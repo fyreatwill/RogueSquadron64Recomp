@@ -1,14 +1,13 @@
-# NEXT: s7208 follow-up — 4:3 Elite Rogues field screen: is the presented weave the retail image?
-HYPOTHESIS-ID: interlaced-still-present
-Context: s7208 fixed the 4:3 double present (ROGUESQ_PE_DEDUPE, default on; pairs 1376 -> 4, distinct images equal). Elite Rogues
-at 4:3 (VI width 1024, fb 512 at 790000) presents 30/s with ~28-30 distinct/s while the game submits two field workloads per image
-(ring W fbs 790000,620000|690000 alternating). s7207 scored G3 frac equal within a slideshow-phase confound (single-source).
-Hypotheses:
- H-equal: presented image == angrylion weave of the same RDP stream (close the thread).
- H-field-mix: RT64 presents one field's fb with the other field's rows stale (row-parity residual vs angrylion).
- H-phase: residual is only the slideshow phase (content-matched frames equal).
-Discriminator, ONE run: scratch/s7207/er43.zsh-style ER route, ER1 arm only, WITH ROGUESQ_G5B_FRAME_EVERY=1 FROM=4450 (s7207 recipe),
-replay through tools/angrylion_replay, score with tools/s7122_fidelity.py and the s7207 parity tools (scratch/s7207/parity_*.txt
-format): row-parity split of the residual on content-matched frames.
-Outcomes: even/odd residual equal and at floor -> H-equal, close; odd rows only -> H-field-mix (fix the weave); unmatched -> H-phase.
-If closed, take the next backlog item from CURRENT-TRUTH (owner items await the owner; ladder 3c).
+# NEXT (s7210): field-mode census — which screens draw with the RDP scissor field bit, and is each presented as model G?
+HYPOTHESIS-ID: field-mode-census
+Context: s7209 closed Elite Rogues (4:3): RT64 ignores the Set Scissor field/odd bits (drawCall.scissorMode read only by the debugger),
+so it presents a progressive render (angrylion NOFIELD=1 replay, model G) instead of the hardware weave. Unknown: whether any OTHER
+screen (boot logos, attract, crawls, cutscenes, menus at 16:9 owner recipe) uses field mode, and whether at 16:9 (WIDE paths, 796/1024 fb)
+the progressive draw still lines up.
+Hypotheses: H-only-ER (Elite Rogues is the only field-mode screen -> census closes the class); H-more-prog (other screens use it and
+present as G: same verdict, list them); H-more-break (a field-mode screen at 16:9 presents rows offset/doubled -> G loses, fix).
+Discriminator, offline first then ONE run: grep existing .cap streams for Set Scissor (op 0x2D) with w1 bit 25 set (write a tiny
+census script over scratch/s7141/*.cap and scratch/s7124/... if any caps remain; else ONE owner-recipe 16:9 boot->menu->L17->ER run
+with G5B_FRAME_EVERY=1 FROM=0 and PRESENT_RING), list field-mode swap ranges by cimg/width, replay them NOFIELD, score
+tools/s7183_parity.py GDIR=. Disk: 136 GB free, ~20 GB per 3 min capture: keep spans short, delete raws after scoring.
+Outcomes: no other field-mode swaps -> H-only-ER, close; G picked with symmetric rows -> H-more-prog, close; G loses -> H-more-break, fix.

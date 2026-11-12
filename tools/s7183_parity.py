@@ -23,7 +23,8 @@ from PIL import Image
 
 MAG = b'\xf8\x00\xf8'
 REPAIR = int(os.environ.get('REPAIR', '0'))
-REPAIR_ALL = os.environ.get('REPAIR_ALL', '0') == '1'  # s7207: re-pair EVERY field swap, not only combed ones (splits pairing/timing from image)
+REPAIR_ALL = os.environ.get('REPAIR_ALL', '0') == '1'
+GDIR = os.environ.get('GDIR')  # s7209: NOFIELD=1 NOPREFILL=1 replay dir = progressive model G (scissor field bit cleared: every row drawn this swap)  # s7207: re-pair EVERY field swap, not only combed ones (splits pairing/timing from image)
 
 
 def rgb(path):
@@ -69,7 +70,7 @@ def main():
     s0, s1 = (int(sys.argv[6]), int(sys.argv[7])) if len(sys.argv) > 7 else (0, 1 << 30)
     raw = Raw(rawp); RW, RH = rect[2] - rect[0], rect[3] - rect[1]
     rows = [r for r in csv.DictReader(open(fcsv)) if s0 <= int(r['swap']) <= s1]
-    res = {k: [] for k in ('W', 'B', 'P', 'ctlB_pickB', 'ctlW_pickW', 'eff_real', 'eff_bob')}; asym = []; picks = {'W': 0, 'B': 0, 'P': 0}; npar = [0, 0]; combrows = []; rep = []
+    res = {k: [] for k in ('W', 'B', 'P', 'ctlB_pickB', 'ctlW_pickW', 'eff_real', 'eff_bob')}; asym = []; picks = {'W': 0, 'B': 0, 'P': 0}; npar = [0, 0]; combrows = []; rep = []; gres = []
     for r in rows:
         s = int(r['swap']); fr = os.path.join(rdir, 'f%d.rgb' % s); fn = os.path.join(ndir, 'f%d.rgb' % s)
         if not (os.path.exists(fr) and os.path.exists(fn)): continue
@@ -98,6 +99,21 @@ def main():
             res[key].append(got == want)
             if want == 'B': res['eff_bob'].append(rowd(S, W, cur)[2] - rowd(S, B, cur)[2])
         res['eff_real'].append(dW[2] - dB[2])
+        if GDIR and os.path.exists(os.path.join(GDIR, 'f%d.rgb' % s)):
+            gw, gh, gpx = rgb(os.path.join(GDIR, 'f%d.rgb' % s)); G = Image.frombytes('RGB', (gw, min(gh, 448)), gpx[:gw * min(gh, 448) * 3])
+            if G.size == W.size:
+                dG = rowd(P, G, cur); dGW = rowd(G, W, cur)[2]
+                gb = None
+                if REPAIR:
+                    j0 = int(r['pframe']); gb = {}
+                    for j in range(max(0, j0 - REPAIR), min(len(raw.T), j0 + REPAIR + 1)):
+                        Q = raw.img(j).crop(rect).resize((w, h), Image.BOX)
+                        for nm, M in (('W', W), ('B', B), ('P', PV), ('G', G)):
+                            v = rowd(Q, M, cur)[2]
+                            if nm not in gb or v < gb[nm][0]: gb[nm] = (v, j - j0)
+                S = G.resize((RW, RH), Image.BICUBIC).resize((w, h), Image.BOX)
+                ctl = min((rowd(S, W, cur)[2], 'W'), (rowd(S, B, cur)[2], 'B'), (rowd(S, PV, cur)[2], 'P'), (rowd(S, G, cur)[2], 'G'))[1]
+                gres.append((s, cw_ > 1.0, dW, dB, dP, dG, dGW, ctl, gb))
     n = len(res['W'])
     print('field swaps scored', n, 'parity counts (even,odd current field)', npar)
     if not n: return 1
@@ -122,6 +138,27 @@ def main():
         for nm in 'WBP':
             print('  REPAIRED (+-%d frames) %s swaps, model %s: median best d %.2f, offsets %s' % (REPAIR, 'ALL field' if REPAIR_ALL else 'combed', nm,
                   statistics.median(b[nm][0] for _, b in rep), dict(sorted(__import__('collections').Counter(b[nm][1] for _, b in rep).items()))))
+    if gres:
+        med = statistics.median
+        for lab, sel in (('combed', True), ('uncombed', False)):
+            g = [x for x in gres if x[1] == sel]
+            if not g: continue
+            pk = {}
+            for x in g:
+                k = min((x[2][2], 'W'), (x[3][2], 'B'), (x[4][2], 'P'), (x[5][2], 'G'))[1]; pk[k] = pk.get(k, 0) + 1
+            dif = [x for x in g if x[6] > 1.0]
+            print('G %-8s n %d: median d WEAVE %.2f BOB %.2f PREV %.2f PROG %.2f | PROG cur %.2f other %.2f | d(G,W) med %.2f, %d swaps with d(G,W)>1 | picks %s | ctl synthetic-G picked G %d/%d' % (
+                lab, len(g), med(x[2][2] for x in g), med(x[3][2] for x in g), med(x[4][2] for x in g), med(x[5][2] for x in g),
+                med(x[5][0] for x in g), med(x[5][1] for x in g), med(x[6] for x in g), len(dif), pk, sum(1 for x in dif if x[7] == 'G'), len(dif)))
+            if dif:
+                pk2 = {}
+                for x in dif:
+                    k = min((x[2][2], 'W'), (x[3][2], 'B'), (x[4][2], 'P'), (x[5][2], 'G'))[1]; pk2[k] = pk2.get(k, 0) + 1
+                print('   where G differs from W (d>1): median d WEAVE %.2f BOB %.2f PREV %.2f PROG %.2f picks %s' % (
+                    med(x[2][2] for x in dif), med(x[3][2] for x in dif), med(x[4][2] for x in dif), med(x[5][2] for x in dif), pk2))
+                rr = [x[8] for x in dif if x[8]]
+                if rr:
+                    print('   re-paired (+-%d): ' % REPAIR + ' '.join('%s %.2f@%s' % (nm, med(b[nm][0] for b in rr), __import__('collections').Counter(b[nm][1] for b in rr).most_common(2)) for nm in 'WBPG'))
     cb = sum(res['ctlB_pickB']); cw = sum(res['ctlW_pickW'])
     ok = cb >= 0.9 * n and cw >= 0.9 * n
     print('CONTROL synthetic bob picked BOB %d/%d, synthetic weave picked WEAVE %d/%d -> %s' % (cb, n, cw, n, 'PASS' if ok else 'FAIL'))

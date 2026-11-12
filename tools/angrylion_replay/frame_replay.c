@@ -34,6 +34,7 @@ int main(int ac, char **av) {
     n64video_init(&c); refill_every = getenv("PREFILL_EVERY") != NULL; const int noprefill = getenv("NOPREFILL") != NULL;
     static uint8_t *fixsnap = NULL; const int snapfrom = getenv("SNAP_FROM") ? atoi(getenv("SNAP_FROM")) : -1; int havefix = 0;
     long killA = getenv("KILL_AREA") ? atol(getenv("KILL_AREA")) : 0, killed = 0;
+    const int nofield = getenv("NOFIELD") != NULL; long unfielded = 0; /* s7209: clear Set Scissor field/odd bits (RT64 ignores them: progressive reference) */
     int wi = 3, want = atoi(av[wi]); uint32_t tag, sw = 0; uint64_t t; int have = 0, active = 0; uint32_t cimg = 0, cw = 0; long nr = 0;
     static char ibuf[1 << 22]; setvbuf(f, ibuf, _IOFBF, sizeof ibuf);
     uint8_t *cmd = malloc(0x200000);
@@ -48,7 +49,7 @@ int main(int ac, char **av) {
                     uint32_t a = (cimg + 2 * (y * cw + x)) ^ 2; uint16_t v = (uint16_t)(rdram[a] | (rdram[a + 1] << 8));
                     uint8_t q[3] = {(uint8_t)((v >> 11 & 31) << 3), (uint8_t)((v >> 6 & 31) << 3), (uint8_t)((v >> 1 & 31) << 3)};
                     if (v != 0xF83Eu) lit++; fwrite(q, 1, 3, o); }
-                fclose(o); printf("swap %d ranges %ld cimg %06X w %u painted %ld of %u killed %ld\n", want, nr, cimg, cw, lit, cw * h, killed); killed = 0; fflush(stdout);
+                fclose(o); printf("swap %d ranges %ld cimg %06X w %u painted %ld of %u killed %ld unfielded %ld\n", want, nr, cimg, cw, lit, cw * h, killed, unfielded); killed = 0; unfielded = 0; fflush(stdout);
                 active = 0; if (++wi >= ac) break; want = atoi(av[wi]);
             }
             if (eof) break;
@@ -70,6 +71,7 @@ int main(int ac, char **av) {
         for (uint32_t a = 0; a + 8 <= n;) { uint32_t w0 = rw(cmd, a), w1 = rw(cmd, a + 4), op = (w0 >> 24) & 0x3F, l = 8;
             if (op >= 8 && op <= 15) l = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); else if (op == 0x24 || op == 0x25) l = 16;
             else if (op == 0x3F) { uint32_t w = (w0 & 0x3FF) + 1; if (w >= cw && ((w0 >> 19) & 3) == 2) { cw = w; if (cimg != (w1 & 0xFFFFFF)) { cimg = w1 & 0xFFFFFF; int seen = 0; for (int k = 0; k < nf; k++) seen |= filled[k] == cimg; if (!seen && nf < 32) filled[nf++] = cimg; if (!noprefill && (!seen || refill_every)) for (uint32_t i = 0; i < w * 448; i++) { uint32_t q = (cimg + 2 * i) ^ 2; rdram[q] = 0x3E; rdram[q + 1] = 0xF8; } } } }
+            if (nofield && op == 0x2D && (w1 & 0x02000000u)) { uint32_t v = w1 & ~0x03000000u; memcpy(cmd + a + 4, &v, 4); unfielded++; }
             if (killA > 0 && op >= 8 && op <= 15 && a + l <= n) { // zero a big terrain tri: NOPs in its place
                 int32_t xl = (int32_t)rw(cmd, a + 8) >> 16, xh = (int32_t)rw(cmd, a + 16) >> 16, xm = (int32_t)rw(cmd, a + 24) >> 16;
                 int yl = ((int32_t)(w0 << 18) >> 18) / 4, yh = ((int32_t)(w1 << 18) >> 18) / 4; int wd = abs(xh - xl) > abs(xh - xm) ? abs(xh - xl) : abs(xh - xm);

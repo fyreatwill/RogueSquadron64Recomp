@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7208 (2026-11-12).
+Compact operational handoff, as of Session 7209 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -113,6 +113,10 @@ Open or awaiting the owner:
   like the s6885 width term. Same session, both arms (tools/s7208_present_pairs.py, s7207_distinct_by_vi.py): 4:3 ER route pairs
   1376 -> 4, presents 8314 -> 6165, distinct images 5730 -> 5799 (boot logos 537/1096 -> 536/565 distinct/presents); 16:9 fullscreen
   boot stills unchanged (B51E00 58.7 distinct/s both, pairs 1 both). 0 crashes in 4 runs.
+- **s7209 4:3 Elite Rogues field screen CLOSED (H-prog):** RT64 ignores the Set Scissor field bit (scissorMode read only by the
+  debugger), so it draws every row: presented == angrylion NOFIELD progressive replay (G picked 121/122 where G != W, offset 0, row-symmetric,
+  synthetic-G control 122/122), not the retail weave (which combs on fades/scroll). Design difference, cleaner than retail; no fix.
+  Kit: frame_replay NOFIELD=1, tools/s7183_parity.py GDIR=.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -235,9 +239,8 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) 4:3 present cadence on the 30/s Elite Rogues field screen (s7208 datum):** ER at 4:3 shows ~28-30 distinct/s
-   from 30 presents/s while the game submits 2 field workloads per image (W fbs 790000,620000/690000). Check the deinterlaced image
-   against angrylion (one weave per image, not field shimmer) with the G3 kit; close if equal. Retina default: owner (s7205).
+1. **(next, NEXT.md) Field-mode census:** which screens besides Elite Rogues draw with the Set Scissor field bit (boot, menus,
+   cutscenes, owner recipe 16:9 and retail 4:3)? Score each with NOFIELD replay model G (s7209 kit). Retina default: owner (s7205).
    Boot freeze stays passive (headline). Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).

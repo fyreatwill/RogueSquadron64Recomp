@@ -190207,3 +190207,29 @@ differ by route timing between the runs (not a loss: both directions). 0 crashes
 D0 (old path) reproduces the s7207 pairs (1376 vs s7207 ER1 1219 on the same route).
 Rules out: H-field (one present per image on ER), losing images to the gate (distinct equal, both arms).
 Next: the 30/s ER field screen at 4:3: check the woven image against angrylion with the G3 kit, close if equal.
+
+## Session 7209 (2026-11-12) — 4:3 Elite Rogues field screen: RT64 presents a progressive render of each swap (field scissor ignored), not the retail weave; H-prog selected, thread closed as an RT64 design difference
+
+Unit from NEXT (HYPOTHESIS-ID interlaced-still-present). No maintenance (29001 B). No new soak results. Owner save untouched (NO_SAVE_WRITE via
+the s7141 harness, no SAVE_FROM). 1 game run, 0 CRASH/SIGSEGV/SIGBUS.
+Line 1 (code): lib/rt64 stores the Set Scissor field/odd mode (RDP::setScissor -> scissorModeStack -> drawCall.scissorMode, rt64_state.cpp:786)
+but only the debugger inspector reads it (rt64_debugger_inspector.cpp:1560). So RT64 rasterises EVERY row of a field-mode workload; the game's
+ER swaps paint only the even rows (s7183 census) and the odd rows in RAM keep the previous picture (the hardware weave combs on transitions).
+Line 2 (measurement): scratch/s7209/er43.zsh = s7207 ER1 arm on the s7208 binary (L17 route, retail 4:3, windowed 849x788, stream 4450+, EVERY=1).
+Post tools/s7152_post.zsh (painted CONTROL PASS). NEW progressive reference: tools/angrylion_replay/frame_replay.c NOFIELD=1 clears the Set
+Scissor field/odd bits (458 field swaps, 3016 scissors unfielded; build scratch/s7209/al16). tools/s7183_parity.py GDIR=<dir> adds model G
+(PROG) with a synthetic-G control and per-model re-pairing. REPAIR=3, rect 0,26,849,666 (scratch/s7209/parity_ER2.txt):
+| swaps | WEAVE | BOB | PREV | PROG | picks | re-pair offset G |
+| combed (66) | 8.75 | 5.64 | 12.45 | 5.00 | G 58, P 8 | |
+| G differs from W, combed (49) | 9.24 | 6.04 | 13.56 | 5.51 | G 49/49 | 0 (49/49) |
+| uncombed (392) | 3.47 | 3.31 | 4.21 | 3.00 | G 293, W 92, P 7 | |
+| G differs from W, uncombed (73) | 4.55 | 3.98 | 5.78 | 3.60 | G 72/73 | 0 (70/73) |
+PROG current-field rows 3.02 vs other rows 2.99 (5.01/5.00 combed): no row asymmetry, so H-field-mix (stale odd rows) is refuted. Controls:
+synthetic-G picked G 122/122 where G != W; synthetic bob/weave 458/458 PASS. H-phase refuted (same-run reference, offset 0). H-equal refuted on
+the 122 swaps where the fields differ (WEAVE 4.55-9.24 vs PROG 3.60-5.51). Residual: combed-swap PROG 5.0 sits above the uncombed 3.0; those
+swaps are the photo cross-fades (more detail in motion), not scored further.
+Side datum, same run: present pairs < 4 ms = 2 of 7125 (s7208 PE_DEDUPE holds on a second run), ER 300 presents/10 s.
+Verdict: H-prog selected (two lines: code path + same-run model fit with control). The presented ER image is a clean progressive frame of
+each swap; retail hardware shows the weave (combs on scroll/fade on a progressive display). Not a defect to fix: matching retail would add
+combing. Thread interlaced-still-present CLOSED. Raws deleted (20 GB); kept replays scratch/s7141/ER2{r,n,g}, ring, parity output.
+Next: field-mode census across the boot/menu/cutscene route at the owner recipe (which other screens use the scissor field bit).
