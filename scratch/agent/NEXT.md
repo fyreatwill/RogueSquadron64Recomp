@@ -1,17 +1,14 @@
-# NEXT (s7221): RETINA=1 fullscreen display hot-plug (1x virtual display removed while fullscreen -> game lands on the 2x built-in)
+# NEXT (s7222): RETINA=1 display ADDED while fullscreen on the 2x built-in (reverse of s7221)
 HYPOTHESIS-ID: retina-hotplug
-Context: RETINA=1 is CLOSED for flight (s7218/s7219) and front end (s7220). s7202 fixed fullscreen display removal (leave fullscreen
-+0.3 s, re-enter +1.5 s, plume needsResize on drawable mismatch) but ran only at RETINA=0 (RETINA arrived s7203); s7203 checked a
-WINDOWED 1x->2x hot-plug at RETINA=1 only. Untested: the s7202 leave/re-enter path when contentsScale changes 1 -> 2 at RETINA=1.
-First fold SOAK-RESULTS for s7220_bootloop_retina (12 owner-env boots, auto + RETINA=1; exit 0 = 0 FROZEN with hunter control PASS).
-Hypotheses: H-ok (after the re-enter the swap chain re-creates/resizes to 3024x1898, on-screen presents ~60/s within ~2 s, picture
-full-screen); H-half (needsResize/getScaleFactor keeps the 1x scale: 1512x949 or 1920x1080 chain on a 2x panel, i.e. RETINA lost
-after the move, or a quarter-size image like the s7202 windowed bug); H-dead (Space hidden / 0 on-screen presents, s7202 class back
-at RETINA=1).
-Run: copy scratch/s7202/arms2.zsh (build/virtual_display 1920 1080 <hold>, ROGUESQ_WINDOW_POS on the virtual display, destroy ~26 s);
-arms r1 = FULLSCREEN=1 RETINA=1 ASPECT=auto, r0 = same with RETINA=0 (s7202 control), plus a reverse arm (start on built-in, add the
-1x display, move is NOT automatic -> skip unless trivial). Witnesses: [retina] swapchain create / Z resize rows, [g1f-win] rows
-(drawableSize, contentsScale, active_space, occlusion), PRESENT_RING P at>0 per second after removal, screencapture -x at +5 s.
-Positive control: CGGetActiveDisplayList 1->2->1 and SDL_DISPLAYEVENT 3 in the log; r0 must reproduce s7202's fixed result.
-Outcomes: H-ok -> hot-plug closed at RETINA=1; H-half -> fix the scale path (plume_apple.mm getScaleFactor / needsResize) and export
-submodule patches; H-dead -> extend rs64_display_hotplug_tick for the scale change.
+Context: s7221 closed removal (1x display removed while fullscreen -> re-enter on built-in at 3024x1898). Untested: a display
+ADDED while the game is fullscreen on the built-in. The s7202 handler logs [g1f] on any display event; it should NOT leave
+fullscreen or resize for an add.
+Hypotheses: H-ok (no leave/re-enter, layer stays 3024x1898, on-screen presents continuous 30/s through the add); H-churn (the add
+triggers the leave/re-enter path or a swap chain resize, a visible blink / gap >250 ms); H-dead (Space change hides the game, P at=0).
+Run: copy scratch/s7221/arms.zsh, but start the game with NO window pos (built-in), FULLSCREEN=1 ASPECT=auto, sleep 20, THEN
+start build/virtual_display 1920 1080 15 (add at ~20 s, removed at ~35 s), screencapture at +5 s after add and +5 s after removal.
+Arms a1 RETINA=1, a0 RETINA=0. Score with scratch/s7221/sum.py (P at>0 per second from 15 s, Z rows), grep [g1f]/[g1f-win]/[retina].
+Positive control: vd log ndisp 1->2->1 and [s7199-hotplug] added row in the log; on-screen P>0 before the add (built-in reports at).
+Outcomes: H-ok -> retina-hotplug closed for good, move to backlog item 2+ (owner-look items: produce nothing new; take the next
+ladder rung not closed, e.g. G1e/G3 checks at RETINA=1 21:9 window); H-churn -> gate the handler to removals of the window's display;
+H-dead -> fix in rs64_display_hotplug_tick.

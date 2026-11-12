@@ -1411,3 +1411,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112 | s7192 fold: s7190_bootloop_d rc=0, 14/14 owner-env boots crash=0 OK, 0 FROZEN (recipe had no HUNT_CONTROL; same binary's control PASS in s7190/s7191). Owner-env total 55 clean.
 20261112-054328 | s7198_backlog_L4 | rc=0 | 406s | scratch/agent/soak_results/s7198_backlog_L4_20261112-054328.log
 20261112 | s7199 fold: s7198_backlog_L4 rc=0, LEVEL=4 owner recipe 374 s: trims=0 fallback=0, peak queued 36.1 ms at 22047 Hz (limit 150). Margin holds in mission.
+20261112-121055 | s7220_bootloop_retina | rc=0 | 442s | scratch/agent/soak_results/s7220_bootloop_retina_20261112-121055.log

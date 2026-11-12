@@ -190546,3 +190546,26 @@ RETINA=1 thread CLOSED for flight (s7218/s7219) and front end (s7220). Owner she
 (title still and pause menu, a1 vs a0). Queued soak scratch/agent/soak_queue/s7220_bootloop_retina.sh (12 owner-env boots
 with auto + RETINA=1, hunter control on boot 1). Logs gzipped in scratch/s7220.
 Next: RETINA=1 fullscreen display hot-plug (2x <-> 1x while fullscreen) (NEXT.md).
+
+## Session 7221 (2026-11-12) — RETINA=1 FULLSCREEN display hot-plug (1x virtual display removed while fullscreen): H-ok, re-enter on the 2x built-in creates the 3024x1898 backing-pixel chain, 30/s on screen within ~2 s, sharpness kept; RETINA hot-plug closed
+
+Soak fold: s7220_bootloop_retina rc=0: 11/11 owner-env boots (ASPECT=auto + RETINA=1) crash=0 OK, 0 FROZEN; boot1 is the hunter
+control (forced FROZEN, CONTROL dump=PASS frozen=PASS). Owner-env clean boots now 66 (+11).
+
+Ran scratch/s7221/arms.zsh (copy of s7202 arms2): build/virtual_display 1920x1080 for 30 s, game started on it with
+ROGUESQ_WINDOW_POS, FULLSCREEN=1 ASPECT=auto; arm r1 RETINA=1, arm r0 RETINA=0 (the s7202 control). Same build as s7220.
+Positive control: vd log ndisp 1->2->1 both arms; [s7199-hotplug] added=3 and [g1f] display removed fullscreen=1 hotplug=1 in both.
+- On the 1x display both arms: [retina] swapchain create 1920x1080 contentsScale=1.0 (RETINA=1 correctly 1x there).
+- r1 after removal: leave fullscreen (+0.5 s layer 3024x1836@2), re-enter on display 0 -> layer 3024x1898@2.0, Z resize rows
+  1920x1080 -> 3024x1898 (26.06 s) ... 3024x1898 (27.59 s), stable through +8 s. On-screen presents 10,17,26 then 30/s from
+  t=29 to the kill (attract, 30/s is the game rate). r0: same sequence at 1512x949 (point size), 12,16,28 then 30/s: reproduces
+  s7202's fixed result (s7202 fsN 4,30,13,30...).
+- Presented picture: screencapture +5 s after re-enter, both arms full screen, no bars, no quarter image (sm_r1_post5 / sm_r0_post5).
+  s7203 half-res residual (scratch/s7203/hf metric, box 200,500,2400,1900): r1 1.178, r0 0.856; positive control r1 down/up 2x 0.792
+  (the r0 level), so r1 really presents at backing resolution after the move. A +11 s pair (darker scene) 0.446 vs 0.399.
+- 0 crashes, 0 hidden seconds after re-enter in either arm. Pre-removal P at=0 on the virtual display in both arms and in s7202
+  (the virtual display reports no on-screen time), so only post-removal seconds are scored.
+Selects H-ok; refutes H-half (getScaleFactor/needsResize follow the new 2x screen) and H-dead. RETINA=1 hot-plug CLOSED
+(windowed 1x->2x s7203, fullscreen removal s7221). Default RETINA stays the owner's call.
+Next: reverse case, a display ADDED while fullscreen on the built-in at RETINA=1 (no move expected; check no stray resize,
+hidden Space or swap chain loss), then backlog.
