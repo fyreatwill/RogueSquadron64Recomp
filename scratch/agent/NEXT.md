@@ -1,17 +1,18 @@
-# NEXT: audio hot-plug on the system-default route (s7199 follow-up)
-HYPOTHESIS-ID: audio-hotplug
-Context: s7199 landed the hot-plug handler (main.cpp audio_hotplug_apply / audio_hotplug_note_queue) and proved it on a NAMED
-route with a real CoreAudio removal (tools/audio_hotplug_agg.c; arms scratch/s7199/arms.zsh). Untested: ROGUESQ_AUDIO_DEVICE=default
-while the macOS DEFAULT output itself is removed.
-Unit:
- 1. Add `setdefault <name>|restore` to tools/audio_hotplug_agg.c (save the old default output UID to a file first; ALWAYS
-    restore it at the end of the script, also on failure: trap EXIT). This briefly changes the owner's system output.
- 2. Arms (owner env as in scratch/s7199/arms.zsh, ROGUESQ_AUDIO_DEVICE=default, aggregate = system default, destroy at 15 s):
-    hotplug=1 vs hotplug=0, plus ctl (no destroy).
+# NEXT: controller + display hot-plug (owner plays on a 65" TV with a pad; s7200 closed the audio side)
+HYPOTHESIS-ID: input-display-hotplug
+Context: src/main/main.cpp ~10883: SDL_CONTROLLERDEVICEADDED opens a pad only if none is open; REMOVED closes ours and
+sets controller=nullptr. Read first (offline, no build): what the pad poll does with controller==nullptr (held buttons
+latched? stick stuck off-centre?), and whether a SECOND connected pad is ever adopted after ours is removed (it is not
+re-scanned: only an ADDED opens). Display side: grep SDL_WINDOWEVENT (~11938) for DISPLAY_CHANGED / fullscreen handling;
+G1f item (3) "moving between displays" was "if feasible" and never measured.
 Hypotheses:
-- H-sdl-heals: SDL3 migrates the default stream; hotplug=0 keeps 115 bufs/s and 0 trims after the destroy. Then the handler is a
-  no-op on this route (check it does not reopen needlessly; a needless reopen costs ~120-170 ms of audio-thread block).
-- H-dead-default: hotplug=0 drops to ~13 bufs/s with trims (like the s7199 named route); hotplug=1 recovers (removed-event or
-  drain-stall) within 0.5 s.
-Discriminator: per-second bufs/trims in [s7198-q] (ROGUESQ_AI_STALL_TEST=100000 arms the logger) and the [s7199-hotplug] reopen lines.
-After this, the audio host-robustness thread closes; go back to CURRENT-TRUTH Next steps (owner-look items, then ITERATION 3c ladder).
+- H-pad-latch: after REMOVED mid-hold the last button/stick state stays applied (craft keeps turning/firing).
+- H-pad-orphan: with two pads, removing the open one leaves input dead though pad 2 is present.
+- H-pad-ok: state clears and the next pad is adopted (then only the display side remains).
+- H-display: fullscreen window on a display that goes away (TV off) stays on a dead display / wrong size; RESMULT and
+  ASPECT=auto do not follow the new display.
+Discriminator: forced arm ROGUESQ_PAD_REMOVE_TEST=<sec> pushing a synthetic SDL_CONTROLLERDEVICEREMOVED for the open pad
+(the s7199 REMOVE_TEST pattern), logging the per-frame pad word sent to the guest before/after. Real-device positive
+control if a pad is connected (check `SDL_NumJoysticks` log line); otherwise the synthetic arm plus a code-read. Display:
+a CGVirtualDisplay (private API, tools/) create/destroy if it works unsigned; else code-read + SDL_WINDOWEVENT log only.
+Build all arms in one build (rule 13). Owner save rule applies (runner exports NO_SAVE_WRITE).

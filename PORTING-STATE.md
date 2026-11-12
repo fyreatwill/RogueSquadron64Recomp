@@ -189946,3 +189946,28 @@ aggregate at 15 s, re-create at 30 s; logs scratch/s7199/{,b_,c_}*.log):
   comes back). H-reopen-race: no crash in 7 arms; every reopen holds audio_device_mutex (single-source: 60 s runs only).
 - Two independent detectors both fire on a real removal (event in v3, watchdog in v2), so the fix does not hang on one SDL behaviour.
 - Untested: pref=default with the system default output itself removed (SDL3 should migrate it). NEXT.md.
+
+## Session 7200 (2026-11-12) — audio hot-plug on the SYSTEM-DEFAULT route: SDL3 migrates the default stream by itself (H-sdl-heals selected, H-dead-default refuted); the s7199 handler stays idle there (0 reopens); audio host-robustness thread closed
+
+What ran: tools/audio_hotplug_agg.c gained `getdefault` and `setuid <uid>` (set the macOS default output). Arms
+scratch/s7200/arms.zsh, one script, same binary as s7199: owner env (LEVEL=4 route, FPS60 dd4 16:9 fullscreen, VI_LOCK,
+QOS_ALL, G1B, ROGUESQ_AI_STALL_TEST=100000 for the per-second [s7198-q] logger) with ROGUESQ_AUDIO_DEVICE=default. Each arm
+creates the aggregate RS64HotplugTest, makes it the SYSTEM DEFAULT output, boots, and at t=15 s destroys it (macOS falls back
+to BuiltInSpeakerDevice). Arms: hp1 (handler on), hp0 (ROGUESQ_AUDIO_HOTPLUG=0), ctl (no destroy). The script saves the
+owner's default UID first and restores it on EXIT (trap); afterwards getdefault = BuiltInSpeakerDevice (restored).
+
+Result (bufs/s per second, trims):
+- hp1: t0-14 ~115, t15 93 (the removal), t16-59 114-117; trims 0. [s7199-aev] removed which=0 only (NOT our id 2);
+  handler saw removed_mask=0x1, no reopen line (0 reopens: no needless 120-170 ms reopen).
+- hp0: identical shape: t15 93, then 114-117 to t59; trims 0. Same removed which=0 event.
+- ctl: 113-117 all 60 s, t15 115, no removed event; trims 0. 0 crash lines in all three.
+Positive control in the same run: the removal registered (removed event + the 115 -> 93 bufs dip at t15) only in the
+two destroy arms, not in ctl; the s7199 named-route arm (same binary, same tool) is the control that the handler fires
+when the stream really dies.
+
+Reading: on the default route SDL3/sdl2-compat moves the open default stream to the new default itself; the hiccup is
+~0.2 s of buffers at the switch and no stale backlog. hp0 healing proves it is SDL, not our handler. H-dead-default
+(refuted): would have shown ~13 bufs/s + trims in hp0. The s7199 handler is a no-op here (REMOVED arrives for id 0,
+our bitmask only matches our own id; the drain watchdog never trips since the queue keeps draining).
+Rules out: any default-route hot-plug defect. Audio host-robustness thread (s7197-s7200) CLOSED.
+Next: controller and display hot-plug (owner's TV / pad case), NEXT.md.

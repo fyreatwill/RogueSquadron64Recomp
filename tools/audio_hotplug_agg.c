@@ -3,6 +3,8 @@
 //   audio_hotplug_agg create <name>   (prints the aggregate UID; device persists until destroyed)
 //   audio_hotplug_agg destroy <name>
 //   audio_hotplug_agg list
+//   audio_hotplug_agg getdefault            (prints the default output UID)
+//   audio_hotplug_agg setuid <uid>          (s7200: make device <uid> the default output; restore with the saved UID)
 // Build: cc -O1 -o build/audio_hotplug_agg tools/audio_hotplug_agg.c -framework CoreAudio -framework CoreFoundation
 #include <CoreAudio/CoreAudio.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -29,7 +31,25 @@ static AudioObjectID find_by_uid(CFStringRef uid) {
     if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &a, sizeof uid, &uid, &sz, &d) != noErr) return 0;
     return d;
 }
+static int set_default(AudioObjectID d) {
+    AudioObjectPropertyAddress a = {kAudioHardwarePropertyDefaultOutputDevice, kAudioObjectPropertyScopeGlobal,
+                                    kAudioObjectPropertyElementMain};
+    OSStatus st = AudioObjectSetPropertyData(kAudioObjectSystemObject, &a, 0, NULL, sizeof d, &d);
+    printf("setdefault id=%u status=%d now=%u\n", (unsigned)d, (int)st, (unsigned)default_out());
+    return st == noErr && default_out() == d ? 0 : 1;
+}
 int main(int argc, char** argv) {
+    if (argc >= 2 && !strcmp(argv[1], "getdefault")) {
+        CFStringRef u = str_prop(default_out(), kAudioDevicePropertyDeviceUID);
+        char b[300] = ""; if (!u || !CFStringGetCString(u, b, sizeof b, kCFStringEncodingUTF8)) return 1;
+        printf("%s\n", b); return 0;
+    }
+    if (argc >= 3 && !strcmp(argv[1], "setuid")) {
+        CFStringRef u = CFStringCreateWithCString(NULL, argv[2], kCFStringEncodingUTF8);
+        AudioObjectID d = find_by_uid(u);
+        if (!d) { fprintf(stderr, "no device uid %s\n", argv[2]); return 1; }
+        return set_default(d);
+    }
     if (argc >= 2 && !strcmp(argv[1], "list")) {
         AudioObjectPropertyAddress a = {kAudioHardwarePropertyDevices, kAudioObjectPropertyScopeGlobal,
                                         kAudioObjectPropertyElementMain};

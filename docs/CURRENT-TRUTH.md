@@ -70,6 +70,8 @@ Open or awaiting the owner:
   thread reopens on SDL_AUDIODEVICEREMOVED for our id (ids kept as a bitmask: SDL3/sdl2-compat posts our id then id 0),
   or on a 400 ms drain-stall watchdog (status stays PLAYING after removal), falling back to the system default, and moves
   back when the preferred device is ADDED. Real arm: 0 trims, 115 bufs/s through the removal; pause/ctl arms 0 reopens.
+  s7200: default route needs nothing: removing the macOS DEFAULT output, SDL3 migrates the stream itself (hotplug=0 arm
+  also 115 bufs/s, 0 trims; one 93-buf second at the switch); the handler stays idle (0 reopens). Audio host thread CLOSED.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -192,9 +194,8 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Hot-plug on the SYSTEM-DEFAULT route (s7199 follow-up).** s7199 proved the named route (the owner's
-   built-in default pref is "MacBook Pro Speakers"). Untested: pref=default while the macOS default output is removed
-   (SDL3 should migrate the default stream itself). Boot freeze stays passive (headline). Hunter
+1. **(next, NEXT.md) Controller + display hot-plug (owner TV/pad case).** Audio hot-plug is closed (s7199 named
+   route fixed; s7200 default route heals inside SDL3, handler idle). Boot freeze stays passive (headline). Hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
