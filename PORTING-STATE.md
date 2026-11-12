@@ -189806,3 +189806,37 @@ does not explain the 1-in-65 boot freeze (whose dumps show tid 3 parked on a rea
 This refutes H-one and selects H-more: a second livelock existed (old 3/3 FROZEN vs fix 3/3 OK, same build). It closes the guard-refusal class: every refusal row is SAFE, DEAD or fixed.
 Next: guest-side NOBLOCK busy-poll audit (NEXT.md): retry loops that on real hardware are rescued by preemption but on
 this cooperative scheduler never let the producer run.
+
+## Session 7196 (2026-11-12) — cooperative-scheduler busy-poll class closed: no guest-produced NOBLOCK poll exists; one runtime hazard fixed (a PI DMA to an unknown region never posted its completion: forced arm old 3/3 FROZEN, fix 3/3 OK, control 3/3 OK)
+HYPOTHESIS-ID: coop-sched-busy-poll-class (closed)
+What ran (offline census first, then a two-arm qualification). Full table in docs/COOP-SCHED-POLL-CENSUS.md.
+- scratch/s7196/census.py: 99 os{Recv,Send,Jam}Mesg sites in RecompiledFuncs.
+  - Only 3 NOBLOCK receives: peek/tryRecvServiceMessage and serviceStreamingVoice. Each is a single poll inside a
+    loop that makes progress. mainEventQueueWorker goes back to a BLOCK recv when idle.
+  - No NOBLOCK send is retried until it succeeds.
+- osYieldThread_recomp is a host std::this_thread::yield(): it never switches guest thread and never drains external
+  messages. 29 yield sites were classified:
+  - Most are `recv BLOCK; yield`, which is SAFE.
+  - Two real spins:
+    - waitForSerialIdle waits on 0x80110741, which siServiceThread (pri 0x76) owns.
+    - submitDmaSlot / waitDmaSlotComplete / pollDmaSlotStep spin while dispatchPendingPiDmaToWorker()==1. With busy
+      0x801126B8 set, that dispatch returns 1 without any OS call. The producer is piDmaWorker (pri 0x78).
+  - Both producers have higher priority than the spinner. Neither blocks inside its flag window, because do_dma and
+    osContStartReadData enqueue their completions synchronously.
+  - Priorities were read statically from the osCreateThread / registerServiceWorker arguments.
+- Hazard found: librecomp pi.cpp do_dma's "read from / write to unknown region" paths only printed [WARN] and posted
+  NO completion. Hardware still raises the PI interrupt.
+  - ORIGIN: the writer is our runtime (do_dma skipped the enqueue). This is not guest data, and the value is
+    illegitimate (hardware always completes).
+  - Fix, default on: post the completion. ROGUESQ_PI_UNK_COMPLETE=0 restores the old drop.
+  - Forced arm ROGUESQ_PI_UNK_TEST=N: the Nth ROM read still copies, but its completion goes through that path.
+Arms (scratch/s7196/arms.zsh, boot_freeze_hunt owner env, 3 boots each, 34 s):
+- a_old (TEST=400, COMPLETE=0): **3/3 FROZEN at fs=444**. [stall-wait] tid=1 IN recv mq=80111290 caller=piDmaWorker+0x844,
+  and the forced hit was logged on that same mq. This is the positive control: a lost PI completion freezes the game.
+- b_fix (TEST=400): 3/3 OK (fs 1951-2078). The hunter keeps only log tails, so a separate full-log boot was run. It shows
+  `[s7196-pi-unk] TEST rom-read ... mq=0x80111290 complete=1` and reaches fs=1694.
+- c_ctl (TEST=0): 3/3 OK.
+Rules out: H-poll (no guest busy-poll can starve its producer, given the priority table). The lost-PI-completion path
+was never seen outside the forced arm, so it does not explain the 1-in-65 boot freeze, which stays passive.
+lib/ edited, so submodule-patches exported. Next: the host completion-delivery class (SP/DP/SI/AI/VI/timer paths that
+can return without posting).

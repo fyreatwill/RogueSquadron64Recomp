@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7195 (2026-11-12).
+Compact operational handoff, as of Session 7196 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -56,7 +56,9 @@ Open or awaiting the owner:
   never on 8011A7E8 or another retrace-fed queue -> H-cycle refuted; the post-clear yield is host std::this_thread::yield (cannot lose
   tid 3). PASSIVE now: [stall-wait]/[stall-cf0] + host sample name the second wait on recurrence. 0 freezes in 73 owner-env boots.
   s7194: separate runtime hazard fixed, default on: external messages to a guard-refused mq are dropped, not requeued forever
-  (v1 arm 5/5 FROZEN old path -> 5/5 OK fixed). s7195: BLOCK recv on a refused mq parks instead of spinning (3/3 FROZEN -> 3/3 OK). 0 freezes in 94 owner-env boots.
+  (v1 arm 5/5 FROZEN old path -> 5/5 OK fixed). s7195: BLOCK recv on a refused mq parks instead of spinning (3/3 FROZEN -> 3/3 OK). s7196: busy-poll class CLOSED (docs/COOP-SCHED-POLL-CENSUS.md: no guest-produced
+  NOBLOCK poll; both real spins wait on higher-priority producers). Fixed, default on: a PI DMA to an unknown region now posts its
+  completion (ROGUESQ_PI_UNK_TEST=400 old 3/3 FROZEN with piDmaWorker IN recv 80111290 -> fix 3/3 OK). 0 freezes in 100 owner-env boots.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -179,13 +181,12 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Guest NOBLOCK busy-poll audit (cooperative-scheduler livelock class).** The guard-refusal class
-   is CLOSED (s7195): every refusal return in mesgqueue.cpp is SAFE/DEAD or fixed. s7194 drops external msgs to refused mqs;
-   s7195 parks a thread whose BLOCK osRecvMesg hits a refused mq (or a refused msg buffer) instead of returning -1, which the
-   guest loop re-entered forever without yielding (forced arm ROGUESQ_REFUSED_RECV_TEST=8018FAC0:1: old path
-   ROGUESQ_REFUSED_RECV_SPIN=1 3/3 FROZEN with recv_other=0, fix 3/3 OK, control 3/3 OK). No refusal has ever fired outside a
-   forced arm, so neither fix explains the boot freeze. Next: enumerate guest loops that retry osRecvMesg/osSendMesg NOBLOCK
-   (or poll a flag) without a blocking call; on hardware preemption rescues them, here the producer thread never runs.
+1. **(next, NEXT.md) Host completion-delivery audit (lost-completion livelock class).** s7196 closed the busy-poll class
+   (docs/COOP-SCHED-POLL-CENSUS.md: 99 message sites + 29 osYieldThread sites classified; osYieldThread_recomp is host-only,
+   but every spin waits on a higher-priority producer that does not block inside its flag window) and fixed the one hazard
+   it exposed: pi.cpp do_dma's unknown-region read/write paths warned but never posted the PI completion, leaving
+   piDmaWorker blocked with busy 0x801126B8 set and every DMA-ring spinner livelocked (ROGUESQ_PI_UNK_COMPLETE=0 = old).
+   Sibling class next: every host path that should post an SP/DP/SI/AI/VI/timer/PI completion but can return without it.
    M6 boot freeze stays passive since s7193 (cycle and yield refuted, see headline). Hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12` (hunter keeps only tails for OK boots:
    take a full log separately when a positive-control line must be shown). TRAPs (s7188): rectfit needs `--slack 40` in
