@@ -1,6 +1,6 @@
-# NEXT: G3 in-flight fidelity at RETAIL settings (4:3, dd1, no FPS60): L8, L9, L10 (CURRENT-TRUTH item 36)
+# NEXT: G3 in-flight fidelity at RETAIL settings (4:3, dd1, no FPS60): L11, L12, L13 (CURRENT-TRUTH item 36)
 HYPOTHESIS-ID: g3-retail-43-sweep
-State (s7175): retail 4:3 H-equal on L0-L7. Remaining: L8-L18.
+State (s7176): retail 4:3 H-equal on L0-L10. Remaining: L11-L18.
 Run (one game at a time; the offline post of level N can overlap the run of level N+1):
   env CW=320 CH=240 zsh tools/s7141_arm.zsh <lvl> L<lvl>r "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1 ROGUESQ_ASPECT=4:3 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
   Check scratch/s7141/cap_L<lvl>r.txt says window (..., 1062.0, 828.0); if the size differs, refit the rect from scratch.

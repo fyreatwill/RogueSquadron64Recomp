@@ -189212,3 +189212,20 @@ All three streams hit the 12 GB cap (740-743 swaps). angrylion CONTROL PASS each
 Verdict: H-equal on L4, L5, L7 at retail settings (two lines: whole-run metric with a firing same-run shift-2 control and passing rect control,
 plus eyeballed sheets). H-hole, H-lag and H-tool outliers absent. Deleted .cap/.raw after scoring.
 Retail 4:3 done: L0-L7. Next: L8, L9, L10 (same recipe and rect).
+
+## Session 7176 (2026-11-11) — G3 retail settings (4:3, dd1, FPS60 off) L8 + L9 + L10 flight == angrylion (centre 0.002/0.005/0.002, 0 >0.05)
+HYPOTHESIS-ID: g3-retail-43-sweep.
+Three game runs, one at a time (L9 post overlapped the L10 run), screen unlocked (no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in every
+run.log/keys.log; run.log shows "[g1d] ROGUESQ_ASPECT=4:3 applied" and "[dd] ROGUESQ_DRAW_DISTANCE multiplier 1" for each. Owner save untouched.
+Recipe as s7174/s7175 (tools/s7141_arm.zsh, CW=320 CH=240, FROM=7500, MAX_MB=12000); window 1062x828 pt each run, so the rect still applies.
+All three streams hit the 12 GB cap (743-746 swaps). angrylion CONTROL PASS each run; s7163_rectfit CTRL x0+4 PASS each run.
+- L8 (orange cloud sky, X-wing): lag 15 ms, rect 0,10,308,241: meand 2.16/2.35/2.63, frac 0.008/0.009/0.010, 0 >0.05, centre 0.005.
+  Rectfit best 0,11,308,240 -> centre 0.002, side 0.008, dup 3. Smooth level: shift-2 has 0 swaps >0.05 but meand 4.22/6.95/9.40
+  (ratio ~3x, fires; same dark/smooth judging as the 21:9 L8). Sheet docs/owner_sheet_s7176_L8_43_fidelity.png identical by eye.
+- L9 (dark canyon / orange sky): lag 15 ms, rect 0,10,308,241 (rectfit keeps it): meand 2.32/2.58/2.83, frac 0.005/0.009/0.010, 0 >0.05,
+  centre 0.004, side 0.006, dup 2. Shift-2 ctl 65 swaps >0.05 (fires). Sheet docs/owner_sheet_s7176_L9_43_fidelity.png identical by eye.
+- L10 (brown/green cloud ground, A-wing): lag 15 ms: meand 3.24/3.68/4.01, frac 0.008/0.009/0.009, 0 >0.05; rectfit best 0,10,308,240
+  -> centre 0.002, side 0.007, dup 2. Shift-2 ctl 268 swaps >0.05 (fires). Sheet docs/owner_sheet_s7176_L10_43_fidelity.png identical by eye.
+Verdict: H-equal on L8, L9, L10 at retail settings (two lines: whole-run metric with a firing same-run shift-2 control and passing rect control,
+plus eyeballed sheets). H-hole, H-lag and H-tool outliers absent. Deleted .cap/.raw after scoring.
+Retail 4:3 done: L0-L10. Next: L11, L12, L13 (same recipe and rect; L13 is dark, judge by meand ratio).
