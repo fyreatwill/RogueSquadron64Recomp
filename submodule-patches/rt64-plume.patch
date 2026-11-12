@@ -1,5 +1,21 @@
+diff --git a/plume_apple.mm b/plume_apple.mm
+index 1384fe9..1fdca66 100644
+--- a/plume_apple.mm
++++ b/plume_apple.mm
+@@ -50,7 +50,10 @@ CGFloat getScaleFactor(NSWindow *nsWindow) {
+ #ifdef PLUME_APPLE_RETINA_ENABLED
+         return [nsWindow backingScaleFactor];
+ #else
+-        return 1.0f;
++        // s7203 RS64: ROGUESQ_RETINA=1 sizes the swap chain in backing pixels (2720x1528 on a 2x panel) instead of points
++        // (1360x764, upscaled 2x by CoreAnimation). Runtime switch so both arms run from one build; unset/0 = old point size.
++        static const bool rs64Retina = [] { const char *e = getenv("ROGUESQ_RETINA"); return e && *e && *e != '0'; }();
++        return rs64Retina ? [nsWindow backingScaleFactor] : 1.0f;
+ #endif
+     }
+ 
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..5ece112 100644
+index a5f30a3..db9d048 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,91 @@
@@ -217,7 +233,18 @@ index a5f30a3..5ece112 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1932,6 +2068,204 @@ namespace plume {
+@@ -1920,6 +2056,10 @@ namespace plume {
+         }
+ 
+         // set each of the drawable to have desc.flags = RenderTextureFlag::RENDER_TARGET;
++        // s7203: witness of the swap chain size at creation (points vs backing pixels, ROGUESQ_RETINA); the Z ring row is not open yet here.
++        fprintf(stderr, "[retina] swapchain create %ux%u layer contentsScale=%.1f\n", width, height,
++            reinterpret_cast<double (*)(void *, SEL)>(objc_msgSend)(layer, sel_registerName("contentsScale")));
++
+         for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
+             MetalDrawable &drawable = this->drawables[i];
+             drawable.desc.width = width;
+@@ -1932,6 +2072,204 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -422,7 +449,7 @@ index a5f30a3..5ece112 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,11 +2288,56 @@ namespace plume {
+@@ -1954,11 +2292,56 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -482,7 +509,7 @@ index a5f30a3..5ece112 100644
              currentAvailableDrawableIndex = (currentAvailableDrawableIndex + 1) % MAX_DRAWABLES;
              drawableMtl->release();
  
-@@ -1969,6 +2348,7 @@ namespace plume {
+@@ -1969,6 +2352,7 @@ namespace plume {
              lastPresentedIdCondVar.notify_all();
          });
  
@@ -490,7 +517,7 @@ index a5f30a3..5ece112 100644
          presentBuffer->commit();
  
          releasePool->release();
-@@ -1987,6 +2367,8 @@ namespace plume {
+@@ -1987,6 +2371,8 @@ namespace plume {
          }
      }
  
@@ -499,7 +526,7 @@ index a5f30a3..5ece112 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2377,17 @@ namespace plume {
+@@ -1995,7 +2381,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -517,7 +544,7 @@ index a5f30a3..5ece112 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2011,7 +2403,20 @@ namespace plume {
+@@ -2011,7 +2407,20 @@ namespace plume {
      bool MetalSwapChain::needsResize() const {
          uint32_t windowWidth, windowHeight;
          getWindowSize(windowWidth, windowHeight);
@@ -539,7 +566,7 @@ index a5f30a3..5ece112 100644
      }
  
      void MetalSwapChain::setVsyncEnabled(const bool vsyncEnabled) {
-@@ -2050,6 +2455,17 @@ namespace plume {
+@@ -2050,6 +2459,17 @@ namespace plume {
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
  
@@ -557,7 +584,7 @@ index a5f30a3..5ece112 100644
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
              fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2534,14 @@ namespace plume {
+@@ -2118,6 +2538,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -572,7 +599,7 @@ index a5f30a3..5ece112 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3432,17 @@ namespace plume {
+@@ -3008,6 +3436,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -590,7 +617,7 @@ index a5f30a3..5ece112 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3695,6 +4130,13 @@ namespace plume {
+@@ -3695,6 +4134,13 @@ namespace plume {
              cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
          }
  
@@ -604,7 +631,7 @@ index a5f30a3..5ece112 100644
          cmdBuffer->commit();
  
          // Commit all command lists except the last one
-@@ -3712,6 +4154,25 @@ namespace plume {
+@@ -3712,6 +4158,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  

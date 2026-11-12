@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7202 (2026-11-12).
+Compact operational handoff, as of Session 7203 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -81,9 +81,14 @@ Open or awaiting the owner:
   re-enters fullscreen on the remaining display (30/s on screen within 2 s); windowed move to a 2x panel left RT64 drawing a
   quarter-size image (plume needsResize checked points only), now resizes when the layer drawable is stale. Built-in control
   0 extra resizes. [g1f-win] logs window/Space/layer state after any display event. Next: Retina render scale (below).
-- **Retina render scale (s7202 side finding, next unit):** plume is built with PLUME_APPLE_RETINA_ENABLED OFF, so the swap
-  chain runs at the window's POINT size: 1360x764 on a 2720x1528 drawable on the built-in panel; a 4K TV at 2x scaling gets a
-  1080p render upscaled. G1f item (4) "a 4K TV is sharp" was never measured at the pixel level.
+- **s7203 Retina render scale: opt-in ROGUESQ_RETINA=1 (owner decides default).** plume ran its swap chain at the window's
+  POINT size (PLUME_APPLE_RETINA_ENABLED OFF), so a 2x panel got a half-size image upscaled by CoreAnimation (H-half selected;
+  H-resmult-covers refuted: RT64's internal 4x/960 rows still reach the panel through a 764-row swap chain). Runtime switch in
+  plume_apple.mm getScaleFactor; [retina] swapchain create row is the witness. Built-in: win 1360x764 -> 2720x1528, fs
+  1512x949 -> 3024x1898 (internal WindowIntegerScale 4x -> 7x/8x); half-resolution residual score (scratch/s7203/hf.py)
+  0.577 -> 0.779 win, 0.584 -> 0.839 fs; positive control (R1 frames down/up 2x) 0.537 = the R0 level. GPU median
+  0.27 -> 0.48 ms win, 0.29 -> 0.57 fs (attract, 30 pres/s), 0 crashes, layout identical. 1x virtual display control:
+  1920x1080 and 0.35 ms in both arms. Hot-plug 1x -> 2x with RETINA=1 resizes to 2720x1528. Flight cost at the owner recipe unmeasured (next).
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -206,7 +211,7 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Controller + display hot-plug (owner TV/pad case).** Audio hot-plug is closed (s7199 named
+1. **(next, NEXT.md) Retina flight cost at the owner recipe (s7203 opt-in), then owner picks the default.** Pad/display hot-plug closed s7201-s7202. Audio hot-plug is closed (s7199 named
    route fixed; s7200 default route heals inside SDL3, handler idle). Boot freeze stays passive (headline). Hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.

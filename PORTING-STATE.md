@@ -190043,3 +190043,29 @@ H-aspect-stale is confirmed by construction and left as is. Next discriminator: 
 (swap chain size, gpu_ms, edge sharpness of a phase-matched frame) with the 1x virtual display as the null control
 (NEXT.md, HYPOTHESIS-ID retina-render-scale).
 In short: this selects H-display-dead (fullscreen) and refutes H-display-follow for fullscreen; root cause of the windowed defect is plume's point-only needsResize.
+
+## Session 7203 (2026-11-12) — Retina render scale: swap chain ran at window POINT size on a 2x panel (H-half selected, H-resmult-covers refuted); opt-in ROGUESQ_RETINA=1 renders at backing pixels, measurably sharper, small cost
+Work unit (NEXT.md retina-render-scale, G1f item 4 "a 4K TV is sharp"). lib/rt64/CMakeLists.txt forces
+PLUME_APPLE_RETINA_ENABLED OFF, so plume_apple.mm getScaleFactor() returned 1 and CocoaWindow reported point sizes.
+Change (lib/rt64/src/contrib/plume, exported to submodule-patches/rt64-plume.patch): getScaleFactor returns
+backingScaleFactor when ROGUESQ_RETINA=1 (cached getenv; unset/0 = old). Witness: plume_metal.cpp MetalSwapChain ctor
+prints `[retina] swapchain create WxH layer contentsScale=S` (the present ring's Z row is not open at creation, so the
+first arm set had no size witness; rebuilt and reran all arms).
+Arms (scratch/s7203/arms.zsh, attract, ASPECT=16:9, 5 screen captures 14-34 s, one game at a time):
+| arm | swap chain | internal (ceil(h/240)) | GPU med/p95 ms | pres/s | detail score |
+| winR0 | 1360x764 | 4x | 0.27/0.30 | 30.0 | 0.577 |
+| winR1 | 2720x1528 | 7x | 0.48/0.52 | 30.0 | 0.779 |
+| fsR0 | 1512x949 | 4x | 0.29/0.32 | 30.0 | 0.584 |
+| fsR1 | 3024x1898 | 8x | 0.57/0.60 | 30.0 | 0.839 |
+| vdR0 (1x virtual display, fs) | 1920x1080 | 5x | 0.35/0.43 | 30.0 | n/a |
+| vdR1 | 1920x1080 | 5x | 0.35/0.38 | 30.0 | n/a |
+Detail score (scratch/s7203/hf.py) = mean|I - up2(down2(I))| / mean|I - shift1(I)| over the 1600x900 centre of the 2x
+screen capture: higher every paired capture (5/5 win, 5/5 fs). Positive control in the same data: the winR1 captures
+downscaled/upscaled 2x (what CoreAnimation does to a point-size image) score 0.537, i.e. the R0 level. Visual 1:1 crop
+scratch/s7203/crop_c3.png: the R0 logo edge is soft, R1 crisp. Full-frame layout fs R0 vs R1 identical
+(layout_fs_c2.png). 0 crashes in 7 runs. Hot-plug arm hpR1 (window on the 1x vd, vd destroyed at 30 s): the stale-layer
+check (s7202) fires and the swap chain goes 1360x764 -> 2720x1528 on the panel.
+Rules out: H-resmult-covers (RT64 already renders 960 rows but the 764-row swap chain throws the extra away before the 2x
+upscale; the measured R0 score equals a simulated half-res image). H-retina-breaks not seen in window, fullscreen, 1x
+control or hot-plug. Single-run attract cost only; flight cost at FPS60 dd4 is the open question (NEXT.md).
+Selects H-half; refutes H-resmult-covers. Opt-in, default unchanged; docs/OWNER-OPT-INS.md row added. Owner decides default.

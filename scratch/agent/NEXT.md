@@ -1,15 +1,16 @@
-# NEXT: Retina / 4K render scale (G1f item 4, "internal resolution follows the window so a 4K TV is sharp")
+# NEXT: Retina flight cost at the owner recipe (s7203 opt-in ROGUESQ_RETINA=1), then owner picks the default
 HYPOTHESIS-ID: retina-render-scale
-Context (s7202): lib/rt64/CMakeLists.txt:77 sets PLUME_APPLE_RETINA_ENABLED OFF, so plume_apple.mm getScaleFactor() = 1 and
-the Metal swap chain is the window's POINT size. Built-in launch with ROGUESQ_ASPECT=16:9: SDL drawable 2720x1528 at create,
-RT64 swap chain 1360x764 (scratch/s7202/bi.log + bi.ring Z rows). RT64's internal resolution (ROGUESQ_RESMULT / auto) is
-derived from the swap chain size, so on any 2x display the 3D image is rendered at half the panel's pixel count.
+Context (s7203): ROGUESQ_RETINA=1 (plume_apple.mm getScaleFactor, runtime) sizes the swap chain in backing pixels:
+built-in fullscreen 1512x949 -> 3024x1898, RT64 WindowIntegerScale 4x -> 8x (1920 internal rows). Attract cost was
+small (+0.28 ms GPU median, 30 presents/s) but flight at FPS60 dd4 16:9 has far more triangles and fill, at 2x the
+present rate. Unmeasured.
 Hypotheses:
-- H-half: RT64 renders at points; CoreAnimation upscales 2x (soft image). Turning Retina on gives a 2x swap chain and sharper frames.
-- H-resmult-covers: ROGUESQ_RESMULT already renders the scene above the swap-chain size, so only the final 2D/UI blit is soft.
-- H-retina-breaks: Retina ON was disabled upstream for a reason (window-size math, mouse coords, fullscreen size, VI aspect).
-Discriminator, one build with a runtime switch (ROGUESQ_RETINA=1 in getScaleFactor instead of the compile flag, default off
-until measured): on the built-in panel windowed and fullscreen, arms RETINA=0/1: swap chain size (Z rows), RT64 internal
-resolution log, frame cost (Q rows gpu_ms), and a crop of a fixed frame (title / FACTOR 5 logo at the same VI phase) to
-compare edge sharpness (high-frequency energy). Plus fullscreen on the 1x virtual display (tools/virtual_display.m) as
-the control: RETINA=1 must change nothing there. Owner decides the default.
+- H-free: RETINA=1 holds 60 fps in flight (fl_shown), GPU median < ~4 ms, no new stalls -> recommend it to the owner as default-on candidate.
+- H-fill: 8x internal (3840x1920-class target) costs enough GPU fill to drop presents below 60/s or raise p95 gpu_ms past ~10 ms
+  on busy levels -> cap the internal multiplier under RETINA (e.g. ceil(points_h/240) * scale, or Manual 4-6x) and re-measure.
+- H-mem: the larger targets raise RT64 memory/pipeline churn (first-use hitches; G5c 250 ms gaps) -> look at Q rows gaps.
+Discriminator, one build (current), arms sequentially (one game at a time), recipe = scratch/agent/soak_queue/done/
+s7198_backlog_L4_20261112-054328.sh with XENV_EXTRA adding ROGUESQ_FULLSCREEN=1 ROGUESQ_PRESENT_RING=<path> and
+ROGUESQ_RETINA=0|1, LEVEL=4 and LEVEL=6, HOLD_S=180. Report per arm: [retina] swapchain create row, presents/s, gpu_ms
+median/p95/max, count of Q-row gaps > 50 ms and > 250 ms, fl_shown fps, crash count. Screen must be unlocked (ioreg check).
+Then an owner sheet: same-scene 1:1 crops RETINA 0 vs 1 (scratch/s7203/crop_c3.png style) in flight.
