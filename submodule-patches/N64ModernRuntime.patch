@@ -6279,7 +6279,7 @@ index 149e770..2e0bad3 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..e2d2ca9 100644
+index 9944a02..742379a 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,323 @@
@@ -6521,14 +6521,14 @@ index 9944a02..e2d2ca9 100644
 +    int source = -1;
 +    AudioRouteMessage audio;
 +    uint32_t host_task_seq = 0xFFFFFFFFu;
- };
- 
++};
++
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
-+};
-+
+ };
+ 
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
 +static AudioRouteMessage g_current_audio_route;
@@ -6862,9 +6862,70 @@ index 9944a02..e2d2ca9 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +616,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -128,7 +615,71 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+     return true;
  }
  
++// s7195 guard-refusal livelock class: a BLOCK receive on a refused mq (or a valid mq whose msg buffer is refused) used to
++// return -1 at once. Guest receive loops ignore the result (`for (;;) { osRecvMesg(mq, &m, OS_MESG_BLOCK); ... }`), so the
++// thread re-enters immediately, never yields, and on this cooperative scheduler starves every other guest thread (and the
++// external-message drain). The mq can never deliver, so the honest OS semantics is "blocks forever": park the thread the
++// way osStopThread(self) does. ROGUESQ_REFUSED_RECV_SPIN=1 restores the old return -1.
++// Forced arm: ROGUESQ_REFUSED_RECV_TEST=<mqhex>:<nth> makes the nth and later BLOCK receives on <mq> see a refused mq.
++static std::atomic<uint64_t> g_s7195_spin{0}, g_s7195_park{0}, g_s7195_recv_other{0};
++static bool s7195_old_spin() {
++    static const bool old = [] { const char* e = std::getenv("ROGUESQ_REFUSED_RECV_SPIN"); return e && e[0] && e[0] != '0'; }();
++    return old;
++}
++static void s7195_reporter_start() {
++    static std::atomic<bool> started{false};
++    if (started.exchange(true)) return;
++    std::thread([] {
++        const int ts[] = {1, 3, 6, 10, 15};
++        int prev = 0;
++        for (int t : ts) {
++            std::this_thread::sleep_for(std::chrono::seconds(t - prev)); prev = t;
++            std::fprintf(stderr, "[s7195-rr] t=%d spin=%llu park=%llu recv_other=%llu mode=%s\n", t,
++                (unsigned long long)g_s7195_spin.load(), (unsigned long long)g_s7195_park.load(),
++                (unsigned long long)g_s7195_recv_other.load(), s7195_old_spin() ? "old-spin" : "park");
++            std::fflush(stderr);
++        }
++    }).detach();
++}
++static PTR(OSMesgQueue) s7195_test_redirect(PTR(OSMesgQueue) mq_, s32 flags) {
++    static uint32_t tmq = 0, tnth = 0;
++    static const bool on = [] {
++        const char* e = std::getenv("ROGUESQ_REFUSED_RECV_TEST");
++        if (!e || !*e || std::strcmp(e, "0") == 0) return false;
++        tmq = (uint32_t)std::strtoul(e, nullptr, 16);
++        const char* c = std::strchr(e, ':'); tnth = c ? (uint32_t)std::strtoul(c + 1, nullptr, 10) : 1;
++        return tmq != 0;
++    }();
++    if (!on) return mq_;
++    static std::atomic<uint32_t> hits{0};
++    static std::atomic<bool> armed{false};
++    if ((uint32_t)mq_ != tmq) { if (armed.load()) g_s7195_recv_other++; return mq_; }
++    if (flags != OS_MESG_BLOCK && !armed.load()) return mq_;
++    if (!armed.load() && ++hits < tnth) return mq_;
++    if (!armed.exchange(true)) {
++        std::fprintf(stderr, "[s7195-rr] TEST armed: BLOCK recv on mq=0x%08X now sees refused mq 0x7FF00000 (hit %u)\n", tmq, hits.load());
++        std::fflush(stderr);
++        s7195_reporter_start();
++    }
++    return (PTR(OSMesgQueue))(int32_t)0x7FF00000;
++}
++// Called on a refused BLOCK receive. Returns only in the old-spin arm.
++static void s7195_refused_block_recv(RDRAM_ARG const char* who, uint32_t mq) {
++    if (s7195_old_spin()) { g_s7195_spin++; return; }
++    const uint64_t n = ++g_s7195_park;
++    if (n <= 8) {
++        std::fprintf(stderr, "[mesgqueue-guard] %s BLOCK recv on refused mq=0x%08X: parking thread (park_total=%llu)\n",
++            who, mq, (unsigned long long)n);
++        std::fflush(stderr);
++    }
++    for (;;) ultramodern::run_next_thread_and_wait(PASS_RDRAM1); // nothing can ever post to it; a spurious resume parks again
++}
++
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
 +    g_last_received_message = NULLPTR;
 +    if (mesgqueue_guard_refuse("do_recv", mq_)) {
@@ -6873,12 +6934,13 @@ index 9944a02..e2d2ca9 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +636,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +696,14 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
 -        *TO_PTR(OSMesg, msg_) = TO_PTR(OSMesg, mq->msg)[mq->first];
 +        if (mesgqueue_guard_refuse("do_recv:msg", mq->msg)) {
++            if (block) s7195_refused_block_recv(PASS_RDRAM "do_recv:msg", (uint32_t)mq_); // s7195: never-consumable, would spin
 +            return false;
 +        }
 +        g_last_received_message = TO_PTR(OSMesg, mq->msg)[mq->first];
@@ -6888,7 +6950,7 @@ index 9944a02..e2d2ca9 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +657,124 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +718,124 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -7014,7 +7076,7 @@ index 9944a02..e2d2ca9 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +786,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +847,14 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -7029,7 +7091,7 @@ index 9944a02..e2d2ca9 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +802,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +863,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -7042,12 +7104,14 @@ index 9944a02..e2d2ca9 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +828,95 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +889,97 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
 +    log_vi_mq("recv", mq_, flags);
++    mq_ = s7195_test_redirect(mq_, flags);
 +    if (mesgqueue_guard_refuse("osRecvMesg", mq_)) {
++        if (flags == OS_MESG_BLOCK) s7195_refused_block_recv(PASS_RDRAM "osRecvMesg", (uint32_t)mq_); // s7195
 +        return -1;
 +    }
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);

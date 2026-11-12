@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7194 (2026-11-12).
+Compact operational handoff, as of Session 7195 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -56,7 +56,7 @@ Open or awaiting the owner:
   never on 8011A7E8 or another retrace-fed queue -> H-cycle refuted; the post-clear yield is host std::this_thread::yield (cannot lose
   tid 3). PASSIVE now: [stall-wait]/[stall-cf0] + host sample name the second wait on recurrence. 0 freezes in 73 owner-env boots.
   s7194: separate runtime hazard fixed, default on: external messages to a guard-refused mq are dropped, not requeued forever
-  (v1 arm 5/5 FROZEN old path -> 5/5 OK fixed). 0 freezes in 88 owner-env boots.
+  (v1 arm 5/5 FROZEN old path -> 5/5 OK fixed). s7195: BLOCK recv on a refused mq parks instead of spinning (3/3 FROZEN -> 3/3 OK). 0 freezes in 94 owner-env boots.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -179,18 +179,17 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Guard-refusal livelock class audit.** s7194 FIXED the s7192 hazard: an external message to an mq that
-   mesgqueue_guard refused is now dropped (logged `[mesgqueue-guard] dropped undeliverable external msg`, once per mq) instead of
-   requeued forever; ROGUESQ_REFUSED_REQUEUE=1 = old path. Qualified on the v1 recipe (ROGUESQ_CF0_DELAY_TEST=600:40:v1): old path
-   5/5 FROZEN, fix 5/5 OK, owner-env control 5/5 OK, drop line seen in the fixed boot. Next: enumerate every refusal return in
-   mesgqueue.cpp / thread / timer / event paths and classify each for other retry-forever or spin shapes; close the class.
-   M6 boot freeze stays passive since s7193 (cycle and yield refuted, see headline; s7194 does not explain it).
-   Earlier: s7191 static census closed the game-code side (see headline bullet);
-   the next freeze's [stall-wait]/[stall-cf0] rows name the delayed receiver and its second wait. Hunter
-   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`; 41 owner-env boots clean; s7190_bootloop_d queued
-   (bash-fixed). After d: no more identical hunts; the rows ride along passively in every soak. Closed s7189: the 339-row menu
-   scissor column is retail (oracle retail ROM: scissor 511,339 at fb 512; angrylion leaves col 511 undrawn at 4:3), no change.
-   TRAPs (s7188): rectfit needs `--slack 40` in fullscreen and >= 2 start rects.
+1. **(next, NEXT.md) Guest NOBLOCK busy-poll audit (cooperative-scheduler livelock class).** The guard-refusal class
+   is CLOSED (s7195): every refusal return in mesgqueue.cpp is SAFE/DEAD or fixed. s7194 drops external msgs to refused mqs;
+   s7195 parks a thread whose BLOCK osRecvMesg hits a refused mq (or a refused msg buffer) instead of returning -1, which the
+   guest loop re-entered forever without yielding (forced arm ROGUESQ_REFUSED_RECV_TEST=8018FAC0:1: old path
+   ROGUESQ_REFUSED_RECV_SPIN=1 3/3 FROZEN with recv_other=0, fix 3/3 OK, control 3/3 OK). No refusal has ever fired outside a
+   forced arm, so neither fix explains the boot freeze. Next: enumerate guest loops that retry osRecvMesg/osSendMesg NOBLOCK
+   (or poll a flag) without a blocking call; on hardware preemption rescues them, here the producer thread never runs.
+   M6 boot freeze stays passive since s7193 (cycle and yield refuted, see headline). Hunter
+   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12` (hunter keeps only tails for OK boots:
+   take a full log separately when a positive-control line must be shown). TRAPs (s7188): rectfit needs `--slack 40` in
+   fullscreen and >= 2 start rects.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

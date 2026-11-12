@@ -189762,3 +189762,47 @@ the correct behaviour, not a mitigation of a corrupted value. The game itself ne
 Discrimination summary: arm a (old requeue) 5/5 FROZEN vs arm b (drop) 5/5 OK on the identical v1 recipe selects H-requeue-freeze;
 control c 5/5 OK shows the fix is harmless on the normal path. Next (NEXT.md): class audit of every mesgqueue_guard refusal return
 path for other retry-forever / spin shapes (guard-refusal livelock class).
+
+## Session 7195 (2026-11-12) — guard-refusal livelock class closed: a BLOCK osRecvMesg on a refused mq returned -1 at once and the guest receive loop spun without yielding, freezing every other guest thread; it now parks the thread (old path 3/3 FROZEN, fix 3/3 OK, control 3/3 OK)
+
+Work unit: CURRENT-TRUTH item 1 / NEXT.md (HYPOTHESIS-ID guard-refusal-livelock-class), H-one (s7194 was the only
+livelock) vs H-more.
+
+Static table, every refusal return in lib/N64ModernRuntime/ultramodern/src (grep `refuse` / `rs64_ram_top`: mesgqueue.cpp
+is the only file with refusal returns; events.cpp / timer.cpp / extensions.cpp post through enqueue_external_message_src):
+| site | what the caller sees | verdict |
+| osCreateMesgQueue | returns, mq untouched; every later op on it is refused too | SAFE |
+| osSendMesg / osJamMesg (any flag) | -1. BLOCK callers ignore it and move on; NOBLOCK = retail "full" semantics | SAFE |
+| do_send / do_send:msg | false -> osSendMesg -1, or external drain (dropped since s7194) | SAFE (s7194) |
+| events (VI/SP/DP/AI/SI) + osSetTimer to a refused mq | one external msg per event, refused by do_send, dropped not requeued | SAFE, bounded (s7194) |
+| wait_for_external_message(_timed) | same drop path | SAFE (s7194) |
+| vi-deq | logging only | SAFE |
+| do_recv (mq) | osRecvMesg checks the same bound first | DEAD |
+| osRecvMesg NOBLOCK | -1 = retail "empty" semantics | SAFE |
+| **osRecvMesg BLOCK** | -1 at once, no yield, no external drain; `for(;;) osRecvMesg(BLOCK)` re-enters forever | **LIVELOCK** |
+| **do_recv:msg, msg_!=NULL, BLOCK** | false without consuming, validCount stays >0, so the next BLOCK recv returns at once | **LIVELOCK (same shape)** |
+| do_recv:msg, msg_==NULL | consumes the slot without reading the buffer | SAFE |
+
+Fix (mesgqueue.cpp, default on): both LIVELOCK rows call s7195_refused_block_recv, which parks the thread the way
+osStopThread(self) does (run_next_thread_and_wait in a loop, logged `[mesgqueue-guard] ... parking thread`, first 8).
+A queue that can never deliver blocks forever, which is the only OS-legal meaning of BLOCK. ROGUESQ_REFUSED_RECV_SPIN=1 =
+old path. Forced arm ROGUESQ_REFUSED_RECV_TEST=<mqhex>:<nth>: from the nth BLOCK recv on <mq>, that mq is seen as refused
+(0x7FF00000); a reporter prints `[s7195-rr] t= spin= park= recv_other=` at 1/3/6/10/15 s.
+
+Two-arm qualification, one build, scratch/s7195/arms.zsh (boot_freeze_hunt owner env, 34 s, target 0x8018FAC0 = tid 4's
+recvServiceMessage queue, which blocks once per boot in normal play, s7191 ctl):
+- a_oldspin (TEST + SPIN=1): **3/3 FROZEN** at fs=41; [stall-wait] tid=4 blocking_calls 167748-174788; reporter
+  spin=489764-511446 by 15 s with recv_other=0 (no other guest thread received one message: total starvation).
+- b_park (TEST): **3/3 OK** (fs 1950-2079, same as control). Full-log boot scratch/s7195/b_full.log: TEST armed, park=1,
+  spin=0, recv_other 1362 -> 31242 by 15 s (other threads keep running).
+- c_ctl: 3/3 OK, no s7195 lines.
+The do_recv:msg row has no forced arm (forcing it means corrupting a live mq's msg field); it uses the same helper.
+
+ORIGIN: no writer. A refusal has never fired outside a forced arm: 49 soak_results logs + every scratch/s7*/ log hold one
+osCreateMesgQueue refusal and one s7194 drop, both from the s7194 forced run. So this is a correctness fix of our own
+guard's semantics (it turned a corrupt pointer into a whole-game spin), not a mitigation of an observed corruption, and it
+does not explain the 1-in-65 boot freeze (whose dumps show tid 3 parked on a real queue, not a spinner).
+
+Rules out: H-one (a second livelock existed). Closes the guard-refusal class: every refusal row is SAFE, DEAD or fixed.
+Next: guest-side NOBLOCK busy-poll audit (NEXT.md): retry loops that on real hardware are rescued by preemption but on
+this cooperative scheduler never let the producer run.
