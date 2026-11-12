@@ -189620,3 +189620,6 @@ ORIGIN: no mitigation; instrument only.
 Discrimination summary: no discriminating result this session (no recurrence); the control passing in the freeze env means
 any later FROZEN from b-d carries runtime + hunter host stacks that split H-consumer (receiver blocked elsewhere) from
 H-race (queue full of duplicate VI posts) from H-host (host lock in stacks).
+This run refutes H-blind-capture (the runtime self-sample or hunter cannot capture under the FULLSCREEN/VI_LOCK/QOS owner
+env): both paths fired in-env. It does not discriminate the freeze hypotheses; next discriminator = a b-d recurrence's [Game]
+thread host stack, else the static osSendMesg(0x80128CF0)/vflag audit in NEXT.md.
