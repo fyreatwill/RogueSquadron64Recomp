@@ -190598,3 +190598,4 @@ hidden Space or swap chain loss), then backlog.
   it after the fix. This is an engineering change (behaviour fix in rs64_display_hotplug_tick), not only instrumentation.
 - Next discriminator (NEXT.md, HYPOTHESIS-ID retina-wide-window): RETINA=1 vs 0 at ASPECT=21:9 windowed. The swap-chain size row
   plus in-phase shot pairs split H-ok (2x chain, full 21:9 viewport) from H-letter (viewport in points) and H-cost (gaps >250 ms).
+- Summary: the add run selects H-ok; the foreign-removal run selects H-churn, and the gated fix refutes it; root cause = rs64_display_hotplug_tick cycling on any removal. This closes retina-hotplug.
