@@ -190314,3 +190314,34 @@ scratch/agent/m6 = 2 logs, 3 non-full 796 viewports, all this event. LATENT (sin
 height change through the follow-draw override would show the box for ~8 presents; candidate fix = box shape from the present VI and
 the current shared rs, not the stale target's. Not landed: no visible symptom to qualify it against. Raw deleted after scoring.
 Next: same census at 21:9 and 4:3 (NEXT.md).
+
+## Session 7213 (2026-11-12) — 21:9 mode-switch letterbox flash is LIT (H-lit): the first frame of the mission intro / hangar showed squashed into a 1360x260 band; present box shape now comes from the present VI (ROGUESQ_PRESENT_SHAPEFIX, default on, lib/rt64), 4:3 and 16:9 census clean
+HYPOTHESIS-ID: mode-switch-pillarbox
+Unit from NEXT (census at 21:9 and 4:3). No maintenance (31 KB). No new soak results. Screen unlocked. Owner save untouched (s7141 harness,
+NO_SAVE_WRITE). 7 game runs, one at a time, 0 CRASH/SIGSEGV/SIGBUS in all.
+Run W21 (old binary, 21:9, capture 48+30 s): VI_SHAPE_LOG shows THREE non-full viewport events beyond the genuine 320x224 boot upload:
+(A) title stills, fb 1024x444 vp 0,125 1360x344 (target rs 2.572,1.5), 2 presents; (B) level select -> mission intro, fb 1024x336 vp 0,167
+1360x260 (target 0x961000 rs 5.143,3.0, rtSize 5266x1020), 1-2 presents, twice (first entry and the hangar re-entry); (C) the s7212 event
+(1024x444 vp 166..1192, stale flight rs 1.5,2.0). C is in that capture: black (sides 0.4, centre <= 6.3 luma), as at 16:9. A and B were
+before the capture window.
+Run X21 (capture 5+45 s, same events, same lines): new tools/s7213_box_scan.py (lit row/col extent per frame, `scan` flags frames narrower than
+their lit neighbours; per-event control zeroes the outer quarter of the brightest frame -> must narrow: PASS). B is LIT: f1301 rows 228..528 x
+full width, mean 26 (neighbour 72), and f2217-2218 on the re-entry; the predicted box (vp y 167..427 at 1.15 raw rows/pt + 37 title rows) is
+229..528. Sheet: the briefing room / hangar first frame squashed vertically into a band. RDP line agrees: swap 1654 = 224 KB of draws. A is
+invisible: its 2 presents land on the black first frames of the title fade-in (mean 0.6).
+ORIGIN: RT64 workload_queue sets each target's resolutionScale from the workload that draws into it (fixedResScale = aspectTarget/aspectSource
+of THAT workload's VI); the value is legitimate for the drawing VI. The present (present_queue threadPresent -> VIRenderer::render ->
+getViewportAndScissor) applied that x/y ratio to a DIFFERENT, newer VI fbSize at a mode switch, so the box took the old VI's shape. Not the
+game, not our walkers.
+Fix (lib/rt64, default on, ROGUESQ_PRESENT_SHAPEFIX=0 = old): when the target's rs.x/rs.y differs >3% from aspectTarget/aspectSource of the
+present VI (Manual: userConfig.aspectTarget; Expand: max(swapW/swapH, src); Original: src), RenderParams.shapeScale = {rs.y*want, rs.y} is used
+for the viewport/scissor only; sampling (videoResolution) keeps the target's own rs. RDRAM-upload (scratch) targets are excluded: a first build
+stretched the genuine 4:3 320x224 boot logo to full width (Y21 run, caught by the vishape log), fixed before the arms below. [s7213-shape] logs
+every mismatch in both arms (fix=0/1).
+Arms (same binary): F21 fix on: 6 corrections (A x2, B x3, C x1), every viewport full width except the 320x224 upload (back to vp 255.7 848.6),
+scan narrow 12 = the fade frames also present in X21 (15 = 12 + the 3 squashed); sheet: corrected hangar first frame f2230 matches its
+neighbour f2231 in geometry. C21 fix=0: squashed band back (f1305-1306 rows 228..528, mean 26.2), vp 0,166.8 1360x260.3 logged. F43 (4:3) and
+F169 (16:9) fix on: 1 correction each (4:3: 512x444 stale rs 2.625,3.0 after the vi-follow-draw REGISTER at osViSetMode #910; 16:9: the s7212
+event), all other viewports full, no box-shaped narrow frame (9-10 fades). Owner sheet docs/owner_sheet_s7213_shape.png (before/after, 21:9).
+Rules out: H-fill-only at 21:9 (B is lit). Not yet tested: ASPECT=auto (Expand branch) and fullscreen. Raws/caps deleted after scoring.
+Next: same census at ASPECT=auto fullscreen (Expand branch of the fix) over the long s7210 route (NEXT.md).

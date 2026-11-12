@@ -3829,7 +3829,7 @@ index dccaa87..d0029ba 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..55fa862 100644
+index f17db9b..12390bc 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,20 +4,91 @@
@@ -3946,7 +3946,33 @@ index f17db9b..55fa862 100644
          FramebufferManager &fbManager = ext.sharedResources->framebufferManager;
          RenderTargetManager &targetManager = ext.sharedResources->renderTargetManager;
          const bool usingMSAA = (targetManager.multisampling.sampleCount > 1);
-@@ -160,9 +246,49 @@ namespace RT64 {
+@@ -115,6 +201,9 @@ namespace RT64 {
+         bool removeBlackBorders;
+         UserConfiguration::RefreshRate refreshRate;
+         UserConfiguration::Filtering filtering;
++        UserConfiguration::AspectRatio rs64AspectMode = UserConfiguration::AspectRatio::Original;
++        float rs64AspectTarget = 4.0f / 3.0f;
++        uint32_t rs64SwapW = 0, rs64SwapH = 0;
+         uint32_t viOriginalRate;
+         uint32_t targetRate;
+         {
+@@ -124,11 +213,15 @@ namespace RT64 {
+             removeBlackBorders = ext.sharedResources->enhancementConfig.presentation.removeBlackBorders;
+             refreshRate = ext.sharedResources->userConfig.refreshRate;
+             filtering = ext.sharedResources->userConfig.filtering;
++            rs64AspectMode = ext.sharedResources->userConfig.aspectRatio;
++            rs64AspectTarget = float(ext.sharedResources->userConfig.aspectTarget);
++            rs64SwapW = ext.sharedResources->swapChainWidth; rs64SwapH = ext.sharedResources->swapChainHeight;
+             viOriginalRate = ext.sharedResources->viOriginalRate;
+             targetRate = ext.sharedResources->targetRate;
+         }
+ 
+         RenderTarget *colorTarget = nullptr;
++        bool rs64ScratchTarget = false; // RS64 s7213: present built from RDRAM bytes (genuine native-size content)
+         int32_t framesToPresent = 1;
+         bool lockedWorkloadMutex = false;
+         InterpolatedFrameCounters &frameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
+@@ -160,9 +253,49 @@ namespace RT64 {
          const bool pqVisibleGate = present.screenVI.visible() ||
                                     (s_pq_force && present.screenVI.fbAddress() != 0 && present.screenVI.fbSiz() != 0);
          if (pqVisibleGate) {
@@ -3997,7 +4023,7 @@ index f17db9b..55fa862 100644
              }
  
              // VI_FOLLOW_DRAW (2026-05-13, ported from reverted commit e718774).
-@@ -183,9 +309,18 @@ namespace RT64 {
+@@ -183,9 +316,18 @@ namespace RT64 {
              //                                of VI/recent-set (diagnostic).
              //   ROGUESQ_VI_FOLLOW_DRAW=N modes:
              //     0       — disabled. Original VI lookup only.
@@ -4017,7 +4043,7 @@ index f17db9b..55fa862 100644
              if (!viewRDRAM) {
                  static const uint32_t s_force_fb = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FORCE_FB");
-@@ -194,15 +329,27 @@ namespace RT64 {
+@@ -194,15 +336,27 @@ namespace RT64 {
                  }();
                  static const int s_follow_mode = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FOLLOW_DRAW");
@@ -4047,7 +4073,7 @@ index f17db9b..55fa862 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +363,139 @@ namespace RT64 {
+@@ -216,7 +370,139 @@ namespace RT64 {
                          }
                      }
                  }
@@ -4188,7 +4214,7 @@ index f17db9b..55fa862 100644
                      !ext.sharedResources->colorImageAddressVector.empty())
                  {
                      const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +587,48 @@ namespace RT64 {
+@@ -308,6 +594,48 @@ namespace RT64 {
                  }
              }
              
@@ -4237,7 +4263,7 @@ index f17db9b..55fa862 100644
              if ((presentFb != nullptr) && (viFb != nullptr)) {
                  for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +674,12 @@ namespace RT64 {
+@@ -353,11 +681,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -4253,7 +4279,7 @@ index f17db9b..55fa862 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -394,6 +716,25 @@ namespace RT64 {
+@@ -394,11 +723,31 @@ namespace RT64 {
                  lockedWorkloadMutex = true;
                  ext.sharedResources->workloadMutex.lock();
  
@@ -4279,7 +4305,13 @@ index f17db9b..55fa862 100644
                  RenderTargetKey colorTargetKey(fbAddress, scratchFb.width, scratchFb.siz, Framebuffer::Type::Color);
                  colorTarget = &targetManager.get(colorTargetKey, true);
                  colorTarget->resize(ext.presentGraphicsWorker, scratchFb.width, scratchFb.height);
-@@ -418,6 +759,7 @@ namespace RT64 {
+                 colorTarget->resolutionScale = { 1.0f, 1.0f };
+                 colorTarget->downsampleMultiplier = 1;
++                rs64ScratchTarget = true;
+ 
+                 scratchFb.nativeTarget.resetBufferHistory();
+ 
+@@ -418,6 +767,7 @@ namespace RT64 {
                  if (!present.paused && (viHistory.top().vi != present.screenVI)) {
                      viHistory.pushVI(present.screenVI, fbSize.x);
                  }
@@ -4287,7 +4319,7 @@ index f17db9b..55fa862 100644
              }
          }
  
-@@ -465,7 +807,9 @@ namespace RT64 {
+@@ -465,7 +815,9 @@ namespace RT64 {
              uint32_t swapChainIndex = 0;
              const bool presentFrame = (i < framesToPresent) && swapChainValid;
              if (presentFrame) {
@@ -4297,7 +4329,41 @@ index f17db9b..55fa862 100644
              }
  
              if (presentFrame && swapChainValid) {
-@@ -545,8 +889,14 @@ namespace RT64 {
+@@ -488,6 +840,33 @@ namespace RT64 {
+                     renderParams.filtering = filtering;
+                     renderParams.vi = &present.screenVI;
+                     renderParams.removeBlackBorders = removeBlackBorders;
++                    // RS64 s7213: a target keeps the resolutionScale of the workload that last drew it, and its x/y ratio encodes
++                    // aspectTarget / aspectSource of THAT workload's VI. At a VI mode switch the first present of a target drawn under
++                    // the old VI (or a stale vi-follow-draw target) applied that ratio to the new VI's fbSize, so the box took the wrong
++                    // shape: at 21:9 the first lit frame of the mission intro showed squashed into a 1360x260 letterbox (fb 1024x336,
++                    // rs 5.143,3.0), at 16:9 a 4:3 pillarbox. The viewport shape now comes from the present VI and the current aspect
++                    // config; sampling (videoResolution) keeps the target's own scale. Only applied when the ratios differ by >3%, so
++                    // normal frames are untouched. ROGUESQ_PRESENT_SHAPEFIX=0 = old.
++                    {
++                        static const bool s_shapeFix = [](){ const char *v = std::getenv("ROGUESQ_PRESENT_SHAPEFIX"); return !(v && v[0] == '0'); }();
++                        const hlslpp::uint2 vfb = present.screenVI.fbSize();
++                        const float rsx = float(colorTarget->resolutionScale.x), rsy = float(colorTarget->resolutionScale.y);
++                        if (!rs64ScratchTarget && removeBlackBorders && (vfb.x > 0) && (vfb.y > 0) && (rsx > 0.0f) && (rsy > 0.0f)) {
++                            const float src = float(uint32_t(vfb.x)) / float(uint32_t(vfb.y));
++                            float tgt = src;
++                            if (rs64AspectMode == UserConfiguration::AspectRatio::Manual) tgt = rs64AspectTarget;
++                            else if ((rs64AspectMode == UserConfiguration::AspectRatio::Expand) && (rs64SwapW > 0) && (rs64SwapH > 0)) tgt = std::max(float(rs64SwapW) / float(rs64SwapH), src);
++                            const float want = tgt / src, have = rsx / rsy;
++                            if (std::fabs(have / want - 1.0f) > 0.03f) {
++                                if (s_shapeFix) renderParams.shapeScale = { rsy * want, rsy };
++                                static uint32_t s_n = 0; ++s_n;
++                                if ((s_n <= 16) || ((s_n & 255) == 0)) {
++                                    std::fprintf(stderr, "[s7213-shape] #%u fix=%d fb %ux%u target rs %.3f,%.3f ratio %.3f want %.3f -> shape rs %.3f,%.3f\n", s_n, int(s_shapeFix),
++                                        (unsigned)uint32_t(vfb.x), (unsigned)uint32_t(vfb.y), rsx, rsy, have, want, rsy * want, rsy);
++                                }
++                            }
++                        }
++                    }
+ 
+                     const bool useDownsampling = (colorTarget->downsampleMultiplier > 1);
+                     if (useDownsampling) {
+@@ -545,8 +924,14 @@ namespace RT64 {
                      const RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
                      RenderCommandSemaphore *waitSemaphore = acquiredSemaphore.get();
                      RenderCommandSemaphore *signalSemaphore = drawSemaphores[swapChainIndex].get();
@@ -4312,7 +4378,7 @@ index f17db9b..55fa862 100644
                  }
              }
  
-@@ -628,6 +978,10 @@ namespace RT64 {
+@@ -628,6 +1013,10 @@ namespace RT64 {
  
      void PresentQueue::threadLoop() {
          Thread::setCurrentThreadName("RT64 Present");
@@ -4323,7 +4389,7 @@ index f17db9b..55fa862 100644
  
          // Create the semaphore the acquire method will use.
          acquiredSemaphore = ext.device->createCommandSemaphore();
-@@ -646,6 +1000,7 @@ namespace RT64 {
+@@ -646,6 +1035,7 @@ namespace RT64 {
          const bool displayTiming = ext.device->getCapabilities().displayTiming;
          bool swapChainValid = !ext.swapChain->needsResize();
          while (presentThreadRunning) {
@@ -4331,7 +4397,7 @@ index f17db9b..55fa862 100644
              {
                  std::unique_lock<std::mutex> cursorLock(cursorMutex);
                  cursorCondition.wait(cursorLock, [&]() {
-@@ -700,12 +1055,20 @@ namespace RT64 {
+@@ -700,12 +1090,20 @@ namespace RT64 {
                  skipPresent = skipPresent || ext.swapChain->isEmpty();
  
                  Present &present = presents[processCursor];
@@ -4352,7 +4418,7 @@ index f17db9b..55fa862 100644
                  if (skipPresent) {
                      skipInterpolation();
                      notifyPresentId(present);
-@@ -714,6 +1077,34 @@ namespace RT64 {
+@@ -714,6 +1112,34 @@ namespace RT64 {
                      threadPresent(present, swapChainValid);
                  }
  
@@ -12717,7 +12783,7 @@ index 0848f3e..616bbb1 100644
  
          TextureUpload newUpload;
 diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
-index b4ff4e9..be28328 100644
+index b4ff4e9..a73d253 100644
 --- a/src/render/rt64_vi_renderer.cpp
 +++ b/src/render/rt64_vi_renderer.cpp
 @@ -4,10 +4,43 @@
@@ -12785,7 +12851,8 @@ index b4ff4e9..be28328 100644
 +
          RenderViewport viewport;
          RenderRect scissor;
-         getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
+-        getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
++        getViewportAndScissor(p.swapChain, *p.vi, (float(p.shapeScale.x) > 0.0f) ? p.shapeScale : p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
 +        // RS64 s6724 G1d: screens such as the debrief draw only the centre 512 columns of their widened colour image;
 +        // the pillars hold the game's own live heap (s6723). Crop the present to the drawn columns so the window shows
 +        // black bars there, as on OPTIONS. Display-only: the target and RDRAM are untouched. ROGUESQ_G1D_DEBRIEF=0 = old.
@@ -12861,6 +12928,18 @@ index b4ff4e9..be28328 100644
          const hlslpp::float2 windowSize = { float(swapChain->getWidth()), float(swapChain->getHeight()) };
  
          // Query the VI for the current rendering area.
+diff --git a/src/render/rt64_vi_renderer.h b/src/render/rt64_vi_renderer.h
+index 8a3782a..074745a 100644
+--- a/src/render/rt64_vi_renderer.h
++++ b/src/render/rt64_vi_renderer.h
+@@ -23,6 +23,7 @@ namespace RT64 {
+             const ShaderLibrary *shaderLibrary = nullptr;
+             RenderFormat textureFormat = RenderFormat::UNKNOWN;
+             hlslpp::float2 resolutionScale;
++            hlslpp::float2 shapeScale = { 0.0f, 0.0f }; // RS64 s7213: viewport box shape; x <= 0 = use resolutionScale.
+             uint32_t downsamplingScale = 0;
+             uint32_t textureWidth = 0;
+             uint32_t textureHeight = 0;
 diff --git a/src/shaders/RasterPS.hlsl b/src/shaders/RasterPS.hlsl
 index f5beee9..f6d692a 100644
 --- a/src/shaders/RasterPS.hlsl

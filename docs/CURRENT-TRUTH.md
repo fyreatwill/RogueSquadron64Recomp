@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7212 (2026-11-12).
+Compact operational handoff, as of Session 7213 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -123,6 +123,12 @@ Open or awaiting the owner:
   (456 swaps). At 16:9 ER presents progressive like 4:3: PROG picked 119/121 where it differs from the weave (offset 0, rows symmetric,
   synthetic-G 121/121, bob/weave controls PASS). TRAP: score only after tools/s7210_regfit.py; a rect ~4 native rows off made BOB "win".
   Datum (single-source): the 1360x796 window shows native rows 0-443 of ER; rows 444-447 are near-black.
+- **s7213 present box shape fixed, default on (lib/rt64, ROGUESQ_PRESENT_SHAPEFIX=0 = old):** at a VI mode switch the first present of a
+  target drawn under the old VI used that target's rs x/y ratio on the new VI, so the box took the old shape. At 21:9 this was LIT: the first
+  frame of the mission intro and of the hangar re-entry showed squashed into a 1360x260 band (fb 1024x336, rs 5.143,3.0; tools/s7213_box_scan.py,
+  control PASS; RDP 224 KB). Now the viewport shape comes from the present VI + aspect config when the ratios differ >3% (sampling unchanged;
+  RDRAM uploads excluded). Same binary: fix=0 squashed band back, fix=1 full window; 4:3 and 16:9 census 1 correction each, no box frame.
+  Untested: ASPECT=auto (Expand branch) and fullscreen. Owner sheet docs/owner_sheet_s7213_shape.png.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -245,16 +251,11 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) mode-switch box census at 21:9 and 4:3.** s7212 CLOSED the 16:9 case as H-unseen: the one-shot
-   `fb 796x444 vp 166,0 1028x764` (4:3 pillarbox) is ~8 presents of the stale last-drawn target through the vi-follow-draw mode=3
-   override (REGISTER of 0xA62B80 / 0x9DE900, then `[vi-follow-stale] idle 8 presents`), whose per-target resolutionScale (2.251,3.0)
-   was set under the 336-row flight VI; applied to the 444-row VI it gives a 4:3 HD box (1792x1332). Those presents fall on
-   208-byte fill-only swaps (3449-3451 / 9410-9412) and the window capture is black there (sides 0.0, centre 0.0) with full-width
-   lit frames from +73 ms (tools/s7212_pillar_scan.py, synthetic-box control PASS). Latent: a LIT first frame after a VI height
-   change would show the box; none on the whole 16:9 route (3 events in 2 logs, all fills). Boot freeze stays passive.
-   Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`. Retina default: owner (s7205).
-   CLOSED s7211: 16:9 "vertical crop" = the game's own VI range (448-row screens scan 442 rows, flight 334; RT64 shows 444/336,
-   2 more than hardware). Nothing cropped vs retail at any aspect. tools/s7211_vi_rows.py tabulates any VI_EXTENT_PROBE=2 log.
+1. **(next, NEXT.md) present-shape census at ASPECT=auto fullscreen (Expand branch of the s7213 fix)** over the long s7210 route
+   (boot -> menus -> L17 -> MISSION FAILED -> Elite Rogues): every [s7213-shape] line must be a real mode-switch mismatch and every
+   viewport full; window capture over each event. CLOSED s7213: 21:9 letterbox flash (lit, fixed), 4:3 / 16:9 (fill-only, now corrected
+   too). s7212/s7211 history in the ledger. Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh
+   tools/boot_freeze_hunt.sh <out> N 34 12`. Retina default: owner (s7205).
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).
