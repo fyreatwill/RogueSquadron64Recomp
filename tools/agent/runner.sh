@@ -136,7 +136,12 @@ case "$RUNNER" in
     while kill -0 "$cpid" 2>/dev/null; do
       sleep 15
       now=$(date +%s)
+      # s7179: only a TERMINAL STATUS (DONE/BLOCKED) means "finished". Iterations 66+67
+      # wrote WORKING themselves, then waited >480 s on a game run; the watchdog killed a
+      # live session mid-tool and then each retry within 15 s (STATUS already stale).
+      st="$(tr -d '[:space:]' < "$AGD/STATUS" 2>/dev/null)"
       if [ -f "$AGD/STATUS" ] && [ "$AGD/STATUS" -nt "$AGD/ITER_START_MARK" ] \
+         && { [ "$st" = DONE ] || [ "$st" = BLOCKED ]; } \
          && [ $((now - $(stat -f %m "$AGD/STATUS"))) -ge "${DONE_GRACE:-480}" ] && kill -0 "$cpid" 2>/dev/null; then
         hung=1; break
       fi

@@ -189280,3 +189280,21 @@ s7163_rectfit CTRL x0+4 PASS each run; rectfit keeps 0,10,308,241 on all three.
 Verdict: H-equal on L14, L15, L16 at retail settings (whole-run metric + firing shift-2 control on flight + passing rect control,
 plus eyeballed sheets). H-hole, H-lag, H-tool not needed. Rules out a renderer difference at retail on these levels. Deleted .cap/.raw.
 Remaining: L17 (FROM=4700, arm delay 60), L18.
+
+## Session 7179 (2026-11-11) — UNBLOCK: "2 iterations ended WORKING" was the runner watchdog killing live sessions (fixed, reproduced)
+Block (iterations 66+67, 18:14-18:33): STATUS stayed WORKING, no commit, empty runner output, BLOCKED.md guessed "unit too
+large / out of turns". Route taken: refute and fix locally (route 1 -> 2). Not a turn or size problem.
+- Evidence (session transcript c3eaf533, iteration 67): 02:24:20Z the agent ran `echo WORKING > scratch/agent/STATUS`, launched
+  `s7141_arm.zsh 17 L17r ... 60`, then sat in a blocking 575 s wait loop. runner.sh's hung-claude watchdog (2026-10-17) fires when
+  STATUS is newer than ITER_START_MARK and has not changed for DONE_GRACE=480 s. It checked mtime, not content, so WORKING counted
+  as "finished". claude was killed at 02:32:32Z (= 02:24:20 + 480 + one 15 s poll; tool result "Exit code 137"), so there was no
+  JSON and rc=0. Both contract retries were then killed on their first 15 s poll because STATUS was already >480 s stale. That is
+  why the whole iteration was 9m17s with 3 empty outputs. Iteration 66 matched it (9m17s, same shape).
+- Second trap: `scratch/s7141/sum_L*r.txt` is 0 bytes on EVERY level (L10-L17), so a wait on `[ -s sum_*.txt ]` never succeeds and
+  always runs to its cap. Wait on `! pgrep -f s7141_arm.zsh` plus a non-empty arm_*.out instead.
+- Fix: tools/agent/runner.sh watchdog also requires STATUS content to be DONE or BLOCKED. Sandbox test with a fake `claude` (sleep
+  50 s, DONE_GRACE=10). Old runner + WORKING: killed at 21 s ("watchdog ... hung=1"), so the mechanism is reproduced. New runner +
+  WORKING: runs the full 50 s and returns its JSON. New runner + DONE: still killed at 20 s (positive control, so the hang guard is
+  kept). Nothing was disabled. The RUNNER_MAX_SECS 3600 cap is unchanged.
+- The L17 retail capture from iteration 67 completed and is still on disk: scratch/s7141/L17r.cap (12.6 GB) + L17r.raw (2.5 GB),
+  cap_L17r.txt window (225,46,1062,828) frames 10970 fails 0. It was never post-processed. NEXT.md resumes from it.
