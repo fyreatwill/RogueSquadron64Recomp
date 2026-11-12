@@ -190721,3 +190721,30 @@ Rules out: H-ok. Not covered: a real HDMI TV / ultrawide (virtual displays only)
 Discrimination: this run selects H-window and H-main (both measured on the old path) and refutes H-ok (fold BARS 16/18 vs ffix FILL 17/18,
 same display, same route, control PASS). Fix landed (target-display helper, default = old when no lever). Next discriminator (NEXT
 s7227): F11 toggle x2 + removal of the target display while fullscreen on it, H-ok vs H-jump vs H-dead, scored per display.
+
+## Session 7227 (2026-11-12) — F11 toggle x2 + removal of the TARGET (non-main) display while fullscreen on it: H-ok (toggle stays on the secondary and refills it; removal lands visible fullscreen on the built-in, 0 gaps >250 ms); H-jump and H-dead refuted; new datum: without the s7202 cycle the post-removal game is pinned at a flat 30/s
+
+Unit from NEXT.md (HYPOTHESIS-ID aspect-auto-display-choice). Script scratch/s7227/arm.zsh: LEVEL=4 owner recipe (FPS60 dd4,
+ASPECT=auto FULLSCREEN RETINA=0) with ROGUESQ_WIN_DISPLAY=1 on a 1920x1080 virtual display (build/virtual_display, destroyed at
+~172 s), ROGUESQ_FS_TEST_TOGGLE_S=100,130, ROGUESQ_PRESENT_RING, `screencapture -D 1` and `-D 2` every 5 s. Two arms, one run each,
+sequential: fix (default) and old (ROGUESQ_DISPLAY_HOTPLUG=0). Both runs: crashlines=0, vi_stalls30s=0, flight 157 s.
+Positive controls: [vd] ndisp 1->2->1 and SDL display event 3 in both logs; scorer side-black control PASS both arms.
+- Toggle (both arms): F11 off -> windowed 1920x1018 on the secondary (menu bar band), F11 on -> 1920x1080 on the secondary. Display-2
+  shots FILL 21/22 (fix) and 20/22 (old); the non-FILL shots are the same dark-sided non-flight screen at t~145-165 seen in s7226.
+  H-jump refuted: leaving fullscreen does NOT move the window to display 0 / main.
+- Removal: both arms log `display removed fullscreen=1 own_display=1512,0,1920x1080 still_present=0` (s7222 gate correct for a
+  non-zero target). Fix arm cycles (5 swap chain sizes in ~2 s: 1512x949/918/863/949), first on-screen present +0.43 s. Old arm:
+  macOS moves it alone, one swap chain step (1512x949), first on-screen present +1.03 s. Both end with identical [g1f-win]
+  +8 s rows: frame 0,0,1512x949, active_space=1, occl_visible=1, fs_style=1. 0 present gaps >250 ms either arm. Built-in shots after
+  removal: letterboxed (lit bbox y 0.045..0.955) both arms, game width kept (by s7225 design). H-dead refuted for this sequence.
+- New datum (single-source): on-screen presents/s after removal: fix 30-60 in the flight rhythm (same as pre-removal, e.g. +3..+8 s
+  60/60/50/60/50), old a flat 30/s for 52 s (no 60 burst at all; pre-removal the same run burst to 60). The old arm also lacks the
+  `layer drawable 3024x1898 != swapchain` resize rows, i.e. RT64's 1512x949 chain into a 2x layer, which s7202 tied to HOTPLUG.
+- Contradiction with s7202 (old path fullscreen removal -> hidden Space, 0 on-screen presents): here the old path was visible. Difference:
+  s7202 opened on the virtual display via WINDOW_POS with no prior toggles; here the window had been F11-cycled twice. Not resolved;
+  the default (fix) path is good in both.
+Owner sheet docs/owner_sheet_s7227_secondary_toggle_removal.png (row 1: windowed on secondary t=110, refilled t=150; row 2: built-in
+after removal fix/old t=190; row 3: t=230 desktop, game was killed by then).
+Rules out: H-jump, H-dead. Selects H-ok for the default path. Not covered: real TV/ultrawide hardware, RETINA=1.
+Next: the flat-30 pin on the HOTPLUG=0 path is a cost the default avoids; G1f display work is done. Next unit takes the next
+CURRENT-TRUTH item (owner-facing items 2-14 are owner-blocked), see NEXT.md.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7226 (2026-11-12).
+Compact operational handoff, as of Session 7227 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -124,6 +124,10 @@ Open or awaiting the owner:
   a secondary still took display 0's aspect + notch band (16:9 virtual: FB 712, BARS 16/18). One target display now drives auto, notch,
   fit and placement: ROGUESQ_WIN_DISPLAY=<n>|mouse (or the ROGUESQ_WINDOW_POS point's display; ROGUESQ_G1F_POSDISP=0 = old); default 0.
   Fix arm FB 796, FILL 17/18 (tools/s7226_display_fill_score.py, ctl PASS); 21:9 virtual -> 1024. Sheet docs/owner_sheet_s7226_auto_second_display.png.
+- **s7227 F11 x2 + removal of the target display (WIN_DISPLAY=1): H-ok.** Toggle stays on the secondary (windowed 1920x1018, refill
+  FILL 21/22); removal lands visible fullscreen on the built-in, letterboxed, 0 gaps >250 ms; s7222 gate reads still_present=0 right.
+  HOTPLUG=0 also recovered here (contradicts s7202 hidden-Space, sequence differs) but pinned at a flat 30/s; default 30-60.
+  Sheet docs/owner_sheet_s7227_secondary_toggle_removal.png.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -296,10 +300,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Fullscreen toggle / display hot-plug with a non-zero target display** (s7226 follow-up): F11 and the s7202
-   removal re-entry assume the window's own display; check WIN_DISPLAY=1 + toggle x2 and removal of the target display (falls back
-   to the built-in, s7202 path) keep one swap chain step each and fill. Boot freeze stays passive; hunter
-   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+1. **(next, NEXT.md) Flat-30 after a macOS-driven display move (s7227, HOTPLUG=0 path, single-source):** the default cycle keeps
+   30-60/s; check whether a windowed move between displays (no fullscreen, not cycled) also pins at 30 (layer 2x vs 1x chain).
+   Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

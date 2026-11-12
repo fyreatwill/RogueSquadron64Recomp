@@ -1,13 +1,14 @@
-# NEXT (s7227): fullscreen toggle + display removal when the game targets a NON-main display
-HYPOTHESIS-ID: aspect-auto-display-choice
-Context: s7226 added rs64_g1f_target_display (ROGUESQ_WIN_DISPLAY=<n>|mouse). Boot on the secondary fills (FB 796 on 16:9). Untested:
-F11 toggles on the secondary (does leaving fullscreen keep the window there and re-entering fill that display?), and REMOVING the
-secondary while fullscreen on it (s7202 path re-enters on the remaining display; the game width stays the boot width -> bars, by
-s7225 design).
-Hypotheses: H-ok (toggle x2 = one swap chain step each, back to 1920x1080 fill on the secondary; removal -> built-in, bars at
-lit 1.778, 30/s within 2 s); H-jump (leaving fullscreen puts the window back on display 0 / centred on main: macOS restores the
-pre-fullscreen frame, which SDL created on the target, so expect not); H-dead (removal of the target display leaves a hidden Space,
-the s7202 gate s7222 checks "own display" by bounds and may mis-match).
-Run: scratch/s7226/flight.zsh-style arm with ROGUESQ_WIN_DISPLAY=1 ROGUESQ_FS_TEST_TOGGLE_S=100,130 and virtual_display hold
-shortened so it is destroyed at ~170 s; shots -D 2 then -D 1 after removal; present ring (ROGUESQ_PRESENT_RING) for gaps.
-Score: tools/s7226_display_fill_score.py per display + [g1f-win]/[retina] swapchain rows.
+# NEXT (s7228): why the HOTPLUG=0 path pins at a flat 30/s after a display move, and does a WINDOWED move do it on the default path
+HYPOTHESIS-ID: display-move-present-rate
+Context: s7227 (scratch/s7227/arm.zsh, ring_fix/ring_old): after the target display was removed while fullscreen, the default path
+(s7202 cycle) presents 30-60/s on screen; HOTPLUG=0 (macOS moves the window alone, one swap chain step 1512x949) is a flat 30/s for
+52 s and never logs `layer drawable 3024x1898 != swapchain` (RT64 1x chain into a 2x layer). The owner path is the default, so this
+matters only if a WINDOWED move between displays (drag, or windowed removal; no fullscreen cycle runs there) also pins at 30.
+Hypotheses: H-scale (1x chain in a 2x layer forces a compositor scale pass -> half rate; layer-drawable resize fixes it),
+H-space (macOS-moved fullscreen window is not direct-to-display; windowed unaffected), H-content (phase: old arm happened to sit in a
+30/s flight stretch - refuted if pre-removal 60 bursts in the same run recur at the same route time).
+Run (one build, current binary, 2 arms sequential): scratch/s7227/arm.zsh variant with ROGUESQ_FULLSCREEN=0 (windowed on display 1,
+removal at ~172 s, no toggles) default vs HOTPLUG=0; score on-screen P/s after removal (python in s7227 ledger entry: P rows with
+at>0 after the first w=1512 Z row) and [g1f-win] layer rows.
+Outcomes: windowed default 30-60 & old flat 30 -> H-scale (the layer resize is what matters; already default on); both 30-60 ->
+H-space, fullscreen-only, close as covered by the default; both flat 30 -> new defect on the windowed path, fix.
