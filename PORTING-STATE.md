@@ -190649,3 +190649,43 @@ hidden Space or swap chain loss), then backlog.
 - Found while reading the code: ROGUESQ_ASPECT=auto is resolved ONCE at boot from SDL_GetDesktopDisplayMode (main.cpp ~12450)
   and sizes the window and game width from it. A later window resize to another aspect cannot change the game width, so G1f goal
   3 ("after a resize") is unmeasured. Next unit (NEXT.md, HYPOTHESIS-ID aspect-auto-live-resize).
+
+## Session 7225 (2026-11-12) — ASPECT=auto does NOT follow a live window resize (H-bars): the boot width stays and RT64 letter/pillarboxes it with correct geometry (lit aspect within 1% of the game aspect) in both the auto arm and the fixed 16:9 control; H-follow and H-stretch refuted; G1f goal 3 closed as "follows the display at boot"
+
+Work unit (NEXT s7225, HYPOTHESIS-ID aspect-auto-live-resize): ROGUESQ_ASPECT=auto, windowed, RETINA=0, LEVEL=4 owner recipe
+(FPS60 dd4), live SDL resizes ROGUESQ_WIN_TEST_RESIZE_S=120:1000:430,140:900:675,160:1200:675; control arm ASPECT=16:9 with the same
+resizes, same iteration, run one after the other (scratch/s7225/arm.zsh au auto / w16 16:9). Full-desktop screencapture -x every 5 s
+(95-200 s), app frontmost in 44/44 shots. Both arms 0 crashes, every resize logged ([g1f] resized / test resize / layer drawable !=
+swapchain -> resize).
+
+Boot: auto windowed reads display 0 = 1512x982 -> 1.5397:1 -> FB_WIDTH 692 (FBW_ALIGN), window 1238x804; 16:9 -> 796, 1360x764.
+
+New scorer tools/s7225_resize_aspect_score.py: current window width read from the shot (title-bar colour just inside / not just
+outside each candidate right edge; falls back to time order where a notification banner hides the edge), lit bbox inside the content
+crop (cols from the bottom 80%, rows from the left 60%, 2-cell inset so the window's 1-pt grey border is not "lit"; the first pass
+without the inset read FILL/STRETCH everywhere, caught by eye on the shots), lit pixel aspect vs window aspect vs FB_WIDTH/448.
+Positive control per arm: 20% black pasted both sides -> bbox 0.197-0.803 / 0.198-0.802 and lit aspect 1.540->0.934, 1.780->1.074: PASS.
+
+| window | auto (game 1.545) | 16:9 control (game 1.777) |
+|---|---|---|
+| boot 1238x804 / 1360x764 | FILL x6 | FILL x5 |
+| 1000x430 (2.326) | BARS x4, bbox x 0.165-0.835, lit 1.557 | BARS x4 (lit 1.796), 1 transient STRETCH at the resize instant |
+| 900x675 (1.333) | BARS x3, rows 0.063-0.937, lit 1.526 | BARS x4, rows 0.120-0.880, lit 1.755 |
+| 1200x675 (1.778) | BARS x7, x 0.062-0.936, lit 1.554 (+2 "?" dark-sky rows) | FILL x7 (+1 "?") |
+
+Result: H-bars in both arms. auto behaves exactly like a fixed aspect after boot: the 692-wide game picture keeps its aspect (lit
+aspect within 0.7-1.2% of 1.545) and RT64 pillarboxes it in a wider window and letterboxes it in a narrower one. H-follow refuted (no
+width change, no fill at 1200x675 in the auto arm while the 16:9 control fills it), H-stretch refuted (only one shot in 44 stretched:
+the 16:9 arm's t=120, the frame CoreAnimation scales between the window resize and the swap chain step; next shot correct; single shot,
+single-source). Sheet docs/owner_sheet_s7225_auto_live_resize.png (row 1 auto, row 2 16:9; boot, 1000x430, 900x675, 1200x675).
+
+Is a live width change feasible? Code reading (second line of evidence for "width is boot-fixed", with the run): FB_WIDTH is cached in
+function statics (upstream_compat.cpp:1011, :1369 `static const fbw`; tools/apply_s6031_far.py s6113/s6115/s6841 `static int wv`),
+the 12 MB osMemSize step for fb>796 and the HUD anchor / disc region / KLEVEL / CAPLEVEL envs are set once in
+rs64_g1d_apply_aspect_policy, and the game allocates its colour images from the heap at boot. A live change would mean reallocating
+the guest framebuffers and re-deriving every boot policy mid-game: not a bounded change. Bars with correct geometry are the design;
+the main.cpp comment "Game width is fixed at boot: a later resize letterboxes" is now measured. G1f goal 3: auto follows the display
+at boot; a later resize or display move letterboxes. G1f fully closed.
+
+Side observation for next: auto reads SDL_GetDesktopDisplayMode(0) = the MAIN display, not the display the window opens on. An owner
+who launches on the TV while the laptop is main would get the laptop aspect (bars on the TV). Unmeasured; NEXT s7226.
