@@ -1,12 +1,15 @@
-# NEXT: s7204 side datum — the 20/s non-flight screen (VI origin B517C8) and the R0-only 60/s presents
-HYPOTHESIS-ID: retina-nonflight-present
-Context: s7204 L6r0/L6r1 (owner recipe, tools/g1e_owner_quiet_arms.zsh) hit an 8 s non-flight screen at t=205-213 (autopilot
-backdrop/menu cycle, tr=31) where the game makes a new image at 20/s in both arms (VI origin B517C8). Single-source: L6r0 also
-queued 60/s presents with vi=B51E00 there that L6r1 (RETINA=1) did not. s7205 owner sheet done; Retina default is the owner's call.
-Hypotheses: H-retina (RETINA=1 changes which VI origins RT64 presents on that screen: a real present-path difference),
-H-phase (the two arms entered the screen in different states, e.g. a fade, so the extra presents are scene, not setting),
-H-retail (the screen is a retail 20/s menu; the B51E00 presents are the old fb being re-presented, harmless).
-Discriminator: replicate L6 with HOLD 240 in both arms x2 (ARMS "4:a0:ROGUESQ_FORCE_SAVE_MISSION=6 4:a1:...+ROGUESQ_RETINA=1" twice,
-order reversed), SHOTS at 205,209 to name the screen; from ring rows count per arm Q rows by vi origin in the B517C8 window
-(tools/s7204_ring_cost.py as base). R0-only B51E00 in all R0 runs -> H-retina; mixed across replicates -> H-phase; then compare
-with the angrylion/retail path to decide H-retail. Positive control: the flight window must show 60/s Q rows in every arm.
+# NEXT: s7206 interlaced-still fix follow-up — distinct images/s and 4:3 G3 re-score
+HYPOTHESIS-ID: interlaced-still-present
+Context: s7206 fixed RT64's fb address for interlaced double-stride VIs (ROGUESQ_VI_ILACE_ADDR) and refused stale VI-history
+early presents (ROGUESQ_PE_STALEFIX), both default on. The title/backdrop stills now present 60/s through the current VI (were
+20/s, or 60/s through a stale VI). Picture identical on the static title. Open: does the 60/s carry new images, and does the
+new address change G3 fidelity on 4:3 interlaced menus?
+Hypotheses: H-motion (the wipe/fade stills change per workload, so f1 shows ~60 distinct images/s where f0 showed 20),
+H-static (redraws are identical; gain nil, fix is still correct), H-regress (the new address changes which fb RT64 presents on a
+4:3 interlaced screen, e.g. Elite Rogues 512x448, and moves its angrylion score).
+Discriminator, one build (current), arms ROGUESQ_VI_ILACE_ADDR=0+ROGUESQ_PE_STALEFIX=0 vs default:
+ 1. g5b_capture (<= 30 s, delete raw after scoring) of the boot window t 8-30 at the owner recipe; tools/g5c_frozen_runs.py /
+    tools/g5d_distinct.py distinct frames per second in the title/wipe span. Positive control: flight-span distinct ~60/s.
+ 2. 4:3 retail settings: re-score the Elite Rogues / interlaced menus with the G3 kit (CURRENT-TRUTH kit list; 448-row needs
+    FID_MAINRUN=1) in both arms; any change > the retail floor = H-regress -> fix or flip default.
+Outcomes: distinct f1 >> f0 -> H-motion (owner-visible gain); equal -> H-static; score move -> H-regress.

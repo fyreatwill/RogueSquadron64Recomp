@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7205 (2026-11-12).
+Compact operational handoff, as of Session 7206 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -97,6 +97,12 @@ Open or awaiting the owner:
   (badge 0.567 -> 0.815, icon 0.542 -> 0.727, radar 0.418 -> 0.778; positive control R1 down/up 2x = 0.539/0.402/0.374, the R0 level)
   and visually (radar ring and ticks crisp). Ground texture 0.653 -> 0.734 (camera pose differs between arms, so scene-confounded).
   Owner sheet docs/owner_sheet_s7205_retina.png. **Awaiting the owner: make RETINA=1 the default?**
+- **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
+  fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
+  current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
+  while dropping the real presents (the s7204 R0-only datum; timing, not Retina). ROGUESQ_VI_ILACE_ADDR=0 / ROGUESQ_PE_STALEFIX=0
+  restore the old paths. f1: 60/s through the current VI, picture pixel-identical to old (shift-0 diff 0.00), flight 59.3 shown/s both.
+  Not yet shown: 60 distinct images/s on these screens; 4:3 G3 re-score of interlaced menus (Elite Rogues) with the new address.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -219,11 +225,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) s7204 side datum: 20/s non-flight screen (VI origin B517C8) where RETINA=0 queued extra 60/s presents with
-   vi=B51E00 that RETINA=1 did not (single-source, L6 autopilot backdrop cycle).** Name the screen and check whether the present
-   difference is real (same-run toggle impossible; replicate both arms on that screen). Retina default: owner (sheet s7205).
-   Pad/display/audio hot-plug closed s7199-s7202. Boot freeze stays passive (headline). Hunter
-   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+1. **(next, NEXT.md) s7206 interlaced-still fix follow-up:** distinct images/s on the boot title window (t 10-28, deterministic)
+   f0 (VI_ILACE_ADDR=0 PE_STALEFIX=0) vs f1, and a 4:3 retail re-score of the interlaced menus (Elite Rogues 512x448,
+   tools/g3_rdp_frame_match.py / s7122_fidelity.py) so the new fb address does not move G3 fidelity. Retina default: owner (s7205).
+   Boot freeze stays passive (headline). Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

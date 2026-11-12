@@ -190104,3 +190104,39 @@ VERDICT: H-sharp selected (two lines: HUD scores in 3/3 crops x 6/6 shots, and t
 stair-stepped in R0). H-same refuted for HUD; terrain gain smaller and confounded. Owner sheet docs/owner_sheet_s7205_retina.png,
 OWNER-OPT-INS row updated. Default stays off until the owner says.
 Next: s7204 side datum, the 20/s non-flight screen where R0 queued extra presents that R1 did not.
+
+## Session 7206 (2026-11-12) — interlaced still screens: RT64 resolved the fb one row early (B517C8), presents ran 20/s or through a stale VI; fixed, now 60/s through the current VI
+Unit from NEXT (HYPOTHESIS-ID retina-nonflight-present). Offline first, on the s7204 rings: the B517C8 screen also appears at boot
+t=11-28 in all 8 s7204/s7205 arms, at 20/s with no extra presents. The mid-run window (L6 autopilot backdrop cycle) gave
+vi=B51E00 60/s presents in R0 2/2 (L6r0 205-213, L6r0b 193-201) and in R1 0/1 (L6r1b never reached it). Rows: in R0 every
+B517C8 present is skip=1 (stale-queue drop, writeCursor moved on) and the shown presents are vi=B51E00 fb=B51E00, one per
+workload (W fbs=B51E00 60/s); in R1 B517C8 is presented (fb=B51E00) at 20/s. [threadPresent] viW=1592 origin B517C8 drawn B51E00.
+Mechanism (code read, rt64_state.cpp early present + rt64_vi.cpp): the screen is an interlaced double-stride VI (width reg 1592,
+fb 796 cols at B51E00, origin reg B52438 = fb + one 796-col row, serrate 1). VI::fbAddress() subtracts a row computed from the raw
+width 1592, not the halved stride fbSize().x = 796, so the current VI resolves to B517C8, which no colour image matches: early
+present never fires through the current VI, and the screen is presented only on VI changes (20/s). Early present can still match
+a LEFTOVER entry of the 3-slot VI history whose estimate lands on B51E00 (the [pe-stale] log names it: w=640 org B52300 ys 0x612
+v=51-51, a zero-height VI from before the screen), and then the fb is presented 60/s through that obsolete VI while the real VI
+presents are dropped. Whether that entry is still in history is timing; Retina does not enter the path (H-retina not selected:
+the s7204 R0/R1 split is history content, not the setting).
+Fix, both default on, lib/rt64 (submodule-patches/rt64.patch refreshed):
+- ROGUESQ_VI_ILACE_ADDR (=0 old): fbAddress() uses fbSize().x as the row width when serrate halves it -> B51E00.
+- ROGUESQ_PE_STALEFIX (=0 old): early present only through history entries compatibleWith() the current top VI; [pe-stale] logs
+  rejects (first 4, then every 600th).
+Run (tools/g1e_owner_quiet_arms.zsh, L6 owner recipe FPS60 dd4 16:9 fullscreen, HOLD 222, shots 13,20,26,194..212, quiet host
+idle > 27700 s, one game at a time), data scratch/s7206:
+  f0 (both =0): boot 11-28 B517C8 20/s; stale state REPRODUCED at 189-197 (B51E00 60/s shown, B517C8 skip=1 20/s): 3/3 R0 runs.
+  f1 (fixed):   boot 10-28 B51E00 skip=0 60.1/s (plus 59.8/s superseded duplicates); 0 B517C8 rows anywhere; [pe-stale] fired
+                (positive control that the stale entry exists in this run and is now refused).
+  Picture: f0 vs f1 shots c1-c3 (boot title stills, same seconds) inside the 4:3 box: mean diff 0.00 at shift 0, 1.37-1.72 at
+  +-1 row, so the image is pixel-identical; only the present rate and the VI it goes through change. Shot c4 (t=194) is a
+  cross-fade wipe between two backdrop stills (hangar / Hoth).
+  Flight control (from 95 s): Q 59.8/s, shown 59.3/s in both arms; gaps > 250 ms 0/0; 0 crashes.
+ORIGIN: RT64's fbAddress() row estimate (upstream heuristic) uses the raw VI width register on double-stride interlaced modes; the
+stale match is RT64's 3-slot history keeping entries across a VI mode change. Not game data, not a guest corruption.
+NOT shown: that the 60 workloads/s on these stills are 60 distinct images (static title is identical across shots, so the gain
+there is nil; the wipe may gain motion); 4:3 retail interlaced screens (Elite Rogues 512x448) not re-scored against angrylion
+with the new address; RETINA=1 arm not re-run with the fix.
+Verdict: root cause named and fixed; H-retina not selected, H-phase-like history timing explains the R0/R1 split; H-retail
+(retail VI scans the fb every refresh, so 60/s through the current VI is the faithful behaviour) is consistent but single-source.
+Next: distinct-frame count on the boot title/wipe windows (f0 vs f1) and a 4:3 G3 re-score of the interlaced menus.

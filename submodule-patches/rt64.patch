@@ -7308,7 +7308,7 @@ index e3d289c..5da989d 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..1c2805b 100644
+index 10f98af..ee10726 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -9278,7 +9278,36 @@ index 10f98af..1c2805b 100644
  
          // Make sure the profiler starts after the workload is advanced to ignore any waiting time.
          dlCpuProfiler.reset();
-@@ -1837,7 +3383,7 @@ namespace RT64 {
+@@ -1822,8 +3368,28 @@ namespace RT64 {
+                     continue;
+                 }
+ 
++                // s7206: ROGUESQ_PE_STALEFIX (default on, =0 old). The 3-slot VI history keeps entries from BEFORE a VI mode
++                // change. On the interlaced 796-col screen (VI width 1592, fb B51E00 redrawn 60/s, VI updated 20/s) a leftover
++                // progressive entry (width 796, origin B51E00) from the previous screen matched every workload's colour image, so
++                // RT64 early-presented the fb through the obsolete VI 60/s and every real VI present was dropped as stale (s7204
++                // L6r0/L6r0b). Only history entries VI-compatible with the current top entry may early-present.
++                static const bool s_rs64_pe_stalefix = [](){ const char *v = std::getenv("ROGUESQ_PE_STALEFIX"); return !(v && v[0] == '0'); }();
++                static std::atomic<uint64_t> s_rs64_pe_stale_rej{0};
+                 for (size_t h = 0; (h < viHistory.history.size()) && !viPresented; h++) {
+                     const VIHistory::Present &entry = viHistory.history[h];
++                    if (s_rs64_pe_stalefix && (&entry != &viHistory.top()) && !entry.vi.compatibleWith(viHistory.top().vi)) {
++                        if (colorImg.address == entry.vi.fbAddress()) {
++                            const uint64_t k = ++s_rs64_pe_stale_rej;
++                            if (k <= 4 || (k % 600) == 0) {
++                                const VI &o = entry.vi, &c = viHistory.top().vi;
++                                std::fprintf(stderr, "[pe-stale] #%llu reject fb=%06X old{w=%u org=%06X ys=0x%X v=%u-%u ser=%u} top{w=%u org=%06X ys=0x%X v=%u-%u ser=%u}\n",
++                                    (unsigned long long)k, colorImg.address & 0xFFFFFF, (unsigned)o.width, (unsigned)(o.origin & 0xFFFFFF), (unsigned)o.yTransform.yScale,
++                                    (unsigned)o.vRegion.vStart, (unsigned)o.vRegion.vEnd, (unsigned)o.status.serrate, (unsigned)c.width, (unsigned)(c.origin & 0xFFFFFF),
++                                    (unsigned)c.yTransform.yScale, (unsigned)c.vRegion.vStart, (unsigned)c.vRegion.vEnd, (unsigned)c.status.serrate);
++                            }
++                        }
++                        continue;
++                    }
+                     const uint32_t fbAddress = entry.vi.fbAddress();
+                     const hlslpp::uint2 fbSize = entry.vi.fbSize();
+                     const uint8_t fbSiz = entry.vi.fbSiz();
+@@ -1837,7 +3403,7 @@ namespace RT64 {
                                  colorImg.address, colorImg.width, (unsigned)colorImg.siz, h);
                              std::fflush(stderr);
                          }
@@ -9287,7 +9316,7 @@ index 10f98af..1c2805b 100644
                          viPresented = true;
                      }
                      else if (s_rs64_log_pe) {
-@@ -1873,7 +3419,29 @@ namespace RT64 {
+@@ -1873,7 +3439,29 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -9317,7 +9346,7 @@ index 10f98af..1c2805b 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1899,6 +3467,132 @@ namespace RT64 {
+@@ -1899,6 +3487,132 @@ namespace RT64 {
              }
          }
          
@@ -9450,7 +9479,7 @@ index 10f98af..1c2805b 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3609,33 @@ namespace RT64 {
+@@ -1915,6 +3629,33 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -9484,7 +9513,7 @@ index 10f98af..1c2805b 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,12 +3680,30 @@ namespace RT64 {
+@@ -1959,12 +3700,30 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -9517,7 +9546,7 @@ index 10f98af..1c2805b 100644
          screenCpuProfiler.start();
          bool fbChangesMade = false;
          bool screenChangesMade = false;
-@@ -1972,7 +3711,11 @@ namespace RT64 {
+@@ -1972,7 +3731,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -9530,7 +9559,7 @@ index 10f98af..1c2805b 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1989,6 +3732,7 @@ namespace RT64 {
+@@ -1989,6 +3752,7 @@ namespace RT64 {
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
                      if (currentHash != screenFb->RAMHash) {
                          {
@@ -9538,7 +9567,7 @@ index 10f98af..1c2805b 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3762,132 @@ namespace RT64 {
+@@ -2018,9 +3782,132 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -9674,7 +9703,7 @@ index 10f98af..1c2805b 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3900,51 @@ namespace RT64 {
+@@ -2033,26 +3920,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -9744,7 +9773,7 @@ index 10f98af..1c2805b 100644
              }
          }
  
-@@ -2060,6 +3952,7 @@ namespace RT64 {
+@@ -2060,6 +3972,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -9752,13 +9781,46 @@ index 10f98af..1c2805b 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4803,4 @@ namespace RT64 {
+@@ -2910,4 +4823,4 @@ namespace RT64 {
              break;
          }
      }
 -};
 \ No newline at end of file
 +};
+diff --git a/src/hle/rt64_vi.cpp b/src/hle/rt64_vi.cpp
+index a870166..5d1991c 100644
+--- a/src/hle/rt64_vi.cpp
++++ b/src/hle/rt64_vi.cpp
+@@ -6,6 +6,7 @@
+ #include <cassert>
+ #include <memory.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ 
+ #include "common/rt64_common.h"
+ #include "gbi/rt64_f3d.h"
+@@ -81,7 +82,19 @@ namespace RT64 {
+         // Estimate the origin is off by one or two rows.
+         if (siz >= G_IM_SIZ_16b) {
+             const bool interlacedStep = status.serrate && (vCurrentLine & 0x1);
+-            const uint32_t rowBytes = width * (1U << (siz - 1));
++            // s7206: ROGUESQ_VI_ILACE_ADDR (default on, =0 old). For interlaced double-stride modes fbSize() halves the VI width
++            // register to the real fb stride (RS64 attract stills: width 1592, fb 796 cols at B51E00, origin B52438). The row
++            // estimate must use that stride too, else the fb resolves one full row early (B517C8), never matches the colour image,
++            // and early present can only fire through a leftover VI-history entry from the previous screen.
++            static const bool s_rs64IlaceAddr = [](){ const char *v = getenv("ROGUESQ_VI_ILACE_ADDR"); return !(v && v[0] == '0'); }();
++            uint32_t rowWidth = width;
++            if (s_rs64IlaceAddr && status.serrate) {
++                const uint32_t fbW = fbSize().x;
++                if ((fbW > 0) && (fbW < width)) {
++                    rowWidth = fbW;
++                }
++            }
++            const uint32_t rowBytes = rowWidth * (1U << (siz - 1));
+             const uint32_t rowCount = interlacedStep ? 2 : 1;
+             const uint32_t rowOffset = rowBytes * rowCount;
+             if (origin >= rowOffset) {
 diff --git a/src/hle/rt64_workload.cpp b/src/hle/rt64_workload.cpp
 index b4c85f5..880611b 100644
 --- a/src/hle/rt64_workload.cpp
