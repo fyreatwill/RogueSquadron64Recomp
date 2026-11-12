@@ -10837,6 +10837,65 @@ static void start_memwp_watchdog() {
 // ---------------------------------------------------------------------------
 static SDL_GameController* controller = nullptr;
 
+// s7201 pad hot-plug. Old path: a pad opened only on its own ADDED while none was open, so a second pad connected
+// at boot (its ADDED came while pad 1 was open) was never adopted after pad 1 was removed: input dead until a
+// replug. Now on removal of ours (or if ours reports detached without an event) we adopt the first remaining
+// game controller. ROGUESQ_PAD_HOTPLUG=0 = old behaviour.
+// Forced arm ROGUESQ_PAD_HOTPLUG_TEST=<sec>: attach two SDL virtual gamepads (P1 holds A + stick right, P2 holds
+// X = N64 B + stick up), detach P1 at <sec>, log the pad word sent to the guest once per second ([pad-hp] word).
+static bool rs64_pad_hotplug_on() {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_PAD_HOTPLUG"); return !(e && e[0] == '0'); }();
+    return on;
+}
+static double rs64_pad_test_s() {
+    static const double t = [] { const char* e = getenv("ROGUESQ_PAD_HOTPLUG_TEST"); return e ? atof(e) : 0.0; }();
+    return t;
+}
+static void rs64_pad_adopt(SDL_JoystickID skip) {
+    if (controller) return;
+    const int n = SDL_NumJoysticks();
+    for (int i = 0; i < n; ++i) {
+        if (!SDL_IsGameController(i) || SDL_JoystickGetDeviceInstanceID(i) == skip) continue;
+        controller = SDL_GameControllerOpen(i);
+        if (controller) {
+            fprintf(stderr, "[pad-hp] adopt idx=%d id=%d name=%s (of %d)\n", i, (int)SDL_JoystickGetDeviceInstanceID(i),
+                    SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "?", n);
+            return;
+        }
+    }
+    fprintf(stderr, "[pad-hp] adopt: no game controller among %d joysticks\n", n);
+}
+static void rs64_pad_test_tick() {
+    const double t_det = rs64_pad_test_s();
+    if (t_det <= 0) return;
+    static double t0 = -1; static int stage = 0; static SDL_Joystick* j1 = nullptr; static SDL_Joystick* j2 = nullptr;
+    static SDL_JoystickID id1 = -1;
+    const double now = (double)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() / 1000.0;
+    if (t0 < 0) t0 = now;
+    if (stage == 0) {
+        auto attach = [](const char* name) -> int {
+            SDL_VirtualJoystickDesc d; SDL_zero(d);
+            d.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION; d.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+            d.naxes = SDL_CONTROLLER_AXIS_MAX; d.nbuttons = SDL_CONTROLLER_BUTTON_MAX; d.name = name;
+            return SDL_JoystickAttachVirtualEx(&d);
+        };
+        const int i1 = attach("RS64 virtual P1"); const int i2 = attach("RS64 virtual P2");
+        j1 = i1 >= 0 ? SDL_JoystickOpen(i1) : nullptr; j2 = i2 >= 0 ? SDL_JoystickOpen(i2) : nullptr;
+        id1 = j1 ? SDL_JoystickInstanceID(j1) : -1;
+        if (j1) { SDL_JoystickSetVirtualButton(j1, SDL_CONTROLLER_BUTTON_A, 1); SDL_JoystickSetVirtualAxis(j1, SDL_CONTROLLER_AXIS_LEFTX, 32767); }
+        if (j2) { SDL_JoystickSetVirtualButton(j2, SDL_CONTROLLER_BUTTON_X, 1); SDL_JoystickSetVirtualAxis(j2, SDL_CONTROLLER_AXIS_LEFTY, -32767); }
+        fprintf(stderr, "[pad-hp] test attach i1=%d i2=%d id1=%d err=%s njoy=%d\n", i1, i2, (int)id1, SDL_GetError(), SDL_NumJoysticks());
+        stage = 1;
+    } else if (stage == 1 && now - t0 >= t_det) {
+        int idx = -1;
+        for (int i = 0; i < SDL_NumJoysticks(); ++i) if (SDL_JoystickGetDeviceInstanceID(i) == id1) idx = i;
+        if (j1) { SDL_JoystickClose(j1); j1 = nullptr; }
+        const int rc = idx >= 0 ? SDL_JoystickDetachVirtual(idx) : -1;
+        fprintf(stderr, "[pad-hp] test detach P1 idx=%d rc=%d t=%.1f\n", idx, rc, now - t0);
+        stage = 2;
+    }
+}
+
 static void poll_input() {
     // Heartbeat: a quiet [pad-sdl] site=key after title 1024 is
     // H-poll-stopped if this dies, H-sdl-late-drop if it keeps climbing.
@@ -10881,15 +10940,18 @@ static void poll_input() {
             }
         }
         if (e.type == SDL_CONTROLLERDEVICEADDED) {
+            fprintf(stderr, "[pad-hp] added idx=%d open=%d\n", (int)e.cdevice.which, controller ? 1 : 0);
             if (!controller) {
                 controller = SDL_GameControllerOpen(e.cdevice.which);
             }
         }
         if (e.type == SDL_CONTROLLERDEVICEREMOVED && controller) {
-            if (SDL_GameControllerGetJoystick(controller) ==
-                SDL_JoystickFromInstanceID(e.cdevice.which)) {
+            const bool ours = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller)) == e.cdevice.which;
+            fprintf(stderr, "[pad-hp] removed id=%d ours=%d\n", (int)e.cdevice.which, ours ? 1 : 0);
+            if (ours) {
                 SDL_GameControllerClose(controller);
                 controller = nullptr;
+                if (rs64_pad_hotplug_on()) rs64_pad_adopt(e.cdevice.which);
             }
         }
 #ifdef _WIN32
@@ -10928,6 +10990,17 @@ static void poll_input() {
             }
         }
     }
+    if (rs64_pad_hotplug_on()) {
+        // A pad that went away without a REMOVED reaching us (event consumed elsewhere) reads all-zero forever.
+        if (controller && !SDL_GameControllerGetAttached(controller)) {
+            const SDL_JoystickID id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
+            fprintf(stderr, "[pad-hp] open pad id=%d detached without event\n", (int)id);
+            SDL_GameControllerClose(controller);
+            controller = nullptr;
+            rs64_pad_adopt(id);
+        }
+    }
+    rs64_pad_test_tick();
 }
 
 extern "C" long long rs64_s5773_ms(void) {
@@ -11765,6 +11838,15 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;
+    if (rs64_pad_test_s() > 0) {  // s7201 [pad-hp] word: what the guest gets, once per wall second
+        static long long s_last = 0;
+        const long long ms = rs64_s5773_ms();
+        if (ms - s_last >= 1000) {
+            s_last = ms;
+            fprintf(stderr, "[pad-hp] word ms=%lld btn=0x%04X x=%.2f y=%.2f pad=%s\n", ms, (unsigned)btn, stick_x, stick_y,
+                    controller && SDL_GameControllerName(controller) ? SDL_GameControllerName(controller) : "none");
+        }
+    }
 
     // s1944: host Start/A rising edges on the outgoing pad word (always-on).
     // Discriminates late winctl/focus drops vs title 1024 ignoring a live pad.
@@ -11948,6 +12030,10 @@ ultramodern::gfx_callbacks_t::gfx_data_t create_gfx() {
         }
         if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
             fprintf(stderr, "[g1f] resized %dx%d\n", ev->window.data1, ev->window.data2);
+        if (ev->type == SDL_WINDOWEVENT && ev->window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED)
+            fprintf(stderr, "[g1f] display changed -> %d\n", ev->window.data1);  // s7201 witness for the display hot-plug unit
+        if (ev->type == SDL_DISPLAYEVENT)
+            fprintf(stderr, "[g1f] display event %d display=%u\n", (int)ev->display.event, (unsigned)ev->display.display);
         static std::atomic<int> any{0};
         const bool first = any.fetch_add(1) < 40;
         if (first) { fprintf(stderr, "[keywitness] anyevent type=0x%X\n", (unsigned)ev->type); fflush(stderr); }

@@ -189971,3 +189971,31 @@ Reading: on the default route SDL3/sdl2-compat moves the open default stream to 
 our bitmask only matches our own id; the drain watchdog never trips since the queue keeps draining).
 Rules out: any default-route hot-plug defect. Audio host-robustness thread (s7197-s7200) CLOSED.
 Next: controller and display hot-plug (owner's TV / pad case), NEXT.md.
+
+## Session 7201 (2026-11-12) — pad hot-plug: removing the open pad left input dead with a second pad present (H-pad-orphan confirmed, H-pad-latch refuted); remaining pad now adopted, default on
+
+What ran: code read of src/main/main.cpp poll_input/get_n64_input, then one build with a forced arm
+ROGUESQ_PAD_HOTPLUG_TEST=<sec>: attaches two SDL virtual gamepads (SDL_JoystickAttachVirtualEx, type GAMECONTROLLER;
+P1 holds A + left stick right, P2 holds X = N64 B + left stick up), detaches P1 at <sec>, and logs the pad word handed to
+the guest once per wall second ([pad-hp] word). Arms scratch/s7201/arms.zsh, 40 s boots, same binary: new (default),
+old (ROGUESQ_PAD_HOTPLUG=0), ctl (no detach).
+
+Code read: get_n64_input reads live SDL state each call, so nothing can latch; but a pad opened only on its own ADDED
+while none was open, and REMOVED only closed ours. A second pad connected at boot (its ADDED arrives while pad 1 is
+open) was never adopted.
+
+Result (seconds per pad word):
+- ctl: 39 s btn=0x8000 x=1.00 (positive control: virtual P1 state reaches the guest).
+- old: 14 s 0x8000 x=1; detach at 15.0 s, removed ours=1; then 24 s btn=0x0000 x=0 y=0 pad=none. Input dead for good
+  with P2 still connected. Goes to zero, so H-pad-latch refuted (no stuck turn/fire), H-pad-orphan confirmed.
+- new: 14 s 0x8000 x=1; at the removal `[pad-hp] adopt idx=0 id=1`; then 24 s btn=0x4000 y=1.00 = P2's state. Fixed.
+  (The adopt line prints "RS64 virtual P1" as the name of id 1: sdl2-compat name lookup on virtual pads; the word proves
+  it is P2.) 0 crash lines in all arms.
+ORIGIN: the writer is our own host input code (main.cpp REMOVED handler), not the game; the value (no open pad) is
+legitimate for the old code's design, which simply never rescanned.
+
+Fix, default on (ROGUESQ_PAD_HOTPLUG=0 = old): on REMOVED of ours, rs64_pad_adopt() opens the first remaining game
+controller (skipping the removed id); also each poll, if ours reports !SDL_GameControllerGetAttached without an event,
+close and adopt (not exercised by this test). New witnesses: [pad-hp] added/removed/adopt lines (always), and
+[g1f] display changed / display event lines in the event watch for the next unit (display hot-plug).
+Next: display side (fullscreen window when the TV display goes away / moves).
