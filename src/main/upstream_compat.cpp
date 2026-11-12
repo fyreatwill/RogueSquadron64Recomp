@@ -5107,6 +5107,10 @@ static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
 extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
     rs64_m5_raw_task_boundary("start", rdram, static_cast<uint32_t>(ctx->r4));
     if (!rs64_guest_range_valid(static_cast<uint64_t>(ctx->r4), sizeof(OSTask))) {
+        // s7197: this return posts no SP/DP completion. Never seen, but make it visible if it ever explains a freeze.
+        static int shown = 0;
+        if (shown++ < 8) fprintf(stderr, "[s7197-sp-drop] invalid OSTask 0x%08X ra=0x%08X: no completion posted\n",
+                                 (uint32_t)ctx->r4, (uint32_t)ctx->r31);
         ctx->r2 = 0;
         return;
     }

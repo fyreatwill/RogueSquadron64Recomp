@@ -4753,7 +4753,7 @@ index 3198be0..a8f859b 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..2e0bad3 100644
+index 149e770..01195e3 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,471 @@
@@ -6273,7 +6273,7 @@ index 149e770..2e0bad3 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1858,45 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1858,60 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };
@@ -6293,9 +6293,24 @@ index 149e770..2e0bad3 100644
 +                const uint32_t rate = ultramodern::get_audio_frequency();
 +                const uint32_t thr = (drain_fixed || rate <= 22047u) ? s4450_ai_event_drain()
 +                                   : (uint32_t)((uint64_t)s4450_ai_event_drain() * rate / 22047u) & ~3u;
-+                if (ultramodern::get_remaining_audio_bytes() > thr) continue;
++                // s7197: hardware's AI interrupt is driven by the DAC clock, so it always completes. This path posts only when
++                // SDL's queue drains, and a device that stops pulling (paused, or an output that disconnected: SDL2 stops calling
++                // the queue callback) never drains, so the AI completion was lost for good. After ROGUESQ_AI_STALL_POST_MS
++                // (default 100) without a post, post anyway. =0 restores the old drain-only path.
++                static const long stall_ms = [] { const char* e = std::getenv("ROGUESQ_AI_STALL_POST_MS"); return e ? std::strtol(e, nullptr, 0) : 100L; }();
++                const uint32_t rem = ultramodern::get_remaining_audio_bytes();
++                bool fallback = false;
++                if (rem > thr) {
++                    if (stall_ms <= 0 || now - last < std::chrono::milliseconds(stall_ms)) continue;
++                    fallback = true;
++                }
 +                std::lock_guard lock{ events_context.message_mutex };
 +                if (events_context.ai.mq != NULLPTR) {
++                    if (fallback) {
++                        static uint32_t nfb = 0;
++                        if (++nfb <= 8 || (nfb & 255) == 0)
++                            std::fprintf(stderr, "[s7197-ai-stall] fallback post n=%u remaining=%u thr=%u\n", nfb, rem, thr);
++                    }
 +                    last = now;
 +                    ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
 +                }

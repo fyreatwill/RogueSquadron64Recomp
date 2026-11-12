@@ -8402,6 +8402,18 @@ static size_t get_frames_remaining() {
     {
         std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
         if (!audio_device) return 0;
+        { // s7197 forced arm: ROGUESQ_AI_STALL_TEST=<sec> pauses the device from <sec> on (re-paused after any reopen). A paused
+          // SDL2 device stops calling its queue callback exactly like a disconnected output, so the queue never drains.
+            static const double t_s = [] { const char* e = getenv("ROGUESQ_AI_STALL_TEST"); return e ? atof(e) : 0.0; }();
+            static const auto t0 = std::chrono::steady_clock::now();
+            static SDL_AudioDeviceID paused = 0;
+            if (t_s > 0 && paused != audio_device &&
+                std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() >= t_s) {
+                SDL_PauseAudioDevice(audio_device, 1);
+                paused = audio_device;
+                fprintf(stderr, "[s7197-ai-stall] TEST paused device=%u at %.1f s\n", (unsigned)audio_device, t_s);
+            }
+        }
         queued = SDL_GetQueuedAudioSize(audio_device);
     }
     rs64_m5_audio_host_row("remaining", queued, queued, 0, 0);

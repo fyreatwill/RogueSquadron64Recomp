@@ -1,21 +1,21 @@
-# NEXT: host completion-delivery audit (lost-completion livelock class)
-HYPOTHESIS-ID: host-completion-delivery-class
-Context: s7196 closed the guest busy-poll class (docs/COOP-SCHED-POLL-CENSUS.md). It also showed that a host path
-returning without posting its completion freezes the game: the PI unknown-region path did this, forced arm 3/3 FROZEN,
-now fixed. Siblings of that path were not audited.
-Unit (offline first, class-audit model):
- 1. Enumerate every host function that owes the guest a completion message. Each one ends in
-    enqueue_external_message* or do_send to a guest mq:
-    - lib/N64ModernRuntime/ultramodern/src/events.cpp: SP task done, DP full sync, VI retrace, AI, SI
-    - timer.cpp
-    - librecomp pi.cpp (the remaining paths) and the flash / eeprom / controller-pak code in librecomp
-    - src/rsp/dpc_bridge.cpp and our src/main overrides (osSpTaskStartGo, osViSwapBuffer, etc.)
- 2. For each one, list every early return, error branch, env-gated skip, drop or guard that exits WITHOUT posting.
-    Classify each: DEAD (cannot happen), SAFE (hardware also posts nothing), or HAZARD (hardware completes but we do not).
- 3. For each HAZARD: a forced arm like ROGUESQ_PI_UNK_TEST, old path vs fix, plus a same-run control, in the
-    boot_freeze_hunt owner env.
+# NEXT: AI stall recovery (s7197 follow-up)
+HYPOTHESIS-ID: ai-stall-recovery
+Context: s7197 (docs/HOST-COMPLETION-CENSUS.md) fixed the AI drain hazard. When the SDL device stops pulling, the drain
+thread now posts AI every 100 ms (ROGUESQ_AI_STALL_POST_MS). While the device is stuck, the SDL queue grows by about 768 B
+per post: remaining went 2597 -> 3365 -> 4133 ... A device that resumes, such as a TV switched back on, then plays that
+backlog as latency, and nothing drains it.
+Unit (one build, all arms):
+ 1. Extend ROGUESQ_AI_STALL_TEST in src/main/main.cpp get_frames_remaining to `<pause_s>:<resume_s>`, which unpauses at
+    resume_s. Log queued bytes once per second ([s7198-q]).
+ 2. Arms, owner env, full logs, 60 s, pause 15 s, resume 35 s:
+    - fix
+    - fix + a backlog trim: SDL_ClearQueuedAudio when the queue has not shrunk for >= stall window, or when queued exceeds
+      ~150 ms at the live rate
+    - ctl
+ 3. Measure: queued bytes after resume, the audio-task ([s3299-t2]) rate after resume vs before the pause, and fallback
+    count after resume (expected 0).
 Hypotheses:
-- H-none: all paths always post. Close the class, then take the next ladder rung (item 3c).
-- H-lost: a gated/early-return path exists. It is a boot-freeze candidate if [stall-wait] would show the waiter IN recv
-  on that mq.
-Discriminator: the table.
+- H-recovers: the queue drains back to < thr within ~1 s of resume. There is no lasting latency, so close the thread.
+- H-backlog: queued stays at the stuck-window size and audio lags video by that much. Land the trim (default on, =0 old).
+- H-dead: audio does not resume. Then the SDL device state on resume needs a reopen.
+Discriminator: queued bytes over time after resume, per arm.

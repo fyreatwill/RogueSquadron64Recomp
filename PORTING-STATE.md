@@ -189846,3 +189846,44 @@ diagnostic: pi.cpp now posts the completion on the unknown-region read and write
 Next discriminator: the host completion-delivery table (NEXT.md, HYPOTHESIS-ID host-completion-delivery-class). Every
 SP/DP/SI/AI/VI/timer return path that skips its post is classified DEAD/SAFE/HAZARD. A HAZARD row selects H-lost as a
 boot-freeze candidate; an all-DEAD/SAFE table selects H-none.
+
+## Session 7197 (2026-11-12) — host completion-delivery class closed: one HAZARD found and fixed (the default AI drain thread never posts once the SDL device stops pulling, so guest audio tasks stop for good: old arm audio-task rows 2 after the stall, fix 578, control 0 fallback fires)
+HYPOTHESIS-ID: host-completion-delivery-class (closed)
+What ran (offline census first, then a two-arm qualification). Full table in docs/HOST-COMPLETION-CENSUS.md.
+- Every producer of an external message was enumerated: SP and DP (task thread and gfx thread), the osSpTaskStartGo
+  override, DL extension events, VI, the 3 AI paths, timer, SI (osContStart*), EEPROM, PI do_dma, flash. The delivery layer
+  was also covered: drop-on-full for VI/AI/PI, the s7194 refused-mq drop, NULL mq.
+- Classes: DEAD (cannot happen), SAFE (hardware posts nothing too, or the failure is loud: QUICK_EXIT/throw/assert), HAZARD.
+  Drop-on-full is SAFE, because libultra's exception handler and __osDevMgrMain post with NOBLOCK.
+- **HAZARD (1): the AI drain thread** (default since s5672, ROGUESQ_AI_EVENT_DRAIN=2048) posts AI only when SDL's queue
+  is at or below thr bytes. Hardware raises AI from the DAC clock, so it always completes. A device that exists but stops
+  pulling never drains: SDL2 stops calling the queue callback when a device is paused or its output disconnects
+  (HDMI TV off, Bluetooth headset gone). Once that happens, AI is never posted again. Close/reopen is fine:
+  audio_device==0 reports 0 bytes.
+  - ORIGIN: the writer is our runtime (the drain thread substitutes queue drain for the DAC clock). The skipped post is
+    illegitimate, since hardware completes.
+  - Fix, default on: after ROGUESQ_AI_STALL_POST_MS (100) without a post, post anyway and log `[s7197-ai-stall]
+    fallback post`. =0 restores the old drain-only path.
+  - Forced arm ROGUESQ_AI_STALL_TEST=<sec> (main.cpp get_frames_remaining): calls SDL_PauseAudioDevice(dev,1) from <sec>
+    on, and re-pauses after a reopen.
+- Near-hazard made visible: the osSpTaskStartGo override returns without submitting (so no SP/DP post) on an invalid OSTask
+  pointer. It is DEAD in practice, but it was silent. It now logs `[s7197-sp-drop]`. 0 hits in all runs below.
+Arms (scratch/s7197/arms.zsh, boot_freeze_hunt owner env, 3 boots x 45 s, pause at 15 s), plus full-log single boots:
+- Hunter: a_old 3/3 OK, b_fix 3/3 OK, c_ctl 3/3 OK. No arm froze: fs reached about 2576 in every boot, so rendering
+  survives a lost AI completion.
+- Full logs (scratch/s7197/full_{old,fix,ctl}.log):
+  - Positive control `TEST paused device=2 at 15.0 s` appears in both old and fix.
+  - old: guest audio-task rows `[s3299-t2]` (type-2 task successor) stop right after the pause. There are 2 rows after
+    the pause (the last one is 24 lines past it), against about 100/s before. 0 fallback posts. Guest audio is dead for
+    good, and video carries on.
+  - fix: 578 audio-task rows after the pause (about 10 tasks/s, the 100 ms fallback cadence). Fallback posts start at
+    remaining=2597 and climb by 768 B each.
+  - ctl (60 s, rebuilt binary): 0 fallback posts, 0 sp-drop, 6187 audio-task rows, fs=3405. The fallback never fires in
+    normal play.
+Discrimination: the census selects H-lost for exactly one path (AI drain) and H-none for every other producer. The forced
+arm shows what a lost AI completion does: permanent silent guest-audio death, not a game freeze. So it does not explain
+the 1-in-65 boot freeze, which stays passive.
+Caveat (single-source, untested): while the device is stuck, the queue grows by about 768 B per fallback post, and the guest
+audio clock runs at the fallback cadence. Recovery after the device resumes, and the latency the backlog adds, were not
+measured. That is the next unit.
+lib/ edited: submodule-patches exported.
