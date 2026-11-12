@@ -3,6 +3,21 @@
 #import <AppKit/AppKit.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+// s7226: same for the screen whose frame matches SDL display bounds (x, w, h in points); screens[0] if none matches.
+extern "C" double rs64_display_top_inset_frac(void);
+extern "C" double rs64_display_top_inset_frac_at(int x, int w, int h) {
+    @autoreleasepool {
+        for (NSScreen* s in [NSScreen screens]) {
+            const NSRect f = s.frame;
+            if ((int)f.origin.x == x && (int)f.size.width == w && (int)f.size.height == h) {
+                if (f.size.height <= 0.0) return 0.0;
+                if (@available(macOS 12.0, *)) return s.safeAreaInsets.top / f.size.height;
+                return 0.0;
+            }
+        }
+    }
+    return rs64_display_top_inset_frac();
+}
 extern "C" double rs64_display_top_inset_frac(void) {
     @autoreleasepool {
         NSArray<NSScreen*>* screens = [NSScreen screens];

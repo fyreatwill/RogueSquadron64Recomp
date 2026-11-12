@@ -190689,3 +190689,32 @@ at boot; a later resize or display move letterboxes. G1f fully closed.
 
 Side observation for next: auto reads SDL_GetDesktopDisplayMode(0) = the MAIN display, not the display the window opens on. An owner
 who launches on the TV while the laptop is main would get the laptop aspect (bars on the TV). Unmeasured; NEXT s7226.
+
+## Session 7226 (2026-11-12) — ASPECT=auto on a non-main display: H-window + H-main both true on the old path (window opens on the main display; a window placed on a secondary still took the MAIN display's aspect and notch band -> side bars); fixed with a target-display helper + ROGUESQ_WIN_DISPLAY=<n>|mouse; H-ok refuted
+
+Question (NEXT s7226): auto read SDL_GetDesktopDisplayMode(0). Does it match the display the game actually opens on when the owner's
+TV / ultrawide is a secondary display? Rig: build/virtual_display (tools/virtual_display.m) as a 1920x1080 or 2560x1080 secondary at
+1512,0 beside the 1512x982-pt built-in (main). Scripts scratch/s7226/boot.zsh (40 s boot, log rows + per-display shots) and
+flight.zsh (LEVEL=4 owner recipe FPS60 dd4, auto FULLSCREEN RETINA=0, `screencapture -D 2` every 10 s, 60-230 s).
+
+Old path, no lever (a0, 21:9 virtual): window fullscreen on the built-in ("at 0,33"), auto 1.5916 from 1512x982 -> H-window: the game
+always opens on display 0, so auto is self-consistent but the owner cannot put it on a secondary display at launch. Old path with the
+only placement lever (ROGUESQ_WINDOW_POS=1700,100, i.e. on the virtual 16:9; ROGUESQ_G1F_POSDISP=0 arm): window + swap chain on the
+virtual display (1920x1080 chain) but auto still 1.5916 -> FB_WIDTH 712, AND the built-in's notch band 0.0326 applied -> H-main.
+
+Fix (src/main/main.cpp rs64_g1f_target_display, src/main/rs64_display_mac.mm rs64_display_top_inset_frac_at): one target display
+drives auto's desktop mode, the notch band (NSScreen matched by frame), the window fit (usable bounds) and the opt-in window placement
+(SDL_WINDOWPOS_CENTERED_DISPLAY). ROGUESQ_WIN_DISPLAY=<n> or =mouse picks it; else a ROGUESQ_WINDOW_POS point's display
+(ROGUESQ_G1F_POSDISP=0 = old); else display 0 as before. Boot logs `[g1f] display N: "name" WxH at x,y` and `[g1f] target display`.
+Retail (no ASPECT/FULLSCREEN) window placement untouched. Default = old behaviour when no lever is given.
+
+Boot arms (logs): b16fix WIN_DISPLAY=1 -> target 1, auto 1.7778, FB 796, notch 0.0000, 1920x1080 chain; b21fix -> 2.2857 (clamp),
+FB 1024, 2560x1080 chain; b16pos WINDOW_POS only -> target 1 (ROGUESQ_WINDOW_POS), 1.7778; b16mouse WIN_DISPLAY=mouse with the cursor
+warped to 2400,500 (JXA CGWarpMouseCursorPosition) -> target 1 (mouse), 1.7778.
+Flight arms on the 16:9 virtual display (tools/s7226_display_fill_score.py, side-black control PASS both): fold (old, WINDOW_POS +
+POSDISP=0) BARS 16/18, lit 1.602 bbox x 0.048..0.950 (game 712/448 = 1.589); ffix (WIN_DISPLAY=1) FILL 17/18, bbox 0..1, lit 1.778.
+The remaining shots: t=170 in BOTH arms a dark-sided non-flight screen (lit 1.15/1.20, same phase), fold t=230 full-display = not game
+flight (after the hold; unexamined, single shot). Both flights 0 crashlines, 0 VI stalls, flight_s 157.
+Second line of evidence: the code path (the only aspect source was display 0's mode) plus the measured FB_WIDTH change 712 -> 796 on
+the same display. Sheet docs/owner_sheet_s7226_auto_second_display.png (old bars vs fix fill, t=150). OWNER-OPT-INS updated.
+Rules out: H-ok. Not covered: a real HDMI TV / ultrawide (virtual displays only), RETINA=1 on a 2x secondary (s7221 covers 2x chains).

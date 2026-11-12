@@ -11912,7 +11912,53 @@ static int rs64_g1f_win_w = 640, rs64_g1f_win_h = 480;
 static bool rs64_g1f_fullscreen = false;
 #ifdef __APPLE__
 extern "C" double rs64_display_top_inset_frac(void);
+extern "C" double rs64_display_top_inset_frac_at(int x, int w, int h);
 #endif
+// s7226 G1f: the display the game targets at boot (auto aspect, notch band, window fit, window placement).
+// ROGUESQ_WIN_DISPLAY=<n> (SDL display index, listed in the [g1f] display rows) or =mouse (the display under the
+// cursor at launch). Else, if ROGUESQ_WINDOW_POS=x,y is set, the display containing that point (ROGUESQ_G1F_POSDISP=0 = old).
+// Else display 0 (the macOS main display), as before. Needs SDL video initialised.
+static int rs64_g1f_target_display() {
+    static int td = -1;
+    if (td >= 0) return td;
+    td = 0;
+    const int nd = SDL_GetNumVideoDisplays();
+    for (int i = 0; i < nd; i++) {
+        SDL_Rect b{}; SDL_GetDisplayBounds(i, &b);
+        const char* nm = SDL_GetDisplayName(i);
+        std::fprintf(stderr, "[g1f] display %d: \"%s\" %dx%d at %d,%d\n", i, nm ? nm : "?", b.w, b.h, b.x, b.y);
+    }
+    auto at_point = [nd](int x, int y) {
+        for (int i = 0; i < nd; i++) {
+            SDL_Rect b{};
+            if (SDL_GetDisplayBounds(i, &b) == 0 && x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h) return i;
+        }
+        return -1;
+    };
+    const char* how = "default";
+    if (const char* e = std::getenv("ROGUESQ_WIN_DISPLAY"); e && *e) {
+        if (!std::strcmp(e, "mouse")) {
+            int mx = 0, my = 0; SDL_GetGlobalMouseState(&mx, &my);
+            const int i = at_point(mx, my);
+            if (i >= 0) td = i;
+            how = "mouse";
+        } else {
+            const int i = std::atoi(e);
+            if (i >= 0 && i < nd) td = i; else std::fprintf(stderr, "[g1f] ROGUESQ_WIN_DISPLAY=%s out of range (0..%d), using 0\n", e, nd - 1);
+            how = "ROGUESQ_WIN_DISPLAY";
+        }
+    } else if (const char* wp = std::getenv("ROGUESQ_WINDOW_POS")) {
+        const char* pd = std::getenv("ROGUESQ_G1F_POSDISP");
+        int x, y;
+        if (!(pd && *pd == '0') && sscanf(wp, "%d,%d", &x, &y) == 2) {
+            const int i = at_point(x, y);
+            if (i >= 0) td = i;
+            how = "ROGUESQ_WINDOW_POS";
+        }
+    }
+    std::fprintf(stderr, "[g1f] target display %d (%s)\n", td, how);
+    return td;
+}
 static bool rs64_g1f_optin = false;  // ASPECT or FULLSCREEN set: high-DPI drawable; unset = retail window
 // s7202 display hot-plug: the event watch records display add/remove/move; update_gfx (main thread) logs where the
 // window went and, if a display was removed while fullscreen, leaves and re-enters desktop fullscreen so macOS builds
@@ -11977,7 +12023,7 @@ static void rs64_display_hotplug_tick() {
 // Size a window of aspect r to ~90% of the usable desktop of display 0.
 static void rs64_g1f_fit_window(double r) {
     SDL_Rect ub{0, 0, 1280, 800};
-    if (SDL_WasInit(SDL_INIT_VIDEO) && SDL_GetDisplayUsableBounds(0, &ub) != 0) ub = {0, 0, 1280, 800};
+    if (SDL_WasInit(SDL_INIT_VIDEO) && SDL_GetDisplayUsableBounds(rs64_g1f_target_display(), &ub) != 0) ub = {0, 0, 1280, 800};
     double h = ub.h * 0.9, w = h * r;
     if (w > ub.w * 0.9) { w = ub.w * 0.9; h = w / r; }
     rs64_g1f_win_w = ((int)w) & ~1;
@@ -12125,6 +12171,10 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     if (const char* wp = std::getenv("ROGUESQ_WINDOW_POS")) {
         int x, y;
         if (sscanf(wp, "%d,%d", &x, &y) == 2) { rs64_win_x = x; rs64_win_y = y; }
+    } else if (rs64_g1f_optin) {
+        // s7226: open centred on the target display (0 unless ROGUESQ_WIN_DISPLAY picks another).
+        const int td = rs64_g1f_target_display();
+        rs64_win_x = rs64_win_y = SDL_WINDOWPOS_CENTERED_DISPLAY(td);
     }
     SDL_Window* sdl_window = SDL_CreateWindow(
         "Star Wars: Rogue Squadron 64 Recompiled",
@@ -12450,13 +12500,16 @@ static void rs64_g1d_apply_aspect_policy() {
     if (as && !std::strcmp(as, "auto")) {
         SDL_DisplayMode dm{};
         double r = 4.0 / 3.0;
-        if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) r = (double)dm.w / dm.h;
+        const int td = rs64_g1f_target_display();
+        if (SDL_GetDesktopDisplayMode(td, &dm) == 0 && dm.h > 0) r = (double)dm.w / dm.h;
 #ifdef __APPLE__
         // s6930: desktop fullscreen stops below the notch band (3024x1898 of 3024x1964), so the whole-panel aspect left
         // side bars. Windowed auto keeps the panel aspect. ROGUESQ_G1F_NOTCH=0 = old.
         const char* nt = std::getenv("ROGUESQ_G1F_NOTCH");
         if (dm.h > 0 && rs64_g1f_fullscreen && !(nt && *nt == '0')) {
-            const double top = rs64_display_top_inset_frac();
+            SDL_Rect db{};
+            const double top = SDL_GetDisplayBounds(td, &db) == 0 ? rs64_display_top_inset_frac_at(db.x, db.w, db.h)
+                                                                   : rs64_display_top_inset_frac();
             if (top > 0.0 && top < 0.5) r /= 1.0 - top;
             std::fprintf(stderr, "[g1f] notch band %.4f of display height\n", top);
         }
