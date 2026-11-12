@@ -190593,3 +190593,8 @@ hidden Space or swap chain loss), then backlog.
   still recovers (3024x1898 on the built-in; pre-removal P at=0 on the vd as in s7221). Screenshot g_rm5 shows the game
   fullscreen on the built-in. 0 crashes in 5 runs.
 - Rules out: any fullscreen disturbance from a display add. Hot-plug thread fully closed (add / foreign removal / own removal).
+- Discrimination: add case SELECTS H-ok and REFUTES H-churn and H-dead (no leave, no Z row, 30/s on screen in both RETINA arms).
+  Foreign-removal case SELECTS H-churn (our handler, control arm a reproduces it in the same build) and the gated arm g REFUTES
+  it after the fix. This is an engineering change (behaviour fix in rs64_display_hotplug_tick), not only instrumentation.
+- Next discriminator (NEXT.md, HYPOTHESIS-ID retina-wide-window): RETINA=1 vs 0 at ASPECT=21:9 windowed. The swap-chain size row
+  plus in-phase shot pairs split H-ok (2x chain, full 21:9 viewport) from H-letter (viewport in points) and H-cost (gaps >250 ms).
