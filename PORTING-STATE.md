@@ -190620,3 +190620,32 @@ hidden Space or swap chain loss), then backlog.
   REFUTES H-cost. Engineering: new scorer tools/s7223_window_score.py (windowed crop + controls) and owner sheet.
 - Next discriminator (NEXT.md, HYPOTHESIS-ID retina-live-resize): live windowed<->fullscreen toggle and window resize mid-flight
   at RETINA=1 vs 0 — swap-chain rows per change split H-ok / H-stale / H-churn.
+
+## Session 7224 (2026-11-12) — RETINA=1 live fullscreen toggle + window resize mid-flight (H-ok): every change moves the swap chain to 2x the new point size in one step, presents recover in <=2 s, 0 gaps >250 ms; H-stale and H-churn refuted; RETINA thread fully closed
+- Run (scratch/s7224/arm.zsh = s7223 recipe + test levers): LEVEL=4 owner recipe (FPS60 dd4) + ASPECT=21:9 windowed 1360x594 pt,
+  arms r1 RETINA=1 / r0 RETINA=0 sequential, screen unlocked (IOConsoleLocked false). Mission at t=72 both arms, flight held.
+  Changes via the existing s6888 levers (same F11 handler as a real key): ROGUESQ_FS_TEST_TOGGLE_LIST_S=105,125,165,175
+  (fs on, off, on, off) and ROGUESQ_WIN_TEST_RESIZE_S=145:1000:430. screencapture -x every 5 s, t=95..200. 0 crashes.
+- Positive control: all 4 toggles logged `[g1f] fullscreen on/off` and the resize logged `[g1f] resized 1000x430` in BOTH arms.
+- Swap chain (ring Z rows, new tools/s7224_live_resize_score.py), 5 size changes per arm, each exactly one step:
+  | change | r1 Z size | r0 Z size | P/s after (r1) | recover >=25/s |
+  | fs on 105 | 3024x1898 | 1512x949 | 23 in the toggle second, then 30+ | <=1 s |
+  | fs off 125 | 2720x1188 | 1360x594 | 21, 46, 30.. | 2 s (both arms) |
+  | resize 145 | 2000x860 | 1000x430 | 30 flat | 0 s |
+  | fs on 165 | 3024x1898 | 1512x949 | 40, 60.. | 1 s |
+  | fs off 175 | 2000x860 | 1000x430 | 41, 60.. | 0 s |
+  r1 = 2 x point size at every step (backing pixels), r0 = 1 x. r1 6 Z rows, r0 10 (r0 makes a second same-size resize() call
+  0.5 s after each toggle: harmless, no size change). 0 gaps >250 ms after 10 s, both arms; min on-screen 21/s = toggle seconds only.
+- Game submits (Q) == on-screen presents (P) in every second of both arms: the 30/s stretches (e.g. 146-163) are the game's own
+  frame output at those seconds (same in both arms and window states), not window/compositor throttling.
+- Sharpness: whole-screen centre crop FAILED its control (down/up2 raised the score), so not used. Window-rect crops (s7223
+  method, central 80%): control passes every phase (r1 down/up2 falls to r0 level) and r1 > r0 in all 6 phases:
+  win1360 0.837 vs 0.747, fs 0.832 vs 0.743, win1360 after round trip 0.810 vs 0.775, win1000 0.774 vs 0.715, fs 0.772 vs 0.391,
+  win1000 after round trip 1.052 vs 0.746 (`--phase=` in the tool). Sheet docs/owner_sheet_s7224_retina_live_resize.png (top r1,
+  bottom r0; fullscreen 115, 1000x430 window 150, 1000x430 after round trip 190).
+- Discrimination: one Z size step per change at 2x points SELECTS H-ok and REFUTES H-stale (old size kept); 0 gaps and <=2 s
+  recovery with equal r0 behaviour REFUTES H-churn. RETINA is closed in every scenario (static fs/windowed, hot-plug, live
+  changes); default stays the owner's call.
+- Found while reading the code: ROGUESQ_ASPECT=auto is resolved ONCE at boot from SDL_GetDesktopDisplayMode (main.cpp ~12450)
+  and sizes the window and game width from it. A later window resize to another aspect cannot change the game width, so G1f goal
+  3 ("after a resize") is unmeasured. Next unit (NEXT.md, HYPOTHESIS-ID aspect-auto-live-resize).

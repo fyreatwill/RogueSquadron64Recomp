@@ -1,16 +1,14 @@
-# NEXT (s7224): RETINA=1 live windowed<->fullscreen toggle and window resize, mid-flight
-HYPOTHESIS-ID: retina-live-resize
-Context: RETINA=1 static cases are all closed (fullscreen auto s7203-s7222, 21:9 windowed s7223: 2720x1188 chain for a
-1360x594 pt window, full view, hf 0.914 vs 0.735). Not yet scored: changing size WHILE playing (owner presses the fullscreen
-toggle Cmd+Ctrl+F / F11, or drags the window edge). Hypotheses: H-ok (each change -> one new [retina] swapchain row at
-2 x new point size, viewport refit, presents recover within ~2 s); H-stale (chain keeps the old size -> blurry or cropped/
-letterboxed view after the change); H-churn (repeated recreate / resize storm, presents <20/s for seconds or gaps >250 ms).
-Run: copy scratch/s7223/arm.zsh (LEVEL=4, ASPECT=21:9 windowed, PRESENT_RING) to scratch/s7224; in flight (~120 s) send the
-fullscreen toggle via osascript keystroke to the game process, +15 s toggle back, +15 s resize the window via System Events
-(set size of window 1 to {1000,430}); screencapture -x +5 s after each change. Arms r1 RETINA=1 / r0 RETINA=0, sequential.
-Score: Z rows / [retina] swapchain rows / [g1f] resized rows per change, scratch/s7222/sum2.py (P/s, gaps), and
-tools/s7223_window_score.py (needs window rect: take the LAST [g1f] window row, or score the fullscreen shot whole).
-Positive control: the toggle must log [g1f] fullscreen change in BOTH arms (else the keystroke never landed = no result);
-hf ctl down/up2 in r1 must fall to r0 level.
-Outcomes: H-ok -> RETINA fully closed, owner sheet; H-stale -> fix the resize path to recreate at backing pixels;
-H-churn -> debounce the resize handler.
+# NEXT (s7225): ROGUESQ_ASPECT=auto after a live window resize (G1f goal 3)
+HYPOTHESIS-ID: aspect-auto-live-resize
+Context: s7224 closed RETINA for live changes. ASPECT=auto is resolved ONCE at boot (main.cpp ~12450: SDL_GetDesktopDisplayMode ->
+clamp -> setenv ROGUESQ_ASPECT=r:1 -> rs64_g1f_fit_window), so the game FB width and the RT64 aspect are fixed from then on.
+G1f goal 3 asked for auto to follow "a resize or moving between displays if feasible"; never measured.
+Hypotheses: H-follow (something already re-derives width on resize: view fills the new window, no bars); H-bars (game width stays,
+RT64 letter/pillarboxes inside the new window: correct geometry, wasted area); H-stretch (picture stretched to the new window:
+wrong geometry - a defect).
+Run: copy scratch/s7224/arm.zsh to scratch/s7225; ASPECT=auto windowed (no FULLSCREEN), RETINA=0, one arm; levers
+ROGUESQ_WIN_TEST_RESIZE_S=120:1000:430,140:900:675,160:1200:675 (2.33, 4:3, 16:9). Control arm in the same iteration: ASPECT=16:9 fixed
+with the same resizes (expected H-bars). Score with tools/s7223_window_score.py-style window crop: lit bbox per shot (bars show as
+bbox < 1 in one axis) and circle/HUD aspect (radar disc width/height in px; stretch shows as != 1).
+Outcomes: H-follow -> close G1f goal 3; H-bars -> decide if a live FB-width change is feasible (game reads width at boot? check
+FB_WIDTH users) or document bars as the design; H-stretch -> fix the RT64 aspect rewrite on resize.

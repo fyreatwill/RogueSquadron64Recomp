@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7223 (2026-11-12).
+Compact operational handoff, as of Session 7224 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -113,6 +113,9 @@ Open or awaiting the owner:
   s7223 ASPECT=21:9 WINDOWED (1360x594 pt window, LEVEL=4 owner recipe, r1 vs r0): r1 swap chain 2720x1188 (r0 1360x594), full 21:9
   view + edge HUD in the window both arms (bbox 0..1), hf 0.914 vs 0.735 (r1 higher 17/19 pairs; ctl down/up2 r1 0.522, r0 0.532),
   0 gaps >250, min 27 vs 29/s in a shared 30/s dip. H-ok. **RETINA windowed CLOSED.** Sheet docs/owner_sheet_s7223_retina_window_21x9.png.
+  s7224 LIVE changes mid-flight (fs toggle x4 + SDL resize to 1000x430, r1 vs r0): every change = ONE swap chain step to 2x (r1) /
+  1x (r0) the new point size, recover <=2 s, 0 gaps >250, Q==P (30/s stretches are game output); window-crop hf r1>r0 in 6/6
+  phases, ctl passes. H-ok. **RETINA CLOSED in every scenario; default = owner.** Sheet docs/owner_sheet_s7224_retina_live_resize.png.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -285,8 +288,8 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) RETINA=1 live windowed<->fullscreen toggle + window resize mid-flight** (s7223 closed static 21:9
-   windowed: H-ok). Swap chain must follow each size change at backing pixels with a refit full viewport, 0 gaps >250 ms.
+1. **(next, NEXT.md) ASPECT=auto after a live window resize** (G1f goal 3). auto is resolved once at boot from the desktop
+   mode (main.cpp ~12450) and fixes window + game width; a resize to another aspect is unmeasured (bars, stretch, or follow?).
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
