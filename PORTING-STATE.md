@@ -189298,3 +189298,23 @@ large / out of turns". Route taken: refute and fix locally (route 1 -> 2). Not a
   kept). Nothing was disabled. The RUNNER_MAX_SECS 3600 cap is unchanged.
 - The L17 retail capture from iteration 67 completed and is still on disk: scratch/s7141/L17r.cap (12.6 GB) + L17r.raw (2.5 GB),
   cap_L17r.txt window (225,46,1062,828) frames 10970 fails 0. It was never post-processed. NEXT.md resumes from it.
+
+## Session 7180 (2026-11-12) — G3 retail settings (4:3, dd1, FPS60 off) L17 + L18 flight == angrylion (centre 0.004/0.011, 0 >0.05); item 36 CLOSED (H-equal L0-L18)
+HYPOTHESIS-ID: g3-retail-43-sweep (closed).
+No maintenance (59995 B < 60000). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked, 0 CRASH/SIGSEGV/SIGBUS.
+- L17 capture left by s7179 (FROM=4700, delay 60) was INVALID for flight. Its raw timestamps (24 MHz) put swap 4700 at ~133 s, after
+  the trench autopilot's MISSION FAILED (~126 s). Swaps 4700-5028 were the level-description screen, a 512x448 INTERLACED field (every
+  other row painted, angrylion `painted 114464 of 229376`). Under FID_MAINRUN its longest-run crop is 512x1, which crashed the CONTROL
+  (IndexError). Swaps 5029-5447 were AVAILABLE CRAFT / SELECT YOUR CRAFT.
+  Incidental 4:3 menu datum (single-source): refit 0,9,308,242 centre 0.032, 0 >0.05, CTRL PASS, identical by eye (fine text and holo).
+- Tool fix: tools/s7122_fidelity.py control() now skips replays cropping to < 100 rows (re-run on that capture: PASS on f5030).
+  tools/s7177_post_lvl.zsh takes SFX=<suffix> (default r) for re-runs under a new name.
+- L17 re-run as L17s with FROM=3300 (the swap estimate from the raw timing put flight ~61-126 s near 2500-4400): 744 swaps, all trench flight
+  plus one autopilot pause overlay. Centre 0.004, side 0.006, meand med 3.32, 0 >0.05. Shift-2 ctl 117 >0.05 (fires; at 21:9 it did not,
+  because that window was darker). Rectfit CTRL x0+4 PASS, best 0,10,308,241. Worst swap 3432 = pause menu frac_c 0.046 (lag). Window
+  849x788 (vs 837x782 earlier; 320x240 capture, rectfit absorbs it). Sheet docs/owner_sheet_s717x_L17_43_fidelity.png identical by eye.
+- L18 (snow canyon, FROM=7500): 740 swaps, lag 15 ms. Centre 0.010-0.011, side 0.013, 0 >0.05. Shift-2 ctl 54 >0.05 (fires), CTRL PASS,
+  refit 0,10,308,240. Worst swap 7847, frac 0.037, frac_c 0.056: a craft banking over a ridge, same as angrylion by eye.
+  Sheet docs/owner_sheet_s717x_L18_43_fidelity.png.
+Verdict: H-equal on L17 and L18. Item 36 (retail 4:3 in-flight fidelity) CLOSED: L0-L18 H-equal. All .cap/.raw deleted.
+Rules out a retail-settings render difference in flight on any level. Next: retail 4:3 menus/cutscenes (item 37), not yet measured at 4:3.

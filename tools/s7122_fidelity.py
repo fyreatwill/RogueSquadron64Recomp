@@ -162,7 +162,8 @@ def control(aldir):
     # s7144: first replay whose image loads (a menu-entry frame can be mostly unpainted -> load_al None)
     for fn in sorted(f for f in os.listdir(aldir) if f.endswith('.rgb')):
         a = load_al(os.path.join(aldir, fn))
-        if a is not None: break
+        # s7180: an interlaced field (every other row painted, L17 level-description screen) crops to 512x1 under FID_MAINRUN
+        if a is not None and a.size[1] >= 100: break
     W, H = a.size
     r0 = regions(dmap(a, a.copy()), W, H)
     b = a.copy(); x0, y0 = W // 3, H // 3
