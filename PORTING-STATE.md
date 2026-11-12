@@ -190748,3 +190748,25 @@ after removal fix/old t=190; row 3: t=230 desktop, game was killed by then).
 Rules out: H-jump, H-dead. Selects H-ok for the default path. Not covered: real TV/ultrawide hardware, RETINA=1.
 Next: the flat-30 pin on the HOTPLUG=0 path is a cost the default avoids; G1f display work is done. Next unit takes the next
 CURRENT-TRUTH item (owner-facing items 2-14 are owner-blocked), see NEXT.md.
+
+## Session 7228 (2026-11-12) — windowed removal of the target display: H-ok on both paths; the s7227 "HOTPLUG=0 flat 30/s pin" is the game's own frame rate (H-content), not the display move
+
+Unit from NEXT.md (HYPOTHESIS-ID display-move-present-rate). Script scratch/s7228/arm.zsh = s7227 arm with ROGUESQ_FULLSCREEN=0 and no
+F11 toggles (LEVEL=4 owner recipe FPS60 dd4 ASPECT=auto RETINA=0 WIN_DISPLAY=1 on a 1920x1080 virtual display destroyed at ~172 s).
+Two arms sequential (scratch/s7228/both.zsh): fix (default) and old (ROGUESQ_DISPLAY_HOTPLUG=0). Both: crashlines=0, vi_stalls30s=0,
+flight 161 s, [vd] ndisp 1->2->1, `display removed fullscreen=0` (no cycle either arm: the s7202 handler needs fs, so windowed = same path).
+New scorer tools/s7228_present_rate_score.py (per-second on-screen P rows at>0 and queued Q rows, 50 s around the removal; FLAT30 vs
+MIXED verdict). Positive control: on the s7227 rings it returns old FLAT30 (49/49 s in 25-35, max 30) and fix MIXED (20 s >=45).
+- Windowed results: both arms move to the built-in windowed (frame 0,54,1512x895, layer 1512x863@2.0, occl_visible=1) and run MIXED
+  30-60 after removal (fix mean 38.0, 15 s >=45; old mean 40.1, 16 s >=45). Shots: windowed on the secondary before, visible on the
+  built-in after (docs/owner_sheet_s7228_windowed_removal.png). H-scale and the windowed-defect outcome refuted; windowed is fine.
+- s7227 old-arm "flat 30" re-read: Q (game swaps queued) and W (workload) rows also run a rigid 33.3 ms (Q delta 8/240 s in 1446/1466),
+  acq_ms median 0.03, tp_ms max 0.59: nothing in the present path blocks; the VI thread is a fixed 60 Hz timer (events.cpp
+  vi_thread_func), so the game itself took 2 VIs per frame. Flat-30 run census over all 4 rings (t>=60): s7228 old has a 62-s run
+  starting t=127, i.e. 41 s BEFORE its removal with no display event; a 21-s run at t=76 recurs in all 4 arms (route-locked content);
+  s7227 old 49 s from t=172; s7228 fix 25 s from t=201. So long flat-30 stretches are a property of the flight route/cost in this
+  harness, and the s7227 coincidence with HOTPLUG=0 was phase (H-content selected, two lines: rigid game swap cadence with free
+  present path, and a same-length run with no removal at all). Also both s7227 arms ended in flight on similar terrain (shots t=180-225).
+Rules out: H-scale (1x chain in 2x layer halving rate), a windowed display-move defect. H-space moot. Downgrades s7227's single-source
+"HOTPLUG=0 pins at 30" to phase. Not covered: why FPS60 flight drops to 30 for up to a minute here when s7204 measured fl_shown ~60.
+Next: in-flight flat-30 stretches under FPS60, H-log vs H-cost vs H-host (NEXT.md).

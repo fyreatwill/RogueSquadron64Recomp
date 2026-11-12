@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7227 (2026-11-12).
+Compact operational handoff, as of Session 7228 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -126,8 +126,14 @@ Open or awaiting the owner:
   Fix arm FB 796, FILL 17/18 (tools/s7226_display_fill_score.py, ctl PASS); 21:9 virtual -> 1024. Sheet docs/owner_sheet_s7226_auto_second_display.png.
 - **s7227 F11 x2 + removal of the target display (WIN_DISPLAY=1): H-ok.** Toggle stays on the secondary (windowed 1920x1018, refill
   FILL 21/22); removal lands visible fullscreen on the built-in, letterboxed, 0 gaps >250 ms; s7222 gate reads still_present=0 right.
-  HOTPLUG=0 also recovered here (contradicts s7202 hidden-Space, sequence differs) but pinned at a flat 30/s; default 30-60.
+  HOTPLUG=0 also recovered here (contradicts s7202 hidden-Space, sequence differs). Its post-removal "flat 30/s" is NOT a display
+  effect (s7228): the GAME swap rate (W/Q rows) fell to a rigid 33.3 ms, acquire 0.03 ms, VI clock is a fixed 60 Hz timer.
   Sheet docs/owner_sheet_s7227_secondary_toggle_removal.png.
+- **s7228 WINDOWED removal of the target display: H-ok, flat-30 = H-content.** Both arms (default, HOTPLUG=0; same code path when
+  windowed) land visible windowed on the built-in, 1512x863 layer, 30-60/s after removal (tools/s7228_present_rate_score.py, scorer
+  reproduces s7227 old FLAT30 / fix MIXED). The old windowed arm ran a 62-s flat-30 stretch from t=127, 41 s BEFORE the removal, and a
+  21-s one at t=76 recurs in all 4 s7227/s7228 arms: in-flight flat-30 runs up to ~60 s happen with no display event (single-route,
+  diagnostic-logging harness). Sheet docs/owner_sheet_s7228_windowed_removal.png.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -300,8 +306,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Flat-30 after a macOS-driven display move (s7227, HOTPLUG=0 path, single-source):** the default cycle keeps
-   30-60/s; check whether a windowed move between displays (no fullscreen, not cycled) also pins at 30 (layer 2x vs 1x chain).
+1. **(next, NEXT.md) In-flight flat-30 stretches under FPS60 (s7228):** coverage-harness L4 flight runs 21-62 s at a rigid 30/s
+   (2 VIs per game frame) with no display event, while s7204 measured fl_shown ~60 at the owner recipe on a quiet host. Split H-log
+   (harness diag logging, ~1M lines/run) vs H-cost (scene cost > 16.7 ms) vs H-host in one same-route arm table.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
