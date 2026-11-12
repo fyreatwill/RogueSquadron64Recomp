@@ -189840,3 +189840,9 @@ Rules out: H-poll (no guest busy-poll can starve its producer, given the priorit
 was never seen outside the forced arm, so it does not explain the 1-in-65 boot freeze, which stays passive.
 lib/ edited, so submodule-patches exported. Next: the host completion-delivery class (SP/DP/SI/AI/VI/timer paths that
 can return without posting).
+Discrimination: the census **refutes H-poll and selects H-none** for guest-produced busy-polls. The forced arm
+**selects H-lost-completion** as a real freeze mechanism: old 3/3 FROZEN, fix 3/3 OK. The fix is engineering, not
+diagnostic: pi.cpp now posts the completion on the unknown-region read and write paths.
+Next discriminator: the host completion-delivery table (NEXT.md, HYPOTHESIS-ID host-completion-delivery-class). Every
+SP/DP/SI/AI/VI/timer return path that skips its post is classified DEAD/SAFE/HAZARD. A HAZARD row selects H-lost as a
+boot-freeze candidate; an all-DEAD/SAFE table selects H-none.
