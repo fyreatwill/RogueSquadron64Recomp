@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7174 (2026-11-11).
+Compact operational handoff, as of Session 7175 (2026-11-11).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -316,7 +316,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 33. **G3 in-flight owner-recipe fidelity 16:9: CLOSED s7164 (H-equal L0-L18).** Score only the flight window (--t1 before medal screens), refit rect with tools/s7163_rectfit.py. L17 dark slab = deliberate W_SHEET_PX sheet cull, not RT64 (PORTING-STATE s7164).
 34. **G3 in-flight owner-recipe fidelity at 21:9: CLOSED s7173 (H-equal L0-L18; centre <=0.006, 0 flight >0.05 beyond dup-pframe lag).** Shift-2 ctl fires except dark/smooth L3/L8/L13/L17 (judged by meand ratio + sheet). TRAP: L17 (trench) autopilot dies ~126 s, so FROM=7500 lands in level select; use FROM=4700 with arm delay 60. Sheets docs/owner_sheet_s71{67..73}_L*_219_fidelity.png.
 35. **G3 L4 21:9 mid-mission cutscene lower-right hole: FIXED s7166 (ours: s7136 SKYFILL rect bottom).** SKYFILL wrote {0,0,w-1,h-1} with h = viewport HEIGHT (340 at 0x80138D20+0x16); letterboxed viewports start at y 54, so the widened rect ended at row 339 and replaced the builder's right below-horizon rect; rows 340-392 right of x 512 were never cleared, exposed when no water tri reaches the bottom band (0 tris at 21:9 and 4:3). Fix tools/apply_s7166_skyfill_bottom.py, ROGUESQ_HORIZON_SKYFILL_BOT (default on, =0 s7136, =tog): rect keeps the builder pair's max bottom/right. L4 21:9 unpainted max 27136 -> 0 (75 -> 0 swaps); CULL_SPIKE=0 byte-identical (not the cull); 4:3 max 338. Recorder trigger ROGUESQ_G5B_FRAME_TRIG_LB=<k> (letterbox span k, dpc_bridge.cpp). Sheet docs/owner_sheet_s7166_L4_219_cutscene_fix.png; owner look.
-36. **(next, NEXT.md) G3 in-flight fidelity at RETAIL settings (4:3, dd1, no FPS60)**: L0 L1 L2 L3 L6 H-equal (s7122/s7124/s7174); s7141 chain, CW=320 CH=240, rect 0,10,308,241 split 103,205 (1062x828 pt window). Next L4 L5 L7+.
+36. **(next, NEXT.md) G3 in-flight fidelity at RETAIL settings (4:3, dd1, no FPS60)**: L0-L7 H-equal (s7122/s7124/s7174/s7175); s7141 chain, CW=320 CH=240, rect 0,10,308,241 split 103,205 (1062x828 pt window). Next L8 L9 L10, then L11-L18.
 
 ## Evidence index
 

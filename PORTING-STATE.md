@@ -189195,3 +189195,20 @@ FPS60=0 follows FPS60=1 in XENV_EXTRA (later wins, as s7124). All three streams 
 Verdict: H-equal on L0, L2, L3 at retail settings; H-hole and H-lag outliers absent; H-tool was real for the old rect and is fixed by the refit (two
 lines: whole-run metric with a firing same-run shift control + eyeballed sheets). Deleted .cap/.raw after scoring.
 Retail 4:3 done: L0 L1 L2 L3 L6. Next: L4, L5, L7 (same recipe and rect).
+
+## Session 7175 (2026-11-11) — G3 retail settings (4:3, dd1, FPS60 off) L4 + L5 + L7 flight == angrylion (centre 0.006/0.003/0.006, 0 >0.05)
+HYPOTHESIS-ID: g3-retail-43-sweep.
+Three game runs, one at a time, screen unlocked (ioreg shows no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS in every run.log/keys.log,
+run.log shows "[g1d] ROGUESQ_ASPECT=4:3 applied" and "[dd] multiplier 1" for each. Owner save untouched (forced-level route, NO_SAVE_WRITE).
+Recipe as s7174 (tools/s7141_arm.zsh, CW=320 CH=240, FROM=7500, MAX_MB=12000). Window 1062x828 pt for all three, so the s7174 rect still applies.
+All three streams hit the 12 GB cap (740-743 swaps). angrylion CONTROL PASS each run; s7163_rectfit CTRL x0+4 PASS each run.
+- L4 (Gerrard V, orange clouds/canyon): lag 15 ms, rect 0,10,308,241: meand 3.06/3.32/3.59, frac 0.010/0.011/0.018, 0 >0.05, centre 0.006,
+  side 0.012, dup 4. Shift-2 ctl 141 swaps >0.05 (fires). Worst swaps 8172-8175 are a letterboxed cutscene, frac 0.018, identical by eye.
+  Sheet docs/owner_sheet_s7175_L4_43_fidelity.png.
+- L5 (Jade Moon, space/moon): lag 15 ms, rect 0,10,308,241: meand 1.89/2.50/2.86, frac 0.005/0.006/0.008, 0 >0.05, centre 0.003, side 0.006.
+  Shift-2 ctl 26 swaps >0.05, meand p90 5.63 vs 2.50 (fires). Sheet docs/owner_sheet_s7175_L5_43_fidelity.png identical by eye.
+- L7 (dark canyon, Y-wing): lag 10 ms, rectfit best 0,10,308,240: meand 3.80/4.55/5.32, frac 0.010/0.011/0.012, 0 >0.05, centre 0.006 (refit),
+  side 0.011, dup 0. Shift-2 ctl 44 swaps >0.05 (fires). Sheet docs/owner_sheet_s7175_L7_43_fidelity.png identical by eye.
+Verdict: H-equal on L4, L5, L7 at retail settings (two lines: whole-run metric with a firing same-run shift-2 control and passing rect control,
+plus eyeballed sheets). H-hole, H-lag and H-tool outliers absent. Deleted .cap/.raw after scoring.
+Retail 4:3 done: L0-L7. Next: L8, L9, L10 (same recipe and rect).
