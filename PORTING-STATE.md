@@ -190233,3 +190233,32 @@ Verdict: H-prog selected (two lines: code path + same-run model fit with control
 each swap; retail hardware shows the weave (combs on scroll/fade on a progressive display). Not a defect to fix: matching retail would add
 combing. Thread interlaced-still-present CLOSED. Raws deleted (20 GB); kept replays scratch/s7141/ER2{r,n,g}, ring, parity output.
 Next: field-mode census across the boot/menu/cutscene route at the owner recipe (which other screens use the scissor field bit).
+
+## Session 7210 (2026-11-12) — field-mode census: only the boot title stills and Elite Rogues use the scissor field bit; ER at 16:9 presents progressive (H-more-prog), after a registration trap that made bob look like the winner
+
+Unit from NEXT (HYPOTHESIS-ID field-mode-census). No maintenance (29335 B). No new soak results. Owner save untouched (s7141 harness,
+NO_SAVE_WRITE, no SAVE_FROM). 2 game runs, 0 CRASH/SIGSEGV/SIGBUS lines in either run log.
+Line 1, census (new tools/s7210_field_census.py: parses a G5B_FRAME stream, per swap scissor ops / field bit w1 b25 / odd b24 / widest
+cimg; mach ticks / 24e6 = s). Run FC1 = scratch/s7210/fc.zsh: owner recipe (FPS60 dd4 16:9, s7141 arm) L17 route from swap 0, EVERY=100000
+(stream only, 4.8 GB, 254 s). 14912 swaps, 14911 with scissors (positive control: every drawing swap counted), 86456 scissors, 12964 field:
+| swaps | t s | cimg/w | scissor | screen |
+| 626-1649 (1024) | 10.9-28.0 | B51E00/796 | 142,0-654,447/448, even only | boot title stills (s7206 interlaced stills) |
+| 7399-7859 (461) | 125.3-133.0 | B51E00/796 | same | Elite Rogues after MISSION FAILED |
+| 12079-12539 (461) | 205.3-213.0 | B51E00/796 | same | Elite Rogues again (autopilot restart) |
+No field-mode scissor anywhere else (logos, attract, crawl, menus, hangar, cutscenes, flight AA3C00/B51E00 ping-pong). The odd bit is never set.
+Run ER169 = scratch/s7210/er169.zsh: same recipe, EVERY=1 FROM=6950, window capture 1360x796. Census again: ER at 7387-7842 (456), same
+shape (second line for the ER entry). Post tools/s7152_post.zsh (painted CONTROL PASS); G = NOFIELD=1 NOPREFILL=1 replay (s7209 al16).
+Line 2, presented model fit (tools/s7183_parity.py, REPAIR=3, GDIR). First pass rect 0,33,1360,796 whole fb, then band-cropped 243,33,1117,796
+(replays cut to cols 142-654): BOB picked over PROG (G!=W uncombed B 66/69, combed B 51/52, effect half the synthetic bob). NOT a result:
+the d level (5.5-10) sat above the 4:3 floor and fell monotonically as the top edge moved down (t30 7.3 ... t34 5.1). New tools/s7210_regfit.py
+(coordinate-descent rect fit vs G plus a native-row-count search) fits rect 243,32,1117,796 showing native rows 0-443 only: d 2.98 (vs 6.59
+with 448 rows). With replays cut to 444 rows (scratch/s7210/parity_444_t3[123].txt, t32 shown):
+| subset | WEAVE | BOB | PREV | PROG | picks | re-pair offset G |
+| combed, G != W (52) | 8.16 | 6.00 | 13.64 | 4.04 | G 51, P 1 | 0 (51/52) |
+| uncombed, G != W (69) | 3.22 | 3.46 | 5.23 | 2.28 | G 68, W 1 | 0 (65/69) |
+PROG cur 1.85 / other 1.83 (no row asymmetry). Controls: synthetic-G 52/52 + 69/69, synthetic bob/weave 456/456 PASS. t31/t33 give the same
+picks (G 119/121 each). Verdict: H-more-prog (both lines): every field-mode screen is the title still or ER, ER presents a clean progressive
+frame at 16:9 as at 4:3; H-more-break refuted (the "bob" pick was the 448-vs-444 row misregistration). Title stills not re-scored: they are
+static (G == W off the fades) and s7206 showed them pixel-identical across the present fix. Thread field-mode-census CLOSED.
+New datum (single-source, fit only): the 16:9 1360x796 window shows native rows 0-443 of ER; rows 444-447 are near-black (mean ~4/255), so
+nothing visible is lost there; whether flight loses HUD rows is the next unit. Raws (35 GB) and replays deleted; census/parity text in scratch/s7210.

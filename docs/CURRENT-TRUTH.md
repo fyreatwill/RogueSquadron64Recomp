@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7209 (2026-11-12).
+Compact operational handoff, as of Session 7210 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -116,7 +116,13 @@ Open or awaiting the owner:
 - **s7209 4:3 Elite Rogues field screen CLOSED (H-prog):** RT64 ignores the Set Scissor field bit (scissorMode read only by the
   debugger), so it draws every row: presented == angrylion NOFIELD progressive replay (G picked 121/122 where G != W, offset 0, row-symmetric,
   synthetic-G control 122/122), not the retail weave (which combs on fades/scroll). Design difference, cleaner than retail; no fix.
-  Kit: frame_replay NOFIELD=1, tools/s7183_parity.py GDIR=.
+  Kit: frame_replay NOFIELD=1, tools/s7183_parity.py GDIR=. (16:9: crop replays to the band and run tools/s7210_regfit.py first.)
+- **s7210 field-mode census CLOSED (H-more-prog):** over the whole owner-recipe 16:9 route (boot -> menus -> L17 -> MISSION FAILED -> ER x2,
+  14912 swaps, 86456 scissors; tools/s7210_field_census.py) only two screens set the Set Scissor field bit, both B51E00/796, band 142-654,
+  even field only: the boot title stills (swaps 626-1649) and the Elite Rogues list (twice, 461 swaps each); a second run found ER again
+  (456 swaps). At 16:9 ER presents progressive like 4:3: PROG picked 119/121 where it differs from the weave (offset 0, rows symmetric,
+  synthetic-G 121/121, bob/weave controls PASS). TRAP: score only after tools/s7210_regfit.py; a rect ~4 native rows off made BOB "win".
+  Datum (single-source): the 1360x796 window shows native rows 0-443 of ER; rows 444-447 are near-black.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -239,9 +245,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) Field-mode census:** which screens besides Elite Rogues draw with the Set Scissor field bit (boot, menus,
-   cutscenes, owner recipe 16:9 and retail 4:3)? Score each with NOFIELD replay model G (s7209 kit). Retina default: owner (s7205).
-   Boot freeze stays passive (headline). Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+1. **(next, NEXT.md) 16:9 vertical crop check:** s7210 fit says the 1360x796 window shows native rows 0-443 of a 448-row
+   screen. Is that every screen at 16:9 windowed/fullscreen (flight HUD bottom rows), retail VI range, or window rounding?
+   Retina default: owner (s7205). Boot freeze stays passive (headline).
+   Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

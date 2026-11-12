@@ -1,13 +1,13 @@
-# NEXT (s7210): field-mode census — which screens draw with the RDP scissor field bit, and is each presented as model G?
-HYPOTHESIS-ID: field-mode-census
-Context: s7209 closed Elite Rogues (4:3): RT64 ignores the Set Scissor field/odd bits (drawCall.scissorMode read only by the debugger),
-so it presents a progressive render (angrylion NOFIELD=1 replay, model G) instead of the hardware weave. Unknown: whether any OTHER
-screen (boot logos, attract, crawls, cutscenes, menus at 16:9 owner recipe) uses field mode, and whether at 16:9 (WIDE paths, 796/1024 fb)
-the progressive draw still lines up.
-Hypotheses: H-only-ER (Elite Rogues is the only field-mode screen -> census closes the class); H-more-prog (other screens use it and
-present as G: same verdict, list them); H-more-break (a field-mode screen at 16:9 presents rows offset/doubled -> G loses, fix).
-Discriminator, offline first then ONE run: grep existing .cap streams for Set Scissor (op 0x2D) with w1 bit 25 set (write a tiny
-census script over scratch/s7141/*.cap and scratch/s7124/... if any caps remain; else ONE owner-recipe 16:9 boot->menu->L17->ER run
-with G5B_FRAME_EVERY=1 FROM=0 and PRESENT_RING), list field-mode swap ranges by cimg/width, replay them NOFIELD, score
-tools/s7183_parity.py GDIR=. Disk: 136 GB free, ~20 GB per 3 min capture: keep spans short, delete raws after scoring.
-Outcomes: no other field-mode swaps -> H-only-ER, close; G picked with symmetric rows -> H-more-prog, close; G loses -> H-more-break, fix.
+# NEXT (s7211): 16:9 vertical crop: does the presented 16:9 window drop the bottom native rows of every screen?
+HYPOTHESIS-ID: wide-vertical-crop
+Context: s7210 tools/s7210_regfit.py on the 16:9 Elite Rogues (window 1360x796, title bar 32, content 1360x764) fitted native rows
+0-443 of the 448-row fb into window rows 32-796 (d 2.98; a full-448 fit was d 6.6). Rows 444-447 there are near-black, so nothing visible
+was lost on ER, but the flight HUD sits near the bottom. 1360/764 = 1.780 vs fb 796/448 = 1.777, so window rounding alone explains <1 row.
+Hypotheses: H-vi-range (the game's VI V_VIDEO range shows 444 lines; retail does the same, nothing to fix); H-rt64-crop (RT64 / the
+wide present path scales or offsets the VI image so the bottom ~4 native rows fall off the window: fix); H-fit (the fit traded the
+row count against a sub-pixel scale error; with finer steps the true count is 448).
+Discriminator, ONE run (owner recipe 16:9 windowed, s7141 arm, EVERY=20 FROM in flight L4 and the title still): log VI regs
+(V_VIDEO start/end, Y_SCALE, V_SYNC) per present, plus RT64's presented source rect (rows) if exposed, and regfit (tools/s7210_regfit.py,
+1-step search, g1 to 448) on a flight span and a still. H-vi-range: VI lines x Y_SCALE = 444 rows and both screens fit 444; H-rt64-crop:
+VI says 448 but the window shows fewer; H-fit: fine search fits 448. Also one 4:3 control arm (same fit must give 448 if 4:3 is complete).
+Disk: delete raws after scoring.
