@@ -1,9 +1,10 @@
 #!/bin/zsh
 # s7125 G3 owner-recipe fidelity: usage arm.zsh <lvl> <name> "<extra env>" [delay=120] [dur=180]. dd4, 16:9, FPS60, no logging env.
 # Records the RDP stream (ROGUESQ_G5B_FRAME, RAM every 20 swaps) and the presented window (g5b_capture 320x240) in ONE run.
+# s7186: CW/CH env override the capture size (fullscreen: CW=1008 CH=633 = 2/3 of the 1512x949 pt window).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 R=$PWD/scratch/${RDIR:-s7131}; mkdir -p $R; B=$PWD/scratch/s6894; L=$1; N=$2; EX=${3:-}; DL=${4:-120}; DU=${5:-180}
-$B/g5b_capture RogueSquadron64Recomp $R/$N.raw 384 216 $DL $DU > $R/cap_$N.txt 2>&1 &
+$B/g5b_capture RogueSquadron64Recomp $R/$N.raw ${CW:-384} ${CH:-216} $DL $DU > $R/cap_$N.txt 2>&1 &
 cp=$!
 ( /bin/sleep $((DL+DU+25)); pkill -9 -f g1_level_coverage_common; pkill -9 -f scratch/agent/m6_god_common.sh; pkill -9 -x RogueSquadron64Recomp ) & kp=$!
 export TITLE_ORIGIN='0x[0-9A-F]*' MISSION_RE='[0-9A-F]+' LOG_ENV='' FBD_EVERY_V=100000 HOLD_S=$((DL+DU)) FBH_V=0 TRI_V=0 DRAWN_V=0

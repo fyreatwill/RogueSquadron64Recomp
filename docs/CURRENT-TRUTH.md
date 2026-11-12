@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7185 (2026-11-12).
+Compact operational handoff, as of Session 7186 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -299,7 +299,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 39. **G3 retail 4:3 crawl + pause + interlaced screen: CLOSED s7183 (H-equal).** Crawl native frac 0.0245 (97% of loss on glyph edges), pause 0.0134 (flight same run 0.0103), both shift controls PASS. The interlaced 512x448 screen is ELITE ROGUES (even rows only, 60/s; s7180 mislabelled it level description): RT64 presents each field as a clean frame; the NOPREFILL weave combs on scroll (79/459 swaps; odd rows = RT64 writeback), which is s7181's Elite Rogues 0.047. Uncombed swaps 0.0105. Tools s7183_parity.py (REPAIR=n), s7183_native_edge.py. TRAP: capture bursts (7-11 ms raw gaps) mis-pair 2-swap runs; re-pair +-6. Sheet docs/owner_sheet_s7183_43_remaining.png.
 40. **G3 retail 4:3 LEVEL DESCRIPTION overlay: CLOSED s7184 (H-equal).** It is C-up on AVAILABLE CRAFT (route AP ...,25:left,27:start,31:cup,43:cup,47:start). Native frac 0.030 vs craft-info control 0.025 same run; 85% of the excess in the text band, glyphs are 1-px strokes (0 interior px), 94% on AL edges; x-scale k=1.000 (RECT_ASPECT fine), no typing lag. tools/s7184_ldesc_region.py. Sheet docs/owner_sheet_s7184_43_ldesc.png.
 41. **G3 true-retail (no ROGUESQ_ASPECT env) crawl/pause/LDESC: CLOSED s7185 (H-equal; G3 retail 4:3 matrix complete).** Native frac: LDESC 0.035 (s7184 0.030), crawl 0.036 (0.025), pause 0.016 (0.011), 89-100% on AL edges, shift ctl PASS all, LDESC kfit 1.000, 0 glyph-interior loss; the rise tracks the smaller presented scale (640x512 window). Shape: 512-wide screens present pillarboxed 554x480, the 640x300 crawl 1:1 letterboxed (s6928 VI_SHAPE class, owner-closed 2026-11-08).
-42. **(next, NEXT.md) G3 owner recipe in FULLSCREEN** (ROGUESQ_FULLSCREEN=1, built-in display): all G3 captures so far were windowed; score L6 flight + a menu vs angrylion.
+42. **G3 owner recipe in FULLSCREEN: CLOSED s7186 (H-equal).** Built-in display, window 1512x949 pt (drawable 3024x1898), g5b_capture records it. Picture 1512x858 pt for 796x448 (y/x scale 1.008, same <1% term as windowed fits, e 0.984-0.992); fitted native frac: title 0.005, SELECT GAME 0.004, level select 0.015, craft 0.019 (82-100% on AL edges, 1px ctl PASS), L6 flight presented 0.0037 (windowed s7125 0.010), shift-2 ctl 162 vs 2 frames >0.02; only outliers = deliberate W_SHEET sky-sheet cull. TRAP: nominal rect 851 rows is wrong, fit to 858. Sheet docs/owner_sheet_s7186_fullscreen_fidelity.png.
+43. **(next, NEXT.md) G3 ROGUESQ_ASPECT=auto + FULLSCREEN**: fb width derived from the display (~714 on the built-in panel), never scored vs angrylion.
 
 ## Evidence index
 

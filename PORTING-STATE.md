@@ -189487,3 +189487,35 @@ edge-only fractions vs s7183/s7184 track the smaller presented scale (1.08-1.25x
 same-run window-size control. G3 retail 4:3 matrix (flight L0-L18, menus/cutscenes, crawl, pause, LDESC, both ASPECT arms) is complete.
 Next: the owner recipe has never been scored in FULLSCREEN (all G3 captures windowed) -> NEXT.md g3-owner-fullscreen.
 Deleted A1/B1 .cap/.raw (~31 GB); kept replays + csvs in scratch/s7185.
+
+## Session 7186 (2026-11-12) — G3 owner recipe in FULLSCREEN == angrylion (H-equal): menus and L6 flight score at or below the windowed numbers once the rect is fitted; picture is 1512x858 pt (y/x 1.008, same <1% term as windowed); outliers are the deliberate W_SHEET sky-sheet cull
+HYPOTHESIS-ID: g3-owner-fullscreen (CLOSED -> next g3-owner-auto-fullscreen).
+No maintenance (59603 B < 60000 at start; 60188 after this entry's CURRENT-TRUTH edit, so s7187 is maintenance). No new soak results.
+Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (ioreg 0). 2 game runs, one at a time, 0 crash lines in both.
+Recipe: FPS60=1 dd4 ASPECT=16:9 FULLSCREEN=1, built-in display 3024x1964 (fullscreen stops below the notch: [g1f] drawable 3024x1898,
+window 1512x949 pt at y 33). Boring first: g5b_capture DOES record the fullscreen window (1465 + 9841 frames, 0 fails; its startup
+"window (0,33,1512,32)" line is the mid-transition frame, frames are full 1512x949).
+F1 = `env RDIR=s7186 ASP=16:9 FROM=200 EVERY=4 SECS=45 DL=8 DU=32 CW=1512 CH=949 zsh tools/s7146_arm.zsh F1 "ROGUESQ_FULLSCREEN=1"` (593 RAM swaps:
+attract flight, title, SELECT GAME, SELECT LEVEL, AVAILABLE CRAFT, hangar; contact sheet scratch/s7186/F1_sheet.png).
+L6F = `env RDIR=s7186 CW=1008 CH=633 zsh tools/s7131_arm.zsh 6 L6F "ROGUESQ_FULLSCREEN=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500
+ROGUESQ_G5B_FRAME_MAX_MB=12000"` (717 flight swaps 7500-8216). tools/s7131_arm.zsh gained CW/CH env (capture size; default 384x216 unchanged).
+Post tools/s7152_post.zsh (painted CONTROL PASS both); title/SELECT GAME re-scored on the NOPREFILL replay (combined took prefill 593/593,
+which scores 0.68 there, the s7154 16:9 title defect of the reference, not RT64).
+1. Shape (H-scale): the nominal 16:9 rect (0,49,1512,900 = 851 rows) is WRONG; s7163_rectfit on menus/title/hangar converges to
+   0/1,49,1512,906-907 (858 rows), and the flight fit at 2/3 scale to 0,33,1009,604 (571 = 858*2/3). So 796x448 presents at 1512x858 pt:
+   y/x scale 1.008. Below the 1% bar and the same magnitude as the windowed affine e 0.984-0.992 (s7155) -> H-scale refuted (two lines:
+   three independent fits agree; the windowed term is the same size, single-source as to cause).
+2. Native scores at the fitted rect (s7183_native_edge, n=24; unfitted in brackets): title 0.0049 (0.028), SELECT GAME 0.0039 (0.032),
+   SELECT LEVEL 0.0151 (0.044), AVAILABLE CRAFT 0.0192 (0.054), hangar 0.0118 (0.018); AL-edge share 99/100/89/88/82%; 1px shift ctl PASS
+   24/24 on title/SELGAME/SELLVL/craft, hangar 23/24. Windowed refs: s7184 retail craft 0.025, SELLVL 0.017 -> fullscreen equal or better.
+3. L6 flight: presented frac>40 median 0.0037 p90 0.0078, 2 frames >0.05 (windowed s7125 p6: 0.010 / 0.015, 7 >0.02); mean|d| 2.71.
+   Pairing control (--shift 2): median 0.0044, p90 0.056, 162 frames >0.02 vs 2 -> scorer has power. Native: 0.0039, 82% on AL edges
+   (1px native ctl 18/24, smooth wall scene, same as s7185's flight caveat). The 2 outliers (7675/7676, 34k px) are the s7125 guard-band sky
+   sheet that angrylion paints and RT64 drops by design (W_SHEET cull), checked on scratch/s7186/out_7675.png.
+4. H-res: RT64 default Resolution::WindowIntegerScale (rt64_render_context.cpp:514) follows the window; presented scale 1.9x pt (3.8x px)
+   and scores fall vs the windowed runs, so no upscale blur shows (single line beyond the code read).
+Attract-demo flight (F1 500-700) scored 0.018 with 56% edge share and shift ctl 21/24: animated 60 fps pairing in an attract demo, not
+scored before; not used for the verdict.
+Verdict H-equal. Owner sheet docs/owner_sheet_s7186_fullscreen_fidelity.png (craft, title, flight; the frac labels on it are the UNFITTED
+presented scores). Deleted .cap/.raw (~47 GB) and the *n/*r replay dirs (the *c symlinks now dangle; csvs/txt kept in scratch/s7186).
+Next: ASPECT=auto + FULLSCREEN (display-derived fb width ~714, never scored) -> NEXT.md g3-owner-auto-fullscreen.
