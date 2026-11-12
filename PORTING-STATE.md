@@ -189173,3 +189173,25 @@ split 117,352; s7163_rectfit; s7160_fit_post). angrylion CONTROL PASS and rectfi
 Verdict: H-equal on L16, L17, L18; no hole, no non-lag outlier. Item 34 (21:9 owner-recipe in-flight fidelity) CLOSED: L0-L18 H-equal.
 Deleted all .cap/.raw after scoring. Rules out a wide-only render difference in flight at 21:9 on any level (L17 single-source: weak control).
 Next: G3 in-flight fidelity at retail settings (4:3, dd1, no FPS60) on the levels beyond L1/L6 (CURRENT-TRUTH item 36).
+
+## Session 7174 (2026-11-11) — G3 retail settings (4:3, dd1, FPS60 off) L0 + L2 + L3 flight == angrylion (centre 0.009/0.005/0.001, 0 >0.05)
+HYPOTHESIS-ID: g3-retail-43-sweep.
+Three game runs, one at a time (offline replays overlapped the next run), screen unlocked (no CGSSessionScreenIsLocked key), 0 CRASH/SIGSEGV/SIGBUS
+in every run.log. Owner save untouched (forced-level route, NO_SAVE_WRITE).
+Recipe: `env CW=320 CH=240 zsh tools/s7141_arm.zsh <lvl> L<lvl>r "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1 ROGUESQ_ASPECT=4:3 ROGUESQ_G5B_FRAME_EVERY=1
+ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"`. Override check: run.log shows "[g1d] ROGUESQ_ASPECT=4:3 applied" and "[dd] multiplier 1";
+FPS60=0 follows FPS60=1 in XENV_EXTRA (later wins, as s7124). All three streams hit the 12 GB cap at ~741 swaps (FROM 7500).
+- H-tool hit first: L0 scored with the s7124 rect 20,15,279,240 gave meand 12.7, frac 0.096, all 740 swaps >0.05, and shift-2 was no worse
+  (13.1): the rect was wrong. This window is 1062x828 pt (cap_L0r.txt), not s7124's 640x512. s7163_rectfit -> 0,10,308,241 (frac 0.019).
+  Split for 4:3 thirds = 103,205.
+- L0 (desert canyon): rect 0,10,308,241, lag 5 ms. meand 3.15/3.43/3.63, frac 0.012/0.014/0.015, 0 >0.05, centre 0.009, side 0.013, dup 3.
+  Shift-2 ctl 61 swaps >0.05, meand p90 9.04 (fires). Bottom band 9.4 = rect row 241, one past the 240-row capture. Sheet
+  docs/owner_sheet_s7174_L0_43_fidelity.png identical by eye.
+- L2 (brown canyon/fog): lag 20 ms, angrylion CONTROL PASS, rectfit CTRL x0+4 PASS (0.0183 vs 0.0077), best 0,10,308,240: meand 2.77/3.85/4.29,
+  frac 0.007/0.008/0.013, 0 >0.05, centre 0.005, side 0.009. Shift-2 ctl 18 swaps >0.05, max 0.243 (fires). Sheet docs/owner_sheet_s7174_L2_43_fidelity.png.
+- L3 (dark city): CONTROL PASS, CTRL PASS (0.0060 vs 0.0024), rect 0,10,308,241: meand 1.48/2.32/4.06, frac 0.002/0.003/0.008, 0 >0.05, centre 0.001,
+  side 0.003. Shift-2 only 4 swaps >0.05 (dark level) but meand 2.48/6.44/10.97 vs 1.48/2.32/4.06 (ratio 1.7-2.8x, fires). Worst swap dup=1 (lag).
+  Sheet docs/owner_sheet_s7174_L3_43_fidelity.png identical by eye.
+Verdict: H-equal on L0, L2, L3 at retail settings; H-hole and H-lag outliers absent; H-tool was real for the old rect and is fixed by the refit (two
+lines: whole-run metric with a firing same-run shift control + eyeballed sheets). Deleted .cap/.raw after scoring.
+Retail 4:3 done: L0 L1 L2 L3 L6. Next: L4, L5, L7 (same recipe and rect).
