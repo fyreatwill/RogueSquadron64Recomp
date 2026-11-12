@@ -189803,6 +189803,6 @@ osCreateMesgQueue refusal and one s7194 drop, both from the s7194 forced run. So
 guard's semantics (it turned a corrupt pointer into a whole-game spin), not a mitigation of an observed corruption, and it
 does not explain the 1-in-65 boot freeze (whose dumps show tid 3 parked on a real queue, not a spinner).
 
-Rules out: H-one (a second livelock existed). Closes the guard-refusal class: every refusal row is SAFE, DEAD or fixed.
+This refutes H-one and selects H-more: a second livelock existed (old 3/3 FROZEN vs fix 3/3 OK, same build). It closes the guard-refusal class: every refusal row is SAFE, DEAD or fixed.
 Next: guest-side NOBLOCK busy-poll audit (NEXT.md): retry loops that on real hardware are rescued by preemption but on
 this cooperative scheduler never let the producer run.
