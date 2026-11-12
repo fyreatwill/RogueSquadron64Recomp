@@ -190770,3 +190770,27 @@ MIXED verdict). Positive control: on the s7227 rings it returns old FLAT30 (49/4
 Rules out: H-scale (1x chain in 2x layer halving rate), a windowed display-move defect. H-space moot. Downgrades s7227's single-source
 "HOTPLUG=0 pins at 30" to phase. Not covered: why FPS60 flight drops to 30 for up to a minute here when s7204 measured fl_shown ~60.
 Next: in-flight flat-30 stretches under FPS60, H-log vs H-cost vs H-host (NEXT.md).
+
+## Session 7229 (2026-11-12) — FPS60 flat-30 stretches are the coverage harness's diagnostic ucode path (H-log/diag selected): gfx task 21.95 ms there vs 12.8-13.0 ms on the owner path, which holds 60/s through the same window
+Unit from NEXT (HYPOTHESIS-ID fps60-flat30-stretches). Boring thing first: m6_god_common.sh sets ROGUESQ_LOG_PHASE=1, which turns
+G1E_FAST off and G1E_PROBES on (s7014 note), and the s7227/s7228 arms never set OWNER_TIMING=1. One binary, three sequential arms,
+same route (LEVEL=4 owner recipe: FPS60 dd4 ASPECT=auto WINDOWED display 0, RETINA=0, no virtual display), + ROGUESQ_G1B=1 for the
+per-second gfx task count and wall ms. Quiet host (idle > 50000 s, screen unlocked, load1 3.7-4.3). Data scratch/s7229 (zst).
+  diag   = scratch/s7229/arm.zsh (s7228 harness as was)        witness [g1e-probes] on=1 reason=ROGUESQ_LOG_PHASE
+  own    = same + OWNER_TIMING=1                                witness [g1e-fast] on=1, [g1e-probes] on=0
+  direct = tools/g1e_owner_quiet_arms.zsh (no harness env), windowed auto override
+New scorer tools/s7229_flat30_cost.py (flat run = >=8 s at 27-33 tasks/s; joins sd_wall). Positive control for the scorer: it finds
+the 21-s run at t=77 in diag that s7228 found by ring rate (same start, same length).
+Result (flat runs; seconds >=55 tasks/s; t=77-97 tasks/s and mean gfx sd_wall):
+  diag   1 x 21 s (t=77)  109/225   30.0/s  21.95 ms (max 25)   log 1.08M lines
+  own    0                213/221   60.0/s  12.95 ms            log 0.23M lines
+  direct 0                232/239   60.0/s  12.76 ms
+All three cursorMask 0x10 (level 4), 0 CRASH, alive at end. VI timer 60.0/s inside the diag flat run.
+VERDICT: H-log (diag ucode path + probe logging) selected, two lines: own and direct both hold 60/s through the exact window where
+diag runs 30/s, and the diag gfx task itself costs 21.95 ms > 16.7 ms there (cost moves with the path, not the host). H-cost on the
+owner path refuted (12.8-13.0 ms < 16.7); H-mode refuted (diag returns to 60/s when the scene cost falls, own never latches); H-host
+refuted (same host/load across arms). So every "in-flight flat 30/s" in s7227/s7228 is a harness artefact; the owner is unaffected.
+Side datum: the owner path spends ~77% of the 16.7 ms budget in that L4 window (12.8 ms), the heaviest second-average seen at dd4.
+Change: scratch/agent/g1_level_coverage_common.zsh now defaults OWNER_TIMING=1 for any arm whose XENV_EXTRA carries
+ROGUESQ_PRESENT_RING or ROGUESQ_G1B=1 (OWNER_TIMING=0 opts back into the diagnostic path), printing "[s7229] timing arm".
+Next: owner-path headroom in that window (dd6 21:9, RETINA=1, busy host), since 12.8 of 16.7 ms is the thinnest margin measured.

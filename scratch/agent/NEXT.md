@@ -1,14 +1,15 @@
-# NEXT (s7229): why FPS60 flight runs rigid 30/s stretches of 21-62 s in the coverage harness
-HYPOTHESIS-ID: fps60-flat30-stretches
-Context (s7228): LEVEL=4 owner recipe via scratch/agent/g1_level_coverage_common.zsh: every arm shows a 21-s flat-30 run at t=76 and
-others up to 62 s (game swap cadence rigid 33.3 ms, present path free, VI timer 60 Hz). s7204 measured fl_shown ~60 at the owner
-recipe on a quiet host. The harness logs ~1M stderr lines per run ([s3290-stall]/[s3294-stall]/[s3295-disp]/[s5901] dominate).
-Hypotheses: H-log (diag logging on the game thread pushes frames past 16.7 ms), H-cost (scene cost at that route time: RSP/guest >16.7),
-H-host (host load / E-core placement; check load avg and thread QoS), H-mode (FPS60 latches a 2-VI cadence after one late frame and
-needs a trigger to return).
-Run (one build, current binary; arms sequential, same route, windowed display 0, no virtual display): copy scratch/s7228/arm.zsh minus
-the virtual display; arm A = as s7228; arm B = same + minimal logging (find the env that silences s3290/s3294/s3295/s5901, e.g. the
-s7204 recipe's quiet env; grep PORTING-STATE s7204). Score with tools/s7228_present_rate_score.py style flat-run census on Q rows
-plus per-second swap cadence; add per-frame guest/RSP ms if a cheap existing counter exists (G1B instrument, grep CURRENT-TRUTH).
-Outcomes: B has no long flat runs -> H-log (harness artefact; owner unaffected, document); both flat at t=76 -> H-cost/H-mode, then
-compare frame cost in that window (H-cost: cost >16.7 throughout; H-mode: cost <16.7 but cadence stays 2 VIs -> fix the latch).
+# NEXT (s7230): owner-path frame headroom in the heaviest L4 window
+HYPOTHESIS-ID: owner-path-frame-headroom
+Context (s7229): the FPS60 flat-30 runs were the coverage harness's diagnostic ucode path. On the owner path the L4 t=77-97 window
+(windowed ASPECT=auto dd4) costs 12.8-13.0 ms per gfx task of the 16.7 ms budget, the thinnest margin measured. Question: which
+owner-reachable setting or host condition pushes that window over 16.7 ms and drops the owner to 30/s?
+Hypotheses: H-dd (dd6 / 21:9 wide window adds per-cell RSP cost, s7019-s7029), H-retina (RETINA=1 adds CPU-side cost; s7204 says GPU only
++0.1 ms), H-host (busy host / E-cores: run a CPU burner on 4 threads during the arm), H-safe (all stay < 16.7 ms, 0 flat runs).
+Run (one game at a time, quiet host, screen unlocked; one binary):
+  env R=$PWD/scratch/s7230 HOLD=200 ARMS="4:base:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_FULLSCREEN=0+ROGUESQ_ASPECT=auto+ROGUESQ_RETINA=0+ROGUESQ_G1B=1+ROGUESQ_STORE_DIAG=0 \
+    6:dd6w:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_FULLSCREEN=0+ROGUESQ_ASPECT=21:9+ROGUESQ_G1B=1+ROGUESQ_STORE_DIAG=0 \
+    4:ret:...base...+ROGUESQ_RETINA=1" zsh tools/g1e_owner_quiet_arms.zsh
+  busy arm: same as base with `yes > /dev/null` x4 running (kill after); the quiet harness's idle watch is unaffected by it.
+Score: python3 tools/s7229_flat30_cost.py scratch/s7230/log_*.txt plus the t=77-97 awk (tasks/s, sd_wall) from s7229 ledger entry.
+Outcomes: an arm with flat runs / t77-97 < 55/s names the tipping term (then cut that cost on the owner path); all arms 60/s -> H-safe,
+close the thread and record the margins.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7228 (2026-11-12).
+Compact operational handoff, as of Session 7229 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -134,6 +134,10 @@ Open or awaiting the owner:
   reproduces s7227 old FLAT30 / fix MIXED). The old windowed arm ran a 62-s flat-30 stretch from t=127, 41 s BEFORE the removal, and a
   21-s one at t=76 recurs in all 4 s7227/s7228 arms: in-flight flat-30 runs up to ~60 s happen with no display event (single-route,
   diagnostic-logging harness). Sheet docs/owner_sheet_s7228_windowed_removal.png.
+- **s7229 those in-flight flat-30 runs are the HARNESS (H-log/diag selected, owner unaffected).** m6_god_common.sh LOG_PHASE turns on
+  G1E_PROBES (diag ucode path): L4 t=77-97 gfx task 21.95 ms -> rigid 30/s for 21 s. Same route with OWNER_TIMING=1 (12.95 ms) or a direct
+  owner launch (12.76 ms): 60/s, 0 flat runs (tools/s7229_flat30_cost.py). The coverage harness now defaults OWNER_TIMING=1 for any arm
+  with PRESENT_RING/G1B. Owner-path margin in that window: 12.8 of 16.7 ms, the thinnest measured at dd4.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -212,6 +216,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 mai
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7227/s7228 "in-flight flat-30 under FPS60 is the game's own frame rate (H-content)". Believable: rigid 33.3 ms game swaps with a free present path and a 60 Hz VI timer, no display event. s7229: the harness ran the diagnostic ucode path (LOG_PHASE -> G1E_PROBES, 21.95 ms task); the owner path holds 60/s there (12.8 ms).
 - s7180 "swaps 4700-5028 of the L17 route are the level-description screen" and s7181 "Elite Rogues 0.047, 21 >0.05". Believable: 512x448 interlaced fb after MISSION FAILED. s7183: it is the Elite Rogues list; the residual is the fb-weave reference combing while it scrolls.
 - s7122 "RT64 shows the 4:3 picture off-centre (21/66 px margins)". Believable: rect search on the capture fit well. s7123: SCK pads the right of the capture; in window points the margins are 43/45 (centred).
 - s7120 "the flight camera sometimes jumps 2-16 u in one frame (open flight, both arms)" and "the lift arm has more >1.0 u jerks". Believable: t/t+1 pairs of equal size, far from any lift, in all runs. s7121: the join in s7119_hop mixed cam objects 458/A28/930; per-cam the flight cam has 0 such steps and the cut cams' stray tick is never presented.
@@ -306,9 +311,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) In-flight flat-30 stretches under FPS60 (s7228):** coverage-harness L4 flight runs 21-62 s at a rigid 30/s
-   (2 VIs per game frame) with no display event, while s7204 measured fl_shown ~60 at the owner recipe on a quiet host. Split H-log
-   (harness diag logging, ~1M lines/run) vs H-cost (scene cost > 16.7 ms) vs H-host in one same-route arm table.
+1. **(next, NEXT.md) Owner-path frame headroom in the L4 t=77-97 window (s7229: 12.8 of 16.7 ms at dd4 16:9-auto windowed).**
+   Arms on the owner path (direct launch or OWNER_TIMING=1): dd4 baseline, dd6 21:9, RETINA=1, busy host; score with
+   tools/s7229_flat30_cost.py. Any arm with flat-30 seconds names the term that tips the owner off 60/s. Never time through the
+   coverage harness without OWNER_TIMING (now its default for timing arms; s7227/s7228 flat-30 = diag path).
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
