@@ -190492,3 +190492,25 @@ Rules out: H-long through 354 s at RETINA=1 (past the 240 s of s7204); H-auto (o
 is NOT evidence either way (not on screen). Landed: s7204_ring_cost.py prints `hidden` (P rows with at=0) and first_hidden_s, so a
 covered window cannot pass as a stall again; g1e_owner_quiet_arms.zsh logs every frontmost-app change to arms.log (`<arm> front t=..`).
 Side note: pmset lists a defunct RogueSquadron64Recomp pid 36480 (7 days, <defunct>) still holding a display-sleep assertion; harmless zombie.
+
+## Session 7219 (2026-11-12) — G5c RETINA=1 + ASPECT=auto FULLSCREEN 600 s hold on screen throughout: 59.7 presents/s, 0 gaps >250 ms, 0 hidden rows, 0 crashes (H-free); RETINA endurance complete, default stays the owner's call
+HYPOTHESIS-ID: g5c-retina-auto-endurance
+Unit from NEXT. No maintenance (33.8 KB). No new soak results. Screen unlocked (no CGSSessionScreenIsLocked key), HID idle 43095 s, load ~4.
+Owner save untouched (harness, NO_SAVE_WRITE). 1 game run:
+`env R=$PWD/scratch/s7219 HOLD=600 ARMS="4:a1:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_ASPECT=auto+ROGUESQ_RETINA=1" zsh tools/g1e_owner_quiet_arms.zsh`
+(owner recipe FPS60 dd4 FULLSCREEN + auto + RETINA=1, LEVEL=4: cursorMask 0x00000010, no LEVEL MISMATCH). Alive at 600 s, 0
+CRASH/SIGBUS/[stall-dump], exactly 1 `[retina] swapchain create 3024x1898 layer contentsScale=2.0`, 0 [g1f-win] rows.
+Host witness: arms.log has ONE `front` row (t=2 RogueSquadron64Recomp = the positive control that always fires) and no later front change,
+so nothing covered the Space this time (s7218's Claude.app relaunch did not recur).
+
+tools/s7204_ring_cost.py a1:
+| window | presents | pres/s | gpu p50/p95/max ms | gaps >50 | gaps >250 | max gap ms | hidden |
+| from 95 s | 30207 | 59.7 | 0.48 / 0.75 / 2.76 | 14 | 0 | 141.1 | 0 |
+| from 354 s (the s7218 blind window) | 14721 | 59.6 | 0.48 / 0.77 / 2.01 | 8 | 0 | 137.7 | 0 |
+Hidden-row detector control, same scorer today: s7218 a1 still prints hidden 3760, first 353.96 s (the covered run), so `hidden 0`
+here is a real zero. Every >50 ms gap is <=141 ms = the paired retail MusyX scene-transition wait (s7065), same as a0/a1 of s7218.
+gpu max 2.76 ms (s7218 a1's 32.3 ms was in its hidden tail, so it was the off-screen layer, not Retina).
+
+Two lines of evidence for H-free through 600 s at RETINA=1: s7218 on-screen 95-354 s (59.6/s, 0 >250) and s7219 95-600 s (59.7/s, 0 >250,
+0 hidden). Rules out H-long (no stall class past 354 s at 2x drawable / 8x internal; gpu p95 flat 0.75 -> 0.77 between windows, no growth)
+and H-host-again for this run. RETINA=1 cost vs RETINA=0 stays ~+0.3 ms gpu p95 (s7218 a0 0.43). Default decision stays with the owner.
