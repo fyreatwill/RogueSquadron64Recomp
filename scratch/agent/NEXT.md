@@ -1,16 +1,15 @@
-# NEXT: G3 retail 4:3 LEVEL DESCRIPTION overlay vs angrylion (CURRENT-TRUTH item 40)
-HYPOTHESIS-ID: g3-retail-43-ldesc
-Why: s7183 closed crawl, pause and the interlaced 512x448 screen (it is ELITE ROGUES, not level description). Per s6802, LEVEL DESCRIPTION
-is C-up on SELECT LEVEL: an overlay on the same 512x339 menu (typed green text replaces the hologram top), matched at RDP level only
-(s6802/s6803), never scored as presented pixels at retail 4:3.
-Route: s7182 F1 = tools/s7146_arm.zsh RDIR=s7184 ASP=4:3 FROM=0 EVERY=5 SECS=70 DL=5 DU=60 CW=849 CH=788, "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1",
-with AP = the s7146 default but a C-up held on SELECT LEVEL: find the SELECT LEVEL window from s7181 ph_* csvs / scratch/s7181 M1.idx
-(SELECT LEVEL sits between the 27:start and 33:start presses), e.g. ...,27:start,29:cup,33:start... (the autopilot knows cup since s6802;
-a 2nd cup closes it, so press once; it types text over several seconds, so let it sit >=3 s before 33:start, shifting later presses if needed).
-Post: tools/s7152_post.zsh (336-row screens score on the pre-fill *r dir), rectfit 1,25,848,668 start (s7182), tools/s7183_native_edge.py
-for the native edge split + shift control. Optional same iteration: crawl/pause with no ASPECT env (ASP=off, window 640x512) on the s7183 B1 route.
-Hypotheses: H-equal (native frac at the ~0.01-0.02 floor, loss on glyph edges), H-type (the typed-text reveal animates: lag shows as
-shift-sensitive frames only), H-rect (overlay texrects stretched; RECT_ASPECT default on keeps 4:3 at k=1; check k with s7181 kfit if residual).
-Discriminator: native-res frac + edge share + shift control on the LDESC swaps vs the SELECT LEVEL swaps before it (same run control).
-Disk >= 25 GB per run; delete .cap/.raw after scoring; one game run at a time; never write WORKING to STATUS; owner save rule stands.
-TRAP (s7183): capture bursts (raw frame gaps 7-11 ms) mis-pair 2-swap runs; re-pair +-6 before calling a swap bad.
+# NEXT: G3 true-retail arm (no ROGUESQ_ASPECT env) on crawl, pause and LEVEL DESCRIPTION (CURRENT-TRUTH item 41)
+HYPOTHESIS-ID: g3-retail-43-noaspect
+Why: s7181 scored menus/cutscenes with ASP=off (RECT_ASPECT inert there), but crawl (s7183), pause (s7183) and the LDESC overlay (s7184)
+were scored only under ROGUESQ_ASPECT=4:3. With no env the window opens 640x480-class (check cap_*.txt window size; set CW/CH to it).
+Runs (one at a time, screen unlocked: `/usr/sbin/ioreg -n Root -d1 | grep -c '"CGSSessionScreenIsLocked"=Yes'` must print 0):
+ A (LDESC): env RDIR=s7185 ASP=off FROM=0 EVERY=5 SECS=56 DL=5 DU=60 CW=<w> CH=<h> AP=6:start,11:start,16:start,21:start,25:left,27:start,31:cup,43:cup,47:start
+    zsh tools/s7146_arm.zsh A1 "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1"   (phases s7184: SELLVL ~1150-1262, AVAIL 1270-1365, LDESC 1440-1770)
+ B (crawl + pause): the s7183 B1 route with ASP=off (PORTING-STATE s7183 "B =" line; FROM=2300 EVERY=12 SECS=300).
+Post: tools/s7152_post.zsh <dir> <name> <rect> <split>, then tools/s7163_rectfit.py to fit the rect (window size differs from 849x788),
+tools/s7183_native_edge.py per phase, tools/s7184_ldesc_region.py raw aldir frames.csv rect ldesc_lo ldesc_hi <craft-info swap> 12.
+Hypotheses: H-equal (same native fractions as s7183/s7184 within ~0.005), H-scale (a non-4:3 window applies a different presentation
+scale: rectfit lands off-aspect, kfit != 1), H-rect (RECT_ASPECT path differs without ASPECT env; s7181 says inert).
+Discriminator: native frac + edge share + kfit vs the s7184/s7183 numbers; same-run control = the craft-info / flight phases.
+Delete .cap/.raw after scoring. Owner save rule stands; never write WORKING to STATUS.
+If this closes H-equal the G3 retail 4:3 matrix is complete; take the next 3c ladder rung not closed (owner-look items need no runs).

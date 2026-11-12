@@ -189431,3 +189431,32 @@ H-interlace: RT64 bobs/progressive-presents the field screen (no comb) where the
 one field per scan, not a weave. H-tool hit twice: capture-burst pairing on the crawl, and the weave reference on the field screen. Not run: the
 no-ASPECT-env arm (s7181 found RECT_ASPECT inert there), and the real level-description screen (not reached: the L17 route goes
 MISSION FAILED -> Elite Rogues -> craft). Deleted L17d/B1/L17m .cap/.raw (~70 GB); kept replays + csvs.
+
+## Session 7184 (2026-11-12) — G3 retail 4:3 LEVEL DESCRIPTION overlay == angrylion (glyph-edge class, H-equal); the overlay lives on AVAILABLE CRAFT, not SELECT LEVEL; x-scale k=1.000 (H-rect refuted), no typing-reveal lag (H-type refuted)
+HYPOTHESIS-ID: g3-retail-43-ldesc (CLOSED -> next g3-retail-43-noaspect).
+No maintenance (58707 B < 60000). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (ioreg).
+1 game run, 0 CRASH/SIGSEGV/SIGBUS. Retail settings: FPS60=0, dd1, ASPECT=4:3, full-size window capture.
+Run: `env RDIR=s7184 ASP=4:3 FROM=0 EVERY=5 SECS=56 DL=5 DU=60 CW=849 CH=788
+AP=6:start,11:start,16:start,21:start,25:left,27:start,31:cup,43:cup,47:start zsh tools/s7146_arm.zsh L1 "ROGUESQ_FPS60=0 ROGUESQ_DRAW_DISTANCE=1"`
+(2078 swaps, 417 RAM swaps, 6.9 GB). Post `tools/s7152_post.zsh scratch/s7184 L1 1,25,848,668 212,636` (painted CONTROL PASS).
+Phases from an angrylion contact sheet (512x339 fb 0x656000/0x6AB000): SELECT LEVEL 1150-1262 (25:left picked Battle of Calamari), the
+27:start went on to AVAILABLE CRAFT 1270-1365 (craft info), 31:cup opened LEVEL DESCRIPTION 1370-1770 (green typed text replaces the craft
+info; typing 1370-1440), 43:cup closed it 1790-1870, 47:start -> SELECT YOUR CRAFT 1960+. So the C-up overlay is on AVAILABLE CRAFT
+("PRESS (C) FOR LEVEL DESCRIPTION" sits under the level name on both screens; s6802's "on SELECT LEVEL" naming was loose).
+1. Presented scores (rect 1,25,848,668; s7163_rectfit keeps it on both the LDESC and the SELECT LEVEL/AVAIL ranges, CTRL x0+4 PASS):
+   frac med SELLVL 0.0238, AVAIL pre 0.0307, typing 0.0342, LDESC 0.0380 (max 0.0394), AVAIL post 0.0317, craft 0.0235; 0 swaps >0.05 in
+   any phase. Shift-2 ctl raises every phase.
+2. Native 512x339 (tools/s7183_native_edge.py, n=16): AVAIL pre 0.0247 / LDESC 0.0304 / AVAIL post 0.0256 / SELLVL 0.0170; loss on AL edges
+   89% / 94% / 90% / 94%; 1 px shift ctl worse 16/16 PASS in all four.
+3. New tools/s7184_ldesc_region.py (text mask = AL text-colour px G>120, G-max(R,B)>50 in rows 60-175, dilated 1; x-scale fit of the text
+   box about the screen centre; planted control = 40x12 magenta block on a glyph pixel). LDESC n=12: whole-frame loss 5371 vs craft-info
+   frame 4128 (+1243); text-band ROI 2142 vs 1083 (+1059) = 85% of the excess in the text band. Glyphs are 1-px strokes: 1 interior px of
+   7696 mask px, so all text loss is edge loss. Loss per mask px 0.240 (full text) vs 0.243 during the typing reveal (n=6): no lag term.
+   x-scale kfit k 0.97/0.99/1.00/1.01/1.03/1.15/1.333 = 0.182/0.125/0.072/0.136/0.183/0.219/0.227, best k=1.000 on every frame.
+   Control PASS 12/12 (first two attempts FAILED: a black block, then a block at the box centre, both landed on dark gaps between lines;
+   moved onto a glyph pixel). Sheet docs/owner_sheet_s7184_43_ldesc.png (AL | RT64 | red loss, control + LDESC): same text, same wrap,
+   same position; red only on glyph outlines and the rotating ring segments (s7182 class).
+Verdict: H-equal (two lines: native edge split 94% + text-band localisation with 0 interior glyph px; RT64 draws the 1-px glyph strokes at
+high-res, hardware stair-steps them, s7182/s7183 edge class). H-rect refuted (k=1.000), H-type refuted (constant loss per glyph px).
+Not run: the no-ASPECT-env arm (crawl/pause/LDESC with ROGUESQ_ASPECT unset); s7181 found RECT_ASPECT inert there, next unit.
+Deleted L1.cap/.raw; kept replays and csvs.

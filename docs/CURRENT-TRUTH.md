@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7183 (2026-11-12).
+Compact operational handoff, as of Session 7184 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -297,7 +297,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 36. **G3 in-flight retail 4:3 fidelity: CLOSED s7180 (H-equal L0-L18).** L17 needs FROM=3300 (autopilot fails ~126 s). 37. **G3 retail 4:3 menus/cutscenes: H-equal s7181** on 18 screen classes (logos, title, SELECT GAME/LEVEL, craft, hangar, intro cutscene, GAME OVER, debriefs, MISSION FAILED, Elite Rogues), arms ASPECT=4:3 and no ASPECT env. 448-row cutscenes need FID_MAINRUN=1 (stray rows 442-447). RECT_ASPECT=0 under ASPECT=4:3 stretches 2D rects (N64 logo k 1.45, menus 1.15); inert with no ASPECT env. Crawl, pause, Elite Rogues field screen: item 39. Sheet docs/owner_sheet_s7181_43_menus.png.
 38. **G3 holo platform ring "7/8 brightness": CLOSED s7182, not a defect.** Ring tris are shade-only AA opaque (no blend term). Interior lit pixels RT64 253 vs AL 248 (5551 ceiling); the whole loss is on segment edges/seams (83-85% of loss px on an AL edge; sheet docs/owner_sheet_s7182_ring_edges.png): RT64 high-res geometric edges vs hardware staircases. Half the s7181 number was the 320x240 rect being 1 row short (fit 234 rows; tools/s7182_yfit.py). Tools s7182_tristate/ringfull/ringint/ringmap.
 39. **G3 retail 4:3 crawl + pause + interlaced screen: CLOSED s7183 (H-equal).** Crawl native frac 0.0245 (97% of loss on glyph edges), pause 0.0134 (flight same run 0.0103), both shift controls PASS. The interlaced 512x448 screen is ELITE ROGUES (even rows only, 60/s; s7180 mislabelled it level description): RT64 presents each field as a clean frame; the NOPREFILL weave combs on scroll (79/459 swaps; odd rows = RT64 writeback), which is s7181's Elite Rogues 0.047. Uncombed swaps 0.0105. Tools s7183_parity.py (REPAIR=n), s7183_native_edge.py. TRAP: capture bursts (7-11 ms raw gaps) mis-pair 2-swap runs; re-pair +-6. Sheet docs/owner_sheet_s7183_43_remaining.png.
-40. **(next, NEXT.md) G3 retail 4:3 mission level-description screen** (button on SELECT LEVEL; never reached by the L17 or crawl routes), plus the no-ASPECT-env arm for crawl/pause if cheap.
+40. **G3 retail 4:3 LEVEL DESCRIPTION overlay: CLOSED s7184 (H-equal).** It is C-up on AVAILABLE CRAFT (route AP ...,25:left,27:start,31:cup,43:cup,47:start). Native frac 0.030 vs craft-info control 0.025 same run; 85% of the excess in the text band, glyphs are 1-px strokes (0 interior px), 94% on AL edges; x-scale k=1.000 (RECT_ASPECT fine), no typing lag. tools/s7184_ldesc_region.py. Sheet docs/owner_sheet_s7184_43_ldesc.png.
+41. **(next, NEXT.md) G3 true-retail arm: no ROGUESQ_ASPECT env** (ASP=off) on crawl, pause and LDESC, same scorers; s7181 menus were inert there.
 
 ## Evidence index
 
