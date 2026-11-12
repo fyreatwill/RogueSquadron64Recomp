@@ -189887,3 +189887,31 @@ Caveat (single-source, untested): while the device is stuck, the queue grows by 
 audio clock runs at the fallback cadence. Recovery after the device resumes, and the latency the backlog adds, were not
 measured. That is the next unit.
 lib/ edited: submodule-patches exported.
+
+## Session 7198 (2026-11-12) — AI stall recovery measured: the device recovers by itself (H-recovers), but the stuck-device backlog replays as stale audio, growing ~87 ms per paused second (20 s pause -> 155030 B = 1.76 s replayed over ~2 s at the 10/s fallback cadence); backlog trim landed, default 150 ms
+HYPOTHESIS-ID: ai-stall-recovery (closed)
+What ran: src/main/main.cpp only (no lib/ edit, no regen).
+- ROGUESQ_AI_STALL_TEST now takes `<pause_s>:<resume_s>` and unpauses at resume_s. Whenever the test is armed it logs
+  `[s7198-q]` once per second: queued bytes, ms at the live rate, AI buffers queued that second, trims that second, and state.
+- New in queue_samples: ROGUESQ_AI_BACKLOG_MS (default 150; 0 = old unbounded queue). If SDL already holds more than that at
+  the live rate, SDL_ClearQueuedAudio runs before the new buffer is queued, and `[s7198-trim]` is logged.
+- ORIGIN: the writer of the backlog is our s7197 fallback. It keeps queueing guest buffers (768 B per post) into a device that
+  is not pulling. The data is legitimate PCM, but replaying it late is illegitimate: hardware's DAC holds only the two AI buffers.
+Arms (scratch/s7198/arms.zsh; owner env, 60 s each, run one after another; pause 15 s, resume 35 s; logs scratch/s7198/*.log):
+| arm | queued at resume | back to normal | bufs/s before / paused / after | trims | fallback |
+| fix (BACKLOG_MS=0) | 155030 B = 1758 ms | t=37 (~2 s, 846 ms still queued at t=36) | 115 / 10 / 115 | 0 | yes |
+| trim (150) | 4581 B = 52 ms (cap 147-156 ms while paused) | t=36 (<1 s) | 115 / 10-13 / 112-115 | 8 | yes |
+| ctl (trim on, no pause) | n/a: peak 3167 B = 35.9 ms over 60 s | n/a | 113-117 | 0 | 0 |
+| default build (no env) | 52 ms | t=36 | 115 / 12-13 / 112-115 | 8 | yes |
+- Positive controls: the pause and resume lines fire in every armed run, and the trim fires in the trim and default arms. The
+  ctl null (0 trims) therefore comes from an instrument that can fire, and it is backed by a direct margin measurement
+  (peak 36 ms against a 150 ms limit).
+- Discrimination: H-dead is refuted, since audio resumes in both arms. H-backlog in its "lasting" form is refuted too: the
+  queue drains to normal ~30 ms in ~2 s. What is real is a transient that grows with pause length: ~87 ms of stale audio per
+  paused second, played while the drain thread stays on the 10/s fallback cadence. A 10-minute TV-off would replay about 52 s
+  of stale audio with a slowed guest audio clock. The trim bounds that to <=150 ms, whatever the pause length.
+- Single-source caveat: the margin was measured at boot/attract only (22047 Hz). An in-mission check is queued:
+  scratch/agent/soak_queue/s7198_backlog_L4.sh (LEVEL=4 owner recipe, 300 s; it exits 3 on any trim and prints the max queued ms).
+- Found for the next unit: main.cpp has no SDL_AUDIODEVICEREMOVED/ADDED handling. An output that really disconnects (HDMI
+  TV off, Bluetooth gone) is never closed or reopened. Audio stays dead until F9 or a rate change reopens the device. The
+  forced pause arm models a stuck device, not a removed one.

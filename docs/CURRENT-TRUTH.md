@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7197 (2026-11-12).
+Compact operational handoff, as of Session 7198 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -62,6 +62,9 @@ Open or awaiting the owner:
   s7197: host completion-delivery class CLOSED (docs/HOST-COMPLETION-CENSUS.md). One HAZARD fixed, default on: the AI drain
   thread never posted once SDL stopped pulling (paused/disconnected output), so guest audio tasks stopped for good (forced
   ROGUESQ_AI_STALL_TEST=15: old 2 audio-task rows after, fix 578, ctl 0 fallback fires). ROGUESQ_AI_STALL_POST_MS=0 = old. Not a freeze.
+  s7198: resume after a stall recovers by itself, but the stuck-device backlog replayed as stale audio (+87 ms per paused second;
+  20 s pause -> 1.76 s). ROGUESQ_AI_BACKLOG_MS=150 trim, default on (=0 old): 52 ms at resume, normal <1 s, 0 trims in normal play
+  (peak queue 36 ms, boot/attract; in-mission soak s7198_backlog_L4 queued).
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -184,11 +187,11 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) AI stall recovery (s7197 follow-up).** s7197 closed the host completion-delivery class and fixed the AI
-   drain hazard (fallback post after 100 ms). Untested: audio recovery when the device resumes, and the queue backlog
-   (+768 B per fallback post) that becomes latency. Arm: pause then resume, then measure queued bytes and audio-task rate.
-   Boot freeze stays passive (headline). Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`
-   (it keeps only tails: take a full log when a positive-control line must be shown).
+1. **(next, NEXT.md) Audio output hot-plug (s7198 follow-up).** main.cpp has no SDL_AUDIODEVICEREMOVED/ADDED handling, so a
+   real disconnect (HDMI TV off, Bluetooth gone) never reopens a device; audio stays dead until F9/rate change. s7197/s7198
+   made a stuck device safe (fallback post + 150 ms trim). Forced arm: push a synthetic REMOVED event for the open device.
+   Fold soak s7198_backlog_L4 (expect 0 trims, peak queue << 150 ms). Boot freeze stays passive (headline). Hunter
+   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

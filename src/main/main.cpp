@@ -8073,6 +8073,8 @@ static void set_frequency(uint32_t freq) {
 }
 
 extern "C" void rs64_s4245_tick(int kind, uint32_t amount);
+// s7198: per-second counters for the [s7198-q] stall-test log (get_frames_remaining).
+static std::atomic<uint32_t> s7198_bufs_sec{0}, s7198_trims_sec{0};
 static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_addr) {
     rs64_s4245_tick(4, 1);
     audio_route_apply_cycle();
@@ -8143,6 +8145,22 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
     {
         std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
         queued_before = audio_device ? SDL_GetQueuedAudioSize(audio_device) : 0;
+        // s7198: a device that stops pulling (paused, output disconnected) keeps receiving the s7197 fallback-paced
+        // buffers, so its queue grows ~768 B per post and replays as latency once it resumes. Hardware's DAC never holds
+        // more than the AI's two buffers. When the queue already holds more than ROGUESQ_AI_BACKLOG_MS at the live rate,
+        // drop it before queueing the new buffer. Default 150 (normal play peaks ~36 ms, s7198 ctl); 0 = old unbounded queue.
+        static const long backlog_ms = [] { const char* e = getenv("ROGUESQ_AI_BACKLOG_MS"); return e ? strtol(e, nullptr, 0) : 150L; }();
+        s7198_bufs_sec.fetch_add(1, std::memory_order_relaxed);
+        if (audio_device && backlog_ms > 0 &&
+            (uint64_t)queued_before * 1000u > (uint64_t)backlog_ms * audio_sample_rate * 4u) {
+            static uint32_t ntrim = 0;
+            if (++ntrim <= 8 || (ntrim & 255) == 0)
+                fprintf(stderr, "[s7198-trim] n=%u dropped=%u rate=%u limit_ms=%ld\n", ntrim, queued_before,
+                        (unsigned)audio_sample_rate, backlog_ms);
+            SDL_ClearQueuedAudio(audio_device);
+            s7198_trims_sec.fetch_add(1, std::memory_order_relaxed);
+            queued_before = 0;
+        }
         if (audio_device) {
             queue_result = SDL_QueueAudio(audio_device, native_samples.data(),
                                           (Uint32)(num_samples * sizeof(int16_t)));
@@ -8404,14 +8422,33 @@ static size_t get_frames_remaining() {
         if (!audio_device) return 0;
         { // s7197 forced arm: ROGUESQ_AI_STALL_TEST=<sec> pauses the device from <sec> on (re-paused after any reopen). A paused
           // SDL2 device stops calling its queue callback exactly like a disconnected output, so the queue never drains.
+          // s7198: ROGUESQ_AI_STALL_TEST=<pause_s>:<resume_s> unpauses at resume_s (a TV switched back on), and logs the queue
+          // once per second ([s7198-q]: queued bytes, ms at the live rate, AI buffers queued and trims in that second).
             static const double t_s = [] { const char* e = getenv("ROGUESQ_AI_STALL_TEST"); return e ? atof(e) : 0.0; }();
+            static const double r_s = [] { const char* e = getenv("ROGUESQ_AI_STALL_TEST"); const char* c = e ? strchr(e, ':') : nullptr; return c ? atof(c + 1) : 0.0; }();
             static const auto t0 = std::chrono::steady_clock::now();
             static SDL_AudioDeviceID paused = 0;
-            if (t_s > 0 && paused != audio_device &&
-                std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() >= t_s) {
+            static bool resumed = false;
+            static int last_sec = -1;
+            const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+            if (t_s > 0 && !resumed && paused != audio_device && el >= t_s) {
                 SDL_PauseAudioDevice(audio_device, 1);
                 paused = audio_device;
                 fprintf(stderr, "[s7197-ai-stall] TEST paused device=%u at %.1f s\n", (unsigned)audio_device, t_s);
+            }
+            if (r_s > t_s && !resumed && paused && el >= r_s) {
+                SDL_PauseAudioDevice(audio_device, 0);
+                resumed = true;
+                fprintf(stderr, "[s7198-ai-stall] TEST resumed device=%u at %.1f s queued=%u\n", (unsigned)audio_device, r_s,
+                        (unsigned)SDL_GetQueuedAudioSize(audio_device));
+            }
+            if (t_s > 0 && (int)el != last_sec) {
+                last_sec = (int)el;
+                const uint32_t q = SDL_GetQueuedAudioSize(audio_device);
+                const uint32_t rate = audio_sample_rate ? audio_sample_rate : 1;
+                fprintf(stderr, "[s7198-q] t=%d queued=%u ms=%.1f rate=%u bufs=%u trims=%u state=%s\n", last_sec, q,
+                        q * 1000.0 / (rate * 4.0), rate, s7198_bufs_sec.exchange(0), s7198_trims_sec.exchange(0),
+                        resumed ? "resumed" : (paused ? "paused" : "pre"));
             }
         }
         queued = SDL_GetQueuedAudioSize(audio_device);
