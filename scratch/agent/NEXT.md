@@ -1,16 +1,10 @@
-# NEXT: Retina flight cost at the owner recipe (s7203 opt-in ROGUESQ_RETINA=1), then owner picks the default
+# NEXT: Retina owner sheet (flight crops RETINA 0 vs 1), then owner picks the default
 HYPOTHESIS-ID: retina-render-scale
-Context (s7203): ROGUESQ_RETINA=1 (plume_apple.mm getScaleFactor, runtime) sizes the swap chain in backing pixels:
-built-in fullscreen 1512x949 -> 3024x1898, RT64 WindowIntegerScale 4x -> 8x (1920 internal rows). Attract cost was
-small (+0.28 ms GPU median, 30 presents/s) but flight at FPS60 dd4 16:9 has far more triangles and fill, at 2x the
-present rate. Unmeasured.
-Hypotheses:
-- H-free: RETINA=1 holds 60 fps in flight (fl_shown), GPU median < ~4 ms, no new stalls -> recommend it to the owner as default-on candidate.
-- H-fill: 8x internal (3840x1920-class target) costs enough GPU fill to drop presents below 60/s or raise p95 gpu_ms past ~10 ms
-  on busy levels -> cap the internal multiplier under RETINA (e.g. ceil(points_h/240) * scale, or Manual 4-6x) and re-measure.
-- H-mem: the larger targets raise RT64 memory/pipeline churn (first-use hitches; G5c 250 ms gaps) -> look at Q rows gaps.
-Discriminator, one build (current), arms sequentially (one game at a time), recipe = scratch/agent/soak_queue/done/
-s7198_backlog_L4_20261112-054328.sh with XENV_EXTRA adding ROGUESQ_FULLSCREEN=1 ROGUESQ_PRESENT_RING=<path> and
-ROGUESQ_RETINA=0|1, LEVEL=4 and LEVEL=6, HOLD_S=180. Report per arm: [retina] swapchain create row, presents/s, gpu_ms
-median/p95/max, count of Q-row gaps > 50 ms and > 250 ms, fl_shown fps, crash count. Screen must be unlocked (ioreg check).
-Then an owner sheet: same-scene 1:1 crops RETINA 0 vs 1 (scratch/s7203/crop_c3.png style) in flight.
+Context: s7203 added opt-in ROGUESQ_RETINA=1 (swap chain at backing pixels). s7204 measured flight cost at the owner recipe:
+free (fl_shown 59.9-60.0, GPU median +0.1 ms, 0 gaps > 250 ms, 0 crashes; scratch/s7204, tools/s7204_ring_cost.py).
+Unit: one owner sheet so the owner can judge sharpness in flight. Same scene both arms, phase-gated by the autopilot timeline
+(tools/g1e_owner_quiet_arms.zsh route, LEVEL=4, t ~ 150 s in flight): screencapture -x at fixed offsets after launch in each arm,
+crop the same 1:1 region (scratch/s7203/crop_c3.png style), score with scratch/s7203/hf.py (expect R1 > R0, ~0.58 -> ~0.8).
+Hypotheses: H-sharp (R1 visibly sharper in flight like attract) vs H-same (flight content is low-frequency, no visible gain:
+then RETINA stays an opt-in with the cost note). Positive control: R1 frame downsampled 2x and back up must score at the R0 level.
+Deliver docs/owner_sheet_s7205_retina.png, add a line to docs/OWNER-OPT-INS.md. Default stays off until the owner says.

@@ -38,7 +38,7 @@ for A in arms:
     try:
         for l in open(f'{d}/ring_{A}.txt'):
             f = l.split()
-            if not f: continue
+            if len(f) < 2: continue  # s7204: SIGKILL can leave a truncated last row
             t = float(f[1]); t0 = t if t0 is None else t0
             if t - t0 < frm: continue
             kv = dict(x.split('=', 1) for x in f[2:] if '=' in x)

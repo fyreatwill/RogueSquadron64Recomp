@@ -190069,3 +190069,23 @@ Rules out: H-resmult-covers (RT64 already renders 960 rows but the 764-row swap 
 upscale; the measured R0 score equals a simulated half-res image). H-retina-breaks not seen in window, fullscreen, 1x
 control or hot-plug. Single-run attract cost only; flight cost at FPS60 dd4 is the open question (NEXT.md).
 Selects H-half; refutes H-resmult-covers. Opt-in, default unchanged; docs/OWNER-OPT-INS.md row added. Owner decides default.
+
+## Session 7204 (2026-11-12) — Retina flight cost at the owner recipe: H-free selected, H-fill and H-mem refuted (RETINA=1 holds 60 fps in flight, +0.1 ms GPU)
+Unit from NEXT (HYPOTHESIS-ID retina-render-scale). Harness tools/g1e_owner_quiet_arms.zsh (owner recipe: FPS60 dd4 16:9
+FULLSCREEN, godmode autopilot, NO_SAVE_WRITE, present ring), + ROGUESQ_G1B=1, HOLD 240, quiet host (idle > 25000 s every arm,
+screen unlocked), one game at a time. Arms L4r0/L4r1/L6r0/L6r1, then replicate L6r1b/L6r0b (order reversed). Data scratch/s7204.
+Witness [retina] swapchain create row: R0 1512x949, R1 3024x1898 in every arm (positive control that the switch took).
+New scorer tools/s7204_ring_cost.py (Q rows from t0+95: presents/s, gpu_ms p50/p95/max, Q->Q gaps). tools/g1e_level_fps.py now
+skips a truncated last ring row (SIGKILL mid-write raised IndexError).
+Result (pres/s, gpu50/95/max ms, gaps>50/>250, fl_shown):
+  L4r0 59.8 0.36/0.48/1.22 6/0 59.9 | L4r1 59.9 0.41/0.64/1.40 6/0 59.9
+  L6r0 60.8 0.28/0.35/1.10 7/0 59.9 | L6r1 57.7 0.44/0.90/1.60 92/0 59.5
+  L6r1b 60.0 0.41/0.61/1.39 2/0 60.0 | L6r0b 60.8 0.35/0.61/1.34 10/0 59.8.   0 crashes in 6 arms.
+L6r1's 92 gaps all sit in t=205-213, an 8 s NON-flight screen (VI origin B517C8 = fb B51E00 - 0x638, sd_wall < 3 ms, autopilot
+backdrop/menu cycle tr=31): the game produces a new image at 20/s there in BOTH arms (B517C8 Q rows 20/s in L6r0 and L6r1; W rows
+continue at 60/s with one fb). The replicate L6r1b never reached that screen (tr=4) and showed 2 gaps. Single-source side datum: on
+that screen L6r0 also queued 60/s presents with vi=B51E00 that L6r1 did not; non-flight, not pursued.
+VERDICT: H-free selected (two lines: L4 and the L6 replicate both hold 60.0 fps in flight with GPU median < 0.45 ms, far below the
+16.7 ms budget). H-fill refuted (8x internal adds +0.05-0.13 ms median, p95 <= 0.9 ms). H-mem refuted (0 gaps > 250 ms in any arm;
+the >50 ms gaps match R0 counts outside the 20/s screen). RETINA=1 is a free default-on candidate; owner decides.
+Next: owner sheet of same-scene flight crops RETINA 0 vs 1, then the owner picks the default.
