@@ -190392,3 +190392,45 @@ Verdict: selects H-ok (two lines: per-correction mode-switch proximity + full vi
 control). Refutes H-new for the fail/ER path. Rules out: a lit box from RDRAM-upload presents at load. Thread mode-switch-pillarbox CLOSED
 (s7212-s7215: 4:3/16:9/21:9 windowed, auto/expand fullscreen, short and long route). Raw deleted after scoring.
 Next: G3 21:9 front-end fidelity (MISSION FAILED, ER, fail wipes) vs angrylion (NEXT.md).
+
+## Session 7216 (2026-11-12) — G3 21:9 long-route front end == angrylion (H-match): GAME OVER/results, oval wipe, Elite Rogues, SELECT GAME/LEVEL, AVAILABLE CRAFT, hangar; H-shift and H-field refuted; the apparent ring/ER residuals were a 448-vs-444 / 339-vs-336 row misregistration (new FID_ALROWS)
+HYPOTHESIS-ID: g3-21x9-frontend-fidelity (CLOSED).
+Unit from NEXT. No maintenance (31.9 KB). No new soak results. Screen unlocked (IOConsoleLocked false). Owner save untouched (s7141 harness,
+NO_SAVE_WRITE, no SAVE_FROM). 1 game run, 0 CRASH/SIGSEGV/SIGBUS in run.log.
+Route location offline first: tools/s7210_field_census.py on the s7215 21:9 stream (scratch/s7215/field21.txt): field screens 625-1648
+(title), 7350-7810 and 11560-12020; B20000 run 6374-6666. Run scratch/s7216/fe.zsh: tools/s7141_arm.zsh 17 FE21, owner recipe + ASPECT=21:9,
+stream FROM=6300 EVERY=2 (23 GB), window 1360x626 captured 1680x720 at 128 s + 34 s (2035 frames; the 1360-pt window lands in cols 0-1563).
+This run's route differed from s7215 after the fail screen: 6300-6676 GAME OVER + results, 6676-6714 oval wipe, 6716-7176 Elite Rogues +
+SELECT GAME (even-field 448-row), 7178-7600 SELECT LEVEL/AVAILABLE CRAFT (339-row), 7600-8243 hangar. 972 RAM swaps in the raw window
+replayed twice (tools/s7152_post.zsh, al16; painted CONTROL PASS; 553 prefill / 419 NOPREFILL).
+Registration (the s7210 TRAP, hit again): regfit rect 1,40,1564,720 gave a linear y misfit, dy -2 at the top to +5 at the bottom on every
+screen (new scratch/s7216/yprof.py: best (dx,dy) per horizontal band). Model: RT64 presents native rows 0-443 of the 448-row screens and
+0-335 of the 339-row screens (s7211's VI range, now at 21:9). New tools/s7122_fidelity.py FID_ALROWS=<n> crops the replay to its first n rows;
+rect 1,37,1564,720: 444 -> dy 0 on all 5 bands; 339-row screens 336 -> dy 0, 334 -> dy -1..-4 (discriminating). dx 0 everywhere (H-shift no).
+Scores (centre = fb cols 256-767; frac >T40 median / swaps >0.05; controls shift-2 and +4-row rect):
+| screen | n | centre | +4-row ctl | shift-2 ctl | sides |
+| GAME OVER/results (444) | 188 | 0.0186 / 0 | 0.0679 / 170 | 0.0188 / 0 (static) | undrawn: RT64 black, ref = stale RAM |
+| oval wipe | 20 | 0.0003 / 0 | - | - | undrawn (magenta) -> RT64 black |
+| ER / SELECT GAME (444) | 231 | 0.0085 / 22 | 0.0425 / 101 | 0.0095 / 32 | undrawn, RAM black: frac_s 0 |
+| SELECT LEVEL/CRAFT (336) | 211 | 0.0346 / 0 | 0.0834 / 195 | 0.0371 / 13 | - |
+| hangar (336) | 322 | 0.0179 / 0 | 0.0541 / 201 | 0.0348 / 93 | - |
+Before the row model the same data read 0.039 / 0.023 / 0.082 (183 swaps >0.05) / 0.031: the "lit ring segments dark" lead at 21:9 (19%
+of angrylion-lit ring pixels dark in RT64, flat over presented frames -8..+8) was this misfit. With it: 7.4% at R=0, 0.4% unlit and luma
++3.2 on the 2-px-eroded interior (scratch/s7216/ringint.py) = the s7182 edge class (RGBA5551 ceiling on interiors, hard staircase edges).
+Side bands (scratch/s7216/sides.py): every 4:3-band screen leaves fb cols <256 / >=768 undrawn (prefill replay 95-100% magenta there);
+RT64 presents them pure black (luma 0.0 on all 208 swaps; WIDE_UNDRAWN). The 0.12 side frac on GAME OVER is the NOPREFILL reference
+showing stale RDRAM garbage, i.e. what a VI scan of that wide fb would show; RT64 is the cleaner result. Hangar: the fb's last column is
+undrawn (s7189 class, RT64 black) and 92 swaps carry transient undrawn wedges on entry/camera moves; inside them RT64 matches the RAM
+snapshot (median |d| 6.1), i.e. the buffer's prior content, as hardware shows.
+H-field: the 22 ER swaps >0.05 are two list-scroll bursts (6752-6770, 6826-6848). Even native rows (current field) scored 13.0 vs odd rows
+5.6 at the chosen pair, because the NOPREFILL weave reference rewards the stale frame; the next presented frame matches the current field at
+the floor (even-row d 4.7-5.9 on all 22, row offsets +-1 worse by 2-4): RT64 renders the current field progressively (H-prog, s7209/s7210),
+the reference combs (owner sheet row 3). No field defect.
+Verdict line: this selects H-match for the 21:9 long-route front end (centre at the 4:3/16:9 floors, two registration controls firing,
+undrawn areas black or hardware-equivalent) and refutes H-shift (dx 0, dy flat under the row model) and H-field (current field at floor
+on every scroll swap). No fix needed. Sheet docs/owner_sheet_s7216_219_frontend.png (RT64 | angrylion | diff x3, 6 swaps).
+Lesson (TRAP, CURRENT-TRUTH): for any presented-vs-angrylion score, set FID_ALROWS=444 (448-row fbs) or 336 (339-row fbs) and fit the rect
+for those rows; check the band dy profile (scratch/s7216/yprof.py) before trusting any localized residual. Earlier wide menu scores fitted to
+448/339 rows (s7144, s7155) carried this misfit in their animated-holo residuals; their H-equal verdicts stand (residual only shrinks).
+Not reached on this route: MISSION FAILED (this route showed GAME OVER), level description, crawl, pause at 21:9.
+Deleted FE21 .cap/.raw (30 GB), replays and the s7215 L21.cap; CSVs in scratch/s7216/csv.

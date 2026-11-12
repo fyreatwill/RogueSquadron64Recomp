@@ -32,6 +32,10 @@ def load_al(path):
         for p, q in zip(rows, rows[1:] + [None]):
             if q != p + 1: runs.append((a, p + 1)); a = q
         y0, y1 = max(runs, key=lambda r: r[1] - r[0])
+    if FID_ALROWS and y1 - y0 > FID_ALROWS:
+        # s7216: RT64 presents native rows 0..443 of a 448-row screen (s7211 VI range; s7210 16:9 fit, s7216 21:9 fit), so a rect
+        # fitted to all 448 rows misregisters linearly in y (dy -2 top .. +5 bottom at 21:9). FID_ALROWS=444 drops the unshown rows.
+        y1 = y0 + FID_ALROWS
     return Image.frombytes('RGB', (w, y1 - y0), px[y0 * w * 3:y1 * w * 3])
 
 
@@ -58,6 +62,7 @@ class Raw:
 # of the same window within 0.3/channel; dominant colours == sips ColorSync sRGB of a tagged PNG). New raws carry a .cs
 # sidecar and are never converted; FID_P3=1 is only for raws captured before s7151.
 FID_MAINRUN = os.environ.get("FID_MAINRUN", "0") == "1"  # s7177, see load_al
+FID_ALROWS = int(os.environ.get("FID_ALROWS", "0"))  # s7216, see load_al
 FID_P3 = os.environ.get('FID_P3', '0') == '1'
 _P3X = None
 def _p3_to_srgb(im):

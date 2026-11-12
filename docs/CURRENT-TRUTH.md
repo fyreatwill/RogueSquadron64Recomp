@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7214 (2026-11-12).
+Compact operational handoff, as of Session 7216 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -136,6 +136,13 @@ Open or awaiting the owner:
   16 corrections, all <=874 log lines after an osViSetMode/vi-mode-table line, 0 non-full viewports bar the 320x224 boot logo;
   box scan 51 narrow = fades/wipes only (control PASS x2). tools/s7215_shape_census.py (exit 1 = correction off a mode switch).
   **mode-switch-pillarbox thread CLOSED.**
+- **s7216 21:9 long-route front end == angrylion (H-match, CLOSED):** GAME OVER/results, oval wipe, Elite Rogues, SELECT GAME / LEVEL,
+  AVAILABLE CRAFT, hangar at the owner recipe 21:9: centre frac 0.019 / 0.000 / 0.009 / 0.035 / 0.018, 0 swaps >0.05 bar 22 ER scroll swaps
+  that are a weave-reference pairing artefact (next frame = current field at the floor; H-field refuted). dx 0, dy flat (H-shift refuted).
+  Undrawn fb side columns of the 4:3-band screens present black (reference shows stale RDRAM); hangar undrawn wedges show the buffer's prior
+  content like hardware. The 21:9 "dark ring" (19% of lit px) was the row misfit below; interiors equal (s7182 edge class).
+  Sheet docs/owner_sheet_s7216_219_frontend.png. TRAP: RT64 presents rows 0-443 of 448-row and 0-335 of 339-row screens; score with
+  tools/s7122_fidelity.py FID_ALROWS=444 / 336 and check scratch/s7216/yprof.py (dy per band) first.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -258,8 +265,8 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) G3 21:9 front-end fidelity on the long route** (MISSION FAILED, Elite Rogues, fail wipes, the
-   load-time stale VI-buffer presents) vs angrylion with the s7141 kit. Present-shape thread CLOSED s7215 (see headline).
+1. **(next, NEXT.md) G3 21:9 remaining screens:** MISSION FAILED, level description (C-up on AVAILABLE CRAFT), chapter crawl and
+   PAUSED at 21:9 with the s7216 row model (FID_ALROWS). Long-route fail/ER/menus/hangar CLOSED s7216 (headline).
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
    Retina default: owner (s7205).
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
@@ -293,7 +300,7 @@ G3 fidelity scoring kit (s7122-s7186), keep for item 1 and any re-score: arms to
 s7131_arm.zsh, s7141_{arm,post}.zsh, s7146_arm.zsh; post tools/s7152_post.zsh (NOPREFILL *n for 4:3-band
 screens at 16:9, *r for 336-row screens, *c combine); scorers tools/s7122_fidelity.py, s7183_native_edge.py,
 s7163_rectfit.py, s7182_yfit.py, s7154_{kmd,kgrid}.py, s7143_affine.py, s7184_ldesc_region.py; replay
-tools/angrylion_replay/build16.sh (16 MB core for dd>1). TRAPs: score only the flight window (--t1 before
+tools/angrylion_replay/build16.sh (16 MB core for dd>1). TRAPs: set FID_ALROWS=444/336 (RT64 shows rows 0-443 / 0-335, s7216); score only the flight window (--t1 before
 medals); L17 autopilot dies ~126 s (FROM=4700 at 21:9, 3300 at 4:3); 448-row cutscenes need FID_MAINRUN=1;
 presented capture can end before the stream (drop clamped pframes); capture bursts mis-pair 2-swap runs
 (re-pair +-6); raws before s7151 are Display-P3 (FID_P3=1); RECT_ASPECT=0 under ASPECT=4:3 stretches rects.
