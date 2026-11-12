@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7221 (2026-11-12).
+Compact operational handoff, as of Session 7223 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -110,6 +110,9 @@ Open or awaiting the owner:
   s7222 display ADDED while fullscreen on the built-in: no resize, no swap chain change, 30/s steady (both RETINA arms). Removing a
   display the window is NOT on used to cycle fullscreen (resize + ~3 s at 13-19/s); s7222 gates the cycle to removals of the
   window's own display (bounds match; ROGUESQ_HOTPLUG_ANY=1 = old). Gated: 0 resizes, min 29/s; own-display removal still re-enters.
+  s7223 ASPECT=21:9 WINDOWED (1360x594 pt window, LEVEL=4 owner recipe, r1 vs r0): r1 swap chain 2720x1188 (r0 1360x594), full 21:9
+  view + edge HUD in the window both arms (bbox 0..1), hf 0.914 vs 0.735 (r1 higher 17/19 pairs; ctl down/up2 r1 0.522, r0 0.532),
+  0 gaps >250, min 27 vs 29/s in a shared 30/s dip. H-ok. **RETINA windowed CLOSED.** Sheet docs/owner_sheet_s7223_retina_window_21x9.png.
 - **s7206 interlaced stills fixed, default on (lib/rt64):** the title / backdrop stills are interlaced double-stride VI (width 1592,
   fb 796 cols B51E00, origin B52438). VI::fbAddress() subtracted a 1592-col row -> B517C8, so early present never matched the
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
@@ -282,10 +285,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) RETINA=1 + ASPECT=21:9 WINDOWED on the 2x built-in** (G1d/G3 at RETINA=1, not fullscreen): full 21:9
-   viewport, backing-res chain, sharpness vs RETINA=0, 0 gaps >250 ms, front end + LEVEL=4 flight. Hot-plug fully CLOSED s7222
-   (add: no-op; foreign removal: gated, no cycle; own removal: re-enter). Boot freeze stays passive; hunter
-   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+1. **(next, NEXT.md) RETINA=1 live windowed<->fullscreen toggle + window resize mid-flight** (s7223 closed static 21:9
+   windowed: H-ok). Swap chain must follow each size change at backing pixels with a refit full viewport, 0 gaps >250 ms.
+   Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

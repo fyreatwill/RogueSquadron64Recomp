@@ -190599,3 +190599,24 @@ hidden Space or swap chain loss), then backlog.
 - Next discriminator (NEXT.md, HYPOTHESIS-ID retina-wide-window): RETINA=1 vs 0 at ASPECT=21:9 windowed. The swap-chain size row
   plus in-phase shot pairs split H-ok (2x chain, full 21:9 viewport) from H-letter (viewport in points) and H-cost (gaps >250 ms).
 - Summary: the add run selects H-ok; the foreign-removal run selects H-churn, and the gated fix refutes it; root cause = rs64_display_hotplug_tick cycling on any removal. This closes retina-hotplug.
+
+## Session 7223 (2026-11-12) — RETINA=1 + ASPECT=21:9 WINDOWED == RETINA=0 layout with a 2x backing chain (H-ok): full 21:9 view, sharper (hf 0.914 vs 0.735), 0 gaps >250 ms; H-letter and H-cost refuted; RETINA windowed closed
+- Run (scratch/s7223/arm.zsh via r.zsh): LEVEL=4 owner recipe (FPS60, dd4) + ROGUESQ_ASPECT=21:9, NO fullscreen, arms r1
+  RETINA=1 / r0 RETINA=0 sequentially on the 2x built-in, screen unlocked (no CGSSessionScreenIsLocked in ioreg). Hold 200 s,
+  screencapture -x every 10 s (t=20..200), PRESENT_RING. Both reached flight (hangar AVAILABLE CRAFT -> Gerrard V flight in shots).
+- Window: both arms `[g1f] window 1360x594 fullscreen=0 at 76,183` (2.29:1), drawable 2720x1188.
+  Swap chain: r1 `[retina] swapchain create 2720x1188 contentsScale=2.0`, r0 `1360x594` (positive control for the arm split).
+- New scorer tools/s7223_window_score.py: crops the window content rect (2 x points; checked visually, content starts exactly
+  below the title bar) from the desktop capture, lit bbox per shot, s7203 hf residual on the centre 80%, plus controls.
+  | arm | bbox (frac of window) | hf mean (19 shots) | ctl down/up2 | blank-left bbox | min on-screen P/s 12..end | gaps>250 |
+  | r1 | 0..1 x 0..1 every shot (2 transient top-fade rows) | 0.914 | 0.522 (from 0.941) | x0 0.5 PASS | 27 | 0 |
+  | r0 | 0..1 x 0..1 every shot | 0.735 | 0.532 (from 0.555) | x0 0.5 PASS | 29 | 0 |
+  r1 > r0 in 17/19 in-phase pairs. The 61-66 s ~30/s stretch and the 28/43/58 s 50/s rows appear in BOTH arms at the same
+  seconds (route events, not RETINA). r0's down/up control barely moves (already point-res), r1's halves: instrument splits.
+- Sheet docs/owner_sheet_s7223_retina_window_21x9.png (left r1, right r0; hangar, two flight shots): HUD at the real window edges
+  in both, no letterbox.
+- Rules out: H-letter (points-sized viewport/scissor in the 2x chain on the windowed path) and H-cost at 21:9 windowed. 0 crashes.
+- Discrimination: the swap-chain row + full-window bbox SELECTS H-ok and REFUTES H-letter; 0 gaps >250 ms with matching P/s
+  REFUTES H-cost. Engineering: new scorer tools/s7223_window_score.py (windowed crop + controls) and owner sheet.
+- Next discriminator (NEXT.md, HYPOTHESIS-ID retina-live-resize): live windowed<->fullscreen toggle and window resize mid-flight
+  at RETINA=1 vs 0 — swap-chain rows per change split H-ok / H-stale / H-churn.
