@@ -7,6 +7,8 @@ R=$PWD/scratch/${RDIR:-s7146}; mkdir -p $R; N=$1; O=$R/$N; rm -rf $O
 AP=${AP:-6:start,11:start,16:start,21:start,25:left,27:start,33:start,40:right,46:left,52:right,58:left,64:a,70:start,76:start}
 scratch/s6894/g5b_capture RogueSquadron64Recomp $R/$N.raw ${CW:-504} ${CH:-216} ${DL:-38} ${DU:-40} > $R/cap_$N.txt 2>&1 &
 cp=$!
-env SECS=${SECS:-80} CAP0=99999 AP=$AP XE="ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_AUTOPILOT_HOLD_MS=250 ROGUESQ_STORE_DIAG=0 ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=${ASP:-21:9} ROGUESQ_G5G_CAM=$O.g5g.txt ROGUESQ_G5B_FRAME=$O.cap ROGUESQ_G5B_FRAME_EVERY=${EVERY:-3} ROGUESQ_G5B_FRAME_FROM=${FROM:-1900} ROGUESQ_G5B_FRAME_MAX_MB=12000 $2" zsh tools/g3_port_capture.sh $O
+# s7181: ASP=off omits ROGUESQ_ASPECT entirely (true retail default)
+if [ "${ASP:-21:9}" = off ]; then ASPE=""; else ASPE="ROGUESQ_ASPECT=${ASP:-21:9}"; fi
+env SECS=${SECS:-80} CAP0=99999 AP=$AP XE="ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_AUTOPILOT_HOLD_MS=250 ROGUESQ_STORE_DIAG=0 ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 $ASPE ROGUESQ_G5G_CAM=$O.g5g.txt ROGUESQ_G5B_FRAME=$O.cap ROGUESQ_G5B_FRAME_EVERY=${EVERY:-3} ROGUESQ_G5B_FRAME_FROM=${FROM:-1900} ROGUESQ_G5B_FRAME_MAX_MB=12000 $2" zsh tools/g3_port_capture.sh $O
 wait $cp; pkill -9 -x RogueSquadron64Recomp
 echo "$N crash=$(grep -a -c -i 'crash\|SIGSEGV\|SIGBUS' $O/run.log) cap=$(du -m $O.cap | cut -f1)MB $(cat $R/cap_$N.txt | tr '\n' ' ')"

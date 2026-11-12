@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7180 (2026-11-12).
+Compact operational handoff, as of Session 7181 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full pre-compaction text of this file (s6893-s6993 headline
 bullets with every number, superseded list, G1e chronology) is archived verbatim in
@@ -241,30 +241,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
    K 0..30 moves the centre exit only 64->68 cells while 21:9 side rays leave through a side face at 18-22 cells on 98% of calls (tools/g5e_window_geom.py;
    MAPWIN_K=8 tog run: no consistent change). Fix = widen the window past 64 columns (slot array 0x80132DC0 row<<8 stride, span tables
    0x80130DB0/0x80131DB0; 9 base sites in binPolygonIntoTerrainGrid/streamTerrainGridCellsByDistance/buildGridCellMeshForFace).
-   **s7009 built: ROGUESQ_DD_WIDEWIN=1|tog (opt-in), tools/apply_s7009_widewin.py**: tables moved to 0x83000000 at 128 stride (9 base + 11 shift sites,
-   s6049/s6882/s6883 bounds follow g_rs64_ww), window up to N=128 per axis, pool cap spent on forward axis first. Same-run tog, two runs, 21:9 dd4 L4:
-   side-third hard80 N128 18.4->14.6 / 16.1->8.3, N96 21.2->12.7 / 17.7->5.8, centre flat; trace 128x64 or 64x128 on 89% of on calls, pool 8192 never
-   exhausted (site 18 = 0); 0 crashes. COST: captured fps 59.6->50.7 (N128) and 61.9->49.4 (N96, window 96x85): cost follows cell count (area 8192 vs 4096),
-   not shape. Owner sheet docs/owner_sheet_s7009_widewin_219.png. Holds L1/L15 300 s clean (crash=0, wide on), L4 still queued. **s7010 cost = H-rsp** (G1E_TL same-run tog split, tools/g5e_cost_by_parity.py,
-   0.5 s-shifted control collapses to T -0.16): per frame guest run 1.83->2.56 ms (+0.74), gfx task start->RSP exit 13.26->16.90 (+3.64, p90
-   16.3->23.2), so P(frame >= 2 VI) 0.07->0.61 and fps 56->37; single run.
-   **s7011: two cost levers refuted.** (i) Frustum cull: code-read, the stream (0x80042D50..DA8) already skips every cell whose span from the game's 3D
-   view pyramid (eye 0x80130C10 + 4 far corners, 0x800439C0..A14, x-extent widened by FP_XSCALE) is empty or misses the cell's height range, so the
-   extra wide-window cells are inside the view; agrees with s7008 geometry (side rays leave the 64 box at 18-22 cells). A 2D wedge cull would remove
-   nothing. (ii) LOD tiers 0x8009DE94..A0 = 256/49/30.25/16 dist^2 in node units, i.e. they only grade the ring within 4-16 nodes of the eye; new opt-in
-   ROGUESQ_DD_LODMUL=<f> (_TOG=1, tools/apply_s7011_lodmul.py) at 0.25 and 4: rsp on-off +1.03 / +1.09 ms vs null arm (mul 1) +0.08 and 0.5 s-shifted
-   controls +0.45/-1.40/+0.74, so no effect above the ~1 ms parity noise in either direction. Confound found: arm scripts' default
-   ROGUESQ_CULL_SPIKE=tog shares the 1 s parity; the null arm shows it does not bias rsp (s7010's +3.6 stands), use CULL=1 in future tog arms.
-   **s7012 area cap (ROGUESQ_DD_WIDEWIN_CAP=a[,b,c], WIDEWIN=tog3 cycles them per mach second, tools/apply_s7012_widewin_cap.py):** one same-run
-   3-phase run each, 21:9 dd4 L4 CULL=1. Cost (g5e_cost_by_parity.py --phases 3): rsp 13.62 / 15.64 / 16.94 ms at 4096 / 6144 / 8192 (8192-4096 +3.32
-   reproduces s7010's +3.64; 1/3-period shifted splits smear as they must), but fps 57.3 / 37.5 / 34.9 and P(>=2VI) 0.04 / 0.60 / 0.72: the VI cliff
-   (rsp + guest run past ~16.7 ms) is crossed already at 6144. Edge (g5e_edge_score.py phases=3): side-third hard80 left 22.5 / 17.2 / 17.6, right
-   18.2 / 13.5 / 14.4: all the side-edge gain arrives by 6144 (edge knee), the fps cost is nearly all-or-nothing (cliff). Sheet
-   docs/owner_sheet_s7012_widewin_cap.png (rows 2-3 flight; row 1 caught a debrief). Next: caps below 6144 (4608/5120/5632) to find the largest
-   cap that stays under the VI cliff and how much side-edge gain it keeps (NEXT.md).
-   **s7013: no room below the cliff.** Same-run caps 4096/5120/5632: fps 54.2/45.7/43.3, P(>=2VI) 0.11/0.31/0.38, rsp 13.06/14.13/14.41 (~0.9 ms per
-   1000 cells). H-room refuted: WIDEWIN is an owner trade (wider 21:9 sides for ~35-45 fps) and stays opt-in. Both at once needs a cheaper gfx RSP task
-   (13 ms at the retail window is the binding term). Next: profile the gfx RSP thread at 21:9 dd4 to name the hot ucode path (NEXT.md).
+   s7009-s7013 (ROGUESQ_DD_WIDEWIN window to N=128 at 0x83000000, side-edge gain by cap 6144, harness-path cost lines): superseded by s7014; detail PORTING-STATE s7009-s7013.
    **s7014 SUPERSEDES the s7009-s7013 cost lines above** (harness probe path): owner path 59-60 fps at caps 4096-8192, rsp 8.8-11.9 ms,
    two runs. WIDEWIN is free at 21:9 dd4 L4; still opt-in until the owner says. s7015: L15 21:9 and L4 16:9 free, L1 21:9 58.1 fps (P 0.03);
    offered in OWNER-OPT-INS, owner look. Glue walks measured s7018: 0.2-0.45 ms/frame, closed.
@@ -316,7 +293,8 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 33. **G3 in-flight owner-recipe fidelity 16:9: CLOSED s7164 (H-equal L0-L18).** Score only the flight window (--t1 before medal screens), refit rect with tools/s7163_rectfit.py. L17 dark slab = deliberate W_SHEET_PX sheet cull, not RT64 (PORTING-STATE s7164).
 34. **G3 in-flight owner-recipe fidelity at 21:9: CLOSED s7173 (H-equal L0-L18; centre <=0.006, 0 flight >0.05 beyond dup-pframe lag).** Shift-2 ctl fires except dark/smooth L3/L8/L13/L17 (judged by meand ratio + sheet). TRAP: L17 (trench) autopilot dies ~126 s, so FROM=7500 lands in level select; use FROM=4700 with arm delay 60. Sheets docs/owner_sheet_s71{67..73}_L*_219_fidelity.png.
 35. **G3 L4 21:9 mid-mission cutscene lower-right hole: FIXED s7166 (ours: s7136 SKYFILL rect bottom).** SKYFILL wrote {0,0,w-1,h-1} with h = viewport HEIGHT (340 at 0x80138D20+0x16); letterboxed viewports start at y 54, so the widened rect ended at row 339 and replaced the builder's right below-horizon rect; rows 340-392 right of x 512 were never cleared, exposed when no water tri reaches the bottom band (0 tris at 21:9 and 4:3). Fix tools/apply_s7166_skyfill_bottom.py, ROGUESQ_HORIZON_SKYFILL_BOT (default on, =0 s7136, =tog): rect keeps the builder pair's max bottom/right. L4 21:9 unpainted max 27136 -> 0 (75 -> 0 swaps); CULL_SPIKE=0 byte-identical (not the cull); 4:3 max 338. Recorder trigger ROGUESQ_G5B_FRAME_TRIG_LB=<k> (letterbox span k, dpc_bridge.cpp). Sheet docs/owner_sheet_s7166_L4_219_cutscene_fix.png; owner look.
-36. **G3 in-flight retail 4:3 fidelity: CLOSED s7180 (H-equal L0-L18).** L17 needs FROM=3300 (autopilot fails ~126 s). 37. **(next, NEXT.md) G3 retail 4:3 menus/cutscenes** (none measured at 4:3; 512x448 interlaced briefing).
+36. **G3 in-flight retail 4:3 fidelity: CLOSED s7180 (H-equal L0-L18).** L17 needs FROM=3300 (autopilot fails ~126 s). 37. **G3 retail 4:3 menus/cutscenes: H-equal s7181** on 18 screen classes (logos, title, SELECT GAME/LEVEL, craft, hangar, intro cutscene, GAME OVER, debriefs, MISSION FAILED, Elite Rogues), arms ASPECT=4:3 and no ASPECT env. 448-row cutscenes need FID_MAINRUN=1 (stray rows 442-447). RECT_ASPECT=0 under ASPECT=4:3 stretches 2D rects (N64 logo k 1.45, menus 1.15); inert with no ASPECT env. Not reached: interlaced level-description screen, crawl, pause. Sheet docs/owner_sheet_s7181_43_menus.png.
+38. **(next, NEXT.md) Holo platform ring ~7/8 brightness on RT64** (s7181: lit segments AL 248 -> RT64 218 at the 849x788 window, 238 at 640x512; lag-flat, wall control 0). Read the ring tris' combine/othermode from scratch/s7141/L17m.cap swap 5161, then split blend vs resolution.
 
 ## Evidence index
 

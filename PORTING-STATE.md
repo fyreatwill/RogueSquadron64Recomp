@@ -189318,3 +189318,50 @@ No maintenance (59995 B < 60000). No new soak results. Owner save untouched (NO_
   Sheet docs/owner_sheet_s717x_L18_43_fidelity.png.
 Verdict: H-equal on L17 and L18. Item 36 (retail 4:3 in-flight fidelity) CLOSED: L0-L18 H-equal. All .cap/.raw deleted.
 Rules out a retail-settings render difference in flight on any level. Next: retail 4:3 menus/cutscenes (item 37), not yet measured at 4:3.
+
+## Session 7181 (2026-11-12) — G3 retail 4:3 menus/cutscenes == angrylion on 18 screen classes (H-equal); RECT_ASPECT=0 under ASPECT=4:3 stretches 2D rects (N64 logo k 1.45, menus 1.15) and is inert with no ASPECT env; new lead: holo platform ring segments ~7/8 as bright as angrylion
+HYPOTHESIS-ID: g3-retail-43-menus (measurement closed; ring lead -> g3-holo-ring-brightness).
+No maintenance (59958 B < 60000). No new soak results. Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (no
+CGSSessionScreenIsLocked key). 5 game runs, one at a time, 0 CRASH/SIGSEGV/SIGBUS in every run.log.
+Arms (FPS60=0 dd1, capture 320x240, owner default boot AP unless stated; tools/s7146_arm.zsh, now with ASP=off = omit ROGUESQ_ASPECT):
+M1 ASPECT=4:3 120 s FROM=0 EVERY=5 (window 849x788, rect 0,9,308,242, split 103,205); R1 = M1 + ROGUESQ_RECT_ASPECT=0 62 s;
+T0 no ASPECT env (true retail, window 640x512 incl. title bar; rectfit 1,29,299,228 for 512x339 menus, 20,15,280,242 for 512x448
+title/profile, 1,49,299,207 for the 640x340 logo fbs); T0R = T0 + RECT_ASPECT=0; L17m forced L17 route (tools/s7141_arm.zsh,
+ASPECT=4:3, FROM=4200 EVERY=2, 16 GB cap) for GAME OVER / debrief / Elite Rogues / MISSION FAILED. Painted-square CONTROL PASS on all 5.
+Post tools/s7152_post.zsh; 448-row cutscene fbs paint 6 stray rows 442-447 below the 340-row band, so score them with FID_MAINRUN=1
+(without it the crop squashes the image: cutscene frac 0.038 / low band 0.91 = tool, not render; with it 0.021, 0 >0.05).
+Title/SELECT GAME/Elite Rogues alpha-blend over the prefill: score on the NOPREFILL (*n) replay, as at 16:9.
+Per-phase medians (frac>40, swaps >0.05; shift-2 control in brackets where the screen animates):
+| screen | arm | frac | >0.05 | fitted centre (s7143_affine) |
+|---|---|---|---|---|
+| N64 logo / F5 intro | M1 | 0.019 / 0.023 | 0 / 2 | 0.014 / 0.014 (F5 sh2 0.135 fires) |
+| N64 logo / F5 intro | T0 | 0.009 / 0.016 | 0 / 4 | - |
+| title / SELECT GAME | M1 n | 0.018 / 0.030 | 0 / 3 | 0.003 / 0.011 |
+| title / SELECT GAME | T0 n | 0.009 / 0.005 | 0 / 4 | - |
+| SELECT LEVEL / AVAILABLE CRAFT | M1 | 0.038 / 0.047 | 0 / 4 | 0.035 / 0.043 |
+| SELECT LEVEL / AVAILABLE CRAFT | T0 | 0.031 / 0.036 | 0 / 0 | - |
+| hangar SELECT YOUR CRAFT | M1 / T0 | 0.024 / 0.022 | 0 / 0 | 0.019 (sh2 55 >0.05) |
+| STAR WARS logo | M1 | 0.019 | 2 | 0.014 |
+| Calamari intro cutscene (640x448) | M1 FID_MAINRUN | 0.021 | 0 | 0.011 (sh2 19 >0.05) |
+| GAME OVER / debrief / MISSION FAILED / results | L17m | 0.011 / 0.021 / 0.009 / 0.022 | 0 all | - |
+| Elite Rogues (n) | L17m | 0.047 | 21 | 0.018 |
+| trench flight | L17m | 0.011 | 0 (sh2 25) | - |
+RECT_ASPECT, two arm pairs: under ASPECT=4:3 (R1) RT64 stretches 2D rect draws: N64 logo 0.019 -> 0.092 (best k 1.45 in a
+1.0-1.5 x-scale sweep, scratch/s7181/py/kfit.py), SELECT LEVEL 0.038 -> 0.090 (best 1.15), AVAILABLE CRAFT 0.047 -> 0.104 (1.15);
+3D (hangar best k 1.0) unscaled; visible in docs/owner_sheet_s7181_43_menus.png bottom rows. With no ASPECT env (T0 vs T0R) the
+two arms score identically on every screen (0.0309/0.0309, 0.0358/0.0358, 0.0219/0.0219, title 0.0089/0.0089): inert. So H-rect
+"inert at 4:3" holds only for the true retail default; with ROGUESQ_ASPECT=4:3 the RT64 source/target ratio differs from 1 and the
+default-on s7142 fix is what keeps the 4:3 opt-in path at the angrylion floor. (Mechanism not derived: aspectRatioSource = VI fb ratio
+in rt64_workload_queue.cpp; single-source on which ratio pair applies.)
+NEW LEAD (H-ring): the SELECT LEVEL / AVAILABLE CRAFT holo platform's lit ring segments are consistently darker on RT64. Ring box
+mean luma RT64-AL -4.6 to -6.4 in M1 sellevel, M1 craft, L17m craft, 78-100% of frames negative, flat under presented-frame shifts
+-3..+3 (so not animation lag; s7155's 16:9 "animated holo" attribution of the same residual is now doubtful); static wall control
++0.4..+0.6. Per-pixel bins (scratch/s7181/py/ringpx.py): AL (248,248,198) -> RT64 (218,218,172) = x0.88 (~7/8) on lit pixels,
+dark ring pixels +7; MISSION FAILED full-frame bright bins only -3..-8 (not a general tone curve). T0 (small window) loss is
+smaller (248 -> 238, x0.96): resolution/presentation dependent, single run each. Zoom scratch/s7181/ring_zoom.png: uniform dimming,
+no seams. Op census swap 5161: 852 tri0F, 275 tri0D, 213 texrect; combiner/blender of the ring tris not yet read.
+NOT reached this session: the 512x448 interlaced level-description screen (route went straight to craft) and the text crawl
+(save's chapter progress skips it on this route); pause menu not captured.
+Verdict: H-equal for 18 retail-4:3 screen classes (two arms: ASPECT=4:3 and no ASPECT); H-tool hit and fixed on the cutscene crop;
+H-rect refuted for ASPECT=4:3 with the fix off (stretch), confirmed inert at true retail; H-interlace untested (screen not reached).
+Kept scratch/s7141/L17m.cap/.idx/r replay for the ring work; deleted M1/R1/T0/T0R .cap/.raw.
