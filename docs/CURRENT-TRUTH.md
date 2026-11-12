@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7213 (2026-11-12).
+Compact operational handoff, as of Session 7214 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -128,7 +128,11 @@ Open or awaiting the owner:
   frame of the mission intro and of the hangar re-entry showed squashed into a 1360x260 band (fb 1024x336, rs 5.143,3.0; tools/s7213_box_scan.py,
   control PASS; RDP 224 KB). Now the viewport shape comes from the present VI + aspect config when the ratios differ >3% (sampling unchanged;
   RDRAM uploads excluded). Same binary: fix=0 squashed band back, fix=1 full window; 4:3 and 16:9 census 1 correction each, no box frame.
-  Untested: ASPECT=auto (Expand branch) and fullscreen. Owner sheet docs/owner_sheet_s7213_shape.png.
+  Owner sheet docs/owner_sheet_s7213_shape.png. s7214 fullscreen (1512x949): ASPECT=auto is rewritten to Manual 712:448 in main.cpp before
+  RT64 init (it never uses Expand); ROGUESQ_ASPECT=expand is the only Expand user. Both: exactly 1 mismatch per run, the boot 4:3 vi-follow-draw
+  target (auto rs 2.25,3 -> 2.973; expand 3.137 -> 4.145 = the rs ordinary 512x444 frames carry), 0 false fires on ordinary frames, all other
+  viewports full. fix=0 arm logs the 4:3 pillar (vp 185..1324) but it falls in the dark title-still fade-in: no box frame in pixels (x8 gain sheet,
+  scan control PASS). Single-route datum (L17 short route).
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -251,10 +255,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) present-shape census at ASPECT=auto fullscreen (Expand branch of the s7213 fix)** over the long s7210 route
-   (boot -> menus -> L17 -> MISSION FAILED -> Elite Rogues): every [s7213-shape] line must be a real mode-switch mismatch and every
-   viewport full; window capture over each event. CLOSED s7213: 21:9 letterbox flash (lit, fixed), 4:3 / 16:9 (fill-only, now corrected
-   too). s7212/s7211 history in the ledger. Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh
+1. **(next, NEXT.md) long-route present-shape census at 21:9 fix on** (s7210 route: boot -> menus -> L17 -> MISSION FAILED ->
+   Elite Rogues x2): every [s7213-shape] line a real mode switch, every viewport full, box scan clean; then close mode-switch-pillarbox.
+   CLOSED: s7213 21:9 letterbox (lit, fixed), 4:3/16:9 (fill-only, corrected); s7214 auto/expand fullscreen (H-ok, 1 event each,
+   unseen). Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh
    tools/boot_freeze_hunt.sh <out> N 34 12`. Retina default: owner (s7205).
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).

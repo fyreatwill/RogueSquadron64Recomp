@@ -190345,3 +190345,29 @@ F169 (16:9) fix on: 1 correction each (4:3: 512x444 stale rs 2.625,3.0 after the
 event), all other viewports full, no box-shaped narrow frame (9-10 fades). Owner sheet docs/owner_sheet_s7213_shape.png (before/after, 21:9).
 Verdict: selects H-lit at 21:9 (event B, pixels + RDP bytes + same-binary fix=0/fix=1 arms); refutes H-fill-only as a class closure. Rules out: H-fill-only at 21:9 (B is lit). Not yet tested: ASPECT=auto (Expand branch) and fullscreen. Raws/caps deleted after scoring.
 Next discriminator: ASPECT=auto fullscreen fix=1 vs fix=0 arms; [s7213-shape] firing on ordinary frames (H-false) vs only on mode switches (H-ok) (NEXT.md).
+
+## Session 7214 (2026-11-12) — present-shape fix at fullscreen: ASPECT=auto is Manual 712:448 (never Expand), ASPECT=expand computes the same `want` as the workload; 1 real mode-switch mismatch each, 0 false fires (H-ok), fix=0 pillar unseen
+HYPOTHESIS-ID: mode-switch-pillarbox
+Unit from NEXT (auto fullscreen census of the s7213 fix). No maintenance (31 KB). No new soak results. Screen unlocked (no lock key in ioreg).
+Owner save untouched (s7141 harness, NO_SAVE_WRITE). 4 game runs, one at a time, L17 short route, fullscreen 1512x949, 0 CRASH/SIGSEGV/SIGBUS.
+Boring thing first: main.cpp:12450 rewrites ROGUESQ_ASPECT=auto to the display ratio (1.5916 -> FB 712) BEFORE rt64_render_context.cpp:511 reads
+it, so RT64 gets `[g1d] ROGUESQ_ASPECT=712:448 applied` = Manual. The Expand branch is reached only by ROGUESQ_ASPECT=expand. Code read: the
+present-side Expand `want` (max(swapW/swapH, src)/src from sharedResources->swapChainWidth/Height) is the same formula and the same source as
+workload_queue threadConfigurationUpdate, so H-false would need a swap-chain resize between workload and present.
+Arms: A1 auto fix on (window capture invalid: grabbed a 1512x32 window before fullscreen settled, raw deleted), B1 auto fix on (recapture,
+8+45 s), A0 auto ROGUESQ_PRESENT_SHAPEFIX=0, E1 expand fix on.
+Logs: auto: exactly one mismatch per run (A0 logs it twice), fb 712x444 target rs 2.250,3.000 (4:3 ratio 0.750) want 0.991 -> 2.973, right after
+the boot `[vi-follow-draw mode=3] REGISTER 0x00A0CD80 w=712` at osViSetMode #910 (the same event s7213 saw at 4:3). fix=1: vp 1.9..1510 full;
+fix=0: vp 185.3 1141.4x949 = the 4:3 pillar. Expand (E1): one mismatch, fb 512x444 rs 3.137 -> 4.145, and 4.145,3.000 is exactly the rs the
+ordinary 512x444 frames carry in that run, so the present-side want equals the workload's. All other viewports full in all arms. One
+Expand-only letterbox, fb 640x336 vp 0,77.6 1512x793.8 rs 3,3, is NOT a mismatch: 640x336 (1.905) is wider than the window (1.593) and
+Expand keeps the content's own ratio, max(window, src) = src. Design, not stale.
+Pixels (tools/s7213_box_scan.py scan, control PASS in both checked events): A0 13 narrow, B1 12, E1 11. A0 and B1 match one to one at an
+offset of about 126 frames (title fade-in, briefing fades, the mission-intro fade, two late fades), except A0 f304, an extra fade-in step
+(mean 4.8 between 3.2 and 6.5). New tools/s7214_gain_sheet.py (x8 luma gain): f304 has the same geometry as its neighbours and as B1
+f177-179 (the title still, its content already within ~216..1296), so it is not a box. The fix=0 pillar present is not visible in the
+capture (dark fade-in, as for the s7212 16:9 event; H-unseen at auto fullscreen). Single-route datum.
+Verdict: selects H-ok for ASPECT=auto and ASPECT=expand fullscreen (logs: 1 real mode-switch mismatch per run, corrected by fix=1, present-side
+Expand want = the workload rs; pixels: no box frame in either arm). Refutes H-false. Rules out: false fires on ordinary frames in the Expand
+branch. Untested: the long s7210 route (MISSION FAILED -> Elite Rogues) at 21:9. Raws deleted after scoring.
+Next discriminator: long-route 21:9 census with fix on (NEXT.md), then close mode-switch-pillarbox.
