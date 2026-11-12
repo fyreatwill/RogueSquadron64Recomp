@@ -7346,6 +7346,36 @@ void rs64_waittab_dump(void) {
     }
 }
 }
+// s7192 M6 boot freeze forced-state arm: ROGUESQ_CF0_DELAY_TEST=<k>[:<ms>] (default ms 40). On the k-th CF0 (0x80128CF0)
+// blocking recv that returns a message, before guest code runs again (so before its vflag clear), block that guest thread
+// cooperatively for <ms> on a private queue fed by osSetTimer (guest scratch 0x200 below the thread's sp).
+// The retrace thread keeps running, so it posts CF0 again with vflag still set: the s6993 pre-state, on demand.
+// Prints [cf0-delay] begin/end plus the CF0 ring (positive control: an S row by the retrace thread during the delay).
+struct Rs64Cf0Delay {
+    uint8_t* rdram; recomp_context* ctx; bool cf0;
+    static int k_arm() { static const int k = [] { const char* e = std::getenv("ROGUESQ_CF0_DELAY_TEST"); return e ? atoi(e) : 0; }(); return k; }
+    static int ms_arm() { static const int m = [] { const char* e = std::getenv("ROGUESQ_CF0_DELAY_TEST"); const char* c = e ? std::strchr(e, ':') : nullptr; return c ? atoi(c + 1) : 40; }(); return m; }
+    Rs64Cf0Delay(uint8_t* r, recomp_context* c) : rdram(r), ctx(c), cf0(k_arm() > 0 && (uint32_t)c->r4 == 0x80128CF0u && (s32)c->r6 != 0) {}
+    ~Rs64Cf0Delay() {
+        if (!cf0 || (s32)ctx->r2 != 0) return;
+        static std::atomic<int> n{0};
+        if (n.fetch_add(1) + 1 != k_arm()) return;
+        // Scratch on the receiver's own guest stack, 0x200 below sp (free; the nested wait is host-side). s7192 v1 used
+        // 0x9FF00000: above rs64_ram_top, so mesgqueue_guard refused the queue, the recv returned at once and the timer's
+        // post to the refused queue froze every boot (10/10) - an instrument artifact, not the s6993 state.
+        const uint32_t base = (((uint32_t)ctx->r29) - 0x200u) & ~0xFu;
+        const uint32_t mq = base, buf = base + 0x20u, tm = base + 0x40u;
+        osCreateMesgQueue(rdram, (PTR(OSMesgQueue))mq, (PTR(OSMesg))buf, 1);
+        const int ms = ms_arm(); const int64_t t0 = rs64_wt_us(); const uint32_t g0 = g_rs64_cf0_n.load();
+        std::fprintf(stderr, "[cf0-delay] begin k=%d ms=%d tid=%d vflag=%u cf0_seq=%u\n", k_arm(), ms, rogue_current_thread_id(rdram), rdram[0x37808 ^ 3], g0);
+        osSetTimer(rdram, (PTR(OSTimer))tm, (OSTime)ms * 46875ull, 0, (PTR(OSMesgQueue))mq, (OSMesg)0x7192);
+        osRecvMesg(rdram, (PTR(OSMesgQueue))mq, (PTR(OSMesg))0, 1);
+        const OSMesgQueue& q = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))0x80128CF0u);
+        std::fprintf(stderr, "[cf0-delay] end waited_ms=%.1f cf0_events=%u valid=%d vflag=%u fullq=%08X\n", (rs64_wt_us() - t0) / 1000.0,
+                     g_rs64_cf0_n.load() - g0, (int)q.validCount, rdram[0x37808 ^ 3], (uint32_t)q.blocked_on_send);
+        rs64_waittab_dump();
+    }
+};
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'S');
     { /* s6571: every direct osSendMesg to the hud service queue (svc 0x80954F60 +0x1D0), any sender */
@@ -7544,6 +7574,7 @@ struct S4913RecvScope {
     ~S4913RecvScope() { if (tag) rs64_s4913_mark(rdram, tag[5] == 'a' ? "recv-ack-ret" : "recv-vi-ret"); }
 };
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    Rs64Cf0Delay s7192_delay(rdram, ctx); // destructs last: after the recv and all bookkeeping
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'R');
     s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "recv");
     S4913RecvScope s4913_scope(rdram, (uint32_t)ctx->r4);

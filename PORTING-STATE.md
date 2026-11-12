@@ -189666,3 +189666,32 @@ route to the dumped state (single-source). The next freeze names that receiver a
 ORIGIN: no mitigation; instrument only.
 Rules out: the bufferArbiterAllocSlot mode-2 vflag leak (dead code); a dump byte-order misread of vflag (dump uses ^3,
 verified in source).
+
+## Session 7192 (2026-11-12) — M6 boot freeze forced-state arm: ROGUESQ_CF0_DELAY_TEST reproduces the s6993 pre-state on demand (retrace blocked on full CF0, vflag 1) and it heals 10/10 -> H-stale-heals; the freeze needs a second wait
+- **Fold:** s7190_bootloop_d rc=0, 14/14 owner-env (HUNT_OWNER) boots OK, 0 FROZEN. Owner-env total now 55 clean (0 freezes).
+- **Instrument (src/main/upstream_compat.cpp, Rs64Cf0Delay, default off):** `ROGUESQ_CF0_DELAY_TEST=<k>[:<ms>]`. On the k-th
+  blocking recv on CF0 (0x80128CF0) that returns a message, as the last thing before guest code runs again (an RAII object
+  declared first in osRecvMesg_recomp, so before the receiver's vflag clear), it blocks that guest thread cooperatively on a
+  private queue fed by osSetTimer. Prints `[cf0-delay] begin/end` (waited ms, CF0 events during the hold, valid, vflag,
+  fullq) plus the full [stall-wait]/[stall-cf0] tables.
+- **v1 was an instrument artifact (scratch/s7192_v1artifact):** scratch at 0x9FF00000 is above rs64_ram_top, so
+  mesgqueue_guard refused the queue (`[mesgqueue-guard] osCreateMesgQueue refused mq_=0x9FF00000`), the recv returned in 0.0 ms,
+  and every delay boot froze at fs~600, 10/10 (ctl 5/5 clean). Those dumps show retrace waiting on the VI queue 80114388, not on
+  CF0: a different state. The likely mechanism is the timer's message to a refused queue being requeued forever by
+  dequeue_external_messages (do_send returns false on a refused mq). This is a latent runtime hazard, but no game path is
+  known to post to an out-of-range mq. Not fixed, noted. v2 puts the scratch 0x200 below the receiver's guest sp.
+- **v2 arms, one build, owner env (HUNT_OWNER=1), 5 boots x 34 s each (scratch/s7192/arms.zsh, arms.out):** k=600:40 5/5 OK
+  fs~1948; k=600:100 5/5 OK fs~1947; control k=0 5/5 OK fs~1951. 0 crash, 0 FROZEN.
+- **Positive control PASS (full-log boots, scratch/s7192/full_d40.log, full_d100.log):** receiver tid 3
+  (waitForPostSwapAck+0x2ec) held 44.2 ms and 103.5 ms. During the hold, retrace (tid 0, viRetraceHandlerThread+0x205c) posted
+  CF0 (valid 0->1), then posted again with valid=1 and blocked: at end `valid=1 vflag=1 fullq=8011CD28`. That is exactly the
+  s6993 dump's queue state (retrace on CF0's full-send list). Both boots then ran on to fs~1691 at 30 s.
+- **Result: H-stale-heals.** The s6993 pre-state forms readily under a delayed receiver and heals as soon as the receiver
+  returns to CF0. So the frozen state (vflag 0, retrace on fullq, no receiver) needs the receiver to block on a second queue
+  whose producer depends on the retrace thread, which is a dependency cycle. Refuted: H-stale-freezes (a delay alone does not
+  freeze, 10/10 heal at 40 and 100 ms). H-no-form is also refuted (the state forms on demand).
+- **Next lead (single-source, from the v1 artifact dumps):** tid 3's other blocking wait is submitGfxFrame+0xc70 on 8011A7E8
+  (the gfx task-done queue). If the RDP/SP done message for that queue is gated on VI/present pacing (VI_LOCK=1 is in the owner
+  env) or on the retrace thread, then delay + retrace blocked on CF0 closes a cycle. NEXT.md: list the producers of every queue
+  tid 3 blocks on and check each for a retrace/VI dependency; then one forced arm that holds the 8011A7E8 delivery while
+  retrace sits on CF0's fullq.
