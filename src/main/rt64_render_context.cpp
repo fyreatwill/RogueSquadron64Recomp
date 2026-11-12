@@ -364,7 +364,12 @@ extern "C" uint32_t rs64_ram_top; // s6132
 extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted, g_rs64_rt64_rect_accepted;
 volatile uint32_t g_rs64_g1cf_tasks = 0, g_rs64_g1cf_dsize = 0;  // s6070 g1cf: gfx tasks / dl bytes since last VI
 extern "C" { volatile int g_rs64_dd_blk = 0; }  // s6070: set by the s6036 dd patch (funcs_9.c): 1 = dd multiplier active this call
-static struct G1cf { uint32_t subs = 0, bytes = 0, tri = 0, maxlen = 0, lastlen = 0; uint64_t rt0 = 0, rr0 = 0; } s_g1cf;  // s6070
+static struct G1cf { uint32_t subs = 0, bytes = 0, tri = 0, maxlen = 0, lastlen = 0; uint64_t rt0 = 0, rr0 = 0;
+    // s7232: per-triangle bbox vs the current RDP scissor: tin (bbox meets scissor), tout (fully outside), tzero (no scanline:
+    // y span < 1 line), area = bbox-clipped px, bin[8] = tin by bbox-centre x across the scissor width; vout = classifier control
+    // (same tris against a virtual scissor shifted one full width right: every tri must land out unless it spans past the right edge).
+    uint32_t tin = 0, tout = 0, tzero = 0, vout = 0, bin[8] = {}; double area = 0; } s_g1cf;  // s6070
+static float s_g1cf_sc[4] = {0, 0, 320, 240};  // s7232 scissor xh, yh, xl, yl (px), carried across VIs
 extern "C" void rs64_g1d_tb2(const char* tag);
 
 namespace s4267 {
@@ -1402,9 +1407,12 @@ public:
                 if (s_f < 0) { const char *e = std::getenv("ROGUESQ_G1CF"); s_f = (e && *e && *e != '0') ? 1 : 0; }
                 if (s_f) {
                     uint64_t t1 = g_rs64_rt64_tri_accepted.load(), r1 = g_rs64_rt64_rect_accepted.load();
-                    fprintf(stderr, "[g1cf] vi=%d dd=%d tasks=%u dsize=%u subs=%u bytes=%u tri=%u rt64tri=%llu rt64rect=%llu maxlen=%u lastlen=%u\n",
+                    fprintf(stderr, "[g1cf] vi=%d dd=%d tasks=%u dsize=%u subs=%u bytes=%u tri=%u rt64tri=%llu rt64rect=%llu maxlen=%u lastlen=%u tin=%u tout=%u tzero=%u vout=%u kpx=%.1f sc=%.0f,%.0f,%.0f,%.0f bin=%u,%u,%u,%u,%u,%u,%u,%u\n",
                             s_n, g_rs64_dd_blk, g_rs64_g1cf_tasks, g_rs64_g1cf_dsize, s_g1cf.subs, s_g1cf.bytes, s_g1cf.tri,
-                            (unsigned long long)(t1 - s_g1cf.rt0), (unsigned long long)(r1 - s_g1cf.rr0), s_g1cf.maxlen, s_g1cf.lastlen);
+                            (unsigned long long)(t1 - s_g1cf.rt0), (unsigned long long)(r1 - s_g1cf.rr0), s_g1cf.maxlen, s_g1cf.lastlen,
+                            s_g1cf.tin, s_g1cf.tout, s_g1cf.tzero, s_g1cf.vout, s_g1cf.area / 1000.0,
+                            s_g1cf_sc[0], s_g1cf_sc[1], s_g1cf_sc[2], s_g1cf_sc[3],
+                            s_g1cf.bin[0], s_g1cf.bin[1], s_g1cf.bin[2], s_g1cf.bin[3], s_g1cf.bin[4], s_g1cf.bin[5], s_g1cf.bin[6], s_g1cf.bin[7]);
                     s_g1cf = G1cf(); s_g1cf.rt0 = t1; s_g1cf.rr0 = r1; g_rs64_g1cf_tasks = 0; g_rs64_g1cf_dsize = 0;
                 }
             }
@@ -2211,8 +2219,29 @@ namespace ultramodern {
                 if (hi_phys - lo_phys > s_g1cf.maxlen) s_g1cf.maxlen = hi_phys - lo_phys;
                 if (app->core.RDRAM) { const uint8_t *r = app->core.RDRAM; uint32_t a = lo_phys;
                     while (a + 8 <= hi_phys) { uint32_t op = r[a ^ 3] & 0x3F, n = 8;
-                        if (op >= 0x08 && op <= 0x0F) { n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); ++s_g1cf.tri; }
+                        if (op >= 0x08 && op <= 0x0F) { n = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0); ++s_g1cf.tri;
+                            if (a + 32 <= hi_phys) {   // s7232 bbox classify
+                                uint32_t w[8]; memcpy(w, r + a, 32);
+                                auto s14 = [](uint32_t v) { return (float)((int32_t)(v << 18) >> 18) * 0.25f; };
+                                const float yl = s14(w[0] & 0x3FFF), ym = s14((w[1] >> 16) & 0x3FFF), yh = s14(w[1] & 0x3FFF);
+                                const float xl = (int32_t)w[2] / 65536.f, dl = (int32_t)w[3] / 65536.f, xh = (int32_t)w[4] / 65536.f,
+                                            dh = (int32_t)w[5] / 65536.f, xm = (int32_t)w[6] / 65536.f, dm = (int32_t)w[7] / 65536.f;
+                                const float yt = floorf(yh), px[6] = {xh, xm, xh + dh * (ym - yt), xm + dm * (ym - yt), xl, xl + dl * (yl - ym)};
+                                float x0 = px[0], x1 = px[0]; for (float v : px) { x0 = std::min(x0, v); x1 = std::max(x1, v); }
+                                { const float xe = xh + dh * (yl - yt); x0 = std::min(x0, xe); x1 = std::max(x1, xe); }
+                                const float *sc = s_g1cf_sc, sw = sc[2] - sc[0];
+                                if (yl - yh < 1.0f && floorf(yl) == floorf(yh)) ++s_g1cf.tzero;
+                                else if (x1 <= sc[0] || x0 >= sc[2] || yl <= sc[1] || yh >= sc[3]) ++s_g1cf.tout;
+                                else { ++s_g1cf.tin;
+                                    const float cx0 = std::max(x0, sc[0]), cx1 = std::min(x1, sc[2]), cy0 = std::max(yh, sc[1]), cy1 = std::min(yl, sc[3]);
+                                    s_g1cf.area += (double)(cx1 - cx0) * (cy1 - cy0);
+                                    int b = sw > 0 ? (int)(((cx0 + cx1) * 0.5f - sc[0]) / sw * 8.f) : 0; s_g1cf.bin[std::clamp(b, 0, 7)]++; }
+                                if (x1 <= sc[0] + sw || x0 >= sc[2] + sw || yl <= sc[1] || yh >= sc[3]) ++s_g1cf.vout;
+                            } }
                         else if (op == 0x24 || op == 0x25) n = 16;
+                        else if (op == 0x2D) { uint32_t w0, w1; memcpy(&w0, r + a, 4); memcpy(&w1, r + a + 4, 4);   // s7232 Set Scissor (10.2)
+                            s_g1cf_sc[0] = ((w0 >> 12) & 0xFFF) * 0.25f; s_g1cf_sc[1] = (w0 & 0xFFF) * 0.25f;
+                            s_g1cf_sc[2] = ((w1 >> 12) & 0xFFF) * 0.25f; s_g1cf_sc[3] = (w1 & 0xFFF) * 0.25f; }
                         a += n; } }
             }
             {   // s5424: per-submission RDP command census (ROGUESQ_LOG_RDP_TRICOUNT=1) for flight-vs-hangar geometry volume.

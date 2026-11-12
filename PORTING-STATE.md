@@ -190849,3 +190849,26 @@ radius costs 6.6 ms" and s7014-s7017 "WIDEWIN is free at 21:9 dd4" for this wind
 Change: tools/s7231_cost_decomp.py (new); docs/OWNER-OPT-INS.md corrections on the WIDEWIN and dd6 lines (steady 60 at 21:9 = WIDEWIN off;
 dd6 UNSAFE without WIDEWIN holds ~59 here). 0 CRASH in all five runs, all alive at end.
 Next: are WIDEWIN's extra ~2k triangles per task on screen? Classify RDP triangles by bbox vs scissor in the existing G1CF stream walk.
+
+## Session 7232 (2026-11-12) — WIDEWIN's extra triangles are on screen but nearly area-free: +2557 tri/task in the L4 21:9 window = 0 off-screen, 42% zero-height (draw nothing), 58% visible covering +42 kpx (+2%); H-offscreen refuted, H-tiny selected
+HYPOTHESIS-ID: widewin-heavy-window-cost. CURRENT-TRUTH 40.7 KB, no maintenance. No new soak verdicts.
+- Instrument (one build): the s6070 [g1cf] RDP stream walk (src/main/rt64_render_context.cpp) now tracks Set Scissor (0x2D) and decodes every
+  triangle's YH/YM/YL (s11.2) and XH/XM/XL + slopes (s15.16) into a bbox: tin (meets scissor), tout (fully outside), tzero (y span < 1
+  scanline, draws no pixel), kpx (sum of scissor-clipped bboxes), bin0..7 (tin by bbox-centre x), vout = classifier control (same tris vs a
+  virtual scissor one width to the right). Scorer: new tools/s7232_tri_onscreen.py (--pair A=B splits the per-task delta).
+- Run scratch/s7232/run.zsh (g1e_owner_quiet_arms, L4 owner path, windowed, HOLD 140, 0 crashes, cursorMask OK, no human input): a4 21:9
+  dd4+WW+MELT, n4 21:9 dd4, c4 4:3 dd4+WW, c1 4:3 dd1. Window t=77-97 per task:
+  a4 sd 19.77 ms tri 8726 tin 6626 tout 7 tzero 2093 kpx 2031 | n4 14.02 / 6169 / 5136 / 7 / 1026 / 1990 | c4 20.96 / 5901 / 4712 / 9 / 1179 / 916
+  | c1 5.03 / 1758 / 1519 / 7 / 231 / 808. Classifier control vout/tri 0.96-0.99 in every arm (fires; the remainder is tris reaching past the
+  right edge into the guard band).
+- a4 - n4 (window): dsd +5.75 ms (replicates s7231 +4.5), dtri +2557 = tin +1490 (58%) + tout +0 + tzero +1066 (42%); dtin outer bins (0,7)
+  +591, inner +899; dkpx +42 (2% of 1990). Flight: +1157 tri = 66% tin / 34% tzero, dkpx +4.
+- Reading: the ucode already rejects off-screen triangles (tout ~7/task in every arm, including the 4:3+WW arm meant as a physical off-screen
+  control, so that arm is not a control for the RDP stream; the virtual-scissor control is). H-offscreen refuted: a host frustum cull on the
+  RDP side would remove nothing, and the RSP cost is paid before the stream anyway. WIDEWIN's extra triangles are distant, sub-scanline or a
+  few px each (1490 visible tris adding 42 kpx of bbox, ~28 px each; 1066 draw nothing). s7011 already showed every node past 7 is at the
+  coarsest retail mesh level, so retail LOD cannot thin them (LODMUL refuted s7011). The cost is geometry density far beyond pixel density:
+  H-tiny. Single-source (one instrument, one run per arm); s7231's tri-cost slope is the second line for "the triangles are the cost".
+- Rules out: H-offscreen (cull on screen bounds), a pure governor being the only option. Leaves: a WW-only distance limit or a coarser-than-
+  retail mesh for far WW cells (skip alternate rows/cols past radius R), measured by tzero + kpx loss vs ms. H-clip (ucode work on culled tris)
+  is untested; tout=0 means it cannot be counted from the stream.
