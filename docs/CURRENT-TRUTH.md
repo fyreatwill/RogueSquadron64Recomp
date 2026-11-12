@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7206 (2026-11-12).
+Compact operational handoff, as of Session 7207 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -102,7 +102,11 @@ Open or awaiting the owner:
   current VI (presented 20/s on VI changes only), or matched a leftover zero-height VI-history entry and presented 60/s through it
   while dropping the real presents (the s7204 R0-only datum; timing, not Retina). ROGUESQ_VI_ILACE_ADDR=0 / ROGUESQ_PE_STALEFIX=0
   restore the old paths. f1: 60/s through the current VI, picture pixel-identical to old (shift-0 diff 0.00), flight 59.3 shown/s both.
-  Not yet shown: 60 distinct images/s on these screens; 4:3 G3 re-score of interlaced menus (Elite Rogues) with the new address.
+  s7207: H-motion selected at 16:9: title / fade / SELECT GAME stills show 58.6 distinct images/s (f0 20.1), the game renders 60/s in
+  both arms (ring W), and the steps are 3x finer motion, not field shimmer (tools/s7207_distinct_by_vi.py, s7207_motion.py). 4:3 Elite
+  Rogues (also double-stride) now presents through 790000: G3 kit frac equal within the slideshow-phase confound (matched phases
+  0.0313/0.0323, 0.0630/0.0650; single-source), no distinct-rate change (~50/s). OPEN: at 4:3 f1 presents that screen in back-to-back
+  pairs (1010 intervals < 4 ms vs 3 in f0, ~102 presents/s for ~48 images/s); at 16:9 fullscreen the duplicate is skipped.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -225,9 +229,9 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) s7206 interlaced-still fix follow-up:** distinct images/s on the boot title window (t 10-28, deterministic)
-   f0 (VI_ILACE_ADDR=0 PE_STALEFIX=0) vs f1, and a 4:3 retail re-score of the interlaced menus (Elite Rogues 512x448,
-   tools/g3_rdp_frame_match.py / s7122_fidelity.py) so the new fb address does not move G3 fidelity. Retina default: owner (s7205).
+1. **(next, NEXT.md) 4:3 field-screen double present (s7207):** with the s7206 fix the 4:3 Elite Rogues screen presents twice per
+   image (pairs < 4 ms apart). Name which two paths fire (ring Q rows + [threadPresent]) and keep one, without losing the s7206 60/s.
+   Recipe scratch/s7207/er43.zsh (s7141_arm L17 route, ~4 min/arm). Retina default: owner (s7205).
    Boot freeze stays passive (headline). Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).

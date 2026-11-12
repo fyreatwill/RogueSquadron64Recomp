@@ -190140,3 +190140,40 @@ with the new address; RETINA=1 arm not re-run with the fix.
 Verdict: root cause named and fixed; H-retina not selected, H-phase-like history timing explains the R0/R1 split; H-retail
 (retail VI scans the fb every refresh, so 60/s through the current VI is the faithful behaviour) is consistent but single-source.
 Next: distinct-frame count on the boot title/wipe windows (f0 vs f1) and a 4:3 G3 re-score of the interlaced menus.
+
+## Session 7207 (2026-11-12) — interlaced-still fix follow-up: H-motion selected at 16:9 (title/SELECT GAME stills 20 -> 58.6 distinct images/s), H-regress not selected at 4:3 Elite Rogues (content-matched phases equal), new datum: f1 double-presents the 4:3 field screen
+Unit from NEXT (HYPOTHESIS-ID interlaced-still-present). No maintenance (27754 B). No new soak results. Owner save untouched (NO_SAVE_WRITE
+via both harnesses, no SAVE_FROM). Host idle > 28000 s (human away). 4 game runs, one at a time, 0 CRASH/SIGSEGV/SIGBUS.
+1. Boot window, owner recipe (FPS60 dd4 16:9 fullscreen, tools/g1e_owner_quiet_arms.zsh HOLD 130, scratch/s7207/boot.zsh), presented
+   capture g5b_capture 320x180 t 4-128, f0 = ROGUESQ_VI_ILACE_ADDR=0 ROGUESQ_PE_STALEFIX=0, f1 = default. NEW tools/s7207_distinct_by_vi.py
+   (distinct images/s per second, labelled by the VI the ring says RT64 presented through; ring and capture share mach seconds).
+   t 11-27 (title, backdrop fade, SELECT GAME; all fb B51E00 double-stride): f0 20.1 distinct/s, 20.2 presents/s via B517C8;
+   f1 58.6 distinct/s, 60.1 presents/s via B51E00 ([pe-stale] fired 5x in f1, 0 in f0). Game workloads W fbs=B51E00 60.0/s in BOTH arms
+   (second line: the game renders 60/s, f0 showed a third of it). Controls same run: static screen t=6 gives 0 distinct of 60 delivered
+   (negative), 98AA00/9DE900 animating spans 60/s distinct in both arms (positive).
+   Motion vs shimmer (NEW tools/s7207_motion.py, PIL): every sub-span (title 12-15, fade 16.5-19.5, SELECT GAME 21-27) has d2 ~ 2 x d1
+   (monotonic), best row shift 0 on 178/180, and f1's per-step diff is ~1/3 of f0's (title 0.006 vs 0.015, SELECT GAME 0.026 vs 0.072):
+   the same motion in 3x finer steps, not field alternation. What moves: the START highlight pulse (bbox 74-111,138-162 at 320x180),
+   the cross-fades, the SELECT GAME craft thumbnail. Raws deleted after scoring.
+2. 4:3 retail Elite Rogues (s7183 run A recipe, tools/s7141_arm.zsh 17 ER0/ER1, FPS60=0 dd1 ASPECT=4:3, stream 4450-5198, presented
+   849x788, PRESENT_RING; scratch/s7207/er43.zsh). The screen is double-stride too (VI width 1024, fb 512, origin 790400), so the fix
+   changes its path: ER0 presents vi=78FC00 1500 / 790000 918 (+720000 888, the other fb); ER1 790000 3403 / 78FC00 2.
+   Post tools/s7152_post.zsh (CONTROL PASS both). s7183_parity (synthetic bob/weave CONTROL PASS 455/455, 456/456): ER1 higher d
+   (BOB all 3.25 -> 4.54, WEAVE 3.55 -> 4.28). Ruled out as causes: pairing (NEW REPAIR_ALL=1 in tools/s7183_parity.py re-pairs every
+   field swap: best BOB 3.23 vs 4.48, offset 0 dominant both), vertical offset (y0 scan -2..+2: both arms best at dy 0), softening
+   (NEW tools/s7207_edge_ratio.py: presented/AL vertical edge ratio 0.979 vs 1.019, horizontal 0.799 vs 0.810; v-blur control 0.87).
+   Cause found: the two runs sit at different slideshow phases (swap 4700 = dark hangar photo in ER0, detailed Hoth photo in ER1, AL edge
+   energy 22 vs 27), and the score scales with photo detail. G3 kit metric (frac > 40, weave reference): rectfit sample (every 15th)
+   0.0130 vs 0.0135, same best rect, x0+4 CTRL PASS both; full field span med 0.0119 vs 0.0151. Per-photo clusters (NEW
+   tools/s7207_parity_byphoto.py + 2-strip signature) barely overlap between runs (the slideshow order differs); the phases that look
+   alike agree within 0.002 (0.0313 vs 0.0323, 0.0630 vs 0.0650). Distinct images/s on the field screen: ER0 53.9 (vi 78FC00 s),
+   ER1 47.7: no gain at 4:3 (f0 already reached ~60/s presents through 790000 history entries).
+   NEW DATUM: ER1 presents the field screen in back-to-back pairs: 1010 present intervals < 4 ms (ER0 3), p50 9.7 ms vs 16.6, ~102
+   presents/s for ~48 distinct images/s. At 16:9 fullscreen (part 1) the duplicate is a skip=1 row (60/s) instead; at 4:3 windowed it is
+   presented. Picture unaffected; wasted present work and possibly uneven present spacing.
+Deleted ER0/ER1 .cap/.raw (~43 GB); kept replays (ER*r/n), csvs, rings.
+Verdict: H-motion selected at 16:9 (two lines: captured distinct 20.1 -> 58.6/s and game W 60/s in both arms); H-regress not selected at
+4:3 (kit metric equal within the content confound, three image-difference mechanisms ruled out; single run per arm, content-confounded, so
+the 4:3 equality is single-source). The s7206 defaults stand.
+Next: the f1 4:3 double present (H-twopath: early present + VI-change present both fire for one VI; H-field: one present per field
+change; H-window: windowed vs fullscreen supersede path).

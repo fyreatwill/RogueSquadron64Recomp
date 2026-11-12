@@ -23,6 +23,7 @@ from PIL import Image
 
 MAG = b'\xf8\x00\xf8'
 REPAIR = int(os.environ.get('REPAIR', '0'))
+REPAIR_ALL = os.environ.get('REPAIR_ALL', '0') == '1'  # s7207: re-pair EVERY field swap, not only combed ones (splits pairing/timing from image)
 
 
 def rgb(path):
@@ -82,7 +83,7 @@ def main():
         res['W'].append(dW); res['B'].append(dB); res['P'].append(dP); asym.append(dW[1] - dW[0])
         pk = min((dW[2], 'W'), (dB[2], 'B'), (dP[2], 'P'))[1]; picks[pk] += 1
         cw_, cp_ = comb(W), comb(P); combrows.append((s, cw_, cp_, pk, dW[2], dB[2]))
-        if REPAIR and cw_ > 1.0:  # s7183: re-pair each model separately over pframe +-REPAIR (a 1-frame lag fakes PREV)
+        if REPAIR and (cw_ > 1.0 or REPAIR_ALL):  # s7183: re-pair each model separately over pframe +-REPAIR (a 1-frame lag fakes PREV)
             j0 = int(r['pframe']); best = {}
             for j in range(max(0, j0 - REPAIR), min(len(raw.T), j0 + REPAIR + 1)):
                 Q = raw.img(j).crop(rect).resize((w, h), Image.BOX)
@@ -119,7 +120,7 @@ def main():
               statistics.median(c[5] for c in cm), ','.join(str(c[0]) for c in cm[:40])))
     if rep:
         for nm in 'WBP':
-            print('  REPAIRED (+-%d frames) combed swaps, model %s: median best d %.2f, offsets %s' % (REPAIR, nm,
+            print('  REPAIRED (+-%d frames) %s swaps, model %s: median best d %.2f, offsets %s' % (REPAIR, 'ALL field' if REPAIR_ALL else 'combed', nm,
                   statistics.median(b[nm][0] for _, b in rep), dict(sorted(__import__('collections').Counter(b[nm][1] for _, b in rep).items()))))
     cb = sum(res['ctlB_pickB']); cw = sum(res['ctlW_pickW'])
     ok = cb >= 0.9 * n and cw >= 0.9 * n
