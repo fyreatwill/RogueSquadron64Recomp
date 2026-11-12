@@ -190037,3 +190037,8 @@ into the new drawable (16:9 game on a 16:10 panel = small bars). Not changed (ga
 Side finding for the next unit: bi shows SDL drawable 2720x1528 at create but RT64's swap chain runs at the 1360x764 point
 size, so on any 2x display (built-in Retina, a 4K TV at "looks like 1080p") the game is rendered at half the panel's
 resolution and upscaled by CoreAnimation. That is G1f item (4) "internal resolution follows the window", unmeasured until now.
+Discrimination: fullscreen arm SELECTS H-display-dead and REFUTES H-display-follow for fullscreen (hidden Space, 0 on-screen
+frames); windowed arm SELECTS H-display-follow for position but adds H-layer-stale (2x drawable vs point-size swap chain).
+H-aspect-stale is confirmed by construction and left as is. Next discriminator: RETINA=0/1 arms on the built-in panel
+(swap chain size, gpu_ms, edge sharpness of a phase-matched frame) with the 1x virtual display as the null control
+(NEXT.md, HYPOTHESIS-ID retina-render-scale).
