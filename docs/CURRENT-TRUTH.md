@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7189 (2026-11-12).
+Compact operational handoff, as of Session 7191 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -45,8 +45,10 @@ Open or awaiting the owner:
   ROGUESQ_PTRMASK=0 = retail mask.
 - **G1e:** 60 fps in flight on all levels (s6996; use fl_shown). Latency chain closed s6962-s6989:
   defaults VI_RT, STDERR_ASYNC, G1E_CELLIDX; opt-ins VI_LOCK=1, QOS_ALL=1. Owner decides QoS default.
-- **Boot freeze (1 in ~65, passive):** s6993 [stall-dump]: retrace thread 8011CD28 blocked on a FULL send
-  to 0x80128CF0. ROGUESQ_STALL_SAMPLE_DIR self-samples host stacks. Wait for recurrence.
+- **Boot freeze (1 in ~65 in s6993; 0/41 in the s6993 env s7190-s7191):** s6993 [stall-dump]: retrace thread 8011CD28 blocked
+  on a FULL send to 0x80128CF0, vflag 0, no receiver. s7191 static census: all live CF0 receivers balanced (mode-2 leak dead), so the
+  state needs a receiver delayed >=2 VIs before its clear that then waits elsewhere (H-consumer). [stall-dump] now prints
+  [stall-wait] (each guest thread's current blocking mq + recompiled caller) and [stall-cf0] (last 48 CF0 events), default on.
 - **G5 owner items fixed, awaiting the owner's flight/look:** G5a s6893, G5b s6896-s6901, G5c s6902,
   G5d s6903, G5e s6904, G5f s6906, G5g s6907, G5h s6908-s6919, G5i s6995. Final-mission dd>1 heap crash
   fixed by OSMEM_MB=12 at dd>1; DL chunk arena reclaim s6909.
@@ -169,10 +171,10 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-1. **(next, NEXT.md) M6 boot freeze, active hunt:** loop title boots (queued soaks, ~15 boots per 600 s recipe, STALL_SAMPLE_DIR armed)
-   until the s6993 retrace-thread FULL-send stall recurs; then name the writer from the host stacks. s7190: hunter
-   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12` (s6993 env + same-run two-path control);
-   13 owner-recipe boots clean, control PASS; b-d queued (scratch/agent/soak_queue/s7190_bootloop_*). Closed s7189: the 339-row menu
+1. **(next, NEXT.md) M6 boot freeze, active hunt:** s7191 static census closed the game-code side (see headline bullet);
+   the next freeze's [stall-wait]/[stall-cf0] rows name the delayed receiver and its second wait. Hunter
+   `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`; 41 owner-env boots clean; s7190_bootloop_d queued
+   (bash-fixed). After d: no more identical hunts; the rows ride along passively in every soak. Closed s7189: the 339-row menu
    scissor column is retail (oracle retail ROM: scissor 511,339 at fb 512; angrylion leaves col 511 undrawn at 4:3), no change.
    TRAPs (s7188): rectfit needs `--slack 40` in fullscreen and >= 2 start rects.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.

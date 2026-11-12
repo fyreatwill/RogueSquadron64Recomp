@@ -7285,7 +7285,69 @@ static void s5038_mq_census(uint8_t* rdram, uint32_t mq, uint32_t ra, const char
 extern "C" void rs64_s5039_mq_hook(uint8_t* rdram, uint32_t mq, uint32_t ra, int kind) {
     s5038_mq_census(rdram, mq, ra, kind ? "setevent" : "jam");
 }
+// s7191 M6 boot freeze: passive per-guest-thread "current OS wait" table + a 48-event ring of every send/recv on the
+// video-ack queue 0x80128CF0 (with validCount and vflag 0x80037808 at the event), printed by [stall-dump]
+// (rt64_render_context.cpp). The s6993s L4 freeze left retrace (0x8011CD28) on CF0's full-send list with vflag=0 and no
+// receiver: static census (s7191) shows that state needs a receiver whose post-recv vflag clear was delayed >=2 VIs and
+// which then waits somewhere other than CF0. This names that thread and its wait (mq + guest ra) on the next recurrence
+// without relying on the host sampler. Default on, ~zero cost; ROGUESQ_WAITTAB=0 off.
+extern "C" {
+struct Rs64WaitEnt { std::atomic<uint32_t> mq{0}, op{0}, pending{0}, n{0}; std::atomic<uintptr_t> ra{0}; };
+Rs64WaitEnt g_rs64_waittab[64];
+struct Rs64Cf0Ev { std::atomic<uint32_t> seq{0}, op{0}, tid{0}, valid{0}, vflag{0}, fullq{0}, mtq{0}; std::atomic<int64_t> us{0}; std::atomic<uintptr_t> ra{0}; };
+static Rs64Cf0Ev g_rs64_cf0[48];
+static std::atomic<uint32_t> g_rs64_cf0_n{0};
+static bool rs64_waittab_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_WAITTAB"); return !(e && *e == '0'); }(); return on; }
+static int64_t rs64_wt_us() { return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static void rs64_cf0_ev(uint8_t* rdram, char op, int tid, uintptr_t ra) {
+    const uint32_t k = g_rs64_cf0_n.fetch_add(1, std::memory_order_relaxed);
+    Rs64Cf0Ev& e = g_rs64_cf0[k % 48];
+    const OSMesgQueue& q = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))0x80128CF0u);
+    e.seq = k + 1; e.op = (uint32_t)op; e.tid = (uint32_t)tid; e.ra = ra; e.valid = (uint32_t)q.validCount;
+    e.vflag = rdram[0x37808 ^ 3]; e.fullq = (uint32_t)q.blocked_on_send; e.mtq = (uint32_t)q.blocked_on_recv; e.us = rs64_wt_us();
+}
+struct Rs64WaitScope {
+    uint8_t* rdram; uint32_t mq; uintptr_t ra; int tid; char op; bool on;
+    Rs64WaitScope(uint8_t* r, uint32_t mq_, uintptr_t ra_, int32_t flag, char op_) : rdram(r), mq(mq_), ra(ra_), tid(-1), op(op_), on(false) {
+        if (!rs64_waittab_on()) return;
+        tid = rogue_current_thread_id(r);
+        const bool cf0 = mq == 0x80128CF0u;
+        on = flag != 0 || cf0;
+        if (!on) return;
+        if (flag != 0) { Rs64WaitEnt& w = g_rs64_waittab[tid & 63]; w.mq = mq; w.ra = ra; w.op = (uint32_t)op; w.pending = 1; w.n++; }
+        if (cf0) rs64_cf0_ev(r, op, tid, ra);
+    }
+    ~Rs64WaitScope() {
+        if (!on) return;
+        Rs64WaitEnt& w = g_rs64_waittab[tid & 63];
+        if (w.mq.load() == mq && w.ra.load() == ra) w.pending = 0;
+        if (mq == 0x80128CF0u) rs64_cf0_ev(rdram, (char)(op | 0x20), tid, ra); // lower case = returned
+    }
+};
+static const char* rs64_wt_sym(uintptr_t a, char* buf, size_t n) { // host caller -> recompiled function name+off
+    Dl_info di{}; if (a && dladdr((void*)a, &di) && di.dli_sname) { std::snprintf(buf, n, "%s+0x%lx", di.dli_sname, (unsigned long)(a - (uintptr_t)di.dli_saddr)); return buf; }
+    std::snprintf(buf, n, "%p", (void*)a); return buf; }
+// Printed by [stall-dump]: one row per guest thread id seen, and the CF0 ring oldest first (age in ms before the dump).
+void rs64_waittab_dump(void) {
+    if (!rs64_waittab_on()) { std::fprintf(stderr, "[stall-wait] off (ROGUESQ_WAITTAB=0)\n"); return; }
+    for (int i = 0; i < 64; ++i) {
+        const Rs64WaitEnt& w = g_rs64_waittab[i];
+        if (!w.n.load()) continue;
+        char sb[160];
+        std::fprintf(stderr, "[stall-wait] tid=%d %s op=%c mq=%08X caller=%s blocking_calls=%u\n", i, w.pending.load() ? "IN" : "last",
+                     (char)w.op.load(), w.mq.load(), rs64_wt_sym(w.ra.load(), sb, sizeof sb), w.n.load());
+    }
+    const uint32_t n = g_rs64_cf0_n.load(); const int64_t now = rs64_wt_us();
+    for (uint32_t k = (n > 48 ? n - 48 : 0); k < n; ++k) {
+        const Rs64Cf0Ev& e = g_rs64_cf0[k % 48];
+        char sb[160];
+        std::fprintf(stderr, "[stall-cf0] seq=%u age_ms=%.1f op=%c tid=%u caller=%s valid=%u vflag=%u fullq=%08X mtq=%08X\n", e.seq.load(),
+                     (now - e.us.load()) / 1000.0, (char)e.op.load(), e.tid.load(), rs64_wt_sym(e.ra.load(), sb, sizeof sb), e.valid.load(), e.vflag.load(), e.fullq.load(), e.mtq.load());
+    }
+}
+}
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'S');
     { /* s6571: every direct osSendMesg to the hud service queue (svc 0x80954F60 +0x1D0), any sender */
         static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();
         static int n = 0;
@@ -7482,6 +7544,7 @@ struct S4913RecvScope {
     ~S4913RecvScope() { if (tag) rs64_s4913_mark(rdram, tag[5] == 'a' ? "recv-ack-ret" : "recv-vi-ret"); }
 };
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'R');
     s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "recv");
     S4913RecvScope s4913_scope(rdram, (uint32_t)ctx->r4);
     g_s4911_host_ra = __builtin_return_address(0); g_s4911_guest_ra = (uint32_t)ctx->r31; /* PATCH: s4911 guest call site of VI recv */

@@ -189623,3 +189623,46 @@ H-race (queue full of duplicate VI posts) from H-host (host lock in stacks).
 This run refutes H-blind-capture (the runtime self-sample or hunter cannot capture under the FULLSCREEN/VI_LOCK/QOS owner
 env): both paths fired in-env. It does not discriminate the freeze hypotheses; next discriminator = a b-d recurrence's [Game]
 thread host stack, else the static osSendMesg(0x80128CF0)/vflag audit in NEXT.md.
+
+## Session 7191 (2026-11-12) — M6 boot freeze: static census of video-ack queue 0x80128CF0 / vflag 0x80037808 (every live receiver clean, mode-2 flag leak is dead code); passive per-thread wait table + CF0 event ring land in [stall-dump], positive control PASS
+HYPOTHESIS-ID: m6-boot-freeze-loop
+Soak fold: s7190_bootloop_b and _c ran 14 boots each, all `crash=0 OK` (fs 1949-2078, origin 0xA12B00/0xA7CF00). Their rc=2 is a
+recipe defect, not a freeze: the loop runs recipes under bash and line 11 used a zsh glob qualifier `(N)` (syntax error after
+the hunter returned 0). Fixed in the still-queued _d (bash shebang, plain ls). Running total in the s6993 owner env: 41 boots
+clean (13 s7190 + 28), 0 freezes.
+Static census (offline, recompiled C + MIPS comments in ../N64Recomp/RecompiledFuncs funcs_4/funcs_5):
+- One sender: viRetraceHandlerThread 0x80019B50, `if (lbu 0x80037808) osSendMesg(CF0, 0, BLOCK)`, after the 0x80128D10 unlock
+  (0x80019B30, NOBLOCK). CF0 is created with msgCount 1 (0x8001xxxx osCreateMesgQueue(CF0, 0x80128D08, 1), funcs_4:39634).
+- Four receive sites, all `vflag=1 (delay slot); osRecvMesg(CF0, BLOCK); vflag=0; osYieldThread`: waitOnVideoQueue (BE9C/BEAC),
+  acquireFreeBufferSlot (C0E8/C0F8), waitForPostSwapAck (C2B0 + clear), bufferArbiterAllocSlot mode 0 (BFF4/C004).
+  bufferArbiterAllocSlot mode 2 (C018-C054) DOES leave vflag=1 when it returns after a recv (no clear on the found-slot exit),
+  but every caller passes 0 or 1 (submitGfxFrame 1, initVideoSubsystem 0, postSwapRdpReset 1), so that window is dead code.
+- Callers: waitOnVideoQueue <- advanceVideoFrame x2, bufferArbiterProducerScanWait, initVideoSubsystem, selectAndApplyViMode;
+  waitForPostSwapAck <- waitForPrevFrameDone; acquireFreeBufferSlot <- ensureHeapInitialized. vflag is ONE shared byte for
+  receivers on at least two guest threads.
+- Runtime: ultramodern do_send/do_recv are libultra-faithful (a recv pops one blocked sender, a send pops one blocked receiver).
+  osYieldThread_recomp is a host std::this_thread::yield() (upstream_compat.cpp:738) and never yields to another guest thread.
+- Re-read of the original frozen log (scratch/s6993s/log_L4.txt.zst, both dumps VI 896/1496): CF0 mtq=0 fullq=8011CD28
+  valid=1 count=1, vflag=0; D10 and VI queue 0x80114388 valid=1 no waiter; slot states 5,4.
+Derivation: the dump state (retrace on the full-send list, no receiver, flag 0) needs a CF0 receiver that took a message and
+then lost the CPU for >=2 VIs inside osRecvMesg (check_running_queue after do_recv) before its guest `vflag=0`. Retrace posts a
+stale message on VI n and blocks on VI n+1. On its own that state heals: any later CF0 recv pops retrace. So the freeze
+also needs that receiver to then block somewhere OTHER than CF0. Static code cannot name that second wait, which leaves
+H-consumer as the leading form (single-source: static read + one frozen dump).
+Instrument (built, default on, ROGUESQ_WAITTAB=0 off; src/main/upstream_compat.cpp Rs64WaitScope in osSendMesg_recomp /
+osRecvMesg_recomp, printed from the rt64_render_context.cpp [stall-dump] via rs64_waittab_dump):
+`[stall-wait]` = per guest thread id, its current (IN) or last blocking send/recv: mq + recompiled caller (dladdr of the host
+return address; ctx->r31 is 0 in recompiled calls, so a first build printed ra=0 and was replaced). `[stall-cf0]` = the last 48
+CF0 send/recv enter (S/R) and return (s/r) events with tid, caller, validCount, vflag, fullq, mtq, age in ms.
+tools/boot_freeze_hunt.sh echoes both on FROZEN.
+Positive control (scratch/s7191/ctl2.log, retail boot, ROGUESQ_STALL_DUMP_TEST=300): rows for tids 0-4 (tid 0
+viRetraceHandlerThread last R 0x80128D10, tid 3 IN submitGfxFrame+0x1dc on 0x8011A818, tids 1/2/4 recvServiceMessage),
+and 48 CF0 events in the healthy pattern (tid 0 S/s at viRetraceHandlerThread+0x205c every 16.7 ms with vflag=1, tid 3
+waitForPostSwapAck R/r). In healthy boot frames the receiver is the gfx thread (tid 3) only.
+VERDICT: refutes H-lost-post in its game-code form. No live receive path leaves vflag set without a waiter: mode 2 is dead,
+the other four sites are balanced. Selects "delayed-clear receiver + second wait elsewhere" (H-consumer) as the only static
+route to the dumped state (single-source). The next freeze names that receiver and its second wait from [stall-wait] /
+[stall-cf0] in any run, soak or owner, without needing the sampler.
+ORIGIN: no mitigation; instrument only.
+Rules out: the bufferArbiterAllocSlot mode-2 vflag leak (dead code); a dump byte-order misread of vflag (dump uses ^3,
+verified in source).

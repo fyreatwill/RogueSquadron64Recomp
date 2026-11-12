@@ -55,7 +55,7 @@ for i in $(seq 1 $N); do
   vo=$(tail -c 400000 $L | grep -a -o 'origin=0x[0-9A-Fa-f]*' | tail -1)
   [[ $st == FROZEN ]] || { tail -200 $L > $O/boot$i.tail.log; rm -f $L; }
   echo "boot$i fs=$fs t=$t $vo crash=$crash $st"
-  [[ $st == FROZEN ]] && grep -a "\[stall-dump\]" $O/boot${i}_freeze.tail.log | head -8
+  [[ $st == FROZEN ]] && { grep -aE "\[stall-(dump|wait)\]" $O/boot${i}_freeze.tail.log | head -20; grep -a "\[stall-cf0\]" $O/boot${i}_freeze.tail.log | tail -12; }
   print -l $O/rs64_stall_*.sample.txt(N) | sed 's/^/runtime self-sample: /'
   if [[ -n $HUNT_CONTROL && $i == 1 ]]; then
     d=FAIL; [[ -n $(print -l $O/rs64_stall_*.sample.txt(N)) ]] && d=PASS

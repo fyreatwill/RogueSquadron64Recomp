@@ -16,6 +16,7 @@
 #include <pthread/qos.h>
 #include <unistd.h>  // s6993 getpid (stall self-sample)
 #include <string>
+extern "C" void rs64_waittab_dump(void); // s7191 (upstream_compat.cpp)
 
 #define HLSL_CPU
 #include "hle/rt64_application.h"
@@ -1161,6 +1162,7 @@ public:
                     for (uint32_t a = 0x80128E80u; a < 0x80128EE0u; a += 32)
                         fprintf(stderr, "[stall-dump] %08X: %08X %08X %08X %08X %08X %08X %08X %08X\n", a, w(a), w(a + 4),
                                 w(a + 8), w(a + 12), w(a + 16), w(a + 20), w(a + 24), w(a + 28));
+                    rs64_waittab_dump(); // s7191: per-thread waits + CF0 ring
                     // s6993: the first live capture (s6993s L4, 16:9 boot fade) showed the retrace thread blocked on a FULL
                     // send to 0x80128CF0 while no thread waits on any of the three queues and vflag=0, so the game thread
                     // sits in some other wait. Self-sample once per stall (first dump only) so the next recurrence names

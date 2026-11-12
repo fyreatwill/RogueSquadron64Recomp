@@ -1404,3 +1404,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261111-005959 | s7128_wsheetpos_p2 | rc=0 | 388s | scratch/agent/soak_results/s7128_wsheetpos_p2_20261111-005959.log
 20261111-011004 | s7128_wsheetpos_p3 | rc=0 | 392s | scratch/agent/soak_results/s7128_wsheetpos_p3_20261111-011004.log
 20261111-011636 | s7128_wsheetpos_p4 | rc=0 | 390s | scratch/agent/soak_results/s7128_wsheetpos_p4_20261111-011636.log
+20261112-033224 | s7190_bootloop_b | rc=2 | 498s | scratch/agent/soak_results/s7190_bootloop_b_20261112-033224.log
+20261112-034042 | s7190_bootloop_c | rc=2 | 497s | scratch/agent/soak_results/s7190_bootloop_c_20261112-034042.log
+20261112 | s7191 fold: s7190_bootloop_b/_c rc=2 = bash syntax error at recipe line 11 (zsh glob), AFTER the hunter returned 0; 28/28 boots crash=0 OK, 0 FROZEN. _d recipe fixed.
