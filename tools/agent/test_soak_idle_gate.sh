@@ -24,4 +24,12 @@ chk "rc=2 at the void cap is filed" '[ ! -e $q/v.sh ] && [ ! -e $q/.v.voids ] &&
 mk c 1; run_soak_queue
 chk "rc=1 (real failure) is filed at once" '[ ! -e $q/c.sh ]'
 chk "verdict lines written" '[ $(grep -c "re-queued" $AG/SOAK-RESULTS.md) = 2 ]'
+# s7235: the soak phase must run under the current loop.sh (re-exec first, soaks run by the new process).
+L=$here/loop.sh
+w=$(grep -n '^while \[ "\$ITER_CAP"' "$L" | head -1 | cut -d: -f1)
+f=$(grep -n 'RS64_LOOP_SOAKS_FIRST:-0' "$L" | head -1 | cut -d: -f1)
+e=$(grep -n 'RS64_LOOP_SOAKS_FIRST=1 exec' "$L" | head -1 | cut -d: -f1)
+r=$(grep -n '^  run_soak_queue$' "$L" | tail -1 | cut -d: -f1)
+chk "deferred soak phase runs before the first iteration" '[ -n "$f" ] && [ -n "$w" ] && [ "$f" -lt "$w" ]'
+chk "loop-tail re-exec precedes the soak call" '[ -n "$e" ] && [ -n "$r" ] && [ "$e" -lt "$r" ] && [ "$e" -gt "$w" ]'
 exit $fail

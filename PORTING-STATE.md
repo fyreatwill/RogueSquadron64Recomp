@@ -190914,3 +190914,21 @@ HYPOTHESIS-ID: widewin-heavy-window-cost. CURRENT-TRUTH 41.5 KB, no maintenance.
   still runs on a busy host. The real idle/lock readers were checked live (idle 0, unlocked). ITERATION.md soak section documents the header.
 - Re-queued: scratch/agent/soak_queue/s7234_widewin_r.sh (s7233b body, SOAK_NEEDS_IDLE=180, SOAK_TIMEOUT=1100).
 Rules out: nothing about H-radius/H-thin/H-near; the discriminator is still unmeasured. ORIGIN: not a mitigation (harness scheduling).
+
+## Session 7235 (2026-11-12) — s7234's soak idle gate never applied to its own soak: loop.sh ran the soak phase with the old in-memory function; loop.sh now re-execs before the soak phase; WIDEWIN_R arms re-queued as s7235_widewin_r
+
+- Fold: SOAK-RESULTS `s7234_widewin_r | rc=2 | 0s`. Its log: `r40 start idle=5` / `human active, stopping`. The verdict line has the
+  OLD format (no "VOID ... re-queued") and the recipe went to done/, so the s7234 gate code did not run. loop.log shows why:
+  `soak s7234_widewin_r starting` at 19:28:34 (16 s after the s7234 commit), then `loop.sh changed on disk - re-executing the new
+  version` only AFTER it. The self-reload check sits at the top of the while loop; `run_soak_queue` sits at its tail, so the soak
+  phase right after an iteration that edits loop.sh always runs the previous version. Measured this iteration from loop.log lines
+  893348-893350, not inferred.
+- Change (tools/agent/loop.sh, written via new file + rename): before the tail `run_soak_queue`, if loop.sh's hash changed and it
+  passes `bash -n`, `RS64_LOOP_SOAKS_FIRST=1 exec` the new script; the new process runs `run_soak_queue` once before its first
+  iteration. tools/agent/test_soak_idle_gate.sh gains two ordering checks; 9/9 PASS (the 7 s7234 behaviour checks still pass on the
+  edited file). The currently running loop will pick this up at the tail of this iteration (its hash differs), so the re-queued soak
+  is gated by the new code immediately.
+- Re-queued: scratch/agent/soak_queue/s7235_widewin_r.sh (same recipe: R=40/56/72 same-run tog arms, L4 21:9 dd4 WW+MELT,
+  SOAK_NEEDS_IDLE=180). Not run by this iteration: HID idle 2.4 s at 19:29 (owner active), so launching the game would void.
+- Rules out: "the owner kept being active" as the whole story for s7234 — the gate that would have held it was not loaded.
+- WIDEWIN_R H-radius / H-thin / H-near still UNMEASURED; next iteration scores the soak if it has run.

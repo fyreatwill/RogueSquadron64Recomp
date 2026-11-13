@@ -344,6 +344,11 @@ HYPSTATE="${TMPDIR:-/tmp}/.rs64-hyp-state"
 prev_hyp=""; hyp_count=0
 [ -f "$HYPSTATE" ] && read -r prev_hyp hyp_count < "$HYPSTATE" 2>/dev/null
 case "${hyp_count:-0}" in ''|*[!0-9]*) hyp_count=0 ;; esac
+if [ "${RS64_LOOP_SOAKS_FIRST:-0}" = 1 ]; then
+  unset RS64_LOOP_SOAKS_FIRST
+  log "running the soak phase deferred from the previous process (s7235)"
+  run_soak_queue
+fi
 while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
 
   cur_hash="$(shasum tools/agent/loop.sh 2>/dev/null | cut -d' ' -f1)"
@@ -864,6 +869,16 @@ else:
       echo; } >> "$AG/PIVOT.md"
   fi
 
+  # s7235: the soak phase must run under the CURRENT loop.sh. The self-reload above only
+  # fires at the top of the next iteration, so an iteration that edited run_soak_queue
+  # (s7234's idle gate) had its first queued soak run by the OLD in-memory function:
+  # s7234_widewin_r launched at idle=5 s, voided at t=0 and was filed under done/.
+  # Re-exec first and let the new process run the queue before its first iteration.
+  cur_hash="$(shasum tools/agent/loop.sh 2>/dev/null | cut -d' ' -f1)"
+  if [ -n "$cur_hash" ] && [ "$cur_hash" != "$SELF_HASH" ] && bash -n tools/agent/loop.sh 2>/dev/null; then
+    log "loop.sh changed on disk - re-executing before the soak phase"
+    RS64_LOOP_SOAKS_FIRST=1 exec /bin/bash tools/agent/loop.sh "${ORIG_ARGS[@]}"
+  fi
   run_soak_queue
 done
 log "iteration cap ($ITER_CAP) reached $(date)"

@@ -1413,3 +1413,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112 | s7199 fold: s7198_backlog_L4 rc=0, LEVEL=4 owner recipe 374 s: trims=0 fallback=0, peak queued 36.1 ms at 22047 Hz (limit 150). Margin holds in mission.
 20261112-121055 | s7220_bootloop_retina | rc=0 | 442s | scratch/agent/soak_results/s7220_bootloop_retina_20261112-121055.log
 20261112-191425 | s7233b_widewin_r | rc=2 | 0s | scratch/agent/soak_results/s7233b_widewin_r_20261112-191425.log
+20261112-192834 | s7234_widewin_r | rc=2 | 0s | scratch/agent/soak_results/s7234_widewin_r_20261112-192834.log
+20261112 | s7235 fold: s7234_widewin_r rc=2 at t=0 = launched at HID idle 5 s by the PRE-s7234 in-memory run_soak_queue (loop re-exec only at iteration top; re-exec logged right after). loop.sh fixed to re-exec before the soak phase; re-queued as s7235_widewin_r.
