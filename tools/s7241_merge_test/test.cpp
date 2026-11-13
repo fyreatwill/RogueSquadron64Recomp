@@ -158,6 +158,15 @@ int main() {
     { auto b = block(0, 0, 64, 61); b.push_back(mk(128, 0, 64, 70)); b.push_back(mk(128, 64, 64, 71)); run("block + 2 loose", b, {{0, 1, 2, 3}}); }
     { auto b = block(0, 0, 64, 81); b[2].v = 128; run("spacing mismatch", b, {}); }
     run("block at int16 x edge", block(32640, 0, 64, 91), {{0, 1, 2, 3}});  // partners at x 32704, outer corner 32768
+    // s7242 stale guard: a dist2 fed in an earlier build pass must not drive a merge in a later one (miss + stale, no merge);
+    // re-feeding all four in the new pass merges again (the generation bump does not break the normal flow).
+    for (int refeed = 0; refeed < 2; refeed++) { cases++; reset_t(); const char* name = refeed ? "new pass, all refed" : "stale dist2 (earlier pass)"; const int f0 = fails;
+      auto [s1, s0] = build(block(0, 0, 64, 111 + refeed), false); emit(s1, s0); reset_t();
+      int n = 0; for (uint32_t e = s0; e; e = rw(e), n++) { if (!refeed && n == 3) continue; float d = 2000.f; uint32_t b; memcpy(&b, &d, 4); rs64_s7239_node(e, b); }
+      auto out = emit(s1, s0);
+      if (refeed) CHECK(out.size() == 1 && tally(T_MERGED) == 1 && tally(T_STALE) == 0 && tally(T_MISS) == 0, "cmds %zu merged %llu stale %llu", out.size(), tally(T_MERGED), tally(T_STALE));
+      else CHECK(out.size() == 4 && tally(T_MERGED) == 0 && tally(T_MISS) == 1 && tally(T_STALE) == 1, "cmds %zu merged %llu miss %llu stale %llu", out.size(), tally(T_MERGED), tally(T_MISS), tally(T_STALE));
+      printf("%s %s\n", fails != f0 ? "...." : "ok  ", name); }
     // TOG ph0: candidates counted, nothing merged.
     { g_tog_ph = 0; s7239_tg = 1; cases++; reset_t(); const char* name = "tog ph0"; const int f0 = fails;
       auto [s1, s0] = build(block(0, 0, 64, 99), false); auto out = emit(s1, s0);

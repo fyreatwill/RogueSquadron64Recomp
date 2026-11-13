@@ -497,16 +497,18 @@ inline uint16_t s7239_rh(const uint8_t* rd, uint32_t a) { return *reinterpret_ca
 inline uint8_t s7239_rb(const uint8_t* rd, uint32_t a) { return rd[(a - 0x80000000u) ^ 3u]; }
 inline bool s7239_ok(uint32_t a) { return a >= 0x80000000u && a < 0x84000000u; }
 constexpr uint32_t S7239_HN = 1u << 17;
-uint32_t s7239_he[S7239_HN]; float s7239_hd[S7239_HN]; uint32_t s7239_hcnt; unsigned long long s7239_hclr;
+uint32_t s7239_he[S7239_HN]; float s7239_hd[S7239_HN]; uint32_t s7239_hg[S7239_HN]; uint32_t s7239_hcnt; unsigned long long s7239_hclr;
+// s7242: per-build-pass generation. H1 after any H2 starts a new pass; an entry from an older pass is a counted miss (stale), never a merge input.
+uint32_t s7239_gen = 1; int s7239_emitted = 0;
 inline uint32_t s7239_hash(uint32_t e) { return ((e >> 2) * 2654435761u) >> 15; }
-bool s7239_dist(uint32_t e, float* d) {
+bool s7239_dist(uint32_t e, float* d, bool* stale) {
     uint32_t h = s7239_hash(e);
-    for (int k = 0; k < 64; k++, h = (h + 1) & (S7239_HN - 1)) { if (s7239_he[h] == e) { *d = s7239_hd[h]; return true; } if (!s7239_he[h]) return false; }
+    for (int k = 0; k < 64; k++, h = (h + 1) & (S7239_HN - 1)) { if (s7239_he[h] == e) { if (s7239_hg[h] != s7239_gen) { *stale = true; return false; } *d = s7239_hd[h]; return true; } if (!s7239_he[h]) return false; }
     return false; }
 float s7239_frac = 0.f; int s7239_tg = 0;
 struct S7239E { uint32_t e; int32_t x, z, yb, v; uint16_t mat; uint8_t b21, b2e, flat, role, dup, cap; int8_t h[4]; int32_t p[3]; uint32_t cmd; uint32_t w[10]; };
 std::vector<S7239E> s7239_l; std::vector<std::pair<uint64_t, int32_t>> s7239_key, s7239_el;
-enum { T_GRP, T_NOWW, T_FLAG, T_EL, T_FLAT, T_CAND, T_ANC, T_DROP, T_OVF, T_MISS, T_NEAR, T_UNM, T_DUP, T_MERGED, T_N };
+enum { T_GRP, T_NOWW, T_FLAG, T_EL, T_FLAT, T_CAND, T_ANC, T_DROP, T_OVF, T_MISS, T_NEAR, T_UNM, T_DUP, T_MERGED, T_STALE, T_N };
 unsigned long long s7239_t[2][T_N]; int s7239_ph = 1; float s7239_farcut = 0.f, s7239_maxd2[2];
 int32_t s7239_find(const std::vector<std::pair<uint64_t, int32_t>>& v, uint64_t k) {
     size_t lo = 0, hi = v.size(); while (lo < hi) { size_t m = (lo + hi) / 2; if (v[m].first < k) lo = m + 1; else hi = m; }
@@ -519,22 +521,24 @@ struct S7239Init { S7239Init() { const char* e = getenv("ROGUESQ_DD_WIDEWIN_MERG
 }
 namespace { S7239Init s7239_init; }
 extern "C" void rs64_s7239_node(uint32_t e, uint32_t d2bits) {
+    if (s7239_emitted) { s7239_gen++; s7239_emitted = 0; }
     if (s7239_hcnt > S7239_HN / 2) { memset(s7239_he, 0, sizeof s7239_he); s7239_hcnt = 0; s7239_hclr++; }
     float d2; memcpy(&d2, &d2bits, 4);
     uint32_t h = s7239_hash(e);
     for (int k = 0; k < 64; k++, h = (h + 1) & (S7239_HN - 1)) {
-        if (s7239_he[h] == e) { s7239_hd[h] = d2; return; }
-        if (!s7239_he[h]) { s7239_he[h] = e; s7239_hd[h] = d2; s7239_hcnt++; return; } } }
+        if (s7239_he[h] == e) { s7239_hd[h] = d2; s7239_hg[h] = s7239_gen; return; }
+        if (!s7239_he[h]) { s7239_he[h] = e; s7239_hd[h] = d2; s7239_hg[h] = s7239_gen; s7239_hcnt++; return; } } }
 extern "C" void rs64_s7239_end(uint8_t* rd);
 static void s7239_flush(uint64_t now) {
     static uint64_t last = 0; if (!last) last = now; if (now - last < 48000000ull) return; last = now;
     for (int p = 0; p < 2; p++) { const unsigned long long* t = s7239_t[p]; if (!t[T_GRP] && !t[T_NOWW]) continue;
-        fprintf(stderr, "[s7239] ph=%d frac=%.2f farcut=%.4g maxd2=%.4g grp=%llu noww=%llu flag=%llu el=%llu flat=%llu cand=%llu anc=%llu drop=%llu merged=%llu ovf=%llu miss=%llu near=%llu unm=%llu dup=%llu hclr=%llu\n",
+        fprintf(stderr, "[s7239] ph=%d frac=%.2f farcut=%.4g maxd2=%.4g grp=%llu noww=%llu flag=%llu el=%llu flat=%llu cand=%llu anc=%llu drop=%llu merged=%llu ovf=%llu miss=%llu near=%llu unm=%llu dup=%llu stale=%llu hclr=%llu\n",
             p, s7239_frac, s7239_farcut, s7239_maxd2[p], t[T_GRP], t[T_NOWW], t[T_FLAG], t[T_EL], t[T_FLAT], t[T_CAND], t[T_ANC], t[T_DROP], t[T_MERGED],
-            t[T_OVF], t[T_MISS], t[T_NEAR], t[T_UNM], t[T_DUP], s7239_hclr);
+            t[T_OVF], t[T_MISS], t[T_NEAR], t[T_UNM], t[T_DUP], t[T_STALE], s7239_hclr);
         memset(s7239_t[p], 0, sizeof s7239_t[p]); s7239_maxd2[p] = 0.f; } }
 extern "C" void rs64_s7239_group(uint8_t* rd, uint32_t s1, uint32_t s0, int ww) {
     if (g_rs64_s7239_act) rs64_s7239_end(rd);
+    s7239_emitted = 1;
     const uint64_t now = mach_absolute_time();
     int ph = 1;
     if (s7239_tg) { static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(now); } ph = rs64_tog_odd(now); }
@@ -575,8 +579,8 @@ extern "C" void rs64_s7239_group(uint8_t* rd, uint32_t s1, uint32_t s0, int ww) 
             const S7239E& p = s7239_l[pi[k]];
             if (p.dup || p.role || p.mat != a.mat || p.b21 != a.b21 || p.b2e != a.b2e) ok = false; }
         if (!ok) continue;
-        float d[4]; bool hit = s7239_dist(a.e, &d[0]); for (int k = 0; k < 3; k++) hit = hit && s7239_dist(s7239_l[pi[k]].e, &d[k + 1]);
-        if (!hit) { s7239_t[ph][T_MISS]++; continue; }
+        float d[4]; bool st = false, hit = s7239_dist(a.e, &d[0], &st); for (int k = 0; k < 3; k++) hit = hit && s7239_dist(s7239_l[pi[k]].e, &d[k + 1], &st);
+        if (!hit) { s7239_t[ph][T_MISS]++; if (st) s7239_t[ph][T_STALE]++; continue; }
         bool far = true; for (int k = 0; k < 4; k++) { if (d[k] > s7239_maxd2[ph]) s7239_maxd2[ph] = d[k]; if (!(d[k] >= thr)) far = false; }
         if (!far) { s7239_t[ph][T_NEAR]++; continue; }
         const int32_t hb = s7239_l[pi[0]].h[1] + s7239_l[pi[0]].yb - a.yb, hc = s7239_l[pi[1]].h[2] + s7239_l[pi[1]].yb - a.yb, hd = s7239_l[pi[2]].h[3] + s7239_l[pi[2]].yb - a.yb;

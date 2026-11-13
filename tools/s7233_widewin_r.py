@@ -39,7 +39,7 @@ for p in a.logs:
     # s7236 positive control: ph1 must skip cells and ph0 must not, else the arm is not evidence (null without control)
     ctl = bool(tl[1]) and bool(tl[0]) and sum(x[1] for x in tl[1]) > 0 and sum(x[1] for x in tl[0]) == 0
     if a.merge:  # s7240 control: ph1 merges (drops == 3x merged, 0 unmerged anchors), ph0 finds candidates but merges none
-        S = {ph: {k: sum(d.get(k, 0) for d in tm[ph]) for k in ('grp', 'noww', 'flag', 'el', 'flat', 'cand', 'anc', 'drop', 'merged', 'ovf', 'miss', 'near', 'unm', 'dup')} for ph in (0, 1)}
+        S = {ph: {k: sum(d.get(k, 0) for d in tm[ph]) for k in ('grp', 'noww', 'flag', 'el', 'flat', 'cand', 'anc', 'drop', 'merged', 'ovf', 'miss', 'near', 'unm', 'dup', 'stale')} for ph in (0, 1)}
         for ph in (0, 1): print(f'  [s7239] ph{ph} lines={len(tm[ph])} ' + ' '.join(f'{k}={v}' for k, v in S[ph].items()))
         ctl = S[1]['merged'] > 0 and S[1]['drop'] == 3 * S[1]['merged'] and S[1]['unm'] == 0 and S[0]['anc'] == 0 and S[0]['drop'] == 0 and S[0]['cand'] > 0
         print(f'  merge: drops/merged={S[1]["drop"] / max(S[1]["merged"], 1):.2f} (3.00 expected); tri removed per merged block expected ~6')

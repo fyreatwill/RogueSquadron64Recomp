@@ -191082,3 +191082,24 @@ If neither does and ms/ktri ~ 0, that refutes the triangle-cost model behind bot
   **Next discriminator** (soak s7240_widewin_merge, [s7239] fields): noww >> grp selects H-wwtiming. miss or near ~ all candidates selects
   H-stale or a units error. merged > 0 with unm == 0 but cracks or misplaced quads in the frame selects H-encoding. merged == drop/3 with no
   artefact passes the control, and then the s7238 bar (window dsd <= -2.5 ms, flight |dkpx| <= 1%) decides merge vs WIDEWIN_R.
+
+## Session 7242 (2026-11-12) — s7239 WIDEWIN merge: per-build-pass generation on the H1 dist2 hash closes H-stale in code (stale entry = counted miss, never a merge input); unit test 19/19 with a negative control; soaks still queued (owner active, HID idle 0.01-1.8 s)
+- Planned unit (NEXT.md): score soaks s7237_widewin_r2 + s7240_widewin_merge. Neither could run: both are `SOAK_NEEDS_IDLE=180`, HID idle
+  measured 1.8 s at session start and 0.01 s at the end (owner using the Mac), load avg 8.3. They stay queued for the loop's idle gate.
+- Offline fix instead of a third wait. s7241 left H-stale open: the H1 elem->dist2 hash was cleared only when half full, not per build
+  pass (the plan said per pass), so an element whose node was not re-fed this pass could be merged on an old camera's dist2.
+  Fix in src/main/upstream_compat.cpp rs64_s7239_*: each slot carries a generation; rs64_s7239_group sets an "emitted" latch and the
+  next rs64_s7239_node after it bumps the generation (build pass = buildVisibleTerrainGridAroundCamera's H1 run, then processSceneNode's
+  renderFlatMeshFaceGroup emits; the call sites are separate functions, read from funcs_9.c:17265 and funcs_4.c:22697/23417).
+  A lookup that finds the element with an older generation returns a miss and counts it in a new `stale=` tally ([s7239] line,
+  scorer tools/s7233_widewin_r.py --merge prints it). No new hook, no fixup change.
+- Test: tools/s7241_merge_test gains 2 cases. "stale dist2 (earlier pass)": pass 1 feeds all 4 cells far, pass 2 re-feeds only 3 ->
+  no merge, miss=1, stale=1. "new pass, all refed": all 4 re-fed -> 1 merge, stale=0. Result 19 cases, 0 failures (ASan+UBSan).
+  Negative control: with the generation compare forced off, the stale case FAILS (merged 1), so the test detects the defect.
+  Game rebuilt clean (cmake --build build), so the queued s7240_widewin_merge soak runs the fixed code.
+- ORIGIN: not a mitigation. The writer is our own host hash (rs64_s7239_node); the stale value was a design gap in s7240's
+  implementation vs docs/WIDEWIN-MERGE-PLAN.md (per-pass clear), not a game-side corruption.
+- Risk noted: if a frame interleaves grid builds and emits (build A, emit A, build B, emit B with B's list holding A's elements), A's
+  entries go stale and become misses (conservative: lost merges, never wrong ones). The soak's stale= vs miss= says whether this happens.
+- Rules out: H-stale as a cause of wrong merges (it can now only lose merges, and visibly). Remaining causes if the soak control fails:
+  H-wwtiming (noww >> grp), H-encoding (merged > 0, unm == 0, but artefacts), a units error (near ~ all), interleaved passes (stale ~ miss).

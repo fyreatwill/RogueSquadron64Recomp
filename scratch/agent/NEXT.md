@@ -1,4 +1,4 @@
-# NEXT (s7242; s7241 unit-tested the merge host code 17/17, soaks still queued): score the queued soaks: s7237_widewin_r2 (WIDEWIN_R bracket, R=48/64/72) and s7240_widewin_merge (2x2 merge, MERGE=0.4/0.55/0.7)
+# NEXT (s7243; s7242 closed H-stale in code, test 19/19, soaks still queued): score the queued soaks: s7237_widewin_r2 (WIDEWIN_R bracket, R=48/64/72) and s7240_widewin_merge (2x2 merge, MERGE=0.4/0.55/0.7)
 HYPOTHESIS-ID: widewin-heavy-window-cost
 Before any rs64_s7239 edit or after the soak: `zsh tools/s7241_merge_test/run.sh` must print 0 failures.
 State (s7240): the merge is BUILT and off by default (tools/apply_s7239_widewin_merge.py, rs64_s7239_* in src/main/upstream_compat.cpp,
@@ -13,6 +13,7 @@ If the control FAILS, the [s7239] fields name the reason:
 - near ~ all: the frac/farcut units are wrong. Compare maxd2 with farcut.
 - flat ~ 0: the flat rule is misread.
 - unm > 0: an anchor was never emitted, which leaves holes. Must be 0.
+- stale ~ miss and both large: grid builds and emits interleave within a frame (s7242 generation bumps mid-frame). Bump the generation per VI instead.
 Decide (s7238 bar: window dsd <= -2.5 ms AND flight |dkpx| <= 1%):
 - A merge arm meets the bar: take owner sheets at that frac (side edge, L4 far-left shoreline, crack close-ups vs
   docs/owner_sheet_s7009_widewin_219.png), then add the opt-in to OWNER-OPT-INS.
