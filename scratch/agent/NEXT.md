@@ -1,11 +1,10 @@
-# NEXT (s7249): fold s7248_fixed_fps_b, then decide the WIDEWIN stack's 60/s claim on a SLOW host
+# NEXT (s7250): close the WIDEWIN stack's 60/s claim with a same-run slow-host control
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7248): fixed-on L4 21:9 window off 10.06 / ww 13.16 / stack 9.59 ms, all 60/s, one run each (stack-ww -3.57 = tog -3.63/-3.88).
-The positive control failed: ww did not go flat 30 because the host ran ~4 ms/task faster than in s7231 (sd_cpu 8.70 vs 12.25 ms, same code).
-1. If SOAK-RESULTS has s7248_fixed_fps_b: score scratch/s7248r/log_{offb,wwb,stackb}.txt with tools/s7230_headroom.py + tools/s7229_flat30_cost.py.
-2. The control needs the slow-host condition. Hypotheses: H-load (owner apps / host load raise sd_cpu: P->E core or lower clock), H-thermal.
-   Discriminator, one run in scratch/s7249: run ww and stack with a fixed background load (e.g. 3 `yes > /dev/null` busy loops, killed by the
-   recipe) and check ww goes flat 30 (control) while stack stays 60 (H-60). Or wait for an owner-active-but-away period. If ww stays 60 under load,
-   s7231's 18.4 ms needs another explanation (compare its [g1b] qos/load columns).
-Outcomes: ww flat 30 + stack 60 -> tell the owner the stack gives steady 60 with WIDEWIN at 21:9 and ask about the auto bundle; both 30 -> next lever
-R=40 rescored with the hole scorer; ww 60 under load -> the s7231 cost was host-specific, re-measure s7231 a4 as-is.
+State (s7249): the s7231 flat 30 ran on BATTERY at 10% (pmset log + constant 1.40x sd_cpu). On AC (s7248): off 10.06 / ww 13.16 / stack 9.59 ms, all 60.
+1. If SOAK-RESULTS has s7248_fixed_fps_b: score scratch/s7248r/log_{offb,wwb,stackb}.txt with tools/s7230_headroom.py + tools/s7229_flat30_cost.py
+   (2nd AC run; check arms.log pwr=AC).
+2. Slow-host control, same recipe, one run: ww and stack with a controlled 1.4x CPU slow-down. Candidates: `taskpolicy -c utility` / `-b` on the game
+   (moves threads toward E-cores; check sd_cpu ratio ~1.4, not 3x), or an ALLOW_BATT=1 arm when the owner unplugs. Positive control: ww goes flat 30
+   (reproduces s7231). Outcomes: ww 30 + stack 60 -> tell the owner the stack keeps 60 even on battery, ask about folding it into the auto bundle;
+   both 30 -> stack only helps on AC, next lever R=40 rescored with the hole scorer; ww stays 60 -> the slow-down is not 1.4x, recalibrate.
+3. Recheck s7230's "L4 heavy window flat 30" (same afternoon, battery): grep its arms.log times against the pmset log before citing it.

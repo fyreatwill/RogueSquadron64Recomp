@@ -191253,3 +191253,21 @@ HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7247. Owner idl
 - Rules out: "the tog saving does not survive fixed-on" (it does, -3.57 ms). Does not decide steady 60 on a slow host (needs the flat-30 control).
 - Shipped: OWNER-OPT-INS stack line updated with the fixed-on numbers and the caveat; soak scratch/agent/soak_queue/s7248_fixed_fps_b.sh queued
   (idle-gated; RESUME keeps run 1, runs offb/wwb/stackb).
+
+## Session 7249 (2026-11-12) — the s7231 "WIDEWIN = flat 30" host was on BATTERY (10%->2%): CPU per gfx task a constant 1.40x the AC run; arm harness now logs power and refuses battery
+- Planned: fold s7248_fixed_fps_b (still queued, not run) or run ww/stack under fixed background load. Owner active (HID idle 1 s), so no
+  key-driven run; did the offline half of the NEXT discriminator instead (compare s7231 vs s7248 host columns).
+- Ran: scratch/s7249/cmp.py on the [g1b] lines of s7231 n4/a4 and s7248 off/ww (matched arms, same code), per time window.
+  sd_cpu ratio s7231/s7248 = 1.20-1.44 (1.37-1.44 from t=20 on) in every window, both pairs, for 1 ms and 12 ms tasks alike; wall-cpu
+  0.66-1.61 vs 0.60-1.43 (nearly equal); load1 3-4 vs 3-4; qos 0x15 in both. A constant multiplicative factor on CPU time = clock speed, not
+  contention (contention adds wait, not CPU time per task).
+- Ground truth: `pmset -g log`: BatteryHealth "cap: 10" at 14:40:44, "cap: 2" at 15:09:46, "Entering Sleep ... 'Low Power Sleep' Using Batt
+  (Charge:1%)" at 15:22:37, "Wake from Hibernate ... due to acattach" at 19:08:09. s7231 arms ran 14:30-14:52 = on battery at ~10%. s7248 at
+  22:41 on AC (pmset now: AC Power, 100%). Both lines agree.
+- ORIGIN: the s7231 flat 30 (ww 18.47 ms) is the battery-powered host running every task 1.4x slower, not a code cost that AC play sees.
+  H-load refuted (load equal, cost multiplicative); H-thermal unnecessary. s7230's "L4 heavy window flat 30" ran the same afternoon: also suspect.
+- Shipped: tools/g1e_owner_quiet_arms.zsh adds pwr() (pmset -g batt -> AC100% / BATT10%), logs pwr= on every start and done line, and stops
+  with exit 2 (re-queued by the loop) when on battery unless ALLOW_BATT=1. Tested: pwr on this host -> AC100%, fake battery output -> BATT10%;
+  tools/s7243_resume_test.zsh failures: 0. OWNER-OPT-INS WIDEWIN line: battery explanation added.
+- Rules out: "WIDEWIN costs a flat 30 at 21:9 L4 on the owner's (AC) host". Leaves: the flat-30 positive control on AC needs a controlled slow-down
+  (ALLOW_BATT=1 battery arm, or taskpolicy); s7248_fixed_fps_b (2nd AC run) still queued.

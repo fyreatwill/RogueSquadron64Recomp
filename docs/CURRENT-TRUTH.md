@@ -36,7 +36,7 @@ already in the RDP stream (s7098). Scene-transition stalls are the retail 3072-s
 
 dd6 21:9/16:9 auto bundle (s7037-s7063, detail archived): off-map cull past 0.6 x fog end, KEDGE=0.8,12,
 WIDEWIN cap 10240, auto KLEVEL `12:0.5,13:0.5` and CAPLEVEL `9:8192` when FB_WIDTH>796. All 19 levels
-hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
+hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249: s7230/s7231 ran ON BATTERY at 10%->2%, CPU/task x1.40, on AC WW holds 60) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
 rsp, +2-5 L4 shoreline rows); cap 9216/8192 and K0.5 globally shave a horizon somewhere (refuted as defaults).
 
 Open or awaiting the owner:
@@ -374,6 +374,12 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    ww did NOT reproduce s7231's flat 30 because the host ran ~4 ms/task faster (off 10.06 vs s7231 n4 13.92, sd_cpu 8.70 vs 12.25 at t=80, same code:
    no perf-relevant diff since s7231). So 'stack holds 60 on a slow host' is inferred (stack <= off, and off held 60 in s7231), not measured. 2nd runs voided
    by owner input at offb t=120 and re-queued (soak s7248_fixed_fps_b, RESUME keeps run 1).
+   **s7249: the slow host was BATTERY POWER (two lines).** (1) pmset log: BatteryHealth warning cap 10% at 14:40 and 2% at 15:09, 'Low Power Sleep'
+   at 1% at 15:22, wake on AC attach 19:08; s7231 ran 14:30-14:52, s7248 22:41 on AC. (2) [g1b] sd_cpu ratio s7231/s7248 is a constant 1.37-1.44
+   in every window (light 1 ms tasks and heavy 12 ms tasks alike; matched n4/off and a4/ww), wall-cpu almost equal, load1 similar (3-4) and qos
+   0x15 both: a clock signature, not contention (H-load refuted, H-thermal not needed). So the WIDEWIN flat 30 is a battery-host result; on AC
+   ww holds 60 (headroom 3.48 ms, 18 s with a >=17 ms task) and stack holds 60 with 7.06 ms. Timing arms on battery are now refused:
+   tools/g1e_owner_quiet_arms.zsh logs pwr= on start/done and exits 2 on battery unless ALLOW_BATT=1.
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
