@@ -190995,3 +190995,25 @@ the loop skipped it (HID idle 18 s) and this iteration measured idle 49 s at sta
 - Change: tools/s7233_widewin_r.py prints per arm `s7238: tri_per_skipped_cell / ms_per_ktri` and `s7238 BAR MET|not met` (window dsd <=
   -2.5 ms and flight |dkpx| <= 1%). Replay on r40/r56: both "not met" (r40 -3.19 ms but flight -3.3%; r56 flight +0.8% but -1.94 ms).
 - Rules out: retail LOD (s7011) and per-cell coarsening as levers. Leaves: radius (bracket R=48/64/72) or a 2x2 merge mesh past R.
+
+## Session 7239 (2026-11-12) — WIDEWIN 2x2 merge mesh designed from a static read (docs/WIDEWIN-MERGE-PLAN.md): the flat lod-2 TRI_GEN command carries its own cell spacing (w9 low = elem+0x22<<2), the emit list is the distance chain with node dist2, so a merge needs no grid-to-element mapping; bracket soak still queued (owner active)
+HYPOTHESIS-ID: widewin-heavy-window-cost. CURRENT-TRUTH 42.8 KB, no maintenance. No new soak verdicts: s7237_widewin_r2 (R=48/64/72) is still
+queued. HID idle was 119 s at start, then 169 s, then 0, 3, 0.1 and 0 s through the session, with REAPER at 38% CPU (owner working). The 180 s gate
+was never held, so it was not run (one run, quiet host). Per NEXT.md this was the fallback branch: the merge-mesh code-read, offline. Nothing was built or run.
+- Static read, renderFlatMeshFaceGroup 0x8001108C (funcs_4.c): flat path 0x80011550-0x80011710 condition and the full 10-word TRI_GEN layout:
+  w1/w2 corner heights h0,h4 / h20,h24 (s8 of *(elem+0x24) at 0x0/0x4/0x14/0x18, packed h<<20 | h<<4), w3-w6 corner RGBA from
+  *(elem+0x28) +0/+0x10/+0x50/+0x60, w7 texture, w8 = x<<16 | ybase, w9 = z<<16 | (hw+0x22 << 2). GLideN64 TriGen02
+  (F5Rogue.cpp:730): vertices = origin + {0, V0} with V0 = w9 low, corner 4 = +x, 20 = +z. So a 2x2 merge = rewrite one command
+  (spacing x2, three far corners' heights rebased to the anchor ybase and their colours) and drop three.
+- Dropping is safe at the command level: the material switch (0x8000E104) and the B5 segment link (0x80011464) are emitted before the command,
+  and the cursor advance is a single +0x28 at 0x800119A8. Exception: groups with *(s1+0x2C) & 0x40000000 log the command pointer for a later
+  patch (0x80011884, table 0x801163BC), so they stay unmerged.
+- Second line (s7105 static read, ledger): the emit list is buildGridCellMeshForFace's distance chain (elem = *(node+0x14)+0x20, node+8 = dist2,
+  far cutoff 0x8009DEB4, LOD table 0x8009DE94 read at 0x800431D8-0x80043214). So the merge's far test is dist2 >= (frac*farcut)^2 from a
+  per-node host hash, and no grid-to-element offset is needed. The stream-time rs64_s7233_cell grid coords and the element x/z have an unmeasured
+  offset, so that route was rejected.
+- New doc: docs/WIDEWIN-MERGE-PLAN.md has the 4 hooks (H1 node dist2, H2 group pre-pass, H3 anchor rewrite, H4 drop), the [s7239]
+  tally with positive control (ph1 drops = 3x anchors, ph0 0), the arms (MERGE=0.5/0.7, tog) and the s7238 bar. Build it only if no
+  bracket R meets the bar.
+- Rules out: nothing measured. Narrows the merge to one emit function plus one node hook. The ucode spacing word makes a merged quad
+  native (no ucode change, RT64 untouched).
