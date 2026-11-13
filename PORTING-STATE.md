@@ -192098,3 +192098,28 @@ HYPOTHESIS-ID: g5c-fbswitch-transition-stall. CURRENT-TRUTH 53.8 KB (no maintena
   unmeasured. L12 21:9 dd6 now gets R=48 again, which s7260 qualified (8.94 ms p50).
 - Rules out: host event (2/2), dd6 as such. Queued s7288_169_dd6_levels (L1/L9/L13 16:9 dd6 auto + L13 STACK=0+DUTY ctl).
 - Verdict: selects H-R88, refutes H-host and H-dd6. Next discriminator: s7288_169_dd6_levels (selects H-L12-only vs H-dense-levels).
+
+## Session 7288 (2026-11-13) — G1c: s7288 16:9 dd6 levels fold (H-L12-only, R=88 auto fine on L1/L9/L13) + dd>=4 terrain window binds at side 128 x area cap (cap 8192 dd4 / 10240 dd6), but the cap's extra depth adds only 1.8% cells; new tools/s7289_window_arms.zsh, tools/s7289_window_bind.py
+- Fold s7288_169_dd6_levels (rc=0, AC, clk 0.97-1.04): L1/L9/L13 16:9 dd6 WIDEWIN auto stack (R=88) win77-97 60.0/s at
+  8.91/10.14/9.73 ms, p95 10.5/11.7/13.4, 0 frames >=17 ms, beyond-route <55/s 0/0/0 s, cells/call 3520/3626/3605, 0 arena full,
+  0 crash. Control L13 STACK=0+DUTY1.4: 79 s <55/s, 73 beyond route, 30/s runs t=177-239 (31 s flat at 30) -> PASS (s7230_headroom's
+  own "flat runs" field reads 0 on the control too, so read the s7229 runs list, not that field). Verdict H-L12-only: no other
+  level needs an RLEVEL entry at 16:9 dd6; thread g1c-169-dd6-r88-levels CLOSED. (L5 dd6 16:9 not measured this time; s7259 L4.)
+- Unit: which limit binds the dd>=4 window (s7286 cells/call flat dd4..dd8)? One in-session run, tools/s7289_window_arms.zsh, L4 16:9
+  owner path + WIDEWIN, HOLD 150, ROGUESQ_G3E_TRACE site 17 (ww, w, d, cap per placement), scored by new tools/s7289_window_bind.py
+  (last 3/4 of placements):
+  | arm | cap | w x d mode | pin128 | capbound | cells/call | win77-97 |
+  | L4 dd2 | 4096 | 64x64 / 67x61 / 79x40 | 0.00 | 0.76 | 1925 | 60/s 5.92 ms |
+  | L4 dd4 | 8192 | 128x64 (3946), 64x128 (871) | 0.96 | 1.00 | 3490 | 60/s 10.96 |
+  | L4 dd6 | 10240 | 128x80 (4086), 80x128 (883) | 1.00 | 1.00 | 3552 | 60/s 11.52 |
+  | L12 dd6 | 10240 | 80x128 / 128x80 | 1.00 | 1.00 | 3510 | 60/s 10.81 |
+  | L4 dd4 WIDEWIN=0 (ctl) | 8192 | 64x64 (all) | 0.00 | 0.00 | - | 60/s 9.28 |
+  (476 rows of 64x64 cap 4096 in every arm = the pre-mission scene.) Control PASS: without WIDEWIN the instrument pins 64x64, the
+  retail table limit, and the wide arms report 128 -> the trace sees each limit when it binds.
+- Reading: cap = 2048 x ceil(dd), clamped at px 5 (main.cpp [ddbundle], ROGUESQ_DD_POOLX_MAX) -> dd>=5 all share 10240. The window
+  is the 128 side axis (WIDEWIN table edge) x cap/128 forward cells: 64 deep at dd4, 80 at dd6. So window AREA grows 25% dd4->dd6,
+  but non-empty cells/call grow 1.8%: the extra 16 forward rows are almost all removed downstream of placement. Candidates: the
+  dd>=6 off-map cull past 0.6 x fog end (s7037 auto, [s7037] printed in the dd6 arm), R=88 (wide-only cells only, s7265), or the
+  far clip / fog end of the stream. So raising POOLX_MAX alone is unlikely to draw more; the downstream cut must be named first.
+- Single run per arm. Queued scratch/agent/soak_queue/s7290_window_depth.sh (L4 16:9 dd6: ref / OFFMAPCULL=-1 / POOLX_MAX=8 /
+  both) -> H-offmap vs H-far vs H-cap-only.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7284 (2026-11-13).
+Compact operational handoff, as of Session 7288 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -321,7 +321,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    15.53 ms flat 30 t=77-84 vs r48 60.0/s 10.95 ms vs dd4(R88) 59.3/s 15.43 ms, equal cells/call (3521/3509/3538). Fix: new
    ROGUESQ_DD_WIDEWIN_RLEVEL=<lvl>:<R>[,...] (upstream_compat.cpp rs64_s7233_win, gCurrentLevel latch s7056_last), auto 12:48 at dd>=6
    (main.cpp [s7258]); verified same session auto 60.0/s 10.94 ms, 0 flat vs RLEVEL=none 49.3/s flat t=77-84, [s7287] level=12
-   widewin_r=48/88. Open: other levels at 16:9 dd6 R88 (only L4/L12 measured) -> queued s7288_169_dd6_levels; dd5 L12 unmeasured.
+   widewin_r=48/88. **s7288: L1/L9/L13 16:9 dd6 R=88 all 60/s, 0 beyond-route s (ctl PASS) -> H-L12-only, CLOSED.** dd5 L12 unmeasured.
+   **s7288 window bind (site-17 trace, tools/s7289_window_bind.py, ctl WIDEWIN=0 pins 64x64 PASS):** dd>=4 window = 128 side x
+   cap/128 deep (cap 2048 x ceil(dd), px clamp 5: 128x64 dd4, 128x80 dd5+); dd4->dd6 area +25% but cells/call +1.8%, so the extra
+   forward rows die downstream (off-map cull K0.6 / R / far clip). Queued s7290_window_depth (OFFMAPCULL=-1, POOLX_MAX=8, both).
    Loop fix s7287: soak recipes now run under their shebang shell (zsh recipes ran under bash; the syntax error's rc=2 was filed as
    a human VOID) and a `-n` syntax failure is filed rc=SYNTAX (tools/agent/test_soak_idle_gate.sh 15/15).
 

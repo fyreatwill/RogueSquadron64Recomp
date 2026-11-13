@@ -1467,3 +1467,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7286 fold: s7285_bootloop_qos rc=0 CONTROL PASS (boot1 SIGSTOP frozen + sample dump): boots 2-12 with QOS_ALL=1 all reached attract (fs~1950, t=34), 0 crash, 0 boot-loop -> QOS_ALL does not cause boot-looping (11/11).
 20261113-134909 | s7287_l12_169_dip | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 0s | scratch/agent/soak_results/s7287_l12_169_dip_20261113-134909.log
 20261113 | s7287 fold: s7287_l12_169_dip loop VOID was a misfile (loop ran the zsh recipe under bash: syntax error rc=2); re-run in-session: CONTROL PASS (ctl flat 30 120 s), r88 49.1/s flat t=77-84, r48 60.0/s 10.95 ms, d4 59.3/s -> H-R88; RLEVEL 12:48 auto at dd>=6 landed, verified auto 60.0/s vs none flat 30. Queued s7288_169_dd6_levels.
+20261113-141747 | s7288_169_dd6_levels | rc=0 | 995s | scratch/agent/soak_results/s7288_169_dd6_levels_20261113-141747.log
+20261113 | s7288 fold: s7288_169_dd6_levels rc=0 CONTROL PASS (ctl 31 s flat 30, 73 beyond-route s): L1/L9/L13 16:9 dd6 R=88 60.0/s 8.9-10.1 ms, 0 beyond-route -> H-L12-only, closed. Queued s7290_window_depth.
