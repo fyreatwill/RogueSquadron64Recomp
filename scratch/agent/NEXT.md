@@ -1,17 +1,11 @@
-# NEXT (s7247): WIDEWIN heavy window: stack the crack-free merge (E=16) with the far radius cut R=48
+# NEXT (s7248): does the WIDEWIN stack (R48 + MERGE0.4 E16) restore 60/s in the L4 heavy window? Fixed-on, no tog
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7246): flatness gate ROGUESQ_DD_WIDEWIN_MERGE_E (default 0 exact; _C centre, default E) is built. With MERGE=0.4 E=16 the image shows no
-seam excess (side seams 23.1 -> 20.1 vs ungated 26.4 -> 38.2, same session), and the window saves -1.28 ms (ungated -2.30) with flight kpx -1.1%.
-That is below the -1.5 ms bar. R=48 alone: window -4.12 ms, kpx -3.2% (single run, no hole check yet).
-Work unit (ONE soak with two image arms + one timing soak, owner idle >= 180 s, screen unlocked):
-1. Image: scratch/s7246/arm.zsh route (copy to scratch/s7247, CW=1260 CH=540, ASP=21:9, 60 s delay, 240 s capture) arms:
-   a) R48 alone (ROGUESQ_DD_WIDEWIN_R=48 + _R_TOG=1), b) MERGE=0.4 E=16 + R=48 (both TOG; they share the global tog phase).
-   Score with tools/s7245_merge_cracks.py (seams) AND the fraction of rows where far terrain gives way to haze/sky earlier in the on phase
-   (holes: R removes cells). Check content_w == 1191 on every arm; discard and rerun an arm whose crop is narrower (s7246 e0/e64 got 631/895).
-2. Timing: copy scratch/s7246/s7246_merge_flat_timing.sh; arms r48, e16r48, e16 (repeat for a second run). Scorer tools/s7233_widewin_r.py --merge
-   (it prints the s7246 flat summary). For R arms use the non --merge split (wr=) or run both.
-Outcomes: H-stack (e16+r48 window <= -3 ms, flight |dkpx| <= 1%, no seam excess, no visible holes) -> owner sheet + OWNER-OPT-INS line (opt-in, 21:9);
-H-r48-holes (r48 removes visible far terrain) -> use R=56 (+-0 kpx, -1.94 ms) with E=16 instead; H-overlap (the merge saving disappears once R
-removes the far cells, since both act on far cells) -> keep the better single lever; then skirts (vertical strips on merged edges facing
-unmerged cells) would be the only way to recover the 45% of merge saving the gate gives up.
-Raws are ~35 GB per 240 s capture: delete them after scoring.
+State (s7247): same-run tog says the stack cuts window gfx work -3.63/-3.88 ms (r48 alone -3.72/-2.83, E16 alone -1.33/-1.35), no seams, no holes
+(tools/s7247_tog_pop.py, control PASS). s7231 fixed arms: dd4 13.96 ms/60 fps, dd4+WW 18.47 ms/30 flat. Tog arms cannot show fps (phase mix).
+Work unit: ONE soak, 3 arms x 2 runs, fixed settings (no _TOG), owner idle >= 180 s, screen unlocked. Copy scratch/s7247/s7247_stack_timing.sh to
+scratch/s7248/, drop every *_TOG, arms: off (WIDEWIN=0), ww (WIDEWIN=1), stack (WIDEWIN=1 + R=48 + MERGE=0.4 + MERGE_E=16); then repeat the arms
+(offb wwb stackb). Score: window t=77-97 and flight 60-230 fps (fl_shown / present ring, tools/s7229_flat30_cost.py for flat-30 runs) and gfx task ms
+(tools/s7230_headroom.py). Positive control: the ww arm must reproduce s7231's flat-30 window (else the route did not reach the heavy stretch).
+Outcomes: H-60 (stack window >= 58 fps and no flat-30 run >= 2 s, both runs) -> OWNER-OPT-INS: drop "steady-60 unverified", ask the owner whether
+WIDEWIN+stack should become part of the 21:9 auto bundle; H-30 (still flat 30) -> stack ms vs 16.7 says how much more is needed (next lever:
+R=40 had -3.19 ms but -8.6% kpx; rescore it with the hole scorer); H-mixed -> report the distribution.

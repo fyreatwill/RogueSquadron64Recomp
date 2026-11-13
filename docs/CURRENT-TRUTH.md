@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7246 (2026-11-12).
+Compact operational handoff, as of Session 7247 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -361,7 +361,13 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    E=0/E=64 arms got a narrower crop (content_w 631/895), so they are not comparable (e64 also had owner input). Timing (same-run tog, 1 run/arm,
    CONTROL PASS x3): window dsd e16 -1.28 ms (kpx -6.8%, within window tog noise), e0 -1.14, ungated -2.30 (repeats s7244's -2.31); flight e16
    -1.13 ms kpx -1.1%. So the gate keeps ~75% of merges but only ~55% of the saving, because the rejected blocks are the hilly, visible ones. Below the
-   -1.5 ms bar (single run). Owner sheet docs/owner_sheet_s7246_merge_e16.png. Next (NEXT.md): stack E=16 with WIDEWIN_R=48 (r48 -4.12 ms) and score holes and seams.
+   -1.5 ms bar (single run). Owner sheet docs/owner_sheet_s7246_merge_e16.png. **s7247: H-stack selected (two runs, CONTROL PASS on all 6 timing arms).**
+   Window dsd: r48 -3.72/-2.83 ms, E16+R48 -3.63/-3.88, E16 -1.33/-1.35 (partial overlap: singles sum ~-4.6). Flight: r48 -1.04/-1.82, stack
+   -3.22/-2.03, E16 -1.40/-3.38. Image (2 capture arms, owner idle, content_w 1191 both): seams r48 -2.4, stack -1.8 px/frame (synthetic control
+   PASS); holes by new tools/s7247_tog_pop.py (TEX = grain fraction G=3 in the side band, flip test + phase means; control = most textured 200x40
+   window flattened, PASS 130/136, 132/138): r48 +0.0029+-0.0052, stack +0.0013+-0.0056 = no visible terrain removed (sensitivity ~1/3 of a 200x40
+   patch). OWNER-OPT-INS line added (experimental, steady-60 unverified); sheet docs/owner_sheet_s7247_widewin_stack.png. Next (NEXT.md): fixed-on
+   (no tog) fps in the window: WW off / WW / WW+stack.
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.

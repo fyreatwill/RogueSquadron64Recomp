@@ -191208,3 +191208,31 @@ HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7246.
   partial: -1.28 ms against the -1.5 ms bar. Not added to OWNER-OPT-INS yet.
 - Next: stack E=16 with WIDEWIN_R=48 (r48 alone saved 4.12 ms, kpx -3.2%, no hole check yet). Image and timing arms are in NEXT.md.
   Raws deleted (4 x ~35 GB).
+
+## Session 7247 (2026-11-12) — WIDEWIN stack E16+R48 measured: window -3.63/-3.88 ms (two runs), no seams, no holes (new hole scorer with a same-run control); H-stack selected, opt-in line added
+
+HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7247. Owner idle 1105-2590 s throughout, screen unlocked, 0 crashes in 8 runs.
+- Image arms (scratch/s7247/all.zsh, L4 21:9 dd4+WW+MELT, CULL=1, same-run tog, 60 s delay + 240 s capture, content_w 1191 on both arms):
+  r48 (ROGUESQ_DD_WIDEWIN_R=48 +_R_TOG) and e16r48 (R48 + MERGE=0.4 E=16, both on the shared tog phase).
+  Seams (tools/s7245_merge_cracks.py, synthetic control PASS 109/109 and 111/111): r48 31.7 -> 29.3 px/frame (A/A +1.0); stack 29.0 -> 27.2 (A/A -3.2).
+  No excess on either.
+- Holes: new tools/s7247_tog_pop.py. Two designs failed their own controls first and were dropped: (1) changed-px across the flip vs within a phase.
+  The same-phase boundaries all sit at s = 7 mod 8, which is phase-locked to the 8 s steering cycle, so they are biased. (2) The max of a per-boundary
+  diff profile. Motion of ~12k px per frame pair swamps an 8k px patch (control 0-3/27). Kept design: TEX = fraction of side-band pixels with
+  |dL/dx|+|dL/dy| > 3 (terrain is grainy; haze, sky and a haze-filled hole are smooth). It runs a flip test (median TEX after minus before each
+  boundary, signed by direction) plus phase means. Control: flatten the most textured 200x40 side window to its mean. A fixed-position patch fails
+  the control because it lands on sky. Control PASS 130/136 (r48) and 132/138 (stack). Flip effect: r48 +0.0029 +- 0.0052, stack +0.0013 +- 0.0056.
+  The control drop is 0.023, so no visible terrain is removed at a sensitivity of about 1/3 of a 200x40 patch. Phase means agree (r48 -0.0028,
+  stack -0.0046, against an A/A of -0.011 / +0.020). Sheets scratch/s7247/owner_sheet_s7247_{r48,e16r48}{,_seams}.png. Raws deleted.
+- Timing soak, run in-iteration (scratch/s7247/s7247_stack_timing.sh, g1e_owner_quiet_arms, HOLD 130, 6 arms, CONTROL PASS on all 6). Window t=77-97
+  dsd on-off: r48 -3.72 / -2.83 ms; stack -3.63 / -3.88; e16 -1.33 / -1.35 (repeats s7246's -1.28).
+  Flight: r48 -1.04 / -1.82; stack -3.22 / -2.03; e16 -1.40 / -3.38.
+  Window dtri: r48 -2132 / -2174; stack -2822 / -2900; e16 -1635 / -1576.
+  kpx swings -4.6..+6.7% unordered, which is the tog noise floor (s7244). The hole scorer replaces kpx as the loss measure.
+  Caveat: the r48 timing arm overlapped about 40 s of offline hole scoring on the host.
+- Discrimination: H-stack is selected. The window is <= -3 ms on both runs, with no seam excess and no holes.
+  H-overlap is partial: the singles sum to about -4.6 ms and the stack gives -3.76, so the merge adds about 0.5 ms on top of R48.
+  H-r48-holes is refuted by the hole scorer (r48 is null with a passing control).
+- Shipped: an opt-in line in docs/OWNER-OPT-INS.md (experimental; steady 60 in the window not yet measured) and the owner sheet
+  docs/owner_sheet_s7247_widewin_stack.png. Defaults are unchanged.
+- Next: fixed-on (no tog) fps in the heavy window, 3 arms x 2 runs: WW off, WW, WW+stack. That is the owner-facing test of whether the stack restores 60/s.
