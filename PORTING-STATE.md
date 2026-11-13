@@ -191985,3 +191985,4 @@ work is coalesced; not pursued.
 Rules out: RT64 command-buffer count as a GPU-contention lever. SKIP_EMPTY_WAIT stays opt-in and undocumented for the owner (no
 benefit measured); defaults untouched.
 Verdict: this pair refutes H-fifo / H-commit-lever and selects H-gpu-policy (the GPU's inter-process scheduler sets our share); it closes the GPU-contention thread. Next discriminator: load-edge gap classification (NEXT.md, g5c-load-edge-gaps).
+ORIGIN: not a corruption mitigation. The empty wait buffers are written by plume's own MetalCommandQueue::executeCommandLists, which always opens a wait MTLCommandBuffer even when waitSemaphoreCount == 0; skipping it is legitimate (no wait to encode, same-queue enqueue order kept) and is opt-in only.
