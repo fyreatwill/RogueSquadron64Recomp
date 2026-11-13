@@ -190952,3 +190952,6 @@ Rules out: nothing about H-radius/H-thin/H-near; the discriminator is still unme
 - Build: cmake --build build OK (build/RogueSquadron64Recomp 19:33). Not yet run (owner active): the new flush is UNVERIFIED in-game.
   The first soak run is its test: it needs >=1 [s7233] block per phase.
 - Rules out: nothing about H-radius/H-thin/H-near yet. It does show the s7233 instrument would have failed its own control.
+- Root cause of the empty tally: a fixed 128-call flush threshold set against an unmeasured placement rate. Next discriminator, unchanged:
+  the s7235_widewin_r R=40/56/72 window dsd/dkpx with CONTROL PASS. dsd <= -3 ms at dkpx > -0.5% selects H-radius, a >2% kpx loss selects
+  H-thin, and dsd ~0 refutes both and selects H-near.
