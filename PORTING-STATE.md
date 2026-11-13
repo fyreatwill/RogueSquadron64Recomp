@@ -191076,3 +191076,9 @@ If neither does and ms/ktri ~ 0, that refutes the triangle-cost model behind bot
   fields split those.
 - Open caveat (read only, not acted on): if a partner is captured and dropped but its anchor's command never reaches H3, the 3 partners are
   already gone, which leaves a hole of 3 cells (counted as unm). The soak control requires unm == 0.
+- Discrimination: **refutes H-hostlogic** (the rs64_s7239 pairing, rebase, colour or drop bookkeeping is wrong). The 17 cases plus the checker
+  control would fail under any of those, and none do. If the soak's merge control fails, the cause is now one of three. H-encoding: the ucode
+  reads the w1/w2 halves or the w9 spacing differently from plan fact 3. H-stale: stale H1 dist2 entries. H-wwtiming: g_rs64_ww is unset at emit time.
+  **Next discriminator** (soak s7240_widewin_merge, [s7239] fields): noww >> grp selects H-wwtiming. miss or near ~ all candidates selects
+  H-stale or a units error. merged > 0 with unm == 0 but cracks or misplaced quads in the frame selects H-encoding. merged == drop/3 with no
+  artefact passes the control, and then the s7238 bar (window dsd <= -2.5 ms, flight |dkpx| <= 1%) decides merge vs WIDEWIN_R.
