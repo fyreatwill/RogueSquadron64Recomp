@@ -1456,3 +1456,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7271 fold: s7270_169_cutscenes rc=0 but VOID (autopilot gate 13:w1024 never matches 16:9 menu width 1592, game looped attract). Recipe fixed to w1592, re-run in-session: control PASS 4.91 (green field), off->stack max 2.72 = shot cut/camera/fade/explosion -> H-clean169, thread closed.
 20261113-065929 | s7272_219_hold | rc=0 | 463s | scratch/agent/soak_results/s7272_219_hold_20261113-065929.log
 20261113 | s7273 fold: s7272_219_hold rc=0 CONTROL PASS 3/3, 8 holds 267-467 ms UNCLASSIFIED (raw deleted). In-session KEEP=1 re-run: control 3/3, 2 holds 275/372 ms = black transition frames (sheet), 0 flight holds -> H-none219, thread closed.
+20261113-111102 | s7280_l12_all | rc=0 | 774s | scratch/agent/soak_results/s7280_l12_all_20261113-111102.log
+20261113-112356 | s7280_l12_gp | rc=0 | 773s | scratch/agent/soak_results/s7280_l12_gp_20261113-112356.log

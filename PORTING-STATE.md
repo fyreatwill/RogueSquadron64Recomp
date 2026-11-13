@@ -191887,3 +191887,29 @@ Single run per arm per level. Two independent lines inside each run (present rin
 two-line; the cross-level replicate is queued: scratch/agent/soak_queue/s7280_l12_{gp,all}.sh (L12 GUEST+PRESENT vs QOS_ALL, same
 toggle; s7277 has L12 none = 49.4 fps).
 Owner recommendation unchanged: QOS_ALL=1 (it includes the minimal set and is no worse); defaults unchanged pending the owner.
+
+## Session 7281 (2026-11-13) — G5c QoS split L12 replicate (queued soaks): GUEST+PRESENT 57.1 fps on-load, 0 gaps >=250, 0 lit holds; QOS_ALL 59.6 fps, 0/0 -> minimal pair removes the freezes on 2 levels, QOS_ALL carries ~2 fps more under load on both; split closed, recommendation stays QOS_ALL; GPU-contention pair queued
+
+Work unit: NEXT s7281 (HYPOTHESIS-ID g5c-qos-split), folding the loop-run soaks s7280_l12_all (11:11) and s7280_l12_gp (11:23).
+Recipe = s7280 on L12: `env LOAD=cpu LEVEL=12 GXE=<knobs> zsh tools/s7277_toggle_load_arm.zsh` (PLAIN FS 16:9 owner recipe, 600 s,
+15 `yes` spinners toggled every 60 s from +150 s), scored with tools/s7277_toggle_score.py. Host: HID idle 42943 s at fold time
+(no human input across both runs), screen unlocked (recipe gate). Knobs reached the game (scratch/agent/m6/g1_lvl12s7009<tag>/*.log):
+l12gp has [guest-qos] ok=1 + [s6985] present only; l12all adds [s6987] workload and [s6988] buffer/texture threads. 0 crash lines both.
+
+| arm (L12, CPU toggle) | on-load gen/s (4 windows) | off windows | gaps >=250 on | gaps >=100 on | max gap on | gpu95 on | lit holds | control |
+|---|---|---|---|---|---|---|---|---|
+| none (s7277) | 49.4 | 60.0 | 5 | - | 567 ms | - | - | 3/3 |
+| GUEST+PRESENT (l12gp) | 57.1 (57.3/57.0/57.0/57.0) | 60.0 | 0 | 1 | 100 ms | 0.39 | 0 | 3/3 (1029-1039 ms) |
+| QOS_ALL (l12all) | 59.6 (59.4/59.5/59.6/59.7) | 60.0 | 0 | 0 | 68 ms | 0.37 | 0 | 3/3 (1021-1030 ms) |
+
+Reading: on L12 the minimal pair removes every load-induced gap >= 250 ms and every lit hold, same as on L4 (s7280). Its on-load rate is
+2.5 fps under QOS_ALL here and 1.7 under on L4: two levels, same direction, each window of gp below every window of all (57.0-57.3 vs
+59.4-59.7), so the residual is real, not swing: WL/UPLOAD/GFX together carry ~2 fps under CPU load. Off windows 60.0 in both arms, so
+QOS_ALL costs nothing on a quiet stretch. Two lines per run (present ring + capture image holds), two levels.
+Rules out: "GUEST+PRESENT is a complete substitute for QOS_ALL" (my s7280 phrasing "WL/UPLOAD/GFX add nothing measurable" is refined:
+nothing for freezes, ~2 fps for rate). Selects: freezes = GUEST_QOS (+PRESENT); full rate = QOS_ALL. Recommendation unchanged:
+QOS_ALL=1; default is the owner's call (backlog 13). G5c QoS split CLOSED.
+Next (queued, not babysat): GPU contention. s7277 measured a saturating Metal neighbour at a steady 16.6 fps on L12 with no QoS; CPU
+QoS was never tried under it. scratch/agent/soak_queue/s7281_l12_gpu_{qos,none}.sh (LOAD=gpu, QOS_ALL vs none, same toggle):
+~16.6 in both -> GPU share is the limit (H-gpu-share, nothing CPU-side fixes it); qos clearly higher -> the render feed was CPU-starved
+by the saturator's driver threads (H-cpu-feed), QOS_ALL also covers it.
