@@ -1,11 +1,11 @@
-# NEXT (s7251): fold the slow-host control (s7250_slowhost) and the s7248 2nd AC run
+# NEXT (s7252): fold the slow-host / AC soaks (s7250_slowhost, s7251_dd6r_ac, s7248_fixed_fps_b)
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7250): battery = Low Power Mode (powermode 1), x1.40 per task. tools/s7250_duty + harness token DUTY=1.4 stand in for it (1.435x on a spin).
-1. If SOAK-RESULTS has s7250_slowhost: read scratch/s7250/arms.log (pwr=AC, duty= lines) and duty_wwd.txt/duty_stackd.txt (achieved factor ~1.4),
-   then score log_{ww,wwd,stack,stackd}.txt with tools/s7230_headroom.py + tools/s7229_flat30_cost.py.
-   - Control: wwd sd_cpu per task ~1.4x ww AND flat 30 in t=77-97. If sd_cpu is 1.4x but wwd holds 60, the burst stall is not like a clock cap:
-     rerun at DUTY_PERIOD=12000 or factor 1.6, or ask the owner for one battery arm (ALLOW_BATT=1).
-   - Control passes: stackd 60 -> tell the owner the stack keeps 60 on battery and ask about folding it into the auto bundle; stackd 30 -> the stack only
-     helps on AC, next lever R=40 rescored with tools/s7247_tog_pop.py.
-2. If s7248_fixed_fps_b ran: score scratch/s7248r/log_{offb,wwb,stackb}.txt (the 2nd AC run).
-3. If neither ran (owner active): offline, recheck s7230's "L4 heavy window flat 30" times against the pmset battery log (s7230 arms.log) and correct CURRENT-TRUTH.
+State (s7251): s7230 AND s7231 both ran on battery Low Power Mode (x1.36-1.44 CPU/task). s7230's dd6r flat 30 is a battery verdict; AC ~14.7 ms inferred.
+1. s7251_dd6r_ac in SOAK-RESULTS: read scratch/s7251/arms.log (pwr=AC) and its soak log tail (headroom/flat30 per arm + clock ratio).
+   - Control: dd6rd flat 30 in t=77-97 and n4 ratio s7230/AC ~1.4. Control passes + dd6r 60 -> farthest-view line holds 60 on AC: correct
+     CURRENT-TRUTH line 220 + tell owner. dd6r 30 on AC -> dd6 radius cost is real; next lever OFFMAPCULL K=0.6 rescored in that window.
+   - dd6rd holds 60 -> duty stand-in too weak (see s7250_slowhost outcome), rerun at DUTY=1.6.
+2. s7250_slowhost: as in s7250 NEXT (wwd flat 30 control; stackd 60 vs 30).
+3. s7248_fixed_fps_b: score scratch/s7248r/log_{offb,wwb,stackb}.txt.
+4. If none ran (owner active): offline, check the other battery-afternoon sessions (09:20-15:22 on 2026-11-12, s7220-s7231) for timing verdicts
+   and tag them in CURRENT-TRUTH; grep PORTING-STATE for 'ms per gfx task|flat 30' in those sessions, verify each with tools/s7251_clock_ratio.py.

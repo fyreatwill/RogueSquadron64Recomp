@@ -36,7 +36,7 @@ already in the RDP stream (s7098). Scene-transition stalls are the retail 3072-s
 
 dd6 21:9/16:9 auto bundle (s7037-s7063, detail archived): off-map cull past 0.6 x fog end, KEDGE=0.8,12,
 WIDEWIN cap 10240, auto KLEVEL `12:0.5,13:0.5` and CAPLEVEL `9:8192` when FB_WIDTH>796. All 19 levels
-hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249: s7230/s7231 ran ON BATTERY at 10%->2%, CPU/task x1.40, on AC WW holds 60) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
+hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249/s7251: s7230 AND s7231 ran ON BATTERY (pmset: Batt 09:20-15:22, no AC event), CPU/task x1.36-1.44 vs AC, so their flat 30s (WIDEWIN dd4, and s7230's dd6r farthest-view line) are battery results; on AC WW holds 60, dd6r untested on AC: soak s7251_dd6r_ac) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
 rsp, +2-5 L4 shoreline rows); cap 9216/8192 and K0.5 globally shave a horizon somewhere (refuted as defaults).
 
 Open or awaiting the owner:
@@ -217,7 +217,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 mai
 
 ## Superseded conclusions — do not act on these
 - s7230 "the dd6 radius at 21:9 adds ~6.6 ms per gfx task over dd4 (H-dd)" and s7014-s7017 "WIDEWIN costs little or none at 21:9 dd4". Believable: s7230's dd4 21:9 arm (13.94 ms) differed from the dd6 line only, it seemed, in the radius; in fact it also lacked ROGUESQ_DD_WIDEWIN, and s7014-s7017 measured whole-flight/other windows. s7231 2x2 in the L4 t=77-97 window: WIDEWIN +4.5 ms at dd4 (flat 30/s), radius +0.7 ms without WIDEWIN.
-- s7054/s7063 "Gerrard V (L4) at 21:9 dd6 runs 58.7-59.5 fps / all 19 levels ~60 at 21:9". Believable: whole-flight averages on the then route. s7230 (owner path, direct harness, two instruments): L4 t=77-97 flat 30/s for 21 s at 20.5 ms per gfx task, 109/239 s <55/s; dd4 21:9 holds 60 there.
+- s7054/s7063 "Gerrard V (L4) at 21:9 dd6 runs 58.7-59.5 fps / all 19 levels ~60 at 21:9". Believable: whole-flight averages on the then route. s7230 (owner path, direct harness, two instruments): L4 t=77-97 flat 30/s for 21 s at 20.5 ms per gfx task, 109/239 s <55/s; dd4 21:9 holds 60 there. s7251: s7230 itself ran on battery (Low Power Mode, x1.36-1.43 CPU/task vs AC s7248 off; x0.97-1.01 vs battery s7231 n4), so this is also a battery-host verdict; AC estimate ~14.7 ms (scaled, inferred), measurement queued.
 - s7227/s7228 "in-flight flat-30 under FPS60 is the game's own frame rate (H-content)". Believable: rigid 33.3 ms game swaps with a free present path and a 60 Hz VI timer, no display event. s7229: the harness ran the diagnostic ucode path (LOG_PHASE -> G1E_PROBES, 21.95 ms task); the owner path holds 60/s there (12.8 ms).
 - s7180 "swaps 4700-5028 of the L17 route are the level-description screen" and s7181 "Elite Rogues 0.047, 21 >0.05". Believable: 512x448 interlaced fb after MISSION FAILED. s7183: it is the Elite Rogues list; the residual is the fb-weave reference combing while it scrolls.
 - s7122 "RT64 shows the 4:3 picture off-centre (21/66 px margins)". Believable: rect search on the capture fit well. s7123: SCK pads the right of the capture; in window points the margins are 43/45 (centred).
@@ -380,6 +380,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    0x15 both: a clock signature, not contention (H-load refuted, H-thermal not needed). So the WIDEWIN flat 30 is a battery-host result; on AC
    ww holds 60 (headroom 3.48 ms, 18 s with a >=17 ms task) and stack holds 60 with 7.06 ms. Timing arms on battery are now refused:
    tools/g1e_owner_quiet_arms.zsh logs pwr= on start/done and exits 2 on battery unless ALLOW_BATT=1.
+   **s7251: s7230 was on battery too (two lines).** pmset: 'Using Batt (Charge: 100)' 09:20, no AC event until acattach 19:08, s7230 ran
+   14:02-14:24. tools/s7251_clock_ratio.py: s7230 dd6w vs s7231 n4 (same flags, both battery) 0.97-1.01; vs s7248 off (AC) 1.36-1.43. So every
+   s7230 margin (dd4 2.7-3.7 ms) understates AC (base 13.00 ms -> ~9.3 inferred) and its dd6r flat 30 (20.64 ms, 107 s <55/s) is a battery verdict.
+   AC rerun queued: soak s7251_dd6r_ac (n4 bridge, dd6r, dd6rd = +DUTY=1.4 control).
    **s7250: the battery clock cap is Low Power Mode** (pmset custom: battery powermode 1, AC 2; changing it needs sudo). taskpolicy gives 1.0x
    (utility) or 3.2x (background), so it cannot stand in. New tools/s7250_duty (SIGSTOP/SIGCONT 8 ms period, calibrated 1.435x on a spin),
    harness arm token `DUTY=1.4`. Same-run control soak s7250_slowhost queued (ww/wwd/stack/stackd; control: wwd flat 30).

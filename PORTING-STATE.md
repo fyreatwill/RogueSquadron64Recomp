@@ -191299,3 +191299,19 @@ Discrimination: the pmset powermode split (battery 1 = Low Power Mode, AC 2) tog
 (battery clock cap) and refutes H-load as the s7231 slow-down cause**. The spin timings **refute H-taskpolicy-standin** (1.0x / 3.2x, never 1.4x).
 Next discriminator: s7250_slowhost wwd vs ww in the same run. wwd at flat 30 with ~1.4x sd_cpu validates the duty stand-in, and stackd then
 decides H-stack-holds-on-slow-host against H-stack-AC-only.
+
+## Session 7251 (2026-11-12) — s7230's whole owner-path headroom table (incl. "dd6 21:9 farthest view = flat 30/s") also ran on battery Low Power Mode at x1.36-1.43 CPU/task; new tools/s7251_clock_ratio.py; AC rerun soak queued
+Planned (NEXT s7251): fold s7250_slowhost / s7248_fixed_fps_b. Neither ran: both idle-gated, owner active (HID idle 5 s at start), host on AC 100%.
+So took NEXT item 3 (offline): recheck s7230 against the pmset battery log.
+- Line 1, pmset -g log: only power-source records on 2026-11-12 are 'Using Batt (Charge: 100)' 09:20:12, BatteryHealth cap 10 at 14:40 / cap 2 at
+  15:09, 'Low Power Sleep ... Using Batt (Charge:1%)' 15:22:37, acattach wake 19:08:09. No AC event between 09:20 and 19:08. s7230 arms.log
+  14:02:51-14:24:04 -> on battery (powermode 1 = Low Power Mode per s7250).
+- Line 2, [g1b] sd_cpu per gfx task (tools/s7251_clock_ratio.py, generalised from scratch/s7249/cmp.py; data scratch/s7251/g*.txt):
+  s7230 dd6w vs s7231 n4 (identical flags, both battery) ratio 0.97-1.01 in every window t>=20; s7230 dd6w vs s7248 off (AC, +MELT) 1.36-1.43;
+  s7231 n4 vs s7248 off 1.37-1.44. qos 0x15 all; load 3-4 all. Same clock state as s7231 = the battery cap.
+- s7230 arms, L4 t=77-97 (tasks/s, wall ms, cpu ms, s<55/s at t>=20): base 60.0 13.00 11.58 8; dd6w 60.0 13.97 12.37 5; ret 59.3 13.16 11.56 8;
+  busy 60.0 13.59 11.48 6; dd6r 30.0 20.64 18.79 107. All battery. Scaled by 1/1.4 (inferred, single-source): dd6r ~14.7 ms, i.e. likely 60/s on AC.
+- ORIGIN: the s7230 "farthest view flat 30" and "dd4 margin 2.7-3.7 ms" numbers were taken on a clock-capped host, not the owner's AC host.
+  Rules out: treating s7230 as an AC measurement. Does NOT prove dd6r holds 60 on AC (scaling is an inference).
+- Queued soak s7251_dd6r_ac (idle 180 s, timeout 1800): n4 (clock bridge vs s7230 dd6w, expect ~0.71), dd6r (s7230 flags), dd6rd (+DUTY=1.4,
+  positive control: should go flat 30 again). Harness refuses battery (s7249), so its result is an AC result by construction.

@@ -1421,3 +1421,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112-2106 | s7244_merge3 (s7244 iteration) | rc=3 (null arm m99 CONTROL FAIL by design) | 410s | scratch/s7244/merge3.soak.log; m30 win -1.89 fl -3.04; m40+R56 win -4.46 ms kpx -0.1%, fl -3.58 kpx -6.6%; m99 null: fl kpx +4.7% = tog noise floor
 20261112-211300 | s7237_widewin_r2 | rc=0 | 410s | scratch/agent/soak_results/s7237_widewin_r2_20261112-211300.log
 20261112 | s7245 fold: s7237_widewin_r2 rc=0, CONTROL PASS x3 (ph1 skip 1699/1092/589 per placement): r48 win dsd -4.12 ms kpx -3.2% fl -1.30 -6.2%; r64 win -1.20 +7.6% fl -0.92 +1.6%; r72 win -1.56 -6.4% fl -0.60 -4.3%. kpx swings +-7% with no dose order = tog kpx noise (agrees with s7244 null arm); r48 time cut is real.
+20261112-230704 | s7248_fixed_fps_b | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 289s | scratch/agent/soak_results/s7248_fixed_fps_b_20261112-230704.log
