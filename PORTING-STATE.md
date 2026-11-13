@@ -191645,3 +191645,25 @@ can no longer compare arms against a reference that showed no gain.
 Docs: CURRENT-TRUTH item 1 CLOSED s7269 note; OWNER-OPT-INS 16:9 WIDEWIN line settled (optional on the TV, benefit mostly at 21:9).
 Rules out: H-merge16, H-real16 (as measurable effects). Next: the WIDEWIN auto stack (R=88 + merge) has never been checked in cutscenes
 (s7039 covered only the dd6 off-map cull) -> NEXT.md widewin-stack-cutscenes.
+
+## Session 7270 (2026-11-13) — WIDEWIN auto stack (R=88 + merge 0.4 + E16) is invisible in cutscenes at 21:9 dd4 (AT THE MOVIES, same-run tog3; first control too weak, second control R0 off-map cull fires 3.36-3.78); new tog3 for WIDEWIN R/MERGE
+
+Work unit (NEXT.md widewin-stack-cutscenes): the stack was qualified in flight only; cutscene cameras look across side/off-map terrain and the merge pass
+could pop on a slow pan. Engineering: src/main/upstream_compat.cpp ROGUESQ_DD_WIDEWIN_R_TOG=3 + _R3=a,b,c (R per (mach s)%3 phase, the s7030/s7039 tog3
+clock; R<=0 = off phase) and ROGUESQ_DD_WIDEWIN_MERGE_TOG=3 + _MERGE3=a,b,c (merge on/off per phase, default 0,1,1). Startup lines print r3=/m3=.
+Note: the [s7233] tally still splits by on/off (ph=1 pools the two on phases).
+Recipe tools/s7270_widewin_cut_mov_219.zsh (s7039 route, private wd scratch/s6908/wd, owner save untouched, 21:9 FPS60 dd4 WIDEWIN STACK=0 + explicit
+R3=0,88,1 MERGE3=0,1,1 MERGE_E=16, frontmost keeper, 960 s, capture 180-950 s 384x164). AC, HID idle ~6 h, screen unlocked.
+Run t3 (control ph2 = R=1 + merge): 0 crash, 50137 frames. Counters: merged ph0 0 / on 6.04M; R skip/call 0.0 off / 5.5 on, only 11 of 235 on-tally lines
+nonzero -> in cutscenes the wide window rarely holds non-empty wide-only cells. Ranker (scratch/s7039/rank3 = tools/g5h_toggle_rank3.cpp): 0->1 p99 1.17 max 1.88,
+1->2 p99 1.30 max 1.79, mid-second control p99 1.59 max 2.10 -> the R=1 control did NOT fire: VOID as a null (rule 1). Top edges viewed (scratch/s7270/top01.jpg):
+ship motion, camera pan, fades to black.
+Run t4 (control ph2 = R1 + merge + s7039 ungated off-map cull R=0 via ROGUESQ_DD_OFFMAPCULL=tog3 _R=-1,-1,0 _K=0,0,0 _H=off): 0 crash, 50251 frames,
+merged ph0 0 / on 3.39M, [s7031] ocull only in ph2. Edges: 0->1 (off->stack) n 211 p90 1.03 p99 1.26 max 1.54; 1->2 (->control) p99 2.05 max 3.36; 2->0 p99 2.04
+max 3.78; mid-second control n 611 p99 1.45 max 2.85. Positive control PASS: 2->0 t=552.4/549.4 (ratio 3.78/3.11) is s7039's green-field X-wing shot, the
+ground band restored on leaving the cull (sheet row 5); 1->2 t=224.4 (3.36) is a cockpit fade (HUD dims too: scene, not cull, row 4). Top 3 off->stack edges
+viewed (t=1.4 hangar people moving, 121.4 and 82.4 ships moving over identical terrain): no ground loss, no popping.
+Verdict: H-clean at 21:9 dd4. Two lines: image ranker with same-run control + counters (merge acts in cutscenes, R barely does). Single run per control.
+Sheet docs/owner_sheet_s7270_widewin_stack_cutscenes.jpg; OWNER-OPT-INS WIDEWIN paragraph extended.
+Rules out: H-cut (stack removes cutscene ground) at 21:9; H-pop (merge popping) at the ranker's resolution (a sliver would hide in the control spread).
+Next: same check at 16:9 (owner TV), queued as soak s7270_169_cutscenes (tools/s7270_widewin_cut_mov_169.zsh, unmodified s6792 w1024 gate).

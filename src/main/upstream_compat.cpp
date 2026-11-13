@@ -453,12 +453,18 @@ extern "C" int rs64_s7009_n(void) {
 extern "C" { int g_rs64_s7233_r = 0; int g_rs64_s7233_wr = 0; }
 namespace { int s7233_x0, s7233_x1, s7233_z0, s7233_z1; float s7233_ex, s7233_ez; int s7233_ph; unsigned long long s7233_h[2][17], s7233_sk[2], s7233_in[2]; unsigned s7233_n[2]; int s7233_lp; }
 extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float ez) {
-    static int r = -1, tg = 0;
+    static int r = -1, tg = 0, r3[3] = {0, 0, 0};
     if (r < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_R"); r = (e && *e) ? atoi(e) : 0; if (r < 0) r = 0;
-        const char* g = getenv("ROGUESQ_DD_WIDEWIN_R_TOG"); tg = (g && *g == '1');
-        fprintf(stderr, "[s7233] widewin_r=%d tog=%d\n", r, tg); }
-    int ph = 1;
-    if (tg) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); } ph = rs64_tog_odd(mt); }
+        const char* g = getenv("ROGUESQ_DD_WIDEWIN_R_TOG"); tg = (g && *g == '1') ? 1 : (g && *g == '3') ? 3 : 0;
+        /* s7270: _R_TOG=3 cycles R over ROGUESQ_DD_WIDEWIN_R3=a,b,c on (mach s)%3 (the s7030/s7039 tog3 clock, g5h_toggle_rank3);
+           a phase with R<=0 is the off phase (tally only). r becomes the largest phase value so the tally gate stays armed. */
+        if (tg == 3) { const char* v = getenv("ROGUESQ_DD_WIDEWIN_R3"); if (v) sscanf(v, "%d,%d,%d", &r3[0], &r3[1], &r3[2]);
+            r = 0; for (int i = 0; i < 3; i++) { if (r3[i] < 0) r3[i] = 0; if (r3[i] > r) r = r3[i]; } }
+        fprintf(stderr, "[s7233] widewin_r=%d tog=%d r3=%d,%d,%d\n", r, tg, r3[0], r3[1], r3[2]); }
+    int ph = 1, rr = r;
+    if (tg == 1) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); } ph = rs64_tog_odd(mt); }
+    else if (tg == 3) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); }
+        rr = r3[(mt / 24000000u) % 3u]; ph = rr > 0; }
 
     /* the tally runs whenever the knob is configured (r > 0), so the off phase is histogrammed too */
     /* s7236: flush per phase every 2 s of host time (or 128 calls), calls=<actual>. The s7233 fixed 128-call flush never fired: placements
@@ -472,7 +478,7 @@ extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float e
             fprintf(stderr, "%s\n", buf); s7233_n[lp] = 0; s7233_sk[lp] = s7233_in[lp] = 0; for (int i = 0; i < 17; i++) s7233_h[lp][i] = 0; last[lp] = now; }
         if (!last[ph]) last[ph] = now; }
     s7233_x0 = x0; s7233_x1 = x1; s7233_z0 = z0; s7233_z1 = z1; s7233_ex = ex; s7233_ez = ez; s7233_ph = s7233_lp = ph;
-    g_rs64_s7233_r = (r > 0 && ph) ? r : 0; g_rs64_s7233_wr = g_rs64_s7233_r;
+    g_rs64_s7233_r = (rr > 0 && ph) ? rr : 0; g_rs64_s7233_wr = g_rs64_s7233_r;
     if (r > 0) { s7233_n[ph]++; g_rs64_s7233_r = g_rs64_s7233_r ? g_rs64_s7233_r : -1; } /* -1 = tally only (off phase) */
 }
 extern "C" int rs64_s7233_cell(int wx, int wz) {
@@ -505,7 +511,7 @@ bool s7239_dist(uint32_t e, float* d, bool* stale) {
     uint32_t h = s7239_hash(e);
     for (int k = 0; k < 64; k++, h = (h + 1) & (S7239_HN - 1)) { if (s7239_he[h] == e) { if (s7239_hg[h] != s7239_gen) { *stale = true; return false; } *d = s7239_hd[h]; return true; } if (!s7239_he[h]) return false; }
     return false; }
-float s7239_frac = 0.f; int s7239_tg = 0;
+float s7239_frac = 0.f; int s7239_tg = 0; int s7239_m3[3] = {0, 1, 1};
 struct S7239E { uint32_t e; int32_t x, z, yb, v; uint16_t mat; uint8_t b21, b2e, flat, role, dup, cap; int8_t h[4]; int32_t p[3]; uint32_t cmd; uint32_t w[10]; };
 std::vector<S7239E> s7239_l; std::vector<std::pair<uint64_t, int32_t>> s7239_key, s7239_el;
 enum { T_GRP, T_NOWW, T_FLAG, T_EL, T_FLAT, T_CAND, T_ANC, T_DROP, T_OVF, T_MISS, T_NEAR, T_UNM, T_DUP, T_MERGED, T_STALE, T_FLATE, T_FLATC, T_SHMIS, T_DH0, T_DH1, T_DH2, T_DH3, T_DH4, T_DH5, T_DH6, T_DH7, T_N };
@@ -523,8 +529,10 @@ int32_t s7239_find(const std::vector<std::pair<uint64_t, int32_t>>& v, uint64_t 
 inline uint64_t s7239_k(int32_t x, int32_t z, int32_t v) { return ((uint64_t)(uint32_t)x << 40) ^ ((uint64_t)(uint32_t)(z & 0xFFFFF) << 20) ^ (uint64_t)(v & 0xFFFFF); }
 inline int32_t s7239_fdiv(int32_t a, int32_t b) { int32_t q = a / b; if ((a % b) && ((a < 0) != (b < 0))) q--; return q; }
 struct S7239Init { S7239Init() { const char* e = getenv("ROGUESQ_DD_WIDEWIN_MERGE"); s7239_frac = (e && *e) ? (float)atof(e) : 0.f;
-    const char* g = getenv("ROGUESQ_DD_WIDEWIN_MERGE_TOG"); s7239_tg = (g && *g == '1');
-    if (s7239_frac > 0.f) { g_rs64_s7239_on = 1; fprintf(stderr, "[s7239] widewin_merge frac=%.3f tog=%d\n", s7239_frac, s7239_tg); } } };
+    const char* g = getenv("ROGUESQ_DD_WIDEWIN_MERGE_TOG"); s7239_tg = (g && *g == '1') ? 1 : (g && *g == '3') ? 3 : 0;
+    /* s7270: _MERGE_TOG=3 = merge on in the (mach s)%3 phases flagged by ROGUESQ_DD_WIDEWIN_MERGE3=a,b,c (default 0,1,1) */
+    if (s7239_tg == 3) { const char* v = getenv("ROGUESQ_DD_WIDEWIN_MERGE3"); if (v) sscanf(v, "%d,%d,%d", &s7239_m3[0], &s7239_m3[1], &s7239_m3[2]); }
+    if (s7239_frac > 0.f) { g_rs64_s7239_on = 1; fprintf(stderr, "[s7239] widewin_merge frac=%.3f tog=%d m3=%d,%d,%d\n", s7239_frac, s7239_tg, s7239_m3[0], s7239_m3[1], s7239_m3[2]); } } };
 }
 namespace { S7239Init s7239_init; }
 // s7258: the dd6 bundle (main.cpp rs64_g1c_apply_dd_policy) setenvs the WIDEWIN stack after these static initialisers ran;
@@ -552,7 +560,7 @@ extern "C" void rs64_s7239_group(uint8_t* rd, uint32_t s1, uint32_t s0, int ww) 
     s7239_emitted = 1;
     const uint64_t now = mach_absolute_time();
     int ph = 1;
-    if (s7239_tg) { static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(now); } ph = rs64_tog_odd(now); }
+    if (s7239_tg) { static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(now); } ph = s7239_tg == 3 ? (s7239_m3[(now / 24000000u) % 3u] != 0) : rs64_tog_odd(now); }
     s7239_ph = ph; g_rs64_s7239_wm = ph; s7239_flush(now);
     if (!ww) { s7239_t[ph][T_NOWW]++; return; }
     s7239_t[ph][T_GRP]++;

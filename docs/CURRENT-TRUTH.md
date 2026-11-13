@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7269 (2026-11-13).
+Compact operational handoff, as of Session 7270 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -360,6 +360,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.
    Not shown: real Low Power Mode on the clock probe (only the DUTY stand-in). Boot freeze stays passive: hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+   **s7270: the stack is invisible in cutscenes at 21:9 dd4** (AT THE MOVIES, same-run tog3 ph0 off / ph1 auto stack / ph2 control; new
+   ROGUESQ_DD_WIDEWIN_R_TOG=3 _R3 and _MERGE_TOG=3 _MERGE3): off->stack edges p99 1.26 max 1.54 vs mid-second control p99 1.45 max 2.85; control
+   (R1 + merge + ungated off-map cull R0) fires 3.36-3.78 (green-field shot). Top edges viewed = ship motion/fades. Merge acts (3.4M merged), R barely
+   (wide-only cells rare in cutscene views). A R=1-only control does NOT fire (t3 run VOID as null). Queued s7270_169_cutscenes (16:9).
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

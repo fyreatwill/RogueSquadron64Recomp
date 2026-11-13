@@ -1,14 +1,10 @@
-# NEXT (s7270): is the WIDEWIN auto stack (R=88 + merge 0.4 + E16) invisible in cutscenes?
+# NEXT (s7271): fold s7270_169_cutscenes (WIDEWIN auto stack in cutscenes at 16:9, owner TV)
 HYPOTHESIS-ID: widewin-stack-cutscenes
-Why: s7039 checked only the dd6 off-map cull across AT THE MOVIES; the WIDEWIN stack (s7258/s7266) was qualified in flight only
-(s7247/s7259/s7262 holes/seams, s7264-s7268 side edges). Cutscene cameras look across off-map/side terrain that flight never covers,
-and the merge pass replaces 2x2 flat far cells with one, which a slow cutscene pan could show as popping.
-Design (s7039 template, rule 2: ONE run, same-run toggle): copy scratch/s7039/mov.zsh (AT THE MOVIES route, private wd scratch/s6908/wd,
-owner save untouched) -> scratch/s7270/mov.zsh; 21:9 FPS60 dd4 WIDEWIN=1 CULL_SPIKE, with the stack cycling per second via a tog3
-on R/MERGE if apply_s7233/s7239 support tog (check `grep -n tog tools/apply_s7233_widewin_r.py tools/apply_s7239_widewin_merge.py`
-and main.cpp [s7258]); ph0 = STACK off, ph1 = auto stack (R=88 merge 0.4 E16), ph2 = positive control R=48 (known to eat side cells, s7264).
-If no tog exists for R/MERGE, add one in the fixup (same pattern as [s7233] widewin_r tog) - that is the engineering change.
-Score: tools/g5h_toggle_rank3.cpp edges 0->1 vs 1->2 vs mid-second control (s7039 thresholds); view top edges; sheet via tools/s7267_tog_sheet.py.
-Outcomes: H-clean (0->1 inside control spread, 1->2 R=48 control fires) -> close, OWNER-OPT-INS note; H-cut (0->1 edges with ground
-loss/popping viewed) -> gate the stack off in cutscenes (cinematic-mode flag) and re-score; control fails -> instrument VOID, fix first.
-Queue as a soak (# SOAK_NEEDS_IDLE=120, drives keys) if the owner is active; do not babysit.
+State: s7270 closed 21:9 dd4 as H-clean (control R0 off-map cull fired 3.36-3.78; off->stack max 1.54 < control spread). The 16:9 run is queued as
+scratch/agent/soak_queue/s7270_169_cutscenes.sh (tools/s7270_widewin_cut_mov_169.zsh, SOAK_NEEDS_IDLE=120). Read its SOAK-RESULTS line and
+scratch/s7270/rank_s169.txt (+ run_s169.log).
+Hypotheses: H-clean169 (0->1 edges inside the mid-second control spread AND 1->2/2->0 control edges >= ~3, the green-field shot) -> close the thread,
+OWNER-OPT-INS 16:9 note; H-cut169 (an off->stack edge above the control max that a view shows as lost ground/pop) -> gate the stack off in cutscenes;
+control does not fire -> VOID, check [s7031] ph2 ocull > 0 and the w1024 gate reached the playlist (frames > 40000).
+View: python3 tools/s7270_tog3_sheet.py scratch/s7270/s169.raw out.jpg 8 <frames of top 0->1 and top control edges>; delete the 8.8 GB raw after.
+If the soak has not run (owner active), do NOT babysit: take the next ladder item (CURRENT-TRUTH Next steps; all remaining are owner-look, so 3c G-ladder).
