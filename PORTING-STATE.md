@@ -191787,3 +191787,24 @@ capture itself runs on the loaded host, so it is not a game-rate measure.
 Rules out: CPU contention as the owner's freeze mechanism (single run per arm).
 Discrimination: selects H-robust over H-host.
 Next: H-slow in ONE run: game-side frame clock (G1b instrument) with the spinners toggled on/off every 60 s, plus a GPU-load arm.
+
+## Session 7277 (2026-11-13) — G5c within-run load toggle: CPU load (15 spinners) drops the game 60 -> 49 fps with 5 gen gaps 250-567 ms; ROGUESQ_QOS_ALL=1 under the same toggle holds 59.5 fps with 0 -> H-cpu-slow selected, QoS fixes it; GPU saturation drops to 16.6 fps (no long gaps)
+Work unit: NEXT s7277 (HYPOTHESIS-ID g5c-busy-host). Owner PLAIN recipe (FPS60 dd4 16:9 FULLSCREEN, L12, 600 s capture), host load
+switched on/off every 60 s inside ONE run (iron rule 2), the game's own present clock (ROGUESQ_PRESENT_RING: Q rows with wall t and
+framebuffer gen) scored per window; SIGSTOP 1 s controls at +180/+280/+380 s cut out and scored separately. Host quiet (HID idle 9.4 h,
+screen unlocked). New tools: tools/s7277_toggle_load_arm.zsh (LOAD=cpu|gpu, GXE= extra game env), tools/s7277_toggle_score.py,
+tools/s7277_gpu_busy.swift (saturating Metal compute, 28 cb/s x 35 ms); tools/s7272_g5c_hold_arm.zsh gains XE=.
+| arm | load-on game fps (4 windows) | load-off | gen gaps >= 250 ms on/off | gaps >= 100 ms on/off | max gap on | present gpu p95 on | control |
+| cpu15 (15 `yes`) | 49.4 (49.3/49.5/47.6/50.9) | 60.0 | 5 / 1 | 78 / 1 | 567 ms | 1.48 ms | 3/3 |
+| gpu (Metal saturate) | 16.6 (17.2/16.1/15.9/17.3) | 60.0 | 0 / 0 | 56 / 0 | 132 ms | 26.25 ms | 3/3 |
+| cpu15qos (+ROGUESQ_QOS_ALL=1) | 59.5 (59.5/59.7/59.6/59.4) | 60.0 | 0 / 0 | 1 / 0 | 112 ms | 0.37 ms | 3/3 |
+(the last "off" window is the run's tail/kill, ignored; the one off-window 274 ms gap in cpu15 is window 4, single.)
+Second line, capture-side image-hold scorer (tools/s7272_image_hold.py, same runs): cpu15 7 holds 267-425 ms, cpu15qos 0, control 3/3 each.
+This overturns s7276's reading (H-robust: "CPU load does not make the freeze"): s7276's capture-only scorer saw 1 hold but the
+capture runs on the same loaded host; the game's own clock shows CPU contention does slow it (~18%) and does freeze it for 250-570 ms.
+s6989 already showed QOS_ALL cuts late frames under load (178 -> 6); this is the freeze-scale version.
+GPU arm: a saturating GPU neighbour makes a steady slowdown to ~17 fps (present pass queued behind 35 ms compute buffers), not freezes;
+a real neighbour (browser WebGL, video) is far lighter, and QoS cannot reorder another process's GPU work, so it was not re-armed.
+Selects H-cpu-slow (+ H-gpu as steady slowdown) over H-none. Single run per arm; two scorers agree.
+Rules out: G5c being a game-internal stall on a quiet host (s7275), and QoS being cosmetic under load.
+Next: owner decision -- make ROGUESQ_QOS_ALL=1 the default (=0 retail scheduling); replicate cpu15/cpu15qos on L4 first.

@@ -3,12 +3,13 @@
 # usage: env TAG=<name> ASP=16:9|21:9 CW=480|630 zsh tools/s7272_g5c_hold_arm.zsh ; analysis tools/s7272_image_hold.py (holds per tog3 phase, SIGSTOP control windows apart).
 # s7274: LEVEL=<n> (default 4) picks the level; FS=1 adds ROGUESQ_FULLSCREEN=1 (owner recipe).
 # PLAIN=1: no WIDEWIN/MELT env at all (owner env only; tog3 phase labels then mean nothing). DUR=<s> capture length (default 300).
+# XE=<env>: extra game env appended (s7277: ROGUESQ_PRESENT_RING=<abs path>).
 # KEEP=1: write $O/holds_sheet.jpg + sheet.txt (tools/s7273_hold_sheet.py) before the raw is deleted.
 # Exit 3 when the SIGSTOP control is not caught 3/3 (>=900 ms), 1 on a crash line.
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 T=${TAG:-s7272f}; LV=${LEVEL:-4}; O=scratch/s7272/$T; mkdir -p $O; : > $O/ctl.txt
 E="ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=1 ROGUESQ_DD_WIDEWIN_STACK=0 ROGUESQ_DD_WIDEWIN_R=88 ROGUESQ_DD_WIDEWIN_R_TOG=3 ROGUESQ_DD_WIDEWIN_R3=0,88,88 ROGUESQ_DD_WIDEWIN_MERGE=0.4 ROGUESQ_DD_WIDEWIN_MERGE_E=16 ROGUESQ_DD_WIDEWIN_MERGE_TOG=3 ROGUESQ_DD_WIDEWIN_MERGE3=0,1,0${FS:+ ROGUESQ_FULLSCREEN=1}"
-[[ -n $PLAIN ]] && E="${FS:+ROGUESQ_FULLSCREEN=1}"; DU=${DUR:-300}
+[[ -n $PLAIN ]] && E="${FS:+ROGUESQ_FULLSCREEN=1}"; E="$E ${XE:-}"; DU=${DUR:-300}
 ( for k in $(seq 1 $(( (DU+150)/10 ))); do /bin/sleep 10; osascript -e 'tell application "System Events" to set frontmost of (first process whose name contains "RogueSquadron64Recomp") to true' >/dev/null 2>&1; done ) & fp=$!
 ( for off in 180 280 380; do /bin/sleep $(( off - ${last:-0} )); last=$off
     pid=$(pgrep -x RogueSquadron64Recomp | head -1); [[ -z $pid ]] && continue
