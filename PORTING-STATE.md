@@ -191467,3 +191467,17 @@ HYPOTHESIS-ID widewin-heavy-window-cost. Owner idle 3194-4758 s, screen unlocked
   the same camera). Raws deleted (25 GB).
 Landed (engineering): tools/s7247_tog_pop.py starved-capture VOID gate; docs sheet; OWNER-OPT-INS distance-6 note updated.
 Verdict: H-clean (single-run, two scorers, control PASS); the dd6 auto stack holds 60 with 0 late dips on the default path (two runs: s7257, s7259).
+
+## Session 7260 (2026-11-13) — s7259_l12_dd6_stack fold: the WIDEWIN stack lifts L12 21:9 dd6's 54-55/s limit (H-ww); stack now auto at any dd>1 + WIDEWIN
+Fold (queued soak, rc=0, scratch/s7259q, L12 confirmed by [ddscene] level=12 in all arms, no LEVEL MISMATCH, 0 crashes, alive=1 x3):
+- control offd (STACK=0 + DUTY 1.4): <55/s 173 s, 4 flat-30 runs 89 s, p50 18.56 ms -> PASS (off 26 s).
+- auto ([s7258] dd6 line present, merged 732817 unm 0): p50 8.94 / p95 11.72 / max 12.10 ms, <55/s 7 s, all at t<=67 (route/load transients the
+  off arm shares at the same t), beyond-route 0 s, flat runs 0.
+- off (STACK=0 = s7055 state): p50 12.02 / p95 17.08 / max 18.99 ms, <55/s 26 s, beyond-route 20 s, one flat-30 run t=76-88 (18.4 ms).
+Verdict: H-ww selected — L12's 21:9 dd6 limit (s7049/s7055 54-55/s) was WIDEWIN cost; the stack removes it. H-other refuted for this run.
+Single run for auto; the off arm reproduces s7049/s7055 (second line of evidence for the baseline only). OWNER-OPT-INS updated.
+Change: src/main/main.cpp rs64_g1c_apply_dd_policy — the [s7258] stack block (R=48, MERGE 0.4, E16, merge reinit) moved out of the dd>=6 branch;
+it now applies at any dd>1 with ROGUESQ_DD_WIDEWIN on (STACK=0 off, explicit values win). Basis: s7247 dd4 image check clean (two runs), s7248 dd4
+fixed-on 9.6 ms/60. Startup check (21:9, 6 s each): dd4+WW prints "[s7258] dd4 widewin stack r=48 merge=0.4 e=16"; dd4+WW+STACK=0 and dd4 without
+WW print none; dd6+WW unchanged (stack + [s7037] bundle). In-mission engagement at dd4 not yet shown: queued s7260_dd4_auto_stack (L4 21:9 dd4,
+auto/off/offd).

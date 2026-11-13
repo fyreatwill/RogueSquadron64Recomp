@@ -415,7 +415,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    [s7239] frac=0.400, STACK=0 prints neither. **s7259:** default-path soak s7258_dd6_auto_stack rc=0, control PASS: auto 9.99 ms/60, 0 beyond-route
    dips, merged 2.28M (engages in mission); STACK=0 13.40 ms + 10 dip s. dd6 image check (same-run tog, holes control PASS 136/142): flip +0.0058 +- 0.0050,
    seams +1.2 px vs A/A -2.8 -> H-clean (single run, two scorers). tog_pop now VOIDs starved captures (<20 fps / <30 flips); keep the game frontmost.
-   Next: queued s7259_l12_dd6_stack (does the stack lift L12 21:9 dd6's 54-55/s limit, s7055?).
+   **s7260:** s7259_l12_dd6_stack rc=0 (L12 confirmed: ddscene level=12, no MISMATCH), control PASS (offd <55/s 173 s vs off 26): auto p50 8.94 /
+   p95 11.72 ms, <55/s 7 s all pre-route (t<=67, same transients as off), beyond-route 0 s, merged 0.73M; off (STACK=0, the s7055 state) p50 12.02 /
+   p95 17.08, beyond-route 20 s incl. flat 30 t=76-88 -> H-ww: L12 21:9 dd6 limit was WIDEWIN cost, lifted (single run; off agrees with s7049/s7055).
+   Landed: [s7258] stack now applies at ANY dd>1 with WIDEWIN on (was dd>=6 only); startup check dd4ww prints [s7258] dd4, STACK=0 / no-WIDEWIN print
+   none, dd6 unchanged. Queued s7260_dd4_auto_stack (L4 21:9 dd4 auto/off/offd) to confirm in-mission engagement + timing at dd4.
    Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;

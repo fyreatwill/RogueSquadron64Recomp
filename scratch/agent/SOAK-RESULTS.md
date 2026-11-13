@@ -1433,3 +1433,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7258 fold: s7257_dd6r_stack rc=0 CONTROL PASS (dd6rd flat30 21 s): dd6r 14.04 ms 9 late dip s (two-run), dd6rs 9.82 ms 0 dips (H-ww), dd6rsd 50.7/s. Stack now auto in dd6 bundle; queued s7258_dd6_auto_stack.
 20261113-003535 | s7258_dd6_auto_stack | rc=0 | 747s | scratch/agent/soak_results/s7258_dd6_auto_stack_20261113-003535.log
 20261113 | s7259 fold: s7258_dd6_auto_stack rc=0 CONTROL PASS (offd flat30 21 s): auto 9.99 ms/60 0 late dips merged 2.28M; off 13.40 ms 10 late dip s. dd6 image check H-clean (single run).
+20261113-010409 | s7259_l12_dd6_stack | rc=0 | 747s | scratch/agent/soak_results/s7259_l12_dd6_stack_20261113-010409.log
+20261113 | s7260 fold: s7259_l12_dd6_stack rc=0 CONTROL PASS (offd 173 s <55): L12 21:9 dd6 auto p50 8.94 ms, 0 beyond-route <55 s; off 12.02 ms, 20 s incl flat30 10 s -> H-ww, L12 limit lifted. Stack extended to dd>1+WIDEWIN; queued s7260_dd4_auto_stack.
