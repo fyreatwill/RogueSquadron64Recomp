@@ -331,7 +331,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    -3.3%; r56 -1.62 ms, +0.8%. Skipping cells cannot add pixels, so r56's +3.8% marks the tog kpx noise floor (~4% window, ~1% flight).
    Both lines agree that the cost moves with R (H-near refuted). r40 buys about 3 ms at a real kpx loss, while r56 buys about 1.7 ms with no measurable loss. About 40-50% of the cut is
    zero-height tris (dtzero -830..-1030 window). WW-only cells peak at d8 56-72. Neither arm meets the dsd <= -3 ms at < 0.5% bar, which leans H-thin
-   (single run per R). The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
+   (single run per R). **s7238: per-cell H-thin refuted** (code-read: retail level 2 = the 4 corner verts = one quad per cell; r40/r56 remove
+   1.1-1.3 tri per skipped cell), so the only thinning past R is a 2x2 cell-merge mesh; scorer now prints tri/cell, ms/ktri and `s7238 BAR`.
+   The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.

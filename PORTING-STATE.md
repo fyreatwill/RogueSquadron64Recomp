@@ -190978,3 +190978,20 @@ Rules out: nothing about H-radius/H-thin/H-near; the discriminator is still unme
   s7235_widewin_r.sh was moved to done/.
 - Rules out: H-near. The remaining questions are whether the kpx-free cut is about 1.7 ms at most (H-thin) or whether R=48 gives about 2.5 ms
   at a loss within noise (H-radius with a softer bar).
+
+## Session 7238 (2026-11-12) — H-thin's per-cell form refuted: the coarsest retail terrain mesh (level 2) is already one 4-corner quad per cell, and r40/r56 remove 1.1-1.3 tri per skipped cell; a coarser far mesh must merge cells. Scorer now prints tri/cell, ms/ktri and the decision bar
+HYPOTHESIS-ID: widewin-heavy-window-cost. CURRENT-TRUTH 42.6 KB, no maintenance. No new soak verdicts: s7237_widewin_r2 (R=48/64/72) still queued,
+the loop skipped it (HID idle 18 s) and this iteration measured idle 49 s at start (owner active), so it was not run here either (rule: one run, quiet host).
+- Code-read, buildGridCellMesh (0x8004B930, funcs_10.c): cell level byte +0x30 gates cumulative passes: level < 3 calls 0x80049814, < 2 adds
+  0x80049BBC, == 0 adds 0x80049FB8, then 0x8004AA94 always. The vertex emitter 0x8004B644 is fed height bytes 0x0, 0x4, 0x14, 0x18 of the
+  5x5 cell height block (the 4 corners) at every level; level < 2 adds 0x2/0xA/0xC/0xE/0x16 (3x3 midpoints), level 0 the rest (5x5).
+  buildGridCellMeshForFace sets level 2 for every node past 7 (s7011), so every WW-only far cell is already a single quad.
+- Second line (offline, scratch/s7233b r40/r56 logs, scorer extended): window tri removed per skipped cell 1.31 (r40) / 1.11 (r56); flight
+  0.68 / 0.81 (skip is the whole-run ph1 mean, so the flight ratio is low-biased). <= 2 = one quad, after the ucode's backface/offscreen
+  rejection. ms per 1000 removed tris 1.16-1.34 (s7231 pooled slope 1.80).
+- Reading: H-thin as "a coarser per-cell mesh for d8 >= R" is impossible: the cell IS the unit (2 tris). The only thinning left beyond the
+  radius is merging cells (one quad over 2x2 cells past R, T-junction cracks against single-cell neighbours, hidden by MELT haze if at all).
+  H-radius stays the lead; the bracket decides it. Two lines (code-read + measured ratio).
+- Change: tools/s7233_widewin_r.py prints per arm `s7238: tri_per_skipped_cell / ms_per_ktri` and `s7238 BAR MET|not met` (window dsd <=
+  -2.5 ms and flight |dkpx| <= 1%). Replay on r40/r56: both "not met" (r40 -3.19 ms but flight -3.3%; r56 flight +0.8% but -1.94 ms).
+- Rules out: retail LOD (s7011) and per-cell coarsening as levers. Leaves: radius (bracket R=48/64/72) or a 2x2 merge mesh past R.

@@ -43,6 +43,7 @@ for p in a.logs:
         n = len(L); h = [sum(x[2][i] for x in L) / n for i in range(17)]
         print(f'  [s7233] ph{ph}: in={sum(x[0] for x in L)/n:.0f} skip={sum(x[1] for x in L)/n:.0f} wide cells/placement by d8: ' +
               ' '.join(f'{8*i}:{v:.0f}' for i, v in enumerate(h) if v >= 0.5))
+    summ = {}
     for name, lo, hi in (('window', a.t0, a.t1 - 1), ('flight', a.flight0, a.flight1)):
         res = {}
         for on in (0, 1):
@@ -56,4 +57,12 @@ for p in a.logs:
         x, y = res[1], res[0]
         print(f'  {name:6s} on-off: dsd={x["sd"]-y["sd"]:+.2f}ms dtri={x["tri"]-y["tri"]:+.0f} dtin={x["tin"]-y["tin"]:+.0f} '
               f'dtzero={x["tzero"]-y["tzero"]:+.0f} dkpx={x["kpx"]-y["kpx"]:+.1f} ({(x["kpx"]-y["kpx"])/max(y["kpx"],1e-9):+.1%})')
+        # s7238: triangles removed per skipped cell (level-2 retail mesh = one 4-corner quad per cell, so <= 2 when the cell
+        # is the unit of cost) and ms per 1000 removed tris (s7231 pooled slope 1.80)
+        sk = sum(x_[1] for x_ in tl[1]) / max(len(tl[1]), 1); dt = y["tri"] - x["tri"]
+        print(f'  {name:6s} s7238: tri_per_skipped_cell={dt / max(sk, 1e-9):.2f} ms_per_ktri={(y["sd"] - x["sd"]) / max(dt / 1000, 1e-9):.2f}')
+        summ[name] = (x["sd"] - y["sd"], (x["kpx"] - y["kpx"]) / max(y["kpx"], 1e-9))
+    # s7238 decision bar (NEXT s7237): H-radius met when window dsd <= -2.5 ms and flight |dkpx| <= 1%
+    w, f = summ.get('window', (0, 0)), summ.get('flight', (0, 0))
+    print(f'  s7238 BAR {"MET" if w[0] <= -2.5 and abs(f[1]) <= 0.01 else "not met"} (window dsd {w[0]:+.2f} ms, flight dkpx {f[1]:+.1%})')
 sys.exit(3 if bad else 0)
