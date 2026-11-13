@@ -328,7 +328,12 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    **s7264: the auto stack ERASES WIDEWIN's side-edge gain** (L4 dd4, same-run WIDEWIN=tog parity, g5e_edge_score hard80% off->on L/C/R,
    capture 52-63 frames/s): 21:9 stack on 23.2->22.5 / 29.7->28.7 / 20.7->21.1 (no gain); 21:9 STACK=0 17.5->13.1 / 29.1->29.3 / 17.6->12.6
    (gain re-fires, = s7009); 16:9 stack on 21.5->24.1 / 31.1->30.6 / 19.1->18.7 (no gain). So "stack is free" = the stack removes the cells
-   that WIDEWIN adds, visible gain included (single run per arm). Open: R=48 vs merge, and 16:9 STACK=0: queued s7264_stack_edge, NEXT.md.
+   that WIDEWIN adds, visible gain included (single run per arm). **s7265 (fold of s7264_stack_edge, control c219 STACK=0 L/R -6.4/-8.0 PASS,
+   51-56 capture frames/s, 0 crash): R=48 is the eater (H-R)**: 21:9 R=0 (merge+E16 kept) L/R hard80 21.9->15.8 / 21.1->14.7 (gain kept);
+   16:9 STACK=0 21.4->17.6 / 21.0->15.9 (H-gain16: WIDEWIN does widen the 16:9 sides). Second line: the [s7233] wide_by_d8 histograms
+   (tools/s7265_ww_r_predict.py, L4 21:9, L4 16:9, L12 21:9 runs) put the wide-only cells at 32-96 cells from the eye, so R=48 skips
+   92-95% of them (predicted = measured skip/call); R=72 keeps ~65%, R=88 ~98%. Open: does R=72/88 (+merge) keep 60/s and the side gain?
+   Queued s7265_ww_r_cost (timing, w0d DUTY control) + s7265_ww_r_edge (image, c219 control); NEXT.md.
    Capture hygiene: s7263_169_edge (rc=0) and its first re-run were void, 133-142 frames/180 s, Chrome frontmost; the s7009 arm lacked the
    s7259 frontmost keeper. tools/s7263_widewin_edge_arms.zsh now keeps the game in front and fails (rc=3) under 10 captured frames/s.
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.

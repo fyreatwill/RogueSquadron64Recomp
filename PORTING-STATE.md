@@ -191550,3 +191550,22 @@ HYPOTHESIS-ID: widewin-169-tv. CURRENT-TRUTH 42.1 KB, no maintenance.
 - OWNER-OPT-INS WIDEWIN line: correction added (auto settings show nothing extra; STACK=0 shows softer 21:9 side edges at ~3-4 ms cost).
 - Queued scratch/agent/soak_queue/s7264_stack_edge.sh (SOAK_TIMEOUT=1500, idle 180): 16:9 STACK=0, 21:9 R=0 (merge only), 21:9 STACK=0 control.
 Verdict: selects H-stack-eats (21:9), voids s7263_169_edge; next discriminator R=48 vs merge as the eater, and 16:9 STACK=0 side gain.
+
+## Session 7265 (2026-11-13) — s7264_stack_edge fold: the auto stack's R=48 radius cut (not merge) eats WIDEWIN's side gain; WIDEWIN does widen 16:9; R=48 skips 92-95% of all wide cells
+HYPOTHESIS-ID: widewin-169-tv. CURRENT-TRUTH 43.2 KB, no maintenance.
+- Soak fold (s7264_stack_edge, rc=0, 1074 s, 0 crash lines, capture 51/56/56 frames/s so not starved), L4 dd4 FPS60 MELT, WIDEWIN=tog parity,
+  g5e_edge_score hard80% fog=0 -> fog=1 (WW off -> on), left / right thirds:
+  c219 (21:9 STACK=0, positive control) 23.0->16.6 / 22.6->14.6 (-6.4/-8.0, PASS, = s7264c -4.4/-5.0 and s7009);
+  m219 (21:9 stack with ROGUESQ_DD_WIDEWIN_R=0, [s7258] r=0 merge=0.4 e=16 printed) 21.9->15.8 / 21.1->14.7 (-6.1/-6.4);
+  s169 (16:9 STACK=0) 21.4->17.6 / 21.0->15.9 (-3.8/-5.1). Centre thirds flat in all arms.
+- Reading: H-R selected (merge+E16 keep the gain; with R=48 in s7264 the gain was -0.7/+0.4), H-merge refuted. H-gain16 selected: WIDEWIN
+  softens the 16:9 side edges too (smaller than 21:9, as expected from the narrower frustum widening). Single run per arm, same-run toggles.
+- Second line of evidence, offline (new tools/s7265_ww_r_predict.py over the [s7233] wide_by_d8 histograms already logged): wide-only cells
+  sit 32-96 cells from the eye (peak 64-72). R=48 skips 92.8% (L4 21:9 s7247e16r48), 95.2% (L4 16:9 s7263a169), 91.5% (L12 21:9 s7262l12dd4s)
+  of them; the predictor reproduces each run's measured skip/call exactly (2074, 1817, 2083), which is its positive control. Predicted keep:
+  R=72 ~61-68%, R=88 ~97-98%. So s7262/s7263 "stack is free / costs nothing at 16:9" measured WIDEWIN ~95% off plus merge; the timing results
+  stand, their reading does not.
+- Queued: scratch/agent/soak_queue/s7265_ww_r_cost.sh (L4 21:9 dd4 heavy window, arms r0 / r72 / r88 / w0d STACK=0+DUTY=1.4 control) and
+  s7265_ww_r_edge.sh (21:9 edge, arms r72 / r88 / c219 STACK=0 control).
+Verdict: selects H-R and H-gain16, refutes H-merge and H-free16. Next discriminator: the smallest R that keeps the side gain at 60/s
+(H-keep), or none does (H-clash: side gain and dd4 frame budget conflict at R; then merge-only or owner choice).
