@@ -1,11 +1,14 @@
-# NEXT (s7278): G5c QOS_ALL replicate on L4 (owner's Gerrard V) under the s7277 CPU toggle
-HYPOTHESIS-ID: g5c-qos-default
-State: s7277 L12 within-run toggle: CPU load 60 -> 49.4 fps + 5 gaps >= 250 ms; QOS_ALL=1 59.5 fps, 0 gaps (control 3/3). Single run per arm.
-Hypotheses: H-qos-general (QOS_ALL removes load freezes on any level); H-level (L4's heavier windows still freeze with QOS_ALL);
-H-fluke (s7277 cpu15qos was a lucky run: replicate shows gaps).
-Commands (one game at a time, check HID idle >= 120 s + screen unlocked):
-  env LOAD=cpu TAG=l4cpu LEVEL=4 zsh tools/s7277_toggle_load_arm.zsh
-  env LOAD=cpu TAG=l4cpuqos LEVEL=4 GXE=ROGUESQ_QOS_ALL=1 zsh tools/s7277_toggle_load_arm.zsh
-  python3 tools/s7277_toggle_score.py l4cpu ; python3 tools/s7277_toggle_score.py l4cpuqos
-Expected: H-qos-general -> l4cpu shows on-window gaps, l4cpuqos 0 and ~60 fps: write the owner the default question (OWNER-OPT-INS row s7277).
-H-level -> name the stalled thread (sample the process during an on-window gap). Do not change the default without the owner.
+# NEXT (s7279): G5c which QoS part removes the load freezes (split QOS_ALL into its five knobs)
+HYPOTHESIS-ID: g5c-qos-split
+State: QOS_ALL=1 removes CPU-load freezes on L12 (s7277) and L4 (s7278): on-load 52 -> 59.6 fps, real image freezes 3 -> 0,
+control 3/3. QOS_ALL = GFX_QOS + GUEST_QOS + PRESENT_QOS + WL_QOS + UPLOAD_QOS (main.cpp s6989). Owner default question open.
+Hypotheses: H-guest (the guest CPU / game thread losing P-cores is the freeze: GUEST_QOS alone ~= QOS_ALL);
+H-gfx (the RSP gfx / RDP thread: GFX_QOS alone ~= QOS_ALL); H-combo (no single knob suffices, need >= 2).
+Commands (one game at a time; HID idle >= 120 s, screen unlocked: ioreg -n Root -d1 | grep CGSSessionScreenIsLocked):
+  env LOAD=cpu TAG=l4guest LEVEL=4 GXE=ROGUESQ_GUEST_QOS=1 zsh tools/s7277_toggle_load_arm.zsh
+  env LOAD=cpu TAG=l4gfx   LEVEL=4 GXE=ROGUESQ_GFX_QOS=1   zsh tools/s7277_toggle_load_arm.zsh
+  python3 tools/s7277_toggle_score.py l4guest ; python3 tools/s7277_toggle_score.py l4gfx
+  grep ctl=0 scratch/s7272/l4{guest,gfx}/sheet.txt   # held luma > 0 = real freeze, 0 = black transition
+Baselines (same recipe): l4cpu on-load 52.0 fps, 3 real freezes; l4cpuqos 59.6 fps, 0.
+Expected: one arm ~59.5 fps / 0 real freezes -> that part carries it (smaller default proposal for the owner);
+both ~52 -> H-combo, run GUEST+GFX together next. Do not change the default without the owner.

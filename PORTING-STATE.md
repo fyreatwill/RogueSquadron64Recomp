@@ -191808,3 +191808,28 @@ a real neighbour (browser WebGL, video) is far lighter, and QoS cannot reorder a
 Selects H-cpu-slow (+ H-gpu as steady slowdown) over H-none. Single run per arm; two scorers agree.
 Rules out: G5c being a game-internal stall on a quiet host (s7275), and QoS being cosmetic under load.
 Next: owner decision -- make ROGUESQ_QOS_ALL=1 the default (=0 retail scheduling); replicate cpu15/cpu15qos on L4 first.
+
+## Session 7278 (2026-11-13) — G5c QOS_ALL replicate on L4 (Gerrard V) under the s7277 within-run CPU toggle: no-QoS 60 -> 52.0 fps on-load with 3 real image freezes 357-700 ms; QOS_ALL=1 59.6 fps on-load, 0 real freezes (control 3/3 each) -> H-qos-general
+
+What ran: `env LOAD=cpu TAG=l4cpu LEVEL=4 zsh tools/s7277_toggle_load_arm.zsh` then the same with `TAG=l4cpuqos
+GXE=ROGUESQ_QOS_ALL=1` (PLAIN owner env FPS60 dd4 16:9 FULLSCREEN, 600 s, 15 `yes` spinners toggled every 60 s from
+t=150 s, first window off; SIGSTOP 1 s controls x3). Host: HID idle 10 h, screen unlocked, AC; background mediaanalysisd ~90%
+CPU in both arms (shared noise). QoS arm log confirms `[s6989] QOS_ALL gfx=1 guest=1 present=1 wl=1 upload=1`; the no-QoS
+arm has 0 such lines.
+
+Results (tools/s7277_toggle_score.py, game's own present ring, control gap >= 900 ms):
+- l4cpu (no QoS): control 3/3 CAUGHT (1036/1034/1062 ms). Load-on windows 50.9/51.2/54.2/51.5 fps, mean 52.0, gen gaps >= 250 ms 6,
+  >= 100 ms 48, max 700 ms; load-off windows 60.0 (first off window 59.6 with one 275 ms gap), gaps >= 100 ms 1.
+- l4cpuqos (QOS_ALL=1): control 3/3 CAUGHT (1037/1022/1023 ms). Load-on windows 59.6/59.6/59.7/59.6 fps, mean 59.6, gaps >= 250 ms 1
+  (356 ms), >= 100 ms 1; load-off windows 58.9-60.0, 6 gaps >= 250 (max 366 ms).
+- Second line of evidence, the capture image-hold scorer (tools/s7273_hold_sheet.py on the 480x270 window capture, held-frame
+  luma): no-QoS non-control holds 7, of which 3 hold a LIT picture = real freezes (+90.3 s 357 ms luma 35, +235.7 s 700 ms luma 103,
+  +497.0 s 372 ms luma 30) and 4 hold black (luma 0 = L4 death/restart transitions, s7275). QoS arm non-control holds 6, ALL held
+  luma 0 (black transitions) -> 0 real freezes. Sheets scratch/s7272/l4cpu{,qos}/holds_sheet.jpg.
+- The present-ring gaps that remain in the QoS arm (and in its off windows) line up with those black transitions, not with load.
+
+Reading: H-qos-general selected (two lines: present ring fps/gaps + image holds, control-passed, same recipe on both arms).
+H-level refuted (L4's heavier windows do not freeze with QOS_ALL). H-fluke refuted for s7277 (replicated on a second level).
+Caveat: one run per arm per level (L12 s7277, L4 s7278); the toggle is within-run, so the on/off split is not cross-run.
+Not changed: the default. The owner decides QoS default (OWNER-OPT-INS row updated with the L4 numbers).
+Rules out: background CPU load being harmless on the owner's mission (Gerrard V); QOS_ALL working only on L12.
