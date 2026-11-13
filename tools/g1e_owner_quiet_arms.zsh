@@ -34,8 +34,8 @@ clk(){ local b m; b=$(awk 'NR==1{print $1}' $TOOLS/s7253_clkprobe.base 2>/dev/nu
 pwr(){ pmset -g batt 2>/dev/null | awk -F"'" 'NR==1{s=($2=="AC Power")?"AC":"BATT"} NR==2{match($0,/[0-9]+%/); c=substr($0,RSTART,RLENGTH)} END{print s c}'; }
 locked(){ /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes'; }
 watch_human(){ local p=$(idle) c t=0 f0="" f w0=$(date +%s) w; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle);
-  w=$(date +%s); if (( w - w0 > 20 )) || locked; then echo "$(date +%T) $2 host slept/locked t=$t wall +$((w-w0))s, arm void" >> $R/arms.log; echo void > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; w0=$w
-  f=$(front); [[ -n $f && $f != $f0 ]] && { echo "$(date +%T) $2 front t=$t $f" >> $R/arms.log; f0=$f; }; if (( c + 1 < p )); then echo "$(date +%T) $2 human input t=$t idle $p -> $c, arm void" >> $R/arms.log; echo void > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; p=$c; done; }
+  w=$(date +%s); if (( w - w0 > 20 )) || locked; then echo "$(date +%T) $2 host slept/locked t=$t wall +$((w-w0))s, arm void" >> $R/arms.log; echo "void $t lock" > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; w0=$w
+  f=$(front); [[ -n $f && $f != $f0 ]] && { echo "$(date +%T) $2 front t=$t $f" >> $R/arms.log; f0=$f; }; if (( c + 1 < p )); then echo "$(date +%T) $2 human input t=$t idle $p -> $c, arm void" >> $R/arms.log; echo "void $t human" > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; p=$c; done; }
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
   if [[ $RESUME == 1 && -e $R/ok_$arm && $(head -1 $R/ok_$arm) == "$(armkey $spec)" && -s ${LOGTO:-$R/log_$arm.txt} ]]; then
@@ -62,7 +62,14 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   if [ -n "$SHOTS" ]; then ( t0=$SECONDS; k=0; for s in ${(s:,:)SHOTS}; do k=$((k+1)); while (( SECONDS - t0 < s )); do /bin/sleep 0.5; done; [ -e $R/void_$arm ] && break; screencapture -x $R/shot_${arm}_c$k.png; done ) & sp=$!; fi
   for ((n=0; n<HOLD; n+=2)); do /bin/sleep 2; [ -e $R/void_$arm ] && break; done; [ -n "$sp" ] && kill $sp 2>/dev/null; alive=0; kill -0 $gp 2>/dev/null && alive=1
   kill -KILL $gp 2>/dev/null; kill $rp 2>/dev/null; kill $wp 2>/dev/null; kill -KILL $hp 2>/dev/null; [ -n "$dp" ] && kill $dp 2>/dev/null
-  [ -e $R/void_$arm ] && { echo human > $R/quiet.done; exit 2; }
+  # s7256: VOID_OK_AFTER=<s> keeps an arm voided by HUMAN input at watch t >= s (its scored window, e.g. L4 t=77-97, already ran clean):
+  # ok_<arm> is written so RESUME=1 skips it, then the recipe still stops (exit 2) because a human is on. A lock/sleep void is never kept
+  # (the screen may have frozen presents before the void was seen). s7248 voided at t=114, s7250 at t=160: both windows were clean, both arms re-ran.
+  if [ -e $R/void_$arm ]; then vt=$(awk '{print $2; exit}' $R/void_$arm); vk=$(awk '{print $3; exit}' $R/void_$arm)
+    if [[ -n $VOID_OK_AFTER && $vk == human && -n $vt ]] && (( vt >= VOID_OK_AFTER )); then
+      dl="$(date +%T) $arm done alive=1 latevoid=t$vt log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log
+      printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; fi
+    echo human > $R/quiet.done; exit 2; fi
   cm=$(grep -a -m1 -o 'cursorMask)=0x[0-9A-Fa-f]*' ${LOGTO:-$R/log_$arm.txt} | sed 's/.*=//'); want=$(printf '0x%08X' $((1 << lv)))
   [[ $cm == $want ]] || echo "$(date +%T) $arm LEVEL MISMATCH want lvl $lv mask $want got ${cm:-none}" >> $R/arms.log
   dl="$(date +%T) $arm done alive=$alive log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log

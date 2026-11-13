@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7255 (2026-11-12).
+Compact operational handoff, as of Session 7256 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -399,6 +399,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    s7254: owner active at the boundary (HID idle 0-89 s, AC), none of s7248_fixed_fps_b / s7250_slowhost / s7251_dd6r_ac ran; still queued.
    s7255: s7248 2nd runs fold (AC, clk 0.98): offb window 9.79 ms/60 (run 1 10.06), wwb window 12.64/60 (run 1 13.16; arm voided at t=114, AFTER
    the window), so ww holding 60 on AC is two-run. stackb not run; s7248_fixed_fps_b moved to soak_queue/hold (its question is answered; slot freed for s7251/s7250).
+   s7256: s7250_slowhost run 1 voided by owner at t=160 (AC, clk 0.982), but arm ww's window was clean: 59.9/s, 12.37 ms (three AC runs
+   12.37-13.16 ms, all 60/s). New harness knob VOID_OK_AFTER=<s> keeps an arm voided by human input at t >= s (lock/sleep voids never kept;
+   test tools/s7243_resume_test.zsh 13/13); both queued recipes use VOID_OK_AFTER=110, and s7250's ww is kept (ok_ww), so its rerun starts at wwd.
    Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;

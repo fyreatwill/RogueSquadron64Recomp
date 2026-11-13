@@ -191393,3 +191393,17 @@ changed loop.sh before its next soak phase (s7235), so the new wait applies from
 - Rules out: "s7248 run 1 was an unusually fast host" for off and ww. Does not decide the slow-host question (s7250_slowhost) or dd6r on AC (s7251).
 - Changed: scratch/agent/soak_queue/s7248_fixed_fps_b.sh moved to soak_queue/hold/ (only stackb is left; stack already has two lines, fixed-on vs tog),
   so the next idle slot goes to s7251_dd6r_ac and s7250_slowhost.
+
+## Session 7256 (2026-11-12) — s7250 ww window folded (third AC run, 60/s); VOID_OK_AFTER keeps arms voided after their window
+- Soak s7250_slowhost run 1 (23:38, AC100%, clk=0.982): arm ww voided by owner input at watch t=160 (front app Chrome); wwd/stack/stackd not run,
+  recipe re-queued (void 1/5). Its t=77-97 window was already done: tools/s7230_headroom.py -> win77-97 59.9/s 12.37 ms, heaviest20 t=77 12.42 ms,
+  headroom 4.28 ms; s7229_flat30_cost: 0 flat-30 runs over t=1..163. With s7248 (13.16, 12.64 ms) that is three AC runs agreeing: WIDEWIN dd6 21:9
+  holds 60/s in the L4 heavy window on AC.
+- Both cancelled runs since s7248 (t=114, t=160) were after the window and re-ran the whole arm. Change: tools/g1e_owner_quiet_arms.zsh writes
+  "void <t> <human|lock>" to void_<arm>; with VOID_OK_AFTER=<s>, a HUMAN void at t >= s writes ok_<arm> (done line alive=1 latevoid=t<N>) so
+  RESUME=1 skips it; the recipe still exits 2 (a human is on). Lock/sleep voids are never kept (presents may have stalled before they were seen).
+  Test tools/s7243_resume_test.zsh 13/13: late void kept + exit 2, resume launches only the next arm, negative controls (void before the threshold,
+  knob unset) keep nothing.
+- s7250_slowhost.sh and s7251_dd6r_ac.sh now pass VOID_OK_AFTER=110 (window ends t=97). scratch/s7250/ok_ww written by hand with the current
+  binary key (binary mtime 21:36 predates the 23:38 run), so the rerun starts at wwd.
+- Rules out nothing new; open: wwd/stackd slow-host control (s7250), dd6r on AC (s7251).

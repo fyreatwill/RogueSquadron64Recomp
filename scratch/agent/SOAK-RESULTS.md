@@ -1424,3 +1424,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112-230704 | s7248_fixed_fps_b | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 289s | scratch/agent/soak_results/s7248_fixed_fps_b_20261112-230704.log
 20261112-233319 | s7248_fixed_fps_b | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 122s | scratch/agent/soak_results/s7248_fixed_fps_b_20261112-233319.log
 20261112 | s7255 fold: s7248_fixed_fps_b 2/5 void at wwb t=114 but its t=77-97 window is clean: offb 9.79 ms/60 (run1 10.06), wwb 12.64/60 (run1 13.16) -> ww 60 on AC two-run. Recipe moved to soak_queue/hold.
+20261112-233828 | s7250_slowhost | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 171s | scratch/agent/soak_results/s7250_slowhost_20261112-233828.log
+20261112 | s7256 fold: s7250_slowhost 1/5 void at ww t=160 (after window): ww win77-97 59.9/s 12.37 ms (3rd AC run). ww kept (ok_ww); recipes now VOID_OK_AFTER=110.
