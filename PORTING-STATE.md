@@ -191203,6 +191203,7 @@ HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7246.
   Flight: e16 -1.13 ms, kpx -1.1%; e0 -2.66 ms, +1.5% (pure_s 4-5, noisy); einf -1.18 ms, -5.6%.
   Merged blocks: e16 1.28M, e0 1.19M, einf 1.72M. So the gate keeps 75% of merges but only about 55% of the window saving: the blocks it
   rejects are the hilly ones that sit in view and carry visible triangles. Single run per arm.
+- Discrimination: the deviation histogram refutes H-flat-empty. The paired image arms select H-flat-works for cracks.
 - Result: H-flat-works for cracks: E=16 shows no seam excess, with a same-session ungated control that does show it. For time the result is
   partial: -1.28 ms against the -1.5 ms bar. Not added to OWNER-OPT-INS yet.
 - Next: stack E=16 with WIDEWIN_R=48 (r48 alone saved 4.12 ms, kpx -3.2%, no hole check yet). Image and timing arms are in NEXT.md.
