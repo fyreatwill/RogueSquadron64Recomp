@@ -191913,3 +191913,31 @@ Next (queued, not babysat): GPU contention. s7277 measured a saturating Metal ne
 QoS was never tried under it. scratch/agent/soak_queue/s7281_l12_gpu_{qos,none}.sh (LOAD=gpu, QOS_ALL vs none, same toggle):
 ~16.6 in both -> GPU share is the limit (H-gpu-share, nothing CPU-side fixes it); qos clearly higher -> the render feed was CPU-starved
 by the saturator's driver threads (H-cpu-feed), QOS_ALL also covers it.
+
+## Session 7282 (2026-11-13) — G5c GPU contention folded: QOS_ALL and no-QoS both 16.0 fps under a Metal saturator, 0 freezes -> H-gpu-share; CPU QoS cannot help GPU contention; dose-response pair queued
+
+What ran: the loop ran the two s7281 queued soaks (scratch/agent/soak_results/s7281_l12_gpu_{none,qos}_*.log), L12, PLAIN FS 16:9
+owner recipe, tools/s7277_toggle_load_arm.zsh LOAD=gpu (scratch/s7277/gpu_busy, 20000 iters = 35.8 ms per command buffer,
+28 cb/s, from scratch/s7277/l12gpu{none,qos}.gpu), load toggled every 60 s from +150 s.
+
+| arm | on-load gen/s | off gen/s | gaps>=250 | gaps>=100 on | max on | gpu95 on/off | control |
+|---|---|---|---|---|---|---|---|
+| none | 16.0 (15.4-16.6) | 57.3 (60.0 full windows) | 0 | 79 | 149 ms | 26.2 / 0.38 ms | 3/3 CAUGHT |
+| QOS_ALL=1 | 16.0 (15.4-16.5) | 57.3 | 0 | 83 | 120 ms | 26.3 / 0.36 ms | 3/3 CAUGHT |
+
+QoS witnesses in the qos arm: [guest-qos] ok=1 x21, [s6985] present, [s6987] workload, [s6988] buffer/texture threads; none in the
+none arm. Positive control: SIGSTOP 1 s holds caught 3/3 in each arm. 0 crashes.
+
+Result: H-gpu-share selected, H-cpu-feed refuted (qos arm not > ~25 fps; window-by-window identical within 0.3 fps). The GPU
+timeslice is the limit and CPU QoS does nothing for it. Under GPU load the game slows evenly (max gap 149 ms, 0 >= 250 ms), so the
+G5c close bar (no gap over 250 ms) holds under GPU contention as well; G5c stays closed. OWNER-OPT-INS QOS_ALL row now says it does
+not help against GPU-heavy apps.
+
+Observation (single-source, not a conclusion): 62.5 ms/frame = ~1.75 saturator buffers of 35.8 ms. If Apple's GPU queues our
+command buffers FIFO behind whole foreign buffers, frame time ~= k*cb with k ~ 2 dependent submits per frame, and fewer RT64
+submits per frame would be a lever; if the GPU timeslices fairly, fps does not depend on the foreign buffer length.
+Engineering: tools/s7277_toggle_load_arm.zsh takes GPU_ITER (saturator iterations, default 20000 unchanged). Queued
+scratch/agent/soak_queue/s7282_l12_gpu_i5000.sh (~9 ms/cb) and s7282_l12_gpu_i80000.sh (~143 ms/cb), no QoS, same recipe
+(SOAK_NEEDS_IDLE=120). Discriminator: on-load fps ~16 in both = timeslice (close, nothing in-process); ~50-60 at 5000 and ~4 at
+80000 = FIFO-per-buffer (then count RT64 command-buffer commits per frame).
+Rules out: QoS as a GPU-contention fix. Does not touch defaults.

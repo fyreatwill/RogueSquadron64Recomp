@@ -1458,3 +1458,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7273 fold: s7272_219_hold rc=0 CONTROL PASS 3/3, 8 holds 267-467 ms UNCLASSIFIED (raw deleted). In-session KEEP=1 re-run: control 3/3, 2 holds 275/372 ms = black transition frames (sheet), 0 flight holds -> H-none219, thread closed.
 20261113-111102 | s7280_l12_all | rc=0 | 774s | scratch/agent/soak_results/s7280_l12_all_20261113-111102.log
 20261113-112356 | s7280_l12_gp | rc=0 | 773s | scratch/agent/soak_results/s7280_l12_gp_20261113-112356.log
+20261113-113910 | s7281_l12_gpu_none | rc=0 | 768s | scratch/agent/soak_results/s7281_l12_gpu_none_20261113-113910.log
+20261113-115158 | s7281_l12_gpu_qos | rc=0 | 766s | scratch/agent/soak_results/s7281_l12_gpu_qos_20261113-115158.log
+20261113 | s7282 fold: s7281_l12_gpu_none/qos rc=0 CONTROL PASS 3/3 each: on-load 16.0/16.0 fps, off 57.3/57.3, 0 gaps>=250, max 149/120 ms, gpu95 26 ms; QoS witnesses fired -> H-gpu-share (QoS no help, slowdown even, no freezes). Queued dose-response s7282_l12_gpu_i5000 + i80000.
