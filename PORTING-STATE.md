@@ -191984,3 +191984,4 @@ not a quiet-host freeze. Under load the game also issues fewer executeCommandLis
 work is coalesced; not pursued.
 Rules out: RT64 command-buffer count as a GPU-contention lever. SKIP_EMPTY_WAIT stays opt-in and undocumented for the owner (no
 benefit measured); defaults untouched.
+Verdict: this pair refutes H-fifo / H-commit-lever and selects H-gpu-policy (the GPU's inter-process scheduler sets our share); it closes the GPU-contention thread. Next discriminator: load-edge gap classification (NEXT.md, g5c-load-edge-gaps).
