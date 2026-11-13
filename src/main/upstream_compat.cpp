@@ -451,7 +451,7 @@ extern "C" int rs64_s7009_n(void) {
 // non-empty cell of the stream loop and returns 1 = skip (cell outside the retail-equivalent window AND centre > R from the eye).
 // One [s7233] line per 128 placements per phase: wide-only non-empty cells per call by 8-cell eye-distance bin, and skipped per call.
 extern "C" { int g_rs64_s7233_r = 0; int g_rs64_s7233_wr = 0; }
-namespace { int s7233_x0, s7233_x1, s7233_z0, s7233_z1; float s7233_ex, s7233_ez; int s7233_ph; unsigned long long s7233_h[2][17], s7233_sk[2], s7233_in[2]; unsigned s7233_n[2]; }
+namespace { int s7233_x0, s7233_x1, s7233_z0, s7233_z1; float s7233_ex, s7233_ez; int s7233_ph; unsigned long long s7233_h[2][17], s7233_sk[2], s7233_in[2]; unsigned s7233_n[2]; int s7233_lp; }
 extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float ez) {
     static int r = -1, tg = 0;
     if (r < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_R"); r = (e && *e) ? atoi(e) : 0; if (r < 0) r = 0;
@@ -459,14 +459,21 @@ extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float e
         fprintf(stderr, "[s7233] widewin_r=%d tog=%d\n", r, tg); }
     int ph = 1;
     if (tg) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); } ph = rs64_tog_odd(mt); }
-    s7233_x0 = x0; s7233_x1 = x1; s7233_z0 = z0; s7233_z1 = z1; s7233_ex = ex; s7233_ez = ez; s7233_ph = ph;
-    g_rs64_s7233_r = (r > 0 && ph) ? r : 0; g_rs64_s7233_wr = g_rs64_s7233_r;
+
     /* the tally runs whenever the knob is configured (r > 0), so the off phase is histogrammed too */
-    if (r > 0 && ++s7233_n[ph] == 128) {
-        char buf[512]; int o = snprintf(buf, sizeof buf, "[s7233] ph=%d r=%d calls=128 in=%.1f skip=%.1f wide_by_d8=", ph, ph ? r : 0, s7233_in[ph] / 128.0, s7233_sk[ph] / 128.0);
-        for (int i = 0; i < 17; i++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", i ? "," : "", s7233_h[ph][i] / 128.0);
-        fprintf(stderr, "%s\n", buf); s7233_n[ph] = 0; s7233_sk[ph] = s7233_in[ph] = 0; for (int i = 0; i < 17; i++) s7233_h[ph][i] = 0; }
-    if (r > 0) g_rs64_s7233_r = g_rs64_s7233_r ? g_rs64_s7233_r : -1; /* -1 = tally only (off phase) */
+    /* s7236: flush per phase every 2 s of host time (or 128 calls), calls=<actual>. The s7233 fixed 128-call flush never fired: placements
+       are far rarer than VIs (s7233 r40: 521 wr=40 VIs, 0 [s7233] lines), so the soak's positive control would have read empty. The
+       counts accumulated here belong to the PREVIOUS placement (cells are asked after win()), which is why the flush precedes the latch. */
+    if (r > 0) { static uint64_t last[2] = {0, 0}; const uint64_t now = mach_absolute_time(); const int lp = s7233_lp;
+        if (s7233_n[lp] && (s7233_n[lp] >= 128 || now - last[lp] >= 48000000ull)) {
+            const double n = (double)s7233_n[lp];
+            char buf[512]; int o = snprintf(buf, sizeof buf, "[s7233] ph=%d r=%d calls=%u in=%.1f skip=%.1f wide_by_d8=", lp, lp ? r : 0, s7233_n[lp], s7233_in[lp] / n, s7233_sk[lp] / n);
+            for (int i = 0; i < 17; i++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", i ? "," : "", s7233_h[lp][i] / n);
+            fprintf(stderr, "%s\n", buf); s7233_n[lp] = 0; s7233_sk[lp] = s7233_in[lp] = 0; for (int i = 0; i < 17; i++) s7233_h[lp][i] = 0; last[lp] = now; }
+        if (!last[ph]) last[ph] = now; }
+    s7233_x0 = x0; s7233_x1 = x1; s7233_z0 = z0; s7233_z1 = z1; s7233_ex = ex; s7233_ez = ez; s7233_ph = s7233_lp = ph;
+    g_rs64_s7233_r = (r > 0 && ph) ? r : 0; g_rs64_s7233_wr = g_rs64_s7233_r;
+    if (r > 0) { s7233_n[ph]++; g_rs64_s7233_r = g_rs64_s7233_r ? g_rs64_s7233_r : -1; } /* -1 = tally only (off phase) */
 }
 extern "C" int rs64_s7233_cell(int wx, int wz) {
     const int r = g_rs64_s7233_r; if (!r) return 0;

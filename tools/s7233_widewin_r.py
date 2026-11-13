@@ -16,6 +16,7 @@ G1CF = re.compile(r'\[g1cf\] vi=\d+ dd=\d+ tasks=(\d+) .*? tri=(\d+) .*? tin=(\d
                   r'sc=\S+ bin=\S+ wr=(-?\d+)')
 S7233 = re.compile(r'\[s7233\] ph=(\d) r=(\d+) calls=\d+ in=([\d.]+) skip=([\d.]+) wide_by_d8=([\d.,]+)')
 K = ['tasks', 'tri', 'tin', 'tzero', 'kpx']
+bad = 0
 for p in a.logs:
     lab = os.path.basename(p).split('.')[0]; vis = []; secs = []; cur = []; tl = {0: [], 1: []}
     for ln in open(p, errors='ignore'):
@@ -31,6 +32,11 @@ for p in a.logs:
         m = S7233.match(ln)
         if m: tl[int(m[1])].append((float(m[3]), float(m[4]), [float(x) for x in m[5].split(',')]))
     print(f'== {lab}: VIs {len(vis)}  [s7233] blocks ph0 {len(tl[0])} ph1 {len(tl[1])}')
+    # s7236 positive control: ph1 must skip cells and ph0 must not, else the arm is not evidence (null without control)
+    ctl = bool(tl[1]) and bool(tl[0]) and sum(x[1] for x in tl[1]) > 0 and sum(x[1] for x in tl[0]) == 0
+    win = [v for v in vis if a.t0 <= v['t'] <= a.t1 - 1 and v['tasks'] > 0]
+    print(f'  CONTROL {"PASS" if ctl else "FAIL"} (ph1 skip>0, ph0 skip=0)  window VIs={len(win)}{"" if win else " (WINDOW NOT REACHED)"}')
+    bad |= (not ctl) or (not win)
     for ph in (0, 1):
         L = tl[ph]
         if not L: continue
@@ -50,3 +56,4 @@ for p in a.logs:
         x, y = res[1], res[0]
         print(f'  {name:6s} on-off: dsd={x["sd"]-y["sd"]:+.2f}ms dtri={x["tri"]-y["tri"]:+.0f} dtin={x["tin"]-y["tin"]:+.0f} '
               f'dtzero={x["tzero"]-y["tzero"]:+.0f} dkpx={x["kpx"]-y["kpx"]:+.1f} ({(x["kpx"]-y["kpx"])/max(y["kpx"],1e-9):+.1%})')
+sys.exit(3 if bad else 0)

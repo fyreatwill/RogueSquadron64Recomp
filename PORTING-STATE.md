@@ -190932,3 +190932,23 @@ Rules out: nothing about H-radius/H-thin/H-near; the discriminator is still unme
   SOAK_NEEDS_IDLE=180). Not run by this iteration: HID idle 2.4 s at 19:29 (owner active), so launching the game would void.
 - Rules out: "the owner kept being active" as the whole story for s7234 — the gate that would have held it was not loaded.
 - WIDEWIN_R H-radius / H-thin / H-near still UNMEASURED; next iteration scores the soak if it has run.
+
+## Session 7236 (2026-11-12) — s7233 [s7233] tally never flushed (fixed 128-placement flush, placements far rarer than VIs): the queued WIDEWIN_R soak would have scored with an empty positive control; tally now flushes per phase every 2 s with calls=<actual>, scorer exits 3 on control FAIL / window not reached
+
+- Step 0: the s7235 gate is live. loop.log: "soak s7235_widewin_r skipped: host not idle (needs 180s, idle 4s, locked=n)", then re-exec.
+  The owner was active all session (HID idle 4-51 s), so the game was not launched. The soak stays queued.
+- Offline check of the only WIDEWIN_R data so far (scratch/s7233/log_r40.txt, the s7233 arm voided at t=72 when loginwindow took the
+  front): 521 VIs carry `wr=40` (so the knob is live; 4211 wr=0 are boot/menu plus off-phase), flight on-off dtri -1485/task. But
+  there are **0 `[s7233]` tally lines**: rs64_s7233_win flushed only when one phase reached 128 placements, and placements are much
+  rarer than VIs. The s7235 soak's positive control ("ph=1 skip > 0, ph=0 skip = 0") and the wide_by_d8 distance histogram would have
+  come back empty. A null without a control is not a result (iron rule 1), so that run would have been wasted.
+  That partial log also shows no window data (t=77-97 never reached) and only 16 pure seconds in flight. It is not evidence for any R.
+- Fix (src/main/upstream_compat.cpp rs64_s7233_win, host-only, no regen): each phase flushes when it reaches 128 calls OR 2 s of
+  mach time since its last flush, printing `calls=<actual>` and per-call averages over the real count. The previous placement's counts
+  are flushed before the new placement latches (cells are asked after win(), so they belong to the previous latch; the old code also
+  bumped n before that placement's cells were counted). Scorer regex is unchanged (`calls=\d+`).
+- tools/s7233_widewin_r.py now prints `CONTROL PASS|FAIL` and `window VIs=N (WINDOW NOT REACHED)` per log and exits 3 if any log fails.
+  On the s7233 r40 log it reports FAIL + not reached, as it should. The queued recipe now exits with the scorer's rc.
+- Build: cmake --build build OK (build/RogueSquadron64Recomp 19:33). Not yet run (owner active): the new flush is UNVERIFIED in-game.
+  The first soak run is its test: it needs >=1 [s7233] block per phase.
+- Rules out: nothing about H-radius/H-thin/H-near yet. It does show the s7233 instrument would have failed its own control.

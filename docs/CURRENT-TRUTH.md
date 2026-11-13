@@ -328,7 +328,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    farther than R from the eye (tools/apply_s7233_widewin_r.py, scorer tools/s7233_widewin_r.py, [g1cf] wr=, [s7233] tallies); built,
    UNMEASURED: the r40 arm went void (screen locked, host slept 3.7 h); harness now voids on lock/sleep; arms R=40/56/72 queued as
    soak s7235_widewin_r (s7233b and s7234 both voided at t=0 with the owner active; s7234's idle gate did not apply because the loop ran
-   that soak phase with its old in-memory code; s7235 makes loop.sh re-exec before the soak phase. Header SOAK_NEEDS_IDLE=180, re-queued on rc=2 up to 5x). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
+   that soak phase with its old in-memory code; s7235 makes loop.sh re-exec before the soak phase. Header SOAK_NEEDS_IDLE=180, re-queued on rc=2 up to 5x). s7236: the [s7233] tally never flushed (fixed 128-placement threshold; s7233 r40 had 521 wr=40 VIs, 0 lines),
+   so the control would have read empty. It now flushes per phase every 2 s (calls=<actual>), and the scorer exits 3 on control FAIL or window not reached
+   (rebuilt, unverified in-game). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
@@ -375,7 +377,7 @@ LEVEL DESCRIPTION = C-up on AVAILABLE CRAFT; the interlaced 512x448 screen is El
 - s6900, s6847, s6759 maintenance archives; [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); images [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png.
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md` (latest s7234_widewin_r rc=2 void at idle=5 s, folded s7235). Recipes that drive the
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md` (latest s7234_widewin_r rc=2 void at idle=5 s, folded s7235; s7235_widewin_r still queued at s7236, owner active). Recipes that drive the
   game window carry `# SOAK_NEEDS_IDLE=<secs>` (loop skips them on a busy/locked host; tools/agent/test_soak_idle_gate.sh).
   An edited loop.sh now takes effect BEFORE the soak phase that follows the editing iteration (s7235 re-exec + RS64_LOOP_SOAKS_FIRST).
 - Recent chronology: PORTING-STATE sessions 7047-7187; search bounded windows only.
