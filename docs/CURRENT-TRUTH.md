@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7232 (2026-11-12).
+Compact operational handoff, as of Session 7233 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -324,7 +324,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    s7232 (new [g1cf] tin/tout/tzero/kpx/bin fields, tools/s7232_tri_onscreen.py, classifier control 0.96-0.99): WW's +2557 tri/task in the
    window are 0 off-screen (ucode already rejects them; H-offscreen refuted), 42% zero-height (no pixel) and 58% visible but adding only +42 kpx
    (+2%) -> H-tiny (single-source): far WW cells are far denser than their pixels, past retail's coarsest LOD (s7011). Next: WW-only far
-   thinning (NEXT.md). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
+   thinning. s7233: knob ROGUESQ_DD_WIDEWIN_R=<cells> (+_R_TOG=1) skips non-empty cells outside the retail-equivalent 64x64 window
+   farther than R from the eye (tools/apply_s7233_widewin_r.py, scorer tools/s7233_widewin_r.py, [g1cf] wr=, [s7233] tallies); built,
+   UNMEASURED: the r40 arm went void (screen locked, host slept 3.7 h); harness now voids on lock/sleep; arms R=40/56/72 queued as
+   soak s7233b (needs an idle host). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.

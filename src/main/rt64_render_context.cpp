@@ -363,7 +363,8 @@ extern "C" int rs64_tl_on; extern "C" void rs64_tl(uint32_t code, uint32_t arg);
 extern "C" uint32_t rs64_ram_top; // s6132
 extern std::atomic<uint64_t> g_rs64_rt64_tri_accepted, g_rs64_rt64_rect_accepted;
 volatile uint32_t g_rs64_g1cf_tasks = 0, g_rs64_g1cf_dsize = 0;  // s6070 g1cf: gfx tasks / dl bytes since last VI
-extern "C" { volatile int g_rs64_dd_blk = 0; }  // s6070: set by the s6036 dd patch (funcs_9.c): 1 = dd multiplier active this call
+extern "C" { volatile int g_rs64_dd_blk = 0; }
+extern "C" int g_rs64_s7233_wr;  // s7233: WIDEWIN_R in force at the last stream call (0 = none), tags [g1cf]  // s6070: set by the s6036 dd patch (funcs_9.c): 1 = dd multiplier active this call
 static struct G1cf { uint32_t subs = 0, bytes = 0, tri = 0, maxlen = 0, lastlen = 0; uint64_t rt0 = 0, rr0 = 0;
     // s7232: per-triangle bbox vs the current RDP scissor: tin (bbox meets scissor), tout (fully outside), tzero (no scanline:
     // y span < 1 line), area = bbox-clipped px, bin[8] = tin by bbox-centre x across the scissor width; vout = classifier control
@@ -1407,12 +1408,12 @@ public:
                 if (s_f < 0) { const char *e = std::getenv("ROGUESQ_G1CF"); s_f = (e && *e && *e != '0') ? 1 : 0; }
                 if (s_f) {
                     uint64_t t1 = g_rs64_rt64_tri_accepted.load(), r1 = g_rs64_rt64_rect_accepted.load();
-                    fprintf(stderr, "[g1cf] vi=%d dd=%d tasks=%u dsize=%u subs=%u bytes=%u tri=%u rt64tri=%llu rt64rect=%llu maxlen=%u lastlen=%u tin=%u tout=%u tzero=%u vout=%u kpx=%.1f sc=%.0f,%.0f,%.0f,%.0f bin=%u,%u,%u,%u,%u,%u,%u,%u\n",
+                    fprintf(stderr, "[g1cf] vi=%d dd=%d tasks=%u dsize=%u subs=%u bytes=%u tri=%u rt64tri=%llu rt64rect=%llu maxlen=%u lastlen=%u tin=%u tout=%u tzero=%u vout=%u kpx=%.1f sc=%.0f,%.0f,%.0f,%.0f bin=%u,%u,%u,%u,%u,%u,%u,%u wr=%d\n",
                             s_n, g_rs64_dd_blk, g_rs64_g1cf_tasks, g_rs64_g1cf_dsize, s_g1cf.subs, s_g1cf.bytes, s_g1cf.tri,
                             (unsigned long long)(t1 - s_g1cf.rt0), (unsigned long long)(r1 - s_g1cf.rr0), s_g1cf.maxlen, s_g1cf.lastlen,
                             s_g1cf.tin, s_g1cf.tout, s_g1cf.tzero, s_g1cf.vout, s_g1cf.area / 1000.0,
                             s_g1cf_sc[0], s_g1cf_sc[1], s_g1cf_sc[2], s_g1cf_sc[3],
-                            s_g1cf.bin[0], s_g1cf.bin[1], s_g1cf.bin[2], s_g1cf.bin[3], s_g1cf.bin[4], s_g1cf.bin[5], s_g1cf.bin[6], s_g1cf.bin[7]);
+                            s_g1cf.bin[0], s_g1cf.bin[1], s_g1cf.bin[2], s_g1cf.bin[3], s_g1cf.bin[4], s_g1cf.bin[5], s_g1cf.bin[6], s_g1cf.bin[7], g_rs64_s7233_wr);
                     s_g1cf = G1cf(); s_g1cf.rt0 = t1; s_g1cf.rr0 = r1; g_rs64_g1cf_tasks = 0; g_rs64_g1cf_dsize = 0;
                 }
             }

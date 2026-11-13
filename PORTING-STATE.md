@@ -190872,3 +190872,26 @@ HYPOTHESIS-ID: widewin-heavy-window-cost. CURRENT-TRUTH 40.7 KB, no maintenance.
 - Rules out: H-offscreen (cull on screen bounds), a pure governor being the only option. Leaves: a WW-only distance limit or a coarser-than-
   retail mesh for far WW cells (skip alternate rows/cols past radius R), measured by tzero + kpx loss vs ms. H-clip (ucode work on culled tris)
   is untested; tout=0 means it cannot be counted from the stream.
+
+## Session 7233 (2026-11-12) — WIDEWIN_R far-cell knob built (ROGUESQ_DD_WIDEWIN_R, same-run tog); its first arm was voided by a host sleep, so the harness now voids arms on screen lock or wall-clock jump; R=40/56/72 arms queued as soak s7233b
+
+What ran: the s7232 NEXT unit (H-radius vs H-thin vs H-near for WIDEWIN's waste). The first attempt at this iteration timed out
+(loop rc=124) and left uncommitted work, which this run finished and committed:
+- tools/apply_s7233_widewin_r.py (RS64_REPLAY after apply_s7012_widewin_cap): in streamTerrainGridCellsByDistance, while the s7009 wide
+  window is active, a non-empty cell outside the retail-equivalent window (min(w,64) x min(d,64), placed by the same s6901 fwdwin rule)
+  whose centre is farther than R cells from the eye takes the game's own empty-cell path (L_80043020). Host side in
+  src/main/upstream_compat.cpp (rs64_s7233_win / rs64_s7233_cell): env ROGUESQ_DD_WIDEWIN_R=<cells> (unset/0 = off), _R_TOG=1 = only on
+  rs64_tog_odd seconds; [s7233] tally lines (wide-only cells per placement by 8-cell eye-distance bin, skip count, in-window count) per
+  phase, now every 128 placements (512 never filled in a 140 s hold); [g1cf] lines carry wr=<R in force>. Scorer tools/s7233_widewin_r.py.
+  ORIGIN: not a mitigation; a cost-vs-coverage feature knob for the measured WIDEWIN waste (s7232), no defect is hidden.
+- The r40 arm (scratch/s7233, 21:9 dd4 WW MELT L4) is VOID: arms.log shows loginwindow frontmost at t=72, the [g1b] clock jumps
+  t=69 -> t=13608 (host asleep about 3.7 h), only 507 flight VIs, 0 [s7233] blocks. Its flight numbers (R on: tri -1485, tzero -1010,
+  kpx -30%, sd +4 ms on 6 vs 10 pure seconds) cover about 10 s around the lock, so they are not a result.
+- tools/g1e_owner_quiet_arms.zsh: watch_human now voids an arm when CGSSessionScreenIsLocked=Yes or the wall clock moves >20 s across
+  one 2 s poll (host sleep), and the harness refuses to start while the screen is locked. Before this a locked or sleeping host gave a
+  rising idle time, and that passed as "quiet".
+- This session the owner was active the whole time (HIDIdleTime 0-1 s on 5 samples), so the key-driven fullscreen arms were not
+  launched over their work. They are queued instead: scratch/agent/soak_queue/s7233b_widewin_r.sh (R=40,56,72, HOLD 130, tog each,
+  exits 2 on human/lock/sleep, 1 on an early game death, otherwise prints the scorer).
+Rules out: nothing yet. The H-radius/H-thin/H-near discriminator is unmeasured. Build at HEAD carries the knob (default off, no
+behaviour change unless the env is set).

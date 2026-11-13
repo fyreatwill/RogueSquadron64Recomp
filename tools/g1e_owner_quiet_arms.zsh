@@ -15,11 +15,16 @@ idle(){ if [ -n "$IDLE_FEED" ]; then tail -1 "$IDLE_FEED"; else ioreg -c IOHIDSy
 # s7218: also log every change of the frontmost app (a Claude.app auto-update relaunch covered the fullscreen Space at t=354
 # in s7218 arm a1: 64 s of presents never reached the screen, one 1 s nextDrawable timeout). Not a void, a recorded host event.
 front(){ lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null | sed 's/.*="//;s/"$//'; }
-watch_human(){ local p=$(idle) c t=0 f0="" f; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle);
+# s7233: arm r40 r40 froze at t=72 when the screen locked and the host slept 3.7 h (game clock t=69 -> 13608); nothing voided it.
+# Now a locked screen or a wall-clock jump > 20 s between 2 s polls (host sleep) voids the arm like human input.
+locked(){ /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes'; }
+watch_human(){ local p=$(idle) c t=0 f0="" f w0=$(date +%s) w; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle);
+  w=$(date +%s); if (( w - w0 > 20 )) || locked; then echo "$(date +%T) $2 host slept/locked t=$t wall +$((w-w0))s, arm void" >> $R/arms.log; echo void > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; w0=$w
   f=$(front); [[ -n $f && $f != $f0 ]] && { echo "$(date +%T) $2 front t=$t $f" >> $R/arms.log; f0=$f; }; if (( c + 1 < p )); then echo "$(date +%T) $2 human input t=$t idle $p -> $c, arm void" >> $R/arms.log; echo void > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; p=$c; done; }
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
   echo "$(date +%T) $arm start idle=$i" >> $R/arms.log
+  locked && { echo "$(date +%T) screen locked, stopping" >> $R/arms.log; echo locked > $R/quiet.done; exit 2; }
   (( i < 120 )) && { echo "$(date +%T) human active, stopping" >> $R/arms.log; echo human > $R/quiet.done; exit 2; }
   # s6991: FORCE_UNLOCK was hardcoded 1 here, which clamps the level-select cursor to level 1 whatever FORCE_SAVE_MISSION
   # says (s5707: the save byte alone is rewritten by the level-select tick). Every "LEVEL=N" arm run through this

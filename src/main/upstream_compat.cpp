@@ -445,6 +445,38 @@ extern "C" int rs64_s7009_n(void) {
     static int n = -1; if (n < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_N"); n = (e && *e) ? atoi(e) : 128; if (n < 64) n = 64; if (n > 128) n = 128; }
     return n;
 }
+// s7233 G1c (tools/apply_s7233_widewin_r.py): WIDEWIN-only eye-distance limit. ROGUESQ_DD_WIDEWIN_R=<cells> (0/unset = off),
+// _R_TOG=1 = only on rs64_tog_odd seconds (same [s7010-clk] anchor). rs64_s7233_win is called once per wide placement with the
+// retail-equivalent window (min(w,64) x min(d,64), same fwdwin rule) and the eye in cell units; rs64_s7233_cell is asked for every
+// non-empty cell of the stream loop and returns 1 = skip (cell outside the retail-equivalent window AND centre > R from the eye).
+// One [s7233] line per 128 placements per phase: wide-only non-empty cells per call by 8-cell eye-distance bin, and skipped per call.
+extern "C" { int g_rs64_s7233_r = 0; int g_rs64_s7233_wr = 0; }
+namespace { int s7233_x0, s7233_x1, s7233_z0, s7233_z1; float s7233_ex, s7233_ez; int s7233_ph; unsigned long long s7233_h[2][17], s7233_sk[2], s7233_in[2]; unsigned s7233_n[2]; }
+extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float ez) {
+    static int r = -1, tg = 0;
+    if (r < 0) { const char* e = getenv("ROGUESQ_DD_WIDEWIN_R"); r = (e && *e) ? atoi(e) : 0; if (r < 0) r = 0;
+        const char* g = getenv("ROGUESQ_DD_WIDEWIN_R_TOG"); tg = (g && *g == '1');
+        fprintf(stderr, "[s7233] widewin_r=%d tog=%d\n", r, tg); }
+    int ph = 1;
+    if (tg) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); } ph = rs64_tog_odd(mt); }
+    s7233_x0 = x0; s7233_x1 = x1; s7233_z0 = z0; s7233_z1 = z1; s7233_ex = ex; s7233_ez = ez; s7233_ph = ph;
+    g_rs64_s7233_r = (r > 0 && ph) ? r : 0; g_rs64_s7233_wr = g_rs64_s7233_r;
+    /* the tally runs whenever the knob is configured (r > 0), so the off phase is histogrammed too */
+    if (r > 0 && ++s7233_n[ph] == 128) {
+        char buf[512]; int o = snprintf(buf, sizeof buf, "[s7233] ph=%d r=%d calls=128 in=%.1f skip=%.1f wide_by_d8=", ph, ph ? r : 0, s7233_in[ph] / 128.0, s7233_sk[ph] / 128.0);
+        for (int i = 0; i < 17; i++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", i ? "," : "", s7233_h[ph][i] / 128.0);
+        fprintf(stderr, "%s\n", buf); s7233_n[ph] = 0; s7233_sk[ph] = s7233_in[ph] = 0; for (int i = 0; i < 17; i++) s7233_h[ph][i] = 0; }
+    if (r > 0) g_rs64_s7233_r = g_rs64_s7233_r ? g_rs64_s7233_r : -1; /* -1 = tally only (off phase) */
+}
+extern "C" int rs64_s7233_cell(int wx, int wz) {
+    const int r = g_rs64_s7233_r; if (!r) return 0;
+    const int ph = s7233_ph;
+    if (wx >= s7233_x0 && wx < s7233_x1 && wz >= s7233_z0 && wz < s7233_z1) { s7233_in[ph]++; return 0; }
+    const float dx = (float)wx + 0.5f - s7233_ex, dz = (float)wz + 0.5f - s7233_ez; const float dd = sqrtf(dx * dx + dz * dz);
+    int b = (int)(dd / 8.0f); if (b > 16) b = 16; s7233_h[ph][b]++;
+    if (r > 0 && dd > (float)r) { s7233_sk[ph]++; return 1; }
+    return 0;
+}
 extern "C" int rs64_s6882_on(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANNARROW"); const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); on = (e && *e == '0') ? 0 : (d && *d && atof(d) != 1.0) ? 2 : 1; } return on == 2 || (on == 1 && rs64_s6880_wide()); }
 // s6883: span scan edge rows past 80 and span cells outside 64x64 (tools/apply_s6883_spancell.py). ROGUESQ_G1D_SPANCELL (default 3 where the s6882 gate runs, =0 old) bits 1 = rows >= 80 in host arrays, 2 = 64x64 cell bound,
 // 4 = control, blank rows 20..23. ROGUESQ_G1D_SPANLOG=1 logs [spancell]; ROGUESQ_G1D_SPANDUMP=<prefix> writes both tables at each POSE_FREEZE.
