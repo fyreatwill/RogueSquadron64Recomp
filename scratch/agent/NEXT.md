@@ -1,17 +1,15 @@
-# NEXT (s7285): decompose the scene-change (fb-relocation) stalls, offline first
-HYPOTHESIS-ID: g5c-fbswitch-transition-stall
-State: s7284 closed G5c load-edge gaps (0 lit quiet freezes in 17 toggle runs; every off-window gap >=250 ms is an fb-relocation
-scene change). CURRENT-TRUTH item 16 closed transition stalls at the retail ~139 ms MusyX 3072-sample wait (s7065) with a reopen
-criterion of a > ~350 ms hitch. s7284's FBSWITCH gaps reach 316-466 ms off-load (L4 restart sequence: 333/337/350/351/414 ms) -> reopen,
-bounded and offline.
-Unit (no game run first): from scratch/s7277/ring_*.txt (Q rows carry wl, wl_ms, tp_ms, acq_ms, gpu_ms, vi, fb, gen) list every
-FBSWITCH gap (python3 tools/s7284_edge_gaps.py | grep FBSWITCH gives times) and, for the rows bracketing each gap, split the gap into:
-present-side (tp_ms/acq_ms/gpu_ms of the first post-gap Q row) vs guest-side (no Q row at all = no VI present request; wl skipped).
-Hypotheses:
-  - H-musyx: guest-side, a fixed ~139 ms MusyX wait plus the game's own load work (dur scales with level/asset load) -> retail; note in
-    OWNER-OPT-INS, close.
-  - H-host-alloc: present-side: RT64 creates new fb/render targets for the relocated pair (first post-gap Q row tp_ms/acq_ms ~ gap) ->
-    ours; fix candidate = pre-create targets / avoid blocking present on resource creation.
-  - H-shader: post-gap rows show pipeline creation (check RT64 log for shader/pipeline counts at those times, if logged).
-Positive control: the SIGSTOP control gaps must classify guest-side (process stopped: no Q rows) with ~1 s gap.
-Second line before any conclusion: angrylion/retail oracle timing of the same L4 restart (or the s7065 MusyX attribution log).
+# NEXT (s7286): G1c phase 2 step: dd8 on today's owner path (auto stack R=88 + merge + E16), find the binding limit
+HYPOTHESIS-ID: g1c-dd8-owner-path
+State: G5c fully closed (s7284 load edges, s7285 transition gaps guest-side/retail). Every G5 item awaits the owner. Ladder G1c
+phase 2 ("push draw distance as far as it will go") was last measured at dd8 in s6466-s6470, before FWDWIN/WIDEWIN/auto stack/
+spill arena. dd6 at R=88 holds 60/s at 12.3 ms (s7267). Fold first: s7285_bootloop_qos verdict (SOAK-RESULTS tail).
+Unit: one queued or in-session run, L4 + L12, owner env (FPS60, 16:9 FULLSCREEN, WIDEWIN=1 auto stack), arms dd6 (reference) / dd8,
+300 s hold each, G1b per-frame timing (tools/g1e_owner_quiet_arms.zsh style win77-97 ms, beyond-route s), heap/alloc-failure lines,
+[s7258] stack print, crash lines. Plus a terrain-fraction still (same camera) per arm.
+Hypotheses (binding limit at dd8):
+  - L-heap: alloc failures / spill arena exhaustion lines at dd8 only.
+  - L-cost: frame time > 16.7 ms at win77-97 (VI drops below 60/s) with no alloc failures.
+  - L-cap: ucode iteration cap / DL buffer: missing far cells or [cap] lines while cost and heap are fine.
+  - L-none: dd8 clean -> next step is the 4.0..8 clamp / dd>8.
+Positive control: dd6 arm must reproduce s7267's ~12 ms / 60/s; a SIGSTOP 1 s mid-hold must show in the frame-time ring.
+Note the single-source rare dd4/dd8 gfx SIGBUS (s6466 att1): any SIGBUS here is a side-effect crash to root-cause (G4 rule).

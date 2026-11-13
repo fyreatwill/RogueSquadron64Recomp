@@ -192019,3 +192019,27 @@ New datum: the L4 restart sequence's fb-relocation stalls run 316-414 ms off-loa
 stalls (s7065 measured ~139 ms MusyX wait). Next unit: decompose those stalls present-side vs guest-side offline (NEXT.md,
 g5c-fbswitch-transition-stall).
 Rules out: any quiet-host or load-edge freeze in the s7277-s7283 data set. Defaults untouched.
+
+## Session 7285 (2026-11-13) — G5c scene-change stalls decomposed offline: all 159 real >=250 ms gaps are guest-side (presents keep flowing at <=188 ms intervals, <=10.6 ms each; the late workload arrived <=13 ms before it finished), RT64 present/render side refuted; new tools/s7285_gap_split.py
+HYPOTHESIS-ID: g5c-fbswitch-transition-stall. CURRENT-TRUTH 53.8 KB (no maintenance). No new soak verdicts since s7284.
+- Unit (NEXT s7285): s7284's off-window fb-relocation gaps reach 316-466 ms, above CURRENT-TRUTH item 16's ~350 ms reopen bar, so
+  split each gap into guest-side vs present/render-side with the three ring row kinds already captured (no game run):
+  Q = present-thread VI present (tp/acq/gpu ms), W = RT64 workload finished (wk = ms since the workload arrived, rs = since render
+  start), gen = shown fb generation. Hypotheses H-musyx (guest-side, retail audio-time wait + load work), H-host-alloc (present blocks
+  on new fb targets), H-shader (workload thread blocks on pipeline creation).
+- New tools/s7285_gap_split.py (17 rings, scratch/s7277/ring_*.txt; output scratch/s7285/gap_split_all.txt). Controls: the 52
+  SIGSTOP windows classify GUEST-IDLE with 0-7 Q rows and max Q->Q 1021-1160 ms; for the wk field, the control windows' late W row
+  has wk/interval up to 1.03 (the workload sat in RT64 while stopped), so the field does see a render-side stall. PASS.
+- Result: 17 boot gaps (+0 s, ~800 ms) = HIDDEN-DRAW (logo route, Q and W flow). All 158 other non-control gaps (254-865 ms; FBSW 131,
+  non-FBSW 27) = GUEST-IDLE: Q rows keep coming (3-35 per gap, max Q->Q 108-188 ms, max present cost 10.6 ms) and the W row that ends
+  the longest dry stretch arrived <=13 ms before it finished (wk/interval <=0.05). So the guest submitted no display list; neither
+  RT64 present (H-host-alloc) nor RT64 render/pipeline creation (H-shader) holds the frame. Refuted, both.
+- Second line for H-musyx: the max Q->Q inside every real gap is 108-188 ms, clustering 136-149 ms: one VI-silent stretch per gap =
+  s7065's waitForMusyXAudioTaskDone 3072-sample countdown (139 ms, 8.37 VI), measured there by a different instrument (blocked-stack
+  sampler) in a different run. The rest of each gap has VI presents but no gfx (slot drain 25-66 ms s7064, shutdownMusyXVoices
+  ~70 ms s7065, load work). The +66.7 s route gap is 437-456 ms in all 17 runs (deterministic guest work). Quiet-host L4 restart
+  gaps 256-414 ms (mostly 330-366); the ON-load no-QoS ones reach 685-865 ms = the known guest-thread CPU-load freezes QOS fixes (s7278).
+- Verdict: H-musyx/guest-side selected, presenter and renderer cleared. The waits are game constants on audio time, so retail pays the
+  same (inference; the oracle cannot drive these transitions). Our recompiled load work is faster than the N64 CPU. Nothing to fix on
+  our side; item 16 stays closed with the >350 ms gaps explained. Thread g5c-fbswitch-transition-stall CLOSED.
+- Queued scratch/agent/soak_queue/s7285_bootloop_qos.sh (12 owner-env boots with QOS_ALL=1, never boot-looped; control boot 1).

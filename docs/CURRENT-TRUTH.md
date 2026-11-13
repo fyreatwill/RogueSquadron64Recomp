@@ -405,7 +405,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
     `verify` (s7091), tools/s7093_su_census.py --controls; after rsp_vu*.hpp / DMEM: tools/s7092_vu_mem_test;
     after rsp DMA: tools/s7094_dma_test + s7094_dma_census.py; after dpc_bridge submit/defer/wrap:
     ROGUESQ_S7095_DPC / S7096_FWD=ctl / S7097_EDIT=ctl (missing/dup/order/unattributed must stay 0).
-16. **Closed, reopen only on an owner report:** transition stalls (s7065, > ~350 ms hitch), host self-time
+16. **Closed, reopen only on an owner report:** transition stalls (s7065; s7285 split all 158 real >=250 ms gaps of 17 rings with
+    tools/s7285_gap_split.py: guest-side, presents <=10.6 ms keep flowing, RT64 render not late, one ~139 ms VI-silent MusyX stretch
+    per gap; quiet L4 restart gaps 256-414 ms = retail waits + load), host self-time
     (s7066-s7070), misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996).
 
 G3 fidelity scoring kit (s7122-s7186), keep for item 1 and any re-score: arms tools/s7125_arm.zsh,
