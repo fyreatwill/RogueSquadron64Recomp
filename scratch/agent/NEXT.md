@@ -1,16 +1,14 @@
-# NEXT (s7276): G5c busy-host arm: does host CPU load produce the owner's in-flight freezes?
+# NEXT (s7277): G5c H-slow / GPU load: does load slow the game itself (not the capture), and does GPU load freeze it?
 HYPOTHESIS-ID: g5c-busy-host
-State: s7272-s7275 show 0 in-flight holds >= 250 ms at the owner recipe on L1/L4/L5/L12 (16:9 + 21:9, windowed + fullscreen, WIDEWIN and
-PLAIN env, 300 s and 900 s), SIGSTOP control caught every time. Every one of those runs was on a QUIET host (HID idle hours, nothing else
-running). The owner plays with Chrome/REAPER/WindowServer load (G1b H-host: only the P-cores sysctl hw.perflevel0 reports).
-Hypotheses: H-host (holds >= 250 ms appear in flight under load: game/RSP threads pushed to E-cores or descheduled); H-robust (still 0 flight
-holds under load: G5c needs an owner-side datum, e.g. a screen recording of a freeze); H-slow (no holds but changes/s drops a lot: a steady
-slowdown, not a freeze; report the per-second change rate).
-Discriminator: tools/s7272_g5c_hold_arm.zsh PLAIN=1 DUR=600 KEEP=1 FS=1 LEVEL=12 (no restarts in s7275), with a background load of one
-`yes > /dev/null` per logical CPU (hw.ncpu) started at launch and killed after, in a SECOND arm with load = P-core count only. Same SIGSTOP
-controls (3/3 required). Baseline = s7275 L12 quiet (39873 frames/900 s, 44.3 changes/s, 0 holds, longest 190 ms).
-Commands (in-session; check HID idle >= 120 s + screen unlocked first):
-  n=$(sysctl -n hw.ncpu); for i in $(seq $n); do yes > /dev/null & done; env PLAIN=1 DUR=600 KEEP=1 FS=1 LEVEL=12 TAG=s7276all ASP=16:9 CW=480 zsh tools/s7272_g5c_hold_arm.zsh; kill %{1..$n}
-  then the same with n=$(sysctl -n hw.perflevel0.logicalcpu), TAG=s7276p. Kill every `yes` afterwards (pkill -x yes).
-Expected: H-host -> holds in flight; sample the live process (`sample <pid> 3`) during the next recurrence and name the stalled thread;
-fix candidate is thread QoS (QOS_ALL opt-in exists, s6962-s6989; owner decides default). H-robust -> G5c parked for an owner datum.
+State: s7276: 15 and 5 `yes` spinners (load avg 30 / ~10) during a 600 s L12 owner-recipe PLAIN FS hold: 0 flight holds >= 250 ms,
+control 3/3 each (H-robust for CPU load). Capture changes/s fell 44.3 -> 41.8 / 35.8, but cross-run and capture-side, so not a game rate.
+Hypotheses: H-cpu-slow (game VI/frame rate drops under CPU load: steady slowdown the owner reads as "buffering"); H-gpu (GPU or
+WindowServer load, which `yes` does not make, produces holds); H-none (neither: G5c parks for an owner screen recording of a freeze).
+Discriminator, ONE run per arm, within-run toggle (iron rule 2): run the game with its own per-VI wall-clock log (G1b instrument,
+grep CURRENT-TRUTH/PROJECT-OVERVIEW for the G1b frame-time env, e.g. the s7010-clk / [s7258] lines) and toggle 15 spinners on/off every
+60 s from a wrapper that logs the toggle times; score game frames/s and VI gaps per on/off window. Second arm: same toggle with a GPU
+load (e.g. a Metal/WebGL stress page in a browser, or `tools/` GPU busy loop if one exists) instead of the spinners.
+Commands: extend tools/s7276_busy_host_arm.zsh with TOGGLE=60 (spinners started/killed per window, times to <TAG>.toggle), keep the
+SIGSTOP controls. Check HID idle >= 120 s + screen unlocked first; pkill -x yes afterwards.
+Expected: H-cpu-slow -> on-window game fps < off-window; then test the QOS_ALL opt-in (s6962-s6989) in the same toggle run.
+H-gpu -> holds only in GPU-on windows; sample the process during one. H-none -> G5c parked for an owner datum.

@@ -191767,3 +191767,23 @@ H-host (owner's freezes need host load: Chrome/REAPER/WindowServer pushing the g
 Rules out: long-run growth (heap/pool/shader cache/log) stalls >= 250 ms over 900 s; the plain dd4 terrain path as a freeze source.
 Discrimination: selects H-none-long over H-late/H-plain.
 Next: G5c busy-host arm (H-host): same PLAIN 900 s L4 run with a background CPU load on every core, NEXT.md g5c-busy-host.
+
+## Session 7276 (2026-11-13) — G5c busy-host arms: owner PLAIN fullscreen recipe L12 600 s under 15 CPU spinners (load avg 30) and 5 (P-cores): 0 in-flight holds >= 250 ms, SIGSTOP control 3/3 each -> H-robust; new tools/s7276_busy_host_arm.zsh
+Work unit (NEXT.md g5c-busy-host). Host: HID idle 8.9 h, screen unlocked (ioreg CGSSessionScreenIsLocked absent), no other game.
+Runs: `zsh tools/s7276_busy_host_arm.zsh <N> <TAG>` = N `yes > /dev/null` spinners for the whole of
+`env PLAIN=1 DUR=600 KEEP=1 FS=1 LEVEL=12 ASP=16:9 CW=480 zsh tools/s7272_g5c_hold_arm.zsh` (owner env FPS60 dd4 16:9 FULLSCREEN), uptime every 10 s.
+| arm | N | load avg (end) | frames / 600 s | changes/s | control | holds >= 250 ms outside controls | longest other | crash |
+| s7276all | 15 (hw.ncpu) | 30.5 | 25104 | 41.8 | 3/3 (1086/1077/1067 ms) | 1: +137.6 s 271 ms | - | 0 |
+| s7276p | 5 (perflevel0) | 9.6-13 | 21518 | 35.8 | 3/3 (1035/1047/1043 ms) | 0 | 181 ms | 0 |
+| s7275 quiet baseline | 0 | ~3 | 39873 / 900 s | 44.3 | 3/3 | 0 | 190 ms | 0 |
+The 271 ms hold, viewed (sheet docs/owner_sheet_s7276_g5c_busyhost_all_L12.jpg): letterboxed, no HUD, static ground camera on the base
+with a distant craft = a cinematic shot, luma 96 pre/held/next/post (not black), -1 s and +1 s nearly identical frames, so a slow shot
+not a flight freeze (single-source: frame view only). Controls all froze mid-flight (positive control for flight frames under load).
+Verdict H-robust: whole-machine CPU saturation (more runnable threads than cores, game pushed to E-cores/descheduled) does not produce
+an in-flight freeze >= 250 ms at the owner recipe. Two lines: hold scorer with same-run SIGSTOP control (6/6) and the frame sheet.
+Caveat: `yes` is pure CPU; it does not load the GPU, WindowServer compositing or memory bandwidth the way Chrome/REAPER can.
+H-slow undecided: capture changes/s fell 44.3 -> 41.8 / 35.8 but that is cross-run, content-dependent (different flight path) and the
+capture itself runs on the loaded host, so it is not a game-rate measure.
+Rules out: CPU contention as the owner's freeze mechanism (single run per arm).
+Discrimination: selects H-robust over H-host.
+Next: H-slow in ONE run: game-side frame clock (G1b instrument) with the spinners toggled on/off every 60 s, plus a GPU-load arm.
