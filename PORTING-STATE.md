@@ -190893,5 +190893,7 @@ What ran: the s7232 NEXT unit (H-radius vs H-thin vs H-near for WIDEWIN's waste)
 - This session the owner was active the whole time (HIDIdleTime 0-1 s on 5 samples), so the key-driven fullscreen arms were not
   launched over their work. They are queued instead: scratch/agent/soak_queue/s7233b_widewin_r.sh (R=40,56,72, HOLD 130, tog each,
   exits 2 on human/lock/sleep, 1 on an early game death, otherwise prints the scorer).
-Rules out: nothing yet. The H-radius/H-thin/H-near discriminator is unmeasured. Build at HEAD carries the knob (default off, no
+Outcome SUBSTITUTED (scratch/agent/SUBSTITUTION.md). Rules out: nothing yet. The H-radius/H-thin/H-near discriminator is unmeasured.
+Next discriminator: the s7233b arms, per R window dsd and dkpx (Ron - Roff). dsd <= -3 ms with dkpx > -0.5% selects H-radius; kpx loss >2%
+selects H-thin; dsd ~0 at every R selects H-near. Build at HEAD carries the knob (default off, no
 behaviour change unless the env is set).
