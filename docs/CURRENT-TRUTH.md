@@ -425,6 +425,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+   **s7261 fold (s7260_dd4_auto_stack rc=0, AC, control offd 142 s <55/s, flat30 21 s PASS):** auto prints [s7258] dd4, merged 3.24M unm 0;
+   win77-97 auto 9.77 ms/60 vs off 13.91/60, max 10.66 vs 15.17 ms, beyond-route dip s 0 vs 3 -> stack auto at dd4 confirmed (single run, agrees
+   with s7248 fixed-on 9.6). L4 only: queued s7261_dd4_stack_levels (L1/L5/L12 auto + L12 offd control) for other-level engagement/rate/crash.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

@@ -1,10 +1,9 @@
-# NEXT (s7261): fold s7260_dd4_auto_stack — does the WIDEWIN stack (now auto at any dd>1 + WIDEWIN) engage in mission at dd4?
+# NEXT (s7262): fold s7261_dd4_stack_levels — does the auto WIDEWIN stack engage and hold 60 at dd4 21:9 on L1/L5/L12?
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7260): L12 21:9 dd6 limit lifted by the stack (H-ww, control PASS, single run). main.cpp rs64_g1c_apply_dd_policy now sets the stack for
-any dd>1 with ROGUESQ_DD_WIDEWIN on (startup check passed: dd4ww prints "[s7258] dd4 ...", STACK=0 and no-WIDEWIN print none).
-Queue: scratch/agent/soak_queue/s7260_dd4_auto_stack.sh (SOAK_NEEDS_IDLE=180; L4 21:9 dd4 WIDEWIN; arms auto / off=STACK=0 / offd=off+DUTY1.4; results scratch/s7260q).
-1. Fold: control offd must show clearly more <55/s seconds than off (else re-run).
-   Engaged: auto has "[s7258] dd4" and "auto merged" > 0; win77-97 ~9.6-10 ms (s7248 fixed-on 9.6) vs off ~12.6-13.2 -> stack auto at dd4 confirmed;
-   add the timing to OWNER-OPT-INS line 63 ("A timing check ... is queued" -> result).
-   Not engaged (merged 0 or auto ~= off): the merge/R latch is read before rs64_g1c_apply_dd_policy at dd<6 -> check upstream_compat S7239Init/S7233 latch order.
-2. If the soak did not run (owner active): G-ladder next rung after G1c/G1d stack work: check CURRENT-TRUTH Next steps top item (do not wait).
+State (s7261): stack auto at dd4 confirmed on L4 (auto 9.77 ms vs off 13.91, merged 3.24M, control PASS). Coverage beyond L4 queued:
+scratch/agent/soak_queue/s7261_dd4_stack_levels.sh (results scratch/s7261q).
+Hypotheses: H-general (every level: [s7258] dd4 line, merged>0, unm 0, 0 beyond-route dips, alive) vs H-L4-only (some level merges 0 -> gate thr
+is level-specific; check [s7239] thr= per level) vs H-crash (an arm alive=0 -> backtrace it, the merge rewrite is the first suspect).
+1. Fold: control l12d must show clearly more <55/s s than l12 (else re-run). Then per level as above; update OWNER-OPT-INS "Other levels at distance 4 are queued".
+2. If all pass: close this thread (H-ww done at dd4/dd6, L4/L12, + levels); take the next CURRENT-TRUTH item / ladder rung G3 (in-flight frame diffs vs retail).
+3. If the soak did not run (owner active): do not wait; take G3 offline work.

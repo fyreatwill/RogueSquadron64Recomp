@@ -191481,3 +191481,15 @@ it now applies at any dd>1 with ROGUESQ_DD_WIDEWIN on (STACK=0 off, explicit val
 fixed-on 9.6 ms/60. Startup check (21:9, 6 s each): dd4+WW prints "[s7258] dd4 widewin stack r=48 merge=0.4 e=16"; dd4+WW+STACK=0 and dd4 without
 WW print none; dd6+WW unchanged (stack + [s7037] bundle). In-mission engagement at dd4 not yet shown: queued s7260_dd4_auto_stack (L4 21:9 dd4,
 auto/off/offd).
+
+## Session 7261 (2026-11-13) — s7260_dd4_auto_stack fold: WIDEWIN stack engages at dd4 in mission (9.77 vs 13.91 ms); queued other-level dd4 check
+
+- Ran (by the loop, AC): scratch/agent/soak_results/s7260_dd4_auto_stack_20261113-012012.log, L4 Gerrard V 21:9 dd4 WIDEWIN MELT, 240 s holds.
+- Control offd (STACK=0 + DUTY=1.4): 142 s <55/s, flat 30 run t=77 21 s, win 21.34 ms -> instrument sees dips: PASS.
+- auto: "[s7258] dd4 widewin stack r=48 merge=0.4 e=16 (auto)", [s7239] merged 3236308 unm 0; win77-97 60.0/s 9.77 ms, p95 9.95, max 10.66,
+  6 <55/s s all route transitions (t=5..67), 0 beyond-route.
+- off (STACK=0, pre-s7260 dd4): win 13.91 ms 60/s, max 15.17, 6 frames >=17 ms, 3 beyond-route dip s (t=160/169/172).
+- Shows: the s7260 dd>1 extension of the stack engages in mission at dd4 and reproduces s7248's fixed-on gain (9.6 ms) -> two lines (s7248 fixed-on,
+  s7261 auto). Rules out the NEXT "not engaged / latch order" branch. L4 only.
+- Queued scratch/agent/soak_queue/s7261_dd4_stack_levels.sh (dd4 21:9 WIDEWIN: L1/L5/L12 auto + L12 STACK=0+DUTY1.4 control) to extend
+  engagement/rate/0-crash coverage of the new default beyond L4. OWNER-OPT-INS line updated with the dd4 timing.
