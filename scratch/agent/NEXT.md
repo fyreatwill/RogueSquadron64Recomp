@@ -1,13 +1,13 @@
-# NEXT (s7268): fold s7267_169_r88_cost + s7267_r88_edge_sheet — does R=88 hold 60 and soften the sides on the 16:9 TV?
+# NEXT (s7269): fold s7268_169_split — why does 16:9 auto R=88 show little side gain?
 HYPOTHESIS-ID: widewin-169-tv
-State (s7267): auto R=88 qualified at 21:9 dd4 (s7266) and 21:9 dd6 (s7267: win 12.30 ms 60/s, control PASS). 16:9 only measured at R=48.
-Results: scratch/s7267q (cost: log_a88/a48/w0d) and scratch/s7267e (edge_*.txt, sheet_s88/w88/c219.png).
-Controls: w0d must show flat 30 / many beyond-route s; c219 must drop hard80 >=3 on a side (else void, re-queue).
+State (s7268): 16:9 R=88 cost OK (10.92 ms 60/s). s7267 edge: 16:9 s88 L/R -0.2/-2.1 vs s7264 16:9 STACK=0 -3.8/-5.1 (cross-run);
+21:9 R=88 right side swung -9.6 -> -3.6 between runs, so single-run side numbers are noisy (~6).
+Fold: `python3 tools/s7268_edge_delta.py scratch/s7268e c219` (VOID unless c219 drops >=3 on a side -> re-queue).
+Also s0 must show a 16:9 side gain (sum >= ~6), else the 16:9 gain is unmeasurable on this route.
 Outcomes:
-- H-keep16: a88 win77-97 60/s <~13 ms, 0 flat, beyond-route within ~2 of a48, AND s88 L/R hard80 drop >=3 -> thread closes:
-  copy sheet_s88.png + sheet_w88.png to docs/owner_sheet_s7268_widewin_r88_{169,219}.png (check them by eye first: left OFF, right ON,
-  no missing ground / cracks), add to OWNER-OPT-INS WIDEWIN paragraph, CT closed note, new slug.
-- H-cost16: a88 dips / flat that a48 lacks at 16:9 -> aspect-dependent auto R in main.cpp (~12461), smoke-boot, OWNER-OPT-INS.
-- H-nogain16: s88 no side drop -> 16:9 WW shows nothing at R=88; check s7265_ww_r_predict on the 16:9 log for the skip share.
+- H-noise: s88b side gain ~ s0 -> R=88 keeps the 16:9 gain; close thread: OWNER-OPT-INS 16:9 line, CT closed note, new slug.
+- H-merge16: m88 ~ s0, s88b small -> merge eats 16:9 gain; make auto MERGE aspect-gated (main.cpp [s7258] block) and queue a 16:9
+  cost check (MERGE=0 R=88 heavy window, w0d control) before landing as default.
+- H-real16: s0 gain, m88 + s88b small -> R=88 still trims 16:9 sides; try aspect-dependent R (e.g. 16:9 R=104) with cost soak.
 - Any crash -> backtrace first.
-If the soaks have not run (owner active): do not wait; take ladder 3c next open owner-look item (G5h cutscenes background at dd2/dd4).
+If the soak has not run (owner active): do not wait; take ladder 3c next open owner-look item (G5h cutscenes background at dd2/dd4).

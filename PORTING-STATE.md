@@ -191605,3 +191605,20 @@ HYPOTHESIS-ID: widewin-169-tv
 - Queued: scratch/agent/soak_queue/s7267_169_r88_cost.sh (16:9 L4 dd4 a88 / a48 / w0d STACK=0+DUTY control) and
   s7267_r88_edge_sheet.sh (16:9 s88, 21:9 w88, 21:9 c219 STACK=0 control, SHEET=1) -> the owner sheet that closes the thread.
 - Docs: OWNER-OPT-INS WIDEWIN "being checked" -> dd6 result; dd6 paragraph notes R=88 since s7266.
+
+## Session 7268 (2026-11-13) — fold s7267_169_r88_cost + s7267_r88_edge_sheet: 16:9 auto R=88 holds 60 (10.92 ms); 16:9 side gain small in one run (-0.2/-2.1), run-to-run swing ~6 -> queued 16:9 split soak; new edge-delta tool
+
+HYPOTHESIS-ID: widewin-169-tv. Offline fold, no game run this session.
+- s7267_169_r88_cost (rc=0, L4 dd4 16:9 AC): control w0d (STACK=0 + DUTY 1.4) win77-97 33.7/s 17.55 ms, 108 beyond-route s -> PASS.
+  a88 (auto R=88) win77-97 60.0/s 10.92 ms headroom 5.74, p95 11.58 max 12.53, 0 f>=17 ms, 0 flat, beyond-route 3 s, measured skip 5%,
+  merged 6.04M unm 0. a48 9.11 ms, skip 96%, beyond-route 3 s. -> R=88 costs +1.8 ms at 16:9 and keeps 60 (single run per arm).
+- s7267_r88_edge_sheet (rc=0, capture 53-57 frames/s, 0 crash lines): new tools/s7268_edge_delta.py -> c219 21:9 STACK=0 control
+  L/C/R -6.3/-1.0/-9.6 PASS; w88 21:9 R=88 -7.7/+0.0/-3.6; s88 16:9 R=88 -0.2/-1.4/-2.1 (side gain 2.3 vs 11.3 at 21:9).
+  Comparison: s7264 16:9 STACK=0 -3.8/-5.1, s7265 21:9 R=88 -7.6/-9.6. The 21:9 R=88 right side moved 6 points between two runs of the
+  same recipe, so the 16:9 "no gain" is within run-to-run swing: NOT concluded (H-nogain16 single-run, cross-run baseline).
+  Sheets (sheet_s88/w88/c219.png) inspected: no cracks or missing ground in ON frames, but off/on frames are neighbouring seconds
+  with different camera, so they do not show the side edge by eye. Not copied to docs.
+- Rules out: R=88 cost problem at 16:9 (H-cost16). Leaves H-merge16 (merge eats 16:9 gain), H-noise, H-real16.
+- Queued scratch/agent/soak_queue/s7268_169_split.sh: one sequence, 16:9 s0 STACK=0 / m88 MERGE=0 / s88b auto repeat + c219 control,
+  verdict via s7268_edge_delta.py (rc=4 on void control).
+- OWNER-OPT-INS: 16:9 R=88 cost note; side-edge gain marked unsettled.

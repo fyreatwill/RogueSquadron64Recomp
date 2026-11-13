@@ -1448,3 +1448,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113-035605 | s7265_ww_r_edge | rc=0 | 1082s | scratch/agent/soak_results/s7265_ww_r_edge_20261113-035605.log
 20261113 | s7266 fold: s7265_ww_r_cost rc=0 CONTROL PASS (w0d flat30 21 s): win r0 12.42/r72 11.58/r88 12.03 ms all 60/s 0 flat, beyond-route 4/4/4; s7265_ww_r_edge rc=0 CONTROL PASS (c219 L/R -8.0/-8.8): r72 -5.1/-7.2, r88 -7.6/-9.6 -> H-keep, auto R 48->88. Queued s7266_dd6_r88.
 20261113-041628 | s7266_dd6_r88 | rc=0 | 747s | scratch/agent/soak_results/s7266_dd6_r88_20261113-041628.log
+20261113-043146 | s7267_169_r88_cost | rc=0 | 747s | scratch/agent/soak_results/s7267_169_r88_cost_20261113-043146.log
+20261113-044413 | s7267_r88_edge_sheet | rc=0 | 1079s | scratch/agent/soak_results/s7267_r88_edge_sheet_20261113-044413.log
+20261113 | s7268 fold: s7267_169_r88_cost rc=0 CONTROL PASS (w0d 33.7/s 108 beyond-route s): 16:9 a88 10.92 ms/60 0 flat vs a48 9.11 (H-cost16 refuted); s7267_r88_edge_sheet CONTROL PASS (c219 -6.3/-9.6): s88 16:9 -0.2/-2.1, w88 -7.7/-3.6 (run swing ~6) -> unsettled; queued s7268_169_split.

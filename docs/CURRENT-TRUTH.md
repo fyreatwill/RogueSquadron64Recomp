@@ -345,6 +345,12 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    21:9 w88, c219 control; new SHEET=1 in tools/s7263_widewin_edge_arms.zsh -> tools/s7267_tog_sheet.py off|on frame-pair sheets).
    Capture hygiene: s7263_169_edge (rc=0) and its first re-run were void, 133-142 frames/180 s, Chrome frontmost; the s7009 arm lacked the
    s7259 frontmost keeper. tools/s7263_widewin_edge_arms.zsh now keeps the game in front and fails (rc=3) under 10 captured frames/s.
+   **s7268 fold (L4 dd4 AC):** s7267_169_r88_cost control w0d (STACK=0+DUTY) 33.7/s 108 beyond-route s PASS: 16:9 a88 win77-97 60.0/s
+   10.92 ms (max 12.53, 0 f>=17 ms, 0 flat, beyond-route 3 s, skip 5%, merged 6.04M) vs a48 9.11 ms (skip 96%) -> 16:9 R=88 cost OK.
+   s7267_r88_edge_sheet control c219 L/R -6.3/-9.6 PASS: s88 16:9 R=88 -0.2/-2.1 (vs s7264 16:9 STACK=0 -3.8/-5.1, cross-run), w88 21:9
+   -7.7/-3.6 (s7265 R=88 -7.6/-9.6: the right side swung 6 between runs). Single-run 16:9 'no gain' not trusted; sheets show no cracks/
+   missing ground but neighbouring seconds differ in camera. New tools/s7268_edge_delta.py (L/C/R deltas + control verdict).
+   Queued s7268_169_split: 16:9 s0 STACK=0 / m88 MERGE=0 / s88b repeat + c219 control (H-merge16 vs H-noise vs H-real16).
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.
    Not shown: real Low Power Mode on the clock probe (only the DUTY stand-in). Boot freeze stays passive: hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
