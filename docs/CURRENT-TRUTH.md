@@ -321,7 +321,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    dd4 21:9 auto on L1/L5/L12 all print [s7258] dd4, merged 4.47M/4.79M/1.04M unm 0, win77-97 60.0/s at 8.91/5.17/11.81 ms, beyond-route
    <55/s 0/1/0 s (L5's single s at t=75, 39/s, sits just after the route transients), alive, 0 crash; control L12 STACK=0+DUTY 30/s flat
    (172 beyond-route s) PASS -> H-general. Image: dd4 L4 clean two runs (s7247), dd6 L4 clean (s7259), L12 dd4 clean (s7262: holes control PASS 143/148,
-   flip +0.0022 +- 0.0041, seams on-off -11.2 vs A/A -15.7 px, tog ph0 merged 0 / ph1 0.49M; single run). Next: 16:9 TV check, NEXT.md.
+   flip +0.0022 +- 0.0041, seams on-off -11.2 vs A/A -15.7 px, tog ph0 merged 0 / ph1 0.49M; single run). **16:9 TV (s7263 fold of
+   s7262_169_widewin, L4 dd4, AC, control w0d+DUTY 33.9/s 112 beyond-route s PASS):** win77-97 n (no WW) 9.23 ms 60/s, w (auto stack) 9.15 ms
+   merged 3.25M, w0 (STACK=0) 12.25 ms 4 frames >=17 ms; beyond-route 3/0/3 s; 0 crash -> H-cost (stack needed at 16:9 too, free with it; single run).
+   Open: does WW add visible side ground at 16:9? Queued s7263_169_edge (tools/s7263_widewin_edge_arms.zsh, 21:9 control arm), NEXT.md.
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.
    Not shown: real Low Power Mode on the clock probe (only the DUTY stand-in). Boot freeze stays passive: hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.

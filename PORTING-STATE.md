@@ -191514,3 +191514,18 @@ HYPOTHESIS-ID widewin-heavy-window-cost (CLOSED). Owner idle ~2 h, screen unlock
 - Landed: CURRENT-TRUTH Next 1 closed and its 115-line thread migrated verbatim to PROJECT-OVERVIEW (57.6 -> ~41.7 KB); headline flat-30
   caveat rewritten; OWNER-OPT-INS distance-4 levels note; queued soak s7262_169_widewin (16:9 TV recipe: n / WW auto / WW STACK=0 / +DUTY control).
 Verdict: selects H-general + H-clean, refutes H-L4-only/H-crash/H-loss. Next discriminator: does WIDEWIN draw anything at 16:9 (H-free vs H-cost).
+
+## Session 7263 (2026-11-13) — s7262_169_widewin fold: at 16:9 L4 dd4 the WIDEWIN auto stack costs nothing (9.15 vs 9.23 ms no-WW) while WIDEWIN alone costs +3 ms (H-cost); queued a 16:9 side-edge image check with a 21:9 positive control
+HYPOTHESIS-ID: widewin-169-tv. CURRENT-TRUTH 41.7 KB, no maintenance.
+- Soak folded (s7262_169_widewin, rc=0, AC 100%, idle 8395 s, all 4 arms alive=1, 240 s each, results scratch/s7262q):
+  win77-97 (Gerrard V heavy window): n (WIDEWIN off) 60.0/s 9.23 ms; w (WIDEWIN=1, [s7258] dd4 auto stack printed) 60.0/s 9.15 ms, merged 3,248,598
+  unm 0; w0 (WIDEWIN=1 STACK=0) 59.9/s 12.25 ms, 4 frames >=17 ms, p95 13.29; w0d (w0 + DUTY 1.4, positive control) 33.9/s 17.24 ms, 112
+  beyond-route <55/s s -> control PASS. Beyond-route <55/s: n 3, w 0, w0 3 s (t=191-216, isolated single seconds).
+- Reading: H-cost selected, H-free refuted for the cost side: WIDEWIN adds cells at 16:9 too (merged >0, w0 +3.0 ms over n), and the auto
+  stack removes all of it (w - n = -0.08 ms). H-crash refuted (0 deaths). Single run; agrees in size with s7261 21:9 dd4 (13.91 -> 9.77 ms).
+- Not shown: whether those extra 16:9 cells are visible as less side edge. Built tools/s7263_widewin_edge_arms.zsh (s7009 arm, WIDEWIN=tog
+  with ROGUESQ_TOG_SPLIT=parity so g5e_edge_score's plain (mach/24e6)&1 binning matches the game's toggle; the default xor8 split would
+  have mixed the arms), arms 16:9 960x540 test + 21:9 1260x540 positive control (s7009: right third hard80 16.1 -> 8.3 must re-fire).
+  Queued scratch/agent/soak_queue/s7263_169_edge.sh (SOAK_NEEDS_IDLE=180, lock check exit 2).
+- OWNER-OPT-INS WIDEWIN line: 16:9 TV cost sentence added.
+Verdict: selects H-cost (stack needed and sufficient at 16:9), refutes H-crash. Next discriminator: 16:9 side-edge hard80 off/on vs the 21:9 control.
