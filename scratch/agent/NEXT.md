@@ -1,13 +1,14 @@
-# NEXT (s7269): fold s7268_169_split — why does 16:9 auto R=88 show little side gain?
-HYPOTHESIS-ID: widewin-169-tv
-State (s7268): 16:9 R=88 cost OK (10.92 ms 60/s). s7267 edge: 16:9 s88 L/R -0.2/-2.1 vs s7264 16:9 STACK=0 -3.8/-5.1 (cross-run);
-21:9 R=88 right side swung -9.6 -> -3.6 between runs, so single-run side numbers are noisy (~6).
-Fold: `python3 tools/s7268_edge_delta.py scratch/s7268e c219` (VOID unless c219 drops >=3 on a side -> re-queue).
-Also s0 must show a 16:9 side gain (sum >= ~6), else the 16:9 gain is unmeasurable on this route.
-Outcomes:
-- H-noise: s88b side gain ~ s0 -> R=88 keeps the 16:9 gain; close thread: OWNER-OPT-INS 16:9 line, CT closed note, new slug.
-- H-merge16: m88 ~ s0, s88b small -> merge eats 16:9 gain; make auto MERGE aspect-gated (main.cpp [s7258] block) and queue a 16:9
-  cost check (MERGE=0 R=88 heavy window, w0d control) before landing as default.
-- H-real16: s0 gain, m88 + s88b small -> R=88 still trims 16:9 sides; try aspect-dependent R (e.g. 16:9 R=104) with cost soak.
-- Any crash -> backtrace first.
-If the soak has not run (owner active): do not wait; take ladder 3c next open owner-look item (G5h cutscenes background at dd2/dd4).
+# NEXT (s7270): is the WIDEWIN auto stack (R=88 + merge 0.4 + E16) invisible in cutscenes?
+HYPOTHESIS-ID: widewin-stack-cutscenes
+Why: s7039 checked only the dd6 off-map cull across AT THE MOVIES; the WIDEWIN stack (s7258/s7266) was qualified in flight only
+(s7247/s7259/s7262 holes/seams, s7264-s7268 side edges). Cutscene cameras look across off-map/side terrain that flight never covers,
+and the merge pass replaces 2x2 flat far cells with one, which a slow cutscene pan could show as popping.
+Design (s7039 template, rule 2: ONE run, same-run toggle): copy scratch/s7039/mov.zsh (AT THE MOVIES route, private wd scratch/s6908/wd,
+owner save untouched) -> scratch/s7270/mov.zsh; 21:9 FPS60 dd4 WIDEWIN=1 CULL_SPIKE, with the stack cycling per second via a tog3
+on R/MERGE if apply_s7233/s7239 support tog (check `grep -n tog tools/apply_s7233_widewin_r.py tools/apply_s7239_widewin_merge.py`
+and main.cpp [s7258]); ph0 = STACK off, ph1 = auto stack (R=88 merge 0.4 E16), ph2 = positive control R=48 (known to eat side cells, s7264).
+If no tog exists for R/MERGE, add one in the fixup (same pattern as [s7233] widewin_r tog) - that is the engineering change.
+Score: tools/g5h_toggle_rank3.cpp edges 0->1 vs 1->2 vs mid-second control (s7039 thresholds); view top edges; sheet via tools/s7267_tog_sheet.py.
+Outcomes: H-clean (0->1 inside control spread, 1->2 R=48 control fires) -> close, OWNER-OPT-INS note; H-cut (0->1 edges with ground
+loss/popping viewed) -> gate the stack off in cutscenes (cinematic-mode flag) and re-score; control fails -> instrument VOID, fix first.
+Queue as a soak (# SOAK_NEEDS_IDLE=120, drives keys) if the owner is active; do not babysit.

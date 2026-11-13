@@ -191622,3 +191622,26 @@ HYPOTHESIS-ID: widewin-169-tv. Offline fold, no game run this session.
 - Queued scratch/agent/soak_queue/s7268_169_split.sh: one sequence, 16:9 s0 STACK=0 / m88 MERGE=0 / s88b auto repeat + c219 control,
   verdict via s7268_edge_delta.py (rc=4 on void control).
 - OWNER-OPT-INS: 16:9 R=88 cost note; side-edge gain marked unsettled.
+
+## Session 7269 (2026-11-13) — fold s7268_169_split: 16:9 WIDEWIN side gain is below run noise (STACK=0 reference -0.1 this run, 8.9 in s7264) -> H-noise, auto R=88 kept at both aspects; thread widewin-169-tv closed; edge-delta tool gains a reference-measurability check
+
+Work unit (NEXT.md widewin-169-tv): fold the queued s7268_169_split soak (rc=0, 1423 s, scratch/s7268e, L4 Gerrard V dd4, AC, WIDEWIN=tog parity,
+g5e_edge_score hard80% per third). Capture 52/56/56/58 frames/s (c219/m88/s0/s88b), 0 crash lines in every arm; [s7258] lines confirm r=88 merge=0
+(m88) and r=88 merge=0.4 e=16 (s88b), [s7233] widewin_r=0 for s0/c219.
+`python3 tools/s7268_edge_delta.py scratch/s7268e c219 3 s0:6`:
+  c219 (21:9 STACK=0, control): off L/C/R 23.0/28.7/25.1 on 16.1/28.1/13.2, delta -6.9/-0.6/-11.9, side gain 18.8 -> CONTROL PASS.
+  s0   (16:9 STACK=0):          off 17.3/30.8/16.3 on 16.5/30.4/17.2, delta -0.8/-0.4/+0.9, side gain -0.1 -> REF UNMEASURABLE.
+  m88  (16:9 R=88 MERGE=0):     delta -1.1/-0.8/-1.2, side gain 2.3.
+  s88b (16:9 R=88 auto stack):  delta -0.4/-0.7/-4.8, side gain 5.2.
+Reading: the instrument sees side gain when it exists (c219, same run). The 16:9 reference (stack fully off) shows none this run, though s7264's
+16:9 STACK=0 showed 8.9. 16:9 side gains over all runs/arms: STACK=0 8.9 / -0.1, R=88 2.3 (s7267) / 5.2, MERGE=0 2.3: span -0.1..8.9, no
+STACK=0 > R=88 ordering. Verdict H-noise: at 16:9, WIDEWIN's side-edge gain on this route is small and below run-to-run noise; R=88 is not
+shown to remove any of it. H-merge16 and H-real16 are not supported (each needs s0 > m88/s88b, which this run reverses). Auto R=88 stays at both
+aspects (16:9 cost 10.92 ms, 60/s, s7268). Likely cause, unmeasured: at 16:9 the WIDEWIN-off side edge is already lower (s0 off L/R 17/16 vs c219
+21:9 23/25), so the 64-cell window covers most of the 16:9 frustum and WIDEWIN has little to add there.
+Limits: one run per arm in this soak; the 16:9 effect is not resolved, only bounded (smaller than the noise, ~6 points).
+Tool: tools/s7268_edge_delta.py takes ref_arm:min_gain args and prints MEASURABLE/UNMEASURABLE (rc 5 if any reference falls short), so a fold
+can no longer compare arms against a reference that showed no gain.
+Docs: CURRENT-TRUTH item 1 CLOSED s7269 note; OWNER-OPT-INS 16:9 WIDEWIN line settled (optional on the TV, benefit mostly at 21:9).
+Rules out: H-merge16, H-real16 (as measurable effects). Next: the WIDEWIN auto stack (R=88 + merge) has never been checked in cutscenes
+(s7039 covered only the dd6 off-map cull) -> NEXT.md widewin-stack-cutscenes.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7266 (2026-11-13).
+Compact operational handoff, as of Session 7269 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -351,6 +351,12 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    -7.7/-3.6 (s7265 R=88 -7.6/-9.6: the right side swung 6 between runs). Single-run 16:9 'no gain' not trusted; sheets show no cracks/
    missing ground but neighbouring seconds differ in camera. New tools/s7268_edge_delta.py (L/C/R deltas + control verdict).
    Queued s7268_169_split: 16:9 s0 STACK=0 / m88 MERGE=0 / s88b repeat + c219 control (H-merge16 vs H-noise vs H-real16).
+   **CLOSED s7269 (fold of s7268_169_split, L4 dd4 AC, capture 52-58/s, 0 crash; control c219 21:9 STACK=0 L/R -6.9/-11.9 PASS):**
+   16:9 s0 STACK=0 L/R -0.8/+0.9 (side gain -0.1), m88 MERGE=0 -1.1/-1.2 (2.3), s88b R=88 -0.4/-4.8 (5.2). The 16:9 reference itself
+   shows no gain this run (s7264: 8.9), so 16:9 side gains across 5 runs/arms span -0.1..8.9 with no STACK=0 > R=88 ordering -> H-noise:
+   at 16:9 WIDEWIN's side gain is small and below run noise on this route; R=88 is not shown to cost any of it. Keep auto R=88 at
+   both aspects (16:9 cost 10.92 ms 60/s, s7268). Likely why (unmeasured): the 16:9 off-edge is already lower (s0 off L/R 17/16 vs
+   21:9 23/25), the 64-cell window covers most of the 16:9 frustum. tools/s7268_edge_delta.py now takes ref_arm:min_gain (MEASURABLE).
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.
    Not shown: real Low Power Mode on the clock probe (only the DUTY stand-in). Boot freeze stays passive: hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
