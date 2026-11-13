@@ -1,15 +1,16 @@
-# NEXT (s7275): G5c close criterion: one LONG run at the owner's PLAIN recipe (no WIDEWIN/MELT env), fullscreen 16:9 dd4 FPS60
-HYPOTHESIS-ID: g5c-long-plain
-State: s7272-s7274 show 0 in-flight holds >= 250 ms in 300 s captures (L1/L4/L5/L12, 16:9 + 21:9, windowed + fullscreen, SIGSTOP control
-caught every time), but every one of those runs set DD_MELT + WIDEWIN env, and none was longer than 300 s. G5c says "Fixed when a long run
-has no gap over 250 ms outside loads, including the catch-up burst". The owner's recipe is FPS60 dd4 ASPECT=16:9 FULLSCREEN=1 only.
-Hypotheses: H-none-long (0 flight holds over 900 s on L4 and L12 -> G5c engineering CLOSED, owner flight only); H-late (holds appear only
-late in a long run: heap/pool growth, shader cache growth, log or file writes; note the time and look at the sheet frames); H-plain (holds
-appear without WIDEWIN/MELT: the plain dd4 terrain path stalls, e.g. the far-loss fill; compare against s7274's runs on the same level).
-Discriminator: tools/s7272_g5c_hold_arm.zsh PLAIN=1 DUR=900 KEEP=1 FS=1 (SIGSTOP 1 s controls x3 at +57/+158/+259 s; holds sheet).
-Commands (in-session: ~1045 s per run, over the loop's 600 s soak cap): check HID idle >= 120 s and the screen is unlocked, then
-  `env PLAIN=1 DUR=900 KEEP=1 FS=1 LEVEL=4 TAG=s7275p4 ASP=16:9 CW=480 zsh tools/s7272_g5c_hold_arm.zsh` then the same with LEVEL=12 TAG=s7275p12.
-  Watch whether the autopilot leaves flight inside 900 s (L4/L1 restarted their mission at ~+50-60 s / +205 s in s7274). Holds inside those
-  transitions are loads. View scratch/s7272/<tag>/holds_sheet.jpg. Phase labels mean nothing under PLAIN.
-Expected: H-none-long -> mark G5c engineering closed in CURRENT-TRUTH item 5 and take the next ladder rung; any flight hold -> its time,
-frames and phase name the next unit (sample the live process with `sample` at the next recurrence).
+# NEXT (s7276): G5c busy-host arm: does host CPU load produce the owner's in-flight freezes?
+HYPOTHESIS-ID: g5c-busy-host
+State: s7272-s7275 show 0 in-flight holds >= 250 ms at the owner recipe on L1/L4/L5/L12 (16:9 + 21:9, windowed + fullscreen, WIDEWIN and
+PLAIN env, 300 s and 900 s), SIGSTOP control caught every time. Every one of those runs was on a QUIET host (HID idle hours, nothing else
+running). The owner plays with Chrome/REAPER/WindowServer load (G1b H-host: only the P-cores sysctl hw.perflevel0 reports).
+Hypotheses: H-host (holds >= 250 ms appear in flight under load: game/RSP threads pushed to E-cores or descheduled); H-robust (still 0 flight
+holds under load: G5c needs an owner-side datum, e.g. a screen recording of a freeze); H-slow (no holds but changes/s drops a lot: a steady
+slowdown, not a freeze; report the per-second change rate).
+Discriminator: tools/s7272_g5c_hold_arm.zsh PLAIN=1 DUR=600 KEEP=1 FS=1 LEVEL=12 (no restarts in s7275), with a background load of one
+`yes > /dev/null` per logical CPU (hw.ncpu) started at launch and killed after, in a SECOND arm with load = P-core count only. Same SIGSTOP
+controls (3/3 required). Baseline = s7275 L12 quiet (39873 frames/900 s, 44.3 changes/s, 0 holds, longest 190 ms).
+Commands (in-session; check HID idle >= 120 s + screen unlocked first):
+  n=$(sysctl -n hw.ncpu); for i in $(seq $n); do yes > /dev/null & done; env PLAIN=1 DUR=600 KEEP=1 FS=1 LEVEL=12 TAG=s7276all ASP=16:9 CW=480 zsh tools/s7272_g5c_hold_arm.zsh; kill %{1..$n}
+  then the same with n=$(sysctl -n hw.perflevel0.logicalcpu), TAG=s7276p. Kill every `yes` afterwards (pkill -x yes).
+Expected: H-host -> holds in flight; sample the live process (`sample <pid> 3`) during the next recurrence and name the stalled thread;
+fix candidate is thread QoS (QOS_ALL opt-in exists, s6962-s6989; owner decides default). H-robust -> G5c parked for an owner datum.

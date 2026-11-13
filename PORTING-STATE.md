@@ -191750,3 +191750,20 @@ Rules out: fullscreen as a G5c freeze source; in-flight freezes >= 250 ms on fou
 Discrimination: selects H-none-fs over H-fs/H-level (controls caught, 0 flight holds).
 Next: G5c's own close criterion ("a long run has no gap over 250 ms outside loads"): PLAIN=1 owner env, DUR=900, L4 then L12, in-session
 (exceeds the loop's 600 s soak cap). NEXT.md g5c-long-plain.
+
+## Session 7275 (2026-11-13) — G5c close criterion: two 900 s runs at the owner's PLAIN fullscreen recipe (no WIDEWIN/MELT env), L4 + L12: 0 in-flight holds >= 250 ms (SIGSTOP control 3/3 each, every L4 hold viewed = black mission-restart transition) -> H-none-long; G5c engineering closed
+Work unit (NEXT.md g5c-long-plain). Host: HID idle 8.2 h, screen UNLOCKED (ioreg CGSSessionScreenIsLocked absent), no other game.
+Runs: `env PLAIN=1 DUR=900 KEEP=1 FS=1 LEVEL=L TAG=s7275pL ASP=16:9 CW=480 zsh tools/s7272_g5c_hold_arm.zsh` (env = owner recipe only:
+FPS60 dd4 ASPECT=16:9 FULLSCREEN=1; SIGSTOP 1 s controls at capture +57/+158/+259 s). Phase labels are meaningless under PLAIN.
+| L | frames / 900 s | changes/s | control | holds >= 250 ms (outside controls) | viewed | crash |
+| 4 | 52807 | 58.6 | 3/3 (1035/1033/1027 ms) | +86.3 275, +96.0 307, +98.6 374, +230.5 292, +240.0 300, +242.6 375, +471.0 359 | all held luma 1 (black): flight death -> black -> hangar/briefing -> iris -> black -> intro tower -> black -> flight, twice, plus a third death->hangar at +471 | 0 |
+| 12 | 39873 | 44.3 | 3/3 (1042/1043/1043 ms) | none (longest identical run 190 ms) | controls all frozen mid-flight; 900 s of flight | 0 |
+Sheets: docs/owner_sheet_s7275_g5c_plain900_L4.jpg, docs/owner_sheet_s7275_g5c_plain900_L12.jpg (-1 s / held / next / +1 s).
+Verdict H-none-long: refutes H-late (no holds appear late in a 900 s run, 300-900 s clean on both levels) and H-plain (the plain dd4 path
+without WIDEWIN/MELT adds no flight hold). Two lines: hold scorer with same-run SIGSTOP control (6/6 caught) and the frame sheet of every
+hold. One run per level. G5c close criterion ("a long run has no gap over 250 ms outside loads, including the catch-up burst") is met on
+L4 and L12; with 0 flight holds there is no catch-up burst to score. Caveat: quiet host throughout (all G5c runs s7272-s7275 were), so
+H-host (owner's freezes need host load: Chrome/REAPER/WindowServer pushing the game off P-cores) is untested.
+Rules out: long-run growth (heap/pool/shader cache/log) stalls >= 250 ms over 900 s; the plain dd4 terrain path as a freeze source.
+Discrimination: selects H-none-long over H-late/H-plain.
+Next: G5c busy-host arm (H-host): same PLAIN 900 s L4 run with a background CPU load on every core, NEXT.md g5c-busy-host.

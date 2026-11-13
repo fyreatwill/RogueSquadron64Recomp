@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7272 (2026-11-13).
+Compact operational handoff, as of Session 7275 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -382,7 +382,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    new tools/s7273_hold_sheet.py), 0 flight holds; the s7272_219_hold soak's 8 holds are unclassified (raw deleted). Thread closed.
    **s7274 FULLSCREEN=1 (owner recipe, [g1f] fullscreen=1 drawable 3024x1898) on L1/L4/L5/L12: 0 flight holds >= 250 ms, control 12/12,
    every hold = black mission-restart transition (sheets docs/owner_sheet_s7274_g5c_fullscreen_L*.jpg) -> H-none-fs.** Arm now takes
-   LEVEL= FS=1 PLAIN=1 DUR=. Open: PLAIN=1 (no WIDEWIN/MELT env) DUR=900 long run, L4 + L12, in-session (> 600 s soak cap), NEXT.md.
+   LEVEL= FS=1 PLAIN=1 DUR=. **s7275 close criterion MET (H-none-long): PLAIN owner env (FPS60 dd4 16:9 FULLSCREEN, no WIDEWIN/MELT),
+   900 s, L4 + L12: 0 flight holds >= 250 ms, control 6/6; L4's 7 holds = black death/restart transitions (sheets
+   docs/owner_sheet_s7275_g5c_plain900_L{4,12}.jpg). G5c engineering CLOSED on a quiet host.** Open: H-host (busy host), NEXT.md.
 6. **G5e fog (s6904): owner look.** 21:9 far slab: DD_MELT takes it to the dd1 floor (s7007). Residual side
    edge = the 64-column terrain window (s7008); WIDEWIN (N=128 at 0x83000000) widens it, free at 21:9 dd4
    on the owner path (s7014-s7015). dd>=6 cost is per cell (s7019-s7029); the off-map bundle pays for it (headline).
