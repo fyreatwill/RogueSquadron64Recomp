@@ -1,12 +1,9 @@
-# NEXT (s7272): G5c frozen-image check on the new WIDEWIN auto-stack path (owner 16:9 TV recipe)
+# NEXT (s7273): fold s7272_219_hold (G5c image holds at 21:9 on the WIDEWIN auto-stack path), then pick the next ladder rung
 HYPOTHESIS-ID: g5c-freeze-widewin-stack
-State: widewin-stack-cutscenes CLOSED s7271 (H-clean at 21:9 and 16:9). The auto stack (R=88 + merge 0.4 + E16, s7233-s7266) is new code
-since G5c (s6902) was checked; its merge pass rebuilds cells per frame and nobody has looked for multi-frame frozen images on that path.
-Unit: one flight run, L4 dd4 16:9 FPS60 WIDEWIN=1 (auto stack) vs WIDEWIN STACK=0 in the SAME run via the existing tog3/tog clocks
-(ROGUESQ_DD_WIDEWIN_R_TOG=3 _R3=0,88,88 _MERGE_TOG=3 _MERGE3=0,1,0, i.e. ph0 off / ph1 stack / ph2 R only), route = tools/s7263_widewin_edge_arms.zsh
-(frontmost keeper, capture >=52 fps or VOID), capture 300 s of flight with scratch/s6914/g5b_capture, then tools/g5c_frozen_runs.py RAW 250.
-Positive control (rule 1): the s6902 meter arm (PORTING-STATE grep 'g5c_frozen_runs', vc arm) or a deliberate ROGUESQ stall injection in
-one phase must show a frozen run >=250 ms in the same raw; without it a zero is not a result.
-Hypotheses: H-none (0 frozen runs >=250 ms outside loads in all phases) -> close; H-merge (runs cluster in ph1/merge phase) -> profile merge;
-H-general (runs in all phases equally) -> host/present cause, G5c reopen with [s7064] timing.
-If the host is busy or locked, queue it as a soak (SOAK_NEEDS_IDLE=120) and do offline work.
+State: s7272 16:9 L4 dd4: H-none (0 in-flight holds >= 120 ms in off/stack/R88 phases; holds 250-442 ms all cutscene transitions; SIGSTOP
+control 3/3). Soak scratch/agent/soak_queue/s7272_219_hold.sh runs the same at 21:9 (out scratch/s7272/s7272w/hold.txt; rc 3 = control miss).
+Fold: if SOAK-RESULTS has it, read scratch/s7272/s7272w/hold.txt. Any non-control hold >= 250 ms: view its frames (tools/s7272_image_hold.py
+times; sheet like scratch/s7272/holds_sheet.jpg) - transition = load-side, flight = real. Outcomes: H-none219 -> close the thread;
+H-merge219 (flight holds cluster in ph1) -> profile rs64_s7239 merge with `sample` on a live run; H-general219 -> host/present, [s7064] timing.
+If not run yet (gated on idle), run it in-session if HID idle >= 120 s and unlocked: `zsh scratch/agent/soak_queue/s7272_219_hold.sh`.
+After closing: Next steps items 2-16 are owner looks; take the first ladder rung (ITERATION.md 3c) not closed and write NEXT.md for it.

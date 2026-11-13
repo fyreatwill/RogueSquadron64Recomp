@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7270 (2026-11-13).
+Compact operational handoff, as of Session 7272 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -375,6 +375,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).
    LEVEL=10 is cloud (no terrain grid): never use it for terrain measures.
 5. **G5c freezes (s6902), G5d logo (s6903): owner flight / boot.**
+   s7272: no frozen image in flight on the WIDEWIN auto-stack path, 16:9 L4 dd4 same-run tog3 (off / stack / R88): 0 holds >= 120 ms in
+   flight in any phase; the 6 holds 250-442 ms are all cutscene transitions; SIGSTOP 1 s control caught 3/3. Tool tools/s7272_image_hold.py
+   (time between differing frames, sees repeats and gaps), arm tools/s7272_g5c_hold_arm.zsh. 21:9 queued (s7272_219_hold).
 6. **G5e fog (s6904): owner look.** 21:9 far slab: DD_MELT takes it to the dd1 floor (s7007). Residual side
    edge = the 64-column terrain window (s7008); WIDEWIN (N=128 at 0x83000000) widens it, free at 21:9 dd4
    on the owner path (s7014-s7015). dd>=6 cost is per cell (s7019-s7029); the off-map bundle pays for it (headline).

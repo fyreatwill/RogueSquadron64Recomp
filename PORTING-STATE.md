@@ -191689,3 +191689,21 @@ Verdict: H-clean169. Two lines: image ranker with same-run control + counters; s
 Rules out: H-cut169 (stack removes cutscene ground at 16:9). Thread widewin-stack-cutscenes closed (21:9 s7270 + 16:9 s7271).
 Next: g5c-freeze-widewin-stack (NEXT.md): frozen-image runs on the new auto-stack path, same-run phases, with a stall positive control.
 Discrimination: selects H-clean169, refutes H-cut169; the w1024 gate defect explains the VOID soak (route timing restored, 216.8 vs 217.0 s).
+
+## Session 7272 (2026-11-13) — G5c: no frozen image in flight on the WIDEWIN auto-stack path at 16:9 dd4 (H-none; SIGSTOP control caught 3/3); new image-hold scorer and arm
+Unit (NEXT g5c-freeze-widewin-stack): the auto stack (R=88 + merge 0.4 + E16) is new since G5c (s6902). One in-session run (AC, HID idle 7 h,
+unlocked): L4 dd4 16:9 FPS60 MELT, WIDEWIN=1 STACK=0 with same-run tog3 ((mach/24e6)%3): ph0 off (R0, merge off), ph1 stack (R88 + merge),
+ph2 R88 only; capture 300 s at 480x270 (15146 frames, 0 idle, 42.3 image changes/s), recipe tools/s7272_g5c_hold_arm.zsh.
+New tools/s7272_image_hold.py: hold = time between consecutive DIFFERING frames (blake2b), so it sees byte-identical repeats AND capture
+gaps; binned by phase of the hold's first frame; holds touching a control window reported apart.
+Positive control (rule 1): SIGSTOP the game 1 s at capture +59/+160/+261 s -> caught 3/3 as 1026/1003/1009 ms holds (plus 373/176/166 ms
+catch-up tails right after). Note: SCK keeps delivering complete (non-idle) repeated frames while the process is stopped.
+Result, holds >= 250 ms outside controls: ph0 1 (275), ph1 2 (258, 251), ph2 2 (384, 442); at >= 120 ms ph1 gains one (250). All 6 viewed
+(docs/owner_sheet_s7272_g5c_widewin_holds.jpg, scratch/s7272/h56.jpg): every one is a scene transition (black/wipe into the in-mission
+tower shot or the rebel-crowd cutscene, and the fade back to flight), i.e. load-side, outside G5c's terms. In flight: 0 holds >= 120 ms in
+any phase. tools/g5c_frozen_runs.py on the same raw lists the same 9 runs.
+Arms acted: [s7239] merged ph=on 42792/5133 vs off 0, unm 0; [s7233] r=88 calls 119 skip 43.7 (on, ~2/3 of time) vs r=0 calls 60; 0 crash lines.
+Verdict H-none (refutes H-merge: no cluster in the merge phase; H-general: no flight holds at all). Single run, 16:9 only; two lines =
+image-hold scorer with same-run control + counters showing every arm active. Raw (5.9 GB) deleted after scoring.
+Queued scratch/agent/soak_queue/s7272_219_hold.sh (same at 21:9, CW 630; exit 3 if the control misses).
+Discrimination: selects H-none at 16:9; the thread stays open for the 21:9 soak fold only.
