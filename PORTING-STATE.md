@@ -191363,3 +191363,7 @@ on the probe pid at factor 1.4 (achieved 1.404) -> 173.87 ms = 1.391x. Load cont
 
 Rules out: nothing about the game. Open (single-source): that real battery Low Power Mode reads ~1.4 on the probe; only the SIGSTOP
 stand-in has been measured. First battery+LPM session should run `tools/s7253_clkprobe` once and record it.
+
+ORIGIN: the slow value is the host, not the game: macOS Low Power Mode (pmset powermode 1 on battery) caps CPU clocks (s7249/s7250,
+attributed by pmset log + a constant sd_cpu ratio across light and heavy tasks). The value is legitimate host behaviour; the gate only
+refuses to time arms under it, and ALLOW_SLOW=1 is the explicit opt-out for deliberate slow-host arms.
