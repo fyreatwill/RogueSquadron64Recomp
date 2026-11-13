@@ -191295,3 +191295,7 @@ so no game run was made this iteration.
   control: wwd goes flat 30, reproducing s7231. Outcomes: wwd 30 + stackd 60 means the stack keeps 60 on a slow host; both 30 means the stack
   only helps on AC; wwd 60 means duty is not equivalent to Low Power Mode, so recalibrate (factor 1.6) or ask the owner for one battery run with ALLOW_BATT=1.
 Rules out: taskpolicy as a battery stand-in. Low Power Mode on AC as a scripted arm (needs sudo).
+Discrimination: the pmset powermode split (battery 1 = Low Power Mode, AC 2) together with s7249's constant 1.40x sd_cpu **selects H-lowpower
+(battery clock cap) and refutes H-load as the s7231 slow-down cause**. The spin timings **refute H-taskpolicy-standin** (1.0x / 3.2x, never 1.4x).
+Next discriminator: s7250_slowhost wwd vs ww in the same run. wwd at flat 30 with ~1.4x sd_cpu validates the duty stand-in, and stackd then
+decides H-stack-holds-on-slow-host against H-stack-AC-only.
