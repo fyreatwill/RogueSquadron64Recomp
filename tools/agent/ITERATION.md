@@ -488,6 +488,10 @@ A soak that only re-runs an existing recipe belongs to the loop, not to you.
   breadcrumb/instrument env vars in every recipe unless the experiment needs
   isolation — passive instruments are free, and rotating one per soak wasted
   10 sessions (s272–s281, 0/20 hits).
+- A recipe that drives the game window/keys or needs a quiet host adds a header line
+  `# SOAK_NEEDS_IDLE=<secs>`: the loop leaves it queued while HID idle is below that or the
+  screen is locked, and re-queues it on exit 2 (the recipe's own human/lock/sleep void), up
+  to SOAK_MAX_VOIDS=5 times (s7234; test: tools/agent/test_soak_idle_gate.sh).
 - The loop runs up to 2 queued recipes between iterations (600 s hard cap
   each, then SIGKILL of the whole process group), appends one verdict line per
   run to scratch/agent/SOAK-RESULTS.md, and moves the recipe to

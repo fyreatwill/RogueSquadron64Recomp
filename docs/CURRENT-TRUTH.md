@@ -327,7 +327,7 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    thinning. s7233: knob ROGUESQ_DD_WIDEWIN_R=<cells> (+_R_TOG=1) skips non-empty cells outside the retail-equivalent 64x64 window
    farther than R from the eye (tools/apply_s7233_widewin_r.py, scorer tools/s7233_widewin_r.py, [g1cf] wr=, [s7233] tallies); built,
    UNMEASURED: the r40 arm went void (screen locked, host slept 3.7 h); harness now voids on lock/sleep; arms R=40/56/72 queued as
-   soak s7233b (needs an idle host). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
+   soak s7234_widewin_r (s7233b voided at t=0, owner active; s7234 made the loop idle-gate it: header SOAK_NEEDS_IDLE=180, re-queued on rc=2 up to 5x). Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
@@ -374,5 +374,6 @@ LEVEL DESCRIPTION = C-up on AVAILABLE CRAFT; the interlaced 512x448 screen is El
 - s6900, s6847, s6759 maintenance archives; [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
 - Objective contracts [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); images [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png.
-- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md` (latest s7128_wsheetpos_p1-p4, folded s7128-s7130).
+- Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md` (latest s7233b rc=2 void, folded s7234). Recipes that drive the
+  game window carry `# SOAK_NEEDS_IDLE=<secs>` (loop skips them on a busy/locked host; tools/agent/test_soak_idle_gate.sh).
 - Recent chronology: PORTING-STATE sessions 7047-7187; search bounded windows only.

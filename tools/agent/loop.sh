@@ -63,6 +63,7 @@ SLEEP_ON_ERROR="${SLEEP_ON_ERROR:-120}"
 MAX_ERR_RETRIES="${MAX_ERR_RETRIES:-4}"
 SOAKS_BETWEEN_ITERS="${SOAKS_BETWEEN_ITERS:-2}"
 SOAK_TIMEOUT="${SOAK_TIMEOUT:-1000}"
+SOAK_MAX_VOIDS="${SOAK_MAX_VOIDS:-5}"
 
 # Choose the model EXPLICITLY. Without this the loop silently inherits whatever
 # `model` sits in ~/.claude/settings.json — which on 2026-07-26 was "fable", the
@@ -245,6 +246,14 @@ notify_blocked() {
 # the verdicts (35 sessions of the first 300 were babysat re-soaks).
 # Each recipe runs in its own process group so the watchdog kill reaps the
 # game too; recipes still must SIGKILL their own game on the clean path.
+host_idle_s() { ioreg -c IOHIDSystem | awk '/HIDIdleTime/{printf "%d\n",$NF/1e9; exit}'; }
+host_locked() { /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes'; }
+# SOAK_IDLE_FEED=<file> overrides the idle reading (tail -1) for tools/agent/test_soak_idle_gate.sh.
+soak_host_idle() {
+  local i
+  if [ -n "${SOAK_IDLE_FEED:-}" ]; then i=$(tail -1 "$SOAK_IDLE_FEED"); else host_locked && return 1; i=$(host_idle_s); fi
+  [ "${i:-0}" -ge "$1" ]
+}
 run_soak_queue() {
   local qdir="$AG/soak_queue" rdir="$AG/soak_results" ran=0
   [ -d "$qdir" ] || return 0
@@ -261,6 +270,18 @@ run_soak_queue() {
     local cap="$SOAK_TIMEOUT" hdr
     hdr="$(sed -n 's/^# SOAK_TIMEOUT=\([0-9][0-9]*\).*/\1/p' "$recipe" | head -1)"
     [ -n "$hdr" ] && cap="$hdr"
+    # s7234: a key-driven/fullscreen recipe declares "# SOAK_NEEDS_IDLE=<secs>". It is
+    # skipped (left queued) while the owner is on the machine or the screen is locked,
+    # and an exit 2 (the recipe's own human/lock/sleep void) re-queues it, up to
+    # SOAK_MAX_VOIDS times. Before this the loop launched s7233b with the owner active,
+    # it voided at t=0 and was filed under done/ - the measurement was lost.
+    local need vfile nv
+    need="$(sed -n 's/^# SOAK_NEEDS_IDLE=\([0-9][0-9]*\).*/\1/p' "$recipe" | head -1)"
+    vfile="$qdir/.${name}.voids"
+    if [ -n "$need" ] && ! soak_host_idle "$need"; then
+      log "soak $name skipped: host not idle (needs ${need}s, idle $(host_idle_s)s, locked=$(host_locked && echo y || echo n))"
+      continue
+    fi
     log "soak $name starting (cap ${cap}s) -> $slog"
     t0=$SECONDS
     perl -e 'setpgrp(0,0); exec @ARGV' /bin/bash "$recipe" >"$slog" 2>&1 &
@@ -270,6 +291,16 @@ run_soak_queue() {
     rc=0; wait "$pid" 2>/dev/null || rc=$?
     kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null
     dur=$((SECONDS - t0))
+    if [ -n "$need" ] && [ "$rc" = 2 ]; then
+      nv=$(( $(cat "$vfile" 2>/dev/null || echo 0) + 1 ))
+      echo "$nv" > "$vfile"
+      if [ "$nv" -lt "$SOAK_MAX_VOIDS" ]; then
+        printf '%s | %s | rc=2 VOID (human/lock/sleep) %s/%s, re-queued | %ss | %s\n' "$ts" "$name" "$nv" "$SOAK_MAX_VOIDS" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
+        log "soak $name voided (rc=2), re-queued ($nv/$SOAK_MAX_VOIDS)"
+        ran=$((ran+1)); continue
+      fi
+    fi
+    rm -f "$vfile"
     printf '%s | %s | rc=%s | %ss | %s\n' "$ts" "$name" "$rc" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
     mv "$recipe" "$qdir/done/${name}_${ts}.sh"
     log "soak $name finished rc=$rc after ${dur}s"

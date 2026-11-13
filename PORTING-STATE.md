@@ -190897,3 +190897,20 @@ Outcome SUBSTITUTED (scratch/agent/SUBSTITUTION.md). Rules out: nothing yet. The
 Next discriminator: the s7233b arms, per R window dsd and dkpx (Ron - Roff). dsd <= -3 ms with dkpx > -0.5% selects H-radius; kpx loss >2%
 selects H-thin; dsd ~0 at every R selects H-near. Build at HEAD carries the knob (default off, no
 behaviour change unless the env is set).
+
+## Session 7234 (2026-11-12) — loop soak queue is now idle-gated: recipes with SOAK_NEEDS_IDLE stay queued on a busy/locked host and re-queue on a void (rc=2); WIDEWIN_R arms re-queued as s7234_widewin_r, still unmeasured
+HYPOTHESIS-ID: widewin-heavy-window-cost. CURRENT-TRUTH 41.5 KB, no maintenance.
+- Soak fold: s7233b_widewin_r rc=2 at 0 s. arms.log: "r40 start idle=1 / human active, stopping". The loop launched the recipe at 19:14
+  with the owner at the keyboard, the harness refused correctly, and loop.sh then filed the recipe under done/. The arms were lost
+  without being run. Same waste as s7233, which voided on a host sleep.
+- This session: the owner was active throughout. HIDIdleTime stayed 0-7 s on every poll from 19:15 to 19:28: an in-session waiter
+  (scratch/s7234/wait_run.zsh, run at idle >=180 s) polled every 3 s and never fired, and a 2-min sampler agreed. Not locked. No game was
+  started over the owner's work.
+- Engineering change: tools/agent/loop.sh run_soak_queue reads a recipe header `# SOAK_NEEDS_IDLE=<secs>`. If HID idle is below it or
+  CGSSessionScreenIsLocked=Yes, the recipe is skipped and left queued, so it costs no soak slot. If such a recipe exits 2 (its own
+  human/lock/sleep void), it is re-queued with a verdict line "VOID ... re-queued" and a .<name>.voids counter, up to SOAK_MAX_VOIDS=5,
+  then filed. rc 0/1 and ungated recipes behave exactly as before. Test: new tools/agent/test_soak_idle_gate.sh, which pulls the functions
+  out of loop.sh and drives a temp queue with a fake idle feed (SOAK_IDLE_FEED): 7/7 PASS, including the control that an ungated recipe
+  still runs on a busy host. The real idle/lock readers were checked live (idle 0, unlocked). ITERATION.md soak section documents the header.
+- Re-queued: scratch/agent/soak_queue/s7234_widewin_r.sh (s7233b body, SOAK_NEEDS_IDLE=180, SOAK_TIMEOUT=1100).
+Rules out: nothing about H-radius/H-thin/H-near; the discriminator is still unmeasured. ORIGIN: not a mitigation (harness scheduling).

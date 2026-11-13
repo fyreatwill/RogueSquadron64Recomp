@@ -1412,3 +1412,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112-054328 | s7198_backlog_L4 | rc=0 | 406s | scratch/agent/soak_results/s7198_backlog_L4_20261112-054328.log
 20261112 | s7199 fold: s7198_backlog_L4 rc=0, LEVEL=4 owner recipe 374 s: trims=0 fallback=0, peak queued 36.1 ms at 22047 Hz (limit 150). Margin holds in mission.
 20261112-121055 | s7220_bootloop_retina | rc=0 | 442s | scratch/agent/soak_results/s7220_bootloop_retina_20261112-121055.log
+20261112-191425 | s7233b_widewin_r | rc=2 | 0s | scratch/agent/soak_results/s7233b_widewin_r_20261112-191425.log
