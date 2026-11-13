@@ -191052,3 +191052,27 @@ Next discriminator (s7241): the queued soaks discriminate between H-radius (some
 (a merge frac meets the bar with less pixel loss, because 2 tri per 4 far cells keeps the pixels) and H-not-tri (the merge removes ~6 tri
 per block but window dsd barely moves, so the heavy-window cost is not in the triangles). Whichever arm meets the bar selects its lever.
 If neither does and ms/ktri ~ 0, that refutes the triangle-cost model behind both levers.
+
+## Session 7241 (2026-11-12) — s7239 WIDEWIN merge host unit test (tools/s7241_merge_test/run.sh): 17/17 cases pass on the live code, ASan/UBSan clean after one UB fix; both soaks still queued (owner active, HID idle 0.2-106 s)
+- Planned unit (NEXT.md): score soaks s7237_widewin_r2 + s7240_widewin_merge. Neither ran: both are `SOAK_NEEDS_IDLE=180` and HID idle
+  was 0.2 s at session start and 106 s at the end (owner using the Mac). They stay queued for the loop's idle gate.
+- Instead I checked the merge offline before it costs a game run. Static check of the generated funcs_4.c: H2 runs after the s0 load (0x800113D8).
+  H3 (0x80011884) sits on the common tail L_80011878, which the flat path reaches by `j L_80011878` at 0x8001170C, so every flat cell passes it.
+  H4 replaces the +0x28 at 0x800119A8. H5 L_800119BC is the loop exit, which the empty-list early branch at 0x800113E8 also reaches.
+- New tools/s7241_merge_test/{run.sh,test.cpp}. run.sh extracts the rs64_s7239_* block verbatim from src/main/upstream_compat.cpp and builds
+  it with ASan+UBSan. The test drives it through a synthetic 64 MB RDRAM: element lists with the real field layout and the ^2/^3 halfword/byte
+  swizzle, the H1 dist2 feed, and an emulation of the game's flat TRI_GEN writer (plan fact 2) with H2-H5 at the patched points. It decodes
+  every emitted command the way TriGen02 does (fact 3). Cases: basic 2x2; partners listed before the anchor; negative coordinates; odd-aligned
+  x (both signs); one cell near; dist2 exactly at the threshold; material mismatch; non-flat partner; flagged (0x40000000) group; height overflow
+  (ovf=1); a 4x2 strip (2 merges); a block plus 2 loose cells; spacing mismatch; a block at the int16 x edge; TOG ph0 (cand=1, anc=0, no
+  merge). In each case the merged quad must reproduce the block's four outer corners exactly (x, y = yb*16 + h*16 rebased, z, colour), every
+  unmerged cell must decode unchanged, and the tallies must satisfy drop == 3*merged, unm == 0 and near/ovf as expected.
+  Positive control: a corrupted corner colour is detected. Result: 17 cases, 0 failures.
+- Defect found and fixed: UBSan flagged `(p.yb - a.yb) << 4` in rs64_s7239_end (left shift of a negative int, UB before C++20). Changed it
+  to `* 16` (same value on clang, now defined). Rebuilt build/ clean. The queued soak picks it up.
+- What this rules out: a wrong pairing, rebase, corner/colour or drop bookkeeping in the host code (the logic under the plan's encoding is
+  correct). What it cannot rule out: the encoding facts themselves (ucode reading of the w1/w2 halves and w9 spacing), stale dist2
+  entries (the H1 hash is cleared only when half full, not per build pass), and g_rs64_ww timing. The soak's [s7239] noww/miss/near/unm
+  fields split those.
+- Open caveat (read only, not acted on): if a partner is captured and dropped but its anchor's command never reaches H3, the 3 partners are
+  already gone, which leaves a hole of 3 cells (counted as unm). The soak control requires unm == 0.

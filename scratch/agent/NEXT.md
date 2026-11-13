@@ -1,5 +1,6 @@
-# NEXT (s7241): score the queued soaks: s7237_widewin_r2 (WIDEWIN_R bracket, R=48/64/72) and s7240_widewin_merge (2x2 merge, MERGE=0.4/0.55/0.7)
+# NEXT (s7242; s7241 unit-tested the merge host code 17/17, soaks still queued): score the queued soaks: s7237_widewin_r2 (WIDEWIN_R bracket, R=48/64/72) and s7240_widewin_merge (2x2 merge, MERGE=0.4/0.55/0.7)
 HYPOTHESIS-ID: widewin-heavy-window-cost
+Before any rs64_s7239 edit or after the soak: `zsh tools/s7241_merge_test/run.sh` must print 0 failures.
 State (s7240): the merge is BUILT and off by default (tools/apply_s7239_widewin_merge.py, rs64_s7239_* in src/main/upstream_compat.cpp,
 [g1cf] wm=, [s7239] tallies, scorer `tools/s7233_widewin_r.py --merge`). Neither soak has run because the owner was active.
 Step 1: tail SOAK-RESULTS.md. For a soak that is still queued or came back rc=2: if HID idle >= 180

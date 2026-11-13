@@ -597,7 +597,7 @@ extern "C" void rs64_s7239_end(uint8_t* rd) {
         const S7239E &b = s7239_l[a.p[0]], &c = s7239_l[a.p[1]], &d = s7239_l[a.p[2]];
         if (!a.cmd || !b.cap || !c.cap || !d.cap) { s7239_t[ph][T_UNM]++; continue; }
         uint32_t* w = reinterpret_cast<uint32_t*>(rd + (a.cmd - 0x80000000u));
-        const int32_t nb = (int16_t)(b.w[1] & 0xFFFFu) + ((b.yb - a.yb) << 4), nc = (int16_t)(c.w[2] >> 16) + ((c.yb - a.yb) << 4), nd = (int16_t)(d.w[2] & 0xFFFFu) + ((d.yb - a.yb) << 4);
+        const int32_t nb = (int16_t)(b.w[1] & 0xFFFFu) + ((b.yb - a.yb) * 16), nc = (int16_t)(c.w[2] >> 16) + ((c.yb - a.yb) * 16), nd = (int16_t)(d.w[2] & 0xFFFFu) + ((d.yb - a.yb) * 16);
         w[1] = (w[1] & 0xFFFF0000u) | ((uint32_t)nb & 0xFFFFu);
         w[2] = (((uint32_t)nc & 0xFFFFu) << 16) | ((uint32_t)nd & 0xFFFFu);
         w[4] = b.w[4]; w[5] = c.w[5]; w[6] = d.w[6];
