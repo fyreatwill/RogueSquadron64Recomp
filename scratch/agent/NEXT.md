@@ -1,15 +1,21 @@
-# NEXT (s7240): score the WIDEWIN_R bracket (soak s7237_widewin_r2: R=48/64/72); if no R meets the bar, build the 2x2 merge (docs/WIDEWIN-MERGE-PLAN.md)
+# NEXT (s7241): score the queued soaks: s7237_widewin_r2 (WIDEWIN_R bracket, R=48/64/72) and s7240_widewin_merge (2x2 merge, MERGE=0.4/0.55/0.7)
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7239): r40 window -3.19 ms / -8.6% kpx, r56 -1.94 ms loss-free (s7237). Per-cell coarsening is impossible (s7238). Merge mesh designed
-from a static read (s7239, docs/WIDEWIN-MERGE-PLAN.md: hooks H1-H4 in renderFlatMeshFaceGroup + buildGridCellMeshForFace, knob ROGUESQ_DD_WIDEWIN_MERGE=<frac>).
-Step 1: tail SOAK-RESULTS.md for s7237_widewin_r2. rc=0: read the scorer block at the end of its soak_results log (data in scratch/s7237q/).
-rc=2 or still queued: if `ioreg -c IOHIDSystem | awk '/HIDIdleTime/{print $NF/1e9; exit}'` >= 180, run
-`zsh scratch/agent/soak_queue/s7237_widewin_r2.sh > scratch/s7237q/soak.log 2>&1` in the background, then move it to done/. A partial run still
-scores any arm past t=97 (`python3 tools/s7233_widewin_r.py scratch/s7237q/log_r*.txt`).
-Decide:
-- H-radius: some R gives `s7238 BAR MET`. Owner sheet at that R, opt-in in OWNER-OPT-INS. Merge plan shelved.
-- No R meets the bar, OR the owner stays active (the bracket can't run): BUILD the merge per the plan. That is an engineering change and doesn't need a run:
-  tools/apply_s7239_widewin_merge.py (wire into fixup_game_funcs_vendored.py after apply_s7233_widewin_r) + host rs64_s7239_* in
-  src/main/upstream_compat.cpp, regen order make_elf -> N64Recomp -> fixup -> cmake. Then queue soak s7240_widewin_merge.sh (SOAK_NEEDS_IDLE=180,
-  arms MERGE=0.5 / 0.7 with _TOG=1, same base B as s7237_widewin_r2). Extend tools/s7233_widewin_r.py to read [s7239].
-- Positive control: CONTROL PASS per arm (WIDEWIN_R); for the merge, ph1 drops ~= 3x anchors, ph0 anchors 0.
+State (s7240): the merge is BUILT and off by default (tools/apply_s7239_widewin_merge.py, rs64_s7239_* in src/main/upstream_compat.cpp,
+[g1cf] wm=, [s7239] tallies, scorer `tools/s7233_widewin_r.py --merge`). Neither soak has run because the owner was active.
+Step 1: tail SOAK-RESULTS.md. For a soak that is still queued or came back rc=2: if HID idle >= 180
+(`ioreg -c IOHIDSystem | awk '/HIDIdleTime/{print $NF/1e9; exit}'`), run it by hand in the background
+(`zsh scratch/agent/soak_queue/<name>.sh > scratch/<dir>/soak.log 2>&1`, then move it to done/). Merge first: it is the new build.
+Merge control (iron rule 1): ph1 merged > 0, drop == 3*merged, unm == 0; ph0 anc == 0 and cand > 0.
+If the control FAILS, the [s7239] fields name the reason:
+- noww >> grp: g_rs64_ww is not set at emit time. Drop the ww gate, or latch ww per frame.
+- miss ~ all candidates: the H1 elem does not match the emit list. Re-read node+0x14 / +0x20.
+- near ~ all: the frac/farcut units are wrong. Compare maxd2 with farcut.
+- flat ~ 0: the flat rule is misread.
+- unm > 0: an anchor was never emitted, which leaves holes. Must be 0.
+Decide (s7238 bar: window dsd <= -2.5 ms AND flight |dkpx| <= 1%):
+- A merge arm meets the bar: take owner sheets at that frac (side edge, L4 far-left shoreline, crack close-ups vs
+  docs/owner_sheet_s7009_widewin_219.png), then add the opt-in to OWNER-OPT-INS.
+- A WIDEWIN_R arm meets the bar and the merge does not: R wins, so shelve the merge.
+- Both meet it: prefer the merge if its flight dkpx is smaller.
+- Neither meets it: report the tri removed per merged block. If it is ~6 but ms/ktri is low, the cost is not in the triangles.
+  Re-split it with tools/s7231_cost_decomp.py.

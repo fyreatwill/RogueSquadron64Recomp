@@ -334,7 +334,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    (single run per R). **s7238: per-cell H-thin refuted** (code-read: retail level 2 = the 4 corner verts = one quad per cell; r40/r56 remove
    1.1-1.3 tri per skipped cell), so the only thinning past R is a 2x2 cell-merge mesh; scorer now prints tri/cell, ms/ktri and `s7238 BAR`.
    **s7239: the 2x2 merge is designed** (docs/WIDEWIN-MERGE-PLAN.md, static, not built). The flat lod-2 TRI_GEN carries its own spacing (w9 low =
-   elem+0x22<<2) and the emit list is the node dist2 chain, so the plan is to rewrite 1 command and drop 3, with no ucode change. Build it only if the bracket fails.
+   elem+0x22<<2) and the emit list is the node dist2 chain, so the plan is to rewrite 1 command and drop 3, with no ucode change.
+   **s7240: merge BUILT, unmeasured** (owner active all session, so neither soak could run). Knob ROGUESQ_DD_WIDEWIN_MERGE=<frac> (+_MERGE_TOG=1), tools/apply_s7239_widewin_merge.py
+   (H1 L_8004323C elem->dist2 hash, H2 0x800113DC pairing, H3 0x80011884 capture, H4 0x800119A8 drop, H5 L_800119BC anchor rewrite) + rs64_s7239_* in
+   upstream_compat.cpp; [g1cf] gains wm=<phase>, one [s7239] line per phase every 2 s; scorer `tools/s7233_widewin_r.py --merge` (control: ph1 merged>0,
+   drop==3*merged, unm=0; ph0 anc=0, cand>0). Off by default (g_rs64_s7239_on=0, all hooks no-op). Soak s7240_widewin_merge queued (MERGE 0.4/0.55/0.7).
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.

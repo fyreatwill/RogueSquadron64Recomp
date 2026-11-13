@@ -42141,6 +42141,7 @@ RS64_REPLAY = [
     "apply_s7136_sky_fill.py",  # s7136: ROGUESQ_HORIZON_SKYFILL (default on, no-op at 4:3, =0 retail, =tog A/B) widens the horizon clear to the whole viewport under ASPECT so the sky side above the band top gets the band fade colour (21:9/16:9 sky-corner holes)
     "apply_s7166_skyfill_bottom.py",  # s7166: ROGUESQ_HORIZON_SKYFILL_BOT (default on, =0 s7136, =tog) keeps the builder rects' bottom/right edge in the s7136 widened rect (letterboxed viewports start at y 54: h-1 was a height; L4 21:9 cutscene lower-right hole)
     "apply_s7134_cull_x.py",  # s7134: ROGUESQ_CULL_XFIX (opt-in, default off = retail; =1 render sites, =tog A/B, =all 19 sites) widens the sphere-in-view test (0x8001DC34) x-extent by the s6104 guPerspective factor (21:9 cloud-tile / object side culls)
+    "apply_s7239_widewin_merge.py",  # s7240: G1c WIDEWIN far-terrain 2x2 merge mesh (docs/WIDEWIN-MERGE-PLAN.md), ROGUESQ_DD_WIDEWIN_MERGE=<frac>, _MERGE_TOG=1
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 

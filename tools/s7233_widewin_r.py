@@ -10,18 +10,20 @@ ap = argparse.ArgumentParser(); ap.add_argument('logs', nargs='+')
 ap.add_argument('--t0', type=int, default=77); ap.add_argument('--t1', type=int, default=97)
 ap.add_argument('--flight0', type=int, default=60); ap.add_argument('--flight1', type=int, default=230)
 ap.add_argument('--pure', type=float, default=0.8)
+ap.add_argument('--merge', action='store_true', help='s7240: split on/off by [g1cf] wm= (WIDEWIN_MERGE phase) and use the [s7239] control')
 a = ap.parse_args()
 G1B = re.compile(r'\[g1b\] t=(\d+) vi=\d+ tasks=(\d+) sd_wall=([\d.]+)/')
 G1CF = re.compile(r'\[g1cf\] vi=\d+ dd=\d+ tasks=(\d+) .*? tri=(\d+) .*? tin=(\d+) tout=(\d+) tzero=(\d+) vout=(\d+) kpx=([\d.]+) '
-                  r'sc=\S+ bin=\S+ wr=(-?\d+)')
+                  r'sc=\S+ bin=\S+ wr=(-?\d+)(?: wm=(\d+))?')
+S7239 = re.compile(r'\[s7239\] ph=(\d) ')
 S7233 = re.compile(r'\[s7233\] ph=(\d) r=(\d+) calls=\d+ in=([\d.]+) skip=([\d.]+) wide_by_d8=([\d.,]+)')
 K = ['tasks', 'tri', 'tin', 'tzero', 'kpx']
 bad = 0
 for p in a.logs:
-    lab = os.path.basename(p).split('.')[0]; vis = []; secs = []; cur = []; tl = {0: [], 1: []}
+    lab = os.path.basename(p).split('.')[0]; vis = []; secs = []; cur = []; tl = {0: [], 1: []}; tm = {0: [], 1: []}
     for ln in open(p, errors='ignore'):
         m = G1CF.match(ln)
-        if m: cur.append(dict(zip(K, [int(m[1]), int(m[2]), int(m[3]), int(m[5]), float(m[7])]), on=int(int(m[8]) > 0))); continue
+        if m: cur.append(dict(zip(K, [int(m[1]), int(m[2]), int(m[3]), int(m[5]), float(m[7])]), on=int(int(m[9] or 0) > 0) if a.merge else int(int(m[8]) > 0))); continue
         m = G1B.match(ln)
         if m:
             t = int(m[1])
@@ -29,11 +31,18 @@ for p in a.logs:
             vis += cur
             if cur: secs.append((t, float(m[3]), sum(v['on'] for v in cur) / len(cur)))
             cur = []; continue
+        m = S7239.match(ln)
+        if m: tm[int(m[1])].append({k: int(v) for k, v in re.findall(r'(\w+)=(\d+)(?=\s|$)', ln)}); continue
         m = S7233.match(ln)
         if m: tl[int(m[1])].append((float(m[3]), float(m[4]), [float(x) for x in m[5].split(',')]))
     print(f'== {lab}: VIs {len(vis)}  [s7233] blocks ph0 {len(tl[0])} ph1 {len(tl[1])}')
     # s7236 positive control: ph1 must skip cells and ph0 must not, else the arm is not evidence (null without control)
     ctl = bool(tl[1]) and bool(tl[0]) and sum(x[1] for x in tl[1]) > 0 and sum(x[1] for x in tl[0]) == 0
+    if a.merge:  # s7240 control: ph1 merges (drops == 3x merged, 0 unmerged anchors), ph0 finds candidates but merges none
+        S = {ph: {k: sum(d.get(k, 0) for d in tm[ph]) for k in ('grp', 'noww', 'flag', 'el', 'flat', 'cand', 'anc', 'drop', 'merged', 'ovf', 'miss', 'near', 'unm', 'dup')} for ph in (0, 1)}
+        for ph in (0, 1): print(f'  [s7239] ph{ph} lines={len(tm[ph])} ' + ' '.join(f'{k}={v}' for k, v in S[ph].items()))
+        ctl = S[1]['merged'] > 0 and S[1]['drop'] == 3 * S[1]['merged'] and S[1]['unm'] == 0 and S[0]['anc'] == 0 and S[0]['drop'] == 0 and S[0]['cand'] > 0
+        print(f'  merge: drops/merged={S[1]["drop"] / max(S[1]["merged"], 1):.2f} (3.00 expected); tri removed per merged block expected ~6')
     win = [v for v in vis if a.t0 <= v['t'] <= a.t1 - 1 and v['tasks'] > 0]
     print(f'  CONTROL {"PASS" if ctl else "FAIL"} (ph1 skip>0, ph0 skip=0)  window VIs={len(win)}{"" if win else " (WINDOW NOT REACHED)"}')
     bad |= (not ctl) or (not win)

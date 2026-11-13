@@ -484,6 +484,126 @@ extern "C" int rs64_s7233_cell(int wx, int wz) {
     if (r > 0 && dd > (float)r) { s7233_sk[ph]++; return 1; }
     return 0;
 }
+// s7240 G1c (tools/apply_s7239_widewin_merge.py, design docs/WIDEWIN-MERGE-PLAN.md): WIDEWIN far-terrain 2x2 merge mesh.
+// ROGUESQ_DD_WIDEWIN_MERGE=<frac> (0/unset = off), _MERGE_TOG=1 = only on rs64_tog_odd seconds. While g_rs64_ww is set, four flat lod-2
+// cells of one face group forming an aligned 2x2 block (anchor floor(x/V0), floor(z/V0) even; same V0/material/w0 bits), all with node
+// dist2 >= frac^2 * farcut (0x8009DEB4, the game's own far cutoff in dist2 units, compared at 0x800434E0), become ONE TRI_GEN: partners are
+// captured at H3 and dropped at H4, the anchor is rewritten at H5 (rebased heights, partner corner colours, spacing 2*V0). Groups with the
+// 0x40000000 patch-table flag are never touched. One [s7239] line per phase every 2 s (counts since the last line).
+extern "C" { int g_rs64_s7239_on = 0; int g_rs64_s7239_act = 0; int g_rs64_s7239_skip = 0; int g_rs64_s7239_wm = 0; }
+namespace {
+inline uint32_t s7239_rw(const uint8_t* rd, uint32_t a) { return *reinterpret_cast<const uint32_t*>(rd + (a - 0x80000000u)); }
+inline uint16_t s7239_rh(const uint8_t* rd, uint32_t a) { return *reinterpret_cast<const uint16_t*>(rd + ((a - 0x80000000u) ^ 2u)); }
+inline uint8_t s7239_rb(const uint8_t* rd, uint32_t a) { return rd[(a - 0x80000000u) ^ 3u]; }
+inline bool s7239_ok(uint32_t a) { return a >= 0x80000000u && a < 0x84000000u; }
+constexpr uint32_t S7239_HN = 1u << 17;
+uint32_t s7239_he[S7239_HN]; float s7239_hd[S7239_HN]; uint32_t s7239_hcnt; unsigned long long s7239_hclr;
+inline uint32_t s7239_hash(uint32_t e) { return ((e >> 2) * 2654435761u) >> 15; }
+bool s7239_dist(uint32_t e, float* d) {
+    uint32_t h = s7239_hash(e);
+    for (int k = 0; k < 64; k++, h = (h + 1) & (S7239_HN - 1)) { if (s7239_he[h] == e) { *d = s7239_hd[h]; return true; } if (!s7239_he[h]) return false; }
+    return false; }
+float s7239_frac = 0.f; int s7239_tg = 0;
+struct S7239E { uint32_t e; int32_t x, z, yb, v; uint16_t mat; uint8_t b21, b2e, flat, role, dup, cap; int8_t h[4]; int32_t p[3]; uint32_t cmd; uint32_t w[10]; };
+std::vector<S7239E> s7239_l; std::vector<std::pair<uint64_t, int32_t>> s7239_key, s7239_el;
+enum { T_GRP, T_NOWW, T_FLAG, T_EL, T_FLAT, T_CAND, T_ANC, T_DROP, T_OVF, T_MISS, T_NEAR, T_UNM, T_DUP, T_MERGED, T_N };
+unsigned long long s7239_t[2][T_N]; int s7239_ph = 1; float s7239_farcut = 0.f, s7239_maxd2[2];
+int32_t s7239_find(const std::vector<std::pair<uint64_t, int32_t>>& v, uint64_t k) {
+    size_t lo = 0, hi = v.size(); while (lo < hi) { size_t m = (lo + hi) / 2; if (v[m].first < k) lo = m + 1; else hi = m; }
+    return (lo < v.size() && v[lo].first == k) ? v[lo].second : -1; }
+inline uint64_t s7239_k(int32_t x, int32_t z, int32_t v) { return ((uint64_t)(uint32_t)x << 40) ^ ((uint64_t)(uint32_t)(z & 0xFFFFF) << 20) ^ (uint64_t)(v & 0xFFFFF); }
+inline int32_t s7239_fdiv(int32_t a, int32_t b) { int32_t q = a / b; if ((a % b) && ((a < 0) != (b < 0))) q--; return q; }
+struct S7239Init { S7239Init() { const char* e = getenv("ROGUESQ_DD_WIDEWIN_MERGE"); s7239_frac = (e && *e) ? (float)atof(e) : 0.f;
+    const char* g = getenv("ROGUESQ_DD_WIDEWIN_MERGE_TOG"); s7239_tg = (g && *g == '1');
+    if (s7239_frac > 0.f) { g_rs64_s7239_on = 1; fprintf(stderr, "[s7239] widewin_merge frac=%.3f tog=%d\n", s7239_frac, s7239_tg); } } };
+}
+namespace { S7239Init s7239_init; }
+extern "C" void rs64_s7239_node(uint32_t e, uint32_t d2bits) {
+    if (s7239_hcnt > S7239_HN / 2) { memset(s7239_he, 0, sizeof s7239_he); s7239_hcnt = 0; s7239_hclr++; }
+    float d2; memcpy(&d2, &d2bits, 4);
+    uint32_t h = s7239_hash(e);
+    for (int k = 0; k < 64; k++, h = (h + 1) & (S7239_HN - 1)) {
+        if (s7239_he[h] == e) { s7239_hd[h] = d2; return; }
+        if (!s7239_he[h]) { s7239_he[h] = e; s7239_hd[h] = d2; s7239_hcnt++; return; } } }
+extern "C" void rs64_s7239_end(uint8_t* rd);
+static void s7239_flush(uint64_t now) {
+    static uint64_t last = 0; if (!last) last = now; if (now - last < 48000000ull) return; last = now;
+    for (int p = 0; p < 2; p++) { const unsigned long long* t = s7239_t[p]; if (!t[T_GRP] && !t[T_NOWW]) continue;
+        fprintf(stderr, "[s7239] ph=%d frac=%.2f farcut=%.4g maxd2=%.4g grp=%llu noww=%llu flag=%llu el=%llu flat=%llu cand=%llu anc=%llu drop=%llu merged=%llu ovf=%llu miss=%llu near=%llu unm=%llu dup=%llu hclr=%llu\n",
+            p, s7239_frac, s7239_farcut, s7239_maxd2[p], t[T_GRP], t[T_NOWW], t[T_FLAG], t[T_EL], t[T_FLAT], t[T_CAND], t[T_ANC], t[T_DROP], t[T_MERGED],
+            t[T_OVF], t[T_MISS], t[T_NEAR], t[T_UNM], t[T_DUP], s7239_hclr);
+        memset(s7239_t[p], 0, sizeof s7239_t[p]); s7239_maxd2[p] = 0.f; } }
+extern "C" void rs64_s7239_group(uint8_t* rd, uint32_t s1, uint32_t s0, int ww) {
+    if (g_rs64_s7239_act) rs64_s7239_end(rd);
+    const uint64_t now = mach_absolute_time();
+    int ph = 1;
+    if (s7239_tg) { static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(now); } ph = rs64_tog_odd(now); }
+    s7239_ph = ph; g_rs64_s7239_wm = ph; s7239_flush(now);
+    if (!ww) { s7239_t[ph][T_NOWW]++; return; }
+    s7239_t[ph][T_GRP]++;
+    if (!s7239_ok(s1) || (s7239_rw(rd, s1 + 0x2C) & 0x40000000u)) { s7239_t[ph][T_FLAG]++; return; }
+    uint32_t fc = s7239_rw(rd, 0x8009DEB4u); memcpy(&s7239_farcut, &fc, 4);
+    const float thr = s7239_frac * s7239_frac * s7239_farcut;
+    s7239_l.clear(); s7239_key.clear(); s7239_el.clear();
+    for (uint32_t e = s0, n = 0; s7239_ok(e) && n < 40000; e = s7239_rw(rd, e), n++) {
+        S7239E c{}; c.e = e; s7239_t[ph][T_EL]++;
+        const uint32_t hp = s7239_rw(rd, e + 0x24);
+        c.flat = s7239_rb(rd, e + 0x10) == 2 && s7239_rh(rd, e + 0x16) == 0 && (s7239_rw(rd, e + 0x10) & 0xFFFFFFu) == 0x020202u &&
+                 s7239_rb(rd, e + 0x14) == 2 && !(s7239_rh(rd, e + 0x18) | s7239_rh(rd, e + 0x1A) | s7239_rh(rd, e + 0x1C) | s7239_rh(rd, e + 0x1E)) && s7239_ok(hp);
+        if (c.flat) {
+            c.x = (int16_t)s7239_rh(rd, e + 0x08); c.yb = (int16_t)s7239_rh(rd, e + 0x0A); c.z = (int16_t)s7239_rh(rd, e + 0x0C);
+            c.v = (int32_t)(((uint32_t)(int32_t)(int16_t)s7239_rh(rd, e + 0x22) << 2) & 0xFFFFu);
+            c.mat = s7239_rh(rd, e + 0x2C); c.b21 = s7239_rb(rd, e + 0x21); c.b2e = s7239_rh(rd, e + 0x2E) & 1;
+            c.h[0] = (int8_t)s7239_rb(rd, hp + 0x00); c.h[1] = (int8_t)s7239_rb(rd, hp + 0x04); c.h[2] = (int8_t)s7239_rb(rd, hp + 0x14); c.h[3] = (int8_t)s7239_rb(rd, hp + 0x18);
+            if (c.v <= 0 || c.v > 0x3FFF) c.flat = 0; }
+        s7239_el.push_back({(uint64_t)e, (int32_t)s7239_l.size()});
+        if (c.flat) { s7239_t[ph][T_FLAT]++; s7239_key.push_back({s7239_k(c.x, c.z, c.v), (int32_t)s7239_l.size()}); }
+        s7239_l.push_back(c); }
+    std::sort(s7239_key.begin(), s7239_key.end()); std::sort(s7239_el.begin(), s7239_el.end());
+    for (size_t i = 1; i < s7239_key.size(); i++) if (s7239_key[i].first == s7239_key[i - 1].first) { s7239_l[s7239_key[i].second].dup = s7239_l[s7239_key[i - 1].second].dup = 1; }
+    for (size_t i = 1; i < s7239_el.size(); i++) if (s7239_el[i].first == s7239_el[i - 1].first) { s7239_l[s7239_el[i].second].dup = s7239_l[s7239_el[i - 1].second].dup = 1; }
+    int anchors = 0;
+    for (size_t i = 0; i < s7239_l.size(); i++) {
+        S7239E& a = s7239_l[i]; if (!a.flat || a.role) continue;
+        if (a.dup) { s7239_t[ph][T_DUP]++; continue; }
+        if ((s7239_fdiv(a.x, a.v) & 1) || (s7239_fdiv(a.z, a.v) & 1)) continue;
+        const int32_t px[3] = {a.x + a.v, a.x, a.x + a.v}, pz[3] = {a.z, a.z + a.v, a.z + a.v}; int32_t pi[3]; bool ok = true;
+        for (int k = 0; k < 3 && ok; k++) {
+            if (px[k] > 32767 || pz[k] > 32767) { ok = false; break; }
+            pi[k] = s7239_find(s7239_key, s7239_k(px[k], pz[k], a.v));
+            if (pi[k] < 0) { ok = false; break; }
+            const S7239E& p = s7239_l[pi[k]];
+            if (p.dup || p.role || p.mat != a.mat || p.b21 != a.b21 || p.b2e != a.b2e) ok = false; }
+        if (!ok) continue;
+        float d[4]; bool hit = s7239_dist(a.e, &d[0]); for (int k = 0; k < 3; k++) hit = hit && s7239_dist(s7239_l[pi[k]].e, &d[k + 1]);
+        if (!hit) { s7239_t[ph][T_MISS]++; continue; }
+        bool far = true; for (int k = 0; k < 4; k++) { if (d[k] > s7239_maxd2[ph]) s7239_maxd2[ph] = d[k]; if (!(d[k] >= thr)) far = false; }
+        if (!far) { s7239_t[ph][T_NEAR]++; continue; }
+        const int32_t hb = s7239_l[pi[0]].h[1] + s7239_l[pi[0]].yb - a.yb, hc = s7239_l[pi[1]].h[2] + s7239_l[pi[1]].yb - a.yb, hd = s7239_l[pi[2]].h[3] + s7239_l[pi[2]].yb - a.yb;
+        if (hb < -2048 || hb > 2047 || hc < -2048 || hc > 2047 || hd < -2048 || hd > 2047) { s7239_t[ph][T_OVF]++; continue; }
+        if (!ph) { s7239_t[ph][T_CAND]++; continue; }
+        a.role = 1; for (int k = 0; k < 3; k++) { a.p[k] = pi[k]; s7239_l[pi[k]].role = 2; }
+        anchors++; s7239_t[ph][T_ANC]++; }
+    g_rs64_s7239_act = anchors > 0; g_rs64_s7239_skip = 0; }
+extern "C" void rs64_s7239_cmd(uint8_t* rd, uint32_t e, uint32_t cmd) {
+    const int32_t i = s7239_find(s7239_el, (uint64_t)e); if (i < 0) return;
+    S7239E& c = s7239_l[i];
+    if (c.role == 1) c.cmd = cmd;
+    else if (c.role == 2 && s7239_ok(cmd)) { for (int k = 0; k < 10; k++) c.w[k] = s7239_rw(rd, cmd + 4u * k); c.cap = 1; g_rs64_s7239_skip = 1; s7239_t[s7239_ph][T_DROP]++; } }
+extern "C" void rs64_s7239_end(uint8_t* rd) {
+    const int ph = s7239_ph;
+    for (S7239E& a : s7239_l) {
+        if (a.role != 1) continue;
+        const S7239E &b = s7239_l[a.p[0]], &c = s7239_l[a.p[1]], &d = s7239_l[a.p[2]];
+        if (!a.cmd || !b.cap || !c.cap || !d.cap) { s7239_t[ph][T_UNM]++; continue; }
+        uint32_t* w = reinterpret_cast<uint32_t*>(rd + (a.cmd - 0x80000000u));
+        const int32_t nb = (int16_t)(b.w[1] & 0xFFFFu) + ((b.yb - a.yb) << 4), nc = (int16_t)(c.w[2] >> 16) + ((c.yb - a.yb) << 4), nd = (int16_t)(d.w[2] & 0xFFFFu) + ((d.yb - a.yb) << 4);
+        w[1] = (w[1] & 0xFFFF0000u) | ((uint32_t)nb & 0xFFFFu);
+        w[2] = (((uint32_t)nc & 0xFFFFu) << 16) | ((uint32_t)nd & 0xFFFFu);
+        w[4] = b.w[4]; w[5] = c.w[5]; w[6] = d.w[6];
+        w[9] = (w[9] & 0xFFFF0000u) | ((uint32_t)(2 * a.v) & 0xFFFFu);
+        s7239_t[ph][T_MERGED]++; }
+    s7239_l.clear(); g_rs64_s7239_act = 0; g_rs64_s7239_skip = 0; }
 extern "C" int rs64_s6882_on(void) { static int on = -1; if (on < 0) { const char* e = getenv("ROGUESQ_G1D_SPANNARROW"); const char* d = getenv("ROGUESQ_DRAW_DISTANCE"); on = (e && *e == '0') ? 0 : (d && *d && atof(d) != 1.0) ? 2 : 1; } return on == 2 || (on == 1 && rs64_s6880_wide()); }
 // s6883: span scan edge rows past 80 and span cells outside 64x64 (tools/apply_s6883_spancell.py). ROGUESQ_G1D_SPANCELL (default 3 where the s6882 gate runs, =0 old) bits 1 = rows >= 80 in host arrays, 2 = 64x64 cell bound,
 // 4 = control, blank rows 20..23. ROGUESQ_G1D_SPANLOG=1 logs [spancell]; ROGUESQ_G1D_SPANDUMP=<prefix> writes both tables at each POSE_FREEZE.

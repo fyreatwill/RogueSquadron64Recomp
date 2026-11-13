@@ -191017,3 +191017,34 @@ was never held, so it was not run (one run, quiet host). Per NEXT.md this was th
   bracket R meets the bar.
 - Rules out: nothing measured. Narrows the merge to one emit function plus one node hook. The ucode spacing word makes a merged quad
   native (no ucode change, RT64 untouched).
+
+## Session 7240 (2026-11-12) — WIDEWIN 2x2 merge mesh BUILT (opt-in ROGUESQ_DD_WIDEWIN_MERGE=<frac>, _MERGE_TOG=1); owner active all session, so the bracket soak and the new merge soak are both queued
+What ran: NEXT s7240 step 1. s7237_widewin_r2 is still queued, not run. HID idle was 63 s, then 89 s, then 0.1 s, never >= 180, so the
+owner was active and the bracket could not run. NEXT's branch for that case: build the merge per docs/WIDEWIN-MERGE-PLAN.md.
+Change (engineering, no run yet):
+- tools/apply_s7239_widewin_merge.py, wired into fixup_game_funcs_vendored.py RS64_REPLAY just before apply_s7069 (which must stay last).
+  Applied to the live tree. It also applies cleanly in a fresh `tools/regen_front.sh` + `regen_replay.sh` pass (scratch/s7240/replay.log
+  says "ok" for it). That replay has 6 failures, all in older scripts (s7114_hsrc anchor, s7115 missing oldpre.txt, ...). They are not this change.
+  Hooks:
+  - H1, buildGridCellMeshForFace L_8004323C: rs64_s7239_node(*(node+0x14)+0x20, node+8) feeds a host open-address elem->dist2 hash
+    (2^17 slots, cleared at half load and counted as hclr).
+  - H2, renderFlatMeshFaceGroup 0x800113DC: rs64_s7239_group(s1, s0, g_rs64_ww) pairs the group's list. Flat rule 2, key (x, z, V0).
+    An anchor has floor(x/V0) and floor(z/V0) even. The 3 partners must have the same V0, material +0x2C, b21 and b2e&1. All 4 must
+    have dist2 >= frac^2 * farcut, where farcut is the float at 0x8009DEB4, the same dist2 units the game compares at 0x800434E0.
+    Rebased heights must fit 12 bits. Groups with the 0x40000000 flag are skipped, and so are duplicate keys.
+  - H3, 0x80011884 (after the w9 store): records the anchor's cmd pointer, and captures each partner's 10 words and sets the skip flag.
+  - H4, 0x800119A8: cursor += 0 instead of 0x28 when the skip flag is set.
+  - H5, L_800119BC: rewrites each anchor. w1 lo = B.h4 rebased. w2 = C.h20 | D.h24, both rebased. w4/w5/w6 = B.c4/C.c20/D.c24.
+    w9 lo = 2*V0. An anchor missing any capture is counted as unm and left unmerged.
+  Code read used for the design: every list element reaches 0x80011880. The only branch to L_8001199C is the group-flag path (0x80011898),
+  so a partner is always captured before it is dropped.
+- src/main/rt64_render_context.cpp: [g1cf] ends with wm=<merge phase>.
+- tools/s7233_widewin_r.py --merge: splits on/off by wm=, tallies [s7239], and checks the merge control. Regression check on the old r40
+  log (scratch/s7233b/log_r40.txt): it reprints s7237's numbers exactly (window dsd -3.19, dkpx -8.6%, CONTROL PASS).
+- Build: cmake rc 0, binary linked. Off by default (g_rs64_s7239_on=0 unless the env is >0), so the WIDEWIN_R bracket soak still
+  measures the same thing on this binary.
+Queued: scratch/agent/soak_queue/s7240_widewin_merge.sh (SOAK_NEEDS_IDLE=180). Arms m40/m55/m70, base B = s7237_widewin_r2 minus R_TOG
+plus MERGE_TOG. Scored by s7233_widewin_r.py --merge.
+Unverified (no run): whether the H1 elem matches the emit-list elem (watch miss=), whether ww is set at emit time (watch noww=), the
+tri saving per merge (~6 expected), and cracks at merged T-junctions (owner sheet needed).
+Rules out: nothing yet. This is a build, not a measurement.

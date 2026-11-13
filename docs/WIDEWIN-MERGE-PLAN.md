@@ -1,6 +1,6 @@
 # WIDEWIN far-terrain 2x2 merge mesh: design (s7239)
 
-Status: DESIGN, not built. Implement only if the R=48/64/72 bracket (soak s7237_widewin_r2) shows that no
+Status: BUILT s7240 (tools/apply_s7239_widewin_merge.py + rs64_s7239_* in src/main/upstream_compat.cpp), soak s7240_widewin_merge queued. Was: implement only if the R=48/64/72 bracket (soak s7237_widewin_r2) shows that no
 radius meets the s7238 bar (window dsd <= -2.5 ms AND flight |dkpx| <= 1%). HYPOTHESIS-ID widewin-heavy-window-cost.
 
 ## Why a merge
