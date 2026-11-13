@@ -7,7 +7,7 @@ R=${R:-$PWD/scratch/s6932}; DHZ=${DHZ:-$PWD/scratch/s6931/dhz}; HOLD=${HOLD:-300
 # s7243: RESUME=1 skips an arm that already completed (ok_<arm> written after its done line) when the key matches:
 # binary mtime+size, the arm spec and HOLD. A void then costs only the voided arm and those after it, not the whole recipe.
 # GAMEDIR/GAME are overridable for tools/s7243_resume_test.zsh (fake game). Default: build/RogueSquadron64Recomp.
-TOOLS=$PWD/tools; [ -x $TOOLS/s7250_duty ] || cc -O2 -o $TOOLS/s7250_duty $TOOLS/s7250_duty.c
+TOOLS=$PWD/tools; [ -x $TOOLS/s7250_duty ] || cc -O2 -o $TOOLS/s7250_duty $TOOLS/s7250_duty.c; [ -x $TOOLS/s7253_clkprobe ] || cc -O2 -o $TOOLS/s7253_clkprobe $TOOLS/s7253_clkprobe.c
 GAMEDIR=${GAMEDIR:-build}; GAME=${GAME:-./RogueSquadron64Recomp}
 armkey(){ echo "$(stat -f '%m:%z' $GAMEDIR/$GAME 2>/dev/null) H=$HOLD S=$1"; }
 EARLY=""; e=10
@@ -26,6 +26,11 @@ front(){ lsappinfo info -only name "$(lsappinfo front)" 2>/dev/null | sed 's/.*=
 # s7249: s7231's "WIDEWIN costs a flat 30" ran on BATTERY at 10%->2% charge (pmset log; host hibernated at 1% at 15:22) and every task's CPU time was a
 # constant 1.40x the AC run s7248 in light and heavy scenes alike (a clock signature, not load). Timing arms on battery are not comparable to AC arms:
 # log the power source on every start/done line and stop (exit 2, re-queued) on battery unless ALLOW_BATT=1.
+# s7253: battery is necessary but not sufficient for the cap (s7252), so the refusal now keys on a MEASURED clock ratio:
+# tools/s7253_clkprobe min ms / tools/s7253_clkprobe.base (controls: DUTY 1.40 reads 1.39, 15-core spin load reads 1.02).
+# Refuse (exit 2) when clk > CLK_MAX (default 1.15) unless ALLOW_SLOW=1; battery alone is only logged now.
+clk(){ local b m; b=$(awk 'NR==1{print $1}' $TOOLS/s7253_clkprobe.base 2>/dev/null); m=$($TOOLS/s7253_clkprobe 60 5 2>/dev/null | sed -n 's/^clk_ms=\([0-9.]*\).*/\1/p')
+  [[ -n $b && -n $m ]] && awk -v m=$m -v b=$b 'BEGIN{printf "%.3f", m/b}' || echo NA; }
 pwr(){ pmset -g batt 2>/dev/null | awk -F"'" 'NR==1{s=($2=="AC Power")?"AC":"BATT"} NR==2{match($0,/[0-9]+%/); c=substr($0,RSTART,RLENGTH)} END{print s c}'; }
 locked(){ /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes'; }
 watch_human(){ local p=$(idle) c t=0 f0="" f w0=$(date +%s) w; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle);
@@ -36,8 +41,8 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   if [[ $RESUME == 1 && -e $R/ok_$arm && $(head -1 $R/ok_$arm) == "$(armkey $spec)" && -s ${LOGTO:-$R/log_$arm.txt} ]]; then
     echo "$(date +%T) $arm resume: key match, arm kept" >> $R/arms.log; tail -1 $R/ok_$arm >> $R/arms.log; continue; fi
   rm -f $R/ok_$arm
-  pw=$(pwr); echo "$(date +%T) $arm start idle=$i pwr=$pw" >> $R/arms.log
-  [[ $pw == BATT* && $ALLOW_BATT != 1 ]] && { echo "$(date +%T) on battery ($pw), stopping" >> $R/arms.log; echo battery > $R/quiet.done; exit 2; }
+  pw=$(pwr); ck=$(clk); echo "$(date +%T) $arm start idle=$i pwr=$pw clk=$ck" >> $R/arms.log
+  [[ $ck != NA && $ALLOW_SLOW != 1 ]] && (( ck > ${CLK_MAX:-1.15} )) && { echo "$(date +%T) host clock capped (clk=$ck > ${CLK_MAX:-1.15}, pwr=$pw), stopping" >> $R/arms.log; echo slowclk > $R/quiet.done; exit 2; }
   locked && { echo "$(date +%T) screen locked, stopping" >> $R/arms.log; echo locked > $R/quiet.done; exit 2; }
   (( i < 120 )) && { echo "$(date +%T) human active, stopping" >> $R/arms.log; echo human > $R/quiet.done; exit 2; }
   # s6991: FORCE_UNLOCK was hardcoded 1 here, which clamps the level-select cursor to level 1 whatever FORCE_SAVE_MISSION
@@ -60,7 +65,7 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   [ -e $R/void_$arm ] && { echo human > $R/quiet.done; exit 2; }
   cm=$(grep -a -m1 -o 'cursorMask)=0x[0-9A-Fa-f]*' ${LOGTO:-$R/log_$arm.txt} | sed 's/.*=//'); want=$(printf '0x%08X' $((1 << lv)))
   [[ $cm == $want ]] || echo "$(date +%T) $arm LEVEL MISMATCH want lvl $lv mask $want got ${cm:-none}" >> $R/arms.log
-  dl="$(date +%T) $arm done alive=$alive log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) pwr=$(pwr)"; echo "$dl" >> $R/arms.log
+  dl="$(date +%T) $arm done alive=$alive log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log
   printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; /bin/sleep ${ARM_GAP:-3}
 done
 echo done > $R/${DONE:-quiet.done}

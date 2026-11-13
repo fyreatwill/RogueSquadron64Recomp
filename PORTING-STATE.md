@@ -191337,3 +191337,29 @@ voided s7248_fixed_fps_b at 23:11:52 on human input; s7250_slowhost and s7251_dd
 VERDICT: refutes H-all-battery-throttled (a battery tag alone does not void a timing verdict) and selects H-11-12-only for this week's
 throttled data, from two lines (clock ratio and the ledger's rsp). It rules out the need for a wider battery rerun sweep.
 - Changed: tools/s7252_power_tag.py (new), CURRENT-TRUTH Next 1 (s7252 bullet), NEXT.md unchanged in substance (steps 1-3 still pending).
+
+## Session 7253 (2026-11-12) — measured host-clock gate for timing arms: tools/s7253_clkprobe (DUTY 1.40 control reads 1.39, 15-core load reads 1.02) replaces the battery refusal in g1e_owner_quiet_arms.zsh
+
+Planned unit (NEXT s7253) was to fold three idle-gated soaks (s7250_slowhost, s7251_dd6r_ac, s7248_fixed_fps_b). None ran: all three
+still sit in soak_queue/ with `# SOAK_NEEDS_IDLE=180`, and HID idle at session start was 52 s (owner active, AC power 100%). Per NEXT
+item 4, took an offline engineering unit.
+
+Problem: s7249 made the timing harness refuse BATTERY, but s7252 showed battery is necessary, not sufficient, for the clock cap
+(11-09 battery = 1.00-1.05x AC, 11-12 afternoon = 1.36-1.44x). The refusal was keyed on a proxy; the throttle itself was only ever
+detected after the fact from [g1b] sd_cpu ratios.
+
+Change:
+- tools/s7253_clkprobe.c (new): fixed dependent integer chain (xorshift + 64-bit mul, no memory), QOS_CLASS_USER_INTERACTIVE,
+  60M iterations x REPS, prints min and median ms. Min rejects preemption; a clock cap raises every rep.
+- tools/s7253_clkprobe.base: 125.0 ms (AC, powermode 2, load1 4.3).
+- tools/g1e_owner_quiet_arms.zsh: clk() = min/base; every start and done line logs clk=; refuse (exit 2, quiet.done=slowclk) when
+  clk > CLK_MAX (default 1.15) unless ALLOW_SLOW=1. The battery refusal is removed (pwr= still logged). Probe auto-built like s7250_duty.
+- tools/s7253_clk_gate_test.zsh (new): extracts the harness's own clk()/gate text and checks 5 cases, 5/5 PASS (real base 0.998 runs;
+  CLK_MAX=0.5 refuses; ALLOW_SLOW overrides; half-speed base reads 1.995 and refuses; missing base -> NA, runs).
+
+Measurements (same session, AC): 4 baseline runs 124.68 / 124.93 / 125.02 / 125.18 ms (spread 0.4%). Positive control: s7250_duty
+on the probe pid at factor 1.4 (achieved 1.404) -> 173.87 ms = 1.391x. Load control: 15 shell spinners on all 15 cores -> 127.66 ms =
+1.021x. So the probe separates a clock-cap-shaped slowdown from contention (two lines: duty reads its factor, load reads ~1).
+
+Rules out: nothing about the game. Open (single-source): that real battery Low Power Mode reads ~1.4 on the probe; only the SIGSTOP
+stand-in has been measured. First battery+LPM session should run `tools/s7253_clkprobe` once and record it.

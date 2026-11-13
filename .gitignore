@@ -123,3 +123,4 @@ tools/oracle/build/
 *.h-E
 *.py-E
 tools/s7250_duty
+tools/s7253_clkprobe

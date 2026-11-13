@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7252 (2026-11-12).
+Compact operational handoff, as of Session 7253 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -392,6 +392,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    1.00-1.05 (menus 1.00-1.02, flight 1.00-1.09), and rsp off/K0.6 agree (16.15/15.85 vs 16.19; 12.03 vs 12.23). So the 11-09 battery verdicts
    (s7037, s7045-s7048 L12 fps/K/KEDGE) STAND as AC-equivalent; only the 11-12 afternoon (x1.36-1.44, s7230/s7231) is throttled. Other battery sessions'
    timing lines are passes (s6996, s7218/s7219 59.5-59.7/s: conservative) or same-run/image verdicts (s7099-s7118, s7164/s7166). No new rerun needed.
+   **s7253: the harness now MEASURES the clock instead of inferring it from pmset.** tools/s7253_clkprobe (dependent xorshift*mul chain on a
+   USER_INTERACTIVE thread, min of reps) / tools/s7253_clkprobe.base (125.0 ms, AC powermode 2). Same-session controls: DUTY 1.404 -> 1.391,
+   15-core spin load -> 1.021, 4 AC repeats 124.7-125.2 (0.4%). tools/g1e_owner_quiet_arms.zsh logs clk= on every start/done line and exits 2
+   when clk > CLK_MAX (1.15) unless ALLOW_SLOW=1; battery alone is only logged (replaces the s7249 ALLOW_BATT refusal). Test tools/s7253_clk_gate_test.zsh 5/5.
+   Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
