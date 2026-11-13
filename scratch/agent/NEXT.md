@@ -1,13 +1,17 @@
-# NEXT (s7284): offline classification of load-edge gaps, then the next non-owner-gated rung
-HYPOTHESIS-ID: g5c-load-edge-gaps
-State: s7283 closed GPU contention (commit count not the lever). Every Next-steps item 2-16 is owner-gated.
-Bounded offline unit (no game run): across every s7277-s7283 toggle run (scratch/s7277/*.toggle + present rings
-scratch/s7277/ring_*.txt + scratch/s7272/<TAG>/sheet.txt), list every gen gap >=250 ms with its distance to the nearest
-toggle edge (on->off / off->on) and the load type (cpu/gpu, GPU_ITER).
+# NEXT (s7285): decompose the scene-change (fb-relocation) stalls, offline first
+HYPOTHESIS-ID: g5c-fbswitch-transition-stall
+State: s7284 closed G5c load-edge gaps (0 lit quiet freezes in 17 toggle runs; every off-window gap >=250 ms is an fb-relocation
+scene change). CURRENT-TRUTH item 16 closed transition stalls at the retail ~139 ms MusyX 3072-sample wait (s7065) with a reopen
+criterion of a > ~350 ms hitch. s7284's FBSWITCH gaps reach 316-466 ms off-load (L4 restart sequence: 333/337/350/351/414 ms) -> reopen,
+bounded and offline.
+Unit (no game run first): from scratch/s7277/ring_*.txt (Q rows carry wl, wl_ms, tp_ms, acq_ms, gpu_ms, vi, fb, gen) list every
+FBSWITCH gap (python3 tools/s7284_edge_gaps.py | grep FBSWITCH gives times) and, for the rows bracketing each gap, split the gap into:
+present-side (tp_ms/acq_ms/gpu_ms of the first post-gap Q row) vs guest-side (no Q row at all = no VI present request; wl skipped).
 Hypotheses:
-  - H-edge-drain: every off-window gap >=250 ms lies within ~1 s after an on->off edge of a GPU arm (in-flight foreign buffers
-    drain after SIGKILL) -> harmless; note in OWNER-OPT-INS ("a short hitch when a GPU-heavy app stops").
-  - H-quiet-freeze: some lie >2 s from any edge -> a real quiet-host freeze; take its frames (KEEP sheets) and name the stall.
-  - H-cpu-edge: CPU arms show edge gaps too -> scheduler re-ramp, not GPU drain.
-Positive control: the SIGSTOP control gaps (179/280/381 s) must appear in the list with distance labels.
-Then: write a tool (tools/s7284_edge_gaps.py), fold, and take the next ladder rung (ITERATION 3c); do not change defaults.
+  - H-musyx: guest-side, a fixed ~139 ms MusyX wait plus the game's own load work (dur scales with level/asset load) -> retail; note in
+    OWNER-OPT-INS, close.
+  - H-host-alloc: present-side: RT64 creates new fb/render targets for the relocated pair (first post-gap Q row tp_ms/acq_ms ~ gap) ->
+    ours; fix candidate = pre-create targets / avoid blocking present on resource creation.
+  - H-shader: post-gap rows show pipeline creation (check RT64 log for shader/pipeline counts at those times, if logged).
+Positive control: the SIGSTOP control gaps must classify guest-side (process stopped: no Q rows) with ~1 s gap.
+Second line before any conclusion: angrylion/retail oracle timing of the same L4 restart (or the s7065 MusyX attribution log).

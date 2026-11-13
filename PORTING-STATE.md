@@ -191986,3 +191986,36 @@ Rules out: RT64 command-buffer count as a GPU-contention lever. SKIP_EMPTY_WAIT 
 benefit measured); defaults untouched.
 Verdict: this pair refutes H-fifo / H-commit-lever and selects H-gpu-policy (the GPU's inter-process scheduler sets our share); it closes the GPU-contention thread. Next discriminator: load-edge gap classification (NEXT.md, g5c-load-edge-gaps).
 ORIGIN: not a corruption mitigation. The empty wait buffers are written by plume's own MetalCommandQueue::executeCommandLists, which always opens a wait MTLCommandBuffer even when waitSemaphoreCount == 0; skipping it is legitimate (no wait to encode, same-queue enqueue order kept) and is opt-in only.
+
+## Session 7284 (2026-11-13) — G5c load-edge gap census (offline): 0 lit quiet-host freezes in all 17 s7277-s7283 toggle runs; every off-window gap >=250 ms is an fb-relocation scene change, only 1 within 2 s of an on->off edge -> H-edge-drain refuted, s7283 side datum superseded; new tools/s7284_edge_gaps.py
+
+What ran: offline only (no game run). New tools/s7284_edge_gaps.py reads each scratch/s7277/ring_<TAG>.txt (present ring, new fb gens),
+<TAG>.toggle and <TAG>.ctl, lists every gen gap >= 250 ms with its load window, time since the last toggle edge and its kind, load type
+(cpu / gpu+GPU_ITER), the matching image hold from scratch/s7272/<TAG>/sheet.txt (capture clock aligned to the ring clock through the
+SIGSTOP control windows; alignment residual <= 0.1 s), and FBSWITCH when the fb double-buffer pair after the gap shares no address with the
+pair before it. Output scratch/s7277/s7284_edge_gaps.txt.
+
+Census, 17 runs (cpu15, cpu15qos, gpu, l12all, l12cb0, l12cb1, l12gp, l12gpui5000, l12gpui80000, l12gpunone, l12gpuqos, l4cpu, l4cpuqos,
+l4gfx, l4gp, l4guest, l4nogfx), MIN 250 ms, EDGE_S 2 s:
+
+| class | n | what |
+|---|---|---|
+| CTL | 52 | every SIGSTOP control (1021-1160 ms, 3 per run = 51/51) + 1 black hold inside a control's +-3 s cut (l4nogfx) |
+| PRE | 119 | route/loading before the first toggle |
+| ON | 25 | inside load windows (the known no-QoS CPU-load freezes of s7277-s7279; 15 of them FBSWITCH) |
+| EDGE | 1 | l4nogfx +389.42 s 337 ms, 0.34 s after on->off: FBSWITCH (L4 restart sequence) |
+| QUIET-black | 27 | off window, held luma 0-1 (black transition), all FBSWITCH |
+| QUIET-fbsw | 3 | off window, no image hold in the capture, FBSWITCH (L4 B51E00/AA3C00 -> A7CA00/A12600, ~2.6 s before the black hold) |
+| QUIET-lit | 0 | -- |
+
+Controls: positive = all 51 SIGSTOP windows listed with distance labels (the NEXT positive control); FBSWITCH negative control = 0 of
+the 51 >=900 ms SIGSTOP gaps carry it, so the flag is not trivially true. Two lines for "off-window gaps are transitions": held luma
+(27/27 black) and fb relocation (31/31).
+Result: H-quiet-freeze REFUTED (0 lit off-window gaps, ~8,500 s of off-window play over L4/L12, cpu and gpu arms); H-edge-drain REFUTED
+(1/31 within 2 s of an edge, and it is the same L4 restart relocation seen 10-55 s from edges elsewhere); H-cpu-edge REFUTED (no CPU-arm
+edge cluster). s7283's side datum ("l12cb0/cb1 off-window gaps = saturator drain") is superseded: the +381 s lit hold it read as the end of
+on-window 3 is the SIGSTOP control; the 379/274 ms gaps are black fb relocations 52.7 / 11.5 s after the edge. G5c fully closed.
+New datum: the L4 restart sequence's fb-relocation stalls run 316-414 ms off-load, above item 16's ~350 ms reopen line for transition
+stalls (s7065 measured ~139 ms MusyX wait). Next unit: decompose those stalls present-side vs guest-side offline (NEXT.md,
+g5c-fbswitch-transition-stall).
+Rules out: any quiet-host or load-edge freeze in the s7277-s7283 data set. Defaults untouched.
