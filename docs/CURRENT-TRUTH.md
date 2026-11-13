@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7247 (2026-11-12).
+Compact operational handoff, as of Session 7248 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -366,8 +366,14 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    -3.22/-2.03, E16 -1.40/-3.38. Image (2 capture arms, owner idle, content_w 1191 both): seams r48 -2.4, stack -1.8 px/frame (synthetic control
    PASS); holes by new tools/s7247_tog_pop.py (TEX = grain fraction G=3 in the side band, flip test + phase means; control = most textured 200x40
    window flattened, PASS 130/136, 132/138): r48 +0.0029+-0.0052, stack +0.0013+-0.0056 = no visible terrain removed (sensitivity ~1/3 of a 200x40
-   patch). OWNER-OPT-INS line added (experimental, steady-60 unverified); sheet docs/owner_sheet_s7247_widewin_stack.png. Next (NEXT.md): fixed-on
+   patch). OWNER-OPT-INS line added (experimental; s7248 fixed-on numbers added); sheet docs/owner_sheet_s7247_widewin_stack.png. Next (NEXT.md): fixed-on
    (no tog) fps in the window: WW off / WW / WW+stack.
+   **s7248: fixed-on (no tog), one run per arm, owner idle, 0 crashes, knobs engaged (stack: [s7233] skip ~4006/placement, [s7239] merged 51.9k
+   unm=0 stale=0).** Window t=77-97 gfx task ms / fps: off 10.06/60, ww 13.16/60, stack 9.59/60; flight p50 8.62/9.56/6.30, max>=17ms s 0/18/0.
+   stack - ww = -3.57 ms, which matches the tog -3.63/-3.88: the fixed-on and tog lines agree (two lines), and stack <= WW-off. Positive control FAILED:
+   ww did NOT reproduce s7231's flat 30 because the host ran ~4 ms/task faster (off 10.06 vs s7231 n4 13.92, sd_cpu 8.70 vs 12.25 at t=80, same code:
+   no perf-relevant diff since s7231). So 'stack holds 60 on a slow host' is inferred (stack <= off, and off held 60 in s7231), not measured. 2nd runs voided
+   by owner input at offb t=120 and re-queued (soak s7248_fixed_fps_b, RESUME keeps run 1).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.

@@ -191236,3 +191236,20 @@ HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7247. Owner idl
 - Shipped: an opt-in line in docs/OWNER-OPT-INS.md (experimental; steady 60 in the window not yet measured) and the owner sheet
   docs/owner_sheet_s7247_widewin_stack.png. Defaults are unchanged.
 - Next: fixed-on (no tog) fps in the heavy window, 3 arms x 2 runs: WW off, WW, WW+stack. That is the owner-facing test of whether the stack restores 60/s.
+
+## Session 7248 (2026-11-12) — WIDEWIN stack fixed-on (no tog): L4 21:9 heavy window off 10.06 / ww 13.16 / stack 9.59 ms, all 60/s; stack - ww = -3.57 ms matches tog; flat-30 control not reproduced (host ~4 ms/task faster than s7231)
+- Ran: scratch/s7248/s7248_fixed_fps.sh (tools/g1e_owner_quiet_arms.zsh, RESUME=1, HOLD=240), arms mirror s7231 a4/n4 exactly (dd spec 6 without UNSAFE,
+  21:9, MELT, G1B, G1CF): off = WIDEWIN off, ww = WIDEWIN=1, stack = WW + R=48 + MERGE=0.4 + MERGE_E=16, all fixed-on (no _TOG; ph=1 always).
+  Owner idle 3021 s at start, screen unlocked. off/ww/stack completed (alive=1, no LEVEL MISMATCH, 0 crashes); offb voided by owner input at t=120.
+- Knobs engaged in stack only: [s7233] widewin_r=48 tog=0, 85 ph=1 blocks, skip ~4006 per placement; [s7239] frac 0.40 tog=0, 89 blocks, merged
+  51907 drop=155721 (=3x) unm=0 stale=0 E=16. off/ww: no s7233/s7239 tallies (ww prints widewin_r=0).
+- tools/s7230_headroom.py, window t=77-97 (tasks/s, mean sd_wall): off 60.0/10.06, ww 60.0/13.16, stack 60.0/9.59. Flight p50 8.62/9.56/6.30,
+  seconds with a task >= 17 ms 0/18/0, heaviest-20 headroom 6.62/3.48/7.06 ms. s7229: 0 flat-30 runs in all three.
+- Two lines now agree on the stack's saving: fixed-on stack-ww = -3.57 ms vs same-run tog -3.63/-3.88 (s7247). stack is below WW-off (-0.47 ms).
+- Positive control FAILED: ww was expected to reproduce s7231 a4's flat 30 (18.38 ms window) and held 60 at 13.16 ms. Cause = host state, not code:
+  every arm is ~4 ms/task cheaper than s7231 (off 10.06 vs n4 13.92; at t=80 sd_cpu 8.70 vs 12.25, so CPU time per task fell, not only waiting),
+  and git diff 0cca30fc8..HEAD touches only the opt-in s7233/s7239 hooks (no-op when off) and the rt64 seam/hole diag. s7231 ran at 14:39 (owner
+  apps up), this at 22:41. So H-60 is shown only on a fast host; on the s7231 host it is INFERRED (stack <= off, and off held 60 there).
+- Rules out: "the tog saving does not survive fixed-on" (it does, -3.57 ms). Does not decide steady 60 on a slow host (needs the flat-30 control).
+- Shipped: OWNER-OPT-INS stack line updated with the fixed-on numbers and the caveat; soak scratch/agent/soak_queue/s7248_fixed_fps_b.sh queued
+  (idle-gated; RESUME keeps run 1, runs offb/wwb/stackb).
