@@ -338,6 +338,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    r72 35%. s7265_ww_r_edge (control c219 STACK=0 L/R hard80 -8.0/-8.8 PASS, 52-56 cap fps, 0 crash): r72 -5.1/-7.2, r88 -7.6/-9.6 (gain
    kept). So merge+E16 carries the cost cut; R only ate the gain. Single run per arm. Open: dd6 at R=88 (s7257's late dips were removed
    with R=48): queued s7266_dd6_r88 (a88 / a48 / offd control).
+   **s7267 fold of s7266_dd6_r88 (L4 21:9 dd6 AC, control offd STACK=0+DUTY flat30 t=77 21 s, 121 beyond-route s PASS) -> H-keep6:**
+   a88 (auto R=88) win77-97 60.0/s 12.30 ms headroom 4.27, p95 13.89 max 16.15, 0 flat runs, beyond-route 4 s, 7 frames >=17 ms,
+   measured skip 12%; a48 9.67 ms headroom 6.96, 0 flat, beyond-route 3 s, 0 frames >=17 ms, skip 96%; merged 4.62M/2.59M unm 0;
+   0 crash. dd6 keeps 60 at R=88 (single run per arm). Queued s7267_169_r88_cost (16:9 a88/a48/w0d) + s7267_r88_edge_sheet (16:9 s88,
+   21:9 w88, c219 control; new SHEET=1 in tools/s7263_widewin_edge_arms.zsh -> tools/s7267_tog_sheet.py off|on frame-pair sheets).
    Capture hygiene: s7263_169_edge (rc=0) and its first re-run were void, 133-142 frames/180 s, Chrome frontmost; the s7009 arm lacked the
    s7259 frontmost keeper. tools/s7263_widewin_edge_arms.zsh now keeps the game in front and fails (rc=3) under 10 captured frames/s.
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.

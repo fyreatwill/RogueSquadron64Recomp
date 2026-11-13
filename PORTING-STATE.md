@@ -191587,3 +191587,21 @@ smoke boots: default prints `[s7258] dd4 widewin stack r=88 merge=0.4 e=16 (auto
 OWNER-OPT-INS WIDEWIN paragraph: "Fixed (s7266)" line. Rules out: H-clash (no R needed between gain and cost) at dd4 21:9.
 Not shown: dd6 at R=88 (s7257/s7258 late dips were removed with R=48) -> queued scratch/agent/soak_queue/s7266_dd6_r88.sh
 (a88 default / a48 explicit / offd STACK=0+DUTY control); 16:9 at R=88 cost (16:9 auto stack was free at R=48, s7263).
+
+## Session 7267 (2026-11-13) — s7266_dd6_r88 fold: auto R=88 holds dd6 21:9 Gerrard V heavy window at 60/s (H-keep6); owner-sheet tool for =tog edge captures
+HYPOTHESIS-ID: widewin-169-tv
+- Ran (loop soak s7266_dd6_r88, scratch/s7266, L4 21:9 dd6 farthest-view line, 240 s holds, AC). Positive control offd (STACK=0 +
+  DUTY) PASS: win77-97 30.0/s 21.78 ms, flat run t=77 len 21 s, 127 s <55/s (121 beyond-route).
+- a88 (auto, prints `[s7258] dd6 widewin stack r=88 merge=0.4 e=16 (auto)`): sd_wall p50 7.27 p95 13.89 max 16.15, win77-97 60.0/s
+  12.30 ms headroom 4.27, 0 flat runs, <55/s 10 s / beyond-route 4 s (late singles t=159/169/172/229, 43-48/s), 7 frames >=17 ms,
+  measured skip/call 12%, merged 4.62M unm 0.
+- a48 (explicit R=48): p50 6.24 p95 10.17 max 11.09, win 9.67 ms headroom 6.96, 0 flat, <55/s 9 / beyond-route 3 s (t=160/169/172),
+  0 frames >=17 ms, skip 96%, merged 2.59M.
+- Result H-keep6 (NEXT s7267 criteria: a88 window <~13 ms, 0 flat runs, beyond-route within 2 of a48): dd6 qualified at R=88. Cost:
+  +2.6 ms in the heavy window vs R=48 and a few >=17 ms frames, still 60/s. Single run per arm. Rules out H-cost6 (no per-dd auto R).
+- Change: new tools/s7267_tog_sheet.py (owner sheet from a =tog capture raw: adjacent OFF/ON period frames at mid-phase, in-flight
+  filter as g5e_edge_score, rows OFF|ON); synthetic-raw test passed (state colours land left/right correctly). 
+  tools/s7263_widewin_edge_arms.zsh: SHEET=1 writes <outdir>/sheet_<arm>.png before deleting the raw.
+- Queued: scratch/agent/soak_queue/s7267_169_r88_cost.sh (16:9 L4 dd4 a88 / a48 / w0d STACK=0+DUTY control) and
+  s7267_r88_edge_sheet.sh (16:9 s88, 21:9 w88, 21:9 c219 STACK=0 control, SHEET=1) -> the owner sheet that closes the thread.
+- Docs: OWNER-OPT-INS WIDEWIN "being checked" -> dd6 result; dd6 paragraph notes R=88 since s7266.

@@ -1,14 +1,13 @@
-# NEXT (s7267): fold s7266_dd6_r88 — does the new auto R=88 hold the dd6 farthest-view line at 60 on L4 21:9?
+# NEXT (s7268): fold s7267_169_r88_cost + s7267_r88_edge_sheet — does R=88 hold 60 and soften the sides on the 16:9 TV?
 HYPOTHESIS-ID: widewin-169-tv
-State (s7266): auto stack R changed 48 -> 88 in src/main/main.cpp (~12461). At L4 21:9 dd4 R=88 keeps the side gain (hard80 L/R -7.6/-9.6
-= STACK=0 control) and win77-97 60/s 12.03 ms. dd6 was qualified only at R=48 (s7257/s7258: R=48 removed 9-14 late dip s).
-Results: scratch/s7266 (log_a88/a48/offd, arms.log); the soak prints headroom, flat30, predictor skip, merged, dip runs.
-Control: offd must go flat 30 in t=77-97 (else void, re-queue).
+State (s7267): auto R=88 qualified at 21:9 dd4 (s7266) and 21:9 dd6 (s7267: win 12.30 ms 60/s, control PASS). 16:9 only measured at R=48.
+Results: scratch/s7267q (cost: log_a88/a48/w0d) and scratch/s7267e (edge_*.txt, sheet_s88/w88/c219.png).
+Controls: w0d must show flat 30 / many beyond-route s; c219 must drop hard80 >=3 on a side (else void, re-queue).
 Outcomes:
-- H-keep6: a88 window <~13 ms, 0 flat runs, beyond-route <55/s s within ~2 of a48 -> dd6 qualified at R=88; then queue a 16:9 dd4 R=88
-  cost+edge check (copy scratch/agent/soak_queue/done/s7265_ww_r_*.sh with ROGUESQ_ASPECT=16:9 in W) and close the thread with an owner
-  sheet (edge frames WIDEWIN off/on at R=88, from scratch/s7265e captures if kept).
-- H-cost6: a88 shows late dips / flat 30 that a48 lacks -> make the auto R per-dd (88 at dd2-5, 48 at dd>=6) in main.cpp, smoke-boot
-  both, update OWNER-OPT-INS (dd6 keeps the old cheaper version), queue a dd6 edge check.
+- H-keep16: a88 win77-97 60/s <~13 ms, 0 flat, beyond-route within ~2 of a48, AND s88 L/R hard80 drop >=3 -> thread closes:
+  copy sheet_s88.png + sheet_w88.png to docs/owner_sheet_s7268_widewin_r88_{169,219}.png (check them by eye first: left OFF, right ON,
+  no missing ground / cracks), add to OWNER-OPT-INS WIDEWIN paragraph, CT closed note, new slug.
+- H-cost16: a88 dips / flat that a48 lacks at 16:9 -> aspect-dependent auto R in main.cpp (~12461), smoke-boot, OWNER-OPT-INS.
+- H-nogain16: s88 no side drop -> 16:9 WW shows nothing at R=88; check s7265_ww_r_predict on the 16:9 log for the skip share.
 - Any crash -> backtrace first.
-If the soak has not run (owner active): do not wait; take ladder 3c next open owner-look item (G5h cutscenes background at dd2/dd4).
+If the soaks have not run (owner active): do not wait; take ladder 3c next open owner-look item (G5h cutscenes background at dd2/dd4).
