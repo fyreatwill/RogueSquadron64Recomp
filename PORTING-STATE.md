@@ -191441,3 +191441,4 @@ Startup check (15 s each, 21:9 dd6 farthest-view line): auto arm prints `[s7258]
 `[s7239] widewin_merge frac=0.400`; STACK=0 arm prints neither (scratch/s7258/boot_*.txt). Only opt-in dd>=6 changes; retail default untouched.
 OWNER-OPT-INS: distance-6 paragraph gained the s7258 note. Not yet shown: in-mission engagement on the default path (soak s7258_dd6_auto_stack
 queued: auto / STACK=0 / STACK=0+DUTY control) and an image check at dd6 (s7247's no-missing-ground check was at dd4).
+Verdict: the s7257 same-run table selects H-ww (stack 0 vs 9 beyond-route dip s, -4.2 ms window) and refutes H-noise (dips reproduce across s7251/s7257) and H-radius for the late dips. Next discriminator: the dd6 21:9 L4 STACK=0 vs auto capture pair (seams px/frame + terrain-removed fraction, synthetic-patch control), which splits H-clean from H-loss (NEXT.md).
