@@ -192069,3 +192069,31 @@ HYPOTHESIS-ID: g5c-fbswitch-transition-stall. CURRENT-TRUTH 53.8 KB (no maintena
   (area cap / 64-deep window), not the multiplier. Single run per arm (owner judges look; no image scored this session).
 - Side datum: L12 at 16:9 dd6 dips flat 30 for 9 s at t=77-85 with the R=88 auto stack (s7260 measured L12 dd6 only at 21:9
   R=48). Queued scratch/agent/soak_queue/s7287_l12_169_dip.sh (r88 / r48 / dd4 / STACK=0+DUTY control) to split H-R88 / H-dd6.
+
+## Session 7287 (2026-11-13) — G1c L12 16:9 dd6 dip is R=88 (H-R88, 2 runs): new ROGUESQ_DD_WIDEWIN_RLEVEL, auto 12:48 at dd>=6, verified 60/s; loop now runs soak recipes under their shebang shell
+- Boring thing first: the loop's "rc=2 VOID (human/lock/sleep)" for s7287_l12_169_dip was a misfile. tools/agent/loop.sh ran every
+  recipe as `/bin/bash recipe`; this #!/bin/zsh recipe uses a zsh glob qualifier (`void_*(N)`), bash died with a syntax error at
+  line 9 (exit 2), and the idle gate reads exit 2 as the recipe's own human void. Only this one of the 4 VOID lines was a misfile.
+  Fix: run_soak_pass picks /bin/zsh when the shebang names zsh, pre-checks with `<sh> -n`, and files a syntax failure as
+  rc=SYNTAX (moved to done/, never re-queued). tools/agent/test_soak_idle_gate.sh: 2 new checks (zsh-syntax recipe runs under zsh;
+  syntax error filed SYNTAX, not VOID), 15/15 PASS.
+- Unit (NEXT s7287): ran the recipe in-session, AC, idle 14 h, clk 0.97-1.04. L12 16:9 dd6 WIDEWIN auto stack, HOLD 240:
+  | arm | win77-97 | p50 / p95 | <55/s (beyond-route) | flat-30 runs | cells/call |
+  | r88 (auto) | 49.1/s 15.53 ms | 11.30 / 15.43 | 15 (8) | t=77-84 | 3521 |
+  | r48 | 60.0/s 10.95 ms | 8.53 / 11.03 | 6 (0) | 0 | 3509 |
+  | d4 (dd4 auto R88) | 59.3/s 15.43 ms | 12.51 / 15.75 | 6 (0) | 0 | 3538 |
+  | ctl (dd6 STACK=0 + DUTY 1.4) | 30.1/s 23.44 ms | 18.65 / 23.40 | 167 (161) | 6 runs, 120 s | - |
+  Control PASS (flat 30 for 120 s). r88 reproduces s7286's dip at the same t (two runs) -> H-R88; H-host refuted (2/2 runs);
+  H-dd6 refuted (r48 at dd6 is the cheapest arm). Cells/call equal across arms, so R=88's extra cost is in the far side cells R=48
+  skips (s7265: R=48 skips 92-95% of wide-only cells), not in window size. d4 R88 holds 60 but with 1.2 ms headroom only.
+- Change: ROGUESQ_DD_WIDEWIN_RLEVEL=<lvl>:<R>[,...] in rs64_s7233_win (src/main/upstream_compat.cpp), level from the s7056
+  gCurrentLevel latch (0x80130B70), applies only with a plain R (tog 0) in force; prints [s7287] rlevel / level=<n> widewin_r=<R>.
+  main.cpp [s7258] auto stack sets RLEVEL=12:48 at dd>=6 (setenv no-overwrite; explicit value or `none` wins).
+  ORIGIN: not a mitigation of a wild value; the cost is legitimate game terrain (L12's far side cells), the writer is our own
+  s7266 R=88 auto default, which was qualified on L4 only.
+- Verification, same session, same recipe (scratch/s7287v): auto (new build) win77-97 60.0/s 10.94 ms, 0 flat, beyond-route 0 s,
+  log `[s7287] level=19 widewin_r=88` then `level=12 widewin_r=48`; positive control RLEVEL=none 49.3/s 15.51 ms flat t=77-84,
+  `level=12 widewin_r=88`. Two lines: the soak's r48 arm and the rebuilt auto arm agree (10.95 vs 10.94 ms).
+- Cost to the look: L12 at dd>=6 loses R=88's side-edge softening (s7264/s7266, measured on L4 21:9); not scored on L12. dd5 L12
+  unmeasured. L12 21:9 dd6 now gets R=48 again, which s7260 qualified (8.94 ms p50).
+- Rules out: host event (2/2), dd6 as such. Queued s7288_169_dd6_levels (L1/L9/L13 16:9 dd6 auto + L13 STACK=0+DUTY ctl).

@@ -12458,9 +12458,12 @@ static void rs64_g1c_apply_dd_policy() {
     // / r88 12.03 ms all 60/s, 0 flat runs; s7265_ww_r_edge (control c219 STACK=0 L/R hard80 -8.0/-8.8 PASS): r88 -7.6/-9.6 kept.
     { const char* ww = std::getenv("ROGUESQ_DD_WIDEWIN"); const char* st = std::getenv("ROGUESQ_DD_WIDEWIN_STACK");
       if (ww && *ww && ww[0] != '0' && !(st && st[0] == '0')) {
+          // s7287: L12 at dd>=6 keeps R=48 (r88 flat 30 at t=77-84 on L12 16:9 dd6 in s7286 and s7287; r48 60/s 10.95 ms, same run).
+          // dd4 L12 r88 held 59.3/s (s7287 d4), dd5 unmeasured. An explicit _RLEVEL (or _RLEVEL=none) wins.
+          if (dd >= 6.0) setenv("ROGUESQ_DD_WIDEWIN_RLEVEL", "12:48", 0);
           setenv("ROGUESQ_DD_WIDEWIN_R", "88", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE", "0.4", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE_E", "16", 0);
           rs64_s7258_merge_reinit();
-          std::fprintf(stderr, "[s7258] dd%.0f widewin stack r=%s merge=%s e=%s (auto)\n", dd, std::getenv("ROGUESQ_DD_WIDEWIN_R"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE_E"));
+          std::fprintf(stderr, "[s7258] dd%.0f widewin stack r=%s rlevel=%s merge=%s e=%s (auto)\n", dd, std::getenv("ROGUESQ_DD_WIDEWIN_R"), std::getenv("ROGUESQ_DD_WIDEWIN_RLEVEL") ? std::getenv("ROGUESQ_DD_WIDEWIN_RLEVEL") : "-", std::getenv("ROGUESQ_DD_WIDEWIN_MERGE"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE_E"));
       } }
     char b[16];
     std::snprintf(b, sizeof b, "%d", px);

@@ -34,6 +34,11 @@ chk "no wait when an ungated recipe ran (control)" '[ -e $q/x.sh ] && [ $((SECON
 SOAK_IDLE_WAIT=0; t0=$SECONDS; run_soak_queue
 chk "SOAK_IDLE_WAIT=0 keeps the old one-check behaviour" '[ -e $q/x.sh ] && [ $((SECONDS-t0)) -lt 2 ]'
 rm -f $q/x.sh
+# s7287: shebang picks the shell; a syntax error is filed as SYNTAX, never as a void.
+printf '#!/bin/zsh\n# SOAK_NEEDS_IDLE=120\nx=(a b); rm -f /nonexistent_*(N); exit 0\n' > "$q/z.sh"; echo 300 > $T/idle; SOAK_IDLE_WAIT=0; run_soak_queue
+chk "zsh-shebang recipe with zsh syntax runs under zsh" 'ls $q/done | grep -q "^z_" && grep -q "| z | rc=0 |" $AG/SOAK-RESULTS.md'
+printf '#!/bin/bash\n# SOAK_NEEDS_IDLE=120\nif then fi (\n' > "$q/s.sh"; run_soak_queue
+chk "syntax error filed as SYNTAX, not re-queued as a void" '[ ! -e $q/s.sh ] && grep -q "| s | rc=SYNTAX" $AG/SOAK-RESULTS.md && ! grep -q "| s | rc=2 VOID" $AG/SOAK-RESULTS.md'
 # s7235: the soak phase must run under the current loop.sh (re-exec first, soaks run by the new process).
 L=$here/loop.sh
 w=$(grep -n '^while \[ "\$ITER_CAP"' "$L" | head -1 | cut -d: -f1)

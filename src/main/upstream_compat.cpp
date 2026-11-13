@@ -462,6 +462,17 @@ extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float e
             r = 0; for (int i = 0; i < 3; i++) { if (r3[i] < 0) r3[i] = 0; if (r3[i] > r) r = r3[i]; } }
         fprintf(stderr, "[s7233] widewin_r=%d tog=%d r3=%d,%d,%d\n", r, tg, r3[0], r3[1], r3[2]); }
     int ph = 1, rr = r;
+    /* s7287: level-scoped R, ROGUESQ_DD_WIDEWIN_RLEVEL=<lvl>:<R>[,...] (gCurrentLevel latched as s7056_last, as _CAPLEVEL does).
+       Only with a plain R (tg 0) in force. s7287 (L12 16:9 dd6, AC, control ctl STACK=0+DUTY flat 30 for 120 s PASS): r88 win77-97
+       49.1/s 15.53 ms, flat 30 t=77-84 (s7286 the same, 2 runs) vs r48 60.0/s 10.95 ms at equal cells/call (3521 vs 3509). */
+    { static int rl[32]; static int rlinit = 0; static uint32_t rllast = 0xFFFFFFFFu;
+      if (!rlinit) { rlinit = 1; for (int i = 0; i < 32; i++) rl[i] = 0;
+          if (const char* q = getenv("ROGUESQ_DD_WIDEWIN_RLEVEL")) while (q && *q) { int l = -1, v = 0;
+              if (sscanf(q, "%d:%d", &l, &v) == 2 && l >= 0 && l < 32 && v > 0) rl[l] = v; q = strchr(q, ','); if (q) q++; }
+          fprintf(stderr, "[s7287] widewin rlevel=%s\n", getenv("ROGUESQ_DD_WIDEWIN_RLEVEL") ? getenv("ROGUESQ_DD_WIDEWIN_RLEVEL") : "(none)"); }
+      const uint32_t lv = s7056_last;
+      if (tg == 0 && r > 0 && lv < 32 && rl[lv] > 0) rr = rl[lv];
+      if (lv != rllast) { rllast = lv; fprintf(stderr, "[s7287] level=%u widewin_r=%d\n", lv, rr); } }
     if (tg == 1) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); } ph = rs64_tog_odd(mt); }
     else if (tg == 3) { const uint64_t mt = mach_absolute_time(); static int anc = 0; if (!anc) { anc = 1; rs64_tog_anchor(mt); }
         rr = r3[(mt / 24000000u) % 3u]; ph = rr > 0; }

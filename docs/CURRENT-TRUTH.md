@@ -315,11 +315,15 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7286 G1c dd8 (owner path 16:9, WIDEWIN auto stack): the terrain window binds from dd4.** Cells per stream call
-   (tools/s7286_dd_window_cells.py) L4 dd2 1798 -> dd4 3495 -> dd6 3536 -> dd8 3542 (L12 dd6 3522 / dd8 3510); dd8 only grows the
-   tile pool (6480 -> 11520) and cost (+0.6/+1.1 ms heavy window); 0 arena full, 0 crash; DUTY + dd2 controls PASS. dd8 is not a
-   useful step; further reach needs a wider/deeper window, not the multiplier. **Open: L12 16:9 dd6 flat 30 t=77-85 (48.9/s
-   15.6 ms)** -> queued s7287_l12_169_dip (R=88 vs R=48 vs dd4, control STACK=0+DUTY); NEXT.md.
+0. **s7286 G1c dd8: the terrain window binds from dd4** (cells/call L4 dd2 1798 -> dd4 3495 -> dd6 3536 -> dd8 3542; dd8 adds only
+   tile pool + cost, 0 arena full/crash). Further reach needs a wider/deeper window, not the multiplier.
+   **s7287 L12 16:9 dd6 dip: H-R88 selected (2 runs: s7286 + s7287, control STACK=0+DUTY flat 30 120 s PASS).** win77-97 r88 49.1/s
+   15.53 ms flat 30 t=77-84 vs r48 60.0/s 10.95 ms vs dd4(R88) 59.3/s 15.43 ms, equal cells/call (3521/3509/3538). Fix: new
+   ROGUESQ_DD_WIDEWIN_RLEVEL=<lvl>:<R>[,...] (upstream_compat.cpp rs64_s7233_win, gCurrentLevel latch s7056_last), auto 12:48 at dd>=6
+   (main.cpp [s7258]); verified same session auto 60.0/s 10.94 ms, 0 flat vs RLEVEL=none 49.3/s flat t=77-84, [s7287] level=12
+   widewin_r=48/88. Open: other levels at 16:9 dd6 R88 (only L4/L12 measured) -> queued s7288_169_dd6_levels; dd5 L12 unmeasured.
+   Loop fix s7287: soak recipes now run under their shebang shell (zsh recipes ran under bash; the syntax error's rc=2 was filed as
+   a human VOID) and a `-n` syntax failure is filed rc=SYNTAX (tools/agent/test_soak_idle_gate.sh 15/15).
 
 1. **CLOSED s7262: WIDEWIN heavy-window cost at 21:9 (s7231-s7262; full thread migrated to PROJECT-OVERVIEW "s7262").**
    Cause: WIDEWIN far side cells are far denser than their pixels (H-tiny, s7232). Fix: the auto stack R=48 + 2x2 merge 0.4 + E16

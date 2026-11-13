@@ -292,9 +292,21 @@ run_soak_pass() {
       { [ "$_soak_minneed" = 0 ] || [ "$need" -lt "$_soak_minneed" ]; } && _soak_minneed=$need
       continue
     fi
-    log "soak $name starting (cap ${cap}s) -> $slog"
+    # s7287: run the recipe under the shell its shebang names. Before this every recipe ran
+    # under /bin/bash, so a #!/bin/zsh recipe using zsh syntax (a glob qualifier) died with a
+    # bash syntax error, exit 2, which the idle gate filed as a human/lock VOID and re-queued.
+    local sh=/bin/bash
+    head -1 "$recipe" | grep -q 'zsh' && sh=/bin/zsh
+    if ! "$sh" -n "$recipe" >"$slog" 2>&1; then
+      rm -f "$vfile"
+      printf '%s | %s | rc=SYNTAX (%s -n failed, not run) | 0s | %s\n' "$ts" "$name" "$sh" "$slog" >> "$AG/SOAK-RESULTS.md"
+      mv "$recipe" "$qdir/done/${name}_${ts}.sh"
+      log "soak $name rejected: $sh -n failed"
+      continue
+    fi
+    log "soak $name starting (cap ${cap}s, $sh) -> $slog"
     t0=$SECONDS
-    perl -e 'setpgrp(0,0); exec @ARGV' /bin/bash "$recipe" >"$slog" 2>&1 &
+    perl -e 'setpgrp(0,0); exec @ARGV' "$sh" "$recipe" >"$slog" 2>&1 &
     pid=$!
     ( sleep "$cap" && kill -9 -- -"$pid" 2>/dev/null ) &
     wd=$!
