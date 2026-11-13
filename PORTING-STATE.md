@@ -191474,7 +191474,7 @@ Fold (queued soak, rc=0, scratch/s7259q, L12 confirmed by [ddscene] level=12 in 
 - auto ([s7258] dd6 line present, merged 732817 unm 0): p50 8.94 / p95 11.72 / max 12.10 ms, <55/s 7 s, all at t<=67 (route/load transients the
   off arm shares at the same t), beyond-route 0 s, flat runs 0.
 - off (STACK=0 = s7055 state): p50 12.02 / p95 17.08 / max 18.99 ms, <55/s 26 s, beyond-route 20 s, one flat-30 run t=76-88 (18.4 ms).
-Verdict: H-ww selected — L12's 21:9 dd6 limit (s7049/s7055 54-55/s) was WIDEWIN cost; the stack removes it. H-other refuted for this run.
+Verdict: this selects H-ww and refutes H-other (single run): L12 21:9 dd6 limit (s7049/s7055 54-55/s) was WIDEWIN cost; the stack removes it. Next discriminator: s7260_dd4_auto_stack (auto merged>0 and win ~9.8 vs off ~13 ms at dd4).
 Single run for auto; the off arm reproduces s7049/s7055 (second line of evidence for the baseline only). OWNER-OPT-INS updated.
 Change: src/main/main.cpp rs64_g1c_apply_dd_policy — the [s7258] stack block (R=48, MERGE 0.4, E16, merge reinit) moved out of the dd>=6 branch;
 it now applies at any dd>1 with ROGUESQ_DD_WIDEWIN on (STACK=0 off, explicit values win). Basis: s7247 dd4 image check clean (two runs), s7248 dd4
