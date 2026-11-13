@@ -12426,7 +12426,16 @@ static void rs64_g1c_apply_dd_policy() {
     int px = (int)std::ceil(dd);
     std::fprintf(stderr, "[ddbundle] dd=%.2f px=%d (ramtop16 spill dlpoolx4MB)\n", dd, px);
     // s7037: px > 5 (10240 cells) is opt-in via ROGUESQ_DD_POOLX_MAX=<6..8> (default 5, the s7019 clamp).
+    // s7293: dd>=8 with WIDEWIN at <=16:9 width (FB_WIDTH <= 796) auto-raises the clamp to 8 and WIDEWIN_R to 128. s7292 (L4 16:9
+    // dd8, 1 run/arm, ctl px8 depth 128 / ref depth 80 PASS): total emitted cells/call ref 6902 / px8(R88) 7316 / px8+R128 11322,
+    // win77-97 11.83 / 11.84 / 12.06 ms, all 60.0/s. 21:9 dd8 is unmeasured at px8 (s7019 px5 already 53 fps) and keeps px5.
+    // Explicit ROGUESQ_DD_POOLX_MAX / _WIDEWIN_R win; ROGUESQ_DD_PX8_AUTO=0 turns it off.
     { const char* pm = std::getenv("ROGUESQ_DD_POOLX_MAX"); int mx = (pm && *pm) ? std::atoi(pm) : 5; if (mx < 1) mx = 1; if (mx > 8) mx = 8;
+      const char* ww = std::getenv("ROGUESQ_DD_WIDEWIN"); const char* fw = std::getenv("ROGUESQ_FB_WIDTH"); const char* pa = std::getenv("ROGUESQ_DD_PX8_AUTO");
+      if (!(pm && *pm) && dd >= 8.0 - 1e-3 && ww && *ww && ww[0] != '0' && !(fw && std::atoi(fw) > 796) && !(pa && pa[0] == '0')) {
+          mx = 8; setenv("ROGUESQ_DD_WIDEWIN_R", "128", 0);
+          std::fprintf(stderr, "[s7293] dd%.0f px8 auto poolx_max=8 widewin_r=%s fbw=%s\n", dd, std::getenv("ROGUESQ_DD_WIDEWIN_R"), fw ? fw : "-");
+      }
       if (px > mx) px = mx; }
     // s7037 G1c bundle: s7034-s7036 qualified the fog-depth off-map cull (R=2, K=0.6, height gate off) at 21:9 dd6 WIDEWIN
     // (L1/L4/L5 ~505 s, 0 crashes, rsp -1.3..-2.8 ms, image <=0.18 at frozen poses). Default it on for dd>=6 with WIDEWIN on;

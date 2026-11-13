@@ -1471,3 +1471,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7288 fold: s7288_169_dd6_levels rc=0 CONTROL PASS (ctl 31 s flat 30, 73 beyond-route s): L1/L9/L13 16:9 dd6 R=88 60.0/s 8.9-10.1 ms, 0 beyond-route -> H-L12-only, closed. Queued s7290_window_depth.
 20261113-145044 | s7290_window_depth | rc=0 | 634s | scratch/agent/soak_results/s7290_window_depth_20261113-145044.log
 20261113 | s7291 fold: s7290_window_depth rc=0 CONTROL PASS (px8 depth 96): in= is retail-window-only; real total cells ref 6921 = nocull, px8 7453 (wide +41%, R88 skips 1578), 11.20 vs 11.24 ms -> R88 binds; queued s7292_r_px.
+20261113-150409 | s7292_r_px | rc=0 | 474s | scratch/agent/soak_results/s7292_r_px_20261113-150409.log
+20261113 | s7293 fold: s7292_r_px rc=0 CONTROL PASS (px8/px8r128 depth 128, ref 80, r128 skip 368): total_emit ref 6902 / px8 7316 / px8r128 11322, all 60.0/s 11.83-12.06 ms -> H-R; landed dd>=8 16:9 px8+R128 auto ([s7293]), in-session verify auto 11406 depth 128 60/s vs PX8_AUTO=0 6902. Queued s7294_169_dd8_levels.

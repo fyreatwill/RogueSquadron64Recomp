@@ -318,7 +318,12 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7291 G1c: total emitted terrain cells per stream call (tools/s7291_wide_cells.py = [s7233] retail in + wide-only histogram -
+0. **s7293 G1c dd8 bundle LANDED: H-R selected (2 runs: s7292 explicit + s7293 auto, ctl depths PASS).** L4 16:9 dd8 total emitted
+   cells/call ref(px5,R88) 6902 / px8(R88) 7316 / px8+R128 11322 (s7292) / auto 11406 (s7293), window 128x128 vs ref 80, win77-97
+   11.83-12.06 ms all 60.0/s. main.cpp [s7293]: dd>=8 + WIDEWIN + FB_WIDTH<=796 -> POOLX_MAX=8, WIDEWIN_R=128 (explicit env wins,
+   ROGUESQ_DD_PX8_AUTO=0 off); 21:9 keeps px5 (unmeasured). Queued s7294_169_dd8_levels (300 s L1/L5/L10/L12 + ctl). Then: look sheet
+   dd6 vs dd8 same camera, 21:9 dd8 px8 cost arm, and the game far cutoff 0x8009DEB4 as the next limit.
+   **s7291 G1c: total emitted terrain cells per stream call (tools/s7291_wide_cells.py = [s7233] retail in + wide-only histogram -
    R skip) L4 16:9: dd2 1893 -> dd4 5528 -> dd6 6878 -> dd8 6809 (px clamp 5 = same cap as dd6); dd6 POOLX_MAX=8 7453 (+8%, window
    128x96, wide 3875 -> 5457 but WIDEWIN_R=88 skips 528 -> 1578), win77-97 11.20 vs 11.24 ms, 0 crash. OFFMAPCULL=-1 leaves the
    tally identical (the cull acts downstream of it; +1.4 ms) (s7290, 1 run/arm, ctl: px8 depth 96 PASS).** Binding distance limit

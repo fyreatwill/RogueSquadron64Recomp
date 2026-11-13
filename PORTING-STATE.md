@@ -192141,3 +192141,20 @@ H-offmap refuted as the depth limiter (tally unchanged; it is a downstream cull)
 41% wide), but the binding distance limit is our own WIDEWIN_R=88. One run per arm (single-source on the ms).
 ORIGIN: no mitigation added; instrument correction only.
 Next: queued scratch/agent/soak_queue/s7292_r_px.sh (L4 16:9 dd8 ref / px8 / px8+R128) to decide whether R88 or the game's farcut binds next.
+
+## Session 7293 (2026-11-13) — G1c: fold s7292_r_px (H-R: WIDEWIN_R=88 bound px8; R=128 +55% cells at 60/s), landed dd>=8 16:9 px8+R128 auto in the dd bundle, verified in-session
+What ran. Folded scratch/agent/soak_results/s7292_r_px_20261113-150409.log (loop soak, L4 16:9 dd8 WIDEWIN, 150 s holds, 1 run/arm).
+| arm | R | total_emit/call | wide skip | window depth (trace 17) | cap | win77-97 |
+| ref (px5) | 88 | 6902 | 527 | 80 | 10240 | 60.0/s 11.83 ms |
+| px8 | 88 | 7316 | 4518 | 128 | 16384 | 60.0/s 11.84 ms |
+| px8r128 | 128 | 11322 | 368 | 128 | 16384 | 60.0/s 12.06 ms |
+Control PASS (px8 arms depth 128, ref 80; r128 skip ~0). Verdict: selects H-R (R=88 discarded 4518 of px8's 8288 wide cells; R=128
+emits them for +0.2 ms), refutes H-cost and H-flat at L4 16:9.
+Change: src/main/main.cpp rs64_g1c_apply_dd_policy [s7293]: dd>=8 with WIDEWIN on and FB_WIDTH<=796 (4:3/16:9) and no explicit
+ROGUESQ_DD_POOLX_MAX -> clamp 8 and setenv(ROGUESQ_DD_WIDEWIN_R=128, no overwrite) before the s7258 stack (which sets 88 without
+overwrite, so 128 sticks). ROGUESQ_DD_PX8_AUTO=0 disables. 21:9 keeps px5: unmeasured at px8 and s7019 21:9 dd8 px5 already 53 fps.
+L12's RLEVEL 12:48 (dd>=6) is level-scoped and should still win; checked by the queued soak.
+Verify (scratch/s7293_px8_auto.sh, in-session, same harness, 2 arms): auto -> [s7293] line 1, r=128 total_emit 11406, depth 128,
+60.0/s 11.93 ms; PX8_AUTO=0 -> no line, r=88 total_emit 6902 (= s7292 ref), depth 80, 60.0/s 11.90 ms. Two runs now agree
+(s7292 explicit env, s7293 auto). OWNER-OPT-INS: dd8 16:9 paragraph replaces the "dd8 adds nothing" note (holds pending).
+Not done: 300 s holds (queued scratch/agent/soak_queue/s7294_169_dd8_levels.sh: L1/L5/L10/L12 + ctl), look sheet, 21:9 cost.
