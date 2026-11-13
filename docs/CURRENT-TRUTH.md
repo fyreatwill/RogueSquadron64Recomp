@@ -315,6 +315,12 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
+0. **s7286 G1c dd8 (owner path 16:9, WIDEWIN auto stack): the terrain window binds from dd4.** Cells per stream call
+   (tools/s7286_dd_window_cells.py) L4 dd2 1798 -> dd4 3495 -> dd6 3536 -> dd8 3542 (L12 dd6 3522 / dd8 3510); dd8 only grows the
+   tile pool (6480 -> 11520) and cost (+0.6/+1.1 ms heavy window); 0 arena full, 0 crash; DUTY + dd2 controls PASS. dd8 is not a
+   useful step; further reach needs a wider/deeper window, not the multiplier. **Open: L12 16:9 dd6 flat 30 t=77-85 (48.9/s
+   15.6 ms)** -> queued s7287_l12_169_dip (R=88 vs R=48 vs dd4, control STACK=0+DUTY); NEXT.md.
+
 1. **CLOSED s7262: WIDEWIN heavy-window cost at 21:9 (s7231-s7262; full thread migrated to PROJECT-OVERVIEW "s7262").**
    Cause: WIDEWIN far side cells are far denser than their pixels (H-tiny, s7232). Fix: the auto stack R=48 + 2x2 merge 0.4 + E16
    (tools/apply_s7233_widewin_r.py, apply_s7239_widewin_merge.py, main.cpp [s7258]) applies at any dd>1 with ROGUESQ_DD_WIDEWIN=1

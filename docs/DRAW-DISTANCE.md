@@ -36,6 +36,12 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 - Cost on -O2 with STORE_DIAG=0: lvl5 dd4 ~30 game fps (retail rate), dd6/dd8 the same. FPS60 at dd4 reaches ~45, not 60.
 - Suggested owner setting: `ROGUESQ_DRAW_DISTANCE=2` until the dd3/dd4 sheets are fixed (s6895: dd2 had none in any test, dd3 and dd4 did). Default stays retail until the owner chooses.
 
+## dd8 on the owner path (s7286)
+
+16:9 with the WIDEWIN auto stack: terrain cells per frame stop growing at dd4 (dd2 1798, dd4 3495, dd6 3536, dd8 3542 on L4).
+dd6 and dd8 only make the tile pool bigger (6480 -> 11520 entries) and cost a little more time. No heap or crash problems at dd8.
+So dd8 shows no more ground than dd4; more reach would need a bigger terrain window, not a bigger number.
+
 ## Map edge (s6874)
 
 Any multiplier other than 1 used to cut the plain that retail draws past the map edge, leaving the edge against the sky. `ROGUESQ_DD_EDGE` (default on) keeps it; `=0` restores the old clamp. Retail (no multiplier) is unaffected.

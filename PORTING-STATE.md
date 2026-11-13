@@ -192043,3 +192043,29 @@ HYPOTHESIS-ID: g5c-fbswitch-transition-stall. CURRENT-TRUTH 53.8 KB (no maintena
   same (inference; the oracle cannot drive these transitions). Our recompiled load work is faster than the N64 CPU. Nothing to fix on
   our side; item 16 stays closed with the >350 ms gaps explained. Thread g5c-fbswitch-transition-stall CLOSED.
 - Queued scratch/agent/soak_queue/s7285_bootloop_qos.sh (12 owner-env boots with QOS_ALL=1, never boot-looped; control boot 1).
+
+## Session 7286 (2026-11-13) — G1c phase 2 dd8 on the owner path: the terrain window binds from dd4 (cells/call 1798 dd2 -> 3495 dd4 -> 3536 dd6 -> 3542 dd8), dd8 adds only tile pool (6480 -> 11520) and cost; no heap/cap limit hit; new tools/s7286_dd_window_cells.py
+- Fold: s7285_bootloop_qos rc=0, control boot1 SIGSTOP frozen + sample dump PASS; boots 2-12 with QOS_ALL=1 all reached attract,
+  0 crash, 0 boot-loop (11/11) -> QOS_ALL does not boot-loop.
+- Unit (NEXT s7286): find dd8's binding limit on today's owner path. One in-session run, AC, clk 0.97-1.04, idle host,
+  tools/g1e_owner_quiet_arms.zsh via new tools/s7286_dd8_arms.zsh: 16:9 window, FPS60, DD_UNSAFE+MELT+WIDEWIN=1 (auto stack
+  R=88 merge 0.4 E16, [s7258] printed dd6/dd8), HOLD 240 s. Arms L4 dd6 / dd8 / dd8+DUTY1.4 (cost control), L12 dd6 / dd8; then a
+  120 s L4 dd2 + dd1 pair as the cell counter's positive control.
+- Results (win77-97 = heavy window; beyond-route = <55/s s outside the route transients):
+  | arm | pool | cells/call | win77-97 | p50 | <55/s s (beyond) | flat30 | arena full | crash |
+  | L4 dd6 | 6480 | 3536 | 60.0/s 11.20 ms | 8.19 | 7 (0) | 0 | 0 | 0 |
+  | L4 dd8 | 11520 | 3542 | 60.0/s 11.83 ms | 7.31 | 9 (3) | 0 | 0 | 0 |
+  | L4 dd8 DUTY1.46 (ctl) | 11520 | 3539 | 33.2/s 17.88 ms | 10.68 | 105 (99) | 10 s | 0 | 0 |
+  | L12 dd6 | - | 3522 | 48.9/s 15.59 ms | 11.47 | 16 (9) | t=77-85 | 0 | 0 |
+  | L12 dd8 | - | 3510 | 43.5/s 16.71 ms | 13.38 | 22 (15) | t=76-88 11 s | 0 | 0 |
+  | L4 dd2 (counter ctl, 120 s) | 720 | 1798 | | | | | 0 | 0 |
+  Reference L4 16:9 dd4 auto stack (s7267 a88 log, same recipe): pool 2880, 3495 cells/call.
+- Controls: DUTY arm goes flat 30 in the heavy window (PASS, timing instrument sees a 1.46x slowdown); cell counter doubles
+  dd2 -> dd4 (PASS), so its flatness above dd4 is real, not a dead counter. Two lines of evidence for "no terrain past dd4":
+  this counter (L4 and L12) and s6699-s6703's pre-WIDEWIN cell count (3904-3968 flat dd4..dd8 on lvl5).
+- Verdict: L-none for heap (0 arena full, 0 crash) and ucode cap (cells unchanged), L-window selected: the terrain window
+  (64-deep FWDWIN x WIDEWIN area cap) is already full at dd4; dd6/dd8 grow only the tile pool (k 32 -> 72 -> 128) and cost
+  (+0.6 ms L4, +1.1 ms L12 heavy window). dd8 is therefore not a useful owner step; pushing further means widening the window
+  (area cap / 64-deep window), not the multiplier. Single run per arm (owner judges look; no image scored this session).
+- Side datum: L12 at 16:9 dd6 dips flat 30 for 9 s at t=77-85 with the R=88 auto stack (s7260 measured L12 dd6 only at 21:9
+  R=48). Queued scratch/agent/soak_queue/s7287_l12_169_dip.sh (r88 / r48 / dd4 / STACK=0+DUTY control) to split H-R88 / H-dd6.
