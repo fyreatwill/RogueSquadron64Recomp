@@ -508,7 +508,14 @@ bool s7239_dist(uint32_t e, float* d, bool* stale) {
 float s7239_frac = 0.f; int s7239_tg = 0;
 struct S7239E { uint32_t e; int32_t x, z, yb, v; uint16_t mat; uint8_t b21, b2e, flat, role, dup, cap; int8_t h[4]; int32_t p[3]; uint32_t cmd; uint32_t w[10]; };
 std::vector<S7239E> s7239_l; std::vector<std::pair<uint64_t, int32_t>> s7239_key, s7239_el;
-enum { T_GRP, T_NOWW, T_FLAG, T_EL, T_FLAT, T_CAND, T_ANC, T_DROP, T_OVF, T_MISS, T_NEAR, T_UNM, T_DUP, T_MERGED, T_STALE, T_N };
+enum { T_GRP, T_NOWW, T_FLAG, T_EL, T_FLAT, T_CAND, T_ANC, T_DROP, T_OVF, T_MISS, T_NEAR, T_UNM, T_DUP, T_MERGED, T_STALE, T_FLATE, T_FLATC, T_SHMIS, T_DH0, T_DH1, T_DH2, T_DH3, T_DH4, T_DH5, T_DH6, T_DH7, T_N };
+// s7246 flatness gate: E = max |y_mid - avg(ends)| (emitted units, abs y = 16*(ybase+h)) over the 4 merged-edge midpoints (the T-junction
+// gap a crack opens), C = centre vs both diagonals (view-dependent split, F5Rogue.cpp TriGen02). Defaults: E=0 (exact), C=E.
+int32_t s7246_E = 0, s7246_C = 0;
+struct S7246Init { S7246Init() { const char* e = getenv("ROGUESQ_DD_WIDEWIN_MERGE_E"); if (e && *e) s7246_E = atoi(e);
+    const char* c = getenv("ROGUESQ_DD_WIDEWIN_MERGE_C"); s7246_C = (c && *c) ? atoi(c) : s7246_E; } } s7246_init;
+// histogram edges of the edge deviation (emitted units) for candidates that pass every other gate, both phases: 0,8,16,32,64,128,256,inf
+inline int s7246_bin(int32_t d) { const int32_t lim[7] = {0, 8, 16, 32, 64, 128, 256}; for (int i = 0; i < 7; i++) if (d <= lim[i]) return i; return 7; }
 unsigned long long s7239_t[2][T_N]; int s7239_ph = 1; float s7239_farcut = 0.f, s7239_maxd2[2], s7239_thr = 0.f;
 int32_t s7239_find(const std::vector<std::pair<uint64_t, int32_t>>& v, uint64_t k) {
     size_t lo = 0, hi = v.size(); while (lo < hi) { size_t m = (lo + hi) / 2; if (v[m].first < k) lo = m + 1; else hi = m; }
@@ -532,9 +539,10 @@ extern "C" void rs64_s7239_end(uint8_t* rd);
 static void s7239_flush(uint64_t now) {
     static uint64_t last = 0; if (!last) last = now; if (now - last < 48000000ull) return; last = now;
     for (int p = 0; p < 2; p++) { const unsigned long long* t = s7239_t[p]; if (!t[T_GRP] && !t[T_NOWW]) continue;
-        fprintf(stderr, "[s7239] ph=%d frac=%.2f farcut=%.4g maxd2=%.4g thr=%.4g grp=%llu noww=%llu flag=%llu el=%llu flat=%llu cand=%llu anc=%llu drop=%llu merged=%llu ovf=%llu miss=%llu near=%llu unm=%llu dup=%llu stale=%llu hclr=%llu\n",
+        fprintf(stderr, "[s7239] ph=%d frac=%.2f farcut=%.4g maxd2=%.4g thr=%.4g grp=%llu noww=%llu flag=%llu el=%llu flat=%llu cand=%llu anc=%llu drop=%llu merged=%llu ovf=%llu miss=%llu near=%llu unm=%llu dup=%llu stale=%llu hclr=%llu E=%d C=%d flatrej=%llu ctrrej=%llu shmis=%llu dh=%llu,%llu,%llu,%llu,%llu,%llu,%llu,%llu\n",
             p, s7239_frac, s7239_farcut, s7239_maxd2[p], s7239_thr, t[T_GRP], t[T_NOWW], t[T_FLAG], t[T_EL], t[T_FLAT], t[T_CAND], t[T_ANC], t[T_DROP], t[T_MERGED],
-            t[T_OVF], t[T_MISS], t[T_NEAR], t[T_UNM], t[T_DUP], t[T_STALE], s7239_hclr);
+            t[T_OVF], t[T_MISS], t[T_NEAR], t[T_UNM], t[T_DUP], t[T_STALE], s7239_hclr, (int)s7246_E, (int)s7246_C, t[T_FLATE], t[T_FLATC], t[T_SHMIS],
+            t[T_DH0], t[T_DH1], t[T_DH2], t[T_DH3], t[T_DH4], t[T_DH5], t[T_DH6], t[T_DH7]);
         memset(s7239_t[p], 0, sizeof s7239_t[p]); s7239_maxd2[p] = 0.f; } }
 extern "C" void rs64_s7239_group(uint8_t* rd, uint32_t s1, uint32_t s0, int ww) {
     if (g_rs64_s7239_act) rs64_s7239_end(rd);
@@ -589,6 +597,18 @@ extern "C" void rs64_s7239_group(uint8_t* rd, uint32_t s1, uint32_t s0, int ww) 
         if (!far) { s7239_t[ph][T_NEAR]++; continue; }
         const int32_t hb = s7239_l[pi[0]].h[1] + s7239_l[pi[0]].yb - a.yb, hc = s7239_l[pi[1]].h[2] + s7239_l[pi[1]].yb - a.yb, hd = s7239_l[pi[2]].h[3] + s7239_l[pi[2]].yb - a.yb;
         if (hb < -2048 || hb > 2047 || hc < -2048 || hc > 2047 || hd < -2048 || hd > 2047) { s7239_t[ph][T_OVF]++; continue; }
+        {   const S7239E &B = s7239_l[pi[0]], &C = s7239_l[pi[1]], &D = s7239_l[pi[2]];
+            const int32_t A0 = a.yb + a.h[0], A4 = a.yb + a.h[1], A20 = a.yb + a.h[2], A24 = a.yb + a.h[3];
+            const int32_t B4 = B.yb + B.h[1], B24 = B.yb + B.h[3], C20 = C.yb + C.h[2], C24 = C.yb + C.h[3], D24 = D.yb + D.h[3];
+            // shared corners must agree between partners, or the retail mesh itself is open there
+            if (B.yb + B.h[0] != A4 || C.yb + C.h[0] != A20 || D.yb + D.h[0] != A24 || B.yb + B.h[2] != A24 || C.yb + C.h[1] != A24 ||
+                D.yb + D.h[1] != B24 || D.yb + D.h[2] != C24) s7239_t[ph][T_SHMIS]++;
+            auto g = [](int32_t m, int32_t e1, int32_t e2) { const int32_t v = 2 * m - e1 - e2; return 8 * (v < 0 ? -v : v); };
+            int32_t de = g(A4, A0, B4); de = std::max(de, g(A20, A0, C20)); de = std::max(de, g(C24, C20, D24)); de = std::max(de, g(B24, B4, D24));
+            const int32_t dc = std::max(g(A24, A0, D24), g(A24, B4, C20));
+            s7239_t[ph][T_DH0 + s7246_bin(de)]++;
+            if (de > s7246_E) { s7239_t[ph][T_FLATE]++; continue; }
+            if (dc > s7246_C) { s7239_t[ph][T_FLATC]++; continue; } }
         if (!ph) { s7239_t[ph][T_CAND]++; continue; }
         a.role = 1; for (int k = 0; k < 3; k++) { a.p[k] = pi[k]; s7239_l[pi[k]].role = 2; }
         anchors++; s7239_t[ph][T_ANC]++; }

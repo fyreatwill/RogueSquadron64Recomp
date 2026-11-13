@@ -191173,3 +191173,37 @@ cutting visible far cells in flight. Next: fixed-setting framebuffer arms and an
 - Next (NEXT.md): crack-free merge gate. The 5x5 height block is readable at group time (*(elem+0x24), plan line 21), so merge a 2x2 block only when
   every shared-edge midpoint and the centre deviate from the merged plane by <= E height units (standard terrain-LOD error gate), E sweep, scored by
   this seam scorer plus window dsd.
+
+## Session 7246 (2026-11-12) — WIDEWIN merge flatness gate: E=16 is crack-free and saves 1.28 ms in the heavy window (ungated 2.30); 70-76% of L4 candidates are exactly planar; still below the -1.5 ms bar
+
+HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7246.
+- Built: rs64_s7239_group (src/main/upstream_compat.cpp) gains a flatness gate after the overflow check. Corner heights are absolute,
+  16*(ybase+h). Edge deviation = max over the 4 merged-edge midpoints (A4, A20, C24, B24) of 8*|2*mid - end1 - end2|, i.e. the T-junction gap
+  in emitted units. Centre deviation = A24 against both diagonals (TriGen02 picks the split by depth, F5Rogue.cpp:1005). Env
+  ROGUESQ_DD_WIDEWIN_MERGE_E (default 0) and _MERGE_C (default E). [s7239] gains E= C= flatrej= ctrrej= shmis= (shared-corner mismatch between
+  partners) and dh= (8-bin edge-deviation histogram over every candidate that passes the other gates, both phases, so the merge count for any E
+  can be read from one run). tools/s7233_widewin_r.py --merge prints a per-phase s7246 summary. Unit test tools/s7241_merge_test 29/29, with 7 new
+  cases: planar merges at E=0; planar with per-cell ybase; a raised edge midpoint rejects at E=0 and merges at E=16; a raised centre rejects
+  via C; a shared-corner mismatch is counted; random terrain rejects at E=0 (negative control). The old cases run with the gate off.
+- Image run (scratch/s7246/all.zsh + ctl.zsh, L4 21:9 dd4+WW+MELT, MERGE=0.4 same-run tog, CULL=1, owner idle 3092-3750 s except at about
+  21:51, 0 crashes in 4 runs). Seam scorer tools/s7245_merge_cracks.py, synthetic control PASS on all 4 arms (111/112, 111/111, 111/112, 111/111).
+  Capture crop varied: content_w 631 (e0), 1191 (e16), 895 (e64), 1191 (einf). Only e16 and einf match s7245's geometry.
+  e16: seams off->on 23.1 -> 20.1 px/frame, side quartiles [0,0,19] -> [0,0,21], A/A +13.0. No excess.
+  einf (ungated, real-crack control in the same session): 26.4 -> 38.2, side L 9.4 -> 13.5, R 17.1 -> 24.6, Q3 28 -> 52, A/A +8.9. The excess is
+  present but weaker than s7245 (+23 to +30).
+  e0 +6.6 (A/A -9.1) and e64 +6.2 (A/A +1.8): narrow crop, so not comparable. e64 also took owner input at about 21:51.
+  Owner sheet docs/owner_sheet_s7246_merge_e16.png. The e16 frames look clean.
+- Deviation histogram (all arms agree): 68-76% of candidate blocks are exactly planar, 74-79% are within 16 and 80-86% within 64. So
+  H-flat-empty is refuted. shmis is 0-45 per run: the retail mesh is closed at shared corners.
+- Timing soak, run in-iteration (scratch/s7246/s7246_merge_flat_timing.sh, g1e_owner_quiet_arms, HOLD 130, owner idle, CONTROL PASS x3,
+  drops = 3.00 x merged). Window t=77-97 on-off:
+  e16 dsd -1.28 ms, dtri -1711, kpx -6.8%;
+  e0 -1.14 ms, kpx +3.4%;
+  einf -2.30 ms, kpx -0.5% (repeats the s7244 m40 result of -2.31).
+  Flight: e16 -1.13 ms, kpx -1.1%; e0 -2.66 ms, +1.5% (pure_s 4-5, noisy); einf -1.18 ms, -5.6%.
+  Merged blocks: e16 1.28M, e0 1.19M, einf 1.72M. So the gate keeps 75% of merges but only about 55% of the window saving: the blocks it
+  rejects are the hilly ones that sit in view and carry visible triangles. Single run per arm.
+- Result: H-flat-works for cracks: E=16 shows no seam excess, with a same-session ungated control that does show it. For time the result is
+  partial: -1.28 ms against the -1.5 ms bar. Not added to OWNER-OPT-INS yet.
+- Next: stack E=16 with WIDEWIN_R=48 (r48 alone saved 4.12 ms, kpx -3.2%, no hole check yet). Image and timing arms are in NEXT.md.
+  Raws deleted (4 x ~35 GB).

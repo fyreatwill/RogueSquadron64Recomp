@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7245 (2026-11-12).
+Compact operational handoff, as of Session 7246 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -352,7 +352,16 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    m40+R56 24.5 -> 55.0 (A/A -6.4), m40 alone 24.4 -> 47.4 (A/A +8.3). Zoom (docs/owner_sheet_s7245_merge_cracks_zoom.png): haze shows through slivers
    along cell edges on mid-distance hillsides and along the L4 shoreline. The merge boundary sits at ~0.4 of the window radius, in clear view, so the plan's
    'haze hides the T-junction' was wrong. R sweep folded (s7237_widewin_r2): r48 win -4.12 ms, r64 -1.20, r72 -1.56; kpx +-7% unordered = noise.
-   Next (NEXT.md): flatness gate: merge a 2x2 block only when its edge midpoints and centre lie within E height units of the merged plane.
+   **s7246: flatness gate BUILT and measured (H-flat-works for cracks, partial for time).** ROGUESQ_DD_WIDEWIN_MERGE_E=<emitted units> (default 0 =
+   exact planar; abs y = 16*(ybase+h)) rejects a block whose 4 merged-edge midpoints deviate from the end average by > E (the T-junction gap);
+   _MERGE_C (default E) does the same for the centre vs both diagonals (TriGen02 picks the split by depth). [s7239] gains E= C= flatrej= ctrrej= shmis=
+   dh=<8-bin edge-dev histogram>; unit test 29/29 (7 new flat cases incl. random-terrain negative control). L4 candidates: 70-76% are exactly planar,
+   80% within 32, so H-flat-empty refuted. Image (4 capture arms, owner idle, synthetic control PASS on all): at full capture geometry E=16 side seams
+   23.1 -> 20.1 px/frame (no excess), ungated control in the same session 26.4 -> 38.2, side Q3 28 -> 52 (real-crack control, weaker than s7245).
+   E=0/E=64 arms got a narrower crop (content_w 631/895), so they are not comparable (e64 also had owner input). Timing (same-run tog, 1 run/arm,
+   CONTROL PASS x3): window dsd e16 -1.28 ms (kpx -6.8%, within window tog noise), e0 -1.14, ungated -2.30 (repeats s7244's -2.31); flight e16
+   -1.13 ms kpx -1.1%. So the gate keeps ~75% of merges but only ~55% of the saving, because the rejected blocks are the hilly, visible ones. Below the
+   -1.5 ms bar (single run). Owner sheet docs/owner_sheet_s7246_merge_e16.png. Next (NEXT.md): stack E=16 with WIDEWIN_R=48 (r48 -4.12 ms) and score holes and seams.
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.

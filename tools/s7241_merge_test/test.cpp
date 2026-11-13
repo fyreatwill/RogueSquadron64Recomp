@@ -140,6 +140,7 @@ int main() {
     rd = (uint8_t*)calloc(64u << 20, 1);
     uint32_t fc; memcpy(&fc, &FARCUT_V, 4); ww(FARCUT, fc);
     s7239_frac = 0.5f; g_rs64_s7239_on = 1;  // thr = 0.25 * 1000 = 250
+    s7246_E = s7246_C = 1 << 30;  // s7246: the pre-flatness cases use random heights; gate off for them (tested below)
     run("basic 2x2", block(0, 0, 64, 1), {{0, 1, 2, 3}});
     { auto b = block(0, 0, 64, 5); std::vector<Cell> r = {b[3], b[1], b[0], b[2]};  // partners before the anchor
       run("partners before anchor", r, {{2, 1, 3, 0}}); }
@@ -177,6 +178,28 @@ int main() {
       auto [s1, s0] = build(block(0, 0, 64, 99), false); auto out = emit(s1, s0);
       CHECK(out.size() == 4 && s7239_t[0][T_CAND] == 1 && s7239_t[0][T_ANC] == 0 && tally(T_MERGED) == 0, "ph0 cmds %zu cand %llu", out.size(), s7239_t[0][T_CAND]);
       printf("%s %s\n", fails != f0 ? "...." : "ok  ", name); g_tog_ph = 1; s7239_tg = 0; }
+    // s7246 flatness gate (E = edge-midpoint T-junction gap, C = centre vs both diagonals; emitted units = 16 * height units).
+    { auto planar = [](int x0, int z0, int v, int ybv) { std::vector<Cell> b = block(x0, z0, v, 3);
+        for (int k = 0; k < 4; k++) { Cell& c = b[k]; c.yb = 100 + ybv * k; const int dx[4] = {0, 1, 0, 1}, dz[4] = {0, 0, 1, 1};
+          for (int i = 0; i < 4; i++) { const int X = (c.x - x0) / v + dx[i], Z = (c.z - z0) / v + dz[i]; c.h[i] = 3 * X - 2 * Z + 5 - c.yb + 100; } }
+        return b; };
+      s7246_E = s7246_C = 0;
+      { const char* name = "flat: planar block merges at E=0"; run(name, planar(0, 0, 64, 0), {{0, 1, 2, 3}});
+        CHECK(tally(T_FLATE) == 0 && tally(T_FLATC) == 0 && tally(T_SHMIS) == 0 && tally(T_DH0) == 1, "flatrej %llu ctr %llu shmis %llu dh0 %llu", tally(T_FLATE), tally(T_FLATC), tally(T_SHMIS), tally(T_DH0)); }
+      { const char* name = "flat: planar, per-cell ybase rebased"; run(name, planar(0, 0, 64, 7), {{0, 1, 2, 3}});
+        CHECK(tally(T_SHMIS) == 0 && tally(T_DH0) == 1, "shmis %llu dh0 %llu", tally(T_SHMIS), tally(T_DH0)); }
+      { const char* name = "flat: raised edge midpoint rejects at E=0"; auto b = planar(0, 0, 64, 0); b[0].h[1] += 1; b[1].h[0] += 1;  // A4 == B0, +1 unit
+        run(name, b, {}); CHECK(tally(T_FLATE) == 1 && tally(T_DH2) == 1, "flatrej %llu dh2 %llu (dev 16)", tally(T_FLATE), tally(T_DH2)); }
+      { const char* name = "flat: same block merges at E=16"; s7246_E = 16; auto b = planar(0, 0, 64, 0); b[0].h[1] += 1; b[1].h[0] += 1;
+        run(name, b, {{0, 1, 2, 3}}); CHECK(tally(T_FLATE) == 0, "flatrej %llu", tally(T_FLATE)); s7246_E = 0; }
+      { const char* name = "flat: raised centre rejects via C"; s7246_E = 1 << 30; s7246_C = 0; auto b = planar(0, 0, 64, 0);
+        b[0].h[3] += 2; b[1].h[2] += 2; b[2].h[1] += 2; b[3].h[0] += 2;
+        run(name, b, {}); CHECK(tally(T_FLATC) == 1 && tally(T_FLATE) == 0, "ctrrej %llu flatrej %llu", tally(T_FLATC), tally(T_FLATE)); s7246_E = s7246_C = 0; }
+      { const char* name = "flat: shared-corner mismatch counted"; auto b = planar(0, 0, 64, 0); b[1].h[0] += 4;  // B0 != A4, A's own edge still planar
+        run(name, b, {{0, 1, 2, 3}}); CHECK(tally(T_SHMIS) == 1, "shmis %llu", tally(T_SHMIS)); }
+      { const char* name = "flat: random terrain rejects at E=0 (negative control)"; run(name, block(0, 0, 64, 1), {});
+        CHECK(tally(T_FLATE) + tally(T_FLATC) == 1 && tally(T_DH0) == 0, "rej %llu dh0 %llu", tally(T_FLATE) + tally(T_FLATC), tally(T_DH0)); }
+      s7246_E = s7246_C = 1 << 30; }
     // Positive control for the checker itself: corrupt one rewrite and the corner check must fail.
     { int before = fails; cases++; reset_t(); auto b = block(0, 0, 64, 7);
       auto [s1, s0] = build(b, false); auto out = emit(s1, s0); ww(out[0] + 0x10, 0xDEADBEEFu);

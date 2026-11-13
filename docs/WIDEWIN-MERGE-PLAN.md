@@ -53,6 +53,12 @@ A merged edge meets single-cell neighbours only where a 2x2 block borders an unm
 midpoint, with a gap of |h_mid - (h_end1 + h_end2)/2| << 4 units. Haze hides most of it at merge range (DD_MELT). Measure, don't assume:
 owner sheet + the s7232 kpx classifier.
 
+## s7246 flatness gate (built)
+ROGUESQ_DD_WIDEWIN_MERGE_E=<emitted units> (default 0): reject a block when max over the 4 merged-edge midpoints of |y_mid - (y_end1+y_end2)/2|
+(abs y = 16*(ybase+h); midpoints A4, A20, C24, B24, ends A0/B4/C20/D24) exceeds E. _MERGE_C (default E) does the same for the centre A24 vs both
+diagonals A0-D24 and B4-C20. Shared corners between partners are cross-checked (shmis=; 0-39 per run, retail mesh). L4: E=16 gives no seam excess and
+saves 1.28 ms (ungated: 2.30).
+
 ## Validation (one build, one soak, same-run tog)
 - Arms, L4 owner path at 21:9 dd4+WW+MELT, ROGUESQ_G1CF=1, HOLD 130: MERGE=0.5, MERGE=0.7 (and the winning WIDEWIN_R arm as reference).
 - Positive control (iron rule 1): ph1 anchors > 0 and drops == 3*anchors (minus edge cases), ph0 anchors == 0. Expected

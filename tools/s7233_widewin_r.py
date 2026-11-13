@@ -32,7 +32,11 @@ for p in a.logs:
             if cur: secs.append((t, float(m[3]), sum(v['on'] for v in cur) / len(cur)))
             cur = []; continue
         m = S7239.match(ln)
-        if m: tm[int(m[1])].append({k: int(v) for k, v in re.findall(r'(\w+)=(\d+)(?=\s|$)', ln)}); continue
+        if m:
+            d = {k: int(v) for k, v in re.findall(r'(\w+)=(\d+)(?=\s|$)', ln)}
+            h = re.search(r' dh=([\d,]+)', ln)  # s7246 edge-deviation histogram, bins <=0,8,16,32,64,128,256,inf (emitted units)
+            if h: d['dh'] = [int(x) for x in h[1].split(',')]
+            tm[int(m[1])].append(d); continue
         m = S7233.match(ln)
         if m: tl[int(m[1])].append((float(m[3]), float(m[4]), [float(x) for x in m[5].split(',')]))
     print(f'== {lab}: VIs {len(vis)}  [s7233] blocks ph0 {len(tl[0])} ph1 {len(tl[1])}')
@@ -41,6 +45,11 @@ for p in a.logs:
     if a.merge:  # s7240 control: ph1 merges (drops == 3x merged, 0 unmerged anchors), ph0 finds candidates but merges none
         S = {ph: {k: sum(d.get(k, 0) for d in tm[ph]) for k in ('grp', 'noww', 'flag', 'el', 'flat', 'cand', 'anc', 'drop', 'merged', 'ovf', 'miss', 'near', 'unm', 'dup', 'stale')} for ph in (0, 1)}
         for ph in (0, 1): print(f'  [s7239] ph{ph} lines={len(tm[ph])} ' + ' '.join(f'{k}={v}' for k, v in S[ph].items()))
+        for ph in (0, 1):  # s7246 flatness gate summary
+            dh = [sum(d.get('dh', [0] * 8)[i] for d in tm[ph]) for i in range(8)]; n = max(sum(dh), 1)
+            E = next((d['E'] for d in tm[ph] if 'E' in d), None)
+            print(f'  s7246 ph{ph} E={E} flatrej={sum(d.get("flatrej", 0) for d in tm[ph])} ctrrej={sum(d.get("ctrrej", 0) for d in tm[ph])} '
+                  f'shmis={sum(d.get("shmis", 0) for d in tm[ph])} dev-cum<=0/8/16/32/64/128/256: ' + ' '.join(f'{sum(dh[:i + 1]) / n:.3f}' for i in range(7)) + f' (n={sum(dh)})')
         ctl = S[1]['merged'] > 0 and S[1]['drop'] == 3 * S[1]['merged'] and S[1]['unm'] == 0 and S[0]['anc'] == 0 and S[0]['drop'] == 0 and S[0]['cand'] > 0
         print(f'  merge: drops/merged={S[1]["drop"] / max(S[1]["merged"], 1):.2f} (3.00 expected); tri removed per merged block expected ~6')
     win = [v for v in vis if a.t0 <= v['t'] <= a.t1 - 1 and v['tasks'] > 0]
