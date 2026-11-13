@@ -192097,3 +192097,4 @@ HYPOTHESIS-ID: g5c-fbswitch-transition-stall. CURRENT-TRUTH 53.8 KB (no maintena
 - Cost to the look: L12 at dd>=6 loses R=88's side-edge softening (s7264/s7266, measured on L4 21:9); not scored on L12. dd5 L12
   unmeasured. L12 21:9 dd6 now gets R=48 again, which s7260 qualified (8.94 ms p50).
 - Rules out: host event (2/2), dd6 as such. Queued s7288_169_dd6_levels (L1/L9/L13 16:9 dd6 auto + L13 STACK=0+DUTY ctl).
+- Verdict: selects H-R88, refutes H-host and H-dd6. Next discriminator: s7288_169_dd6_levels (selects H-L12-only vs H-dense-levels).
