@@ -191381,3 +191381,15 @@ recipe and ends the wait early; an ungated recipe that ran suppresses the wait (
 pre-s7254 code (it returns at once), so it is the negative control.
 Rules out nothing about the thread (widewin-heavy-window-cost); the queued soaks remain the next measurement. The loop re-executes itself on the
 changed loop.sh before its next soak phase (s7235), so the new wait applies from this boundary.
+
+## Session 7255 (2026-11-12) — s7248 second runs fold: the voided wwb arm's t=77-97 window is clean, ww and off reproduce on AC (two-run)
+- State at start: owner active (HID idle 33 s, AC 100%). loop.log: the s7254 idle wait ran s7248_fixed_fps_b after 511 s; wwb voided at t=114
+  (void 2/5); s7250_slowhost / s7251_dd6r_ac skipped (idle 0 s). No soak or game run possible this iteration.
+- Ran: tools/s7230_headroom.py + s7229_flat30_cost.py on scratch/s7248r/log_{off,offb,ww,wwb,stack}.txt. offb completed (alive=1, pwr=AC100%);
+  wwb was voided by input at t=114, i.e. after the t=77-97 window, so its window is clean data (clk=0.981 at start).
+- Showed: window t=77-97 tasks/s / mean sd_wall: off 60.0/10.06, offb 60.0/9.79; ww 60.0/13.16, wwb 60.0/12.64; stack 60.0/9.59 (one run).
+  offb: 0 flat-30 runs, headroom 6.88 ms (run 1 6.62). Both pairs agree within 0.3-0.5 ms, so WIDEWIN holding 60 in the L4 heavy window on an
+  unthrottled AC host is now two-run, and the s7248 run-1 numbers were not a lucky host moment.
+- Rules out: "s7248 run 1 was an unusually fast host" for off and ww. Does not decide the slow-host question (s7250_slowhost) or dd6r on AC (s7251).
+- Changed: scratch/agent/soak_queue/s7248_fixed_fps_b.sh moved to soak_queue/hold/ (only stackb is left; stack already has two lines, fixed-on vs tog),
+  so the next idle slot goes to s7251_dd6r_ac and s7250_slowhost.
