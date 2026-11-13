@@ -363,7 +363,13 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    **s7270: the stack is invisible in cutscenes at 21:9 dd4** (AT THE MOVIES, same-run tog3 ph0 off / ph1 auto stack / ph2 control; new
    ROGUESQ_DD_WIDEWIN_R_TOG=3 _R3 and _MERGE_TOG=3 _MERGE3): off->stack edges p99 1.26 max 1.54 vs mid-second control p99 1.45 max 2.85; control
    (R1 + merge + ungated off-map cull R0) fires 3.36-3.78 (green-field shot). Top edges viewed = ship motion/fades. Merge acts (3.4M merged), R barely
-   (wide-only cells rare in cutscene views). A R=1-only control does NOT fire (t3 run VOID as null). Queued s7270_169_cutscenes (16:9).
+   (wide-only cells rare in cutscene views). A R=1-only control does NOT fire (t3 run VOID as null).
+   **CLOSED s7271: same at 16:9 dd4 (owner TV) -> H-clean169.** Soak s7270_169_cutscenes was VOID: its autopilot gate 13:w1024 waits for a VI
+   width EQUAL to 1024, the 16:9 menu phase commits 1592, so the schedule stalled and the game looped attract for 960 s (top edges = logo/fades).
+   Recipe fixed (13:w1592; route then leaves the menus at 216.8 s = 21:9's 217.0). Re-run s169b in-session: 0 crash, 50886 frames, movies
+   216.8-955 s; off->stack p99 1.60 max 2.72 vs mid-second control p99 1.49 max 1.98; control (ocull 1469/f in ph2 only) 2->0 4.91 / 1->2 3.24 =
+   green-field ground band. Top 4 off->stack edges viewed: shot cut, camera move, fade, explosion; no ground loss. Sheet
+   docs/owner_sheet_s7271_widewin_stack_cutscenes_169.jpg. Gate audit: no other 16:9 recipe carries w1024. Thread widewin-stack-cutscenes closed.
 2. **G5i hangar re-entry: fixed s6995, owner look.** Route scratch/s6995/arm.zsh; tools/g5i_pan_metric.py.
 3. **G5a Gerrard V (LEVEL=4) crash: fixed s6893, owner re-flight** past half way, repeated (s6998 writeback audit clean).
 4. **G5b terrain drops: owner flight.** FWDWIN far-loss fix holds L1/L4/L5/L7 (tools/g5b_fwdwin_seamless.py).

@@ -1,10 +1,10 @@
 #!/bin/zsh
-# s7270 (16:9 variant, unmodified s6792 w1024 gate): AT THE MOVIES, 16:9 FPS60 dd4 WIDEWIN, same-run tog3 on the WIDEWIN stack, (mach s)%3: ph0 off (R0, merge off), ph1 = auto stack
+# s7270 (16:9 variant, s7271: gate 13:w1592 - the 16:9 title phase commits 1592, w1024 never matched (s7270 s169 looped attract)): AT THE MOVIES, 16:9 FPS60 dd4 WIDEWIN, same-run tog3 on the WIDEWIN stack, (mach s)%3: ph0 off (R0, merge off), ph1 = auto stack
 # (R88 merge0.4 E16), ph2 = positive control R=1 (all wide-only cells skipped) + merge. Frontmost keeper per s7264. usage: mov.zsh <name> [secs=960]
 # EXTRA="env..." adds env (t4: ROGUESQ_DD_OFFMAPCULL=tog3 _R=-1,-1,0 _K=0,0,0 _H=off = s7039 ground-removing control in ph2 only).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 R=$PWD/scratch/s7270; N=$1; S=${2:-960}
-AP=$(sed -n 's/^port AP: //p' scratch/s6792/mov/press.txt )
+AP=$(sed -n 's/^port AP: //p' scratch/s6792/mov/press.txt | sed 's/13:w1024/13:w1592/')
 ( /bin/sleep 180; exec scratch/s6914/g5b_capture RogueSquadron64Recomp $R/$N.raw 384 164 0 770 > $R/cap_$N.txt 2>&1 ) &
 ( cd scratch/s6908/wd && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_AUTOPILOT=$AP ROGUESQ_LOG_PHASE=1 ROGUESQ_STORE_DIAG=0 ROGUESQ_CULL_SPIKE=1 \
   ROGUESQ_FPS60=1 ROGUESQ_ASPECT=16:9 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_DD_WIDEWIN=1 ROGUESQ_DD_WIDEWIN_STACK=0 \

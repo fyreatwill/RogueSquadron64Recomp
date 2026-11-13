@@ -1452,3 +1452,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113-044413 | s7267_r88_edge_sheet | rc=0 | 1079s | scratch/agent/soak_results/s7267_r88_edge_sheet_20261113-044413.log
 20261113 | s7268 fold: s7267_169_r88_cost rc=0 CONTROL PASS (w0d 33.7/s 108 beyond-route s): 16:9 a88 10.92 ms/60 0 flat vs a48 9.11 (H-cost16 refuted); s7267_r88_edge_sheet CONTROL PASS (c219 -6.3/-9.6): s88 16:9 -0.2/-2.1, w88 -7.7/-3.6 (run swing ~6) -> unsettled; queued s7268_169_split.
 20261113-050448 | s7268_169_split | rc=0 | 1423s | scratch/agent/soak_results/s7268_169_split_20261113-050448.log
+20261113-060829 | s7270_169_cutscenes | rc=0 | 990s | scratch/agent/soak_results/s7270_169_cutscenes_20261113-060829.log
+20261113 | s7271 fold: s7270_169_cutscenes rc=0 but VOID (autopilot gate 13:w1024 never matches 16:9 menu width 1592, game looped attract). Recipe fixed to w1592, re-run in-session: control PASS 4.91 (green field), off->stack max 2.72 = shot cut/camera/fade/explosion -> H-clean169, thread closed.

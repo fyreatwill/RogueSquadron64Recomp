@@ -191669,3 +191669,23 @@ Rules out: H-cut (stack removes cutscene ground) at 21:9; H-pop (merge popping) 
 Next: same check at 16:9 (owner TV), queued as soak s7270_169_cutscenes (tools/s7270_widewin_cut_mov_169.zsh, unmodified s6792 w1024 gate).
 Discrimination: selects H-clean (21:9 dd4), refutes H-cut and H-pop for cutscenes. Next discriminator: the same same-run tog3 ranker at 16:9 (soak
 s7270_169_cutscenes): an off->stack edge above the mid-second control max that a view shows as lost ground selects H-cut169, else H-clean169.
+
+## Session 7271 (2026-11-13) — WIDEWIN auto stack is invisible in cutscenes at 16:9 dd4 too (H-clean169); soak s7270_169_cutscenes was VOID (autopilot gate w1024 never matches the 16:9 1592 menu width), recipe fixed and re-run in-session
+
+Work unit (NEXT.md widewin-stack-cutscenes): fold soak s7270_169_cutscenes. rc=0, 0 crash, 49844 frames, control fired (ocull 671/f ph2 only),
+but the top-edge sheet (scratch/s7270/top_s169_void.jpg) showed the Factor 5 logo, the title fade and the DEMO flight: the game looped attract.
+Cause (boring thing): the s6747 autopilot phase gate "13:w1024" waits until the committed VI width EQUALS 1024. At 16:9 the menu phase commits
+1592 (2x796; vi_width 1592 at 12.7 s, 640/796 afterwards in a 115 s attract cycle), so the schedule never advanced. The 21:9 recipe already
+rewrote it to w2048; the 16:9 copy was labelled "unmodified s6792 w1024 gate" (s7270's mistake). VOID; the raw was deleted, log kept as
+scratch/s7270/run_s169_void.log.zst.
+Fix: tools/s7270_widewin_cut_mov_169.zsh rewrites the gate to 13:w1592. Audit: no other tools/*.zsh|sh 16:9 recipe uses press.txt/w1024.
+Re-run s169b in-session (AC, HID idle 6.7 h, unlocked): VI 1592 at 12.5 s, 640 at 216.8 s (21:9 t4: 217.0 s) to 955 s = the movies playlist.
+0 crash, 50886 frames (222 dropped). Ranker (scratch/s7039/rank3 8 14 8): 0->1 off->stack n 225 p99 1.60 max 2.72; 1->2 p99 2.66 max 3.24;
+2->0 p99 1.73 max 4.91; mid-second control n 650 p99 1.49 max 1.98. Counters: [s7031] ocull/f 0/0/1469 by phase; [s7239] merged ph0 0, ph1 > 0.
+Positive control PASS: 2->0 t=550.4 (4.91) and 1->2 t=549.3/552.3 (3.24/2.70) are the green-field X-wing shot, the ground band removed and
+restored by the ph2 cull (sheet rows 5-6), as at 21:9 (t=552). Top 4 off->stack edges viewed (t=665 shot cut, 434 camera move under the Star
+Destroyer, 116 fade to black, 659 explosion): no ground loss, no pop. Sheet docs/owner_sheet_s7271_widewin_stack_cutscenes_169.jpg.
+Verdict: H-clean169. Two lines: image ranker with same-run control + counters; single run.
+Rules out: H-cut169 (stack removes cutscene ground at 16:9). Thread widewin-stack-cutscenes closed (21:9 s7270 + 16:9 s7271).
+Next: g5c-freeze-widewin-stack (NEXT.md): frozen-image runs on the new auto-stack path, same-run phases, with a stall positive control.
+Discrimination: selects H-clean169, refutes H-cut169; the w1024 gate defect explains the VOID soak (route timing restored, 216.8 vs 217.0 s).
