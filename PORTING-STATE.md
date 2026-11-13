@@ -191048,3 +191048,7 @@ plus MERGE_TOG. Scored by s7233_widewin_r.py --merge.
 Unverified (no run): whether the H1 elem matches the emit-list elem (watch miss=), whether ww is set at emit time (watch noww=), the
 tri saving per merge (~6 expected), and cracks at merged T-junctions (owner sheet needed).
 Rules out: nothing yet. This is a build, not a measurement.
+Next discriminator (s7241): the queued soaks discriminate between H-radius (some WIDEWIN_R in 48/64/72 meets the s7238 bar), H-merge
+(a merge frac meets the bar with less pixel loss, because 2 tri per 4 far cells keeps the pixels) and H-not-tri (the merge removes ~6 tri
+per block but window dsd barely moves, so the heavy-window cost is not in the triangles). Whichever arm meets the bar selects its lever.
+If neither does and ms/ktri ~ 0, that refutes the triangle-cost model behind both levers.
