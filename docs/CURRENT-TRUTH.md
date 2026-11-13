@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7257 (2026-11-13).
+Compact operational handoff, as of Session 7266 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -333,7 +333,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    16:9 STACK=0 21.4->17.6 / 21.0->15.9 (H-gain16: WIDEWIN does widen the 16:9 sides). Second line: the [s7233] wide_by_d8 histograms
    (tools/s7265_ww_r_predict.py, L4 21:9, L4 16:9, L12 21:9 runs) put the wide-only cells at 32-96 cells from the eye, so R=48 skips
    92-95% of them (predicted = measured skip/call); R=72 keeps ~65%, R=88 ~98%. Open: does R=72/88 (+merge) keep 60/s and the side gain?
-   Queued s7265_ww_r_cost (timing, w0d DUTY control) + s7265_ww_r_edge (image, c219 control); NEXT.md.
+   **s7266 fold -> auto R 48 -> 88 (main.cpp [s7258]).** s7265_ww_r_cost (L4 21:9 dd4 AC, control w0d STACK=0+DUTY flat30 21 s, 122
+   beyond-route s PASS): win77-97 r0 12.42 / r72 11.58 / r88 12.03 ms, all 60/s, 0 flat runs, beyond-route 4/4/4 s; r88 measured skip 2%,
+   r72 35%. s7265_ww_r_edge (control c219 STACK=0 L/R hard80 -8.0/-8.8 PASS, 52-56 cap fps, 0 crash): r72 -5.1/-7.2, r88 -7.6/-9.6 (gain
+   kept). So merge+E16 carries the cost cut; R only ate the gain. Single run per arm. Open: dd6 at R=88 (s7257's late dips were removed
+   with R=48): queued s7266_dd6_r88 (a88 / a48 / offd control).
    Capture hygiene: s7263_169_edge (rc=0) and its first re-run were void, 133-142 frames/180 s, Chrome frontmost; the s7009 arm lacked the
    s7259 frontmost keeper. tools/s7263_widewin_edge_arms.zsh now keeps the game in front and fails (rc=3) under 10 captured frames/s.
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.

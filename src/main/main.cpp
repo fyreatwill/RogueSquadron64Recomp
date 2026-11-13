@@ -12453,9 +12453,12 @@ static void rs64_g1c_apply_dd_policy() {
     // control dd6rd flat 30 PASS): L4 21:9 dd6 window 14.04 -> 9.82 ms, late dip s 9 -> 0; s7259 L12 21:9 dd6 (control offd PASS):
     // p50 12.02 -> 8.94 ms, <55/s beyond route 20 -> 0 s. s7260 extends it to dd2-dd5 (s7247 image check dd4 clean, s7248 dd4
     // fixed-on 60/s). Any explicit ROGUESQ_DD_WIDEWIN_R / _MERGE / _MERGE_E wins; ROGUESQ_DD_WIDEWIN_STACK=0 turns it off.
+    // s7266: auto R 48 -> 88. R=48 skipped 92-95% of the wide-only cells (they sit 32-96 cells out, s7265_ww_r_predict), erasing
+    // the side-edge gain (s7264). s7265_ww_r_cost (L4 21:9 dd4 AC, control w0d DUTY flat30 21 s PASS): win77-97 r0 12.42 / r72 11.58
+    // / r88 12.03 ms all 60/s, 0 flat runs; s7265_ww_r_edge (control c219 STACK=0 L/R hard80 -8.0/-8.8 PASS): r88 -7.6/-9.6 kept.
     { const char* ww = std::getenv("ROGUESQ_DD_WIDEWIN"); const char* st = std::getenv("ROGUESQ_DD_WIDEWIN_STACK");
       if (ww && *ww && ww[0] != '0' && !(st && st[0] == '0')) {
-          setenv("ROGUESQ_DD_WIDEWIN_R", "48", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE", "0.4", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE_E", "16", 0);
+          setenv("ROGUESQ_DD_WIDEWIN_R", "88", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE", "0.4", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE_E", "16", 0);
           rs64_s7258_merge_reinit();
           std::fprintf(stderr, "[s7258] dd%.0f widewin stack r=%s merge=%s e=%s (auto)\n", dd, std::getenv("ROGUESQ_DD_WIDEWIN_R"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE_E"));
       } }

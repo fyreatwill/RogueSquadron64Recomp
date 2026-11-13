@@ -1444,3 +1444,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7264 fold: s7263_169_edge rc=0 but VOID (capture 142/140 frames in 180 s, Chrome frontmost; s7009 arm had no frontmost keeper). Re-run in-session with keeper 61-63 fps: 21:9 stack on L/R hard80 23.2->22.5/20.7->21.1, STACK=0 17.5->13.1/17.6->12.6, 16:9 stack 21.5->24.1/19.1->18.7 -> auto stack erases WW side gain. Queued s7264_stack_edge.
 20261113-031828 | s7264_stack_edge | rc=0 | 1074s | scratch/agent/soak_results/s7264_stack_edge_20261113-031828.log
 20261113 | s7265 fold: s7264_stack_edge rc=0 CONTROL PASS (c219 STACK=0 L/R -6.4/-8.0): m219 R=0 merge kept -6.1/-6.4 -> H-R (R=48 eats the gain); s169 16:9 STACK=0 -3.8/-5.1 -> H-gain16. R=48 skips 92-95% of wide cells (s7265_ww_r_predict). Queued s7265_ww_r_cost + s7265_ww_r_edge.
+20261113-033929 | s7265_ww_r_cost | rc=0 | 996s | scratch/agent/soak_results/s7265_ww_r_cost_20261113-033929.log
+20261113-035605 | s7265_ww_r_edge | rc=0 | 1082s | scratch/agent/soak_results/s7265_ww_r_edge_20261113-035605.log
+20261113 | s7266 fold: s7265_ww_r_cost rc=0 CONTROL PASS (w0d flat30 21 s): win r0 12.42/r72 11.58/r88 12.03 ms all 60/s 0 flat, beyond-route 4/4/4; s7265_ww_r_edge rc=0 CONTROL PASS (c219 L/R -8.0/-8.8): r72 -5.1/-7.2, r88 -7.6/-9.6 -> H-keep, auto R 48->88. Queued s7266_dd6_r88.

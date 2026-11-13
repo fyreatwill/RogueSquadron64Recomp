@@ -191569,3 +191569,21 @@ HYPOTHESIS-ID: widewin-169-tv. CURRENT-TRUTH 43.2 KB, no maintenance.
   s7265_ww_r_edge.sh (21:9 edge, arms r72 / r88 / c219 STACK=0 control).
 Verdict: selects H-R and H-gain16, refutes H-merge and H-free16. Next discriminator: the smallest R that keeps the side gain at 60/s
 (H-keep), or none does (H-clash: side gain and dd4 frame budget conflict at R; then merge-only or owner choice).
+
+## Session 7266 (2026-11-13) — s7265 fold: auto WIDEWIN stack R 48 -> 88 keeps the side-edge gain at 60/s (L4 21:9 dd4)
+What ran: folded the two loop soaks queued by s7265 (both rc=0, AC 100%, game frontmost from t=12, 0 crash lines).
+- s7265_ww_r_cost (scratch/s7265q, L4 21:9 dd4 + MELT + WIDEWIN, 240 s holds, tools/s7230_headroom.py / s7229_flat30_cost.py /
+  s7257_dip_runs.py / s7265_ww_r_predict.py). Positive control w0d (STACK=0 + DUTY 1.4, achieved 1.42) PASS: win77-97 30.0/s 21.45 ms,
+  flat run t=77 len 21 s, 128 s <55/s (122 beyond-route). Arms (merge 0.4 + E16 in all): r0 win 12.42 ms 60/s headroom 4.23, r72 11.58 ms
+  60/s, r88 12.03 ms 60/s headroom 4.63; 0 flat runs; <55/s 10/11/11 s, beyond-route 4/4/4 s (39-52/s singles, same t=5-67 route
+  transients + 2-3 late singles); merged 6.24M/5.32M/6.08M unm 0. Measured skip/call r72 35%, r88 2% (matches the s7265 prediction 35%/2%).
+- s7265_ww_r_edge (scratch/s7265e, same scene, WIDEWIN tog parity, g5e_edge_score hard80% off->on L/C/R; capture 52/56/55 frames/s).
+  Control c219 (STACK=0) L 23.3->15.3, R 22.8->14.0 (-8.0/-8.8) PASS. r72 21.7->16.6 / 22.0->14.8 (-5.1/-7.2); r88 22.7->15.1 /
+  21.1->11.5 (-7.6/-9.6); centre third unchanged (29.2->28.4, 28.9->28.9).
+Result (H-keep, NEXT s7266): R=88 keeps the full side gain (= STACK=0 control) and the heavy window at 60/s; the cost cut comes from the
+merge + E16, the radius cut only removed the gain. Two lines for "R=88 keeps the gain": edge score (this run) + predictor/measured skip 2%.
+Cost evidence is single run per arm. Change: src/main/main.cpp auto stack setenv ROGUESQ_DD_WIDEWIN_R "48" -> "88" (explicit env wins);
+smoke boots: default prints `[s7258] dd4 widewin stack r=88 merge=0.4 e=16 (auto)`, ROGUESQ_DD_WIDEWIN_R=48 prints r=48.
+OWNER-OPT-INS WIDEWIN paragraph: "Fixed (s7266)" line. Rules out: H-clash (no R needed between gain and cost) at dd4 21:9.
+Not shown: dd6 at R=88 (s7257/s7258 late dips were removed with R=48) -> queued scratch/agent/soak_queue/s7266_dd6_r88.sh
+(a88 default / a48 explicit / offd STACK=0+DUTY control); 16:9 at R=88 cost (16:9 auto stack was free at R=48, s7263).
