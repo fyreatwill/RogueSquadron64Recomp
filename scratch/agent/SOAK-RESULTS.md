@@ -1436,3 +1436,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113-010409 | s7259_l12_dd6_stack | rc=0 | 747s | scratch/agent/soak_results/s7259_l12_dd6_stack_20261113-010409.log
 20261113 | s7260 fold: s7259_l12_dd6_stack rc=0 CONTROL PASS (offd 173 s <55): L12 21:9 dd6 auto p50 8.94 ms, 0 beyond-route <55 s; off 12.02 ms, 20 s incl flat30 10 s -> H-ww, L12 limit lifted. Stack extended to dd>1+WIDEWIN; queued s7260_dd4_auto_stack.
 20261113-012012 | s7260_dd4_auto_stack | rc=0 | 747s | scratch/agent/soak_results/s7260_dd4_auto_stack_20261113-012012.log
+20261113-013445 | s7261_dd4_stack_levels | rc=0 | 995s | scratch/agent/soak_results/s7261_dd4_stack_levels_20261113-013445.log
+20261113 | s7262 fold: s7261_dd4_stack_levels rc=0 CONTROL PASS (l12d STACK=0+DUTY 172 beyond-route s, flat 30): L1/L5/L12 dd4 21:9 auto 60/s win 8.91/5.17/11.81 ms, merged 4.47M/4.79M/1.04M unm 0, beyond-route 0/1/0 s, 0 crash -> H-general; thread closed. Queued s7262_169_widewin.

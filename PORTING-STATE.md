@@ -191493,3 +191493,24 @@ auto/off/offd).
   s7261 auto). Rules out the NEXT "not engaged / latch order" branch. L4 only.
 - Queued scratch/agent/soak_queue/s7261_dd4_stack_levels.sh (dd4 21:9 WIDEWIN: L1/L5/L12 auto + L12 STACK=0+DUTY1.4 control) to extend
   engagement/rate/0-crash coverage of the new default beyond L4. OWNER-OPT-INS line updated with the dd4 timing.
+
+## Session 7262 (2026-11-13) — s7261_dd4_stack_levels fold: WIDEWIN auto stack holds 60 at 21:9 dd4 on L1/L5/L12 (H-general); L12 dd4 image check clean; thread closed
+
+HYPOTHESIS-ID widewin-heavy-window-cost (CLOSED). Owner idle ~2 h, screen unlocked, AC, 0 crashes in 5 runs.
+- Fold soak s7261_dd4_stack_levels (loop, rc=0, AC clk 0.96-1.04). 21:9 dd4 WIDEWIN MELT, 240 s holds:
+  | arm | [s7258] | merged / unm | win77-97 | p50 / p95 sd_wall | <55/s s | beyond-route s |
+  | L1 auto | dd4 | 4.47M / 0 | 60.0/s 8.91 ms | 7.33 / 9.70 | 6 | 0 |
+  | L5 auto | dd4 | 4.79M / 0 | 60.0/s 5.17 ms | 5.00 / 10.13 | 7 | 1 (t=75, 39/s) |
+  | L12 auto | dd4 | 1.04M / 0 | 60.0/s 11.81 ms | 10.15 / 12.01 | 6 | 0 |
+  | L12 STACK=0+DUTY1.4 (control) | none | 0 | 30.0/s 26.19 ms, flat t=67-239 | 22.48 / 26.38 | 178 | 172 |
+  Control PASS. H-general selected (engages and holds 60 on every level tried), H-L4-only and H-crash refuted (single run per level; agrees
+  with L4 s7260/s7261 and L12 dd6 s7260). L5's one beyond-route second sits at t=75 right after the shared route transients (5..67).
+- Image check L12 dd4 (work unit; scratch/s7262/all.zsh + arm.zsh, copy of s7259 with LEVEL=12 dd4; same-run R_TOG+MERGE_TOG, 60 s delay +
+  240 s capture, game re-fronted). [ddscene] level=19 (front end) then level=12, no MISMATCH; tog ph0 merged 0, ph1 0.49M, unm 0 (toggle works).
+  Capture 10609 frames, 204 flips. tools/s7247_tog_pop.py: holes CONTROL PASS 143/148 (need 0.0077, median drop 0.0134); flip D +0.0022 +-
+  0.0041 (0.5 sem) -> no texture removed above the floor. tools/s7245_merge_cracks.py: synthetic-seam control PASS 118/119; on-off -11.2 crack
+  px/frame vs A/A -15.7, side quartiles off [0,0,16] on [0,0,15] -> no added cracks. H-clean on L12 (single run, two scorers; L4 dd4 two runs
+  s7247, dd6 s7259). Sheet docs/owner_sheet_s7262_l12dd4_stack.png. Raw deleted (20 GB).
+- Landed: CURRENT-TRUTH Next 1 closed and its 115-line thread migrated verbatim to PROJECT-OVERVIEW (57.6 -> ~41.7 KB); headline flat-30
+  caveat rewritten; OWNER-OPT-INS distance-4 levels note; queued soak s7262_169_widewin (16:9 TV recipe: n / WW auto / WW STACK=0 / +DUTY control).
+Verdict: selects H-general + H-clean, refutes H-L4-only/H-crash/H-loss. Next discriminator: does WIDEWIN draw anything at 16:9 (H-free vs H-cost).

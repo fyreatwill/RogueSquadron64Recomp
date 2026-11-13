@@ -11820,3 +11820,121 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Owner order: G5i (fixed,
 - Objective contracts [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); images [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md`; latest s6980_219_async_noqos_r1/r2 (folded s6981).
 - Recent chronology: PORTING-STATE sessions 6893-6994; search bounded windows only.
+
+## Migrated from CURRENT-TRUTH (s7262): WIDEWIN heavy-window cost thread s7231-s7261 (CLOSED), verbatim
+
+1. **(next, NEXT.md) WIDEWIN cost at 21:9 (s7231 2x2, L4 t=77-97, owner path, one run per cell, 0 crashes, cursorMask 0x10).**
+   gfx task ms / fps: dd4 13.96/60, dd6 14.62/58.6 (both WIDEWIN off), dd4+WIDEWIN 18.47/30 (flat 20 s), dd6+WIDEWIN 20.73/30 (flat 21 s)
+   -> H-widewin selected (+4.5 ms at dd4, +6.1 at dd6), the radius adds only +0.7 / +2.3 (single run per arm; two instruments: [g1b]
+   sd_wall and the G1E_TL rsp split agree, tog ph0 20.27 vs a6 20.73). Same-run tog3 in the dd6+WW line: K 0.6->0.45 rsp -1.04 ms
+   (shift control -0.15), cap 10240->8192 -0.34 (shift control -0.47 = noise) although streamed cells/f fall 8300->6100: the cap
+   and the streamed window cell count are NOT the cost (H-cap, H-cells refuted). Cost tracks RDP triangles: pooled fit 1.80 ms per
+   1000 tri/task (R2 0.60, shuffle 0.00); WIDEWIN adds ~2.0-2.4k tri/task in the window, and the window sits +1.3..+3.7 ms above the
+   line (extra per-triangle work the count misses, largest with WIDEWIN). OWNER-OPT-INS corrected: steady 60 at 21:9 = WIDEWIN off.
+   s7232 (new [g1cf] tin/tout/tzero/kpx/bin fields, tools/s7232_tri_onscreen.py, classifier control 0.96-0.99): WW's +2557 tri/task in the
+   window are 0 off-screen (ucode already rejects them; H-offscreen refuted), 42% zero-height (no pixel) and 58% visible but adding only +42 kpx
+   (+2%) -> H-tiny (single-source): far WW cells are far denser than their pixels, past retail's coarsest LOD (s7011). Next: WW-only far
+   thinning. s7233: knob ROGUESQ_DD_WIDEWIN_R=<cells> (+_R_TOG=1) skips non-empty cells outside the retail-equivalent 64x64 window
+   farther than R from the eye (tools/apply_s7233_widewin_r.py, scorer tools/s7233_widewin_r.py, [g1cf] wr=, [s7233] tallies); built.
+   **s7237 measured R=40/56** (L4 21:9 dd4+WW+MELT, same-run tog, CONTROL PASS both: ph1 skip 1820/1503 per placement, ph0 0; s7236 flush
+   verified, 60 [s7233] blocks/log). Window t=77-97: r40 dsd -3.19 ms, dkpx -8.6%; r56 -1.94 ms, +3.8%. Flight t=60-230: r40 -1.61 ms,
+   -3.3%; r56 -1.62 ms, +0.8%. Skipping cells cannot add pixels, so r56's +3.8% marks the tog kpx noise floor (~4% window, ~1% flight).
+   Both lines agree that the cost moves with R (H-near refuted). r40 buys about 3 ms at a real kpx loss, while r56 buys about 1.7 ms with no measurable loss. About 40-50% of the cut is
+   zero-height tris (dtzero -830..-1030 window). WW-only cells peak at d8 56-72. Neither arm meets the dsd <= -3 ms at < 0.5% bar, which leans H-thin
+   (single run per R). **s7238: per-cell H-thin refuted** (code-read: retail level 2 = the 4 corner verts = one quad per cell; r40/r56 remove
+   1.1-1.3 tri per skipped cell), so the only thinning past R is a 2x2 cell-merge mesh; scorer now prints tri/cell, ms/ktri and `s7238 BAR`.
+   **s7239: the 2x2 merge is designed** (docs/WIDEWIN-MERGE-PLAN.md, static, not built). The flat lod-2 TRI_GEN carries its own spacing (w9 low =
+   elem+0x22<<2) and the emit list is the node dist2 chain, so the plan is to rewrite 1 command and drop 3, with no ucode change.
+   **s7240: merge BUILT, unmeasured** (owner active all session, so neither soak could run). Knob ROGUESQ_DD_WIDEWIN_MERGE=<frac> (+_MERGE_TOG=1), tools/apply_s7239_widewin_merge.py
+   (H1 L_8004323C elem->dist2 hash, H2 0x800113DC pairing, H3 0x80011884 capture, H4 0x800119A8 drop, H5 L_800119BC anchor rewrite) + rs64_s7239_* in
+   upstream_compat.cpp; [g1cf] gains wm=<phase>, one [s7239] line per phase every 2 s; scorer `tools/s7233_widewin_r.py --merge` (control: ph1 merged>0,
+   drop==3*merged, unm=0; ph0 anc=0, cand>0). Off by default (g_rs64_s7239_on=0, all hooks no-op). Soak s7240_widewin_merge queued (MERGE 0.4/0.55/0.7). **s7241: host unit test tools/s7241_merge_test/run.sh** (live block, synthetic RDRAM, emulated writer + TriGen02 decode): 17/17 pass incl. reorder, negatives, overflow, TOG ph0, checker control; UB `<<4` on negative -> `*16` fixed. Rerun it after any rs64_s7239 edit. **s7242: H-stale closed in code**: H1 dist2 hash slots carry a per-build-pass generation (H1 after an H2 bumps it); an older entry is a miss counted as `stale=` in [s7239] (scorer prints it), never a merge input. Test 19/19, negative control (gen check off) fails the stale case.
+   **s7244: merge MEASURED** (L4 21:9 dd4+WW+MELT, same-run tog, owner idle; 9 arms over 3 soaks, CONTROL PASS on every merge arm: drop==3*merged, unm=0, stale=0).
+   Gate bug found and fixed: H1 node+8 reaches 7116 while farcut 0x8009DEB4 = 117.4 (different units), so the s7240 gate frac^2*farcut passed ~all
+   cells (near 216..7627 of ~2M; three arms = three reps of merge-all: win dsd -2.44..-2.75 ms, kpx +-0.4%). Now thr = frac^2 * pass-max node+8
+   ([s7239] thr=, unit test 22/22, negative control fails 5 checks). Fixed gate shows dose-response, m40/m55/m70: merged 1.73M/1.21M/0.61M,
+   win dsd -2.31/-1.75/-0.79 ms (about 0.9 ms per ktri), win kpx within +-1%. m30: win -1.89, flight -3.04 ms. **m40+R56 combined: win dsd -4.46 ms,
+   kpx -0.1%; flight -3.58 ms, kpx -6.6%.** The null arm m99 (merges nothing) reads flight kpx +4.7%, win +1.7%, so the tog kpx floor is ~+-5% in
+   flight and the s7238 flight |dkpx|<=1% half of the bar CANNOT be resolved with tog kpx (single-source; the s7237 1% estimate was too low).
+   The window time half is met by m40+R56 only.
+   **s7245: the merge CRACKS (H-crack, two runs; H-clean refuted, keep it out of OWNER-OPT-INS).** New tools/s7245_merge_cracks.py counts bright 1-px
+   seams in the side thirds per in-flight frame by tog phase, same-run control (+80 seams injected) PASS 112/112 both runs. Seam px/frame off -> on:
+   m40+R56 24.5 -> 55.0 (A/A -6.4), m40 alone 24.4 -> 47.4 (A/A +8.3). Zoom (docs/owner_sheet_s7245_merge_cracks_zoom.png): haze shows through slivers
+   along cell edges on mid-distance hillsides and along the L4 shoreline. The merge boundary sits at ~0.4 of the window radius, in clear view, so the plan's
+   'haze hides the T-junction' was wrong. R sweep folded (s7237_widewin_r2): r48 win -4.12 ms, r64 -1.20, r72 -1.56; kpx +-7% unordered = noise.
+   **s7246: flatness gate BUILT and measured (H-flat-works for cracks, partial for time).** ROGUESQ_DD_WIDEWIN_MERGE_E=<emitted units> (default 0 =
+   exact planar; abs y = 16*(ybase+h)) rejects a block whose 4 merged-edge midpoints deviate from the end average by > E (the T-junction gap);
+   _MERGE_C (default E) does the same for the centre vs both diagonals (TriGen02 picks the split by depth). [s7239] gains E= C= flatrej= ctrrej= shmis=
+   dh=<8-bin edge-dev histogram>; unit test 29/29 (7 new flat cases incl. random-terrain negative control). L4 candidates: 70-76% are exactly planar,
+   80% within 32, so H-flat-empty refuted. Image (4 capture arms, owner idle, synthetic control PASS on all): at full capture geometry E=16 side seams
+   23.1 -> 20.1 px/frame (no excess), ungated control in the same session 26.4 -> 38.2, side Q3 28 -> 52 (real-crack control, weaker than s7245).
+   E=0/E=64 arms got a narrower crop (content_w 631/895), so they are not comparable (e64 also had owner input). Timing (same-run tog, 1 run/arm,
+   CONTROL PASS x3): window dsd e16 -1.28 ms (kpx -6.8%, within window tog noise), e0 -1.14, ungated -2.30 (repeats s7244's -2.31); flight e16
+   -1.13 ms kpx -1.1%. So the gate keeps ~75% of merges but only ~55% of the saving, because the rejected blocks are the hilly, visible ones. Below the
+   -1.5 ms bar (single run). Owner sheet docs/owner_sheet_s7246_merge_e16.png. **s7247: H-stack selected (two runs, CONTROL PASS on all 6 timing arms).**
+   Window dsd: r48 -3.72/-2.83 ms, E16+R48 -3.63/-3.88, E16 -1.33/-1.35 (partial overlap: singles sum ~-4.6). Flight: r48 -1.04/-1.82, stack
+   -3.22/-2.03, E16 -1.40/-3.38. Image (2 capture arms, owner idle, content_w 1191 both): seams r48 -2.4, stack -1.8 px/frame (synthetic control
+   PASS); holes by new tools/s7247_tog_pop.py (TEX = grain fraction G=3 in the side band, flip test + phase means; control = most textured 200x40
+   window flattened, PASS 130/136, 132/138): r48 +0.0029+-0.0052, stack +0.0013+-0.0056 = no visible terrain removed (sensitivity ~1/3 of a 200x40
+   patch). OWNER-OPT-INS line added (experimental; s7248 fixed-on numbers added); sheet docs/owner_sheet_s7247_widewin_stack.png. Next (NEXT.md): fixed-on
+   (no tog) fps in the window: WW off / WW / WW+stack.
+   **s7248: fixed-on (no tog), one run per arm, owner idle, 0 crashes, knobs engaged (stack: [s7233] skip ~4006/placement, [s7239] merged 51.9k
+   unm=0 stale=0).** Window t=77-97 gfx task ms / fps: off 10.06/60, ww 13.16/60, stack 9.59/60; flight p50 8.62/9.56/6.30, max>=17ms s 0/18/0.
+   stack - ww = -3.57 ms, which matches the tog -3.63/-3.88: the fixed-on and tog lines agree (two lines), and stack <= WW-off. Positive control FAILED:
+   ww did NOT reproduce s7231's flat 30 because the host ran ~4 ms/task faster (off 10.06 vs s7231 n4 13.92, sd_cpu 8.70 vs 12.25 at t=80, same code:
+   no perf-relevant diff since s7231). So 'stack holds 60 on a slow host' is inferred (stack <= off, and off held 60 in s7231), not measured. 2nd runs voided
+   by owner input at offb t=120 and re-queued (soak s7248_fixed_fps_b, RESUME keeps run 1).
+   **s7249: the slow host was BATTERY POWER (two lines).** (1) pmset log: BatteryHealth warning cap 10% at 14:40 and 2% at 15:09, 'Low Power Sleep'
+   at 1% at 15:22, wake on AC attach 19:08; s7231 ran 14:30-14:52, s7248 22:41 on AC. (2) [g1b] sd_cpu ratio s7231/s7248 is a constant 1.37-1.44
+   in every window (light 1 ms tasks and heavy 12 ms tasks alike; matched n4/off and a4/ww), wall-cpu almost equal, load1 similar (3-4) and qos
+   0x15 both: a clock signature, not contention (H-load refuted, H-thermal not needed). So the WIDEWIN flat 30 is a battery-host result; on AC
+   ww holds 60 (headroom 3.48 ms, 18 s with a >=17 ms task) and stack holds 60 with 7.06 ms. Timing arms on battery are now refused:
+   tools/g1e_owner_quiet_arms.zsh logs pwr= on start/done and exits 2 on battery unless ALLOW_BATT=1.
+   **s7251: s7230 was on battery too (two lines).** pmset: 'Using Batt (Charge: 100)' 09:20, no AC event until acattach 19:08, s7230 ran
+   14:02-14:24. tools/s7251_clock_ratio.py: s7230 dd6w vs s7231 n4 (same flags, both battery) 0.97-1.01; vs s7248 off (AC) 1.36-1.43. So every
+   s7230 margin (dd4 2.7-3.7 ms) understates AC (base 13.00 ms -> ~9.3 inferred) and its dd6r flat 30 (20.64 ms, 107 s <55/s) is a battery verdict.
+   AC rerun queued: soak s7251_dd6r_ac (n4 bridge, dd6r, dd6rd = +DUTY=1.4 control).
+   **s7250: the battery clock cap is Low Power Mode** (pmset custom: battery powermode 1, AC 2; changing it needs sudo). taskpolicy gives 1.0x
+   (utility) or 3.2x (background), so it cannot stand in. New tools/s7250_duty (SIGSTOP/SIGCONT 8 ms period, calibrated 1.435x on a spin),
+   harness arm token `DUTY=1.4`. Same-run control soak s7250_slowhost queued (ww/wwd/stack/stackd; control: wwd flat 30).
+   **s7252: battery-era audit (tools/s7252_power_tag.py, pmset log from 11-06).** 75 of 322 sessions overlap battery. Battery is necessary but not
+   sufficient for a throttle: the matched L12 16:9 dd6 pair s7046 H12ke12 (battery, 11-09 18:58) vs s7042 S42L12 (AC, 16:11) reads CPU/task
+   1.00-1.05 (menus 1.00-1.02, flight 1.00-1.09), and rsp off/K0.6 agree (16.15/15.85 vs 16.19; 12.03 vs 12.23). So the 11-09 battery verdicts
+   (s7037, s7045-s7048 L12 fps/K/KEDGE) STAND as AC-equivalent; only the 11-12 afternoon (x1.36-1.44, s7230/s7231) is throttled. Other battery sessions'
+   timing lines are passes (s6996, s7218/s7219 59.5-59.7/s: conservative) or same-run/image verdicts (s7099-s7118, s7164/s7166). No new rerun needed.
+   **s7253: the harness now MEASURES the clock instead of inferring it from pmset.** tools/s7253_clkprobe (dependent xorshift*mul chain on a
+   USER_INTERACTIVE thread, min of reps) / tools/s7253_clkprobe.base (125.0 ms, AC powermode 2). Same-session controls: DUTY 1.404 -> 1.391,
+   15-core spin load -> 1.021, 4 AC repeats 124.7-125.2 (0.4%). tools/g1e_owner_quiet_arms.zsh logs clk= on every start/done line and exits 2
+   when clk > CLK_MAX (1.15) unless ALLOW_SLOW=1; battery alone is only logged (replaces the s7249 ALLOW_BATT refusal). Test tools/s7253_clk_gate_test.zsh 5/5.
+   s7254: owner active at the boundary (HID idle 0-89 s, AC), none of s7248_fixed_fps_b / s7250_slowhost / s7251_dd6r_ac ran; still queued.
+   s7255: s7248 2nd runs fold (AC, clk 0.98): offb window 9.79 ms/60 (run 1 10.06), wwb window 12.64/60 (run 1 13.16; arm voided at t=114, AFTER
+   the window), so ww holding 60 on AC is two-run. stackb not run; s7248_fixed_fps_b moved to soak_queue/hold (its question is answered; slot freed for s7251/s7250).
+   s7256: s7250_slowhost run 1 voided by owner at t=160 (AC, clk 0.982), but arm ww's window was clean: 59.9/s, 12.37 ms (three AC runs
+   12.37-13.16 ms, all 60/s). New harness knob VOID_OK_AFTER=<s> keeps an arm voided by human input at t >= s (lock/sleep voids never kept;
+   test tools/s7243_resume_test.zsh 13/13); both queued recipes use VOID_OK_AFTER=110, and s7250's ww is kept (ok_ww), so its rerun starts at wwd.
+   **s7257 fold (both soaks ran, AC, clk 0.965-1.04, controls PASS).** s7251_dd6r_ac: n4 9.81 ms/60, dd6r 14.06 ms/60 (headroom 2.51), control dd6rd
+   flat 30 (21.81 ms) -> the s7230 'farthest view flat 30' was battery; dd6r holds 60 in the heavy window on AC, but adds 14 dip seconds at t=142-217
+   (min 34/s at t=172) that n4 lacks (the 6 route-transition dips t=5..67 are common to every arm). s7250_slowhost: control wwd flat 30 (20.89 ms),
+   stack 9.47 ms/60, stackd 44.5/s 15.18 ms, 0 flat runs but 68 dip seconds -> under a 1.4x clock the stack degrades to ~45/s instead of flat 30:
+   it helps on a slow host but does not keep 60. Queued s7257_dd6r_stack (dd6r / dd6r+stack / +DUTY / dd6rd control); tools/s7257_dip_runs.py scores late dips.
+   **s7258 fold (s7257_dd6r_stack rc=0, AC clk 0.97-1.04, control dd6rd flat 30 21 s PASS).** dd6r repeat: win 14.04 ms/59.9, 9 beyond-route dip s
+   t=142-173 (s7251 had 14) -> late dips are two-run, H-noise refuted. dd6rs (stack): win 9.82 ms/60.0, max task 11.43 (vs 16.53), 0 beyond-route dips,
+   2.28M merges unm=0 stale=0, skip ~4.2k/placement -> H-ww selected (stack removes them; H-radius refuted for these dips). dd6rsd 50.7/s in window,
+   23 beyond-route dip s (vs dd6rd 115, flat 30). Landed: main.cpp [s7258] dd>=6+WIDEWIN sets R=48/MERGE 0.4/E16 (setenv overwrite=0; explicit wins;
+   ROGUESQ_DD_WIDEWIN_STACK=0 off) + upstream_compat rs64_s7258_merge_reinit (MERGE/E latch at static init). Startup check: auto prints [s7258] and
+   [s7239] frac=0.400, STACK=0 prints neither. **s7259:** default-path soak s7258_dd6_auto_stack rc=0, control PASS: auto 9.99 ms/60, 0 beyond-route
+   dips, merged 2.28M (engages in mission); STACK=0 13.40 ms + 10 dip s. dd6 image check (same-run tog, holes control PASS 136/142): flip +0.0058 +- 0.0050,
+   seams +1.2 px vs A/A -2.8 -> H-clean (single run, two scorers). tog_pop now VOIDs starved captures (<20 fps / <30 flips); keep the game frontmost.
+   **s7260:** s7259_l12_dd6_stack rc=0 (L12 confirmed: ddscene level=12, no MISMATCH), control PASS (offd <55/s 173 s vs off 26): auto p50 8.94 /
+   p95 11.72 ms, <55/s 7 s all pre-route (t<=67, same transients as off), beyond-route 0 s, merged 0.73M; off (STACK=0, the s7055 state) p50 12.02 /
+   p95 17.08, beyond-route 20 s incl. flat 30 t=76-88 -> H-ww: L12 21:9 dd6 limit was WIDEWIN cost, lifted (single run; off agrees with s7049/s7055).
+   Landed: [s7258] stack now applies at ANY dd>1 with WIDEWIN on (was dd>=6 only); startup check dd4ww prints [s7258] dd4, STACK=0 / no-WIDEWIN print
+   none, dd6 unchanged. Queued s7260_dd4_auto_stack (L4 21:9 dd4 auto/off/offd) to confirm in-mission engagement + timing at dd4.
+   Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
+ (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
+   The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
+   dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
+   Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+   **s7261 fold (s7260_dd4_auto_stack rc=0, AC, control offd 142 s <55/s, flat30 21 s PASS):** auto prints [s7258] dd4, merged 3.24M unm 0;
+   win77-97 auto 9.77 ms/60 vs off 13.91/60, max 10.66 vs 15.17 ms, beyond-route dip s 0 vs 3 -> stack auto at dd4 confirmed (single run, agrees
+   with s7248 fixed-on 9.6). L4 only: queued s7261_dd4_stack_levels (L1/L5/L12 auto + L12 offd control) for other-level engagement/rate/crash.
