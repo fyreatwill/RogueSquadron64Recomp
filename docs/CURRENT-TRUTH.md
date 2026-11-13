@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7241 (2026-11-12).
+Compact operational handoff, as of Session 7245 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -346,7 +346,13 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    win dsd -2.31/-1.75/-0.79 ms (about 0.9 ms per ktri), win kpx within +-1%. m30: win -1.89, flight -3.04 ms. **m40+R56 combined: win dsd -4.46 ms,
    kpx -0.1%; flight -3.58 ms, kpx -6.6%.** The null arm m99 (merges nothing) reads flight kpx +4.7%, win +1.7%, so the tog kpx floor is ~+-5% in
    flight and the s7238 flight |dkpx|<=1% half of the bar CANNOT be resolved with tog kpx (single-source; the s7237 1% estimate was too low).
-   The window time half is met by m40+R56 only. Next: fixed-camera owner sheets (cracks, side edge, L4 shoreline) at m40+R56 vs merge-off.
+   The window time half is met by m40+R56 only.
+   **s7245: the merge CRACKS (H-crack, two runs; H-clean refuted, keep it out of OWNER-OPT-INS).** New tools/s7245_merge_cracks.py counts bright 1-px
+   seams in the side thirds per in-flight frame by tog phase, same-run control (+80 seams injected) PASS 112/112 both runs. Seam px/frame off -> on:
+   m40+R56 24.5 -> 55.0 (A/A -6.4), m40 alone 24.4 -> 47.4 (A/A +8.3). Zoom (docs/owner_sheet_s7245_merge_cracks_zoom.png): haze shows through slivers
+   along cell edges on mid-distance hillsides and along the L4 shoreline. The merge boundary sits at ~0.4 of the window radius, in clear view, so the plan's
+   'haze hides the T-junction' was wrong. R sweep folded (s7237_widewin_r2): r48 win -4.12 ms, r64 -1.20, r72 -1.56; kpx +-7% unordered = noise.
+   Next (NEXT.md): flatness gate: merge a 2x2 block only when its edge midpoints and centre lie within E height units of the merged plane.
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.

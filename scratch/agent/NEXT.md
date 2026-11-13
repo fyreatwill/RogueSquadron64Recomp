@@ -1,15 +1,19 @@
-# NEXT (s7245): judge the s7244 WIDEWIN merge + R combo by image, not tog kpx
+# NEXT (s7246): crack-free WIDEWIN merge: flatness gate
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7244): merge gate fixed (thr = frac^2 * pass-max node+8). Same-run tog, L4 21:9 dd4+WW+MELT:
-m40+R56 win dsd -4.46 ms kpx -0.1%, flight -3.58 ms kpx -6.6%; m40 alone win -2.31; null arm m99 flight kpx +4.7%
--> tog kpx floor ~+-5% in flight: the s7238 flight kpx bar is unresolvable with tog kpx. Logs scratch/s7244q, scratch/s7244r.
-Before any rs64_s7239 edit: `zsh tools/s7241_merge_test/run.sh` must print 0 failures (22 cases).
-Work unit: an image judgement, ONE build (current), owner idle (check HID idle >= 180 and screen unlocked):
-- Arms without TOG (fixed settings, same route, framebuffer capture at the same VI-phase-gated frames, tools/g3_port_capture.sh
-  WITHOUT SAVE_FROM): A = WW+MELT (merge off), B = WW+MELT+MERGE=0.4+WIDEWIN_R=56, C = MERGE=0.4 only.
-- Score each frame pair with the s7232 kpx classifier AND a far-band pixel diff (side edge / L4 far-left shoreline region),
-  then build an owner sheet vs docs/owner_sheet_s7009_widewin_219.png with crack close-ups.
-Hypotheses: H-clean (B differs from A only inside haze, no cracks) -> add the B recipe to OWNER-OPT-INS as the 21:9 WW
-speed setting, owner judges; H-crack (T-junction gaps visible at merge borders) -> skirt the merged edge or raise frac to 0.55;
-H-R-loss (the B flight kpx -6.6% is R=56 cutting visible far cells) -> keep the merge, drop R or raise it to 64.
-The queued soak s7237_widewin_r2 (R=48/64/72) is still useful for the H-R-loss arm; leave it queued.
+State (s7245): MERGE=0.4 cracks visibly (two runs, tools/s7245_merge_cracks.py control PASS 112/112): side-third bright seam px/frame
+off->on 24.5->55.0 (m40+R56), 24.4->47.4 (m40 alone); zoom docs/owner_sheet_s7245_merge_cracks_zoom.png shows slivers on mid-distance
+hillsides + the L4 shoreline. Cause: T-junction at every merged-edge midpoint, gap |h_mid - (h_end1+h_end2)/2| (abs y = ybase<<4 + h<<4,
+WIDEWIN-MERGE-PLAN.md lines 18-25), merge boundary at ~0.4 of window radius = in clear view.
+Before any rs64_s7239 edit and after it: `zsh tools/s7241_merge_test/run.sh` must print 0 failures; add cases for the new gate.
+Work unit (ONE build, ONE run when owner idle >= 180 s, screen unlocked):
+1. In rs64_s7239_group (src/main/upstream_compat.cpp ~539), for each candidate 2x2 block read the four partners' corner heights (elem+0x24
+   bytes 0,4,20,24, s8) and y bases (hw+0x0A) -> absolute corner y. Deviation = max over the 4 edge midpoints (shared corners between partners)
+   of |y_mid - avg(outer ends)| and the centre vs the merged quad's diagonal. Merge only if dev <= E. Env ROGUESQ_DD_WIDEWIN_MERGE_E=<units>
+   (default: 0 = exact-planar only; log `flatrej=` in [s7239]). Unit test: planar block merges, one raised midpoint rejects, negative control.
+2. Run arms with tools/g1e_owner_quiet_arms.zsh or the scratch/s7245/arm.zsh capture route (same-run MERGE_TOG): E=0, E=16, E=64 (frac 0.4),
+   each scored by tools/s7245_merge_cracks.py (seams on-off vs A/A) AND [g1b]/[g1cf] window dsd via tools/s7233_widewin_r.py --merge.
+Hypotheses / outcomes: H-flat-works (some E gives seam on-off within A/A noise and window dsd <= -1.5 ms) -> owner sheet + OWNER-OPT-INS line;
+H-flat-empty (E small enough to be crack-free merges ~nothing, dsd ~0) -> merge is dead; fall back to R (r48 -4.12 ms, single run; needs its
+own seam/hole check with the s7245 scorer) or skirts (emit a vertical skirt strip along merged edges facing unmerged cells);
+H-shore (shoreline seams persist at E=0) -> water/land cell type differs inside a block: also require equal material (elem+0x2C) across partners.
+Raws are ~35 GB per 240 s capture: delete them after scoring.

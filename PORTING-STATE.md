@@ -191146,3 +191146,30 @@ Rules out: the merge being inert or harmful to window pixels (it saves time in p
 flight kpx floor" (the null arm reads +4.7%, single-source), so the s7238 flight kpx bar cannot be judged with tog kpx. The window
 time half of the bar (<= -2.5 ms) is met only by m40+R56 (and nearly by merge-all). Not ruled out: visible T-junction cracks, or R=56
 cutting visible far cells in flight. Next: fixed-setting framebuffer arms and an owner sheet (NEXT.md).
+
+## Session 7245 (2026-11-12) — WIDEWIN merge judged by image: it cracks (H-crack selected, two runs); new seam scorer with a same-run positive control; r48/64/72 soak folded
+- Soak folded: s7237_widewin_r2 (R=48/64/72, same-run tog, CONTROL PASS x3). Window dsd -4.12/-1.20/-1.56 ms, kpx -3.2/+7.6/-6.4%; flight dsd -1.30/-0.92/-0.60,
+  kpx -6.2/+1.6/-4.3%. kpx has no dose order and swings +-7%, so it is the tog kpx noise floor (agrees with the s7244 m99 null arm, +4.7%). Window time
+  cut follows R (r48 -4.1 ms) but r48 is single-run (r40 s7237 read -3.19).
+- No build (binary 20:57 carries the s7244 gate fix; `tools/s7241_merge_test/run.sh` 22 cases, 0 failures). Owner idle (HID idle 2178 -> 2828 s over both runs).
+- Runs (scratch/s7245/both.zsh -> arm.zsh, s7012 copy: owner path LEVEL=4, 21:9 windowed 2030x920 pt, FPS60 dd4 CULL=1, MELT, WIDEWIN, G1CF,
+  g5b_capture 1260x540 window grabs from t=60 s for 240 s): m40r56 = MERGE=0.4 + WIDEWIN_R=56 both tog; m40 = MERGE=0.4 tog alone. 0 crashes.
+  [s7239] ph1 lines show the merge active (m40: merged 52225 / drop 156675 = 3x, unm=0, stale=0; thr ~1190-1470 of maxd2 5100-9500, i.e. merge starts
+  at ~0.4 of the window radius).
+- New tool tools/s7245_merge_cracks.py (PIL only; host has no numpy): per in-flight frame at mid-second (tog phase from the frame's mach time, xor8),
+  counts BRIGHT 1-px seams (pixel > both neighbours 2 px away by > 40 L, neighbours agree within 20) in the band rows 0.35-0.75 h, side thirds only
+  (the centre holds the craft/reticle), content width auto-detected (the window grab has ~70 black columns at the right). Same-run positive control:
+  two +80 seams injected into every off frame must add >= 100 px on >= 90% of frames: PASS in both runs (+227 / +226 median, 112/112).
+- Result (side-third seam px per frame, off -> on; A/A = off frames odd vs even 8 s blocks):
+  m40r56: 24.5 -> 55.0 (+30.5, A/A -6.4), L 10.4 -> 24.6, R 14.1 -> 30.4; median 0 -> 20, Q3 34 -> 90.
+  m40:    24.4 -> 47.4 (+23.0, A/A +8.3), L 7.5 -> 19.0, R 16.9 -> 28.3; median 0 -> 16, Q3 26 -> 70.
+  Zoomed frames (docs/owner_sheet_s7245_merge_cracks_zoom.png, raw | seams in cyan): thin bright slivers along cell edges, haze/sky showing through,
+  on MID-DISTANCE hillsides (not hidden in the haze) and a seam line along the L4 shoreline that only appears in on seconds.
+  Owner sheet of off|on pairs: docs/owner_sheet_s7245_merge_m40r56.png. Seam sheets + the m40 sheet kept in scratch/s7245 (raws deleted, 70 GB).
+- Reading: H-crack selected (two runs, two lines: the scorer with a passing control, and direct inspection of the flagged pixels). The merge itself
+  owns the cracks (merge-only arm shows them); R56 only removes cells and adds a little. H-clean refuted: MERGE=0.4 must NOT go into OWNER-OPT-INS.
+  Why visible: thr = frac^2 * pass-max puts the merge boundary at ~0.4 of the window radius, well inside clear view, so the T-junction gap
+  |h_mid - (h_end1+h_end2)/2| << 4 at each merged edge midpoint is not hazed. The plan's "haze hides most of it" assumption was wrong.
+- Next (NEXT.md): crack-free merge gate. The 5x5 height block is readable at group time (*(elem+0x24), plan line 21), so merge a 2x2 block only when
+  every shared-edge midpoint and the centre deviate from the merged plane by <= E height units (standard terrain-LOD error gate), E sweep, scored by
+  this seam scorer plus window dsd.
