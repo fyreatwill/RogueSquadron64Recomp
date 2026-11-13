@@ -191103,3 +191103,20 @@ If neither does and ms/ktri ~ 0, that refutes the triangle-cost model behind bot
   entries go stale and become misses (conservative: lost merges, never wrong ones). The soak's stale= vs miss= says whether this happens.
 - Rules out: H-stale as a cause of wrong merges (it can now only lose merges, and visibly). Remaining causes if the soak control fails:
   H-wwtiming (noww >> grp), H-encoding (merged > 0, unm == 0, but artefacts), a units error (near ~ all), interleaved passes (stale ~ miss).
+
+## Session 7243 (2026-11-12) — soak harness RESUME=1: a voided recipe re-runs only its unfinished arms (test 7/7 with a binary-changed negative control); both WIDEWIN soaks still queued (owner active, HID idle 0.3-5 s)
+
+What ran: no game run. HID idle 0.27 s at start and 5.2 s at the end (owner active, load 4-5), so neither
+s7240_widewin_merge nor s7237_widewin_r2 could run, for the fourth iteration in a row. Root inefficiency: these
+are 3-arm recipes of about 160 s per arm, and every void (s7233 host sleep, s7233b/s7234 owner, s7235 r56 at t=126)
+threw away the arms that had already finished, so the loop had to find a fresh ~8-minute idle gap each time.
+Change: tools/g1e_owner_quiet_arms.zsh gains RESUME=1. After each completed arm it writes $R/ok_<arm> holding a key
+(binary mtime:size, HOLD and the full arm spec) plus the arm's done line. On a rerun with RESUME=1, an arm whose key
+matches and whose log is non-empty is skipped, and its done line is copied into arms.log, so the recipe's `alive=0`
+check and the scorer still see all arms. A voided or interrupted arm has no ok_ file (it is removed at arm start
+and written only after the done line), so it re-runs. GAMEDIR/GAME/DHZ/ARM_GAP are now overridable, for the test.
+Test tools/s7243_resume_test.zsh (fake game, IDLE_FEED, no window): fresh run 3 launches; resume 0; one done line per
+arm kept; ok_b removed -> 1; NEGATIVE CONTROL binary mtime changed -> 3; RESUME unset -> 3; arm c spec changed -> 1.
+7/7 pass. Both queued recipes now pass RESUME=1 (the arms compare within the arm through _TOG, not across arms, so
+taking arms from different idle gaps loses nothing).
+Rules out: nothing about WIDEWIN. The decision is still the s7238 bar on the merge and R-bracket soaks.

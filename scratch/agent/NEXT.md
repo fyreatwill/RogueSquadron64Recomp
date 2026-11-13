@@ -1,5 +1,6 @@
-# NEXT (s7243; s7242 closed H-stale in code, test 19/19, soaks still queued): score the queued soaks: s7237_widewin_r2 (WIDEWIN_R bracket, R=48/64/72) and s7240_widewin_merge (2x2 merge, MERGE=0.4/0.55/0.7)
+# NEXT (s7244; s7243 made the soak harness resumable, RESUME=1; soaks still queued): score the queued soaks s7240_widewin_merge (MERGE=0.4/0.55/0.7) and s7237_widewin_r2 (R=48/64/72)
 HYPOTHESIS-ID: widewin-heavy-window-cost
+Harness edits: rerun `zsh tools/s7243_resume_test.zsh` (7/7). A voided recipe keeps its finished arms (scratch/s7240q|s7237q ok_<arm>), so a partial run is progress, not a loss.
 Before any rs64_s7239 edit or after the soak: `zsh tools/s7241_merge_test/run.sh` must print 0 failures.
 State (s7240): the merge is BUILT and off by default (tools/apply_s7239_widewin_merge.py, rs64_s7239_* in src/main/upstream_compat.cpp,
 [g1cf] wm=, [s7239] tallies, scorer `tools/s7233_widewin_r.py --merge`). Neither soak has run because the owner was active.
