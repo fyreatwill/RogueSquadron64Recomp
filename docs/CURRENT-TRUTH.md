@@ -380,7 +380,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    (time between differing frames, sees repeats and gaps), arm tools/s7272_g5c_hold_arm.zsh. **s7273 21:9: same (H-none219)**: in-session
    KEEP=1 run, control 3/3, 2 holds 275/372 ms both black transition frames (sheet docs/owner_sheet_s7273_g5c_widewin_holds_219.jpg,
    new tools/s7273_hold_sheet.py), 0 flight holds; the s7272_219_hold soak's 8 holds are unclassified (raw deleted). Thread closed.
-   Open: the same scorer at the owner's exact recipe (FULLSCREEN=1, L1/L5/L12), NEXT.md.
+   **s7274 FULLSCREEN=1 (owner recipe, [g1f] fullscreen=1 drawable 3024x1898) on L1/L4/L5/L12: 0 flight holds >= 250 ms, control 12/12,
+   every hold = black mission-restart transition (sheets docs/owner_sheet_s7274_g5c_fullscreen_L*.jpg) -> H-none-fs.** Arm now takes
+   LEVEL= FS=1 PLAIN=1 DUR=. Open: PLAIN=1 (no WIDEWIN/MELT env) DUR=900 long run, L4 + L12, in-session (> 600 s soak cap), NEXT.md.
 6. **G5e fog (s6904): owner look.** 21:9 far slab: DD_MELT takes it to the dd1 floor (s7007). Residual side
    edge = the 64-column terrain window (s7008); WIDEWIN (N=128 at 0x83000000) widens it, free at 21:9 dd4
    on the owner path (s7014-s7015). dd>=6 cost is per cell (s7019-s7029); the off-map bundle pays for it (headline).

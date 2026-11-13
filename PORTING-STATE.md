@@ -191726,3 +191726,27 @@ frame sheet of every hold. Single in-session run; the soak run is unclassified. 
 Rules out: the WIDEWIN auto stack introducing in-flight frozen frames at either owner aspect on L4 dd4.
 Discrimination: selects H-none219 over H-merge219/H-general219 (no flight hold in any phase, controls caught).
 Next: G5c on the owner's exact recipe (FULLSCREEN=1, more levels) with the same scorer and KEEP=1 sheets (NEXT.md g5c-freeze-owner-fullscreen).
+
+## Session 7274 (2026-11-13) — G5c at the owner's fullscreen recipe: 0 in-flight holds >= 250 ms on L1/L4/L5/L12 (SIGSTOP control 3/3 each, every hold viewed = black mission-restart transition) -> H-none-fs
+Work unit (NEXT.md g5c-freeze-owner-fullscreen): the s7272 image-hold scorer at FPS60 dd4 ASPECT=16:9 **FULLSCREEN=1**, four levels.
+Boring check first: scratch/s7009/arm.zsh passes the extra env straight into XENV_EXTRA, so ROGUESQ_FULLSCREEN=1 reaches the game; every
+run.log prints `[g1f] window 1360x764 fullscreen=1 at 0,33`, `resized 1512x949`, `drawable 3024x1898` (real desktop fullscreen below the
+notch on the built-in Retina display), and tools/g5b_capture found the fullscreen window (SCK frame 0,33,1512x949) at 29.8-53.6 changes/s.
+Arm change: tools/s7272_g5c_hold_arm.zsh gains LEVEL=<n> (default 4) and FS=1 (adds ROGUESQ_FULLSCREEN=1), plus PLAIN=1 (no WIDEWIN/MELT env)
+and DUR=<s> (capture length) for the next unit. Host: HID idle 7.6 h, screen unlocked, one game at a time.
+Runs (`env KEEP=1 FS=1 LEVEL=L TAG=s7274fL ASP=16:9 CW=480 zsh tools/s7272_g5c_hold_arm.zsh`, 300 s capture, same-run tog3 off/stack/R88,
+SIGSTOP 1 s controls at capture +57/+158/+259 s):
+| L | frames | changes/s | control | holds >=250 ms (outside controls) | viewed | crash |
+| 4 | 11889 | 39.5 | 3/3 (1037/1055/1028 ms) | +50.0 s 274, +60.4 s 299, +62.5 s 372 | all held luma 0: flight->hangar black, iris wipe->black, tower shot->flight black cut | 0 |
+| 1 | 11218 | 37.2 | 3/3 (1047/1055/1053) | +205.7 s 281, +215.6 s 399, +218.2 s 555 | all held luma 0: same mission-restart chain (flight -> hangar -> briefing iris -> intro -> flight) | 0 |
+| 5 | 16092 | 53.6 | 3/3 (1034/1027/1037) | none | 300 s of flight (Jade Moon), controls frozen in flight | 0 |
+| 12 | 8962 | 29.8 | 3/3 (1044/1045/1055) | none | 300 s of flight | 0 |
+In flight: 0 holds >= 250 ms on any level, any phase. The 555 ms L1 hold is the black cut into the mission intro, not flight.
+Sheets: docs/owner_sheet_s7274_g5c_fullscreen_L{1,4,5,12}.jpg (one row per hold, -1 s / held / next / +1 s).
+Verdict H-none-fs: refutes H-fs (fullscreen present/drawable path adds no frozen frames) and H-level for L1/L4/L5/L12. Two lines: image-hold
+scorer with same-run SIGSTOP control caught 12/12, and the frame sheet of every hold. Single run per level. Caveat: the arm still sets
+DD_MELT + WIDEWIN (+ tog3 R/MERGE) env in all phases, which the owner's plain recipe does not, and captures are 300 s, not a "long run".
+Rules out: fullscreen as a G5c freeze source; in-flight freezes >= 250 ms on four levels at the owner aspect/dd/FPS60 in 300 s windows.
+Discrimination: selects H-none-fs over H-fs/H-level (controls caught, 0 flight holds).
+Next: G5c's own close criterion ("a long run has no gap over 250 ms outside loads"): PLAIN=1 owner env, DUR=900, L4 then L12, in-session
+(exceeds the loop's 600 s soak cap). NEXT.md g5c-long-plain.
