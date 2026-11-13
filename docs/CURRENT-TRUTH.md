@@ -216,6 +216,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 mai
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7247/s7259/s7262 "the WIDEWIN auto stack removes no visible ground" (and OWNER-OPT-INS "WIDEWIN is free with its automatic settings"). Believable: holes/seams/flip scorers found no lost ground inside the picture. They never scored the side edge, which is the only thing WIDEWIN adds: s7264 same-run toggles show the side gain present with STACK=0 (L/R -4.4/-5.0) and gone with the stack (-0.7/+0.4).
 - s7230 "the dd6 radius at 21:9 adds ~6.6 ms per gfx task over dd4 (H-dd)" and s7014-s7017 "WIDEWIN costs little or none at 21:9 dd4". Believable: s7230's dd4 21:9 arm (13.94 ms) differed from the dd6 line only, it seemed, in the radius; in fact it also lacked ROGUESQ_DD_WIDEWIN, and s7014-s7017 measured whole-flight/other windows. s7231 2x2 in the L4 t=77-97 window: WIDEWIN +4.5 ms at dd4 (flat 30/s), radius +0.7 ms without WIDEWIN.
 - s7054/s7063 "Gerrard V (L4) at 21:9 dd6 runs 58.7-59.5 fps / all 19 levels ~60 at 21:9". Believable: whole-flight averages on the then route. s7230 (owner path, direct harness, two instruments): L4 t=77-97 flat 30/s for 21 s at 20.5 ms per gfx task, 109/239 s <55/s; dd4 21:9 holds 60 there. s7251: s7230 itself ran on battery (Low Power Mode, x1.36-1.43 CPU/task vs AC s7248 off; x0.97-1.01 vs battery s7231 n4), so this is also a battery-host verdict; AC measured s7257: dd6r 60.0/s, 14.06 ms (n4 bridge 9.81 vs battery 13.97 = x1.42), control dd6rd flat 30 21.81 ms.
 - s7227/s7228 "in-flight flat-30 under FPS60 is the game's own frame rate (H-content)". Believable: rigid 33.3 ms game swaps with a free present path and a 60 Hz VI timer, no display event. s7229: the harness ran the diagnostic ucode path (LOG_PHASE -> G1E_PROBES, 21.95 ms task); the owner path holds 60/s there (12.8 ms).
@@ -324,7 +325,12 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    flip +0.0022 +- 0.0041, seams on-off -11.2 vs A/A -15.7 px, tog ph0 merged 0 / ph1 0.49M; single run). **16:9 TV (s7263 fold of
    s7262_169_widewin, L4 dd4, AC, control w0d+DUTY 33.9/s 112 beyond-route s PASS):** win77-97 n (no WW) 9.23 ms 60/s, w (auto stack) 9.15 ms
    merged 3.25M, w0 (STACK=0) 12.25 ms 4 frames >=17 ms; beyond-route 3/0/3 s; 0 crash -> H-cost (stack needed at 16:9 too, free with it; single run).
-   Open: does WW add visible side ground at 16:9? Queued s7263_169_edge (tools/s7263_widewin_edge_arms.zsh, 21:9 control arm), NEXT.md.
+   **s7264: the auto stack ERASES WIDEWIN's side-edge gain** (L4 dd4, same-run WIDEWIN=tog parity, g5e_edge_score hard80% off->on L/C/R,
+   capture 52-63 frames/s): 21:9 stack on 23.2->22.5 / 29.7->28.7 / 20.7->21.1 (no gain); 21:9 STACK=0 17.5->13.1 / 29.1->29.3 / 17.6->12.6
+   (gain re-fires, = s7009); 16:9 stack on 21.5->24.1 / 31.1->30.6 / 19.1->18.7 (no gain). So "stack is free" = the stack removes the cells
+   that WIDEWIN adds, visible gain included (single run per arm). Open: R=48 vs merge, and 16:9 STACK=0: queued s7264_stack_edge, NEXT.md.
+   Capture hygiene: s7263_169_edge (rc=0) and its first re-run were void, 133-142 frames/180 s, Chrome frontmost; the s7009 arm lacked the
+   s7259 frontmost keeper. tools/s7263_widewin_edge_arms.zsh now keeps the game in front and fails (rc=3) under 10 captured frames/s.
    Unit tests: tools/s7241_merge_test/run.sh (after any rs64_s7239 edit), tools/s7243_resume_test.zsh. Arms: tools/g1e_owner_quiet_arms.zsh.
    Not shown: real Low Power Mode on the clock probe (only the DUTY stand-in). Boot freeze stays passive: hunter
    `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.

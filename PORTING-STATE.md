@@ -191529,3 +191529,24 @@ HYPOTHESIS-ID: widewin-169-tv. CURRENT-TRUTH 41.7 KB, no maintenance.
   Queued scratch/agent/soak_queue/s7263_169_edge.sh (SOAK_NEEDS_IDLE=180, lock check exit 2).
 - OWNER-OPT-INS WIDEWIN line: 16:9 TV cost sentence added.
 Verdict: selects H-cost (stack needed and sufficient at 16:9), refutes H-crash. Next discriminator: 16:9 side-edge hard80 off/on vs the 21:9 control.
+
+## Session 7264 (2026-11-13) — s7263_169_edge was a starved capture (Chrome frontmost); re-run shows the WIDEWIN auto stack erases WIDEWIN's side-edge gain at 21:9 and 16:9
+HYPOTHESIS-ID: widewin-169-tv. CURRENT-TRUTH 42.1 KB, no maintenance.
+- Soak fold (s7263_169_edge, rc=0): VOID. Capture 142 (a169) / 140 (a219) frames in 180 s (s7009: ~3400); fog=1 bins 180-378 cols vs 1320 off,
+  so per-state hard80 was noise (a219 left -14, right +13). Game itself was fine (mission_verified_130s, 0 crash; the s3290-stall lines are
+  the always-on breadcrumb). First in-session re-run (scratch/s7264) starved the same way (133/134 frames); frontmost app = Google Chrome.
+  Boring cause, known since s7259: SCK sends ~0.75 frames/s when the game is not frontmost; scratch/s7262/arm.zsh has the frontmost keeper,
+  scratch/s7009/arm.zsh (used by tools/s7263_widewin_edge_arms.zsh) does not.
+- Fix (tools/s7263_widewin_edge_arms.zsh): frontmost keeper per arm (osascript every 10 s); capture guard rc=3 under 1800 frames/180 s
+  (positive control: fired on both starved arms of scratch/s7264, silent at 61-63/s); ARMS / XENV / XENV_<name> knobs for per-arm env.
+- Re-run (scratch/s7264b, L4 dd4 FPS60 MELT CULL=1, WIDEWIN=tog parity, [s7258] auto stack printed, [s7010-clk] split=parity), hard80% off->on L/C/R:
+  a169 16:9 stack: 21.5->24.1 / 31.1->30.6 / 19.1->18.7 (11150 frames); a219 21:9 stack: 23.2->22.5 / 29.7->28.7 / 20.7->21.1 (11517 frames)
+  -> 21:9 control did NOT fire with the stack. Discriminating arm (scratch/s7264c, 21:9 STACK=0, [s7233] widewin_r=0, 9487 frames):
+  17.5->13.1 / 29.1->29.3 / 17.6->12.6 -> s7009's side gain re-fires (instrument valid), centre flat.
+- Reading: H-stack-eats selected (single run per arm, same-run toggles): the auto stack (R=48 + merge 0.4 + E16) removes the side ground
+  WIDEWIN adds, so s7262/s7263 "stack is free" means "stack is visually WIDEWIN-off". 16:9 H-gain16 vs H-free16 is NOT decided (stack-on arm
+  shows no gain, as at 21:9; needs 16:9 STACK=0). Supersedes "auto stack removes no visible ground" (CURRENT-TRUTH superseded list):
+  s7247/s7259/s7262 scored holes/seams/flips only, never the side edge.
+- OWNER-OPT-INS WIDEWIN line: correction added (auto settings show nothing extra; STACK=0 shows softer 21:9 side edges at ~3-4 ms cost).
+- Queued scratch/agent/soak_queue/s7264_stack_edge.sh (SOAK_TIMEOUT=1500, idle 180): 16:9 STACK=0, 21:9 R=0 (merge only), 21:9 STACK=0 control.
+Verdict: selects H-stack-eats (21:9), voids s7263_169_edge; next discriminator R=48 vs merge as the eater, and 16:9 STACK=0 side gain.
