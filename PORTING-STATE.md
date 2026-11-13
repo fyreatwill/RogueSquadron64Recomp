@@ -191833,3 +191833,25 @@ H-level refuted (L4's heavier windows do not freeze with QOS_ALL). H-fluke refut
 Caveat: one run per arm per level (L12 s7277, L4 s7278); the toggle is within-run, so the on/off split is not cross-run.
 Not changed: the default. The owner decides QoS default (OWNER-OPT-INS row updated with the L4 numbers).
 Rules out: background CPU load being harmless on the owner's mission (Gerrard V); QOS_ALL working only on L12.
+
+## Session 7279 (2026-11-13) — G5c QoS split on L4: GUEST_QOS alone 55.0 fps on-load, 1 gap >=100 ms, 0 lit freezes; GFX_QOS alone 47.7 fps, 38 gaps >=100 ms, 1 lit freeze -> H-guest carries the stalls, H-gfx refuted, residual fps needs the render-side knobs (H-combo)
+
+Ran the two NEXT.md arms back to back, one game at a time (host: AC power, HID idle ~10.5 h, screen unlocked, load ~4 at start).
+Recipe as s7278: `env LOAD=cpu LEVEL=4 GXE=<knob> zsh tools/s7277_toggle_load_arm.zsh` (PLAIN FS 16:9 owner recipe, 600 s,
+15 `yes` spinners toggled every 60 s from +150 s), scored with tools/s7277_toggle_score.py + scratch/s7272/<tag>/sheet.txt.
+
+| arm (L4, CPU toggle) | on-load gen/s | gaps >=250 on | gaps >=100 on | max gap on | gpu95 on | lit image holds | control |
+|---|---|---|---|---|---|---|---|
+| none (s7278 l4cpu) | 52.0 | 6 | 48 | 700 ms | 1.80 | 3 (357-700 ms) | 3/3 |
+| QOS_ALL (s7278 l4cpuqos) | 59.6 | 1 | 1 | 356 ms | 0.37 | 0 | 3/3 |
+| GUEST_QOS only (l4guest) | 55.0 | 1 | 1 | 338 ms | 2.67 | 0 (3 holds, all held luma 0 = black) | 3/3 |
+| GFX_QOS only (l4gfx) | 47.7 | 4 | 38 | 865 ms | 2.63 | 1 (351 ms, held luma 104) | 3/3 |
+
+Off-load windows are ~60 fps in every arm (window 10 is the post-run tail). crash_lines 0 both runs.
+Reading: raising the guest threads alone removes the 100-ms-class stalls (48 -> 1) and the lit freezes, so the game thread losing
+the CPU is what makes the freezes (two lines: present-ring gaps + capture image holds). It does not restore the frame rate
+(55 vs 59.6), and gpu95 under load stays high (2.6 vs 0.37 with QOS_ALL), which points at the RT64 present/workload/upload threads
+for the rest. GFX_QOS alone is no better than no QoS (single run; 47.7 < 52.0 is within what one run can say, but it is clearly not a fix).
+Rules out: H-gfx (the gfx/RSP thread alone), H-guest as the whole fix. Leaves H-combo = GUEST + render-side threads.
+Single-run per arm; the QOS_ALL comparison is cross-run but the toggle gives a same-run on/off control in each.
+Next (NEXT.md): GUEST+PRESENT+WL+UPLOAD (everything except GFX) vs GUEST+PRESENT, to find the smallest default to offer the owner.
