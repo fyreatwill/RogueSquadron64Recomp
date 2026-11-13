@@ -191855,3 +191855,35 @@ for the rest. GFX_QOS alone is no better than no QoS (single run; 47.7 < 52.0 is
 Rules out: H-gfx (the gfx/RSP thread alone), H-guest as the whole fix. Leaves H-combo = GUEST + render-side threads.
 Single-run per arm; the QOS_ALL comparison is cross-run but the toggle gives a same-run on/off control in each.
 Next (NEXT.md): GUEST+PRESENT+WL+UPLOAD (everything except GFX) vs GUEST+PRESENT, to find the smallest default to offer the owner.
+
+## Session 7280 (2026-11-13) — G5c smallest QoS set on L4: GUEST+PRESENT 57.9 fps on-load / 1 gap >=100 ms / 0 lit freezes = QOS_ALL-minus-GFX 58.0 / 7 / 0 -> H-present selected, WL+UPLOAD+GFX add nothing measurable; L12 replicate queued
+
+Ran the two NEXT.md arms back to back, one game at a time (host: AC power, HID idle ~11 h before and after, so no human input; screen
+unlocked, load ~4 at start). Recipe as s7278/s7279: `env LOAD=cpu LEVEL=4 GXE=<knobs> zsh tools/s7277_toggle_load_arm.zsh`
+(PLAIN FS 16:9 owner recipe, 600 s, 15 `yes` spinners toggled every 60 s from +150 s), scored with tools/s7277_toggle_score.py
++ scratch/s7272/<tag>/sheet.txt. The knobs reached the game: l4nogfx log has [guest-qos] ok=1, [s6985] present, [s6987] workload,
+[s6988] buffer + texture threads all rc=0; l4gp has [guest-qos] + [s6985] only.
+
+| arm (L4, CPU toggle) | on-load gen/s | off gen/s | gaps >=250 on | gaps >=100 on | max gap on | gpu95 on | lit image holds | control |
+|---|---|---|---|---|---|---|---|---|
+| none (s7278 l4cpu) | 52.0 | ~60 | 6 | 48 | 700 ms | 1.80 | 3 (357-700 ms) | 3/3 |
+| QOS_ALL (s7278 l4cpuqos) | 59.6 | ~60 | 1 | 1 | 356 ms | 0.37 | 0 | 3/3 |
+| GUEST only (s7279 l4guest) | 55.0 | ~60 | 1 | 1 | 338 ms | 2.67 | 0 | 3/3 |
+| GFX only (s7279 l4gfx) | 47.7 | ~60 | 4 | 38 | 865 ms | 2.63 | 1 | 3/3 |
+| GUEST+PRESENT+WL+UPLOAD (l4nogfx) | 58.0 | 56.1* | 6 | 7 | 466 ms | 0.37 | 0 (15 holds: 14 black, 1 static death cam) | 3/3 |
+| GUEST+PRESENT (l4gp) | 57.9 | 56.0* | 1 | 1 | 394 ms | 0.54 | 0 (7 holds, all held luma 0) | 3/3 |
+
+*off mean includes window 10 (post-run tail, 38 gen/s); the in-run off windows are 58.9-60.0 in both arms.
+The l4nogfx 2468 ms image hold at +453 s is lit (luma 46) but is the HUD-less ground-impact death camera: the ring shows the game
+generating frames throughout (max gap 466 ms in that window), so the picture was still, not frozen (viewed in holds_sheet.jpg).
+The l4nogfx on-window >=250 gaps (300-470 ms) match black death/restart/menu transitions in the sheet; this run had more autopilot
+deaths, and its off windows carry the same count (6), so they are not load-induced.
+Reading: GUEST+PRESENT gets the same on-load frame rate as everything-but-GFX (57.9 vs 58.0) and the same stall removal, so the
+workload/upload/GFX knobs add nothing measurable on top of it here. Both sit ~1.6 fps under QOS_ALL's 59.6, but that is a cross-run
+comparison of single runs and within run-to-run swing; the toggle gives the same-run control. gpu95 under load drops from 2.67
+(GUEST only) to 0.54 with PRESENT added, i.e. the present thread was what lost the CPU on the render side.
+Rules out: H-wl-upload (WL/UPLOAD needed beyond PRESENT), H-gfx-needed. Selects H-present: smallest set = GUEST_QOS + PRESENT_QOS.
+Single run per arm per level. Two independent lines inside each run (present ring + capture image holds), so the L4 reading is
+two-line; the cross-level replicate is queued: scratch/agent/soak_queue/s7280_l12_{gp,all}.sh (L12 GUEST+PRESENT vs QOS_ALL, same
+toggle; s7277 has L12 none = 49.4 fps).
+Owner recommendation unchanged: QOS_ALL=1 (it includes the minimal set and is no worse); defaults unchanged pending the owner.
