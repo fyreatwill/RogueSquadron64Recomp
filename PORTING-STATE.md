@@ -190955,3 +190955,26 @@ Rules out: nothing about H-radius/H-thin/H-near; the discriminator is still unme
 - Root cause of the empty tally: a fixed 128-call flush threshold set against an unmeasured placement rate. Next discriminator, unchanged:
   the s7235_widewin_r R=40/56/72 window dsd/dkpx with CONTROL PASS. dsd <= -3 ms at dkpx > -0.5% selects H-radius, a >2% kpx loss selects
   H-thin, and dsd ~0 refutes both and selects H-near.
+
+## Session 7237 (2026-11-12) — WIDEWIN_R measured: r40 window -3.19 ms sd at -8.6% kpx, r56 -1.94 ms at +3.8% (noise floor); flight both -1.6 ms; H-near refuted, the cost moves with R but no R tested meets the 3 ms / 0.5% bar (leans H-thin); r48/64/72 bracket queued
+
+- Ran the queued soak s7235_widewin_r in-session after an idle gate (HID idle reached 203 s). Arm r40 completed. Arm r56 was voided at t=126
+  of 130 by owner input, after the t=77-97 window and most of the flight had been logged. Arm r72 never ran. Logs are in scratch/s7233b/log_r40.txt,
+  log_r56.txt and soak_s7237.log (copied to scratch/s7237/).
+- The s7236 flush is verified in-game: 60 `[s7233]` blocks per log (30 per phase). Positive control PASS on both arms: ph1 skip 1820 (r40)
+  and 1503 (r56) cells per placement, ph0 skip 0. Retail-equivalent `in` matches across phases (3579/3573, 3564/3559).
+- Scorer (tools/s7233_widewin_r.py), Ron - Roff:
+  | arm | window dsd | window dkpx | window dtzero | flight dsd | flight dkpx |
+  | r40 | -3.19 ms | -181.8 (-8.6%) | -1030 | -1.61 ms | -3.3% |
+  | r56 | -1.94 ms | +76.3 (+3.8%) | -828 | -1.62 ms | +0.8% |
+  Skipping cells cannot add pixels, so r56's +3.8% window kpx shows the noise floor of the same-run tog comparison
+  (on and off seconds sample different scene moments): about +-4% in the window and about +-1% in flight. r40's flight loss of -3.3% is beyond that floor.
+- WW-only non-empty cells per placement by eye distance (d8 bins) peak at 56-72 (409/484/394), with a tail to 104.
+- Reading: the cost tracks the radius in both lines (window and flight), so H-near is refuted. R=40 reaches the 3 ms target only in the window,
+  and it costs a real kpx loss. R=56 gives about 1.7 ms at no measurable loss. No arm meets "dsd <= -3 ms and dkpx > -0.5%", which leans H-thin:
+  the waste is spread over the far WW distances, and a coarser far mesh, rather than a radius cut, would be needed for the full gain. Each R is
+  a single run. About 40-50% of the triangle cut is zero-height (dtzero), which is consistent with s7232 H-tiny.
+- Queued the bracket soak s7237_widewin_r2 (R=48/64/72, same recipe, SOAK_NEEDS_IDLE=180, out scratch/s7237q). The consumed
+  s7235_widewin_r.sh was moved to done/.
+- Rules out: H-near. The remaining questions are whether the kpx-free cut is about 1.7 ms at most (H-thin) or whether R=48 gives about 2.5 ms
+  at a loss within noise (H-radius with a softer bar).

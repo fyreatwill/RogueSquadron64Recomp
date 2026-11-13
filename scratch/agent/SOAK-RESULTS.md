@@ -1415,3 +1415,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112-191425 | s7233b_widewin_r | rc=2 | 0s | scratch/agent/soak_results/s7233b_widewin_r_20261112-191425.log
 20261112-192834 | s7234_widewin_r | rc=2 | 0s | scratch/agent/soak_results/s7234_widewin_r_20261112-192834.log
 20261112 | s7235 fold: s7234_widewin_r rc=2 at t=0 = launched at HID idle 5 s by the PRE-s7234 in-memory run_soak_queue (loop re-exec only at iteration top; re-exec logged right after). loop.sh fixed to re-exec before the soak phase; re-queued as s7235_widewin_r.
+20261112-193610 | s7235_widewin_r (run by s7237 iteration) | rc=2 (r56 voided t=126 by owner, r72 not run) | ~270s | scratch/s7237/soak_s7237.log; r40 win dsd -3.19 ms dkpx -8.6%, r56 -1.94 ms +3.8%, CONTROL PASS both
