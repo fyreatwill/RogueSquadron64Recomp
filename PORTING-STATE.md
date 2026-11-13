@@ -191120,3 +191120,29 @@ arm kept; ok_b removed -> 1; NEGATIVE CONTROL binary mtime changed -> 3; RESUME 
 7/7 pass. Both queued recipes now pass RESUME=1 (the arms compare within the arm through _TOG, not across arms, so
 taking arms from different idle gaps loses nothing).
 Rules out: nothing about WIDEWIN. The decision is still the s7238 bar on the merge and R-bracket soaks.
+
+## Session 7244 (2026-11-12) — WIDEWIN merge measured: distance gate unit bug found and fixed (frac was inert); fixed merge dose-response 0.9 ms/ktri; MERGE=0.4+R=56 saves 4.46 ms in the heavy window; null arm puts tog flight-kpx noise at +-5%
+
+Owner went idle at 20:48, so the queued s7240_widewin_merge soak ran in-iteration via scratch/s7244/wait_run.zsh, followed by two more batches
+(owner still idle, iron rule 13). Unit test was 19/19 before the run.
+
+1. s7240 soak (MERGE 0.4/0.55/0.7, scratch/s7240q, scratch/s7244/merge.soak.log): CONTROL PASS x3 (drops/merged 3.00, unm 0, stale 0, ph0 anc 0),
+   but anchors were ~equal across arms (1.94M/2.10M/2.02M) and near only 216/2424/7627 of ~2M. [s7239] logged farcut=117.4, maxd2=7116:
+   the node+8 value fed by H1 is not in farcut's units (the game compares a node+8 against 117.4 at 0x800434E4 yet the emitted chain
+   holds values up to 7116, so they cannot be the same quantity there), and thr = frac^2*farcut = 18.8..57.5 let almost every flat
+   block merge. ORIGIN: our s7239 host code (upstream_compat.cpp), not the game. The three arms are three repeats of merge-all:
+   window dsd -2.52/-2.44/-2.75 ms, window kpx +0.4/+0.3/-0.2%, flight kpx -6.4/+2.8/-5.4%.
+2. Fix: thr = frac^2 * pmax, pmax = the largest node+8 in the current build pass (reset at the s7242 generation bump; all nodes of
+   a pass precede its emits, stale=0 confirms). [s7239] now logs thr=. Unit test extended to 22 cases (at/below threshold vs the
+   pass max, near block beside a far block, whole pass close): 22/22. Negative control: the old formula substituted into the
+   extracted block fails 5 checks. docs/WIDEWIN-MERGE-PLAN.md corrected.
+3. s7244_widewin_merge2 (fixed build, scratch/s7244q): thr 1139/2152/3487; merged 1.73M/1.21M/0.61M, near 0.38M/0.82M/1.44M
+   (monotonic dose-response), window dsd -2.31/-1.75/-0.79 ms with dtri -2534/-1913/-943 (about 0.9 ms per ktri), window kpx
+   -0.8/+0.6/+1.0%; flight dsd -2.28/-0.95/-0.73, flight kpx +4.2/-4.8/+0.4%.
+4. s7244_merge3 (scratch/s7244r): m30 window -1.89 ms (kpx +0.8%), flight -3.04 ms (-0.6%). m40+R56 (both toggled on the one global
+   tog phase): window -4.46 ms, dtri -3346, kpx -0.1%; flight -3.58 ms, kpx -6.6%. m99 null arm (merges nothing, CONTROL FAIL by
+   design -> recipe rc=3): window dsd -0.18 ms, kpx +1.7%; flight dsd -0.59 ms, kpx +4.7%.
+Rules out: the merge being inert or harmful to window pixels (it saves time in proportion to the tris it removes); the s7237 "~1%
+flight kpx floor" (the null arm reads +4.7%, single-source), so the s7238 flight kpx bar cannot be judged with tog kpx. The window
+time half of the bar (<= -2.5 ms) is met only by m40+R56 (and nearly by merge-all). Not ruled out: visible T-junction cracks, or R=56
+cutting visible far cells in flight. Next: fixed-setting framebuffer arms and an owner sheet (NEXT.md).

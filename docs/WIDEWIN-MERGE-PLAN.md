@@ -38,7 +38,8 @@ Fixup tools/apply_s7239_widewin_merge.py (funcs_4.c + funcs_9.c), host code besi
 - H2, 0x800113D8 after s0 is loaded, gated by g_rs64_ww (WIDEWIN active this frame) and the group flag being clear:
   rs64_s7239_group(s1, s0) walks the list in RDRAM once. It keys every flat-eligible element (rule 2) by (x, z, V0). An element is an
   ANCHOR when ((x / V0) & 1) == 0, ((z / V0) & 1) == 0, its three partners (x+V0, z), (x, z+V0), (x+V0, z+V0) with the same V0 are
-  in the list and flat, and all four have dist2 >= (frac * farcut)^2 (farcut read from 0x8009DEB4, so the knob follows dd). Partners
+  in the list and flat, and all four have dist2 >= frac^2 * pmax, pmax = the largest node+8 of this build pass (s7244: node+8 reaches 7116 while farcut
+  0x8009DEB4 is 117.4, so the two are NOT the same units; the s7240 build used frac^2 * farcut and merged ~every flat block). Partners
   are marked DROP. Unpaired cells stay as they are.
 - H3, after the w9 store at 0x80011880: for an ANCHOR, rewrite the command in place:
   w1 = h0(A)<<20 | (h4'(B)<<4 & 0xFFFF), w2 = h20'(C)<<20 | (h24'(D)<<4 & 0xFFFF), where h' = h + ybase(partner) - ybase(A) is

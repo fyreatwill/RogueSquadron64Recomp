@@ -1,24 +1,15 @@
-# NEXT (s7244; s7243 made the soak harness resumable, RESUME=1; soaks still queued): score the queued soaks s7240_widewin_merge (MERGE=0.4/0.55/0.7) and s7237_widewin_r2 (R=48/64/72)
+# NEXT (s7245): judge the s7244 WIDEWIN merge + R combo by image, not tog kpx
 HYPOTHESIS-ID: widewin-heavy-window-cost
-Harness edits: rerun `zsh tools/s7243_resume_test.zsh` (7/7). A voided recipe keeps its finished arms (scratch/s7240q|s7237q ok_<arm>), so a partial run is progress, not a loss.
-Before any rs64_s7239 edit or after the soak: `zsh tools/s7241_merge_test/run.sh` must print 0 failures.
-State (s7240): the merge is BUILT and off by default (tools/apply_s7239_widewin_merge.py, rs64_s7239_* in src/main/upstream_compat.cpp,
-[g1cf] wm=, [s7239] tallies, scorer `tools/s7233_widewin_r.py --merge`). Neither soak has run because the owner was active.
-Step 1: tail SOAK-RESULTS.md. For a soak that is still queued or came back rc=2: if HID idle >= 180
-(`ioreg -c IOHIDSystem | awk '/HIDIdleTime/{print $NF/1e9; exit}'`), run it by hand in the background
-(`zsh scratch/agent/soak_queue/<name>.sh > scratch/<dir>/soak.log 2>&1`, then move it to done/). Merge first: it is the new build.
-Merge control (iron rule 1): ph1 merged > 0, drop == 3*merged, unm == 0; ph0 anc == 0 and cand > 0.
-If the control FAILS, the [s7239] fields name the reason:
-- noww >> grp: g_rs64_ww is not set at emit time. Drop the ww gate, or latch ww per frame.
-- miss ~ all candidates: the H1 elem does not match the emit list. Re-read node+0x14 / +0x20.
-- near ~ all: the frac/farcut units are wrong. Compare maxd2 with farcut.
-- flat ~ 0: the flat rule is misread.
-- unm > 0: an anchor was never emitted, which leaves holes. Must be 0.
-- stale ~ miss and both large: grid builds and emits interleave within a frame (s7242 generation bumps mid-frame). Bump the generation per VI instead.
-Decide (s7238 bar: window dsd <= -2.5 ms AND flight |dkpx| <= 1%):
-- A merge arm meets the bar: take owner sheets at that frac (side edge, L4 far-left shoreline, crack close-ups vs
-  docs/owner_sheet_s7009_widewin_219.png), then add the opt-in to OWNER-OPT-INS.
-- A WIDEWIN_R arm meets the bar and the merge does not: R wins, so shelve the merge.
-- Both meet it: prefer the merge if its flight dkpx is smaller.
-- Neither meets it: report the tri removed per merged block. If it is ~6 but ms/ktri is low, the cost is not in the triangles.
-  Re-split it with tools/s7231_cost_decomp.py.
+State (s7244): merge gate fixed (thr = frac^2 * pass-max node+8). Same-run tog, L4 21:9 dd4+WW+MELT:
+m40+R56 win dsd -4.46 ms kpx -0.1%, flight -3.58 ms kpx -6.6%; m40 alone win -2.31; null arm m99 flight kpx +4.7%
+-> tog kpx floor ~+-5% in flight: the s7238 flight kpx bar is unresolvable with tog kpx. Logs scratch/s7244q, scratch/s7244r.
+Before any rs64_s7239 edit: `zsh tools/s7241_merge_test/run.sh` must print 0 failures (22 cases).
+Work unit: an image judgement, ONE build (current), owner idle (check HID idle >= 180 and screen unlocked):
+- Arms without TOG (fixed settings, same route, framebuffer capture at the same VI-phase-gated frames, tools/g3_port_capture.sh
+  WITHOUT SAVE_FROM): A = WW+MELT (merge off), B = WW+MELT+MERGE=0.4+WIDEWIN_R=56, C = MERGE=0.4 only.
+- Score each frame pair with the s7232 kpx classifier AND a far-band pixel diff (side edge / L4 far-left shoreline region),
+  then build an owner sheet vs docs/owner_sheet_s7009_widewin_219.png with crack close-ups.
+Hypotheses: H-clean (B differs from A only inside haze, no cracks) -> add the B recipe to OWNER-OPT-INS as the 21:9 WW
+speed setting, owner judges; H-crack (T-junction gaps visible at merge borders) -> skirt the merged edge or raise frac to 0.55;
+H-R-loss (the B flight kpx -6.6% is R=56 cutting visible far cells) -> keep the merge, drop R or raise it to 64.
+The queued soak s7237_widewin_r2 (R=48/64/72) is still useful for the H-R-loss arm; leave it queued.

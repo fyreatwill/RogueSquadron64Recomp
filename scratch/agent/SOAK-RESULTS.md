@@ -1416,3 +1416,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112-192834 | s7234_widewin_r | rc=2 | 0s | scratch/agent/soak_results/s7234_widewin_r_20261112-192834.log
 20261112 | s7235 fold: s7234_widewin_r rc=2 at t=0 = launched at HID idle 5 s by the PRE-s7234 in-memory run_soak_queue (loop re-exec only at iteration top; re-exec logged right after). loop.sh fixed to re-exec before the soak phase; re-queued as s7235_widewin_r.
 20261112-193610 | s7235_widewin_r (run by s7237 iteration) | rc=2 (r56 voided t=126 by owner, r72 not run) | ~270s | scratch/s7237/soak_s7237.log; r40 win dsd -3.19 ms dkpx -8.6%, r56 -1.94 ms +3.8%, CONTROL PASS both
+20261112-204823 | s7240_widewin_merge (run by s7244 iteration) | rc=0 | 410s | scratch/s7244/merge.soak.log; CONTROL PASS x3 but frac inert (gate bug thr=frac^2*farcut, near 216..7627 of 2M): 3 reps of merge-all, win dsd -2.44..-2.75 ms kpx +-0.4%
+20261112-205719 | s7244_widewin_merge2 (fixed gate, s7244 iteration) | rc=0 | 410s | scratch/s7244/merge2.soak.log; m40/m55/m70 win dsd -2.31/-1.75/-0.79 ms, merged 1.73M/1.21M/0.61M (dose-response), win kpx within 1%
+20261112-2106 | s7244_merge3 (s7244 iteration) | rc=3 (null arm m99 CONTROL FAIL by design) | 410s | scratch/s7244/merge3.soak.log; m30 win -1.89 fl -3.04; m40+R56 win -4.46 ms kpx -0.1%, fl -3.58 kpx -6.6%; m99 null: fl kpx +4.7% = tog noise floor

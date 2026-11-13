@@ -147,7 +147,12 @@ int main() {
     run("negative odd-free (x=-64)", block(-64, 0, 64, 13), {});  // -64/64 = -1 odd -> no anchor
     run("odd-aligned x", block(64, 0, 64, 17), {});
     { auto b = block(0, 0, 64, 21); b[2].d2 = 100.f; run("one cell near", b, {}, false, 1); }
-    { auto b = block(0, 0, 64, 25); for (auto& c : b) c.d2 = 250.f; run("at threshold", b, {{0, 1, 2, 3}}); }
+    // s7244: thr = frac^2 * (farthest node of this pass) = 0.25 * 1000 = 250
+    { auto b = block(0, 0, 64, 25); for (auto& c : b) c.d2 = 1000.f; b[3].d2 = 250.f; run("at threshold (pass max)", b, {{0, 1, 2, 3}}); }
+    { auto b = block(0, 0, 64, 26); for (auto& c : b) c.d2 = 1000.f; b[3].d2 = 249.f; run("below threshold (pass max)", b, {}, false, 1); }
+    { auto b = block(0, 0, 64, 27), f = block(256, 0, 64, 28); for (auto& c : b) c.d2 = 200.f; for (auto& c : f) c.d2 = 1000.f;
+      b.insert(b.end(), f.begin(), f.end()); run("near block vs far block, same pass", b, {{4, 5, 6, 7}}, false, 1); }
+    { auto b = block(0, 0, 64, 31); for (auto& c : b) c.d2 = 7.f; run("whole pass close: frac of its own max merges", b, {{0, 1, 2, 3}}); }
     { auto b = block(0, 0, 64, 29); b[1].mat = 9; run("material mismatch", b, {}); }
     { auto b = block(0, 0, 64, 33); b[3].flat = false; run("non-flat partner", b, {}); }
     run("flagged group", block(0, 0, 64, 37), {}, true);

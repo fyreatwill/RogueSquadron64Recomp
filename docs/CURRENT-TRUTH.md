@@ -339,7 +339,15 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    (H1 L_8004323C elem->dist2 hash, H2 0x800113DC pairing, H3 0x80011884 capture, H4 0x800119A8 drop, H5 L_800119BC anchor rewrite) + rs64_s7239_* in
    upstream_compat.cpp; [g1cf] gains wm=<phase>, one [s7239] line per phase every 2 s; scorer `tools/s7233_widewin_r.py --merge` (control: ph1 merged>0,
    drop==3*merged, unm=0; ph0 anc=0, cand>0). Off by default (g_rs64_s7239_on=0, all hooks no-op). Soak s7240_widewin_merge queued (MERGE 0.4/0.55/0.7). **s7241: host unit test tools/s7241_merge_test/run.sh** (live block, synthetic RDRAM, emulated writer + TriGen02 decode): 17/17 pass incl. reorder, negatives, overflow, TOG ph0, checker control; UB `<<4` on negative -> `*16` fixed. Rerun it after any rs64_s7239 edit. **s7242: H-stale closed in code**: H1 dist2 hash slots carry a per-build-pass generation (H1 after an H2 bumps it); an older entry is a miss counted as `stale=` in [s7239] (scorer prints it), never a merge input. Test 19/19, negative control (gen check off) fails the stale case.
-   **s7243: harness RESUME=1** (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
+   **s7244: merge MEASURED** (L4 21:9 dd4+WW+MELT, same-run tog, owner idle; 9 arms over 3 soaks, CONTROL PASS on every merge arm: drop==3*merged, unm=0, stale=0).
+   Gate bug found and fixed: H1 node+8 reaches 7116 while farcut 0x8009DEB4 = 117.4 (different units), so the s7240 gate frac^2*farcut passed ~all
+   cells (near 216..7627 of ~2M; three arms = three reps of merge-all: win dsd -2.44..-2.75 ms, kpx +-0.4%). Now thr = frac^2 * pass-max node+8
+   ([s7239] thr=, unit test 22/22, negative control fails 5 checks). Fixed gate shows dose-response, m40/m55/m70: merged 1.73M/1.21M/0.61M,
+   win dsd -2.31/-1.75/-0.79 ms (about 0.9 ms per ktri), win kpx within +-1%. m30: win -1.89, flight -3.04 ms. **m40+R56 combined: win dsd -4.46 ms,
+   kpx -0.1%; flight -3.58 ms, kpx -6.6%.** The null arm m99 (merges nothing) reads flight kpx +4.7%, win +1.7%, so the tog kpx floor is ~+-5% in
+   flight and the s7238 flight |dkpx|<=1% half of the bar CANNOT be resolved with tog kpx (single-source; the s7237 1% estimate was too low).
+   The window time half is met by m40+R56 only. Next: fixed-camera owner sheets (cracks, side edge, L4 shoreline) at m40+R56 vs merge-off.
+ (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.
    Boot freeze stays passive; hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
