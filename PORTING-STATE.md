@@ -191941,3 +191941,46 @@ scratch/agent/soak_queue/s7282_l12_gpu_i5000.sh (~9 ms/cb) and s7282_l12_gpu_i80
 (SOAK_NEEDS_IDLE=120). Discriminator: on-load fps ~16 in both = timeslice (close, nothing in-process); ~50-60 at 5000 and ~4 at
 80000 = FIFO-per-buffer (then count RT64 command-buffer commits per frame).
 Rules out: QoS as a GPU-contention fix. Does not touch defaults.
+
+## Session 7283 (2026-11-13) — G5c GPU dose-response folded + RT64 Metal commit census: frame time sublinear in foreign buffer length (slope ~0.33), ~26 commits/frame, opt-in skip of empty wait buffers cuts them 31-36% with 0 fps change -> commit count is not the lever; GPU-contention thread closed
+
+What ran: (1) folded the loop's s7282 soaks (scratch/agent/soak_results/s7282_l12_gpu_i{5000,80000}_*.log; L12 PLAIN FS 16:9,
+tools/s7277_toggle_load_arm.zsh LOAD=gpu, no QoS, saturator toggled every 60 s). (2) Engineering: lib/rt64 plume Metal backend
+(src/contrib/plume/plume_metal.cpp, exported to submodule-patches/rt64-plume.patch) gained ROGUESQ_MTL_COMMITS=1, a stderr census
+every 10 s of MTLCommandBuffer commits per present split by site (executeCommandLists wait buffer, empty wait buffers, command lists,
+acquire, present), and opt-in ROGUESQ_MTL_SKIP_EMPTY_WAIT=1, which drops executeCommandLists' wait buffer when it has no semaphores to
+wait on (kept when the s6985 stamp path is armed). Offline scorer tools/s7283_commit_census.py bins the census by the toggle windows.
+(3) In-session pair, same recipe, GPU_ITER=80000 (143 ms/cb), TAG l12cb0 (skip=0) then l12cb1 (skip=1), both with the census.
+
+Dose-response (saturator ms per command buffer from each .gpu tail; on-load gen/s; control SIGSTOP 3/3 CAUGHT in every arm):
+
+| saturator ms/cb | on-load gen/s | frame ms | frame ms / cb | gaps>=250 on | source |
+|---|---|---|---|---|---|
+| 9.0 | 29.7 | 33.7 | 3.74 | 0 | s7282_l12_gpu_i5000 |
+| 35.8 | 16.0 | 62.5 | 1.75 | 0 | s7281_l12_gpu_none |
+| 143.1 | 11.9 | 84.0 | 0.59 | 0 | s7282_l12_gpu_i80000 |
+
+16x longer foreign buffers -> 2.5x longer frames (log-log slope ~0.33): neither fair timeslice (flat) nor FIFO-behind-whole-buffers
+(slope 1, and 0.59 cb per frame at 143 ms means we do not wait a whole foreign buffer). Off-load 57.0-57.3 in all arms.
+
+Commit census + skip A/B (L12, 143 ms/cb, per presented frame):
+
+| arm | state | gen/s | exec/frame | commits/frame | empty waits | skipped | gaps>=250 |
+|---|---|---|---|---|---|---|---|
+| skip=0 | off | 57.1 | 12.3 | 26.6 | 11.0 | 0 | 3 (window 4 start) |
+| skip=0 | on | 12.2 | 9.1 | 20.2 | 7.3 | 0 | 0 |
+| skip=1 | off | 57.3 | 13.8 | 17.1 | 12.5 | 12.5 | 1 (window 8 start) |
+| skip=1 | on | 12.0 | 9.9 | 13.9 | 7.8 | 7.8 | 0 |
+
+Positive control for the knob: skipped == empty waits, wait buffers fall 12.3 -> 1.3 per frame (it fires). 0 crashes, 0 Metal errors
+in either log; lit image holds 69 / 87 (all inside on-load windows or at the on->off edge, as in s7282).
+Result: H-commit-lever REFUTED. 31% (on-load) / 36% (off-load) fewer commits per frame moved on-load fps by -0.2 (12.2 -> 12.0, within
+the window-to-window spread 11.6-12.5). Two lines: the dose-response shape (sublinear, not k*cb) and the direct A/B. The GPU shares
+time between processes by its own policy (preemptive timeslicing that favours long foreign buffers), and our submit pattern does not
+change our share. Nothing in-process helps; the owner note stays "close GPU-heavy apps". GPU-contention thread CLOSED.
+Side datum (single-source): the off-window gaps >=250 ms (379 ms skip=0 window 4, 274 ms skip=1 window 8) both sit at an on->off edge
+(lit holds +381-383 s in l12cb0 = end of on window 3), i.e. the saturator's last in-flight 143 ms buffers draining after its SIGKILL,
+not a quiet-host freeze. Under load the game also issues fewer executeCommandLists per frame (12.3 -> 9.1), presumably frames whose
+work is coalesced; not pursued.
+Rules out: RT64 command-buffer count as a GPU-contention lever. SKIP_EMPTY_WAIT stays opt-in and undocumented for the owner (no
+benefit measured); defaults untouched.

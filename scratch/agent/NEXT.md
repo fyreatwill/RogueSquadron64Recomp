@@ -1,13 +1,13 @@
-# NEXT (s7283): fold the GPU dose-response pair, then next non-owner-gated rung
-HYPOTHESIS-ID: g5c-gpu-contention
-State: s7282 H-gpu-share (QOS_ALL and none both 16.0 fps on-load under the 35.8 ms/cb saturator, 0 freezes). G5c stays closed.
-Queued (SOAK_NEEDS_IDLE=120): scratch/agent/soak_queue/s7282_l12_gpu_i5000.sh and s7282_l12_gpu_i80000.sh (no QoS, GPU_ITER saturator).
-Check first: the tail of each log prints the saturator's ms/cb (expect ~9 and ~143); if not, void.
-Hypotheses / outcomes (on-load gen/s):
-  - H-timeslice: ~16 in both -> fair GPU sharing; nothing in-process helps. Close thread, owner note already in OWNER-OPT-INS.
-  - H-fifo: ~45-60 at i5000 and <~6 at i80000 (fps ~ 1/(k*ms_cb), k ~ 1.75) -> our frame waits behind ~k foreign buffers.
-    Next: count RT64 MTLCommandBuffer commits per presented frame (lib/rt64 Metal backend) and test merging them, opt-in.
-  - mixed (fps scales but not 1/cb) -> both; report k fit, do the commit count anyway (cheap).
-Control: SIGSTOP 3/3 CAUGHT in each log; else void.
-If not run yet, do not babysit; take the next non-owner-gated rung (CURRENT-TRUTH next steps; most are owner-look gated -> ITERATION 3c ladder).
-Do not change defaults without the owner.
+# NEXT (s7284): offline classification of load-edge gaps, then the next non-owner-gated rung
+HYPOTHESIS-ID: g5c-load-edge-gaps
+State: s7283 closed GPU contention (commit count not the lever). Every Next-steps item 2-16 is owner-gated.
+Bounded offline unit (no game run): across every s7277-s7283 toggle run (scratch/s7277/*.toggle + present rings
+scratch/s7277/ring_*.txt + scratch/s7272/<TAG>/sheet.txt), list every gen gap >=250 ms with its distance to the nearest
+toggle edge (on->off / off->on) and the load type (cpu/gpu, GPU_ITER).
+Hypotheses:
+  - H-edge-drain: every off-window gap >=250 ms lies within ~1 s after an on->off edge of a GPU arm (in-flight foreign buffers
+    drain after SIGKILL) -> harmless; note in OWNER-OPT-INS ("a short hitch when a GPU-heavy app stops").
+  - H-quiet-freeze: some lie >2 s from any edge -> a real quiet-host freeze; take its frames (KEEP sheets) and name the stall.
+  - H-cpu-edge: CPU arms show edge gaps too -> scheduler re-ramp, not GPU drain.
+Positive control: the SIGSTOP control gaps (179/280/381 s) must appear in the list with distance labels.
+Then: write a tool (tools/s7284_edge_gaps.py), fold, and take the next ladder rung (ITERATION 3c); do not change defaults.

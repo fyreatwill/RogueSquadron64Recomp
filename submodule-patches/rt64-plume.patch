@@ -15,7 +15,7 @@ index 1384fe9..1fdca66 100644
      }
  
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..db9d048 100644
+index a5f30a3..5abdb9c 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,91 @@
@@ -244,7 +244,7 @@ index a5f30a3..db9d048 100644
          for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
              MetalDrawable &drawable = this->drawables[i];
              drawable.desc.width = width;
-@@ -1932,6 +2072,204 @@ namespace plume {
+@@ -1932,6 +2072,223 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -282,6 +282,25 @@ index a5f30a3..db9d048 100644
 +    static thread_local bool g_rs64StampArmed = false;
 +    static std::atomic<double> g_rs64StC{0}, g_rs64StWs{0}, g_rs64StWe{0}, g_rs64StGs{0}, g_rs64StGe{0};
 +    static std::atomic<uint64_t> g_rs64OtherGeUs{0}, g_rs64OtherGsUs{0}, g_rs64OtherN{0};
++    // s7283 G5c: MTLCommandBuffer commit census (ROGUESQ_MTL_COMMITS=1, stderr every 10 s): commits per present, split by
++    // site. Under a foreign GPU saturator each commit is a scheduling point our frame may queue behind (s7282 dose-response).
++    // ROGUESQ_MTL_SKIP_EMPTY_WAIT=1 (opt-in) drops executeCommandLists' wait buffer when it has no semaphores to wait on.
++    static std::atomic<uint64_t> g_rs64CbWait{0}, g_rs64CbWaitEmpty{0}, g_rs64CbList{0}, g_rs64CbAcq{0}, g_rs64CbPres{0}, g_rs64CbExec{0}, g_rs64CbSkipped{0};
++    static bool rs64CommitsOn() { static const bool on = getenv("ROGUESQ_MTL_COMMITS") != nullptr; return on; }
++    static bool rs64SkipEmptyWait() { static const bool on = []() { const char *p = getenv("ROGUESQ_MTL_SKIP_EMPTY_WAIT"); return p && atoi(p) != 0; }(); return on; }
++    static void rs64CommitsReport() {
++        if (!rs64CommitsOn()) return;
++        static double last = 0.0; static uint64_t lp = 0, lw = 0, lwe = 0, ll = 0, la = 0, lx = 0, ls = 0;
++        const double now = rs64_pring_now();
++        if (last == 0.0) { last = now; lp = g_rs64CbPres.load(); lw = g_rs64CbWait.load(); lwe = g_rs64CbWaitEmpty.load(); ll = g_rs64CbList.load(); la = g_rs64CbAcq.load(); lx = g_rs64CbExec.load(); ls = g_rs64CbSkipped.load(); return; }
++        if (now - last < 10.0) return;
++        const uint64_t p = g_rs64CbPres.load(), w = g_rs64CbWait.load(), we = g_rs64CbWaitEmpty.load(), l = g_rs64CbList.load(), a = g_rs64CbAcq.load(), x = g_rs64CbExec.load(), sk = g_rs64CbSkipped.load();
++        const double dp = double(p - lp) > 0 ? double(p - lp) : 1.0;
++        fprintf(stderr, "[s7283-mtl] t=%.1f dt=%.1f presents=%llu exec=%llu commits/present=%.2f wait=%.2f waitEmpty=%.2f list=%.2f acq=%.2f pres=%.2f skipped=%.2f skip=%d\n",
++            now, now - last, (unsigned long long)(p - lp), (unsigned long long)(x - lx), double((w - lw) + (l - ll) + (a - la) + (p - lp)) / dp,
++            double(w - lw) / dp, double(we - lwe) / dp, double(l - ll) / dp, double(a - la) / dp, double(p - lp) / dp, double(sk - ls) / dp, rs64SkipEmptyWait() ? 1 : 0);
++        last = now; lp = p; lw = w; lwe = we; ll = l; la = a; lx = x; ls = sk;
++    }
 +    static void rs64AtomicMax(std::atomic<uint64_t> &a, uint64_t v) {
 +        uint64_t o = a.load(std::memory_order_relaxed);
 +        while (v > o && !a.compare_exchange_weak(o, v, std::memory_order_relaxed)) {}
@@ -449,7 +468,7 @@ index a5f30a3..db9d048 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,11 +2292,56 @@ namespace plume {
+@@ -1954,11 +2311,56 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -509,15 +528,18 @@ index a5f30a3..db9d048 100644
              currentAvailableDrawableIndex = (currentAvailableDrawableIndex + 1) % MAX_DRAWABLES;
              drawableMtl->release();
  
-@@ -1969,6 +2352,7 @@ namespace plume {
+@@ -1969,7 +2371,10 @@ namespace plume {
              lastPresentedIdCondVar.notify_all();
          });
  
 +        if (rs64S) rs64S->c = rs64_pring_now();
          presentBuffer->commit();
++        g_rs64CbPres.fetch_add(1, std::memory_order_relaxed);
++        rs64CommitsReport();
  
          releasePool->release();
-@@ -1987,6 +2371,8 @@ namespace plume {
+ 
+@@ -1987,6 +2392,8 @@ namespace plume {
          }
      }
  
@@ -526,7 +548,7 @@ index a5f30a3..db9d048 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2381,17 @@ namespace plume {
+@@ -1995,7 +2402,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -544,7 +566,7 @@ index a5f30a3..db9d048 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2011,7 +2407,20 @@ namespace plume {
+@@ -2011,7 +2428,20 @@ namespace plume {
      bool MetalSwapChain::needsResize() const {
          uint32_t windowWidth, windowHeight;
          getWindowSize(windowWidth, windowHeight);
@@ -566,10 +588,12 @@ index a5f30a3..db9d048 100644
      }
  
      void MetalSwapChain::setVsyncEnabled(const bool vsyncEnabled) {
-@@ -2050,6 +2459,17 @@ namespace plume {
+@@ -2049,6 +2479,18 @@ namespace plume {
+         acquireBuffer->enqueue();
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
- 
++        g_rs64CbAcq.fetch_add(1, std::memory_order_relaxed);
++
 +        if (const uint64_t rs64Max = rs64InflightMax()) {
 +            std::unique_lock<std::mutex> lock(g_rs64InflightMutex);
 +            // By highest id reported, not a count: a handler that never fires is healed by the next one, so a timeout needs no resync (s6886: a
@@ -580,11 +604,10 @@ index a5f30a3..db9d048 100644
 +                if ((++rs64Timeouts & (rs64Timeouts - 1)) == 0) fprintf(stderr, "[s6886] inflight gate timeout #%d id=%llu presented=%llu\n", rs64Timeouts, (unsigned long long)currentPresentId, (unsigned long long)g_rs64PresentedHigh);
 +            }
 +        }
-+
+ 
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
-             fprintf(stderr, "No more drawables available for rendering.\n");
-@@ -2118,6 +2538,14 @@ namespace plume {
+@@ -2118,6 +2560,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -599,7 +622,7 @@ index a5f30a3..db9d048 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3436,17 @@ namespace plume {
+@@ -3008,6 +3458,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -617,21 +640,42 @@ index a5f30a3..db9d048 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3695,6 +4134,13 @@ namespace plume {
-             cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
-         }
+@@ -3685,8 +4146,23 @@ namespace plume {
+         assert(commandLists != nullptr);
+         assert(commandListCount > 0);
  
++        // s7283: the stamp path (g_rs64StampArmed) keeps the wait buffer so its GPU times stay measurable.
++        g_rs64CbExec.fetch_add(1, std::memory_order_relaxed);
++        g_rs64CbList.fetch_add(commandListCount, std::memory_order_relaxed);
++        if (waitSemaphoreCount == 0) g_rs64CbWaitEmpty.fetch_add(1, std::memory_order_relaxed);
++        const bool rs64SkipWait = waitSemaphoreCount == 0 && !g_rs64StampArmed && rs64SkipEmptyWait(); // armed -> keep (rs64WaitBuf)
++        if (rs64SkipWait) g_rs64CbSkipped.fetch_add(1, std::memory_order_relaxed);
++        else g_rs64CbWait.fetch_add(1, std::memory_order_relaxed);
++
 +        // s6985 G1e: stamp the present pass (armed) or fold any other fenced buffer into the per-Q max.
 +        const bool rs64Armed = g_rs64StampArmed;
 +        g_rs64StampArmed = false;
 +        const bool rs64Other = !rs64Armed && signalFence != nullptr && rs64_pring_on();
 +        MTL::CommandBuffer *rs64WaitBuf = nullptr;
 +        double rs64Commit = 0.0;
+         // Create a new command buffer to encode the wait semaphores into
+-        MTL::CommandBuffer* cmdBuffer = mtl->commandBufferWithUnretainedReferences();
++        MTL::CommandBuffer* cmdBuffer = rs64SkipWait ? nullptr : mtl->commandBufferWithUnretainedReferences();
++        if (cmdBuffer) {
+         cmdBuffer->setLabel(MTLSTR("Wait Command Buffer"));
+         cmdBuffer->enqueue();
+ 
+@@ -3695,7 +4171,9 @@ namespace plume {
+             cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
+         }
+ 
 +        if (rs64Armed) { rs64WaitBuf = cmdBuffer; rs64WaitBuf->retain(); rs64Commit = rs64_pring_now(); }
          cmdBuffer->commit();
++        }
  
          // Commit all command lists except the last one
-@@ -3712,6 +4158,25 @@ namespace plume {
+ 
+@@ -3712,6 +4190,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  
