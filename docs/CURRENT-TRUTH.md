@@ -396,6 +396,7 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    USER_INTERACTIVE thread, min of reps) / tools/s7253_clkprobe.base (125.0 ms, AC powermode 2). Same-session controls: DUTY 1.404 -> 1.391,
    15-core spin load -> 1.021, 4 AC repeats 124.7-125.2 (0.4%). tools/g1e_owner_quiet_arms.zsh logs clk= on every start/done line and exits 2
    when clk > CLK_MAX (1.15) unless ALLOW_SLOW=1; battery alone is only logged (replaces the s7249 ALLOW_BATT refusal). Test tools/s7253_clk_gate_test.zsh 5/5.
+   s7254: owner active at the boundary (HID idle 0-89 s, AC), none of s7248_fixed_fps_b / s7250_slowhost / s7251_dd6r_ac ran; still queued.
    Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
@@ -446,6 +447,6 @@ LEVEL DESCRIPTION = C-up on AVAILABLE CRAFT; the interlaced 512x448 screen is El
 - Objective contracts [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); images [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png.
 - Queued-soak verdicts: `scratch/agent/SOAK-RESULTS.md` (s7235_widewin_r run by s7237 itself: r40+r56 scored, r72 void; s7237_widewin_r2 queued). Recipes that drive the
-  game window carry `# SOAK_NEEDS_IDLE=<secs>` (loop skips them on a busy/locked host; tools/agent/test_soak_idle_gate.sh).
+  game window carry `# SOAK_NEEDS_IDLE=<secs>` (loop skips them on a busy/locked host; tools/agent/test_soak_idle_gate.sh). s7254: if nothing ran and only gated recipes wait, the loop polls up to SOAK_IDLE_WAIT=1800 s (every 30 s) for idle before starting the next iteration.
   An edited loop.sh now takes effect BEFORE the soak phase that follows the editing iteration (s7235 re-exec + RS64_LOOP_SOAKS_FIRST).
 - Recent chronology: PORTING-STATE sessions 7047-7187; search bounded windows only.

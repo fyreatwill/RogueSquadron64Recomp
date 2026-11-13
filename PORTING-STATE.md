@@ -191367,3 +191367,17 @@ stand-in has been measured. First battery+LPM session should run `tools/s7253_cl
 ORIGIN: the slow value is the host, not the game: macOS Low Power Mode (pmset powermode 1 on battery) caps CPU clocks (s7249/s7250,
 attributed by pmset log + a constant sd_cpu ratio across light and heavy tasks). The value is legitimate host behaviour; the gate only
 refuses to time arms under it, and ALLOW_SLOW=1 is the explicit opt-out for deliberate slow-host arms.
+
+## Session 7254 (2026-11-12) — loop soak phase waits (bounded) for host idle instead of skipping idle-gated soaks at the boundary
+What ran: no game run. At 23:22 the host was on AC (pmset 'AC Power', 100%) but the owner was active (HID idle 89 s, then 0 s); loop.log shows
+iteration 18's soak phase skipped all three queued recipes (s7248_fixed_fps_b, s7250_slowhost, s7251_dd6r_ac: needs 180 s, idle 60 s). All three
+are SOAK_NEEDS_IDLE=180 and the boundary check is a single instant, so an evening of owner activity skips them every iteration while paid
+iterations run without the measurement they wait on.
+Change (engineering, tools/agent/loop.sh): run_soak_queue = run_soak_pass + a bounded wait. When a pass ran nothing and skipped >=1 idle-gated
+recipe, the loop polls every SOAK_IDLE_POLL (30) s for up to SOAK_IDLE_WAIT (1800) s for the smallest requested idle, then runs one more pass;
+on expiry it logs 'idle wait expired' and starts the iteration. SOAK_IDLE_WAIT=0 restores the old one-check behaviour. No wait when any recipe ran.
+Test: tools/agent/test_soak_idle_gate.sh 13/13 (4 new: expiry keeps the recipe queued and takes >= the wait; host going idle mid-wait runs the
+recipe and ends the wait early; an ungated recipe that ran suppresses the wait (control); WAIT=0 = old path). The expiry check fails on the
+pre-s7254 code (it returns at once), so it is the negative control.
+Rules out nothing about the thread (widewin-heavy-window-cost); the queued soaks remain the next measurement. The loop re-executes itself on the
+changed loop.sh before its next soak phase (s7235), so the new wait applies from this boundary.

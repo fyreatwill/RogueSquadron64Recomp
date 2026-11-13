@@ -64,6 +64,11 @@ MAX_ERR_RETRIES="${MAX_ERR_RETRIES:-4}"
 SOAKS_BETWEEN_ITERS="${SOAKS_BETWEEN_ITERS:-2}"
 SOAK_TIMEOUT="${SOAK_TIMEOUT:-1000}"
 SOAK_MAX_VOIDS="${SOAK_MAX_VOIDS:-5}"
+# s7254: when every queued recipe is idle-gated and the owner is on the machine, wait up to
+# SOAK_IDLE_WAIT s (polling every SOAK_IDLE_POLL s) for the host to go idle before starting
+# the next paid iteration. 0 = old behaviour (check once at the boundary, then move on).
+SOAK_IDLE_WAIT="${SOAK_IDLE_WAIT:-1800}"
+SOAK_IDLE_POLL="${SOAK_IDLE_POLL:-30}"
 
 # Choose the model EXPLICITLY. Without this the loop silently inherits whatever
 # `model` sits in ~/.claude/settings.json — which on 2026-07-26 was "fable", the
@@ -254,8 +259,11 @@ soak_host_idle() {
   if [ -n "${SOAK_IDLE_FEED:-}" ]; then i=$(tail -1 "$SOAK_IDLE_FEED"); else host_locked && return 1; i=$(host_idle_s); fi
   [ "${i:-0}" -ge "$1" ]
 }
-run_soak_queue() {
+# One pass over the queue. Sets _soak_ran (recipes run) and _soak_skipped / _soak_minneed
+# (idle-gated recipes left queued, and the smallest idle they asked for).
+run_soak_pass() {
   local qdir="$AG/soak_queue" rdir="$AG/soak_results" ran=0
+  _soak_ran=0; _soak_skipped=0; _soak_minneed=0
   [ -d "$qdir" ] || return 0
   mkdir -p "$rdir" "$qdir/done"
   local recipe
@@ -280,6 +288,8 @@ run_soak_queue() {
     vfile="$qdir/.${name}.voids"
     if [ -n "$need" ] && ! soak_host_idle "$need"; then
       log "soak $name skipped: host not idle (needs ${need}s, idle $(host_idle_s)s, locked=$(host_locked && echo y || echo n))"
+      _soak_skipped=$((_soak_skipped+1))
+      { [ "$_soak_minneed" = 0 ] || [ "$need" -lt "$_soak_minneed" ]; } && _soak_minneed=$need
       continue
     fi
     log "soak $name starting (cap ${cap}s) -> $slog"
@@ -297,15 +307,29 @@ run_soak_queue() {
       if [ "$nv" -lt "$SOAK_MAX_VOIDS" ]; then
         printf '%s | %s | rc=2 VOID (human/lock/sleep) %s/%s, re-queued | %ss | %s\n' "$ts" "$name" "$nv" "$SOAK_MAX_VOIDS" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
         log "soak $name voided (rc=2), re-queued ($nv/$SOAK_MAX_VOIDS)"
-        ran=$((ran+1)); continue
+        ran=$((ran+1)); _soak_ran=$ran; continue
       fi
     fi
     rm -f "$vfile"
     printf '%s | %s | rc=%s | %ss | %s\n' "$ts" "$name" "$rc" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
     mv "$recipe" "$qdir/done/${name}_${ts}.sh"
     log "soak $name finished rc=$rc after ${dur}s"
-    ran=$((ran+1))
+    ran=$((ran+1)); _soak_ran=$ran
   done
+}
+run_soak_queue() {
+  run_soak_pass
+  [ "$_soak_ran" = 0 ] && [ "$_soak_skipped" -gt 0 ] && [ "${SOAK_IDLE_WAIT:-0}" -gt 0 ] || return 0
+  local t0=$SECONDS
+  log "soak phase: ${_soak_skipped} idle-gated recipe(s) waiting; polling up to ${SOAK_IDLE_WAIT}s for ${_soak_minneed}s idle"
+  while [ $((SECONDS - t0)) -lt "$SOAK_IDLE_WAIT" ]; do
+    sleep "$SOAK_IDLE_POLL"
+    if soak_host_idle "$_soak_minneed"; then
+      log "soak phase: host idle after $((SECONDS - t0))s wait - running the queue"
+      run_soak_pass; return 0
+    fi
+  done
+  log "soak phase: idle wait expired after $((SECONDS - t0))s - starting the iteration"
 }
 
 # Computed once per run and reused on every iteration's finished-line stamp,

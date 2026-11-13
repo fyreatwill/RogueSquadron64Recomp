@@ -5,7 +5,7 @@ set -u
 here=$(cd "$(dirname "$0")" && pwd); T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 awk '/^host_idle_s\(\)/{f=1} f{print} f&&/^}$/&&seen{exit} /^run_soak_queue\(\)/{seen=1}' "$here/loop.sh" > "$T/fn.sh"
 log(){ echo "LOG $*" >> "$T/log"; }
-AG=$T/ag; mkdir -p $AG/soak_queue; SOAKS_BETWEEN_ITERS=2; SOAK_TIMEOUT=30; SOAK_MAX_VOIDS=3
+AG=$T/ag; mkdir -p $AG/soak_queue; SOAKS_BETWEEN_ITERS=2; SOAK_TIMEOUT=30; SOAK_MAX_VOIDS=3; SOAK_IDLE_WAIT=0; SOAK_IDLE_POLL=1
 source "$T/fn.sh"
 q=$AG/soak_queue; fail=0
 mk(){ printf '#!/bin/bash\n# SOAK_NEEDS_IDLE=120\nexit %s\n' "$2" > "$q/$1.sh"; }
@@ -24,6 +24,16 @@ chk "rc=2 at the void cap is filed" '[ ! -e $q/v.sh ] && [ ! -e $q/.v.voids ] &&
 mk c 1; run_soak_queue
 chk "rc=1 (real failure) is filed at once" '[ ! -e $q/c.sh ]'
 chk "verdict lines written" '[ $(grep -c "re-queued" $AG/SOAK-RESULTS.md) = 2 ]'
+# s7254: bounded idle wait when every queued recipe is gated and the host is busy.
+mk w 0; echo 5 > $T/idle; SOAK_IDLE_WAIT=3; t0=$SECONDS; run_soak_queue
+chk "wait expires on a busy host, recipe stays queued" '[ -e $q/w.sh ] && grep -q "idle wait expired" $T/log && [ $((SECONDS-t0)) -ge 3 ]'
+( sleep 2; echo 300 > $T/idle ) & SOAK_IDLE_WAIT=20; t0=$SECONDS; run_soak_queue; wait
+chk "host goes idle mid-wait: recipe runs, wait ends early" '[ ! -e $q/w.sh ] && ls $q/done | grep -q "^w_" && grep -q "host idle after" $T/log && [ $((SECONDS-t0)) -lt 15 ]'
+mk x 0; printf '#!/bin/bash\nexit 0\n' > "$q/plain2.sh"; echo 5 > $T/idle; t0=$SECONDS; run_soak_queue
+chk "no wait when an ungated recipe ran (control)" '[ -e $q/x.sh ] && [ $((SECONDS-t0)) -lt 3 ]'
+SOAK_IDLE_WAIT=0; t0=$SECONDS; run_soak_queue
+chk "SOAK_IDLE_WAIT=0 keeps the old one-check behaviour" '[ -e $q/x.sh ] && [ $((SECONDS-t0)) -lt 2 ]'
+rm -f $q/x.sh
 # s7235: the soak phase must run under the current loop.sh (re-exec first, soaks run by the new process).
 L=$here/loop.sh
 w=$(grep -n '^while \[ "\$ITER_CAP"' "$L" | head -1 | cut -d: -f1)
