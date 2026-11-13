@@ -191442,3 +191442,28 @@ Startup check (15 s each, 21:9 dd6 farthest-view line): auto arm prints `[s7258]
 OWNER-OPT-INS: distance-6 paragraph gained the s7258 note. Not yet shown: in-mission engagement on the default path (soak s7258_dd6_auto_stack
 queued: auto / STACK=0 / STACK=0+DUTY control) and an image check at dd6 (s7247's no-missing-ground check was at dd4).
 Verdict: the s7257 same-run table selects H-ww (stack 0 vs 9 beyond-route dip s, -4.2 ms window) and refutes H-noise (dips reproduce across s7251/s7257) and H-radius for the late dips. Next discriminator: the dd6 21:9 L4 STACK=0 vs auto capture pair (seams px/frame + terrain-removed fraction, synthetic-patch control), which splits H-clean from H-loss (NEXT.md).
+
+## Session 7259 (2026-11-13) — s7258_dd6_auto_stack folds (auto engages in mission, 9.99 ms, 0 late dips); dd6 image check: stack removes no visible terrain (H-clean)
+
+HYPOTHESIS-ID widewin-heavy-window-cost. Owner idle 3194-4758 s, screen unlocked, AC, 0 crashes in 4 runs.
+- Fold soak s7258_dd6_auto_stack (loop, rc=0, AC clk 0.97-1.04). Default path, L4 21:9 farthest-view line:
+  | arm | win t=77-97 | max task | <55/s s | beyond-route dip s |
+  | auto (bundle default) | 60.0/s 9.99 ms | 11.23 | 6 | 0 |
+  | STACK=0 | 60.0/s 13.40 ms | 16.05 | 17 | 10 |
+  | STACK=0 + DUTY1.4 (control) | 30.0/s 21.69 ms, flat run t=77 21 s | 23.58 | 120 | 114 |
+  Control PASS. Engagement: auto printed [s7258] and merged 2,284,787 unm=0. The auto path engages in mission and matches the s7257 explicit
+  stack (9.82 ms, 0 dips); STACK=0 reproduces the late dips (third run: s7251 14, s7257 9, here 10 beyond-route dip s).
+- Image check at dd6 (work unit; scratch/s7259/all.zsh + arm.zsh, L4 21:9 dd6+WW+MELT, CULL=1, auto stack with ROGUESQ_DD_WIDEWIN_R_TOG=1
+  + _MERGE_TOG=1 so R48 and MERGE share the same-run tog phase, 60 s delay + 240 s capture):
+  Run 1 VOID: Chrome was frontmost and arm.zsh never fronted the game, so ScreenCaptureKit delivered 156 frames in 235 s (bursts, 5.3 s gaps,
+  0 flips). tools/s7247_tog_pop.py still printed "CONTROL PASS ... no texture removed" on it, which is a false null. Fixed: the scorer now prints
+  VERDICT VOID and exits 3 below 20 frames/s, 30 flips or 30 phase frames per side (checked: void1 -> VOID, run 2 -> verdict unchanged).
+  arm.zsh now re-fronts the game every 10 s (as tools/g1e_owner_quiet_arms.zsh does).
+  Run 2 (13173 frames, 56/s): holes CONTROL PASS 136/142 (patch drop 0.0205, need 0.0077). Flip D +0.0058 +- 0.0050 (n=193, 1.2 sem, below the
+  2-sem and need/2 bars; dd4 s7247 was +0.0013 +- 0.0056). Phase means on-off -0.0022 vs A/A +0.0068. Seams (s7245_merge_cracks.py) on-off
+  +1.2 crack px/frame vs A/A -2.8, quartiles off [0,0,20] on [0,1,13].
+  Shows: at dd6 the stack removes no visible side terrain above ~1/5 of a 200x40 patch, and adds no cracks. Two scorers agree; single run.
+  H-clean selected (single-run), H-loss refuted at this sensitivity. Sheet docs/owner_sheet_s7259_dd6_stack.png (adjacent seconds off | on, not
+  the same camera). Raws deleted (25 GB).
+Landed (engineering): tools/s7247_tog_pop.py starved-capture VOID gate; docs sheet; OWNER-OPT-INS distance-6 note updated.
+Verdict: H-clean (single-run, two scorers, control PASS); the dd6 auto stack holds 60 with 0 late dips on the default path (two runs: s7257, s7259).

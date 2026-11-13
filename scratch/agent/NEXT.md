@@ -1,10 +1,14 @@
-# NEXT (s7259): fold s7258_dd6_auto_stack, then the dd6 stack image check
+# NEXT (s7260): fold s7259_l12_dd6_stack — does the dd6 auto WIDEWIN stack lift level 12's 21:9 limit?
 HYPOTHESIS-ID: widewin-heavy-window-cost
-State (s7258): stack (R48+MERGE0.4/E16) removes dd6r's late dips and cuts the L4 window 14.04 -> 9.82 ms (s7257); it is now auto in the dd6 bundle
-(main.cpp [s7258]; ROGUESQ_DD_WIDEWIN_STACK=0 off). Queue: s7258_dd6_auto_stack (SOAK_NEEDS_IDLE=180; arms auto, off, offd).
-1. Fold: control offd must be flat 30 in t=77-97. auto must show [s7258] + [s7239] merged>0 and ~9.8 ms / 0 beyond-route dips; off ~14 ms + late dips.
-   auto == off -> the auto path is not engaging in mission: debug the reinit (S7239Init/S7246Init latch order).
-2. Hypotheses for the open image question at dd6: H-clean (stack removes no visible terrain at dd6, as at dd4) vs H-loss (R=48 skips cells that
-   dd6's bigger footprint shows, or merges crack on far ground). Discriminator: the s7247 capture pair at dd6 21:9 L4 (STACK=0 vs auto, same
-   fixed camera spots, synthetic-patch positive control), seams px/frame + terrain-removed fraction. H-loss -> narrow the auto to MERGE only or raise R.
-3. If the soak did not run: do step 2 offline-scored captures only when the screen is unlocked; else the next G-ladder item (G5 list).
+State (s7259): dd6 auto stack engages in mission on the default path (9.99 ms L4 window, 0 late dips; STACK=0 13.40 ms + 10 dip s; control PASS)
+and removes no visible side terrain at dd6 (same-run tog, holes control PASS 136/142, flip +0.0058 +- 0.0050; seams +1.2 vs A/A -2.8): H-clean.
+Open: L12 at 21:9 dd6 runs 54-55/s whatever the cap (s7049/s7055, OWNER-OPT-INS). Queue: scratch/agent/soak_queue/s7259_l12_dd6_stack.sh
+(SOAK_NEEDS_IDLE=180; arms auto / off=STACK=0 / offd=off+DUTY1.4 control; results in scratch/s7259q).
+1. Fold: control offd must show clearly more <55/s seconds than off (else the soak cannot discriminate: re-run).
+   H-ww (L12's limit is WIDEWIN cost): auto <55/s seconds far below off, p50 sd_wall down ~3-4 ms -> update OWNER-OPT-INS level-12 note (limit lifted).
+   H-other (limit is not WIDEWIN cost: dd6 radius / offmap cull / CPU side): auto ~= off -> split with G1CF rsp vs cpu fields (tools/s7231_cost_decomp.py) in one
+   follow-up run, arms auto vs auto+ROGUESQ_DD_WIDEWIN=0.
+   Check log_*.txt has the LEVEL line (no "LEVEL MISMATCH" in arms.log) and [s7258] in auto only.
+2. If the soak did not run (owner active): next G-ladder unit is extending the auto stack to WIDEWIN at dd2-dd5 (s7247 image check dd4 clean, s7248 dd4 60/s
+   fixed-on): code change in main.cpp rs64_g1c_apply_dd_policy outside the dd>=6 branch, startup check [s7258] at dd4, queue auto/off/offd at dd4 L4.
+Capture lesson: any g5b_capture arm must keep the game frontmost (scratch/s7259/arm.zsh re-fronts every 10 s); tools/s7247_tog_pop.py now VOIDs starved captures.

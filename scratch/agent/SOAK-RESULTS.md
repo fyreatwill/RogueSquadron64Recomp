@@ -1431,3 +1431,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7257 fold: s7251_dd6r_ac rc=0 CONTROL PASS (dd6rd flat30 21.81 ms): n4 9.81/60, dd6r 14.06/60 headroom 2.51, 14 late dip s t=142-238. s7250_slowhost rc=0 CONTROL PASS (wwd flat30 20.89): stack 9.47/60, stackd 44.5/s 15.18 ms no flat run. Queued s7257_dd6r_stack.
 20261113-001510 | s7257_dd6r_stack | rc=0 | 994s | scratch/agent/soak_results/s7257_dd6r_stack_20261113-001510.log
 20261113 | s7258 fold: s7257_dd6r_stack rc=0 CONTROL PASS (dd6rd flat30 21 s): dd6r 14.04 ms 9 late dip s (two-run), dd6rs 9.82 ms 0 dips (H-ww), dd6rsd 50.7/s. Stack now auto in dd6 bundle; queued s7258_dd6_auto_stack.
+20261113-003535 | s7258_dd6_auto_stack | rc=0 | 747s | scratch/agent/soak_results/s7258_dd6_auto_stack_20261113-003535.log
+20261113 | s7259 fold: s7258_dd6_auto_stack rc=0 CONTROL PASS (offd flat30 21 s): auto 9.99 ms/60 0 late dips merged 2.28M; off 13.40 ms 10 late dip s. dd6 image check H-clean (single run).

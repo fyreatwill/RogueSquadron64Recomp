@@ -76,5 +76,11 @@ print('FLIP  D mean %+.4f +- %.4f (sem, n=%d); same-phase d mean %+.4f sd %.4f (
 dpm = mean(pm[1]) - mean(pm[0]); aa = mean(blk[1]) - mean(blk[0])
 print('PHASE TEX off %.4f on %.4f  on-off %+.4f  (A/A off by 8 s block %+.4f)' % (mean(pm[0]), mean(pm[1]), dpm, aa))
 vis = mean(flip) > 2 * sem(flip) and mean(flip) > need / 2
+# s7259: a starved capture (window not frontmost: 156 frames in 235 s, 0 flips) still printed CONTROL PASS + 'no texture removed'.
+# Void it: need >= 20 frames/s of capture and >= 30 flips (and >= 30 phase frames per side), else no verdict at all.
+fps = n / max(ts[-1] - ts[0], 1e-9) if n > 1 else 0.0
+if fps < 20 or len(flip) < 30 or min(len(pm[0]), len(pm[1])) < 30:
+    print('VERDICT VOID (capture starved: %.1f frames/s, %d flips, phase frames %d/%d; need 20, 30, 30/30)' % (fps, len(flip), len(pm[0]), len(pm[1])))
+    sys.exit(3)
 print('VERDICT', 'LEVER REMOVES VISIBLE TEXTURE' if vis else 'no texture removed above the floor',
       '(flip effect %.2f%% of band = %.0f px; control patch = %.0f px)' % (100 * mean(flip), mean(flip) * BAND, PAREA))

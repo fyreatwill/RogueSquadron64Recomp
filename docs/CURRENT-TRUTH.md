@@ -412,7 +412,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    2.28M merges unm=0 stale=0, skip ~4.2k/placement -> H-ww selected (stack removes them; H-radius refuted for these dips). dd6rsd 50.7/s in window,
    23 beyond-route dip s (vs dd6rd 115, flat 30). Landed: main.cpp [s7258] dd>=6+WIDEWIN sets R=48/MERGE 0.4/E16 (setenv overwrite=0; explicit wins;
    ROGUESQ_DD_WIDEWIN_STACK=0 off) + upstream_compat rs64_s7258_merge_reinit (MERGE/E latch at static init). Startup check: auto prints [s7258] and
-   [s7239] frac=0.400, STACK=0 prints neither. Open: in-mission default-path soak s7258_dd6_auto_stack queued; image check at dd6 (s7247 was dd4).
+   [s7239] frac=0.400, STACK=0 prints neither. **s7259:** default-path soak s7258_dd6_auto_stack rc=0, control PASS: auto 9.99 ms/60, 0 beyond-route
+   dips, merged 2.28M (engages in mission); STACK=0 13.40 ms + 10 dip s. dd6 image check (same-run tog, holes control PASS 136/142): flip +0.0058 +- 0.0050,
+   seams +1.2 px vs A/A -2.8 -> H-clean (single run, two scorers). tog_pop now VOIDs starved captures (<20 fps / <30 flips); keep the game frontmost.
+   Next: queued s7259_l12_dd6_stack (does the stack lift L12 21:9 dd6's 54-55/s limit, s7055?).
    Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
