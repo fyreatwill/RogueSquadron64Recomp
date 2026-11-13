@@ -1469,3 +1469,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113 | s7287 fold: s7287_l12_169_dip loop VOID was a misfile (loop ran the zsh recipe under bash: syntax error rc=2); re-run in-session: CONTROL PASS (ctl flat 30 120 s), r88 49.1/s flat t=77-84, r48 60.0/s 10.95 ms, d4 59.3/s -> H-R88; RLEVEL 12:48 auto at dd>=6 landed, verified auto 60.0/s vs none flat 30. Queued s7288_169_dd6_levels.
 20261113-141747 | s7288_169_dd6_levels | rc=0 | 995s | scratch/agent/soak_results/s7288_169_dd6_levels_20261113-141747.log
 20261113 | s7288 fold: s7288_169_dd6_levels rc=0 CONTROL PASS (ctl 31 s flat 30, 73 beyond-route s): L1/L9/L13 16:9 dd6 R=88 60.0/s 8.9-10.1 ms, 0 beyond-route -> H-L12-only, closed. Queued s7290_window_depth.
+20261113-145044 | s7290_window_depth | rc=0 | 634s | scratch/agent/soak_results/s7290_window_depth_20261113-145044.log
+20261113 | s7291 fold: s7290_window_depth rc=0 CONTROL PASS (px8 depth 96): in= is retail-window-only; real total cells ref 6921 = nocull, px8 7453 (wide +41%, R88 skips 1578), 11.20 vs 11.24 ms -> R88 binds; queued s7292_r_px.

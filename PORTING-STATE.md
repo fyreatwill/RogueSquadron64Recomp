@@ -192123,3 +192123,21 @@ HYPOTHESIS-ID: g5c-fbswitch-transition-stall. CURRENT-TRUTH 53.8 KB (no maintena
   far clip / fog end of the stream. So raising POOLX_MAX alone is unlikely to draw more; the downstream cut must be named first.
 - Single run per arm. Queued scratch/agent/soak_queue/s7290_window_depth.sh (L4 16:9 dd6: ref / OFFMAPCULL=-1 / POOLX_MAX=8 /
   both) -> H-offmap vs H-far vs H-cap-only.
+
+## Session 7291 (2026-11-13) — G1c: fold s7290_window_depth; "cells/call" was the retail 64x64 window only — real totals grow to dd6, WIDEWIN_R=88 cuts px8's extra depth; new tools/s7291_wide_cells.py, queued s7292_r_px
+What ran: offline fold of s7290_window_depth (rc=0, L4 16:9 dd6 WIDEWIN auto, 150 s holds, 4 arms). tools/s7286_dd_window_cells.py
+gave cells/call 3552/3552/3552/3544 for ref/OFFMAPCULL=-1/POOLX_MAX=8/both, which would read as H-far. Positive control PASS: the
+site-17 trace shows px8 depth 96 (area 12288) vs ref 80 (10240).
+Boring thing first: reading rs64_s7233_cell (upstream_compat.cpp), `in=` increments ONLY for cells inside the retail-equivalent
+min(w,64) x min(d,64) window, before any distance test, so it is constant by construction and never measured the wide window. The
+wide-only cells are the wide_by_d8 histogram; skip= is what WIDEWIN_R drops. New tools/s7291_wide_cells.py sums retail in + wide - skip.
+Result (s7290 logs): ref total 6921 (wide 3875, skip 528); nocull identical (the tally sits upstream of the off-map cull, which still
+costs +1.4 ms at win77-97: 12.69 vs 11.24 ms); px8 total 7453 (+7.7%; wide 5457 = +41%, skip 1578 = bins d8 11-16 beyond R=88);
+px8nc 7436. Frame time px8 11.20 ms vs 11.24, 60/s all arms, 0 arena full, 0 crash lines.
+Rescore of s7286 logs: L4 dd2 1893, dd4 (s7287q) 5528, dd6 6878, dd8 6809, dd8c 6914; L12 dd6 7105, dd8 7067. So the window keeps
+growing to dd6 (+24% dd4->dd6); dd8 = dd6 because of the px clamp 5.
+Rules out / supersedes: s7286/s7288 "window binds from dd4; +25% area adds 1.8% cells" (metric artefact; moved to Superseded).
+H-offmap refuted as the depth limiter (tally unchanged; it is a downstream cull). H-cap-only partly selected (px8 grows the window
+41% wide), but the binding distance limit is our own WIDEWIN_R=88. One run per arm (single-source on the ms).
+ORIGIN: no mitigation added; instrument correction only.
+Next: queued scratch/agent/soak_queue/s7292_r_px.sh (L4 16:9 dd8 ref / px8 / px8+R128) to decide whether R88 or the game's farcut binds next.

@@ -3,6 +3,8 @@
 mean terrain-window cells per stream call ([s7233] ph=.. calls=N in=X, emitted when the WIDEWIN stack R>0), spill-arena
 'arena full' lines and crash lines. s7286: L4/L12 16:9 dd6 3536/3522 vs dd8 3542/3510 cells per call while the pool grows
 6480 -> 11520 entries, i.e. the window (64 deep x 128 wide area cap) binds from dd6 and dd8 only adds pool and cost.
+NOTE s7291: in= counts only the retail-equivalent 64x64 window, so this "cells/call" is ~constant by construction; use
+tools/s7291_wide_cells.py for the real total.
 Usage: s7286_dd_window_cells.py log [log ...]"""
 import re, sys
 if len(sys.argv) < 2: print(__doc__); sys.exit(1)
