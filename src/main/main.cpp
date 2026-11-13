@@ -12417,6 +12417,7 @@ static void rs64_m5_apply_drain_tick_policy() {
 // G1c (s6578): ROGUESQ_DRAW_DISTANCE=<dd> with dd > 1 bundles the validated pool/heap recipe
 // (s6567 RAMTOP guards, s6569 malloc spill, s6099 DL-chunk arena, s6058 terrain pool x ceil(dd)); px2-px5 hold
 // clean with it (s6567, s6574) and px>=2 faults without it (s6549-s6551). Explicit env values win; dd<=1 untouched.
+extern "C" void rs64_s7258_merge_reinit();
 extern "C" int g_rs64_s7030;  /* s7037: upstream_compat.cpp fog/off-map cull arm */
 static void rs64_g1c_apply_dd_policy() {
     const char* e = std::getenv("ROGUESQ_DRAW_DISTANCE");
@@ -12446,6 +12447,16 @@ static void rs64_g1c_apply_dd_policy() {
           // L12's hard horizon cut (frozen poses 0.07 vs 0.81, 2 runs) for ~0.3 ms rsp (L12 59.6/59.9 vs 59.8 fps same run). =0 disables.
           setenv("ROGUESQ_DD_OFFMAPCULL_KEDGE", "0.8,12", 0);
           g_rs64_s7030 = 1;
+          // s7258: the s7247 WIDEWIN stack (R=48 + MERGE 0.4/E16) rides with the dd6 bundle. s7257 (AC, same run, control dd6rd
+          // flat 30 PASS): L4 window 14.04 -> 9.82 ms, max task 16.53 -> 11.43, late dip s beyond route 9 -> 0 (dd6r repeat
+          // reproduced s7251's late dips), 2.28M merges unm=0; s7247 image check (dd4) no terrain removed. Any explicit
+          // ROGUESQ_DD_WIDEWIN_R / _MERGE / _MERGE_E wins; ROGUESQ_DD_WIDEWIN_STACK=0 turns the whole stack off.
+          { const char* st = std::getenv("ROGUESQ_DD_WIDEWIN_STACK");
+            if (!(st && st[0] == '0')) {
+                setenv("ROGUESQ_DD_WIDEWIN_R", "48", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE", "0.4", 0); setenv("ROGUESQ_DD_WIDEWIN_MERGE_E", "16", 0);
+                rs64_s7258_merge_reinit();
+                std::fprintf(stderr, "[s7258] dd6 widewin stack r=%s merge=%s e=%s (auto)\n", std::getenv("ROGUESQ_DD_WIDEWIN_R"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE"), std::getenv("ROGUESQ_DD_WIDEWIN_MERGE_E"));
+            } }
           std::fprintf(stderr, "[s7037] dd bundle offmapcull=2 k=%s h=%s kedge=%s klevel=%s caplevel=%s (auto)\n", std::getenv("ROGUESQ_DD_OFFMAPCULL_K"), std::getenv("ROGUESQ_DD_OFFMAPCULL_H"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KEDGE"), std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") ? std::getenv("ROGUESQ_DD_OFFMAPCULL_KLEVEL") : "-", std::getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") ? std::getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") : "-");
       } }
     char b[16];

@@ -191422,3 +191422,22 @@ Folded the two queued soaks the loop ran overnight (both rc=0, AC, clk 0.965-1.0
   scratch/agent/soak_queue/s7257_dd6r_stack.sh: dd6r / dd6rs (+R=48 MERGE 0.4 E16) / dd6rsd (+DUTY) / dd6rd control, to split the late dd6r
   dips into WIDEWIN cost (stack removes them) vs dd6 radius cost (they stay -> OFFMAPCULL K=0.6 next).
 Rules out: "dd6 radius alone forces 30/s in L4 on this Mac at AC clock".
+
+## Session 7258 (2026-11-13) — s7257_dd6r_stack fold: WIDEWIN stack removes dd6r late dips (H-ww); stack now rides with the dd6 bundle
+Soak s7257_dd6r_stack (loop, rc=0, AC 100%, clk 0.967-1.039, owner idle 1969-2713 s). Scored with tools/s7230_headroom.py, s7229_flat30_cost.py,
+s7257_dip_runs.py on scratch/s7257/log_*.txt.
+| arm | win t=77-97 | max task | <55/s s | beyond-route dip s |
+| dd6r (s7251 repeat) | 59.9/s 14.04 ms | 16.53 | 16 | 9 (t=142-173) |
+| dd6r + stack | 60.0/s 9.82 ms | 11.43 | 6 | 0 |
+| dd6r + stack + DUTY1.4 | 50.7/s 14.23 ms | 15.72 | 29 | 23 |
+| dd6r + DUTY1.4 (control) | 30.0/s 22.26 ms, flat run t=77 21 s | 26.52 | 121 | 115 |
+Control PASS (flat 30 as s7251). Engagement: dd6rs [s7239] merged 2,283,731 unm=0 stale=0; [s7233] r=48 skip ~4210/placement.
+Shows: the late dips reproduce (two runs: 14 s in s7251, 9 s here) so H-noise is refuted; the stack removes them all and cuts the window by 4.2 ms,
+so they are WIDEWIN cost (H-ww), not dd6 radius cost (H-radius refuted for these dips). On a 1.4x-slow host the stack keeps ~50/s, not 60.
+Landed (engineering): src/main/main.cpp rs64_g1c_apply_dd_policy: dd>=6 with WIDEWIN on (the s7037 bundle branch) now setenvs
+ROGUESQ_DD_WIDEWIN_R=48, _MERGE=0.4, _MERGE_E=16 (overwrite=0, explicit values win; ROGUESQ_DD_WIDEWIN_STACK=0 skips it) and calls the new
+upstream_compat.cpp rs64_s7258_merge_reinit(), because S7239Init/S7246Init latch MERGE/MERGE_E at static init, before the policy runs (R is lazy).
+Startup check (15 s each, 21:9 dd6 farthest-view line): auto arm prints `[s7258] dd6 widewin stack r=48 merge=0.4 e=16 (auto)` and
+`[s7239] widewin_merge frac=0.400`; STACK=0 arm prints neither (scratch/s7258/boot_*.txt). Only opt-in dd>=6 changes; retail default untouched.
+OWNER-OPT-INS: distance-6 paragraph gained the s7258 note. Not yet shown: in-mission engagement on the default path (soak s7258_dd6_auto_stack
+queued: auto / STACK=0 / STACK=0+DUTY control) and an image check at dd6 (s7247's no-missing-ground check was at dd4).

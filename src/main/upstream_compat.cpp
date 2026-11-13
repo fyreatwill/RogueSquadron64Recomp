@@ -527,6 +527,9 @@ struct S7239Init { S7239Init() { const char* e = getenv("ROGUESQ_DD_WIDEWIN_MERG
     if (s7239_frac > 0.f) { g_rs64_s7239_on = 1; fprintf(stderr, "[s7239] widewin_merge frac=%.3f tog=%d\n", s7239_frac, s7239_tg); } } };
 }
 namespace { S7239Init s7239_init; }
+// s7258: the dd6 bundle (main.cpp rs64_g1c_apply_dd_policy) setenvs the WIDEWIN stack after these static initialisers ran;
+// re-read MERGE / MERGE_E so the auto values take effect (R is read lazily on first rs64_s7233_win call, no reinit needed).
+extern "C" void rs64_s7258_merge_reinit() { S7239Init a; S7246Init b; (void)a; (void)b; }
 extern "C" void rs64_s7239_node(uint32_t e, uint32_t d2bits) {
     if (s7239_emitted) { s7239_gen++; s7239_emitted = 0; s7239_pmax = 0.f; }
     if (s7239_hcnt > S7239_HN / 2) { memset(s7239_he, 0, sizeof s7239_he); s7239_hcnt = 0; s7239_hclr++; }

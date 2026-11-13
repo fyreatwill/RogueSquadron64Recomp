@@ -36,7 +36,7 @@ already in the RDP stream (s7098). Scene-transition stalls are the retail 3072-s
 
 dd6 21:9/16:9 auto bundle (s7037-s7063, detail archived): off-map cull past 0.6 x fog end, KEDGE=0.8,12,
 WIDEWIN cap 10240, auto KLEVEL `12:0.5,13:0.5` and CAPLEVEL `9:8192` when FB_WIDTH>796. All 19 levels
-hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249/s7251: s7230 AND s7231 ran ON BATTERY (pmset: Batt 09:20-15:22, no AC event), CPU/task x1.36-1.44 vs AC, so their flat 30s (WIDEWIN dd4, and s7230's dd6r farthest-view line) are battery results; on AC WW holds 60 (3 runs) and **dd6r, the farthest view, holds 60 too** (s7257: 14.06 ms, headroom 2.51 ms, same-run DUTY=1.4 control flat 30; 14 s of late dips t=142-205, min 34/s, soak s7257_dd6r_stack tests the stack on them) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
+hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249/s7251: s7230 AND s7231 ran ON BATTERY (pmset: Batt 09:20-15:22, no AC event), CPU/task x1.36-1.44 vs AC, so their flat 30s (WIDEWIN dd4, and s7230's dd6r farthest-view line) are battery results; on AC WW holds 60 (3 runs) and **dd6r, the farthest view, holds 60 too** (s7257: 14.06 ms, headroom 2.51 ms, same-run DUTY=1.4 control flat 30; 14 s of late dips t=142-205, min 34/s, s7258: the stack removes them (dd6rs 0 beyond-route dip s vs dd6r 9, window 9.82 vs 14.04 ms, DUTY=1.4 50.7/s vs control flat 30) and now rides with the dd6 auto bundle, =ROGUESQ_DD_WIDEWIN_STACK=0 off) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
 rsp, +2-5 L4 shoreline rows); cap 9216/8192 and K0.5 globally shave a horizon somewhere (refuted as defaults).
 
 Open or awaiting the owner:
@@ -407,6 +407,12 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    (min 34/s at t=172) that n4 lacks (the 6 route-transition dips t=5..67 are common to every arm). s7250_slowhost: control wwd flat 30 (20.89 ms),
    stack 9.47 ms/60, stackd 44.5/s 15.18 ms, 0 flat runs but 68 dip seconds -> under a 1.4x clock the stack degrades to ~45/s instead of flat 30:
    it helps on a slow host but does not keep 60. Queued s7257_dd6r_stack (dd6r / dd6r+stack / +DUTY / dd6rd control); tools/s7257_dip_runs.py scores late dips.
+   **s7258 fold (s7257_dd6r_stack rc=0, AC clk 0.97-1.04, control dd6rd flat 30 21 s PASS).** dd6r repeat: win 14.04 ms/59.9, 9 beyond-route dip s
+   t=142-173 (s7251 had 14) -> late dips are two-run, H-noise refuted. dd6rs (stack): win 9.82 ms/60.0, max task 11.43 (vs 16.53), 0 beyond-route dips,
+   2.28M merges unm=0 stale=0, skip ~4.2k/placement -> H-ww selected (stack removes them; H-radius refuted for these dips). dd6rsd 50.7/s in window,
+   23 beyond-route dip s (vs dd6rd 115, flat 30). Landed: main.cpp [s7258] dd>=6+WIDEWIN sets R=48/MERGE 0.4/E16 (setenv overwrite=0; explicit wins;
+   ROGUESQ_DD_WIDEWIN_STACK=0 off) + upstream_compat rs64_s7258_merge_reinit (MERGE/E latch at static init). Startup check: auto prints [s7258] and
+   [s7239] frac=0.400, STACK=0 prints neither. Open: in-mission default-path soak s7258_dd6_auto_stack queued; image check at dd6 (s7247 was dd4).
    Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
