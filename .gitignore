@@ -122,3 +122,4 @@ tools/oracle/build/
 *.c-E
 *.h-E
 *.py-E
+tools/s7250_duty

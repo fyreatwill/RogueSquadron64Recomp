@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7248 (2026-11-12).
+Compact operational handoff, as of Session 7250 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -380,6 +380,9 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    0x15 both: a clock signature, not contention (H-load refuted, H-thermal not needed). So the WIDEWIN flat 30 is a battery-host result; on AC
    ww holds 60 (headroom 3.48 ms, 18 s with a >=17 ms task) and stack holds 60 with 7.06 ms. Timing arms on battery are now refused:
    tools/g1e_owner_quiet_arms.zsh logs pwr= on start/done and exits 2 on battery unless ALLOW_BATT=1.
+   **s7250: the battery clock cap is Low Power Mode** (pmset custom: battery powermode 1, AC 2; changing it needs sudo). taskpolicy gives 1.0x
+   (utility) or 3.2x (background), so it cannot stand in. New tools/s7250_duty (SIGSTOP/SIGCONT 8 ms period, calibrated 1.435x on a spin),
+   harness arm token `DUTY=1.4`. Same-run control soak s7250_slowhost queued (ww/wwd/stack/stackd; control: wwd flat 30).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.

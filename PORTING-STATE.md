@@ -191271,3 +191271,27 @@ HYPOTHESIS-ID widewin-heavy-window-cost. Work unit from NEXT.md s7247. Owner idl
   tools/s7243_resume_test.zsh failures: 0. OWNER-OPT-INS WIDEWIN line: battery explanation added.
 - Rules out: "WIDEWIN costs a flat 30 at 21:9 L4 on the owner's (AC) host". Leaves: the flat-30 positive control on AC needs a controlled slow-down
   (ALLOW_BATT=1 battery arm, or taskpolicy); s7248_fixed_fps_b (2nd AC run) still queued.
+
+## Session 7250 (2026-11-12) — battery slow-down = Low Power Mode (pmset powermode 1 on battery, 2 on AC); taskpolicy cannot stand in (1.0x / 3.2x); new calibrated SIGSTOP/SIGCONT duty cycler (1.435x) wired into the arms harness; slow-host control soak queued
+
+Planned unit (NEXT s7250 item 2): same-run slow-host control for the WIDEWIN stack's 60/s claim. Item 1 not possible: s7248_fixed_fps_b
+is still queued, its run 2 was voided by owner input at offb t=120 (arms.log 22:55:42) and the owner was active this session (HID idle 72 s),
+so no game run was made this iteration.
+- **Why battery was 1.40x (new, two lines):** `pmset -g custom` shows Battery Power `powermode 1` (Low Power Mode) and AC `powermode 2`
+  (High Power). That is a clock cap, which fits s7249's constant 1.40x sd_cpu in light and heavy scenes. Setting powermode on AC needs sudo
+  (a password is required), so the faithful control cannot be scripted.
+- **taskpolicy cannot reproduce it** (0.4 G-iteration FP spin, /tmp, best of runs): plain 0.88-0.92 s; `-c utility` 0.889 (1.0x);
+  `-t 5 -l 5` 0.911 (1.0x); `-c background` 2.978 and `-b` 2.789 (3.1-3.4x, E-cores only). Neither is ~1.4x.
+- **New tools/s7250_duty.c** (binary gitignored, the harness builds it on demand): duty-cycles a pid with SIGSTOP/SIGCONT, user-interactive
+  QoS, and reports the factor it achieved. Calibration with the spin at factor 1.4: period 4 ms gives wall 2.32 s (2.6x: wake latency after
+  SIGCONT dominates, so short periods are unusable); 8 ms gives 1.270 s = **1.435x** wall, self-reported 1.405 (real period 9.7 ms); 10-16 ms
+  gives 1.37-1.39x. Default period 8000 us. Caveat: this slows the whole process in bursts (~3 ms stop per ~10 ms), not a uniform clock, so a
+  frame can lose 0 or 1 stop. The positive control below decides whether it is good enough.
+- **Harness:** tools/g1e_owner_quiet_arms.zsh takes an arm token `DUTY=<factor>` (taken out of the game env) and runs the duty cycler on the
+  game pid (log in $R/duty_<arm>.txt, arms.log `duty=`). Optional `DUTY_PERIOD`. tools/s7243_resume_test.zsh passes 7/7.
+- **Test fix:** tools/g1e_quiet_watch_test.zsh had been failing since watch_human became multi-line (s7233). Its one-line grep defined nothing
+  ("command not found: watch_human", pos FAIL). Now an awk range takes idle/locked/front/watch_human whole. neg ok + pos ok.
+- **Queued soak s7250_slowhost** (idle-gated 180 s, timeout 1800): L4 21:9 heavy window, arms ww / wwd (ww+DUTY=1.4) / stack / stackd. Positive
+  control: wwd goes flat 30, reproducing s7231. Outcomes: wwd 30 + stackd 60 means the stack keeps 60 on a slow host; both 30 means the stack
+  only helps on AC; wwd 60 means duty is not equivalent to Low Power Mode, so recalibrate (factor 1.6) or ask the owner for one battery run with ALLOW_BATT=1.
+Rules out: taskpolicy as a battery stand-in. Low Power Mode on AC as a scripted arm (needs sudo).

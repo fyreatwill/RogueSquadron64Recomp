@@ -7,6 +7,7 @@ R=${R:-$PWD/scratch/s6932}; DHZ=${DHZ:-$PWD/scratch/s6931/dhz}; HOLD=${HOLD:-300
 # s7243: RESUME=1 skips an arm that already completed (ok_<arm> written after its done line) when the key matches:
 # binary mtime+size, the arm spec and HOLD. A void then costs only the voided arm and those after it, not the whole recipe.
 # GAMEDIR/GAME are overridable for tools/s7243_resume_test.zsh (fake game). Default: build/RogueSquadron64Recomp.
+TOOLS=$PWD/tools; [ -x $TOOLS/s7250_duty ] || cc -O2 -o $TOOLS/s7250_duty $TOOLS/s7250_duty.c
 GAMEDIR=${GAMEDIR:-build}; GAME=${GAME:-./RogueSquadron64Recomp}
 armkey(){ echo "$(stat -f '%m:%z' $GAMEDIR/$GAME 2>/dev/null) H=$HOLD S=$1"; }
 EARLY=""; e=10
@@ -42,16 +43,20 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   # s6991: FORCE_UNLOCK was hardcoded 1 here, which clamps the level-select cursor to level 1 whatever FORCE_SAVE_MISSION
   # says (s5707: the save byte alone is rewritten by the level-select tick). Every "LEVEL=N" arm run through this
   # harness before s6991 (s6962 l4/l10, s6990 L0-L18) actually flew level 1. Now FORCE_UNLOCK follows the requested level.
+  # s7250: harness token DUTY=<factor> (not passed to the game) runs tools/s7250_duty on the game pid: SIGSTOP/SIGCONT at an 8 ms
+  # period, a calibrated whole-process slow-down standing in for battery Low Power Mode (s7249 x1.40; taskpolicy gives 1.0x or 3.2x).
+  du=""; [[ " $x " == *" DUTY="* ]] && { du=${x##*DUTY=}; du=${du%% *}; x=${x//DUTY=$du/}; }
   lv=1; [[ " $x " == *" ROGUESQ_FORCE_SAVE_MISSION="* ]] && { lv=${x##*ROGUESQ_FORCE_SAVE_MISSION=}; lv=${lv%% *}; }
   [[ " $x " == *" ROGUESQ_FORCE_UNLOCK="* ]] || x="ROGUESQ_FORCE_UNLOCK=$lv $x"
   $DHZ 60 $((HOLD+30)) > $R/hz_$arm.txt 2>&1 & hp=$!; /bin/sleep 3
   ( cd $GAMEDIR && exec env ROGUESQ_FORCE_SAVE_MISSION=1 ROGUESQ_FORCE_UNLOCK=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_GODMODE=1 ROGUESQ_AUTOPILOT_HOLD_MS=1800 ROGUESQ_AUTOPILOT=$AP ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=$dd ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ROGUESQ_PRESENT_RING=$R/ring_$arm.txt ${=x} $GAME ) > ${LOGTO:-$R/log_$arm.txt} 2>&1 & gp=$!
+  dp=""; [ -n "$du" ] && { $TOOLS/s7250_duty $gp $du ${DUTY_PERIOD:-8000} 2> $R/duty_$arm.txt & dp=$!; echo "$(date +%T) $arm duty=$du" >> $R/arms.log; }
   ( for k in 1 2 3 4 5 6 7 8; do /bin/sleep 12; osascript -e 'tell application "System Events" to set frontmost of (first process whose name contains "RogueSquadron64Recomp") to true' >/dev/null 2>&1; done ) & rp=$!
   rm -f $R/void_$arm; watch_human $gp $arm & wp=$!
   # s7205: SHOTS="150,160,..." = screencapture -x at those seconds after launch (same autopilot timeline in every arm).
   if [ -n "$SHOTS" ]; then ( t0=$SECONDS; k=0; for s in ${(s:,:)SHOTS}; do k=$((k+1)); while (( SECONDS - t0 < s )); do /bin/sleep 0.5; done; [ -e $R/void_$arm ] && break; screencapture -x $R/shot_${arm}_c$k.png; done ) & sp=$!; fi
   for ((n=0; n<HOLD; n+=2)); do /bin/sleep 2; [ -e $R/void_$arm ] && break; done; [ -n "$sp" ] && kill $sp 2>/dev/null; alive=0; kill -0 $gp 2>/dev/null && alive=1
-  kill -KILL $gp 2>/dev/null; kill $rp 2>/dev/null; kill $wp 2>/dev/null; kill -KILL $hp 2>/dev/null
+  kill -KILL $gp 2>/dev/null; kill $rp 2>/dev/null; kill $wp 2>/dev/null; kill -KILL $hp 2>/dev/null; [ -n "$dp" ] && kill $dp 2>/dev/null
   [ -e $R/void_$arm ] && { echo human > $R/quiet.done; exit 2; }
   cm=$(grep -a -m1 -o 'cursorMask)=0x[0-9A-Fa-f]*' ${LOGTO:-$R/log_$arm.txt} | sed 's/.*=//'); want=$(printf '0x%08X' $((1 << lv)))
   [[ $cm == $want ]] || echo "$(date +%T) $arm LEVEL MISMATCH want lvl $lv mask $want got ${cm:-none}" >> $R/arms.log
