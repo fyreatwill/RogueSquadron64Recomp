@@ -191707,3 +191707,22 @@ Verdict H-none (refutes H-merge: no cluster in the merge phase; H-general: no fl
 image-hold scorer with same-run control + counters showing every arm active. Raw (5.9 GB) deleted after scoring.
 Queued scratch/agent/soak_queue/s7272_219_hold.sh (same at 21:9, CW 630; exit 3 if the control misses).
 Discrimination: selects H-none at 16:9; the thread stays open for the 21:9 soak fold only.
+
+## Session 7273 (2026-11-13) — G5c 21:9: no frozen image in flight on the WIDEWIN auto-stack path (H-none219; SIGSTOP control 3/3, holds viewed = transitions); thread closed; new hold contact-sheet tool
+Unit (NEXT g5c-freeze-widewin-stack): fold soak s7272_219_hold (L4 dd4 21:9 FPS60 MELT WIDEWIN tog3 ph0 off / ph1 auto stack / ph2 R88).
+Soak fold: rc=0, control caught 3/3 (1032/1009/1043 ms), 0 crash lines; holds >= 250 ms outside controls ph0 5 (max 467, at +63/+66/+183/
++195/+198 s), ph1 2 (275, 292 at +284/+295), ph2 1 (275). The recipe deletes its raw after scoring, so these 8 could NOT be classified
+(flight vs transition): unclassified, not a null and not a positive.
+Fix: tools/s7272_g5c_hold_arm.zsh KEEP=1 now runs new tools/s7273_hold_sheet.py before deleting the raw: one sheet row per hold
+(-1 s / held / next / +1 s frames, phase, control flag) plus a luma line per hold (black/fade frames read as luma < 20).
+In-session re-run (AC, HID idle 7 h, unlocked, `env KEEP=1 TAG=s7273w ASP=21:9 CW=630`): 14769 frames/300 s, 40.3 changes/s, control
+caught 3/3 (1021/1051/1025 ms, the sheet shows the 1 s freeze in briefing and twice in flight), 0 crash. Holds outside controls:
+ph0 +60.1 s 275 ms, ph1 +61.5 s 372 ms; ph2 none. Both viewed (docs/owner_sheet_s7273_g5c_widewin_holds_219.jpg): held frame luma 2,
+i.e. the black of the briefing -> intro iris wipe and the black cut from the tower shot into flight = load-side. In flight: 0 holds
+>= 250 ms in any phase. The soak's late ph0 holds (+183-198 s) were in the OFF phase (no stack), so even if they were flight holds they
+are not the stack's; ph1 had at most 2 x <=292 ms there.
+Verdict H-none219 (refutes H-merge219 and H-general219 for this run). Two lines: image-hold scorer with same-run SIGSTOP control +
+frame sheet of every hold. Single in-session run; the soak run is unclassified. Thread g5c-freeze-widewin-stack CLOSED (16:9 s7272 + 21:9).
+Rules out: the WIDEWIN auto stack introducing in-flight frozen frames at either owner aspect on L4 dd4.
+Discrimination: selects H-none219 over H-merge219/H-general219 (no flight hold in any phase, controls caught).
+Next: G5c on the owner's exact recipe (FULLSCREEN=1, more levels) with the same scorer and KEEP=1 sheets (NEXT.md g5c-freeze-owner-fullscreen).

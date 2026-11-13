@@ -1,6 +1,7 @@
 #!/bin/zsh
 # s7272: L4 dd4 16:9 FPS60 WIDEWIN tog3 stack phases + SIGSTOP 1 s positive controls at capture +60/+160/+260 s.
 # usage: env TAG=<name> ASP=16:9|21:9 CW=480|630 zsh tools/s7272_g5c_hold_arm.zsh ; analysis tools/s7272_image_hold.py (holds per tog3 phase, SIGSTOP control windows apart).
+# KEEP=1: write $O/holds_sheet.jpg + sheet.txt (tools/s7273_hold_sheet.py) before the raw is deleted.
 # Exit 3 when the SIGSTOP control is not caught 3/3 (>=900 ms), 1 on a crash line.
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 T=${TAG:-s7272f}; O=scratch/s7272/$T; mkdir -p $O; : > $O/ctl.txt
@@ -15,7 +16,7 @@ kill -9 $fp $sp 2>/dev/null
 python3 tools/s7272_image_hold.py scratch/s7009/$T.raw 250 $O/ctl.txt > $O/hold.txt 2>&1
 python3 tools/g5c_frozen_runs.py scratch/s7009/$T.raw 250 > $O/frozen.txt 2>&1
 grep -a -h 's7258\|s7010-clk\|CRASH\|SIGSEGV\|SIGBUS' scratch/agent/m6/g1_lvl4s7009$T/*.log 2>/dev/null | head -8 > $O/log.txt
-rm -f scratch/s7009/$T.raw; cat $O/hold.txt $O/frozen.txt $O/log.txt; tail -3 $O/arm.txt
+[[ -n $KEEP ]] && python3 tools/s7273_hold_sheet.py scratch/s7009/$T.raw $O/holds_sheet.jpg 250 $O/ctl.txt 0.5 > $O/sheet.txt 2>&1; rm -f scratch/s7009/$T.raw; cat $O/hold.txt $O/frozen.txt $O/log.txt; tail -3 $O/arm.txt
 c=$(grep -o 'caught .*' $O/hold.txt | grep -o '[0-9]*ms' | tr -d ms | awk '$1>=900' | wc -l); echo "control_hits $c"
 grep -a -cE 'CRASH|SIGSEGV|SIGBUS' scratch/agent/m6/g1_lvl4s7009$T/run.log | read cr; echo "crash_lines $cr"
 (( cr > 0 )) && exit 1; (( c < 3 )) && exit 3; exit 0

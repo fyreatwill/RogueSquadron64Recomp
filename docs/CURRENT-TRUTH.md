@@ -377,7 +377,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 5. **G5c freezes (s6902), G5d logo (s6903): owner flight / boot.**
    s7272: no frozen image in flight on the WIDEWIN auto-stack path, 16:9 L4 dd4 same-run tog3 (off / stack / R88): 0 holds >= 120 ms in
    flight in any phase; the 6 holds 250-442 ms are all cutscene transitions; SIGSTOP 1 s control caught 3/3. Tool tools/s7272_image_hold.py
-   (time between differing frames, sees repeats and gaps), arm tools/s7272_g5c_hold_arm.zsh. 21:9 queued (s7272_219_hold).
+   (time between differing frames, sees repeats and gaps), arm tools/s7272_g5c_hold_arm.zsh. **s7273 21:9: same (H-none219)**: in-session
+   KEEP=1 run, control 3/3, 2 holds 275/372 ms both black transition frames (sheet docs/owner_sheet_s7273_g5c_widewin_holds_219.jpg,
+   new tools/s7273_hold_sheet.py), 0 flight holds; the s7272_219_hold soak's 8 holds are unclassified (raw deleted). Thread closed.
+   Open: the same scorer at the owner's exact recipe (FULLSCREEN=1, L1/L5/L12), NEXT.md.
 6. **G5e fog (s6904): owner look.** 21:9 far slab: DD_MELT takes it to the dd1 floor (s7007). Residual side
    edge = the 64-column terrain window (s7008); WIDEWIN (N=128 at 0x83000000) widens it, free at 21:9 dd4
    on the owner path (s7014-s7015). dd>=6 cost is per cell (s7019-s7029); the off-map bundle pays for it (headline).
