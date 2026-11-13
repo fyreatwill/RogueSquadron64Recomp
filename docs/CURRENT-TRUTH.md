@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7250 (2026-11-12).
+Compact operational handoff, as of Session 7252 (2026-11-12).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -387,6 +387,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    **s7250: the battery clock cap is Low Power Mode** (pmset custom: battery powermode 1, AC 2; changing it needs sudo). taskpolicy gives 1.0x
    (utility) or 3.2x (background), so it cannot stand in. New tools/s7250_duty (SIGSTOP/SIGCONT 8 ms period, calibrated 1.435x on a spin),
    harness arm token `DUTY=1.4`. Same-run control soak s7250_slowhost queued (ww/wwd/stack/stackd; control: wwd flat 30).
+   **s7252: battery-era audit (tools/s7252_power_tag.py, pmset log from 11-06).** 75 of 322 sessions overlap battery. Battery is necessary but not
+   sufficient for a throttle: the matched L12 16:9 dd6 pair s7046 H12ke12 (battery, 11-09 18:58) vs s7042 S42L12 (AC, 16:11) reads CPU/task
+   1.00-1.05 (menus 1.00-1.02, flight 1.00-1.09), and rsp off/K0.6 agree (16.15/15.85 vs 16.19; 12.03 vs 12.23). So the 11-09 battery verdicts
+   (s7037, s7045-s7048 L12 fps/K/KEDGE) STAND as AC-equivalent; only the 11-12 afternoon (x1.36-1.44, s7230/s7231) is throttled. Other battery sessions'
+   timing lines are passes (s6996, s7218/s7219 59.5-59.7/s: conservative) or same-run/image verdicts (s7099-s7118, s7164/s7166). No new rerun needed.
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;
    dsize is 0 on the owner path), s7230_headroom.py, s7229_flat30_cost.py, g5e_cost_by_parity.py --phases 3.

@@ -191315,3 +191315,25 @@ So took NEXT item 3 (offline): recheck s7230 against the pmset battery log.
   Rules out: treating s7230 as an AC measurement. Does NOT prove dd6r holds 60 on AC (scaling is an inference).
 - Queued soak s7251_dd6r_ac (idle 180 s, timeout 1800): n4 (clock bridge vs s7230 dd6w, expect ~0.71), dd6r (s7230 flags), dd6rd (+DUTY=1.4,
   positive control: should go flat 30 again). Harness refuses battery (s7249), so its result is an AC result by construction.
+
+## Session 7252 (2026-11-12) — battery-era timing audit: 75/322 sessions since 11-06 overlap battery, but battery is not a throttle by itself (11-09 matched L12 pair reads CPU/task 1.00-1.05); only the 11-12 afternoon (s7230/s7231) is clock-capped; new tools/s7252_power_tag.py
+Unit from NEXT.md step 4 (HYPOTHESIS-ID widewin-heavy-window-cost). Steps 1-3 could not run: owner active (HID idle 59 s at 23:15), the loop
+voided s7248_fixed_fps_b at 23:11:52 on human input; s7250_slowhost and s7251_dd6r_ac still queued (idle-gated). No game run this session.
+- New tools/s7252_power_tag.py: parses `pmset -g log` "Using AC/Batt" events into a timeline (log starts 11-06 01:06), takes each session's window
+  as (previous iter commit, its first iter commit], prints the battery fraction and a timing-word count from its PORTING-STATE entry.
+  Battery windows: 11-08 12:03-14:36, 11-09 11:30-13:10 and 17:59-20:30, 11-10 09:00-13:25 and 15:21-21:11, 11-11 11:28-14:35, 11-12 09:20-15:22.
+  75 of 322 sessions overlap; those with timing words: s6996, s7036-s7037, s7044-s7048, s7085-s7090 (censuses, no timing), s7098-s7118
+  (same-run flicker splits), s7164/s7166 (image), s7218-s7231.
+- Is battery always the x1.4 Low Power Mode cap? Matched pair, same harness and recipe (L12 16:9 dd6 WIDEWIN tog3 off/K0.6/K0.6[+KEDGE]):
+  s7046 H12ke12 (battery, 11-09 18:58) vs s7042 S42L12 (AC, 11-09 16:11), tools/s7251_clock_ratio.py: menus t20-60 1.00-1.02 (identical
+  arms there = the control), flight t60-240 0.99-1.09. Second line, the ledger's own rsp: off 15.85 (s7046) / 16.15 (s7045) vs 16.19 (s7042);
+  K0.6 12.03 vs 12.23. Both say no throttle on 11-09 battery (charge then ~60% by interpolation 100% 17:59 -> 17% 20:30), against
+  1.36-1.44 on 11-12 (s7249/s7251). Why it differs (LPM enabled after 11-09, or charge-dependent) is not knowable: pmset keeps no powermode history.
+  (The H12 and H12aa pairs read 1.2 / 0.86-2.39 but their arms differ from S42L12 in K and menu path, so they are not clean pairs.)
+- Re-check of fail-direction verdicts in battery windows: s7037 dd8 <59 fps and s7045-s7048 L12 54-56 fps stand (11-09, unthrottled; s7048's
+  hold H12w also started 20:26-20:29, AC from 20:30:04). s7218/s7219 passes and s6996 pass are conservative either way. s7227's flat 30 was already
+  explained as harness (s7229). Only s7230/s7231 carry throttled fail verdicts, and their AC reruns are queued (s7251_dd6r_ac, s7250_slowhost).
+- I drafted and then withdrew an AC rerun soak of s7048 (s7252_l12w_ac): the matched pair shows it would re-measure an unthrottled run.
+VERDICT: refutes H-all-battery-throttled (a battery tag alone does not void a timing verdict) and selects H-11-12-only for this week's
+throttled data, from two lines (clock ratio and the ledger's rsp). It rules out the need for a wider battery rerun sweep.
+- Changed: tools/s7252_power_tag.py (new), CURRENT-TRUTH Next 1 (s7252 bullet), NEXT.md unchanged in substance (steps 1-3 still pending).
