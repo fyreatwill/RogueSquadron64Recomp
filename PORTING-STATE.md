@@ -191667,3 +191667,5 @@ Verdict: H-clean at 21:9 dd4. Two lines: image ranker with same-run control + co
 Sheet docs/owner_sheet_s7270_widewin_stack_cutscenes.jpg; OWNER-OPT-INS WIDEWIN paragraph extended.
 Rules out: H-cut (stack removes cutscene ground) at 21:9; H-pop (merge popping) at the ranker's resolution (a sliver would hide in the control spread).
 Next: same check at 16:9 (owner TV), queued as soak s7270_169_cutscenes (tools/s7270_widewin_cut_mov_169.zsh, unmodified s6792 w1024 gate).
+Discrimination: selects H-clean (21:9 dd4), refutes H-cut and H-pop for cutscenes. Next discriminator: the same same-run tog3 ranker at 16:9 (soak
+s7270_169_cutscenes): an off->stack edge above the mid-second control max that a view shows as lost ground selects H-cut169, else H-clean169.
