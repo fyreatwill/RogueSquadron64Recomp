@@ -1426,3 +1426,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261112 | s7255 fold: s7248_fixed_fps_b 2/5 void at wwb t=114 but its t=77-97 window is clean: offb 9.79 ms/60 (run1 10.06), wwb 12.64/60 (run1 13.16) -> ww 60 on AC two-run. Recipe moved to soak_queue/hold.
 20261112-233828 | s7250_slowhost | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 171s | scratch/agent/soak_results/s7250_slowhost_20261112-233828.log
 20261112 | s7256 fold: s7250_slowhost 1/5 void at ww t=160 (after window): ww win77-97 59.9/s 12.37 ms (3rd AC run). ww kept (ok_ww); recipes now VOID_OK_AFTER=110.
+20261112-234756 | s7250_slowhost | rc=0 | 746s | scratch/agent/soak_results/s7250_slowhost_20261112-234756.log
+20261113-000022 | s7251_dd6r_ac | rc=0 | 746s | scratch/agent/soak_results/s7251_dd6r_ac_20261113-000022.log
+20261113 | s7257 fold: s7251_dd6r_ac rc=0 CONTROL PASS (dd6rd flat30 21.81 ms): n4 9.81/60, dd6r 14.06/60 headroom 2.51, 14 late dip s t=142-238. s7250_slowhost rc=0 CONTROL PASS (wwd flat30 20.89): stack 9.47/60, stackd 44.5/s 15.18 ms no flat run. Queued s7257_dd6r_stack.

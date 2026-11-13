@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7256 (2026-11-12).
+Compact operational handoff, as of Session 7257 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -36,7 +36,7 @@ already in the RDP stream (s7098). Scene-transition stalls are the retail 3072-s
 
 dd6 21:9/16:9 auto bundle (s7037-s7063, detail archived): off-map cull past 0.6 x fog end, KEDGE=0.8,12,
 WIDEWIN cap 10240, auto KLEVEL `12:0.5,13:0.5` and CAPLEVEL `9:8192` when FB_WIDTH>796. All 19 levels
-hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249/s7251: s7230 AND s7231 ran ON BATTERY (pmset: Batt 09:20-15:22, no AC event), CPU/task x1.36-1.44 vs AC, so their flat 30s (WIDEWIN dd4, and s7230's dd6r farthest-view line) are battery results; on AC WW holds 60, dd6r untested on AC: soak s7251_dd6r_ac) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
+hold ~60 fps in flight with 0 crashes at 21:9 (s7063; EXCEPT L4 heavy window t=77-97: flat 30/s, 20.5 ms task, s7230; s7231: the cost is WIDEWIN, not the dd6 radius, see Next 1; s7249/s7251: s7230 AND s7231 ran ON BATTERY (pmset: Batt 09:20-15:22, no AC event), CPU/task x1.36-1.44 vs AC, so their flat 30s (WIDEWIN dd4, and s7230's dd6r farthest-view line) are battery results; on AC WW holds 60 (3 runs) and **dd6r, the farthest view, holds 60 too** (s7257: 14.06 ms, headroom 2.51 ms, same-run DUTY=1.4 control flat 30; 14 s of late dips t=142-205, min 34/s, soak s7257_dd6r_stack tests the stack on them) and 16:9 (s7043). Cap 12288 is an opt-in (+0.25 ms
 rsp, +2-5 L4 shoreline rows); cap 9216/8192 and K0.5 globally shave a horizon somewhere (refuted as defaults).
 
 Open or awaiting the owner:
@@ -217,7 +217,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 mai
 
 ## Superseded conclusions — do not act on these
 - s7230 "the dd6 radius at 21:9 adds ~6.6 ms per gfx task over dd4 (H-dd)" and s7014-s7017 "WIDEWIN costs little or none at 21:9 dd4". Believable: s7230's dd4 21:9 arm (13.94 ms) differed from the dd6 line only, it seemed, in the radius; in fact it also lacked ROGUESQ_DD_WIDEWIN, and s7014-s7017 measured whole-flight/other windows. s7231 2x2 in the L4 t=77-97 window: WIDEWIN +4.5 ms at dd4 (flat 30/s), radius +0.7 ms without WIDEWIN.
-- s7054/s7063 "Gerrard V (L4) at 21:9 dd6 runs 58.7-59.5 fps / all 19 levels ~60 at 21:9". Believable: whole-flight averages on the then route. s7230 (owner path, direct harness, two instruments): L4 t=77-97 flat 30/s for 21 s at 20.5 ms per gfx task, 109/239 s <55/s; dd4 21:9 holds 60 there. s7251: s7230 itself ran on battery (Low Power Mode, x1.36-1.43 CPU/task vs AC s7248 off; x0.97-1.01 vs battery s7231 n4), so this is also a battery-host verdict; AC estimate ~14.7 ms (scaled, inferred), measurement queued.
+- s7054/s7063 "Gerrard V (L4) at 21:9 dd6 runs 58.7-59.5 fps / all 19 levels ~60 at 21:9". Believable: whole-flight averages on the then route. s7230 (owner path, direct harness, two instruments): L4 t=77-97 flat 30/s for 21 s at 20.5 ms per gfx task, 109/239 s <55/s; dd4 21:9 holds 60 there. s7251: s7230 itself ran on battery (Low Power Mode, x1.36-1.43 CPU/task vs AC s7248 off; x0.97-1.01 vs battery s7231 n4), so this is also a battery-host verdict; AC measured s7257: dd6r 60.0/s, 14.06 ms (n4 bridge 9.81 vs battery 13.97 = x1.42), control dd6rd flat 30 21.81 ms.
 - s7227/s7228 "in-flight flat-30 under FPS60 is the game's own frame rate (H-content)". Believable: rigid 33.3 ms game swaps with a free present path and a 60 Hz VI timer, no display event. s7229: the harness ran the diagnostic ucode path (LOG_PHASE -> G1E_PROBES, 21.95 ms task); the owner path holds 60/s there (12.8 ms).
 - s7180 "swaps 4700-5028 of the L17 route are the level-description screen" and s7181 "Elite Rogues 0.047, 21 >0.05". Believable: 512x448 interlaced fb after MISSION FAILED. s7183: it is the Elite Rogues list; the residual is the fb-weave reference combing while it scrolls.
 - s7122 "RT64 shows the 4:3 picture off-centre (21/66 px margins)". Believable: rect search on the capture fit well. s7123: SCK pads the right of the capture; in window points the margins are 43/45 (centred).
@@ -402,6 +402,11 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    s7256: s7250_slowhost run 1 voided by owner at t=160 (AC, clk 0.982), but arm ww's window was clean: 59.9/s, 12.37 ms (three AC runs
    12.37-13.16 ms, all 60/s). New harness knob VOID_OK_AFTER=<s> keeps an arm voided by human input at t >= s (lock/sleep voids never kept;
    test tools/s7243_resume_test.zsh 13/13); both queued recipes use VOID_OK_AFTER=110, and s7250's ww is kept (ok_ww), so its rerun starts at wwd.
+   **s7257 fold (both soaks ran, AC, clk 0.965-1.04, controls PASS).** s7251_dd6r_ac: n4 9.81 ms/60, dd6r 14.06 ms/60 (headroom 2.51), control dd6rd
+   flat 30 (21.81 ms) -> the s7230 'farthest view flat 30' was battery; dd6r holds 60 in the heavy window on AC, but adds 14 dip seconds at t=142-217
+   (min 34/s at t=172) that n4 lacks (the 6 route-transition dips t=5..67 are common to every arm). s7250_slowhost: control wwd flat 30 (20.89 ms),
+   stack 9.47 ms/60, stackd 44.5/s 15.18 ms, 0 flat runs but 68 dip seconds -> under a 1.4x clock the stack degrades to ~45/s instead of flat 30:
+   it helps on a slow host but does not keep 60. Queued s7257_dd6r_stack (dd6r / dd6r+stack / +DUTY / dd6rd control); tools/s7257_dip_runs.py scores late dips.
    Not yet shown: that real Low Power Mode reads ~1.4 on the probe (needs a battery+LPM session; the duty stand-in is the only control so far).
  (tools/g1e_owner_quiet_arms.zsh, test tools/s7243_resume_test.zsh 7/7): after a void, only the unfinished arms re-run. Both queued recipes use it.
    The bracket arms R=48/64/72 are queued as soak s7237_widewin_r2 (idle-gated). r72 was voided by owner input in s7237. Tools: tools/s7231_cost_decomp.py (needs ROGUESQ_G1CF=1;

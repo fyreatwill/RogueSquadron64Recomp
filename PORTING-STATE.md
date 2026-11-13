@@ -191407,3 +191407,18 @@ changed loop.sh before its next soak phase (s7235), so the new wait applies from
 - s7250_slowhost.sh and s7251_dd6r_ac.sh now pass VOID_OK_AFTER=110 (window ends t=97). scratch/s7250/ok_ww written by hand with the current
   binary key (binary mtime 21:36 predates the 23:38 run), so the rerun starts at wwd.
 - Rules out nothing new; open: wwd/stackd slow-host control (s7250), dd6r on AC (s7251).
+
+## Session 7257 (2026-11-13) — dd6r farthest view holds 60/s on AC (control PASS); stack under 1.4x clock gives ~45/s, not 60
+Folded the two queued soaks the loop ran overnight (both rc=0, AC, clk 0.965-1.04 on every arm start/done line).
+- s7251_dd6r_ac (L4 21:9 owner path, heavy window t=77-97, HOLD 240): n4 9.81 ms 60.0/s (6 dip s, all route transitions t=5,11,28,43,59,67);
+  dd6r (DD_UNSAFE+MELT+WIDEWIN) 14.06 ms 60.0/s, headroom 2.51 ms, 21 dip s of which 14 beyond the route set (t=142-238, min 34/s at t=172);
+  dd6rd (dd6r + DUTY=1.4) flat 30 for 21 s at 21.81 ms = positive control PASS. Clock bridge: s7230 battery dd6w vs n4 AC ratio 1.38-1.46.
+  So s7230's "farthest view flat 30" was the battery clock; on AC the farthest view holds 60 in the heavy window (two lines: same-run control +
+  bridge ratio). New: late dips t=142-217 at dd6r that n4 lacks.
+- s7250_slowhost: ww kept from run 1 (59.9/s 12.37 ms); wwd flat 30 20.89 ms = control PASS; stack 9.47 ms 60/s; stackd 44.5/s 15.18 ms,
+  headroom 1.38, 0 flat runs, 68 dip s beyond route (t=76-166, 31-54/s). Verdict: under a 1.4x clock the stack turns flat 30 into ~45/s; it
+  does not keep 60 on a slow host. Single run per arm.
+- Change: tools/s7257_dip_runs.py (groups <55/s seconds into runs, separates the common route-transition seconds). Queued
+  scratch/agent/soak_queue/s7257_dd6r_stack.sh: dd6r / dd6rs (+R=48 MERGE 0.4 E16) / dd6rsd (+DUTY) / dd6rd control, to split the late dd6r
+  dips into WIDEWIN cost (stack removes them) vs dd6 radius cost (they stay -> OFFMAPCULL K=0.6 next).
+Rules out: "dd6 radius alone forces 30/s in L4 on this Mac at AC clock".
