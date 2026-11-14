@@ -193362,3 +193362,4 @@ s6132 fixup pipeline order; no guest value was wrong.
 Discrimination: H-diag selected for every host D site and all 11 generated survivors (latent); H-behave refuted for the B site at
 dd>1 (it was a no-op above 8 MB, not a drop); H-intended only for the A arena-layout sites. Class R CLOSED.
 Docs: docs/HEAP-ADDR-AUDIT.md class R section; CURRENT-TRUTH 27b/27c. Open: class M (193 physical 8 MB masks), NEXT.md s7338.
+Summary: this selects H-diag (host D sites, 11 latent generated survivors), refutes H-behave for the OSTask check at dd>1 (root cause of its non-bound: wrapping subtraction, fixed), and closes class R. Next discriminator: class M physical-mask census (NEXT.md s7338).
