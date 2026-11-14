@@ -192478,3 +192478,7 @@ New tools: s7310_cap_swaps.py (finds the frozen swap), s7310_left_w.py (left-edg
 sign-extend fix (s11.2, the '<<18>>18' was a no-op on Python ints). Raw caps deleted.
 ORIGIN: the dd-scaled projection far (apply_s6031_far, our code) writes far > 36k into the game's guPerspective. The cap fixes the value at its writer.
 Queued: scratch/agent/soak_queue/s7311_219_dd8_farmax_hold.sh (21:9 dd8 300 s L1/L5/L12 + same-soak l1 FARMAX=0 + ctl).
+Discrimination: SELECTS H-geom (the defect follows the far value: clean at far <= 36.3k, pinned at >= 40.4k, at fixed dd8, aspect and pose).
+REFUTES H-wide (at the same pose 16:9 has no sliver at far x8, while 21:9 has none at far x4.5 or capped) and the s6418 far clip (NOFARCLIP
+still pinned). H-rsp-emu is not refuted directly, but the fix does not depend on it. Next discriminator: the same FARMAX default vs 0 pair on L5
+and L12 (NEXT.md) decides whether 32767 holds for every dome or needs to be relative to the dome w.
