@@ -1374,6 +1374,80 @@ index 048246e..5811902 100644
      save_read(rdram, buffer, eep_address * eeprom_block_size, nbytes);
  
      ctx->r2 = 0;
+diff --git a/librecomp/src/math_routines.cpp b/librecomp/src/math_routines.cpp
+index 4d6a01d..78a3270 100644
+--- a/librecomp/src/math_routines.cpp
++++ b/librecomp/src/math_routines.cpp
+@@ -1,13 +1,23 @@
+ #include <ultramodern/ultramodern.hpp>
+ #include "recomp.h"
+ 
++// [s7348] guest-derived divisors: a C `/ 0` or `% 0` (and INT64_MIN / -1) is UB (SIGFPE on x86, silent 0 on arm64).
++// Use the MIPS ddiv / ddivu results the recompiled DDIV / DDIVU instructions produce (recomp.h).
++static inline uint64_t rs64_udiv64(uint64_t a, uint64_t b) { return b ? a / b : ~0ull; }
++static inline uint64_t rs64_urem64(uint64_t a, uint64_t b) { return b ? a % b : a; }
++static inline int64_t rs64_sdiv64(int64_t a, int64_t b) {
++    if (b == 0) return a < 0 ? 1 : -1;
++    if ((uint64_t)a == 0x8000000000000000ull && b == -1) return a;
++    return a / b;
++}
++
+ // TODO remove these by implementing the necessary instructions and control flow handling in the recompiler.
+ // This has already been partially completed.
+ 
+ extern "C" void __udivdi3_recomp(uint8_t * rdram, recomp_context * ctx) {
+     uint64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+     uint64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+-    uint64_t ret = a / b;
++    uint64_t ret = rs64_udiv64(a, b);
+ 
+     ctx->r2 = (int32_t)(ret >> 32);
+     ctx->r3 = (int32_t)(ret >> 0);
+@@ -16,7 +26,7 @@ extern "C" void __udivdi3_recomp(uint8_t * rdram, recomp_context * ctx) {
+ extern "C" void __divdi3_recomp(uint8_t * rdram, recomp_context * ctx) {
+     int64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+     int64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+-    int64_t ret = a / b;
++    int64_t ret = rs64_sdiv64(a, b);
+ 
+     ctx->r2 = (int32_t)(ret >> 32);
+     ctx->r3 = (int32_t)(ret >> 0);
+@@ -25,7 +35,7 @@ extern "C" void __divdi3_recomp(uint8_t * rdram, recomp_context * ctx) {
+ extern "C" void __umoddi3_recomp(uint8_t * rdram, recomp_context * ctx) {
+     uint64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+     uint64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+-    uint64_t ret = a % b;
++    uint64_t ret = rs64_urem64(a, b);
+ 
+     ctx->r2 = (int32_t)(ret >> 32);
+     ctx->r3 = (int32_t)(ret >> 0);
+@@ -34,7 +44,7 @@ extern "C" void __umoddi3_recomp(uint8_t * rdram, recomp_context * ctx) {
+ extern "C" void __ull_div_recomp(uint8_t * rdram, recomp_context * ctx) {
+     uint64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+     uint64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+-    uint64_t ret = a / b;
++    uint64_t ret = rs64_udiv64(a, b);
+ 
+     ctx->r2 = (int32_t)(ret >> 32);
+     ctx->r3 = (int32_t)(ret >> 0);
+@@ -43,7 +53,7 @@ extern "C" void __ull_div_recomp(uint8_t * rdram, recomp_context * ctx) {
+ extern "C" void __ll_div_recomp(uint8_t * rdram, recomp_context * ctx) {
+     int64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+     int64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+-    int64_t ret = a / b;
++    int64_t ret = rs64_sdiv64(a, b);
+ 
+     ctx->r2 = (int32_t)(ret >> 32);
+     ctx->r3 = (int32_t)(ret >> 0);
+@@ -61,7 +71,7 @@ extern "C" void __ll_mul_recomp(uint8_t * rdram, recomp_context * ctx) {
+ extern "C" void __ull_rem_recomp(uint8_t * rdram, recomp_context * ctx) {
+     uint64_t a = (ctx->r4 << 32) | ((ctx->r5 << 0) & 0xFFFFFFFFu);
+     uint64_t b = (ctx->r6 << 32) | ((ctx->r7 << 0) & 0xFFFFFFFFu);
+-    uint64_t ret = a % b;
++    uint64_t ret = rs64_urem64(a, b);
+ 
+     ctx->r2 = (int32_t)(ret >> 32);
+     ctx->r3 = (int32_t)(ret >> 0);
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..1d5ee9e 100644
 --- a/librecomp/src/overlays.cpp

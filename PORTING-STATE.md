@@ -193697,3 +193697,38 @@ H-diag (only gated probes), H-ub (a default-on unclamped site exists).
   It refutes H-diag as a blanket explanation, because the defective site runs by default whenever WIDEWIN is on. This closes class X.
   Next discriminator: class Y, whether any default-on integer division or modulo has a guest-derived divisor that can be 0
   (tools/s7348_div_census.py, NEXT.md).
+
+## Session 7348 (2026-11-14) — class Y integer division / modulo by guest-derived divisors closed: 1512 ops, 214 sites, 0 open; RT64 4b tile-copy pixelSize 0 divisor and librecomp guest 64-bit div helper UB fixed
+HYPOTHESIS-ID: host-int-div-zero. Hypotheses: H-safe (every divisor constant / checked / nonzero by construction), H-diag (only gated
+probes), H-zero (a default-on guest-derived divisor can be 0).
+- New `tools/s7348_div_census.py` (reuses s7347 is_float, s7346 idents, s7344 decl, s7342 ev/names_of, s7338 sites()). Controls PASS
+  in the same run: planted `off / w` with w = task->width gives '?', checked twin NZ, `1u << n` twin BC, gated twin G, float twin
+  excluded.
+- Result: 1512 binary / and % ops in the s7343 scope (183 files): 973 constant divisors, 282 float, 34 std::filesystem path `/`,
+  9 `% size()` rings over std::array. 214 sites: NZ 71, H 53, C 37, D 30, G 10, BC 5, P 2, FIX 6, 0 open. I spot-read every
+  guest-derived NZ row (fbStride == 0 return, rowBytes from the same fb, `if (dxt)`, tmemStride > 0, stride > 0, px = min(w*h) loop)
+  and all of them are real checks.
+- DEFECT 1 FIXED (lib/rt64 hle/rt64_framebuffer_manager.cpp tile-copy): `pixelSize = 1 << fb->siz >> 1` gives 0 for a G_IM_SIZ_4b
+  colour image (siz comes from the guest SetColorImage), and it is the divisor of `offset % pixelSize` and `rowOffset / pixelSize`.
+  The comment says 4- and 8-bit share a byte size, and pixelShift already handles 4b. Now `std::max(1u, (1u << siz) >> 1)`.
+  ORIGIN: the writer is upstream RT64 arithmetic. The siz value is legitimate RDP data that this game does not set for colour images
+  (no 4b fb was observed). This is a latent UB fix (arm64 udiv by 0 gives 0, x86 traps), not a mitigation of an observed corruption.
+- DEFECT 2 FIXED (lib/N64ModernRuntime librecomp/src/math_routines.cpp): the C replacements for the guest libultra
+  __ull_div / __ll_div / __ull_rem (each called from funcs_8.c), plus the unreferenced __udivdi3 / __divdi3 / __umoddi3, did
+  `a / b` and `a % b` on guest 64-bit values. b == 0 and INT64_MIN / -1 are UB there. They now return the MIPS ddiv/ddivu results
+  that the recompiled DDIV/DDIVU instructions already produce (recomp.h: udiv ~0 / rem a, sdiv sign-based +-1, MIN/-1 = MIN).
+  ORIGIN: the writer is the upstream runtime helper. The divisor is guest data. Retail IDO code would trap (break 7), so no retail
+  value exists to match, and matching the instruction-level DDIV keeps the two paths consistent.
+  Standalone control tools/s7348_div_ctl.cpp (clang++ -O2 + UBSan integer-divide-by-zero/signed-overflow): 72 (a,b) pairs, including
+  b = 0 and INT64_MIN / -1, match DDIV/DDIVU; pixelSize siz0 0 -> 1, siz1..3 unchanged (1/2/4); bad=0. Positive control: the old forms
+  (`off % px_old(0)`, `INT64_MIN / -1`) each abort under UBSan.
+- Hand (H) highlights: guest mesgqueue `% mq->msgCount` is reached only past the full check (validCount >= msgCount) or the empty
+  check (validCount == 0), so it needs a corrupted validCount, and arm64 x % 0 = x does not trap. The s2dex / HLE rsp modules are
+  unreached under LLE. rt64_framebuffer_renderer `coord % lround(resScale[1])` (the NEXT.md lead) runs only for extended-GBI
+  origins, which LLE never sets. Texture-cache blockWidth/formatSize come from replacement packs, i.e. host data.
+- Runtime: build clean; export.sh refreshed rt64.patch + N64ModernRuntime.patch. `env SECS=260 zsh scratch/s7326/run.zsh s7348_dd8 ''`
+  (dd8 21:9 FPS60 hangar -> mission -> abort route, owner save read-only): crash=0 resets=14 late=0 arenafull=0, identical to
+  s7346/s7347. This is a regression smoke only. No in-run counter proved that the patched expressions executed. For the
+  value-level proof, use the standalone control (single-source for the runtime path).
+- Conclusion: the census selects H-zero for 2 latent sites (both fixed: zero only from a 4b fb or a guest b == 0) and refutes it for the other
+  206 non-comment sites. Class Y closed. Next: class Z, shifts by a guest-derived count (NEXT.md, CURRENT-TRUTH 27n).

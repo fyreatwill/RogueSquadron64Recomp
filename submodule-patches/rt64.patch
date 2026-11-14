@@ -2261,7 +2261,7 @@ index 873883d..998654c 100644
 \ No newline at end of file
 +};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..37c7422 100644
+index 7d385fa..702b727 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,9 +6,16 @@
@@ -2574,7 +2574,17 @@ index 7d385fa..37c7422 100644
          }
  
          // We went over the allowed address range, a tile copy is impossible.
-@@ -797,6 +1000,41 @@ namespace RT64 {
+@@ -421,7 +624,8 @@ namespace RT64 {
+         const uint32_t offset = addressStart - fb->addressStart;
+ 
+         // This will be the same size for 4 and 8 byte formats.
+-        const uint32_t pixelSize = 1 << fb->siz >> 1;
++        // [s7348] G_IM_SIZ_4b gave 1 << 0 >> 1 = 0, a zero divisor for the % / below (the 4b case shifts by pixelShift).
++        const uint32_t pixelSize = std::max(1u, (1u << fb->siz) >> 1);
+ 
+         // The offset is not aligned to the pixel size. It's not possible to make a direct copy.
+         if ((offset % pixelSize) != 0) {
+@@ -797,6 +1001,41 @@ namespace RT64 {
          assert(RDRAM != nullptr);
  
          differentFbs.clear();
@@ -2616,7 +2626,7 @@ index 7d385fa..37c7422 100644
          auto it = framebuffers.begin();
          while (it != framebuffers.end()) {
              const uint8_t *fbRAM = &RDRAM[it->first];
-@@ -829,7 +1067,31 @@ namespace RT64 {
+@@ -829,7 +1068,31 @@ namespace RT64 {
              FramebufferChange &fbChange = fbChangePool.use(renderWorker, fbChangeType, fb->width, fb->height, shaderLibrary->usesHDR);
              const uint32_t DifferenceFractionNum = 1;
              const uint32_t DifferenceFractionDiv = 4;

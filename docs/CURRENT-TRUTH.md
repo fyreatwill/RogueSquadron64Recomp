@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7347 (2026-11-14).
+Compact operational handoff, as of Session 7348 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -403,9 +403,19 @@ is in the s7307 archive). Active unit: NEXT.md.
     `dd < 128 ? (int)(dd/8) : 16`. tools/s7347_bin_ctl.cpp: identical bins on finite dd, NaN 0 -> 16. 260 s dd8 21:9 hangar smoke:
     0 crash, 14 resets, 66 [s7233] tally lines from the patched path. Guest-side TRUNC_W_S = (int32_t)f in recomp.h: retail traps
     on an invalid convert (FPE unimplemented op), so no retail value to match; left unchanged. Next: class Y (item 27m).
-27m. **Next unit (NEXT.md): class Y, integer division / modulo by a guest-derived divisor with no zero check** (x86 SIGFPE,
-    arm64 silently 0; e.g. `coord % lround(resScale)`, `/ width`, `% stride` on VI / RDP / task fields).
-28. **When 1-27m offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27m. **Integer division / modulo by a guest-derived divisor (class Y): CLOSED (s7348, static + standalone control + smoke).**
+    `tools/s7348_div_census.py --controls`: 1512 binary / % ops in the s7343 scope; 973 constant divisors, 282 float, 34 filesystem
+    path `/`, 9 std::array ring `% size()`; 214 sites: NZ 71 (zero check / bound before the op), H 53, C 37, D 30, G 10, BC 5,
+    P 2, FIX 6, 0 open. Two latent UB defects FIXED: (1) RT64 FramebufferManager tile-copy `pixelSize = 1 << siz >> 1` is 0 for a
+    G_IM_SIZ_4b colour image (guest siz), the divisor of `offset % pixelSize` / `rowOffset / pixelSize`; now `max(1, ..)` (4b keeps
+    its pixelShift). (2) librecomp math_routines `__ull_div` / `__ll_div` / `__ull_rem` (+ unused __udivdi3/__divdi3/__umoddi3)
+    divided guest 64-bit values in C: b == 0 and INT64_MIN / -1 are UB; now the MIPS ddiv/ddivu results the recompiled DDIV/DDIVU
+    give (recomp.h). tools/s7348_div_ctl.cpp: 72 pairs match DDIV/DDIVU, UBSan aborts on the old forms. Guest mesgqueue
+    `% msgCount` is reached only past the full/empty checks (H). Next: class Z (item 27n).
+27n. **Next unit (NEXT.md): class Z, shift by a guest-derived count with no range check** (`x << n` / `x >> n` with n >= the
+    operand width or negative is UB; arm64 masks n mod 32/64, x86 too, but the compiler may assume n < width). Sources: RDP tile
+    shifts / masks (shifts, masks fields), siz-based `1 << siz`, ucode fields, VI scale shifts.
+28. **When 1-27n offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
