@@ -193293,3 +193293,6 @@ Positive control: o8 shows the instrument and the overlap are real (chunks insid
 0x80B6A000 sentinel). The o8 arm did not crash in 131 s, so the defect is latent. Default behaviour is unchanged (def = pre-fix layout).
 Rules out: any guest reader assuming an 8 MB/24-bit heap end. Not covered: other host arenas vs each other. Next unit (NEXT.md
 s7336): host arena layout census. Docs: HEAP-ADDR-AUDIT class H, CURRENT-TRUTH item 26.
+Discrimination: on the guest side this selects H-clean and refutes H-cap (no reader clamps or masks the bound) and H-overlap (tail end
+<= 0x81000000 by the librecomp clamp). On the host side it selects H-overlap for the DLPOOLX arena: arm o8 places chunks at 0x80800000
+below the guest top, and arm c8 shows the clamp closes it. Next discriminator (s7336): a pairwise host arena table over every accepted env value.
