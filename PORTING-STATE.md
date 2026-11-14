@@ -192380,3 +192380,37 @@ Step 0 triggered (CURRENT-TRUTH 60272 bytes > 60000), so this is a MAINTENANCE i
   11090 vs 11224 (cells ~equal). -> H-hold: FOG_ALT=1,3,1 qualified at 21:9 as well as 16:9 (s7304), and cheaper per frame
   at both (two soaks; the cheaper-frame mechanism is unmeasured). OWNER-OPT-INS updated. G5e now awaits only the owner's look.
 - Rules out: H-crash/dip at 21:9 for the fog opt-in (L1/L5).
+
+## Session 7308 (2026-11-13) — G1c: same-pose dd1/dd6/dd8/dd8+FOG_ALT horizon sheet at 16:9 and 21:9 (new tools/s7308_pose_horizon.py): dd8 draws the open-plain far edge visibly farther than dd6 (H-dd8-visible, small); FOG_ALT turns the hard stair-stepped edge into haze; repeat arm pixel-identical
+HYPOTHESIS-ID g1c-dd8-horizon-look. Unit from NEXT (s7308). No maintenance (CURRENT-TRUTH 18633 B).
+- **Why:** s7300's horizon sheet compared arms at equal route seconds, but the poses diverged (dd1 level, dd>1 banked), so its
+  dd-vs-dd scores were pose-confounded. This run uses the s6872 pose harness instead.
+- **Run (in session, AC, HID idle 73500 s, unlocked):** scratch/s7308/run.zsh = tools/g3_optin_pose_arms.sh PIN=1 (dt pin 1/30),
+  POSE_LOCK=1 + POSE_REF (lvl1 attitude pin) + POSE_FREEZE at x 42.33/74.04/106.28 (15 s each, 2 window captures per freeze), L1,
+  B = ASPECT + FULLSCREEN=0 RETINA=0 DD_UNSAFE MELT WIDEWIN; arms dd1, dd6, dd8, dd8f (+ROGUESQ_DD_FOG_ALT=1,3,1), dd8b (repeat of dd8),
+  first at 16:9 and then at 21:9. All 10 arms alive_at_end=1, crashlines=0, vi_stalls30s=0, caps=6. Freeze positions are identical across all
+  10 arms (k0 42.398,-2.5,95.812; k1 74.112; k2 106.294,-6.799,69.769). [s7293] px8 auto fired in all dd8 arms (fbw 796 / 1024), and [s7302] fog alt ke=3
+  fired in both dd8f arms.
+- **New tool tools/s7308_pose_horizon.py:** crops each capture to the game area (2x title bar 64 px, measured; trims black bars). It reports
+  the far-edge row (median over columns 20-80% of the first row below 30% height with luma < 110) and the s7300 sky%, and the
+  horizon-band (rows 30-58%) mean abs diff for a REPEAT floor pair, a CTL pair and pairs of interest. It also writes a per-freeze sheet.
+- **Results (16:9 | 21:9):**
+  - Floor dd8 vs dd8b: 0.00 at every freeze in both aspects, i.e. pixel-identical. Pose lock + dt pin makes cross-run comparison exact at a frozen pose.
+  - Control dd1 vs dd6 band diff: mean 10.46 | 10.99. CONTROL PASS.
+  - Far-edge row (rows/1000, lower = farther ground) at k2, an open off-map plain with nothing in front:
+    dd1 841|841, dd6 767|770, dd8 745|745, dd8f 803|805. At k0/k1 (near ridges in front) dd6 = dd8 within 1-2 rows (450/449, 459/458).
+  - Band diff dd6 vs dd8: 2.49/0.45/8.82 | 2.48/0.38/8.36 (k0/k1/k2). dd8 vs dd8f: 8.25/7.50/8.82 | 8.74/7.06/8.36.
+  - sky% is cloud-confounded (the 13%-height sample hits a cloud; dd8 k2 reads 11.7 vs dd6 8.7 although dd8's ground edge is HIGHER). Do not
+    use sky% at this pose. The far-edge row is the measure.
+- **Read by eye (docs/owner_sheet_s7308_dd8_horizon.jpg, k2 edge strips; full frames docs/owner_sheet_s7308_dd8_horizon_169.jpg / _219.jpg):**
+  dd6's far edge is a hard, slightly stair-stepped line against the sky. dd8 moves the same hard line ~22/1000 of frame height higher (~34 px at
+  1528). dd8f replaces the line with a haze gradient that melts into the sky. Nearby ground looks the same in all dd>1 arms.
+- **Verdict (two lines: edge-row scorer + eyeball; one run per arm, but the repeat floor is exactly 0):** H-dd8-visible, small. It shows only where
+  the view is open, and it is the hard edge moving outward, not new detail. H-fog-hides: partly. FOG_ALT hides the hard edge, and its
+  dark line ends up between dd1 and dd6. That is the G5e look the owner asked for (melt rather than pop). H-dd8-invisible is refuted at an open pose
+  and holds behind near ridges (k0/k1), consistent with s7301's R88-ring-hidden.
+- **New defect seen (measured, single-source):** at 21:9 dd>1 freeze k2 there is a thin white vertical sliver at the left screen edge. Near-white
+  (>235) pixels in the left 1% of columns: 21:9 dd6 923 / dd8 882 / dd8f 934 vs dd1 61. At 16:9 it is 0 in dd6/dd8/dd8f (dd1 18).
+  It is deterministic at this frozen pose, so it is a reproducible case for the G5f knife-line/edge-sliver class or the W_SHEET guard-band sheets.
+  It is the next unit.
+- Rules out: "dd8 is indistinguishable from dd6 at the horizon" (s7300/s7301 single-source view) at an open pose; pose confound in this comparison.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7307 (2026-11-13).
+Compact operational handoff, as of Session 7308 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -29,7 +29,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   removed far/near/side); weaker at 21:9 (L1 null in all bands, lever ctl 8/27/17% PASS, s7306); untouched on
   L10 (cloud). Holds: 16:9 L1/L5/L10 300 s (s7304) and **21:9 L1/L5 300 s (s7307 fold: 0 crash, 60/s, beyond-route
   3/1 s, ctl flat-30 176 s PASS)**. Cheaper per frame in both: same-soak L1 heaviest20 12.57 -> 9.69 ms (16:9),
-  13.53 -> 9.40 ms (21:9). Default unchanged; owner judges the look (docs/OWNER-OPT-INS.md, sheets s7303/s7305/s7306).
+  13.53 -> 9.40 ms (21:9). Default unchanged; owner judges the look (docs/OWNER-OPT-INS.md, sheets s7303/s7305/s7306, same-pose dd6/dd8/fog s7308).
 - **G5c freezes CLOSED (s7272-s7285):** 0 flight image holds >= 250 ms on quiet host, windowed, fullscreen, 900 s
   L4/L12; every hold is a black death/restart or cutscene transition; off-window gaps are fb-relocation scene
   changes (s7284). Background CPU load IS a real freeze source and ROGUESQ_QOS_ALL=1 removes it (s7277-s7281;
@@ -127,7 +127,8 @@ Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, 
 - lvl10/15 need `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. L10 is cloud with no terrain grid: never use it for terrain
   measures. Wide soaks need `MISSION_WIDTH=796|1024` + `WIDE_ROUTE=1`; ASPECT implies `OSMEM_MB=12`. 16:9 autopilot
   gates wait on VI width 1592, not 1024 (s7271).
-- Pose control: `ROGUESQ_POSE_LOCK=1` + `ROGUESQ_POSE_FREEZE=<x,...>:<ms>` (needs RAND_TRACE + DEBUG_WRITE;
+- Pose control (s7308: PIN=1 repeat arms are pixel-identical at a freeze, so cross-run arm diffs are exact there; score with
+  tools/s7308_pose_horizon.py): `ROGUESQ_POSE_LOCK=1` + `ROGUESQ_POSE_FREEZE=<x,...>:<ms>` (needs RAND_TRACE + DEBUG_WRITE;
   tools/g3_optin_pose_arms.sh). Port dt pin `ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889`.
 - Timing: any ROGUESQ_LOG_* turns FAST off and PROBES on: set `ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0`, or
   OWNER_TIMING=1 in the harness. Per-frame meter `[g1b]` (sd_wall, tasks/s). Measure on AC power (battery x1.4).
@@ -172,9 +173,11 @@ is in the s7307 archive). Active unit: NEXT.md.
 
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner
    asks for more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
-2. **dd8 horizon look.** The s7295 look sheet's route window banks under cliffs (horizon mostly off-frame); a
-   horizon-in-view camera (pose lock or a later route second) is needed for a real dd6-vs-dd8 owner sheet.
-   Game far cutoff 0x8009DEB4 done s7300; the dd8 ring beyond 88 cells is invisible (s7301). dd5 L12 unmeasured.
+2. **21:9 dd>1 left-edge white sliver (s7308, measured, deterministic):** L1 pose-lock freeze k2 (tools/g3_optin_pose_arms.sh,
+   scratch/s7308/run.zsh) shows 880-930 near-white px in the left 1% columns at 21:9 dd6/dd8 vs 61 at dd1, 0 at 16:9. Name the
+   drawer (spike escaping CULL_SPIKE vs W_SHEET guard-band sky sheet vs RT64 edge) with LOG_SPIKE + RDP dump at that frozen pose. NEXT.md.
+   dd8 horizon look DONE s7308: same-pose far-edge row dd1 841 / dd6 767 / dd8 745 / dd8+FOG_ALT 803 (/1000, both aspects, repeat
+   floor 0.00) -> dd8 pushes the hard open-plain edge out a little; FOG_ALT melts it. Owner sheet docs/owner_sheet_s7308_dd8_horizon.jpg.
 3. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle. Never flip without the owner.
 4. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
