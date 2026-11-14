@@ -194186,3 +194186,44 @@ Verdict: the census + fork control selects H-hole (in its real form: zero-extend
 refutes H-safe as stated; H-trust is moot (sext junk pointers stay inside the reservation). This closes class AL. Next discriminator:
 class AM raw `rdram + X` provenance census (MASK/CHECKED/CONST/PHYS/B) with a fork escape control per B row.
 Next: class AM, raw `rdram + <expr>` host arithmetic (73 lines in src/, librecomp, ultramodern) - NEXT.md.
+
+## Session 7362 (2026-11-14) — class AM closed: raw `rdram + X` host arithmetic census (317 host + 5 generated rows); 1 real hole, the ROGUESQ_BUCKETLOG rd lambdas read rdram + (int32)g = 2 GB BELOW rdram (host memory): FIXED, fork two-arm control PASS, regen gate added
+HYPOTHESIS-ID: host-rdram-raw-offset. Hypotheses (NEXT.md): H-safe / H-trust / H-hole.
+Boring thing first (the model): librecomp mmaps exactly 4 GB PROT_NONE for rdram (recomp.cpp:872, addresses.hpp allocation_size), first
+512 MB RW, nothing reserved before or after it. So any offset X of C type uint32 is contained by construction: guest RAM or a
+deterministic fault, never host memory. Host memory is reachable only through a NEGATIVE offset, a 64-bit offset, or
+u32 + a further pointer-level term past 4 GB.
+Census tools/s7362_rdramraw_census.py (it reuses the s7361 C-type evaluator; block comments are stripped). Per `rdram + X` /
+`rdram[X]` / `&rdram[X]` it splits pointer-level terms and classes each one as MASK (top-level & M < 512 MB), CONST, U32, SIGNED,
+NEG (a sign-extended KSEG0 address added without the -0xFFFFFFFF80000000 bias), U32+K, WIDE or UNK. Selftest has 10 planted rows,
+all PASS. Host scope (src/**, librecomp src+include, ultramodern src+include) has 317 rows: U32 205, MASK 56, CONST 31, and 25 that
+are not contained by type. Each of the 25 got a hand verdict, now in the tool's REVIEWED table:
+ BOUNDED (sp.cpp ramdump i<8 MB; upstream_compat s6883 r in [20,24), k<4; s4231 0x17D000+i*4 with i<0x480);
+ CHECKED (main.cpp m5-descriptor-layout base+i*4: task_ptr == 0x800377C8 is pinned; rt64_render_context fz pl+0x4C:
+ 0x80001000 <= pl < ram_top-0x100);
+ SEXT-BIASED (mod_config_api free, s4913 poll addr());
+ U32-ENV (events.cpp ROGUESQ_DD_ADDRS/IADDRS from strtoul to uint32);
+ CONST/MASK that the evaluator missed (vtx-fault ranges[], fl_zero slot & 0x1FFFFFF, s4231 A[]);
+ STRING (2 format strings).
+Generated scope (`--gen ../N64Recomp/RecompiledFuncs`) has 5 rows (s4984 atomics, s5229 masked+checked byte), all contained.
+build/factor5_ucode has 0 rows.
+H-hole: upstream_compat.cpp rs64_s6094_tick and rs64_s6088_fuse (ROGUESQ_BUCKETLOG, injected into funcs_6
+tickTextureMaterialExpiry / findAndUnlinkSmallestEntry by tools/apply_s6088_bucketlog.py) computed
+`q = rdram + (int64_t)(int32_t)g` for g in [0x80000000, ram_top). (int32)g is negative, so q = rdram - 2 GB + phys: every bucket
+read (and the chain walk that follows it) came from host memory below the reservation. The s6094-s6097 bucketlog numbers were
+therefore host garbage or zeros, not guest state (any conclusion that rests on them is suspect; single-source, the instrument was
+opt-in). Fix: `rdram + (g - 0x80000000u)` at both sites.
+ORIGIN: the writer is our own s6088/s6094 diagnostic, which mixed the MEM_x sign-extension idiom without its bias. No guest value is
+illegitimate. Not a mitigation.
+Control tools/s7362_rawneg_ctl.sh is a forked child over a 6 GB reservation with rdram at +2 GB and a host sentinel page at
+rdram - 2 GB: pre rd() reads the HOST sentinel, post reads the planted guest word, post at the range top (0x8FFFFFFC) never reaches
+the host. 3/3 PASS. Census control: the pre-fix upstream_compat.cpp text gives 2 NEG rows, post gives 0 open.
+Gate: regen_replay.sh now runs `s7362_rdramraw_census.py --gen $D --check` and the host `--check`, failing on any non-contained row
+that has no verdict. A planted NEG in a copy of funcs_24.c -> rc 1; live tree -> rc 0.
+Smoke (rebuilt): `env SECS=260 zsh scratch/s7326/run.zsh s7362_dd8 'ROGUESQ_BUCKETLOG=1'` (dd8 21:9 FPS60 hangar->mission->abort
+cycles) -> crash=0 resets=14 late=0 arenafull=0, load_level_hmp 5x, 0 CRASH/SIG lines in 196 MB. The fixed path executed: 64 s6094
+ticks, 57 with ent>0 (max 458 chained entries, nb=512, base 0x8015F5D0/0x80170CC0, nodes_ge_8MB=0). This is real guest texture
+bucket state, a second line of evidence that the post read is right.
+Verdict: the census + fork control select H-hole for one site pair (an opt-in diagnostic) and H-safe/H-trust for the other 320
+rows. This closes class AM.
+Next: class AN, host fixed-size arrays indexed by guest-derived values (NEXT.md).

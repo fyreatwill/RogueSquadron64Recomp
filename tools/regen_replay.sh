@@ -10,4 +10,6 @@ done
 python3 tools/rename_generated_symbols.py "$D" >> "$LOG" 2>&1 || { echo "regen_replay: rename failed (see $LOG)"; exit 1; }
 # s7361: no injected MEM_x base may be zero-extended (lands 4 GB past rdram).
 python3 tools/s7361_memzext_census.py --gen "$D" >> "$LOG" 2>&1 || { echo "regen_replay: s7361 zero-extended MEM base (see $LOG)"; exit 1; }
+# s7362: no raw rdram + X in the injected tree or owned host code may leave the 4 GB reservation without a hand verdict.
+python3 tools/s7362_rdramraw_census.py --gen "$D" --check >> "$LOG" 2>&1 && python3 tools/s7362_rdramraw_census.py --check >> "$LOG" 2>&1 || { echo "regen_replay: s7362 unreviewed raw rdram offset (see $LOG)"; exit 1; }
 echo "regen_replay: ok"

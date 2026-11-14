@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7361 (2026-11-14).
+Compact operational handoff, as of Session 7362 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -504,9 +504,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     fixup_live_replay "suffix_29" had re-broken. All fixed (signed bases) in the source apply scripts + live tree
     (tools/apply_s7361_sext_bases.py); suffix_29 removed; regen_replay.sh now fails on any ZEXT (planted ctl rc=1).
     tools/s7361_zext_ctl.sh: 4/4 pre forms fault, post read the planted word. 260 s dd8 smoke + LOG_DMA clean (pi-slot path not hit).
-27za. **Next unit (NEXT.md): class AM, raw `rdram + <expr>` host pointer arithmetic** (~81 sites in src/, librecomp, ultramodern):
-    each offset must be masked/bounded below the RW 512 MB or derived from a sign-extended guest address.
-28. **When 1-27za offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27za. **Raw `rdram + X` host arithmetic (class AM): CLOSED (s7362, census + fork two-arm control + regen gate).**
+    rdram has 4 GB reserved and nothing before or after it, so a uint32 X is contained by construction. tools/s7362_rdramraw_census.py:
+    317 host rows (U32 205, MASK 56, CONST 31, 25 hand-reviewed BOUNDED/CHECKED/SEXT-BIASED/STRING), plus 5 in the --gen tree (contained).
+    1 real hole (NEG): the ROGUESQ_BUCKETLOG `rd` lambdas (upstream_compat rs64_s6094_tick / rs64_s6088_fuse) read
+    `rdram + (int64_t)(int32_t)g`, which lands 2 GB BELOW rdram, i.e. on host memory. FIXED (`g - 0x80000000u`). tools/s7362_rawneg_ctl.sh: pre
+    reads the host sentinel, post reads the guest word, PASS. regen_replay.sh runs `--check` on host + gen (planted NEG -> rc 1).
+27zb. **Next unit (NEXT.md): class AN, host fixed-size arrays indexed by guest-derived values** (static `T buf[N]` / std::array
+    subscripted by a guest RAM word, ctx->rN, an RDP/RSP command field or a DMA length; mask/loop/field/checked or fix).
+28. **When 1-27zb offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

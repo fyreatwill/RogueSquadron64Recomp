@@ -1,14 +1,18 @@
-# NEXT (s7362): idiom-class audit - class AM, raw `rdram + <expr>` host pointer arithmetic
-HYPOTHESIS-ID: host-rdram-raw-offset
-Context: s7361 closed class AL: MEM_x / TO_PTR with sign-extended bases cannot leave librecomp's 4 GB reservation (512 MB RW);
-the hole was zero-extended bases (fixed, regen gate in regen_replay.sh). Raw `rdram + X` (and `&rdram[X]`, `rdram[X]`) bypasses
-both protections: X is whatever the author computed.
-Idiom (class AM): host code forming a host pointer as rdram + X where X is not provably in [0, 512 MB) (or [0, 8 MB) for game RAM).
-Enumerate: `grep -rnE 'rdram *\+|&rdram\[|rdram\[' src lib/N64ModernRuntime/librecomp/src lib/N64ModernRuntime/ultramodern/src`
-(73 `rdram +` lines) + the --gen tree (injected code) + lib/rt64 '+' lines that touch RDRAM.
-Hypotheses: H-safe (every X is masked/range-checked or a constant), H-trust (unchecked but derived from a masked/known-good source:
-classify the provenance), H-hole (an X a guest value can push past 512 MB: fix with a mask/range check).
-Method: tools/s7362_rdramraw_census.py: per site, X provenance MASK (& 0x..), CHECKED (dominating compare within the function),
-CONST, PHYS (x - 0x80000000 after a KSEG0 test), B (none). Planted controls per kind. Second line: for each B, a fork/ASan harness like
-tools/s7361_zext_ctl.sh (pre escapes, post bounded). Then 260 s dd8 smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7362_dd8 ''`.
-Exit: PORTING-STATE s7362, CURRENT-TRUTH 27za -> closed, commit; any lib/ edit -> ./submodule-patches/export.sh first.
+# NEXT (s7363): idiom-class audit - class AN, host fixed-size arrays indexed by guest-derived values
+HYPOTHESIS-ID: host-array-guest-index
+Context: s7361 (class AL) and s7362 (class AM) closed every route from a guest value to a host pointer through rdram:
+MEM_x sext bases stay in the 4 GB reservation, raw `rdram + X` sites are contained/checked (tools/s7362_rdramraw_census.py,
+gated in regen_replay.sh). The remaining route is the host's OWN arrays: `static T buf[N]; buf[idx]` where idx comes from guest
+RAM, a ctx->rN register, an RDP/RSP command word or a DMA length (e.g. upstream_compat `s_s6093_cnt[w & 7]`, funcs_24 `bkt[bi]`,
+dpc_bridge per-tile/per-slot tables, rt64 tile/TMEM tables fed from RDP commands, rsp.cpp shadow buffers).
+Idiom (class AN): `name[expr]` / `name + expr` on a host array of static extent N, where expr is not provably in [0, N).
+Hypotheses: H-safe (every index masked `& (N-1)`, clamped, or a bounded loop counter), H-trust (unchecked but the producer is
+range-limited by the ucode/RDP format: e.g. a 3-bit tile field into an 8-entry table), H-hole (a guest value can index past N:
+host stack/BSS corruption - fix with a mask or bound).
+Method: tools/s7363_hostarr_census.py: collect host arrays with constant extent (declarations `T name[N]` / std::array<T,N>) in
+src/**, librecomp, ultramodern, the --gen tree, and lib/rt64/src (RDP-command-indexed tables); per subscript classify
+MASK (& M, M < N), LOOP (for-counter bounded by N or a smaller constant), FIELD (bitfield extract (x >> s) & m with m < N),
+CHECKED (dominating `< N` compare on the same name in the function), B (rest). Planted control rows per class (--selftest).
+Second line: for each B, a fork/ASan two-arm harness like tools/s7362_rawneg_ctl.sh (pre overflows, post bounded).
+Then the regression smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7363_dd8 ''`.
+Exit: PORTING-STATE s7363, CURRENT-TRUTH 27zb -> closed, commit; any lib/ edit -> ./submodule-patches/export.sh first.
