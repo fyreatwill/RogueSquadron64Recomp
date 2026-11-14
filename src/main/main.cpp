@@ -12444,6 +12444,45 @@ static void rs64_m5_apply_drain_tick_policy() {
 // clean with it (s6567, s6574) and px>=2 faults without it (s6549-s6551). Explicit env values win; dd<=1 untouched.
 extern "C" void rs64_s7258_merge_reinit();
 extern "C" int g_rs64_s7030;  /* s7037: upstream_compat.cpp fog/off-map cull arm */
+// s7358 class AI (tools/s7358_envparse_census.py): owner numeric knobs reach sizes unvalidated. ROGUESQ_DRAW_DISTANCE is read by
+// ~12 host and fixup sites with bare atof: the terrain multiplier (apply_s6036_dd) clamps it to [0.25,4] / [0.25,8] (DD_UNSAFE)
+// but its `v < 0.25` test lets NaN through (pre-fix arm "nan": multiplier nan -> assert in buildVisibleTerrainGridAroundCamera,
+// SIGABRT), a typo like "x4" reads 0 -> silent 0.25x terrain, and the tile pool (rs64_s6893_tilepool_size) sizes ceil(dd)^2*2
+// unclamped (pre-fix arm "d12": k=288, spill req 0x677DC0 arena full, SIGBUS). Normalise once, before any lazy reader runs:
+// not a number / not finite -> unset (retail, warned), above the 8.0 terrain ceiling -> 8 (warned). ROGUESQ_FB_WIDTH set by
+// hand bypasses the aspect policy's 1024 clamp (s6142: >1024 stalls the guest); negative atoi became a huge uint32 width in
+// upstream_compat's VI widen. Clamp it the same way. ROGUESQ_S7358_ENVCHECK=0 = old.
+static void rs64_s7358_sanitize_env() {
+    const char* off = std::getenv("ROGUESQ_S7358_ENVCHECK");
+    if (off && *off == '0') return;
+    auto num = [](const char* e, double& v) {
+        char* end = nullptr; v = std::strtod(e, &end);
+        if (end == e) return false;
+        while (*end && std::isspace((unsigned char)*end)) end++;
+        return *end == '\0' && std::isfinite(v);
+    };
+    if (const char* e = std::getenv("ROGUESQ_DRAW_DISTANCE"); e && *e) {
+        double v = 0;
+        if (!num(e, v)) {
+            std::fprintf(stderr, "[s7358-env] ROGUESQ_DRAW_DISTANCE=%s is not a finite number: ignored (retail draw distance)\n", e);
+            unsetenv("ROGUESQ_DRAW_DISTANCE");
+        } else if (v > 8.0) {
+            std::fprintf(stderr, "[s7358-env] ROGUESQ_DRAW_DISTANCE=%s is above the 8.0 terrain ceiling: using 8\n", e);
+            setenv("ROGUESQ_DRAW_DISTANCE", "8", 1);
+        }
+    }
+    if (const char* e = std::getenv("ROGUESQ_FB_WIDTH"); e && *e) {
+        double v = 0;
+        if (!num(e, v) || v < 0.0) {
+            std::fprintf(stderr, "[s7358-env] ROGUESQ_FB_WIDTH=%s is not a width: ignored\n", e);
+            unsetenv("ROGUESQ_FB_WIDTH");
+        } else if (v > 1024.0) {
+            std::fprintf(stderr, "[s7358-env] ROGUESQ_FB_WIDTH=%s is above the 1024 limit (s6142): using 1024\n", e);
+            setenv("ROGUESQ_FB_WIDTH", "1024", 1);
+        }
+    }
+}
+
 static void rs64_g1c_apply_dd_policy() {
     const char* e = std::getenv("ROGUESQ_DRAW_DISTANCE");
     double dd = (e && *e) ? std::atof(e) : 1.0;
@@ -12790,6 +12829,7 @@ int main(int argc, char* argv[]) {
         for (const char* n : {"ROGUESQ_GFX_QOS", "ROGUESQ_GUEST_QOS", "ROGUESQ_PRESENT_QOS", "ROGUESQ_WL_QOS", "ROGUESQ_UPLOAD_QOS"}) setenv(n, "1", 0);
         std::fprintf(stderr, "[s6989] QOS_ALL gfx=%s guest=%s present=%s wl=%s upload=%s\n", std::getenv("ROGUESQ_GFX_QOS"), std::getenv("ROGUESQ_GUEST_QOS"),
             std::getenv("ROGUESQ_PRESENT_QOS"), std::getenv("ROGUESQ_WL_QOS"), std::getenv("ROGUESQ_UPLOAD_QOS")); } }
+    rs64_s7358_sanitize_env();
     rs64_g1d_apply_aspect_policy();
     rs64_g1c_apply_dd_policy();
 

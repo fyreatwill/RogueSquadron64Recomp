@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7354 (2026-11-14).
+Compact operational handoff, as of Session 7358 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -484,9 +484,17 @@ is in the s7307 archive). Active unit: NEXT.md.
     throw; short read -> empty) + write_file (reported success unchecked), mod_manifest.cpp loose read_file, mods.cpp config
     writes. Runtime: `zsh tools/s7357_arms.zsh` (own working folder, save COPY): ctl 512 B silent, short 100 B -> named warning,
     both boot; owner save sha unchanged. 260 s dd8 smoke clean. Next: class AI (27w).
-27w. **Next unit (NEXT.md): class AI, unvalidated numeric env/config parses** (atoi/strtol/strtoul/atof on getenv or a
-    config file, used as an index, size, shift or divisor without a range check) in host code we own.
-28. **When 1-27w offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27w. **Unvalidated numeric env/config parses (class AI): CLOSED (s7358, census + runtime arms; 2 owner-knob crashes FIXED).**
+    tools/s7358_envparse_census.py (atoi/atof/strto*/sscanf/sto* over the s7356 scope, auto sink pass + every owner-knob and
+    config site read by hand): 290 sites, 0 B, 4 G-M (diag cadence %/÷ test levers), 4 controls PASS. FIXED: ROGUESQ_DRAW_DISTANCE
+    above 8 sized the tile pool ceil(dd)^2*2 unclamped (dd12 k=288 -> spill arena full -> SIGBUS) while terrain clamps at 8; "nan"
+    passed apply_s6036_dd's `v < 0.25` clamp (assert in buildVisibleTerrainGridAroundCamera, SIGABRT); a typo ("x4") read 0 ->
+    silent 0.25x terrain; hand-set ROGUESQ_FB_WIDTH bypassed the 1024 clamp. main.cpp rs64_s7358_sanitize_env (before the
+    aspect/dd policies; ROGUESQ_S7358_ENVCHECK=0 old) + tilepool px<=8. `zsh tools/s7358_arms.zsh <tag>`: pre d12/nan crash,
+    typo 0.25; post all alive with "[s7358-env]"; same-build ENVCHECK=0 nan re-crashes. 260 s dd8 smoke clean. Next: class AJ (27x).
+27x. **Next unit (NEXT.md): class AJ, unbounded string copies of env/config/file text** (strcpy/strcat/sprintf/%s-without-width
+    sscanf/memcpy of strlen into fixed buffers) in host code we own.
+28. **When 1-27x offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

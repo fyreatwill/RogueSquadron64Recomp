@@ -3983,7 +3983,7 @@ extern "C" uint32_t rs64_s6893_tilepool_size(uint32_t req) {
     if (!s6893_pool_on()) return req;
     static const uint32_t k = [] {
         if (const char* e = std::getenv("ROGUESQ_TILEPOOL_K")) { int v = std::atoi(e); if (v >= 1) return (uint32_t)v; }
-        const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE"); double dd = (d && *d) ? std::atof(d) : 1.0; uint32_t px = dd > 1.0 ? (uint32_t)std::ceil(dd) : 1u;
+        const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE"); double dd = (d && *d) ? std::atof(d) : 1.0; uint32_t px = dd > 1.0 ? (uint32_t)std::ceil(dd) : 1u; if (!(px <= 8u)) px = 8u; /* s7358: terrain clamps dd at 8 (apply_s6036_dd); k=ceil(dd)^2*2 past it overflowed the spill arena */
         const char* w = std::getenv("ROGUESQ_FB_WIDTH");
         return px * px * ((w && std::atoi(w) > 640) ? 2u : 1u); }();
     s6893_base = req / 25u; s6893_cap = s6893_base * k; s6893_max = 0;

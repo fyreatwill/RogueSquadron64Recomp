@@ -1,18 +1,17 @@
-# NEXT (s7358): idiom-class audit - class AI, unvalidated numeric env/config parses
-HYPOTHESIS-ID: host-unvalidated-numeric-parse
-Context: s7357 closed class AH (unchecked I/O lengths; census tools/s7357_iolen_census.py, arms tools/s7357_arms.zsh).
-Idiom (class AI): in host C++ we own (src/, lib/N64ModernRuntime/{librecomp,ultramodern}/src, our lib/rt64 '+' lines),
-atoi/atol/strtol/strtoul/strtoull/atof/strtod/sscanf on a getenv value or config-file text, whose result is then used as an
-array index, allocation size/count, shift amount, divisor or loop bound with no clamp. A typo'd or negative ROGUESQ_* value
-(owner opt-ins: ROGUESQ_DRAW_DISTANCE, ROGUESQ_ASPECT, ROGUESQ_RESMULT, ROGUESQ_UCODE_CAP, FOG_ALT, ...) then indexes out of
-bounds, divides by zero or allocates huge.
-Hypotheses: H-safe (every default-on owner knob is clamped), H-diag (only diagnostic knobs are unclamped: harmless-ish),
-H-unclamped (an owner-facing opt-in, or any default-on parse, reaches an index/size/shift/divisor unclamped: fix with a clamp
-+ named warning).
-Method: tools/s7358_envparse_census.py: enumerate parse calls; follow the result variable forward (same function / static
-init lambda) to its first sink use; classify CLAMPED (min/max/std::clamp/if range test before the sink) / NOSINK (only
-printed / compared) / G (diagnostic knob) / B (owner knob or default-on, unclamped sink) / ?. MANUAL table like s7356/s7357.
-Controls: planted unclamped index (B), clamped twin, printed-only twin. Second line: for each B, run the game with the bad
-value (e.g. ROGUESQ_X=-1 / 0 / 99999999) pre-fix vs post-fix, 20 s boot arms like tools/s7357_arms.zsh (own working folder
-with a save COPY; never touch build/saves). Then 260 s dd8 smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7358_dd8 ''`.
-Exit: PORTING-STATE s7358, CURRENT-TRUTH item 27w -> closed, commit.
+# NEXT (s7359): idiom-class audit - class AJ, unbounded string copies of env/config/file text
+HYPOTHESIS-ID: host-unbounded-string-copy
+Context: s7358 closed class AI (numeric env parses; census tools/s7358_envparse_census.py, arms tools/s7358_arms.zsh).
+Idiom (class AJ): in host C++ we own (src/, lib/N64ModernRuntime/{librecomp,ultramodern}/src, our lib/rt64 '+' lines):
+strcpy/strcat/sprintf/vsprintf, sscanf/fscanf "%s"/"%[" without a width, memcpy(dst, src, strlen(src)[+1]) and
+snprintf whose return value is used as an offset (it reports the untruncated length), with a fixed-size destination and a
+source that is getenv text, a config/mod/save file, a path (std::filesystem / SDL_GetBasePath), or a guest-RAM string.
+Hypotheses: H-safe (every such copy is bounded), H-diag (only env-gated diagnostics are unbounded), H-overflow (a default-on or
+owner-knob path copies unbounded text into a fixed buffer: fix with a bounded copy + named warning).
+Method: tools/s7359_strcopy_census.py: enumerate the calls; classify BOUNDED (snprintf/strncpy/strlcpy with sizeof dst,
+"%Ns" width <= dst-1, std::string) / CONST (source is a literal) / G (env-gated diagnostic) / B (default-on or owner-knob,
+unbounded) / ?. snprintf-return-as-offset is its own row type. MANUAL table like s7358. Controls: planted strcpy(getenv) (B),
+snprintf(sizeof) (BOUNDED), strcpy literal (CONST), env-gated sprintf (G).
+Second line: for each B, run with an oversized value (e.g. a 600-char env string / long path) pre-fix vs post-fix; 20 s boot
+arms like tools/s7357_arms.zsh (own working folder, save COPY; never touch build/saves) or the s7358 route arms. ASan build in a
+separate dir is allowed if the overflow is silent. Then 260 s dd8 smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7359_dd8 ''`.
+Exit: PORTING-STATE s7359, CURRENT-TRUTH item 27x -> closed, commit.

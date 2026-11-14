@@ -194059,3 +194059,38 @@ class AI (s7358) unclamped numeric env/config parses, H-safe vs H-diag vs H-uncl
 - Smoke on build/ (fix in): `env SECS=260 zsh scratch/s7326/run.zsh s7357_dd8 ''`: crash=0 resets=14 late=0 arenafull=0
   (same as s7356).
 - Next: class AI (CURRENT-TRUTH 27w): unvalidated numeric env/config parses used as index/size/shift/divisor.
+
+## Session 7358 (2026-11-14) — class AI unvalidated numeric env parses closed: 2 owner-knob crashes FIXED (ROGUESQ_DRAW_DISTANCE >8 overflows the tile pool -> SIGBUS; "nan" passes the terrain clamp -> SIGABRT) + silent typo / FB_WIDTH bypass; census 290 sites, 0 B
+HYPOTHESIS-ID: host-unvalidated-numeric-parse
+Hypotheses: H-safe (every default-on owner knob is clamped), H-diag (only diagnostic knobs are unclamped), H-unclamped (an
+owner-facing opt-in reaches a size/index unclamped). **Census + arms select H-unclamped** for ROGUESQ_DRAW_DISTANCE (the main
+owner knob), refuting H-safe and H-diag; class AI closed.
+- Census: tools/s7358_envparse_census.py (atoi/atol/atof/strtol/strtoul/strtoull/strtod/strtof/sscanf/sto* in src/**, librecomp +
+  ultramodern src, our lib/rt64 '+' lines). Auto pass follows the assigned variable to index/divisor/shift/alloc/loop-bound sinks
+  and clamp tests: 290 sites, CLAMPED 18 / NOSINK 265 / D 2 / G 5 (pre-manual). Controls B / CLAMPED / NOSINK / G all PASS. The
+  auto pass cannot see a result flowing through a return expression or another env var, so every owner-knob site (47, knob named
+  in docs/OWNER-OPT-INS.md) and config-text site (14) was read by hand, plus the 69 fixup-injected getenv parses in
+  tools/apply_*.py for owner knobs (22 knobs; all float scales with explicit floors, or flags). Post-manual: 0 B, G-M 4 (test-lever
+  cadences % / ÷ an atoi; arm64 udiv by 0 gives 0, no trap; static only, single-source), NOSINK-M 1 (name collision).
+  Clamped as found: OSMEM_MB 4..16 (recomp.cpp, s7335 top), RAMTOP_MB <=24, WIDEWIN_N 64..128, WIDEWIN_R >=0, POOLX_MAX 1..8,
+  KLEVEL/CAPLEVEL/RLEVEL level < 32, ASPECT ratio clamped to 4:3..amax, fbw <=1024 on the policy path.
+- Defects (all on ROGUESQ_DRAW_DISTANCE, read by ~12 host + fixup sites with bare atof):
+  * rs64_s6893_tilepool_size: k = ceil(dd)^2 x2 (wide), no clamp, while apply_s6036_dd clamps the terrain multiplier at 8.
+    dd=12: k=288, spill req 0x677DC0 (942 x 25 x 288) "arena full", NULL, SIGBUS si_addr 0x380000003.
+  * apply_s6036_dd `if (v < 0.25) v = 0.25` is false for NaN: dd=nan -> "[dd] multiplier nan" -> "Assertion failed:
+    (ctx->f2.fl == ctx->f2.fl), buildVisibleTerrainGridAroundCamera, funcs_9.c" -> SIGABRT.
+  * typo "x4": atof 0 -> clamped to 0.25 -> a quarter of retail draw distance, no message.
+  * ROGUESQ_FB_WIDTH set by hand skipped the aspect policy's 1024 clamp (setenv overwrite=0); negative atoi -> (uint32_t) huge
+    VI width in upstream_compat's s6113 widen. Static only (not armed), single-source.
+- ORIGIN: ours (G1c/G1d env plumbing). Values are user typos/out-of-range inputs, not game data; the writer is the env parse.
+- FIX: src/main/main.cpp rs64_s7358_sanitize_env(), called before rs64_g1d_apply_aspect_policy/rs64_g1c_apply_dd_policy (all
+  dd/FB_WIDTH readers that matter are lazy, after it): DRAW_DISTANCE not a finite number -> unset + "[s7358-env] ... ignored
+  (retail draw distance)", > 8 -> "8" + warning; FB_WIDTH not a number / negative -> unset, > 1024 -> 1024. ROGUESQ_S7358_ENVCHECK=0
+  = old. Belt: tilepool px <= 8 (upstream_compat.cpp). The apply_s6036_dd NaN test itself is left (needs a regen; the sanitizer is
+  the single entry point).
+- Runtime arms `zsh tools/s7358_arms.zsh <tag>` (s7326 hangar->mission route, dd8 21:9 bundle, owner save read-only, 130 s each):
+  pre:  ctl(8) mult 8 k=128 0 crash | d12 mult 8 k=288 arenafull 1 CRASH | nan mult nan CRASH (assert) | typo mult 0.25 0 crash.
+  post: ctl mult 8 k=128 0 crash | d12 -> 8, k=128, 0 arenafull, 0 crash, 1 [s7358-env] | nan -> retail mult 1, 0 crash | typo ->
+  retail mult 1, 0 crash. Same-build revert control ROGUESQ_S7358_ENVCHECK=0 + nan: mult nan, assert 1, crash 1 (the sanitizer is
+  the lever). Smoke `env SECS=260 zsh scratch/s7326/run.zsh s7358_dd8 ''`: crash=0 resets=14 late=0 arenafull=0 (= s7357).
+- Next: class AJ (CURRENT-TRUTH 27x) unbounded string copies of env/config/file text into fixed buffers.
