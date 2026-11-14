@@ -1,15 +1,15 @@
-# NEXT (s7327): qualify the s7326 spill reset release + 8 MB arena on the owner's routes
-HYPOTHESIS-ID: spill-scene-reset-leak
-Context (s7326): spill blocks escaped the retail scene bulk free (coalesceFreeHeapBlocks) -> dd8 21:9 hangar route crashed at the first
-mission load (arena full, rs_malloc NULL). Fix default on: rs64_s7326_spill_reset (ROGUESQ_SPILL_RESET=0 old) + 8 MB arena
-(ROGUESQ_SPILL_MB=4 old, RAMTOP 24). Same-build 4-arm table in PORTING-STATE s7326. Soak s7326_spill_levels queued (L4 + L15 dd8 21:9).
-1. Fold the s7326_spill_levels verdict (SOAK-RESULTS).
-2. Owner route coverage, one build, arms run back to back (scratch/s7326/run.zsh <name> "<env>", 650 s, needs idle + unlocked screen):
-   dd4 16:9 (owner recipe), dd6 21:9 WIDEWIN, dd8 16:9. Per arm: crash, arena full, "[s7326] spill reset" count/bytes, spill bump peak.
-   Hypotheses: H-dd8-only (lower dd never spills the 0x2DFF00 buffers -> fix inert there) vs H-all-dd (lower dd also spills them and
-   was one reset away from the same crash). Control: ROGUESQ_S7326_CTL=1 ctl seen == resets.
-3. Class G re-check with blocks above 0x81400000: ROGUESQ_S7324_RCPREF=ctl + ALLOCMAP on arm c's route, tools/s7324_rcp_report.py
-   (exit 1 on a hit). Expected: 0 direct / 0 alias (spill is above 16 MB in both layouts).
-Outcomes: all clean -> close item 21 and tell the owner (OWNER-OPT-INS note: dd8 hangar route no longer crashes at mission load);
-any crash -> backtrace + spill log, name the request that failed.
+# NEXT (s7328): visible effect of the s7327 25-bit RSP DMA fix + dd6 RCP check
+HYPOTHESIS-ID: spill-rcp-dma-width
+Context (s7327): on the dd8 16:9 hangar route the gfx ucode DMAs terrain grid-layer data (initGridLayerFromLevelData, inside the spill
+0x2DFF00 level buffer) at 0x81xxxxxx; the old 0xFFFFF8 mask read the 0x80xxxxxx alias (49152/49152 reads wrong). Fix default on:
+rs64_s7327_mask in lib/N64ModernRuntime rsp.hpp, ROGUESQ_RSP_DMA25=0 old.
+Hypotheses: H-visible (wrong grid data drew wrong/missing terrain cells in dd8 hangar-route missions; fix changes the frame) vs H-masked
+(the bytes feed something that does not reach the frame, e.g. a cull/LOD table the CPU already resolved).
+Discriminating measurement, one build, same pose: pose-locked capture (ROGUESQ_POSE_LOCK=1 + POSE_FREEZE, tools/g3_optin_pose_arms.sh,
+tools/s7308_pose_horizon.py) on the dd8 16:9 hangar route in-mission, arms DMA25=1 / DMA25=0 / DMA25=1 repeat. Repeat arm must be
+pixel-identical to arm 1 (control); arm 0 vs 1 diff > repeat diff selects H-visible, = selects H-masked. Also RDP triangle count
+in the frame. Owner sheet if H-visible.
+Also in the same session: RCPREF=ctl + DMA25_CTL=1 on the dd6 21:9 route (scratch/s7326/run.zsh s7328_dd6 "ROGUESQ_DRAW_DISTANCE=6
+ROGUESQ_S7324_RCPREF=ctl ROGUESQ_RSP_DMA25_CTL=1", SECS=330): are the 0x19DF70 spill blocks RSP-read? Add a negative control for the
+byte comparer (log a bit-24 read whose images match, or compare a spill block against itself).
 Parallel open (item 22): 46 audio reads of song-channel arrays freed 0-14 ms earlier at the scene transition.

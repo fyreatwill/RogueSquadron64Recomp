@@ -192959,3 +192959,37 @@ Not covered: dd4/dd6 and 16:9 on the hangar route (owner's real route; unknown w
 references with the larger arena (spill is above 16 MB either way). Queued soak s7326_spill_levels (forced-level L4 + L15 dd8 21:9,
 300 s each). Logs scratch/s7326/{a,b,c,d}/run.log.
 DISCRIMINATION: selects H-leak (survivors never freed, and fatal at dd8 21:9 on the hangar route); refutes H-freed-later and H-persistent-only.
+
+## Session 7327 (2026-11-14) — spill fix qualified on the owner's hangar routes; class G re-run FAILED H-cpu-only: the gfx RSP DMA read terrain grid data from spill blocks through a 24-bit mask (wrong bytes 49152/49152), fixed with a 25-bit RSP DMA mask (ROGUESQ_RSP_DMA25, default on)
+HYPOTHESIS-ID: spill-scene-reset-leak. Hypotheses: H-dd8-only (lower dd never spills the big level buffers, fix inert) vs H-all-dd;
+class G: H-cpu-only (s7324) vs H-rcp-reads-spill on the hangar route.
+Soak fold s7326_spill_levels (rc=0): L4 dd8 21:9 hold 303 s, L15 305 s, alive, 0 crash, 0 VI stall, 0 arena full, releases 2/1.
+Owner-route arms (scratch/s7326/run.zsh, 650 s, hangar -> mission -> abort x4, FPS60, owner save read-only, one game at a time,
+driver scratch/s7327/arms.zsh, idle host 8980 s, screen unlocked):
+| arm | crash | arena full | spill reset releases | big spill reqs | spill peak used |
+| dd4 16:9 (owner recipe, no WIDEWIN) | 0 | 0 | 0 | none | 0xC560 |
+| dd6 21:9 WIDEWIN | 0 | 0 | 2 x (2 blocks, 0x33BEE0) | 4 x 0x19DF70 | 0x33BEE0 |
+| dd8 16:9 WIDEWIN + RCPREF=ctl | 0 | 0 | 6 (0x2DFF00 / 0x5C2DD0) | 9 x 0x2DFF00 | 0x688B50 |
+Controls: [s7326] ctl seen == resets in every arm (25/25, 22/22, 25/25); heap_np_kept=0. Selects H-all-dd above dd4: dd6 also leaks
+without the release (0x33BEE0 per load, the 4 MB arena would fill on the 2nd load); dd4 never spills, the owner recipe is unaffected.
+dd8 16:9 peak 0x688B50 > 4 MB, so the 8 MB arena is needed even with the release.
+Class G re-run (dd8 16:9 arm, tools/s7324_rcp_report.py -> VERDICT FAIL): dma_rd_gfx direct_spill=74607, raw 0x8137B00B, 0x8109B0F2 ...
+(len 0x20, address stride -0x19), blocks 0x813767E0 / 0x810968E0 req 0x2DFF00, owner initGridLayerFromLevelData+0x18e0/+0x1878 <
+loadLevelAssets+0x53c < initMission+0x2014. direct_other=0 in all sources; RDP TIMG/ZIMG/CIMG never spill. librecomp rsp.hpp masked
+DRAM_ADDR with 0xFFFFF8 (hardware width), so each such read fetched phys 0x0037B008 = heap, not the block. s7324 missed it because the
+forced-level route keeps the 0x2DFF00 in the main heap; on the hangar route the scene-reset/reload sequence places it in spill.
+ORIGIN: the writer of the bad address is nobody: the address is the game's legitimate KSEG0 pointer to its own grid-layer buffer, which
+our port placed above 16 MB; the ucode passes it through unmasked and our RSP DMA dropped bit 24. The defect is ours (port layout vs
+hardware DMA width), not retail.
+Fix (lib/N64ModernRuntime rsp.hpp, exported to submodule-patches): rs64_s7327_mask() = 0x1FFFFF8 (default) and bound 0x2000000 for both
+DMA directions; ROGUESQ_RSP_DMA25=0 = old 24-bit mask / 16 MB bound. Safe because no non-spill DMA ever carries bit 24 (direct_other=0
+over ~740M DMAs here and in s7324). ROGUESQ_RSP_DMA25_CTL=1 compares the 24-bit and 25-bit images per bit-24 read.
+Same-build arms (SECS=330, dd8 16:9 route, RCPREF=ctl + DMA25_CTL=1; driver scratch/s7327/arms2.zsh):
+| arm | mask line | crash | bit-24 gfx reads | bytes differ | s7324 ctl |
+| on  | 0x1FFFFF8 | 0 | 49152+ (direct_spill 47764) | 49152/49152 | 200/200 |
+| off | 0xFFFFF8  | 0 | 49152+ (direct_spill 51655) | 49152/49152 | 204/204 |
+Two lines: allocation-map owner + raw DMA address (s7324 classifier) and the byte compare agree: under the old mask every spill read
+returned wrong data. Not measured: the visible effect (terrain cells built from wrong grid-layer data on the dd8 hangar route), whether
+dd6's 0x19DF70 spill blocks are RSP-read, and a negative control for the byte comparer (a bit-24 read whose two images match).
+DISCRIMINATION: selects H-rcp-reads-spill (refutes s7324 H-cpu-only for the hangar route) and H-all-dd for dd>=6; dd4 unaffected.
+Logs scratch/s7326/s7327_{dd4_169,dd6_219,dd8_169,mon,moff}/run.log, scratch/s7327/s7324_{on,off}.log.

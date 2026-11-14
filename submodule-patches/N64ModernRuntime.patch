@@ -11,19 +11,20 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..e664722 100644
+index b0d6bef..0d6c577 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
-@@ -2,6 +2,8 @@
+@@ -2,6 +2,9 @@
  #define __RSP_H__
  
  #include <cstdio>
 +#include <cstdlib>
 +#include <cstring>
++#include <atomic>
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -34,17 +36,63 @@ struct RspContext {
+@@ -34,17 +37,63 @@ struct RspContext {
  
  using RspUcodeFunc = RspExitReason(uint8_t* rdram, uint32_t ucode_addr);
  
@@ -89,7 +90,7 @@ index b0d6bef..e664722 100644
      uint32_t out;
      for (int i = 0; i < 4; i++) {
          reinterpret_cast<uint8_t*>(&out)[i ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -53,12 +101,15 @@ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
+@@ -53,12 +102,15 @@ static inline uint32_t RSP_MEM_W_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline void RSP_MEM_W_STORE(uint32_t offset, uint32_t addr, uint32_t val) {
@@ -106,7 +107,7 @@ index b0d6bef..e664722 100644
      uint16_t out;
      for (int i = 0; i < 2; i++) {
          reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -67,6 +118,7 @@ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
+@@ -67,6 +119,7 @@ static inline uint32_t RSP_MEM_HU_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
@@ -114,7 +115,7 @@ index b0d6bef..e664722 100644
      int16_t out;
      for (int i = 0; i < 2; i++) {
          reinterpret_cast<uint8_t*>(&out)[(i + 2) ^ 3] = RSP_MEM_BU(offset + i, addr);
-@@ -75,9 +127,11 @@ static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
+@@ -75,9 +128,11 @@ static inline uint32_t RSP_MEM_H_LOAD(uint32_t offset, uint32_t addr) {
  }
  
  static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val) {
@@ -127,7 +128,7 @@ index b0d6bef..e664722 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +148,238 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +149,262 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -208,11 +209,35 @@ index b0d6bef..e664722 100644
 +extern "C" void rs64_s7094_dma_shape(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud);
 +inline thread_local uint64_t g_s4248_dma_rd_bytes = 0, g_s4248_dma_rd_calls = 0, g_s4248_dma_wr_bytes = 0, g_s4248_dma_wr_calls = 0;
 +
++// s7327: RSP DMA address width. Hardware drops DRAM_ADDR bits 24+, but the port's dd>1 spill arena sits at phys 0x01000000-0x017FFFFF
++// (s7326 8 MB layout) and the gfx ucode passes spill pointers through untouched (s7327 hangar route dd8 16:9: 74,607 gfx reads of the
++// 0x2DFF00 loadLevelAssets grid-layer buffer at 0x81xxxxxx, read from the 24-bit alias 0x80xxxxxx = wrong memory). No non-spill DMA
++// ever carries bit 24 (s7324/s7327 direct_other=0 over ~740M DMAs), so a 25-bit mask changes only spill reads. ROGUESQ_RSP_DMA25=0 = old.
++// ROGUESQ_RSP_DMA25_CTL=1: per read with bit 24 set, compare the 24-bit and 25-bit images and count the reads whose bytes differ.
++static inline uint32_t rs64_s7327_mask() {
++    static const uint32_t m = [] { const char* e = getenv("ROGUESQ_RSP_DMA25"); const bool off = e && e[0] == '0';
++        fprintf(stderr, "[s7327] rsp dma dram mask %s\n", off ? "0xFFFFF8 (24-bit, old)" : "0x1FFFFF8 (25-bit, spill arena reachable)");
++        return off ? 0xFFFFF8u : 0x1FFFFF8u; }();
++    return m; }
++static inline uint32_t rs64_s7327_limit() { return rs64_s7327_mask() == 0xFFFFF8u ? 0x1000000u : 0x2000000u; }
++static inline void rs64_s7327_ctl(uint8_t* rdram, uint32_t raw, uint32_t len, int wr) {
++    static const bool on = [] { const char* e = getenv("ROGUESQ_RSP_DMA25_CTL"); return e && e[0] && e[0] != '0'; }();
++    if (!on) return;
++    const uint32_t q = raw & 0x1FFFFFFFu; if (q < 0x1000000u || q >= 0x2000000u) return;
++    static std::atomic<uint64_t> n{0}, nd{0}, nb{0};
++    const uint32_t a = q & 0xFFFFF8u, b = q & 0x1FFFFF8u; uint32_t l = len + 1; if (b + l > 0x2000000u) l = 0x2000000u - b;
++    const bool d = memcmp(rdram + a, rdram + b, l) != 0;
++    const uint64_t k = ++n; if (d) ++nd; nb += l;
++    if (k <= 8 || (k & 4095u) == 0) fprintf(stderr, "[s7327] dma25 %s n=%llu differ=%llu bytes=%llu last raw=%08X len=0x%X differ=%d mask=%X\n", wr ? "wr" : "rd",
++        (unsigned long long)k, (unsigned long long)nd.load(), (unsigned long long)nb.load(), raw, l, (int)d, rs64_s7327_mask()); }
++
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
 +    if (rs64_s7094_on) rs64_s7094_dma_shape(0, dmem_addr, dram_addr, rd_len, RS64_DMEM_BASE == dmem_audio);
      rd_len += 1; // Read length is inclusive
+-    dram_addr &= 0xFFFFF8;
 +    g_s4248_dma_rd_bytes += rd_len; g_s4248_dma_rd_calls++;
-     dram_addr &= 0xFFFFF8;
++    rs64_s7327_ctl(rdram, dram_addr, rd_len - 1, 0);
++    dram_addr &= rs64_s7327_mask();
      // Bit 12 of the mem address selects IMEM (1) vs DMEM (0) on real RSP.
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
@@ -269,8 +294,8 @@ index b0d6bef..e664722 100644
      if (dmem_addr + rd_len > 0x1000) rd_len = 0x1000 - dmem_addr;
 -    if (dram_addr >= 0x800000) return;
 -    if (dram_addr + rd_len > 0x800000) rd_len = 0x800000 - dram_addr;
-+    if (dram_addr >= 0x1000000) return; // s6135: 16 MB (was 8 MB: dropped every DL fetch above 8 MB at OSMEM>8)
-+    if (dram_addr + rd_len > 0x1000000) rd_len = 0x1000000 - dram_addr;
++    if (dram_addr >= rs64_s7327_limit()) return; // s7327 limit; s6135: 16 MB (was 8 MB: dropped every DL fetch above 8 MB at OSMEM>8)
++    if (dram_addr + rd_len > rs64_s7327_limit()) rd_len = rs64_s7327_limit() - dram_addr;
 +    if (!rs64_g1e_fast) rs64_m5_audio_input_dma(rdram, dram_addr, rd_len, dmem_addr);
 +    // Record only window-targeted small fetches (actual DL chunk staging,
 +    // dmem 0x170 len ~0x110) — NOT full segment images that merely cover the
@@ -336,8 +361,10 @@ index b0d6bef..e664722 100644
  static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t wr_len) {
 +    if (rs64_s7094_on) rs64_s7094_dma_shape(1, dmem_addr, dram_addr, wr_len, RS64_DMEM_BASE == dmem_audio);
      wr_len += 1; // Write length is inclusive
+-    dram_addr &= 0xFFFFF8;
 +    g_s4248_dma_wr_bytes += wr_len; g_s4248_dma_wr_calls++;
-     dram_addr &= 0xFFFFF8;
++    rs64_s7327_ctl(rdram, dram_addr, wr_len - 1, 1);
++    dram_addr &= rs64_s7327_mask();
      // Same IMEM/DMEM split as the rdram→dmem direction: silently skip IMEM
      // writebacks, clamp lengths to actual memory bounds.
      if (dmem_addr & 0x1000) return;
@@ -345,8 +372,8 @@ index b0d6bef..e664722 100644
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
 -    if (dram_addr >= 0x800000) return;
 -    if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
-+    if (dram_addr >= 0x1000000) return; // s6138: 16 MB (was 8 MB: dropped every DMEM->RDRAM write above 8 MB)
-+    if (dram_addr + wr_len > 0x1000000) wr_len = 0x1000000 - dram_addr;
++    if (dram_addr >= rs64_s7327_limit()) return; // s7327 limit; s6138: 16 MB (was 8 MB: dropped every DMEM->RDRAM write above 8 MB)
++    if (dram_addr + wr_len > rs64_s7327_limit()) wr_len = rs64_s7327_limit() - dram_addr;
 +    if (rs64_g1e_fast && (dmem_addr & 3u) == 0u) {
 +        const uint32_t n4 = wr_len & ~3u;
 +        memcpy(rdram + dram_addr, RS64_DMEM_BASE + dmem_addr, n4);

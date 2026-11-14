@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7326 (2026-11-14).
+Compact operational handoff, as of Session 7327 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -58,6 +58,8 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   arena filled, rs_malloc NULL, SIGBUS in grid-cell terrain code. rs64_s7326_spill_reset releases a1&0x84==0 spill blocks at the reset
   (ROGUESQ_SPILL_RESET=0 old) + 8 MB arena 0x81000000-0x81800000, RAMTOP 24 (ROGUESQ_SPILL_MB=4 old). Same-build arms: release-only
   and arena-only both crash, both together 650 s / 2 mission cycles clean; heap_np_kept=0 at every sync (retail semantics).
+- **Spill reads by the RSP FIXED (s7327, default on):** the RSP DMA masked DRAM_ADDR to 24 bits, so gfx ucode reads of terrain grid
+  data in a spill block (dd>=6 hangar route) fetched the 0x80xxxxxx alias. 25-bit mask in rsp.hpp, ROGUESQ_RSP_DMA25=0 old (item 21).
 - **L15 21:9 dd4 crash FIXED (s6992):** 7-site `(p & 0xFF000000) == 0x80000000` test vs the 0x81000000 spill arena;
   tools/apply_s6993_ptrmask.py, ROGUESQ_PTRMASK=0 retail.
 - **G1e:** 60 fps in flight on all levels (s6996; use fl_shown). Defaults VI_RT, STDERR_ASYNC, G1E_CELLIDX;
@@ -92,6 +94,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7324 "class G CLOSED, H-cpu-only: the RCP is never handed a spill address". Believable: 462M DMAs at dd8 21:9 L4, 0 direct, ctl
+  198/198. It ran the forced-level route, where loadLevelAssets' 0x2DFF00 sits in the main heap; on the hangar route (s7327, dd8 16:9)
+  the reset/reload puts it in spill and the gfx ucode DMAs its grid-layer data at 0x81xxxxxx (fixed: 25-bit DMA mask).
 - s7324 "40k audio RSP reads hit heap GAPS / freed blocks (no live rs_malloc block)". Believable: the s7317 map recorded every hooked
   malloc/free. s7325: the retail scene reset frees in bulk without rs_free, the map kept 531 stale entries shadowing live blocks;
   the guest heap walk puts every address inside an allocated block, dd1 identical. Re-synced map: 46 residual reads.
@@ -172,6 +177,8 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 - Retail defaults stay unless the owner chooses; never make an opt-in default from a single source.
 - Crash-free holds do not mean "renders correctly" (s6468). No mitigation without naming the writer; dd>1 fixes
   live in `tools/apply_s6*.py` (registered in RS64_REPLAY only, docs/REGEN-VERIFY.md).
+- The RSP DMA keeps bit 24 (s7327, phys < 32 MB); RDP image addresses and the game's own 24-bit rebuilds (class D) still drop it, so
+  textures / colour images / DL-pool refs must stay below 0x81000000.
 - Any guest pointer the game range-tests must sit where its test accepts it: 0x81000000+ fails
   `(p & 0xFF000000) == 0x80000000` unless ROGUESQ_PTRMASK (s6992). Re-check for any new arena.
 - Never reset, clean, checkout or update submodules; after editing `lib/` run `./submodule-patches/export.sh` and commit.
@@ -252,7 +259,7 @@ is in the s7307 archive). Active unit: NEXT.md.
     20 flagged (11 unbounded, 1 OVERFLOW, 4 ALIAS, 4 range-checked) all read by hand as data: ADPCM header, 23-bit pan fraction, JPEG 16.16,
     material flag fields, HOB record length, float->int, opcode decoder. Classes A-F close the spill-pointer-as-value edge (single-source
     static for E/F; linear scan misses indexes crossing branch joins or calls).
-19. **RCP-visible spill references class G: CLOSED (s7324, H-cpu-only).** ROGUESQ_S7324_RCPREF=ctl + ROGUESQ_S7317_ALLOCMAP=1
+19. **RCP-visible spill references class G: REOPENED + FIXED s7327 (s7324 H-cpu-only held on the forced-level route only, see 21).** ROGUESQ_S7324_RCPREF=ctl + ROGUESQ_S7317_ALLOCMAP=1
     (src/rsp/s7324_rcp_spill.cpp; hooks: s7094 DMA census, rs64_dpc_record_submit), report tools/s7324_rcp_report.py (exit 1 on a
     hit). dd8 21:9 L4 205 s flight x3 runs, 0 crash: ~462M RSP DMAs + 40M RDP SETTIMG/ZIMG/CIMG, **0 direct spill addresses, 0 RDP
     aliases**; ctl 198/198 classes the live lowest spill block as direct and alias. Alias-only DMA hits (24-bit address inside a live
@@ -266,10 +273,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     guest ALLOCATED block (independent heap walk), dd1 4:3 identical. tools/apply_s7325_heaprebuild.py (buildHeapFreeList hook +
     coalesce wrapper -> rs64_s7325_heapsync, ALLOCMAP-only) re-syncs: stale 531 -> 1, gap reads 10.5k -> 46, class G re-run clean.
     Any future ALLOCMAP/HEAPLOG consumer gets the corrected map; report tools/s7325_gap_report.py.
-21. **Spill scene-reset leak: FIXED (s7326, H-leak, was a real crash).** See headline. Qualify: soak s7326_spill_levels (forced L4 + L15
-    dd8 21:9 300 s); then the owner's hangar route at dd4/dd6 16:9 and 21:9 (does it spill at all?), and a class G re-run
-    (ROGUESQ_S7324_RCPREF=ctl) with blocks in 0x81400000-0x81800000. Instrument: ROGUESQ_S7317_ALLOCMAP=1 + ROGUESQ_S7326_CTL=1,
-    route scratch/s7326/run.zsh <name> "<env>".
+21. **Spill scene-reset leak: FIXED + qualified (s7326-s7327).** Soak s7326_spill_levels: forced L4 + L15 dd8 21:9 300 s, 0 crash, 0 arena
+    full. Owner hangar route (scratch/s7326/run.zsh, 650 s each, s7327): dd4 16:9 (owner recipe) spills nothing big (peak 0xC560, 0
+    releases: fix inert there), dd6 21:9 WIDEWIN spills 2x 0x19DF70 per mission load (peak 0x33BEE0, released at the reset), dd8 16:9
+    spills the 0x2DFF00 level buffers (peak 0x688B50: the old 4 MB arena would fill even with the release). All 0 crash / 0 arena full;
+    ctl seen == resets in every arm. **Class G re-run on the dd8 16:9 route FAILED s7324's H-cpu-only:** 47-75k gfx RSP DMA reads at
+    raw 0x81xxxxxx (len 0x20, stride 0x19) inside the spill 0x2DFF00 blocks (owner initGridLayerFromLevelData < loadLevelAssets <
+    initMission); the RSP DMA masked DRAM_ADDR to 0xFFFFF8 so they read the 0x80xxxxxx alias: wrong bytes in 49152/49152 compared reads
+    (ROGUESQ_RSP_DMA25_CTL=1). Fix default on: 25-bit mask 0x1FFFFF8 + 32 MB bound in librecomp rsp.hpp (rs64_s7327_mask,
+    ROGUESQ_RSP_DMA25=0 old); direct_other=0 in every run (no non-spill DMA carries bit 24). Visible effect not yet measured (NEXT.md).
 22. **Scene-transition audio read of just-freed song-channel arrays (s7325, single-source).** 46 audio DMA reads + 6 writes in 200 s
     land in a guest FREE block, arrays freed 0-14 ms earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync.
     Retail race vs our audio-task wait not waiting: compare the wait's completion against the host audio RSP task end.
