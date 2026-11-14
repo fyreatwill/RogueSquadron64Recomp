@@ -194182,4 +194182,7 @@ post text reads the planted guest word: 4/4 PASS.
 Smoke (rebuilt): `env SECS=260 zsh scratch/s7326/run.zsh s7361_dd8 'ROGUESQ_LOG_DMA=1'` -> crash=0 resets=14 late=0 arenafull=0,
 load_level_hmp reached, 0 CRASH/SIG lines in 215 MB. LOG_DMA was live (26469 [pi-start-dma]) but 0 [pi-slot-send]: no osSendMesg to
 the 0x801107E0 ring on this route, so that site's in-game arm is unexercised (single-source: the harness).
+Verdict: the census + fork control selects H-hole (in its real form: zero-extended bases, 14 live sites, 1 in a live export) and
+refutes H-safe as stated; H-trust is moot (sext junk pointers stay inside the reservation). This closes class AL. Next discriminator:
+class AM raw `rdram + X` provenance census (MASK/CHECKED/CONST/PHYS/B) with a fork escape control per B row.
 Next: class AM, raw `rdram + <expr>` host arithmetic (73 lines in src/, librecomp, ultramodern) - NEXT.md.
