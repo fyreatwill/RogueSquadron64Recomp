@@ -193693,3 +193693,7 @@ H-diag (only gated probes), H-ub (a default-on unclamped site exists).
 - Guest side noted, unchanged: N64Recomp recomp.h TRUNC_W_S/D = `(int32_t)f` (UB out of range) and CVT_W_S = `(int32_t)lrintf` (wraps).
   The VR4300 raises the unimplemented-operation exception on an invalid convert, so retail has no value to match. Rules out H-ub for
   every other host site in scope. Next: class Y, integer division / modulo by a guest-derived divisor with no zero check.
+- Conclusion: the census selects H-ub for exactly one site (rs64_s7233_cell, now fixed) and refutes it for the other 6 sink sites.
+  It refutes H-diag as a blanket explanation, because the defective site runs by default whenever WIDEWIN is on. This closes class X.
+  Next discriminator: class Y, whether any default-on integer division or modulo has a guest-derived divisor that can be 0
+  (tools/s7348_div_census.py, NEXT.md).
