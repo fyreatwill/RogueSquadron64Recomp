@@ -1,18 +1,18 @@
-# NEXT (s7344): idiom-class audit - class U, wrap-prone uint32 bound checks on guest-derived values
-HYPOTHESIS-ID: host-wrap-prone-bound-checks
-Context: s7343 closed class T (tools/s7343_buffer_copy_census.py: 466 sinks, 0 overflowing writes, one RT64 TLUT OOB read clamped).
-Every clamp it credited has the form `if (a + n > LIMIT) n = LIMIT - a` or `if (a + n <= end)`. With uint32 a and n both from guest
-data (DMA length, OSTask size, DL word, DPC start/end), a huge n wraps `a + n` below LIMIT, the check passes, and the copy/loop runs
-with the raw n. Safe forms: `n > LIMIT - a` after `a < LIMIT`, a 64-bit sum ((uint64_t)a + n), or n pre-masked (e.g. & 0xFFF).
-Hypotheses: H-safe (every check is 64-bit, pre-masked or subtractive), H-diag (wrap-prone checks are only in gated probes),
-H-wrap (a default-on check on guest a/n can wrap: real defect, fix with a 64-bit sum or the subtractive form plus a log line).
-Method: new tools/s7344_wrap_census.py on the s7343 scope (reuse s7343 files_in_scope(), ln_fn(), body_gated() and the s7338 classes).
-Enumerate every comparison `X + Y (<|<=|>|>=) Z` and `Z (<|>) X + Y` (also `X + Y - 1`), classify:
-K constant operands; W64 a (uint64_t)/(size_t on 64-bit)/`ull` cast on the sum; MSK an operand masked to <= 24 bits in the function
-before the check (`&= 0xFFF`, `& 0xFFFFFF`), or a uint8/uint16 type; SUB subtractive form; G/D/P/C; B default-on with both
-operands guest-derived 32-bit (say which); ? otherwise. Controls: plant `if (a + task->data_size > 0x1000) return; memcpy(..)` ('?'),
-the uint64 twin ('W64'), the masked twin (`n &= 0xFFF` first, 'MSK'), a gated twin ('G').
-Second part, same tool: re-run the s7338-s7342 censuses' rt64 G/D rows through s7343 body_gated(); list any that change to '?'.
-Runtime only if a B site exists: build the fix, run `env SECS=260 zsh scratch/s7326/run.zsh s7344_dd8 'ROGUESQ_S7344_SELFTEST=1'`
-(check screen unlocked + HID idle first) with a selftest that feeds n = 0xFFFFFFF0 once and must log the reject.
-Exit: PORTING-STATE s7344, CURRENT-TRUTH item 27i -> closed/fixed, commit.
+# NEXT (s7345): idiom-class audit - class V, 32-bit multiply overflow in guest-derived sizes
+HYPOTHESIS-ID: host-mul-overflow-sizes
+Context: s7344 closed class U (tools/s7344_wrap_census.py: 343 `a + n <cmp> Z` sites, 0 open; rsp.hpp DMA length clamp made
+subtractive, pi.cpp save_write_ptr/save_clear guarded). The sibling idiom: a size computed as a uint32 product of guest values
+(`width * height * bpp`, `page_num * page_size`, `count * sizeof(T)`, `rows * stride`, `n << k`) wraps before the bound check or
+allocation sees it, so a 64-bit or subtractive check downstream compares the wrapped (small) product while the loop uses the factors.
+Hypotheses: H-safe (every product is computed in 64 bits, or its factors are masked/bounded so the product < 2^32),
+H-diag (overflowing products only in gated probes), H-ovf (a default-on product of guest factors can wrap before a check or a
+resize/new: real defect, fix with uint64_t math + reject log).
+Method: new tools/s7345_mul_census.py on the s7344 scope; reuse s7344 classify()/CORE/HAND machinery and s7343 body_gated().
+Sites: `X * Y` and `X << k` (k variable or >= 8) whose result feeds a comparison, a memcpy/loop bound, a resize/new/malloc, or an
+index, within the same statement or via one local. Classes: K constant factors; W64 64-bit factor/cast/size_t; MSK factors masked
+(<= 16 bits each, or bitfields); BND factors bounded earlier in the function (`w > N return`); G/D/P/C (CORE demotion as s7344);
+B default-on guest factors, product can exceed 2^32 before use. Controls: plant `uint32_t n = task->w * task->h * 4; if (n > cap)
+return; memcpy(..)` ('?'), the uint64 twin ('W64'), the masked twin (`w &= 0x3FF; h &= 0x3FF`, 'MSK'), a gated twin ('G').
+Priority files: rt64 hle (framebuffer sizes, texture sizes, TMEM loads), librecomp pi.cpp/flash.cpp/eep.cpp, src/main capture paths.
+Runtime only if a B site exists: build the fix + selftest, then `env SECS=260 zsh scratch/s7326/run.zsh s7345_dd8 ''`.
+Exit: PORTING-STATE s7345, CURRENT-TRUTH item 27j -> closed/fixed, commit.

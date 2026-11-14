@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7343 (2026-11-14).
+Compact operational handoff, as of Session 7344 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -368,10 +368,21 @@ is in the s7307 archive). Active unit: NEXT.md.
     limit, S2D &0xFF, setVertex bound, RDP pending copy <= 176 B of 256). One OOB READ fixed: RT64 CI4 TLUT hash at palette 15 read
     TMEM 0xF80..0x1080 (128 B past TMEM); uploadTMEM now clamps (`[s7343] tlut-clamp`, ROGUESQ_S7343_SELFTEST=1 control PASS;
     0 real clamps in a 260 s dd8 21:9 route, latent). Caveat: s7338 sites() mis-attributes indented rt64 namespace members to the
-    previous top-level function; s7343 corrects it for its own rows, the s7338-s7342 rt64 G/D rows were not re-audited.
-27i. **Next unit (NEXT.md): class U, wrap-prone uint32 bound checks** (`a + n > LIMIT` / `a + n <= end` on guest-derived a, n:
-    a huge n wraps the sum and the check passes), plus re-audit of the s7338-s7342 rt64 G/D rows under the s7343 body_gated fix.
-28. **When 1-27i offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    previous top-level function; s7343 corrects it for its own rows (s7338-s7342 rt64 rows re-audited in s7344: harmless).
+27i. **Wrap-prone uint32 bound checks (class U): CLOSED (s7344, static + compile-time control).** `tools/s7344_wrap_census.py
+    --controls --regate` (exit 1 = '?' / B / s7344 fix missing): 343 `a + n <cmp> Z` sites in the 183 host files, 0 open. One real
+    (latent) defect FIXED: librecomp rsp.hpp `dma_rdram_to_dmem` / `dma_dmem_to_rdram` take the raw SP_RD_LEN/SP_WR_LEN register
+    (count/skip bits not modelled) and clamped with `dmem_addr + len > 0x1000`, which wraps for a garbage register >= 0xFFFFF000
+    and passed a ~4 GB length to the DMEM memcpy (ROGUESQ_G1E_FAST) / the rdram write loop. Now `rs64_s7344_clamp` (subtractive,
+    identical for every non-wrapping length; static_asserts prove the old form passes 0x800+0xFFFFF900 and the new one clamps it) +
+    a `[s7344] dma len wrap clamped` log. pi.cpp save_write_ptr / save_clear got the s5235 64-bit guard (assert-only before;
+    osFlash* unreferenced by RS64). Caveat for older audits: the s7337 DIAG rule ('getenv' anywhere earlier in the function) labels
+    hot paths (run_task, dma_*, rsp_dpc_submit_impl, rs64_spike_scan, map_result...) 'D'; s7344 demotes those (CORE set) and hand-
+    classes each row (DPC lo/hi & 0x3FFFFFF). Regate of s7338-s7342 rt64 rows under body_gated(): 89 ungated, all harmless
+    (R24 RDP addresses 31, LOG 39, HASH 8, K 5, W64 6). s7343's "DMA 0xFFF" clamp meant the dmem_addr mask, not the length.
+27j. **Next unit (NEXT.md): class V, 32-bit multiply overflow in guest-derived sizes** (`w * h * bpp`, `page * size`, `count * 8`
+    computed in uint32 before a bound check or allocation).
+28. **When 1-27j offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

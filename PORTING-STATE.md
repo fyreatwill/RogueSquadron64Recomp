@@ -193564,3 +193564,38 @@ Discrimination: selects H-capped for every default-on guest-length write (with H
 Class T CLOSED.
 Next (NEXT.md s7344): class U, wrap-prone uint32 bound checks (`a + n > LIMIT`, `a + n <= end`) on guest-derived a/n, where a
 large n wraps the sum below LIMIT and the check passes; the s7327/s7339 bounds and the DMA clamps above all use this form.
+
+## Session 7344 (2026-11-14) — class U wrap-prone uint32 bound checks closed: 343 sites, 0 open; librecomp RSP DMA length clamp wrapped on a garbage SP_RD/WR_LEN (fixed, subtractive rs64_s7344_clamp), save_write_ptr/save_clear guarded
+
+What ran: new `tools/s7344_wrap_census.py --controls --regate` over the s7343 scope (183 host files). Every comparison with a
+sum on one side (`a + n <cmp> Z`, `Z <cmp> a + n`) is a site: 343. Classes: C 5, D 115, G 68, H 42, K 5, MSK 56, P 16, S 1,
+SUB 1, W64 33, X 1, ? 0, B 0. Controls pass in the same run: planted `if (a + task->data_size > 0x1000) return; memcpy` -> '?',
+uint64 twin W64, masked twin MSK, gated twin G.
+
+Census correction: the inherited s7337 DIAG rule ('getenv' anywhere earlier in the function -> 'D') labels default-on hot
+paths diagnostic. s7344 demotes 'D' to '?' in a CORE set (run_task, dma_rdram_to_dmem, dma_dmem_to_rdram, rsp_dpc_submit_impl,
+rs64_spike_scan, rs64_dpc_record_submit_impl, rs64_dpc_defer_end_impl, osSpTaskStartGo_recomp, map_result, factor5_gfx_runner,
+rs64_run_lle_gfx, rs64_g1d_blk_dma) and hand-classes each row. The DPC loops (`p + 8 <= submit_hi`, spike scan `a + len <= hi`)
+are safe because rsp_dpc_submit_impl masks start/end with & 0x3FFFFFF (dpc_bridge.cpp:6506). PI DMA sizes reach overlays only
+after the s5061 64-bit guard; g5a_walk caps h < 0x81000000 and sz <= 0x1000000.
+
+DEFECT (latent) FIXED, writer named: librecomp rsp.hpp dma_rdram_to_dmem / dma_dmem_to_rdram receive the raw SP_RD_LEN /
+SP_WR_LEN register from recompiled ucode (`DO_DMA_READ(r3)`, no mask: the count/skip bits 12-31 are not modelled) and clamped
+with `dmem_addr + len > 0x1000`. For a register >= 0xFFFFF000 the sum wraps below 0x1000, the clamp passes, and a ~4 GB
+length reaches the DMEM memcpy (ROGUESQ_G1E_FAST) or the rdram write loop. The value is not legitimate (no F5 ucode writes
+skip=0xFFF count=0xFF); this is hardening, not a crash fix. Now `rs64_s7344_clamp(off, len, lim)` (len > lim - off ? lim - off :
+len): identical to the old clamp for every non-wrapping length, plus a `[s7344] dma len wrap clamped` log. static_asserts are
+the positive control: the old form passes 0x800 + 0xFFFFF900, the new one returns 0x800, legal lengths unchanged. s7343's
+"DMA 0xFFF" credit was the dmem_addr mask, not the length. pi.cpp save_write_ptr and save_clear had assert-only bounds
+(wrap-prone; save_clear's `<` also rejected a whole-buffer clear) -> the s5235 (uint64_t) guard + log; osFlash* is not
+referenced by RS64, so latent.
+ORIGIN: the wild length would come from the RSP ucode's own r3 at an mtc0 SP_RD_LEN/SP_WR_LEN; never observed.
+
+Regate (s7343 caveat): the s7338-s7342 primary regexes re-run over lib/rt64 with s7343 body_gated(): 89 G/D rows whose
+enclosing member is ungated, all harmless (R24 RDP 24-bit addresses 31, LOG 39, HASH 8 = 64-bit >> 52 into [4096] / wd < 512,
+K 5, W64 6). 0 '?'.
+
+Runtime regression (same build): `env SECS=260 zsh scratch/s7326/run.zsh s7344_dd8 ''` (dd8 21:9 hangar->mission->abort
+route) -> crash=0 resets=14 late=0 arenafull=0, 0 `[s7344]` lines (no wrap in real traffic, as expected). Single-source for the
+"no wrap in practice" claim; the fix itself is proven by the compile-time control.
+Rules out: wrap-prone sum checks as a live defect class in host code. Next: class V, 32-bit multiply overflow (NEXT.md).
