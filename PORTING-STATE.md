@@ -193754,5 +193754,5 @@ H-ub (a default-on guest count can reach >= operand width).
   match a bit-loop MIPS dsrlv/dsllv model (PASS). Positive control: the old form with count 64 aborts under UBSan.
 - Runtime: build clean; export.sh refreshed N64ModernRuntime.patch. `env SECS=260 zsh scratch/s7326/run.zsh s7349_dd8 ''`:
   crash=0 resets=14 late=0 arenafull=0, the same as s7346-s7348. This is a regression smoke only, because the patched helpers are never called.
-- Conclusion: H-ub was selected for 2 latent helper sites (fixed) and refuted for the other 156. Class Z is closed. Next: class AA, memcpy
+- Conclusion: the census selects H-ub for 2 latent helper sites (fixed) and refutes it for the other 156; this closes class Z. Next: class AA, memcpy
   between ranges that may overlap (NEXT.md, CURRENT-TRUTH 27o).
