@@ -70,3 +70,25 @@ Result: retail code has no fixed heap upper bound built from a constant, and not
 size-dependent code is the 4 MB-vs-more split. So raising osMemSize (OSMEM_MB=12) changes the framebuffer placement and nothing else in
 retail code. Method limit (single-source, static): a bound loaded from a data word or derived from a heap-end variable is not caught.
 The s6992 mask class, the s6862 host-literal table and the dd>1 300 s holds at OSMEM_MB=12 are the dynamic side of that.
+
+## Retail pointer tests against DATA-word bounds (s7316)
+
+Complements s7315 (lui-built constants only). `tools/s7316_data_bound_census.py --ram <dumps>` lists every retail
+`slt`/`sltu` whose one operand was loaded with `lw` from a constant global address G and whose other operand is not a constant,
+then reads each G in ROGUESQ_RDRAM_DUMP_DIR dumps. Run s7316: L1 16:9 dd2 (OSMEM 12, spill 0x81000000 live, 216 spill blocks
+all at 0x81xxxxxx, max request 0x8000), 29 dumps from boot to 137 s of flight.
+
+| G | Sites | Runtime value | Verdict |
+|---|---|---|---|
+| 0x801163D4 DL pool limit | 169 | 0x80917B28..0x80B66720 | DL write pointer vs limit of the same pool; pool carved from the main heap at init, under 16 MB, never spill-served |
+| 0x8011DC58 DL chunk pointer | 43 | same range | same pool |
+| 0x801163B0 RDP-init DL pointer | 1 | same range | same pool |
+| 0x8010FF18 heap head block | 2 | 0x80154690 | free-list walk in initMainHeap/coalesceFreeHeapBlocks; spill blocks never join the chain (rs_free hook returns on rs64_s6569_isspill first) |
+| 37 other globals | 88 | scalar in all 29 dumps | counts, sizes, ids, timers (audio sorted tables, terrain grid dims, pool phases) |
+
+The stored heap bounds 0x8010FF08..0x8010FF14 (written by initMainHeap/coalesceFreeHeapBlocks) have no retail `lw` reader
+at all. No G held a spill pointer in any dump, while 80-87 heap words did (scratch/s7316/spill_words.txt), so the dump read
+sees spill pointers where they live. Control: the same census on a dump with 0x81000040 written at 0x801163D4 flags all 169
+sites. Verdict H-clean: no retail data-word bound rejects or misorders a spill pointer. Method limit: linear pass without a
+CFG; a G read through a register base (struct field) is not followed; a G that holds a pointer only outside the dumped
+phases is classed scalar. Single run, static + runtime lines agree.

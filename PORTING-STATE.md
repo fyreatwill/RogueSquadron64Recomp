@@ -192594,3 +192594,30 @@ HYPOTHESIS-ID: retail-ram-bound-idiom (closed).
   Dynamic side, already on record: the s6992 mask class and the dd>1 OSMEM_MB=12 300 s holds (s7294/s7298) are clean.
 - Docs: docs/HEAP-ADDR-AUDIT.md gains the s7315 section. CURRENT-TRUTH Next steps 13 = this class (closed), 14 = fallback.
 - No game run (static audit, no build change). Rules out the retail fixed-top pointer-bound class as a source of dd>1/OSMEM defects.
+
+## Session 7316 (2026-11-14) — retail pointer-vs-DATA-word bound class closed H-clean: new tools/s7316_data_bound_census.py, 303 sites over 41 globals, 4 pointer-valued (DL pool + heap head), none ever holds a spill pointer in a dd2 16:9 mission run
+Unit (NEXT.md s7315 item 2, slug generated-symbol-renaming-sweep fallback -> idiom-class audit): SOAK-RESULTS had no
+leftover/foreign-kill line, so item 1 was empty. Hypotheses: H-reject (a retail site compares a pointer against a bound held in
+a global word, e.g. heap end / arena top, and rejects or misorders 0x81xxxxxx spill pointers) vs H-clean.
+- Tool: tools/s7316_data_bound_census.py. Linear pass over the original MIPS comments: tracks lui/addiu/ori constants and
+  `lw` from constant addresses; a site = slt/sltu with one operand a loaded global G and the other non-constant. --ram reads
+  each G in ROGUESQ_RDRAM_DUMP_DIR dumps; pointer-valued G needs a verdict, scalar G is auto-classed, any G holding
+  0x81000000..0x813FFFFF is forced unclassified (exit 1). --selftest (fake lw 0x8010FF18 + sltu) PASS.
+- Static: 303 sites, 41 globals. Separately, the stored heap bounds 0x8010FF08..FF14 (initMainHeap/coalesce writes) have no
+  retail lw reader at all.
+- Run: scratch/s7316 (g1_level_coverage_common, LEVEL=1, FPS60, DRAW_DISTANCE=2, ASPECT=16:9 -> OSMEM 12, spill 0x81000000,
+  RDRAM dump every 400 swaps). mission_t 72 s, flight 137 s, alive, 0 crash, 0 stalls. 216 spill blocks, all 0x81xxxxxx,
+  max request 0x8000. 29 dumps (swaps 400..11600).
+- Result: unclassified 0, spill_valued_sites 0. Pointer-valued G: 0x801163D4 DL pool limit (169 sites), 0x8011DC58 DL chunk
+  pointer (43), 0x801163B0 RDP-init DL pointer (1), all 0x80917B28..0x80B66720 (heap, under 16 MB; the pool is carved at init
+  and is far larger than any spill request); 0x8010FF18 heap head 0x80154690 (2 sites, free-list walk; spill blocks never join
+  the chain because the rs_free hook returns on rs64_s6569_isspill first). Other 37 G scalar in every dump (audio sorted
+  tables, terrain grid dims, pool phases).
+- Positive controls, same run: 80-87 heap words held 0x81xxxxxx pointers in the dumps (scratch/s7316/spill_words.txt), so the
+  dump read does see spill pointers where they live; a copy of the last dump with 0x81000040 written at 0x801163D4 makes the
+  census flag 169 spill-valued sites.
+- Discrimination: selects H-clean, refutes H-reject for the global-word form. Two lines: static site census + runtime G values.
+  Method limit: no CFG; G read through a register base (struct field) is not followed; a G holding a pointer only in an
+  undumped phase reads as scalar. Next: the struct-field edge, starting from the objects that actually hold spill pointers.
+- Docs: docs/HEAP-ADDR-AUDIT.md s7316 section; CURRENT-TRUTH Next steps 14 (closed), 15 (spill holders), 16 (fallback).
+  Dumps deleted after analysis (197 MB); census.txt and spill_words.txt kept.

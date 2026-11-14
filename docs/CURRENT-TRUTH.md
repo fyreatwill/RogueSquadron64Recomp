@@ -217,7 +217,12 @@ is in the s7307 archive). Active unit: NEXT.md.
 13. **Retail RAM-size/upper-bound idiom class: CLOSED (s7315, static, single-source).** tools/s7315_retail_bound_census.py: 86 sites,
     0 unclassified; only size dependence is 4 MB vs more (framebuffer top, expansion flag 0x80130B63). Table in docs/HEAP-ADDR-AUDIT.md.
     Re-run after a regen (exit 1 = new unclassified site).
-14. **When 1-13 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+14. **Retail DATA-word bound class: CLOSED (s7316, H-clean).** tools/s7316_data_bound_census.py --ram: 303 sites, 41 globals, 4
+    pointer-valued (DL pool limit/chunk, heap head), none ever holds a spill pointer; spill-injected dump flags 169 (control).
+    Table in docs/HEAP-ADDR-AUDIT.md. Open edge: struct-field bounds (G via register base), see 15.
+15. **Spill-pointer holders (s7317 candidate):** the 80-87 heap words holding 0x81xxxxxx pointers at runtime
+    (scratch/s7316/spill_words.txt): name the owning objects and check every retail compare on those fields.
+16. **When 1-15 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
