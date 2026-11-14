@@ -17,6 +17,7 @@ cd build && env ROGUESQ_DRAW_DISTANCE=2 ./RogueSquadron64Recomp
 | `ROGUESQ_DD_POOLMIN=<n>` | Floor on the terrain pool at dd>1 on levels 0..18, default 4096 (the 64x64 window). Cutscene levels author 400-700, which cut their ground (s6908). `=0` old; `ROGUESQ_DD_POOLMIN_TOG=1` puts the old cap back on odd seconds for a same-run comparison. |
 | `ROGUESQ_DD_MELT=1` | Opt-in, default off. Far terrain fades into the sky already drawn instead of to the flat fog colour, so the straight end of extended terrain has no hard edge (s6916). `=tog` alternates each second. |
 | `ROGUESQ_DD_FAR_TOG=1` | Test only: drops the far plane scale on odd seconds, for a same-run comparison (s6916). |
+| `ROGUESQ_DD_FARMAX=<units>` | Default 32767 (s7310): ceiling on the dd-scaled far plane. Above ~33-44k the sky-dome edge panels clip to the screen edge with texture W ~0 (vertical streaks, the 21:9 dd8 left sliver, warped dome edges); terrain at the L1 test pose is identical with far x4 vs x8. `=0` = old (s6701 65534-near cap only). Never lowers far below the game value; dd1 untouched. |
 | `ROGUESQ_DLPOOLX_RECLAIM=0` | Default on at dd>1: the display-list chunk arena restarts when the game rebuilds its chunk pool, so scene loads no longer add up to the 4 MB limit and a crash (s6909). `=0` old (never reset). |
 
 ## What is measured (see CURRENT-TRUTH s6070-s6076 for evidence)

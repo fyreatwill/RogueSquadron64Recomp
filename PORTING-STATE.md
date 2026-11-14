@@ -192443,3 +192443,38 @@ vertical streaks seen. So the clip-generated vertex on the left screen edge has 
 Rules out: escaped knife spike, W_SHEET residual, RT64 edge/scissor, MELT, WIDEWIN. Open: H-geom (dd auto-far / wide frustum place the sky dome
 vertex so the F5 clip legitimately produces w<=0, as retail ucode would on real hardware) vs H-rsp-emu (our LLE RSP clip math, e.g. VRCP
 precision, yields w<=0). Next: same-pose dd1/dd4/dd8 G5B_FRAME caps, decode the left-edge sky tris' W per dd (NEXT.md).
+
+## Session 7310 (2026-11-13) — G5f: the 21:9 dd>1 left-edge sliver is caused by the dd-scaled far plane above ~36-40k units; new default ROGUESQ_DD_FARMAX=32767 removes it (dd1 untouched)
+HYPOTHESIS-ID: g5f-219-left-sliver. (Iteration 17's first attempt ran the arms, built the fix and timed out at the 1 h runner limit
+before writing the ledger; its last arm, q500, was still running. This entry folds all of it. All arms L1, PIN=1, FZ=106.28, same
+frozen pose 106.294,-6.799,69.769, frozen swap 4062-4065, G5B_FRAME caps decoded by tools/s7309_tri_texcoef.py.)
+Arms (21:9 unless noted; base ASPECT/WIDEWIN/MELT/DD_UNSAFE as s7309):
+| arm | far | left-edge dome tris (tris 1/3/4 start W) | min x | near-white left 1% cols |
+| d1 dd1 | game | sane (guard band) | -490..-512 | 0 |
+| d4 dd4 | x4 | sane, W -231/-259/-260 | -230..-260 | 0 |
+| f4 dd8 DD_FAR=4 | x4 = 32283 | sane, identical to d4 | -230 | 0 |
+| b405 / b412 dd8 | x4.05 / x4.12 | sane | -230 | 0 |
+| q450 dd8 FARMAX=0 | x4.5 = 36319 | sane | -230 | 0 |
+| q500 dd8 FARMAX=0 | x5.0 = 40354 | PINNED: x=0, W 0/-0.0015/-0 | 0 | 608 |
+| p540 / p542 dd8 | x5.40 / x5.42 | pinned | 0 | 608 |
+| d6 dd6, d8 dd8 (old auto far) | x6 / x8 | pinned | 0 | 608 |
+| nfc dd8 DD_NOFARCLIP=1 | x8 | pinned (s6418 far clip not it) | 0 | 608 |
+| fx8 dd8 FIX default | capped 32767 | sane, stream == f4/q450 | -230 | 0 |
+| fw8 16:9 dd8 FIX / w8 16:9 dd8 old | capped / x8 | sane both | -149..-199 | 0 / 0 |
+Threshold: between far 36.3k and 40.4k at this pose. Below it the dome edge panels reach the RDP as normal guard-band triangles; above it
+the F5 clip output collapses onto fb x=0 with texture W ~0 (vertical streaks). Two lines agree in all 12 arms (RDP-stream W decode, presented
+near-white pixel count). perspNorm is not it (x5.40 still perspNorm 3, per the first attempt's [pnormcap] lines); aspect is not it (same cut at 21:9).
+16:9 dd8 at this pose has no sliver either way, but its dome periphery still differs (below).
+Reading (single-source, mechanism inferred, not traced in the ucode): H-geom. Our opt-in far scale pushes dome-vertex w past the range the
+F5 clip arithmetic handles; retail never builds a far near 32k, so this is not an LLE emulation defect to fix (H-rsp-emu not tested directly).
+Fix: tools/apply_s7310_farmax.py (registered in RS64_REPLAY after apply_s6031_far; applied live in funcs_4.c, built 22:17):
+ROGUESQ_DD_FARMAX=<units>, default 32767, 0 = old s6701 cap only. It only bites when the far scale is active (dd>1 or DD_FAR). It is a ceiling
+on the scaled far and never lowers far below the game's own value (sf = max(lim, ff)), so dd1 and retail are untouched. dd4 (x4 = 32283) is below it.
+Same-pose diffs, |d|>24: fx8 vs q450 0 px (repeat floor exact). d8 vs fx8: left 1% 13.6k px, rest 120k px, all in the sky-dome periphery and
+cloud edges (top rows, left/right columns), plus a few hundred px of speckle in the near-terrain bottom-left. Horizon line and terrain unchanged
+(scratch/s7310/diff_d8_fx8.png). 16:9 w8 vs fw8: 13k + 147k px, same placement. So the cap also takes out the warped dome edges.
+Owner sheet docs/owner_sheet_s7310_farmax.jpg (left 600 px, before d8 / after fx8). Census tools/s7090_fixup_statement_census.py rc=0.
+New tools: s7310_cap_swaps.py (finds the frozen swap), s7310_left_w.py (left-edge W census), s7310_sliver_score.py; s7309_tri_texcoef.py y
+sign-extend fix (s11.2, the '<<18>>18' was a no-op on Python ints). Raw caps deleted.
+ORIGIN: the dd-scaled projection far (apply_s6031_far, our code) writes far > 36k into the game's guPerspective. The cap fixes the value at its writer.
+Queued: scratch/agent/soak_queue/s7311_219_dd8_farmax_hold.sh (21:9 dd8 300 s L1/L5/L12 + same-soak l1 FARMAX=0 + ctl).

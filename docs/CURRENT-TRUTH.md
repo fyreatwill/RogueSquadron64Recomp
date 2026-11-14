@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7309 (2026-11-13).
+Compact operational handoff, as of Session 7310 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -23,7 +23,8 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   (R=88 + 2x2 merge 0.4 + E16, main.cpp [s7258], STACK=0 off) at any dd>1 with ROGUESQ_DD_WIDEWIN=1; merge+E16
   carry the cost cut, R=48 only ate the side gain (s7265-s7266). L12 auto RLEVEL `12:48` at dd>=6 (s7287).
   **dd8 auto px8 + R128 (main.cpp [s7293], ROGUESQ_DD_PX8_AUTO=0 off) QUALIFIED at 16:9 (s7295) and 21:9 (s7299):**
-  300 s, 0 crash, 60/s on L1/L5/L9/L10/L12; total emitted cells/call L4 16:9 ref 6902 -> 11406.
+  300 s, 0 crash, 60/s on L1/L5/L9/L10/L12; total emitted cells/call L4 16:9 ref 6902 -> 11406. Far plane capped at
+  32767 (ROGUESQ_DD_FARMAX, s7310): above it the sky-dome edge clip pins to x=0 (21:9 left sliver).
 - **G5e fog (opt-in ROGUESQ_DD_FOG_ALT=1,3,1, s7302-s7307): QUALIFIED at both owner screens.** ke3 at dd8 =
   dd4's fog end; melts the far horizon into haze, near detail kept (16:9 L1 1.3/2.4/2.7%, L4 1.5/6.5/4.0% texture
   removed far/near/side); weaker at 21:9 (L1 null in all bands, lever ctl 8/27/17% PASS, s7306); untouched on
@@ -173,13 +174,16 @@ is in the s7307 archive). Active unit: NEXT.md.
 
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner
    asks for more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
-2. **21:9 dd>1 left-edge sliver: drawer NAMED (s7309).** 3 sky-dome triangles clipped at fb x=0 (L1 frozen pose swap 4064, tris 1/3/4,
-   op 0E timg 8078A4C0) start with texture W <= 0 (0.0000/-0.0015/-0.0000; the other 6604 textured tris have W >= 12), so the texture stretches
-   into vertical streaks. In the RDP stream: the angrylion replay draws it too. Not CULL_SPIKE (lever live, wedge unchanged), W_SHEET, MELT, WIDEWIN,
-   RT64. Sheet docs/s7309_219_left_sliver.jpg; decoder tools/s7309_tri_texcoef.py. Next (NEXT.md): split H-geom (dd far/wide frustum make the
-   clip legitimately emit w<=0) from H-rsp-emu (our LLE clip math) with same-pose dd1/dd4/dd8 caps; then a fix at the origin.
-   dd8 horizon look DONE s7308: same-pose far-edge row dd1 841 / dd6 767 / dd8 745 / dd8+FOG_ALT 803 (/1000, both aspects, repeat
-   floor 0.00) -> dd8 pushes the hard open-plain edge out a little; FOG_ALT melts it. Owner sheet docs/owner_sheet_s7308_dd8_horizon.jpg.
+2. **21:9 dd>1 left-edge sliver FIXED (s7310), owner look + multi-level hold pending.** Cause: the dd-scaled projection far. With far above
+   ~36-40k units (L1: far 8070.8 x4.5 clean, x5.0 pinned; dd6 auto and dd8 both above) the F5 clip emits the sky-dome edge panels pinned to
+   fb x=0 with texture W 0/-0.0015 (vertical streaks); at far <= x4.5 the same panels arrive as normal guard-band tris (minx -230..-260, W sane).
+   Two lines: RDP-stream W decode and presented near-white left-column count (608 vs 0) agree in all 12 same-pose arms. Not perspNorm, not the
+   s6418 far clip (NOFARCLIP same), not aspect. H-geom (single-source mechanism reading): our opt-in far pushes dome w past the ucode's working
+   range; retail never builds that far. Fix: **ROGUESQ_DD_FARMAX default 32767** (tools/apply_s7310_farmax.py, after apply_s6031_far; 0 = old;
+   only bites when the far scale is active and never lowers below the game far, so dd1 is untouched). dd8 21:9 and 16:9 with the cap: sliver 0,
+   stream identical to far x4; repeat arm pixel-identical; other diffs vs far x8 are only sky-dome periphery and clouds, horizon/terrain unchanged.
+   Sheet docs/owner_sheet_s7310_farmax.jpg. Soak queued: scratch/agent/soak_queue/s7311_219_dd8_farmax_hold.sh (fold it).
+   dd8 horizon look DONE s7308 (sheet docs/owner_sheet_s7308_dd8_horizon.jpg).
 3. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle. Never flip without the owner.
 4. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets

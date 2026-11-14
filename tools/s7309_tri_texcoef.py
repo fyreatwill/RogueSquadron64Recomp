@@ -25,7 +25,8 @@ for b in rngs:
         w0, = struct.unpack_from('<I', b, a); op = (w0 >> 24) & 0x3F  # RDRAM words, host order
         if op in LEN and a + LEN[op] <= len(b):
             W = struct.unpack_from('<%dI' % (LEN[op] // 4), b, a)
-            yl = ((W[0] & 0x3FFF) << 18 >> 18) / 4; ym = (((W[1] >> 16) & 0x3FFF) << 18 >> 18) / 4; yh = ((W[1] & 0x3FFF) << 18 >> 18) / 4
+            y14 = lambda v: ((v & 0x3FFF) ^ 0x2000) - 0x2000  # s7310: s11.2 sign-extend (Python ints never wrap, '<<18>>18' was a no-op)
+            yl = y14(W[0]) / 4; ym = y14(W[1] >> 16) / 4; yh = y14(W[1]) / 4
             sx = lambda v: (v - (1 << 32) if v & 0x80000000 else v) / 65536.0
             xl, dxl, xh, dxh, xm, dxm = sx(W[2]), sx(W[3]), sx(W[4]), sx(W[5]), sx(W[6]), sx(W[7])
             row = dict(i=n, op=op, y=(yh, ym, yl), x=(xh, dxh, xm, dxm, xl, dxl))

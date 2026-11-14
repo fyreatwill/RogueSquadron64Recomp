@@ -42132,6 +42132,7 @@ RS64_REPLAY = [
     "apply_s7107_painter.py",  # s7107: publish all 49 near-eye cell TRI_GEN keys for the per-triangle source-cell tag FIFO (src/rsp/s7106_rsptri.cpp, ROGUESQ_S7107_TAG=1; measurement only)
     "apply_s7108_camwide.py",  # s7108: push-out corner width vs guPerspective args ([s7108] stderr) + ROGUESQ_S7108_CAMWIDE=1|tog corner widening arm
     "apply_s7110_neartog.py",  # s7110: ROGUESQ_DD_NEAR_TOG=1 applies DD_NEAR only in odd mach seconds (same-run near-plane arm)
+    "apply_s7310_farmax.py",  # s7310: ROGUESQ_DD_FARMAX (default 32767, 0 = s6701 only) caps the dd-scaled far: above ~33k-43k the sky-dome edge clip pins to x=0 with W~0 (21:9 dd8 left sliver)
     "apply_s7111_camfixk.py",  # s7111: ROGUESQ_S7103_CAMFIX=tog1 (odd mach seconds) + ROGUESQ_S7111_PUSHK=<k> re-push margin arm
     "apply_s7114_hsrc.py",  # s7114: y-clamp sampler tile/bytes (CHASE hx lines) vs eye-cell TriGen cmd + 25 height bytes (ht lines), ROGUESQ_S7114_HSRC=1 (measurement only)
     "apply_s7114_nearlod.py",  # s7114: ROGUESQ_S7114_NEARLOD=<r2> (+_TOG=1) ignores the per-cell forced-decimation flags (mesh+0x14 bits 3/2) for terrain cells with dist^2 < r2 (opt-in, default retail)
