@@ -193983,3 +193983,7 @@ FPS60): crash=0 resets=14 late=0 arenafull=0, 6 initMission, 259 update_screen r
 counts as the s7354 smoke on this route -> the altstack hook costs nothing visible.
 Next: class AG (unchecked host allocation / mmap / fopen results), NEXT.md.
 
+Verdict: the ml_old/ml_fix and so_noalt/so_alt arm pairs (same build, env-toggled) select H-unsafe for the default crash
+handler (strsignal under the held malloc lock: hang vs full report; no altstack: silent death vs report) and refute H-safe;
+H-diag is selected only for the 7 env-gated G rows. This closes class AF. Next discriminator: class AG census
+(tools/s7356_unchecked_census.py, CHECKED/G/B split with planted controls) plus a forced-failure arm per B row (NEXT.md).
