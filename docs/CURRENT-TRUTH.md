@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7301 (2026-11-13).
+Compact operational handoff, as of Session 7303 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -318,13 +318,13 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7302 G5e far band: the dark grid band at dd>1 on L1 is the OFF-MAP PLATEAU (the game's dark mesa, retail shows it up close), drawn
-   out to the horizon and nearly unhazed because the dd fog ramp (s6904: start 0.375dd, end 0.8dd x retail) is very long at dd8 (3 -> 6.4).
-   It DOES take fog: same-run new ROGUESQ_DD_FOG_ALT=<ks>,<ke> (alt ramp on xor8-odd seconds; alt cutoff floor 1/dd^2) on L1 dd8 16:9,
-   extreme 0.3,0.8 removes 21%/38%/7% texture (side/near/far; s7247, control PASS) and the plateau melts into sky. ks=1 with ke=6.4 is
-   small: L1 side +1.6 +- 0.35%, far null; L4 near +5.4 +- 0.9, side +2.9 +- 0.6. -> H-not-fog refuted; the lever is ke (fog end).
-   0 crashes in 3 arms. Sheets docs/owner_sheet_s7302_l1_fog_{ks1,ctl}.png have WRONG OFF/ON labels (sheet called without xor8; s7301's
-   sheet too). Next: ke sweep (NEXT.md). s7301: the dd8 ring beyond 88 cells is invisible (R_TOG, R40 control); default R128 left.**
+0. **s7303 G5e fog END sweep (dd8 16:9, same-run FOG_ALT toggle, xor8 sheets, 0 crashes, patch control PASS in all 12 bands):
+   haze grows monotonically as ke drops, no knee. Texture removed far/near/side: L1 ke4.5 0.6(null)/0.9(null)/1.1; L1 ke3 1.3(null)/2.4/2.7;
+   L1 ke2 1.5/4.6/3.7; L4 ke3 1.5/6.5/4.0 (%; s7302 ctl 0.3,0.8 = 7/38/22). By eye (docs/owner_sheet_s7303_{l1k3,l4k3,l1k2}_fog_tog.jpg):
+   ke3 melts the far horizon into the sky/orange haze and near terrain keeps its detail; the L1 plateau stays dark CLOSE to the camera
+   (retail draws it there too, distance fog cannot remove it without hazing near land). ke3 at dd8 = dd4's default fog end (0.8x4=3.2).
+   Opt-in for the owner: ROGUESQ_DD_FOG_ALT=1,3,1 (OWNER-OPT-INS). Default unchanged (owner decides). s7302: the band is the off-map
+   plateau and it takes fog; s7301: the dd8 ring beyond 88 cells is invisible (default R128 left). Next: 300 s hold + frame ms of the opt-in (NEXT.md).**
 0. **s7299: dd8 px8 auto QUALIFIED at 21:9 (s7298 soak, ctl flat-30 158 s PASS): L1/L5/L9/L10/L12 300 s, 0 crash, 60/s,
    beyond-route 3/8/0/1/0 s (L5's 8 s are 36-47/s single seconds at t<=76, route), heaviest20 10.6-12.1 ms (headroom 3.2-6.1).
    total_emit L1 11134 L5 11837; L9 6189 (CAPLEVEL 9:8192 binds, wide 2509); L12 RLEVEL 12:48 wins (3839 vs ctl R128 12420 ->

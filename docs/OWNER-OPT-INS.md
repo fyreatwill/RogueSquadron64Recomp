@@ -70,6 +70,8 @@ Far cutoff follows the scene at dd2 or above (s6919), opt-in, not yet judged: ad
 
 Draw distance above 1 (s6904): extended terrain now fades into the haze instead of drawing clear and then turning solid fog colour at a line. On by default above dd1, off at dd1. `ROGUESQ_DD_FOG=0` restores the old look. `ROGUESQ_DD_FOG=<start>,<end>` sets how far the fade starts and ends, as multiples of the level's own fog distances (defaults at dd4: 1.5,3.2). No frame rate cost measured at level 5 dd2 over 300 s.
 
+Hazier horizon at draw distance 8 (s7303), opt-in, for the owner to judge: add `ROGUESQ_DD_FOG_ALT=1,3,1`. The far landscape melts into the sky haze instead of running dark to the horizon; nearby ground keeps its detail. It gives dd8 the same fog end as dd4. Sheets: docs/owner_sheet_s7303_l1k3_fog_tog.jpg and _l4k3_ (left = default, right = this setting). Not yet held 300 s by itself.
+
 Draw distance above 1 (s6899): the water and ground that vanished in the Liberation of Gerrard V cutscene at dd4 are back, by a change that is on by default (`ROGUESQ_DD_EYEWIN=0` restores the old path). It did not measurably change flight, so it is not yet known to help the in-flight terrain drops. Measured at 16:9 only.
 
 Fixed (s6898): the black block on the right in a Liberation of Gerrard V cutscene (X-wing, then TIEs over a tower) at 16:9 is gone at draw distances 1 and 4. `ROGUESQ_G1D_LETTERBOX=0` brings it back. Known issue: at draw distance 4 that cutscene still loses the dark water and most of the ground (docs/owner_sheet_s6898_dd1_dd4_scene.png).

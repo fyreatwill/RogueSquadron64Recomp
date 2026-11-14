@@ -192290,3 +192290,24 @@ Next discriminator: a same-run ke sweep (1,2 / 1,3 / 1,4.5) that tells H-k3-swee
 H-monotone-loss (any ke that melts the band also hazes near land, so it needs a fade shaped to off-map cells).
 Rules out: "fog does not reach the plateau"; "ks alone fixes the band".
 Next: same-run ke sweep at dd8 (ks=1, ke 2 / 3 / 4.5 vs default) on L1+L4 with the xor8 sheet, plus dd1 reference, then owner sheet.
+
+## Session 7303 (2026-11-13) — G5e fog END sweep at dd8 16:9: haze is monotone in ke with no knee; ke=3 melts the far horizon by eye while near terrain keeps detail; offered as opt-in ROGUESQ_DD_FOG_ALT=1,3,1
+HYPOTHESIS-ID g5e-far-fog. Unit from NEXT (s7303). No maintenance (CURRENT-TRUTH 59249 B < 60000). Screen unlocked, HID idle 66722 s, AC power.
+**Run:** new tools/s7303_fog_ke_sweep.zsh (s7302 harness, spec list as args): dd8 16:9 FPS60 MELT WIDEWIN CULL_SPIKE=1, same-run
+ROGUESQ_DD_FOG_ALT=<ks>,<ke> (alt ramp on xor8-odd seconds, default 3,6.4 otherwise), g5b capture 120-300 s; witness `[s7302] fog alt ks=1 ke=2`
+fired. 0 crash lines in all 4 arms. s7247 TEX flip D, control patch PASS in all 12 bands (far rows 12-50 / near 60-88 / side):
+- l1k45 (L1 1,4.5): far +0.55 (null), near +0.89 (null), side +1.05 (removes).
+- l1k3 (L1 1,3): far +1.34 (null), near +2.42, side +2.74.
+- l1k2 (L1 1,2): far +1.54, near +4.60, side +3.68.
+- l4k3 (L4 1,3): far +1.52, near +6.54, side +4.02.
+(s7302 extreme control 0.3,0.8: far 7.1, near 38.1, side 21.5.)
+**By eye (xor8-labelled sheets docs/owner_sheet_s7303_{l1k3,l4k3,l1k2}_fog_tog.jpg):** in the ke3/ke2 ON frames the far plateau and far land
+take the sky haze (blue on L1, orange on L4) toward the horizon instead of running dark; rock, grass, buildings near the craft keep detail. The
+L1 plateau stays dark close to the camera, which retail shows too (s7300 dd1); distance fog cannot remove that part without hazing near land.
+**Reading:** dose-response is monotone with no knee (near loss 0.9 -> 2.4 -> 4.6% for ke 4.5 -> 3 -> 2), so neither hypothesis is clean:
+H-monotone-loss holds for the near plateau, but ke3 is a by-eye compromise (H-k3-sweet for the far band). ke3 at dd8 equals dd4's default
+fog end (0.8 x 4 = 3.2), so the opt-in gives dd8 the dd4 haze with dd8's geometry. H-perf not measured: the [s7233] tally is not phase-split
+(in ~3550 cells/call in every arm). Poses differ by ~1 s between pair halves (single run per arm; scorer + eyeball).
+**Change:** OWNER-OPT-INS line for ROGUESQ_DD_FOG_ALT=1,3,1 (alt always). Default unchanged (owner decides). Raws deleted.
+Rules out: "only a very short ramp (ke<1) melts the band"; "ke3 visibly hazes near terrain".
+Next: 300 s hold of DD_FOG_ALT=1,3,1 (alt always) at dd8 16:9 on L1/L5/L10 with frame ms vs the s7294 baseline, then owner judges.
