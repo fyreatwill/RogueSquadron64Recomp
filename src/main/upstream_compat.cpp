@@ -514,7 +514,7 @@ extern "C" int rs64_s7233_cell(int wx, int wz) {
     const int ph = s7233_ph;
     if (wx >= s7233_x0 && wx < s7233_x1 && wz >= s7233_z0 && wz < s7233_z1) { s7233_in[ph]++; return 0; }
     const float dx = (float)wx + 0.5f - s7233_ex, dz = (float)wz + 0.5f - s7233_ez; const float dd = sqrtf(dx * dx + dz * dz);
-    int b = (int)(dd / 8.0f); if (b > 16) b = 16; s7233_h[ph][b]++;
+    int b = dd < 128.0f ? (int)(dd / 8.0f) : 16; /* [s7347] NaN / huge dd -> bin 16 (no (int)NaN index) */ s7233_h[ph][b]++;
     if (r > 0 && dd > (float)r) { s7233_sk[ph]++; return 1; }
     return 0;
 }

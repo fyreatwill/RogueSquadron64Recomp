@@ -1,18 +1,17 @@
-# NEXT (s7347): idiom-class audit - class X, float-to-integer conversions of guest floats reaching index/size sinks
-HYPOTHESIS-ID: host-float-to-int-sinks
-Context: s7346 closed class W (tools/s7346_signed_len_census.py: 1322 sinks, 0 open; RT64 CommandWarning::format fixed).
-Sibling idiom: a guest float (RDRAM/DMEM-read float, guest vertex/matrix/camera value, FPR ctx->f*) converted to an integer with
-`(int)f`, `int i = f`, static_cast<int>, lround/lrint/floor-then-cast, then used as an array index, a memcpy/resize length, a loop
-bound or a pointer offset. NaN / +-inf / |f| >= 2^31 is UB in C++; arm64 fcvtzs saturates (NaN -> 0, huge -> INT_MAX/INT_MIN), so a
-NaN camera value could become INT_MIN as an index.
-Hypotheses: H-safe (every such conversion is clamped / isfinite-checked / the result is clamped before the sink), H-diag (only
-gated probes / logging), H-ub (default-on guest float -> int -> sink with no clamp: real defect, fix with an isfinite + clamp helper).
-Method: new tools/s7347_f2i_census.py on the s7343 scope; reuse s7346 idents()/member_types()/hdr_text() for types and s7345
-FLOATT/FLOATCALL for float detection. Sites: casts `(int|int32_t|uint32_t|s32|u32|size_t|long)\s*\(?expr` / static_cast<int..>
-/ lround/lrint/(int)floor/ceil, and int-typed locals assigned a float expression, whose result feeds a sink (index `[..]`, memcpy
-len, resize, for bound, pointer +) on the same line or a later line of the function (s7345 sink_use()). Classes: CL clamped
-(std::clamp/min/max on the float before or the int after, or an `if (x < 0 || x >= N)` before the sink), FIN isfinite/isnan
-check, HOST host-only float (config, time, resolution scale), G/D/P/C, B default-on guest float unclamped. Controls: planted
-`float f = guest_f(); int i = (int)f; tab[i] = 1;` ('?'), clamped twin ('CL'), isfinite twin ('FIN'), gated twin ('G').
-Runtime only if a B site exists: fix + selftest, then `env SECS=260 zsh scratch/s7326/run.zsh s7347_dd8 ''`.
-Exit: PORTING-STATE s7347, CURRENT-TRUTH item 27l -> closed/fixed, commit.
+# NEXT (s7348): idiom-class audit - class Y, integer division / modulo by a guest-derived divisor with no zero check
+HYPOTHESIS-ID: host-int-div-zero
+Context: s7347 closed class X (tools/s7347_f2i_census.py: 233 float conversions, 7 sink sites, 0 open; rs64_s7233_cell NaN bin fixed).
+Sibling idiom: `a / b` or `a % b` with integer type where b comes from guest data (VI width / xScale / yScale registers, RDP image
+width, tile line / stride, task sizes, ucode fields, MEM_* reads) or from a float rounded to int (e.g. rt64_framebuffer_renderer
+`coord % std::lround(resScale[1])`), with no `b == 0` / `b > 0` / max(1, b) check before. x86 raises SIGFPE; arm64 udiv/sdiv return 0
+silently (wrong value, no crash). INT_MIN / -1 is also UB.
+Hypotheses: H-safe (every divisor is a constant, a sizeof, nonzero by construction, or checked), H-diag (only gated probes),
+H-zero (a default-on guest-derived divisor can be 0: real defect, fix with a guard).
+Method: new tools/s7348_div_census.py on the s7343 scope (s43.files_in_scope); reuse s7346 idents()/member_types()/hdr_text() and s7347
+is_float() to exclude float division. Sites: `/` or `%` (not `//`, not `/=` in comments, not float operands) whose right operand is
+not a literal/sizeof/constexpr (s42.ev). Classes: K constant, NZ divisor checked (`if (!b)`, `b == 0`, `b > 0`, `b != 0`, max(1, ..),
+`?:` guard) before the op in the function, BC nonzero by construction (`1 << n`, `x | 1`, +1 of an unsigned), G/D/P/C, H hand,
+B default-on guest divisor unchecked. Controls: planted `uint32_t w = task->width; return off / w;` ('?'), checked twin (NZ),
+shift twin (BC), gated twin (G).
+Runtime only if a B site exists: fix + standalone control, then `env SECS=260 zsh scratch/s7326/run.zsh s7348_dd8 ''`.
+Exit: PORTING-STATE s7348, CURRENT-TRUTH item 27m -> closed/fixed, commit.

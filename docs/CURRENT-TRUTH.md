@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7346 (2026-11-14).
+Compact operational handoff, as of Session 7347 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -393,9 +393,19 @@ is in the s7307 archive). Active unit: NEXT.md.
     throws on `%lc 0xD800` and gives 'tile 4' for 'tile 42'; new form gives "" and 'tile 42'). Submit-range subtractions in
     dpc_bridge are safe because `submit_hi <= submit_lo` is dropped at :6793 before any push. 260 s dd8 21:9 hangar-route smoke
     after the fix: 0 crash, 14 resets. Next: class X (item 27l).
-27l. **Next unit (NEXT.md): class X, float-to-integer conversions of guest floats reaching indices / sizes / loop bounds**
-    (`(int)f`, `int i = f`, lround/static_cast on a guest float with NaN / out-of-range is UB; arm64 saturates to INT_MIN/MAX or 0).
-28. **When 1-27l offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27l. **Float-to-integer conversions reaching index / size sinks (class X): CLOSED (s7347, static + control + smoke).**
+    `tools/s7347_f2i_census.py --controls` (exit 1 = '?' / B / fix missing): 3825 integer conversions in the 183 host files, 233
+    with a float operand, 7 reach an index / length / for-bound sink (CL 3, D 2, H 1, FIX 1), 0 open. Interprocedural flows read by
+    hand: RT64 updateCallTexcoords int(u) is clamped downstream (rt64_state.cpp mask/clamp branches); VI::fbSize lround(inf) at
+    yScale 0 lands at size.y 0; rs64_i4_fetch floor(u) is ROGUESQ_LOG_FLOOR-gated; dpc_bridge coverage xa_i/xb_i NaN-rejected
+    and clamped. One defect FIXED (src/main/upstream_compat.cpp rs64_s7233_cell, live with ROGUESQ_DD_WIDEWIN=1): `(int)(dd/8)` of
+    sqrtf over guest eye floats indexed s7233_h with only an upper clamp; NaN is UB (arm64 0, x86 INT_MIN = OOB). Now
+    `dd < 128 ? (int)(dd/8) : 16`. scratch/s7347/ctl.cpp: identical bins on finite dd, NaN 0 -> 16. 260 s dd8 21:9 hangar smoke:
+    0 crash, 14 resets, 66 [s7233] tally lines from the patched path. Guest-side TRUNC_W_S = (int32_t)f in recomp.h: retail traps
+    on an invalid convert (FPE unimplemented op), so no retail value to match; left unchanged. Next: class Y (item 27m).
+27m. **Next unit (NEXT.md): class Y, integer division / modulo by a guest-derived divisor with no zero check** (x86 SIGFPE,
+    arm64 silently 0; e.g. `coord % lround(resScale)`, `/ width`, `% stride` on VI / RDP / task fields).
+28. **When 1-27m offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

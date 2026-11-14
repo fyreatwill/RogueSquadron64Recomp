@@ -193663,3 +193663,33 @@ construction), H-diag (only gated probes), H-neg (a default-on signed guest leng
 - lib/rt64 edited -> ./submodule-patches/export.sh run, rt64.patch refreshed in this commit.
 - Rules out: signed guest lengths as a crash source in the host runtime (s7337-s7346 sibling classes R..W now all closed).
   Next: class X, float-to-integer conversions of guest floats reaching indices / sizes / loop bounds.
+
+## Session 7347 (2026-11-14) — class X float-to-integer conversions reaching index/size sinks closed: 233 float conversions, 7 sink sites, 0 open; rs64_s7233_cell (int)NaN histogram index fixed
+HYPOTHESIS-ID: host-float-to-int-sinks. Hypotheses: H-safe (every guest float -> int -> sink is clamped / finite-checked),
+H-diag (only gated probes), H-ub (a default-on unclamped site exists).
+- New `tools/s7347_f2i_census.py` (reuses the s7346 idents/member_types/hdr_text and the s7345 FLOATT/FLOATCALL). It enumerates C casts,
+  functional casts, static_cast and l/ll round/rint; keeps conversions with a float operand; marks a site when the result sits in
+  `[...]`, in a memcpy/memset/resize/new[]/malloc length, or goes through a variable into one of those or a `for` bound within 40 lines
+  (same-line statements after the `;` count). Controls PASS in the same run: a planted `(int)f` index gives '?', the clamped twin
+  gives CL, the isfinite twin gives FIN, the gated twin gives G, and the no-sink twin is not a site.
+- Result: 3825 conversions, 233 with a float operand, 226 with no sink (arithmetic, comparisons, logging, struct fields, calls).
+  7 sites: CL 3 (render_context map_result bin clamped at the sink; rt64_state rs64_lookup_image_word bytes/tol range-checked), D 2
+  (rt64_vi_renderer rows), H 1 (screenFbSize is hlslpp::uint2, so this is not a float conversion), FIX 1. 0 open.
+- Interprocedural flows read by hand from the 226 no-sink rows: RT64 RDP::updateCallTexcoords `int(u)` -> callTile.min/maxTexcoord,
+  clamped at rt64_state.cpp ~2060-2075 by the clamp/mask branches before use. VI::fbSize `lround(../(2*yScale..))` at yScale 0:
+  lround(inf) -> 0xFFFFFFFF, +2 wraps to 1, lround(1/4)*4 = 0, so size.y = 0 (benign by accident, implementation-defined, not UB).
+  rs64_i4_fetch floor(u/v) runs only under ROGUESQ_LOG_FLOOR. dpc_bridge coverage xa_i/xb_i: NaN rejected by `!(xb > xa)` and clamped
+  to the scissor first. iv in the floor probe and rt64_rdp hex ch() clamp 0..255.
+- DEFECT FIXED (H-ub for one site): src/main/upstream_compat.cpp rs64_s7233_cell, live whenever ROGUESQ_DD_WIDEWIN=1 (auto R=88/128):
+  `int b = (int)(dd / 8.0f); if (b > 16) b = 16; s7233_h[ph][b]++;` with dd = sqrtf over the guest eye floats (qx.f/qz.f) and only an
+  upper clamp. A NaN eye makes this UB: arm64 fcvtzs gives 0, x86 cvttss2si gives INT_MIN, an out-of-bounds write. Now
+  `int b = dd < 128.0f ? (int)(dd / 8.0f) : 16;`. ORIGIN: the writer is our own s7233 diagnostic tally. The value is a guest float that
+  is legitimate unless the eye is NaN; no NaN was observed. This is a latent UB fix and does not mitigate an observed corruption.
+  Standalone control scratch/s7347/ctl.cpp (clang -O2): old and new agree on 541 finite dd in [0,200) and on 128/135/1000/3e10/inf;
+  NaN: old 0, new 16; bad=0.
+- Runtime: build clean; `env SECS=260 zsh scratch/s7326/run.zsh s7347_dd8 ''` (dd8 21:9 WIDEWIN hangar->mission->abort route) gave
+  crash=0 resets=14 late=0 arenafull=0, matching s7346. Positive control for the patched path: 66 `[s7233] ph=` tally lines, 13 with a
+  non-empty bin 16, so rs64_s7233_cell executed the new expression on both sides of 128.
+- Guest side noted, unchanged: N64Recomp recomp.h TRUNC_W_S/D = `(int32_t)f` (UB out of range) and CVT_W_S = `(int32_t)lrintf` (wraps).
+  The VR4300 raises the unimplemented-operation exception on an invalid convert, so retail has no value to match. Rules out H-ub for
+  every other host site in scope. Next: class Y, integer division / modulo by a guest-derived divisor with no zero check.
