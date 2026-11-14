@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7310 (2026-11-13).
+Compact operational handoff, as of Session 7312 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -174,7 +174,10 @@ is in the s7307 archive). Active unit: NEXT.md.
 
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner
    asks for more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
-2. **21:9 dd>1 left-edge sliver FIXED (s7310), owner look + multi-level hold pending.** Cause: the dd-scaled projection far. With far above
+2. **21:9 dd>1 left-edge sliver FIXED (s7310), qualified s7312, owner look pending.** s7312: FARMAX=0 pins the dome edge tris to x=0 on L1,
+   L5 and L12 alike, the 32767 default never does (stream decode, same-pose L1/L5); s7311 soak 300 s L1/L5/L12 clean, 60/s, no frame-time cost.
+   Sheets docs/owner_sheet_s7310_farmax.jpg + docs/owner_sheet_s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
+   Open (single instance, s7312): the window once showed a different scene from the frozen RDP swap for >2 s (first arm after a rebuild). Cause: the dd-scaled projection far. With far above
    ~36-40k units (L1: far 8070.8 x4.5 clean, x5.0 pinned; dd6 auto and dd8 both above) the F5 clip emits the sky-dome edge panels pinned to
    fb x=0 with texture W 0/-0.0015 (vertical streaks); at far <= x4.5 the same panels arrive as normal guard-band tris (minx -230..-260, W sane).
    Two lines: RDP-stream W decode and presented near-white left-column count (608 vs 0) agree in all 12 same-pose arms. Not perspNorm, not the
@@ -182,7 +185,6 @@ is in the s7307 archive). Active unit: NEXT.md.
    range; retail never builds that far. Fix: **ROGUESQ_DD_FARMAX default 32767** (tools/apply_s7310_farmax.py, after apply_s6031_far; 0 = old;
    only bites when the far scale is active and never lowers below the game far, so dd1 is untouched). dd8 21:9 and 16:9 with the cap: sliver 0,
    stream identical to far x4; repeat arm pixel-identical; other diffs vs far x8 are only sky-dome periphery and clouds, horizon/terrain unchanged.
-   Sheet docs/owner_sheet_s7310_farmax.jpg. Soak queued: scratch/agent/soak_queue/s7311_219_dd8_farmax_hold.sh (fold it).
    dd8 horizon look DONE s7308 (sheet docs/owner_sheet_s7308_dd8_horizon.jpg).
 3. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle. Never flip without the owner.
 4. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops

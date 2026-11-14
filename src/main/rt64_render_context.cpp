@@ -56,12 +56,14 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
     // each rising x. +0x4C is a per-tick copy, so POSE_PIN_POSITION cannot hold the ship, but no-input flight is deterministic:
     // this gives the same pose in every arm at any frame rate, held still for a window capture. The pad thread cannot do it.
     if (pc == 0x800FA730u) {
-        static std::vector<float> fz; static int fz_ms = -1; static size_t fz_k = 0;
+        // s7312: an entry written <x fires on a FALLING crossing (x <= value): L12's no-input flight spawns at x=156 and flies -x first.
+        // A falling entry only arms once x has been seen above it (pre-spawn the object reads pos 0,0,0, which fired <72 at once).
+        static std::vector<float> fz; static std::vector<char> fzd; static int fz_ms = -1; static size_t fz_k = 0; static bool fz_up = false;
         if (fz_ms < 0) {
             fz_ms = 0;
             if (const char* g = std::getenv("ROGUESQ_POSE_FREEZE")) {
                 char* e = const_cast<char*>(g);
-                for (;;) { fz.push_back(strtof(e, &e)); if (*e != ',') break; e++; }
+                for (;;) { const bool dn = *e == '<'; if (dn) e++; fz.push_back(strtof(e, &e)); fzd.push_back(dn); if (*e != ',') break; e++; }
                 fz_ms = (*e == ':') ? atoi(e + 1) : 4000;
             }
         }
@@ -69,7 +71,9 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
         if (fz_k < fz.size() && pl >= 0x80001000u && pl < rs64_ram_top - 0x100u && !(pl & 3)) { // s6881: spill puts the player above 8 MB in wide + dd
             float v[3];
             memcpy(v, rdram + (pl - 0x80000000u) + 0x4C, 12);
-            if (v[0] >= fz[fz_k]) {
+            if (fzd[fz_k] && v[0] > fz[fz_k]) fz_up = true;
+            if (fzd[fz_k] ? (fz_up && v[0] <= fz[fz_k]) : v[0] >= fz[fz_k]) {
+                fz_up = false;
                 fprintf(stderr, "[posefreeze] k=%zu vi=%u pos=%.3f,%.3f,%.3f ms=%d\n", fz_k, rs64_vi_n_g, (double)v[0], (double)v[1], (double)v[2], fz_ms);
                 rs64_s6883_freeze((unsigned)fz_k);
                 fflush(stderr);

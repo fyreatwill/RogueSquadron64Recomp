@@ -192483,3 +192483,33 @@ REFUTES H-wide (at the same pose 16:9 has no sliver at far x8, while 21:9 has no
 still pinned). H-rsp-emu is not refuted directly, but the fix does not depend on it. Next discriminator: the same FARMAX default vs 0 pair on L5
 and L12 (NEXT.md) decides whether 32767 holds for every dome or needs to be relative to the dome w.
 (In plain terms: the far-sweep selects H-geom and refutes H-wide; root cause = our dd far scale above ~36-40k; ROGUESQ_DD_FARMAX is the fix, not just a diagnostic: getenv/fprintf there are its knob and its one-time echo.)
+
+## Session 7312 (2026-11-13) — G5f: ROGUESQ_DD_FARMAX=32767 qualified on L1, L5 and L12 (stream decode: FARMAX=0 pins the dome edge tris to x=0 on all three, the default never does); s7311 hold soak clean; POSE_FREEZE gains falling-crossing entries
+HYPOTHESIS-ID: g5f-219-left-sliver.
+Soak fold: s7311_219_dd8_farmax_hold rc=0 CONTROL PASS (ctl flat 30 168 s). 21:9 dd8 FARMAX default l1/l5/l12 300 s alive, 0 crash, 60/s,
+beyond-route 3/1/0 s, "[s7310] far max 32767" + pnormcap 32767 in all three; l1o (FARMAX=0) "far max 0" + 65504. Same-soak l1 heaviest20
+13.69 vs l1o 13.40 ms, win77-97 11.30 vs 10.95 ms: no frame-time cost beyond noise.
+Same-pose arms (21:9 dd8, PIN=1, G5B_FRAME caps decoded by s7309_tri_texcoef.py + s7310_left_w.py at the frozen swap from s7310_cap_swaps.py):
+| arm | freeze pose | left-edge dome tris | minx | W<=0.01 tris | presented |
+| L1 FARMAX=0 (control, batch 2) | 106.294,-6.799,69.769 | PINNED, W 0/-0.0015 | 0.0 | 3 | sliver 608 px, 180 px from s7310 d8 |
+| L1 default (batch 2) | same | sane, stream == s7310 fx8 | -230 | 3 (W -260, not pinned) | 0 px, pixel-identical to s7310 fx8 |
+| L5 FARMAX=0 | 87.904,-7.058,73.798 | PINNED, start W 0, minx 0.0 / -0.1 | 0.0 | 1 | night sky: near-white score n/a |
+| L5 default | same | sane guard band, W -166 | -69..-166 | 1 (W -166) | vs f0: left 1% 70 px, rest 11.7k (sky bands + bottom-left speckle) |
+| L12 FARMAX=0 | falling x<72: 71.929,-8.539,12.424 | PINNED, W -1.0/0 | 0.0 | 1 | - |
+| L12 default | 71.953,-8.539,8.640 (z differs) | sane guard band | -188..-250 | 3 (W -251) | - |
+L5 repeat floor (f0_1 vs f0_2) 0 px. L12 arms did not share a pose (NOREF, z 8.64 vs 12.42), so only the within-arm stream verdict counts there.
+Reading: two lines agree (RDP-stream decode in 6 arms, presented diff where comparable): with the dd-scaled far uncapped (65504) the sky-dome
+edge panels collapse onto fb x=0 on every level tested; the 32767 default keeps them as normal guard-band tris on every level. 32767 holds
+for these three domes; no need to make it relative to the dome w (that stays open only if a new level shows pinning at the default).
+Presentation anomaly (single instance): batch 1's first arm after the rebuild (L1 FARMAX=0) froze at the identical pose with an RDP stream
+matching s7310 d8 (17 of 13215 decode lines differ), yet both window captures (1.52 / 2.23 s into the 15 s freeze, measured from the cap's
+mach stamps) showed a different scene (level craft over rock, not the banked craft against sky). The batch-2 repeat on the same binary was
+pixel-identical to s7310. So the window showed a frame that was not the last submitted swap for >2 s. Not explained; next unit (NEXT.md).
+Harness fixes (engineering): src/main/rt64_render_context.cpp ROGUESQ_POSE_FREEZE entry "<x" = falling crossing, armed only after x was seen
+above it (pre-spawn the object reads pos 0,0,0, which fired the first build's <72 at once: void arm l12d, killed and rebuilt);
+tools/g3_optin_pose_arms.sh passes <x through FZ/SHIFT and now refuses an absolute OUTDIR (RAND_TRACE is $PWD/$O/..., so an absolute path
+never opened the trace and POSE_FREEZE silently never fired: first batch void, caps=0, rerun). L12 needs the falling form: its no-input
+flight spawns at x=156 and flies -x first. Scouts: scratch/agent/m6/g1_lvl{5,12}s7312sc_sc (tools/g3_pose_track.py).
+Owner sheet docs/owner_sheet_s7312_farmax_l5_l12.jpg (L5/L12 before/after). Raw caps deleted.
+Discrimination: SELECTS H-geom-global (the far value alone decides pinning on L1, L5 and L12). REFUTES H-L1-only (the pinning appears on two more
+domes with FARMAX=0) and the "32767 too high for some dome" branch for these three levels.

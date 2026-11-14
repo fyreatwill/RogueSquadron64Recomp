@@ -1,13 +1,20 @@
-# NEXT (s7311): fold the s7311 FARMAX hold soak, then check the other dd8 levels' sky periphery
-HYPOTHESIS-ID: g5f-219-left-sliver
-State (s7310): ROGUESQ_DD_FARMAX=32767 default (far plane cap at dd>1) removes the 21:9 left sliver and the warped sky-dome edges at L1.
-Threshold far 36.3k-40.4k. Proof is one pose on one level (L1).
-1. If SOAK-RESULTS has s7311_219_dd8_farmax_hold: fold it (alive, crashlines, 60/s, "[s7310] far max 32767" in l1/l5/l12, "far max 0" in l1o,
-   l1 heaviest20 vs l1o). If it fails, root-cause that arm.
-2. Second level/pose (rule 4, widen the evidence): same-pose arms on L5 and L12 (21:9 dd8): FARMAX default vs FARMAX=0, PIN=1, then
-   tools/s7310_sliver_score.py on f0_2.png and tools/s7310_left_w.py on the decoded frozen swap (tools/s7310_cap_swaps.py names it).
-   Template scratch/s7310/run5.zsh (change FORCE_SAVE_MISSION; FZ pose must be taken from that level's [posefreeze] line, see
-   tools/g3_optin_pose_arms.sh). Expect: FARMAX=0 shows pinned W~0 edge tris where the dome reaches the edge, the default shows none.
-   If a level shows pinned tris even at 32767, lower the default (bisect as s7310) or make it relative to the dome w.
-3. Delete the .cap files after decoding (400 MB each with MAX_MB=400).
+# NEXT (s7313): does the presented window lag the RDP stream on the first run after a rebuild?
+HYPOTHESIS-ID: present-stale-after-rebuild
+Datum (s7312, single instance): batch 1 arm l1f0 (first game run after a cmake rebuild of the main exe) froze at L1 pose 106.294,-6.799,69.769
+with an RDP stream identical to s7310 d8 (swap 4063), but both window captures 1.5 and 2.2 s into the 15 s freeze showed another scene
+(level craft over dark rock, not the banked craft against sky). The batch-2 repeat on the same binary (also first-after-rebuild!) matched s7310
+pixel for pixel. Frames: scratch/s7312/a1/l1f0/f0_{1,2}.png vs scratch/s7312/b1/l1f0/f0_2.png. If the window can show a stale frame for
+seconds, that may be part of the owner's "terrain drops" / "buffering" reports (G5b/G5c).
+Hypotheses:
+- H-shader: RT64 pipeline compile after a fresh binary (or first use of a material) holds presentation on an old frame. Predicts: stale frames
+  cluster right after launch/new materials; the RT64 log shows pipeline creation around the freeze.
+- H-capture: screencapture -l grabbed a stale WindowServer backing store (window not front/occluded). Predicts: the game's own presented
+  framebuffer (RT64 readback / G5B present ring) at that moment is correct while the PNG is not.
+- H-present-lag: RT64 presents frames late (queue backlog) under recorder I/O (MAX_MB 1600). Predicts: present stamps lag swap stamps by >1 s.
+Discriminator, one build, one batch: L1 l1f0 recipe from scratch/s7312/run2.zsh x3 (same binary), each with ROGUESQ_PRESENT_RING (present wall
+stamps vs swap mach stamps) and an in-game framebuffer dump at the freeze (check ROGUESQ_G5B_* / fbd options in tools/g3_optin_pose_arms.sh
+callers), plus a window capture. Compare PNG vs in-game fb vs RDP stream per arm. First arm right after `touch src/main/rt64_render_context.cpp`
++ rebuild, to try to reproduce the batch-1 condition. If it never recurs in 3 arms + a positive control (a deliberately occluded window
+capture should show the stale effect for H-capture), record it and close as non-reproducible.
+Commands: env LEVEL=1 PIN=1 TAGP=s7313 FZ=106.28 zsh tools/g3_optin_pose_arms.sh scratch/s7313/a <arms>   (OUTDIR must be repo-relative)
 Needs an unlocked screen and an idle host (the arms script checks both).
