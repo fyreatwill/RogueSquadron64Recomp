@@ -102,5 +102,36 @@ spill-range word (live_ptr / dangling / data) with owner block, offset and calle
 - dd8 21:9 L4: 22-120 live spill blocks in flight, up to 2747 holder words, 42 owner types (scratch/s7317/d8_owner_table.txt).
 `tools/s7317_field_compare_census.py <holders_all.txt>`:
 - Class A, top-byte shift then compare (shift form of the s6993 mask test): 32 sites, all spill-equal by evaluation. CLOSED.
-- Class B, field-vs-register ordering compares at holder offsets: 182 sites, OPEN (needs a runtime cross-block check).
+- Class B, field-vs-register ordering compares at holder offsets: 182 sites, CLOSED s7319 (below).
 s7316 global-word census re-run on the dd8 dumps (2113 static words holding live spill pointers): 0 spill-valued sites.
+
+## Class B field-order compares closed (s7318 runtime + s7319 static)
+
+Runtime (s7318, ROGUESQ_S7318_BCMP, 4 runs: dd8 21:9 L4 x2, L1, L12): 119/182 sites executed, 21.2M compares, **0 cross**
+(spill vs 0x80xxxxxx), controls 3968/3968 classed cross. The only spill-operand compares are 8 zlib window sites (one block, H-same).
+Static (s7319, `tools/s7319_bcmp_static_class.py <tables>`): the 63 never-executed sites, each class signature re-checked against
+the generated MIPS (accepts all own sites, rejects >=40 foreign sites; dropping 3 tables makes coverage FAIL = control).
+
+| class | kind | sites | meaning of the compared field |
+|---|---|---|---|
+| heap-size | scalar | 0, 8 | rs-heap block size vs request / running max |
+| heap-freelist | same | 2 | block header vs neighbour header in one rs-heap freelist (spill arena is its own allocator) |
+| asset-length | scalar | 6, 7 | asset load offset/length (0x20, 0x60) vs remaining length |
+| frame-counter | scalar | 19, 20 | global frame stamp 0x8013889C vs per-object stamp 0x3C |
+| halfword | scalar | 29 | lhu value (data_gap disassembly) |
+| ctr-table | scalar | 17 sites (32 ... 123) | signed objective counter table 0x80138060[id-1] vs threshold field |
+| loop-count | scalar | 34, 40, 41 | loop index vs element count field |
+| blob-offset | scalar | 36-39 | file-relative offsets (4-aligned check) vs blob size, before relocation |
+| voice-handle | scalar | 50, 51, 53, 57-59 | MusyX voice handle id vs sorted list node id (0x8) |
+| voice-pitch | scalar | 52 | glide pitch current vs target (shifted by 8) |
+| sched-time | scalar | 87 | signed message time vs field 0x1C4 |
+| float-trunc | scalar | 116 | trunc.w.s value vs field 0x34 |
+| tlut-pool | same | 127 | TLUT table entries vs freed entry, all inside one pool (compaction shift) |
+| inflate-window | same | 131-133, 156 | zlib window/read/write/end (0x24-0x30) of one inflate state |
+| inflate-avail | scalar | 134 | avail_in count min |
+| huft-count | scalar | 158, 159 | Huffman code counts |
+| pfs-page | scalar | 163-168 | controller-pak page numbers (signed) |
+| printf-prec | scalar | 170-177 | _Genld precision/width |
+
+Verdict: 57 scalar + 6 same + 119 runtime-clean = 182/182, **0 H-cross**: no class-B compare can order a spill pointer against
+another allocation. Static half is single-source (one reader + mechanical signature), the runtime half is independent.

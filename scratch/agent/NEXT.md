@@ -1,16 +1,19 @@
-# NEXT (s7319): close class B — fold the s7318_bcmp_levels soak, then statically classify the sites no run executed
-HYPOTHESIS-ID: spill-holder-field-compare
-Context: s7318 runtime classifier (ROGUESQ_S7318_BCMP, tools/apply_s7318_bcmp_probe.py): dd8 21:9 L4 250 s flight, 109/182 class-B sites
-executed, 0 cross compares (spill pointer vs 0x80xxxxxx), control 2569/2569; the 464 spill-operand compares are zlib window pointers
-in one block. 73 sites never executed (list: `python3 tools/s7318_bcmp_report.py scratch/s7318/bcmp_run1.txt scratch/s7318/bcmp_run2.txt`).
-Soak scratch/agent/soak_queue/s7318_bcmp_levels.sh (L1 + L12) queued; its tables land in scratch/s7318q/bcmp_l{1,12}.txt.
-Hypotheses for the remaining sites: H-scalar (the compared field is a count/size/time, never a pointer) vs H-same (pointer vs pointer
-into the same object/array) vs H-cross (a pointer vs a heap bound/pointer from another allocation -> can misorder a spill pointer).
+# NEXT (s7320): spill-pointer DIFFERENCE class — census subu over holder-offset fields, classify every site
+HYPOTHESIS-ID: spill-holder-pointer-diff
+Context: s7317-s7319 closed the ordering edge (class A top-byte shifts, class B 182 slt/sltu: 0 cross). The sibling idiom is a
+difference: `subu d, p, q` (or addu with a negated value) where p is a load from a holder offset (scratch/s7317/d8_holders_all.txt.gz,
+offsets of words that held live spill pointers in dd8 21:9 L4 flight) and q is a pointer from another allocation or a heap bound.
+Spill (0x81000000+) minus heap (0x80xxxxxx) is >= 8 MB: any size/limit check on d (sltiu/slt vs a constant, used as a length) would
+then fail where retail passes.
+Hypotheses: H-same (p and q in the same object: d is an in-object length, base-invariant) vs H-scalar (p is never a pointer at that
+site) vs H-cross (q from another allocation: d is wrong under spill -> defect candidate).
 Unit:
-1. Fold the soak verdict (SOAK-RESULTS). Re-run the report over all 4 tables; any cross -> read that function first (that is the unit).
-2. For every still-unexecuted site: read the lw/slt pair and the surrounding 20 lines in N64Recomp/RecompiledFuncs (grep the pc), and
-   class it H-scalar / H-same / H-cross / by-construction (heap freelist walkers never see spill: the spill arena is its own allocator;
-   __osPfs* is controller-pak code with no heap pointers). Write the table into docs/HEAP-ADDR-AUDIT.md (class B section).
-3. If any site is H-cross on a field an owner type in scratch/s7317/d8_owner_table.txt actually holds: name the compare's meaning and
-   fix (allocate that owner type outside the spill arena, or map the compare), qualified with the two-arm discipline.
-Outcomes: all scalar/same/by-construction -> class B CLOSED, spill-holder thread closed; take CURRENT-TRUTH Next steps 16.
+1. Extend tools/s7317_field_compare_census.py with a class C detector (subu of a holder-offset load against a non-constant register,
+   record what consumes d: compare-with-constant / length arg / store) + a planted selftest snippet (positive control). One run over
+   d8_holders_all.txt.gz; write tools/s7320_bdiff_sites.txt.
+2. Classify every site statically with the s7319 signature approach (tools/s7319_bcmp_static_class.py as the model). If more than ~40
+   sites stay unclear, add them to the s7318 runtime hook (apply_s7318_bcmp_probe.py: hook subu sites, class cross = one operand spill
+   and the other 0x80xxxxxx) and run ONE dd8 21:9 L4 flight with the control at a known hh site.
+3. Any H-cross site: read the function, name what d means, fix (allocate that owner outside the spill arena or correct the length),
+   two-arm qualified.
+Outcomes: all scalar/same -> class C closed, spill-pointer edge fully closed; take CURRENT-TRUTH 17 (next ladder rung).

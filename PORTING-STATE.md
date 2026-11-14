@@ -192700,3 +192700,23 @@ differ from retail's all-heap layout) vs H-scalar (the field is never a spill po
   instrument agree (464/464 same, 0 cross); one instrument = single-source for the mechanism, but the static census line (s7317) and
   this runtime line agree that no B site is a pointer-vs-bound compare on a spill value. Class B is CLOSED for executed sites; 73
   unexecuted sites stay open pending the soak. No defect, no mitigation landed.
+
+## Session 7319 (2026-11-14) — class-B field-order compares CLOSED: L1/L12 soak adds 10 sites at runtime (119/182, 0 cross, ctl 3968/3968); new tools/s7319_bcmp_static_class.py classes the 63 never-executed sites 57 scalar + 6 same-object, 0 cross
+Unit (NEXT.md s7319, slug spill-holder-field-compare). Hypotheses per unexecuted site: H-scalar (field is a count/size/time/id) vs
+H-same (pointer vs pointer into one object) vs H-cross (pointer vs another allocation's pointer/bound: could misorder a spill pointer).
+- Soak fold: s7318_bcmp_levels rc=0 (L1 + L12, dd8 21:9 FPS60 WIDEWIN, 202-203 s holds, alive, 0 crash, 0 VI stall). L1 5.05M
+  compares, L12 5.90M; both 0 cross, 464 same (the inflate window block again), ctl 669/669 and 730/730 classed cross (control PASS).
+  Merged 4 tables (21.2M compares): 119/182 executed, 0 cross, ctl 3968/3968; 63 never executed.
+- Static (new tools/s7319_bcmp_static_class.py): read each of the 63 sites' original MIPS (scratch/s7319/ctx.py window dump; two
+  functions can share a VA - data_gap copies / overlays - the tool picks the copy named like the census site). Verdict table with 18
+  classes, each with a mechanical signature re-checked against the generated code: 57 SCALAR (objective counter table 0x80138060 x17,
+  _Genld printf precision x8, __osPfs page numbers x6, MusyX voice handle ids x6, blob file offsets x4, loop counts x3, heap block
+  sizes x2, asset lengths x2, frame stamp 0x8013889C x2, huft counts x2, voice pitch, sched time, trunc.w.s, lhu, avail_in) and 6 SAME
+  (zlib window fields 0x24-0x30 of one inflate state x4, TLUT pool compaction entries in one pool, one rs-heap freelist walk). 0 H-cross.
+- Controls: every signature accepts all its own sites and rejects 40-62 foreign ones (none vacuous); feeding only one table makes the
+  coverage check FAIL (12 unclassified executed sites listed, rc=1). Full table in docs/HEAP-ADDR-AUDIT.md.
+- Findings beside the verdict: site #77 findNearestSceneObjectToPoint's pc 0x800AFDA8 is `lui` in funcs_29's first copy and the real
+  slt in a second function at the same VA (funcs_29:13667) - ctx tools must be function-scoped, not pc-keyed.
+- Discrimination: selects H-scalar (57) / H-same (6) for every unexecuted site, refutes H-cross for all 182 (runtime 119 with control,
+  static 63). Runtime and static lines are independent; static half is single-source (one reader + signature). Class B CLOSED, the
+  spill-holder-field-compare thread is closed. No defect, no mitigation. Next: sibling pointer-difference class (CURRENT-TRUTH 16).
