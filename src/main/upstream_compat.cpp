@@ -15,6 +15,7 @@
 #include <mutex>
 #include <set>
 #include <map>
+#include <deque>
 #include <vector>
 #include <string>
 #include <chrono>
@@ -3349,11 +3350,32 @@ extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
    each ROGUESQ_RDRAM_DUMP_DIR dump as alloc_<swap>.txt, so a word holding a spill pointer can be mapped to its owner block and allocator.
    Guest ra is 0 here (recompiled jal does not write r31), so the caller is the host return address chain (frames 0..2), resolved
    with dladdr at write time. '#' header: spill blocks recorded / freed so far (positive control that spill blocks reach the map). */
-struct S7317B { uint32_t req; void* pc[3]; };
+struct S7317B { uint32_t req; void* pc[3]; double t; uint32_t fl; };
 static std::mutex s_s7317_mu; static std::map<uint32_t, S7317B> s_s7317_live; static uint64_t s_s7317_sprec = 0, s_s7317_spfree = 0;
 static bool s7317_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7317_ALLOCMAP"); return e && e[0] && e[0] != '0'; }(); return on; }
 static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x81400000u; }
-static void s7317_free(uint32_t ptr) { if (!s7317_on() || !ptr) return; std::lock_guard<std::mutex> lk(s_s7317_mu); if (s_s7317_live.erase(ptr) && s7317_isspill(ptr)) ++s_s7317_spfree; }
+/* s7325 audio heap-gap reads (needs ROGUESQ_S7324_RCPREF + ALLOCMAP): history of the last 65536 non-spill frees (ptr, req, free
+   time, host freer frames, allocator frames) so an RCP read in no live block can be classed freed / header gap / untracked. */
+extern "C" int rs64_s7324_on;
+struct S7325F { uint32_t ptr, req; uint64_t seq; double t; void* fpc[4]; void* apc[3]; };
+static std::multimap<uint32_t, S7325F> s_s7325_freed;
+static std::deque<std::multimap<uint32_t, S7325F>::iterator> s_s7325_ord;
+static uint64_t s_s7325_seq = 0; static uint32_t s_s7325_lastfree = 0, s_s7325_lastmalloc = 0, s_s7325_hmin = 0xFFFFFFFFu, s_s7325_hmax = 0;
+static double s7325_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static void s7317_free(uint32_t ptr) {
+    if (!s7317_on() || !ptr) return;
+    void* fpc[4] = {nullptr, nullptr, nullptr, nullptr};
+    if (rs64_s7324_on) { fpc[0] = __builtin_return_address(0); void** fp = (void**)__builtin_frame_address(0);
+        for (int k = 1; k < 4 && fp && fp[0]; ++k) { fp = (void**)fp[0]; fpc[k] = fp[1]; } }
+    std::lock_guard<std::mutex> lk(s_s7317_mu);
+    auto it = s_s7317_live.find(ptr); if (it == s_s7317_live.end()) return;
+    if (rs64_s7324_on && !s7317_isspill(ptr)) {
+        S7325F f{ptr, it->second.req, ++s_s7325_seq, s7325_now(), {fpc[0], fpc[1], fpc[2], fpc[3]}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
+        s_s7325_ord.push_back(s_s7325_freed.emplace(ptr, f));
+        if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); }
+        s_s7325_lastfree = ptr; }
+    if (s7317_isspill(ptr)) ++s_s7317_spfree;
+    s_s7317_live.erase(it); }
 static void s7317_sym(FILE* f, void* pc) {
     Dl_info di; if (pc && dladdr(pc, &di) && di.dli_sname) fprintf(f, " %s+0x%lx", di.dli_sname, (unsigned long)((char*)pc - (char*)di.dli_saddr)); else fprintf(f, " ?%p", pc);
 }
@@ -3456,10 +3478,12 @@ extern "C" void rs64_s7324_sym(void* pc, char* out, size_t n) {
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     rs64_floor_ownership("malloc", ptr, req, ra);
     if (ptr && s7317_on()) {
-        S7317B b{ req, { __builtin_return_address(0), nullptr, nullptr } };
+        S7317B b{ req, { __builtin_return_address(0), nullptr, nullptr }, 0.0, g_s6127_flags };
+        if (rs64_s7324_on) b.t = s7325_now();
         void** fp = (void**)__builtin_frame_address(0);  /* arm64: fp[0] = caller fp, fp[1] = return address */
         for (int k = 1; k < 3 && fp && fp[0]; ++k) { fp = (void**)fp[0]; b.pc[k] = fp[1]; }
-        std::lock_guard<std::mutex> lk(s_s7317_mu); s_s7317_live[ptr] = b; if (s7317_isspill(ptr)) ++s_s7317_sprec; }
+        std::lock_guard<std::mutex> lk(s_s7317_mu); s_s7317_live[ptr] = b; if (s7317_isspill(ptr)) ++s_s7317_sprec;
+        else { s_s7325_lastmalloc = ptr; if (ptr < s_s7325_hmin) s_s7325_hmin = ptr; if (ptr + req > s_s7325_hmax) s_s7325_hmax = ptr + req; } }
     if (!s6063_on()) return;
     if (!ptr && req == 0x1000u) s6127_walk(req);
     if (ptr && req == 0x1000u) { static int k1 = 0; if (k1++ < 40) { s6127_walk(req, true); uint8_t* r = g_s6127_rd; std::fprintf(stderr, "[heaplog-1000ok] flags=%X -> %08X slot100=%08X slotE8=%08X slot104=%08X\n", g_s6127_flags, ptr, r?s5042_rd(r,0x10FF00u):0xFFFFFFFFu, r?s5042_rd(r,0x10FF18u):0xFFFFFFFFu, r?s5042_rd(r,0x10FEFCu):0xFFFFFFFFu); } }
@@ -4289,6 +4313,123 @@ static int g5a_walk(volatile uint8_t* r, std::vector<G5aBlk>& out) {
     }
     return narena;
 }
+/* s7325: guest-side heap walk (independent of the host alloc map): 0 x in no block, 1 in block header, 2 in data. */
+static int s7325_guest(uint32_t x, uint32_t* fl, uint32_t* h, uint32_t* sz) {
+    *fl = *h = *sz = 0; volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return 0;
+    std::vector<G5aBlk> b; g5a_walk(r, b);
+    for (const auto& k : b) if (x >= k.h && x < k.h + 0x10u + k.sz) { *fl = k.fl; *h = k.h; *sz = k.sz; return x < k.h + 0x10u ? 1 : 2; }
+    return 0; }
+}  // namespace
+struct S7325Out { uint32_t lo, loend, hi, lreq, hreq; void* lopc[3]; void* hipc[3]; uint32_t fptr, freq; double fage; void* fpc[4]; void* apc[3];
+                  int gk; uint32_t gfl, gh, gsz; };
+/* s7325 gap class of KSEG0 x: 0 inside a live block, 1 outside the heap extent ever allocated (static), 2 header gap (x in
+   [end of a live block, next live block) with that gap <= 0x20), 3 inside a freed block (most recent free wins), 4 untracked.
+   With guest=1 the guest heap walk result is filled (gk 0 none / 1 header / 2 data, gfl flags 1 free 2 allocated). */
+extern "C" int rs64_s7325_gap(uint32_t x, S7325Out* o, int guest) {
+    std::memset(o, 0, sizeof *o); int k;
+    { std::lock_guard<std::mutex> lk(s_s7317_mu);
+      const bool live = s7318_blk(x, nullptr) != 0;
+      auto it = s_s7317_live.upper_bound(x);
+      if (it != s_s7317_live.end() && !s7318_sp(it->first)) { o->hi = it->first; o->hreq = it->second.req; for (int j = 0; j < 3; ++j) o->hipc[j] = it->second.pc[j]; }
+      if (it != s_s7317_live.begin()) { auto lv = std::prev(it); o->lo = lv->first; o->lreq = lv->second.req; o->loend = lv->first + lv->second.req;
+          for (int j = 0; j < 3; ++j) o->lopc[j] = lv->second.pc[j]; }
+      const S7325F* best = nullptr; auto fi = s_s7325_freed.upper_bound(x);
+      for (int n = 0; n < 2048 && fi != s_s7325_freed.begin(); ++n) { --fi; const S7325F& f = fi->second;
+          if (x - f.ptr < (f.req ? f.req : 1u) && (!best || f.seq > best->seq)) best = &f; }
+      if (best) { o->fptr = best->ptr; o->freq = best->req; o->fage = s7325_now() - best->t; for (int j = 0; j < 4; ++j) o->fpc[j] = best->fpc[j]; for (int j = 0; j < 3; ++j) o->apc[j] = best->apc[j]; }
+      if (live) k = 0;
+      else if (x < s_s7325_hmin || x >= s_s7325_hmax) k = 1;
+      else if (o->hi && o->lo && x >= o->loend && x < o->hi && o->hi - o->loend <= 0x20u) k = 2;
+      else if (best) k = 3;
+      else k = 4; }
+    if (guest) o->gk = s7325_guest(x, &o->gfl, &o->gh, &o->gsz);
+    return k; }
+/* positive controls: *fr = last freed ptr (0 if none), *hg = end of the last malloc'd block when its live successor sits <= 0x20 past it */
+extern "C" void rs64_s7325_ctl(uint32_t* fr, uint32_t* hg) {
+    std::lock_guard<std::mutex> lk(s_s7317_mu); *fr = s_s7325_lastfree; *hg = 0;
+    static uint32_t rot = 0; rot = rot * 1103515245u + 12345u;
+    auto it = s_s7317_live.lower_bound(0x80000000u | (rot & 0x003FFFF0u)); if (it == s_s7317_live.end()) it = s_s7317_live.begin();
+    for (int n = 0; n < 4096 && it != s_s7317_live.end(); ++n, ++it) { auto nx = std::next(it); if (nx == s_s7317_live.end()) break;
+        const uint32_t e = it->first + it->second.req;
+        if (!s7318_sp(it->first) && !s7318_sp(nx->first) && nx->first > e && nx->first - e <= 0x20u) { *hg = e; return; } } }
+/* s7325: buildHeapFreeList(head, 0, 0, lo, hi) entry (tools/apply_s7325_heaprebuild.py). The retail scene reset rebuilds an arena
+   without rs_free, so every host-map block in [lo, hi) dies here: drop them (s7317 map -> freed history tagged reset, s6063 map).
+   Under ALLOCMAP one stderr line per rebuild with the spill arena (s6702) live blocks/bytes at that moment (spill blocks are never
+   in the rebuilt range, so anything the game allocated there before the reset and relied on the reset to discard stays live). */
+extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) {
+    static uint64_t n = 0; ++n; uint64_t dropped = 0, dbytes = 0;
+    if (s7317_on()) { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now();
+        for (auto it = s_s7317_live.lower_bound(lo); it != s_s7317_live.end() && it->first < hi;) {
+            if (s7318_sp(it->first)) { ++it; continue; }
+            if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
+                s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
+            ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); } }
+    for (auto it = s_s6063_live.lower_bound(lo); it != s_s6063_live.end() && it->first < hi;) { s_s6063_bytes -= it->second; it = s_s6063_live.erase(it); }
+    if (s7317_on()) { uint32_t sb = 0; size_t sn = 0; { std::lock_guard<std::mutex> lk(s_s6702_mu); sn = s_s6702_live.size(); sb = s_s6702_live_bytes; }
+        std::fprintf(stderr, "[s7325] heap rebuild #%llu head=%08X range=%08X..%08X dropped=%llu blocks 0x%llX bytes | spill live=%zu blocks 0x%X bytes bump=0x%X\n",
+                     (unsigned long long)n, head, lo, hi, (unsigned long long)dropped, (unsigned long long)dbytes, sn, sb, s_s6569_bump); } }
+/* s7325: after coalesceFreeHeapBlocks (0x800022F8, misnamed: scene-change bulk free of every persistent-heap block whose header tag
+   lacks 0x80; wrapper from tools/apply_s7325_heaprebuild.py). Re-sync: host-map non-spill entries inside the walked arenas whose
+   ptr-0x10 is no longer an allocated guest header are dropped (freed history, freer null). When anything was dropped, one stderr
+   line: dropped count, spill-arena live blocks split by the rs_malloc a1 tag bit 0x80 recorded at allocation (a non-persistent spill
+   block outlives the reset that retail would have applied to it), and the tag control (recorded a1 & 0x80 vs guest header tag & 0x80
+   on matched heap blocks: must agree). */
+extern "C" void rs64_s7325_heapsync(uint32_t a0) {
+    if (!s7317_on()) return;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    static uint64_t ncall = 0, nlog = 0; ++ncall;
+    std::vector<G5aBlk> b; g5a_walk(r, b); if (b.empty()) return;
+    std::map<uint32_t, uint32_t> alloc; uint32_t lo = 0xFFFFFFFFu, hi = 0;
+    for (const auto& k : b) { lo = std::min(lo, k.h); hi = std::max(hi, k.h + 0x10u + k.sz); if ((k.fl & 3u) == 2u) alloc[k.h + 0x10u] = k.tag; }
+    uint64_t dropped = 0, dbytes = 0, agree = 0, disagree = 0, sp_n = 0, sp_np = 0, sp_npb = 0; std::map<std::string, uint64_t> npown;
+    { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now();
+      for (auto it = s_s7317_live.lower_bound(lo); it != s_s7317_live.end() && it->first < hi;) {
+          if (s7318_sp(it->first)) { ++it; continue; }
+          auto g = alloc.find(it->first);
+          if (g != alloc.end()) { (((g->second ^ it->second.fl) & 0x80u) ? disagree : agree)++; ++it; continue; }
+          if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
+              s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
+          ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); }
+      if (dropped) for (auto it = s_s7317_live.lower_bound(0x81000000u); it != s_s7317_live.end() && s7318_sp(it->first); ++it) {
+          ++sp_n; if (!(it->second.fl & 0x80u)) { ++sp_np; sp_npb += it->second.req; Dl_info di; void* pc = it->second.pc[1];
+              npown[(pc && dladdr(pc, &di) && di.dli_sname) ? di.dli_sname : "?"]++; } } }
+    for (auto it = s_s6063_live.lower_bound(lo); it != s_s6063_live.end() && it->first < hi;) { if (!alloc.count(it->first)) { s_s6063_bytes -= it->second; it = s_s6063_live.erase(it); } else ++it; }
+    if (dropped && nlog++ < 400) {
+        std::fprintf(stderr, "[s7325] heapsync #%llu a0=%08X arena=%08X..%08X guest_alloc=%zu dropped=%llu 0x%llX bytes tagctl agree=%llu disagree=%llu | spill live=%llu nonpersist=%llu 0x%llX bytes owners:",
+                     (unsigned long long)ncall, a0, lo, hi, alloc.size(), (unsigned long long)dropped, (unsigned long long)dbytes, (unsigned long long)agree,
+                     (unsigned long long)disagree, (unsigned long long)sp_n, (unsigned long long)sp_np, (unsigned long long)sp_npb);
+        int k = 0; for (auto& kv : npown) { if (k++ >= 8) break; std::fprintf(stderr, " %s=%llu", kv.first.c_str(), (unsigned long long)kv.second); }
+        std::fprintf(stderr, "\n"); } }
+/* s7325 reconciliation: host live map (non-spill) vs the guest heap walk. Guest block h (flags, size) is "matched" when the
+   map holds ptr h+0x10. Map entries with no guest allocated block at ptr-0x10 are stale: nested (inside a guest allocated block),
+   in_free (inside a guest free block), or nowhere (outside every walked arena). Guest allocated blocks with no map entry are
+   unmapped. Top owners (allocator frame 1) and alloc ages of the stale classes; sizes/addresses of unmapped. */
+extern "C" void rs64_s7325_reconcile(FILE* o) {
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    std::vector<G5aBlk> b; const int na = g5a_walk(r, b);
+    std::lock_guard<std::mutex> lk(s_s7317_mu);
+    const double now = s7325_now();
+    uint64_t galloc = 0, gfree = 0, matched = 0, unmapped = 0, ub = 0, st[3] = {0, 0, 0}, nmap = 0;
+    std::map<std::string, uint64_t> own[3]; double amin[3] = {1e30, 1e30, 1e30}, amax[3] = {0, 0, 0};
+    std::map<uint32_t, const G5aBlk*> byh; for (const auto& k : b) { byh[k.h] = &k; if ((k.fl & 3u) == 2u) ++galloc; else ++gfree; }
+    std::vector<std::pair<uint32_t, uint32_t>> um;
+    for (const auto& k : b) if ((k.fl & 3u) == 2u) { if (s_s7317_live.count(k.h + 0x10u)) ++matched; else { ++unmapped; ub += k.sz; if (um.size() < 12) um.push_back({k.h + 0x10u, k.sz}); } }
+    for (auto& kv : s_s7317_live) { if (s7318_sp(kv.first)) continue; ++nmap;
+        auto g = byh.find(kv.first - 0x10u); if (g != byh.end() && (g->second->fl & 3u) == 2u) continue;
+        int c = 2; auto c2 = byh.upper_bound(kv.first);
+        if (c2 != byh.begin()) { --c2; const G5aBlk* k = c2->second; if (kv.first < k->h + 0x10u + k->sz) c = (k->fl & 3u) == 2u ? 0 : 1; }
+        ++st[c]; char nm[160]; Dl_info di; void* pc = kv.second.pc[1];
+        if (pc && dladdr(pc, &di) && di.dli_sname) snprintf(nm, sizeof nm, "%s", di.dli_sname); else snprintf(nm, sizeof nm, "?");
+        own[c][nm]++; const double a = kv.second.t > 0 ? now - kv.second.t : -1; if (a >= 0) { amin[c] = std::min(amin[c], a); amax[c] = std::max(amax[c], a); } }
+    fprintf(o, "REC arenas=%d guest_alloc=%llu guest_free=%llu map_nonspill=%llu matched=%llu unmapped=%llu unmapped_bytes=%llX stale_nested=%llu stale_in_free=%llu stale_nowhere=%llu\n",
+            na, (unsigned long long)galloc, (unsigned long long)gfree, (unsigned long long)nmap, (unsigned long long)matched, (unsigned long long)unmapped,
+            (unsigned long long)ub, (unsigned long long)st[0], (unsigned long long)st[1], (unsigned long long)st[2]);
+    static const char* cn[3] = {"nested", "in_free", "nowhere"};
+    for (int c = 0; c < 3; ++c) { if (!st[c]) continue; std::vector<std::pair<uint64_t, std::string>> v; for (auto& kv : own[c]) v.push_back({kv.second, kv.first});
+        std::sort(v.rbegin(), v.rend()); fprintf(o, "REC stale_%s age %.1f..%.1f s owners:", cn[c], amin[c] < 1e29 ? amin[c] : -1.0, amax[c]);
+        for (size_t i = 0; i < v.size() && i < 8; ++i) fprintf(o, " %s=%llu", v[i].second.c_str(), (unsigned long long)v[i].first); fprintf(o, "\n"); }
+    fprintf(o, "REC unmapped_ex:"); for (auto& u : um) fprintf(o, " %08X+%X", u.first, u.second); fprintf(o, "\n"); }
+namespace {
 // returns class 0 own,1 stale,2 nonheap,3 foreign; fills fb/foreign block info
 static int g5a_classify(const std::vector<G5aBlk>& b, uint32_t F, uint32_t lo, uint32_t hi,
                         const G5aBlk** fbb, const G5aBlk** fgn, int* hdr) {

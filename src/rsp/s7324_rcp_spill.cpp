@@ -18,6 +18,17 @@ extern "C" int rs64_s7324_class(uint32_t addr, uint32_t* blk, uint32_t* req, voi
 extern "C" uint32_t rs64_s7324_lowspill();
 extern "C" void rs64_s7324_sym(void* pc, char* out, size_t n);
 extern "C" void rs64_s7324_near(uint32_t x, uint32_t* lo, uint32_t* loend, uint32_t* hi);
+// s7325: audio RSP DMAs (rd/wr) whose address is in no live heap block (class none / alias_only) are classed against the
+// freed-block history and the guest heap walk (rs64_s7325_gap, upstream_compat.cpp): static / hdrgap / freed / untracked;
+// audio reads starting inside a live heap block but running past its end are counted as cross_end. Distinct table DG
+// (src, addr, len) with first-sight neighbour owners, freed record (age, freer frames, allocator) and the guest header class.
+// ctl: once per second the last freed ptr must class freed (or be live again: reused) and the end of the last malloc'd block, when
+// its successor is <= 0x20 away, must class hdrgap. Dump: build/rs64_s7325.log beside the s7324 log.
+struct S7325Out { uint32_t lo, loend, hi, lreq, hreq; void* lopc[3]; void* hipc[3]; uint32_t fptr, freq; double fage; void* fpc[4]; void* apc[3];
+                  int gk; uint32_t gfl, gh, gsz; };
+extern "C" int rs64_s7325_gap(uint32_t x, S7325Out* o, int guest);
+extern "C" void rs64_s7325_ctl(uint32_t* fr, uint32_t* hg);
+extern "C" void rs64_s7325_reconcile(FILE* o);
 extern "C" int rs64_s7324_on = [] {
     const char* e = getenv("ROGUESQ_S7324_RCPREF");
     int v = (e && *e && *e != '0') ? (strcmp(e, "ctl") == 0 ? 2 : 1) : 0;
@@ -37,7 +48,37 @@ time_t g_last_dump = 0, g_last_ctl = 0;
 // distinct (src, class>=2, 24-bit addr, len) with count and the nearest live heap blocks at first sight (static vs heap-gap triage)
 struct Di { uint32_t src, cls, a24, len, raw0, lo, loend, hi; uint64_t n; };
 Di g_di[4096]; uint32_t g_ndi = 0; uint64_t g_di_over = 0;
-uint64_t g_tag[S_N][6][3];  // raw address top byte 0x00 / 0x80 / other, per class
+uint64_t g_tag[S_N][6][3];
+const char* kGap[6] = {"live", "static", "hdrgap", "freed", "untracked", "cross_end"};
+uint64_t g_gap[2][6];  // [rd/wr aud][kind]
+struct Dg { uint32_t src, kind, x, len; uint64_t n; S7325Out o; };
+Dg g_dg[8192]; uint32_t g_ndg = 0; uint64_t g_dg_over = 0;
+uint64_t g_c5_n = 0, g_c5_fok = 0, g_c5_freuse = 0, g_c5_fbad = 0, g_c5_fnone = 0, g_c5_hn = 0, g_c5_hok = 0, g_c5_hbad = 0;
+void dump7325_locked() {
+    FILE* o = fopen("rs64_s7325.log", "w");
+    if (!o) return;
+    fprintf(o, "s7325 ctl_n=%llu freed_ok=%llu freed_reused=%llu freed_bad=%llu freed_none=%llu hdr_n=%llu hdr_ok=%llu hdr_bad=%llu\n",
+            (unsigned long long)g_c5_n, (unsigned long long)g_c5_fok, (unsigned long long)g_c5_freuse, (unsigned long long)g_c5_fbad,
+            (unsigned long long)g_c5_fnone, (unsigned long long)g_c5_hn, (unsigned long long)g_c5_hok, (unsigned long long)g_c5_hbad);
+    for (int d = 0; d < 2; d++) { fprintf(o, "GAP %s", d ? "dma_wr_aud" : "dma_rd_aud"); for (int k = 0; k < 6; k++) fprintf(o, " %s=%llu", kGap[k], (unsigned long long)g_gap[d][k]); fprintf(o, "\n"); }
+    for (uint32_t i = 0; i < g_ndg; i++) { const Dg& g = g_dg[i]; char lo[3][128], hi[3][128], fr[4][128], al[3][128];
+        for (int j = 0; j < 3; j++) { rs64_s7324_sym(g.o.lopc[j], lo[j], 128); rs64_s7324_sym(g.o.hipc[j], hi[j], 128); rs64_s7324_sym(g.o.apc[j], al[j], 128); }
+        for (int j = 0; j < 4; j++) rs64_s7324_sym(g.o.fpc[j], fr[j], 128);
+        fprintf(o, "DG %s %s x=%08X len=%X n=%llu lo=%08X+%X(%s<%s) hi=%08X+%X(%s<%s) freed=%08X+%X age=%.3f freer=%s<%s<%s<%s alloc=%s<%s<%s guest=%d fl=%X h=%08X sz=%X\n",
+                kSrc[g.src], kGap[g.kind], g.x, g.len, (unsigned long long)g.n, g.o.lo, g.o.lreq, lo[1], lo[2], g.o.hi, g.o.hreq, hi[1], hi[2],
+                g.o.fptr, g.o.freq, g.o.fage, fr[0], fr[1], fr[2], fr[3], al[0], al[1], al[2], g.o.gk, g.o.gfl, g.o.gh, g.o.gsz); }
+    fprintf(o, "DG_OVERFLOW %llu\n", (unsigned long long)g_dg_over);
+    rs64_s7325_reconcile(o);
+    fclose(o);
+}
+void dg_note(int src, int kind, uint32_t x, uint32_t len, const S7325Out* pre) {
+    uint32_t i = 0;
+    for (; i < g_ndg; i++) if (g_dg[i].src == (uint32_t)src && g_dg[i].x == x && g_dg[i].len == len && g_dg[i].kind == (uint32_t)kind) break;
+    if (i < g_ndg) { g_dg[i].n++; return; }
+    if (g_ndg >= 8192) { g_dg_over++; return; }
+    Dg& g = g_dg[g_ndg++]; g.src = src; g.kind = kind; g.x = x; g.len = len; g.n = 1;
+    if (pre) g.o = *pre; else rs64_s7325_gap(x, &g.o, 1);
+}  // raw address top byte 0x00 / 0x80 / other, per class
 void dump_locked() {
     FILE* o = fopen("rs64_s7324.log", "w");
     if (!o) return;
@@ -75,8 +116,22 @@ void note(int src, uint32_t addr, uint32_t len) {
         else if (g_ndi < 4096) { uint32_t lo, le, hi; rs64_s7324_near(0x80000000u | a24, &lo, &le, &hi); g_di[g_ndi++] = Di{(uint32_t)src, (uint32_t)c, a24, len, addr, lo, le, hi, 1}; }
         else g_di_over++;
     }
+    if (src == S_DMA_RD_AUD || src == S_DMA_WR_AUD) {
+        const int d = src == S_DMA_WR_AUD;
+        if (c == 1) { if (addr + len > blk + req) { g_gap[d][5]++; uint32_t x = 0x80000000u | (addr & 0xFFFFFFu); dg_note(src, 5, x, len, nullptr); } }
+        else if (c == 0 || c == 2) {
+            const uint32_t x = 0x80000000u | (addr & 0xFFFFFFu); S7325Out o; const int k = rs64_s7325_gap(x, &o, 0);
+            g_gap[d][k]++;
+            if (k >= 2) { uint32_t i = 0; for (; i < g_ndg; i++) if (g_dg[i].src == (uint32_t)src && g_dg[i].x == x && g_dg[i].len == len && g_dg[i].kind == (uint32_t)k) break;
+                if (i < g_ndg) g_dg[i].n++; else { S7325Out o2; rs64_s7325_gap(x, &o2, 1); dg_note(src, k, x, len, &o2); } }
+        }
+    }
     const time_t now = time(nullptr);
     if (rs64_s7324_on == 2 && now != g_last_ctl) {
+        g_c5_n++; uint32_t fr, hg; rs64_s7325_ctl(&fr, &hg); S7325Out o;
+        if (!fr) g_c5_fnone++;
+        else { const int k = rs64_s7325_gap(fr, &o, 0); if (k == 3) g_c5_fok++; else if (k == 0) g_c5_freuse++; else g_c5_fbad++; }
+        if (hg) { g_c5_hn++; if (rs64_s7325_gap(hg, &o, 0) == 2) g_c5_hok++; else g_c5_hbad++; }
         g_last_ctl = now; g_ctl_n++;
         const uint32_t S = rs64_s7324_lowspill();
         if (!S) g_ctl_nospill++;
@@ -87,7 +142,7 @@ void note(int src, uint32_t addr, uint32_t len) {
             if ((ca == 2 || ca == 3) && b2 == S) g_ctl_ok_alias++;
         }
     }
-    if (now - g_last_dump >= 5) { g_last_dump = now; dump_locked(); }
+    if (now - g_last_dump >= 5) { g_last_dump = now; dump_locked(); dump7325_locked(); }
 }
 }  // namespace
 extern "C" void rs64_s7324_dma(int dir, uint32_t dram, uint32_t raw_len, int aud) {

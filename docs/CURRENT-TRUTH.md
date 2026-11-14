@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7323 (2026-11-14).
+Compact operational handoff, as of Session 7325 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -87,6 +87,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7324 "40k audio RSP reads hit heap GAPS / freed blocks (no live rs_malloc block)". Believable: the s7317 map recorded every hooked
+  malloc/free. s7325: the retail scene reset frees in bulk without rs_free, the map kept 531 stale entries shadowing live blocks;
+  the guest heap walk puts every address inside an allocated block, dd1 identical. Re-synced map: 46 residual reads.
 - s7316 "spill live in the dd2 16:9 L1 run; 80-87 heap words held spill pointers". Believable: the words were aligned 0x81xxxxxx in
   heap. s7317 allocation map: all 833 spill blocks are freed in the load window; those words are halfword data and dead stack slots.
 - s7312 "the presented window can lag the RDP stream for seconds (first run after a rebuild)". Believable: same pose, same stream,
@@ -250,11 +253,22 @@ is in the s7307 archive). Active unit: NEXT.md.
     aliases**; ctl 198/198 classes the live lowest spill block as direct and alias. Alias-only DMA hits (24-bit address inside a live
     spill block's 16 MB-lower image, no live heap block) are all raw tag 0x80 or static: gfx ucode_data 0x80038D00, state-setup
     sub-DL 0x80037658, audio ucode_data 0x800A4E00 (named retail statics), plus 40k audio sample reads in heap GAPS (no live rs_malloc
-    block, tag 0x80): open datum, item 20. Spill audit family A-G done.
-20. **Audio RSP reads in heap gaps (s7324 datum, NEXT.md).** 4092 distinct dma_rd_aud addresses (len 8-0xC8, ADPCM frame sizes) lie
-    outside every live block; some streams run across a block end through the 0x10 header gap into the next block (0x80190440 ->
-    0x80190490 -> 0x801904E0). Freed-buffer read, untracked allocator path, or one logical buffer of adjacent blocks: name it.
-21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    block, tag 0x80): instrument artefact, closed s7325 (item 20). Spill audit family A-G done.
+20. **Audio "heap-gap" reads: CLOSED (s7325, instrument artefact, retail path named).** The retail scene-change bulk free never calls
+    rs_free: coalesceFreeHeapBlocks (0x800022F8, misnamed) frees every persistent-heap block (head 0x8010FF18) whose header tag lacks
+    0x80; waitForPrevFrameDone (0x8000A86C) -> 0x80001880 zeroes head 0x8010FEFC and buildHeapFreeList rebuilds the temp / overlay-BSS
+    arenas. The s7317 map kept 531 stale entries nested in live guest blocks, shadowing them; every distinct "gap" address was inside a
+    guest ALLOCATED block (independent heap walk), dd1 4:3 identical. tools/apply_s7325_heaprebuild.py (buildHeapFreeList hook +
+    coalesce wrapper -> rs64_s7325_heapsync, ALLOCMAP-only) re-syncs: stale 531 -> 1, gap reads 10.5k -> 46, class G re-run clean.
+    Any future ALLOCMAP/HEAPLOG consumer gets the corrected map; report tools/s7325_gap_report.py.
+21. **Spill blocks outlive the retail scene reset (s7325 datum, NEXT.md).** Spill blocks are not in the guest chain, so the bulk free
+    cannot release them; arm e saw 1 non-persistent (a1 tag & 0x80 == 0) spill block (initWaterSprayEffectAndSfx 0x2FD0) live after a
+    reset. Measure growth across many scene changes at dd>1; if real, free non-persistent spill blocks in rs64_s7325_heapsync (retail
+    semantics), two-arm qualified.
+22. **Scene-transition audio read of just-freed song-channel arrays (s7325, single-source).** 46 audio DMA reads + 6 writes in 200 s
+    land in a guest FREE block, arrays freed 0-14 ms earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync.
+    Retail race vs our audio-task wait not waiting: compare the wait's completion against the host audio RSP task end.
+23. **When 1-22 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

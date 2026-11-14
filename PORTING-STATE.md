@@ -192864,3 +192864,56 @@ HYPOTHESIS-ID: spill-rcp-ref (closed). Unit from NEXT.md s7324.
   gap into the next block (0x80190440 -> 0x80190490 -> 0x801904E0, blocks 80190410..80190490 and 801904A0..). Candidates:
   freed buffer still referenced (stale sample cache), an allocation path that bypasses the rs64_s6063_malloc hook, or one logical
   stream buffer made of adjacent blocks. Next unit (NEXT.md); G2 audio is closed by the owner, so this is an idiom datum, not a bug.
+
+## Session 7325 (2026-11-14) — audio "heap-gap" reads NAMED: host alloc map went stale at the retail scene-change bulk free (coalesceFreeHeapBlocks frees every non-0x80-tagged persistent-heap block, no rs_free); reads were inside live guest blocks; map re-sync landed (531 stale -> 1, gap reads 10.5k -> 46)
+
+HYPOTHESIS-ID: audio-heapgap-read. Question (s7324 item 20): 40k audio RSP DMA reads at addresses in no live rs_malloc block.
+Hypotheses: H-freed (UAF), H-untracked (allocation/free path bypassing the hooks), H-adjacent (one buffer across adjacent blocks),
+H-dd (dd8 heap pressure only).
+
+Instrument (one build, extended once mid-session): src/main/upstream_compat.cpp freed-block history (last 65536 non-spill frees: ptr,
+req, time, host freer frames, allocator frames) + rs64_s7325_gap classifier (live / static / hdrgap / freed / untracked) + an
+INDEPENDENT guest heap walk (g5a_walk over heads 0x8010FEFC/FF00/FF18) per distinct address + rs64_s7325_reconcile (host map vs guest
+heap every 5 s); src/rsp/s7324_rcp_spill.cpp classes every audio rd/wr DMA in class none/alias_only, counts cross_end (read starting
+in a live block, running past req), distinct table DG -> build/rs64_s7325.log. Report tools/s7325_gap_report.py (exit 1 on failed ctl).
+Controls (same run, once per second): last freed ptr must class freed (or be live again) -> 66-117 ok, 0 bad every arm; end of a live
+block with successor <=0x20 away must class hdrgap -> 106-153/106-153 (first arm had 0 samples: picker fixed, rotating scan).
+
+Runs (L4, 200 s hold, all alive, 0 crash, 0 VI stall): a dd8 21:9; c dd8 21:9 (+reconcile); b dd1 4:3 FPS60; d dd8 + buildHeapFreeList
+hook; e dd8 + coalesce re-sync. scratch/s7325/{a,b,c,d,e}{4,5}.log, d_rebuilds.txt, e_sync.txt.
+- Arms a/b/c: GAP rd_aud hdrgap 2380-2651, freed 6507-8861, untracked 14-46, cross_end 3692-6596; **dd1 4:3 the same** -> H-dd refuted.
+  Guest walk on EVERY distinct DG address (101+756+20+2 in a; 275+1244+43 in b): inside a guest ALLOCATED block (gk=2 fl=2) except 1.
+  Reconcile (c, d): guest_alloc 117, host map 664-703 non-spill, matched 116, **stale_nested 531** (host entries inside real live guest
+  blocks, all front-end/hangar owners: slotDispatcherIter 99, initFrontendMenuResources 58, craft select, ...), stale_nowhere 17-56.
+  Stale nested entries shadow the real block in the nearest-predecessor lookup, so reads inside a live 0x1E30 song-channel array
+  (guest h=80171CD0) classed gap/freed. H-freed refuted for the 40k; H-adjacent refuted (the "headers" were stale-entry edges).
+- **Writer/path named (H-untracked, retail):** blocks die without rs_free in two retail paths. (1) coalesceFreeHeapBlocks
+  (0x800022F8, MISNAMED: scene-change bulk free) walks the persistent heap (head 0x8010FF18, built once by initMainHeap from
+  0x80154690) and marks free every allocated block whose header tag lacks 0x80; called from runVideoFrameTick. (2) waitForPrevFrameDone
+  (0x8000A86C, MISNAMED) -> 0x80001880 (clearFrameReadyFlag, MISNAMED) zeroes head 0x8010FEFC; the next rs_malloc runs
+  ensureHeapInitialized -> buildHeapFreeList over a top-of-RAM temp arena (0x8096xxxx..0x80A3xxxx seen); clearSceneBssRegion ->
+  queueDeferredClearRequest rebuilds the overlay-BSS arena (head 0x8010FF00, 0x800B1EF0/0x800D03E0..0x8010D200). Callers of the reset:
+  runHangarSelectionFrame, tickCraftSelectScreen, menu screens, cinematicLoopBody, runIdleFramesAndLoadSaveData.
+- Landed: tools/apply_s7325_heaprebuild.py (registered in fixup_game_funcs_vendored.py): buildHeapFreeList entry hook
+  rs64_s7325_heaprebuild(head, lo, hi) drops host-map/s6063 entries in the rebuilt range; coalesceFreeHeapBlocks wrapper ->
+  rs64_s7325_heapsync re-syncs the maps with the guest walk. Both act only under ROGUESQ_S7317_ALLOCMAP (s6063 map only under HEAPLOG);
+  no game behaviour change. S7317B now records alloc time and the rs_malloc a1 tag.
+- Arm e (re-sync on): stale_nested 531 -> **1**, GAP rd_aud hdrgap 2539 -> 0, freed 7980 -> 45, untracked 40 -> 0, cross_end 3746 -> 54;
+  heapsync fired 8x (dropped 17-178 blocks each), tag control (recorded a1 & 0x80 vs guest header tag) agree 9/9, disagree 0 every sync.
+  Class G re-run on the corrected map (tools/s7324_rcp_report.py e4.log): VERDICT clean, audio alias_only only the static audio
+  ucode_data 0x800A4E00. Class G H-cpu-only stands; its "heap-gap" datum was an instrument artefact.
+- Residuals (arm e): cross_end 54 reads all end inside the guest block's rounded size (req 0x21C8, guest sz 0x21D0): benign.
+  **46 audio reads + 6 writes land in a guest FREE block** (fl=1), in song-channel arrays (allocateSongChannelArray<initN64RspMixer,
+  req 0x1E30/0x298) freed 0.000-0.014 s earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync: a narrow
+  use-after-free window at the scene transition. Retail race or our audio-task wait not waiting: open (single-source).
+- **Spill-leak candidate (single-source):** spill blocks are never in the guest chain, so the bulk free cannot release them; heapsync #8
+  saw 1 live non-persistent (a1 tag & 0x80 == 0) spill block (initWaterSprayEffectAndSfx, 0x2FD0) survive a scene reset. Retail
+  would have freed it there. Over many scene changes at dd>1 this would grow the spill arena. Next unit.
+- Unmapped: one guest-allocated block 0x806F6000+0x41A000 has no host-map entry (allocated outside the rs_malloc hook); not
+  RCP-relevant here, named for later.
+- Implication for s7317-s7324: heap-side "live block" lookups ran on a map carrying hundreds of stale entries after the first scene
+  change. Spill-side classifications (classes A-G cross/alias verdicts) used spill entries, which only die through the rs_free hook,
+  so they stand; the s7324 heap-gap row is withdrawn.
+ORIGIN: the stale entries were written by rs64_s6063_malloc (s7317 map) for blocks the retail scene reset later freed in bulk
+(coalesceFreeHeapBlocks / buildHeapFreeList) without calling rs_free; values were legitimate at write time. The re-sync is an
+instrument correction, not a game-side mitigation.
