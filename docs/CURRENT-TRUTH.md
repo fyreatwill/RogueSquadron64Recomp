@@ -322,7 +322,10 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    CHEAPER (same-soak L1 heaviest20 12.57 -> 9.69 ms, cells ~equal; single-source). s7305 toggle sheets (patch ctl PASS all bands, 0 crash):
    L5 far/near/side removed 0.9(null)/3.1/2.0% (space level: far ground fades to black, near detail kept, H-melts, borderline 3%);
    L10 cloud level: ke3 0.2/0.9/0.4 AND the haze-all lever ctl 0.3,0.8 = -0.4/-0.1/-0.4 (all null) -> the fog ramp does not touch
-   L10 at all (H-no-far, harmless). 3-level sheet bar met (L1,L4 s7303; L5,L10 s7305). Remaining: owner look; 21:9 check.**
+   L10 at all (H-no-far, harmless). 3-level sheet bar met (L1,L4 s7303; L5,L10 s7305). Remaining: owner look; 21:9 hold (queued s7307).**
+0. **s7306 G5e 21:9 (dd8, L1, same-run toggle): FOG_ALT=1,3,1 removes nothing measurable (far/near/side -0.3/+0.8/+0.1%, null)
+   while the lever ctl 0.3,0.8 removes 8/27/17% (instrument live); 0 crash. Safe at 21:9 and no side loss (H-side refuted), but a weaker melt
+   than 16:9 (1.3/2.4/2.7%). Sheet docs/owner_sheet_s7306_l1k3_219_fog_tog.jpg. Hold queued: soak_queue/s7307_219_dd8_fog_hold.sh.**
 0. **s7303 G5e fog END sweep (dd8 16:9, same-run FOG_ALT toggle, xor8 sheets, 0 crashes, patch control PASS in all 12 bands):
    haze grows monotonically as ke drops, no knee. Texture removed far/near/side: L1 ke4.5 0.6(null)/0.9(null)/1.1; L1 ke3 1.3(null)/2.4/2.7;
    L1 ke2 1.5/4.6/3.7; L4 ke3 1.5/6.5/4.0 (%; s7302 ctl 0.3,0.8 = 7/38/22). By eye (docs/owner_sheet_s7303_{l1k3,l4k3,l1k2}_fog_tog.jpg):

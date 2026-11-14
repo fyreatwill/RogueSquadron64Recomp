@@ -192349,3 +192349,16 @@ with a same-session lever control that also returns null, so ke3 is harmless the
 sheet requirement is met (L1/L4 s7303, L5/L10 now). Single run per arm.
 Rules out: a per-level ke (RLEVEL-style) need on L5/L10.
 Next: G5e waits on the owner's look; meanwhile check the opt-in at 21:9 dd8 (owner's ultrawide) - 300 s hold L1/L5 + L1 toggle sheet.
+
+## Session 7306 (2026-11-13) — G5e: the fog opt-in ROGUESQ_DD_FOG_ALT=1,3,1 at dd8 21:9 is harmless and nearly inert on L1 (every band null, lever control passes)
+HYPOTHESIS-ID: g5e-far-fog
+Ran: new tools/s7306_fog_219.zsh (s7303 sweep copied to ASP=21:9, 1260x540 capture), same-run xor8 FOG_ALT toggle, dd8 px8 auto
+(cfg [s7293] poolx_max=8 r=128 fbw=1024, [s7302] fog alt ks=1 ke=3 all=1 logged), L1, 120 s delay + 180 s capture per arm.
+- l1k3 (1,3,1): patch control PASS 109/109 in all 3 bands; texture removed far -0.33% / near +0.75% / side +0.14%, all null. 0 crash lines.
+- l1c lever control (0.3,0.8 haze-all): far 8.2% / near 27.4% / side 16.6% REMOVED. The instrument sees haze at 21:9, so the null is real.
+Compare 16:9 L1 ke3 (s7303): 1.3/2.4/2.7%. At 21:9 the fog end of 3 removes less than at 16:9, and the side band loses nothing.
+Verdict: H-side refuted (the wider frustum does not put near side cells inside the fog), H-same partly (safe, no detail lost),
+but the visible melt at 21:9 is weaker than at 16:9. By eye (docs/owner_sheet_s7306_l1k3_219_fog_tog.jpg), the far horizon
+already reads blue-hazy in both halves. Not run: the 300 s hold. It is queued as soak_queue/s7307_219_dd8_fog_hold.sh
+(L1 fog / L1 no-fog / L5 fog / ctl), SOAK_NEEDS_IDLE=180.
+Rules out: aspect-scaled ke being needed for detail preservation at 21:9. Open: whether the owner wants a stronger ke at 21:9 (owner look).

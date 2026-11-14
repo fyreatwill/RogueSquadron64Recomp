@@ -1,11 +1,10 @@
-# NEXT (s7306): G5e - ROGUESQ_DD_FOG_ALT=1,3,1 at dd8 21:9 (owner's ultrawide): L1 toggle sheet + L1/L5 300 s hold
+# NEXT (s7307): G5e - fold the queued 21:9 fog hold, then (if clean) close G5e pending the owner's look
 HYPOTHESIS-ID: g5e-far-fog
-State (s7305): 16:9 qualified (s7304 hold, sheets L1/L4/L5/L10; L10 untouched by fog, lever ctl null). 21:9 never measured with the opt-in.
-Unit: `zsh tools/s7303_fog_ke_sweep.zsh` is 16:9-only (ASP=16:9 CW=960 CH=540); copy it to tools/s7306_fog_219.zsh with ASP=21:9
-CW=1120 CH=480 (check arm.zsh for the 21:9 vars used by s7298), run l1k3:1:1,3,1 and l1c:1:0.3,0.8 (lever control must remove >5%).
-Then a 300 s hold L1/L5 21:9 with FOG_ALT=1,3,1 (reuse the s7304 soak recipe in soak_queue/done with ASPECT=21:9 MISSION_WIDTH=1024).
-Hypotheses / outcomes:
-  - H-same: 21:9 near removed <3%, far melts, hold 0 crash 60/s -> opt-in valid at both owner screens; OWNER-OPT-INS note.
-  - H-side: the wide side band loses detail (>5% side) because the 21:9 frustum widening puts near cells at the fog end -> scale ke by aspect.
-  - H-cost: 21:9 heaviest20 rises vs no-fog -> report; unlikely (16:9 was cheaper).
-Needs keys/window: idle >=180 s and unlocked screen, else queue as a soak (# SOAK_NEEDS_IDLE=180).
+State (s7306): 21:9 L1 toggle sheet: FOG_ALT=1,3,1 is null in every band (lever ctl 8/27/17% PASS), 0 crash -> safe, weak melt.
+Unit: if SOAK-RESULTS has an s7307_219_dd8_fog_hold line, fold it (arms l1f/l1n/l5f/ctl; pass = all alive, 0 crash, 60/s beyond route,
+[s7302] line in l1f/l5f and absent in l1n, ctl dips to flat-30). If it is absent (gated on idle), run it yourself:
+`zsh scratch/agent/soak_queue/s7307_219_dd8_fog_hold.sh` (~30 min, needs idle >=180 s and an unlocked screen).
+Outcomes:
+  - H-hold: clean -> FOG_ALT qualified at both owner screens. Mark G5e awaiting the owner's look and move to the next G-ladder rung.
+  - H-crash/dip at 21:9 only -> root-cause it (backtrace) before anything else.
+Optional, only if the owner asks for more haze at 21:9: sweep ke 2 / 2.5 at 21:9 with tools/s7306_fog_219.zsh l1k2:1:1,2,1.
