@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7327 (2026-11-14).
+Compact operational handoff, as of Session 7328 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -60,6 +60,9 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   and arena-only both crash, both together 650 s / 2 mission cycles clean; heap_np_kept=0 at every sync (retail semantics).
 - **Spill reads by the RSP FIXED (s7327, default on):** the RSP DMA masked DRAM_ADDR to 24 bits, so gfx ucode reads of terrain grid
   data in a spill block (dd>=6 hangar route) fetched the 0x80xxxxxx alias. 25-bit mask in rsp.hpp, ROGUESQ_RSP_DMA25=0 old (item 21).
+  **Visible (s7328):** with the grid buffer forced into spill (new lever ROGUESQ_SPILL_FORCE=min:0x200000) on posed L1 dd8 16:9, the
+  old mask draws near terrain as rainbow garbage polygons (37.8% of pixels at one freeze); the fix is pixel-identical to the no-spill
+  layout. Sheet docs/owner_sheet_s7328_dma25.jpg.
 - **L15 21:9 dd4 crash FIXED (s6992):** 7-site `(p & 0xFF000000) == 0x80000000` test vs the 0x81000000 spill arena;
   tools/apply_s6993_ptrmask.py, ROGUESQ_PTRMASK=0 retail.
 - **G1e:** 60 fps in flight on all levels (s6996; use fl_shown). Defaults VI_RT, STDERR_ASYNC, G1E_CELLIDX;
@@ -281,7 +284,8 @@ is in the s7307 archive). Active unit: NEXT.md.
     raw 0x81xxxxxx (len 0x20, stride 0x19) inside the spill 0x2DFF00 blocks (owner initGridLayerFromLevelData < loadLevelAssets <
     initMission); the RSP DMA masked DRAM_ADDR to 0xFFFFF8 so they read the 0x80xxxxxx alias: wrong bytes in 49152/49152 compared reads
     (ROGUESQ_RSP_DMA25_CTL=1). Fix default on: 25-bit mask 0x1FFFFF8 + 32 MB bound in librecomp rsp.hpp (rs64_s7327_mask,
-    ROGUESQ_RSP_DMA25=0 old); direct_other=0 in every run (no non-spill DMA carries bit 24). Visible effect not yet measured (NEXT.md).
+    ROGUESQ_RSP_DMA25=0 old); direct_other=0 in every run (no non-spill DMA carries bit 24). Visible: YES (s7328, headline). Open:
+    dd6 21:9 0x19DF70 blocks RSP-read? (NEXT.md). Pose any spill question with ROGUESQ_SPILL_FORCE (forced route + pose tool).
 22. **Scene-transition audio read of just-freed song-channel arrays (s7325, single-source).** 46 audio DMA reads + 6 writes in 200 s
     land in a guest FREE block, arrays freed 0-14 ms earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync.
     Retail race vs our audio-task wait not waiting: compare the wait's completion against the host audio RSP task end.

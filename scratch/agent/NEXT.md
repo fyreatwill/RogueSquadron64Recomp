@@ -1,15 +1,14 @@
-# NEXT (s7328): visible effect of the s7327 25-bit RSP DMA fix + dd6 RCP check
+# NEXT (s7329): dd6 21:9 spill blocks — RSP-read? + byte-comparer negative control
 HYPOTHESIS-ID: spill-rcp-dma-width
-Context (s7327): on the dd8 16:9 hangar route the gfx ucode DMAs terrain grid-layer data (initGridLayerFromLevelData, inside the spill
-0x2DFF00 level buffer) at 0x81xxxxxx; the old 0xFFFFF8 mask read the 0x80xxxxxx alias (49152/49152 reads wrong). Fix default on:
-rs64_s7327_mask in lib/N64ModernRuntime rsp.hpp, ROGUESQ_RSP_DMA25=0 old.
-Hypotheses: H-visible (wrong grid data drew wrong/missing terrain cells in dd8 hangar-route missions; fix changes the frame) vs H-masked
-(the bytes feed something that does not reach the frame, e.g. a cull/LOD table the CPU already resolved).
-Discriminating measurement, one build, same pose: pose-locked capture (ROGUESQ_POSE_LOCK=1 + POSE_FREEZE, tools/g3_optin_pose_arms.sh,
-tools/s7308_pose_horizon.py) on the dd8 16:9 hangar route in-mission, arms DMA25=1 / DMA25=0 / DMA25=1 repeat. Repeat arm must be
-pixel-identical to arm 1 (control); arm 0 vs 1 diff > repeat diff selects H-visible, = selects H-masked. Also RDP triangle count
-in the frame. Owner sheet if H-visible.
-Also in the same session: RCPREF=ctl + DMA25_CTL=1 on the dd6 21:9 route (scratch/s7326/run.zsh s7328_dd6 "ROGUESQ_DRAW_DISTANCE=6
-ROGUESQ_S7324_RCPREF=ctl ROGUESQ_RSP_DMA25_CTL=1", SECS=330): are the 0x19DF70 spill blocks RSP-read? Add a negative control for the
-byte comparer (log a bit-24 read whose images match, or compare a spill block against itself).
+Context (s7328): the s7327 25-bit RSP DMA fix is visible (posed L1 dd8 16:9 with ROGUESQ_SPILL_FORCE=min:0x200000: old mask = rainbow
+garbage near terrain, 37.8% px; fix = pixel-identical to no spill). Remaining: dd6 21:9 hangar route spills 2x 0x19DF70 per mission load.
+Hypotheses: H-rsp-read (the 0x19DF70 blocks are DMA'd by the gfx/audio ucode -> were wrong before s7327, fixed now) vs H-cpu-only
+(only the CPU touches them; s7327 irrelevant at dd6).
+Measurement (offline-cheap first): which allocator owns 0x19DF70 (grep heaplog/ALLOCMAP in scratch/s7326/s7327_dd6_219/run.log).
+Then ONE run: forced route L1 dd6 21:9 + ROGUESQ_SPILL_FORCE=19DF70 (check "[s7328] big req" lines for the L1 size first; use the
+logged size) + ROGUESQ_S7324_RCPREF=ctl + ROGUESQ_S7317_ALLOCMAP=1 + ROGUESQ_RSP_DMA25_CTL=1, report tools/s7324_rcp_report.py:
+direct_spill>0 in the forced block selects H-rsp-read; 0 with ctl PASS selects H-cpu-only. Pose arms (scratch/s7328/run.zsh, ARMS=)
+DMA25=1/0 only if H-rsp-read.
+Byte-comparer negative control: in rsp.hpp DMA25_CTL, also compare a spill read against itself (must be 0 differ) — or log one
+non-spill read through both masks (identical by construction).
 Parallel open (item 22): 46 audio reads of song-channel arrays freed 0-14 ms earlier at the scene transition.

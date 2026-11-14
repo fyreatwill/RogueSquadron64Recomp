@@ -192993,3 +192993,31 @@ returned wrong data. Not measured: the visible effect (terrain cells built from 
 dd6's 0x19DF70 spill blocks are RSP-read, and a negative control for the byte comparer (a bit-24 read whose two images match).
 DISCRIMINATION: selects H-rcp-reads-spill (refutes s7324 H-cpu-only for the hangar route) and H-all-dd for dd>=6; dd4 unaffected.
 Logs scratch/s7326/s7327_{dd4_169,dd6_219,dd8_169,mon,moff}/run.log, scratch/s7327/s7324_{on,off}.log.
+
+## Session 7328 (2026-11-14) — s7327 25-bit RSP DMA fix is VISIBLE: with the grid-layer buffer in spill, the old 24-bit mask draws near terrain as rainbow garbage polygons (37.8% of pixels changed at one freeze); fix arm pixel-identical to the no-spill layout. New lever ROGUESQ_SPILL_FORCE
+HYPOTHESIS-ID: spill-rcp-dma-width. Hypotheses: H-visible (wrong grid-layer bytes reach the frame) vs H-masked (they feed nothing drawn).
+Boring check / harness gap: the pose tool (tools/g3_optin_pose_arms.sh) drives only the forced-level route, where the big grid-layer
+buffer sits in the main heap (s7324), so the hangar-route condition could not be posed. New lever (engineering): ROGUESQ_SPILL_FORCE=
+<hex>[,<hex>]|min:<hex> in src/main/upstream_compat.cpp (s7328_force, called from the existing rs64_s6086_divert hook at the top of
+rs_malloc; no generated-code edit) serves matching requests from the spill arena before the main heap; logs "[s7328] big req" for every
+req >= 1 MB and "[s7328] forced". Experiment-only; the block skips the s5041/s6063 hooks and carries the previous call's s7326 tag.
+What ran: scratch/s7328/run.zsh, L1 dd8 16:9 WIDEWIN, PIN=1 + POSE_REF + POSE_LOCK, freezes at x 74.04 (k0) and 106.28 (k1), 4 window
+captures each, RSP_DMA25_CTL=1 in all arms, one game at a time, idle host (HID idle ~12000 s), AC power. Arms: nf = no force;
+f1 = SPILL_FORCE=min:0x200000 + DMA25=1; f0 = same + DMA25=0 (old mask); f1r = f1 repeat.
+Lever control: in f1/f0/f1r "[s7328] forced req=0x2E0000 -> 81000000" (L1's grid-layer buffer; 0x1E000C stayed in heap), and the
+gfx ucode then read it with bit 24 set: dma25 rd n=172032, all differ (the 24-bit alias holds other data). All 4 arms froze at the
+same pose (pos 74.112,-2.500,78.392 / 106.294,-6.799,69.769, vi within 2), 0 crash, alive_at_end=1.
+| pair | k0 meanAbs / frac>24 | k1 meanAbs / frac>24 |
+| nf vs f1r (fix vs no spill) | 0.0000 / 0.0000 | 0.0000 / 0.0000 |
+| nf vs f1 / f1 vs f1r (run floor) | 0.0185 / 0.0002 | 0.0211 / 0.0002 |
+| f1 vs f0 (fix vs old mask) | 18.67 / 0.378 | 0.0000 / 0.0000 |
+| nf vs f0 | 18.69 / 0.378 | 0.0211 / 0.0002 |
+f1 differs from nf/f1r by the 0.02% floor (two discrete run paths, f0 at k1 sits on f1's). At k0 (low over rolling dunes) the old mask
+draws the near terrain as large flat rainbow-coloured polygons covering the lower right of the screen (sheet
+docs/owner_sheet_s7328_dma25.jpg: top row nf/f1/f0 at k0, bottom row at k1). At k1 (over the flat dark plain) nothing changes: the
+damage is local to terrain whose grid cells are fetched in that frame, so it comes and goes as the craft flies.
+Two lines: the per-read byte compare (every bit-24 read returns other bytes under the 24-bit mask) and the presented frame (37.8%
+of pixels off at k0, 0 with the fix, 0 vs no spill). DISCRIMINATION: selects H-visible, refutes H-masked. Any owner run at dd>=6 on
+the hangar route before s7327 could show garbage terrain in missions after a reload; the s7327 default fix removes it exactly.
+Not done (carried to NEXT): dd6 21:9 RCPREF check of the 0x19DF70 spill blocks; a negative control for the byte comparer.
+Logs scratch/agent/m6/g1_lvl1s7328_{nf,f1,f0,f1r}/run.log, captures scratch/s7328/a (gitignored).

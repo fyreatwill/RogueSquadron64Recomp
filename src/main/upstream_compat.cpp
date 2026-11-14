@@ -3717,7 +3717,26 @@ extern "C" void rs64_s6086_arm(uint32_t o, uint32_t n) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_BIGARENA"); return e && e[0] && e[0] != '0'; }();
     if (on && n > o) { s_s6086_expect = n * 184u; s_s6086_bump = 0; }
 }
+/* s7328: ROGUESQ_SPILL_FORCE=<hex>[,<hex>...] and/or min:<hex> serves matching rs_malloc requests from the spill arena BEFORE the
+   main heap is tried (needs ROGUESQ_MALLOC_SPILL, which main.cpp sets for dd>1). Experiment lever only: it places a chosen block (e.g.
+   the dd8 0x2DFF00 grid-layer buffer that only the hangar route spills, s7327) above 16 MB on the deterministic forced-level route, so
+   same-pose arms can test what reads it. The block skips the s5041/s6063 malloc hooks (as the s6086 divert does) and its s7326 reset
+   tag is the previous call's a1 (rs64_s6127_fl runs after the divert). Every request >= 1 MB is logged with the decision. Unset = off. */
+extern "C" uint32_t rs64_s6569_spill(uint32_t req);
+static bool s7328_force(uint32_t req) {
+    static std::vector<uint32_t> lst; static uint32_t mn = 0;
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_SPILL_FORCE"); if (!e || !e[0]) return false;
+        std::string s(e); size_t i = 0; while (i < s.size()) { size_t j = s.find(',', i); if (j == std::string::npos) j = s.size();
+            std::string w = s.substr(i, j - i); if (w.rfind("min:", 0) == 0) mn = (uint32_t)std::strtoul(w.c_str() + 4, nullptr, 16);
+            else if (!w.empty()) lst.push_back((uint32_t)std::strtoul(w.c_str(), nullptr, 16)); i = j + 1; }
+        std::fprintf(stderr, "[s7328] spill force list=%zu min=0x%X\n", lst.size(), mn); return true; }();
+    if (!on) return false;
+    bool hit = (mn && req >= mn); for (uint32_t v : lst) hit |= (v == req);
+    if (req >= 0x100000u) std::fprintf(stderr, "[s7328] big req=0x%X force=%d\n", req, hit ? 1 : 0);
+    return hit;
+}
 extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
+    if (s7328_force(req)) { uint32_t p = rs64_s6569_spill(req); std::fprintf(stderr, "[s7328] forced req=0x%X -> %08X\n", req, p); if (p) return p; }
     if (!s_s6086_expect || req != s_s6086_expect) return 0;
     s_s6086_expect = 0;
     uint32_t p = rs64_ram_top + s_s6086_bump; s_s6086_bump += (req + 15u) & ~15u;
