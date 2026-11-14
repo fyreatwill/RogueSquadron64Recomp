@@ -318,7 +318,12 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7293 G1c dd8 bundle LANDED: H-R selected (2 runs: s7292 explicit + s7293 auto, ctl depths PASS).** L4 16:9 dd8 total emitted
+0. **s7295: dd8 px8 auto QUALIFIED at 16:9 (s7294 soak, ctl flat-30 PASS): L1/L5/L10/L12 300 s, 0 crash, 60/s, beyond-route
+   <=4 s, L12 RLEVEL 12:48 still wins.** Look sheet docs/owner_sheet_s7295_dd6_dd8.jpg (L1 dd1/6/8, L4 dd6/8, SHOTS t=100-140,
+   tools/s7295_dd_look_sheet.py): that route window banks under cliffs, horizon mostly off-frame; only L4 shot 6 separates dd6
+   (11% sky band) from dd8 (1%) - single-source. A horizon-in-view camera (pose lock / later route second) is needed for a real
+   dd6-vs-dd8 look. Queued s7296_219_dd8_px (21:9 dd8 px8/R128 cost). Then the game far cutoff 0x8009DEB4.
+   s7293 G1c dd8 bundle LANDED: H-R selected (2 runs: s7292 explicit + s7293 auto, ctl depths PASS).** L4 16:9 dd8 total emitted
    cells/call ref(px5,R88) 6902 / px8(R88) 7316 / px8+R128 11322 (s7292) / auto 11406 (s7293), window 128x128 vs ref 80, win77-97
    11.83-12.06 ms all 60.0/s. main.cpp [s7293]: dd>=8 + WIDEWIN + FB_WIDTH<=796 -> POOLX_MAX=8, WIDEWIN_R=128 (explicit env wins,
    ROGUESQ_DD_PX8_AUTO=0 off); 21:9 keeps px5 (unmeasured). Queued s7294_169_dd8_levels (300 s L1/L5/L10/L12 + ctl). Then: look sheet

@@ -192158,3 +192158,26 @@ Verify (scratch/s7293_px8_auto.sh, in-session, same harness, 2 arms): auto -> [s
 60.0/s 11.93 ms; PX8_AUTO=0 -> no line, r=88 total_emit 6902 (= s7292 ref), depth 80, 60.0/s 11.90 ms. Two runs now agree
 (s7292 explicit env, s7293 auto). OWNER-OPT-INS: dd8 16:9 paragraph replaces the "dd8 adds nothing" note (holds pending).
 Not done: 300 s holds (queued scratch/agent/soak_queue/s7294_169_dd8_levels.sh: L1/L5/L10/L12 + ctl), look sheet, 21:9 cost.
+
+## Session 7295 (2026-11-13) — G1c: fold s7294_169_dd8_levels (H-hold: dd8 px8 auto holds 300 s on L1/L5/L10/L12 at 16:9, 0 crash, 60/s); dd1/dd6/dd8 look sheet on L1+L4 (new tools/s7295_dd_look_sheet.py); queued s7296_219_dd8_px
+
+HYPOTHESIS-ID g1c-window-bind. Unit from NEXT (s7294).
+**Fold s7294_169_dd8_levels** (rc=0, 1545 s, AC, clk 0.97). All 5 arms alive 300 s, 0 crash. [s7293] dd8 px8 auto line
+(poolx_max=8 widewin_r=128 fbw=796) in every arm. Per arm (tools/s7230_headroom.py / s7291_wide_cells.py / s7257_dip_runs.py):
+L1 p50 10.80 p95 13.61 ms, win77-97 60.0/s 10.01 ms, total_emit 11438, beyond-route <55/s 4 s (t=167-168 52/s, 289, 293);
+L5 7.14/11.60 ms, 60.0/s, total_emit 12278, beyond-route 1 s; L10 3.01/3.70 ms, 60.0/s, no [s7233] in-flight lines (cloud level,
+no terrain grid, s7000: expected), 1 s; L12 9.20/11.20 ms, 60.0/s, [s7287] level=12 widewin_r=48 (RLEVEL still beats the dd8
+R=128: skip 8806, total_emit 3626), 0 s. Positive control ctl (L12, WIDEWIN_STACK=0 + DUTY=1.4; it ran R=128 at L12 since
+STACK=0 bypasses the rule): 29.9/s, flat-30 runs 5 / 199 s, beyond-route 234 s -> CONTROL PASS. **H-hold selected: dd8 at 16:9
+qualified on the G1c done-bar levels 1/5/10 (+L12).** Rules out H-level-cost and H-crash at 300 s, 1 run per level.
+**Look sheet (in-session run scratch/s7295, tools/g1e_owner_quiet_arms.zsh SHOTS=100,108,..,140, HOLD=150, 16:9 windowed):**
+arms l1d1/l1d6/l1d8/l4d6/l4d8, all alive, 60.0/s; win77-97 ms L1 dd1 2.73 / dd6 8.69 / dd8 10.08, L4 dd6 11.21 / dd8 12.03;
+total_emit L1 dd6 6721 -> dd8 11294, L4 6885 -> 11444 (reproduces s7293 11406). New tools/s7295_dd_look_sheet.py crops the game
+window from the desktop shot via the log's [g1f] window row and scores fog% (sky-coloured share of the band 12-50% height).
+Synthetic control (lower band painted sky) 5.3 -> 51.7 CONTROL PASS. fog% mean L1 dd1 7.2 / dd6 5.7 / dd8 5.4; L4 dd6 7.1 / dd8 5.7.
+Real-scene control direction holds (dd1 > dd>1) but per-shot spread (1-14) is larger than the arm gaps: **the route seconds
+100-140 are a steep bank under cliffs, the horizon is mostly off-frame, so this window cannot separate dd6 from dd8 except
+L4 shot 6 (horizon in view: dd6 11% sky vs dd8 1%, dd8 visibly fills the far band).** Single-source. Owner sheet
+docs/owner_sheet_s7295_dd6_dd8.jpg (rows l1d1, l1d6, l1d8, l4d6, l4d8). Failed step, recorded: an osascript Finder query
+raised a TCC "Terminal wants to control Finder" dialog over the first l1d1 shots; that arm was re-run (RESUME, ok file removed).
+Queued scratch/agent/soak_queue/s7296_219_dd8_px.sh: L4 21:9 dd8 ref (auto off, gated FB_WIDTH<=796) / px8 / px8+R128 + ctl.
