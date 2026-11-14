@@ -5857,14 +5857,41 @@ extern "C" void rs64_m5_raw_task_boundary(const char* edge,
                                              uint8_t* rdram,
                                              uint32_t raw_task_ptr);
 
-static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
-    constexpr uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
-    constexpr uint64_t kseg0_end = 0xFFFFFFFF80800000ull;
-    if (addr >= kseg0_base && size <= kseg0_end - addr) return true;
+/* s7337: the OSTask range check hard-coded 8 MB. At dd>1 the game is told 12 MB (s6858), so a task struct in
+   0x80800000..guest top would be dropped with no SP/DP completion (a freeze). Bound = rs64_ram_top (guest top, widened
+   to the host arena end by s7336). ROGUESQ_S7337=0 restores 8 MB. [s7337] line: tasks seen, highest task address,
+   and how many the old bound would have rejected. */
+extern "C" uint32_t rs64_ram_top;
+static bool rs64_s7337_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7337"); return !(e && e[0] == '0'); }(); return on; }
+static bool rs64_guest_range_valid_top(uint64_t addr, uint64_t size, uint32_t top) {
+    const uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
+    const uint64_t kseg0_end = 0xFFFFFFFF00000000ull | top;
+    /* s7337: the pre-s7337 form `size <= kseg0_end - addr` wrapped for addr above the end, so it never rejected a
+       sign-extended task pointer past 8 MB (selftest old=1 at 0x80900000). Require addr < end first. */
+    if (addr >= kseg0_base) return addr < kseg0_end && size <= kseg0_end - addr;
 
     const uint32_t low = static_cast<uint32_t>(addr);
-    return (addr >> 32) == 0 && low >= 0x80000000u &&
-           size <= 0x00800000ull - (low - 0x80000000u);
+    return (addr >> 32) == 0 && low >= 0x80000000u && low < top &&
+           size <= static_cast<uint64_t>(top - 0x80000000u) - (low - 0x80000000u);
+}
+static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
+    static std::atomic<uint32_t> n{0}, hi{0}, widened{0};
+    const uint32_t top = rs64_s7337_on() && rs64_ram_top > 0x80800000u ? rs64_ram_top : 0x80800000u;
+    const bool ok = rs64_guest_range_valid_top(addr, size, top);
+    const bool old_ok = rs64_guest_range_valid_top(addr, size, 0x80800000u);
+    const uint32_t lo = static_cast<uint32_t>(addr);
+    uint32_t h = hi.load(std::memory_order_relaxed);
+    while (ok && lo > h && !hi.compare_exchange_weak(h, lo, std::memory_order_relaxed)) {}
+    const uint32_t w = (ok && !old_ok) ? widened.fetch_add(1, std::memory_order_relaxed) + 1 : widened.load(std::memory_order_relaxed);
+    const uint32_t k = n.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (k == 1)  /* positive control: a synthetic task at 0x80900000 (9 MB) under each bound */
+        std::fprintf(stderr, "[s7337] selftest 0x80900000: old=%d new=%d top=0x%08X\n",
+                     (int)rs64_guest_range_valid_top(0xFFFFFFFF80900000ull, 64, 0x80800000u),
+                     (int)rs64_guest_range_valid_top(0xFFFFFFFF80900000ull, 64, top), top);
+    if (k == 1 || (k & (k - 1)) == 0 && k >= 1024 || (ok && !old_ok && w <= 4))
+        std::fprintf(stderr, "[s7337] task range: n=%u hi=0x%08X top=0x%08X widened=%u%s\n", k, hi.load(std::memory_order_relaxed),
+                     top, w, rs64_s7337_on() ? "" : " (S7337=0: 8 MB bound)");
+    return ok;
 }
 
 extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {

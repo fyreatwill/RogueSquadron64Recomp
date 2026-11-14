@@ -290,3 +290,25 @@ DLPOOLX_MB=8 with the clamp off put chunks at 0x80800000 (inside the heap, which
 131 s without a crash, so the defect is latent. Fix (src/main/upstream_compat.cpp rs64_s7335_dlpool_cap): the arena never starts
 below the guest top. `[s7335] dlpool ...` line at the first grow, ROGUESQ_S7335_CLAMP=0 = old. Default arm identical (80C00000, 4 MB).
 The legacy spill base 0x80800000 under OSMEM>8 with SPILL_HI=0 now prints a `[s7335] WARNING`.
+
+## Class R: hard-coded 8 MB guest-range bounds (s7337 static + runtime)
+
+Since s6858 every dd>1 run tells the game it has 12 MB (guest top 0x80C00000, rs64_ram_top up to 0x81800000 with s7336 arenas).
+Census: `tools/s7337_bound_census.py [--controls]` (literals 0x80800000 / 0x807FFFxx; exit 1 = generated survivor or unclassified host site).
+
+| part | sites | class | verdict |
+|---|---|---|---|
+| host, env-gated logging/probes (m5_*, f5 shadow, s5229, floor writer, g5b trigen, createmq row cap, port-load log) | 32 | D | stale bound only drops log lines |
+| host, deliberate arena layout (s6086 divert, s6558 cut, s6909/s7335/s7336 comments+code, s6993 okb) | 5 | A | intended |
+| host comments / `rs64_ram_top` initial value | 6 / 1 | C / I | n/a |
+| host osSpTaskStartGo OSTask check (rs64_guest_range_valid) | 4 lit, 1 fn | B | fixed s7337 |
+| generated funcs_*.c survivors of fixup_ramtop (s6311 edgefade/s6325 radfade, s6417 meshlog, s6657, s7101, s5818 `ull`) | 11 lines / 13 lit | G | converted; all opt-in, latent |
+
+B detail: `addr >= kseg0_base && size <= kseg0_end - addr` wraps for addr > kseg0_end, so the pre-s7337 check accepted every
+sign-extended pointer above 8 MB (positive control: synthetic 0x80900000 -> old=1). The stale literal was therefore never a drop
+risk at dd>1, but the check guarded nothing at the top either. Now `addr < end` first, end = rs64_ram_top (ROGUESQ_S7337=0 = 8 MB).
+Startup `[s7337] selftest` + power-of-two `[s7337] task range: n= hi= top= widened=` lines. Runtime (forced L1, FPS60):
+dd1 and dd8 21:9 real task pointers max 0x80149470, widened=0, 0 s7197 drops; dd8 hold 137 s flight, 0 crash.
+G detail: fixup_ramtop runs last in fixup_game_funcs_vendored.py, but scripts applied straight to the live tree afterwards emit raw
+literals. The census catches that; the radfade/edgepos camera bound was in range at dd1 and dd8 (cam=0,0 rows 0/5365 and 0/7676).
+Open: class M, 193 physical 8 MB masks/ends (`& 0x7FFFFF`, `< 0x800000`) counted by the census, not yet classified.

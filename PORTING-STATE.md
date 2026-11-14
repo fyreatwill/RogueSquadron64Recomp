@@ -193335,3 +193335,30 @@ Discrimination: selects H-pair (spill/DLPOOLX) and H-guest (legacy spill) for op
 refutes H-clean as a whole-class claim. BIGARENA is an opt-in left at ram_top by design (not gfx-guarded); noted, not changed.
 Next (NEXT.md): idiom-class audit of hard-coded 0x80800000 "end of guest RAM" range checks in src/ and librecomp, which went stale
 when dd>1 moved the guest top to 0x80C00000 (s6858).
+
+## Session 7337 (2026-11-14) — class R stale 8 MB guest-range bounds closed: 11 fixup_ramtop survivors converted (latent, opt-in); the one behavioural site (osSpTaskStartGo OSTask check) never bounded anything above 8 MB because its subtraction wrapped -> real rs64_ram_top bound
+Work unit (NEXT.md s7337, HYPOTHESIS-ID stale-8mb-range-checks): classify every hard-coded 0x80800000 "end of guest RAM" check against
+the dd>1 guest top 0x80C00000 (s6858). Hypotheses H-diag / H-behave / H-intended.
+Tool: `tools/s7337_bound_census.py [--controls]` (new). Host part: 48 literal sites (0x80800000 / 0x807FFFxx) classed by enclosing
+function: D 32 (env-gated logging/probes: m5_*, f5 store shadow, s5229, floor writer, g5b trigen, createmq row cap, m5 port-load log
+incl. the s5250 taskptr guard which sits inside that log-only function), A 5 (arena layout, s7336 territory), C 6 comments, I 1
+(rs64_ram_top initial value), B 4 literals in one function. Generated part: 11 lines / 13 literals in RecompiledFuncs survived
+fixup_ramtop (funcs_9/10/13/16/39: s6311 edgefade poslog, s6325 radfade, s6417 meshlog, s6657 objective probe, s7101 env parse,
+s5818 `0x80800000ull`). Cause: those scripts were applied straight to the live tree after the vendored fixer's final fixup_ramtop
+call, plus the regex `0x80800000u(?![lL])` skips the `ull` spelling. Control: `--controls` plants a survivor and finds it.
+Runtime discriminator for G (old binary, scratch/s7337/run.zsh, forced L1 FPS60, ROGUESQ_EDGE_FADE_R=500,1500 + G3C_POSLOG=1; the
+radfade/edgepos camera read is skipped, cam=0,0, when *0x80138D1C fails the bound): dd1 5365 edgepos rows, 0 zeroed; dd8 21:9
+(osmem 12, ram_top 0x81800000) 7676 rows, 0 zeroed -> the camera object stays below 8 MB even at dd8; survivors are latent (H-diag for G).
+Converted all 13 (fixup_ramtop on the live tree; regex widened to `ull` -> `((uint64_t)RS64_RAM_TOP)`), census survivors 0.
+B: osSpTaskStartGo_recomp drops an OSTask failing rs64_guest_range_valid with no SP/DP completion (s7197). Added the 8 MB-vs-top
+A/B and a `[s7337] selftest 0x80900000` positive control. First build printed old=1 new=1: `addr >= kseg0_base && size <= kseg0_end
+- addr` WRAPS when addr > kseg0_end, so the pre-s7337 check accepted every sign-extended pointer above 8 MB. H-behave refuted for
+dd>1 (it could never drop a legit 8-12 MB task), but the check also never caught a wild pointer at the top. Fixed: `addr < end` first,
+end = rs64_ram_top (ROGUESQ_S7337=0 = 8 MB). Rebuilt; 30 s boots: dd8 selftest old=0 new=1 top 0x81800000; dd8 S7337=0 old=0 new=0;
+dd1 0/0 top 0x80800000. Real task pointers max 0x80149470 in every arm, widened=0. Final binary dd8 21:9 L1 hold: flight 137 s,
+alive, 0 crash, 0 VI stall, 0 s7197 drops, n=16384 tasks.
+ORIGIN: not a corruption fix. The writer of the bad bound is our own s4xxx/s7197 OSTask validator (subtraction underflow) and the
+s6132 fixup pipeline order; no guest value was wrong.
+Discrimination: H-diag selected for every host D site and all 11 generated survivors (latent); H-behave refuted for the B site at
+dd>1 (it was a no-op above 8 MB, not a drop); H-intended only for the A arena-layout sites. Class R CLOSED.
+Docs: docs/HEAP-ADDR-AUDIT.md class R section; CURRENT-TRUTH 27b/27c. Open: class M (193 physical 8 MB masks), NEXT.md s7338.

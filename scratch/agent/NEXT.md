@@ -1,16 +1,16 @@
-# NEXT (s7337): idiom-class audit - hard-coded 8 MB "end of guest RAM" range checks
-HYPOTHESIS-ID: stale-8mb-range-checks
-Context: s7336 closed host arena layout (tools/s7336_host_arena_table.py). Its grep turned up a second idiom class: range checks
-that hard-code 0x80800000u as the end of guest RAM. Since s6858 every dd>1 run tells the game it has 12 MB (guest top 0x80C00000),
-so heap/fb/FIFO addresses in 0x80800000..0x80C00000 are legitimate there, and these checks quietly reject them.
-Sites (grep -n '0x80800000u' src/main/main.cpp src/rsp/dpc_bridge.cpp lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp):
-main.cpp 510 (rs64_ram_top initial value, fine), 537, 606, 1116, 1706, 4580, 4630, 4857, 5541, 5672; dpc_bridge 891 (pool range),
-1682, 1733, 3551; mesgqueue 535 (s6572 queue cap exemption). Also check the generated-code fixups: grep tools/apply_*.py and
-tools/fixup_*.py for 0x80800000 / 0x00800000 literals.
-Hypotheses: H-diag (every site is diagnostic or logging only, so a stale bound loses log lines but doesn't change behaviour),
-H-behave (at least one site gates behaviour, e.g. OSTask validation at main.cpp 4857 or a task_ptr/a0 check, and drops or mangles a
-legitimate >8 MB address at dd>1), H-intended (the bound means "below the 8 MB retail heap" on purpose).
-Method: classify every site statically: what it gates, whether a legitimate dd>1 address can reach it, and the right bound
-(rs64_ram_top, the s7335 guest top, or keep it as is). Write the table to docs/HEAP-ADDR-AUDIT.md as class R. For any H-behave site,
-switch it to RS64 guest top / rs64_ram_top behind ROGUESQ_S7337=0 and check it with one dd8 21:9 L1 arm plus a counter of how
-often the old bound would have rejected an address (positive control: the counter is >0 in the dd8 arm and 0 at dd1).
+# NEXT (s7338): idiom-class audit - class M, physical 8 MB masks in host code
+HYPOTHESIS-ID: phys-8mb-masks
+Context: s7337 closed class R (guest-range 0x80800000 bounds; tools/s7337_bound_census.py). Its census counts 193 physical-address
+literals in host code that assume 8 MB RDRAM: `& 0x7FFFFF`, `& 0x7FFFFC`, `< 0x800000`, `0x800000 - x`. At dd>1 guest data lives up
+to 0x80C00000 and host arenas (DLPOOLX 0x80C00000.., spill 0x81000000..0x81800000) are read by the gfx path, so a live-path mask would
+fold 0x80C01234 onto 0x00401234 (silent wrong read) or reject it.
+Sites: `python3 tools/s7337_bound_census.py` prints the count; enumerate with the MASK regex in that tool over src/main/*.cpp,
+src/rsp/dpc_bridge.cpp, src/main/rt64_render_context.cpp, lib/N64ModernRuntime/{ultramodern,librecomp}/src/*.cpp. Already seen:
+factor5_gfx_runner (DL walkers 7335-7558, sh2 shadow 6710), rs64_run_lle_gfx (LOG_SEQ dump), rt64 map_result (texture dump),
+dpc_bridge e9prov/f5 shadow (logging), sp.cpp dump_frame, events.cpp ramsnap, upstream_compat rs64_g1d_blk_dma.
+Hypotheses: H-diag (every live-path mask sits behind an env/log gate), H-alias (a default-on path masks a >8 MB address: look first at
+the DL walkers in factor5_gfx_runner and anything in dpc_bridge submit/defer/wrap, RSP DMA, ai.cpp), H-intended (24-bit RSP
+segment math where 0xFFFFFF would be right and 0x7FFFFF is a typo-class bug only above 8 MB).
+Method: extend the census with class M: classify every mask site by enclosing function gate (D/A/X as in s7337), list default-on ones.
+For any H-alias site: switch to 0xFFFFFF / rs64_ram_top behind ROGUESQ_S7338=0, with a counter of addresses >= 0x800000 seen there
+(positive control: counter > 0 in a dd8 21:9 L1 arm via scratch/s7337/run.zsh, 0 at dd1).

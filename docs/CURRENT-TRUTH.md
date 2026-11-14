@@ -328,9 +328,16 @@ is in the s7307 archive). Active unit: NEXT.md.
     under an OSMEM>8 top moves to 0x81000000; DLPOOLX clamped below the legacy spill end (dd4 OSMEM8 DLPOOLX_MB8 without it: 5/5 boot
     attempts die, NaN assert + ucode jump 0x08A0; with it 130 s clean); rs64_ram_top widened to the arenas' end (max 0x81800000).
     Startup `[s7336] layout ...` line prints every arena + OVERLAP/GUARD. BIGARENA (opt-in) still sits at ram_top by design.
-27b. **Next unit (NEXT.md): stale 8 MB range checks** - hard-coded `< 0x80800000u` "guest RAM end" checks in src/main, src/rsp,
-    ultramodern (main.cpp ~10 sites, dpc_bridge 1682/1733/3551, mesgqueue 535) vs the dd>1 guest top 0x80C00000.
-28. **When 1-27b offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27b. **Stale 8 MB guest-range bounds (class R): CLOSED (s7337).** `tools/s7337_bound_census.py --controls` (exit 1 = survivor or
+    unclassified): host 48 sites = D 32 diagnostic, A 5 arena layout, C 6 comments, I 1 init, B 4 (one function). Generated tree: 11
+    literals had survived fixup_ramtop (scripts applied to the live tree after its last run, plus an `ull` spelling its regex missed) ->
+    converted, regex widened, 0 left; all 11 were opt-in/diagnostic and latent (camera ptr stays < 8 MB at dd8, same-run cam rows 7676/0).
+    Only behavioural site, osSpTaskStartGo's OSTask check (upstream_compat.cpp rs64_guest_range_valid): its `size <= end - addr` wrapped,
+    so it never rejected any task above 8 MB (selftest old=1 at 0x80900000). Fixed: real bound rs64_ram_top (ROGUESQ_S7337=0 = 8 MB);
+    selftest old=0/new=1 at dd8; real tasks top out at 0x80149470; dd8 21:9 L1 hold clean, 0 drops. Open: class M (193 phys masks).
+27c. **Next unit (NEXT.md): class M, the 8 MB physical masks** (`& 0x7FFFFF`, `< 0x800000`) on live paths in host code, which
+    would fold a 0x80800000+ address back into 0-8 MB.
+28. **When 1-27c offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
