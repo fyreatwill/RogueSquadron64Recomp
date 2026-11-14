@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7328 (2026-11-14).
+Compact operational handoff, as of Session 7329 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -284,8 +284,12 @@ is in the s7307 archive). Active unit: NEXT.md.
     raw 0x81xxxxxx (len 0x20, stride 0x19) inside the spill 0x2DFF00 blocks (owner initGridLayerFromLevelData < loadLevelAssets <
     initMission); the RSP DMA masked DRAM_ADDR to 0xFFFFF8 so they read the 0x80xxxxxx alias: wrong bytes in 49152/49152 compared reads
     (ROGUESQ_RSP_DMA25_CTL=1). Fix default on: 25-bit mask 0x1FFFFF8 + 32 MB bound in librecomp rsp.hpp (rs64_s7327_mask,
-    ROGUESQ_RSP_DMA25=0 old); direct_other=0 in every run (no non-spill DMA carries bit 24). Visible: YES (s7328, headline). Open:
-    dd6 21:9 0x19DF70 blocks RSP-read? (NEXT.md). Pose any spill question with ROGUESQ_SPILL_FORCE (forced route + pose tool).
+    ROGUESQ_RSP_DMA25=0 old); direct_other=0 in every run (no non-spill DMA carries bit 24). Visible: YES (s7328 dd8 16:9, s7329 dd6 21:9).
+    s7329: the dd6 21:9 0x19DF70 blocks are the s6893 tile-variant pool (942 x 72 x 25; dd8's 0x2DFF00 = 942 x 128 x 25), gfx-read:
+    forced to spill, 192k bit-24 reads all differ via the 24-bit alias (neg control: sampled non-spill reads 0 differ), old mask
+    garbles near terrain 26.2% px, fix pixel-identical to no spill (docs/owner_sheet_s7329_dd6_dma25.jpg). Thread CLOSED.
+    Pose any spill question with ROGUESQ_SPILL_FORCE=<size> (forced-route sizes differ: L1 dd6 21:9 pool 0x1CC000; read the
+    "[s7328] big req" lines). RCPREF does not see SPILL_FORCE blocks (control fails, hits land in direct_other).
 22. **Scene-transition audio read of just-freed song-channel arrays (s7325, single-source).** 46 audio DMA reads + 6 writes in 200 s
     land in a guest FREE block, arrays freed 0-14 ms earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync.
     Retail race vs our audio-task wait not waiting: compare the wait's completion against the host audio RSP task end.

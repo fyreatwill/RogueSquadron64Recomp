@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..0d6c577 100644
+index b0d6bef..fb5c0eb 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,9 @@
@@ -128,7 +128,7 @@ index b0d6bef..0d6c577 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +149,262 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +149,270 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -223,7 +223,15 @@ index b0d6bef..0d6c577 100644
 +static inline void rs64_s7327_ctl(uint8_t* rdram, uint32_t raw, uint32_t len, int wr) {
 +    static const bool on = [] { const char* e = getenv("ROGUESQ_RSP_DMA25_CTL"); return e && e[0] && e[0] != '0'; }();
 +    if (!on) return;
-+    const uint32_t q = raw & 0x1FFFFFFFu; if (q < 0x1000000u || q >= 0x2000000u) return;
++    const uint32_t q = raw & 0x1FFFFFFFu;
++    if (q < 0x1000000u) { // s7329 negative control: a sampled non-spill read through the same compare must never differ.
++        static std::atomic<uint64_t> m{0}, md{0}; const uint64_t j = ++m; if ((j & 1023u) != 0) return;
++        const uint32_t a0 = q & 0xFFFFF8u, b0 = q & 0x1FFFFF8u; uint32_t l0 = len + 1; if (b0 + l0 > 0x1000000u) l0 = 0x1000000u - b0;
++        if (memcmp(rdram + a0, rdram + b0, l0) != 0) ++md; const uint64_t s = j >> 10;
++        if (s <= 4 || (s & 4095u) == 0) fprintf(stderr, "[s7329] dma25 neg %s sampled=%llu differ=%llu (must be 0)\n", wr ? "wr" : "rd",
++            (unsigned long long)s, (unsigned long long)md.load());
++        return; }
++    if (q >= 0x2000000u) return;
 +    static std::atomic<uint64_t> n{0}, nd{0}, nb{0};
 +    const uint32_t a = q & 0xFFFFF8u, b = q & 0x1FFFFF8u; uint32_t l = len + 1; if (b + l > 0x2000000u) l = 0x2000000u - b;
 +    const bool d = memcmp(rdram + a, rdram + b, l) != 0;

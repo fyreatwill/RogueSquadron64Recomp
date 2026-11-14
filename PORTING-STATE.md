@@ -193021,3 +193021,35 @@ of pixels off at k0, 0 with the fix, 0 vs no spill). DISCRIMINATION: selects H-v
 the hangar route before s7327 could show garbage terrain in missions after a reload; the s7327 default fix removes it exactly.
 Not done (carried to NEXT): dd6 21:9 RCPREF check of the 0x19DF70 spill blocks; a negative control for the byte comparer.
 Logs scratch/agent/m6/g1_lvl1s7328_{nf,f1,f0,f1r}/run.log, captures scratch/s7328/a (gitignored).
+
+## Session 7329 (2026-11-14) — dd6 21:9 spill blocks are the s6893 tile-variant pool and the gfx ucode reads them: old 24-bit RSP DMA mask garbles near terrain at dd6 21:9 too (26.2% px), s7327 fix pixel-identical to no spill; byte-comparer negative control added (0 differ)
+HYPOTHESIS-ID: spill-rcp-dma-width. Hypotheses: H-rsp-read (the dd6 21:9 hangar-route 2x 0x19DF70 spill blocks are DMA'd by the RSP, so
+they were read wrong before s7327) vs H-cpu-only (only the CPU touches them; s7327 changes nothing at dd6).
+Offline first (scratch/s7326/s7327_dd6_219/run.log): every "[spill] req=0x19DF70" line comes right after "[s6893] tile pool entries
+942 -> 67824 (k=72)". 0x19DF70 = 942 x 72 x 25: the s6893 tile-variant pool (25-byte entries, written by selectGridCellTileVariant).
+The dd8 16:9 0x2DFF00 blocks of s7327 are the same pool (942 x 128 x 25), and s7327's gfx hits there had stride 0x19 = 25. Same
+owner, same reader, so H-rsp-read was expected before the run.
+Instrument change (lib/, exported): rsp.hpp rs64_s7327_ctl gains a negative control under ROGUESQ_RSP_DMA25_CTL=1: every 1024th
+non-spill RSP DMA goes through the same 24-bit vs 25-bit compare and logs "[s7329] dma25 neg ... differ=N (must be 0)".
+What ran: scratch/s7329/run.zsh, L1 dd6 21:9 WIDEWIN forced route, PIN=1 + POSE_REF + POSE_LOCK, freezes x 74.04 (k0) / 106.28 (k1),
+4 captures each, one game at a time, idle host (HID idle ~13000 s). All arms: RSP_DMA25_CTL=1 + S7324_RCPREF=ctl + S7317_ALLOCMAP=1.
+First pass with SPILL_FORCE=19DF70,19E000 MISSED (logged "[s7328] big req=0x1CC000 force=0"): on the forced route the L1 dd6 21:9 pool
+request is 0x1CC000 (= 80 x 0x5C00, the 942 x 25 pool size rounded), not the hangar-route 0x19DF70. Those f1/f0 arms ran unforced and
+were moved to scratch/s7329/miss. Re-run with SPILL_FORCE=1CC000: "[s7328] forced req=0x1CC000 -> 81000000" in f1 and f0.
+| arm | bit-24 gfx reads (byte compare) | all differ? | RCPREF direct_other | neg ctl sampled / differ | crash |
+| nf (no force) | 0 (no line; the first 8 always print) | - | 0 | 258048 / 0 | 0 |
+| f1 (force, DMA25=1) | 192512 | yes | 191081 | 253952 / 0 | 0 |
+| f0 (force, DMA25=0 old) | 188416 | yes | 190338 | 258048 / 0 | 0 |
+| pair (4 captures each, identical) | k0 meanAbs / frac>24 | k1 |
+| nf vs f1 (fix vs no spill) | 0.0000 / 0.0000 | 0.0000 / 0.0000 |
+| f1 vs f0 (fix vs old mask) | 13.37 / 0.2623 | 0.0160 / 0.0001 |
+Sheet docs/owner_sheet_s7329_dd6_dma25.jpg: at k0 the old mask draws the near dunes as large flat red/yellow/green/purple polygons
+over the lower right; at k1 (flat dark plain) nothing visible, as in s7328 at dd8.
+Two lines: byte compare (every bit-24 read gives other bytes through the 24-bit alias; neg control 0 differ, so the comparer does not
+produce false differs) and the presented frame (26.2% of pixels off with the old mask, 0 with the fix, 0 vs no spill). RCPREF agrees
+on the count but lists the reads as direct_other, not direct_spill, and its own control FAILS here (ctl_direct_ok=0, ctl_nospill=174):
+SPILL_FORCE blocks skip the s5041/s6063 hooks, so the spill registry never sees them. RCPREF is not usable with SPILL_FORCE as built.
+DISCRIMINATION: selects H-rsp-read, refutes H-cpu-only for dd6 21:9. Any owner run at dd6 21:9 on the hangar route before s7327 could
+show garbled near terrain after the mission load that spills the pool; s7327's default 25-bit mask removes it exactly. Spill + RSP
+width thread closed at dd6 and dd8; dd4 16:9 never spills the pool (s7327).
+Logs scratch/agent/m6/g1_lvl1s7329_{nf,f1,f0}/run.log, scratch/s7329/rcp_*.log, captures scratch/s7329/a.
