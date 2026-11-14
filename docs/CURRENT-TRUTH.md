@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7339 (2026-11-14).
+Compact operational handoff, as of Session 7340 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -348,9 +348,13 @@ is in the s7307 archive). Active unit: NEXT.md.
     osViSetMode_recomp masks the OSViMode pointer with 0xFFFFFF -> [s7339] vimode hi counter. Runtime dd8 21:9 hangar->mission
     (spill live 0x81000000..0x81800000, 14 resets, 0 crash): selftest old=0/new=1 at 0x81000100, spai hi 0, vimode hi 0 (mode ptrs
     static 0x80128C90-0x80128E40), census bad 0. Latent: no live pointer ever crossed 16 MB. Next: class O (item 27e).
-27e. **Next unit (NEXT.md): class O, host KSEG0 16 MB upper bounds `0x81000000`** (62 sites: upstream_compat 50, sp 7, main 2,
-    s7324 1, dpc_bridge 1, overlays 1) vs spill pointers 0x81000000-0x81800000.
-28. **When 1-27e offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27e. **Host KSEG0 16 MB upper bounds (class O): CLOSED (s7340, static).** `tools/s7340_kseg16_census.py --controls` (exit 1 =
+    unclassified): 69 `0x81000000` sites = D 33, G 17, C 16, W 2 (spill branch / rs64_ram_top bound), P 1, B 0. The 8 hand-classed
+    readers of s_s7317_live / s_s7332_carve are dead by default (every map write sits under ROGUESQ_S7317_ALLOCMAP). The 7
+    spill-top `0x81800000` bounds equal the hard ram_top ceiling (RAMTOP_MB <= 24, s7336 clamp), so they cannot drop a pointer.
+27f. **Next unit (NEXT.md): class P, KSEG0 top-byte tests** `(x >> 24) == 0x80` / `& 0xFF000000 == 0x80000000` vs 0x81xxxxxx
+    spill pointers: host 6 sites (upstream_compat 5, s7324_rcp_spill 1), then the generated tree and PatchesLib.
+28. **When 1-27f offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

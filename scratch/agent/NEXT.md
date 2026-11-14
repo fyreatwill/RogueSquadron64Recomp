@@ -1,12 +1,14 @@
-# NEXT (s7340): idiom-class audit - class O, host KSEG0 16 MB upper bounds (`0x81000000` / `0xFFFFFFFF81000000`) vs spill pointers
-HYPOTHESIS-ID: kseg-16mb-bounds
-Context: s7339 closed class N (16 MB masks, tools/s7339_mask16_census.py, B 0) and widened the sp.cpp wrapper guard to
-max(0x81000000, rs64_ram_top). The spill arena is 0x81000000-0x81800000 and rs64_ram_top reaches 0x81800000 (s7336). Any host
-validator `a < 0x81000000` / `a >= 0x81000000 -> reject` that runs default-on on a guest pointer drops spill-resident objects.
-Count (s7339): upstream_compat.cpp 50, sp.cpp 7 (now the s7339 bound), main.cpp 2, s7324_rcp_spill 1, dpc_bridge 1, overlays 1.
-Hypotheses: H-diag (gated audits: s7317/s7318/s7333/g5a walkers bound the GUEST heap on purpose), H-reject (a default-on
-validator rejects a spill pointer: silently skips work), H-intended (bound means "guest heap only" and spill is handled by a
-separate branch, e.g. s7324_class).
-Method: copy tools/s7339_mask16_census.py's frame with an `0x(FFFFFFFF)?81000000` regex; classify by enclosing function; any
-H-reject site -> rs64_ram_top bound behind ROGUESQ_S7340=0 with a hi counter; runtime: `env SECS=260 zsh scratch/s7326/run.zsh
-s7340_dd8 ''` (spill live; control = a selftest predicate on 0x81000100 as in s7339).
+# NEXT (s7341): idiom-class audit - class P, KSEG0 top-byte tests vs spill pointers (0x81xxxxxx)
+HYPOTHESIS-ID: kseg-topbyte-tests
+Context: s7340 closed class O (host `0x81000000` bounds, tools/s7340_kseg16_census.py, B 0). A different idiom can still reject
+a spill pointer: `(x >> 24) == 0x80`, `(x & 0xFF000000) == 0x80000000`, `(x >> 28) == 8` is fine (0x81 passes), `x >> 24 != 0x80`.
+Host count (s7340 grep): upstream_compat.cpp 5, src/rsp/s7324_rcp_spill.cpp 1. Generated tree / PatchesLib not counted yet:
+grep the generated C (RecompiledFuncs dir from CMakeLists / fixup_game_funcs.py) for `>> 24` / `0xFF000000` compared to 0x80, and
+the retail MIPS idiom `srl tX, ptr, 24` + `addiu/ori 0x80` + `beq/bne` (that one is the game's own check: retail semantics, but at
+dd>1 a game-side check that sees a host spill pointer is exactly the H-reject case).
+Hypotheses: H-diag (host sites are s7318/s7324 audit classifiers), H-reject (a default-on check, host or game, treats a spill
+pointer as invalid), H-none-in-game (the game never tests the top byte; it relies on KSEG masks).
+Method: copy tools/s7340_kseg16_census.py frame with the top-byte regex for host; separate pass over generated C with a
+per-function list; any game-side site that can see a spill pointer -> name the object type (is it ever spill-allocated? spill
+allocations are rs_malloc reqs routed by s6569) and either prove unreachable or convert in a fixup script behind ROGUESQ_S7341=0.
+Runtime only if a B site exists: `env SECS=260 zsh scratch/s7326/run.zsh s7341_dd8 ''` with a selftest control on 0x81000100.

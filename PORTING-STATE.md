@@ -193420,3 +193420,33 @@ ORIGIN: no mitigation; the bound widening is a latent-defect conversion (no live
 Discrimination: selects H-hw (222 masks model the 24-bit VI/RDP/RSP bus, correct by design) + H-diag (rest gated/log/key);
 refutes H-fold on the live path (0 spill pointers reach the guard or osViSetMode in a spill-live run, positive control PASS).
 Class N CLOSED. Next (NEXT.md s7340): class O, host `0x81000000` KSEG0 16 MB upper bounds (62 sites) vs spill pointers.
+
+## Session 7340 (2026-11-14) — class O host KSEG0 16 MB upper bounds closed: 69 sites classified, 0 behavioural; spill-top 0x81800000 bounds match the hard ram_top ceiling
+Work unit (NEXT.md s7340, HYPOTHESIS-ID kseg-16mb-bounds): classify every host `0x81000000` / `0xFFFFFFFF81000000` literal, since
+the spill arena is 0x81000000-0x81800000 (s7326) and a default-on validator `a < 0x81000000` on a guest pointer would drop
+spill-resident objects (H-reject) vs gated audits (H-diag) vs deliberate "guest heap only / spill branch" bounds (H-intended).
+Tool: `tools/s7340_kseg16_census.py [--controls] [-v]` (new; loads tools/s7338_mask_census.py frame + gates, class-O regex, adds
+W = bound is the spill branch / rs64_ram_top-widened). Control: planted default-on `a < 0x81000000u` reported '?', planted
+`max(0x81000000u, rs64_ram_top)` reported 'W'. PASS. s7339 census still exits 0.
+Result: 69 sites in 159 files: D 33, G 17, C 16, W 2, P 1, B 0, unclassified 0 (exit 0; listing scratch/agent/s7340_census.txt).
+First pass left 8 '?' sites, all hand-reviewed and classed:
+- s7333_hdr, rs64_s7318_bcmp, rs64_s7324_near, rs64_s7324_lowspill, rs64_s7326_scan: readers of s_s7317_live / s_s7332_carve.
+  Every write to those maps is under s7317_on() (ROGUESQ_S7317_ALLOCMAP): the malloc hook, and rs64_s7325_heapsync's
+  `if (!s7317_on()) return;` before carve registration and the s7326 scan. So s7318_blk's s7333 keep path (default-on knob,
+  but on empty maps by default) never sees a key at all. s7333_hdr's `< 0x81000000` bound is there to stop the 24-bit fold of its
+  `h & 0x00FFFFFC` read (carve keys are guest heap) -> correct as written. D.
+- rs64_s7324_class: `0x81000000u | q` builds the spill alias of an RCP address on purpose (RCPREF audit). W.
+- g5a_walk: ROGUESQ_G5A_WBLIVE walker of the three guest rs_malloc arena heads (guest heap, < 16 MB by construction). D.
+- The 17 G sites (rs64_floor_ownership, s6558/s6559 walkers) open on log gates; the D sites are s7335/s7336 arena-layout
+  clamps (the DLPOOLX top is 0x81000000 by design) and sp.cpp's s7339 widened bound.
+Companion class (spill top, 7 sites `0x81800000`): s7317_isspill / s7318_sp (8 MB arena predicate), s6892_valid (v < 0x81800000),
+the s7336 ram_top clamp. rs64_ram_top cannot exceed 0x81800000: recomp.cpp:569 accepts RAMTOP_MB <= 24 and upstream_compat.cpp:3754
+clamps the s7336 widening to 0x81800000. So every spill-top bound equals the largest reachable ram_top -> no drop possible.
+Evidence lines: (1) census with planted controls; (2) hand read of the map writers' gate (single-source per site, but the gate is one
+function the census can't see through). No runtime run: with B 0 there is no changed behaviour to exercise, and s7339's spill-live
+dd8 run already showed 0 guard pointers above 16 MB (its selftest control passed at 0x81000100).
+ORIGIN: no mitigation; no code behaviour changed.
+Discrimination: selects H-diag (50 of 69 gated/log) + H-intended (W 2, arena-layout D); refutes H-reject (0 default-on validators).
+Class O CLOSED. Next (NEXT.md s7341): class P, KSEG0 top-byte tests `(x >> 24) == 0x80` / `(x & 0xFF000000) == 0x80000000` that
+reject 0x81xxxxxx spill pointers (host 6 sites: upstream_compat 5, s7324_rcp_spill 1) plus the same idioms in the generated tree and
+PatchesLib (grep `srl ... 24` + compare 0x80 in RecompiledFuncs is the expensive half).
