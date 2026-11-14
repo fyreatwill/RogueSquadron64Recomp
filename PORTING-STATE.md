@@ -192414,3 +192414,32 @@ HYPOTHESIS-ID g1c-dd8-horizon-look. Unit from NEXT (s7308). No maintenance (CURR
   It is deterministic at this frozen pose, so it is a reproducible case for the G5f knife-line/edge-sliver class or the W_SHEET guard-band sheets.
   It is the next unit.
 - Rules out: "dd8 is indistinguishable from dd6 at the horizon" (s7300/s7301 single-source view) at an open pose; pose confound in this comparison.
+
+## Session 7309 (2026-11-13) — G5f: the 21:9 dd>1 left-edge sliver is 3 clipped sky-dome triangles whose texture W starts at <=0; it is in the RDP stream (angrylion replay draws it too), not CULL_SPIKE escape, W_SHEET, MELT, WIDEWIN or RT64
+
+HYPOTHESIS-ID: g5f-219-left-sliver. Env-only, no build. Nine same-pose runs (tools/g3_optin_pose_arms.sh PIN=1 FZ=106.28, L1, 21:9,
+base B = ASPECT=21:9 FULLSCREEN=0 RETINA=0 DD_UNSAFE=1 DD_WIDEWIN=1 [+DD_MELT=1]); scripts scratch/s7309/run{,2,3}.zsh. All arms reached the freeze
+(pos 106.294,-6.799,69.769, vi ~6984), 0 crash. Score = near-white (>235) px in the left 1% columns of the cropped window capture.
+| arm | sliver px | whole-frame diff vs base (px>24) |
+| base dd8 (both captures) | 634 / 634 | 0 (repeat floor) |
+| spk (LOG_SPIKE + W_SHEET_DROPLOG/STATS) | 634 | 398 |
+| cs0 (CULL_SPIKE=0) | 634 | 185 -> lever live at this pose (positive control PASS) |
+| wsp0 (W_SHEET_POS=0) | 634 | 0 (lever does nothing here) |
+| wpx0 (W_SHEET_PX=0) | 634 | 398 -> lever live |
+| melt0 (DD_MELT=0) | 634 | 185 |
+| ww0 (DD_WIDEWIN=0) | 632 | 354670 (whole scene changes, wedge stays) |
+| d1 (dd1) | 0 | (control: no wedge at dd1) |
+(The s7308 "880-930 vs dd1 61" used a different crop; with this scorer s7308 dd6/dd8/dd8f k2 = 632-634, dd1 0, k0/k1 0.)
+-> H-spike refuted (the cull is live and the wedge does not move), H-sheet refuted (PX lever live, no change; POS no-op), MELT and WIDEWIN not involved.
+Drawer: ROGUESQ_G5B_TRIS at the same pose. The game stops submitting during the freeze, so the frozen frame is the swap before the
+15.04 s gap (swap 4064, both runs). tools/g5b_point_stack.py puts every wedge point on tri 4 (op 0E, cw 1024, timg 8078A4C0). Overlay of tris 2-6
+on the capture (scratch/s7309/tri_overlay.png) matches the wedge to tri 4, with weaker streaks in tri 2/3: these are sky-dome panels clipped
+at fb x=0. G5B_FRAME capture (FROM 4030 EVERY 5) + angrylion replay (scratch/s7098/frame_replay16) of swap 4063/4064 paints the full frame and
+shows the same streaked wedge -> H-rt64 refuted; it is in the RDP stream. Sheet docs/s7309_219_left_sliver.jpg (dd1 / dd8 RT64 + outlines / angrylion).
+New tools/s7309_tri_texcoef.py decodes per-tri edge and S/T/W coefficients from a G5B_FRAME swap (RNG words are host-order u32).
+Swap 4064: of 6607 textured tris exactly 3 have start W <= 0.01, tris 1/3/4 = the three left-edge slivers (W 0.0000, -0.0015, -0.0000;
+tri 4 dW/dx -63), while neighbouring sky tris carry W 12-258. A perspective divide by ~0 or negative W stretches the texture into the
+vertical streaks seen. So the clip-generated vertex on the left screen edge has 1/w <= 0 (at or behind the eye plane), at dd>1 21:9 only.
+Rules out: escaped knife spike, W_SHEET residual, RT64 edge/scissor, MELT, WIDEWIN. Open: H-geom (dd auto-far / wide frustum place the sky dome
+vertex so the F5 clip legitimately produces w<=0, as retail ucode would on real hardware) vs H-rsp-emu (our LLE RSP clip math, e.g. VRCP
+precision, yields w<=0). Next: same-pose dd1/dd4/dd8 G5B_FRAME caps, decode the left-edge sky tris' W per dd (NEXT.md).

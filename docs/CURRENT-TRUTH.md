@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7308 (2026-11-13).
+Compact operational handoff, as of Session 7309 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -173,9 +173,11 @@ is in the s7307 archive). Active unit: NEXT.md.
 
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner
    asks for more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
-2. **21:9 dd>1 left-edge white sliver (s7308, measured, deterministic):** L1 pose-lock freeze k2 (tools/g3_optin_pose_arms.sh,
-   scratch/s7308/run.zsh) shows 880-930 near-white px in the left 1% columns at 21:9 dd6/dd8 vs 61 at dd1, 0 at 16:9. Name the
-   drawer (spike escaping CULL_SPIKE vs W_SHEET guard-band sky sheet vs RT64 edge) with LOG_SPIKE + RDP dump at that frozen pose. NEXT.md.
+2. **21:9 dd>1 left-edge sliver: drawer NAMED (s7309).** 3 sky-dome triangles clipped at fb x=0 (L1 frozen pose swap 4064, tris 1/3/4,
+   op 0E timg 8078A4C0) start with texture W <= 0 (0.0000/-0.0015/-0.0000; the other 6604 textured tris have W >= 12), so the texture stretches
+   into vertical streaks. In the RDP stream: the angrylion replay draws it too. Not CULL_SPIKE (lever live, wedge unchanged), W_SHEET, MELT, WIDEWIN,
+   RT64. Sheet docs/s7309_219_left_sliver.jpg; decoder tools/s7309_tri_texcoef.py. Next (NEXT.md): split H-geom (dd far/wide frustum make the
+   clip legitimately emit w<=0) from H-rsp-emu (our LLE clip math) with same-pose dd1/dd4/dd8 caps; then a fix at the origin.
    dd8 horizon look DONE s7308: same-pose far-edge row dd1 841 / dd6 767 / dd8 745 / dd8+FOG_ALT 803 (/1000, both aspects, repeat
    floor 0.00) -> dd8 pushes the hard open-plain edge out a little; FOG_ALT melts it. Owner sheet docs/owner_sheet_s7308_dd8_horizon.jpg.
 3. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle. Never flip without the owner.

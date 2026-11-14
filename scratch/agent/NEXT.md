@@ -1,19 +1,18 @@
-# NEXT (s7309): name the drawer of the 21:9 dd>1 left-edge white sliver at the L1 pose-lock freeze k2
+# NEXT (s7310): why the clipped left-edge sky-dome tris get texture W <= 0 at 21:9 dd>1 (H-geom vs H-rsp-emu)
 HYPOTHESIS-ID: g5f-219-left-sliver
-State (s7308): tools/g3_optin_pose_arms.sh PIN=1 at L1 gives pixel-identical repeat captures (floor 0.00). At freeze k2
-(x 106.28, open off-map plain) 21:9 dd6/dd8/dd8f show 880-930 near-white (>235) px in the left 1% columns vs dd1 61, and 16:9 shows 0.
-See scratch/s7308/a219/dd8/f2_2.png and docs/owner_sheet_s7308_dd8_horizon.jpg (left edge of the 21:9 rows).
+State (s7309): the sliver = tris 1/3/4 of swap 4064 (L1 PIN=1 freeze FZ=106.28), sky-dome panels clipped at fb x=0, start W 0/-0.0015/-0
+(all other 6604 textured tris W >= 12). In the RDP stream (angrylion replay agrees). Not CULL_SPIKE/W_SHEET/MELT/WIDEWIN/RT64.
+Tools: tools/s7309_tri_texcoef.py <cap> <swap> all|i,j ; frozen swap = last swap before the ~15 s gap in G5B_TRIS (snippet in s7309 entry).
 Hypotheses:
- H-spike: a knife triangle that escapes CULL_SPIKE (G5f class). Its RDP tri has an extreme-x vertex, and LOG_SPIKE lists it at the k2 frame.
- H-sheet: a W_SHEET guard-band sky-sheet residual at the wide left edge (W_SHEET_PX/POS cull). ROGUESQ_W_SHEET_DROPLOG/STATS show a
-   sheet at x<0, and W_SHEET_POS=0 changes the sliver.
- H-rt64: the RDP stream is clean at that column and RT64 draws it (edge clamp / scissor at fbw 1024).
-Unit, ONE build (none needed: env only), arms at the same frozen pose (exact cross-run compare):
- env PIN=1 TAGP=s7309 FZ=106.28 zsh tools/g3_optin_pose_arms.sh scratch/s7309/a \
-   base=$B+ROGUESQ_DRAW_DISTANCE=8 spk=$B+ROGUESQ_DRAW_DISTANCE=8+ROGUESQ_LOG_SPIKE=1+ROGUESQ_W_SHEET_DROPLOG=1+ROGUESQ_W_SHEET_STATS=1 \
-   cs0=$B+ROGUESQ_DRAW_DISTANCE=8+ROGUESQ_CULL_SPIKE=0 wsp0=$B+ROGUESQ_DRAW_DISTANCE=8+ROGUESQ_W_SHEET_POS=0 d1=$B+ROGUESQ_DRAW_DISTANCE=1
- (B as in scratch/s7308/run.zsh with ASPECT=21:9). Score with the left-edge white count in tools/s7308_pose_horizon.py style (add an
- EDGE_WHITE column). Positive control: cs0 must change the spike count (more wedges) and base must reproduce 880+ px.
- Discriminator: the sliver changes in cs0 -> H-spike. It changes in wsp0 -> H-sheet. Neither, and no logged tri reaches x<=0 -> H-rt64
- (then dump RDP with ROGUESQ_S7096_FWD / angrylion replay of that frame).
-Needs an unlocked screen and idle host. g3_optin_pose_arms.sh gates on both.
+ H-geom: dd auto-far (or the 21:9 frustum x-widening) moves the sky dome / far scale so the F5 clip legitimately makes a vertex at w<=0;
+   retail ucode on hardware would do the same. Predicts: left-edge sky tri W shrinks monotonically dd1 -> dd4 -> dd8 and crosses 0.
+ H-rsp-emu: our LLE RSP clip math (VRCP/VRCPH, VMULF clamp) emits w<=0 where hardware would not. Predicts: W jumps (not a trend) and the
+   clip input vertex has a sane positive w; check the vertex buffer / ucode clip path with docs/F5-UCODE-REFERENCE.md.
+ H-wide: only the 21:9 widened frustum exposes the dome edge (16:9 dd8 has none at this pose): 16:9 dd8 left sky tris keep W >> 0.
+Unit, ONE pass, env only (B from scratch/s7309/run3.zsh, minus the ASPECT for the 16:9 arm):
+ env PIN=1 TAGP=s7310 FZ=106.28 zsh tools/g3_optin_pose_arms.sh scratch/s7310/a \
+   d1=<B21:9>+DRAW_DISTANCE=1+G5B_FRAME=..d1.cap+G5B_TRIS=..d1.bin  d4=..dd4  d8=..dd8  w8=<B16:9>+dd8   (FRAME_FROM 3900 EVERY 5 MAX_MB 1500 each)
+ For each: frozen swap; list textured tris with any vertex at x<=1, their W, dWdx, and W of the tri covering (2,290). Table W vs dd and aspect.
+Then fix at the origin (H-geom: clamp/skip sky-dome clip output with w<=0 in the opt-in dd path, or keep the dome inside the far scale;
+H-rsp-emu: fix the vector op). Owner sheet before/after. dd1 stays retail.
+Needs an unlocked screen and idle host (the arms script gates on both). Delete the .cap files after decoding (1.5 GB each).
