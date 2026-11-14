@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7348 (2026-11-14).
+Compact operational handoff, as of Session 7350 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -418,10 +418,16 @@ is in the s7307 archive). Active unit: NEXT.md.
     sits behind siz == 0 / >= 16b. One latent UB defect FIXED: librecomp `__ull_rshift` / `__ll_lshift` shifted by the unmasked
     guest 64-bit count; it is now `& 63` (MIPS dsrlv/dsllv). The game never calls them (RecompiledFuncs uses only __ull_div); recompiled
     SLLV/DSLLV already mask. tools/s7349_shift_ctl.cpp: 1000 pairs match MIPS, UBSan aborts on the old form. Next: class AA (27o).
-27o. **Next unit (NEXT.md): class AA, memcpy between possibly-overlapping ranges** (memcpy with src and dst both in guest RDRAM or the
-    same host buffer is UB if they overlap; it should be memmove). Sources: RDRAM-to-RDRAM copies in librecomp/ultramodern (osPiRawStartDma
-    shims, osVirtualToPhysical copies), the dpc_bridge rings, RT64 TMEM/framebuffer copy-to-RAM.
-28. **When 1-27o offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27o. **memcpy between possibly-overlapping ranges (class AA): CLOSED (s7350, static census + controls; no defect, no runtime).**
+    `tools/s7350_overlap_census.py --controls`: 195 memcpy sites in the s7343 scope (0 std::copy / copy_n; 0 memmove in scope, the
+    control proves memmove is excluded): DISJ 117, D 40, G 33, C 3, H 1, P 1, 0 open. No default-on copy has src and dst in the same
+    object: every RDRAM copy pairs RDRAM with a host local / std::vector / malloc'd snapshot / GPU ->map() buffer / DMEM (SP DMA).
+    The only same-base pairs are dpc_bridge rs64_dlw_root (two members of g_dlw, P) and S2DEX struct_buffer vs RDRAM (state->..).
+    The guest's own memcpy/bcopy are recompiled MIPS (retail semantics, s5037 span guard), not host memcpy. H-safe. Next: class AB (27p).
+27p. **Next unit (NEXT.md): class AB, typed loads/stores through a cast guest pointer** (`*(uint32_t*)(rdram + a)`,
+    `reinterpret_cast<uint16_t*>(RDRAM + a)`) with a guest-chosen, possibly unaligned address: alignment/aliasing UB the compiler may
+    exploit (vectorised or ldp/stp pairs, atomics fault on misalignment). Fix with memcpy-based loads or a proven alignment mask.
+28. **When 1-27p offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

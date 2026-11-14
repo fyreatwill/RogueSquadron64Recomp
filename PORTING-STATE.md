@@ -193756,3 +193756,23 @@ H-ub (a default-on guest count can reach >= operand width).
   crash=0 resets=14 late=0 arenafull=0, the same as s7346-s7348. This is a regression smoke only, because the patched helpers are never called.
 - Conclusion: the census selects H-ub for 2 latent helper sites (fixed) and refutes it for the other 156; this closes class Z. Next: class AA, memcpy
   between ranges that may overlap (NEXT.md, CURRENT-TRUTH 27o).
+
+## Session 7350 (2026-11-14) — class AA memcpy between possibly-overlapping ranges closed: 195 sites, 0 open, no defect (census s7350_overlap_census.py with controls)
+
+HYPOTHESIS-ID: host-memcpy-overlap. Work unit from NEXT.md (idiom-class audit, ITERATION item 3).
+Hypotheses: H-safe (every same-object copy is memmove or disjoint by construction), H-diag (only gated probes), H-ub (default-on
+memcpy with guest-chosen overlapping src/dst).
+What ran: new `tools/s7350_overlap_census.py` on the s7343 scope (183 files), reusing s7343 args_of()/ln_fn()/body_gated(), the
+s7338 sites() C/P/G/D classes and the s7344 CORE demotion. Site = memcpy / std::memcpy / __builtin_memcpy / std::copy / copy_n.
+Each side's base object is resolved (casts, &, .data() stripped) and its declaration classed obj / ptr / device array.
+Controls (same run, `--controls`): planted `memcpy(rdram + task->dst, rdram + task->src, task->len)` -> '?', memmove twin excluded
+(MM=1), local-buf twin DISJ, `d + n <= s || s + n <= d` twin CHK, gated twin G: PASS.
+Result: 195 sites: DISJ 117, D 40, G 33, C 3, H 1 (mods.cpp patch_func: host code page <- patch literal), P 1; 0 '?' / B.
+The rt64 demotion surfaced 14 member-function sites; all hand-read disjoint (malloc'd fl_snap snapshot, pendingCommandBuffer
+vector <- DL, GPU ->map() upload/readback heaps <-> CPU/RDRAM, memcpyRows callers both pass a mapped upload buffer). A whole-scope
+same-base pass finds only rs64_dlw_root (g_dlw.snap_last <- g_dlw.snap_first, two members, P) and S2DEX struct_buffer <- RDRAM.
+Guest memcpy/bcopy are recompiled MIPS (retail semantics, s5037 span guard), so they are outside this host class. 0 std::copy and
+0 memmove exist in scope.
+Conclusion: H-safe selected for all 195 sites; H-ub refuted. No fix, so no runtime smoke (NEXT.md: runtime only if a B site exists).
+Rules out: overlapping host memcpy as a source of corrupted guest RDRAM / RT64 buffers. Next: class AB (typed access through a cast
+guest pointer, alignment/aliasing UB), CURRENT-TRUTH 27p.
