@@ -10033,7 +10033,7 @@ index b4c85f5..880611b 100644
              adjustVector(fbPairs, fbPairCount);
              addedPair = true;
 diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
-index 5a331aa..eafcfdb 100644
+index 5a331aa..a563987 100644
 --- a/src/hle/rt64_workload_queue.cpp
 +++ b/src/hle/rt64_workload_queue.cpp
 @@ -7,9 +7,84 @@
@@ -10338,7 +10338,7 @@ index 5a331aa..eafcfdb 100644
                      threadRenderFrame(curFrame, prevFrame, workloadConfig, workload.debuggerRenderer, workload.debuggerCamera, curFrameWeight, prevFrameWeight, deltaTimeMs,
                          interpolationTargetKey, interpolationTargetFbPairIndex, overrideTarget, overrideModifier, velocityUploaderUsed, uploadExtras, tileInterpolationUsed, lookAtInterpolationUsed);
  
-@@ -1125,6 +1337,23 @@ namespace RT64 {
+@@ -1125,6 +1337,27 @@ namespace RT64 {
  
                      // After one frame is rendered, we indicate the workload has been processed so the present thread can start presenting frames as soon as it can.
                      if (frame == 0) {
@@ -10355,6 +10355,10 @@ index 5a331aa..eafcfdb 100644
 +                                const double now = plume::rs64_pring_now();
 +                                n += std::snprintf(row + n, sizeof(row) - n, " wk=%.3f lk=%.3f pid=%.3f rs=%.3f qos=%d", (now - rs64Wake) * 1e3, (now - rs64Lock) * 1e3, (now - rs64Pid) * 1e3, (now - rs64Rs) * 1e3, rs64Qos0);
 +                            }
++                            // s7359 class AJ: snprintf returns the untruncated length; a long wk/lk/pid/rs row left n > sizeof(row)
++                            // and this append's size wrapped (2-byte stack overflow). Clamp so the "\n" always fits.
++                            if (n < 0) n = 0;
++                            if (n > (int)sizeof(row) - 2) n = (int)sizeof(row) - 2;
 +                            std::snprintf(row + n, sizeof(row) - n, "\n");
 +                            plume::rs64_pring_write(row);
 +                        }

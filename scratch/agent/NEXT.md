@@ -1,17 +1,14 @@
-# NEXT (s7359): idiom-class audit - class AJ, unbounded string copies of env/config/file text
-HYPOTHESIS-ID: host-unbounded-string-copy
-Context: s7358 closed class AI (numeric env parses; census tools/s7358_envparse_census.py, arms tools/s7358_arms.zsh).
-Idiom (class AJ): in host C++ we own (src/, lib/N64ModernRuntime/{librecomp,ultramodern}/src, our lib/rt64 '+' lines):
-strcpy/strcat/sprintf/vsprintf, sscanf/fscanf "%s"/"%[" without a width, memcpy(dst, src, strlen(src)[+1]) and
-snprintf whose return value is used as an offset (it reports the untruncated length), with a fixed-size destination and a
-source that is getenv text, a config/mod/save file, a path (std::filesystem / SDL_GetBasePath), or a guest-RAM string.
-Hypotheses: H-safe (every such copy is bounded), H-diag (only env-gated diagnostics are unbounded), H-overflow (a default-on or
-owner-knob path copies unbounded text into a fixed buffer: fix with a bounded copy + named warning).
-Method: tools/s7359_strcopy_census.py: enumerate the calls; classify BOUNDED (snprintf/strncpy/strlcpy with sizeof dst,
-"%Ns" width <= dst-1, std::string) / CONST (source is a literal) / G (env-gated diagnostic) / B (default-on or owner-knob,
-unbounded) / ?. snprintf-return-as-offset is its own row type. MANUAL table like s7358. Controls: planted strcpy(getenv) (B),
-snprintf(sizeof) (BOUNDED), strcpy literal (CONST), env-gated sprintf (G).
-Second line: for each B, run with an oversized value (e.g. a 600-char env string / long path) pre-fix vs post-fix; 20 s boot
-arms like tools/s7357_arms.zsh (own working folder, save COPY; never touch build/saves) or the s7358 route arms. ASan build in a
-separate dir is allowed if the overflow is silent. Then 260 s dd8 smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7359_dd8 ''`.
-Exit: PORTING-STATE s7359, CURRENT-TRUTH item 27x -> closed, commit.
+# NEXT (s7360): idiom-class audit - class AK, unterminated guest-RAM string reads
+HYPOTHESIS-ID: host-guest-string-read
+Context: s7359 closed class AJ (unbounded string copies; census tools/s7359_strcopy_census.py, helper src/main/rs64_apf.h,
+control tools/s7359_apf_ctl.cpp). Next idiom in the same family: host code that reads a GUEST string (rdram bytes, ^3
+byte-swapped, possibly unterminated or pointing at junk) with an unbounded scan.
+Idiom (class AK): in host C++ we own (src/, lib/N64ModernRuntime/{librecomp,ultramodern}/src, our lib/rt64 '+' lines, fixup-
+injected C): `%s` / strlen / strcmp / strchr / std::string(ptr) / fputs applied to a pointer into rdram (TO_PTR, rdram + x,
+MEM_B loops without a cap), and byte loops `while (MEM_BU(..)) ++i` with no length cap or no top-of-RAM check.
+Hypotheses: H-safe (every guest string read is length-capped and range-checked), H-diag (only env-gated diagnostics scan
+unbounded), H-overrun (a default-on path scans past rs64_ram_top / reads ^3-unswapped text: fix with a capped copy).
+Method: tools/s7360_gueststr_census.py; classify CAPPED (explicit i < N and address < ram_top) / G / B / ?; controls as s7359.
+Second line: for each B, plant an unterminated string at the end of guest RAM (a test lever in a separate build dir or an
+ASan build) and show pre-fix over-read vs post-fix bounded. Then 260 s dd8 smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7360_dd8 ''`.
+Exit: PORTING-STATE s7360, CURRENT-TRUTH item 27y -> closed, commit.

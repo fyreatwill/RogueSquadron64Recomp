@@ -1,3 +1,4 @@
+#include "../main/rs64_apf.h"  // s7359 class AJ
 #include <algorithm>
 #include <pthread.h>
 #include <mach/mach_time.h>
@@ -4604,15 +4605,15 @@ extern "C" void rs64_floor_mesh(uint32_t op, uint32_t width, const float *edge,
     int n = std::snprintf(buf, sizeof(buf), "[floor-mesh] {\"w\":%u,\"origin\":%u,\"frame\":%u,\"ordinal\":%u,\"op\":%u,\"cc\":\"%s\",\"cca\":\"%s\"",
         width, g_ft.origin, frame, ++ordinal, op, cc, cca);
     auto floats = [&](const char *key, const float *v, int count) {
-        n += std::snprintf(buf + n, sizeof(buf) - n, ",\"%s\":[", key);
+        n = rs64_apf(buf, sizeof buf, n, ",\"%s\":[", key);
         for (int i = 0; i < count; i++)
-            n += std::snprintf(buf + n, sizeof(buf) - n, "%s%.9g", i ? "," : "", v[i]);
-        n += std::snprintf(buf + n, sizeof(buf) - n, "]");
+            n = rs64_apf(buf, sizeof buf, n, "%s%.9g", i ? "," : "", v[i]);
+        n = rs64_apf(buf, sizeof buf, n, "]");
     };
     floats("edge", edge, 14); floats("plane", plane, 21); floats("v", vertices, 30);
-    n += std::snprintf(buf + n, sizeof(buf) - n, ",\"flags\":[");
+    n = rs64_apf(buf, sizeof buf, n, ",\"flags\":[");
     for (int i = 0; i < 21; i++)
-        n += std::snprintf(buf + n, sizeof(buf) - n, "%s%u", i ? "," : "", flags[i]);
+        n = rs64_apf(buf, sizeof buf, n, "%s%u", i ? "," : "", flags[i]);
     std::snprintf(buf + n, sizeof(buf) - n, "]}\n");
     std::fputs(buf, stderr);
 }

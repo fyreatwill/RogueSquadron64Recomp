@@ -492,9 +492,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     silent 0.25x terrain; hand-set ROGUESQ_FB_WIDTH bypassed the 1024 clamp. main.cpp rs64_s7358_sanitize_env (before the
     aspect/dd policies; ROGUESQ_S7358_ENVCHECK=0 old) + tilepool px<=8. `zsh tools/s7358_arms.zsh <tag>`: pre d12/nan crash,
     typo 0.25; post all alive with "[s7358-env]"; same-build ENVCHECK=0 nan re-crashes. 260 s dd8 smoke clean. Next: class AJ (27x).
-27x. **Next unit (NEXT.md): class AJ, unbounded string copies of env/config/file text** (strcpy/strcat/sprintf/%s-without-width
-    sscanf/memcpy of strlen into fixed buffers) in host code we own.
-28. **When 1-27x offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27x. **Unbounded string copies (class AJ): CLOSED (s7359, census + ASan control; 20 appends hardened, 1 latent rt64 overflow FIXED).**
+    tools/s7359_strcopy_census.py: 44 sites, 0 unresolved, 7 controls. No strcpy/sprintf/%s-scanf of env/file text exists (H-safe);
+    the live idiom was `o += snprintf(b + o, cap - o, ..)` (o passes cap on truncation, cap - o wraps): 20 unguarded sites incl.
+    the default-on dd8 [s7030]/[s7046]/[s7233] rows (bounded by value only, max 159 of 300 B) -> src/main/rs64_apf.h clamped append.
+    rt64 W present-ring row final "\n" append clamped. tools/s7359_apf_ctl.cpp: old idiom ASan stack-buffer-overflow, helper clean
+    and byte-identical. 260 s dd8 smoke clean. Next: class AK (27y).
+27y. **Next unit (NEXT.md): class AK, unterminated guest-RAM string reads** (%s/strlen/strcmp/byte loops on rdram pointers
+    without a length cap or ram_top check) in host code we own.
+28. **When 1-27y offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

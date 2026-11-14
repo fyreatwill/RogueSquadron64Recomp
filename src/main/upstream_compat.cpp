@@ -6,6 +6,7 @@
 // All taken verbatim from MikeSemicolonD/N64ModernRuntime fork additions.
 // Lifted into our repo so we don't have to maintain a librecomp fork.
 
+#include "rs64_apf.h"  // s7359 class AJ
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -261,18 +262,18 @@ extern "C" void rs64_s7030_begin(uint8_t *rdram, uint32_t a0) {
     if (!s7030_t0) { s7030_t0 = s7030_last = mt; if (s7030_tog3) rs64_tog_anchor(mt); } /* anchor for g5e_cost_by_parity --phases 3 */
     if (mt - s7030_last > 240000000ull) { s7030_last = mt;
         for (int p = 0; p < 3; p++) { const double fr = s7030_frames[p] ? (double)s7030_frames[p] : 1.0; uint64_t tot = 0; for (int b = 0; b < 20; b++) tot += s7030_h[p][b];
-            char buf[400]; int o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7030_h[p][b] / fr);
+            char buf[400]; int o = 0; for (int b = 0; b < 20; b++) o = rs64_apf(buf, sizeof buf, o, "%s%.1f", b ? "," : "", s7030_h[p][b] / fr);
             fprintf(stderr, "[s7030] t=%.0f ph=%d k=%g frames=%llu cells/f=%.1f cull/f=%.1f F=%.1f fe=%.1f hist/f=%s\n", (mt - s7030_t0) / 24e6, p, s7030_k[p],
                     (unsigned long long)s7030_frames[p], tot / fr, s7030_cull[p] / fr, s7030_F[p] / fr, s7030_FE[p] / fr, buf);
-            o = 0; for (int b = 0; b < 20; b++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", b ? "," : "", s7031_off[p][b] / fr);
-            char rb[300], rb2[300]; int o1 = 0, o2 = 0; for (int b = 0; b < 18; b++) { o1 += snprintf(rb + o1, sizeof rb - o1, "%s%.1f", b ? "," : "", s7031_ring[p][b] / fr);
-                o2 += snprintf(rb2 + o2, sizeof rb2 - o2, "%s%.1f", b ? "," : "", s7031_rband[p][b] / fr); }
+            o = 0; for (int b = 0; b < 20; b++) o = rs64_apf(buf, sizeof buf, o, "%s%.1f", b ? "," : "", s7031_off[p][b] / fr);
+            char rb[300], rb2[300]; int o1 = 0, o2 = 0; for (int b = 0; b < 18; b++) { o1 = rs64_apf(rb, sizeof rb, o1, "%s%.1f", b ? "," : "", s7031_ring[p][b] / fr);
+                o2 = rs64_apf(rb2, sizeof rb2, o2, "%s%.1f", b ? "," : "", s7031_rband[p][b] / fr); }
             fprintf(stderr, "[s7033] t=%.0f ph=%d eb=%.2f sc=%.4f eyecell=%d..%d up=%d upc=%llu/%llu keep/f=%.1f pass/f=%.1f\n", (mt - s7030_t0) / 24e6, p, s7033_eb, s7033_sc,
                     s7033_emin, s7033_emax, s7033_up, (unsigned long long)s7033_upc[1], (unsigned long long)s7033_upc[0], s7033_keep[p] / fr, s7033_pass[p] / fr);
-            { char kb[300]; int ok = 0; for (int b = 0; b < 20; b++) ok += snprintf(kb + ok, sizeof kb - ok, "%s%.1f", b ? "," : "", s7034_kc[p][b] / fr);
+            { char kb[300]; int ok = 0; for (int b = 0; b < 20; b++) ok = rs64_apf(kb, sizeof kb, ok, "%s%.1f", b ? "," : "", s7034_kc[p][b] / fr);
               fprintf(stderr, "[s7034] t=%.0f ph=%d K=%g kept/f=%.1f chist/f=%s\n", (mt - s7030_t0) / 24e6, p, s7034_k[p], s7034_kk[p] / fr, kb); }
             { char eb[300]; int oe = 0; uint64_t en = 0; for (int b = 0; b < 32; b++) en += s7046_ed[p][b]; const double ed = en ? (double)en : 1.0;
-              for (int b = 0; b < 32; b++) oe += snprintf(eb + oe, sizeof eb - oe, "%s%.2f", b ? "," : "", s7046_ed[p][b] / ed);
+              for (int b = 0; b < 32; b++) oe = rs64_apf(eb, sizeof eb, oe, "%s%.2f", b ? "," : "", s7046_ed[p][b] / ed);
               fprintf(stderr, "[s7046] t=%.0f ph=%d k2=%g N=%d on=%d k2cells/f=%.1f k2cull/f=%.1f eyeedge=%s\n", (mt - s7030_t0) / 24e6, p, s7046_k2[p], s7046_n[p],
                       (s7046_k2[p] > 0 && ((s7046_mask >> p) & 1)) ? 1 : 0, s7046_kc[p] / fr, s7046_kcull[p] / fr, eb); }
             fprintf(stderr, "[s7032] t=%.0f ph=%d eye=%d,%d ring=%d eyeoff_cells/f=%.1f spread_bad=%llu\n", (mt - s7030_t0) / 24e6, p, s7032_eyex, s7032_eyez, s7032_eyering, s7032_eyeoff[p] / fr, (unsigned long long)s7032_spread_bad);
@@ -440,7 +441,7 @@ extern "C" void rs64_s7023_cs(const unsigned long long* v) {
     for (int r = 0; r < 3; r++) for (int j = 0; j < 10; j++) { s[k][r][j] += g_s7024[r][j]; g_s7024[r][j] = 0; }
     if (x.n == 256) {
         { const double n = x.n; char buf[512]; int o = snprintf(buf, sizeof buf, "[s7024-gv] cap=%d calls=%u", x.cap, x.n);
-          for (int j = 1; j < 10; j++) if (s[k][0][j]) o += snprintf(buf + o, sizeof buf - o, " b%d=%.1f/%.1fns/w%.2f", j, s[k][0][j] / n,
+          for (int j = 1; j < 10; j++) if (s[k][0][j]) o = rs64_apf(buf, sizeof buf, o, " b%d=%.1f/%.1fns/w%.2f", j, s[k][0][j] / n,
               s[k][1][j] * tb / s[k][0][j], (double)s[k][2][j] / s[k][0][j]);
           fprintf(stderr, "%s\n", buf); for (int r = 0; r < 3; r++) for (int j = 0; j < 10; j++) s[k][r][j] = 0; }
         { const unsigned long long* q = s25[k]; const double n = x.n; auto ns = [&](int a, int b) { return q[b] ? q[a] * tb / q[b] : 0.0; };
@@ -502,7 +503,7 @@ extern "C" void rs64_s7233_win(int x0, int x1, int z0, int z1, float ex, float e
         if (s7233_n[lp] && (s7233_n[lp] >= 128 || now - last[lp] >= 48000000ull)) {
             const double n = (double)s7233_n[lp];
             char buf[512]; int o = snprintf(buf, sizeof buf, "[s7233] ph=%d r=%d calls=%u in=%.1f skip=%.1f wide_by_d8=", lp, lp ? r : 0, s7233_n[lp], s7233_in[lp] / n, s7233_sk[lp] / n);
-            for (int i = 0; i < 17; i++) o += snprintf(buf + o, sizeof buf - o, "%s%.1f", i ? "," : "", s7233_h[lp][i] / n);
+            for (int i = 0; i < 17; i++) o = rs64_apf(buf, sizeof buf, o, "%s%.1f", i ? "," : "", s7233_h[lp][i] / n);
             fprintf(stderr, "%s\n", buf); s7233_n[lp] = 0; s7233_sk[lp] = s7233_in[lp] = 0; for (int i = 0; i < 17; i++) s7233_h[lp][i] = 0; last[lp] = now; }
         if (!last[ph]) last[ph] = now; }
     s7233_x0 = x0; s7233_x1 = x1; s7233_z0 = z0; s7233_z1 = z1; s7233_ex = ex; s7233_ez = ez; s7233_ph = s7233_lp = ph;
@@ -3768,12 +3769,12 @@ extern "C" void rs64_s7336_layout() {  /* once, at the first rs_malloc: evaluate
     if (rs64_s7336_spill_on()) { const uint32_t b = rs64_s6587_spill_base(); a[na++] = { "spill", b, b + rs64_s7326_spill_cap() }; }
     if (rs64_s6099_en()) { const uint32_t c = rs64_s7336_dlpool_cap(); a[na++] = { "dlpool", 0x81000000u - c, 0x81000000u }; }
     char buf[400]; int o = std::snprintf(buf, sizeof buf, "[s7336] layout guest 80000000..%08X ram_top %08X", top, rs64_ram_top);
-    for (int i = 0; i < na; ++i) o += std::snprintf(buf + o, sizeof buf - o, " %s %08X..%08X", a[i].n, a[i].b, a[i].e);
+    for (int i = 0; i < na; ++i) o = rs64_apf(buf, sizeof buf, o, " %s %08X..%08X", a[i].n, a[i].b, a[i].e);
     int bad = 0;
     for (int i = 0; i < na; ++i) { if (a[i].e <= a[i].b) continue;
-        if (a[i].b < top) { o += std::snprintf(buf + o, sizeof buf - o, " OVERLAP %s/guest", a[i].n); ++bad; }
-        if (a[i].e > rs64_ram_top) { o += std::snprintf(buf + o, sizeof buf - o, " GUARD %s", a[i].n); ++bad; }
-        for (int j = i + 1; j < na; ++j) if (a[j].e > a[j].b && a[i].b < a[j].e && a[j].b < a[i].e) { o += std::snprintf(buf + o, sizeof buf - o, " OVERLAP %s/%s", a[i].n, a[j].n); ++bad; } }
+        if (a[i].b < top) { o = rs64_apf(buf, sizeof buf, o, " OVERLAP %s/guest", a[i].n); ++bad; }
+        if (a[i].e > rs64_ram_top) { o = rs64_apf(buf, sizeof buf, o, " GUARD %s", a[i].n); ++bad; }
+        for (int j = i + 1; j < na; ++j) if (a[j].e > a[j].b && a[i].b < a[j].e && a[j].b < a[i].e) { o = rs64_apf(buf, sizeof buf, o, " OVERLAP %s/%s", a[i].n, a[j].n); ++bad; } }
     std::fprintf(stderr, "%s%s%s\n", buf, bad ? "" : " clean", rs64_s7336_on() ? "" : " (s7336 off)"); }
 extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
     const uint32_t cap = rs64_s7336_dlpool_cap();  /* s6587/s7335/s7336: env cap, clamped to the guest top and the spill arena */
@@ -3816,7 +3817,7 @@ extern "C" void rs64_s6088_fuse(uint8_t* rdram, uint32_t ret, uint32_t ra, uint3
         uint32_t n = rd(base + 4 * i); unsigned len = 0, cs = 0;
         while (n && len < 4096) { unsigned age = rd(n + 8) >> 16; cs += age; ++len; ++nent; if (age == 0) ++a0n; else if (age < 16) ++a1n; else ++a2n; if (age > maxage) maxage = age; n = rd(n); }
         totc += cs; if (len) ++nz; if (len > maxlen) maxlen = len;
-        if (i < 40 && o < 480) o += std::snprintf(buf + o, sizeof(buf) - o, "%u:%u/%u ", i, len, cs);
+        if (i < 40 && o < 480) o = rs64_apf(buf, sizeof buf, o, "%u:%u/%u ", i, len, cs);
     }
     std::fprintf(stderr, "[bucketlog] s6092 all: entries=%lu age0=%lu age1_15=%lu age16+=%lu maxage=%u maxchain=%lu\n", nent, a0n, a1n, a2n, maxage, maxlen);
     std::fprintf(stderr, "[bucketlog] s6093 tickcalls=%lu resetcalls=%lu\n", s_s6093_cnt[0], s_s6093_cnt[1]);
@@ -7997,7 +7998,7 @@ static void s4264_flush(int sec) {
 static void s4263_flush(uint8_t* rdram, int sec) {
     s4264_flush(sec);
     char fl[64]; int n = 0;
-    for (int a = 0; a < 16; ++a) n += std::snprintf(fl + n, sizeof(fl) - n, "%02X", (unsigned)MEM_BU(-0X5770 + a, (int64_t)(int32_t)0x80120000));
+    for (int a = 0; a < 16; ++a) n = rs64_apf(fl, sizeof fl, n, "%02X", (unsigned)MEM_BU(-0X5770 + a, (int64_t)(int32_t)0x80120000));
     for (int i = 0; i < 3; ++i) {
         const OSMesgQueue& q = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))kS4263Q[i]);
         std::fprintf(stderr, "[s4263] t=%d mq=0x%08X send=%llu full=%llu recv=%llu rblock=%llu valid=%d flags[8011A890]=%s\n", sec,
@@ -8613,7 +8614,7 @@ void s6892_log(uint8_t* rdram, uint32_t s2, uint32_t bad, uint32_t good, uint32_
     int n = snprintf(line, sizeof line, "[s6892] pc=%08X s2=%08X bad=%08X repair=%08X reads=%lu level=%u dump:", pc, s2, bad, good,
                      s6892_reads, (unsigned)rdram[(0x80130B40u ^ 3) - 0x80000000u]);
     if (s6892_valid(s2))
-        for (uint32_t o = 0; o < 0x60 && n < 960; o += 4) n += snprintf(line + n, sizeof line - n, " %08X", *s6892_word(rdram, s2 + o));
+        for (uint32_t o = 0; o < 0x60 && n < 960; o += 4) n = rs64_apf(line, sizeof line, n, " %08X", *s6892_word(rdram, s2 + o));
     fprintf(stderr, "%s\n", line);
     if (FILE* f = fopen("rs64_s6892.log", "a")) { fprintf(f, "%s\n", line); fclose(f); }
 }

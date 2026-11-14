@@ -194095,3 +194095,32 @@ copies, H-safe vs H-diag vs H-overflow.
   retail mult 1, 0 crash. Same-build revert control ROGUESQ_S7358_ENVCHECK=0 + nan: mult nan, assert 1, crash 1 (the sanitizer is
   the lever). Smoke `env SECS=260 zsh scratch/s7326/run.zsh s7358_dd8 ''`: crash=0 resets=14 late=0 arenafull=0 (= s7357).
 - Next: class AJ (CURRENT-TRUTH 27x) unbounded string copies of env/config/file text into fixed buffers.
+
+## Session 7359 (2026-11-14) — class AJ unbounded string copies closed: no strcpy/sprintf/%s-scanf of env/file text anywhere; 20 unguarded snprintf-append sites (default-on dd8 [s7030]/[s7046]/[s7233] rows) moved to clamped rs64_apf + 1 latent rt64 W-row stack overflow FIXED; census 44 sites, 0 unresolved
+HYPOTHESIS-ID: host-unbounded-string-copy
+Hypotheses: H-safe (every copy bounded), H-diag (only env-gated diagnostics unbounded), H-overflow (a default-on/owner path
+copies unbounded text into a fixed buffer). **The census selects H-safe for the classic copies and H-diag for the
+snprintf-append idiom**: no strcpy/strcat/sprintf/gets of non-literal text exists in our scope (3 strcpy of literals), every
+sscanf %s has a width (%899s into char[900], %15[a-z] into char[16]), strncpy both terminated. The live shape is
+`o += snprintf(b + o, cap - o, ...)`: snprintf returns the untruncated length, so after one truncated write o > cap and the next
+`cap - o` wraps to ~2^64 -> the following write runs past b. 20 such sites had NO guard; the dd8 owner-recipe ones
+([s7030]/[s7031]/[s7033]/[s7034]/[s7046] every 10 s, [s7233]) are default-on and bounded only by value range (measured max 110 of
+400 B and 159 of 300 B; %.1f of a double is type-unbounded, 310 chars for 1e308). Refutes H-overflow at today's magnitudes.
+- Census: tools/s7359_strcopy_census.py (scope as s7356-s7358 + fixup_game_funcs_vendored.py injected C; multi-line append
+  forms). 44 sites: ACC FIXED 20 / GUARDED 9 / G 2 / UNGUARDED 6 (all type-bounded, width proof in MANUAL) / CPY CONST 3 / NCPY 2 /
+  SCAN BOUNDED 2; unresolved 0; 7 planted controls PASS (CPY B/CONST, SCAN B/BOUNDED, ACC UNGUARDED/GUARDED/FIXED). The
+  apply_s5786/s5798/s5866/s5867/s6992 watch scripts carry appends with %s of dladdr names but are not in the regen pipeline (D).
+- FIX: src/main/rs64_apf.h `o = rs64_apf(b, sizeof b, o, fmt, ...)` (offset clamped to cap-1, stays NUL-terminated, negative
+  return leaves o). All 20 unguarded/guarded appends in upstream_compat.cpp (15) and dpc_bridge.cpp floor-mesh (5) converted.
+  lib/rt64 rt64_workload_queue.cpp W present-ring row (ROGUESQ_PRESENT_RING): n<140 loop, then 4 x %.3f of unbounded ms doubles,
+  then `snprintf(row + n, sizeof row - n, "\n")` -> a truncated row wrapped the size (2-byte stack write past row[240]); n
+  clamped to sizeof-2 first. Exported to submodule-patches/rt64.patch.
+- ORIGIN: ours (diagnostic row builders, s6885-s7233). Not a guest writer; the defect is the append idiom itself.
+- Second line, standalone control tools/s7359_apf_ctl.cpp (clang++ -fsanitize=address): equivalence on the measured s7030 row
+  (110 B) and s7046 row (159 B) byte-identical old vs new; 20 x 1e30 -> rs64_apf offset 399, strlen 399, CTL PASS;
+  -DOLD_OVERFLOW (old idiom, same input) -> "AddressSanitizer: stack-buffer-overflow" (positive control).
+- Runtime: 260 s dd8 smoke `env SECS=260 zsh scratch/s7326/run.zsh s7359_dd8 ''`: crash=0 resets=14 late=0 arenafull=0 (= s7358);
+  row counts/sizes same as s7358 (s7030 42/42, s7046 42/42, max hist 110, max eyeedge 159, [s7336] layout clean). After the rt64
+  rebuild: 90 s `ROGUESQ_PRESENT_RING` arm crash=0, 5027 W rows all with wk..qos fields, max 100 of 240 B. The truncation path
+  itself is not reachable in-game (single-source for the rt64 clamp; the helper's clamp is proven by the control).
+- Next: class AK (CURRENT-TRUTH 27y) unterminated guest-RAM string reads (%s/strlen/byte loops on rdram without cap).
