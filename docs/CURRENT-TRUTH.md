@@ -318,10 +318,11 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7304 G5e: ROGUESQ_DD_FOG_ALT=1,3,1 QUALIFIED at dd8 16:9 (in-session soak, ctl flat-30 194 s PASS): L1/L5/L10 300 s, 0 crash,
-   60/s, beyond-route 5/1/1 s (route). It is CHEAPER, not costlier: same-soak L1 no-fog vs fog heaviest20 12.57 vs 9.69 ms, win77-97
-   10.02 vs 8.22 ms, p50 10.76 vs 6.45 ms with emitted cells ~equal (11509 vs 11375), so the saving is per-pixel/fog-cutoff side, not
-   cells (single-source: sequential arms of one soak, L5 9.88->8.91 vs s7294 cross-run). Remaining: owner look; L5/L10 toggle sheets.**
+0. **s7304/s7305 G5e: ROGUESQ_DD_FOG_ALT=1,3,1 QUALIFIED at dd8 16:9: L1/L5/L10 300 s, 0 crash, 60/s (s7304 ctl flat-30 PASS), and
+   CHEAPER (same-soak L1 heaviest20 12.57 -> 9.69 ms, cells ~equal; single-source). s7305 toggle sheets (patch ctl PASS all bands, 0 crash):
+   L5 far/near/side removed 0.9(null)/3.1/2.0% (space level: far ground fades to black, near detail kept, H-melts, borderline 3%);
+   L10 cloud level: ke3 0.2/0.9/0.4 AND the haze-all lever ctl 0.3,0.8 = -0.4/-0.1/-0.4 (all null) -> the fog ramp does not touch
+   L10 at all (H-no-far, harmless). 3-level sheet bar met (L1,L4 s7303; L5,L10 s7305). Remaining: owner look; 21:9 check.**
 0. **s7303 G5e fog END sweep (dd8 16:9, same-run FOG_ALT toggle, xor8 sheets, 0 crashes, patch control PASS in all 12 bands):
    haze grows monotonically as ke drops, no knee. Texture removed far/near/side: L1 ke4.5 0.6(null)/0.9(null)/1.1; L1 ke3 1.3(null)/2.4/2.7;
    L1 ke2 1.5/4.6/3.7; L4 ke3 1.5/6.5/4.0 (%; s7302 ctl 0.3,0.8 = 7/38/22). By eye (docs/owner_sheet_s7303_{l1k3,l4k3,l1k2}_fog_tog.jpg):
@@ -333,7 +334,7 @@ numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
    beyond-route 3/8/0/1/0 s (L5's 8 s are 36-47/s single seconds at t<=76, route), heaviest20 10.6-12.1 ms (headroom 3.2-6.1).
    total_emit L1 11134 L5 11837; L9 6189 (CAPLEVEL 9:8192 binds, wide 2509); L12 RLEVEL 12:48 wins (3839 vs ctl R128 12420 ->
    flat 30); L10 cloud level, no [s7233] terrain lines (same as 16:9). dd8 now qualified at 16:9 and 21:9; OWNER-OPT-INS updated.
-   Next: horizon-in-view dd6-vs-dd8 look sheet, then the game far cutoff 0x8009DEB4.**
+   (horizon sheet + far cutoff 0x8009DEB4 done s7300.)**
 0. **s7297: dd8 px8+R128 auto extended to 21:9 (FB_WIDTH<=796 gate dropped in main.cpp [s7293]).** s7296 soak (L4 21:9 dd8,
    1 run/arm, ctl flat 30 + px8 depth 128 PASS): total_emit ref(px5,R88) 7466 / px8 7909 / px8+R128 11818, win77-97 12.98 /
    13.54 / 13.65 ms, all 60.0/s -> H-219-ok. In-session verify (scratch/s7297_verify.sh): auto [s7293] fbw=1024, 11620 cells/call

@@ -192330,3 +192330,22 @@ caveat: the fog/no-fog cost comparison comes from sequential arms of one soak, n
 larger than the s7294 vs s7304 l1n run-to-run spread (12.57 vs 12.57 ms), so it is credible.
 Rules out: the "shorter fog end pulls the fog-blender switch in and costs frame time" worry (H-hold-cost).
 Next: owner toggle sheets on L5/L10 to complete G5e's 3-level sheet requirement (L1 and L4 exist from s7303), then the owner judges.
+
+## Session 7305 (2026-11-13) — G5e: L5/L10 fog toggle sheets for ROGUESQ_DD_FOG_ALT=1,3 at dd8 16:9; L5 melts its far ground to black with near detail kept, L10 (cloud level) is untouched by the fog ramp even at the haze-all control
+
+Ran (in-session, host idle ~70000 s, screen unlocked): `zsh tools/s7303_fog_ke_sweep.zsh l5k3:5:1,3 l10k3:10:1,3 l10c:10:0.3,0.8`
+(arm.zsh dd8 16:9 DD_MELT+WIDEWIN, px8 auto, same-run xor8 FOG_ALT toggle, 120 s route + 180 s hold). Outputs scratch/s7303/*_{l5k3,
+l10k3,l10c}.txt, run log scratch/s7303/s7305_run.out; sheets docs/owner_sheet_s7305_{l5k3,l10k3}_fog_tog.jpg.
+Witnesses: [s7293] px8 auto line in all 3; [s7302] "fog alt ks=1 ke=3" / "ks=0.3 ke=0.8" in the matching arms. 0 CRASH lines.
+Instrument control: tog_pop 200x40 patch CONTROL PASS (110/110) in every band.
+Texture removed (flip effect, far 12-50 / near 60-88 / side):
+- L5 ke3: 0.86% (null) / 3.13% / 1.96%. Jade Moon is a black-sky level, so fog fades far ground toward black; by eye near terrain keeps
+  its detail (camera poses differ between pair halves, so the sheet is a look aid, not pixel-matched).
+- L10 ke3: 0.16% (null) / 0.90% / 0.41% (null).
+- L10 lever control 0.3,0.8 (which hazes 7/38/22% on L1, s7302): -0.41 / -0.08 / -0.44%, all null. So the fog ramp does nothing on L10:
+  it is the cloud level with no terrain grid (s7000), and its cloud geometry is not drawn through the fogged terrain path.
+Verdict: H-melts holds on L5 (near 3.1%, at the 3% line, far below the 5% H-level-dep bar; L4 was 6.5%); H-no-far selected on L10
+with a same-session lever control that also returns null, so ke3 is harmless there. H-level-dep refuted for L5/L10. The G5e 3-level
+sheet requirement is met (L1/L4 s7303, L5/L10 now). Single run per arm.
+Rules out: a per-level ke (RLEVEL-style) need on L5/L10.
+Next: G5e waits on the owner's look; meanwhile check the opt-in at 21:9 dd8 (owner's ultrawide) - 300 s hold L1/L5 + L1 toggle sheet.
