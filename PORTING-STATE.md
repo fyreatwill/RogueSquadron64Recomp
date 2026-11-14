@@ -194284,5 +194284,5 @@ ROGUESQ_S7097_EDIT=c'` -> crash=0 resets=14 late=0 arenafull=0, load_level_hmp 5
 executed), s7097 35247 begin calls ctl 8/8, 259 [g1b-gt] rows.
 Reviewer side notes, not fixed (NEXT.md): funcs_13 rs5834_who sentinel 2 would index rs5834_n[2] if post ran without pre;
 dpc_bridge.cpp:4116 (int)floor(xa) UB on huge xa; s7318 bcmp ex[s.nex++] check-then-increment unsynchronised.
-Verdict: census + independent reviews select H-hole for 6 sites (all host diagnostics, one default-on) and H-safe/H-trust for the
-rest. Class AN closed. Next: class AO, runtime-sized heap/container buffers indexed by guest values (NEXT.md).
+Verdict: census + independent reviews selects H-hole for 6 sites (all host diagnostics, one default-on) and H-safe/H-trust for the
+rest and refutes H-safe for those 6; this closes class AN. Next discriminator: class AO, runtime-sized heap/container buffers indexed by guest values (NEXT.md).
