@@ -193887,3 +193887,53 @@ Conclusion: H-safe selected for class AD: every enum cast is FIXED or range-mask
 refuted; H-diag not needed. Rules out: invalid bool / enum loads as a live defect source in host code.
 Next: class AE, data races on non-atomic host globals shared between host threads (CURRENT-TRUTH 27s, NEXT.md).
 Discrimination: census + UBSan control select H-safe and refute H-ub for class AD.
+
+## Session 7354 (2026-11-14) — class AE host data races closed with a ThreadSanitizer build: VI cur/next state flip outside message_mutex FIXED (lost-swap window), sample_rate atomic; rest SEM/BENIGN/EXT/D (TSan control PASS, mach-semaphore blind-spot control, 260 s dd8 smoke clean)
+HYPOTHESIS-ID: host-global-data-race. Work unit from NEXT.md (s7353): idiom-class audit, class AE.
+Method change vs NEXT.md: instead of a regex thread-map census (low fidelity for races), asked ground truth first (rule 12): a
+ThreadSanitizer arm. New tools/build_tsan.sh -> build_tsan/ (-O1 -g -fsanitize=thread on C++ only: host runtime, RT64, RSP bridge,
+main; the generated C (RecompiledFuncs, factor5_ucode) is not instrumented, so guest-RAM traffic is untraced). Build took ~2 min.
+Side effect (known since s5598): configuring the second dir drops build/'s spirv-cross subproject rules; `cmake -S . -B build`
+repairs it, and build_tsan.sh now does that at the end. New tools/s7354_tsan_report.py groups TSan reports by (kind, top frame
+pair), prints location / threads / frames and applies a HAND class table (exit 1 on '?' or B).
+Positive control (same run, every run): ROGUESQ_S7354_RACE_CTL=1 (main.cpp s7354_race_ctl_start) plants two detached threads
+incrementing a plain static; TSan reported s7354_race_ctl_var in all 6 run logs.
+Runs (owner-style recipe FPS60 dd8 21:9 forced L1 route, BUILD=build_tsan, owner save COPIED into build_tsan/saves, read-only):
+run1 (pre-fix, 2 attempts) + run1 attempt 3 / run2 / run3 (post-fix). Datum: under TSan the game stalls in early boot every time,
+pre- and post-fix: VI keeps ticking (17856 VIs) but RDP frames stop at rdpFs=39 at origin 0xA6F000 and initMission never comes
+(run3: nomission after WAITN=90). So TSan's runtime coverage is boot / intro threads only (game, VI, gfx, task, AI drain,
+present, workload, Metal). Not root-caused; ASan builds reach missions, so it is TSan slowdown or a TSan-specific interaction.
+Findings (groups) and classes:
+- B -> FIXED: `events_context` (ultramodern events.cpp). vi_thread_func called `events_context.vi.update_vi()` with NO lock; it
+  reads next_state, then `cur_state ^= 1; *get_next_state() = *get_cur_state();`. osViSwapBuffer / osViSetMode /
+  osViSetSpecialFeatures / osViSetEvent write next_state under message_mutex on game threads. TSan: VI-thread read at the update
+  vs writes at osViSwapBuffer, osViSetMode, osViSetSpecialFeatures, plus osViSetEvent read vs VI write. Failure shape: a swap
+  whose store follows the flip lands in the new CURRENT state and the copy then discards it from next, so the next VI shows
+  the old framebuffer (lost swap = held frame) until the game swaps again; osViGetNextFramebuffer also reads a mid-flip index.
+  ORIGIN: writer = vi_thread_func's unlocked update_vi (upstream N64ModernRuntime shape); values legitimate, ordering not.
+  Fix: update_vi, set_dummy_vi (pre-game dummy mode) and osViGetNextFramebuffer / osViGetCurrentFramebuffer take message_mutex.
+  Nothing called from update_vi takes message_mutex (its lockers: osSetEventMesg, osViSetEvent, sp/dp_complete, osVi*, the two
+  AI drain threads); no caller of osViGet*Framebuffer holds it. Not measured: how often the lost swap actually fired in normal
+  play (ns window); latent-to-rare, not tied to any owner symptom.
+- B -> FIXED: `sample_rate` (audio.cpp): written by init_audio / set_audio_frequency (game thread), read by the AI drain thread via
+  get_audio_frequency -> std::atomic<uint32_t>.
+- SEM (TSan blind spot): guest mq / OSThread fields in RDRAM read in osRecvMesg / osSendMesg_recomp / osRecvMesg_recomp / the new
+  thread after osCreateThread, writers guest threads; and the gfx thread signalling the init semaphore on T13's stack. All are
+  handoffs through moodycamel::LightweightSemaphore, which on macOS is a mach semaphore_t that TSan does not intercept.
+  Control tools/s7354_sem_ctl.cpp (clang++ -fsanitize=thread, maxSpins 0 so it blocks in semaphore_wait): `sem` arm (correctly
+  synchronised handoff) 1 report, `mutex` arm 0, `none` (real race) 1 -> TSan cannot see this happens-before; these rows are FP.
+- BENIGN: g_recomp_rdram_for_wp_raw (one aligned 8-byte publish of the rdram base before guest code, read by diag poll threads);
+  RT64 sharedResources->swapChainRate (aligned u32 pacing hint written on the present thread under its mutex on window move,
+  read unlocked by RT64Context::get_display_framerate).
+- EXT: plume_metal.cpp completion-handler block + vptr (copied on the present thread, run on Metal's internal queue).
+- D: osViSwapBuffer_recomp ROGUESQ_FB_HASH (the m6 harness sets it) hashes the guest framebuffer while RT64 fullSync writes it.
+- No lock-order-inversion, deadlock, use-after-free or signal-unsafe reports (2845 data race + 31 vptr reports total, all grouped).
+Before/after (same recipe, same boot window, per TSan log): events_context rows 4/4/0/0/0, sample_rate 1/1/0/0/0 (2 pre-fix
+logs, 3 post-fix logs with >500 reports each); control present in all.
+Smoke on build/ (normal build, fix in): `env SECS=260 zsh scratch/s7326/run.zsh s7354_dd8 ''` (hangar -> mission -> abort cycles,
+dd8 21:9 FPS60): crash=0 resets=14 late=0 arenafull=0, 6 initMission, 259 update_screen rows; same reset count as earlier
+smokes on this route.
+lib/ edited (events.cpp, audio.cpp): ./submodule-patches/export.sh run, N64ModernRuntime.patch refreshed in this commit.
+Rules out: a default-on unsynchronised global between game / VI / gfx / AI threads in the boot path other than the two fixed.
+Does not rule out: races that only occur in mission phases (TSan never got there); races inside the uninstrumented generated C.
+Next: class AF, async-signal-unsafe calls in signal handlers (NEXT.md, CURRENT-TRUTH 27t).

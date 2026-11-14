@@ -12706,8 +12706,18 @@ extern "C" void rs64_stderr_async_restore() { // async-signal tolerant: atomics,
 #else
 extern "C" void rs64_stderr_async_restore() {}
 #endif
+// s7354 class AE positive control: ROGUESQ_S7354_RACE_CTL=1 plants a deliberate unsynchronised write/write race on a plain
+// static between two host threads, so a ThreadSanitizer run (tools/build_tsan.sh) proves in the same run that it reports.
+static int s7354_race_ctl_var;
+static void s7354_race_ctl_start() {
+    const char* e = std::getenv("ROGUESQ_S7354_RACE_CTL"); if (!e || *e != '1') return;
+    std::thread([] { for (int i = 0; i < 100000; i++) s7354_race_ctl_var++; }).detach();
+    std::thread([] { for (int i = 0; i < 100000; i++) s7354_race_ctl_var++; }).detach();
+    std::fprintf(stderr, "[s7354] race control armed\n");
+}
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
+    s7354_race_ctl_start();
 #if !defined(_WIN32)
     s6979se::init(); std::atexit([] { rs64_stderr_async_restore(); }); std::at_quick_exit([] { rs64_stderr_async_restore(); });
 #endif

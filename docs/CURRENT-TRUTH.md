@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7352 (2026-11-14).
+Compact operational handoff, as of Session 7354 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -445,10 +445,23 @@ is in the s7307 archive). Active unit: NEXT.md.
     resolved to byte/int types. Combiner ColorInput/AlphaInput come from switch returns (enumerators only). No -fstrict-enums in the
     build. tools/s7353_boolenum_ctl.cpp: UBSan flags exactly the planted unscoped cast and the guest byte memcpy'd into a bool, none of
     the FIXED/RC/conversion twins. Next: class AE (27s).
-27s. **Next unit (NEXT.md): class AE, data races on non-atomic host globals shared between the game thread and the RSP / RDP /
-    present threads** (UB; torn or stale reads). Census thread entry points, the globals each writes, and classify atomic / mutex /
-    single-thread / write-once-before-start / diag-only.
-28. **When 1-27s offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27s. **Data races on host globals (class AE): CLOSED (s7354, ThreadSanitizer runtime + standalone control; 1 default-on race FIXED).**
+    `tools/build_tsan.sh` (build_tsan/, C++ only instrumented, generated C not) + `tools/s7354_tsan_report.py` (groups reports,
+    HAND classes, exit 1 on '?'/B). Same-run positive control ROGUESQ_S7354_RACE_CTL=1 (planted static race, main.cpp) fired in
+    every run. FIXED (ultramodern events.cpp, default on): vi_thread_func flipped `cur_state` and copied cur->next in update_vi()
+    WITHOUT message_mutex while osViSwapBuffer / osViSetMode / osViSetSpecialFeatures write next_state under it, so a swap stored
+    after the flip lands in the now-current state and is lost by `*next = *cur`. update_vi, set_dummy_vi and osViGet{Next,Current}
+    Framebuffer now take message_mutex; audio.cpp sample_rate -> std::atomic. TSan: 4 events_context + 1 sample_rate rows in 2/2
+    pre-fix runs, 0 in 3/3 post-fix runs. Rest classified: SEM (guest-thread handoff via moodycamel LightweightSemaphore = mach
+    semaphore_t, which TSan does not model; tools/s7354_sem_ctl.cpp shows TSan reporting a correctly synchronised sem handoff),
+    BENIGN (rdram base publish, RT64 swapChainRate hint), EXT (Metal completion block), D (ROGUESQ_FB_HASH). No lock-order
+    inversions or deadlocks reported. LIMIT: under TSan the game stalls in early boot (RDP frames stop at 39, pre- and post-fix),
+    so runtime coverage is boot only; mission-phase threads (present / workload / audio under load) are covered by the static
+    lock review only. 260 s dd8 smoke on build/ after the fix: 0 crash, 14 resets, 6 mission loads. Next: class AF (27t).
+27t. **Next unit (NEXT.md): class AF, async-signal-unsafe calls in signal handlers** (7 sigaction/signal installs, all in
+    src/main/main.cpp). A crash taken while the faulting thread holds the malloc / stdio lock deadlocks an fprintf/malloc handler
+    and turns the crash into a silent hang.
+28. **When 1-27t offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

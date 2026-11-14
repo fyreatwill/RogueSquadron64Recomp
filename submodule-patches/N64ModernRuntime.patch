@@ -4852,28 +4852,29 @@ index 57db6f6..a8d37c4 100644
      using set_frequency_t = void(uint32_t);
      queue_samples_t* queue_samples;
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
-index 3198be0..a8f859b 100644
+index 3198be0..c25d889 100644
 --- a/ultramodern/src/audio.cpp
 +++ b/ultramodern/src/audio.cpp
-@@ -1,9 +1,17 @@
+@@ -1,8 +1,17 @@
++#include <atomic>
  #include "ultramodern/ultra64.h"
  #include "ultramodern/ultramodern.hpp"
  #include <cassert>
 +#include <cstdio>
 +#include <cstdlib>
  
- static uint32_t sample_rate = 48000;
- 
+-static uint32_t sample_rate = 48000;
++static std::atomic<uint32_t> sample_rate{48000}; // s7354: written by the game thread, read by the AI drain thread
++
 +extern "C" uint32_t rs64_phase_ord();
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
 +extern "C" bool rs64_audio_current_route_snapshot(
 +    uint32_t*, uint32_t*, uint32_t*, uint32_t*, uint32_t*, int*, const char**);
-+
+ 
  static ultramodern::audio_callbacks_t audio_callbacks;
  
- void ultramodern::set_audio_callbacks(const ultramodern::audio_callbacks_t& callbacks) {
-@@ -22,6 +30,8 @@ void ultramodern::set_audio_frequency(uint32_t freq) {
+@@ -22,6 +31,8 @@ void ultramodern::set_audio_frequency(uint32_t freq) {
      sample_rate = freq;
  }
  
@@ -4882,7 +4883,7 @@ index 3198be0..a8f859b 100644
  void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_t byte_count) {
      // Ensure that the byte count is an integer multiple of samples.
      assert((byte_count & 1) == 0);
-@@ -31,7 +41,60 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
+@@ -31,7 +42,60 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
  
      // Queue the swapped audio data.
      if (sample_count > 0 && audio_callbacks.queue_samples) {
@@ -4945,7 +4946,7 @@ index 3198be0..a8f859b 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..01195e3 100644
+index 149e770..fccb0cd 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,471 @@
@@ -5688,7 +5689,7 @@ index 149e770..01195e3 100644
          //if (next > std::chrono::high_resolution_clock::now()) {
          //    printf("Sleeping for %" PRIu64 " us to get from %" PRIu64 " us to %" PRIu64 " us \n",
          //        (next - std::chrono::high_resolution_clock::now()) / 1us,
-@@ -200,28 +826,71 @@ void vi_thread_func() {
+@@ -200,28 +826,77 @@ void vi_thread_func() {
              // printf("Skipping the next VI wait\n");
              next = std::chrono::high_resolution_clock::now();
          }
@@ -5738,7 +5739,8 @@ index 149e770..01195e3 100644
 -        if (!ultramodern::is_game_started()) {
 +        if (!game_started) {
              static bool odd = false;
-             set_dummy_vi(odd);
+-            set_dummy_vi(odd);
++            { std::lock_guard dummy_lock{ events_context.message_mutex }; set_dummy_vi(odd); } // s7354
              odd = !odd;
          }
  
@@ -5761,11 +5763,17 @@ index 149e770..01195e3 100644
  
          // Update VI registers and swap VI modes.
 -        events_context.vi.update_vi();
-+        events_context.vi.update_vi(callback_ordinal, total_vis, callback_delta);
++        // s7354 class AE: the cur/next VI state flip + copy must hold message_mutex. osViSwapBuffer / osViSetMode /
++        // osViSetEvent / osViSetSpecialFeatures write next_state under it on game threads; unlocked, a swap whose store lands
++        // after `cur_state ^= 1` hits the now-current state and is dropped by `*next = *cur` (lost framebuffer swap). TSan s7354.
++        {
++            std::lock_guard vi_lock{ events_context.message_mutex };
++            events_context.vi.update_vi(callback_ordinal, total_vis, callback_delta);
++        }
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,13 +900,24 @@ void vi_thread_func() {
+@@ -231,13 +906,24 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -5791,7 +5799,7 @@ index 149e770..01195e3 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +929,438 @@ void vi_thread_func() {
+@@ -249,15 +935,438 @@ void vi_thread_func() {
      }
  }
  
@@ -6230,7 +6238,7 @@ index 149e770..01195e3 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1380,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1386,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -6284,7 +6292,7 @@ index 149e770..01195e3 100644
  
          (void)task_type;
      }
-@@ -325,6 +1462,34 @@ void ultramodern::trigger_config_action() {
+@@ -325,6 +1468,34 @@ void ultramodern::trigger_config_action() {
  std::atomic<ultramodern::renderer::SetupResult> renderer_setup_result = ultramodern::renderer::SetupResult::Success;
  std::atomic<ultramodern::renderer::GraphicsApi> renderer_chosen_api = ultramodern::renderer::GraphicsApi::Auto;
  
@@ -6319,7 +6327,7 @@ index 149e770..01195e3 100644
  void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready, ultramodern::renderer::WindowHandle window_handle) {
      bool enabled_instant_present = false;
      using namespace std::chrono_literals;
-@@ -354,11 +1519,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -354,11 +1525,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
      thread_ready->signal();
  
      while (!exited) {
@@ -6337,7 +6345,7 @@ index 149e770..01195e3 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1539,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1545,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -6361,7 +6369,7 @@ index 149e770..01195e3 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1565,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1571,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
@@ -6406,7 +6414,7 @@ index 149e770..01195e3 100644
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1663,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1669,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -6414,7 +6422,7 @@ index 149e770..01195e3 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,8 +1671,17 @@ void set_dummy_vi(bool odd) {
+@@ -463,8 +1677,17 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -6432,7 +6440,7 @@ index 149e770..01195e3 100644
      events_context.vi.get_next_state()->framebuffer = frameBufPtr;
  }
  
-@@ -473,6 +1690,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1696,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -6440,7 +6448,17 @@ index 149e770..01195e3 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -567,16 +1785,24 @@ extern "C" PTR(void) osViGetCurrentFramebuffer() {
+@@ -559,24 +1783,34 @@ extern "C" void osViSetYScale(float scale) {
+ }
+ 
+ extern "C" PTR(void) osViGetNextFramebuffer() {
++    std::lock_guard lock{ events_context.message_mutex }; // s7354: cur_state flips on the VI thread
+     return events_context.vi.get_next_state()->framebuffer;
+ }
+ 
+ extern "C" PTR(void) osViGetCurrentFramebuffer() {
++    std::lock_guard lock{ events_context.message_mutex }; // s7354: cur_state flips on the VI thread
+     return events_context.vi.get_cur_state()->framebuffer;
  }
  
  void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
@@ -6465,7 +6483,7 @@ index 149e770..01195e3 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -632,6 +1858,60 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -632,6 +1866,60 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      events_context.vi.states[1].mode = &dummy_mode;
  
      events_context.vi.thread = std::thread{ vi_thread_func };
