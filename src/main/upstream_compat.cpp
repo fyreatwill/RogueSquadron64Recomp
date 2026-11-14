@@ -1399,7 +1399,9 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         if (n % s_coarse == 0 || (n >= s_from && n <= s_to && n % s_every == 0)) {
             char path[512];
             snprintf(path, sizeof path, "%s/rdram_%07d_fb%08X.bin", s_rd, n, fb);
-            if (FILE* f = fopen(path, "wb")) { fwrite(rdram, 1, 0x680000, f); fclose(f); }
+            static const int s_bytes = ev("ROGUESQ_RDRAM_DUMP_BYTES", 0x680000);  /* s7317: 0x1400000 covers OSMEM 12 heap + 0x81000000 spill arena */
+            if (FILE* f = fopen(path, "wb")) { fwrite(rdram, 1, (size_t)(s_bytes > 0x1400000 ? 0x1400000 : s_bytes), f); fclose(f); }
+            { extern void rs64_s7317_write(const char*); snprintf(path, sizeof path, "%s/alloc_%07d.txt", s_rd, n); rs64_s7317_write(path); }
         }
     }
     // ROGUESQ_WATCH_LOG=1 (s5076): per-swap log of the stick struct (0x80130B88 port0),
@@ -3343,8 +3345,35 @@ static inline uint32_t s5042_rd(const uint8_t* rd, uint32_t off);
 static uint32_t g_s6127_flags;
 extern "C" void rs64_s6127_fl(uint32_t f) { g_s6127_flags = f; }
 extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
+/* s7317: ROGUESQ_S7317_ALLOCMAP=1 keeps every live guest allocation (heap AND spill) as ptr -> (req, malloc ra), written beside
+   each ROGUESQ_RDRAM_DUMP_DIR dump as alloc_<swap>.txt, so a word holding a spill pointer can be mapped to its owner block and allocator.
+   Guest ra is 0 here (recompiled jal does not write r31), so the caller is the host return address chain (frames 0..2), resolved
+   with dladdr at write time. '#' header: spill blocks recorded / freed so far (positive control that spill blocks reach the map). */
+struct S7317B { uint32_t req; void* pc[3]; };
+static std::mutex s_s7317_mu; static std::map<uint32_t, S7317B> s_s7317_live; static uint64_t s_s7317_sprec = 0, s_s7317_spfree = 0;
+static bool s7317_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7317_ALLOCMAP"); return e && e[0] && e[0] != '0'; }(); return on; }
+static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x81400000u; }
+static void s7317_free(uint32_t ptr) { if (!s7317_on() || !ptr) return; std::lock_guard<std::mutex> lk(s_s7317_mu); if (s_s7317_live.erase(ptr) && s7317_isspill(ptr)) ++s_s7317_spfree; }
+static void s7317_sym(FILE* f, void* pc) {
+    Dl_info di; if (pc && dladdr(pc, &di) && di.dli_sname) fprintf(f, " %s+0x%lx", di.dli_sname, (unsigned long)((char*)pc - (char*)di.dli_saddr)); else fprintf(f, " ?%p", pc);
+}
+void rs64_s7317_write(const char* path) {
+    if (!s7317_on()) return;
+    std::lock_guard<std::mutex> lk(s_s7317_mu);
+    if (FILE* f = fopen(path, "w")) {
+        uint64_t nsp = 0; for (auto& kv : s_s7317_live) nsp += s7317_isspill(kv.first);
+        fprintf(f, "# spill_recorded=%llu spill_freed=%llu spill_live=%llu blocks=%zu\n", (unsigned long long)s_s7317_sprec, (unsigned long long)s_s7317_spfree, (unsigned long long)nsp, s_s7317_live.size());
+        for (auto& kv : s_s7317_live) { fprintf(f, "%08X %X", kv.first, kv.second.req); for (void* pc : kv.second.pc) s7317_sym(f, pc); fprintf(f, "\n"); }
+        fclose(f);
+    }
+}
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     rs64_floor_ownership("malloc", ptr, req, ra);
+    if (ptr && s7317_on()) {
+        S7317B b{ req, { __builtin_return_address(0), nullptr, nullptr } };
+        void** fp = (void**)__builtin_frame_address(0);  /* arm64: fp[0] = caller fp, fp[1] = return address */
+        for (int k = 1; k < 3 && fp && fp[0]; ++k) { fp = (void**)fp[0]; b.pc[k] = fp[1]; }
+        std::lock_guard<std::mutex> lk(s_s7317_mu); s_s7317_live[ptr] = b; if (s7317_isspill(ptr)) ++s_s7317_sprec; }
     if (!s6063_on()) return;
     if (!ptr && req == 0x1000u) s6127_walk(req);
     if (ptr && req == 0x1000u) { static int k1 = 0; if (k1++ < 40) { s6127_walk(req, true); uint8_t* r = g_s6127_rd; std::fprintf(stderr, "[heaplog-1000ok] flags=%X -> %08X slot100=%08X slotE8=%08X slot104=%08X\n", g_s6127_flags, ptr, r?s5042_rd(r,0x10FF00u):0xFFFFFFFFu, r?s5042_rd(r,0x10FF18u):0xFFFFFFFFu, r?s5042_rd(r,0x10FEFCu):0xFFFFFFFFu); } }
@@ -3362,6 +3391,7 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
 }
 extern "C" void rs64_s6063_free(uint32_t ptr) {
     rs64_floor_ownership("free", ptr, 0, 0);
+    s7317_free(ptr);
     if (!s6063_on() || !ptr) return;
     auto it = s_s6063_live.find(ptr); if (it == s_s6063_live.end()) return;
     s_s6063_bytes -= it->second; s_s6063_live.erase(it);
@@ -3624,6 +3654,7 @@ extern "C" int rs64_s6569_isspill(uint32_t p) {
     auto lv = s_s6702_live.find(p);
     if (lv == s_s6702_live.end()) { static int nb = 0; if (nb++ < 20) std::fprintf(stderr, "[spill] free of unknown/double-freed %08X ignored\n", p); return 1; }
     uint32_t sz = lv->second; s_s6702_live.erase(lv); s_s6702_live_bytes -= sz; ++s_s6702_freed; s6893_ev(2, sz, p);
+    s7317_free(p);
     auto it = s_s6702_free.emplace(p, sz).first;  /* coalesce with neighbours */
     if (it != s_s6702_free.begin()) { auto pv = std::prev(it); if (pv->first + pv->second == it->first) { pv->second += it->second; s_s6702_free.erase(it); it = pv; } }
     auto nx = std::next(it); if (nx != s_s6702_free.end() && it->first + it->second == nx->first) { it->second += nx->second; s_s6702_free.erase(nx); }

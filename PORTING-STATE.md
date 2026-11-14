@@ -192621,3 +192621,49 @@ a global word, e.g. heap end / arena top, and rejects or misorders 0x81xxxxxx sp
   undumped phase reads as scalar. Next: the struct-field edge, starting from the objects that actually hold spill pointers.
 - Docs: docs/HEAP-ADDR-AUDIT.md s7316 section; CURRENT-TRUTH Next steps 14 (closed), 15 (spill holders), 16 (fallback).
   Dumps deleted after analysis (197 MB); census.txt and spill_words.txt kept.
+
+## Session 7317 (2026-11-14) — spill-pointer holders named: at dd2 16:9 L1 spill is load-window-only (833/833 freed, 0 live in flight); at dd8 21:9 L4 up to 120 live spill blocks / 2747 holder words, 42 owner types; top-byte shift class (32 sites) closed spill-equal; s7316 global census holds under live spill; 182 field-order compares open
+Unit (NEXT.md s7317, slug spill-holder-field-compare). Hypotheses: H-reject (a retail compare on an object field that holds a spill
+pointer rejects or misorders 0x81xxxxxx) vs H-clean; first sub-question: which objects hold live spill pointers at all.
+- Instrument (one build, src/main/upstream_compat.cpp): ROGUESQ_S7317_ALLOCMAP=1 keeps every live guest allocation (heap AND spill)
+  as ptr -> (req, host caller frames 0..2, dladdr names), written beside each RDRAM dump as alloc_<swap>.txt with a header
+  `spill_recorded/spill_freed/spill_live`; ROGUESQ_RDRAM_DUMP_BYTES (default 0x680000, cap 0x1400000) so dumps cover the OSMEM 12
+  heap and the 0x81000000 arena. Boring finding first: guest ra is always 0 in rs_malloc (recompiled jal never writes r31), so the
+  s6893 ring's ra column and s6063 heaplog ra= are 0 too; host frame 0 is the rs_malloc caller (rs64_s6063_malloc is a tail call).
+- New tools/s7317_spill_holders.py <dumpdir> [--all] [--selftest]: every word with value in 0x81000000..0x813FFFFF classed live_ptr
+  (inside a live spill block; owner = enclosing live block + offset + caller), dangling (aligned, in a live heap block, no live
+  target), unaligned / free / static data. Selftest (plant a live-spill pointer in a live heap block) PASS in both runs.
+- Run A, dd2 16:9 L1 (s7316 recipe: g1_level_coverage_common LEVEL=1 FPS60 dd2 ASPECT=16:9, WIDE_ROUTE=1, dumps every 25 swaps in
+  400-900 + every 400): flight 133 s, alive, 0 crash. Map header: spill_recorded 0 up to swap 575, 833 at swap 600, and
+  spill_freed = 833 at every later dump -> spill_live 0 in all 47 dumps (positive control: the map does see 833 spill blocks). Spill at
+  this recipe is a load-window transient (log: [spill] lines only between VI #640 and #704). Mission phase (swap >= 2000): 0 words
+  below the arena high-water 0x8100C560 hold a spill-range value. The pre-mission stale ones: 16 words at 0x80154B20+0x1B60..0x2128 =
+  the registerServiceWorker 0x2230 thread STACK (saved ra 0x80038F4C/0x801ECAB0 in the frame), i.e. dead loader frame slots, which
+  hold ordinary 0x809E.. heap pointers after the next load (swap 1600); two words = 0x81000000 inside buildSongDecodeBufferRing
+  buffers, one already at swap 400 before any spill existed (audio data, a natural coincidence control). The rest of s7316's 80-87
+  "spill words" are halfword pairs (0x81088108 x369) and unaligned values.
+- Run B, dd8 21:9 L4 (FPS60 dd8 DD_UNSAFE WIDEWIN ASPECT=21:9, dumps every 400): flight 159 s, alive, 0 crash, 24 dumps. spill_live
+  22 -> 120 blocks in flight (1801 recorded, 1681 freed by swap 8800), live_ptr up to 2747 words/dump. Owner table (42 types,
+  scratch/s7317/d8_owner_table.txt): allocAndInitDoublyLinkedNodePool12 (0x37188, 518/dump), walkDatTreeAndAllocSubtypeBuffers
+  (0x2A0), slotDispatcherInner (0x204C), allocNpcContextArrays (0x2D00), walkMeshdef0List (0x9C4/0x4A4/0x2AC/0x2E8/0x204),
+  allocObjectPoolNode (0x6C0), flattenAnimTreeAndAllocateSlot, allocateAndInitCraftNpcContext, allocAndInitGridCellArray,
+  multiEventTemplateNpcHandler, randomParticleWithParentNpcHandler, registerServiceWorker stack, ...; plus static tables
+  0x80114404..0x801148B4 (151 words), 0x80116414.., 0x80117C28.., and spill->spill links (224).
+- New tools/s7317_field_compare_census.py <holders_all.txt> [--selftest]. Class A, top-byte shift (srl/sra >= 23 reaching a compare
+  with a nonzero constant), whole program: 32 sites, all SPILL-EQUAL by evaluation (every heap-range and spill-range KSEG0 value gives
+  the same outcome): sign-extended bytes vs small constants, GBI command decode (data_gap_80024A0C >>25 == 0x72 = G_TEXRECT, >>30 ==
+  3). Selftest: a planted `>>24 == 0x80` (the s6993 shape) reads SPILL-DIFFERS and a `>>28 == 8` reads spill-equal, PASS. Class B,
+  field order compares (lw at a holder-field offset, register base, then slt/sltu vs a non-constant): 182 sites (inflate_codes_recomp
+  17, loadDatFile 10, inflate_blocks 10, _Genld 8, ...), not classified: a static linear pass cannot tell whether the other operand
+  is in the same block.
+- Second line for s7316: tools/s7316_data_bound_census.py --ram on the 24 heavy-spill dumps: 303 sites, unclassified 0,
+  spill_valued_sites 0, although 2113 static words held live spill pointers in the same dumps -> the global-word class is H-clean with
+  spill live, not only in the s7316 run that (it turns out) had none live.
+- Discrimination: holder sub-question answered with named owners (selects "live holders exist only when spill is live in flight":
+  dd8 21:9 yes, dd2 16:9 L1 no). H-reject refuted for the top-byte-shift form (A) and for global words under live spill; open for the
+  B form (182 sites). Two lines for A: static census + arithmetic evaluation over both ranges, with a two-way control.
+- Superseded: s7316 "spill 0x81000000 live" in its dd2 run and "80-87 heap words held spill pointers, so the dump read sees them":
+  at that recipe no spill block is live after the load window; those words are data and dead stack slots (its injected control
+  stays valid).
+- Docs: docs/HEAP-ADDR-AUDIT.md s7317 section; CURRENT-TRUTH Next steps 15 rewritten; NEXT.md = B runtime cross-block hook.
+  Dumps (1.4 GB) deleted after analysis; tables kept in scratch/s7317 (d8_holders_all.txt.gz is the full per-word list).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7314 (2026-11-14).
+Compact operational handoff, as of Session 7317 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -87,6 +87,8 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7316 "spill live in the dd2 16:9 L1 run; 80-87 heap words held spill pointers". Believable: the words were aligned 0x81xxxxxx in
+  heap. s7317 allocation map: all 833 spill blocks are freed in the load window; those words are halfword data and dead stack slots.
 - s7312 "the presented window can lag the RDP stream for seconds (first run after a rebuild)". Believable: same pose, same stream,
   two captures 0.7 s apart both wrong. s7313: a voided batch-1 L5 game was still alive and the pose script captured the oldest game
   (`pgrep|head -1`); the repro arm with a one-game guard matched 6/6 (diff 0.01 vs 92.8 control).
@@ -220,8 +222,11 @@ is in the s7307 archive). Active unit: NEXT.md.
 14. **Retail DATA-word bound class: CLOSED (s7316, H-clean).** tools/s7316_data_bound_census.py --ram: 303 sites, 41 globals, 4
     pointer-valued (DL pool limit/chunk, heap head), none ever holds a spill pointer; spill-injected dump flags 169 (control).
     Table in docs/HEAP-ADDR-AUDIT.md. Open edge: struct-field bounds (G via register base), see 15.
-15. **Spill-pointer holders (s7317 candidate):** the 80-87 heap words holding 0x81xxxxxx pointers at runtime
-    (scratch/s7316/spill_words.txt): name the owning objects and check every retail compare on those fields.
+15. **Spill-pointer holders (s7317, owners named).** Instrument ROGUESQ_S7317_ALLOCMAP=1 + ROGUESQ_RDRAM_DUMP_BYTES=20971520;
+    tools/s7317_spill_holders.py. dd2 16:9 L1: spill is load-window-only (833/833 freed, 0 live in flight). dd8 21:9 L4: 22-120 live
+    spill blocks in flight, up to 2747 holder words, 42 owner types (scratch/s7317/d8_owner_table.txt). tools/s7317_field_compare_census.py:
+    top-byte shift class 32 sites all spill-equal (CLOSED); s7316 global census 0 spill-valued on the dd8 dumps. **OPEN: class B, 182
+    field-vs-register ordering compares** (inflate, loadDatFile, _Genld...): next unit = runtime cross-block hook (NEXT.md).
 16. **When 1-15 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

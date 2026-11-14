@@ -92,3 +92,15 @@ sees spill pointers where they live. Control: the same census on a dump with 0x8
 sites. Verdict H-clean: no retail data-word bound rejects or misorders a spill pointer. Method limit: linear pass without a
 CFG; a G read through a register base (struct field) is not followed; a G that holds a pointer only outside the dumped
 phases is classed scalar. Single run, static + runtime lines agree.
+
+## Spill-pointer holders and the struct-field edge (s7317)
+
+Instrument: `ROGUESQ_S7317_ALLOCMAP=1` + `ROGUESQ_RDRAM_DUMP_BYTES=20971520` beside `ROGUESQ_RDRAM_DUMP_DIR` writes `alloc_<swap>.txt`
+(every live heap and spill block, host caller names; guest ra is 0 in rs_malloc). `tools/s7317_spill_holders.py <dir>` classes each
+spill-range word (live_ptr / dangling / data) with owner block, offset and caller; `--selftest` plants a pointer.
+- dd2 16:9 L1: spill is load-window-only (833 recorded, 833 freed before swap 600), 0 live spill blocks in flight.
+- dd8 21:9 L4: 22-120 live spill blocks in flight, up to 2747 holder words, 42 owner types (scratch/s7317/d8_owner_table.txt).
+`tools/s7317_field_compare_census.py <holders_all.txt>`:
+- Class A, top-byte shift then compare (shift form of the s6993 mask test): 32 sites, all spill-equal by evaluation. CLOSED.
+- Class B, field-vs-register ordering compares at holder offsets: 182 sites, OPEN (needs a runtime cross-block check).
+s7316 global-word census re-run on the dd8 dumps (2113 static words holding live spill pointers): 0 spill-valued sites.
