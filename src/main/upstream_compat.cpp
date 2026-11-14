@@ -3353,6 +3353,31 @@ extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
    with dladdr at write time. '#' header: spill blocks recorded / freed so far (positive control that spill blocks reach the map). */
 struct S7317B { uint32_t req; void* pc[3]; double t; uint32_t fl; };
 static std::mutex s_s7317_mu; static std::map<uint32_t, S7317B> s_s7317_live; static uint64_t s_s7317_sprec = 0, s_s7317_spfree = 0;
+static char s7332_carve_tag;  /* s7332: pc[0] marker of host-map entries registered from the guest carve walk (not an rs_malloc) */
+static std::map<uint32_t, uint32_t> s_s7332_carve;  /* s7332: carve start -> req; fallback when a nested temp-pool block shadows it */
+/* s7333 item 24(a): every erase / replace of a host-map entry at a key the carve walk ever registered is logged with its path
+   (free / malloc / rebuild / sync / fallback) and the guest header at key-0x10 at that moment ([s7333] lines, first 300).
+   ROGUESQ_S7333_KEEP (default 1; =0 old): the s7318_blk carve fallback trusts the guest header (fl&6 == 6, size covers x) instead of
+   the host entry, so a host erase between heapsyncs no longer turns a still-allocated guest carve into "not live". */
+extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
+static std::map<uint32_t, uint64_t> s_s7333_keys;  /* carve key -> event count; guarded by s_s7317_mu */
+static uint64_t s_s7333_nev = 0, s_s7333_kept = 0, s_s7333_dropped = 0;
+static uint64_t s_s7332_ncarve = 0;
+static bool s7333_keep_on() { static const int v = [] { const char* e = std::getenv("ROGUESQ_S7333_KEEP"); return (e && *e == '0') ? 0 : 1; }(); return v != 0; }
+static bool s7333_hdr(uint32_t key, uint32_t* fl, uint32_t* sz) {
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; *fl = *sz = 0; if (!r || key < 0x80000010u || key >= 0x81000000u) return false;
+    const uint32_t h = key - 0x10u; *fl = (*(volatile uint32_t*)(r + (h & 0x00FFFFFCu))) >> 16; *sz = *(volatile uint32_t*)(r + ((h + 4u) & 0x00FFFFFCu));
+    return (*fl & 6u) == 6u && !(*fl & 8u) && *sz && *sz <= 0x1000000u; }
+/* caller holds s_s7317_mu */
+static void s7333_ev(const char* path, uint32_t key, uint32_t oldreq, bool oldcarve, uint32_t newreq) {
+    auto k = s_s7333_keys.find(key); if (k == s_s7333_keys.end()) return; ++k->second; ++s_s7333_nev;
+    uint32_t fl, sz; const bool g = s7333_hdr(key, &fl, &sz);
+    void* pc[4] = {nullptr, nullptr, nullptr, nullptr}; void** fp = (void**)__builtin_frame_address(0);
+    for (int i = 0; i < 4 && fp && fp[0]; ++i) { fp = (void**)fp[0]; pc[i] = fp[1]; }
+    if (s_s7333_nev <= 300) { std::fprintf(stderr, "[s7333] carve-key %s key=%08X old=%c+%X new=%X guest fl=%X sz=%X carve_ok=%d n=%llu stack:", path, key,
+                                         oldcarve ? 'C' : 'M', oldreq, newreq, fl, sz, (int)g, (unsigned long long)k->second);
+        for (void* q : pc) { Dl_info di; if (q && dladdr(q, &di) && di.dli_sname) std::fprintf(stderr, " %s+0x%lx", di.dli_sname, (unsigned long)((char*)q - (char*)di.dli_saddr)); else std::fprintf(stderr, " ?"); }
+        std::fprintf(stderr, "\n"); } }
 static bool s7317_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7317_ALLOCMAP"); return e && e[0] && e[0] != '0'; }(); return on; }
 static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x81800000u; }  /* s7326: 8 MB arena */
 /* s7325 audio heap-gap reads (needs ROGUESQ_S7324_RCPREF + ALLOCMAP): history of the last 65536 non-spill frees (ptr, req, free
@@ -3398,6 +3423,7 @@ static void s7317_free(uint32_t ptr) {
                                  sv->second.kind, (unsigned long long)sv->second.reset, (unsigned long long)s_s7326_resets, dt,
                                  (pc && dladdr(pc, &di) && di.dli_sname) ? di.dli_sname : "?"); } }
             s_s7326_surv.erase(sv); } }
+    s7333_ev("free", ptr, it->second.req, it->second.pc[0] == (void*)&s7332_carve_tag, 0);
     s_s7317_live.erase(it); }
 static void s7317_sym(FILE* f, void* pc) {
     Dl_info di; if (pc && dladdr(pc, &di) && di.dli_sname) fprintf(f, " %s+0x%lx", di.dli_sname, (unsigned long)((char*)pc - (char*)di.dli_saddr)); else fprintf(f, " ?%p", pc);
@@ -3431,18 +3457,25 @@ struct S7318Init { S7318Init() {
     rs64_s7318_on = 1; std::fprintf(stderr, "[s7318] bcmp probe on -> %s ctl=%08X allocmap=%d\n", g_s7318_path, g_s7318_ctl, (int)s7317_on()); } } g_s7318_init;
 inline bool s7318_sp(uint32_t x) { return x >= 0x81000000u && x < 0x81800000u; }  /* s7326: 8 MB arena */
 /* block containing x, or 0 (caller holds s_s7317_mu) */
-static char s7332_carve_tag;  /* s7332: pc[0] marker of host-map entries registered from the guest carve walk (not an rs_malloc) */
-static std::map<uint32_t, uint32_t> s_s7332_carve;  /* s7332: carve start -> req; fallback when a nested temp-pool block shadows it */
+void s7333_boot_register();
 uint32_t s7318_blk(uint32_t x, uint32_t* req) {
     auto it = s_s7317_live.upper_bound(x);
     if (it != s_s7317_live.begin()) { --it;
         if (x - it->first < (it->second.req ? it->second.req : 1)) { if (req) *req = it->second.req; return it->first; } }
-    auto c = s_s7332_carve.upper_bound(x); if (c == s_s7332_carve.begin()) return 0; --c;
-    if (x - c->first >= c->second) return 0;
-    auto l = s_s7317_live.find(c->first);
-    if (l == s_s7317_live.end()) { s_s7332_carve.erase(c); return 0; }  /* dropped since; an rs_malloc that re-took the start keeps it:
-       the flags&4 malloc returns the whole free tail (guest header size), the host entry only records the requested size */
-    if (req) *req = c->second; return c->first; }
+    if (s7333_keep_on() && s_s7332_ncarve == 0) s7333_boot_register();  /* s7333: boot FIFO precedes heapsync #1 */
+    auto c = s_s7332_carve.upper_bound(x);
+    /* s7333: walk DOWN the carve keys: carves from different scenes overlap, so a stale nearer key must not shadow the enclosing one.
+       A live host entry at the key (an rs_malloc that re-took the carve start with req < guest size) keeps the carve. */
+    for (int n = 0; n < 64 && c != s_s7332_carve.begin(); ++n) { --c;
+        if (s_s7317_live.find(c->first) == s_s7317_live.end()) {
+            uint32_t fl, sz;
+            if (s7333_keep_on() && s7333_hdr(c->first, &fl, &sz)) { if (x - c->first < sz) { ++s_s7333_kept; if (req) *req = sz; return c->first; } continue; }
+            if (!s7333_keep_on() && x - c->first >= c->second) return 0;
+            ++s_s7333_dropped; s7333_ev("fallback-drop", c->first, c->second, true, 0); c = s_s7332_carve.erase(c);
+            if (!s7333_keep_on()) return 0; continue; }
+        if (x - c->first < c->second) { if (req) *req = c->second; return c->first; }
+        if (!s7333_keep_on()) return 0; }
+    return 0; }
 /* 0 nn 1 same 2 spsp 3 cross 4 speq; *unm set when a spill operand is unmapped */
 int s7318_class(uint32_t a, uint32_t b, int* unm, uint32_t* blk, uint32_t* req) {
     bool sa = s7318_sp(a), sb = s7318_sp(b); *unm = 0; *blk = 0; *req = 0;
@@ -3515,7 +3548,9 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
         void** fp = (void**)__builtin_frame_address(0);  /* arm64: fp[0] = caller fp, fp[1] = return address */
         for (int k = 1; k < 3 && fp && fp[0]; ++k) { fp = (void**)fp[0]; b.pc[k] = fp[1]; }
         if (rs64_s7331_on) rs64_s7331_malloc(ptr, req, b.pc[1]);
-        std::lock_guard<std::mutex> lk(s_s7317_mu); s_s7317_live[ptr] = b; if (s7317_isspill(ptr)) ++s_s7317_sprec;
+        std::lock_guard<std::mutex> lk(s_s7317_mu);
+        { auto ex = s_s7317_live.find(ptr); s7333_ev("malloc", ptr, ex != s_s7317_live.end() ? ex->second.req : 0u, ex != s_s7317_live.end() && ex->second.pc[0] == (void*)&s7332_carve_tag, req); }
+        s_s7317_live[ptr] = b; if (s7317_isspill(ptr)) ++s_s7317_sprec;
         else { s_s7325_lastmalloc = ptr; if (ptr < s_s7325_hmin) s_s7325_hmin = ptr; if (ptr + req > s_s7325_hmax) s_s7325_hmax = ptr + req; } }
     if (!s6063_on()) return;
     if (!ptr && req == 0x1000u) s6127_walk(req);
@@ -4420,6 +4455,24 @@ static int s7325_guest(uint32_t x, uint32_t* fl, uint32_t* h, uint32_t* sz) {
     for (const auto& k : b) if (x >= k.h && x < k.h + 0x10u + k.sz) { *fl = k.fl; *h = k.h; *sz = k.sz; return x < k.h + 0x10u ? 1 : 2; }
     return 0; }
 }  // namespace
+/* s7333 item 24(b): for an address the guest walk does not place (FIFO above the arena top), report the highest walked block end
+   below x, the 4 words at x-0x10 and at that end (sentinel header?), plus the s7333 keep/drop counters. */
+extern "C" void rs64_s7333_above(uint32_t x, uint32_t* top, uint32_t* w, uint32_t* tw, uint64_t* kept, uint64_t* dropped, uint64_t* nev) {
+    *top = 0; for (int i = 0; i < 4; ++i) w[i] = tw[i] = 0; *kept = s_s7333_kept; *dropped = s_s7333_dropped; *nev = s_s7333_nev;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    std::vector<G5aBlk> b; g5a_walk(r, b);
+    for (const auto& k : b) { const uint32_t e = k.h + 0x10u + k.sz; if (e <= x && e > *top) *top = e; }
+    for (int i = 0; i < 4; ++i) { w[i] = g5a_rd(r, x - 0x10u + 4u * i); if (*top) tw[i] = g5a_rd(r, *top + 4u * i); } }
+/* s7333: before heapsync #1 (boot) register the guest fl&6 carves from one guest walk, retried every 512 lookups. Caller holds s_s7317_mu. */
+namespace {
+void s7333_boot_register() {
+    static uint32_t miss = 0; if ((miss++ & 511u) != 0) return;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    std::vector<G5aBlk> b; g5a_walk(r, b); static int nlog = 0;
+    for (const auto& k : b) { if ((k.fl & 6u) != 6u) continue; const uint32_t p0 = k.h + 0x10u; if (s_s7332_carve.count(p0)) continue;
+        s_s7332_carve[p0] = k.sz; s_s7333_keys.emplace(p0, 0);
+        if (nlog++ < 16) std::fprintf(stderr, "[s7333] boot carve %08X+%X (guest fl=%X) registered before heapsync #1\n", p0, k.sz, k.fl); } }
+}  // namespace
 struct S7325Out { uint32_t lo, loend, hi, lreq, hreq; void* lopc[3]; void* hipc[3]; uint32_t fptr, freq; double fage; void* fpc[4]; void* apc[3];
                   int gk; uint32_t gfl, gh, gsz; };
 /* s7325 gap class of KSEG0 x: 0 inside a live block, 1 outside the heap extent ever allocated (static), 2 header gap (x in
@@ -4466,6 +4519,7 @@ extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) 
             if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
                 s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
             if (rs64_s7331_on) s7331_t.emplace_back('R', it->first, it->second.req, it->second.pc[1]);
+            s7333_ev("rebuild", it->first, it->second.req, it->second.pc[0] == (void*)&s7332_carve_tag, 0);
             ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); } }
     for (auto it = s_s6063_live.lower_bound(lo); it != s_s6063_live.end() && it->first < hi;) { s_s6063_bytes -= it->second; it = s_s6063_live.erase(it); }
     if (s7317_on() && head == 0x8010FEFCu) { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now(); uint64_t nt = 0, nb = 0;
@@ -4483,7 +4537,6 @@ extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) 
    block outlives the reset that retail would have applied to it), and the tag control (recorded a1 & 0x80 vs guest header tag & 0x80
    on matched heap blocks: must agree). */
 static void rs64_s7326_scan(uint32_t a0, uint64_t ncall, uint64_t npk, uint64_t npk_b, uint32_t ctl);
-static uint64_t s_s7332_ncarve = 0;
 static bool s7332_carve_on() { static const int v = [] { const char* e = std::getenv("ROGUESQ_S7332_CARVE"); return (e && *e == '0') ? 0 : 1; }(); return v != 0; }
 extern "C" void rs64_s7325_heapsync(uint32_t a0);
 extern "C" void rs64_s7325_heapsync(uint32_t a0) {
@@ -4511,13 +4564,14 @@ extern "C" void rs64_s7325_heapsync(uint32_t a0) {
           if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
               s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
           if (rs64_s7331_on && it->second.pc[0] != (void*)&s7332_carve_tag) s7331_t.emplace_back('H', it->first, it->second.req, it->second.pc[1]);
+          s7333_ev("sync", it->first, it->second.req, it->second.pc[0] == (void*)&s7332_carve_tag, 0);
           ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); }
       /* s7332 item 24: coalesceFreeHeapBlocks (0x80002510/18/5C, 0x800023AC/D8: store watch s7332) writes the per-scene flags&4 carve
          block header by hand: no rs_malloc call, so rs64_s6063_malloc never saw it. It holds the framebuffers, the temp arena and the
          gfx RDP FIFO (OSTask output_buff). Register every guest-allocated fl&4 block the map lacks so ALLOCMAP consumers class it live. */
       if (s7332_carve_on()) for (const auto& k : b) { if ((k.fl & 6u) != 6u) continue; const uint32_t p0 = k.h + 0x10u;
-          auto ex = s_s7317_live.find(p0); if (ex != s_s7317_live.end()) { if (ex->second.pc[0] == (void*)&s7332_carve_tag) ex->second.req = k.sz; if (k.sz > ex->second.req || ex->second.pc[0] == (void*)&s7332_carve_tag) s_s7332_carve[p0] = k.sz; continue; }
-          s_s7317_live[p0] = S7317B{k.sz, {(void*)&s7332_carve_tag, (void*)&rs64_s7325_heapsync, nullptr}, now, 0x04u}; s_s7332_carve[p0] = k.sz; ++s_s7332_ncarve;
+          auto ex = s_s7317_live.find(p0); if (ex != s_s7317_live.end()) { if (ex->second.pc[0] == (void*)&s7332_carve_tag) ex->second.req = k.sz; if (k.sz > ex->second.req || ex->second.pc[0] == (void*)&s7332_carve_tag) { s_s7332_carve[p0] = k.sz; s_s7333_keys.emplace(p0, 0); } continue; }
+          s_s7317_live[p0] = S7317B{k.sz, {(void*)&s7332_carve_tag, (void*)&rs64_s7325_heapsync, nullptr}, now, 0x04u}; s_s7332_carve[p0] = k.sz; s_s7333_keys.emplace(p0, 0); ++s_s7332_ncarve;
           if (s_s7332_ncarve <= 64) std::fprintf(stderr, "[s7332] carve #%llu registered %08X+%X (guest fl=%X) at heapsync #%llu\n",
                                                   (unsigned long long)s_s7332_ncarve, p0, k.sz, k.fl, (unsigned long long)(ncall)); }
       if (dropped) for (auto it = s_s7317_live.lower_bound(0x81000000u); it != s_s7317_live.end() && s7318_sp(it->first); ++it) {

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7332 (2026-11-14).
+Compact operational handoff, as of Session 7333 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -309,13 +309,14 @@ is in the s7307 archive). Active unit: NEXT.md.
     are inside a guest-allocated flags&4 carve block = the per-scene framebuffer / temp pool (parseImageFile, rt64_writeback).
     Abort route too (s7332): the s7331_abort_resetw soak's rc=0 was grep's, and its 3 "NEW" rows were the gfx RDP FIFO in the carve
     (a line-start guest-walk artefact). With the walk on the first changed byte: 3 reruns, rc 0, other owners 0, stale 0.
-24. **flags&4 carve block: writer named (s7332, H-carve), partly registered.** coalesceFreeHeapBlocks (pc 80002510/18/5C, 800023AC/D8)
-    writes the per-scene fl=6 block header by hand. The block holds the framebuffers, the temp arena and the gfx RDP FIFO (OSTask
-    output_buff, set by buildAndRegisterDefaultMaterial 0x80017F80 from advanceVideoFrame's args, OSTask 0x800277C8). ALLOCMAP now
-    registers every guest fl&6 block at each heapsync (ROGUESQ_S7332_CARVE=0 = off), with a nested-block lookup fallback. FIFO-in-carve
-    host-live 14-15 of 18-20 transitions per abort-route run. Open: (a) the carve start entry is erased between heapsyncs (rs_free path
-    upstream_compat:3401, or the flags&4 rs_malloc re-taking the start with req < guest size); (b) the FIFO placed ABOVE the arena top
-    (guest walk 0:0, e.g. 80986800) is an unmodelled above-heap carve. Probe: `[s7332] fifo` lines (ROGUESQ_S7331_RESETW=1).
+24. **flags&4 carve block: writer named (s7332), (a) CLOSED s7333.** coalesceFreeHeapBlocks (pc 80002510/18/5C, 800023AC/D8) writes
+    the per-scene fl=6 header by hand. The block holds the framebuffers, the temp arena and the gfx RDP FIFO (OSTask output_buff). ALLOCMAP
+    registers guest fl&6 blocks at each heapsync (ROGUESQ_S7332_CARVE=0 off) and before heapsync #1 (s7333). s7333: the carve start is
+    erased by the buildHeapFreeList rebuild while the guest still says fl=6. The real gap was a lookup bug: stale overlapping carve
+    keys shadowed the enclosing carve. Fix: walk the carve keys down and trust the guest header (ROGUESQ_S7333_KEEP=0 = old). Abort route
+    FIFO-in-carve host-live 17/17 (old 17/22). Report tools/s7333_carve_report.py. Open (b): the 13 above-heap FIFO transitions all start
+    0x10 past the arena's fl=8 sz=0 end sentinel (80904000, 80986800; boot 80B77800 at +0xD810). That is non-heap guest memory, and its
+    host "freed" class is stale history. Model it as its own class (NEXT.md).
 25. **Soak recipes take the analyser's own rc** (`${pipestatus[1]}`), never a downstream grep's (s7332).
 26. **When 1-25 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.

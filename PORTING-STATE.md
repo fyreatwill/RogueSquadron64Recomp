@@ -193181,3 +193181,32 @@ ORIGIN: the writer is the retail gfx ucode filling its RDP FIFO, which the game 
 writer, no dangling write, no mitigation. The instrument changes are attribution only.
 Rules out: the abort route as a counter-example to item 23 H-audio-only (it holds there: 0 non-mixer guest-free writers once the walk
 uses the written byte). Not run-validated: change (4) (built only). Logs: scratch/s7332/ (report*.txt, r2..r5_lines.txt, run_abort*.zsh).
+
+## Session 7333 (2026-11-14) — item 24(a) closed: carve-start erase is the rebuild path + a carve-lookup shadowing bug; FIFO-in-carve host-live 17/17; (b) above-heap FIFO sits on the arena's fl=8 end sentinel
+
+HYPOTHESIS-ID hostmap-carve-blind. One build (v1) logged every erase/replace of a host-map key the carve walk ever registered,
+with path and guest header at key-0x10 ([s7333] carve-key lines, src/main/upstream_compat.cpp s7333_ev). It also carried a
+guest-header keep in the s7318_blk carve fallback (ROGUESQ_S7333_KEEP, default 1, =0 old), and per gfx FIFO transition the arena
+top, the words at out-0x10 and at the top, plus keep/drop counters ([s7333] fifo, src/rsp/s7331_reset_writer.cpp). Recipe:
+scratch/s7333/run2.zsh (s7332 abort route, dd8 21:9, 540 s, RCPREF=ctl + S7331_RESETW). New report tools/s7333_carve_report.py
+(rc 0 only when every guest=2 fl&6 FIFO transition reads host=0).
+
+Results (3 runs, one at a time, all 0 crash, s7331 report rc 0, rs64_s7331.log.tmp gone = the s7332 tmp+rename dump validated):
+| arm | build | in-carve FIFO host-live |
+| keep0 (old behaviour) | v1 | 17/22 (4 host=4, 1 host=3) |
+| keep (guest-header keep) | v1 | 16/20 (4 host=4) |
+| keepv2 (keep + walk-down + boot registration) | v2 | **17/17** |
+(a) paths named: the carve-start entry at 80989000 is erased by the **rebuild** path (buildHeapFreeList from ensureHeapInitialized
+inside rs_malloc, range 80989000..80A1F000) while the guest header still says fl=6 sz=1D1000. That is H-rebuild; H-free and
+H-malloc only touched keys after the guest had reused them (fl=2, nested zcalloc). The keep on its own did not move the count.
+The 4 remaining misses were (1) **a lookup bug**: the fallback checked only the nearest carve key <= x, and stale keys from
+earlier scenes overlap (8096B000, 80892800, 80896800 sit inside 8081E800+331800), so the fallback dropped the stale key and
+returned "untracked" without trying the enclosing carve (3 cases, out=80B20000); (2) the boot FIFO 80B77800 runs before heapsync #1
+registered anything (1 case). v2 walks DOWN the carve keys (up to 64), skips stale ones whose guest header is no longer fl&6,
+and registers guest carves from one walk before heapsync #1 (every 512 lookups; "[s7333] boot carve 809F2000+195800").
+(b) measured: all 13 above-heap FIFO transitions over the three runs start exactly 0x10 past an **fl=8 sz=0 arena end sentinel**
+(80903FF0 -> 80904000 x7, 809867F0 -> 80986800 x4). The boot case 80B77800 is 0xD810 past the sentinel 80B69FF0. The region
+above the sentinel is non-heap guest memory (arena trimmed below the FIFO); its host class 3 "freed" is stale free history from a
+block that covered it before, not a dangling owner. Not yet modelled.
+Rules out: H-free/H-malloc as the carve-start eraser; "the keep alone fixes it". The cross-run arm comparison is about a host-map
+classification, not an animating scene. Same-build positive control: keep0 shows the misses that v2 removes.

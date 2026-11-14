@@ -200,6 +200,7 @@ extern "C" void rs64_s7331_malloc(uint32_t ptr, uint32_t req, void* own) {
     }
 }
 // RSP DMA (raw dram, inclusive len as passed to the s7094 hook)
+extern "C" void rs64_s7333_above(uint32_t x, uint32_t* top, uint32_t* w, uint32_t* tw, uint64_t* kept, uint64_t* dropped, uint64_t* nev);
 extern "C" void rs64_s7331_task(const uint32_t* f) {  // s7332: f = type ucode dram_stack out out_size data data_size yield yield_size
     if (!rs64_s7331_on || !f || f[0] < 1 || f[0] > 2) return;
     { std::lock_guard<std::mutex> lk(g_mu); memcpy(g_task[f[0]], f, sizeof g_task[0]); }
@@ -214,6 +215,11 @@ extern "C" void rs64_s7331_task(const uint32_t* f) {  // s7332: f = type ucode d
     fprintf(stderr, "[s7332] fifo t=%.6f sync=%llu out=%08X osz=%08X guest=%d:%X:%08X+%X host=%d lo=%08X+%X lown=%s hi=%08X | end guest=%d:%X:%08X+%X host=%d\n",
             now_s(), (unsigned long long)g_nsync, f[3], f[4], o.gk, o.gfl, o.gh, o.gsz, hk, o.lo, o.lreq, sym(o.lopc[1]).c_str(), o.hi,
             e.gk, e.gfl, e.gh, e.gsz, ek);
+    {   // s7333: arena top / sentinel words for guest 0:0 FIFOs, and the carve keep/drop counters
+        uint32_t top, w[4], tw[4]; uint64_t kp, dr, nv; rs64_s7333_above(f[3], &top, w, tw, &kp, &dr, &nv);
+        fprintf(stderr, "[s7333] fifo out=%08X guest=%d host=%d top=%08X dist=%X pre=%08X %08X %08X %08X topw=%08X %08X %08X %08X kept=%llu dropped=%llu ev=%llu\n",
+                f[3], o.gk, hk, top, top ? f[3] - top : 0u, w[0], w[1], w[2], w[3], tw[0], tw[1], tw[2], tw[3],
+                (unsigned long long)kp, (unsigned long long)dr, (unsigned long long)nv); }
 }
 extern "C" void rs64_s7331_dma(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud) {
     if (!rs64_s7331_on) return;
