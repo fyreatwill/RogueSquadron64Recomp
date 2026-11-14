@@ -193210,3 +193210,15 @@ above the sentinel is non-heap guest memory (arena trimmed below the FIFO); its 
 block that covered it before, not a dangling owner. Not yet modelled.
 Rules out: H-free/H-malloc as the carve-start eraser; "the keep alone fixes it". The cross-run arm comparison is about a host-map
 classification, not an animating scene. Same-build positive control: keep0 shows the misses that v2 removes.
+Verdicts (s7333, offline on scratch/s7326/s7333_keepv2/run.log):
+- (a): **SELECTS H-rebuild + H-shadow** (stale overlapping carve key shadows the enclosing carve in s7318_blk). **REFUTES H-free and
+  H-malloc** as the carve-start eraser: their only events hit keys the guest had already reused (header fl=2). keep0 17/22 -> keepv2 17/17.
+- (b): **REFUTES H-trim as stated** (sentinel == a buildHeapFreeList hi). No sentinel matches any rebuild range bound: 80903FF0,
+  809867F0 and 80B69FF0 against rebuild ranges 80A40000..80B20000, 809B6000..80A35800, 80989000..80A1F000 etc. Every sentinel sits
+  inside the carve freed at the previous heapsync (806E4800..80B10000, 8081E800..80B50000, 809F2000..80B87800), exactly 0x10 below the
+  FIFO, and the FIFO's first words follow the sentinel. So the guest ends a heap arena with an fl=8 header placed inside the old freed
+  carve, directly under the new FIFO. Host class 3 is literal history (the old carve was freed). The open question is whether the
+  guest owns that tail (H-top: non-heap carve) or it is still free memory (H-stale).
+- **Next discriminator:** a guest store watch on the sentinel words (80903FF0/809867F0, the s7332 store-watch mechanism) naming the pc
+  that writes fl=8, and the free-list head after it. If that pc is in the arena setup that also sets the FIFO base, H-top selected:
+  add class 5. If it is buildHeapFreeList's terminator and the span above is still on a free list, H-stale: a real overlap.

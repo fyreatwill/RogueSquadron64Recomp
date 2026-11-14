@@ -316,7 +316,8 @@ is in the s7307 archive). Active unit: NEXT.md.
     keys shadowed the enclosing carve. Fix: walk the carve keys down and trust the guest header (ROGUESQ_S7333_KEEP=0 = old). Abort route
     FIFO-in-carve host-live 17/17 (old 17/22). Report tools/s7333_carve_report.py. Open (b): the 13 above-heap FIFO transitions all start
     0x10 past the arena's fl=8 sz=0 end sentinel (80904000, 80986800; boot 80B77800 at +0xD810). That is non-heap guest memory, and its
-    host "freed" class is stale history. Model it as its own class (NEXT.md).
+    host "freed" class is literal history: each sentinel sits inside the carve freed at the previous heapsync, not at a rebuild bound
+    (H-trim refuted). Next discriminator: a store watch on the sentinel naming its writer, H-top vs H-stale (NEXT.md).
 25. **Soak recipes take the analyser's own rc** (`${pipestatus[1]}`), never a downstream grep's (s7332).
 26. **When 1-25 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.

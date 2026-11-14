@@ -7,7 +7,10 @@ Hypotheses: H-trim (the scene setup sets the arena end below the FIFO/fb region 
 carve: the sentinel writer is in the same coalesceFreeHeapBlocks / buildHeapFreeList(lo, hi) call, hi = sentinel), H-top (the region
 is the RAMTOP tail osMemSize - fb, always the same physical span per scene), H-stale (a real freed block still covers it, and a
 write there after the free would be dangling).
-Measurement (offline first, ONE build if needed): from scratch/s7326/s7333_keepv2/run.log, compare each sentinel address to the
+s7333 OFFLINE RESULT: H-trim (sentinel == rebuild hi) REFUTED; every sentinel lies inside the previous heapsync's freed carve, 0x10
+below the FIFO. Discriminator now: guest store watch on the sentinel words (s7332 store-watch mechanism) -> writer pc + free-list
+state. Pc in the arena/FIFO setup -> H-top (add class 5); buildHeapFreeList terminator with span still free-listed -> H-stale.
+Old plan (kept for reference): from scratch/s7326/s7333_keepv2/run.log, compare each sentinel address to the
 "[s7325] heap rebuild ... range=lo..hi" hi values and to the preceding carve end. If sentinel == rebuild hi, H-trim. Then add class
 5 "above arena end sentinel (guest non-heap)" in rs64_s7325_gap (computed from the guest walk's sentinel, ahead of the freed-history
 check), make tools/s7331_reset_writer_report.py and s7333_carve_report.py print it, and rerun ONE abort route:
