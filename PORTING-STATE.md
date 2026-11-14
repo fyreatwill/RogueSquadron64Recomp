@@ -192776,3 +192776,6 @@ HYPOTHESIS-ID: spill-holder-pointer-trunc (closed). Unit from NEXT.md s7321.
 - Rules out H-alias for class D. With A-C, the holder-field edge of the spill-pointer class (top byte, order, difference,
   truncation) is closed. Two lines: runtime with control, and static provenance (single-source for the 7). Queued
   s7321_trunc_levels (L1/L12 coverage). Next: KSEG re-tag class E (NEXT.md).
+- Discrimination: selects H-safe/H-scalar and refutes H-alias on 26/26 class-D sites (19 at runtime with 0 spill sources under a
+  passing control, 7 statically). Next discriminator: the class-E re-tag census (NEXT.md). Narrowed values rebuilt into KSEG0 pointers,
+  paired with their producers, then the unpaired producers hooked with ctl 800173C0.
