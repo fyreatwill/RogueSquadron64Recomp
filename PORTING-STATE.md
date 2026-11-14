@@ -192914,6 +192914,10 @@ hook; e dd8 + coalesce re-sync. scratch/s7325/{a,b,c,d,e}{4,5}.log, d_rebuilds.t
 - Implication for s7317-s7324: heap-side "live block" lookups ran on a map carrying hundreds of stale entries after the first scene
   change. Spill-side classifications (classes A-G cross/alias verdicts) used spill entries, which only die through the rs_free hook,
   so they stand; the s7324 heap-gap row is withdrawn.
+DISCRIMINATION: selects H-untracked (retail bulk free bypasses the rs_free hook; named coalesceFreeHeapBlocks / buildHeapFreeList),
+refutes H-freed for the 40k reads (guest walk: inside allocated blocks), refutes H-adjacent (header edges were stale entries) and
+refutes H-dd (dd1 4:3 identical). Next discriminator: spill non-persistent survivors per scene reset and whether rs_free ever
+reclaims them (H-leak vs H-freed-later, NEXT.md spill-scene-reset-leak).
 ORIGIN: the stale entries were written by rs64_s6063_malloc (s7317 map) for blocks the retail scene reset later freed in bulk
 (coalesceFreeHeapBlocks / buildHeapFreeList) without calling rs_free; values were legitimate at write time. The re-sync is an
 instrument correction, not a game-side mitigation.
