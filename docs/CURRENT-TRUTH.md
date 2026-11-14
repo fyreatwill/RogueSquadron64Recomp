@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7325 (2026-11-14).
+Compact operational handoff, as of Session 7326 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -53,6 +53,11 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   (LOG_PHASE -> G1E_PROBES); the coverage harness defaults OWNER_TIMING=1 (s7229).
 - **Boot freeze (1 in ~65, s6993) stays PASSIVE:** [stall-dump] prints [stall-wait] + [stall-cf0]; H-cycle refuted
   (s7193); 0 in 100+ owner-env boots since. Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+- **dd8 21:9 hangar-route mission-load crash FIXED (s7326, default on):** spill blocks never saw the retail scene-change bulk free
+  (coalesceFreeHeapBlocks frees every non-0x80 persistent block), so loadLevelAssets' 0x2DFF00 outlived the reset, the 4 MB spill
+  arena filled, rs_malloc NULL, SIGBUS in grid-cell terrain code. rs64_s7326_spill_reset releases a1&0x84==0 spill blocks at the reset
+  (ROGUESQ_SPILL_RESET=0 old) + 8 MB arena 0x81000000-0x81800000, RAMTOP 24 (ROGUESQ_SPILL_MB=4 old). Same-build arms: release-only
+  and arena-only both crash, both together 650 s / 2 mission cycles clean; heap_np_kept=0 at every sync (retail semantics).
 - **L15 21:9 dd4 crash FIXED (s6992):** 7-site `(p & 0xFF000000) == 0x80000000` test vs the 0x81000000 spill arena;
   tools/apply_s6993_ptrmask.py, ROGUESQ_PTRMASK=0 retail.
 - **G1e:** 60 fps in flight on all levels (s6996; use fl_shown). Defaults VI_RT, STDERR_ASYNC, G1E_CELLIDX;
@@ -261,10 +266,10 @@ is in the s7307 archive). Active unit: NEXT.md.
     guest ALLOCATED block (independent heap walk), dd1 4:3 identical. tools/apply_s7325_heaprebuild.py (buildHeapFreeList hook +
     coalesce wrapper -> rs64_s7325_heapsync, ALLOCMAP-only) re-syncs: stale 531 -> 1, gap reads 10.5k -> 46, class G re-run clean.
     Any future ALLOCMAP/HEAPLOG consumer gets the corrected map; report tools/s7325_gap_report.py.
-21. **Spill blocks outlive the retail scene reset (s7325 datum, NEXT.md).** Spill blocks are not in the guest chain, so the bulk free
-    cannot release them; arm e saw 1 non-persistent (a1 tag & 0x80 == 0) spill block (initWaterSprayEffectAndSfx 0x2FD0) live after a
-    reset. Measure growth across many scene changes at dd>1; if real, free non-persistent spill blocks in rs64_s7325_heapsync (retail
-    semantics), two-arm qualified.
+21. **Spill scene-reset leak: FIXED (s7326, H-leak, was a real crash).** See headline. Qualify: soak s7326_spill_levels (forced L4 + L15
+    dd8 21:9 300 s); then the owner's hangar route at dd4/dd6 16:9 and 21:9 (does it spill at all?), and a class G re-run
+    (ROGUESQ_S7324_RCPREF=ctl) with blocks in 0x81400000-0x81800000. Instrument: ROGUESQ_S7317_ALLOCMAP=1 + ROGUESQ_S7326_CTL=1,
+    route scratch/s7326/run.zsh <name> "<env>".
 22. **Scene-transition audio read of just-freed song-channel arrays (s7325, single-source).** 46 audio DMA reads + 6 writes in 200 s
     land in a guest FREE block, arrays freed 0-14 ms earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync.
     Retail race vs our audio-task wait not waiting: compare the wait's completion against the host audio RSP task end.

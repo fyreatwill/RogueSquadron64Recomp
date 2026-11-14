@@ -12487,8 +12487,8 @@ static void rs64_g1c_apply_dd_policy() {
     const char* om = std::getenv("ROGUESQ_OSMEM_MB");
     if (om && std::atoi(om) > 8) {
         setenv("ROGUESQ_SPILL_HI", "1", 0);
-        setenv("ROGUESQ_RAMTOP_MB", "20", 0);
-        std::fprintf(stderr, "[ddbundle] osmem=%s MB > 8 -> spill arena 0x81000000, ramtop 20 MB\n", om);
+        setenv("ROGUESQ_RAMTOP_MB", "24", 0);  /* s7326: 8 MB spill arena 0x81000000-0x81800000 (was 20 = 4 MB) */
+        std::fprintf(stderr, "[ddbundle] osmem=%s MB > 8 -> spill arena 0x81000000, ramtop 24 MB\n", om);
     }
     setenv("ROGUESQ_RAMTOP_MB", "16", 0);
     setenv("ROGUESQ_MALLOC_SPILL", "1", 0);

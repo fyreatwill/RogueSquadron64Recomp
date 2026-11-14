@@ -3353,7 +3353,7 @@ extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
 struct S7317B { uint32_t req; void* pc[3]; double t; uint32_t fl; };
 static std::mutex s_s7317_mu; static std::map<uint32_t, S7317B> s_s7317_live; static uint64_t s_s7317_sprec = 0, s_s7317_spfree = 0;
 static bool s7317_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7317_ALLOCMAP"); return e && e[0] && e[0] != '0'; }(); return on; }
-static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x81400000u; }
+static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x81800000u; }  /* s7326: 8 MB arena */
 /* s7325 audio heap-gap reads (needs ROGUESQ_S7324_RCPREF + ALLOCMAP): history of the last 65536 non-spill frees (ptr, req, free
    time, host freer frames, allocator frames) so an RCP read in no live block can be classed freed / header gap / untracked. */
 extern "C" int rs64_s7324_on;
@@ -3362,6 +3362,16 @@ static std::multimap<uint32_t, S7325F> s_s7325_freed;
 static std::deque<std::multimap<uint32_t, S7325F>::iterator> s_s7325_ord;
 static uint64_t s_s7325_seq = 0; static uint32_t s_s7325_lastfree = 0, s_s7325_lastmalloc = 0, s_s7325_hmin = 0xFFFFFFFFu, s_s7325_hmax = 0;
 static double s7325_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+/* s7326: spill blocks alive at a retail scene reset that retail would have released there: kind 'C' = a1 tag lacks 0x80 and not
+   flags&4, alive after coalesceFreeHeapBlocks (persistent-heap bulk free); 'T' = flags&4 (temp pool) alive at the temp-arena rebuild
+   (buildHeapFreeList on head 0x8010FEFC). A survivor later rs_free'd is a "late free" (H-freed-later); one never freed is a leak
+   relative to retail (H-leak). ROGUESQ_S7326_CTL=1: a synthetic a1=0 spill block is allocated before each coalesce scan (must be
+   listed as a survivor) and freed right after (must register as a late free). Needs ROGUESQ_S7317_ALLOCMAP=1. */
+struct S7326S { uint64_t reset; double t; uint32_t fl, req; void* pc; char kind; bool ctl; };
+static std::map<uint32_t, S7326S> s_s7326_surv;  /* guarded by s_s7317_mu */
+static uint64_t s_s7326_nsurv = 0, s_s7326_nlate = 0, s_s7326_ctl_seen = 0, s_s7326_ctl_late = 0, s_s7326_ctl_n = 0, s_s7326_resets = 0;
+static uint64_t s_s7326_late_bytes = 0; static double s_s7326_late_dtmax = 0;
+static bool s7326_ctl_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7326_CTL"); return e && e[0] && e[0] != '0'; }(); return on; }
 static void s7317_free(uint32_t ptr) {
     if (!s7317_on() || !ptr) return;
     void* fpc[4] = {nullptr, nullptr, nullptr, nullptr};
@@ -3374,7 +3384,16 @@ static void s7317_free(uint32_t ptr) {
         s_s7325_ord.push_back(s_s7325_freed.emplace(ptr, f));
         if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); }
         s_s7325_lastfree = ptr; }
-    if (s7317_isspill(ptr)) ++s_s7317_spfree;
+    if (s7317_isspill(ptr)) { ++s_s7317_spfree;
+        auto sv = s_s7326_surv.find(ptr);
+        if (sv != s_s7326_surv.end()) { const double dt = s7325_now() - sv->second.t;
+            if (sv->second.ctl) ++s_s7326_ctl_late;
+            else { ++s_s7326_nlate; s_s7326_late_bytes += sv->second.req; if (dt > s_s7326_late_dtmax) s_s7326_late_dtmax = dt;
+                static int nl = 0; if (nl++ < 60) { Dl_info di; void* pc = sv->second.pc;
+                    std::fprintf(stderr, "[s7326] late free %08X req=0x%X fl=%X kind=%c reset#%llu now#%llu dt=%.3f s owner=%s\n", ptr, sv->second.req, sv->second.fl,
+                                 sv->second.kind, (unsigned long long)sv->second.reset, (unsigned long long)s_s7326_resets, dt,
+                                 (pc && dladdr(pc, &di) && di.dli_sname) ? di.dli_sname : "?"); } }
+            s_s7326_surv.erase(sv); } }
     s_s7317_live.erase(it); }
 static void s7317_sym(FILE* f, void* pc) {
     Dl_info di; if (pc && dladdr(pc, &di) && di.dli_sname) fprintf(f, " %s+0x%lx", di.dli_sname, (unsigned long)((char*)pc - (char*)di.dli_saddr)); else fprintf(f, " ?%p", pc);
@@ -3406,7 +3425,7 @@ struct S7318Init { S7318Init() {
     g_s7318_path = (e[0] == '1' && !e[1]) ? "rs64_s7318_bcmp.txt" : e;
     const char* c = std::getenv("ROGUESQ_S7318_BCMP_CTL"); if (c && *c) g_s7318_ctl = (uint32_t)strtoul(c, nullptr, 16);
     rs64_s7318_on = 1; std::fprintf(stderr, "[s7318] bcmp probe on -> %s ctl=%08X allocmap=%d\n", g_s7318_path, g_s7318_ctl, (int)s7317_on()); } } g_s7318_init;
-inline bool s7318_sp(uint32_t x) { return x >= 0x81000000u && x < 0x81400000u; }
+inline bool s7318_sp(uint32_t x) { return x >= 0x81000000u && x < 0x81800000u; }  /* s7326: 8 MB arena */
 /* block containing x, or 0 (caller holds s_s7317_mu) */
 uint32_t s7318_blk(uint32_t x, uint32_t* req) {
     auto it = s_s7317_live.upper_bound(x); if (it == s_s7317_live.begin()) return 0; --it;
@@ -3709,6 +3728,9 @@ static uint32_t s_s6569_bump = 0;
 static std::mutex s_s6702_mu;
 static std::map<uint32_t, uint32_t> s_s6702_free, s_s6702_live;  /* s6702: spill free list / live blocks, addr -> rounded size */
 static uint32_t s_s6702_live_bytes = 0; static unsigned long s_s6702_reused = 0, s_s6702_freed = 0;
+static std::map<uint32_t, uint32_t> s_s7326_tag;  /* s7326: spill block -> rs_malloc a1 recorded at spill time (guarded by s_s6702_mu) */
+static std::map<uint32_t, uint32_t> s_s7326_released;  /* s7326: blocks released by the scene reset, until reallocated (post-reset rs_free detector) */
+static unsigned long s_s7326_rel_n = 0, s_s7326_rel_post = 0; static uint64_t s_s7326_rel_bytes = 0;
 /* s6893 G5a: every spill event in a ring with the guest malloc ra, dumped when the s6892 guard fires, so the block that
    overran or stayed in use after a free can be read back. rs64_s6893_ra is set by the rs_malloc hook. */
 struct S6893Ev { uint32_t op, req, p, ra; };
@@ -3716,6 +3738,18 @@ static S6893Ev s6893_ring[1u << 16]; static uint32_t s6893_n = 0;
 extern "C" { uint32_t rs64_s6893_ra = 0; }
 static inline void s6893_ev(uint32_t op, uint32_t req, uint32_t p) { s6893_ring[s6893_n++ & 0xFFFFu] = { op, req, p, rs64_s6893_ra }; }
 static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const char* e = std::getenv("ROGUESQ_SPILL_HI"); return (e && e[0] && e[0] != '0') ? 0x81000000u : 0x80800000u; }(); return b; }  /* s6587: spill arena above the RSP-visible 16 MB so the DL pool can take 8 MB */
+/* s7326: spill arena size. 4 MB (s6569) was too small for the dd8 21:9 hangar-route mission load (0x1E000C + 0x2DFF00 after the
+   scene reset, s7326 arm b: "[spill] arena full" -> rs_malloc NULL -> SIGBUS). With the 0x81000000 layout the arena is 8 MB
+   (0x81000000-0x81800000; main.cpp sets ROGUESQ_RAMTOP_MB=24, librecomp's maximum, so the pointer guards accept it), clamped to
+   rs64_ram_top. ROGUESQ_SPILL_MB=<n> overrides (4 = old). The 0x80800000 legacy layout keeps 4 MB (game heap starts at 0x80C00000 there). */
+extern "C" uint32_t rs64_ram_top;
+static uint32_t rs64_s7326_spill_cap() {
+    static const uint32_t c = [] { const uint32_t b = rs64_s6587_spill_base(); uint32_t mb = b == 0x81000000u ? 8u : 4u;
+        if (const char* e = std::getenv("ROGUESQ_SPILL_MB")) { int v = std::atoi(e); if (v >= 1 && v <= 16) mb = (uint32_t)v; }
+        uint32_t cap = mb << 20; if (b == 0x81000000u && rs64_ram_top > b && b + cap > rs64_ram_top) cap = rs64_ram_top - b;
+        if (b != 0x81000000u && cap > 0x400000u) cap = 0x400000u;
+        std::fprintf(stderr, "[s7326] spill arena %08X..%08X (%u KB, ram_top %08X)\n", b, b + cap, cap >> 10, rs64_ram_top); return cap; }();
+    return c; }
 extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
     static const bool on = [] { const char* e = std::getenv("ROGUESQ_MALLOC_SPILL"); return e && e[0] && e[0] != '0'; }();
     if (!on || !req) return 0;
@@ -3727,12 +3761,14 @@ extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
         uint32_t p = it->first, rest = it->second - sz;
         s_s6702_free.erase(it); if (rest) s_s6702_free[p + sz] = rest;
         s_s6702_live[p] = sz; s_s6702_live_bytes += sz; ++s_s6702_reused; s6893_ev(1, req, p);
+        s_s7326_tag[p] = g_s6127_flags; s_s7326_released.erase(p);
         if ((s_s6702_reused & 255u) == 1) std::fprintf(stderr, "[spill] reuse#%lu req=0x%X -> %08X live=0x%X bump=0x%X freeblk=%zu\n", s_s6702_reused, req, p, s_s6702_live_bytes, s_s6569_bump, s_s6702_free.size());
         return p;
     }
-    if (s_s6569_bump + sz > 0x400000u) { std::fprintf(stderr, "[spill] req=0x%X arena full live=0x%X freeblk=%zu\n", req, s_s6702_live_bytes, s_s6702_free.size()); return 0; }
+    if (s_s6569_bump + sz > rs64_s7326_spill_cap()) { std::fprintf(stderr, "[spill] req=0x%X arena full live=0x%X freeblk=%zu\n", req, s_s6702_live_bytes, s_s6702_free.size()); return 0; }
     uint32_t p = rs64_s6587_spill_base() + s_s6569_bump; s_s6569_bump += sz;
     s_s6702_live[p] = sz; s_s6702_live_bytes += sz; s6893_ev(0, req, p);
+    s_s7326_tag[p] = g_s6127_flags; s_s7326_released.erase(p);
     std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X live 0x%X)\n", req, p, s_s6569_bump, s_s6702_live_bytes);
     return p;
 }
@@ -3755,20 +3791,49 @@ extern "C" void rs64_s6571_svc(char k, uint32_t a, uint32_t b, uint32_t c, uint3
     if (c == 0) g_s6571_last_null = true;
     std::fprintf(stderr, "[svcrecv] r svc=%08X ret=%08X slot=%08X validCount=%u\n", a, b, c, d);
 }
-/* Called only from the rs_free hook (apply_s6569_spill.py F_NEW): a spill pointer is released here, then rs_free returns. */
-extern "C" int rs64_s6569_isspill(uint32_t p) {
-    uint32_t b = rs64_s6587_spill_base(); if (!(p >= b && p < b + 0x400000u)) return 0;
-    static const bool legacy = [] { const char* e = std::getenv("ROGUESQ_SPILL_LEAK"); return e && e[0] && e[0] != '0'; }();  /* =1: s6569 leak behaviour */
-    if (legacy) return 1;
-    std::lock_guard<std::mutex> lk(s_s6702_mu);
-    auto lv = s_s6702_live.find(p);
-    if (lv == s_s6702_live.end()) { static int nb = 0; if (nb++ < 20) std::fprintf(stderr, "[spill] free of unknown/double-freed %08X ignored\n", p); return 1; }
-    uint32_t sz = lv->second; s_s6702_live.erase(lv); s_s6702_live_bytes -= sz; ++s_s6702_freed; s6893_ev(2, sz, p);
+/* s6702 release of a live spill block into the coalescing free list; caller holds s_s6702_mu. */
+static void s6702_release_locked(std::map<uint32_t, uint32_t>::iterator lv) {
+    const uint32_t b = rs64_s6587_spill_base(), p = lv->first, sz = lv->second;
+    s_s6702_live.erase(lv); s_s6702_live_bytes -= sz; ++s_s6702_freed; s6893_ev(2, sz, p); s_s7326_tag.erase(p);
     s7317_free(p);
     auto it = s_s6702_free.emplace(p, sz).first;  /* coalesce with neighbours */
     if (it != s_s6702_free.begin()) { auto pv = std::prev(it); if (pv->first + pv->second == it->first) { pv->second += it->second; s_s6702_free.erase(it); it = pv; } }
     auto nx = std::next(it); if (nx != s_s6702_free.end() && it->first + it->second == nx->first) { it->second += nx->second; s_s6702_free.erase(nx); }
     if (it->first + it->second == b + s_s6569_bump) { s_s6569_bump = it->first - b; s_s6702_free.erase(it); }  /* top block returns to the bump */
+}
+/* s7326: retail scene reset for spill blocks. coalesceFreeHeapBlocks (0x800022F8) frees EVERY used persistent-heap block whose header
+   tag lacks 0x80 (rs_malloc a1 & 0x88 -> tag), whatever its a0. Spill blocks are outside the guest chain, so before s7326 they survived:
+   s7326 run a, dd8 21:9 hangar route, loadLevelAssets' 0x2DFF00 (a1 tag 0) outlived the reset that precedes the mission load, the
+   game's next 0x1E000C / 0x2DFF00 requests found the 4 MB arena full, rs_malloc returned NULL and emitGridCellTileStrip faulted.
+   Called from the coalesce wrapper (before the ALLOCMAP-gated re-sync): releases every live spill block whose recorded a1 has neither
+   0x80 (persistent) nor 0x04 (temp pool, which retail drops at its own rebuild). ROGUESQ_SPILL_RESET=0 = old (blocks survive). */
+extern "C" void rs64_s7326_spill_reset(uint32_t a0) {
+    static const bool off = [] { const char* e = std::getenv("ROGUESQ_SPILL_RESET"); return e && e[0] == '0'; }();
+    if (off) return;
+    std::lock_guard<std::mutex> lk(s_s6702_mu);
+    if (s_s6702_live.empty()) return;
+    unsigned long n = 0; uint64_t bytes = 0; uint32_t big = 0, bigp = 0;
+    for (auto it = s_s6702_live.begin(); it != s_s6702_live.end();) {
+        auto tg = s_s7326_tag.find(it->first); const uint32_t fl = tg != s_s7326_tag.end() ? tg->second : 0x80u;  /* unknown tag: keep */
+        if (fl & 0x84u) { ++it; continue; }
+        auto nx = std::next(it); const uint32_t p = it->first, sz = it->second;
+        ++n; bytes += sz; if (sz > big) { big = sz; bigp = p; }
+        s6702_release_locked(it); s_s7326_released[p] = sz; it = nx; }
+    s_s7326_rel_n += n; s_s7326_rel_bytes += bytes;
+    if (n) { static int nl = 0; if (nl++ < 400) std::fprintf(stderr, "[s7326] spill reset a0=%X released %lu blocks 0x%llX bytes (largest 0x%X at %08X) | live now 0x%X bump=0x%X | total %lu blocks 0x%llX, post-reset rs_free %lu\n",
+        a0, n, (unsigned long long)bytes, big, bigp, s_s6702_live_bytes, s_s6569_bump, s_s7326_rel_n, (unsigned long long)s_s7326_rel_bytes, s_s7326_rel_post); }
+}
+/* Called only from the rs_free hook (apply_s6569_spill.py F_NEW): a spill pointer is released here, then rs_free returns. */
+extern "C" int rs64_s6569_isspill(uint32_t p) {
+    uint32_t b = rs64_s6587_spill_base(); if (!(p >= b && p < b + rs64_s7326_spill_cap())) return 0;
+    static const bool legacy = [] { const char* e = std::getenv("ROGUESQ_SPILL_LEAK"); return e && e[0] && e[0] != '0'; }();  /* =1: s6569 leak behaviour */
+    if (legacy) return 1;
+    std::lock_guard<std::mutex> lk(s_s6702_mu);
+    auto lv = s_s6702_live.find(p);
+    if (lv == s_s6702_live.end()) { static int nb = 0;
+        if (s_s7326_released.count(p)) { ++s_s7326_rel_post; static int np = 0; if (np++ < 40) std::fprintf(stderr, "[s7326] rs_free of %08X after the scene reset released it (ignored, not reallocated)\n", p); return 1; }
+        if (nb++ < 20) std::fprintf(stderr, "[spill] free of unknown/double-freed %08X ignored\n", p); return 1; }
+    uint32_t sz = lv->second; s6702_release_locked(lv);
     if ((s_s6702_freed & 255u) == 1) std::fprintf(stderr, "[spill] free#%lu %08X sz=0x%X live=0x%X bump=0x%X freeblk=%zu\n", s_s6702_freed, p, sz, s_s6702_live_bytes, s_s6569_bump, s_s6702_free.size());
     return 1;
 }
@@ -4365,6 +4430,11 @@ extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) 
                 s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
             ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); } }
     for (auto it = s_s6063_live.lower_bound(lo); it != s_s6063_live.end() && it->first < hi;) { s_s6063_bytes -= it->second; it = s_s6063_live.erase(it); }
+    if (s7317_on() && head == 0x8010FEFCu) { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now(); uint64_t nt = 0, nb = 0;
+        for (auto it = s_s7317_live.lower_bound(0x81000000u); it != s_s7317_live.end() && s7318_sp(it->first); ++it) {
+            if (!(it->second.fl & 4u)) continue; ++nt; nb += it->second.req;
+            if (!s_s7326_surv.count(it->first)) { s_s7326_surv[it->first] = S7326S{s_s7326_resets, now, it->second.fl, it->second.req, it->second.pc[1], 'T', false}; ++s_s7326_nsurv; } }
+        if (nt) std::fprintf(stderr, "[s7326] temp rebuild: %llu flags&4 spill blocks 0x%llX bytes outlive it\n", (unsigned long long)nt, (unsigned long long)nb); }
     if (s7317_on()) { uint32_t sb = 0; size_t sn = 0; { std::lock_guard<std::mutex> lk(s_s6702_mu); sn = s_s6702_live.size(); sb = s_s6702_live_bytes; }
         std::fprintf(stderr, "[s7325] heap rebuild #%llu head=%08X range=%08X..%08X dropped=%llu blocks 0x%llX bytes | spill live=%zu blocks 0x%X bytes bump=0x%X\n",
                      (unsigned long long)n, head, lo, hi, (unsigned long long)dropped, (unsigned long long)dbytes, sn, sb, s_s6569_bump); } }
@@ -4374,10 +4444,15 @@ extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) 
    line: dropped count, spill-arena live blocks split by the rs_malloc a1 tag bit 0x80 recorded at allocation (a non-persistent spill
    block outlives the reset that retail would have applied to it), and the tag control (recorded a1 & 0x80 vs guest header tag & 0x80
    on matched heap blocks: must agree). */
+static void rs64_s7326_scan(uint32_t a0, uint64_t ncall, uint64_t npk, uint64_t npk_b, uint32_t ctl);
 extern "C" void rs64_s7325_heapsync(uint32_t a0) {
+    rs64_s7326_spill_reset(a0);  /* s7326: retail bulk free applied to spill blocks (always, not ALLOCMAP-gated) */
     if (!s7317_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
     static uint64_t ncall = 0, nlog = 0; ++ncall;
+    uint32_t ctl = 0; uint64_t npk = 0, npk_b = 0;  /* s7326 */
+    if (s7326_ctl_on()) { ctl = rs64_s6569_spill(0x40u);
+        if (ctl) { std::lock_guard<std::mutex> lk(s_s7317_mu); s_s7317_live[ctl] = S7317B{0x40u, {nullptr, nullptr, nullptr}, s7325_now(), 0u}; ++s_s7317_sprec; ++s_s7326_ctl_n; } }
     std::vector<G5aBlk> b; g5a_walk(r, b); if (b.empty()) return;
     std::map<uint32_t, uint32_t> alloc; uint32_t lo = 0xFFFFFFFFu, hi = 0;
     for (const auto& k : b) { lo = std::min(lo, k.h); hi = std::max(hi, k.h + 0x10u + k.sz); if ((k.fl & 3u) == 2u) alloc[k.h + 0x10u] = k.tag; }
@@ -4386,7 +4461,7 @@ extern "C" void rs64_s7325_heapsync(uint32_t a0) {
       for (auto it = s_s7317_live.lower_bound(lo); it != s_s7317_live.end() && it->first < hi;) {
           if (s7318_sp(it->first)) { ++it; continue; }
           auto g = alloc.find(it->first);
-          if (g != alloc.end()) { (((g->second ^ it->second.fl) & 0x80u) ? disagree : agree)++; ++it; continue; }
+          if (g != alloc.end()) { (((g->second ^ it->second.fl) & 0x80u) ? disagree : agree)++; if (!(it->second.fl & 0x84u)) { ++npk; npk_b += it->second.req; } ++it; continue; }
           if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
               s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
           ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); }
@@ -4399,7 +4474,30 @@ extern "C" void rs64_s7325_heapsync(uint32_t a0) {
                      (unsigned long long)ncall, a0, lo, hi, alloc.size(), (unsigned long long)dropped, (unsigned long long)dbytes, (unsigned long long)agree,
                      (unsigned long long)disagree, (unsigned long long)sp_n, (unsigned long long)sp_np, (unsigned long long)sp_npb);
         int k = 0; for (auto& kv : npown) { if (k++ >= 8) break; std::fprintf(stderr, " %s=%llu", kv.first.c_str(), (unsigned long long)kv.second); }
-        std::fprintf(stderr, "\n"); } }
+        std::fprintf(stderr, "\n"); }
+    rs64_s7326_scan(a0, ncall, npk, npk_b, ctl); }
+/* s7326 survivor scan after each coalesce reset (see S7326S). One [s7326] line per reset: heap np_kept (non-spill a1&0x84==0 blocks the
+   guest still holds after the reset: retail-semantics control, must be 0 if the bulk free releases every such block), new 'C'
+   survivors, current survivor set (count, bytes, by kind), cumulative survived / late-freed, spill arena live bytes and bump, ctl. */
+static void rs64_s7326_scan(uint32_t a0, uint64_t ncall, uint64_t npk, uint64_t npk_b, uint32_t ctl) {
+    uint64_t nnew = 0, nnew_b = 0, cur = 0, cur_b = 0, curT = 0, splive = 0; bool ctl_in = false; std::map<std::string, uint64_t> own;
+    { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now(); ++s_s7326_resets;
+      for (auto it = s_s7317_live.lower_bound(0x81000000u); it != s_s7317_live.end() && s7318_sp(it->first); ++it) {
+          ++splive; if (it->second.fl & 0x84u) continue;
+          if (!s_s7326_surv.count(it->first)) { const bool c = (it->first == ctl);
+              s_s7326_surv[it->first] = S7326S{s_s7326_resets, now, it->second.fl, it->second.req, it->second.pc[1], 'C', c};
+              if (c) { ctl_in = true; ++s_s7326_ctl_seen; } else { ++s_s7326_nsurv; ++nnew; nnew_b += it->second.req; } } }
+      for (auto& kv : s_s7326_surv) { if (kv.second.ctl) continue; ++cur; cur_b += kv.second.req; if (kv.second.kind == 'T') ++curT;
+          Dl_info di; void* pc = kv.second.pc; own[(pc && dladdr(pc, &di) && di.dli_sname) ? di.dli_sname : "?"]++; } }
+    uint32_t lb = 0, bump = 0; size_t nfree = 0; { std::lock_guard<std::mutex> lk(s_s6702_mu); lb = s_s6702_live_bytes; bump = s_s6569_bump; nfree = s_s6702_free.size(); }
+    std::fprintf(stderr, "[s7326] reset#%llu sync#%llu a0=%X heap_np_kept=%llu 0x%llX | new_surv=%llu 0x%llX cur_surv=%llu 0x%llX (T %llu) tot_surv=%llu late_freed=%llu 0x%llX dtmax=%.1f | spill blocks=%llu live=0x%X bump=0x%X freeblk=%zu | ctl in=%d seen=%llu/%llu late=%llu owners:",
+                 (unsigned long long)s_s7326_resets, (unsigned long long)ncall, a0, (unsigned long long)npk, (unsigned long long)npk_b, (unsigned long long)nnew,
+                 (unsigned long long)nnew_b, (unsigned long long)cur, (unsigned long long)cur_b, (unsigned long long)curT, (unsigned long long)s_s7326_nsurv,
+                 (unsigned long long)s_s7326_nlate, (unsigned long long)s_s7326_late_bytes, s_s7326_late_dtmax, (unsigned long long)splive, lb, bump, nfree,
+                 (int)ctl_in, (unsigned long long)s_s7326_ctl_seen, (unsigned long long)s_s7326_ctl_n, (unsigned long long)s_s7326_ctl_late);
+    int k = 0; for (auto& kv : own) { if (k++ >= 10) break; std::fprintf(stderr, " %s=%llu", kv.first.c_str(), (unsigned long long)kv.second); }
+    std::fprintf(stderr, "\n");
+    if (ctl) rs64_s6569_isspill(ctl);  /* ctl: free it now -> must count as a late free */ }
 /* s7325 reconciliation: host live map (non-spill) vs the guest heap walk. Guest block h (flags, size) is "matched" when the
    map holds ptr h+0x10. Map entries with no guest allocated block at ptr-0x10 are stale: nested (inside a guest allocated block),
    in_free (inside a guest free block), or nowhere (outside every walked arena). Guest allocated blocks with no map entry are
@@ -8284,7 +8382,7 @@ struct S6892Rec { uint32_t s2, mesh; };
 S6892Rec s6892_rec[16];
 unsigned s6892_next = 0, s6892_logged = 0;
 unsigned long s6892_reads = 0;
-bool s6892_valid(uint32_t v) { return (v & 3) == 0 && v >= 0x80000400u && v < 0x81400000u; } // s6893: covers the 0x81000000 spill arena of the wide bundles
+bool s6892_valid(uint32_t v) { return (v & 3) == 0 && v >= 0x80000400u && v < 0x81800000u; } // s6893: covers the 0x81000000 spill arena of the wide bundles
 uint32_t* s6892_word(uint8_t* rdram, uint32_t a) { return reinterpret_cast<uint32_t*>(rdram + (a - 0x80000000u)); }
 bool s6892_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S6892"); return !(e && *e == '0'); }(); return on; }
 void s6892_log(uint8_t* rdram, uint32_t s2, uint32_t bad, uint32_t good, uint32_t pc) {

@@ -192921,3 +192921,41 @@ reclaims them (H-leak vs H-freed-later, NEXT.md spill-scene-reset-leak).
 ORIGIN: the stale entries were written by rs64_s6063_malloc (s7317 map) for blocks the retail scene reset later freed in bulk
 (coalesceFreeHeapBlocks / buildHeapFreeList) without calling rs_free; values were legitimate at write time. The re-sync is an
 instrument correction, not a game-side mitigation.
+
+## Session 7326 (2026-11-14) — spill blocks DO leak across the retail scene reset and it is a real crash: dd8 21:9 hangar route died at the first mission load (loadLevelAssets 0x2DFF00 survived the reset, arena full, rs_malloc NULL, SIGBUS in the grid-cell terrain code); fixed by applying the retail bulk free to spill blocks + an 8 MB spill arena, same-build 4-arm table
+HYPOTHESIS-ID: spill-scene-reset-leak. Hypotheses: H-leak (non-persistent spill blocks survive every coalesceFreeHeapBlocks reset and
+are never rs_free'd), H-freed-later (the game rs_frees them afterwards), H-persistent-only (survivors are tag 0x80 in steady state).
+
+Instrument (src/main/upstream_compat.cpp, C++ only, no regen; needs ROGUESQ_S7317_ALLOCMAP=1): survivor table S7326S filled after
+every coalesce reset (spill blocks with recorded a1 & 0x84 == 0, kind C) and at every temp-arena rebuild (head 0x8010FEFC, a1 & 4,
+kind T); the spill-free path reports a survivor's later rs_free as "late free" (dt, reset numbers, owner). One [s7326] reset line per
+sync: heap_np_kept (non-spill a1&0x84==0 blocks still allocated in the guest after the reset = retail-semantics control), new/current/
+total survivors, late frees, spill live/bump. ROGUESQ_S7326_CTL=1: a synthetic a1=0 spill block is allocated before each scan (must
+be listed) and freed after (must count as a late free). Decoded coalesceFreeHeapBlocks 0x800022F8: frees EVERY used persistent-heap
+block whose tag lacks 0x80; a0..a3 only go to globals 0x8010FF08.. (a0 does not select blocks).
+Route scratch/s7326/run.zsh: owner save read-only, title -> SELECT YOUR CRAFT -> mission (owner save) -> idle -> PAUSE/ABORT -> SELECT
+LEVEL -> craft select -> mission, x4 (s6995 route_long extended; cycles 3-4 drift off-route into other scenes), dd8 21:9 FPS60 WIDEWIN.
+Arms (one game at a time; a = pre-fix binary; b, c, d = later binaries):
+| arm | release at reset | arena | result |
+| a | no (pre-fix) | 4 MB | reset#8 new_surv=1 0x2DFF00 (loadLevelAssets); then 0x1E000C + 0x2DFF00 "arena full" -> rs_malloc NULL -> SIGBUS emitGridCellTileStrip+2416 at the FIRST mission load, t~120 s |
+| b | yes | 4 MB | reset released the 0x2DFF00; 0x1E000C fits (0x1E0010), the next 0x2DFF00 does not -> arena full -> SIGBUS selectGridCellTileVariant |
+| d | no (ROGUESQ_SPILL_RESET=0, same binary as c) | 8 MB | survivor 0x2DFF00 + 0x1E000C + 0x2DFF00 + 0x2DFF00 > 8 MB -> arena full -> SIGBUS selectGridCellTileVariant |
+| c | yes | 8 MB | 650 s alive, 0 crash, 0 arena full, 22 resets, 2 full mission load -> flight -> abort cycles (loads t=82/250, aborts 180/330), 10 spill blocks (0x1145BA0 bytes) released over 6 resets, 0 rs_free of a released block afterwards |
+Controls: ctl block seen 22/22 (c), 8/8 (a), late-free path fired for every ctl; heap_np_kept=0 at every one of the 22+8+8+8 syncs
+(the guest keeps NO non-persistent heap block across the reset = the release is exactly retail semantics, second line of evidence next
+to the decode). late_freed=0 in every arm (no survivor was ever rs_free'd: H-freed-later refuted), survivors were the 0x2DFF00 level
+asset buffers and 0x2FD0 initWaterSprayEffectAndSfx (H-persistent-only refuted). The game allocates the 0x2DFF00 level-asset buffer
+BEFORE the reset that precedes the mission load and again after it: in retail the first copy dies in the bulk free.
+Fix (default on): rs64_s7326_spill_reset (called first in the coalesce wrapper rs64_s7325_heapsync, not ALLOCMAP-gated) releases every
+live spill block whose a1, recorded at spill time (s_s7326_tag), has neither 0x80 nor 0x04; a later rs_free of a released, not
+reallocated block is ignored and counted ("[s7326] rs_free of ... after the scene reset released it"). ROGUESQ_SPILL_RESET=0 = old.
+Spill arena 4 -> 8 MB with the 0x81000000 layout (0x81000000-0x81800000; main.cpp ddbundle RAMTOP 20 -> 24 MB, librecomp's maximum;
+clamped to rs64_ram_top; ROGUESQ_SPILL_MB=<n> override, 4 = old; legacy 0x80800000 layout stays 4 MB). Static spill-range checks
+(s7317_isspill, s7318_sp, s6892_valid) widened to 0x81800000. dd1 untouched (spill is only armed at dd>1).
+ORIGIN: the NULL was legitimate arena exhaustion caused by our port: the retail bulk free never sees spill blocks (outside the guest
+chain), so a block retail frees at the scene reset stayed live in the arena. The writer of the crash pointer is the game's own NULL
+return path from rs_malloc; the fix restores the retail lifetime, it does not guard the deref.
+Not covered: dd4/dd6 and 16:9 on the hangar route (owner's real route; unknown whether they spill this much), class G re-check of RCP
+references with the larger arena (spill is above 16 MB either way). Queued soak s7326_spill_levels (forced-level L4 + L15 dd8 21:9,
+300 s each). Logs scratch/s7326/{a,b,c,d}/run.log.
+DISCRIMINATION: selects H-leak (survivors never freed, and fatal at dd8 21:9 on the hangar route); refutes H-freed-later and H-persistent-only.
