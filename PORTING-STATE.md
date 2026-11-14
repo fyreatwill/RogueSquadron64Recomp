@@ -192181,3 +192181,19 @@ L4 shot 6 (horizon in view: dd6 11% sky vs dd8 1%, dd8 visibly fills the far ban
 docs/owner_sheet_s7295_dd6_dd8.jpg (rows l1d1, l1d6, l1d8, l4d6, l4d8). Failed step, recorded: an osascript Finder query
 raised a TCC "Terminal wants to control Finder" dialog over the first l1d1 shots; that arm was re-run (RESUME, ok file removed).
 Queued scratch/agent/soak_queue/s7296_219_dd8_px.sh: L4 21:9 dd8 ref (auto off, gated FB_WIDTH<=796) / px8 / px8+R128 + ctl.
+
+## Session 7297 (2026-11-13) — G1c: fold s7296_219_dd8_px (H-219-ok: dd8 px8+R128 fits at 21:9 on L4, 60/s), dropped the FB_WIDTH<=796 gate on the [s7293] dd8 auto, verified in-session
+**Soak s7296_219_dd8_px (rc=0, L4 Gerrard V 21:9 windowed dd8 WIDEWIN, HOLD=150, 1 run/arm).** Positive controls PASS: ctl
+(WIDEWIN_STACK=0 + DUTY=1.4) flat 30/s t=76-143 (68 beyond-route s below 55); px8 arms trace depth 128 p10/50/90 (ref 80/80/128).
+total_emit per stream call (tools/s7291_wide_cells.py): ref (auto gated off at fbw 1024: px5, R88) 7466 / px8 (R88) 7909 /
+px8+R128 11818 (+58%). win77-97: 60.0/s at 12.98 / 13.54 / 13.65 ms. Dips below 55/s beyond the route transients: ref 0 s, px8 1 s
+(t=142 54/s), px8r128 2 s (t=141 51, t=146 48). -> **H-219-ok** selected; H-219-cost (px8 itself dips) and H-219-px (R128 only
+dips) refuted at win77-97 for L4. The two px8r128 one-second dips past t=140 are minor and in line with the 16:9 s7294 beyond-route 1-4 s.
+**Change:** src/main/main.cpp dd bundle: removed `!(fw && atoi(fw) > 796)` from the [s7293] condition, so dd>=8 + WIDEWIN sets
+POOLX_MAX=8 + WIDEWIN_R=128 at every aspect (explicit env and ROGUESQ_DD_PX8_AUTO=0 still win; L12 RLEVEL 12:48 and the 21:9
+KLEVEL/CAPLEVEL rules are set later and are untouched).
+**In-session verify (scratch/s7297_verify.sh, same recipe, ctl reuse not needed for a positive A/B):** auto arm prints
+`[s7293] dd8 px8 auto poolx_max=8 widewin_r=128 fbw=1024`, r=128, total_emit 11620, window depth 128, win77-97 60.0/s 13.73 ms;
+PX8_AUTO=0 arm: no [s7293] line, r=88, 7313, depth 80, 60.0/s 12.94 ms. Both alive, 0 crash, beyond-route 1 s each.
+Two independent runs (s7296 explicit env, s7297 auto) agree. OWNER-OPT-INS updated (21:9 distance-8 note).
+Queued scratch/agent/soak_queue/s7298_219_dd8_levels.sh: 300 s holds at 21:9 dd8 on L1/L5/L9/L10/L12 + ctl (L12 STACK=0+DUTY=1.4).
