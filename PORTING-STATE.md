@@ -193598,4 +193598,7 @@ K 5, W64 6). 0 '?'.
 Runtime regression (same build): `env SECS=260 zsh scratch/s7326/run.zsh s7344_dd8 ''` (dd8 21:9 hangar->mission->abort
 route) -> crash=0 resets=14 late=0 arenafull=0, 0 `[s7344]` lines (no wrap in real traffic, as expected). Single-source for the
 "no wrap in practice" claim; the fix itself is proven by the compile-time control.
+DISCRIMINATION: selects H-wrap (one default-on wrap-prone clamp on guest-derived operands: rsp.hpp DMA length, fixed) and
+refutes H-safe for librecomp rsp.hpp/pi.cpp; every other site is H-safe (K/W64/MSK/SUB/hand-bounded) or H-diag (G/D/P/C), 0 B.
+Next discriminator: class V census (H-safe vs H-ovf for uint32 products of guest factors before a bound/alloc).
 Rules out: wrap-prone sum checks as a live defect class in host code. Next: class V, 32-bit multiply overflow (NEXT.md).
