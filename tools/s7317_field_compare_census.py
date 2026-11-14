@@ -9,6 +9,8 @@ on any redefinition and on calls except callee-saved):
   B. FIELD ORDER COMPARE: `lw d, off(base)` with a register base and off in the holder-field set (offsets of words that held live
      spill pointers in a dd8 21:9 L4 flight, tools/s7317_spill_holders.py --all output), then slt/sltu of d against another
      non-constant register. Lists the site and the other operand's provenance (another field load at offset o / unknown).
+  C. FIELD POINTER DIFFERENCE (s7320): `subu d, x, y` where x or y is such a holder-field load and the other is non-constant;
+     lists the other operand's provenance and the first 4 consumers of d (compare / shift / store / call arg).
 Output: one line per site; an A site is spill-equal when every heap-range and spill-range KSEG0 pointer gives the same compare
 outcome there (evaluated, not judged); exit 1 if any A site is not spill-equal and not in KNOWN_A; B sites are listed for manual classification (exit status unaffected).
 --selftest runs both detectors on planted snippets (positive controls). Usage: s7317_field_compare_census.py <holders_all.txt> [--selftest]"""
@@ -32,12 +34,21 @@ RECOMP_FUNC void s7317FakeFieldOrder(uint8_t* rdram, recomp_context* ctx) {
     // 0x80002000: lw          $a0, 0xB0($s1)
     // 0x80002004: lw          $a1, 0x78($s1)
     // 0x80002008: sltu        $v0, $a0, $a1
+RECOMP_FUNC void s7320FakeFieldDiff(uint8_t* rdram, recomp_context* ctx) {
+    // 0x80003000: lw          $a0, 0xB0($s1)
+    // 0x80003004: lw          $a1, 0x78($s2)
+    // 0x80003008: subu        $v0, $a0, $a1
+    // 0x8000300C: sltiu       $at, $v0, 0x100
+    // 0x80003010: lw          $t0, 0x40($s3)
+    // 0x80003014: addiu       $t1, $zero, 0x10
+    // 0x80003018: subu        $t2, $t0, $t1
 """
 
 def imm(s): return int(s, 0)
 
-def scan(srcs, offs):
+def scan(srcs, offs, C=None):
     A, B = [], []
+    C = [] if C is None else C
     for name, text in srcs:
         fn, reg, seen = None, {}, set()
         for line in text.splitlines():
@@ -58,7 +69,7 @@ def scan(srcs, offs):
             elif op == "lw" and len(a) == 2:
                 mm = MEM.match(a[1])
                 if mm and mm.group(2) not in ("$sp",) and reg.get(mm.group(2), ("",))[0] != "c" and imm(mm.group(1)) in offs:
-                    new = ("f", imm(mm.group(1)), pc)
+                    new = ("f", imm(mm.group(1)), pc, mm.group(2))
             elif op in ("srl", "sra") and len(a) == 3 and imm(a[2]) >= 23:
                 new = ("t", imm(a[2]), pc, reg.get(a[1], ("?",)), op)
             elif op in ("addu", "or") and len(a) == 3 and a[2] == "$zero" and a[1] in reg:
@@ -79,6 +90,23 @@ def scan(srcs, offs):
                     if tx and tx[0] == "f" and y != "$zero" and not (ty and ty[0] == "c"):
                         B.append((fn, tx[2], pc, op, tx[1], ("f+0x%X" % ty[1]) if ty and ty[0] == "f" else "other"))
                         break
+            # class C consumers: every later read of a difference register
+            srcs_ = a if op.startswith(("s", "b")) and op not in ("sll", "srl", "sra", "sllv", "srlv", "srav", "slt", "sltu", "slti", "sltiu", "sub", "subu") else a[1:]
+            for x in srcs_:
+                x = MEM.match(x).group(2) if MEM.match(x) else x
+                tx = reg.get(x)
+                if tx and tx[0] == "d" and len(C[tx[1]][-1]) < 4: C[tx[1]][-1].append("%s@%s" % (op, pc))
+            if op in ("jal", "jalr"):
+                for k, v in reg.items():
+                    if v[0] == "d" and k in ("$a0", "$a1", "$a2", "$a3") and len(C[v[1]][-1]) < 4: C[v[1]][-1].append("arg%s>%s" % (k, a[0] if a else "?"))
+            if op in ("subu", "sub") and len(a) == 3 and "$zero" not in (a[1], a[2]):
+                tx, ty = reg.get(a[1]), reg.get(a[2])
+                fx, fy = bool(tx and tx[0] == "f"), bool(ty and ty[0] == "f")
+                if (fx and not (ty and ty[0] == "c")) or (fy and not (tx and tx[0] == "c")):
+                    f, o = (tx, ty) if fx else (ty, tx)
+                    prov = ("f+0x%X(%s)" % (o[1], o[3])) if o and o[0] == "f" else "other"
+                    C.append([fn, f[2], pc, op, f[1], f[3], "p" if fx else "q", prov, a[1], a[2], []])
+                    new = ("d", len(C) - 1)
             if d and d.startswith("$") and not op.startswith(("s", "b", "j")) or op in ("slt", "sltu", "slti", "sltiu", "sll", "srl", "sra", "sllv", "srlv", "srav", "sub", "subu"):
                 reg.pop(d, None)
             if new is not None and d: reg[d] = new
@@ -104,16 +132,19 @@ def ptrshaped(k, c):  # constant a top-byte test of a KSEG pointer would use aft
 
 def main():
     if "--selftest" in sys.argv:
-        A, B = scan([("self", SELFTEST)], {0x40, 0xB0, 0x78})
+        C = []; A, B = scan([("self", SELFTEST)], {0x40, 0xB0, 0x78}, C)
         ok = any(x[0] == "s7317FakeTopByte" and x[4] == 0x80 and not spill_equal(x[7], x[5], x[3], x[4]) for x in A) and \
-             any(x[0] == "s7317FakeTopByte" and x[4] == 0x8 and spill_equal(x[7], x[5], x[3], x[4]) for x in A)  # s6993 shape differs; >>28 is equal and any(x[0] == "s7317FakeFieldOrder" and x[5] == "f+0x78" for x in B)
-        print("SELFTEST A=%d B=%d %s" % (len(A), len(B), "PASS" if ok else "FAIL")); return 0 if ok else 2
+             any(x[0] == "s7317FakeTopByte" and x[4] == 0x8 and spill_equal(x[7], x[5], x[3], x[4]) for x in A) and \
+             any(x[0] == "s7317FakeFieldOrder" and x[5] == "f+0x78" for x in B) and \
+             any(c[0] == "s7320FakeFieldDiff" and c[7] == "f+0x78($s2)" and any(u.startswith("sltiu@") for u in c[-1]) for c in C) and \
+             not any(c[2] == "0x80003018" for c in C)  # constant subtrahend is not a pointer difference
+        print("SELFTEST A=%d B=%d C=%d %s" % (len(A), len(B), len(C), "PASS" if ok else "FAIL")); return 0 if ok else 2
     offs = set()
     for ln in open(sys.argv[1]):
         m = re.match(r"^\s+LIVE \S+ owner=[0-9A-F]+\+0x([0-9A-F]+) ", ln)
         if m: offs.add(int(m.group(1), 16))
     srcs = [(p.name, p.read_text(errors="surrogateescape")) for p in sorted(GEN.glob("funcs_*.c"))]
-    A, B = scan(srcs, offs)
+    C = []; A, B = scan(srcs, offs, C)
     print("holder field offsets: %d (%s...)" % (len(offs), ",".join("0x%X" % o for o in sorted(offs)[:20])))
     bad = 0
     print("A top-byte shift compares: %d" % len(A))
@@ -124,6 +155,9 @@ def main():
     print("B field order compares: %d" % len(B))
     for fn, lpc, pc, op, o, other in B:
         print("  B %s lw+0x%X@%s %s@%s vs %s" % (fn, o, lpc, op, pc, other))
+    print("C field pointer differences: %d" % len(C))
+    for i, (fn, lpc, pc, op, o, base, side, other, rs, rt, uses) in enumerate(C):
+        print("  C %d %s lw+0x%X(%s)@%s %s@%s %s,%s field=%s vs %s uses=%s" % (i, fn, o, base, lpc, op, pc, rs, rt, side, other, ";".join(uses) or "-"))
     print("A sites whose outcome differs heap vs spill, unclassified: %d" % bad)
     return 1 if bad else 0
 

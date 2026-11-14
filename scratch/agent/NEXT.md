@@ -1,19 +1,18 @@
-# NEXT (s7320): spill-pointer DIFFERENCE class — census subu over holder-offset fields, classify every site
-HYPOTHESIS-ID: spill-holder-pointer-diff
-Context: s7317-s7319 closed the ordering edge (class A top-byte shifts, class B 182 slt/sltu: 0 cross). The sibling idiom is a
-difference: `subu d, p, q` (or addu with a negated value) where p is a load from a holder offset (scratch/s7317/d8_holders_all.txt.gz,
-offsets of words that held live spill pointers in dd8 21:9 L4 flight) and q is a pointer from another allocation or a heap bound.
-Spill (0x81000000+) minus heap (0x80xxxxxx) is >= 8 MB: any size/limit check on d (sltiu/slt vs a constant, used as a length) would
-then fail where retail passes.
-Hypotheses: H-same (p and q in the same object: d is an in-object length, base-invariant) vs H-scalar (p is never a pointer at that
-site) vs H-cross (q from another allocation: d is wrong under spill -> defect candidate).
+# NEXT (s7321): 24-bit truncation class over holder pointers — census, classify every site
+HYPOTHESIS-ID: spill-holder-pointer-trunc
+Context: s7317-s7320 closed the holder-field edge for order (class B), top byte (A) and difference (C), 0 cross. The remaining idiom
+on the same holder set is TRUNCATION: the spill arena starts at 0x81000000, and 0x81000000 & 0x00FFFFFF = 0 (also & 0x007FFFFF,
+& 0x003FFFFF alias low RAM). A heap pointer 0x80xxxxxx masked to 24 bits is its physical address and works; a spill pointer masked the
+same way points into the bottom of RDRAM. 0x1FFFFFFF (K0_TO_PHYS) is safe up to 512 MB. Shapes: `and/andi d, p, M` with M a 24/23/22-bit
+low mask (M built by lui/ori), `sll d, p, 8 ; srl d, d, 8`, and `lui 0x00FF ; ori 0xFFFF ; and` feeding a segment/DMA/RSP address store.
+Hypotheses: H-safe (every such site masks with >= 29 bits or the operand is scalar) vs H-scalar (field never a pointer there) vs
+H-alias (a holder pointer is truncated to < 25 bits -> a spill pointer would alias physical 0 -> defect candidate, fix or prove the
+owner never lands in spill).
 Unit:
-1. Extend tools/s7317_field_compare_census.py with a class C detector (subu of a holder-offset load against a non-constant register,
-   record what consumes d: compare-with-constant / length arg / store) + a planted selftest snippet (positive control). One run over
-   d8_holders_all.txt.gz; write tools/s7320_bdiff_sites.txt.
-2. Classify every site statically with the s7319 signature approach (tools/s7319_bcmp_static_class.py as the model). If more than ~40
-   sites stay unclear, add them to the s7318 runtime hook (apply_s7318_bcmp_probe.py: hook subu sites, class cross = one operand spill
-   and the other 0x80xxxxxx) and run ONE dd8 21:9 L4 flight with the control at a known hh site.
-3. Any H-cross site: read the function, name what d means, fix (allocate that owner outside the spill arena or correct the length),
-   two-arm qualified.
-Outcomes: all scalar/same -> class C closed, spill-pointer edge fully closed; take CURRENT-TRUTH 17 (next ladder rung).
+1. Add class D to tools/s7317_field_compare_census.py: holder-field load -> and/andi with a constant mask < 0x01FFFFFF, or sll k / srl k
+   with k >= 7 on the same value; record the mask bits and the consumers. Planted selftest (positive control: field & 0x00FFFFFF listed,
+   field & 0x1FFFFFFF NOT listed). Whole-program variant too (any register, not just holder fields) as a second count for context.
+2. Classify. If > ~40 sites unclear, hook them into the s7318 classifier (new class idx 512+: count inputs in spill range = "alias"),
+   ONE dd8 21:9 L4 flight, control = synthetic spill substitution at a hot heap site (like ROGUESQ_S7318_BCMP_CTL).
+3. Any H-alias site with a spill input: name the consumer (DMA/segment/RSP), fix the owner placement or the mask, two-arm qualified.
+Outcomes: all safe/scalar -> spill-pointer class fully closed; take CURRENT-TRUTH 17 (next ladder rung / new idiom audit).

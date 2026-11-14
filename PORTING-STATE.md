@@ -192720,3 +192720,34 @@ H-same (pointer vs pointer into one object) vs H-cross (pointer vs another alloc
 - Discrimination: selects H-scalar (57) / H-same (6) for every unexecuted site, refutes H-cross for all 182 (runtime 119 with control,
   static 63). Runtime and static lines are independent; static half is single-source (one reader + signature). Class B CLOSED, the
   spill-holder-field-compare thread is closed. No defect, no mitigation. Next: sibling pointer-difference class (CURRENT-TRUTH 16).
+
+## Session 7320 (2026-11-14) — class-C field pointer differences CLOSED: census 155 sites, runtime 98 executed with 0 spill-minus-heap cross (ctl 1398/1398), 57 unexecuted classed statically 43 scalar + 14 same-object; holder-field spill edge (order, top byte, difference) closed
+Unit (NEXT.md s7320, slug spill-holder-pointer-diff). Hypotheses per `subu d, p, q` site with p or q a holder-field load (offsets of
+words that held live spill pointers in dd8 21:9 L4 flight, scratch/s7317/d8_holders_all.txt.gz): H-same (both in one object:
+difference base-invariant) vs H-scalar (field never a pointer there) vs H-cross (other operand from another allocation: spill minus
+heap >= 8 MB where retail is small -> defect candidate).
+- Census: tools/s7317_field_compare_census.py gains class C (subu/sub with a field operand vs a non-constant; records the other
+  operand's provenance and the first 4 consumers of d). Selftest extended with a planted cross-base difference (must be listed with
+  its sltiu consumer) and a constant-subtrahend negative; also fixed the s7317 selftest whose class-B check had been swallowed into a
+  trailing comment (it never ran). SELFTEST PASS. 155 class-C sites (152 unique pcs), tools/s7320_bdiff_sites.txt (idx 256+i).
+  Classes A=32, B=182 unchanged.
+- Runtime instrument (one build): new tools/apply_s7320_bdiff_probe.py (RS64_REPLAY after s7318) hooks 179 copies into the s7318
+  classifier; src/main/upstream_compat.cpp table 256 -> 512 slots (256+ = class C). New tools/s7320_bdiff_report.py.
+- Run: LEVEL=4 FPS60 dd8 DD_UNSAFE WIDEWIN 21:9 WIDE_ROUTE HOLD_S=240, ctl ROGUESQ_S7318_BCMP_CTL=80029B70 (inflate_flush class-C
+  hh site). Mission at 68 s, flight 246 s, alive, 0 crash, 0 VI stall. 8.85M hook calls total; class C: 98/155 executed, 2.33M
+  subtractions, cross 0, ctl 1398/1398 classed cross (control PASS). Spill-operand subtractions only at zlib sites (inflate_blocks,
+  inflate_codes, inflate_fast, inflate_flush): same 18787, spsp 250 with unm 485 (window `end - q`: end = window + size is one past the
+  block, so the alloc map leaves it unmapped by construction), speq 18442 (spill window pointer minus a scalar distance/length, result a
+  pointer in the same window). Table scratch/s7320/bcmp_l4.txt.
+- Static (new tools/s7320_bdiff_static_class.py, s7319 model): 57 never-executed sites, 12 classes with mechanical signatures re-checked
+  on the generated MIPS: 43 SCALAR (17 strength-reduced index multiplies `x<<k - x`, 7 NPC health/timer decrements, 7 _Genld printf,
+  3 MusyX sample positions, 3 huft counts, 2 asset positions, 2 CP0 Count/Compare, heap block size, avail_in) and 14 SAME (12 zlib
+  window fields of one inflate state, inflateSync next_in after-minus-before, one rs-heap block split). Every signature accepts all own
+  sites and rejects 40-56 foreign; with no table the coverage check FAILs (98 unclassified listed, rc=1) = control. 3 huft sites show as
+  "never executed" only because their pcs are shared with the data_gap_80029270 duplicate-VA copy whose idx took the hook (executed, nn).
+- Discrimination: selects H-same / H-scalar for all 155 sites and refutes H-cross (runtime 98 with a passing control, static 57).
+  Two lines (runtime classifier, static signatures) agree; static half single-source. No defect, no mitigation. Classes A+B+C close
+  the holder-field edge of the spill-pointer class. Table in docs/HEAP-ADDR-AUDIT.md. Also ran tools/s7090_fixup_statement_census.py
+  after the fixup registration edit: rc=0.
+- Next: 24-bit truncation class (spill arena 0x81000000 & 0x00FFFFFF aliases physical 0, so any holder pointer masked to 24 bits or
+  sll 8/srl 8 - segment addresses, DMA/RSP addresses - would point at the wrong memory): NEXT.md s7321.

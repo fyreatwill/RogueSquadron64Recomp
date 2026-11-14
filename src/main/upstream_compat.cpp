@@ -3378,7 +3378,7 @@ void rs64_s7317_write(const char* path) {
 extern "C" { int rs64_s7318_on = 0; }
 namespace {
 struct S7318S { uint32_t pc; uint64_t n, nn, hh, same, spsp, cross, speq, unm, ctl_n, ctl_cross; uint32_t ex[4][4]; int nex; };
-S7318S g_s7318[256]; const char* g_s7318_path = nullptr; uint32_t g_s7318_ctl = 0; uint64_t g_s7318_calls = 0, g_s7318_last = 0;
+S7318S g_s7318[512];  /* 0-255 class B (s7318), 256-511 class C (s7320) */ const char* g_s7318_path = nullptr; uint32_t g_s7318_ctl = 0; uint64_t g_s7318_calls = 0, g_s7318_last = 0;
 struct S7318Init { S7318Init() {
     const char* e = std::getenv("ROGUESQ_S7318_BCMP"); if (!e || !e[0] || e[0] == '0') return;
     g_s7318_path = (e[0] == '1' && !e[1]) ? "rs64_s7318_bcmp.txt" : e;
@@ -3405,7 +3405,7 @@ void s7318_dump() {
     uint64_t T[9] = {0}; for (auto& s : g_s7318) { T[0] += s.n; T[1] += s.nn; T[2] += s.hh; T[3] += s.same; T[4] += s.spsp; T[5] += s.cross; T[6] += s.speq; T[7] += s.unm; T[8] += s.ctl_cross; }
     std::fprintf(f, "# s7318 calls=%llu nn=%llu hh=%llu same=%llu spsp=%llu cross=%llu speq=%llu unm=%llu ctl_cross=%llu\n# idx pc n nn hh same spsp cross speq unm ctl_n ctl_cross | ex a b blk req\n",
         (unsigned long long)T[0], (unsigned long long)T[1], (unsigned long long)T[2], (unsigned long long)T[3], (unsigned long long)T[4], (unsigned long long)T[5], (unsigned long long)T[6], (unsigned long long)T[7], (unsigned long long)T[8]);
-    for (int i = 0; i < 256; ++i) { auto& s = g_s7318[i]; if (!s.n) continue;
+    for (int i = 0; i < 512; ++i) { auto& s = g_s7318[i]; if (!s.n) continue;
         std::fprintf(f, "%d %08X %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu |", i, s.pc, (unsigned long long)s.n, (unsigned long long)s.nn, (unsigned long long)s.hh, (unsigned long long)s.same,
             (unsigned long long)s.spsp, (unsigned long long)s.cross, (unsigned long long)s.speq, (unsigned long long)s.unm, (unsigned long long)s.ctl_n, (unsigned long long)s.ctl_cross);
         for (int k = 0; k < s.nex; ++k) std::fprintf(f, " %08X,%08X,%08X,%X", s.ex[k][0], s.ex[k][1], s.ex[k][2], s.ex[k][3]);
@@ -3413,7 +3413,7 @@ void s7318_dump() {
     std::fclose(f); }
 }
 extern "C" void rs64_s7318_bcmp(int idx, uint32_t pc, uint32_t a, uint32_t b) {
-    if ((unsigned)idx >= 256) return;
+    if ((unsigned)idx >= 512) return;
     S7318S& s = g_s7318[idx]; s.pc = pc; ++s.n;
     int unm; uint32_t blk, req; int c = s7318_class(a, b, &unm, &blk, &req);
     if (c == 0) { ++s.nn; if ((a >> 24) == 0x80 && (b >> 24) == 0x80) ++s.hh; }

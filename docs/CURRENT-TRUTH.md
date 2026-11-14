@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7319 (2026-11-14).
+Compact operational handoff, as of Session 7320 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -222,15 +222,15 @@ is in the s7307 archive). Active unit: NEXT.md.
 14. **Retail DATA-word bound class: CLOSED (s7316, H-clean).** tools/s7316_data_bound_census.py --ram: 303 sites, 41 globals, 4
     pointer-valued (DL pool limit/chunk, heap head), none ever holds a spill pointer; spill-injected dump flags 169 (control).
     Table in docs/HEAP-ADDR-AUDIT.md. Open edge: struct-field bounds (G via register base), see 15.
-15. **Spill-pointer holders + class-B compares: CLOSED (s7317-s7319, 0 cross).** ROGUESQ_S7317_ALLOCMAP=1 +
+15. **Spill-pointer holders + class-B compares + class-C differences: CLOSED (s7317-s7320, 0 cross).** ROGUESQ_S7317_ALLOCMAP=1 +
     ROGUESQ_RDRAM_DUMP_BYTES=20971520; tools/s7317_spill_holders.py. dd8 21:9 L4: 22-120 live spill blocks, 42 owner types
-    (scratch/s7317/d8_owner_table.txt). Top-byte shift class (32) spill-equal. Class B (182 sites): runtime ROGUESQ_S7318_BCMP
-    (tools/apply_s7318_bcmp_probe.py, report tools/s7318_bcmp_report.py) 119/182 executed over L4 x2/L1/L12, 0 cross, ctl 3968/3968;
-    the 63 unexecuted sites classed statically by tools/s7319_bcmp_static_class.py (57 scalar, 6 same-object, 0 cross; signatures
-    re-checked on the generated MIPS, coverage control fails when tables are dropped). Table: docs/HEAP-ADDR-AUDIT.md. Open sibling:
-    pointer-difference class (subu of a holder field vs a pointer from another allocation), see 16.
-16. **Spill-pointer difference class (s7320 next, NEXT.md).** `subu d, p, q` where p is a holder-offset field load: a spill-minus-heap
-    difference is >=8 MB and breaks size/limit tests. Census like s7317 class B, then classify (runtime hook or static).
+    (scratch/s7317/d8_owner_table.txt). Top-byte shift class (32) spill-equal. Class B (182 slt/sltu): runtime ROGUESQ_S7318_BCMP
+    (tools/apply_s7318_bcmp_probe.py, report tools/s7318_bcmp_report.py) 119/182 executed, 0 cross, ctl 3968/3968; 63 static
+    (tools/s7319_bcmp_static_class.py). Class C (155 subu, tools/s7320_bdiff_sites.txt): tools/apply_s7320_bdiff_probe.py into the same
+    classifier (idx 256+), report tools/s7320_bdiff_report.py: 98 executed, 0 cross, ctl 1398/1398; 57 static
+    (tools/s7320_bdiff_static_class.py: 43 scalar, 14 same). Tables: docs/HEAP-ADDR-AUDIT.md.
+16. **24-bit truncation class (s7321 next, NEXT.md).** Spill 0x81000000 & 0x00FFFFFF = 0: any holder pointer masked to 24 bits
+    (andi/and 0xFFFFFF, sll 8 + srl 8, segment/DMA/RSP address builders) aliases low physical memory. Census + classify, same kit.
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

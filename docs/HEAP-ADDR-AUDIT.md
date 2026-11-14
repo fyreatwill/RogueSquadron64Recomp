@@ -103,6 +103,7 @@ spill-range word (live_ptr / dangling / data) with owner block, offset and calle
 `tools/s7317_field_compare_census.py <holders_all.txt>`:
 - Class A, top-byte shift then compare (shift form of the s6993 mask test): 32 sites, all spill-equal by evaluation. CLOSED.
 - Class B, field-vs-register ordering compares at holder offsets: 182 sites, CLOSED s7319 (below).
+- Class C, field pointer differences (`subu/sub d, p, q`, one operand a holder-field load, other non-constant): 155 sites, CLOSED s7320 (below).
 s7316 global-word census re-run on the dd8 dumps (2113 static words holding live spill pointers): 0 spill-valued sites.
 
 ## Class B field-order compares closed (s7318 runtime + s7319 static)
@@ -135,3 +136,35 @@ the generated MIPS (accepts all own sites, rejects >=40 foreign sites; dropping 
 
 Verdict: 57 scalar + 6 same + 119 runtime-clean = 182/182, **0 H-cross**: no class-B compare can order a spill pointer against
 another allocation. Static half is single-source (one reader + mechanical signature), the runtime half is independent.
+
+## Class C field pointer differences closed (s7320 runtime + static)
+
+Census: `tools/s7317_field_compare_census.py <holders_all.txt>` class C (selftest plants a cross-base field difference, must list it
+with its sltiu consumer, and must NOT list a constant subtrahend): 155 sites, 152 unique pcs (3 shared by the data_gap_80029270 /
+huft_build_recomp duplicate-VA copies), table tools/s7320_bdiff_sites.txt (idx 256+i).
+Runtime (s7320, `tools/apply_s7320_bdiff_probe.py` hooks into the s7318 classifier, table now 512 slots; report
+`tools/s7320_bdiff_report.py`): dd8 21:9 L4 FPS60 WIDEWIN, 246 s flight, alive, 0 crash, 0 VI stall. 98/155 sites, 2.33M
+subtractions, **0 cross** (spill minus 0x80xxxxxx or reverse), control at inflate_flush 0x80029B70 1398/1398 classed cross.
+Every spill-operand subtraction is zlib: same-block (18787) or both-spill with one operand one-past-the-end of the window block
+(spsp 250 / unm 485: `end - q`, end = window + size is outside [start, start+req) by construction), or spill pointer minus a scalar
+distance/length (speq 18442: `q - dist`, `end - e`, the result is a pointer into the same window).
+Static (`tools/s7320_bdiff_static_class.py <tables>`, signatures re-checked on the generated MIPS, each rejects >=40 foreign sites;
+no table -> COVERAGE FAIL = control): the 57 never-executed sites.
+
+| class | kind | sites | meaning |
+|---|---|---|---|
+| heap-freelist | same | 258 | split block minus its header inside one rs-heap block |
+| heap-size | scalar | 268 | block size minus request |
+| asset-pos | scalar | 263, 264 | asset load position 0x60/0x68 (zeroed at init) vs entry length 0x1C / stream position 0x24 |
+| mul-idiom | scalar | 17 (270, 271, 280, 284, 286, 308-317, 319, 325) | `x<<k - x` strength-reduced multiply of an index, then scaled again |
+| health-timer | scalar | 278, 279, 329, 330, 334-336 | NPC health / timer minus lhu damage step, max minus current |
+| musyx-samples | scalar | 294, 295, 298 | MusyX voice sample positions 0x38/0x3C/0x40 vs truncated cursor |
+| cp0-timer | scalar | 342, 343 | CP0 Count/Compare deltas (exception/timer code) |
+| inflate-window | same | 347-352, 370, 374, 376, 378-380 | zlib window/read/write/end (0x24-0x30) of one inflate state |
+| inflate-avail | scalar | 353 | avail_in -= n |
+| inflate-input | same | 344 | next_in after minus before (total_in update) |
+| huft-count | scalar | 391-393 | Huffman counts / code values |
+| printf-prec | scalar | 400-406 | _Genld width/precision fields |
+
+Verdict: 43 scalar + 14 same + 98 runtime-clean = 155/155, **0 H-cross**. With classes A, B and C the holder-field edge of the
+spill-pointer class (order, top byte, difference) is closed. Static half single-source; runtime half independent.
