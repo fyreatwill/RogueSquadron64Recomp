@@ -1,17 +1,21 @@
-# NEXT (s7352): idiom-class audit - class AC, signed 32-bit add/sub/negate overflow on guest-derived ints
-HYPOTHESIS-ID: host-signed-overflow
-Context: s7351 closed class AB (tools/s7351_cast_census.py: 168 sites, 0 open; RT64 framebuffer word swap fixed, latent).
-Idiom: `int32_t`/`int` `a + b`, `a - b`, `-a`, `abs(a)`, `a += b` where an operand is guest-derived (RDRAM word, DL/RDP field,
-OSTask field, ctx->rN, MEM_W) and the sum can leave int range. Signed overflow is UB: clang folds `x + 1 > x`, range checks and loop
-trip counts on it. MIPS ADDU/SUBU wrap, so retail semantics = unsigned wrap. (Class V s7345 covered 32-bit multiply only.)
-Hypotheses: H-safe (operands narrowed: int16/12-bit RDP fields sign-extended into int32 cannot overflow a sum of two; or the
-arithmetic is already unsigned / int64 / float), H-diag (only gated probes), H-ub (default-on int32 sum of two full-range guest
-words: fix with uint32_t arithmetic + cast, or int64).
-Method: new tools/s7352_signed_census.py on the s7343 scope; reuse s7343 args_of()/ln_fn()/body_gated(), s7338 sites() C/P/G/D, s7344
-CORE demotion and its NARROW/decl() helpers. Site = binary + / - (and unary -, abs) whose operand is declared int/int32_t/int64->int
-narrowing and is guest-derived. Classes: NAR (operands <= 24-bit by type or mask), W64 (computed in int64/float), U (unsigned), K
-(constant + small), H, B. Controls: planted `int32_t s = (int32_t)task->a + (int32_t)task->b;` ('?'), uint32 twin (U), int16 twin
-(NAR), int64 twin (W64), gated twin (G).
-Runtime only if a B site gets fixed: standalone UBSan control (-fsanitize=signed-integer-overflow), then
-`env SECS=260 zsh scratch/s7326/run.zsh s7352_dd8 ''`.
-Exit: PORTING-STATE s7352, CURRENT-TRUTH item 27q -> closed/fixed, commit.
+# NEXT (s7353): idiom-class audit - class AD, invalid bool / enum values from guest-derived bytes
+HYPOTHESIS-ID: host-bool-enum-load
+Context: s7352 closed class AC (tools/s7352_signed_census.py: 407 sites + 178 blind-spot rows, 0 open, no defect).
+Idiom: a host `bool` (or a struct with a bool member) filled from RDRAM / DL / OSTask bytes by memcpy, a cast pointer or
+`*(bool*)`. Also `static_cast<Enum>(guest)` / `(Enum)w0 field`, where the field can exceed the enum's range (enum class without a
+fixed underlying type, or a plain enum whose value range is narrower than the field). Also a `switch` / table index on such an enum.
+Loading a bool not 0/1 or an out-of-range enum is UB: clang may drop default: branches or treat the bool as 0..255.
+Hypotheses: H-safe (every bool is computed by a comparison / `!= 0`; every enum cast has a fixed underlying type that covers the
+field width, e.g. `enum class X : uint8_t` from an 8-bit field), H-diag (only gated probes), H-ub (default-on bool/enum load from
+an unconstrained guest byte/field: fix with `!= 0` or a range check before the cast).
+Method: new tools/s7353_boolenum_census.py on the s7343 scope; reuse s7338 sites() C/P/G/D, s7343 ln_fn/body_gated/hand, s7344
+decl/CORE, s7346 hdr_text/member_types. Sites:
+  (a) `static_cast<E>(` / `(E)` where E is an enum type (collect enum names and their underlying types from the scope headers);
+  (b) memcpy / cast-pointer reads into a bool or a struct containing bool (s7350/s7351 site lists give the guest copies);
+  (c) `bool x = <guest int>` without a comparison (implicit int -> bool conversion is FINE: count it as SAFE, it is not a load).
+Classes: FIXED (underlying type covers the field width), CMP (value produced by a comparison), RC (range-checked before the cast),
+H, B. Controls: planted `Mode m = static_cast<Mode>(task->a);` with an unfixed `enum class Mode { A, B }` ('?'), a fixed `: uint32_t`
+twin (FIXED), a range-checked twin (RC), a gated twin (G), and a `bool b = task->a;` twin (SAFE, not a site).
+Runtime only if a B site gets fixed: standalone UBSan control (-fsanitize=bool,enum), then
+`env SECS=260 zsh scratch/s7326/run.zsh s7353_dd8 ''`.
+Exit: PORTING-STATE s7353, CURRENT-TRUTH item 27r -> closed/fixed, commit.

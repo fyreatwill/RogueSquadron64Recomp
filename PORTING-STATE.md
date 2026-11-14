@@ -193809,3 +193809,43 @@ misaligned image, so the fix is latent (no behaviour change expected, none seen)
 Conclusion: H-safe for 167 sites, H-ub for 1 (fixed, latent). Rules out: misaligned typed host access to guest RDRAM as a live
 defect source. Next: class AC (signed 32-bit add/sub/negate overflow on guest-derived ints in host code), CURRENT-TRUTH 27q.
 Discrimination: the census selects H-safe for 167 sites and H-ub for the RT64 framebuffer swap (fixed); H-diag refuted as the only explanation.
+
+## Session 7352 (2026-11-14) — class AC signed 32-bit add/sub/negate overflow closed: 407 sites + 178 blind-spot rows, 0 open, no defect (census s7352_signed_census.py with controls; VRCP/VRSQ INT_MIN guard UBSan control PASS)
+HYPOTHESIS-ID: host-signed-overflow. Work unit from NEXT.md (s7351): idiom-class audit, class AC.
+Hypotheses: H-safe (operands narrow / unsigned / 64-bit / float, so no signed-32 sum can leave int range), H-diag (the only
+full-range sums sit in gated probes), H-ub (a default-on int32 sum of two full-range guest words: fix with uint32 or int64).
+Generated code first (largest volume of guest arithmetic): N64Recomp ADD32/SUB32 (recomp.h:96-100) add two `gpr` = uint64_t and
+then truncate, so no signed overflow. RecompiledFuncs has 0 S32()/SIGNED() +/- (one `(int32_t)((a & ~Nu) + ...)` casts an
+unsigned sum). Its Sll32 form is `S32(x << n)`, a uint64 shift. The F5 ucode C files have 0 signed +/- too. Their `S32(rN) << k`
+(213 sites) is signed left shift, but the ucode files are compiled LANGUAGE CXX under CMAKE_CXX_STANDARD 20 (CMakeLists.txt:9, :301),
+where it is defined as modular. Not a defect.
+Host census: new tools/s7352_signed_census.py on the s7343 scope (183 files, 96k lines). It reuses s7338 sites() C/P/G/D, s7343
+ln_fn/body_gated/hand, s7344 decl/CORE and s7348 lhs_of/rhs_of. Site = binary + / - / += / -=, unary -, or abs() whose arithmetic is
+signed 32. That means at least one operand is declared or cast int/int32_t/s32, and no operand is unsigned 32, 64-bit or float.
+Classes: NAR (known widths fit in 31 bits), HOST (no guest-derived operand within one assignment level), H, PTR, U, W64 (hand
+corrections), FIX, B.
+Controls (same run, `--controls`): planted `(int32_t)task->a + (int32_t)task->b` -> '?', int16/masked twin NAR, gated twin G,
+uint32 twin counted U, int64 twin counted W64: PASS.
+Result: 4826 +/- sites seen. Not signed 32: U 2549, W64 844, FLT 618. Untyped (an operand's type unresolved) 2095. Signed-32 sites:
+407 = HOST 146, G 76, NAR 69, D 62, H 33, U 11, PTR 8, W64 1, P 1. 0 '?' / B.
+The 22 first-pass '?' were pointer + int (rdram / g_rdram_for_submit / diag dumps), uint32 + int32 that the usual conversions make
+unsigned (overlays `rom_addr - rom + ram_addr`), or bounded counts (n += bool over 8 compares, rows <= 512, palette 0xF80 + idx<<3).
+HAND also moves the guest-derived-but-narrow families the one-level HOST rule had mislabelled into NAR/H with reasons: rt64 tile
+coords (uint16 12-bit), rect/scissor coords + extended-GBI offsets, x/yScroll vs int(texcoord), the floor-texel diag sampler
+(returns without ROGUESQ_LOG_FLOOR), RSP VU VCL/VMACQ/VMULQ, and terrain cell indices.
+Blind spot made explicit: 178 default-on +/- with a guest-derived operand of unresolved type, all classed: U 150 (120 are RSP
+LWC2/SWC2 address maths, where rs is RSP::r32 = uint32_t (rsp_vu.hpp:66); the rest are u-suffixed literals or GBI p0/p1 uint32
+bitfields), PTR 9, NAR 9, HOST 7, H 3. The census exits 1 on any unclassified blind-spot row.
+Only interesting default-on candidate: RSP VRCP/VRSQ `data = input ^ mask; data -= mask` with a guest double-precision input
+(DIVIN << 16 | low). At input = INT_MIN (DIVIN 0x8000, low 0) the step would compute INT_MAX - (-1). The real code runs the `-=` only
+under `if (input > -32768)`, so INT_MIN never reaches it.
+Control tools/s7352_signed_ctl.cpp (clang -O1 -fsanitize=signed-integer-overflow -fno-sanitize-recover): the guarded step (verbatim)
+runs 16,777,481 inputs clean, including every 16-bit input, the INT_MIN / INT_MAX edges and a 0x101-stride sweep of all 32-bit
+values. The unguarded twin aborts: "2147483647 - -1 cannot be represented in type 's32'". PASS. The census also checks the guard is
+still in the header (2 copies).
+No code fix, so no game run (NEXT.md: runtime only if a B site is fixed). Second line of evidence: the UBSan control covers the one
+non-trivial default-on site only. The other 406 rest on static review: single-source.
+Conclusion: H-safe selected for all 407 signed-32 sites and 178 blind-spot rows. H-ub refuted: no default-on full-range int32 guest
+sum exists in host code. H-diag is not needed to explain it. Rules out: signed add/sub overflow UB as a live defect source.
+Next: class AD, invalid bool / enum values loaded from guest-derived bytes (UB under -fsanitize=bool,enum), CURRENT-TRUTH 27r.
+Discrimination: census + control select H-safe and refute H-ub for class AC.

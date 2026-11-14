@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7351 (2026-11-14).
+Compact operational handoff, as of Session 7352 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -430,10 +430,17 @@ is in the s7307 archive). Active unit: NEXT.md.
     derefed `uint32_t*` at colour-image address + row * rowBytes (guest-chosen; odd 16b width -> 2 mod 4); now memcpy word access.
     tools/s7351_cast_ctl.cpp: identical bytes when aligned, UBSan aborts the old form at +2. 260 s dd8 smoke clean; the path ran 20000+
     times, every range 4-aligned (latent). Next: class AC (27q).
-27q. **Next unit (NEXT.md): class AC, signed 32-bit add/sub/negate overflow on guest-derived ints** in host code (`int32_t` sums of
-    guest coords/lengths, `-x`, `abs(x)` of INT_MIN): UB the compiler may exploit (loop-bound / range-check folding). MIPS ADDU/SUBU wrap;
-    fix with unsigned arithmetic or a widened type. Class V (s7345) covered multiply only.
-28. **When 1-27q offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27q. **Signed 32-bit add/sub/negate overflow (class AC): CLOSED (s7352, static census + standalone control; no defect, no runtime).**
+    `tools/s7352_signed_census.py --controls`: 407 signed-32 +/-/neg/abs sites in the s7343 scope: HOST 146, G 76, NAR 69, D 62, H 33,
+    U 11, PTR 8, W64 1, P 1, 0 open. Blind spot listed: 178 default-on rows with a guest operand of unresolved type, all classed (U 150:
+    RSP LWC2/SWC2 maths on r32 = uint32_t). Generated code is clean: ADD32/SUB32 add uint64 gpr then truncate, and RecompiledFuncs has
+    no signed +/-. Ucode `S32(r) << k` is defined (built as C++20). The only non-trivial site, the RSP VRCP/VRSQ magnitude step, never
+    sees INT_MIN (`if (input > -32768)`). tools/s7352_signed_ctl.cpp: 16.8M inputs clean under UBSan, and the unguarded twin aborts at
+    INT_MIN. Single-source beyond that site. Next: class AD (27r).
+27r. **Next unit (NEXT.md): class AD, invalid bool / enum values from guest-derived bytes** in host code: a `bool` loaded from
+    RDRAM/DL bytes not 0/1, a `static_cast<Enum>(guest)` outside its range, or a switch over it. UB under -fsanitize=bool,enum. Fix with
+    `!= 0` / a range check.
+28. **When 1-27r offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
