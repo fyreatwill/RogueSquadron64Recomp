@@ -318,6 +318,11 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
+0. **s7299: dd8 px8 auto QUALIFIED at 21:9 (s7298 soak, ctl flat-30 158 s PASS): L1/L5/L9/L10/L12 300 s, 0 crash, 60/s,
+   beyond-route 3/8/0/1/0 s (L5's 8 s are 36-47/s single seconds at t<=76, route), heaviest20 10.6-12.1 ms (headroom 3.2-6.1).
+   total_emit L1 11134 L5 11837; L9 6189 (CAPLEVEL 9:8192 binds, wide 2509); L12 RLEVEL 12:48 wins (3839 vs ctl R128 12420 ->
+   flat 30); L10 cloud level, no [s7233] terrain lines (same as 16:9). dd8 now qualified at 16:9 and 21:9; OWNER-OPT-INS updated.
+   Next: horizon-in-view dd6-vs-dd8 look sheet, then the game far cutoff 0x8009DEB4.**
 0. **s7297: dd8 px8+R128 auto extended to 21:9 (FB_WIDTH<=796 gate dropped in main.cpp [s7293]).** s7296 soak (L4 21:9 dd8,
    1 run/arm, ctl flat 30 + px8 depth 128 PASS): total_emit ref(px5,R88) 7466 / px8 7909 / px8+R128 11818, win77-97 12.98 /
    13.54 / 13.65 ms, all 60.0/s -> H-219-ok. In-session verify (scratch/s7297_verify.sh): auto [s7293] fbw=1024, 11620 cells/call

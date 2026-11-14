@@ -1476,3 +1476,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113-152006 | s7294_169_dd8_levels | rc=0 | 1545s | scratch/agent/soak_results/s7294_169_dd8_levels_20261113-152006.log
 20261113 | s7295 fold: s7294_169_dd8_levels rc=0 CONTROL PASS (ctl flat 30 199 s, 234 beyond-route s): dd8 px8 auto ([s7293] in all 4) L1/L5/L10/L12 16:9 300 s alive, 0 crash, 60/s, beyond-route 4/1/1/0 s, heaviest20 headroom 4.1-13.3 ms; total_emit L1 11438 L5 12278; L12 RLEVEL 12:48 still wins (emit 3626) -> H-hold, dd8 qualified at 16:9.
 20261113-160425 | s7296_219_dd8_px | rc=0 | 633s | scratch/agent/soak_results/s7296_219_dd8_px_20261113-160425.log
+20261113-162231 | s7298_219_dd8_levels | rc=0 | 1853s | scratch/agent/soak_results/s7298_219_dd8_levels_20261113-162231.log
+20261113 | s7299 fold: s7298_219_dd8_levels rc=0 CONTROL PASS (ctl flat 30 158 s): dd8 px8 auto L1/L5/L9/L10/L12 21:9 300 s alive, 0 crash, 60/s, beyond-route 3/8/0/1/0 s (route), heaviest20 10.6-12.1 ms; L9 CAPLEVEL binds (6189), L12 RLEVEL 12:48 wins (3839) -> H-hold, dd8 qualified at 21:9.

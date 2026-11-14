@@ -192197,3 +192197,20 @@ KLEVEL/CAPLEVEL rules are set later and are untouched).
 PX8_AUTO=0 arm: no [s7293] line, r=88, 7313, depth 80, 60.0/s 12.94 ms. Both alive, 0 crash, beyond-route 1 s each.
 Two independent runs (s7296 explicit env, s7297 auto) agree. OWNER-OPT-INS updated (21:9 distance-8 note).
 Queued scratch/agent/soak_queue/s7298_219_dd8_levels.sh: 300 s holds at 21:9 dd8 on L1/L5/L9/L10/L12 + ctl (L12 STACK=0+DUTY=1.4).
+
+## Session 7299 (2026-11-13) — G1c: fold s7298_219_dd8_levels (H-hold: dd8 px8 auto holds 300 s at 21:9 on L1/L5/L9/L10/L12, 0 crash, 60/s, ctl PASS)
+HYPOTHESIS-ID g1c-window-bind. Unit from NEXT (s7298).
+**Fold s7298_219_dd8_levels** (rc=0, 1853 s, AC100%, clk 0.97-1.05; scratch/s7298q/). All 6 arms alive=1 at 300 s, 0
+CRASH/SIGSEGV/SIGBUS/abort lines in any log. [s7293] `dd8 px8 auto poolx_max=8 widewin_r=128 fbw=1024` in every arm.
+| arm | p50/p95 ms | heaviest20 | beyond-route <55/s | total_emit | note |
+| L1 | 11.64/14.54 | 13.55 ms 59.1/s (hr 3.15) | 3 s | 11134 | |
+| L5 | 7.78/12.44 | 10.56 ms 60.0/s (hr 6.14) | 8 s (single seconds 36-47/s, t<=76) | 11837 | |
+| L9 | 8.00/12.66 | 11.46 ms 60.0/s | 0 | 6189 (wide 2509) | CAPLEVEL 9:8192 applies |
+| L10 | 3.39/4.17 | 3.74 ms 60.0/s | 1 s | - | cloud level, no [s7233] lines (same as s7294 16:9) |
+| L12 | 9.78/11.61 | 12.08 ms 60.0/s | 0 | 3839 (skip 9414) | [s7287] level=12 widewin_r=48 |
+| ctl (L12 RLEVEL=none) | 20.87/26.73 | 27.46 ms 29.6/s | 230 s, flat runs 4 / 158 s | 12420 | POSITIVE CONTROL PASS |
+Result: H-hold selected, H-level-cost and H-crash refuted for these 5 levels at 21:9 (one run each; the L4 21:9 arm is s7296 +
+s7297, two runs). Together with s7294-s7295 (16:9) the dd8 auto is qualified on both owner screens. Note L5's beyond-route seconds
+all sit before t=77 (the shared route transients at t=5/11/28/43/59/67 plus 1/60/68/76), not in flight.
+Changed: docs/OWNER-OPT-INS.md (dd8 16:9 + 21:9 300 s checks recorded, one-line command), CURRENT-TRUTH next-step 0.
+Next: horizon-in-view dd6-vs-dd8 look sheet (the s7295 route window banked under cliffs), then the far cutoff 0x8009DEB4.
