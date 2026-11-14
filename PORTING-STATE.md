@@ -192544,3 +192544,7 @@ All 6 captures over the freeze vs the good s7312 b1 frame: mean abs diff 0.01; v
 vs good (the control): 92.80. The window never lagged the stream.
 Rules out: a presentation lag or stale-frame mechanism behind G5b/G5c owner reports, as far as this datum went (it was a harness
 artefact). Lesson: a batch voided mid-run must be confirmed dead (pgrep) before the rerun. The pose script now enforces this.
+Verdict: selects H-wrong-window (two lines: process-lifetime overlap at the capture second + L5 scenery in the stale PNG; mechanism
+reproduced by the fake-process control). Refutes H-parity (offline, 9 correct freezes on 0x8F5000) and the after-rebuild premise; the
+repro arm refutes a presentation lag at this recipe (6/6 captures == stream frame). Next discriminator: H-clean vs H-leak for the
+loop's soak phase (does any soak start with a foreign game alive?), NEXT.md s7314.
