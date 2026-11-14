@@ -193936,4 +193936,6 @@ smokes on this route.
 lib/ edited (events.cpp, audio.cpp): ./submodule-patches/export.sh run, N64ModernRuntime.patch refreshed in this commit.
 Rules out: a default-on unsynchronised global between game / VI / gfx / AI threads in the boot path other than the two fixed.
 Does not rule out: races that only occur in mission phases (TSan never got there); races inside the uninstrumented generated C.
+Conclusion: the TSan table selects H-race for the VI state (events_context) and sample_rate globals (fixed, 0 rows after) and
+refutes H-safe; every other row selects H-diag / blind-spot (SEM, BENIGN, EXT, D). Next discriminator: class AF signal-handler census.
 Next: class AF, async-signal-unsafe calls in signal handlers (NEXT.md, CURRENT-TRUTH 27t).
