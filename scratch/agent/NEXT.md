@@ -1,18 +1,15 @@
-# NEXT (s7334): item 24(b) — class the above-sentinel FIFO region instead of "freed"
-HYPOTHESIS-ID: hostmap-carve-blind
-Context: s7333 closed (a) (abort route FIFO-in-carve host-live 17/17, tools/s7333_carve_report.py). (b): every above-heap FIFO starts
-0x10 past an arena end sentinel (fl=8 sz=0): 80904000, 80986800, boot 80B77800 at sentinel+0xD810. rs64_s7325_gap classes it 3
-(inside a freed block: stale history) or 4.
-Hypotheses: H-trim (the scene setup sets the arena end below the FIFO/fb region on purpose, so the memory above is a static non-heap
-carve: the sentinel writer is in the same coalesceFreeHeapBlocks / buildHeapFreeList(lo, hi) call, hi = sentinel), H-top (the region
-is the RAMTOP tail osMemSize - fb, always the same physical span per scene), H-stale (a real freed block still covers it, and a
-write there after the free would be dangling).
-s7333 OFFLINE RESULT: H-trim (sentinel == rebuild hi) REFUTED; every sentinel lies inside the previous heapsync's freed carve, 0x10
-below the FIFO. Discriminator now: guest store watch on the sentinel words (s7332 store-watch mechanism) -> writer pc + free-list
-state. Pc in the arena/FIFO setup -> H-top (add class 5); buildHeapFreeList terminator with span still free-listed -> H-stale.
-Old plan (kept for reference): from scratch/s7326/s7333_keepv2/run.log, compare each sentinel address to the
-"[s7325] heap rebuild ... range=lo..hi" hi values and to the preceding carve end. If sentinel == rebuild hi, H-trim. Then add class
-5 "above arena end sentinel (guest non-heap)" in rs64_s7325_gap (computed from the guest walk's sentinel, ahead of the freed-history
-check), make tools/s7331_reset_writer_report.py and s7333_carve_report.py print it, and rerun ONE abort route:
-`env ARMS=keepv2b zsh scratch/s7333/run2.zsh` (edit ARMS name). Target: 0 FIFO transitions classed 3/4; report rc 0.
-If (b) closes, item 24 is closed: take the next CURRENT-TRUTH item / ITERATION 3c rung.
+# NEXT (s7335): idiom-class audit — consumers of the frame-buffer layout bound (fb / FIFO tail base)
+HYPOTHESIS-ID: fb-layout-bound-audit
+Context: s7334 closed item 24: the persistent arena ends at hi-0x10, hi = output of the fb-layout routine 0x80000DD4 (sp+0x48 at caller
+0x80001430 in 0x80001354) or the global 0x801163E4; above it live the scene's framebuffers + gfx RDP FIFO (boot tail at 0x80B69FF0, i.e.
+above 8 MB because RAMTOP is 24 MB since s7326). Question: does every guest consumer of that bound agree with the 24 MB RAMTOP / spill
+arena 0x81000000-0x81800000 layout, or does any assume the tail ends at osMemSize (8 MB) or sits below 0x80800000?
+Hypotheses: H-clean (all readers derive from the same bound, no fixed 8 MB assumption), H-cap (a reader clamps or masks to 8 MB / 24-bit,
+latent like class D), H-overlap (fb tail at some dd/aspect width reaches 0x81000000 = the spill arena base).
+Method (static first, one tool): tools/s7335_fb_bound_census.py: disassemble 0x80000DD4 and list every load of 0x801163E4 / stores of its
+output across funcs_*.c asm comments (grep '0x63E4(' with lui 0x8011, plus the sp+0x48 out pointer passers), classify each site
+(derives-from-bound / fixed constant / mask). Exit 1 on unclassified. Then ONE runtime check only if H-overlap is possible: log
+max(fb tail end) per scene on the dd8 21:9 abort route (scratch/s7334/run2.zsh recipe + a new [s7335] line at the 0x80001430 call: a3 and
+the 0x80000DD4 args) vs 0x81000000. Positive control: the boot hi must equal 0x80B6A000 (s7334 sentinel B69FF0+0x10).
+Outcomes: all derive -> H-clean, close; a constant 0x80800000/0x00800000 or 0xFFFFFF mask on the bound -> H-cap, classify reachability;
+tail end >= 0x81000000 at any scene -> H-overlap, a real defect: fix the spill base or the bound.

@@ -2167,6 +2167,18 @@ static const bool s_s6843_init = [] {
         const uint32_t hi = (c && *c == ':') ? (uint32_t)strtoul(c + 1, nullptr, 16) : 0u;
         if (hi > lo) { rs64_s6843_lo = lo; rs64_s6843_len = hi - lo; std::fprintf(stderr, "[swatch] armed %06X-%06X\n", lo, hi); } }
     return true; }();
+// s7334: ROGUESQ_STORE_WATCH_PTS=<p>,<p>,... (hex phys, up to 16) watches only the 16-byte windows [p, p+16): the pre-check range
+// becomes [min, max+16) and every hit prints one [swatch-pt] line (swap, pc|api, phys, width, the 4 words BEFORE the store);
+// non-point stores in the range are ignored (no table). First ROGUESQ_STORE_WATCH_LINES lines. Diagnostic only.
+static uint32_t s_s7334_pt[16]; static int s_s7334_n = 0;
+static const bool s_s7334_init = [] {
+    const char* e = std::getenv("ROGUESQ_STORE_WATCH_PTS");
+    if (!e || !*e) return true;
+    uint32_t lo = 0xFFFFFFFFu, hi = 0; const char* c = e;
+    while (*c && s_s7334_n < 16) { char* q = nullptr; const uint32_t v = (uint32_t)strtoul(c, &q, 16) & 0x1FFFFFF0u;
+        if (q == c) break; s_s7334_pt[s_s7334_n++] = v; if (v < lo) lo = v; if (v + 16 > hi) hi = v + 16; c = (*q == ',') ? q + 1 : q; if (!*q) break; }
+    if (s_s7334_n) { rs64_s6843_lo = lo; rs64_s6843_len = hi - lo; std::fprintf(stderr, "[swatch-pt] armed %d points %06X-%06X\n", s_s7334_n, lo, hi); }
+    return true; }();
 static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
     struct Agg { uint64_t n = 0, bytes = 0; uint32_t lo = 0xFFFFFFFFu, hi = 0; const char* api = nullptr; };
     static std::mutex mu; static std::map<uint32_t, Agg> by; static int cur = -1; static int lines = 0;
@@ -2174,6 +2186,17 @@ static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const cha
     static const int from = [] { const char* e = std::getenv("ROGUESQ_STORE_WATCH_FROM_SWAP"); return (e && *e) ? std::atoi(e) : 0; }();
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
     if (sw < from) return;
+    if (s_s7334_n) {   // s7334 point mode
+        int k = -1; for (int i = 0; i < s_s7334_n; ++i) if (phys + len > s_s7334_pt[i] && phys < s_s7334_pt[i] + 16) { k = i; break; }
+        if (k < 0) return;
+        std::lock_guard<std::mutex> lk(mu);
+        if (lines++ >= cap) return;
+        uint32_t w[4] = {}; const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+        if (rd) for (int i = 0; i < 4; ++i) { const uint32_t a = s_s7334_pt[k] + 4u * i; w[i] = *(const volatile uint32_t*)(rd + a); }
+        std::fprintf(stderr, "[swatch-pt] swap=%d %s=%08X%s%s phys=%06X len=%u pt=%06X pre=%08X %08X %08X %08X\n", sw, api ? "api" : "pc", key,
+                     api ? ":" : "", api ? api : "", phys, len, s_s7334_pt[k], w[0], w[1], w[2], w[3]);
+        return;
+    }
     std::lock_guard<std::mutex> lk(mu);
     if (sw != cur) {
         for (auto& kv : by) if (lines++ < cap)

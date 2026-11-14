@@ -4448,6 +4448,17 @@ static int g5a_walk(volatile uint8_t* r, std::vector<G5aBlk>& out) {
     }
     return narena;
 }
+/* s7334 item 24(b): class 5 "guest non-heap tail". coalesceFreeHeapBlocks (0x800022F8) re-terminates the persistent arena at
+   a3 - 0x10 (fl=8 sz=0 store at pc 800024A4/A8/B0, store watch s7334), a3 being the frame-buffer layout bound from 0x80000DD4
+   (caller 0x80001430) or the global 0x801163E4; the memory above holds the scene's framebuffers and the gfx RDP FIFO and is never
+   heap. True when x sits in no walked guest block and the highest walked block end below x is such a sentinel.
+   ROGUESQ_S7334_CLASS5=0 restores the old 3/4 classes. */
+static bool s7334_nonheap(uint32_t x) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7334_CLASS5"); return !(e && *e == '0'); }();
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!on || !r) return false;
+    std::vector<G5aBlk> b; g5a_walk(r, b); uint32_t top = 0;
+    for (const auto& k : b) { const uint32_t e = k.h + 0x10u + k.sz; if (e <= x && e > top) top = e; }
+    return top && ((g5a_rd(r, top) >> 16) & 8u) && g5a_rd(r, top + 4u) == 0u; }
 /* s7325: guest-side heap walk (independent of the host alloc map): 0 x in no block, 1 in block header, 2 in data. */
 static int s7325_guest(uint32_t x, uint32_t* fl, uint32_t* h, uint32_t* sz) {
     *fl = *h = *sz = 0; volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return 0;
@@ -4476,7 +4487,7 @@ void s7333_boot_register() {
 struct S7325Out { uint32_t lo, loend, hi, lreq, hreq; void* lopc[3]; void* hipc[3]; uint32_t fptr, freq; double fage; void* fpc[4]; void* apc[3];
                   int gk; uint32_t gfl, gh, gsz; };
 /* s7325 gap class of KSEG0 x: 0 inside a live block, 1 outside the heap extent ever allocated (static), 2 header gap (x in
-   [end of a live block, next live block) with that gap <= 0x20), 3 inside a freed block (most recent free wins), 4 untracked.
+   [end of a live block, next live block) with that gap <= 0x20), 3 inside a freed block (most recent free wins), 4 untracked, 5 (guest=1 only, s7334) above an arena end sentinel in no guest block.
    With guest=1 the guest heap walk result is filled (gk 0 none / 1 header / 2 data, gfl flags 1 free 2 allocated). */
 extern "C" int rs64_s7325_gap(uint32_t x, S7325Out* o, int guest) {
     std::memset(o, 0, sizeof *o); int k;
@@ -4496,6 +4507,7 @@ extern "C" int rs64_s7325_gap(uint32_t x, S7325Out* o, int guest) {
       else if (best) k = 3;
       else k = 4; }
     if (guest) o->gk = s7325_guest(x, &o->gfl, &o->gh, &o->gsz);
+    if (guest && o->gk == 0 && (k == 3 || k == 4) && s7334_nonheap(x)) k = 5;   // s7334 class 5 (item 24(b))
     return k; }
 /* positive controls: *fr = last freed ptr (0 if none), *hg = end of the last malloc'd block when its live successor sits <= 0x20 past it */
 extern "C" void rs64_s7325_ctl(uint32_t* fr, uint32_t* hg) {

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """s7333 item 24: per-run FIFO host-live table + carve-key erase paths from a run log ([s7332] fifo / [s7333] lines).
-usage: s7333_carve_report.py <run.log> [...]. rc 0 when every in-carve (guest=2 fl=6) FIFO transition reads host-live (host=0)."""
+usage: s7333_carve_report.py <run.log> [...]. rc 0 when every in-carve (guest=2 fl=6) FIFO transition reads host-live (host=0).
+s7334: with --class5, also every above-heap (guest=0, over an fl=8 arena end sentinel) FIFO transition must read host=5 (guest
+non-heap tail, ROGUESQ_S7334_CLASS5 default on); host 3/4 there fails."""
 import re, sys, collections
 rc = 0
-for path in sys.argv[1:]:
+c5 = '--class5' in sys.argv
+for path in [a for a in sys.argv[1:] if not a.startswith('--')]:
     fifo = collections.Counter(); ev = collections.Counter(); above = collections.Counter(); bad_above = 0
     for ln in open(path, 'rb'):
         ln = ln.decode('latin1')
@@ -20,4 +23,8 @@ for path in sys.argv[1:]:
     for k, v in sorted(ev.items()): print(f'  erase {k}: {v}')
     for k, v in sorted(above.items()): print(f'  above-heap {k}: {v}')
     if inc == 0 or live != inc: rc = 1
+    if c5:
+        sab = sum(v for k, v in above.items() if k[0] == 'sentinel'); s5 = above.get(('sentinel', 'host=5'), 0)
+        print(f'  above-heap sentinel FIFO transitions host=5: {s5}/{sab}')
+        if sab == 0 or s5 != sab: rc = 1
 sys.exit(rc)

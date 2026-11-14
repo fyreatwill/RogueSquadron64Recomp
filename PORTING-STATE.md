@@ -193223,3 +193223,33 @@ Verdicts (s7333, offline on scratch/s7326/s7333_keepv2/run.log):
   that writes fl=8, and the free-list head after it. If that pc is in the arena setup that also sets the FIFO base, H-top selected:
   add class 5. If it is buildHeapFreeList's terminator and the span above is still on a free list, H-stale: a real overlap.
 Summary: this selects H-rebuild + H-shadow and closes item 24(a); it refutes H-free, H-malloc and H-trim; the sentinel store watch is the next measurement to discriminate H-top from H-stale.
+
+## Session 7334 (2026-11-14) — item 24(b) closed H-top: the arena end sentinel is written by coalesceFreeHeapBlocks' re-terminator at the fb-layout bound; host class 5 (guest non-heap tail) lands, above-heap FIFO 6/6 class 5
+
+HYPOTHESIS-ID hostmap-carve-blind. Instrument: point mode for the s6843 store watch, ROGUESQ_STORE_WATCH_PTS=<p>,... (src/main/main.cpp,
+up to 16 16-byte windows; one `[swatch-pt]` line per hit with swap, pc|api, phys, width and the 4 words BEFORE the store). Run
+scratch/s7334/run.zsh (s7332 abort route, dd8 21:9, 540 s, RCPREF=ctl + S7331_RESETW), points 6E47F0 (positive control) + sentinels
+903FF0 / 9867F0 / B69FF0. 0 crash, 23 resets; 20000-line cap reached at swap 12399 (rt64_writeback floods, see below).
+- Positive control PASS: 6E47F0 written by 80002510/18/5C then 800023AC/D8, the same coalesceFreeHeapBlocks pcs as s7332 r2.
+- Every sentinel's fl=8 sz=0 header is stored by **pc 800024A4/A8/B0** (B69FF0 swap 40 at boot, 9867F0 swap 681, 903FF0 swap 8599),
+  each the first [s7333] fifo transition at out = sentinel+0x10 (B77800 at +0xD810 for boot). Static read of that code: coalesceFreeHeapBlocks
+  (a0 carve count, a1 carve list, a2 heap start 0x80154690, a3 hi) walks to the last block, sets its size to hi-0x20-block and writes the
+  new terminator at hi-0x10. Its one caller (0x80001430, in 0x80001354) passes hi = the output of the frame-buffer layout routine 0x80000DD4
+  (sp+0x48) or the global 0x801163E4. Three fl=8 writers exist in the heap code: 0x80002050 (buildHeapFreeList, hi = stack arg),
+  0x800021EC (0x80002150 init), 0x800024A4 (this one).
+- The span above is framebuffer: rt64_writeback writes 8F5000+0xE0000 over 903FF0 (4987 hits), rsp_dmem_to_rdram over B69FF0 (671).
+Verdict: **SELECTS H-top** (the region above the sentinel is the scene's fb / RDP-FIFO tail, set on purpose by the scene's heap reset).
+**REFUTES H-stale**: the arena is walked by size up to fl=8, and the re-terminator shrinks the last block to end at the sentinel, so no
+guest free-list entry covers anything above it. H-trim (s7333) stays refuted: the bound is coalesce's a3, not a buildHeapFreeList hi,
+which is why no rebuild range matched.
+Change: **host class 5** in rs64_s7325_gap (src/main/upstream_compat.cpp s7334_nonheap): with guest=1, an address in no walked guest block
+whose highest walked block end below it is an fl=8 sz=0 sentinel classes 5 "guest non-heap tail" instead of 3/4 (ROGUESQ_S7334_CLASS5=0
+old). guest=0 callers (s7324 class G counters, kGap[5]="cross_end") are untouched. tools/s7333_carve_report.py `--class5` fails unless
+every above-heap sentinel FIFO transition reads host=5; on the s7333 keepv2 log it reports 0/7 (negative control).
+Verify (scratch/s7334/run2.zsh, same route, one run): 0 crash, 23 resets, in-carve FIFO host-live 19/19, above-heap sentinel FIFO host=5
+6/6, carve report rc 0, s7331 report rc 0 (other owners 0).
+ORIGIN: the writer is retail coalesceFreeHeapBlocks (pc 800024A4) ending the persistent arena at the fb-layout bound; the value is legitimate.
+No mitigation: class 5 is attribution in a diagnostic classifier.
+Rules out: a dangling owner or a free-list overlap above the arena; item 24 CLOSED. Logs: scratch/s7334/ (lines.txt, report_c5.txt,
+report_s7331_c5.txt), scratch/s7326/s7334_pt, s7334_c5.
+Summary: this selects H-top and closes item 24(b); it refutes H-stale; host class 5 lands, verified 6/6 on the abort route.

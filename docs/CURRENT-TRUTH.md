@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7333 (2026-11-14).
+Compact operational handoff, as of Session 7334 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -309,17 +309,16 @@ is in the s7307 archive). Active unit: NEXT.md.
     are inside a guest-allocated flags&4 carve block = the per-scene framebuffer / temp pool (parseImageFile, rt64_writeback).
     Abort route too (s7332): the s7331_abort_resetw soak's rc=0 was grep's, and its 3 "NEW" rows were the gfx RDP FIFO in the carve
     (a line-start guest-walk artefact). With the walk on the first changed byte: 3 reruns, rc 0, other owners 0, stale 0.
-24. **flags&4 carve block: writer named (s7332), (a) CLOSED s7333.** coalesceFreeHeapBlocks (pc 80002510/18/5C, 800023AC/D8) writes
-    the per-scene fl=6 header by hand. The block holds the framebuffers, the temp arena and the gfx RDP FIFO (OSTask output_buff). ALLOCMAP
-    registers guest fl&6 blocks at each heapsync (ROGUESQ_S7332_CARVE=0 off) and before heapsync #1 (s7333). s7333: the carve start is
-    erased by the buildHeapFreeList rebuild while the guest still says fl=6. The real gap was a lookup bug: stale overlapping carve
-    keys shadowed the enclosing carve. Fix: walk the carve keys down and trust the guest header (ROGUESQ_S7333_KEEP=0 = old). Abort route
-    FIFO-in-carve host-live 17/17 (old 17/22). Report tools/s7333_carve_report.py. Open (b): the 13 above-heap FIFO transitions all start
-    0x10 past the arena's fl=8 sz=0 end sentinel (80904000, 80986800; boot 80B77800 at +0xD810). That is non-heap guest memory, and its
-    host "freed" class is literal history: each sentinel sits inside the carve freed at the previous heapsync, not at a rebuild bound
-    (H-trim refuted). Next discriminator: a store watch on the sentinel naming its writer, H-top vs H-stale (NEXT.md).
+24. **flags&4 carve block: CLOSED (s7332-s7334).** coalesceFreeHeapBlocks (0x800022F8, misnamed: the scene heap reset) writes the
+    per-scene fl=6 carve header (pc 80002510/18/5C, 800023AC/D8) holding framebuffers, temp arena and gfx RDP FIFO, and re-terminates the
+    persistent arena with fl=8 sz=0 at hi-0x10 (pc 800024A4/A8/B0, s7334 store watch), hi = the fb-layout bound from 0x80000DD4 (caller
+    0x80001430) or global 0x801163E4. Above the sentinel = the scene's fb / FIFO tail (rt64_writeback writes it), never heap (H-top; H-stale
+    and H-trim refuted). Host map: carve registration (ROGUESQ_S7332_CARVE), walk-down + guest-header keep (ROGUESQ_S7333_KEEP), class 5
+    "guest non-heap tail" in rs64_s7325_gap with guest=1 (ROGUESQ_S7334_CLASS5=0 old). Abort route s7334: in-carve FIFO host-live 19/19,
+    above-heap FIFO class 5 6/6, `tools/s7333_carve_report.py <log> --class5` rc 0. Point store watch: ROGUESQ_STORE_WATCH_PTS=<p>,...
 25. **Soak recipes take the analyser's own rc** (`${pipestatus[1]}`), never a downstream grep's (s7332).
-26. **When 1-25 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+26. **Next unit (NEXT.md): fb-layout bound consumer audit** (readers of 0x801163E4 / the 0x80000DD4 output vs RAMTOP 8/24 MB).
+27. **When 1-26 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
