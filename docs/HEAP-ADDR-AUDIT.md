@@ -313,3 +313,6 @@ G detail: fixup_ramtop runs last in fixup_game_funcs_vendored.py, but scripts ap
 literals. The census catches that; the radfade/edgepos camera bound was in range at dd1 and dd8 (cam=0,0 rows 0/5365 and 0/7676).
 Class M (s7338, CLOSED): 199 physical 8 MB masks/ends classified by tools/s7338_mask_census.py (D 101, P 43, G 33, R 10, X 4, S 1, C 6,
 B 0). Every live-path mask is behind an env/log gate or only feeds log keys/dumps. Next: class N, `& 0xFFFFFF` vs the spill arena.
+Class P (s7341, CLOSED): KSEG0 top-byte tests. `tools/s7341_topbyte_census.py --controls`: host 12 compares all gated/diag or the
+s6993 widening; game 45 `and` masks with bit 24 set and partial low bits, 0 pointer operands (flag words, HOB link indices, GBI
+fields, RMW clears); s6993 7/7 patched. Next: class S, host address-indexed tables.

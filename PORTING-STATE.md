@@ -193450,3 +193450,37 @@ Discrimination: selects H-diag (50 of 69 gated/log) + H-intended (W 2, arena-lay
 Class O CLOSED. Next (NEXT.md s7341): class P, KSEG0 top-byte tests `(x >> 24) == 0x80` / `(x & 0xFF000000) == 0x80000000` that
 reject 0x81xxxxxx spill pointers (host 6 sites: upstream_compat 5, s7324_rcp_spill 1) plus the same idioms in the generated tree and
 PatchesLib (grep `srl ... 24` + compare 0x80 in RecompiledFuncs is the expensive half).
+
+## Session 7341 (2026-11-14) — class P KSEG0 top-byte tests closed: host 12 sites all gated/diag or the s6993 widening, game 45 bit-24 masks with 0 pointer sources (census tool s7341_topbyte_census.py with controls)
+Work unit (NEXT.md s7341, HYPOTHESIS-ID kseg-topbyte-tests): find every test that reads a 0x81xxxxxx spill pointer differently from
+a 0x80xxxxxx one by its top byte: `(x >> 24) == 0x80`, `(x & 0xFF000000) == 0x80000000`, or a mask that keeps bit 24 without the
+low 24 bits. Hypotheses: H-diag (host sites are audit classifiers), H-reject (a default-on host or game check treats a spill
+pointer as invalid), H-none-in-game (the game never tests the top byte of a pointer outside the already-patched sites).
+Tool: `tools/s7341_topbyte_census.py [--controls] [-v]` (new). Part 1 host: s7338 scope (159 files) and gates, direct top-byte
+compares plus `v = x >> 24;` locals compared within 8 lines. Part 2 game: every `and` with a lui/ori constant M where bit 24 is set
+and the low 24 bits are not all set, across the 51 generated RecompiledFuncs files, classed per (function, M) by where the other
+operand comes from. Precondition: all 7 s6993 ptrmask patches present. Controls (all PASS): planted default-on host tests, direct and
+via a local, report '?'; a log-gated one 'G'; an unknown game `lw; lui 0x100; and` '?'; an unpatched tree fails the s6993 count.
+Result (exit 0, listing scratch/agent/s7341_census.txt):
+- Host 12: D 7 (s7318 bcmp probe x3, osSpTaskStartGo s4508 DL dump behind RS64_GFX_DL_DUMP_DIR x2, get_n64_input s5681 dump behind
+  ROGUESQ_PLAYER_DUMP, s7324 RCPREF tag histogram), P 2 (dpc_bridge rs64_m4_dma_probe), G 1 (rs64_s4457_list_check), W 1
+  (rs64_s6993_mask itself: the compare only picks its log lines), C 1. 0 default-on.
+- Game 45 masks in 32 functions: W 7 (the s6993 sites, still patched 7/7), Z 4 (0xFF00FF00 fills), F 14 (flag words of the
+  0x80130B40 game-state record: `lw 0xC(0x80130B40 + 4*idx)` with idx = player index, s1811 power-up bits OR onto 0x80130B4C;
+  0x80130B58 flag word; cutscene slot kind/flag word & 0xFF000004 == 4), K 4 (HOB meshdef link word: 6-bit 1-based indices at bits
+  24/18/12 in walkMeshdef0List, loadSkyHorizonHob, initializeRadar; `& 0x3F000000` then `srl 24/22`), Q 2 (G_SETOTHERMODE field
+  0x01C00000 of a command word being built), A 4 (negu sign masks, stack float bits, guMtxL2F halves), M 10 (flag-clear RMW masks
+  on audio channel/profile words). None of the masked operands is a pointer.
+- The shift form in game code was already closed as s7317 class A (32 sites, evaluated), and the `& 0xFF000000` form is s6993; the
+  census re-checks the second, not the first.
+- Second line for the F class: the s7317 dd8 21:9 L4 holder dump (scratch/s7317/d8_holders_all.txt.gz, 21263 holder words) has
+  spill pointers inside 0x80130B40-0x80130D00 only at 0x80130BC0/0x80130BC4 (record +0x80/+0x84), never at the flag words read
+  by these masks (+0xC..+0x18 for player index 0-3).
+- Noted, not new: commitMeshDrawBatchRefs packs a tag in the top byte of a 24-bit ref (`lui 0xFF; ori 0xFFFF`), the latent alias
+  shape s7321 already named (referents are DL-pool / heap). The 6 other game `0x00FFFFFF` constants are menu sentinels / flag masks.
+ORIGIN: no mitigation; no code behaviour changed.
+Discrimination: selects H-diag (host) and H-none-in-game (game, outside s6993); refutes H-reject (0 default-on sites in 57).
+Single-source per game site for K/Q/A/M (static provenance read); F has the holder-dump second line. Class P CLOSED.
+This closes the spill-pointer idiom campaign's KSEG-literal classes (R, M, N, O, P host; A-F game). Next (NEXT.md s7342): class S,
+host tables indexed by an address-derived value (`addr >> k` into a fixed array or bitmap sized for 8 or 16 MB), which would read or
+write out of bounds for a spill address rather than reject it.

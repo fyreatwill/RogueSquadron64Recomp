@@ -352,9 +352,13 @@ is in the s7307 archive). Active unit: NEXT.md.
     unclassified): 69 `0x81000000` sites = D 33, G 17, C 16, W 2 (spill branch / rs64_ram_top bound), P 1, B 0. The 8 hand-classed
     readers of s_s7317_live / s_s7332_carve are dead by default (every map write sits under ROGUESQ_S7317_ALLOCMAP). The 7
     spill-top `0x81800000` bounds equal the hard ram_top ceiling (RAMTOP_MB <= 24, s7336 clamp), so they cannot drop a pointer.
-27f. **Next unit (NEXT.md): class P, KSEG0 top-byte tests** `(x >> 24) == 0x80` / `& 0xFF000000 == 0x80000000` vs 0x81xxxxxx
-    spill pointers: host 6 sites (upstream_compat 5, s7324_rcp_spill 1), then the generated tree and PatchesLib.
-28. **When 1-27f offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27f. **KSEG0 top-byte tests (class P): CLOSED (s7341, static + holder dump).** `tools/s7341_topbyte_census.py --controls`
+    (exit 1 = unclassified or s6993 patch missing): host 12 = D 7, P 2, G 1, W 1 (rs64_s6993_mask), C 1, 0 default-on; game 45
+    bit-24 masks = W 7 (s6993, 7/7 patched), F 14 (0x80130B40 game-state flag words; s7317 d8 dump: spill holders there only at
+    +0x80/+0x84), K 4 (HOB 6-bit link indices), M 10, A 4, Q 2, Z 4. Game shift form = s7317 class A (closed).
+27g. **Next unit (NEXT.md): class S, host address-indexed tables** (`addr >> k` into a fixed array/bitmap sized for 8/16 MB):
+    out-of-bounds for a spill address rather than a reject.
+28. **When 1-27g offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

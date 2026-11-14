@@ -1,14 +1,17 @@
-# NEXT (s7341): idiom-class audit - class P, KSEG0 top-byte tests vs spill pointers (0x81xxxxxx)
-HYPOTHESIS-ID: kseg-topbyte-tests
-Context: s7340 closed class O (host `0x81000000` bounds, tools/s7340_kseg16_census.py, B 0). A different idiom can still reject
-a spill pointer: `(x >> 24) == 0x80`, `(x & 0xFF000000) == 0x80000000`, `(x >> 28) == 8` is fine (0x81 passes), `x >> 24 != 0x80`.
-Host count (s7340 grep): upstream_compat.cpp 5, src/rsp/s7324_rcp_spill.cpp 1. Generated tree / PatchesLib not counted yet:
-grep the generated C (RecompiledFuncs dir from CMakeLists / fixup_game_funcs.py) for `>> 24` / `0xFF000000` compared to 0x80, and
-the retail MIPS idiom `srl tX, ptr, 24` + `addiu/ori 0x80` + `beq/bne` (that one is the game's own check: retail semantics, but at
-dd>1 a game-side check that sees a host spill pointer is exactly the H-reject case).
-Hypotheses: H-diag (host sites are s7318/s7324 audit classifiers), H-reject (a default-on check, host or game, treats a spill
-pointer as invalid), H-none-in-game (the game never tests the top byte; it relies on KSEG masks).
-Method: copy tools/s7340_kseg16_census.py frame with the top-byte regex for host; separate pass over generated C with a
-per-function list; any game-side site that can see a spill pointer -> name the object type (is it ever spill-allocated? spill
-allocations are rs_malloc reqs routed by s6569) and either prove unreachable or convert in a fixup script behind ROGUESQ_S7341=0.
-Runtime only if a B site exists: `env SECS=260 zsh scratch/s7326/run.zsh s7341_dd8 ''` with a selftest control on 0x81000100.
+# NEXT (s7342): idiom-class audit - class S, host tables indexed by an address-derived value vs spill addresses
+HYPOTHESIS-ID: host-addr-indexed-tables
+Context: s7341 closed class P (top-byte tests; tools/s7341_topbyte_census.py, 0 default-on). The KSEG-literal classes are done
+(R/M/N/O/P host, A-F game). A different failure shape remains: a host array/bitmap/vector indexed by `(addr & mask) >> k` or
+`(addr - 0x80000000) >> k` and SIZED for 8 or 16 MB (e.g. per-4 KB page tags, per-word coverage bitsets, `[0x800000 >> 3]`). A spill
+address (0x81000000-0x81800000, phys 0x01000000-0x017FFFFF) indexes past such a table: silent OOB read/write, not a reject.
+Hypotheses: H-diag (every such table belongs to a gated probe), H-oob (a default-on table indexed by a live guest address can be
+reached with a spill address: a real defect, fix by sizing to rs64_ram_top or bounds-checking), H-masked (indices pass through an
+8/16 MB mask first, which class M/N already classified).
+Method: new tools/s7342_addr_index_census.py on the s7338 HOST scope + gates. Enumerate (1) declarations of arrays / std::bitset /
+std::vector / new[] whose size expression contains 0x800000, 0x1000000, 8 << 20, 16 << 20, RDRAM_SIZE-like names or `>> k` of
+those; (2) subscripts `[ ... >> k ... ]` (k 2..23) and `.set(`/`.test(` with a shifted address. Join each subscript to its array's
+declared size; class D/G/P/C as s7338, B = default-on and the index is a guest address with no bound <= size. Controls: plant a
+default-on `static uint8_t tag[0x800000 >> 12]; tag[(a - 0x80000000u) >> 12] = 1;` ('?') and the same behind a log gate ('G').
+Pre-grep (s7341): only fixed 0x1000/0x2000 DMEM/IMEM buffers matched a literal-size grep; subscripts go through locals, so the
+join must follow `const uint32_t idx = ...;` locals (8-line window like s7341's VAR pass).
+Runtime only if a B site exists: `env SECS=260 zsh scratch/s7326/run.zsh s7342_dd8 ''` with a selftest control at 0x81000100.
