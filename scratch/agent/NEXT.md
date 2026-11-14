@@ -1,18 +1,18 @@
-# NEXT (s7345): idiom-class audit - class V, 32-bit multiply overflow in guest-derived sizes
-HYPOTHESIS-ID: host-mul-overflow-sizes
-Context: s7344 closed class U (tools/s7344_wrap_census.py: 343 `a + n <cmp> Z` sites, 0 open; rsp.hpp DMA length clamp made
-subtractive, pi.cpp save_write_ptr/save_clear guarded). The sibling idiom: a size computed as a uint32 product of guest values
-(`width * height * bpp`, `page_num * page_size`, `count * sizeof(T)`, `rows * stride`, `n << k`) wraps before the bound check or
-allocation sees it, so a 64-bit or subtractive check downstream compares the wrapped (small) product while the loop uses the factors.
-Hypotheses: H-safe (every product is computed in 64 bits, or its factors are masked/bounded so the product < 2^32),
-H-diag (overflowing products only in gated probes), H-ovf (a default-on product of guest factors can wrap before a check or a
-resize/new: real defect, fix with uint64_t math + reject log).
-Method: new tools/s7345_mul_census.py on the s7344 scope; reuse s7344 classify()/CORE/HAND machinery and s7343 body_gated().
-Sites: `X * Y` and `X << k` (k variable or >= 8) whose result feeds a comparison, a memcpy/loop bound, a resize/new/malloc, or an
-index, within the same statement or via one local. Classes: K constant factors; W64 64-bit factor/cast/size_t; MSK factors masked
-(<= 16 bits each, or bitfields); BND factors bounded earlier in the function (`w > N return`); G/D/P/C (CORE demotion as s7344);
-B default-on guest factors, product can exceed 2^32 before use. Controls: plant `uint32_t n = task->w * task->h * 4; if (n > cap)
-return; memcpy(..)` ('?'), the uint64 twin ('W64'), the masked twin (`w &= 0x3FF; h &= 0x3FF`, 'MSK'), a gated twin ('G').
-Priority files: rt64 hle (framebuffer sizes, texture sizes, TMEM loads), librecomp pi.cpp/flash.cpp/eep.cpp, src/main capture paths.
-Runtime only if a B site exists: build the fix + selftest, then `env SECS=260 zsh scratch/s7326/run.zsh s7345_dd8 ''`.
-Exit: PORTING-STATE s7345, CURRENT-TRUTH item 27j -> closed/fixed, commit.
+# NEXT (s7346): idiom-class audit - class W, signed lengths reaching size_t sinks
+HYPOTHESIS-ID: host-signed-len-sinks
+Context: s7345 closed class V (tools/s7345_mul_census.py: 1402 product sites, 0 open). Sibling idiom: a length held in a signed
+type (`int n`, `int32_t len`, `s32`, ptrdiff of guest values, `end - start` of int operands) is checked only from above
+(`if (n > cap) return;`), so a negative n passes and is converted to size_t / uint32 at a memcpy/memset/memmove/resize/new/
+loop bound/fwrite, becoming ~2^32/2^64.
+Hypotheses: H-safe (every signed length is checked `n < 0` / `n <= 0`, or is non-negative by construction: unsigned source,
+masked, loop count), H-diag (only gated probes), H-neg (default-on signed length from guest data, upper-bound-only check: real
+defect, fix with `if (n < 0 || n > cap)` + reject log).
+Method: new tools/s7346_signed_len_census.py on the s7343 scope; reuse s7345 width()/census scaffolding, s7344 decl(), s7343
+args_of() to pull the length argument of each sink. Sites: sink length args (memcpy/memset/memmove 3rd arg, resize/reserve/new[]
+arg, fwrite size*count, for-bound `i < n`) whose expression involves a variable declared int/int32_t/s32/int16_t/long/ptrdiff_t
+or a subtraction. Classes: U unsigned type; LB lower bound checked earlier (`n < 0`, `n <= 0`, `n >= 0 &&`, max(0, ..)); MSK
+masked/narrow-unsigned source; K constant; G/D/P/C; B default-on, guest-derived, no lower bound. Controls: planted
+`int n = (int)task->size; if (n > 0x1000) return; memcpy(b, rdram, n);` ('?'), lower-bounded twin ('LB'), unsigned twin ('U'),
+gated twin ('G').
+Runtime only if a B site exists: fix + selftest, then `env SECS=260 zsh scratch/s7326/run.zsh s7346_dd8 ''`.
+Exit: PORTING-STATE s7346, CURRENT-TRUTH item 27k -> closed/fixed, commit.

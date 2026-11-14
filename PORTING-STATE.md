@@ -193602,3 +193602,31 @@ DISCRIMINATION: selects H-wrap (one default-on wrap-prone clamp on guest-derived
 refutes H-safe for librecomp rsp.hpp/pi.cpp; every other site is H-safe (K/W64/MSK/SUB/hand-bounded) or H-diag (G/D/P/C), 0 B.
 Next discriminator: class V census (H-safe vs H-ovf for uint32 products of guest factors before a bound/alloc).
 Rules out: wrap-prone sum checks as a live defect class in host code. Next: class V, 32-bit multiply overflow (NEXT.md).
+
+## Session 7345 (2026-11-14) — class V 32-bit multiply overflow in guest-derived sizes closed: 1402 product/shift sites, 0 open, 0 defects (census tool s7345_mul_census.py with controls)
+HYPOTHESIS-ID: host-mul-overflow-sizes. Offline idiom-class audit (ITERATION item 3 model), no game run (no B site => no
+runtime arm, per NEXT.md).
+Tool: NEW `tools/s7345_mul_census.py --controls` (exit 1 = '?' / B). Scope = s7343 files_in_scope() (183 host files). A site is
+an integer `X * Y` or `X << Y` (Y variable or >= 8) on a sink line (comparison in if/while/for, memcpy/memset/memmove,
+resize/reserve/new/alloc, product inside `[..]`) or assigned to a local that a sink line within 40 lines uses. Factor widths
+are derived per operand (constant value, uint8/16 / MEM_B/MEM_H, `& mask`, `>> k`, `v > N return`, min(), loop bound),
+then BITS = widths sum <= 31. Controls (same run, PASS): planted `uint32_t n = task->w * task->h; if (n > cap) return;
+memcpy(..)` -> '?', uint64 twin -> W64, masked twin (w,h &= 0x3FF) -> BITS, gated twin -> G.
+Result: 1402 sites: D 377, G 228, PTR 206 (pointer decl / `if (p) *p =` / cast deref, regex false positives kept for the
+count), H 139, FLT 126, BITS 100, PACK 82 (constant-shift word/key assembly), W64 75, LOOPK 29 (loop index x const <= 2^12),
+P 18, HASH 12 (FNV/polynomial, wrap intended), K 6, C 3, X 1; '?' 0, B 0.
+Hand table (139 H, reasons in HAND): the bulk is RT64 RDP row maths (fb/TMEM/texture rows x bytes/row) whose factors are
+RDP command bitfields: image width 10 bits (+1 <= 1024 px, <= 4096 B/row), tile/scissor coords 12-bit 10.2 (rows <= 1024),
+load line 9 bits, siz 2 bits -> products <= 2^23. RT64 HLE-only paths (rt64_rsp globalIndex, gbi s2dex / f3dfactor5) are host
+vector indices or never dispatched under LLE gfx. src/: s6963 `r * 0xB8u` has a 16-bit factor (s6963_hu), terrain
+z*s7031_w+x masked & 0x1FFF, env caps are owner config not guest data, mach time maths is uint64.
+Audit of the auto buckets (this session, by listing): D rows with alloc/copy sinks are loop-index x 4 reads or pointer decls;
+the hot-path D functions (get_n64_input, osViSwapBuffer_recomp, osViSetMode_recomp, queue_samples, recomp.cpp init) carry
+only loop-index/const products or already-64-bit checks (fbdump `uint64_t(phys) + uint64_t(dw) * dh * bpp`, VI rescale
+`(uint64_t)xScale * fbw`, OSMEM `mb` clamped 4..16); PTR rows are all declarations/derefs; BITS sample (25 rows) correct.
+DISCRIMINATION: selects H-safe for class V (every guest-derived product is 64-bit, hardware-bitfield-narrow, constant, or
+bounded first) and refutes H-ovf in host code; H-diag holds for the rest (D/G/P/C). Single-source (static census + manual
+review; no runtime instrument needed since no candidate exists). Caveat: RDP-field width claims assume RT64 stores the
+decoded field, not a host-widened value (true for colorImage.width / tile coords read in this pass, not re-verified per site).
+Rules out: 32-bit product wrap before a bound/alloc as a live defect class in host code. Next: class W, signed lengths
+reaching size_t sinks (NEXT.md).

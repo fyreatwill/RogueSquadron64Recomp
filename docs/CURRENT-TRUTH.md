@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7344 (2026-11-14).
+Compact operational handoff, as of Session 7345 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -380,9 +380,13 @@ is in the s7307 archive). Active unit: NEXT.md.
     hot paths (run_task, dma_*, rsp_dpc_submit_impl, rs64_spike_scan, map_result...) 'D'; s7344 demotes those (CORE set) and hand-
     classes each row (DPC lo/hi & 0x3FFFFFF). Regate of s7338-s7342 rt64 rows under body_gated(): 89 ungated, all harmless
     (R24 RDP addresses 31, LOG 39, HASH 8, K 5, W64 6). s7343's "DMA 0xFFF" clamp meant the dmem_addr mask, not the length.
-27j. **Next unit (NEXT.md): class V, 32-bit multiply overflow in guest-derived sizes** (`w * h * bpp`, `page * size`, `count * 8`
-    computed in uint32 before a bound check or allocation).
-28. **When 1-27j offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27j. **32-bit multiply overflow in guest-derived sizes (class V): CLOSED (s7345, static, single-source).** `tools/s7345_mul_census.py
+    --controls` (exit 1 = '?' / B): 1402 `X * Y` / `X << Y` sink sites in the 183 host files, 0 open, 0 defects. 139 hand rows are
+    mostly RT64 RDP row maths bounded by RDP bitfield widths (width 10 bits, coords 12-bit 10.2, line 9 bits, siz 2 -> <= 2^23);
+    hot-path D rows (get_n64_input, osViSwapBuffer/SetMode, queue_samples) re-read by hand: loop x const or already uint64.
+27k. **Next unit (NEXT.md): class W, signed lengths reaching size_t sinks** (`int n = guest; if (n > cap) return; memcpy(.., n)`:
+    a negative n passes the signed check and becomes ~2^64 in the copy).
+28. **When 1-27k offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
