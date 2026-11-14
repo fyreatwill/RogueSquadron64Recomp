@@ -1,10 +1,14 @@
-# NEXT (s7307): G5e - fold the queued 21:9 fog hold, then (if clean) close G5e pending the owner's look
-HYPOTHESIS-ID: g5e-far-fog
-State (s7306): 21:9 L1 toggle sheet: FOG_ALT=1,3,1 is null in every band (lever ctl 8/27/17% PASS), 0 crash -> safe, weak melt.
-Unit: if SOAK-RESULTS has an s7307_219_dd8_fog_hold line, fold it (arms l1f/l1n/l5f/ctl; pass = all alive, 0 crash, 60/s beyond route,
-[s7302] line in l1f/l5f and absent in l1n, ctl dips to flat-30). If it is absent (gated on idle), run it yourself:
-`zsh scratch/agent/soak_queue/s7307_219_dd8_fog_hold.sh` (~30 min, needs idle >=180 s and an unlocked screen).
-Outcomes:
-  - H-hold: clean -> FOG_ALT qualified at both owner screens. Mark G5e awaiting the owner's look and move to the next G-ladder rung.
-  - H-crash/dip at 21:9 only -> root-cause it (backtrace) before anything else.
-Optional, only if the owner asks for more haze at 21:9: sweep ke 2 / 2.5 at 21:9 with tools/s7306_fog_219.zsh l1k2:1:1,2,1.
+# NEXT (s7308): G1c dd8 horizon-in-view owner sheet (dd6 vs dd8 vs dd8+FOG_ALT), 16:9 and 21:9
+HYPOTHESIS-ID: g1c-dd8-horizon-look
+State (s7307): dd8 auto (px8+R128) and FOG_ALT=1,3,1 both qualified (300 s, 0 crash, 60/s) at 16:9 and 21:9. The s7295
+look sheet was single-source: its route window banks under cliffs, so the horizon is mostly off-frame and only one L4 shot
+separated dd6 (11% sky band) from dd8 (1%). The owner cannot judge dd8 or the fog from that.
+Unit: build a horizon-in-view camera and one sheet. Use ROGUESQ_POSE_LOCK=1 + ROGUESQ_POSE_FREEZE (tools/g3_optin_pose_arms.sh,
+needs RAND_TRACE + DEBUG_WRITE) at an L1 and an L4 flight pose looking level toward open ground, or pick later route seconds where
+pitch ~0 (check camera pitch from G5G/G3C camera logs). Same pose, arms dd6 / dd8 / dd8+FOG_ALT=1,3,1, 16:9 then 21:9.
+Hypotheses: H-dd8-visible (dd8 shows more ground than dd6 at the horizon: sky-band fraction / far-terrain pixel fraction drops);
+H-dd8-invisible (fog/haze or the 88-cell visibility limit, s7301, hides the dd8 gain: equal far fraction);
+H-fog-hides (FOG_ALT removes the dd8 gain it was meant to soften).
+Discriminator: far-terrain pixel fraction in the top band (tools/s7295_dd_look_sheet.py / g5e_edge_score) per arm at the same pose,
+with a dd1 arm as positive control (must differ from dd6). Output: docs/owner_sheet_s7308_dd8_horizon.jpg.
+Needs an unlocked screen and idle host (check CGSSessionScreenIsLocked); otherwise queue it as a SOAK_NEEDS_IDLE recipe.

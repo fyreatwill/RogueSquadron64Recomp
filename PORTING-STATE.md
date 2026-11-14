@@ -192362,3 +192362,21 @@ but the visible melt at 21:9 is weaker than at 16:9. By eye (docs/owner_sheet_s7
 already reads blue-hazy in both halves. Not run: the 300 s hold. It is queued as soak_queue/s7307_219_dd8_fog_hold.sh
 (L1 fog / L1 no-fog / L5 fog / ctl), SOAK_NEEDS_IDLE=180.
 Rules out: aspect-scaled ke being needed for detail preservation at 21:9. Open: whether the owner wants a stronger ke at 21:9 (owner look).
+
+## Session 7307 (2026-11-13) — maintenance: CURRENT-TRUTH compacted 60272 -> ~20 KB; folded the s7307 21:9 fog hold (FOG_ALT qualified at 21:9)
+
+Step 0 triggered (CURRENT-TRUTH 60272 bytes > 60000), so this is a MAINTENANCE iteration: no game run.
+- Archived the whole s7306 CURRENT-TRUTH verbatim into PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7307
+  maintenance)" (headings demoted to ####). Rewrote CURRENT-TRUTH: headline paragraphs s7192-s7229 (boot freeze,
+  host hazards, Retina, presentation, window/aspect) condensed to one bullet each; the item-0 dd8/fog chronology
+  (s7287-s7306) and the closed WIDEWIN thread (s7262-s7271) and G5c freeze thread (s7272-s7285) reduced to
+  headline/closed bullets; superseded list trimmed to one-liners; backlog renumbered 1-12 in ONE sequence
+  (the five colliding "0." items and old 1-16 collapsed); headline "as of" refreshed to s7307.
+- Folded queued soak s7307_219_dd8_fog_hold (rc=0, 1238 s, scratch/agent/soak_results/s7307_219_dd8_fog_hold_20261113-194340.log;
+  offline read of its summary, no new run): arms l1f (L1 fog), l1n (L1 no fog), l5f (L5 fog), ctl. Control PASS: ctl flat 30
+  from t=67 to 300 (176 s flat, 231 beyond-route s <55/s). l1f/l1n/l5f all 300 s, 0 crash ("0" crashlines), 60.0/s in
+  win77-97, beyond-route 3/5/1 s (single seconds at route transients), [s7302] fog line present in l1f/l5f, absent in l1n.
+  Same-soak cost L1: no-fog heaviest20 13.53 ms (59.2/s) vs fog 9.40 ms (60/s); win77-97 11.19 vs 9.26 ms; total_emit
+  11090 vs 11224 (cells ~equal). -> H-hold: FOG_ALT=1,3,1 qualified at 21:9 as well as 16:9 (s7304), and cheaper per frame
+  at both (two soaks; the cheaper-frame mechanism is unmeasured). OWNER-OPT-INS updated. G5e now awaits only the owner's look.
+- Rules out: H-crash/dip at 21:9 for the fog opt-in (L1/L5).
