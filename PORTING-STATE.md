@@ -193363,3 +193363,33 @@ Discrimination: H-diag selected for every host D site and all 11 generated survi
 dd>1 (it was a no-op above 8 MB, not a drop); H-intended only for the A arena-layout sites. Class R CLOSED.
 Docs: docs/HEAP-ADDR-AUDIT.md class R section; CURRENT-TRUTH 27b/27c. Open: class M (193 physical 8 MB masks), NEXT.md s7338.
 Summary: this selects H-diag (host D sites, 11 latent generated survivors), refutes H-behave for the OSTask check at dd>1 (root cause of its non-bound: wrapping subtraction, fixed), and closes class R. Next discriminator: class M physical-mask census (NEXT.md s7338).
+
+## Session 7338 (2026-11-14) — class M physical 8 MB masks closed: 199 host/rt64 sites classified, 0 behavioural; >8 MB RDP windows flow through the default submit path at 21:9
+Work unit (NEXT.md s7338, HYPOTHESIS-ID phys-8mb-masks): classify every physical 8 MB mask/end (`& 0x7FFFFx`, `< 0x800000`,
+`0x800000 - x`) in host code, since dd>1 / 21:9 put guest data up to 0x80C00000 and host arenas above it.
+Tool: `tools/s7338_mask_census.py [--controls] [-v]` (new, imports s7337's regexes). Scope: s7337 host list + src/rsp/*.cpp +
+lib/rt64/src/{gbi,hle,render,common} (rt64 was never scanned before). Classes: C comment, P in-ucode probe behind the s6715
+call-site gate (PROBE_GATE_FNS parsed from fixup_factor5_ucode.py), G function opens with an early-return log/env gate, D env/log-
+gated body or hand-classed, R read-only audit key, X dump of first 8 MB, S size cap, B behavioural. Exit 1 on ?/B.
+Control: `--controls` plants a default-on mask function (reported '?') and a log-gated one (reported 'G'); probe-gate fns=27. PASS.
+Result: 199 sites in 159 files: D 101, P 43, G 33, R 10, X 4, S 1, C 6, B 0, unclassified 0 (exit 0).
+Hand review of the hot functions the loose DIAG regex marked D: rsp_dpc_submit_impl (3 sites, all inside ROGUESQ_LOG_DPCWIN /
+log_dpc / seq-log blocks), rs64_spike_scan (ROGUESQ_G5H_BAND file only), factor5_gfx_runner (28: SHADOW2, WIPE_DLWALK, FS_SLOT,
+DL_SYNC walkers, all env-gated), rs64_g1d_blk_dma (after rs64_g1d_blk_enabled), sp.cpp ram_size (dump_frame only). R sites:
+rs64_audio_hash_rdram (FNV for an M5 audit row), rs64_inline_probe_trigen_stage (masked copies read only by gated trigen rows),
+rt64_gbi_rdp.cpp shadeDl (rs64_shade_ordinal key + log/floor-mesh fields; rendering does not read it). X: rs64_dump_ucode,
+rt64_state RDRAMSize fwrite, snap. RSP DMA: rsp.hpp uses rs64_s7327_mask (0xFFFFF8 / 0x1FFFFF8), no 8 MB literal; the
+factor5_ucode C files carry no 8 MB mask. The live submit mask is s6690's kSubmitRamMask 0xFFFFFC / end 0x1000000.
+Runtime second line (scratch/s7338/run.zsh, forced L1 FPS60 HOLD 60, ROGUESQ_LOG_DPCWIN=1, sequential, one game):
+| arm | env | RDP windows start >= 8 MB (hi counter) | logged >=8/<8 | flight | crash / VI stall |
+|---|---|---|---|---|---|
+| dd8 | DRAW_DISTANCE=8 DD_UNSAFE DD_WIDEWIN ASPECT=21:9 | 33,003,572 | 1690 / 20243 | 137 s | 0 / 0 |
+| dd1 | ASPECT=21:9 | 14,794,366 | 779 / 4172 | 137 s | 0 / 0 |
+Both arms put RDP command lists at 0x80892800+ (above 8 MB) through the default submit path and fly clean, so the default path
+is exercised above 8 MB and holds. dd1 21:9 is NOT an 8 MB negative control (21:9 alone sets osmem 12, layout guest top
+80C00000): a 4:3 dd1 arm would be the true negative; not needed for the verdict, which rests on the static census (B 0).
+ORIGIN: no mitigation added; audit + census tool only.
+Discrimination: selects H-diag (every live-path 8 MB mask is env/log-gated or feeds only log keys/dumps); refutes H-alias (no
+default-on path masks a >8 MB address; the RDP submit and RSP DMA paths were already widened in s6690/s7327); H-intended has no
+instance (no 24-bit segment math spelled 0x7FFFFF on a live path). Class M CLOSED.
+Next (NEXT.md s7339): class N, `& 0xFFFFFF` 16 MB masks (~380 host sites) vs the spill arena at phys 0x01000000+, host CPU side.

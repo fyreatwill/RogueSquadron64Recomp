@@ -311,4 +311,5 @@ Startup `[s7337] selftest` + power-of-two `[s7337] task range: n= hi= top= widen
 dd1 and dd8 21:9 real task pointers max 0x80149470, widened=0, 0 s7197 drops; dd8 hold 137 s flight, 0 crash.
 G detail: fixup_ramtop runs last in fixup_game_funcs_vendored.py, but scripts applied straight to the live tree afterwards emit raw
 literals. The census catches that; the radfade/edgepos camera bound was in range at dd1 and dd8 (cam=0,0 rows 0/5365 and 0/7676).
-Open: class M, 193 physical 8 MB masks/ends (`& 0x7FFFFF`, `< 0x800000`) counted by the census, not yet classified.
+Class M (s7338, CLOSED): 199 physical 8 MB masks/ends classified by tools/s7338_mask_census.py (D 101, P 43, G 33, R 10, X 4, S 1, C 6,
+B 0). Every live-path mask is behind an env/log gate or only feeds log keys/dumps. Next: class N, `& 0xFFFFFF` vs the spill arena.

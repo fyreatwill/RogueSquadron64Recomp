@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7336 (2026-11-14).
+Compact operational handoff, as of Session 7338 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -335,9 +335,13 @@ is in the s7307 archive). Active unit: NEXT.md.
     Only behavioural site, osSpTaskStartGo's OSTask check (upstream_compat.cpp rs64_guest_range_valid): its `size <= end - addr` wrapped,
     so it never rejected any task above 8 MB (selftest old=1 at 0x80900000). Fixed: real bound rs64_ram_top (ROGUESQ_S7337=0 = 8 MB);
     selftest old=0/new=1 at dd8; real tasks top out at 0x80149470; dd8 21:9 L1 hold clean, 0 drops. Open: class M (193 phys masks).
-27c. **Next unit (NEXT.md): class M, the 8 MB physical masks** (`& 0x7FFFFF`, `< 0x800000`) on live paths in host code, which
-    would fold a 0x80800000+ address back into 0-8 MB.
-28. **When 1-27c offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27c. **Physical 8 MB masks (class M): CLOSED (s7338, static + runtime).** `tools/s7338_mask_census.py --controls` (exit 1 =
+    unclassified/behavioural; scope s7337 list + src/rsp + lib/rt64 gbi/hle): 199 sites = D 101, P 43 (s6715 probe gate), G 33
+    (early-return log gate), R 10 read-only audit keys, X 4 dumps, S 1 size cap, C 6, B 0. RSP DMA uses s7327 masks, ucode C none.
+    Runtime (scratch/s7338/run.zsh, LOG_DPCWIN): dd8 21:9 L1 33.0M RDP windows start >=8 MB (logged 1690/21931), dd1 21:9 14.8M (779/4951;
+    21:9 alone sets osmem 12) through the default submit path (s6690 0xFFFFFC mask); both 137 s flight, 0 crash, 0 VI stall.
+27d. **Next unit (NEXT.md): class N, 16 MB `& 0xFFFFFF` masks** (~380 host sites) vs the spill arena at phys 0x01000000+.
+28. **When 1-27d offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
