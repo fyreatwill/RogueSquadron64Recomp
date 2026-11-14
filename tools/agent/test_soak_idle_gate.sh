@@ -39,6 +39,23 @@ printf '#!/bin/zsh\n# SOAK_NEEDS_IDLE=120\nx=(a b); rm -f /nonexistent_*(N); exi
 chk "zsh-shebang recipe with zsh syntax runs under zsh" 'ls $q/done | grep -q "^z_" && grep -q "| z | rc=0 |" $AG/SOAK-RESULTS.md'
 printf '#!/bin/bash\n# SOAK_NEEDS_IDLE=120\nif then fi (\n' > "$q/s.sh"; run_soak_queue
 chk "syntax error filed as SYNTAX, not re-queued as a void" '[ ! -e $q/s.sh ] && grep -q "| s | rc=SYNTAX" $AG/SOAK-RESULTS.md && ! grep -q "| s | rc=2 VOID" $AG/SOAK-RESULTS.md'
+# s7314: one game at a time. A fake game (C sleeper; a copied /bin/sleep is SIGKILLed by macOS) named SOAK_GAME_NAME.
+export SOAK_GAME_NAME=rs64fake7314
+if printf '#include <unistd.h>\n#include <stdlib.h>\nint main(int c,char**v){sleep(atoi(v[1]));return 0;}\n' | clang -x c -o "$T/$SOAK_GAME_NAME" - 2>/dev/null; then
+  echo 300 > $T/idle; SOAK_IDLE_WAIT=0
+  printf '#!/bin/bash\nexit 0\n' > "$q/g0.sh"; run_soak_queue
+  chk "no game alive: no foreign/outlived note (control)" 'grep "| g0 | rc=0" $AG/SOAK-RESULTS.md | grep -vq "killed\|SIGKILLed"'
+  "$T/$SOAK_GAME_NAME" 60 & fk=$!; sleep 0.3
+  printf '#!/bin/bash\npgrep -x %s >/dev/null && exit 7; exit 0\n' "$SOAK_GAME_NAME" > "$q/g1.sh"; run_soak_pass
+  chk "leftover game SIGKILLed before the recipe starts" '! kill -0 $fk 2>/dev/null && grep "| g1 | rc=0" $AG/SOAK-RESULTS.md | grep -q "foreign game killed before start: pids $fk"'
+  wait $fk 2>/dev/null
+  printf '#!/bin/bash\nperl -e "setpgrp(0,0); exec @ARGV" %s 60 >/dev/null 2>&1 &\nsleep 0.3; exit 0\n' "$T/$SOAK_GAME_NAME" > "$q/g2.sh"; run_soak_queue
+  chk "game escaping the recipe's process group is reaped and logged" '! pgrep -x $SOAK_GAME_NAME >/dev/null && grep "| g2 | rc=0" $AG/SOAK-RESULTS.md | grep -q "own game outlived the recipe"'
+  mkdir -p $T/emptyq; AGs=$AG; AG=$T/emptyq; "$T/$SOAK_GAME_NAME" 60 & fk=$!; sleep 0.3; run_soak_queue; AG=$AGs
+  chk "empty queue: iteration leftover reaped at soak-phase start" '! kill -0 $fk 2>/dev/null && grep -q "| loop | leftover game alive after the iteration, SIGKILLed: pids $fk" $T/emptyq/SOAK-RESULTS.md'
+  wait $fk 2>/dev/null; pkill -9 -x $SOAK_GAME_NAME 2>/dev/null
+else echo "FAIL s7314 fake game build (clang)"; fail=1; fi
+unset SOAK_GAME_NAME
 # s7235: the soak phase must run under the current loop.sh (re-exec first, soaks run by the new process).
 L=$here/loop.sh
 w=$(grep -n '^while \[ "\$ITER_CAP"' "$L" | head -1 | cut -d: -f1)

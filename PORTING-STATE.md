@@ -192548,3 +192548,26 @@ Verdict: selects H-wrong-window (two lines: process-lifetime overlap at the capt
 reproduced by the fake-process control). Refutes H-parity (offline, 9 correct freezes on 0x8F5000) and the after-rebuild premise; the
 repro arm refutes a presentation lag at this recipe (6/6 captures == stream frame). Next discriminator: H-clean vs H-leak for the
 loop's soak phase (does any soak start with a foreign game alive?), NEXT.md s7314.
+
+## Session 7314 (2026-11-14) — loop soak phase enforces one game at a time: leftover games SIGKILLed before each recipe, after each recipe, and at every soak-phase start; test 19/19, old loop.sh fails the 3 new checks
+
+NEXT.md unit (HYPOTHESIS-ID harness-one-game). Retro scan for H-clean vs H-leak: UNEVALUABLE, not a null - 901 soak_results
+logs and loop.log carry no record of which game processes were alive when a recipe started (no hit for "games alive"/"still
+alive"/"foreign"), so whether a soak ever ran beside a leftover game cannot be answered from history. Landed the guard instead,
+so the question is answered going forward (every kill is written into the SOAK-RESULTS verdict line).
+
+Change (tools/agent/loop.sh): `soak_kill_games` (pgrep -x the game name, SOAK_GAME_NAME overrides it for tests; SIGKILL all,
+print the pids). Called (1) at the start of run_soak_queue, whether or not anything is queued: an iteration's leftover game
+gets a `<ts> | loop | leftover game alive after the iteration, SIGKILLed: pids ...` line; (2) before each recipe: the verdict
+line gains ` | foreign game killed before start: pids ...`; (3) after each recipe's process-group kill: ` | own game outlived
+the recipe, SIGKILLed: pids ...` (a game that escaped the group via setpgrp/setsid). The iteration has ended whenever these run,
+so any live game is a leftover; killing it is safe. ORIGIN: the s7312 stale-frame datum (s7313: a leftover game's window
+captured by `pgrep|head -1`); the writer of the leftover is whichever iteration/soak arm failed to reap its game, and now each
+occurrence is named by pid in the ledger feed instead of silently doubling host load.
+
+Test (tools/agent/test_soak_idle_gate.sh, fake game = C sleeper renamed rs64fake7314): control "no game alive -> no note";
+leftover before start -> killed and named (recipe itself asserts it sees no game, exit 7 otherwise); recipe spawning a game in
+its own process group -> reaped and logged; empty queue -> iteration leftover reaped with the loop line. 19/19 PASS. Same test
+against HEAD's loop.sh: the 3 kill checks FAIL (positive control that the test discriminates). Pid class audit: tools/ has no
+remaining `pgrep ... | head` pid pick outside the helper/its test (s7313 covered the users). Rules out nothing about the game;
+closes harness item 12.

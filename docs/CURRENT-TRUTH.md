@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7313 (2026-11-14).
+Compact operational handoff, as of Session 7314 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -210,8 +210,10 @@ is in the s7307 archive). Active unit: NEXT.md.
 11. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
-12. **Harness one-game discipline (s7313):** capture/sample/SIGSTOP tools take the pid from tools/rs64_game_pid.zsh (exactly one
-    game or nothing); test tools/s7313_pid_test/run.zsh. Next: the loop's soak phase does not check for a leftover game (NEXT.md).
+12. **Harness one-game discipline: CLOSED (s7313-s7314).** Iteration tools take the pid from tools/rs64_game_pid.zsh (exactly one
+    game or nothing; test tools/s7313_pid_test/run.zsh). loop.sh SIGKILLs any game alive at soak-phase start, before and after each
+    recipe, and names the pids in SOAK-RESULTS ("leftover"/"foreign game killed"/"outlived"); test tools/agent/test_soak_idle_gate.sh.
+    A SOAK-RESULTS kill line = some arm failed to reap its game: treat that run's frame-time numbers as contaminated.
 13. **When 1-12 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

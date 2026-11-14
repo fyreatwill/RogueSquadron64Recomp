@@ -259,6 +259,15 @@ soak_host_idle() {
   if [ -n "${SOAK_IDLE_FEED:-}" ]; then i=$(tail -1 "$SOAK_IDLE_FEED"); else host_locked && return 1; i=$(host_idle_s); fi
   [ "${i:-0}" -ge "$1" ]
 }
+# s7314: one game at a time in the soak phase. The iteration has ended when a recipe starts, so any
+# game alive then is a leftover (an iteration arm or a soak whose process group escaped the kill);
+# it would double CPU load, steal focus, and be picked by a by-name pid lookup. SOAK_GAME_NAME
+# overrides the process name for tools/agent/test_soak_idle_gate.sh.
+soak_kill_games() {
+  local p; p=$(pgrep -x "${SOAK_GAME_NAME:-RogueSquadron64Recomp}" | tr '\n' ' '); p=${p% }
+  [ -z "$p" ] && return 1
+  kill -9 $p 2>/dev/null; sleep 1; echo "$p"
+}
 # One pass over the queue. Sets _soak_ran (recipes run) and _soak_skipped / _soak_minneed
 # (idle-gated recipes left queued, and the smallest idle they asked for).
 run_soak_pass() {
@@ -304,6 +313,11 @@ run_soak_pass() {
       log "soak $name rejected: $sh -n failed"
       continue
     fi
+    local fg lg note=""
+    if fg=$(soak_kill_games); then
+      note=" | foreign game killed before start: pids $fg"
+      log "soak $name: leftover game(s) alive before start, SIGKILLed: $fg"
+    fi
     log "soak $name starting (cap ${cap}s, $sh) -> $slog"
     t0=$SECONDS
     perl -e 'setpgrp(0,0); exec @ARGV' "$sh" "$recipe" >"$slog" 2>&1 &
@@ -313,23 +327,34 @@ run_soak_pass() {
     rc=0; wait "$pid" 2>/dev/null || rc=$?
     kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null
     dur=$((SECONDS - t0))
+    if lg=$(soak_kill_games); then
+      note="$note | own game outlived the recipe, SIGKILLed: pids $lg"
+      log "soak $name: game(s) still alive after the recipe, SIGKILLed: $lg"
+    fi
     if [ -n "$need" ] && [ "$rc" = 2 ]; then
       nv=$(( $(cat "$vfile" 2>/dev/null || echo 0) + 1 ))
       echo "$nv" > "$vfile"
       if [ "$nv" -lt "$SOAK_MAX_VOIDS" ]; then
-        printf '%s | %s | rc=2 VOID (human/lock/sleep) %s/%s, re-queued | %ss | %s\n' "$ts" "$name" "$nv" "$SOAK_MAX_VOIDS" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
+        printf '%s | %s | rc=2 VOID (human/lock/sleep) %s/%s, re-queued | %ss | %s%s\n' "$ts" "$name" "$nv" "$SOAK_MAX_VOIDS" "$dur" "$slog" "$note" >> "$AG/SOAK-RESULTS.md"
         log "soak $name voided (rc=2), re-queued ($nv/$SOAK_MAX_VOIDS)"
         ran=$((ran+1)); _soak_ran=$ran; continue
       fi
     fi
     rm -f "$vfile"
-    printf '%s | %s | rc=%s | %ss | %s\n' "$ts" "$name" "$rc" "$dur" "$slog" >> "$AG/SOAK-RESULTS.md"
+    printf '%s | %s | rc=%s | %ss | %s%s\n' "$ts" "$name" "$rc" "$dur" "$slog" "$note" >> "$AG/SOAK-RESULTS.md"
     mv "$recipe" "$qdir/done/${name}_${ts}.sh"
     log "soak $name finished rc=$rc after ${dur}s"
     ran=$((ran+1)); _soak_ran=$ran
   done
 }
 run_soak_queue() {
+  # s7314: reap an iteration's leftover game even when the queue is empty, so it cannot
+  # survive into the next iteration (where a by-name pid lookup would pick it).
+  local lf
+  if lf=$(soak_kill_games); then
+    printf '%s | loop | leftover game alive after the iteration, SIGKILLed: pids %s\n' "$(date +%Y%m%d-%H%M%S)" "$lf" >> "$AG/SOAK-RESULTS.md"
+    log "soak phase: leftover game(s) alive after the iteration, SIGKILLed: $lf"
+  fi
   run_soak_pass
   [ "$_soak_ran" = 0 ] && [ "$_soak_skipped" -gt 0 ] && [ "${SOAK_IDLE_WAIT:-0}" -gt 0 ] || return 0
   local t0=$SECONDS
