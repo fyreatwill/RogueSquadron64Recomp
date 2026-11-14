@@ -193776,3 +193776,4 @@ Guest memcpy/bcopy are recompiled MIPS (retail semantics, s5037 span guard), so 
 Conclusion: H-safe selected for all 195 sites; H-ub refuted. No fix, so no runtime smoke (NEXT.md: runtime only if a B site exists).
 Rules out: overlapping host memcpy as a source of corrupted guest RDRAM / RT64 buffers. Next: class AB (typed access through a cast
 guest pointer, alignment/aliasing UB), CURRENT-TRUTH 27p.
+Discrimination: the census selects H-safe and refutes H-ub (and H-diag as the only explanation) for all 195 sites. Next discriminator: class AB cast-pointer census (NEXT.md, s7351).
