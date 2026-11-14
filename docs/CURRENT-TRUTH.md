@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7350 (2026-11-14).
+Compact operational handoff, as of Session 7351 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -424,10 +424,16 @@ is in the s7307 archive). Active unit: NEXT.md.
     object: every RDRAM copy pairs RDRAM with a host local / std::vector / malloc'd snapshot / GPU ->map() buffer / DMEM (SP DMA).
     The only same-base pairs are dpc_bridge rs64_dlw_root (two members of g_dlw, P) and S2DEX struct_buffer vs RDRAM (state->..).
     The guest's own memcpy/bcopy are recompiled MIPS (retail semantics, s5037 span guard), not host memcpy. H-safe. Next: class AB (27p).
-27p. **Next unit (NEXT.md): class AB, typed loads/stores through a cast guest pointer** (`*(uint32_t*)(rdram + a)`,
-    `reinterpret_cast<uint16_t*>(RDRAM + a)`) with a guest-chosen, possibly unaligned address: alignment/aliasing UB the compiler may
-    exploit (vectorised or ldp/stp pairs, atomics fault on misalignment). Fix with memcpy-based loads or a proven alignment mask.
-28. **When 1-27p offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27p. **Typed load/store through a cast guest pointer (class AB): CLOSED (s7351, static + standalone control + smoke).**
+    `tools/s7351_cast_census.py --controls`: CAST 109 (HOST 36, D 37, G 16, GF 10, ALN 5, K 3, H 2), MEM_* 59 (G 18, D 17, SP 11,
+    K 10, C 2, GF 1), 0 open. One latent UB defect FIXED: RT64 Framebuffer copyRAMToNativeAndChanges / copyNativeToRAM word swap
+    derefed `uint32_t*` at colour-image address + row * rowBytes (guest-chosen; odd 16b width -> 2 mod 4); now memcpy word access.
+    tools/s7351_cast_ctl.cpp: identical bytes when aligned, UBSan aborts the old form at +2. 260 s dd8 smoke clean; the path ran 20000+
+    times, every range 4-aligned (latent). Next: class AC (27q).
+27q. **Next unit (NEXT.md): class AC, signed 32-bit add/sub/negate overflow on guest-derived ints** in host code (`int32_t` sums of
+    guest coords/lengths, `-x`, `abs(x)` of INT_MIN): UB the compiler may exploit (loop-bound / range-check folding). MIPS ADDU/SUBU wrap;
+    fix with unsigned arithmetic or a widened type. Class V (s7345) covered multiply only.
+28. **When 1-27q offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

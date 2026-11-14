@@ -193777,3 +193777,35 @@ Conclusion: H-safe selected for all 195 sites; H-ub refuted. No fix, so no runti
 Rules out: overlapping host memcpy as a source of corrupted guest RDRAM / RT64 buffers. Next: class AB (typed access through a cast
 guest pointer, alignment/aliasing UB), CURRENT-TRUTH 27p.
 Discrimination: the census selects H-safe and refutes H-ub (and H-diag as the only explanation) for all 195 sites. Next discriminator: class AB cast-pointer census (NEXT.md, s7351).
+
+## Session 7351 (2026-11-14) — class AB typed access through a cast guest pointer closed: 168 sites, 0 open; RT64 framebuffer RAM<->native word swap fixed to memcpy word access (latent, control PASS, 260 s dd8 smoke clean)
+
+HYPOTHESIS-ID: host-typed-guest-access. Work unit from NEXT.md (idiom-class audit, ITERATION item 3).
+Hypotheses: H-safe (offset masked or aligned by construction: literal, guest pointer the MIPS code itself loads with lw), H-diag
+(only gated probes), H-ub (default-on typed deref at a guest-chosen address with unproven alignment).
+What ran: new `tools/s7351_cast_census.py` on the s7343 scope (183 files), reusing s7343 args_of()/ln_fn()/body_gated(), s7338
+sites() C/P/G/D, s7344 CORE demotion. Two idioms: CAST (C-style / reinterpret_cast to a >1-byte int/float pointer) and MEM (host
+uses of MEM_W/MEM_H/MEM_HU/MEM_D). Classes HOST (host memory, not a site in substance), K literal aligned, ALN mask/test, SP
+stack-pointer + literal, GF guest pointer used by the guest's own lw/sw, H, B.
+Controls (same run, `--controls`): planted `*(uint32_t*)(rdram + task->a)` -> '?', `& ~3u` twin ALN, memcpy twin not a site,
+literal twin K, std::vector .data() twin HOST, gated twin G: PASS.
+Result: CAST 109: HOST 36, D 37, G 16, GF 10, ALN 5, K 3, H 2. MEM 59: G 18, D 17, SP 11, K 10, C 2, GF 1. 0 '?' / B after the fix.
+Hand review moved several first-guess GF rows to D/ALN after reading the code (dpc_bridge gw = ROGUESQ_G5H_BAND only; map_result
+debug write requires (a & 3) == 0; s6892_word callers all pass s6892_valid() (v & 3 == 0) bases; rt64_state wvPx/px = WB probes;
+framebuffer_renderer casts are GPU readback ->map() buffers, not RDRAM). Remaining GF: s7239_end a.cmd (the game's own DL write
+pointer, r7 at 0x80011884, the guest sw's there itself), osDpGetCounters buf_ptr, rt64_gbi ucode-data detection (OSTask ucode_data,
+SP DMA 8-aligned), and the never-dispatched HLE rsp/extended paths.
+DEFECT (latent) FIXED: RT64 `Framebuffer::copyRAMToNativeAndChanges` read and `copyNativeToRAM` wrote RDRAM through `uint32_t*`
+at colour-image address + rowStart * rowBytes, both guest-chosen (an odd 16b width makes rowBytes = 2 mod 4). Now memcpy word
+access (rs64LoadWord / rs64StoreWord, same ldr/str codegen). lib/rt64 patch exported (submodule-patches/rt64.patch).
+ORIGIN: no misaligned value was observed; the writer of the address is the game's SET_COLOR_IMAGE (via RDP::setColorImage
+maskAddress, 24-bit, no alignment mask) and the width from the same command; this is UB removal, not a mitigation of a bad value.
+Control: tools/s7351_cast_ctl.cpp (clang -O2 -fsanitize=alignment): 944 cases, new == old byte-for-byte at 4-aligned bases and
+equals a byte model at 2-aligned bases: PASS; old form at base+2 -> UBSan "load of misaligned address" abort.
+Runtime: `env SECS=260 zsh scratch/s7326/run.zsh s7351_dd8 'ROGUESQ_LOG_S4298=1'` (dd8 21:9 hangar->mission->abort route):
+crash=0, resets=14, late=0, arenafull=0. Positive control that the fixed path ran: 20000 s4298 copyToRAM rows (budget cap), w=1024
+18546 / 640 1374 / 320 80, all siz 2, addressStart % 8 == 0 and range start % 4 == 0 in every row: the game never picks a
+misaligned image, so the fix is latent (no behaviour change expected, none seen). Single-source for "never misaligned" beyond this route.
+Conclusion: H-safe for 167 sites, H-ub for 1 (fixed, latent). Rules out: misaligned typed host access to guest RDRAM as a live
+defect source. Next: class AC (signed 32-bit add/sub/negate overflow on guest-derived ints in host code), CURRENT-TRUTH 27q.
+Discrimination: the census selects H-safe for 167 sites and H-ub for the RT64 framebuffer swap (fixed); H-diag refuted as the only explanation.

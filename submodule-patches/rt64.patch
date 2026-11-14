@@ -1852,7 +1852,7 @@ index c702055..f5fa89f 100644
  
          va_end(va1);
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..998654c 100644
+index 873883d..44b94fd 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
 @@ -15,6 +15,74 @@
@@ -1930,7 +1930,33 @@ index 873883d..998654c 100644
  
  #ifdef __GNUC__
  #define _byteswap_ulong __builtin_bswap32
-@@ -91,7 +159,58 @@ namespace RT64 {
+@@ -25,6 +93,12 @@
+ #endif
+ 
+ namespace RT64 {
++    // s7351 class AB: the RDRAM side of these copies sits at colour-image address + row * rowBytes, both guest-chosen
++    // (an odd 16b width gives rowBytes = 2 mod 4), so a uint32_t* deref there is misaligned-access UB. memcpy word
++    // access compiles to the same ldr/str on arm64 and x86 and is defined at any address.
++    static inline uint32_t rs64LoadWord(const uint8_t *p) { uint32_t v; memcpy(&v, p, sizeof(v)); return v; }
++    static inline void rs64StoreWord(uint8_t *p, uint32_t v) { memcpy(p, &v, sizeof(v)); }
++
+     // Framebuffer
+ 
+     Framebuffer::Framebuffer() {
+@@ -81,17 +155,68 @@ namespace RT64 {
+             nativeSwappedRAM.resize(nativeSize);
+         }
+ 
+-        const uint32_t *srcWords = reinterpret_cast<const uint32_t *>(src);
++        const uint8_t *srcWords = src;  // s7351: guest-aligned only by the game's choice of address/width
+         uint32_t *dstWords = reinterpret_cast<uint32_t *>(nativeSwappedRAM.data());
+         uint32_t wordsToSwap = nativeSize / sizeof(uint32_t);
+         while (wordsToSwap > 0) {
+-            *dstWords = _byteswap_ulong(*srcWords);
++            *dstWords = _byteswap_ulong(rs64LoadWord(srcWords));
+             wordsToSwap--;
+-            srcWords++;
++            srcWords += sizeof(uint32_t);
              dstWords++;
          }
  
@@ -1989,10 +2015,14 @@ index 873883d..998654c 100644
          return differentPixels;
      }
  
-@@ -143,9 +262,160 @@ namespace RT64 {
+@@ -141,18 +266,169 @@ namespace RT64 {
+ 
+         // Copy native target to RDRAM.
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
-         uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
+-        uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
++        uint8_t *dstWords = dstBytes;  // s7351: word access via rs64LoadWord/rs64StoreWord (guest-chosen alignment)
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
+-        uint32_t dstFirstWord = dstWords[0];
 +        // s652–s660 freelist phys 0x1F3CC0. Product path:
 +        // writeback completion co-gates recovery (H-wb-complete-not-stomp);
 +        // freelist integrity via surgical multi-header restore (s660).
@@ -2111,7 +2141,7 @@ index 873883d..998654c 100644
 +                }
 +            }
 +        }
-         uint32_t dstFirstWord = dstWords[0];
++        uint32_t dstFirstWord = rs64LoadWord(dstWords);
 +        { // s4279: does this host readback land on the sample-stream node heap block 0x1F9C00..0x1FB400? (phase-ungated)
 +            static int on = -1; static int rows = 0; static unsigned long calls = 0;
 +            if (on < 0) { const char *e = std::getenv("ROGUESQ_LOG_S4222"); on = (e && e[0] && e[0] != '0') ? 1 : 0; }
@@ -2150,8 +2180,21 @@ index 873883d..998654c 100644
          // Write back to RDRAM by swapping every word.
          if (bytesToSwap >= sizeof(uint32_t)) {
              uint32_t wordsToSwap = (bytesToSwap) / sizeof(uint32_t);
-@@ -165,6 +435,102 @@ namespace RT64 {
-             dstWords[0] = dstFirstWord;
+             while (wordsToSwap > 0) {
+-                *dstWords = _byteswap_ulong(*dstWords);
++                rs64StoreWord(dstWords, _byteswap_ulong(rs64LoadWord(dstWords)));
+                 wordsToSwap--;
+-                dstWords++;
++                dstWords += sizeof(uint32_t);
+             }
+         }
+         // Special case when the total amount of bytes is smaller than a word.
+@@ -162,9 +438,105 @@ namespace RT64 {
+                 dstFirstWordU8[i ^ 3] = dstBytes[i];
+             }
+ 
+-            dstWords[0] = dstFirstWord;
++            rs64StoreWord(dstWords, dstFirstWord);
          }
  
 +        rs64FloorRdramNoteSwap(dstBytes, rdramPhys0, bytesToSwap, &rdramSnap);
@@ -2253,7 +2296,7 @@ index 873883d..998654c 100644
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
-@@ -199,4 +565,4 @@ namespace RT64 {
+@@ -199,4 +571,4 @@ namespace RT64 {
      uint64_t FramebufferTile::hash() const {
          return XXH3_64bits(this, sizeof(FramebufferTile));
      }
