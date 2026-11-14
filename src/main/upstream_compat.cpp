@@ -3426,6 +3426,33 @@ extern "C" void rs64_s7318_bcmp(int idx, uint32_t pc, uint32_t a, uint32_t b) {
     if ((++g_s7318_calls & 0xFFFF) == 0) { uint64_t now = mach_absolute_time(); static mach_timebase_info_data_t tb; if (!tb.denom) mach_timebase_info(&tb);
         if ((now - g_s7318_last) * tb.numer / tb.denom >= 10000000000ull) { g_s7318_last = now; s7318_dump(); } }
 }
+/* s7324 class G: is any RCP-read address (RSP DMA dram, RDP SETTIMG/SETZIMG/SETCIMG) a spill block, direct or 24-bit aliased?
+   addr is the raw value the RCP was handed. Returns 0 none (static/untracked), 1 heap block, 2 alias-only (addr < 4 MB, its
+   0x81000000|addr lies in a live spill block and 0x80000000|addr in no live heap block), 3 alias+heap (both), 4 direct live spill
+   (bits 24+ set, KSEG0 form in a live spill block), 5 direct other (bits 24+ set, no live spill block). blk/req/pc of the spill
+   (classes 2-4) or heap (1) block. rs64_s7324_lowspill: lowest live spill block start or 0 (positive control source). */
+extern "C" int rs64_s7324_class(uint32_t addr, uint32_t* blk, uint32_t* req, void** pc) {
+    const uint32_t q = addr & 0x1FFFFFFFu; *blk = 0; *req = 0; pc[0] = pc[1] = pc[2] = nullptr;
+    std::lock_guard<std::mutex> lk(s_s7317_mu);
+    auto fill = [&](uint32_t b) { auto it = s_s7317_live.find(b); if (it != s_s7317_live.end()) { *blk = b; *req = it->second.req; for (int k = 0; k < 3; ++k) pc[k] = it->second.pc[k]; } };
+    if (q >= 0x01000000u) { uint32_t r; uint32_t b = s7318_blk(0x80000000u | q, &r); if (b && s7318_sp(b)) { fill(b); return 4; } return 5; }
+    uint32_t rh = 0, rs = 0; const uint32_t bh = s7318_blk(0x80000000u | q, &rh);
+    const uint32_t bs = q < 0x00400000u ? s7318_blk(0x81000000u | q, &rs) : 0u;
+    const bool sp = bs && s7318_sp(bs);
+    if (sp) { fill(bs); return bh ? 3 : 2; }
+    if (bh) { fill(bh); return 1; }
+    return 0; }
+/* nearest live non-spill blocks around KSEG0 x: *lo = start of last block starting <= x (its end in *loend), *hi = first block start > x */
+extern "C" void rs64_s7324_near(uint32_t x, uint32_t* lo, uint32_t* loend, uint32_t* hi) {
+    std::lock_guard<std::mutex> lk(s_s7317_mu); *lo = *loend = *hi = 0;
+    auto it = s_s7317_live.upper_bound(x);
+    if (it != s_s7317_live.end() && it->first < 0x81000000u) *hi = it->first;
+    if (it != s_s7317_live.begin()) { --it; *lo = it->first; *loend = it->first + it->second.req; } }
+extern "C" uint32_t rs64_s7324_lowspill() {
+    std::lock_guard<std::mutex> lk(s_s7317_mu); auto it = s_s7317_live.lower_bound(0x81000000u);
+    return (it != s_s7317_live.end() && s7318_sp(it->first)) ? it->first : 0u; }
+extern "C" void rs64_s7324_sym(void* pc, char* out, size_t n) {
+    Dl_info di; if (pc && dladdr(pc, &di) && di.dli_sname) snprintf(out, n, "%s+0x%lx", di.dli_sname, (unsigned long)((char*)pc - (char*)di.dli_saddr)); else snprintf(out, n, "?%p", pc); }
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     rs64_floor_ownership("malloc", ptr, req, ra);
     if (ptr && s7317_on()) {

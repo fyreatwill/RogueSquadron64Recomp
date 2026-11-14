@@ -16,6 +16,8 @@
 extern "C" int rs64_s7094_on = [] {
     const char* e = getenv("ROGUESQ_S7094_DMASHAPE");
     int v = (e && *e && *e != '0') ? (strcmp(e, "ctl") == 0 ? 2 : 1) : 0;
+    const char* g = getenv("ROGUESQ_S7324_RCPREF");  // s7324 class G rides this hook (src/rsp/s7324_rcp_spill.cpp)
+    if (!v && g && *g && *g != '0') v = 1;
     if (v) fprintf(stderr, "[s7094] dma shape census armed mode=%s\n", v == 2 ? "ctl" : "on");
     return v;
 }();
@@ -76,7 +78,9 @@ const bool g_selftest = [] {
     return bad == 0;
 }();
 }  // namespace
+extern "C" int rs64_s7324_on; extern "C" void rs64_s7324_dma(int dir, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" void rs64_s7094_dma_shape(int dir, uint32_t mem, uint32_t dram, uint32_t raw, int aud_in) {
+    if (rs64_s7324_on && !(mem & 0x1000)) rs64_s7324_dma(dir, dram, raw, aud_in);  // IMEM boot DMAs are skipped by the runtime
     const uint32_t aud = aud_in ? 1u : 0u;
     const uint32_t f = classify(mem, dram, raw, rs64_s7094_on);
     const uint32_t vmask = f & ~((1u << F_IMEM) | (1u << F_CTL));  // IMEM DMAs are skipped by design (ucode is recompiled), not a shape defect

@@ -1,19 +1,27 @@
-# NEXT (s7324): class G, RCP-visible references to spill blocks
-HYPOTHESIS-ID: spill-rcp-ref
-Context: s7317-s7323 closed classes A-F (spill pointer as a CPU value: top byte, order, difference, truncation, re-tag, index). The
-spill arena 0x81000000-0x813FFFFF is PHYSICAL 0x01000000-0x013FFFFF, above the 24-bit SP DRAM_ADDR and DL segment-address range.
-If any of the 42 spill owner types (scratch/s7317/d8_owner_table.txt) is read by the RSP (vertex / matrix / texture / DL chunk /
-audio sample) its DMA either carries bits 24+ (hardware drops them -> reads heap at phys 0x00xxxxxx) or the game masked the pointer
-to 24 bits first (class D found no such site at runtime). Either way the RCP would draw/play garbage, a plausible source of dd>1-only
-terrain drops (G5b). HEAP-ADDR-AUDIT line 13 says "spill blocks are not on those chains" by design: never measured at dd8.
-Hypotheses: H-cpu-only (no RCP DMA / DL address ever falls in spill or its 24-bit alias of a live spill block) vs H-rcp (some do:
-name the owner type and the DMA/command, then move that allocation class below 16 MB or out of the spill path).
-Unit (ONE build, ONE run):
-1. Read src/rsp/s7094_dma_shape.cpp (ROGUESQ_S7094_DMASHAPE=1, =ctl control) and the DPC bridge DL walk. Add to the s7094 census:
-   per RSP DMA, raw dram address before any mask; flag phys >= 0x01000000 (spill direct) and, with ROGUESQ_S7317_ALLOCMAP=1, phys
-   whose 0x80000000|addr or 0x81000000|(addr&0xFFFFFF) is inside a LIVE spill block (alias); keep first 8 examples with task type
-   (gfx/audio) and the DMEM target. Positive control: =ctl injects one DMA from a live spill block address per second (must count).
-2. CPU side in the same build: at osSpTaskStart / task submit, walk the gfx DL (F5 table, docs/F5-UCODE-REFERENCE.md) and the audio
-   command list for address words; count addresses that resolve (segment table) into spill.
-3. Run dd8 21:9 L4 flight ~200 s (recipe as s7321 probe run). Outcomes: 0 hits with control fired -> class G closed, spill audit
-   family A-G done; any hit -> owner type + command, fix (allocate that class from the heap / below 16 MB), two-arm qualify.
+# NEXT (s7325): audio RSP reads in heap gaps — name the owner
+HYPOTHESIS-ID: audio-heapgap-read
+Context: s7324 (class G closed) found 40330 audio-bank RSP DMA reads (4092 distinct addresses, len 8-0xC8 = ADPCM frame / loop
+state sizes, raw tag 0x80) whose address lies in no live rs_malloc block of the s7317 map, at dd8 21:9 L4. Some streams run
+contiguously across a block end through the 0x10 header gap into the next block (0x80190440 -> 0x80190490 -> 0x801904E0; blocks
+80190410..80190490 and 801904A0..801905A0). Table: scratch/s7324/l4c.log (DI lines, heap-gap rows), tools/s7324_rcp_report.py.
+Hypotheses:
+- H-freed: the region was a live block that has been freed; the audio still DMAs from it (stale sample/voice buffer: use-after-free).
+- H-untracked: memory came from a path that bypasses rs64_s6063_malloc (realloc, a game sub-pool, MusyX/audio heap carved inside a
+  free region, or allocations made before the hook arms).
+- H-adjacent: one logical buffer built from adjacent small blocks (the gap is the next block's header), so a stream reading across
+  is by design and the "gap" bytes are rs heap headers read as sample data (retail would do the same).
+- H-dd: dd8 heap pressure only; dd1 (retail layout) shows no gap reads.
+Discriminator (ONE build, ONE run of two arms):
+1. In upstream_compat.cpp keep a freed-block history (ptr, req, free time, freer host pc) for the last ~64k frees under ALLOCMAP; in
+   s7324 note(), for each heap-gap alias-only/none audio read, look the address up: inside a freed block (H-freed: report seconds
+   since free + owner), exactly in a 0x10 header between adjacent blocks with the stream continuing (H-adjacent), or never allocated
+   (H-untracked). Also count audio reads in "none" class below 8 MB that are in neither live nor freed blocks.
+2. Positive control: =ctl frees nothing extra; instead once per second classify the start of the most recently freed block (must
+   class H-freed) and the header word of a live block's successor (must class H-adjacent).
+3. Arms: dd8 21:9 L4 (as s7324 run c) and dd1 4:3 L4, same build, run sequentially (one game at a time).
+Outcomes: H-freed at dd8 only -> real UAF exposed by heap pressure: find the freer and the stale holder, fix the root cause.
+H-freed at dd1 too -> retail behaviour, document. H-adjacent -> by design, close. H-untracked -> name the allocator path, add it to
+the map, re-run class G for that region.
+Run recipe: env LEVEL=4 TAG_SUFFIX=s7325 HOLD_S=200 WIDE_ROUTE=1 XENV_EXTRA="ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=8
+ROGUESQ_DD_UNSAFE=1 ROGUESQ_DD_WIDEWIN=1 ROGUESQ_ASPECT=21:9 ROGUESQ_S7317_ALLOCMAP=1 ROGUESQ_S7324_RCPREF=ctl"
+zsh scratch/agent/g1_level_coverage_common.zsh  (log build/rs64_s7324.log; 640 s watchdog; SIGKILL after).

@@ -5998,8 +5998,11 @@ uint64_t g_rs64_s7026_rt_n = 0, g_rs64_s7026_rt_ns = 0, g_rs64_s7026_rt_by = 0, 
          g_rs64_s7026_smp_n = 0, g_rs64_s7026_smp_w = 0, g_rs64_s7026_smp_c = 0; int g_rs64_s7026_spin_win = 0; }
 static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi);
 extern "C" void rs64_s7096_pre(uint32_t lo, uint32_t hi);
+extern "C" int rs64_s7324_on; extern "C" void rs64_s7324_rdp(uint32_t lo, uint32_t hi, uint8_t (*rd8)(uint32_t));
+static uint8_t rs64_s7324_rd8(uint32_t a) { return g_rdram_for_submit ? g_rdram_for_submit[(a & 0xFFFFFFu) ^ 3u] : 0; }
 static inline void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
-    if (rs64_s7096_on) rs64_s7096_pre(lo, hi);   // s7096: bytes before the bridge's record/edit walkers
+    if (rs64_s7096_on) rs64_s7096_pre(lo, hi);
+    if (rs64_s7324_on) rs64_s7324_rdp(lo, hi, rs64_s7324_rd8);   // s7324 class G: RDP image addresses vs live spill blocks   // s7096: bytes before the bridge's record/edit walkers
     if (!g_rs64_s7026) { rs64_dpc_record_submit_impl(lo, hi); return; }
     const uint64_t t0 = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
     rs64_dpc_record_submit_impl(lo, hi);

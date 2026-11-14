@@ -243,8 +243,18 @@ is in the s7307 archive). Active unit: NEXT.md.
     every heap and spill pointer through its index expression: 36 scalar sources, 20 bounded-safe masks, 5 spill-equal top-byte indexes,
     20 flagged (11 unbounded, 1 OVERFLOW, 4 ALIAS, 4 range-checked) all read by hand as data: ADPCM header, 23-bit pan fraction, JPEG 16.16,
     material flag fields, HOB record length, float->int, opcode decoder. Classes A-F close the spill-pointer-as-value edge (single-source
-    static for E/F; linear scan misses indexes crossing branch joins or calls). Next: class G, does the RCP ever get a spill block (NEXT.md).
-19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    static for E/F; linear scan misses indexes crossing branch joins or calls).
+19. **RCP-visible spill references class G: CLOSED (s7324, H-cpu-only).** ROGUESQ_S7324_RCPREF=ctl + ROGUESQ_S7317_ALLOCMAP=1
+    (src/rsp/s7324_rcp_spill.cpp; hooks: s7094 DMA census, rs64_dpc_record_submit), report tools/s7324_rcp_report.py (exit 1 on a
+    hit). dd8 21:9 L4 205 s flight x3 runs, 0 crash: ~462M RSP DMAs + 40M RDP SETTIMG/ZIMG/CIMG, **0 direct spill addresses, 0 RDP
+    aliases**; ctl 198/198 classes the live lowest spill block as direct and alias. Alias-only DMA hits (24-bit address inside a live
+    spill block's 16 MB-lower image, no live heap block) are all raw tag 0x80 or static: gfx ucode_data 0x80038D00, state-setup
+    sub-DL 0x80037658, audio ucode_data 0x800A4E00 (named retail statics), plus 40k audio sample reads in heap GAPS (no live rs_malloc
+    block, tag 0x80): open datum, item 20. Spill audit family A-G done.
+20. **Audio RSP reads in heap gaps (s7324 datum, NEXT.md).** 4092 distinct dma_rd_aud addresses (len 8-0xC8, ADPCM frame sizes) lie
+    outside every live block; some streams run across a block end through the 0x10 header gap into the next block (0x80190440 ->
+    0x80190490 -> 0x801904E0). Freed-buffer read, untracked allocator path, or one logical buffer of adjacent blocks: name it.
+21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

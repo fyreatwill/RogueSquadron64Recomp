@@ -242,3 +242,23 @@ No address-derived index takes a heap/spill pointer. Coverage limit: the scan fo
 redefinition and calls; an index that crosses a branch join or is passed to a callee is not seen (same limit as classes A-E).
 Classes A-F close the spill-pointer-as-value edge. Open edge: whether the RCP (RSP DMA / DL segment addresses, 24-bit) is ever
 handed a spill block (scratch/agent/NEXT.md, class G).
+
+## Class G: RCP-visible spill references (s7324)
+
+Question: does the RSP (DMA) or RDP (image commands) ever get a spill-block address? A spill pointer reaching the RCP either keeps
+bits 24+ ("direct": hardware and rsp.hpp `& 0xFFFFF8` drop them) or was masked first ("alias": reads phys 0x00xxxxxx = heap/static).
+Instrument `ROGUESQ_S7324_RCPREF=1|ctl` (src/rsp/s7324_rcp_spill.cpp) classes every RSP DMA (raw DRAM_ADDR before the runtime mask,
+gfx/audio bank, rd/wr, IMEM excluded) and every SETTIMG/SETZIMG/SETCIMG in the hardware DPC stream against the s7317 allocation map.
+Report `tools/s7324_rcp_report.py` (exit 1 on direct hit, failed control or foreign-tag alias). Control (ctl): once per second the
+lowest live spill block is classed in its direct (& 0x1FFFFFFF) and masked (& 0xFFFFFF) forms: 198/198 each (68 s had no live spill).
+
+| source (dd8 21:9 L4, 205 s flight) | total | direct | alias-only | alias+heap | notes |
+|---|---|---|---|---|---|
+| RSP DMA read gfx | 51.5M | 0 | 22742 | 0 | all static: ucode_data 0x80038D00 (tag 00), sub-DL 0x80037658/0x80037780 |
+| RSP DMA read audio | 1.47M | 0 | 81383 | 942022 | static audio ucode_data 0x800A4E00; 40k heap-gap sample reads (tag 80) |
+| RSP DMA write gfx/audio | 411M / 87k | 0 | 0 | 62502 | alias+heap = inside a live heap block |
+| RDP image cmds | 40.0M | 0 | 0 | 0 | none ever below 4 MB alias range or above 16 MB |
+
+The 2 MB grid cell array spill block at 0x81000000 makes everything below 0x1E000C "alias", so alias-only is only a triage bucket:
+no alias-only hit carries a 0x01/0x81 tag, and a spill pointer can only become a 0x80-tag address by a class D/E mask + re-tag (closed,
+0 spill sources at runtime). Verdict **H-cpu-only**: no RCP-visible address is a spill block. Open datum: heap-gap audio reads.

@@ -192834,3 +192834,33 @@ HYPOTHESIS-ID: spill-pointer-retag (closed). Unit from NEXT.md s7322.
 - Classes A-F close the spill-pointer-as-value edge. Open edge, next unit (class G): is a spill block ever handed to the RCP? Spill
   0x81xxxxxx is physical 0x01xxxxxx, beyond the 24-bit SP DRAM_ADDR / DL segment range, so an RSP DMA of it would read low RDRAM
   (s7094 DMA census has a dram_hi8 flag; never run at dd8 with the allocmap).
+
+## Session 7324 (2026-11-14) — class G RCP-visible spill references CLOSED (H-cpu-only): ~462M RSP DMAs + 40M RDP image commands at dd8 21:9 L4, 0 direct spill addresses, 0 RDP aliases, ctl 198/198; alias-only DMA hits are named retail statics or tag-0x80 audio heap-gap reads (new datum)
+HYPOTHESIS-ID: spill-rcp-ref (closed). Unit from NEXT.md s7324.
+- Question: does a spill block (0x81000000-0x813FFFFF = phys 0x01xxxxxx) ever reach the RCP? Direct (bits 24+ kept: SP DMA and
+  rsp.hpp `& 0xFFFFF8` drop them -> reads heap) or alias (masked first -> reads phys 0x00xxxxxx).
+- New instrument src/rsp/s7324_rcp_spill.cpp, ROGUESQ_S7324_RCPREF=1|ctl (needs ROGUESQ_S7317_ALLOCMAP=1). Hooks: every RSP DMA via
+  the s7094 census entry (raw DRAM_ADDR before the mask; S7324 arms the s7094 hook, no lib/ edit), every SETTIMG/SETZIMG/SETCIMG in
+  the hardware DPC stream at rs64_dpc_record_submit (dpc_bridge.cpp; walks triangle/texrect lengths, carries a split command).
+  Classifier rs64_s7324_class + rs64_s7324_near/lowspill/sym in upstream_compat.cpp: none / heap / alias-only / alias+heap /
+  direct-spill / direct-other; distinct table of alias-only/direct hits with nearest live blocks; raw top-byte tag histogram.
+  Control (ctl): once per second the lowest live spill block start is classed as direct (& 0x1FFFFFFF) and masked (& 0xFFFFFF).
+  Report tools/s7324_rcp_report.py (exit 1 on direct hit, failed control, foreign-tag alias).
+- Runs (all dd8 21:9 L4 FPS60 WIDEWIN, WIDE_ROUTE, HOLD 200; alive, 0 crash, 0 VI stall, flight 205-210 s):
+  run a: first cut. ctl 208/208. 0 direct anywhere, RDP 43.9M image cmds all "none". Alias-only examples all owned by the 2 MB
+  grid cell array spill block at 0x81000000 (allocAndInitGridCellArray), whose 24-bit image covers 0..0x1E000C = the static image,
+  so alias-only needs triage. Run b: distinct table (512) overflowed on alias+heap entries. Run c (final, scratch/s7324/l4c.log):
+  table restricted to alias-only/direct (4096) + tag histogram. ctl 198/198 direct and alias (68 s with no live spill block).
+  RSP DMA rd gfx 51.5M / rd aud 1.47M / wr gfx 411M / wr aud 87k; RDP timg 39.9M, zimg 36.7k, cimg 59.6k. direct 0 in every
+  source; RDP alias 0. Alias-only: gfx 22742 = 3 static addresses (0x00038D00 len 0x800 = gfx task ucode_data per
+  PROJECT-OVERVIEW 8499; 0x80037658/0x80037780 = static state-setup sub-DL per tools/scan_data_seg.py), audio 9578 at 0x800A4E00
+  (audio ucode_data, PROJECT-OVERVIEW 3914), and 40330 audio reads (4092 distinct, len 8-0xC8, tag 0x80) in heap GAPS: no live
+  rs_malloc block covers them. Alias+heap (inside a live heap block) 942k audio rd + 62k audio wr: legitimate.
+- Discrimination: selects H-cpu-only, refutes H-rcp. Two lines: (1) runtime, all RCP-visible addresses with a passing control, no
+  0x01/0x81 tag ever; (2) static closure: a spill pointer can only become a 0x80-tag/24-bit address through a class D truncation
+  or class E re-tag, both closed with 0 spill sources (s7321/s7322). The static alias hits are named retail objects (independent
+  docs). Single-level runtime (L4, the heaviest spill level per s7317: 22-120 live blocks). Spill audit family A-G closed.
+- New datum (not spill): audio RSP reads from memory outside every live block, some streams crossing a block end through the 0x10
+  gap into the next block (0x80190440 -> 0x80190490 -> 0x801904E0, blocks 80190410..80190490 and 801904A0..). Candidates:
+  freed buffer still referenced (stale sample cache), an allocation path that bypasses the rs64_s6063_malloc hook, or one logical
+  stream buffer made of adjacent blocks. Next unit (NEXT.md); G2 audio is closed by the owner, so this is an idiom datum, not a bug.
