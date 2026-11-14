@@ -193685,7 +193685,7 @@ H-diag (only gated probes), H-ub (a default-on unclamped site exists).
   upper clamp. A NaN eye makes this UB: arm64 fcvtzs gives 0, x86 cvttss2si gives INT_MIN, an out-of-bounds write. Now
   `int b = dd < 128.0f ? (int)(dd / 8.0f) : 16;`. ORIGIN: the writer is our own s7233 diagnostic tally. The value is a guest float that
   is legitimate unless the eye is NaN; no NaN was observed. This is a latent UB fix and does not mitigate an observed corruption.
-  Standalone control scratch/s7347/ctl.cpp (clang -O2): old and new agree on 541 finite dd in [0,200) and on 128/135/1000/3e10/inf;
+  Standalone control tools/s7347_bin_ctl.cpp (clang -O2): old and new agree on 541 finite dd in [0,200) and on 128/135/1000/3e10/inf;
   NaN: old 0, new 16; bad=0.
 - Runtime: build clean; `env SECS=260 zsh scratch/s7326/run.zsh s7347_dd8 ''` (dd8 21:9 WIDEWIN hangar->mission->abort route) gave
   crash=0 resets=14 late=0 arenafull=0, matching s7346. Positive control for the patched path: 66 `[s7233] ph=` tally lines, 13 with a

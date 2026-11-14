@@ -400,7 +400,7 @@ is in the s7307 archive). Active unit: NEXT.md.
     yScale 0 lands at size.y 0; rs64_i4_fetch floor(u) is ROGUESQ_LOG_FLOOR-gated; dpc_bridge coverage xa_i/xb_i NaN-rejected
     and clamped. One defect FIXED (src/main/upstream_compat.cpp rs64_s7233_cell, live with ROGUESQ_DD_WIDEWIN=1): `(int)(dd/8)` of
     sqrtf over guest eye floats indexed s7233_h with only an upper clamp; NaN is UB (arm64 0, x86 INT_MIN = OOB). Now
-    `dd < 128 ? (int)(dd/8) : 16`. scratch/s7347/ctl.cpp: identical bins on finite dd, NaN 0 -> 16. 260 s dd8 21:9 hangar smoke:
+    `dd < 128 ? (int)(dd/8) : 16`. tools/s7347_bin_ctl.cpp: identical bins on finite dd, NaN 0 -> 16. 260 s dd8 21:9 hangar smoke:
     0 crash, 14 resets, 66 [s7233] tally lines from the patched path. Guest-side TRUNC_W_S = (int32_t)f in recomp.h: retail traps
     on an invalid convert (FPE unimplemented op), so no retail value to match; left unchanged. Next: class Y (item 27m).
 27m. **Next unit (NEXT.md): class Y, integer division / modulo by a guest-derived divisor with no zero check** (x86 SIGFPE,
