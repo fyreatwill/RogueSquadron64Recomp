@@ -192311,3 +192311,22 @@ fog end (0.8 x 4 = 3.2), so the opt-in gives dd8 the dd4 haze with dd8's geometr
 **Change:** OWNER-OPT-INS line for ROGUESQ_DD_FOG_ALT=1,3,1 (alt always). Default unchanged (owner decides). Raws deleted.
 Rules out: "only a very short ramp (ke<1) melts the band"; "ke3 visibly hazes near terrain".
 Next: 300 s hold of DD_FOG_ALT=1,3,1 (alt always) at dd8 16:9 on L1/L5/L10 with frame ms vs the s7294 baseline, then owner judges.
+
+## Session 7304 (2026-11-13) — G5e: the dd8 fog opt-in ROGUESQ_DD_FOG_ALT=1,3,1 holds 300 s on L1/L5/L10 at 16:9 with 0 crashes at 60/s, and is cheaper per frame than the default fog
+
+Ran: new soak recipe scratch/agent/soak_queue/done/s7304_169_dd8_fog_hold_*.sh (the s7294 dd8 16:9 px8 auto recipe, FULLSCREEN=0,
+G1B=1, DD_UNSAFE/MELT/WIDEWIN, RESUME=1 forced-save route) run in-session (host idle 68000 s, screen unlocked). Five sequential arms
+of 300 s: l1f/l5f/l10f with ROGUESQ_DD_FOG_ALT=1,3,1, l1n (L1 without the fog, same-soak baseline), ctl (L12 STACK=0+DUTY=1.4).
+Result (rc=0; log scratch/agent/soak_results/s7304_169_dd8_fog_hold_insession.log, arms scratch/s7304q/):
+- Positive control PASS: ctl 30.0/s flat for 194 s (239 s <55/s), heaviest20 25.83 ms. So the frame-rate instrument can see a dip.
+- Witnesses: [s7293] px8 auto line in all 5 arms; [s7302] "fog alt ks=1 ke=3 all=1" in the 3 fog arms and absent in l1n/ctl.
+- 0 CRASH/SIGSEGV/SIGBUS lines, all arms alive=1. Beyond-route seconds l1f 5, l1n 6, l5f 1, l10f 1 (route transients; L1's t=167
+  and 248-270 single seconds show in both arms).
+- Frame ms, L1 fog vs no-fog (same soak): heaviest20 9.69 vs 12.57 ms, win77-97 8.22 vs 10.02 ms, p50 6.45 vs 10.76 ms. Emitted cells
+  are about equal (total_emit 11375 vs 11509), so the saving is not fewer cells. It comes from the fill/fog side, likely the nearer
+  alt cutoff floor (1/dd^2). L5 fog heaviest20 8.91 ms vs s7294 no-fog 9.88 (cross-run); L10 3.48 vs 3.45 (unchanged, light level).
+Verdict: H-hold-gain selected; H-hold-cost and H-crash refuted for this recipe. The opt-in is qualified at dd8 16:9. Single-source
+caveat: the fog/no-fog cost comparison comes from sequential arms of one soak, not a within-run toggle. The 2.9 ms L1 gap is far
+larger than the s7294 vs s7304 l1n run-to-run spread (12.57 vs 12.57 ms), so it is credible.
+Rules out: the "shorter fog end pulls the fog-blender switch in and costs frame time" worry (H-hold-cost).
+Next: owner toggle sheets on L5/L10 to complete G5e's 3-level sheet requirement (L1 and L4 exist from s7303), then the owner judges.

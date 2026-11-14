@@ -1478,3 +1478,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261113-160425 | s7296_219_dd8_px | rc=0 | 633s | scratch/agent/soak_results/s7296_219_dd8_px_20261113-160425.log
 20261113-162231 | s7298_219_dd8_levels | rc=0 | 1853s | scratch/agent/soak_results/s7298_219_dd8_levels_20261113-162231.log
 20261113 | s7299 fold: s7298_219_dd8_levels rc=0 CONTROL PASS (ctl flat 30 158 s): dd8 px8 auto L1/L5/L9/L10/L12 21:9 300 s alive, 0 crash, 60/s, beyond-route 3/8/0/1/0 s (route), heaviest20 10.6-12.1 ms; L9 CAPLEVEL binds (6189), L12 RLEVEL 12:48 wins (3839) -> H-hold, dd8 qualified at 21:9.
+20261113 | s7304 in-session: s7304_169_dd8_fog_hold rc=0 CONTROL PASS (ctl flat 30 194 s): dd8 16:9 px8 auto + ROGUESQ_DD_FOG_ALT=1,3,1 L1/L5/L10 300 s alive, 0 crash, 60/s, beyond-route 5/1/1 s; same-soak L1 no-fog heaviest20 12.57 vs fog 9.69 ms, win77-97 10.02 vs 8.22 ms, emit 11509 vs 11375 -> H-hold-gain, opt-in qualified.
