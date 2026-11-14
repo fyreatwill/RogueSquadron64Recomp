@@ -194346,3 +194346,6 @@ Verdict: census + 6 independent reviews + an in-game two-arm counter select H-ho
 on 58% of frames) and 6 smaller sites, H-safe/H-trust for the rest; class AO closed. Next: class AP, references/indices/iterators held
 across a container mutation (clear/resize/push/erase) - the generalisation of this defect - plus a retail check of what the stale tile
 drew.
+Ledger wording (s7364): this selects H-hole for the RT64 FULLSYNC carry (in-game arm: 4773/8192 stale out-of-range first draws with
+WLRESET=0, 0/12288 with the fix) and for the 6 smaller sites, refutes H-safe for them, and closes class AO. Next discriminator:
+class AP (container-invalidation lifetimes), NEXT.md.
