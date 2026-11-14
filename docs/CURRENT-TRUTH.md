@@ -214,7 +214,10 @@ is in the s7307 archive). Active unit: NEXT.md.
     game or nothing; test tools/s7313_pid_test/run.zsh). loop.sh SIGKILLs any game alive at soak-phase start, before and after each
     recipe, and names the pids in SOAK-RESULTS ("leftover"/"foreign game killed"/"outlived"); test tools/agent/test_soak_idle_gate.sh.
     A SOAK-RESULTS kill line = some arm failed to reap its game: treat that run's frame-time numbers as contaminated.
-13. **When 1-12 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+13. **Retail RAM-size/upper-bound idiom class: CLOSED (s7315, static, single-source).** tools/s7315_retail_bound_census.py: 86 sites,
+    0 unclassified; only size dependence is 4 MB vs more (framebuffer top, expansion flag 0x80130B63). Table in docs/HEAP-ADDR-AUDIT.md.
+    Re-run after a regen (exit 1 = new unclassified site).
+14. **When 1-13 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

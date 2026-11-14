@@ -48,3 +48,25 @@ s6863 answered why: they are removed on purpose after the fixer. Staged replay, 
 
 The table moves by level and always stays above the 0x80110000 bound; heap starts at 0x80154690, so it cannot fall below it.
 A 131 s lvl5 hold logged 0 elements (still in its cinematic), so that arm was discarded and re-run. All arms alive, 0 stalls, 0 crash lines.
+
+## Retail-side RAM-size and upper-bound constants (s7315)
+
+The tables above read host-patch C literals. Retail MIPS builds its bounds in registers (`lui`+`ori`, then `sltu`), so those
+sites never show up as C literals; s6992's 0xFF000000 pointer-mask class was the first one found this way. `tools/s7315_retail_bound_census.py`
+reads the original-instruction comments in RecompiledFuncs and lists every `lui` of a RAM-size high half (0x003F/0x0040/0x007F/
+0x0080/0x00FF) or a KSEG0 top (0x8040..0x8100), plus every osMemSize (0x80000318) load. It names the consumer and checks a verdict
+table (exit 1 = unclassified; `--selftest` runs a fake `lui 0x8080; sltu` + osMemSize function, which must come back unclassified).
+Run 2026-11-14: 86 distinct PCs (84 lui + 2 lw, the same count as an independent grep), 0 unclassified.
+
+| Site | Verdict |
+|---|---|
+| partitionFramebufferMemory 0x80000EB4/0x80000EBC | Framebuffer top = 0x80400000 in 4 MB mode, else 0x80000000\|osMemSize. Follows OSMEM_MB, no fixed heap bound |
+| getUsableRdramSize 0x80002664 | Returns 4 MB when the mode flag (*0x8010FCB0+0x44 & 0x2000) is set, else osMemSize |
+| resetGameSettingsAndMissionStats 0x8006E5CC, initIdleDemoTimersAndSave 0x8006ED1C | settings 0x80130B63 = (usable > 4 MB). Expansion-pak flag, 1 at both 8 and 12 MB |
+| applyRgbaTintToMeshVertices, buildAndRegisterDefaultMaterial | 0x80808081 = divide-by-255 magic |
+| 70 others | Flag bits (or/and), MusyX 16.16 volume/pitch values (0x7F0000, 0x3F0000, 0x800000, 0x400000), 0x00FFFFFF/0xFF0000 field masks |
+
+Result: retail code has no fixed heap upper bound built from a constant, and nothing that branches on 8 MB vs more. The only
+size-dependent code is the 4 MB-vs-more split. So raising osMemSize (OSMEM_MB=12) changes the framebuffer placement and nothing else in
+retail code. Method limit (single-source, static): a bound loaded from a data word or derived from a heap-end variable is not caught.
+The s6992 mask class, the s6862 host-literal table and the dd>1 300 s holds at OSMEM_MB=12 are the dynamic side of that.

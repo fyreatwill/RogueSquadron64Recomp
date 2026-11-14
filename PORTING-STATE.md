@@ -192571,3 +192571,26 @@ its own process group -> reaped and logged; empty queue -> iteration leftover re
 against HEAD's loop.sh: the 3 kill checks FAIL (positive control that the test discriminates). Pid class audit: tools/ has no
 remaining `pgrep ... | head` pid pick outside the helper/its test (s7313 covered the users). Rules out nothing about the game;
 closes harness item 12.
+
+## Session 7315 (2026-11-14) — retail RAM-size/upper-bound idiom class closed: new tools/s7315_retail_bound_census.py finds 86 sites in retail code, 0 fixed heap bounds; the only size dependence is 4 MB vs more
+
+HYPOTHESIS-ID: retail-ram-bound-idiom (closed).
+- Unit: NEXT s7315 step 1 found no leftover/foreign/outlived kill line in SOAK-RESULTS, and the last 15 session titles are not sweep
+  titles, so this is not a REVISIT. Paired idiom-class audit chosen per iron rule 14: retail-side RAM-size constants. s6992 showed
+  the s6862 HEAP-ADDR-AUDIT reads host-patch C literals only. Retail builds bounds in registers (`lui`+`ori`, `sltu`), and its
+  0xFF000000 pointer mask was missed that way. Hypotheses: H-bound (some retail code compares heap pointers with a constant top,
+  e.g. 0x80800000, so spill/OSMEM>8 pointers get rejected like s6992) vs H-none (only mode/size reads, no pointer bounds).
+- New tool tools/s7315_retail_bound_census.py: reads the original-instruction comments in RecompiledFuncs, lists every lui of a
+  RAM-size high half (0x3F/0x40/0x7F/0x80/0xFF) or a KSEG0 top (0x8040..0x8100) plus every osMemSize (0x80000318) load, names the
+  completing ori/addiu and the first consumer, and checks a verdict table (exit 1 = unclassified). Positive control `--selftest`:
+  a fake `lui $at,0x8080; sltu` + `lw 0x318` function comes back 2/2 unclassified, rc=1. The count cross-checks with an independent
+  grep: 84 lui PCs + 2 lw PCs = 86, same as the tool.
+- Result: 86 sites, 0 unclassified -> H-none. partitionFramebufferMemory: FB top = 0x80400000 in 4 MB mode
+  (*0x8010FCB0+0x44 & 0x2000), else 0x80000000|osMemSize. getUsableRdramSize 0x80002664 returns 4 MB or osMemSize.
+  resetGameSettingsAndMissionStats/initIdleDemoTimersAndSave store settings 0x80130B63 = (usable > 4 MB), which is 1 at both 8
+  and 12 MB. Two 0x80808081 are divide-by-255 magic. The other 70 are flag bits, MusyX 16.16 volume/pitch values and field masks.
+  No retail code branches on 8 MB vs more, so OSMEM_MB=12 moves the framebuffers and changes nothing else in retail code.
+- Evidence: single-source, static. Method limit: a bound loaded from a data word or taken from a heap-end variable is not caught.
+  Dynamic side, already on record: the s6992 mask class and the dd>1 OSMEM_MB=12 300 s holds (s7294/s7298) are clean.
+- Docs: docs/HEAP-ADDR-AUDIT.md gains the s7315 section. CURRENT-TRUTH Next steps 13 = this class (closed), 14 = fallback.
+- No game run (static audit, no build change). Rules out the retail fixed-top pointer-bound class as a source of dd>1/OSMEM defects.
