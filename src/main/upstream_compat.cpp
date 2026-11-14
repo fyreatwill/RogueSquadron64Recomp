@@ -3713,8 +3713,25 @@ extern "C" void rs64_s6909_rebuild(void) {
     std::fprintf(stderr, "[dlpoolx] rebuild: arena held %u chunks%s pc=%08X\n", s_s6909_bump / 0x108u, off ? " (kept)" : "", (uint32_t)g_rs64_last_guest_pc);
     if (!off) { s_s6909_bump = 0; s_s6558_blocks.clear(); }
 }
+/* s7335: the guest's own memory top. partitionFramebufferMemory (0x80000DD4) puts the scene framebuffers + gfx RDP FIFO at
+   [top - fb, top) with top = 0x80000000|osMemSize (cfg+0x44 bit 0x2000 = 4 MB mode), and the persistent heap ends just below
+   (0x801163E4, s7334). librecomp writes osMemSize from ROGUESQ_OSMEM_MB clamped to 4..16 (default 8; recomp.cpp s6114/s6130),
+   mirrored here. Host arenas in 0x80800000..0x81000000 must start at or above it: with the dd>1 bundle (OSMEM 12, DLPOOLX 4)
+   the DL arena starts exactly at 0x80C00000 = top, so DLPOOLX_MB 5..8 or OSMEM_MB 13..16 used to hand the guest's fb tail
+   and heap top to the DL chunk pool. ROGUESQ_S7335_CLAMP=0 = old (no clamp). */
+static uint32_t rs64_s7335_guest_top() {
+    const char* e = std::getenv("ROGUESQ_OSMEM_MB"); int mb = (e && *e) ? std::atoi(e) : 8; if (mb < 4 || mb > 16) mb = 8;
+    return 0x80000000u + ((uint32_t)mb << 20); }
+static uint32_t rs64_s7335_dlpool_cap(uint32_t cap) {
+    const char* off = std::getenv("ROGUESQ_S7335_CLAMP"); const uint32_t top = rs64_s7335_guest_top();
+    const uint32_t lim = top < 0x81000000u ? 0x81000000u - top : 0u;
+    std::fprintf(stderr, "[s7335] dlpool arena %08X..81000000 (%u KB) guest top %08X%s\n", 0x81000000u - cap, cap >> 10, top,
+                 cap > lim ? ((off && off[0] == '0') ? " OVERLAP (clamp off)" : " overlap -> clamped") : "");
+    if (cap > lim && !(off && off[0] == '0')) { cap = lim & ~0xFFFFu;
+        std::fprintf(stderr, "[s7335] dlpool clamp -> %08X..81000000 (%u KB)\n", 0x81000000u - cap, cap >> 10); }
+    return cap; }
 extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
-    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 8) m = 8; return (uint32_t)m << 20; }();  /* s6587: >4 needs ROGUESQ_SPILL_HI=1 (frees 0x80800000..0x81000000) */
+    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 8) m = 8; return rs64_s7335_dlpool_cap((uint32_t)m << 20); }();  /* s6587: >4 needs ROGUESQ_SPILL_HI=1 (frees 0x80800000..0x81000000); s7335: never below the guest osMemSize top */
     uint32_t& bump = s_s6909_bump; const uint32_t bytes = 128u * 0x108u;
     if (bump + bytes > cap) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted (cap %u MB)\n", cap >> 20); return 0; }
     uint32_t p = (0x81000000u - cap) + bump; bump += bytes; s_s6558_blocks.push_back(p);
@@ -3816,6 +3833,7 @@ static uint32_t rs64_s7326_spill_cap() {
         if (const char* e = std::getenv("ROGUESQ_SPILL_MB")) { int v = std::atoi(e); if (v >= 1 && v <= 16) mb = (uint32_t)v; }
         uint32_t cap = mb << 20; if (b == 0x81000000u && rs64_ram_top > b && b + cap > rs64_ram_top) cap = rs64_ram_top - b;
         if (b != 0x81000000u && cap > 0x400000u) cap = 0x400000u;
+        if (b < rs64_s7335_guest_top()) std::fprintf(stderr, "[s7335] WARNING spill arena %08X below guest top %08X: overlaps the guest heap / fb tail (set ROGUESQ_SPILL_HI=1)\n", b, rs64_s7335_guest_top());
         std::fprintf(stderr, "[s7326] spill arena %08X..%08X (%u KB, ram_top %08X)\n", b, b + cap, cap >> 10, rs64_ram_top); return cap; }();
     return c; }
 extern "C" uint32_t rs64_s6569_spill(uint32_t req) {

@@ -317,8 +317,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     "guest non-heap tail" in rs64_s7325_gap with guest=1 (ROGUESQ_S7334_CLASS5=0 old). Abort route s7334: in-carve FIFO host-live 19/19,
     above-heap FIFO class 5 6/6, `tools/s7333_carve_report.py <log> --class5` rc 0. Point store watch: ROGUESQ_STORE_WATCH_PTS=<p>,...
 25. **Soak recipes take the analyser's own rc** (`${pipestatus[1]}`), never a downstream grep's (s7332).
-26. **Next unit (NEXT.md): fb-layout bound consumer audit** (readers of 0x801163E4 / the 0x80000DD4 output vs RAMTOP 8/24 MB).
-27. **When 1-26 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+26. **fb-layout bound consumers: CLOSED (s7335).** `tools/s7335_fb_bound_census.py` (68 sites, 0 unclassified, control PASS): every
+    guest reader of 0x801163E4/63D8..63F8 derives from partitionFramebufferMemory (top = 0x80000000|osMemSize, 4 MB mode 0x80400000);
+    the coalesce-stored hi 0x8010FF08..14 is write-only; walkers stop at the sentinel. Guest H-clean (docs/HEAP-ADDR-AUDIT.md class H).
+    Host H-overlap FIXED: the DLPOOLX arena [0x81000000-MB, 0x81000000) starts exactly at the OSMEM-12 guest top, so DLPOOLX_MB 5..8
+    or OSMEM_MB 13..16 overlapped the guest heap/fb tail (arm o8: chunks at 0x80800000, latent, 131 s no crash). rs64_s7335_dlpool_cap
+    clamps it to the guest top (`[s7335]` line, ROGUESQ_S7335_CLAMP=0 old); default unchanged (L1 dd8 21:9 def/c8/o8, 0 crash each).
+27. **Next unit (NEXT.md): host arena layout census** - every host-owned guest-address range (spill, DLPOOLX, BIGARENA, s6127, RT64
+    writeback, ...) vs the guest layout and each other, per env combo; one static table + a startup `[s7336] layout` line.
+28. **When 1-27 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

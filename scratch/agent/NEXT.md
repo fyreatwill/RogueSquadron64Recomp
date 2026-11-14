@@ -1,15 +1,14 @@
-# NEXT (s7335): idiom-class audit — consumers of the frame-buffer layout bound (fb / FIFO tail base)
-HYPOTHESIS-ID: fb-layout-bound-audit
-Context: s7334 closed item 24: the persistent arena ends at hi-0x10, hi = output of the fb-layout routine 0x80000DD4 (sp+0x48 at caller
-0x80001430 in 0x80001354) or the global 0x801163E4; above it live the scene's framebuffers + gfx RDP FIFO (boot tail at 0x80B69FF0, i.e.
-above 8 MB because RAMTOP is 24 MB since s7326). Question: does every guest consumer of that bound agree with the 24 MB RAMTOP / spill
-arena 0x81000000-0x81800000 layout, or does any assume the tail ends at osMemSize (8 MB) or sits below 0x80800000?
-Hypotheses: H-clean (all readers derive from the same bound, no fixed 8 MB assumption), H-cap (a reader clamps or masks to 8 MB / 24-bit,
-latent like class D), H-overlap (fb tail at some dd/aspect width reaches 0x81000000 = the spill arena base).
-Method (static first, one tool): tools/s7335_fb_bound_census.py: disassemble 0x80000DD4 and list every load of 0x801163E4 / stores of its
-output across funcs_*.c asm comments (grep '0x63E4(' with lui 0x8011, plus the sp+0x48 out pointer passers), classify each site
-(derives-from-bound / fixed constant / mask). Exit 1 on unclassified. Then ONE runtime check only if H-overlap is possible: log
-max(fb tail end) per scene on the dd8 21:9 abort route (scratch/s7334/run2.zsh recipe + a new [s7335] line at the 0x80001430 call: a3 and
-the 0x80000DD4 args) vs 0x81000000. Positive control: the boot hi must equal 0x80B6A000 (s7334 sentinel B69FF0+0x10).
-Outcomes: all derive -> H-clean, close; a constant 0x80800000/0x00800000 or 0xFFFFFF mask on the bound -> H-cap, classify reachability;
-tail end >= 0x81000000 at any scene -> H-overlap, a real defect: fix the spill base or the bound.
+# NEXT (s7336): idiom-class audit - host-owned arenas vs the guest memory layout
+HYPOTHESIS-ID: host-arena-layout-audit
+Context: s7335 closed the guest side (fb-layout bound consumers, H-clean) and found one host overlap: the DLPOOLX DL-chunk arena could
+start below the guest top 0x80000000|osMemSize (fixed: rs64_s7335_dlpool_cap). The same class may hold other members: every host
+allocator that hands out guest addresses picks its range from its own env (SPILL_HI/SPILL_MB, DLPOOLX_MB, BIGARENA, s6127 fl, RT64
+writeback/aux buffers, RAMTOP guards) with no shared layout table.
+Hypotheses: H-clean (no other pair overlaps under any accepted env value), H-pair (two host arenas overlap each other at some combo,
+e.g. spill 0x81000000+SPILL_MB 16 past RAMTOP 24, or BIGARENA vs spill), H-guest (another arena can start below the guest top).
+Method (static first): grep src/main + src/rsp + tools/apply_*.py for every host-chosen guest address base (0x808/0x80C/0x810/0x818
+literals, rs64_*_base functions); tabulate [base, end) as a function of each env and its clamp range; check pairwise and vs the guest
+top over the accepted env range (script: tools/s7336_host_arena_table.py, exit 1 on any overlap). Then ONE build adding a startup
+`[s7336] layout` line printing every arena actually chosen; positive control = an env combo the table says overlaps must print OVERLAP.
+Outcomes: no overlap -> H-clean, close; overlap -> clamp at the source like s7335 and verify with def / clamped / clamp-off arms
+(scratch/s7335/run.zsh pattern, L1 dd8 21:9, 90 s hold).

@@ -193253,3 +193253,43 @@ No mitigation: class 5 is attribution in a diagnostic classifier.
 Rules out: a dangling owner or a free-list overlap above the arena; item 24 CLOSED. Logs: scratch/s7334/ (lines.txt, report_c5.txt,
 report_s7331_c5.txt), scratch/s7326/s7334_pt, s7334_c5.
 Summary: this selects H-top and closes item 24(b); it refutes H-stale; host class 5 lands, verified 6/6 on the abort route.
+
+## Session 7335 (2026-11-14) — fb-layout bound consumer audit closed: guest H-clean (68 sites, every reader derives from partitionFramebufferMemory), host H-overlap fixed (DLPOOLX arena could start below the guest top)
+
+Work unit: NEXT.md s7335 (fb-layout-bound-audit). Static first, then one runtime check because the static pass found a host overlap.
+
+Static: new `tools/s7335_fb_bound_census.py` reads the RecompiledFuncs asm comments, tracks `lui` bases, and lists every access to
+0x801163D8..F8, 0x8010FF00..1C, osMemSize, KSEG0-top `lui`s and 0xFFFFFF/0x7FFFFF masks. Control: the s7334-measured sites
+0x80001408/0x80000ED8 plus 0x80000EBC/0x8000232C must be found. Result: PASS, 68 sites, 0 unclassified (scratch/s7335/census.txt).
+- partitionFramebufferMemory 0x80000DD4: top = (cfg+0x44 & 0x2000) ? 0x80400000 : 0x80000000|osMemSize; 63E4 = top - zbuf; the fb/aux
+  regions 63D8..63F8 are carved down from it.
+- Consumers: thread3_video_handle (boot) and runVideoFrameTick (scene) pass 63E4 as the coalesce hi; ensureHeapInitialized sizes
+  the heap as *63E4 - base. All derived, no constants.
+- coalesceFreeHeapBlocks/initMainHeap store their args (incl. hi) to 0x8010FF08..14. Those words are WRITE-ONLY: no guest load. The
+  &0x8010FF00 that queueDeferredClearRequest passes to buildHeapFreeList is read at offset 0 only (list head slot). Walkers use the
+  head 0x8010FF18 and stop at the fl=8 sentinel.
+- Masks: commitMeshDrawBatchRefs = class D idx 528 (s7321); renderFlat/UnlitMeshFaces 0xFFFFFF is a 0x020202 flag compare;
+  computeVoiceVolumePanCoefficients 0x7FFFFF scalars. getUsableRdramSize = expansion flag only (s7315).
+Guest verdict H-clean (H-cap refuted: no reader clamps the bound to 8 MB or 24 bits). Two lines: the static formula gives
+0x80C00000 - 0x96000 - 0x10 = 0x80B69FF0, the boot sentinel s7334 measured at runtime.
+H-overlap on the guest side is impossible: librecomp clamps OSMEM_MB to 4..16, so the tail end is <= 0x81000000 = spill base.
+
+Host side (the real finding): the DLPOOLX bump arena is [0x81000000 - DLPOOLX_MB, 0x81000000). With the bundle (OSMEM 12, DLPOOLX 4)
+it starts exactly at the guest top 0x80C00000, so DLPOOLX_MB 5..8 (accepted by the code, and the s6587 comment called >4 safe with
+SPILL_HI) or OSMEM_MB 13..16 hands the guest heap top / fb tail to the DL chunk pool. The s6587 comment was written at OSMEM 8; s6858
+raised OSMEM to 12 and made it stale.
+ORIGIN: the overlap is ours, not the game's. The writer is rs64_s6099_alloc (src/main/upstream_compat.cpp): it chose its base from
+DLPOOLX_MB alone, and the guest top had moved under it (s6858 OSMEM 12). Values the pool writes there are legitimate DL chunks in the wrong place.
+Change: rs64_s7335_guest_top() (mirrors librecomp's OSMEM clamp) + rs64_s7335_dlpool_cap(): the arena never starts below the
+guest top; `[s7335] dlpool arena ...` line at the first grow; ROGUESQ_S7335_CLAMP=0 = old. The legacy spill base 0x80800000 under
+OSMEM>8 + SPILL_HI=0 now prints a `[s7335] WARNING` (no behaviour change).
+Run (scratch/s7335/run.zsh, forced L1 dd8 21:9 FPS60 WIDEWIN, HOLD 90, sequential, one game at a time):
+| arm | env | [s7335] line | first chunk | flight/hold | crash |
+|---|---|---|---|---|---|
+| def | bundle | 80C00000..81000000 4096 KB, no overlap | 80C00000 | 133 s / 131 s | 0 |
+| c8 | DLPOOLX_MB=8 | 80800000 overlap -> clamped 80C00000 4096 KB | 80C00000 | 137 / 131 | 0 |
+| o8 | DLPOOLX_MB=8 S7335_CLAMP=0 | OVERLAP (clamp off) | 80800000 | 137 / 131 | 0 |
+Positive control: o8 shows the instrument and the overlap are real (chunks inside the guest heap range, which ends at the
+0x80B6A000 sentinel). The o8 arm did not crash in 131 s, so the defect is latent. Default behaviour is unchanged (def = pre-fix layout).
+Rules out: any guest reader assuming an 8 MB/24-bit heap end. Not covered: other host arenas vs each other. Next unit (NEXT.md
+s7336): host arena layout census. Docs: HEAP-ADDR-AUDIT class H, CURRENT-TRUTH item 26.

@@ -262,3 +262,31 @@ lowest live spill block is classed in its direct (& 0x1FFFFFFF) and masked (& 0x
 The 2 MB grid cell array spill block at 0x81000000 makes everything below 0x1E000C "alias", so alias-only is only a triage bucket:
 no alias-only hit carries a 0x01/0x81 tag, and a spill pointer can only become a 0x80-tag address by a class D/E mask + re-tag (closed,
 0 spill sources at runtime). Verdict **H-cpu-only**: no RCP-visible address is a spill block. Open datum: heap-gap audio reads.
+
+## Class H: the frame-buffer layout bound and its consumers (s7335 static + runtime)
+
+`tools/s7335_fb_bound_census.py` (exit 1 = unclassified, exit 2 = positive control failed) tracks `lui`-based addresses across
+RecompiledFuncs. It lists every access to the partition globals 0x801163D8..0x801163F8 (0x801163E4 = the persistent-arena hi),
+the heap globals 0x8010FF00..0x8010FF1C, osMemSize loads, KSEG0-top `lui`s and 24/23-bit masks. Control: the s7334-measured
+sites 0x80001408 (scene coalesce hi) and 0x80000ED8 (bound writer) must be found. Run 2026-11-14: 68 sites, 0 unclassified.
+
+| Group | Verdict |
+|---|---|
+| partitionFramebufferMemory 0x80000DD4 | top = cfg+0x44&0x2000 ? 0x80400000 : 0x80000000\|osMemSize; 63E4 = top - zbuf; 63D8..63F8 carved down from it (15 writers, 3 internal readers) |
+| thread3_video_handle / runVideoFrameTick (13) | pass 63E4 as the coalesce hi and 63D8..63F8 as the video config: all straight from the partition |
+| ensureHeapInitialized 0x80001930 | heap size = *63E4 - base (derived) |
+| 0x8010FF08..FF14 (8 stores) | coalesce/initMainHeap args incl. the stored hi: WRITE-ONLY, no guest reader |
+| 0x8010FF18 heap head (11), 0x8010FF00 free-list head slot (8) | walkers start at the head and stop at the fl=8 sentinel; buildHeapFreeList reads &FF00 offset 0 only |
+| masks | commitMeshDrawBatchRefs = class D idx 528; renderFlat/UnlitMeshFaces 0xFFFFFF = 0x020202 flag compare; MusyX 0x7FFFFF scalars |
+
+Guest verdict H-clean: no reader re-derives the heap/fb end from a constant, and nothing assumes the tail ends at 8 MB. Tail end
+= 0x80000000|osMemSize <= 0x81000000 because librecomp clamps OSMEM_MB to 4..16. Second line: s7334's runtime boot sentinel
+0x80B69FF0 = 0x80C00000 (OSMEM 12) - 0x96000 (640x480x2) - 0x10, the same number the formula gives.
+
+**Host H-overlap (real, latent, FIXED s7335):** the DLPOOLX bump arena is [0x81000000 - DLPOOLX_MB, 0x81000000). With the dd>1
+bundle (OSMEM 12, DLPOOLX 4) it starts exactly at the guest top 0x80C00000. DLPOOLX_MB 5..8 (the code allowed up to 8) or OSMEM_MB 13..16
+handed the guest fb tail and heap top to the DL chunk pool. Run (L1 dd8 21:9 forced, 131 s each, scratch/s7335/run.txt):
+DLPOOLX_MB=8 with the clamp off put chunks at 0x80800000 (inside the heap, which ends at the 0x80B6A000 sentinel). It held
+131 s without a crash, so the defect is latent. Fix (src/main/upstream_compat.cpp rs64_s7335_dlpool_cap): the arena never starts
+below the guest top. `[s7335] dlpool ...` line at the first grow, ROGUESQ_S7335_CLAMP=0 = old. Default arm identical (80C00000, 4 MB).
+The legacy spill base 0x80800000 under OSMEM>8 with SPILL_HI=0 now prints a `[s7335] WARNING`.
