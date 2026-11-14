@@ -193222,3 +193222,4 @@ Verdicts (s7333, offline on scratch/s7326/s7333_keepv2/run.log):
 - **Next discriminator:** a guest store watch on the sentinel words (80903FF0/809867F0, the s7332 store-watch mechanism) naming the pc
   that writes fl=8, and the free-list head after it. If that pc is in the arena setup that also sets the FIFO base, H-top selected:
   add class 5. If it is buildHeapFreeList's terminator and the span above is still on a free list, H-stale: a real overlap.
+Summary: this selects H-rebuild + H-shadow and closes item 24(a); it refutes H-free, H-malloc and H-trim; the sentinel store watch is the next measurement to discriminate H-top from H-stale.
