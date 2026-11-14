@@ -3,7 +3,8 @@
 # Picks N adjacent OFF/ON pairs (state = int(mach/PER) % 2, mid-period phase 0.4-0.6, in-flight frames only: side columns not black,
 # same filter as g5e_edge_score.py) spread across the run, and tiles them as rows "OFF | ON" so the owner sees the side edge with and
 # without the lever a fraction of a second apart (same flight, same camera path).
-# usage: s7267_tog_sheet.py raw out.png [label] [pairs=6] [period_ticks=24e6] [cell_w=640]
+# usage: s7267_tog_sheet.py raw out.png [label] [pairs=6] [period_ticks=24e6] [cell_w=640] [split=parity|xor8]
+# s7301: split=xor8 = rs64_tog_odd default clock (state = (k ^ k>>3) & 1); pairs are adjacent periods whose states differ.
 import sys, struct
 from PIL import Image, ImageDraw
 
@@ -24,7 +25,10 @@ def main(a):
         k = int(t // PER); d = abs(ph - 0.5)
         if k not in best or d < best[k][0]: best[k] = (d, i)
     # adjacent (off, on) periods: off = even state, on = the next period
-    pairs = [(best[k][1], best[k + 1][1]) for k in sorted(best) if k % 2 == 0 and k + 1 in best]
+    X8 = len(a) > 7 and a[7] == 'xor8'
+    def stt(k): return ((k ^ (k >> 3)) & 1) if X8 else (k & 1)
+    pairs = [((best[k][1], best[k + 1][1]) if stt(k) == 0 else (best[k + 1][1], best[k][1]))
+             for k in sorted(best) if k + 1 in best and stt(k) != stt(k + 1) and (X8 or k % 2 == 0)]
     if not pairs: print("no OFF/ON pairs"); return 1
     pick = [pairs[round(j * (len(pairs) - 1) / max(1, NP - 1))] for j in range(min(NP, len(pairs)))]
     ch = round(h * CW / w); hdr = 22

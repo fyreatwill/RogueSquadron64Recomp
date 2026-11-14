@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7288 (2026-11-13).
+Compact operational handoff, as of Session 7301 (2026-11-13).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7186 text of this file (every s7047-s7186 headline paragraph
 with all numbers, the long item-6 dd chronology, closed items 11-42 in full) is archived verbatim in
@@ -318,13 +318,15 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7300: horizon-in-view look sheet docs/owner_sheet_s7300_horizon_dd.jpg (L1+L4 x dd1/dd6/dd8, 16:9, 300 s, all alive,
-   0 crash; tools/s7300_horizon_sheet.py selects the dd1 sky-band seconds, painted-band CONTROL PASS). Sky-band fog% L1 19.3/8.3/7.7,
-   L4 18.6/7.4/8.2 -> H-same (dd8 ~= dd6); matched-pose pairs agree (L4 t=90 13/13, t=160 5/5). Caveat: the arms' poses diverge
-   (dd1 flies level, dd>1 banks), so the dd1 gap is pose-confounded. Seen: far terrain at dd>1 draws as a dark grid-textured band to
-   the horizon (L1); a sky-band score cannot see added cells inside it. Far cutoff 0x8009DEB4 does NOT bind at dd>=6 (s6418 x dd^2
-   -> ~87/116 cells, beyond R88/R128). Next: same-pose in-run R88<->R128 toggle (WIDEWIN_R_TOG) far-band diff; then G5e fog on the
-   dark band.**
+0. **s7301: dd8 far ring R88->R128 is INVISIBLE (H-ring-hidden; same-run R_TOG=1 xor8 toggles, 16:9, capture 120-300 s, 0 crash).**
+   Off phase = no R cut (superset of the auto R128). L1 R88: skip 0.0 cells/call (all wide cells sit 40-80 cells from the eye: the
+   lever is a no-op on L1). L4 R88: skip 274-1883 cells/call, yet s7247 TEX flip far band (12-50%) -0.09% +- 0.37, near -0.84 +- 0.72,
+   sides -0.22 +- 0.43 (control patch PASS 102-103/103). Lever-positive control L1 R40 (skip ~4500): sides +0.94% +- 0.42 = 1920 px
+   "LEVER REMOVES VISIBLE TEXTURE" -> the scorer sees a real cut. Sheet docs/owner_sheet_s7301_l4_r88_tog.jpg: horizon melts into haze
+   in both phases (single run per arm, one scorer + eyeball). So the dd8 R128 auto (s7293, ~+0.2 ms, +4000 cells/call) buys no visible
+   ground; the far ring beyond 88 cells lies inside the haze. Owner decides whether dd8 drops back to R88; default left as is.
+   s7300 (sheet docs/owner_sheet_s7300_horizon_dd.jpg): dd8 ~= dd6 sky band (pose-confounded vs dd1); far cutoff 0x8009DEB4 does not
+   bind at dd>=6; at dd>1 far terrain is a dark grid-textured band to the horizon (L1). Next: G5e fog on that band.
 0. **s7299: dd8 px8 auto QUALIFIED at 21:9 (s7298 soak, ctl flat-30 158 s PASS): L1/L5/L9/L10/L12 300 s, 0 crash, 60/s,
    beyond-route 3/8/0/1/0 s (L5's 8 s are 36-47/s single seconds at t<=76, route), heaviest20 10.6-12.1 ms (headroom 3.2-6.1).
    total_emit L1 11134 L5 11837; L9 6189 (CAPLEVEL 9:8192 binds, wide 2509); L12 RLEVEL 12:48 wins (3839 vs ctl R128 12420 ->

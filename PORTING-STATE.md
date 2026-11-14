@@ -192243,3 +192243,22 @@ Rules out: H-none-in-view; "dd8 visibly draws a lot more sky-band terrain than d
 out dd8 adding far cells inside the dark band.
 Next: in-run ROGUESQ_DD_WIDEWIN_R_TOG=1 with WIDEWIN_R=88 at dd8 (odd seconds R88, even seconds uncapped R128 window), shots every
 second, adjacent-second pairs share a pose -> pixel diff of the far band (scratch/agent/NEXT.md).
+
+## Session 7301 (2026-11-13) — G1c: same-run dd8 far-ring toggle (WIDEWIN_R=88 vs no cut, R_TOG=1) on L1+L4 16:9 with an R40 lever control: the ring beyond 88 cells is invisible (H-ring-hidden)
+- Ran scratch/s7301/run.zsh (in session, AC, HID idle 64000 s, screen unlocked): scratch/s7009/arm.zsh LEVEL lv dd8 16:9, CULL_SPIKE=1
+  (not tog: same clock), DD_MELT=1 WIDEWIN=1 + explicit ROGUESQ_DD_WIDEWIN_R=<R> ROGUESQ_DD_WIDEWIN_R_TOG=1 (R on xor8-odd seconds,
+  no R cut on even; the explicit R overrides the s7293 auto R128, so the off phase is a superset of R128). g5b capture 960x540 120..300 s
+  (8583-9615 frames, ~50/s). Arms l1r88, l4r88, l1r40 (lever-positive control). 0 crash lines in all three. [s7293] px8 auto fired.
+- Tools: tools/s7247_tog_pop.py gained optional row band + 'full' width (args 3/4); tools/s7267_tog_sheet.py gained split=xor8 (arg 7).
+- Results ([s7233] tally / s7247 TEX flip D, mean +- sem, control = 200x40 patch-to-mean, all PASS):
+  - l1r88: skip 0.0 cells/call in the R phase (wide_by_d8 bins 5-9 only = 40-80 cells) -> R88 cuts nothing on L1. far -0.27 +- 0.98 %,
+    near -0.15 +- 1.03, sides -0.32 +- 0.37: null, consistent with nothing removed.
+  - l4r88: skip 274-1883 cells/call in the R phase (0 in the off phase). far -0.09 +- 0.37 %, near -0.84 +- 0.72, sides -0.22 +- 0.43:
+    no texture removed.
+  - l1r40 (control): skip ~4500 cells/call. sides +0.94 +- 0.42 % = 1920 px -> "LEVER REMOVES VISIBLE TEXTURE" (far/near full bands
+    +0.09/+0.18, diluted). The instrument detects a real far-cell cut in the same harness.
+  - Owner sheet docs/owner_sheet_s7301_l4_r88_tog.jpg (6 adjacent off/on pairs, xor8 labels): the horizon fades into haze in both
+    phases; poses differ by 1 s of banked flight, no cut edge visible.
+- Conclusion (single run per arm; scorer + eyeball = two lines but one run): H-ring-hidden. The s7293 dd8 R128 auto adds ~4000
+  cells/call (+0.2 ms, s7292) that land inside the haze; it buys no visible ground. Rules out H-ring-visible and H-toggle-dead (tally
+  alternates). Default not changed; owner may choose R88 at dd8. Next: G5e fog on the dark far band seen at dd>1 (s7300).

@@ -11,7 +11,9 @@
 # POSITIVE CONTROL (same run, both tests): copies of the after-window frames of every same-phase boundary, and of every off
 # mid-second frame, get their most textured 200x40 side window replaced by its own mean (terrain turned to haze): the
 # detector must see a TEX drop of >= 25% of the patch area on >= 90% of copies (G=3: about 30% of band px are textured).
-# usage: s7247_tog_pop.py raw [G=12]
+# usage: s7247_tog_pop.py raw [G=12] [ya,yb percent rows, default 18,88] [full]
+# s7301: optional row band and 'full' (one window over the whole content width instead of the two side thirds), so a far-ring
+# lever (WIDEWIN_R) can be scored on the far band (e.g. 12,50) and, as a motion control, the near band (60,88).
 import sys, struct, bisect, statistics as st
 from PIL import Image, ImageChops as IC, ImageFilter
 raw = sys.argv[1]; G = int(sys.argv[2]) if len(sys.argv) > 2 else 3
@@ -27,18 +29,21 @@ def content_w():
     return x + 1
 CWD = content_w()
 X0, X1 = CWD // 16, CWD - CWD // 16; W3 = (X1 - X0) // 3; YA, YB = h * 18 // 100, h * 88 // 100
+if len(sys.argv) > 3: _a, _b = (int(v) for v in sys.argv[3].split(',')); YA, YB = h * _a // 100, h * _b // 100
+FULL = len(sys.argv) > 4 and sys.argv[4] == 'full'
+REG = [(X0, X1 - X0)] if FULL else [(X0, W3), (X1 - W3, W3)]
 PAREA = 200 * 40
-BAND = 2 * W3 * (YB - YA)
+BAND = sum(rw for _, rw in REG) * (YB - YA)
 def texmask(g):
     dx = IC.difference(g, IC.offset(g, 1, 0)); dy = IC.difference(g, IC.offset(g, 0, 1))
     return IC.add(dx, dy).point(lambda v: 255 if v > G else 0)
-CAND = [(x, y) for x0 in (X0, X1 - W3) for x in range(x0, x0 + W3 - 200, 100) for y in range(YA, YB - 40, 40)]
+CAND = [(x, y) for x0, rw in REG for x in range(x0, x0 + rw - 200, 100) for y in range(YA, YB - 40, 40)]
 def tex(im, patch=False):
     g = im.convert('L'); m = texmask(g)
     if patch:   # control: the most textured 200x40 window (terrain) is replaced by its mean (turned to haze)
         x, y = max(CAND, key=lambda c: m.crop((c[0], c[1], c[0] + 200, c[1] + 40)).histogram()[255]); box = (x, y, x + 200, y + 40)
         g.paste(g.crop(box).resize((1, 1), Image.BOX).getpixel((0, 0)), box); m = texmask(g)
-    return sum(m.crop((x0, YA, x0 + W3, YB)).histogram()[255] for x0 in (X0, X1 - W3)) / BAND
+    return sum(m.crop((x0, YA, x0 + rw, YB)).histogram()[255] for x0, rw in REG) / BAND
 def phase(s): return (s ^ (s >> 3)) & 1
 def win(a, b, patch=False):
     i0, i1 = bisect.bisect_left(ts, a), bisect.bisect_left(ts, b); idx = list(range(i0, i1, 3))
