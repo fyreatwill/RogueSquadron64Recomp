@@ -194017,7 +194017,7 @@ instrument was rejected and rebuilt calloc-only with the env read once in the co
 Regression: `zsh tools/s7356_arms.zsh` (arm_ctl alive, arm_fail fatal=1 segv=0).
 Smoke on build/ (fix in): `env SECS=260 zsh scratch/s7326/run.zsh s7356_dd8 ''`: crash=0 resets=14 late=0 arenafull=0,
 6 initMission, 259 update_screen rows (identical to the s7355 smoke).
-Discrimination: the census + forced-failure arms SELECT H-unchecked (a default-on path, init_overlays, derefs an unchecked calloc:
+Discrimination (this selects H-unchecked and refutes H-safe): the census + forced-failure arms SELECT H-unchecked (a default-on path, init_overlays, derefs an unchecked calloc:
 pre-fix SIGSEGV si_addr=0x8 reproduced, post-fix named FATAL) and REFUTE H-safe; H-diag is REFUTED as the sole explanation
 (2 of the 3 real sites were env-gated, the third was not). Class AG closed.
 Next discriminator: class AH (unchecked I/O lengths): tools/s7357_iolen_census.py + a short-read DYLD interpose arm on a COPY of
