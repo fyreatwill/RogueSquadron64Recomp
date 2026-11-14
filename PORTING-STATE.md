@@ -194028,7 +194028,9 @@ report, already a named failure). Lib edit exported (submodule-patches/N64Modern
 ## Session 7357 (2026-11-14) — class AH unchecked host I/O lengths closed: 4 default-on defects FIXED (short save read keeps stale tail, failed save write still finalized, ROM read_file tellg/short read, write_file unchecked); census 100 sites, 0 B / 0 G
 HYPOTHESIS-ID: host-unchecked-io-length
 Hypotheses: H-safe (every default-on site checks the length), H-diag (only env-gated dumps ignore it), H-short (a default-on
-reader uses a short read as full data). **Selected: H-short** (and the write twin); H-safe and H-diag refuted.
+reader uses a short read as full data). **The census + arms select H-short** (and the write twin): this refutes
+H-safe and H-diag (4 default-on librecomp readers/writers, not env-gated dumps) and closes class AH. Next discriminator:
+class AI (s7358) unclamped numeric env/config parses, H-safe vs H-diag vs H-unclamped.
 - Census: tools/s7357_iolen_census.py (fread/read/pread/fgets/fwrite/write/pwrite/fseek/ftell/lseek + iostream
   read/write/tellg/seekg; scope = s7356's: src/**, librecomp + ultramodern src, our lib/rt64 '+' lines). Pre-fix `--raw`:
   100 sites, B 49 / G 26 / CHECKED 24 / D 1. Adding class W (unchecked write to an output-only diagnostic sink opened for
