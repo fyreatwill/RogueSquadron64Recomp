@@ -193484,3 +193484,39 @@ Single-source per game site for K/Q/A/M (static provenance read); F has the hold
 This closes the spill-pointer idiom campaign's KSEG-literal classes (R, M, N, O, P host; A-F game). Next (NEXT.md s7342): class S,
 host tables indexed by an address-derived value (`addr >> k` into a fixed array or bitmap sized for 8 or 16 MB), which would read or
 write out of bounds for a spill address rather than reject it.
+
+## Session 7342 (2026-11-14) — class S host address-indexed tables closed: 31 shift subscripts + 95 uses of the 19 big tables classified, 0 default-on (census tool s7342_addr_index_census.py with controls)
+Work unit (NEXT.md s7342, HYPOTHESIS-ID host-addr-indexed-tables): find every host array/bitmap/vector indexed by an address
+shifted right (`(addr & mask) >> k`, `(addr - 0x80000000) >> k`, `phys >> k`) and sized for 8 or 16 MB, which a spill address
+(0x81000000-0x81800000, phys 0x01000000-0x017FFFFF) would index past the end (silent OOB read/write, not a reject).
+Hypotheses: H-diag (every such table belongs to a gated probe), H-oob (a default-on table can be reached with a spill address),
+H-masked (indices pass an 8/16 MB mask first).
+Tool: `tools/s7342_addr_index_census.py [--controls] [-v]` (new). Scope: s7338 HOST list plus every other src/main/*.cpp, src/main
+and src/rsp headers, librecomp/ultramodern public headers and rt64 hle headers (183 files). Part 1: every `T[.. >> k ..]` (k 2..23),
+`T[v]` with `v = .. >> k ..;` within 8 lines above (no reassignment between), and `.set/.test/.reset(` with a shifted argument,
+classed with the s7338 C/P/G/D framework, then H (64-bit mix hash), K (not an address, hand), M (`& MASK` with MASK >> k < the
+table's entries), N (hand-verified function bound). Part 2: every table with >= 0x8000 entries (array declarations, named
+constexpr/#define sizes, resize/assign, new[], vector ctor, calloc/malloc), and EVERY subscript of each (shifted or not), classed
+the same way plus ring masks `& ((1 << n) - 1)` / `& (N - 1)` with N a power of two <= size, for-loop bounds, and hash slots whose
+hash function result is proven < size (proof text pinned: the tool requires the exact s7239_hash body in the file).
+Controls (all PASS, same run): planted default-on `tag[(a - 0x80000000u) >> 12]` -> '?', the same through a local -> '?', log-gated
+-> 'G', `(a & 0x7FFFFF) >> 12` into a 0x800 table -> 'M', table size parsed 0x800; big table `pcs[0x800000]` indexed
+`a & 0x1FFFFFF` -> '?', `a & 0x7FFFFF` -> 'M'.
+Result (exit 0; scratch/agent/s7342_census.txt, -v listing s7342_census_v.txt):
+- Part 1, 31 subscripts: G 13 + D 12 (g_s4457_tab ROGUESQ_LOG_S4457; g_f5_last_writer ROGUESQ_LOG_F5_STORE_SHADOW/LOG_ALL), K 6
+  (Rs64CovAcc pixel x >> 5; rs64_bl_eq blender mux `(blend >> k) & 3u` into 4-name string tables; RSP VU VADDC/VSUBC
+  `VCOL.set(n, result >> 16)`, the shift is the carry value, n is the lane).
+- Part 2, 19 tables >= 0x8000 entries, 95 uses: D 59, G 27, H 7, M 2. The H rows are the default-on s7239 WIDEWIN merge hash
+  (s7239_he/hd/hg[1 << 17], hash `((e >> 2) * 2654435761u) >> 15` of a uint32 is 17 bits, probes `(h + 1) & (S7239_HN - 1)`). M rows:
+  g_s4299_ring `& ((1u << 20) - 1)` and s7106 g_q `& (kQ - 1)`, kQ = 1 << 22, both rings exactly their size.
+- Only 2 big tables take an address shift at all: g_s4457_tab (calloc 0x100000 rows, index `(a & 0x3FFFFF) >> 2` = 0xFFFFF max,
+  in bounds and env-gated) and g_f5_last_writer (resize 0x200000 rows, index `p >> 2`, gated, and rs64_f5_dump_join returns unless
+  source < 0x800000 && bytes <= 0x800000 - source; the two writer loops clamp `i < 0x200000`). The 8 MB g_s5229_* tables are D.
+- Named-constant sizes mattered: the first pass (literal sizes only) saw 12 big tables; resolving constexpr/#define names added 7
+  (s7239 x3, s7106 g_q, RS64_TL_N...) and 8 uses that were then proved bounded rather than assumed.
+ORIGIN: no mitigation; no code behaviour changed.
+Discrimination: selects H-diag for every address-shift table (both gated) and H-masked for the masked forms; refutes H-oob (0
+default-on address-indexed tables). Single-source (static read, controls pass); no runtime arm because no B site exists (NEXT plan).
+Class S CLOSED. With it the spill-pointer idiom campaign is complete: host R, M, N, O, P, S; game A-F (s7317-s7323).
+Next (NEXT.md s7343): class T, host fixed-size buffers written with a guest-derived length (memcpy / copy loops into a stack or
+static array whose length is read from rdram, an OSTask, or a DL word), an overflow shape the bound censuses did not cover.

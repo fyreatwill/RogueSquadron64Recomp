@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7340 (2026-11-14).
+Compact operational handoff, as of Session 7342 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -356,9 +356,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     (exit 1 = unclassified or s6993 patch missing): host 12 = D 7, P 2, G 1, W 1 (rs64_s6993_mask), C 1, 0 default-on; game 45
     bit-24 masks = W 7 (s6993, 7/7 patched), F 14 (0x80130B40 game-state flag words; s7317 d8 dump: spill holders there only at
     +0x80/+0x84), K 4 (HOB 6-bit link indices), M 10, A 4, Q 2, Z 4. Game shift form = s7317 class A (closed).
-27g. **Next unit (NEXT.md): class S, host address-indexed tables** (`addr >> k` into a fixed array/bitmap sized for 8/16 MB):
-    out-of-bounds for a spill address rather than a reject.
-28. **When 1-27g offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27g. **Host address-indexed tables (class S): CLOSED (s7342, static, single-source).** `tools/s7342_addr_index_census.py --controls`
+    (exit 1 = '?' or B; 183 host files): 31 `T[.. >> k ..]` / local / `.set(` subscripts = G 13, D 12, K 6 (pixel, blender field,
+    RSP VU carry); all 19 tables >= 0x8000 entries (literal, named-constant, resize, calloc sizes), 95 uses = D 59, G 27, H 7
+    (s7239 merge hash: uint32 >> 15 = 17 bits = S7239_HN, pinned to source text), M 2 (rings & (N-1)). Only 2 big tables take an
+    address shift (g_s4457_tab, g_f5_last_writer), both env-gated; g_f5_last_writer also bounds source < 0x800000. 0 default-on.
+    This ends the spill-pointer idiom campaign (host R M N O P S; game A-F).
+27h. **Next unit (NEXT.md): class T, host fixed buffers filled with a guest-derived length** (memcpy / copy loop into a stack or
+    static array whose length comes from rdram or a DL/OSTask field): an overflow, not a reject.
+28. **When 1-27h offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
