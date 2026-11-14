@@ -193142,3 +193142,42 @@ scratch/agent/soak_queue/s7331_abort_resetw.sh (hangar route with aborts). Side 
 (s7317/s7324/s7325/s7331) classes the framebuffer/temp-pool region wrongly.
 Verdict: this selects H-audio-only and refutes H-more and H-reuse on the forced route (boot, menus, hangar, 2 mission loads; abort
 resets queued). Closes item 23.
+
+## Session 7332 (2026-11-14) — s7331 abort soak's "NEW free-memory owner" is the gfx RDP FIFO (OSTask output_buff) inside the per-scene flags&4 carve block; its header is written by coalesceFreeHeapBlocks (H-carve, item 24); soak rc was grep's; carve blocks now registered in the host map
+
+HYPOTHESIS-ID: hostmap-carve-blind. Units: fold soak s7331_abort_resetw, then NEXT.md item 24.
+- **Soak fold: its verdict was false.** s7331_abort_resetw logged rc=0, but the recipe took `$?` from the `| grep -v` after the report.
+  The report itself exits 1 on that log: 3 NEW guest-FREE-memory rows, 806E3C60+0x3600 own=setupCutsceneLevel+0x318 (host frame),
+  RSP pre-reuse 170 lines / ~23k changes from off 0xB80, at syncs 8/14/20 (the abort resets). Audit: no other done/ recipe has the
+  pattern. The report docstring now says to take its own rc (`${pipestatus[1]}`).
+- Instrument (src/rsp/s7331_reset_writer.cpp + upstream_compat osSpTaskStart hook, s7094 hook passes mem + aud): per block, RSP
+  writes split gfx/aud pre/post, offset and DMEM range, last write, and the writing task's OSTask fields at the first write. Also a
+  `[s7332] fifo` timeline: guest walk + host class AT output_buff on every gfx task, one line per transition. Positive control for
+  the split: the boot voice-state block 0x80171EB0 reads waud=4 wgfx=0 (audio task, s7330 class 1). Run r1 (abort route, s7326 recipe
+  540 s, dd8 21:9): the 3 rows are wgfx 97-104k, waud 0, woff 0xBA0-0x3600, wmem 0xD60-0xEC0, writes for the whole 2 s window,
+  task t1 ucode 80024A10 out=806E4800 osz=807247F0: **the gfx FIFO starts at ptr+0xBA0** (256 KB FIFO, the old block only overlaps its
+  head). The FIFO is set by buildAndRegisterDefaultMaterial (0x80017F80/88: output_buff = stack arg 5, end = arg5 + arg6 - 0x10, args
+  passed down from advanceVideoFrame). Static: OSTask at 0x800277C8; "setGfxTaskYieldParams" globals 0x800277C0/C4 are really
+  ucode/ucode_data (copied to +0x10/+0x18 in submitGfxFrame 0x8000C294/9C), so that symbol name is wrong.
+- Run r2 (same + store watch 6E47E0:6E4800): the FIFO lives in a guest-ALLOCATED fl=6 block in every scene (abort: 806E47F0+0x42B800;
+  others 808927F0+28D800, 808967F0+2A9800, 8096AFF0+20B000, 8081E7F0+331800, ...). The host map saw none of them (host 3/4). The
+  s7331 g=2:1 was the guest walk at the 64-B line start 0x806E47E0, which is the last line of the free neighbour 8068B900+58EE0.
+  Store watch at the abort reset: header 0x806E47F0..F8 is written by pc 80002510/80002518/8000255C, later by 800023AC/800023D8: all
+  inside **coalesceFreeHeapBlocks** (0x800022F8-0x800025B0). Selects H-carve (the retail heap reset writes the header by hand),
+  refutes H-heapcap (no port helper PC), and H-inner is only partly true (see r4/r5 below).
+- Changes: (1) the s7331 guest walk uses the first changed byte of the line; (2) **carve registration** (ALLOCMAP, default on,
+  ROGUESQ_S7332_CARVE=0 = off): at each rs64_s7325_heapsync, every guest fl&6 block the map lacks is inserted (pc[0] tag, owner
+  rs64_s7325_heapsync, fl 0x04), excluded from s7331 drop tracking, `[s7332] carve #n` line; (3) s7318_blk falls back to a carve side
+  map when a nested temp-pool block (loadDatFile 0x809B6010 etc.) shadows the carve start; (4) the s7331 dump goes to tmp + rename,
+  because r5's log was torn by the SIGKILL mid-rewrite (that is the "SIGKILL-safe" claim failing), and the report skips torn rows.
+- Verify runs r3/r4/r5 (same route): alive, 0 crash, 20-24 resets, ctl PASS, **other owners 0, stale-owner DMAs 0, report rc 0** (its
+  own rc). 15-19 carves registered per run. FIFO transitions inside an fl=6 block that read host-live: r3 14/20, r4 15/19, r5 14/18.
+  The rest: the carve start entry is erased between heapsyncs while the guest header still says fl=6 + full size (e.g. 80989000 by
+  t=+0.8 s after sync 1, 8081E800 within 6 s of sync 7). The s7318 malloc hook re-takes the start (flags&4 rs_malloc returns the whole
+  free tail, host records req only) or an rs_free erase at upstream_compat:3401 drops it. r5's side-map fix did not move the count, so
+  it is the erase path. Also 5-6 FIFO transitions per run sit at guest 0:0 (no heap block: FIFO above the arena top, e.g. 80986800
+  just past arena end 809867F0, 80904000 past 80903FF0) = the above-heap fb carve, not modelled.
+ORIGIN: the writer is the retail gfx ucode filling its RDP FIFO, which the game places in the scene's flags&4 carve block. No port
+writer, no dangling write, no mitigation. The instrument changes are attribution only.
+Rules out: the abort route as a counter-example to item 23 H-audio-only (it holds there: 0 non-mixer guest-free writers once the walk
+uses the written byte). Not run-validated: change (4) (built only). Logs: scratch/s7332/ (report*.txt, r2..r5_lines.txt, run_abort*.zsh).

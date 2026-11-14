@@ -3359,6 +3359,7 @@ static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x
    time, host freer frames, allocator frames) so an RCP read in no live block can be classed freed / header gap / untracked. */
 extern "C" int rs64_s7331_on; extern "C" void rs64_s7331_track(uint64_t sync, char kind, uint32_t ptr, uint32_t req, void* own);
 extern "C" void rs64_s7331_malloc(uint32_t ptr, uint32_t req, void* own);
+extern "C" void rs64_s7331_task(const uint32_t* f);
 extern "C" int rs64_s7324_on;
 struct S7325F { uint32_t ptr, req; uint64_t seq; double t; void* fpc[4]; void* apc[3]; };
 static std::multimap<uint32_t, S7325F> s_s7325_freed;
@@ -3430,9 +3431,18 @@ struct S7318Init { S7318Init() {
     rs64_s7318_on = 1; std::fprintf(stderr, "[s7318] bcmp probe on -> %s ctl=%08X allocmap=%d\n", g_s7318_path, g_s7318_ctl, (int)s7317_on()); } } g_s7318_init;
 inline bool s7318_sp(uint32_t x) { return x >= 0x81000000u && x < 0x81800000u; }  /* s7326: 8 MB arena */
 /* block containing x, or 0 (caller holds s_s7317_mu) */
+static char s7332_carve_tag;  /* s7332: pc[0] marker of host-map entries registered from the guest carve walk (not an rs_malloc) */
+static std::map<uint32_t, uint32_t> s_s7332_carve;  /* s7332: carve start -> req; fallback when a nested temp-pool block shadows it */
 uint32_t s7318_blk(uint32_t x, uint32_t* req) {
-    auto it = s_s7317_live.upper_bound(x); if (it == s_s7317_live.begin()) return 0; --it;
-    if (x - it->first < (it->second.req ? it->second.req : 1)) { if (req) *req = it->second.req; return it->first; } return 0; }
+    auto it = s_s7317_live.upper_bound(x);
+    if (it != s_s7317_live.begin()) { --it;
+        if (x - it->first < (it->second.req ? it->second.req : 1)) { if (req) *req = it->second.req; return it->first; } }
+    auto c = s_s7332_carve.upper_bound(x); if (c == s_s7332_carve.begin()) return 0; --c;
+    if (x - c->first >= c->second) return 0;
+    auto l = s_s7317_live.find(c->first);
+    if (l == s_s7317_live.end()) { s_s7332_carve.erase(c); return 0; }  /* dropped since; an rs_malloc that re-took the start keeps it:
+       the flags&4 malloc returns the whole free tail (guest header size), the host entry only records the requested size */
+    if (req) *req = c->second; return c->first; }
 /* 0 nn 1 same 2 spsp 3 cross 4 speq; *unm set when a spill operand is unmapped */
 int s7318_class(uint32_t a, uint32_t b, int* unm, uint32_t* blk, uint32_t* req) {
     bool sa = s7318_sp(a), sb = s7318_sp(b); *unm = 0; *blk = 0; *req = 0;
@@ -4473,6 +4483,9 @@ extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) 
    block outlives the reset that retail would have applied to it), and the tag control (recorded a1 & 0x80 vs guest header tag & 0x80
    on matched heap blocks: must agree). */
 static void rs64_s7326_scan(uint32_t a0, uint64_t ncall, uint64_t npk, uint64_t npk_b, uint32_t ctl);
+static uint64_t s_s7332_ncarve = 0;
+static bool s7332_carve_on() { static const int v = [] { const char* e = std::getenv("ROGUESQ_S7332_CARVE"); return (e && *e == '0') ? 0 : 1; }(); return v != 0; }
+extern "C" void rs64_s7325_heapsync(uint32_t a0);
 extern "C" void rs64_s7325_heapsync(uint32_t a0) {
     ++s7331_sync; s7331_q.clear();
     rs64_s7326_spill_reset(a0);  /* s7326: retail bulk free applied to spill blocks (always, not ALLOCMAP-gated) */
@@ -4497,8 +4510,16 @@ extern "C" void rs64_s7325_heapsync(uint32_t a0) {
           if (g != alloc.end()) { (((g->second ^ it->second.fl) & 0x80u) ? disagree : agree)++; if (!(it->second.fl & 0x84u)) { ++npk; npk_b += it->second.req; } ++it; continue; }
           if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
               s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
-          if (rs64_s7331_on) s7331_t.emplace_back('H', it->first, it->second.req, it->second.pc[1]);
+          if (rs64_s7331_on && it->second.pc[0] != (void*)&s7332_carve_tag) s7331_t.emplace_back('H', it->first, it->second.req, it->second.pc[1]);
           ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); }
+      /* s7332 item 24: coalesceFreeHeapBlocks (0x80002510/18/5C, 0x800023AC/D8: store watch s7332) writes the per-scene flags&4 carve
+         block header by hand: no rs_malloc call, so rs64_s6063_malloc never saw it. It holds the framebuffers, the temp arena and the
+         gfx RDP FIFO (OSTask output_buff). Register every guest-allocated fl&4 block the map lacks so ALLOCMAP consumers class it live. */
+      if (s7332_carve_on()) for (const auto& k : b) { if ((k.fl & 6u) != 6u) continue; const uint32_t p0 = k.h + 0x10u;
+          auto ex = s_s7317_live.find(p0); if (ex != s_s7317_live.end()) { if (ex->second.pc[0] == (void*)&s7332_carve_tag) ex->second.req = k.sz; if (k.sz > ex->second.req || ex->second.pc[0] == (void*)&s7332_carve_tag) s_s7332_carve[p0] = k.sz; continue; }
+          s_s7317_live[p0] = S7317B{k.sz, {(void*)&s7332_carve_tag, (void*)&rs64_s7325_heapsync, nullptr}, now, 0x04u}; s_s7332_carve[p0] = k.sz; ++s_s7332_ncarve;
+          if (s_s7332_ncarve <= 64) std::fprintf(stderr, "[s7332] carve #%llu registered %08X+%X (guest fl=%X) at heapsync #%llu\n",
+                                                  (unsigned long long)s_s7332_ncarve, p0, k.sz, k.fl, (unsigned long long)(ncall)); }
       if (dropped) for (auto it = s_s7317_live.lower_bound(0x81000000u); it != s_s7317_live.end() && s7318_sp(it->first); ++it) {
           ++sp_n; if (!(it->second.fl & 0x80u)) { ++sp_np; sp_npb += it->second.req; Dl_info di; void* pc = it->second.pc[1];
               npown[(pc && dladdr(pc, &di) && di.dli_sname) ? di.dli_sname : "?"]++; } } }
@@ -5731,6 +5752,9 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
     rs64_sp_reset_yield_request();
     { if (rs64_s7324_on) { OSTask* t30 = TO_PTR(OSTask, ctx->r4); if (t30->t.type == 2u) rs64_s7330_aud_submit((uint32_t)t30->t.data_ptr); } }  /* s7330 */
+    { if (rs64_s7331_on) { OSTask* t32 = TO_PTR(OSTask, ctx->r4); const uint32_t f[9] = { (uint32_t)t32->t.type, (uint32_t)t32->t.ucode, (uint32_t)t32->t.dram_stack,
+        (uint32_t)t32->t.output_buff, (uint32_t)t32->t.output_buff_size, (uint32_t)t32->t.data_ptr, (uint32_t)t32->t.data_size, (uint32_t)t32->t.yield_data_ptr,
+        (uint32_t)t32->t.yield_data_size }; rs64_s7331_task(f); } }  /* s7332 */
     rs64_m5_descriptor_start(rdram, (uint32_t)ctx->r4);
     rs64_set_pending_task_guest_ptr((uint32_t)ctx->r4);
     static int s_log = -1;

@@ -50,11 +50,14 @@ struct Blk {
     uint32_t lines[2][W_N] = {}, events[2][W_N] = {};     // [pre/post realloc][writer]: distinct lines changed / change events
     double first[2][W_N] = {{-1, -1, -1}, {-1, -1, -1}}; uint32_t firstoff[2][W_N] = {};
     uint64_t rsp_rd[2] = {}, rsp_wr[2] = {};
+    // s7332: RSP write attribution: [pre/post][gfx=0/aud=1] counts, block-offset and DMEM range, last write, writing task at first write
+    uint64_t wt[2][2] = {}; uint32_t olo = ~0u, ohi = 0, mlo = ~0u, mhi = 0; double tlast = -1; int wtype = -1; uint32_t tf[9] = {};
     int gk[2][W_N] = {{-1, -1, -1}, {-1, -1, -1}}; uint32_t gfl[2][W_N] = {}, gh[2][W_N] = {}, gsz[2][W_N] = {}; int hk[2][W_N] = {};  // guest heap walk + host class at first change
     std::vector<uint8_t> seen;  // per line: bit (pre/post*3 + writer) set once
     bool done = false;
 };
 std::mutex g_mu;
+uint32_t g_task[3][9];  // s7332: last submitted OSTask per type (1 gfx, 2 aud): type ucode dram_stack out out_size data data_size yield yield_size
 std::vector<Blk*> g_act, g_fin;
 uint64_t g_nsync = 0, g_ntrack = 0, g_nbytes = 0, g_pi_seen = 0;
 std::atomic<bool> g_thr{false};
@@ -88,7 +91,8 @@ void compare_locked(Blk* b, const uint8_t* r, double t) {
             const uint8_t bit = (uint8_t)(1u << (ph * 3 + w));
             if (!(b->seen[k] & bit)) { b->seen[k] |= bit; b->lines[ph][w]++; }
             if (b->first[ph][w] < 0) { b->first[ph][w] = t - b->t0; b->firstoff[ph][w] = off;
-                if (b->kind != 'T') { S7325Out o{}; o.gk = -1; b->hk[ph][w] = rs64_s7325_gap(b->ptr + off, &o, 1);
+                uint32_t fb = 0; while (fb + 1 < n && c[fb] == g[fb]) ++fb;  // s7332: walk at the first changed byte, not the line start
+                if (b->kind != 'T') { S7325Out o{}; o.gk = -1; b->hk[ph][w] = rs64_s7325_gap(b->ptr + off + (fb & ~3u), &o, 1);
                     b->gk[ph][w] = o.gk; b->gfl[ph][w] = o.gfl; b->gh[ph][w] = o.gh; b->gsz[ph][w] = o.gsz; } }
             memcpy(c, g, n);
         }
@@ -96,7 +100,7 @@ void compare_locked(Blk* b, const uint8_t* r, double t) {
     }
 }
 void dump_locked() {
-    FILE* o = fopen("rs64_s7331.log", "w"); if (!o) return;
+    FILE* o = fopen("rs64_s7331.log.tmp", "w"); if (!o) return;  // s7332: tmp + rename (a SIGKILL mid-dump tore the in-place file, r5)
     uint64_t chpre = 0, chpost = 0, unch = 0, re = 0; uint64_t wpre[W_N] = {}, wpost[W_N] = {};
     std::vector<Blk*> all(g_fin); all.insert(all.end(), g_act.begin(), g_act.end());
     for (Blk* b : all) {
@@ -121,12 +125,18 @@ void dump_locked() {
         for (int ph = 0; ph < 2; ++ph) for (int w = 0; w < W_N; ++w) if (b->lines[ph][w])
             fprintf(o, " %s_%s=%u/%u@+%.1fms off=0x%X g=%d:%X:%08X:%X h=%d", ph ? "post" : "pre", kW[w], b->lines[ph][w], b->events[ph][w], b->first[ph][w] * 1e3, b->firstoff[ph][w],
                     b->gk[ph][w], b->gfl[ph][w], b->gh[ph][w], b->gsz[ph][w], b->hk[ph][w]);
-        fprintf(o, " rsp_rd=%llu/%llu rsp_wr=%llu/%llu\n", (unsigned long long)b->rsp_rd[0], (unsigned long long)b->rsp_rd[1],
+        fprintf(o, " rsp_rd=%llu/%llu rsp_wr=%llu/%llu", (unsigned long long)b->rsp_rd[0], (unsigned long long)b->rsp_rd[1],
                 (unsigned long long)b->rsp_wr[0], (unsigned long long)b->rsp_wr[1]);
+        if (b->wtype >= 0)
+            fprintf(o, " wgfx=%llu/%llu waud=%llu/%llu woff=0x%X-0x%X wmem=0x%X-0x%X wlast=+%.1fms wtask=t%u:uc%08X:stk%08X:out%08X:osz%08X:dp%08X:ds%X:yld%08X:ys%X",
+                    (unsigned long long)b->wt[0][0], (unsigned long long)b->wt[1][0], (unsigned long long)b->wt[0][1], (unsigned long long)b->wt[1][1],
+                    b->olo, b->ohi, b->mlo, b->mhi, b->tlast * 1e3, b->tf[0], b->tf[1], b->tf[2], b->tf[3], b->tf[4], b->tf[5], b->tf[6], b->tf[7], b->tf[8]);
+        fprintf(o, "\n");
     }
     for (auto& kv : quiet) fprintf(o, "Q sync=%llu kind=%c unchanged=%llu bytes=0x%llX\n", (unsigned long long)kv.first.first, kv.first.second,
                                    (unsigned long long)kv.second.first, (unsigned long long)kv.second.second);
     fclose(o);
+    rename("rs64_s7331.log.tmp", "rs64_s7331.log");
 }
 void poll() {
     uint64_t pi_last = rs64_s4211_pi_n; double last_dump = now_s();
@@ -190,15 +200,40 @@ extern "C" void rs64_s7331_malloc(uint32_t ptr, uint32_t req, void* own) {
     }
 }
 // RSP DMA (raw dram, inclusive len as passed to the s7094 hook)
-extern "C" void rs64_s7331_dma(int dir, uint32_t dram, uint32_t raw_len) {
+extern "C" void rs64_s7331_task(const uint32_t* f) {  // s7332: f = type ucode dram_stack out out_size data data_size yield yield_size
+    if (!rs64_s7331_on || !f || f[0] < 1 || f[0] > 2) return;
+    { std::lock_guard<std::mutex> lk(g_mu); memcpy(g_task[f[0]], f, sizeof g_task[0]); }
+    // s7332 FIFO ownership timeline: guest heap walk + host class AT output_buff (not a line start) per gfx task; one line per transition
+    if (f[0] != 1 || !f[3]) return;
+    static uint32_t last[7] = {}; static int nlines = 0;
+    S7325Out o{}; o.gk = -1; const int hk = rs64_s7325_gap(f[3], &o, 1);
+    S7325Out e{}; e.gk = -1; const int ek = rs64_s7325_gap(f[4] ? f[4] - 4 : f[3], &e, 1);
+    const uint32_t cur[7] = { f[3], f[4], (uint32_t)o.gk, o.gfl, o.gh, o.gsz, (uint32_t)(hk | (ek << 4) | ((uint32_t)e.gh << 8)) };
+    if (!memcmp(cur, last, sizeof cur) || nlines >= 400) return;
+    memcpy(last, cur, sizeof cur); ++nlines;
+    fprintf(stderr, "[s7332] fifo t=%.6f sync=%llu out=%08X osz=%08X guest=%d:%X:%08X+%X host=%d lo=%08X+%X lown=%s hi=%08X | end guest=%d:%X:%08X+%X host=%d\n",
+            now_s(), (unsigned long long)g_nsync, f[3], f[4], o.gk, o.gfl, o.gh, o.gsz, hk, o.lo, o.lreq, sym(o.lopc[1]).c_str(), o.hi,
+            e.gk, e.gfl, e.gh, e.gsz, ek);
+}
+extern "C" void rs64_s7331_dma(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud) {
     if (!rs64_s7331_on) return;
     const uint32_t p = phys(dram) & ~7u, len = (raw_len & 0xFFFu) + 1;
     std::lock_guard<std::mutex> lk(g_mu); if (g_act.empty()) return;
+    const double t = dir ? now_s() : 0.0;
     for (Blk* b : g_act) {
         const uint32_t bp = phys(b->ptr), be = bp + b->req;
         if (p >= be || p + len <= bp) continue;
         const int ph = b->trealloc >= 0 ? 1 : 0;
         if (dir) b->rsp_wr[ph]++; else b->rsp_rd[ph]++;
+        if (!dir) continue;
+        const int a = aud ? 1 : 0; b->wt[ph][a]++;
+        if (ph == 0) {
+            const uint32_t o0 = p > bp ? p - bp : 0, o1 = std::min(p + len, be) - bp;
+            if (o0 < b->olo) b->olo = o0; if (o1 > b->ohi) b->ohi = o1;
+            const uint32_t m = mem & 0x1FFFu; if (m < b->mlo) b->mlo = m; if (m + len > b->mhi) b->mhi = m + len;
+            b->tlast = t - b->t0;
+            if (b->wtype < 0) { b->wtype = a; memcpy(b->tf, g_task[a ? 2 : 1], sizeof b->tf); }
+        }
     }
     if (dir) mark_locked(p, len, 1);
 }

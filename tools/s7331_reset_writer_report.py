@@ -12,6 +12,10 @@ Changes are also split by the guest heap walk at first change (g=kind:flags: 2:1
 a guest ALLOCATED block the host map does not model, e.g. the framebuffer / temp-pool carve).
 Exit 1 when the control fails, a pre-reuse change lands in a guest FREE block outside the control set (new dangling writer), or
 a stale-owner DMA follows a reallocation.
+s7332 builds add per-block RSP-write attribution (wgfx/waud = gfx/audio task writes pre/post realloc, woff/wmem = block-offset and
+DMEM ranges, wlast, wtask = writing task type ucode dram_stack output_buff output_buff_size data_ptr data_size yield ...).
+Callers must take this script's exit status itself (zsh ${pipestatus[1]}), not a downstream grep's: s7331_abort_resetw read
+grep's rc and logged report_rc=0 over 3 NEW free-memory rows.
 """
 import re
 import sys
@@ -28,6 +32,8 @@ def parse(path):
             hdr = ln
         elif ln.startswith("B "):
             d = dict(re.findall(r"(\w+)=(\S+)", ln))
+            if "req" not in d or "own" not in d:  # torn row (pre-s7332 dumps were rewritten in place; a SIGKILL could cut one)
+                continue
             d["ptr"] = int(d["ptr"], 16)
             d["w"] = {m[0]: m[1] for m in re.findall(r"((?:pre|post)_(?:cpu|rsp|pi))=(\S+ off=\S+(?: g=\S+ h=\S+)?)", ln)}
             rows.append(d)
@@ -111,6 +117,8 @@ def main():
               f"other owners: {len(newfree_x)}")
         for r in newfree_x[:10]:
             print(f"  NEW sync={r['sync']} {r['ptr']:08X}+{r['req']} own={r.get('own')} " + " ".join(f"{k}={v}" for k, v in r["w"].items()))
+            if "wtask" in r:  # s7332 RSP-write attribution: gfx/aud split [pre/post], block offsets, DMEM source, writing task's OSTask fields
+                print("      " + " ".join(f"{k}={r[k]}" for k in ("wgfx", "waud", "woff", "wmem", "wlast", "wtask")))
         bad |= bool(newfree_x)
         if s30:
             ns = stale(rows, s30)

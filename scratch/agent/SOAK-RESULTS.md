@@ -1489,3 +1489,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261114 | s7322 fold: s7321_trunc_levels rc=0 CONTROL PASS (ctl 25832/25832): L1/L12 dd8 21:9 202-203 s alive, 0 crash, 0 VI stall; class D 19/26 executed, 154M truncations, 0 spill sources -> class D coverage same on 3 levels.
 20261114-034012 | s7326_spill_levels | rc=0 | 796s | scratch/agent/soak_results/s7326_spill_levels_20261114-034012.log
 20261114 | s7327 fold: s7326_spill_levels rc=0: L4/L15 dd8 21:9 303/305 s alive, 0 crash, 0 VI stall, 0 arena full (releases 2/1) -> s7326 fix holds on the forced route; owner hangar-route arms in PORTING-STATE s7327.
+20261114-061550 | s7331_abort_resetw | rc=0 | 555s | scratch/agent/soak_results/s7331_abort_resetw_20261114-061550.log
+20261114 | s7332 fold: s7331_abort_resetw logged rc=0 but the report's own rc is 1 (recipe read grep's $?): 3 NEW rows = gfx RDP FIFO (OSTask output_buff 806E4800) inside the coalesceFreeHeapBlocks flags&4 carve, line-start walk artefact; after s7332 fixes, 3 abort-route reruns report rc 0, other owners 0, stale 0.

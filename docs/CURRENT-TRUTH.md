@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7331 (2026-11-14).
+Compact operational handoff, as of Session 7332 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -307,11 +307,17 @@ is in the s7307 archive). Active unit: NEXT.md.
     retail settings: the only writes into guest-FREE memory are the boot initN64RspMixer buffers (item 22); 0 stale-owner audio DMAs
     after reallocation (last stale DMA 0.075-6.5 ms BEFORE the realloc). Other "post-free" writes (loadDatFile 12-B blocks 0x809B6010)
     are inside a guest-allocated flags&4 carve block = the per-scene framebuffer / temp pool (parseImageFile, rt64_writeback).
-    Abort-route recipe queued (soak s7331_abort_resetw).
-24. **Host alloc map blind to the flags&4 carve block (s7331 side finding, NEXT.md).** The guest heap holds an allocated fl=6 block
-    0x808927F0+0x28D800 / 0x806F5FF0+0x41A000 (dd8 21:9) covering the framebuffers + temp arena that rs64_s6063_malloc never reports
-    (cf. s6128 0x2DB000/0x3E4B00 "path the heaplog misses"), so ALLOCMAP consumers class that region as freed/untracked.
-25. **When 1-24 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    Abort route too (s7332): the s7331_abort_resetw soak's rc=0 was grep's, and its 3 "NEW" rows were the gfx RDP FIFO in the carve
+    (a line-start guest-walk artefact). With the walk on the first changed byte: 3 reruns, rc 0, other owners 0, stale 0.
+24. **flags&4 carve block: writer named (s7332, H-carve), partly registered.** coalesceFreeHeapBlocks (pc 80002510/18/5C, 800023AC/D8)
+    writes the per-scene fl=6 block header by hand. The block holds the framebuffers, the temp arena and the gfx RDP FIFO (OSTask
+    output_buff, set by buildAndRegisterDefaultMaterial 0x80017F80 from advanceVideoFrame's args, OSTask 0x800277C8). ALLOCMAP now
+    registers every guest fl&6 block at each heapsync (ROGUESQ_S7332_CARVE=0 = off), with a nested-block lookup fallback. FIFO-in-carve
+    host-live 14-15 of 18-20 transitions per abort-route run. Open: (a) the carve start entry is erased between heapsyncs (rs_free path
+    upstream_compat:3401, or the flags&4 rs_malloc re-taking the start with req < guest size); (b) the FIFO placed ABOVE the arena top
+    (guest walk 0:0, e.g. 80986800) is an unmodelled above-heap carve. Probe: `[s7332] fifo` lines (ROGUESQ_S7331_RESETW=1).
+25. **Soak recipes take the analyser's own rc** (`${pipestatus[1]}`), never a downstream grep's (s7332).
+26. **When 1-25 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

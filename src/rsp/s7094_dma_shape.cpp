@@ -79,10 +79,10 @@ const bool g_selftest = [] {
 }();
 }  // namespace
 extern "C" int rs64_s7324_on; extern "C" void rs64_s7324_dma(int dir, uint32_t dram, uint32_t raw_len, int aud);
-extern "C" int rs64_s7331_on; extern "C" void rs64_s7331_dma(int dir, uint32_t dram, uint32_t raw_len);
+extern "C" int rs64_s7331_on; extern "C" void rs64_s7331_dma(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" void rs64_s7094_dma_shape(int dir, uint32_t mem, uint32_t dram, uint32_t raw, int aud_in) {
     if (rs64_s7324_on && !(mem & 0x1000)) rs64_s7324_dma(dir, dram, raw, aud_in);
-    if (rs64_s7331_on && !(mem & 0x1000)) rs64_s7331_dma(dir, dram, raw);  // s7331 reset dangling-writer attribution  // IMEM boot DMAs are skipped by the runtime
+    if (rs64_s7331_on && !(mem & 0x1000)) rs64_s7331_dma(dir, mem, dram, raw, aud_in);  // s7331 reset dangling-writer attribution  // IMEM boot DMAs are skipped by the runtime
     const uint32_t aud = aud_in ? 1u : 0u;
     const uint32_t f = classify(mem, dram, raw, rs64_s7094_on);
     const uint32_t vmask = f & ~((1u << F_IMEM) | (1u << F_CTL));  // IMEM DMAs are skipped by design (ucode is recompiled), not a shape defect
