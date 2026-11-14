@@ -192262,3 +192262,27 @@ second, adjacent-second pairs share a pose -> pixel diff of the far band (scratc
 - Conclusion (single run per arm; scorer + eyeball = two lines but one run): H-ring-hidden. The s7293 dd8 R128 auto adds ~4000
   cells/call (+0.2 ms, s7292) that land inside the haze; it buys no visible ground. Rules out H-ring-visible and H-toggle-dead (tally
   alternates). Default not changed; owner may choose R88 at dd8. Next: G5e fog on the dark far band seen at dd>1 (s7300).
+
+## Session 7302 (2026-11-13) — G5e: the dd>1 dark far band on L1 is the off-map plateau and it does take fog; new same-run ROGUESQ_DD_FOG_ALT ramp toggle shows the fog END (ke) is the lever, ks=1 alone is small
+HYPOTHESIS-ID g5e-far-fog. Unit from NEXT (s7302). No maintenance (CURRENT-TRUTH 59478 B < 60000).
+**Boring-first read:** DD_FOG (s6904, default on at dd>1) sets the fog ramp start x max(1,0.375dd), end x 0.8dd; at dd8 that is 3 / 6.4 x
+retail. s7300's band was shot with DD_MELT on, so it is not a flat-fog-colour slab.
+**New lever (src/main/upstream_compat.cpp [s7302]):** ROGUESQ_DD_FOG_ALT=<ks>,<ke>[,1] applies that ramp on rs64_tog_odd seconds (xor8,
+the [s7010-clk] split) and the default ramp otherwise (,1 = alt always). The alt cutoff (rs64_s6904_clipmul) uses floor 1/dd^2 (cutoff never
+nearer than retail) instead of 0.25, so a nearer ramp start can pull the fog-blender switch in with it. Witness `[s7302] fog alt` fired.
+**Run (in session, HID idle 65000 s, unlocked):** tools/s7302_fog_alt_arms.zsh (= scratch/s7302/run.zsh, s7301 harness): dd8 16:9 FPS60
+MELT WIDEWIN CULL_SPIKE=1, g5b capture 120-300 s, arms l1a (L1 alt 1,6.4), l4a (L4 alt 1,6.4), l1c (L1 alt 0.3,0.8 = extreme-haze lever
+control). 0 crash lines in all three. s7247 TEX flip D (lever removes texture > 0), control patch PASS 6/6 bands:
+- l1a: far +1.15 +- 0.97% (null), near +1.43 +- 1.04 (null), side +1.60 +- 0.35 (removes).
+- l4a: far +0.81 +- 0.46 (null), near +5.43 +- 0.90, side +2.88 +- 0.55 (removes).
+- l1c: far +7.09 +- 0.67, near +38.1 +- 1.3, side +21.5 +- 0.7: everything hazes, and by eye the dark plateau melts into the sky.
+**By eye (sheets docs/owner_sheet_s7302_l1_fog_ks1.png, _ctl.png):** the "dark grid band" is the off-map plateau, the dark mesa around the
+L1 map that retail also draws near the camera (s7300 dd1 t=270). At dd8 it runs to the horizon with only a thin pale line. With ks=1,
+ke=6.4 it still reads dark. **Label defect:** tools/s7267_tog_sheet.py was called without split=xor8 (as in s7301), so its OFF/ON labels
+follow parity, not the game's xor8 clock: in sheet_l1c the hazy frame is labelled OFF in 2 of 6 pairs. Images valid, labels not; the s7247
+scores use xor8 and stand. s7301's sheet had the same defect (its scores also stand). Script fixed (xor8 passed).
+**Reading:** H-not-fog (band drawn without the fog blender) refuted by the l1c control. H-ramp-late (start too far) is weak: moving the start
+3 -> 1 changes little, because fog alpha is linear in z ~ 1/d and so concentrates at the ramp END; the lever is ke. H-shade / H-lod-tex not
+needed. Raws deleted (14 GB each), single run per arm.
+Rules out: "fog does not reach the plateau"; "ks alone fixes the band".
+Next: same-run ke sweep at dd8 (ks=1, ke 2 / 3 / 4.5 vs default) on L1+L4 with the xor8 sheet, plus dd1 reference, then owner sheet.

@@ -83,13 +83,28 @@ static void s6904_init() {
     s6904_lg = e && *e && *e != '0';
 }
 static int s6904_on() { if (s6904_lg < 0) s6904_init(); return s6904_ks > 0 && (!s6904_tog || ((mach_absolute_time() / 96000000ull) & 1)); }
+// s7302 G5e far band: ROGUESQ_DD_FOG_ALT=<ks>,<ke> uses that ramp on rs64_tog_odd seconds (same [s7010-clk] split as R_TOG), the default
+// ramp otherwise, so one run A/Bs two ramps. The alt cutoff floor is 1/dd^2 (cutoff never nearer than retail) instead of (dd/2)^2, so
+// a ramp starting nearer than 0.375 dd can still pull the fog-blender switch in to its start. =<ks>,<ke>,1 = alt every second.
+static double s7302_ks = 0, s7302_ke = 0; static int s7302_all = 0;
+extern "C" int rs64_tog_odd(uint64_t mt); extern "C" void rs64_tog_anchor(uint64_t mt);
+static int s7302_alt() {
+    static int init = 0;
+    if (!init) { init = 1; const char *a = std::getenv("ROGUESQ_DD_FOG_ALT"); double x = 0, y = 0; int z = 0;
+        if (a && sscanf(a, "%lf,%lf,%d", &x, &y, &z) >= 2 && x > 0 && y > 0) { s7302_ks = x; s7302_ke = y; s7302_all = z == 1; }
+        if (s7302_ks > 0) fprintf(stderr, "[s7302] fog alt ks=%g ke=%g all=%d\n", s7302_ks, s7302_ke, s7302_all); }
+    if (s7302_ks <= 0) return 0;
+    const uint64_t mt = mach_absolute_time(); rs64_tog_anchor(mt);
+    return s7302_all || rs64_tog_odd(mt);
+}
 // The cutoff only needs to sit inside the ramp start. Seam distance (fog units) ~ 24 x cutoff factor on lvl1/lvl4; 26 leaves a margin. Clamped between
 // a total of (dd/2)^2 and no pull. Levels 1/4/5 all have s ~34, so this is 0.43 at dd2, 0.25 at dd3 and dd4 there.
 extern "C" float rs64_s6904_clipmul(float v) {
     if (v > 0.0f) return v;
     if (!s6904_on()) return 1.0f;
-    const double r = s6904_s * s6904_ks / (26.0 * s6904_dd), m = r * r;
-    return s6904_s <= 0 ? 0.25f : (float)(m < 0.25 ? 0.25 : m > 1.0 ? 1.0 : m);
+    const int alt = s7302_alt(); const double ks = alt ? s7302_ks : s6904_ks, lo = alt ? 1.0 / (s6904_dd * s6904_dd) : 0.25;
+    const double r = s6904_s * ks / (26.0 * s6904_dd), m = r * r;
+    return s6904_s <= 0 ? (float)lo : (float)(m < lo ? lo : m > 1.0 ? 1.0 : m);
 }
 // s6919 G5h: tools/apply_s6919_cutlive.py. ROGUESQ_CUT_LIVE (default on, =0 old, =tog odd seconds) leaves the game's far cutoff 0x8009DEB4 alone where the dd scale is off.
 // ROGUESQ_DD_CUT_LIVE=1|tog (default off): where it is on, scale the game's value, not the one latched at boot. Writes are remembered so a frame without a game write cannot compound.
@@ -119,7 +134,7 @@ extern "C" void rs64_s6919_cut(uint8_t *rdram, uint32_t node) {
     for (uint32_t i = 0; i < 4; i++) g_rs64_s6919[7 + i] = w(0x80132DB0u + 4 * i);
 }
 extern "C" void rs64_s6904_fog(uint8_t *rdram, recomp_context *ctx) {
-    const int want = s6904_on(); const double ks = s6904_ks, ke = s6904_ke; const int lg = s6904_lg;
+    const int want = s6904_on(); const int alt = want && s7302_alt(); const double ks = alt ? s7302_ks : s6904_ks, ke = alt ? s7302_ke : s6904_ke; const int lg = s6904_lg;
     auto rf = [&](uint32_t a) { uint32_t v = (uint32_t)MEM_W(0, (int64_t)(int32_t)a); float f; memcpy(&f, &v, 4); return f; };
     const float s = rf(0x8011A878u), e = rf(0x8011A87Cu), D = rf(0x8011A8CCu), A = rf(0x8011A7D4u), B = rf(0x801163C0u);
     s6904_s = s <= D ? D : s;

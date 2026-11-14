@@ -318,15 +318,13 @@ level 8 (counter3==1 fails the mission).
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7187 into one sequence; the s7186
 numbering (1-43) is in the s7187 archive. Active unit: NEXT.md.
 
-0. **s7301: dd8 far ring R88->R128 is INVISIBLE (H-ring-hidden; same-run R_TOG=1 xor8 toggles, 16:9, capture 120-300 s, 0 crash).**
-   Off phase = no R cut (superset of the auto R128). L1 R88: skip 0.0 cells/call (all wide cells sit 40-80 cells from the eye: the
-   lever is a no-op on L1). L4 R88: skip 274-1883 cells/call, yet s7247 TEX flip far band (12-50%) -0.09% +- 0.37, near -0.84 +- 0.72,
-   sides -0.22 +- 0.43 (control patch PASS 102-103/103). Lever-positive control L1 R40 (skip ~4500): sides +0.94% +- 0.42 = 1920 px
-   "LEVER REMOVES VISIBLE TEXTURE" -> the scorer sees a real cut. Sheet docs/owner_sheet_s7301_l4_r88_tog.jpg: horizon melts into haze
-   in both phases (single run per arm, one scorer + eyeball). So the dd8 R128 auto (s7293, ~+0.2 ms, +4000 cells/call) buys no visible
-   ground; the far ring beyond 88 cells lies inside the haze. Owner decides whether dd8 drops back to R88; default left as is.
-   s7300 (sheet docs/owner_sheet_s7300_horizon_dd.jpg): dd8 ~= dd6 sky band (pose-confounded vs dd1); far cutoff 0x8009DEB4 does not
-   bind at dd>=6; at dd>1 far terrain is a dark grid-textured band to the horizon (L1). Next: G5e fog on that band.
+0. **s7302 G5e far band: the dark grid band at dd>1 on L1 is the OFF-MAP PLATEAU (the game's dark mesa, retail shows it up close), drawn
+   out to the horizon and nearly unhazed because the dd fog ramp (s6904: start 0.375dd, end 0.8dd x retail) is very long at dd8 (3 -> 6.4).
+   It DOES take fog: same-run new ROGUESQ_DD_FOG_ALT=<ks>,<ke> (alt ramp on xor8-odd seconds; alt cutoff floor 1/dd^2) on L1 dd8 16:9,
+   extreme 0.3,0.8 removes 21%/38%/7% texture (side/near/far; s7247, control PASS) and the plateau melts into sky. ks=1 with ke=6.4 is
+   small: L1 side +1.6 +- 0.35%, far null; L4 near +5.4 +- 0.9, side +2.9 +- 0.6. -> H-not-fog refuted; the lever is ke (fog end).
+   0 crashes in 3 arms. Sheets docs/owner_sheet_s7302_l1_fog_{ks1,ctl}.png have WRONG OFF/ON labels (sheet called without xor8; s7301's
+   sheet too). Next: ke sweep (NEXT.md). s7301: the dd8 ring beyond 88 cells is invisible (R_TOG, R40 control); default R128 left.**
 0. **s7299: dd8 px8 auto QUALIFIED at 21:9 (s7298 soak, ctl flat-30 158 s PASS): L1/L5/L9/L10/L12 300 s, 0 crash, 60/s,
    beyond-route 3/8/0/1/0 s (L5's 8 s are 36-47/s single seconds at t<=76, route), heaviest20 10.6-12.1 ms (headroom 3.2-6.1).
    total_emit L1 11134 L5 11837; L9 6189 (CAPLEVEL 9:8192 binds, wide 2509); L12 RLEVEL 12:48 wins (3839 vs ctl R128 12420 ->
