@@ -193849,3 +193849,4 @@ Conclusion: H-safe selected for all 407 signed-32 sites and 178 blind-spot rows.
 sum exists in host code. H-diag is not needed to explain it. Rules out: signed add/sub overflow UB as a live defect source.
 Next: class AD, invalid bool / enum values loaded from guest-derived bytes (UB under -fsanitize=bool,enum), CURRENT-TRUTH 27r.
 Discrimination: census + control select H-safe and refute H-ub for class AC.
+Verdict: the census (with same-run controls) selects H-safe and refutes H-ub for all 407 class AC sites and 178 blind-spot rows; this closes class AC. The UBSan control resolves the one non-trivial site (VRCP/VRSQ INT_MIN). Next discriminator: the class AD bool/enum census (NEXT.md).
