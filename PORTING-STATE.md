@@ -192482,3 +192482,4 @@ Discrimination: SELECTS H-geom (the defect follows the far value: clean at far <
 REFUTES H-wide (at the same pose 16:9 has no sliver at far x8, while 21:9 has none at far x4.5 or capped) and the s6418 far clip (NOFARCLIP
 still pinned). H-rsp-emu is not refuted directly, but the fix does not depend on it. Next discriminator: the same FARMAX default vs 0 pair on L5
 and L12 (NEXT.md) decides whether 32767 holds for every dome or needs to be relative to the dome w.
+(In plain terms: the far-sweep selects H-geom and refutes H-wide; root cause = our dd far scale above ~36-40k; ROGUESQ_DD_FARMAX is the fix, not just a diagnostic: getenv/fprintf there are its knob and its one-time echo.)
