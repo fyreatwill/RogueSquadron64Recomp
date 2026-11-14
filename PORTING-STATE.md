@@ -194063,8 +194063,9 @@ class AI (s7358) unclamped numeric env/config parses, H-safe vs H-diag vs H-uncl
 ## Session 7358 (2026-11-14) — class AI unvalidated numeric env parses closed: 2 owner-knob crashes FIXED (ROGUESQ_DRAW_DISTANCE >8 overflows the tile pool -> SIGBUS; "nan" passes the terrain clamp -> SIGABRT) + silent typo / FB_WIDTH bypass; census 290 sites, 0 B
 HYPOTHESIS-ID: host-unvalidated-numeric-parse
 Hypotheses: H-safe (every default-on owner knob is clamped), H-diag (only diagnostic knobs are unclamped), H-unclamped (an
-owner-facing opt-in reaches a size/index unclamped). **Census + arms select H-unclamped** for ROGUESQ_DRAW_DISTANCE (the main
-owner knob), refuting H-safe and H-diag; class AI closed.
+owner-facing opt-in reaches a size/index unclamped). **The census + arms selects H-unclamped** for ROGUESQ_DRAW_DISTANCE (the
+main owner knob); this refutes H-safe and H-diag and closes class AI. Next discriminator: class AJ (s7359) unbounded string
+copies, H-safe vs H-diag vs H-overflow.
 - Census: tools/s7358_envparse_census.py (atoi/atol/atof/strtol/strtoul/strtoull/strtod/strtof/sscanf/sto* in src/**, librecomp +
   ultramodern src, our lib/rt64 '+' lines). Auto pass follows the assigned variable to index/divisor/shift/alloc/loop-bound sinks
   and clamp tests: 290 sites, CLAMPED 18 / NOSINK 265 / D 2 / G 5 (pre-manual). Controls B / CLAMPED / NOSINK / G all PASS. The
