@@ -16,6 +16,13 @@ on any redefinition and on calls except callee-saved):
      pointers 0x80000000-0x807FFFFF survive it as their physical address, a spill pointer 0x81xxxxxx loses bit 24 and aliases low RDRAM.
      Whole program (any non-constant source); src=f+0xNN marks a holder-field load. Masks keeping bit 24 (0x1FFFFFFF K0_TO_PHYS) are
      not listed. Lists the first 4 consumers of d.
+  E. KSEG RE-TAG (s7322): `or/addu/xor d, x, K` with K a constant register whose low 24 bits are zero and top byte 0x80-0xBF (lui 0x8000,
+     0xA000, ...): a value rebuilt into a KSEG pointer. x provenance: D (a class-D truncation result: already covered), narrow (andi,
+     lhu/lh/lbu/lb, srl by 8..31: <= 24 significant bits, a spill pointer could not survive it), fpu (mfc1: the compiler's float->unsigned
+     idiom `trunc.w ; mfc1 ; or 0x80000000` for values >= 2^31, a scalar), index (sll by < 8: a scaled index, with `lw off(d) ; jr` a jump
+     table at 0x80000000+off), field/word (a full
+     word: bit 24 intact if it was a physical address) or other (arg / unknown). Lists the first 4 consumers of d. Constants with nonzero
+     low 24 bits (`lui 0x8013 ; addu at, at, idx` global-table indexing) are counted per provenance, not listed.
 Output: one line per site; an A site is spill-equal when every heap-range and spill-range KSEG0 pointer gives the same compare
 outcome there (evaluated, not judged); exit 1 if any A site is not spill-equal and not in KNOWN_A; B sites are listed for manual classification (exit status unaffected).
 --selftest runs both detectors on planted snippets (positive controls). Usage: s7317_field_compare_census.py <holders_all.txt> [--selftest]"""
@@ -27,6 +34,24 @@ FN = re.compile(r"^RECOMP_FUNC void (\w+)\(")
 MEM = re.compile(r"^(-?0x[0-9A-Fa-f]+|-?\d+)\((\$\w+)\)$")
 SAVED = ("$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$fp", "$sp", "$gp")
 KNOWN_A = {}  # pc -> verdict, filled after reading each flagged site
+KNOWN_E = {  # s7322: narrow / other re-tags read by hand
+    "0x80092608": "relocateSndPointer `(p & 0xFF000000) ^ 0x80000000` != 0 test = s6993 mask site 0x800925FC (patched, PTRMASK)",
+    "0x80092614": "relocateSndPointer second test vs 0xB0000000 ROM tag = s6993 mask site 0x800925FC (patched, PTRMASK)",
+    "0x800137CC": "renderLitMeshFaceGroup F5 DL command word 0xBD000000 | (byte & 0xFF): scalar, not an address",
+    "0x80014618": "renderLitMeshFaceGroup F5 DL command word 0xBD000000 | (byte & 0xFF): scalar, not an address",
+}
+def e_verdict(op, K, prov, pc, uses):
+    """s7322: evaluated class-E verdict; None = unclassified (exit 1)."""
+    if pc in KNOWN_E: return "known: " + KNOWN_E[pc]
+    if prov == "fpu": return "scalar: float->unsigned / sign idiom (mfc1 source)"
+    if prov == "index" and any(u.startswith("BASE:lw") for u in uses): return "jump table at 0x%08X+off (scaled index)" % K
+    if prov == "D": return "paired: class-D truncation result (s7321 runtime: 0 spill sources)"
+    if prov == "word":  # full 32-bit source: or/xor/addu with K touch bits 24..31 only through K, so bit 24 survives iff K lacks it
+        heap, spill = 0x00400000, 0x01200000  # physical forms; KSEG0 forms behave the same for or/xor/addu with bit-24-free K
+        f = {"or": lambda x: x | K, "xor": lambda x: x ^ K, "addu": lambda x: (x + K) & 0xFFFFFFFF}[op]
+        if all((f(v) & 0x01000000) == (v & 0x01000000) for v in (heap, spill, heap | 0x80000000, spill | 0x80000000)):
+            return "spill-equal: full-word source keeps bit 24"
+    return None
 SELFTEST = """RECOMP_FUNC void s7317FakeTopByte(uint8_t* rdram, recomp_context* ctx) {
     // 0x80001000: lw          $a0, 0x40($s1)
     // 0x80001004: srl         $v0, $a0, 24
@@ -47,6 +72,23 @@ RECOMP_FUNC void s7320FakeFieldDiff(uint8_t* rdram, recomp_context* ctx) {
     // 0x80003010: lw          $t0, 0x40($s3)
     // 0x80003014: addiu       $t1, $zero, 0x10
     // 0x80003018: subu        $t2, $t0, $t1
+RECOMP_FUNC void s7322FakeRetag(uint8_t* rdram, recomp_context* ctx) {
+    // 0x80005000: lw          $v1, 0x10($s1)
+    // 0x80005004: lui         $t4, 0xFF
+    // 0x80005008: ori         $t4, $t4, 0xFFFF
+    // 0x8000500C: and         $v0, $v1, $t4
+    // 0x80005010: lui         $at, 0x8000
+    // 0x80005014: or          $a0, $v0, $at
+    // 0x80005018: sw          $zero, 0x0($a0)
+    // 0x8000501C: lhu         $t5, 0x4($s1)
+    // 0x80005020: lui         $t6, 0x8000
+    // 0x80005024: addu        $a1, $t5, $t6
+    // 0x80005028: lw          $t7, 0x8($s1)
+    // 0x8000502C: lui         $t8, 0x8000
+    // 0x80005030: addu        $a2, $t7, $t8
+    // 0x80005034: andi        $t9, $a3, 0xFF
+    // 0x80005038: lui         $at, 0x8013
+    // 0x8000503C: addu        $at, $at, $t9
 RECOMP_FUNC void s7321FakeTrunc(uint8_t* rdram, recomp_context* ctx) {
     // 0x80004000: lw          $a0, 0xB0($s1)
     // 0x80004004: lui         $at, 0xFF
@@ -67,8 +109,10 @@ def imm(s): return int(s, 0)
 def trunc_alias(M):
     return (M & 0x01000000) == 0 and (M & 0x003F0000) == 0x003F0000
 
-def scan(srcs, offs, C=None, D=None):
+def scan(srcs, offs, C=None, D=None, E=None, G=None):
     A, B = [], []
+    E = [] if E is None else E
+    G = {} if G is None else G
     C = [] if C is None else C
     D = [] if D is None else D
     for name, text in srcs:
@@ -96,6 +140,29 @@ def scan(srcs, offs, C=None, D=None):
                 new = ("t", imm(a[2]), pc, reg.get(a[1], ("?",)), op)
             elif op in ("addu", "or") and len(a) == 3 and a[2] == "$zero" and a[1] in reg:
                 new = reg[a[1]]
+            if new is None and len(a) >= 2:
+                if op == "andi": new = ("n", "andi0x%X@%s" % (imm(a[2]), pc))
+                elif op in ("lhu", "lh", "lbu", "lb"): new = ("n", "%s@%s" % (op, pc))
+                elif op == "srl" and len(a) == 3 and 8 <= imm(a[2]) < 23: new = ("n", "srl%s@%s" % (a[2], pc))
+                elif op == "lw": new = ("w", "lw %s@%s" % (a[1], pc))
+                elif op == "mfc1": new = ("u", "mfc1@%s" % pc)
+                elif op == "sll" and len(a) == 3 and imm(a[2]) < 8: new = ("i", "sll%s@%s" % (a[2], pc))
+            if op in ("or", "addu", "xor") and len(a) == 3 and "$zero" not in (a[1], a[2]):
+                for x, y in ((a[1], a[2]), (a[2], a[1])):
+                    tx, ty = reg.get(x), reg.get(y)
+                    if ty and ty[0] == "c" and not (tx and tx[0] == "c") and 0x80 <= (ty[1] >> 24) <= 0xBF:
+                        if not tx: prov, det = "other", x
+                        elif tx[0] == "D": prov, det = "D", "D%d" % tx[1]
+                        elif tx[0] in ("n", "t"): prov, det = "narrow", tx[1] if tx[0] == "n" else "srl%d@%s" % (tx[1], tx[2])
+                        elif tx[0] == "u": prov, det = "fpu", tx[1]
+                        elif tx[0] == "i": prov, det = "index", tx[1]
+                        elif tx[0] in ("f", "w"): prov, det = "word", ("f+0x%X(%s)" % (tx[1], tx[3])) if tx[0] == "f" else tx[1]
+                        else: prov, det = "other", "%s:%s" % (x, tx[0])
+                        if ty[1] & 0x00FFFFFF == 0:
+                            E.append([fn, pc, op, ty[1], prov, det, []]); new = ("E", len(E) - 1)
+                        else:
+                            G[prov] = G.get(prov, 0) + 1
+                        break
             def srcname(r):
                 t = reg.get(r)
                 return ("f+0x%X(%s)" % (t[1], t[3])) if t and t[0] == "f" else r
@@ -131,14 +198,18 @@ def scan(srcs, offs, C=None, D=None):
             # class C consumers: every later read of a difference register
             srcs_ = a if op.startswith(("s", "b")) and op not in ("sll", "srl", "sra", "sllv", "srlv", "srav", "slt", "sltu", "slti", "sltiu", "sub", "subu") else a[1:]
             for x in srcs_:
-                x = MEM.match(x).group(2) if MEM.match(x) else x
+                isbase = bool(MEM.match(x))
+                x = MEM.match(x).group(2) if isbase else x
                 tx = reg.get(x)
+                if tx and tx[0] == "E" and isbase and len(E[tx[1]][-1]) < 4: E[tx[1]][-1].append("BASE:%s@%s" % (op, pc)); continue
                 if tx and tx[0] == "d" and len(C[tx[1]][-1]) < 4: C[tx[1]][-1].append("%s@%s" % (op, pc))
                 if tx and tx[0] == "D" and len(D[tx[1]][-1]) < 4: D[tx[1]][-1].append("%s@%s" % (op, pc))
+                if tx and tx[0] == "E" and len(E[tx[1]][-1]) < 4: E[tx[1]][-1].append("%s@%s" % (op, pc))
             if op in ("jal", "jalr"):
                 for k, v in reg.items():
                     if v[0] == "d" and k in ("$a0", "$a1", "$a2", "$a3") and len(C[v[1]][-1]) < 4: C[v[1]][-1].append("arg%s>%s" % (k, a[0] if a else "?"))
                     if v[0] == "D" and k in ("$a0", "$a1", "$a2", "$a3") and len(D[v[1]][-1]) < 4: D[v[1]][-1].append("arg%s>%s" % (k, a[0] if a else "?"))
+                    if v[0] == "E" and k in ("$a0", "$a1", "$a2", "$a3") and len(E[v[1]][-1]) < 4: E[v[1]][-1].append("arg%s>%s" % (k, a[0] if a else "?"))
             if op in ("subu", "sub") and len(a) == 3 and "$zero" not in (a[1], a[2]):
                 tx, ty = reg.get(a[1]), reg.get(a[2])
                 fx, fy = bool(tx and tx[0] == "f"), bool(ty and ty[0] == "f")
@@ -172,7 +243,13 @@ def ptrshaped(k, c):  # constant a top-byte test of a KSEG pointer would use aft
 
 def main():
     if "--selftest" in sys.argv:
-        C, D = [], []; A, B = scan([("self", SELFTEST)], {0x40, 0xB0, 0x78}, C, D)
+        C, D, E, G = [], [], [], {}; A, B = scan([("self", SELFTEST)], {0x40, 0xB0, 0x78}, C, D, E, G)
+        byp = {x[1]: x for x in E}
+        okE = byp.get("0x80005014", [0] * 7)[4] == "D" and any(u.startswith("BASE:sw@") for u in byp["0x80005014"][-1]) and \
+              byp.get("0x80005024", [0] * 7)[4] == "narrow" and byp.get("0x80005030", [0] * 7)[4] == "word" and \
+              "0x8000503C" not in byp and G.get("narrow", 0) == 1 and \
+              e_verdict("or", 0x80000000, "D", "0x80005014", []) and e_verdict("addu", 0x80000000, "narrow", "0x80005024", []) is None and \
+              e_verdict("addu", 0x80000000, "word", "0x80005030", []) and e_verdict("or", 0x81000000, "word", "x", []) is None
         okD = any(x[1] == "0x8000400C" and x[4] == "f+0xB0($s1)" and x[3] == 0xFFFFFF and any(u.startswith("sw@") for u in x[-1]) for x in D) and \
               any(x[1] == "0x80004024" and x[3] == 0xFFFFFF for x in D) and \
               not any(x[1] in ("0x8000401C", "0x8000402C") for x in D)  # 0x1FFFFFFF and a 29-bit shift pair keep bit 24
@@ -180,14 +257,14 @@ def main():
              any(x[0] == "s7317FakeTopByte" and x[4] == 0x8 and spill_equal(x[7], x[5], x[3], x[4]) for x in A) and \
              any(x[0] == "s7317FakeFieldOrder" and x[5] == "f+0x78" for x in B) and \
              any(c[0] == "s7320FakeFieldDiff" and c[7] == "f+0x78($s2)" and any(u.startswith("sltiu@") for u in c[-1]) for c in C) and \
-             not any(c[2] == "0x80003018" for c in C) and okD  # constant subtrahend is not a pointer difference
-        print("SELFTEST A=%d B=%d C=%d D=%d %s" % (len(A), len(B), len(C), len(D), "PASS" if ok else "FAIL")); return 0 if ok else 2
+             not any(c[2] == "0x80003018" for c in C) and okD and okE  # constant subtrahend is not a pointer difference
+        print("SELFTEST A=%d B=%d C=%d D=%d E=%d %s" % (len(A), len(B), len(C), len(D), len(E), "PASS" if ok else "FAIL")); return 0 if ok else 2
     offs = set()
     for ln in open(sys.argv[1]):
         m = re.match(r"^\s+LIVE \S+ owner=[0-9A-F]+\+0x([0-9A-F]+) ", ln)
         if m: offs.add(int(m.group(1), 16))
     srcs = [(p.name, p.read_text(errors="surrogateescape")) for p in sorted(GEN.glob("funcs_*.c"))]
-    C, D = [], []; A, B = scan(srcs, offs, C, D)
+    C, D, E, G = [], [], [], {}; A, B = scan(srcs, offs, C, D, E, G)
     print("holder field offsets: %d (%s...)" % (len(offs), ",".join("0x%X" % o for o in sorted(offs)[:20])))
     bad = 0
     print("A top-byte shift compares: %d" % len(A))
@@ -204,7 +281,14 @@ def main():
     print("D 24-bit truncations (mask lacks bit 24, keeps bits 16-21): %d (holder-field source %d)" % (len(D), sum(x[4].startswith("f+") for x in D)))
     for i, (fn, pc, how, M, src, r, uses) in enumerate(D):
         print("  D %d %s %s@%s mask=0x%X src=%s reg=%s uses=%s" % (i, fn, how, pc, M, src, r, ";".join(uses) or "-"))
-    print("A sites whose outcome differs heap vs spill, unclassified: %d" % bad)
+    from collections import Counter
+    print("E KSEG re-tags (K low 24 bits zero): %d by provenance %s; global-base adds (not listed) %s" % (len(E), dict(Counter(x[4] for x in E)), G))
+    vc = Counter()
+    for i, (fn, pc, op, K, prov, det, uses) in enumerate(E):
+        v = e_verdict(op, K, prov, pc, uses); bad += v is None; vc[(v or "UNCLASSIFIED").split(":")[0]] += 1
+        print("  E %d %s %s@%s K=0x%08X src=%s %s uses=%s => %s" % (i, fn, op, pc, K, prov, det, ";".join(uses) or "-", v or "UNCLASSIFIED"))
+    print("E verdicts: %s" % dict(vc))
+    print("A sites whose outcome differs heap vs spill + E re-tags, unclassified: %d" % bad)
     return 1 if bad else 0
 
 if __name__ == "__main__":

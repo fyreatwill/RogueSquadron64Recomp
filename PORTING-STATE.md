@@ -192779,3 +192779,30 @@ HYPOTHESIS-ID: spill-holder-pointer-trunc (closed). Unit from NEXT.md s7321.
 - Discrimination: selects H-safe/H-scalar and refutes H-alias on 26/26 class-D sites (19 at runtime with 0 spill sources under a
   passing control, 7 statically). Next discriminator: the class-E re-tag census (NEXT.md). Narrowed values rebuilt into KSEG0 pointers,
   paired with their producers, then the unpaired producers hooked with ctl 800173C0.
+
+## Session 7322 (2026-11-14) — KSEG re-tag class E CLOSED: 404 sites whole-program, 0 unclassified, 0 H-alias (387 float->unsigned idiom, 8 jump tables, 4 full-word sources keep bit 24, 1 paired with class D, 4 read by hand); class-D L1/L12 soak folded 0 cross
+
+HYPOTHESIS-ID: spill-pointer-retag (closed). Unit from NEXT.md s7322.
+- Fold: s7321_trunc_levels (rc=0) L1/L12 dd8 21:9 202-203 s holds alive, 0 crash, 0 VI stall; class D 19/26 executed (same set as L4),
+  154M truncations, 0 spill sources, ctl 25832/25832 classed cross (PASS). Class D coverage is the same on three levels.
+- Census: class E added to tools/s7317_field_compare_census.py. It covers `or/addu/xor d, x, K` with K low 24 bits zero and top byte
+  0x80-0xBF. Provenance of x: D / narrow (andi, lhu/lh/lbu/lb, srl 8..31) / fpu (mfc1) / index (sll < 8) / word / other. The first 4
+  consumers are listed, and a memory-base use is marked BASE. e_verdict() classes every site and the census exits 1 on any unclassified
+  site; hand-read sites go in KNOWN_E. Selftest extended (D-paired retag with BASE:sw, narrow lhu retag unclassified, word retag
+  spill-equal, 0x81000000 K not spill-equal, `lui 0x8013` index add counted not listed) and PASS. Classes A-D counts unchanged with the
+  d8 holder table (32 / 182 / 155 / 26).
+- First pass, before fpu/index provenance: 397 of 404 had provenance "other". Reading them showed the compiler's float->unsigned idiom:
+  `trunc.w ; mfc1 ; or 0x80000000` for values >= 2^31. Added mfc1 and sll<8 provenance.
+- Result: 404 sites. 387 fpu, scalar. Separate instruction-pattern check: 385 have trunc.w within 3 instructions before the mfc1, 1
+  neg.s, and 1 is libultra cvt.w.d + FCSR in guPerspectiveF (perspNorm). 8 index: jump tables at 0x80000000+off with lw;jr. 4 word,
+  spill-equal by evaluation (or/xor/addu with 0x80000000 leaves bit 24): osMemSize | K0 in partitionFramebufferMemory, flag bit 31 in
+  processSongByHandle / npcAtAtUpdate, sign flip in renderLitTexturedMeshFaces. 1 D: commitMeshDrawBatchRefs, class-D idx 528, runtime
+  0 spill sources on L4/L1/L12. 4 read by hand: relocateSndPointer xor 0x80000000 / 0xB0000000 != 0 is the s6993 mask site 0x800925FC
+  (already patched via PTRMASK), and renderLitMeshFaceGroup 0xBD000000 | (byte & 0xFF) is an F5 DL command word.
+  Not classified, only counted: adds of a constant with nonzero low 24 bits (global-table indexing: index 2225, other 577, narrow 194,
+  word 29, fpu 1).
+- Rules out H-alias for class E: no narrowed value is re-tagged into a pointer except the class-D pair, which runs clean. No runtime
+  build was needed because there are no unpaired narrow producers to hook. Two lines: provenance plus evaluated verdicts, and the
+  independent trunc/mfc1 pattern check for the 387 (the 4 hand-read sites are single-source). Table in docs/HEAP-ADDR-AUDIT.md.
+- Discrimination: selects H-safe/H-paired and refutes H-alias on 404/404 class-E sites. Next discriminator: class F, the
+  address-derived table index (spill pointer >> k used unbounded as a table index), in NEXT.md.

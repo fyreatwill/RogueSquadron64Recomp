@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7320 (2026-11-14).
+Compact operational handoff, as of Session 7322 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -231,11 +231,13 @@ is in the s7307 archive). Active unit: NEXT.md.
     (tools/s7320_bdiff_static_class.py: 43 scalar, 14 same). Tables: docs/HEAP-ADDR-AUDIT.md.
 16. **24-bit truncation class D: CLOSED (s7321, 0 H-alias).** Census class D (tools/s7317_field_compare_census.py) found 26 sites.
     Runtime probe tools/apply_s7321_trunc_probe.py (idx 512+), report tools/s7321_trunc_report.py: dd8 21:9 L4, 19/26 executed, 66M calls,
-    0 spill sources, ctl 9313/9313 at 800173C0. The other 7 were classed statically (docs/HEAP-ADDR-AUDIT.md). Latent alias shape:
-    commitMeshDrawBatchRefs rebuilds `(ref & 0xFFFFFF) | 0x80000000` and stores through it; its referents are DL-pool heap only. Re-check if
-    the DL pool moves to spill. L1/L12 coverage soak queued (s7321_trunc_levels).
-17. **Next idiom audit: KSEG re-tag class E (NEXT.md).** Pointers rebuilt from a narrowed value (`or/addu x, 0x80000000`, `lui 0x80xx`
-    + 16-bit half) lose a spill pointer's bit 24 the same way class D does. Census + classify, same kit.
+    0 spill sources, ctl 9313/9313 at 800173C0; L1/L12 soak (s7321_trunc_levels, folded s7322) same 19/26, 154M, 0 cross, ctl 25832/25832.
+    The other 7 were classed statically (docs/HEAP-ADDR-AUDIT.md). Latent alias shape: commitMeshDrawBatchRefs rebuilds
+    `(ref & 0xFFFFFF) | 0x80000000` and stores through it; its referents are DL-pool heap only. Re-check if the DL pool moves to spill.
+17. **KSEG re-tag class E: CLOSED (s7322, static + evaluated, 0 H-alias).** Census class E: 404 sites, 0 unclassified (exit 1 on any):
+    387 float->unsigned idiom (instruction-pattern check 387/387), 8 jump tables, 4 full-word sources (bit 24 kept by evaluation), 1
+    paired with class D (runtime-clean), 4 read by hand (relocateSndPointer = s6993 mask site, 0xBD DL command). Table in
+    docs/HEAP-ADDR-AUDIT.md. Classes A-E close the spill-pointer edge. Next idiom audit: address-derived table index (NEXT.md).
 18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

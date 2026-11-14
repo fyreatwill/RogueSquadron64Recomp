@@ -1,20 +1,20 @@
-# NEXT (s7322): KSEG re-tag class E — pointers rebuilt from a narrowed value
-HYPOTHESIS-ID: spill-pointer-retag
-Context: s7321 closed class D (24-bit masks, 0 H-alias). Its one real alias shape (commitMeshDrawBatchRefs `(ref & 0xFFFFFF) | 0x80000000`)
-showed the general idiom: a pointer narrowed somewhere (packed into 24 bits, stored as a 16-bit half or index, kept as an offset from a
-base) and later RE-TAGGED into a KSEG0 pointer. Any re-tag that does not restore bit 24 maps a spill pointer 0x81xxxxxx onto heap.
-Shapes: `or/addu d, x, R` with R = constant 0x80000000 (lui 0x8000), `lui d, 0x80xx ; or/addu d, d, x` where x has <= 24 significant
-bits (andi/lhu/srl source), `addu d, x, 0x80000000`, and PHYS_TO_K0 helpers (osPhysicalToVirtual).
-Hypotheses: H-safe (every re-tag source was never a spill pointer: physical addresses from hardware/DMA, ROM offsets) vs H-paired
-(re-tag consumes a class-D packed value; already covered by the D producers) vs H-alias (a re-tag rebuilds a pointer whose original was
-spill -> silent heap alias; fix the packing or keep the owner out of spill).
+# NEXT (s7323): address-derived table index, class F
+HYPOTHESIS-ID: spill-addr-index
+Context: s7322 closed class E (KSEG re-tags: 404 sites, 0 H-alias). Classes A-E cover the spill pointer as a value: top byte, order,
+difference, truncation and re-tag. One shape is still open: the pointer used as an INDEX. Code like `(p & 0x1FFFFFFF) >> k`,
+`(p - 0x80000000) >> k`, `(p << 3) >> (3+k)` or `p >> k` with 8 <= k < 23, then scaled and added to a table base, indexes a page table,
+bitmap or bucket array sized for 4/8 MB of RDRAM. A spill pointer 0x81xxxxxx gives an index past the end of an 8 MB table, so the
+write lands in whatever follows the table. With an `andi`/`and` bound before the add (a hash), it is safe.
+Hypotheses: H-none (no such index), H-bounded (every one is masked or range-checked, or its source is never a heap pointer) vs
+H-overflow (an unbounded address-derived index whose source can be spill: name the table and its size, fix it with the PTRMASK pattern).
 Unit:
-1. Class E in tools/s7317_field_compare_census.py: a register holding constant 0x80000000 (or any 0x80xx0000 lui) combined by or/addu
-   with a non-constant; record the other operand's provenance (andi/lhu/srl/and-mask/field load) and first 4 consumers. Planted selftest
-   (positive: `lui 0x8000; or a0, v0, t4` after `and v0, v1, 0xFFFFFF` listed with provenance class-D; negative: `lui 0x8000; addu`
-   with a full-width pointer source NOT counted as narrowed).
-2. Classify. Pair each narrowed re-tag with its producer. Hook the unpaired producers into the s7318 classifier (idx 640+) and run ONE dd8
-   21:9 L4 flight, ctl ROGUESQ_S7318_BCMP_CTL=800173C0 (proven per-frame in flight, s7321).
-3. Any H-alias: name the owner and placement, fix, two-arm qualify.
-Fold first: SOAK-RESULTS line for s7321_trunc_levels (L1/L12 class-D coverage; exit 1 = a class-D cross, reopen item 16).
-Outcomes: all safe/paired -> spill-pointer audit family closed; take CURRENT-TRUTH 18.
+1. Class F in tools/s7317_field_compare_census.py: srl/sra by 8..22 (or a phys-mask/subtract of 0x80000000 then shift) of a non-constant;
+   follow d through sll/addu up to a memory BASE use or `addu` with a constant base (G list). Record bounded (andi/and/sltiu/bound
+   compare on the path) or unbounded, the source provenance (holder field / word / arg) and the table base. Planted selftest: positive
+   `lw a0,0x10($s1); srl v0,a0,12; sll v0,v0,2; lui at,0x8013; addu at,at,v0; lw t0,0x40($at)` listed unbounded; negative with
+   `andi v0,v0,0x3FF` before the sll listed bounded.
+2. Classify. Unbounded sites with pointer-shaped sources: hook them into the s7318 classifier (idx 768+, table 768 -> 1024 in
+   src/main/upstream_compat.cpp) as (source, 0x80000000) and run ONE dd8 21:9 L4 flight with ctl ROGUESQ_S7318_BCMP_CTL=800173C0
+   (per frame in flight, s7321).
+3. Any H-overflow: name the table, its size and what follows it; fix; two-arm qualify.
+Outcomes: 0 unbounded spill sources -> the spill-pointer audit family closes (A-F); then CURRENT-TRUTH 18.

@@ -202,3 +202,21 @@ Never-executed sites (static, single-source):
 
 Verdict: 19 runtime-clean + 7 static = 26/26, **0 H-alias**. Classes A-D close the spill-pointer struct-field edge for top byte,
 order, difference and truncation.
+
+## Class E KSEG re-tags closed (s7322 static, evaluated)
+
+`or/addu/xor d, x, K` with K a constant whose low 24 bits are zero and top byte 0x80-0xBF (tools/s7317_field_compare_census.py class E,
+selftest PASS). A narrowed x (<= 24 bits) re-tagged this way would map a spill pointer onto heap. Whole program: **404 sites, 0 unclassified**
+(the census exits 1 on any). Output scratch/s7317/field_census_s7322.txt.
+
+| provenance | sites | verdict |
+|---|---|---|
+| fpu (mfc1) | 387 | scalar: float->unsigned idiom. Checked separately: 385 have trunc.w within 3 instructions before the mfc1, 1 neg.s, 1 libultra cvt.w.d + FCSR in guPerspectiveF |
+| index (sll < 8) + `lw off(d) ; jr` | 8 | jump tables at 0x80000000+off (quatFromCardinalAxis, decodeRdpFormat/SizeFlags, parseImageFile, loadTextureTile, inflate x3) |
+| word (full lw) | 4 | spill-equal by evaluation: or/xor/addu with 0x80000000 leaves bit 24 alone (partitionFramebufferMemory osMemSize, processSongByHandle flag, renderLitTexturedMeshFaces sign flip, npcAtAtUpdate flag) |
+| D | 1 | paired: commitMeshDrawBatchRefs `(ref & 0xFFFFFF) | 0x80000000` = class-D idx 528; runtime 0 spill sources at L4 (s7321), L1, L12 (s7321_trunc_levels soak) |
+| other/narrow, read by hand | 4 | relocateSndPointer xor 0x80000000 / 0xB0000000 != 0 tests = s6993 mask site 0x800925FC (already patched); renderLitMeshFaceGroup 0xBD000000 \| byte = F5 DL command word |
+
+Constants with nonzero low 24 bits (`lui 0x8013 ; addu at, at, idx` global-table indexing) are counted, not classified: index 2225,
+other 577, narrow 194, word 29, fpu 1. They add an index to a global base, not a re-tag.
+Verdict: **0 H-alias.** Classes A-E close the spill-pointer edge for top byte, order, difference, truncation and re-tag.
