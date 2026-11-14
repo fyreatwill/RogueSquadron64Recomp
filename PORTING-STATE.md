@@ -192284,5 +192284,9 @@ scores use xor8 and stand. s7301's sheet had the same defect (its scores also st
 **Reading:** H-not-fog (band drawn without the fog blender) refuted by the l1c control. H-ramp-late (start too far) is weak: moving the start
 3 -> 1 changes little, because fog alpha is linear in z ~ 1/d and so concentrates at the ramp END; the lever is ke. H-shade / H-lod-tex not
 needed. Raws deleted (14 GB each), single run per arm.
+**Verdict:** the l1c control refutes H-not-fog (the plateau takes the fog blender), and the ks=1 arms refute H-ramp-late as the main cause.
+This selects the fog END (ke) as the lever: fog alpha is linear in z ~ 1/d, so it builds mostly near the ramp end.
+Next discriminator: a same-run ke sweep (1,2 / 1,3 / 1,4.5) that tells H-k3-sweet (the band melts and near land keeps its texture) from
+H-monotone-loss (any ke that melts the band also hazes near land, so it needs a fade shaped to off-map cells).
 Rules out: "fog does not reach the plateau"; "ks alone fixes the band".
 Next: same-run ke sweep at dd8 (ks=1, ke 2 / 3 / 4.5 vs default) on L1+L4 with the xor8 sheet, plus dd1 reference, then owner sheet.
