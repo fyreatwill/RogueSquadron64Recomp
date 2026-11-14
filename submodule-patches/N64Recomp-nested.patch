@@ -174,3 +174,29 @@ index 4fbd1ce..606c4f0 100644
                      }
                      else {
                          reloc_out.reference_symbol = false;
+diff --git a/src/mod_symbols.cpp b/src/mod_symbols.cpp
+index 7318a07..6929623 100644
+--- a/src/mod_symbols.cpp
++++ b/src/mod_symbols.cpp
+@@ -365,6 +365,10 @@ bool parse_v1(std::span<const char> data, const std::unordered_map<uint32_t, uin
+         N64Recomp::FunctionReplacement& cur_replacement = mod_context.replacements[replacement_index];
+ 
+         cur_replacement.func_index = replacements[replacement_index].func_index;
++        if (cur_replacement.func_index >= mod_context.functions.size()) { // s7364: indexed into functions[] unchecked at load
++            printf("Replacement %zu func_index %u out of range (%zu functions)\n", replacement_index, (unsigned)cur_replacement.func_index, mod_context.functions.size());
++            return false;
++        }
+         cur_replacement.original_section_vrom = replacements[replacement_index].original_section_vrom;
+         cur_replacement.original_vram = replacements[replacement_index].original_vram;
+         cur_replacement.flags = static_cast<N64Recomp::ReplacementFlags>(replacements[replacement_index].flags);
+@@ -472,6 +476,10 @@ bool parse_v1(std::span<const char> data, const std::unordered_map<uint32_t, uin
+         N64Recomp::FunctionHook& hook_out = mod_context.hooks.emplace_back();
+ 
+         hook_out.func_index = hook_in.func_index;
++        if (hook_out.func_index >= mod_context.functions.size()) { // s7364: indexed into functions[] unchecked at load
++            printf("Hook %zu func_index %u out of range (%zu functions)\n", hook_index, (unsigned)hook_out.func_index, mod_context.functions.size());
++            return false;
++        }
+         hook_out.original_section_vrom = hook_in.original_section_vrom;
+         hook_out.original_vram = hook_in.original_vram;
+         hook_out.flags = static_cast<N64Recomp::HookFlags>(hook_in.flags);

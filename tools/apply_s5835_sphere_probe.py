@@ -127,6 +127,9 @@ def apply(text, name=None):
         b = "rs5834_zero[1]);\n}\n"
         assert text.count(b) == 1
         text = text.replace(b, "rs5834_zero[1]);\n    rs5834_who = 2; /* PATCH: s5835 */\n}\n", 1); n += 1
+    # s7364: post resets who to the 2 sentinel; a post without a pre would index rs5834_n[2] (one past the end).
+    if "unsigned w = rs5834_who; float dl" in text and "PATCH: s7364 who" not in text:
+        text = text.replace("unsigned w = rs5834_who; float dl", "unsigned w = rs5834_who; if (w > 1) return; /* PATCH: s7364 who */ float dl", 1); n += 1
     if "rs5841_cand = " not in text and "PATCH: s5833 proj loop" in text:
         a = "    rs5833_ev(rdram, (uint32_t)ctx->r17, 1, (uint32_t)(ctx->r16 & 0xFFFF), 1); /* PATCH: s5833 proj loop */\n"
         if a in text:

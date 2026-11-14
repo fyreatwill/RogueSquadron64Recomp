@@ -6727,8 +6727,11 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             static int s_diff_logs = 0;
             if (s_diff_logs < 24) {
                 uint32_t ndiff = 0, first = 0;
-                for (uint32_t k = 0; k < sh2_size; k++) {
-                    if ((uint8_t)MEM_B(0, (int64_t)(int32_t)(sh2_phys + k + 0x80000000)) != s_sh2_buf[k]) {
+                // s7364: s_sh2_buf is sized by the FIRST task; a later task's sh2_size/sh2_phys can exceed it.
+                const uint32_t sh2_cap_phys = g_rsp_dma_shadow2_addr;
+                const uint32_t sh2_cmp = (uint32_t)std::min<size_t>(sh2_size, s_sh2_buf.size());
+                for (uint32_t k = 0; k < sh2_cmp; k++) {
+                    if ((uint8_t)MEM_B(0, (int64_t)(int32_t)(sh2_cap_phys + k + 0x80000000)) != s_sh2_buf[k]) {
                         if (ndiff == 0) first = k;
                         ndiff++;
                     }

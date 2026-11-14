@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7362 (2026-11-14).
+Compact operational handoff, as of Session 7364 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -507,9 +507,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     events.cpp G1B / G1E_GRING snprintf appends could push n past buf (unbounded %.0f/%.3f); dpc_bridge g_f5_phase_dma slot check now under
     its mutex; PLPOS_POKE_DWELL=0 div-by-zero. tools/s7363_an_ctl.sh: pre arms global-overflow/BUS/SEGV, post clean. regen_replay.sh gate
     (planted guest index -> rc 1). Two 260 s dd8 smokes clean (s7097 ctl 3/3, G1B/G1E rows live).
-27zc. **Next unit (NEXT.md): class AO, heap/container buffers indexed by guest-derived values** (std::vector / new[] / calloc tables
-    subscripted or memcpy'd at a guest address, length or field: s7097 word_snap was this shape and the AN census cannot see it).
-28. **When 1-27zc offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27zc. **Runtime-sized host buffers (class AO): CLOSED (s7364, census 1285 rows + 6 independent reviews + in-game two-arm + ASan 12/12 + gate).**
+    tools/s7364_heapbuf_census.py / s7364_heapbuf_reviewed.tsv (631 keys). DEFAULT-PATH FIX: RT64 State::fullSync left drawCall.tileIndex
+    and drawStatus alive across Workload::begin(), so the first draw after FULLSYNC reused a stale tileIndex into the emptied callTiles
+    (OOB write/read); WLRESET=0 arm: 4773/8192 first draws carried it, default 0/12288 (ROGUESQ_S7364_WLRESET=0 restores). Also fixed:
+    EEP trace, s4272 shadow word loops, SHADOW2 diff, FB_SOURCE_FP, mod func_index/section bounds, rs5834 who sentinel. HOLE-OPEN:
+    RT64 RSP vertex cache (HLE only, LLE_FORCE=0), mods duplicate deps, texture-pack zip, debug-UI one-offs.
+27zd. **Next unit (NEXT.md): class AP, references/indices/iterators held across a container mutation** (clear/resize/push_back/erase
+    invalidating a saved &v[i] / iterator / index; the s7364 FULLSYNC carry is one instance), plus a retail check of the stale-tile frames.
+28. **When 1-27zd offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

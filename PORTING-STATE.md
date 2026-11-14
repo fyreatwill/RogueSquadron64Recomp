@@ -194286,3 +194286,63 @@ Reviewer side notes, not fixed (NEXT.md): funcs_13 rs5834_who sentinel 2 would i
 dpc_bridge.cpp:4116 (int)floor(xa) UB on huge xa; s7318 bcmp ex[s.nex++] check-then-increment unsynchronised.
 Verdict: census + independent reviews selects H-hole for 6 sites (all host diagnostics, one default-on) and H-safe/H-trust for the
 rest and refutes H-safe for those 6; this closes class AN. Next discriminator: class AO, runtime-sized heap/container buffers indexed by guest values (NEXT.md).
+
+## Session 7364 (2026-11-14) — class AO closed: runtime-sized host buffers (vector/string/new[]/malloc); census 1285 host+rt64 rows, 628 unproven keys reviewed by 6 independent reviewers; DEFAULT-ON RT64 stale tileIndex after FULLSYNC (callTiles OOB on 4773/8192 frames) FIXED + 6 diag/mods holes; ASan 12/12, gate, two dd8 smokes
+HYPOTHESIS-ID: host-heapbuf-guest-index. Hypotheses (NEXT.md): H-safe (index checked vs size()/alloc const), H-trust (producer
+range-limited), H-hole (a guest value or reachable state indexes past size()).
+Census tools/s7364_heapbuf_census.py (imports the s7363 helpers). Collects std::vector/deque/string/span decls (locals, params,
+members incl. header members) and pointers from new[]/malloc/calloc/realloc/aligned_alloc/make_unique<T[]> (constant extent when the
+alloc is constant, e.g. calloc(N, sizeof(T)) cast to T*); every name[expr], name.data()[expr], name.data()+expr, and memcpy/memmove/
+memset touching one. Classes FIXED-<AN class> (constant extent proven by the s7363 classifier; + FIXED-SHIFTMASK `(x & M) >> s`),
+LOOP (enclosing for/while bound by name.size()/length() or a local assigned from it, down-counters), SIZECHK (dominating E < size() /
+size() > E / E >= size() -> return, incl. compound ||), GROWN (resize(E+k), idx = size() then push, size()-k under non-empty), LIT,
+MEM-SIZED, and B-GUEST/B-PARAM/B-CTR/B-HOST. Selftest 19 planted rows incl. negatives (index after the loop exits, literal into a
+never-filled vector, guest memcpy length, mask wider than a constant alloc). First draft's size_check regex was quadratic (49 s on
+dpc_bridge.cpp); rewritten to anchor on each size() occurrence, same classification, 2.3 s.
+Result: host (src/**, librecomp, ultramodern) 424 rows / 161 unproven keys; + lib/rt64/src 1285 rows / 628 unproven keys; generated
+tree 0 rows (injected diagnostics use no host containers). Six independent reviewers (split by file group, given code + row list,
+not my conclusion) wrote per-row verdicts: 178+ BOUNDED, ~130 TRUST, HOLE rows below. Merged into tools/s7364_heapbuf_reviewed.tsv
+(631 keys, HOLE rows tagged FIXED / HOLE-OPEN).
+H-hole, FIXED:
+ 1. RT64 State::fullSync (lib/rt64/src/hle/rt64_state.cpp, DEFAULT PATH): Workload::begin() clears callTiles/rdpTiles/gpuTiles and
+    resets transforms/lookAt, but drawCall.tileIndex/tileCount and drawStatus survive. The first draw after FULLSYNC with no
+    texture/combine/othermode command reused the old tileIndex -> updateCallTexcoords wrote callTiles[stale] (rt64_rdp.cpp:3620) and
+    flush/createGPUTiles/game_frame read rdpTiles/callTiles/gpuTiles past size(). Three reviewers (g3/g4/g5, different files) found it
+    independently; g6 found the same in the projection/transform processors. Fix: after nextWorkload.begin() mark every draw attribute
+    changed (as resetDrawCall does) and set RSP projectionMatrixChanged/viewportChanged/modelViewProjChanged/lookAtChanged (these rebuild
+    curViewProjIndex rt64_rsp.cpp:464, curTransformIndex :526, vertexLookAtIndex :646; HLE path only). ROGUESQ_S7364_WLRESET=0 = old.
+    Instrument (same build, both arms): at the first checkDrawState after each FULLSYNC count carried_tex (Texture unchanged,
+    tileCount>0) and stale_oob (tileIndex+tileCount > new callTiles.size()).
+    Arm WLRESET=0 (s7364_dd8_wl0, 200 s): fullsyncs=8192 first_draws=8192 carried_tex=4773 stale_oob=4773 -> REACHED in normal LLE
+    play on ~58% of frames (every carry was out of range). Arm default (s7364_dd8, 260 s): fullsyncs=12288 carried 0 oob 0.
+    Not a crash before because clear() keeps capacity: the writes landed in stale capacity of a ring workload (container overflow,
+    beyond capacity only when that workload had been smaller). Rendering effect of the stale tile on the first draw of a frame is
+    UNMEASURED (candidate G3 residual; see NEXT.md).
+ 2. pi.cpp save_read RS64_EEP_TRACE dumped save_buffer[offset+0..7] for a 4-byte read at 0x7FFC (or a 0-byte buffer): gated on +8 fit.
+ 3. dpc_bridge.cpp g_s4272_shadow word loops (ROGUESQ_S4285 / G1E_RSTAT / G1E_CDIAG): `x < hi; x += 4` read 1-3 (7 at the +8 walk)
+    bytes past an unaligned deferred range (DPC_END is only & 0x3FFFFFF masked); now `x + 4 <= hi` / `a + 8 <= hi`.
+ 4. main.cpp ROGUESQ_SHADOW2 LIVE DIFF: s_sh2_buf sized by the first task, later tasks diffed sh2_size (up to 0x82000) bytes from their
+    own phys: bounded by the buffer and compared against the captured address.
+ 5. rt64_state.cpp ROGUESQ_LOG_FB_SOURCE_FP: walked present.storage when it was resized to 0 (FB beyond 16 MB): guarded.
+ 6. mods-only: N64Recomp mod_symbols.cpp now rejects replacement/hook func_index >= functions.size(); librecomp mods.cpp rejects a
+    section whose rom_addr+size exceeds mod_binary.bin.
+ 7. (s7363 leftover) funcs_13 rs5834_post: who is reset to the 2 sentinel, a post without a pre indexed rs5834_n[2]; `if (w > 1) return;`
+    in tools/apply_s5835_sphere_probe.py (idempotent; applied to the live tree). dpc_bridge.cpp:4116 floor(xa): xa is clamped into
+    [x_lo_sc, x_hi_sc] = +-1e9 at most, fits int -> no UB, no change. s7318 bcmp ex[s.nex++]: single guest thread, noted only.
+ORIGIN: 1 is an upstream RT64 defect (per-workload index state outliving the workload's containers), legitimate guest streams (a frame
+whose first draw follows FULLSYNC without re-sending texture state) trigger it; 2-5 are our diagnostics; 6 is upstream mod loading.
+Not mitigations: each fix bounds the reader/writer that was wrong.
+HOLE-OPEN (recorded, not fixed): RT64 RSP vertex cache indices[]/used[] survive a workload (rt64_rsp.cpp drawIndexedTri/modifyVertex,
+and the debugger inspector) - HLE path only, reached only with ROGUESQ_LLE_FORCE=0 (LLE default since s6738); mods-only duplicate
+dependency names (mods.cpp:1009/2456); texture-pack zip source over-read (rt64_filesystem_zip.cpp:162, no packs shipped); debug-UI
+preset_light newLightName[-1] and inspector sprite callIndex.
+Control tools/s7364_ao_ctl.sh (ASan, each case's pre logic vs the fix): wlreset/eep/shadow/sh2/modbin/who pre -> heap-buffer-overflow
+x6, post clean x6 -> 12/12 PASS. (The wlreset model shrinks the cleared vector so ASan sees it; the in-game arm above is the real one.)
+Gate: regen_replay.sh runs s7364_heapbuf_census.py --gen $D --check and --rt64 --check; planted `zz[MEM_W(0, ctx->r4)]` on a vector
+-> 1 open row rc 1; live tree rc 0; s7363 AN gate still OPEN 0.
+Smokes (rebuilt): `env SECS=260 zsh scratch/s7326/run.zsh s7364_dd8 ''` -> crash=0 resets=14 late=0 arenafull=0, load_level_hmp 5x,
+0 CRASH/SIG/ASan; `SECS=200 ... s7364_dd8_wl0 'ROGUESQ_S7364_WLRESET=0'` -> crash=0 resets=9, 3 loads.
+Verdict: census + 6 independent reviews + an in-game two-arm counter select H-hole for the RT64 FULLSYNC carry (default path, reached
+on 58% of frames) and 6 smaller sites, H-safe/H-trust for the rest; class AO closed. Next: class AP, references/indices/iterators held
+across a container mutation (clear/resize/push/erase) - the generalisation of this defect - plus a retail check of what the stale tile
+drew.

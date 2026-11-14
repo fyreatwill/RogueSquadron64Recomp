@@ -6579,7 +6579,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             unsigned long d = 0, w = 0;
             static const bool s_s4285 = []{ const char *e = std::getenv("ROGUESQ_S4285"); return e && *e == '1'; }(); /* s6016: diag-only O(shadow bytes) loop per flush; default off */
             if (s_s4285 && g_rdram_for_submit) for (const S4272Sh &e : g_s4272_sh)
-                for (uint32_t x = e.lo; x < e.hi; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[e.off + (x - e.lo)], 4); memcpy(&now, g_rdram_for_submit + x, 4); w++; if (was != now) d++; }
+                for (uint32_t x = e.lo; x + 4 <= e.hi; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[e.off + (x - e.lo)], 4); /* s7364: word loop stayed inside an unaligned range */ memcpy(&now, g_rdram_for_submit + x, 4); w++; if (was != now) d++; }
             if (s_s4285) fl++; flWords += w; flDiffWords += d; if (d) flDiff++;
             { uint32_t x = 0, y = 1; flCtl += (x != y); }
             if (s_s4285 && (fl <= 8 || (fl & 63) == 0))
@@ -6740,11 +6740,11 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                 } else if (shp) {   // s4286: feed RT64 the bump-time bytes, then put live back
                     wm_undo.push_back({r.first, r.second, wm_live.size()});
                     wm_live.insert(wm_live.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second);
-                    if (rstat) for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
+                    if (rstat) for (uint32_t x = r.first; x + 4 <= r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); /* s7364 */ memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rWordsRestored++; }
                     memcpy(g_rdram_for_submit + r.first, &g_s4272_shadow[shp->off], r.second - r.first);
                     if (r.second > r.first)
                         rs64_g1d_blk_dma("wrap", 0, r.first, r.second - r.first, 0);
-                    if (rstat) for (uint32_t x = r.first; x < r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
+                    if (rstat) for (uint32_t x = r.first; x + 4 <= r.second; x += 4) { uint32_t was, now; memcpy(&was, &g_s4272_shadow[shp->off + (x - r.first)], 4); /* s7364 */ memcpy(&now, g_rdram_for_submit + x, 4); if (was != now) rPostDiff++; }
                     rCtl += 1;
                 } else if (s_restore) rMiss++;
                 if (!shp && coal && s_coal_chk && g_rdram_for_submit) { commit_pr(); cc_exp.insert(cc_exp.end(), g_rdram_for_submit + r.first, g_rdram_for_submit + r.second); ++cc_ranges; }
@@ -8060,7 +8060,7 @@ static void rs64_dpc_defer_end_impl(int commit) {
         static unsigned long cmpWords = 0, diffWords = 0, tasks = 0, tasksDiff = 0; static int shown = 0;
         unsigned long d = 0;
         for (const S4272Sh &e : g_s4272_sh) {
-            for (uint32_t a = e.lo; a < e.hi; a += 4) {
+            for (uint32_t a = e.lo; a + 4 <= e.hi; a += 4) {   /* s7364: was a < e.hi, read 1-3 bytes past an unaligned range */
                 uint32_t was, now;
                 memcpy(&was, &g_s4272_shadow[e.off + (a - e.lo)], 4);
                 memcpy(&now, g_rdram_for_submit + a, 4);
@@ -8144,7 +8144,7 @@ static void rs64_dpc_defer_end_impl(int commit) {
                     for (size_t k = 0; k < g_s4272_sh.size(); k++) { const S4272Sh &r = g_s4272_sh[k];
                         if (r.hi + 0x200 >= off && r.lo <= off + 0x100) fprintf(stderr, "[s4283-rng] k=%zu/%zu %06X..%06X len=%X%s\n", k, g_s4272_sh.size(), r.lo, r.hi, r.hi - r.lo, (off >= r.lo && off + 8 <= r.hi) ? " <== holds cimg" : ""); } }
                 for (const S4272Sh &e : g_s4272_sh) if (off >= e.lo && off + 8 <= e.hi) {
-                    for (uint32_t a = e.lo; a < e.hi; a += 8) { uint32_t b0, b1, n0 = 0, n1 = 0; memcpy(&b0, &g_s4272_shadow[e.off + (a - e.lo)], 4); memcpy(&b1, &g_s4272_shadow[e.off + (a - e.lo) + 4], 4);
+                    for (uint32_t a = e.lo; a + 8 <= e.hi; a += 8) { uint32_t b0, b1, n0 = 0, n1 = 0; /* s7364 */ memcpy(&b0, &g_s4272_shadow[e.off + (a - e.lo)], 4); memcpy(&b1, &g_s4272_shadow[e.off + (a - e.lo) + 4], 4);
                         if (g_rdram_for_submit) { memcpy(&n0, g_rdram_for_submit + a, 4); memcpy(&n1, g_rdram_for_submit + a + 4, 4); }
                         fprintf(stderr, "[s4280-walk] %06X bump=%08X %08X commit=%08X %08X%s%s\n", a, b0, b1, n0, n1, (b0 != n0 || b1 != n1) ? " DIFF" : "", a == off ? " <== cimg" : ""); }
                     break; }
