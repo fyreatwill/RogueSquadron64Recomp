@@ -118,7 +118,9 @@ extern "C" void rs64_s7097_begin(uint32_t lo, uint32_t hi, uint8_t* rd) {
     g_rd = rd; g_lo = lo; g_hi = hi; g_ctl = false; g_ctl_stage = 0;
     if (!rd || hi <= lo || hi > kEnd || hi - lo > 0x200000u) { g_glo = g_ghi = 0; g_skipped++; g_valid = false; return; }
     g_calls++; g_bytes += hi - lo;
-    g_glo = lo >= G ? lo - G : 0; g_ghi = std::min<uint32_t>(hi + G, kEnd);
+    // s7363 (class AN): word-align the window. word_snap(a) reads g_cur[(a & ~3) - g_glo .. +4): with an unaligned DPC start
+    // (lo & 3 != 0) the first changed byte gave (a & ~3) < g_glo -> a size_t underflow read, and an unaligned g_ghi read 1-3 B past g_cur.
+    g_glo = (lo >= G ? lo - G : 0) & ~3u; g_ghi = (std::min<uint32_t>(hi + G, kEnd) + 3u) & ~3u;
     g_s0.assign(rd + g_glo, rd + g_ghi); g_cur = g_s0;
     // command boundaries from the entry bytes, carried across contiguous calls
     g_cmds.clear();

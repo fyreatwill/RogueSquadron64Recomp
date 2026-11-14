@@ -494,25 +494,22 @@ is in the s7307 archive). Active unit: NEXT.md.
     typo 0.25; post all alive with "[s7358-env]"; same-build ENVCHECK=0 nan re-crashes. 260 s dd8 smoke clean. Next: class AJ (27x).
 27x. **Unbounded string copies (class AJ): CLOSED (s7359).** 44 sites; 20 `o += snprintf` appends -> src/main/rs64_apf.h; rt64 W-row fixed.
 27y. **Guest-RAM string reads (class AK): CLOSED (s7360).** 1 dead site (__osRdbSend) range-checked; 57 live exports read no guest text.
-27z. **Zero-extended guest-pointer bases (class AL): CLOSED (s7361, census over host + LIVE generated tree + fork two-arm control).**
-    MEM_x(off, base) = rdram + ((base+off) - 0xFFFFFFFF80000000): a sign-extended base always lands in librecomp's 4 GB reservation
-    (guest RAM or a deterministic fault), TO_PTR masks to 32 MB, so a junk guest pointer arg can NOT reach host memory (H-safe for
-    the 57 exports' pointer args). The real hole is C typing: a uint32_t base, a 0x8xxxxxxxu literal, or int32 + unsigned offset
-    zero-extends -> rdram + 4 GB (s4087's SEGV_ACCERR). tools/s7361_memzext_census.py (C promotion evaluator, 10 selftest rows):
-    live RecompiledFuncs 52643 non-pristine sites -> 9 ZEXT, host 5 (osSendMesg_recomp [pi-slot-send] under ROGUESQ_LOG_DMA, main.cpp
-    m5 object-field witness), all opt-in diagnostics, incl. a WRITE (s4571c ROGUESQ_S4571_ZERO) and s3308 stage_adv, which s5546's
-    fixup_live_replay "suffix_29" had re-broken. All fixed (signed bases) in the source apply scripts + live tree
-    (tools/apply_s7361_sext_bases.py); suffix_29 removed; regen_replay.sh now fails on any ZEXT (planted ctl rc=1).
-    tools/s7361_zext_ctl.sh: 4/4 pre forms fault, post read the planted word. 260 s dd8 smoke + LOG_DMA clean (pi-slot path not hit).
-27za. **Raw `rdram + X` host arithmetic (class AM): CLOSED (s7362, census + fork two-arm control + regen gate).**
-    rdram has 4 GB reserved and nothing before or after it, so a uint32 X is contained by construction. tools/s7362_rdramraw_census.py:
-    317 host rows (U32 205, MASK 56, CONST 31, 25 hand-reviewed BOUNDED/CHECKED/SEXT-BIASED/STRING), plus 5 in the --gen tree (contained).
-    1 real hole (NEG): the ROGUESQ_BUCKETLOG `rd` lambdas (upstream_compat rs64_s6094_tick / rs64_s6088_fuse) read
-    `rdram + (int64_t)(int32_t)g`, which lands 2 GB BELOW rdram, i.e. on host memory. FIXED (`g - 0x80000000u`). tools/s7362_rawneg_ctl.sh: pre
-    reads the host sentinel, post reads the guest word, PASS. regen_replay.sh runs `--check` on host + gen (planted NEG -> rc 1).
-27zb. **Next unit (NEXT.md): class AN, host fixed-size arrays indexed by guest-derived values** (static `T buf[N]` / std::array
-    subscripted by a guest RAM word, ctx->rN, an RDP/RSP command field or a DMA length; mask/loop/field/checked or fix).
-28. **When 1-27zb offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27z. **Zero-extended guest-pointer bases (class AL): CLOSED (s7361).** sext MEM_x bases stay in the 4 GB rdram reservation; 9 gen + 5
+    host zero-extended (uint32 / 0x8..u literal) bases fixed (tools/apply_s7361_sext_bases.py); regen_replay.sh fails on any ZEXT.
+27za. **Raw `rdram + X` host arithmetic (class AM): CLOSED (s7362).** 317 host + 5 gen rows; ROGUESQ_BUCKETLOG rd() read 2 GB below rdram
+    (FIXED; s6094-s6097 bucketlog numbers were host garbage). regen_replay.sh runs tools/s7362_rdramraw_census.py --check.
+27zb. **Host fixed-size arrays indexed by guest-derived values (class AN): CLOSED (s7363, census + 5 independent reviews + ASan 6/6 + gate).**
+    tools/s7363_hostarr_census.py (scoped decls, CONST/MASK/FIELD/MOD/LOOP/CHECKED/DEFMASK/TYPE/CLAMP rules, 20 selftest rows incl. 4
+    negative controls): host+rt64 2481 subscripts, gen tree 2418; 338 unproven keys hand/agent-reviewed into
+    tools/s7363_hostarr_reviewed.tsv. 6 real defects FIXED, all in opt-in diagnostics except s4279: main.cpp ROGUESQ_AIM read s_tg[64]
+    (NaN/far target leaves s_cur=64); s4279-diff (funcs_24 fillSampleStreamRange, DEFAULT-ON, via tools/apply_s4279b_ringdiff.py) read cs[1536]
+    when the guest tail sat in the last word; s7097 word_snap size_t underflow on an unaligned DPC start (std::vector, outside the census);
+    events.cpp G1B / G1E_GRING snprintf appends could push n past buf (unbounded %.0f/%.3f); dpc_bridge g_f5_phase_dma slot check now under
+    its mutex; PLPOS_POKE_DWELL=0 div-by-zero. tools/s7363_an_ctl.sh: pre arms global-overflow/BUS/SEGV, post clean. regen_replay.sh gate
+    (planted guest index -> rc 1). Two 260 s dd8 smokes clean (s7097 ctl 3/3, G1B/G1E rows live).
+27zc. **Next unit (NEXT.md): class AO, heap/container buffers indexed by guest-derived values** (std::vector / new[] / calloc tables
+    subscripted or memcpy'd at a guest address, length or field: s7097 word_snap was this shape and the AN census cannot see it).
+28. **When 1-27zc offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

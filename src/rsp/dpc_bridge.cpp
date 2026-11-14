@@ -2044,6 +2044,9 @@ extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
     const uint32_t start = phys & 0x7FFFFFu;
     const uint32_t end = std::min(start + len, 0x800000u);
     const uint32_t phase = rs64_phase_ord();
+    // s7363 (class AN): the slot check-and-increment runs under the store mutex (before s7363 it was taken only after this block), so two RSP
+    // DMA callers cannot both pass `count < 512` at 511 and write g_f5_phase_dma[512].
+    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     if (phase == 5u && g_f5_phase_dma_count < 512u) {
         Rs64F5PhaseDma& dma = g_f5_phase_dma[g_f5_phase_dma_count++];
         dma.phase = phase;
@@ -2064,7 +2067,6 @@ extern "C" void rs64_f5_host_bulk_payload(uint32_t phys, uint32_t len,
         }
     }
     static uint32_t rows = 0;
-    std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     for (Rs64F5VtxStoreRange& row : g_f5_vtx_store_ranges) {
         if (!row.end || start >= row.end || end <= row.source) continue;
         if (rows++ >= 64u) return;

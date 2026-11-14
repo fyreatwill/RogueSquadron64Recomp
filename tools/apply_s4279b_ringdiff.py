@@ -34,7 +34,7 @@ if "s4279-diff" not in s:
     code = r'''    { /* PATCH: s4279-diff */ static uint32_t sh[1536]; static int dumped = 0, have = 0; extern void rs64_s4279_dump_ring(void);
       uint32_t cs[1536]; for (unsigned k = 0; k < 1536; k++) cs[k] = (uint32_t)MEM_W(0, S32(0x801F9C00u + 4u * k));
       { uint32_t hd2 = (uint32_t)MEM_W(-0X661C, S32(0X8015 << 16)), tl2 = (uint32_t)MEM_W(-0X664C, S32(0X8015 << 16)); uint32_t c2 = tl2; uint32_t pn = 0; int b2 = 0; unsigned l2 = 0;
-        while (c2 && l2 < 400 && c2 >= 0x801F9C00u && c2 < 0x801FB400u) { if (cs[(c2 - 0x801F9C00u) / 4] != pn) b2 = 1; pn = c2; c2 = cs[(c2 - 0x801F9C00u) / 4 + 1]; ++l2; }
+        while (c2 && l2 < 400 && c2 >= 0x801F9C00u && c2 <= 0x801FB400u - 8u && !(c2 & 3u)) { /* s7363 class AN: cs[i + 1] in range */ if (cs[(c2 - 0x801F9C00u) / 4] != pn) b2 = 1; pn = c2; c2 = cs[(c2 - 0x801F9C00u) / 4 + 1]; ++l2; }
         if (tl2 && (b2 || pn != hd2) && have && !dumped) { dumped = 1;
           fprintf(stderr, "[s4279-diff] first BAD at ENTRY n=%u; changed words since previous ENTRY (addr old new):\n", rs64_s4234_g);
           for (unsigned k = 0; k < 1536; k++) if (cs[k] != sh[k]) fprintf(stderr, "[s4279-diff] %08X %08X -> %08X\n", 0x801F9C00u + 4u * k, sh[k], cs[k]);

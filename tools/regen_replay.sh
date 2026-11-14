@@ -12,4 +12,6 @@ python3 tools/rename_generated_symbols.py "$D" >> "$LOG" 2>&1 || { echo "regen_r
 python3 tools/s7361_memzext_census.py --gen "$D" >> "$LOG" 2>&1 || { echo "regen_replay: s7361 zero-extended MEM base (see $LOG)"; exit 1; }
 # s7362: no raw rdram + X in the injected tree or owned host code may leave the 4 GB reservation without a hand verdict.
 python3 tools/s7362_rdramraw_census.py --gen "$D" --check >> "$LOG" 2>&1 && python3 tools/s7362_rdramraw_census.py --check >> "$LOG" 2>&1 || { echo "regen_replay: s7362 unreviewed raw rdram offset (see $LOG)"; exit 1; }
+# s7363: no host fixed-size array in the injected tree or owned host code (+ rt64) may take an unproven subscript without a hand verdict.
+python3 tools/s7363_hostarr_census.py --gen "$D" --check >> "$LOG" 2>&1 && python3 tools/s7363_hostarr_census.py --rt64 --check >> "$LOG" 2>&1 || { echo "regen_replay: s7363 unreviewed host-array subscript (see $LOG)"; exit 1; }
 echo "regen_replay: ok"

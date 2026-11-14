@@ -194227,3 +194227,62 @@ bucket state, a second line of evidence that the post read is right.
 Verdict: the census + fork control select H-hole for one site pair (an opt-in diagnostic) and H-safe/H-trust for the other 320
 rows. This closes class AM.
 Next: class AN, host fixed-size arrays indexed by guest-derived values (NEXT.md).
+
+## Session 7363 (2026-11-14) — class AN closed: host fixed-size arrays indexed by guest-derived values; census 2481 host+rt64 + 2418 generated subscripts, 338 unproven keys reviewed, 6 real defects FIXED (incl. default-on s4279-diff cs[1536] over-read), ASan two-arm 6/6, regen gate
+HYPOTHESIS-ID: host-array-guest-index. Hypotheses (NEXT.md): H-safe (masked/clamped/bounded loop), H-trust (producer range-limited),
+H-hole (a guest value indexes past N).
+Census tools/s7363_hostarr_census.py. It collects arrays of constant extent (`T name[N]`, std::array<T,N>, struct members when the
+member name has one extent) with SCOPED resolution (innermost visible declaration; file-scope consts only, so local `const g = ...`
+cannot shadow loop counters; namespace braces tracked), then classes every `name[expr]`: CONST, MASK/FIELD (& M < N), MOD, LOOP (an
+ENCLOSING for whose bound is a literal, a min/ternary/sizeof-of-bytes bound, or a counter whose every increment is dominated by
+`cnt < K <= N`), CHECKED (context-aware: `if (i < K) <stmt containing use>`, `if (i >= K) return/continue/break` before the use,
+`while (i < K) {use}`, `i < K && use`), DEFMASK (every assignment of the index variable bounded), TYPE (uint8/uint16/bool vs N),
+CLAMP (`x < K ? x : K`), OOB, and B split by a taint pass into B-GUEST / B-CTR / B-HOST. Selftest 20 rows, including negative
+controls the first draft FAILED and that forced fixes: an index used after its for loop exits (the loop condition had been
+accepted as a dominating check), `i < sizeof(uint64_t[4])` (bytes, not elements), a capped-counter check that does not dominate
+the increment, an uncapped counter used as a loop bound.
+Result: host (src/**, librecomp, ultramodern) + lib/rt64/src = 2481 subscripts (CONST 1068, LOOP 663, DEFMASK 172, CHECKED 97,
+MASK 72, MOD 21, ...), 378 unproven; generated tree (../N64Recomp/RecompiledFuncs, injected diagnostics) = 2418, 260 unproven.
+Review, two lines of evidence per row: I read every B-GUEST row, all librecomp/ultramodern/rt64 rows; five independent reviewers
+(given the code and the row list, not my conclusion) read main.cpp (86), upstream_compat.cpp (101), src/rsp + rt64_render_context
+(68), gen funcs_24/16 (143) and the other gen files (117), each naming the guard/producer per row.
+H-hole, 6 defects FIXED:
+ 1. main.cpp ROGUESQ_AIM: the nearest-target search leaves s_cur = 64 when no target has finite d2 < 1e30 ("nan" target accepted by
+    sscanf %f, a far target, or an inf ship position); the aim block then read s_tg[64] (12 B past the static) and the [aim] line
+    called d2(64). Guarded by `s_cur < s_ntg` (+ d=-1 in the log). Found by reviewer A; the census flags it on HEAD's main.cpp and
+    classes it CHECKED post-fix (census positive control).
+ 2. funcs_24.c fillSampleStreamRange s4279-diff (tools/apply_s4279b_ringdiff.py; DEFAULT ON, no env gate): the walk guard was
+    `c2 < 0x801FB400` but it reads cs[(c2-base)/4 + 1] from a 1536-word stack copy, so a guest tail/link word in 0x801FB3FC..FF read
+    cs[1536] (one word past the stack array, then used as the next pointer). Guard now `c2 <= 0x801FB400 - 8 && !(c2 & 3)`, in the
+    apply script and the live tree (vendored fixer re-runs the script). Found by reviewer D.
+ 3. src/rsp/s7097_edit_census.cpp word_snap (ROGUESQ_S7097_EDIT): g_cur[(a & ~3) - g_glo] with g_glo = lo - 64 unaligned when the
+    DPC start is not 4-aligned -> (a & ~3) < g_glo on the first changed byte -> uint32 underflow -> read ~4 GB past g_cur; an unaligned
+    g_ghi read 1-3 B past the end. Window now word-aligned. (std::vector: outside this census; found by reviewer C as a side note.)
+ 4. ultramodern events.cpp [g1b-gt] (ROGUESQ_G1B) and g1eg::g_row (ROGUESQ_G1E_GRING): `n += snprintf(...)` with %.0f/%.3f of an
+    unbounded double against 40/48 B headroom; one truncated append pushes n past buf and the closing buf[n]=0 / snprintf(buf+n,
+    sizeof-n) writes beyond it. Clamped. (Class AJ s7359 missed these: they had a headroom guard, but the format is not width-bounded.)
+    The other 3 `+= snprintf` appends in owned code use fixed-width formats within their headroom.
+ 5. dpc_bridge.cpp rs64_f5_host_bulk_payload (ROGUESQ_LOG_F5_STORE_SHADOW): the g_f5_phase_dma `count < 512` check-and-increment ran
+    before g_f5_vtx_store_mutex was taken; the lock now covers it (its readers already hold that mutex).
+ 6. main.cpp ROGUESQ_PLPOS_POKE_DWELL=0 divided by zero (`% dwell`): clamped to 1.
+ORIGIN: every writer is our own diagnostic code (s4279b, s5892/aim, s7097, s6710/s6967 G1B/G1E, F5 shadow); no guest value is
+illegitimate. These are bounds fixes in host instrumentation, not mitigations of a guest defect.
+Control tools/s7363_an_ctl.sh (ASan, each site's logic lifted verbatim, pre = HEAD, post = s7363): aim pre global-buffer-overflow,
+snap pre BUS (the underflowed ~4 GB offset), grow pre SEGV; all 3 post arms clean -> 6/6 PASS.
+H-safe / H-trust for the other 332 keys, recorded line-agnostically (path, array, index expr, verdict) in
+tools/s7363_hostarr_reviewed.tsv. Notable H-trust: RSP VU element e is a compile-time 4-bit template literal (shuffle[16]); ai.cpp
+cnt[12] kinds are literal 0..11 at every caller; rt64 TMEM bytes are uint8 into [256]; rs6657_arm is 99 until started (every use is
+gated on started && !done or flight()==1 — fragile, noted).
+Gate: regen_replay.sh runs `s7363_hostarr_census.py --gen $D --check` and `--rt64 --check`; a planted `zz[MEM_W(0, ctx->r4)]` in a
+copy of funcs_24.c -> exactly 1 open row, rc 1; live tree rc 0.
+Smoke (rebuilt with 1-6): `env SECS=260 zsh scratch/s7326/run.zsh s7363_dd8 'ROGUESQ_G1B=1 ROGUESQ_G1E_GRING=... ROGUESQ_S7097_EDIT=c
+ROGUESQ_LOG_F5_STORE_SHADOW=1'` (dd8 21:9 FPS60 hangar->mission->abort) -> crash=0 resets=14 late=0 arenafull=0, load_level_hmp 5x,
+0 CRASH/SIG lines in 127 MB; fixed paths live: 259 [g1b-gt] rows, 8285 G rows (max 333 chars), s7097 14009 begin calls with its
+planted ctl 3/3, F5 shadow controls fired.
+Smoke B (rebuilt with the funcs_24 s4279 guard, which runs on every fillSampleStreamRange): `run.zsh s7363b_dd8 'ROGUESQ_G1B=1
+ROGUESQ_S7097_EDIT=c'` -> crash=0 resets=14 late=0 arenafull=0, load_level_hmp 5x, 0 CRASH/SIG, 108 [s4279*] rows (the guarded block
+executed), s7097 35247 begin calls ctl 8/8, 259 [g1b-gt] rows.
+Reviewer side notes, not fixed (NEXT.md): funcs_13 rs5834_who sentinel 2 would index rs5834_n[2] if post ran without pre;
+dpc_bridge.cpp:4116 (int)floor(xa) UB on huge xa; s7318 bcmp ex[s.nex++] check-then-increment unsynchronised.
+Verdict: census + independent reviews select H-hole for 6 sites (all host diagnostics, one default-on) and H-safe/H-trust for the
+rest. Class AN closed. Next: class AO, runtime-sized heap/container buffers indexed by guest values (NEXT.md).

@@ -11264,7 +11264,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 float wp[64][3]; unsigned nw = 0; const char* c = pk;
                 while (nw < 64 && sscanf(c, "%f,%f,%f", &wp[nw][0], &wp[nw][1], &wp[nw][2]) == 3) { nw++; c = strchr(c, ';'); if (!c) break; c++; }
                 if (nw) {
-                    static const unsigned dwell = std::getenv("ROGUESQ_PLPOS_POKE_DWELL") ? (unsigned)atoi(std::getenv("ROGUESQ_PLPOS_POKE_DWELL")) : 450u;  // s5892
+                    static const unsigned dwell = [] { const char* e = std::getenv("ROGUESQ_PLPOS_POKE_DWELL"); const unsigned d = e ? (unsigned)atoi(e) : 450u; return d ? d : 1u; }();  // s7363: 0 would divide by zero  // s5892
                     const unsigned k = ((m - from) / dwell) % nw;
                     for (int i = 0; i < 3; i++) { uint32_t u; memcpy(&u, &wp[k][i], 4); const uint32_t b = (p + 0x4C + 4 * i) & ~3u; volatile uint8_t* w = const_cast<volatile uint8_t*>(rd); w[b + 3] = u >> 24; w[b + 2] = u >> 16; w[b + 1] = u >> 8; w[b] = u; }
                     if (((m - from) % dwell) == 0) fprintf(stderr, "[plpoke] m=%u k=%u/%u pos=(%g,%g,%g)\n", m, k, nw, (double)wp[k][0], (double)wp[k][1], (double)wp[k][2]);
@@ -11431,7 +11431,9 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     s_cur_polls++;
                     const unsigned L = 4;
                     double yerr = 0, perr = 0; bool valid = false;
-                    if (s_hn > L) {
+                    // s7363 (class AN): the nearest-target search leaves s_cur = 64 (one past s_tg) when no target has a finite
+                    // d2 < 1e30 (a "nan" or far ROGUESQ_AIM_TARGETS entry, or an inf ship position): no aim this poll.
+                    if (s_hn > L && s_cur < s_ntg) {
                         const float* o = s_hist[(s_hn - 1 - L) % 8];
                         const double dx = v[0]-o[0], dy = v[1]-o[1], dz = v[2]-o[2], hs = std::sqrt(dx*dx+dz*dz);
                         if (hs > 0.02 * L && hs < 2.0 * L) {  // moving, and not a respawn/teleport jump
@@ -11458,7 +11460,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     }
                     if ((++s_n % 16) == 1)
                         fprintf(stderr, "[aim] el=%.1f %s tgt=%u d=%.2f yerr=%.1f perr=%.1f sx=%.2f sy=%.2f act=%u visits=%u pos=(%.2f,%.2f,%.2f) mean|yerr| ctl=%.1f(%u) act=%.1f(%u)\n",
-                                el, on ? "ON" : "ctl", s_cur, std::sqrt((double)d2(s_cur)), yerr * 57.29578, perr * 57.29578, (double)stick_x, (double)stick_y,
+                                el, on ? "ON" : "ctl", s_cur, s_cur < s_ntg ? std::sqrt((double)d2(s_cur)) : -1.0, yerr * 57.29578, perr * 57.29578, (double)stick_x, (double)stick_y,
                                 s_act, s_visits, (double)v[0], (double)v[1], (double)v[2],
                                 s_cnt_ctl ? s_sum_ctl / s_cnt_ctl * 57.29578 : 0.0, s_cnt_ctl, s_cnt_act ? s_sum_act / s_cnt_act * 57.29578 : 0.0, s_cnt_act);
                 }
