@@ -12715,6 +12715,66 @@ static void s7354_race_ctl_start() {
     std::thread([] { for (int i = 0; i < 100000; i++) s7354_race_ctl_var++; }).detach();
     std::fprintf(stderr, "[s7354] race control armed\n");
 }
+// s7355 class AF (async-signal safety of the crash reporter). See the sigaction install in main().
+#ifdef __APPLE__
+#include <pthread/introspection.h>
+static bool rs64_s7355_env_is(const char* k, const char* v) { const char* e = std::getenv(k); return e && std::strcmp(e, v) == 0; }
+static int g_rs64_s7355_strsignal = 0; // ROGUESQ_S7355_STRSIGNAL=1 restores the pre-s7355 strsignal() call (negative arm)
+static const char* rs64_s7355_signame(int sig) {
+    switch (sig) {
+        case SIGSEGV: return "Segmentation fault: 11"; case SIGBUS: return "Bus error: 10";
+        case SIGABRT: return "Abort trap: 6"; case SIGILL: return "Illegal instruction: 4";
+        case SIGFPE: return "Floating point exception: 8"; case SIGTRAP: return "Trace/BPT trap: 5";
+        default: return "signal";
+    }
+}
+static constexpr size_t kRs64AltStack = 128 * 1024; // the handler's own frames: fprintf, dladdr, backtrace, ctx-scan
+static void rs64_s7355_altstack_here() {
+    stack_t cur{};
+    if (sigaltstack(nullptr, &cur) == 0 && !(cur.ss_flags & SS_DISABLE)) return; // already has one
+    void* p = mmap(nullptr, kRs64AltStack, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    if (p == MAP_FAILED) return;
+    stack_t ss{}; ss.ss_sp = p; ss.ss_size = kRs64AltStack; ss.ss_flags = 0;
+    if (sigaltstack(&ss, nullptr) != 0) munmap(p, kRs64AltStack);
+}
+static void rs64_s7355_altstack_drop() {
+    stack_t cur{};
+    if (sigaltstack(nullptr, &cur) != 0 || (cur.ss_flags & (SS_DISABLE | SS_ONSTACK)) || cur.ss_size != kRs64AltStack) return;
+    stack_t off{}; off.ss_flags = SS_DISABLE;
+    if (sigaltstack(&off, nullptr) == 0) munmap(cur.ss_sp, kRs64AltStack);
+}
+static pthread_introspection_hook_t g_rs64_s7355_prev_hook = nullptr;
+static std::atomic<uint64_t> g_rs64_s7355_altN{0};
+static void rs64_s7355_thread_hook(unsigned int event, pthread_t thread, void* addr, size_t size) {
+    // START and TERMINATE run on the thread itself (pthread/introspection.h), so sigaltstack applies to it.
+    if (event == PTHREAD_INTROSPECTION_THREAD_START && thread == pthread_self()) { rs64_s7355_altstack_here(); g_rs64_s7355_altN.fetch_add(1); }
+    else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE && thread == pthread_self()) rs64_s7355_altstack_drop();
+    if (g_rs64_s7355_prev_hook) g_rs64_s7355_prev_hook(event, thread, addr, size);
+}
+static void rs64_s7355_altstack_install() {
+    rs64_s7355_altstack_here(); // main thread
+    g_rs64_s7355_prev_hook = pthread_introspection_hook_install(rs64_s7355_thread_hook); // every thread created later
+    fprintf(stderr, "[s7355] sigaltstack on: %zu KB per thread (main + introspection hook); ROGUESQ_ALTSTACK=0 disables\n",
+        kRs64AltStack / 1024);
+}
+extern "C" void _malloc_fork_prepare(void); // libsystem_malloc: takes every malloc zone lock (as fork() does)
+__attribute__((noinline)) static int rs64_s7355_overflow(int n) { volatile char buf[4096]; buf[0] = (char)n; return rs64_s7355_overflow(n + 1) + buf[0]; }
+// Same-run positive controls for the crash reporter (both off by default):
+//  ROGUESQ_TEST_STACK_OVERFLOW_AT=<s>  a host thread recurses until its stack overflows at <s> s
+//  ROGUESQ_TEST_CRASH_MALLOC_AT=<s>    a host thread takes the malloc zone locks, then writes to a null pointer at <s> s
+// Either must yield a "[CRASH] caught signal" report; with ROGUESQ_ALTSTACK=0 / ROGUESQ_S7355_STRSIGNAL=1 they did not.
+static void rs64_s7355_test_triggers() {
+    g_rs64_s7355_strsignal = rs64_s7355_env_is("ROGUESQ_S7355_STRSIGNAL", "1");
+    const char* a = std::getenv("ROGUESQ_TEST_STACK_OVERFLOW_AT"); const int at = (a && *a) ? std::atoi(a) : 0;
+    if (at > 0) std::thread([at] { std::this_thread::sleep_for(std::chrono::seconds(at));
+        fprintf(stderr, "[s7355] test stack overflow now (altN=%llu)\n", (unsigned long long)g_rs64_s7355_altN.load());
+        rs64_s7355_overflow(0); }).detach();
+    const char* m = std::getenv("ROGUESQ_TEST_CRASH_MALLOC_AT"); const int mt = (m && *m) ? std::atoi(m) : 0;
+    if (mt > 0) std::thread([mt] { std::this_thread::sleep_for(std::chrono::seconds(mt));
+        fprintf(stderr, "[s7355] test crash with malloc locks held now\n");
+        _malloc_fork_prepare(); *(volatile int*)nullptr = 1; }).detach();
+}
+#endif
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
     s7354_race_ctl_start();
@@ -12912,11 +12972,19 @@ int main(int argc, char* argv[]) {
     });
 #else
     {
+        // s7355 class AF: the crash report must survive (a) a crash taken inside malloc/free (strsignal() aborts on the
+        // held malloc lock, measured tools/s7355_sighandler_ctl.cpp, so the whole report was lost) and (b) a stack
+        // overflow (no sigaltstack: the kernel cannot build the handler frame and kills the process silently).
+#ifdef __APPLE__
+        (void)wbw_on(); // pre-warm its getenv/static-guard init outside signal context
+        if (!rs64_s7355_env_is("ROGUESQ_ALTSTACK", "0")) rs64_s7355_altstack_install();
+        rs64_s7355_test_triggers();
+#endif
         struct sigaction sa {};
         // s646: no SA_RESETHAND — [fl-zero-fault] mprotect watch must survive
         // multiple recoverable write faults. Real crashes re-raise with
         // SIG_DFL below so we still terminate.
-        sa.sa_flags = SA_SIGINFO;
+        sa.sa_flags = SA_SIGINFO | SA_ONSTACK; // s7355: SA_ONSTACK is a no-op on threads without an altstack
         sigemptyset(&sa.sa_mask);
         sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
             if (sig == SIGSEGV || sig == SIGBUS) {
@@ -12948,7 +13016,11 @@ int main(int argc, char* argv[]) {
             }
             rs64_stderr_async_restore(); // s6979: crash text goes straight to the original fd
             fprintf(stderr, "[CRASH] caught signal %d (%s), dumping stack:\n",
+#ifdef __APPLE__
+                sig, g_rs64_s7355_strsignal ? strsignal(sig) : rs64_s7355_signame(sig)); // s7355: no strsignal (mallocs)
+#else
                 sig, strsignal(sig));
+#endif
             // s194: dump siginfo + the ARM64 register file at fault time --
             // SA_SIGINFO already gave us these two params, previously
             // discarded. si_addr/__far is the exact faulting virtual address;
@@ -12986,9 +13058,13 @@ int main(int argc, char* argv[]) {
                         // s4882b: x5 sat 0x170 BELOW sp in the first capture, so start
                         // below sp (dead frames) -- the s4882a scan from sp found 0 hits.
                         const uintptr_t lo = ((uintptr_t)ss.__sp - 0x2000) & ~(uintptr_t)7;
+                        // s7355: clamp to the thread's mapped stack. After a stack overflow sp sits on the guard page, so
+                        // sp-0x2000 faulted inside the handler (signal blocked -> the process hung with no report).
+                        const uintptr_t stk_lo = stk_top - (uintptr_t)pthread_get_stacksize_np(pthread_self());
+                        const uintptr_t lo_c = lo < stk_lo ? stk_lo : lo;
                         const uint64_t far_ = (uint64_t)es.__far;
                         int hits = 0;
-                        for (uintptr_t p = lo; p + 32 * 8 <= stk_top && p < lo + 0x40000 && hits < 8; p += 8) {
+                        for (uintptr_t p = lo_c; p + 32 * 8 <= stk_top && p < lo + 0x40000 && hits < 8; p += 8) {
                             const volatile uint64_t* c = (const volatile uint64_t*)p;
                             if (c[0] != 0) continue;
                             for (int r = 1; r < 32; r++) {

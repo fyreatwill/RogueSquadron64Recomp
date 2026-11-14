@@ -1,23 +1,18 @@
-# NEXT (s7355): idiom-class audit - class AF, async-signal-unsafe calls inside signal handlers
-HYPOTHESIS-ID: host-signal-handler-safety
-Context: s7354 closed class AE with a ThreadSanitizer build (tools/build_tsan.sh, build_tsan/; report grouper
-tools/s7354_tsan_report.py; Mach-semaphore blind-spot control tools/s7354_sem_ctl.cpp). One default-on race fixed (VI state
-flip outside message_mutex in ultramodern events.cpp) + sample_rate made atomic. Reuse build_tsan for any later race question:
-`env TSAN_OPTIONS="log_path=$PWD/scratch/<dir>/tsan halt_on_error=0" BUILD=$PWD/build_tsan WIDE_ROUTE=1 ...` with
-ROGUESQ_S7354_RACE_CTL=1 as the same-run positive control. tools/build_tsan.sh now re-runs `cmake -S . -B build` at the end
-(configuring a second build dir drops build/'s spirv-cross rules).
-Idiom (class AF): a function installed with sigaction/signal (SIGSEGV/SIGBUS/SIGILL/SIGABRT/SIGUSR*, 7 install sites, all in
-src/main/main.cpp) calling something not on the POSIX async-signal-safe list: malloc/new, fprintf/printf/std::string, locking a
-std::mutex, dladdr/backtrace_symbols, std::getenv after setenv, C++ iostream. Hazard: a crash taken while the faulting thread holds
-the malloc or stdio lock deadlocks the handler (a crash turns into a hang with no report: G5c freeze / VI-stall lookalike).
-Hypotheses: H-safe (handlers only touch atomics / write(2) / pre-formatted buffers), H-diag (unsafe calls only in env-gated
-diagnostic handlers), H-unsafe (the default-on crash reporter calls fprintf/malloc: fix with a write(2) + preformatted buffer path,
-or a dedicated reporter thread fed through a pipe).
-Method: new tools/s7355_sighandler_census.py: (1) list every sigaction/signal install and its handler; (2) call graph within
-main.cpp + 1 cross-file level from each handler; (3) flag each call against the POSIX async-signal-safe list (write, _exit,
-sigaction, raise, clock_gettime, ...; atomics allowed). Classes SAFE / D / G / B / ?.
-Controls: planted handler calling fprintf ('?'), write(2) twin (SAFE), gated twin (G).
-Second line: a standalone control that takes SIGSEGV while another thread holds the stdio lock (flockfile(stderr)) and shows
-an fprintf-based handler hangs while a write(2) handler returns. Then, for any B fix, 260 s dd8 smoke:
-`env SECS=260 zsh scratch/s7326/run.zsh s7355_dd8 ''`.
-Exit: PORTING-STATE s7355, CURRENT-TRUTH item 27t -> closed/fixed, commit.
+# NEXT (s7356): idiom-class audit - class AG, unchecked host allocation / mapping / file-open results
+HYPOTHESIS-ID: host-unchecked-resource-result
+Context: s7355 closed class AF (crash reporter async-signal safety; strsignal removed, per-thread sigaltstack, ctx-scan clamp;
+arms in scratch/s7355/arms.zsh, census tools/s7355_sighandler_census.py, ground truth tools/s7355_sighandler_ctl.cpp).
+A crash now ALWAYS reports: re-run scratch/s7355/arms.zsh after any change to the sigaction lambda in main.cpp.
+Idiom (class AG): in host C++ we own (src/, lib/N64ModernRuntime/{librecomp,ultramodern}/src, lib/rt64/src/{hle,rhi}/ our patched
+files only), a result of malloc/calloc/realloc/new(nothrow)/mmap/fopen/popen/SDL_Create*/dup used without a null / MAP_FAILED /
+<0 check. Hazard: a resource failure (low memory at dd8 px8, fd exhaustion from log files, a missing file) becomes a wild
+deref far from its cause instead of a named error.
+Hypotheses: H-safe (every site checks or the use is itself guarded), H-diag (unchecked sites only in env-gated diagnostics),
+H-unchecked (a default-on path derefs an unchecked result: fix with a named fail-fast message).
+Method: tools/s7356_unchecked_census.py: enumerate call sites of the allocator/open set; for each, find the assigned variable and
+look for a check (if (!x) / x == nullptr / x == MAP_FAILED / x < 0 / x != nullptr) before the first deref within the function;
+classify CHECKED / D (dead or _WIN32) / G (env-gated) / B (default-on unchecked) / ?. Controls: planted unchecked malloc (B),
+checked twin (CHECKED), gated twin (G).
+Second line: for each B, a runtime arm that forces the failure (e.g. DYLD interpose or an env knob that makes the alloc fail) and
+shows the pre-fix crash vs the post-fix named error. Then 260 s dd8 smoke: `env SECS=260 zsh scratch/s7326/run.zsh s7356_dd8 ''`.
+Exit: PORTING-STATE s7356, CURRENT-TRUTH item 27u -> closed/fixed, commit.

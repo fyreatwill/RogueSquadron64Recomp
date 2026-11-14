@@ -458,10 +458,19 @@ is in the s7307 archive). Active unit: NEXT.md.
     inversions or deadlocks reported. LIMIT: under TSan the game stalls in early boot (RDP frames stop at 39, pre- and post-fix),
     so runtime coverage is boot only; mission-phase threads (present / workload / audio under load) are covered by the static
     lock review only. 260 s dd8 smoke on build/ after the fix: 0 crash, 14 resets, 6 mission loads. Next: class AF (27t).
-27t. **Next unit (NEXT.md): class AF, async-signal-unsafe calls in signal handlers** (7 sigaction/signal installs, all in
-    src/main/main.cpp). A crash taken while the faulting thread holds the malloc / stdio lock deadlocks an fprintf/malloc handler
-    and turns the crash into a silent hang.
-28. **When 1-27t offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27t. **Async-signal safety of the crash reporter (class AF): CLOSED (s7355, 3 default-on defects FIXED).** One install
+    (main.cpp sigaction lambda for SIGSEGV/SIGBUS/SIGABRT; the 4th install is _WIN32 = D). Ground truth tools/s7355_sighandler_ctl.cpp
+    (forked child takes every malloc zone lock via _malloc_fork_prepare, then faults): malloc and strsignal DIE under the held lock,
+    fprintf/fflush/backtrace/backtrace_symbols_fd/dladdr/std::string::c_str are OK on this libc. FIXED: (1) strsignal() ->
+    static name table (pre-fix a crash inside malloc/free HUNG the game with no report, game arm ml_old alive at 20 s, 0 [CRASH]
+    lines; ml_fix full report); (2) no sigaltstack -> per-thread 128 KB altstack (main + pthread_introspection_hook) + SA_ONSTACK
+    (stack overflow pre-fix: rc 132, 0 lines; ROGUESQ_ALTSTACK=0 restores); (3) ctx-scan read sp-0x2000 into the guard page and
+    hung the handler -> clamped to the mapped stack (post-fix: report + 63-frame backtrace naming the recursion). Census
+    tools/s7355_sighandler_census.py: 28 SAFE, 7 G (env-gated diagnostic handlers), 0 B, 0 ?; controls PASS. Lesson: on macOS a
+    fault inside the handler (signal blocked) HANGS rather than dies, so a handler bug turns crashes into freezes. Regression
+    arms: `zsh scratch/s7355/arms.zsh` (positive controls ROGUESQ_TEST_STACK_OVERFLOW_AT / ROGUESQ_TEST_CRASH_MALLOC_AT).
+27u. **Next unit (NEXT.md): class AG, unchecked host allocation / mmap / fopen results** in host C++ we own.
+28. **When 1-27u offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

@@ -193939,3 +193939,47 @@ Does not rule out: races that only occur in mission phases (TSan never got there
 Conclusion: the TSan table selects H-race for the VI state (events_context) and sample_rate globals (fixed, 0 rows after) and
 refutes H-safe; every other row selects H-diag / blind-spot (SEM, BENIGN, EXT, D). Next discriminator: class AF signal-handler census.
 Next: class AF, async-signal-unsafe calls in signal handlers (NEXT.md, CURRENT-TRUTH 27t).
+
+## Session 7355 (2026-11-14) — class AF crash-reporter async-signal safety closed: 3 default-on defects FIXED (strsignal under held malloc lock hung the game silently, no sigaltstack lost stack-overflow reports, ctx-scan guard-page read hung the handler); census 0 B / 0 ?
+HYPOTHESIS-ID: host-signal-handler-safety. Work unit from NEXT.md (s7354): idiom-class audit, class AF.
+Installs: 4 textual (src/main/main.cpp): the _WIN32 signal(SIGABRT) lambda (D on macOS) and ONE sigaction lambda for
+SIGSEGV/SIGBUS/SIGABRT (NEXT.md's "7" counted the Windows SetUnhandledExceptionFilter/CRT hooks). No installs in
+lib/N64ModernRuntime or lib/rt64 runtime code (zstd programs/ and catch.hpp test harnesses are not linked into the game).
+Ground truth first (rule 12): tools/s7355_sighandler_ctl.cpp. Each case runs in a forked child that installs the same
+SA_SIGINFO handler, optionally takes EVERY malloc zone lock (_malloc_fork_prepare, the state a crash inside malloc/free leaves
+the faulting thread in), null-derefs, and the handler does ONE candidate call then write(2) "OK". First attempt used
+malloc_default_zone()->introspect->force_lock: the malloc positive control stayed OK (that lock does not cover the allocator
+paths), so the instrument was rejected and replaced. With _malloc_fork_prepare: malloc DIED (positive control), write OK
+(negative control); strsignal DIED; fprintf (%d/%llx/%s/%p), fflush, backtrace, backtrace_symbols_fd, dladdr, std::string
+c_str, pthread_get_stackaddr_np all OK on this libc. A stack-overflow case with no sigaltstack DIED with no handler run.
+Second side scratch/s7355/alt.cpp: backtrace() from a sigaltstack still walks into the interrupted frames via _sigtramp
+(leaf2/leaf1/main named), so an altstack costs no backtrace quality.
+Fixes (main.cpp, default on, macOS):
+- (1) strsignal(sig) -> rs64_s7355_signame() static table. ROGUESQ_S7355_STRSIGNAL=1 restores the old call (negative arm).
+  ORIGIN: the handler's first fprintf evaluated strsignal(), which allocates; with the malloc lock held by the faulting thread.
+- (2) per-thread sigaltstack (128 KB mmap): main thread at install + pthread_introspection_hook_install (THREAD_START runs on the
+  new thread, TERMINATE unmaps), SA_ONSTACK on the sigaction. ROGUESQ_ALTSTACK=0 disables. Threads created before the install
+  (stderr-async drain, m5 watch threads) have none.
+- (3) the s4882 ctx-scan started at sp-0x2000; after a stack overflow sp sits on the guard page, so the read faulted inside the
+  handler with the signal blocked and macOS HUNG the process (found by game arm so_alt before the fix: [CRASH] + mcontext
+  printed, then alive at 20 s). Now clamped to stk_top - pthread_get_stacksize_np.
+- wbw_on() pre-warmed before the install (its static-guard getenv init could otherwise first run in signal context).
+Game arms (scratch/s7355/arms.zsh, one boot each, sequential, killed at 20 s; positive controls ROGUESQ_TEST_STACK_OVERFLOW_AT /
+ROGUESQ_TEST_CRASH_MALLOC_AT added in main.cpp, ROGUESQ_TEST_CRASH_AT from s6979):
+  so_alt    (fix)            rc=138 report: "Bus error: 10", mcontext, pc-symbol rs64_s7355_overflow+12, 63 backtrace frames
+  so_noalt  (ALTSTACK=0)     rc=132, 0 [CRASH] lines (silent death = pre-fix behaviour)
+  ml_fix    (fix)            rc=139 report: "Segmentation fault: 11", mcontext, pc-symbol (local-symtab), backtrace
+  ml_old    (STRSIGNAL=1)    ALIVE at 20 s (SIGKILLed), 0 [CRASH] lines -> pre-fix a crash inside malloc was a silent HANG
+  nul_fix   (plain null)     rc=139 full report (unchanged path)
+Datum for G5c-style freezes: before s7355, any host crash taken inside malloc/free (heap corruption is the usual way) froze the
+game with no text instead of crashing; no past freeze is attributed to this (none was captured with a sample), but the shape fits.
+Census tools/s7355_sighandler_census.py (handler body + main.cpp callees depth 3 + rs64_get_vifs_crash_snapshot in rt64_state.cpp;
+classes from the measured tables): pre-fix B=1 (strsignal); post-fix 28 SAFE, 7 G (backtrace_symbols/free/sysconf in the
+ROGUESQ_LOG_FL_ZERO_WATCH handler, getenv in wbw_on gate, route/phase snapshots in m5/vtx watch handlers, the STRSIGNAL arm),
+0 B, 0 ?; planted B/SAFE/G/? controls PASS; also checks the clamp, SA_ONSTACK and the hook are present.
+Rules out: H-safe as stated (strsignal was unsafe in the default handler); H-diag only for the env-gated watch handlers.
+Smoke on build/ (fix in): `env SECS=260 zsh scratch/s7326/run.zsh s7355_dd8 ''` (hangar -> mission -> abort cycles, dd8 21:9
+FPS60): crash=0 resets=14 late=0 arenafull=0, 6 initMission, 259 update_screen rows, "[s7355] sigaltstack on" logged; same
+counts as the s7354 smoke on this route -> the altstack hook costs nothing visible.
+Next: class AG (unchecked host allocation / mmap / fopen results), NEXT.md.
+
