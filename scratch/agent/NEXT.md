@@ -1,20 +1,17 @@
-# NEXT (s7313): does the presented window lag the RDP stream on the first run after a rebuild?
-HYPOTHESIS-ID: present-stale-after-rebuild
-Datum (s7312, single instance): batch 1 arm l1f0 (first game run after a cmake rebuild of the main exe) froze at L1 pose 106.294,-6.799,69.769
-with an RDP stream identical to s7310 d8 (swap 4063), but both window captures 1.5 and 2.2 s into the 15 s freeze showed another scene
-(level craft over dark rock, not the banked craft against sky). The batch-2 repeat on the same binary (also first-after-rebuild!) matched s7310
-pixel for pixel. Frames: scratch/s7312/a1/l1f0/f0_{1,2}.png vs scratch/s7312/b1/l1f0/f0_2.png. If the window can show a stale frame for
-seconds, that may be part of the owner's "terrain drops" / "buffering" reports (G5b/G5c).
+# NEXT (s7314): enforce "one game run at a time" in the loop's soak phase
+HYPOTHESIS-ID: harness-one-game
+Context (s7313): s7312's "stale presented frame" was a leftover game captured by `pgrep|head -1`. Iteration-side tools now use
+tools/rs64_game_pid.zsh (exactly one game or nothing; test tools/s7313_pid_test/run.zsh 8/8). The loop itself is still open:
+tools/agent/loop.sh run_soak_pass (lines ~264-330) launches each queued recipe with no check that a game from the iteration (or a
+previous soak whose process group escaped the `kill -9 -- -$pid`) is still alive. A leftover game would double CPU load (frame-time
+verdicts), steal window/key focus, and confuse any recipe that picks a pid by name.
 Hypotheses:
-- H-shader: RT64 pipeline compile after a fresh binary (or first use of a material) holds presentation on an old frame. Predicts: stale frames
-  cluster right after launch/new materials; the RT64 log shows pipeline creation around the freeze.
-- H-capture: screencapture -l grabbed a stale WindowServer backing store (window not front/occluded). Predicts: the game's own presented
-  framebuffer (RT64 readback / G5B present ring) at that moment is correct while the PNG is not.
-- H-present-lag: RT64 presents frames late (queue backlog) under recorder I/O (MAX_MB 1600). Predicts: present stamps lag swap stamps by >1 s.
-Discriminator, one build, one batch: L1 l1f0 recipe from scratch/s7312/run2.zsh x3 (same binary), each with ROGUESQ_PRESENT_RING (present wall
-stamps vs swap mach stamps) and an in-game framebuffer dump at the freeze (check ROGUESQ_G5B_* / fbd options in tools/g3_optin_pose_arms.sh
-callers), plus a window capture. Compare PNG vs in-game fb vs RDP stream per arm. First arm right after `touch src/main/rt64_render_context.cpp`
-+ rebuild, to try to reproduce the batch-1 condition. If it never recurs in 3 arms + a positive control (a deliberately occluded window
-capture should show the stale effect for H-capture), record it and close as non-reproducible.
-Commands: env LEVEL=1 PIN=1 TAGP=s7313 FZ=106.28 zsh tools/g3_optin_pose_arms.sh scratch/s7313/a <arms>   (OUTDIR must be repo-relative)
-Needs an unlocked screen and an idle host (the arms script checks both).
+- H-clean: no soak has ever started with a foreign game alive. Predicts: 0 hits in a retro scan of soak_results logs for
+  overlapping game lifetimes (each recipe log carries its own start/end; the game logs carry pids in [startup] lines, if any).
+- H-leak: some have. Predicts: >=1 soak whose window overlaps another game's lifetime.
+Bounded change either way: before each recipe, `. tools/rs64_game_pid.zsh; rs64_no_foreign_game 30` and if it fails, log the pids,
+SIGKILL them (the iteration has ended, so any game alive is a leftover), and note "foreign game killed" in the SOAK-RESULTS verdict line.
+Also check after each recipe that its own game died (pgrep empty after the process-group kill), and log it if not.
+Positive control: tools/agent/test_soak_idle_gate.sh style test: start the s7313 fake sleeper named RogueSquadron64Recomp, run one
+pass of run_soak_pass on a trivial recipe, and assert the log line and that the fake was killed. Keep loop.sh changes minimal; it
+re-execs itself when edited (s7235).

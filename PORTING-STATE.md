@@ -192513,3 +192513,34 @@ flight spawns at x=156 and flies -x first. Scouts: scratch/agent/m6/g1_lvl{5,12}
 Owner sheet docs/owner_sheet_s7312_farmax_l5_l12.jpg (L5/L12 before/after). Raw caps deleted.
 Discrimination: SELECTS H-geom-global (the far value alone decides pinning on L1, L5 and L12). REFUTES H-L1-only (the pinning appears on two more
 domes with FARMAX=0) and the "32767 too high for some dome" branch for these three levels.
+
+## Session 7313 (2026-11-14) — s7312 "stale presented frame" was the harness capturing ANOTHER game's window (pgrep|head -1 = oldest PID); new one-game PID guard tools/rs64_game_pid.zsh in 4 tools; repro arm clean 6/6
+
+Work unit (NEXT s7313, HYPOTHESIS-ID present-stale-after-rebuild): why did s7312 batch 1's L1 l1f0 window captures show a
+different scene (level craft over dark rock) from the frozen RDP swap (banked craft against sky)?
+
+Boring thing first, offline, before any build:
+- Both runs froze at the identical pose (k=0 vi 6985/6984, pos 106.294,-6.799,69.769) and both presented the last drawn fb
+  ([threadPresent] origin == drawn for the whole freeze: a1 0x8F5000, b1 0x9D5000). H-parity (one fb address has a stale RT)
+  refuted offline: 9 earlier same-pose freezes on 0x8F5000 (s7310 d6/d8/b412/fx8/q450/q500, s7312b l1d, L12 x2) were correct.
+- File birth/mtime timeline: s7312 batch 1 (absolute OUTDIR, void, started 23:09:20) was still running when batch 2 started.
+  Its l5f0 arm (attempt 2 after fail_att1.log 23:19:49) ran until its summary at 23:23:17. Batch 2's l1f0 ran 23:20:17-23:23:43 and
+  took the captures at 23:22:15/16. So two games were alive at capture time.
+- tools/g3_optin_pose_arms.sh took the window from `pgrep -x RogueSquadron64Recomp | head -1` = the LOWEST pid = the OLDER game
+  (the batch-1 L5 run). The stale PNG shows grey night rock like L5 (scratch/s7312/sm_l5f0.png), not L1.
+ORIGIN: the writer of the wrong pixels is our capture harness (pid selection in g3_optin_pose_arms.sh:42), not RT64 or the game;
+the frame shown was legitimate, it belonged to a different process. H-shader, H-capture-backing-store and H-present-lag are not needed
+and were not tested; the "first run after a rebuild" link was never real (b1 was also first-after-rebuild).
+
+Fix (engineering): tools/rs64_game_pid.zsh. rs64_game_pid prints the pid only when exactly ONE game is alive (rc 1 none, 2 many).
+rs64_no_foreign_game waits for zero games before a launch. Wired into: g3_optin_pose_arms.sh (refuses to launch an arm while any
+game is alive: exit 5 "VOID: foreign game alive"; captures skipped and counted multi= when !=1 game; CAPN=<n> captures per freeze,
+default 2), s7272_g5c_hold_arm.zsh (its SIGSTOP positive control could have frozen the wrong game), g1e_clean_fps.zsh and
+s7065_sample_loop.zsh (`sample` of the wrong game). The 16 one-off scratch/agent/s62xx/g1b samplers keep the old pattern (historical).
+Positive control: tools/s7313_pid_test/run.zsh (two fake processes named RogueSquadron64Recomp, a C sleeper; a copied /bin/sleep is
+SIGKILLed by macOS): 8/8 PASS. This includes "old head -1 picks the older pid", which is the s7312 mechanism reproduced.
+Real-game check (scratch/s7313/run.zsh, same L1 21:9 dd8 FARMAX=0 recipe, CAPN=6): caps=6 multi=0, freeze k=0 vi 6984 same pose.
+All 6 captures over the freeze vs the good s7312 b1 frame: mean abs diff 0.01; vs the stale a1 frame: 92.80. Same scorer on stale
+vs good (the control): 92.80. The window never lagged the stream.
+Rules out: a presentation lag or stale-frame mechanism behind G5b/G5c owner reports, as far as this datum went (it was a harness
+artefact). Lesson: a batch voided mid-run must be confirmed dead (pgrep) before the rerun. The pose script now enforces this.

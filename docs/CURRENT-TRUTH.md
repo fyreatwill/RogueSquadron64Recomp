@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7312 (2026-11-13).
+Compact operational handoff, as of Session 7313 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -87,6 +87,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7312 "the presented window can lag the RDP stream for seconds (first run after a rebuild)". Believable: same pose, same stream,
+  two captures 0.7 s apart both wrong. s7313: a voided batch-1 L5 game was still alive and the pose script captured the oldest game
+  (`pgrep|head -1`); the repro arm with a one-game guard matched 6/6 (diff 0.01 vs 92.8 control).
 - s7286/s7288 "the terrain window binds from dd4; dd4->dd6 adds 1.8% cells". Believable: [s7233] in= sat at ~3550
   dd4..dd8. s7291: in= counts only the retail-equivalent 64x64 window (constant by construction); total cells grow +24%.
 - s7283 "off-window gaps >=250 ms are the GPU saturator draining after SIGKILL". Believable: they followed lit holds
@@ -177,7 +180,7 @@ is in the s7307 archive). Active unit: NEXT.md.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310), qualified s7312, owner look pending.** s7312: FARMAX=0 pins the dome edge tris to x=0 on L1,
    L5 and L12 alike, the 32767 default never does (stream decode, same-pose L1/L5); s7311 soak 300 s L1/L5/L12 clean, 60/s, no frame-time cost.
    Sheets docs/owner_sheet_s7310_farmax.jpg + docs/owner_sheet_s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-   Open (single instance, s7312): the window once showed a different scene from the frozen RDP swap for >2 s (first arm after a rebuild). Cause: the dd-scaled projection far. With far above
+   The s7312 "window showed another scene" datum was a harness artefact (s7313: a leftover game was alive and `pgrep|head -1` captured its window; tools/rs64_game_pid.zsh guard). Cause of the sliver: the dd-scaled projection far. With far above
    ~36-40k units (L1: far 8070.8 x4.5 clean, x5.0 pinned; dd6 auto and dd8 both above) the F5 clip emits the sky-dome edge panels pinned to
    fb x=0 with texture W 0/-0.0015 (vertical streaks); at far <= x4.5 the same panels arrive as normal guard-band tris (minx -230..-260, W sane).
    Two lines: RDP-stream W decode and presented near-white left-column count (608 vs 0) agree in all 12 same-pose arms. Not perspNorm, not the
@@ -207,7 +210,9 @@ is in the s7307 archive). Active unit: NEXT.md.
 11. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
-12. **When 1-11 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+12. **Harness one-game discipline (s7313):** capture/sample/SIGSTOP tools take the pid from tools/rs64_game_pid.zsh (exactly one
+    game or nothing); test tools/s7313_pid_test/run.zsh. Next: the loop's soak phase does not check for a leftover game (NEXT.md).
+13. **When 1-12 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

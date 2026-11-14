@@ -12,7 +12,7 @@ E="ROGUESQ_DD_MELT=1 ROGUESQ_DD_WIDEWIN=1 ROGUESQ_DD_WIDEWIN_STACK=0 ROGUESQ_DD_
 [[ -n $PLAIN ]] && E="${FS:+ROGUESQ_FULLSCREEN=1}"; E="$E ${XE:-}"; DU=${DUR:-300}
 ( for k in $(seq 1 $(( (DU+150)/10 ))); do /bin/sleep 10; osascript -e 'tell application "System Events" to set frontmost of (first process whose name contains "RogueSquadron64Recomp") to true' >/dev/null 2>&1; done ) & fp=$!
 ( for off in 180 280 380; do /bin/sleep $(( off - ${last:-0} )); last=$off
-    pid=$(pgrep -x RogueSquadron64Recomp | head -1); [[ -z $pid ]] && continue
+    pid=$(. tools/rs64_game_pid.zsh; rs64_game_pid) || { echo "skip-multi $off" >> $O/ctl.txt; continue; }
     a=$(python3 -c 'import time;print(time.clock_gettime_ns(time.CLOCK_UPTIME_RAW)*24//1000)'); kill -STOP $pid; /bin/sleep 1; kill -CONT $pid
     b=$(python3 -c 'import time;print(time.clock_gettime_ns(time.CLOCK_UPTIME_RAW)*24//1000)'); echo "$a $b" >> $O/ctl.txt; done ) & sp=$!
 env CW=${CW:-480} CH=270 CULL=1 ASP=${ASP:-16:9} zsh scratch/s7009/arm.zsh $LV 4 $T "$E" 120 $DU > $O/arm.txt 2>&1

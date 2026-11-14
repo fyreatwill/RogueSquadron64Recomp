@@ -9,7 +9,7 @@ lvl=${1:-1}; dds=(${=2:-4 1}); hold=${3:-150}; O=scratch/agent/m6
 for dd in $dds; do
   T=g1_lvl${lvl}s6716_cleandd$dd
   ( for i in $(seq 1 400); do [ -f $O/$T/run.log ] && grep -a -q '\[g1e-split\] phase=6' $O/$T/run.log && break; sleep 1; done
-    sleep 60; p=$(pgrep -x RogueSquadron64Recomp | head -1); [ -n "$p" ] && sample $p 10 -file $O/$T/sample.txt >/dev/null 2>&1 ) &
+    sleep 60; p=$(. tools/rs64_game_pid.zsh; rs64_game_pid) && sample $p 10 -file $O/$T/sample.txt >/dev/null 2>&1 ) &
   env HOLD_S=$hold zsh scratch/agent/s6716_bridge.zsh $lvl $dd cleandd$dd
   wait
 done

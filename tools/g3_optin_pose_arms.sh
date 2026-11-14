@@ -18,6 +18,7 @@ O=${1:?outdir}; shift; [[ $O == /* ]] && { echo "OUTDIR must be repo-relative (R
 /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes' && { echo LOCKED; exit 4; }
 # s6934: same gate as g1e_owner_quiet_arms.zsh; these arms take the window route and key focus, so a human at the machine stops them (rc 2, nothing launched).
 i=$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/{printf "%d\n",$NF/1e9; exit}'); (( i < ${IDLE_MIN:-120} )) && { echo "human active idle=$i"; exit 2; }
+. tools/rs64_game_pid.zsh  # s7313: one-game PID guard (see that file)
 LV=${LEVEL:-1}
 REF=$PWD/scratch/agent/m6/s6468p_dd8_sheet/poseref.bin; [ -s $REF ] || [ -n "${NOREF:-}" ] || exit 3
 FZ=(${=FZ:-42.33 74.04 106.28}); MS=${MS:-15000}
@@ -32,19 +33,22 @@ for a in $ARMS; do
   fi
   wd=(); dw=512; case "$e" in *ROGUESQ_ASPECT=16:9*) dw=796;; *ROGUESQ_ASPECT=21:9*) dw=1024;; esac; (( dw != 512 )) && wd=(WIDE_ROUTE=1 MISSION_WIDTH=$dw)
   rf="ROGUESQ_POSE_REF=$REF"; [ -n "${NOREF:-}" ] && rf=
+  rs64_no_foreign_game ${FOREIGN_WAIT:-60} || { echo "$n VOID: foreign game alive before launch"; exit 5; }
   T=${TAGP:-s6872}_$n; L=scratch/agent/m6/g1_lvl$LV$T/run.log; C=$O/$n; mkdir -p $C; rm -f $L
   env ROGUESQ_NO_PKILL=1 MISSION_WIDE_FLIGHT=0 TITLE_OPTIONAL=1 $wd \
     XENV_EXTRA="$e $pk ROGUESQ_XTRACE_MEM=800FA730:29:30:1,800FA730:0:80137DC0:3,800FA730:0:80137E7C:1${XMEM:+,$XMEM} ROGUESQ_POSE_LOCK=${LOCK:-1} $rf ROGUESQ_POSE_FREEZE=$fz:$MS ROGUESQ_DEBUG_WRITE=80003470:1:$dw:55 ROGUESQ_RAND_TRACE=$PWD/$C/rand.txt" \
     HOLD_S=${HOLD_S:-110} LEVEL=$LV TAG_SUFFIX=$T zsh scratch/agent/g1_level_coverage_common.zsh > $C/harness.log 2>&1 &
-  H=$!; c=0; k=0
+  H=$!; c=0; k=0; mg=0
   while kill -0 $H 2>/dev/null && (( k < $#FZ )); do
     if grep -aq "^\[posefreeze\] k=$k " $L 2>/dev/null; then
-      sleep 1; P=$(pgrep -x RogueSquadron64Recomp | head -1); g=$(build/winctl find $P 2>/dev/null)
-      for i in 1 2; do /usr/sbin/screencapture -x -o -l${g%% *} $C/f${k}_$i.png && c=$((c+1)); sleep 0.5; done
+      sleep 1; P=$(rs64_game_pid); g=$(build/winctl find $P 2>/dev/null)
+      # s7313: CAPN captures 0.5 s apart (default 2); with != 1 game alive the capture is skipped and counted in multi=.
+      if [ -n "$P" ] && [ -n "$g" ]; then for i in $(seq 1 ${CAPN:-2}); do /usr/sbin/screencapture -x -o -l${g%% *} $C/f${k}_$i.png && c=$((c+1)); sleep 0.5; done
+      else mg=$((mg+1)); echo "$n k=$k capture SKIPPED: pid='$P' (not exactly one game alive)"; fi
       k=$((k+1))
     fi
     sleep 0.1
   done
-  wait $H; echo "$n env='$e' caps=$c $(tail -1 $C/harness.log | cut -c1-160)"
+  wait $H; echo "$n env='$e' caps=$c multi=$mg $(tail -1 $C/harness.log | cut -c1-160)"
   grep -a '^\[posefreeze\]' $L | cut -c1-70
 done
