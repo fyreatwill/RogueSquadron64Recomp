@@ -475,8 +475,18 @@ is in the s7307 archive). Active unit: NEXT.md.
     on failure; now "[s7356] FATAL init_overlays" + abort) and 2 env-gated diagnostic callocs in main.cpp. Runtime second line:
     tools/s7356_failalloc.c (DYLD calloc interpose, fails the first call from a named caller): pre-fix SIGSEGV si_addr=0x8,
     post-fix named FATAL; ctl arms boot. Regression `zsh tools/s7356_arms.zsh`. 260 s dd8 smoke clean. Next: class AH (27v).
-27v. **Next unit (NEXT.md): class AH, unchecked I/O lengths** (fread/read/fseek/ftell/fwrite results) in host code we own.
-28. **When 1-27v offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27v. **Unchecked host I/O lengths (class AH): CLOSED (s7357, static census + runtime arms; 4 default-on FIXED).**
+    tools/s7357_iolen_census.py (fread/read/fgets/fwrite/write/ftell/lseek + iostream read/write/tellg/seekg) over the s7356
+    scope: 100 sites, 0 B / 0 G after fixes (58 W = output-only diagnostic dump writes; persisted sinks excluded from W; 6
+    controls). FIXED in librecomp: pi.cpp read_save_file (short save left the buffer tail stale, i.e. the previous profile's
+    bytes after change_save_file -> zero-fill + "[s7357-io] save file short"), pi.cpp update_save_file (failed write still
+    finalized a truncated temp over the real save -> close+fail() check), recomp.cpp read_file (tellg -1 -> resize(SIZE_MAX)
+    throw; short read -> empty) + write_file (reported success unchecked), mod_manifest.cpp loose read_file, mods.cpp config
+    writes. Runtime: `zsh tools/s7357_arms.zsh` (own working folder, save COPY): ctl 512 B silent, short 100 B -> named warning,
+    both boot; owner save sha unchanged. 260 s dd8 smoke clean. Next: class AI (27w).
+27w. **Next unit (NEXT.md): class AI, unvalidated numeric env/config parses** (atoi/strtol/strtoul/atof on getenv or a
+    config file, used as an index, size, shift or divisor without a range check) in host code we own.
+28. **When 1-27w offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

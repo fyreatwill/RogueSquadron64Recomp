@@ -194024,3 +194024,36 @@ Next discriminator: class AH (unchecked I/O lengths): tools/s7357_iolen_census.p
 the ROM/save splits H-short (a default-on reader treats a short read as full data) from H-safe / H-diag.
 Not covered: upstream RT64 code we did not touch, and C++ `new`/std containers (they throw bad_alloc -> terminate -> SIGABRT
 report, already a named failure). Lib edit exported (submodule-patches/N64ModernRuntime.patch). Next: class AH (27v).
+
+## Session 7357 (2026-11-14) — class AH unchecked host I/O lengths closed: 4 default-on defects FIXED (short save read keeps stale tail, failed save write still finalized, ROM read_file tellg/short read, write_file unchecked); census 100 sites, 0 B / 0 G
+HYPOTHESIS-ID: host-unchecked-io-length
+Hypotheses: H-safe (every default-on site checks the length), H-diag (only env-gated dumps ignore it), H-short (a default-on
+reader uses a short read as full data). **Selected: H-short** (and the write twin); H-safe and H-diag refuted.
+- Census: tools/s7357_iolen_census.py (fread/read/pread/fgets/fwrite/write/pwrite/fseek/ftell/lseek + iostream
+  read/write/tellg/seekg; scope = s7356's: src/**, librecomp + ultramodern src, our lib/rt64 '+' lines). Pre-fix `--raw`:
+  100 sites, B 49 / G 26 / CHECKED 24 / D 1. Adding class W (unchecked write to an output-only diagnostic sink opened for
+  write nearby or a static s_/g_ log FILE*; persisted sinks save_file/out_file/output_file are never W) and the rt64
+  `read(ram,..)` RDRAM accessor (D) left 10 real rows, all in librecomp. Post-fix: CHECKED 33, CHECKED-M 2, D 5, W 58, W-M 2,
+  **0 B / 0 G**. Controls (planted): B, CHECKED, G, W, unchecked save_file.write -> B, stream gcount check -> CHECKED: all PASS.
+- FIXED (lib/N64ModernRuntime/librecomp, exported to submodule-patches/N64ModernRuntime.patch):
+  * pi.cpp read_save_file: a short save file filled only the head of save_buffer; the tail kept whatever it held (zeros on
+    first load, the PREVIOUS profile's bytes after change_save_file). Now gcount-checked: zero-fill tail (same policy as a
+    missing file) + "[s7357-io] save file short: read N of M bytes".
+  * pi.cpp update_save_file: write result unchecked, so a disk-full/I/O error still ran finalize_output_file_with_backup,
+    copying a truncated temp file over the real save. Now close() + fail() -> saving_failed (existing message box path).
+  * recomp.cpp read_file: tellg() -1 -> resize(SIZE_MAX) (throws, uncaught); short read returned a zero tail as ROM data.
+    Both now return empty (callers map it to FailedToOpen / hash mismatch). write_file returned true unchecked -> now
+    flush + good(); the stored-ROM caller logs a non-fatal "[s7357-io] storing the ROM copy failed".
+  * mod_manifest.cpp LooseModFileHandle::read_file: same tellg/short-read pair -> exists=false. mods.cpp: both config
+    writers now return false on a failed close instead of finalizing over the good file.
+- ORIGIN: upstream N64ModernRuntime code (not ours, not the game's): the iostream reads/writes never consulted gcount()/fail().
+  Values are legitimate data paths; the defect is only the missing length/failure test.
+- Runtime second line: tools/s7357_arms.zsh runs the game from its own working folder (config_path = cwd) with a COPY of the
+  owner save (build/saves untouched, ROGUESQ_NO_SAVE_WRITE set): ctl (512 B copy) alive 20 s, 0 "[s7357-io]"; short (100 B
+  copy) alive 20 s, exactly 1 "[s7357-io] save file short: read 100 of 512 bytes, zero-filling the rest"; 0 signals in both;
+  owner save sha1 687d9f77... identical before/after. (The ctl is the same-run negative/positive pair: the warning fires only on
+  the truncated input.) Not armed at runtime: the save-write failure path (would need NO_SAVE_WRITE cleared) and a truncated
+  ROM (pre-fix also failed the hash, so behaviour only differs in the tellg -1 case) — static only, labelled single-source.
+- Smoke on build/ (fix in): `env SECS=260 zsh scratch/s7326/run.zsh s7357_dd8 ''`: crash=0 resets=14 late=0 arenafull=0
+  (same as s7356).
+- Next: class AI (CURRENT-TRUTH 27w): unvalidated numeric env/config parses used as index/size/shift/divisor.
