@@ -193630,3 +193630,36 @@ review; no runtime instrument needed since no candidate exists). Caveat: RDP-fie
 decoded field, not a host-widened value (true for colorImage.width / tile coords read in this pass, not re-verified per site).
 Rules out: 32-bit product wrap before a bound/alloc as a live defect class in host code. Next: class W, signed lengths
 reaching size_t sinks (NEXT.md).
+
+## Session 7346 (2026-11-14) — class W signed lengths reaching size_t sinks closed: 1322 sinks, 22 signed/subtraction rows, 0 open; RT64 CommandWarning::format negative-vsnprintf resize + truncation fixed
+
+HYPOTHESIS-ID: host-signed-len-sinks. Hypotheses (NEXT.md): H-safe (every signed length lower-bounded or non-negative by
+construction), H-diag (only gated probes), H-neg (a default-on signed guest length with an upper-bound-only check).
+- New `tools/s7346_signed_len_census.py --controls` on the s7343 scope (183 host files). Sinks: memcpy/memmove/memset 3rd arg,
+  fread/fwrite size*count, malloc/calloc/realloc, .resize/.reserve/.assign(count, v), new T[n], and every `<`/`<=` bound of a for
+  loop with an unsigned index (multi-line call args joined from the next 4 lines). Variable types from the function body, the file,
+  then a one-pass declaration map of all project headers (struct members such as rt64 projectionCount / gameCallCount resolve to
+  uint32_t). Controls PASS: planted `int n = (int)task->size; if (n > 0x1000) return; memcpy(b, rdram, n);` -> '?', lower-bounded
+  twin -> LB, unsigned twin -> LB, gated twin -> G.
+- Result: sinks=1322, length unparsed 11 (all for-loops whose condition has no `<` bound on the index: `!=` ring walks, null-
+  terminated tables, count-down loops; read by hand, none signed). 42 sinks carry a length variable with no declaration found:
+  read by hand, all .size(), constexpr uint32_t (kWbwMax, FloorAttachRows), static uint32_t/size_t globals (g_dlw_nzero, z_nl,
+  g_bfsh_pk_*), uint64 (avail) or uint32 members. 22 rows carry a signed variable or a subtraction: D 6, G 3, P 1, K 1, LB 3,
+  U 2, H 5, FIX 1. H rows: dpc_bridge WmUndo `u.hi - u.lo`, `r.second - r.first` and the rstat loops: unsigned pairs, safe
+  because rs64_bf_push's caller drops `submit_hi <= submit_lo` at dpc_bridge.cpp:6793 before any g_deferred_ranges push, and the
+  shadow entry also needs `hi - lo <= cap`; RT64 floor dump `r.end - r.begin` of RenderRange(0, pitch*height).
+- -> H-safe for guest data (no signed guest length anywhere in the host), plus ONE host defect (H-neg shape, not guest-derived):
+  lib/rt64/src/hle/rt64_command_warning.cpp `CommandWarning::format` did `int reqSize = vsnprintf(nullptr, 0, ..)` then
+  `message.resize(reqSize)` with no lower bound. vsnprintf returns -1 on an encoding error, so resize asked for ~2^64 and threw
+  std::length_error. The second call `vsnprintf(data, reqSize, ..)` also dropped the last character of every warning. FIXED:
+  clamp reqSize < 0 to 0, resize(size_t), buffer size reqSize + 1 (std::string keeps room for the terminator). ORIGIN: upstream
+  RT64 code, untouched by this port; the writer of the bad length is vsnprintf itself on a format error, which is a legitimate
+  return value the caller never handled. Latent here: the port runs the gfx ucode LLE, so the HLE gbi paths that build
+  CommandWarnings are rarely reached.
+- Control `tools/s7346_warn_ctl.cpp` (clang++ -std=c++17): probe vsnprintf("%lc", 0xD800) = -1; old form THREW basic_string,
+  new form returned ""; normal format "tile %d" 42: old 'tile 4', new 'tile 42' -> PASS. The census exits 1 if the fix is gone.
+- Build: cmake --build build OK. Regression smoke `env SECS=260 zsh scratch/s7326/run.zsh s7346_dd8 ''` (dd8 21:9 FPS60 hangar
+  -> mission -> abort route, owner save read-only): crash=0 resets=14 late=0 arenafull=0, no basic_string / length_error lines.
+- lib/rt64 edited -> ./submodule-patches/export.sh run, rt64.patch refreshed in this commit.
+- Rules out: signed guest lengths as a crash source in the host runtime (s7337-s7346 sibling classes R..W now all closed).
+  Next: class X, float-to-integer conversions of guest floats reaching indices / sizes / loop bounds.

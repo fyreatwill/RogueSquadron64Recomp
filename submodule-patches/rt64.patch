@@ -1832,6 +1832,25 @@ index 785de27..3fc321b 100644
              DisplayList *dlStart = reinterpret_cast<DisplayList *>(&memory[dlStartAddress]);
              DisplayList *dlEnd = (dlEndAddress > 0) ? reinterpret_cast<RT64::DisplayList *>(&memory[dlEndAddress]) : nullptr;
  
+diff --git a/src/hle/rt64_command_warning.cpp b/src/hle/rt64_command_warning.cpp
+index c702055..f5fa89f 100644
+--- a/src/hle/rt64_command_warning.cpp
++++ b/src/hle/rt64_command_warning.cpp
+@@ -15,9 +15,12 @@ namespace RT64 {
+         va_start(va1, msg);
+         va_copy(va2, va1);
+         int reqSize = vsnprintf(nullptr, 0, msg, va1);
+-        warning.message.resize(reqSize);
++        // [s7346] class W: vsnprintf returns -1 on an encoding error; resize(-1) asked for ~2^64 and threw. The second call took
++        // reqSize as the buffer size and dropped the last character of every message; std::string keeps room for the terminator.
++        if (reqSize < 0) reqSize = 0;
++        warning.message.resize(size_t(reqSize));
+         if (reqSize > 0) {
+-            vsnprintf(warning.message.data(), reqSize, msg, va2);
++            vsnprintf(warning.message.data(), size_t(reqSize) + 1, msg, va2);
+         }
+ 
+         va_end(va1);
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
 index 873883d..998654c 100644
 --- a/src/hle/rt64_framebuffer.cpp

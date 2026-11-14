@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7345 (2026-11-14).
+Compact operational handoff, as of Session 7346 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -384,9 +384,18 @@ is in the s7307 archive). Active unit: NEXT.md.
     --controls` (exit 1 = '?' / B): 1402 `X * Y` / `X << Y` sink sites in the 183 host files, 0 open, 0 defects. 139 hand rows are
     mostly RT64 RDP row maths bounded by RDP bitfield widths (width 10 bits, coords 12-bit 10.2, line 9 bits, siz 2 -> <= 2^23);
     hot-path D rows (get_n64_input, osViSwapBuffer/SetMode, queue_samples) re-read by hand: loop x const or already uint64.
-27k. **Next unit (NEXT.md): class W, signed lengths reaching size_t sinks** (`int n = guest; if (n > cap) return; memcpy(.., n)`:
-    a negative n passes the signed check and becomes ~2^64 in the copy).
-28. **When 1-27k offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27k. **Signed lengths reaching size_t sinks (class W): CLOSED (s7346, static + standalone control).** `tools/s7346_signed_len_census.py
+    --controls` (exit 1 = '?' / B / fix missing): 1322 sinks (memcpy/memmove/memset len, fread/fwrite, malloc/calloc/realloc,
+    resize/reserve/assign, new[], unsigned-index for bounds) in the 183 host files; 22 carry a signed variable or a subtraction, 0 open.
+    No guest-derived signed length exists. One host defect FIXED (lib/rt64 rt64_command_warning.cpp `CommandWarning::format`):
+    `int reqSize = vsnprintf(..)` went to `resize()` unchecked (-1 on an encoding error -> ~2^64 -> throws) and the second vsnprintf
+    used reqSize as the buffer size, dropping the last character of every warning. `tools/s7346_warn_ctl.cpp` control PASS (old form
+    throws on `%lc 0xD800` and gives 'tile 4' for 'tile 42'; new form gives "" and 'tile 42'). Submit-range subtractions in
+    dpc_bridge are safe because `submit_hi <= submit_lo` is dropped at :6793 before any push. 260 s dd8 21:9 hangar-route smoke
+    after the fix: 0 crash, 14 resets. Next: class X (item 27l).
+27l. **Next unit (NEXT.md): class X, float-to-integer conversions of guest floats reaching indices / sizes / loop bounds**
+    (`(int)f`, `int i = f`, lround/static_cast on a guest float with NaN / out-of-range is UB; arm64 saturates to INT_MIN/MAX or 0).
+28. **When 1-27l offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
