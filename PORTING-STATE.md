@@ -193393,3 +193393,30 @@ Discrimination: selects H-diag (every live-path 8 MB mask is env/log-gated or fe
 default-on path masks a >8 MB address; the RDP submit and RSP DMA paths were already widened in s6690/s7327); H-intended has no
 instance (no 24-bit segment math spelled 0x7FFFFF on a live path). Class M CLOSED.
 Next (NEXT.md s7339): class N, `& 0xFFFFFF` 16 MB masks (~380 host sites) vs the spill arena at phys 0x01000000+, host CPU side.
+
+## Session 7339 (2026-11-14) — class N 16 MB physical masks closed: 461 sites classified (B 0); wrapper-guard 16 MB bound widened to rs64_ram_top; spill-live dd8 run shows 0 pointers above 16 MB (latent)
+Work unit (NEXT.md s7339, HYPOTHESIS-ID phys-16mb-masks): classify every `& 0xFFFFFx` / `0x1000000` site in host code, since
+the spill arena sits at phys 0x01000000-0x01800000 (s7326) and a CPU-side `rdram + (a & 0xFFFFFF)` would fold a spill pointer
+onto phys 0x00xxxxxx, and a `< 16 MB` bound would reject it.
+Tool: `tools/s7339_mask16_census.py [--controls] [-v]` (new; loads tools/s7338_mask_census.py, swaps in a class-N regex, adds
+H = hardware-bus 24-bit address and K = key-only). Control: planted default-on fold reported '?', planted VI-origin mask 'H'. PASS.
+Result: 461 sites in 159 files: H 222, D 116, G 97, P 8, K 4, R 4, X 1, C 9, B 0, unclassified 0 (exit 0). s7338 still exits 0.
+Hand review of the default-on functions: VI origin masks (osViSwapBuffer, vi commit handoff, queue_samples, rt64 VI state) = 24-bit
+VI register; rsp_dpc_submit_impl / kSubmitRamMask = RDP command bus (s6690, RCP side closed s7324/s7327); rt64 gbi/hle
+(s2dex, rt64_rsp fromSegmented, RDP_ADDRESS_MASK, RSP_DMA_MASK) = GBI/bus math, unused by the LLE path anyway; get_n64_input
+harness rows each env-gated; rsp.cpp run_task under ROGUESQ_LOG_HUDBIT; s7333_hdr / s7324_class / g5a = audits bounded first.
+Two default-on CPU-side shapes:
+1. lib/N64ModernRuntime/librecomp/src/sp.cpp rs64_sp_task_range_valid (s5063 guard for osSpTaskStartGo/osSpTaskLoad,
+   osAiSetNextBuffer, osContGetReadData, osEeprom*): accepted only KSEG0 0x80000000-0x81000000 -> a wrapper pointer in spill would be
+   SKIPPED. Now end = max(0x81000000, rs64_ram_top), read per call (ROGUESQ_S7339=0 = old 16 MB; never narrower, dd1 4:3 unchanged
+   since ram_top 0x80800000 < 16 MB). `[s7339] spai selftest` (control) + `[s7339] spai hi` counter. Patch exported.
+2. src/main/upstream_compat.cpp osViSetMode_recomp: `rdram_off = mode_ptr & 0x00FFFFFF` read/writes the OSViMode struct ->
+   `[s7339] vimode hi` counter (behaviour unchanged) + first 4 pointers.
+Runtime second line (`env SECS=260 zsh scratch/s7326/run.zsh s7339_dd8 ''`: dd8 21:9 FPS60 DD_WIDEWIN, ALLOCMAP, hangar ->
+mission -> abort route, one game): spill arena live 81000000..81800000 (ram_top 81800000, blocks at 81000000 / 811E0010), 14 resets,
+0 crash. selftest ram_top=81800000 old(81000100)=0 new=1 (instrument detects a spill pointer); spai hi = 0 lines; s5065 census bad=0
+on every wrapper; vimode hi 0, mode ptrs 80128DA0/80128C90/80128E40/80128DF0 (static osViModeTable). Lines: scratch/s7339/lines.txt.
+ORIGIN: no mitigation; the bound widening is a latent-defect conversion (no live pointer ever crossed 16 MB at the guards).
+Discrimination: selects H-hw (222 masks model the 24-bit VI/RDP/RSP bus, correct by design) + H-diag (rest gated/log/key);
+refutes H-fold on the live path (0 spill pointers reach the guard or osViSetMode in a spill-live run, positive control PASS).
+Class N CLOSED. Next (NEXT.md s7340): class O, host `0x81000000` KSEG0 16 MB upper bounds (62 sites) vs spill pointers.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7338 (2026-11-14).
+Compact operational handoff, as of Session 7339 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -340,8 +340,17 @@ is in the s7307 archive). Active unit: NEXT.md.
     (early-return log gate), R 10 read-only audit keys, X 4 dumps, S 1 size cap, C 6, B 0. RSP DMA uses s7327 masks, ucode C none.
     Runtime (scratch/s7338/run.zsh, LOG_DPCWIN): dd8 21:9 L1 33.0M RDP windows start >=8 MB (logged 1690/21931), dd1 21:9 14.8M (779/4951;
     21:9 alone sets osmem 12) through the default submit path (s6690 0xFFFFFC mask); both 137 s flight, 0 crash, 0 VI stall.
-27d. **Next unit (NEXT.md): class N, 16 MB `& 0xFFFFFF` masks** (~380 host sites) vs the spill arena at phys 0x01000000+.
-28. **When 1-27d offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27d. **16 MB physical masks (class N): CLOSED (s7339, static + runtime, latent).** `tools/s7339_mask16_census.py --controls`
+    (exit 1 = unclassified; s7338 scope/classes + H hardware-bus 24-bit address, K key-only): 461 sites = H 222 (VI origin, RDP
+    command/image/texture, RSP DMA, rt64 HLE GBI segment math), D 116, G 97, P 8, K 4, R 4, X 1, C 9, B 0. Two default-on CPU-side
+    shapes found and converted: librecomp sp.cpp rs64_sp_task_range_valid (the s5063 guard of osSpTaskStartGo/osAiSetNextBuffer/
+    osContGetReadData/osEeprom*) bounded every pointer at 0x81000000 -> now max(0x81000000, rs64_ram_top) (ROGUESQ_S7339=0 old);
+    osViSetMode_recomp masks the OSViMode pointer with 0xFFFFFF -> [s7339] vimode hi counter. Runtime dd8 21:9 hangar->mission
+    (spill live 0x81000000..0x81800000, 14 resets, 0 crash): selftest old=0/new=1 at 0x81000100, spai hi 0, vimode hi 0 (mode ptrs
+    static 0x80128C90-0x80128E40), census bad 0. Latent: no live pointer ever crossed 16 MB. Next: class O (item 27e).
+27e. **Next unit (NEXT.md): class O, host KSEG0 16 MB upper bounds `0x81000000`** (62 sites: upstream_compat 50, sp 7, main 2,
+    s7324 1, dpc_bridge 1, overlays 1) vs spill pointers 0x81000000-0x81800000.
+28. **When 1-27e offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

@@ -1512,6 +1512,13 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         __atomic_store_n(&rs64_last_vi_mode, mode_ptr, __ATOMIC_RELAXED);  // s6734: FB_DUMP_MODE trigger
     }
     uint32_t rdram_off = mode_ptr & 0x00FFFFFF;
+    if ((mode_ptr & 0x1FFFFFFFu) >= 0x01000000u) {  // s7339 class N: an OSViMode above 16 MB would fold onto phys 0x00xxxxxx
+        static std::atomic<uint32_t> s_hi{0};
+        const uint32_t c = s_hi.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (c <= 8 || (c & (c - 1)) == 0) fprintf(stderr, "[s7339] vimode hi n=%u mode=%08X\n", c, mode_ptr);
+    }
+    {   static std::atomic<uint32_t> s_seen{0};  // s7339: distinct-ish mode pointers seen (positive control: >0 lines)
+        if (s_seen.fetch_add(1, std::memory_order_relaxed) < 4) fprintf(stderr, "[s7339] vimode ptr=%08X\n", mode_ptr); }
     auto read_u32 = [&](uint32_t off) -> uint32_t {
         uint32_t v = 0;
         for (int i = 0; i < 4; ++i) {

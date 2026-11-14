@@ -4400,10 +4400,10 @@ index 1cb3f6a..e72ecc9 100644
      return true;
  }
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..049aea6 100644
+index ae0f44f..0e1b7f9 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -1,15 +1,112 @@
+@@ -1,15 +1,132 @@
  #include <cstdio>
 +#include <cstdlib>
 +#include <cstring>
@@ -4419,14 +4419,34 @@ index ae0f44f..049aea6 100644
 +
 +static std::atomic<bool> g_sp_yield_requested{false};
 +
++// s7339 class N: the guarded-wrapper bound was KSEG0 0x80000000-0x81000000 (16 MB). The host spill arena sits at
++// 0x81000000+ and rs64_ram_top is widened to its end (s7336), so a wrapper pointer into spill would be SKIPPED.
++// ROGUESQ_S7339 (default 1; =0 old 16 MB): end = max(0x81000000, rs64_ram_top), read per call (ram_top moves at arena
++// creation). Never narrower than the old bound. [s7339] spai lines count calls with an address >= 0x81000000.
++extern "C" uint32_t rs64_ram_top;
 +static bool rs64_sp_task_range_valid(uint64_t addr, uint64_t size) {
-+    constexpr uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
-+    constexpr uint64_t kseg0_end = 0xFFFFFFFF81000000ull;
++    static const bool s7339_off = [] { const char* e = std::getenv("ROGUESQ_S7339"); return e && e[0] == '0'; }();
++    const uint32_t top = (!s7339_off && rs64_ram_top > 0x81000000u) ? rs64_ram_top : 0x81000000u;
++    static std::atomic<bool> s7339_st{false};
++    if (!s7339_st.exchange(true)) {
++        const uint32_t probe = 0x81000100u;  // control: a spill-arena address (old bound rejects it)
++        std::fprintf(stderr, "[s7339] spai selftest ram_top=%08X end=%08X old(%08X)=%d new=%d off=%d\n", rs64_ram_top, top, probe,
++            probe + 0x40u <= 0x81000000u ? 1 : 0, probe + 0x40u <= top ? 1 : 0, s7339_off ? 1 : 0);
++    }
++    const uint32_t low = static_cast<uint32_t>(addr);
++    if (low >= 0x81000000u && ((addr >> 32) == 0 || (addr >> 32) == 0xFFFFFFFFull)) {
++        static std::atomic<uint64_t> n{0};
++        const uint64_t c = n.fetch_add(1, std::memory_order_relaxed) + 1;
++        if (c <= 16 || (c & (c - 1)) == 0)
++            std::fprintf(stderr, "[s7339] spai hi n=%llu addr=%08X size=0x%llX end=%08X\n", (unsigned long long)c, low,
++                (unsigned long long)size, top);
++    }
++    const uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
++    const uint64_t kseg0_end = 0xFFFFFFFF00000000ull | top;
 +    if (addr >= kseg0_base && size <= kseg0_end - addr) return true;
 +
-+    const uint32_t low = static_cast<uint32_t>(addr);
-+    return (addr >> 32) == 0 && low >= 0x80000000u &&
-+           size <= 0x01000000ull - (low - 0x80000000u);
++    return (addr >> 32) == 0 && low >= 0x80000000u && low < top &&
++           size <= static_cast<uint64_t>(top - low);
 +}
 +
 +static bool log_sp_yielded_ab() {
@@ -4518,7 +4538,7 @@ index ae0f44f..049aea6 100644
      //printf("[sp] osSpTaskStartGo(0x%08X)\n", (uint32_t)ctx->r4);
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
-@@ -37,12 +134,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -37,12 +154,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
  }
  
  extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {
