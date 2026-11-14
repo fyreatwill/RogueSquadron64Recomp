@@ -1,22 +1,16 @@
-# NEXT (s7318): class B field-order compares vs live spill pointers — runtime cross-block check
+# NEXT (s7319): close class B — fold the s7318_bcmp_levels soak, then statically classify the sites no run executed
 HYPOTHESIS-ID: spill-holder-field-compare
-Context: s7317 named the live spill holders (dd8 21:9 L4: up to 120 live spill blocks, 2747 holder words, 42 owner types) and closed
-the top-byte-shift form (32 sites, spill-equal). Open: 182 sites where a word loaded from a holder-field offset (register base) is
-ordered (slt/sltu) against a non-constant register (scratch/s7317/field_census.txt "  B" lines; inflate_codes_recomp 17,
-loadDatFile 10, inflate_blocks 10, _Genld 8, ...). Static pass cannot tell if the other operand is in the same block.
-Hypotheses: H-same (every B compare that sees a spill pointer compares it with a pointer into the SAME block or the same arena
--> order is the retail order) vs H-cross (some B site orders a spill pointer against a heap pointer / pool bound -> its result can
-differ from retail's all-heap order) vs H-scalar (the loaded field is never a pointer at these sites at runtime).
+Context: s7318 runtime classifier (ROGUESQ_S7318_BCMP, tools/apply_s7318_bcmp_probe.py): dd8 21:9 L4 250 s flight, 109/182 class-B sites
+executed, 0 cross compares (spill pointer vs 0x80xxxxxx), control 2569/2569; the 464 spill-operand compares are zlib window pointers
+in one block. 73 sites never executed (list: `python3 tools/s7318_bcmp_report.py scratch/s7318/bcmp_run1.txt scratch/s7318/bcmp_run2.txt`).
+Soak scratch/agent/soak_queue/s7318_bcmp_levels.sh (L1 + L12) queued; its tables land in scratch/s7318q/bcmp_l{1,12}.txt.
+Hypotheses for the remaining sites: H-scalar (the compared field is a count/size/time, never a pointer) vs H-same (pointer vs pointer
+into the same object/array) vs H-cross (a pointer vs a heap bound/pointer from another allocation -> can misorder a spill pointer).
 Unit:
-1. New tools/apply_s7318_bcmp_probe.py (fixup, RS64_REPLAY registration per docs/REGEN-VERIFY.md, env ROGUESQ_S7318_BCMP=1 only):
-   before each of the 182 slt/sltu sites (generate the list from tools/s7317_field_compare_census.py), call
-   rs64_s7318_bcmp(pc, a, b). C++: classify per pc: both scalar / one spill (is the other in the same live spill block? same arena?
-   a heap pointer?) / heap-heap; count per pc, first 4 examples per pc for cross cases. Dump the table at exit / every 1200 swaps.
-   Use the s7317 allocation map (ROGUESQ_S7317_ALLOCMAP=1) for the block lookup.
-2. Positive control in the same run: ROGUESQ_S7318_BCMP_CTL=<pc> forces operand a to 0x81000040 at one site with a heap other
-   operand -> must log a cross case.
-3. Run the s7317 run-B recipe (LEVEL=4 dd8 21:9, g1_level_coverage_common, HOLD_S=150). Rebuild needs only RecompiledFuncs+main.
-Outcomes: 0 cross cases with the control firing -> H-same/H-scalar, class B closed, the struct-field edge closed. Any cross pc ->
-read that function, name the compare's meaning, decide whether retail order is required (fix: allocate that owner type outside
-the spill arena, or map the compare).
-If the probe can't be built in one iteration, fall back to CURRENT-TRUTH Next steps 16.
+1. Fold the soak verdict (SOAK-RESULTS). Re-run the report over all 4 tables; any cross -> read that function first (that is the unit).
+2. For every still-unexecuted site: read the lw/slt pair and the surrounding 20 lines in N64Recomp/RecompiledFuncs (grep the pc), and
+   class it H-scalar / H-same / H-cross / by-construction (heap freelist walkers never see spill: the spill arena is its own allocator;
+   __osPfs* is controller-pak code with no heap pointers). Write the table into docs/HEAP-ADDR-AUDIT.md (class B section).
+3. If any site is H-cross on a field an owner type in scratch/s7317/d8_owner_table.txt actually holds: name the compare's meaning and
+   fix (allocate that owner type outside the spill arena, or map the compare), qualified with the two-arm discipline.
+Outcomes: all scalar/same/by-construction -> class B CLOSED, spill-holder thread closed; take CURRENT-TRUTH Next steps 16.

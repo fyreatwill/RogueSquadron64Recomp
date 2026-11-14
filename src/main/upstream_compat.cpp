@@ -3367,6 +3367,65 @@ void rs64_s7317_write(const char* path) {
         fclose(f);
     }
 }
+/* s7318: ROGUESQ_S7318_BCMP=1|<path> (needs ROGUESQ_S7317_ALLOCMAP=1): classifier behind the 182 class-B field-order compares
+   (tools/apply_s7318_bcmp_probe.py, sites tools/s7318_bcmp_sites.txt). Per site, every executed compare (a, b) is classed:
+   nn = no spill operand (hh = both 0x80xxxxxx); same = both spill, same live block; spsp = both spill, different/unmapped blocks;
+   cross = one spill, other in 0x80000000-0x80FFFFFF (the only case whose outcome can differ from a retail all-heap layout);
+   speq = one spill, other < 0x80000000 or >= 0x81400000 (outcome identical for any heap or spill pointer). unm = spill operand in
+   no live block. First 4 cross examples per site kept with the spill block's req and allocator. Positive control
+   ROGUESQ_S7318_BCMP_CTL=<pc hex>: at that site, when neither operand is spill and b is 0x80xxxxxx, the classifier is re-run with
+   a := the lowest live spill block start into the separate ctl counters (must class cross). Table rewritten every >=10 s. */
+extern "C" { int rs64_s7318_on = 0; }
+namespace {
+struct S7318S { uint32_t pc; uint64_t n, nn, hh, same, spsp, cross, speq, unm, ctl_n, ctl_cross; uint32_t ex[4][4]; int nex; };
+S7318S g_s7318[256]; const char* g_s7318_path = nullptr; uint32_t g_s7318_ctl = 0; uint64_t g_s7318_calls = 0, g_s7318_last = 0;
+struct S7318Init { S7318Init() {
+    const char* e = std::getenv("ROGUESQ_S7318_BCMP"); if (!e || !e[0] || e[0] == '0') return;
+    g_s7318_path = (e[0] == '1' && !e[1]) ? "rs64_s7318_bcmp.txt" : e;
+    const char* c = std::getenv("ROGUESQ_S7318_BCMP_CTL"); if (c && *c) g_s7318_ctl = (uint32_t)strtoul(c, nullptr, 16);
+    rs64_s7318_on = 1; std::fprintf(stderr, "[s7318] bcmp probe on -> %s ctl=%08X allocmap=%d\n", g_s7318_path, g_s7318_ctl, (int)s7317_on()); } } g_s7318_init;
+inline bool s7318_sp(uint32_t x) { return x >= 0x81000000u && x < 0x81400000u; }
+/* block containing x, or 0 (caller holds s_s7317_mu) */
+uint32_t s7318_blk(uint32_t x, uint32_t* req) {
+    auto it = s_s7317_live.upper_bound(x); if (it == s_s7317_live.begin()) return 0; --it;
+    if (x - it->first < (it->second.req ? it->second.req : 1)) { if (req) *req = it->second.req; return it->first; } return 0; }
+/* 0 nn 1 same 2 spsp 3 cross 4 speq; *unm set when a spill operand is unmapped */
+int s7318_class(uint32_t a, uint32_t b, int* unm, uint32_t* blk, uint32_t* req) {
+    bool sa = s7318_sp(a), sb = s7318_sp(b); *unm = 0; *blk = 0; *req = 0;
+    if (!sa && !sb) return 0;
+    std::lock_guard<std::mutex> lk(s_s7317_mu);
+    uint32_t ra = 0, rb = 0, ba = sa ? s7318_blk(a, &ra) : 0, bb = sb ? s7318_blk(b, &rb) : 0;
+    if ((sa && !ba) || (sb && !bb)) *unm = 1;
+    *blk = sa ? ba : bb; *req = sa ? ra : rb;
+    if (sa && sb) return (ba && ba == bb) ? 1 : 2;
+    uint32_t o = sa ? b : a;
+    return (o >= 0x80000000u && o < 0x81000000u) ? 3 : 4; }
+void s7318_dump() {
+    FILE* f = std::fopen(g_s7318_path, "w"); if (!f) return;
+    uint64_t T[9] = {0}; for (auto& s : g_s7318) { T[0] += s.n; T[1] += s.nn; T[2] += s.hh; T[3] += s.same; T[4] += s.spsp; T[5] += s.cross; T[6] += s.speq; T[7] += s.unm; T[8] += s.ctl_cross; }
+    std::fprintf(f, "# s7318 calls=%llu nn=%llu hh=%llu same=%llu spsp=%llu cross=%llu speq=%llu unm=%llu ctl_cross=%llu\n# idx pc n nn hh same spsp cross speq unm ctl_n ctl_cross | ex a b blk req\n",
+        (unsigned long long)T[0], (unsigned long long)T[1], (unsigned long long)T[2], (unsigned long long)T[3], (unsigned long long)T[4], (unsigned long long)T[5], (unsigned long long)T[6], (unsigned long long)T[7], (unsigned long long)T[8]);
+    for (int i = 0; i < 256; ++i) { auto& s = g_s7318[i]; if (!s.n) continue;
+        std::fprintf(f, "%d %08X %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu |", i, s.pc, (unsigned long long)s.n, (unsigned long long)s.nn, (unsigned long long)s.hh, (unsigned long long)s.same,
+            (unsigned long long)s.spsp, (unsigned long long)s.cross, (unsigned long long)s.speq, (unsigned long long)s.unm, (unsigned long long)s.ctl_n, (unsigned long long)s.ctl_cross);
+        for (int k = 0; k < s.nex; ++k) std::fprintf(f, " %08X,%08X,%08X,%X", s.ex[k][0], s.ex[k][1], s.ex[k][2], s.ex[k][3]);
+        std::fprintf(f, "\n"); }
+    std::fclose(f); }
+}
+extern "C" void rs64_s7318_bcmp(int idx, uint32_t pc, uint32_t a, uint32_t b) {
+    if ((unsigned)idx >= 256) return;
+    S7318S& s = g_s7318[idx]; s.pc = pc; ++s.n;
+    int unm; uint32_t blk, req; int c = s7318_class(a, b, &unm, &blk, &req);
+    if (c == 0) { ++s.nn; if ((a >> 24) == 0x80 && (b >> 24) == 0x80) ++s.hh; }
+    else if (c == 1) ++s.same; else if (c == 2) ++s.spsp; else if (c == 4) ++s.speq;
+    else { ++s.cross; if (s.nex < 4) { uint32_t* e = s.ex[s.nex++]; e[0] = a; e[1] = b; e[2] = blk; e[3] = req; } }
+    s.unm += unm;
+    if (g_s7318_ctl == pc && c == 0 && (b >> 24) == 0x80) {
+        uint32_t lo = 0; { std::lock_guard<std::mutex> lk(s_s7317_mu); auto it = s_s7317_live.lower_bound(0x81000000u); if (it != s_s7317_live.end() && s7318_sp(it->first)) lo = it->first; }
+        if (lo) { ++s.ctl_n; int u2; uint32_t b2, r2; if (s7318_class(lo, b, &u2, &b2, &r2) == 3 && !u2) ++s.ctl_cross; } }
+    if ((++g_s7318_calls & 0xFFFF) == 0) { uint64_t now = mach_absolute_time(); static mach_timebase_info_data_t tb; if (!tb.denom) mach_timebase_info(&tb);
+        if ((now - g_s7318_last) * tb.numer / tb.denom >= 10000000000ull) { g_s7318_last = now; s7318_dump(); } }
+}
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     rs64_floor_ownership("malloc", ptr, req, ra);
     if (ptr && s7317_on()) {

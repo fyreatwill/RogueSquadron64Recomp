@@ -192667,3 +192667,36 @@ pointer rejects or misorders 0x81xxxxxx) vs H-clean; first sub-question: which o
   stays valid).
 - Docs: docs/HEAP-ADDR-AUDIT.md s7317 section; CURRENT-TRUTH Next steps 15 rewritten; NEXT.md = B runtime cross-block hook.
   Dumps (1.4 GB) deleted after analysis; tables kept in scratch/s7317 (d8_holders_all.txt.gz is the full per-word list).
+
+## Session 7318 (2026-11-14) — class-B field-order compares classified at runtime: 0 cross compares in 6.4M executed (109/182 sites, dd8 21:9 L4, control fires 2569x); the only spill-operand compares are inflate window pointers in one block
+Unit (NEXT.md s7318, slug spill-holder-field-compare). Hypotheses: H-same (a spill pointer at a B site is only ordered against a
+pointer into the same block) vs H-cross (some site orders a spill pointer against a 0x80xxxxxx heap pointer / bound: outcome can
+differ from retail's all-heap layout) vs H-scalar (the field is never a spill pointer at these sites).
+- Instrument (one build): new tools/apply_s7318_bcmp_probe.py (RS64_REPLAY, before s7069) hooks the 182 sites listed in new
+  tools/s7318_bcmp_sites.txt (generated from tools/s7317_field_compare_census.py on scratch/s7317/d8_holders_all.txt.gz; 180 unique
+  pcs, 194 hooks with delay-slot copies) with `if (rs64_s7318_on) rs64_s7318_bcmp(idx, pc, rs, rt)`. Classifier in
+  src/main/upstream_compat.cpp beside the s7317 alloc map (ROGUESQ_S7318_BCMP=1|<path>, needs ROGUESQ_S7317_ALLOCMAP=1): per site nn/hh
+  (no spill operand / both 0x80xxxxxx), same (both spill, same live block), spsp, cross (spill vs 0x80000000-0x80FFFFFF: the only class
+  whose outcome can differ from retail), speq (spill vs <0x80000000 or >=0x81400000: outcome provably identical), unm (spill operand in
+  no live block). Control ROGUESQ_S7318_BCMP_CTL=<pc>: at that site, when both operands are 0x80xxxxxx, re-classify with a := the lowest
+  live spill block -> separate ctl counters, must class cross. New tools/s7318_bcmp_report.py merges tables (exit 1 on any cross).
+- Run 1 (LEVEL=4 FPS60 dd8 DD_UNSAFE WIDEWIN 21:9, g1_level_coverage_common): attempts 1-2 failed the title gate (I omitted
+  WIDE_ROUTE=1, harness artefact, no crash); attempt 3 reached the mission. Control site buildHeapFreeList 0x800020A0 never executed
+  (heap init only) -> ctl 0, so run 1 alone is not a result. Its data: 107 sites executed, 464 spill-operand compares, all same.
+- Run 2 (same + WIDE_ROUTE=1, HOLD_S=240, ctl at inflate_flush 0x80029B58 = hottest hh site): mission at 72 s, flight 250 s, alive,
+  0 crash, 0 VI stall. calls 6.36M, hh 18567, same 464, spsp 0, cross 0, speq 0, unm 0, **ctl_cross 2569 = ctl_n (control PASS)**.
+  The 464 spill-operand compares (same count in both runs: deterministic load-time) are all at 8 zlib sites: inflate_blocks
+  0x80027864/0x800281B8, inflate_codes_recomp 0x800285EC/0x800286B4/0x800289E0/0x80028A18, inflate_fast 0x80028D8C, inflate_flush
+  0x80029B58 = window read/write/end pointer compares while a spilled inflate window is in use; both operands in the same live block.
+  Not one compare saw a spill value in flight, although s7317 measured 22-120 live spill blocks then: the holder fields are not reached
+  by these ordering compares in flight.
+- Coverage gap: 73 sites never executed on this route (_Genld 8 = printf float formatting, load_naboo_starfighter 4,
+  datItemActorNpcHandler 4, inflate_blocks 4, __osPfs* 6 = controller pak, heap walkers findLargestFreeHeapChunk / buildHeapFreeList /
+  allocRsHeapBlock (retail heap freelist; the spill arena is a separate allocator, so these never hold spill pointers by construction,
+  static, single-source), NPC handlers npcTrainCarUpdate / npcShieldUpdate / npcWingmanUpdate / ..., voice helpers). Queued soak
+  scratch/agent/soak_queue/s7318_bcmp_levels.sh (L1 + L12, same recipe, control at 0x80029B58) to cover more of them.
+- Discrimination: for the 109 executed sites H-same selected (8 sites, inflate) and H-scalar for the other 101 (never saw a spill
+  operand); H-cross refuted there (0 cross with the control classing 2569 synthetic cross cases in the same run). Two runs of one
+  instrument agree (464/464 same, 0 cross); one instrument = single-source for the mechanism, but the static census line (s7317) and
+  this runtime line agree that no B site is a pointer-vs-bound compare on a spill value. Class B is CLOSED for executed sites; 73
+  unexecuted sites stay open pending the soak. No defect, no mitigation landed.
