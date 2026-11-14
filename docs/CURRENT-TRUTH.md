@@ -412,10 +412,16 @@ is in the s7307 archive). Active unit: NEXT.md.
     divided guest 64-bit values in C: b == 0 and INT64_MIN / -1 are UB; now the MIPS ddiv/ddivu results the recompiled DDIV/DDIVU
     give (recomp.h). tools/s7348_div_ctl.cpp: 72 pairs match DDIV/DDIVU, UBSan aborts on the old forms. Guest mesgqueue
     `% msgCount` is reached only past the full/empty checks (H). Next: class Z (item 27n).
-27n. **Next unit (NEXT.md): class Z, shift by a guest-derived count with no range check** (`x << n` / `x >> n` with n >= the
-    operand width or negative is UB; arm64 masks n mod 32/64, x86 too, but the compiler may assume n < width). Sources: RDP tile
-    shifts / masks (shifts, masks fields), siz-based `1 << siz`, ucode fields, VI scale shifts.
-28. **When 1-27n offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27n. **Shift by a guest-derived count (class Z): CLOSED (s7349, static + standalone control + smoke).**
+    `tools/s7349_shift_census.py --controls`: 1727 << / >> in the s7343 scope; 1565 constant counts, 192 stream/template; 158 sites:
+    MSK 68 (RDP siz 2-bit / masks 4-bit fields, & masks), D 24, RC 22, H 21, G 13, LP 6, P 2, FIX 2, 0 open. Every `siz - 1` count
+    sits behind siz == 0 / >= 16b. One latent UB defect FIXED: librecomp `__ull_rshift` / `__ll_lshift` shifted by the unmasked
+    guest 64-bit count; it is now `& 63` (MIPS dsrlv/dsllv). The game never calls them (RecompiledFuncs uses only __ull_div); recompiled
+    SLLV/DSLLV already mask. tools/s7349_shift_ctl.cpp: 1000 pairs match MIPS, UBSan aborts on the old form. Next: class AA (27o).
+27o. **Next unit (NEXT.md): class AA, memcpy between possibly-overlapping ranges** (memcpy with src and dst both in guest RDRAM or the
+    same host buffer is UB if they overlap; it should be memmove). Sources: RDRAM-to-RDRAM copies in librecomp/ultramodern (osPiRawStartDma
+    shims, osVirtualToPhysical copies), the dpc_bridge rings, RT64 TMEM/framebuffer copy-to-RAM.
+28. **When 1-27o offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

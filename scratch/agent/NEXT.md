@@ -1,17 +1,17 @@
-# NEXT (s7349): idiom-class audit - class Z, shift by a guest-derived count with no range check
-HYPOTHESIS-ID: host-shift-count
-Context: s7348 closed class Y (tools/s7348_div_census.py: 1512 / % ops, 214 sites, 0 open; RT64 4b pixelSize and librecomp
-guest 64-bit div helpers fixed).
-Sibling idiom: `x << n` / `x >> n` where n comes from guest data (RDP tile shifts/masks fields, siz in `1 << siz`, ucode / task
-fields, VI registers, MEM_* reads) with no `n < 32` / `& 31` / min() check. n >= operand width or negative is UB in C++ (arm64 and
-x86 mask the count, but clang may fold assuming n < width); `1 << 31` on a signed int is UB before C++20.
-Hypotheses: H-safe (every count is a literal, masked by a <= 5-bit field (`& 0xF` / `& 0x1F`), or range-checked), H-diag (only
-gated probes), H-ub (a default-on guest count can reach >= width: real defect, fix with a mask/clamp matching hardware).
-Method: new tools/s7349_shift_census.py on the s7343 scope; reuse s7348 rhs_of()/lhs_of()/strip_div() (operand parsing), s7342 ev()
-for constants, s7344 decl() and s7344 MSK logic (narrow types, `& 0x..` masks give a max count). Sites: `<<` / `>>` (not stream
-`<<`, not templates `>>`, not `<<=` in comments) whose count is not a literal/constexpr. Classes: K, MSK (count masked or narrow
-type with max < operand width), RC (range-checked before), BC, G/D/P/C, H hand, B default-on guest count unchecked. Note the
-operand width (32 vs 64) when judging MSK. Controls: planted `uint32_t n = tile->shifts; return x << n;` ('?'), masked twin
-(`& 0xF` -> MSK), checked twin (RC), gated twin (G), stream twin (`std::cout << n`, not a site).
-Runtime only if a B site exists: fix + standalone control, then `env SECS=260 zsh scratch/s7326/run.zsh s7349_dd8 ''`.
-Exit: PORTING-STATE s7349, CURRENT-TRUTH item 27n -> closed/fixed, commit.
+# NEXT (s7350): idiom-class audit - class AA, memcpy between ranges that may overlap
+HYPOTHESIS-ID: host-memcpy-overlap
+Context: s7349 closed class Z (tools/s7349_shift_census.py: 1727 shifts, 158 sites, 0 open; librecomp __ull_rshift/__ll_lshift & 63).
+Idiom: `memcpy(dst, src, n)` (also std::copy over raw pointers, which is memmove-safe only for a forward overlap) where dst and src can
+both point into the same object: guest RDRAM (rdram + a, rdram + b), one host ring, or one RT64 buffer. If the ranges overlap, the
+result is UB (arm64 libc memcpy copies backward in some size classes, so the bytes really come out wrong).
+Hypotheses: H-safe (every same-object copy uses memmove, or the ranges are disjoint by construction: separate buffers, a checked
+`a + n <= b`), H-diag (only gated probes / dumps), H-ub (a default-on memcpy whose guest-chosen src/dst can overlap: real defect, fix
+with memmove).
+Method: new tools/s7350_overlap_census.py on the s7343 scope. Reuse s7343 args_of() and the s7338 sites() classes (C/P/G/D). Site = memcpy /
+std::memcpy / __builtin_memcpy / std::copy. Classify by the base object of dst and src (s7344 base()): DISJ (different named objects,
+one a local/stack array or a std::vector/.data() of a different object), MM (already memmove), CHK (overlap ruled out before the call),
+H hand, B (same base, e.g. both `rdram + ...` / `RDRAM + ...` with guest offsets, no check). Controls: planted
+`memcpy(rdram + task->dst, rdram + task->src, task->len)` ('?'), memmove twin (MM, not a site), disjoint twin (local buf -> DISJ),
+checked twin (`if (d + n <= s || s + n <= d)` -> CHK), gated twin (G).
+Runtime only if a B site exists: fix + standalone control, then `env SECS=260 zsh scratch/s7326/run.zsh s7350_dd8 ''`.
+Exit: PORTING-STATE s7350, CURRENT-TRUTH item 27o -> closed/fixed, commit.

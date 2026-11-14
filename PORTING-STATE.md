@@ -193732,3 +193732,27 @@ probes), H-zero (a default-on guest-derived divisor can be 0).
   value-level proof, use the standalone control (single-source for the runtime path).
 - Conclusion: the census selects H-zero for 2 latent sites (both fixed: zero only from a 4b fb or a guest b == 0) and refutes it for the other
   206 non-comment sites. Class Y closed. Next: class Z, shifts by a guest-derived count (NEXT.md, CURRENT-TRUTH 27n).
+
+## Session 7349 (2026-11-14) — class Z shifts by guest-derived counts closed: 1727 shifts, 158 sites, 0 open; librecomp guest 64-bit shift helpers (__ull_rshift/__ll_lshift) count masked & 63 (latent UB, unreferenced by this game)
+HYPOTHESIS-ID: host-shift-count. Hypotheses: H-safe (every count literal / masked / range-checked), H-diag (only gated probes),
+H-ub (a default-on guest count can reach >= operand width).
+- New `tools/s7349_shift_census.py` (reuses s7348 rhs_of/lhs_of/strip_div, s7344 decl/base, s7342 ev, s7338 sites()). Controls PASS
+  in the same run: planted `x << n` with n = tile->shifts gives '?', `& 0xF` twin MSK, `n >= 32` return twin RC, gated twin G,
+  `std::cout << n` twin excluded.
+- Result: 1727 binary << / >> in the s7343 scope (183 files): 1565 constant counts, 192 stream / template / ifstream. 158 sites:
+  MSK 68, D 24, RC 22, H 21, G 13, LP 6, P 2, FIX 2, 0 open. Most guest-derived counts are RDP `siz` (2-bit, p0(19,2)) and
+  `masks`/`maskt` (4-bit, p1(4,4)/p1(14,4)) fields. A grep of every rt64 `siz =` assignment shows each one copies those fields, fbSiz()
+  (VI type -> G_IM_SIZ_*), or a constant. All 7 `1 << (siz - 1)` forms (rt64_state wblog/VI-RAM rows, rt64_vi fbAddress) sit behind
+  `siz == 0 ? 1 :` or `siz >= G_IM_SIZ_16b`. The uint8_t sizDifference cases are computed inside `dst > src` (or the reverse) and give 1..3.
+  F3DFactor5 strip-mask `1u << (length + 1)` sits behind `length + 1 >= 32 ?`. VRCP/VRSQ shift = clz(nonzero) <= 31.
+- DEFECT FIXED (lib/N64ModernRuntime librecomp/src/math_routines.cpp): `__ull_rshift_recomp` / `__ll_lshift_recomp` did
+  `a >> b` / `a << b` with the guest 64-bit count b, which is UB for b >= 64. They now use `b & 63`, which is MIPS dsrlv/dsllv (low 6 bits of
+  the count). The recompiled SLLV/DSLLV already emit `& 31` / `& 63`, checked in RecompiledFuncs.
+  ORIGIN: the writer is the upstream runtime helper. The count is guest data. A grep of RecompiledFuncs finds no call to either helper
+  in this game (only __ull_div_recomp, 3 refs), so this is a LATENT fix, not a mitigation of an observed defect.
+  Control tools/s7349_shift_ctl.cpp (clang++ -fsanitize=shift): 1000 (a,b) pairs, including counts 64..199 and a set high count word,
+  match a bit-loop MIPS dsrlv/dsllv model (PASS). Positive control: the old form with count 64 aborts under UBSan.
+- Runtime: build clean; export.sh refreshed N64ModernRuntime.patch. `env SECS=260 zsh scratch/s7326/run.zsh s7349_dd8 ''`:
+  crash=0 resets=14 late=0 arenafull=0, the same as s7346-s7348. This is a regression smoke only, because the patched helpers are never called.
+- Conclusion: H-ub was selected for 2 latent helper sites (fixed) and refuted for the other 156. Class Z is closed. Next: class AA, memcpy
+  between ranges that may overlap (NEXT.md, CURRENT-TRUTH 27o).
