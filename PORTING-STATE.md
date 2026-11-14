@@ -192695,8 +192695,8 @@ differ from retail's all-heap layout) vs H-scalar (the field is never a spill po
   allocRsHeapBlock (retail heap freelist; the spill arena is a separate allocator, so these never hold spill pointers by construction,
   static, single-source), NPC handlers npcTrainCarUpdate / npcShieldUpdate / npcWingmanUpdate / ..., voice helpers). Queued soak
   scratch/agent/soak_queue/s7318_bcmp_levels.sh (L1 + L12, same recipe, control at 0x80029B58) to cover more of them.
-- Discrimination: for the 109 executed sites H-same selected (8 sites, inflate) and H-scalar for the other 101 (never saw a spill
-  operand); H-cross refuted there (0 cross with the control classing 2569 synthetic cross cases in the same run). Two runs of one
+- Discrimination: for the 109 executed sites this selects H-same (8 sites, inflate) and H-scalar for the other 101 (never saw a spill
+  operand) and refutes H-cross there (0 cross with the control classing 2569 synthetic cross cases in the same run). Two runs of one
   instrument agree (464/464 same, 0 cross); one instrument = single-source for the mechanism, but the static census line (s7317) and
   this runtime line agree that no B site is a pointer-vs-bound compare on a spill value. Class B is CLOSED for executed sites; 73
   unexecuted sites stay open pending the soak. No defect, no mitigation landed.
