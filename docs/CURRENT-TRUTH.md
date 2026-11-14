@@ -437,10 +437,18 @@ is in the s7307 archive). Active unit: NEXT.md.
     no signed +/-. Ucode `S32(r) << k` is defined (built as C++20). The only non-trivial site, the RSP VRCP/VRSQ magnitude step, never
     sees INT_MIN (`if (input > -32768)`). tools/s7352_signed_ctl.cpp: 16.8M inputs clean under UBSan, and the unguarded twin aborts at
     INT_MIN. Single-source beyond that site. Next: class AD (27r).
-27r. **Next unit (NEXT.md): class AD, invalid bool / enum values from guest-derived bytes** in host code: a `bool` loaded from
-    RDRAM/DL bytes not 0/1, a `static_cast<Enum>(guest)` outside its range, or a switch over it. UB under -fsanitize=bool,enum. Fix with
-    `!= 0` / a range check.
-28. **When 1-27r offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27r. **Invalid bool / enum values from guest bytes (class AD): CLOSED (s7353, static census + standalone UBSan control; no defect).**
+    `tools/s7353_boolenum_census.py --controls`: 19 sites in the s7343 scope + RT64 `shared/*.h` (blind spot fixed: the combiner /
+    blender decoders live there): enum casts FIXED 10 (scoped enums always have a fixed type, int by default, so any int is defined),
+    RC 8 (rt64_blender.h decodeInputP/M/A/B: `(x >> k) & 3` into 2-bit unscoped enums), HOST 1 (SDL userdata). 0 bool* casts, 0
+    memcpy/overlay of guest bytes into a bool or a bool-carrying struct; 11 guest-source copies with unresolved destination all hand-
+    resolved to byte/int types. Combiner ColorInput/AlphaInput come from switch returns (enumerators only). No -fstrict-enums in the
+    build. tools/s7353_boolenum_ctl.cpp: UBSan flags exactly the planted unscoped cast and the guest byte memcpy'd into a bool, none of
+    the FIXED/RC/conversion twins. Next: class AE (27s).
+27s. **Next unit (NEXT.md): class AE, data races on non-atomic host globals shared between the game thread and the RSP / RDP /
+    present threads** (UB; torn or stale reads). Census thread entry points, the globals each writes, and classify atomic / mutex /
+    single-thread / write-once-before-start / diag-only.
+28. **When 1-27s offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

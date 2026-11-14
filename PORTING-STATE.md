@@ -193850,3 +193850,40 @@ sum exists in host code. H-diag is not needed to explain it. Rules out: signed a
 Next: class AD, invalid bool / enum values loaded from guest-derived bytes (UB under -fsanitize=bool,enum), CURRENT-TRUTH 27r.
 Discrimination: census + control select H-safe and refute H-ub for class AC.
 Verdict: the census (with same-run controls) selects H-safe and refutes H-ub for all 407 class AC sites and 178 blind-spot rows; this closes class AC. The UBSan control resolves the one non-trivial site (VRCP/VRSQ INT_MIN). Next discriminator: the class AD bool/enum census (NEXT.md).
+
+## Session 7353 (2026-11-14) — class AD invalid bool / enum values from guest bytes closed: 19 sites, 0 open, no defect (census s7353_boolenum_census.py with controls; UBSan bool,enum control PASS)
+HYPOTHESIS-ID: host-bool-enum-load. Work unit from NEXT.md (s7352): idiom-class audit, class AD.
+Language facts the classes rest on (C++17 [dcl.enum]/[expr.static.cast]): a scoped enum (`enum class`) always has a fixed underlying
+type (int if none is written), so any int value is defined; an unscoped enum with `: T` likewise. Only unscoped enums WITHOUT a fixed
+type have the narrow bitmask range, and clang exploits it only under -fstrict-enums (no CMakeLists in the tree sets it). A bool is
+different: every bool load carries !range [0,2), so a guest byte memcpy'd into a bool or read through a bool* is the real hazard.
+`bool b = guest;` is a conversion, not a load. NEXT.md's H-safe wording ("enum class without a fixed type" as risky) was wrong on
+that point and the census uses the corrected rule.
+New tools/s7353_boolenum_census.py (reuses s7338 sites() C/P/G/D, s7343 ln_fn/args_of/body_gated/hand, s7344 decl/CORE). Enum and
+struct tables come from the scope plus src/, include/, lib/rt64/src, lib/N64ModernRuntime headers (test/gtest/rabbitizer excluded),
+with `using X = E;` / typedef aliases. Site kinds: E (static_cast<E>, (E)x, E(x)), BP (cast to bool*), BS (memcpy/memmove/fread or
+cast whose destination is a bool or a struct with a direct bool member: 203 such structs).
+Blind spot fixed during the run: the first pass found only 11 enum casts, because the RT64 combiner/blender decoders live in
+lib/rt64/src/shared/*.h (compiled into the host under HLSL_CPU), which s7343 files_in_scope() does not cover. The census adds them
+(EXTRA_SCOPE) and they produced the only unscoped-unfixed casts.
+Controls (same run, `--controls`): planted `static_cast<Mode>(task->a)` with unscoped unfixed `enum Mode {A, B}` -> '?', enum class
+twin FIXED, `: uint32_t` twin FIXED, `& 1` twin RC, gated twin G, `bool b = task->a` not a site, `memcpy(&flag, rdram + task->a, 1)`
+into a bool -> '?' (BS): PASS.
+Result: 19 sites, 212 files: FIXED 10 (mods RelocType : uint8_t, ReplacementFlags, PatchActionType, RT64 user-config enums Antialiasing /
+ReplacementShift / ReplacementOperation / VisualizationMode / UpscaleMode / QualityMode, Blender Approximation), RC 8 (rt64_blender.h
+decodeInputP/M/A/B: `(blenderInputs >> k) & 0x3` into 2-bit unscoped InputPM/InputA/InputB; 4 lines x 2 casts), HOST 1 (rt64
+application window SDL userdata cast to ApplicationWindow*, a bool-carrying struct, but the pointer is the host `this`). 0 bool*
+casts on guest data (the two `(bool)` hits are conversions), 0 copies into a bool or bool struct. 196 non-bool copies; 11 of them have a
+guest source and an unresolved destination type (9 D, 2 G): all hand-resolved (BLIND_HAND) to uint8_t / uint32_t / uint64_t /
+int32_t buffers. ColorCombiner ColorInput/AlphaInput (unscoped, unfixed) are only produced by switch returns of enumerators
+(colorInputA..D), never cast from a field. Census exits 0; it exits 1 on any '?', B or unresolved blind-spot row.
+Second line: tools/s7353_boolenum_ctl.cpp, clang++ -std=c++17 -O1 -fsanitize=bool,enum, worst-case guest word 0xFFFFFFFF and byte
+0x5A. UBSan reports exactly two errors: "load of value 4294967295, which is not a valid value for type 'Mode'" (planted unscoped cast)
+and "load of value 90, which is not a valid value for type 'bool'" (byte memcpy'd into a bool). No report for the enum class, the
+`: uint32_t` twin, the masked twin, the verbatim rt64 decodeInputP shape (both cycles) or the `bool b = g` conversion. PASS: the
+checker agrees with every class rule the census applies.
+No code fix, so no game run (NEXT.md: runtime only if a B site is fixed).
+Conclusion: H-safe selected for class AD: every enum cast is FIXED or range-masked, and no guest byte reaches a bool object. H-ub
+refuted; H-diag not needed. Rules out: invalid bool / enum loads as a live defect source in host code.
+Next: class AE, data races on non-atomic host globals shared between host threads (CURRENT-TRUTH 27s, NEXT.md).
+Discrimination: census + UBSan control select H-safe and refute H-ub for class AD.
