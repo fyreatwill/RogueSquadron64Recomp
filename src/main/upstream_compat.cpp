@@ -17,6 +17,7 @@
 #include <map>
 #include <deque>
 #include <vector>
+#include <tuple>
 #include <string>
 #include <chrono>
 #ifdef __APPLE__
@@ -3356,6 +3357,8 @@ static bool s7317_on() { static const bool on = [] { const char* e = std::getenv
 static inline bool s7317_isspill(uint32_t p) { return p >= 0x81000000u && p < 0x81800000u; }  /* s7326: 8 MB arena */
 /* s7325 audio heap-gap reads (needs ROGUESQ_S7324_RCPREF + ALLOCMAP): history of the last 65536 non-spill frees (ptr, req, free
    time, host freer frames, allocator frames) so an RCP read in no live block can be classed freed / header gap / untracked. */
+extern "C" int rs64_s7331_on; extern "C" void rs64_s7331_track(uint64_t sync, char kind, uint32_t ptr, uint32_t req, void* own);
+extern "C" void rs64_s7331_malloc(uint32_t ptr, uint32_t req, void* own);
 extern "C" int rs64_s7324_on;
 struct S7325F { uint32_t ptr, req; uint64_t seq; double t; void* fpc[4]; void* apc[3]; };
 static std::multimap<uint32_t, S7325F> s_s7325_freed;
@@ -3501,6 +3504,7 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
         if (rs64_s7324_on) b.t = s7325_now();
         void** fp = (void**)__builtin_frame_address(0);  /* arm64: fp[0] = caller fp, fp[1] = return address */
         for (int k = 1; k < 3 && fp && fp[0]; ++k) { fp = (void**)fp[0]; b.pc[k] = fp[1]; }
+        if (rs64_s7331_on) rs64_s7331_malloc(ptr, req, b.pc[1]);
         std::lock_guard<std::mutex> lk(s_s7317_mu); s_s7317_live[ptr] = b; if (s7317_isspill(ptr)) ++s_s7317_sprec;
         else { s_s7325_lastmalloc = ptr; if (ptr < s_s7325_hmin) s_s7325_hmin = ptr; if (ptr + req > s_s7325_hmax) s_s7325_hmax = ptr + req; } }
     if (!s6063_on()) return;
@@ -3826,6 +3830,7 @@ static void s6702_release_locked(std::map<uint32_t, uint32_t>::iterator lv) {
    game's next 0x1E000C / 0x2DFF00 requests found the 4 MB arena full, rs_malloc returned NULL and emitGridCellTileStrip faulted.
    Called from the coalesce wrapper (before the ALLOCMAP-gated re-sync): releases every live spill block whose recorded a1 has neither
    0x80 (persistent) nor 0x04 (temp pool, which retail drops at its own rebuild). ROGUESQ_SPILL_RESET=0 = old (blocks survive). */
+static std::vector<std::pair<uint32_t, uint32_t>> s7331_q; static uint64_t s7331_sync = 0;  /* s7331: spill blocks released at this reset */
 extern "C" void rs64_s7326_spill_reset(uint32_t a0) {
     static const bool off = [] { const char* e = std::getenv("ROGUESQ_SPILL_RESET"); return e && e[0] == '0'; }();
     if (off) return;
@@ -3837,6 +3842,7 @@ extern "C" void rs64_s7326_spill_reset(uint32_t a0) {
         if (fl & 0x84u) { ++it; continue; }
         auto nx = std::next(it); const uint32_t p = it->first, sz = it->second;
         ++n; bytes += sz; if (sz > big) { big = sz; bigp = p; }
+        if (rs64_s7331_on) s7331_q.push_back({p, sz});  /* s7331: tracked after the lock drops */
         s6702_release_locked(it); s_s7326_released[p] = sz; it = nx; }
     s_s7326_rel_n += n; s_s7326_rel_bytes += bytes;
     if (n) { static int nl = 0; if (nl++ < 400) std::fprintf(stderr, "[s7326] spill reset a0=%X released %lu blocks 0x%llX bytes (largest 0x%X at %08X) | live now 0x%X bump=0x%X | total %lu blocks 0x%llX, post-reset rs_free %lu\n",
@@ -4442,11 +4448,14 @@ extern "C" void rs64_s7325_ctl(uint32_t* fr, uint32_t* hg) {
    in the rebuilt range, so anything the game allocated there before the reset and relied on the reset to discard stays live). */
 extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) {
     static uint64_t n = 0; ++n; uint64_t dropped = 0, dbytes = 0;
+    std::vector<std::tuple<char, uint32_t, uint32_t, void*>> s7331_t;
+    struct S7331Fl { std::vector<std::tuple<char, uint32_t, uint32_t, void*>>& v; ~S7331Fl() { for (auto& x : v) rs64_s7331_track(1000000u + s7331_sync, std::get<0>(x), std::get<1>(x), std::get<2>(x), std::get<3>(x)); } } s7331_fl{s7331_t};
     if (s7317_on()) { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now();
         for (auto it = s_s7317_live.lower_bound(lo); it != s_s7317_live.end() && it->first < hi;) {
             if (s7318_sp(it->first)) { ++it; continue; }
             if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
                 s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
+            if (rs64_s7331_on) s7331_t.emplace_back('R', it->first, it->second.req, it->second.pc[1]);
             ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); } }
     for (auto it = s_s6063_live.lower_bound(lo); it != s_s6063_live.end() && it->first < hi;) { s_s6063_bytes -= it->second; it = s_s6063_live.erase(it); }
     if (s7317_on() && head == 0x8010FEFCu) { std::lock_guard<std::mutex> lk(s_s7317_mu); const double now = s7325_now(); uint64_t nt = 0, nb = 0;
@@ -4465,7 +4474,12 @@ extern "C" void rs64_s7325_heaprebuild(uint32_t head, uint32_t lo, uint32_t hi) 
    on matched heap blocks: must agree). */
 static void rs64_s7326_scan(uint32_t a0, uint64_t ncall, uint64_t npk, uint64_t npk_b, uint32_t ctl);
 extern "C" void rs64_s7325_heapsync(uint32_t a0) {
+    ++s7331_sync; s7331_q.clear();
     rs64_s7326_spill_reset(a0);  /* s7326: retail bulk free applied to spill blocks (always, not ALLOCMAP-gated) */
+    std::vector<std::tuple<char, uint32_t, uint32_t, void*>> s7331_t;  /* s7331 dropped blocks (kind, ptr, req, allocator) */
+    if (rs64_s7331_on && s7317_on()) { std::lock_guard<std::mutex> lk(s_s7317_mu);
+        for (auto& q : s7331_q) { auto it = s_s7317_live.find(q.first); s7331_t.emplace_back('S', q.first, it != s_s7317_live.end() ? it->second.req : q.second, it != s_s7317_live.end() ? it->second.pc[1] : nullptr); } }
+    struct S7331Fl { std::vector<std::tuple<char, uint32_t, uint32_t, void*>>& v; ~S7331Fl() { for (auto& x : v) rs64_s7331_track(s7331_sync, std::get<0>(x), std::get<1>(x), std::get<2>(x), std::get<3>(x)); } } s7331_fl{s7331_t};
     if (!s7317_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
     static uint64_t ncall = 0, nlog = 0; ++ncall;
@@ -4483,6 +4497,7 @@ extern "C" void rs64_s7325_heapsync(uint32_t a0) {
           if (g != alloc.end()) { (((g->second ^ it->second.fl) & 0x80u) ? disagree : agree)++; if (!(it->second.fl & 0x84u)) { ++npk; npk_b += it->second.req; } ++it; continue; }
           if (rs64_s7324_on) { S7325F f{it->first, it->second.req, ++s_s7325_seq, now, {nullptr, nullptr, nullptr, nullptr}, {it->second.pc[0], it->second.pc[1], it->second.pc[2]}};
               s_s7325_ord.push_back(s_s7325_freed.emplace(it->first, f)); if (s_s7325_ord.size() > 65536u) { s_s7325_freed.erase(s_s7325_ord.front()); s_s7325_ord.pop_front(); } }
+          if (rs64_s7331_on) s7331_t.emplace_back('H', it->first, it->second.req, it->second.pc[1]);
           ++dropped; dbytes += it->second.req; it = s_s7317_live.erase(it); }
       if (dropped) for (auto it = s_s7317_live.lower_bound(0x81000000u); it != s_s7317_live.end() && s7318_sp(it->first); ++it) {
           ++sp_n; if (!(it->second.fl & 0x80u)) { ++sp_np; sp_npb += it->second.req; Dl_info di; void* pc = it->second.pc[1];

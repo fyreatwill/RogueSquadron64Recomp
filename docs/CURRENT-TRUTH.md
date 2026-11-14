@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7330 (2026-11-14).
+Compact operational handoff, as of Session 7331 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -301,7 +301,17 @@ is in the s7307 archive). Active unit: NEXT.md.
     is decremented at build time, not SP completion). No live block overlapped in either run. Retail code shape; oracle cannot reach the
     transition (single-source for retail). ROGUESQ_S7324_RCPREF=ctl + ALLOCMAP -> build/rs64_s7330.log, tools/s7330_task_free_report.py.
     Follow-up audit (NEXT.md): every block the scene reset frees that still changes before reallocation.
-23. **When 1-22 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+23. **Scene-reset dangling writers: CLOSED (s7331, H-audio-only).** ROGUESQ_S7331_RESETW=1 + ALLOCMAP + RCPREF=ctl
+    (src/rsp/s7331_reset_writer.cpp; report tools/s7331_reset_writer_report.py, `--s7330 <log>` orders stale DMAs). Every block a reset
+    drops is re-compared per 64 B for 2 s with RSP/PI/CPU attribution and the guest heap walk at first change. Forced L4, dd8 21:9 x4 +
+    retail settings: the only writes into guest-FREE memory are the boot initN64RspMixer buffers (item 22); 0 stale-owner audio DMAs
+    after reallocation (last stale DMA 0.075-6.5 ms BEFORE the realloc). Other "post-free" writes (loadDatFile 12-B blocks 0x809B6010)
+    are inside a guest-allocated flags&4 carve block = the per-scene framebuffer / temp pool (parseImageFile, rt64_writeback).
+    Abort-route recipe queued (soak s7331_abort_resetw).
+24. **Host alloc map blind to the flags&4 carve block (s7331 side finding, NEXT.md).** The guest heap holds an allocated fl=6 block
+    0x808927F0+0x28D800 / 0x806F5FF0+0x41A000 (dd8 21:9) covering the framebuffers + temp arena that rs64_s6063_malloc never reports
+    (cf. s6128 0x2DB000/0x3E4B00 "path the heaplog misses"), so ALLOCMAP consumers class that region as freed/untracked.
+25. **When 1-24 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

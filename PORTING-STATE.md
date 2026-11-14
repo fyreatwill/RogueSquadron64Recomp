@@ -193097,3 +193097,48 @@ Verdict: this selects H-next-task for the boot class (every hit task submitted a
 H-wait-noop there; class 2 resolves as the retail build-time countdown race (H-retail-race shape). Closes item 22.
 Next discriminator (NEXT.md, reset-dangling-writer): per-VI hashes of every block the scene reset frees, 2 s window, changed-before-
 reuse vs changed-after-reuse, with the boot mixer buffers as positive control.
+
+## Session 7331 (2026-11-14) — item 23 closed H-audio-only: of ~900 blocks per run that the retail scene resets drop, the only ones written in guest-FREE memory before reuse are the boot initN64RspMixer buffers (s7330 class 1); the other "post-free" writes land inside a guest-allocated flags&4 carve block the host map never sees (parseImageFile + RT64 fb writeback); 0 stale-owner audio DMAs after reallocation in 3 arms incl. retail settings
+
+HYPOTHESIS-ID: reset-dangling-writer (closed). Unit from NEXT.md s7331 (item 23).
+Hypotheses: H-audio-only (mixer buffers are the only blocks written after a reset), H-more (other subsystems write freed blocks),
+H-reuse (a writer hits a block already reallocated to another owner).
+Instrument (new src/rsp/s7331_reset_writer.cpp, ROGUESQ_S7331_RESETW=1, needs ALLOCMAP; RSP attribution rides ROGUESQ_S7324_RCPREF's
+s7094 DMA hook): every block dropped at rs64_s7325_heapsync (kind H), rs64_s7325_heaprebuild (R) and the s7326 spill release (S) is
+copied and re-compared per 64 B line every 8 ms for 2 s; changed lines attributed RSP (DMA write marked the line), PI (librecomp
+rs64_s4211_pi_ring) or CPU; a guest malloc overlapping [ptr-0x10, ptr+req+0x10) marks reallocation (time, new allocator); at each
+block's first change the guest heap walk (rs64_s7325_gap guest=1) says whether the address is in a guest FREE or ALLOCATED block;
+t0/tr absolute stamps let tools/s7331_reset_writer_report.py order s7330 freed-class audio DMAs (same free event: fptr + ft) against
+the reallocation. Startup selftest (fake block, one change per writer kind, no re-fire): pass. Hooks: upstream_compat.cpp (sync,
+rebuild, spill release, malloc), s7094_dma_shape.cpp (DMA). Second line: ROGUESQ_STORE_WATCH=9B6000:9B6040 (s6843) in runs b-d.
+Runs (forced L4, scratch/s7331/run_[a-e].zsh, logs scratch/s7331/): a/b/c dd8 21:9 FPS60 WIDEWIN 200 s hold, d same 60 s hold,
+e retail settings dd1 4:3 60 s hold. All alive, 0 crash, 0 VI stall; 10 heapsyncs (boot, menus, hangar, 2 mission loads) + 17 rebuilds.
+- ctl: the three boot mixer buffers 0x80169F10/0x8016BD50 (0x1E30) and 0x80171EB0 (0x298) change before reuse in all 5 runs (PASS);
+  their changes sit in a guest FREE block (g=2:1, 0x80169450+0x2BB40), host class freed. Negative class: 387-496 dropped blocks never
+  change in the window.
+- Pre-reuse changes (c: 107 blocks): 68 inside a guest allocated block fl=2 and 32 in a free-block header = the allocator's own header
+  write at the moment of reallocation; 2 more in guest FREE memory = 0x2178 siblings from the same initN64RspMixer site (class 1).
+  The only other owner, 12-byte loadDatFile blocks at 0x809B6010/0x809B6030 (0x8004702C w*h*2 image buffer and 0x80047144 table, a1=0)
+  written 14-56 times after syncs 4/7/10: guest walk g=2:6 = INSIDE a guest-allocated flags&4 block (0x808927F0+0x28D800 at sync 4,
+  0x806F5FF0+0x41A000 at 7/10) that no rs64_s6063_malloc ever reported. Store watch names the writers: parseImageFile 0x8001EE04 (sb)
+  / 0x8001F5E4 (sh), rs_malloc_s5041_inner 0x80001C18 headers, and rt64_writeback every swap (ranges 8F5000-9D5000 / 961000-A0A800 =
+  the framebuffers, which the temp arena 0x8010FEFC rebuild ranges equal exactly: rebuild #12 808F5000..809D5000). So the region is
+  the per-scene framebuffer / temp-pool carve, now owned by the new scene: not a dangling write, a host-map blind spot.
+- RSP: 0 pre-reuse RSP line changes outside the control; post-realloc RSP/PI traffic (61-63 blocks/run) lands in new-owner blocks
+  (loadLevelAssets 0x2E0000 level buffer, audio re-init initN64RspMixer/setupSongRenderBuffers/reapplyAudioConfig, same-allocator
+  buildAndRegisterDefaultMaterial buffers). s7325 classifier, same runs: the only freed-class audio DMAs are the s7330 class 1/2 ones.
+- **Stale owner (d, e): 0 audio DMAs after reallocation.** Last boot-class stale DMA vs reallocation of the same block: d 80171EB0
+  -0.506 ms, 8016BD50 -5.086 ms, 80169F10 -0.075 ms; e -0.500 / -0.124 / -6.470 ms. New owner's first change follows at +0.9..+101 ms.
+  The synth's last task into the freed buffers ends just before the mixer re-init reallocates them: ordered, not overlapping, in both
+  dd8 21:9 and retail settings. The 0.075 ms margin is a host-RSP figure (task ~0.1 ms); retail hardware timing is not measured
+  (oracle cannot reach the transition, s7330): single-source for retail.
+ORIGIN: the post-reset writes are by the region's new owner (parseImageFile, rs_malloc, RT64 framebuffer writeback into the per-scene
+fb/temp-pool carve) or the s7330 class-1 synth (retail code). No port writer; no mitigation landed.
+Rules out: H-more (no non-mixer owner writes guest-free memory in 3 arms, retail settings included) and H-reuse (0 stale-owner DMAs,
+0 RSP/PI line changes in guest-free memory). Selects H-audio-only. Engineering: src/rsp/s7331_reset_writer.cpp,
+tools/s7331_reset_writer_report.py (exit 1 on ctl fail / new free-memory owner / stale-owner DMA), queued
+scratch/agent/soak_queue/s7331_abort_resetw.sh (hangar route with aborts). Side finding for NEXT: the flags&4 carve block
+(0x28D800 / 0x41A000) is invisible to the host alloc map (cf. s6128 "path the heaplog misses"), so every ALLOCMAP consumer
+(s7317/s7324/s7325/s7331) classes the framebuffer/temp-pool region wrongly.
+Verdict: this selects H-audio-only and refutes H-more and H-reuse on the forced route (boot, menus, hangar, 2 mission loads; abort
+resets queued). Closes item 23.
