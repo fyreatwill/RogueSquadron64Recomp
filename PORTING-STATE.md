@@ -193093,4 +193093,7 @@ waitForMusyXAudioTaskDone). No port writer; no mitigation landed.
 Rules out: H-wait-noop for class 1 (no wait involved, every task post-dates the free); a dd/spill/aspect cause (retail-settings arm
 identical); corruption in the measured runs (0 live overlap). Harness note: `pkill -f g1_level_coverage_common` inside the same shell
 command line kills its own watchdog (cmdline match); use a script file or kill by pid (tools/rs64_game_pid.zsh).
-Next: item 22 closed; NEXT.md takes the next rung (item 23).
+Verdict: this selects H-next-task for the boot class (every hit task submitted after the bulk free, both arms) and refutes
+H-wait-noop there; class 2 resolves as the retail build-time countdown race (H-retail-race shape). Closes item 22.
+Next discriminator (NEXT.md, reset-dangling-writer): per-VI hashes of every block the scene reset frees, 2 s window, changed-before-
+reuse vs changed-after-reuse, with the boot mixer buffers as positive control.
