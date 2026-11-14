@@ -192806,3 +192806,31 @@ HYPOTHESIS-ID: spill-pointer-retag (closed). Unit from NEXT.md s7322.
   independent trunc/mfc1 pattern check for the 387 (the 4 hand-read sites are single-source). Table in docs/HEAP-ADDR-AUDIT.md.
 - Discrimination: selects H-safe/H-paired and refutes H-alias on 404/404 class-E sites. Next discriminator: class F, the
   address-derived table index (spill pointer >> k used unbounded as a table index), in NEXT.md.
+
+## Session 7323 (2026-11-14) — address-derived table index class F CLOSED: 81 sites whole-program (61 at k 8..22), 0 unclassified, no index ever takes a heap/spill pointer (36 scalar, 20 bounded-safe, 5 spill-equal, 20 hand-read data sources)
+- Unit (NEXT.md s7323, HYPOTHESIS-ID spill-addr-index): H-none / H-bounded vs H-overflow for `p >> k` used as a table index.
+- New tools/s7323_addr_index_census.py (standalone, same linear fall-through scan as tools/s7317_field_compare_census.py): tracks
+  `srl/sra d, s, k` (8..22; `--top` 8..31) of a non-constant, optionally after a phys mask / KSEG subtract, through sll scale and addu
+  with a constant or register base to the first memory-base use; records source provenance (narrow / word / arg / other) and any
+  andi/and/slt* read before the use. Evaluated verdict per site: every heap 0x80000000-0x807FFFFF and spill 0x81000000-0x813FFFFF pointer
+  is run through `(p [& srcmask]) >> k [& andimask]`; k <= 22 -> OVERFLOW if a spill index exceeds the max heap index, top-byte
+  (k >= 23 or source mask above bit 24) -> ALIAS if spill and heap indexes differ. Positive controls (selftest, PASS 6/6): planted
+  unbounded `lw; srl 12; sll 2; lui 0x8013; addu; lw` -> probe with base 0x80130000; andi 0x3FF -> bounded-safe; lhu source -> scalar;
+  arg sra 16 -> probe(arg); `(a0 & 0x3F000000) >> 22` segment index -> ALIAS; 0x00FC0000 >> 18 -> bounded-safe; shift with no memory
+  use -> not listed. First live run also caught a real false-negative class in my own first draft: masks above bit 24 (0x3F000000,
+  0x01C00000) had been tagged "narrow"; the evaluator now treats them as top-byte indexes.
+- Result (8..31): 81 shift sites / 223 memory uses: scalar 36, bounded-safe 20, spill-equal 5, flagged 20 (11 unbounded word/arg/other,
+  1 OVERFLOW appendRdpStateDl 0x8000DF60, 4 ALIAS, 4 range-checked). All 20 read by hand: ADPCM header predictor byte (decodeAdpcmSampleBlock
+  x2), 23-bit pan/volume fraction (computeVoiceVolumePanCoefficients x4, `0x7FFFFF - pan`, sll10/srl10 lerp), JPEG 16.16 sample coords
+  (decodeJpegScanToImage x6), appendRdpStateDl material flags 3-bit field `(a1 & 0x01C00000) >> 20` (sibling 0x0E000000 >> 23 in the
+  same function: adjacent 3-bit fields, a pointer has 0 in bits 25-27), loadSkyHorizonHob HOB record length `(w & 0x3F000000) >> 22`
+  added to the record cursor (the listed use past the j is a scan artefact), processSceneNode float->int >> 9 with slti 0x40,
+  data_gap_80024A0C opcode decoder (sra 23 & 0x1FE -> jr table) and COP2 result, sound-macro 16.16 curve / volume and glyph code
+  with sltiu checks. Recorded in KNOWN_F; census exits 0 (8..22: scalar 24, bounded-safe 20, known 17).
+- Rules out: an address-derived table index overflowing past an 8 MB-sized table, and segment-style top-byte indexes aliasing a
+  spill pointer to segment 1. Discrimination: selects H-bounded/H-none, refutes H-overflow on 81/81 sites. Single-source static
+  (hand reads + evaluation); no runtime probe was needed because no site has a pointer-shaped source. Coverage limit: indexes that cross
+  a branch join or a call are not seen (same as classes A-E). Table: docs/HEAP-ADDR-AUDIT.md "Class F".
+- Classes A-F close the spill-pointer-as-value edge. Open edge, next unit (class G): is a spill block ever handed to the RCP? Spill
+  0x81xxxxxx is physical 0x01xxxxxx, beyond the 24-bit SP DRAM_ADDR / DL segment range, so an RSP DMA of it would read low RDRAM
+  (s7094 DMA census has a dram_hi8 flag; never run at dd8 with the allocmap).

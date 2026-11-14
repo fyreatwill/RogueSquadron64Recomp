@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7322 (2026-11-14).
+Compact operational handoff, as of Session 7323 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -237,8 +237,14 @@ is in the s7307 archive). Active unit: NEXT.md.
 17. **KSEG re-tag class E: CLOSED (s7322, static + evaluated, 0 H-alias).** Census class E: 404 sites, 0 unclassified (exit 1 on any):
     387 float->unsigned idiom (instruction-pattern check 387/387), 8 jump tables, 4 full-word sources (bit 24 kept by evaluation), 1
     paired with class D (runtime-clean), 4 read by hand (relocateSndPointer = s6993 mask site, 0xBD DL command). Table in
-    docs/HEAP-ADDR-AUDIT.md. Classes A-E close the spill-pointer edge. Next idiom audit: address-derived table index (NEXT.md).
-18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    docs/HEAP-ADDR-AUDIT.md.
+18. **Address-derived table index class F: CLOSED (s7323, static + evaluated, 0 pointer sources).** tools/s7323_addr_index_census.py
+    (`--top` adds k 23..31; selftest 6/6; exit 1 on unclassified): srl/sra 8..22 -> memory base 61 sites, 8..31 81 sites. Each site runs
+    every heap and spill pointer through its index expression: 36 scalar sources, 20 bounded-safe masks, 5 spill-equal top-byte indexes,
+    20 flagged (11 unbounded, 1 OVERFLOW, 4 ALIAS, 4 range-checked) all read by hand as data: ADPCM header, 23-bit pan fraction, JPEG 16.16,
+    material flag fields, HOB record length, float->int, opcode decoder. Classes A-F close the spill-pointer-as-value edge (single-source
+    static for E/F; linear scan misses indexes crossing branch joins or calls). Next: class G, does the RCP ever get a spill block (NEXT.md).
+19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

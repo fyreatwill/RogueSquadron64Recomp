@@ -1,20 +1,19 @@
-# NEXT (s7323): address-derived table index, class F
-HYPOTHESIS-ID: spill-addr-index
-Context: s7322 closed class E (KSEG re-tags: 404 sites, 0 H-alias). Classes A-E cover the spill pointer as a value: top byte, order,
-difference, truncation and re-tag. One shape is still open: the pointer used as an INDEX. Code like `(p & 0x1FFFFFFF) >> k`,
-`(p - 0x80000000) >> k`, `(p << 3) >> (3+k)` or `p >> k` with 8 <= k < 23, then scaled and added to a table base, indexes a page table,
-bitmap or bucket array sized for 4/8 MB of RDRAM. A spill pointer 0x81xxxxxx gives an index past the end of an 8 MB table, so the
-write lands in whatever follows the table. With an `andi`/`and` bound before the add (a hash), it is safe.
-Hypotheses: H-none (no such index), H-bounded (every one is masked or range-checked, or its source is never a heap pointer) vs
-H-overflow (an unbounded address-derived index whose source can be spill: name the table and its size, fix it with the PTRMASK pattern).
-Unit:
-1. Class F in tools/s7317_field_compare_census.py: srl/sra by 8..22 (or a phys-mask/subtract of 0x80000000 then shift) of a non-constant;
-   follow d through sll/addu up to a memory BASE use or `addu` with a constant base (G list). Record bounded (andi/and/sltiu/bound
-   compare on the path) or unbounded, the source provenance (holder field / word / arg) and the table base. Planted selftest: positive
-   `lw a0,0x10($s1); srl v0,a0,12; sll v0,v0,2; lui at,0x8013; addu at,at,v0; lw t0,0x40($at)` listed unbounded; negative with
-   `andi v0,v0,0x3FF` before the sll listed bounded.
-2. Classify. Unbounded sites with pointer-shaped sources: hook them into the s7318 classifier (idx 768+, table 768 -> 1024 in
-   src/main/upstream_compat.cpp) as (source, 0x80000000) and run ONE dd8 21:9 L4 flight with ctl ROGUESQ_S7318_BCMP_CTL=800173C0
-   (per frame in flight, s7321).
-3. Any H-overflow: name the table, its size and what follows it; fix; two-arm qualify.
-Outcomes: 0 unbounded spill sources -> the spill-pointer audit family closes (A-F); then CURRENT-TRUTH 18.
+# NEXT (s7324): class G, RCP-visible references to spill blocks
+HYPOTHESIS-ID: spill-rcp-ref
+Context: s7317-s7323 closed classes A-F (spill pointer as a CPU value: top byte, order, difference, truncation, re-tag, index). The
+spill arena 0x81000000-0x813FFFFF is PHYSICAL 0x01000000-0x013FFFFF, above the 24-bit SP DRAM_ADDR and DL segment-address range.
+If any of the 42 spill owner types (scratch/s7317/d8_owner_table.txt) is read by the RSP (vertex / matrix / texture / DL chunk /
+audio sample) its DMA either carries bits 24+ (hardware drops them -> reads heap at phys 0x00xxxxxx) or the game masked the pointer
+to 24 bits first (class D found no such site at runtime). Either way the RCP would draw/play garbage, a plausible source of dd>1-only
+terrain drops (G5b). HEAP-ADDR-AUDIT line 13 says "spill blocks are not on those chains" by design: never measured at dd8.
+Hypotheses: H-cpu-only (no RCP DMA / DL address ever falls in spill or its 24-bit alias of a live spill block) vs H-rcp (some do:
+name the owner type and the DMA/command, then move that allocation class below 16 MB or out of the spill path).
+Unit (ONE build, ONE run):
+1. Read src/rsp/s7094_dma_shape.cpp (ROGUESQ_S7094_DMASHAPE=1, =ctl control) and the DPC bridge DL walk. Add to the s7094 census:
+   per RSP DMA, raw dram address before any mask; flag phys >= 0x01000000 (spill direct) and, with ROGUESQ_S7317_ALLOCMAP=1, phys
+   whose 0x80000000|addr or 0x81000000|(addr&0xFFFFFF) is inside a LIVE spill block (alias); keep first 8 examples with task type
+   (gfx/audio) and the DMEM target. Positive control: =ctl injects one DMA from a live spill block address per second (must count).
+2. CPU side in the same build: at osSpTaskStart / task submit, walk the gfx DL (F5 table, docs/F5-UCODE-REFERENCE.md) and the audio
+   command list for address words; count addresses that resolve (segment table) into spill.
+3. Run dd8 21:9 L4 flight ~200 s (recipe as s7321 probe run). Outcomes: 0 hits with control fired -> class G closed, spill audit
+   family A-G done; any hit -> owner type + command, fix (allocate that class from the heap / below 16 MB), two-arm qualify.

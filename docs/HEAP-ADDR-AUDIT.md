@@ -220,3 +220,25 @@ selftest PASS). A narrowed x (<= 24 bits) re-tagged this way would map a spill p
 Constants with nonzero low 24 bits (`lui 0x8013 ; addu at, at, idx` global-table indexing) are counted, not classified: index 2225,
 other 577, narrow 194, word 29, fpu 1. They add an index to a global base, not a re-tag.
 Verdict: **0 H-alias.** Classes A-E close the spill-pointer edge for top byte, order, difference, truncation and re-tag.
+
+## Class F address-derived table index closed (s7323 static, evaluated)
+
+`srl/sra d, s, k` (8 <= k <= 22; `--top` adds 23..31) of a non-constant whose result, scaled, reaches a memory base directly or
+through `addu` with a constant or register base (tools/s7323_addr_index_census.py, linear fall-through scan per function, planted
+selftest 6/6 incl. a segment-table ALIAS positive and a bounded negative). Each pointer-capable site is EVALUATED: every heap
+(0x80000000-0x807FFFFF) and spill (0x81000000-0x813FFFFF) pointer is run through `(p [& srcmask]) >> k [& andimask]`; k <= 22 is
+OVERFLOW when a spill index exceeds the largest heap index, k >= 23 (or a source mask above bit 24) is ALIAS when spill and heap
+indices differ. Exit 1 on any unclassified site.
+
+| verdict | 8..22 | 8..31 | meaning |
+|---|---|---|---|
+| scalar | 24 | 36 | narrow source: lhu/lbu/andi, sll16+sra (halfword sign extend), mfc1/mflo |
+| bounded-safe | 20 | 20 | andi/and mask after the shift: every spill index lands inside the heap index range (hash/bucket) |
+| spill-equal | 0 | 5 | top-byte index whose outcome is the same for heap and spill (bit 31, bits 25-27/28-31 of a flags word) |
+| known (hand) | 17 | 20 | evaluator said probe/OVERFLOW/ALIAS/bounded-check; source read: ADPCM header bytes (2), 23-bit pan fraction (4), JPEG 16.16 coords (6), material flags 3-bit field 0x01C00000>>20 (appendRdpStateDl, sibling field 0x0E000000>>23), HOB record length 0x3F000000>>22 (loadSkyHorizonHob), float->int (processSceneNode), instruction-word decoder and COP2 result in data_gap_80024A0C, sound-macro 16.16 curve/volume and glyph code with sltiu range checks (3) |
+| unclassified | 0 | 0 | |
+
+No address-derived index takes a heap/spill pointer. Coverage limit: the scan follows fall-through order and stops at
+redefinition and calls; an index that crosses a branch join or is passed to a callee is not seen (same limit as classes A-E).
+Classes A-F close the spill-pointer-as-value edge. Open edge: whether the RCP (RSP DMA / DL segment addresses, 24-bit) is ever
+handed a spill block (scratch/agent/NEXT.md, class G).
