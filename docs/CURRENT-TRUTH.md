@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7358 (2026-11-14).
+Compact operational handoff, as of Session 7361 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -492,21 +492,21 @@ is in the s7307 archive). Active unit: NEXT.md.
     silent 0.25x terrain; hand-set ROGUESQ_FB_WIDTH bypassed the 1024 clamp. main.cpp rs64_s7358_sanitize_env (before the
     aspect/dd policies; ROGUESQ_S7358_ENVCHECK=0 old) + tilepool px<=8. `zsh tools/s7358_arms.zsh <tag>`: pre d12/nan crash,
     typo 0.25; post all alive with "[s7358-env]"; same-build ENVCHECK=0 nan re-crashes. 260 s dd8 smoke clean. Next: class AJ (27x).
-27x. **Unbounded string copies (class AJ): CLOSED (s7359, census + ASan control; 20 appends hardened, 1 latent rt64 overflow FIXED).**
-    tools/s7359_strcopy_census.py: 44 sites, 0 unresolved, 7 controls. No strcpy/sprintf/%s-scanf of env/file text exists (H-safe);
-    the live idiom was `o += snprintf(b + o, cap - o, ..)` (o passes cap on truncation, cap - o wraps): 20 unguarded sites incl.
-    the default-on dd8 [s7030]/[s7046]/[s7233] rows (bounded by value only, max 159 of 300 B) -> src/main/rs64_apf.h clamped append.
-    rt64 W present-ring row final "\n" append clamped. tools/s7359_apf_ctl.cpp: old idiom ASan stack-buffer-overflow, helper clean
-    and byte-identical. 260 s dd8 smoke clean. Next: class AK (27y).
-27y. **Unterminated guest-RAM string reads (class AK): CLOSED (s7360, census + export cross-ref + ASan two-arm control).**
-    tools/s7360_gueststr_census.py (STR/FMT/LOOP/GSTUB, 6 planted controls): 1 site in all host code we own, D: librecomp
-    __osRdbSend walked a guest buf with MEM_B for up to 8 MB with no range check (0 callers). Second line: of 134 host
-    *_recomp exports, 57 are called from RecompiledFuncs/Patches and none reads guest text (osPfsFindFile/AllocateFile take
-    names but are NOPACK stubs; the game's sprintf is recompiled guest code). H-safe selected, H-overrun refuted. __osRdbSend
-    now range-checks [buf, buf+size) in 8 MB KSEG0; tools/s7360_rdbsend_ctl.sh: pre heap-buffer-overflow, post 5/5. 260 s dd8 smoke clean.
-27z. **Next unit (NEXT.md): class AL, unvalidated guest pointer args in live host exports** (`_arg<N, T*>` / TO_PTR /
-    MEM_W(0, ctx->rN) through a guest-supplied pointer in the 57 called exports, scratch/s7360/host_exports.txt).
-28. **When 1-27z offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27x. **Unbounded string copies (class AJ): CLOSED (s7359).** 44 sites; 20 `o += snprintf` appends -> src/main/rs64_apf.h; rt64 W-row fixed.
+27y. **Guest-RAM string reads (class AK): CLOSED (s7360).** 1 dead site (__osRdbSend) range-checked; 57 live exports read no guest text.
+27z. **Zero-extended guest-pointer bases (class AL): CLOSED (s7361, census over host + LIVE generated tree + fork two-arm control).**
+    MEM_x(off, base) = rdram + ((base+off) - 0xFFFFFFFF80000000): a sign-extended base always lands in librecomp's 4 GB reservation
+    (guest RAM or a deterministic fault), TO_PTR masks to 32 MB, so a junk guest pointer arg can NOT reach host memory (H-safe for
+    the 57 exports' pointer args). The real hole is C typing: a uint32_t base, a 0x8xxxxxxxu literal, or int32 + unsigned offset
+    zero-extends -> rdram + 4 GB (s4087's SEGV_ACCERR). tools/s7361_memzext_census.py (C promotion evaluator, 10 selftest rows):
+    live RecompiledFuncs 52643 non-pristine sites -> 9 ZEXT, host 5 (osSendMesg_recomp [pi-slot-send] under ROGUESQ_LOG_DMA, main.cpp
+    m5 object-field witness), all opt-in diagnostics, incl. a WRITE (s4571c ROGUESQ_S4571_ZERO) and s3308 stage_adv, which s5546's
+    fixup_live_replay "suffix_29" had re-broken. All fixed (signed bases) in the source apply scripts + live tree
+    (tools/apply_s7361_sext_bases.py); suffix_29 removed; regen_replay.sh now fails on any ZEXT (planted ctl rc=1).
+    tools/s7361_zext_ctl.sh: 4/4 pre forms fault, post read the planted word. 260 s dd8 smoke + LOG_DMA clean (pi-slot path not hit).
+27za. **Next unit (NEXT.md): class AM, raw `rdram + <expr>` host pointer arithmetic** (~81 sites in src/, librecomp, ultramodern):
+    each offset must be masked/bounded below the RW 512 MB or derived from a sign-extended guest address.
+28. **When 1-27za offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

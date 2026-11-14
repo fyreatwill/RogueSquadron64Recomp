@@ -89,7 +89,7 @@ def apply10c(text):
 
 
 EF4_LINE = (
-        '        if (lg6315 && ((n6315 < 40u) || (n6315 % 4001u) == 0u)) { uint32_t w0 = (uint32_t)MEM_W(0X0, pb), s3 = (uint32_t)ctx->r19; fprintf(stderr, "[edgefade4] slot=%08X %08X %08X %08X %08X obj=", (unsigned)w0, (unsigned)MEM_W(0X4, pb), (unsigned)MEM_W(0X8, pb), (unsigned)MEM_W(0XC, pb), (unsigned)MEM_W(0X10, pb)); if (w0 >= 0x80000000u && w0 < 0x80800000u) for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, (gpr)(int32_t)w0); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g ", fv); } fprintf(stderr, " s3=%08X cell=%d,%d\\n", (unsigned)s3, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X18, s3) : -1, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X1A, s3) : -1); }\n'
+        '        if (lg6315 && ((n6315 < 40u) || (n6315 % 4001u) == 0u)) { uint32_t w0 = (uint32_t)MEM_W(0X0, pb), s3 = (uint32_t)ctx->r19; fprintf(stderr, "[edgefade4] slot=%08X %08X %08X %08X %08X obj=", (unsigned)w0, (unsigned)MEM_W(0X4, pb), (unsigned)MEM_W(0X8, pb), (unsigned)MEM_W(0XC, pb), (unsigned)MEM_W(0X10, pb)); if (w0 >= 0x80000000u && w0 < 0x80800000u) for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, (gpr)(int32_t)w0); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g ", fv); } fprintf(stderr, " s3=%08X cell=%d,%d\\n", (unsigned)s3, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X18, (int32_t)s3) : -1, (s3 >= 0x80000000u && s3 < 0x80800000u) ? (int)(int16_t)MEM_H(0X1A, (int32_t)s3) : -1); }\n'
 )
 
 
@@ -105,7 +105,7 @@ def apply10d(text):
 
 
 EF5_LINE = (
-    '        if (lg6315 && ((n6315 % 5u) == 0u) && n6315 < 60000u) { fprintf(stderr, "[edgefade5] n=%u cell=%d,%d cam=", n6315, (int)rs64_ef_col, (int)rs64_ef_row); for (int q = 0; q < 32; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, 0x80138D20u); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "pl="); for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, 0x80137DBCu); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "\\n"); }\n'
+    '        if (lg6315 && ((n6315 % 5u) == 0u) && n6315 < 60000u) { fprintf(stderr, "[edgefade5] n=%u cell=%d,%d cam=", n6315, (int)rs64_ef_col, (int)rs64_ef_row); for (int q = 0; q < 32; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, (int32_t)0x80138D20u); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "pl="); for (int q = 0; q < 12; q++) { uint32_t u = (uint32_t)MEM_W(q * 4, (int32_t)0x80137DBCu); float fv; memcpy(&fv, &u, 4); fprintf(stderr, "%g,", fv); } fprintf(stderr, "\\n"); }\n'
 )
 
 

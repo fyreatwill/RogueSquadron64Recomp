@@ -194149,3 +194149,37 @@ heap-buffer-overflow on the cross-top send -> the instrument sees the hole it cl
 Smoke (same build): `env SECS=260 zsh scratch/s7326/run.zsh s7360_dd8 ''` -> crash=0 resets=14 late=0 arenafull=0, level
 load reached (load_level_hmp, phase 12, width 1024); 0 CRASH/SIGSEGV/SIGBUS/SIGABRT lines in a 208 MB log.
 Next: class AL (NEXT.md, CURRENT-TRUTH 27z): unvalidated guest pointer args dereferenced inside the 57 live host exports.
+
+## Session 7361 (2026-11-14) — class AL closed: guest-pointer args cannot escape rdram when sign-extended; the live hole was C zero-extension (uint32/unsigned-literal MEM bases -> rdram + 4 GB): 9 generated + 5 host diagnostic sites FIXED, regen gate added
+HYPOTHESIS-ID: host-export-guest-ptr. Hypotheses (NEXT.md): H-safe / H-trust / H-hole.
+Boring thing first (the macros): librecomp reserves 4 GB PROT_NONE behind rdram (addresses.hpp allocation_size) with 512 MB RW.
+MEM_x(off, base) = rdram + ((base+off) - 0xFFFFFFFF80000000). For ANY sign-extended 32-bit base the host offset is in [0, 4 GB):
+guest RAM or a deterministic fault, never host memory. TO_PTR masks & 0x1FFFFFF. N64Recomp ctx->rN are always sign-extended.
+So a null/junk guest pointer arg to the 57 live exports (cont/pak/eep/sp/ai/vi/pi/ultra_translation/upstream_compat) can not
+corrupt host memory -> H-safe for the arg class as framed; H-trust moot.
+The real hole is the base's C TYPE: uint32_t base, unsuffixed/`u` 0x8xxxxxxx literal, or int32 + unsigned offset -> unsigned int ->
+ZERO-extended -> rdram + 4 GB + x, past the reservation (s4087 already hit this: SEGV_ACCERR at rdram+0x100128d47).
+Census tools/s7361_memzext_census.py: per MEM_x/SD/TO_PTR, a C usual-arithmetic-conversion evaluator over both macro args (casts,
+S32/SX macros, nested MEM values, literal suffixes, nearest declaration incl. multi-declarators, paren-balanced). Selftest 10 planted
+rows PASS. Two scopes: host (src/**, librecomp, ultramodern, tools/fixup_*/apply_*: 3560 rows) and the LIVE generated tree
+(`--gen ../N64Recomp/RecompiledFuncs`, pristine `MEM_x(ctx->rN, 0X..)` fast-pathed): 52643 non-pristine rows.
+First passes had false ZEXT/UNK (arg order: N64Recomp emits (reg, off); function-call args mistaken for declarators; 30 KB decl
+window); each fixed and re-run, survivors checked by hand (pb/sb/h/nb/base/mips/mips_first/mp all int64/gpr sext).
+Result: live ZEXT = 9 generated + 5 host, every one an opt-in diagnostic:
+ funcs_29 s3308 stage_adv `MEM_W(0x934u, S32(..))`/0x938u (re-broken by s5546 fixup_live_replay "suffix_29" for text identity);
+ funcs_23 s4571c ROGUESQ_S4571_ZERO `MEM_W(i, (int32_t)t0) = 0` (a WRITE loop); funcs_10 s6311 edgefade4/5 logs (uint32 s3,
+ 0x80138D20u/0x80137DBCu literals); funcs_9 s6492b ROGUESQ_FORFACE_LOG (uint32 a0); funcs_9 s6480 poolcensus (int32 pb + 12*i u32);
+ host: upstream_compat.cpp osSendMesg_recomp [pi-slot-send] under ROGUESQ_LOG_DMA (uint32 m) = the one live EXPORT site (H-hole,
+ diagnostic); main.cpp rs64_m5_object_field_witness word/byte lambdas (their 8 MB range check was useless: the sum escaped anyway).
+Fix: signed bases in the source apply scripts (s4571c, s6311, s6492b, s6480) + main.cpp/upstream_compat.cpp, the same text in the
+live tree via tools/apply_s7361_sext_bases.py (11/11, idempotent re-run 0/11), suffix_29 deleted from fixup_live_replay.py.
+Census after: generated 52643/52643 SEXT; host-scope ZEXT left only in stale/comment pattern strings of non-live scripts.
+regen_replay.sh now runs the --gen census last-but-one and fails on any ZEXT; planted control (funcs_29 with 0x934u) -> rc=1.
+ORIGIN: the writers are our own diagnostic patches (s3308/s4571c/s5546/s6126/s6311/s6480/s6492b), not the guest; no value is
+illegitimate, the address arithmetic was. Not a mitigation.
+Control tools/s7361_zext_ctl.sh (real recomp.h macros, librecomp-shaped 4 GB reservation, forked arms): 4 idioms, pre text faults,
+post text reads the planted guest word: 4/4 PASS.
+Smoke (rebuilt): `env SECS=260 zsh scratch/s7326/run.zsh s7361_dd8 'ROGUESQ_LOG_DMA=1'` -> crash=0 resets=14 late=0 arenafull=0,
+load_level_hmp reached, 0 CRASH/SIG lines in 215 MB. LOG_DMA was live (26469 [pi-start-dma]) but 0 [pi-slot-send]: no osSendMesg to
+the 0x801107E0 ring on this route, so that site's in-game arm is unexercised (single-source: the harness).
+Next: class AM, raw `rdram + <expr>` host arithmetic (73 lines in src/, librecomp, ultramodern) - NEXT.md.

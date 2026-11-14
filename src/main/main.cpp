@@ -1700,11 +1700,11 @@ extern "C" void rs64_m5_object_field_witness(uint8_t* rdram, uint32_t pc,
     if (rows >= 512u) return;
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
-        return static_cast<uint32_t>(MEM_W(0x00, guest));
+        return static_cast<uint32_t>(MEM_W(0x00, (int32_t)guest));
     };
     auto byte = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
-        return static_cast<uint32_t>(MEM_BU(0x00, guest));
+        return static_cast<uint32_t>(MEM_BU(0x00, (int32_t)guest));
     };
     const uint32_t s0 = U32(ctx->r16);
     const uint32_t s1 = U32(ctx->r17);

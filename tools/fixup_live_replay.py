@@ -351,10 +351,7 @@ for _f, _pat, _n in (("funcs_20.c", r"rs64_m5_voice_modulation_callee\(", 3),
                      ("funcs_25.c", r"rs64_s4221_coef\(", 2)):
     drop_lines("drop_" + _f, _f, _pat, _n)
 move_lines("order_s3092_mark_5", "funcs_5.c", r"rs64_m5_producer_mark_handoff\(rdram, 0u, .*s3092 producer-mark entry", 1, 1)
-_p29 = d / "funcs_29.c"
-_t29 = _p29.read_text()
-_t29 = _t29.replace("MEM_W(0x934, S32(0x800B0000u))", "MEM_W(0x934u, S32(0x800B0000u))").replace("MEM_BU(0x938, S32(0x800B0000u))", "MEM_BU(0x938u, S32(0x800B0000u))")
-_p29.write_text(_t29)
-print("suffix_29: ok")
+# s7361: suffix_29 removed. It rewrote MEM_W(0x934, S32(..)) to MEM_W(0x934u, ..) for text identity with a hand-edited live
+# tree, re-creating the s4087 zero-extension crash (int32 + unsigned -> uint32 -> rdram + 4 GB). apply_s3308 text is canonical.
 
 sys.exit(1 if fail else 0)

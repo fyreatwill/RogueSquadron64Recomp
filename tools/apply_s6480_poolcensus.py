@@ -7,8 +7,8 @@ OLD = '        for (int i = 0; i < 8; i++) g_s6476[i] = 0; }\n'
 NEW = '''        { /* ''' + TAG + ''' */
           int32_t pb = (int32_t)MEM_W((int32_t)0x80130000, 0x6FCC); uint32_t nf = 0, nl = 0, nt1 = 0, nfree = 0, last = 0, scan = 0;
           if (pb > 0x80000000 && pb < 0x80700000) { for (uint32_t i = 0; i < 6000 && (uint32_t)pb + 12u * i + 12u < 0x80700000u; i++) { scan = i + 1;
-              uint32_t pr = MEM_HU(pb, 12*i), nx = MEM_HU(pb, 12*i+2); if (nx == i + 1 && (pr == i - 1 || (i == 0 && pr == 0xFFFF))) { nfree++; last = i; }
-              else if (nx != 0xFFFF && nx < 6000) { nl++; if (MEM_HU(pb, 12*nx+4) == 1) nt1++; } else if (nx != 0xFFFF) { nl++; } } }
+              uint32_t pr = MEM_HU(pb, (int32_t)(12*i)), nx = MEM_HU(pb, (int32_t)(12*i+2)); if (nx == i + 1 && (pr == i - 1 || (i == 0 && pr == 0xFFFF))) { nfree++; last = i; }
+              else if (nx != 0xFFFF && nx < 6000) { nl++; if (MEM_HU(pb, (int32_t)(12*nx+4)) == 1) nt1++; } else if (nx != 0xFFFF) { nl++; } } }
           fprintf(stderr, "[poolcensus] base=%08x scan=%u freepattern=%u lastfree=%u linked(non-FFFF,non-free)=%u of-which-type1=%u\\n", (uint32_t)pb, scan, nfree, last, nl, nt1); }
 '''
 def apply9(t):

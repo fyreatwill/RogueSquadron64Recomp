@@ -16,7 +16,7 @@ hook = r'''    { /* PATCH: s4571c zero render-record tables (env ROGUESQ_S4571_Z
         if (s4571c_on < 0) { const char* e = getenv("ROGUESQ_S4571_ZERO"); s4571c_on = (e && e[0] && e[0] != '0') ? 1 : 0; }
         uint32_t t0 = (uint32_t)MEM_W(-0X68F8, S32(0x8015 << 16)), t1 = (uint32_t)ctx->r2, cap = (uint32_t)MEM_HU(-0X68FC, S32(0x8015 << 16));
         if (s4571c_on && t0 && t1 && cap && cap < 4096) {
-            for (uint32_t i = 0; i < cap * 0x88u; i += 4) { MEM_W(i, (int32_t)t0) = 0; MEM_W(i, (int32_t)t1) = 0; }
+            for (uint32_t i = 0; i < cap * 0x88u; i += 4) { MEM_W((int32_t)i, (int32_t)t0) = 0; MEM_W((int32_t)i, (int32_t)t1) = 0; }
             fprintf(stderr, "[s4571c-zero] tbl0=0x%08X tbl1=0x%08X cap=%u bytes=%u each\n", t0, t1, cap, cap * 0x88u); fflush(stderr);
         }
     }

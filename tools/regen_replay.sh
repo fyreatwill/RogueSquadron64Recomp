@@ -8,4 +8,6 @@ for step in fixup_game_funcs_vendored fixup_movz_movn strip_diag_layers fixup_li
 done
 # s6868: last, so every fixer above still sees the names N64Recomp emitted.
 python3 tools/rename_generated_symbols.py "$D" >> "$LOG" 2>&1 || { echo "regen_replay: rename failed (see $LOG)"; exit 1; }
+# s7361: no injected MEM_x base may be zero-extended (lands 4 GB past rdram).
+python3 tools/s7361_memzext_census.py --gen "$D" >> "$LOG" 2>&1 || { echo "regen_replay: s7361 zero-extended MEM base (see $LOG)"; exit 1; }
 echo "regen_replay: ok"

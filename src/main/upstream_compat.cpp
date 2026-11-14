@@ -8236,7 +8236,7 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t m = (uint32_t)ctx->r5;
         if (on && m >= 0x801107E0u && m < 0x80110900u) {
             fprintf(stderr, "[pi-slot-send] mq=0x%08X mb=0x%08X ra=0x%08X dram=0x%08X dev=0x%08X size=0x%X\n",
-                (uint32_t)ctx->r4, m, (uint32_t)ctx->r31, (uint32_t)MEM_W(8, m), (uint32_t)MEM_W(0xC, m), (uint32_t)MEM_W(0x10, m));
+                (uint32_t)ctx->r4, m, (uint32_t)ctx->r31, (uint32_t)MEM_W(8, (int32_t)m), (uint32_t)MEM_W(0xC, (int32_t)m), (uint32_t)MEM_W(0x10, (int32_t)m));
         }
     }
     s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "send");
