@@ -5666,6 +5666,7 @@ static void rs64_s5229_store(char width, uint32_t pc, uint32_t addr, uint32_t va
         g_s5229_pc = (uint32_t*)std::calloc(0x800000, sizeof(uint32_t));
         g_s5229_val = (uint8_t*)std::calloc(0x800000, 1);
         g_s5229_w = (uint8_t*)std::calloc(0x800000, 1);
+        if (!g_s5229_pc || !g_s5229_val || !g_s5229_w) { std::fprintf(stderr, "[s7356] FATAL s5229 tables: calloc failed (host out of memory)\n"); std::fflush(stderr); std::abort(); }
     }
     ++g_s5229_calls;
     const uint32_t n = width == 'B' ? 1u : width == 'H' ? 2u : width == 'W' ? 4u : width == 'D' ? 8u : 0u;
@@ -5754,6 +5755,7 @@ extern "C" void rs64_m5_lowfield_store(char width, uint32_t pc,
     }
     if (rs64_s4457_on()) {
         if (!g_s4457_tab) g_s4457_tab = (S4457W*)std::calloc(0x100000, sizeof(S4457W));
+        if (!g_s4457_tab) { std::fprintf(stderr, "[s7356] FATAL s4457 table: calloc failed (host out of memory)\n"); std::fflush(stderr); std::abort(); }
         if (addr >= 0x80000000u && addr < 0x80400000u) {
             S4457W& e = g_s4457_tab[(addr & 0x3FFFFFu) >> 2];
             e.ppc = e.pc; e.pval = e.val; e.pc = pc; e.val = value; e.w = (uint16_t)width;

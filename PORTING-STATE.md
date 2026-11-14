@@ -193987,3 +193987,36 @@ Verdict: the ml_old/ml_fix and so_noalt/so_alt arm pairs (same build, env-toggle
 handler (strsignal under the held malloc lock: hang vs full report; no altstack: silent death vs report) and refute H-safe;
 H-diag is selected only for the 7 env-gated G rows. This closes class AF. Next discriminator: class AG census
 (tools/s7356_unchecked_census.py, CHECKED/G/B split with planted controls) plus a forced-failure arm per B row (NEXT.md).
+
+## Session 7356 (2026-11-14) — class AG unchecked host allocation / file-open results closed: 1 default-on defect FIXED (init_overlays calloc null write at boot) + 2 env-gated calloc fail-fasts; census 105 sites, 0 B / 0 ?
+HYPOTHESIS-ID: host-unchecked-resource-result. Work unit from NEXT.md (s7355): idiom-class audit, class AG.
+Scope: every line of src/** and lib/N64ModernRuntime/{librecomp,ultramodern}/src/*.cpp, plus only the lines WE added to lib/rt64
+(git diff -U0 '+' lines). Sites: malloc/calloc/realloc/strdup/mmap/fopen/popen/fdopen/opendir/dup/SDL_Create*/new(nothrow).
+Census tools/s7356_unchecked_census.py: binds the result variable, then requires every later use to be guarded (same-line test,
+enclosing block header test, or an earlier bail-out in the same function). First version extracted 1-char variable names
+(regex bug, "never used" rows for the rdram mmap and overlays calloc); caught by reading the CHECKED list, fixed before use.
+Raw heuristic: 82 CHECKED, 6 B, 15 G, 2 ?. Every non-CHECKED row read by hand and recorded in the tool's MANUAL table:
+19 false positives (short static names like `f` colliding across dpc_bridge.cpp, checks in a helper's return value such as
+copyRamOpen/rdramOpen, _WIN32 branch uses), 2 designed null tolerances (env-cache strdup null key = empty slot; g5b_tg_open
+returns into a tested global), and 3 REAL:
+- B overlays.cpp:344 recomp::overlays::init_overlays: section_addresses = calloc(total_num_sections, 4), unchecked, written at
+  :356 on every boot. FIXED: named "[s7356] FATAL init_overlays: calloc(%zu, 4) ... failed (host out of memory)" + abort.
+  ORIGIN: upstream N64ModernRuntime code; the value is legitimate (14 sections), only the failure path was missing.
+- G main.cpp rs64_s5229_store (3 x calloc, 48 MB, ROGUESQ_LOG_S5223_ENTRY_JOIN) and rs64_s4457 table (calloc 0x100000 entries,
+  rs64_s4457_on): unchecked, deref'd at once. FIXED with the same named fail-fast.
+Post-fix census: 105 sites, 82 CHECKED + 21 CHECKED-M + 2 D-M, 0 B, 0 ?; planted B / CHECKED / G controls PASS.
+Second line (runtime, rule 4): tools/s7356_failalloc.c, a DYLD-interposed calloc that returns NULL for the first call whose
+caller symbol contains $S7356_FAIL_IN (dladdr on the return address). First version also interposed malloc and used __thread +
+getenv in the hook: the game exited rc 0 at once even in the control arm (recursion through the s7066 getenv cache), so the
+instrument was rejected and rebuilt calloc-only with the env read once in the constructor. Arms, one boot each, 15 s:
+  pre_ctl  (__none__, old build)       alive at 15 s, 43824 log lines (positive control: interposer loaded, boot normal)
+  pre_fail (init_overlays, old build)  "[s7356i] forcing NULL alloc in _ZN6recomp8overlays13init_overlaysEv" then
+                                       [CRASH] signal 11 si_addr=0x8 (null + section index: the defect, reproduced)
+  post_ctl (__none__, fixed)           alive at 15 s, 42942 lines
+  post_fail(init_overlays, fixed)      "[s7356] FATAL init_overlays: calloc(14, 4) for section_addresses failed" then SIGABRT report
+Regression: `zsh tools/s7356_arms.zsh` (arm_ctl alive, arm_fail fatal=1 segv=0).
+Smoke on build/ (fix in): `env SECS=260 zsh scratch/s7326/run.zsh s7356_dd8 ''`: crash=0 resets=14 late=0 arenafull=0,
+6 initMission, 259 update_screen rows (identical to the s7355 smoke).
+Rules out: H-safe as stated (one default-on unchecked calloc); H-diag only partly (2 of 3 real sites were env-gated).
+Not covered: upstream RT64 code we did not touch, and C++ `new`/std containers (they throw bad_alloc -> terminate -> SIGABRT
+report, already a named failure). Lib edit exported (submodule-patches/N64ModernRuntime.patch). Next: class AH (27v).

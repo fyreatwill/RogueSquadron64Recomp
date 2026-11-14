@@ -1469,14 +1469,15 @@ index 4d6a01d..e93a084 100644
      ctx->r2 = (int32_t)(ret >> 32);
      ctx->r3 = (int32_t)(ret >> 0);
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..1d5ee9e 100644
+index 8c8e5d1..636836a 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
-@@ -1,9 +1,11 @@
+@@ -1,9 +1,12 @@
  #include <algorithm>
 +#include <atomic>
  #include <cassert>
  #include <cstdio>
++#include <cstdlib>
  #include <cstring>
  #include <unordered_map>
  #include <vector>
@@ -1484,7 +1485,7 @@ index 8c8e5d1..1d5ee9e 100644
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,9 +14,46 @@
+@@ -12,9 +15,46 @@
  #include "overlays.hpp"
  #include "sections.h"
  
@@ -1531,7 +1532,7 @@ index 8c8e5d1..1d5ee9e 100644
  static SectionTableEntry* patch_code_sections = nullptr;
  size_t num_patch_code_sections = 0;
  static std::vector<char> patch_data;
-@@ -186,6 +225,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
+@@ -186,6 +226,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
  }
  
  extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
@@ -1539,7 +1540,7 @@ index 8c8e5d1..1d5ee9e 100644
      // Search for the first section that's included in the loaded rom range
      // Sections were sorted by `init_overlays` so we can use the bounds functions
      auto lower = std::lower_bound(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections], rom,
-@@ -198,8 +238,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +239,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -1557,7 +1558,7 @@ index 8c8e5d1..1d5ee9e 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +285,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +286,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -1585,7 +1586,20 @@ index 8c8e5d1..1d5ee9e 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,13 +429,244 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -274,6 +343,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
+ void recomp::overlays::init_overlays() {
+     func_map.clear();
+     section_addresses = (int32_t *)calloc(sections_info.total_num_sections, sizeof(int32_t));
++    if (section_addresses == nullptr && sections_info.total_num_sections != 0) {  // s7356 class AG: was a null write at boot
++        std::fprintf(stderr, "[s7356] FATAL init_overlays: calloc(%zu, 4) for section_addresses failed (host out of memory)\n",
++            (size_t)sections_info.total_num_sections);
++        std::fflush(stderr);
++        std::abort();
++    }
+ 
+     // Sort the executable sections by rom address
+     std::sort(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections],
+@@ -361,13 +436,244 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  

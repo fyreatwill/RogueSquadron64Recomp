@@ -469,8 +469,14 @@ is in the s7307 archive). Active unit: NEXT.md.
     tools/s7355_sighandler_census.py: 28 SAFE, 7 G (env-gated diagnostic handlers), 0 B, 0 ?; controls PASS. Lesson: on macOS a
     fault inside the handler (signal blocked) HANGS rather than dies, so a handler bug turns crashes into freezes. Regression
     arms: `zsh scratch/s7355/arms.zsh` (positive controls ROGUESQ_TEST_STACK_OVERFLOW_AT / ROGUESQ_TEST_CRASH_MALLOC_AT).
-27u. **Next unit (NEXT.md): class AG, unchecked host allocation / mmap / fopen results** in host C++ we own.
-28. **When 1-27u offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27u. **Unchecked host allocation / mmap / fopen results (class AG): CLOSED (s7356, static census + runtime arms; 1 default-on FIXED).**
+    tools/s7356_unchecked_census.py over src/**, librecomp/ultramodern src, our rt64 '+' lines: 105 sites, 0 B / 0 ? after hand
+    review (MANUAL table in the tool; 19 heuristic false positives). FIXED: overlays.cpp init_overlays calloc (null write at boot
+    on failure; now "[s7356] FATAL init_overlays" + abort) and 2 env-gated diagnostic callocs in main.cpp. Runtime second line:
+    tools/s7356_failalloc.c (DYLD calloc interpose, fails the first call from a named caller): pre-fix SIGSEGV si_addr=0x8,
+    post-fix named FATAL; ctl arms boot. Regression `zsh tools/s7356_arms.zsh`. 260 s dd8 smoke clean. Next: class AH (27v).
+27v. **Next unit (NEXT.md): class AH, unchecked I/O lengths** (fread/read/fseek/ftell/fwrite results) in host code we own.
+28. **When 1-27v offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
