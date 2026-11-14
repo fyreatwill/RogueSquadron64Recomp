@@ -36532,6 +36532,7 @@ void rs64_s2031_m5_gate_event(uint8_t* rdram, const char* edge, const char* site
     static int enabled = -1;
     static uint32_t phase_key = 0xFFFFFFFFu;
     static unsigned long row = 0;
+    { extern void rs64_s7330_gate(const char* edge, uint32_t pc); rs64_s7330_gate(edge, pc); }  /* s7330 wait-edge stamps */
     if (enabled < 0) {
         const char* all = getenv("ROGUESQ_LOG_ALL");
         const char* e = getenv("ROGUESQ_LOG_M5_GATE_CONTRACT");

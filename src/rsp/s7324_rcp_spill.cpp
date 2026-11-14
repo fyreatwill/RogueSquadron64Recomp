@@ -14,6 +14,7 @@
 #include <cstring>
 #include <ctime>
 #include <mutex>
+#include <chrono>
 extern "C" int rs64_s7324_class(uint32_t addr, uint32_t* blk, uint32_t* req, void** pc);
 extern "C" uint32_t rs64_s7324_lowspill();
 extern "C" void rs64_s7324_sym(void* pc, char* out, size_t n);
@@ -54,6 +55,51 @@ uint64_t g_gap[2][6];  // [rd/wr aud][kind]
 struct Dg { uint32_t src, kind, x, len; uint64_t n; S7325Out o; };
 Dg g_dg[8192]; uint32_t g_ndg = 0; uint64_t g_dg_over = 0;
 uint64_t g_c5_n = 0, g_c5_fok = 0, g_c5_freuse = 0, g_c5_fbad = 0, g_c5_fnone = 0, g_c5_hn = 0, g_c5_hok = 0, g_c5_hbad = 0;
+// s7330 audio-freed-song-read: which audio task reads a just-freed block? Audio task submits (osSpTaskStartGo type 2, guest thread)
+// get a seq; the RSP runs one task at a time and the guest submits the next only after SP completion, so the running audio task at
+// an audio DMA is the latest submitted one. Per task: submit, first and last audio DMA wall time (last DMA ~ task end). Per freed-class
+// audio DMA (every hit, not distinct): time, seq, free time (now - fage), freed ptr, bulk flag (no host freer frames = guest bulk free).
+// Guest wait edges (waitForMusyXAudioTaskDone entry/seed/exit) from the s2031 helper. ctl: every audio DMA must attribute (seq > 0,
+// submit <= now < submit + 0.1 s). Dump build/rs64_s7330.log beside the s7325 log.
+double s7330_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+struct T7330 { uint64_t seq; double sub, first, last; uint32_t ndma, data; };
+T7330 g_t30[65536]; uint64_t g_seq30 = 0;
+struct H7330 { double t, ft; uint64_t seq; uint32_t dir, x, len, fptr, freq, bulk; };
+H7330 g_h30[8192]; uint32_t g_nh30 = 0; uint64_t g_h30_over = 0;
+struct W7330 { double t; uint32_t edge, pc; };
+W7330 g_w30[8192]; uint64_t g_nw30 = 0;
+uint64_t g_c30_n = 0, g_c30_ok = 0, g_c30_noseq = 0, g_c30_late = 0, g_c30_neg = 0;
+double g_c30_maxdt = 0;
+void s7330_dma_locked(double now) {
+    g_c30_n++;
+    if (!g_seq30) { g_c30_noseq++; return; }
+    T7330& t = g_t30[g_seq30 & 65535];
+    const double dt = now - t.sub;
+    if (dt < 0) g_c30_neg++; else if (dt >= 0.1) g_c30_late++; else g_c30_ok++;
+    if (dt > g_c30_maxdt) g_c30_maxdt = dt;
+    if (!t.ndma++) t.first = now;
+    t.last = now;
+}
+void dump7330_locked() {
+    FILE* o = fopen("rs64_s7330.log", "w");
+    if (!o) return;
+    fprintf(o, "s7330 ctl aud_dma=%llu attr_ok=%llu noseq=%llu late=%llu neg=%llu maxdt=%.4f tasks=%llu hits=%u hit_over=%llu waits=%llu\n",
+            (unsigned long long)g_c30_n, (unsigned long long)g_c30_ok, (unsigned long long)g_c30_noseq, (unsigned long long)g_c30_late,
+            (unsigned long long)g_c30_neg, g_c30_maxdt, (unsigned long long)g_seq30, g_nh30, (unsigned long long)g_h30_over, (unsigned long long)g_nw30);
+    uint64_t lastdump = 0;
+    for (uint32_t i = 0; i < g_nh30; i++) { const H7330& h = g_h30[i];
+        fprintf(o, "HIT t=%.6f dir=%s x=%08X len=%X seq=%llu fptr=%08X freq=%X ft=%.6f bulk=%u\n", h.t, h.dir ? "wr" : "rd", h.x, h.len,
+                (unsigned long long)h.seq, h.fptr, h.freq, h.ft, h.bulk);
+        const uint64_t lo = h.seq > 4 ? h.seq - 4 : 1, hi = h.seq + 4;
+        for (uint64_t s = (lo > lastdump ? lo : lastdump + 1); s <= hi && s <= g_seq30; s++) {
+            if (g_seq30 - s >= 65536) continue; const T7330& t = g_t30[s & 65535];
+            fprintf(o, "TASK seq=%llu sub=%.6f first=%.6f last=%.6f ndma=%u data=%08X\n", (unsigned long long)t.seq, t.sub, t.first, t.last, t.ndma, t.data);
+            lastdump = s; } }
+    const uint64_t w0 = g_nw30 > 8192 ? g_nw30 - 8192 : 0;
+    for (uint64_t i = w0; i < g_nw30; i++) { const W7330& w = g_w30[i & 8191];
+        fprintf(o, "WAIT t=%.6f edge=%u pc=%08X\n", w.t, w.edge, w.pc); }
+    fclose(o);
+}
 void dump7325_locked() {
     FILE* o = fopen("rs64_s7325.log", "w");
     if (!o) return;
@@ -118,10 +164,13 @@ void note(int src, uint32_t addr, uint32_t len) {
     }
     if (src == S_DMA_RD_AUD || src == S_DMA_WR_AUD) {
         const int d = src == S_DMA_WR_AUD;
+        const double now30 = s7330_now(); s7330_dma_locked(now30);
         if (c == 1) { if (addr + len > blk + req) { g_gap[d][5]++; uint32_t x = 0x80000000u | (addr & 0xFFFFFFu); dg_note(src, 5, x, len, nullptr); } }
         else if (c == 0 || c == 2) {
             const uint32_t x = 0x80000000u | (addr & 0xFFFFFFu); S7325Out o; const int k = rs64_s7325_gap(x, &o, 0);
             g_gap[d][k]++;
+            if (k == 3) { if (g_nh30 < 8192) g_h30[g_nh30++] = H7330{now30, s7330_now() - o.fage, g_seq30, (uint32_t)d, x, len, o.fptr, o.freq, o.fpc[0] ? 0u : 1u};
+                          else g_h30_over++; }
             if (k >= 2) { uint32_t i = 0; for (; i < g_ndg; i++) if (g_dg[i].src == (uint32_t)src && g_dg[i].x == x && g_dg[i].len == len && g_dg[i].kind == (uint32_t)k) break;
                 if (i < g_ndg) g_dg[i].n++; else { S7325Out o2; rs64_s7325_gap(x, &o2, 1); dg_note(src, k, x, len, &o2); } }
         }
@@ -142,7 +191,7 @@ void note(int src, uint32_t addr, uint32_t len) {
             if ((ca == 2 || ca == 3) && b2 == S) g_ctl_ok_alias++;
         }
     }
-    if (now - g_last_dump >= 5) { g_last_dump = now; dump_locked(); dump7325_locked(); }
+    if (now - g_last_dump >= 5) { g_last_dump = now; dump_locked(); dump7325_locked(); dump7330_locked(); }
 }
 }  // namespace
 extern "C" void rs64_s7324_dma(int dir, uint32_t dram, uint32_t raw_len, int aud) {
@@ -171,4 +220,18 @@ extern "C" void rs64_s7324_rdp(uint32_t lo, uint32_t hi, uint8_t (*rd8)(uint32_t
         if (a + n > hi) { s_carry_at = hi; s_carry = a + n - hi; break; }
         a += n;
     }
+}
+
+// s7330 entry points: audio task submit (osSpTaskStartGo_recomp, type 2) and guest wait edges (s2031 helper in funcs_23.c).
+extern "C" void rs64_s7330_aud_submit(uint32_t data_ptr) {
+    if (!rs64_s7324_on) return;
+    std::lock_guard<std::mutex> lk(g_mu);
+    const uint64_t s = ++g_seq30; g_t30[s & 65535] = T7330{s, s7330_now(), 0, 0, 0, data_ptr};
+}
+extern "C" void rs64_s7330_gate(const char* edge, uint32_t pc) {
+    if (!rs64_s7324_on || !edge) return;
+    uint32_t e = 0;
+    if (!strcmp(edge, "wait-entry")) e = 1; else if (!strcmp(edge, "wait-seed")) e = 2; else if (!strcmp(edge, "wait-exit")) e = 3; else return;
+    std::lock_guard<std::mutex> lk(g_mu);
+    g_w30[g_nw30++ & 8191] = W7330{s7330_now(), e, pc};
 }

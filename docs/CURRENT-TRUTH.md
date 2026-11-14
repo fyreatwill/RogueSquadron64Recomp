@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7329 (2026-11-14).
+Compact operational handoff, as of Session 7330 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -97,6 +97,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7325 "46 audio reads land in song-channel arrays freed by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync". Believable:
+  allocator frames said allocateSongChannelArray. s7330: the blocks are the synth's command-list buffers, and the boot hits come from
+  tasks built AFTER the scene bulk free (no wait involved); only 1 in-flight case belongs to the wait path.
 - s7324 "class G CLOSED, H-cpu-only: the RCP is never handed a spill address". Believable: 462M DMAs at dd8 21:9 L4, 0 direct, ctl
   198/198. It ran the forced-level route, where loadLevelAssets' 0x2DFF00 sits in the main heap; on the hangar route (s7327, dd8 16:9)
   the reset/reload puts it in spill and the gfx ucode DMAs its grid-layer data at 0x81xxxxxx (fixed: 25-bit DMA mask).
@@ -290,9 +293,14 @@ is in the s7307 archive). Active unit: NEXT.md.
     garbles near terrain 26.2% px, fix pixel-identical to no spill (docs/owner_sheet_s7329_dd6_dma25.jpg). Thread CLOSED.
     Pose any spill question with ROGUESQ_SPILL_FORCE=<size> (forced-route sizes differ: L1 dd6 21:9 pool 0x1CC000; read the
     "[s7328] big req" lines). RCPREF does not see SPILL_FORCE blocks (control fails, hits land in direct_other).
-22. **Scene-transition audio read of just-freed song-channel arrays (s7325, single-source).** 46 audio DMA reads + 6 writes in 200 s
-    land in a guest FREE block, arrays freed 0-14 ms earlier by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync.
-    Retail race vs our audio-task wait not waiting: compare the wait's completion against the host audio RSP task end.
+22. **Audio reads/writes into freed blocks: CLOSED (s7330, named, 0 live overlap).** The s7325 "song-channel arrays" are the synth's
+    double-buffered audio command lists (task data_ptr = the freed 0x1E30 block). Class 1 (boot): the first coalesceFreeHeapBlocks
+    (after menuOverlayInit) releases the untagged initN64RspMixer buffers; the synth keeps building 4-7 tasks into them (+15..+114 ms,
+    every hit task submitted AFTER the free: H-next-task), the ucode writes 0x198 B of voice state back into the freed 0x298 block.
+    Same in dd8 21:9 and retail-settings arms. Class 2: one task in flight across the rs_free inside waitForMusyXAudioTaskDone (countdown
+    is decremented at build time, not SP completion). No live block overlapped in either run. Retail code shape; oracle cannot reach the
+    transition (single-source for retail). ROGUESQ_S7324_RCPREF=ctl + ALLOCMAP -> build/rs64_s7330.log, tools/s7330_task_free_report.py.
+    Follow-up audit (NEXT.md): every block the scene reset frees that still changes before reallocation.
 23. **When 1-22 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -193053,3 +193053,44 @@ DISCRIMINATION: selects H-rsp-read, refutes H-cpu-only for dd6 21:9. Any owner r
 show garbled near terrain after the mission load that spills the pool; s7327's default 25-bit mask removes it exactly. Spill + RSP
 width thread closed at dd6 and dd8; dd4 16:9 never spills the pool (s7327).
 Logs scratch/agent/m6/g1_lvl1s7329_{nf,f1,f0}/run.log, scratch/s7329/rcp_*.log, captures scratch/s7329/a.
+
+## Session 7330 (2026-11-14) — item 22 named: the "freed song-channel array" audio reads are the synth's double-buffered command lists; boot bulk free (menuOverlayInit, heapsync #1) leaves the mixer building 4-7 tasks into the freed buffers (H-next-task, 41/41 and 59/59 hits), plus one in-flight task straddling the musyxNoopStub teardown rs_free; 0 live-block overlap, retail code shape
+
+HYPOTHESIS-ID: audio-freed-song-read (closed). Unit from NEXT.md s7330 (item 22, s7325 single-source datum: 46 audio reads + 6 writes
+per 200 s into a guest FREE block, song-channel arrays freed 0-14 ms earlier).
+Hypotheses: H-wait-noop (our wait returns before the in-flight audio task ends, guest frees under it), H-retail-race (same, harmless),
+H-next-task (task submitted AFTER the free: the synth still points at freed memory).
+Instrument (one build, src only): src/rsp/s7324_rcp_spill.cpp s7330 block (under ROGUESQ_S7324_RCPREF): audio task seq stamped at
+osSpTaskStartGo_recomp type 2 (upstream_compat.cpp), per task submit / first / last audio DMA wall time + data_ptr; every freed-class
+audio DMA (not distinct) with its task seq, free time and bulk flag (no host freer frames = guest bulk free); waitForMusyXAudioTaskDone
+entry/seed/exit wall stamps via the s2031 helper (funcs_23.c live + tools/fixup_game_funcs_vendored.py, same text). Control: every
+audio DMA must attribute (seq > 0, submit <= t < submit + 0.1 s). Dump build/rs64_s7330.log; report tools/s7330_task_free_report.py
+(exit 1 on failed ctl / missing task row).
+Runs (L4 forced route): a dd8 21:9 FPS60 WIDEWIN 200 s hold (alive, 0 crash, 0 VI stall); b retail settings dd1 4:3 (boot + ~4 min,
+SIGKILLed after the transitions were logged). scratch/s7330/{rs64_s7330.log, rs64_s7330_b.log, rs64_s7325.log, run_a.out}.
+- ctl: a 1,595,385/1,595,385 audio DMAs attributed (maxdt 35 ms), b 209,397/209,397. PASS both.
+- **Class 1 (boot, a 41/41 hits, b 59/62):** one free event, bulk=1, at heapsync #1 = the first coalesceFreeHeapBlocks after boot
+  (right after `[slot-ret-caller] site=menuOverlayInit n=1`, VI 320 wide, audio output still all zero). Freed: 0x80169F10+0x1E30,
+  0x8016BD50+0x1E30, 0x80171EB0+0x298 (allocateSongChannelArray < initN64RspMixer, header tag without 0x80, so the scene bulk free
+  releases them). Every hit task was SUBMITTED AFTER the free: a seq 33-36 at +14.6/+31.2/+76.4/+81.1 ms, b seq 69-75 at +15.1..+114.4
+  ms; the task before ended 1.6/2.1 ms before the free. The tasks' data_ptr IS the freed 0x1E30 block, alternating 80169F10/8016BD50:
+  the "song-channel arrays" are the synth's double-buffered audio command lists, so after the free the CPU synth keeps building
+  command lists into freed memory and the RSP writes 0x198 bytes of voice state back into the freed 0x298 block at 0x80171FB0, for
+  4-7 tasks until the mixer moves on. No wait edge within 0.5 s. -> **H-next-task.** Same in retail settings -> not dd/aspect/FPS60.
+- **Class 2 (b only, 3 hits):** bulk=0 rs_free of 0x80171570+0x1E30 and 0x80175870+0x298 inside waitForMusyXAudioTaskDone (entry
+  -132.9 ms, exit +0.02 ms rel free); task seq 300 (data_ptr = 0x80171570, the freed buffer) submitted -0.08 ms, last DMA +0.02 ms:
+  in flight across the free. The wait's countdown 0x8014998A is decremented by musyxSynthFrame at build time, not at SP completion
+  (s7065), so the guest frees as soon as the last chunk is built. Code-structure race; the host RSP task is ~0.1 ms, hardware longer.
+- Overlap: every hit classed freed means no live host-map block contained the address at DMA time, so in both runs no allocation
+  reused the buffers in the window: 0 corrupting reads/writes.
+- Oracle (retail ROM, mupen, 40 s headless, exec trace coalesce/osSpTaskStartGo/musyxSynthFrame/initN64RspMixer/allocateSongChannelArray,
+  scratch/s7330/oracle/o1.log): initN64RspMixer + allocateSongChannelArray once, 2395 audio task starts + 2397 synth frames, but ONE gfx
+  task and NO coalesce in 40 s: the undriven oracle never leaves the first screen, so it cannot witness the menuOverlayInit transition.
+  Retail status of class 1 therefore rests on code identity (same guest code, two port arms), single-source for retail.
+ORIGIN: the reads/writes are issued by the MusyX audio ucode on command lists the guest synth (musyxSynthFrame) builds into buffers the
+guest itself freed (class 1: retail bulk free coalesceFreeHeapBlocks of untagged mixer buffers at boot; class 2: retail rs_free in
+waitForMusyXAudioTaskDone). No port writer; no mitigation landed.
+Rules out: H-wait-noop for class 1 (no wait involved, every task post-dates the free); a dd/spill/aspect cause (retail-settings arm
+identical); corruption in the measured runs (0 live overlap). Harness note: `pkill -f g1_level_coverage_common` inside the same shell
+command line kills its own watchdog (cmdline match); use a script file or kill by pid (tools/rs64_game_pid.zsh).
+Next: item 22 closed; NEXT.md takes the next rung (item 23).

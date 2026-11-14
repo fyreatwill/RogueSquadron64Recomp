@@ -5689,6 +5689,7 @@ extern void print_stack_with_symbols(void** frames, USHORT count);
 extern "C" void rs64_set_pending_task_guest_ptr(uint32_t guest_ptr);
 extern "C" void rs64_m5_descriptor_start(uint8_t* rdram, uint32_t task_ptr);
 extern "C" void rs64_sp_reset_yield_request();
+extern "C" void rs64_s7330_aud_submit(uint32_t data_ptr);
 extern "C" void rs64_m5_raw_task_boundary(const char* edge,
                                              uint8_t* rdram,
                                              uint32_t raw_task_ptr);
@@ -5714,6 +5715,7 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
         return;
     }
     rs64_sp_reset_yield_request();
+    { if (rs64_s7324_on) { OSTask* t30 = TO_PTR(OSTask, ctx->r4); if (t30->t.type == 2u) rs64_s7330_aud_submit((uint32_t)t30->t.data_ptr); } }  /* s7330 */
     rs64_m5_descriptor_start(rdram, (uint32_t)ctx->r4);
     rs64_set_pending_task_guest_ptr((uint32_t)ctx->r4);
     static int s_log = -1;
