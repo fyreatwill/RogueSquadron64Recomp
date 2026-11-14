@@ -194124,3 +194124,28 @@ sscanf %s has a width (%899s into char[900], %15[a-z] into char[16]), strncpy bo
   rebuild: 90 s `ROGUESQ_PRESENT_RING` arm crash=0, 5027 W rows all with wk..qos fields, max 100 of 240 B. The truncation path
   itself is not reachable in-game (single-source for the rt64 clamp; the helper's clamp is proven by the control).
 - Next: class AK (CURRENT-TRUTH 27y) unterminated guest-RAM string reads (%s/strlen/byte loops on rdram without cap).
+
+## Session 7360 (2026-11-14) — class AK unterminated guest-RAM string reads closed: 1 site in all owned host code (librecomp __osRdbSend, dead: 0 callers) range-checked; 57 live host exports read no guest text; ASan pre/post control
+HYPOTHESIS-ID: host-guest-string-read. Hypotheses (NEXT.md): H-safe / H-diag / H-overrun.
+Line 1, census: tools/s7360_gueststr_census.py (scope as s7356-s7359: src/**, librecomp+ultramodern src, rt64 '+' lines,
+fixup_game_funcs_vendored.py). Row kinds STR (strlen/strcmp/strchr/std::string/fputs on a guest expr, string literals stripped
+so "pi_rom_to_rdram" does not match), FMT (%s with a char*-cast guest arg), LOOP (while/for whose CONDITION is a guest-byte
+terminator test; bounded `i < N` counting loops are not string scans), GSTUB (text-shaped *_recomp export copying MEM_B(i, buf)).
+6 planted controls, all PASS. Result: TOTAL 1, D=1 -> librecomp/src/print.cpp __osRdbSend: size capped at 0x800000 (s5258)
+but buf never checked, so a KUSEG/null/past-top buf walks host memory outside rdram. First regex pass was too wide (17 rows:
+size-driven PI/flash DMA copies = class AH, nonzero-count loops, a literal "_rdram"); narrowed, not hand-waved.
+By-hand hits checked: fixup s1978 drain-base `ascii='%s'` prints a 33-byte local copy filled by a 32-iteration capped loop with
+a base32_ok range test (CAPPED); is_proutSyncPrintf body is commented out; the other %s rows print host dladdr names.
+Line 2, export cross-ref (scratch/s7360/host_exports.txt): 134 host-defined *_recomp exports, 57 called from
+N64Recomp/RecompiledFuncs + RecompiledPatches and not defined there. None takes guest text except osPfsFindFile /
+osPfsAllocateFile, which are PFS_ERR_NOPACK stubs that read nothing. __osRdbSend / is_proutSyncPrintf have 0 callers; the game's
+sprintf (124 call files) is recompiled guest code, out of host scope. -> H-safe selected; H-overrun refuted (no live site);
+H-diag moot.
+Change (lib/, exported): __osRdbSend now requires a sign-extended KSEG0 buf with [buf, buf+size) <= 0x80800000, else r2=0.
+ORIGIN: no writer; the stub is upstream librecomp code trusting a guest pointer; hardening a dead path, not a mitigation.
+Control tools/s7360_rdbsend_ctl.sh (links the REAL print.cpp, 8 MB malloc'd fake rdram, ASan): post in-range 6/6 bytes + RDBOK
+printed, cross-top/KUSEG-null/unsext rejected, top-exact accepted (5/5 PASS); pre (s7360 block stripped) aborts with
+heap-buffer-overflow on the cross-top send -> the instrument sees the hole it closes.
+Smoke (same build): `env SECS=260 zsh scratch/s7326/run.zsh s7360_dd8 ''` -> crash=0 resets=14 late=0 arenafull=0, level
+load reached (load_level_hmp, phase 12, width 1024); 0 CRASH/SIGSEGV/SIGBUS/SIGABRT lines in a 208 MB log.
+Next: class AL (NEXT.md, CURRENT-TRUTH 27z): unvalidated guest pointer args dereferenced inside the 57 live host exports.

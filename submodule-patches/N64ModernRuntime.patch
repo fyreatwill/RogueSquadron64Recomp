@@ -2386,16 +2386,25 @@ index 43509ba..322abc6 100644
  
      do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
 diff --git a/librecomp/src/print.cpp b/librecomp/src/print.cpp
-index 944e9fe..72c5fcd 100644
+index 944e9fe..415f0fc 100644
 --- a/librecomp/src/print.cpp
 +++ b/librecomp/src/print.cpp
-@@ -32,6 +32,10 @@ extern "C" void isPrintfInit_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -32,6 +32,19 @@ extern "C" void isPrintfInit_recomp(uint8_t * rdram, recomp_context * ctx) {
  extern "C" void __osRdbSend_recomp(uint8_t * rdram, recomp_context * ctx) {
      gpr buf = ctx->r4;
      size_t size = ctx->r5;
 +    // s5258: guest-sized read; reject sizes that cannot fit in RDRAM (size is a 64-bit gpr here)
 +    if (size > 0x800000) {
 +        return;
++    }
++    // s7360 class AK: buf is guest-supplied; require [buf, buf+size) inside 8 MB KSEG0 before MEM_B walks it
++    // (MEM_B on a non-KSEG0 or past-top buf reads host memory outside rdram). 0 callers in the generated game today.
++    {
++        const uint32_t b32 = (uint32_t)buf;
++        if ((int64_t)buf != (int64_t)(int32_t)b32 || b32 < 0x80000000u || (uint64_t)b32 + size > 0x80800000ull) {
++            ctx->r2 = 0;
++            return;
++        }
 +    }
      u32 type = (u32)ctx->r6;
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);

@@ -498,9 +498,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     the default-on dd8 [s7030]/[s7046]/[s7233] rows (bounded by value only, max 159 of 300 B) -> src/main/rs64_apf.h clamped append.
     rt64 W present-ring row final "\n" append clamped. tools/s7359_apf_ctl.cpp: old idiom ASan stack-buffer-overflow, helper clean
     and byte-identical. 260 s dd8 smoke clean. Next: class AK (27y).
-27y. **Next unit (NEXT.md): class AK, unterminated guest-RAM string reads** (%s/strlen/strcmp/byte loops on rdram pointers
-    without a length cap or ram_top check) in host code we own.
-28. **When 1-27y offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27y. **Unterminated guest-RAM string reads (class AK): CLOSED (s7360, census + export cross-ref + ASan two-arm control).**
+    tools/s7360_gueststr_census.py (STR/FMT/LOOP/GSTUB, 6 planted controls): 1 site in all host code we own, D: librecomp
+    __osRdbSend walked a guest buf with MEM_B for up to 8 MB with no range check (0 callers). Second line: of 134 host
+    *_recomp exports, 57 are called from RecompiledFuncs/Patches and none reads guest text (osPfsFindFile/AllocateFile take
+    names but are NOPACK stubs; the game's sprintf is recompiled guest code). H-safe selected, H-overrun refuted. __osRdbSend
+    now range-checks [buf, buf+size) in 8 MB KSEG0; tools/s7360_rdbsend_ctl.sh: pre heap-buffer-overflow, post 5/5. 260 s dd8 smoke clean.
+27z. **Next unit (NEXT.md): class AL, unvalidated guest pointer args in live host exports** (`_arg<N, T*>` / TO_PTR /
+    MEM_W(0, ctx->rN) through a guest-supplied pointer in the 57 called exports, scratch/s7360/host_exports.txt).
+28. **When 1-27z offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
