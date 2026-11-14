@@ -193520,3 +193520,47 @@ default-on address-indexed tables). Single-source (static read, controls pass); 
 Class S CLOSED. With it the spill-pointer idiom campaign is complete: host R, M, N, O, P, S; game A-F (s7317-s7323).
 Next (NEXT.md s7343): class T, host fixed-size buffers written with a guest-derived length (memcpy / copy loops into a stack or
 static array whose length is read from rdram, an OSTask, or a DL word), an overflow shape the bound censuses did not cover.
+
+## Session 7343 (2026-11-14) — class T host fixed buffers with guest-derived lengths closed: 466 write sinks classified, 0 overflowing writes; one 128 B OOB read found in RT64's CI4 TLUT hash and clamped
+Work unit: NEXT.md s7343, HYPOTHESIS-ID host-fixed-buffer-guest-length. Hypotheses: H-capped (every copy into a fixed host buffer
+clamps the length), H-diag (uncapped copies are only in gated probes), H-ovf (a default-on copy takes an uncapped guest length).
+Tool: `tools/s7343_buffer_copy_census.py [--controls] [-v]` (new; s7342 scope, 183 files). Four sink families: CALL
+memcpy/memmove/memset/strncpy/strcpy/fread (245), LOOP `for (i..; i < BOUND; ..)` writing `T[..i..]` into a sized host array within
+6 lines (32), FMT snprintf/vsnprintf size vs destination (167), GUEST every write into the fixed guest-facing host buffers RDP TMEM
+(4096 B), RSP DMEM (0x1000) and the S2D struct_buffer (22). Classes: s7338 C/P/G/D/X, then K constant/sizeof length or scalar
+destination, L clamp in the function (std::min, `if (n > N) n =`, `&= MASK`, `&& i < N`, sizeof/.size() loop bound), M index masked
+to the buffer, V destination sized to the length (vector resize / malloc / GPU buffer created with it) or guest RAM, H hand-read
+(caller passes sizeof; RDP pending buffer bounded by the command-length table).
+Tool defect found and fixed mid-session: s7338 sites() attributes a line to the last top-level function, but every rt64 member sits
+indented inside `namespace RT64`, so the TMEM writes in loadWord were credited to rs64SkipDraw and classed G by ITS env gate. s7343
+drops inherited G/D for lib/rt64 rows unless the nearest enclosing indented member opens with its own gate (body_gated); 35 rt64 rows
+moved from G/D to auto/hand classes. NOTE: the s7338-s7342 censuses share this attribution; their rt64 G/D rows were not re-audited here.
+Controls (all PASS, same run): planted default-on `uint8_t b[64]; memcpy(b, rdram + a, task->data_size)` -> '?', std::min clamped
+twin -> 'L', dlwalk-gated twin -> 'G', unclamped `for (i < task->data_size) lb[i] = ..` -> '?', `snprintf(fb[16], 64, ..)` -> '?',
+`snprintf(fb, sizeof fb, ..)` -> 'K'.
+Result (exit 0; scratch/agent/s7343_census.txt, -v listing s7343_census_v.txt), 466 sites:
+- CALL 245: D 86, G 44, K 75, V 21, L 5, H 4, M 4, P 3, C 3. Guest-length copies all clamp: librecomp dma_rdram_to_dmem /
+  dma_dmem_to_rdram (dmem &= 0xFFF, len clamped to 0x1000 - dmem and to rs64_s7327_limit()), S2D `loadSize &= 0xFF` into
+  std::array<uint8_t,256>, RT64 setVertex rejects dstIndex + vtxCount > RSP_MAX_VERTICES, the RDP pending-command copies
+  (rt64_interpreter.cpp:647/842) into the 256 B pendingCommandBuffer are parts of one command of commandWordLengths[op & 0x3F] words,
+  max 22 (tri shade+tex+z) = 176 B.
+- LOOP 32: D 16, G 8, H 5, L 3 (n clamped to kRecvMqCap; base + i < 0x800000; `i < 4 &&` frame walk).
+- FMT 167: D 46, G 43, K 63, H 8, V 2, P 4, X 1; the 8 H are `(char *out, size_t n)` helpers whose every caller passes sizeof.
+- GUEST 22: M 11 (TMEM loadWord: tmemAddress = (..) & tmemMask, 8-aligned, +0..7 ^ xor; RSP_MEM_B 0xFFF), L 6, K 4, C 1.
+- FINDING (a read, not a write; class T has 0 overflowing writes): RT64 rt64_state.cpp:1853 hashes the CI4 TLUT as
+  TMEM[0x800 + palette * 0x80 .. + 0x100] through TextureManager::uploadTMEM (rt64_rdp_tmem.cpp). At palette 15 that is
+  0xF80..0x1080, 128 B past the 4096 B TMEM, into the next RDP member (rice.lastLoadOpByTMEM). Effect: an undefined read and a TLUT
+  hash that depends on non-TMEM bytes (texture-cache churn if that member changes), not a crash. Fix: uploadTMEM clamps the hashed
+  range to TMEM (clampTmemRange), logs the first and every power-of-two clamp `[s7343] tlut-clamp`, and ROGUESQ_S7343_SELFTEST=1
+  runs the clamp once on (0xF80, 0x100). The census pins the clamp text and exits 1 if it is missing.
+ORIGIN: writer = RT64 upstream State code (rt64_state.cpp:1853-1855) computing byteOffset = 0x800 + (palette << 7) and byteCount
+0x100 for CI4; the value is not legitimate for palette 15 (TMEM ends at 0x1000). Not guest-written; no game data involved.
+Runtime (in-session, host idle 31717 s, unlocked): `env SECS=260 zsh scratch/s7326/run.zsh s7343_dd8 'ROGUESQ_S7343_SELFTEST=1'`
+(dd8 21:9 FPS60 WIDEWIN hangar -> mission -> abort cycles): crash 0, resets 14, arena full 0; positive control
+`[s7343] tlut-clamp selftest off=0xF80 cnt=0x100 -> 0x80 (want 0x80)` PASS; real clamps 0 in 260 s. Whether this route reaches the
+CI4 palette-15 TLUT branch at all is unmeasured, so the defect is LATENT here (single-source static finding + controlled clamp).
+lib/rt64 edited -> submodule-patches/export.sh run, rt64.patch refreshed and committed.
+Discrimination: selects H-capped for every default-on guest-length write (with H-diag for the uncapped gated rows); refutes H-ovf.
+Class T CLOSED.
+Next (NEXT.md s7344): class U, wrap-prone uint32 bound checks (`a + n > LIMIT`, `a + n <= end`) on guest-derived a/n, where a
+large n wraps the sum below LIMIT and the check passes; the s7327/s7339 bounds and the DMA clamps above all use this form.

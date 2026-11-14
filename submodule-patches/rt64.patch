@@ -6957,11 +6957,14 @@ index d1a9f4e..132376c 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
-index 6051f4e..c568d2e 100644
+index 6051f4e..0449a60 100644
 --- a/src/hle/rt64_rdp_tmem.cpp
 +++ b/src/hle/rt64_rdp_tmem.cpp
-@@ -6,6 +6,9 @@
+@@ -4,8 +4,12 @@
  
+ #include "rt64_rdp_tmem.h"
+ 
++#include <atomic>
  #include <cassert>
  #include <cinttypes>
 +#include <cstdio>
@@ -6970,7 +6973,7 @@ index 6051f4e..c568d2e 100644
  
  #include "xxHash/xxh3.h"
  
-@@ -13,6 +16,216 @@
+@@ -13,6 +17,216 @@
  
  #include "rt64_state.h"
  
@@ -7187,7 +7190,36 @@ index 6051f4e..c568d2e 100644
  namespace RT64 {
      // TextureManager
  
-@@ -50,10 +263,47 @@ namespace RT64 {
+@@ -27,6 +241,28 @@ namespace RT64 {
+         XXH3_state_t xxh3;
+         XXH3_64bits_reset(&xxh3);
+         const uint8_t *TMEM = reinterpret_cast<const uint8_t *>(state->rdp->TMEM);
++        // s7343 class T: the CI4 TLUT hash (rt64_state.cpp) asks for 0x800 + palette * 0x80 .. + 0x100, which runs 128 B past the
++        // 4096 B TMEM at palette 15 (an OOB read of the next RDP member). Clamp to TMEM. ROGUESQ_S7343_SELFTEST=1 runs the clamp once on
++        // (0xF80, 0x100) as the positive control; the first real clamp logs once.
++        {
++            static const bool s_selftest = [] { const char *e = std::getenv("ROGUESQ_S7343_SELFTEST"); return e && *e && *e != '0'; }();
++            static std::atomic<uint64_t> s_clamps{ 0 };
++            static std::atomic<bool> s_selftestDone{ false };
++            auto clampTmemRange = [](uint32_t off, uint32_t cnt) -> uint32_t {
++                return (off >= RDP_TMEM_BYTES) ? 0u : ((off + cnt > RDP_TMEM_BYTES) ? (RDP_TMEM_BYTES - off) : cnt);
++            };
++            if (s_selftest && !s_selftestDone.exchange(true)) {
++                std::fprintf(stderr, "[s7343] tlut-clamp selftest off=0xF80 cnt=0x100 -> 0x%X (want 0x80)\n", clampTmemRange(0xF80, 0x100));
++            }
++            const uint32_t clamped = clampTmemRange(byteOffset, byteCount);
++            if (clamped != byteCount) {
++                const uint64_t n = ++s_clamps;
++                if (n == 1 || (n & (n - 1)) == 0) {
++                    std::fprintf(stderr, "[s7343] tlut-clamp n=%llu off=0x%X cnt=0x%X -> 0x%X\n", (unsigned long long)n, byteOffset, byteCount, clamped);
++                }
++                byteCount = (uint16_t)clamped;
++            }
++        }
+         XXH3_64bits_update(&xxh3, &TMEM[byteOffset], byteCount);
+         XXH3_64bits_update(&xxh3, &byteOffset, sizeof(byteOffset));
+         XXH3_64bits_update(&xxh3, &byteCount, sizeof(byteCount));
+@@ -50,10 +286,47 @@ namespace RT64 {
      }
  
      uint64_t TextureManager::uploadTexture(State *state, const LoadTile &loadTile, TextureCache *textureCache, uint64_t creationFrame, uint16_t width, uint16_t height, uint32_t tlut) {
@@ -7236,7 +7268,7 @@ index 6051f4e..c568d2e 100644
              textureCache->queueGPUUploadTMEM(hash, creationFrame, TMEM, RDP_TMEM_BYTES, width, height, tlut, loadTile, true);
          }
  
-@@ -85,7 +335,7 @@ namespace RT64 {
+@@ -85,7 +358,7 @@ namespace RT64 {
          }
  
          // Dump the RDRAM last loaded into the TMEM address pointed to by the tile. Required for generating hashes used by Rice.
