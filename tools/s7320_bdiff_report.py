@@ -12,7 +12,7 @@ for p in sys.argv[1:]:
     for l in open(p).read().splitlines():
         if l.startswith("#"): continue
         a, _, b = l.partition("|"); f = a.split(); i = int(f[0])
-        if i < 256: continue
+        if i < 256 or i >= 512: continue
         v = list(map(int, f[2:]))
         tot[i] = [x + y for x, y in zip(tot.get(i, [0] * len(v)), v)]
         ex.setdefault(i, []).extend(b.split())

@@ -222,16 +222,21 @@ is in the s7307 archive). Active unit: NEXT.md.
 14. **Retail DATA-word bound class: CLOSED (s7316, H-clean).** tools/s7316_data_bound_census.py --ram: 303 sites, 41 globals, 4
     pointer-valued (DL pool limit/chunk, heap head), none ever holds a spill pointer; spill-injected dump flags 169 (control).
     Table in docs/HEAP-ADDR-AUDIT.md. Open edge: struct-field bounds (G via register base), see 15.
-15. **Spill-pointer holders + class-B compares + class-C differences: CLOSED (s7317-s7320, 0 cross).** ROGUESQ_S7317_ALLOCMAP=1 +
+15. **Spill-pointer holders + class-B compares + class-C differences: CLOSED (s7317-s7320, 0 cross; class D s7321, item 16).** ROGUESQ_S7317_ALLOCMAP=1 +
     ROGUESQ_RDRAM_DUMP_BYTES=20971520; tools/s7317_spill_holders.py. dd8 21:9 L4: 22-120 live spill blocks, 42 owner types
     (scratch/s7317/d8_owner_table.txt). Top-byte shift class (32) spill-equal. Class B (182 slt/sltu): runtime ROGUESQ_S7318_BCMP
     (tools/apply_s7318_bcmp_probe.py, report tools/s7318_bcmp_report.py) 119/182 executed, 0 cross, ctl 3968/3968; 63 static
     (tools/s7319_bcmp_static_class.py). Class C (155 subu, tools/s7320_bdiff_sites.txt): tools/apply_s7320_bdiff_probe.py into the same
     classifier (idx 256+), report tools/s7320_bdiff_report.py: 98 executed, 0 cross, ctl 1398/1398; 57 static
     (tools/s7320_bdiff_static_class.py: 43 scalar, 14 same). Tables: docs/HEAP-ADDR-AUDIT.md.
-16. **24-bit truncation class (s7321 next, NEXT.md).** Spill 0x81000000 & 0x00FFFFFF = 0: any holder pointer masked to 24 bits
-    (andi/and 0xFFFFFF, sll 8 + srl 8, segment/DMA/RSP address builders) aliases low physical memory. Census + classify, same kit.
-17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+16. **24-bit truncation class D: CLOSED (s7321, 0 H-alias).** Census class D (tools/s7317_field_compare_census.py) found 26 sites.
+    Runtime probe tools/apply_s7321_trunc_probe.py (idx 512+), report tools/s7321_trunc_report.py: dd8 21:9 L4, 19/26 executed, 66M calls,
+    0 spill sources, ctl 9313/9313 at 800173C0. The other 7 were classed statically (docs/HEAP-ADDR-AUDIT.md). Latent alias shape:
+    commitMeshDrawBatchRefs rebuilds `(ref & 0xFFFFFF) | 0x80000000` and stores through it; its referents are DL-pool heap only. Re-check if
+    the DL pool moves to spill. L1/L12 coverage soak queued (s7321_trunc_levels).
+17. **Next idiom audit: KSEG re-tag class E (NEXT.md).** Pointers rebuilt from a narrowed value (`or/addu x, 0x80000000`, `lui 0x80xx`
+    + 16-bit half) lose a spill pointer's bit 24 the same way class D does. Census + classify, same kit.
+18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

@@ -42145,6 +42145,7 @@ RS64_REPLAY = [
     "apply_s7239_widewin_merge.py",  # s7240: G1c WIDEWIN far-terrain 2x2 merge mesh (docs/WIDEWIN-MERGE-PLAN.md), ROGUESQ_DD_WIDEWIN_MERGE=<frac>, _MERGE_TOG=1
     "apply_s7318_bcmp_probe.py",  # s7318: class-B field-order compare classifier vs live spill blocks, ROGUESQ_S7318_BCMP=1|<path> (measurement only; needs ROGUESQ_S7317_ALLOCMAP=1)
     "apply_s7320_bdiff_probe.py",  # s7320: class-C field pointer-difference classifier (shares the s7318 table, idx>=256), ROGUESQ_S7318_BCMP=1|<path> (measurement only; needs ROGUESQ_S7317_ALLOCMAP=1)
+    "apply_s7321_trunc_probe.py",  # s7321: class-D 24-bit truncation classifier (shares the s7318 table, idx 512-767), ROGUESQ_S7318_BCMP=1|<path> (measurement only; needs ROGUESQ_S7317_ALLOCMAP=1)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 

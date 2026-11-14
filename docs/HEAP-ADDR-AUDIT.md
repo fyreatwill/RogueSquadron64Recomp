@@ -104,6 +104,7 @@ spill-range word (live_ptr / dangling / data) with owner block, offset and calle
 - Class A, top-byte shift then compare (shift form of the s6993 mask test): 32 sites, all spill-equal by evaluation. CLOSED.
 - Class B, field-vs-register ordering compares at holder offsets: 182 sites, CLOSED s7319 (below).
 - Class C, field pointer differences (`subu/sub d, p, q`, one operand a holder-field load, other non-constant): 155 sites, CLOSED s7320 (below).
+- Class D, 24-bit truncation (`and` with a mask lacking bit 24 but keeping bits 16-21, or `sll k + srl k`, k >= 8): 26 sites whole-program, CLOSED s7321 (below).
 s7316 global-word census re-run on the dd8 dumps (2113 static words holding live spill pointers): 0 spill-valued sites.
 
 ## Class B field-order compares closed (s7318 runtime + s7319 static)
@@ -168,3 +169,36 @@ no table -> COVERAGE FAIL = control): the 57 never-executed sites.
 
 Verdict: 43 scalar + 14 same + 98 runtime-clean = 155/155, **0 H-cross**. With classes A, B and C the holder-field edge of the
 spill-pointer class (order, top byte, difference) is closed. Static half single-source; runtime half independent.
+
+## Class D 24-bit truncation closed (s7321 runtime + static)
+
+Spill 0x81xxxxxx & 0x00FFFFFF drops bit 24: the masked value aliases low RDRAM, or aliases heap if re-tagged with | 0x80000000.
+Census: class D in `tools/s7317_field_compare_census.py`, whole program (any non-constant source, holder-field loads marked). Kept-bit
+mask M lacks bit 24 and keeps bits 16-21. Single-bit flag tests such as 0x10000 are excluded; the first, looser criterion listed 135.
+Selftest: field & 0x00FFFFFF and sll8/srl8 are listed, & 0x1FFFFFFF and sll3/srl3 are not. Result: 26 sites (13 from holder fields).
+Table: tools/s7321_trunc_sites.txt (idx 512+i).
+Runtime: `tools/apply_s7321_trunc_probe.py` feeds each source with 0x80000000 into the s7318 classifier (table 768 slots; 512+ =
+class D; cross = source in spill). Report: `tools/s7321_trunc_report.py`. Run: dd8 21:9 L4, FPS60 WIDEWIN, 250 s flight, alive, 0 crash,
+0 VI stall. 19/26 sites executed, 66.3M truncations, **0 spill sources**. Control ROGUESQ_S7318_BCMP_CTL=800173C0 classed
+9313/9313 as cross (PASS). A first run with ctl on 0x80008624 got ctl_n=0: that site never ran while a spill block was live.
+Tables: scratch/s7321/bcmp_l4b.txt and bcmp_l4.txt.
+
+Latent hazard, a real alias shape that is not reached: `commitMeshDrawBatchRefs` (0x80008624) rebuilds `a0 = (ref & 0xFFFFFF) |
+0x80000000` from the packed ref chunks at 0x80122F70 and stores through it (`sw v0, 4(a0)`). The producers are
+`recordDeferredDrawRefVariant` 0x80008518, `emitAllocatedDLCommand` 0x8000888C and `reserveAndEmitDLEntry` 0x8000CD8C, each packing
+`(s0 & 0xFFFFFF) | tag << 24`. A spill-resident referent would turn that store into a silent write 16 MB lower, into heap. In the
+run, 529/532 packed 9892 pointers, all 0x80xxxxxx. Statically the referents live in the DL pool, whose limit global never holds a
+spill pointer (s7316). Re-check this if the DL pool or a mesh owner ever moves to spill.
+
+Never-executed sites (static, single-source):
+
+| idx | site | verdict | reason |
+|---|---|---|---|
+| 513 | generateUnlockString 0x8006E668 | scalar | global 0x80130B4C & 0x7FFE00 unlock bits; siblings 512/514-516 executed nn |
+| 518 | factor5SortedTableLookupWidePairRecord 0x80085F00 | scalar | same shape as executed 519: MusyX table +4 packed 24-bit value, top byte read separately |
+| 526/533/534 | playerSnowSpeederInit / initPlayerCraftMovementMode / playerAtStInit | scalar | `lw 0xC; and 0xFEFFFFFF; sw 0xC` clears flag bit 24 |
+| 527 | recordDeferredDrawRefVariant 0x80008518 | heap-only | same ring as executed 529/532 (heap 9892, spill 0) |
+| 536 | renderUnlitMeshFaces 0x80011D8C | scalar | field +0x10 & 0xFFFFFF == 0x20202 mode test; sibling 535 ran 67M nn |
+
+Verdict: 19 runtime-clean + 7 static = 26/26, **0 H-alias**. Classes A-D close the spill-pointer struct-field edge for top byte,
+order, difference and truncation.

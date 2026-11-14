@@ -15,6 +15,7 @@ for p in sys.argv[1:]:
             if "ctl_cross=" in l: ctl += int(l.split("ctl_cross=")[1].split()[0])
             continue
         a, _, b = l.partition("|"); f = a.split(); i = int(f[0]); v = list(map(int, f[2:]))
+        if i >= 256: continue  # class C (s7320) and D (s7321) have their own reports
         tot[i] = [x + y for x, y in zip(tot.get(i, [0] * len(v)), v)]
         ex.setdefault(i, []).extend(b.split())
 cols = "n nn hh same spsp cross speq unm ctl_n ctl_cross".split()

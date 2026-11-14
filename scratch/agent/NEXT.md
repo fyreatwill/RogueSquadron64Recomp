@@ -1,18 +1,20 @@
-# NEXT (s7321): 24-bit truncation class over holder pointers — census, classify every site
-HYPOTHESIS-ID: spill-holder-pointer-trunc
-Context: s7317-s7320 closed the holder-field edge for order (class B), top byte (A) and difference (C), 0 cross. The remaining idiom
-on the same holder set is TRUNCATION: the spill arena starts at 0x81000000, and 0x81000000 & 0x00FFFFFF = 0 (also & 0x007FFFFF,
-& 0x003FFFFF alias low RAM). A heap pointer 0x80xxxxxx masked to 24 bits is its physical address and works; a spill pointer masked the
-same way points into the bottom of RDRAM. 0x1FFFFFFF (K0_TO_PHYS) is safe up to 512 MB. Shapes: `and/andi d, p, M` with M a 24/23/22-bit
-low mask (M built by lui/ori), `sll d, p, 8 ; srl d, d, 8`, and `lui 0x00FF ; ori 0xFFFF ; and` feeding a segment/DMA/RSP address store.
-Hypotheses: H-safe (every such site masks with >= 29 bits or the operand is scalar) vs H-scalar (field never a pointer there) vs
-H-alias (a holder pointer is truncated to < 25 bits -> a spill pointer would alias physical 0 -> defect candidate, fix or prove the
-owner never lands in spill).
+# NEXT (s7322): KSEG re-tag class E — pointers rebuilt from a narrowed value
+HYPOTHESIS-ID: spill-pointer-retag
+Context: s7321 closed class D (24-bit masks, 0 H-alias). Its one real alias shape (commitMeshDrawBatchRefs `(ref & 0xFFFFFF) | 0x80000000`)
+showed the general idiom: a pointer narrowed somewhere (packed into 24 bits, stored as a 16-bit half or index, kept as an offset from a
+base) and later RE-TAGGED into a KSEG0 pointer. Any re-tag that does not restore bit 24 maps a spill pointer 0x81xxxxxx onto heap.
+Shapes: `or/addu d, x, R` with R = constant 0x80000000 (lui 0x8000), `lui d, 0x80xx ; or/addu d, d, x` where x has <= 24 significant
+bits (andi/lhu/srl source), `addu d, x, 0x80000000`, and PHYS_TO_K0 helpers (osPhysicalToVirtual).
+Hypotheses: H-safe (every re-tag source was never a spill pointer: physical addresses from hardware/DMA, ROM offsets) vs H-paired
+(re-tag consumes a class-D packed value; already covered by the D producers) vs H-alias (a re-tag rebuilds a pointer whose original was
+spill -> silent heap alias; fix the packing or keep the owner out of spill).
 Unit:
-1. Add class D to tools/s7317_field_compare_census.py: holder-field load -> and/andi with a constant mask < 0x01FFFFFF, or sll k / srl k
-   with k >= 7 on the same value; record the mask bits and the consumers. Planted selftest (positive control: field & 0x00FFFFFF listed,
-   field & 0x1FFFFFFF NOT listed). Whole-program variant too (any register, not just holder fields) as a second count for context.
-2. Classify. If > ~40 sites unclear, hook them into the s7318 classifier (new class idx 512+: count inputs in spill range = "alias"),
-   ONE dd8 21:9 L4 flight, control = synthetic spill substitution at a hot heap site (like ROGUESQ_S7318_BCMP_CTL).
-3. Any H-alias site with a spill input: name the consumer (DMA/segment/RSP), fix the owner placement or the mask, two-arm qualified.
-Outcomes: all safe/scalar -> spill-pointer class fully closed; take CURRENT-TRUTH 17 (next ladder rung / new idiom audit).
+1. Class E in tools/s7317_field_compare_census.py: a register holding constant 0x80000000 (or any 0x80xx0000 lui) combined by or/addu
+   with a non-constant; record the other operand's provenance (andi/lhu/srl/and-mask/field load) and first 4 consumers. Planted selftest
+   (positive: `lui 0x8000; or a0, v0, t4` after `and v0, v1, 0xFFFFFF` listed with provenance class-D; negative: `lui 0x8000; addu`
+   with a full-width pointer source NOT counted as narrowed).
+2. Classify. Pair each narrowed re-tag with its producer. Hook the unpaired producers into the s7318 classifier (idx 640+) and run ONE dd8
+   21:9 L4 flight, ctl ROGUESQ_S7318_BCMP_CTL=800173C0 (proven per-frame in flight, s7321).
+3. Any H-alias: name the owner and placement, fix, two-arm qualify.
+Fold first: SOAK-RESULTS line for s7321_trunc_levels (L1/L12 class-D coverage; exit 1 = a class-D cross, reopen item 16).
+Outcomes: all safe/paired -> spill-pointer audit family closed; take CURRENT-TRUTH 18.

@@ -192751,3 +192751,28 @@ heap >= 8 MB where retail is small -> defect candidate).
   after the fixup registration edit: rc=0.
 - Next: 24-bit truncation class (spill arena 0x81000000 & 0x00FFFFFF aliases physical 0, so any holder pointer masked to 24 bits or
   sll 8/srl 8 - segment addresses, DMA/RSP addresses - would point at the wrong memory): NEXT.md s7321.
+
+## Session 7321 (2026-11-14) — class-D 24-bit truncation CLOSED: 26 sites whole-program, runtime 19 executed with 0 spill sources over 66M truncations (ctl 9313/9313), 7 static all scalar or heap-only; latent alias shape in commitMeshDrawBatchRefs named
+
+HYPOTHESIS-ID: spill-holder-pointer-trunc (closed). Unit from NEXT.md s7321.
+- Census: class D added to tools/s7317_field_compare_census.py. It covers `and d, s, M` with M a constant register and `sll k ; srl k`
+  (k >= 8), where M lacks bit 24 but keeps bits 16-21. Whole program, holder-field loads marked, first 4 consumers listed. Selftest
+  extended and PASS: field & 0x00FFFFFF and sll8/srl8 listed, & 0x1FFFFFFF and sll3/srl3 not. The first, looser mask criterion
+  (any of bits 16-22) listed 135 sites, mostly single-bit flag tests (0x10000, 0x80000), so it was tightened.
+  Result: 26 sites, 13 from holder fields. tools/s7321_trunc_sites.txt (idx 512+i).
+- Runtime (one build): new tools/apply_s7321_trunc_probe.py (in the fixup list after s7320) hooks 27 copies into the s7318 classifier
+  as (source, 0x80000000). src/main/upstream_compat.cpp table 512 -> 768. New tools/s7321_trunc_report.py. The s7318/s7320 reports
+  now skip idx >= 256 / >= 512.
+- Run 1: dd8 21:9 L4, FPS60 WIDEWIN, WIDE_ROUTE, HOLD 240, ctl at 0x80008624. Alive, 0 crash, 19/26 executed, 0 cross, BUT
+  ctl_n=0: commitMeshDrawBatchRefs never ran while a spill block was live (spill is live in flight, 2 MB at exit), so this null had
+  no control. Run 2: same recipe, ctl at setupCameraMatrices 0x800173C0 (per frame in flight). Alive, 0 crash, 0 VI stall, flight
+  250 s. 19/26 executed, 66.3M truncations, cross 0, ctl 9313/9313 classed cross (PASS). scratch/s7321/bcmp_l4b.txt.
+- Static, 7 never-executed (table in docs/HEAP-ADDR-AUDIT.md): 513 unlock bits, 518 MusyX table packed value (same shape as executed
+  519), 536 field +0x10 mode compare (sibling 535 ran 67M) are scalar. 526/533/534 clear flag bit 24 by read-modify-write. 527
+  recordDeferredDrawRefVariant uses the same ring as executed 529/532 (9892 heap, 0 spill).
+- Named latent alias shape: commitMeshDrawBatchRefs 0x80008624 rebuilds `(ref & 0xFFFFFF) | 0x80000000` from the packed ref chunks
+  at 0x80122F70 and stores through it. A spill referent would write 16 MB lower, into heap. Not reached: the referents are in the DL
+  pool, heap per s7316 and the runtime above. No guard landed, because nothing reaches it. Re-check if the DL pool moves to spill.
+- Rules out H-alias for class D. With A-C, the holder-field edge of the spill-pointer class (top byte, order, difference,
+  truncation) is closed. Two lines: runtime with control, and static provenance (single-source for the 7). Queued
+  s7321_trunc_levels (L1/L12 coverage). Next: KSEG re-tag class E (NEXT.md).

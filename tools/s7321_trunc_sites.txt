@@ -1,0 +1,27 @@
+# s7321 class-D 24-bit truncation sites (tools/s7317_field_compare_census.py class D, dd8 21:9 L4 holder dump). idx(512+i) hookpc reg fn how mask src
+512 0x8006DBF8 $v0 applySaveSlotToMissionState and 0x7FFE00 f+0xC($s2)
+513 0x8006E668 $a1 generateUnlockString and 0x7FFE00 $a1
+514 0x8006EB10 $v0 loadAccountDataIntoStruct and 0x7FFE00 $v0
+515 0x8006EDCC $v0 gatherActiveUnlockFlags and 0x7FFE00 $v0
+516 0x8006EDFC $v0 syncMissionUnlockBitsToSettings and 0x7FFE00 $v0
+517 0x8006FD80 $v1 orientedNpcHandler and 0xF03FFFFF f+0x64($v0)
+518 0x80085F00 $v0 factor5SortedTableLookupWidePairRecord and 0xFFFFFF f+0x4($a0)
+519 0x8008A484 $v0 soundMacroOpPlaySampleKeymap and 0xFFFFFF f+0x4($a0)
+520 0x80094138 $a2 computeVoiceVolumePanCoefficients sll10+srl 0x3FFFFF $a2
+521 0x800941A8 $t1 computeVoiceVolumePanCoefficients sll10+srl 0x3FFFFF $t1
+522 0x80094214 $t1 computeVoiceVolumePanCoefficients sll10+srl 0x3FFFFF $t1
+523 0x80094258 $a3 computeVoiceVolumePanCoefficients sll10+srl 0x3FFFFF $a3
+524 0x8009B1F0 $a1 allocAndConfigureNewVoice and 0xFFFFFF f+0x0($v0)
+525 0x8009BF78 $v1 serviceStreamingVoice and 0xFFFFFF f+0x1A8($s0)
+526 0x800AAD0C $v0 playerSnowSpeederInit and 0xFEFFFFFF f+0xC($v1)
+527 0x80008518 $s0 recordDeferredDrawRefVariant and 0xFFFFFF $s0
+528 0x80008624 $v1 commitMeshDrawBatchRefs and 0xFFFFFF f+0x8($v0)
+529 0x8000888C $s0 emitAllocatedDLCommand and 0xFFFFFF $s0
+530 0x8000BB7C $v0 emitCombinerStateAndPatch and 0xFCFFFFFF f+0x4($v1)
+531 0x8000C1D8 $v0 submitGfxFrame and 0xFCFFFFFF f+0x4($v1)
+532 0x8000CD8C $s0 reserveAndEmitDLEntry and 0xFFFFFF $s0
+533 0x800B39C0 $v0 initPlayerCraftMovementMode and 0xFEFFFFFF f+0xC($v1)
+534 0x800D120C $v0 playerAtStInit and 0xFEFFFFFF $v0
+535 0x8001157C $v1 renderFlatMeshFaceGroup and 0xFFFFFF f+0x10($s0)
+536 0x80011D8C $v1 renderUnlitMeshFaces and 0xFFFFFF f+0x10($s0)
+537 0x800173C0 $v0 setupCameraMatrices and 0xFFFF00 $v0
