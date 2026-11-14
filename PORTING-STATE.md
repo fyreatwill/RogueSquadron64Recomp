@@ -192214,3 +192214,32 @@ s7297, two runs). Together with s7294-s7295 (16:9) the dd8 auto is qualified on 
 all sit before t=77 (the shared route transients at t=5/11/28/43/59/67 plus 1/60/68/76), not in flight.
 Changed: docs/OWNER-OPT-INS.md (dd8 16:9 + 21:9 300 s checks recorded, one-line command), CURRENT-TRUTH next-step 0.
 Next: horizon-in-view dd6-vs-dd8 look sheet (the s7295 route window banked under cliffs), then the far cutoff 0x8009DEB4.
+
+## Session 7300 (2026-11-13) — G1c: horizon-in-view dd1/dd6/dd8 look sheet on L1+L4 at 16:9 (new tools/s7300_horizon_sheet.py): dd8 ~= dd6 on the matched-pose shots (H-same); far cutoff 0x8009DEB4 does not bind at dd>=6; arm poses diverge, and a dark far-terrain band is seen at dd>1
+HYPOTHESIS-ID g1c-window-bind. Unit from NEXT (s7300). No maintenance (CURRENT-TRUTH 58302 B < 60000).
+**Run (in-session, host idle 62000 s, unlocked, AC, clk 0.97-1.05):** scratch/s7300/run.zsh = tools/g1e_owner_quiet_arms.zsh, 16:9
+windowed, HOLD=300, SHOTS t=90..290 every 10 s (21 per arm), arms l1d1/l1d6/l1d8/l4d1/l4d6/l4d8 (same B env as s7295: DD_UNSAFE, MELT,
+WIDEWIN). All 6 arms alive at 300 s, 0 CRASH/SIGSEGV/SIGBUS/abort lines, 0 voids; [s7293] dd8 px8 auto line (poolx_max=8 widewin_r=128)
+in both dd8 arms, `[dd] multiplier 6/8` confirmed.
+**New tool tools/s7300_horizon_sheet.py:** same crop and fog% score as s7295, but per level it SELECTS the seconds where the dd1 arm shows
+the most sky band (top 5, fog% >= 8), prints a verdict per group and builds the sheet from those columns only. Painted-band control
+2.9 -> 50.0 CONTROL PASS. Tested offline on scratch/s7295 first.
+**Scores (selected columns):** L1 t=130/210/250/270/290: dd1 19.3 / dd6 8.3 / dd8 7.7; L4 t=90/160/190/280/290: dd1 18.6 / dd6 7.4 /
+dd8 8.2. Real-scene control ref-mid +11.0 / +11.2 PASS. |dd8-dd6| 0.6 / 0.8 -> **H-same on both levels.** H-none-in-view refuted (dd1
+reaches 16-27% sky band on 5+ seconds per level).
+**Caveat, read by eye from docs/owner_sheet_s7300_horizon_dd.jpg (rows L1 dd1/6/8, L4 dd1/6/8):** "same route second = same camera"
+does NOT hold across arms. On L1 the dd1 arm flies level while dd6/dd8 bank steeply at the same seconds, and L4 dd6 t=190 is a
+letterboxed sea frame. So part of the dd1-vs-dd>1 gap is pose, and the real-scene control is pose-confounded. On the shots where dd6
+and dd8 share a pose (L4 t=90 13/13, t=160 5/5; L1 t=130 5/10) they score alike, which supports H-same between dd6 and dd8
+(single-source: one instrument, a whole-frame score). **New look defect (seen, not measured):** at dd>1 on L1 the far terrain out to the
+horizon draws as a dark, uniformly grid-textured band (l1d8 t=250/290, l1d6 t=250/290 side walls). It is drawn geometry, so fog% counts
+it as "not sky" in dd6 and dd8 alike, and a sky-band score cannot see whether dd8 adds cells to it. These are the far pieces G5e
+(fog on extended distance) is about.
+**Far cutoff 0x8009DEB4 read offline:** apply_s6418_farclip.py scales it by me6036^2 (DD_UNSAFE clamp 8 -> x64 in dist2, x8 in
+distance, ~14.5 -> ~116 cells), and since s6919 the game's per-scene value is used. At dd6 that is ~87 cells and at dd8 ~116. Both
+are at or beyond the R88/R128 window radius, so **the cutoff does not bind at dd>=6; the window/R does.** The NEXT branch "H-same ->
+far cutoff" is therefore replaced by a direct same-pose test of the R88 -> R128 ring.
+Rules out: H-none-in-view; "dd8 visibly draws a lot more sky-band terrain than dd6" at whole-frame scale on these routes. Does not rule
+out dd8 adding far cells inside the dark band.
+Next: in-run ROGUESQ_DD_WIDEWIN_R_TOG=1 with WIDEWIN_R=88 at dd8 (odd seconds R88, even seconds uncapped R128 window), shots every
+second, adjacent-second pairs share a pose -> pixel diff of the far band (scratch/agent/NEXT.md).
