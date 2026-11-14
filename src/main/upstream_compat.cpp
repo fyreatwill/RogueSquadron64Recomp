@@ -3730,8 +3730,46 @@ static uint32_t rs64_s7335_dlpool_cap(uint32_t cap) {
     if (cap > lim && !(off && off[0] == '0')) { cap = lim & ~0xFFFFu;
         std::fprintf(stderr, "[s7335] dlpool clamp -> %08X..81000000 (%u KB)\n", 0x81000000u - cap, cap >> 10); }
     return cap; }
+/* s7336: host-arena layout census (tools/s7336_host_arena_table.py models the same rules over 9216 env combos). Every host arena
+   that hands guest addresses to the game must (1) start at or above the guest top, (2) not overlap another host arena, (3) end at
+   or below rs64_ram_top (the RS64_RAM_TOP pointer guards and RT64 reads reject anything above it, and rs_free's s6086 early return
+   `ptr >= RS64_RAM_TOP` swallows its frees, so a spill block there leaks). Defaults (dd1, dd>1 bundle, OSMEM_MB=8 bundle) already
+   pass; opt-in combos did not: legacy spill 0x80800000 under an OSMEM>8 guest top (s7335 only warned), DLPOOLX_MB 5..8 over the
+   legacy spill arena, SPILL_HI or DLPOOLX without the matching RAMTOP_MB. Fixes: legacy spill moves to 0x81000000 when the guest
+   top is above 0x80800000, DLPOOLX is clamped below the legacy spill end too, and rs64_ram_top is widened to the end of the arenas
+   in use (max 0x81800000, librecomp's RAMTOP_MB 24 ceiling). ROGUESQ_S7336=0 = old. */
+static bool rs64_s7336_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7336"); return !(e && e[0] == '0'); }(); return on; }
+static uint32_t rs64_s6587_spill_base();
+static uint32_t rs64_s7326_spill_cap();
+static bool rs64_s7336_spill_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_MALLOC_SPILL"); return e && e[0] && e[0] != '0'; }(); return on; }
+static void rs64_s7336_widen(uint32_t end, const char* who) {
+    if (!rs64_s7336_on() || end <= rs64_ram_top) return;
+    const uint32_t nt = end > 0x81800000u ? 0x81800000u : end;
+    std::fprintf(stderr, "[s7336] ram_top %08X -> %08X (%s arena end %08X)\n", rs64_ram_top, nt, who, end); rs64_ram_top = nt; }
+static uint32_t rs64_s7336_dlpool_cap() {
+    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 8) m = 8;
+        uint32_t c = rs64_s7335_dlpool_cap((uint32_t)m << 20);
+        if (rs64_s7336_on() && rs64_s7336_spill_on()) { const uint32_t sb = rs64_s6587_spill_base(), se = sb + rs64_s7326_spill_cap();
+            if (sb < 0x81000000u && se > 0x81000000u - c) { const uint32_t nc = se < 0x81000000u ? ((0x81000000u - se) & ~0xFFFFu) : 0u;
+                std::fprintf(stderr, "[s7336] dlpool %08X..81000000 overlaps spill %08X..%08X -> clamped to %08X..81000000 (%u KB)\n", 0x81000000u - c, sb, se, 0x81000000u - nc, nc >> 10); c = nc; } }
+        rs64_s7336_widen(0x81000000u, "dlpool"); return c; }();
+    return cap; }
+extern "C" void rs64_s7336_layout() {  /* once, at the first rs_malloc: evaluate every arena, print the layout and any violation */
+    static bool done = false; if (done) return; done = true;
+    struct A { const char* n; uint32_t b, e; } a[3]; int na = 0;
+    const uint32_t top = rs64_s7335_guest_top();
+    if (rs64_s7336_spill_on()) { const uint32_t b = rs64_s6587_spill_base(); a[na++] = { "spill", b, b + rs64_s7326_spill_cap() }; }
+    if (rs64_s6099_en()) { const uint32_t c = rs64_s7336_dlpool_cap(); a[na++] = { "dlpool", 0x81000000u - c, 0x81000000u }; }
+    char buf[400]; int o = std::snprintf(buf, sizeof buf, "[s7336] layout guest 80000000..%08X ram_top %08X", top, rs64_ram_top);
+    for (int i = 0; i < na; ++i) o += std::snprintf(buf + o, sizeof buf - o, " %s %08X..%08X", a[i].n, a[i].b, a[i].e);
+    int bad = 0;
+    for (int i = 0; i < na; ++i) { if (a[i].e <= a[i].b) continue;
+        if (a[i].b < top) { o += std::snprintf(buf + o, sizeof buf - o, " OVERLAP %s/guest", a[i].n); ++bad; }
+        if (a[i].e > rs64_ram_top) { o += std::snprintf(buf + o, sizeof buf - o, " GUARD %s", a[i].n); ++bad; }
+        for (int j = i + 1; j < na; ++j) if (a[j].e > a[j].b && a[i].b < a[j].e && a[j].b < a[i].e) { o += std::snprintf(buf + o, sizeof buf - o, " OVERLAP %s/%s", a[i].n, a[j].n); ++bad; } }
+    std::fprintf(stderr, "%s%s%s\n", buf, bad ? "" : " clean", rs64_s7336_on() ? "" : " (s7336 off)"); }
 extern "C" uint32_t rs64_s6099_alloc(uint32_t ra) {  /* s6099/s6284: 128 DL chunks (0x108 B) from a bump arena ending at 0x81000000 (ROGUESQ_DLPOOLX_MB, default 1, max 4); 0 when exhausted */
-    static const uint32_t cap = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_MB"); int m = e ? std::atoi(e) : 1; if (m < 1) m = 1; if (m > 8) m = 8; return rs64_s7335_dlpool_cap((uint32_t)m << 20); }();  /* s6587: >4 needs ROGUESQ_SPILL_HI=1 (frees 0x80800000..0x81000000); s7335: never below the guest osMemSize top */
+    const uint32_t cap = rs64_s7336_dlpool_cap();  /* s6587/s7335/s7336: env cap, clamped to the guest top and the spill arena */
     uint32_t& bump = s_s6909_bump; const uint32_t bytes = 128u * 0x108u;
     if (bump + bytes > cap) { static int w = 0; if (!w++) std::fprintf(stderr, "[dlpoolx] arena exhausted (cap %u MB)\n", cap >> 20); return 0; }
     uint32_t p = (0x81000000u - cap) + bump; bump += bytes; s_s6558_blocks.push_back(p);
@@ -3802,6 +3840,7 @@ static bool s7328_force(uint32_t req) {
     return hit;
 }
 extern "C" uint32_t rs64_s6086_divert(uint32_t req) {
+    rs64_s7336_layout();
     if (s7328_force(req)) { uint32_t p = rs64_s6569_spill(req); std::fprintf(stderr, "[s7328] forced req=0x%X -> %08X\n", req, p); if (p) return p; }
     if (!s_s6086_expect || req != s_s6086_expect) return 0;
     s_s6086_expect = 0;
@@ -3822,7 +3861,9 @@ struct S6893Ev { uint32_t op, req, p, ra; };
 static S6893Ev s6893_ring[1u << 16]; static uint32_t s6893_n = 0;
 extern "C" { uint32_t rs64_s6893_ra = 0; }
 static inline void s6893_ev(uint32_t op, uint32_t req, uint32_t p) { s6893_ring[s6893_n++ & 0xFFFFu] = { op, req, p, rs64_s6893_ra }; }
-static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const char* e = std::getenv("ROGUESQ_SPILL_HI"); return (e && e[0] && e[0] != '0') ? 0x81000000u : 0x80800000u; }(); return b; }  /* s6587: spill arena above the RSP-visible 16 MB so the DL pool can take 8 MB */
+static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const char* e = std::getenv("ROGUESQ_SPILL_HI"); uint32_t v = (e && e[0] && e[0] != '0') ? 0x81000000u : 0x80800000u;
+    if (v == 0x80800000u && rs64_s7336_on() && rs64_s7335_guest_top() > v) { std::fprintf(stderr, "[s7336] legacy spill 80800000 below guest top %08X -> 81000000\n", rs64_s7335_guest_top()); v = 0x81000000u; }
+    return v; }(); return b; }  /* s6587: spill arena above the RSP-visible 16 MB so the DL pool can take 8 MB */
 /* s7326: spill arena size. 4 MB (s6569) was too small for the dd8 21:9 hangar-route mission load (0x1E000C + 0x2DFF00 after the
    scene reset, s7326 arm b: "[spill] arena full" -> rs_malloc NULL -> SIGBUS). With the 0x81000000 layout the arena is 8 MB
    (0x81000000-0x81800000; main.cpp sets ROGUESQ_RAMTOP_MB=24, librecomp's maximum, so the pointer guards accept it), clamped to
@@ -3831,8 +3872,10 @@ extern "C" uint32_t rs64_ram_top;
 static uint32_t rs64_s7326_spill_cap() {
     static const uint32_t c = [] { const uint32_t b = rs64_s6587_spill_base(); uint32_t mb = b == 0x81000000u ? 8u : 4u;
         if (const char* e = std::getenv("ROGUESQ_SPILL_MB")) { int v = std::atoi(e); if (v >= 1 && v <= 16) mb = (uint32_t)v; }
-        uint32_t cap = mb << 20; if (b == 0x81000000u && rs64_ram_top > b && b + cap > rs64_ram_top) cap = rs64_ram_top - b;
+        uint32_t cap = mb << 20; if (b == 0x81000000u && rs64_ram_top <= b) rs64_s7336_widen(b + cap, "spill");  /* s7336: SPILL_HI without RAMTOP_MB */
+        if (b == 0x81000000u && rs64_ram_top > b && b + cap > rs64_ram_top) cap = rs64_ram_top - b;
         if (b != 0x81000000u && cap > 0x400000u) cap = 0x400000u;
+        if (b != 0x81000000u) rs64_s7336_widen(b + cap, "spill");  /* s7336: legacy spill without RAMTOP_MB 16 */
         if (b < rs64_s7335_guest_top()) std::fprintf(stderr, "[s7335] WARNING spill arena %08X below guest top %08X: overlaps the guest heap / fb tail (set ROGUESQ_SPILL_HI=1)\n", b, rs64_s7335_guest_top());
         std::fprintf(stderr, "[s7326] spill arena %08X..%08X (%u KB, ram_top %08X)\n", b, b + cap, cap >> 10, rs64_ram_top); return cap; }();
     return c; }

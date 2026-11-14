@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7334 (2026-11-14).
+Compact operational handoff, as of Session 7336 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -323,9 +323,14 @@ is in the s7307 archive). Active unit: NEXT.md.
     Host H-overlap FIXED: the DLPOOLX arena [0x81000000-MB, 0x81000000) starts exactly at the OSMEM-12 guest top, so DLPOOLX_MB 5..8
     or OSMEM_MB 13..16 overlapped the guest heap/fb tail (arm o8: chunks at 0x80800000, latent, 131 s no crash). rs64_s7335_dlpool_cap
     clamps it to the guest top (`[s7335]` line, ROGUESQ_S7335_CLAMP=0 old); default unchanged (L1 dd8 21:9 def/c8/o8, 0 crash each).
-27. **Next unit (NEXT.md): host arena layout census** - every host-owned guest-address range (spill, DLPOOLX, BIGARENA, s6127, RT64
-    writeback, ...) vs the guest layout and each other, per env combo; one static table + a startup `[s7336] layout` line.
-28. **When 1-27 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27. **Host arena layout: CLOSED (s7336).** `tools/s7336_host_arena_table.py` (9216 env combos, `--control` 4/4 PASS): shipped defaults
+    (dd1/2/4/8, OSMEM_MB=8 bundle) clean. Opt-in defects fixed in upstream_compat.cpp (ROGUESQ_S7336=0 old): legacy spill 0x80800000
+    under an OSMEM>8 top moves to 0x81000000; DLPOOLX clamped below the legacy spill end (dd4 OSMEM8 DLPOOLX_MB8 without it: 5/5 boot
+    attempts die, NaN assert + ucode jump 0x08A0; with it 130 s clean); rs64_ram_top widened to the arenas' end (max 0x81800000).
+    Startup `[s7336] layout ...` line prints every arena + OVERLAP/GUARD. BIGARENA (opt-in) still sits at ram_top by design.
+27b. **Next unit (NEXT.md): stale 8 MB range checks** - hard-coded `< 0x80800000u` "guest RAM end" checks in src/main, src/rsp,
+    ultramodern (main.cpp ~10 sites, dpc_bridge 1682/1733/3551, mesgqueue 535) vs the dd>1 guest top 0x80C00000.
+28. **When 1-27b offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

@@ -193296,3 +193296,42 @@ s7336): host arena layout census. Docs: HEAP-ADDR-AUDIT class H, CURRENT-TRUTH i
 Discrimination: on the guest side this selects H-clean and refutes H-cap (no reader clamps or masks the bound) and H-overlap (tail end
 <= 0x81000000 by the librecomp clamp). On the host side it selects H-overlap for the DLPOOLX arena: arm o8 places chunks at 0x80800000
 below the guest top, and arm c8 shows the clamp closes it. Next discriminator (s7336): a pairwise host arena table over every accepted env value.
+
+## Session 7336 (2026-11-14) — host-arena layout census: shipped defaults clean; 3 opt-in defect classes fixed (spill/DLPOOLX overlap destroys boot 5/5, legacy spill under the guest top, arenas above ram_top)
+HYPOTHESIS-ID: host-arena-layout-audit. Hypotheses: H-clean (no other pair overlaps), H-pair (two host arenas overlap), H-guest
+(another arena starts below the guest top). Static census first: the only host allocators that hand out guest addresses are spill
+(rs64_s6569_spill, base s6587, cap s7326), DLPOOLX (rs64_s6099_alloc, cap s7335) and BIGARENA (rs64_s6086_divert, opt-in, at
+rs64_ram_top by design). Every other 0x808..0x818 literal in src/ and librecomp is a range check, not an allocator (listed in NEXT.md).
+Tool: `tools/s7336_host_arena_table.py` models guest top (recomp.cpp OSMEM/RAMTOP clamps), the main.cpp dd>1 bundle (setenv
+overwrite=0) and the three arenas, sweeps 9216 env combos, and checks OVERLAP (pairwise + below guest top), GUARD (arena end above
+rs64_ram_top: RS64_RAM_TOP guards reject it and rs_free's s6086 `ptr >= RS64_RAM_TOP` early return swallows its frees, so spill blocks
+there leak) and RSP24. Results (scratch/s7336/table*.txt):
+- Shipped defaults dd1/dd2/dd4/dd8 and the OSMEM_MB=8 dd bundle: clean in both models. -> H-clean for defaults.
+- Pre-s7336 model, 4 classes: OVERLAP spill/dlpool 448 combos (legacy spill 0x80800000..0x80C00000 + DLPOOLX_MB 5..8; s7335's clamp
+  only looked at the guest top) = H-pair; OVERLAP spill/guest 1280 (legacy spill under an OSMEM>8 top; s7335 only warned) = H-guest;
+  GUARD spill 1408 (SPILL_HI or MALLOC_SPILL without the matching RAMTOP_MB); GUARD dlpool 480 (DLPOOLX without RAMTOP 16).
+Change (src/main/upstream_compat.cpp, ROGUESQ_S7336=0 = old): legacy spill base moves to 0x81000000 when the guest top is above
+0x80800000; DLPOOLX is also clamped below the legacy spill end; rs64_ram_top is widened to the end of the arenas in use (max
+0x81800000, librecomp's RAMTOP 24 ceiling; dpc_bridge reads rs64_ram_top live); one `[s7336] layout ...` line at the first rs_malloc
+prints every arena plus OVERLAP/GUARD verdicts. Current model: 0 findings over 9216 combos; `--control` PASS 4/4 (each known combo
+flagged by the old model, clean in the new).
+ORIGIN: the writer of the clobbered bytes is our own host DLPOOLX bump allocator handing out 0x80800000+ while the spill allocator
+hands out the same addresses for rs_malloc blocks: both values are legitimate (DL chunks, guest heap data) and the defect is purely the
+layout, so the fix is at the allocator base/cap, not a guard on a consumer.
+Run (scratch/s7336/run.zsh, forced L1, FPS60, HOLD 90, sequential, one game at a time):
+| arm | env | [s7336] layout | first DL chunk | flight/hold | crash |
+|---|---|---|---|---|---|
+| def | dd8 21:9 WIDEWIN bundle | spill 81000000..81800000 dlpool 80C00000..81000000 ram_top 81800000 clean | 80C00000 | 133/131 s | 0 |
+| o8 | dd4 OSMEM 8 DLPOOLX_MB 8 S7336=0 | dlpool 80800000.. OVERLAP spill/dlpool | 80800000 | never: 5/5 attempts fail | 5/5 |
+| f8 | dd4 OSMEM 8 DLPOOLX_MB 8 | dlpool clamped 80C00000..81000000, clean | 80C00000 | 136/130 s | 0 |
+| hi | dd4 OSMEM 8 SPILL_HI 1 | ram_top 81000000 -> 81800000, spill 81000000..81800000, clean | 80C00000 | 136/131 s | 0 |
+o8 failures: spill blocks start at 0x80800000 and DL chunks are bumped through 0x80821000/0x80829400 on top of them; attempts die
+with `Assertion failed: (ctx->f6.fl == ctx->f6.fl)` (NaN) in transformWorldPosToGridSpace, and "Unhandled jump target 0x08A0 in
+microcode factor5_ucode" (RSP running a clobbered DL) -> SIGABRT. Positive control for the instrument AND for the defect: the overlap
+is destructive, not latent (unlike s7335's o8). f8 is the same combo with the clamp and holds 130 s clean. def shows the shipped
+layout is unchanged. The hi arm verifies the widen path runs and holds; it has no same-run old arm (single-source that the pre-fix
+hi combo misbehaved: the static model says its spill blocks sat above ram_top and leaked on rs_free).
+Discrimination: selects H-pair (spill/DLPOOLX) and H-guest (legacy spill) for opt-in combos, H-clean for every shipped default;
+refutes H-clean as a whole-class claim. BIGARENA is an opt-in left at ram_top by design (not gfx-guarded); noted, not changed.
+Next (NEXT.md): idiom-class audit of hard-coded 0x80800000 "end of guest RAM" range checks in src/ and librecomp, which went stale
+when dd>1 moved the guest top to 0x80C00000 (s6858).
