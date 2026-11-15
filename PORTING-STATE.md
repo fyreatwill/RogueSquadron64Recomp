@@ -195044,3 +195044,49 @@ Conclusion: selects H-idle for normal play (0 barrier waits in 25k advances, 0 g
 H-starve; the stall shape of the old spin is H-burn (619M iterations / 29 forced stalls), fixed as a condvar wait. Next
 discriminator: class AX per-thread QoS + CPU-share dump (ROGUESQ_S7382_QOS=1, QOS_ALL on/off arms) selects H-covered / H-gap /
 H-invert (scratch/agent/NEXT.md).
+
+## Session 7382 (2026-11-14) — class AX (every host thread: QoS / priority at creation, CPU share in play) CLOSED: H-gap selected — the two hot threads ([Game]_MAIN up to 78.5% of a core, Gfx_Thread up to 66.6%) run at DEFAULT QoS (pri 31) by default and at USER_INTERACTIVE (pri 46) under ROGUESQ_QOS_ALL=1; default left to the owner (CURRENT-TRUTH item 4)
+
+HYPOTHESIS-ID: host-thread-qos. Hypotheses: H-covered (hot threads already interactive by default), H-gap (a hot thread at
+default/utility QoS in normal play), H-invert (a high-QoS waiter blocks on a lower-QoS producer).
+
+What ran:
+- Static half: tools/s7382_thread_qos_census.py (scope src/main, src/rsp, rt64 hle/render/common/rhi/gui/apple + plume,
+  ultramodern + librecomp). 58 creator rows (std::thread temp/named/new/make_unique, pthread_create, SDL_CreateThread,
+  dispatch). Controls PASS: planted std::thread and pthread_create listed, this_thread / thread::id not listed, real RT64 present
+  creation listed. Hand verdicts tools/s7382_thread_qos_reviewed.tsv: HOT-COVERED 1 (VI, time-constraint pri 97 since s6967),
+  OWNER 3 (guest threads, Gfx, RT64 Present), WARM 12, COLD 3, DIAG 39. `--check` rc 0. Plume creates no threads itself; Metal /
+  CoreAudio threads appear only at runtime (all < 0.5%).
+- Runtime half: ROGUESQ_S7382_QOS=1 (default off, src/main/main.cpp s7382_qos_start): sampler thread dumps every thread
+  (task_threads; THREAD_EXTENDED_INFO base/cur priority + user+sys CPU; pthread_get_qos_class_np via pthread_from_mach_thread_np;
+  THREAD_TIME_CONSTRAINT get) at ROGUESQ_S7382_QOS_AT seconds. Positive control ROGUESQ_S7382_QOS_CTL=1: thread "s7382-ctl" at
+  QOS_CLASS_BACKGROUND, 5 ms spin / 5 ms sleep, accumulates its own spin wall time: dump must show qos=0x09 pri=4 and a CPU delta
+  within 15% of its own spin time. PASS in s7382_qos2 (3.46 s vs 3.84 s) and s7382_qos3 (2.17 vs 2.40). (BG timer slack stretches
+  the 5 ms sleep, so its share is ~2%, not 50%: the first run's "50%" expectation was wrong, the exact spin-time check replaced it.)
+- Runs (scratch/s7326/run.zsh hangar -> mission route, dd8 21:9 FPS60, owner save read-only): s7382_qos (default, 260 s),
+  s7382_qosall (QOS_ALL=1, 260 s), s7382_qos2 (default, 200 s, names fixed + exact control), s7382_qos3 (130 s, AI drain named),
+  s7382_qos4 (50 s, no control, + `sample`). All crash=0.
+
+Result (s7382_qos2 default, in mission t=80-180 s, share of one core per 20 s interval):
+  [Game]_MAIN DEF pri 31 51-78.5%; Gfx_Thread DEF pri 31 50-66.6%; VI_Thread RT pri 97 3.0%; SP_Task_Thread DEF <=2.4%;
+  RT64_Workload / RT64_Idle DEF <=1.9%; stderr-wr UTILITY <=1.8% (by design); RT64_Present DEF <=0.7%; RT64_Texture <=0.7%;
+  12 RT64_Buffer 0.3% total; 7 RT64_Shader / 3 RT64_Stream ~0; AI_Drain (default-on AI event drain, named this session) 0.3-0.4%.
+  QOS_ALL arm, same route: [Game] UI pri 46 77.2% max, Gfx UI pri 46 62.5% max, RT64 Present/Workload/Buffer/Texture UI,
+  the [s6985]/[s6987]/[s6988]/[s6989] lines confirm each knob fired. Same CPU shares in both arms (QoS changes placement, not work),
+  so the measurement does not perturb the workload.
+  -> H-gap SELECTED for [Game] guest threads and Gfx (both >5% at DEFAULT). H-covered refuted for them (VI is covered).
+  H-invert: not found on a hot path — by default Game, Gfx and RT64 Present/Workload are all DEFAULT (same tier, no inversion);
+  under QOS_ALL all four are UI. Only by-design pair: stderr-rd (UI) hands off to stderr-wr (UTILITY), < 2% (single-source,
+  from reading s6979, no wait measurement).
+  RT64 Thread::setCurrentThreadPriority is a no-op on macOS (rt64_thread.cpp), so RT64's Low (Stream) / Idle (Shader) requests
+  do nothing: those threads run at DEFAULT. Harmless (~0% CPU).
+  Unattributed: an unnamed DEFAULT thread at a steady 15.6% from t=0 to ~60 s, gone before the mission, present in all 3
+  control-armed runs and absent in the one unarmed run (s7382_qos4, `sample` at t=20 found no such thread). Boot phase, not in
+  play; creator not named (not Recomp Boot, not AI Drain, both named this session).
+
+Fix decision: none landed on defaults. The fix would be QOS_ALL default-on, which docs/OWNER-OPT-INS.md and CURRENT-TRUTH item 4
+leave to the owner ("Never flip without the owner"). This census is a second, independent line of evidence for that question
+(first: s7277-s7281 background-load freezes removed by QOS_ALL): the threads the knob raises are exactly the ones that are hot.
+Code landed: the sampler + control (default off), census tool + verdicts, and thread names for the AI event-drain / AI Hz /
+Recomp Boot threads (lib/N64ModernRuntime, exported to submodule-patches/N64ModernRuntime.patch).
+Rules out: a hot thread at UTILITY/BACKGROUND by default (none); RT64 present/workload being hot (< 2% each).

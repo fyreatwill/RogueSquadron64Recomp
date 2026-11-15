@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7381 (2026-11-14).
+Compact operational handoff, as of Session 7382 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -208,8 +208,13 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-thread-qos): class AX, host thread QoS / priority census** (every host thread:
-   QoS class / priority at creation, with and without QOS_ALL, CPU time in play, P vs E cluster, waits on a lower-QoS thread).
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-atomic-ordering): class AY, host std::atomic memory-ordering audit** (relaxed /
+   acquire / release on publication flags and counters that guard non-atomic data handed between threads).
+   **AX CLOSED s7382, H-gap selected** (`tools/s7382_thread_qos_census.py --check` rc 0, 58 creators, tools/s7382_thread_qos_reviewed.tsv;
+   runtime ROGUESQ_S7382_QOS=1 + _QOS_CTL=1 control, `--runtime <log>`): in mission [Game]_MAIN 51-78.5% and Gfx_Thread 50-66.6% of
+   a core run at DEFAULT QoS (pri 31) by default, USER_INTERACTIVE (pri 46) under QOS_ALL=1; VI is RT pri 97; everything else
+   < 2.5%. No inversion on a hot path. Default NOT flipped (item 4): second evidence line for the owner's QOS_ALL question.
+   RT64 setCurrentThreadPriority is a no-op on macOS. Unattributed boot-only unnamed DEF thread 15.6% t<60 s (control-armed runs only).
    **AW CLOSED s7381** (`tools/s7381_spin_census.py --check` rc 0, 75 rows, tools/s7381_spin_reviewed.tsv): RT64
    advanceToNextWorkload / advanceToNextPresent pure spins never wait in play (0/12570, 0/12697) but burn a core when they do
    (forced 150 ms stalls: 619M mutex iterations); now block on barrierCondition (ROGUESQ_S7381_BARRIER_CV=0 old): 58 evals for
@@ -252,6 +257,7 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
 4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle. Never flip without the owner.
+   QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
    s7005/s7006), G5g hangar lens (s6907), G5h cutscene background (s6908-s6919): owner flight / look.**

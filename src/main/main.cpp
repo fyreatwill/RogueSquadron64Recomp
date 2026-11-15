@@ -12774,6 +12774,58 @@ static void s7354_race_ctl_start() {
     std::thread([] { for (int i = 0; i < 100000; i++) s7354_race_ctl_var++; }).detach();
     std::fprintf(stderr, "[s7354] race control armed\n");
 }
+// s7382 class AX: host thread QoS / priority census, runtime half. ROGUESQ_S7382_QOS=1 (default off) starts a sampler that at
+// each second listed in ROGUESQ_S7382_QOS_AT (default 30,60,...,240) prints one "[s7382] thr" row per thread of the process:
+// mach thread id, name, QoS class + relative priority (pthread_get_qos_class_np via pthread_from_mach_thread_np), base and
+// current mach priority (THREAD_EXTENDED_INFO), whether a time-constraint (real-time) policy is set, cumulative user+system CPU
+// us. tools/s7382_thread_qos_census.py --runtime folds the CPU deltas per interval. P vs E cluster is not observable per thread
+// with public API; the QoS tier / base priority is what the scheduler uses to place it. Control ROGUESQ_S7382_QOS_CTL=1 plants
+// a thread "s7382-ctl" at QOS_CLASS_BACKGROUND (5 ms spin / 5 ms sleep; BG timer slack stretches the sleep): it must print
+// qos=0x09 pri=4, and its cpu_us delta must match its own spin wall time (dump ctl_spin_us) within 15%.
+#ifdef __APPLE__
+static std::atomic<uint64_t> s7382_ctl_spin_us{0}; // control: the ctl thread's own spin wall time, to check the CPU accounting
+static void s7382_qos_dump(double t) {
+    thread_act_array_t th = nullptr; mach_msg_type_number_t n = 0;
+    if (task_threads(mach_task_self(), &th, &n) != KERN_SUCCESS) return;
+    for (mach_msg_type_number_t i = 0; i < n; i++) {
+        thread_extended_info_data_t xi{}; mach_msg_type_number_t c = THREAD_EXTENDED_INFO_COUNT;
+        thread_identifier_info_data_t ii{}; mach_msg_type_number_t ci = THREAD_IDENTIFIER_INFO_COUNT;
+        if (thread_info(th[i], THREAD_EXTENDED_INFO, (thread_info_t)&xi, &c) != KERN_SUCCESS) { mach_port_deallocate(mach_task_self(), th[i]); continue; }
+        thread_info(th[i], THREAD_IDENTIFIER_INFO, (thread_info_t)&ii, &ci);
+        qos_class_t q = QOS_CLASS_UNSPECIFIED; int rp = 0;
+        pthread_t pt = pthread_from_mach_thread_np(th[i]); if (pt) pthread_get_qos_class_np(pt, &q, &rp);
+        for (char* k = xi.pth_name; *k; k++) if (*k == ' ' || *k == '=') *k = '_'; // one token for the fold
+        thread_time_constraint_policy_data_t tc{}; mach_msg_type_number_t ct = THREAD_TIME_CONSTRAINT_POLICY_COUNT; boolean_t def = TRUE;
+        thread_policy_get(th[i], THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&tc, &ct, &def);
+        std::fprintf(stderr, "[s7382] thr t=%.1f tid=%llu name=%s qos=0x%02x rp=%d pri=%d cur=%d rt=%d cpu_us=%llu run=%d\n", t,
+            (unsigned long long)ii.thread_id, xi.pth_name[0] ? xi.pth_name : "-", (unsigned)q, rp, xi.pth_priority, xi.pth_curpri, def ? 0 : 1,
+            (unsigned long long)((xi.pth_user_time + xi.pth_system_time) / 1000), xi.pth_run_state);
+        mach_port_deallocate(mach_task_self(), th[i]);
+    }
+    vm_deallocate(mach_task_self(), (vm_address_t)th, n * sizeof(thread_act_t));
+    std::fprintf(stderr, "[s7382] dump t=%.1f threads=%u ctl_spin_us=%llu\n", t, (unsigned)n, (unsigned long long)s7382_ctl_spin_us.load());
+}
+static void s7382_qos_start() {
+    const char* e = std::getenv("ROGUESQ_S7382_QOS"); if (!e || *e != '1') return;
+    std::vector<int> at; { const char* a = std::getenv("ROGUESQ_S7382_QOS_AT"); std::string s = (a && *a) ? a : "30,60,90,120,150,180,210,240";
+        size_t p = 0; while (p < s.size()) { at.push_back(std::atoi(s.c_str() + p)); size_t k = s.find(',', p); if (k == std::string::npos) break; p = k + 1; } }
+    const char* c = std::getenv("ROGUESQ_S7382_QOS_CTL");
+    if (c && *c == '1') std::thread([] {
+        pthread_setname_np("s7382-ctl"); pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
+        for (;;) { auto t0 = std::chrono::steady_clock::now(); volatile unsigned x = 0;
+            while (std::chrono::steady_clock::now() - t0 < std::chrono::milliseconds(5)) x++;
+            s7382_ctl_spin_us.fetch_add((uint64_t)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - t0).count());
+            std::this_thread::sleep_for(std::chrono::milliseconds(5)); } }).detach();
+    std::thread([at] {
+        pthread_setname_np("s7382-qos");
+        const auto t0 = std::chrono::steady_clock::now();
+        for (int s : at) { std::this_thread::sleep_until(t0 + std::chrono::seconds(s));
+            s7382_qos_dump(std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count()); } }).detach();
+    std::fprintf(stderr, "[s7382] qos sampler armed ctl=%d dumps=%zu\n", (c && *c == '1') ? 1 : 0, at.size());
+}
+#else
+static void s7382_qos_start() {}
+#endif
 // s7355 class AF (async-signal safety of the crash reporter). See the sigaction install in main().
 #ifdef __APPLE__
 #include <pthread/introspection.h>
@@ -12849,6 +12901,7 @@ static void rs64_s7355_test_triggers() {
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
     s7354_race_ctl_start();
+    s7382_qos_start();
 #if !defined(_WIN32)
     s6979se::init(); std::atexit([] { rs64_stderr_async_restore(); }); std::at_quick_exit([] { rs64_stderr_async_restore(); });
 #endif
