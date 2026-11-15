@@ -1512,3 +1512,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-065849 | s7396_tq_levels | rc=0 | 856s | scratch/agent/soak_results/s7396_tq_levels_20261115-065849.log
 20261115 | s7397 fold: s7396_tq_levels rc=0: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, report rc 0 control PASS, VERDICT H-none x3 -> TQFIX holds on 3 more levels.
 20261115-072525 | s7397_tm_levels | rc=0 | 871s | scratch/agent/soak_results/s7397_tm_levels_20261115-072525.log
+20261115 | s7398 fold: s7397_tm_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, report rc 0 control PASS, VERDICT H-none x3 -> TIMERFIX holds on 3 levels.
