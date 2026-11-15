@@ -196370,3 +196370,17 @@ signed sign-tests), H-likely (nullification structurally exact on all 1,733 like
 H-slotorder for jr/jalr is real in the generator but has 0 live sites. Selects H-equal; closes class BZ.
 Next: CURRENT-TRUTH is now 60.3 KB, so s7417 is a MAINTENANCE iteration (Step 0). After that, class CA: the opcode-coverage
 residue, i.e. every disasm op in RecompiledFuncs not scored by the BU-BZ tools (cop0, cache, sync, trap ops, anything else left).
+
+## Session 7417 (2026-11-15) — maintenance: CURRENT-TRUTH compacted 60,281 -> 31,862 bytes (554 -> 320 lines)
+
+Step 0 triggered (CURRENT-TRUTH 60.3 KB > 60000). No experiments run.
+- Whole s7416 CURRENT-TRUTH archived verbatim (headings demoted) in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH
+  (s7417 maintenance)". Script: scratch/s7417/compact.py.
+- Next steps renumbered into one sequence 1-20. The 199-line item 1 (RENDER_TO_RAM + class sub-items AQ-BP) and items
+  16-25 (BQ-BZ) are now one summary item (16) with one line per class, plus a 4-line RENDER_TO_RAM item (11). Default-on
+  fixes from s7376-s7405 (S7376_PQLOCK, S7377_EARLYLOCK, S7378_SHLOCK, S7381_BARRIER_CV, S7383_FBPACK, S7394_HOLDFIX,
+  S7396_TQFIX, S7397_TIMERFIX, S7398_IOFIX, S7400_CONTFIX, S7401_FLAGFIX, S7402_CLOCKFIX, FTZ) gathered into item 17
+  (before, they were only in the class paragraphs). Class CA (opcode-coverage residue) promoted to item 1.
+- Header refreshed to "as of Session 7417"; cross-refs fixed (RSP_DMA25 -> item 17, rerun censuses -> items 12/15).
+- Soak results: no new lines since the s7416 fold.
+Rules out nothing; bookkeeping only.

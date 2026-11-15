@@ -12974,3 +12974,563 @@ is in the s7307 archive). Active unit: NEXT.md.
   (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
 - Recent chronology: PORTING-STATE sessions 7187-7307; search bounded windows only.
 
+
+## Migrated from CURRENT-TRUTH (s7417 maintenance): whole s7416 file, verbatim
+
+Every Next-steps item 1-27 with full numbers: item 1 sub-classes AQ-BP (TSan/lockset follow-ups s7373-s7384, guest
+stack s7391, libultra/OS contract classes BB-BP s7392-s7406), items 16-25 classes BQ-BZ (recompiler emission
+semantics s7407-s7416), plus headline, superseded, recipes as of s7416. Headings demoted one level.
+
+## Rogue Squadron 64 Recomp — current truth
+
+Compact operational handoff, as of Session 7416 (2026-11-15).
+`PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
+`docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
+PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
+all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
+verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7307 maintenance)"; older text in "(s7187
+maintenance)" and "(s6994 maintenance)". Grep there for any sNNNN.
+
+### Headline
+
+**Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
+owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
+
+- **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
+  4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
+  LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
+  Default-on fixes from it (=0 old): FBW_ALIGN (s7188), RECT_ASPECT (s7142), HORIZON_XFIX / GATEFIX / SKYFILL
+  (s7133-s7136) + SKYFILL_BOT (s7166), W_SHEET_POS (s7130).
+- **Draw distance (G1c) at the owner screens.** dd4 is the 4:3 ceiling (docs/DRAW-DISTANCE.md). Wide:
+  dd6 auto bundle (off-map cull past 0.6 x fog end, KEDGE 0.8,12, WIDEWIN cap 10240, auto KLEVEL `12:0.5,13:0.5`,
+  CAPLEVEL `9:8192` when FB_WIDTH>796) holds ~60 fps on all 19 levels at 21:9 and 16:9. WIDEWIN auto stack
+  (R=88 + 2x2 merge 0.4 + E16, main.cpp [s7258], STACK=0 off) at any dd>1 with ROGUESQ_DD_WIDEWIN=1; merge+E16
+  carry the cost cut, R=48 only ate the side gain (s7265-s7266). L12 auto RLEVEL `12:48` at dd>=6 (s7287).
+  **dd8 auto px8 + R128 (main.cpp [s7293], ROGUESQ_DD_PX8_AUTO=0 off) QUALIFIED at 16:9 (s7295) and 21:9 (s7299):**
+  300 s, 0 crash, 60/s on L1/L5/L9/L10/L12; total emitted cells/call L4 16:9 ref 6902 -> 11406. Far plane capped at
+  32767 (ROGUESQ_DD_FARMAX, s7310): above it the sky-dome edge clip pins to x=0 (21:9 left sliver).
+- **G5e fog (opt-in ROGUESQ_DD_FOG_ALT=1,3,1, s7302-s7307): QUALIFIED at both owner screens.** ke3 at dd8 =
+  dd4's fog end; melts the far horizon into haze, near detail kept (16:9 L1 1.3/2.4/2.7%, L4 1.5/6.5/4.0% texture
+  removed far/near/side); weaker at 21:9 (L1 null in all bands, lever ctl 8/27/17% PASS, s7306); untouched on
+  L10 (cloud). Holds: 16:9 L1/L5/L10 300 s (s7304) and **21:9 L1/L5 300 s (s7307 fold: 0 crash, 60/s, beyond-route
+  3/1 s, ctl flat-30 176 s PASS)**. Cheaper per frame in both: same-soak L1 heaviest20 12.57 -> 9.69 ms (16:9),
+  13.53 -> 9.40 ms (21:9). Default unchanged; owner judges the look (docs/OWNER-OPT-INS.md, sheets s7303/s7305/s7306, same-pose dd6/dd8/fog s7308).
+- **G5c freezes CLOSED (s7272-s7285):** 0 flight image holds >= 250 ms on quiet host, windowed, fullscreen, 900 s
+  L4/L12; every hold is a black death/restart or cutscene transition; off-window gaps are fb-relocation scene
+  changes (s7284). Background CPU load IS a real freeze source and ROGUESQ_QOS_ALL=1 removes it (s7277-s7281;
+  minimal set GUEST_QOS+PRESENT_QOS); GPU contention slows evenly, no freezes, CPU QoS cannot help (s7282-s7283).
+  Transition stalls = retail 3072-sample MusyX wait ~139 ms (s7065, s7285). **Owner: QOS_ALL default?**
+- **Retina (s7203-s7224): opt-in ROGUESQ_RETINA=1 CLOSED in every scenario** (flight, front end, windowed 21:9,
+  live resize, hot-plug): H-free (GPU +0.05-0.4 ms, 0 gaps), H-sharp (HUD crops 0.42-0.57 -> 0.73-0.82).
+  **Owner: RETINA default?** Sheets docs/owner_sheet_s7205_retina.png, s7220, s7223, s7224.
+- **Host hazards fixed, default on (=0 old):** guard-refused mq drop (s7194) and park (s7195); PI DMA to unknown
+  region posts completion (s7196); AI drain post when SDL stops pulling (s7197, AI_STALL_POST_MS); AI backlog
+  trim 150 ms (s7198, AI_BACKLOG_MS); audio output hot-plug (s7199, AUDIO_HOTPLUG; default-route needs nothing
+  s7200); pad hot-plug (s7201, PAD_HOTPLUG); display hot-plug (s7202, DISPLAY_HOTPLUG; own-display gate s7222,
+  HOTPLUG_ANY=1 old). Censuses CLOSED: docs/COOP-SCHED-POLL-CENSUS.md, docs/HOST-COMPLETION-CENSUS.md.
+- **Presentation fixes, default on (lib/rt64):** interlaced still address VI_ILACE_ADDR / PE_STALEFIX (s7206),
+  4:3 double present PE_DEDUPE (s7208), present box shape PRESENT_SHAPEFIX (s7213). Elite Rogues field screen
+  presents progressive (RT64 ignores the scissor field bit; design difference, s7209/s7210).
+- **Window/aspect (G1f) CLOSED:** auto follows the display at boot, live resize gives bars (FB_WIDTH lives in
+  statics, s7225); ROGUESQ_WIN_DISPLAY=<n>|mouse drives auto/notch/fit/placement on a secondary (s7226);
+  F11 and target-display removal OK (s7227/s7228). In-flight flat-30 in harness runs is the diag ucode path
+  (LOG_PHASE -> G1E_PROBES); the coverage harness defaults OWNER_TIMING=1 (s7229).
+- **Boot freeze (1 in ~65, s6993) stays PASSIVE:** [stall-dump] prints [stall-wait] + [stall-cf0]; H-cycle refuted
+  (s7193); 0 in 100+ owner-env boots since. Hunter `env HUNT_OWNER=1 HUNT_CONTROL=1 zsh tools/boot_freeze_hunt.sh <out> N 34 12`.
+- **dd8 21:9 hangar-route mission-load crash FIXED (s7326, default on):** spill blocks never saw the retail scene-change bulk free
+  (coalesceFreeHeapBlocks frees every non-0x80 persistent block), so loadLevelAssets' 0x2DFF00 outlived the reset, the 4 MB spill
+  arena filled, rs_malloc NULL, SIGBUS in grid-cell terrain code. rs64_s7326_spill_reset releases a1&0x84==0 spill blocks at the reset
+  (ROGUESQ_SPILL_RESET=0 old) + 8 MB arena 0x81000000-0x81800000, RAMTOP 24 (ROGUESQ_SPILL_MB=4 old). Same-build arms: release-only
+  and arena-only both crash, both together 650 s / 2 mission cycles clean; heap_np_kept=0 at every sync (retail semantics).
+- **Spill reads by the RSP FIXED (s7327, default on):** the RSP DMA masked DRAM_ADDR to 24 bits, so gfx ucode reads of terrain grid
+  data in a spill block (dd>=6 hangar route) fetched the 0x80xxxxxx alias. 25-bit mask in rsp.hpp, ROGUESQ_RSP_DMA25=0 old (item 21).
+  **Visible (s7328):** with the grid buffer forced into spill (new lever ROGUESQ_SPILL_FORCE=min:0x200000) on posed L1 dd8 16:9, the
+  old mask draws near terrain as rainbow garbage polygons (37.8% of pixels at one freeze); the fix is pixel-identical to the no-spill
+  layout. Sheet docs/owner_sheet_s7328_dma25.jpg.
+- **L15 21:9 dd4 crash FIXED (s6992):** 7-site `(p & 0xFF000000) == 0x80000000` test vs the 0x81000000 spill arena;
+  tools/apply_s6993_ptrmask.py, ROGUESQ_PTRMASK=0 retail.
+- **G1e:** 60 fps in flight on all levels (s6996; use fl_shown). Defaults VI_RT, STDERR_ASYNC, G1E_CELLIDX;
+  opt-ins VI_LOCK=1, QOS_ALL=1.
+- **Wide/aspect fixes default on:** G1D_SHOWROOM, G1D_340PERSP, G1D_INTROSHAPE / W640 / SCISSOR_TOL, notch safe
+  area + VPW_SCALE, WIDE_LOGQUIET, WIDE_UNDRAWN (s6924-s6932).
+- **Opt-ins, owner's choice (default off):** VI_SHAPE (owner: stays opt-in), DD_MELT, DD_SKYZ, DD_CUT_LIVE,
+  HANGAR_FOV, G5G_LENS, NEARLIFT (near-wall flicker is retail, s7109; k1.6 removes it), WIDEWIN cap 12288,
+  RETINA, QOS_ALL, DD_FOG_ALT. Owner ran MELT, SKYZ, VI_LOCK, QOS_ALL and reported nothing wrong (2026-11-08).
+- Save guard: runner.sh exports ROGUESQ_NO_SAVE_WRITE=1 and snapshots build/saves to
+  ~/Documents/RS64-save-backups/auto. Never touch the owner's save (profile "ASS").
+
+### Closed work, summarised
+
+Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s7262 / s7307)".
+- **G3 retail match** (angrylion oracle): boot, attract, hangar, crawl, intro, missions 1-19, front end at RDP
+  level, AT THE MOVIES 81/81 (s6784-s6792); presented-frame matrix s7122-s7217.
+- **Default-on fixes from that sweep:** UCODE_CAP 65536 (dd>1 1048576), MENU_WORKER_FIFO, EXACT_EDGES, exact-ns
+  VI deadline, LLE_FORCE/UNGATED/SOLO, audio_device_mutex.
+- **G1e rate:** s6696 getenv, -O2, RSP work s6713-s6775, FPS60 classes s6828-s6831 (docs/FPS60-FIXES.md).
+- **G1, G1c, G1d, G1f, G3c, M5, M3, M6, G2, renaming (s6868, misnomers s7072-s7080): closed.** G1(d) objectives
+  and G4 crash hunting parked by owner.
+- **Engineering s7066-s7098:** cached getenv (ENV_CACHE), dladdr cache, diag call-site gates, N64Recomp
+  self-branch miscompile (tools/fixup_selfbranch.py), lowering / host-shim / fixup / RSP censuses, DPC bridge
+  forwards exactly the hardware RDP stream (s7096), big G5b drops are already in the RDP stream (s7098).
+- **WIDEWIN thread s7231-s7271 CLOSED:** cost (H-tiny far side cells), auto stack, side-edge gain at 21:9 kept at
+  R=88, 16:9 side gain below run noise (H-noise s7269), stack invisible in cutscenes at both aspects (s7270/s7271).
+- **Wide + dd span class (s6879-s6885)**, width class (docs/G1D-WIDTH-CENSUS.md), spill arena (s6858) + heap audit
+  (docs/HEAP-ADDR-AUDIT.md; missed the s6992 mask class).
+- **Regen (s6863-s6881):** replay from pristine compiles/links/boots; live tree NOT regenerated (docs/REGEN-VERIFY.md).
+- **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
+
+### Superseded conclusions — do not act on these
+Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- "FCSR.FS vs host FZ: known and left, ROGUESQ_FTZ stays opt-in" (s6013/s7087). Believable because the s6012 lvl1 holds
+  were clean in both arms; but no instrument ever asked whether denormals occur. s7405 FPSR witness: they do (game thread, in
+  flight), so FTZ is now default on (=0 old).
+- s7376 "the present thread already takes workloadMutex at line ~676 in the same frame" (used in its deadlock/coverage reasoning).
+  Believable: upstream locks it there. s7377 counter: that lock sits on the `!interpolationEnabled` branch, taken on 27/10800 presents;
+  the other 99.7% ran lock-free (fixed by ROGUESQ_S7377_EARLYLOCK).
+- s7372 "17 AQ rows exercised in mission incl. dpc defer_begin and rs64_s6094_tick; 73 never executed". Believable: coverage
+  counts are exact. s7373: the s7366 rows' line numbers predated s7368/s7371 edits (20/97 lines no longer named the container);
+  re-cut rows give 19 mission rows (defer_begin and s6094_tick out, both env-gated; get, s6702_release_locked, heapsync in), 71 unexecuted.
+- s7193 "boot-freeze second wait unknown, not reproducible by forcing" -> s7367: it is MAIN IN 0x8011A818 (scheduler chain), reached when MAIN (not retrace) is starved; s7193 forced retrace holds, which let MAIN return to CF0.
+- s7325 "46 audio reads land in song-channel arrays freed by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync". Believable:
+  allocator frames said allocateSongChannelArray. s7330: the blocks are the synth's command-list buffers, and the boot hits come from
+  tasks built AFTER the scene bulk free (no wait involved); only 1 in-flight case belongs to the wait path.
+- s7324 "class G CLOSED, H-cpu-only: the RCP is never handed a spill address". Believable: 462M DMAs at dd8 21:9 L4, 0 direct, ctl
+  198/198. It ran the forced-level route, where loadLevelAssets' 0x2DFF00 sits in the main heap; on the hangar route (s7327, dd8 16:9)
+  the reset/reload puts it in spill and the gfx ucode DMAs its grid-layer data at 0x81xxxxxx (fixed: 25-bit DMA mask).
+- s7324 "40k audio RSP reads hit heap GAPS / freed blocks (no live rs_malloc block)". Believable: the s7317 map recorded every hooked
+  malloc/free. s7325: the retail scene reset frees in bulk without rs_free, the map kept 531 stale entries shadowing live blocks;
+  the guest heap walk puts every address inside an allocated block, dd1 identical. Re-synced map: 46 residual reads.
+- s7316 "spill live in the dd2 16:9 L1 run; 80-87 heap words held spill pointers". Believable: the words were aligned 0x81xxxxxx in
+  heap. s7317 allocation map: all 833 spill blocks are freed in the load window; those words are halfword data and dead stack slots.
+- s7312 "the presented window can lag the RDP stream for seconds (first run after a rebuild)". Believable: same pose, same stream,
+  two captures 0.7 s apart both wrong. s7313: a voided batch-1 L5 game was still alive and the pose script captured the oldest game
+  (`pgrep|head -1`); the repro arm with a one-game guard matched 6/6 (diff 0.01 vs 92.8 control).
+- s7286/s7288 "the terrain window binds from dd4; dd4->dd6 adds 1.8% cells". Believable: [s7233] in= sat at ~3550
+  dd4..dd8. s7291: in= counts only the retail-equivalent 64x64 window (constant by construction); total cells grow +24%.
+- s7283 "off-window gaps >=250 ms are the GPU saturator draining after SIGKILL". Believable: they followed lit holds
+  near +381 s. s7284: that hold is the SIGSTOP control; the gaps are black fb-relocation transitions.
+- s7247/s7259/s7262 "the WIDEWIN auto stack removes no visible ground". Believable: holes/seams scorers clean. They never
+  scored the side edge; s7264 showed R=48 erased the side gain (fixed by R=88, s7266).
+- s7230 "dd6 at 21:9 adds ~6.6 ms per task (H-dd)" and s7014-s7017 "WIDEWIN costs little at 21:9 dd4". Believable: the arms
+  seemed to differ only in radius; s7231 2x2: WIDEWIN +4.5 ms, radius +0.7 ms. s7230 also ran on battery (x1.4, s7251).
+- s7054/s7063 "L4 21:9 dd6 58.7-59.5 fps". Believable: whole-flight averages; s7230 heavy window flat 30 (battery);
+  AC s7257: 60.0/s at 14.06 ms.
+- s7227/s7228 "in-flight flat-30 under FPS60 is the game's own rate". Believable: rigid 33.3 ms swaps, free present path.
+  s7229: the harness ran the diagnostic ucode path; owner path holds 60/s.
+- s7180 "swaps 4700-5028 are LEVEL DESCRIPTION" / s7181 "Elite Rogues 0.047". s7183: it is Elite Rogues; residual =
+  weave-reference combing while it scrolls.
+- s7122 "4:3 picture off-centre". s7123: SCK pads the capture; in window points it is centred.
+- s7120 "flight camera jumps 2-16 u". s7121: the join mixed cam objects; per-cam 0 such steps.
+- s7113 "H-raymiss: collision surface ~0.2 u off the drawn mesh". s7114: common-mode rebuild bias; drawn == collision exactly.
+- s7098 "near-wall flashes only with FPS60". s7108/s7109: same rate at 30 fps and full retail.
+- s7102 "near-wall zig-zag is push vs clamp (H-fight)"; s7100 "FPS60 episodes 4.1x" (s7101: 1.6x, p=0.185).
+- s7059 "transition stalls are audio-slot polling". s7064: waits are ~14% of the gap; remainder OS-silent.
+- s7032 "the wall face occludes the craft at poses 0-4". s7033: eye above ~99% of culled cells.
+- s7009-s7013 "WIDEWIN costs ~10-25 fps": harness LOG_PHASE probe path. Any harness timing since s6713 without
+  G1E_FAST=1 PROBES=0 is suspect.
+- s6990 "60.0 fps on all 19 levels at 16:9": FORCE_UNLOCK=1 clamps the cursor to level 1. Check `cur` / cursorMask.
+- s6788-s6791 "G3e drops CLOSED" (reopened as G5b); s6895 "dd1 has no knife lines" (s6906: dd1 has the thickest).
+- PORTING-STATE line 1862 "Fog contributes nothing" (s6904): true only of the early pre-flight scene.
+- g3_aspect_crop scores s6879-s6881 scored pillarbox bars; "pinned pose" s6445-s6583 is attitude-only;
+  "300 s hold" FPS60/dd>1 s6774-s6862 counted from boot (use inits= and flight_s=).
+
+### Run recipes and hard config
+
+- Run from `build/` with the ROM beside it; SIGKILL to stop; one game run at a time.
+- Disk ~20 GB free: a 960x540 g5b_capture is ~9 GB/min. Keep captures <= 90 s, delete raws after scoring.
+- Arms: tools/g1e_owner_quiet_arms.zsh (per-level owner fps; sets FORCE_UNLOCK, check `cur`); G5 template
+  `scratch/s6899/arm.zsh`; scenes `scratch/s6908/arm.zsh`; hangar `scratch/s6907/arm.zsh` + tools/g5g_pan_score.py;
+  fog/edge sheets tools/s7306_fog_219.zsh, tools/s7263_widewin_edge_arms.zsh (SHEET=1), tools/s7268_edge_delta.py;
+  image holds tools/s7272_g5c_hold_arm.zsh + s7272_image_hold.py; toggle load tools/s7277_toggle_load_arm.zsh.
+- dd4 needs no DD_UNSAFE; higher uses DD_UNSAFE (clamp 8). Confirm run.log echoes `multiplier N`.
+- lvl10/15 need `ROGUESQ_FORCE_PLANET_UNLOCK=0xFF`. L10 is cloud with no terrain grid: never use it for terrain
+  measures. Wide soaks need `MISSION_WIDTH=796|1024` + `WIDE_ROUTE=1`; ASPECT implies `OSMEM_MB=12`. 16:9 autopilot
+  gates wait on VI width 1592, not 1024 (s7271).
+- Pose control (s7308: PIN=1 repeat arms are pixel-identical at a freeze, so cross-run arm diffs are exact there; score with
+  tools/s7308_pose_horizon.py): `ROGUESQ_POSE_LOCK=1` + `ROGUESQ_POSE_FREEZE=<x,...>:<ms>` (needs RAND_TRACE + DEBUG_WRITE;
+  tools/g3_optin_pose_arms.sh). Port dt pin `ROGUESQ_XTRACE_POKE=800FA730:29:30:3d088889`.
+- Timing: any ROGUESQ_LOG_* turns FAST off and PROBES on: set `ROGUESQ_G1E_FAST=1 ROGUESQ_G1E_PROBES=0`, or
+  OWNER_TIMING=1 in the harness. Per-frame meter `[g1b]` (sd_wall, tasks/s). Measure on AC power (battery x1.4).
+- Present rings (ROGUESQ_PRESENT_RING): tools/g1e_present_cadence.py first; at=0 throughout is not a measurement.
+- g5b_capture is sRGB since s7151; raws before s7151 are Display-P3 (FID_P3=1).
+- Freezes: stalls = [g1b] sd_wall max; image freezes = tools/g5c_frozen_runs.py / s7272_image_hold.py;
+  `sample <pid> <s> <ms>` costs no build.
+- AT THE MOVIES shots by run time (dd1 16:9): 76 887-912, 77 912-924, 78 924-942, 79 942-952 s.
+- Frame comparison: score menus by RDP (tools/g3_rdp_frame_match.py, tools/g3_menu_pair.sh). G3 kit: arms
+  tools/s7125_arm.zsh, s7131_arm.zsh, s7141_{arm,post}.zsh, s7146_arm.zsh, post s7152_post.zsh; scorers
+  tools/s7122_fidelity.py (FID_ALROWS=444/336: RT64 shows rows 0-443 / 0-335), s7183_native_edge.py,
+  s7210_regfit.py (run first at 16:9); replay tools/angrylion_replay/build16.sh. L17 autopilot dies ~126 s.
+- Oracle missions: tools/g3_eep_patch.py sets +0x31; use --save-dir, never swap a save over the user .eep.
+- Slow builds (TSan/ASan): `ROGUESQ_AUTOPILOT_CLOCK=frames ROGUESQ_AUTOPILOT_FPS=58` (FPS60) keys autopilot to fullsyncs,
+  but front-end screens are VI-timed, so the route still diverges at TSan speed; gate with `<s>:w<width>` events (s7371).
+- Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc. Recipes that
+  drive the window carry `# SOAK_NEEDS_IDLE=<secs>`; zsh recipes run under their shebang shell (s7287).
+- Knob tables: PROJECT-OVERVIEW "G1c draw-distance knob and recipe reference"; docs/DRAW-DISTANCE.md;
+  owner commands docs/OWNER-OPT-INS.md.
+
+### G1 mission coverage
+
+Playable levels 0..18 (`NUM_LEVELS=0x13`); 19/20 are sentinels. All have route, 300 s holds and framebuffer
+presence; level 1 has a retail flight match; objective response (d) parked by owner. See
+docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hull damage on level 8.
+
+### Durable constraints
+- Never end a turn to wait on a run: foreground (timeout <= 600 s) or queue a soak.
+- Retail defaults stay unless the owner chooses; never make an opt-in default from a single source.
+- Crash-free holds do not mean "renders correctly" (s6468). No mitigation without naming the writer; dd>1 fixes
+  live in `tools/apply_s6*.py` (registered in RS64_REPLAY only, docs/REGEN-VERIFY.md).
+- The RSP DMA keeps bit 24 (s7327, phys < 32 MB); RDP image addresses and the game's own 24-bit rebuilds (class D) still drop it, so
+  textures / colour images / DL-pool refs must stay below 0x81000000.
+- Any guest pointer the game range-tests must sit where its test accepts it: 0x81000000+ fails
+  `(p & 0xFF000000) == 0x80000000` unless ROGUESQ_PTRMASK (s6992). Re-check for any new arena.
+- Never reset, clean, checkout or update submodules; after editing `lib/` run `./submodule-patches/export.sh` and commit.
+- Controls: get_n64_input is the pre-6ed036b97 mapping; no changes without an owner request.
+- Title plume parked; reopen only on new evidence.
+- Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 streams. Positive control for every null; two
+  independent lines before a conclusion enters this file.
+
+### Next steps (single monotonic backlog)
+
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
+numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
+
+1. **RENDER_TO_RAM=0 CLOSED s7389: ready for the owner (OWNER-OPT-INS), default stays on.** Saves ~2.5 ms/gfx task in mission
+   (s7385); abort-cut stale-upload stripe fixed on the r2r=0 path (s7387, ROGUESQ_R2R_CPUUP=1 old; s7388 probe ROGUESQ_S7388_PRES
+   3/3 -> 0/3); soak L1/L4/L12 300 s pass with upl=0 hot=0 (s7389). Residual-risk census s7389 (build_fbld,
+   tools/build_fbld.sh + s7389_fbld_run.zsh + s7389_fbld_report.py, ROGUESQ_S7389_FBLD=1): 0 guest LOADS from a live colour image
+   over the s7386 route (control 2.8e8 loads; 2.5e8 stale-page loads = heap/DL reuse, 61 fns, none an fb reader); live-Z loads
+   are all the dummy SetZImage at phys 0 (low RAM) or boot DL memory at 0xC04F68 -> H-no-reader (route only); s7390 fold: same on
+   L5/L10/L15 (+4 HEAP header reads in rs_free/coalesce = heap reuse inside an over-estimated Z span). s7390 widened the watch to
+   LD (ld/ldc1) + do_lwl/do_lwr (control: 5.6e6 LD + 1.0e7 lwl/lwr hits on CTL=0:138000) and the report now classes every live
+   load (HEAP/DUMMYZ/BOOTDL/UNCLASSED, rc 3 on a reader candidate): route rerun 0 live colour loads on any path; s7391 fold of
+   s7390_fbld_wide_levels: L5/L10/L15 no-reader x3, LD control fires -> **fb-cpu-reader-census CLOSED s7391**. Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those). One CPU store to a
+   live fb: rs_memset 0xA6F000 at boot vi 55 (dropped at r2r=0; boot sheet identical). Detail PORTING-STATE s7385-s7389.
+   **BB CLOSED s7392, no harmful message-queue drop** (`tools/s7392_mesg_census.py --check` rc 0: 59 osSendMesg/osJamMesg
+   sites, 32 drop-capable rows hand-classed in tools/s7392_mesg_reviewed.tsv; runtime ROGUESQ_S7392_MQ=1 + _CTL=1 planted full
+   queue, `tools/s7392_mq_report.py <log> --known`, route tools/s7392_mq_run.zsh, RETAIL=1 arm). 5 drop families, all benign:
+   heap-mutex re-init inside rs_malloc (10/run), 8011A800 sched token (10/run), VI tick (22-25), CF0 dup-ack (s7367), and AI
+   events 538-549 per owner-recipe run vs 23 retail (port timing, flight) with no added host underrun ([ai-underrun]).
+   s7393 fold s7392_mq_levels: L5/L10/L15 report rc 0 --known, CONTROL PASS, 0 DROP x3.
+   **BC CLOSED s7393 (route), no live-queue re-create** (`tools/s7393_createmq_census.py`: 35 osCreateMesgQueue sites, 10 post
+   a token at once = post=SEND; runtime ROGUESQ_S7393_CQ=1 + _CTL=1 planted queue valid 1 + linked fake waiter, hook
+   rs64_s7393_create in ultra_translation.cpp osCreateMesgQueue_recomp, `tools/s7393_cq_report.py <log>`; route
+   tools/s7392_mq_run.zsh with the env, owner + RETAIL=1 arms): CONTROL PASS both arms, 0 orphan_r / 0 orphan_s / 0 raw link
+   field on any re-create of 12 re-created queues; every lost message is a count-1 mutex re-seeded by its creator (SEED: heap
+   8010FEE0 x3 fns, 80128D10, F5 mutex 80149990, MusyX 80154650), identical counts in both arms (scene re-init runs ~11x per
+   route on tid 3) -> H-none, not port timing. Residual: buildHeapFreeList re-seeds the heap mutex at validCount 0 (held,
+   10/run) = a mutual-exclusion window in retail code (s7392's rs_malloc fails=7) -> class BD. Soak s7393_cq_levels queued.
+   s7394 fold s7393_cq_levels: L5/L10/L15 CONTROL PASS, H-none x3.
+   **BD CLOSED s7394, heap-mutex re-seed window fixed** (namespace s7394 window census ROGUESQ_S7394_BD=1 + _CTL=1,
+   `tools/s7394_bd_report.py <log> [--fix]`, route tools/s7392_mq_run.zsh): 0 foreign takes in 40 held windows (4 runs, owner +
+   RETAIL=1, controls PASS), but 5 thread ids use 8010FEE0 and a foreign thread ran in 1/11 RETAIL=1 windows -> race structurally
+   live, ORIGIN retail buildHeapFreeList re-seed post 0x80001fe8 under rs_malloc's hold. **ROGUESQ_S7394_HOLDFIX default ON**
+   (=0 retail): the holder's re-seed post is skipped, rs_malloc's release posts the one token (release drops 10 -> 0, same end
+   state). Soak s7394_holdfix_levels queued (L4/L7/L12).
+   s7395 fold s7394_holdfix_levels: L4/L7/L12 203-204 s alive, 0 crash, 0 VI stall, --fix rc 0, FIX-ARM CONTROL PASS,
+   holdfix_skips 8/10/5, VERDICT H-none x3 -> HOLDFIX holds on 3 more levels.
+   **BE CLOSED s7395, no event re-binding** (`tools/s7395_event_census.py`: 9 osSetEventMesg/osViSetEvent guest sites, one
+   per event, all straight-line in thread entries or one-shot init; the PI/VI/COUNTER sites sit in osCreatePi/ViManager, which
+   librecomp replaces (pi.cpp/vi.cpp), so they never run; VI's two sites are libultra's two layers, not a re-bind). Runtime
+   ROGUESQ_LOG_EVENT_WIRING=1 on tools/s7392_mq_run.zsh, owner + RETAIL=1 arms: the 6 live sites register exactly once each
+   (AI 80149670, DP 8011A408, SP 8011A420, SI 80110770, PRENMI 8010DFD8, VI-SET 80114388), identical in both arms, SP/DP
+   completions reach the bound queues (64+64 rows each arm) -> H-none; H-strand and H-port refuted (nothing is re-bound,
+   so ultramodern's table cannot go stale).
+   **BF CLOSED s7396, thread lifecycle H-none on route; upstream thread_queue_remove walk FIXED** (`tools/s7396_thread_census.py`:
+   40 sites, 5 non-self stop/destroy/setpri, all reach ultramodern::thread_queue_remove, whose upstream walk never advanced past the
+   head = infinite loop on a non-head target in a >=2 queue). **ROGUESQ_S7396_TQFIX default ON** (=0 old walk). Runtime
+   ROGUESQ_S7396_TQ=1 + _CTL=1 (planted middle-node remove: old=HANG, fixed PASS), `tools/s7396_tq_report.py`, route
+   tools/s7392_mq_run.zsh owner + RETAIL=1: 21 removes each, all pos 0 (old walk safe, latent only), 0 live re-create of 27
+   creates. s7397 fold s7396_tq_levels: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, control PASS, H-none x3.
+   **BG CLOSED s7397, timer lifecycle H-none on route; upstream osSetTimer re-arm FIXED** (`tools/s7397_timer_census.py`: 3 guest
+   osSetTimer sites, 0 osStopTimer linked; osEepromLongWrite/osContInit are librecomp-replaced, the one LIVE site is
+   installPeriodicCallback 0x80007458 (interval timer 0x801128F0, once from mainBootstrapWorker, gated on cfg+8)). Upstream
+   osSetTimer wrote t->timestamp from the guest thread while t sat in the timer thread's std::set keyed on it: re-arming a live
+   timer mutates a set key (dup/unsorted entry; erase misses, later timers can hide behind it). **ROGUESQ_S7397_TIMERFIX
+   default ON** (=0 old): guest only enqueues values, timer thread erases + writes + re-inserts. Runtime ROGUESQ_S7397_TM=1
+   + _CTL=1 (3 fake timers at 0x9FFE1000, live non-head re-arm: old = CORRUPT dup=1 unsorted=1, fix = PASS order 2,0,1),
+   `tools/s7397_timer_report.py`; route tools/s7392_mq_run.zsh owner + RETAIL=1: control PASS, flight+debrief reached, 0 guest or
+   host timer calls (latent only; two lines: census gate + runtime). s7398 fold s7397_tm_levels: L5/L10/L15 202-203 s alive, 0 crash,
+   0 VI stall, control PASS, H-none x3.
+   **BH CLOSED s7398, PI/SI I/O-message lifecycle H-none; upstream osPiStartDma OSIoMesg/completion FIXED**
+   (`tools/s7398_iomesg_census.py`: 4 live osPiStartDma sites = DMA ring submitDmaSlot / waitDmaSlotComplete / pollDmaSlotStep
+   (8 OSIoMesg at 0x801107E0+24n, own count-1 mq 0x801108C0+24n) + piDmaWorker (mb 0x80111270, mq 0x80111290); every restart of
+   an OSIoMesg follows the recv of its completion (wait loops back to the recv, poll is NOBLOCK-then-restart); every recv
+   discards the msg (slot 0); no guest load of the OSIoMesg fields; osContStartReadData siServiceThread same; osEPiRawStartDma
+   only in __osLeoInterrupt (64DD, dead), osPiRawReadIo only in replaced osInitialize/osCartRomInit. DMA is synchronous in
+   do_dma, so H-async is impossible; a slot re-used with a stale completion would show as a Pi full-queue drop on its count-1
+   mq: 0 in s7392_mq_levels L5/L10/L15 (control PASS) -> H-reuse refuted on two lines.) Latent upstream deviation: osPiStartDma
+   never filled the OSIoMesg (type/pri/retQueue/dram/dev/size) and both Pi starts completed with msg 0, not the OSIoMesg
+   pointer. **ROGUESQ_S7398_IOFIX default ON** (=0 old); ROGUESQ_S7398_IO_CTL=1 reads the fields back (route owner recipe:
+   fix 200 s alive, 0 crash, phase 9, 16k+ fills readback PASS, bad=0; old arm 0 fill rows, 200 s alive, 0 crash). Soak
+   s7398_io_levels queued (L4/L7/L12); s7399 fold: L4/L7/L12 alive, 0 crash, readback PASS, 0 FAIL -> IOFIX holds.
+   **BI CLOSED s7399, event-message payloads H-none** (`tools/s7399_evpayload_census.py --check` rc 0: 6 live bindings
+   PRENMI/SI/VI/DP msg 0, SP 8011A420 msg 80128C70 (type 0x81), AI 80149670 msg 801496A0 (type 1); Pi/Vi manager bindings run
+   in REPLACED empty stubs; 7 consumers: 5 NULL-slot, SP scheduler + AI loop dispatch on lbu 0(msg); all 14 host
+   enqueue_external_message_src sites pass the stored bound msg, none jams. Runtime ROGUESQ_S7399_EVP=1 + _CTL=1 (planted
+   BADC0DE0 on a queue below guest $sp), `tools/s7399_evp_report.py <log>`, route tools/s7392_mq_run.zsh: owner + RETAIL=1
+   0 mismatches over ~70-90k event deliveries each, CONTROL PASS both). Message-queue lifecycle family BB-BI CLOSED.
+   Lesson: plant controls relative to ctx->r29 only (a receive slot can be a global; s7399 v1 plant SIGBUS-ed retail).
+   **BJ CLOSED s7400, replaced-libultra output contract: one latent H-struct + one latent H-ret, both FIXED** (`tools/s7400_replaced_contract.py`
+   rc 0: 144 `_recomp` replacements, 64 with live guest callers, each joined to the s7392 v0 classifier; libultra void set
+   excluded). H-ret: `__osDisableInt` empty stub left v0 stale; its 3 live consumers (musyxSynthFrame, __osSet/ResetGlobalIntMask)
+   pass v0 only to the no-op `__osRestoreInt` -> harmless, now r2=1. H-struct: osContGetReadData_recomp skipped the whole pad
+   on error, never writing err_no (libultra writes errno for every channel), so a channel that stops responding kept err_no 0 +
+   its last buttons in guest pad buffer 0x8010FF30 (pollControllerInputs tests 4(pad) == 8/4). Latent only: the query gate
+   (osContGetQuery errno, written correctly) and get_n64_input / get_connected_device_info agree (ch0 always ok, 1-3 absent),
+   startSiPollingThread seeds err_no 8. **ROGUESQ_S7400_CONTFIX default ON** (=0 old). Control ROGUESQ_S7400_PAD_CTL=60 (polls
+   60-89 force ch0 no-response): route tools/s7392_mq_run.zsh 200 s, fix 30/30 PASS (guest err 8), old 30/30 STALE (err 0),
+   both phase 9, 0 crash. Other returns checked: Pfs* all NOPACK (status 0, consistent), osMotorInit NOPACK, osContStartQuery/
+   Init 0, osAiSetFrequency retail formula, osGetCount sign-extended (s7087). s7401 fold s7400_cont_levels: L5/L10/L15 alive, 0 crash, 30 PASS / 0 STALE x3 -> CONTFIX holds.
+   **BK CLOSED s7401 (argument contract), H-none + 1 latent fix** (`tools/s7401_replaced_args.py` rc 0): live guest arg values at
+   every jal to a special-value replacement. Flags: 104 live osRecvMesg/osSendMesg/osJamMesg sites (+21 dead-caller) all const
+   0/1; port blocked only on ==1 while retail blocks on any !=0 -> **ROGUESQ_S7401_FLAGFIX default ON** (=0 old) normalises.
+   Runtime ROGUESQ_S7401_ARGS=1 + _CTL=1 (one planted flags=2), route tools/s7392_mq_run.zsh 200 s: fix ctl PASS(retail), old
+   STALE(old), both 9.2e5 calls, 0 guest odd flags, phase 9, 0 crash. osSetEventMesg: SP/SI/AI/DP OK; PRENMI(14) dropped by
+   ultramodern = INERT (no host reset source). osSetThreadPri pri byte-masked, NULL thread -> self in Stop/Destroy/SetPri like
+   retail; osSetTimer countdown 0 -> interval handled; osVirtualToPhysical: 11 sites dead (viMgrMain/_VirtualToPhysicalTask under
+   replaced osCreateViManager/osSpTaskLoad), 1 in osPfsIsPlug (0 jal, 0 address refs). Soak s7401_flags_levels queued (L4/L7/L12).
+   s7402 fold s7401_flags_levels: L4/L7/L12 alive, 0 crash, ctl PASS x3, 0 odd -> FLAGFIX holds.
+   **BL CLOSED s7402 (side-effect contract), 1 real divergence fixed, sim-latent** (`tools/s7402_side_effects.py` rc 0, verdicts
+   tools/s7402_side_reviewed.tsv): 60 live replaced roots, 56 globals their RETAIL bodies (+callees) store; 51 no live reader,
+   5 H-unwritten -> 3 DEAD/SELF-INIT (__osRunningThread only in __osException; __osMaxControllers only under unreferenced
+   osPfsIsPlug; __osSiAccessQueueEnabled self-initialised by __osSiGetAccess) + **osClockRate 0x80039100**: ROM 62500000, retail
+   osInitialize scales *3/4 = 46875000, the empty osInitialize_recomp left it unscaled -> **ROGUESQ_S7402_CLOCKFIX default ON**
+   (=0 old; applied only if the word holds the ROM value). Runtime two-arm, one build, L1 200 s each: boot row lo=62500000 both,
+   fix now=46875000 vs old 62500000; guest measured-time accumulator 0x8011A8F8 +10.0 vs +7.5 per 10 s at the same 30 frames/s
+   (positive control). BUT the sim dt (snapshot +0x20, read by runInMissionFrame / cinematicComputeDt /
+   advanceWrappingPhaseAccumulator, the only fields they read) takes the VI-count branch: sum 193.6 s vs wall 195.7 s in BOTH arms,
+   identical 1/2-VI histograms -> game speed was never 0.75x. Clock-dependent consumers left: unread snapshot fields
+   +0x0C..+0x18/+0x24, the flags-clear +0x20 branch (postSwap flags 0x8011A8C8/C9 both 0; not taken on this route), profiler
+   computeElapsedMillis. s6752's port "dt 2.00" is consistent (VI branch). s7403 fold s7402_clock_levels: L5/L10/L15 alive, 0 crash, 0 VI stall, boot_pass=1 bad_clk=0 x3 -> CLOCKFIX holds.
+   **BM CLOSED s7403 (boot-global contract), H-none** (`tools/s7403_boot_globals.py`): live guest reads of 0x80000300-0x8000033F
+   + 0x80039100-0x8003910F: osTvType (setViModeType; preNmiResetThread runs only on PRENMI = inert), osResetType+3
+   (getOsResetType, 0 callers/refs), osMemSize (getUsableRdramSize, partitionFramebufferMemory), osAppNMIBuffer address
+   (getResetVectorRegion 0 callers/refs, fatalErrorHalt 0 jal), osClockRate (BL). osRomType/osRomBase/osCicId/osVersion/osViClock:
+   no live reader (only dead or replaced libultra). Runtime RDRAM dump at swap 300 (scratch/agent/s7403_bootdump.sh), one build:
+   default tv=1 romtype=0 rombase=B0000000 reset=0 mem=00800000 clk=46875000 viclk=48681812 (retail NTSC VI clock) NMI buf 0;
+   planted arm OSMEM_MB=4 + CLOCKFIX=0 shows mem=00400000 clk=62500000 (control PASS). Port == retail 8 MB expansion-pak cold boot.
+   **BN CLOSED s7404 (direct RCP/PI/SI/VI/AI/MI + cart register access), H-none** (`tools/s7404_rcp_access.py`, rc 0): every
+   load/store whose base is a KSEG1 constant (0xA0000000-0xBFFFFFFF) or an `or/addu` KSEG1 conversion. 31 rows the s7401 live()
+   model called LIVE all sit in N64Recomp `ignored_funcs` (358 names, never emitted: __osException, __osLeoInterrupt,
+   __osLeoAbnormalResume, osLeoDiskInit, __osSiRawStartDma, __osSiDeviceBusy) or are flag ORs (processSceneNode |0x20000000 on
+   +0x2C, never a base); 0 of 2508 generated RECOMP_FUNCs carry those names (second line). Live address-only constants are GBI
+   words, float/rand/div magics, and cart ROM DMA sources (initDmaSlots 0xB0144340/80, loadOverlay 0xB0135D30) that the port's
+   osPiStartDma maps through k1_to_phys exactly as retail. Control: scanner sees SI/PI/VI/AI/MI/SP/DP writes in replaced+ignored
+   libultra (PASS). Caveat for every s7401-live()-based census: it treats ignored_funcs as live (false positives only).
+   **BP CLOSED s7406 (FP corner semantics after FTZ): H-none.** build_fpat (tools/build_fpat.sh: tools/s7406_fpat_transform.py
+   wraps 20050 guest FP stmts + 14602 call lines with a per-guest-PC FPSR check; report tools/s7406_fpat_report.py, rc 3 = guest
+   denormal input or IOC; planted control ROGUESQ_S7406_PLANT=1 PASS 8/8 both arms), L5 dd8 21:9 FTZ=0/1: every UFC is guest
+   quaternion/matrix math on MAIN (rotateVec3ByQuat, quatFromAxisAngleSafe ~75%; flushed by FTZ like retail FS=1); 0 IDC at any
+   guest stmt (all 65 = host loggers: s5797 [aim] under ROGUESQ_LOG_HUDBIT, rs5818_log, osRecvMesg_recomp); DZC 173 = one site
+   scanConvertTriangleToSpanTable 0x8004251C x/0 -> sub.s + c.lt.s branch only, IOC 0 (matches s7405 soak dzc=173 x3). Soak
+   s7406_fpat_levels queued (L4/L7/L12). s7406 fold s7405_ftz_levels: L4/L7/L12 0 crash, fz1 all, FTZ default holds.
+   **BO CLOSED s7405 (COP0 Status/Count/Compare + FCSR control access): FR/RM rows H-none, FCSR.FS H-fs FIXED.**
+   `tools/s7405_cop_access.py` (control PASS: Status/Count/Compare seen in replaced+ignored libultra): 28 live rows = 22 Status FR
+   toggles in the 7 asm math helpers (s7087: librecomp switches f_odd per FR, run_thread_function inits FR=0;
+   projectPointToScreen never clears FR but is dead) + guPerspectiveF's RZ cvt.w.d window (s4816: honoured, overflow path
+   unreachable). 0 live Count/Compare. The one divergence: retail FCSR 0x01000800 (FS=1, osCreateThread) vs host FZ off.
+   Witness ROGUESQ_S7405_FPSR=1 (threads.cpp, sticky arm64 FPSR read+cleared at every guest block, per thread id; planted
+   1e-30f*1e-10f per thread = control): L5 dd8 21:9 150 s, game thread tid 3 UFC (denormal result) in 174/29407 blocks, all
+   in flight; DZC 173 at boot/front end only; IOC 0 (retail traps invalid: consistent). FZ=1 arm: UFC 153 (flushes) + IDC 41.
+   Both arms 0 crash, 0 stall, plant_ufc=1 on all 14 threads. **ROGUESQ_FTZ now DEFAULT ON (=0 old)**; boot check fz=1 x13 vs
+   =0 fz=0 x13. Writer of the denormals unattributed (game-thread float code; single-source). Soak s7405_ftz_levels queued.
+   **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
+   **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
+   verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
+   threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts
+   (LOCKED 23, DIAG 23, INITORDER 11, BENIGN 7, CONFINED 5, ARTEFACT 2), 0 RACE; controls pass. The one real two-writer site:
+   the last-drawn framebuffer is published by BOTH submitRasterScene instances (s7383 assumed one). Gfx thread makes every
+   address change (8509 vs render 0), but 0/52000 overlaps (control 1/1) and 0/9000 mode-3 presents saw a Gfx-ahead address
+   (planted mismatch 6/6; Gfx holding an ahead address 30 ms x5 still 0) -> serialized, H-serial. Default unchanged;
+   ROGUESQ_S7384_LDGFX=0 = render-thread-only publish (opt-in). submitRasterScene's floor statics and s7383 width pair are now
+   thread_local / atomic. Probe ROGUESQ_S7384_LOG=1 (+ _CTL=1).
+   **AY CLOSED s7383, H-relaxed-publish selected for ONE default-path tuple, fixed** (`tools/s7383_atomic_order_census.py --check`
+   rc 0: 588 explicit-order ops on 250 atomics + 16 static volatiles; COUNTER 131 / ORDERED 33 auto, 102 hand verdicts in
+   tools/s7383_atomic_reviewed.tsv, 0 PUBLISH; controls pass). The RT64 last-drawn framebuffer (addr / width / siz = three relaxed
+   atomics, workload-thread writer, unlocked present-thread reader in follow-draw mode 3 = default) could pair a new address with the
+   previous width. Now also one packed 64-bit word, store-release / load-acquire (`rs64_last_drawn_snapshot`, ROGUESQ_S7383_FBPACK=0
+   old). Planted-tear control (ROGUESQ_S7383_TEAR_CTL=1, wrong width for 200 us): detector 3377 / 1580 tears; old path let 53 torn
+   widths reach the mode-3 decision ([vi-follow-skip] wild-w), new path 0. Default play: 0 natural tears in 21000 reads, only 6
+   width changes per 200 s (latent, single-source). All other relaxed / volatile rows are counters, self-contained values, SPSC
+   indices, or env-gated diagnostics.
+   **AX CLOSED s7382, H-gap selected** (`tools/s7382_thread_qos_census.py --check` rc 0, 58 creators, tools/s7382_thread_qos_reviewed.tsv;
+   runtime ROGUESQ_S7382_QOS=1 + _QOS_CTL=1 control, `--runtime <log>`): in mission [Game]_MAIN 51-78.5% and Gfx_Thread 50-66.6% of
+   a core run at DEFAULT QoS (pri 31) by default, USER_INTERACTIVE (pri 46) under QOS_ALL=1; VI is RT pri 97; everything else
+   < 2.5%. No inversion on a hot path. Default NOT flipped (item 4): second evidence line for the owner's QOS_ALL question.
+   RT64 setCurrentThreadPriority is a no-op on macOS. Unattributed boot-only unnamed DEF thread 15.6% t<60 s (control-armed runs only).
+   **AW CLOSED s7381** (`tools/s7381_spin_census.py --check` rc 0, 75 rows, tools/s7381_spin_reviewed.tsv): RT64
+   advanceToNextWorkload / advanceToNextPresent pure spins never wait in play (0/12570, 0/12697) but burn a core when they do
+   (forced 150 ms stalls: 619M mutex iterations); now block on barrierCondition (ROGUESQ_S7381_BARRIER_CV=0 old): 58 evals for
+   the same 29 stalls, TSan rc 0. 22 guest osYieldThread polls: 0 calls (control RA fires). VI deadline spin = deliberate
+   s6456/s6967, 493 us/VI = 3.0% of a core. Counters ROGUESQ_S7381_SPIN=1 (+ _SPIN_CTL=1 control), default off.
+   **AV CLOSED s7380 as H-shutdown** (`tools/s7380_condvar_census.py --check` rc 0): 19 waits / 35 notifies all LOCKED in play;
+   9 RT64 destructor stop notifies + 3 start races fixed (exit paths). ENABLE_OPTIMIZED_SHADER_GENERATION is undefined on macOS
+   (ubershader only).
+   **AU2 CLOSED s7379 as H-ordered, no fix:** the resize/fb-config teardown (threadConfigurationUpdate destroyAll under managerMutex)
+   cannot overlap a present's target use: W waits presentId<=W.presentId (notify only after frame-0 GPU pass), every later present
+   waits workloadId>=W, advanced only after the teardown. Probe ROGUESQ_S7379_PROBE=1 (default off): 0/56 (build) and 0/75 (TSan)
+   teardowns overlapped the present target phase under resize stress (ROGUESQ_WIN_TEST_RESIZE_S + FS_TEST_TOGGLE_LIST_S), controls
+   busy 56/56, 75/75 and seen 755/755, 88/92; TSan rc 0, CTL 3045, no manager races. Re-run the probe after any change to
+   waitForPresentId / waitForWorkloadId / notifyPresentId placement.
+   **AU CLOSED s7378** (`tools/s7378_shared_res_census.py --check` rc 0, 20 fields, 192 accesses; hand verdicts
+   tools/s7378_shared_res_reviewed.tsv): 13 GUARDED (all config fields under configurationMutex, incl. targetRate/resolutionScale:
+   threadConfigurationUpdate holds it for its whole body), 1 CONFINED, 6 fixed: swapChainRate (port get_display_framerate read
+   unlocked = the s7354-s7377 TSan BENIGN row), viOriginalRate, interpolatedFramesIndex -> std::atomic; the per-present
+   interpolatedFrames counter reset and the present's two count reads, and the interpolatedColorTargets grow, now under
+   interpolatedMutex (ROGUESQ_S7378_SHLOCK=0 = old). Control: `--rev HEAD` (upstream) flags the unlocked rows. Smoke both arms crash 0,
+   14 resets, 10800 presents each; TSan rc 0, CTL 3011, swapChainRate group gone (was x1 in s7375/s7376/s7377 runs), 0 SharedQueueResources rows.
+   **AT CLOSED s7377** (`tools/s7377_present_lock_table.py --check`): present-thread colour-target get + GPU pass now under
+   workloadMutex, colorImageAddressVector snapshotted under managerMutex (ROGUESQ_S7377_EARLYLOCK=0 = old).
+   **AS2 CLOSED s7376**: port present-thread inserts into targetManager/fbManager now under workloadMutex (ROGUESQ_S7376_PQLOCK=0 = old).
+   **AS CLOSED s7375** (tools/s7375_nolock_threads.py + s7375_nolock_reviewed.tsv, `--check`): the 98 s7366 NOLOCK containers,
+   walker + hand verdicts CONFINED 37 / CALLER-LOCKED 16 / NOT-SHARED 15 / HANDOFF 9 / INIT-ONLY 6 / GUEST-SERIAL 6 / CFG-DEAD 5
+   (RT64 texture-replacement-pack state, inspector-only: upstream race if a pack were loaded) / FIXED 1: the depth-hist diag
+   (ROGUESQ_FLOOR_DEPTH_DIR, rt64_framebuffer_renderer.cpp) reached from both FramebufferRenderer instances (State on the gfx
+   thread, WorkloadQueue on the RT64 render thread) now locks g_depthMu, gate at static init. Smoke clean, diag control 12544
+   events; TSan arm 0 reports in that file, CTL fires (hangar-only coverage; two-thread reach single-source, static).
+   **AR CLOSED s7374** (tools/s7374_lazy_static_census.py + s7374_lazy_static_reviewed.tsv, `--check`): 236 lazy-init statics,
+   27 COMPANION/PTR rows thread-reviewed (SINGLE 8, GUEST-SERIAL 11, NOT-LAZY 7), 1 real multi-thread site FIXED: rs64_s7012_cap
+   (guest + gfx_thread under S7026_SUB / G1E_TRING) now a magic static (could read the cap tables as zeros or v[3] out of range);
+   172 SIMPLE rows are idempotent single-word values, not converted. TSan arm with the gfx caller armed: 0 reports on it, CTL fires.
+   **AQ CLOSED s7373** (tools/s7373_aq_gate_table.py). Re-cut rows on the tree the coverage build used (tool exits 3 on stale rows).
+2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
+   more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
+3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
+   Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
+   left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
+   s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
+4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
+   QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
+5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
+   (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
+   s7005/s7006), G5g hangar lens (s6907), G5h cutscene background (s6908-s6919): owner flight / look.**
+6. **L15 21:9: owner re-flight after s6992 PTRMASK.**
+7. **G1d close-out: owner judgement** (scratch/s6731/sheet_menus_owner.png); owner scope: why L7/L16/L17
+   autopilot holds cycle the backdrop menu.
+8. **Near-wall NEARLIFT, G3 21:9 holes (s7132-s7140), L4 cutscene SKYFILL_BOT (s7166): owner look.**
+9. **Owner judgement / parked:** FPS60 feel, G3c sheets, native hangar geometry, rare dd4/dd8 gfx SIGBUS
+   (single-source). Reopen on an owner report or side-effect failure.
+10. **(PARKED by owner) G1(d) objective qualification.** PORTING-STATE s6640-s6687 first.
+11. **Rerun-after-change censuses (all CLOSED, 0 defects):** after a regen: tools/scan_selfbranch.py +
+    tools/s7081_selfbranch_test, tools/s708[2-7]_* lowering, host-shim s7088/s7089; after a fixup edit:
+    tools/s7090_fixup_statement_census.py (exit 1 = defect); after RSPRecomp/ucode fixups: tools/ucode_regen.sh
+    `verify`, tools/s7093_su_census.py --controls; after rsp_vu*.hpp / DMEM: tools/s7092_vu_mem_test; after rsp DMA:
+    tools/s7094_dma_test + s7094_dma_census.py; after dpc_bridge submit/defer/wrap: ROGUESQ_S7095_DPC /
+    S7096_FWD=ctl / S7097_EDIT=ctl (missing/dup/order/unattributed must stay 0); after an rs64_s7239 edit:
+    tools/s7241_merge_test/run.sh; tools/s7243_resume_test.zsh; loop: tools/agent/test_soak_idle_gate.sh.
+    After any host-code edit: every class census in item 14 with `--controls` (exit 1 = survivor or failed control).
+12. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
+    misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
+    contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
+13. **Harness discipline (CLOSED s7313-s7314, s7332):** iteration tools take the pid from tools/rs64_game_pid.zsh;
+    loop.sh SIGKILLs any game alive around each soak recipe and names it in SOAK-RESULTS (a kill line = that run's
+    frame times are contaminated). Soak recipes take the analyser's own rc (`${pipestatus[1]}`), never a grep's.
+14. **Idiom-class audits s7315-s7366: ALL CLOSED** (full text, numbers and controls: s7370 archive). Census tool per class:
+    - guest-side: retail RAM bound s7315 (tools/s7315_retail_bound_census.py, single-source); DATA-word bound s7316
+      (s7316_data_bound_census.py); spill holders / class B compares / C diffs s7317-s7320 (ROGUESQ_S7317_ALLOCMAP=1,
+      s7317_spill_holders.py, apply_s7318_bcmp_probe.py); D 24-bit truncation s7321 (s7317_field_compare_census.py,
+      s7321_trunc_report.py); E KSEG re-tag s7322; F addr-derived index s7323 (s7323_addr_index_census.py); G RCP-visible
+      spill refs s7324 -> FIXED s7327 (s7324_rcp_report.py); audio heap-gap reads s7325 (artefact); audio freed-block
+      access s7330 (s7330_task_free_report.py); scene-reset dangling writers s7331 (s7331_reset_writer_report.py);
+      flags&4 carve s7332-s7334 (s7333_carve_report.py); fb-layout bound consumers s7335; host arena layout s7336
+      (s7336_host_arena_table.py); R stale 8 MB bounds s7337; M 8 MB masks s7338; N 16 MB masks s7339 (latent);
+      O KSEG0 16 MB bounds s7340; P top-byte tests s7341; L zero-extended bases s7361 (apply_s7361_sext_bases.py);
+      AM raw rdram+X s7362 (s7362_rdramraw_census.py); **BA guest thread stack headroom s7391** (build_spwm:
+      include/spwm/recomp.h checks all 68k generated $sp adjusts, tools/build_spwm.sh + s7391_spwm_run.zsh +
+      s7391_spwm_report.py, ROGUESQ_S7391_SPWM=1 [+_CTL=1]): 27 threads on the s7386 route all inside their stacks, deepest
+      mainBootstrapWorker 6848/8192 B, 1 KB audio stack uses 120 B; line B (service-worker stack snapshot, exact bounds from
+      the registerServiceWorker descriptor) dirties 16-44 B above the $sp min, canaries intact, planted control seen ->
+      H-fits. Soak s7391_spwm_levels (L4/L7/L12) queued. Tools are tools/s73NN_*_census.py.
+    - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
+      V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
+      AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
+      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AS NOLOCK containers s7375, AS2 lockless files s7376 (AT present-thread maps open); AF signal safety s7355; AG unchecked alloc s7356;
+      AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
+      s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
+      reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census) + runtime half s7372/s7373 (COV=1 arm,
+    tools/s7372_aq_runtime_cross.py, tools/s7373_aq_gate_table.py): CLOSED.
+15. **Default-on fixes from the audits and TSan thread (=0 / old value restores the previous behaviour):**
+    ROGUESQ_SPILL_RESET + 8 MB spill arena 0x81000000 (s7326, SPILL_MB=4 old); RSP_DMA25 (s7327); S7334_CLASS5;
+    S7335_CLAMP; S7336; S7337; S7339; ALTSTACK (s7355); S7358_ENVCHECK; S7364_WLRESET; CF0_DUPDROP (s7367, guest
+    video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
+    DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
+    build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
+16. **BQ CLOSED s7407 (host replacements of guest math): H-equal, no code change.** `tools/s7407_libm_census.py` (rc 0):
+    no libm routine is replaced; guest sinf (0x80033960, 133 jal) and cosf (0x8002B190, 75 jal) are recompiled retail code,
+    sqrtf has no ELF symbol (inline sqrt.s). The 13 math-shaped host bodies in librecomp math_routines.cpp: 4 LIVE
+    (__ll_div 1 call lldiv, __ll_mul 2 lldiv+osInitialize, __ull_div 2 _Litob+osInitialize, __ull_rem 1 _Litob), 9 DEAD (no ELF
+    body or ignored with 0 jal). Host body text extracted verbatim vs a C transcription of the retail MIPS (sw/ld pair,
+    ddiv(u)/dmultu, break 7/6, dsll32/dsra32 split), 4e6 random + 22x22 edge pairs with garbage upper register halves:
+    mismatch 0 x4; perturbed-host control (r3^=1) mismatches all 4 -> PASS. Only divergence = retail break 7 (y=0) / break 6
+    (INT64_MIN/-1) traps where host returns ddiv values; unreachable: divisors are the print base 8/10/16 (_Litob, lldiv) and
+    the constant 4 (osInitialize). s7407 fold s7406_fpat_levels: L4/L7/L12 CONTROL PASS, H-none x3 -> BP stands.
+17. **BR CLOSED s7408 (FP->int conversion macros): H-equal, no code change.** `tools/s7408_cvt_contract.py` (rc 0): all
+    2^32 floats + 2.7e8 doubles, real recomp.h at -O2, RM N and Z: in-range mism 0 on all 6 rows (control +1 perturb PASS).
+    Out of range TRUNC saturates, CVT_W wraps (frintx + 64-bit fcvtzs, no IOC: BP was blind to it). Emitted: TRUNC_W_S 1171,
+    TRUNC_W_D 28, CVT_W_S 13, CVT_W_D 2, L/round/floor/ceil 0 (CVT_L_S stray `;` unreachable). Live build_cvt (`tools/build_cvt.sh`,
+    report `tools/s7408_cvt_report.py`): L4 21:9 dd8 and dd1, 475/479 sites, oor 0, mism 0, plant control PASS. Worst site
+    convertMat3x4ToN64Mtx translation x2^24 at 53% of int32, identical dd1/dd8. Widen soak s7408_cvt_levels L5/L10/L15: rc 0 x3 (s7409 fold).
+18. **BS CLOSED s7409 (FR mode / odd-FPR views): H-consistent, no code change.** Generator: float/double operands ->
+    own slot `ctx->fN.fl/.d`; mtc1/mfc1/lwc1/swc1 odd -> `ctx->f_odd[(N-1)*2]` (librecomp cop0_status_write: FR=0 ->
+    f(N-1).u32h, FR=1 -> fN.u32l = VR4300 physical layout). `tools/s7409_fodd_census.py` (rc-less, --plant control PASS):
+    2500 fns, 19 use f_odd (146 uses), 7 hand-asm FR=1 routines; own-slot odd access in an FR=0 region only in 4 fns:
+    fetchIndexedVertexPosition / fetchVertexPositionPrimary / normalizeVec3InPlace (only caller = transformAndEmitFaceVertices'
+    FR=1 region) and data_gap_80023968 (no caller). Live: `tools/build_fodd.sh` -> build_fodd/ (probes at entry of all 20
+    odd-FPR fns + after all 13 Status writes; mode check + real write-through of f_odd[40] vs f21.u32l/f20.u32h; plant =
+    swapped f_odd base), report `tools/s7409_fodd_report.py`. L5 dd8 and dd1 21:9 FPS60, 131 s hold each: 25 sites,
+    bad 0, view_bad 0, plant 242771/242771 and 321069/321069 flagged -> CONTROL PASS x2. FR never leaks into FR=0 code
+    (sinf/cosf/guPerspectiveF always m0). Never ran: projectPointToScreen (sets FR, no clear; s7087 dead), data_gap_80023968,
+    _Ldtob, quaternionToMat3x4 on L5. Widen soak s7409_fodd_levels (L4/L7/L12) queued. Lesson: a new build dir needs the
+    owner save COPY in <dir>/saves (build_fodd.sh does it); without it the route boots profile-less, START is ignored at
+    the 768 phase, 5/5 nomission (looked like the probe hanging the game until a zero-probe arm also failed).
+19. **BT CLOSED s7410 (callee-saved preservation across the FR=1 hand-asm routines): H-preserved, no code change.**
+    `tools/s7410_csave_census.py` (--plant: dropped ldc1 f22 + unsaved s0 write -> both flagged, CONTROL PASS): every
+    callee-saved pair the 3 FR=1-region routines (transformAndEmitFaceVertices incl. its 3 FR=1 callees, evalCubicSplineAtTime,
+    mat3x4Multiply) write is sdc1-saved and ldc1-restored in an FR=0 region (= whole caller pair in BOTH the recomp layout
+    and the VR4300 physical one, so odd own-slot writes are harmless); s0-s3 sw/lw paired; sp balanced; ra untouched.
+    transformVec3ByMat34 / rotateVec3ByMat3x3 / quaternionToMat3x4 never touch f20+ or s-regs. Only projectPointToScreen
+    (0x800196A8) clobbers f20-f26 unsaved: 0 jal callers in the image, 0 calls live (s7409/s7410) -> H-clobber-dead, and
+    the same retail ABI break in either model. Live `tools/build_fsv.sh` -> build_fsv/ (entry snapshot vs every return:
+    f20..f30 .u64, s0-s8, sp, FR mode), report `tools/s7410_fsv_report.py`: L5 21:9 FPS60 131 s hold, dd8 3.02e6 returns /
+    dd1 4.31e6, fbad=gbad=mbad=0, plant (post-restore f24+s1 flip every 64th) 47196/47196 and 67291/67291 -> CONTROL PASS
+    x2. s7410_fsv_levels widen soak: L4/L7/L12 CONTROL PASS + H-preserved x3 (s7411).
+20. **BU CLOSED s7411 (unaligned lwl/lwr/swl/swr/ldl/ldr/sdl/sdr): H-equal.** `tools/s7411_unaligned_contract.py`: real
+    header vs byte-wise BE model, 1e6 cases/macro + ulw/usw pairs, 0 MISM; lane-swap mutants CONTROL PASS. All sites paired
+    except 5 covered libultra bcmp/bzero prologues; no lone lwr (LWR upper-32 has no live site).
+21. **BV CLOSED s7412 (integer emission on 64-bit GPRs): H-equal.** `tools/s7412_int_emission.py`: 14,687 verbatim forms of
+    44 ops vs VR4300 model, 3.76e6 cases 0 MISM; 5 mutants CONTROL PASS. div-by-0: 132 break-7 guarded + 3 const (= s7085)
+    + 3 dead data_gap. 16 non-canonical MusyX flows all andi-masked to low word.
+22. **BW CLOSED s7413 (aligned load/store macros): H-equal.** `tools/s7413_aligned_ldst.py`: 58,654 verbatim forms of 15 ops
+    vs a byte-wise BE model, 0 MISM/0 stray, mutants CONTROL PASS x8. KSEG1 not aliased (PROT_NONE) but 0 RDRAM-KSEG1
+    constants; 206 $zero-base sites in 3 dead data_gap_* fns. Single-source model.
+23. **BX CLOSED s7414 (FP compare + bc1x): H-equal.** `tools/s7414_fp_compare.py` (rc 0): only ordered c.eq/lt/le/ole used
+    (2,837 sites, 282 forms) -> exact incl. NaN, 0 MISM; FZ=1 differs on denormal inputs only (runtime 0 IDC, s7406). Generator
+    table wrong on NaN for the 8 unordered conds: LATENT, 0 sites -- re-run after any ROM/asm change. 2,796 bc1x polarity +
+    reaching-def CLEAN (10 in dead copies/data_gap fns), plants CONTROL PASS.
+24. **BY CLOSED s7415 (FP arith + moves): H-equal.** `tools/s7415_fp_arith.py` (rc 0, ~20 s): 17,910 sites, 2,183 verbatim
+    forms (add/sub/mul/div .s/.d, neg/abs/sqrt.s, neg/abs/mov.d, mov.s, mfc1/mtc1 incl. 13 odd-FPR f_odd forms) vs an
+    exact-rational IEEE RNE model, ~8.1e6 cases per arm, 0 MISM 0 stray at FZ=0 and FZ=1 (vs ARM-flush model). NaN results
+    match as NaN; payload differs (ARM 0x7FC00000 vs MIPS 0x7FBFFFFF) but invalid ops are runtime-unreached (s7406 IOC=0).
+    NAN_CHECK = live assert (Debug build, 19,744 ___assert_rtn relocs): a NaN operand aborts the port; 0 fires in 229 logs.
+    Contraction: 0 fused ops on generated statement lines (control: one-statement a*b+c fuses, MUL_S;+ does not); the 191
+    fmadd-family are host patch helpers. 28 FPS60 patch sites (s6817/s6826) are identity at k=1. Mutants CONTROL PASS x10,
+    neutral x2. Soak s7415_ioc_levels queued (IOC re-check L5/L10/L15).
+25. **BZ CLOSED s7416 (control flow + delay slots): H-equal.** `tools/s7416_ctrl_flow.py` (rc 0, 3 s): 18,722 cond branches
+    (COND text, 64-bit/SIGNED, cond-before-slot, target, slot copy, likely skip), 14,494 jal, 5,245 j/b, 2,527 jr $ra, 177 jump
+    tables == ELF words, 634 cond forms 0 MISM on 64-bit edges; mutants + 11 structural plants PASS; 70 residue = 54 fixup
+    PATCH + 16 dead data_gap. LATENT: jr/jalr emit the slot before reading rS (2 sites, dead data_gap_80024A0C). Re-run on change.
+26. **Next audit candidate:** class CA, opcode-coverage residue: every disasm op not scored by BU-BZ (cop0/cache/sync/trap...).
+    Any new arena or pointer layout re-runs items
+    11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
+27. **When 1-26 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
+
+### Evidence index
+
+- Maintenance archives (whole CURRENT-TRUTH verbatim): PROJECT-OVERVIEW s7370, s7307, s7187, s6994; trims s7262,
+  s7134, s7121, s7104, s6982, s6962; s6900, s6847, s6759; [Maintenance s6667 retained evidence](PROJECT-OVERVIEW.md#maintenance-s6667-retained-evidence).
+- Objective contracts [G1-OBJECTIVE-RESPONSE](G1-OBJECTIVE-RESPONSE.md); images [G1-FRAMEBUFFER-COVERAGE](G1-FRAMEBUFFER-COVERAGE.md).
+- Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png/jpg.
+- Queued-soak verdicts `scratch/agent/SOAK-RESULTS.md`; loop.sh edits take effect before the next soak phase
+  (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
+- Recent chronology: PORTING-STATE sessions 7307-7370; search bounded windows only.
