@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7407 (2026-11-15).
+Compact operational handoff, as of Session 7408 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -481,14 +481,17 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     mismatch 0 x4; perturbed-host control (r3^=1) mismatches all 4 -> PASS. Only divergence = retail break 7 (y=0) / break 6
     (INT64_MIN/-1) traps where host returns ddiv values; unreachable: divisors are the print base 8/10/16 (_Litob, lldiv) and
     the constant 4 (osInitialize). s7407 fold s7406_fpat_levels: L4/L7/L12 CONTROL PASS, H-none x3 -> BP stands.
-17. **Next audit candidate:** class BR, recompiler FP->int conversion macros (recomp.h TRUNC_W/L_S/D = C casts, CVT_W/L_S/D =
-    lrint/llrint truncated to int32) vs VR4300 on NaN/inf/out-of-range/-0/half-way under RM nearest: VR4300 raises an
-    unimplemented-op exception on out-of-range (retail fault), arm64 saturates (fcvtzs) while (int32_t)lrintf wraps. Offline
-    sweep every 2^32 float per macro vs a VR4300 model, then census which guest conversion sites see out-of-range live
-    (BP's IOC=0 covers route stmts only). NEXT.md s7408.
+17. **BR CLOSED s7408 (FP->int conversion macros): H-equal, no code change.** `tools/s7408_cvt_contract.py` (rc 0): all
+    2^32 floats + 2.7e8 doubles, real recomp.h at -O2, RM N and Z: in-range mism 0 on all 6 rows (control +1 perturb PASS).
+    Out of range TRUNC saturates, CVT_W wraps (frintx + 64-bit fcvtzs, no IOC: BP was blind to it). Emitted: TRUNC_W_S 1171,
+    TRUNC_W_D 28, CVT_W_S 13, CVT_W_D 2, L/round/floor/ceil 0 (CVT_L_S stray `;` unreachable). Live build_cvt (`tools/build_cvt.sh`,
+    report `tools/s7408_cvt_report.py`): L4 21:9 dd8 and dd1, 475/479 sites, oor 0, mism 0, plant control PASS. Worst site
+    convertMat3x4ToN64Mtx translation x2^24 at 53% of int32, identical dd1/dd8. Widen soak s7408_cvt_levels (L5/L10/L15) queued.
+18. **Next audit candidate:** class BS, FR=0 odd-register single-precision access (recomp `f_odd` mapping, 145 uses in 8
+    files, e.g. hand-asm transformAndEmitFaceVertices $f5/$f7/$f9) vs VR4300 FR=0 semantics. NEXT.md s7409.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

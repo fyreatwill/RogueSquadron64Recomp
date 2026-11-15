@@ -1,16 +1,21 @@
-# NEXT (s7408)
-HYPOTHESIS-ID: fp-int-conversion-contract
+# NEXT (s7409)
+HYPOTHESIS-ID: fr0-odd-register-access
 
-s7407 closed class BQ (H-equal: no libm replaced; 4 live IDO 64-bit helpers bit-identical, tools/s7407_libm_census.py).
-Class BR: recompiler FP->int conversion macros, lib/N64ModernRuntime/N64Recomp/include/recomp.h:395-450.
-TRUNC_W_S/D, TRUNC_L_S/D are plain C casts (UB out of range; arm64 fcvtzs saturates, NaN -> 0); CVT_W_S/D = (int32_t)lrintf /
-lrint (64-bit long truncated -> WRAPS out of int32 range); CVT_L_S has a stray ';' in its macro. VR4300: out-of-range/NaN/inf
-conversion raises an unimplemented-operation exception (retail fault), in-range follows FCSR RM (nearest; s7405 RM rows H-none).
-1. Offline (one script tools/s7408_cvt_contract.py + generated C harness, like s7407): every 2^32 float through each .s macro
-   (and a dense double sweep for .d) vs a VR4300 model {in-range: RM-nearest / trunc result; else UNIMPL}. Rows: equal, UNIMPL
-   (retail faults, record host value: saturate vs wrap), mismatch in range (must be 0). Control: perturbed macro (+1) mismatches.
-2. Census: grep RecompiledFuncs for every TRUNC_*/CVT_W_*/CVT_L_* site (count, function); join with BP's build_fpat IOC=0
-   (route stmts) - any site outside the BP route that can see |x|>=2^31 (e.g. float from a guest-derived distance) is a row.
-3. Hypotheses: H-equal (in-range identical, out-of-range unreachable live), H-wrap-live (a live CVT_W site receives |x|>=2^31
-   and the host wraps where arm64 cast would saturate -> pick saturation behind default-on flag, =0 old), H-macro-bug (the CVT_L_S
-   stray ';' changes an expression at some emit site -> fix in fixup or recomp.h with export.sh).
+s7408 closed class BR (H-equal: FP->int macros identical in range on all 2^32 floats; 0 out-of-range live at 475 sites,
+dd8 + dd1; tools/s7408_cvt_contract.py, build_cvt). Fold the queued s7408_cvt_levels soak (L5/L10/L15) if it ran.
+Class BS: odd FPR access / FR mode. recomp_context has fpr f0..f31 plus `uint32_t* f_odd` and `mips3_float_mode`
+(recomp.h ~478); CHECK_FR is an assert (compiled out in Release?). 145 f_odd uses in funcs_4/7/8/26/27/36/42/49.
+Seen in s7408: transformAndEmitFaceVertices (hand asm, sets Status.FR via mtc0 and clears it with & 0xFBFFFFFF at exit)
+WRITES odd destinations through ctx->f_odd[(7-1)*2] but READS `ctx->f7.fl` directly (CVT_W_S(ctx->f7.fl), mfc1 reads
+f_odd). If f_odd aliases the high half of the even fpr in FR=0 and f7 is a separate slot in FR=1, a mixed read/write pair
+can see two different registers.
+1. Offline: read how librecomp sets f_odd and mips3_float_mode on cop0_status_write (lib/N64ModernRuntime/librecomp),
+   and how the generator picks f_odd vs fN (../N64Recomp/src/cgenerator.cpp). Census every f_odd use and every plain
+   odd fN.fl/u32l use per function, and which functions run with FR=1 (mtc0 Status with bit 26 set).
+2. Model: VR4300 FR=1 has 32 independent 64-bit FPRs; FR=0 odd single-precision ops touch the high word of the even pair.
+   Each function gives a row: consistent (all odd accesses through one view) / mixed (read via one view, write via the other).
+3. Hypotheses: H-consistent (every function uses one view for each register, or the two views alias correctly at runtime),
+   H-mixed-live (a function on the live path writes through f_odd and reads fN, or the reverse, with a different value
+   seen; fix in the generator/fixup + export.sh if lib/ is touched), H-dead (mixed only in functions never called).
+   Discriminator: the census rows plus, for any mixed function, a live check in a separate build dir comparing the two
+   views at the read (positive control: a planted write to one view must show up in the other check).

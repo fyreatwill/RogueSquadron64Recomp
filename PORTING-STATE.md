@@ -195987,3 +195987,47 @@ Rules out H-diverge and H-ulp-benign for every live replacement. Class BQ CLOSED
 Conclusion: selects H-equal (bit-identical on the whole non-trapping domain, trap domain unreachable), refutes H-diverge and the
 "host libm shims" premise. Next discriminator: class BR, recomp.h FP->int conversion macros (C casts / lrint truncation) vs
 VR4300 out-of-range/NaN behaviour, full 2^32 float sweep offline (NEXT.md s7408).
+
+## Session 7408 (2026-11-15) — class BR FP->int conversion macros closed (H-equal): every 2^32 float identical in range under both guest RMs, 0 out-of-int32 conversions at 475 live sites (dd8 and dd1, control PASS)
+
+Target: recomp.h TRUNC_W/L_S/D (plain C casts) and CVT_W/L_S/D (do_cvt_*: (int32_t)lrint/llrint) vs the VR4300.
+Hypotheses: H-equal (in-range identical, out-of-range unreachable live), H-wrap-live (a live CVT_W site gets |x|>=2^31 and
+the host wraps), H-macro-bug (stray ';' in CVT_L_S changes an emitted expression).
+
+1. Census (`tools/s7408_cvt_contract.py`, offline): RecompiledFuncs emits TRUNC_W_S 1171 (202 funcs), TRUNC_W_D 28 (8 funcs),
+   CVT_W_S 13, CVT_W_D 2, and 0 of TRUNC_L_*, CVT_L_*, round/floor/ceil.{w,l}. CVT_L_S has 0 emit sites -> H-macro-bug
+   unreachable (latent only). The 15 CVT sites: computeVoiceVolumePanCoefficients x4 (0x80094190..0x80094330),
+   transformAndEmitFaceVertices x3 (0x80018CF8/D00/D0C, colour clamped to <=255 by c.ole.s just before), convertMat3x4ToN64Mtx
+   x3 (0x80018E00-08: translation row x 2^24, constant at 0x800186F0), packMtxRowFloatToFixed x3 (0x80018E74-7C: rows x 65536,
+   0x800186EC; both hand-written asm, the only caller is traverseSceneGraphRecursive 0x800155E4), guPerspectiveF x2
+   (0x8002EAEC/EB1C: IDO u32 idiom ctc1 RM=1 / cvt.w.d / cfc1&0x78 test, perspNorm = 131072/(n+f), only taken when n+f>2,
+   so the result is < 65536). get_cop1_cs returns only RM, so the cfc1&0x78 test is 0 on host; retail also reads 0 there
+   because ctc1 1 just cleared the flags and the only flag the cvt can raise is Inexact (bit 2, outside 0x78).
+   clang -O2 lowers CVT_W_S to frintx + fcvtzs x (64-bit) then a 32-bit truncation: out of range it WRAPS and raises no
+   IOC, so s7406's FPSR instrument could not see CVT_W overflow. TRUNC_W_* lowers to fcvtzs w (saturates, sets IOC).
+2. Offline sweep: the real recomp.h is #included and compiled with cc -O2. All 4,294,967,296 float patterns go through TRUNC_W_S
+   and CVT_W_S, plus 2.7e8 strided, edge and tie doubles through TRUNC_W_D and CVT_W_D, each under host FE_TONEAREST and
+   FE_TOWARDZERO, compared with a VR4300 model (trunc / round per RM; NaN, inf or out of int32 = UNIMPL, which faults on
+   retail). In range: mism 0 on all 6 rows (eq 2,650,800,129 per float row). Out of range: TRUNC sat 100%; CVT_W_S sat
+   25.2M, wrap 528M, other 1.09e9 (|x|>=2^63 -> low half of INT64 sat). Control: -DPERTURB (+1 when |x| is in [1000,1001))
+   gives mism 32768 (float) / 16650 (double) on every row -> PASS. rc 0, 53 s.
+3. Live census: new separate build dir `tools/build_cvt.sh` -> build_cvt/. `tools/s7408_cvt_transform.py` wraps all 1214
+   macro uses as RS64_CVT(pc, kind, MACRO, x) (tools/s7408_cvt/rs64_cvt.h + rs64_cvt_rt.c). Per site it records calls,
+   max|x|, UNIMPL count, in-range host-vs-model mismatch (model rounds in the current host mode = guest RM via set_cop1_cs)
+   and calls under RM=Z. Control ROGUESQ_S7408_PLANT=1: every 4096th call per site also classifies x*1e10+-3e9, which must
+   come out UNIMPL. Report `tools/s7408_cvt_report.py <log>` (rc 0 = H-equal + control PASS). Run scratch/s7408_arms.sh: L4
+   21:9 FPS60 WIDE_ROUTE, 150 s hold, arm dd8 (DD_UNSAFE + WIDEWIN) and arm dd1. Both 153-155 s hold, alive, 0 crash, 0 VI stall.
+   dd8: 475 live sites, 4.55e8 conversions, oor 0, mism 0, plant 111429/111429 PASS. dd1: 479 sites, 9.98e7, oor 0,
+   mism 0, plant 24709/24709 PASS. guPerspectiveF ran with RM=Z on 100% of calls (32188/32188), so set_cop1_cs reaches the
+   host FPU and the result matched the model. The closest site to overflow is the convertMat3x4ToN64Mtx translation row,
+   max 1.148e9 (53% of 2^31, |t| = 68.4 in 1/2^24 units), the same value at dd1 and dd8, so the extended draw distance
+   does not push it. Next closest: setupCameraMatrices TRUNC_W_S 0x80017274 at 4.54e8 dd8 vs 2.52e8 dd1 (21%), and
+   packMtxRowFloatToFixed at 1.67e6.
+Second line for TRUNC: s7406 BP saw IOC=0 at every route statement (fcvtzs w sets IOC on overflow), and today's census
+also shows oor 0. CVT_W has only today's line (single-source for the 15 CVT sites; widen soak queued:
+scratch/agent/soak_queue/s7408_cvt_levels.sh, L5/L10/L15).
+No code change: no live site reaches the retail-faulting domain, so changing the host's out-of-range value would only
+alter behaviour the game never uses. ORIGIN: n/a (no mitigation landed).
+Conclusion: selects H-equal (identical in range on the whole float domain; 0 live out-of-range conversions at dd1 and dd8),
+refutes H-wrap-live (0 oor at all 15 CVT sites, worst 53% of range) and H-macro-bug (CVT_L_S never emitted). Class BR
+CLOSED. Next: class BS, FR=0 odd-register single-precision access (f_odd mapping, 145 uses in 8 files) vs the VR4300.
