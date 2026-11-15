@@ -6031,7 +6031,9 @@ static inline void rs64_rt_submit(uint32_t lo, uint32_t hi, int site) {
 extern "C" int rs64_s7097_on; extern "C" void rs64_s7097_begin(uint32_t, uint32_t, uint8_t *);
 extern "C" void rs64_s7097_pre(int); extern "C" void rs64_s7097_post(int); extern "C" void rs64_s7097_end();
 #define RS64_W7(id, call) do { if (rs64_s7097_on) rs64_s7097_pre(id); call; if (rs64_s7097_on) rs64_s7097_post(id); } while (0)
+extern "C" void rs64_s7389_scan(uint32_t, uint32_t, const uint8_t *);  // s7389 fb-load watch marks
 static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
+    rs64_s7389_scan(lo, hi, g_rdram_for_submit);
     if (rs64_s7097_on) rs64_s7097_begin(lo, hi, g_rdram_for_submit);
     static const bool gtime = [] { const char *e = std::getenv("ROGUESQ_GLUE_TIME"); return e && *e && *e != '0'; }();
     static const int gtog = [] { const char *e = std::getenv("ROGUESQ_GLUE_TOG"); return (e && *e == '2') ? 2 : (e && *e == '3') ? 3 : (e && *e && *e != '0') ? 1 : 0; }();  // 3 = A/A null: anchor + parity only

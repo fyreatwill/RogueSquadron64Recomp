@@ -195309,3 +195309,35 @@ window A/B on the old build, off 3/3 vs on 0/3) and refutes H-other-source (bran
 instrument. Residual risk unchanged: genuine CPU writes to a scanned fb are dropped at r2r=0 (none on the route). Default unchanged.
 Queued: scratch/agent/soak_queue/s7388_r2r_fix_levels.sh (L1/L4/L12 300 s, r2r=0 + fix + probe; pass = alive, 0 crash, knob line,
 probe summary, upl=0 hot=0). OWNER-OPT-INS row updated (fix confirmed, soak pending). rt64.patch re-exported.
+
+## Session 7389 (2026-11-15) — RENDER_TO_RAM=0 closed for the owner: fix soak passes 3/3, and a new framebuffer-load watch finds 0 guest CPU loads from a live colour image over the whole s7386 route (control 2.8e8 loads)
+
+**Soak fold.** s7388_r2r_fix_levels rc=0: ROGUESQ_RENDER_TO_RAM=0 with the s7387 stale-upload fix, dd8 21:9 FPS60, L1/L4/L12
+305/303/303 s alive, 0 crash, 0 VI stall, knob line present, [s7388-pres-sum] upl=0 hot=0 on all three (branchB 14-15 presents,
+all black). Second line beside the s7388 in-run probe A/B (old 3/3, fix 0/3) -> the fix holds. OWNER-OPT-INS row now "ready to try";
+default unchanged (owner decides, CURRENT-TRUTH item 4).
+
+**Residual risk measured (NEXT.md item "game CPU reads of scanned fbs").** At r2r=0 RT64 never writes rendered pixels back into RDRAM,
+so any guest code that READS a framebuffer (lens-flare Z test, freeze-frame, screenshot, fade-from-picture) would read stale memory.
+Hypotheses: H-no-reader (nothing reads fb pixels; r2r=0 safe), H-z-reader (Z-buffer reads, e.g. sun occlusion), H-color-reader
+(pause/transition reads the last picture). Discriminator: a guest-load census keyed by exact instruction.
+Instrument (new, diagnostic only, separate build dir): `include/fbld/recomp.h` (found BEFORE the upstream recomp.h only when
+`cmake -DROGUESQ_FB_LDWATCH=ON`, tools/build_fbld.sh -> build_fbld/) wraps MEM_W/WU/H/HU/B/BU; `src/rsp/s7389_fbld.cpp` marks 4 KB
+pages named by SetColorImage (width x bpp x 256 rows) / SetZImage in every gfx RDP submit (hook in rs64_dpc_record_submit_impl,
+returns at once unless ROGUESQ_S7389_FBLD=1); each access reports __FILE__:__LINE__ (one generated line = one MIPS instruction, so
+`tools/s7389_fbld_report.py` reads load vs store and the function straight from RecompiledFuncs). "live" = page named within 8 VIs.
+Positive control ROGUESQ_S7389_CTL=130000:138000 (game data read every frame) through the same macro path. Not covered: LD/LWL/LWR
+helpers (bound to the upstream macros), RSP DMA reads. build/ is unchanged in behaviour (RecompiledFuncs has 0 references to the hit
+function; 40 s boot smoke clean, 0 s7389 lines). Full build_fbld build 54 s.
+Run (tools/s7389_fbld_run.zsh scratch/s7389/run1, 200 s, s7386 keyed route incl. pause/abort/MISSION FAILED/debrief, owner save copy
+read-only, r2r default): crash 0; CONTROL PASS 278,892,532 ctl loads; colour images named 21,058 times, Z 14,675.
+- kind=color live=1: **0 LOADS**; 286,720 STORES, all one rs_memset of fb 0xA6F000 at vi 55 (boot clear; at r2r=0 that clear is not
+  shown, the RDP draws over it; s7385 boot sheet identical).
+- kind=color stale (page named > 8 VIs earlier): 2.5e8 loads, 61 functions, all heap / DL / inflate / mesh code (renderFlatMeshFaceGroup,
+  emitMaterialTexturedDL, heapFreeListDequeue, inflate_fast ...) = memory reuse after the fb moved; none an fb reader.
+- kind=z live=1: 0.8M loads, all in pages 0x000000-0x03D000 (a SetZImage with address 0 = dummy Z image of 2D passes, so the marked span
+  is low RAM code/data: setupCameraMatrices, drawSubtitleText, musyx ...) or 0xC00000/0xC04000 at vi 58-60 (boot DL memory read by
+  beginFrameDLChunk / allocateDisplayListBuffer) and 2 rs_free at 0xB80000. No Z-buffer reader.
+-> **H-no-reader selected on the route (two lines: this census + the s7385/s7386 image identity over the same scenes)**; H-z-reader and
+H-color-reader refuted for the route. Coverage is one level; soak s7389_fbld_levels queued (L5/L10/L15 200 s, fails on any live colour load).
+ORIGIN: not a mitigation (diagnostic instrument only).

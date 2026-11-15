@@ -1,16 +1,14 @@
-# NEXT (s7389)
-HYPOTHESIS-ID: render-to-rdram-double-pass
+# NEXT (s7390)
+HYPOTHESIS-ID: fb-cpu-reader-census
 
-s7388 closed the r2r=0 abort-cut stripe on two lines (s7387 window A/B old build; s7388 present-side probe ROGUESQ_S7388_PRES: old path
-3/3 presents the stale 0xA40000 upload, fix 0/3, branch-B raw presents all black). Soak s7388_r2r_fix_levels is queued.
+s7389 closed RENDER_TO_RAM=0 (soak 3/3, owner row "ready to try") and measured its residual risk: 0 guest loads from a live colour
+image over the s7386 route (build_fbld, ROGUESQ_S7389_FBLD=1, control 2.8e8). Soak s7389_fbld_levels is queued (L5/L10/L15).
 
 Work unit:
-1. Fold the s7388_r2r_fix_levels verdict from SOAK-RESULTS (pass = alive, 0 crash, knob line, [s7388-pres-sum] present with upl=0 hot=0
-   on L1/L4/L12). If it passes: OWNER-OPT-INS row -> "ready to try" (default stays on = retail; owner decides), close CURRENT-TRUTH item 1
-   down to 3 lines, and take the next CURRENT-TRUTH Next-steps item (item 2+) per ITERATION.md priority.
-2. If it fails (hot>0 or upl>0 at r2r=0): the probe line names fb/t/nz -> find which path uploaded despite the s7387 skip (hypotheses:
-   H-other-upload = a second uploadRAM caller, e.g. a non-screen fb path; H-flag = renderToRAM read differently at that moment
-   (extended.renderToRAM toggled); H-probe = branch-B storage with real content not from a stale buffer). Discriminate by the probe's
-   branch/upl fields alone before building anything.
-Residual-risk check (optional, cheap): grep for game CPU writes into scanned fbs (any title/text drawn by the CPU straight to the fb would
-be dropped at r2r=0) - the probe's upl count in the CPUUP arm lists every hash-change fb; all 5-6 per run were garbage, none real content.
+1. Fold s7389_fbld_levels from SOAK-RESULTS (reports in scratch/s7389q/report_l*.txt). Pass = alive, CONTROL PASS, no
+   "TOTAL kind=color live=1 LOAD". If a live colour LOAD appears: the row names function + file:line + page -> read the function
+   (H-real-reader: copy/blit/sample shape, then r2r=0 needs a targeted readback; H-reuse: heap/DL code on a page still within 8 VIs of a
+   SetColorImage = span over-estimate, tighten to the real scissor height). Z live loads on pages >= 0x100000 that are not boot DL
+   memory: same split.
+2. If it passes, CURRENT-TRUTH item 1 stays closed; take the next Next-steps item per ITERATION.md (items 2-10 are owner items ->
+   item 16/17: a new idiom-class audit; candidate: guest-side LD/LWL/LWR + RSP DMA reads of fb pages, the two paths build_fbld does not see).

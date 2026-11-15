@@ -105,6 +105,14 @@ else()
     )
 endif()
 
+# s7389: framebuffer-load watch (separate build dir only, tools/build_fbld.sh). include/fbld/recomp.h wraps the guest
+# MEM_* macros so every access to a page named by SetColorImage/SetZImage is reported. Never ON in build/.
+option(ROGUESQ_FB_LDWATCH "s7389 diagnostic: report guest loads from framebuffer pages" OFF)
+if (ROGUESQ_FB_LDWATCH)
+    target_include_directories(RecompiledFuncs BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/fbld)
+    target_compile_definitions(RecompiledFuncs PRIVATE RS64_FB_LDWATCH)
+endif()
+
 target_include_directories(RecompiledFuncs PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/ultramodern/include
@@ -364,6 +372,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7095_dpc_model.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7096_fwd_cover.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7097_edit_census.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7389_fbld.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7106_rsptri.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}

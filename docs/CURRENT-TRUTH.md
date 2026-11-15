@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7387 (2026-11-15).
+Compact operational handoff, as of Session 7389 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -208,28 +208,13 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **RENDER_TO_RAM=0 (s7385, opt-in, H-redundant for covered scenes).** RT64's Gfx-thread renderToRDRAM pass (2nd draw of every
-   raster scene, s7384) is not needed by the boot cinematics, hangar holo, SELECT YOUR CRAFT, crawl, flight or pause/abort menus
-   (scratch/s7385/sheet_on_off.jpg, sheet_boot.jpg; same images). In-run toggle (ROGUESQ_RENDER_TO_RAM_TOG, [s4267] r2r tag):
-   Gfx-thread per-task cost 14.9 -> 12.4 ms in mission, 5.4 -> 4.2 ms front end (~17 %, not the 6-8 ms guessed); the
-   rs64_run_lle_gfx ucode run (~10 ms) still binds, task rate 44.1 -> 45.4/s quiet host. Soak s7385_r2r_off_levels queued
-   (L1/L4/L12 300 s): **PASS (s7386 fold: 304/305/304 s alive, 0 crash, 0 VI stall, knob line, no Gfx Thread row).**
-   **s7386: H-partial SELECTED (single-source, one capture):** keyed A/B on/off (tools/s7386_route_ab.zsh, dd8 21:9) over level select,
-   AVAILABLE CRAFT/LDESC typing, SELECT YOUR CRAFT, crawl, Calamari intro cutscene, flight, pause, abort, MISSION FAILED, debrief, return
-   to hangar: identical images, 0 stale both arms, same dark runs; BUT at the abort -> MISSION FAILED cut the off arm showed one frame
-   of raw-RDRAM stripes in the 4:3 box (scratch/s7386/abort_trans.jpg, aboff w_0156.12) where on shows black: a VI-scanned buffer the
-   game cleared via RDP is only cleared in RDRAM by the readback pass. Busy host (15x yes, in-run TOG=10): mission 28.3 -> 29.7
-   gfx tasks/s (<2/s = H-noheadroom), max tail one 48 ms outlier.
-   **s7387-s7388: stripe mechanism named and fixed (opt-in path only), TWO lines.** s7387: abort route off 3/3 stripe frames, on 0/3
-   (tools/s7387_stripe_detect.py); content log names RT64's screen-fb hash-change CPU upload of stale RDRAM (fb 0xA40000 w=1024,
-   nz 171 per mille, 135/240 zero rows). Fix (rt64_state.cpp, r2r=0 only): adopt the hash, keep GPU content; ROGUESQ_R2R_CPUUP=1 = old.
-   s7388: window captures CANNOT witness it on the current build (~170 burst caps vs 240, a ~90 ms gap right after the cut; old-path
-   arms 0/3 without the log too = H-rate). New present-side probe ROGUESQ_S7388_PRES=1 (rt64_present_queue.cpp: every present that
-   applies a CPU upload or shows raw RDRAM branch B, with nz/zrows + ms): old path 3/3 present the 0xA40000 upload at the cut
-   (nz 172-173, zrows 133) and 5-6 garbage uploads per run (boot 23 s, craft fade 49 s, crawl 65/71 s, cutscene->flight 125 s,
-   debrief); fix 0/3 uploads, 0 hot presents, branch-B presents all black (11-13/run) -> H-fix, H-other-source refuted on the route.
-   Residual risk: real CPU writes to a scanned fb are dropped at r2r=0 (none on the route). Soak s7388_r2r_fix_levels queued
-   (L1/L4/L12 300 s, probe upl=0 hot=0). Owner decides any default.
+1. **RENDER_TO_RAM=0 CLOSED s7389: ready for the owner (OWNER-OPT-INS), default stays on.** Saves ~2.5 ms/gfx task in mission
+   (s7385); abort-cut stale-upload stripe fixed on the r2r=0 path (s7387, ROGUESQ_R2R_CPUUP=1 old; s7388 probe ROGUESQ_S7388_PRES
+   3/3 -> 0/3); soak L1/L4/L12 300 s pass with upl=0 hot=0 (s7389). Residual-risk census s7389 (build_fbld,
+   tools/build_fbld.sh + s7389_fbld_run.zsh + s7389_fbld_report.py, ROGUESQ_S7389_FBLD=1): 0 guest LOADS from a live colour image
+   over the s7386 route (control 2.8e8 loads; 2.5e8 stale-page loads = heap/DL reuse, 61 fns, none an fb reader); live-Z loads
+   are all the dummy SetZImage at phys 0 (low RAM) or boot DL memory at 0xC04F68 -> H-no-reader (route only). One CPU store to a
+   live fb: rs_memset 0xA6F000 at boot vi 55 (dropped at r2r=0; boot sheet identical). Detail PORTING-STATE s7385-s7389.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
    threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts
