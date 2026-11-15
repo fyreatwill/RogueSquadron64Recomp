@@ -77,7 +77,10 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime ${CMAKE_BINARY_DIR}/N6
 
 # ---- RecompiledFuncs ----
 # Path to the N64Recomp output — adjust if you move the files
-set(RECOMP_FUNCS_DIR "${CMAKE_SOURCE_DIR}/../N64Recomp/RecompiledFuncs")
+# s7406: overridable so a diagnostic build dir can compile a transformed copy (tools/build_fpat.sh). build/ never sets it.
+if (NOT DEFINED RECOMP_FUNCS_DIR)
+    set(RECOMP_FUNCS_DIR "${CMAKE_SOURCE_DIR}/../N64Recomp/RecompiledFuncs")
+endif()
 
 add_library(RecompiledFuncs STATIC)
 

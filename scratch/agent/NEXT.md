@@ -1,15 +1,16 @@
-# NEXT (s7406)
-HYPOTHESIS-ID: fp-corner-semantics
+# NEXT (s7407)
+HYPOTHESIS-ID: libm-replacement-contract
 
-s7405 closed class BO (ROGUESQ_FTZ now default on). First fold soak s7405_ftz_levels if SOAK-RESULTS has it (pass: alive,
-0 crash, fz1>=1, fz0=0, plant_rows>=10 per level).
-Class BP: FP corner cases left after FTZ, on the game thread (tid 3).
-1. Attribute the producers. With ROGUESQ_S7405_FPSR=1 the sample point is a guest block, too coarse. Add a sampling
-   arm (ROGUESQ_S7406_FPATTR=1) that reads FPSR at every RECOMP function return (hook in a fixup-script-injected macro, or
-   sample in the mem/lookup shim with the current guest PC from the s4584/r4300_pc wrapper) and logs the first 64 guest
-   functions where UFC (FZ=0 arm), IDC (FZ=1 arm) or DZC set. Use one build and two arms (FTZ=0 / default), L5 route as in
-   scratch/s7405_arms.sh.
-2. Hypotheses: H-guest-math (UFC/IDC come from game float code: then IDC = lwc1 of a denormal from memory, i.e. data that retail
-   would trap on, so check whether retail ever stores it), H-host-shim (IDC from host C++ on the game thread, e.g. audio or
-   matrix shims: harmless), H-dz-benign (the 173 boot DZC quotients are discarded or compared the same as retail's inf).
-3. Positive control: the s7405 plant (plant_ufc=1 per thread) plus a planted denormal lwc1 inside one known guest function.
+s7406 closed class BP (H-none; build_fpat per-PC FPSR attribution). First fold soak s7406_fpat_levels if SOAK-RESULTS has it
+(pass: per level CONTROL PASS and VERDICT H-none; a rc 3 names a guest stmt that consumed a denormal or made an invalid op ->
+reopen BP for that PC).
+Class BQ: host replacements of guest libm.
+1. Census (offline, one script tools/s7407_libm_census.py): every callee of the form X_recomp / host function called from
+   RecompiledFuncs that replaces a libultra/libm routine (sinf, cosf, sqrtf, guSqrtf, atan2f, ...), where it is defined (grep
+   src/, lib/N64ModernRuntime/librecomp, patches), call-site count, and whether the retail body exists in the ROM (ELF symbols
+   in syms/ / N64Recomp toml ignored list).
+2. For each with a retail body: run the recompiled retail body (or a C transcription of its MIPS) against the host version over
+   all 2^32 float inputs (or a dense sweep for 2-arg) offline; report max ulp, mismatches on inf/NaN/denormal/-0.
+3. Hypotheses: H-equal (bit-identical), H-ulp-benign (<=2 ulp, no edge mismatch), H-diverge (edge-case or large mismatch that a
+   game branch sees -> switch the replacement to the retail body behind a default-on flag, =0 host).
+4. Positive control: a deliberately perturbed host copy (result+1 ulp) must show mismatches in the same harness.

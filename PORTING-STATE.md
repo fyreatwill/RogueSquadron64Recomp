@@ -195918,3 +195918,39 @@ PASS = Status + Count($9) + Compare($11) accesses found in replaced/ignored libu
 - Soak queued: scratch/agent/soak_queue/s7405_ftz_levels.sh (L4/L7/L12 200 s, default arm, fz=1 rows + plant control).
 VERDICT: this selects H-none for the COP0 FR / FCSR RM rows and H-fs for FCSR.FS, and refutes H-count (0 live Count reads) and
 "FS is inert" (UFC 174 in flight); closes class BO with ROGUESQ_FTZ default on.
+
+## Session 7406 (2026-11-15) — class BP FP corner semantics closed (H-none): per-guest-PC FPSR attribution puts every denormal result in guest quaternion/matrix math (flushed by FTZ = retail FS), 0 guest denormal inputs, 1 benign x/0 site
+
+Fold first: soak s7405_ftz_levels rc=0: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, fz1=25/28/20 fz0=0, plant_rows
+187/235/110, tid 3 dzc=173 x3 -> FTZ default holds on 3 levels (SOAK-RESULTS line added).
+
+Instrument (new, engineering): `tools/s7406_fpat_transform.py` copies ../N64Recomp/RecompiledFuncs into build_fpat/fpat_src,
+wrapping each of 20050 guest FP statements as `{ snapshot 2 source fprs; stmt; RS64_FPCHK(pc) }` and each of 14602 call lines
+as `{ call; RS64_FPCHK(pc, "call:callee") }` (pc from the generated `// 0xPC:` comment). RS64_FPCHK (tools/s7406_fpat/rs64_fpat.h)
+reads arm64 FPSR; on IOC/DZC/OFC/UFC/IDC it records site + thread + operands (rs64_fpat_rt.c) and clears FPSR. Statement hit =
+that guest op set the flag; call hit = host code inside the callee (or uninstrumented caller code since the previous check).
+Positive control ROGUESQ_S7406_PLANT=1: inline in distanceFromCameraToPoint/transformVec3ByAffineMatrix/normalizeVec3, every
+2000th entry (max 8) a host 1e-30f*1e-10f (UFC) and denormal*3 (IDC when FZ=1) + its own check (site fffffff0).
+CMakeLists RECOMP_FUNCS_DIR is now overridable (build/ unchanged). `tools/build_fpat.sh`, `scratch/s7406_arms.sh`,
+`tools/s7406_fpat_report.py <log> --fz 0|1` (rc 0 control PASS + H-none, 2 control FAIL, 3 guest-stmt IDC or any IOC).
+
+Run: L5 dd8 21:9 FPS60 150 s hold, build_fpat, arms ROGUESQ_FTZ=0 and default (=1). Both 153 s hold alive, 0 crash, 0 VI stall.
+- Control PASS both arms: plants 8 -> plant_ufc 8 (ftz0), plant_ufc 8 + plant_idc 8 (ftz1).
+- UFC (denormal/flushed results): ftz0 2116 over 75 sites, ftz1 1370 over 48, ALL guest statements on [Game] MAIN (tid 3):
+  rotateVec3ByQuat (8001D3CC-8001D52C) and quatFromAxisAngleSafe (8001D164/16C/184/200) ~75%, rest mat34CrossRowsAndCopyPos,
+  mat3x3InverseInto, vec3Cross. Operands are ~1e-19..1e-21 quaternion components multiplied together. Retail FCSR FS=1 flushes
+  these to 0; s7405's FTZ default does the same -> H-guest-math, already matched.
+- IDC (denormal INPUTS, the case retail VR4300 would trap on as unimplemented-op): ftz1 65 hits, 0 at any guest statement.
+  All at call sites: 46 audioCueDispatcherNpcHandler -> popNpcSlotFromTail (8005CB98; callee is integer-only; the source is the
+  caller's inline host block "PATCH: s5797 aim" = the [aim] logger, armed by the g1 route's default LOG_ENV ROGUESQ_LOG_HUDBIT=1,
+  which memcpy's raw slot words into floats and does sqrtf/dot math), 18 destroyNpcSlotByIndex/destroyNpcSlotChain/
+  destroyObjectOwnedNpcSlot (rs5818_log at destroyNpcSlotByIndex entry prints hp as %g), 1 factor5MutexAcquire ->
+  osRecvMesg_recomp (host). -> H-host-shim: host diagnostics only, no guest state written; no guest op consumes a denormal.
+- DZC: 172 (ftz0) / 173 (ftz1) = s7405 and the s7405_ftz_levels soak's tid-3 dzc=173 exactly (second, independent line), one
+  guest site scanConvertTriangleToSpanTable 0x8004251C div.s $f2,$f2,$f4 with divisor 0. The quotient only feeds sub.s then
+  c.lt.s against 0 (edge-order branch); IOC=0 in both arms, so no inf-inf NaN and no inf->int conversion ever followed. Retail
+  FCSR enables only V (0x800), so x/0 = inf with the Z flag set, same as host -> H-dz-benign.
+- OFC 0, IOC 0 both arms.
+Rules out: guest float code reading denormal data (H-guest-math for inputs), port-made invalid ops. Class BP CLOSED, H-none,
+no code change needed beyond the instrument. Soak s7406_fpat_levels queued (L4/L7/L12 ftz1 120 s, pass = control PASS + H-none).
+Next: class BQ, host replacements of guest libm (sinf/cosf/sqrtf shims vs retail libultra polynomials).

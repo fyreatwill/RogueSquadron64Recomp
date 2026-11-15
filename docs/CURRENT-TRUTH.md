@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7405 (2026-11-15).
+Compact operational handoff, as of Session 7406 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -334,6 +334,13 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    words, float/rand/div magics, and cart ROM DMA sources (initDmaSlots 0xB0144340/80, loadOverlay 0xB0135D30) that the port's
    osPiStartDma maps through k1_to_phys exactly as retail. Control: scanner sees SI/PI/VI/AI/MI/SP/DP writes in replaced+ignored
    libultra (PASS). Caveat for every s7401-live()-based census: it treats ignored_funcs as live (false positives only).
+   **BP CLOSED s7406 (FP corner semantics after FTZ): H-none.** build_fpat (tools/build_fpat.sh: tools/s7406_fpat_transform.py
+   wraps 20050 guest FP stmts + 14602 call lines with a per-guest-PC FPSR check; report tools/s7406_fpat_report.py, rc 3 = guest
+   denormal input or IOC; planted control ROGUESQ_S7406_PLANT=1 PASS 8/8 both arms), L5 dd8 21:9 FTZ=0/1: every UFC is guest
+   quaternion/matrix math on MAIN (rotateVec3ByQuat, quatFromAxisAngleSafe ~75%; flushed by FTZ like retail FS=1); 0 IDC at any
+   guest stmt (all 65 = host loggers: s5797 [aim] under ROGUESQ_LOG_HUDBIT, rs5818_log, osRecvMesg_recomp); DZC 173 = one site
+   scanConvertTriangleToSpanTable 0x8004251C x/0 -> sub.s + c.lt.s branch only, IOC 0 (matches s7405 soak dzc=173 x3). Soak
+   s7406_fpat_levels queued (L4/L7/L12). s7406 fold s7405_ftz_levels: L4/L7/L12 0 crash, fz1 all, FTZ default holds.
    **BO CLOSED s7405 (COP0 Status/Count/Compare + FCSR control access): FR/RM rows H-none, FCSR.FS H-fs FIXED.**
    `tools/s7405_cop_access.py` (control PASS: Status/Count/Compare seen in replaced+ignored libultra): 28 live rows = 22 Status FR
    toggles in the 7 asm math helpers (s7087: librecomp switches f_odd per FR, run_thread_function inits FR=0;
@@ -465,10 +472,11 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidate:** class BP, FP corner semantics left after FTZ: (a) attribute the tid-3 denormal producer and
-    the 41 FZ-arm denormal INPUTS (retail VR4300 raises unimplemented-op on a denormal operand -> a fault; who feeds them:
-    lwc1 of non-float words? host shim on the game thread?), (b) the 173 boot DZC divisions by zero (retail: flag only, EZ off)
-    -> check the quotient feeds nothing that retail would see differently (inf vs host inf: same). NEXT.md s7406.
+16. **Next audit candidate:** class BQ, host replacements of guest libm: enumerate every guest math routine the port
+    replaces or stubs with host code (sinf/cosf/sqrtf and friends: grep `_recomp(rdram, ctx)` callees in RecompiledFuncs, ~214
+    sinf/cosf/sqrtf call lines; N64Recomp ignored/renamed funcs in the toml), and measure each against the retail libultra
+    routine on its whole input domain offline (max ulp, NaN/inf/denormal edge inputs, sign of zero). H-equal / H-ulp-benign /
+    H-diverge (a result the game branches on differs). NEXT.md s7407.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
