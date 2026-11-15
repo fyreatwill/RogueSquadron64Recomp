@@ -194446,3 +194446,7 @@ Discrimination (s7366): the TSan arm (control in every run) + the lockset census
 rs64_spk_dma_n / rs64_s4208_active (fixed, 0 rows post) and g_f5_last_writer first touch (fixed), and SELECT H-safe for every other
 MIXED row (95/97) and every host container TSan reached; H-race is refuted on default paths. The static half of class AQ is closed;
 the dynamic half's mission coverage moves to NEXT.md (guest VI-handshake deadlock: H-slow / H-sem / H-flag).
+Conclusion (s7366): TSan + census + 2 reviews selects H-race for rs64_spk_dma_n / rs64_s4208_active and the g_f5_last_writer first
+touch (all fixed), refutes H-race for the other 95 MIXED rows and every host container TSan reached, and closes the static half of
+class AQ. Retail-settings arm t3 refutes the wide path as the TSan-stall cause. Next discriminator: ROGUESQ_VI_HZ 60/20/10 on the TSan
+arm separates H-slow / H-sem / H-flag for the guest VI-handshake deadlock (NEXT.md).
