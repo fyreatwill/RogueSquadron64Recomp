@@ -195371,3 +195371,6 @@ DMA (fb-as-texture), which RT64 owns. The [s7389-new] print cap of 3000 hides no
 Rules out: a guest reader of live fb pixels on the route via ld/ldc1 or lwl/lwr. Queued: scratch/agent/soak_queue/
 s7390_fbld_wide_levels.sh (L5/L10/L15, CTL=0:138000, fails on report rc 3 / void / no LD control). RENDER_TO_RAM=0 stays
 owner-ready, default unchanged.
+Conclusion: selects H-no-reader and refutes H-real-reader (a guest CPU reader of live colour/Z pixels) for the s7386 route on
+every guest load path (MEM_*, LD, lwl/lwr), and classes the 4 high-RAM live-Z loads as H-reuse (heap headers). Next
+discriminator: s7390_fbld_wide_levels (L5/L10/L15 with the wide wrap): rc 3 on any level reopens H-real-reader at the named line.
