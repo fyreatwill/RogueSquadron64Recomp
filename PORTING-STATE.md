@@ -194946,3 +194946,51 @@ calling threads instead of s7366's unchecked "thread-confined or handed off by q
   resize teardown; H-gfx confirmed (separate managers). Class AU2 CLOSED, no code fix. The probe stays (default off) as a
   regression instrument for any change to the id handoff (waitForPresentId / waitForWorkloadId / notifyPresentId placement).
 - lib/rt64 edited (probe only): submodule-patches/export.sh refreshed rt64.patch.
+
+## Session 7380 (2026-11-14) — class AV (every host condition_variable wait/notify pair) CLOSED as H-shutdown: 19 waits / 35 notifies, every in-play pair writes its predicate state under the waiter's mutex; 9 destructor stop-flag notifies (lost-wakeup -> join hang) and 3 thread start races fixed in RT64
+
+Work unit: NEXT s7380 class AV (HYPOTHESIS-ID host-condvar-lost-wakeup). Hypotheses H-clean / H-lost (an in-play pair writes
+predicate state outside the waiter mutex: rare stall until the next unrelated notify) / H-shutdown (only stop flags unlocked).
+
+Census: new tools/s7380_condvar_census.py + hand verdicts tools/s7380_condvar_reviewed.tsv (57 rows), `--check` rc 0.
+Scope: 15 condvars (14 RT64 in workload/present queue, shared resources, raster shader, buffer uploader, shader cache, texture
+cache; port rdpq cv_job/cv_idle in src/main/rt64_render_context.cpp; stderr-async cv in main.cpp). texture_packer (tool, not in
+the game) and contrib/ excluded. NEXT's "22 declarations" counted includes and the texture_packer tool.
+Per wait: waiter mutex from its unique_lock, predicate text -> state identifiers (obj.field -> field, container.method -> container).
+Per notify: every write before the notify in the same function to a predicate identifier, with the lexically held mutex set
+(scoped/unique/lock_guard scopes, explicit lock/unlock, empty `{ lock(M); }` handshake after the store) -> LOCKED / LOST? / NOWRITE.
+Per thread loop: START-RACE when the loop stores `FLAG = true` for its own `while (FLAG)`.
+Controls (in-tool, every run): planted unlocked write -> LOST?, planted locked write -> LOCKED, planted handshake -> LOCKED,
+planted self-store loop -> START-RACE, real PresentQueue::skipInterpolation -> LOCKED: PASS.
+Second line: `--rev HEAD` (committed upstream submodule state) flags 11 LOST?: the 9 destructor rows plus the 2
+renderThreadLoop interpolatedCondition notifies whose counter reset s7378 moved under interpolatedMutex - the tool
+re-finds s7378's independently found defect with no knowledge of it.
+
+Results (all 19 waits have lambda predicates; 0 NONE):
+- In play: every notify LOCKED (25 auto + firstPipelineCondition by hand: pipelines[0] written between firstPipelineMutex
+  lock()/unlock()). Port rdpq + stderr queue LOCKED. -> H-lost REFUTED for stalls (no in-play lost-wakeup window).
+- 9 LOST? rows, all destructors storing an atomic run flag with no lock then notifying: ~WorkloadQueue (cursor, idle,
+  workloadId conditions), ~PresentQueue (cursor, presentId), ~BufferUploader (work), ~CompilationThread (descQueue),
+  ~StreamThread (streamDescStack), ~TextureCache (uploadQueue). A waiter between its predicate check and its block misses
+  the notify; join() hangs. -> H-shutdown SELECTED.
+- 3 START-RACE: BufferUploader::threadLoop and TextureCache::uploadThreadLoop set their own running flag true (a destructor
+  before the thread's first instruction stores false first, the thread then stores true -> loops forever, join hangs);
+  RasterShaderCache::CompilationThread ctor stored threadRunning=false AFTER starting the thread (thread can exit at once,
+  or skip its descQueueActiveCount-- so setup() spins forever). CompilationThread is CFG-DEAD on macOS:
+  ENABLE_OPTIMIZED_SHADER_GENERATION is undefined (no compilation threads exist; specialised shaders never compile here,
+  the ubershader serves everything - by RT64 design off Windows; noted for H-shader).
+Reachability: SDL_QUIT -> std::quick_exit (main.cpp ~10953) so no destructor runs on a normal quit; Application::end runs only
+via ultramodern events.cpp renderer_context->shutdown() after graphics_shutdown_ready. Exit-path only, harmless in play.
+
+ORIGIN: writer of the lost wakeup = each destructor's unlocked `xRunning = false` store racing the waiter's predicate check
+(value legitimate, ordering wrong); start races = the thread body storing its own run flag. Upstream RT64 code.
+
+Fix (lib/rt64, unconditional - shutdown/ctor only, no env gate): empty critical section on the waiter mutex after each stop
+store and before notify (WorkloadQueue cursor/idle/workloadId, PresentQueue cursor/presentId, BufferUploader workMutex,
+CompilationThread descQueueMutex, StreamThread streamDescStackMutex, TextureCache uploadQueueMutex); run flags set true in
+the constructors before thread creation (BufferUploader, TextureCache upload, CompilationThread) and the self-stores removed.
+After: census 34 LOCKED, 0 LOST?, 0 START-RACE.
+Positive control for the mechanism: tools/s7380_lostwake_model.cpp (delay injected inside the predicate after it reads
+running==true): OLD pattern hung 20/20, fixed pattern 0/20, rc 0. Not run against the real destructors (unreachable in play).
+Build: cmake --build build OK. Smoke `env SECS=260 zsh scratch/s7326/run.zsh s7380_dd8 ''` (dd8 21:9 FPS60 hangar->mission->abort route): crash 0, resets 14 (= s7378 smoke), arena full 0, 186 MB log. TSan arm not re-run: the changed code runs only at thread construction and destruction, and construction is exercised by every boot (clean here).
+Next: class AW host spin-waits (NEXT.md, HYPOTHESIS-ID host-spin-wait).

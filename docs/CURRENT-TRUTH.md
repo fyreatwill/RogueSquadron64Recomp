@@ -208,8 +208,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-condvar-lost-wakeup): class AV, every host condition_variable wait/notify pair
-   (lost wakeup, missing predicate, notify before the state write, wait under a second mutex).** Census + hand verdicts.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-spin-wait): class AW, every host busy-wait / spin loop on another thread's state**
+   (pure spin vs yield vs sleep vs condvar; CPU burn on 5 P-cores = a G1b pacing lever). See NEXT.md.
+   **AV CLOSED s7380 as H-shutdown** (`tools/s7380_condvar_census.py --check` rc 0, hand verdicts tools/s7380_condvar_reviewed.tsv):
+   15 condvars, 19 waits (all lambda predicates), 35 notifies; every in-play pair writes its predicate state under the waiter
+   mutex (H-lost refuted as a stall source). Fixed in lib/rt64 (unconditional, exit/ctor paths only): 9 destructor stop-flag
+   notifies without a lock (lost wakeup -> join hang) now take an empty critical section on the waiter mutex first; 3 start
+   races (BufferUploader, TextureCache upload thread set their own run flag; CompilationThread ctor stored false after start)
+   now set the flag before thread creation. Unreachable in normal play (SDL_QUIT -> quick_exit). Control: in-tool planted
+   cases + `--rev HEAD` re-flags s7378's two interpolated rows; tools/s7380_lostwake_model.cpp OLD hangs 20/20, NEW 0/20.
+   Note: ENABLE_OPTIMIZED_SHADER_GENERATION is undefined on macOS, so RT64 never compiles specialised shaders here (ubershader only).
    **AU2 CLOSED s7379 as H-ordered, no fix:** the resize/fb-config teardown (threadConfigurationUpdate destroyAll under managerMutex)
    cannot overlap a present's target use: W waits presentId<=W.presentId (notify only after frame-0 GPU pass), every later present
    waits workloadId>=W, advanced only after the teardown. Probe ROGUESQ_S7379_PROBE=1 (default off): 0/56 (build) and 0/75 (TSan)

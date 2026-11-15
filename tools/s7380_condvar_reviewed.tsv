@@ -1,0 +1,58 @@
+#key	verdict	note
+rt64_workload_queue.cpp|WorkloadQueue::waitForWorkloadId|workloadIdCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_workload_queue.cpp|WorkloadQueue::threadConfigurationUpdate|interpolatedCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_workload_queue.cpp|WorkloadQueue::renderThreadLoop|cursorCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_workload_queue.cpp|WorkloadQueue::renderThreadLoop|interpolatedCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_workload_queue.cpp|WorkloadQueue::renderThreadLoop|interpolatedCondition|wait|2	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_workload_queue.cpp|WorkloadQueue::idleThreadLoop|idleCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_workload_queue.cpp|WorkloadQueue::~WorkloadQueue|cursorCondition|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_workload_queue.cpp|WorkloadQueue::~WorkloadQueue|idleCondition|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_workload_queue.cpp|WorkloadQueue::~WorkloadQueue|workloadIdCondition|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_workload_queue.cpp|WorkloadQueue::advanceToNextWorkload|cursorCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_workload_queue.cpp|WorkloadQueue::repeatLastWorkload|cursorCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_workload_queue.cpp|WorkloadQueue::threadConfigurationUpdate|idleCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_workload_queue.cpp|WorkloadQueue::threadAdvanceWorkloadId|workloadIdCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_workload_queue.cpp|WorkloadQueue::renderThreadLoop|interpolatedCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_workload_queue.cpp|WorkloadQueue::renderThreadLoop|interpolatedCondition|notify|2	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_present_queue.cpp|PresentQueue::waitForPresentId|presentIdCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_present_queue.cpp|PresentQueue::threadPresent|interpolatedCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_present_queue.cpp|PresentQueue::threadLoop|cursorCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_present_queue.cpp|PresentQueue::~PresentQueue|cursorCondition|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_present_queue.cpp|PresentQueue::~PresentQueue|presentIdCondition|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_present_queue.cpp|PresentQueue::advanceToNextPresent|cursorCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_present_queue.cpp|PresentQueue::repeatLastPresent|cursorCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_present_queue.cpp|PresentQueue::threadPresent|interpolatedCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_present_queue.cpp|PresentQueue::skipInterpolation|interpolatedCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_present_queue.cpp|PresentQueue::notifyPresentId|presentIdCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_raster_shader.cpp|RasterShaderUber::threadCreatePipelines|firstPipelineCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_raster_shader.cpp|RasterShaderUber::threadCreatePipelines|firstPipelineCondition|notify|1	LOCKED	pipelines[0] written between firstPipelineMutex.lock()/unlock() (subscript write invisible to the regex)
+rt64_buffer_uploader.cpp|BufferUploader::threadLoop|workCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_buffer_uploader.cpp|BufferUploader::wait|readyCondition|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_buffer_uploader.cpp|BufferUploader::~BufferUploader|workCondition|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_buffer_uploader.cpp|BufferUploader::threadLoop|readyCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_buffer_uploader.cpp|BufferUploader::submit|workCondition|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_raster_shader_cache.cpp|CompilationThread::loop|descQueueChanged|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_raster_shader_cache.cpp|CompilationThread::~CompilationThread|descQueueChanged|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_raster_shader_cache.cpp|RasterShaderCache::submit|descQueueChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|StreamThread::loop|streamDescStackChanged|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_texture_cache.cpp|TextureCache::uploadThreadLoop|uploadQueueChanged|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_texture_cache.cpp|TextureCache::waitForGPUUploads|uploadQueueFinished|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_texture_cache.cpp|StreamThread::~StreamThread|streamDescStackChanged|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_texture_cache.cpp|StreamThread::loop|uploadQueueChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|TextureCache::~TextureCache|uploadQueueChanged|notify|1	FIXED	s7380: stop-flag store now followed by an empty critical section on the waiter mutex before notify (was a lost-wakeup window -> join hang at shutdown; SHUTDOWN-only: the port quits via quick_exit, Application::end runs only via ultramodern renderer shutdown)
+rt64_texture_cache.cpp|TextureCache::uploadThreadLoop|streamDescStackChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|TextureCache::uploadThreadLoop|uploadQueueFinished|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|TextureCache::queueGPUUploadTMEM|uploadQueueChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|TextureCache::addReplacement|uploadQueueChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|TextureCache::reloadReplacements|uploadQueueChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_texture_cache.cpp|TextureCache::loadReplacementDirectories|streamDescStackChanged|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_render_context.cpp|worker|cv_job|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_render_context.cpp|drain|cv_idle|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+rt64_render_context.cpp|worker|cv_idle|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_render_context.cpp|flush_pend|cv_job|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_render_context.cpp|rs64_rdpq_screen_job|cv_job|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+main.cpp|writer|cv|wait|1	LOCKED	lambda predicate evaluated under the waiter mutex; every writer of its state found in the notify rows
+main.cpp|reader|cv|notify|1	LOCKED	predicate state written under the waiter mutex (auto)
+rt64_buffer_uploader.cpp|BufferUploader::threadLoop|running|start|1	FIXED	s7380: running=true moved to the constructor before thread creation
+rt64_raster_shader_cache.cpp|CompilationThread::loop|threadRunning|start|1	FIXED	s7380: ctor stored false AFTER thread start (thread could exit at once or skip its activeCount-- so setup() spins); now true before start. CFG-DEAD on macOS (ENABLE_OPTIMIZED_SHADER_GENERATION undefined: no compilation threads)
+rt64_texture_cache.cpp|TextureCache::uploadThreadLoop|uploadThreadRunning|start|1	FIXED	s7380: uploadThreadRunning=true moved to the constructor before thread creation
