@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7396 (2026-11-15).
+Compact operational handoff, as of Session 7398 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -263,8 +263,21 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    default ON** (=0 old): guest only enqueues values, timer thread erases + writes + re-inserts. Runtime ROGUESQ_S7397_TM=1
    + _CTL=1 (3 fake timers at 0x9FFE1000, live non-head re-arm: old = CORRUPT dup=1 unsorted=1, fix = PASS order 2,0,1),
    `tools/s7397_timer_report.py`; route tools/s7392_mq_run.zsh owner + RETAIL=1: control PASS, flight+debrief reached, 0 guest or
-   host timer calls (latent only; two lines: census gate + runtime). Soak s7397_tm_levels queued (L5/L10/L15).
-   Next class BH: PI/SI I/O-message lifecycle (OSIoMesg reused while its DMA is in flight).
+   host timer calls (latent only; two lines: census gate + runtime). s7398 fold s7397_tm_levels: L5/L10/L15 202-203 s alive, 0 crash,
+   0 VI stall, control PASS, H-none x3.
+   **BH CLOSED s7398, PI/SI I/O-message lifecycle H-none; upstream osPiStartDma OSIoMesg/completion FIXED**
+   (`tools/s7398_iomesg_census.py`: 4 live osPiStartDma sites = DMA ring submitDmaSlot / waitDmaSlotComplete / pollDmaSlotStep
+   (8 OSIoMesg at 0x801107E0+24n, own count-1 mq 0x801108C0+24n) + piDmaWorker (mb 0x80111270, mq 0x80111290); every restart of
+   an OSIoMesg follows the recv of its completion (wait loops back to the recv, poll is NOBLOCK-then-restart); every recv
+   discards the msg (slot 0); no guest load of the OSIoMesg fields; osContStartReadData siServiceThread same; osEPiRawStartDma
+   only in __osLeoInterrupt (64DD, dead), osPiRawReadIo only in replaced osInitialize/osCartRomInit. DMA is synchronous in
+   do_dma, so H-async is impossible; a slot re-used with a stale completion would show as a Pi full-queue drop on its count-1
+   mq: 0 in s7392_mq_levels L5/L10/L15 (control PASS) -> H-reuse refuted on two lines.) Latent upstream deviation: osPiStartDma
+   never filled the OSIoMesg (type/pri/retQueue/dram/dev/size) and both Pi starts completed with msg 0, not the OSIoMesg
+   pointer. **ROGUESQ_S7398_IOFIX default ON** (=0 old); ROGUESQ_S7398_IO_CTL=1 reads the fields back (route owner recipe:
+   fix 200 s alive, 0 crash, phase 9, 16k+ fills readback PASS, bad=0; old arm 0 fill rows, 200 s alive, 0 crash). Soak
+   s7398_io_levels queued (L4/L7/L12). Next class BI: VI/SP/DP event-message payloads (msg value each librecomp completion
+   sends vs what the guest recv sites compare/load).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest

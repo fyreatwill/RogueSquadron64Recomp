@@ -195654,3 +195654,36 @@ Rules out: timer lifecycle as a source of stray/duplicate messages or stalled pe
 hardening. Soak s7397_tm_levels queued (L5/L10/L15). tools/s7392_mq_run.zsh gained NOREPORT=1 (skips the mq report).
 Next: class BH, PI/SI I/O-message lifecycle (OSIoMesg reused while its DMA is in flight).
 Conclusion: selects H-none, refutes H-rearm and H-stop-late for guest timer lifecycle (class BG closed); next discriminator: class BH OSIoMesg reuse-while-pending counter with a planted double-start control.
+
+## Session 7398 (2026-11-15) — class BH PI/SI I/O-message lifecycle closed (H-none); upstream osPiStartDma left the OSIoMesg unfilled and completed with msg 0, fixed default-on
+
+Fold: s7397_tm_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, report rc 0, control PASS, VERDICT H-none x3 ->
+TIMERFIX holds on 3 levels.
+
+Static census (new `tools/s7398_iomesg_census.py`, /tmp/s7392.dis): osPiStartDma 4 LIVE sites (callee librecomp-replaced):
+submitDmaSlot 0x800035E0, waitDmaSlotComplete 0x800037BC, pollDmaSlotStep 0x800039AC = the 8-slot DMA ring (OSIoMesg
+0x801107E0+24n, per-slot mq 0x801108C0+24n created count 1 in initDmaSlots, ring index 0x801109A8 mod 8, mutex mq 0x80110990),
+and piDmaWorker 0x80005634 (mb 0x80111270, mq 0x80111290, recv right after). osContStartReadData 1 site (siServiceThread, recv
+after, slot 0). osEPiRawStartDma 3 sites, all __osLeoInterrupt (64DD; librecomp stub would quick-exit, never seen). osPiRawReadIo
+2 sites in replaced osInitialize / osCartRomInit. Read by hand: waitDmaSlotComplete's chunk loop branches back to 0x800036BC,
+before its blocking recv, so every chunk restart of the same OSIoMesg follows receipt of the previous completion;
+pollDmaSlotStep does NOBLOCK recv and restarts only if it got one. Every recv passes msg slot 0 (message discarded). No guest
+load of the OSIoMesg array fields anywhere (only the addiu base materialisation in the three ring fns).
+Hypotheses: H-none / H-reuse (restart with completion still queued) / H-async (completion before the guest writes checked
+fields). H-async impossible: do_dma copies synchronously and then enqueues. H-reuse: a ring slot reused with a stale completion
+would make the new Pi completion fail on its count-1 mq (Pi sends are not requeued) = a DROP row in the s7392 report; the
+s7392_mq_levels soak (L5/L10/L15, control PASS guest=1 ext=1) shows drops=0 and no Pi row -> refuted on a second, runtime line.
+Selects H-none.
+Latent upstream defect (code read): librecomp osPiStartDma_recomp never wrote the OSIoMesg (hdr.type/pri/retQueue, dramAddr,
+devAddr, size) and do_dma completed with msg 0, whereas libultra's PI manager sends the OSIoMesg pointer. Harmless today (every
+consumer discards), wrong for any reader. Fix in lib/N64ModernRuntime/librecomp/src/pi.cpp: **ROGUESQ_S7398_IOFIX default ON**
+(=0 old): fill the fields (type 11/12 by direction) when mb is an aligned RDRAM pointer, complete with mb (thread_local
+s7398_msg threaded into every do_dma completion, incl. the s5061 guard skip and s7196 unknown-region paths); osEPiStartDma
+completes with its mb. ROGUESQ_S7398_IO_CTL=1 reads every fill back.
+Runs (tools/s7392_mq_run.zsh owner recipe dd8 21:9 FPS60, 200 s, NOREPORT): fix arm +CTL: 0 crash, phase 9 reached, 16384+ fills,
+readback PASS all, bad=0 (rows cover ring slots 0-3 and piDmaWorker); s7392 report drops=0 (mq control not armed in this run,
+so that zero is NOT a result). Old arm IOFIX=0 +CTL: 0 [s7398-io] rows (negative control: the fill path is off), 0 crash,
+phase 9. Soak s7398_io_levels queued (L4/L7/L12, pass = alive + readback PASS + 0 FAIL).
+ORIGIN: not a mitigation — ABI-fidelity fix of the librecomp PI replacement (writer of the missing fields = libultra's
+osPiStartDma, which librecomp replaces wholesale).
+Next: class BI event-message payloads (scratch/agent/NEXT.md).
