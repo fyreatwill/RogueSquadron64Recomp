@@ -195839,3 +195839,28 @@ ORIGIN: the writer is retail osInitialize (osClockRate *= 3/4), absent because l
 the fix restores the retail value, it does not mask anything. The value 62500000 is legitimate only as ROM initial data.
 Soak s7402_clock_levels queued (L5/L10/L15 dd8 21:9 FPS60, 200 s). Next: class BM boot-global contract (NEXT.md).
 VERDICT: this selects H-unwritten for osClockRate (fixed, sim-latent) and refutes H-sim-slow (sim dt +0x20 equal in both arms); closes class BL. Next discriminator: class BM boot-global words, one boot dump row vs IPL3/retail values.
+
+## Session 7403 (2026-11-15) — class BM boot-global contract closed (H-none): every live read of the IPL3 low-memory block and libultra clock words sees the retail 8 MB NTSC cold-boot value; runtime dump + planted control PASS
+
+HYPOTHESIS-ID: replaced-libultra-boot-globals (closed) -> direct-rcp-register-access.
+
+Soak fold: s7402_clock_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, boot_pass=1 bad_clk=0 (28 clk rows) x3 -> CLOCKFIX holds.
+
+Static (new tools/s7403_boot_globals.py, reuses s7402 scan() + s7401 live()): every R/A of 0x80000300-0x8000033F and
+0x80039100-0x8003910F in /tmp/s7392.dis, tagged LIVE / REPLACED / dead. 9 words touched, 17 live rows:
+- osTvType 0x80000300: setViModeType (live, from mainBootstrap path) and preNmiResetThread (blocks on PRENMI event 14, which
+  ultramodern never posts, s7401 = inert). Port writes 1 (NTSC) = retail IPL3 for this NTSC cart.
+- osResetType+3: getOsResetType only - 0 jal callers, no lui/addiu address ref, word absent from ROM -> unreachable. Port 0 = cold.
+- osMemSize: getUsableRdramSize (callers 0x8006E5BC/0x8006ED0C; cfg+0x44 bit 0x2000 selects 4 MB) and partitionFramebufferMemory.
+  Port 8 MB (ROGUESQ_OSMEM_MB) = retail with expansion pak.
+- osAppNMIBuffer address: getResetVectorRegion (0 callers/refs) and fatalErrorHalt (0 jal) -> unreachable.
+- osClockRate: class BL (fixed s7402). osRomType/osRomBase/osCicId/osVersion/osViClock: readers only in dead or replaced libultra.
+- KSEG1 0xA000 lui sites (8): all in libultra raw-IO / osVirtualToPhysical / osSpTaskLoad, none a low-memory read.
+Runtime (scratch/agent/s7403_bootdump.sh, current build, ROGUESQ_RDRAM_DUMP_DIR at swap 300, two arms back to back):
+- A default: tv=1 romtype=0 rombase=B0000000 reset=0 cic=0 ver=0 mem=00800000 clk.lo=02CB4178 (46875000) viclk=02E6D354
+  (48681812 = libultra VI_NTSC_CLOCK) osAppNMIBuffer..0x400 all zero (= retail cold-boot bzero).
+- B planted control ROGUESQ_OSMEM_MB=4 ROGUESQ_S7402_CLOCKFIX=0: mem=00400000 clk.lo=03B9ACA0 -> the dump sees changed words (PASS).
+Two lines: static reader join + runtime dump with control. Selects H-none; refutes H-unset and H-value for every live-read word.
+No code change. Next: class BN direct RCP/PI register access from live game code (NEXT.md); note most game `lui 0xB9xx/0xBAxx`
+hits are GBI command words, so the census must key on lui used as a load/store BASE only.
+VERDICT: this selects H-none for class BM and refutes H-unset/H-value (boot dump + planted OSMEM/CLOCKFIX control); closes class BM. Next discriminator: class BN live KSEG1 register load/store sites vs port MEM_* behaviour.

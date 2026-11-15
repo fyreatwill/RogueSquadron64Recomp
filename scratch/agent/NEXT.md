@@ -1,17 +1,15 @@
-# NEXT (s7403)
-HYPOTHESIS-ID: replaced-libultra-boot-globals
+# NEXT (s7404)
+HYPOTHESIS-ID: direct-rcp-register-access
 
-s7402 closed class BL (side-effect contract): osClockRate fixed (ROGUESQ_S7402_CLOCKFIX default on), sim-latent.
-Fold first: soak s7402_clock_levels (L5/L10/L15, pass = alive, 0 crash, 1 boot row applied=1 now=46875000, all clk rows 46875000).
-
-Work unit, class BM (boot-global contract: what IPL3 + retail osInitialize leave in low memory / libultra data that the port's
-bootstrap may not):
-1. Enumerate every live guest READ (tools/s7402_side_effects.py scan(), kind R/A, live() filter) of 0x80000300-0x8000033F
-   (osTvType 300, osRomType 304, osRomBase 308, osResetType 30C, osCicId 310, osVersion 314, osMemSize 318, osAppNMIBuffer 31C..)
-   and of libultra data words 0x80039100-0x8003910F (osClockRate, osViClock) plus any other libultra .data word a live game
-   function reads.
-2. For each, the retail value (IPL3 for an NTSC 6102-class cart, osInitialize stores) vs the port's (grep recomp.cpp /
-   librecomp bootstrap for the address; runtime witness = one boot log line dumping the words at the first game-thread entry).
-3. Hypotheses: H-none (every live-read word matches retail), H-unset (port leaves 0 / ROM data where IPL3 writes),
-   H-value (port writes a different value, e.g. osMemSize 8 MB vs expansion-pak logic, osResetType). Static first; runtime
-   = ONE boot dump line, two arms only if a fix lands (default-on env, =0 old), with a planted control.
+s7403 closed class BM (boot globals, H-none). Work unit, class BN: LIVE (non-replaced, s7401 live()) guest code that loads/stores
+RCP / PI / SI / VI / AI / MI registers or PI-mapped cart space directly (KSEG1 0xA4000000-0xA4FFFFFF, 0xA0000000|x, 0xB0000000+),
+bypassing the replaced libultra.
+1. Extend tools/s7402_side_effects.py scan() idea (new tools/s7404_rcp_access.py): track lui/ori/addiu constants that are used as the
+   BASE of a load/store (ignore lui values only stored as data: most game 0xB9xx/0xBAxx lui are GBI command words written to DLs).
+   Also catch `or reg, reg, at` with at=0xA0000000 (KSEG1 conversion of a pointer). Rows: function, insn, register, R/W, LIVE tag.
+2. For each live row: what the recompiled code does (grep RecompiledFuncs for the insn's MEM_* and librecomp's handling of
+   >=0xA4000000 addresses: rdram mirror, intercept, or out-of-bounds) vs what hardware returns.
+3. Hypotheses: H-none (no live direct access, or each is a harmless mirror e.g. KSEG1 rdram alias), H-mirror-bad (a register read
+   lands in RAM and returns 0/stale where hardware returns status bits, e.g. a busy-wait that passes trivially or never ends),
+   H-write-lost (a register write the game relies on is dropped). Static first; runtime only if a live register site exists:
+   one counter at that site + a planted control, two arms only if a fix lands (default-on env, =0 old).

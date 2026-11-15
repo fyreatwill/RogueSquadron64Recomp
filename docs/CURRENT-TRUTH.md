@@ -315,7 +315,14 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    advanceWrappingPhaseAccumulator, the only fields they read) takes the VI-count branch: sum 193.6 s vs wall 195.7 s in BOTH arms,
    identical 1/2-VI histograms -> game speed was never 0.75x. Clock-dependent consumers left: unread snapshot fields
    +0x0C..+0x18/+0x24, the flags-clear +0x20 branch (postSwap flags 0x8011A8C8/C9 both 0; not taken on this route), profiler
-   computeElapsedMillis. s6752's port "dt 2.00" is consistent (VI branch). Soak s7402_clock_levels queued (L5/L10/L15).
+   computeElapsedMillis. s6752's port "dt 2.00" is consistent (VI branch). s7403 fold s7402_clock_levels: L5/L10/L15 alive, 0 crash, 0 VI stall, boot_pass=1 bad_clk=0 x3 -> CLOCKFIX holds.
+   **BM CLOSED s7403 (boot-global contract), H-none** (`tools/s7403_boot_globals.py`): live guest reads of 0x80000300-0x8000033F
+   + 0x80039100-0x8003910F: osTvType (setViModeType; preNmiResetThread runs only on PRENMI = inert), osResetType+3
+   (getOsResetType, 0 callers/refs), osMemSize (getUsableRdramSize, partitionFramebufferMemory), osAppNMIBuffer address
+   (getResetVectorRegion 0 callers/refs, fatalErrorHalt 0 jal), osClockRate (BL). osRomType/osRomBase/osCicId/osVersion/osViClock:
+   no live reader (only dead or replaced libultra). Runtime RDRAM dump at swap 300 (scratch/agent/s7403_bootdump.sh), one build:
+   default tv=1 romtype=0 rombase=B0000000 reset=0 mem=00800000 clk=46875000 viclk=48681812 (retail NTSC VI clock) NMI buf 0;
+   planted arm OSMEM_MB=4 + CLOCKFIX=0 shows mem=00400000 clk=62500000 (control PASS). Port == retail 8 MB expansion-pak cold boot.
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
@@ -437,11 +444,10 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidate:** class BM, boot-global (IPL3/low-memory) contract: the words retail IPL3 + osInitialize leave at
-    0x80000300-0x8000031C and in libultra data (osTvType, osRomType, osRomBase, osResetType, osCicId, osVersion, osMemSize,
-    osAppNMIBuffer, osViClock 0x80039108) vs what the port's bootstrap writes, joined with live guest readers (NEXT.md s7403;
-    reuse tools/s7402_side_effects.py scan()). Any new arena or pointer layout re-runs items 11/14 with --controls; a
-    census whose rows are cached across sessions must re-cut them on the measured tree (s7373 stale-row lesson).
+16. **Next audit candidate:** class BN, direct RCP/PI register access from LIVE (non-replaced) guest code: every lui 0xA4xx /
+    0xA000|x / 0xB000 KSEG1 load/store in a live function, what the recompiled MEM_* access hits in the port (rdram offset, a
+    librecomp intercept, or nothing) vs what hardware returns (NEXT.md s7404). Any new arena or pointer layout re-runs items
+    11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
