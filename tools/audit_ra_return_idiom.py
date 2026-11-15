@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2] / "N64Recomp" / "RecompiledFuncs"
-FUNC_RE = re.compile(r"^RECOMP_FUNC\s+.*?\b([A-Za-z0-9_]+)\s*\([^\n]*\)\s*\{", re.M)
+FUNC_RE = re.compile(r"^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC\s+.*?\b([A-Za-z0-9_]+)\s*\([^\n]*\)\s*\{", re.M)  # s7420: weak-aware
 JR_RE = re.compile(r"^\s*//\s+(0x[0-9A-F]+):\s+jr\s+\$ra\s*$", re.M)
 CALL_RE = re.compile(r"^\s*//\s+(0x[0-9A-F]+):\s+jalr?\b", re.M)
 ASSIGN_RE = re.compile(r"^\s*ctx->r31\s*=\s*([^;]+);", re.M)

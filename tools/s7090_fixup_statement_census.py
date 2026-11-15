@@ -26,7 +26,7 @@ must report reapplyAudioConfig 0x80091CB0/0x80091CBC as dup.
 """
 import argparse, collections, gzip, os, re, sys
 
-FUNC_RE = re.compile(r'^RECOMP_FUNC void (\w+)\(uint8_t\* rdram, recomp_context\* ctx\) \{')
+FUNC_RE = re.compile(r'^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void (\w+)\(uint8_t\* rdram, recomp_context\* ctx\) \{')  # s7420: weak-aware
 ADDR_RE = re.compile(r'^\s*// 0x([0-9A-F]{8}):')
 # PATCH tags, or a session comment like `// s6869: ...` naming the change
 TAG_LINE_RE = re.compile(r'PATCH|(?://|/\*)\s*[sS]\d{3,4}\b')

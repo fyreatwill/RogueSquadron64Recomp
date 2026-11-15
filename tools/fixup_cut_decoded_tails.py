@@ -13,7 +13,7 @@ usage: fixup_cut_decoded_tails.py <RecompiledFuncs dir> [--dry] [--md out.md] [-
        fixup_cut_decoded_tails.py <RecompiledFuncs dir> --self-test   (reads the tree, writes nothing)"""
 import argparse, glob, os, re, sys
 
-FN = re.compile(r'^RECOMP_FUNC void (\w+)\(')
+FN = re.compile(r'^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void (\w+)\(')  # s7420: weak-aware (runs after weaken_patched_funcs)
 CMT = re.compile(r'^    // 0x([0-9A-Fa-f]{8}): (\S+)\s*(.*)$')
 LBL = re.compile(r'^\s*(\w+):\s*$')   # L_<addr> and the generator's after_N / skip_N
 GOTO = re.compile(r'\bgoto (\w+);')

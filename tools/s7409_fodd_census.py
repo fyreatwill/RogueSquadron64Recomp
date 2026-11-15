@@ -8,7 +8,7 @@ not where f_odd writes go. Also lists calls made inside FR=1 regions (callees ru
 Usage: s7409_fodd_census.py <RecompiledFuncs dir> [--plant]   (--plant injects a synthetic FR0-called MIXED row: positive control)"""
 import os, re, sys
 src = sys.argv[1]; plant = '--plant' in sys.argv
-fn_re = re.compile(r'^RECOMP_FUNC void (\w+)\(')
+fn_re = re.compile(r'^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void (\w+)\(')
 fodd_re = re.compile(r'ctx->f_odd\[\((\d+) - 1\) \* 2\](\s*=(?!=))?')
 own_re = re.compile(r'ctx->f(\d+)\.(fl|d|u32l|u32h|fh|u64)')
 call_re = re.compile(r'^\s*(\w+)\(rdram, ctx\);')

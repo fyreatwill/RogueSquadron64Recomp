@@ -240,7 +240,7 @@ CONS32 = set('addu addiu subu add addi sub negu sll srl sra sllv srlv srav mult 
 
 def census():
     """Linear per-function scan; flags reset at function entry, v0/v1 cleared at calls. Returns hits and counts."""
-    cpat = re.compile(r'^\s*// 0x([0-9A-F]{8}): (\S+)\s+(.*?)\s*$'); fnpat = re.compile(r'^RECOMP_FUNC void (\w+)\(')
+    cpat = re.compile(r'^\s*// 0x([0-9A-F]{8}): (\S+)\s+(.*?)\s*$'); fnpat = re.compile(r'^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void (\w+)\(')  # s7420: weak-aware
     hits = []; prod = collections.Counter(); divs = []
     for f in sorted(os.listdir(FUNCS)):
         if not f.endswith('.c'): continue
@@ -291,7 +291,7 @@ def div_guards(_divs):
     """Per div/divu site, inside its own function's instruction list (overlays share VRAM, so never look up by PC
     globally): a 'break' within the next 6 insns (IDO/GCC break-7 guard: retail traps before lo/hi are read), or the
     divisor loaded as a nonzero immediate in the previous 3, or neither (= a C-UB divisor-0 hazard to read by hand)."""
-    cpat = re.compile(r'^\s*// 0x([0-9A-F]{8}): (\S+)\s+(.*?)\s*$'); fnpat = re.compile(r'^RECOMP_FUNC void (\w+)\(')
+    cpat = re.compile(r'^\s*// 0x([0-9A-F]{8}): (\S+)\s+(.*?)\s*$'); fnpat = re.compile(r'^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void (\w+)\(')  # s7420: weak-aware
     out = collections.Counter(); bare = []
     def scan(fn, seq):
         for i, (pc, op, ops) in enumerate(seq):

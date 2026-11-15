@@ -71,8 +71,18 @@ if MARK in t:
     print("funcs_9.c s7104 cellcull already applied"); sys.exit(0)
 i = t.index(FN); j = t.index("\nRECOMP_FUNC ", i + len(FN))
 body = t[i:j]
+# s7420: the regen replay never applies the s6500-s6526 funcs_9 chain (env-gated observation, unwired since s6864), so the two
+# s6513-bearing anchors fall back to their pre-s6513 text there; the hook lands on the same guest line either way.
+FALLBACK = {
+    EDITS[0][0]: ("    ctx->r4 = MEM_B(ctx->r21, 0X0);\n",
+                  "    ctx->r4 = MEM_B(ctx->r21, 0X0);\n    s7104_visit(rdram, ctx); /* " + MARK + " */\n"),
+    EDITS[1][0]: ("        g_s6493[4]++; /* PATCH: s6493 streamcum */\n",
+                  "        g_s6493[4]++; /* PATCH: s6493 streamcum */\n        s7104_mark('E', 0); /* " + MARK + " */\n"),
+}
 for a, r in EDITS:
     n = body.count(a)
+    if n != 1 and a in FALLBACK and "s6513" not in body:
+        a, r = FALLBACK[a]; n = body.count(a)
     if n != 1: sys.exit("s7104: anchor count %d for %r" % (n, a[:70]))
     body = body.replace(a, r)
 t = t[:i] + PRE + body + t[j:]

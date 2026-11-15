@@ -196476,3 +196476,38 @@ rows s7418 already covered (and one boot CDE, safe). Rules out: an undecoded MIP
 mesg/event/thread/timer/io/contract/arg/side-effect/boot-global/RCP/libm row. Two lines: rabbitizer row agreement + census
 byte-identity across three listings, with the plain-listing control.
 Next: class CC, RecompiledFuncs harvest-parser agreement (HYPOTHESIS-ID recompfuncs-parser-agreement).
+
+## Session 7420 (2026-11-15) — class CC RecompiledFuncs parser agreement closed (H-clean): 79 of 264 RECOMP_FUNC-parsing tools are weak-header-blind, none edits an affected function after weaken; 8 blind live parsers made weak-aware; regen replay repaired end to end (4 breaks)
+
+HYPOTHESIS-ID: recompfuncs-parser-agreement. Note: the first attempt at this session timed out (runner rc=124, 1 h) before
+committing; this entry folds its uncommitted work after re-running every check in a fresh iteration.
+What ran: new tools/s7420_parser_census.py. It pulls every string constant containing RECOMP_FUNC out of tools/*.py (ast),
+classifies how it is applied (re.match / ^-anchored / search / find / startswith), tests it on a normal and a weak header, and
+places each tool by phase of tools/regen_replay.sh: CHAIN-PRE (before weaken_patched_funcs: never sees a weak header),
+WEAKENER, CHAIN-POST, STANDALONE. Targets are intersected with the affected set (3 weak functions + the function before each:
+rand_recomp, cinematicInitializer, findAndUnlinkSmallestEntry_s6088_inner).
+Result: reference split 2508 functions, 3 weak headers; a blind whole-tree split mis-attributes 14 rows (setRngSeed 9,
+isCinematicActive 5, findAndUnlinkSmallestEntry 0). 264 tools carry a RECOMP_FUNC constant, 79 weak-blind: STANDALONE 49
+BLIND-NOHIT, CHAIN-PRE 27 BLIND-NOHIT + 2 IMMUNE-PRE (apply_s5370_path_census, fixup_game_funcs_vendored: they do target
+findAndUnlinkSmallestEntry / cinematicInitializer, but run before weaken, so they always see the plain header), WEAKENER SELF 1,
+CHAIN-POST 1 ok. **VERDICT H-clean, OPEN 0.**
+Controls (--controls, rc 0): planted blind editor anchored on setRngSeed -> OPEN (PASS); planted weak-aware reader blind=0 (PASS);
+planted weak header on get_manifest_entry_type in a temp funcs copy moves 55 rows in a blind split (PASS).
+Second line (--dynamic, scratch/s7420/dynamic.out): the 47 blind standalone tools run on a live copy and a de-weakened copy in
+sandboxes: 32 equal rc 0, 0 differ, 15 UNEVALUATED (fail identically on both arms: need a runtime log or argv).
+Changes (preventive, live parsers that read the weakened tree): weak-aware header regex in fixup_cut_decoded_tails (CHAIN-POST,
+runs after weaken), audit_at_branch_join, audit_ra_return_idiom, s7090_fixup_statement_census, s7409_fodd_census,
+s7412_int_emission (2 sites).
+Regen replay (tools/regen_verify.sh, scratch/s7420/regen_verify.log): the replay chain had 4 breaks, fixed:
+apply_s6903_cinegate (extern now goes above whichever of s6523_scale / s6527_force comes first; in the replay s6527_force is
+first and used g_rs64_dd_scene undeclared), apply_s7104_cellcull (fallback anchors when the env-gated s6500-s6526 funcs_9 chain
+is absent, same guest line), apply_s7320_bdiff_probe (sites inside data_gap_* may be absent when func_sizes.txt sizes the gap
+as data), fixup_game_funcs_vendored replay sandbox now copies tools/*.txt|tsv|json|csv data files beside replayed scripts.
+The s7363/s7364/s7366 regen gates also stopped on unreviewed rows in host code added since s7393; hand verdicts added
+(s7363 +5, s7364 +8, s7366 +5; all BOUNDED/H-safe; censuses rc 0, OPEN 0). After: live 51 files 0 compile failures, regen 50
+files 0 failures; object compare 2664 same / 114 differ / 18 live-only / 3 regen-only (s6881 baseline 2684/82/17/1). The drift
+is not triaged (single-source, named as class CD).
+Re-run after the parser changes: s7419_dis_agree --controls rc 0 H-clean; s7418_opcode_residue rc 0 H-equal CONTROL PASS;
+fixup_cut_decoded_tails --self-test rc 0.
+Rules out: a weak-header mis-split moving a fixup edit, or an audit verdict row, onto the wrong function.
+Next: class CD, regen-verify drift triage (114 differing objects vs 82 at s6881).

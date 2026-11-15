@@ -42409,6 +42409,9 @@ def rs64_replay_apply_scripts(tree, names=RS64_REPLAY):
             # Other spellings in replayed scripts are parents[]-relative and resolve into the sandbox.
             s = q.read_text(errors="replace")
             (sb / "tools" / q.name).write_text(s.replace(_RS64_LIVE_STR, link))
+        for q in _RS64_TOOLS.iterdir():  # s7420: data files replayed scripts read beside themselves (s7115/s7318/s7320/s7321 sites)
+            if q.is_file() and q.suffix in (".txt", ".tsv", ".json", ".csv"):
+                _rs64_shutil.copy(q, sb / "tools" / q.name)
         for rel in ("src", "lib/N64ModernRuntime/librecomp", "build/factor5_ucode"):
             if (rs64_root / rel).is_dir():
                 _rs64_shutil.copytree(rs64_root / rel, sb / rel, symlinks=True)

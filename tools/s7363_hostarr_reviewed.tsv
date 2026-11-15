@@ -338,3 +338,13 @@ RecompiledFuncs/funcs_9.c	s6515_s1a	i	BOUNDED s7363 review E: guarded counters (
 RecompiledFuncs/funcs_9.c	g_s7105_vis	i	BOUNDED s7363 review E: guarded counters (<8/<16/<24/<64/<512), literal callers, [-3,3] window checks -> 0..48, & 63/& 255 masks, clamps, 0/1 booleans, backtrace counts
 RecompiledFuncs/funcs_9.c	s7105_dup	i	BOUNDED s7363 review E: guarded counters (<8/<16/<24/<64/<512), literal callers, [-3,3] window checks -> 0..48, & 63/& 255 masks, clamps, 0/1 booleans, backtrace counts
 RecompiledFuncs/funcs_9.c	g_s7105_el	i	BOUNDED s7363 review E: guarded counters (<8/<16/<24/<64/<512), literal callers, [-3,3] window checks -> 0..48, & 63/& 255 masks, clamps, 0/1 booleans, backtrace counts
+lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp	hist	b < 0 ? 0 : b > 7 ? 7 : b	BOUNDED s7420 hand: ternary clamp to 0..7 of hist[8]
+lib/rt64/src/hle/rt64_workload_queue.cpp	s7381Calls	site	BOUNDED s7420 hand: every rs64_s7381_note caller passes a literal site 0..5 (present_queue 1, workload_queue 0, raster_shader_cache 2, texture_cache 3, timer 5) < 6
+lib/rt64/src/hle/rt64_workload_queue.cpp	s7381YRa	i	BOUNDED s7420 hand: i = ((ra>>2)+k) & 63 < 64 (dump loop i < 64)
+lib/rt64/src/hle/rt64_workload_queue.cpp	s7381YN	i	BOUNDED s7420 hand: i = ((ra>>2)+k) & 63 < 64
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp	g_s7384Slots	rs64S7384Slot()	BOUNDED s7420 hand: rs64S7384Slot() returns (k < 4) ? k : 3, cached per thread
+src/main/upstream_compat.cpp	tab	i	BOUNDED s7420 hand: lookup loop i < ntab; on miss ntab==cap returns before tab[ntab++], so i == old ntab < cap (cap 512 at 8277, 256 at 8415)
+src/main/upstream_compat.cpp	tab	ntab++	BOUNDED s7420 hand: lookup loop i < ntab; on miss ntab==cap returns before tab[ntab++], so i == old ntab < cap (cap 512 at 8277, 256 at 8415)
+src/main/upstream_compat.cpp	tid_recv	(tid >= 0 && tid < 64) ? tid : 65	BOUNDED s7420 hand: ternary -> 0..63 or 65 < 66
+src/rsp/s7389_fbld.cpp	s_pg_ctl	p	BOUNDED s7420 hand: line 39 p <= (hi-1)>>12 with hi <= 0x1000000 -> p <= 0xFFF; line 91 phys from include/fbld/recomp.h rs64_fbld_chk, called only when a < 0x1000000 -> p < 4096
+src/rsp/s7389_fbld.cpp	s_pg_c	p	BOUNDED s7420 hand: phys from rs64_fbld_chk, called only when a < 0x1000000 -> p < 4096

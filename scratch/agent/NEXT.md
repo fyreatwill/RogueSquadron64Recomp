@@ -1,17 +1,13 @@
-# NEXT (s7420)
-HYPOTHESIS-ID: recompfuncs-parser-agreement
+# NEXT (s7421)
+HYPOTHESIS-ID: regen-verify-drift
 
-Class CC (CURRENT-TRUTH Next steps item 1). s7419 found `re.match(r'RECOMP_FUNC void (\w+)\(')` misses the 3
-`__attribute__((weak)) RECOMP_FUNC` headers (isCinematicActive, setRngSeed, findAndUnlinkSmallestEntry), so rows after them are
-attributed to the previous function. Fixed in s7418/s7419 only.
-1. `grep -ln "RECOMP_FUNC" tools/*.py` -> for each parser: its header regex, whether it reads full-line and/or mid-line
-   `// 0xADDR:` comments, how it handles delay-slot duplicate comments and fixup-inserted lines, and whether it EDITS code (fixup_*,
-   apply_*) or only reads (audits).
-2. Reference split: tools/s7419_dis_agree.rabbit() (weak-aware). For each parser, run its own split (import or copy its regex) over
-   ../N64Recomp/RecompiledFuncs and diff the (function -> addr set) map against the reference: mis-attributed rows / functions.
-3. For EDITING tools: intersect mis-attributed functions with the tool's target list; if a target is hit, show the generated line
-   it edits (or fails to edit) and fix the regex in that fixup (regen order: fixups live in tools/fixup_*.py).
-Hypotheses: H-clean (only the 3 weak headers differ, no fixup target among them, audits unaffected) / H-split (a parser
-mis-attributes a target or an audit verdict row). Control: a planted `__attribute__((weak)) RECOMP_FUNC void zz_plant(` header in a
-temp copy of one funcs_N.c must move rows in each un-fixed parser's split.
-Re-run tools/s7419_dis_agree.py --controls and tools/s7418_opcode_residue.py (rc 0) after any shared-parser change.
+Class CD (CURRENT-TRUTH Next steps item 1). s7420 got tools/regen_verify.sh to complete; compare is 2664 same / 114 differ /
+18 live-only / 3 regen-only vs the s6881 baseline 2684/82/17/1 (scratch/s7420/regen_compare.json; baseline in
+docs/REGEN-VERIFY.md / scratch/s6864/cmp2.json).
+1. Diff the differing-name set against the baseline: list the NEW differing/one-sided functions (~32+).
+2. For each, diff the live vs regen C of that function (both trees are left by regen_verify; see the script header) and
+   classify: EXPECTED-ENVDIAG (env-gated diag/obs chain not in RS64_REPLAY), EXPECTED-SIZE (func_sizes.txt / data_gap),
+   EXPECTED-CODEGEN (same statements, different layout), or LOST (a live hand edit absent from every fixup/apply script).
+3. Each LOST: move it into a fixup (regen order), re-run regen_verify, show it now matches.
+Hypotheses: H-mirrored (0 LOST) vs H-lost (>=1). Control: plant a one-line hand edit in a live funcs copy of one function and
+show the classifier calls it LOST.

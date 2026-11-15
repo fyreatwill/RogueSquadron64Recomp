@@ -97,3 +97,8 @@ src/rsp/dpc_bridge.cpp	last	rs64_dpc_defer_begin	H-safe-other	'static uint64_t l
 src/rsp/dpc_bridge.cpp	last	rs64_floor_cover_emit	H-safe-other	'int last' is a loop local
 src/rsp/dpc_bridge.cpp	last	rs64_g5b_frame	H-safe-other	'static int last' is a function-local static used only in this function; the locked 'last' (1712/1744) is a local const in another function
 src/rsp/dpc_bridge.cpp	g_f5_last_writer	rs64_f5_last_writer_ensure	H-safe-caller	s7366 fix: resize inside std::call_once
+src/main/upstream_compat.cpp	seen	g5a_walk	H-safe-other	s7420: 'uint32_t seen[3]' is a stack local of g5a_walk; the locked 'seen' (s7393 cq, 8412) is a different namespace-scope array
+src/main/upstream_compat.cpp	seen	osViSwapBuffer_recomp	H-safe-other	s7420: 'static uint32_t seen[24]' is a function-local static of the [fbw] swap log, not the s7393 cq 'seen' locked under mu
+src/main/upstream_compat.cpp	seen	rs64_m5_b40_route_title_transition	H-safe-other	s7420: 'static std::atomic<bool> seen' is a function-local atomic, not the s7393 cq 'seen'
+src/main/upstream_compat.cpp	seen	rs64_s6911_mapidx	H-safe-other	s7420: 'static uint64_t seen' is a function-local diag counter of rs64_s6911_mapidx, not the s7393 cq 'seen'
+src/main/upstream_compat.cpp	tab	dump_locked	H-safe-caller	s7420: both dump_locked (s7392 8253, s7393 8388) are called only from note paths that hold std::lock_guard(mu) (8273->8287, 8408->8438)

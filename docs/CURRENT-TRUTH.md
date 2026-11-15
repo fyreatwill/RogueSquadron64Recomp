@@ -215,15 +215,14 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CC, RecompiledFuncs harvest-parser agreement (HYPOTHESIS-ID recompfuncs-parser-agreement).**
-   s7419 found `re.match(r'RECOMP_FUNC void ...')` misses the 3 `__attribute__((weak)) RECOMP_FUNC` headers
-   (isCinematicActive, setRngSeed, findAndUnlinkSmallestEntry), so their rows get attributed to the function before them.
-   ~10 more tools/*.py (fixup_fps60_ticks, fixup_fps60_float_trace, g1e_int_step_audit, g3_dt_quantum_audit, apply_s56xx_*)
-   split RecompiledFuncs with their own regex. Census every parser (header regex, `// 0xADDR:` full-line vs mid-line, delay-
-   slot duplicate comments, fixup-inserted lines), run each against one reference split (tools/s7419_dis_agree.rabbit) and
-   list per tool the functions/rows it mis-attributes; for FIXUPS (they edit code) say whether any target is affected.
-   H-clean (only the 3 weak headers, no fixup target hit) vs H-split (a parser or fixup mis-attributes a target).
-   CB (s7419) CLOSED H-clean: tools/s7419_dis_agree.py --controls rc 0; canonical listing tools/s7419_canon_dis.py.
+1. **Next audit: class CD, regen-verify drift triage (HYPOTHESIS-ID regen-verify-drift).** s7420 repaired the replay chain
+   (tools/regen_verify.sh now completes: live 51 / regen 50 objects, 0 compile failures) but the object compare is
+   2664 same / 114 differ / 18 live-only / 3 regen-only vs the s6881 baseline 2684/82/17/1 (scratch/s7420/regen_compare.json,
+   docs/REGEN-VERIFY.md). Classify every new differing / one-sided function: EXPECTED (env-gated diag chain not replayed,
+   func_sizes.txt sizing, hand patch already mirrored in a fixup) vs LOST (a live-tree hand edit with no fixup: it dies at the
+   next regen). H-mirrored (all expected) vs H-lost (any live-only edit). Fix each LOST by moving it into a fixup.
+   CC (s7420) CLOSED H-clean: tools/s7420_parser_census.py --controls rc 0 (79/264 blind tools, 0 editor hits after weaken;
+   --dynamic 32 equal / 0 differ / 15 unevaluated). Use the weak-aware regex `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC` in new parsers.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

@@ -14,8 +14,13 @@ if TAG in t: print("already applied"); sys.exit(0)
 def sub(s, a, b, n=1):
     assert s.count(a) == n, (a, s.count(a))
     return s.replace(a, b)
-t = sub(t, "static inline int s6523_scale(void) { /* PATCH: s6523 spanscale */\n",
-        "extern volatile int g_rs64_dd_scene; int rs64_dd_scene_update(int level); /* " + TAG + " */\nstatic inline int s6523_scale(void) { /* PATCH: s6523 spanscale */\n")
+# s7420: the extern goes before whichever of s6523_scale / s6527_force comes first. The live tree has s6523 first; the regen
+# replay gets s6527_force (via apply_s6529) above it, and the g_rs64_dd_scene uses below sit in s6527_force (undeclared there).
+_a = "static inline int s6523_scale(void) { /* PATCH: s6523 spanscale */\n"
+assert t.count(_a) == 1, (_a, t.count(_a))
+_k = t.index(_a); _k2 = t.find("static inline int s6527_force(void)")
+if 0 <= _k2 < _k: _k = _k2
+t = t[:_k] + "extern volatile int g_rs64_dd_scene; int rs64_dd_scene_update(int level); /* " + TAG + " */\n" + t[_k:]
 t = sub(t, "      { extern volatile int g_rs64_dd_blk; g_rs64_dd_blk = (me6036 != 1.0f); }\n",
         "      g_rs64_dd_scene = rs64_dd_scene_update((int32_t)MEM_W(0, (int64_t)(int32_t)0x80130B70)); if (!g_rs64_dd_scene) me6036 = 1.0f; /* " + TAG + " */\n"
         "      { extern volatile int g_rs64_dd_blk; g_rs64_dd_blk = (me6036 != 1.0f); }\n")

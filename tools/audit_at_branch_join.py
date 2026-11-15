@@ -13,7 +13,7 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-FUNC_RE = re.compile(r"^RECOMP_FUNC\s+.*?\b([A-Za-z0-9_]+)\s*\([^\n]*\)\s*\{", re.M)
+FUNC_RE = re.compile(r"^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC\s+.*?\b([A-Za-z0-9_]+)\s*\([^\n]*\)\s*\{", re.M)  # s7420: weak-aware
 INS_RE = re.compile(r"^\s*//\s+(0x[0-9A-Fa-f]+):\s+([A-Za-z0-9_.]+)\s*(.*)$")
 LABEL_RE = re.compile(r"^\s*(L_[0-9A-Fa-f]+):")
 TARGET_RE = re.compile(r"\b(L_[0-9A-Fa-f]+)\b")

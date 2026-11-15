@@ -16,10 +16,12 @@ R = {"$zero": 0, "$at": 1, "$v0": 2, "$v1": 3, "$a0": 4, "$a1": 5, "$a2": 6, "$a
      "$t4": 12, "$t5": 13, "$t6": 14, "$t7": 15, "$s0": 16, "$s1": 17, "$s2": 18, "$s3": 19, "$s4": 20, "$s5": 21, "$s6": 22,
      "$s7": 23, "$t8": 24, "$t9": 25, "$k0": 26, "$k1": 27, "$gp": 28, "$sp": 29, "$fp": 30, "$ra": 31}
 sites = {}
+gapfn = {}
 for ln in SITES.read_text().splitlines():
     if ln.startswith("#") or not ln.strip(): continue
     idx, pc = ln.split()[:2]
     sites.setdefault(pc[2:].upper(), int(idx))
+    gapfn.setdefault(pc[2:].upper(), ln.split()[2] if len(ln.split()) > 2 else "")
 files = sorted(D.glob("funcs_*.c"))
 if any(TAG in f.read_text(errors="surrogateescape") for f in files):
     print("already applied"); sys.exit(0)
@@ -36,5 +38,10 @@ for f in files:
     n = pat.sub(sub, t)
     if n != t: f.write_text(n, errors="surrogateescape")
 miss = sorted(set(sites) - set(hit))
+# s7420: a regen with tools/func_sizes.txt sizes data_gap_* to its real (data) length, so sites the live tree decoded
+# inside a data gap do not exist there; only those may be absent.
+gone = [pc for pc in miss if gapfn.get(pc, "").startswith("data_gap_")]
+if gone: print("s7320: %d data_gap site(s) absent from this tree (not code): %s" % (len(gone), " ".join(gone)))
+miss = [pc for pc in miss if pc not in gone]
 assert not miss, ("sites not found", miss)
 print("s7320 bdiff: %d sites, %d hooks (delay-slot copies included)" % (len(hit), sum(hit.values())))

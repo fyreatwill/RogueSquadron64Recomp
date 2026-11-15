@@ -629,3 +629,11 @@ lib/rt64/src/tools/texture_packer/texture_packer.cpp	mipmapRowPitches	i	BOUNDED 
 lib/rt64/src/tools/texture_packer/texture_packer.cpp	mipmapAlignedRowPitches	i	BOUNDED pushed once per i<mipCount
 lib/rt64/src/tools/texture_packer/texture_packer.cpp	mipmapRowCounts	i	BOUNDED pushed once per i<mipCount
 lib/rt64/src/tools/texture_packer/texture_packer.cpp	mipmapSizes	i	BOUNDED pushed once per i<mipCount
+lib/rt64/src/hle/rt64_present_queue.cpp	storage	i * 4u	BOUNDED s7420 hand: i < words = size()/4, so i*4+4 <= size()
+lib/rt64/src/hle/rt64_present_queue.cpp	storage	r * rowB + i	BOUNDED s7420 hand: r < 240, i + 4 <= rowB = size()/240 -> r*rowB+i+4 <= size()
+lib/rt64/src/hle/rt64_present_queue.cpp	storage	memcpy len=4	BOUNDED s7420 hand: both memcpy sites stay inside size(): i*4+4 <= size(); r*rowB+i+4 <= 240*rowB <= size() (rowB = size()/240, i+4 <= rowB, r < 240)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp	name	32	BOUNDED s7420 hand: char name[32], pthread_getname_np/snprintf pass sizeof(name)
+src/main/upstream_compat.cpp	v	c.n++	BOUNDED s7420 hand: while guard c.n < 3 before v[c.n++] (v[3])
+src/main/upstream_compat.cpp	v	1	BOUNDED s7420 hand: Cfg::v[3] literal index 1 in fprintf
+src/main/upstream_compat.cpp	v	2	BOUNDED s7420 hand: Cfg::v[3] literal index 2 in fprintf
+src/main/upstream_compat.cpp	v	ph % n	BOUNDED s7420 hand: n in 1..3 on this branch (n==0 takes the 0 arm), ph%n < n <= 3
