@@ -195341,3 +195341,4 @@ read-only, r2r default): crash 0; CONTROL PASS 278,892,532 ctl loads; colour ima
 -> **H-no-reader selected on the route (two lines: this census + the s7385/s7386 image identity over the same scenes)**; H-z-reader and
 H-color-reader refuted for the route. Coverage is one level; soak s7389_fbld_levels queued (L5/L10/L15 200 s, fails on any live colour load).
 ORIGIN: not a mitigation (diagnostic instrument only).
+Conclusion: the census selects H-no-reader and refutes H-z-reader / H-color-reader on the covered route; it closes CURRENT-TRUTH item 1 (owner decides the default). Next discriminator: the queued L5/L10/L15 census (any live colour LOAD row).
