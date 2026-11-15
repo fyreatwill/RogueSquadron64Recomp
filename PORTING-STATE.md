@@ -195137,3 +195137,47 @@ Next: class AZ, non-atomic static / file-scope mutable state written from more t
 Conclusion: this selects H-relaxed-publish for the RT64 last-drawn tuple only (root cause: three relaxed fields read unlocked by
 default follow-draw mode 3; fixed and checked against the planted-tear control, old 53 vs new 0) and refutes H-volatile and
 H-relaxed-publish everywhere else in scope. Next discriminator: the AZ thread-root census of non-atomic shared statics (NEXT.md).
+
+## Session 7384 (2026-11-15) — class AZ (every non-atomic static / file-scope mutable in host code, by thread reachability) CLOSED: 0 default-path races; the RT64 last-drawn framebuffer has TWO writer threads (Gfx-thread renderToRDRAM pass + render thread), measured serialized, and every raster scene is drawn twice per frame
+
+Work unit (NEXT s7384, HYPOTHESIS-ID host-static-shared-state). New census `tools/s7384_static_state_census.py` (+ verdicts
+`tools/s7384_static_reviewed.tsv`): parses src/main, src/rsp, lib/rt64/src/{hle,render}, ultramodern/src, librecomp/src
+(163 files, 2763 functions), builds a name-resolved call graph (same-class / same-file / same-namespace preference, internal
+linkage respected, std-named member calls only same-file, thread-spawn lambdas cut by EDGE_CUTS), and seeds 14 thread roots
+(GUEST = generated-code host calls with rdram/ctx args + *_recomp + guest callbacks, all guest OSThreads one root;
+GFX = gfx_thread_func + build/factor5_ucode callees, since M_GFXTASK runs inside send_dl, events.cpp:1818; TASK; VI; MAIN;
+RT64 render / idle / present / uploader / shader / texture; timer; save; cleaner). `--why <key>` prints one call path per
+root. Controls (always run, PASS): planted two-root writer -> MULTI, planted lock_guard writer -> LOCKED, planted init-only
+local -> INIT-ONCE. Graph refinement history (each fixed a measured over-merge): generic tokens in RecompiledFuncs (start/
+free/apply) were GUEST seeds; `struct recomp::X` made a namespace look like a class; `obj.resize(` resolved to
+RenderTarget::resize; `free(` resolved to recomp::free; 134 `namespace X {` openers were read as variables.
+Result: 1769 statics: CONFINED 1058, INIT-ONCE 186, LOCKED(auto) 54, UNROOTED 400 (no root reaches an accessor: diag lambda
+threads / dead code, listed not gated), MULTI 71 -> all 71 hand-reviewed: LOCKED 23 (route-fingerprint mutex, s_s7317_mu
+carve maps whose helpers are only called under it, g_audio_join_mutex, s7375 g_depthMu, rdpq::m), DIAG 23, INITORDER 11
+(callback tables / config written in recomp::start before the reader threads exist), BENIGN 7 (lazy getenv caches),
+CONFINED 5 (rs64_g1d_blk_dma statics live in the kind=="rt64wb" branch, Gfx only), ARTEFACT 2. 0 RACE. `--check` rc 0.
+
+The census pointed at one real two-writer site: FramebufferRenderer::submitRasterScene runs on BOTH instances (State's on
+the Gfx thread in fullSync's renderToRDRAM pass, renderToRAM defaults on, rt64_emulator_configuration.cpp:13; and
+WorkloadQueue's on "RT64 Workload"). s7383 had assumed one writer for the last-drawn tuple. Probe (lib/rt64
+rt64_framebuffer_renderer.cpp S7384Bracket + rt64_present_queue.cpp, ROGUESQ_S7384_LOG=1, controls ROGUESQ_S7384_CTL=1):
+per-thread calls / last-drawn writes / address changes, an in-flight overlap counter, and at each mode-3 present whether the
+published address differs from the render thread's own last-drawn (g_s7384RtLast). Runs: scratch/s7326 recipe, dd8 21:9
+FPS60 hangar->mission->abort, 200 s each, 0 crash in all 5.
+- s7384c_old / s7384d_def (default): Gfx Thread calls 26002 vs RT64 Workload 25998 -> every raster scene drawn twice per
+  frame. Address changes: Gfx 8509, render 0 (the Gfx pass always publishes first, render re-writes the same address).
+  Overlap 0 / 52000 calls (planted-thread control ctl_overlap 1/1). Present: ahead 0 / 9000 mode-3 presents, planted mismatch
+  ctl_ahead 6/6; and with the Gfx thread holding a fresh ahead address for 30 ms five times ([s7384-ctl] 5 lines), still
+  ahead 0 -> presents cannot sample the lead window (structurally serialized behind the Gfx pass).
+- s7384b_new (ROGUESQ_S7384_LDGFX=0, render thread only publishes): render 9554 changes, Gfx would-be publishes differing
+  from current 98% (it runs one target ahead), ahead 0 / 10200; vi-follow-stale 32 vs 27 in old (different timing, same order).
+SELECTED H-serial for the two-writer site: real, but serialized and invisible to present in 9000+ presents with a control
+that fires. REFUTED H-race on the default path (no MULTI row without a lock/order/env gate). Fixes landed anyway (no
+behaviour change): submitRasterScene floorPhase/floorCount -> thread_local, floorSerial -> atomic, s7383 width-change pair
+s_pw/s_ps -> thread_local (they were plain statics with two writer threads). Default left at the old two-writer publish;
+ROGUESQ_S7384_LDGFX=0 = render-thread-only publish (opt-in, owner/next-unit choice). TSan arm NOT run: no H-race row to fix,
+and the only two-thread statics were made thread-local.
+SIDE DATUM (single-source, but agrees with s4905/s4906 fsRender 3-5 ms + fsRenderSync 3.2 ms of Gfx-thread time per frame):
+the Gfx thread re-renders every frame's raster scenes for RDRAM readback. Whether the game needs that readback was never
+tested -> NEXT.
+ORIGIN: no mitigation added (thread_local/atomic conversion of diagnostic statics; the publish gate defaults to old).

@@ -208,8 +208,20 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-static-shared-state): class AZ, non-atomic static / file-scope mutable state written
-   from more than one host thread** (census by thread-root attribution; spec in NEXT.md).
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID render-to-rdram-double-pass): does the game need RT64's Gfx-thread renderToRDRAM pass?**
+   s7384 measured that every frame's raster scenes are drawn twice: State's FramebufferRenderer inside send_dl (Gfx thread,
+   fullSync renderToRDRAM, renderToRAM defaults on) and WorkloadQueue's on the render thread (26002 vs 25998 submitRasterScene
+   calls / 200 s). s4905/s4906 already put fsRender + fsRenderSync at ~6-8 ms of Gfx-thread time per frame. Never tested: an
+   arm with the readback off (spec in NEXT.md).
+   **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
+   verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
+   threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts
+   (LOCKED 23, DIAG 23, INITORDER 11, BENIGN 7, CONFINED 5, ARTEFACT 2), 0 RACE; controls pass. The one real two-writer site:
+   the last-drawn framebuffer is published by BOTH submitRasterScene instances (s7383 assumed one). Gfx thread makes every
+   address change (8509 vs render 0), but 0/52000 overlaps (control 1/1) and 0/9000 mode-3 presents saw a Gfx-ahead address
+   (planted mismatch 6/6; Gfx holding an ahead address 30 ms x5 still 0) -> serialized, H-serial. Default unchanged;
+   ROGUESQ_S7384_LDGFX=0 = render-thread-only publish (opt-in). submitRasterScene's floor statics and s7383 width pair are now
+   thread_local / atomic. Probe ROGUESQ_S7384_LOG=1 (+ _CTL=1).
    **AY CLOSED s7383, H-relaxed-publish selected for ONE default-path tuple, fixed** (`tools/s7383_atomic_order_census.py --check`
    rc 0: 588 explicit-order ops on 250 atomics + 16 static volatiles; COUNTER 131 / ORDERED 33 auto, 102 hand verdicts in
    tools/s7383_atomic_reviewed.tsv, 0 PUBLISH; controls pass). The RT64 last-drawn framebuffer (addr / width / siz = three relaxed

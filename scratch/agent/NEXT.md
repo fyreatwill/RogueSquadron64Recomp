@@ -1,24 +1,27 @@
-# NEXT (s7384)
-HYPOTHESIS-ID: host-static-shared-state
+# NEXT (s7385)
+HYPOTHESIS-ID: render-to-rdram-double-pass
 
-s7383 closed class AY (atomic memory ordering): 249 atomics / 585 explicit-order ops + 16 static volatiles, census
-tools/s7383_atomic_order_census.py --check rc 0 (verdicts tools/s7383_atomic_reviewed.tsv). One default-path defect fixed:
-the last-drawn framebuffer tuple (addr / width / siz as three relaxed atomics) read unlocked by follow-draw mode 3 ->
-now one packed 64-bit word, store-release / load-acquire (ROGUESQ_S7383_FBPACK=0 old; tear counter ROGUESQ_S7383_LOG=1,
-control ROGUESQ_S7383_TEAR_CTL=1).
+s7384 closed class AZ (tools/s7384_static_state_census.py --check rc 0, 0 default-path races) and measured as a side datum
+that RT64 draws every frame's raster scenes TWICE: State's FramebufferRenderer inside send_dl on the Gfx thread
+(fullSync renderToRDRAM pass; RT64 default framebuffer.renderToRAM = true, lib/rt64/src/common/rt64_emulator_configuration.cpp:13)
+and WorkloadQueue's on "RT64 Workload" (26002 vs 25998 submitRasterScene calls in 200 s, ROGUESQ_S7384_LOG=1).
+s4905/s4906 put that pass (fsRender + fsRenderSync) at ~6-8 ms of Gfx-thread time per frame, inside the send_dl that bounds
+the port's frame rate. Nobody has tested whether the game NEEDS the readback.
 
-Work unit: class AZ, every NON-atomic function-local `static` or file-scope mutable variable (not const, not
-std::atomic, not thread_local) in src/main, src/rsp, lib/rt64/src/{hle,render}, lib/N64ModernRuntime/{ultramodern,librecomp}/src
-that is written in a function reachable from more than one host thread (game thread, Gfx/RSP task thread, VI thread,
-RT64 workload / present threads, audio callback). AY only covered variables that are already atomic; a plain static
-counter or "seen" cache written from two threads is a data race TSan only reports if the route exercises both writers.
-Hypotheses: H-confined (every such static is touched by one thread; the thread is named in the verdict),
-H-locked (a mutex covers every writer), H-race (a plain static is written by >=2 threads with no lock: fix to atomic /
-thread_local / lock), H-diag-only (races exist only in env-gated logging statics: rate-limit counters).
-Discriminator: census tool tools/s7384_static_state_census.py (thread attribution by entry-point call graph roots:
-osViSwapBuffer / recomp game funcs, rsp task entry, vi_thread_func, WorkloadQueue::threadLoop, PresentQueue::threadLoop,
-audio callback) with --check (exit 1 on an unreviewed multi-thread non-diag row) and --controls (a planted static written
-from two planted thread roots must classify MULTI; a planted static under a lock_guard must classify LOCKED). For every
-H-race row on a default path: fix, then TSan arm (tools/build_tsan.sh, scratch/s7377/tsan_run.zsh t1 480,
-ROGUESQ_S7354_RACE_CTL=1 must report) and smoke `env SECS=200 zsh scratch/s7326/run.zsh s7384_smoke ''` (crash 0).
-Expected: H-confined/H-locked/H-diag-only -> close with the table; H-race -> fix list + TSan before/after.
+Work unit: one opt-in knob, two arms, one comparison.
+- Add ROGUESQ_RENDER_TO_RAM=0 (default unset = RT64 default on): set emulatorConfig framebuffer.renderToRAM = false where the
+  RT64 application/config is built (src/main/rt64_render_context.cpp; find where EmulatorConfiguration is filled). lib/ edits
+  -> ./submodule-patches/export.sh + commit.
+- Hypotheses: H-needed (the game reads framebuffers back from RDRAM: pause-menu snapshot/blur, hangar holo, cutscene fades,
+  s6206 "rt64wb" copyNativeToRAM spans; the off arm shows black/stale/garbled images there),
+  H-redundant (no visible difference; the off arm's send_dl wall drops by ~6-8 ms and G1b/G5c frame time improves),
+  H-partial (needed only in specific scenes: then a per-scene / per-fb-pair gate, not a global off).
+- Discriminator (one recipe, run twice, same keyed route: env SECS=200 zsh scratch/s7326/run.zsh <name> '<env>'):
+  per arm: Gfx-thread submitRasterScene calls (ROGUESQ_S7384_LOG=1: Gfx Thread calls must be 0 in the off arm = knob
+  positive control, >0 in the on arm), rt64wb copy count (ROGUESQ_LOG_G1D_TASK=1 [g1d] wb lines), send_dl wall
+  (ROGUESQ_S4265=1 or the g1e R lines), crash count, and framebuffer captures at fixed VI phases (title, hangar SELECT YOUR
+  CRAFT, mission flight, pause menu, mission intro cutscene) for an on/off contact sheet the owner can judge.
+- Outcomes: H-redundant -> offer ROGUESQ_RENDER_TO_RAM=0 in docs/OWNER-OPT-INS.md as a frame-time opt-in (default stays
+  on until the owner says); H-needed -> name the scene and the guest reader (write-watch the copied span), park;
+  H-partial -> design the narrow gate.
+Do NOT change the default. Owner save read-only (runner exports ROGUESQ_NO_SAVE_WRITE).

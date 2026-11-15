@@ -1,0 +1,75 @@
+# s7384 class AZ hand verdicts (tools/s7384_static_state_census.py --check). key<TAB>verdict reason.
+# INITORDER = written during recomp::start / thread setup before the reading thread is created (std::thread ctor is a
+# happens-before edge) or on the same game thread; DIAG = env-gated diagnostic, value only printed / dedupes a log line;
+# BENIGN = idempotent lazy env-cache init (every racer stores the same value); ARTEFACT = census misparse.
+lib/N64ModernRuntime/librecomp/src/overlays.cpp|sections_info	INITORDER register_overlays from main() before recomp::start spawns the game thread; GUEST load_overlays only reads
+lib/N64ModernRuntime/librecomp/src/recomp.cpp|config_path	INITORDER register_config_path from main() before recomp::start; initialize_mods reads it later
+lib/N64ModernRuntime/librecomp/src/rsp.cpp|rsp_callbacks	INITORDER set by recomp::start before the task thread is created (ultramodern::preinit); task thread only reads
+lib/N64ModernRuntime/librecomp/src/rsp.cpp|g_audio_join_pcm	LOCKED g_audio_join_mutex: every writer is an *_locked helper reached only under it (rsp.cpp:302)
+lib/N64ModernRuntime/librecomp/src/rsp.cpp|g_audio_image_scope_key	LOCKED g_audio_join_mutex (audio_image_scope_locked)
+lib/N64ModernRuntime/librecomp/src/rsp.cpp|g_audio_image_consumer_only	LOCKED g_audio_join_mutex (audio_image_*_locked)
+lib/N64ModernRuntime/ultramodern/src/audio.cpp|audio_callbacks	INITORDER ultramodern::set_callbacks in recomp::start before the game thread exists; guest only reads
+lib/N64ModernRuntime/ultramodern/src/error_handling.cpp|error_handling_callbacks	INITORDER set in recomp::start before every other thread is created
+lib/N64ModernRuntime/ultramodern/src/events.cpp|events_callbacks	INITORDER set in recomp::start before gfx/vi threads are created (init_events)
+lib/N64ModernRuntime/ultramodern/src/input.cpp|input_callbacks	INITORDER set in recomp::start before the game thread
+lib/N64ModernRuntime/ultramodern/src/input.cpp|input_poll_time	DIAG only reader measure_input_latency is compiled out (#if 0, input.cpp:30); write-only on the guest thread
+lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp|requeue_enabled	INITORDER set_message_queue_control in recomp::start before the timer/vi/gfx/task threads; then read-only
+lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp|rs64_tl_on	DIAG ROGUESQ_G1E_TL timeline (default off: static init from getenv); rs64_tl_flush clears it once on the VI thread at the end, readers then stop logging
+lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp|g_rs64_tl	DIAG ROGUESQ_G1E_TL ring: slot index from atomic g_rs64_tl_n fetch_add, each slot one writer; flushed by the VI thread only
+lib/N64ModernRuntime/ultramodern/src/renderer_context.cpp|render_callbacks	INITORDER set in recomp::start before gfx_thread_func is created
+lib/N64ModernRuntime/ultramodern/src/rsp.cpp|rsp_callbacks	INITORDER set in recomp::start before gfx/task threads
+lib/N64ModernRuntime/ultramodern/src/scheduling.cpp|cached@sched_log_enabled	BENIGN lazy getenv cache, every racer stores the same value; guest-serialized in practice (MAIN path is bootproc on the same thread before scheduling)
+lib/N64ModernRuntime/ultramodern/src/scheduling.cpp|g_s4583_t3	DIAG s4583 scheduler dump (env-gated en), bootproc then guest-serialized
+lib/N64ModernRuntime/ultramodern/src/scheduling.cpp|en@s4583_dump	BENIGN lazy getenv cache
+lib/N64ModernRuntime/ultramodern/src/scheduling.cpp|en@ultramodern::schedule_running_thread	BENIGN lazy getenv cache
+lib/N64ModernRuntime/ultramodern/src/threads.cpp|cached@thr_resume_log_enabled	BENIGN lazy getenv cache (cleaner thread and guest store the same value)
+lib/N64ModernRuntime/ultramodern/src/threads.cpp|en@s4581_log_switch	BENIGN lazy getenv cache
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp|s_log@FramebufferManager::reinterpretTileRecord	BENIGN lazy ROGUESQ_LOG_REINTERPRET / SKIP_REINTERPRET cache, same value from every racer
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp|s_reinterpret_tile_guard_enabled@FramebufferManager::reinterpretTileRecord	BENIGN lazy getenv cache
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp|s_reinterpret_tile_guard_n@FramebufferManager::reinterpretTileRecord	DIAG ROGUESQ_LOG_REINTERPRET_TILE_GUARD log counter
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_rs64FloorFragments	DIAG s7375 floor/depth-hist buffers: only ROGUESQ_FLOOR_DEPTH_DIR / FLOOR_SHADER_DIR paths, entries take g_depthMu (s7375 class AS)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_rs64FloorFragmentZero	DIAG s7375 floor diag buffer (see g_rs64FloorFragments)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_rs64FloorBufferBytes	DIAG s7375 floor diag buffer size
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_guestSlots	LOCKED g_depthMu (s7375: every depth-hist public entry takes it once the env gate is on)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_guestAttached	LOCKED g_depthMu (s7375)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_depthJson	LOCKED g_depthMu (s7375)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_depthColor	LOCKED g_depthMu (s7375)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_depthDepth	LOCKED g_depthMu (s7375)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_depthZ	LOCKED g_depthMu (s7375)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_depthZCaptured	LOCKED g_depthMu (s7375)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|g_s7384Slots	DIAG s7384 probe: counters atomic, each slot name written once by the thread that won the slot's fetch_add
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|addCount@FramebufferRenderer::addFramebuffer	DIAG ROGUESQ_LOG_ALLOC counter (and s7384: the two instances never overlap, 0/52000)
+lib/rt64/src/render/rt64_native_target.cpp|s_warned@NativeTarget::copyFromRAM	DIAG warn-once flag; a race prints the warning twice at worst
+lib/rt64/src/render/rt64_render_target.cpp|last_phase@rs64_g1d_target_log	DIAG rs64_g1d_target_log_enabled() gate, log dedupe only
+lib/rt64/src/render/rt64_render_target.cpp|count@rs64_g1d_target_log	DIAG log budget under rs64_g1d_target_log_enabled()
+lib/rt64/src/render/rt64_vi_renderer.cpp|s_lx@rs64PresentFbSize	DIAG ROGUESQ_VI_EXACT_ROWS log dedupe triple, never feeds the returned size
+lib/rt64/src/render/rt64_vi_renderer.cpp|s_lastCols@VIRenderer::getViewportAndScissor	DIAG [g1d-vishape] log dedupe pair, never feeds sdSize
+src/main/main.cpp|s_s7334_pt	INITORDER filled by the s_s7334_init static initializer (ROGUESQ_STORE_WATCH_PTS) before main(); read-only after
+src/main/main.cpp|g_wbw_ring	DIAG write-watch ring (env-armed): slot from atomic g_wbw_head, drained by wbw_report only
+src/main/main.cpp|g_wbw_tail	DIAG write-watch consumer index, wbw_report (single drain caller)
+src/main/main.cpp|init@ensure_dbghelp_init	DIAG Windows dbghelp init flag on the crash/stack-print path; no-op on macOS
+src/main/rs64_env_cache.cpp|g_mu	ARTEFACT pthread_mutex_t (the env-cache lock itself), not shared data
+src/main/rt64_render_context.cpp|s_rand_trace_f	DIAG ROGUESQ rand trace FILE*: set once in update_screen when the env is set, guest writer tests it; a late first open loses lines only
+src/main/rt64_render_context.cpp|q	LOCKED rdpq::m: worker / flush_pend / screen_job / bolt_mark all push or pop under lock_guard / unique_lock(m)
+src/main/upstream_compat.cpp|last_phase@rs64_vi_committed_width	DIAG under log_post_consumer (ROGUESQ_LOG_M5_POST_CONSUMER / LOG_ALL), log budget only
+src/main/upstream_compat.cpp|rows@rs64_vi_committed_width	DIAG under log_post_consumer, log budget only
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_phase	LOCKED g_rs64_m5_route_fingerprint_mutex (every *_locked caller takes it, upstream_compat.cpp:1987-2011)
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_width	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_origin	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_b40	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_route	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_keyon	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_last_pc	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|g_rs64_m5_route_fingerprint_snapshots	LOCKED g_rs64_m5_route_fingerprint_mutex
+src/main/upstream_compat.cpp|s_s7332_carve	LOCKED s_s7317_mu: s7318_blk / s7333_boot_register / s7333_ev are only called with it held (callers 3499, 3539, 4580, 4614-4672; rs64_s7324_class takes it on the Gfx path)
+src/main/upstream_compat.cpp|s_s7333_keys	LOCKED s_s7317_mu (see s_s7332_carve)
+src/main/upstream_compat.cpp|s_s7333_nev	LOCKED s_s7317_mu (s7333_ev: caller holds it)
+src/main/upstream_compat.cpp|nlog@s7333_boot_register	LOCKED s_s7317_mu (caller holds it)
+src/main/upstream_compat.cpp|s_wb@rs64_g1d_blk_dma	CONFINED GFX: inside the kind=="rt64wb" branch (only Framebuffer::copyNativeToRAM on the Gfx thread passes it); guest pi/zmemcpy kinds skip it. Also DIAG (ROGUESQ_LOG_G1D_TASK)
+src/main/upstream_compat.cpp|n@rs64_g1d_blk_dma	CONFINED GFX (rt64wb branch, see s_wb)
+src/main/upstream_compat.cpp|n4@rs64_g1d_blk_dma	CONFINED GFX (rt64wb branch)
+src/main/upstream_compat.cpp|s_first@rs64_g1d_blk_dma	CONFINED GFX (rt64wb branch)
+src/main/upstream_compat.cpp|s_cov@rs64_g1d_blk_dma	CONFINED GFX (rt64wb branch)
+src/main/upstream_compat.cpp|g_m5_selector_ai_call_latch	DIAG M5 selector latch: Gfx-side join returns unless ROGUESQ_LOG_M5_ROUTE_TRANSITION / LOG_ALL; fields only printed
+src/rsp/dpc_bridge.cpp|g_f5_last_writer	DIAG ROGUESQ_LOG_F5_STORE_SHADOW table: sized once by call_once (s7366), rows written by the guest store hook only when the gate is on, read by the Gfx dump for printing
+src/rsp/dpc_bridge.cpp|event	ARTEFACT function-local automatic (Rs64E9Provenance::FrameEvent event{...}) in a function head the parser missed, not a static
