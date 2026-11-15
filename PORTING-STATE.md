@@ -194913,3 +194913,36 @@ calling threads instead of s7366's unchecked "thread-confined or handed off by q
   holding workloadMutex. Every swap-chain resize (fullscreen toggle, window move) runs it.
 - Conclusion: selects H-race for the counters/vector (fixed with the existing interpolatedMutex) and H-guarded for every config
   field; refutes H-hint-only (the counter reset is a multi-field write, not a word hint).
+
+## Session 7379 (2026-11-14) — class AU2 (RT64 resize / fb-config teardown vs the present thread) CLOSED as H-ordered: the workload/present id handoff already keeps every present out of the teardown; runtime probe 0/56 and 0/75 overlaps under resize stress with positive controls, TSan rc 0 across 70 resizes + 4 fullscreen toggles; no fix needed
+- Question (NEXT s7379): WorkloadQueue::threadConfigurationUpdate, on swapChainSizeChanged || fbConfigChanged, destroys
+  renderFramebufferManager / shared renderTargetManager / fbManager tile copies under managerMutex only, while the present thread
+  (s7377) uses colour targets from the same targetManager under workloadMutex. Hypotheses H-ordered / H-race / H-gfx.
+- Static (line 1): ids are assigned on the gfx thread in State::advanceWorkload (workloadId=++w, presentId=current p) and
+  advancePresent (presentId=++p, workloadId=current w). Workload W runs waitForPresentId(W.presentId) BEFORE
+  threadConfigurationUpdate (renderThreadLoop), and notifyPresentId is called only after frame 0's GPU pass + workloadMutex
+  release (rt64_present_queue.cpp, i==0). Every present Q submitted after W has Q.workloadId >= W.id, and the present loop runs
+  waitForWorkloadId(Q.workloadId) before threadPresent; W advances its id only after threadConfigurationUpdate (frame-0
+  threadAdvanceWorkloadId). So presents <= W.presentId have finished target use and presents > it are blocked: no present can be
+  inside its target-use window during W's teardown. The i>0 interpolated frames use interpolatedColorTargets after notify; the
+  teardown already waits presented>=available on that counter set before clearing them (upstream). Debugger-pause repeat path
+  re-advances both ids (same ordering; unused by RS64). H-gfx: State has its own framebufferManager/renderTargetManager
+  (rt64_state.h:76/79); the destroyed ones are the SharedQueueResources pair touched only by the workload + present threads.
+- Lock order (static, no fix needed): present takes configurationMutex alone, managerMutex alone (s7377 snapshot), then
+  workloadMutex (-> interpolatedMutex for the s7378 count read); workload teardown configurationMutex -> interpolatedMutex (wait,
+  released) -> managerMutex; threadRenderFrame holds workloadMutex and takes no other queue mutex. No cycle.
+- Runtime probe (line 2), lib/rt64 default-off ROGUESQ_S7379_PROBE=1: g_s7379PresentPhase = 1 from threadPresent entry to the
+  frame-0 notifyPresentId; teardown polls it for 2 ms before and after the destroy. Controls: g_s7379LoopBusy (present loop pass
+  incl. its waitForWorkloadId) must overlap; "seen" = phase polled 0.5 ms right after frame-0 threadAdvanceWorkloadId (1 in 16
+  workloads) must be >0. Resize stress via the existing ROGUESQ_WIN_TEST_RESIZE_S (1680x720 <-> 1280x720 every 4 s, t=30-246)
+  + ROGUESQ_FS_TEST_TOGGLE_LIST_S=120,126,200,206 (list in scratch/s7379/resize_list.txt).
+  - build/, `env SECS=260 zsh scratch/s7326/run.zsh s7379_probe "<probe + stress>"` (dd8 21:9 FPS60 hangar->mission->abort):
+    crash 0, resets 14, 55 resizes + 4 F11, **56 teardowns (size=1), phaseHits 0, busyHits 56/56, seen 755/755.**
+  - build_tsan/ (tools/build_tsan.sh, 28 s), scratch/s7379/tsan_run.zsh tsan_resize 480 (70 resizes every 6 s + 4 F11): crash 0,
+    initMission 1, **75 teardowns, phaseHits 0, busyHits 75/75, seen 88/92**; 3125 reports in 20 groups,
+    `python3 tools/s7354_tsan_report.py` rc 0, CTL x3045; no group in the RT64 target/fb managers (the queue-file frames in the
+    log are the known EXT Metal completion-handler and thread-creation stacks). First TSan coverage of the resize path.
+- Conclusion: selects H-ordered (static id chain + runtime probe with controls + TSan, three lines); refutes H-race for the
+  resize teardown; H-gfx confirmed (separate managers). Class AU2 CLOSED, no code fix. The probe stays (default off) as a
+  regression instrument for any change to the id handoff (waitForPresentId / waitForWorkloadId / notifyPresentId placement).
+- lib/rt64 edited (probe only): submodule-patches/export.sh refreshed rt64.patch.

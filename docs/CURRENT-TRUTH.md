@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7378 (2026-11-14).
+Compact operational handoff, as of Session 7379 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -208,10 +208,14 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID rt64-resize-destroy-vs-present): class AU2, the workload thread's resize/fb-config
-   teardown (threadConfigurationUpdate: renderFramebufferManager/targetManager destroyAll + fbManager.destroyAllTileCopies under
-   managerMutex only, inside configurationMutex) vs the present thread using colour targets under workloadMutex (s7377).**
-   Fires on every swap-chain resize (fullscreen toggle, ASPECT=auto window moves). Lock-order table + a resize stress arm under TSan.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-condvar-lost-wakeup): class AV, every host condition_variable wait/notify pair
+   (lost wakeup, missing predicate, notify before the state write, wait under a second mutex).** Census + hand verdicts.
+   **AU2 CLOSED s7379 as H-ordered, no fix:** the resize/fb-config teardown (threadConfigurationUpdate destroyAll under managerMutex)
+   cannot overlap a present's target use: W waits presentId<=W.presentId (notify only after frame-0 GPU pass), every later present
+   waits workloadId>=W, advanced only after the teardown. Probe ROGUESQ_S7379_PROBE=1 (default off): 0/56 (build) and 0/75 (TSan)
+   teardowns overlapped the present target phase under resize stress (ROGUESQ_WIN_TEST_RESIZE_S + FS_TEST_TOGGLE_LIST_S), controls
+   busy 56/56, 75/75 and seen 755/755, 88/92; TSan rc 0, CTL 3045, no manager races. Re-run the probe after any change to
+   waitForPresentId / waitForWorkloadId / notifyPresentId placement.
    **AU CLOSED s7378** (`tools/s7378_shared_res_census.py --check` rc 0, 20 fields, 192 accesses; hand verdicts
    tools/s7378_shared_res_reviewed.tsv): 13 GUARDED (all config fields under configurationMutex, incl. targetRate/resolutionScale:
    threadConfigurationUpdate holds it for its whole body), 1 CONFINED, 6 fixed: swapChainRate (port get_display_framerate read

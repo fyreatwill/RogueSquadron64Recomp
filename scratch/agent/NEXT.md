@@ -1,21 +1,24 @@
-# NEXT (s7379)
-HYPOTHESIS-ID: rt64-resize-destroy-vs-present
+# NEXT (s7380)
+HYPOTHESIS-ID: host-condvar-lost-wakeup
 
-s7378 closed class AU (SharedQueueResources fields; tools/s7378_shared_res_census.py --check rc 0). It surfaced AU2.
+s7379 closed AU2 (resize teardown vs present: H-ordered, probe ROGUESQ_S7379_PROBE=1 0/56 + 0/75 under resize stress, TSan rc 0).
+Item 1 of CURRENT-TRUTH Next steps is now class AV: a new idiom-class audit (ITERATION.md 3 model: enumerate, classify every
+site, fix or prove safe, close).
 
-Work unit: class AU2. WorkloadQueue::threadConfigurationUpdate (lib/rt64/src/hle/rt64_workload_queue.cpp ~331-349), on
-fbConfigChanged || sizeChanged, waits presented>=available, then under managerMutex ONLY calls renderFramebufferManager->destroyAll(),
-targetManager.destroyAll(), fbManager.destroyAllTileCopies(). The present thread (s7377) holds workloadMutex (not managerMutex) from
-performOperations through its GPU pass and dereferences RenderTarget* from targetManager. A resize (fullscreen toggle, window move,
-ASPECT=auto) makes the present thread set swapChainSizeChanged in threadLoop, then the workload tears down on its next config update
-while the next present may be inside threadPresent.
-Hypotheses: H-ordered (some handoff already keeps the next threadPresent out: e.g. waitForWorkloadId pairing means the present that
-could race waits for this very workload; prove it from the id chain), H-race (present uses a destroyed target: fix = take
-workloadMutex around the teardown, lock order configurationMutex -> managerMutex -> workloadMutex must be checked against every
-present/workload path, or do the teardown inside threadRenderFrame's workloadMutex scope), H-gfx (State's own targetManager is a
-separate object: confirm the destroyed managers are the shared ones).
-Discriminator: (1) a lock-order table of every managerMutex/workloadMutex/configurationMutex/interpolatedMutex acquisition with what is
-held (extend s7378 census lock tracker); (2) a TSan arm with a resize stress: env knob forcing a swap-chain resize every N s
-(SDL_SetWindowSize alternating, or ROGUESQ_FULLSCREEN toggle) during flight, positive control = s7354 CTL + the resize count in log.
-Gate if a fix lands: rebuild, smoke `env SECS=260 zsh scratch/s7326/run.zsh s7379_dd8 ''` + old arm, TSan
-`zsh tools/build_tsan.sh` + scratch/s7378/tsan_run.zsh copied to scratch/s7379 (480 s), `python3 tools/s7354_tsan_report.py` rc 0.
+Work unit: class AV, every host std::condition_variable / condition_variable_any (22 declarations across src/, lib/rt64/src,
+lib/N64ModernRuntime, excluding contrib) and every .wait / .wait_for / .wait_until / .notify_one / .notify_all on them.
+Per wait site record: mutex held, predicate form (lambda / while-loop / NONE), what other mutexes are held across the wait,
+the state the predicate reads. Per notify site: is the predicate state written under the SAME mutex the waiter holds (a write
+outside it, or under a different mutex, is a lost-wakeup window), notify before vs after the write, notify_one where several
+waiters can exist, shutdown flags (threadsRunning / presentThreadRunning) written without the mutex.
+Hypotheses: H-clean (every pair writes predicate state under the waiter's mutex), H-lost (>=1 pair writes outside it: hang
+until the next unrelated notify; candidate mechanism for rare stalls), H-shutdown (only the stop flags are unlocked: exit-time
+hang, harmless in play).
+Known leads to check first: RT64 PresentQueue::~PresentQueue sets presentThreadRunning=false with no cursorMutex before
+cursorCondition.notify_all; WorkloadQueue threadsRunning likewise; the s7378 interpolatedCondition pairs; ultramodern
+events.cpp / mesg queues; plume_metal present wait.
+Discriminator: a census tool tools/s7380_condvar_census.py (--check exits 1 on an unreviewed or LOST row, --controls plants a
+pair with an unlocked write and must flag it) + hand-verdict TSV. Any LOST row: fix (write under the mutex), gate with a
+targeted stress (e.g. a delay injected between the unlocked write and the notify must hang the old arm and not the new one =
+positive control), smoke `env SECS=260 zsh scratch/s7326/run.zsh s7380_dd8 ''`, TSan via scratch/s7379/tsan_run.zsh copy +
+`python3 tools/s7354_tsan_report.py` rc 0.
