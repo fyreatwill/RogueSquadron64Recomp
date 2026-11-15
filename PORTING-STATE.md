@@ -195181,3 +195181,4 @@ SIDE DATUM (single-source, but agrees with s4905/s4906 fsRender 3-5 ms + fsRende
 the Gfx thread re-renders every frame's raster scenes for RDRAM readback. Whether the game needs that readback was never
 tested -> NEXT.
 ORIGIN: no mitigation added (thread_local/atomic conversion of diagnostic statics; the publish gate defaults to old).
+s7384 conclusion: this run selects H-serial for the two-writer last-drawn site (two writer threads, 0/52000 overlaps, 0/9000 Gfx-ahead presents, all three controls fire) and H-confined/H-locked/H-diag-only for the other 70 MULTI statics; it refutes H-race on the default path (0 RACE verdicts, --check rc 0). Next discriminator (NEXT.md, render-to-rdram-double-pass): ROGUESQ_RENDER_TO_RAM=0 vs default on the same keyed route, splitting H-needed (readback images break) from H-redundant (send_dl drops ~6-8 ms, no visible change) and H-partial.
