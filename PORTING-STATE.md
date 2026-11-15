@@ -195796,3 +195796,45 @@ Conclusion: selects H-none for class BK (no live guest value is mishandled or ig
 divergence is a latent contract bug, fixed default-on (=0 old), control discriminates PASS vs STALE. Rules out: stale-flag
 non-blocking recv/send as a source of any observed hang/drop. Soak s7401_flags_levels queued (L4/L7/L12, 1 ctl PASS, 0 odd).
 Lib edit: lib/N64ModernRuntime ultramodern/src/mesgqueue.cpp, exported (submodule-patches/N64ModernRuntime.patch).
+
+## Session 7402 (2026-11-15) — class BL replaced-libultra side-effect contract closed: osClockRate left unscaled (62.5 MHz vs retail 46.875 MHz) by the empty osInitialize_recomp, fixed default-on; the sim dt never depended on it (VI-count branch), so sim-latent
+
+HYPOTHESIS-ID: replaced-libultra-side-effect-contract (closed) -> replaced-libultra-boot-globals.
+
+Soak folds: s7400_cont_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, pad 30 PASS / 0 STALE x3 -> CONTFIX holds.
+s7401_flags_levels rc=0: L4/L7/L12 202-205 s alive, 0 crash, 0 VI stall, ctl_pass=1 odd=0 x3 -> FLAGFIX holds.
+
+Static (new tools/s7402_side_effects.py, verdicts tools/s7402_side_reviewed.tsv, rc 0): for the 60 replaced libultra functions
+with live guest callers, walk the RETAIL body + transitive guest callees in /tmp/s7392.dis, collect absolute stores
+(lui/addiu/ori base + offset), join each global with live (s7401 live()) guest readers / address takers, then grep the port
+source for the address. 56 globals written: 51 NO-READER, 5 H-unwritten:
+- 0x80039190 __osRunningThread: only live reader __osException (reached only from __osExceptionPreamble; never runs) -> DEAD.
+- 0x8012D051 __osMaxControllers: readers __osPfsGetInitData/__osPfsRequestData, both called only by osPfsIsPlug, which has no
+  jal caller and no address ref -> DEAD.
+- 0x80039170 __osSiAccessQueueEnabled: __osSiGetAccess creates the queue itself when it reads 0 -> SELF-INIT.
+- 0x80039100/104 osClockRate (u64): ROM .data value 0x03B9ACA0 = 62500000. Retail osInitialize: osPiRawReadIo(4) header
+  override (header word 0x0000000F & ~0xF = 0 -> none), then osClockRate = osClockRate * 3 / 4 = 46875000 (the CPU count rate).
+  osInitialize_recomp just calls the empty ultramodern osInitialize(). Readers: timeSnapshotFiller (every frame-dt field divides
+  osGetTime/count deltas by the lo word), computeElapsedMillis + emitProfilerBarSegment (profiler). ultramodern osGetTime counts
+  46875 per ms, so every clock-divided term read 0.75x real time -> H-unwritten, real.
+Fix: osInitialize_recomp (librecomp ultra_translation.cpp) writes 46875000 to 0x80039104 when hi=0 and lo=62500000 (ROM value only,
+so another image is untouched). ROGUESQ_S7402_CLOCKFIX default ON, =0 old. Witness ROGUESQ_S7402_CLOCKLOG=1: one boot row
+[s7402-clock] + a [s7402-clk] row per 10 guest s (clock word, guest accumulators 0x8011A8F4/F8/FC).
+
+Runtime, one build, two arms back to back (one game at a time), L1 forced route, HOLD 60 (flight 132-137 s), 0 crash both:
+- boot row both arms lo=62500000 (ROM value confirmed at runtime); fix arm now=46875000, old arm 62500000 (positive control).
+- 0x8011A8F4 (+1 per timeSnapshotFiller) 6535 vs 6233 at t=200/190 s: same 30 frames/s. 0x8011A8F8 (sum of clock-divided
+  frame time) +10.0 per 10 s (fix) vs +7.5 (old): the guest really saw 0.75x time in those fields.
+- Second build adding a TEMPORARY hook in generated timeSnapshotFiller at the +0x20 store (0x8000BF3C -> rs64_s7402_dt, sink
+  kept in ultra_translation.cpp; the hook was reverted from funcs_3.c and the binary rebuilt): the +0x20 dt that runInMissionFrame,
+  cinematicComputeDt and advanceWrappingPhaseAccumulator consume (the only fields they read, +0x1C/+0x20) summed 193.633 s (fix)
+  vs 193.667 s (old) over 6450 frames at wall 195.7 s; quantised histograms 1-VI 1254/1251, 2-VI 5196/5199. The +0x20 branch taken
+  (postSwap flags 0x8011A8C8/C9 nonzero) is Δstamp/clock + getViModePeriod x VI-count terms where the result tracks VI count, not
+  the clock. So game/cutscene speed was NEVER 0.75x. Clock-dependent and still live only in: unread snapshot fields
+  +0x0C..+0x18/+0x24, the flags-clear +0x20 branch ([0x8011A904]/clock; not taken on this route), the profiler.
+  s6752's port "dt*60 = 2.00" agrees (VI branch), so no earlier conclusion is overturned.
+Two lines: (1) static join + ROM value + empty replacement; (2) runtime two-arm boot row + accumulator slope 0.75 vs 1.00, and the
+sim-dt equality between arms. Selects H-unwritten for osClockRate (fixed, sim-latent); H-none for the other 4 rows.
+ORIGIN: the writer is retail osInitialize (osClockRate *= 3/4), absent because librecomp replaces osInitialize with a no-op;
+the fix restores the retail value, it does not mask anything. The value 62500000 is legitimate only as ROM initial data.
+Soak s7402_clock_levels queued (L5/L10/L15 dd8 21:9 FPS60, 200 s). Next: class BM boot-global contract (NEXT.md).

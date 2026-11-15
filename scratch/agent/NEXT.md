@@ -1,16 +1,17 @@
-# NEXT (s7402)
-HYPOTHESIS-ID: replaced-libultra-side-effect-contract
+# NEXT (s7403)
+HYPOTHESIS-ID: replaced-libultra-boot-globals
 
-s7401 closed class BK (argument contract, H-none + latent flags fix ROGUESQ_S7401_FLAGFIX default on).
-Fold first: soak s7401_flags_levels (L4/L7/L12, pass = alive, 0 crash, 1 [s7401-ctl] PASS(retail), 0 [s7401-odd]).
+s7402 closed class BL (side-effect contract): osClockRate fixed (ROGUESQ_S7402_CLOCKFIX default on), sim-latent.
+Fold first: soak s7402_clock_levels (L5/L10/L15, pass = alive, 0 crash, 1 boot row applied=1 now=46875000, all clk rows 46875000).
 
-Work unit, class BL (replaced-libultra SIDE-EFFECT contract: guest-visible state retail writes that the port does not):
-1. For each of the 64 live replacements (tools/s7400_replaced_contract.py rows), list the guest globals / structs retail libultra
-   mutates as a side effect (e.g. __osRunningThread / __osRunQueue, __osViCurr/__osViNext, __osContPifRam, __osMaxControllers,
-   __osEepromTimer, __osSiAccessQueue, osTvType, __osCurrentTime/__osBaseCounter, __osTimerList, OSThread.state/priority/queue
-   fields, OSMesgQueue.validCount/first/mtqueue/fullqueue) from /tmp/s7392.dis (sw/sh/sb to %hi/%lo pairs inside the original
-   libultra body), versus what the replacement writes into rdram.
-2. Join with guest READERS that are live (non-replaced, s7401 live()): a global retail writes and a live game function reads
-   but the port never writes = H-unwritten. A field the port writes with a different encoding = H-encoding.
-3. Hypotheses: H-none, H-unwritten, H-encoding. Static first (tool tools/s7402_side_effects.py); runtime only for a flagged row,
-   two-arm in ONE build with a planted control (s7400/s7401 model). Fix behind a default-on env, =0 old.
+Work unit, class BM (boot-global contract: what IPL3 + retail osInitialize leave in low memory / libultra data that the port's
+bootstrap may not):
+1. Enumerate every live guest READ (tools/s7402_side_effects.py scan(), kind R/A, live() filter) of 0x80000300-0x8000033F
+   (osTvType 300, osRomType 304, osRomBase 308, osResetType 30C, osCicId 310, osVersion 314, osMemSize 318, osAppNMIBuffer 31C..)
+   and of libultra data words 0x80039100-0x8003910F (osClockRate, osViClock) plus any other libultra .data word a live game
+   function reads.
+2. For each, the retail value (IPL3 for an NTSC 6102-class cart, osInitialize stores) vs the port's (grep recomp.cpp /
+   librecomp bootstrap for the address; runtime witness = one boot log line dumping the words at the first game-thread entry).
+3. Hypotheses: H-none (every live-read word matches retail), H-unset (port leaves 0 / ROM data where IPL3 writes),
+   H-value (port writes a different value, e.g. osMemSize 8 MB vs expansion-pak logic, osResetType). Static first; runtime
+   = ONE boot dump line, two arms only if a fix lands (default-on env, =0 old), with a planted control.

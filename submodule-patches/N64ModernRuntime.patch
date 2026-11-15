@@ -5008,16 +5008,41 @@ index ae0f44f..0e1b7f9 100644
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..dd15996 100644
+index e0d367e..840337f 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
-@@ -1,4 +1,5 @@
+@@ -1,10 +1,30 @@
  #include <memory>
 +#include <cstdlib>
++#include <cstring>
++#include <cmath>
++#include <cstdio>
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  #include "recomp.h"
-@@ -20,7 +21,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
+ 
++// s7402 class BL (side-effect contract): retail osInitialize rescales osClockRate (u64 at 0x80039100, ROM data value
++// 62500000) to the CPU count rate, osClockRate * 3 / 4 = 46875000, after an osPiRawReadIo(4) header override (RS64 header
++// word 0x0000000F & ~0xF = 0 -> no override). The game divides osGetTime deltas (ultramodern counts 46875 per ms) by it in
++// timeSnapshotFiller (frame dt for runInMissionFrame / cinematicComputeDt) and computeElapsedMillis. The empty
++// replacement left it at 62500000. ROGUESQ_S7402_CLOCKFIX default ON (=0 restores the old unscaled word). Applied only
++// when the word still holds the ROM value, so another game image is untouched.
++static uint32_t s7402_clock_word(uint8_t* rdram, uint32_t vaddr) { return MEM_W(0, (int32_t)vaddr); }
+ extern "C" void osInitialize_recomp(uint8_t * rdram, recomp_context * ctx) {
+     osInitialize();
++    static const bool clockfix = [] { const char* e = std::getenv("ROGUESQ_S7402_CLOCKFIX"); return !(e && e[0] == '0'); }();
++    const uint32_t hi = s7402_clock_word(rdram, 0x80039100u), lo = s7402_clock_word(rdram, 0x80039104u);
++    bool applied = false;
++    if (clockfix && hi == 0 && lo == 62500000u) {
++        MEM_W(0, (int32_t)0x80039104u) = 46875000u;
++        applied = true;
++    }
++    fprintf(stderr, "[s7402-clock] boot osClockRate hi=%08X lo=%u fix=%d applied=%d now=%u\n", hi, lo, clockfix ? 1 : 0,
++            applied ? 1 : 0, s7402_clock_word(rdram, 0x80039104u));
+ }
+ 
+ extern "C" void __osInitialize_common_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -20,7 +40,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
      osStartThread(rdram, (int32_t)ctx->r4);
  }
  
@@ -5026,7 +5051,7 @@ index e0d367e..dd15996 100644
      osStopThread(rdram, (int32_t)ctx->r4);
  }
  
-@@ -28,7 +29,7 @@ extern "C" void osDestroyThread_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -28,7 +48,7 @@ extern "C" void osDestroyThread_recomp(uint8_t * rdram, recomp_context * ctx) {
      osDestroyThread(rdram, (int32_t)ctx->r4);
  }
  
@@ -5035,7 +5060,7 @@ index e0d367e..dd15996 100644
      assert(false);
      // osYieldThread(rdram);
  }
-@@ -45,23 +46,33 @@ extern "C" void osGetThreadId_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -45,23 +65,33 @@ extern "C" void osGetThreadId_recomp(uint8_t * rdram, recomp_context * ctx) {
      ctx->r2 = osGetThreadId(rdram, (int32_t)ctx->r4);
  }
  
@@ -5071,7 +5096,7 @@ index e0d367e..dd15996 100644
      osSetEventMesg(rdram, (OSEvent)ctx->r4, (int32_t)ctx->r5, (OSMesg)ctx->r6);
  }
  
-@@ -70,7 +81,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -70,7 +100,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
  }
  
  extern "C" void osGetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
@@ -5081,7 +5106,27 @@ index e0d367e..dd15996 100644
  }
  
  extern "C" void osSetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
-@@ -123,7 +135,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -79,6 +110,19 @@ extern "C" void osSetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
+ 
+ extern "C" void osGetTime_recomp(uint8_t * rdram, recomp_context * ctx) {
+     uint64_t total_count = osGetTime();
++    // s7402 witness: every 10 s of guest time (first 40), the clock word the game divides by and the guest's own frame-time
++    // accumulators 0x8011A8F4 (+1 per timeSnapshotFiller), 0x8011A8F8 (+= swap-state delta / clock), 0x8011A8FC.
++    {
++        static const bool w = [] { const char* e = std::getenv("ROGUESQ_S7402_CLOCKLOG"); return e && e[0] == '1'; }();
++        static uint64_t next = 0; static int n = 0;
++        if (w && total_count >= next && n < 40) {
++            next = total_count + 468750000ull; n++;
++            auto f = [&](uint32_t a) { uint32_t v = s7402_clock_word(rdram, a); float x; memcpy(&x, &v, 4); return x; };
++            fprintf(stderr, "[s7402-clk] t=%.3f clock=%u ratio=%.4f acc4=%.3f acc8=%.4f accC=%.4f\n",
++                    (double)total_count / 46875000.0, s7402_clock_word(rdram, 0x80039104u),
++                    46875000.0 / (double)s7402_clock_word(rdram, 0x80039104u), f(0x8011A8F4u), f(0x8011A8F8u), f(0x8011A8FCu));
++        }
++    }
+     ctx->r2 = (int32_t)(total_count >> 32);
+     ctx->r3 = (int32_t)(total_count >> 0);
+ }
+@@ -123,7 +167,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
  }
  
  extern "C" void __osDisableInt_recomp(uint8_t * rdram, recomp_context * ctx) {
@@ -5095,6 +5140,33 @@ index e0d367e..dd15996 100644
  }
  
  extern "C" void __osRestoreInt_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -170,3 +219,26 @@ extern "C" void __osSetFpcCsr_recomp(uint8_t * rdram, recomp_context * ctx) {
+ //extern "C" int32_t osGetThreadEx(void) {
+ //    return ultramodern::this_thread();
+ //}
++
++// s7402 diagnostic sink (called only by a temporary hook in the generated timeSnapshotFiller; harmless if unreferenced):
++// per frame the +0x20 dt the game hands runInMissionFrame / cinematicComputeDt, raw and after the game's round-half-up
++// quantiser to 1/60 multiples; summary every 150 frames vs host wall time. ROGUESQ_S7402_CLOCKLOG=1 only.
++#include <chrono>
++extern "C" void rs64_s7402_dt(uint32_t bits) {
++    static const bool w = [] { const char* e = std::getenv("ROGUESQ_S7402_CLOCKLOG"); return e && e[0] == '1'; }();
++    if (!w) return;
++    static auto t0 = std::chrono::steady_clock::now();
++    static double sraw = 0, sq = 0; static long n = 0; static int lines = 0; static long hist[8];
++    float dt; memcpy(&dt, &bits, 4);
++    const double v = 1.0 / 60.0, r = std::fmod((double)dt, v);
++    double q = (r > 0) ? ((r / v < 0.5) ? dt - r : dt + v - r) : dt;
++    if (q <= 0) q = 1.0 / 30.0;
++    sraw += dt; sq += q; n++;
++    int b = (int)std::lround(q * 60.0); hist[b < 0 ? 0 : b > 7 ? 7 : b]++;
++    if (n % 150 == 0 && lines < 60) {
++        lines++;
++        double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
++        fprintf(stderr, "[s7402-dt] n=%ld wall=%.2f sum_raw=%.3f sum_q=%.3f raw_last60=%.3f qhist1..4=%ld/%ld/%ld/%ld\n", n, wall, sraw,
++                sq, dt * 60.0, hist[1], hist[2], hist[3], hist[4]);
++    }
++}
 diff --git a/librecomp/src/vi.cpp b/librecomp/src/vi.cpp
 index 1f3a4cf..b9cc34f 100644
 --- a/librecomp/src/vi.cpp

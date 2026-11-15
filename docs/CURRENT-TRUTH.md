@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7401 (2026-11-15).
+Compact operational handoff, as of Session 7402 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -303,6 +303,19 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    ultramodern = INERT (no host reset source). osSetThreadPri pri byte-masked, NULL thread -> self in Stop/Destroy/SetPri like
    retail; osSetTimer countdown 0 -> interval handled; osVirtualToPhysical: 11 sites dead (viMgrMain/_VirtualToPhysicalTask under
    replaced osCreateViManager/osSpTaskLoad), 1 in osPfsIsPlug (0 jal, 0 address refs). Soak s7401_flags_levels queued (L4/L7/L12).
+   s7402 fold s7401_flags_levels: L4/L7/L12 alive, 0 crash, ctl PASS x3, 0 odd -> FLAGFIX holds.
+   **BL CLOSED s7402 (side-effect contract), 1 real divergence fixed, sim-latent** (`tools/s7402_side_effects.py` rc 0, verdicts
+   tools/s7402_side_reviewed.tsv): 60 live replaced roots, 56 globals their RETAIL bodies (+callees) store; 51 no live reader,
+   5 H-unwritten -> 3 DEAD/SELF-INIT (__osRunningThread only in __osException; __osMaxControllers only under unreferenced
+   osPfsIsPlug; __osSiAccessQueueEnabled self-initialised by __osSiGetAccess) + **osClockRate 0x80039100**: ROM 62500000, retail
+   osInitialize scales *3/4 = 46875000, the empty osInitialize_recomp left it unscaled -> **ROGUESQ_S7402_CLOCKFIX default ON**
+   (=0 old; applied only if the word holds the ROM value). Runtime two-arm, one build, L1 200 s each: boot row lo=62500000 both,
+   fix now=46875000 vs old 62500000; guest measured-time accumulator 0x8011A8F8 +10.0 vs +7.5 per 10 s at the same 30 frames/s
+   (positive control). BUT the sim dt (snapshot +0x20, read by runInMissionFrame / cinematicComputeDt /
+   advanceWrappingPhaseAccumulator, the only fields they read) takes the VI-count branch: sum 193.6 s vs wall 195.7 s in BOTH arms,
+   identical 1/2-VI histograms -> game speed was never 0.75x. Clock-dependent consumers left: unread snapshot fields
+   +0x0C..+0x18/+0x24, the flags-clear +0x20 branch (postSwap flags 0x8011A8C8/C9 both 0; not taken on this route), profiler
+   computeElapsedMillis. s6752's port "dt 2.00" is consistent (VI branch). Soak s7402_clock_levels queued (L5/L10/L15).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
@@ -424,9 +437,10 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidates:** class BJ, replaced-libultra output contract: every librecomp *_recomp that returns a
-    value or writes a guest struct (osCont*, osPfs*/osEeprom*, osGetTime/osGetCount, osVi* getters, osAi*, osSp*) vs the
-    libultra contract, joined with the guest sites that test the return/struct (NEXT.md s7400). Any new arena or pointer layout re-runs items 11/14 with --controls; a
+16. **Next audit candidate:** class BM, boot-global (IPL3/low-memory) contract: the words retail IPL3 + osInitialize leave at
+    0x80000300-0x8000031C and in libultra data (osTvType, osRomType, osRomBase, osResetType, osCicId, osVersion, osMemSize,
+    osAppNMIBuffer, osViClock 0x80039108) vs what the port's bootstrap writes, joined with live guest readers (NEXT.md s7403;
+    reuse tools/s7402_side_effects.py scan()). Any new arena or pointer layout re-runs items 11/14 with --controls; a
     census whose rows are cached across sessions must re-cut them on the measured tree (s7373 stale-row lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.

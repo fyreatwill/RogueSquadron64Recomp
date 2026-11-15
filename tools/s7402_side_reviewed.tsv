@@ -1,0 +1,6 @@
+# s7402 class BL hand verdicts for H-unwritten rows of tools/s7402_side_effects.py. addr<TAB>verdict<TAB>reason
+80039100	FIXED-s7402	osClockRate hi word (0 in ROM and retail); CLOCKFIX rewrites only the lo word
+80039104	FIXED-s7402	osClockRate lo: ROM 62500000, retail osInitialize *3/4 = 46875000; port left it unscaled. ROGUESQ_S7402_CLOCKFIX default on. Readers: timeSnapshotFiller fields +0x0C..+0x18/+0x24 (no caller reads them) and the flags-clear +0x20 branch (not taken on the measured route), computeElapsedMillis (profiler). Sim dt +0x20 = wall in both arms (s7402 runtime)
+80039170	SELF-INIT	__osSiAccessQueueEnabled: only live reader __osSiGetAccess creates the queue itself when it reads 0 (and its only non-replaced caller osPfsIsPlug is unreferenced)
+80039190	DEAD	__osRunningThread: only live reader __osException, reached solely from the guest exception preamble, which never runs under recomp
+8012D051	DEAD	__osMaxControllers: readers __osPfsGetInitData / __osPfsRequestData / osPfsIsPlug; osPfsIsPlug has no jal caller and no address ref, the other two are called only by it
