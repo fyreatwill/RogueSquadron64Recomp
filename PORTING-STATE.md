@@ -195653,3 +195653,4 @@ Runtime: ROGUESQ_S7397_TM=1 logs [s7397-tm] set (live flag = already in set) / s
 Rules out: timer lifecycle as a source of stray/duplicate messages or stalled periodic work on the route. The fix is latent
 hardening. Soak s7397_tm_levels queued (L5/L10/L15). tools/s7392_mq_run.zsh gained NOREPORT=1 (skips the mq report).
 Next: class BH, PI/SI I/O-message lifecycle (OSIoMesg reused while its DMA is in flight).
+Conclusion: selects H-none, refutes H-rearm and H-stop-late for guest timer lifecycle (class BG closed); next discriminator: class BH OSIoMesg reuse-while-pending counter with a planted double-start control.
