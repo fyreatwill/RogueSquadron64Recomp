@@ -196063,6 +196063,9 @@ upstream_compat (bzero, yield) run no FP code. CHECK_FR asserts are live (Debug)
    empty (the s7408 soak recipe copies the owner save into its build dir; a fresh dir boots profile-less). With the save COPY
    (cmp-identical; build/saves untouched) the full-probe build PASSes. build_fodd.sh now copies it. Also moved the transform
    output to build_fodd/fodd_src (build_fodd/src holds RT64's generated shaders/).
+Conclusion: this selects H-consistent and refutes H-mixed-live (0 FR0-called mixed rows statically; bad 0 / view_bad 0 live,
+plant control PASS x2), and closes class BS. H-dead covers only data_gap_80023968 and projectPointToScreen (0 calls live).
+Next discriminator: class BT, per-routine callee-saved f20-f30/s-reg save/restore census plus a live entry-vs-return diff (NEXT.md).
 Rules out: an FR-mode or odd-register view mismatch on the live path (static + live, two settings), FR=1 leaking into FR=0
 guest math. No code/runtime change, no ORIGIN line needed. Fold: s7408_cvt_levels rc 0 x3 (SOAK-RESULTS). Queued
 s7409_fodd_levels (L4/L7/L12). Next: class BT callee-saved register preservation across the FR=1 routines (NEXT.md).
