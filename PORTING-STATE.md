@@ -195619,3 +195619,6 @@ Work unit: NEXT.md class BF (thread lifecycle idiom audit, s7392 message-queue l
 - Soak queued: scratch/agent/soak_queue/s7396_tq_levels.sh (L4/L7/L12 dd8 21:9 FPS60 200 s, report rc 0 per level).
 - lib/ edit exported (submodule-patches/N64ModernRuntime.patch). Build: cmake --build build OK.
 - Next: class BG timer lifecycle (osSetTimer / osStopTimer: re-arm of an active timer, stop with a message pending).
+- Conclusion: this selects H-none and refutes H-dangle (as a live failure on the route) and H-recreate for class BF; it closes
+  class BF, and the root cause of the latent HANG is the upstream thread_queue_remove walk (fixed, TQFIX default on). Next
+  discriminator: class BG timer lifecycle (osSetTimer re-arm / osStopTimer late-send census with a planted control, NEXT.md).
