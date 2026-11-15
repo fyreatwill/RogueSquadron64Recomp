@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7373 (2026-11-14).
+Compact operational handoff, as of Session 7374 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -205,15 +205,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID lazy-static-init-audit): class AR, non-atomic lazy-init statics.** `static int x = -1;
-   if (x < 0) x = <getenv...>` and kin (159 grep hits in src + librecomp + ultramodern + rt64 hle/render/gbi): a plain-int
-   lazy init reached from more than one thread is a C++ data race neither s7354 (TSan, reached code only) nor s7366 (lockset,
-   containers only) keyed on. Census -> classify each site by calling threads -> convert multi-thread ones to `static const`
-   magic-static init (thread-safe) behind no flag (pure refactor, same value) -> gate re-run (item 11 censuses --controls).
-   **AQ CLOSED s7373** (static s7366 + runtime s7372/s7373): tools/s7373_aq_gate_table.py gates the 72 rows a coverage run never
-   executed: 68 env/dtor/const/dead/build/cfg/error-gated (H-diag), 3 tile-copy rows single-thread by FramebufferRenderer
-   instance ownership, 1 hotkey row. 19 rows exercised in mission, 0 races on own access. Rows must be re-cut on the tree the
-   coverage build used (tool exits 3 on stale rows; the s7366 rows had 20/97 dead lines).
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID nolock-container-threads): class AS, the 98 s7366 NOLOCK containers.** s7366 counted
+   containers that are never accessed under a lock as "thread-confined or handed off by queue" without checking. Apply the s7374
+   calling-thread method (gfx_thread / task_thread / main / present / audio callback / GUEST-SERIAL) to each; any container touched
+   from two host threads with no lock and no queue handoff is a defect to fix.
+   **AR CLOSED s7374** (tools/s7374_lazy_static_census.py + s7374_lazy_static_reviewed.tsv, `--check`): 236 lazy-init statics,
+   27 COMPANION/PTR rows thread-reviewed (SINGLE 8, GUEST-SERIAL 11, NOT-LAZY 7), 1 real multi-thread site FIXED: rs64_s7012_cap
+   (guest + gfx_thread under S7026_SUB / G1E_TRING) now a magic static (could read the cap tables as zeros or v[3] out of range);
+   172 SIMPLE rows are idempotent single-word values, not converted. TSan arm with the gfx caller armed: 0 reports on it, CTL fires.
+   **AQ CLOSED s7373** (tools/s7373_aq_gate_table.py). Re-cut rows on the tree the coverage build used (tool exits 3 on stale rows).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -259,7 +259,7 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
       V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
       AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
-      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372 = item 1); AF signal safety s7355; AG unchecked alloc s7356;
+      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AF signal safety s7355; AG unchecked alloc s7356;
       AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
       s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
       reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census) + runtime half s7372/s7373 (COV=1 arm,

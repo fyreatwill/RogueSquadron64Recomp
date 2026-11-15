@@ -1,0 +1,29 @@
+# s7374 class AR hand verdicts: file<TAB>function<TAB>sentinel<TAB>verdict<TAB>reason
+# SINGLE = one host thread (named); GUEST-SERIAL = recompiled-guest hook only, guest threads run one at a time under ultramodern run-one handoff (semaphore release/acquire = happens-before);
+# NOT-LAZY = file-scope state the guard regex matched, not a lazy-init idiom (thread use covered by AE s7354 / AQ s7366);
+# FIXED = converted to a thread-safe magic static this session.
+lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp	dma_rdram_to_dmem	s_f	SINGLE	static inline in a header: one copy per TU; gfx ucode TUs + main.cpp factor5_gfx_runner run on gfx_thread, audio ucode TU on task_thread; also needs IMEM DMA + ROGUESQ_DUMP_IMEM_DMA
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	load_patch_functions	patch_code_sections	NOT-LAZY	assigned at startup patch load before game threads start
+lib/N64ModernRuntime/librecomp/src/rsp.cpp	run_task	s_vf_en	SINGLE	inside is_audio_task; run_task is reached only from task_thread_func (gfx goes action_queue -> gfx_thread -> rs64_run_lle_gfx, not run_task)
+lib/rt64/src/hle/rt64_framebuffer.cpp	copyNativeToRAM	s_fl_hdr_restore	SINGLE	RT64 State fullSync path (rt64_state.cpp:2955/2973/3033) on gfx_thread send_dl
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	reinterpretTileRecord	s_log	SINGLE	FramebufferManager driven by RT64 State on gfx_thread
+src/main/main.cpp	rs64_m5_lowfield_store	g_s4457_tab	GUEST-SERIAL	alloc in the guest store hook rs64_m5_lowfield_store, read in rs64_s4457_list_check (guest store hook, upstream_compat.cpp:3151); ROGUESQ_LOG_S4457 diag
+src/main/main.cpp	rs64_s5229_store	g_s5229_pc	GUEST-SERIAL	guest store hook; ROGUESQ_LOG_S5223_ENTRY_JOIN diag
+src/main/main.cpp	poll_input	controller	NOT-LAZY	SDL controller handle, main-thread event pump only
+src/main/main.cpp	rs64_pad_test_tick	stage	SINGLE	main thread (poll_input); ROGUESQ_PAD_HOTPLUG_TEST arm
+src/main/main.cpp	get_n64_input	s_init	GUEST-SERIAL	get_input callback, called from osContGetReadData on guest threads
+src/main/main.cpp	get_n64_input	s_ah_have	GUEST-SERIAL	get_input callback (guest)
+src/main/main.cpp	get_n64_input	s_god3	GUEST-SERIAL	get_input callback (guest); the spawned sampler thread takes its inputs by copy
+src/main/main.cpp	rs64_display_hotplug_tick	g_rs64_window	NOT-LAZY	SDL window handle, main thread
+src/main/rt64_render_context.cpp	update_screen	s_sd	SINGLE	ScreenUpdateAction on gfx_thread (events.cpp:1617)
+src/main/upstream_compat.cpp	rs64_s6898_ovl_x1	mode	GUEST-SERIAL	recompiled-code hook (tools/apply_s6898_letterbox.py)
+src/main/upstream_compat.cpp	s7302_alt	init	GUEST-SERIAL	callers rs64_s6904_fog / rs64_s6904_clipmul are recompiled-code hooks (tools/apply_s6904_fog.py)
+src/main/upstream_compat.cpp	rs64_s7030_begin	s7030_t0	GUEST-SERIAL	recompiled-code hook (tools/apply_s7030_fogcull.py)
+src/main/upstream_compat.cpp	rs64_s7033_frame	s7033_on	GUEST-SERIAL	called from rs64_s7030_begin (guest)
+src/main/upstream_compat.cpp	rs64_s7030_begin	init	GUEST-SERIAL	recompiled-code hook
+src/main/upstream_compat.cpp	rs64_s7011_lodmul	m	GUEST-SERIAL	recompiled-code hook (tools/apply_s7011_lodmul.py)
+src/main/upstream_compat.cpp	rs64_s7023_cs	tb	GUEST-SERIAL	recompiled-code hook (tools/apply_s7023_calleetime.py)
+src/rsp/dpc_bridge.cpp	rs64_dpc_record_submit_impl	s_task_first_hi	NOT-LAZY	per-task DPC bookkeeping, gfx_thread
+src/rsp/dpc_bridge.cpp	dlw_dump_words	g_rdram_for_submit	NOT-LAZY	rdram base set once at bridge init
+src/rsp/dpc_bridge.cpp	rs64_m4_dma_probe	init	SINGLE	called only from the factor5 gfx ucode TUs (gfx_thread); G1E_PROBES-gated
+src/rsp/dpc_bridge.cpp	rs64_floor_cover	s_cov_origin_set	NOT-LAZY	floor-cover accumulator state, gfx_thread

@@ -372,22 +372,25 @@ extern "C" float rs64_s7011_lodmul(void) {
 // s7012 G5e (tools/apply_s7012_widewin_cap.py): ROGUESQ_DD_WIDEWIN_CAP=a[,b,c] caps the wide window's cell area; with
 // ROGUESQ_DD_WIDEWIN=tog3 the cap cycles a/b/c on (mach/24e6) % 3 seconds. 0 = no host cap.
 extern "C" int rs64_s7012_cap(void) {
-    static int n = -1; static int v[3] = {0, 0, 0}; static int tog3 = 0;
-    if (n < 0) { n = 0; const char* e = getenv("ROGUESQ_DD_WIDEWIN_CAP");
-        while (e && *e && n < 3) { v[n++] = atoi(e); const char* c = strchr(e, ','); e = c ? c + 1 : nullptr; }
-        const char* w = getenv("ROGUESQ_DD_WIDEWIN"); tog3 = (w && w[0] == 't' && w[1] && w[2] && w[3] == '3');
-        fprintf(stderr, "[s7012] widewin cap n=%d %d,%d,%d tog3=%d\n", n, v[0], v[1], v[2], tog3); }
-    /* s7061 level-scoped cap: ROGUESQ_DD_WIDEWIN_CAPLEVEL=<lvl>:<cells>[,...] caps those levels (gCurrentLevel as latched by
-       rs64_s7030_begin, s7056_last). _CAPLEVEL_TOG=1 (needs WIDEWIN=tog3): phase 1 ignores it (same-run on/off/on). */
-    static int cl[32]; static int clinit = 0, cltog = 0;
-    if (!clinit) { clinit = 1; for (int i = 0; i < 32; i++) cl[i] = 0;
-        if (const char* q = getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL")) while (q && *q) { int l = -1, c = 0;
-            if (sscanf(q, "%d:%d", &l, &c) == 2 && l >= 0 && l < 32 && c > 0) cl[l] = c; q = strchr(q, ','); if (q) q++; }
-        { const char* t = getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL_TOG"); cltog = t && t[0] == '1'; }
-        fprintf(stderr, "[s7061] widewin caplevel=%s tog=%d\n", getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") ? getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") : "(none)", cltog); }
+    /* s7374 class AR: was two plain lazy-init blocks (n=-1 / clinit=0) publishing v[], tog3, cl[], cltog; reached from the guest
+       thread and the gfx thread (factor5_gfx_runner under S7026, rs64_g1e_tring_push under G1B), so a second thread could see
+       n/clinit set with v[]/cl[] still zero, or race v[n++] past v[2]. Now one thread-safe magic static, same values. */
+    struct Cfg { int n = 0; int v[3] = {0, 0, 0}; int tog3 = 0; int cl[32] = {0}; int cltog = 0; };
+    static const Cfg cfg = [] { Cfg c; const char* e = getenv("ROGUESQ_DD_WIDEWIN_CAP");
+        while (e && *e && c.n < 3) { c.v[c.n++] = atoi(e); const char* q = strchr(e, ','); e = q ? q + 1 : nullptr; }
+        const char* w = getenv("ROGUESQ_DD_WIDEWIN"); c.tog3 = (w && w[0] == 't' && w[1] && w[2] && w[3] == '3');
+        fprintf(stderr, "[s7012] widewin cap n=%d %d,%d,%d tog3=%d\n", c.n, c.v[0], c.v[1], c.v[2], c.tog3);
+        /* s7061 level-scoped cap: ROGUESQ_DD_WIDEWIN_CAPLEVEL=<lvl>:<cells>[,...] caps those levels (gCurrentLevel as latched by
+           rs64_s7030_begin, s7056_last). _CAPLEVEL_TOG=1 (needs WIDEWIN=tog3): phase 1 ignores it (same-run on/off/on). */
+        if (const char* q = getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL")) while (q && *q) { int l = -1, k = 0;
+            if (sscanf(q, "%d:%d", &l, &k) == 2 && l >= 0 && l < 32 && k > 0) c.cl[l] = k; q = strchr(q, ','); if (q) q++; }
+        { const char* g = getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL_TOG"); c.cltog = g && g[0] == '1'; }
+        fprintf(stderr, "[s7061] widewin caplevel=%s tog=%d\n", getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") ? getenv("ROGUESQ_DD_WIDEWIN_CAPLEVEL") : "(none)", c.cltog);
+        return c; }();
+    const int n = cfg.n, tog3 = cfg.tog3, cltog = cfg.cltog; const int* v = cfg.v; const int* cl = cfg.cl;
     int ph = 0;
-    if (tog3) { const uint64_t mt = mach_absolute_time(); static int anc = 0;
-        if (!anc) { anc = 1; rs64_tog_anchor(mt); }  /* tog3 cycles on sec %% 3, not on the s7017 split */
+    if (tog3) { const uint64_t mt = mach_absolute_time(); static std::atomic<int> anc{0};
+        if (!anc.exchange(1)) rs64_tog_anchor(mt);  /* tog3 cycles on sec %% 3, not on the s7017 split; s7374 once across threads */
         ph = (int)((mt / 24000000u) % 3u); }
     const int base = n == 0 ? 0 : (tog3 ? v[ph % n] : v[0]);
     const uint32_t lv = s7056_last;

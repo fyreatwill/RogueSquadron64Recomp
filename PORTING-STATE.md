@@ -194691,3 +194691,52 @@ Next: a new idiom-class audit (CURRENT-TRUTH item 16): AR non-atomic lazy-init s
 getenv...`, 159 grep hits), reached from more than one thread = a C++ data race the s7354/s7366 censuses did not key on.
 Conclusion (s7373): selects H-diag and closes AQ; refutes the s7372 "dpc defer exercised in mission" item (stale-line
 artefact).
+
+## Session 7374 (2026-11-14) — class AR (non-atomic lazy-init statics) CLOSED: census 236 rows, 27 publish more than the sentinel, 1 real multi-thread site (rs64_s7012_cap: guest + gfx thread) converted to a magic static; TSan arm 0 reports on it, control fires
+
+Work unit (NEXT.md s7374, HYPOTHESIS-ID lazy-static-init-audit), one census, one build.
+
+- **Census** (new tools/s7374_lazy_static_census.py, scope src + librecomp + ultramodern + rt64 hle/render/gbi): every plain static
+  scalar/pointer with a sentinel initialiser and a lazy guard (`if (x < 0)`, `if (!x)`, `== -1`, `== nullptr`); std::atomic,
+  const/constexpr, thread_local and magic statics skipped. Classes SIMPLE (block writes only the sentinel from a pure expression:
+  idempotent value, formally a race if two threads, single-copy-atomic aligned store), COMPANION (block also writes other statics:
+  publication-order hazard on arm64), PTR, LOCKED. --selftest (planted SIMPLE/COMPANION/PTR/LOCKED + atomic/const/thread_local
+  decoys that must produce no row): PASS. Real-tree control: on the pre-fix upstream_compat.cpp the tool flags rs64_s7012_cap
+  `n` and `clinit` as COMPANION; after the fix the function has no rows.
+- **Result (pre-fix):** 236 rows = SIMPLE 173, LOCKED 36, COMPANION 20, PTR 7. Each COMPANION/PTR row got a calling-thread verdict
+  (tools/s7374_lazy_static_reviewed.tsv, `--check` exits 1 on an unreviewed row): SINGLE 8 (gfx_thread: update_screen,
+  copyNativeToRAM, reinterpretTileRecord, rs64_m4_dma_probe; task_thread: rsp.cpp run_task s_vf_en, which sits inside
+  is_audio_task and run_task is reached only from task_thread_func; main thread: rs64_pad_test_tick; dma_rdram_to_dmem s_f is
+  `static inline` in rsp.hpp, so one copy per TU and each ucode TU runs on one thread), GUEST-SERIAL 11 (recompiled-code hooks
+  and the get_input callback; guest threads run one at a time under ultramodern's run-one handoff), NOT-LAZY 7 (file-scope state
+  the guard regex matched: controller, g_rs64_window, patch_code_sections, dpc s_task_first_hi / g_rdram_for_submit /
+  s_cov_origin_set), **FIXED 2 (one function)**.
+- **The one multi-thread site:** rs64_s7012_cap (upstream_compat.cpp) is called by the guest terrain-stream hook (funcs_9.c,
+  apply_s7012_widewin_cap.py) AND on gfx_thread by factor5_gfx_runner (main.cpp:7048, under ROGUESQ_S7026_SUB) and
+  rs64_g1e_tring_push (main.cpp:6611, events.cpp:1587, under ROGUESQ_G1E_TRING). Its two lazy blocks set `n`/`clinit` first and
+  then fill v[3], tog3, cl[32], cltog, so a second thread could read the level cap table as zeros, and two first callers racing
+  `v[n++]` could push n to 4 and read v[3] (past the array) via `v[ph % n]`. ORIGIN: the s7012/s7061 author wrote the init as a
+  guest-only helper; s7026 and s6954 later added gfx-thread callers. Fix: one `static const Cfg cfg = [] {...}()` magic static
+  (same parse, same [s7012]/[s7061] log lines), plus the tog3 anchor flag as `std::atomic<int>::exchange`. No flag (pure refactor,
+  same values). Owner path today reaches it on the guest thread only (the gfx-thread callers are diag-gated), so this closes a
+  latent defect, not an observed symptom.
+- **H-few selected** (<= 5 multi-thread sites with companions: exactly 1). The 172 SIMPLE rows are not thread-reviewed; they are
+  idempotent single-word values (classed MULTI-BENIGN-VALUE by design, not converted).
+- **Gates.** build/ rebuilt. Host censuses with --controls (s7340-s7353): every control passes; survivors s7343 1 (rs64_apf.h
+  vsnprintf, guarded by `o >= cap - 1` above it), s7345 1 (rt64_framebuffer_manager.cpp:628 `1u << fb->siz`, siz is 2 bits),
+  s7346 2 (dpc_bridge.cpp:6745/6749 RSTAT loop) are older sites in files this session did not touch (drift from later edits, safe
+  on inspection, not added to their tables). Normal-build smoke `env SECS=260 zsh scratch/s7326/run.zsh s7374_dd8
+  'ROGUESQ_DD_WIDEWIN_CAP=9000,7000'` (hangar route, dd8 21:9): crash 0, resets 14, late 0, arena full 0, VI stall/stall-dump 0,
+  `[s7012] widewin cap n=2 9000,7000,0 tog3=0` (cap parsed through the new path; caplevel (none) as designed when an explicit
+  _CAP is set, main.cpp:12536; the s7367 run without _CAP printed caplevel=9:8192).
+- **TSan arm** (tools/build_tsan.sh, incremental 30 s; scratch/s7374/tsan_run.zsh t1 600, AP2 route, CLOCK=frames, FPS60 dd8
+  21:9 WIDEWIN, ROGUESQ_S7026_SUB=1 so gfx_thread calls rs64_s7012_cap every task, WIDEWIN_CAP=9000,7000, RACE_CTL=1): crash 0,
+  initMission 1, 3233 reports in 22 groups, CTL x3165 (control fires), **0 report frames in rs64_s7012_cap**. No old-code arm was
+  built, so this null alone does not prove TSan would have caught the old race (the init window is one call); it is a second
+  line only for "the fix introduces no new race". 2 unclassified groups, both classified in tools/s7354_tsan_report.py: the
+  existing init-semaphore stack row under a shifted thread number (T12 instead of T13; gfx_thread_func signal events.cpp:1534 vs
+  init_timers' std::thread ctor, HB through a mach semaphore TSan cannot see), and inflate_flush (zmemcpy) writing RDRAM later
+  reused for an OSThread that resume_thread_tagged reads on another guest thread (heap reuse, run-one scheduler, SEM). Re-run of
+  the report: 0 unclassified.
+- Rules out: lazy-init statics as a source of the parked rare dd4/dd8 gfx SIGBUS (the only multi-thread publisher is diag-gated
+  off the owner path). Thread verdicts are single-source (static call-site reading) except rs64_s7012_cap (static + TSan run).
