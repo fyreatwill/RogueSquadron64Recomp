@@ -195090,3 +195090,5 @@ leave to the owner ("Never flip without the owner"). This census is a second, in
 Code landed: the sampler + control (default off), census tool + verdicts, and thread names for the AI event-drain / AI Hz /
 Recomp Boot threads (lib/N64ModernRuntime, exported to submodule-patches/N64ModernRuntime.patch).
 Rules out: a hot thread at UTILITY/BACKGROUND by default (none); RT64 present/workload being hot (< 2% each).
+Conclusion: this selects H-gap (hot [Game]/Gfx threads at DEFAULT QoS by default) and refutes H-covered for them and H-invert on the hot path; class AX closes. Next discriminator: class AY atomic memory-ordering census (NEXT.md).
+
