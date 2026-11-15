@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """s7393 class BC: static census of every guest osCreateMesgQueue call site (re-create of a LIVE queue).
 
-Usage: tools/s7393_createmq_census.py [disasm=/tmp/s7392.dis]
-  (mips64-elf-objdump -d --no-show-raw-insn ../rogue_squadron64/build/roguesquadron.elf > /tmp/s7392.dis)
+Usage: tools/s7393_createmq_census.py [disasm=/tmp/s7419_canon.dis]
+  (default built by tools/s7419_canon_dis.py)
 
 Per site: caller function, mq (a0), msg buffer (a1), count (a2) resolved by tools/s7392_mesg_census.py's resolver, and the
 number of static jal sites that reach the caller (callers=N; 0 = reached only indirectly / entry). A caller with callers>1,

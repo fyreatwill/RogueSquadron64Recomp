@@ -23,7 +23,7 @@ INC = os.path.join(ROOT, 'lib/N64ModernRuntime/N64Recomp/include')
 FORCE = os.path.join(ROOT, 'include/rsp_dpc_macros.h')
 FUNCS = os.path.join(ROOT, '../N64Recomp/RecompiledFuncs')
 ELF = os.path.join(ROOT, '../rogue_squadron64/build/roguesquadron.elf')
-DIS = '/tmp/s7418.dis'
+DIS = '/tmp/s7419_canon.dis'   # s7419: canonical listing (mips:4300 decode, inner OBJECT labels stripped)
 m15 = importlib.import_module('s7415_fp_arith')
 CMT = re.compile(r'// 0x([0-9A-F]{8}): (\S+)[ \t]*([^\n]*?)\s*$')
 
@@ -52,7 +52,7 @@ def harvest():
         L = open(f, errors='replace').read().split('\n')
         fn = None
         for i, l in enumerate(L):
-            m = re.match(r'RECOMP_FUNC void (\w+)\(', l)
+            m = re.match(r'(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void (\w+)\(', l)
             if m: fn = m.group(1)
             for m in CMT.finditer(l):
                 out.append((fn, L, i, m.group(1), m.group(2), m.group(3), l.lstrip().startswith('//')))
@@ -88,24 +88,26 @@ def live_tags(fns):
     """tag per RecompiledFuncs function NAME (the ELF has overlays sharing VRAM, so address lookup is ambiguous)."""
     c92 = importlib.import_module('s7392_mesg_census'); c00 = importlib.import_module('s7400_replaced_contract')
     c01 = importlib.import_module('s7401_replaced_args'); c04 = importlib.import_module('s7404_rcp_access')
-    if not os.path.exists(DIS) or os.path.getmtime(DIS) < os.path.getmtime(ELF):
-        with open(DIS, 'w') as fo:
-            subprocess.run(['mips64-elf-objdump', '-d', '--no-show-raw-insn', ELF], stdout=fo, check=True)
+    importlib.import_module('s7419_canon_dis').ensure(DIS)
     ins = c92.parse(DIS)
     known = set(fn for a, mn, ops, fn in ins)
+    # s7419: 147 RecompiledFuncs names (renames, *_recomp, overlay copies) are not objdump names; s7418 tagged them `nofn`
+    # and so skipped them. Map each to the objdump function that agrees on the most mnemonics at its addresses.
+    nmap = importlib.import_module('s7419_dis_agree').name_map(DIS)
     allb, ign = c00.bodies(), c04.ignored()
     tag = {}
     for fn in fns:
-        if fn is None or fn not in known: tag[fn] = 'nofn'
-        elif fn in allb: tag[fn] = 'REPLACED'
-        elif fn in ign: tag[fn] = 'IGNORED'
-        elif fn.startswith('data_gap_') and not c01.callers(ins, fn) and not c01.addr_refs(ins, fn) and fn not in CALLED_GAPS:
+        fo = nmap.get(fn) if fn is not None and fn not in known and nmap.get(fn) in known else fn
+        if fn is None or fo not in known: tag[fn] = 'nofn'
+        elif fo in allb: tag[fn] = 'REPLACED'
+        elif fo in ign: tag[fn] = 'IGNORED'
+        elif fo.startswith('data_gap_') and not c01.callers(ins, fo) and not c01.addr_refs(ins, fo) and fo not in CALLED_GAPS:
             tag[fn] = 'GAPDEAD'   # N64Recomp gap filler: 0 jal callers, 0 lui/addiu refs, 0 direct calls in RecompiledFuncs
-        elif UCODE.match(fn):
-            tag[fn] = 'UCODE' if not c01.callers(ins, fn) else 'LIVE'   # RSP microcode blob: 0 jal callers = never CPU code
-        elif not c01.callers(ins, fn) and c01.addr_refs(ins, fn) and set(c01.addr_refs(ins, fn)) <= (set(allb) | set(ign)):
+        elif UCODE.match(fo):
+            tag[fn] = 'UCODE' if not c01.callers(ins, fo) else 'LIVE'   # RSP microcode blob: 0 jal callers = never CPU code
+        elif not c01.callers(ins, fo) and c01.addr_refs(ins, fo) and set(c01.addr_refs(ins, fo)) <= (set(allb) | set(ign)):
             tag[fn] = 'dead'   # 0 jal callers; address materialised only inside replaced/ignored libultra (e.g. a data word)
-        else: tag[fn] = 'LIVE' if c01.live(ins, fn, allb) else 'dead'
+        else: tag[fn] = 'LIVE' if c01.live(ins, fo, allb) else 'dead'
     return tag
 
 W8 = {'sb': 1, 'sh': 2, 'sw': 4, 'sd': 8, 'swc1': 4, 'sdc1': 8}

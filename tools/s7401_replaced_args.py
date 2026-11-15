@@ -9,7 +9,7 @@ For every live guest jal to a replaced libultra function with a special-value co
   INERT    libultra honours it but no host event source exists (PRENMI)
   DEAD-caller  site in a libultra internal whose only callers/address refs are replaced bodies
   UNRES    value not static (listed; decided by the runtime arm ROGUESQ_S7401_ARGS)
-Usage: tools/s7401_replaced_args.py [disasm=/tmp/s7392.dis] [--rows]"""
+Usage: tools/s7401_replaced_args.py [disasm=/tmp/s7419_canon.dis] [--rows]"""
 import re, sys, os, importlib, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

@@ -2,7 +2,7 @@
 """s7392 class BB report: last complete [s7392-mq] table of a ROGUESQ_S7392_MQ=1 run, joined with the static census
 (tools/s7392_mesg_census.py) by call site (ra - 8).
 
-usage: tools/s7392_mq_report.py <run.log> [disasm=/tmp/s7392.dis] [--known]  (--known: classified families -> KNWN, not DROP)
+usage: tools/s7392_mq_report.py <run.log> [disasm=/tmp/s7419_canon.dis] [--known]  (--known: classified families -> KNWN, not DROP)
 exit 0 = control PASS (or not armed) and no failing non-control row; 2 = control armed but FAILED;
      3 = a guest send failed / an external message was dropped outside the control (the rows marked DROP).
 """
@@ -26,7 +26,7 @@ def funcs(dis):
 def main():
     av = [a for a in sys.argv[1:] if not a.startswith('--')]
     log = av[0]
-    dis = av[1] if len(av) > 1 else '/tmp/s7392.dis'
+    dis = av[1] if len(av) > 1 else '/tmp/s7419_canon.dis'
     census = {}
     try:
         out = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7392_mesg_census.py'), dis],

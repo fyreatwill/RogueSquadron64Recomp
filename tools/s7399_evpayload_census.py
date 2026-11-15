@@ -10,7 +10,7 @@ function) classify what the consumer does with the received message:
   PASS     loaded msg handed to a call / stored
 The sender side (ultramodern events.cpp / timer.cpp / pi.cpp) is checked textually: every enqueue for an event source
 must pass the stored bound msg (events_context.X.msg / cur_state->msg), never a literal.
-Usage: tools/s7399_evpayload_census.py [disasm=/tmp/s7392.dis] [--check]  (rc 1 on a CMP/DEREF consumer whose sender
+Usage: tools/s7399_evpayload_census.py [disasm=/tmp/s7419_canon.dis] [--check]  (rc 1 on a CMP/DEREF consumer whose sender
 does not pass the bound msg, or on an unresolved bound mq)."""
 import re, sys, os, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

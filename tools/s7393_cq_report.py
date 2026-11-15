@@ -2,7 +2,7 @@
 """s7393 class BC report: last complete [s7393-cq] table of a ROGUESQ_S7393_CQ=1 run, joined with the static census
 (tools/s7393_createmq_census.py) by guest call site (gra - 8).
 
-usage: tools/s7393_cq_report.py <run.log> [disasm=/tmp/s7392.dis]
+usage: tools/s7393_cq_report.py <run.log> [disasm=/tmp/s7419_canon.dis]
 exit 0 = control PASS (or not armed) and no orphan / lost row outside it; 2 = control armed but FAILED or no table;
      3 = a guest re-create orphaned a live waiter or discarded a pending message (rows marked LIVE).
 """
@@ -14,7 +14,7 @@ ROW = re.compile(r'^\[s7393-cq\] mq=(\w+) key=(\S+) gra=(\w+) cnt=(-?\d+) create
 
 def main():
     av = [a for a in sys.argv[1:] if not a.startswith('--')]
-    log, dis = av[0], (av[1] if len(av) > 1 else '/tmp/s7392.dis')
+    log, dis = av[0], (av[1] if len(av) > 1 else '/tmp/s7419_canon.dis')
     census = {}
     out = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7393_createmq_census.py'), dis],
                          capture_output=True, text=True).stdout

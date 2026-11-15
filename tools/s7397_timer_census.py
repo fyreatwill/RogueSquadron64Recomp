@@ -2,7 +2,7 @@
 """s7397 class BG: static census of guest timer call sites (osSetTimer / osStopTimer). Per site: caller fn, OSTimer (a0),
 countdown (a2:a3), interval (16/20(sp)), mq (24(sp)), msg (28(sp)), callers=N, IN-LOOP, and REPLACED when librecomp defines
 <caller>_recomp (that guest body never runs). Runtime half: ROGUESQ_S7397_TM=1 [+ _CTL=1], tools/s7397_timer_report.py.
-Usage: tools/s7397_timer_census.py [disasm=/tmp/s7392.dis]"""
+Usage: tools/s7397_timer_census.py [disasm=/tmp/s7419_canon.dis]"""
 import re, sys, os, glob, collections, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

@@ -6,7 +6,7 @@ For ctc1 rows the value written is constant-propagated (lui/ori/addiu/li within 
 cfc1 rX; ori/and/xor; ctc1 rX read-modify-write) and decoded: RM bits 0-1, FS bit 24, enables bits 7-11.
 Positive control: the scanner must see the Status/Count/Compare accesses inside replaced/ignored libultra
 (__osDisableInt / osGetCount / __osSetCompare-class bodies) - if it does not, the regexes or tagging are broken.
-Usage: tools/s7405_cop_access.py [disasm=/tmp/s7392.dis] [--all]"""
+Usage: tools/s7405_cop_access.py [disasm=/tmp/s7419_canon.dis] [--all]"""
 import re, sys, os, importlib, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

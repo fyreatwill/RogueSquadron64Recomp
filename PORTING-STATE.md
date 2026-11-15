@@ -196420,3 +196420,59 @@ others) is blind to whatever objdump leaves as .word, so measure the objdump-vs-
 Conclusion: this selects H-equal and refutes H-gap for class CA (0 live mis-lowered residue op, conversion forms exact with the
 mutant control flagging), and closes the class. Next discriminator (class CB): the per-census row diff after decoding objdump's
 .word blind set in s7392 parse, with recovery of the known live cache words as the positive control.
+
+## Session 7419 (2026-11-15) — class CB objdump decode blind spot closed (H-clean): the mips1-flagged ELF made `objdump -d` hide every MIPS II/III op and all code under size-0 OBJECT labels; canonical listing tools/s7419_canon_dis.py agrees with rabbitizer on every live instruction; no census row was hidden except the known cache/eret
+
+Work unit: CURRENT-TRUTH Next steps 1 / NEXT.md (HYPOTHESIS-ID objdump-decode-blindspot). Offline only, no game run.
+
+Hypotheses: H-clean (blind set = cache + branch-likely, no census row hidden) vs H-blind (another op, or a census row changes).
+
+1. **Agreement table** (new tools/s7419_dis_agree.py): every RecompiledFuncs `// 0xADDR: op` row (289,078, first per (fn, addr))
+   joined to the objdump row at the same address in the objdump function that agrees on most mnemonics (vote join: the
+   rename sweep changed generated names and the menu overlay's ELF symbols carry stale mission-style names, e.g.
+   allocJpegDecoderState == ELF allocZeroedCellRecord 25/25). Operands compared after normalisation (s8=fp, hex/dec, labels).
+   On the s7392/s7418 listing (plain `objdump -d`): **WORD 5,349 + DIFF 1,342**. Root cause: `readelf -h` = `o32, mips1`, so objdump
+   decodes MIPS I only: `.word` for ldc1 1334, sdc1 1202, bnel 856, beql 739, bc1tl 570, bc1fl 194, bltzl 33, bgezl 32, blezl 12,
+   bgtzl 9, dsll 63, sd 46, cache 33, dsrl32 14, dsll32 11, ld 4, ...; `c1 0x..` for trunc.w.s 1073, sqrt.s 94, trunc.w.d 21,
+   ceil.w.d 1; eret too. s7392 parse re-decoded 4 of the 8 branch-likely forms only.
+2. **Second blind spot:** objdump dumps any OBJECT symbol in a code section as bytes. 251 size-0 OBJECT labels sit inside FUNCs;
+   10 of them label real code: texPackTlutAtAllocSlot (66 instructions inside getTextureAttrBySlot's FUNC range) and
+   __osException's sub-handlers IP6_Hdlr/IP7_Hdlr/counter/cart/rcp/prenmi/sw1/sw2/redispatch. The rest sit in FUNCs that run
+   into data (the synthetic ELF gives __OSGlobalIntMask, osYieldThread, audioCompandS16, lvj_checkComplexObjectives, ... FUNC
+   sizes covering sized data objects). Stripping all 523 inner labels was tried first and decoded that data as code (s7405
+   +1,061 junk cop0 rows), so the rule is: strip size-0 labels only in FUNCs holding no sized object and not data_gap_.
+   objdump also skips zero runs as `...` (-z fixes it).
+3. **Canonical listing** tools/s7419_canon_dis.py: temp objcopy with those 10 labels stripped, `objdump -d -z -m mips:4300
+   -M cp0-names=r3000` (r3000 cp0 names keep s7405's c0_sr/$9/$11). Result: 243,426 SAME with equal operands, 42,275 alias spellings
+   (move/addu, li/addiu, beqz/beq, ...), 0 survivors outside data_gap fillers, RSP ucode and REVIEWED (setRngSeed 0x80003470-7C:
+   rngSeed data + 3 unlabelled words after `jr ra` + `return;`, no label or branch target -> unreachable). The remaining 419 DIFF +
+   1,708 NOMATCH rows are data_gap/ucode junk (c2 invalids in data_gap_80024A0C etc.). **Control** (--controls): the plain listing
+   through the same gate gives 6,799 survivors, .word ldc1=1386 sdc1=1255 cache=33, 66 hidden texPackTlutAtAllocSlot rows -> PASS.
+4. **Census re-runs** on old / `-d -m mips:4300` / canonical listings (13 importers of s7392 parse + s7407): s7392, s7393, s7395-
+   s7402 and s7407 **byte-identical**, rc 0 (so ldc1/ld/sd, the 4 unpatched branch-likely forms and the hidden code touched none
+   of their rows). s7403: +3 rows (__osShutdown 0x8003910C A/R/W from __osException); s7404: +8 RCP rows (MI/SP/VI/AI/SI/PI from
+   __osException's rcp handler). Under plain `-D` these showed as LIVE functions named `rcp`/`prenmi` (s7404 rc 1); attributed
+   correctly they are __osException = N64Recomp ignored_funcs. s7404 already tags IGNORED; s7403 did not consult ignored_funcs,
+   patched (also turns 3 old `dead` rows __osViInit/osPiRawReadIo into IGNORED), live_rows 17 unchanged. s7405: +43 LIVE cache,
+   +11 REPLACED cache (osInvalDCache/ICache/WritebackDCache), +IGNORED eret and cop0 moves in __osException/__osDispatchThread;
+   live_rows 28 -> 62, control PASS. Every new LIVE row is cache: 41 match s7418's set, 1 is 0x800A5174 (unlabelled .ovl.mission
+   data, not in RecompiledFuncs), 1 is 0x8000041C.
+5. **s7418 liveness gap found by the reconciliation:** 0x8000041C is `cache 0x0D` in clearMemory16ByteBlocks (= ELF func_8000040C,
+   boot BSS clear); s7418 tagged it `nofn` because its liveness keyed on objdump names, and **147** RecompiledFuncs functions
+   (renames, *_recomp, menu overlay, 16 data_gaps) are not objdump names. s7418 now maps through s7419_dis_agree.name_map (131
+   mapped; 16 unmapped are data_gaps with no objdump code). Re-run: still **H-equal rc 0**, GAP rows 0, CONTROL PASS; nofn rows
+   go LIVE (cvt.s.w 1115 -> 1185, nop 11513 -> 12003, break 184 -> 222, ...); live cache 33 = 18 CDE + 15 HWB-D. The new CDE is
+   followed by `sd $zero,0` + `sd $zero,8` on the same 16 B line before any read -> FULL, no-op-safe.
+6. Side find: harvest regexes `re.match(r'RECOMP_FUNC void ...')` miss 3 `__attribute__((weak)) RECOMP_FUNC` headers
+   (isCinematicActive, setRngSeed, findAndUnlinkSmallestEntry); their rows were attributed to the previous function (that was
+   s7419's last `cinematicInitializer` residue). Fixed in s7418 + s7419; ~10 other tools/fixups use the same regex (none names
+   these 3 functions by grep) -> next class CC.
+
+Changes: new tools/s7419_canon_dis.py, tools/s7419_dis_agree.py; s7392 parse default /tmp/s7419_canon.dis auto-built + warning
+on any non-canonical listing; s7392_mq_report / s7393_cq_report / s7407 / s7418 defaults to it; s7403 honours ignored_funcs;
+s7418 name join + weak header. Logs scratch/s7419/ (agree_*.txt, cen/*.{old,d,full,canon,final}.txt, s7418_*.txt).
+Verdict: **H-clean.** The blind set was much wider than cache + branch-likely, but it hid no census row beyond the cache/eret
+rows s7418 already covered (and one boot CDE, safe). Rules out: an undecoded MIPS II/III op or OBJECT-label code hiding a
+mesg/event/thread/timer/io/contract/arg/side-effect/boot-global/RCP/libm row. Two lines: rabbitizer row agreement + census
+byte-identity across three listings, with the plain-listing control.
+Next: class CC, RecompiledFuncs harvest-parser agreement (HYPOTHESIS-ID recompfuncs-parser-agreement).

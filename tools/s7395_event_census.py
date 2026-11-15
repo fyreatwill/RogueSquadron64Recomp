@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """s7395 class BE: static census of every guest osSetEventMesg / osViSetEvent call site (event re-binding).
 
-Usage: tools/s7395_event_census.py [disasm=/tmp/s7392.dis]
+Usage: tools/s7395_event_census.py [disasm=/tmp/s7419_canon.dis]
 Per site: caller fn, event (a0 for osSetEventMesg), queue, message, callers=N (static jal sites reaching the caller).
 An event bound by >1 site, or by a caller with callers>1, can be RE-BOUND; whether a re-bind strands a waiter on the
 old queue is the runtime half (ROGUESQ_S7395_EV=1, tools/s7395_ev_report.py).

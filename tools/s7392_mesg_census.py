@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """s7392 class BB: static census of every guest osSendMesg / osJamMesg call site.
 
-Usage: tools/s7392_mesg_census.py [disasm]   (default /tmp/s7392.dis; make it with
-  mips64-elf-objdump -d --no-show-raw-insn ../rogue_squadron64/build/roguesquadron.elf > /tmp/s7392.dis)
+Usage: tools/s7392_mesg_census.py [disasm]   (default /tmp/s7419_canon.dis, (re)built automatically by
+  tools/s7419_canon_dis.py: -m mips:4300 decode + inner OBJECT labels stripped. s7419: a plain `objdump -d` of this
+  mips1-flagged ELF leaves every MIPS II/III op as .word; parse() warns when handed such a listing.)
       tools/s7392_mesg_census.py --check     exit 1 if a NOBLOCK site with an ignored result lacks a verdict row in
                                              tools/s7392_mesg_reviewed.tsv (a NEW site after a regen / rebuild).
 
@@ -14,7 +15,7 @@ message silently; those rows need a hand verdict.
 """
 import re, sys, os
 
-DIS = '/tmp/s7392.dis'
+DIS = '/tmp/s7419_canon.dis'
 REVIEWED = os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7392_mesg_reviewed.tsv')
 TARGETS = ('osSendMesg', 'osJamMesg')
 STORES = {'sb', 'sh', 'sw', 'sd', 'swl', 'swr', 'swc1', 'sdc1', 'sc', 'scd', 'sdl', 'sdr'}
@@ -29,6 +30,13 @@ FUNC = re.compile(r'^([0-9a-f]{8}) <([^>]+)>:$')
 
 def parse(path):
     funcs, cur, insns = {}, None, []
+    if os.path.abspath(path) == DIS:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        __import__('s7419_canon_dis').ensure(DIS)
+    with open(path) as f:
+        if not f.readline().startswith('# s7419-canon'):
+            sys.stderr.write('[s7419] WARNING %s is not the canonical listing (tools/s7419_canon_dis.py): MIPS II/III ops '
+                             'other than beql/bnel/blezl/bgtzl and code under OBJECT labels are invisible\n' % path)
     for ln in open(path):
         ln = ln.rstrip()
         m = FUNC.match(ln)

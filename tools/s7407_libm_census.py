@@ -8,10 +8,12 @@
    dmultu / break 7 / break 6 / dsll32-dsra32 split) over an edge cross product + random pairs with garbage upper register
    halves. Retail break = TRAP row (retail faults; host continues) counted apart from MISMATCH.
 3. Positive control: the same harness with -DPERTURB (host result ^ 1) must report mismatches for every live helper.
-Usage: tools/s7407_libm_census.py [disasm=/tmp/s7392.dis] [--n N]   rc 0 = H-equal + control PASS, rc 3 otherwise."""
+Usage: tools/s7407_libm_census.py [disasm=/tmp/s7419_canon.dis] [--n N]   rc 0 = H-equal + control PASS, rc 3 otherwise."""
 import re, sys, os, glob, subprocess, collections, tempfile
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-DIS = next((a for a in sys.argv[1:] if not a.startswith('--') and not a.isdigit()), '/tmp/s7392.dis')
+DIS = next((a for a in sys.argv[1:] if not a.startswith('--') and not a.isdigit()), '/tmp/s7419_canon.dis')
+if DIS == '/tmp/s7419_canon.dis':
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); __import__('s7419_canon_dis').ensure(DIS)
 N = int(sys.argv[sys.argv.index('--n') + 1]) if '--n' in sys.argv else 4000000
 SYML = os.path.join(ROOT, '../N64Recomp/src/symbol_lists.cpp')
 MATHSRC = os.path.join(ROOT, 'lib/N64ModernRuntime/librecomp/src/math_routines.cpp')

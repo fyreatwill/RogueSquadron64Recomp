@@ -5,7 +5,7 @@ Every load/store in the retail disassembly whose BASE register holds a lui/ori/a
 constant operand. Rows: region, function, insn addr, R/W, address, tag LIVE / REPLACED / dead (s7401 live()).
 Also lists constant addresses only materialised (not dereferenced) in a live function, as a second-line net
 (an address passed to a callee that dereferences it).
-Usage: tools/s7404_rcp_access.py [disasm=/tmp/s7392.dis] [--all]"""
+Usage: tools/s7404_rcp_access.py [disasm=/tmp/s7419_canon.dis] [--all]"""
 import re, sys, os, importlib, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

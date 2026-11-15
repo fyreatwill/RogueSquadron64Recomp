@@ -7,7 +7,7 @@ Then ask whether the port writes it: the address (or a symbol from KNOWN) appear
   H-unwritten  retail writes G, a live game function reads G, the port never writes G  (rc 1 unless reviewed)
   PORT-WRITES  the port source references G
   NO-READER    retail writes G but no live guest code reads it
-Usage: tools/s7402_side_effects.py [disasm=/tmp/s7392.dis] [--rows]"""
+Usage: tools/s7402_side_effects.py [disasm=/tmp/s7419_canon.dis] [--rows]"""
 import re, sys, os, glob, importlib, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

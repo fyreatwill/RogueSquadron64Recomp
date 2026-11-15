@@ -3,7 +3,7 @@
 extract its body and classify: R2 (sets ctx->r2 / _return<>), writes (MEM_*/TO_PTR/memcpy targets), then join every guest
 jal to <name> (callers not themselves replaced) with the s7392 v0_fate classifier (TESTED/USED/IGNORED/RETURNED).
 FLAG = a live caller consumes v0 of a replacement that never sets r2 (H-ret, stale v0).
-Usage: tools/s7400_replaced_contract.py [disasm=/tmp/s7392.dis] [--rows]"""
+Usage: tools/s7400_replaced_contract.py [disasm=/tmp/s7419_canon.dis] [--rows]"""
 import re, sys, os, glob, collections, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

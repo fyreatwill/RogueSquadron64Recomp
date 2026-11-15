@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7418 (2026-11-15).
+Compact operational handoff, as of Session 7419 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -97,6 +97,8 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7418 "32 live cache ops". Believable: RecompiledFuncs census with a passing liveness control. s7419: its liveness keyed on objdump
+  names, so 147 renamed functions were `nofn`; one live CDE (clearMemory16ByteBlocks 0x8000041C, boot) was skipped -> 33, still safe.
 - "0 live cache ops" (s7405 class BO). Believable because the census ran with a control that passed (Status/Count/Compare rows),
   but that control never exercised `cache`: mips64-elf-objdump prints cache as .word, so the row could not fire. s7418 on
   RecompiledFuncs: 32 live (CDE 0x0D + HWB-D 0x19 only), no-op-safe. Class BO's FR/RM/FS conclusions stand.
@@ -213,15 +215,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CB, disassembler agreement for the objdump-based censuses (HYPOTHESIS-ID objdump-decode-blindspot).**
-   s7418 found mips64-elf-objdump prints `cache` as `.word`, so s7405's "0 live cache" was structural (s7392 parse already patches
-   beql/bnel/blezl/bgtzl). Per address, compare the objdump mnemonic in /tmp/s7418.dis with the RecompiledFuncs disasm comment
-   (rabbitizer); list every op objdump leaves as .word or names differently, and for each census tool that parses the objdump
-   (grep `s7392_mesg_census` / `c7392.parse` importers: s7400-s7405, s7418 liveness, ...) say whether its op sets intersect the
-   blind set; re-run the affected ones with the gap patched in s7392 parse (decode those words) and compare rows. H-clean (only
-   cache + branch-likely, nothing else affected) vs H-blind (another op or census row hidden). Control: the known cache words
-   must be recovered by the patched parse.
-   CA (s7418) CLOSED H-equal: tools/s7418_opcode_residue.py, 28 residue ops 0 live gap, 1,496 conversions exact, controls PASS.
+1. **Next audit: class CC, RecompiledFuncs harvest-parser agreement (HYPOTHESIS-ID recompfuncs-parser-agreement).**
+   s7419 found `re.match(r'RECOMP_FUNC void ...')` misses the 3 `__attribute__((weak)) RECOMP_FUNC` headers
+   (isCinematicActive, setRngSeed, findAndUnlinkSmallestEntry), so their rows get attributed to the function before them.
+   ~10 more tools/*.py (fixup_fps60_ticks, fixup_fps60_float_trace, g1e_int_step_audit, g3_dt_quantum_audit, apply_s56xx_*)
+   split RecompiledFuncs with their own regex. Census every parser (header regex, `// 0xADDR:` full-line vs mid-line, delay-
+   slot duplicate comments, fixup-inserted lines), run each against one reference split (tools/s7419_dis_agree.rabbit) and
+   list per tool the functions/rows it mis-attributes; for FIXUPS (they edit code) say whether any target is affected.
+   H-clean (only the 3 weak headers, no fixup target hit) vs H-split (a parser or fixup mis-attributes a target).
+   CB (s7419) CLOSED H-clean: tools/s7419_dis_agree.py --controls rc 0; canonical listing tools/s7419_canon_dis.py.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -300,6 +302,17 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
       FP compare + bc1x (unordered-cond generator table wrong on NaN, 0 game sites); BY s7415 FP arith + moves (0 FMA); BZ s7416
       control flow + delay slots; CA s7418 opcode residue (s7418_opcode_residue.py: 0 live gap, cvt int/FP->FP exact, live cache
       = CDE/HWB-D no-op-safe). LATENT from BZ: jr/jalr emit the slot BEFORE reading rS (2 sites, dead data_gap_80024A0C).
+    - **CB s7419 objdump decode blind spot: CLOSED H-clean.** The ELF is flagged `o32, mips1`, so plain `objdump -d` left every
+      MIPS II/III op undecoded (ldc1 1386, sdc1 1255, trunc 1094 as `c1`, 8 branch-likely forms 2445 [s7392 parse patched 4],
+      sqrt.s 94, cache 33, 64-bit ~140, eret), dumped size-0 OBJECT labels inside FUNCs as bytes (texPackTlutAtAllocSlot's 66
+      instrs; __osException's rcp/prenmi/... sub-handlers, then mis-named LIVE functions) and skipped zero runs. Canonical
+      listing tools/s7419_canon_dis.py (strip those 10 labels on a temp copy, `-d -z -m mips:4300 -M cp0-names=r3000`), now the
+      auto-built default of s7392 parse (warns on any other listing), s7407, s7418. tools/s7419_dis_agree.py: 243,426 SAME (operands
+      equal) + 42,275 alias spellings vs rabbitizer, 0 survivors outside data_gap/ucode/REVIEWED; control = plain listing flagged
+      (6,799 survivors). Census re-runs: s7392-s7402 + s7407 byte-identical; s7403/s7404 rows move to IGNORED (__osException,
+      s7403 now honours ignored_funcs); s7405 gains only cache (43 LIVE rows = s7418's set + 1 unrecompiled data word) + IGNORED
+      eret/cop0. s7418 had tagged 147 renamed functions `nofn`; with the vote name join (s7419_dis_agree.name_map) it stays
+      H-equal rc 0, live cache = 33 (18 CDE + 15 HWB-D; +clearMemory16ByteBlocks CDE then full 16 B sd/sd = no-op-safe).
 17. **Default-on fixes from the audits and TSan thread (=0 / old value restores the previous behaviour):**
     ROGUESQ_SPILL_RESET + 8 MB spill arena 0x81000000 (s7326, SPILL_MB=4 old); RSP_DMA25 (s7327); S7334_CLASS5;
     S7335_CLAMP; S7336; S7337; S7339; ALTSTACK (s7355); S7358_ENVCHECK; S7364_WLRESET; CF0_DUPDROP (s7367, guest
@@ -310,7 +323,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     S7378_SHLOCK, S7381_BARRIER_CV, S7383_FBPACK.
 18. **Runtime soak folds for the AQ-BZ classes all PASSED** (SOAK-RESULTS s7392-s7416: L4/L7/L12 or L5/L10/L15, 0 crash, 0 VI
     stall, controls PASS). No class soak is outstanding.
-19. **Rerun the emission tools after any regen:** tools/s7407-s7416 + s7418 scripts above (rc 0 expected) alongside item 12.
+19. **Rerun the emission tools after any regen:** tools/s7407-s7416 + s7418 + s7419_dis_agree.py --controls (rc 0 expected) alongside item 12.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

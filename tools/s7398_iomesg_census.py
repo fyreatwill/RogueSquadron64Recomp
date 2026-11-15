@@ -4,7 +4,7 @@ osEPiRawStartDma / osPiRawReadIo / osPiReadIo / osEPiReadIo / osContStartReadDat
 librecomp defines <caller>_recomp (guest body never runs), callee REPLACED (librecomp owns the start), the OSIoMesg (a0
 for osPiStartDma, a1 for osEPi*), completion mq (24(sp) / a0 for SI), the NEXT osRecvMesg in the same function
 (mq, msg slot, flag) and whether the received msg slot is ever loaded back (msg-consumed), IN-LOOP, callers=N.
-Usage: tools/s7398_iomesg_census.py [disasm=/tmp/s7392.dis]"""
+Usage: tools/s7398_iomesg_census.py [disasm=/tmp/s7419_canon.dis]"""
 import re, sys, os, collections, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')

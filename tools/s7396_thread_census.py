@@ -4,7 +4,7 @@ osDestroyThread/osSetThreadPri). Per site: caller fn, target thread (a0; 0 = sel
 callers=N, IN-LOOP. A non-self stop/destroy/setpri reaches ultramodern::thread_queue_remove, whose pre-s7396 walk
 never advanced past the queue head (non-head target in a >=2 queue = infinite loop). Runtime half:
 ROGUESQ_S7396_TQ=1 [+ _CTL=1], tools/s7396_tq_report.py.
-Usage: tools/s7396_thread_census.py [disasm=/tmp/s7392.dis]"""
+Usage: tools/s7396_thread_census.py [disasm=/tmp/s7419_canon.dis]"""
 import re, sys, os, collections, importlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 c7392 = importlib.import_module('s7392_mesg_census')
