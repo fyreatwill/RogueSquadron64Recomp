@@ -195253,3 +195253,33 @@ Verdict line: this selects H-partial (single-source: one stripe frame at the abo
 refutes H-redundant-all and H-headroom; it confirms H-redundant for the 11 newly covered scenes. docs/OWNER-OPT-INS.md row now says not
 recommended. Next (NEXT.md): repeat the abort cut 3x per arm with in-process burst grabs + VI origin log to name the buffer, then fix
 (readback for undrawn buffers, or black for unknown fb when off).
+
+## Session 7387 (2026-11-15) — RENDER_TO_RAM=0 abort-cut stripe is repeatable (off 3/3, on 0/3) and comes from RT64 uploading stale RDRAM on a hash change (fb 0xA40000); fix lands on the r2r=0 path only, image confirmation weak
+HYPOTHESIS-ID: render-to-rdram-double-pass.
+Unit from NEXT. No maintenance (36.2 KB at start). Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked, HID idle ~2000 s.
+This session picks up an interrupted earlier run of the same unit (scratch/s7387 run6/runfix/runfix2, 01:02-01:59, never written up;
+runfix2's cpu3/r2ron1/skipcov were killed). 22 game runs total, one at a time, 0 CRASH/SIGSEGV/SIGBUS.
+Runs (tools/s7386_route_ab.zsh, abort route AP ...155:a,165:a,173:a,181:a, SECS=190 CAP0=150 BURST=153,162, dd8 21:9 FPS60):
+1. on1-3 / off1-3 (old build): stripe frames (new tools/s7387_stripe_detect.py: >=60 black rows and >=8 noisy rows in the 4:3 box,
+   positive control s7386 aboff w_0156.12 = STRIPE, abon black = not): **on 0/3, off 3/3** (t 157.15-157.74, 129 black rows, 12-14 noisy).
+   Second line for s7386's single capture: the stripe is repeatable and r2r=0-only.
+2. Fix attempt 1 (H-unknown-fb: extend the s6885 wide-undrawn blank to every VI width while r2r=0, ROGUESQ_R2R_UNDRAWN): fixoff 2/3
+   stripes -> REFUTED, code reverted (the rt64.patch exported mid-session had it; now re-exported without it).
+3. Fix 2 (H-stale-upload): at r2r=0 the screen-fb RAMHash is never refreshed and RDRAM never holds RDP output, so a hash change means
+   memory reuse, not a CPU write; RT64 uploaded that stale RDRAM over the GPU target. Now: r2r=0 adopts the hash and keeps the GPU
+   content (rt64_state.cpp, ROGUESQ_R2R_CPUUP=1 = old, ROGUESQ_S7387_LOG=1 logs each decision with nz_pm / zrows of the RDRAM).
+   Content log (cpuA, CPUUP=1): the upload right after the t=155 abort is **fb 0xA40000 w=1024 nz_pm=171 zrows=135** (stripe frame:
+   129 black rows) next to fb 0xB20000 nz_pm=0 (black, not the source, the s7386 guess was the wrong buffer). Same event logged SKIP in
+   skipA. r2ronA (readback on, log): 6 hash-change uploads (0xB20000, 0xA0B000, 0x961000, 0x8F5000) vs 21 at r2r=0; no 0xA40000.
+4. Image arms with fix 2: skip1-3 + skipA 0/4 stripes. **Control failed:** CPUUP=1 arms cpu1, cpu2, cpuA 0/3 and runfix's ctl1-2
+   (UNDRAWN=0 = old) 0/2. Old-behaviour total 5/10 vs fix 0/4 (hypergeometric p~0.13): the image line is NOT significant. These arms
+   captured fewer frames in the burst window (~167 vs ~240) and the stripe lasts ~1 present.
+5. Coverage skipcov (boot -> flight, r2r=0 + fix, 789 caps): dark runs 22-24 boot, 48.7-49 craft fade, 64.8-71.5 crawl, 124.6-125
+   cutscene->flight = s7386 on/off's; plus one black frame at 108.08 = a Calamari intro shot cut (neighbours are the two shots,
+   scratch/s7387/t108.png), seen because this arm captured ~4.6/s vs 0.8/s. 0 stale, 0 stripe, 476 SKIP decisions.
+ORIGIN: the writer of the stripe pixels is RT64's own screen-fb CPU-upload path (rt64_state.cpp hash check -> upload) copying RDRAM
+at 0xA40000 that the game reused for other data; the value is not a legitimate frame (no RDP output ever reaches RDRAM at r2r=0).
+Verdict line: this selects H-stale-upload (mechanism single-source: content log + timing; image A/B not significant) and refutes
+H-unknown-fb (UNDRAWN blank 2/3) and H-capture-artefact (off 3/3 vs on 0/3). Residual risk: genuine CPU writes to a scanned fb are
+now dropped at r2r=0 (the r2r=1 run shows 4 fbs do change hash with readback on; no visible loss on the route). Default unchanged
+(r2r=1 path untouched); OWNER-OPT-INS row says fixed, needs a repeat. Next: rate-matched image A/B without the log, 3+3 interleaved.

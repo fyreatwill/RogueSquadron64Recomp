@@ -7776,7 +7776,7 @@ index 8858dac..6b31d86 100644
          std::condition_variable interpolatedCondition;
          std::mutex workloadMutex;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..4878032 100644
+index 10f98af..40b3b4a 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -7874,7 +7874,7 @@ index 10f98af..4878032 100644
 +static uint32_t rs64_s7364_fullsyncs, rs64_s7364_first, rs64_s7364_carried, rs64_s7364_oob;
 +static bool rs64_s7364_pending;
 +
-+namespace RT64 {
+ namespace RT64 {
 +    int rs64RtPairRel() {
 +        static const int ep = [] { const char *e = std::getenv("ROGUESQ_LOG_RTPAIR_EPOCH"); return e ? atoi(e) : -1; }();
 +        if (ep < 0 || __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) != ep) return -1;
@@ -8334,7 +8334,7 @@ index 10f98af..4878032 100644
 +    // different things — which is how s33 read batching as loss.
 +    }
 +
- namespace RT64 {
++namespace RT64 {
 +    struct Rs64RdramSnap;
 +    extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
 +    void rs64FloorRdramLog(const char *site, const uint8_t *buf, uint32_t phys0, uint32_t nbytes, const Rs64RdramSnap *snap, int flRestore);
@@ -10120,15 +10120,38 @@ index 10f98af..4878032 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1989,6 +3818,7 @@ namespace RT64 {
+@@ -1987,8 +3816,29 @@ namespace RT64 {
+                 if ((screenFbSize.x == screenFb->width) && (screenFbSiz == screenFb->siz)) {
+                     const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
-                     if (currentHash != screenFb->RAMHash) {
+-                    if (currentHash != screenFb->RAMHash) {
++                    // s7387: with ROGUESQ_RENDER_TO_RAM=0, hashTracking never refreshes RAMHash and RDRAM never holds RDP output,
++                    // so "RDRAM hash changed" is not a CPU write: uploading it paints stale RDRAM over the GPU target (abort ->
++                    // MISSION FAILED cut, VI onto 0xB20000: one frame of raw-memory stripes, s7386/s7387). Readback off: adopt the
++                    // hash, keep the GPU content. ROGUESQ_R2R_CPUUP=1 = old (upload anyway). Readback on: unchanged.
++                    // ROGUESQ_S7387_LOG=1 logs every hash-change upload decision.
++                    static const bool s_cpuupOld = [](){ const char *v = std::getenv("ROGUESQ_R2R_CPUUP"); return v && v[0] == '1'; }();
++                    static const bool s_cpuupLog = [](){ const char *v = std::getenv("ROGUESQ_S7387_LOG"); return v && v[0] == '1'; }();
++                    const bool r2rOnNow = (extended.renderToRAM < UINT8_MAX) ? (extended.renderToRAM != 0) : ext.emulatorConfig->framebuffer.renderToRAM;
++                    const bool s7387Skip = (currentHash != screenFb->RAMHash) && !r2rOnNow && !s_cpuupOld;
++                    if (s_cpuupLog && (currentHash != screenFb->RAMHash)) {
++                        static uint32_t s_n = 0;
++                        // s7388: content of the RDRAM this decision would upload: nonzero 32-bit words per mille and rows (of 240
++                        // sampled) whose words are all zero. Stale garbage = high nz; an RDP-cleared black fb = nz ~0.
++                        uint32_t nzw = 0, words = screenFb->RAMBytes / 4u, zrows = 0;
++                        for (uint32_t i = 0; i < words; ++i) { uint32_t w; memcpy(&w, fbRAM + i * 4u, 4); nzw += (w != 0u); }
++                        const uint32_t rowB = screenFb->RAMBytes / 240u;
++                        for (uint32_t r = 0; rowB >= 4u && r < 240u; ++r) { bool z = true; for (uint32_t i = 0; z && i + 4u <= rowB; i += 4u) { uint32_t w; memcpy(&w, fbRAM + r * rowB + i, 4); z = (w == 0u); } zrows += z; }
++                        if (s_n++ < 400u) { fprintf(stderr, "[s7387-cpuup] #%u fb=0x%06X w=%u vi=0x%06X r2r=%d %s nz_pm=%u zrows=%u bytes=%u\n", s_n, screenFb->addressStart & 0xFFFFFFu, screenFb->width, newVI.origin & 0xFFFFFFu, r2rOnNow ? 1 : 0, s7387Skip ? "SKIP" : "UPLOAD", words ? uint32_t(uint64_t(nzw) * 1000u / words) : 0u, zrows, screenFb->RAMBytes); }
++                    }
++                    if (s7387Skip) { screenFb->RAMHash = currentHash; }
++                    else if (currentHash != screenFb->RAMHash) {
                          {
 +                            S4267T _uw(27); // s4907: screen-fb upload + performOperations
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3848,133 @@ namespace RT64 {
+@@ -2018,9 +3868,133 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -10265,7 +10288,7 @@ index 10f98af..4878032 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +3987,51 @@ namespace RT64 {
+@@ -2033,26 +4007,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -10335,7 +10358,7 @@ index 10f98af..4878032 100644
              }
          }
  
-@@ -2060,6 +4039,7 @@ namespace RT64 {
+@@ -2060,6 +4059,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -10343,7 +10366,7 @@ index 10f98af..4878032 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4890,4 @@ namespace RT64 {
+@@ -2910,4 +4910,4 @@ namespace RT64 {
              break;
          }
      }
