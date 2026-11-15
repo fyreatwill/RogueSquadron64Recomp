@@ -194604,3 +194604,8 @@ owner's level 15). Rules out: a race that fires within the first ~700 frames of 
 present / workload / audio threads. Does not rule out: races that need longer flight or the owner's level.
 The frame clock is still useful for slow builds wherever the route is gated by `w<width>` events, but on its own it
 does not make the TSan route match full speed (front end is VI-timed): single run, single-source.
+
+Conclusion (s7371): the m1 report selects H-clean and refutes H-race for the ~700 covered mission frames (0 unclassified
+rows, planted control fired); H-stall is selected for flight depth (~1.2 frames/s). The f1/m1 pair also refutes the
+NEXT.md premise that a fullsync-keyed clock replays the full-speed route at TSan speed (front end is VI-timed; presses 1-3
+diverged). Next discriminator: the offline AQ cross (NEXT.md) splits H-covered vs H-gap per container.
