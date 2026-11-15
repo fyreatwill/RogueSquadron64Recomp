@@ -195765,3 +195765,6 @@ pad polls 60-89 and reads the guest bytes back ([s7400-pad]). Route tools/s7392_
 Result: H-struct selected (latent) for osContGetReadData, H-ret selected (latent, harmless) for __osDisableInt, H-none for the
 other 62 live replacements. Both fixed; class BJ CLOSED. Soak s7400_cont_levels queued (L5/L10/L15, 30 PASS / 0 STALE each).
 Not covered: input-side contracts (how replacements read guest args) -> class BK.
+Conclusion: selects H-struct (osContGetReadData err_no, latent) and H-ret (__osDisableInt stale v0, latent and harmless), refutes
+H-none for class BJ as a whole (H-none holds for the other 62 live replacements). Fix landed default-on (ROGUESQ_S7400_CONTFIX),
+two-arm control discriminates (PASS 30/30 vs STALE 30/30). Next discriminator: class BK argument census (H-arg vs H-ignored).
