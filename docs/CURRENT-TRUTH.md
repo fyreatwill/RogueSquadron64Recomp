@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7408 (2026-11-15).
+Compact operational handoff, as of Session 7409 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -486,12 +486,26 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     Out of range TRUNC saturates, CVT_W wraps (frintx + 64-bit fcvtzs, no IOC: BP was blind to it). Emitted: TRUNC_W_S 1171,
     TRUNC_W_D 28, CVT_W_S 13, CVT_W_D 2, L/round/floor/ceil 0 (CVT_L_S stray `;` unreachable). Live build_cvt (`tools/build_cvt.sh`,
     report `tools/s7408_cvt_report.py`): L4 21:9 dd8 and dd1, 475/479 sites, oor 0, mism 0, plant control PASS. Worst site
-    convertMat3x4ToN64Mtx translation x2^24 at 53% of int32, identical dd1/dd8. Widen soak s7408_cvt_levels (L5/L10/L15) queued.
-18. **Next audit candidate:** class BS, FR=0 odd-register single-precision access (recomp `f_odd` mapping, 145 uses in 8
-    files, e.g. hand-asm transformAndEmitFaceVertices $f5/$f7/$f9) vs VR4300 FR=0 semantics. NEXT.md s7409.
+    convertMat3x4ToN64Mtx translation x2^24 at 53% of int32, identical dd1/dd8. Widen soak s7408_cvt_levels L5/L10/L15: rc 0 x3 (s7409 fold).
+18. **BS CLOSED s7409 (FR mode / odd-FPR views): H-consistent, no code change.** Generator: float/double operands ->
+    own slot `ctx->fN.fl/.d`; mtc1/mfc1/lwc1/swc1 odd -> `ctx->f_odd[(N-1)*2]` (librecomp cop0_status_write: FR=0 ->
+    f(N-1).u32h, FR=1 -> fN.u32l = VR4300 physical layout). `tools/s7409_fodd_census.py` (rc-less, --plant control PASS):
+    2500 fns, 19 use f_odd (146 uses), 7 hand-asm FR=1 routines; own-slot odd access in an FR=0 region only in 4 fns:
+    fetchIndexedVertexPosition / fetchVertexPositionPrimary / normalizeVec3InPlace (only caller = transformAndEmitFaceVertices'
+    FR=1 region) and data_gap_80023968 (no caller). Live: `tools/build_fodd.sh` -> build_fodd/ (probes at entry of all 20
+    odd-FPR fns + after all 13 Status writes; mode check + real write-through of f_odd[40] vs f21.u32l/f20.u32h; plant =
+    swapped f_odd base), report `tools/s7409_fodd_report.py`. L5 dd8 and dd1 21:9 FPS60, 131 s hold each: 25 sites,
+    bad 0, view_bad 0, plant 242771/242771 and 321069/321069 flagged -> CONTROL PASS x2. FR never leaks into FR=0 code
+    (sinf/cosf/guPerspectiveF always m0). Never ran: projectPointToScreen (sets FR, no clear; s7087 dead), data_gap_80023968,
+    _Ldtob, quaternionToMat3x4 on L5. Widen soak s7409_fodd_levels (L4/L7/L12) queued. Lesson: a new build dir needs the
+    owner save COPY in <dir>/saves (build_fodd.sh does it); without it the route boots profile-less, START is ignored at
+    the 768 phase, 5/5 nomission (looked like the probe hanging the game until a zero-probe arm also failed).
+19. **Next audit candidate:** class BT, callee-saved FPR/GPR preservation across the 7 FR=1 hand-asm routines and their
+    FR=1 callees (o32: f20-f30 even pairs + s0-s8/sp/ra must survive; in FR=1 the routine sees 32 independent regs, so a
+    write to f21 own slot or f20.u32l without sdc1/ldc1 save would clobber a caller's double). NEXT.md s7410.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

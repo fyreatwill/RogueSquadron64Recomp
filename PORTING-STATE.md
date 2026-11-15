@@ -196031,3 +196031,38 @@ alter behaviour the game never uses. ORIGIN: n/a (no mitigation landed).
 Conclusion: selects H-equal (identical in range on the whole float domain; 0 live out-of-range conversions at dd1 and dd8),
 refutes H-wrap-live (0 oor at all 15 CVT sites, worst 53% of range) and H-macro-bug (CVT_L_S never emitted). Class BR
 CLOSED. Next: class BS, FR=0 odd-register single-precision access (f_odd mapping, 145 uses in 8 files) vs the VR4300.
+
+## Session 7409 (2026-11-15) — class BS FR mode / odd-FPR views closed (H-consistent): census + live probe, FR never leaks into FR=0 code, 0 view mismatches (plant control PASS, L5 dd8 and dd1)
+
+Unit (NEXT.md fr0-odd-register-access). Hypotheses: H-consistent / H-mixed-live / H-dead.
+Model read: N64Recomp cgenerator.cpp emits float/double operands as the own slot `ctx->fN.fl/.d` and mtc1/mfc1/lwc1/swc1 on
+odd N as `ctx->f_odd[(N-1)*2]`; librecomp cop0_status_write points f_odd at &f0.u32h (FR=0 -> f(N-1).u32h) or &f1.u32l
+(FR=1 -> fN.u32l). That is the VR4300 physical layout (FR=0 odd single = high word of the even reg). Contexts: run_thread_function
+and wait_for_game_started set f_odd; mod_events copies ctx and restores into the same ctx (pointer stays valid); helper ctx{} in
+upstream_compat (bzero, yield) run no FP code. CHECK_FR asserts are live (Debug).
+1. Offline `tools/s7409_fodd_census.py ../N64Recomp/RecompiledFuncs [--plant]` (output scratch/s7409_census.txt): 2500 functions,
+   19 with f_odd (146 uses), 0 even .u32h/.fh uses, 7 Status-writing FR=1 routines (static regions OR..AND), none touching an
+   odd reg outside its FR=1 region. Own-slot odd access in FR=0 code: 4 functions. fetchIndexedVertexPosition,
+   fetchVertexPositionPrimary, normalizeVec3InPlace: FR1-ONLY-CALLEE (sole caller transformAndEmitFaceVertices, inside its FR=1
+   region). data_gap_80023968: NO-DIRECT-CALLER. VERDICT H-consistent-static, fr0_called=[]. Control: planted FR0-called mixed
+   function (lwc1 f7 via f_odd, cvt reads f7.fl) -> kind FR0-CALLED, CONTROL PASS.
+2. Live: new `tools/build_fodd.sh` -> build_fodd/ (`tools/s7409_fodd_transform.py`, runtime tools/s7409_fodd/rs64_frp{.h,_rt.c},
+   report `tools/s7409_fodd_report.py`, rc 0 = PASS+consistent). Probes at the entry of all 20 odd-FPR functions (expect FR=1 for
+   the 3 callees, record-only for data_gap_*, else FR=0) and after all 13 Status writes (expect 1 after OR, 0 after AND). Each
+   call: mode check, then a real write-through: sentinel via f_odd[(21-1)*2], which slot moved (f21.u32l own / f20.u32h pair) vs
+   the mode, both restored. Plant ROGUESQ_S7409_PLANT=1: every 64th call repeats it with f_odd swapped to the other mode's base.
+   Recipe scratch/s7409_arms.sh (L5 21:9 FPS60, 120 s hold): dd8 mission t=77 s, 131 s hold, alive, 0 VI stall, 0 crash;
+   25 sites, bad 0, view_bad 0, plant 242771/242771, flip probes m1 on every call -> CONTROL PASS, VERDICT H-consistent.
+   dd1 same route/hold: plant 321069/321069, H-consistent. Hot rows dd8: fetchVertexPositionPrimary 2.44e6 m1, transformAndEmit
+   0.88e6, transformVec3ByMat34 1.02e6; sinf/cosf/guPerspectiveF/compute3DSourceSpatialMix/filterVoiceSampleBlock all m0 only.
+   Never ran (both arms): projectPointToScreen (sets FR, never clears; s7087 dead), data_gap_80023968, data_gap_8009D8BC, _Ldtob,
+   quaternionToMat3x4.
+3. Dead end on the way (documented): the first 5 attempts went nomission, each frozen at the 2048 phase at 44.1 s with START
+   ignored in the 768 phase. Bisect (scratch/s7409_bisect.sh, quick title-route PASS/FAIL, same-session controls build/ and
+   build_cvt PASS): ROGUESQ_S7409_OFF=1 FAIL, status-only FAIL, zero probes FAIL -> not the instrument. Cause: build_fodd/saves was
+   empty (the s7408 soak recipe copies the owner save into its build dir; a fresh dir boots profile-less). With the save COPY
+   (cmp-identical; build/saves untouched) the full-probe build PASSes. build_fodd.sh now copies it. Also moved the transform
+   output to build_fodd/fodd_src (build_fodd/src holds RT64's generated shaders/).
+Rules out: an FR-mode or odd-register view mismatch on the live path (static + live, two settings), FR=1 leaking into FR=0
+guest math. No code/runtime change, no ORIGIN line needed. Fold: s7408_cvt_levels rc 0 x3 (SOAK-RESULTS). Queued
+s7409_fodd_levels (L4/L7/L12). Next: class BT callee-saved register preservation across the FR=1 routines (NEXT.md).

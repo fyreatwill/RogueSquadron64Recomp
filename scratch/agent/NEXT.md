@@ -1,21 +1,18 @@
-# NEXT (s7409)
-HYPOTHESIS-ID: fr0-odd-register-access
+# NEXT (s7410)
+HYPOTHESIS-ID: fr1-callee-saved-preservation
 
-s7408 closed class BR (H-equal: FP->int macros identical in range on all 2^32 floats; 0 out-of-range live at 475 sites,
-dd8 + dd1; tools/s7408_cvt_contract.py, build_cvt). Fold the queued s7408_cvt_levels soak (L5/L10/L15) if it ran.
-Class BS: odd FPR access / FR mode. recomp_context has fpr f0..f31 plus `uint32_t* f_odd` and `mips3_float_mode`
-(recomp.h ~478); CHECK_FR is an assert (compiled out in Release?). 145 f_odd uses in funcs_4/7/8/26/27/36/42/49.
-Seen in s7408: transformAndEmitFaceVertices (hand asm, sets Status.FR via mtc0 and clears it with & 0xFBFFFFFF at exit)
-WRITES odd destinations through ctx->f_odd[(7-1)*2] but READS `ctx->f7.fl` directly (CVT_W_S(ctx->f7.fl), mfc1 reads
-f_odd). If f_odd aliases the high half of the even fpr in FR=0 and f7 is a separate slot in FR=1, a mixed read/write pair
-can see two different registers.
-1. Offline: read how librecomp sets f_odd and mips3_float_mode on cop0_status_write (lib/N64ModernRuntime/librecomp),
-   and how the generator picks f_odd vs fN (../N64Recomp/src/cgenerator.cpp). Census every f_odd use and every plain
-   odd fN.fl/u32l use per function, and which functions run with FR=1 (mtc0 Status with bit 26 set).
-2. Model: VR4300 FR=1 has 32 independent 64-bit FPRs; FR=0 odd single-precision ops touch the high word of the even pair.
-   Each function gives a row: consistent (all odd accesses through one view) / mixed (read via one view, write via the other).
-3. Hypotheses: H-consistent (every function uses one view for each register, or the two views alias correctly at runtime),
-   H-mixed-live (a function on the live path writes through f_odd and reads fN, or the reverse, with a different value
-   seen; fix in the generator/fixup + export.sh if lib/ is touched), H-dead (mixed only in functions never called).
-   Discriminator: the census rows plus, for any mixed function, a live check in a separate build dir comparing the two
-   views at the read (positive control: a planted write to one view must show up in the other check).
+s7409 closed class BS (H-consistent; tools/s7409_fodd_census.py + build_fodd live probe, L5 dd8/dd1 CONTROL PASS).
+Fold the queued s7409_fodd_levels soak (L4/L7/L12) if it ran: pass = rc 0 (CONTROL PASS + H-consistent per level).
+Class BT: callee-saved register preservation across the 7 hand-asm FR=1 routines (transformAndEmitFaceVertices,
+evalCubicSplineAtTime, mat3x4Multiply, transformVec3ByMat34, rotateVec3ByMat3x3, quaternionToMat3x4, projectPointToScreen)
+and the 3 FR=1 callees (fetchIndexedVertexPosition, fetchVertexPositionPrimary, normalizeVec3InPlace).
+Model: callers are GCC FR=0 o32: f20,f22,..,f30 (64-bit pairs incl. the odd high word = f(N).u32h) plus s0-s8, sp, ra
+must survive. In FR=1 the routine sees 32 independent regs: a write to f20.fl (= low word of the caller's f20 double) or to any
+even callee-saved slot without sdc1 save / ldc1 restore clobbers the caller. Odd own slots (f21.u32l..) are invisible to FR=0
+callers, so writing them is harmless.
+1. Offline: per routine, list writes to f20-f31 (.fl/.d/.u32l/.u64) and r16-r23/r30/r29/r31, and the sdc1/ldc1 (sd/ld, sw/lw)
+   save/restore pairs; row = preserved / clobbered-unsaved. Plant control: delete one ldc1 restore in a copy -> must flag.
+2. Live (build_fodd pattern, own dir build_fsv, copy the owner save into build_fsv/saves!): snapshot f20-f30 .u64 + s-regs at
+   entry, compare at every return; positive control: a planted post-return clobber of f20 every Nth call must be flagged.
+3. Hypotheses: H-preserved (all rows saved/restored, live diffs 0), H-clobber-live (a live routine changes a callee-saved
+   reg -> fix in a fixup script, export.sh if lib/), H-clobber-dead (only in never-called projectPointToScreen/quaternion paths).

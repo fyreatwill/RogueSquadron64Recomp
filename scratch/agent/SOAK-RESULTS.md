@@ -1523,3 +1523,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7406 fold: s7405_ftz_levels rc=0: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, fz1=25/28/20 fz0=0, plant_rows 187/235/110 -> FTZ default holds on 3 levels.
 20261115-105532 | s7406_fpat_levels | rc=0 | 631s | scratch/agent/soak_results/s7406_fpat_levels_20261115-105532.log
 20261115 | s7407 fold: s7406_fpat_levels rc=0: L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS 8/8 x3, VERDICT H-none (stmt_idc=0 ioc=0) x3 -> class BP stands on 3 more levels.
+20261115-112728 | s7408_cvt_levels | rc=0 | 649s | scratch/agent/soak_results/s7408_cvt_levels_20261115-112728.log
+20261115 | s7409 fold: s7408_cvt_levels rc=0: L5/L10/L15 dd8 134-135 s flight alive, 0 crash, 0 VI stall, report rc 0 x3 (= CONTROL PASS + H-equal; the recipe head -4 cut the CONTROL lines, rc carries them), oor=0 at every TOPMAX site (worst convertMat3x4ToN64Mtx 1.29e9) -> class BR stands on 3 more levels.
