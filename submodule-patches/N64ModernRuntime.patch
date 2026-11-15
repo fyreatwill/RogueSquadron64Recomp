@@ -1244,16 +1244,22 @@ index 0195f2b..4330ea4 100644
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/cont.cpp b/librecomp/src/cont.cpp
-index 7ad6c21..cdb0a1f 100644
+index 7ad6c21..2645ddc 100644
 --- a/librecomp/src/cont.cpp
 +++ b/librecomp/src/cont.cpp
-@@ -1,3 +1,5 @@
+@@ -1,6 +1,11 @@
 +#include <cstdio>
 +#include <cstdlib>
  #include "ultramodern/ultramodern.hpp"
  
  #include "helpers.hpp"
-@@ -42,13 +44,58 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
++#ifndef CONT_NO_RESPONSE_ERROR
++#define CONT_NO_RESPONSE_ERROR 0x8 // ultramodern/src/input.cpp (CHNL_ERR_NORESP >> 4)
++#endif
+ 
+ #define MAXCONTROLLERS 4
+ 
+@@ -42,21 +47,86 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
      _return<s32>(ctx, ret);
  }
  
@@ -1309,9 +1315,37 @@ index 7ad6c21..cdb0a1f 100644
 +        }
 +    }
 +
++    // s7400 class BJ: libultra __osContGetReadData writes data->errno for EVERY channel and the button/stick only when
++    // errno == 0. The upstream loop skipped the whole pad on error, so a channel that stops responding kept err_no 0 and
++    // its last buttons (stuck input) in guest memory. ROGUESQ_S7400_CONTFIX default ON (=0 restores the old skip).
++    // ROGUESQ_S7400_PAD_CTL=N: planted control, polls N..N+29 force controller 0 to no-response and read back the guest
++    // bytes ([s7400-pad] PASS = err_no 8 reached guest memory, STALE = old behaviour).
++    static const bool contfix = [] { const char* e = std::getenv("ROGUESQ_S7400_CONTFIX"); return !(e && e[0] == '0'); }();
++    static const long pad_ctl = [] { const char* e = std::getenv("ROGUESQ_S7400_PAD_CTL"); return e ? atol(e) : 0L; }();
++    static long pad_calls = 0;
++    ++pad_calls;
++    const bool ctl_win = pad_ctl > 0 && pad_calls >= pad_ctl && pad_calls < pad_ctl + 30;
++    if (ctl_win) {
++        dummy_data[0].err_no = CONT_NO_RESPONSE_ERROR;
++    }
      for (int controller = 0; controller < MAXCONTROLLERS; controller++) {
          if (dummy_data[controller].err_no == 0) {
              MEM_H(6 * controller + 0, data) = dummy_data[controller].button;
+             MEM_B(6 * controller + 2, data) = dummy_data[controller].stick_x;
+             MEM_B(6 * controller + 3, data) = dummy_data[controller].stick_y;
+             MEM_B(6 * controller + 4, data) = dummy_data[controller].err_no;
++        } else if (contfix) {
++            MEM_B(6 * controller + 4, data) = dummy_data[controller].err_no;
+         }
+     }
++    if (pad_ctl > 0 && (ctl_win || pad_calls == pad_ctl - 1 || pad_calls == pad_ctl + 30)) {
++        const unsigned err = (unsigned)(uint8_t)MEM_B(4, data);
++        fprintf(stderr, "[s7400-pad] call=%ld win=%d fix=%d guest_err=%u guest_btn=0x%04X %s\n", pad_calls, (int)ctl_win, (int)contfix,
++                err, (unsigned)(uint16_t)MEM_H(0, data), !ctl_win ? "OUT" : (err == CONT_NO_RESPONSE_ERROR ? "PASS" : "STALE"));
++    }
+ }
+ 
+ extern "C" void osContStartQuery_recomp(uint8_t * rdram, recomp_context * ctx) {
 diff --git a/librecomp/src/eep.cpp b/librecomp/src/eep.cpp
 index 048246e..5811902 100644
 --- a/librecomp/src/eep.cpp
@@ -4974,10 +5008,16 @@ index ae0f44f..0e1b7f9 100644
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..46ce708 100644
+index e0d367e..dd15996 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
-@@ -20,7 +20,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -1,4 +1,5 @@
+ #include <memory>
++#include <cstdlib>
+ #include <ultramodern/ultra64.h>
+ #include <ultramodern/ultramodern.hpp>
+ #include "recomp.h"
+@@ -20,7 +21,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
      osStartThread(rdram, (int32_t)ctx->r4);
  }
  
@@ -4986,7 +5026,7 @@ index e0d367e..46ce708 100644
      osStopThread(rdram, (int32_t)ctx->r4);
  }
  
-@@ -28,7 +28,7 @@ extern "C" void osDestroyThread_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -28,7 +29,7 @@ extern "C" void osDestroyThread_recomp(uint8_t * rdram, recomp_context * ctx) {
      osDestroyThread(rdram, (int32_t)ctx->r4);
  }
  
@@ -4995,7 +5035,7 @@ index e0d367e..46ce708 100644
      assert(false);
      // osYieldThread(rdram);
  }
-@@ -45,23 +45,33 @@ extern "C" void osGetThreadId_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -45,23 +46,33 @@ extern "C" void osGetThreadId_recomp(uint8_t * rdram, recomp_context * ctx) {
      ctx->r2 = osGetThreadId(rdram, (int32_t)ctx->r4);
  }
  
@@ -5031,7 +5071,7 @@ index e0d367e..46ce708 100644
      osSetEventMesg(rdram, (OSEvent)ctx->r4, (int32_t)ctx->r5, (OSMesg)ctx->r6);
  }
  
-@@ -70,7 +80,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -70,7 +81,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
  }
  
  extern "C" void osGetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
@@ -5041,6 +5081,20 @@ index e0d367e..46ce708 100644
  }
  
  extern "C" void osSetCount_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -123,7 +135,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
+ }
+ 
+ extern "C" void __osDisableInt_recomp(uint8_t * rdram, recomp_context * ctx) {
+-    ;
++    // s7400 class BJ: libultra returns the previous SR IE bit, which callers pass to __osRestoreInt. The empty stub left
++    // v0 stale; harmless while __osRestoreInt is a no-op (all 3 live callers feed v0 only to it), defined now anyway.
++    static const bool contfix = [] { const char* e = std::getenv("ROGUESQ_S7400_CONTFIX"); return !(e && e[0] == '0'); }();
++    if (contfix) {
++        ctx->r2 = 1;
++    }
+ }
+ 
+ extern "C" void __osRestoreInt_recomp(uint8_t * rdram, recomp_context * ctx) {
 diff --git a/librecomp/src/vi.cpp b/librecomp/src/vi.cpp
 index 1f3a4cf..b9cc34f 100644
 --- a/librecomp/src/vi.cpp

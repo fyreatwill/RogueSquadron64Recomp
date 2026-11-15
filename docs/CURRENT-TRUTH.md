@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7399 (2026-11-15).
+Compact operational handoff, as of Session 7400 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -284,6 +284,17 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    BADC0DE0 on a queue below guest $sp), `tools/s7399_evp_report.py <log>`, route tools/s7392_mq_run.zsh: owner + RETAIL=1
    0 mismatches over ~70-90k event deliveries each, CONTROL PASS both). Message-queue lifecycle family BB-BI CLOSED.
    Lesson: plant controls relative to ctx->r29 only (a receive slot can be a global; s7399 v1 plant SIGBUS-ed retail).
+   **BJ CLOSED s7400, replaced-libultra output contract: one latent H-struct + one latent H-ret, both FIXED** (`tools/s7400_replaced_contract.py`
+   rc 0: 144 `_recomp` replacements, 64 with live guest callers, each joined to the s7392 v0 classifier; libultra void set
+   excluded). H-ret: `__osDisableInt` empty stub left v0 stale; its 3 live consumers (musyxSynthFrame, __osSet/ResetGlobalIntMask)
+   pass v0 only to the no-op `__osRestoreInt` -> harmless, now r2=1. H-struct: osContGetReadData_recomp skipped the whole pad
+   on error, never writing err_no (libultra writes errno for every channel), so a channel that stops responding kept err_no 0 +
+   its last buttons in guest pad buffer 0x8010FF30 (pollControllerInputs tests 4(pad) == 8/4). Latent only: the query gate
+   (osContGetQuery errno, written correctly) and get_n64_input / get_connected_device_info agree (ch0 always ok, 1-3 absent),
+   startSiPollingThread seeds err_no 8. **ROGUESQ_S7400_CONTFIX default ON** (=0 old). Control ROGUESQ_S7400_PAD_CTL=60 (polls
+   60-89 force ch0 no-response): route tools/s7392_mq_run.zsh 200 s, fix 30/30 PASS (guest err 8), old 30/30 STALE (err 0),
+   both phase 9, 0 crash. Other returns checked: Pfs* all NOPACK (status 0, consistent), osMotorInit NOPACK, osContStartQuery/
+   Init 0, osAiSetFrequency retail formula, osGetCount sign-extended (s7087). Soak s7400_cont_levels queued (L5/L10/L15).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest

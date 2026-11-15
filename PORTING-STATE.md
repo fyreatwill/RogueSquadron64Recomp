@@ -195729,3 +195729,39 @@ logged only 37 Pi / 281 DP deliveries (the v2 rerun logged 20k / 11k, so the pla
 arm SIGBUS-ed after 1 s in runAiAudioStreamPlaybackLoop (si_addr 0x3800003e8). Moving the plant below the live guest $sp
 (the s7392 model) fixed both: retail 200 s, 0 crash. Lesson: a receive slot address is not a stack address; plant only
 relative to ctx->r29. The v1 owner log is kept at scratch/s7399/own_v1 and excluded from the result.
+
+## Session 7400 (2026-11-15) — class BJ replaced-libultra output contract closed: osContGetReadData never wrote err_no for a non-responding pad (latent stuck input), __osDisableInt left v0 stale; both fixed default-on, two-arm control PASS/STALE
+
+Work unit from NEXT.md (class BJ). Hypotheses: H-none (every consumed output of a replaced libultra fn matches libultra),
+H-ret (a replacement leaves r2 stale or returns a value libultra never returns, on a consumed site), H-struct (an out-struct
+field the guest reads is left unwritten or in a different format).
+
+Line 1, static (new `tools/s7400_replaced_contract.py`, rc 1 on FLAG): brace-extracts all 144 `<name>_recomp` bodies in
+librecomp/src + src/, classifies R2 (ctx->r2 / _return<>, following delegation to other _recomp), joins every guest jal from a
+non-replaced caller with the s7392 v0_fate classifier. 64 replacements have live callers. libultra void prototypes excluded
+(their RETURNED rows are void tail calls). Pre-fix FLAG=1: `__osDisableInt` (empty stub, 5 USED sites; live ones
+musyxSynthFrame 80091274, __osResetGlobalIntMask 8003331C, __osSetGlobalIntMask 800335EC; osLeoDiskInit and __osInsertTimer
+are dead: 64DD / replaced timer). Each live site moves v0 into the a0 of `__osRestoreInt`, also an empty stub -> stale v0
+goes nowhere. H-ret latent only. Now r2 = 1 (IE bit) under ROGUESQ_S7400_CONTFIX.
+
+H-struct by hand on every replacement whose out-struct a live caller reads: osContGetQuery -> __osContGetInitData writes
+errno for every channel (type/status only when present = libultra); osContGetReadData_recomp wrote button/stick/err_no ONLY
+when err_no == 0. libultra __osContGetReadData writes data->errno for every channel, the rest only on errno 0. Guest:
+siServiceThread polls into pad buffer 0x8010FF30 (4 x 6 B), startSiPollingThread seeds err_no=8 per pad, pollControllerInputs
+80003048 gates on query errno (0x80110788+3, 8/4 skip), query status bit 0, then pad err_no 4(a0) (8/4 skip), then copies
+button/stick. So a pad that answered once and then stopped responding would keep err_no 0 and its last buttons (stuck
+input). Latent: get_n64_input (ch0 always true, 1-3 false) and get_connected_device_info (ch0 Controller, 1-3 None) agree, so
+the query gate already masks it. Fix: write err_no on the error path too (ROGUESQ_S7400_CONTFIX default ON, =0 old).
+Other consumed outputs checked: Pfs* all return 1 NOPACK (query status 0 so the guest never probes a pak), osMotorInit NOPACK,
+osContStartQuery/StartReadData/Init 0 + bitpattern, osEepromProbe by save type, osAiSetFrequency retail formula (s-era),
+osGetCount sign-extended (s7087), osVirtualToPhysical, osSpTaskYielded 0 (tasks synchronous).
+
+Line 2, runtime two-arm, one build (lib patch exported): planted control ROGUESQ_S7400_PAD_CTL=60 forces ch0 no-response for
+pad polls 60-89 and reads the guest bytes back ([s7400-pad]). Route tools/s7392_mq_run.zsh (owner recipe dd8 21:9 FPS60,
+200 s each, NOREPORT=1):
+| arm | window rows | verdict | after window | phase | crash |
+| fix (default) | 30 | 30 PASS (guest_err 8) | err 0 again at call 90 | 9 | 0 |
+| CONTFIX=0 | 30 | 30 STALE (guest_err 0) | err 0 | 9 | 0 |
+Result: H-struct selected (latent) for osContGetReadData, H-ret selected (latent, harmless) for __osDisableInt, H-none for the
+other 62 live replacements. Both fixed; class BJ CLOSED. Soak s7400_cont_levels queued (L5/L10/L15, 30 PASS / 0 STALE each).
+Not covered: input-side contracts (how replacements read guest args) -> class BK.
