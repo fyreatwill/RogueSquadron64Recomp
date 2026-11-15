@@ -196236,3 +196236,8 @@ for 800CC3D4.
 
 Rules out: H-ext (sign/zero extension), H-swz (lane per alignment), H-width (neighbour bytes touched) for every pure
 emitted aligned load/store. Class BW closed, no code change. Next: class BX, FP compare emission (NEXT.md s7414).
+
+**Conclusion: selects H-equal, refutes H-ext, H-swz and H-width** for all 101,169 pure aligned load/store sites. It also
+refutes H-kseg1-live: 0 KSEG1-RDRAM constants, so the non-aliased mapping has no static site. That last point rests on a
+static census plus 0 crash in the soaks. **Next discriminator:** class BX, FP compare emission under NaN/inf/denormal
+operands vs the MIPS cond table, with mutant control (NEXT.md s7414; H-equal / H-nan / H-fmt / H-stale).
