@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7367 (2026-11-14).
+Compact operational handoff, as of Session 7368 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -507,15 +507,18 @@ is in the s7307 archive). Active unit: NEXT.md.
     boot hang from the s7355 introspection hook (skipped under TSan). TSan arm still never reaches a mission: guest deadlock
     MAIN 0x8011A818 / sched 0x8011A420 / viRetraceHandlerThread blocked sending 0x80128CF0 (cap 1, vflag 0x80037808) when guest code
     is slowed (single-source mechanism; normal builds 0 stalls).
-27zf. **Guest video-ack deadlock (TSan front-end stall = s6993 / s6814 title-boot freeze): FIXED s7367, default on.** Retrace
-    (0x80019B50) posts BLOCK to cap-1 CF0 0x80128CF0 every VI while vflag is set; a MAIN starved >=1 VI gets a duplicate ack, retrace parks,
-    MAIN leaves waitForPostSwapAck (C8 cleared) and waits on 0x8011A818 (scheduler <- 0x8011A420 <- retrace) = permanent cycle. Ring 5/5 +
-    static chain; H-sem/H-flag refuted; VI_HZ 20 still deadlocks, 10 clean. Fix: drop a BLOCK send into a FULL CF0 (mesgqueue.cpp,
-    ROGUESQ_CF0_DUPDROP=0 = retail). TSan A/B old deadlock fs=39 / fix fs=331; build/ dd8 smoke clean, 1 drop in normal play.
-    Classifier tools/s7367_vi_deadlock.py; diag ROGUESQ_VI_HZ. Soaks s7367_bootload_old/fix queued (loaded-host boots).
-27zg. **Next unit (NEXT.md): 0x8000E29C material NULL (allocateDisplayListBuffer <- allocOrEvictMaterialNode) on the fixed TSan arm,
-    then TSan through a mission; the s7364 stale-tile retail frame check still carried.**
-28. **When 1-27zg offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27zf. **Guest video-ack deadlock (TSan front-end stall = s6993 / s6814 title-boot freeze): FIXED s7367, default on.** A starved MAIN
+    gets a duplicate CF0 (0x80128CF0, cap 1) ack, retrace parks on BLOCK, MAIN waits 0x8011A818 = cycle. Fix: drop a BLOCK send into a
+    FULL CF0 (mesgqueue.cpp, ROGUESQ_CF0_DUPDROP=0 retail). TSan old deadlock fs=39 / fix fs=331; host-load boot soaks (s7368 fold)
+    5/5 clean in BOTH arms = load does not reproduce it. Detail PORTING-STATE s7367.
+27zg. **TSan-arm dd>1 DL-chunk pool NULL (0x8000E29C / renderFlatMeshFaceGroup si_addr 0x380000004): FIXED s7368, default on.**
+    Pool head 0x801163B0 empty + material finder 0x8002221C empty -> NULL chunk; DLPOOLX per-site grows were armed only at begin 3000, a
+    frame-count proxy a slowed run never reaches before the time-driven route lands in a 3D scene (arena held 0 chunks, 0 grows). Now armed
+    at the game's own pool init (buildAndRegisterDefaultMaterial relink, rebuild 1; ROGUESQ_DLPOOLX_ARM_REBUILD=0 old). TSan old 2/2 crash,
+    fix 2/2 past it; normal dd8 21:9 fix 2/2 + old 1/1 300 s clean (grows 40-43 all). TSan retail settings 0 crash, reaches the mission.
+27zh. **Next unit (NEXT.md): TSan arm at the post-fix 1024-wide scene** — fs crawls 1 frame per 600-VI stall-dump (t1 fs 375->378,
+    t2 363->364, t>300 s), plus 3 new unclassified rows (g_s6127_rd / g_s6127_flags rs_malloc diag statics, rs64_s5042_poison).
+28. **When 1-27zh offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

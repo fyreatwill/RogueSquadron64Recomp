@@ -1491,3 +1491,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261114 | s7327 fold: s7326_spill_levels rc=0: L4/L15 dd8 21:9 303/305 s alive, 0 crash, 0 VI stall, 0 arena full (releases 2/1) -> s7326 fix holds on the forced route; owner hangar-route arms in PORTING-STATE s7327.
 20261114-061550 | s7331_abort_resetw | rc=0 | 555s | scratch/agent/soak_results/s7331_abort_resetw_20261114-061550.log
 20261114 | s7332 fold: s7331_abort_resetw logged rc=0 but the report's own rc is 1 (recipe read grep's $?): 3 NEW rows = gfx RDP FIFO (OSTask output_buff 806E4800) inside the coalesceFreeHeapBlocks flags&4 carve, line-start walk artefact; after s7332 fixes, 3 abort-route reruns report rc 0, other owners 0, stale 0.
+20261114-172941 | s7367_bootload_fix | rc=0 | 252s | scratch/agent/soak_results/s7367_bootload_fix_20261114-172941.log
+20261114-173353 | s7367_bootload_old | rc=0 | 252s | scratch/agent/soak_results/s7367_bootload_old_20261114-173353.log
+20261114 | s7368 fold: s7367_bootload_old / s7367_bootload_fix rc=0 CONTROL PASS both (boot1 forced FROZEN + sample): boots 2-6 OK 5/5 in BOTH arms (fs 1068-1158 at t=40, 0 stall, 0 crash; fix arm 1 dup-ack drop) -> host `yes` load does NOT reproduce the fs=39 freeze on the old path; the s7367 fix stays qualified by the TSan A/B only (load arm non-discriminating).

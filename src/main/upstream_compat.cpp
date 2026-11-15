@@ -3713,11 +3713,20 @@ extern "C" int rs64_s6285_en(void) { static const int off = [] { const char* e =
 extern "C" int rs64_s6286_pre(void) {  /* s6286: 0 until the AT-th beginFrameDLChunk call (ROGUESQ_DLPOOLX_AT, default 3000: past boot and level load, where early grows broke the game), then PRE chunks (or -1 = arm per-site grows only) */
     static const int pre = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_PRE"); return e ? std::atoi(e) : 0; }();
     static const int at = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_AT"); return e ? std::atoi(e) : 3000; }();
-    static int calls = 0; if (++calls < at) return 0; s_s6286_armed = 1; return pre > 0 ? pre : -1; }
+    static int calls = 0; if (++calls < at) return 0; if (!s_s6286_armed) std::fprintf(stderr, "[s7368] dlpoolx armed at begin %d\n", calls); s_s6286_armed = 1; return pre > 0 ? pre : -1; }
 static uint32_t s_s6909_bump = 0;  /* s6909: arena high water, reset when the game rebuilds its chunk pool (tools/apply_s6909_dlreclaim.py) */
 extern "C" void rs64_s6909_rebuild(void) {
     static const bool off = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_RECLAIM"); return e && e[0] == '0'; }();
     if (!rs64_s6099_en()) return;
+    /* s7368: arm the per-site grows once the game has initialised its own chunk pool (this hook = buildAndRegisterDefaultMaterial's
+       relink, head store at 0x80018094) instead of only at the AT-th beginFrameDLChunk (3000). The begin count is a frame-count proxy
+       for "past boot": a slowed host or a quick player reaches a dd>1 3D scene in fewer game frames (TSan arm: ~330 frames at the
+       mission), the fixed 1356-chunk pool runs dry with the arena unarmed (0 chunks held), the finder finds nothing and a NULL chunk
+       is stored (allocateDisplayListBuffer / renderFlatMeshFaceGroup, si_addr 0x380000004). s6286's boot death was top-ups on the
+       UNinitialised cache before this point. ROGUESQ_DLPOOLX_ARM_REBUILD=<n> arms at the n-th rebuild (default 1), 0 = old (AT only). */
+    static const int arm_at = [] { const char* e = std::getenv("ROGUESQ_DLPOOLX_ARM_REBUILD"); return e ? std::atoi(e) : 1; }();
+    static int nreb = 0; ++nreb;
+    if (arm_at > 0 && nreb >= arm_at && !s_s6286_armed) { s_s6286_armed = 1; std::fprintf(stderr, "[s7368] dlpoolx armed at rebuild %d (pc=%08X)\n", nreb, (uint32_t)g_rs64_last_guest_pc); }
     std::fprintf(stderr, "[dlpoolx] rebuild: arena held %u chunks%s pc=%08X\n", s_s6909_bump / 0x108u, off ? " (kept)" : "", (uint32_t)g_rs64_last_guest_pc);
     if (!off) { s_s6909_bump = 0; s_s6558_blocks.clear(); }
 }

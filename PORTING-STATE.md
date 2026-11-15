@@ -194490,3 +194490,35 @@ HYPOTHESIS-ID: host-container-race (closing the TSan-deadlock sub-thread; next s
 Conclusion (s7367): ring (5/5) + static producer chain select H-cycle (starved MAIN leaves the ack loop while retrace is parked on a
 duplicate ack); the ring refutes H-sem and H-flag; VI_HZ 20 still deadlocking refutes "VI rate alone" (H-slow in its pure form).
 Fix A/B on one build: old 1/1 deadlock, fix 0/1 deadlock (reaches fs=331). Next: the 0x8000E29C material NULL under the fixed TSan arm.
+
+## Session 7368 (2026-11-14) — TSan-arm 0x8000E29C crash named: dd>1 DL-chunk pool dry with the DLPOOLX grow still unarmed (begin-3000 gate); now armed at the game's own pool init, default on
+HYPOTHESIS-ID: tsan-arm-material-crash
+- **Soak fold:** s7367_bootload_old / _fix rc=0, control PASS both; boots 2-6 OK 5/5 in BOTH arms (fs 1068-1158 at t=40, 0 stall) ->
+  host `yes` load does not reproduce the fs=39 freeze on the old path; the s7367 fix stays qualified by the TSan A/B only.
+- **Static (funcs_3.c):** 0x8000E29C is the delay slot of `jal 0x800225F8` in allocateDisplayListBuffer; the crashing frame is a
+  re-entered allocateDisplayListBuffer near its entry (0x80007D74: head = *0x801163B0; if 0 -> finder 0x8002221C; if that is 0 too, the
+  NULL head goes through the silent s434 generic guard and is used as a chunk). Same family as s6098 (dd>=3 finder null node) and s6909
+  (renderFlatMeshFaceGroup NULL node store si_addr 0x380000004).
+- **Recurrence (TSan build, owner recipe dd8 21:9 FPS60, time-driven AP route):** s7367 ab_fix + s7368 o1 = 2/2 crash, both seconds after
+  the pool rebuild into the 768-wide 3D scene (t 160-174 s), o1 in renderFlatMeshFaceGroup+15368 (si_addr 0x380000004, last pc
+  0x8000E7FC). Both logs: `[dlpoolx] rebuild: arena held 0 chunks`, zero `+128 chunks` lines = DLPOOLX never grew. TSan retail settings
+  (r1, FPS60=0, no dd bundle): 0 crash, reaches the mission origin 0x00690400 at 209.9 s.
+- **Mechanism:** rs64_s6285_en() (per-site grows) requires s_s6286_armed, set only at the 3000th beginFrameDLChunk (ROGUESQ_DLPOOLX_AT).
+  At normal speed that is ~18 s in (n0), 5 s before the first scene that needs a grow (1024-wide, 23.8 s). Under TSan the game renders
+  ~330 frames by t=165 s while the AP route is time-driven, so the dd8 3D scene arrives with the gate closed and the fixed 1356-chunk pool
+  runs dry. Begin count is a frame-count proxy for "pool initialised"; s6286's boot death was top-ups on the uninitialised cache.
+- **ORIGIN:** writer of the NULL = the retail pool pop (0x80007D74 / 0x8000E1E4) on an empty 0x801163B0 list with an empty finder; the
+  list is empty because dd>1 demand exceeds the fixed 1356-chunk pool (s6286/s6287: legitimate demand burst, pushes==pops/2) and OUR
+  DLPOOLX refill was gated off. Not a guest corruption.
+- **FIX (default on, src/main/upstream_compat.cpp rs64_s6909_rebuild):** arm per-site grows at the n-th game pool rebuild
+  (buildAndRegisterDefaultMaterial relink, head store 0x80018094; ROGUESQ_DLPOOLX_ARM_REBUILD=n, default 1, 0 = old AT-only). Logs
+  `[s7368] dlpoolx armed at rebuild N` / `... at begin N`. Only active with DLPOOLX (dd>1 bundle); dd1 retail untouched.
+- **A/B (scratch/s7368/ab.zsh, ab.log):** normal build dd8 21:9 FPS60 300 s: n1 fix / n2 fix / n0 old: 0 crash each, 3 initMission each,
+  grows 42/40/43, 0 arena exhausted, 9 rebuilds, 0 stall. n1 grew at pc 0x80001F88 at boot (the s6286 "boot breaker" site) and booted
+  fine -> that hazard no longer applies (the s6286 chain-walk bound + s6909 reclaim fixes came after it). TSan fix t1/t2: 0 crash, 6
+  rebuilds (past the old crash point), 23/24 grows, reach the 1024-wide scene at 217-254 s.
+- **New datum (next unit):** in t1/t2 after ~300 s the 1024 scene crawls: fs +1 per 600-VI stall-dump (t1 375->378, t2 363->364),
+  states alternate 5,1 / 1,5, vflag 0. tools/s7354_tsan_report.py t1 rc 1: 3 new `?` rows (g_s6127_rd / g_s6127_flags written by
+  rs64_s6127_fl <- rs_malloc on guest threads T68/T73/T82; rs64_s5042_poison <- rs_free). Likely SEM (guest run-one), unreviewed.
+- Rules out: H-retail (retail settings TSan 0 crash; mechanism is our gate), H-tsan-only as "harmless": the gate is a frame-count proxy
+  any slowed host can undercut. Selects H-ours (DLPOOLX arm gate) x H-tsan-timing. Two lines: static pop/finder path + 2/2 vs 0/2 A/B.
