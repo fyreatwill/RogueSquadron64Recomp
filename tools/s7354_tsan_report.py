@@ -32,6 +32,7 @@ HAND = [  # (substring of group key, class, reason) -- filled from the s7354 run
     ("g_recomp_rdram_for_wp_raw", "BENIGN", "one 8-byte aligned publish of the rdram base before any guest code; diag poll threads read it"),
     ("rt64_present_queue.cpp:1075", "BENIGN", "swapChainRate: aligned u32 pacing hint, changed only on window move/resize (present thread under its mutex), gfx thread reads stale-or-new"),
     ("rt64_present_queue.cpp:1107", "BENIGN", "s7376: same swapChainRate write (setSwapChainRate), moved 1075->1107 by the s7376 present-thread lock patch"),
+    ("rt64_present_queue.cpp:1147", "BENIGN", "s7377: same swapChainRate write (setSwapChainRate), moved 1107->1147 by the s7377 early-lock patch"),
     ("plume_metal.cpp", "EXT", "Metal completion-handler block: copied on the present thread, run on Metal's internal queue (uninstrumented system HB)"),
     ("data race on vptr", "EXT", "same Metal completion-handler block (vptr of the captured object)"),
     ("'events_context'", "FIX", "s7354: VI cur/next flip in vi_thread_func now under message_mutex (+ dummy VI, osViGet*Framebuffer)"),

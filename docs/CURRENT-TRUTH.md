@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7374 (2026-11-14).
+Compact operational handoff, as of Session 7377 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -98,6 +98,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7376 "the present thread already takes workloadMutex at line ~676 in the same frame" (used in its deadlock/coverage reasoning).
+  Believable: upstream locks it there. s7377 counter: that lock sits on the `!interpolationEnabled` branch, taken on 27/10800 presents;
+  the other 99.7% ran lock-free (fixed by ROGUESQ_S7377_EARLYLOCK).
 - s7372 "17 AQ rows exercised in mission incl. dpc defer_begin and rs64_s6094_tick; 73 never executed". Believable: coverage
   counts are exact. s7373: the s7366 rows' line numbers predated s7368/s7371 edits (20/97 lines no longer named the container);
   re-cut rows give 19 mission rows (defer_begin and s6094_tick out, both env-gated; get, s6702_release_locked, heapsync in), 71 unexecuted.
@@ -205,10 +208,13 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID present-thread-shared-maps): class AT, every present-thread access to the shared RT64
-   fbManager / targetManager / interpolatedColorTargets in rt64_present_queue.cpp, with its lock state.** Upstream (line ~266
-   viFb find) and several port-added finds (force-fb, vi-stale-diag, STALE_NOFB, recentFb, colorFb) read the shared maps before
-   the present thread takes workloadMutex (~line 708 now); decide per site, or move the lock earlier for the lookup phase.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID rt64-shared-resources-census): class AU, every field of RT64 SharedQueueResources
+   (rt64_shared_queue_resources.h) by thread and guarding mutex.** **AT CLOSED s7377** (`tools/s7377_present_lock_table.py --check`,
+   30 rows, `--assume-off` control bad=17): upstream RT64's present thread took the lock-free `interpolationEnabled` branch on 99.7% of
+   presents (count always 1 here), so its colour-target get and GPU pass ran without workloadMutex, and it iterated
+   colorImageAddressVector (written under managerMutex) with no lock. Now: vector snapshotted under managerMutex, workloadMutex held
+   from performOperations through the GPU pass, released only when framesToPresent > 1 (0 times). ROGUESQ_S7377_EARLYLOCK=0 = old.
+   Smoke both arms crash 0 / 14 resets, presents 13922 vs 13931 (no cost); TSan rc 0, CTL fires, 0 inversions.
    **AS2 CLOSED s7376** (`tools/s7375_nolock_threads.py --lockless --check` OPEN 0, 126 hand verdicts): 1 real MULTI fixed. The
    port's present-thread present-1024 diag (every wide-phase present) inserted into targetManager via get(k,true), and the
    follow-draw REGISTER inserted into fbManager, both without workloadMutex: now locked (diag try_lock + find-only probe),

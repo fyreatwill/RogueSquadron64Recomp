@@ -1,0 +1,31 @@
+# s7377 class AT verdicts: key<TAB>verdict<TAB>note. Regenerate keys with tools/s7377_present_lock_table.py
+const bool usingMSAA = (targetManager.multisampling.sampleCount > 1);#0	CFG-READ	sampleCount set at init/config change only; upstream
+s7377ColorVec = ext.sharedResources->colorImageAddressVector;#0	MGR-LOCKED	snapshot under managerMutex (the writer lock, workload_queue.cpp:1141)
+if (!s7377Colors.empty()) { s7377ColorNonEmpty.fetch_add(1, std::memory_order_relaxed); }#0	LOCKED-REQUIRED	default-on lock@251
+fbManager.performOperations(ext.presentGraphicsWorker, &screenFbChangePool, nullptr, ext.shaderLibrary, nullptr,#0	LOCKED-REQUIRED	default-on lock@251
+viFb = fbManager.find(viAddrSnapped);#0	LOCKED-REQUIRED	default-on lock@251
+fbManager.framebuffers.size(),#0	LOCKED-REQUIRED	raii s7376LkFbs@310
+targetManager.targetMap.size());#0	LOCKED-REQUIRED	raii s7376LkFbs@310
+for (const auto &kv : fbManager.framebuffers) {#0	LOCKED-REQUIRED	raii s7376LkFbs@310
+Framebuffer *forceFb = fbManager.find(s_force_fb);#0	LOCKED-REQUIRED	default-on lock@251
+forceFb = fbManager.find(0x80000000u | s_force_fb);#0	LOCKED-REQUIRED	default-on lock@251
+Framebuffer *vf = fbManager.find(viAddr);#0	LOCKED-REQUIRED	default-on lock@251
+if (s_need_nofb && fbManager.find(viAddr) != nullptr) return true;#0	LOCKED-REQUIRED	default-on lock@251
+Framebuffer *drawnFb = fbManager.find(drawn);#0	LOCKED-REQUIRED	raii s7376Lk@478
+drawnFb = &fbManager.get(drawn, siz, drawnW, h);#0	LOCKED-REQUIRED	raii s7376Lk@478
+!s7377Colors.empty())#0	LOCKED-REQUIRED	default-on lock@251
+const auto &vec = s7377Colors;#0	LOCKED-REQUIRED	default-on lock@251
+Framebuffer *recentFb = fbManager.find(recentAddr);#0	LOCKED-REQUIRED	default-on lock@251
+Framebuffer *candidateFb = fbManager.find(present.debuggerFramebuffer.address);#0	LOCKED-REQUIRED	default-on lock@251
+Framebuffer *f = fbManager.find(drawn);#0	LOCKED-REQUIRED	raii s7376Lk1024@652
+auto it = targetManager.targetMap.find(k.hash());#0	LOCKED-REQUIRED	raii s7376Lk1024@652
+if (it != targetManager.targetMap.end()) {#0	LOCKED-REQUIRED	raii s7376Lk1024@652
+rt = &targetManager.get(k, true);#0	LOCKED-REQUIRED	raii s7376Lk1024@652
+auto it = targetManager.targetMap.find(k.hash());#1	LOCKED-REQUIRED	raii s7376Lk1024@652
+if (it != targetManager.targetMap.end()) {#1	LOCKED-REQUIRED	raii s7376Lk1024@652
+for (uint32_t colorAddress : s7377Colors) {#0	LOCKED-REQUIRED	default-on lock@251
+Framebuffer *colorFb = fbManager.find(colorAddress);#0	LOCKED-REQUIRED	default-on lock@251
+colorTarget = &targetManager.get(colorTargetKey, true);#0	LOCKED-REQUIRED	unlocked only when interpolationEnabled && framesToPresent>1 (upstream design, interpolatedCondition wait)
+RenderTarget &otherColorTarget = targetManager.get(otherColorTargetKey, true);#0	LOCKED-REQUIRED	unlocked only when interpolationEnabled && framesToPresent>1 (upstream design, interpolatedCondition wait)
+colorTarget = &targetManager.get(colorTargetKey, true);#1	LOCKED-REQUIRED	unlocked only when interpolationEnabled && framesToPresent>1 (upstream design, interpolatedCondition wait)
+colorTarget = ext.sharedResources->interpolatedColorTargets[targetIndex].get();#0	LOCKED-REQUIRED	unlocked only when interpolationEnabled && framesToPresent>1 (upstream design, interpolatedCondition wait)

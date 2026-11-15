@@ -194834,3 +194834,42 @@ calling threads instead of s7366's unchecked "thread-confined or handed off by q
   Next discriminator (class AT): a lock-state table of every present-thread read of the shared maps. H-move-lock (take
   workloadMutex at pqVisibleGate) vs H-interp (RT64 interpolation is live in some arm, so only per-site locks) is decided by
   whether presentFb->interpolationEnabled is ever true in the owner recipe, plus the frame-time cost of the earlier lock.
+
+## Session 7377 (2026-11-14) — class AT (present-thread reads of the shared RT64 maps) CLOSED: 30-row lock table; upstream RT64's present thread ran its colour-target lookup AND GPU pass without workloadMutex on 99.7% of presents (interpolationEnabled is live, count 1); workloadMutex now held for the whole lookup phase (ROGUESQ_S7377_EARLYLOCK, default on)
+- Tool: `python3 tools/s7377_present_lock_table.py [--check] [--assume-off] [--rev HEAD]` walks PresentQueue::threadPresent
+  (brace-scope lexical model: explicit lock/unlock, default-on env-gated lock blocks, RAII unique_lock) and prints every access to
+  fbManager / targetManager / colorImageAddressVector / interpolatedColorTargets with its workloadMutex state and origin (UPSTREAM =
+  text in lib/rt64 HEAD, else PORT). Verdicts in tools/s7377_present_lock_reviewed.tsv (30 rows: LOCKED-REQUIRED 28, MGR-LOCKED 1,
+  CFG-READ 1). Controls: `--check` rc 0 on the tree, bad=17 with `--assume-off` (= ROGUESQ_S7377_EARLYLOCK=0); `--rev HEAD`
+  (upstream) reads the viFb find NONE, the non-interp colour get COND, scratch get LOCKED; the s7376 RAII sites read LOCKED.
+- Pre-fix table (upstream design + port): 11 reads with no lock (performOperations, viFb find, force-fb x2, vi-stale-diag, STALE_NOFB,
+  recentFb, debugger fb, colorImageAddressVector x3 incl. the colorFb loop) + the colour-target get / depth->colour get / interpolated
+  target taken only on the `!interpolationEnabled` branch. colorImageAddressVector is written by the workload thread under
+  managerMutex (workload_queue.cpp:1141, clear + push_back each workload), never under workloadMutex: the present thread iterated it
+  with no lock at all.
+- Measurement (new [s7377] counter, both smoke arms, 10800 presents): interp=10773 / 10774, interpMulti=0, colorVecNonEmpty=10797.
+  So in this game presentFb is the workload's own colour image on ~99.7% of presents, `presentFb->interpolationEnabled = true`, and the
+  upstream code took the lock-free branch: targetManager.get(key, true) (may insert), the depth->colour copy and the whole present GPU
+  pass ran without workloadMutex while workload N+1 (which waits only for present N, waitForPresentId) mutates the same maps.
+  frameCounters.count is always 1 (refreshRate Original, targetRate 0), so the only reason for the lock-free branch (waiting on
+  interpolatedCondition for frames rendered under workloadMutex) never applies here.
+- Fix (lib/rt64 rt64_present_queue.cpp, submodule-patches/rt64.patch refreshed): snapshot colorImageAddressVector under managerMutex
+  (nothing else held), then take workloadMutex before performOperations and keep it through the GPU pass (existing unlock in the
+  frame loop); release it only when interpolationEnabled && framesToPresent > 1 (upstream path, counted as interpMulti: 0 here).
+  The s7376 per-site locks/try_locks and the two upstream lock points skip when already held. ROGUESQ_S7377_EARLYLOCK=0 = old.
+  ORIGIN: writer = RT64's own workload thread (processWorkload / threadRenderFrame under workloadMutex, the colour-vector rebuild under
+  managerMutex); values legitimate, the present-thread access unsynchronised; upstream's own TODO (present_queue ~line 229) names this
+  race. Not a game value.
+- Gate: smoke `env SECS=260 zsh scratch/s7326/run.zsh s7377_dd8 ''` crash 0, 14 resets, late 0, arenafull 0; same-build old arm
+  (S7377_EARLYLOCK=0) identical (crash 0, 14 resets). Cost: presents 13922 (fix) vs 13931 (old) in 260 s, present-1024 rt=yes 11081 vs
+  11088: no measurable present-rate loss. TSan arm (build_tsan, scratch/s7377/tsan_run.zsh t1 480): crash 0, initMission 1, 3158
+  reports, 22 groups, CTL x3079 fires, 0 lock-order-inversion, 0 reports in render_target_manager / framebuffer_manager; only new
+  group = the known swapChainRate BENIGN write moved 1107->1147 (rule added to tools/s7354_tsan_report.py); report rc 0 (s7376 t1 rc 0).
+- Limits: TSan saw no report on the old unlocked accesses in s7375/s7376 either, so "it raced" stays static reasoning
+  (single-source); the measured part is that the unlocked path was the 99.7% path, not a corner. Deadlock argument: under workloadMutex
+  the workload thread waits only on its GPU workers; the present thread's only wait on the workload thread (interpolatedCondition)
+  releases first; managerMutex is never taken while workloadMutex is held. Not linked to the parked rare dd4/dd8 gfx SIGBUS.
+- Conclusion: selects H-move-lock (one change covers every site, no frame-rate cost) and refutes H-upstream-ok (the unlocked colour
+  target path was the common path, not a corner) and H-interp in its blocking form (interpolation is "enabled" but count==1, so the
+  lock can be held). Supersedes s7376's "the present thread already takes workloadMutex at line ~676 in the same frame": true only on
+  the 0.3% non-interp presents.

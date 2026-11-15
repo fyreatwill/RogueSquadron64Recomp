@@ -3901,7 +3901,7 @@ index dccaa87..d0029ba 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..fc8a479 100644
+index f17db9b..c80e914 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,20 +4,91 @@
@@ -4044,7 +4044,44 @@ index f17db9b..fc8a479 100644
          int32_t framesToPresent = 1;
          bool lockedWorkloadMutex = false;
          InterpolatedFrameCounters &frameCounters = ext.sharedResources->interpolatedFrames[ext.sharedResources->interpolatedFramesIndex];
-@@ -160,9 +253,51 @@ namespace RT64 {
+@@ -139,6 +232,36 @@ namespace RT64 {
+         // modified while the present queue is retrieving the framebuffer or the target. These can
+         // likely be solved by locking the access to the managers during modification.
+         
++        // s7377 AT: the shared fbManager / targetManager are mutated by the workload thread under workloadMutex
++        // (processWorkload, threadRenderFrame). Upstream locks it only at the colour-target lookup, so every earlier
++        // present-thread read (performOperations below, the viFb find, the force/stale/recent/debugger/colorFb finds)
++        // raced with workload N+1, which runs concurrently with present N+1 (the workload only waits for present N).
++        // Take it for the whole lookup phase instead. Deadlock-free: under workloadMutex the workload thread only waits
++        // on its own GPU workers; the only present-thread wait on the workload thread (interpolatedCondition, when
++        // framesToPresent > 1) releases it first, below. colorImageAddressVector is written under managerMutex, not
++        // workloadMutex: snapshot it under managerMutex with nothing else held. ROGUESQ_S7377_EARLYLOCK=0 = old.
++        static const bool s7377Early = []{ const char *e = std::getenv("ROGUESQ_S7377_EARLYLOCK"); return !(e && *e == '0'); }();
++        static std::atomic<uint64_t> s7377Presents{0}, s7377Interp{0}, s7377InterpMulti{0}, s7377ColorNonEmpty{0};
++        std::vector<uint32_t> s7377ColorVec;
++        if (s7377Early) {
++            {
++                const std::scoped_lock s7377MgrLock(ext.sharedResources->managerMutex);
++                s7377ColorVec = ext.sharedResources->colorImageAddressVector;
++            }
++            ext.sharedResources->workloadMutex.lock();
++            lockedWorkloadMutex = true;
++        }
++        const std::vector<uint32_t> &s7377Colors = s7377Early ? s7377ColorVec : ext.sharedResources->colorImageAddressVector;
++        if (!s7377Colors.empty()) { s7377ColorNonEmpty.fetch_add(1, std::memory_order_relaxed); }
++        {
++            const uint64_t pn = s7377Presents.fetch_add(1, std::memory_order_relaxed) + 1;
++            if (pn == 1 || (pn % 3600) == 0) {
++                std::fprintf(stderr, "[s7377] presents=%llu early=%d interp=%llu interpMulti=%llu colorVecNonEmpty=%llu\n",
++                    (unsigned long long)pn, s7377Early ? 1 : 0, (unsigned long long)s7377Interp.load(),
++                    (unsigned long long)s7377InterpMulti.load(), (unsigned long long)s7377ColorNonEmpty.load());
++            }
++        }
++
+         // Perform any external write operations indicated by the event.
+         if (!present.fbOperations.empty()) {
+             const std::scoped_lock lock(screenFbChangePoolMutex);
+@@ -160,9 +283,51 @@ namespace RT64 {
          const bool pqVisibleGate = present.screenVI.visible() ||
                                     (s_pq_force && present.screenVI.fbAddress() != 0 && present.screenVI.fbSiz() != 0);
          if (pqVisibleGate) {
@@ -4073,7 +4110,7 @@ index f17db9b..fc8a479 100644
 +                }();
 +                // s7376 AS2: iterating the shared maps needs workloadMutex; try-lock, skip the census when busy.
 +                std::unique_lock<std::mutex> s7376LkFbs(ext.sharedResources->workloadMutex, std::defer_lock);
-+                if (s_log_fbs && s7376LkFbs.try_lock()) {
++                if (s_log_fbs && (lockedWorkloadMutex || s7376LkFbs.try_lock())) {
 +                    static std::atomic<uint64_t> n{0};
 +                    uint64_t v = ++n;
 +                    if ((v % 30) == 0) {
@@ -4097,7 +4134,7 @@ index f17db9b..fc8a479 100644
              }
  
              // VI_FOLLOW_DRAW (2026-05-13, ported from reverted commit e718774).
-@@ -183,9 +318,18 @@ namespace RT64 {
+@@ -183,9 +348,18 @@ namespace RT64 {
              //                                of VI/recent-set (diagnostic).
              //   ROGUESQ_VI_FOLLOW_DRAW=N modes:
              //     0       — disabled. Original VI lookup only.
@@ -4117,7 +4154,7 @@ index f17db9b..fc8a479 100644
              if (!viewRDRAM) {
                  static const uint32_t s_force_fb = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FORCE_FB");
-@@ -194,15 +338,27 @@ namespace RT64 {
+@@ -194,15 +368,27 @@ namespace RT64 {
                  }();
                  static const int s_follow_mode = []() {
                      const char *e = std::getenv("ROGUESQ_VI_FOLLOW_DRAW");
@@ -4147,11 +4184,12 @@ index f17db9b..fc8a479 100644
                      if (forceFb != nullptr) {
                          viFb = forceFb;
                          overrideUsed = true;
-@@ -216,7 +372,146 @@ namespace RT64 {
+@@ -216,10 +402,149 @@ namespace RT64 {
                          }
                      }
                  }
 -                if (!overrideUsed && s_follow_mode > 0 &&
+-                    !ext.sharedResources->colorImageAddressVector.empty())
 +                // Mode 3: present whichever framebuffer last received real
 +                // geometry. Independent of colorImageAddressVector.
 +                // s82: refuse wild last-drawn widths (same allowlist as last-drawn
@@ -4225,7 +4263,7 @@ index f17db9b..fc8a479 100644
 +                        // thread holds no lock here, so a blocking lock cannot deadlock. ROGUESQ_S7376_PQLOCK=0 = old.
 +                        static const bool s_pqlock = []{ const char *e = std::getenv("ROGUESQ_S7376_PQLOCK"); return !(e && *e == '0'); }();
 +                        std::unique_lock<std::mutex> s7376Lk(ext.sharedResources->workloadMutex, std::defer_lock);
-+                        if (s_pqlock) s7376Lk.lock();
++                        if (s_pqlock && !lockedWorkloadMutex) s7376Lk.lock();
 +                        Framebuffer *drawnFb = fbManager.find(drawn);
 +                        // Session 21: 1024-phase draws land in a GPU target at
 +                        // 0x790000 (SETCIMG w=512) but performDiscards / the
@@ -4292,10 +4330,14 @@ index f17db9b..fc8a479 100644
 +                }
 +
 +                if (!overrideUsed && s_follow_mode > 0 && s_follow_mode != 3 &&
-                     !ext.sharedResources->colorImageAddressVector.empty())
++                    !s7377Colors.empty())
                  {
-                     const auto &vec = ext.sharedResources->colorImageAddressVector;
-@@ -308,6 +603,71 @@ namespace RT64 {
+-                    const auto &vec = ext.sharedResources->colorImageAddressVector;
++                    const auto &vec = s7377Colors;
+                     bool doOverride = false;
+                     if (s_follow_mode == 2) {
+                         doOverride = true;
+@@ -308,8 +633,73 @@ namespace RT64 {
                  }
              }
              
@@ -4315,7 +4357,7 @@ index f17db9b..fc8a479 100644
 +                std::unique_lock<std::mutex> s7376Lk1024(ext.sharedResources->workloadMutex, std::defer_lock);
 +                const bool s7376Want = (drawn != 0 && drawn != s_lastLogDrawn &&
 +                    (drawn == 0x790000u || drawnW == 512u || present.screenVI.fbSize().x >= 1024u));
-+                if (s7376Want && s_pqlock1024 && !s7376Lk1024.try_lock()) {
++                if (s7376Want && s_pqlock1024 && !lockedWorkloadMutex && !s7376Lk1024.try_lock()) {
 +                    static std::atomic<uint64_t> s_busy{0};
 +                    const uint64_t bz = ++s_busy;
 +                    if (bz <= 5 || (bz % 500) == 0) {
@@ -4365,9 +4407,30 @@ index f17db9b..fc8a479 100644
 +
 +            rs64PrFb = (presentFb != nullptr) ? presentFb->addressStart : 0;
              if ((presentFb != nullptr) && (viFb != nullptr)) {
-                 for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
+-                for (uint32_t colorAddress : ext.sharedResources->colorImageAddressVector) {
++                for (uint32_t colorAddress : s7377Colors) {
                      Framebuffer *colorFb = fbManager.find(colorAddress);
-@@ -353,11 +713,12 @@ namespace RT64 {
+                     if (colorFb == nullptr) {
+                         continue;
+@@ -342,8 +732,16 @@ namespace RT64 {
+ 
+                 if (presentFb->interpolationEnabled) {
+                     framesToPresent = frameCounters.count;
++                    s7377Interp.fetch_add(1, std::memory_order_relaxed);
++                    // s7377: framesToPresent > 1 waits on interpolatedCondition for frames the workload thread renders
++                    // under workloadMutex; holding it there would deadlock. Upstream (lock-free) behaviour from here.
++                    if (lockedWorkloadMutex && (framesToPresent > 1)) {
++                        s7377InterpMulti.fetch_add(1, std::memory_order_relaxed);
++                        ext.sharedResources->workloadMutex.unlock();
++                        lockedWorkloadMutex = false;
++                    }
+                 }
+-                else {
++                else if (!lockedWorkloadMutex) {
+                     lockedWorkloadMutex = true;
+                     ext.sharedResources->workloadMutex.lock();
+                 }
+@@ -353,11 +751,12 @@ namespace RT64 {
                  if (s_pq_log) {
                      static int s_n2 = 0;
                      int n = ++s_n2;
@@ -4383,9 +4446,16 @@ index f17db9b..fc8a479 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -394,11 +755,31 @@ namespace RT64 {
-                 lockedWorkloadMutex = true;
-                 ext.sharedResources->workloadMutex.lock();
+@@ -391,14 +790,36 @@ namespace RT64 {
+                 scratchFb.height = fbSize.y;
+                 scratchFb.siz = present.screenVI.fbSiz();
+ 
+-                lockedWorkloadMutex = true;
+-                ext.sharedResources->workloadMutex.lock();
++                if (!lockedWorkloadMutex) {
++                    lockedWorkloadMutex = true;
++                    ext.sharedResources->workloadMutex.lock();
++                }
  
 +                // RS64 (s5446): VI::fbSize() returns (0,0) while the VI registers are mid mode-switch.
 +                // resize(0,0) is a no-op on a fresh target, leaving texture==nullptr, and
@@ -4415,7 +4485,7 @@ index f17db9b..fc8a479 100644
  
                  scratchFb.nativeTarget.resetBufferHistory();
  
-@@ -418,6 +799,7 @@ namespace RT64 {
+@@ -418,6 +839,7 @@ namespace RT64 {
                  if (!present.paused && (viHistory.top().vi != present.screenVI)) {
                      viHistory.pushVI(present.screenVI, fbSize.x);
                  }
@@ -4423,7 +4493,7 @@ index f17db9b..fc8a479 100644
              }
          }
  
-@@ -465,7 +847,9 @@ namespace RT64 {
+@@ -465,7 +887,9 @@ namespace RT64 {
              uint32_t swapChainIndex = 0;
              const bool presentFrame = (i < framesToPresent) && swapChainValid;
              if (presentFrame) {
@@ -4433,7 +4503,7 @@ index f17db9b..fc8a479 100644
              }
  
              if (presentFrame && swapChainValid) {
-@@ -488,6 +872,33 @@ namespace RT64 {
+@@ -488,6 +912,33 @@ namespace RT64 {
                      renderParams.filtering = filtering;
                      renderParams.vi = &present.screenVI;
                      renderParams.removeBlackBorders = removeBlackBorders;
@@ -4467,7 +4537,7 @@ index f17db9b..fc8a479 100644
  
                      const bool useDownsampling = (colorTarget->downsampleMultiplier > 1);
                      if (useDownsampling) {
-@@ -545,8 +956,14 @@ namespace RT64 {
+@@ -545,8 +996,14 @@ namespace RT64 {
                      const RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
                      RenderCommandSemaphore *waitSemaphore = acquiredSemaphore.get();
                      RenderCommandSemaphore *signalSemaphore = drawSemaphores[swapChainIndex].get();
@@ -4482,7 +4552,7 @@ index f17db9b..fc8a479 100644
                  }
              }
  
-@@ -628,6 +1045,10 @@ namespace RT64 {
+@@ -628,6 +1085,10 @@ namespace RT64 {
  
      void PresentQueue::threadLoop() {
          Thread::setCurrentThreadName("RT64 Present");
@@ -4493,7 +4563,7 @@ index f17db9b..fc8a479 100644
  
          // Create the semaphore the acquire method will use.
          acquiredSemaphore = ext.device->createCommandSemaphore();
-@@ -646,6 +1067,7 @@ namespace RT64 {
+@@ -646,6 +1107,7 @@ namespace RT64 {
          const bool displayTiming = ext.device->getCapabilities().displayTiming;
          bool swapChainValid = !ext.swapChain->needsResize();
          while (presentThreadRunning) {
@@ -4501,7 +4571,7 @@ index f17db9b..fc8a479 100644
              {
                  std::unique_lock<std::mutex> cursorLock(cursorMutex);
                  cursorCondition.wait(cursorLock, [&]() {
-@@ -700,12 +1122,20 @@ namespace RT64 {
+@@ -700,12 +1162,20 @@ namespace RT64 {
                  skipPresent = skipPresent || ext.swapChain->isEmpty();
  
                  Present &present = presents[processCursor];
@@ -4522,7 +4592,7 @@ index f17db9b..fc8a479 100644
                  if (skipPresent) {
                      skipInterpolation();
                      notifyPresentId(present);
-@@ -714,6 +1144,34 @@ namespace RT64 {
+@@ -714,6 +1184,34 @@ namespace RT64 {
                      threadPresent(present, swapChainValid);
                  }
  

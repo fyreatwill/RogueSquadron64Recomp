@@ -1,26 +1,23 @@
-# NEXT (s7377)
-HYPOTHESIS-ID: present-thread-shared-maps
+# NEXT (s7378)
+HYPOTHESIS-ID: rt64-shared-resources-census
 
-s7376 closed class AS2 (lock-free-file containers, 126 verdicts) and fixed the port's present-thread INSERTS into the shared
-RT64 targetManager/fbManager (now under workloadMutex; ROGUESQ_S7376_PQLOCK=0 = old). It left the READS: the present thread
-still calls fbManager.find / targetManager lookups before it locks workloadMutex.
+s7377 closed class AT (present-thread map reads; workloadMutex now held for the whole present lookup + GPU pass,
+ROGUESQ_S7377_EARLYLOCK=0 = old). It showed a whole struct is shared across three threads with mixed guards: AT only covered the maps.
 
-Work unit: class AT. Enumerate EVERY access to ext.sharedResources-> {framebufferManager, renderTargetManager,
-interpolatedColorTargets, fbConfigChanged ...} in lib/rt64/src/hle/rt64_present_queue.cpp (threadPresent, threadLoop) with the
-lock held at that line (none / workloadMutex / managerMutex / interpolatedMutex). One small python tool
-(tools/s7377_present_lock_table.py) that walks threadPresent tracking `workloadMutex.lock()/unlock()`, scoped_lock and unique_lock
-scopes, prints file:line, access, lock state, upstream-or-port (git blame vs upstream tag, or the s/session comment), and a
---check against a reviewed TSV.
-Per row verdict: LOCKED / UPSTREAM-UNLOCKED (upstream's own design: viFb find ~line 266, present-time colorFb find) / FIXED.
-Candidate fix: in the non-interpolated path (this port never enables RT64 interpolation? VERIFY: grep interpolationEnabled=true
-fires; log presentFb->interpolationEnabled once), take workloadMutex at the start of the lookup phase (pqVisibleGate) instead of
-at ~line 708, so every find runs under it. Deadlock reasoning from s7376 holds (workload thread under workloadMutex only waits on
-GPU workers).
-Hypotheses: H-upstream-ok (the unlocked reads are upstream design and only race with map rehash: fix only port-added sites),
-H-move-lock (moving the lock earlier is safe and covers all: one change), H-interp (interpolation is live in some arm, so the
-present thread must stay lock-free there: per-site locks only).
-Gate: rebuild, smoke `env SECS=260 zsh scratch/s7326/run.zsh s7377_dd8 ''` (crash 0, present-1024 rt=yes count ~ s7376),
-TSan `zsh tools/build_tsan.sh` + `zsh scratch/s7376/tsan_run.zsh t1 480 ''` copied to scratch/s7377 (foreground, long timeout),
-`python3 tools/s7354_tsan_report.py ...` rc 0, CTL fires, 0 lock-order-inversion. Watch frame time: present now waits on the
-workload thread earlier; compare heaviest20 / VI rate against s7376 smoke in the same recipe.
-Positive control for the tool: the s7376-fixed sites must come out LOCKED, and line ~266 viFb find must come out UNLOCKED.
+Work unit: class AU. Census every field of RT64::SharedQueueResources (lib/rt64/src/hle/rt64_shared_queue_resources.h:
+swapChainWidth/Height/Rate, resolutionScale, targetRate, userConfig/enhancementConfig/emulatorConfig, the *Changed flags,
+newConfigValidated, viOriginalRate, colorImageAddressSet, interpolatedColorTargets, interpolatedFrames[2].{presented,available,count,
+skipped}, interpolatedFramesIndex) across ALL of lib/rt64/src and src/ (grep `sharedResources->` and `ext.sharedResources->`).
+One tool tools/s7378_shared_res_census.py: per access file:line, field, R/W, thread (State=gfx thread, WorkloadQueue=rt64 render,
+PresentQueue=present, Application/main=main; reuse the s7375 walker's file->thread map), mutex held (configurationMutex /
+managerMutex / interpolatedMutex / workloadMutex, lexical like s7377), and a --check vs a reviewed TSV.
+Per field verdict: GUARDED (one mutex on every write and cross-thread read) / BENIGN (aligned word hint, document) / RACE (fix).
+Known leads: present_queue reads frameCounters.count (written workload_queue.cpp:1251, no lock) and interpolatedFramesIndex unlocked;
+targetRate/viOriginalRate written by the workload thread - check under which lock.
+Hypotheses: H-guarded (every cross-thread field already sits under configurationMutex/interpolatedMutex: 0 fixes),
+H-hint-only (unguarded fields are all aligned single-word hints: BENIGN rows only), H-race (a multi-word field, e.g. resolutionScale
+float2 or a config struct copy, is read torn across threads: fix with the existing mutex).
+Positive control: the tool must mark swapChainRate writes (setSwapChainRate) GUARDED by configurationMutex and the s7377 snapshot of
+colorImageAddressVector MGR-LOCKED; s7354 TSan report's swapChainRate BENIGN row must match a census row.
+Gate if a fix lands: rebuild, smoke `env SECS=260 zsh scratch/s7326/run.zsh s7378_dd8 ''` + old arm, TSan `zsh tools/build_tsan.sh`
++ copy scratch/s7377/tsan_run.zsh to scratch/s7378 (480 s, foreground), `python3 tools/s7354_tsan_report.py ...` rc 0, CTL fires.
