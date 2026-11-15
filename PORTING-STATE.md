@@ -195182,3 +195182,45 @@ the Gfx thread re-renders every frame's raster scenes for RDRAM readback. Whethe
 tested -> NEXT.
 ORIGIN: no mitigation added (thread_local/atomic conversion of diagnostic statics; the publish gate defaults to old).
 s7384 conclusion: this run selects H-serial for the two-writer last-drawn site (two writer threads, 0/52000 overlaps, 0/9000 Gfx-ahead presents, all three controls fire) and H-confined/H-locked/H-diag-only for the other 70 MULTI statics; it refutes H-race on the default path (0 RACE verdicts, --check rc 0). Next discriminator (NEXT.md, render-to-rdram-double-pass): ROGUESQ_RENDER_TO_RAM=0 vs default on the same keyed route, splitting H-needed (readback images break) from H-redundant (send_dl drops ~6-8 ms, no visible change) and H-partial.
+
+## Session 7385 (2026-11-15) — RT64's Gfx-thread renderToRDRAM pass is not needed by any scene covered: opt-in ROGUESQ_RENDER_TO_RAM=0 drops the Gfx-thread per-task cost ~2.5 ms in mission (14.9 -> 12.4 ms, in-run toggle) with identical images; H-redundant selected (scene coverage single-run), default unchanged
+
+HYPOTHESIS-ID render-to-rdram-double-pass. s7384 found every raster scene drawn twice per frame (State's FramebufferRenderer in
+fullSync on the Gfx thread + WorkloadQueue on "RT64 Workload"). Never tested whether the game reads the rendered framebuffer back.
+
+Change (src only, no lib/ edit): src/main/rt64_render_context.cpp
+- `ROGUESQ_RENDER_TO_RAM=0` (opt-in; unset = RT64 default on): after setup, emulatorConfig.framebuffer.renderToRAM = false +
+  updateEmulatorConfig; prints `[s7385] framebuffer.renderToRAM forced OFF`. State::fullSync reads ext.emulatorConfig (pointer to
+  app->emulatorConfig) each call, gating the RSP processor, the FramebufferRenderer submitRasterScene, the RDRAM writeback and
+  hashTracking (rt64_state.cpp:2029/2362/2385/3165).
+- `ROGUESQ_RENDER_TO_RAM_TOG=<secs>` (diagnostic): flips renderToRAM on the Gfx thread before processDisplayLists, on in even
+  blocks / off in odd; `[s7385-tog]` lines, and every `[s4267]` line now carries `r2r=<0|1> ntog=<n>` so per-second phase costs
+  split by arm (seconds straddling a flip are dropped).
+
+Runs (scratch/s7385/run.zsh: s7326 keyed hangar -> mission -> pause/abort route, FPS60 dd8 DD_WIDEWIN 21:9, 200 s, window
+captures from 20 s, owner save read-only; ROGUESQ_S7384_LOG=1 S4265=1):
+- Knob positive control: on arm `[s7384]` Gfx Thread calls=31002 / RT64 Workload 30998; off arm Gfx Thread absent, Workload 28000.
+  Toggle arm (TOG=10): Gfx Thread 14182 of Workload 27818 (half), 19 flips. 0 crashes in all 5 runs.
+- In-run toggle (scratch/s7385/tog.py, S4267=1; per send_dl, ms), the frame-time datum:
+  | window | r2r | secs | sendDl/s | sendDl | fullSync | fsRender | fsRenderSync | procDL |
+  | front end 20-85 s | on | 31 | 57.5 | 5.43 | 1.78 | 1.54 | 1.36 | 2.25 |
+  | front end | off | 27 | 57.2 | 4.22 | 0.57 | 0.43 | 0.00 | 1.53 |
+  | mission 95-200 s | on | 45 | 44.1 | 14.89 | 2.89 | 2.68 | 1.94 | 3.99 |
+  | mission | off | 50 | 45.4 | 12.40 | 1.13 | 0.97 | 0.00 | 2.11 |
+  Off saves ~1.2 ms (front end) / ~2.5 ms (mission) per gfx task, i.e. ~17 % of the Gfx-thread send_dl. NOT the 6-8 ms that
+  s4905/s4906 suggested: the rest of send_dl is rs64_run_lle_gfx ucode emulation (~10 ms in mission), which still binds. The task
+  rate moved only 44.1 -> 45.4/s on this quiet host.
+- Cross-run on vs off (scratch/s7385/cmp.py, s4265 gfx run_avg; second line of evidence, keyed route so weaker): mission
+  13.59 -> 12.70 ms, front end 2.79 -> 4.01 ms (the cross-run front-end number contradicts the in-run one; scenes were
+  time-keyed, not phase-gated, so the in-run toggle is the number to quote).
+- Images: scratch/s7385/sheet_on_off.jpg (14 times: SELECT LEVEL hangar holo, SELECT YOUR CRAFT, crawl, flight, PAUSED, ABORT
+  LEVEL) and sheet_boot.jpg (copyright, N64 logo, Factor 5 explosion, title, SELECT GAME): no black, stale or garbled frame in the off
+  arm; differences are only route timing (craft pose / position). The pause menu background still shows the live scene, so it is
+  re-drawn, not a readback. `[g1d] wb` grep matched 0 in both arms (no control, so not a datum).
+Selected: H-redundant for every scene covered (single-run coverage per scene, one sheet each). Not covered: mission intro/outro
+cutscenes other than the crawl, LEVEL DESCRIPTION, results/debrief screens, other levels. H-needed refuted for the covered scenes;
+H-partial still open for the uncovered ones.
+Rules out: the readback as the main Gfx-thread cost (it is ~17 %); game-visible dependence on RDRAM framebuffer contents in the hangar,
+pause menu and boot cinematics.
+Queued: scratch/agent/soak_queue/s7385_r2r_off_levels.sh (L1/L4/L12 300 s holds, RENDER_TO_RAM=0, knob and Gfx-thread-absent controls).
+docs/OWNER-OPT-INS.md: new row (opt-in, testing). Default unchanged; the owner decides.

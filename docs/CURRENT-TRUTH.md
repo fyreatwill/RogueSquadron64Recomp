@@ -208,11 +208,12 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID render-to-rdram-double-pass): does the game need RT64's Gfx-thread renderToRDRAM pass?**
-   s7384 measured that every frame's raster scenes are drawn twice: State's FramebufferRenderer inside send_dl (Gfx thread,
-   fullSync renderToRDRAM, renderToRAM defaults on) and WorkloadQueue's on the render thread (26002 vs 25998 submitRasterScene
-   calls / 200 s). s4905/s4906 already put fsRender + fsRenderSync at ~6-8 ms of Gfx-thread time per frame. Never tested: an
-   arm with the readback off (spec in NEXT.md).
+1. **RENDER_TO_RAM=0 (s7385, opt-in, H-redundant for covered scenes).** RT64's Gfx-thread renderToRDRAM pass (2nd draw of every
+   raster scene, s7384) is not needed by the boot cinematics, hangar holo, SELECT YOUR CRAFT, crawl, flight or pause/abort menus
+   (scratch/s7385/sheet_on_off.jpg, sheet_boot.jpg; same images). In-run toggle (ROGUESQ_RENDER_TO_RAM_TOG, [s4267] r2r tag):
+   Gfx-thread per-task cost 14.9 -> 12.4 ms in mission, 5.4 -> 4.2 ms front end (~17 %, not the 6-8 ms guessed); the
+   rs64_run_lle_gfx ucode run (~10 ms) still binds, task rate 44.1 -> 45.4/s quiet host. Soak s7385_r2r_off_levels queued
+   (L1/L4/L12 300 s). Next (NEXT.md): coverage of the unscanned scenes + busy-host fps toggle. Owner decides any default.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
    threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts
@@ -277,7 +278,7 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
    left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle. Never flip without the owner.
+4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets

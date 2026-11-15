@@ -385,6 +385,7 @@ static const auto t0 = std::chrono::steady_clock::now();
 struct A { uint64_t n = 0; double sum = 0, mx = 0; };
 static A agg[36];
 static int last_sec = -1;
+static std::atomic<int> s7385_r2r{-1}, s7385_ntog{0}; // s7385: renderToRAM value / toggle count, tagged on each [s4267] line
 static void flush_locked(int sec) {
     static const char* nm[36] = {"pipeline","texwait","fbwait","ddwait","fullSync","procDL","lleRun","sendDl","fsFlush","fsSubmitFb","fsMisc","fsValidate","fsUpload","fsRspPipe","fsRender","fsEvict","fsProj","fsAdvance","fsTail","fsRsz","fsTiles","fsRenderSync","fsEvictOnly","fsPostEvict","fsScript","fsUpdScreen","ctlSleep","usUpload","usCopyHash","usAdvance","usPre","usRest","usResize","usMemcpy","usHash","pad"};
     std::string o;
@@ -393,7 +394,7 @@ static void flush_locked(int sec) {
         std::snprintf(b, sizeof b, " %s=%llu/%.0fms/max%.0f", nm[i], (unsigned long long)agg[i].n, agg[i].sum, agg[i].mx);
         o += b; agg[i] = A{};
     }
-    std::fprintf(stderr, "[s4267] t=%d%s\n", sec, o.c_str());
+    std::fprintf(stderr, "[s4267] t=%d%s r2r=%d ntog=%d\n", sec, o.c_str(), s7385_r2r.load(), s7385_ntog.load());
 }
 struct T {
     int p; std::chrono::steady_clock::time_point a = std::chrono::steady_clock::now();
@@ -595,6 +596,17 @@ public:
                     app->emulatorConfig.framebuffer.copyWithGPU = false;
                     app->updateEmulatorConfig();
                     fprintf(stderr, "[RT64] framebuffer.copyWithGPU forced OFF via ROGUESQ_NO_GPU_COPY\n");
+                }
+            }
+            // s7385 ROGUESQ_RENDER_TO_RAM=0 (opt-in; unset = RT64 default on): turn off the Gfx-thread renderToRDRAM
+            // pass in State::fullSync (RSP processor + FramebufferRenderer submitRasterScene + RDRAM writeback +
+            // hashTracking). s7384 measured every raster scene drawn twice per frame (Gfx thread + RT64 Workload).
+            // A/B: does the game ever read the rendered framebuffer back from RDRAM?
+            if (const char *v = std::getenv("ROGUESQ_RENDER_TO_RAM")) {
+                if (v[0] == '0') {
+                    app->emulatorConfig.framebuffer.renderToRAM = false;
+                    app->updateEmulatorConfig();
+                    fprintf(stderr, "[s7385] framebuffer.renderToRAM forced OFF via ROGUESQ_RENDER_TO_RAM=0\n");
                 }
             }
             fprintf(stderr, "[RT64] enhancementConfig: presentMode=%d forceBranch=%d textureLOD.scale=%d copyWithGPU=%d\n",
@@ -1783,6 +1795,20 @@ namespace ultramodern {
 #else
         if (rdpq::submit(app, lo_phys, hi_phys)) return; // s6705: queued for the async consumer
         const auto st0 = (rdpq::aq_on && rdpq::in_task) ? rdpq::aclk::now() : rdpq::aclk::time_point{}; // s6706
+        { // s7385 ROGUESQ_RENDER_TO_RAM_TOG=<secs>: diagnostic in-run A/B, renderToRAM on in even blocks, off in odd
+          // blocks (Gfx thread, before the DL parse that reaches fullSync, so one fullSync sees one value).
+            static const int tog = [] { const char *e = std::getenv("ROGUESQ_RENDER_TO_RAM_TOG"); return e ? std::atoi(e) : 0; }();
+            if (tog > 0) {
+                static const auto t0 = std::chrono::steady_clock::now();
+                const long blk = (long)(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - t0).count() / tog);
+                const bool want = (blk % 2) == 0;
+                if (app->emulatorConfig.framebuffer.renderToRAM != want) {
+                    app->emulatorConfig.framebuffer.renderToRAM = want;
+                    s4267::s7385_r2r.store(want ? 1 : 0); s4267::s7385_ntog.fetch_add(1);
+                    fprintf(stderr, "[s7385-tog] blk=%ld renderToRAM=%d\n", blk, want ? 1 : 0);
+                }
+            }
+        }
         { s4267::T s4267_pd(5); app->processDisplayLists(app->core.RDRAM, lo_phys, hi_phys, /*isHLE*/ false); }
         if (rdpq::aq_on && rdpq::in_task) { rdpq::t_sync += rdpq::aq_ms(st0, rdpq::aclk::now()); rdpq::t_bytes += hi_phys - lo_phys; ++rdpq::t_calls; }
 #endif
