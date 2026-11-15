@@ -196103,3 +196103,36 @@ Rules out: a callee-saved FPR/GPR/sp clobber or FR-mode leak across the FR=1 han
 No code/runtime change, no ORIGIN line needed. Fold: s7409_fodd_levels rc 0 (L4/L7/L12 CONTROL PASS + H-consistent x3, 137 s
 flight alive, 0 crash, 0 VI stall) -> class BS stands on 3 more levels. Queued s7410_fsv_levels (L4/L7/L12).
 Next: class BU unaligned load/store macro semantics (NEXT.md).
+
+## Session 7411 (2026-11-15) — class BU unaligned load/store macros closed (H-equal): real build header vs byte-wise VR4300 model, 0 mismatches over 1e7 cases, mutant control PASS x8, every emitted site paired or a covered libultra prologue
+
+Unit (NEXT.md unaligned-access-macro-semantics). Hypotheses: H-equal / H-lane (lane or shift error at some addr&3) /
+H-ext (wrong sign extension of the 32-bit result, visible only to 64-bit consumers).
+Boring first: the build compiles RecompiledFuncs against lib/N64ModernRuntime/N64Recomp/include/recomp.h (not
+../N64Recomp/include/recomp.h; they differ by s7085 ddiv guards, RS64_BYTE_WATCH MEM_B, the s6132 RAM_TOP and observer
+calls in swl/swr/sdl/sdr -> rs64_g1d_blk_unaligned / rs64_floor_writer_unaligned, both log-only, read in
+upstream_compat.cpp). funcs_24.c also wraps do_swl/do_swr in a #define calling rs64_s4299_swlr (log-only, env-gated).
+None changes the stored value.
+1. New `tools/s7411_unaligned_contract.py` (rc 0 = H-equal + CONTROL PASS, ~6 s, no game run): includes the real header
+   verbatim with the force-included include/rsp_dpc_macros.h, cc -O2, observers stubbed; reference is an independent
+   byte-wise model over a plain big-endian byte array (LWL bytes addr..word end -> lanes from the MSB; LWR word start..addr
+   -> lanes from the LSB; 32-bit result sign-extended; SWL/SWR mirror; LDL/LDR/SDL/SDR on dwords with the hi word at +0).
+   Call shapes match the emitter (do_lwl(rdram, rt, base, imm), do_swl(rdram, imm, base, rt)). 1e7 cases: 1e6 per macro
+   for all 8 macros (ldl/ldr/sdl/sdr are never emitted but checked), plus ulw (lwl a + lwr a+3, both orders) == sign-extended
+   BE word and usw (swl a + swr a+3) == BE word store with every other byte untouched: MISM 0 in all 10 rows.
+2. Positive control: per macro, a mutant header with that macro's misalignment m -> m ^ (m==2) (lanes 2/3 swapped):
+   own MISM 62482/62744/62705/62842 (word) and 31123/31143/31347/31163 (dword) of 2.5e5, other macros 0 -> CONTROL PASS x8.
+3. Census (../N64Recomp/RecompiledFuncs, comment lines incl. delay-slot duplicates): lwl 207, lwr 203, swl 203, swr 202
+   (the do_ grep's 205/204 counted the 2+2 s4299 #define lines). Paired k / k+3, same rt + base, within 4 insns: all but 5.
+   Lone: bcmp_recomp lwl x4 (0x80029F88 / 0x80029F8C / 0x8002A040 twice) = libultra alignment prologue comparing the
+   leading partial word with v0 = v1 preloaded, so it depends on lwl keeping the old low lanes (exactly what the sweep
+   checks with a random rt); bzero_recomp swl $zero at 0x8002A098 = leading partial-word clear. 0 lone lwr, so the only
+   place LWR's upper-32 behaviour (sign-extended in our macro; a pair always ends with bit 31 written) could matter has
+   no live site -> H-ext has nothing to bite on.
+Conclusion: this selects H-equal, refutes H-lane (1e6 cases per macro, every misalignment, mutant control PASS) and finds
+no site for H-ext; class BU is closed. Two lines: randomized harness vs byte-wise model, plus per-m derivation of the
+masks/shifts (shift counts <= 24 / 56, never UB). No live run needed: the macros are pure functions of (rt, memory, addr).
+Rules out: an unaligned load/store lane, shift or sign-extension defect in the recompiled code.
+No code/runtime change, no ORIGIN line needed. Fold: s7410_fsv_levels rc 0 (L4/L7/L12 CONTROL PASS + H-preserved x3,
+137 s flight alive, 0 crash, 0 VI stall) -> class BT stands on 3 more levels.
+Next: class BV integer emission semantics on 64-bit GPRs (NEXT.md).

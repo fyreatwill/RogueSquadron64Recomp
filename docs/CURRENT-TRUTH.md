@@ -510,12 +510,21 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     the same retail ABI break in either model. Live `tools/build_fsv.sh` -> build_fsv/ (entry snapshot vs every return:
     f20..f30 .u64, s0-s8, sp, FR mode), report `tools/s7410_fsv_report.py`: L5 21:9 FPS60 131 s hold, dd8 3.02e6 returns /
     dd1 4.31e6, fbad=gbad=mbad=0, plant (post-restore f24+s1 flip every 64th) 47196/47196 and 67291/67291 -> CONTROL PASS
-    x2. Widen soak s7410_fsv_levels (L4/L7/L12) queued.
-20. **Next audit candidate:** class BU, unaligned load/store macro semantics (do_lwl 207 / do_lwr 203 / do_swl 205 /
-    do_swr 204 sites) vs a VR4300 big-endian reference over every addr&3 on the word-swapped rdram. NEXT.md s7411.
+    x2. s7410_fsv_levels widen soak: L4/L7/L12 CONTROL PASS + H-preserved x3 (s7411).
+20. **BU CLOSED s7411 (unaligned load/store macros): H-equal, no code change.** `tools/s7411_unaligned_contract.py`
+    (rc 0, ~6 s): the REAL build header (lib/.../N64Recomp/include/recomp.h + force-included rsp_dpc_macros.h; the swl/swr/
+    sdl/sdr g1d/floor observers and funcs_24's s4299 do_swl/do_swr wrapper are pass-through loggers) vs a byte-wise VR4300
+    big-endian model on the swizzled rdram: 1e6 random cases per macro (all 8 incl. never-emitted ldl/ldr/sdl/sdr) + the
+    ulw/usw pair identities (both orders), 0 MISM, bytes outside the word untouched; lane-2/3-swap mutant per macro ->
+    31k-63k MISM own, 0 other: CONTROL PASS. Census: lwl 207 / lwr 203 / swl 203 / swr 202 comment sites, all paired
+    (k / k+3, same rt+base) except 5: libultra bcmp alignment prologue lwl x4 (v0=v1 preloaded, relies on old low lanes
+    kept = covered) and bzero swl $zero x1. No lone lwr, so the LWR upper-32 question (H-ext) has no live site.
+21. **Next audit candidate:** class BV, integer emission semantics on 64-bit GPRs: slt/sltu/slti/sltiu (3.7k sites),
+    mult/multu/div/divu hi/lo (669), dsll/dsrl/dsra(32,v) + 64-bit arith (~140) vs a VR4300 model, plus a census of
+    non-canonical (not sign-extended) 32-bit-op inputs. NEXT.md s7412.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
