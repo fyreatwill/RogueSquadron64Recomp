@@ -196285,3 +196285,43 @@ rs5858_inner), were not harvested and left 22 sites UNREACHED.
 H-stale (every live bc1x reads a c1cs written in-function with no call/ctc1 between). Selects H-equal; closes class BX.
 Caveat: the latent unordered-cond table would mis-lower any future c.un/ueq/ult/ule/ngle/ngl/nge/ngt; re-run the tool after
 any ROM/asm change. Next: class BY FP arithmetic + move emission (NEXT.md s7415).
+
+## Session 7415 (2026-11-15) — class BY FP arithmetic + FP move emission closed (H-equal): 17,910 sites / 2,183 verbatim forms vs an exact-rational IEEE RNE model 0 mismatches 0 stray at FZ=0 and FZ=1, 0 fused ops on generated statements (scanner control PASS), mutant control PASS x10 + neutral x2, NAN_CHECK is a live assert with 0 runtime fires
+
+Unit (NEXT.md fp-arith-move-emission-semantics). Hypotheses: H-equal / H-contract (FMA fusion changes rounding) /
+H-negzero (neg/abs lowered arithmetically) / H-nancheck (NAN_CHECK alters control flow).
+Tool: `tools/s7415_fp_arith.py [K]` (rc 0 = H-equal + CONTROL PASS; output scratch/agent/s7415_fp_arith.txt, K=3000, ~20 s).
+- Harvest (../N64Recomp/RecompiledFuncs): abs.d 4, abs.s 244, add.d 108, add.s 2954, div.d 15, div.s 1195, mfc1 2962, mov.d 3,
+  mov.s 1574, mtc1 2418, mul.d 69, mul.s 4704, neg.d 1, neg.s 720, sqrt.s 95, sub.d 44, sub.s 2800; 0 dmfc1/dmtc1/sqrt.d.
+  Every statement matched its disasm (fd/fs/ft, .fl vs .d, operator/macro) AND its NAN_CHECK operand list (fs,ft for
+  arith, fs for neg/abs/sqrt, none for mov): 0 unmatched. 13 odd-FPR mfc1/mtc1 use `ctx->f_odd[(N-1)*2]` (FR=0 high word,
+  class BS s7409) and are tested with f_odd=&f0.u32h. 12 sub.s carry the s2181 vec3 logger (reads u32l by value: pass-through).
+  28 PATCH sites (s6817 fps60 scrape x10, s6826 float quanta x18) are FPS60 opt-ins; at k=1 (FPS60 off) they are
+  `a*powf(b,1)` = a*b and fma(b,1,a) = round(a+b), so retail-identical.
+- Model: exact rationals (fractions.Fraction), RNE with subnormals/overflow, exact sqrt via isqrt, IEEE signed-zero rules;
+  FZ=1 model = ARM flush (subnormal inputs of arith -> signed 0, tiny-before-rounding results -> signed 0; neg/abs/mov not
+  flushed). Vectors: 24x24 specials (+-0, min/max subnormal, min normal +-ulp, 1+-ulp, max, +-inf, qNaN, sNaN, -NaN, 2^+-63/64,
+  ...) + 3000 random/near-cancel/near-equal/tiny/huge pairs per op. Each distinct statement compiled verbatim with the game
+  flags (-g -std=gnu17 -O2 -fno-strict-aliasing -DRS64_BYTE_WATCH, force header), ctx randomised, whole-ctx stray check.
+- Result both arms: 0 MISM, 0 stray, ~8.1e6 cases per arm (mul.s 2.37e6, add.s 1.29e6, sub.s 1.26e6, div.s 6.4e5, mtc1 4.5e5,
+  mov.s 4.7e5, mfc1 4.0e5, ...). NaN outputs are NaN in both; payload differs (ARM default 0x7FC00000 / propagated-quieted vs
+  VR4300 default 0x7FBFFFFF), counted apart, unreachable at runtime because no invalid op ever fires (s7406 build_fpat: IOC=0
+  on L5 dd8 + soaks L4/L7/L12; second line: 0 NAN_CHECK fires below).
+- Contraction: object scan of the 52 RecompiledFuncs objects with DWARF line attribution: 0 fmadd/fmsub/fnmadd/fnmsub on any
+  generated guest-op statement line; the 191 fused ops sit on 74 hand-written patch/helper lines (s7115 lift, vec normalise,
+  HUD logger, s6826 quanta). Scanner control (game flags): one-statement `a*b+c` -> 1 fused; two generated statements
+  `MUL_S(a,b); x = x + c;` -> 0 (clang -ffp-contract=on fuses within one expression only). H-contract refuted.
+- NAN_CHECK: assert(val == val), live (Debug, no NDEBUG; 19,744 ___assert_rtn relocs incl. CHECK_FR). A NaN operand to any
+  arith/neg/abs/sqrt aborts the port (retail VR4300 raises on NaN operands: unverified here, single-source). Runtime: 0 'val ==
+  val' fires in 229 soak/build logs; the same census sees the 2 rt64 tileCopy asserts, so stderr is captured (log control).
+- Positive control, same run: add->sub 481, div via reciprocal 105, neg as 0-x 1 (+0), abs via compare 1 (-0), sqrt*(1+ulp)
+  232, mfc1 zero-extend 148, mtc1 64-bit write 308 stray, mov via +0.0f 3, add.d through float 498, mul.d *(1+2^-52) 303:
+  CONTROL PASS x10; neutral rewrites mul.s/add.s via double 0 (double rounding innocuous): PASS x2.
+**Dead ends (harness, fixed before the verdict):** (1) mtc1 $zero forms scored 4,590 false MISMs because the driver wrote the
+input into r0; (2) the mov mutant `(float)(double)x` never flagged: clang folds fpext+fptrunc to a no-op, so it was no control
+(replaced by `x + 0.0f`); (3) the first assert census grepped `bl ___assert_rtn` in unlinked objects (targets are relocations)
+and read 0; (4) 13 f_odd and 12 s2181-logger sites were first reported unmatched.
+**Rules out:** H-contract (no fusion on generated lines), H-negzero (neg = sign flip, abs = fabsf: exact on +-0), H-nancheck as a
+live hazard (0 fires; only reachable via a NaN operand, and invalid ops never fire). Selects H-equal; closes class BY.
+Soak s7415_ioc_levels queued (s7406 build_fpat recipe on L5/L10/L15: 0 IDC / 0 IOC expected). Next: class BZ control-flow
+emission (NEXT.md s7416).

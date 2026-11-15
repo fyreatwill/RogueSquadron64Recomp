@@ -1,22 +1,18 @@
-# NEXT (s7415)
-HYPOTHESIS-ID: fp-arith-move-emission-semantics
+# NEXT (s7416)
+HYPOTHESIS-ID: control-flow-emission-semantics
 
-s7414 closed class BX (tools/s7414_fp_compare.py rc 0: 2,837 c.cond sites / 282 forms 0 MISM at FZ=0, CONTROL PASS x4 +
-reach plants PASS, 2,796 bc1x CLEAN). Class BY: FP arithmetic + move emission.
-Census (s7414 grep): mul.s 4704, add.s 2954, sub.s 2800, mov.s 1574, div.s 1195, neg.s 720, abs.s 244, sqrt.s 95,
-add.d 108, mul.d 69, sub.d 44, div.d 15, abs.d 4, mov.d 3, neg.d 1; mfc1 2962, mtc1 2418 (dmfc1/dmtc1: check).
-1. Offline, the s7414 way (reuse its harvest skeleton: fnpat incl. `static void` inner bodies, mid-line disasm comments,
-   pass-through prefixes CHECK_FR / PC stamp, and NEW: `NAN_CHECK(ctx->fN.fl);` lines that precede neg/abs/sqrt -- read
-   NAN_CHECK's definition in recomp.h first: if it aborts/logs on NaN that is a behaviour difference to record, not skip).
-   Require operand match vs disasm; compile each distinct form verbatim (-O2 -DRS64_BYTE_WATCH, force header).
-2. Model: IEEE-754 binary32/64 round-to-nearest (compute in the harness with the host in FZ=0 via a separate,
-   -ffp-contract=off TU, or with __int128/softfloat for div/sqrt), FR=0 register semantics for mtc1/mfc1 (sign-extend to
-   64-bit GPR on mfc1), neg/abs = sign-bit ops (VR4300 neg/abs on NaN raise invalid -> trap disabled -> value: check).
-   Arms: host FZ=0 and FZ=1 (default on since s7405); FZ=1 diffs on denormal in/out are expected (= retail FS=1 flush for
-   outputs; inputs runtime-unreached per s7406 0 IDC) -- count separately, as s7414 did.
-   Watch for: fused multiply-add contraction (-ffp-contract default on clang = on for -O2? measure: a mul.s+add.s pair in one
-   C statement block could be fused by the compiler -> 1-ulp diffs vs MIPS separate rounding). Check CMakeLists flags.
-3. Positive control: mutants (add->sub, mul rounding via double then float, neg as 0-x (differs on +0), abs via fabs ok vs
-   x<0?-x:x (differs on -0/NaN), mfc1 zero-extend) must flag their own ops only.
-4. Hypotheses: H-equal / H-contract (FMA fusion changes rounding) / H-negzero (neg/abs lowered arithmetically) /
-   H-nancheck (NAN_CHECK alters control flow).
+s7415 closed class BY (tools/s7415_fp_arith.py rc 0). If scratch/agent/SOAK-RESULTS.md has a s7415_ioc_levels line, fold it
+(pass = alive, 0 crash, CONTROL PASS + VERDICT H-none x3 on L5/L10/L15). NOTE: CURRENT-TRUTH is 59.9 KB; if Step 0 prints
+>60000 this iteration is MAINTENANCE instead.
+Class BZ: control-flow emission. Offline, the s7412/s7414 way (harvest skeleton in tools/s7414_fp_compare.py /
+tools/s7415_fp_arith.py: fnpat incl. `static void` inner bodies, mid-line disasm comments, pass-through prefixes).
+1. Census every conditional branch (beq/bne/blez/bgtz/bltz/bgez + likely variants, bltzal/bgezal, b/bal) and jal/jalr/jr/j.
+2. Per site check vs disasm: condition operands and width (MIPS compares full 64-bit GPRs: the emitted test must read the
+   64-bit gpr, signed for blez/bgtz/bltz/bgez), target label, delay-slot placement: non-likely -> delay slot runs on both
+   paths; likely -> delay slot only on the taken path. HAZARD to grep for: a delay slot that writes a source register of
+   its own branch (MIPS evaluates the condition BEFORE the slot) -- the emission must evaluate first (look for a temp or
+   ordering). Also jalr rd,rs where the slot writes rs, and jr through a register the slot overwrites.
+3. Compile distinct condition forms verbatim (game flags) and drive with 64-bit edge values (0, +-1, INT32 edges with
+   non-canonical upper words, INT64 min/max) vs a MIPS model.
+4. Positive control: mutants (32-bit compare, signed/unsigned swap, slot-after-condition swap, likely slot on both paths)
+   must flag. Hypotheses: H-equal / H-slotorder / H-width / H-likely.

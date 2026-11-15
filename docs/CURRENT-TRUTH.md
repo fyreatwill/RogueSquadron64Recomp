@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7413 (2026-11-15).
+Compact operational handoff, as of Session 7415 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -520,19 +520,23 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 22. **BW CLOSED s7413 (aligned load/store macros): H-equal.** `tools/s7413_aligned_ldst.py`: 58,654 verbatim forms of 15 ops
     vs a byte-wise BE model, 0 MISM/0 stray, mutants CONTROL PASS x8. KSEG1 not aliased (PROT_NONE) but 0 RDRAM-KSEG1
     constants; 206 $zero-base sites in 3 dead data_gap_* fns. Single-source model.
-23. **BX CLOSED s7414 (FP compare + bc1x): H-equal, no code change.** `tools/s7414_fp_compare.py` (rc 0, ~4 s): game uses only
-    c.eq/lt/le/ole (.s 2804, .d 33 sites), all ordered -> C ==/</<= exact incl. NaN; 282 verbatim forms x all-pairs specials
-    (+-0, denormals, +-inf, qNaN/sNaN) + random, 1.27e6 cases 0 MISM at host FZ=0. FZ=1 (default) differs on denormal inputs
-    only; runtime-unreached (s7406: 0 IDC on any guest stmt incl. c1cs). Mutants (lt->ult, le->ule, eq->ueq, ole->olt)
-    CONTROL PASS x4. Generator table wrong on NaN for all 8 unordered conds (un/ueq/ult/ule/ngle/ngl/nge/ngt): LATENT, 0 sites
-    -- re-run this tool after any ROM/asm change. 2,796 bc1x: polarity 0 bad; reaching-def CFG (delay slots, likely, calls,
-    switch tables): 2,786 CLEAN, 7 dead interior copies (twin in handleCraftSelectInput CLEAN), 3 in dead data_gap fns;
-    plants (call/entry/ctc1/likely) CONTROL PASS. cfc1/ctc1 (3 pairs) touch rounding mode only.
-24. **Next audit candidate:** class BY, FP arithmetic + move emission (add/sub/mul/div/sqrt/abs/neg/mov .s/.d, mtc1/mfc1/
-    dmtc1/dmfc1) vs an IEEE/VR4300 model, both FZ arms. NEXT.md s7415.
+23. **BX CLOSED s7414 (FP compare + bc1x): H-equal.** `tools/s7414_fp_compare.py` (rc 0): only ordered c.eq/lt/le/ole used
+    (2,837 sites, 282 forms) -> exact incl. NaN, 0 MISM; FZ=1 differs on denormal inputs only (runtime 0 IDC, s7406). Generator
+    table wrong on NaN for the 8 unordered conds: LATENT, 0 sites -- re-run after any ROM/asm change. 2,796 bc1x polarity +
+    reaching-def CLEAN (10 in dead copies/data_gap fns), plants CONTROL PASS.
+24. **BY CLOSED s7415 (FP arith + moves): H-equal.** `tools/s7415_fp_arith.py` (rc 0, ~20 s): 17,910 sites, 2,183 verbatim
+    forms (add/sub/mul/div .s/.d, neg/abs/sqrt.s, neg/abs/mov.d, mov.s, mfc1/mtc1 incl. 13 odd-FPR f_odd forms) vs an
+    exact-rational IEEE RNE model, ~8.1e6 cases per arm, 0 MISM 0 stray at FZ=0 and FZ=1 (vs ARM-flush model). NaN results
+    match as NaN; payload differs (ARM 0x7FC00000 vs MIPS 0x7FBFFFFF) but invalid ops are runtime-unreached (s7406 IOC=0).
+    NAN_CHECK = live assert (Debug build, 19,744 ___assert_rtn relocs): a NaN operand aborts the port; 0 fires in 229 logs.
+    Contraction: 0 fused ops on generated statement lines (control: one-statement a*b+c fuses, MUL_S;+ does not); the 191
+    fmadd-family are host patch helpers. 28 FPS60 patch sites (s6817/s6826) are identity at k=1. Mutants CONTROL PASS x10,
+    neutral x2. Soak s7415_ioc_levels queued (IOC re-check L5/L10/L15).
+25. **Next audit candidate:** class BZ, control-flow emission: conditional branches (64-bit compares, likely nullification,
+    delay slot that writes the branch's own source register), jal/jr/jalr link + return. NEXT.md s7416.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-24. **When 1-23 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+26. **When 1-25 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
