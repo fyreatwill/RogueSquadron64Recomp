@@ -194609,3 +194609,47 @@ Conclusion (s7371): the m1 report selects H-clean and refutes H-race for the ~70
 rows, planted control fired); H-stall is selected for flight depth (~1.2 frames/s). The f1/m1 pair also refutes the
 NEXT.md premise that a fullsync-keyed clock replays the full-speed route at TSan speed (front end is VI-timed; presses 1-3
 diverged). Next discriminator: the offline AQ cross (NEXT.md) splits H-covered vs H-gap per container.
+
+## Session 7372 (2026-11-14) — AQ runtime half: TSan text alone cannot witness coverage (90/97 rows unknowable); TSan+coverage arm (build_tsan.sh COV=1) mission run: 17 AQ rows exercised in mission, 25 in run, 0 race on any row's own access; 2 new diag rows classified
+
+Work unit (NEXT.md s7372, HYPOTHESIS-ID tsan-mission-coverage): cross the s7366 static lockset rows with the mission TSan run.
+
+Step 1, offline, as planned (new tools/s7372_aq_runtime_cross.py, rows = tools/s7366_lockset_reviewed.tsv, unlocked@
+lines from scratch/s7366/lockset_rows.txt, planted s7354_race_ctl row appended as the positive control) on s7371 m1:
+control RACED; 1 row SEEN, 6 RACED-OTHER (the function is in a racing stack but the race is on another, already classified
+location: Metal block / g_recomp_rdram_for_wp_raw), 0 RACED on a row's own unlocked line, **90 UNSEEN**. Boring thing
+first: TSan prints races only, so UNSEEN = "not executed" OR "executed clean"; the m1 text cannot split H-covered from
+H-gap for 90 of 97 rows. The planned discriminator was blind by construction.
+
+Step 2, fixed version run in the same session: tools/build_tsan.sh COV=1 -> build_tsan_cov/ (same TSan flags plus
+`-fprofile-instr-generate -fcoverage-mapping -fprofile-update=atomic` on C++ TUs; atomic counters so TSan sees no
+counter races; 84 s incremental). Run with `LLVM_PROFILE_FILE=.../p%c.profraw` (continuous mode: counters mmapped, so
+the SIGKILLed run keeps them); scratch/s7372/cov_run.zsh copies the profraw at the first `[initMission] call#1` line
+(mission-phase base). The tool's `--cov end.json --cov-base base.json` gives per-row mission-only counts at the row's
+unlocked@ lines (llvm-cov line rule: wrapped region + regions starting on the line).
+Run c1 (s7371 m1 recipe: AP2 route, CLOCK=frames FPS=58, FPS60 dd8 21:9 DD_WIDEWIN, 900 s): 0 crash, initMission call#1
+B40=0x10 at 322 s (snapshot), call#2 at ~810 s; fs 1218 -> 1623 in mission (~405 game frames, ~0.7 frames/s).
+Controls: TSan planted CTL x4736 (fires); coverage: CTL row full-run EXEC 1 / mission EXEC 0 (boot-only, so the phase
+subtraction works), per-frame threadPresent rows mission EXEC 16816, texture_packer.cpp row NOTLINKED (separate binary).
+TSan report (tools/s7354_tsan_report.py): 4842 reports, 26 groups, 2 new, both default-on diag rings, classified:
+`rs64_s4211_pi_ring` BENIGN (same [s4211-new] log as s7369's rs64_s4211_pi_n), `rs64_s4209_read` D (s4209 audio-DMA
+stats count nonzero RDRAM bytes while piDmaWorker's ROM->RDRAM copy writes them; the RSP's own DMA of those bytes is
+uninstrumented, RSP/PI RDRAM sharing is by design; single-source). Report rc 0 on c1, m1 and s7369 c2.
+Cross (scratch/s7372/cross_c1_mission.txt, cross_c1_full.txt): **17 rows exercised in mission** with no race on their own
+access: present queue (threadPresent drawSemaphores/swapChainFramebuffers 16.8k, advanceToNextPresent 31.9k), workload
+advanceToNextWorkload 387, buffer uploader pendingUploads x3 12.4k, framebuffer renderer descriptor/texture-cache rows x6
+(780-159k), texture upload thread 529, BandWriteback samples 1248, dpc defer_begin 388, rs64_s6094_tick 26,
+run_thread_function 4. 8 more ran only before the mission (ctor/boot rows: game_roms x4, workloads reset, threadLoop,
+audio_route_load_pref, altstack_here). **73 never executed in this run**: audio image/join diag rows in rsp.cpp (13),
+upstream_compat audit/diag rows (s7317/s7331/s7332/s7333 maps, 23), dpc_bridge diag statics (8), main.cpp diag (8), RT64
+texture-replacement/raw rows (13), destructor TextureCache, std::array size rows, s6702_release_locked tag line (the
+spill reset ran once, "released 2 blocks", but not the tagged-block branch at 3934).
+Outcome: H-race refuted for the 17 mission-exercised + 8 boot-exercised rows (~405 mission frames at TSan speed);
+H-covered for the default per-frame paths (present, workload, upload, descriptor, band writeback, dpc defer);
+H-gap only for rows the coverage says never run on this route (mostly env-gated diag). The TSan-text-only claim
+"UNSEEN = clean" would have been wrong 73 times out of 90: those rows simply never ran.
+Rules out: a lockset defect on any AQ row the mission path executes within ~400 frames. Does not rule out: the 73
+unexecuted rows (static verdicts only), longer flight.
+Conclusion (s7372): the coverage arm selects H-covered for every default per-frame AQ row and H-gap only for unexecuted
+(mostly diag-gated) rows, and refutes H-race; it also refutes the s7372 NEXT.md premise that TSan reports can witness
+coverage.

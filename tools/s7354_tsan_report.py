@@ -37,6 +37,9 @@ HAND = [  # (substring of group key, class, reason) -- filled from the s7354 run
     ("osDestroyThread threads.cpp", "SEM", "s7369: OSThread.context cleared by the destroying guest thread, read by a guest thread it created (run-one scheduler)"),
     ("rt64_render_context.cpp:117", "D", "s7369: [stall-dump] reads guest mq/VI words in RDRAM for its log line while the retrace guest thread writes them (diag print only)"),
     ("rs64_s4211_pi_n", "BENIGN", "s7369: default-on [s4211-new] log: audio RSP thread reads the PI-DMA ring count/entries the PI guest thread appends; only feeds <=32 stderr lines, no state"),
+    # s7372: TSan+coverage mission run (build_tsan_cov, scratch/s7372/c1) - 2 new rows, both default-on diag rings
+    ("'rs64_s4211_pi_ring'", "BENIGN", "s7372: same [s4211-new] log as rs64_s4211_pi_n: audio RSP thread reads ring entries the PI guest thread appends; feeds stderr lines only"),
+    ("rs64_s4209_read", "D", "s7372: s4209 audio-DMA stats ring counts nonzero RDRAM bytes while piDmaWorker's ROM->RDRAM copy writes them; stats only. The RSP's own DMA of the same bytes is uninstrumented (ucode exempt): RSP/PI RDRAM sharing is by design, ordering is the game's (single-source)"),
     # s7371: first mission-phase TSan run (frame-keyed autopilot, 3 initMission calls B40=0x10) - 4 new rows
     ("'func_map'", "SEM", "s7371: librecomp overlay func_map: load_overlay insert (submitDmaSlot -> osPiStartDma, guest) vs get_function (viRetraceHandlerThread, guest); both guest threads (run-one scheduler)"),
     ("'rs64_vi_n_g'", "BENIGN", "s7371: VI counter, single writer (update_screen, gfx thread), aligned volatile u32; guest readers = opt-in S6848 force window + log lines, stale by <=1 VI"),

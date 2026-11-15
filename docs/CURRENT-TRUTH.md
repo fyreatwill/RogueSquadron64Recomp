@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7370 (2026-11-14).
+Compact operational handoff, as of Session 7372 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -202,16 +202,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID tsan-mission-coverage): AQ runtime half, offline.** s7371 landed
-   ROGUESQ_AUTOPILOT_CLOCK=frames (+ ROGUESQ_AUTOPILOT_FPS, default 30; fs ~58/s at FPS60): positive control on build/
-   PASS (same VI width at all 15 presses as wall, initMission reached). Under TSan the frame clock does NOT replay the
-   full-speed route: the front-end timers run ahead of fullsyncs (presses 1-3 land on 2048/2048/1024 screens, not
-   768/768/2048), so the run went to level 16 (B40=0x10), not 15. It still reached a mission: 3 initMission calls,
-   ~590 s wall in mission at ~1.2 game frames/s (~700 mission frames). TSan mission-phase report (4820 reports,
-   27 groups): **H-clean** with partial flight coverage (H-stall: < 2 frames/s): 4 new rows, all classified
-   (func_map SEM, rs64_vi_n_g / rs64_g1d_title_vi BENIGN), tools/s7354_tsan_report.py rc 0 on m1 and on s7369 c2.
-   Next: cross the m1 TSan access set with the s7366 static lockset rows (scratch/s7366/lockset_rows.txt) to
-   say which AQ containers were exercised in mission; for longer flight use `w<width>` gates, not timing.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID tsan-mission-coverage): AQ runtime half.** s7371: ROGUESQ_AUTOPILOT_CLOCK=frames
+   (control PASS on build/; at TSan speed the front end is VI-timed so the route diverges, went to level 16). s7372:
+   TSan reports alone cannot witness coverage (90/97 AQ rows UNSEEN = unknowable), so **tools/build_tsan.sh COV=1**
+   (build_tsan_cov/, clang source coverage with atomic counters, `LLVM_PROFILE_FILE=<dir>/p%c.profraw` continuous mode
+   survives SIGKILL; scratch/s7372/cov_run.zsh snapshots it at initMission) + **tools/s7372_aq_runtime_cross.py**
+   (`--lines scratch/s7366/lockset_rows.txt --cov end.json --cov-base base.json`; planted CTL row must be RACED).
+   c1 (~405 mission frames): 17 AQ rows exercised in mission (present queue, workload, uploads, descriptors, band
+   writeback, dpc defer), 8 boot-only, 0 races on any row's own access; 73 never executed (mostly env-gated diag rows).
+   2 new TSan diag rows classified (rs64_s4211_pi_ring BENIGN, rs64_s4209_read D). Next: name the gate of each of the
+   73 unexecuted rows offline (env var / destructor / branch); only a DEFAULT-path row that did not run needs a run.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -257,7 +257,7 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
       V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
       AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
-      (TSan, tools/build_tsan.sh; mission phase uncovered = item 1); AF signal safety s7355; AG unchecked alloc s7356;
+      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372 = item 1); AF signal safety s7355; AG unchecked alloc s7356;
       AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
       s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
       reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census; runtime half = item 1).
