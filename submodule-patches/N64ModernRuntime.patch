@@ -4925,7 +4925,7 @@ index ae0f44f..0e1b7f9 100644
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..1cc8d62 100644
+index e0d367e..46ce708 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
 @@ -20,7 +20,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -4946,7 +4946,14 @@ index e0d367e..1cc8d62 100644
      assert(false);
      // osYieldThread(rdram);
  }
-@@ -49,19 +49,26 @@ extern "C" void osCreateMesgQueue_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -45,23 +45,33 @@ extern "C" void osGetThreadId_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = osGetThreadId(rdram, (int32_t)ctx->r4);
+ }
+ 
++// s7393 class BC: pre-create hook (src/main, ROGUESQ_S7393_CQ=1) - reads the queue's state before it is reset.
++extern "C" __attribute__((weak)) void rs64_s7393_create(uint8_t*, uint32_t, uint64_t, uint32_t, int) {}
+ extern "C" void osCreateMesgQueue_recomp(uint8_t* rdram, recomp_context* ctx) {
++    rs64_s7393_create(rdram, (uint32_t)ctx->r4, (uint64_t)(uintptr_t)__builtin_return_address(0), (uint32_t)ctx->r31, (int)(s32)ctx->r6); // s7393
      osCreateMesgQueue(rdram, (int32_t)ctx->r4, (int32_t)ctx->r5, (s32)ctx->r6);
  }
  
@@ -4975,7 +4982,7 @@ index e0d367e..1cc8d62 100644
      osSetEventMesg(rdram, (OSEvent)ctx->r4, (int32_t)ctx->r5, (OSMesg)ctx->r6);
  }
  
-@@ -70,7 +77,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -70,7 +80,8 @@ extern "C" void osViSetEvent_recomp(uint8_t * rdram, recomp_context * ctx) {
  }
  
  extern "C" void osGetCount_recomp(uint8_t * rdram, recomp_context * ctx) {

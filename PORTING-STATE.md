@@ -195479,3 +195479,31 @@ Conclusion s7392: **selects H-none** (no harmful guest message-queue drop on the
 events only** (538/549 owner vs 23 retail, harmless: no added underrun); **refutes H-drop** for every exercised site.
 Next discriminator: class BC runtime pre-state at osCreateMesgQueue (waiters / pending messages wiped by a re-create),
 planted-orphan control, owner + retail arms (scratch/agent/NEXT.md).
+
+## Session 7393 (2026-11-15) — class BC guest osCreateMesgQueue live-queue census closed on the route: 0 orphaned waiters, every discarded message is a mutex token re-seeded at once; identical in owner and retail arms
+
+Fold: s7392_mq_levels rc 0: L5/L10/L15 203 s alive, 0 crash, 0 VI stall, `tools/s7392_mq_report.py --known` rc 0, CONTROL
+PASS (guest=1 ext=1), VERDICT H-none-on-route drops=0 x3 -> class BB stands on 3 more levels.
+
+Class BC (NEXT s7393): osCreateMesgQueue resets blocked_on_recv/blocked_on_send/validCount, so a re-create of a live queue
+would orphan a blocked thread (never woken) or discard pending messages. Hypotheses H-none / H-orphan / H-port-timing.
+- Static: new `tools/s7393_createmq_census.py` (reuses s7392's resolver): 35 sites; mq, msg, count, static callers, and
+  post=SEND when the caller posts to the same queue right after (10 sites: heap mutex 8010FEE0 in buildHeapFreeList /
+  initMainHeap / coalesceFreeHeapBlocks, 80128D10 initVideoSubsystem, F5 mutex 80149990, MusyX 80154650, PI/SI access queues).
+  `same_sreg` handles `move a0,s0` across the jal (initFactor5Mutex).
+- Runtime: weak `rs64_s7393_create` in lib/.../ultra_translation.cpp osCreateMesgQueue_recomp (pre-reset), implemented in
+  src/main/upstream_compat.cpp `s7393` (ROGUESQ_S7393_CQ=1, default off): per (mq, recompiled caller) creates, re-creates
+  (address already created this run), lost (validCount>0), orphan_r/s (thread on the link whose OSThread.queue points back at
+  this queue), raw link fields, held (count-1 re-created at validCount 0). Control ROGUESQ_S7393_CTL=1: planted queue below
+  $sp, validCount 1 + fake linked waiter, re-created once. Report `tools/s7393_cq_report.py` (SEED = lost on a post=SEND
+  count-1 site). Note ctx->r31 is 0 in this recomp at the call (gra=0), so the key is the host return address.
+- Runs (same binary, tools/s7392_mq_run.zsh, 200 s route to MISSION FAILED/debrief): owner dd8 21:9 FPS60 and RETAIL=1.
+  Both: CONTROL PASS (lost 1, orphan_r 1, raw_r 1 on CONTROL); 50 rows, 12 queues re-created; orphan_r = orphan_s = raw_r =
+  raw_s = 0 on every real re-create; lost only on the 5 SEED sites (11/11/11/10/8 per run); held: buildHeapFreeList 10,
+  setupSongRenderBuffers 80149730 11, initMusyXVoiceSlot 14 (empty, no waiter). Owner and retail counts identical row by row;
+  re-inits come in bursts at t=0.8/5.1/12/23/48 s on tid 3 (scene re-init). Report rc 0, VERDICT H-none, both arms; 0 crash.
+Result: H-none selected (two arms + static post=SEND), H-orphan refuted on the route, H-port-timing refuted (retail arm equal).
+Residual, class BD: buildHeapFreeList re-seeds the heap mutex while held (validCount 0, 10/run, inside rs_malloc ->
+ensureHeapInitialized): for that window the mutex holds a token while its caller is still in the critical section, so a
+second thread could enter the heap. Retail code; matches s7392's rs_malloc release fails=7. Queued: s7393_cq_levels (L5/L10/L15).
+Engineering: tools/s7393_createmq_census.py, tools/s7393_cq_report.py, ultra_translation.cpp hook (patch exported), s7393 impl.

@@ -8309,8 +8309,97 @@ extern "C" void rs64_s7392_send(uint8_t* rdram, uint32_t mq, uint64_t ra, int fl
 extern "C" void rs64_s7392_ext(uint8_t* rdram, uint32_t mq, int src, int sent, int rq) {
     if (s7392::on()) s7392::note(rdram, 'E', mq, (uint64_t)(int64_t)src, 0, !sent, rq != 0);
 }
+// s7393 class BC: guest osCreateMesgQueue on a LIVE queue (ROGUESQ_S7393_CQ=1, default off). Per (mq, recompiled caller):
+// creates, re-creates (address created before in this run), and per create the pre-state: lost = validCount>0 (messages the
+// reset discards), orphan_r / orphan_s = a thread on blocked_on_recv / blocked_on_send whose OSThread.queue points back at
+// this queue (a live waiter the reset unlinks and nothing will wake), raw_r / raw_s = non-null link fields at all, held =
+// re-create of a count-1 queue at validCount 0 (a mutex re-created while held). Each orphan/lost event prints one
+// [s7393-ev] row at once; full [s7393-cq] table every 10 s wall (SIGKILL-safe). ROGUESQ_S7393_CTL=1 plants a queue below the
+// guest $sp on the first create (validCount 1 + a fake waiter whose queue field points back) and re-creates it once through
+// the hook: the table must show exactly 1 lost + 1 orphan_r on key CONTROL. Report: tools/s7393_cq_report.py <log>.
+namespace s7393 {
+struct Ent { uint32_t mq; uint64_t key; uint32_t gra; uint64_t creates, recreates, lost, orphan_r, orphan_s, raw_r, raw_s, held; int cnt; };
+static std::mutex mu; static Ent tab[256]; static int ntab = 0; static double t0 = 0, t_last = 0;
+static uint32_t seen[1024]; static int nseen = 0;
+static bool on() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7393_CQ"); return e && e[0] && e[0] != '0'; }(); return v; }
+static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static bool inram(uint32_t a) { return a >= 0x80000000u && a < rs64_ram_top - 0x20u; }
+static void dump_locked(double t) {
+    std::fprintf(stderr, "[s7393-cq-begin] t=%.1f n=%d nseen=%d\n", t - t0, ntab, nseen);
+    for (int i = 0; i < ntab; i++) {
+        const Ent& e = tab[i]; char sb[160];
+        if (e.key == 0xC7C7C7C7u) std::snprintf(sb, sizeof sb, "CONTROL"); else rs64_wt_sym((uintptr_t)e.key, sb, sizeof sb);
+        std::fprintf(stderr, "[s7393-cq] mq=%08X key=%s gra=%08X cnt=%d creates=%llu recreates=%llu lost=%llu orphan_r=%llu orphan_s=%llu raw_r=%llu raw_s=%llu held=%llu\n",
+            e.mq, sb, e.gra, e.cnt, (unsigned long long)e.creates, (unsigned long long)e.recreates, (unsigned long long)e.lost,
+            (unsigned long long)e.orphan_r, (unsigned long long)e.orphan_s, (unsigned long long)e.raw_r, (unsigned long long)e.raw_s,
+            (unsigned long long)e.held);
+    }
+    std::fflush(stderr);
+}
+static void note(uint8_t* rdram, uint32_t mq, uint64_t key, uint32_t gra, int cnt) {
+    int valid = 0; uint32_t r = 0, sd = 0; bool orr = false, ors = false;
+    if (inram(mq)) {
+        const OSMesgQueue* q = TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq);
+        valid = q->validCount; r = (uint32_t)q->blocked_on_recv; sd = (uint32_t)q->blocked_on_send;
+        if (r && inram(r)) orr = (uint32_t)TO_PTR(OSThread, (PTR(OSThread))r)->queue == mq;
+        if (sd && inram(sd)) ors = (uint32_t)TO_PTR(OSThread, (PTR(OSThread))sd)->queue == mq + 4u;
+    }
+    std::lock_guard<std::mutex> lk(mu);
+    const double t = now();
+    if (t0 == 0) { t0 = t; t_last = t; }
+    bool re = false;
+    for (int k = 0; k < nseen; k++) if (seen[k] == mq) { re = true; break; }
+    if (!re && nseen < 1024) seen[nseen++] = mq;
+    int i = 0;
+    for (; i < ntab; i++) if (tab[i].mq == mq && tab[i].key == key) break;
+    if (i == ntab) { if (ntab == 256) return; tab[ntab++] = Ent{mq, key, gra, 0, 0, 0, 0, 0, 0, 0, 0, cnt}; }
+    Ent& e = tab[i];
+    e.creates++; e.cnt = cnt; e.gra = gra;
+    // pre-state only means something on an address this run already created (first creates see whatever was in the memory)
+    if (re) {
+        e.recreates++;
+        if (valid > 0) e.lost++;
+        if (orr) e.orphan_r++;
+        if (ors) e.orphan_s++;
+        if (r) e.raw_r++;
+        if (sd) e.raw_s++;
+        if (cnt == 1 && valid == 0) e.held++;
+        if (valid > 0 || orr || ors) {
+            static int nev = 0;
+            if (nev++ < 200) {
+                char sb[160];
+                if (key == 0xC7C7C7C7u) std::snprintf(sb, sizeof sb, "CONTROL"); else rs64_wt_sym((uintptr_t)key, sb, sizeof sb);
+                std::fprintf(stderr, "[s7393-ev] t=%.1f mq=%08X key=%s gra=%08X tid=%d valid=%d recv=%08X(%s) send=%08X(%s)\n", t - t0, mq, sb, gra,
+                             rogue_current_thread_id(rdram), valid, r, orr ? "LIVE" : "-", sd, ors ? "LIVE" : "-");
+            }
+        }
+    }
+    if (t - t_last >= 10.0) { t_last = t; dump_locked(t); }
+}
+static void control(uint8_t* rdram, recomp_context* ctx) {
+    static const bool ctl = [] { const char* e = std::getenv("ROGUESQ_S7393_CTL"); return e && e[0] && e[0] != '0'; }();
+    static std::atomic<bool> done{false};
+    if (!ctl || !ctx || done.exchange(true)) return;
+    const uint32_t q = ((uint32_t)ctx->r29 - 0x200u) & ~0xFu, buf = q + 0x40u, th = q + 0x80u;
+    osCreateMesgQueue(rdram, (int32_t)q, (int32_t)buf, 1);
+    note(rdram, q, 0xC7C7C7C7u, 0, 1); // first create: not a re-create, must count nothing
+    OSMesgQueue* mq = TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))q);
+    TO_PTR(OSMesg, (PTR(OSMesg))buf)[0] = (OSMesg)0x7393; mq->validCount = 1; mq->first = 0;
+    OSThread* t = TO_PTR(OSThread, (PTR(OSThread))th);
+    t->next = 0; t->priority = 0; t->queue = (PTR(PTR(OSThread)))q; // fake waiter linked back to blocked_on_recv
+    mq->blocked_on_recv = (PTR(OSThread))th;
+    note(rdram, q, 0xC7C7C7C7u, 0, 1);
+    osCreateMesgQueue(rdram, (int32_t)q, (int32_t)buf, 1);
+    std::fprintf(stderr, "[s7393-ctl] q=%08X planted valid=1 recv=%08X\n", q, th);
+}
+} // namespace s7393
+extern "C" void rs64_s7393_create(uint8_t* rdram, uint32_t mq, uint64_t ra, uint32_t gra, int cnt) {
+    if (!s7393::on()) return;
+    s7393::note(rdram, mq, ra, gra, cnt);
+}
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     Rs64RetraceHold::maybe(rdram, ctx);
+    if (s7393::on()) s7393::control(rdram, ctx); // s7393 planted live-queue re-create control
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'S');
     { /* s6571: every direct osSendMesg to the hud service queue (svc 0x80954F60 +0x1D0), any sender */
         static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();

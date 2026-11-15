@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7389 (2026-11-15).
+Compact operational handoff, as of Session 7393 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -224,7 +224,15 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    queue, `tools/s7392_mq_report.py <log> --known`, route tools/s7392_mq_run.zsh, RETAIL=1 arm). 5 drop families, all benign:
    heap-mutex re-init inside rs_malloc (10/run), 8011A800 sched token (10/run), VI tick (22-25), CF0 dup-ack (s7367), and AI
    events 538-549 per owner-recipe run vs 23 retail (port timing, flight) with no added host underrun ([ai-underrun]).
-   Follow-up class BC: osCreateMesgQueue on a live queue (the heap re-init clears blocked_on_recv). Soak s7392_mq_levels queued.
+   s7393 fold s7392_mq_levels: L5/L10/L15 report rc 0 --known, CONTROL PASS, 0 DROP x3.
+   **BC CLOSED s7393 (route), no live-queue re-create** (`tools/s7393_createmq_census.py`: 35 osCreateMesgQueue sites, 10 post
+   a token at once = post=SEND; runtime ROGUESQ_S7393_CQ=1 + _CTL=1 planted queue valid 1 + linked fake waiter, hook
+   rs64_s7393_create in ultra_translation.cpp osCreateMesgQueue_recomp, `tools/s7393_cq_report.py <log>`; route
+   tools/s7392_mq_run.zsh with the env, owner + RETAIL=1 arms): CONTROL PASS both arms, 0 orphan_r / 0 orphan_s / 0 raw link
+   field on any re-create of 12 re-created queues; every lost message is a count-1 mutex re-seeded by its creator (SEED: heap
+   8010FEE0 x3 fns, 80128D10, F5 mutex 80149990, MusyX 80154650), identical counts in both arms (scene re-init runs ~11x per
+   route on tid 3) -> H-none, not port timing. Residual: buildHeapFreeList re-seeds the heap mutex at validCount 0 (held,
+   10/run) = a mutual-exclusion window in retail code (s7392's rs_malloc fails=7) -> class BD. Soak s7393_cq_levels queued.
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
