@@ -196384,3 +196384,36 @@ Step 0 triggered (CURRENT-TRUTH 60.3 KB > 60000). No experiments run.
 - Header refreshed to "as of Session 7417"; cross-refs fixed (RSP_DMA25 -> item 17, rerun censuses -> items 12/15).
 - Soak results: no new lines since the s7416 fold.
 Rules out nothing; bookkeeping only.
+
+## Session 7418 (2026-11-15) — class CA opcode-coverage residue closed (H-equal): 28 residue mnemonics, 0 live gap; 1,496 int/FP->FP conversions exact vs an IEEE model (74 forms, FZ 0/1, RN/RZ, mutants PASS); s7405 "0 live cache" was a structural false zero (objdump prints cache as .word), the 32 live cache ops are CDE/HWB-D, no-op-safe
+
+Unit (NEXT.md opcode-coverage-residue). New tools/s7418_opcode_residue.py (rc 0 = H-equal + CONTROL PASS; ~80 s).
+- Census: 330,399 disasm comments in ../N64Recomp/RecompiledFuncs, 157 distinct mnemonics; 129 are in the op sets the class
+  tools import-check (s7405/s7408/s7411-s7416, sets imported from the tools, not retyped); 28 residue.
+- Liveness, keyed on the RecompiledFuncs function NAME (the ELF has overlays sharing VRAM: 0x800CC3F0 is both AT-AT code and
+  hangar data, so address lookup was wrong in the first cut). New tags: GAPDEAD = N64Recomp data_gap_* filler with 0 jal callers,
+  0 lui/addiu refs and no direct call in RecompiledFuncs; UCODE = RSP microcode blob symbol (gspF3DEXTextStart, rspbootText*)
+  with 0 jal callers; dead = 0 callers and address materialised only inside replaced/ignored libultra (__OSGlobalIntMask).
+- Residue rows: COP2 (lwc2/swc2/mfc2/mtc2/cfc2/sdc2), ll/sc/scd, the trap family, sync, ctc0/dmtc0/bc0f, undecoded .word,
+  movn/movz, syscall: every do_break-lowered site is GAPDEAD/UCODE/nofn data_gap, 0 LIVE; one hand-reviewed site (8009D8C0 scd,
+  tail of filterVoiceSampleBlock after `return;`, label reached only by a never-taken `bltzal $zero` get-PC idiom). movn/movz:
+  rd = $zero at all 10 sites (and MIPS IV, reserved on the VR4300) -> `;` is exact. break: 184 live, do_break = retail trap.
+  syscall: 3 sites, all GAPDEAD. nop: no state.
+- mfc0/mtc0 LIVE = 9 / 13, exactly s7405's 9 + 13 live Status rows: second, independent line for class BO.
+- Arithmetic residue = cvt.s.w 1205, cvt.d.w 77, cvt.d.s 80, cvt.s.d 134 sites (FP->int is s7408). Every site's statement matches
+  the disasm text (dest/src register, .fl/.d/.u32l, macro, NAN_CHECK on FP sources; 6 forms use the FR=1 f_odd source view inside
+  the hand-written FR=1 helpers). 74 distinct statements compiled VERBATIM (build header, -O2, -DNDEBUG), edge + 3000 random inputs
+  each, ctx stray-write check, at FZ=1/0 x RN/RZ vs an exact-rational model (s7415 functions): 0 mism, 0 stray in all 16 cells.
+  Controls: mutants CVT_S_W unsigned / CVT_D_W via float / CVT_S_D RZ under RN / CVT_D_S biased each flag their own op only;
+  3 planted text defects (wrong dest, wrong view, missing NAN_CHECK) flagged; liveness controls (planted do_break in a LIVE fn
+  flagged; directly-called data_gap_8009D8BC not GAPDEAD; known live audio cache sites seen) PASS.
+- **Correction to s7405:** its "0 live cache" was structural. mips64-elf-objdump leaves `cache` undecoded as `.word`
+  (0x800934AC = .word 0xbd0d0000), the same blind spot as beql/bnel, so its cache row could never fire (0 rows even with --all).
+  Measured on RecompiledFuncs: 32 live cache ops, only 0x0D Create Dirty Exclusive D (17) and 0x19 Hit Write Back D (15), in the
+  voice resamplers/copiers, zeroAudioBufferWords, zmemcpy, convertMat3x4ToN64Mtx, packMtxRowFloatToFixed. HWB-D is a no-op on
+  coherent memory. CDE: 6 sites fully written in straight line before any read; the 11 others are loop / prepare-for-overwrite
+  bodies read by hand (resample* store sd +0 / sd +8 then HWB -8 per line; the Mtx and row destinations are fully stored). The
+  no-op differs from hardware only where retail would read an undefined line, so it is safe. Other cache codes are all GAPDEAD.
+VERDICT H-equal, H-gap refuted. Rules out: a live do_break or mis-lowered residue op, int->FP / FP<->FP conversion drift, and live
+cache semantics as a divergence source. Opens class CB: every objdump-based census tool (s7392 parse is shared by s7400-s7405 and
+others) is blind to whatever objdump leaves as .word, so measure the objdump-vs-rabbitizer mnemonic agreement per address.

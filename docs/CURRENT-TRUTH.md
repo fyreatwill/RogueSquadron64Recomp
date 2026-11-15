@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7417 (2026-11-15).
+Compact operational handoff, as of Session 7418 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -97,6 +97,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- "0 live cache ops" (s7405 class BO). Believable because the census ran with a control that passed (Status/Count/Compare rows),
+  but that control never exercised `cache`: mips64-elf-objdump prints cache as .word, so the row could not fire. s7418 on
+  RecompiledFuncs: 32 live (CDE 0x0D + HWB-D 0x19 only), no-op-safe. Class BO's FR/RM/FS conclusions stand.
 - "FCSR.FS vs host FZ: known and left, ROGUESQ_FTZ stays opt-in" (s6013/s7087). Believable because the s6012 lvl1 holds
   were clean in both arms; but no instrument ever asked whether denormals occur. s7405 FPSR witness: they do (game thread, in
   flight), so FTZ is now default on (=0 old).
@@ -210,13 +213,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CA, opcode-coverage residue (HYPOTHESIS-ID opcode-coverage-residue).** Census every distinct disasm
-   mnemonic in ../N64Recomp/RecompiledFuncs (full-line + mid-line `// 0x...: op` comments); subtract the ops scored by
-   tools/s7408_cvt_contract.py, s7411_unaligned_contract.py, s7412_int_emission.py, s7413_aligned_ldst.py, s7414_fp_compare.py,
-   s7415_fp_arith.py, s7416_ctrl_flow.py; for each residue op (mfc0/mtc0, cache, sync, trap family, eret, ll/sc, cfc1...)
-   give site count, live vs data_gap, emitted form, VR4300 semantics or deliberate no-op; compile arithmetic residue against
-   a model with a mutant control (s7412 style). H-equal vs H-gap. Any new arena or pointer layout re-runs items 12/15 with
-   --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
+1. **Next audit: class CB, disassembler agreement for the objdump-based censuses (HYPOTHESIS-ID objdump-decode-blindspot).**
+   s7418 found mips64-elf-objdump prints `cache` as `.word`, so s7405's "0 live cache" was structural (s7392 parse already patches
+   beql/bnel/blezl/bgtzl). Per address, compare the objdump mnemonic in /tmp/s7418.dis with the RecompiledFuncs disasm comment
+   (rabbitizer); list every op objdump leaves as .word or names differently, and for each census tool that parses the objdump
+   (grep `s7392_mesg_census` / `c7392.parse` importers: s7400-s7405, s7418 liveness, ...) say whether its op sets intersect the
+   blind set; re-run the affected ones with the gap patched in s7392 parse (decode those words) and compare rows. H-clean (only
+   cache + branch-likely, nothing else affected) vs H-blind (another op or census row hidden). Control: the known cache words
+   must be recovered by the patched parse.
+   CA (s7418) CLOSED H-equal: tools/s7418_opcode_residue.py, 28 residue ops 0 live gap, 1,496 conversions exact, controls PASS.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -293,7 +298,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
       replacements (s7407_libm_census.py); BR s7408 FP->int (s7408_cvt_contract.py); BS s7409 FR/odd-FPR views; BT s7410
       callee-saved across FR=1 asm; BU s7411 unaligned ld/st; BV s7412 integer 64-bit GPR; BW s7413 aligned ld/st; BX s7414
       FP compare + bc1x (unordered-cond generator table wrong on NaN, 0 game sites); BY s7415 FP arith + moves (0 FMA); BZ s7416
-      control flow + delay slots. LATENT from BZ: jr/jalr emit the slot BEFORE reading rS (2 sites, dead data_gap_80024A0C).
+      control flow + delay slots; CA s7418 opcode residue (s7418_opcode_residue.py: 0 live gap, cvt int/FP->FP exact, live cache
+      = CDE/HWB-D no-op-safe). LATENT from BZ: jr/jalr emit the slot BEFORE reading rS (2 sites, dead data_gap_80024A0C).
 17. **Default-on fixes from the audits and TSan thread (=0 / old value restores the previous behaviour):**
     ROGUESQ_SPILL_RESET + 8 MB spill arena 0x81000000 (s7326, SPILL_MB=4 old); RSP_DMA25 (s7327); S7334_CLASS5;
     S7335_CLAMP; S7336; S7337; S7339; ALTSTACK (s7355); S7358_ENVCHECK; S7364_WLRESET; CF0_DUPDROP (s7367, guest
@@ -304,7 +310,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     S7378_SHLOCK, S7381_BARRIER_CV, S7383_FBPACK.
 18. **Runtime soak folds for the AQ-BZ classes all PASSED** (SOAK-RESULTS s7392-s7416: L4/L7/L12 or L5/L10/L15, 0 crash, 0 VI
     stall, controls PASS). No class soak is outstanding.
-19. **Rerun the emission tools after any regen:** tools/s7407-s7416 scripts above (rc 0 expected) alongside item 12.
+19. **Rerun the emission tools after any regen:** tools/s7407-s7416 + s7418 scripts above (rc 0 expected) alongside item 12.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
