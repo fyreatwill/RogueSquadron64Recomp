@@ -37,6 +37,10 @@ HAND = [  # (substring of group key, class, reason) -- filled from the s7354 run
     ("osDestroyThread threads.cpp", "SEM", "s7369: OSThread.context cleared by the destroying guest thread, read by a guest thread it created (run-one scheduler)"),
     ("rt64_render_context.cpp:117", "D", "s7369: [stall-dump] reads guest mq/VI words in RDRAM for its log line while the retrace guest thread writes them (diag print only)"),
     ("rs64_s4211_pi_n", "BENIGN", "s7369: default-on [s4211-new] log: audio RSP thread reads the PI-DMA ring count/entries the PI guest thread appends; only feeds <=32 stderr lines, no state"),
+    # s7371: first mission-phase TSan run (frame-keyed autopilot, 3 initMission calls B40=0x10) - 4 new rows
+    ("'func_map'", "SEM", "s7371: librecomp overlay func_map: load_overlay insert (submitDmaSlot -> osPiStartDma, guest) vs get_function (viRetraceHandlerThread, guest); both guest threads (run-one scheduler)"),
+    ("'rs64_vi_n_g'", "BENIGN", "s7371: VI counter, single writer (update_screen, gfx thread), aligned volatile u32; guest readers = opt-in S6848 force window + log lines, stale by <=1 VI"),
+    ("'rs64_g1d_title_vi'", "BENIGN", "s7371: 0/1/2 title/debrief tag, single writer (osViSetMode, guest VI thread), aligned int; gfx thread uses old-or-new pillar handling for one task at a VI mode change"),
     ("osViSwapBuffer_recomp upstream_compat.cpp:1298", "D", "ROGUESQ_FB_HASH (m6 harness default) hashes the guest framebuffer while RT64 fullSync copies native->RAM"),
 ]
 ARGS = [a for i, a in enumerate(sys.argv[1:]) if not a.startswith("--") and sys.argv[i] != "--frames"]

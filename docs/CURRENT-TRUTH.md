@@ -169,6 +169,8 @@ Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, 
   tools/s7122_fidelity.py (FID_ALROWS=444/336: RT64 shows rows 0-443 / 0-335), s7183_native_edge.py,
   s7210_regfit.py (run first at 16:9); replay tools/angrylion_replay/build16.sh. L17 autopilot dies ~126 s.
 - Oracle missions: tools/g3_eep_patch.py sets +0x31; use --save-dir, never swap a save over the user .eep.
+- Slow builds (TSan/ASan): `ROGUESQ_AUTOPILOT_CLOCK=frames ROGUESQ_AUTOPILOT_FPS=58` (FPS60) keys autopilot to fullsyncs,
+  but front-end screens are VI-timed, so the route still diverges at TSan speed; gate with `<s>:w<width>` events (s7371).
 - Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc. Recipes that
   drive the window carry `# SOAK_NEEDS_IDLE=<secs>`; zsh recipes run under their shebang shell (s7287).
 - Knob tables: PROJECT-OVERVIEW "G1c draw-distance knob and recipe reference"; docs/DRAW-DISTANCE.md;
@@ -200,12 +202,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID tsan-mission-coverage): game-frame-keyed autopilot clock.** TSan runtime coverage
-   (class AE, s7354) never reached mission threads (present / workload / audio under load). s7369 exempted the RSP ucode
-   TUs from TSan (CMakeLists, ROGUESQ_TSAN_UCODE=ON old): 0.1 -> 12-13 gfx tasks/s. But ROGUESQ_AUTOPILOT events are
-   wall-clock-timed, so the route diverges when game speed differs (s7369 c2 split at press 4). Add
-   ROGUESQ_AUTOPILOT_CLOCK=frames (default wall), positive control on build/, then a mission-phase TSan report
-   (tools/build_tsan.sh, scratch/s7366/tsan_run.zsh, tools/s7354_tsan_report.py). Outcomes: H-clean / H-race / H-stall.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID tsan-mission-coverage): AQ runtime half, offline.** s7371 landed
+   ROGUESQ_AUTOPILOT_CLOCK=frames (+ ROGUESQ_AUTOPILOT_FPS, default 30; fs ~58/s at FPS60): positive control on build/
+   PASS (same VI width at all 15 presses as wall, initMission reached). Under TSan the frame clock does NOT replay the
+   full-speed route: the front-end timers run ahead of fullsyncs (presses 1-3 land on 2048/2048/1024 screens, not
+   768/768/2048), so the run went to level 16 (B40=0x10), not 15. It still reached a mission: 3 initMission calls,
+   ~590 s wall in mission at ~1.2 game frames/s (~700 mission frames). TSan mission-phase report (4820 reports,
+   27 groups): **H-clean** with partial flight coverage (H-stall: < 2 frames/s): 4 new rows, all classified
+   (func_map SEM, rs64_vi_n_g / rs64_g1d_title_vi BENIGN), tools/s7354_tsan_report.py rc 0 on m1 and on s7369 c2.
+   Next: cross the m1 TSan access set with the s7366 static lockset rows (scratch/s7366/lockset_rows.txt) to
+   say which AQ containers were exercised in mission; for longer flight use `w<width>` gates, not timing.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

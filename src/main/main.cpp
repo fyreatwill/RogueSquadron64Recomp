@@ -84,6 +84,7 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
 void rs64_register_overlays();
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" uint32_t rs64_vi_committed_width();
+extern "C" uint32_t rs64_dpc_get_cumulative_fullsyncs();
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" int rs64_g1d_pause_live(void);
 extern "C" uint32_t rs64_phase_ord();
@@ -11163,6 +11164,15 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         static uint16_t s_held = 0;
         static float    s_held_sx = 0.0f, s_held_sy = 0.0f;
         static double   s_release_at = 0.0;
+        // s7371: ROGUESQ_AUTOPILOT_CLOCK=frames keys every event time (and the hold, and the w<width> rebase) to game
+        // frames = cumulative RDP fullsyncs / ROGUESQ_AUTOPILOT_FPS (default 30) instead of wall time, so a slow build
+        // (TSan, ~13 gfx tasks/s) walks the same route as full speed. Default (unset / "wall") = old wall clock.
+        static bool     s_frames = false;
+        static double   s_fps = 30.0;
+        static double   s_base = 0.0;   // clock value at schedule start / last gate rebase (seconds in the chosen domain)
+        auto ap_now = [&]() -> double {
+            return s_frames ? (double)rs64_dpc_get_cumulative_fullsyncs() / s_fps : SDL_GetTicks() / 1000.0;
+        };
         if (!s_init) {
             s_init = true;
             const char* spec = std::getenv("ROGUESQ_AUTOPILOT");
@@ -11219,30 +11229,33 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     else s_ev[s_nev].btn = keybtn(kbuf);
                     s_nev++;
                 }
-                if (s_nev > 0) { s_on = true; s_t0 = SDL_GetTicks(); }
-                fprintf(stderr, "[autopilot] armed: %d events hold=%.0fms stop_width=%u\n",
-                        s_nev, s_hold * 1000.0, s_stop_w);
+                if (const char* ck = std::getenv("ROGUESQ_AUTOPILOT_CLOCK")) s_frames = !strcmp(ck, "frames");
+                if (const char* fp = std::getenv("ROGUESQ_AUTOPILOT_FPS")) { const double f = atof(fp); if (f > 0.0 && f < 1000.0) s_fps = f; }
+                if (s_nev > 0) { s_on = true; s_t0 = SDL_GetTicks(); s_base = ap_now(); }
+                fprintf(stderr, "[autopilot] armed: %d events hold=%.0fms stop_width=%u clock=%s fps=%.1f\n",
+                        s_nev, s_hold * 1000.0, s_stop_w, s_frames ? "frames" : "wall", s_fps);
                 fflush(stderr);
             }
         }
         if (s_on) {
-            const double el = (SDL_GetTicks() - s_t0) / 1000.0;
+            const double el = ap_now() - s_base;
             const bool stop = (s_stop_w != 0 && rs64_vi_committed_width() == s_stop_w);
             if ((s_held || s_held_sx != 0.0f || s_held_sy != 0.0f) && el >= s_release_at) { s_held = 0; s_held_sx = s_held_sy = 0.0f; }
             if (!stop && s_idx < s_nev && s_ev[s_idx].waitw && el >= s_ev[s_idx].t &&
                 rs64_vi_committed_width() == s_ev[s_idx].waitw) {
-                s_t0 = SDL_GetTicks() - (Uint32)(s_ev[s_idx].t * 1000.0);
-                fprintf(stderr, "[autopilot] gate %d/%d width=%u reached at wall %.1f s -> clock rebased to %.1f\n",
-                        s_idx + 1, s_nev, s_ev[s_idx].waitw, el, s_ev[s_idx].t);
+                s_base = ap_now() - s_ev[s_idx].t;
+                fprintf(stderr, "[autopilot] gate %d/%d width=%u reached at %s %.1f s -> clock rebased to %.1f\n",
+                        s_idx + 1, s_nev, s_ev[s_idx].waitw, s_frames ? "frames" : "wall", el, s_ev[s_idx].t);
                 fflush(stderr);
                 s_idx++;
             } else if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && !s_ev[s_idx].waitw && el >= s_ev[s_idx].t) {
                 s_held = s_ev[s_idx].btn;
                 s_held_sx = s_ev[s_idx].sx; s_held_sy = s_ev[s_idx].sy;
                 s_release_at = el + s_hold;
-                fprintf(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u\n",
+                fprintf(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u wall=%.1f fs=%u\n",
                         s_idx + 1, s_nev, el, (unsigned)s_held,
-                        (unsigned)rs64_vi_committed_width());
+                        (unsigned)rs64_vi_committed_width(), (SDL_GetTicks() - s_t0) / 1000.0,
+                        (unsigned)rs64_dpc_get_cumulative_fullsyncs());
                 fflush(stderr);
                 s_idx++;
             }

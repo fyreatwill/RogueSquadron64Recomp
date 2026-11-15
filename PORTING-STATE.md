@@ -194562,3 +194562,45 @@ Step 0 triggered (61006 bytes > 60000). No experiments.
   one-game discipline + soak rc rule merged (13). FARMAX item condensed (3). Active unit (tsan-mission-coverage) is item 1.
 - Headline, superseded, recipes, constraints sections kept as they were; header refreshed to s7370.
 Rules out nothing; next iteration runs NEXT.md (ROGUESQ_AUTOPILOT_CLOCK=frames + mission-phase TSan report).
+
+## Session 7371 (2026-11-14) — ROGUESQ_AUTOPILOT_CLOCK=frames landed (control PASS on build/); first mission-phase TSan run: 3 initMission, ~700 mission frames, H-clean with partial flight coverage, 4 new rows classified
+
+Work unit: CURRENT-TRUTH Next steps 1 (HYPOTHESIS-ID tsan-mission-coverage).
+
+Change (src/main/main.cpp autopilot block): `ROGUESQ_AUTOPILOT_CLOCK=frames` keys every event time, the press hold and
+the `w<width>` gate rebase to `rs64_dpc_get_cumulative_fullsyncs() / ROGUESQ_AUTOPILOT_FPS` (default 30) instead of
+SDL_GetTicks. Default (unset or `wall`) behaves as before: el = ticks/1000 - base is the same arithmetic. Every fire
+line now prints `wall=` and `fs=`, and the armed line prints `clock=`.
+
+Runs (scratch/s7371/, normal runs via scratch/s7371/norm_run.zsh, TSan via scratch/s7366/tsan_run.zsh, s7366 AP2 route,
+FPS60 dd8 21:9 recipe):
+- w1, build/, wall clock: fires 1-15 at VI widths 768,768,2048,2048,1024x9,640,768; fs 338..4789 (~58 fullsyncs/s at
+  FPS60); initMission call#1 B40=0x0F; 0 crash.
+- f1, build/, CLOCK=frames FPS=58 (positive control): the same VI width at all 15 presses, wall drift <= 0.6 s,
+  initMission call#1 B40=0x0F; 0 crash. **Control PASS.**
+- m1, build_tsan/ (rebuilt with tools/build_tsan.sh; a plain `cmake --build build_tsan` fails on the shared spirv-cross
+  subproject rules, s5598), CLOCK=frames FPS=58, 900 s: presses 1-3 landed at VI widths 2048/2048/1024 (full speed:
+  768/768/2048) at wall 116/160/214 s. Under TSan the front-end screens advance on VI time while fullsyncs lag (~5.5 fs/s
+  before the mission), so the frame clock does not replay the route either. The run went to **B40=0x10 (level 16)**
+  instead of 15: initMission call#1 at fs~1218 (wall ~260 s), call#2 after press 6, call#3 after press 7 (START presses
+  restarting/aborting). From press 4 to press 7, fs 1218 -> 1914 over 590 s wall = ~1.2 game frames/s in the mission
+  phase: about 700 mission frames covered. 0 crash.
+- TSan report (tools/s7354_tsan_report.py scratch/s7371/m1/tsan*, scratch/s7371/m1_tsan_report.txt): 4820 reports,
+  27 groups; planted CTL x4707 fired (positive control in the same run). The 23 known groups match the s7369 classes.
+  4 new rows:
+  * `func_map` (librecomp overlays): load_overlay insert (submitDmaSlot -> osPiStartDma -> do_dma -> load_overlays_by_start,
+    guest thread T72) vs get_function (viRetraceHandlerThread, guest thread T68). Both sides are guest threads, which the
+    run-one scheduler serialises, the same basis as the guest-mq SEM rows -> SEM.
+  * `rs64_vi_n_g` x2 groups: single writer (RT64Context::update_screen on the gfx thread), aligned volatile u32 counter;
+    the guest readers are rs64_s6848_ovl_w (opt-in ROGUESQ_S6848_FORCE_OVL window) and rs64_s6846_wipe_eps (log line
+    value) -> BENIGN.
+  * `rs64_g1d_title_vi`: single writer (osViSetMode_recomp on the guest VI thread, values 0/1/2), read by the gfx
+    thread's pillar handling in dpc_bridge; at a VI mode change one task gets old-or-new handling -> BENIGN.
+  Added to the report's class table: rc 0 on m1, and still rc 0 on scratch/s7369/c2 (regression control).
+
+Outcome against the NEXT.md hypotheses: **H-clean** (no new B row on any mission path in the covered frames), with
+**H-stall partial** (in-mission rate ~1.2 frames/s < 2, so flight coverage is ~700 frames of one mission, not the
+owner's level 15). Rules out: a race that fires within the first ~700 frames of a mission at TSan timing on the
+present / workload / audio threads. Does not rule out: races that need longer flight or the owner's level.
+The frame clock is still useful for slow builds wherever the route is gated by `w<width>` events, but on its own it
+does not make the TSan route match full speed (front end is VI-timed): single run, single-source.

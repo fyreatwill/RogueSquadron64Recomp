@@ -1,15 +1,16 @@
-# NEXT (s7371)
-s7370 was the maintenance iteration (CURRENT-TRUTH 61.0 -> 26.7 KB). This unit = CURRENT-TRUTH Next steps item 1.
-
+# NEXT (s7372)
 HYPOTHESIS-ID: tsan-mission-coverage
-Goal: the class-AE (s7354) LIMIT. TSan runtime coverage has never reached mission threads (present / workload / audio under load). With the s7369
-ucode exemption the TSan arm runs ~13 gfx tasks/s, but ROGUESQ_AUTOPILOT events are wall-clock-timed, so the route diverges from the
-owner route whenever game speed differs (s7369 c2 split at press 4 and never called initMission).
-Work unit (one build): add ROGUESQ_AUTOPILOT_CLOCK=frames to the autopilot (main.cpp ~11223): event times count game frames
-(rs64_dpc_get_cumulative_fullsyncs() / 30 per "second", or a swap count) instead of wall time; default stays wall. Positive control: the
-normal build/ with CLOCK=frames reaches initMission on the s7366 AP2 route (same as wall clock at full speed). Then
-`env RECIPE=... zsh scratch/s7366/tsan_run.zsh ../s7370/m1 900 "ROGUESQ_AUTOPILOT_CLOCK=frames"` and
-`python3 tools/s7354_tsan_report.py scratch/s7370/m1/tsan*`.
-Hypotheses for the mission-phase report: H-clean (only SEM/BENIGN/EXT rows, as at boot), H-race (a new B row on a mission-only host
-path: present queue, workload, audio backlog trim, spill reset), H-stall (TSan still too slow in flight: tasks/s < 2 -> report flight
-coverage as partial).
+
+s7371: ROGUESQ_AUTOPILOT_CLOCK=frames landed (control PASS). The TSan m1 run reached a mission (level 16, 3 initMission,
+~700 mission frames at ~1.2 frames/s); report H-clean, 4 new rows classified (tools/s7354_tsan_report.py rc 0).
+
+Work unit (OFFLINE, no game run): the AQ runtime half (CURRENT-TRUTH item 1 / 16). Cross the s7366 static lockset
+rows (scratch/s7366/lockset_rows.txt, rows_A/B.tsv) with the m1 TSan reports (scratch/s7371/m1/tsan.*): for each AQ
+cross-thread container, did TSan see accesses from >=2 threads in the mission phase (after the initMission line;
+log order in tsan.* vs run.log is not shared, so use the race report frames + the s7366 container names)? Classify each
+AQ row as runtime-exercised-clean / not-exercised. Tool: tools/s7372_aq_runtime_cross.py.
+Hypotheses: H-covered (most AQ rows have their accessor functions in m1 stacks -> AQ runtime half closes clean),
+H-gap (key mission rows: present queue, workload, audio backlog trim, spill reset, never appear -> name them and plan a
+w-gated TSan flight route for those paths), H-race (a cross reveals a row whose lock is missing in a TSan stack).
+Positive control: a row known to race in the planted CTL (s7354_race_ctl_var) must be found by the cross tool.
+If nothing an agent can do remains after this: CURRENT-TRUTH item 17.
