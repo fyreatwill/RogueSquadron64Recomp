@@ -1515,3 +1515,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7398 fold: s7397_tm_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, report rc 0 control PASS, VERDICT H-none x3 -> TIMERFIX holds on 3 levels.
 20261115-075146 | s7398_io_levels | rc=0 | 862s | scratch/agent/soak_results/s7398_io_levels_20261115-075146.log
 20261115 | s7399 fold: s7398_io_levels rc=0: L4/L7/L12 203-204 s alive, 0 crash, 0 VI stall, io readback PASS 9/9/7 rows, 0 FAIL -> IOFIX holds on 3 levels.
+20261115-083534 | s7400_cont_levels | rc=0 | 872s | scratch/agent/soak_results/s7400_cont_levels_20261115-083534.log

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7400 (2026-11-15).
+Compact operational handoff, as of Session 7401 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -294,7 +294,15 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    startSiPollingThread seeds err_no 8. **ROGUESQ_S7400_CONTFIX default ON** (=0 old). Control ROGUESQ_S7400_PAD_CTL=60 (polls
    60-89 force ch0 no-response): route tools/s7392_mq_run.zsh 200 s, fix 30/30 PASS (guest err 8), old 30/30 STALE (err 0),
    both phase 9, 0 crash. Other returns checked: Pfs* all NOPACK (status 0, consistent), osMotorInit NOPACK, osContStartQuery/
-   Init 0, osAiSetFrequency retail formula, osGetCount sign-extended (s7087). Soak s7400_cont_levels queued (L5/L10/L15).
+   Init 0, osAiSetFrequency retail formula, osGetCount sign-extended (s7087). s7401 fold s7400_cont_levels: L5/L10/L15 alive, 0 crash, 30 PASS / 0 STALE x3 -> CONTFIX holds.
+   **BK CLOSED s7401 (argument contract), H-none + 1 latent fix** (`tools/s7401_replaced_args.py` rc 0): live guest arg values at
+   every jal to a special-value replacement. Flags: 104 live osRecvMesg/osSendMesg/osJamMesg sites (+21 dead-caller) all const
+   0/1; port blocked only on ==1 while retail blocks on any !=0 -> **ROGUESQ_S7401_FLAGFIX default ON** (=0 old) normalises.
+   Runtime ROGUESQ_S7401_ARGS=1 + _CTL=1 (one planted flags=2), route tools/s7392_mq_run.zsh 200 s: fix ctl PASS(retail), old
+   STALE(old), both 9.2e5 calls, 0 guest odd flags, phase 9, 0 crash. osSetEventMesg: SP/SI/AI/DP OK; PRENMI(14) dropped by
+   ultramodern = INERT (no host reset source). osSetThreadPri pri byte-masked, NULL thread -> self in Stop/Destroy/SetPri like
+   retail; osSetTimer countdown 0 -> interval handled; osVirtualToPhysical: 11 sites dead (viMgrMain/_VirtualToPhysicalTask under
+   replaced osCreateViManager/osSpTaskLoad), 1 in osPfsIsPlug (0 jal, 0 address refs). Soak s7401_flags_levels queued (L4/L7/L12).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest

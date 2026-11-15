@@ -6882,7 +6882,7 @@ index 149e770..cb31f06 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..4769582 100644
+index 9944a02..1901291 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,323 @@
@@ -7124,14 +7124,14 @@ index 9944a02..4769582 100644
 +    int source = -1;
 +    AudioRouteMessage audio;
 +    uint32_t host_task_seq = 0xFFFFFFFFu;
-+};
-+
+ };
+ 
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
- };
- 
++};
++
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
 +static AudioRouteMessage g_current_audio_route;
@@ -7569,7 +7569,7 @@ index 9944a02..4769582 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +734,124 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -160,8 +734,155 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -7685,8 +7685,39 @@ index 9944a02..4769582 100644
 +}
 +}
 +
++// s7401 class BK: retail libultra osRecvMesg/osSendMesg/osJamMesg block for ANY flags != OS_MESG_NOBLOCK (0); upstream
++// ultramodern blocked only on flags == OS_MESG_BLOCK (1). Census s7401 (tools/s7401_replaced_args.py): every live guest
++// site passes a constant 0 or 1, so this is latent. ROGUESQ_S7401_FLAGFIX (default on, =0 old) normalises nonzero -> 1.
++// ROGUESQ_S7401_ARGS=1 logs a heartbeat of calls per kind + every non-{0,1} flags value; _CTL=1 plants flags=2 once.
++static s32 s7401_flags(s32 flags, char kind) {
++    static const bool fix = [] { const char* e = std::getenv("ROGUESQ_S7401_FLAGFIX"); return !(e && e[0] == '0'); }();
++    static const bool log = [] { const char* e = std::getenv("ROGUESQ_S7401_ARGS"); return e && *e && *e != '0'; }();
++    static const bool ctl = [] { const char* e = std::getenv("ROGUESQ_S7401_CTL"); return e && *e && *e != '0'; }();
++    static std::atomic<uint64_t> n_r{0}, n_s{0}, n_j{0}, odd{0};
++    static std::atomic<bool> planted{false};
++    auto norm = [](s32 f) -> s32 { return (fix && f != OS_MESG_NOBLOCK) ? OS_MESG_BLOCK : f; };
++    if (log) {
++        if (ctl && !planted.exchange(true)) {
++            const s32 out = norm(2);
++            std::fprintf(stderr, "[s7401-ctl] fix=%d in=2 out=%d blocks=%d %s\n", fix ? 1 : 0, (int)out,
++                out == OS_MESG_BLOCK ? 1 : 0, out == OS_MESG_BLOCK ? "PASS(retail)" : "STALE(old)");
++            odd.fetch_add(1);
++        }
++        const uint64_t c = (kind == 'R' ? n_r : kind == 'S' ? n_s : n_j).fetch_add(1) + 1;
++        if (flags != OS_MESG_NOBLOCK && flags != OS_MESG_BLOCK) {
++            const uint64_t o = odd.fetch_add(1);
++            if (o < 32) std::fprintf(stderr, "[s7401-odd] kind=%c flags=%d out=%d\n", kind, (int)flags, (int)norm(flags));
++        }
++        if ((c & 4095) == 0) std::fprintf(stderr, "[s7401-sum] R=%llu S=%llu J=%llu odd=%llu fix=%d\n",
++            (unsigned long long)n_r.load(), (unsigned long long)n_s.load(), (unsigned long long)n_j.load(),
++            (unsigned long long)odd.load(), fix ? 1 : 0);
++    }
++    return norm(flags);
++}
++
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
 -    OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
++    flags = s7401_flags(flags, 'S');
 +    log_vi_mq("send", mq_, flags);
 +    if (rs64_tl_on) rs64_tl(13, static_cast<uint32_t>(mq_)); // s6711
 +    if (mesgqueue_guard_refuse("osSendMesg", mq_)) {
@@ -7695,7 +7726,7 @@ index 9944a02..4769582 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +863,34 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +894,34 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -7730,11 +7761,12 @@ index 9944a02..4769582 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +899,11 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +930,12 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
 -    OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
++    flags = s7401_flags(flags, 'J');
 +    log_unique_mq_tag("sendtgt-jam", static_cast<uint32_t>(mq_), static_cast<int>(flags));
 +    log_vi_mq("jam", mq_, flags);
 +    if (mesgqueue_guard_refuse("osJamMesg", mq_)) {
@@ -7743,10 +7775,11 @@ index 9944a02..4769582 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +925,99 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +957,100 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
++    flags = s7401_flags(flags, 'R');
 +    log_vi_mq("recv", mq_, flags);
 +    mq_ = s7195_test_redirect(mq_, flags);
 +    if (mesgqueue_guard_refuse("osRecvMesg", mq_)) {

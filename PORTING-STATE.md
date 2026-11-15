@@ -195768,3 +195768,31 @@ Not covered: input-side contracts (how replacements read guest args) -> class BK
 Conclusion: selects H-struct (osContGetReadData err_no, latent) and H-ret (__osDisableInt stale v0, latent and harmless), refutes
 H-none for class BJ as a whole (H-none holds for the other 62 live replacements). Fix landed default-on (ROGUESQ_S7400_CONTFIX),
 two-arm control discriminates (PASS 30/30 vs STALE 30/30). Next discriminator: class BK argument census (H-arg vs H-ignored).
+
+## Session 7401 (2026-11-15) — class BK replaced-libultra argument contract closed (H-none): every live send/recv/jam flags value is constant 0/1; latent port/retail flags divergence (block only on ==1 vs retail any !=0) fixed default-on, two-arm control PASS/STALE
+
+Fold: soak s7400_cont_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, pad 30 PASS / 0 STALE x3 -> CONTFIX holds.
+
+Work unit (class BK, input/argument contract of the 64 live replaced libultra functions). New tool
+`tools/s7401_replaced_args.py` (reuses s7400 bodies(), s7392 parse, s7399 val(); handles delay-slot `move a2,a1`, `andi 0xff`,
+one caller level for pass-through args, dead-caller pruning: a site is dead when every jal caller / lui+addiu address ref of its
+function chain sits in a replaced body). Port semantics read from ultramodern: osRecvMesg/osSendMesg/osJamMesg passed
+`flags == OS_MESG_BLOCK` to do_recv/do_send (retail libultra: `if (flags == OS_MESG_NOBLOCK) return -1`, so any nonzero blocks);
+osSetEventMesg stores SP/DP/AI/SI only; osSetThreadPri/osStopThread/osDestroyThread map NULL to self (as retail); osSetTimer
+countdown 0 -> interval (as retail); osVirtualToPhysical KSEG0/1 only.
+Static result (rc 0): flags OK at 2 jam + 56 recv + 46 send live sites (+13/+8 dead-caller), all constant 0/1. osSetEventMesg 5 OK
++ 1 PRENMI(14) at preNmiResetThread 800016DC -> INERT (dropped by ultramodern, but no host reset source exists, so neither
+port nor retail-on-host ever delivers it). osSetThreadPri pri byte-masked (setServiceWorkerPriority andi 0xff) / const.
+osVirtualToPhysical: 11 dead-caller (viMgrMain is only address-referenced inside replaced osCreateViManager;
+_VirtualToPhysicalTask under replaced osSpTaskLoad), 1 UNRES in __osSiRawStartDma <- osPfsIsPlug (0 jal callers, 0 lui/addiu
+address refs: unreachable). Thread-pointer args UNRES (struct fields) are value-independent (port == retail incl. NULL).
+Runtime second line, ONE build, two arms on route tools/s7392_mq_run.zsh (owner dd8 21:9 FPS60, 200 s): helper s7401_flags() in
+ultramodern mesgqueue.cpp at the top of osSendMesg/osJamMesg/osRecvMesg, ROGUESQ_S7401_FLAGFIX (default on) normalises nonzero
+-> OS_MESG_BLOCK; ROGUESQ_S7401_ARGS=1 heartbeat + [s7401-odd] per non-{0,1} value; _CTL=1 plants one flags=2.
+  fix arm: [s7401-ctl] fix=1 in=2 out=1 PASS(retail); R=520192 S=403029; odd=1 (the plant only); phases 2-9; 0 crash.
+  old arm (FLAGFIX=0): [s7401-ctl] fix=0 in=2 out=2 STALE(old); R=520192 S=403019; 0 [s7401-odd]; phases 2-9; 0 crash.
+s7392-era runtime logs (8 runs, owner + RETAIL=1) agree on the send side: kind=S flags only 0/1.
+Conclusion: selects H-none for class BK (no live guest value is mishandled or ignored-but-honoured, PRENMI inert); the flags
+divergence is a latent contract bug, fixed default-on (=0 old), control discriminates PASS vs STALE. Rules out: stale-flag
+non-blocking recv/send as a source of any observed hang/drop. Soak s7401_flags_levels queued (L4/L7/L12, 1 ctl PASS, 0 odd).
+Lib edit: lib/N64ModernRuntime ultramodern/src/mesgqueue.cpp, exported (submodule-patches/N64ModernRuntime.patch).
