@@ -1,24 +1,26 @@
-# NEXT (s7376)
-HYPOTHESIS-ID: lockless-file-containers
+# NEXT (s7377)
+HYPOTHESIS-ID: present-thread-shared-maps
 
-s7375 closed class AS (the 98 s7366 NOLOCK containers; 1 fix: depth-hist diag g_depthMu). It found that s7366 never looked at
-files containing no lock at all: 144 containers in 48 files.
+s7376 closed class AS2 (lock-free-file containers, 126 verdicts) and fixed the port's present-thread INSERTS into the shared
+RT64 targetManager/fbManager (now under workloadMutex; ROGUESQ_S7376_PQLOCK=0 = old). It left the READS: the present thread
+still calls fbManager.find / targetManager lookups before it locks workloadMutex.
 
-Work unit: class AS2. `python3 tools/s7375_nolock_threads.py --lockless -v` lists every container with its accessing functions
-and walker thread labels (AUTO-CONFINED / AUTO-GUEST / REVIEW).
-Steps (offline census + one build + one TSan run only if a fix lands):
- 1. Hand-verdict every REVIEW row in tools/s7375_nolock_reviewed.tsv (same classes: CONFINED / GUEST-SERIAL / HANDOFF /
-    INIT-ONLY / CALLER-LOCKED / NOT-SHARED / CFG-DEAD / FIXED); then `--lockless --check` must print OPEN 0. Expect most rows
-    NOT-SHARED (name collisions) and RT64 State-driver / per-instance CONFINED (s7375 reasoning: State is driven by one thread at a
-    time, the gfx thread or the s6705 RDP-async consumer with rs64_rdpq_drain; the two FramebufferRenderer instances are per thread).
-    Watch especially: librecomp (31 rows: overlays/func_map, mods, config, input, save), rt64 common/preset (config read by the
-    present thread vs written by the inspector or window events), src (4).
- 2. Fix every MULTI (mutex, thread_local, or a magic static); lib/ edits -> ./submodule-patches/export.sh + commit.
- 3. Gate: rebuild build/, s7366/s7374/s7375 --check, 260 s smoke (`env SECS=260 zsh scratch/s7326/run.zsh s7376_dd8 ''`); if a
-    fix landed, TSan arm `zsh tools/build_tsan.sh` then `zsh scratch/s7375/tsan_run.zsh t1 480 ''` (run it in the foreground with
-    a long timeout or with an explicit SIGKILL: s7375's 600 s hold hit the background-task limit and ended by SDL_QUIT) and
-    `python3 tools/s7354_tsan_report.py scratch/s7375/t1/run.log` rc 0 with CTL firing.
-Hypotheses: H-confined (all 144 resolve to one thread / name collision / handoff: AS2 closes with 0 fixes), H-diag-multi (MULTI only
-behind diag env gates: fix anyway), H-live-multi (a MULTI container on the owner path: list it against the parked rare dd4/dd8 gfx
-SIGBUS report).
-Positive control: the s7375 selftest (planted two-thread container -> REVIEW {gfx, task}; s7374 rs64_s7012_cap shape -> {gfx, guest}).
+Work unit: class AT. Enumerate EVERY access to ext.sharedResources-> {framebufferManager, renderTargetManager,
+interpolatedColorTargets, fbConfigChanged ...} in lib/rt64/src/hle/rt64_present_queue.cpp (threadPresent, threadLoop) with the
+lock held at that line (none / workloadMutex / managerMutex / interpolatedMutex). One small python tool
+(tools/s7377_present_lock_table.py) that walks threadPresent tracking `workloadMutex.lock()/unlock()`, scoped_lock and unique_lock
+scopes, prints file:line, access, lock state, upstream-or-port (git blame vs upstream tag, or the s/session comment), and a
+--check against a reviewed TSV.
+Per row verdict: LOCKED / UPSTREAM-UNLOCKED (upstream's own design: viFb find ~line 266, present-time colorFb find) / FIXED.
+Candidate fix: in the non-interpolated path (this port never enables RT64 interpolation? VERIFY: grep interpolationEnabled=true
+fires; log presentFb->interpolationEnabled once), take workloadMutex at the start of the lookup phase (pqVisibleGate) instead of
+at ~line 708, so every find runs under it. Deadlock reasoning from s7376 holds (workload thread under workloadMutex only waits on
+GPU workers).
+Hypotheses: H-upstream-ok (the unlocked reads are upstream design and only race with map rehash: fix only port-added sites),
+H-move-lock (moving the lock earlier is safe and covers all: one change), H-interp (interpolation is live in some arm, so the
+present thread must stay lock-free there: per-site locks only).
+Gate: rebuild, smoke `env SECS=260 zsh scratch/s7326/run.zsh s7377_dd8 ''` (crash 0, present-1024 rt=yes count ~ s7376),
+TSan `zsh tools/build_tsan.sh` + `zsh scratch/s7376/tsan_run.zsh t1 480 ''` copied to scratch/s7377 (foreground, long timeout),
+`python3 tools/s7354_tsan_report.py ...` rc 0, CTL fires, 0 lock-order-inversion. Watch frame time: present now waits on the
+workload thread earlier; compare heaviest20 / VI rate against s7376 smoke in the same recipe.
+Positive control for the tool: the s7376-fixed sites must come out LOCKED, and line ~266 viFb find must come out UNLOCKED.

@@ -194799,3 +194799,32 @@ calling threads instead of s7366's unchecked "thread-confined or handed off by q
   re-run of the s4751 anchor against already-patched ucode; the script has not changed since s7112, and the build links).
 - Rules out: an unlocked shared container on the owner path among the s7366 file set (H-live-multi). Does NOT cover the 144
   lockless-file containers.
+
+## Session 7376 (2026-11-14) — class AS2 (containers in lock-free files) CLOSED: 126 hand verdicts, 1 real cross-thread mutation found and fixed: the port's present-thread diag/follow-draw code inserted into the shared RT64 targetManager/fbManager without workloadMutex
+- Census: `python3 tools/s7375_nolock_threads.py --lockless --check` -> OPEN 0 (144 containers: AUTO-CONFINED 11, AUTO-GUEST 7,
+  hand 126 in tools/s7375_nolock_reviewed.tsv: CONFINED 53 / INIT-ONLY 22 / HANDOFF 16 / CFG-DEAD 13 / CALLER-LOCKED 9 /
+  GUEST-SERIAL 8 / NOT-SHARED 3 / FIXED 2). Most rows are RT64 per-instance state (State on gfx, WorkloadQueue on rt64_render,
+  PresentQueue on rt64_present: e.g. two separate VIHistory instances), Workload objects handed over the cursor mutex, librecomp
+  overlay tables registered at startup and then guest-serial, and developer-inspector state (developerMode off = CFG-DEAD).
+  s7366/s7374/s7375 default --check still OPEN 0; s7375 selftest PASS.
+- FIXED (the MULTI): sharedResources->renderTargetManager / framebufferManager are mutated by the workload thread under
+  workloadMutex (processWorkload holds it for the whole workload, workload_queue.cpp:373) and managerMutex. Port-added
+  present-thread code touched them unlocked: (1) the session-21 present-1024 diag ran fbManager.find + targetManager.get(k, true),
+  which INSERTS a RenderTarget, on every wide-phase present, not env-gated (1339x in s7375 t1, 10888x in this smoke): now
+  try_lock(workloadMutex) + find-only targetMap probe, skip the log line when busy; (2) vi-follow-draw mode 3 (default) find +
+  REGISTER fbManager.get insert: now a blocking workloadMutex lock; (3) ROGUESQ_LOG_FBLIST map iteration: try_lock.
+  Deadlock reasoning: under workloadMutex the workload thread only waits on GPU workers/uploaders (workload_queue.cpp:1037/1039),
+  never on the present thread, and the present thread holds no lock at these points (screenFbChangePoolMutex scope ends at 242);
+  the present thread already takes workloadMutex at line ~676 in the same frame. ROGUESQ_S7376_PQLOCK=0 restores the old code.
+  ORIGIN: writer = the port's own present-thread code (present_queue.cpp present-1024 diag, session 21; follow-draw REGISTER,
+  s82), not the game; the values are legitimate, the access was unsynchronised. Upstream's own present-time fbManager.find()
+  before the workloadMutex lock (line 266) is the same idiom and is NOT fixed here (next unit, class AT).
+- Gate: build/ rebuilt; smoke `env SECS=260 zsh scratch/s7326/run.zsh s7376_dd8 ''` crash=0, 14 abort-cycle resets, late 0,
+  arenafull 0; present-1024 diag 10888x rt=yes on the locked probe (old code s7375 t1: 1339x rt=yes, so the find-only probe loses
+  no hits), 0 busy skips, REGISTER 1 on the locked path. TSan arm (tools/build_tsan.sh; scratch/s7376/tsan_run.zsh t1 480,
+  foreground): crash 0, initMission 1, 3200 reports, 22 groups, CTL x3124 fires, 0 lock-order-inversion, 0 reports in
+  render_target_manager / framebuffer_manager; the only present_queue group is the known swapChainRate BENIGN write moved
+  1075->1107 by this patch (rule added to tools/s7354_tsan_report.py); report rc 0 (s7375 t1 still rc 0).
+- Limits: TSan did NOT flag the old unlocked insert in s7375 t1 either (no positive for this specific race), so the fix rests on
+  static reasoning (single-source for "it could race"); the qualification is "no regression + no new TSan report + no
+  lock-order inversion". Not linked to the parked rare dd4/dd8 gfx SIGBUS; that stays open.

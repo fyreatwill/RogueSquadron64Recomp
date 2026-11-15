@@ -205,10 +205,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID lockless-file-containers): class AS2, 144 containers in the 48 scope files with NO lock.**
-   s7366 skipped those files ("nothing can be inconsistent within it"), but a lock-free file can be touched from two threads.
-   `python3 tools/s7375_nolock_threads.py --lockless` lists them with walker thread labels; give each a hand verdict in
-   tools/s7375_nolock_reviewed.tsv (same classes), fix every MULTI, gate like s7375.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID present-thread-shared-maps): class AT, every present-thread access to the shared RT64
+   fbManager / targetManager / interpolatedColorTargets in rt64_present_queue.cpp, with its lock state.** Upstream (line ~266
+   viFb find) and several port-added finds (force-fb, vi-stale-diag, STALE_NOFB, recentFb, colorFb) read the shared maps before
+   the present thread takes workloadMutex (~line 708 now); decide per site, or move the lock earlier for the lookup phase.
+   **AS2 CLOSED s7376** (`tools/s7375_nolock_threads.py --lockless --check` OPEN 0, 126 hand verdicts): 1 real MULTI fixed. The
+   port's present-thread present-1024 diag (every wide-phase present) inserted into targetManager via get(k,true), and the
+   follow-draw REGISTER inserted into fbManager, both without workloadMutex: now locked (diag try_lock + find-only probe),
+   ROGUESQ_S7376_PQLOCK=0 = old. Smoke 260 s clean (14 aborts), TSan rc 0, CTL fires, 0 lock-order inversions. TSan never saw the
+   old race (fix single-source, static reasoning).
    **AS CLOSED s7375** (tools/s7375_nolock_threads.py + s7375_nolock_reviewed.tsv, `--check`): the 98 s7366 NOLOCK containers,
    walker + hand verdicts CONFINED 37 / CALLER-LOCKED 16 / NOT-SHARED 15 / HANDOFF 9 / INIT-ONLY 6 / GUEST-SERIAL 6 / CFG-DEAD 5
    (RT64 texture-replacement-pack state, inspector-only: upstream race if a pack were loaded) / FIXED 1: the depth-hist diag
@@ -265,7 +270,7 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
       V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
       AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
-      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AS NOLOCK containers s7375 (AS2 lockless files open); AF signal safety s7355; AG unchecked alloc s7356;
+      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AS NOLOCK containers s7375, AS2 lockless files s7376 (AT present-thread maps open); AF signal safety s7355; AG unchecked alloc s7356;
       AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
       s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
       reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census) + runtime half s7372/s7373 (COV=1 arm,

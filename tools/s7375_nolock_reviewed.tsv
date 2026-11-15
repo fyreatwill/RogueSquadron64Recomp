@@ -95,3 +95,130 @@ src/rsp/dpc_bridge.cpp	g_rs64_g1d_walk	CONFINED	gfx thread: rsp_dpc_submit (dpc_
 src/rsp/dpc_bridge.cpp	g_rs64_g1d_walk_cw	CONFINED	gfx thread: rsp_dpc_submit (dpc_bridge.cpp:8454) is reached only from the F5 gfx ucode inside factor5_gfx_runner (main.cpp:6628), which also brackets rs64_dpc_defer_begin/end (main.cpp:6968/7154); factor5_gfx_runner runs on gfx_thread (s7374); the audio ucode issues no DPC writes
 src/rsp/dpc_bridge.cpp	g_s4272_sh	CONFINED	gfx thread: rsp_dpc_submit (dpc_bridge.cpp:8454) is reached only from the F5 gfx ucode inside factor5_gfx_runner (main.cpp:6628), which also brackets rs64_dpc_defer_begin/end (main.cpp:6968/7154); factor5_gfx_runner runs on gfx_thread (s7374); the audio ucode issues no DPC writes
 src/rsp/dpc_bridge.cpp	g_s4272_shadow	CONFINED	gfx thread: rsp_dpc_submit (dpc_bridge.cpp:8454) is reached only from the F5 gfx ucode inside factor5_gfx_runner (main.cpp:6628), which also brackets rs64_dpc_defer_begin/end (main.cpp:6968/7154); factor5_gfx_runner runs on gfx_thread (s7374); the audio ucode issues no DPC writes
+# s7376 class AS2 (lockless files) hand verdicts
+lib/N64ModernRuntime/librecomp/include/librecomp/game.hpp	suffix	NOT-SHARED	Version::suffix per-object member; the to_string thread labels are a name collision across the tree
+lib/N64ModernRuntime/librecomp/include/librecomp/mods.hpp	game_indices	INIT-ONLY	ModManifest member filled by mod scan on main before the guest thread starts, read-only after
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	authors_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	config_option_map	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	config_schema_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	dependencies_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	description_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	display_name_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	enabled_by_default_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	game_mod_id_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	manifest_data	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	minimum_recomp_version_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	mod_game_id	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	mod_id_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	native_libraries_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	optional_dependencies_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	ret	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	short_description_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/mod_manifest.cpp	version_key	INIT-ONLY	constant manifest key strings / parse_manifest locals, mod scan on main at startup before the guest thread exists
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	base_events	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	base_exports	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	ext_base_exports	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	func_map	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	loaded_sections	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	manual_patch_symbols_by_vram	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	patch_code_sections_by_rom	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/N64ModernRuntime/librecomp/src/overlays.cpp	patch_data	GUEST-SERIAL	register_* run at startup (heap.cpp/mod_config_api/mod_hooks init, main, before the guest thread); load/unload/get run from recompiled guest code, serialised by the ultramodern run-one scheduler
+lib/rt64/src/common/rt64_filesystem_directory.h	pathStr	INIT-ONLY	per-instance path set in the ctor, read-only after
+lib/rt64/src/common/rt64_filesystem_zip.cpp	basePath	INIT-ONLY	per-instance path set in the ctor/create, read-only after
+lib/rt64/src/common/rt64_profiling_timer.cpp	history	CONFINED	per-instance timer, each driven by its owning thread (State: gfx, WorkloadQueue: rt64_render, PresentQueue: rt64_present); cross-thread readers are the developer inspector only (developerMode off)
+lib/rt64/src/common/rt64_replacement_database.cpp	ReplacementKnownExtensions	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	operationFilters	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	path	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	relativePath	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	rt64	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	shiftFilters	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	textures	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/common/rt64_replacement_database.cpp	tmemHashToReplaceMap	CFG-DEAD	texture-replacement packs: loaded only from the developer inspector buttons (State::inspect, developerMode off in the port); no pack shipped or configured
+lib/rt64/src/gbi/rt64_gbi.cpp	dataSegments	CONFINED	GBIManager owned by the State interpreter: gfx thread, or the s6705 RDP-async consumer under rs64_rdpq_drain (one driver at a time)
+lib/rt64/src/gbi/rt64_gbi.cpp	gbiCache	CONFINED	GBIManager owned by the State interpreter: gfx thread, or the s6705 RDP-async consumer under rs64_rdpq_drain (one driver at a time)
+lib/rt64/src/gbi/rt64_gbi.cpp	textSegments	CONFINED	GBIManager owned by the State interpreter: gfx thread, or the s6705 RDP-async consumer under rs64_rdpq_drain (one driver at a time)
+lib/rt64/src/gui/rt64_debugger_inspector.cpp	popupCalls	CFG-DEAD	developer inspector UI, developerMode off in the port
+lib/rt64/src/gui/rt64_file_dialog.h	description	NOT-SHARED	FileFilter struct members, per-object temporaries
+lib/rt64/src/gui/rt64_file_dialog.h	extensions	NOT-SHARED	FileFilter struct members, per-object temporaries
+lib/rt64/src/hle/rt64_framebuffer.h	tileCopies	CONFINED	per-Framebuffer member, mutated via State on the gfx thread
+lib/rt64/src/hle/rt64_framebuffer_changes.cpp	changesMap	CONFINED	per-FramebufferChangePool instance: the present thread owns screenFbChangePool (under screenFbChangePoolMutex), the workload thread its own; the get/reset labels are name collisions
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	activeRegionsTMEM	CALLER-LOCKED	State::framebufferManager is gfx-thread; sharedResources->framebufferManager is used by the workload thread under workloadMutex (processWorkload) / managerMutex and by the present thread under workloadMutex at present time
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	cmdListDiscards	CALLER-LOCKED	State::framebufferManager is gfx-thread; sharedResources->framebufferManager is used by the workload thread under workloadMutex (processWorkload) / managerMutex and by the present thread under workloadMutex at present time
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	descriptorReinterpretSets	CALLER-LOCKED	State::framebufferManager is gfx-thread; sharedResources->framebufferManager is used by the workload thread under workloadMutex (processWorkload) / managerMutex and by the present thread under workloadMutex at present time
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	framebuffers	FIXED	s7376: present-thread vi-follow-draw mode 3 find + REGISTER fbManager.get (insert) and the FBLIST iteration ran without workloadMutex: now locked; upstream present-time find() before the workloadMutex lock (present_queue.cpp:266) stays as upstream design
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	reinterpretTileCache	CALLER-LOCKED	State::framebufferManager is gfx-thread; sharedResources->framebufferManager is used by the workload thread under workloadMutex (processWorkload) / managerMutex and by the present thread under workloadMutex at present time
+lib/rt64/src/hle/rt64_framebuffer_manager.cpp	tileCopies	CALLER-LOCKED	State::framebufferManager is gfx-thread; sharedResources->framebufferManager is used by the workload thread under workloadMutex (processWorkload) / managerMutex and by the present thread under workloadMutex at present time
+lib/rt64/src/hle/rt64_framebuffer_manager.h	cmdListCopyRegions	CONFINED	per-FramebufferManager instance: State::framebufferManager driven by the gfx thread; the shared one under workloadMutex/managerMutex
+lib/rt64/src/hle/rt64_framebuffer_manager.h	cmdListDiscards	CONFINED	per-FramebufferManager instance: State::framebufferManager driven by the gfx thread; the shared one under workloadMutex/managerMutex
+lib/rt64/src/hle/rt64_framebuffer_manager.h	cmdListDispatches	CONFINED	per-FramebufferManager instance: State::framebufferManager driven by the gfx thread; the shared one under workloadMutex/managerMutex
+lib/rt64/src/hle/rt64_framebuffer_manager.h	copyRegionTargets	CONFINED	per-FramebufferManager instance: State::framebufferManager driven by the gfx thread; the shared one under workloadMutex/managerMutex
+lib/rt64/src/hle/rt64_framebuffer_storage.cpp	handleVector	HANDOFF	per-Workload storage filled on the gfx thread, read by the workload thread after the WorkloadQueue cursor handoff (cursorMutex)
+lib/rt64/src/hle/rt64_framebuffer_storage.cpp	rdramData	HANDOFF	per-Workload storage filled on the gfx thread, read by the workload thread after the WorkloadQueue cursor handoff (cursorMutex)
+lib/rt64/src/hle/rt64_game_frame.cpp	curCallHashMap	CONFINED	GameFrame belongs to WorkloadQueue matching (rt64_render thread); set() from the gfx-side labels is a name collision
+lib/rt64/src/hle/rt64_game_frame.cpp	orthographicScenes	CONFINED	GameFrame belongs to WorkloadQueue matching (rt64_render thread); set() from the gfx-side labels is a name collision
+lib/rt64/src/hle/rt64_game_frame.cpp	perspectiveScenes	CONFINED	GameFrame belongs to WorkloadQueue matching (rt64_render thread); set() from the gfx-side labels is a name collision
+lib/rt64/src/hle/rt64_game_frame.cpp	prevCallHashMap	CONFINED	GameFrame belongs to WorkloadQueue matching (rt64_render thread); set() from the gfx-side labels is a name collision
+lib/rt64/src/hle/rt64_game_frame.cpp	workloads	CONFINED	GameFrame belongs to WorkloadQueue matching (rt64_render thread); set() from the gfx-side labels is a name collision
+lib/rt64/src/hle/rt64_game_frame.cpp	workloadsModified	CONFINED	GameFrame belongs to WorkloadQueue matching (rt64_render thread); set() from the gfx-side labels is a name collision
+lib/rt64/src/hle/rt64_game_frame.h	workloads	CONFINED	GameFrame member, rt64_render thread
+lib/rt64/src/hle/rt64_light_manager.cpp	directionalLights	CONFINED	per-Workload light manager, built on the gfx thread and consumed after the cursor handoff
+lib/rt64/src/hle/rt64_light_manager.cpp	pointLights	CONFINED	per-Workload light manager, built on the gfx thread and consumed after the cursor handoff
+lib/rt64/src/hle/rt64_projection.cpp	gameCalls	HANDOFF	Projection lives in a Workload: built on the gfx thread, consumed by the workload thread after the cursor handoff
+lib/rt64/src/hle/rt64_projection.cpp	pointLights	HANDOFF	Projection lives in a Workload: built on the gfx thread, consumed by the workload thread after the cursor handoff
+lib/rt64/src/hle/rt64_rdp_tmem.cpp	dumpedSet	CONFINED	State TMEM model: gfx thread or the RDP-async consumer under rs64_rdpq_drain
+lib/rt64/src/hle/rt64_rdp_tmem.cpp	hashSet	CONFINED	State TMEM model: gfx thread or the RDP-async consumer under rs64_rdpq_drain
+lib/rt64/src/hle/rt64_rsp.cpp	clipRatios	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	geometryModeStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	indices	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	invViewProjMatrixStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	lights	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	modelMatrixPhysicalAddressStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	modelMatrixSegmentedAddressStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	modelMatrixStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	otherModeStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	projMatrixStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	projectionMatrixPhysicalAddressStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	projectionMatrixSegmentedAddressStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	segments	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	vertices	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	viewMatrixStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	viewProjMatrixStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_rsp.cpp	viewportStack	CONFINED	RT64 HLE RSP state owned by State: gfx thread only (this port runs the F5 ucode LLE; HLE RSP paths idle); reset() labels are name collisions
+lib/rt64/src/hle/rt64_vi.cpp	factors	CONFINED	two separate VIHistory instances: State::viHistory (gfx) and PresentQueue::viHistory (rt64_present)
+lib/rt64/src/hle/rt64_vi.cpp	history	CONFINED	two separate VIHistory instances: State::viHistory (gfx) and PresentQueue::viHistory (rt64_present)
+lib/rt64/src/hle/rt64_workload.cpp	commandWarnings	HANDOFF	Workload filled on the gfx thread, handed to the workload thread through the WorkloadQueue cursor (cursorMutex)
+lib/rt64/src/hle/rt64_workload.cpp	fbPairs	HANDOFF	Workload filled on the gfx thread, handed to the workload thread through the WorkloadQueue cursor (cursorMutex)
+lib/rt64/src/hle/rt64_workload.cpp	physicalAddressTransformMap	HANDOFF	Workload filled on the gfx thread, handed to the workload thread through the WorkloadQueue cursor (cursorMutex)
+lib/rt64/src/hle/rt64_workload.cpp	pointLights	HANDOFF	Workload filled on the gfx thread, handed to the workload thread through the WorkloadQueue cursor (cursorMutex)
+lib/rt64/src/hle/rt64_workload.cpp	spriteCommands	HANDOFF	Workload filled on the gfx thread, handed to the workload thread through the WorkloadQueue cursor (cursorMutex)
+lib/rt64/src/hle/rt64_workload.cpp	transformIdMap	HANDOFF	Workload filled on the gfx thread, handed to the workload thread through the WorkloadQueue cursor (cursorMutex)
+lib/rt64/src/hle/rt64_workload.h	modifyPosUints	HANDOFF	Workload members, same cursor handoff as rt64_workload.cpp
+lib/rt64/src/hle/rt64_workload.h	triPosFloats	HANDOFF	Workload members, same cursor handoff as rt64_workload.cpp
+lib/rt64/src/hle/rt64_workload.h	worldIndices	HANDOFF	Workload members, same cursor handoff as rt64_workload.cpp
+lib/rt64/src/hle/rt64_workload.h	worldTransformVertexIndices	HANDOFF	Workload members, same cursor handoff as rt64_workload.cpp
+lib/rt64/src/preset/rt64_preset.h	presetMap	INIT-ONLY	preset JSON read at startup, written only from the developer inspector (off)
+lib/rt64/src/preset/rt64_preset_draw_call.cpp	cachedKeyMap	CONFINED	State::drawCallLibrary cache, gfx thread (findMaterialsInCache state.cpp:3268); clearCache from the inspector only
+lib/rt64/src/preset/rt64_preset_draw_call.cpp	materialCache	CONFINED	State::drawCallLibrary cache, gfx thread (findMaterialsInCache state.cpp:3268); clearCache from the inspector only
+lib/rt64/src/preset/rt64_preset_draw_call.cpp	materialPresetName	CONFINED	State::drawCallLibrary cache, gfx thread (findMaterialsInCache state.cpp:3268); clearCache from the inspector only
+lib/rt64/src/preset/rt64_preset_draw_call.cpp	nameIndexMap	CONFINED	State::drawCallLibrary cache, gfx thread (findMaterialsInCache state.cpp:3268); clearCache from the inspector only
+lib/rt64/src/preset/rt64_preset_inspector.h	deletePresetName	CFG-DEAD	developer inspector UI state, developerMode off
+lib/rt64/src/preset/rt64_preset_inspector.h	selectedPresetName	CFG-DEAD	developer inspector UI state, developerMode off
+lib/rt64/src/preset/rt64_preset_light.cpp	lightMap	CFG-DEAD	light presets: inspector library + JSON at startup; developerMode off
+lib/rt64/src/preset/rt64_preset_light.cpp	selectedLightName	CFG-DEAD	light presets: inspector library + JSON at startup; developerMode off
+lib/rt64/src/render/rt64_buffer_uploader.h	defaultViews	CONFINED	per-uploader instance owned by a FramebufferRenderer, one per driving thread
+lib/rt64/src/render/rt64_look_at_processor.cpp	uploads	CONFINED	per-processor upload list, owned by the workload thread FramebufferRenderer
+lib/rt64/src/render/rt64_native_target.cpp	readBufferHistory	CALLER-LOCKED	per-NativeTarget history, reached through RenderTargets used by the workload thread under workloadMutex and the present thread under workloadMutex
+lib/rt64/src/render/rt64_native_target.cpp	writeBufferHistory	CALLER-LOCKED	per-NativeTarget history, reached through RenderTargets used by the workload thread under workloadMutex and the present thread under workloadMutex
+lib/rt64/src/render/rt64_projection_processor.cpp	uploads	CONFINED	per-processor upload list, owned by the workload thread FramebufferRenderer
+lib/rt64/src/render/rt64_render_target_manager.cpp	overrideMap	CALLER-LOCKED	sharedResources->renderTargetManager: workload thread under workloadMutex (setOverride/removeOverride workload_queue.cpp:444/1052) or managerMutex (destroyAll), present thread under workloadMutex (present_queue.cpp:680)
+lib/rt64/src/render/rt64_render_target_manager.cpp	storageMap	CALLER-LOCKED	sharedResources->renderTargetManager: workload thread under workloadMutex (setOverride/removeOverride workload_queue.cpp:444/1052) or managerMutex (destroyAll), present thread under workloadMutex (present_queue.cpp:680)
+lib/rt64/src/render/rt64_render_target_manager.cpp	targetMap	FIXED	s7376: present-thread present-1024 diag called targetManager.get(k,true) (inserts) every wide-phase present with no workloadMutex (1339x in s7375 t1) and ROGUESQ_LOG_FBLIST iterated targetMap unlocked: now try-lock + find-only probe; other users CALLER-LOCKED (workloadMutex/managerMutex)
+lib/rt64/src/render/rt64_render_worker.cpp	name	INIT-ONLY	RenderWorker name set in the ctor
+lib/rt64/src/render/rt64_texture_cache.h	relativePath	HANDOFF	StreamDescription/ReplacementDirectory value types copied into the texture-stream queue under its mutex (texture_cache.cpp)
+lib/rt64/src/render/rt64_texture_cache.h	zipBasePath	HANDOFF	StreamDescription/ReplacementDirectory value types copied into the texture-stream queue under its mutex (texture_cache.cpp)
+lib/rt64/src/render/rt64_tile_processor.cpp	uploads	CONFINED	per-processor upload list, owned by the workload thread FramebufferRenderer
+lib/rt64/src/render/rt64_transform_processor.cpp	uploads	CONFINED	per-processor upload list, owned by the workload thread FramebufferRenderer
+src/rsp/s7096_fwd_cover.cpp	drops	CONFINED	env-gated diag (ROGUESQ_S7096_FWD): every entry point is called from the gfx RSP task path; clear/finish labels are name collisions
+src/rsp/s7096_fwd_cover.cpp	pend	CONFINED	env-gated diag (ROGUESQ_S7096_FWD): every entry point is called from the gfx RSP task path; clear/finish labels are name collisions
+src/rsp/s7096_fwd_cover.cpp	snap	CONFINED	env-gated diag (ROGUESQ_S7096_FWD): every entry point is called from the gfx RSP task path; clear/finish labels are name collisions
+src/rsp/s7097_edit_census.cpp	g_cmds	CONFINED	env-gated diag (ROGUESQ_S7097_EDIT): begin/pre/post/end from the gfx RSP task path; find() labels are a name collision
