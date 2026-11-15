@@ -196241,3 +196241,47 @@ emitted aligned load/store. Class BW closed, no code change. Next: class BX, FP 
 refutes H-kseg1-live: 0 KSEG1-RDRAM constants, so the non-aliased mapping has no static site. That last point rests on a
 static census plus 0 crash in the soaks. **Next discriminator:** class BX, FP compare emission under NaN/inf/denormal
 operands vs the MIPS cond table, with mutant control (NEXT.md s7414; H-equal / H-nan / H-fmt / H-stale).
+
+## Session 7414 (2026-11-15) — class BX FP compare + FP branch emission closed (H-equal): 2,837 c.cond sites / 282 verbatim forms vs the MIPS cond table 0 mismatches incl. NaN/inf/+-0, mutant control PASS x4, 2,796 bc1x polarity-correct and reaching-def CLEAN, generator's unordered-cond table wrong on NaN but 0 game sites
+
+HYPOTHESIS-ID: fp-compare-emission-semantics. Work unit from NEXT.md s7414 (M3 idiom-class audit, item 3). No code change.
+
+**Instrument (new):** `tools/s7414_fp_compare.py [K]` (rc 0 = H-equal + CONTROL PASS + all bc1x CLEAN, ~4 s; output of
+this run in scratch/s7414_fp_compare.out).
+- Generator facts (../N64Recomp/src/operations.cpp + cgenerator.cpp): c.cond.fmt -> `c1cs = ctx->fS.<fl|d> OP ctx->fT.<fl|d>;`
+  into a function-local `int c1cs = 0;`; bc1t/tl -> `if (c1cs) {`, bc1f/fl -> `if (!c1cs) {`; cfc1/ctc1 -> get/set_cop1_cs,
+  which touch the rounding mode only (bit 23 is never read or written). The table maps un/sf/ngle -> `0`, ueq/ngl -> `==`,
+  ult/nge -> `<`, ule/ngt -> `<=`: all 8 unordered conds are WRONG when an operand is NaN.
+- Census: the game emits only c.eq.s 318, c.lt.s 1653, c.le.s 823, c.ole.s 10, c.eq.d 2, c.lt.d 14, c.le.d 17 = 2,837 sites,
+  all ordered conds, so the unordered-table defect is LATENT (0 game sites). 0 statements non-conforming to the disasm
+  (operator per cond, .fl for .s / .d for .d, fs/ft registers).
+- Semantics: 282 distinct forms compiled verbatim against the real header (-O2 -DRS64_BYTE_WATCH, force header), driven with
+  all 16x16 special pairs (+-0, min/max denormal, min normal, +-1, 1+-ulp, max, +-inf, qNaN, sNaN, -NaN) + 2000 random /
+  equal / near-equal pairs per form, vs the MIPS cond table (bit0 unordered, bit1 equal, bit2 less) on exact bit-pattern
+  ordering. FZ=0: 636,192 cases 0 MISM. FZ=1 (arm64 FPCR.FZ, the ROGUESQ_FTZ default since s7405): 0 non-denormal MISM;
+  3,336 denormal-input cases differ (FZ flushes compare inputs). Second line of evidence that this is unreached at runtime:
+  s7406's build_fpat wraps `c1cs =` statements too (s7406_fpat_transform.py ST regex) and measured 0 IDC at any guest stmt
+  (L5 dd8 plus soaks L4/L7/L12).
+- Positive control, same run: operator mutants on the real forms, each flags only its own op: lt->`!(a>=b)` 9335,
+  le->`!(a>b)` 5179, eq->ueq 4595, ole->`<` 675; other ops 0. CONTROL PASS x4. The latent table scored on a synthetic
+  emission flags exactly the 8 unordered conds x 2 fmts.
+- Branches: 2,796 bc1x (bc1f 1512, bc1tl 597, bc1t 490, bc1fl 197), 0 polarity errors; 3 in runMenuModelViewerScreen are
+  prefixed by the s3288 viewer-fade logger, which takes c1cs by value (pass-through).
+- Reaching definitions over each function's guest CFG (delay slots, likely-branch nullification, jal/jalr/bal calls after
+  their delay slot, switch-table targets parsed from `switch (jr_addend_X >> 2)`, jr $ra / indirect jr = exit; tokens
+  D=c.cond, E=entry, X=call since, W=ctc1 since): 2,786 CLEAN; 7 in tickCraftSelectScreen are a dead interior copy of
+  handleCraftSelectInput (its jal 0x800AF6AC calls the separate function, whose twin sites are CLEAN); 3 are in
+  data_gap_800BCC38 / 800CC3D4 / 80102A98 (0 static callers; a bc1 at or next to the entry = data). Planted functions
+  (compare->call->bc1, entry path skipping the compare, ctc1 between, compare only in a likely delay slot, clean) are
+  classified X / D+E / W / D+E / CLEAN: CONTROL PASS.
+
+**Dead ends in this session (harness bugs, all fixed before the verdict):** (1) a same-register form (c.eq.s f4,f4, the NaN
+self-test) scored false MISMs because the harness set the model operand from the first write, not the last; (2) treating
+every function address as a jump-table target produced 345 false D+X / 179 D+E reaches; real switch targets removed them
+all; (3) disasm comments placed mid-line after patched statements, and fixup-renamed `static void` inner bodies (s5858
+rs5858_inner), were not harvested and left 22 sites UNREACHED.
+
+**Rules out:** H-nan (no used cond differs from MIPS on NaN), H-fmt (every .d compare reads .d, every .s reads .fl),
+H-stale (every live bc1x reads a c1cs written in-function with no call/ctc1 between). Selects H-equal; closes class BX.
+Caveat: the latent unordered-cond table would mis-lower any future c.un/ueq/ult/ule/ngle/ngl/nge/ngt; re-run the tool after
+any ROM/asm change. Next: class BY FP arithmetic + move emission (NEXT.md s7415).

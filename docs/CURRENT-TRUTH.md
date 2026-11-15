@@ -517,15 +517,19 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 21. **BV CLOSED s7412 (integer emission on 64-bit GPRs): H-equal.** `tools/s7412_int_emission.py`: 14,687 verbatim forms of
     44 ops vs VR4300 model, 3.76e6 cases 0 MISM; 5 mutants CONTROL PASS. div-by-0: 132 break-7 guarded + 3 const (= s7085)
     + 3 dead data_gap. 16 non-canonical MusyX flows all andi-masked to low word.
-22. **BW CLOSED s7413 (aligned load/store macros): H-equal, no code change.** `tools/s7413_aligned_ldst.py` (rc 0, ~25 s):
-    101,169 pure sites of 15 ops (lb..sdc1), 58,654 verbatim forms, real header -DRS64_BYTE_WATCH -O2, 40 cases/form vs a
-    byte-wise BE model from the disasm operands (every legal alignment, KSEG0): 0 MISM, 0 stray writes (whole image compared);
-    plain MEM_B also 0. Mutants (MEM_B/BU ^1, MEM_H ^0, HU/W/WU sign swap, SD/LD hi-lo swap) each flag only their own ops:
-    CONTROL PASS x8. 1,738 guarded/gated sites (s6287/s6826/s4307 patches, alloc guards) skipped. KSEG1 is NOT aliased (0xA0..
-    -> rdram+0x20000000, PROT_NONE) but 0 lui 0xA000-0xA07F constants exist (0xB0 = PI ROM DMA args, 0xA8/0xAA = rand/div
-    magic, 0xB5-0xBF = DL opcodes); 206 $zero-base sites all in 3 data_gap_* fns with 0 callers. Single-source model.
-23. **Next audit candidate:** class BX, FP compare emission (c.cond.s/d all 16 conds incl. NaN/unordered + bc1t/bc1f/
-    bc1tl/bc1fl reading the condition bit). NEXT.md s7414.
+22. **BW CLOSED s7413 (aligned load/store macros): H-equal.** `tools/s7413_aligned_ldst.py`: 58,654 verbatim forms of 15 ops
+    vs a byte-wise BE model, 0 MISM/0 stray, mutants CONTROL PASS x8. KSEG1 not aliased (PROT_NONE) but 0 RDRAM-KSEG1
+    constants; 206 $zero-base sites in 3 dead data_gap_* fns. Single-source model.
+23. **BX CLOSED s7414 (FP compare + bc1x): H-equal, no code change.** `tools/s7414_fp_compare.py` (rc 0, ~4 s): game uses only
+    c.eq/lt/le/ole (.s 2804, .d 33 sites), all ordered -> C ==/</<= exact incl. NaN; 282 verbatim forms x all-pairs specials
+    (+-0, denormals, +-inf, qNaN/sNaN) + random, 1.27e6 cases 0 MISM at host FZ=0. FZ=1 (default) differs on denormal inputs
+    only; runtime-unreached (s7406: 0 IDC on any guest stmt incl. c1cs). Mutants (lt->ult, le->ule, eq->ueq, ole->olt)
+    CONTROL PASS x4. Generator table wrong on NaN for all 8 unordered conds (un/ueq/ult/ule/ngle/ngl/nge/ngt): LATENT, 0 sites
+    -- re-run this tool after any ROM/asm change. 2,796 bc1x: polarity 0 bad; reaching-def CFG (delay slots, likely, calls,
+    switch tables): 2,786 CLEAN, 7 dead interior copies (twin in handleCraftSelectInput CLEAN), 3 in dead data_gap fns;
+    plants (call/entry/ctc1/likely) CONTROL PASS. cfc1/ctc1 (3 pairs) touch rounding mode only.
+24. **Next audit candidate:** class BY, FP arithmetic + move emission (add/sub/mul/div/sqrt/abs/neg/mov .s/.d, mtc1/mfc1/
+    dmtc1/dmfc1) vs an IEEE/VR4300 model, both FZ arms. NEXT.md s7415.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
 24. **When 1-23 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
