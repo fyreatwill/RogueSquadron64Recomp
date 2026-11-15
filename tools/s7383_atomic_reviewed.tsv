@@ -1,0 +1,103 @@
+# s7383 class AY verdicts: key var|class <TAB> verdict reason (tools/s7383_atomic_order_census.py)
+caller|TUPLE-RELAXED	DIAG g_m5_vi_commit row: env-gated M5 VI-commit probe (returns before the stores unless enabled), fields only printed/compared for a log key
+g_cine_iter|VALUE-RELAXED	DIAG cinematic watchdog breadcrumb (iter/tid/ms), read only by the stuck-dump watchdog print
+g_cine_last_ms|TUPLE-RELAXED	DIAG cinematic watchdog breadcrumb (iter/tid/ms), read only by the stuck-dump watchdog print
+g_cine_tid|TUPLE-RELAXED	DIAG cinematic watchdog breadcrumb (iter/tid/ms), read only by the stuck-dump watchdog print
+g_e9prov_join_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_flz_fault_armed|MIXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_fault_enabled|MIXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_fault_slot|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_fault_want|MIXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_last_fa|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_last_in_hdr|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_last_lr|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_last_n|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_last_pc|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_flz_last_want|VALUE-RELAXED	DIAG fault-zone (FLZ) watch: env-gated fault-injection probe; arm/want gates use release/acquire, relaxed rows are counters/breadcrumbs only printed
+g_inline_probe_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_route_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_summaries|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_boot_130|TUPLE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_boot_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_chunk_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_entry_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_pairs|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_post_130|TUPLE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_reload_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_skip_130|TUPLE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_source_lines|VALUE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_inline_probe_trigen_staged_dram|TUPLE-RELAXED	DIAG dpc_bridge inline/trigen probe line counters and staged addresses, env-gated, printed only
+g_last_fullsync_addr|MIXED	VALUE release store / acquire loads on the hot path; the relaxed load is the stats dump snapshot (6484) that only prints it
+g_m5_host_fault_enabled|MIXED	DIAG M5 fault probe, env-gated; pending_* fields are published by the release store of pending_n and read after its acquire
+g_m5_task_fault_pending_pc|VALUE-RELAXED	DIAG M5 fault probe, env-gated; pending_* fields are published by the release store of pending_n and read after its acquire
+g_m5_task_fault_pending_phys|VALUE-RELAXED	DIAG M5 fault probe, env-gated; pending_* fields are published by the release store of pending_n and read after its acquire
+g_m5_task_fault_pending_value|VALUE-RELAXED	DIAG M5 fault probe, env-gated; pending_* fields are published by the release store of pending_n and read after its acquire
+g_m5_task_fault_pending_width|VALUE-RELAXED	DIAG M5 fault probe, env-gated; pending_* fields are published by the release store of pending_n and read after its acquire
+g_qh|MIXED	VALUE s7106 SPSC ring: each side loads its own index relaxed and the peer index acquire, publishes its index release (correct SPSC pattern)
+g_qt|MIXED	VALUE s7106 SPSC ring: each side loads its own index relaxed and the peer index acquire, publishes its index release (correct SPSC pattern)
+g_recv_n|VALUE-RELAXED	DIAG probe counters/flags, values only printed
+g_rs64_dd_blk|VOLATILE	DIAG volatile tag printed on [fbdump]/G1CF lines
+g_rs64_dd_scene|VOLATILE	SAMETHREAD written by the s6903 cinegate patch in guest code and read by rs64_s6904_fog / rs64_s6911_mapidx, all game-thread guest hooks
+g_rs64_g1cf_tasks|VOLATILE	DIAG s6070 G1CF counter (non-atomic ++ on the RSP path, reset on VI): only printed under the G1CF log; a lost increment only miscounts a log column
+g_rs64_g1d_join_ci_a|VALUE-RELAXED	DIAG G1d join probe fields, env-gated, printed only
+g_rs64_g1d_join_ci_w|VALUE-RELAXED	DIAG G1d join probe fields, env-gated, printed only
+g_rs64_g1d_join_cis|VALUE-RELAXED	DIAG G1d join probe fields, env-gated, printed only
+g_rs64_g1d_join_hi|VALUE-RELAXED	DIAG G1d join probe fields, env-gated, printed only
+g_rs64_g1d_join_lo|VALUE-RELAXED	DIAG G1d join probe fields, env-gated, printed only
+g_rs64_g1d_join_phase|VALUE-RELAXED	DIAG G1d join probe fields, env-gated, printed only
+g_rs64_g1d_paused|VALUE-RELAXED	VALUE pause-menu state int is itself the datum (stamped every frame by the guest hook, read by the gfx bridge gate)
+g_rs64_g1d_rdram|VALUE-RELAXED	VALUE rdram base pointer: the pointee is allocated before any thread starts (published by thread creation); the store just repeats the same pointer every swap
+g_rs64_last_drawn_fb_siz|TUPLE-RELAXED	FIXED s7383: writer also publishes the tuple as one 64-bit word (g_rs64_last_drawn_packed, store-release); follow-draw mode 3 (default) and the 1024-phase diag read it via rs64_last_drawn_snapshot (one load-acquire); ROGUESQ_S7383_FBPACK=0 old; remaining separate-field readers are log-only (tilecopy-fb, rt64_state address-only compares)
+g_rs64_last_drawn_fb_width|TUPLE-RELAXED	FIXED s7383: writer also publishes the tuple as one 64-bit word (g_rs64_last_drawn_packed, store-release); follow-draw mode 3 (default) and the 1024-phase diag read it via rs64_last_drawn_snapshot (one load-acquire); ROGUESQ_S7383_FBPACK=0 old; remaining separate-field readers are log-only (tilecopy-fb, rt64_state address-only compares)
+g_rs64_last_drawn_fb|TUPLE-RELAXED	FIXED s7383: writer also publishes the tuple as one 64-bit word (g_rs64_last_drawn_packed, store-release); follow-draw mode 3 (default) and the 1024-phase diag read it via rs64_last_drawn_snapshot (one load-acquire); ROGUESQ_S7383_FBPACK=0 old; remaining separate-field readers are log-only (tilecopy-fb, rt64_state address-only compares)
+g_rs64_last_guest_pc|VOLATILE	DIAG crash breadcrumb: single writer (game thread), read by the crash handler print
+g_rs64_lb_trig|VALUE-RELAXED	DIAG span-dump trigger swap number (env-gated lbspan/wsheetpos dump), consumed by exchange
+g_rs64_m5_b40_route_ordinal|VALUE-RELAXED	DIAG M5 b40 route probe, env-gated, values only logged
+g_rs64_m5_pre_dma_writer_len|TUPLE-RELAXED	DIAG M5 pre-DMA writer breadcrumb, env-gated M5 probe, values only printed
+g_rs64_m5_pre_dma_writer_pc|TUPLE-RELAXED	DIAG M5 pre-DMA writer breadcrumb, env-gated M5 probe, values only printed
+g_rs64_m5_pre_dma_writer_phys|TUPLE-RELAXED	DIAG M5 pre-DMA writer breadcrumb, env-gated M5 probe, values only printed
+g_rs64_m5_pre_dma_writer_value|TUPLE-RELAXED	DIAG M5 pre-DMA writer breadcrumb, env-gated M5 probe, values only printed
+g_rs64_pcm_consumer_count|VALUE-RELAXED	VALUE guest address / count scalars, the value is the datum (no host memory behind it), used for diagnostics rows
+g_rs64_pcm_task_data_ptr|VALUE-RELAXED	VALUE guest address / count scalars, the value is the datum (no host memory behind it), used for diagnostics rows
+g_rs64_radar_epoch|TUPLE-RELAXED	VALUE swap stamp + VI epoch for the radar window gate; a torn pair only shifts the 8-swap window edge by one call, same as a mark one frame later
+g_rs64_radar_swap|TUPLE-RELAXED	VALUE swap stamp + VI epoch for the radar window gate; a torn pair only shifts the 8-swap window edge by one call, same as a mark one frame later
+g_rs64_rand_trace|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+g_rs64_swap_n|VALUE-RELAXED	VALUE swap ordinal: single writer (osViSwapBuffer hook), every reader uses it as a frame number for gates/logs; no data published through it
+g_rs64_wsheetpos_trig|VALUE-RELAXED	DIAG span-dump trigger swap number (env-gated lbspan/wsheetpos dump), consumed by exchange
+g_rsp_full_sync_seen|MIXED	VALUE release store / acquire loads on the hot path; the relaxed load is the stats dump snapshot (6484) that only prints it
+g_s6559_pend|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+g_task_bridge_e9|VALUE-RELAXED	VALUE per-task counters: relaxed fetch_add on the RSP thread, release reset at task start, acquire reads by the same task path; count is the datum
+g_task_synthetic_fullsyncs|VALUE-RELAXED	VALUE per-task counters: relaxed fetch_add on the RSP thread, release reset at task start, acquire reads by the same task path; count is the datum
+g_vi_screen_request|VALUE-RELAXED	DIAG VI boundary probe: framebuffer value logged by rs64_vi_boundary_log only
+g_vifsDecisionSnapshot|TUPLE-RELAXED	DIAG crash-snapshot fields read only by the crash handler print (rs64_get_vifs_crash_snapshot); a torn row only mislabels a post-mortem line
+g_vifsLastFireDecisionSnapshot|TUPLE-RELAXED	DIAG crash-snapshot fields read only by the crash handler print (rs64_get_vifs_crash_snapshot); a torn row only mislabels a post-mortem line
+g_vifsLastFireWasStalledSnapshot|TUPLE-RELAXED	DIAG crash-snapshot fields read only by the crash handler print (rs64_get_vifs_crash_snapshot); a torn row only mislabels a post-mortem line
+g_vifsStalledNowSnapshot|TUPLE-RELAXED	DIAG crash-snapshot fields read only by the crash handler print (rs64_get_vifs_crash_snapshot); a torn row only mislabels a post-mortem line
+g_vtx_fault_enabled|MIXED	DIAG vertex fault probe enable flag; release store at arm, relaxed reread only on the already-armed path
+g_wp_addr|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+g_wp_hit_count|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+last_b40_return|TUPLE-RELAXED	DIAG M5 b40 route probe, env-gated, values only logged
+last_b40_stored|TUPLE-RELAXED	DIAG M5 b40 route probe, env-gated, values only logged
+nsites|MIXED	LOCKED sp.cpp site table: relaxed reload happens under the spin lock (exchange acquire / store release); readers load acquire
+origin|TUPLE-RELAXED	DIAG g_m5_vi_commit row: env-gated M5 VI-commit probe (returns before the stores unless enabled), fields only printed/compared for a log key
+phase_rows|VALUE-RELAXED	DIAG M5 b40 route probe, env-gated, values only logged
+phase_row|VALUE-RELAXED	DIAG M5 b40 route probe, env-gated, values only logged
+phase|TUPLE-RELAXED	DIAG g_m5_vi_commit row: env-gated M5 VI-commit probe (returns before the stores unless enabled), fields only printed/compared for a log key
+requested_width|VALUE-RELAXED	DIAG g_m5_vi_commit row: env-gated M5 VI-commit probe (returns before the stores unless enabled), fields only printed/compared for a log key
+rows|VALUE-RELAXED	DIAG probe counters/flags, values only printed
+rs64_run_tok_g|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+rs64_s4234_g|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+rs64_s6843_lo|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+rs64_ucode_cap_fires_g|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+rs64_vi_n_g|VOLATILE	VALUE VI counter: single writer (render context update_screen), readers use it as a log/phase tag
+rs64_vimode_n_g|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+rs64_vsrc_lo|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+s6968_acq_ema|TUPLE-RELAXED	VALUE two independent EMAs, each single-writer (workload / present thread) read-modify-written by its own thread; the VI thread reads each as its own datum (ROGUESQ_VI_LOCK, default 0); not a tuple
+s6968_err_ema|TUPLE-RELAXED	VALUE two independent EMAs, each single-writer (workload / present thread) read-modify-written by its own thread; the VI thread reads each as its own datum (ROGUESQ_VI_LOCK, default 0); not a tuple
+s6968_vsync_s|VALUE-RELAXED	VALUE presented-time scalar is itself the datum (VI lock, default off)
+s_dumped|VALUE-RELAXED	DIAG probe counters/flags, values only printed
+s_hle_disabled|VALUE-RELAXED	VALUE one-way SEH kill-switch bools / streak count; the flag itself is the datum, no state published with it
+s_last_val|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed off through it
+s_rdp_disabled|VALUE-RELAXED	VALUE one-way SEH kill-switch bools / streak count; the flag itself is the datum, no state published with it
+s_seh_streak|VALUE-RELAXED	VALUE one-way SEH kill-switch bools / streak count; the flag itself is the datum, no state published with it
+width|TUPLE-RELAXED	DIAG g_m5_vi_commit row: env-gated M5 VI-commit probe (returns before the stores unless enabled), fields only printed/compared for a log key

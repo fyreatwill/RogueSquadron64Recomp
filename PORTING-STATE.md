@@ -195092,3 +195092,45 @@ Recomp Boot threads (lib/N64ModernRuntime, exported to submodule-patches/N64Mode
 Rules out: a hot thread at UTILITY/BACKGROUND by default (none); RT64 present/workload being hot (< 2% each).
 Conclusion: this selects H-gap (hot [Game]/Gfx threads at DEFAULT QoS by default) and refutes H-covered for them and H-invert on the hot path; class AX closes. Next discriminator: class AY atomic memory-ordering census (NEXT.md).
 
+
+## Session 7383 (2026-11-14) — class AY (every host atomic with an explicit memory_order + every static volatile) CLOSED: one default-path torn tuple (RT64 last-drawn framebuffer addr/width/siz read unlocked by follow-draw mode 3) now published as one packed word, store-release / load-acquire; everything else counters, values, SPSC indices or env-gated diagnostics
+
+What ran:
+- Census `tools/s7383_atomic_order_census.py` (src/main, src/rsp, lib/rt64/src/{hle,render,common,rhi,apple,gui,shared},
+  lib/N64ModernRuntime/{ultramodern,librecomp}; thirdparty/contrib excluded). 588 explicit-order ops on 250 atomics + 16
+  namespace/static volatiles. Automatic classes: COUNTER 131 and ORDERED 33 need no verdict; TUPLE-RELAXED 27, VALUE-RELAXED 49,
+  MIXED 10, VOLATILE 16 = 102 hand verdicts in tools/s7383_atomic_reviewed.tsv. `--check` rc 0: 0 unreviewed, 0 stale, 0 PUBLISH,
+  controls PASS (a planted relaxed field pair read together -> TUPLE-RELAXED, a fetch_add -> COUNTER, a release/acquire flag ->
+  ORDERED, a lone relaxed flag -> VALUE-RELAXED, a static volatile -> VOLATILE, and the real g_rs64_last_drawn_fb -> TUPLE-RELAXED).
+  The first control run failed (my planted lone flag sat within 4 lines of the pair, so it was a genuine pair); moved it to its own function.
+- Verdicts: H-relaxed-publish selected for ONE row group, H-ordered for the rest. Relaxed rows are counters, scalars that are
+  themselves the datum (swap ordinal, pause state, rdram base pointer allocated before any thread, SEH kill switches), the s7106
+  SPSC ring (own index relaxed, peer index acquire, publish release = correct), the sp.cpp site table (under its spin lock), or
+  env-gated diagnostics (M5/FLZ/vtx fault probes: pending fields ARE published by a release store of pending_n; crash-snapshot
+  fields; G1d/inline/trigen probes). Static volatiles: breadcrumbs / log tags / probe state; g_rs64_dd_scene is game-thread only
+  (s6903 cinegate guest patch writes, s6904 fog / s6911 mapidx guest hooks read). Diag-only defect left as-is: the M5 VI-commit
+  probe does its release store of latest_sequence BEFORE the field stores (wrong order, but env-gated, log only).
+- The defect: FramebufferRenderer (workload thread) writes g_rs64_last_drawn_fb (exchange), then _width, then _siz, all relaxed;
+  the present thread in follow-draw mode 3 (the default since s23) loads the three separately with no lock, then decides
+  sane-width / REGISTERs fbManager.get(drawn, siz, drawnW, h). A read between the writes pairs the new address with the old width.
+- Fix (lib/rt64, default on): the writer also stores the whole tuple as one 64-bit word g_rs64_last_drawn_packed (addr | width<<32
+  | siz<<56) with release; mode 3 and the 1024-phase diag read it via rs64_last_drawn_snapshot (one load-acquire).
+  ROGUESQ_S7383_FBPACK=0 = old separate loads. Instrument: every snapshot also loads the separate fields and checks them a read later
+  against the width the packed word finally holds for that address (tear counter), plus a writer-side width-change counter;
+  ROGUESQ_S7383_LOG=1 prints `[s7383] reads= tear= wchg= pack=` every 600 reads. Control ROGUESQ_S7383_TEAR_CTL=1: the writer stores
+  width+8 for 200 us after moving the address. First control try (plain 200 us delay) gave tear=0 over 7800 reads: successive
+  targets share a width, so a torn read looks the same as a good one. The planted wrong width fixed that.
+- Runs (dd8 21:9 FPS60 hangar->mission->abort route, `env SECS=200 zsh scratch/s7326/run.zsh <name> '<env>'`, one at a time):
+  | arm | reads | tear | wchg | [vi-follow-skip] wild-w | crash |
+  | ctl, packed (TEAR_CTL=1) | 7200 | 3377 | 5 | 0 | 0 |
+  | ctl, old (TEAR_CTL=1 FBPACK=0) | 7200 | 1580 | 6 | 53 | 0 |
+  | default smoke (packed) | 21000 | 0 | 6 | 0 | 0 |
+  The detector fires (positive control). With the planted tear, the old path let 53 torn widths reach the mode-3 decision and the
+  packed path let 0 through. Default play saw 0 natural tears and only 6 width changes in 200 s, so the defect is real but latent
+  (the 0 is single-source). Control arms ran fewer presents (7200 vs 21000) because the 200 us writer sleep slows the workload thread.
+  Packed control arm logged 3 mode-3 REGISTER lines, the others 0; not followed up (control-only, correct widths).
+- TSan arm not run: the change is atomics only (TSan does not report atomic-vs-atomic ordering), and no lock or plain-data access
+  changed. Submodule patch refreshed (submodule-patches/rt64.patch).
+Rules out: any other relaxed/volatile handoff of non-atomic data on a default path in the audited scope (H-relaxed-publish beyond
+this tuple, and H-volatile).
+Next: class AZ, non-atomic static / file-scope mutable state written from more than one host thread (NEXT.md).

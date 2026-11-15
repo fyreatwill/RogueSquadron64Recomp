@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7382 (2026-11-14).
+Compact operational handoff, as of Session 7383 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -208,8 +208,17 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-atomic-ordering): class AY, host std::atomic memory-ordering audit** (relaxed /
-   acquire / release on publication flags and counters that guard non-atomic data handed between threads).
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-static-shared-state): class AZ, non-atomic static / file-scope mutable state written
+   from more than one host thread** (census by thread-root attribution; spec in NEXT.md).
+   **AY CLOSED s7383, H-relaxed-publish selected for ONE default-path tuple, fixed** (`tools/s7383_atomic_order_census.py --check`
+   rc 0: 588 explicit-order ops on 250 atomics + 16 static volatiles; COUNTER 131 / ORDERED 33 auto, 102 hand verdicts in
+   tools/s7383_atomic_reviewed.tsv, 0 PUBLISH; controls pass). The RT64 last-drawn framebuffer (addr / width / siz = three relaxed
+   atomics, workload-thread writer, unlocked present-thread reader in follow-draw mode 3 = default) could pair a new address with the
+   previous width. Now also one packed 64-bit word, store-release / load-acquire (`rs64_last_drawn_snapshot`, ROGUESQ_S7383_FBPACK=0
+   old). Planted-tear control (ROGUESQ_S7383_TEAR_CTL=1, wrong width for 200 us): detector 3377 / 1580 tears; old path let 53 torn
+   widths reach the mode-3 decision ([vi-follow-skip] wild-w), new path 0. Default play: 0 natural tears in 21000 reads, only 6
+   width changes per 200 s (latent, single-source). All other relaxed / volatile rows are counters, self-contained values, SPSC
+   indices, or env-gated diagnostics.
    **AX CLOSED s7382, H-gap selected** (`tools/s7382_thread_qos_census.py --check` rc 0, 58 creators, tools/s7382_thread_qos_reviewed.tsv;
    runtime ROGUESQ_S7382_QOS=1 + _QOS_CTL=1 control, `--runtime <log>`): in mission [Game]_MAIN 51-78.5% and Gfx_Thread 50-66.6% of
    a core run at DEFAULT QoS (pri 31) by default, USER_INTERACTIVE (pri 46) under QOS_ALL=1; VI is RT pri 97; everything else
