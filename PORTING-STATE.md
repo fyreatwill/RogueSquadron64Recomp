@@ -195954,3 +195954,6 @@ Run: L5 dd8 21:9 FPS60 150 s hold, build_fpat, arms ROGUESQ_FTZ=0 and default (=
 Rules out: guest float code reading denormal data (H-guest-math for inputs), port-made invalid ops. Class BP CLOSED, H-none,
 no code change needed beyond the instrument. Soak s7406_fpat_levels queued (L4/L7/L12 ftz1 120 s, pass = control PASS + H-none).
 Next: class BQ, host replacements of guest libm (sinf/cosf/sqrtf shims vs retail libultra polynomials).
+Conclusion: selects H-guest-math for denormal results (UFC) and H-host-shim for denormal inputs (IDC), selects H-dz-benign for
+the boot DZC; refutes H-guest-denormal-input (retail-trapping operand in guest code). Next discriminator: s7406_fpat_levels
+soak on L4/L7/L12 (rc 3 would name a guest PC), then class BQ libm replacements (NEXT.md s7407).
