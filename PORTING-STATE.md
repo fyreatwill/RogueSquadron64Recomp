@@ -195507,3 +195507,8 @@ Residual, class BD: buildHeapFreeList re-seeds the heap mutex while held (validC
 ensureHeapInitialized): for that window the mutex holds a token while its caller is still in the critical section, so a
 second thread could enter the heap. Retail code; matches s7392's rs_malloc release fails=7. Queued: s7393_cq_levels (L5/L10/L15).
 Engineering: tools/s7393_createmq_census.py, tools/s7393_cq_report.py, ultra_translation.cpp hook (patch exported), s7393 impl.
+
+Conclusion s7393: **selects H-none** (no guest osCreateMesgQueue re-create orphans a waiter or loses a non-token message on
+the route), **refutes H-orphan** (0 live links on 12 re-created queues while the planted control counts 1) and **refutes
+H-port-timing** (owner and RETAIL=1 arms equal row by row). Next discriminator: class BD, other-thread receives on the heap
+mutex 8010FEE0 inside the buildHeapFreeList held re-seed window (owner + retail arms, injected-recv control).
