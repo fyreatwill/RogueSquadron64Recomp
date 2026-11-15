@@ -195224,3 +195224,4 @@ Rules out: the readback as the main Gfx-thread cost (it is ~17 %); game-visible 
 pause menu and boot cinematics.
 Queued: scratch/agent/soak_queue/s7385_r2r_off_levels.sh (L1/L4/L12 300 s holds, RENDER_TO_RAM=0, knob and Gfx-thread-absent controls).
 docs/OWNER-OPT-INS.md: new row (opt-in, testing). Default unchanged; the owner decides.
+Conclusion: the in-run toggle plus both image sheets selects H-redundant for the covered scenes and refutes H-needed there; it also refutes the s4905/s4906 reading that the readback is the main Gfx-thread cost (~17 %, the ucode run binds). Next discriminator (NEXT.md): an off-vs-on contact sheet of the uncovered scenes (H-partial) and a busy-host toggle run (H-headroom vs H-noheadroom).
