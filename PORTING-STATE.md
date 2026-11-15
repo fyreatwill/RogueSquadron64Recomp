@@ -195474,3 +195474,8 @@ Verdict: **class BB CLOSED, H-none for harmful drops on the route** (two lines: 
 with planted control, 3 runs); H-drop refuted for every exercised site; H-port-timing selected only for AI events and
 shown harmless. Not covered: sites off the route (rumble, peekServiceMessage put-back, 6 unexercised). Soak
 s7392_mq_levels (L5/L10/L15, `--known` filter: a DROP outside the 5 families fails) queued.
+
+Conclusion s7392: **selects H-none** (no harmful guest message-queue drop on the route) and **selects H-port-timing for AI
+events only** (538/549 owner vs 23 retail, harmless: no added underrun); **refutes H-drop** for every exercised site.
+Next discriminator: class BC runtime pre-state at osCreateMesgQueue (waiters / pending messages wiped by a re-create),
+planted-orphan control, owner + retail arms (scratch/agent/NEXT.md).
