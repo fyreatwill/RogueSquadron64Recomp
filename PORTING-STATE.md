@@ -194653,3 +194653,41 @@ unexecuted rows (static verdicts only), longer flight.
 Conclusion (s7372): the coverage arm selects H-covered for every default per-frame AQ row and H-gap only for unexecuted
 (mostly diag-gated) rows, and refutes H-race; it also refutes the s7372 NEXT.md premise that TSan reports can witness
 coverage.
+
+## Session 7373 (2026-11-14) — AQ runtime half CLOSED offline: gate table for the never-executed lockset rows (tools/s7373_aq_gate_table.py) selects H-diag 68/72; the s7366 rows were stale (20/97 lines moved), corrected mission set is 19 rows
+HYPOTHESIS-ID: tsan-mission-coverage (closed this session).
+What ran (offline, no game run): tools/s7373_aq_gate_table.py (new) classifies the gate of every AQ lockset row whose
+unlocked@ lines have count 0 in the s7372 c1 coverage export (scratch/s7372/c1/end.json). Order: G-dtor (enclosing fn is
+~X / shutdown), G-const (only `<c>.size()` of a std::array), G-branch (enclosing fn ran, line did not; gate = nearest
+EXECUTED control line above it), G-env (never ran; first executed ancestor skips the call under an env-reading condition,
+call-site walk up to 4 levels), G-dead (no call site in a linked function), else G-route. A hand OVERRIDE table (53 entries,
+each with the file:line read) settles generic/lambda names and function-call flags (s6063_on, s7317_on, depthDirOn...) the
+walker cannot read; `--auto` prints the walker alone. Positive control (exit 2 on fail): TextureCache row -> G-dtor,
+presents/workloads previousWriteCursor -> G-const: PASS.
+Boring-thing finding first: **the s7366 lockset rows were stale.** src was edited in s7368/s7371 after the s7366 census, so
+27 of 97 rows carried moved line numbers and 20/97 cited lines no longer mention their container at all (comment or
+unrelated code) -> count 0 regardless of execution. The tool now refuses stale rows (exit 3; old rows flag 20/97, re-cut rows
+0/96 = the check's own control). Re-cut: `python3 tools/s7366_lockset_census.py -v | grep unlocked@ >
+scratch/s7373/lockset_rows_clean.txt` (96 rows, OPEN 0); re-crossed with tools/s7372_aq_runtime_cross.py (control RACED).
+Corrected s7372 numbers: 71 rows never executed (not 73), **19 exercised in mission** (not 17): out of the list go
+rs64_dpc_defer_begin (its unlocked lines sit in the ROGUESQ_G1E_BUMPFAST arm, dpc_bridge.cpp:8009) and rs64_s6094_tick
+(ROGUESQ_BUCKETLOG); in come upstream_compat `get` (s7326 map), s6702_release_locked (the s7326 tag branch DID run) and
+rs64_s7325_heapsync. altstack_here leaves the boot-only list (G-build). 0 races on any row's own access still holds.
+Gate table on the 72 unexecuted rows (scratch/s7373/gates.tsv): G-env 54, G-cfg 4 (RT64 texture-pack load, reached only
+from the RT64 inspector UI, rt64_state.cpp:4368-4437), G-dead 3 (current_mod_game_id, rs64_s4602_strncpy_caller,
+rs64_cine_progress_log whose spawner rs64_cine_iter_tick has no caller), G-const 2, G-dtor 1, G-build 2 (s7355 altstack:
+install returns under RS64_TSAN_BUILD, main.cpp:12818), G-error 1 (select_rom: invalid ROM only), NOTLINKED 1
+(texture_packer), G-input 1 (audio_route_apply_cycle: needs the route hotkey; static H-safe-thread), G-route-confined 3
+(FramebufferRenderer getTextureIndex x2 / getDestinationIndex: only when callTile.tileCopyUsed, none on this route; the
+containers are non-static members and each FramebufferRenderer instance has one owning thread: State's at
+rt64_state.cpp:653, WorkloadQueue's at rt64_workload_queue.cpp:178 -> single-thread by construction). Walker vs hand:
+the walker alone said G-route 31 / G-branch 13; 52 of those became G-env etc. on reading the flag, none moved the other way.
+Outcome: **H-diag selected** (68/72 = 94% behind env/dtor/const/dead/build/cfg/error gates; the other 4 are proven
+single-thread or input-only). H-route refuted: no default-path unexecuted row lacks a verdict, so no further TSan run is
+needed. The AQ class (static half s7366 + runtime half s7372/s7373) is CLOSED.
+Rules out: an unreviewed default-path AQ row. Does not rule out: tile-copy-path races in a scene that sets tileCopyUsed
+(single-thread by instance ownership, read once - single-source).
+Next: a new idiom-class audit (CURRENT-TRUTH item 16): AR non-atomic lazy-init statics (`static int x = -1; if (x < 0) x =
+getenv...`, 159 grep hits), reached from more than one thread = a C++ data race the s7354/s7366 censuses did not key on.
+Conclusion (s7373): selects H-diag and closes AQ; refutes the s7372 "dpc defer exercised in mission" item (stale-line
+artefact).

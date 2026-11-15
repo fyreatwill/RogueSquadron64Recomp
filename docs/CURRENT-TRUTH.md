@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7372 (2026-11-14).
+Compact operational handoff, as of Session 7373 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -98,6 +98,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7372 "17 AQ rows exercised in mission incl. dpc defer_begin and rs64_s6094_tick; 73 never executed". Believable: coverage
+  counts are exact. s7373: the s7366 rows' line numbers predated s7368/s7371 edits (20/97 lines no longer named the container);
+  re-cut rows give 19 mission rows (defer_begin and s6094_tick out, both env-gated; get, s6702_release_locked, heapsync in), 71 unexecuted.
 - s7193 "boot-freeze second wait unknown, not reproducible by forcing" -> s7367: it is MAIN IN 0x8011A818 (scheduler chain), reached when MAIN (not retrace) is starved; s7193 forced retrace holds, which let MAIN return to CF0.
 - s7325 "46 audio reads land in song-channel arrays freed by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync". Believable:
   allocator frames said allocateSongChannelArray. s7330: the blocks are the synth's command-list buffers, and the boot hits come from
@@ -202,16 +205,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID tsan-mission-coverage): AQ runtime half.** s7371: ROGUESQ_AUTOPILOT_CLOCK=frames
-   (control PASS on build/; at TSan speed the front end is VI-timed so the route diverges, went to level 16). s7372:
-   TSan reports alone cannot witness coverage (90/97 AQ rows UNSEEN = unknowable), so **tools/build_tsan.sh COV=1**
-   (build_tsan_cov/, clang source coverage with atomic counters, `LLVM_PROFILE_FILE=<dir>/p%c.profraw` continuous mode
-   survives SIGKILL; scratch/s7372/cov_run.zsh snapshots it at initMission) + **tools/s7372_aq_runtime_cross.py**
-   (`--lines scratch/s7366/lockset_rows.txt --cov end.json --cov-base base.json`; planted CTL row must be RACED).
-   c1 (~405 mission frames): 17 AQ rows exercised in mission (present queue, workload, uploads, descriptors, band
-   writeback, dpc defer), 8 boot-only, 0 races on any row's own access; 73 never executed (mostly env-gated diag rows).
-   2 new TSan diag rows classified (rs64_s4211_pi_ring BENIGN, rs64_s4209_read D). Next: name the gate of each of the
-   73 unexecuted rows offline (env var / destructor / branch); only a DEFAULT-path row that did not run needs a run.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID lazy-static-init-audit): class AR, non-atomic lazy-init statics.** `static int x = -1;
+   if (x < 0) x = <getenv...>` and kin (159 grep hits in src + librecomp + ultramodern + rt64 hle/render/gbi): a plain-int
+   lazy init reached from more than one thread is a C++ data race neither s7354 (TSan, reached code only) nor s7366 (lockset,
+   containers only) keyed on. Census -> classify each site by calling threads -> convert multi-thread ones to `static const`
+   magic-static init (thread-safe) behind no flag (pure refactor, same value) -> gate re-run (item 11 censuses --controls).
+   **AQ CLOSED s7373** (static s7366 + runtime s7372/s7373): tools/s7373_aq_gate_table.py gates the 72 rows a coverage run never
+   executed: 68 env/dtor/const/dead/build/cfg/error-gated (H-diag), 3 tile-copy rows single-thread by FramebufferRenderer
+   instance ownership, 1 hotkey row. 19 rows exercised in mission, 0 races on own access. Rows must be re-cut on the tree the
+   coverage build used (tool exits 3 on stale rows; the s7366 rows had 20/97 dead lines).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -260,15 +262,16 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
       (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372 = item 1); AF signal safety s7355; AG unchecked alloc s7356;
       AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
       s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
-      reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census; runtime half = item 1).
+      reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census) + runtime half s7372/s7373 (COV=1 arm,
+    tools/s7372_aq_runtime_cross.py, tools/s7373_aq_gate_table.py): CLOSED.
 15. **Default-on fixes from the audits and TSan thread (=0 / old value restores the previous behaviour):**
     ROGUESQ_SPILL_RESET + 8 MB spill arena 0x81000000 (s7326, SPILL_MB=4 old); RSP_DMA25 (s7327); S7334_CLASS5;
     S7335_CLAMP; S7336; S7337; S7339; ALTSTACK (s7355); S7358_ENVCHECK; S7364_WLRESET; CF0_DUPDROP (s7367, guest
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidates (when 1 closes):** AQ runtime half under TSan in flight; any new arena or pointer layout
-    re-runs items 11/14 with --controls.
+16. **Next audit candidates (when 1 closes):** any new arena or pointer layout re-runs items 11/14 with --controls; a
+    census whose rows are cached across sessions must re-cut them on the measured tree (s7373 stale-row lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
