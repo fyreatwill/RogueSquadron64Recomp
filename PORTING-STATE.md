@@ -194349,3 +194349,41 @@ drew.
 Ledger wording (s7364): this selects H-hole for the RT64 FULLSYNC carry (in-game arm: 4773/8192 stale out-of-range first draws with
 WLRESET=0, 0/12288 with the fix) and for the 6 smaller sites, refutes H-safe for them, and closes class AO. Next discriminator:
 class AP (container-invalidation lifetimes), NEXT.md.
+
+## Session 7365 (2026-11-14) — class AP closed: references/pointers/iterators/indices held across a container mutation; census 767 captures + 84 member-index rows, 2 independent reviews; s7096 dangling Rng& after push_back FIXED, mods.cpp dependency-index bounds guarded; RT64 callIndex vs rdpParams slot measured aligned (ctl 16/16)
+HYPOTHESIS-ID: host-container-invalidation. Hypotheses per site: H-safe (no invalidating mutation between capture and use / index
+produced with its container), H-trust (capacity proven), H-hole (use after an invalidating mutation, or index outliving the container).
+Instrument: tools/s7365_invalidation_census.py (imports s7364 collect(); adds header-declared member containers). Captures REF
+(&C[i]/back/front/at), PTR (C.data()/&C[i]), ITER (begin/find/std::find), IDX (= C.size()), RFOR (range-for hidden iterator);
+mutations direct, `C =`, std::swap, or a call to a same-file function mutating a container of that name; loop-carried uses (mutation and
+use in a loop begun after the capture) count. Classes NOMUT/DEADAFTER/REFRESHED/GROWONLY/RESERVED/B/B-LOOP/B-CALL. Part 2: every
+`C[obj.<...>Index|Start|Count|Cursor|...]` where C is cleared/resized/erased in some function F that does not assign the field (the s7364
+FULLSYNC drawCall.tileIndex shape). Selftest 13 planted rows incl. negative controls PASS. Scope: src + librecomp + ultramodern + rt64.
+Result: 767 captures (744 NOMUT, 11 GROWONLY, 4 REFRESHED, 3 DEADAFTER, 5 B) + 84 MEMBER-B.
+- REAL HOLE (FIXED): src/rsp/s7096_fwd_cover.cpp fwd() held `Rng& r = pend[i]`, pushed `tail` (may reallocate), then read `r.hi` and
+  erased: heap-use-after-free in the opt-in ROGUESQ_S7096_FWD detector. Now decides/erases on r before the push. tools/s7365_ap_ctl.sh:
+  pre arm heap-use-after-free, post clean (2/2). The pre-fix file still flags B in the census (rc 1); fixed file NOMUT.
+- 5 capture B rows hand-reviewed H-safe (same-named member of a different object; json iterator; function-local thread_local in another
+  function; DisplayList* value copy).
+- 84 member rows: reviewer A (hle/gui/preset, 50) all H-safe, confirms the s7364 fix covers every callTiles/rdpTiles emptying path
+  (Workload::begin only from State::fullSync, real + synthesized; shutdown after State::reset). Reviewer B (render/librecomp, 34): 29
+  H-safe, 5 H-hole, none reachable at defaults: mods.cpp dependencies_ordered[import/event dependency_index] when a malformed .nrm repeats
+  a dependency ID (add_dependency drops duplicates) -> GUARDED in resolve_code_dependencies (InvalidImport / InvalidCallbackEvent, also
+  dependency_events[callback.dependency_event_index]); rt64_texture_cache.cpp fileSystemIndex rows 84/1071/1182/1195 (in-flight stream
+  results / resolvedPathQueue survive clearReplacementDirectories; developer-mode texture-pack UI only, game never loads a pack) ->
+  HOLE-OPEN, not fixed (upstream RT64 threading; no RS64 path).
+- Reviewer B's out-of-row lead: renderer instanceIndex = callDesc.callIndex (= gameCallCount++, state.cpp) but rdpParams gets one entry
+  per SURVIVING call, so a dropped call (fb-pair cap reuse, ROGUESQ_SKIP_CC) would shift every later call's RDP params. MEASURED with
+  ROGUESQ_S7365_CALLIDX=1 (rt64_state.cpp, default off; compares callIndex with the rdpParams slot at emplace, reports per 4096 workloads),
+  dd8 21:9 hangar->mission->abort route, 200 s per arm: default 8192 workloads / 5.12M calls, mism 0; MAX_FBPAIRS=4 (cap hit) mism 0
+  (the reused pairs held no calls, so it is NOT a control); =ctl planting one skipped index in 1 of 512 workloads: mism_workloads 16 =
+  planted 16, i.e. comparator PASS and 0 natural mismatches in the same run. -> H-safe at the owner recipe (two lines: review reasoning that
+  the cap only reuses empty-ish pairs is unproven; measurement in 2 runs + same-run ctl). SKIP_CC (opt-in) path untested.
+- Smokes: 260 s dd8 21:9 with ROGUESQ_S7096_FWD=ctl on the fixed build: crash 0, s7096 selftest pass, 12426 tasks, MISSING_UNEXPLAINED 0;
+  the three 200 s callidx arms crash 0.
+- Gate: tools/regen_replay.sh runs the census --selftest and --check (planted ref-push-use file -> rc 1; full tree OPEN 0).
+ORIGIN: the s7096 dangling reference is our own diagnostic code (s7096 author split the range after pushing). The mods holes are upstream
+librecomp trusting an index validated against the header count rather than the deduplicated map. Texture-cache holes are upstream RT64.
+Not done (side question from NEXT): what the s7364 stale tile drew vs angrylion — carried to NEXT.
+Rules out: class AP holes on any default RS64 path in src/librecomp/ultramodern/rt64 (within the census idioms: aliasing through
+non-member pointers and cross-file mutator calls deeper than one level are outside it).

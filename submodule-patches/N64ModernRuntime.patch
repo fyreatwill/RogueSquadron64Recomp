@@ -1497,7 +1497,7 @@ index a75d253..e6808be 100644
      exists = true;
      return ret;
 diff --git a/librecomp/src/mods.cpp b/librecomp/src/mods.cpp
-index ff40212..0ef7c77 100644
+index ff40212..ae1fb16 100644
 --- a/librecomp/src/mods.cpp
 +++ b/librecomp/src/mods.cpp
 @@ -686,6 +686,9 @@ bool save_mod_config_storage(const std::filesystem::path &path, const std::strin
@@ -1530,6 +1530,45 @@ index ff40212..0ef7c77 100644
              for (size_t i = 0; i < section.size; i++) {
                  MEM_B(i, (gpr)cur_section_addr) = binary_data[section.rom_addr + i];
              }
+@@ -2441,12 +2450,22 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+     dependencies_ordered.resize(mod.recompiler_context->dependencies_by_name.size());
+ 
+     for (const auto& [dependency, dependency_index] : mod.recompiler_context->dependencies_by_name) {
++        // s7365 class AP: the .nrm parser validates indices against the header's dependency count, but duplicate mod IDs
++        // are dropped from dependencies_by_name, so its size (and dependencies_ordered) can be smaller.
++        if (dependency_index >= dependencies_ordered.size()) {
++            error_param = dependency;
++            return CodeModLoadError::InvalidImport;
++        }
+         dependencies_ordered[dependency_index] = dependency;
+     }
+ 
+     // Imported symbols.
+     for (size_t import_index = 0; import_index < mod.recompiler_context->import_symbols.size(); import_index++) {
+         const N64Recomp::ImportSymbol& imported_func = mod.recompiler_context->import_symbols[import_index];
++        if (imported_func.dependency_index >= dependencies_ordered.size()) {   // s7365: see dependencies_ordered above
++            error_param = imported_func.base.name;
++            return CodeModLoadError::InvalidImport;
++        }
+         const std::string& dependency_id = dependencies_ordered[imported_func.dependency_index];
+ 
+         GenericFunction func_handle{};
+@@ -2499,7 +2518,15 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+ 
+     // Register callbacks.
+     for (const N64Recomp::Callback& callback : mod.recompiler_context->callbacks) {
++        if (callback.dependency_event_index >= mod.recompiler_context->dependency_events.size()) {   // s7365
++            error_param = std::to_string(callback.dependency_event_index);
++            return CodeModLoadError::InvalidCallbackEvent;
++        }
+         const N64Recomp::DependencyEvent& dependency_event = mod.recompiler_context->dependency_events[callback.dependency_event_index];
++        if (dependency_event.dependency_index >= dependencies_ordered.size()) {   // s7365: see dependencies_ordered above
++            error_param = dependency_event.event_name;
++            return CodeModLoadError::InvalidCallbackEvent;
++        }
+         const std::string& dependency_id = dependencies_ordered[dependency_event.dependency_index];
+         GenericFunction func = mod.code_handle->get_function_handle(callback.function_index);
+         size_t event_index = 0;
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..636836a 100644
 --- a/librecomp/src/overlays.cpp

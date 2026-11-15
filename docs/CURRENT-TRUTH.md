@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7364 (2026-11-14).
+Compact operational handoff, as of Session 7365 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -513,9 +513,13 @@ is in the s7307 archive). Active unit: NEXT.md.
     (OOB write/read); WLRESET=0 arm: 4773/8192 first draws carried it, default 0/12288 (ROGUESQ_S7364_WLRESET=0 restores). Also fixed:
     EEP trace, s4272 shadow word loops, SHADOW2 diff, FB_SOURCE_FP, mod func_index/section bounds, rs5834 who sentinel. HOLE-OPEN:
     RT64 RSP vertex cache (HLE only, LLE_FORCE=0), mods duplicate deps, texture-pack zip, debug-UI one-offs.
-27zd. **Next unit (NEXT.md): class AP, references/indices/iterators held across a container mutation** (clear/resize/push_back/erase
-    invalidating a saved &v[i] / iterator / index; the s7364 FULLSYNC carry is one instance), plus a retail check of the stale-tile frames.
-28. **When 1-27zd offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27zd. **Container invalidation (class AP): CLOSED (s7365, census 767 captures + 84 member rows, 2 independent reviews, ASan 2/2, gate).**
+    tools/s7365_invalidation_census.py / s7365_invalidation_reviewed.tsv. FIXED: s7096_fwd_cover Rng& across push_back (UAF, opt-in);
+    librecomp resolve_code_dependencies bounds on dependency/event indices (malformed .nrm). Measured: RT64 callIndex == rdpParams slot
+    at the owner recipe (ROGUESQ_S7365_CALLIDX=1, 0/5.12M; =ctl 16/16). HOLE-OPEN: rt64_texture_cache fileSystemIndex across
+    clearReplacementDirectories (dev-mode pack UI only); ROGUESQ_SKIP_CC callIndex shift untested.
+27ze. **Next unit (NEXT.md): retail check of the s7364 stale-tile frames, then class AQ (cross-thread container access without a lock).**
+28. **When 1-27ze offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

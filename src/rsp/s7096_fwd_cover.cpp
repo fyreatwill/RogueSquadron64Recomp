@@ -112,8 +112,10 @@ struct Matcher {
                 order += n;
                 // split r around [p, p+n)
                 Rng tail{p + n, r.hi, r.off + (p + n - r.lo)}; r.hi = p;
+                // s7365 class AP: r is a reference into pend; push_back may reallocate, so decide on r before it.
+                const bool rdead = r.hi <= r.lo;
+                if (rdead) pend.erase(pend.begin() + i);
                 if (tail.hi > tail.lo) pend.push_back(tail);
-                if (r.hi <= r.lo) pend.erase(pend.begin() + i);
                 p += n; got = true; break;
             }
             if (got) continue;
