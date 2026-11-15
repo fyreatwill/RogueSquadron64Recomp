@@ -195864,3 +195864,28 @@ Two lines: static reader join + runtime dump with control. Selects H-none; refut
 No code change. Next: class BN direct RCP/PI register access from live game code (NEXT.md); note most game `lui 0xB9xx/0xBAxx`
 hits are GBI command words, so the census must key on lui used as a load/store BASE only.
 VERDICT: this selects H-none for class BM and refutes H-unset/H-value (boot dump + planted OSMEM/CLOCKFIX control); closes class BM. Next discriminator: class BN live KSEG1 register load/store sites vs port MEM_* behaviour.
+
+## Session 7404 (2026-11-15) — class BN direct RCP/PI register access closed (H-none): every KSEG1-based load/store sits in N64Recomp ignored_funcs or is a flag OR; scanner control PASS
+
+HYPOTHESIS-ID: direct-rcp-register-access (closed) -> cop-control-register-access.
+
+No new soak results to fold (last line s7403 fold of s7402_clock_levels).
+
+Static (new tools/s7404_rcp_access.py, rc 0 = no live deref + control PASS): constant-propagates lui/addiu/ori per function in
+/tmp/s7392.dis and records every load/store whose base is a KSEG1 constant (0xA0000000-0xBFFFFFFF, regioned SP/DP/MI/VI/AI/PI/
+RI/SI/cart/PIF) or a pointer converted by `or/addu rd, rs, rt` with a 0xA0000000/0x20000000 constant. Tags LIVE (s7401 live()),
+REPLACED (s7400 bodies), IGNORED (N64Recomp src/symbol_lists.cpp ignored_funcs, 358 names), dead.
+- First pass (no IGNORED tag): 31 "live" deref rows: MI read in __osException; PI/CART-D in __osLeoInterrupt,
+  __osLeoAbnormalResume, osLeoDiskInit; SI in __osSiRawStartDma (via osPfsIsPlug) and __osSiDeviceBusy; 2 K1 conversions in
+  processSceneNode. All of those functions are in ignored_funcs and 0 of the 2508 generated RECOMP_FUNCs carry their names
+  (grep ../N64Recomp/RecompiledFuncs), and no aligned word in the ROM holds their addresses -> never executed. processSceneNode's
+  `lui v1,0x2000; or v0,v0,v1; sw v0,44(s0)` is a flag bit on node+0x2C, never used as a base.
+- Second pass with IGNORED tag: live_deref_rows=0. Live address-only constants: GBI command words (0xB9/BA/BB/BC/B4..), float and
+  multiplier magics (0xA8351D63 rand, 0xAAAAAAAB /3, 0xBDCCCCCD -0.1f), 0xBFFFFFFF masks, and cart ROM DMA sources passed to
+  submitDmaSlot/initPiDmaWorker (initDmaSlots 0xB0144340/0xB0144380) and loadOverlay (0xB0135D30). The port's osPiStartDma does
+  devAddr|rom_base then k1_to_phys (& 0x1FFFFFFF, lib/N64ModernRuntime/librecomp/src/pi.cpp:637-641) = retail K1_TO_PHYS.
+- Positive control: the same scanner sees register writes in replaced+ignored libultra for AI,CART-D,DP,MI,PI,SI,SP,VI (PASS).
+Two lines: static census with control + generated-code absence of every flagged function. Selects H-none; refutes H-mirror-bad and
+H-write-lost. Methodology caveat recorded in CURRENT-TRUTH: s7401 live() counts ignored_funcs as live, so BK/BL/BM censuses could
+only have over-reported (false positives), never missed a live row. Engineering change: the new census tool.
+VERDICT: this selects H-none for class BN and refutes H-mirror-bad/H-write-lost (0 live KSEG1 deref rows, scanner control PASS, flagged functions absent from generated code); closes class BN. Next discriminator: class BO live ctc1/cfc1/mfc0/mtc0 coprocessor-control sites vs N64Recomp emission.

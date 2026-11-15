@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7402 (2026-11-15).
+Compact operational handoff, as of Session 7404 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -323,6 +323,14 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    no live reader (only dead or replaced libultra). Runtime RDRAM dump at swap 300 (scratch/agent/s7403_bootdump.sh), one build:
    default tv=1 romtype=0 rombase=B0000000 reset=0 mem=00800000 clk=46875000 viclk=48681812 (retail NTSC VI clock) NMI buf 0;
    planted arm OSMEM_MB=4 + CLOCKFIX=0 shows mem=00400000 clk=62500000 (control PASS). Port == retail 8 MB expansion-pak cold boot.
+   **BN CLOSED s7404 (direct RCP/PI/SI/VI/AI/MI + cart register access), H-none** (`tools/s7404_rcp_access.py`, rc 0): every
+   load/store whose base is a KSEG1 constant (0xA0000000-0xBFFFFFFF) or an `or/addu` KSEG1 conversion. 31 rows the s7401 live()
+   model called LIVE all sit in N64Recomp `ignored_funcs` (358 names, never emitted: __osException, __osLeoInterrupt,
+   __osLeoAbnormalResume, osLeoDiskInit, __osSiRawStartDma, __osSiDeviceBusy) or are flag ORs (processSceneNode |0x20000000 on
+   +0x2C, never a base); 0 of 2508 generated RECOMP_FUNCs carry those names (second line). Live address-only constants are GBI
+   words, float/rand/div magics, and cart ROM DMA sources (initDmaSlots 0xB0144340/80, loadOverlay 0xB0135D30) that the port's
+   osPiStartDma maps through k1_to_phys exactly as retail. Control: scanner sees SI/PI/VI/AI/MI/SP/DP writes in replaced+ignored
+   libultra (PASS). Caveat for every s7401-live()-based census: it treats ignored_funcs as live (false positives only).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
