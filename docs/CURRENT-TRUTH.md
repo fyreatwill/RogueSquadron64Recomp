@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7410 (2026-11-15).
+Compact operational handoff, as of Session 7412 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -519,12 +519,19 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     31k-63k MISM own, 0 other: CONTROL PASS. Census: lwl 207 / lwr 203 / swl 203 / swr 202 comment sites, all paired
     (k / k+3, same rt+base) except 5: libultra bcmp alignment prologue lwl x4 (v0=v1 preloaded, relies on old low lanes
     kept = covered) and bzero swl $zero x1. No lone lwr, so the LWR upper-32 question (H-ext) has no live site.
-21. **Next audit candidate:** class BV, integer emission semantics on 64-bit GPRs: slt/sltu/slti/sltiu (3.7k sites),
-    mult/multu/div/divu hi/lo (669), dsll/dsrl/dsra(32,v) + 64-bit arith (~140) vs a VR4300 model, plus a census of
-    non-canonical (not sign-extended) 32-bit-op inputs. NEXT.md s7412.
+21. **BV CLOSED s7412 (integer emission on 64-bit GPRs): H-equal, no code change.** `tools/s7412_int_emission.py` (rc 0,
+    ~16 s): every distinct (disasm operands, emitted statement) form of 44 integer ops (136,228 sites, 14,687 forms, verbatim
+    text, real recomp.h -O2) vs a VR4300 model driven by the disasm operands: 3.76e6 cases, can 0 MISM, nc 0 MISM (64-bit ops
+    defined; 32-bit ops vs ares rules, single-source). Mutants (ADD32 no-trunc, S32 zext, SIGNED unsigned, sllv &63, dsll32 +0)
+    all flagged: CONTROL PASS. div/divu by 0 gives host lo=0 (C UB) but 132 sites break-7 guarded + 3 const divisor (= s7085,
+    independent census) + 3 in data_gap_800CC3D4 (data decoded as code, 0 callers). Non-canonical census: 16 flows (MusyX
+    ADPCM srl of ld words, resample sra), all followed by andi masking to low-word bits -> upper-bit independent.
+22. **Next audit candidate:** class BW, aligned load/store macros (MEM_B/BU/H/HU/W/WU/D + store forms, RS64_BYTE_WATCH
+    variant, rsp_dpc_macros MEM_WU override, lwc1/ldc1/swc1/sdc1) vs a byte-wise big-endian model on the swizzled rdram.
+    NEXT.md s7413.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+23. **When 1-22 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

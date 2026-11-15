@@ -196136,3 +196136,41 @@ Rules out: an unaligned load/store lane, shift or sign-extension defect in the r
 No code/runtime change, no ORIGIN line needed. Fold: s7410_fsv_levels rc 0 (L4/L7/L12 CONTROL PASS + H-preserved x3,
 137 s flight alive, 0 crash, 0 VI stall) -> class BT stands on 3 more levels.
 Next: class BV integer emission semantics on 64-bit GPRs (NEXT.md).
+
+## Session 7412 (2026-11-15) — class BV integer emission on 64-bit GPRs closed (H-equal): 14,687 emitted forms of 44 ops vs a VR4300 model, 0 mismatches over 3.76e6 cases, mutant control PASS x5, every non-canonical flow masked to low-word bits
+
+Unit (NEXT.md integer-64bit-gpr-emission-semantics). Hypotheses: H-equal / H-mism (a canonical-input row differs ->
+emitter fix) / H-noncanon (a live non-canonical value reaches a 32-bit op whose recomp result differs from hardware).
+Boring first: s7085 already checked hand-written macro rows per op and the div guards on the pristine front-end output;
+this unit tests the EMITTED text of every site in the live RecompiledFuncs (fixups included), which s7085 did not.
+1. New `tools/s7412_int_emission.py` (rc 0, ~16 s, no game run). Harvest: for 44 ops (addu/subu/add/sub/negu, and/or/xor/
+   nor, slt/sltu, sll/srl/sra + v, dsll/dsrl/dsra (32, v), addiu/addi/slti/sltiu/andi/ori/xori/daddiu/daddi/lui, mult/multu/
+   div/divu/dmult/dmultu/ddiv/ddivu, mfhi/mflo/mthi/mtlo) the statement after each `// 0xPC: op` comment, skipping
+   diagnostic-prefix lines (s7318 bcmp observers, guest-pc stamps) to reach the lowering: 136,228 pure sites, 14,687 distinct
+   (operands, statement) forms, pasted verbatim into one C file, compiled -O2 against the real build recomp.h + forced
+   rsp_dpc_macros.h. 269 sites are our own patched replacements (fps60 tick/despawn, s6993 mask, commented-out lowerings)
+   and are out of scope. Model: independent C from the manual, driven only by operands parsed from the disasm comment.
+   256 cases per form = 3,759,872: class can (canonical sources) 0 MISM for every op; class nc (random 64-bit sources)
+   0 MISM - for the 64-bit ops (slt/sltu/slti/sltiu/and/or/xor/andi/ori/dsll*/ddiv/...) that is defined behaviour; for
+   32-bit ops the manual says undefined and the model uses ares' rules (addu s32(u32+u32), sra s32(s64>>sa)), single-source.
+   ovf rows (add/addi/sub/dadd/daddi/dsub overflow; hardware traps) all wrap identically (0 MISM), reported only.
+   div0 rows: div/divu by 0 gives host lo=0 vs hardware lo=1/-1 (C UB, arm64 sdiv) - expected, see 3.
+2. Positive control, same run: mutant header ADD32 without int32 truncation -> addu 3485 / addiu 814 MISM; S32 zero-extending
+   -> mult 1329 / lui 6832 / sll 4709; SIGNED unsigned -> slt 1515 / slti 1982 / dsra32 8; mutant statement text sllv
+   '& 31'->'& 63' -> 669; dsll32 '+ 32'->'+ 0' -> 112. CONTROL PASS.
+3. div/divu guard census per function (first attempt looked up PCs globally and reported 32 "unguarded" divides in the
+   0x800AB000-0x800CC000 overlay region - an artifact: overlays share VRAM, so the lookup read another overlay's code; fixed
+   to scan each function's own instruction list): 132 break-7 guarded, 3 constant divisor (_Ldtob /at, computeNoteRatePair
+   A/B divu by t0=const), 3 in data_gap_800CC3D4 (data decoded as code, no caller in the image). Agrees with s7085's
+   independent census (89/90 div + 43/45 divu guarded, same 3 constant) -> second line of evidence; retail traps on every
+   variable-divisor zero, so the host lo=0 is reachable only where retail dies.
+4. Non-canonical census (linear per-function dataflow; producers ld/lwu/dsll*/dsrl*/daddu/...; andi always canonical):
+   16 flows into a 32-bit op in 3 functions: decodeAdpcmSampleBlock srl t2,t8/t9,{4..28} x14 (nibble extraction from ld
+   words; the upper word uses dsrl32), resampleVoiceConstantSamples 0x80092C9C and resampleVoiceLutSamplesPacked 0x80092F40
+   sra t6,{16,15}. Every one is followed by andi of the same reg with sa + mask bits <= 32 (0xF / 0xFFFF), so the result is
+   independent of bits 63..32 under any VR4300 rule (checked mechanically by the tool). H-noncanon has no site.
+Conclusion: selects H-equal, refutes H-mism (0 MISM on 3.76e6 cases over every emitted form, control PASS) and finds no
+site for H-noncanon; class BV is closed. Two lines: per-site verbatim harness vs manual model, plus the guard/mask censuses
+(the div census independently matching s7085). Rules out: an integer ALU/shift/compare/mul/div lowering defect in the
+recompiled code. No code/runtime change, no ORIGIN line needed. No new soak results to fold (last fold s7411).
+Next: class BW aligned load/store macros (NEXT.md).
