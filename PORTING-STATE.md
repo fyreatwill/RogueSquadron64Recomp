@@ -194450,3 +194450,43 @@ Conclusion (s7366): TSan + census + 2 reviews selects H-race for rs64_spk_dma_n 
 touch (all fixed), refutes H-race for the other 95 MIXED rows and every host container TSan reached, and closes the static half of
 class AQ. Retail-settings arm t3 refutes the wide path as the TSan-stall cause. Next discriminator: ROGUESQ_VI_HZ 60/20/10 on the TSan
 arm separates H-slow / H-sem / H-flag for the guest VI-handshake deadlock (NEXT.md).
+
+## Session 7367 (2026-11-14) — guest video-ack deadlock named and FIXED: retrace parks on a duplicate ack into full cap-1 CF0 while MAIN waits on 0x8011A818 (cycle through the scheduler); duplicate-ack drop default on; TSan arm old 5/5 deadlock -> fix past it (to the old 0x8000e29c material crash); VI_HZ 60/20 deadlock, 10 clean
+HYPOTHESIS-ID: host-container-race (closing the TSan-deadlock sub-thread; next slug tsan-arm-material-crash)
+- **Instrument (lib/N64ModernRuntime ultramodern events.cpp):** `ROGUESQ_VI_HZ=<1..240>` (default 60, diag only, prints `[s7367] VI_HZ n`)
+  replaces the fixed 60 in the VI deadline and VI count. Run script scratch/s7367/arms.zsh (TSan arm via scratch/s7366/tsan_run.zsh,
+  autopilot times scaled by 60/hz, ROGUESQ_S4259=1 + G1E_TL). Classifier `tools/s7367_vi_deadlock.py <tl> <run.log>`: reads the first
+  [stall-dump]'s [stall-cf0] ring + [stall-wait] table (s7191 passive instruments) -> CLEAN / H-sem / H-flag / H-cycle.
+- **VI_HZ arms (dd8 21:9 FPS60, TSan build):** v60 deadlock fs=39 t=43 s; v20 deadlock fs=266 t=109 s; v10 CLEAN 600 s (fs=1649) although
+  its timeline shows 22 double-send windows (each healed). Slower VI delays/thins the deadlock, does not remove its precondition.
+- **Mechanism, two sources.** (1) Runtime ring, 5/5 stalls (s7366 t2/t3/t4, s7367 v60/v20/ab_old) identical: MAIN (tid 3) blocked in
+  waitForPostSwapAck's CF0 recv; retrace posts (S/s, wakes MAIN) but MAIN does not run for ~80-120 ms (TSan starvation); retrace, one VI
+  later or replaying its pending VI message, posts AGAIN into the still-full capacity-1 queue and parks (S without s, vflag 1). MAIN's recv
+  then consumes one, retrace's retry lands, and retrace posts once more and parks again; MAIN returns (r: valid 1, fullq = retrace
+  0x8011CD28), clears vflag, sees C8 already cleared by that retrace pass and LEAVES the ack loop. It next blocks on 0x8011A818
+  (advanceVideoFrame+0x474 or bufferArbiterProducerScanWait+0x164) instead of returning to CF0. Every S row has vflag 1 (H-flag
+  refuted); every r after the final S still lists the sender, and earlier recvs resume parked senders normally (H-sem refuted).
+  (2) Static: 0x8011A818's only senders are in spTaskSchedulerThread (0x80019C54, 0x80019EF8), which is parked on 0x8011A420, whose
+  producers are submitGfxFrame (MAIN, blocked) and the retrace thread's postSwapRdpReset / per-VI task posts (parked) -> closed cycle.
+  This is exactly the s6993 owner-env boot freeze signature (retrace on CF0 fullq, vflag 0 at dump, no receiver) and the s6814/s6834
+  title-boot freeze at fs=39; s7193's 120 forced holds never reached it because a held RETRACE lets MAIN return to CF0 - the cycle
+  needs a starved MAIN, not a held retrace. s7192's "pre-state heals" is right only when MAIN's next wait is CF0.
+- **ORIGIN:** the writer is the retail retrace thread (viRetraceHandlerThread 0x80019B50: osSendMesg(0x80128CF0, BLOCK) every VI while
+  vflag 0x80037808 is set; return value ignored, next op osYieldThread). The second message is a legitimate duplicate ack; it is the
+  BLOCK on a full queue that turns MAIN's >=1 VI starvation into a permanent cycle. Retail hardware preempts on interrupt, so MAIN is
+  rarely starved that long; our host scheduler (TSan, host load, slow host wake) starves it.
+- **FIX (default on, ROGUESQ_CF0_DUPDROP=0 = retail BLOCK), mesgqueue.cpp osSendMesg:** a BLOCK, non-jam send to 0x80128CF0 that finds
+  the queue FULL is dropped (returns -1, check_running_queue, `[s7367] cf0 dup ack dropped n=` first 8 + powers of 2, TL code 17).
+  Safe: a full queue already holds an ack, so the receiver cannot starve; only the park is removed.
+- **A/B, same TSan build, VI 60 (scratch/s7367/fix_ab.zsh):** ab_old (DUPDROP=0) H-cycle deadlock fs=39 t=46 s (5th of 5); ab_fix
+  drops 64+, no CF0 cycle, front end advances to fs=331 (two slow-progress stall-dumps with MAIN running, fs 105 -> 150 -> 331), then
+  SIGBUS at t~65 s: allocateDisplayListBuffer+4792 <- allocOrEvictMaterialNode <- findOrCreateMaterial <- emitMaterialTexturedDL,
+  far = rdram_base + 0x80000000 (guest NULL), last guest PC 0x8000E29C = the "material noise" family filed 2x in s605-s607 and never
+  chased. Unknown whether it is TSan-timing-only; it is the next unit (NEXT.md).
+- **Normal build smoke (build/, fix in):** `env SECS=260 zsh scratch/s7326/run.zsh s7367_dd8 ''` crash 0, resets 14, arenafull 0,
+  6 initMission, 258 update_screen (= s7366), stall 0, **drops 1**: the duplicate-ack precondition occurs in normal play too.
+- **Queued soaks:** s7367_bootload_old / s7367_bootload_fix (6 title boots each under hw.ncpu `yes` load, boot_freeze_hunt with
+  HUNT_CONTROL): does host load reproduce the fs=39 freeze on the old path, and does the fix arm hold.
+Conclusion (s7367): ring (5/5) + static producer chain select H-cycle (starved MAIN leaves the ack loop while retrace is parked on a
+duplicate ack); the ring refutes H-sem and H-flag; VI_HZ 20 still deadlocking refutes "VI rate alone" (H-slow in its pure form).
+Fix A/B on one build: old 1/1 deadlock, fix 0/1 deadlock (reaches fs=331). Next: the 0x8000E29C material NULL under the fixed TSan arm.

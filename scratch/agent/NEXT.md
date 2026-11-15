@@ -1,21 +1,17 @@
-# NEXT (s7367): class AQ dynamic half — get the TSan arm into missions (guest VI-handshake deadlock under slowdown)
-HYPOTHESIS-ID: host-container-race
-Context (s7366): the TSan arm (tools/build_tsan.sh, scratch/s7366/tsan_run.zsh) now boots (s7355 sigaltstack hook skipped under
-TSan) but every run still stops in the front end: 3/3 runs (dd8 21:9 at fs=39 twice and fs=281 once; retail settings at fs=281) end in a
-guest wait cycle. MAIN waits on 0x8011A818, the scheduler on 0x8011A420, and viRetraceHandlerThread is stuck in
-osSendMesg(0x80128CF0, BLOCK) into a full capacity-1 queue that only MAIN drains (vflag 0x80037808 handshake, funcs_4 0x80019B3C /
-funcs_5 0x8001BFDC-0x8001C0F8). TSan makes guest code ~5-20x slower, so a gfx task spans >1 VI. Static census + 2 reviews cover the
-rest of class AQ (s7366 entry).
-Hypotheses for the deadlock: H-slow (only a guest that misses many VIs deadlocks; retail hardware never does; a slower VI clock
-lets TSan reach missions), H-sem (ultramodern's blocked-sender wake on a full queue loses a wakeup: MAIN's recv does not restart
-the blocked sender), H-flag (the retrace thread reads a stale vflag across the handoff).
-Discriminator (one build, the TSan arm): add ROGUESQ_VI_HZ=<n> (events.cpp vi_hz override, default 60), then run the dd8
-recipe at VI_HZ=60 / 20 / 10 with ROGUESQ_G1E_TL=<file> + ROGUESQ_S4259=1. H-slow: 20 or 10 reaches initMission with no
-stall-dump. H-sem: the timeline shows a CF0 recv that returns while the fullqueue sender stays blocked. H-flag: a CF0 send with no
-flag-set window open (MAIN not in 0x8001BFF8 / 0x8001C048 / 0x8001C0EC).
-Also check (cheap, normal build): does a heavily loaded host (tools/s7277_toggle_load_arm.zsh) ever hit the same cycle? If
-so it is an owner-visible permanent freeze, not a TSan artefact.
-Then: TSan run through hangar -> mission -> abort (scratch/s7326 AP route, timings scaled to the slower VI), report with
-tools/s7354_tsan_report.py (exit 1 on ? / B), fix any default-path container race, 260 s dd8 smoke on build/.
+# NEXT (s7368): 0x8000E29C material NULL on the fixed TSan arm (allocateDisplayListBuffer <- allocOrEvictMaterialNode)
+HYPOTHESIS-ID: tsan-arm-material-crash
+Context (s7367): the guest video-ack deadlock is FIXED (ROGUESQ_CF0_DUPDROP default on). The TSan arm now gets past fs=39 and at
+fs~331 / t~65 s (dd8 21:9 FPS60, scratch/s7367/fix_ab.zsh arm fix) SIGBUSes in allocateDisplayListBuffer+4792 <- allocOrEvictMaterialNode
+<- findOrCreateMaterial <- emitMaterialTexturedDL, far = rdram_base + 0x80000000 (guest NULL pointer), last guest PC 0x8000E29C - the
+"material noise" family filed 2x in s605-s607 (PORTING-STATE ~48000) and never chased. Single occurrence so far.
+First fold soaks s7367_bootload_old / s7367_bootload_fix (SOAK-RESULTS): old FROZEN under load = owner-visible freeze confirmed fixed.
+Hypotheses: H-tsan-timing (only the slowed TSan schedule reaches it: a material node freed/evicted by another guest thread between
+lookup and use), H-retail (a real game NULL in the material cache eviction, reachable at retail speed only rarely), H-ours (our heap
+/ spill / dd8 sizing leaves a material slot or list link NULL: check dd1 4:3 retail-settings TSan arm too).
+Discriminator (one TSan build, no rebuild needed): 3 runs `env ARMS="fix:360:" zsh scratch/s7367/fix_ab.zsh` + 2 runs with
+RECIPE="ROGUESQ_FPS60=0" (retail settings). Recurrence rate per arm and the guest state at the fault: disassemble funcs around
+allocateDisplayListBuffer+4792 (which guest load yields NULL: list head, node->next, material table slot), then a ROGUESQ_* write watch
+on that slot naming its last writer (rule 11) in the next run. Retail settings crash too -> H-ours via dd8 refuted.
+Then: TSan route hangar -> mission -> abort (scratch/s7326 AP), tools/s7354_tsan_report.py (exit 1 on ? / B).
 Side question still carried from s7364: what did the stale tile DRAW? WLRESET=0 vs default presented frames, phase-gated.
-Exit: PORTING-STATE s7367, CURRENT-TRUTH 27zf, commit; any lib/ edit -> ./submodule-patches/export.sh first.
+Exit: PORTING-STATE s7368, CURRENT-TRUTH 27zg, commit; any lib/ edit -> ./submodule-patches/export.sh first.

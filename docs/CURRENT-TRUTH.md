@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7365 (2026-11-14).
+Compact operational handoff, as of Session 7367 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -97,6 +97,7 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- s7193 "boot-freeze second wait unknown, not reproducible by forcing" -> s7367: it is MAIN IN 0x8011A818 (scheduler chain), reached when MAIN (not retrace) is starved; s7193 forced retrace holds, which let MAIN return to CF0.
 - s7325 "46 audio reads land in song-channel arrays freed by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync". Believable:
   allocator frames said allocateSongChannelArray. s7330: the blocks are the synth's command-list buffers, and the boot hits come from
   tasks built AFTER the scene bulk free (no wait involved); only 1 in-flight case belongs to the wait path.
@@ -506,9 +507,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     boot hang from the s7355 introspection hook (skipped under TSan). TSan arm still never reaches a mission: guest deadlock
     MAIN 0x8011A818 / sched 0x8011A420 / viRetraceHandlerThread blocked sending 0x80128CF0 (cap 1, vflag 0x80037808) when guest code
     is slowed (single-source mechanism; normal builds 0 stalls).
-27zf. **Next unit (NEXT.md): ROGUESQ_VI_HZ for the TSan arm -> H-slow/H-sem/H-flag for that deadlock, then TSan through a mission;
-    plus the s7364 stale-tile retail frame check.**
-28. **When 1-27zf offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27zf. **Guest video-ack deadlock (TSan front-end stall = s6993 / s6814 title-boot freeze): FIXED s7367, default on.** Retrace
+    (0x80019B50) posts BLOCK to cap-1 CF0 0x80128CF0 every VI while vflag is set; a MAIN starved >=1 VI gets a duplicate ack, retrace parks,
+    MAIN leaves waitForPostSwapAck (C8 cleared) and waits on 0x8011A818 (scheduler <- 0x8011A420 <- retrace) = permanent cycle. Ring 5/5 +
+    static chain; H-sem/H-flag refuted; VI_HZ 20 still deadlocks, 10 clean. Fix: drop a BLOCK send into a FULL CF0 (mesgqueue.cpp,
+    ROGUESQ_CF0_DUPDROP=0 = retail). TSan A/B old deadlock fs=39 / fix fs=331; build/ dd8 smoke clean, 1 drop in normal play.
+    Classifier tools/s7367_vi_deadlock.py; diag ROGUESQ_VI_HZ. Soaks s7367_bootload_old/fix queued (loaded-host boots).
+27zg. **Next unit (NEXT.md): 0x8000E29C material NULL (allocateDisplayListBuffer <- allocOrEvictMaterialNode) on the fixed TSan arm,
+    then TSan through a mission; the s7364 stale-tile retail frame check still carried.**
+28. **When 1-27zg offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
