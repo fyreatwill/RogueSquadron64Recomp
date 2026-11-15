@@ -8796,6 +8796,7 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
 // semantics: remove the target thread from any queue it's blocked on and
 // mark it STOPPED so the scheduler doesn't try to schedule it. The host
 // std::thread is parked in wait_for_resumed until a future osStartThread.
+extern "C" void rs64_s7396_tq_tag(const char* t); // s7396 (ultramodern threadqueue.cpp)
 extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
     PTR(OSThread) t_ = (PTR(OSThread))(int32_t)ctx->r4;
     if (t_ == NULLPTR) {
@@ -8806,6 +8807,7 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
     OSThread* t = TO_PTR(OSThread, t_);
     if (t->state != OSThreadState::STOPPED) {
         if (t->queue != NULLPTR) {
+            rs64_s7396_tq_tag("stop"); // s7396
             ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
         }
         t->state = OSThreadState::STOPPED;

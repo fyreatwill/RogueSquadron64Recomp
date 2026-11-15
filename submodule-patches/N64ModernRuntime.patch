@@ -7865,8 +7865,126 @@ index a22f747..9a72ebe 100644
              ultramodern::thread_queue_pop(PASS_RDRAM running_queue);
              // Swap to the higher priority thread.
              swap_to_thread(PASS_RDRAM next_thread);
+diff --git a/ultramodern/src/threadqueue.cpp b/ultramodern/src/threadqueue.cpp
+index f9c0fa1..d8571fd 100644
+--- a/ultramodern/src/threadqueue.cpp
++++ b/ultramodern/src/threadqueue.cpp
+@@ -40,9 +40,33 @@ PTR(OSThread) ultramodern::thread_queue_pop(RDRAM_ARG PTR(PTR(OSThread)) queue_)
+     return ret;
+ }
+ 
+-bool ultramodern::thread_queue_remove(RDRAM_ARG PTR(PTR(OSThread)) queue_, PTR(OSThread) t_) {
+-    debug_printf("[Thread Queue] Removing thread %d from queue 0x%08X\n", TO_PTR(OSThread, t_)->id, (uintptr_t)queue_);
++// s7396 class BF: the upstream walk below never advanced -- cur_ptr was recomputed from queue_ (the HEAD) on every
++// iteration -- so removing a non-head thread from a queue of >=2 spun forever, and a remove on an empty non-running
++// queue dereferenced TO_PTR(0)->next. Reached by osStopThread(other) / osDestroyThread(other) / osSetThreadPri(other).
++// ROGUESQ_S7396_TQFIX default ON (=0 restores the old walk). ROGUESQ_S7396_TQ=1 logs [s7396-tq] per call with the target's
++// position in the list and what the OLD walk would have done (OK / HANG / WILD / MISS); ROGUESQ_S7396_TQ_CTL=1 plants a
++// fake 3-thread queue at 0x9FFE0000 once and removes its middle node (must report pos=1 old=HANG and leave head->third).
++#include <atomic>
++#include <cstdio>
++#include <cstdlib>
++static bool s7396_env(const char* n, bool dflt) { const char* e = std::getenv(n); if (!e || !*e) return dflt; return *e != '0'; }
++thread_local const char* s7396_tq_tag = "?";
++extern "C" void rs64_s7396_tq_tag(const char* t) { s7396_tq_tag = t; }
++
++static bool s7396_remove_fixed(RDRAM_ARG PTR(PTR(OSThread)) queue_, PTR(OSThread) t_) {
++    if (queue_ == NULLPTR) return false;
++    PTR(OSThread)* link = queue_to_ptr(PASS_RDRAM queue_);
++    for (int guard = 0; *link != NULLPTR && guard < 4096; guard++) {
++        if (*link == t_) {
++            *link = TO_PTR(OSThread, t_)->next;
++            return true;
++        }
++        link = &TO_PTR(OSThread, *link)->next;
++    }
++    return false;
++}
+ 
++static bool s7396_remove_old(RDRAM_ARG PTR(PTR(OSThread)) queue_, PTR(OSThread) t_) {
+     PTR(PTR(OSThread)) cur = queue_;
+     while (cur != NULLPTR) {
+         PTR(OSThread)* cur_ptr = queue_to_ptr(PASS_RDRAM queue_);
+@@ -52,10 +76,76 @@ bool ultramodern::thread_queue_remove(RDRAM_ARG PTR(PTR(OSThread)) queue_, PTR(O
+         }
+         cur = TO_PTR(OSThread, *cur_ptr)->next;
+     }
+-
+     return false;
+ }
+ 
++// What the old walk does on this list, without running it: target position pos (-1 absent), list length len.
++static const char* s7396_old_outcome(int pos, int len) {
++    if (pos == 0) return "OK";
++    if (len == 0) return "WILD";       // *head == 0 and t_ != 0 -> TO_PTR(0)->next
++    if (len == 1) return pos < 0 ? "MISS-OK" : "OK";  // absent, single node: returns false (correct)
++    return "HANG";                      // head != t_ and head->next != 0: spins on the head forever
++}
++
++static void s7396_census(RDRAM_ARG PTR(PTR(OSThread)) queue_, PTR(OSThread) t_, int& pos, int& len) {
++    pos = -1; len = 0;
++    if (queue_ == NULLPTR) return;
++    PTR(OSThread) cur = *queue_to_ptr(PASS_RDRAM queue_);
++    while (cur != NULLPTR && len < 4096) {
++        if (cur == t_ && pos < 0) pos = len;
++        len++;
++        cur = TO_PTR(OSThread, cur)->next;
++    }
++}
++
++static void s7396_control(RDRAM_ARG1) {
++    const uint32_t b = 0x9FFE0000u;
++    PTR(OSThread) a = (PTR(OSThread))b, m = (PTR(OSThread))(b + 0x200), z = (PTR(OSThread))(b + 0x400);
++    PTR(PTR(OSThread)) q = (PTR(PTR(OSThread)))(b + 0x600);
++    *TO_PTR(PTR(OSThread), q) = a;
++    TO_PTR(OSThread, a)->next = m; TO_PTR(OSThread, a)->priority = 30;
++    TO_PTR(OSThread, m)->next = z; TO_PTR(OSThread, m)->priority = 20;
++    TO_PTR(OSThread, z)->next = NULLPTR; TO_PTR(OSThread, z)->priority = 10;
++    int pos, len; s7396_census(PASS_RDRAM q, m, pos, len);
++    bool rc = s7396_remove_fixed(PASS_RDRAM q, m);
++    int pos2, len2; s7396_census(PASS_RDRAM q, z, pos2, len2);
++    bool pass = pos == 1 && len == 3 && rc && len2 == 2 && pos2 == 1 && *TO_PTR(PTR(OSThread), q) == a;
++    std::fprintf(stderr, "[s7396-tq-ctl] pos=%d len=%d old=%s fixed_rc=%d after_len=%d third_pos=%d %s\n", pos, len,
++                 s7396_old_outcome(pos, len), rc ? 1 : 0, len2, pos2, pass ? "PASS" : "FAIL");
++    std::fflush(stderr);
++}
++
++// Called from osCreateThread so the planted control fires even in a run with no remove at all.
++extern "C" void rs64_s7396_tq_poke(RDRAM_ARG1) {
++    static const bool ctl = s7396_env("ROGUESQ_S7396_TQ_CTL", false);
++    static std::atomic<bool> done{false};
++    if (ctl && !done.exchange(true)) s7396_control(PASS_RDRAM1);
++}
++
++bool ultramodern::thread_queue_remove(RDRAM_ARG PTR(PTR(OSThread)) queue_, PTR(OSThread) t_) {
++    debug_printf("[Thread Queue] Removing thread %d from queue 0x%08X\n", TO_PTR(OSThread, t_)->id, (uintptr_t)queue_);
++    static const bool fix = s7396_env("ROGUESQ_S7396_TQFIX", true);
++    static const bool log = s7396_env("ROGUESQ_S7396_TQ", false);
++    rs64_s7396_tq_poke(PASS_RDRAM1);
++    int pos = -1, len = 0;
++    if (log) s7396_census(PASS_RDRAM queue_, t_, pos, len);
++    bool rc = fix ? s7396_remove_fixed(PASS_RDRAM queue_, t_) : s7396_remove_old(PASS_RDRAM queue_, t_);
++    if (log) {
++        static std::atomic<unsigned> n{0};
++        unsigned k = ++n;
++        if (k <= 400 || (k % 1000) == 0) {
++            OSThread* t = TO_PTR(OSThread, t_);
++            std::fprintf(stderr, "[s7396-tq] n=%u tag=%s q=%s%08X t=%08X id=%d pri=%d state=%u pos=%d len=%d rc=%d old=%s fix=%d\n",
++                         k, s7396_tq_tag, queue_ == ultramodern::running_queue ? "RUN:" : "", (unsigned)queue_, (unsigned)t_,
++                         (int)t->id, (int)t->priority, (unsigned)t->state, pos, len, rc ? 1 : 0, s7396_old_outcome(pos, len),
++                         fix ? 1 : 0);
++            std::fflush(stderr);
++        }
++    }
++    s7396_tq_tag = "?";
++    return rc;
++}
++
+ bool ultramodern::thread_queue_empty(RDRAM_ARG PTR(PTR(OSThread)) queue_) {
+     PTR(OSThread)* queue = queue_to_ptr(PASS_RDRAM queue_);
+     return *queue == NULLPTR;
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..9c132aa 100644
+index 812c556..c88aed7 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,23 @@
@@ -8298,7 +8416,7 @@ index 812c556..9c132aa 100644
  
      // Set the thread name
      ultramodern::set_native_thread_name(ultramodern::threads::get_game_thread_name(self));
-@@ -239,7 +597,7 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,12 +597,15 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -8307,7 +8425,15 @@ index 812c556..9c132aa 100644
          //throw ultramodern::thread_terminated{};
      }
  }
-@@ -259,6 +617,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+ 
++extern "C" void rs64_s7396_tq_tag(const char* t); // s7396 (threadqueue.cpp)
++extern "C" void rs64_s7396_tq_poke(RDRAM_ARG1);
+ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_func_t) entrypoint, PTR(void) arg, PTR(void) sp, OSPri pri) {
++    rs64_s7396_tq_poke(PASS_RDRAM1);
+     debug_printf("[os] Create Thread %d\n", id);
+     OSThread *t = TO_PTR(OSThread, t_);
+     
+@@ -259,6 +620,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -8328,7 +8454,7 @@ index 812c556..9c132aa 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,6 +658,11 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,17 +661,36 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -8340,7 +8466,9 @@ index 812c556..9c132aa 100644
          throw ultramodern::thread_terminated{};
      }
      // Otherwise if the thread isn't stopped, remove it from its currrent queue., 
-@@ -294,9 +671,22 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+     if (t->state != OSThreadState::STOPPED) {
++        rs64_s7396_tq_tag("destroy");
+         ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
      }
      // Check if the thread has already been destroyed to prevent destroying it again.
      UltraThreadContext* cur_context = t->context;
@@ -8363,7 +8491,15 @@ index 812c556..9c132aa 100644
          cur_context->running.signal();
      }
  }
-@@ -337,6 +727,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -311,6 +705,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
+         t->priority = pri;
+ 
+         if (t_ != ultramodern::this_thread() && t->state != OSThreadState::STOPPED) {
++            rs64_s7396_tq_tag("setpri");
+             ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
+             ultramodern::thread_queue_insert(PASS_RDRAM t->queue, t_);
+         }
+@@ -337,6 +732,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -8384,7 +8520,7 @@ index 812c556..9c132aa 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +751,18 @@ void thread_cleaner_func() {
+@@ -347,8 +756,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -8403,7 +8539,7 @@ index 812c556..9c132aa 100644
              delete to_delete;
          }
      }
-@@ -359,6 +773,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +778,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {

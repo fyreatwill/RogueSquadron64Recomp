@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7395 (2026-11-15).
+Compact operational handoff, as of Session 7396 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -248,7 +248,13 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    ROGUESQ_LOG_EVENT_WIRING=1 on tools/s7392_mq_run.zsh, owner + RETAIL=1 arms: the 6 live sites register exactly once each
    (AI 80149670, DP 8011A408, SP 8011A420, SI 80110770, PRENMI 8010DFD8, VI-SET 80114388), identical in both arms, SP/DP
    completions reach the bound queues (64+64 rows each arm) -> H-none; H-strand and H-port refuted (nothing is re-bound,
-   so ultramodern's table cannot go stale). Next class BF: thread lifecycle (osStopThread 3 / osDestroyThread 2 sites).
+   so ultramodern's table cannot go stale).
+   **BF CLOSED s7396, thread lifecycle H-none on route; upstream thread_queue_remove walk FIXED** (`tools/s7396_thread_census.py`:
+   40 sites, 5 non-self stop/destroy/setpri, all reach ultramodern::thread_queue_remove, whose upstream walk never advanced past the
+   head = infinite loop on a non-head target in a >=2 queue). **ROGUESQ_S7396_TQFIX default ON** (=0 old walk). Runtime
+   ROGUESQ_S7396_TQ=1 + _CTL=1 (planted middle-node remove: old=HANG, fixed PASS), `tools/s7396_tq_report.py`, route
+   tools/s7392_mq_run.zsh owner + RETAIL=1: 21 removes each, all pos 0 (old walk safe, latent only), 0 live re-create of 27
+   creates. Soak s7396_tq_levels queued (L4/L7/L12). Next class BG: timer lifecycle (osSetTimer / osStopTimer).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest

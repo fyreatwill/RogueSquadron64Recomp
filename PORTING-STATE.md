@@ -195587,3 +195587,35 @@ no event is ever re-bound on the route, so ultramodern's event table is written 
 Residual: SI event posts come from the cont path (events.cpp:1831), not an SI interrupt. That is working as designed.
 Next: class BF, thread lifecycle (osStopThread 3 / osDestroyThread 2 / osCreateThread 12 sites): can a stopped or destroyed
 thread still be linked in a queue's waiter list?
+
+## Session 7396 (2026-11-15) — class BF thread lifecycle closed: upstream thread_queue_remove walk never advanced (latent hang), fixed default-on; every live remove hits the queue head (owner + retail), H-none on route
+
+Work unit: NEXT.md class BF (thread lifecycle idiom audit, s7392 message-queue lifecycle family).
+- Static census `tools/s7396_thread_census.py` (/tmp/s7392.dis): 40 sites = osCreateThread 12, osStartThread 17, osStopThread 3,
+  osDestroyThread 2, osSetThreadPri 6. Self-only: __osCleanupThread destroy(0), idle/PI/VI-manager setpri(0) (PI/VI managers are
+  replaced by librecomp, never run). Non-self (5): mainBootstrapWorker stop(idle thread 8010D3D0), waitForSerialIdle stop(SI poll
+  thread 8010FF70, 6 callers), stopServiceWorker stop(node+32), unregisterServiceWorker destroy(node+32, 6 callers),
+  setServiceWorkerPriority setpri. All straight-line. Non-self stop (upstream_compat.cpp override), destroy and setpri all reach
+  `ultramodern::thread_queue_remove`.
+- DEFECT FOUND (code read, lib/N64ModernRuntime/ultramodern/src/threadqueue.cpp): the upstream walk recomputed `cur_ptr =
+  queue_to_ptr(queue_)` (the HEAD) on every iteration and never advanced, so a non-head target in a queue of >=2 spins forever
+  (HANG), and a remove on an empty non-running queue reads TO_PTR(0)->next (WILD). Head removes and absent-from-1-node work.
+  ORIGIN: upstream N64ModernRuntime bug (commit a2f201d "fix thread_queue_remove not actually removing" left the walk broken);
+  not a guest writer, so this is a fix, not a mitigation. **ROGUESQ_S7396_TQFIX default ON** (correct linked walk, guard 4096);
+  =0 restores the old walk.
+- Instrument (one build): ROGUESQ_S7396_TQ=1 logs `[s7396-tq]` per remove with caller tag (stop/destroy/setpri), queue
+  (RUN: = running queue), target id/pri/state, target position pos and list length len by a correct walk, and what the OLD walk
+  would do (OK/HANG/WILD/MISS-OK). ROGUESQ_S7396_TQ_CTL=1 plants a 3-node queue at 0x9FFE0000 (fired from the first
+  osCreateThread) and removes the middle node. Report `tools/s7396_tq_report.py <log>` (rc 0 H-none, 2 no control, 3 live HANG/WILD).
+- Runs (tools/s7392_mq_run.zsh route, 200 s, one at a time): owner arm (dd8 21:9 FPS60) and RETAIL=1 arm: crash 0 both; control
+  `pos=1 len=3 old=HANG fixed_rc=1 after_len=2 third_pos=1 PASS` both; 21 removes each, identical: destroy MQ pos0 len1 x14
+  (service workers, ids 4-18), destroy RUN pos0 len3 x1 (id14), stop MQ 8010FF50 pos0 len1 x5 (SI poll thread), stop RUN pos0
+  len2 x1 (idle thread) -> old=OK on every live remove. H-recreate check on the same logs ([thr-create-id] thr_rdram vs destroy rows):
+  27 creates, 24 structs, 3 reused, 0 re-created while live (both arms).
+- Verdict: H-none on the route (no dangling stopped/destroyed thread, no live re-create; the old walk never met a non-head target).
+  H-dangle is refuted as a live failure but the latent HANG is real code and now fixed; H-recreate refuted. Two lines: static
+  census + runtime census with planted control, both arms.
+- Rules out: thread lifecycle as a source of the historic hang/stall families on this route (6 levels pending soak).
+- Soak queued: scratch/agent/soak_queue/s7396_tq_levels.sh (L4/L7/L12 dd8 21:9 FPS60 200 s, report rc 0 per level).
+- lib/ edit exported (submodule-patches/N64ModernRuntime.patch). Build: cmake --build build OK.
+- Next: class BG timer lifecycle (osSetTimer / osStopTimer: re-arm of an active timer, stop with a message pending).

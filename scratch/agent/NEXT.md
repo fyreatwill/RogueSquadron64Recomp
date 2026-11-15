@@ -1,17 +1,18 @@
-# NEXT (s7396)
-HYPOTHESIS-ID: thread-lifecycle-waiter
+# NEXT (s7397)
+HYPOTHESIS-ID: timer-lifecycle
 
-s7395 closed class BE (event re-binding: 6 live sites bind once each, owner + retail, H-none).
+s7396 closed class BF (thread lifecycle): H-none on route, upstream thread_queue_remove walk fixed (ROGUESQ_S7396_TQFIX default on).
+Fold soak s7396_tq_levels (SOAK-RESULTS) first: pass = alive + 0 crash + tools/s7396_tq_report.py rc 0 on L4/L7/L12.
 
-Work unit, class BF (thread lifecycle, next message-queue lifecycle idiom):
-1. Static: extend the census pattern (tools/s7395_event_census.py as template) to osStopThread (3), osDestroyThread (2),
-   osCreateThread (12) and osSetThreadPri (6) sites in /tmp/s7392.dis (regenerate with mips64-elf-objdump -d
-   --no-show-raw-insn ../rogue_squadron64/build/roguesquadron.elf if missing). Per site: target thread (a0; 0 = self),
-   entry fn, callers, in-loop. First check whether librecomp replaces each call (grep *_recomp in lib/N64ModernRuntime/librecomp/src).
-2. Hypotheses: H-none (every stop/destroy targets self or a thread not blocked on any queue), H-dangle (a stopped or
-   destroyed thread stays linked in a queue's blocked_on_recv/send list, so a later post wakes a dead thread or the
-   message is lost), H-recreate (osCreateThread re-uses an OSThread struct that is still linked or running).
-   Discriminator, ONE build if the logs do not already show it: hook osStopThread_recomp / osDestroyThread_recomp /
-   osCreateThread_recomp -> log target tid, its state, and whether it is linked on any queue waiter list; planted control:
-   stop a fake thread linked on a fake queue (must report 1 dangle). Route tools/s7392_mq_run.zsh, owner + RETAIL=1 arms.
+Work unit, class BG (timer lifecycle, next in the message-queue lifecycle family):
+1. Static: census the 3 guest osSetTimer/osStopTimer jal sites in /tmp/s7392.dis (template tools/s7396_thread_census.py):
+   caller, OSTimer struct (a0), countdown/interval, mq, msg, in-loop, callers. Read ultramodern timer.cpp (osSetTimer/osStopTimer,
+   the host timer thread) for the same kind of latent defect s7396 found in threadqueue.cpp: re-arm of an already-active OSTimer
+   struct, stop of a timer whose message is already queued/in flight, interval timers, and host-side lifetime of the struct.
+2. Hypotheses: H-none (each timer struct armed once at a time, stops only hit armed timers), H-rearm (osSetTimer on a live struct
+   leaves two host entries -> double messages or a send into a re-created queue), H-stop-late (osStopTimer races the host timer
+   thread: message sent after stop returns).
+   Discriminator, ONE build if the code read does not settle it: hook osSetTimer_recomp/osStopTimer_recomp -> log struct, live
+   flag (host table), mq, msg; count sends after stop. Planted control: arm one fake timer twice + stop it with a message pending
+   (must report 1 rearm + 1 late). Route tools/s7392_mq_run.zsh owner + RETAIL=1 arms (one at a time).
    Any lib/ edit: ./submodule-patches/export.sh + commit.
