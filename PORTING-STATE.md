@@ -195283,3 +195283,29 @@ Verdict line: this selects H-stale-upload (mechanism single-source: content log 
 H-unknown-fb (UNDRAWN blank 2/3) and H-capture-artefact (off 3/3 vs on 0/3). Residual risk: genuine CPU writes to a scanned fb are
 now dropped at r2r=0 (the r2r=1 run shows 4 fbs do change hash with readback on; no visible loss on the route). Default unchanged
 (r2r=1 path untouched); OWNER-OPT-INS row says fixed, needs a repeat. Next: rate-matched image A/B without the log, 3+3 interleaved.
+
+## Session 7388 (2026-11-15) — RENDER_TO_RAM=0 stale-upload fix confirmed by a present-side probe (old path 3/3 presents the 0xA40000 garbage upload, fix 0/3); window captures cannot see the frame on this build (H-rate)
+HYPOTHESIS-ID: render-to-rdram-double-pass.
+Unit from NEXT. No maintenance (37.2 KB at start). Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked, HID idle ~3000 s;
+an rclone backup was running (load ~5). 12 game runs, one at a time, 0 CRASH/SIGSEGV/SIGBUS.
+1. Window A/B as NEXT specified (scratch/s7388/run.zsh: cpu1-3 = ROGUESQ_R2R_CPUUP=1 old path, skip1-3 = fix, interleaved, NO
+   ROGUESQ_S7387_LOG, abort route, BURST=153,162): stripe 0/3 cpu, 0/3 skip -> positive control FAILED again. Burst caps stay ~162-173 (vs
+   240-250 in the old-build s7387 off/on arms) WITHOUT the log, so the log was not the rate cause. Timing at the cut: old-build off1
+   bright 157.12 -> STRIPE 157.17 -> scene 157.19; new-build cpu1/cpu2 bright 157.07 -> next cap 157.15-157.17 (a ~90 ms gap exactly where
+   the one-present stripe sits). Also: the MISSION FAILED background is a random hangar still per run (scratch/s7388/postcut.jpg), so
+   post-cut luma differs run to run. -> H-rate: the window instrument cannot witness the frame on this build.
+2. New instrument (NEXT's H-rate branch): ROGUESQ_S7388_PRES=1 in lib/rt64/src/hle/rt64_present_queue.cpp logs every present that applies a
+   CPU fb upload (present.fbOperations non-empty) or shows raw RDRAM (branch B, viFb==nullptr -> scratch fb from present.storage), with ms
+   since first present, fb, nz 32-bit words per mille and all-zero rows of 240 of that RDRAM; summary every 3600 presents. Timing-independent.
+   Arms pcpu1-3 (CPUUP=1) / pskip1-3 (fix), interleaved, + S7387_LOG for alignment (scratch/s7388/run2.zsh):
+   - Positive control: pcpu 3/3 present the 0xA40000 upload at the cut (t=156.65 s, nz 172-173, zrows 133; matches [s7387-cpuup] UPLOAD
+     nz 171 zrows 135), upl=14-15 per 7200 presents, hot (nz>=50) 5-6: boot 23.4 s 0x961000 nz 722, craft fade 48.7 s 0x961000 nz 687,
+     crawl 65.1 s 0x9F9800 / 71.2 s 0x9B6000, cutscene->flight 124.7 s 0x8F5000 nz 842, debrief 167/183 s 0x961000. These are the s7386
+     dark-run transition times; no visible garbage was caught there (presumably overdrawn), but they are the same stale-RDRAM path.
+   - Fix: pskip 0/3 uploads, 0 hot presents; branch-B presents 11-13 per run, ALL nz 0 / 240 zero rows (black) -> the raw-storage path is
+     not a second stripe source on the route.
+Verdict line: this selects H-fix (second line = present-side probe, 3/3 vs 0/3, independent of window-capture timing; first line = s7387
+window A/B on the old build, off 3/3 vs on 0/3) and refutes H-other-source (branch B all black). H-rate selected for the window
+instrument. Residual risk unchanged: genuine CPU writes to a scanned fb are dropped at r2r=0 (none on the route). Default unchanged.
+Queued: scratch/agent/soak_queue/s7388_r2r_fix_levels.sh (L1/L4/L12 300 s, r2r=0 + fix + probe; pass = alive, 0 crash, knob line,
+probe summary, upl=0 hot=0). OWNER-OPT-INS row updated (fix confirmed, soak pending). rt64.patch re-exported.

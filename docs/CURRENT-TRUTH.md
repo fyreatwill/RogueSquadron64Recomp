@@ -220,16 +220,16 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    of raw-RDRAM stripes in the 4:3 box (scratch/s7386/abort_trans.jpg, aboff w_0156.12) where on shows black: a VI-scanned buffer the
    game cleared via RDP is only cleared in RDRAM by the readback pass. Busy host (15x yes, in-run TOG=10): mission 28.3 -> 29.7
    gfx tasks/s (<2/s = H-noheadroom), max tail one 48 ms outlier.
-   **s7387: stripe REPEATABLE and mechanism named; fix landed (opt-in path only).** Abort route x3/arm: off 3/3 stripe frames
-   (t~157.2), on 0/3 (tools/s7387_stripe_detect.py, calibrated on the s7386 frame). Cause: with readback off RT64's screen-fb hash
-   check sees RDRAM change (memory reuse, never RDP output) and UPLOADS the stale RDRAM over the GPU target. Content log
-   ([s7387-cpuup] nz_pm/zrows) names the abort-cut upload: fb 0xA40000 w=1024, 171 per mille nonzero, 135/240 zero rows (stripe frame:
-   129 black rows + 12 noisy rows); 0xB20000 at that cut is all zero (not the source). r2r=1 run: 6 hash-change uploads vs 21 at r2r=0,
-   no 0xA40000 one. Fix (rt64_state.cpp, r2r=0 only): adopt the hash, keep GPU content; ROGUESQ_R2R_CPUUP=1 = old. First attempt
-   (blank undrawn fb at every width, ROGUESQ_R2R_UNDRAWN) REFUTED 2/3 stripes, reverted. Image arm weak: fix 0/4 stripes, but
-   matched-rate old arms (CPUUP=1) 0/3 and ctl 0/2 -> image line not significant (old-behaviour total 5/10); mechanism single-source
-   (log). Coverage boot->flight with fix: dark runs = s7386 on/off's (+1 cutscene shot cut seen at higher capture rate), 0 stripe.
-   Residual risk: real CPU writes to a scanned fb are dropped at r2r=0 (none visible on the route). Next: NEXT.md. Owner decides any default.
+   **s7387-s7388: stripe mechanism named and fixed (opt-in path only), TWO lines.** s7387: abort route off 3/3 stripe frames, on 0/3
+   (tools/s7387_stripe_detect.py); content log names RT64's screen-fb hash-change CPU upload of stale RDRAM (fb 0xA40000 w=1024,
+   nz 171 per mille, 135/240 zero rows). Fix (rt64_state.cpp, r2r=0 only): adopt the hash, keep GPU content; ROGUESQ_R2R_CPUUP=1 = old.
+   s7388: window captures CANNOT witness it on the current build (~170 burst caps vs 240, a ~90 ms gap right after the cut; old-path
+   arms 0/3 without the log too = H-rate). New present-side probe ROGUESQ_S7388_PRES=1 (rt64_present_queue.cpp: every present that
+   applies a CPU upload or shows raw RDRAM branch B, with nz/zrows + ms): old path 3/3 present the 0xA40000 upload at the cut
+   (nz 172-173, zrows 133) and 5-6 garbage uploads per run (boot 23 s, craft fade 49 s, crawl 65/71 s, cutscene->flight 125 s,
+   debrief); fix 0/3 uploads, 0 hot presents, branch-B presents all black (11-13/run) -> H-fix, H-other-source refuted on the route.
+   Residual risk: real CPU writes to a scanned fb are dropped at r2r=0 (none on the route). Soak s7388_r2r_fix_levels queued
+   (L1/L4/L12 300 s, probe upl=0 hot=0). Owner decides any default.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
    threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts
