@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7398 (2026-11-15).
+Compact operational handoff, as of Session 7399 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -276,8 +276,14 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    never filled the OSIoMesg (type/pri/retQueue/dram/dev/size) and both Pi starts completed with msg 0, not the OSIoMesg
    pointer. **ROGUESQ_S7398_IOFIX default ON** (=0 old); ROGUESQ_S7398_IO_CTL=1 reads the fields back (route owner recipe:
    fix 200 s alive, 0 crash, phase 9, 16k+ fills readback PASS, bad=0; old arm 0 fill rows, 200 s alive, 0 crash). Soak
-   s7398_io_levels queued (L4/L7/L12). Next class BI: VI/SP/DP event-message payloads (msg value each librecomp completion
-   sends vs what the guest recv sites compare/load).
+   s7398_io_levels queued (L4/L7/L12); s7399 fold: L4/L7/L12 alive, 0 crash, readback PASS, 0 FAIL -> IOFIX holds.
+   **BI CLOSED s7399, event-message payloads H-none** (`tools/s7399_evpayload_census.py --check` rc 0: 6 live bindings
+   PRENMI/SI/VI/DP msg 0, SP 8011A420 msg 80128C70 (type 0x81), AI 80149670 msg 801496A0 (type 1); Pi/Vi manager bindings run
+   in REPLACED empty stubs; 7 consumers: 5 NULL-slot, SP scheduler + AI loop dispatch on lbu 0(msg); all 14 host
+   enqueue_external_message_src sites pass the stored bound msg, none jams. Runtime ROGUESQ_S7399_EVP=1 + _CTL=1 (planted
+   BADC0DE0 on a queue below guest $sp), `tools/s7399_evp_report.py <log>`, route tools/s7392_mq_run.zsh: owner + RETAIL=1
+   0 mismatches over ~70-90k event deliveries each, CONTROL PASS both). Message-queue lifecycle family BB-BI CLOSED.
+   Lesson: plant controls relative to ctx->r29 only (a receive slot can be a global; s7399 v1 plant SIGBUS-ed retail).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
@@ -399,9 +405,9 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidates:** fold s7391_spwm_levels (rc 3 names thread + frame); then a new class, e.g. BB guest
-    message-queue drops (osSendMesg/osJamMesg OS_MESG_NOBLOCK with the -1 full return ignored: census the sites, count
-    full-queue returns per queue in play). Any new arena or pointer layout re-runs items 11/14 with --controls; a
+16. **Next audit candidates:** class BJ, replaced-libultra output contract: every librecomp *_recomp that returns a
+    value or writes a guest struct (osCont*, osPfs*/osEeprom*, osGetTime/osGetCount, osVi* getters, osAi*, osSp*) vs the
+    libultra contract, joined with the guest sites that test the return/struct (NEXT.md s7400). Any new arena or pointer layout re-runs items 11/14 with --controls; a
     census whose rows are cached across sessions must re-cut them on the measured tree (s7373 stale-row lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.

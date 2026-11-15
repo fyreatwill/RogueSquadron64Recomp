@@ -8309,6 +8309,67 @@ extern "C" void rs64_s7392_send(uint8_t* rdram, uint32_t mq, uint64_t ra, int fl
 extern "C" void rs64_s7392_ext(uint8_t* rdram, uint32_t mq, int src, int sent, int rq) {
     if (s7392::on()) s7392::note(rdram, 'E', mq, (uint64_t)(int64_t)src, 0, !sent, rq != 0);
 }
+// s7399 class BI: event-message payload census (ROGUESQ_S7399_EVP=1, default off). Every external delivery keyed by
+// (mq, source, msg) and every guest receive on a hardware-event queue (VI 80114388, SI 80110770, SP 8011A420, DP 8011A408,
+// AI 80149670) keyed by (mq, msg, first byte at msg when msg is a RAM pointer = the type byte the SP/AI consumers dispatch
+// on). Table every 10 s wall as [s7399-ev] / [s7399-rv] rows (SIGKILL-safe). ROGUESQ_S7399_CTL=1 plants a capacity-2 queue
+// 0x200 below the guest $sp at the first guest osSendMesg and posts one external message msg=BADC0DE0 source=Sp through the real
+// enqueue -> dequeue path, then receives it: the report must show that (mq, Sp, BADC0DE0) row as a payload mismatch.
+// Report: tools/s7399_evp_report.py <log>.
+namespace s7399 {
+struct Ev { uint32_t mq, msg; int src; uint64_t n, unsent; };
+struct Rv { uint32_t mq, msg; int tb; uint64_t n; };
+static std::mutex mu; static Ev ev[256]; static int nev = 0; static Rv rv[256]; static int nrv = 0; static double t_last = 0;
+static uint32_t ctl_q = 0;
+static bool on() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7399_EVP"); return e && e[0] && e[0] != '0'; }(); return v; }
+static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static void dump_locked() {
+    std::fprintf(stderr, "[s7399-begin] nev=%d nrv=%d ctl_q=%08X\n", nev, nrv, ctl_q);
+    for (int i = 0; i < nev; i++)
+        std::fprintf(stderr, "[s7399-ev] mq=%08X src=%d msg=%08X n=%llu unsent=%llu\n", ev[i].mq, ev[i].src, ev[i].msg,
+                     (unsigned long long)ev[i].n, (unsigned long long)ev[i].unsent);
+    for (int i = 0; i < nrv; i++)
+        std::fprintf(stderr, "[s7399-rv] mq=%08X msg=%08X tb=%d n=%llu\n", rv[i].mq, rv[i].msg, rv[i].tb, (unsigned long long)rv[i].n);
+    std::fflush(stderr);
+}
+static void tick_locked() { const double t = now(); if (t_last == 0) t_last = t; if (t - t_last >= 10.0) { t_last = t; dump_locked(); } }
+static bool evq(uint32_t mq) {
+    return mq == 0x80114388u || mq == 0x80110770u || mq == 0x8011A420u || mq == 0x8011A408u || mq == 0x80149670u || (ctl_q && mq == ctl_q);
+}
+static void control(uint8_t* rdram, recomp_context* ctx) {
+    static const bool ctl = [] { const char* e = std::getenv("ROGUESQ_S7399_CTL"); return e && e[0] && e[0] != '0'; }();
+    static std::atomic<bool> done{false};
+    if (!ctl || done.exchange(true)) return;
+    const uint32_t q = ((uint32_t)ctx->r29 - 0x200u) & ~7u, buf = q + 0x40u, dst = q + 0x60u;
+    osCreateMesgQueue(rdram, (int32_t)q, (int32_t)buf, 2);
+    { std::lock_guard<std::mutex> lk(mu); ctl_q = q; }
+    ultramodern::enqueue_external_message_src((int32_t)q, (OSMesg)0xBADC0DE0u, false, ultramodern::EventMessageSource::Sp);
+    const s32 r = osRecvMesg(rdram, (int32_t)q, (int32_t)dst, OS_MESG_NOBLOCK); // drains externals, then receives the plant
+    std::fprintf(stderr, "[s7399-ctl] q=%08X sp=%08X recv=%d got=%08X\n", q, (uint32_t)ctx->r29, (int)r, (uint32_t)*TO_PTR(OSMesg, (PTR(OSMesg))dst));
+    std::fflush(stderr);
+}
+} // namespace s7399
+extern "C" void rs64_s7399_ev(uint8_t* rdram, uint32_t mq, uint32_t msg, int src, int sent) {
+    if (!s7399::on()) return;
+    std::lock_guard<std::mutex> lk(s7399::mu);
+    int i = 0;
+    for (; i < s7399::nev; i++) if (s7399::ev[i].mq == mq && s7399::ev[i].src == src && s7399::ev[i].msg == msg) break;
+    if (i == s7399::nev) { if (i == 256) return; s7399::ev[s7399::nev++] = s7399::Ev{mq, msg, src, 0, 0}; }
+    s7399::ev[i].n++; if (!sent) s7399::ev[i].unsent++;
+    s7399::tick_locked();
+}
+extern "C" void rs64_s7399_recv(uint8_t* rdram, uint32_t mq, uint32_t msg, uint32_t slot) {
+    if (!s7399::on()) return;
+    if (!s7399::evq(mq)) return;
+    int tb = -1;
+    if (msg >= 0x80000000u && msg < rs64_ram_top) tb = rdram[(msg & 0x1FFFFFFFu) ^ 3];
+    std::lock_guard<std::mutex> lk(s7399::mu);
+    int i = 0;
+    for (; i < s7399::nrv; i++) if (s7399::rv[i].mq == mq && s7399::rv[i].msg == msg && s7399::rv[i].tb == tb) break;
+    if (i == s7399::nrv) { if (i == 256) return; s7399::rv[s7399::nrv++] = s7399::Rv{mq, msg, tb, 0}; }
+    s7399::rv[i].n++;
+    s7399::tick_locked();
+}
 // s7393 class BC: guest osCreateMesgQueue on a LIVE queue (ROGUESQ_S7393_CQ=1, default off). Per (mq, recompiled caller):
 // creates, re-creates (address created before in this run), and per create the pre-state: lost = validCount>0 (messages the
 // reset discards), orphan_r / orphan_s = a thread on blocked_on_recv / blocked_on_send whose OSThread.queue points back at
@@ -8566,6 +8627,7 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
         ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
     }
     if (s7392::on()) { rs64_s7392_send(rdram, (uint32_t)ctx->r4, (uint64_t)(uintptr_t)__builtin_return_address(0), (int)(s32)ctx->r6, (int)(s32)ctx->r2, 0); s7392::control(rdram, ctx); }
+    if (s7399::on()) s7399::control(rdram, ctx); // s7399
     if (s7394::on()) s7394::post_send(rdram, ctx, (uint32_t)ctx->r4, (int)(s32)ctx->r2, (uint64_t)(uintptr_t)__builtin_return_address(0)); // s7394
     if ((uint32_t)ctx->r4 == 0x8010FEE0u && (int32_t)ctx->r2 == 0) s7394fix::holder.store(-1); // s7394 fix: released
     if (s4580_q) s4580::rec(rdram, ctx, 'S', s4580_vcb, s4580::vc(rdram, (uint32_t)ctx->r4), (int)(s32)ctx->r6); /* PATCH: s4580 */

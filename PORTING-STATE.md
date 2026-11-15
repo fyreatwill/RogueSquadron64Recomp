@@ -195688,3 +195688,44 @@ ORIGIN: not a mitigation — ABI-fidelity fix of the librecomp PI replacement (w
 osPiStartDma, which librecomp replaces wholesale).
 Next: class BI event-message payloads (scratch/agent/NEXT.md).
 Conclusion: selects H-none, refutes H-reuse and H-async for PI/SI I/O-message lifecycle (class BH closed); next discriminator: class BI per-mq (msg sent, msg received) payload log with a planted bad-msg control.
+
+## Session 7399 (2026-11-15) — class BI event-message payloads closed (H-none): every host event delivery carries the guest-bound msg; SP/AI type-byte consumers see only bound pointers, owner + retail arms, control PASS
+
+Fold: soak s7398_io_levels rc=0: L4/L7/L12 203-204 s alive, 0 crash, 0 VI stall, io readback PASS rows 9/9/7, 0 FAIL ->
+IOFIX holds on 3 levels.
+
+Work unit (NEXT s7399, HYPOTHESIS-ID event-msg-payload): does any guest consumer of a hardware-event queue dispatch on a
+message value that librecomp/ultramodern sends differently from libultra? H-none / H-payload / H-jam.
+
+Line 1, static (`tools/s7399_evpayload_census.py [--check]`, new; resolves callee-saved regs across jal, which the s7392
+resolver did not): 9 binding sites, 6 live guest bindings: PRENMI 8010DFD8 msg 0, SI 80110770 msg 0, VI 80114388 msg 0
+(viRetraceHandlerThread, retrace 1), SP 8011A420 msg 80128C70 (type byte 0x81 stored just before), DP 8011A408 msg 0, AI
+80149670 msg 801496A0 (type byte 1). osCreatePiManager (PI 22222222) and osCreateViManager (VI 80130AD0 / COUNTER 80130AE8)
+are REPLACED by empty librecomp stubs, so those bindings never run. Consumers: 7 osRecvMesg sites on bound queues; PRENMI,
+SI x2, VI, DP use a NULL slot (DISCARD); SP spTaskSchedulerThread 80019CD0 and AI runAiAudioStreamPlaybackLoop 8008EE1C
+DEREF the msg (lbu 0(msg) = type-byte dispatch). Host senders: all 14 enqueue_external_message_src call sites (events.cpp
+VI/AI x3/SP/DP/SI, timer.cpp, extensions.cpp DL-event, pi.cpp x5) pass the stored bound msg, never a literal; no event
+sender jams (jam=false everywhere) -> H-jam impossible on the external path. osSetEventMesg ignores PRENMI (host never
+raises it; consumer waits forever = retail without a reset). Verdict H-none x6, CHECK rows 0.
+
+Line 2, runtime (new ROGUESQ_S7399_EVP=1, default off): weak hooks rs64_s7399_ev (every external delivery: mq, msg,
+source, sent; 3 delivery points in mesgqueue.cpp) and rs64_s7399_recv (every guest receive: mq, msg, slot) in
+lib/N64ModernRuntime (patch exported); table in src/main/upstream_compat.cpp ([s7399-ev]/[s7399-rv] every 10 s), report
+`tools/s7399_evp_report.py <log>` (rc 2 control fail, 3 mismatch). ROGUESQ_S7399_CTL=1 plants a capacity-2 queue 0x200
+below the guest $sp at the first guest osSendMesg and posts msg BADC0DE0 source=Sp through the real enqueue -> dequeue path.
+Route tools/s7392_mq_run.zsh (200 s, s7386 keyed route) with `ROGUESQ_S7399_EVP=1 ROGUESQ_S7399_CTL=1`:
+| arm | SP 80128C70 | SI 0 | AI 801496A0 (unsent) | VI 0 (unsent) | DP 0 | mismatches | control |
+| owner (dd8 21:9 FPS60) | 21437 | 23960 | 23822 (588) | 12003 (21) | 10846 | 0 | PASS |
+| RETAIL=1 | 16982 | 23932 | 23236 (16) | 12003 (35) | 6339 | 0 | PASS |
+Receives on SP 8011A420: 80128C70 tb 0x81 (= every SP event), plus guest-sent 80128C80 tb 0x02, 80128CE0 tb 0x01, 80112AE0
+tb 0x01 (12); AI only 801496A0 tb 0x01. Every received event msg is the bound pointer. AI unsent 588 = the s7392 AI drop
+family (known, benign). Pi deliveries ~20k/arm listed, not event-bound (class BH).
+Result: H-none on two lines (static guest+host census, runtime both arms with a planted mismatch flagged). H-payload and
+H-jam refuted. Class BI CLOSED, which closes the message-queue lifecycle family BB-BI.
+
+Failed first try (a dead end worth recording): the first control planted its queue at (first stack-resident receive
+slot - 0x200). That slot was not on a stack (q=80154B08, near the MusyX mutex 80154650 globals). The owner arm survived but
+logged only 37 Pi / 281 DP deliveries (the v2 rerun logged 20k / 11k, so the plant disturbed the run), and the RETAIL=1
+arm SIGBUS-ed after 1 s in runAiAudioStreamPlaybackLoop (si_addr 0x3800003e8). Moving the plant below the live guest $sp
+(the s7392 model) fixed both: retail 200 s, 0 crash. Lesson: a receive slot address is not a stack address; plant only
+relative to ctx->r29. The v1 owner log is kept at scratch/s7399/own_v1 and excluded from the result.
