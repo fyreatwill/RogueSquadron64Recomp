@@ -195342,3 +195342,32 @@ read-only, r2r default): crash 0; CONTROL PASS 278,892,532 ctl loads; colour ima
 H-color-reader refuted for the route. Coverage is one level; soak s7389_fbld_levels queued (L5/L10/L15 200 s, fails on any live colour load).
 ORIGIN: not a mitigation (diagnostic instrument only).
 Conclusion: the census selects H-no-reader and refutes H-z-reader / H-color-reader on the covered route; it closes CURRENT-TRUTH item 1 (owner decides the default). Next discriminator: the queued L5/L10/L15 census (any live colour LOAD row).
+
+## Session 7390 (2026-11-15) — fb-load watch widened to LD + lwl/lwr and given a live-load classifier; L5/L10/L15 soak and route rerun both find no guest reader of a live framebuffer
+
+Fold: s7389_fbld_levels rc=0, CONTROL PASS on all three levels (ctl loads 8.7e8 / 6.1e7 / 1.07e9). L5/L10/L15 dd8 21:9 FPS60,
+203-205 s flight, alive, 0 crash, 0 VI stall. 0 live colour LOAD. Live-Z LOADs were ~2.87e5 per level: pages < 0x100000 (the
+game's dummy SetZImage at phys 0, span covers 0x000000-0x03DFFF), 546 at 0xC00000-0xC05FFF (boot DL memory named by a boot
+SetZImage, vi 61), and 4 new ones: funcs_0.c:4728 rs_free `lhu 0(a1)` on page 0xB80000 (vi 613-614) and funcs_0.c:6568/6654
+coalesceFreeHeapBlocks_s7325_inner `lhu 0x10` on page 0xBA2000 (vi 4021-4022), n=1-2 each. These are heap block-header reads
+(H-reuse: a heap block sits inside the width*height span estimate of a Z image just named), not a copy/blit/sample shape.
+Identical counts on all three levels -> route-driven, not level-driven.
+
+Gap found reading include/fbld/recomp.h: the s7389 wrap covered MEM_W/WU/H/HU/B/BU only. Generated code also loads via LD
+(1332 ldc1 + 5 ld sites, load_doubleword) and do_lwl/do_lwr (410 sites); lwc1 already uses MEM_W. Change (diagnostic, build_fbld
+only): include/fbld/recomp.h now wraps LD and do_lwl/do_lwr as function-like macros (check the aligned dword/word, then call the
+original inline helper; the inner name does not re-expand). tools/s7389_fbld_report.py: PATH rows (MEM / LD / LWLR per kind),
+LIVECLASS per live colour/Z load (HEAP = rs_free/coalesceFreeHeapBlocks*, DUMMYZ = Z page < 0x100000, BOOTDL = Z page
+0xC00000-0xC05FFF, else UNCLASSED), LIVELOAD lines for colour or UNCLASSED rows, VERDICT, and exit 3 on a reader candidate
+(2 = void control). Re-run on the three s7389q logs: VERDICT no-reader x3 (matches the hand reading above).
+
+Run (tools/s7389_fbld_run.zsh scratch/s7390/run1, CTL=0:138000 so code/rodata are the control, 200 s s7386 keyed route through
+pause/abort/MISSION FAILED/debrief, dd8 21:9 FPS60, owner-save copy): alive 200 s, 0 crash. Positive control for the new paths:
+PATH kind=ctl LD 5,640,527, LWLR 10,268,466 (MEM 7.5e8). Result: 0 live colour LOAD on any path; live Z LOAD = HEAP 4 only
+(DUMMYZ hidden by the control range, by design). LWLR hits on stale colour/Z pages (45,522 / 5,560) are heap/DL reuse like the
+MEM stale rows. -> H-no-reader holds with the LD and unaligned paths included; the only remaining unwatched read path is RSP/RDP
+DMA (fb-as-texture), which RT64 owns. The [s7389-new] print cap of 3000 hides nothing: [s7389-row] dumps every key each ~20 s
+(141,057 row lines).
+Rules out: a guest reader of live fb pixels on the route via ld/ldc1 or lwl/lwr. Queued: scratch/agent/soak_queue/
+s7390_fbld_wide_levels.sh (L5/L10/L15, CTL=0:138000, fails on report rc 3 / void / no LD control). RENDER_TO_RAM=0 stays
+owner-ready, default unchanged.

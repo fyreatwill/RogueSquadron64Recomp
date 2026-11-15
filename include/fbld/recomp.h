@@ -2,7 +2,8 @@
  * include path for RecompiledFuncs). Wraps every MEM_W/H/HU/B/BU guest access: when the physical page was named by
  * an RDP SetColorImage / SetZImage (marked by src/rsp/s7389_fbld.cpp from the gfx RDP stream) the access is reported
  * with __FILE__/__LINE__ (one generated line = one MIPS instruction, so the line itself says load vs store).
- * Not covered: load_doubleword / do_lwl / do_lwr (inline helpers above, bound to the upstream macros). Diagnostic. */
+ * s7390: LD (ld / ldc1 via load_doubleword) and do_lwl / do_lwr are wrapped too (checked on the aligned word / dword).
+ * Not covered: RSP/RDP DMA reads (RT64 owns fb-as-texture) and the SWL/SWR/SD store paths (loads only matter). Diagnostic. */
 #include_next "recomp.h"
 #ifdef RS64_FB_LDWATCH
 #ifndef RS64_FBLD_OVERRIDE
@@ -32,5 +33,16 @@ static inline uint8_t *rs64_fbld_chk(uint8_t *rdram, uint8_t *p, const char *f, 
     (*(int8_t*)rs64_fbld_chk(rdram, rdram + ((((reg) + (offset)) ^ 3) - 0xFFFFFFFF80000000), __FILE__, __LINE__, 1))
 #define MEM_BU(offset, reg) \
     (*(uint8_t*)rs64_fbld_chk(rdram, rdram + ((((reg) + (offset)) ^ 3) - 0xFFFFFFFF80000000), __FILE__, __LINE__, 1))
+#undef LD
+#define LD(offset, reg) \
+    (rs64_fbld_chk(rdram, rdram + (((((reg) + (offset))) & ~(gpr)7) - 0xFFFFFFFF80000000), __FILE__, __LINE__, 8), \
+     load_doubleword(rdram, offset, reg))
+/* function-like macros over the inline helpers defined above; the inner name does not re-expand */
+#define do_lwl(rd, iv, off, reg) \
+    (rs64_fbld_chk(rd, rd + (((((reg) + (off))) & ~(gpr)3) - 0xFFFFFFFF80000000), __FILE__, __LINE__, 4), \
+     do_lwl(rd, iv, off, reg))
+#define do_lwr(rd, iv, off, reg) \
+    (rs64_fbld_chk(rd, rd + (((((reg) + (off))) & ~(gpr)3) - 0xFFFFFFFF80000000), __FILE__, __LINE__, 4), \
+     do_lwr(rd, iv, off, reg))
 #endif
 #endif

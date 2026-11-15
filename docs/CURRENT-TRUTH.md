@@ -213,7 +213,11 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    3/3 -> 0/3); soak L1/L4/L12 300 s pass with upl=0 hot=0 (s7389). Residual-risk census s7389 (build_fbld,
    tools/build_fbld.sh + s7389_fbld_run.zsh + s7389_fbld_report.py, ROGUESQ_S7389_FBLD=1): 0 guest LOADS from a live colour image
    over the s7386 route (control 2.8e8 loads; 2.5e8 stale-page loads = heap/DL reuse, 61 fns, none an fb reader); live-Z loads
-   are all the dummy SetZImage at phys 0 (low RAM) or boot DL memory at 0xC04F68 -> H-no-reader (route only). One CPU store to a
+   are all the dummy SetZImage at phys 0 (low RAM) or boot DL memory at 0xC04F68 -> H-no-reader (route only); s7390 fold: same on
+   L5/L10/L15 (+4 HEAP header reads in rs_free/coalesce = heap reuse inside an over-estimated Z span). s7390 widened the watch to
+   LD (ld/ldc1) + do_lwl/do_lwr (control: 5.6e6 LD + 1.0e7 lwl/lwr hits on CTL=0:138000) and the report now classes every live
+   load (HEAP/DUMMYZ/BOOTDL/UNCLASSED, rc 3 on a reader candidate): route rerun 0 live colour loads on any path. Soak
+   s7390_fbld_wide_levels queued (L5/L10/L15). Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those). One CPU store to a
    live fb: rs_memset 0xA6F000 at boot vi 55 (dropped at r2r=0; boot sheet identical). Detail PORTING-STATE s7385-s7389.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
