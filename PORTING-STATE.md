@@ -194522,3 +194522,4 @@ HYPOTHESIS-ID: tsan-arm-material-crash
   rs64_s6127_fl <- rs_malloc on guest threads T68/T73/T82; rs64_s5042_poison <- rs_free). Likely SEM (guest run-one), unreviewed.
 - Rules out: H-retail (retail settings TSan 0 crash; mechanism is our gate), H-tsan-only as "harmless": the gate is a frame-count proxy
   any slowed host can undercut. Selects H-ours (DLPOOLX arm gate) x H-tsan-timing. Two lines: static pop/finder path + 2/2 vs 0/2 A/B.
+Conclusion (s7368): this A/B selects H-ours x H-tsan-timing (the begin-3000 DLPOOLX arm gate) and refutes H-retail (retail-settings TSan 0 crash); the root cause is the frame-count arm proxy, fixed. Next discriminator: TL ring + sample on the TSan 1024-scene crawl (NEXT.md).
