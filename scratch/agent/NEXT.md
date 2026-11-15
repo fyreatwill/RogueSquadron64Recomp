@@ -1,19 +1,23 @@
-# NEXT (s7381)
-HYPOTHESIS-ID: host-spin-wait
+# NEXT (s7382)
+HYPOTHESIS-ID: host-thread-qos
 
-s7380 closed class AV (condvars) as H-shutdown: 0 in-play lost wakeups; 9 destructor stop notifies + 3 start races fixed.
+s7381 closed class AW (host spin-waits): barrier spins never wait in play, now condvar waits (ROGUESQ_S7381_BARRIER_CV=0 old);
+guest osYieldThread polls 0 calls; VI deadline spin 3% of a core by design.
 
-Work unit: class AW, every host busy-wait / spin loop that polls another thread's state (src/, lib/rt64/src,
-lib/N64ModernRuntime/ultramodern, plume Metal backend; contrib except plume excluded). Known instances: RT64
-WorkloadQueue::advanceToNextWorkload and PresentQueue::advanceToNextPresent (`do { lock; check barrier } while` with no
-yield), RasterShaderCache::setup (activeCount spin), any `while (!flag) {}` / `while (x.load() ...)` / sleep_for(0) polls in
-the port (events.cpp, rsp/dpc bridge, audio).
-Per site: what it waits for, which thread sets it, pure spin / yield / sleep(N) / bounded, whether it can run during play,
-and measured hit rate + spin time (one counter build: iterations and wall us per site, dumped per 10 s).
-Hypotheses: H-idle (spins exist but never iterate in play: 0 cost), H-burn (>=1 spin iterates in play and burns a P-core:
-convert to condvar/yield, measure VI and frame time before/after), H-starve (a spin holds a mutex the setter needs).
-Discriminator: census tool tools/s7381_spin_census.py (--check exits 1 on an unreviewed row; --controls plants a pure spin
-that must be flagged) + one counter build (env ROGUESQ_S7381_SPIN=1, default off) smoke run
-`env SECS=260 zsh scratch/s7326/run.zsh s7381_spin 'ROGUESQ_S7381_SPIN=1'`; positive control: a site forced to spin
-(advanceToNextWorkload with a 1-slot barrier under ROGUESQ_S7381_SPIN_CTL=1) must show iterations > 0.
-Any H-burn row: fix with a condvar or yield (env gate =0 old), smoke both arms, TSan via scratch/s7379/tsan_run.zsh.
+Work unit: class AX, every host thread the process creates (std::thread / pthread_create / SDL_CreateThread / dispatch
+queues / RT64 Thread / plume Metal completion threads; src/, lib/rt64/src incl. plume, ultramodern, librecomp).
+Per thread: creator site, name, QoS class / priority set at creation (default, ROGUESQ_QOS_ALL=1, GUEST_QOS, PRESENT_QOS,
+VI_RT real-time policy), whether it runs in play, CPU time in play, which cluster it ran on (P/E), and whether it ever
+blocks waiting on a lower-QoS thread (priority inversion: e.g. a USER_INTERACTIVE present thread waiting on a default-QoS
+render thread).
+Hypotheses: H-covered (every hot thread already gets an interactive QoS by default; QOS_ALL only matters under load),
+H-gap (a hot thread at default/utility QoS in normal play: can land on E-cores, a G1b/G5c pacing lever),
+H-invert (a high-QoS waiter blocks on a lower-QoS producer: the waits measured in s7380/s7381 name the pairs).
+Discriminator: census tool tools/s7382_thread_qos_census.py (--check exits 1 on an unreviewed creator; --controls plants
+a thread creation that must be listed) + one runtime dump (env ROGUESQ_S7382_QOS=1, default off): at 60 s and 200 s, for
+every thread of the process: name, qos_class (pthread_get_qos_class_np on self at a hook, or thread_policy_get /
+proc_pidinfo THREAD info from a sampler), user+system CPU us (thread_info THREAD_BASIC_INFO), so CPU share per thread in play
+is measured. Positive control: a planted thread created at QOS_CLASS_BACKGROUND under ROGUESQ_S7382_QOS_CTL=1 must show
+background QoS and its own busy CPU in the dump.
+Run: `env SECS=260 zsh scratch/s7326/run.zsh s7382_qos 'ROGUESQ_S7382_QOS=1'` and the same with ROGUESQ_QOS_ALL=1 (two arms,
+same build, sequential). Any H-gap row with CPU share > 5%: set its QoS at creation (env gate =0 old), smoke both arms.

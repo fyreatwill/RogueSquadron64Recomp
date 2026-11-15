@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7379 (2026-11-14).
+Compact operational handoff, as of Session 7381 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -208,16 +208,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-spin-wait): class AW, every host busy-wait / spin loop on another thread's state**
-   (pure spin vs yield vs sleep vs condvar; CPU burn on 5 P-cores = a G1b pacing lever). See NEXT.md.
-   **AV CLOSED s7380 as H-shutdown** (`tools/s7380_condvar_census.py --check` rc 0, hand verdicts tools/s7380_condvar_reviewed.tsv):
-   15 condvars, 19 waits (all lambda predicates), 35 notifies; every in-play pair writes its predicate state under the waiter
-   mutex (H-lost refuted as a stall source). Fixed in lib/rt64 (unconditional, exit/ctor paths only): 9 destructor stop-flag
-   notifies without a lock (lost wakeup -> join hang) now take an empty critical section on the waiter mutex first; 3 start
-   races (BufferUploader, TextureCache upload thread set their own run flag; CompilationThread ctor stored false after start)
-   now set the flag before thread creation. Unreachable in normal play (SDL_QUIT -> quick_exit). Control: in-tool planted
-   cases + `--rev HEAD` re-flags s7378's two interpolated rows; tools/s7380_lostwake_model.cpp OLD hangs 20/20, NEW 0/20.
-   Note: ENABLE_OPTIMIZED_SHADER_GENERATION is undefined on macOS, so RT64 never compiles specialised shaders here (ubershader only).
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID host-thread-qos): class AX, host thread QoS / priority census** (every host thread:
+   QoS class / priority at creation, with and without QOS_ALL, CPU time in play, P vs E cluster, waits on a lower-QoS thread).
+   **AW CLOSED s7381** (`tools/s7381_spin_census.py --check` rc 0, 75 rows, tools/s7381_spin_reviewed.tsv): RT64
+   advanceToNextWorkload / advanceToNextPresent pure spins never wait in play (0/12570, 0/12697) but burn a core when they do
+   (forced 150 ms stalls: 619M mutex iterations); now block on barrierCondition (ROGUESQ_S7381_BARRIER_CV=0 old): 58 evals for
+   the same 29 stalls, TSan rc 0. 22 guest osYieldThread polls: 0 calls (control RA fires). VI deadline spin = deliberate
+   s6456/s6967, 493 us/VI = 3.0% of a core. Counters ROGUESQ_S7381_SPIN=1 (+ _SPIN_CTL=1 control), default off.
+   **AV CLOSED s7380 as H-shutdown** (`tools/s7380_condvar_census.py --check` rc 0): 19 waits / 35 notifies all LOCKED in play;
+   9 RT64 destructor stop notifies + 3 start races fixed (exit paths). ENABLE_OPTIMIZED_SHADER_GENERATION is undefined on macOS
+   (ubershader only).
    **AU2 CLOSED s7379 as H-ordered, no fix:** the resize/fb-config teardown (threadConfigurationUpdate destroyAll under managerMutex)
    cannot overlap a present's target use: W waits presentId<=W.presentId (notify only after frame-0 GPU pass), every later present
    waits workloadId>=W, advanced only after the teardown. Probe ROGUESQ_S7379_PROBE=1 (default off): 0/56 (build) and 0/75 (TSan)

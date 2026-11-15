@@ -194994,3 +194994,48 @@ Positive control for the mechanism: tools/s7380_lostwake_model.cpp (delay inject
 running==true): OLD pattern hung 20/20, fixed pattern 0/20, rc 0. Not run against the real destructors (unreachable in play).
 Build: cmake --build build OK. Smoke `env SECS=260 zsh scratch/s7326/run.zsh s7380_dd8 ''` (dd8 21:9 FPS60 hangar->mission->abort route): crash 0, resets 14 (= s7378 smoke), arena full 0, 186 MB log. TSan arm not re-run: the changed code runs only at thread construction and destruction, and construction is exercised by every boot (clean here).
 Next: class AW host spin-waits (NEXT.md, HYPOTHESIS-ID host-spin-wait).
+
+## Session 7381 (2026-11-14) — class AW (every host busy-wait / poll loop on another thread's state) CLOSED: 75 rows, the two in-play pure spins (RT64 workload/present barrier) never fire in play but burn a full core when they do; both now block on a condvar (default on, ROGUESQ_S7381_BARRIER_CV=0 old)
+
+HYPOTHESIS-ID: host-spin-wait. Hypotheses: H-idle (spins exist but never iterate in play), H-burn (>=1 spins in play and
+burns a P-core), H-starve (a spin holds a mutex the setter needs).
+
+**Census** `tools/s7381_spin_census.py --check` rc 0 (hand verdicts tools/s7381_spin_reviewed.tsv). Scope src/main, src/rsp,
+lib/rt64/src/{hle,render,common,rhi,apple,gui,shared}, plume_metal.cpp, ultramodern + librecomp src, plus the guest side
+(every RecompiledFuncs function calling osYieldThread_recomp = host sched_yield). Loop body classes PURE-SPIN / YIELD /
+SLEEP (blocking loops dropped). In-tool controls: planted pure spin, sleep poll, yield poll classified right; planted condvar
+loop not listed; real advanceToNextWorkload listed. The first cut missed the VI deadline spin and the preciseSleepUntil tail
+(empty body on `clock::now()`): rule widened, and the tool strips its own s7381 counters so instrumentation cannot hide a site.
+75 rows: PURE-SPIN 13 (FIXED 2, BOUNDED 4 = lock-free CAS retries + VI spin, DIAG 4, IDLE 2, EXIT 1), SLEEP 39 (DIAG 32
+env-gated pollers, BOUNDED 6, EXIT 1), YIELD 23 (22 guest functions + librecomp wait_one_frame, which has no caller: all IDLE).
+
+**Runtime** (one counter build, ROGUESQ_S7381_SPIN=1, default off: per site calls / calls that spun / iterations / wall us,
+guest osYieldThread keyed by RA, dumped per 10 s). Route = scratch/s7326/run.zsh (hangar -> mission -> abort cycles, dd8 21:9
+FPS60), all runs crash 0, arena full 0:
+| run | workload barrier | present barrier | VI deadline spin | guest yields |
+|---|---|---|---|---|
+| old, play 260 s | 0 / 13489 spun | 0 / 13630 | (site added later) | 0 |
+| old, CTL 200 s | 29 spun, 619M iters, 3.28 s, max 125 ms | 29, 496M iters, 2.67 s | - | 0 |
+| new, play 260 s | 0 / 12570 | 0 / 12697 | 15026/15027 VIs, mean 493 us, max 510 us (3.0% of a core) | 0 |
+| new, CTL 200 s | 29 waits, 58 evals, 3.27 s | 29 waits, 58 evals, 2.65 s | 11426/11427, max 505 us | 0 |
+| new, CTL 150 s (yield ctl) | 23 / 46 evals | 23 / 46 | max 501 us | ra=8000C7C0 n=23 (ctl), no guest RA |
+| TSan, CTL 240 s | 1 / 2 evals | 1405 real waits (slow present), 2810 evals | - | - |
+CTL = ROGUESQ_S7381_SPIN_CTL=1: render and present threads sleep 150 ms before every 300th barrier advance (forces the writers
+to wait), and call the real osYieldThread_recomp with marked RA 0x8000C7C0 (control for the yield histogram: fires 23/23).
+present_pace (Timer::preciseSleepUntil tail) 0 calls: targetRate is never above viOriginalRate here. shader/texstream waitAll
+0 calls (teardown only).
+
+**Result: H-idle in play for every in-play spin, but the barrier spin shape is H-burn when it fires** (~190k mutex
+lock/unlock per ms on the gfx/VI thread for the whole stall; host load is a measured freeze source, s7277). H-starve not
+seen (the render/present threads still got cursorMutex under the old spin). FIX (lib/rt64, default on): advanceToNextWorkload /
+advanceToNextPresent wait on a new barrierCondition; threadAdvanceBarrier writes barrierCursor under cursorMutex, then
+notify_all (s7380 LOCKED pattern, no lost wakeup). ROGUESQ_S7381_BARRIER_CV=0 restores the spin. Same forced stalls: 58
+predicate evaluations instead of 619M iterations, same wall wait. TSan report (tools/s7354_tsan_report.py) rc 0, 19 known
+groups, CTL x2786, nothing in the queue files. VI deadline spin left as is: deliberate s6456/s6967 precision (500 us/VI under
+VI_RT default, ROGUESQ_VI_RT_SPIN_US tunes it), 3.0% of one core measured.
+
+ORIGIN: not a mitigation. The writer of barrierCursor is the RT64 render/present thread (threadAdvanceBarrier); the waiter's
+spin was RT64 upstream design. The change only replaces how the gfx/VI thread waits for that legitimate value.
+
+Rules out: guest osYieldThread poll loops as a CPU burn source (0 calls, control fires); RT64 barrier spins as a normal-play
+pacing cost (0 waits in 25k advances). Next: class AX, host thread QoS / priority census.

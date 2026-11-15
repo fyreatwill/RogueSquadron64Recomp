@@ -1,0 +1,76 @@
+#key	verdict	note
+main.cpp|s4578_poll|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_level_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_state_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_exact_route_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_exact_route_poller|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_b50_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_b50_poller|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_phase_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_voice_slot_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_fs_slot_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_fs_slot_poller|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_host_write_fault_watch|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_host_write_fault_watch|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_task_write_fault_watch|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_m5_task_write_fault_watch|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_vtx_write_fault_watch|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_vtx_write_fault_watch|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_fl_zero_poller|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_fl_zero_poller|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_memwp_watchdog|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|start_memwp_watchdog|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
+main.cpp|get_n64_input|SLEEP|1	DIAG	ROGUESQ_GODMODE3 health-revive thread, 20 us sleeps
+main.cpp|init|SLEEP|1	EXIT	rs64_stderr_async_restore drain at exit/crash, usleep 1 ms x <=300
+upstream_compat.cpp|floorWriterGuest|SLEEP|1	DIAG	cine watchdog thread, Sleep(500)
+upstream_compat.cpp|rs64_guest_range_valid|PURE-SPIN|1	BOUNDED	CAS-max retry on a diag high-water mark, lock-free
+upstream_compat.cpp|recv_trace_start_dumper|SLEEP|1	DIAG	env-gated recv trace dumper, 10 s sleeps
+upstream_compat.cpp|rec|SLEEP|1	DIAG	periodic dump thread, 40-60 s sleeps
+dpc_bridge.cpp|rs64_f5_vtxcolor_state|PURE-SPIN|1	BOUNDED	CAS-decrement retry on a log latch, lock-free
+dpc_bridge.cpp|rs64_rt_submit|PURE-SPIN|1	DIAG	s7026 deliberate positive-control spin (ROGUESQ_S7026 spin arm only)
+dpc_bridge.cpp|rs64_aq_now|PURE-SPIN|1	DIAG	rs64_g1e_aq_spin: s6954 G1E_AQ positive-control busy-wait (g_rs64_aq_spin_ns > 0 only)
+s7331_reset_writer.cpp|poll|SLEEP|1	DIAG	s7331 reset-writer census poller, 8 ms sleeps, env-gated
+rt64_present_queue.cpp|PresentQueue::advanceToNextPresent|PURE-SPIN|1	FIXED	s7381: same as workload; play 0/12697; ctl 29 waits / 58 evals vs old 496M iters / 2.67 s; TSan arm (slow present) 1405 real waits, 2 evals each, report rc 0
+rt64_state.cpp|State::fullSync|SLEEP|1	DIAG	s4267 ctl sleep (s_ctl only)
+rt64_workload_queue.cpp|WorkloadQueue::advanceToNextWorkload|PURE-SPIN|1	FIXED	s7381: =0 branch only (ROGUESQ_S7381_BARRIER_CV=0). Default waits on barrierCondition, notified by threadAdvanceBarrier after the locked barrierCursor write. Play 0/12570 waits; forced 150 ms stalls 29 waits / 58 predicate evals vs old spin 619M iters / 3.28 s burnt
+rt64_workload_queue.cpp|rs64_s7381_note|PURE-SPIN|1	DIAG	s7381 census CAS-max, ROGUESQ_S7381_SPIN only
+rt64_raster_shader_cache.cpp|RasterShaderCache::waitForAll|PURE-SPIN|1	EXIT	only caller Application::destroyShaderCache (teardown, after both queues idle); 0 calls in 2 x 260 s play runs
+rt64_texture_cache.cpp|TextureCache::waitForAllStreamThreads|SLEEP|1	BOUNDED	sleep_for 1 ms per poll; 0 calls in play runs
+rt64_timer.cpp|Timer::preciseSleepUntil|SLEEP|1	BOUNDED	100 us nanosleep steps
+rt64_timer.cpp|Timer::preciseSleepUntil|PURE-SPIN|1	IDLE	tail spin < sleep estimate (~100 us + 2 sd), only when targetRate > viOriginalRate (interpolation); measured 0 calls in play (site present_pace)
+events.cpp|vi_thread_func|SLEEP|1	BOUNDED	VI loop; sleep_until each VI
+events.cpp|vi_thread_func|PURE-SPIN|1	BOUNDED	s6456/s6967 deliberate VI deadline precision spin: sleep_until(next - 500 us) then spin (VI_RT default; 2 ms with VI_RT=0). Measured 15026/15027 VIs spin, mean 493 us, max 510 us = 3.0% of one core; ROGUESQ_VI_RT_SPIN_US tunes it
+events.cpp|ultramodern::init_events|SLEEP|1	BOUNDED	s4450 AI drain thread, sleep_for 1 ms
+events.cpp|ultramodern::init_events|SLEEP|2	BOUNDED	s4440 AI event thread, sleep_until period
+mesgqueue.cpp|s7195_reporter_start|SLEEP|1	DIAG	s7195 reporter thread, seconds sleeps
+mesgqueue.cpp|s4259_start|SLEEP|1	DIAG	s4259 census thread, 10 ms sleeps, env-gated
+port_main.c|main_thread_func|SLEEP|1	DIAG	ultramodern sample program, not linked into the game path
+port_main.c|idle_thread_func|SLEEP|1	DIAG	ultramodern sample program, not linked into the game path
+threads.cpp|sampler_loop|SLEEP|1	DIAG	s4587 1 kHz PC sampler, env-gated
+recomp.cpp|recomp::start|PURE-SPIN|1	IDLE	while(!wait_for_game_started()) {}: callee blocks in game_status.wait(None) (atomic wait), boot only
+recomp.cpp|recomp::start|SLEEP|1	BOUNDED	gfx update loop, sleep_milliseconds(1)
+sp.cpp|log_sp_yielded_ab|PURE-SPIN|1	DIAG	first-use site-table spinlock in an SP yield logger, held for a strcmp scan of 8 entries
+vi.cpp|?|YIELD|1	IDLE	wait_one_frame: no caller in RecompiledFuncs (grep), never runs
+plume_metal.cpp|rs64AtomicMax|PURE-SPIN|1	BOUNDED	CAS-max retry, lock-free, waits on nobody
+guest|siServiceThread|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|siServiceThread|YIELD|2	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|siServiceThread|YIELD|3	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|waitForSerialIdle|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|waitDmaSlotComplete|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|pollDmaSlotStep|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|yieldThreadRet1|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|periodicCallbackWorker|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|musyxSynthFrame_s4562_impl|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|bufferArbiterProducerScanWait|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|bufferArbiterProducerScanWait|YIELD|2	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|advanceVideoFrame|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|advanceVideoFrame|YIELD|2	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|viRetraceHandlerThread|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|yieldCurrentThread|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|yieldFromSpThread|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|yieldFromGfxFrame|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|waitOnVideoQueue|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|bufferArbiterAllocSlot|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|bufferArbiterAllocSlot|YIELD|2	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|acquireFreeBufferSlot|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+guest|waitForPostSwapAck|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached

@@ -965,9 +965,14 @@ extern "C" void osViGetCurrentField_recomp(uint8_t* /*rdram*/, recomp_context* c
 // This symbol is defined in upstream librecomp too (with the assert), but
 // the linker picks our definition first because /FORCE:MULTIPLE is enabled
 // (already used for the patches/heap_guards.c override). Same trick.
-extern "C" void osYieldThread_recomp(uint8_t* /*rdram*/, recomp_context* /*ctx*/) {
+extern "C" { bool rs64_s7381_on(); uint64_t rs64_s7381_now(); void rs64_s7381_yield(uint32_t ra, uint64_t ns); }
+extern "C" void osYieldThread_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
+    if (rs64_s7381_on()) { const uint64_t t0 = rs64_s7381_now(); std::this_thread::yield(); rs64_s7381_yield((uint32_t)ctx->r31, rs64_s7381_now() - t0); return; }
     std::this_thread::yield();
 }
+// s7381 positive control for the guest-yield histogram: ROGUESQ_S7381_SPIN_CTL=1 calls the real osYieldThread_recomp with a
+// marked return address (0x8000C7C0) from the barrier-stall path; the [s7381] dump must show "yield ra=8000C7C0".
+extern "C" void rs64_s7381_yield_ctl() { recomp_context c{}; c.r31 = (gpr)(int32_t)0x8000C7C0u; osYieldThread_recomp(nullptr, &c); }
 
 // RS64 fix: game calls osViBlack(1) twice during boot at funcs_0.c:2083 and
 // :2142 and never osViBlack(0). That keeps ultramodern's VI_STATE_BLACK set
