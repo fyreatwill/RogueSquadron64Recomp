@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7394 (2026-11-15).
+Compact operational handoff, as of Session 7395 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -240,6 +240,15 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    live, ORIGIN retail buildHeapFreeList re-seed post 0x80001fe8 under rs_malloc's hold. **ROGUESQ_S7394_HOLDFIX default ON**
    (=0 retail): the holder's re-seed post is skipped, rs_malloc's release posts the one token (release drops 10 -> 0, same end
    state). Soak s7394_holdfix_levels queued (L4/L7/L12).
+   s7395 fold s7394_holdfix_levels: L4/L7/L12 203-204 s alive, 0 crash, 0 VI stall, --fix rc 0, FIX-ARM CONTROL PASS,
+   holdfix_skips 8/10/5, VERDICT H-none x3 -> HOLDFIX holds on 3 more levels.
+   **BE CLOSED s7395, no event re-binding** (`tools/s7395_event_census.py`: 9 osSetEventMesg/osViSetEvent guest sites, one
+   per event, all straight-line in thread entries or one-shot init; the PI/VI/COUNTER sites sit in osCreatePi/ViManager, which
+   librecomp replaces (pi.cpp/vi.cpp), so they never run; VI's two sites are libultra's two layers, not a re-bind). Runtime
+   ROGUESQ_LOG_EVENT_WIRING=1 on tools/s7392_mq_run.zsh, owner + RETAIL=1 arms: the 6 live sites register exactly once each
+   (AI 80149670, DP 8011A408, SP 8011A420, SI 80110770, PRENMI 8010DFD8, VI-SET 80114388), identical in both arms, SP/DP
+   completions reach the bound queues (64+64 rows each arm) -> H-none; H-strand and H-port refuted (nothing is re-bound,
+   so ultramodern's table cannot go stale). Next class BF: thread lifecycle (osStopThread 3 / osDestroyThread 2 sites).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest

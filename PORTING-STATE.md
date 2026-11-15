@@ -195561,3 +195561,29 @@ report --fix rc 0 + skips > 0 per level).
 
 Rules out: a second thread ever acquiring the heap mutex inside a re-seed window on this route (measured, not just argued); class
 BD closes for every other count-1 re-seed too (s7393: held=0 for 80128D10 / 80149990 / 80154650 / coalesce 8010FEE0).
+
+## Session 7395 (2026-11-15) — class BE event re-binding closed: 9 sites, 6 live, each binds once in owner and retail arms (H-none)
+
+Fold: s7394_holdfix_levels rc 0. L4/L7/L12 ran 203-204 s alive with 0 crash and 0 VI stall. `s7394_bd_report.py --fix` gave
+rc 0 and FIX-ARM CONTROL PASS on each level, holdfix_skips 8/10/5, no RACE row, VERDICT H-none x3.
+
+Class BE (osSetEventMesg / osViSetEvent re-binding). Static: new `tools/s7395_event_census.py` over /tmp/s7392.dis finds 9
+sites:
+- preNmiResetThread binds PRENMI, siServiceThread binds SI, viRetraceHandlerThread uses osViSetEvent (VI, retrace 1),
+  spTaskSchedulerThread binds SP and dpInterruptHandlerThread binds DP. These are thread entries (callers=0).
+- osCreatePiManager binds PI, osCreateViManager binds VI and COUNTER, and initAudioSubsystem binds AI (callers=1 each).
+- Every site is straight-line code: no backward branch covers the call.
+- The PI/VI/COUNTER sites never run, because librecomp replaces osCreatePiManager / osCreateViManager (pi.cpp:76,
+  vi.cpp:13). VI's two sites are libultra's two layers (interrupt -> vimgr, vimgr -> client), not a re-bind.
+
+Runtime: no build. ROGUESQ_LOG_EVENT_WIRING=1 on the s7386 keyed route (tools/s7392_mq_run.zsh, 200 s each), run in an
+owner arm (dd8 21:9 FPS60) and a RETAIL=1 arm. In both arms the 6 live sites register exactly once: AI mq 80149670 msg
+801496A0, DP 8011A408, SP 8011A420 msg 80128C70, SI 80110770, PRENMI 8010DFD8, VI-SET 80114388 retrace 1. The two arms
+match, and SP and DP completions are delivered to the bound queues (64-row cap reached for each in both arms). 0 crash.
+Positive control: every reachable binding site fired, through the same un-deduplicated logger a re-bind would use, and the
+row count (6) is far under the 64-row cap.
+Result: H-none selected. H-strand (a re-bind leaves a waiter behind) and H-port (a stale ultramodern binding) are refuted:
+no event is ever re-bound on the route, so ultramodern's event table is written once per event.
+Residual: SI event posts come from the cont path (events.cpp:1831), not an SI interrupt. That is working as designed.
+Next: class BF, thread lifecycle (osStopThread 3 / osDestroyThread 2 / osCreateThread 12 sites): can a stopped or destroyed
+thread still be linked in a queue's waiter list?
