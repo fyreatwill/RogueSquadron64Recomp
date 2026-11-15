@@ -216,8 +216,8 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    are all the dummy SetZImage at phys 0 (low RAM) or boot DL memory at 0xC04F68 -> H-no-reader (route only); s7390 fold: same on
    L5/L10/L15 (+4 HEAP header reads in rs_free/coalesce = heap reuse inside an over-estimated Z span). s7390 widened the watch to
    LD (ld/ldc1) + do_lwl/do_lwr (control: 5.6e6 LD + 1.0e7 lwl/lwr hits on CTL=0:138000) and the report now classes every live
-   load (HEAP/DUMMYZ/BOOTDL/UNCLASSED, rc 3 on a reader candidate): route rerun 0 live colour loads on any path. Soak
-   s7390_fbld_wide_levels queued (L5/L10/L15). Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those). One CPU store to a
+   load (HEAP/DUMMYZ/BOOTDL/UNCLASSED, rc 3 on a reader candidate): route rerun 0 live colour loads on any path; s7391 fold of
+   s7390_fbld_wide_levels: L5/L10/L15 no-reader x3, LD control fires -> **fb-cpu-reader-census CLOSED s7391**. Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those). One CPU store to a
    live fb: rs_memset 0xA6F000 at boot vi 55 (dropped at r2r=0; boot sheet identical). Detail PORTING-STATE s7385-s7389.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
@@ -319,7 +319,12 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
       flags&4 carve s7332-s7334 (s7333_carve_report.py); fb-layout bound consumers s7335; host arena layout s7336
       (s7336_host_arena_table.py); R stale 8 MB bounds s7337; M 8 MB masks s7338; N 16 MB masks s7339 (latent);
       O KSEG0 16 MB bounds s7340; P top-byte tests s7341; L zero-extended bases s7361 (apply_s7361_sext_bases.py);
-      AM raw rdram+X s7362 (s7362_rdramraw_census.py). Tools are tools/s73NN_*_census.py.
+      AM raw rdram+X s7362 (s7362_rdramraw_census.py); **BA guest thread stack headroom s7391** (build_spwm:
+      include/spwm/recomp.h checks all 68k generated $sp adjusts, tools/build_spwm.sh + s7391_spwm_run.zsh +
+      s7391_spwm_report.py, ROGUESQ_S7391_SPWM=1 [+_CTL=1]): 27 threads on the s7386 route all inside their stacks, deepest
+      mainBootstrapWorker 6848/8192 B, 1 KB audio stack uses 120 B; line B (service-worker stack snapshot, exact bounds from
+      the registerServiceWorker descriptor) dirties 16-44 B above the $sp min, canaries intact, planted control seen ->
+      H-fits. Soak s7391_spwm_levels (L4/L7/L12) queued. Tools are tools/s73NN_*_census.py.
     - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
       V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
       AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
@@ -334,7 +339,9 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidates (when 1 closes):** any new arena or pointer layout re-runs items 11/14 with --controls; a
+16. **Next audit candidates:** fold s7391_spwm_levels (rc 3 names thread + frame); then a new class, e.g. BB guest
+    message-queue drops (osSendMesg/osJamMesg OS_MESG_NOBLOCK with the -1 full return ignored: census the sites, count
+    full-queue returns per queue in play). Any new arena or pointer layout re-runs items 11/14 with --controls; a
     census whose rows are cached across sessions must re-cut them on the measured tree (s7373 stale-row lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.

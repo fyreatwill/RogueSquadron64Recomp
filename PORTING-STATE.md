@@ -195374,3 +195374,47 @@ owner-ready, default unchanged.
 Conclusion: selects H-no-reader and refutes H-real-reader (a guest CPU reader of live colour/Z pixels) for the s7386 route on
 every guest load path (MEM_*, LD, lwl/lwr), and classes the 4 high-RAM live-Z loads as H-reuse (heap headers). Next
 discriminator: s7390_fbld_wide_levels (L5/L10/L15 with the wide wrap): rc 3 on any level reopens H-real-reader at the named line.
+
+## Session 7391 (2026-11-15) — fb-cpu-reader census closed (L5/L10/L15 wide wrap no-reader x3); new class BA guest thread stack headroom: every guest thread stays inside its stack, two independent lines agree
+
+Fold: s7390_fbld_wide_levels rc=0. L5/L10/L15 dd8 21:9 FPS60 203-205 s alive, 0 crash, 0 VI stall; report rc 0 x3,
+VERDICT no-reader x3, LIVECLASS z HEAP 4 only (same rs_free/coalesce header reads as s7390), PATH ctl LD 7.1e6 / 2.4e7 /
+7.9e6 and LWLR 1.2e6 / 1.1e6 / 1.6e7 (control fires on the new paths every level). -> fb-cpu-reader-census CLOSED:
+H-no-reader on every guest load path over the route and 6 levels. RENDER_TO_RAM=0 stays owner-ready, default unchanged.
+
+Pivot (CURRENT-TRUTH item 16/17): new idiom class BA, guest thread stack headroom. Never audited: s1179 counted stack
+STORES, nobody measured whether any thread outgrows its stack. Static census from the retail ELF (mips64-elf-objdump):
+12 osCreateThread sites + 7 registerServiceWorker callers (0x80006C28: rs_malloc, top = round8 end, size = a1, two
+0xCDCDCDCD canary words at the bottom, the game's own checkServiceWorkerStackGuard). Sizes: mainBootstrapWorker /
+mainEventQueueWorker 8192, piDmaWorker 512, hud/save/tickBackdropLoader/tickSongAssetLoad workers 2048; the audio thread
+runAiAudioStreamPlaybackLoop gets rs_malloc(1024) with sp = base+0x400 (initAudioSubsystem 0x80091BF8), and
+periodicCallbackWorker the bottom 1 KB of an 8 KB block (0x800073F0): overflow on either writes the heap block header below.
+Static stacks: dpInterruptHandler [0x8011C928, 0x8011CD28) = 1 KB; thread3_video_handle (game main loop) ~2 KB (highest
+referenced object below its top is 0x80115B9C, single-source); idle <= ~550 B; viRetraceHandler has no referenced object
+in the 6 KB below its top.
+Hypotheses: H-fits (every thread stays inside its stack), H-overflow (a thread pushes past its bottom: heap header / bss
+neighbour corruption, a candidate writer for the old coalesceFreeHeapBlocks / voice-array corruption families), H-port-deep
+(port-added inner functions, e.g. rs_malloc_s5041_inner, push a near-full stack over).
+Instrument (diagnostic, separate build dir only): include/spwm/recomp.h (cmake -DROGUESQ_SP_WATCH=ON, tools/build_spwm.sh)
+redefines ADD32 so every generated `ctx->r29 = ADD32(ctx->r29, ...)` (68,093 sites incl. PatchesLib; r29 detected by a
+compile-time fold on the stringized argument, every other ADD32 unchanged) keeps a per-thread minimum $sp and reports each
+new low with file:line (line A). src/main/s7391_spwm.cpp line B: at a service worker's entry prologue a0 is its descriptor,
+so the exact [bottom, top) is read and snapshotted; every 2^18 $sp adjusts the thread rescans for the lowest word changed
+since the snapshot. ROGUESQ_S7391_CTL=1 flips one SNAPSHOT word (host copy only) at bottom+0x40: every scan must see it.
+Run tools/s7391_spwm_run.zsh (s7386 keyed route: level select, crawl, cutscene, flight, pause, abort, MISSION FAILED, debrief;
+dd8 21:9 FPS60, owner-save copy), report tools/s7391_spwm_report.py (rc 3 on < 128 B headroom / dirty below spmin / broken
+canary, 2 = no records). Three runs (200 s, 200 s CTL, 150 s CTL with the 2^18 tick), 0 crash, 22-27 threads each.
+Result (deepest per thread): mainBootstrapWorker 6848 / 8192 (headroom 1344, deepest frame rs_malloc_s5041_inner),
+mainEventQueueWorker 3024 / 8192 (huft_build inflate), tickBackdropLoaderWorker 824 / 2048 (parseImageFile), viRetrace 808
+(size ?), thread3_video_handle 736 / ~2 KB (bufferArbiterAllocSlot), hud 160 / 2048, audio 120 / 1024, save 112 / 2048,
+piDma 104 / 512, dpInterrupt 64 / 1024, si 96, idle 48, preNmi 40. Line B (4 threads, 7 scans): lowest dirtied word sits
+16-44 B ABOVE the lowest $sp on every thread (mainBootstrap 0x80164578 vs 0x80164568: 6832 vs 6848 used), canaries intact,
+ctlseen=1 on every scan (control PASS). Line A's estimated tops equal the descriptor tops on all 18 service workers.
+Not covered: periodicCallbackWorker and tickSongAssetLoadWorker never ran on this route; light workers never reached a
+line-B tick; host C hooks that move the guest sp without ADD32 (none known).
+Rules out: a guest thread stack overflow on the route as a writer of heap headers / neighbouring bss (H-overflow), and
+H-port-deep (the port's inner-function splits leave 1344 B on the deepest thread). Queued
+scratch/agent/soak_queue/s7391_spwm_levels.sh (L4/L7/L12 forced route, CTL armed, fails on report rc != 0 or line-B control).
+ORIGIN: no mitigation; diagnostic build only, default build unchanged.
+Conclusion: selects H-fits and refutes H-overflow and H-port-deep for every guest thread on the s7386 route (two independent
+lines agree within one frame). Next discriminator: s7391_spwm_levels; rc 3 on any level names the thread and frame.

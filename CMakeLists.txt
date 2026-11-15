@@ -113,6 +113,14 @@ if (ROGUESQ_FB_LDWATCH)
     target_compile_definitions(RecompiledFuncs PRIVATE RS64_FB_LDWATCH)
 endif()
 
+# s7391: guest stack low-water watch (separate build dir only, tools/build_spwm.sh). include/spwm/recomp.h routes every
+# generated `ctx->r29 = ADD32(ctx->r29, ...)` through a per-thread minimum-$sp check. Never ON in build/.
+option(ROGUESQ_SP_WATCH "s7391 diagnostic: per-thread guest stack low-water marks" OFF)
+if (ROGUESQ_SP_WATCH)
+    target_include_directories(RecompiledFuncs BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/spwm)
+    target_compile_definitions(RecompiledFuncs PRIVATE RS64_SP_WATCH)
+endif()
+
 target_include_directories(RecompiledFuncs PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/ultramodern/include
@@ -225,6 +233,10 @@ if (EXISTS "${MIPS_GCC}" AND EXISTS "${N64RECOMP_EXE}" AND PATCHES_MAKE_EXE AND 
             -fno-strict-aliasing -Wno-unused-variable -Wno-implicit-function-declaration)
     endif()
     target_compile_definitions(PatchesLib PRIVATE main=rs_main)
+    if (ROGUESQ_SP_WATCH)
+        target_include_directories(PatchesLib BEFORE PRIVATE ${CMAKE_SOURCE_DIR}/include/spwm)
+        target_compile_definitions(PatchesLib PRIVATE RS64_SP_WATCH)
+    endif()
 
     set(PATCHES_BUILD_OK TRUE)
 else()
@@ -373,6 +385,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7096_fwd_cover.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7097_edit_census.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7389_fbld.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/s7391_spwm.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7106_rsptri.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}

@@ -1,14 +1,17 @@
-# NEXT (s7391)
-HYPOTHESIS-ID: fb-cpu-reader-census
+# NEXT (s7392)
+HYPOTHESIS-ID: guest-msgqueue-drop-census
 
-s7390 widened build_fbld to LD (ld/ldc1) + do_lwl/do_lwr and added the report classifier (tools/s7389_fbld_report.py: LIVECLASS,
-VERDICT, rc 3 = reader candidate). Route rerun: 0 live colour loads on any path, controls LD 5.6e6 / LWLR 1.0e7.
+s7391 closed fb-cpu-reader-census and class BA (guest thread stack headroom: H-fits, two lines agree; build_spwm).
 
 Work unit:
-1. Fold s7390_fbld_wide_levels from SOAK-RESULTS (reports scratch/s7390q/report_l*.txt). Pass = alive, VERDICT no-reader, PATH
-   kind=ctl path=LD present. On rc 3: the LIVELOAD line names fn + file:line + page + path -> read the function
-   (H-real-reader: copy/blit/sample shape -> r2r=0 needs a targeted readback for that buffer; H-reuse: heap/DL code -> add the
-   function to klass() HEAP with the evidence in the session entry).
-2. On pass, CLOSE fb-cpu-reader-census in CURRENT-TRUTH item 1 and pivot (new HYPOTHESIS-ID): next Next-steps item per
-   ITERATION.md -- items 2-10 are owner items, so item 16/17: a new idiom-class audit or the next open 3c rung.
-   Do not re-run fb-load watches without a new code path to cover.
+1. Fold s7391_spwm_levels from SOAK-RESULTS (reports scratch/s7391q/report_l{4,7,12}.txt). Pass = alive, report rc 0,
+   LINEB control=PASS. On rc 3: the THREAD/SCAN line names the thread and its deepest frame (file:line) -> read that call
+   chain (H-overflow if headroom < 0 or lowdirty below spmin: name the writer before any change).
+2. New idiom class BB, guest message-queue drops. Hypotheses: H-none (every OS_MESG_NOBLOCK send either checks the -1
+   return or targets a queue that never fills), H-drop (a send whose -1 is ignored drops a message in play: a lost
+   VI/RSP/DP/service event -> stall or skipped work), H-port-timing (queues fill only because host threads run at a
+   different cadence than retail). Discriminator, ONE build: static census of every osSendMesg / osJamMesg call site in
+   /tmp disasm of ../rogue_squadron64/build/roguesquadron.elf (flags arg a2 = 0 NOBLOCK; is v0 tested after the call?),
+   plus a runtime counter in lib/N64ModernRuntime/ultramodern (mesgqueue send path) of full-queue returns keyed by queue
+   address and caller ra, positive control = a planted full queue (env) that must count. Remember export.sh + commit for any
+   lib/ edit. Route: tools/s7391_spwm_run.zsh-style keyed route (copy it, swap the build dir).
