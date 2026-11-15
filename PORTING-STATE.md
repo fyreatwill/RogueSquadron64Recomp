@@ -194387,3 +194387,9 @@ librecomp trusting an index validated against the header count rather than the d
 Not done (side question from NEXT): what the s7364 stale tile drew vs angrylion — carried to NEXT.
 Rules out: class AP holes on any default RS64 path in src/librecomp/ultramodern/rt64 (within the census idioms: aliasing through
 non-member pointers and cross-file mutator calls deeper than one level are outside it).
+Discrimination (s7365): census + 2 independent reviews + ASan two-arm SELECTS H-hole for s7096 fwd() (Rng& across push_back, fixed) and
+the mods.cpp dependency indices (guarded), and REFUTES H-hole for every default-path RT64/librecomp member index (84 rows, incl. the s7364
+FULLSYNC fix covering all callTiles/rdpTiles emptying paths). The callIndex/rdpParams lead: ROGUESQ_S7365_CALLIDX measurement with a
+same-run planted control (16/16) SELECTS H-safe (0 natural mismatches in 5.12M calls) and refutes the reviewer's H-shift at the owner recipe.
+Class AP closed. Next discriminator: class AQ (cross-thread container access without a common lock), NEXT.md, plus the stale-tile
+retail frame check.
