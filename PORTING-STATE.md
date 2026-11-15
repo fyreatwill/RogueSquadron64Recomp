@@ -195039,3 +195039,8 @@ spin was RT64 upstream design. The change only replaces how the gfx/VI thread wa
 
 Rules out: guest osYieldThread poll loops as a CPU burn source (0 calls, control fires); RT64 barrier spins as a normal-play
 pacing cost (0 waits in 25k advances). Next: class AX, host thread QoS / priority census.
+
+Conclusion: selects H-idle for normal play (0 barrier waits in 25k advances, 0 guest yields, controls fire) and refutes
+H-starve; the stall shape of the old spin is H-burn (619M iterations / 29 forced stalls), fixed as a condvar wait. Next
+discriminator: class AX per-thread QoS + CPU-share dump (ROGUESQ_S7382_QOS=1, QOS_ALL on/off arms) selects H-covered / H-gap /
+H-invert (scratch/agent/NEXT.md).
