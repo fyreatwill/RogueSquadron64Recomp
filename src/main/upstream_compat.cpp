@@ -8393,13 +8393,138 @@ static void control(uint8_t* rdram, recomp_context* ctx) {
     std::fprintf(stderr, "[s7393-ctl] q=%08X planted valid=1 recv=%08X\n", q, th);
 }
 } // namespace s7393
+// s7394 class BD: heap-mutex re-seed window (ROGUESQ_S7394_BD=1, default off). A guest osCreateMesgQueue on 8010FEE0 at
+// count 1 / validCount 0 (re-seed while held) opens a window owned by the creating guest thread; it closes on the owner's
+// SECOND osSendMesg on 8010FEE0 (1st = the re-seed's own token, 2nd = rs_malloc's release) or on any OTHER thread's send on
+// 8010FEE0 (foreign close = a second holder released). Per window: intr = osRecvMesg successes on 8010FEE0 by another thread
+// inside the window (H-race), xcalls / ocalls = guest send/recv calls on ANY queue by other threads / by the owner (did any
+// other thread run at all = H-port-timing), close kind + result (fail = token still unclaimed at close) + closing caller.
+// ROGUESQ_S7394_CTL=1 positive control: in the first window that sees a foreign-thread call, that thread (real other guest
+// thread context) takes the token NOBLOCK and returns it, through the same counter -> intr must be exactly 1 on that window;
+// if no foreign call happens by the 3rd window, the owner injects the same take+return as fake tid 99 (CTLF, weaker).
+// Rows: [s7394-win] per window (first 400), [s7394-sum] every 10 s wall. Report: tools/s7394_bd_report.py <log>.
+static uint64_t s7394fix_nskip();
+namespace s7394 {
+static constexpr uint32_t MQ = 0x8010FEE0u;
+static std::mutex mu; static bool open_ = false; static int owner = -1, osends = 0, nwin = 0, ctl_state = 0;
+static uint64_t intr = 0, xcalls = 0, ocalls = 0, xtids = 0; static double topen = 0, t0 = 0, t_last = 0; static char okey[96];
+static uint64_t s_win = 0, s_intr = 0, s_xwin = 0, s_foreign = 0, s_okfail = 0, s_okok = 0, s_ctl = 0; static int s_ctlwin = -1;
+static uint64_t tid_recv[66]; static uint64_t s_wtids = 0; // whole-run 8010FEE0 recv successes per guest tid (65 = id<0 / >63); window owner tids
+static double shadow_until = 0; static uint64_t s_shx = 0, s_shwin = 0; static bool sh_hit = false; // 20 ms after each close: xcalls counter control
+static bool on() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7394_BD"); return e && e[0] && e[0] != '0'; }(); return v; }
+static bool ctl() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7394_CTL"); return e && e[0] && e[0] != '0'; }(); return v; }
+static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static void sum_locked(double t) {
+    std::fprintf(stderr, "[s7394-sum] t=%.1f windows=%llu intr=%llu xwin=%llu foreign_close=%llu own_close_fail=%llu own_close_ok=%llu ctl=%llu ctlwin=%d ctlmode=%d open=%d shadow_x=%llu shadow_hitwin=%llu\n",
+        t - t0, (unsigned long long)s_win, (unsigned long long)s_intr, (unsigned long long)s_xwin, (unsigned long long)s_foreign,
+        (unsigned long long)s_okfail, (unsigned long long)s_okok, (unsigned long long)s_ctl, s_ctlwin, ctl_state, open_ ? 1 : 0,
+        (unsigned long long)s_shx, (unsigned long long)s_shwin);
+    std::fprintf(stderr, "[s7394-tid] t=%.1f owners=%llx", t - t0, (unsigned long long)s_wtids);
+    std::fprintf(stderr, " holdfix_skips=%llu", (unsigned long long)s7394fix_nskip());
+    for (int i = 0; i < 66; i++) if (tid_recv[i]) std::fprintf(stderr, " tid%d=%llu", i == 65 ? -1 : i, (unsigned long long)tid_recv[i]);
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
+}
+static void close_locked(char kind, int tid, int result, uint64_t ra) {
+    char sb[96]; rs64_wt_sym((uintptr_t)ra, sb, sizeof sb);
+    const double t = now();
+    s_win++; s_intr += intr; if (xcalls) s_xwin++;
+    if (kind == 'F') s_foreign++; else if (result != 0) s_okfail++; else s_okok++;
+    if (nwin <= 400)
+        std::fprintf(stderr, "[s7394-win] n=%d t=%.2f owner=%d open=%s close=%c ctid=%d cres=%d ckey=%s us=%.0f intr=%llu xcalls=%llu xtids=%llx ocalls=%llu\n",
+            nwin, topen - t0, owner, okey, kind, tid, result, sb, (t - topen) * 1e6, (unsigned long long)intr, (unsigned long long)xcalls,
+            (unsigned long long)xtids, (unsigned long long)ocalls);
+    open_ = false; shadow_until = t + 0.020; sh_hit = false;
+    if (t - t_last >= 10.0) { t_last = t; sum_locked(t); }
+}
+// guest create hook (before the reset): valid = pre-create validCount
+static void on_create(uint8_t* rdram, uint32_t mq, uint64_t ra, int cnt) {
+    if (mq != MQ) return;
+    const int valid = TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq)->validCount;
+    std::lock_guard<std::mutex> lk(mu);
+    const double t = now(); if (t0 == 0) { t0 = t; t_last = t; }
+    if (cnt != 1 || valid != 0) return;
+    if (open_) close_locked('N', rogue_current_thread_id(rdram), -9, ra); // nested re-seed: close the old one first
+    open_ = true; owner = rogue_current_thread_id(rdram); s_wtids |= 1ull << (owner & 63); osends = 0; intr = xcalls = ocalls = xtids = 0; topen = t; nwin++;
+    rs64_wt_sym((uintptr_t)ra, okey, sizeof okey);
+}
+static void take_return(uint8_t* rdram, uint32_t buf) { // NOBLOCK take of the token + give it back (net zero); lock NOT held
+    if (osRecvMesg(rdram, (int32_t)MQ, (PTR(OSMesg))buf, 0) == 0) {
+        { std::lock_guard<std::mutex> lk(mu); intr++; s_ctl++; }
+        osSendMesg(rdram, (int32_t)MQ, 0, 0);
+    }
+}
+// every guest send/recv on any queue, BEFORE the call (counts who runs inside the window; may run the control)
+static void pre(uint8_t* rdram, recomp_context* ctx) {
+    bool fire = false;
+    {
+        std::lock_guard<std::mutex> lk(mu);
+        if (!open_) {
+            if (shadow_until != 0 && rogue_current_thread_id(rdram) != owner && now() < shadow_until) { s_shx++; if (!sh_hit) { sh_hit = true; s_shwin++; } }
+            return;
+        }
+        const int tid = rogue_current_thread_id(rdram);
+        if (tid == owner) { ocalls++; return; }
+        xcalls++; xtids |= 1ull << (tid & 63);
+        if (ctl() && ctl_state == 0) { ctl_state = 1; s_ctlwin = nwin; fire = true; }
+    }
+    if (fire) take_return(rdram, ((uint32_t)ctx->r29 - 0x100u) & ~0xFu);
+}
+static void post_recv(uint8_t* rdram, uint32_t mq, int result) {
+    if (mq != MQ || result != 0) return;
+    std::lock_guard<std::mutex> lk(mu);
+    const int tid = rogue_current_thread_id(rdram);
+    tid_recv[(tid >= 0 && tid < 64) ? tid : 65]++;
+    if (open_ && tid != owner) intr++;
+}
+static void post_send(uint8_t* rdram, recomp_context* ctx, uint32_t mq, int result, uint64_t ra) {
+    if (mq != MQ) return;
+    bool fire = false;
+    {
+        std::lock_guard<std::mutex> lk(mu);
+        if (!open_) return;
+        const int tid = rogue_current_thread_id(rdram);
+        if (tid == owner) {
+            if (++osends == 1) {
+                if (ctl() && ctl_state == 0 && nwin >= 3) { ctl_state = 2; s_ctlwin = nwin; fire = true; } // CTLF: owner context
+            } else close_locked('O', tid, result, ra);
+        } else close_locked('F', tid, result, ra);
+    }
+    if (fire) take_return(rdram, ((uint32_t)ctx->r29 - 0x100u) & ~0xFu);
+}
+} // namespace s7394
+// s7394 class BD fix (ROGUESQ_S7394_HOLDFIX, default ON, =0 retail): buildHeapFreeList (reached from rs_malloc ->
+// ensureHeapInitialized with the heap mutex 8010FEE0 HELD) re-creates the mutex and posts a token at once, so until
+// rs_malloc's own release the mutex is free while the critical section is still open; the release then drops (10/run).
+// ORIGIN: retail code (buildHeapFreeList 0x80001fd4/0x80001fe8), not a port writer; s7394 measured 0 intrusions in 40
+// windows but 5 thread ids take this mutex and a foreign thread ran inside 1/11 retail-arm windows. Fix: when the creating
+// thread is the current holder (last successful recv, no release since), skip that one re-seed post; rs_malloc's release
+// then supplies the single token -> same end state (1 token), no free token inside the section, no dropped release.
+namespace s7394fix {
+static std::atomic<int> holder{-2}; static thread_local bool skip = false; static std::atomic<uint64_t> nskip{0};
+static bool on() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7394_HOLDFIX"); return !(e && e[0] == '0'); }(); return v; }
+}
+static uint64_t s7394fix_nskip() { return s7394fix::nskip.load(); }
 extern "C" void rs64_s7393_create(uint8_t* rdram, uint32_t mq, uint64_t ra, uint32_t gra, int cnt) {
+    if (s7394::on()) s7394::on_create(rdram, mq, ra, cnt); // s7394
+    if (mq == 0x8010FEE0u && cnt == 1 && s7394fix::on() && TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq)->validCount == 0 &&
+        s7394fix::holder.load() == rogue_current_thread_id(rdram)) {
+        s7394fix::skip = true; // s7394 fix: next post on 8010FEE0 by this thread is the re-seed token; drop it (we hold the mutex)
+        static std::atomic<bool> said{false};
+        if (!said.exchange(true)) std::fprintf(stderr, "[s7394-holdfix] first held re-seed of 8010FEE0 by tid %d: re-seed post skipped (=0 retail)\n", rogue_current_thread_id(rdram));
+    }
     if (!s7393::on()) return;
     s7393::note(rdram, mq, ra, gra, cnt);
 }
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     Rs64RetraceHold::maybe(rdram, ctx);
     if (s7393::on()) s7393::control(rdram, ctx); // s7393 planted live-queue re-create control
+    if (s7394::on()) s7394::pre(rdram, ctx); // s7394 window census
+    if (s7394fix::skip && (uint32_t)ctx->r4 == 0x8010FEE0u) { // s7394 fix: the held re-seed's token post
+        s7394fix::skip = false; s7394fix::nskip++; ctx->r2 = 0;
+        if (s7394::on()) s7394::post_send(rdram, ctx, (uint32_t)ctx->r4, 0, (uint64_t)(uintptr_t)__builtin_return_address(0));
+        return;
+    }
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'S');
     { /* s6571: every direct osSendMesg to the hud service queue (svc 0x80954F60 +0x1D0), any sender */
         static const bool on = [] { const char* e = std::getenv("ROGUESQ_SVCNULL"); return e && e[0] && e[0] != '0'; }();
@@ -8441,6 +8566,8 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
         ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
     }
     if (s7392::on()) { rs64_s7392_send(rdram, (uint32_t)ctx->r4, (uint64_t)(uintptr_t)__builtin_return_address(0), (int)(s32)ctx->r6, (int)(s32)ctx->r2, 0); s7392::control(rdram, ctx); }
+    if (s7394::on()) s7394::post_send(rdram, ctx, (uint32_t)ctx->r4, (int)(s32)ctx->r2, (uint64_t)(uintptr_t)__builtin_return_address(0)); // s7394
+    if ((uint32_t)ctx->r4 == 0x8010FEE0u && (int32_t)ctx->r2 == 0) s7394fix::holder.store(-1); // s7394 fix: released
     if (s4580_q) s4580::rec(rdram, ctx, 'S', s4580_vcb, s4580::vc(rdram, (uint32_t)ctx->r4), (int)(s32)ctx->r6); /* PATCH: s4580 */
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
@@ -8599,6 +8726,7 @@ struct S4913RecvScope {
 };
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     Rs64Cf0Delay s7192_delay(rdram, ctx); // destructs last: after the recv and all bookkeeping
+    if (s7394::on()) s7394::pre(rdram, ctx); // s7394 window census
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'R');
     s5038_mq_census(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r31, "recv");
     S4913RecvScope s4913_scope(rdram, (uint32_t)ctx->r4);
@@ -8651,6 +8779,8 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     } else {
         ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, flag);
     }
+    if (s7394::on()) s7394::post_recv(rdram, mq_addr, (int)(int32_t)ctx->r2); // s7394
+    if (mq_addr == 0x8010FEE0u && (int32_t)ctx->r2 == 0) s7394fix::holder.store(rogue_current_thread_id(rdram)); // s7394 fix
     rs64_m5_frequency_receive_join(rdram, ctx, mq_addr, flag, (int32_t)ctx->r2,
                                    delivered_hint);
     { static const bool s4264_on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();

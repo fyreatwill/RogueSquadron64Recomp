@@ -195512,3 +195512,52 @@ Conclusion s7393: **selects H-none** (no guest osCreateMesgQueue re-create orpha
 the route), **refutes H-orphan** (0 live links on 12 re-created queues while the planted control counts 1) and **refutes
 H-port-timing** (owner and RETAIL=1 arms equal row by row). Next discriminator: class BD, other-thread receives on the heap
 mutex 8010FEE0 inside the buildHeapFreeList held re-seed window (owner + retail arms, injected-recv control).
+
+## Session 7394 (2026-11-15) — class BD heap-mutex re-seed window: 0 intrusions in 40 windows, window reachable by other threads; retail re-seed-while-held fixed (ROGUESQ_S7394_HOLDFIX default on)
+
+HYPOTHESIS-ID: heap-mutex-reseed-window.
+
+**Fold.** s7393_cq_levels (SOAK-RESULTS 20261115-053303) rc 0: L5/L10/L15 dd8 21:9 FPS60 202-203 s alive, 0 crash, 0 VI stall,
+tools/s7393_cq_report.py CONTROL PASS + VERDICT H-none x3 (SEED rows only; 8010FEE0 buildHeapFreeList held=7 per level) -> class BC
+stands on 3 more levels.
+
+**Static half (/tmp/s7392.dis).** rs_malloc 0x80001b04 osRecvMesg(8010FEE0, BLOCK) -> (flags&4) ensureHeapInitialized 0x80001b24 ->
+buildHeapFreeList 0x800019ac -> osCreateMesgQueue(8010FEE0, cnt 1) 0x80001fd4 + osSendMesg(NOBLOCK) 0x80001fe8 (re-seed = mutex free
+NOW) -> free-list rebuild + rs_malloc scan (no libultra call) -> release osSendMesg 0x80001c6c (drops: queue full). The other caller,
+queueDeferredClearRequest 0x80001858 (from clearSceneBssRegion / clearDeferredClearRequest), does not hold the mutex. So the window
+has no voluntary yield; on hardware only interrupt preemption by a higher-priority thread can enter it.
+
+**Instrument (one build).** src/main/upstream_compat.cpp namespace s7394 (ROGUESQ_S7394_BD=1, default off): a create of 8010FEE0
+at cnt 1 / validCount 0 opens a window owned by the creating guest thread; closes on the owner's 2nd 8010FEE0 send (re-seed token,
+then release) or on a foreign send. Per window: intr (foreign 8010FEE0 recv successes), xcalls (any foreign send/recv),
+ocalls, close kind/result/caller, length. Whole-run 8010FEE0 recv per thread id ([s7394-tid]). Controls: ROGUESQ_S7394_CTL=1 planted
+take-and-return of the token (foreign-thread context if one runs in windows 1-2, else owner context CTLF at window 3), which must
+count intr 1; xcalls counter control = foreign calls in the 20 ms after each close (must be >0). Report tools/s7394_bd_report.py
+<log> [--fix]. Route tools/s7392_mq_run.zsh (dd8 21:9 FPS60 owner arm; RETAIL=1 = dd1 4:3).
+
+**Results, 200 s each, 0 crash.**
+| arm | held windows | close | intr (non-ctl) | foreign close | windows with foreign thread running | xcalls ctl | planted take |
+|---|---|---|---|---|---|---|---|
+| own, retail path (x3 runs incl. HOLDFIX=0) | 10 each, 229-279 us med, <=620 max | owner release, cres -1 (full) 10/10 | 0 | 0 | 0/11 | 9286-9446 PASS | 1 (PASS) |
+| RETAIL=1, retail path (x2) | 10 each, 360-465 us med | same | 0 | 0 | 1/11 both runs (tid 0, 1 call, no 8010FEE0 recv) | 9102-9408 PASS | 1 (PASS) |
+| own, HOLDFIX on | 10 | cres 0 (release posts the single token) 10/10 | 0 | 0 | 0/11 | 9286 PASS | 0 = no free token in window (PASS) |
+| RETAIL=1, HOLDFIX on | 10 | cres 0 10/10 | 0 | 0 | 1/11 | 9046 PASS | 0 (PASS) |
+Heap mutex recv by thread id (all arms): tid2 27-29k, tid3 20-33k, tid7 171, tid9 83, tid0 13; every held window owner = tid 2.
+s7392 drop census: rs_malloc 8010FEE0 release fails 10 -> 0 with the fix (34356 vs 34362 rs_malloc calls = same route).
+
+**Verdict.** H-none MEASURED (0 foreign takes in 40 held windows, 4 retail-path runs, both settings arms; control PASS), but H-race
+is structurally live: five guest thread ids use this mutex and a foreign guest thread ran inside 1/11 windows in both RETAIL=1 runs
+(two independent lines: static window + per-thread recv census + xwin). H-port-timing refuted as a source: the port enters the
+window no more than retail would (no yield in it; the one foreign call is a thread already runnable). ORIGIN: the free token is
+written by retail code, buildHeapFreeList's re-seed post at 0x80001fe8 while its rs_malloc caller holds the mutex; not a port writer.
+
+**Fix (default on, ROGUESQ_S7394_HOLDFIX=0 = retail).** namespace s7394fix tracks the 8010FEE0 holder (tid of the last successful
+recv, -1 on a successful send). When osCreateMesgQueue(8010FEE0, cnt 1) runs at validCount 0 in the holder's thread, that thread's
+next 8010FEE0 post (the re-seed token) is skipped (r2 = 0). rs_malloc's release then posts the single token: same end state as retail
+(1 token), no free token inside the critical section, no dropped release. Re-seeds by a non-holder (queueDeferredClearRequest while
+someone else holds) keep retail behaviour. One-shot stderr line [s7394-holdfix]. Qualified on the route in both settings arms above
+(200 s, 0 crash, same rs_malloc call count); soak scratch/agent/soak_queue/s7394_holdfix_levels.sh queued (L4/L7/L12 dd8 21:9,
+report --fix rc 0 + skips > 0 per level).
+
+Rules out: a second thread ever acquiring the heap mutex inside a re-seed window on this route (measured, not just argued); class
+BD closes for every other count-1 re-seed too (s7393: held=0 for 80128D10 / 80149990 / 80154650 / coalesce 8010FEE0).

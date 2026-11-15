@@ -1,20 +1,20 @@
-# NEXT (s7394)
-HYPOTHESIS-ID: heap-mutex-reseed-window
+# NEXT (s7395)
+HYPOTHESIS-ID: mesg-event-rebind
 
-s7393 closed class BC (osCreateMesgQueue on a live queue: 0 orphans, lost tokens = mutex re-seeds, owner == retail arm).
-Its residual opens class BD.
+s7394 closed class BD (heap-mutex re-seed window: 0 intrusions in 40 windows; retail re-seed-while-held fixed by
+ROGUESQ_S7394_HOLDFIX default on, =0 retail).
 
 Work unit:
-1. Fold s7393_cq_levels from SOAK-RESULTS (scratch/s7393q/report_l{5,10,15}.txt). Pass = alive, report rc 0 (CONTROL PASS,
-   no LIVE row). A LIVE row: read the [s7393-ev] line (mq, caller, recv/send LIVE) and name the writer before any change.
-2. Class BD: buildHeapFreeList re-seeds the heap mutex 8010FEE0 at validCount 0 (held, ~10/run) from inside rs_malloc ->
-   ensureHeapInitialized, so between the re-seed and rs_malloc's own release the mutex has a free token while a critical
-   section is still open. Hypotheses: H-none (no other guest thread ever receives 8010FEE0 inside that window), H-race (a
-   second thread enters rs_malloc/rs_free in the window -> heap corruption candidate), H-port-timing (only the port's
-   scheduling lets a second thread run there). Discriminator, ONE build: in src/main s7393, on a held re-seed of 8010FEE0
-   open a window keyed by the creating guest thread id; count every osRecvMesg success on 8010FEE0 by any OTHER thread
-   until the creator's next osSendMesg on 8010FEE0 (window close); also the window length in guest calls. Positive control:
-   under a CTL env, from a different thread context inject one recv on 8010FEE0 during the first window (must count 1).
-   Same route tools/s7392_mq_run.zsh, owner + RETAIL=1 arms. Static half: read buildHeapFreeList's caller chain in
-   /tmp/s7392.dis (who calls it with the mutex held) and whether retail can switch threads there (no blocking call
-   between re-seed and release = no switch on N64's non-preemptive-at-equal-priority scheduler).
+1. Fold s7394_holdfix_levels from SOAK-RESULTS (scratch/s7394q/report_l{4,7,12}.txt). Pass = alive, report --fix rc 0
+   (FIX-ARM CONTROL PASS, no RACE row), holdfix_skips > 0 per level. A RACE row or a hang after a skip: read the
+   [s7394-win] row (owner, ctid, ckey) and name the thread before any change; HOLDFIX=0 reproduces retail for an A/B.
+2. Class BE (message-queue lifecycle sweep, next idiom): osSetEventMesg / osViSetEvent / osSpSetEvent-style event
+   re-registration. Grep-enumerate every guest call site in /tmp/s7392.dis (regenerate with
+   mips64-elf-objdump -d --no-show-raw-insn ../rogue_squadron64/build/roguesquadron.elf if missing), class each: event,
+   queue, message, one-shot vs re-bound per scene. Hypotheses: H-none (every re-bind targets the same queue or a queue
+   with no pending event messages), H-strand (a re-bind moves an event to a new queue while the old queue still has a
+   waiter that only that event wakes -> stall candidate), H-port (ultramodern's event table keeps a stale binding).
+   Discriminator, ONE build: hook osSetEventMesg_recomp / osViSetEvent_recomp (lib/N64ModernRuntime/librecomp/src/
+   ultra_translation.cpp, export.sh + commit) -> per (event, caller) count re-binds, old queue, old queue's blocked_on_recv
+   waiter and whether any later post reaches that old queue; planted control: re-bind a fake event away from a queue with
+   a linked fake waiter (must count 1 stranded). Route tools/s7392_mq_run.zsh, owner + RETAIL=1 arms.

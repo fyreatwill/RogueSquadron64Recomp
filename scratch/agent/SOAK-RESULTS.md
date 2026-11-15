@@ -1505,3 +1505,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-043233 | s7391_spwm_levels | rc=0 | 855s | scratch/agent/soak_results/s7391_spwm_levels_20261115-043233.log
 20261115 | s7392 fold: s7391_spwm_levels rc=0 LINEB control=PASS x3: L4/L7/L12 dd8 21:9 202-204 s alive, 0 crash, 0 VI stall, VERDICT headroom-ok x3 -> class BA stands on 6 levels.
 20261115-050623 | s7392_mq_levels | rc=0 | 874s | scratch/agent/soak_results/s7392_mq_levels_20261115-050623.log
+20261115-053303 | s7393_cq_levels | rc=0 | 871s | scratch/agent/soak_results/s7393_cq_levels_20261115-053303.log
+20261115 | s7394 fold: s7393_cq_levels rc=0 CONTROL PASS x3: L5/L10/L15 dd8 21:9 202-203 s alive, 0 crash, 0 VI stall, VERDICT H-none x3 (SEED rows only) -> class BC stands on 3 more levels.

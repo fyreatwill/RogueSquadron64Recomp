@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7393 (2026-11-15).
+Compact operational handoff, as of Session 7394 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -233,6 +233,13 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    8010FEE0 x3 fns, 80128D10, F5 mutex 80149990, MusyX 80154650), identical counts in both arms (scene re-init runs ~11x per
    route on tid 3) -> H-none, not port timing. Residual: buildHeapFreeList re-seeds the heap mutex at validCount 0 (held,
    10/run) = a mutual-exclusion window in retail code (s7392's rs_malloc fails=7) -> class BD. Soak s7393_cq_levels queued.
+   s7394 fold s7393_cq_levels: L5/L10/L15 CONTROL PASS, H-none x3.
+   **BD CLOSED s7394, heap-mutex re-seed window fixed** (namespace s7394 window census ROGUESQ_S7394_BD=1 + _CTL=1,
+   `tools/s7394_bd_report.py <log> [--fix]`, route tools/s7392_mq_run.zsh): 0 foreign takes in 40 held windows (4 runs, owner +
+   RETAIL=1, controls PASS), but 5 thread ids use 8010FEE0 and a foreign thread ran in 1/11 RETAIL=1 windows -> race structurally
+   live, ORIGIN retail buildHeapFreeList re-seed post 0x80001fe8 under rs_malloc's hold. **ROGUESQ_S7394_HOLDFIX default ON**
+   (=0 retail): the holder's re-seed post is skipped, rs_malloc's release posts the one token (release drops 10 -> 0, same end
+   state). Soak s7394_holdfix_levels queued (L4/L7/L12).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
