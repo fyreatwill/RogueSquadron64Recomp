@@ -195687,3 +195687,4 @@ phase 9. Soak s7398_io_levels queued (L4/L7/L12, pass = alive + readback PASS + 
 ORIGIN: not a mitigation — ABI-fidelity fix of the librecomp PI replacement (writer of the missing fields = libultra's
 osPiStartDma, which librecomp replaces wholesale).
 Next: class BI event-message payloads (scratch/agent/NEXT.md).
+Conclusion: selects H-none, refutes H-reuse and H-async for PI/SI I/O-message lifecycle (class BH closed); next discriminator: class BI per-mq (msg sent, msg received) payload log with a planted bad-msg control.
