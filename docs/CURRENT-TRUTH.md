@@ -205,10 +205,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID nolock-container-threads): class AS, the 98 s7366 NOLOCK containers.** s7366 counted
-   containers that are never accessed under a lock as "thread-confined or handed off by queue" without checking. Apply the s7374
-   calling-thread method (gfx_thread / task_thread / main / present / audio callback / GUEST-SERIAL) to each; any container touched
-   from two host threads with no lock and no queue handoff is a defect to fix.
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID lockless-file-containers): class AS2, 144 containers in the 48 scope files with NO lock.**
+   s7366 skipped those files ("nothing can be inconsistent within it"), but a lock-free file can be touched from two threads.
+   `python3 tools/s7375_nolock_threads.py --lockless` lists them with walker thread labels; give each a hand verdict in
+   tools/s7375_nolock_reviewed.tsv (same classes), fix every MULTI, gate like s7375.
+   **AS CLOSED s7375** (tools/s7375_nolock_threads.py + s7375_nolock_reviewed.tsv, `--check`): the 98 s7366 NOLOCK containers,
+   walker + hand verdicts CONFINED 37 / CALLER-LOCKED 16 / NOT-SHARED 15 / HANDOFF 9 / INIT-ONLY 6 / GUEST-SERIAL 6 / CFG-DEAD 5
+   (RT64 texture-replacement-pack state, inspector-only: upstream race if a pack were loaded) / FIXED 1: the depth-hist diag
+   (ROGUESQ_FLOOR_DEPTH_DIR, rt64_framebuffer_renderer.cpp) reached from both FramebufferRenderer instances (State on the gfx
+   thread, WorkloadQueue on the RT64 render thread) now locks g_depthMu, gate at static init. Smoke clean, diag control 12544
+   events; TSan arm 0 reports in that file, CTL fires (hangar-only coverage; two-thread reach single-source, static).
    **AR CLOSED s7374** (tools/s7374_lazy_static_census.py + s7374_lazy_static_reviewed.tsv, `--check`): 236 lazy-init statics,
    27 COMPANION/PTR rows thread-reviewed (SINGLE 8, GUEST-SERIAL 11, NOT-LAZY 7), 1 real multi-thread site FIXED: rs64_s7012_cap
    (guest + gfx_thread under S7026_SUB / G1E_TRING) now a magic static (could read the cap tables as zeros or v[3] out of range);
@@ -259,7 +265,7 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
       V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
       AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
-      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AF signal safety s7355; AG unchecked alloc s7356;
+      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AS NOLOCK containers s7375 (AS2 lockless files open); AF signal safety s7355; AG unchecked alloc s7356;
       AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
       s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
       reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census) + runtime half s7372/s7373 (COV=1 arm,

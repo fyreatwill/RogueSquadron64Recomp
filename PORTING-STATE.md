@@ -194740,3 +194740,62 @@ Work unit (NEXT.md s7374, HYPOTHESIS-ID lazy-static-init-audit), one census, one
   the report: 0 unclassified.
 - Rules out: lazy-init statics as a source of the parked rare dd4/dd8 gfx SIGBUS (the only multi-thread publisher is diag-gated
   off the owner path). Thread verdicts are single-source (static call-site reading) except rs64_s7012_cap (static + TSan run).
+
+## Session 7375 (2026-11-14) — class AS (s7366 NOLOCK containers) CLOSED: thread-attribution walker + 97 hand verdicts, 1 real two-thread container (depth-hist diag g_depthEvents, both FramebufferRenderer instances) fixed with a lock; s7366's file filter skipped 144 containers in lock-free files (class AS2, next)
+
+Work unit (NEXT.md s7375, HYPOTHESIS-ID nolock-container-threads): give every NOLOCK container of the s7366 lockset census a set of
+calling threads instead of s7366's unchecked "thread-confined or handed off by queue".
+
+- **Tool** (new tools/s7375_nolock_threads.py + tools/s7375_nolock_reviewed.tsv, `--check` exits 1 on an unreviewed REVIEW row):
+  function index over the s7366 scope, thread lambdas (`std::thread([..]{..})`) as their own roots, name-based call graph
+  (short/generic names restricted to the defining file or files naming it), BFS up callers to depth 6 until a thread entry
+  (gfx/task/vi_thread_func, main, RT64 render/idle/present/uploader/shadercomp/texstream/texupload/pipeline loops, save, timer,
+  ultramodern _thread_func, cleaner, modcfg, sampler) or a recompiled-guest function (params carry recomp_context / *_recomp).
+  Classes AUTO-CONFINED, AUTO-GUEST, REVIEW (two+ labels or unresolved). --selftest PASS: planted one-thread, two-thread,
+  guest-only and thread-lambda containers, plus the s7374 positive control (a helper called from a guest hook and from
+  gfx_thread_func) which must come out REVIEW {gfx, guest}.
+- **Result.** 98 rows at start: AUTO-CONFINED 7, REVIEW 91. The walker resolves few rows alone (name collisions such as
+  add/use/reset/clear pull in every thread), so every REVIEW row got a hand verdict citing its evidence: CONFINED 37
+  (FramebufferRenderer members are per instance: State's on the State driver, WorkloadQueue's on the RT64 render thread;
+  RT64 State/RDP/interpreter members on the State driver, which is the gfx thread or, under ROGUESQ_RDP_ASYNC, the s6705
+  consumer with job queue + rs64_rdpq_drain; dpc_bridge globals under factor5_gfx_runner on gfx_thread; wbw diag maps called only
+  from State fullSync), CALLER-LOCKED 16 (TextureMap/ReplacementMap members: a scan of every textureMap./replacementMap. call in
+  rt64/src finds textureMapMutex held at all of them except the replacement-pack ones), NOT-SHARED 15 (locals, params and
+  members that share a name: name/path/ret/seen/own/prev/alloc/rev/cols/bytesTMEM, mesgqueue `tab` = a mutex-guarded static map
+  plus an atomic array), HANDOFF 9 (Workload FramebufferPair via the WorkloadQueue cursor ring; RasterShaderUber pipeline
+  threads filled before creation and joined in waitForPipelineCreation), INIT-ONLY 6 (pi.cpp rom set on main before
+  recomp.cpp:892 creates the game thread; RDP commandWordLengths; TextureCache descriptorSets/upload resources/stream threads
+  built in the ctor before the threads exist and cleared after join), GUEST-SERIAL 6 (upstream_compat heap/DL shadow containers
+  s_s5041_freed, s_s6063_live, s_s6558_blocks, s_s6287_pc, s7239_l: every caller is a fixup hook inside a recompiled guest
+  function; mesgqueue g_audio_sp_deliveries in guest osRecvMesg/scheduler idle), CFG-DEAD 5 (texture-replacement-pack state:
+  populated only by loadReplacementDirectories, called only from the RT64 inspector ImGui buttons; the unlocked upload-thread
+  reads at texture_cache.cpp:1159-1195/1387 iterate empty containers in this port. Upstream race if a pack were ever loaded:
+  noted, not fixed), **FIXED 1**.
+- **The defect (H-diag-multi selected; H-live-multi refuted for this class):** rt64_framebuffer_renderer.cpp's depth-history
+  diag (ROGUESQ_FLOOR_DEPTH_DIR) keeps file-scope state (g_depthEvents vector, g_depthTracks, g_guestPending, closed/flushed
+  flags, readback buffers) and is called from methods of BOTH FramebufferRenderer instances (gfx/State fullSync and the RT64
+  render thread) and from render_target.cpp. ORIGIN: the s4xxx floor-depth author wrote it as a single-renderer probe; RT64 runs
+  two renderers on two threads. Even with the diag off, rs64DepthHistSample wrote g_guestPending.armed = 0 on every copy-kind
+  call from both threads. Fix (lib/rt64, exported to submodule-patches/rt64.patch): env gate resolved once at static init
+  (`const char *const g_depthDir`, was a lazy-init pair); every public rs64DepthHist* entry returns on the gate first, then takes
+  one std::recursive_mutex g_depthMu; the off path writes nothing. No flag: diag-only, behaviour with the diag off unchanged
+  except that the stray store is gone. s7366 census after: CONSISTENT 21 -> 22, NOLOCK 98 -> 97, OPEN 0.
+- **Coverage gap found:** s7366 skipped every file that contains no lock at all ("nothing can be inconsistent within it"), but a
+  lock-free file can still be touched from two threads. `tools/s7375_nolock_threads.py --lockless` lists them: 144 containers
+  in 48 files (rt64 hle 56, librecomp 31, rt64 render 13, common 11, tools 10, preset 9, src 4, ...). That is class AS2, the next unit.
+- **Gates.** build/ rebuilt. s7366 --check OPEN 0, s7374 --check unreviewed 0 + selftest PASS, s7375 --selftest PASS + --check
+  OPEN 0. Smoke `env SECS=260 zsh scratch/s7326/run.zsh s7375_dd8 "ROGUESQ_FLOOR_DEPTH_DIR=..."` (hangar->mission->abort x3,
+  dd8 21:9 FPS60): crash 0, resets 9, late 0, arena full 0; **positive control for the locked path: the diag wrote 12544
+  history events** (copy-target 6459, enter 4108, tri 1972, setup 3, copy-changes 2) + rdram/copytoram logs.
+  TSan arm (tools/build_tsan.sh incremental; scratch/s7375/tsan_run.zsh t1 600 with the depth diag on): 4443 reports, 26 groups,
+  CTL x4342 fires, depth diag 2330 events under TSan, **0 frames in rt64_framebuffer_renderer.cpp in any report**. 2 new groups
+  classified in tools/s7354_tsan_report.py: rs64_floor_ownership (guest RDRAM read from a guest-called store-shadow hook vs a
+  guest do_recv write: SEM) and a recomp.cpp:892 thread leak (BENIGN: the harness stopped the wrapper at its 600 s background limit,
+  SDL turned the signal into SDL_QUIT and main returned without joining the game thread). Report rc 0. The TSan run stayed in
+  the hangar (initMission 0: the depth readbacks slow TSan further), so the TSan arm covers boot/front end/hangar, not mission.
+  This is a one-arm TSan result (no pre-fix TSan arm was built), so the two-thread reach of the depth diag rests on the static
+  caller evidence (two renderer instances, rt64_state.cpp:653 / rt64_workload_queue.cpp:178): single-source.
+- Pre-existing, not acted on: every configure prints "fixup_factor5_ucode: FIXUP 24 ANCHOR FAILED (0)" twice (configure-time
+  re-run of the s4751 anchor against already-patched ucode; the script has not changed since s7112, and the build links).
+- Rules out: an unlocked shared container on the owner path among the s7366 file set (H-live-multi). Does NOT cover the 144
+  lockless-file containers.

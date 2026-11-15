@@ -27,6 +27,8 @@ HAND = [  # (substring of group key, class, reason) -- filled from the s7354 run
     ("thread.h:213", "SEM", "same: std::thread ctor reuses the stack slot of the waited-on init semaphore"),
     ("stack of thread T12", "SEM", "s7374: same init-semaphore stack slot when preinit runs on T12 (thread numbering shifts by one): gfx_thread_func signal() events.cpp:1534 vs init_timers std::thread ctor; HB is the mach semaphore wait, invisible to TSan"),
     ("zmemcpy upstream_compat.cpp", "SEM", "s7374: inflate_flush on a guest thread wrote RDRAM later reused for an OSThread that resume_thread_tagged reads on another guest thread (heap reuse, run-one scheduler)"),
+    ("rs64_floor_ownership upstream_compat.cpp", "SEM", "s7375: floor-writer diag reads guest RDRAM (rs64_f5_store_shadow_post called from guest bufferArbiterAllocSlot) vs a guest osRecvMesg do_recv write; both guest threads (run-one scheduler)"),
+    ("thread leak", "BENIGN", "s7375: recomp.cpp:892 game_thread not joined when main returns on SDL_QUIT (run ended by a signal-to-SDL_QUIT instead of SIGKILL); exit-time artefact"),
     ("g_recomp_rdram_for_wp_raw", "BENIGN", "one 8-byte aligned publish of the rdram base before any guest code; diag poll threads read it"),
     ("rt64_present_queue.cpp:1075", "BENIGN", "swapChainRate: aligned u32 pacing hint, changed only on window move/resize (present thread under its mutex), gfx thread reads stale-or-new"),
     ("plume_metal.cpp", "EXT", "Metal completion-handler block: copied on the present thread, run on Metal's internal queue (uninstrumented system HB)"),

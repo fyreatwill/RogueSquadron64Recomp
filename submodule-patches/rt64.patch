@@ -10509,7 +10509,7 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..9b03ba6 100644
+index b9cb1f5..cfad5c5 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -1,3 +1,4 @@
@@ -10714,7 +10714,7 @@ index b9cb1f5..9b03ba6 100644
          descCommonSet->setBuffer(descCommonSet->FrParams, frameParamsBuffer.get(), sizeof(interop::FrameParams));
          descCommonSet->setBuffer(descCommonSet->instanceRenderIndices, renderIndicesBuffer.get(), RenderBufferStructuredView(sizeof(interop::RenderIndices)));
          descCommonSet->setBuffer(descCommonSet->instanceRDPParams, drawBuffers->rdpParamsBuffer.get(), RenderBufferStructuredView(sizeof(interop::RDPParams)));
-@@ -470,7 +598,975 @@ namespace RT64 {
+@@ -470,7 +598,996 @@ namespace RT64 {
          return true;
      }
      
@@ -10765,8 +10765,14 @@ index b9cb1f5..9b03ba6 100644
 +        int seen = 0;
 +    };
 +
-+    const char *g_depthDir = nullptr;
-+    bool g_depthDirReady = false;
++    // s7375 class AS: the depth-hist diag is reached from BOTH FramebufferRenderer instances (State's on the gfx thread
++    // via fullSync, WorkloadQueue's on the RT64 render thread). Its env gate is resolved once at static init (it was a
++    // plain lazy-init pair, a race), and every public entry takes g_depthMu once the gate is on.
++    const char *const g_depthDir = [] {
++        const char *d = std::getenv("ROGUESQ_FLOOR_DEPTH_DIR");
++        return (d != nullptr && d[0] != '\0') ? d : static_cast<const char *>(nullptr);
++    }();
++    std::recursive_mutex g_depthMu;
 +    FILE *g_depthJson = nullptr;
 +    bool g_depthClosed = false;
 +    bool g_depthFlushed = false;
@@ -10782,13 +10788,6 @@ index b9cb1f5..9b03ba6 100644
 +    uint32_t g_depthColorFmt[kDepthCap];
 +
 +    bool depthDirOn() {
-+        if (!g_depthDirReady) {
-+            g_depthDir = std::getenv("ROGUESQ_FLOOR_DEPTH_DIR");
-+            if (g_depthDir != nullptr && g_depthDir[0] == '\0') {
-+                g_depthDir = nullptr;
-+            }
-+            g_depthDirReady = true;
-+        }
 +        return g_depthDir != nullptr;
 +    }
 +
@@ -10922,6 +10921,7 @@ index b9cb1f5..9b03ba6 100644
 +        if (!depthDirOn() || site == nullptr || !depthWatched(width, width)) {
 +            return;
 +        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
 +        std::memset(&g_guestPending, 0, sizeof(g_guestPending));
 +        std::snprintf(g_guestPending.site, sizeof(g_guestPending.site), "%s", site);
 +        g_guestPending.width = width;
@@ -11332,6 +11332,10 @@ index b9cb1f5..9b03ba6 100644
 +    }
 +
 +    void rs64DepthHistCaptureGuest(const char *site, const uint8_t *swapped, uint32_t swappedBytes, uint32_t width, uint32_t rowCount, uint32_t rowStart, uint32_t storeStride, uint32_t storeAddr, uint32_t lookupAddr) {
++        if (!depthDirOn()) {
++            return;
++        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
 +        rs64DepthHistNoteSite(site, width, rowCount, rowStart, storeStride, lookupAddr);
 +        if (g_guestPending.armed != 1 || swapped == nullptr || rowCount == 0 || width < 34u) {
 +            return;
@@ -11375,6 +11379,7 @@ index b9cb1f5..9b03ba6 100644
 +        if (!depthDirOn() || depth == nullptr || !depthWatched(width, width)) {
 +            return;
 +        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
 +        const uint64_t ptr = reinterpret_cast<uint64_t>(depth);
 +        if (DepthTrack *slot = depthTrack(ptr, true)) {
 +            slot->dirty = 1;
@@ -11398,7 +11403,11 @@ index b9cb1f5..9b03ba6 100644
 +    }
 +
 +    bool rs64DepthHistBeginZ(RenderWorker *worker) {
-+        if (!depthDirOn() || g_depthClosed || worker == nullptr || worker->commandList == nullptr) {
++        if (!depthDirOn() || worker == nullptr || worker->commandList == nullptr) {
++            return false;
++        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
++        if (g_depthClosed) {
 +            return false;
 +        }
 +        if (g_rs64FloorFragments == nullptr || g_rs64FloorFragmentZero == nullptr || g_rs64FloorBufferBytes < kDepthZBytes) {
@@ -11414,7 +11423,11 @@ index b9cb1f5..9b03ba6 100644
 +    }
 +
 +    bool rs64DepthHistCaptureDraw(uint32_t width, int zUpd, int x0, int y0, int x1, int y1) {
-+        if (!depthDirOn() || g_depthClosed || !zUpd || rs64_phase_ord() < 4 || !depthWatched(width, width)) {
++        if (!depthDirOn() || !zUpd || rs64_phase_ord() < 4 || !depthWatched(width, width)) {
++            return false;
++        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
++        if (g_depthClosed) {
 +            return false;
 +        }
 +        if (g_depthSamples + 1u >= kDepthCap) {
@@ -11425,8 +11438,12 @@ index b9cb1f5..9b03ba6 100644
 +    }
 +
 +    void rs64DepthHistSample(RenderWorker *worker, const char *kind, RenderTexture *depth, RenderTexture *color, RenderFormat colorFormat, uint32_t colorAddr, uint32_t colorW, uint32_t colorH, uint32_t depthW, uint32_t depthH, uint64_t frame, uint32_t pair, int x0, int y0, int x1, int y1, int whole, int zCmp, int zUpd, int depthCmp, int depthWr, int faces, int captureZ) {
-+        const bool isCopy = depthIsCopyKind(kind);
-+        if (!depthDirOn() || g_depthClosed || depth == nullptr || kind == nullptr) {
++        if (!depthDirOn()) {
++            return;  // s7375: off -> nothing ever arms g_guestPending, so no clear (was a two-thread write)
++        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
++        const bool isCopy = kind != nullptr && depthIsCopyKind(kind);
++        if (g_depthClosed || depth == nullptr || kind == nullptr) {
 +            if (isCopy) depthClearGuest();
 +            return;
 +        }
@@ -11530,7 +11547,11 @@ index b9cb1f5..9b03ba6 100644
 +    }
 +
 +    void rs64DepthHistFlush(const char *reason) {
-+        if (!depthDirOn() || g_depthFlushed) {
++        if (!depthDirOn()) {
++            return;
++        }
++        std::lock_guard<std::recursive_mutex> depthLock(g_depthMu);
++        if (g_depthFlushed) {
 +            return;
 +        }
 +        g_depthFlushed = true;
@@ -11690,7 +11711,7 @@ index b9cb1f5..9b03ba6 100644
          InstanceDrawCall::Type previousCallType = InstanceDrawCall::Type::Unknown;
          bool previousVertexTestZ = false;
          const RenderPipeline *previousPipeline = nullptr;
-@@ -543,6 +1639,135 @@ namespace RT64 {
+@@ -543,6 +1660,135 @@ namespace RT64 {
              }
          }
  
@@ -11826,7 +11847,7 @@ index b9cb1f5..9b03ba6 100644
          for (uint32_t i : rasterScene.instanceIndices) {
              const InstanceDrawCall &drawCall = instanceDrawCallVector[i];
  
-@@ -573,9 +1798,16 @@ namespace RT64 {
+@@ -573,9 +1819,16 @@ namespace RT64 {
                      int nt = ++n_total;
                      if (nf == 1 || (nf % 50) == 0 || nt <= 5) {
                          const uint32_t lo = (uint32_t)(drawCall.triangles.shaderDesc.colorCombiner.L);
@@ -11845,7 +11866,7 @@ index b9cb1f5..9b03ba6 100644
                          std::fflush(stderr);
                      }
                  }
-@@ -585,6 +1817,58 @@ namespace RT64 {
+@@ -585,6 +1838,58 @@ namespace RT64 {
              case InstanceDrawCall::Type::IndexedTriangles:
              case InstanceDrawCall::Type::RawTriangles:
              case InstanceDrawCall::Type::RegularRect: {
@@ -11904,7 +11925,7 @@ index b9cb1f5..9b03ba6 100644
                  // ROGUESQ: skip draws with null colorTarget instead of
                  // asserting. Some workloads route instances through a
                  // rasterScene whose fbStorage has no allocated colorTarget
-@@ -657,6 +1941,45 @@ namespace RT64 {
+@@ -657,6 +1962,45 @@ namespace RT64 {
                      continue;
                  }
  
@@ -11950,7 +11971,7 @@ index b9cb1f5..9b03ba6 100644
                  // A new pass must be started if decals are required and something wrote to the depth buffer before this call.
                  const interop::OtherMode otherMode = triangles.shaderDesc.otherMode;
                  bool depthDecal = (otherMode.zMode() == ZMODE_DEC);
-@@ -668,9 +1991,9 @@ namespace RT64 {
+@@ -668,9 +2012,9 @@ namespace RT64 {
                      switchToDepthWrite();
                  }
  
@@ -11963,7 +11984,7 @@ index b9cb1f5..9b03ba6 100644
                  }
  
                  if (previousPipeline != triangles.pipeline) {
-@@ -679,25 +2002,67 @@ namespace RT64 {
+@@ -679,25 +2023,67 @@ namespace RT64 {
                  }
                  
                  rasterParams.renderIndex = i;
@@ -12033,7 +12054,7 @@ index b9cb1f5..9b03ba6 100644
                      previousPipeline = nullptr;
                  }
  
-@@ -735,13 +2100,70 @@ namespace RT64 {
+@@ -735,13 +2121,70 @@ namespace RT64 {
                      break;
                  }
  
@@ -12104,7 +12125,7 @@ index b9cb1f5..9b03ba6 100644
                  }
  
                  break;
-@@ -773,6 +2195,158 @@ namespace RT64 {
+@@ -773,6 +2216,158 @@ namespace RT64 {
              }
          }
  
@@ -12263,7 +12284,7 @@ index b9cb1f5..9b03ba6 100644
          // Mark targets for resolve.
          if (fbStorage->colorTarget != nullptr) {
              fbStorage->colorTarget->markForResolve();
-@@ -1462,6 +3036,15 @@ namespace RT64 {
+@@ -1462,6 +3057,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -12279,7 +12300,7 @@ index b9cb1f5..9b03ba6 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
-@@ -1470,6 +3053,8 @@ namespace RT64 {
+@@ -1470,6 +3074,8 @@ namespace RT64 {
          }
  
          Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
@@ -12288,7 +12309,7 @@ index b9cb1f5..9b03ba6 100644
          void *paramBufferBytes = framebuffer.paramsBuffer->map();
          memcpy(paramBufferBytes, &fbParams, sizeof(interop::FramebufferParams));
          framebuffer.paramsBuffer->unmap();
-@@ -1569,7 +3154,12 @@ namespace RT64 {
+@@ -1569,7 +3175,12 @@ namespace RT64 {
          const float SimilarityPercentage = 0.1f; // TODO: Make more strict once VI ratios are in.
          const float scissorRatio = static_cast<float>(fbPair.scissorRect.width(false, true)) / static_cast<float>(fbPair.scissorRect.height(false, true));
          const bool adjustRatio = (abs((scissorRatio / p.aspectRatioSource) - 1.0f) < SimilarityPercentage);
@@ -12302,7 +12323,7 @@ index b9cb1f5..9b03ba6 100644
          InstanceDrawCall instanceDrawCall;
          interop::RenderIndices renderIndices;
          uint32_t globalCallIndex = 0;
-@@ -1643,6 +3233,17 @@ namespace RT64 {
+@@ -1643,6 +3254,17 @@ namespace RT64 {
  
              for (uint32_t d = 0; (d < proj.gameCallCount) && (globalCallIndex < p.maxGameCall); d++) {
                  const GameCall &call = proj.gameCalls[d];
@@ -12320,7 +12341,7 @@ index b9cb1f5..9b03ba6 100644
                  renderIndices.instanceIndex = call.callDesc.callIndex;
                  renderIndices.faceIndicesStart = call.meshDesc.faceIndicesStart;
                  renderIndices.rdpTileIndex = call.callDesc.tileIndex;
-@@ -1789,6 +3390,22 @@ namespace RT64 {
+@@ -1789,6 +3411,22 @@ namespace RT64 {
  
                              RenderViewport viewportRect = convertViewportRect(call.callDesc.rect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, horizontalMisalignment, call.callDesc.rectLeftOrigin, call.callDesc.rectRightOrigin);
                              triangles.screenScale = { viewportRect.width / framebuffer.viewport.width, viewportRect.height / framebuffer.viewport.height };
