@@ -1,18 +1,21 @@
-# NEXT (s7366): idiom-class audit - class AQ, host containers touched from two threads without a common lock
+# NEXT (s7367): class AQ dynamic half — get the TSan arm into missions (guest VI-handshake deadlock under slowdown)
 HYPOTHESIS-ID: host-container-race
-Context: s7365 (class AP) closed; its one upstream hole left open (rt64_texture_cache fileSystemStreamResolvedPaths cleared at 1526
-under no mutex while the upload thread reads it at 1071) is the race shape, not the lifetime shape. Class AQ: a std container / member
-written in one thread's function and read or written in another's, where the two sites do not hold the same mutex (lock_guard /
-unique_lock / scoped_lock on the same mutex name in the enclosing scope).
-NOTE: CURRENT-TRUTH is 59985 bytes; if Step 0 prints > 60000 this iteration is MAINTENANCE instead.
-Hypotheses: H-safe (same lock, or single-threaded by construction: e.g. only the game thread), H-ordered (handoff through a queue/
-atomic/condition with happens-before), H-race (fix: lock or move ownership).
-Method: tools/s7366_race_census.py: thread entry points (std::thread / SDL_CreateThread / ultramodern thread bodies / RT64 worker
-loops: Workload/Present/Texture upload / rsp audio) -> one-level same-file call closure -> container members each touches, with the
-mutexes held at each site (lock objects in enclosing blocks). Rows: member touched from >=2 thread roots with no common lock.
-Planted selftest rows (two thread lambdas, one shared vector, lock in one only = B; both locked = SAFE).
-Independent reviewers per file group (code + rows, not conclusions). Real races on default paths: fix + TSan arm (clang -fsanitize=thread
-on a unit repro like tools/s7365_ap_ctl.sh) + 260 s dd8 smoke `env SECS=260 zsh scratch/s7326/run.zsh s7366_dd8 ''`.
-Side question carried from s7364/s7365 (cheap, do first): what did the stale tile DRAW? Same dd8 recipe, presented-frame captures
-ROGUESQ_S7364_WLRESET=0 vs default phase-gated on the same VI ordinals; if frames differ, compare against angrylion (tools/oracle).
-Exit: PORTING-STATE s7366, CURRENT-TRUTH 27ze -> closed, commit; any lib/ edit -> ./submodule-patches/export.sh first.
+Context (s7366): the TSan arm (tools/build_tsan.sh, scratch/s7366/tsan_run.zsh) now boots (s7355 sigaltstack hook skipped under
+TSan) but every run still stops in the front end: 3/3 runs (dd8 21:9 at fs=39 twice and fs=281 once; retail settings at fs=281) end in a
+guest wait cycle. MAIN waits on 0x8011A818, the scheduler on 0x8011A420, and viRetraceHandlerThread is stuck in
+osSendMesg(0x80128CF0, BLOCK) into a full capacity-1 queue that only MAIN drains (vflag 0x80037808 handshake, funcs_4 0x80019B3C /
+funcs_5 0x8001BFDC-0x8001C0F8). TSan makes guest code ~5-20x slower, so a gfx task spans >1 VI. Static census + 2 reviews cover the
+rest of class AQ (s7366 entry).
+Hypotheses for the deadlock: H-slow (only a guest that misses many VIs deadlocks; retail hardware never does; a slower VI clock
+lets TSan reach missions), H-sem (ultramodern's blocked-sender wake on a full queue loses a wakeup: MAIN's recv does not restart
+the blocked sender), H-flag (the retrace thread reads a stale vflag across the handoff).
+Discriminator (one build, the TSan arm): add ROGUESQ_VI_HZ=<n> (events.cpp vi_hz override, default 60), then run the dd8
+recipe at VI_HZ=60 / 20 / 10 with ROGUESQ_G1E_TL=<file> + ROGUESQ_S4259=1. H-slow: 20 or 10 reaches initMission with no
+stall-dump. H-sem: the timeline shows a CF0 recv that returns while the fullqueue sender stays blocked. H-flag: a CF0 send with no
+flag-set window open (MAIN not in 0x8001BFF8 / 0x8001C048 / 0x8001C0EC).
+Also check (cheap, normal build): does a heavily loaded host (tools/s7277_toggle_load_arm.zsh) ever hit the same cycle? If
+so it is an owner-visible permanent freeze, not a TSan artefact.
+Then: TSan run through hangar -> mission -> abort (scratch/s7326 AP route, timings scaled to the slower VI), report with
+tools/s7354_tsan_report.py (exit 1 on ? / B), fix any default-path container race, 260 s dd8 smoke on build/.
+Side question still carried from s7364: what did the stale tile DRAW? WLRESET=0 vs default presented frames, phase-gated.
+Exit: PORTING-STATE s7367, CURRENT-TRUTH 27zf, commit; any lib/ edit -> ./submodule-patches/export.sh first.

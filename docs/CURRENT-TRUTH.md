@@ -469,29 +469,11 @@ is in the s7307 archive). Active unit: NEXT.md.
     tools/s7355_sighandler_census.py: 28 SAFE, 7 G (env-gated diagnostic handlers), 0 B, 0 ?; controls PASS. Lesson: on macOS a
     fault inside the handler (signal blocked) HANGS rather than dies, so a handler bug turns crashes into freezes. Regression
     arms: `zsh scratch/s7355/arms.zsh` (positive controls ROGUESQ_TEST_STACK_OVERFLOW_AT / ROGUESQ_TEST_CRASH_MALLOC_AT).
-27u. **Unchecked host allocation / mmap / fopen results (class AG): CLOSED (s7356, static census + runtime arms; 1 default-on FIXED).**
-    tools/s7356_unchecked_census.py over src/**, librecomp/ultramodern src, our rt64 '+' lines: 105 sites, 0 B / 0 ? after hand
-    review (MANUAL table in the tool; 19 heuristic false positives). FIXED: overlays.cpp init_overlays calloc (null write at boot
-    on failure; now "[s7356] FATAL init_overlays" + abort) and 2 env-gated diagnostic callocs in main.cpp. Runtime second line:
-    tools/s7356_failalloc.c (DYLD calloc interpose, fails the first call from a named caller): pre-fix SIGSEGV si_addr=0x8,
-    post-fix named FATAL; ctl arms boot. Regression `zsh tools/s7356_arms.zsh`. 260 s dd8 smoke clean. Next: class AH (27v).
-27v. **Unchecked host I/O lengths (class AH): CLOSED (s7357, static census + runtime arms; 4 default-on FIXED).**
-    tools/s7357_iolen_census.py (fread/read/fgets/fwrite/write/ftell/lseek + iostream read/write/tellg/seekg) over the s7356
-    scope: 100 sites, 0 B / 0 G after fixes (58 W = output-only diagnostic dump writes; persisted sinks excluded from W; 6
-    controls). FIXED in librecomp: pi.cpp read_save_file (short save left the buffer tail stale, i.e. the previous profile's
-    bytes after change_save_file -> zero-fill + "[s7357-io] save file short"), pi.cpp update_save_file (failed write still
-    finalized a truncated temp over the real save -> close+fail() check), recomp.cpp read_file (tellg -1 -> resize(SIZE_MAX)
-    throw; short read -> empty) + write_file (reported success unchecked), mod_manifest.cpp loose read_file, mods.cpp config
-    writes. Runtime: `zsh tools/s7357_arms.zsh` (own working folder, save COPY): ctl 512 B silent, short 100 B -> named warning,
-    both boot; owner save sha unchanged. 260 s dd8 smoke clean. Next: class AI (27w).
-27w. **Unvalidated numeric env/config parses (class AI): CLOSED (s7358, census + runtime arms; 2 owner-knob crashes FIXED).**
-    tools/s7358_envparse_census.py (atoi/atof/strto*/sscanf/sto* over the s7356 scope, auto sink pass + every owner-knob and
-    config site read by hand): 290 sites, 0 B, 4 G-M (diag cadence %/÷ test levers), 4 controls PASS. FIXED: ROGUESQ_DRAW_DISTANCE
-    above 8 sized the tile pool ceil(dd)^2*2 unclamped (dd12 k=288 -> spill arena full -> SIGBUS) while terrain clamps at 8; "nan"
-    passed apply_s6036_dd's `v < 0.25` clamp (assert in buildVisibleTerrainGridAroundCamera, SIGABRT); a typo ("x4") read 0 ->
-    silent 0.25x terrain; hand-set ROGUESQ_FB_WIDTH bypassed the 1024 clamp. main.cpp rs64_s7358_sanitize_env (before the
-    aspect/dd policies; ROGUESQ_S7358_ENVCHECK=0 old) + tilepool px<=8. `zsh tools/s7358_arms.zsh <tag>`: pre d12/nan crash,
-    typo 0.25; post all alive with "[s7358-env]"; same-build ENVCHECK=0 nan re-crashes. 260 s dd8 smoke clean. Next: class AJ (27x).
+27u. **Unchecked alloc/mmap/fopen (class AG): CLOSED (s7356).** 105 sites; init_overlays calloc + 2 diag callocs fixed; `zsh tools/s7356_arms.zsh`.
+27v. **Unchecked host I/O lengths (class AH): CLOSED (s7357).** 100 sites; pi.cpp short save read / failed save write, recomp.cpp
+    read_file/write_file, mod manifest/config fixed; `zsh tools/s7357_arms.zsh` (save COPY).
+27w. **Numeric env/config parses (class AI): CLOSED (s7358).** 290 sites; DRAW_DISTANCE >8 / "nan" / typo and FB_WIDTH clamp fixed in
+    main.cpp rs64_s7358_sanitize_env (ROGUESQ_S7358_ENVCHECK=0 old); `zsh tools/s7358_arms.zsh <tag>`.
 27x. **Unbounded string copies (class AJ): CLOSED (s7359).** 44 sites; 20 `o += snprintf` appends -> src/main/rs64_apf.h; rt64 W-row fixed.
 27y. **Guest-RAM string reads (class AK): CLOSED (s7360).** 1 dead site (__osRdbSend) range-checked; 57 live exports read no guest text.
 27z. **Zero-extended guest-pointer bases (class AL): CLOSED (s7361).** sext MEM_x bases stay in the 4 GB rdram reservation; 9 gen + 5
@@ -518,8 +500,15 @@ is in the s7307 archive). Active unit: NEXT.md.
     librecomp resolve_code_dependencies bounds on dependency/event indices (malformed .nrm). Measured: RT64 callIndex == rdpParams slot
     at the owner recipe (ROGUESQ_S7365_CALLIDX=1, 0/5.12M; =ctl 16/16). HOLE-OPEN: rt64_texture_cache fileSystemIndex across
     clearReplacementDirectories (dev-mode pack UI only); ROGUESQ_SKIP_CC callIndex shift untested.
-27ze. **Next unit (NEXT.md): retail check of the s7364 stale-tile frames, then class AQ (cross-thread container access without a lock).**
-28. **When 1-27ze offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27ze. **Cross-thread container access (class AQ): static half CLOSED (s7366, lockset census 97 rows, 2 reviews, gate).**
+    tools/s7366_lockset_census.py / s7366_lockset_reviewed.tsv. FIXED: rsp.cpp rs64_spk_dma_* / rs64_s4208_active shared by the audio and
+    gfx RSP threads (thread_local; TSan pre 2 B -> post 0); dpc_bridge g_f5_last_writer first-touch resize (call_once, diag); TSan arm
+    boot hang from the s7355 introspection hook (skipped under TSan). TSan arm still never reaches a mission: guest deadlock
+    MAIN 0x8011A818 / sched 0x8011A420 / viRetraceHandlerThread blocked sending 0x80128CF0 (cap 1, vflag 0x80037808) when guest code
+    is slowed (single-source mechanism; normal builds 0 stalls).
+27zf. **Next unit (NEXT.md): ROGUESQ_VI_HZ for the TSan arm -> H-slow/H-sem/H-flag for that deadlock, then TSan through a mission;
+    plus the s7364 stale-tile retail frame check.**
+28. **When 1-27zf offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

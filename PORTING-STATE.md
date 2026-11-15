@@ -194393,3 +194393,56 @@ FULLSYNC fix covering all callTiles/rdpTiles emptying paths). The callIndex/rdpP
 same-run planted control (16/16) SELECTS H-safe (0 natural mismatches in 5.12M calls) and refutes the reviewer's H-shift at the owner recipe.
 Class AP closed. Next discriminator: class AQ (cross-thread container access without a common lock), NEXT.md, plus the stale-tile
 retail frame check.
+
+## Session 7366 (2026-11-14) — class AQ (cross-thread container access) static half closed + TSan arm unblocked: s7355 sigaltstack hook hung every TSan boot (FIXED), audio/gfx RSP threads shared diag DMA rings (FIXED), dpc_bridge g_f5_last_writer first-touch resize race (FIXED); TSan still stops in a guest VI-handshake deadlock under slowdown (named)
+HYPOTHESIS-ID: host-container-race. Work unit from NEXT.md (s7365): class AQ. Hypotheses per site: H-safe (same lock / one thread),
+H-ordered (queue/atomic handoff), H-race.
+Dynamic half (ground truth first, rule 12): the TSan arm (tools/build_tsan.sh) rebuilt at HEAD; run script scratch/s7366/tsan_run.zsh
+(build_tsan/, owner save copy, TSAN log per run, ROGUESQ_S7354_RACE_CTL=1 control). Owner-style dd8 21:9 FPS60 unless noted.
+- t1: game hung in create_gfx -> SDL_InitAudio -> pthread_create (TSan semaphore wait) after 24 log lines. A thread had died at
+  "ThreadSanitizer: CHECK failed: tsan_interceptors_posix.cpp:2184 thr->slot != 0" inside rs64_s7355_thread_hook's TERMINATE
+  callout (main.cpp; the instrumented hook runs after TSan tore the thread down). ORIGIN: s7355's pthread_introspection hook;
+  TSan-only. FIX: hook skipped when __has_feature(thread_sanitizer) ("[s7355] sigaltstack hook skipped" line). The normal build
+  keeps it.
+- t2 (dd8), t3 (retail settings, FPS60=0), t4 (dd8): boot proceeds; all three later stall for good (stall-dump; t2 rdpFs=39, t3/t4
+  rdpFs=281 with vi_width 640). The wide path is refuted as the cause, since retail settings stall too. t4 with ROGUESQ_G1E_TL timeline +
+  ROGUESQ_S4259 names a guest wait cycle. MAIN (slot 8) blocks on osRecvMesg 0x8011A818 (frame done from the scheduler). The
+  scheduler (slot 6) blocks on 0x8011A420. viRetraceHandlerThread (slot 5) last logs osSendMesg(0x80128CF0, BLOCK) at funcs_4
+  0x80019B50 (taken when byte 0x80037808 is set) and never returns; stall-dump: CF0 validCount 1 of capacity 1 (osCreateMesgQueue
+  0x800198D0 count 1) + a thread on its fullqueue. Only MAIN drains CF0 (bufferArbiterAllocSlot 0x8001BFF8/0x8001C048/0x8001C0EC,
+  which sets the byte, recv BLOCK, and on the 0x8001C034 path loops without clearing it). In t4 MAIN's earlier CF0 recv found a
+  message posted 51 ms before, while MAIN was blocked elsewhere, i.e. the retrace thread posts outside MAIN's wait. LLE gfx task
+  26.7062 -> 26.7300 s = 24 ms > 1 VI under TSan. Mechanism single-source (one timeline); H-slow vs H-sem vs H-flag -> NEXT.md.
+  Normal builds never stall-dump (s7364/s7365 dd8 smokes: 0).
+- TSan rows (tools/s7354_tsan_report.py; control present every run: CTL x623/x1158/x937/x597). No std:: container race in any RT64,
+  librecomp or ultramodern thread over boot -> front end. NEW B (both FIXED, lib/N64ModernRuntime/librecomp/src/rsp.cpp):
+  `rs64_spk_dma_n` write/write between T14 (SP Task Thread, audio LLE) and T15 (Gfx thread, gfx LLE): both RSP threads appended to
+  one spike-DMA ring with a non-atomic index, so dpc_bridge's spike "covering" report mixed audio DMAs in. `rs64_s4208_active`: the
+  audio task's gate was global, so gfx-thread DMAs went into the audio s4208/s4209/s4210 rings while an audio task ran. ORIGIN:
+  s4208/s4239/s6369 diagnostics written assuming one RSP thread (DMEM itself is per thread, g_dmem_cur thread_local). FIX:
+  thread_local gate + ring (dpc_bridge extern matches). Values are legitimate; the cross-thread mixing was not. Three new guest-RAM rows
+  (osStopThread_recomp, osCreateMesgQueue) -> SEM in HAND. Pre-fix t4 report rc 1 (2 B), post-fix t5 rc 0 at the same boot point as
+  t2 (fs=39, where t2 had both rows).
+Static half: tools/s7366_lockset_census.py (Eraser-style lockset: containers declared at class/namespace scope; lock = lock_guard /
+unique_lock / scoped_lock / shared_lock / std::lock in an enclosing block, or X.lock() with no unlock between; MIXED = touched under a
+lock in one function and without one in another; selftest 4 planted classes PASS). 1453 accesses, 158 containers: 21 CONSISTENT,
+98 NOLOCK, 39 MIXED -> 97 unlocked-function rows, given to 2 independent reviewers (lib/ 54, src/ 43; code, not conclusions):
+44 H-safe-other (same-named locals/params/static decls, fixed std::array size()), 23 H-safe-caller (*_locked helpers,
+s7318_blk callers), 28 H-safe-thread (register_game before start; Present-thread-only members; per-renderer snapshot vectors), 2 H-race-diag:
+dpc_bridge g_f5_last_writer first-touch `if empty() resize()` unlocked on the guest store hook and on the Gfx-thread vtx dump
+(ROGUESQ_LOG_F5_VTX + STORE_SHADOW) -> FIXED with std::call_once (rs64_f5_last_writer_ensure). Verdicts in
+tools/s7366_lockset_reviewed.tsv; regen_replay.sh runs --selftest + --check (OPEN 0).
+Reviewer A out-of-row: rt64_texture_cache uploadThreadLoop 1159-1196 reads/writes the replacement map + stream maps without
+textureMapMutex while dev-UI clearReplacementDirectories clears them unlocked (1523/1526): same HOLE-OPEN as s7365 (texture packs
+only; the game never loads one). Reviewer B assumption: g_audio_route_pref safety rests on guest threads running one at a time.
+Smokes (build/, fixes in): `env SECS=260 zsh scratch/s7326/run.zsh s7366_dd8 ''` crash 0, resets 14, arenafull 0, 6 initMission, 258
+update_screen (same as earlier smokes); 120 s with ROGUESQ_LOG_F5_VTX=1 ROGUESQ_LOG_F5_STORE_SHADOW=1: crash 0.
+lib/ edited (rsp.cpp): ./submodule-patches/export.sh run, N64ModernRuntime.patch refreshed in this commit.
+Not done: the s7364 stale-tile retail frame check (carried again); TSan coverage of missions (blocked by the deadlock above).
+Rules out: lock-inconsistent container access on any default path in src/librecomp/ultramodern/rt64 (within the lockset idiom:
+locks taken in a caller in another file, and atomics/queues as handoffs, are judged by review only); TSan-visible host races in boot ->
+front end other than the two fixed.
+Discrimination (s7366): the TSan arm (control in every run) + the lockset census with 2 independent reviews SELECT H-race for
+rs64_spk_dma_n / rs64_s4208_active (fixed, 0 rows post) and g_f5_last_writer first touch (fixed), and SELECT H-safe for every other
+MIXED row (95/97) and every host container TSan reached; H-race is refuted on default paths. The static half of class AQ is closed;
+the dynamic half's mission coverage moves to NEXT.md (guest VI-handshake deadlock: H-slow / H-sem / H-flag).

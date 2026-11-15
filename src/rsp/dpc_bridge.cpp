@@ -462,7 +462,7 @@ static std::atomic<uint32_t> g_inline_probe_trigen_boot_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
-extern "C" { extern uint32_t rs64_spk_dma_ring[256][3]; extern uint32_t rs64_spk_dma_n, rs64_spk_cov43a, rs64_spk_cov462, rs64_spk_ctl; }
+extern "C" { extern thread_local uint32_t rs64_spk_dma_ring[256][3]; extern thread_local uint32_t rs64_spk_dma_n, rs64_spk_cov43a, rs64_spk_cov462, rs64_spk_ctl; } // s7366: per RSP thread (rsp.cpp)
 
 static bool log_inline_advance() {
     static const bool enabled = [] {
@@ -1598,6 +1598,10 @@ static uint32_t g_f5_vtx_store_range_next = 0;
 static std::mutex g_f5_vtx_store_mutex;
 static std::vector<Rs64F5LastWriter> g_f5_last_writer;
 static uint32_t g_f5_last_writer_updates = 0;
+// s7366: first-touch sizing ran unlocked on both the guest store hook and the Gfx-thread dump (TSan-class AQ review): two threads
+// could resize the same empty vector at once. Size it exactly once.
+static std::once_flag g_f5_last_writer_once;
+static inline void rs64_f5_last_writer_ensure() { std::call_once(g_f5_last_writer_once, [] { g_f5_last_writer.resize(0x200000u); }); }
 static uint32_t g_f5_bulk_control = 0;
 static uint32_t g_f5_bulk_rows = 0;
 static uint32_t g_f5_d114_exact_rows = 0;
@@ -1682,8 +1686,7 @@ static void rs64_f5_last_writer_update(char width, uint32_t pc,
                                        uint32_t phase) {
     if (!rs64_f5_shadow_on() || addr < 0x80000000u || addr >= 0x80800000u)
         return;
-    if (g_f5_last_writer.empty())
-        g_f5_last_writer.resize(0x200000u);
+    rs64_f5_last_writer_ensure();
     const uint32_t span = width == 'D' ? 8u : (width == 'B' ? 1u :
                            (width == 'H' ? 2u : 4u));
     const uint32_t phys = addr & 0x7FFFFFu;
@@ -1739,7 +1742,7 @@ extern "C" void rs64_f5_store_shadow_post(char width, uint32_t pc,
     const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
     uint32_t now = rs64_f5_read_word(rd, aligned);
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
-    if (g_f5_last_writer.empty()) g_f5_last_writer.resize(0x200000u);
+    rs64_f5_last_writer_ensure();
     const uint32_t first = phys >> 2u;
     const uint32_t last = (phys + span - 1u) >> 2u;
     if (rs64_phase_ord() == 5u && phys < 0x7355D0u &&
@@ -1788,8 +1791,7 @@ static void rs64_f5_dump_join(uint32_t phase, uint32_t source, uint32_t bytes,
     if (!rs64_f5_shadow_on() || phase < 6u || !rdram ||
         source >= 0x800000u || bytes == 0 || bytes > 0x800000u - source)
         return;
-    if (g_f5_last_writer.empty())
-        g_f5_last_writer.resize(0x200000u);
+    rs64_f5_last_writer_ensure();
     std::lock_guard<std::mutex> lock(g_f5_vtx_store_mutex);
     uint32_t rows = 0, written = 0, red = 0;
     const uint32_t snapshot = std::min(bytes, 32u);

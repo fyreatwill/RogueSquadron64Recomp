@@ -12797,7 +12797,19 @@ static void rs64_s7355_thread_hook(unsigned int event, pthread_t thread, void* a
     else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE && thread == pthread_self()) rs64_s7355_altstack_drop();
     if (g_rs64_s7355_prev_hook) g_rs64_s7355_prev_hook(event, thread, addr, size);
 }
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define RS64_TSAN_BUILD 1
+#endif
+#endif
 static void rs64_s7355_altstack_install() {
+#ifdef RS64_TSAN_BUILD
+    // s7366: under ThreadSanitizer the TERMINATE callout runs after TSan has torn the thread's state down; the
+    // instrumented hook then trips "CHECK failed: thr->slot != 0" and the next pthread_create waits forever (game hangs in
+    // create_gfx / SDL_InitAudio). TSan installs its own signal handling, so the TSan arm skips the hook.
+    fprintf(stderr, "[s7355] sigaltstack hook skipped: ThreadSanitizer build (s7366)\n");
+    return;
+#endif
     rs64_s7355_altstack_here(); // main thread
     g_rs64_s7355_prev_hook = pthread_introspection_hook_install(rs64_s7355_thread_hook); // every thread created later
     fprintf(stderr, "[s7355] sigaltstack on: %zu KB per thread (main + introspection hook); ROGUESQ_ALTSTACK=0 disables\n",
