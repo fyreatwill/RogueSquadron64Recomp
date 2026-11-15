@@ -1,16 +1,16 @@
-# NEXT (s7407)
-HYPOTHESIS-ID: libm-replacement-contract
+# NEXT (s7408)
+HYPOTHESIS-ID: fp-int-conversion-contract
 
-s7406 closed class BP (H-none; build_fpat per-PC FPSR attribution). First fold soak s7406_fpat_levels if SOAK-RESULTS has it
-(pass: per level CONTROL PASS and VERDICT H-none; a rc 3 names a guest stmt that consumed a denormal or made an invalid op ->
-reopen BP for that PC).
-Class BQ: host replacements of guest libm.
-1. Census (offline, one script tools/s7407_libm_census.py): every callee of the form X_recomp / host function called from
-   RecompiledFuncs that replaces a libultra/libm routine (sinf, cosf, sqrtf, guSqrtf, atan2f, ...), where it is defined (grep
-   src/, lib/N64ModernRuntime/librecomp, patches), call-site count, and whether the retail body exists in the ROM (ELF symbols
-   in syms/ / N64Recomp toml ignored list).
-2. For each with a retail body: run the recompiled retail body (or a C transcription of its MIPS) against the host version over
-   all 2^32 float inputs (or a dense sweep for 2-arg) offline; report max ulp, mismatches on inf/NaN/denormal/-0.
-3. Hypotheses: H-equal (bit-identical), H-ulp-benign (<=2 ulp, no edge mismatch), H-diverge (edge-case or large mismatch that a
-   game branch sees -> switch the replacement to the retail body behind a default-on flag, =0 host).
-4. Positive control: a deliberately perturbed host copy (result+1 ulp) must show mismatches in the same harness.
+s7407 closed class BQ (H-equal: no libm replaced; 4 live IDO 64-bit helpers bit-identical, tools/s7407_libm_census.py).
+Class BR: recompiler FP->int conversion macros, lib/N64ModernRuntime/N64Recomp/include/recomp.h:395-450.
+TRUNC_W_S/D, TRUNC_L_S/D are plain C casts (UB out of range; arm64 fcvtzs saturates, NaN -> 0); CVT_W_S/D = (int32_t)lrintf /
+lrint (64-bit long truncated -> WRAPS out of int32 range); CVT_L_S has a stray ';' in its macro. VR4300: out-of-range/NaN/inf
+conversion raises an unimplemented-operation exception (retail fault), in-range follows FCSR RM (nearest; s7405 RM rows H-none).
+1. Offline (one script tools/s7408_cvt_contract.py + generated C harness, like s7407): every 2^32 float through each .s macro
+   (and a dense double sweep for .d) vs a VR4300 model {in-range: RM-nearest / trunc result; else UNIMPL}. Rows: equal, UNIMPL
+   (retail faults, record host value: saturate vs wrap), mismatch in range (must be 0). Control: perturbed macro (+1) mismatches.
+2. Census: grep RecompiledFuncs for every TRUNC_*/CVT_W_*/CVT_L_* site (count, function); join with BP's build_fpat IOC=0
+   (route stmts) - any site outside the BP route that can see |x|>=2^31 (e.g. float from a guest-derived distance) is a row.
+3. Hypotheses: H-equal (in-range identical, out-of-range unreachable live), H-wrap-live (a live CVT_W site receives |x|>=2^31
+   and the host wraps where arm64 cast would saturate -> pick saturation behind default-on flag, =0 old), H-macro-bug (the CVT_L_S
+   stray ';' changes an expression at some emit site -> fix in fixup or recomp.h with export.sh).

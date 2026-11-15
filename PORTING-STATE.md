@@ -195957,3 +195957,33 @@ Next: class BQ, host replacements of guest libm (sinf/cosf/sqrtf shims vs retail
 Conclusion: selects H-guest-math for denormal results (UFC) and H-host-shim for denormal inputs (IDC), selects H-dz-benign for
 the boot DZC; refutes H-guest-denormal-input (retail-trapping operand in guest code). Next discriminator: s7406_fpat_levels
 soak on L4/L7/L12 (rc 3 would name a guest PC), then class BQ libm replacements (NEXT.md s7407).
+
+## Session 7407 (2026-11-15) — class BQ host replacements of guest math closed (H-equal): no libm routine replaced, 4 live IDO 64-bit helpers bit-identical to retail MIPS on all non-trapping inputs, trap divisors unreachable
+
+Fold: s7406_fpat_levels rc 0, L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS (plants 8 -> ufc 8, idc 8) and
+VERDICT H-none (stmt_idc 0, ioc 0) on all three -> class BP stands on 6 levels.
+
+New tool `tools/s7407_libm_census.py [disasm] [--n N]` (rc 0 = H-equal + control PASS, 3 otherwise; disasm from
+mips64-elf-objdump as in s7392). Offline only, no build/run.
+Census (N64Recomp symbol_lists.cpp reimplemented/ignored lists joined with the ELF disasm and every *_recomp body in
+librecomp/src + src/):
+- No libm routine has a host replacement. Guest sinf 0x80033960 (133 jal) and cosf 0x8002B190 (75 jal) are recompiled from
+  retail; no sqrtf/atan2f/guSqrtf symbol exists in the ELF (sqrt.s is an instruction). The NEXT.md premise "host sinf/cosf
+  shims" was wrong: the ~214 call lines are calls into recompiled retail bodies.
+- 13 math-shaped host bodies, all in math_routines.cpp. LIVE (ELF body + reimplemented + called): __ll_div (1: lldiv),
+  __ll_mul (2: lldiv, osInitialize), __ull_div (2: _Litob, osInitialize), __ull_rem (1: _Litob). DEAD: __divdi3, __udivdi3,
+  __umoddi3, __f_to_ll, __ll_to_f, __ull_to_d, __ull_to_f (no ELF body), __ll_lshift, __ull_rshift (ignored, 0 jal; their
+  dsllv/dsrlv fixes s7349 stay as latent hygiene). Guest __ll_rem/__ll_mod/__ll_rshift/__ull_divremi are recompiled, 0 jal.
+Sweep: host body text extracted verbatim into a harness vs a C transcription of the retail MIPS at 0x8002D0B0-0x8002D248
+(sw a0-a3, ld 0/8(sp), ddivu/ddiv/dmultu, break 7 on y=0, break 6 on INT64_MIN/-1, dsll32/dsra32 split with both halves
+sign-extended). 4,000,484 cases per helper (22x22 edge cross product + random magnitude pairs), garbage in the upper 32 bits
+of every arg register (sw drops them; host masks them the same way): mismatch 0 on all 4. Positive control, same harness with
+the host result perturbed (r3 ^= 1): 3.88e6/4.0e6 mismatches per helper -> PASS.
+Only divergence: TRAP rows (~123k per divider) where retail executes break and faults and host returns the s7348 MIPS ddiv
+values. Second line, call-site divisors: _Litob passes the conversion base t1 in {8,16,10} (li at 0x800372C0/CC/DC) to
+__ull_rem/__ull_div and to lldiv -> __ll_div, osInitialize divides by the constant 4 -> no live call can trap; INT64_MIN/-1 needs
+divisor -1, impossible.
+Rules out H-diverge and H-ulp-benign for every live replacement. Class BQ CLOSED, H-equal, no code change.
+Conclusion: selects H-equal (bit-identical on the whole non-trapping domain, trap domain unreachable), refutes H-diverge and the
+"host libm shims" premise. Next discriminator: class BR, recomp.h FP->int conversion macros (C casts / lrint truncation) vs
+VR4300 out-of-range/NaN behaviour, full 2^32 float sweep offline (NEXT.md s7408).

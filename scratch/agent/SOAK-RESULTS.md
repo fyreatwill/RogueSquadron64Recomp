@@ -1521,3 +1521,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7403 fold: s7402_clock_levels rc=0: L5/L10/L15 202-203 s alive, 0 crash, 0 VI stall, boot_pass=1 bad_clk=0 x3 -> CLOCKFIX holds.
 20261115-102325 | s7405_ftz_levels | rc=0 | 857s | scratch/agent/soak_results/s7405_ftz_levels_20261115-102325.log
 20261115 | s7406 fold: s7405_ftz_levels rc=0: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, fz1=25/28/20 fz0=0, plant_rows 187/235/110 -> FTZ default holds on 3 levels.
+20261115-105532 | s7406_fpat_levels | rc=0 | 631s | scratch/agent/soak_results/s7406_fpat_levels_20261115-105532.log
+20261115 | s7407 fold: s7406_fpat_levels rc=0: L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS 8/8 x3, VERDICT H-none (stmt_idc=0 ioc=0) x3 -> class BP stands on 3 more levels.

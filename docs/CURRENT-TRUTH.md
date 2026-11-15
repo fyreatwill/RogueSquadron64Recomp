@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7406 (2026-11-15).
+Compact operational handoff, as of Session 7407 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -472,14 +472,23 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidate:** class BQ, host replacements of guest libm: enumerate every guest math routine the port
-    replaces or stubs with host code (sinf/cosf/sqrtf and friends: grep `_recomp(rdram, ctx)` callees in RecompiledFuncs, ~214
-    sinf/cosf/sqrtf call lines; N64Recomp ignored/renamed funcs in the toml), and measure each against the retail libultra
-    routine on its whole input domain offline (max ulp, NaN/inf/denormal edge inputs, sign of zero). H-equal / H-ulp-benign /
-    H-diverge (a result the game branches on differs). NEXT.md s7407.
+16. **BQ CLOSED s7407 (host replacements of guest math): H-equal, no code change.** `tools/s7407_libm_census.py` (rc 0):
+    no libm routine is replaced; guest sinf (0x80033960, 133 jal) and cosf (0x8002B190, 75 jal) are recompiled retail code,
+    sqrtf has no ELF symbol (inline sqrt.s). The 13 math-shaped host bodies in librecomp math_routines.cpp: 4 LIVE
+    (__ll_div 1 call lldiv, __ll_mul 2 lldiv+osInitialize, __ull_div 2 _Litob+osInitialize, __ull_rem 1 _Litob), 9 DEAD (no ELF
+    body or ignored with 0 jal). Host body text extracted verbatim vs a C transcription of the retail MIPS (sw/ld pair,
+    ddiv(u)/dmultu, break 7/6, dsll32/dsra32 split), 4e6 random + 22x22 edge pairs with garbage upper register halves:
+    mismatch 0 x4; perturbed-host control (r3^=1) mismatches all 4 -> PASS. Only divergence = retail break 7 (y=0) / break 6
+    (INT64_MIN/-1) traps where host returns ddiv values; unreachable: divisors are the print base 8/10/16 (_Litob, lldiv) and
+    the constant 4 (osInitialize). s7407 fold s7406_fpat_levels: L4/L7/L12 CONTROL PASS, H-none x3 -> BP stands.
+17. **Next audit candidate:** class BR, recompiler FP->int conversion macros (recomp.h TRUNC_W/L_S/D = C casts, CVT_W/L_S/D =
+    lrint/llrint truncated to int32) vs VR4300 on NaN/inf/out-of-range/-0/half-way under RM nearest: VR4300 raises an
+    unimplemented-op exception on out-of-range (retail fault), arm64 saturates (fcvtzs) while (int32_t)lrintf wraps. Offline
+    sweep every 2^32 float per macro vs a VR4300 model, then census which guest conversion sites see out-of-range live
+    (BP's IOC=0 covers route stmts only). NEXT.md s7408.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
