@@ -1,0 +1,9 @@
+# s7378 class AU hand verdicts for SharedQueueResources fields the census leaves REVIEW (field<TAB>verdict<TAB>note)
+# re-run: python3 tools/s7378_shared_res_census.py --check
+colorImageAddressVector	GUARDED	workload rebuilds under managerMutex (1145/1160); present default path snapshots it under managerMutex (s7377, 249); line 254 picks the snapshot when s7377Early; =0 arm documented in s7377 table
+colorImageAddressSet	CONFINED	workload only
+interpolatedColorTargets	FIXED	grow (resize+make_unique) was unlocked while the present thread indexes it under interpolatedMutex (882); s7378 grows it under interpolatedMutex; clear() at 348 ORDERED by the presented>=available wait under interpolatedMutex just above
+interpolatedFrames	FIXED	per-present counter reset (skipped/presented/available/count) was unlocked and the present read count unlocked (734/884) while other members are read under interpolatedMutex; presented==0 skips the workload's wait; s7378 locks the reset and both count reads. updateMultisampling (Application, gfx) writes .skipped with queues IDLE (destroyShaderCache waits both ids + threadMutex)
+interpolatedFramesIndex	FIXED	ORDERED: flipped at 1235 before threadAdvanceWorkloadId (1361); present reads it after waitForWorkloadId(present.workloadId); made std::atomic for the record
+viOriginalRate	FIXED	workload writes at 1229 outside configurationMutex; a workload with no new present (same presentId) runs concurrently with the next present's read at 219; now std::atomic (constant VI rate in practice)
+swapChainRate	FIXED	s7354 TSan BENIGN row: get_display_framerate (port src/main, gfx thread per VI) read it unlocked vs setSwapChainRate under configurationMutex; now std::atomic

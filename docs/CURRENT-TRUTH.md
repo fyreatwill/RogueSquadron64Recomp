@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7377 (2026-11-14).
+Compact operational handoff, as of Session 7378 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -208,18 +208,20 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7370 into one sequence 1-17 (the s7369
 numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
 
-1. **ACTIVE (NEXT.md, HYPOTHESIS-ID rt64-shared-resources-census): class AU, every field of RT64 SharedQueueResources
-   (rt64_shared_queue_resources.h) by thread and guarding mutex.** **AT CLOSED s7377** (`tools/s7377_present_lock_table.py --check`,
-   30 rows, `--assume-off` control bad=17): upstream RT64's present thread took the lock-free `interpolationEnabled` branch on 99.7% of
-   presents (count always 1 here), so its colour-target get and GPU pass ran without workloadMutex, and it iterated
-   colorImageAddressVector (written under managerMutex) with no lock. Now: vector snapshotted under managerMutex, workloadMutex held
-   from performOperations through the GPU pass, released only when framesToPresent > 1 (0 times). ROGUESQ_S7377_EARLYLOCK=0 = old.
-   Smoke both arms crash 0 / 14 resets, presents 13922 vs 13931 (no cost); TSan rc 0, CTL fires, 0 inversions.
-   **AS2 CLOSED s7376** (`tools/s7375_nolock_threads.py --lockless --check` OPEN 0, 126 hand verdicts): 1 real MULTI fixed. The
-   port's present-thread present-1024 diag (every wide-phase present) inserted into targetManager via get(k,true), and the
-   follow-draw REGISTER inserted into fbManager, both without workloadMutex: now locked (diag try_lock + find-only probe),
-   ROGUESQ_S7376_PQLOCK=0 = old. Smoke 260 s clean (14 aborts), TSan rc 0, CTL fires, 0 lock-order inversions. TSan never saw the
-   old race (fix single-source, static reasoning).
+1. **ACTIVE (NEXT.md, HYPOTHESIS-ID rt64-resize-destroy-vs-present): class AU2, the workload thread's resize/fb-config
+   teardown (threadConfigurationUpdate: renderFramebufferManager/targetManager destroyAll + fbManager.destroyAllTileCopies under
+   managerMutex only, inside configurationMutex) vs the present thread using colour targets under workloadMutex (s7377).**
+   Fires on every swap-chain resize (fullscreen toggle, ASPECT=auto window moves). Lock-order table + a resize stress arm under TSan.
+   **AU CLOSED s7378** (`tools/s7378_shared_res_census.py --check` rc 0, 20 fields, 192 accesses; hand verdicts
+   tools/s7378_shared_res_reviewed.tsv): 13 GUARDED (all config fields under configurationMutex, incl. targetRate/resolutionScale:
+   threadConfigurationUpdate holds it for its whole body), 1 CONFINED, 6 fixed: swapChainRate (port get_display_framerate read
+   unlocked = the s7354-s7377 TSan BENIGN row), viOriginalRate, interpolatedFramesIndex -> std::atomic; the per-present
+   interpolatedFrames counter reset and the present's two count reads, and the interpolatedColorTargets grow, now under
+   interpolatedMutex (ROGUESQ_S7378_SHLOCK=0 = old). Control: `--rev HEAD` (upstream) flags the unlocked rows. Smoke both arms crash 0,
+   14 resets, 10800 presents each; TSan rc 0, CTL 3011, swapChainRate group gone (was x1 in s7375/s7376/s7377 runs), 0 SharedQueueResources rows.
+   **AT CLOSED s7377** (`tools/s7377_present_lock_table.py --check`): present-thread colour-target get + GPU pass now under
+   workloadMutex, colorImageAddressVector snapshotted under managerMutex (ROGUESQ_S7377_EARLYLOCK=0 = old).
+   **AS2 CLOSED s7376**: port present-thread inserts into targetManager/fbManager now under workloadMutex (ROGUESQ_S7376_PQLOCK=0 = old).
    **AS CLOSED s7375** (tools/s7375_nolock_threads.py + s7375_nolock_reviewed.tsv, `--check`): the 98 s7366 NOLOCK containers,
    walker + hand verdicts CONFINED 37 / CALLER-LOCKED 16 / NOT-SHARED 15 / HANDOFF 9 / INIT-ONLY 6 / GUEST-SERIAL 6 / CFG-DEAD 5
    (RT64 texture-replacement-pack state, inspector-only: upstream race if a pack were loaded) / FIXED 1: the depth-hist diag

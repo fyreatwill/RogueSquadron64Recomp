@@ -1,23 +1,21 @@
-# NEXT (s7378)
-HYPOTHESIS-ID: rt64-shared-resources-census
+# NEXT (s7379)
+HYPOTHESIS-ID: rt64-resize-destroy-vs-present
 
-s7377 closed class AT (present-thread map reads; workloadMutex now held for the whole present lookup + GPU pass,
-ROGUESQ_S7377_EARLYLOCK=0 = old). It showed a whole struct is shared across three threads with mixed guards: AT only covered the maps.
+s7378 closed class AU (SharedQueueResources fields; tools/s7378_shared_res_census.py --check rc 0). It surfaced AU2.
 
-Work unit: class AU. Census every field of RT64::SharedQueueResources (lib/rt64/src/hle/rt64_shared_queue_resources.h:
-swapChainWidth/Height/Rate, resolutionScale, targetRate, userConfig/enhancementConfig/emulatorConfig, the *Changed flags,
-newConfigValidated, viOriginalRate, colorImageAddressSet, interpolatedColorTargets, interpolatedFrames[2].{presented,available,count,
-skipped}, interpolatedFramesIndex) across ALL of lib/rt64/src and src/ (grep `sharedResources->` and `ext.sharedResources->`).
-One tool tools/s7378_shared_res_census.py: per access file:line, field, R/W, thread (State=gfx thread, WorkloadQueue=rt64 render,
-PresentQueue=present, Application/main=main; reuse the s7375 walker's file->thread map), mutex held (configurationMutex /
-managerMutex / interpolatedMutex / workloadMutex, lexical like s7377), and a --check vs a reviewed TSV.
-Per field verdict: GUARDED (one mutex on every write and cross-thread read) / BENIGN (aligned word hint, document) / RACE (fix).
-Known leads: present_queue reads frameCounters.count (written workload_queue.cpp:1251, no lock) and interpolatedFramesIndex unlocked;
-targetRate/viOriginalRate written by the workload thread - check under which lock.
-Hypotheses: H-guarded (every cross-thread field already sits under configurationMutex/interpolatedMutex: 0 fixes),
-H-hint-only (unguarded fields are all aligned single-word hints: BENIGN rows only), H-race (a multi-word field, e.g. resolutionScale
-float2 or a config struct copy, is read torn across threads: fix with the existing mutex).
-Positive control: the tool must mark swapChainRate writes (setSwapChainRate) GUARDED by configurationMutex and the s7377 snapshot of
-colorImageAddressVector MGR-LOCKED; s7354 TSan report's swapChainRate BENIGN row must match a census row.
-Gate if a fix lands: rebuild, smoke `env SECS=260 zsh scratch/s7326/run.zsh s7378_dd8 ''` + old arm, TSan `zsh tools/build_tsan.sh`
-+ copy scratch/s7377/tsan_run.zsh to scratch/s7378 (480 s, foreground), `python3 tools/s7354_tsan_report.py ...` rc 0, CTL fires.
+Work unit: class AU2. WorkloadQueue::threadConfigurationUpdate (lib/rt64/src/hle/rt64_workload_queue.cpp ~331-349), on
+fbConfigChanged || sizeChanged, waits presented>=available, then under managerMutex ONLY calls renderFramebufferManager->destroyAll(),
+targetManager.destroyAll(), fbManager.destroyAllTileCopies(). The present thread (s7377) holds workloadMutex (not managerMutex) from
+performOperations through its GPU pass and dereferences RenderTarget* from targetManager. A resize (fullscreen toggle, window move,
+ASPECT=auto) makes the present thread set swapChainSizeChanged in threadLoop, then the workload tears down on its next config update
+while the next present may be inside threadPresent.
+Hypotheses: H-ordered (some handoff already keeps the next threadPresent out: e.g. waitForWorkloadId pairing means the present that
+could race waits for this very workload; prove it from the id chain), H-race (present uses a destroyed target: fix = take
+workloadMutex around the teardown, lock order configurationMutex -> managerMutex -> workloadMutex must be checked against every
+present/workload path, or do the teardown inside threadRenderFrame's workloadMutex scope), H-gfx (State's own targetManager is a
+separate object: confirm the destroyed managers are the shared ones).
+Discriminator: (1) a lock-order table of every managerMutex/workloadMutex/configurationMutex/interpolatedMutex acquisition with what is
+held (extend s7378 census lock tracker); (2) a TSan arm with a resize stress: env knob forcing a swap-chain resize every N s
+(SDL_SetWindowSize alternating, or ROGUESQ_FULLSCREEN toggle) during flight, positive control = s7354 CTL + the resize count in log.
+Gate if a fix lands: rebuild, smoke `env SECS=260 zsh scratch/s7326/run.zsh s7379_dd8 ''` + old arm, TSan
+`zsh tools/build_tsan.sh` + scratch/s7378/tsan_run.zsh copied to scratch/s7379 (480 s), `python3 tools/s7354_tsan_report.py` rc 0.

@@ -194873,3 +194873,43 @@ calling threads instead of s7366's unchecked "thread-confined or handed off by q
   target path was the common path, not a corner) and H-interp in its blocking form (interpolation is "enabled" but count==1, so the
   lock can be held). Supersedes s7376's "the present thread already takes workloadMutex at line ~676 in the same frame": true only on
   the 0.3% non-interp presents.
+
+## Session 7378 (2026-11-14) — class AU (every RT64 SharedQueueResources field) CLOSED: 20-field / 192-access census, 13 GUARDED, 1 CONFINED, 6 fixed (3 fields made atomic incl. the long-standing TSan swapChainRate BENIGN row; interpolated frame-counter reset, count reads and target-vector grow moved under interpolatedMutex)
+- Tool: tools/s7378_shared_res_census.py (+ tools/s7378_shared_res_reviewed.tsv). Every `sharedResources->F` /
+  `sharedQueueResources->F` access, every member access through a reference alias (`InterpolatedFrameCounters &x = ...`), and every
+  header setter call (writes under configurationMutex) in rt64_workload_queue / present_queue / state / application.cpp and
+  src/main/rt64_render_context.cpp; per access R/W, function, thread (rt64_render / rt64_present / gfx / init), mutexes lexically
+  held (scoped/unique/lock_guard incl. defer_lock + .lock(), explicit lock/unlock). Field verdict CONFINED / ATOMIC / GUARDED (one
+  mutex on every write + cross-thread read) / REVIEW -> hand verdict. `--check` rc 0. Controls: setSwapChainRate write and the
+  present's resolutionScale read both come out {configurationMutex} (PASS); `--rev HEAD` (upstream file) flags the unlocked
+  present reads (frameCounters.count, interpolatedFramesIndex, colorImageAddressVector) and the gfx swapChainRate read.
+- Result: all 13 config fields GUARDED by configurationMutex. targetRate / resolutionScale (NEXT.md lead) are written inside
+  threadConfigurationUpdate, which holds configurationMutex for its whole body: GUARDED, no fix. colorImageAddressSet CONFINED.
+  colorImageAddressVector GUARDED since s7377. Six REVIEW fields, all fixed:
+  * swapChainRate: port get_display_framerate (gfx thread, every VI) read it with no lock vs setSwapChainRate under
+    configurationMutex = the TSan BENIGN group carried since s7354. Now std::atomic<uint32_t>.
+  * viOriginalRate: workload writes it (renderThreadLoop) outside configurationMutex; a workload without a new present (same
+    presentId) is not ordered against the next present's read. Now atomic (value is the constant VI rate in practice).
+  * interpolatedFramesIndex: ORDERED (flip before threadAdvanceWorkloadId; present reads after waitForWorkloadId); atomic for the record.
+  * interpolatedFrames: the per-present counter reset (skipped/presented/available/count) ran with no lock, and the present read
+    count unlocked at two sites, while every other access sits under interpolatedMutex; the workload's wait is skipped when
+    presented==0. Reset and both count reads now under interpolatedMutex. Application::updateMultisampling's .skipped write is IDLE
+    (destroyShaderCache waits both ids + threadMutex).
+  * interpolatedColorTargets: resize + make_unique ran unlocked while the present indexes the vector under interpolatedMutex; grow now
+    under interpolatedMutex. clear() at threadConfigurationUpdate is ORDERED by the presented>=available wait just above it.
+  Env ROGUESQ_S7378_SHLOCK=0 restores the lock-free counter/grow code (atomics are unconditional).
+  ORIGIN: writers are upstream RT64's own workload thread (renderThreadLoop counter reset / vector grow / viOriginalRate store) and the
+  port's get_display_framerate reader (src/main/rt64_render_context.cpp:1487); all values legitimate, the defect is the missing
+  ordering, not a wild value.
+- Gate: rebuild clean. Smoke `env SECS=260 zsh scratch/s7326/run.zsh s7378_dd8 ''`: crash 0, resets 14, late 0, arenafull 0,
+  [s7377] presents 10800 interp 10774 (the newly locked count read ran 10774 times, no deadlock); old arm
+  (ROGUESQ_S7378_SHLOCK=0) crash 0, resets 14, presents 10800 interp 10775: no cost. TSan (build_tsan, scratch/s7378/tsan_run.zsh t1
+  480): crash 0, initMission 1, 3085 reports in 20 groups, s7354_tsan_report rc 0, CTL x3011 fires; the swapChainRate BENIGN group
+  (x1 in each of s7375 / s7376 / s7377 TSan runs) is absent, 0 groups touch SharedQueueResources.
+- Limits: TSan never observed the counter / vector races (count==1, no MSAA, so the grow never runs at 60 Hz display); those fixes rest
+  on the static census (single-source). Two lines of evidence only for swapChainRate (census + TSan group gone).
+- New lead (class AU2): threadConfigurationUpdate's resize teardown destroys renderTargetManager / fbManager contents under
+  managerMutex only, while the present thread uses colour targets under workloadMutex (s7377) and never takes managerMutex while
+  holding workloadMutex. Every swap-chain resize (fullscreen toggle, window move) runs it.
+- Conclusion: selects H-race for the counters/vector (fixed with the existing interpolatedMutex) and H-guarded for every config
+  field; refutes H-hint-only (the counter reset is a multi-field write, not a word hint).
