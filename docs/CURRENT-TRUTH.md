@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7409 (2026-11-15).
+Compact operational handoff, as of Session 7410 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -500,12 +500,22 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     _Ldtob, quaternionToMat3x4 on L5. Widen soak s7409_fodd_levels (L4/L7/L12) queued. Lesson: a new build dir needs the
     owner save COPY in <dir>/saves (build_fodd.sh does it); without it the route boots profile-less, START is ignored at
     the 768 phase, 5/5 nomission (looked like the probe hanging the game until a zero-probe arm also failed).
-19. **Next audit candidate:** class BT, callee-saved FPR/GPR preservation across the 7 FR=1 hand-asm routines and their
-    FR=1 callees (o32: f20-f30 even pairs + s0-s8/sp/ra must survive; in FR=1 the routine sees 32 independent regs, so a
-    write to f21 own slot or f20.u32l without sdc1/ldc1 save would clobber a caller's double). NEXT.md s7410.
+19. **BT CLOSED s7410 (callee-saved preservation across the FR=1 hand-asm routines): H-preserved, no code change.**
+    `tools/s7410_csave_census.py` (--plant: dropped ldc1 f22 + unsaved s0 write -> both flagged, CONTROL PASS): every
+    callee-saved pair the 3 FR=1-region routines (transformAndEmitFaceVertices incl. its 3 FR=1 callees, evalCubicSplineAtTime,
+    mat3x4Multiply) write is sdc1-saved and ldc1-restored in an FR=0 region (= whole caller pair in BOTH the recomp layout
+    and the VR4300 physical one, so odd own-slot writes are harmless); s0-s3 sw/lw paired; sp balanced; ra untouched.
+    transformVec3ByMat34 / rotateVec3ByMat3x3 / quaternionToMat3x4 never touch f20+ or s-regs. Only projectPointToScreen
+    (0x800196A8) clobbers f20-f26 unsaved: 0 jal callers in the image, 0 calls live (s7409/s7410) -> H-clobber-dead, and
+    the same retail ABI break in either model. Live `tools/build_fsv.sh` -> build_fsv/ (entry snapshot vs every return:
+    f20..f30 .u64, s0-s8, sp, FR mode), report `tools/s7410_fsv_report.py`: L5 21:9 FPS60 131 s hold, dd8 3.02e6 returns /
+    dd1 4.31e6, fbad=gbad=mbad=0, plant (post-restore f24+s1 flip every 64th) 47196/47196 and 67291/67291 -> CONTROL PASS
+    x2. Widen soak s7410_fsv_levels (L4/L7/L12) queued.
+20. **Next audit candidate:** class BU, unaligned load/store macro semantics (do_lwl 207 / do_lwr 203 / do_swl 205 /
+    do_swr 204 sites) vs a VR4300 big-endian reference over every addr&3 on the word-swapped rdram. NEXT.md s7411.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

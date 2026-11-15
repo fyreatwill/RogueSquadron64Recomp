@@ -1525,3 +1525,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7407 fold: s7406_fpat_levels rc=0: L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS 8/8 x3, VERDICT H-none (stmt_idc=0 ioc=0) x3 -> class BP stands on 3 more levels.
 20261115-112728 | s7408_cvt_levels | rc=0 | 649s | scratch/agent/soak_results/s7408_cvt_levels_20261115-112728.log
 20261115 | s7409 fold: s7408_cvt_levels rc=0: L5/L10/L15 dd8 134-135 s flight alive, 0 crash, 0 VI stall, report rc 0 x3 (= CONTROL PASS + H-equal; the recipe head -4 cut the CONTROL lines, rc carries them), oor=0 at every TOPMAX site (worst convertMat3x4ToN64Mtx 1.29e9) -> class BR stands on 3 more levels.
+20261115-122610 | s7409_fodd_levels | rc=0 | 632s | scratch/agent/soak_results/s7409_fodd_levels_20261115-122610.log
+20261115 | s7410 fold: s7409_fodd_levels rc=0: L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS + VERDICT H-consistent x3 (plant 379701/263437/291936 all flagged) -> class BS stands on 3 more levels.

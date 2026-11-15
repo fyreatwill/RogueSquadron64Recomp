@@ -196069,3 +196069,37 @@ Next discriminator: class BT, per-routine callee-saved f20-f30/s-reg save/restor
 Rules out: an FR-mode or odd-register view mismatch on the live path (static + live, two settings), FR=1 leaking into FR=0
 guest math. No code/runtime change, no ORIGIN line needed. Fold: s7408_cvt_levels rc 0 x3 (SOAK-RESULTS). Queued
 s7409_fodd_levels (L4/L7/L12). Next: class BT callee-saved register preservation across the FR=1 routines (NEXT.md).
+
+## Session 7410 (2026-11-15) — class BT callee-saved preservation across the FR=1 hand-asm routines closed (H-preserved): static census + live entry/return diff, 0 clobbers (plant control PASS, L5 dd8 and dd1)
+
+Unit (NEXT.md fr1-callee-saved-preservation). Hypotheses: H-preserved / H-clobber-live / H-clobber-dead.
+Model: the GCC FR=0 caller expects f20,f22,..,f30 doubles, s0-s8 and sp to survive. Recomp layout keeps a whole FR=0 pair
+(double + odd single) in ctx->fN.u64; VR4300 keeps it in physical fN.lo32 + f(N+1).lo32. An sdc1/ldc1 executed in an FR=0
+region moves the whole caller pair in both models; an FR=1 save covers only fN. So the row to check is where (which FR
+region) each save/restore sits, plus every write (transitively through FR=1 callees).
+1. Offline `tools/s7410_csave_census.py ../N64Recomp/RecompiledFuncs --plant` (scratch/s7410_census.txt):
+   transformAndEmitFaceVertices (+ fetchIndexedVertexPosition / fetchVertexPositionPrimary / normalizeVec3InPlace, called in
+   its FR=1 region) writes f20-f31 in both regions, saves f20..f30 in FR=0, restores in FR=0 -> preserved x6; s0-s3 sw/lw paired.
+   evalCubicSplineAtTime preserved x6 (s0/s1 paired); mat3x4Multiply preserved f20-f26; transformVec3ByMat34,
+   rotateVec3ByMat3x3, quaternionToMat3x4 touch no f20+ / s-reg; sp balanced and ra never rewritten in all 7.
+   projectPointToScreen (entry 0x800196A8): writes f20/f22/f24/f26 (+odd) in FR=1 with no save -> CLOBBER in both models;
+   0 direct callers (no jal to it, no projectPointToScreen(rdram, ctx) call in the image), 0 live calls (s7409 L4/L5/L7/L12,
+   s7410 L5 x2) -> H-clobber-dead (it also sets FR without clearing, s7087). Plant (copy of mat3x4Multiply minus its ldc1 f22,
+   plus an unsaved s0 write) -> flagged f22,r16: CONTROL PASS.
+2. Live: new `tools/build_fsv.sh` -> build_fsv/ (`tools/s7410_fsv_transform.py`, runtime tools/s7410_fsv/rs64_fsv{.h,_rt.c},
+   report `tools/s7410_fsv_report.py`, rc 0 = PASS+preserved). Snapshot at entry of the 7 routines (local struct, so nesting
+   is safe), diff before every `return;` (8 return probes): f20..f30 .u64, s0-s8, sp, FR mode; odd own slots informational.
+   Plant ROGUESQ_S7410_PLANT=1: every 64th return flips f24.u64 bit 32 and s1 bit 4 after the routine's own restores, diffs,
+   undoes. Recipe scratch/s7410_arms.sh (L5 21:9 FPS60, 120 s hold): dd8 mission t=78 s, 131 s hold, alive, 0 VI stall,
+   0 crash: 5 sites, 3.02e6 returns, fbad 0 gbad 0 mbad 0, plant 47196/47196 -> CONTROL PASS, VERDICT H-preserved.
+   dd1: 4.31e6 returns, all 0, plant 67291/67291, H-preserved. odd_changed on mat3x4Multiply / transformAndEmit / spline
+   (~80% of returns) = FR=1 own odd slots left modified, invisible to an FR=0 caller in both models (read-before-write in FR=1
+   was class BS). Entry FR mode always 0. quaternionToMat3x4 and projectPointToScreen did not run on L5.
+   Build note: a fixup-added helper after rotateVec3ByMat3x3 (rs64_s2179_vec3_word) sits in the same file; the transform ends
+   the current function at a column-0 `}` / `;}` so its `return;`s are not probed (first build failed on that).
+Conclusion: this selects H-preserved for the 6 reachable routines and H-clobber-dead for projectPointToScreen, refutes
+H-clobber-live (static + live, two settings, plant control PASS x3), and closes class BT.
+Rules out: a callee-saved FPR/GPR/sp clobber or FR-mode leak across the FR=1 hand-asm routines on the live path.
+No code/runtime change, no ORIGIN line needed. Fold: s7409_fodd_levels rc 0 (L4/L7/L12 CONTROL PASS + H-consistent x3, 137 s
+flight alive, 0 crash, 0 VI stall) -> class BS stands on 3 more levels. Queued s7410_fsv_levels (L4/L7/L12).
+Next: class BU unaligned load/store macro semantics (NEXT.md).
