@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7368 (2026-11-14).
+Compact operational handoff, as of Session 7369 (2026-11-14).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7306 text of this file (every headline paragraph s7192-s7229 with
 all numbers, the WIDEWIN / dd8 / fog chronology s7262-s7306, the G5c freeze thread s7272-s7285) is archived
@@ -516,9 +516,17 @@ is in the s7307 archive). Active unit: NEXT.md.
     frame-count proxy a slowed run never reaches before the time-driven route lands in a 3D scene (arena held 0 chunks, 0 grows). Now armed
     at the game's own pool init (buildAndRegisterDefaultMaterial relink, rebuild 1; ROGUESQ_DLPOOLX_ARM_REBUILD=0 old). TSan old 2/2 crash,
     fix 2/2 past it; normal dd8 21:9 fix 2/2 + old 1/1 300 s clean (grows 40-43 all). TSan retail settings 0 crash, reaches the mission.
-27zh. **Next unit (NEXT.md): TSan arm at the post-fix 1024-wide scene** — fs crawls 1 frame per 600-VI stall-dump (t1 fs 375->378,
-    t2 363->364, t>300 s), plus 3 new unclassified rows (g_s6127_rd / g_s6127_flags rs_malloc diag statics, rs64_s5042_poison).
-28. **When 1-27zh offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27zh. **TSan-arm 1024-scene crawl: H-slow, cause = TSan-instrumented RSP ucode; FIXED in build_tsan (s7369).** The ucode TUs are
+    compiled as CXX, so build_tsan instrumented every gfx/audio ucode DMEM/RDRAM access: c1 sample (330 s) gfx thread 276/439 in the ucode
+    call (main.cpp:7055), audio SP thread in __tsan ReportRace under dma_rdram_to_dmem; gfx task median 4.9-11.3 s at the wide scene (vs
+    0.2 s earlier), dump-to-next-completion lag 2-17 s (not tied to the dump; the dump is passive) -> H-cycle2 refuted. CMakeLists.txt now
+    adds -fno-sanitize=thread to the 6 ucode TUs when the CXX flags carry it (ROGUESQ_TSAN_UCODE=ON old; build/ untouched). c2 (same
+    recipe): 0 stall dumps, 12-13 gfx tasks/s, ~55 ms/task sustained 140-397 s in the 1024/2048 scene, 0 crash; TSan report rc 0 (ctl
+    3337). LIMIT: the time-driven AP route diverged at press 4 (faster game), so c2 never reached a mission and the A/B is not same-scene.
+    The 4 s7368 `?` rows are classed (g_s6127_rd/flags, osDestroyThread = SEM; stall-dump read = D; rs64_s4211_pi_n = BENIGN).
+27zi. **Next unit (NEXT.md): game-frame-keyed autopilot clock** so the TSan arm follows the owner route to a mission at its own pace,
+    then a mission-phase TSan report (the 27s LIMIT: mission threads never covered at runtime).
+28. **When 1-27zi offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

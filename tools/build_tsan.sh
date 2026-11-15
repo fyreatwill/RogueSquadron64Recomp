@@ -1,6 +1,7 @@
 #!/bin/zsh
 # s7354: ThreadSanitizer arm of the recomp in build_tsan/ (separate from build/).
-# Only C++ (host runtime, RT64, RSP bridge, main) is instrumented; the generated C (RecompiledFuncs, factor5_ucode) is not,
+# Only C++ (host runtime, RT64, RSP bridge, main) is instrumented; the generated C (RecompiledFuncs) and the RSP ucode TUs
+# (compiled as CXX, exempted in CMakeLists.txt since s7369, ROGUESQ_TSAN_UCODE=ON to instrument) are not,
 # so guest-memory traffic is not traced (guest threads are serialized by ultramodern; RDRAM sharing with the RSP is by design).
 # Usage: tools/build_tsan.sh   Run the result from build_tsan/ with the ROM beside it, same as build/.
 set -e

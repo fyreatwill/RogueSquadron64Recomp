@@ -31,6 +31,12 @@ HAND = [  # (substring of group key, class, reason) -- filled from the s7354 run
     ("data race on vptr", "EXT", "same Metal completion-handler block (vptr of the captured object)"),
     ("'events_context'", "FIX", "s7354: VI cur/next flip in vi_thread_func now under message_mutex (+ dummy VI, osViGet*Framebuffer)"),
     ("'sample_rate'", "FIX", "s7354: audio.cpp sample_rate -> std::atomic<uint32_t>"),
+    # s7369: the 4 unclassified s7368 t1/t2 rows (post-DLPOOLX TSan runs that first reached the 1024-wide scene)
+    ("g_s6127_rd", "SEM", "s7369: rs_free stashes the rdram base (same value every write) on guest threads serialised by the run-one scheduler"),
+    ("g_s6127_flags", "SEM", "s7369: rs_malloc flag stash for the NULL-path heap walk diag, written on guest threads (run-one scheduler)"),
+    ("osDestroyThread threads.cpp", "SEM", "s7369: OSThread.context cleared by the destroying guest thread, read by a guest thread it created (run-one scheduler)"),
+    ("rt64_render_context.cpp:117", "D", "s7369: [stall-dump] reads guest mq/VI words in RDRAM for its log line while the retrace guest thread writes them (diag print only)"),
+    ("rs64_s4211_pi_n", "BENIGN", "s7369: default-on [s4211-new] log: audio RSP thread reads the PI-DMA ring count/entries the PI guest thread appends; only feeds <=32 stderr lines, no state"),
     ("osViSwapBuffer_recomp upstream_compat.cpp:1298", "D", "ROGUESQ_FB_HASH (m6 harness default) hashes the guest framebuffer while RT64 fullSync copies native->RAM"),
 ]
 ARGS = [a for i, a in enumerate(sys.argv[1:]) if not a.startswith("--") and sys.argv[i] != "--frames"]

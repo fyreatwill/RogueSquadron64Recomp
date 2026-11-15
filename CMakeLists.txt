@@ -334,6 +334,19 @@ if (NOT MSVC AND NOT ROGUESQ_UCODE_INLINE_THRESHOLD STREQUAL "0")
     set_property(SOURCE ${FACTOR5_UCODE_TLS_CPP} APPEND PROPERTY COMPILE_OPTIONS
         -mllvm "-inline-threshold=${ROGUESQ_UCODE_INLINE_THRESHOLD}")
 endif()
+# s7369: the RSP ucode TUs above are compiled as CXX, so a ThreadSanitizer build (tools/build_tsan.sh puts -fsanitize=thread
+# in the CXX flags) instrumented every DMEM/RDRAM access of the gfx and audio ucode. At the dd8 21:9 1024-wide scene a gfx task
+# then took ~6.1 s (median, s7369 c1) vs ~0.2 s before it, so the TSan arm crawled at ~0.1 frame/s and never reached a mission
+# phase. The ucode only touches DMEM (per-thread) and guest RDRAM (shared with the guest by design, like the generated C, which
+# build_tsan already leaves uninstrumented). Keep it out of TSan; ROGUESQ_TSAN_UCODE=ON restores the instrumented ucode.
+if (CMAKE_CXX_FLAGS_DEBUG MATCHES "fsanitize=thread" OR CMAKE_CXX_FLAGS MATCHES "fsanitize=thread")
+    option(ROGUESQ_TSAN_UCODE "Instrument the RSP ucode TUs under ThreadSanitizer" OFF)
+    if (NOT ROGUESQ_TSAN_UCODE)
+        set_property(SOURCE ${FACTOR5_UCODE_C} ${FACTOR5_UCODE_B_C} ${FACTOR5_BOOT_C} ${FACTOR5_UCODE_TLS_CPP}
+            ${FACTOR5_UCODE_LEAN_CPP} ${FACTOR5_UCODE_NMAC_CPP} APPEND PROPERTY COMPILE_OPTIONS -fno-sanitize=thread)
+        message(STATUS "s7369: RSP ucode TUs built without -fsanitize=thread (ROGUESQ_TSAN_UCODE=ON to instrument)")
+    endif()
+endif()
 
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp

@@ -194523,3 +194523,29 @@ HYPOTHESIS-ID: tsan-arm-material-crash
 - Rules out: H-retail (retail settings TSan 0 crash; mechanism is our gate), H-tsan-only as "harmless": the gate is a frame-count proxy
   any slowed host can undercut. Selects H-ours (DLPOOLX arm gate) x H-tsan-timing. Two lines: static pop/finder path + 2/2 vs 0/2 A/B.
 Conclusion (s7368): this A/B selects H-ours x H-tsan-timing (the begin-3000 DLPOOLX arm gate) and refutes H-retail (retail-settings TSan 0 crash); the root cause is the frame-count arm proxy, fixed. Next discriminator: TL ring + sample on the TSan 1024-scene crawl (NEXT.md).
+
+## Session 7369 (2026-11-14) — TSan-arm 1024-scene crawl is H-slow: the RSP ucode TUs (compiled as CXX) were TSan-instrumented; exempted in build_tsan, gfx tasks 0.1/s -> 12-13/s, 0 stall dumps; 4 s7368 `?` TSan rows classed
+- **Run c1 (old build_tsan, s7368 binary, owner recipe dd8 21:9 FPS60, 420 s, SAMPLE_AT=330, ROGUESQ_G1E_TL ring):** 0 crash, 8 stall
+  dumps. New tool tools/s7369_tsan_crawl.py (aligns each [stall-dump] vi=N to the N-th update_screen mark, counts gfx kicks / dp_complete /
+  swaps per window, lag to the next completion). Gfx kicks per 20 s fall 56-65 -> 1-6 from t=140 s; every stall window after the first two
+  holds 1 kick; dump-to-next-dp_complete lag 2.2-16.7 s (median 9.7 s). The dump is passive (prints + one detached `sample`), so
+  H-cycle2 (only the dump's action breaks a wait cycle) is refuted. Per-task RSP time (TL codes 6->7): 0.24 s median at 60-140 s, 4.9 s
+  at 140-260 s, 11.3 s at 260-400 s. Sample at 330 s: Gfx thread 276/439 in factor5_gfx_runner at main.cpp:7055 (the call into the lean/
+  nmac gfx ucode, a CXX TU), only 57 below it in rsp_dpc_submit; SP Task thread in factor5_ucode_b -> dma_rdram_to_dmem -> __tsan
+  ReportRace (82 samples). H-starve not supported (both busy threads are computing, not waiting).
+- **Mechanism:** CMakeLists.txt sets LANGUAGE CXX on factor5_ucode/_b/boot_recompiled.c and the tls/lean/nmac .cpp arms, so
+  tools/build_tsan.sh's -fsanitize=thread in CMAKE_CXX_FLAGS_DEBUG instrumented the whole ucode (its header said it did not).
+- **FIX (build_tsan only):** CMakeLists.txt appends -fno-sanitize=thread to the 6 ucode TUs when the CXX flags carry
+  fsanitize=thread (option ROGUESQ_TSAN_UCODE=ON restores). build/ never matches the condition. nm: ucode objects 0 __tsan_ symbols,
+  main.cpp.o 38 (method control). build_tsan.sh header corrected.
+- **Run c2 (fixed build_tsan, same recipe/env):** 0 crash, 0 stall dumps, gfx tasks 12-13/s sustained 140-397 s in the 1024/2048-wide
+  scene (origin 0xB20000), ~55 ms per task. TSan report rc 0, control 3337 rows. LIMIT: the AP route is time-driven; the faster game was
+  already at 768 wide at press 4 (t=21 s, c1 still 640), so c2 took another branch and never called initMission. Not a same-scene A/B,
+  and the early-phase task times disagree (t<21 s: c1 5.3 ms vs c2 22.7 ms median, unexplained, host load 3.7-4.9 both runs).
+  The selection rests on the sample (c1) + the rate in a wide scene (c2) = two lines, not same-scene.
+- **TSan rows:** s7368 t1's 3 `?` groups + t2's 1 classed in tools/s7354_tsan_report.py HAND: g_s6127_rd (rs_free rdram stash, same
+  value), g_s6127_flags (rs_malloc diag stash), osDestroyThread threads.cpp (OSThread.context, guest threads) = SEM (run-one scheduler);
+  rt64_render_context.cpp:117x = D ([stall-dump] reads guest RDRAM words for its log line); rs64_s4211_pi_n = BENIGN (default-on
+  [s4211-new] log reads the PI ring count; only feeds <=32 stderr lines). t1/t2/c1/c2 reports now all rc 0.
+- Rules out: H-cycle2, H-starve. Selects H-slow with a named cost (instrumented ucode), fixed for the TSan arm.
+Conclusion (s7369): the c1 sample + c2 rate select H-slow (TSan-instrumented RSP ucode) and refute H-cycle2 (passive dump, 2-17 s lags); fixed in build_tsan. Next discriminator: frame-keyed autopilot so the TSan arm reaches a mission for mission-phase race coverage.
