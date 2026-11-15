@@ -195134,3 +195134,6 @@ What ran:
 Rules out: any other relaxed/volatile handoff of non-atomic data on a default path in the audited scope (H-relaxed-publish beyond
 this tuple, and H-volatile).
 Next: class AZ, non-atomic static / file-scope mutable state written from more than one host thread (NEXT.md).
+Conclusion: this selects H-relaxed-publish for the RT64 last-drawn tuple only (root cause: three relaxed fields read unlocked by
+default follow-draw mode 3; fixed and checked against the planted-tear control, old 53 vs new 0) and refutes H-volatile and
+H-relaxed-publish everywhere else in scope. Next discriminator: the AZ thread-root census of non-atomic shared statics (NEXT.md).
