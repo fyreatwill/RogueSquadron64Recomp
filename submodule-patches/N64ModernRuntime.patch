@@ -8201,7 +8201,7 @@ index f9c0fa1..d8571fd 100644
      PTR(OSThread)* queue = queue_to_ptr(PASS_RDRAM queue_);
      return *queue == NULLPTR;
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..c88aed7 100644
+index 812c556..58f198a 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,23 @@
@@ -8300,14 +8300,68 @@ index 812c556..c88aed7 100644
  }
  
  bool ultramodern::is_game_thread() {
-@@ -147,6 +218,18 @@ void ultramodern::set_native_thread_priority(ThreadPriority pri) {}
+@@ -146,7 +217,72 @@ void ultramodern::set_native_thread_name(const std::string& name) {
+ void ultramodern::set_native_thread_priority(ThreadPriority pri) {}
  #endif
  
++// s7405 class BO: FCSR.FS witness. Retail runs every game thread with FCSR 0x01000800 (FS=1: denormal results flush to
++// zero); the host leaves arm64 FPCR.FZ off unless ROGUESQ_FTZ=1. ROGUESQ_S7405_FPSR=1 reads+clears the sticky FPSR on
++// every guest block (wait_for_resumed), per OS thread id: IOC DZC OFC UFC IXC IDC = samples where the flag was set since
++// the previous block. UFC>0 with FZ=0 means a denormal (tiny inexact) result was produced, i.e. retail would have flushed.
++// Same-run control: each thread computes one planted 1e-30f*1e-10f before its first block (must set UFC -> plant=1).
++static std::atomic<uint64_t> s7405_n[16][8];   // [tid&15][samples, ioc, dzc, ofc, ufc, ixc, idc, plant_ufc]
++static thread_local int s7405_tid = -1;
++static bool s7405_on() { static const bool e = []{ const char* v = getenv("ROGUESQ_S7405_FPSR"); return v && v[0] == '1'; }(); return e; }
++static void s7405_dump(const char* why) {
++    for (int t = 0; t < 16; t++) {
++        uint64_t n = s7405_n[t][0].load();
++        if (!n && !s7405_n[t][7].load()) continue;
++        std::fprintf(stderr, "[s7405-fpsr] %s tid=%d samples=%llu ioc=%llu dzc=%llu ofc=%llu ufc=%llu ixc=%llu idc=%llu plant_ufc=%llu\n", why, t,
++            (unsigned long long)n, (unsigned long long)s7405_n[t][1].load(), (unsigned long long)s7405_n[t][2].load(),
++            (unsigned long long)s7405_n[t][3].load(), (unsigned long long)s7405_n[t][4].load(), (unsigned long long)s7405_n[t][5].load(),
++            (unsigned long long)s7405_n[t][6].load(), (unsigned long long)s7405_n[t][7].load());
++    }
++    std::fflush(stderr);
++}
++static void s7405_sample() {
++#if defined(__aarch64__)
++    if (!s7405_on() || s7405_tid < 0) return;
++    uint64_t f;
++    __asm__ volatile("mrs %0, fpsr" : "=r"(f));
++    __asm__ volatile("msr fpsr, %0" :: "r"((uint64_t)0));
++    auto& r = s7405_n[s7405_tid & 15];
++    r[0]++;
++    static const int bit[6] = {0, 1, 2, 3, 4, 7};
++    for (int i = 0; i < 6; i++) if (f & (1ull << bit[i])) r[1 + i]++;
++    static std::atomic<uint64_t> tot{0};
++    if ((++tot % 50000) == 0) s7405_dump("periodic");
++#endif
++}
++static void s7405_plant(int tid) {
++#if defined(__aarch64__)
++    if (!s7405_on()) return;
++    s7405_tid = tid;
++    __asm__ volatile("msr fpsr, %0" :: "r"((uint64_t)0));
++    volatile float a = 1e-30f, b = 1e-10f; volatile float c = a * b; (void)c;
++    uint64_t f;
++    __asm__ volatile("mrs %0, fpsr" : "=r"(f));
++    __asm__ volatile("msr fpsr, %0" :: "r"((uint64_t)0));
++    if (f & (1ull << 3)) s7405_n[tid & 15][7]++;
++    uint64_t cr;
++    __asm__ volatile("mrs %0, fpcr" : "=r"(cr));
++    std::fprintf(stderr, "[s7405-fz] tid=%d fz=%d\n", tid, (int)((cr >> 24) & 1));
++    s7405_dump("plant");
++#else
++    (void)tid;
++#endif
++}
++
  void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
 +    // s443/item-278: see the counter declarations above for the hypothesis this
 +    // tests. Cheap unconditional check (matches resume_thread_tagged's existing
 +    // always-on pattern); only fprintf's on the bad path so a healthy run pays
 +    // just an atomic increment + a hash-set lookup per swap, not a log line.
++    s7405_sample();
 +    ++g_wait_resumed_n;
 +    if (!thr_live_contains(thread_context)) {
 +        ++g_wait_resumed_dead_ctx;
@@ -8319,7 +8373,7 @@ index 812c556..c88aed7 100644
      thread_context->running.wait();
      // If this thread's context was replaced by another thread or deleted, destroy it again from its own context.
      // This will trigger thread cleanup instead.
-@@ -155,19 +238,267 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+@@ -155,19 +291,267 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
      }
  }
  
@@ -8589,7 +8643,7 @@ index 812c556..c88aed7 100644
  }
  
  void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
-@@ -178,15 +509,42 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,15 +562,45 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
  
  void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
      UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
@@ -8616,9 +8670,10 @@ index 812c556..c88aed7 100644
 +    s6983_guest_qos();
 +
 +    // Retail sets FCSR 0x01000800 (flush-denormals-to-zero) via osCreateThread 0x8002B40C /
-+    // osInitialize 0x8002BFD0 (s6012 census). Opt-in arm: ROGUESQ_FTZ=1 sets arm64 FPCR.FZ (bit 24).
++    // osInitialize 0x8002BFD0 (s6012 census). s7405: DEFAULT ON (arm64 FPCR.FZ, bit 24): the FPSR witness saw the game
++    // thread make denormal results in flight (L5: 174/29407 blocks) that retail FS=1 flushes. ROGUESQ_FTZ=0 = old (FZ off).
 +    {
-+        static const bool ftz = []{ const char* e = getenv("ROGUESQ_FTZ"); return e && e[0] == '1'; }();
++        static const bool ftz = []{ const char* e = getenv("ROGUESQ_FTZ"); return !(e && e[0] == '0'); }();
 +#if defined(__aarch64__)
 +        if (ftz) {
 +            uint64_t fpcr;
@@ -8630,10 +8685,12 @@ index 812c556..c88aed7 100644
 +        (void)ftz;
 +#endif
 +    }
++
++    s7405_plant(self->id);  // after the FTZ arm so the control sees the live FPCR
  
      // Set the thread name
      ultramodern::set_native_thread_name(ultramodern::threads::get_game_thread_name(self));
-@@ -239,12 +597,15 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,12 +653,15 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -8650,7 +8707,7 @@ index 812c556..c88aed7 100644
      debug_printf("[os] Create Thread %d\n", id);
      OSThread *t = TO_PTR(OSThread, t_);
      
-@@ -259,6 +620,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +676,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -8671,7 +8728,7 @@ index 812c556..c88aed7 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,17 +661,36 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,17 +717,36 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -8708,7 +8765,7 @@ index 812c556..c88aed7 100644
          cur_context->running.signal();
      }
  }
-@@ -311,6 +705,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
+@@ -311,6 +761,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
          t->priority = pri;
  
          if (t_ != ultramodern::this_thread() && t->state != OSThreadState::STOPPED) {
@@ -8716,7 +8773,7 @@ index 812c556..c88aed7 100644
              ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
              ultramodern::thread_queue_insert(PASS_RDRAM t->queue, t_);
          }
-@@ -337,6 +732,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +788,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -8737,7 +8794,7 @@ index 812c556..c88aed7 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +756,18 @@ void thread_cleaner_func() {
+@@ -347,8 +812,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -8756,7 +8813,7 @@ index 812c556..c88aed7 100644
              delete to_delete;
          }
      }
-@@ -359,6 +778,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +834,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {

@@ -195889,3 +195889,32 @@ Two lines: static census with control + generated-code absence of every flagged 
 H-write-lost. Methodology caveat recorded in CURRENT-TRUTH: s7401 live() counts ignored_funcs as live, so BK/BL/BM censuses could
 only have over-reported (false positives), never missed a live row. Engineering change: the new census tool.
 VERDICT: this selects H-none for class BN and refutes H-mirror-bad/H-write-lost (0 live KSEG1 deref rows, scanner control PASS, flagged functions absent from generated code); closes class BN. Next discriminator: class BO live ctc1/cfc1/mfc0/mtc0 coprocessor-control sites vs N64Recomp emission.
+
+## Session 7405 (2026-11-15) — class BO coprocessor control access closed: FR/RM rows H-none, FCSR.FS divergence live (game-thread denormals in flight), ROGUESQ_FTZ default on
+
+Unit (NEXT.md cop-control-register-access): every live mfc0/mtc0/cfc1/ctc1 (plus cache/eret/TLB) vs what N64Recomp emits.
+New tools/s7405_cop_access.py (s7404 tagging incl. ignored_funcs, ctc1 value propagation with RM/FS/EN decode; rc 0, control
+PASS = Status + Count($9) + Compare($11) accesses found in replaced/ignored libultra).
+- 28 live rows: 9 mfc0 + 13 mtc0 Status in the 7 hand-written FR=1 math helpers (lowered to cop0_status_read/write; librecomp
+  swaps ctx->f_odd per FR and aborts on any other bit; s7087 already found this), and 3 cfc1 + 3 ctc1 in guPerspectiveF's gcc
+  RZ cvt.w.d idiom (honoured by set_cop1_cs; >=2^31 retry path unreachable, s4816). projectPointToScreen sets FR and never
+  clears it, same as the retail bytes; 0 jal callers, dead (s7087). 0 live Count/Compare/Cause/TLB/cache. -> H-none, H-count refuted.
+- Remaining divergence, already "known and left" since s6013: retail runs every thread with FCSR 0x01000800 (FS=1 flush denormal
+  results), host arm64 FPCR.FZ off. Nobody had measured whether denormals occur. New witness ROGUESQ_S7405_FPSR=1
+  (lib/N64ModernRuntime/ultramodern/src/threads.cpp): reads and clears the sticky FPSR in wait_for_resumed (every guest block) per
+  OS thread id, counts IOC/DZC/OFC/UFC/IXC/IDC; control = one planted 1e-30f*1e-10f per thread before its first block.
+- Run (scratch/s7405_arms.sh, sequential, L5 forced route dd8 21:9 FPS60, 150 s hold):
+  ftz0: alive, 0 crash, 0 VI stall; plant_ufc=1 on all 14 thread ids (control PASS). tid 3 (game thread): 29407 blocks,
+  UFC 174, DZC 173, IXC 23428, IOC 0, OFC 0. DZC 173 all in the first window (boot/front end); UFC 0 in the first two windows,
+  139 by the third (flight), 174 at end. Other threads: UFC 0.
+  ftz1: same health; tid 3 UFC 153 (flushes), DZC 173, IDC 41 (denormal inputs flushed; flagged only under FZ).
+- ORIGIN: the denormal results are written by retail float code on the game thread (writer function not attributed;
+  single-source). Their value is IEEE-legitimate. Retail hardware flushes them to 0 because osCreateThread 0x8002B40C sets FS=1,
+  and the port's replaced osCreateThread never set FZ. So the divergence is ours, not the game's.
+- Fix: ROGUESQ_FTZ DEFAULT ON (arm64 FPCR.FZ on every game thread at _thread_func start), ROGUESQ_FTZ=0 = old. Boot check (25 s
+  each): default 13 x fz=1, =0 13 x fz=0, 28 plant rows each. Patches re-exported (N64ModernRuntime.patch).
+- Not closed: the 41 denormal INPUTS. On a VR4300 a denormal operand raises unimplemented-operation (a fault on retail), so
+  either a host shim on the game thread makes them or retail would see different values. That is class BP (CURRENT-TRUTH item 16).
+- Soak queued: scratch/agent/soak_queue/s7405_ftz_levels.sh (L4/L7/L12 200 s, default arm, fz=1 rows + plant control).
+VERDICT: this selects H-none for the COP0 FR / FCSR RM rows and H-fs for FCSR.FS, and refutes H-count (0 live Count reads) and
+"FS is inert" (UFC 174 in flight); closes class BO with ROGUESQ_FTZ default on.

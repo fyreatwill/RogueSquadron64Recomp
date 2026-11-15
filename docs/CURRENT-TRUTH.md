@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7404 (2026-11-15).
+Compact operational handoff, as of Session 7405 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -98,6 +98,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 
 ## Superseded conclusions — do not act on these
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
+- "FCSR.FS vs host FZ: known and left, ROGUESQ_FTZ stays opt-in" (s6013/s7087). Believable because the s6012 lvl1 holds
+  were clean in both arms; but no instrument ever asked whether denormals occur. s7405 FPSR witness: they do (game thread, in
+  flight), so FTZ is now default on (=0 old).
 - s7376 "the present thread already takes workloadMutex at line ~676 in the same frame" (used in its deadlock/coverage reasoning).
   Believable: upstream locks it there. s7377 counter: that lock sits on the `!interpolationEnabled` branch, taken on 27/10800 presents;
   the other 99.7% ran lock-free (fixed by ROGUESQ_S7377_EARLYLOCK).
@@ -331,6 +334,16 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    words, float/rand/div magics, and cart ROM DMA sources (initDmaSlots 0xB0144340/80, loadOverlay 0xB0135D30) that the port's
    osPiStartDma maps through k1_to_phys exactly as retail. Control: scanner sees SI/PI/VI/AI/MI/SP/DP writes in replaced+ignored
    libultra (PASS). Caveat for every s7401-live()-based census: it treats ignored_funcs as live (false positives only).
+   **BO CLOSED s7405 (COP0 Status/Count/Compare + FCSR control access): FR/RM rows H-none, FCSR.FS H-fs FIXED.**
+   `tools/s7405_cop_access.py` (control PASS: Status/Count/Compare seen in replaced+ignored libultra): 28 live rows = 22 Status FR
+   toggles in the 7 asm math helpers (s7087: librecomp switches f_odd per FR, run_thread_function inits FR=0;
+   projectPointToScreen never clears FR but is dead) + guPerspectiveF's RZ cvt.w.d window (s4816: honoured, overflow path
+   unreachable). 0 live Count/Compare. The one divergence: retail FCSR 0x01000800 (FS=1, osCreateThread) vs host FZ off.
+   Witness ROGUESQ_S7405_FPSR=1 (threads.cpp, sticky arm64 FPSR read+cleared at every guest block, per thread id; planted
+   1e-30f*1e-10f per thread = control): L5 dd8 21:9 150 s, game thread tid 3 UFC (denormal result) in 174/29407 blocks, all
+   in flight; DZC 173 at boot/front end only; IOC 0 (retail traps invalid: consistent). FZ=1 arm: UFC 153 (flushes) + IDC 41.
+   Both arms 0 crash, 0 stall, plant_ufc=1 on all 14 threads. **ROGUESQ_FTZ now DEFAULT ON (=0 old)**; boot check fz=1 x13 vs
+   =0 fz=0 x13. Writer of the denormals unattributed (game-thread float code; single-source). Soak s7405_ftz_levels queued.
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
@@ -452,9 +465,11 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
     DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
     build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE.
-16. **Next audit candidate:** class BN, direct RCP/PI register access from LIVE (non-replaced) guest code: every lui 0xA4xx /
-    0xA000|x / 0xB000 KSEG1 load/store in a live function, what the recompiled MEM_* access hits in the port (rdram offset, a
-    librecomp intercept, or nothing) vs what hardware returns (NEXT.md s7404). Any new arena or pointer layout re-runs items
+16. **Next audit candidate:** class BP, FP corner semantics left after FTZ: (a) attribute the tid-3 denormal producer and
+    the 41 FZ-arm denormal INPUTS (retail VR4300 raises unimplemented-op on a denormal operand -> a fault; who feeds them:
+    lwc1 of non-float words? host shim on the game thread?), (b) the 173 boot DZC divisions by zero (retail: flag only, EZ off)
+    -> check the quotient feeds nothing that retail would see differently (inf vs host inf: same). NEXT.md s7406.
+    Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
 17. **When 1-16 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
