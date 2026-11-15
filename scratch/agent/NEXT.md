@@ -1,9 +1,8 @@
-# NEXT (s7370)
-NOTE: docs/CURRENT-TRUTH.md is 61 KB after s7369 -> Step 0 makes s7370 a MAINTENANCE iteration (compact to ~35 KB, no experiments).
-After that, the unit below.
+# NEXT (s7371)
+s7370 was the maintenance iteration (CURRENT-TRUTH 61.0 -> 26.7 KB). This unit = CURRENT-TRUTH Next steps item 1.
 
 HYPOTHESIS-ID: tsan-mission-coverage
-Goal: the 27s LIMIT. TSan runtime coverage has never reached mission threads (present / workload / audio under load). With the s7369
+Goal: the class-AE (s7354) LIMIT. TSan runtime coverage has never reached mission threads (present / workload / audio under load). With the s7369
 ucode exemption the TSan arm runs ~13 gfx tasks/s, but ROGUESQ_AUTOPILOT events are wall-clock-timed, so the route diverges from the
 owner route whenever game speed differs (s7369 c2 split at press 4 and never called initMission).
 Work unit (one build): add ROGUESQ_AUTOPILOT_CLOCK=frames to the autopilot (main.cpp ~11223): event times count game frames

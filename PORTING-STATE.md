@@ -194549,3 +194549,16 @@ Conclusion (s7368): this A/B selects H-ours x H-tsan-timing (the begin-3000 DLPO
   [s4211-new] log reads the PI ring count; only feeds <=32 stderr lines). t1/t2/c1/c2 reports now all rc 0.
 - Rules out: H-cycle2, H-starve. Selects H-slow with a named cost (instrumented ucode), fixed for the TSan arm.
 Conclusion (s7369): the c1 sample + c2 rate select H-slow (TSan-instrumented RSP ucode) and refute H-cycle2 (passive dump, 2-17 s lags); fixed in build_tsan. Next discriminator: frame-keyed autopilot so the TSan arm reaches a mission for mission-phase race coverage.
+
+## Session 7370 (2026-11-14) — maintenance: CURRENT-TRUTH compacted 61006 -> 26667 bytes (540 -> 277 lines), backlog renumbered 1-17
+
+Step 0 triggered (61006 bytes > 60000). No experiments.
+- Archived the whole s7369 CURRENT-TRUTH verbatim (headings demoted) to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370
+  maintenance): whole s7369 file, verbatim".
+- Next steps: the s7369 sequence 1-28 with sub-items 27b..27zi (the sub-letter sequence had run to 27zi) collapsed into ONE monotonic
+  list 1-17. The 50 closed idiom-class audit items (s7315-s7366, classes B-G, R, M, N, O, P, S-Z, AA-AQ) became one table item (14)
+  naming each class, session and census tool; their default-on knobs became one list (15: SPILL_RESET/arena, RSP_DMA25, S7334_CLASS5,
+  S7335_CLAMP, S7336, S7337, S7339, ALTSTACK, S7358_ENVCHECK, S7364_WLRESET, CF0_DUPDROP, DLPOOLX_ARM_REBUILD, TSAN_UCODE). Harness
+  one-game discipline + soak rc rule merged (13). FARMAX item condensed (3). Active unit (tsan-mission-coverage) is item 1.
+- Headline, superseded, recipes, constraints sections kept as they were; header refreshed to s7370.
+Rules out nothing; next iteration runs NEXT.md (ROGUESQ_AUTOPILOT_CLOCK=frames + mission-phase TSan report).
