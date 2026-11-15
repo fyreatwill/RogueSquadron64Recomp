@@ -1494,3 +1494,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261114-172941 | s7367_bootload_fix | rc=0 | 252s | scratch/agent/soak_results/s7367_bootload_fix_20261114-172941.log
 20261114-173353 | s7367_bootload_old | rc=0 | 252s | scratch/agent/soak_results/s7367_bootload_old_20261114-173353.log
 20261114 | s7368 fold: s7367_bootload_old / s7367_bootload_fix rc=0 CONTROL PASS both (boot1 forced FROZEN + sample): boots 2-6 OK 5/5 in BOTH arms (fs 1068-1158 at t=40, 0 stall, 0 crash; fix arm 1 dup-ack drop) -> host `yes` load does NOT reproduce the fs=39 freeze on the old path; the s7367 fix stays qualified by the TSan A/B only (load arm non-discriminating).
+20261115-002002 | s7385_r2r_off_levels | rc=0 | 1172s | scratch/agent/soak_results/s7385_r2r_off_levels_20261115-002002.log
+20261115 | s7386 fold: s7385_r2r_off_levels rc=0 CONTROL PASS (knob line 1/1 per level, no Gfx Thread row): ROGUESQ_RENDER_TO_RAM=0 dd8 21:9 L1/L4/L12 304/305/304 s alive, 0 crash, 0 VI stall -> holds 300 s on the forced route.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7383 (2026-11-14).
+Compact operational handoff, as of Session 7386 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -213,7 +213,15 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    (scratch/s7385/sheet_on_off.jpg, sheet_boot.jpg; same images). In-run toggle (ROGUESQ_RENDER_TO_RAM_TOG, [s4267] r2r tag):
    Gfx-thread per-task cost 14.9 -> 12.4 ms in mission, 5.4 -> 4.2 ms front end (~17 %, not the 6-8 ms guessed); the
    rs64_run_lle_gfx ucode run (~10 ms) still binds, task rate 44.1 -> 45.4/s quiet host. Soak s7385_r2r_off_levels queued
-   (L1/L4/L12 300 s). Next (NEXT.md): coverage of the unscanned scenes + busy-host fps toggle. Owner decides any default.
+   (L1/L4/L12 300 s): **PASS (s7386 fold: 304/305/304 s alive, 0 crash, 0 VI stall, knob line, no Gfx Thread row).**
+   **s7386: H-partial SELECTED (single-source, one capture):** keyed A/B on/off (tools/s7386_route_ab.zsh, dd8 21:9) over level select,
+   AVAILABLE CRAFT/LDESC typing, SELECT YOUR CRAFT, crawl, Calamari intro cutscene, flight, pause, abort, MISSION FAILED, debrief, return
+   to hangar: identical images, 0 stale both arms, same dark runs; BUT at the abort -> MISSION FAILED cut the off arm showed one frame
+   of raw-RDRAM stripes in the 4:3 box (scratch/s7386/abort_trans.jpg, aboff w_0156.12) where on shows black: a VI-scanned buffer the
+   game cleared via RDP is only cleared in RDRAM by the readback pass. Busy host (15x yes, in-run TOG=10): mission 28.3 -> 29.7
+   gfx tasks/s (<2/s = H-noheadroom), max tail one 48 ms outlier. OWNER-OPT-INS row now says not recommended. Next (NEXT.md):
+   repeat the abort transition 3x per arm for a second line, name the scanned address (VI origin vs RT64 fb list), then either
+   keep readback for buffers RT64 has not drawn this frame or present black for unknown fbs. Owner decides any default.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
    threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts

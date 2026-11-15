@@ -195225,3 +195225,31 @@ pause menu and boot cinematics.
 Queued: scratch/agent/soak_queue/s7385_r2r_off_levels.sh (L1/L4/L12 300 s holds, RENDER_TO_RAM=0, knob and Gfx-thread-absent controls).
 docs/OWNER-OPT-INS.md: new row (opt-in, testing). Default unchanged; the owner decides.
 Conclusion: the in-run toggle plus both image sheets selects H-redundant for the covered scenes and refutes H-needed there; it also refutes the s4905/s4906 reading that the readback is the main Gfx-thread cost (~17 %, the ucode run binds). Next discriminator (NEXT.md): an off-vs-on contact sheet of the uncovered scenes (H-partial) and a busy-host toggle run (H-headroom vs H-noheadroom).
+
+## Session 7386 (2026-11-15) — RENDER_TO_RAM=0 scene coverage: identical on 11 more scenes but one raw-RDRAM stripe frame at the abort -> MISSION FAILED cut (H-partial, single-source); busy host gains only 1.4 tasks/s (H-noheadroom); soak passes 300 s x3
+HYPOTHESIS-ID: render-to-rdram-double-pass.
+Unit from NEXT. No maintenance (35.2 KB). Owner save untouched (NO_SAVE_WRITE, no SAVE_FROM). Screen unlocked (ioreg check). 5 game runs,
+one at a time, 0 CRASH/SIGSEGV/SIGBUS.
+Soak fold: s7385_r2r_off_levels rc=0: L1/L4/L12 dd8 21:9 304/305/304 s alive, 0 crash, 0 VI stall; knob line present, [s7384] shows only
+the RT64 Workload row (Gfx-thread pass absent) in all three.
+Runs (new tools/s7386_route_ab.zsh = s7385 run.zsh with a forced-route AP: owner save, title -> SELECT LEVEL -> AVAILABLE CRAFT/LDESC typing
+-> SELECT YOUR CRAFT -> crawl -> Calamari intro cutscene -> flight; abort tail 140:start,144:down,148:a,152:left,155:a,165:a,173:a,181:a):
+on / off (SECS=170, 138 caps each), abon / aboff (SECS=200 with abort tail, CAP0=135), togbusy (ROGUESQ_RENDER_TO_RAM_TOG=10 ROGUESQ_S4267=1
+with 15x `yes` load).
+1. Images: contact sheets scratch/s7386/sheet_on_off.jpg, sheet_abort.jpg: every scene the same in both arms (level select, AVAILABLE
+   CRAFT typing, SELECT YOUR CRAFT, crawl, full intro cutscene, flight HUD, pause, abort confirm, MISSION FAILED, debrief medal, return to
+   SELECT LEVEL / hangar). tools/s7386_frame_stats.py: on 138 frames dark 10 stale 0; off 138 dark 9 stale 0 (shared dark runs at
+   boot 21-22 s and the crawl black 64-70 s; strays on 124 = cutscene->flight black cut, off 48 = AVAILABLE CRAFT fade, both phase of capture);
+   abon/aboff 61/59 frames, dark [156,157,166] both, stale 0 both.
+2. **The one difference:** aboff w_0156.12 (abort -> MISSION FAILED cut) shows a 4:3 box of raw memory: white scallops on top, coloured
+   diagonal noise bands, a glyph-like row at the bottom (scratch/s7386/abort_trans.jpg); abon at 155.90 is black. Reading: the VI scanned a
+   buffer that RT64 did not draw that frame; with the readback pass on, the game's RDP clear of it reached RDRAM (black), with it off RDRAM
+   still holds old data. Single-source (one capture, one run per arm); not yet repeated.
+3. Busy host (in-run toggle, clean windows only, tools from s7385 tog.py with path arg): mission r2r=1 28.3 gfx tasks/s vs r2r=0 29.7
+   (+1.4/s, under the 2/s bar = H-noheadroom); per-task Gfx-thread fullSync 1.99 -> 1.24 ms; worst-second max 48 ms on vs 16 ms off but
+   one outlier (median per-second max 12 vs 10 ms, 1/36 vs 0/32 seconds over 20 ms). Front-end windows mix scenes (rate not comparable).
+   Control: [s7384] Gfx Thread calls 5485 vs Workload 10515 (pass ran in about half the windows, the toggle worked).
+Verdict line: this selects H-partial (single-source: one stripe frame at the abort cut) and H-noheadroom (+1.4 tasks/s under 15x yes), and
+refutes H-redundant-all and H-headroom; it confirms H-redundant for the 11 newly covered scenes. docs/OWNER-OPT-INS.md row now says not
+recommended. Next (NEXT.md): repeat the abort cut 3x per arm with in-process burst grabs + VI origin log to name the buffer, then fix
+(readback for undrawn buffers, or black for unknown fb when off).

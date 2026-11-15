@@ -1,21 +1,18 @@
-# NEXT (s7386)
+# NEXT (s7387)
 HYPOTHESIS-ID: render-to-rdram-double-pass
 
-s7385 added ROGUESQ_RENDER_TO_RAM=0 (opt-in) and ROGUESQ_RENDER_TO_RAM_TOG=<secs> (in-run A/B, [s4267] lines carry r2r=/ntog=).
-Covered scenes look the same with the pass off; Gfx-thread per-task cost -2.5 ms mission / -1.2 ms front end (in-run toggle).
-First: fold the s7385_r2r_off_levels soak verdict (SOAK-RESULTS.md; L1/L4/L12 300 s, pass = alive, 0 crash, knob line, no Gfx Thread
-row in [s7384]).
+s7386 selected H-partial (single-source): with ROGUESQ_RENDER_TO_RAM=0 the abort -> MISSION FAILED cut showed one frame of raw-RDRAM
+stripes in the 4:3 box (scratch/s7386/aboff/w_0156.12.png) where the on arm showed black. Everything else on the route matched.
 
-Work unit: close H-partial and measure the busy-host payoff in ONE build (no rebuild needed) and ONE run per arm.
-- Hypotheses: H-redundant-all (no scene needs the readback), H-partial (a scene not covered yet reads the rendered fb from RDRAM:
-  mission intro/outro cutscenes, LEVEL DESCRIPTION, results/debrief, a level with a screen-effect), H-headroom (under host CPU load
-  the 2.5 ms becomes fps: off blocks show more gfx tasks/s than on blocks), H-noheadroom (task rate equal under load too: the
-  ucode run binds, nothing to offer beyond the frame-time margin).
-- Coverage arm pair: env SECS=200 zsh scratch/s7385/run.zsh <name> '<env>' with an AP that reaches LEVEL DESCRIPTION, a mission
-  intro cutscene, a mission end/results (forced-level route recipes in scratch/agent/g1_level_coverage_common.zsh, LEVEL=4 Gerrard V
-  intro). Arms: unset vs ROGUESQ_RENDER_TO_RAM=0; contact sheet at the same keyed times (scratch/s7385 sheet code in the s7385
-  PORTING-STATE entry). Any black / stale / garbled frame only in the off arm = H-partial: name the scene and write-watch its fb span.
-- Busy-host arm: ROGUESQ_RENDER_TO_RAM_TOG=10 ROGUESQ_S4267=1 with a background load (e.g. 15 x `yes > /dev/null`, killed at end;
-  s7277 recipe) on the same route; python3 scratch/s7385/tog.py (edit the path) -> sendDl/s by r2r in mission. Off > on by >= 2/s
-  = H-headroom (add to OWNER-OPT-INS row); equal = H-noheadroom.
-Do NOT change the default. Owner save read-only.
+Work unit: second line + mechanism in ONE build/run set.
+- Hypotheses: H-unknown-fb (VI scans out an address RT64 never drew; with readback off RDRAM still holds old data, with it on the
+  game's RDP clear landed there), H-fade-fill (the game's fill-rect clear of that buffer is GPU-only with r2r off and RT64 presents
+  the RDRAM copy because the fb is not in its tracked list), H-capture-artefact (one-off capture of a half-presented frame; would
+  also show in the on arm on repeats).
+- Run: route with abort tail, 3 abort cycles per arm (extend AP: after the debrief 181:a, re-enter mission and abort again, or 3 runs
+  per arm, one at a time). `env AP=<route+abort> SECS=200 CAP0=150 RDIR=scratch/s7387 zsh tools/s7386_route_ab.zsh offN "ROGUESQ_RENDER_TO_RAM=0 <vi/fb log env>"`
+  plus BURST=150,160 in-process grabs (g3_port_capture.sh BURST) for frame-exact capture. Log VI origin per VI and RT64's
+  present source (follow-draw mode / fb lookup hit-miss) over t 150-160.
+- Outcome: stripes in off only, repeatable, VI origin not in RT64's drawn list = H-unknown-fb -> fix: keep renderToRDRAM for fill-only
+  / undrawn buffers, or present black for an unknown fb when r2r=0. Stripes in on arm too = H-capture-artefact (r2r clean).
+Owner save read-only. Do NOT change the default. OWNER-OPT-INS row says not recommended until fixed.
