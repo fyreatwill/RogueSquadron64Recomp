@@ -195622,3 +195622,34 @@ Work unit: NEXT.md class BF (thread lifecycle idiom audit, s7392 message-queue l
 - Conclusion: this selects H-none and refutes H-dangle (as a live failure on the route) and H-recreate for class BF; it closes
   class BF, and the root cause of the latent HANG is the upstream thread_queue_remove walk (fixed, TQFIX default on). Next
   discriminator: class BG timer lifecycle (osSetTimer re-arm / osStopTimer late-send census with a planted control, NEXT.md).
+
+## Session 7397 (2026-11-15) — class BG timer lifecycle closed: 1 live osSetTimer site, never re-armed or stopped (H-none); upstream osSetTimer live re-arm corrupted the timer set, fixed default-on
+
+Folded soak s7396_tq_levels: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, s7396_tq_report rc 0 (control PASS, H-none x3).
+
+Static (`tools/s7397_timer_census.py` over /tmp/s7392.dis): 3 guest osSetTimer jal sites, osStopTimer is not linked at all.
+- 0x8002A258 osEepromLongWrite (t=0x8012D058, 12 ms one-shot, in loop + recv): REPLACED by librecomp eep.cpp, never runs.
+- 0x8002AF08 osContInit (stack OSTimer sp+64, one-shot + recv): REPLACED by librecomp cont.cpp.
+- 0x80007458 installPeriodicCallback: LIVE, interval timer 0x801128F0 (mq 0x80112910, msg 0, interval a1 ms), one caller
+  (mainBootstrapWorker 0x80000D4C, straight-line, gated on cfg->+8 != 0).
+Host: upstream_compat.cpp s7192/s7193 test arms (CF0_DELAY_TEST, RETRACE_HOLD_TEST) arm one-shot stack timers and block on
+them until fire; default off.
+
+Code read of ultramodern timer.cpp found a latent defect: osSetTimer writes t->timestamp/interval/mq/msg on the CALLING guest
+thread, while t may still be in the timer thread's std::set whose comparator reads t->timestamp. Re-arming a live non-head
+timer mutates a set key in place (and races the comparator): the set holds the struct twice / out of order, erase() by key
+can miss it (an interval timer keeps firing after osStopTimer), and a timer that sorts behind a stale entry can be starved.
+Fix (ROGUESQ_S7397_TIMERFIX default ON, =0 old path): osSetTimer only enqueues the values; the timer thread erases any live
+entry for the struct by pointer, writes the fields, re-inserts; osStopTimer falls back to a pointer erase when the keyed
+erase misses. ORIGIN: upstream N64ModernRuntime timer.cpp design (guest-thread write of the set key), not game data.
+
+Runtime: ROGUESQ_S7397_TM=1 logs [s7397-tm] set (live flag = already in set) / stop / fire rows; ROGUESQ_S7397_TM_CTL=1 plants
+3 fake timers at 0x9FFE1000 (1/2/3 h, never fire), re-arms the non-head C to 0.5 h and checks the set synchronously.
+- TIMERFIX=0 short boot: `fake_entries=4 dup=1 unsorted=1 order=2,0,1,2 => CORRUPT` (positive control: defect reproduced).
+- tools/s7392_mq_run.zsh owner arm (dd8 21:9 FPS60) and RETAIL=1 arm, 200 s each, route reached flight + debrief, 0 crash:
+  control `order=2,0,1 => PASS` both; 0 [s7397-tm] rows for any non-fake struct in either arm -> the game arms no timer on
+  this route (installPeriodicCallback's cfg gate is off); report rc 0, VERDICT H-none. H-rearm and H-stop-late refuted
+  (nothing re-arms, nothing stops). Two lines: static census + runtime with planted control.
+Rules out: timer lifecycle as a source of stray/duplicate messages or stalled periodic work on the route. The fix is latent
+hardening. Soak s7397_tm_levels queued (L5/L10/L15). tools/s7392_mq_run.zsh gained NOREPORT=1 (skips the mq report).
+Next: class BH, PI/SI I/O-message lifecycle (OSIoMesg reused while its DMA is in flight).

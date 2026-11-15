@@ -8552,10 +8552,152 @@ index 812c556..c88aed7 100644
  }
  
 diff --git a/ultramodern/src/timer.cpp b/ultramodern/src/timer.cpp
-index ee26c45..a3ccdc1 100644
+index ee26c45..49cd899 100644
 --- a/ultramodern/src/timer.cpp
 +++ b/ultramodern/src/timer.cpp
-@@ -178,7 +178,9 @@ extern "C" void osSetTime(OSTime t) {
+@@ -1,6 +1,11 @@
+ #include <thread>
+ #include <variant>
+ #include <set>
++#include <future>
++#include <atomic>
++#include <cstdio>
++#include <cstdlib>
++#include <map>
+ #include "blockingconcurrentqueue.h"
+ 
+ #include "ultramodern/ultra64.h"
+@@ -29,15 +34,36 @@ struct OSTimer {
+     OSMesg msg;
+ };
+ 
++// s7397 class BG: upstream osSetTimer wrote t->timestamp from the guest thread while t could still sit in the timer
++// thread's std::set, whose ordering IS t->timestamp. Re-arming a live timer therefore mutated a set key in place (and raced
++// the comparator): the set goes unsorted or holds the struct twice, so erase() can miss it, a later timer can hide behind
++// it and never fire, or a stopped interval timer keeps firing. ROGUESQ_S7397_TIMERFIX default ON (=0 old path): the guest
++// thread only enqueues the values; the timer thread erases any live entry for the struct, writes the fields, re-inserts.
++// ROGUESQ_S7397_TM=1 logs [s7397-tm] set/stop/fire rows (live = struct already armed); ROGUESQ_S7397_TM_CTL=1 plants 3 fake
++// timers at 0x9FFE1000 (hours out, never fire), re-arms the non-head one earlier and checks the set (old = CORRUPT, fix = PASS).
++static bool s7397_env(const char* n, bool dflt) { const char* e = std::getenv(n); if (!e || !*e) return dflt; return *e != '0'; }
++static bool s7397_fix() { static const bool f = s7397_env("ROGUESQ_S7397_TIMERFIX", true); return f; }
++static bool s7397_log() { static const bool f = s7397_env("ROGUESQ_S7397_TM", false); return f; }
++
+ struct AddTimerAction {
+     PTR(OSTimer) timer;
++    bool carry = false; // s7397: fields below are applied by the timer thread
++    OSTime timestamp = 0;
++    OSTime interval = 0;
++    PTR(OSMesgQueue) mq = 0;
++    OSMesg msg = 0;
+ };
+ 
+ struct RemoveTimerAction {
+     PTR(OSTimer) timer;
+ };
+ 
+-using Action = std::variant<AddTimerAction, RemoveTimerAction>;
++struct CheckTimerAction { // s7397 control: verify set integrity, drop fake entries in [lo,hi), report through the promise
++    std::promise<std::string>* reply;
++    uint32_t lo, hi;
++};
++
++using Action = std::variant<AddTimerAction, RemoveTimerAction, CheckTimerAction>;
+ 
+ struct {
+     std::thread thread;
+@@ -91,9 +117,46 @@ void timer_thread(RDRAM_ARG1) {
+     auto process_timer_action = [&](const Action& action) {
+         // Determine the action type and act on it
+         if (const auto* add_action = std::get_if<AddTimerAction>(&action)) {
++            // Live = the struct is already in the set (a waited-on head was re-inserted before this runs). Pointer scan,
++            // not find(): under the old path the key may already be stale.
++            int live = 0;
++            for (auto it = active_timers.begin(); it != active_timers.end();) {
++                if (*it == add_action->timer) { ++live; if (add_action->carry) { it = active_timers.erase(it); continue; } }
++                ++it;
++            }
++            if (add_action->carry) {
++                OSTimer* t = TO_PTR(OSTimer, add_action->timer);
++                t->timestamp = add_action->timestamp; t->interval = add_action->interval; t->mq = add_action->mq; t->msg = add_action->msg;
++            }
+             active_timers.insert(add_action->timer);
++            if (s7397_log()) {
++                OSTimer* t = TO_PTR(OSTimer, add_action->timer);
++                std::fprintf(stderr, "[s7397-tm] set t=%08X live=%d fix=%d cd_ms=%.1f iv_ms=%.1f mq=%08X msg=%08X set_n=%zu\n", (uint32_t)add_action->timer, live,
++                             (int)add_action->carry, ((double)(int64_t)(t->timestamp - time_now())) / counter_per_ms, (double)t->interval / counter_per_ms,
++                             (uint32_t)t->mq, (uint32_t)t->msg, active_timers.size());
++            }
+         } else if (const auto* remove_action = std::get_if<RemoveTimerAction>(&action)) {
+-            active_timers.erase(remove_action->timer);
++            int live = 0;
++            for (auto it = active_timers.begin(); it != active_timers.end(); ++it) if (*it == remove_action->timer) ++live;
++            size_t n = active_timers.erase(remove_action->timer);
++            if (s7397_fix() && n == 0 && live) { // stale key: drop by pointer
++                for (auto it = active_timers.begin(); it != active_timers.end();) it = (*it == remove_action->timer) ? active_timers.erase(it) : std::next(it);
++            }
++            if (s7397_log()) std::fprintf(stderr, "[s7397-tm] stop t=%08X live=%d erased=%zu\n", (uint32_t)remove_action->timer, live, n);
++        } else if (const auto* chk = std::get_if<CheckTimerAction>(&action)) {
++            std::set<PTR(OSTimer)> seen; int dup = 0, unsorted = 0, fake = 0; OSTime prev = 0; bool first = true; char order[160] = ""; size_t ol = 0;
++            for (PTR(OSTimer) p : active_timers) {
++                if (!seen.insert(p).second) ++dup;
++                OSTimer* t = TO_PTR(OSTimer, p);
++                if (!first && t->timestamp < prev) ++unsorted;
++                prev = t->timestamp; first = false;
++                if ((uint32_t)p >= chk->lo && (uint32_t)p < chk->hi) { ++fake; if (ol < sizeof order - 8) ol += std::snprintf(order + ol, sizeof order - ol, "%X,", ((uint32_t)p - chk->lo) / 0x20); }
++            }
++            for (auto it = active_timers.begin(); it != active_timers.end();)
++                it = ((uint32_t)*it >= chk->lo && (uint32_t)*it < chk->hi) ? active_timers.erase(it) : std::next(it);
++            char out[320];
++            std::snprintf(out, sizeof out, "fake_entries=%d dup=%d unsorted=%d order=%s", fake, dup, unsorted, order);
++            chk->reply->set_value(out);
+         }
+     };
+ 
+@@ -131,6 +194,11 @@ void timer_thread(RDRAM_ARG1) {
+         else {
+             // Waiting for the timer completed, so send the timer's message to its message queue
+             ultramodern::enqueue_external_message_src(cur_timer->mq, cur_timer->msg, false, ultramodern::EventMessageSource::Timer);
++            if (s7397_log()) {
++                static std::map<uint32_t, uint64_t> fires; uint64_t n = ++fires[(uint32_t)cur_timer_];
++                if (n <= 3 || (n % 1000) == 0) std::fprintf(stderr, "[s7397-tm] fire t=%08X n=%llu mq=%08X iv_ms=%.1f\n", (uint32_t)cur_timer_,
++                                                            (unsigned long long)n, (uint32_t)cur_timer->mq, (double)cur_timer->interval / counter_per_ms);
++            }
+             // If the timer has a specified interval then reload it with that value
+             if (cur_timer->interval != 0) {
+                 cur_timer->timestamp = cur_timer->interval + time_now();
+@@ -140,9 +208,31 @@ void timer_thread(RDRAM_ARG1) {
+     }
+ }
+ 
++extern "C" int osSetTimer(RDRAM_ARG PTR(OSTimer) t_, OSTime countdown, OSTime interval, PTR(OSMesgQueue) mq, OSMesg msg);
++static std::string s7397_sync_check(uint32_t lo, uint32_t hi) {
++    std::promise<std::string> pr; auto fu = pr.get_future();
++    timer_context.action_queue.enqueue(CheckTimerAction{ &pr, lo, hi });
++    return fu.get();
++}
++
+ void ultramodern::init_timers(RDRAM_ARG1) {
+     timer_context.thread = std::thread{ timer_thread, PASS_RDRAM1 };
+     timer_context.thread.detach();
++    if (s7397_env("ROGUESQ_S7397_TM_CTL", false)) {
++        // Fake structs above the guest's RAM top (never touched by the game, nothing fires: hours out, mq 0).
++        const uint32_t lo = 0x9FFE1000u, hi = lo + 0x60u;
++        const OSTime hr = (OSTime)counter_per_ms * 3600000ull;
++        osSetTimer(PASS_RDRAM lo + 0x00, 1 * hr, 0, 0, 0); // A: head, the thread waits on it (erased while waiting)
++        osSetTimer(PASS_RDRAM lo + 0x20, 2 * hr, 0, 0, 0); // B
++        osSetTimer(PASS_RDRAM lo + 0x40, 3 * hr, 0, 0, 0); // C
++        std::string pre = s7397_sync_check(0, 0);           // barrier: all three processed, nothing dropped (range empty)
++        osSetTimer(PASS_RDRAM lo + 0x40, hr / 2, 0, 0, 0);   // re-arm live non-head C to 0.5 h: must now sort first
++        std::string r = s7397_sync_check(lo, hi);           // PASS = 3 entries, order C,A,B (indices 2,0,1), no dup
++        bool pass = r.find("order=2,0,1,") != std::string::npos && r.find("dup=0 unsorted=0") != std::string::npos && r.find("fake_entries=3") != std::string::npos;
++        std::fprintf(stderr, "[s7397-tm-ctl] fix=%d %s => %s\n", (int)s7397_fix(), r.c_str(), pass ? "PASS" : "CORRUPT");
++        for (uint32_t a = lo; a < hi; a += 4) *TO_PTR(uint32_t, (PTR(uint32_t))a) = 0;
++        (void)pre;
++    }
+ }
+ 
+ uint32_t ultramodern::get_speed_multiplier() {
+@@ -178,8 +268,16 @@ extern "C" void osSetTime(OSTime t) {
      ostime_offset = time_now() - t;
  }
  
@@ -8563,5 +8705,12 @@ index ee26c45..a3ccdc1 100644
  extern "C" int osSetTimer(RDRAM_ARG PTR(OSTimer) t_, OSTime countdown, OSTime interval, PTR(OSMesgQueue) mq, OSMesg msg) {
 +    s4261_note_timer(static_cast<uint32_t>(mq));
      OSTimer* t = TO_PTR(OSTimer, t_);
++    if (s7397_fix()) {
++        AddTimerAction a{ t_ };
++        a.carry = true; a.timestamp = (countdown == 0 ? interval : countdown) + time_now(); a.interval = interval; a.mq = mq; a.msg = msg;
++        timer_context.action_queue.enqueue(a);
++        return 0;
++    }
  
      // Determine the time when this timer will trigger off
+     if (countdown == 0) {

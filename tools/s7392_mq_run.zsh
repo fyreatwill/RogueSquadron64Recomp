@@ -15,4 +15,4 @@ SECS=${SECS:-200}; s=0
 while (( s < SECS )) && kill -0 $P 2>/dev/null; do sleep 1; s=$((s+1)); done
 kill -9 $P 2>/dev/null; wait $P 2>/dev/null
 echo "s7392 run: secs=$s crash=$(grep -a -c 'CRASH\|SIGSEGV\|SIGBUS' $O/run.log) rows=$(grep -a -c '^\[s7392-mq\]' $O/run.log)"
-python3 tools/s7392_mq_report.py $O/run.log
+[ -n "$NOREPORT" ] || python3 tools/s7392_mq_report.py $O/run.log

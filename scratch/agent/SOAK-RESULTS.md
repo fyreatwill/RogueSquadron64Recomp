@@ -1509,3 +1509,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7394 fold: s7393_cq_levels rc=0 CONTROL PASS x3: L5/L10/L15 dd8 21:9 202-203 s alive, 0 crash, 0 VI stall, VERDICT H-none x3 (SEED rows only) -> class BC stands on 3 more levels.
 20261115-062211 | s7394_holdfix_levels | rc=0 | 853s | scratch/agent/soak_results/s7394_holdfix_levels_20261115-062211.log
 20261115 | s7395 fold: s7394_holdfix_levels rc=0: L4/L7/L12 203-204 s alive, 0 crash, 0 VI stall, --fix rc 0 FIX-ARM CONTROL PASS, holdfix_skips 8/10/5, H-none x3 -> HOLDFIX holds.
+20261115-065849 | s7396_tq_levels | rc=0 | 856s | scratch/agent/soak_results/s7396_tq_levels_20261115-065849.log
+20261115 | s7397 fold: s7396_tq_levels rc=0: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, report rc 0 control PASS, VERDICT H-none x3 -> TQFIX holds on 3 more levels.

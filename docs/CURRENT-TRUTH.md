@@ -254,7 +254,17 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    head = infinite loop on a non-head target in a >=2 queue). **ROGUESQ_S7396_TQFIX default ON** (=0 old walk). Runtime
    ROGUESQ_S7396_TQ=1 + _CTL=1 (planted middle-node remove: old=HANG, fixed PASS), `tools/s7396_tq_report.py`, route
    tools/s7392_mq_run.zsh owner + RETAIL=1: 21 removes each, all pos 0 (old walk safe, latent only), 0 live re-create of 27
-   creates. Soak s7396_tq_levels queued (L4/L7/L12). Next class BG: timer lifecycle (osSetTimer / osStopTimer).
+   creates. s7397 fold s7396_tq_levels: L4/L7/L12 202-204 s alive, 0 crash, 0 VI stall, control PASS, H-none x3.
+   **BG CLOSED s7397, timer lifecycle H-none on route; upstream osSetTimer re-arm FIXED** (`tools/s7397_timer_census.py`: 3 guest
+   osSetTimer sites, 0 osStopTimer linked; osEepromLongWrite/osContInit are librecomp-replaced, the one LIVE site is
+   installPeriodicCallback 0x80007458 (interval timer 0x801128F0, once from mainBootstrapWorker, gated on cfg+8)). Upstream
+   osSetTimer wrote t->timestamp from the guest thread while t sat in the timer thread's std::set keyed on it: re-arming a live
+   timer mutates a set key (dup/unsorted entry; erase misses, later timers can hide behind it). **ROGUESQ_S7397_TIMERFIX
+   default ON** (=0 old): guest only enqueues values, timer thread erases + writes + re-inserts. Runtime ROGUESQ_S7397_TM=1
+   + _CTL=1 (3 fake timers at 0x9FFE1000, live non-head re-arm: old = CORRUPT dup=1 unsorted=1, fix = PASS order 2,0,1),
+   `tools/s7397_timer_report.py`; route tools/s7392_mq_run.zsh owner + RETAIL=1: control PASS, flight+debrief reached, 0 guest or
+   host timer calls (latent only; two lines: census gate + runtime). Soak s7397_tm_levels queued (L5/L10/L15).
+   Next class BH: PI/SI I/O-message lifecycle (OSIoMesg reused while its DMA is in flight).
    **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
