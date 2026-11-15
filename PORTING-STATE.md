@@ -196511,3 +196511,5 @@ Re-run after the parser changes: s7419_dis_agree --controls rc 0 H-clean; s7418_
 fixup_cut_decoded_tails --self-test rc 0.
 Rules out: a weak-header mis-split moving a fixup edit, or an audit verdict row, onto the wrong function.
 Next: class CD, regen-verify drift triage (114 differing objects vs 82 at s6881).
+Conclusion: selects H-clean, refutes H-split (0 editor targets mis-split after weaken; controls PASS; dynamic 0 differ).
+Next discriminator: class CD LOST-edit classifier over the 114 regen-verify diffs (H-mirrored vs H-lost), planted-edit control.
