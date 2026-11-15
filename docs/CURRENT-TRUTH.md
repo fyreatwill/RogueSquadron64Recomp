@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7412 (2026-11-15).
+Compact operational handoff, as of Session 7413 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -511,27 +511,24 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     f20..f30 .u64, s0-s8, sp, FR mode), report `tools/s7410_fsv_report.py`: L5 21:9 FPS60 131 s hold, dd8 3.02e6 returns /
     dd1 4.31e6, fbad=gbad=mbad=0, plant (post-restore f24+s1 flip every 64th) 47196/47196 and 67291/67291 -> CONTROL PASS
     x2. s7410_fsv_levels widen soak: L4/L7/L12 CONTROL PASS + H-preserved x3 (s7411).
-20. **BU CLOSED s7411 (unaligned load/store macros): H-equal, no code change.** `tools/s7411_unaligned_contract.py`
-    (rc 0, ~6 s): the REAL build header (lib/.../N64Recomp/include/recomp.h + force-included rsp_dpc_macros.h; the swl/swr/
-    sdl/sdr g1d/floor observers and funcs_24's s4299 do_swl/do_swr wrapper are pass-through loggers) vs a byte-wise VR4300
-    big-endian model on the swizzled rdram: 1e6 random cases per macro (all 8 incl. never-emitted ldl/ldr/sdl/sdr) + the
-    ulw/usw pair identities (both orders), 0 MISM, bytes outside the word untouched; lane-2/3-swap mutant per macro ->
-    31k-63k MISM own, 0 other: CONTROL PASS. Census: lwl 207 / lwr 203 / swl 203 / swr 202 comment sites, all paired
-    (k / k+3, same rt+base) except 5: libultra bcmp alignment prologue lwl x4 (v0=v1 preloaded, relies on old low lanes
-    kept = covered) and bzero swl $zero x1. No lone lwr, so the LWR upper-32 question (H-ext) has no live site.
-21. **BV CLOSED s7412 (integer emission on 64-bit GPRs): H-equal, no code change.** `tools/s7412_int_emission.py` (rc 0,
-    ~16 s): every distinct (disasm operands, emitted statement) form of 44 integer ops (136,228 sites, 14,687 forms, verbatim
-    text, real recomp.h -O2) vs a VR4300 model driven by the disasm operands: 3.76e6 cases, can 0 MISM, nc 0 MISM (64-bit ops
-    defined; 32-bit ops vs ares rules, single-source). Mutants (ADD32 no-trunc, S32 zext, SIGNED unsigned, sllv &63, dsll32 +0)
-    all flagged: CONTROL PASS. div/divu by 0 gives host lo=0 (C UB) but 132 sites break-7 guarded + 3 const divisor (= s7085,
-    independent census) + 3 in data_gap_800CC3D4 (data decoded as code, 0 callers). Non-canonical census: 16 flows (MusyX
-    ADPCM srl of ld words, resample sra), all followed by andi masking to low-word bits -> upper-bit independent.
-22. **Next audit candidate:** class BW, aligned load/store macros (MEM_B/BU/H/HU/W/WU/D + store forms, RS64_BYTE_WATCH
-    variant, rsp_dpc_macros MEM_WU override, lwc1/ldc1/swc1/sdc1) vs a byte-wise big-endian model on the swizzled rdram.
-    NEXT.md s7413.
+20. **BU CLOSED s7411 (unaligned lwl/lwr/swl/swr/ldl/ldr/sdl/sdr): H-equal.** `tools/s7411_unaligned_contract.py`: real
+    header vs byte-wise BE model, 1e6 cases/macro + ulw/usw pairs, 0 MISM; lane-swap mutants CONTROL PASS. All sites paired
+    except 5 covered libultra bcmp/bzero prologues; no lone lwr (LWR upper-32 has no live site).
+21. **BV CLOSED s7412 (integer emission on 64-bit GPRs): H-equal.** `tools/s7412_int_emission.py`: 14,687 verbatim forms of
+    44 ops vs VR4300 model, 3.76e6 cases 0 MISM; 5 mutants CONTROL PASS. div-by-0: 132 break-7 guarded + 3 const (= s7085)
+    + 3 dead data_gap. 16 non-canonical MusyX flows all andi-masked to low word.
+22. **BW CLOSED s7413 (aligned load/store macros): H-equal, no code change.** `tools/s7413_aligned_ldst.py` (rc 0, ~25 s):
+    101,169 pure sites of 15 ops (lb..sdc1), 58,654 verbatim forms, real header -DRS64_BYTE_WATCH -O2, 40 cases/form vs a
+    byte-wise BE model from the disasm operands (every legal alignment, KSEG0): 0 MISM, 0 stray writes (whole image compared);
+    plain MEM_B also 0. Mutants (MEM_B/BU ^1, MEM_H ^0, HU/W/WU sign swap, SD/LD hi-lo swap) each flag only their own ops:
+    CONTROL PASS x8. 1,738 guarded/gated sites (s6287/s6826/s4307 patches, alloc guards) skipped. KSEG1 is NOT aliased (0xA0..
+    -> rdram+0x20000000, PROT_NONE) but 0 lui 0xA000-0xA07F constants exist (0xB0 = PI ROM DMA args, 0xA8/0xAA = rand/div
+    magic, 0xB5-0xBF = DL opcodes); 206 $zero-base sites all in 3 data_gap_* fns with 0 callers. Single-source model.
+23. **Next audit candidate:** class BX, FP compare emission (c.cond.s/d all 16 conds incl. NaN/unordered + bc1t/bc1f/
+    bc1tl/bc1fl reading the condition bit). NEXT.md s7414.
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-23. **When 1-22 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+24. **When 1-23 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

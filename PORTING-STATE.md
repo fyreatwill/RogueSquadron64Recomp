@@ -196174,3 +196174,65 @@ site for H-noncanon; class BV is closed. Two lines: per-site verbatim harness vs
 (the div census independently matching s7085). Rules out: an integer ALU/shift/compare/mul/div lowering defect in the
 recompiled code. No code/runtime change, no ORIGIN line needed. No new soak results to fold (last fold s7411).
 Next: class BW aligned load/store macros (NEXT.md).
+
+## Session 7413 (2026-11-15) — class BW aligned load/store macros closed (H-equal): 58,654 emitted forms of 15 ops vs a byte-wise big-endian model, 0 mismatches and 0 stray writes, mutant control PASS x8, KSEG1 not aliased but has 0 RDRAM constants
+
+HYPOTHESIS-ID: aligned-load-store-macro-semantics. Work unit from NEXT.md s7413 (M3 idiom-class audit, item 3).
+
+**Instrument (new):** `tools/s7413_aligned_ldst.py [K]` (rc 0 = H-equal + CONTROL PASS, ~25 s). It harvests every
+lb lbu lh lhu lw lwu ld sb sh sw sd lwc1 ldc1 swc1 sdc1 site in ../N64Recomp/RecompiledFuncs and takes the lowering line
+that carries the op's macro. It skips only pass-through prefixes: the `g_rs64_last_guest_pc` stamp, `CHECK_FR`, and every
+`if (__builtin_expect(g_rs64_store_diag, 0))` observer, which can span several lines. It requires the statement's base,
+offset and dest/source to match the disasm operands; 0 operand mismatches. It compiles each distinct form VERBATIM against
+the real build header (-DRS64_BYTE_WATCH as CMakeLists sets it, -include include/rsp_dpc_macros.h, -O2), with
+RS64_S5798_ST and rs64_s4307_synth_read stubbed as no-op observers. Each form runs K=40 cases against a byte-wise VR4300
+big-endian model driven by the disasm operands: random GPR/FPR file and f_odd array, a random 72-byte image around the
+target, every legal alignment of the op, and a KSEG0 base.
+- Loads: the dest must equal the sign- or zero-extended BE value, and every other register must be unchanged.
+- Stores: exactly the op's width is written, and the whole 128 KB image is compared after each form.
+
+**Result.** 101,169 pure sites, 58,654 forms, 2.35e6 cases: 0 MISM and 0 stray for every op. Rows: lb 9.8k, lbu 89k,
+lh 17k, lhu 69k, lw 226k, lwu 80, ld 200, sb 173k, sh 157k, sw 882k, sd 6.2k, lwc1 315k, ldc1 16k, swc1 336k, sdc1 50k
+cases. The plain (non-BYTE_WATCH) MEM_B arm on all lb/sb forms also gave 0.
+
+**Positive control, same run.** Each mutant header was run on up to 400 forms per op, and each flagged only its own ops:
+- MEM_B ^3->^1 (both defs): lb/sb 6455
+- MEM_BU ^3->^1: lbu 3980
+- MEM_H ^2->^0: lh/sh 8000
+- MEM_HU zext->sext: lhu 1996
+- MEM_W sext->zext: lw 1992
+- MEM_WU (force header) zext->sext: lwu 11
+- SD hi/lo swap: sd/sdc1 5230
+- LD hi/lo swap: ld/ldc1 4050
+
+Other ops: 0 in all 8. CONTROL PASS.
+
+**Dead ends in this session.** The first run printed no rows and still said VERDICT H-equal: a false null. The harness had
+died with SIGSEGV because the harvest took a line inside the s3285 freelist guard block (`ctx->r31 = MEM_W(ctx->r29,
+0X10)`) as the lowering of `lw $v1,0($v0)`. Fixes: (1) a harness death now aborts the tool; (2) any non-prefix line before
+the macro line marks the site as guarded; (3) the operand check against the disasm. The second run dropped every store
+because the multi-line store-diag observers were not skipped; fixed. Lesson: a verdict needs non-empty rows.
+
+**Skipped sites.** 1,738 guarded/gated sites (lw 1398, sw 260, sb 52, sh 15, others <=5) are owned by earlier guard
+audits: s6287 ppcount, s6826 fps60, s4307 synth joins, alloc/freelist/cache guards, s6883 spancell. They are not
+re-tested here.
+
+**KSEG1.** The macros subtract 0xFFFFFFFF80000000 only, so guest 0xA0010000 maps to host rdram+0x20010000. That is the
+PROT_NONE part of librecomp's 4 GB reservation, NOT an alias of physical 0x10000 as on hardware (measured by address
+arithmetic in the harness). The lui census shows this cannot be reached through a constant:
+- 0 sites in 0xA000-0xA07F (KSEG1 RDRAM) and 0 in KSEG1 MMIO.
+- The 0xA8/0xAA hi-halves are rand LCG and divide-by-3 magic (rand_recomp, MusyX).
+- 0xB0 x9 are PI ROM addresses passed to DMA (loadOverlay, initDmaSlots, mainBootstrapWorker, relocateSndPointer), which
+  pi.cpp handles.
+- 0xB4-0xBF are DL opcode words.
+
+A computed K0_TO_K1 would fault loudly (SIGSEGV in rdram+0x2000xxxx), never corrupt silently, and 19-level soaks show 0
+such crashes. **Two lines for KSEG1: static census + crash-free soaks.** The macro equality itself is single-source: the
+model is written from the VR4300 manual.
+
+**$zero-base sites.** 206, all in data_gap_800CC3D4 (180), data_gap_80024A0C (24) and data_gap_800FA248 (2). Each has 0
+callers (the only references are its definition and the funcs.h prototype); this is data decoded as code, as s7412 found
+for 800CC3D4.
+
+Rules out: H-ext (sign/zero extension), H-swz (lane per alignment), H-width (neighbour bytes touched) for every pure
+emitted aligned load/store. Class BW closed, no code change. Next: class BX, FP compare emission (NEXT.md s7414).
