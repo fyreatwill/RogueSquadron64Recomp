@@ -194828,3 +194828,9 @@ calling threads instead of s7366's unchecked "thread-confined or handed off by q
 - Limits: TSan did NOT flag the old unlocked insert in s7375 t1 either (no positive for this specific race), so the fix rests on
   static reasoning (single-source for "it could race"); the qualification is "no regression + no new TSan report + no
   lock-order inversion". Not linked to the parked rare dd4/dd8 gfx SIGBUS; that stays open.
+- Conclusion: this selects H-live-multi and refutes H-confined (AS2 does not close with 0 fixes). The one MULTI pair was on the
+  owner path, not behind a diag env gate: the present-1024 diag has no env gate and runs every wide-phase present at 16:9/21:9, and
+  follow-draw mode 3 is the default. H-diag-multi is refuted as the only class (FBLIST was env-gated, the other two were not).
+  Next discriminator (class AT): a lock-state table of every present-thread read of the shared maps. H-move-lock (take
+  workloadMutex at pqVisibleGate) vs H-interp (RT64 interpolation is live in some arm, so only per-site locks) is decided by
+  whether presentFb->interpolationEnabled is ever true in the owner recipe, plus the frame-time cost of the earlier lock.
