@@ -196417,3 +196417,6 @@ Unit (NEXT.md opcode-coverage-residue). New tools/s7418_opcode_residue.py (rc 0 
 VERDICT H-equal, H-gap refuted. Rules out: a live do_break or mis-lowered residue op, int->FP / FP<->FP conversion drift, and live
 cache semantics as a divergence source. Opens class CB: every objdump-based census tool (s7392 parse is shared by s7400-s7405 and
 others) is blind to whatever objdump leaves as .word, so measure the objdump-vs-rabbitizer mnemonic agreement per address.
+Conclusion: this selects H-equal and refutes H-gap for class CA (0 live mis-lowered residue op, conversion forms exact with the
+mutant control flagging), and closes the class. Next discriminator (class CB): the per-census row diff after decoding objdump's
+.word blind set in s7392 parse, with recovery of the known live cache words as the positive control.
