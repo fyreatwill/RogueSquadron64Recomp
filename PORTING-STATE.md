@@ -195838,3 +195838,4 @@ sim-dt equality between arms. Selects H-unwritten for osClockRate (fixed, sim-la
 ORIGIN: the writer is retail osInitialize (osClockRate *= 3/4), absent because librecomp replaces osInitialize with a no-op;
 the fix restores the retail value, it does not mask anything. The value 62500000 is legitimate only as ROM initial data.
 Soak s7402_clock_levels queued (L5/L10/L15 dd8 21:9 FPS60, 200 s). Next: class BM boot-global contract (NEXT.md).
+VERDICT: this selects H-unwritten for osClockRate (fixed, sim-latent) and refutes H-sim-slow (sim dt +0x20 equal in both arms); closes class BL. Next discriminator: class BM boot-global words, one boot dump row vs IPL3/retail values.
