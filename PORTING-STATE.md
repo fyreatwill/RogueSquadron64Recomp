@@ -196325,3 +196325,48 @@ and read 0; (4) 13 f_odd and 12 s2181-logger sites were first reported unmatched
 live hazard (0 fires; only reachable via a NaN operand, and invalid ops never fire). Selects H-equal; closes class BY.
 Soak s7415_ioc_levels queued (s7406 build_fpat recipe on L5/L10/L15: 0 IDC / 0 IOC expected). Next: class BZ control-flow
 emission (NEXT.md s7416).
+
+## Session 7416 (2026-11-15) — class BZ control-flow emission closed (H-equal): 18,722 conditional branches + 14,494 jal + 5,245 j/b + 2,715 jr + 83 jalr, 0 unexplained defects; 177 jump tables match the ELF word for word; 634 condition forms vs a 64-bit MIPS model 0 mismatches; mutant and structural controls PASS; jr/jalr slot-before-read hazard is LATENT (only 2 sites, both in a dead data_gap)
+**Soak fold:** s7415_ioc_levels rc=0: L5/L10/L15 134-136 s flight alive, 0 crash, 0 VI stall, CONTROL PASS (8/8 plants)
++ VERDICT H-none (stmt_idc=0 ioc=0) x3 -> class BY holds at runtime on 3 levels.
+**Work unit:** class BZ, offline. New `tools/s7416_ctrl_flow.py` (rc 0, ~3 s, output scratch/agent/s7416_ctrl_flow.out).
+It tokenizes every function in ../N64Recomp/RecompiledFuncs, strips the pass-through prefixes (PC stamps, CHECK_FR), and checks:
+- S1, conditional branches (beq/bne/blez/bgtz/bltz/bgez + likely, bltzal/bgezal, bc1x): the emitted `if (COND) {` text is exactly
+  the expected one for that op and those registers (full 64-bit gpr, SIGNED() for the sign tests, `0` for $zero). The condition
+  comes before the slot, so MIPS order (evaluate first, then the slot) holds by construction, including when the slot writes the
+  branch's own source register. Also checked: goto target == disasm target, label defined in the function, the slot copy inside
+  the if is identical to the fall-through copy, and likely <=> `goto skip_N;` with the skip label after the fall-through copy.
+  18,674 ok. 48 non-ok, each one a deliberate fixup PATCH block or a data_gap.
+- S2 jal: 14,225 call the function whose first instruction is the target (ELF symtab for the `_recomp` libultra names), 251 are
+  `LOOKUP_FUNC(0xT)` overlay calls with the constant == target, and the slot always comes before the call. S3 j/b: 5,296 goto a
+  defined label or tail-call the function at T. 7 are `pause_self` idle self-loops; 74 emit `do_break(pc)` (preamble/invalid,
+  traps loudly if ever reached, never runs silently wrong). S4 jr $ra: 2,527 `slot; return;`.
+- S5 jump tables: all 177 `switch (jr_addend_A >> 2)` case lists equal the words of the ELF table named in switch_error, read
+  from the ELF segment whose word at A is the jr encoding (overlays share a vaddr). 0 mismatched, 0 undefined labels; jr_addend
+  is captured at the table-base addu from the index register (177/177).
+- S6: the 634 distinct condition texts (18 shapes) compiled verbatim against recomp.h and run on 16 64-bit edge values per
+  operand (INT32 edges with non-canonical upper words, INT64 min/max) vs a MIPS model: 111,154 cases, 0 MISM. Mutants: 32-bit
+  compare, sign-extend-32, signed<->unsigned and operator flip each flag 632-634/634 forms (the 2 unflagged are the `SIGNED(0)`
+  constant forms, which no operand mutation can change). CONTROL PASS.
+- S7 structural positive control: 11 synthetic emissions (good bne/bnel/blez, plus each defect: slot moved before the
+  condition, likely without skip, non-likely with skip, wrong target, diverging slot copy, 32-bit cond, unsigned blez, swapped
+  regs). 11/11 classified correctly. PASS.
+- Hazards: the jr/jalr emission runs the slot BEFORE `LOOKUP_FUNC(ctx->rS)`. MIPS reads rS before the slot, so a slot that
+  writes rS would jump to the wrong place: a LATENT generator defect. The detector found exactly 2 such sites (organic positive
+  control), both in data_gap_80024A0C (jr $v0 / negu $v0 and ori $v0). That function has 0 static callers and jals into
+  0x8400xxxx, so it is relocated code that never runs here (single-source on liveness). No jalr slot writes $ra and every jalr
+  is rd=$ra. Re-run the tool after any ROM, asm or generator change.
+- Non-H-equal residue (70): 54 FIXUP_PATCH (the s7081 selfbranch goto wrapper x18, call-timing wrappers s5908/s5880/s7025,
+  s285/s169/s1981/s301 guard blocks, s3288 viewer logger, s7102 pushlog, tracer inserts). All are deliberate, listed in the output,
+  and keep the guest test as their first conjunct or are pass-through. 16 DATA_GAP (0 callers). 0 UNEXPLAINED.
+**Dead ends (harness bugs, fixed before the verdict):** (1) jump tables read 534 false mismatches from the first PT_LOAD segment
+until segments were chosen by the jr encoding (overlays share a vaddr); (2) 251 jal "unresolved" were LOOKUP_FUNC overlay calls,
+and ~200 more were `_recomp` libultra names missing from RecompiledFuncs; (3) the opflip mutant mangled `->` into `->=` (now
+token-aware); (4) `SIGNED(0)` forms gave 10 false MISMs because the driver fed operands to a constant; (5) the patch classifier
+first matched the ubiquitous s2190 m5 store logger, which made it vacuous. Tightened to real PATCH markers, it exposed 2
+more (a tracer insert, an s6869 data cut), both deliberate.
+**Rules out:** H-slotorder for conditional branches (by construction, verified on every site), H-width (64-bit compares,
+signed sign-tests), H-likely (nullification structurally exact on all 1,733 likely sites), jump-table drift vs ROM.
+H-slotorder for jr/jalr is real in the generator but has 0 live sites. Selects H-equal; closes class BZ.
+Next: CURRENT-TRUTH is now 60.3 KB, so s7417 is a MAINTENANCE iteration (Step 0). After that, class CA: the opcode-coverage
+residue, i.e. every disasm op in RecompiledFuncs not scored by the BU-BZ tools (cop0, cache, sync, trap ops, anything else left).

@@ -1529,3 +1529,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7410 fold: s7409_fodd_levels rc=0: L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS + VERDICT H-consistent x3 (plant 379701/263437/291936 all flagged) -> class BS stands on 3 more levels.
 20261115-125002 | s7410_fsv_levels | rc=0 | 631s | scratch/agent/soak_results/s7410_fsv_levels_20261115-125002.log
 20261115 | s7411 fold: s7410_fsv_levels rc=0: L4/L7/L12 137 s flight alive, 0 crash, 0 VI stall, CONTROL PASS + VERDICT H-preserved x3 -> class BT stands on 3 more levels.
+20261115-134614 | s7415_ioc_levels | rc=0 | 651s | scratch/agent/soak_results/s7415_ioc_levels_20261115-134614.log
+20261115 | s7416 fold: s7415_ioc_levels rc=0: L5/L10/L15 134-136 s flight alive, 0 crash, 0 VI stall, CONTROL PASS 8/8 + VERDICT H-none (stmt_idc=0 ioc=0) x3 -> class BY holds at runtime on 3 levels.

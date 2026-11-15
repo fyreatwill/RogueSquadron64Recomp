@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7415 (2026-11-15).
+Compact operational handoff, as of Session 7416 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7369 text of this file (every audit class s7315-s7369 in full) is archived verbatim in
 PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7370 maintenance)"; the full s7306 text (every headline paragraph s7192-s7229 with
@@ -532,11 +532,14 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
     Contraction: 0 fused ops on generated statement lines (control: one-statement a*b+c fuses, MUL_S;+ does not); the 191
     fmadd-family are host patch helpers. 28 FPS60 patch sites (s6817/s6826) are identity at k=1. Mutants CONTROL PASS x10,
     neutral x2. Soak s7415_ioc_levels queued (IOC re-check L5/L10/L15).
-25. **Next audit candidate:** class BZ, control-flow emission: conditional branches (64-bit compares, likely nullification,
-    delay slot that writes the branch's own source register), jal/jr/jalr link + return. NEXT.md s7416.
+25. **BZ CLOSED s7416 (control flow + delay slots): H-equal.** `tools/s7416_ctrl_flow.py` (rc 0, 3 s): 18,722 cond branches
+    (COND text, 64-bit/SIGNED, cond-before-slot, target, slot copy, likely skip), 14,494 jal, 5,245 j/b, 2,527 jr $ra, 177 jump
+    tables == ELF words, 634 cond forms 0 MISM on 64-bit edges; mutants + 11 structural plants PASS; 70 residue = 54 fixup
+    PATCH + 16 dead data_gap. LATENT: jr/jalr emit the slot before reading rS (2 sites, dead data_gap_80024A0C). Re-run on change.
+26. **Next audit candidate:** class CA, opcode-coverage residue: every disasm op not scored by BU-BZ (cop0/cache/sync/trap...).
     Any new arena or pointer layout re-runs items
     11/14 with --controls; a census whose rows are cached across sessions must re-cut them on the measured tree (s7373 lesson).
-26. **When 1-25 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+27. **When 1-26 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
