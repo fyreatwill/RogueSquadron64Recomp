@@ -8239,6 +8239,76 @@ struct Rs64RetraceHold {
         }
     }
 };
+// s7392 class BB: guest message-queue drop census (ROGUESQ_S7392_MQ=1, default off). Every guest osSendMesg/osJamMesg result
+// keyed by (kind, mq, caller ra, flags) and every external (host event / non-game-thread) delivery keyed by (mq, source):
+// calls, failures (full-queue NOBLOCK returns / external drops), requeues, and the post-send high-water of validCount vs
+// msgCount. Summary table every 10 s wall to stderr as [s7392-mq] rows (SIGKILL-safe). ROGUESQ_S7392_CTL=1 plants a
+// capacity-1 queue below the guest $sp on the first game-thread send and fills it twice by each path: the census must count
+// exactly one guest failure (ra=C7C7C7C7) and one external drop on that queue. Report: tools/s7392_mq_report.py <log>.
+namespace s7392 {
+struct Ent { char kind; uint32_t mq; uint64_t key; int flags; uint64_t calls, fails, rq; int hiv, cnt; double t_first_fail; };
+static std::mutex mu; static Ent tab[512]; static int ntab = 0; static double t0 = 0, t_last = 0;
+static bool on() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7392_MQ"); return e && e[0] && e[0] != '0'; }(); return v; }
+static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static void dump_locked(double t) {
+    std::fprintf(stderr, "[s7392-mq-begin] t=%.1f n=%d\n", t - t0, ntab);
+    for (int i = 0; i < ntab; i++) {
+        const Ent& e = tab[i];
+        char sb[160];
+        if (e.kind == 'E') std::snprintf(sb, sizeof sb, "src%d", (int)(int64_t)e.key);
+        else if (e.key == 0xC7C7C7C7u) std::snprintf(sb, sizeof sb, "CONTROL");
+        else rs64_wt_sym((uintptr_t)e.key, sb, sizeof sb);
+        std::fprintf(stderr, "[s7392-mq] t=%.1f kind=%c mq=%08X key=%s flags=%d calls=%llu fails=%llu rq=%llu hiv=%d cnt=%d tff=%.1f\n",
+                     t - t0, e.kind, e.mq, sb, e.flags, (unsigned long long)e.calls, (unsigned long long)e.fails,
+                     (unsigned long long)e.rq, e.hiv, e.cnt, e.fails ? e.t_first_fail - t0 : -1.0);
+    }
+    std::fflush(stderr);
+}
+static void note(uint8_t* rdram, char kind, uint32_t mq, uint64_t key, int flags, bool fail, bool rq) {
+    int hiv = -1, cnt = -1;
+    if (mq >= 0x80000000u && mq < rs64_ram_top) {
+        const OSMesgQueue* q = TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq);
+        hiv = q->validCount; cnt = q->msgCount;
+    }
+    std::lock_guard<std::mutex> lk(mu);
+    const double t = now();
+    if (t0 == 0) { t0 = t; t_last = t; }
+    int i = 0;
+    for (; i < ntab; i++) if (tab[i].kind == kind && tab[i].mq == mq && tab[i].key == key && tab[i].flags == flags) break;
+    if (i == ntab) {
+        if (ntab == 512) return;
+        tab[ntab++] = Ent{kind, mq, key, flags, 0, 0, 0, -1, cnt, 0};
+    }
+    Ent& e = tab[i];
+    e.calls++; if (rq) e.rq++;
+    if (fail) { if (!e.fails) e.t_first_fail = t; e.fails++; }
+    if (hiv > e.hiv) e.hiv = hiv;
+    if (cnt >= 0) e.cnt = cnt;
+    if (t - t_last >= 10.0) { t_last = t; dump_locked(t); }
+}
+static void control(uint8_t* rdram, recomp_context* ctx) {
+    static const bool ctl = [] { const char* e = std::getenv("ROGUESQ_S7392_CTL"); return e && e[0] && e[0] != '0'; }();
+    static std::atomic<bool> done{false};
+    if (!ctl || done.exchange(true)) return;
+    const uint32_t q = ((uint32_t)ctx->r29 - 0x100u) & ~7u, buf = q + 0x40u;
+    osCreateMesgQueue(rdram, (int32_t)q, (int32_t)buf, 1);
+    const s32 r1 = osSendMesg(rdram, (int32_t)q, (OSMesg)1, OS_MESG_NOBLOCK);
+    note(rdram, 'S', q, 0xC7C7C7C7u, 0, r1 != 0, false);
+    const s32 r2 = osSendMesg(rdram, (int32_t)q, (OSMesg)2, OS_MESG_NOBLOCK);
+    note(rdram, 'S', q, 0xC7C7C7C7u, 0, r2 != 0, false);
+    // external path: two non-requeue externals into the (full) planted queue; the next game-thread osSendMesg drains them
+    ultramodern::enqueue_external_message((int32_t)q, (OSMesg)3, false, false);
+    const s32 r3 = osSendMesg(rdram, (int32_t)q, (OSMesg)4, OS_MESG_NOBLOCK); // drains externals first, then fails itself
+    std::fprintf(stderr, "[s7392-ctl] q=%08X r1=%d r2=%d r3=%d valid=%d\n", q, (int)r1, (int)r2, (int)r3,
+                 (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))q)->validCount);
+}
+} // namespace s7392
+extern "C" void rs64_s7392_send(uint8_t* rdram, uint32_t mq, uint64_t ra, int flags, int result, int jam) {
+    if (s7392::on()) s7392::note(rdram, jam ? 'J' : 'S', mq, ra, flags, result != 0, false);
+}
+extern "C" void rs64_s7392_ext(uint8_t* rdram, uint32_t mq, int src, int sent, int rq) {
+    if (s7392::on()) s7392::note(rdram, 'E', mq, (uint64_t)(int64_t)src, 0, !sent, rq != 0);
+}
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     Rs64RetraceHold::maybe(rdram, ctx);
     Rs64WaitScope s7191_ws(rdram, (uint32_t)ctx->r4, (uintptr_t)__builtin_return_address(0), (s32)ctx->r6, 'S');
@@ -8281,6 +8351,7 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     } else {
         ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
     }
+    if (s7392::on()) { rs64_s7392_send(rdram, (uint32_t)ctx->r4, (uint64_t)(uintptr_t)__builtin_return_address(0), (int)(s32)ctx->r6, (int)(s32)ctx->r2, 0); s7392::control(rdram, ctx); }
     if (s4580_q) s4580::rec(rdram, ctx, 'S', s4580_vcb, s4580::vc(rdram, (uint32_t)ctx->r4), (int)(s32)ctx->r6); /* PATCH: s4580 */
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");

@@ -1,0 +1,33 @@
+# s7392 class BB hand verdicts: site	function	class	verdict. Runtime = tools/s7392_mq_report.py on the s7386 keyed route, both arms.
+80001C6C	rs_malloc	REINIT-BY-DESIGN	REINIT-BY-DESIGN: rs_malloc -> ensureHeapInitialized -> buildHeapFreeList re-creates + re-seeds this mutex inside the held region, so the release finds the token present; final count 1. Runtime 10 fails / 28-34k in BOTH arms at heap rebuilds (load-time, not load-dependent)
+80001FE8	buildHeapFreeList	SEED	SEED: send right after osCreateMesgQueue(cap 1) on the same queue; cannot fail (runtime 0/20)
+800021BC	initMainHeap	SEED	SEED: after osCreateMesgQueue (runtime 0/1)
+80002468	coalesceFreeHeapBlocks	SEED	SEED: after osCreateMesgQueue (runtime 0/11)
+80002B78	startRumbleEffect	MUTEX-RELEASE	MUTEX-RELEASE: SI access token 80110750 (cap 1) after its recv; not on route
+80002C14	stopRumbleEffect	MUTEX-RELEASE	MUTEX-RELEASE: SI token (s0+0x750 = 80110750); not on route
+80002C3C	stopRumbleEffect	MUTEX-RELEASE	MUTEX-RELEASE: SI token 80110750; not on route
+80002F3C	siServiceThread	MUTEX-RELEASE	MUTEX-RELEASE: SI token 80110750 (runtime 0/11978)
+800030E8	pollControllerInputs	MUTEX-RELEASE	MUTEX-RELEASE: SI token 80110750 (runtime 0/10854)
+8000335C	initSiQueue	SEED	SEED: initSiQueue seeds the SI token (runtime 0/1)
+8000466C	initDmaSlots	SEED	SEED: initDmaSlots seeds 80110990 (runtime 0/1)
+80005674	piDmaWorker	REPLY	REPLY: per-request completion queue from the OSIoMesg (runtime 0/6694 on 80149730, 0/1 on 80165FE8)
+80006EA4	peekServiceMessage	PUTBACK	PUTBACK: jams back the message osRecvMesg NOBLOCK just removed from the same queue; room guaranteed; not on route
+8000C2A0	submitGfxFrame	HEADROOM	HEADROOM: sched command queue 8011A420 cap 8, hi-water 0-1/8 (runtime 0/12)
+80019B30	viRetraceHandlerThread	COALESCE	COALESCE: content-free frame-sync token into cap-1 80128D10 (runtime 0/11980)
+80019F1C	spTaskSchedulerThread	COALESCE	COALESCE: content-free token into cap-1 8011A818 (runtime 0/10848)
+80019F40	spTaskSchedulerThread	COALESCE-LOAD	COALESCE-LOAD: msg 0 into cap-1 8011A800 (musyxSynthFrame wake); 10 fails in BOTH arms at the same instants as the heap re-init (scene loads), not load-dependent
+80019F64	spTaskSchedulerThread	COALESCE-LOAD	COALESCE-LOAD: as 80019F40 (same host site row; one of the two)
+8001A1BC	initVideoSubsystem	SEED	SEED: initVideoSubsystem after osCreateMesgQueue (runtime 0/12)
+8001C3D4	dpInterruptHandlerThread	COALESCE	COALESCE: DP-done token into cap-1 8011A7E8 (runtime 0/10847)
+800324E4	osPiStartDma	DEAD-HOST	DEAD-HOST: libultra osPiStartDma replaced by ultramodern; 0 calls on route
+80032508	osPiStartDma	DEAD-HOST	DEAD-HOST: libultra osPiStartDma replaced; 0 calls
+80032A44	__osDevMgrMain	DEAD-HOST	DEAD-HOST: libultra __osDevMgrMain replaced; 0 calls
+80032A84	__osDevMgrMain	DEAD-HOST	DEAD-HOST: __osDevMgrMain; 0 calls
+80032BF8	__osDevMgrMain	DEAD-HOST	DEAD-HOST: __osDevMgrMain; 0 calls
+80032C40	__osDevMgrMain	DEAD-HOST	DEAD-HOST: __osDevMgrMain; 0 calls
+80032C54	__osDevMgrMain	DEAD-HOST	DEAD-HOST: __osDevMgrMain; 0 calls
+80034988	__osTimerInterrupt	DEAD-HOST	DEAD-HOST: libultra __osTimerInterrupt replaced (host timer thread -> external Timer source); 0 calls
+80035000	viMgrMain	DEAD-HOST	DEAD-HOST: libultra viMgrMain replaced (host VI -> external Vi source); 0 calls
+8009B218	allocAndConfigureNewVoice	MUTEX-RELEASE	MUTEX-RELEASE: MusyX voice mutex 80154650 (runtime 0/7)
+8009B56C	setVoiceMixByKey	MUTEX-RELEASE	MUTEX-RELEASE: voice mutex (runtime 0/61)
+8009BC24	initMusyXVoiceTable	MUTEX-RELEASE/SEED	MUTEX-RELEASE/SEED: voice mutex (runtime 0/9)

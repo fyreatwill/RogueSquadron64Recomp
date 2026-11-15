@@ -1,17 +1,23 @@
-# NEXT (s7392)
-HYPOTHESIS-ID: guest-msgqueue-drop-census
+# NEXT (s7393)
+HYPOTHESIS-ID: guest-mq-recreate-census
 
-s7391 closed fb-cpu-reader-census and class BA (guest thread stack headroom: H-fits, two lines agree; build_spwm).
+s7392 closed class BB (guest message-queue drops: 59 sites classed, 5 runtime drop families all benign, AI drops = port
+timing with no added underrun). Its one residual opens class BC.
 
 Work unit:
-1. Fold s7391_spwm_levels from SOAK-RESULTS (reports scratch/s7391q/report_l{4,7,12}.txt). Pass = alive, report rc 0,
-   LINEB control=PASS. On rc 3: the THREAD/SCAN line names the thread and its deepest frame (file:line) -> read that call
-   chain (H-overflow if headroom < 0 or lowdirty below spmin: name the writer before any change).
-2. New idiom class BB, guest message-queue drops. Hypotheses: H-none (every OS_MESG_NOBLOCK send either checks the -1
-   return or targets a queue that never fills), H-drop (a send whose -1 is ignored drops a message in play: a lost
-   VI/RSP/DP/service event -> stall or skipped work), H-port-timing (queues fill only because host threads run at a
-   different cadence than retail). Discriminator, ONE build: static census of every osSendMesg / osJamMesg call site in
-   /tmp disasm of ../rogue_squadron64/build/roguesquadron.elf (flags arg a2 = 0 NOBLOCK; is v0 tested after the call?),
-   plus a runtime counter in lib/N64ModernRuntime/ultramodern (mesgqueue send path) of full-queue returns keyed by queue
-   address and caller ra, positive control = a planted full queue (env) that must count. Remember export.sh + commit for any
-   lib/ edit. Route: tools/s7391_spwm_run.zsh-style keyed route (copy it, swap the build dir).
+1. Fold s7392_mq_levels from SOAK-RESULTS (reports scratch/s7392q/report_l{5,10,15}.txt). Pass = alive, report rc 0 with
+   --known (CONTROL PASS, no DROP row outside the 5 families). A new DROP row: read its census verdict
+   (tools/s7392_mesg_reviewed.tsv) and name the writer before any change.
+2. New idiom class BC, osCreateMesgQueue on a LIVE queue. s7392 found rs_malloc -> ensureHeapInitialized ->
+   buildHeapFreeList re-creating the heap mutex 8010FEE0 while it is held; osCreateMesgQueue sets blocked_on_recv /
+   blocked_on_send = NULL and validCount = 0, so any thread blocked on that queue at that instant is orphaned (never
+   woken) and pending messages vanish. Hypotheses: H-none (every re-create happens with no waiter and no pending message),
+   H-orphan (a re-create drops a blocked waiter or a pending message in play -> stall), H-port-timing (only because host
+   cadence lets a waiter park there). Discriminator, ONE build: (a) static census of every osCreateMesgQueue call site
+   in /tmp/s7392.dis (mips64-elf-objdump -d --no-show-raw-insn ../rogue_squadron64/build/roguesquadron.elf), reusing
+   tools/s7392_mesg_census.py's resolver: queue address, caller, and whether the caller can run more than once (init-once vs
+   re-init path); (b) runtime counter at osCreateMesgQueue (lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp, weak hook
+   like rs64_s7392_ext, src/main implementation env-gated) keyed by (mq, host return address): create count, and per
+   create the pre-state validCount, blocked_on_recv != 0, blocked_on_send != 0; positive control = a planted queue with
+   validCount 1 and a fake non-null blocked_on_recv re-created once (must count 1 orphan + 1 lost message). Route
+   tools/s7392_mq_run.zsh (owner + RETAIL=1 arms, same binary). Any lib/ edit: ./submodule-patches/export.sh + commit.

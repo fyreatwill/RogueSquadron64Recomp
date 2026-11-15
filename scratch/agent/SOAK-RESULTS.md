@@ -1502,3 +1502,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7390 fold: s7389_fbld_levels rc=0 CONTROL PASS (ctl 8.7e8/6.1e7/1.07e9): L5/L10/L15 dd8 21:9 FPS60 203-205 s alive, 0 crash, 0 VI stall; 0 live colour LOAD; live Z LOADs = DUMMYZ ~2.87e5 (phys <0x100000) + BOOTDL 546 (0xC00000-0xC05FFF) + HEAP 4 (rs_free / coalesceFreeHeapBlocks header reads on 0xB80000/0xBA2000, n=1-2 each) -> H-no-reader on 3 more levels (MEM_* path only; LD + lwl/lwr wrapped s7390, soak s7390_fbld_wide_levels queued).
 20261115-035806 | s7390_fbld_wide_levels | rc=0 | 876s | scratch/agent/soak_results/s7390_fbld_wide_levels_20261115-035806.log
 20261115 | s7391 fold: s7390_fbld_wide_levels rc=0 CONTROL PASS (ctl LD 7.1e6/2.4e7/7.9e6 on L5/L10/L15): 203-205 s alive, 0 crash, 0 VI stall, VERDICT no-reader x3, live Z = HEAP 4 only -> fb-cpu-reader-census CLOSED.
+20261115-043233 | s7391_spwm_levels | rc=0 | 855s | scratch/agent/soak_results/s7391_spwm_levels_20261115-043233.log
+20261115 | s7392 fold: s7391_spwm_levels rc=0 LINEB control=PASS x3: L4/L7/L12 dd8 21:9 202-204 s alive, 0 crash, 0 VI stall, VERDICT headroom-ok x3 -> class BA stands on 6 levels.

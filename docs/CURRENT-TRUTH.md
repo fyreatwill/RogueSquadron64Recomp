@@ -219,6 +219,13 @@ numbering 1-28 with sub-items 27b-27zi is in the s7370 archive).
    load (HEAP/DUMMYZ/BOOTDL/UNCLASSED, rc 3 on a reader candidate): route rerun 0 live colour loads on any path; s7391 fold of
    s7390_fbld_wide_levels: L5/L10/L15 no-reader x3, LD control fires -> **fb-cpu-reader-census CLOSED s7391**. Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those). One CPU store to a
    live fb: rs_memset 0xA6F000 at boot vi 55 (dropped at r2r=0; boot sheet identical). Detail PORTING-STATE s7385-s7389.
+   **BB CLOSED s7392, no harmful message-queue drop** (`tools/s7392_mesg_census.py --check` rc 0: 59 osSendMesg/osJamMesg
+   sites, 32 drop-capable rows hand-classed in tools/s7392_mesg_reviewed.tsv; runtime ROGUESQ_S7392_MQ=1 + _CTL=1 planted full
+   queue, `tools/s7392_mq_report.py <log> --known`, route tools/s7392_mq_run.zsh, RETAIL=1 arm). 5 drop families, all benign:
+   heap-mutex re-init inside rs_malloc (10/run), 8011A800 sched token (10/run), VI tick (22-25), CF0 dup-ack (s7367), and AI
+   events 538-549 per owner-recipe run vs 23 retail (port timing, flight) with no added host underrun ([ai-underrun]).
+   Follow-up class BC: osCreateMesgQueue on a live queue (the heap re-init clears blocked_on_recv). Soak s7392_mq_levels queued.
+   **BA CLOSED s7391** (guest stack headroom, build_spwm): 6 levels headroom-ok, line-B control PASS.
    **AZ CLOSED s7384, 0 default-path races** (`tools/s7384_static_state_census.py --check` rc 0, `--why <key>` call paths;
    verdicts tools/s7384_static_reviewed.tsv): 1769 non-atomic statics by call-graph thread reachability (14 roots, guest
    threads = one root); CONFINED 1058 / INIT-ONCE 186 / LOCKED 54 auto, UNROOTED 400 listed; 71 MULTI all hand verdicts

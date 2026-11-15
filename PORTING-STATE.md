@@ -195418,3 +195418,59 @@ scratch/agent/soak_queue/s7391_spwm_levels.sh (L4/L7/L12 forced route, CTL armed
 ORIGIN: no mitigation; diagnostic build only, default build unchanged.
 Conclusion: selects H-fits and refutes H-overflow and H-port-deep for every guest thread on the s7386 route (two independent
 lines agree within one frame). Next discriminator: s7391_spwm_levels; rc 3 on any level names the thread and frame.
+
+## Session 7392 (2026-11-15) — class BB guest message-queue drop census closed: 59 send/jam sites classified, 5 runtime drop families all benign; AI event drops are port timing (owner recipe 538-549 vs retail 23) but add no host audio underrun
+
+**Fold s7391_spwm_levels (rc 0):** L4/L7/L12 dd8 21:9 FPS60 202-204 s alive, 0 crash, 0 VI stall; report rc 0 x3,
+LINEB control=PASS x3, VERDICT headroom-ok x3 (hudDisplayUpdateWorker 1888 B headroom, deepest sendServiceMessage).
+Class BA stands on 6 levels.
+
+**Class BB (HYPOTHESIS-ID guest-msgqueue-drop-census).** Hypotheses: H-none (every NOBLOCK send checks -1 or targets a
+queue that never fills), H-drop (an ignored -1 loses a message in play), H-port-timing (queues fill only because host
+threads run at another cadence than retail).
+
+Line 1, static: `tools/s7392_mesg_census.py` (disasm of ../rogue_squadron64/build/roguesquadron.elf in /tmp/s7392.dis;
+decodes the branch-likely words objdump leaves as `.word`, which first misread sendServiceMessageAwaitReply's bnel retry
+as IGNORED). 59 sites (56 send, 3 jam): 44 NOBLOCK, 9 BLOCK, 6 unresolved flags; 32 rows can drop silently and all have
+hand verdicts in `tools/s7392_mesg_reviewed.tsv` (`--check` rc 0): SEED 8 (send right after osCreateMesgQueue),
+MUTEX-RELEASE 9 (SI token 80110750, MusyX voice mutex 80154650), COALESCE 4 + COALESCE-LOAD 2 (content-free tokens into
+capacity-1 queues), REINIT-BY-DESIGN 1, REPLY 1, PUTBACK 1, HEADROOM 1, DEAD-HOST 9 (libultra __osDevMgrMain /
+osPiStartDma / __osTimerInterrupt / viMgrMain, replaced by ultramodern, 0 calls).
+
+Line 2, runtime: `ROGUESQ_S7392_MQ=1` (src/main/upstream_compat.cpp `s7392::`, weak hooks rs64_s7392_send in librecomp
+osJamMesg_recomp and rs64_s7392_ext at the 3 external-delivery sites in ultramodern mesgqueue.cpp; lib patches
+exported). Every guest send/jam result keyed by (mq, host return address -> recompiled symbol, flags), every external
+delivery by (mq, source), with drops, requeues and post-send high-water, table every 10 s. Guest ctx->r31 is 0 at these
+calls in recompiled code, so the host return address is the only caller key (old [m5-os-send-return] caller_ra rows read it
+too). Positive control `ROGUESQ_S7392_CTL=1`: a capacity-1 queue planted below the guest $sp, filled twice by each path:
+guest 2 calls / 1 fail and external 1 drop, CONTROL PASS in all 3 runs. Route tools/s7392_mq_run.zsh (s7386 keyed route,
+200 s), arms owner recipe (dd8 21:9 FPS60) x2 and RETAIL=1 (dd1 4:3) x1, same binary, run one at a time:
+
+| drop family | owner run 1 | owner run 2 | retail | class |
+|---|---|---|---|---|
+| ext Vi -> 80114388 (cap 1) | 22 / 12002 | 25 | 25 | COALESCE: retrace tick; boot + loads only; retail viMgr also sends NOBLOCK |
+| ext Ai -> 80149670 (cap 4, hi 4/4) | 549 / 23776 | 538 | 23 | port timing: 520+ fall in t=120-170 s (flight), see below |
+| rs_malloc -> heap mutex 8010FEE0 | 10 / 34364 | 10 | 10 | REINIT-BY-DESIGN |
+| spTaskSchedulerThread -> 8011A800 (cap 1, msg 0) | 10 / 10607 | 10 | 10 | COALESCE-LOAD |
+| viRetrace -> CF0 BLOCK | 0 | 0 | 3 | the s7367 duplicate-ack drop, deliberate |
+
+Every other queue: 0 fails (factor5 mutex 158k sends, PI reply queues, service queues hi-water 32/66, sched cmd 0-1/8).
+
+ORIGIN of each family (named writer, legitimate?): (1) heap: rs_malloc 80001B04 recv -> ensureHeapInitialized 80001890 ->
+buildHeapFreeList 800019AC does osCreateMesgQueue(8010FEE0) + seed send while rs_malloc still holds the old token, so
+rs_malloc's release at 80001C6C finds the queue full; the end count is 1 = correct, retail code, deterministic (10 in every
+arm, at heap rebuilds). Residual (not measured): the re-create also clears blocked_on_recv, so a thread blocked in
+rs_malloc/rs_free at that moment would be orphaned -> class BC. (2) 8011A800: the sched thread's done-token for
+musyxSynthFrame; same 10 instants as (1) in every arm (scene loads), a coalesced wake. (3) VI: the host VI thread's tick,
+capacity 1, coalesced. (4) AI: the host AI-buffer event into runAiAudioStreamPlaybackLoop's 4-deep queue; the guest audio
+thread falls 4 events behind in flight under the owner recipe only (24x the retail count) -> H-port-timing selected for
+the drop itself. Harm check (owner run 2, ROGUESQ_LOG_AI_UNDERRUN=1, same run): in the drop window (phase 9, wall
+128-160 s) the host SDL queue never added an underrun beyond 1 (zero counter 1 -> 2 over 4096 buffers), avg depth
+1890 B vs 1500 in the phase before, producer 22.4k samples/s = rate. The instrument fires on real underruns (zero=2 at
+boot phase 2, 1 at phase 7), natural control, no planted one. So the dropped AI events cost no audio: single-source for
+"inaudible" (no owner listen). No mitigation landed; nothing to fix.
+
+Verdict: **class BB CLOSED, H-none for harmful drops on the route** (two lines: static verdict table + runtime census
+with planted control, 3 runs); H-drop refuted for every exercised site; H-port-timing selected only for AI events and
+shown harmless. Not covered: sites off the route (rumble, peekServiceMessage put-back, 6 unexercised). Soak
+s7392_mq_levels (L5/L10/L15, `--known` filter: a DROP outside the 5 families fails) queued.
