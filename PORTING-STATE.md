@@ -197502,3 +197502,7 @@ Second line (no false positives): 7 clean flight logs (s7447 L4/L7/L12 full volu
 exit in L1 flight must give alive_at_end=0 crashlines>=1 exitrc=1; L4 clean control crashlines=0 exitrc=held).
 ORIGIN: not a mitigation; the writer of the false zeros is our own scorer regex, which predates the non-signal exit paths.
 Next: class DH harness-death-exit-status (classify all 21 exit/_Exit/quick_exit/abort sites; silent ones get a line).
+Verdict restated: the quick-arm per-scorer count (0 in all 5 old scorers, 1 in the shared list) against the same-build
+PLANT_FAIL control (>=37 everywhere) selects H-few and refutes H-none; the switch arm refutes "switch_error is missed"
+(caught via SIGABRT). Next discriminator (class DH): the (b)+(c) count of the 21 exit/_Exit/quick_exit/abort sites
+classified against tools/agent/fatal_patterns.txt.
