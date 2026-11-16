@@ -198016,3 +198016,25 @@ groups) in the C++ runtime/RT64/RSP code on abort/re-entry teardown and rebuild.
 not instrumented; guest RAM is one host map), L15 dd8 flight (queued), levels other than L4/L7/L12/L15/L16.
 Verdict line: this run selects H-route-clean and refutes H-route-hit and H-route-unreached. Next discriminator is class EA: an
 ASan level sweep over the remaining forced levels at the owner recipe (queued as soaks), see NEXT.md.
+
+## Session 7470 (2026-11-16) — class EA opened: ASan+UBSan per-level sweep; recipe a (L0/L1/L2) clean with both plants PASS, L15 dd8 flight now covered, recipes b-e queued via new generator
+
+**Fold.** s7469_asan_w15_hold300 rc=0: L15 dd8 21:9 at HOLD=300 reached flight (initMission=1, after 0 at HOLD=150 twice), alive,
+vi_stalls30s=0, control PASS, ucode_control PASS, 0 NEW groups. L15 dd8 21:9 flight is now ASan-covered; the HOLD=150 misses were
+time-to-flight under ASan, not a route defect.
+
+**Unit (class EA).** ASan flight coverage so far: L4, L7, L12, L15, L16. Sweep the other 14 forced levels at the owner recipe on
+build_asan (UCODE=1). Hypotheses: H-lv-clean (0 NEW groups in every arm that reaches flight) / H-lv-hit (a NEW group, named by
+stack) / H-lv-unreached (arm initMission=0).
+- tools/s7470_gen_asan_lv.zsh (new): writes one self-contained recipe `<name> <hold> lv:dd ...` (dd4 -> 16:9, dd8 -> 21:9,
+  first arm carries ROGUESQ_S7467_ASAN_PLANT=1 + ROGUESQ_S7468_UCODE_PLANT=1, scored by tools/s7467_san_report.py --plant/--uplant
+  --known, SOAK_NEEDS_IDLE=180, SOAK_TIMEOUT max(900,(hold+100)*arms)); rejects malformed arms (exit 2, checked).
+- Recipe a (L0 dd4 16:9 + plants, L1 dd8 21:9, L2 dd4 16:9, HOLD=220) run in-session (HID idle 8 h, load ~2.7), scratch/s7470a:
+  all 3 arms initMission=1, alive_at_end=1, crashlines=0, vi_stalls30s=0, max_gap_ms <=148; reports 16/12/12 = 4 plant + 12 in the
+  12 known FP groups each; new_groups=0; control=PASS (plant_asan=1 plant_ubsan=1), ucode_control=PASS.
+- Queued s7470_asan_lv_b (L3 dd8, L5 dd4, L6 dd8), _c (L8 dd4, L9 dd8, L10 dd4), _d (L11 dd8, L13 dd4, L14 dd8), _e (L17 dd4,
+  L18 dd8), HOLD=220, plants on each first arm.
+**Verdict:** for L0/L1/L2 this run selects H-lv-clean and refutes H-lv-hit and H-lv-unreached (both controls live in the same
+run; all arms flew). Two lines: runtime plant control in the same boot + per-arm initMission/route markers. Rules out host
+ASan/UBSan defects outside the 12 reviewed FP groups in flight on L0-L2 at dd4 16:9 / dd8 21:9 (guest code is not instrumented).
+EA stays open on L3,5,6,8-11,13,14,17,18 (queued).
