@@ -198371,3 +198371,6 @@ refuted. H-recarve (s7480) and the new H-retarget-unreserved selected. Code: src
 log, main.cpp g_rs64_s7481_task_out, recipe prints frame_span_S=. Rules out: a guest free-then-write bug on these levels.
 Next: reserve the retarget span in the heap (or reject when base falls inside a free block's extent), plus a collision detector
 (rs_malloc return overlapping [base, ec) while the retarget is active).
+Verdict wording: selects H-retarget-unreserved and H-recarve, refutes H-uaf (a guest use-after-free store) on all 6 flown levels.
+Next discriminator: the s7482 pool-collide detector (rs_malloc return overlapping [e8, ec) in the wide phase) with
+ROGUESQ_RETARGET_RESERVE=0 vs 1 in one build. Collisions > 0 select H-collide; 0 with RESERVE=1 loc_S=0 selects H-reserve-safe.
