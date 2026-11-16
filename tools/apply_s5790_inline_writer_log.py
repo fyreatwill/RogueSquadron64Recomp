@@ -19,7 +19,7 @@ def apply(text, funcs):
         if i < 0: continue
         j = text.find("    int c1cs = 0;\n", i); assert 0 < j - i < 300
         k = j + len("    int c1cs = 0;\n")
-        if TAG in text[k:k + 40 + len(block(f))]: continue
+        if TAG in text[k:text.find("RECOMP_FUNC ", k) if "RECOMP_FUNC " in text[k:] else len(text)]: continue  # s7421: whole body, not a window
         text = text[:k] + block(f) + text[k:]; n += 1
     return text, n
 if __name__ == "__main__":

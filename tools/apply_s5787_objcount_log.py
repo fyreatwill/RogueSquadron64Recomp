@@ -20,7 +20,8 @@ def apply(text):
         if i < 0: continue
         j = text.find("    int c1cs = 0;\n", i); assert 0 < j - i < 300
         k = j + len("    int c1cs = 0;\n")
-        if TAG in text[k:k + 40 + len(block(f))]: continue
+        e = text.find("RECOMP_FUNC ", k); e = len(text) if e < 0 else e
+        if TAG in text[k:e]: continue  # s7421: whole body, not a window (another block at the same anchor pushed the tag out -> applied twice)
         text = text[:k] + block(f) + text[k:]; n += 1
     return text, n
 if __name__ == "__main__":

@@ -196513,3 +196513,36 @@ Rules out: a weak-header mis-split moving a fixup edit, or an audit verdict row,
 Next: class CD, regen-verify drift triage (114 differing objects vs 82 at s6881).
 Conclusion: selects H-clean, refutes H-split (0 editor targets mis-split after weaken; controls PASS; dynamic 0 differ).
 Next discriminator: class CD LOST-edit classifier over the 114 regen-verify diffs (H-mirrored vs H-lost), planted-edit control.
+
+## Session 7421 (2026-11-15) — class CD regen-verify drift triaged (H-mirrored): 0 LOST among the 47 new differing + 3 new one-sided functions; 4 HUDBIT apply scripts double-applied in a regen (windowed idempotence check) fixed, compare 2664/114 -> 2671/107
+
+HYPOTHESIS-ID: regen-verify-drift.
+What ran: fresh regen of the s7420 pristine front (cp /tmp/s7420/front /tmp/s7421/R; tools/regen_replay.sh; tools/regen_verify.sh):
+2664 same / 114 differ / 18 live-only / 3 regen-only, identical to s7420 (reproducible). New tools/s7421_regen_drift.py: splits
+live and regen funcs_*.c per function (brace/string/comment-aware, weak-aware headers; 2504/2504 RECOMP_FUNCs found, incl. one-line
+wrappers), normalises to statements and classifies each differing/one-sided function: CODEGEN (text equal, names the file context
+that changes it), ENVDIAG / REORDER-DIAG (only statements with no guest write, no non-diag control condition), GUEST (N64Recomp
+sizing), LOST, REORDER. Reviewed baseline rows in new tools/s7421_regen_accept.tsv.
+Control (--control): planted `ctx->r2 = ctx->r2 ^ 0x7421u` in a copy of npcVortexUpdate -> LOST; planted getenv/fprintf -> ENVDIAG. PASS.
+Result vs the s6871/s6881 name set: 47 new differing, 15 no longer differing (s6657-s6685 objective chain etc. now replay), +1
+live-only (s6593_hudptr_note), +2 regen-only (s6992_note, s6992b_note). New rows: 45 funcs_13 CODEGEN + the 2 static notes, all from
+rs64_s5798_st (g_rs64_store_diag handler: same watch branches, different order, inlined into every RS64_S5798_ST caller and
+changing which static notes inline); rs64_s5798_st REORDER-DIAG; buildMenuImageTileWipeMesh + updatePilotSlotLogoModels ENVDIAG
+(6 stale live rs64_tctr hooks, ROGUESQ_TICK_TRACE, no value change: g3_float_quanta_audit no longer selects them, r[6] False in both
+trees, and fixup_fps60_float_trace never removes hooks). **0 LOST, 0 OPEN -> H-mirrored.** Baseline residue (accept file): s6499 +
+s6512-s6519 funcs_9 chain, s6314/s6328 EDGE_FADE block order, s5854 census vs HUDBIT order, HUDBIT block order in
+datItemSetObjectiveBooleanCount; all getenv-gated, all on the docs/REGEN-VERIFY.md "What a regen loses" list or diag-only.
+Second line (independent, PATCH-tag census live vs regen): live-only tags = s5904 + s6496..s6526 (documented opt-in list), regen-only
+none; count deltas s2190/s6336/s7318/s7320 only inside the 11 func_sizes data_gap functions; s6826 = the 6 stale tctr hooks. But regen
+carried MORE tags than live for s5787/s5790/s5791/s5809 (objective HUDBIT logs: getObjectiveCount etc. had the block twice) and s5856/s6497.
+ORIGIN (double apply): apply_s5787/s5790/s5791/s5809 are called inline in fixup_game_funcs_vendored AND from its RS64_REPLAY list; their
+"already applied" test searched for the tag only in text[k:k+40+len(block)] after the anchor, so once another block landed at the same
+anchor the second call missed the tag and inserted again. Live never showed it (applied once, by hand). Diagnostic-only (ROGUESQ_LOG_HUDBIT).
+Change: whole-function-body tag check in those 4 scripts. New tools/s7421_idem_test.py: apply to pristine, interpose a 3.6 KB foreign
+block at the script's anchor, re-apply: fixed scripts add 0; the HEAD (20ff19bbc) copies add 3/2/1/2 (control) -> IDEMPOTENCE PASS.
+After: second fresh replay (/tmp/s7421/R2) 2671 same / 107 differ / 18 / 3; s5787 3/3, s5790 2/2, s5791 1/1, s5809 2/2 live/regen;
+s7421_regen_drift --control rc 0 H-mirrored. No live-tree or build change (fixups only affect the next regen); no game run needed.
+Rules out: a live hand edit with no fixup hiding in the s6881->s7420 drift (would die at the next regen).
+Not covered: 13 more apply/fixup scripts use a windowed idempotence check (class CE); s5856/s6497 regen>live tags unexplained.
+Next: class CE, windowed idempotence census over all apply/fixup scripts.
+Conclusion: selects H-mirrored, refutes H-lost (0 LOST over 50 new rows, control PASS, tag census agrees); closes class CD.

@@ -1,13 +1,18 @@
-# NEXT (s7421)
-HYPOTHESIS-ID: regen-verify-drift
+# NEXT (s7422)
+HYPOTHESIS-ID: apply-idempotence-window
 
-Class CD (CURRENT-TRUTH Next steps item 1). s7420 got tools/regen_verify.sh to complete; compare is 2664 same / 114 differ /
-18 live-only / 3 regen-only vs the s6881 baseline 2684/82/17/1 (scratch/s7420/regen_compare.json; baseline in
-docs/REGEN-VERIFY.md / scratch/s6864/cmp2.json).
-1. Diff the differing-name set against the baseline: list the NEW differing/one-sided functions (~32+).
-2. For each, diff the live vs regen C of that function (both trees are left by regen_verify; see the script header) and
-   classify: EXPECTED-ENVDIAG (env-gated diag/obs chain not in RS64_REPLAY), EXPECTED-SIZE (func_sizes.txt / data_gap),
-   EXPECTED-CODEGEN (same statements, different layout), or LOST (a live hand edit absent from every fixup/apply script).
-3. Each LOST: move it into a fixup (regen order), re-run regen_verify, show it now matches.
-Hypotheses: H-mirrored (0 LOST) vs H-lost (>=1). Control: plant a one-line hand edit in a live funcs copy of one function and
-show the classifier calls it LOST.
+Class CE (CURRENT-TRUTH Next steps item 1): windowed idempotence checks in apply/fixup scripts. s7421 found 4 scripts
+(s5787/s5790/s5791/s5809) whose "already applied?" test looked for the tag only in a fixed window after the anchor, so a second
+call (inline fixer + RS64_REPLAY) after another block landed at the same anchor applied them twice in a regen. Fixed + tested
+(tools/s7421_idem_test.py). Enumerate the whole idiom class:
+1. `grep -lE "in (text|t|s|src)\[[a-z]+ *: *[a-z]+ *\+ *[0-9]+" tools/apply_*.py tools/fixup_*.py` (13 at s7421) plus any
+   `find(TAG, k, k + N)` / `TAG in x[a:b]` variants. Classify each: SAFE (called once in the chain, or window covers every
+   possible interposer), DOUBLE (called twice: inline fixer + RS64_REPLAY list in fixup_game_funcs_vendored.py), AT-RISK.
+2. Extend tools/s7421_idem_test.py to every DOUBLE/AT-RISK script; fix to a whole-body check.
+3. Remaining regen>live tag counts after the s7421 fix: s5856 (apply_s5835_sphere_probe.py, checkTrackedNpcProximityForCue) and
+   s6497 (apply_s6496_bin_inputs.py, binPolygonIntoTerrainGrid). Explain each.
+4. Second line: full regen replay (cp -R /tmp/s7420/front X; tools/regen_replay.sh X; tools/regen_verify.sh X out) then
+   tools/s7421_regen_drift.py ... --control rc 0 and the PATCH-tag census (s7421 PORTING-STATE entry): no regen>live tag left.
+   If /tmp/s7420/front is gone, regenerate with tools/regen_front.sh.
+Hypotheses: H-once (every remaining windowed script is applied once: 0 DOUBLE) vs H-double (>=1 doubles in a regen).
+Control: the HEAD copy of a fixed script must double under the interposed-block test.

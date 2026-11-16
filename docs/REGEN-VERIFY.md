@@ -89,3 +89,34 @@ s6095 `rs64_s6093_cnt(3)` (no script exists for it; a counter). None run by defa
 
 Regen binary (regen objects, every other object from live) vs live, lvl1 forced route, one run each, sequential: mission at
 85 s / 84 s, 130 s hold verified, 0 stalls, 0 crash lines, 5927 / 5917 distinct framebuffer hashes. dd1 at 4:3 only.
+
+## s7421: class CD, drift since s6881 triaged (H-mirrored)
+
+Fresh replay of the s7420 pristine front (`/tmp/s7420/front` -> `tools/regen_replay.sh` -> `tools/regen_verify.sh`) reproduces
+s7420 exactly: 2664 same / 114 differ / 18 live-only / 3 regen-only (`scratch/s7421/regen_compare.json`). New classifier
+`tools/s7421_regen_drift.py <live> <regen> <compare.json> --baseline scratch/s6871/v/compare.json --control` splits both trees
+per function (comments dropped, statements normalised) and classifies every differing / one-sided function: CODEGEN (text equal;
+the cause is the file context it names), ENVDIAG / REORDER-DIAG (only diagnostic or opt-in statements differ: no guest write, no
+control flow on a non-diag condition), GUEST (N64Recomp sizing: data_gap_/static_/rspboot), LOST (live-only non-diag statement),
+REORDER (same statements, non-diag order change). Reviewed env-gated LOST/REORDER rows live in `tools/s7421_regen_accept.tsv`.
+Control (`--control`): a planted `ctx->r2 ^= ...` in a copy of an equal function -> LOST, a planted getenv/fprintf line -> ENVDIAG.
+
+Against s6871's name set: 47 new differing, 15 no longer differing (the s6657-s6685 objective chain plus
+`buildVisibleTerrainGridAroundCamera`, `intersectSegmentWithObjectSphere`, `unpackGridVertexBytes` now replay), 1 new live-only
+(`s6593_hudptr_note`), 2 new regen-only (`s6992_note`, `s6992b_note`). New rows: 45 funcs_13 CODEGEN + 2 static notes, all caused
+by `rs64_s5798_st` (the g_rs64_store_diag handler: watch branches in a different order, inlined into every RS64_S5798_ST caller,
+which also changes which static notes get inlined); `rs64_s5798_st` itself REORDER-DIAG; 2 funcs_32 ENVDIAG
+(`buildMenuImageTileWipeMesh`, `updatePilotSlotLogoModels`: 6 stale live `rs64_tctr` ROGUESQ_TICK_TRACE hooks; the current
+g3_float_quanta_audit selection no longer picks them and the idempotent fixup never removes old hooks). **0 LOST, 0 OPEN.**
+Baseline residue (also in the accept file): s6499/s6512-s6519 funcs_9 chain, s6314/s6328 EDGE_FADE block order, s5854 census vs
+HUDBIT log order, HUDBIT blocks order in datItemSetObjectiveBooleanCount.
+
+Second line (PATCH-tag census, live vs regen, funcs_50 excluded): live-only tags exactly s5904 + s6496-s6526 (the documented
+opt-in list); tag-count deltas s2190/s6336/s7318/s7320 sit only in the 11 data_gap functions func_sizes.txt sizes as data; s6826
+is the 6 stale tctr hooks; regen had MORE tags for s5787/s5790/s5791/s5809 (objective HUDBIT logs applied twice) and s5856/s6497.
+Cause of the double apply: those four scripts are called inline in the fixer and again from RS64_REPLAY, and their idempotence
+check looked for the tag only in a window of 40 + len(block) after the anchor, so any other block inserted at the same anchor hid
+it. Fixed (whole-body check); `tools/s7421_idem_test.py` re-applies each after a 3.6 KB interposed block: fixed 0 added, HEAD copies
+3/2/1/2 added (control). 13 more apply/fixup scripts use a windowed check (class CE).
+After the fix, second fresh replay: 2671 same / 107 differ / 18 live-only / 3 regen-only (`scratch/s7421/regen_compare_after.json`);
+s5787 3/3, s5790 2/2, s5791 1/1, s5809 2/2 tags live/regen; s7421_regen_drift --control rc 0, H-mirrored.

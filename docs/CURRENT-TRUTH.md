@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7419 (2026-11-15).
+Compact operational handoff, as of Session 7421 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,14 +215,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CD, regen-verify drift triage (HYPOTHESIS-ID regen-verify-drift).** s7420 repaired the replay chain
-   (tools/regen_verify.sh now completes: live 51 / regen 50 objects, 0 compile failures) but the object compare is
-   2664 same / 114 differ / 18 live-only / 3 regen-only vs the s6881 baseline 2684/82/17/1 (scratch/s7420/regen_compare.json,
-   docs/REGEN-VERIFY.md). Classify every new differing / one-sided function: EXPECTED (env-gated diag chain not replayed,
-   func_sizes.txt sizing, hand patch already mirrored in a fixup) vs LOST (a live-tree hand edit with no fixup: it dies at the
-   next regen). H-mirrored (all expected) vs H-lost (any live-only edit). Fix each LOST by moving it into a fixup.
-   CC (s7420) CLOSED H-clean: tools/s7420_parser_census.py --controls rc 0 (79/264 blind tools, 0 editor hits after weaken;
-   --dynamic 32 equal / 0 differ / 15 unevaluated). Use the weak-aware regex `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC` in new parsers.
+1. **Next audit: class CE, windowed idempotence checks in apply/fixup scripts (HYPOTHESIS-ID apply-idempotence-window).**
+   13 apply/fixup scripts test "already applied?" only in a fixed window after their anchor; called twice (inline fixer +
+   RS64_REPLAY) after another block lands at the same anchor, they apply twice in a regen. Classify SAFE / DOUBLE / AT-RISK, fix
+   to whole-body checks, extend tools/s7421_idem_test.py; explain the remaining regen>live tags s5856 and s6497 (scratch/agent/NEXT.md).
+   CD (s7421) CLOSED H-mirrored: tools/s7421_regen_drift.py --control rc 0 (plant LOST / plant-diag ENVDIAG PASS) over a fresh
+   replay (2664/114/18/3, = s7420; 2671/107/18/3 after the idempotence fix): all 47 new diffs + 3 new one-sided = funcs_13 store-diag handler rs64_s5798_st reorder
+   (diag, inlined into 45 callers) + 6 stale ROGUESQ_TICK_TRACE hooks; 0 LOST; baseline residue in tools/s7421_regen_accept.tsv.
+   PATCH-tag census agrees (live-only tags = documented opt-in list). Found and fixed: s5787/s5790/s5791/s5809 HUDBIT logs
+   double-applied in a regen (windowed idempotence; diag only). docs/REGEN-VERIFY.md "s7421".
+   CC (s7420) CLOSED H-clean. Use the weak-aware regex `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC` in new parsers.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -253,6 +255,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     S7096_FWD=ctl / S7097_EDIT=ctl (missing/dup/order/unattributed must stay 0); after an rs64_s7239 edit:
     tools/s7241_merge_test/run.sh; tools/s7243_resume_test.zsh; loop: tools/agent/test_soak_idle_gate.sh.
     After any host-code edit: every class census in item 15 with `--controls` (exit 1 = survivor or failed control).
+    After a regen replay: tools/s7421_regen_drift.py <live> <regen> <compare.json> --control (exit 1 = LOST/REORDER not in
+    tools/s7421_regen_accept.tsv); after an apply-script edit: tools/s7421_idem_test.py.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).

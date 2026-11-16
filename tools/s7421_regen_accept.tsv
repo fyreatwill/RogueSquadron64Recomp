@@ -1,0 +1,7 @@
+# s7421: reviewed live-vs-regen statement deltas that are env-gated diag / opt-in (docs/REGEN-VERIFY.md "What a regen loses").
+# file	function	reason
+funcs_9.c	binPolygonIntoTerrainGrid	s6499 store census loops (count-only, s6496-s6526 funcs_9 chain)
+funcs_9.c	streamTerrainGridCellsByDistance	s6512/s6515/s6516/s6519 funcs_9 chain (ROGUESQ_FORFACE_LOG and siblings, closed thread)
+funcs_10.c	transformWorldPosToGridSpace	s6314 ROGUESQ_EDGE_FADE_TEST2 vs s6328 ROGUESQ_EDGE_FADE_R2 block order (both opt-in)
+funcs_13.c	audioCueDispatcherNpcHandler	s5854 spawn census call vs ROGUESQ_LOG_HUDBIT log block order
+funcs_15.c	datItemSetObjectiveBooleanCount	ROGUESQ_LOG_HUDBIT log blocks (s5811 bt) order

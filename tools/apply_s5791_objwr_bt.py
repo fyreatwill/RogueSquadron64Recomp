@@ -16,7 +16,7 @@ def apply(text, funcs=None):
     j = text.find(ANCH, i)
     if j < 0 or j - i > 3000: return text, 0
     k = j + len(ANCH)
-    if TAG in text[k:k + 40 + len(BLOCK)]: return text, 0
+    if TAG in text[k:text.find("RECOMP_FUNC ", k) if "RECOMP_FUNC " in text[k:] else len(text)]: return text, 0  # s7421: whole body, not a window
     return text[:k] + BLOCK + text[k:], 1
 if __name__ == "__main__":
     p = base / "funcs_15.c"; t = p.read_text(); t2, n = apply(t)
