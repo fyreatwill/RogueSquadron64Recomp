@@ -197434,3 +197434,34 @@ Closer: g1_level_coverage_common.zsh LEVEL=4 HOLD_S=120 WIDE_ROUTE=1 XENV_EXTRA=
 Verdict: H-few selected; H-many and H-none refuted. QUIET is now usable as the owner-like logging arm in every harness.
 Queued: scratch/agent/soak_queue/s7448_quiet_levels.sh (L7/L12 under QUIET). Next: class DF quiet-crash-passthrough
 (keep decides on the format, so a crash report with the keyword in a "%s" argument would be dropped).
+
+## Session 7449 (2026-11-15) — class DF closed H-few: ROGUESQ_DIAG_QUIET dropped 6 of 7 failure-report classes (message_box "%s", [Error], quick_exit, "Failed to find function", "exited unexpectedly", [s6892]); rs64_diag_keep now checks extra words and the formatted text of "%s" formats; planted control 1/7 -> 7/7, crash block intact
+
+Fold: s7448_quiet_levels rc=0: L7/L12 under QUIET, inits=1, 135 s flight, alive, 0 VI stall, crashlines=0, logs 607/448 KB
+-> class DE second line.
+
+Class DF (quiet-crash-passthrough). Audit (offline) of every failure-report path vs the s7448 QUIET filter (format-string
+keyword match: CRASH crash abort FATAL fatal SIG ERROR assert):
+- macOS signal handler (main.cpp ~13300-13440, SIGSEGV/SIGBUS/SIGABRT): every line carries "[CRASH]", backtrace via raw
+  backtrace_symbols_fd -> kept (non-member).
+- assert: libc __assert_rtn, raw -> non-member. switch_error / do_break (librecomp recomp.cpp:465/471): printf to stdout,
+  never routed -> not a QUIET issue (H-unrouted for stdout, harmless to QUIET).
+- MEMBERS (dropped under QUIET): ultramodern error_handling.cpp message_box `fprintf(stderr,"%s\n",msg)` and our callback
+  `"[Error] %s\n"` ("Error" not in the list; covers "Failed to allocate memory!", "Error opening stored ROM!", mod errors);
+  quick_exit "Exiting with exit status..."; overlays.cpp:672 "Failed to find function at 0x%08X"; rsp.cpp:2164 "RSP ucode %u
+  exited unexpectedly"; [s7357-io] "... failed" lines; upstream_compat.cpp:9009 [s6892] walker-guard repair `"%s\n"` (the
+  G5a breadcrumb; its build/rs64_s6892.log copy survived).
+Change (src/main/main.cpp): rs64_diag_keep_words adds Error error Fail fail unexpected Exiting [s6892]; rs64_diag_fprintf,
+when the format is dropped and contains "%s", vsnprintf's into a 2 KB stack buffer and keeps the line if the formatted text
+passes. ROGUESQ_DIAG_QUIET_ARGCHECK=0 restores the s7448 filter. ROGUESQ_PLANT_FAIL=<s> (positive control): at t=s on the
+guest thread prints one line of each member class with its real format, then "[s7449-plant] raising SIGSEGV" and raise(SIGSEGV).
+Run (scratch/s7449/arms.sh, plant at 15 s, three sequential boots):
+  arm A default:               planted 7/7, [CRASH] 37, backtrace frames 12, log 407 KB
+  arm B QUIET ARGCHECK=0 (old): planted 1/7 (only the SIG line), [CRASH] 37, frames 12, log 5937 B
+  arm C QUIET new:             planted 7/7, [CRASH] 37, frames 12, log 6346 B
+Verdict: H-few selected (6 member classes dropped by the old filter, all restored), H-none refuted (arm B loses 6 lines arm
+A has), H-unrouted refuted for the crash handler (37 lines in every arm). Second line: the audit names the same 6 classes
+from source. Cost: +409 B per boot (the planted lines themselves); flight volume queued as soak s7449_argck_levels (L4/L10).
+ORIGIN: not a mitigation; the writer of the missing lines is our own s7432/s7448 QUIET filter (rs64_diag_keep matched the
+format string only), and the dropped values were legitimate failure reports.
+Next: class DG harness-fatal-exit-coverage (crashlines grep misses non-signal fatal exits).

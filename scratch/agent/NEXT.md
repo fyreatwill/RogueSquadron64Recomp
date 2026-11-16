@@ -1,20 +1,18 @@
-# NEXT (s7449)
-HYPOTHESIS-ID: quiet-crash-passthrough
+# NEXT (s7450)
+HYPOTHESIS-ID: harness-fatal-exit-coverage
 
-First: fold SOAK-RESULTS line for s7448_quiet_levels (L7/L12, harness under ROGUESQ_DIAG_QUIET=1). Pass = inits=1,
-alive_at_end=1, vi_stalls30s=0, crashlines=0 both -> class DE second line.
+First: fold SOAK-RESULTS line for s7449_argck_levels (L4/L10 under QUIET with the s7449 argcheck filter). Pass = inits=1,
+alive_at_end=1, vi_stalls30s=0, crashlines=0 both, run.log size in the s7448 range (450-610 KB) -> class DF flight line.
 
-Class DF: rs64_diag_keep (src/main/main.cpp) decides on the FORMAT string. A failure report whose keyword lives in an
-argument (fprintf(stderr, "%s\n", buf) with buf="... SIGSEGV ..."; 9 "%s"-leading sites in src, e.g.
-upstream_compat.cpp:9009) or in an unrouted path is either dropped under QUIET or never routed at all. QUIET must never
-hide a crash.
-Step 1 (offline): list every failure-report path: signal handlers (grep sigaction/signal( in src + lib/N64ModernRuntime),
-ultramodern error/abort handlers, recomp unhandled-op / exit paths, assert macros, fputs/puts/write(2) sites; for each,
-say: raw (write/fputs/(fprintf)), routed+keyword-in-fmt (kept), routed+keyword-in-arg (DROPPED = class member).
-Step 2 (one run, positive control): a planted crash under QUIET. Find an existing fault-injection env (grep ROGUESQ_.*FAULT|
-PLANT|FORCE_CRASH in src); if none, add ROGUESQ_PLANT_SEGV=<sec> (raise SIGSEGV on the guest thread at t=sec). Arms: default
-vs QUIET=1, same plant; compare the crash report lines. Members: lines in default that QUIET loses.
-Hypotheses: H-none (every crash path is raw or keyword-in-fmt), H-few (some "%s" crash lines dropped -> route via (fprintf) or
-check the formatted text when fmt starts "%s"), H-unrouted (a handler bypasses stderr capture entirely - not a QUIET issue).
-Discriminator: count of default-arm crash-report lines missing in the QUIET arm. Positive control: the plant must produce a
-crash line in the default arm and crashlines>0 in m6-style grep.
+Class DG: scratch/agent/m6_god_common.sh:89 crashlines = grep 'CRASH\|SIGSEGV\|abort'. Non-signal fatal exits print other
+words: librecomp recomp.cpp:465 switch_error "Switch-case out of bounds" (printf stdout + exit), :471 do_break "Encountered
+break", ultramodern quick_exit "Exiting with exit status", message_box "Failed to allocate memory!"/"[Error] ...", RSP
+"exited unexpectedly", plus SIGBUS without "SIGSEGV" text. alive_at_end=0 would flag the death but not name it.
+Step 1 (offline): list every harness/scorer that classifies a run (grep crashlines|CRASH in scratch/agent/*.sh *.zsh,
+tools/*.py, tools/agent/loop.sh soak verdicts); for each, which fatal-exit classes it would miss.
+Step 2 (one run per class is NOT needed): reuse ROGUESQ_PLANT_FAIL (s7449, prints all classes then SIGSEGV) plus add a
+ROGUESQ_PLANT_EXIT=<s> mode that prints the switch_error line and exit(1) without a signal; run each harness scorer on the
+two logs. Members: scorers that report crash=0 on the PLANT_EXIT log.
+Hypotheses: H-none (every scorer also gates on alive/exit code), H-few (some scorers miss non-signal exits -> one shared
+fatal-pattern list, e.g. tools/agent/fatal_patterns.txt, used by all), H-stdout (stdout not captured in some recipes).
+Discriminator: per-scorer verdict on the PLANT_EXIT log. Positive control: PLANT_FAIL log must score crash>0 everywhere.

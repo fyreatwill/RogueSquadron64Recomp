@@ -5144,9 +5144,24 @@ static void rs64_diag_spin_us(int us) {
 // s7229_flat30_cost.py, tools/boot_freeze_hunt.sh) gate on these; all are low-rate (lvl4 211 s default: [vi] 194,
 // [autopilot] 75, [godmode] 3, [initMission] 1 lines) or opt-in ([g1b], [stall-*]). ROGUESQ_DIAG_QUIET_HARNESS=0 drops them too.
 static const int s_dq_keep_harness = rs64_env_int("ROGUESQ_DIAG_QUIET_HARNESS", 1);
-static bool rs64_diag_keep(const char* f) {
+// s7449 class DF: failure reports whose keyword lives in an ARGUMENT or in a word the s7432 list missed were dropped under
+// QUIET: ultramodern message_box "%s\n" + our callback "[Error] %s\n" ("Failed to allocate memory!", "Error opening stored
+// ROM!"), quick_exit "Exiting with exit status", librecomp "Failed to find function at", "RSP ucode %u exited unexpectedly",
+// [s7357-io] "... failed", [s6892] "%s\n" walker-guard repairs. Now: extra keywords + when fmt has "%s" the FORMATTED text
+// is checked too. ROGUESQ_DIAG_QUIET_ARGCHECK=0 restores the s7448 filter (A/B arm). ROGUESQ_PLANT_FAIL=<s>: positive
+// control, emits one line of each class at t=s on the guest thread, then raises SIGSEGV (crash-handler path).
+static const int s_dq_argcheck = rs64_env_int("ROGUESQ_DIAG_QUIET_ARGCHECK", 1);
+static bool rs64_diag_keep_words(const char* f) {
     static const char* const k[] = {"CRASH", "crash", "abort", "FATAL", "fatal", "SIG", "ERROR", "assert"};
     for (const char* w : k) if (strstr(f, w)) return true;
+    if (s_dq_argcheck) {
+        static const char* const k2[] = {"Error", "error", "Fail", "fail", "unexpected", "Exiting", "[s6892]"};
+        for (const char* w : k2) if (strstr(f, w)) return true;
+    }
+    return false;
+}
+static bool rs64_diag_keep(const char* f) {
+    if (rs64_diag_keep_words(f)) return true;
     if (s_dq_keep_harness && f[0] == '[') {
         static const char* const h[] = {"[initMission]", "[autopilot]", "[vi] update_screen", "[f5-phase5-target-store]",
                                         "[godmode]", "[g1b]", "[stall-"};
@@ -5157,8 +5172,15 @@ static bool rs64_diag_keep(const char* f) {
 extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...) {
     const int task = g_rs64_lle_depth.load(std::memory_order_relaxed) > 0;
     if (rs64_diag_quiet && f == stderr && !rs64_diag_keep(fmt)) {
-        if (s_dq_stat) s_dq_drop[task].fetch_add(1, std::memory_order_relaxed);
-        return 0;
+        bool keep = false;
+        if (s_dq_argcheck && strstr(fmt, "%s")) {  // s7449: keyword may be in a %s argument
+            char b[2048]; va_list a2; va_start(a2, fmt); const int n = vsnprintf(b, sizeof b, fmt, a2); va_end(a2);
+            keep = n > 0 && rs64_diag_keep(b);
+        }
+        if (!keep) {
+            if (s_dq_stat) s_dq_drop[task].fetch_add(1, std::memory_order_relaxed);
+            return 0;
+        }
     }
     va_list ap; va_start(ap, fmt);
     if (!s_dq_stat || f != stderr) { const int r = vfprintf(f, fmt, ap); va_end(ap); return r; }
@@ -5172,7 +5194,25 @@ extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...) {
     return r;
 }
 extern "C" void rs64_diag_busy_task(void) { if (rs64_diag_busy.load(std::memory_order_relaxed)) rs64_diag_spin_us(s_dq_busy_us); }
+static void rs64_diag_plant_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_PLANT_FAIL"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0) return;
+    static const auto t0 = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < sec) return;
+    const char* mb = "Failed to allocate memory! (s7449 plant)";
+    fprintf(stderr, "%s\n", mb);                       // ultramodern message_box line
+    fprintf(stderr, "[Error] %s\n", mb);               // our message_box callback line
+    fprintf(stderr, "Exiting with exit status '%i'. Function %s, at file %s:%i\n", 1, "s7449_plant", __FILE__, __LINE__);
+    fprintf(stderr, "Failed to find function at 0x%08X\n", 0x80001234u);
+    fprintf(stderr, "RSP ucode %u exited unexpectedly. exit_reason: %i\n", 1u, 3);
+    char buf[128]; snprintf(buf, sizeof buf, "[s6892] pc=%08X s2=%08X bad=%08X plant", 0x80022160u, 0x80100000u, 0x26282B2Bu);
+    fprintf(stderr, "%s\n", buf);                      // upstream_compat s6892 "%s\n" line
+    fprintf(stderr, "[s7449-plant] raising SIGSEGV\n"); // contains SIG: kept by the s7432 list (in-run control)
+    fflush(stderr);
+    raise(SIGSEGV);
+}
 static void rs64_diag_quiet_tick() {
+    rs64_diag_plant_tick();
     if (rs64_diag_busy.load(std::memory_order_relaxed)) rs64_diag_spin_us(s_dq_busy_guest_us);
     if (!s_dq_stat) return;
     static const auto t0 = std::chrono::steady_clock::now(); static auto tq = t0, tb = t0, tw = t0;

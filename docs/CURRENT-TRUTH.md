@@ -215,9 +215,18 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Class DE CLOSED s7448 (quiet-harness-markers). Next: class DF (HYPOTHESIS-ID quiet-crash-passthrough)**, see NEXT.md:
-   rs64_diag_keep matches the FORMAT string, so a crash/abort report printed through a non-literal or "%s" format is
-   dropped under QUIET; enumerate those sites. Soak s7448_quiet_levels (L7/L12 under QUIET) queued.
+1. **Class DF CLOSED s7449 (quiet-crash-passthrough). Next: class DG (HYPOTHESIS-ID harness-fatal-exit-coverage)**, see
+   NEXT.md: m6_god_common.sh crashlines greps only 'CRASH\|SIGSEGV\|abort', so non-signal fatal exits (librecomp
+   switch_error "Switch-case out of bounds" / do_break "Encountered break" via printf+exit, quick_exit "Exiting with exit
+   status", message_box "Failed to allocate memory!") score crashlines=0. Soak s7449_argck_levels (L4/L10 QUIET) queued.
+   DF (s7449) CLOSED H-few, one change: rs64_diag_keep words + (fmt has "%s") the FORMATTED text is checked. Members found
+   by audit: ultramodern message_box "%s\n" + our callback "[Error] %s\n", quick_exit "Exiting with exit status", librecomp
+   "Failed to find function at", "RSP ucode %u exited unexpectedly", [s7357-io] "... failed", [s6892] "%s\n" walker-guard
+   repairs (G5a breadcrumb). Non-members: the macOS SIGSEGV/SIGBUS/SIGABRT handler (every line "[CRASH]..." + raw
+   backtrace_symbols_fd), assert (libc raw), switch_error/do_break (printf = stdout, unrouted). Positive control
+   ROGUESQ_PLANT_FAIL=15 (7 planted lines then SIGSEGV), scratch/s7449: default 7/7 planted, 37 [CRASH] + 12 bt frames;
+   QUIET ARGCHECK=0 (s7448 filter) 1/7, 37 + 12; QUIET new 7/7, 37 + 12; boot log 5937 -> 6346 B. ARGCHECK=0 = old.
+   s7448_quiet_levels fold: L7/L12 QUIET 135 s flight, 0 crash, 0 stall (DE second line).
    DE (s7448) CLOSED H-few, one change: src/main/main.cpp rs64_diag_keep also passes format prefixes [initMission],
    [autopilot], [vi] update_screen, [f5-phase5-target-store], [godmode], [g1b], [stall- (the tags the live harnesses
    m6_god_common.sh / g1_level_coverage_common.zsh, s7230/s7257/s7229 scorers, boot_freeze_hunt.sh gate on; [fbhash and
