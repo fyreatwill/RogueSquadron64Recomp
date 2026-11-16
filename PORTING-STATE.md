@@ -197093,3 +197093,5 @@ Second line: scratch/s7433 sample_{4,8} (busy-off windows, control passed in s74
 alloc 0.0127, same top callers (TextureMap::use 0.0046, executeCommandLists 0.0023).
 Verdict H-free (< 0.02 core). Rules out: allocator churn and malloc lock contention as a G1b H-host term. No code change.
 Next: class CT, RT64 TMEM hashing (TMEMHasher::hash + XXH3 0.57 ms/frame in s7434), H-needed vs H-redundant.
+Conclusion: selects H-free, refutes H-hot (no owned caller >= 0.01 core; largest 0.0035) and H-lock (0 lock samples under
+malloc), on two captures. Next discriminator: TMEMHasher repeat-hash fraction (H-needed vs H-redundant), class CT.
