@@ -216,8 +216,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. Next: fold s7465_dt_guard_flight (class DT), see NEXT.md. One line each:
-   - **DT s7465 host null-pointer derefs (analyzer core.NullDereference/CallAndMessage/NullArg), CLOSED pending soak:**
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. Next: see NEXT.md. One line each:
+   - **DV s7466 remaining clang-analyzer crash families (UAF/double-free unix.Malloc+cplusplus.NewDelete, MismatchedDeallocator,
+     DivideZero, BitwiseShift, StdCLibraryFunctions, Stream, BlockInCriticalSection), CLOSED:** tools/s7466_analyzer_rest_census.py
+     --controls (planted lines 3-8 PASS) rc 0 over 150 TUs: 0 UAF/double-free/mismatch; 6 sites = 2 fixed (main.cpp s4243 PCM
+     double getenv, s7106_rsptri fopen(e) null-safe), 4 reviewed (events.cpp:1924 static-const hz FP, rt64 dumpRDRAM DEAD no
+     caller, main.cpp:8132 one-shot fgets under mutex, s7064 env-gated FP). Unscored counts: DeadStores 263, NullPassedToNonnull 2.
+   - **DT s7465 host null-pointer derefs (analyzer core.NullDereference/CallAndMessage/NullArg), CLOSED (s7465_dt_guard_flight soak PASS s7466: L4+L12 dd4 alive, 0 crash/stall, fillrect_null=0 both arms):**
      tools/s7465_nullderef_census.py --controls (s7463 TU scope + runner, null-family regex; planted control lines 3/4/5 PASS) rc 0,
      11 sites: 1 GUARDED (rt64_framebuffer_renderer.cpp FillRect read chosenTarget->width when the fbStorage has neither colour nor
      depth target; writer RenderFramebufferManager::get() with both keys empty; the null-colour case is reached in this port, the

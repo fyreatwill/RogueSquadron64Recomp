@@ -197887,3 +197887,21 @@ Verdict: DS selects H-const and refutes H-split (cnt distinct_raw == distinct_fi
 splits when padding varies) and selects H-unreached for the reinterpret/fbtile sites. DT: refutes "unguarded reachable host null
 deref" for 9 of 10 remaining sites (invariant proved), 1 known-parked. Next discriminator: s7465_dt_guard_flight fillrect_null count
 (0 = latent; >0 = the both-null storage is reached in flight, then name its framebuffer key).
+
+## Session 7466 (2026-11-16) — class DT closed (guard soak PASS); class DV opened and closed: remaining clang-analyzer crash families over 150 host TUs, 0 UAF/double-free, 2 null-safe fixes, 4 reviewed
+- Fold: s7465_dt_guard_flight rc=0, arms l4/l12 (dd4 HOLD=150) alive_at_end=1 crashlines=0 vi_stalls30s=0, fillrect_null=0 in
+  both -> the FillRect both-null storage is not reached in flight; DT guard stays as latent hardening. Class DT CLOSED.
+- Class DV: new tools/s7466_analyzer_rest_census.py (s7463 scope/runner, analyzer-only, scores by bracketed checker tag; excludes
+  the DS/DT families and leaks/deadcode/insecureAPI/optin/nullability, which are counted only). Positive control: planted TU with
+  main.cpp's command, UAF (malloc and new), double free, divide-zero, new[]/delete mismatch, shift overflow, lines 3-8 all flagged
+  PASS (same run). Census: 6 scored sites, 0 in the UAF/double-free/mismatch families.
+  * FIXED src/main/main.cpp:8440 s4243 PCM dump called getenv twice (analyzer: fopen(NULL) if the 2nd returns NULL) -> one getenv.
+  * FIXED src/rsp/s7106_rsptri.cpp:184 fopen(e) where e=getenv(ROGUESQ_S7112_TRI); gated by rs64_s7112_on (which requires e), now
+    null-safe regardless.
+  * REVIEWED events.cpp:1924 FP (static-const hz), rt64_state.cpp:4876 dumpRDRAM DEAD (no caller), main.cpp:8132 BENIGN one-shot
+    fgets under audio_device_mutex, upstream_compat.cpp:9251 FP-by-contract (g_rs64_s7064 gate). tools/s7466_analyzer_rest_reviewed.tsv.
+  Rebuild OK; re-run rc 0 survivors=0 (fixed sites gone). Unscored: deadcode.DeadStores 263, nullability.NullPassedToNonnull 2.
+- ORIGIN: both fixes are diagnostic opt-in dump paths (env-gated writers in our own code), not game-state corruption; no
+  runtime behaviour change with the env unset. No soak needed (dump-path only, env unset in every recipe).
+- Rules out: host use-after-free / double free / mismatched dealloc / divide-zero as a source of the remaining crash classes,
+  within what the path-sensitive analyzer can see (single-TU, no cross-TU inlining).

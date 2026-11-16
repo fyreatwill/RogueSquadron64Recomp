@@ -181,7 +181,7 @@ extern "C" void rs64_s7112_tri(const uint8_t* dm, uint32_t r11, uint32_t r12, ui
     if (!g_tf) {
         static bool tried = false; if (tried) return; tried = true;
         const char* e = getenv("ROGUESQ_S7112_TRI");
-        g_tf = fopen(e, "wb");
+        g_tf = e ? fopen(e, "wb") : nullptr;  // s7466 DV: rs64_s7112_on already implies e, keep fopen(NULL) impossible
         if (!g_tf) { fprintf(stderr, "[s7112] cannot open %s\n", e); return; }
         setvbuf(g_tf, nullptr, _IOFBF, 1 << 22);
     }

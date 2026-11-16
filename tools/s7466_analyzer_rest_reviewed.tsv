@@ -1,0 +1,5 @@
+# s7466 class DV reviewed sites: file<TAB>line<TAB>verdict<TAB>why
+lib/N64ModernRuntime/ultramodern/src/events.cpp	1924	FP-by-construction	s4440_ai_event_hz() returns a function-static const (events.cpp:687); the != 0 check at 1921 and the divide read the same value; analyzer models two calls as independent
+lib/rt64/src/hle/rt64_state.cpp	4876	DEAD	State::dumpRDRAM has no caller in lib/rt64 or src (grep: only the rt64_state.h:171 declaration); fwrite(NULL) unreachable
+src/main/main.cpp	8132	BENIGN-once	fgets of the tiny audio-route prefs file under audio_device_mutex; latched by g_audio_route_loaded so it blocks at most once per process
+src/main/upstream_compat.cpp	9251	FP-by-contract	s7064() only reached via rs64_s7064_* whose generated call sites are gated by g_rs64_s7064 (upstream_compat.cpp:9230: getenv("ROGUESQ_S7064") non-empty, not "0")

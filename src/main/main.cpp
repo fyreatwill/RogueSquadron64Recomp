@@ -8437,7 +8437,7 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                 std::fprintf(stderr, "[s4244-q] n=%u addr=0x%06X fnv=0x%08X\n", cn, rdram_addr & 0x7FFFFFu, f32);
             }
             prev_h = h; prev_addr = rdram_addr;
-            static FILE* pcm = getenv("ROGUESQ_S4243_PCM") ? fopen(getenv("ROGUESQ_S4243_PCM"), "wb") : nullptr;
+            static FILE* pcm = [] { const char* e = getenv("ROGUESQ_S4243_PCM"); return e ? fopen(e, "wb") : nullptr; }();  // s7466 DV: one getenv
             static size_t pcm_bytes = 0;
             if (pcm && cn >= 1200 && pcm_bytes < 2400000) { fwrite(native_samples.data(), 2, num_samples, pcm); pcm_bytes += num_samples * 2; fflush(pcm); }
         }
