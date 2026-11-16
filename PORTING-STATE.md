@@ -198110,3 +198110,34 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
 - **Verdict:** H-heap-clean selected at header level for L0-L4, L7, L12, L15 (8 levels, in-flight plant detected in both
   recipes); H-heap-hit refuted there. Rules out a cross-boundary overrun that reaches the next header within 250 ms on those
   levels. Not ruled out: writes inside a block's data or a header restored within one check interval. 11 levels remain.
+
+## Session 7474 (2026-11-16) — class EB closed on all 19 levels; class EC: the [s4279-BAD] burst was a hard-coded-region walker false positive (fixed and checked against a plant)
+
+- **Folded:** the loop's s7473_heapchk_lv_b (L5 plant, L6, L8, L9) and lv_c (L10 plant, L11, L13, L14) both scored 0. Every arm
+  had alive_at_end=1, crashlines=0, vi_stalls30s=0, initMission>=1 and heap_bad_nonplant=0, and the plant was in flight and
+  DETECTED. lv_d had not run, so it ran in-session: L16 dd4 (plant), L17 dd8 21:9, L18 dd4, HOLD=220, score=0, same numbers
+  (L16 initMission=5 and L17=4 are in-mission restarts). Moved to soak_queue/done/.
+- **Class EB CLOSED (H-heap-clean, header level):** all 19 levels were walked in flight with a detected in-flight plant in every
+  recipe. Refuted: H-heap-hit and H-walker-wrong (flag histogram other=0). Not covered: in-block slack writes, or headers
+  restored within 250 ms. That gap becomes class ED.
+- **Class EC: the passive `[s4279-BAD]` burst.** An offline pass (/tmp/s4279cls.py over all 23 EB arm logs) found that every
+  arm prints exactly 40 rows, all bad=10 (bit 8 out-of-region plus bit 2 chain-end-not-head), at n~8870-9040. All rows have
+  head/tail in 0x80192xxx, and every row short enough to verify from the logged fields (5 per arm) is a consistent
+  doubly-linked list. Cause: tools/apply_s4279_nodeinvariant.py hard-coded the node region 0x801F9C00..0x801FB400, but in that
+  front-end phase the game runs the sample-stream LRU list from a 60-node pool at 0x80192C40. The walker stopped at the first
+  node, and poollen=0 was the same artifact.
+  **ORIGIN:** the instrument (our s4279 walker), not the game; the list values are legitimate.
+- **Fix (tools/apply_s4279_nodeinvariant.py, idempotent upgrade of the already-patched funcs_24.c):** any aligned KSEG0
+  pointer below 0x81000000 is accepted, and leaving the primary region sets a new `offreg=1` field instead of bad. Added a positive
+  control, ROGUESQ_S7474_LRU_PLANT=<n>: at entry call n the walker sees the first node's next word XOR 1 (a host-side read
+  only; guest memory is untouched).
+  Side effect handled: the script chains apply_s4278 -> apply_s4222_storewatch, which re-added a `rs64_m5_writer_parity`
+  store watch to 49 funcs files that the current tree (the last build) did not carry. Those 49 insertions were stripped again
+  by exact-line match, so the build differs from the last one only by the s4279 change. A full regen chain behaves as before.
+- **Same-run check (scratch/s7474_lruwalk, g1e_owner_quiet_arms, L4 plant n=8890 / L12 plant n=3000, dd4, HOLD=60):** both
+  arms alive, vi_stalls30s=0. Each arm had exactly ONE [s4279-BAD] row, at the planted n (bad=1, offreg=0, len=236 / 35), and
+  135 offreg=1 chk rows with bad=0 (len 3-13, len+poollen=60, a full walk). The front-end burst is gone and detection still
+  fires. initMission=0 in 60 s, so this check covers the front end only; in-flight rows in the 23 EB logs were already bad=0.
+- **Verdict:** EC H-walker-wrong selected by two lines: (1) the offline consistency of the 40-row bursts, and (2) the fixed
+  walker's full off-region walks staying bad=0 while the same-run plant fires. Rules out an LRU inconsistency in that phase.
+- Next: class ED, a tail canary for in-block slack overruns (scratch/agent/NEXT.md).

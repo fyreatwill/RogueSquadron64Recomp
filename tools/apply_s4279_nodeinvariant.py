@@ -61,3 +61,33 @@ if "s4279-chk" not in s:
     s = s.replace(anchor, anchor + code, 1)
     p.write_text(s)
 print("ok")
+
+# s7474 class EC: the walker hard-coded the node region 0x801F9C00..0x801FB400 and flagged bad=10 (8|2) on every arm at
+# n~8870-9040, where the game legitimately runs the LRU list out of 0x80192C40 (lists checked consistent offline). Accept any
+# aligned KSEG0 pointer below 0x81000000 (rdram + spill arena); report the off-region case as offreg=1, not as bad.
+s = p.read_text()
+UP = [
+    ("unsigned len = 0, plen = 0;\n      while (cur && len < 400) { if (cur < 0x801F9C00u || cur >= 0x801FB400u) { bad |= 8;",
+     "unsigned len = 0, plen = 0, offreg = 0;\n      while (cur && len < 400) { if (cur < 0x801F9C00u || cur >= 0x801FB400u) offreg = 1; if (cur < 0x80000400u || cur >= 0x81000000u || (cur & 3u)) { bad |= 8;"),
+    ("while (pc2 && plen < 400 && pc2 >= 0x801F9C00u && pc2 < 0x801FB400u) {",
+     "while (pc2 && plen < 400 && pc2 >= 0x80000400u && pc2 < 0x81000000u && !(pc2 & 3u)) {"),
+    ('"[%s] n=%u bad=%u len=%u poollen=%u', '"[%s] n=%u bad=%u offreg=%u len=%u poollen=%u'),
+    ('"s4279-chk", rs64_s4234_g, bad, len, plen,', '"s4279-chk", rs64_s4234_g, bad, offreg, len, plen,'),
+]
+if "offreg" not in s:
+    for a, b in UP:
+        assert s.count(a) == 1, a[:60]
+        s = s.replace(a, b, 1)
+    p.write_text(s)
+print("s7474 offreg ok")
+
+# s7474 positive control: ROGUESQ_S7474_LRU_PLANT=<n> makes the walker see the first visited node's next word XOR 1 at entry
+# call n (host-side read only, guest memory untouched), so bad bit 1 and the [s4279-BAD] row must fire on that one call.
+s = p.read_text()
+A = "uint32_t nx = (uint32_t)MEM_W(0, S32(cur)), pv = (uint32_t)MEM_W(4, S32(cur));"
+B = A + " { static long s7474_pl = -2; if (s7474_pl == -2) { const char* e = getenv(\"ROGUESQ_S7474_LRU_PLANT\"); s7474_pl = (e && *e) ? atol(e) : -1; } if (len == 0 && (long)rs64_s4234_g == s7474_pl) { nx ^= 1u; fprintf(stderr, \"[s7474-plant] n=%u node=%08X\\n\", rs64_s4234_g, cur); } }"
+if "s7474-plant" not in s:
+    assert s.count(A) == 1
+    s = s.replace(A, B, 1)
+    p.write_text(s)
+print("s7474 plant ok")
