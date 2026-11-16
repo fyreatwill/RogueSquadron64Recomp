@@ -197004,3 +197004,7 @@ HYPOTHESIS-ID: default-probe-bookkeeping
   Closes class CP and, with CM-CO, the default-on diagnostic-cost family.
 - Next: class CQ, gfx-thread host glue decomposition: rs64_dpc_defer_end_impl 1.5 ms/frame inclusive and memmove 5% on the
   thread that bounds dd8 headroom; offline first on /tmp/rs64_s7431/{P,N}/sample_*.txt (copied to scratch/s7433/).
+- Conclusion: this selects H-free and refutes H-cost for default-on probe bookkeeping (guest 0.108-0.144 ms/frame vs the
+  0.25 ms/frame and control/4 thresholds, control PASS in both runs), and closes class CP. Next discriminator (class CQ):
+  share of the Gfx Thread's rs64_dpc_defer_end_impl + rs64_dpc_record_submit_impl samples that is our code vs RT64:: frames,
+  plus the callers of _platform_memmove, on scratch/s7433/sample_{4,8}.txt (H-copy / H-walk vs H-rt64).
