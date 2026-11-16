@@ -197909,3 +197909,46 @@ deref" for 9 of 10 remaining sites (invariant proved), 1 known-parked. Next disc
   The DV census (control PASS, same run) refutes H-host-uaf (no use-after-free, double free or mismatched dealloc in any of the
   150 single-TU host files) and closes DV. Next discriminator: ASan+UBSan build-asan soak (class DW, NEXT.md) with a planted
   heap-overflow control arm, which splits H-asan-clean from H-asan-hit across TUs and at runtime.
+
+## Session 7467 (2026-11-16) — class DW: ASan+UBSan owner-recipe flight (build_asan rebuilt, C++ only, recoverable), control PASS; 1 REAL defect FIXED (plume Metal uninitialized depth bias read on every unbiased pipeline), 12 FP groups reviewed; post-fix run clean
+
+Work unit: NEXT.md class DW (HYPOTHESIS-ID host-analyzer-rest): runtime / cross-TU coverage the single-TU clang analyzer (DS/DT/DV)
+cannot see. Last ASan runs were s5597-s5600 (title + keyed hangar->mission, ASan only, no UBSan, pre-FPS60/dd/aspect), so the
+owner recipe had never run under a sanitizer.
+
+Changes:
+- tools/build_asan.sh: now ASan+UBSan, `-fsanitize-recover=address,undefined`, C++ only (generated C and RSP ucode TUs not
+  instrumented, same rationale as build_tsan.sh: guest RAM is one host map; CMakeLists ROGUESQ_ASAN_UCODE=ON to instrument);
+  re-runs `cmake -S . -B build` after, like build_tsan.sh.
+- src/main/main.cpp: ROGUESQ_S7467_ASAN_PLANT=1 planted control (1-byte heap over-read + signed int overflow at boot), compiled
+  only under __has_feature(address_sanitizer).
+- tools/s7467_san_report.py: groups ASan/UBSan reports per arm (log_path files), plant matched by source line (inlined into
+  main), `--known tools/s7467_san_reviewed.tsv` marks reviewed groups; exit 0 clean / 1 NEW group / 3 control FAIL.
+- lib/rt64 plume_metal.cpp (MetalGraphicsPipeline ctor): FIX, see below; export.sh refreshed submodule-patches/rt64-plume.patch.
+
+Run 1 (scratch/s7467/asan_flight.sh, quiet harness GAMEDIR=build_asan, owner recipe FPS60 16:9 fullscreen dd4, HOLD=150,
+host idle 7 h, AC, clk 0.97-1.03): arms p (L4 + plant), l4, l12: all alive_at_end=1, crashlines=0, vi_stalls30s=0, level_ok=1,
+initMission=1 each. **Control PASS** (p: heap-buffer-overflow + signed overflow both reported, arm kept flying). ASan: 0 reports
+outside the plant in all arms. UBSan: 13 non-plant groups, identical in all 3 arms:
+- REAL: plume_metal.cpp:3906 "load of value 190, not a valid value for type bool" = MetalRenderState::dynamicDepthBiasEnabled.
+  ORIGIN: the writer is the MetalGraphicsPipeline ctor: it sets the field + 3 bias floats only when the desc has dynamic or
+  static bias; a no-bias pipeline (most of them) leaves them uninitialized (the struct has no default). 190 = 0xBE = ASan's
+  malloc fill byte, so the value is not legitimate. MetalCommandList's depth-bias apply reads them for every bound pipeline,
+  so an unbiased draw could get a heap-garbage (or the last dynamic) depth bias. Fix: else branch initializes to no-bias.
+- FP-compiler x6: rt64_rdp.cpp:3423/3424/3455-3458 left shift of negative int32 (TexRect s/t fixed point; rt64 TU is C++17,
+  clang emits shl, defined in C++20).
+- FP-idiom x3: mesgqueue.cpp:626/709/729 GET_MEMBER = offsetof via ((type*)nullptr)->member, never dereferenced.
+- FP-tagged-ptr x3: plume_metal.cpp:1429 MetalShader dtor functionName->release() (+ NSObject.hpp:112) on an ObjC tagged
+  NSString (address 0x9dd9e565f1b2183b).
+  All in tools/s7467_san_reviewed.tsv.
+
+Run 2 post-fix (scratch/s7467/post_fix.sh, same recipe): build_asan p + l4: control PASS, 12 groups (all KNOWN), the 3906
+group GONE (pre 3/3 arms, post 0/2; the other 12 still fire in the same run = instrument live). build/ (normal) b4 (L4) +
+b12 (L12) with ROGUESQ_S7467_BIASPROBE=1: alive, 0 crash/stall, `biasprobe nobias=64 garbage=0` on both -> in the normal
+build the system allocator handed these pipelines zeroed bytes, so the pre-fix read was latent here (H-latent). Single-source
+and the probe's nonzero branch has no planted control in build/ (ASan's 0xBE fill is the only witness that the bytes are
+uninit); do not cite this as an explanation for G5b terrain drops.
+
+Rules out (150 s per arm, L4/L12 dd4 16:9): any ASan-visible heap/stack/global overflow or UAF in the instrumented C++ host
+(runtime, RT64, plume, RSP bridge, main) on that route; any UBSan class beyond the 13 groups. Does not cover: generated C,
+ucode TUs, 21:9/dd8, other levels, hangar/cutscene routes -> queued soak_queue/s7467_asan_routes.sh (p + L7 dd4 + L15 dd8 21:9).

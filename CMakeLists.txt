@@ -379,6 +379,18 @@ if (CMAKE_CXX_FLAGS_DEBUG MATCHES "fsanitize=thread" OR CMAKE_CXX_FLAGS MATCHES 
     endif()
 endif()
 
+# s7467 class DW: same exemption for the ASan+UBSan arm (tools/build_asan.sh). The ucode touches only DMEM (masked) and guest
+# RDRAM (one big host map, so ASan cannot see guest-side overruns anyway); instrumenting it only slows the gfx thread.
+# ROGUESQ_ASAN_UCODE=ON instruments it.
+if (CMAKE_CXX_FLAGS_DEBUG MATCHES "fsanitize=address" OR CMAKE_CXX_FLAGS MATCHES "fsanitize=address")
+    option(ROGUESQ_ASAN_UCODE "Instrument the RSP ucode TUs under ASan/UBSan" OFF)
+    if (NOT ROGUESQ_ASAN_UCODE)
+        set_property(SOURCE ${FACTOR5_UCODE_C} ${FACTOR5_UCODE_B_C} ${FACTOR5_BOOT_C} ${FACTOR5_UCODE_TLS_CPP}
+            ${FACTOR5_UCODE_LEAN_CPP} ${FACTOR5_UCODE_NMAC_CPP} APPEND PROPERTY COMPILE_OPTIONS -fno-sanitize=address,undefined)
+        message(STATUS "s7467: RSP ucode TUs built without -fsanitize=address,undefined (ROGUESQ_ASAN_UCODE=ON to instrument)")
+    endif()
+endif()
+
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp
     $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_display_mac.mm>

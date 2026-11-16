@@ -1,0 +1,14 @@
+# s7467 class DW: every non-plant ASan/UBSan group from the owner-recipe ASan+UBSan soak (build_asan, L4+L12 dd4 HOLD=150), with verdict.
+# kind	site	verdict	invariant / fix
+ubsan:signed integer overflow	src/main/main.cpp:rs64_s7467_asan_plant	PLANT	positive control (ROGUESQ_S7467_ASAN_PLANT=1)
+asan:heap-buffer-overflow	src/main/main.cpp:rs64_s7467_asan_plant	PLANT	positive control, reported inlined at the main() call line
+ubsan:load of value 190 not valid for bool	lib/rt64/src/contrib/plume/plume_metal.cpp:3906	REAL-FIXED	MetalGraphicsPipeline ctor left dynamicDepthBiasEnabled + 3 bias floats uninitialized when the pipeline has no depth bias; 190 = 0xBE = ASan malloc fill. Apply path read them for every bound pipeline. Now initialized to no-bias (else branch, plume_metal.cpp ctor).
+ubsan:left shift of negative value	lib/rt64/src/hle/rt64_rdp.cpp:3423,3424,3455-3458	FP-compiler	TexRect s/t fixed-point math (uls<<7, pixels<<2) on negative int32; rt64 TU is C++17 where it is UB on paper, clang emits a plain shl (two's complement, defined in C++20); matches RDP arithmetic
+ubsan:member access within null pointer OSMesgQueue	lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp:626,709,729	FP-idiom	GET_MEMBER(type,addr,member) = addr + offsetof via ((type*)nullptr)->member (ultra64.h:45) to form a guest address; never dereferenced
+ubsan:misaligned NS::String upcast/member call	lib/rt64/src/contrib/plume/plume_metal.cpp:1429 + metal-cpp NSObject.hpp:112	FP-tagged-ptr	functionName->release() on an ObjC tagged-pointer NSString (address 0x9dd9...: high-bit tagged, not a heap object); objc_msgSend handles tagged pointers
+# --known keys for tools/s7467_san_report.py (KNOWN<TAB>kind prefix<TAB>file basename): a group matching one is not new.
+KNOWN	ubsan:left shift of negative value	rt64_rdp.cpp
+KNOWN	ubsan:member access within null pointer of type 'OSMesgQueue'	mesgqueue.cpp
+KNOWN	ubsan:member call on misaligned address	NSObject.hpp
+KNOWN	ubsan:member call on misaligned address	plume_metal.cpp
+KNOWN	ubsan:upcast of misaligned address	plume_metal.cpp

@@ -15,10 +15,10 @@ index 1384fe9..1fdca66 100644
      }
  
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..5abdb9c 100644
+index a5f30a3..8354e4f 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
-@@ -9,17 +9,91 @@
+@@ -9,17 +9,92 @@
  #define CA_PRIVATE_IMPLEMENTATION
  #define MTL_PRIVATE_IMPLEMENTATION
  
@@ -30,6 +30,7 @@ index a5f30a3..5abdb9c 100644
 +#include <atomic>
 +#include <cstdio>
 +#include <cstdlib>
++#include <cstring>
 +#include <mutex>
  #include <Foundation/Foundation.hpp>
  #include <Metal/Metal.hpp>
@@ -110,7 +111,7 @@ index a5f30a3..5abdb9c 100644
      // MARK: - Constants
  
      static constexpr size_t MAX_DRAWABLES = 3;
-@@ -1117,6 +1191,15 @@ namespace plume {
+@@ -1117,6 +1192,15 @@ namespace plume {
  
          this->mtl = device->mtl->newBuffer(desc.size, mapResourceOption(desc.heapType));
  
@@ -126,7 +127,7 @@ index a5f30a3..5abdb9c 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              // If the buffer may be used by device address, we need to make sure it will be resident.
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
-@@ -1130,6 +1213,9 @@ namespace plume {
+@@ -1130,6 +1214,9 @@ namespace plume {
      }
  
      MetalBuffer::~MetalBuffer() {
@@ -136,7 +137,7 @@ index a5f30a3..5abdb9c 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
              if (device->gpuAddressableResidencySet != nullptr) {
-@@ -1234,11 +1320,19 @@ namespace plume {
+@@ -1234,11 +1321,19 @@ namespace plume {
  
          this->mtl = device->mtl->newTexture(descriptor);
  
@@ -156,7 +157,7 @@ index a5f30a3..5abdb9c 100644
          mtl->release();
      }
  
-@@ -1575,6 +1669,23 @@ namespace plume {
+@@ -1575,6 +1670,23 @@ namespace plume {
          state.renderPipelineState = device->mtl->newRenderPipelineState(descriptor, &error);
          state.primitiveType = mapPrimitiveType(desc.primitiveTopology);
          state.stencilReference = desc.stencilEnabled ? desc.stencilReference : 0;
@@ -180,7 +181,37 @@ index a5f30a3..5abdb9c 100644
  
          if (desc.dynamicDepthBiasEnabled) {
              state.dynamicDepthBiasEnabled = true;
-@@ -1618,6 +1729,13 @@ namespace plume {
+@@ -1583,6 +1695,29 @@ namespace plume {
+             state.depthBiasConstantFactor = static_cast<float>(desc.depthBias);
+             state.depthBiasClamp = desc.depthBiasClamp;
+             state.depthBiasSlopeFactor = desc.slopeScaledDepthBias;
++        } else {
++            // s7467 class DW (ASan+UBSan arm, UBSan "load of value 190 ... bool" at the depth-bias apply in
++            // MetalCommandList): a pipeline with no depth bias left dynamicDepthBiasEnabled and the three bias floats
++            // uninitialized (MetalRenderState has no default for them), and the apply path reads them for EVERY bound
++            // pipeline -> a heap-garbage bias (or the last dynamic bias) on unbiased draws. Initialize to "no bias".
++            // ROGUESQ_S7467_BIASPROBE=1 counts how often the pre-fix bytes were nonzero (would have applied garbage).
++            static const bool probe = [] { const char* e = std::getenv("ROGUESQ_S7467_BIASPROBE"); return e && *e == '1'; }();
++            if (probe) {
++                static std::atomic<uint32_t> nNone{0}, nGarbage{0};
++                unsigned char raw[sizeof(bool) + 3 * sizeof(float)];
++                std::memcpy(raw, &state.dynamicDepthBiasEnabled, sizeof(bool));
++                std::memcpy(raw + 1, &state.depthBiasConstantFactor, sizeof(float));
++                std::memcpy(raw + 1 + sizeof(float), &state.depthBiasClamp, sizeof(float));
++                std::memcpy(raw + 1 + 2 * sizeof(float), &state.depthBiasSlopeFactor, sizeof(float));
++                bool nz = false; for (unsigned char b : raw) nz |= (b != 0);
++                const uint32_t n = ++nNone; const uint32_t g = nz ? ++nGarbage : nGarbage.load();
++                if (nz && g <= 8) fprintf(stderr, "[s7467] biasprobe garbage #%u of %u: bool=0x%02X\n", g, n, raw[0]);
++                if ((n & 63) == 0 || n <= 4) fprintf(stderr, "[s7467] biasprobe nobias=%u garbage=%u\n", n, g);
++            }
++            state.dynamicDepthBiasEnabled = false;
++            state.depthBiasConstantFactor = 0.0f;
++            state.depthBiasClamp = 0.0f;
++            state.depthBiasSlopeFactor = 0.0f;
+         }
+ 
+         if (error != nullptr) {
+@@ -1618,6 +1753,13 @@ namespace plume {
          return RenderPipelineProgram();
      }
  
@@ -194,7 +225,7 @@ index a5f30a3..5abdb9c 100644
      // MetalDescriptorSet
  
      MetalDescriptorSet::MetalDescriptorSet(MetalDevice *device, const RenderDescriptorSetDesc &desc) {
-@@ -1667,6 +1785,11 @@ namespace plume {
+@@ -1667,6 +1809,11 @@ namespace plume {
              .offset = 0,
          };
  
@@ -206,7 +237,7 @@ index a5f30a3..5abdb9c 100644
          if (!device->useArgumentBuffersTier2) {
              argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
          }
-@@ -1676,6 +1799,11 @@ namespace plume {
+@@ -1676,6 +1823,11 @@ namespace plume {
      }
  
      MetalDescriptorSet::~MetalDescriptorSet() {
@@ -218,7 +249,7 @@ index a5f30a3..5abdb9c 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
-@@ -1904,6 +2032,14 @@ namespace plume {
+@@ -1904,6 +2056,14 @@ namespace plume {
          this->layer = static_cast<CA::MetalLayer*>(desc.renderWindow.view);
          layer->setDevice(commandQueue->device->mtl);
          layer->setPixelFormat(mapPixelFormat(desc.format));
@@ -233,7 +264,7 @@ index a5f30a3..5abdb9c 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1920,6 +2056,10 @@ namespace plume {
+@@ -1920,6 +2080,10 @@ namespace plume {
          }
  
          // set each of the drawable to have desc.flags = RenderTextureFlag::RENDER_TARGET;
@@ -244,7 +275,7 @@ index a5f30a3..5abdb9c 100644
          for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
              MetalDrawable &drawable = this->drawables[i];
              drawable.desc.width = width;
-@@ -1932,6 +2072,223 @@ namespace plume {
+@@ -1932,6 +2096,223 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -468,7 +499,7 @@ index a5f30a3..5abdb9c 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,11 +2311,56 @@ namespace plume {
+@@ -1954,11 +2335,56 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -528,7 +559,7 @@ index a5f30a3..5abdb9c 100644
              currentAvailableDrawableIndex = (currentAvailableDrawableIndex + 1) % MAX_DRAWABLES;
              drawableMtl->release();
  
-@@ -1969,7 +2371,10 @@ namespace plume {
+@@ -1969,7 +2395,10 @@ namespace plume {
              lastPresentedIdCondVar.notify_all();
          });
  
@@ -539,7 +570,7 @@ index a5f30a3..5abdb9c 100644
  
          releasePool->release();
  
-@@ -1987,6 +2392,8 @@ namespace plume {
+@@ -1987,6 +2416,8 @@ namespace plume {
          }
      }
  
@@ -548,7 +579,7 @@ index a5f30a3..5abdb9c 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2402,17 @@ namespace plume {
+@@ -1995,7 +2426,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -566,7 +597,7 @@ index a5f30a3..5abdb9c 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2011,7 +2428,20 @@ namespace plume {
+@@ -2011,7 +2452,20 @@ namespace plume {
      bool MetalSwapChain::needsResize() const {
          uint32_t windowWidth, windowHeight;
          getWindowSize(windowWidth, windowHeight);
@@ -588,7 +619,7 @@ index a5f30a3..5abdb9c 100644
      }
  
      void MetalSwapChain::setVsyncEnabled(const bool vsyncEnabled) {
-@@ -2049,6 +2479,18 @@ namespace plume {
+@@ -2049,6 +2503,18 @@ namespace plume {
          acquireBuffer->enqueue();
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
@@ -607,7 +638,7 @@ index a5f30a3..5abdb9c 100644
  
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
-@@ -2118,6 +2560,14 @@ namespace plume {
+@@ -2118,6 +2584,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -622,7 +653,7 @@ index a5f30a3..5abdb9c 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3458,17 @@ namespace plume {
+@@ -3008,6 +3482,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -640,7 +671,7 @@ index a5f30a3..5abdb9c 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3685,8 +4146,23 @@ namespace plume {
+@@ -3685,8 +4170,23 @@ namespace plume {
          assert(commandLists != nullptr);
          assert(commandListCount > 0);
  
@@ -665,7 +696,7 @@ index a5f30a3..5abdb9c 100644
          cmdBuffer->setLabel(MTLSTR("Wait Command Buffer"));
          cmdBuffer->enqueue();
  
-@@ -3695,7 +4171,9 @@ namespace plume {
+@@ -3695,7 +4195,9 @@ namespace plume {
              cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
          }
  
@@ -675,7 +706,7 @@ index a5f30a3..5abdb9c 100644
  
          // Commit all command lists except the last one
  
-@@ -3712,6 +4190,25 @@ namespace plume {
+@@ -3712,6 +4214,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  

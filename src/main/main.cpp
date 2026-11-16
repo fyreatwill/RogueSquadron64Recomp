@@ -13136,8 +13136,31 @@ extern "C" void rs64_s7427_policy_begin();
 extern "C" int rs64_s7427_tg_fix_reinit();
 extern "C" int rs64_g5b_tg_fix;
 static __attribute__((noinline)) int s7427_plant_latch() { static const int v = std::getenv("ROGUESQ_OSMEM_MB") ? 1 : 0; return v; }
+// s7467 class DW: planted positive control for the ASan+UBSan arm (tools/build_asan.sh). ROGUESQ_S7467_ASAN_PLANT=1 does
+// one 1-byte heap over-read (ASan heap-buffer-overflow) and one signed-int overflow (UBSan) at boot. Compiled only into a
+// sanitizer build (the over-read would be plain UB elsewhere); a recoverable build (-fsanitize-recover) keeps running after.
+#if defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+#    define RS64_S7467_ASAN 1
+#  endif
+#endif
+static void rs64_s7467_asan_plant() {
+    const char* p = std::getenv("ROGUESQ_S7467_ASAN_PLANT"); if (!p || *p != '1') return;
+#if defined(RS64_S7467_ASAN)
+    char* volatile b = static_cast<char*>(std::malloc(16));
+    volatile char c = b[16];                     // heap-buffer-overflow READ of size 1, 0 bytes past a 16-byte region
+    volatile int big = 0x7FFFFFFF; volatile int one = 1;
+    volatile int ov = big + one;                 // UBSan signed-integer-overflow
+    std::free(b);
+    std::fprintf(stderr, "[s7467] asan plant fired c=%d ov=%d\n", (int)c, (int)ov);
+#else
+    std::fprintf(stderr, "[s7467] asan plant requested but this build has no ASan: skipped\n");
+#endif
+}
+
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
+    rs64_s7467_asan_plant();
     { const char* p = std::getenv("ROGUESQ_S7427_PLANT"); if (p && *p == '1') std::fprintf(stderr, "[s7427] plant latch=%d\n", s7427_plant_latch()); }
     s7354_race_ctl_start();
     s7382_qos_start();
