@@ -198209,3 +198209,26 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
   in-flight plant control; pass = control DETECTED, 0 non-plant tail-hits, 0 slack-store rows).
 - Lesson worth a class audit: every port patch that calls a guest function mid-flow must preserve the caller-saved registers the
   surrounding generated code still needs. s4889 saved one of four.
+
+## Session 7477 (2026-11-16) — class EE closed: no other injected guest call clobbers live registers (44 sites audited, both controls pass); s7476 flight soak confirms the voice-count fix on 4 levels and leaves two 1-byte slack stores (class EF)
+
+Soak fold: s7476_canary_flight rc=1 (927 s, L4/L7/L12/L15 dd4 HOLD=220): all 4 arms alive, vi_stalls30s=0, `[s7476] dereg a1
+before=17 after=1 fix=1` in every arm (the callee really sets a1=1 and the fix restores 17), 0 slack-stores at the MusyX PCs
+0x800923B8/0x800924C4, tail_hit_nonplant=0, L4 in-flight plant DETECTED. The rc=1 comes from 2 OTHER 1-byte-past-request stores:
+rs_memset 0x800078EC at blk 0x800CAE80 req 0x2CB8 (all arms, t=10.9) and parseImageFile 0x8001EE04 at blk 0x809B6010 req 0xC (L15 only).
+Both land in the 8-byte rounding slack. Opened as class EF (NEXT.md).
+
+Class EE (injected-guest-call register clobber, s282 model): new tools/s7477_injected_call_audit.py. Enumerates every
+`f(rdram, ctx)` call on a PATCH line, plus unmarked calls that are not the translation of a jal/jalr/bal-class site, across
+N64Recomp/RecompiledFuncs (44 sites). Per site it takes the callee's transitive caller-saved writes (generated bodies + src/ host helper
+bodies, brace-matched), the caller's read-before-write set after the site (worklist over fallthrough, gotos and after_N labels, a
+tail `return` on the line, callee entry live-in for arg regs at the next call), minus the regs the patch restores after its last
+call. Table (scratch/s7477_audit.txt): 0 BUG, 33 SAFE, 10 REPLACE (patch wraps the site's own jal, then `goto after_N`; the o32 ABI
+already lets that call clobber caller-saved regs), 1 INTENT (s6904 fog: rs64_s6904_fog writes $f0/$f4, consumed by trunc.w.s at
+0x8001726C/74 on purpose). Controls: real (the pre-s7476 s4889 text, OLD_CALL, flags r5; the current text passes) and synthetic
+(an injected call before a read of a1/v1 flags r3,r5; the same call with restore flags nothing). Both PASS in the same run.
+Dead ends in the run, all fixed in the tool and recorded: the first pass flagged 6 call-replacement sites (did not follow after_N
+labels, and counted callee-saved s-regs, which callee bodies restore), and one wrapper `{ inner(); return; }`.
+ORIGIN: no new mitigation; s4889 (fixed s7476) was the only live clobber -> H-class-single selected, H-class-multi refuted.
+Rules out: injected guest calls as a source of other wrong-argument bugs. Coverage limit: only hooks taking `(rdram, ctx)`; hooks
+that take values (e.g. rs64_s4540_call(ctx->r4)) cannot write guest regs through ctx, so they are out of scope by construction.

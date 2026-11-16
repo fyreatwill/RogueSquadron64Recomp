@@ -1,21 +1,18 @@
-# NEXT (s7477)
-HYPOTHESIS-ID: injected-guest-call-register-clobber
+# NEXT (s7478)
+HYPOTHESIS-ID: canary-one-byte-past-request
 
-Class EE (M3 idiom-class audit, s282-s288 model): port patches that call a GUEST function from inside generated code
-(e.g. `findAndZeroTableSlotMatching(rdram, ctx);` inside a `/* PATCH: ... */` block) clobber the caller-saved registers
-($v0,$v1,$a0-$a3,$t0-$t9,$at, hi/lo, FPRs) that the surrounding generated code still reads. s7476 found one: s4889 saved only
-$a0 and turned the MusyX voice count 17 into 1 (class ED). Enumerate the whole class and close it.
-
-0. Fold the s7476_canary_flight soak verdict (SOAK-RESULTS.md) into the ledger first (pass = plant DETECTED, 0 non-plant
-   tail-hits, 0 `[s7476-ss]` slack_store).
-1. Enumerate (offline, one script tools/s7477_injected_call_audit.py): in /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/*.c,
-   every line containing `PATCH` that also contains `<guestfunc>(rdram, ctx)` where guestfunc is a RECOMP_FUNC name, plus
-   fixup/apply scripts emitting such calls (grep tools/*.py for `(rdram, ctx);` inside emitted strings).
-2. Classify each site: which regs the callee writes (parse its generated body for `ctx->rN =`), which regs the code after the
-   site reads before writing (scan forward in the caller to the next call/return), and which the patch saves/restores.
-   Live-and-clobbered-and-not-restored = BUG. Dead or restored = SAFE.
-3. Fix every BUG site in its fixup script (save/restore), with an =0 switch only where behaviour visibly changes; rebuild;
-   one boot + the s7476 point watch/ALLOC_CALLERS as a smoke control.
-Hypotheses: H-class-single (s4889 was the only live clobber) vs H-class-multi (more sites; each is a latent wrong-argument bug).
-Discriminator: the audit table's BUG count, with a positive control = the audit must flag s4889 when run on the pre-fix body
-(use OLD_CALL text from tools/apply_s4889_first_dereg.py) and pass it on the fixed body.
+Class EF (M3 idiom-class): the s7475 slack canary still reports two 1-byte stores exactly at offset == request size, in the
+8-byte rounding slack (s7476_canary_flight logs scratch/s7476_canary/log_l*.txt, `[s7475] slack-store`):
+  (1) rs_memset pc=0x800078EC a=0x800CDB38 blk=0x800CAE80 req=0x2CB8 alloc=spawnCutsceneObjectsFromList+0x214c t=10.9 (all arms)
+  (2) parseImageFile pc=0x8001EE04 a=0x809B601C blk=0x809B6010 req=0xC alloc=loadDatFile+0x8de0 t=11.1 (L15 21:9 dd8 only)
+Hypotheses: H-retail (retail code writes req+1 bytes: an off-by-one the 8-byte rounding hides; same store on hardware) vs
+H-port-size (a port patch shrinks the request, e.g. a dd/wide size computation or a size fixup) vs H-attr (the canary's
+alloc attribution / req is wrong: spawnCutsceneObjectsFromList+0x214c is past any real function end, and 0x800CAE80 is in the
+static .bss range, not an rs_malloc arena -> check how the canary registered that block).
+Discriminator, offline first (no build):
+ 1. Disassemble both writer sites in the ROM ELF (tools/make_elf.py output, mips64-elf-objdump) and the caller of rs_memset that
+    passes length; read whether the length is req+1 or the memset starts at +req (string NUL / terminator idiom).
+ 2. Check the canary registration path for blk=0x800CAE80 (grep s7475 canary in src/main/upstream_compat.cpp): is it a heap block?
+ 3. If still open: oracle (tools/oracle/README.md) write-watch physical 0x0CDB38 and 0x9B601C w/ positive control; same PC ->
+    H-retail (whitelist the two sites in the canary, document); none/different -> H-port-size, name the writer.
+Close with: each site classified, canary allowlist or fix landed, s7476_canary_flight re-scored clean.
