@@ -1,15 +1,16 @@
-# NEXT (s7447)
-HYPOTHESIS-ID: direct-stderr-bypass
+# NEXT (s7448)
+HYPOTHESIS-ID: quiet-harness-markers
 
-Class DD (CURRENT-TRUTH Next steps item 1, new idiom-class audit after the CZ-DC default-diag campaign closed s7446).
-Idiom: hand-written `fprintf(stderr` in src/main/*.cpp + src/rsp/*.cpp (1468 sites) that do NOT go through rs64_diag_fprintf
-(main.cpp), so ROGUESQ_DIAG_QUIET=1 cannot drop them and the game thread pays the libc lock itself.
-Step 1 (offline census, tools/s7447_stderr_sites.py): classify every site by kind: one-shot (static flag / lambda init),
-crash/abort breadcrumb, env-gated (getenv/latch dominates), counter-budgeted (n++ < K), UNGATED-RECURRING (none of these).
-Step 2 (runtime, one run): env S7431_ARM=DD zsh tools/s7431_stderr_volume.sh 150 - map every tag that fired in the default arm to
-its site; ungated-recurring sites that fired = the class members.
-Hypotheses: H-clean (every recurring direct site is already gated or rate-capped -> close the class with the census),
-H-hidden (some ungated-recurring sites fire in owner flight -> route via rs64_diag_fprintf or latch, consumer control restores),
-H-dead (the ungated-recurring ones never fire in owner recipe -> document, no change).
-Discriminator: count of UNGATED-RECURRING sites that fire in the default arm (0 -> H-clean/H-dead; >0 -> H-hidden).
-Positive control: the s7431 [fbhash planted tag (ROGUESQ_FB_HASH=1) must classify PERSISTENT in the same run.
+First: fold SOAK-RESULTS line for s7447_route_levels (L4/L7/L12 120 s flight, build with include/rs64_diag_route.h). A crash
+there that the s7447 150 s lvl1 runs did not show -> suspect the lib TU recompile (RS64_DIAG_ROUTE=OFF arm to split).
+
+Class DE: since s7447 ROGUESQ_DIAG_QUIET=1 drops every non-crash diagnostic line, including markers the harnesses wait on
+([initMission] from generated C makes g1_level_coverage_common.zsh MISSION_INIT=1 time out). QUIET is the cheapest owner-like
+logging arm, so it should be usable in every harness.
+Step 1 (offline): grep tools/*.{sh,zsh,py} + scratch/agent/*.{sh,zsh} for the stderr tags they match (grep -a '\[...', re
+patterns); list them. Step 2 (one run each arm, 150 s, tools/s7431_stderr_volume.sh): default vs ROGUESQ_DIAG_QUIET=1; a
+harness tag present in default but 0 in QUIET = class member.
+Hypotheses: H-few (a handful of markers: [initMission], [osViSwapBuffer, VI/phase markers -> add to rs64_diag_keep or (fprintf)),
+H-many (consumers depend on high-rate per-frame tags -> QUIET stays a non-harness arm, document), H-none.
+Discriminator: count of harness-consumed tags dropped under QUIET. Positive control: [initMission] must show as dropped.
+Close with g1_level_coverage_common.zsh running one level to flight under XENV_EXTRA=ROGUESQ_DIAG_QUIET=1.

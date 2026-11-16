@@ -197372,3 +197372,32 @@ VERDICT: selects H-hidden (consumer-only output, latched: default 0, consumer co
 recorded elsewhere) and H-clean (it was the last ungated burst in the owner-recipe stderr).
 Next discriminator: class DD - hand-written src fprintf(stderr) sites (1468 in src/main + src/rsp) that bypass rs64_diag_fprintf:
 census by kind (one-shot / crash / env-gated / ungated-recurring) with a same-run fired count in the owner-recipe default arm.
+
+## Session 7447 (2026-11-15) — class DD closed H-hidden: every hand-written direct fprintf (src/main, src/rsp, rt64, librecomp, ultramodern) now routed via rs64_diag_fprintf; ROGUESQ_DIAG_QUIET=1 flight residual 18.8 KB/10s -> 163 B/10s, default output byte-for-byte volume unchanged, 0 crash
+
+Work unit: class DD (HYPOTHESIS-ID direct-stderr-bypass), NEXT.md s7447. Hypotheses H-clean / H-hidden / H-dead; discriminator =
+recurring direct (non-routed) sites that fire in owner flight. Measured at runtime first instead of a 1468-site static census:
+the same 150 s owner recipe lvl1 flight (tools/s7431_stderr_volume.sh, FPS60 dd4 16:9, copied save) with ROGUESQ_DIAG_QUIET=1:
+whatever still prints under QUIET is by definition a bypass site.
+- Before (scratch/s7447/default.txt, quiet.txt): default 8,770,263 B / 150 s, flight 628 lines/s non-control; QUIET 909,554 B,
+  flight 24.4 lines/s = 18.8 KB/10s still printing, 12 PERSISTENT bypass tags: src [set-cimg (dpc_bridge.cpp), [s4273-wrap,
+  [dpc-merge, [pad-sdl (main.cpp), [lle send_dl / [vi update_screen (rt64_render_context.cpp), [bucketlog / [osViSwapBuffer
+  (upstream_compat.cpp), [audtask-dispatch; lib: [threadPresent / [vi-follow-draw (rt64_present_queue.cpp), [vi-fs-decision
+  (rt64_state.cpp), [m5-cmd (librecomp rsp.cpp), [pe. All counter-budgeted periodic (n%K) sites, none env-gated. -> H-hidden.
+  Routed control in the same QUIET run: [dpc-fwd]/[s2020-svc] 0 (router works); planted [fbhash PERSISTENT (8830).
+- Change (no per-site edits, no lib/ source edits): include/rs64_diag_route.h (new) = <cstdio> + extern "C" rs64_diag_fprintf +
+  `namespace std { using ::rs64_diag_fprintf; }` + function-like `#define fprintf(...) rs64_diag_fprintf(__VA_ARGS__)`.
+  CMakeLists option RS64_DIAG_ROUTE (default ON) force-includes it into every src/main/*.cpp + src/rsp/*.cpp (factor5_ucode*
+  excluded, they keep RS64_UCODE_FLAGS) and, via target_compile_options CXX-only, into rt64 / librecomp / ultramodern. Kept raw
+  via `(fprintf)(...)` (parenthesised name skips the macro): the [diag-quiet] init/win/flip lines (the QUIET instrument itself),
+  [fbhash (planted control), [autopilot] fire (harness flight marker the s7431 analyzer keys flight_from on).
+- After, QUIET (quiet_after2.txt, +DIAG_STAT): flight non-control 163 B/10s, control PASS [fbhash 8833 (= 8830 before: frame
+  delivery unchanged), [diag-quiet] win drop counts ~4050 task + ~2100 other per 10 s, 0 crash. quiet_after3.txt (with the
+  autopilot exemption): flight_from 96.4 s (= 96.4 before), 302 B/10s, control PASS 8825, 0 crash.
+- After, default (default_after.txt, consumer control): 8,772,166 B vs 8,770,263 B, flight_from 68.4 s both, 193 vs 191 tags, the
+  only tag-set differences are hex-led <other> fragments; [s2020-svc] 16423/16405, [dpc-fwd] 16169/16150, [threadPresent]
+  1099/1099, [pad-sdl] 294/294, [set-cimg] 750/749, [fbhash 8823/8816. 0 crash.
+Rules out: H-clean (12 recurring bypass tags fired) and H-dead. Not a mitigation (diagnostic routing only; no guest store).
+Trap found: QUIET also drops generated-C harness markers such as [initMission] (routed since s7432), so
+scratch/agent/g1_level_coverage_common.zsh (MISSION_INIT=1 waits on it) cannot run under QUIET -> next class DE.
+Queued scratch/agent/soak_queue/s7447_route_levels.sh: L4/L7/L12 120 s flight default arm on the new build (lib TUs recompiled).

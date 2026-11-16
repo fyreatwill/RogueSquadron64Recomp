@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7443 (2026-11-15).
+Compact operational handoff, as of Session 7447 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,9 +215,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Default-diag burst audit campaign (CZ-DC) CLOSED s7446. Next: class DD (HYPOTHESIS-ID direct-stderr-bypass).** See
-   NEXT.md: hand-written src/main + src/rsp `fprintf(stderr` sites that bypass rs64_diag_fprintf (so ROGUESQ_DIAG_QUIET=1 cannot
-   drop them); enumerate, classify one-shot / crash-breadcrumb / gated / ungated-recurring, route or latch the recurring ones.
+1. **Class DD CLOSED s7447 (direct-stderr-bypass). Next: class DE (HYPOTHESIS-ID quiet-harness-markers).** See NEXT.md:
+   ROGUESQ_DIAG_QUIET=1 now drops harness markers the tools wait on ([initMission] in generated C), so QUIET cannot be used
+   with g1_level_coverage_common.zsh; enumerate every tag tools/ + scratch/agent harnesses grep for, keep those in
+   rs64_diag_keep. Fold SOAK-RESULTS s7447_route_levels (L4/L7/L12, new build) first.
+   DD (s7447) CLOSED H-hidden, one change: include/rs64_diag_route.h force-included (CMake option RS64_DIAG_ROUTE, default ON)
+   into src/main + src/rsp (not factor5_ucode*) and the rt64 / librecomp / ultramodern C++ TUs, so every direct fprintf /
+   std::fprintf goes through rs64_diag_fprintf; `(fprintf)(...)` keeps a site raw ([diag-quiet], [fbhash, [autopilot] fire).
+   150 s owner recipe lvl1 (scratch/s7447): QUIET flight residual 18.8 KB/10s (12 periodic bypass tags) -> 163 B/10s, control
+   [fbhash 8830 -> 8833; default arm 8.770 -> 8.772 MB, same tags, flight_from 68.4 s both; 0 crash all four runs.
    DC (s7446) CLOSED H-hidden, one change: src/main/upstream_compat.cpp rs64_s6569_spill per-request bump line
    "[spill] req=.. -> .." latched on ROGUESQ_SPILL_LOG=1 (G1E_TRIM=0 = old); arena-full breadcrumb and the 1-in-256
    reuse/free summaries stay unconditional; placement stays in the s6893 ring / S7317_ALLOCMAP. scratch/s7446, 150 s owner

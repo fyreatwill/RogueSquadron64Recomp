@@ -407,6 +407,23 @@ add_executable(RogueSquadron64Recomp
     $<$<PLATFORM_ID:Windows>:${CMAKE_SOURCE_DIR}/src/main/app.rc>
 )
 
+# s7447 class DD: route the hand-written src/main + src/rsp fprintf/std::fprintf sites through rs64_diag_fprintf so
+# ROGUESQ_DIAG_QUIET=1 drops them too (default output unchanged). The ucode .cpp arms keep RS64_UCODE_FLAGS.
+option(RS64_DIAG_ROUTE "Force-include include/rs64_diag_route.h into src/main + src/rsp host sources" ON)
+if (RS64_DIAG_ROUTE AND NOT MSVC)
+    file(GLOB RS64_DIAG_ROUTE_SRC ${CMAKE_SOURCE_DIR}/src/main/*.cpp ${CMAKE_SOURCE_DIR}/src/rsp/*.cpp)
+    list(FILTER RS64_DIAG_ROUTE_SRC EXCLUDE REGEX "factor5_ucode")
+    set_property(SOURCE ${RS64_DIAG_ROUTE_SRC} APPEND PROPERTY COMPILE_OPTIONS
+        "-include;${CMAKE_SOURCE_DIR}/include/rs64_diag_route.h")
+    # lib targets linked only into this executable (rs64_diag_fprintf resolves at link); no lib/ source edits.
+    foreach(t rt64 librecomp ultramodern)
+        if (TARGET ${t})
+            target_compile_options(${t} PRIVATE
+                "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_SOURCE_DIR}/include/rs64_diag_route.h>")
+        endif()
+    endforeach()
+endif()
+
 target_include_directories(RogueSquadron64Recomp PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${RECOMP_FUNCS_DIR}

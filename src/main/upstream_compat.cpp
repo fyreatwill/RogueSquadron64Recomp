@@ -1309,7 +1309,7 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         for (uint32_t i = 0; i < 320u * 224u * 2u; ++i) {
             h = (h ^ rdram[((phys + i) & 0xFFFFFFu) ^ 3]) * 1099511628211ull;
         }
-        fprintf(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
+        (fprintf)(stderr, "[fbhash #%d] fb=0x%08X h=%016llx\n", n, fb, (unsigned long long)h);
     }
     static const char* s_fbd = std::getenv("ROGUESQ_FB_DUMP_DIR");
     static const int s_fbd_every = [] { const char* e = std::getenv("ROGUESQ_FB_DUMP_EVERY"); int v = e ? atoi(e) : 0; return v > 0 ? v : 500; }();

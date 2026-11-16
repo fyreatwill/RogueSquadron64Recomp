@@ -5127,7 +5127,7 @@ static void rs64_g1e_nmac_tick() {
 // [g1e-split] ucode window) and ROGUESQ_DIAG_BUSY_GUEST_US per osViSwapBuffer on the guest thread. One [diag-quiet] line per flip.
 static int rs64_env_int(const char* n, int d) { const char* e = getenv(n); return (e && *e) ? atoi(e) : d; }
 extern "C" int rs64_diag_quiet = [] { const int q = rs64_env_int("ROGUESQ_DIAG_QUIET", 0) != 0;
-    fprintf(stderr, "[diag-quiet] init quiet=%d\n", q); return q; }();
+    (fprintf)(stderr, "[diag-quiet] init quiet=%d\n", q); return q; }();
 static const double s_dq_qtog = [] { const char* e = getenv("ROGUESQ_DIAG_QUIET_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
 static const double s_dq_btog = [] { const char* e = getenv("ROGUESQ_DIAG_BUSY_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
 static const int s_dq_stat = rs64_env_int("ROGUESQ_DIAG_STAT", 0) || s_dq_qtog > 0 || s_dq_btog > 0;
@@ -5175,13 +5175,13 @@ static void rs64_diag_quiet_tick() {
     uint64_t c[2], ns[2], by[2], dr[2];
     for (int i = 0; i < 2; ++i) { c[i] = s_dq_calls[i].exchange(0); ns[i] = s_dq_ns[i].exchange(0); by[i] = s_dq_bytes[i].exchange(0); dr[i] = s_dq_drop[i].exchange(0); }
     // window stats belong to the state BEFORE this flip
-    fprintf(stderr, "[diag-quiet] win quiet=%d busy=%d t=%.3f secs=%.3f task_calls=%llu task_ms=%.3f task_bytes=%llu task_drop=%llu "
+    (fprintf)(stderr, "[diag-quiet] win quiet=%d busy=%d t=%.3f secs=%.3f task_calls=%llu task_ms=%.3f task_bytes=%llu task_drop=%llu "
             "oth_calls=%llu oth_ms=%.3f oth_bytes=%llu oth_drop=%llu\n", rs64_diag_quiet, rs64_diag_busy.load(),
             std::chrono::duration<double>(now - t0).count(), win, (unsigned long long)c[1], ns[1] / 1e6, (unsigned long long)by[1],
             (unsigned long long)dr[1], (unsigned long long)c[0], ns[0] / 1e6, (unsigned long long)by[0], (unsigned long long)dr[0]);
     if (fq) { tq = now; rs64_diag_quiet = !rs64_diag_quiet; }
     if (fb) { tb = now; rs64_diag_busy = !rs64_diag_busy.load(); }
-    if (fq || fb) fprintf(stderr, "[diag-quiet] flip quiet=%d busy=%d t=%.3f\n", rs64_diag_quiet, rs64_diag_busy.load(),
+    if (fq || fb) (fprintf)(stderr, "[diag-quiet] flip quiet=%d busy=%d t=%.3f\n", rs64_diag_quiet, rs64_diag_busy.load(),
                           std::chrono::duration<double>(now - t0).count());
 }
 extern "C" void rs64_store_diag_tick(void) {
@@ -11339,7 +11339,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 s_held = s_ev[s_idx].btn;
                 s_held_sx = s_ev[s_idx].sx; s_held_sy = s_ev[s_idx].sy;
                 s_release_at = el + s_hold;
-                fprintf(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u wall=%.1f fs=%u\n",
+                (fprintf)(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u wall=%.1f fs=%u\n",
                         s_idx + 1, s_nev, el, (unsigned)s_held,
                         (unsigned)rs64_vi_committed_width(), (SDL_GetTicks() - s_t0) / 1000.0,
                         (unsigned)rs64_dpc_get_cumulative_fullsyncs());
