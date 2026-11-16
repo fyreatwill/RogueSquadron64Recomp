@@ -197177,3 +197177,26 @@ Rules out: other per-triangle/per-load rs64 hooks as a frame-time term (all <= 0
 (ROGUESQ_LOG_FLOOR=1 / LOG_SHADE_RAW=1 still log) - code-reading only, queued as the first step of class CW.
 Conclusion: selects H-gated (the ~0.10 found by s7438 was the whole class, now gated, measured saving ~0.2 ms/f self), refutes
 H-spread and H-needed. Next discriminator: class CW, per-command/per-rect hooks + CV consumer control.
+
+## Session 7440 (2026-11-15) — class CW per-command/per-rect rs64 hooks closed H-small: rs64_note_image_word op test moved to the call site (35 -> 0 profiler samples), rs64_floor_rect arguments gated on ROGUESQ_LOG_FLOOR; CV consumer control PASS
+
+HYPOTHESIS-ID: rt64-percmd-diag.
+Part A (CV consumer positive control, owed by s7439): tools/s7431_stderr_volume.sh 150 with ROGUESQ_LOG_SHADE_RAW=1
+LOG_FLOOR=1 LOG_FLOOR_MESH=1 (S7431_ARM=CWA, new build): [shade-raw 4751 lines (first: task=79 ord=1), [tri-source-join
+4751 all with ord>=1, [floor* 55745 (mesh 43645, hist 4945, tex 2183, cov 1861, census rect counters > 0), [s4531-img]
+control 1, 0 crash. The s7439 gates pass their consumers.
+Part B (classification by reading): rs64_note_image_word (rt64_interpreter.cpp, per RDP command) feeds the FF/FE ring read by
+rs64_lookup_image_word, whose only caller is the default-on [ost-wb] wild-width freelist-allow log (rt64_state.cpp, n<=40 or
+%100) -> UNGATED-NEEDED for the ring, but the out-of-line call per command is not: the op test `((w0>>24)|1)==0xFF` (exactly
+0xFE/0xFF) now sits at the call site. rs64_floor_rect (rt64_rdp.cpp, per rect) returns unless ROGUESQ_LOG_FLOOR ->
+UNGATED-DIAG; its scissor/fill argument block now runs only under LOG_FLOOR or ROGUESQ_G1E_TRIM=0. rs64LogLoad and
+rs64SkipDraw are GATED (static getenv latch at entry). submodule-patches/rt64.patch refreshed.
+Measurement: tools/s7433_probe_cost.sh (S7431_ARM=CW), samples kept in scratch/s7440; tools/s7438_rt64_terms.py CONTROL
++0.0355 core vs 0.030 PASS. Top-of-stack sample counts over the 8 x 12 s windows (python pass, s7439 vs s7440):
+rs64_note_image_word 35 -> 0, rs64_floor_rect 0 -> 0, rs64LogLoad 5 -> 6, rs64SkipDraw 16 -> 27 (~0.012 ms/f, noise-level),
+processRDPLists self 895 -> 1023 (absorbs the inlined test; cross-run). Guest probe verdict same run H-free 0.13 ms/f
+(control 0.62). 0 crash in run.tlog.
+Rules out: any per-command / per-rect rs64 hook in the interpreter/RDP files as a frame-time term (all < 0.015 ms/f left).
+Conclusion: selects H-small (with the free call-site fix), refutes H-hidden; H-needed holds only for the image-word ring.
+Next discriminator: class CX, per-draw rs64 hooks in render/ framebuffer/ state/ present files (not yet enumerated) + inline
+rs64SkipDraw latch.

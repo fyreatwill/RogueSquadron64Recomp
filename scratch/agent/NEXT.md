@@ -1,15 +1,14 @@
-# NEXT (s7440)
-HYPOTHESIS-ID: rt64-percmd-diag
+# NEXT (s7441)
+HYPOTHESIS-ID: rt64-perdraw-diag
 
-Class CW (CURRENT-TRUTH Next steps item 1). Two parts, one build, one or two runs.
-Part A, CV consumer positive control (s7439 gated decodeTriangles hooks behind env latches): run the owner recipe once with
-  env ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_LOG_FLOOR=1 ROGUESQ_LOG_FLOOR_MESH=1 (e.g. via tools/s7431_stderr_volume.sh 150 <envs>)
-  and confirm [shade-raw ...], [tri-source-join] with nonzero ord, and [floor] lines still appear (any count > 0 = PASS).
-  If 0: the gate is wrong -> fix before anything else.
-Part B, remaining per-command / per-rect rs64 hooks (s7439 --under tables): rs64_note_image_word (rt64_interpreter.cpp:848,
-  called per RDP command, 0.016 ms/f; returns unless op FF/FE; find who reads s_rs64_ff/fe rings: rs64_img_find), rs64_floor_rect
-  (rt64_rdp.cpp, per rect), rs64LogLoad, rs64SkipDraw. Classify GATED / UNGATED-NEEDED / UNGATED-DIAG; inline the op-byte check at
-  the call site for note_image_word if it stays needed. Expected: H-small (all < 0.03 ms/f total -> close, no change unless free),
-  H-hidden (a hook >= 0.05 under another frame -> gate it), H-needed (ring feeds a default-on fix -> keep, document).
-Measure with tools/s7433_probe_cost.sh (S7431_ARM=CW) + python3 tools/s7438_rt64_terms.py /tmp/rs64_s7431/CW --under <frame>;
-compare against scratch/s7439. lib/rt64 edit => ./submodule-patches/export.sh + commit.
+Class CX (CURRENT-TRUTH Next steps item 1). One build, one measuring run.
+Step 1 (offline): grep default-on rs64_* / getenv-latched calls in lib/rt64/src/render/rt64_framebuffer_renderer.cpp,
+hle/rt64_state.cpp, hle/rt64_framebuffer.cpp, hle/rt64_framebuffer_manager.cpp, hle/rt64_present_queue.cpp,
+hle/rt64_rdp_tmem.cpp, hle/rt64_workload_queue.cpp. Classify per call frequency (per draw call / per texture / per frame)
+as GATED / UNGATED-NEEDED / UNGATED-DIAG (read every consumer).
+Step 2 (change, same build): rs64SkipDraw (rt64_rdp.cpp) -> inline static env latch + slow path; any UNGATED-DIAG per-draw
+hook found in step 1 gets a call-site latch (ROGUESQ_G1E_TRIM=0 = old path).
+Measure: env S7431_ARM=CX zsh tools/s7433_probe_cost.sh; then the top-of-stack python pass used in s7440 (PORTING-STATE)
+against scratch/s7440; copy samples to scratch/s7441. Positive control = the probe script's DIAG_BUSY toggle (must PASS).
+Outcomes: H-small (all < 0.03 ms/f -> close the diag-cost family for lib/rt64), H-hidden (a hook >= 0.05 ms/f -> gate it,
+show its samples drop), H-needed (feeds a default-on fix -> keep, document). lib/rt64 edit => ./submodule-patches/export.sh.

@@ -215,10 +215,18 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CW, the remaining default-on per-command / per-rect rs64 hooks in lib/rt64 (HYPOTHESIS-ID
-   rt64-percmd-diag).** See scratch/agent/NEXT.md: rs64_note_image_word (per RDP command, 0.016 ms/f under processRDPLists),
-   rs64_floor_rect (per rect), rs64LogLoad (0.002+0.002), rs64SkipDraw (0.003); plus the ROGUESQ_LOG_FLOOR=1 / LOG_SHADE_RAW=1
-   consumer positive control for CV (logs must still fire with the s7439 gates).
+1. **Next audit: class CX, per-draw rs64 hooks outside the interpreter/RDP/GBI files (HYPOTHESIS-ID rt64-perdraw-diag).**
+   See scratch/agent/NEXT.md: enumerate default-on rs64 calls in lib/rt64/src/render/rt64_framebuffer_renderer.cpp,
+   hle/rt64_state.cpp, hle/rt64_framebuffer*.cpp, hle/rt64_present_queue.cpp, rdp_tmem.cpp; split rs64SkipDraw (0.012 ms/f, per tri/
+   rect) into an inline env latch + slow path in the same build. Expect H-small (close) unless a term >= 0.05 ms/f shows.
+   CW (s7440) CLOSED H-small, one change: rs64_note_image_word was an out-of-line call per RDP command that returned unless op
+   FF/FE; the op test is now at the rt64_interpreter.cpp call site (same ring; consumer = the default-on [ost-wb] wild-width
+   freelist log in rt64_state.cpp, so the ring stays). rs64_floor_rect call (rt64_rdp.cpp, per rect) now skips its argument
+   building unless ROGUESQ_LOG_FLOOR (or G1E_TRIM=0). rs64LogLoad (6 samples) and rs64SkipDraw (27) are already env-gated at
+   entry, < 0.015 ms/f each. /usr/bin/sample top-of-stack, owner recipe lvl1, scratch/s7440 (control +0.0355 vs 0.030 PASS):
+   note_image_word 35 -> 0 samples vs scratch/s7439; 0 crash. CV consumer control PASS (same session, LOG_SHADE_RAW/FLOOR/
+   FLOOR_MESH=1): shade-raw 4751 lines with ord>=1, tri-source-join 4751, [floor*] 55745 incl. census rect counts > 0,
+   [s4531-img] control 1 (ring still fed after the call-site gate).
    CV (s7439) LANDED H-gated: rt64_gbi_rdp.cpp decodeTriangles now computes shadeTask/shadeOrdinal/submit serial only when
    ROGUESQ_LOG_SHADE_RAW / FIX_ZERO_SHADE / LOG_FLOOR_MESH / SHADE_DIAG=1 is armed, and builds the floor_note/cover/texel/untex
    argument blocks only under ROGUESQ_LOG_FLOOR / LOG_FLOOR_MESH (every callee already returned at once without them).
