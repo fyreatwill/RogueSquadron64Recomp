@@ -197401,3 +197401,6 @@ Rules out: H-clean (12 recurring bypass tags fired) and H-dead. Not a mitigation
 Trap found: QUIET also drops generated-C harness markers such as [initMission] (routed since s7432), so
 scratch/agent/g1_level_coverage_common.zsh (MISSION_INIT=1 waits on it) cannot run under QUIET -> next class DE.
 Queued scratch/agent/soak_queue/s7447_route_levels.sh: L4/L7/L12 120 s flight default arm on the new build (lib TUs recompiled).
+Verdict: selects H-hidden (12 ungated-recurring bypass tags fired in owner flight; routed, QUIET residual 163 B/10s), refutes
+H-clean and H-dead. Next discriminator (class DE): count of harness-consumed stderr tags present in the default arm but 0 under
+ROGUESQ_DIAG_QUIET=1 ([initMission] = positive control).
