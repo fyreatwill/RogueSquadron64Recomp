@@ -198454,3 +198454,5 @@ Work unit: NEXT.md s7484, class EI = guest LOADS of freed rs_malloc blocks (EH c
   Single instrument, two levels + in-flight positive control; levels soak s7484_uafload_levels queued (L1 dd8 21:9, L7/L10/L12 dd4).
 - Side datum (unscored): byte loads 1-16 past the request in swizzleTextureRowsToTmem (0x800248CC-F0, a=80B87F70.., arming time) and
   decodeJpegScanToImage (0x800C96AC.., L15 t=11) = over-reads into the PAD band, reads only.
+- Verdict wording (s7484): this run selects H-load-clean and refutes H-load-uaf and H-load-recarve for L4/L15. Next discriminator: the queued
+  s7484_uafload_levels soak (L1/L7/L10/L12) locator class at load time; any loc=F row there reopens it and names the reader.
