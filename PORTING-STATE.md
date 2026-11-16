@@ -197465,3 +197465,6 @@ from source. Cost: +409 B per boot (the planted lines themselves); flight volume
 ORIGIN: not a mitigation; the writer of the missing lines is our own s7432/s7448 QUIET filter (rs64_diag_keep matched the
 format string only), and the dropped values were legitimate failure reports.
 Next: class DG harness-fatal-exit-coverage (crashlines grep misses non-signal fatal exits).
+Verdict restated: the arm-B vs arm-C planted-line count (1/7 vs 7/7) selects H-few and refutes H-none and H-unrouted (crash
+handler 37 lines in every arm). Next discriminator (class DG): per-scorer crash verdict on a ROGUESQ_PLANT_EXIT log
+(non-signal fatal exit) vs the PLANT_FAIL positive control.
