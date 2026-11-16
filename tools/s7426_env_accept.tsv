@@ -1,0 +1,36 @@
+# s7426 reviewed env read sites. file<TAB>var<TAB>sem(unset,"","0","1","tog" truthiness; - = n/a)<TAB>match substring in the site line<TAB>note
+dpc_bridge.cpp	ROGUESQ_CULL_SPIKE	-	cull_tog	=t same-run toggle selector, not the on/off parse (line above: !(e && *e=='0') = default ON)	SPLIT-OK
+main.cpp	ROGUESQ_DD_OFFMAPCULL	-	!std::getenv("ROGUESQ_DD_OFFMAPCULL")	dd bundle: any explicit value (incl. -1 = off) wins over the auto R=2
+main.cpp	ROGUESQ_DD_OFFMAPCULL_K	-	!std::getenv("ROGUESQ_DD_OFFMAPCULL_K")	dd bundle: explicit K wins over the level-scoped auto
+main.cpp	ROGUESQ_DD_WIDEWIN_CAP	-	!std::getenv("ROGUESQ_DD_WIDEWIN_CAP")	dd bundle: explicit cap wins over CAPLEVEL auto
+main.cpp	ROGUESQ_DD_OFFMAPCULL_KLEVEL	-	[s7037] dd bundle	log print only
+main.cpp	ROGUESQ_DD_WIDEWIN_CAPLEVEL	-	[s7037] dd bundle	log print only
+main.cpp	ROGUESQ_DD_WIDEWIN_RLEVEL	-	[s7258] dd%.0f	log print only
+upstream_compat.cpp	ROGUESQ_DD_OFFMAPCULL_KLEVEL	-	fprintf	log print only
+upstream_compat.cpp	ROGUESQ_DD_WIDEWIN_CAPLEVEL	-	fprintf	log print only
+upstream_compat.cpp	ROGUESQ_DD_WIDEWIN_RLEVEL	-	fprintf	log print only
+upstream_compat.cpp	ROGUESQ_DD_OFFMAPCULL	-	g_rs64_s7030 = [	file-scope latch before main; main.cpp dd bundle sets g_rs64_s7030 = 1 itself when it setenv's OFFMAPCULL (s7037)
+funcs_9.c	ROGUESQ_DD_EYEWIN	11111	ROGUESQ_DD_EYEWIN	!(e&&*e) ? 1 : t?2 : e[0]!='0'  -> default ON
+funcs_9.c	ROGUESQ_DD_FWDWIN	11111	ROGUESQ_DD_FWDWIN	same form as EYEWIN -> default ON
+main.cpp	ROGUESQ_DD_PX8_AUTO	11011	ROGUESQ_DD_PX8_AUTO	next line !(pa && pa[0]=='0') -> default ON (gated on dd>=8 + WIDEWIN)
+main.cpp	ROGUESQ_DD_WIDEWIN	00011	ROGUESQ_DD_WIDEWIN	ww && *ww && ww[0]!='0' -> opt-in
+upstream_compat.cpp	ROGUESQ_DD_WIDEWIN	00011	ROGUESQ_DD_WIDEWIN	!(e&&*e) ? 0 : t ? 2/3 : e[0]!='0'; :381 = tog3 detector -> opt-in
+main.cpp	ROGUESQ_DD_WIDEWIN_STACK	11011	ROGUESQ_DD_WIDEWIN_STACK	next line !(st && st[0]=='0') -> default ON with WIDEWIN
+main.cpp	ROGUESQ_FBW_ALIGN	11011	ROGUESQ_FBW_ALIGN	!(al && *al=='0') -> default ON
+main.cpp	ROGUESQ_FULLSCREEN	00010	ROGUESQ_FULLSCREEN	fs && atoi(fs)!=0 -> opt-in
+upstream_compat.cpp	ROGUESQ_G1E_CELLIDX	11011	ROGUESQ_G1E_CELLIDX	unset: on at dd>1 only; set: atoi / t / tog3 -> doc "on by default at dd > 1"
+main.cpp	ROGUESQ_G1E_FAST	11011	ROGUESQ_G1E_FAST	set: *e!='0'; unset falls through to the normal-play default (on)
+dpc_bridge.cpp	ROGUESQ_G5B_TG_FIX	11011	ROGUESQ_G5B_TG_FIX	set: t?2 : *e!='0'; unset: on at dd>1 -> doc "on by default above dd1"
+main.cpp	ROGUESQ_GFX_QOS	-	[s6989] QOS_ALL	log print only
+main.cpp	ROGUESQ_GUEST_QOS	-	[s6989] QOS_ALL	log print only
+main.cpp	ROGUESQ_PRESENT_QOS	-	std::getenv("ROGUESQ_PRESENT_QOS"), std::getenv("ROGUESQ_WL_QOS")	log print only (s6989 line 2)
+main.cpp	ROGUESQ_WL_QOS	-	std::getenv("ROGUESQ_PRESENT_QOS"), std::getenv("ROGUESQ_WL_QOS")	log print only (s6989 line 2)
+main.cpp	ROGUESQ_UPLOAD_QOS	-	std::getenv("ROGUESQ_PRESENT_QOS"), std::getenv("ROGUESQ_WL_QOS")	log print only (s6989 line 2)
+events.cpp	ROGUESQ_GFX_QOS	00010	ROGUESQ_GFX_QOS	set: atoi; unset: QOS_ALL=='1' (file-scope, reads QOS_ALL itself before main) -> opt-in
+rt64_render_context.cpp	ROGUESQ_LLE_FORCE	11011	ROGUESQ_LLE_FORCE	(v&&*v) ? v[0]!='0' : 1 -> default ON (s6738)
+rt64_render_context.cpp	ROGUESQ_LLE_UNGATED	11011	ROGUESQ_LLE_UNGATED	same -> default ON
+rt64_render_context.cpp	ROGUESQ_LLE_SOLO	11011	ROGUESQ_LLE_SOLO	same -> default ON
+rt64_render_context.cpp	ROGUESQ_RENDER_TO_RAM	11011	ROGUESQ_RENDER_TO_RAM	only v[0]=='0' turns renderToRAM off -> RT64 default on, =0 opt-in
+main.cpp	ROGUESQ_VI_SHAPE	00011	ROGUESQ_VI_SHAPE	vsh && *vsh && *vsh!='0' -> opt-in
+rt64_render_context.cpp	ROGUESQ_VI_SHAPE	00011	ROGUESQ_VI_SHAPE	same -> opt-in
+main.cpp	ROGUESQ_WINDOW_FIT	11011	ROGUESQ_WINDOW_FIT	!wf || atoi(wf)!=0 -> default ON ("" -> atoi 0 = off, harmless)

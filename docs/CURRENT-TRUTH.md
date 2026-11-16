@@ -215,9 +215,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CI, env-default drift (HYPOTHESIS-ID env-default-drift).** Does every ROGUESQ_* getenv default compiled
-   into build/ (src/, librecomp, ultramodern, rt64 patches, fixup-injected diag) match the default documented in
-   docs/OWNER-OPT-INS.md / this file (CULL_SPIKE on, DD_FARMAX 32767, DD_FOG_ALT, QOS, NO_SAVE_WRITE ...)? scratch/agent/NEXT.md.
+1. **Next audit: class CJ, env-policy order (HYPOTHESIS-ID env-policy-order).** Do readers latch policy vars before main()'s
+   setenv sequence (function-local statics reached from pre-policy calls / global ctors), does one policy step read a value a later
+   step sets, is any setenv(...,1) an unguarded overwrite of a user value? scratch/agent/NEXT.md.
+   CI (s7426) CLOSED H-consistent after one fix: tools/s7426_env_defaults.py --control PASS (planted flipped default / presence /
+   file-scope policy latch all flagged); 3,789 sites, 703 lambdas compiled+evaluated, 86 documented vars, reviewed rows in
+   tools/s7426_env_accept.tsv. Defect fixed: ROGUESQ_DD_UNSAFE was a presence test (=0 unlocked dd 8); now a value test in
+   apply_s6036_dd.py + live funcs_9.c, two-arm verified (=0 -> multiplier 4, =1 -> 8). OWNER-OPT-INS header corrected. 154
+   undocumented default-ON vars = internal fix kill-switches/caps (inventory, not drift).
+   CH (s7425) qualified at runtime: s7425_nobw_levels L1/L5/L10 alive, 0 crash.
    CH (s7425) DRIFT FOUND + FIXED: tools/s7425_build_options.py --control (planted -O0 -DRS64_BYTE_WATCH librecomp entry and
    planted cache SP_WATCH=ON both flagged). 16 options/cache vars all at default (MIPS_*/N64RECOMP_EXE = host paths); hot targets
    (RecompiledFuncs 52, PatchesLib, game 24, librecomp 27, ultramodern 15, rt64 211, plume 3) all -O2; gfx ucode keeps

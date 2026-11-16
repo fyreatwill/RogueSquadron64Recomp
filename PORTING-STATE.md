@@ -196669,3 +196669,41 @@ compile flags newer than the objects. Limitation: wall-clock frame-time gain not
 ORIGIN: no mitigation; the define's writer is CMakeLists.txt line ~100 (s5690), a diagnostic left on; removed from the default build.
 Next: class CI, env-default drift (compiled ROGUESQ_* getenv defaults vs the documented defaults).
 Conclusion: selects H-drift (one undocumented diagnostic define live), fixed by gating it OFF; post-fix audit H-intended; closes class CH.
+
+## Session 7426 (2026-11-15) — class CI env-default drift: every documented default matches the code; one presence-test bug (ROGUESQ_DD_UNSAFE=0 unlocked the 8x clamp) fixed and verified two-arm
+Soak fold: s7425_nobw_levels rc=0, L1/L5/L10 134-138 s flight alive, 0 crash, 0 VI stall -> the ROGUESQ_BYTE_WATCH=OFF build
+qualifies (second line for class CH).
+Question: do the ROGUESQ_* runtime defaults compiled into build/ match what docs/OWNER-OPT-INS.md says, and is each documented
+var parsed the same way at every read site? New tool tools/s7426_env_defaults.py (exit 0 consistent / 1 drift / 3 control failed):
+sources = build/compile_commands.json (game, librecomp, ultramodern, rt64, plume, RecompiledFuncs, factor5_ucode) + headers;
+3,789 getenv/helper sites, 1,343 distinct names. Per site it (a) EVALUATES the read: 703/732 enclosing lambdas are compiled with
+a fake getenv and run for unset/""/"0"/"1"/"tog" (non-arithmetic/side-effect lambdas skipped), statement forms go through a regex
+classifier, the rest through a reviewed table tools/s7426_env_accept.tsv (36 rows, each with its parse written out); (b) parses the
+doc's claims per var (86 vars: `X=0` + "turns it off/restores/old" = default ON; `X=1`/opt-in = default OFF).
+Checks: DOC (claim vs evaluated unset/"0"/"1"), PRESENCE (`getenv(X) ? a : b` on a documented var, so "=0" acts as set), SPLIT
+(two sites of one boolean var disagree), ORDER (a file-scope static initializer latches a var that main() later setenv's: 36
+policy vars incl. the QOS_ALL name loop).
+Control (same run) PASS: a planted CULL_SPIKE reader with the default flipped (DOC), a planted presence test on TILEPOOL
+(PRESENCE) and a planted file-scope OSMEM_MB latch (ORDER) were all flagged.
+Result: 18 raw flags -> reviewed: 1 real defect. funcs_9.c:16843 (apply_s6036_dd.py) clamped DRAW_DISTANCE with
+`getenv("ROGUESQ_DD_UNSAFE") ? 8.0 : 4.0`, so ROGUESQ_DD_UNSAFE=0 UNLOCKED dd up to 8 (docs only ever show =1; owner recipe does not
+set it, so test/owner-typo exposure only). The rest are by design: the CULL_SPIKE =t toggle selector; main.cpp dd-bundle presence
+tests mean "an explicit user value wins" (OFFMAPCULL/_K/_WIDEWIN_CAP); *LEVEL/QOS presence reads are log prints; the one ORDER hit
+(upstream_compat.cpp:164 g_rs64_s7030 file-scope latch of DD_OFFMAPCULL) is already compensated by main.cpp:12541 (s7037 sets
+g_rs64_s7030 = 1 itself). 3 flags were my classifier's bugs (binding to the first getenv on a line), fixed before review.
+All 25 statement-form boolean sites read by hand agree with the doc (EYEWIN/FWDWIN/PX8_AUTO/WIDEWIN_STACK/FBW_ALIGN/WINDOW_FIT/
+LLE_* default on; CELLIDX/G5B_TG_FIX on at dd>1; G1E_FAST on via the normal-play default; RENDER_TO_RAM off only on '0'; VI_SHAPE/
+FULLSCREEN/WIDEWIN opt-in). No documented var is parsed two incompatible ways.
+Fix: value test `u && *u && *u != '0'` in tools/apply_s6036_dd.py AND the live funcs_9.c (same text). Rebuilt build/ (rc 0).
+Verification, same build, two arms (L1, FPS60 dd8 16:9, g1_level_coverage_common): DD_UNSAFE=0 -> "[dd] ROGUESQ_DRAW_DISTANCE
+multiplier 4" (137 s flight, alive, 0 crash, 0 stall); DD_UNSAFE=1 (positive control) -> "multiplier 8". Post-fix tool rc 0,
+VERDICT H-consistent (scratch/agent/s7426_env_defaults.out).
+Doc drift fixed: OWNER-OPT-INS header said "Everything here is OFF by default" while ~20 rows are on by default; rewritten.
+Inventory, not drift: 154 vars are ON when unset (unset=1, "0"=0) and named in neither OWNER-OPT-INS nor CURRENT-TRUTH: internal
+kill-switches of landed fixes (S7398_IOFIX, S7402_CLOCKFIX, S7376_PQLOCK ...) and nonzero numeric caps; none owner-facing.
+Rules out: a documented default that the code contradicts; a "0 means on" parse on an owner var (after the fix); split parses.
+Limitation: ORDER covers file-scope latches only; function-local latches reached before main's policy block, and policy steps
+reading values a later step sets, are class CJ (next).
+ORIGIN: no mitigation; the defect's writer is tools/apply_s6036_dd.py (s6036 NEW text), fixed at the source.
+Next: class CJ env-policy order (scratch/agent/NEXT.md).
+Conclusion: selects H-consistent for documented defaults after fixing one presence-test drift (DD_UNSAFE); closes class CI.

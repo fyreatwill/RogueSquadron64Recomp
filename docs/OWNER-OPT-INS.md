@@ -1,6 +1,6 @@
 # Owner opt-in settings (one page)
 
-Everything here is OFF by default; unset = retail behaviour. Run from `build/` with the ROM beside it:
+Rows marked "opt-in" or giving `=1` are OFF by default (unset = retail); rows marked "on by default" / **ON by default** are already on and their `=0` turns them off (s7426: every documented default matches the code, `tools/s7426_env_defaults.py`). Run from `build/` with the ROM beside it:
 
 ```sh
 cd build && env ROGUESQ_FPS60=1 ./RogueSquadron64Recomp            # steady 60 fps (s6703)
