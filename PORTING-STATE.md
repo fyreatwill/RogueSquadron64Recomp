@@ -197833,3 +197833,6 @@ stack contents) and the fix removes it. Instrument discriminates (ctl). Single-s
 s7463_padhash_flight queued (L4 cnt, L1 ctl, HOLD=150). Census rerun after the fix: rc 0, 0 survivors, both controls PASS.
 Latent, noted not changed: DrawCallKey::operator== returns memcmp() (true when keys DIFFER), 0 callers.
 Rules out: uninitialised-read UB in any in-scope host TU beyond these (two independent lines, controls PASS); the 5 compiler sites.
+Verdict: selects H-const, refutes H-split for title+attract (distinct raw == distinct fixed at both firing sites, while the planted
+varying-padding control splits 511270 vs 651 in the same build). Next discriminator: s7463_padhash_flight in-flight raw vs fixed distinct
+counts per site (H-split if raw > fixed at any site), plus whether the reinterpret site is reached at all (H-unreached).
