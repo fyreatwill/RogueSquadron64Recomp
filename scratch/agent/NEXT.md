@@ -1,17 +1,18 @@
-# NEXT (s7431)
-HYPOTHESIS-ID: default-stderr-volume
+# NEXT (s7432)
+HYPOTHESIS-ID: default-fprintf-cost
 
-First fold new scratch/agent/SOAK-RESULTS.md lines (s7428_audio_route_arms: rc 0 = F9 gate two-arm verified; 2 = VOID).
+Fold new scratch/agent/SOAK-RESULTS.md lines first (s7428_audio_route_arms: rc 0 = F9 gate two-arm verified; 2 = VOID).
 
-Class CN (CURRENT-TRUTH Next steps item 1): default-on stderr volume. s7430: a no-logging-env owner-recipe run
-(ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9 ROGUESQ_NO_SAVE_WRITE=1) writes ~1.5 MB per 40 s of boot.
-Hypotheses: H-capped (every default-on tag has a per-run line budget; volume is boot-front-loaded and flight is quiet)
-vs H-perframe (>=1 default-on tag prints per frame/task in flight: unbounded per run and a G5c H-log stall source)
-vs H-burst (budgets exist but one event fans out to >100 KB in one frame).
-Discriminating measurement, ONE run: forced-level route to flight (s5705-s5720 recipe, LEVEL=1, no keys needed?) for
->=180 s with stderr to a file, then offline: bytes per tag per 10 s window (boot / title / flight). A tag whose rate in the
-last 60 s of flight is > 0 and flat = H-perframe. Static half: grep the top 15 tags' fprintf sites, record each budget
-(counter cap or none) and gate. Positive control: plant ROGUESQ_<a known opt-in log>=1 and see its tag appear at its
-expected rate. Fix: move per-frame/unbudgeted default-on tags behind an opt-in env (keep crash breadcrumbs default-on
-but budgeted). Tool: tools/s7431_stderr_volume.py (exit 0 H-capped, 1 found, 3 control fail).
-Reuse tools/s7430_file_growth.sh's copied-folder pattern (/tmp/rs64_s7430/R/1.runlog is a boot-only sample).
+Class CO (CURRENT-TRUTH Next steps item 1): s7431 capped what reaches the terminal, but 37 default-on tags still format every
+frame on the calling threads (gfx thread: [dpc-fwd], [lle, [vi-mode-table]/[osViSetMode]; guest thread: [s2020-svc],
+[s3290-stall], [s5855] ~5 KB/line, [s3294-stall], ...). Hypotheses: H-free (formatting + pipe write < 0.1 ms per frame on each
+thread: the cap is enough) vs H-cost (gating the per-frame default-on sites at source lowers gfx-task ms or raises game fps at
+FPS60 dd4 16:9 by a measurable amount) vs H-guest (cost lands on the guest thread only: game frame time, not gfx).
+Discriminator, ONE build: a single global switch ROGUESQ_DIAG_QUIET=1 (read once into a global) that the top ~15 per-frame
+sites test before fprintf (sites listed in the s7431 PORTING-STATE entry; generated sites go into their tools/apply_*.py /
+fixup scripts, never hand-edit RecompiledFuncs), toggled IN-RUN at a fixed second (ROGUESQ_DIAG_QUIET_AT=<s>, phase-gated,
+same-run A/B) on lvl1 flight with OWNER_TIMING-style gfx path and the G1b per-VI timing ring (ROGUESQ_PRESENT_RING) dumped
+at exit. Compare gfx task host-ms and game fps before vs after the switch. Positive control: an injected 1 ms busy-wait
+per frame toggled at a second time point must show up in the same metric. Then: if H-cost, make the quiet switch default-on
+(sites become opt-in via ROGUESQ_DIAG_LOUD=1 for harnesses that parse them - check every grep in scratch/agent/*.sh first).
+Reuse tools/s7431_stderr_volume.sh copied-folder runner.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7428 (2026-11-15).
+Compact operational handoff, as of Session 7431 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,16 +215,24 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CN, default-on stderr volume (HYPOTHESIS-ID default-stderr-volume).** A no-logging-env owner run
-   writes ~1.5 MB of stderr per 40 s of boot (s7430 R1: [s3290-stall] 328 KB, [s4234-ENTRY] 257 KB, [lle 235 KB, ...).
-   Which default-on tags are unbounded per run, which fire per frame in flight (G5c H-log), and which should be opt-in?
+1. **Next audit: class CO, per-frame default-on fprintf cost on game/gfx threads (HYPOTHESIS-ID default-fprintf-cost).**
+   CN capped what reaches the terminal, but the 37 default-on per-frame tags still FORMAT ~170 KB/s on the calling threads
+   (fprintf runs before the pipe). Does gating them at source move the gfx-task ms / game fps at the owner recipe? See
    scratch/agent/NEXT.md.
-   CM (s7430) CLOSED H-bounded after two fixes: tools/s7430_file_growth.py (105 write sites, 8 default-on, each bounded;
-   control PASS; --rev HEAD flags both defects) + tools/s7430_file_growth.sh (copied folders: old binary creates
-   ucode_024A10.bin, new binary R1/R2 create nothing, DUMP_UCODE_BIN=1 control creates it, planted 300 KiB s6892 log
-   rotates, NO_ROTATE=1 keeps it). Fixes: rs64_s6892.log rotated to .1 above 256 KiB at process start + per-run header
-   (ROGUESQ_S7430_NO_ROTATE=1 = old); boot ucode dump now opt-in ROGUESQ_DUMP_UCODE_BIN=1. rs64_s6893_rdram.bin (20 MB,
-   once per run on the first real s6892 repair, guest thread) left: bounded, a one-off G5c stall candidate.
+   CN (s7431) CLOSED H-perframe FOUND + FIXED (writer-side): tools/s7431_stderr_volume.{sh,py} (copied folder, owner recipe
+   FPS60 dd4 16:9 + forced lvl1 autopilot, no logging env, per-line arrival timestamps; planted per-frame control
+   ROGUESQ_FB_HASH=1). Old binary 260 s: 39.5 MB, flight 1.71 MB/10 s, 37 tags print in every flight window ([s5855] 800 KB/10s
+   at 5 KB/line, [vi-mode-table]/[osViSetMode] 60 lines/s, [dpc-fwd], [s2020-svc], [s3290-stall], [lle ...); burst
+   [s4234-ENTRY] 165 KB in 1 s at boot. Fix: per-tag token bucket in the s6979 async-stderr WRITER thread (game threads pay
+   nothing): 200-token burst, 0.2 tokens/s, a line costs 1+bytes/512; CRASH/abort/FATAL/SIG/ERROR/assert lines always pass; a
+   "[stderr-cap] dropped" summary every 30 s. ROGUESQ_STDERR_CAP unset = on iff the original stderr is a terminal (owner's
+   Terminal launch; harness pipes/files keep every line their gates parse), =1 force, =0 off; _BURST/_RATE tunable. Arms, new
+   binary: C (file, CAP=1) 1.33 MB/260 s, flight 11.5 KB/10 s (149x less), control [fbhash held to 2 lines/window; N (file,
+   unset) cap=0, 2.1 MB/10 s = unchanged; T (pty via script(1), unset) cap=1, 11.5 KB/10 s; crash control
+   ROGUESQ_TEST_CRASH_AT=25 under CAP=1 printed the whole [CRASH] block.
+   CM (s7430) CLOSED H-bounded after two fixes: rs64_s6892.log rotated to .1 above 256 KiB at start (ROGUESQ_S7430_NO_ROTATE=1
+   = old); boot ucode dump opt-in ROGUESQ_DUMP_UCODE_BIN=1 (tools/s7430_file_growth.{py,sh}). rs64_s6893_rdram.bin (20 MB,
+   once per run on the first real s6892 repair) left: bounded, a one-off G5c stall candidate.
    CL (s7429) WINDOW FOUND + FIXED: librecomp finalize_output_file_with_backup copied temp -> final with copy_file, which
    truncates final first; a quit/crash/kill inside the copy left a short or 0-byte final save, and the loader opened it (it
    exists) instead of the whole .bak, then zero-filled = profile wiped. tools/s7429_save_quit/harness.cpp (real files.cpp,

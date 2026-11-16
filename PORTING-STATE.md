@@ -196876,3 +196876,49 @@ Side datum for the next class: a no-logging-env owner run writes ~1.5 MB of stde
 tags [s3290-stall] 328 KB, [s4234-ENTRY] 257 KB, [lle 235 KB, [s3294-stall] 93 KB, [s3295-disp] 66 KB, [s5901] 57 KB. A
 launcher redirecting stderr to a file grows without bound, and the volume is G5c H-log. -> class CN.
 Owner save untouched (build/saves never written; every arm used a copied folder).
+
+## Session 7431 (2026-11-15) — class CN default-on stderr volume: H-perframe selected (37 default-on tags print every flight window, 39.5 MB per 260 s, 1.71 MB/10 s in flight) and capped writer-side by a per-tag token bucket, on by default only when stderr is a terminal
+
+Soak fold: s7428_audio_route_arms VOID 3/5 (human/lock/sleep), still re-queued by the loop; no new verdict.
+
+Instrument (new): tools/s7431_stderr_volume.sh runs one owner-recipe game (ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4
+ROGUESQ_ASPECT=16:9 ROGUESQ_NO_SAVE_WRITE=1, no logging env) in a copied folder /tmp/rs64_s7431/<arm> (owner save copied,
+never touched), forced to level 1 flight by the wall-clock in-process autopilot (FORCE_SAVE_MISSION/FORCE_UNLOCK=1,
+GODMODE, same key schedule as g1_level_coverage_common.zsh; no window keys), and timestamps every stdout/stderr line on
+arrival. tools/s7431_stderr_volume.py bins bytes/lines per tag per 10 s window: PERSISTENT = >=5 lines in each of the last 6
+complete windows (flight), BURST = >100 KB from one tag in 1 s. Positive control planted in the same run: ROGUESQ_FB_HASH=1
+([fbhash, one line per frame) must classify PERSISTENT (exit 3 otherwise); --capped R mode: control must fire >200 times
+but be held to <=R*10+2 lines per flight window.
+
+Result, old binary (HEAD 959819435), 260 s: 39.5 MB total, flight from 68 s, FLIGHT_RATE 1,709,726 B/10 s, CONTROL PASS,
+VERDICT H-perframe+H-burst. 37 non-control tags PERSISTENT; biggest per 10 s of flight: [s5855 800 KB (sphere probe,
+apply_s5835_sphere_probe.py, every 1024th call but ~5 KB lines), [vi-mode-table 106 KB / [osViSetMode 96 KB (60 lines/s
+each, upstream_compat.cpp), [dpc-fwd 102 KB, [s2020-svc 92 KB (fixup_game_funcs_vendored.py), [s3290-stall 63 KB, [lle 61 KB,
+[s5908 37 KB, [s3294-stall 23 KB. [s5901 is budgeted (60000-line cap, hit at ~150 s: 9.3 MB). BURST: [s4234-ENTRY 165 KB in
+1 s at t=7 (2101 lines then silent = budgeted). H-capped refuted: volume is NOT boot-front-loaded, flight is the loudest.
+(G5c H-log context: s6979 already moved the write() off game threads; the owner's Terminal held 26 GB of scrollback.)
+
+Fix (src/main/main.cpp s6979se::writer, ORIGIN ours: the diagnostic probes of s2020-s5908 were left default-on with no
+budget): per-tag line cap applied on the async-stderr WRITER thread, so game threads pay nothing new. Tag = first token up
+to space/#/:. Token bucket: burst ROGUESQ_STDERR_CAP_BURST (200), refill ROGUESQ_STDERR_CAP_RATE (0.2 tokens/s), a line costs
+1+bytes/512 (first build charged 1/line: capped flight was 37 KB/10 s, dominated by 5 KB [s5855 lines and still-draining
+bursts; that arm is superseded). Lines containing CRASH/crash/abort/FATAL/fatal/SIG/ERROR/assert/[stderr- always pass;
+partial lines flush after 200 ms idle or 64 KB; one "[stderr-cap] dropped t= lines= bytes= tags= top:" line per 30 s with
+drops. ROGUESQ_STDERR_CAP unset = on iff isatty(original stderr) (owner Terminal launch); every soak/harness redirects to a file
+or pipe and keeps every line its gates parse (origin=, [autopilot], [initMission], fbhash...), so no tool changes behaviour;
+=1 force on, =0 off. Marker "[stderr-async] on t=<s> cap=<0|1> burst= rate=" (tools/g1e_stderr_async_ab.py regex still matches).
+
+Arms, new binary, one game at a time:
+| arm | stderr | CAP | run | total | flight B/10 s | control |
+| OLD A | file | (n/a) | 260 s | 39.5 MB | 1,709,726 | [fbhash PERSISTENT, PASS |
+| N | file | unset | 200 s | 29.8 MB | 2,118,038 | marker cap=0; PASS (unchanged = harness-safe) |
+| C | file | 1 | 260 s | 1.33 MB | 11,502 | [fbhash 230 total, <=2/window, PASS; VERDICT H-capped-by-s7431 |
+| T | pty (script -q /dev/null) | unset | 260 s | 1.34 MB | 11,550 | marker cap=1; PASS; 8 [stderr-cap summary lines |
+Crash control: ROGUESQ_STDERR_CAP=1 ROGUESQ_TEST_CRASH_AT=25 printed "[stderr-async] test crash now" and the full
+[CRASH] signal 11 / siginfo / mcontext block. 0 crash lines in every arm. Owner save untouched (copied folders).
+Two lines of evidence that the cap is on by default for the owner: the isatty gate itself (code) and arm T's marker +
+measured rate through a real pty.
+
+Rules out: H-capped (flight is the loudest phase). Not addressed (next, class CO): the per-frame tags still FORMAT on the
+calling threads (~170 KB/s of snprintf work); whether gating them at source moves gfx-task ms is unmeasured.
+docs/OWNER-OPT-INS.md: the Terminal tip now says the cap is automatic, ROGUESQ_STDERR_CAP=0 shows everything.

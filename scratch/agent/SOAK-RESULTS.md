@@ -1536,3 +1536,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-170822 | loop | leftover game alive after the iteration, SIGKILLed: pids 53662
 20261115-173101 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 66s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-173101.log
 20261115-173813 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-173813.log
+20261115-175140 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 3/5, re-queued | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-175140.log

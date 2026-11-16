@@ -12741,12 +12741,65 @@ static void reader() {
         { std::lock_guard<std::mutex> l(m); q.emplace_back(b.data(), (size_t)n); queued += (size_t)n; } cv.notify_one();
     }
 }
+static void wr_all(const char *d, size_t n) {
+    size_t o = 0; while (o < n) { const ssize_t w = write(orig, d + o, n - o); if (w < 0) { if (errno == EINTR) continue; break; } o += (size_t)w; }
+}
+// s7431 class CN: per-tag line cap, applied here on the writer thread (game threads pay nothing). ORIGIN ours: s7431 measured a
+// no-logging-env owner-recipe flight (FPS60 dd4 16:9, lvl1) writing 39.5 MB of stderr in 260 s, ~1.6 MB per 10 s in flight,
+// from 37 default-on diagnostic tags that print every frame/task with no budget ([s5855] 800 KB/10s, [vi-mode-table],
+// [osViSetMode], [dpc-fwd], [s2020-svc], [s3290-stall], [lle ...) - into the owner's Terminal scrollback (26 GB seen, s6979).
+// ROGUESQ_STDERR_CAP unset: on iff the original stderr is a terminal (owner launches; soak harnesses pipe/redirect and keep every
+// line their gates parse); =1 force on; =0 off. Each tag (first token up to space/'#'/':') gets CAP_BURST (default 200) lines,
+// then a token bucket of ROGUESQ_STDERR_CAP_RATE lines/s (default 0.2); a line costs 1 + bytes/512 tokens. Lines containing CRASH/crash/abort/FATAL/fatal/SIG/
+// ERROR/assert always pass. Every 30 s with drops: one "[stderr-cap] dropped" summary line (itself bounded).
+static int cap_on = 0; static double cap_burst = 200, cap_rate = 0.2;
+static bool must_pass(const char *b, size_t n) {
+    static const char *k[] = {"CRASH", "crash", "abort", "FATAL", "fatal", "SIG", "ERROR", "assert", "[stderr-"};
+    for (const char *w : k) { const size_t wl = strlen(w); for (size_t i = 0; i + wl <= n && i < 512; i++) if (!memcmp(b + i, w, wl)) return true; }
+    return false;
+}
+struct capst { double tok; double t; uint64_t dl, db; };
 static void writer() {
     pthread_setname_np("stderr-wr"); pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+    std::unordered_map<std::string, capst> tags; std::string part; uint64_t dl = 0, db = 0; auto t0 = std::chrono::steady_clock::now();
+    double last_sum = 0;
+    auto now_s = [&] { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(); };
+    auto line = [&](const char *b, size_t n) {  // n includes the '\n' (or not, for a timed-out partial)
+        if (must_pass(b, n)) { wr_all(b, n); return; }
+        size_t e = 0; while (e < n && e < 48 && b[e] != ' ' && b[e] != '#' && b[e] != ':' && b[e] != '\n' && b[e] != '\t') e++;
+        auto it = tags.find(std::string(b, e)); const double t = now_s();
+        if (it == tags.end()) it = tags.emplace(std::string(b, e), capst{cap_burst, t, 0, 0}).first;
+        capst &c = it->second; c.tok = std::min(cap_burst, c.tok + (t - c.t) * cap_rate); c.t = t;
+        const double cost = 1.0 + (double)n / 512.0;  // long lines ([s5855] ~5 KB) cost more
+        if (c.tok >= cost) { c.tok -= cost; wr_all(b, n); } else { c.dl++; c.db += n; dl++; db += n; }
+    };
     for (;;) {
-        std::string s_; { std::unique_lock<std::mutex> l(m); cv.wait(l, [] { return !q.empty(); }); s_ = std::move(q.front()); q.pop_front(); }
-        size_t o = 0; while (o < s_.size()) { const ssize_t w = write(orig, s_.data() + o, s_.size() - o); if (w < 0) { if (errno == EINTR) continue; break; } o += (size_t)w; }
+        std::string s_; bool got = false;
+        { std::unique_lock<std::mutex> l(m);
+          if (cap_on && !part.empty()) got = cv.wait_for(l, std::chrono::milliseconds(200), [] { return !q.empty(); });
+          else { cv.wait(l, [] { return !q.empty(); }); got = true; }
+          if (got) { s_ = std::move(q.front()); q.pop_front(); } }
+        if (!cap_on) { wr_all(s_.data(), s_.size()); queued -= s_.size(); continue; }
+        if (!got) { line(part.data(), part.size()); part.clear(); continue; }  // flush a stuck partial line
+        size_t o = 0;
+        for (;;) {
+            const char *nl = (const char *)memchr(s_.data() + o, '\n', s_.size() - o);
+            if (!nl) { part.append(s_.data() + o, s_.size() - o); break; }
+            const size_t e = (size_t)(nl - s_.data()) + 1;
+            if (part.empty()) line(s_.data() + o, e - o); else { part.append(s_.data() + o, e - o); line(part.data(), part.size()); part.clear(); }
+            o = e;
+        }
+        if (part.size() > (64u << 10)) { line(part.data(), part.size()); part.clear(); }
         queued -= s_.size();
+        const double t = now_s();
+        if (dl && t - last_sum >= 30) {
+            last_sum = t; std::vector<std::pair<uint64_t, std::string>> v;
+            for (auto &kv : tags) if (kv.second.dl) v.push_back({kv.second.db, kv.first});
+            std::sort(v.rbegin(), v.rend()); char h[512];
+            int k = snprintf(h, sizeof h, "[stderr-cap] dropped t=%.0f lines=%llu bytes=%llu tags=%zu top:", t, (unsigned long long)dl, (unsigned long long)db, v.size());
+            for (size_t i = 0; i < v.size() && i < 5 && k > 0 && k < (int)sizeof h - 64; i++) k += snprintf(h + k, sizeof h - k, " %s=%llu", v[i].second.c_str(), (unsigned long long)v[i].first);
+            if (k > 0 && k < (int)sizeof h - 1) { h[k++] = '\n'; wr_all(h, (size_t)k); }
+        }
     }
 }
 static void switch_on() {
@@ -12754,11 +12807,14 @@ static void switch_on() {
     rd = p[0]; std::thread(reader).detach(); std::thread(writer).detach();
     fflush(stderr); dup2(p[1], STDERR_FILENO); close(p[1]); on = 1;
     mach_timebase_info_data_t tb; mach_timebase_info(&tb);
-    fprintf(stderr, "[stderr-async] on t=%.6f\n", (double)mach_absolute_time() * tb.numer / tb.denom / 1e9);
+    fprintf(stderr, "[stderr-async] on t=%.6f cap=%d burst=%.0f rate=%g\n", (double)mach_absolute_time() * tb.numer / tb.denom / 1e9, cap_on, cap_burst, cap_rate);
 }
 static void init() {
     const char *e = std::getenv("ROGUESQ_STDERR_ASYNC"); if (e && *e && std::atoi(e) == 0) return;
     orig = dup(STDERR_FILENO); if (orig < 0) return;
+    { const char *c = std::getenv("ROGUESQ_STDERR_CAP"); cap_on = (c && *c) ? (std::atoi(c) != 0) : isatty(orig);
+      if (const char *b = std::getenv("ROGUESQ_STDERR_CAP_BURST")) if (atof(b) >= 1) cap_burst = atof(b);
+      if (const char *r = std::getenv("ROGUESQ_STDERR_CAP_RATE")) if (atof(r) >= 0) cap_rate = atof(r); }
     const char *a = std::getenv("ROGUESQ_STDERR_ASYNC_AT"); const int at = (a && *a) ? std::atoi(a) : 0;
     if (at > 0) std::thread([at] { std::this_thread::sleep_for(std::chrono::seconds(at)); switch_on(); }).detach();
     else switch_on();
