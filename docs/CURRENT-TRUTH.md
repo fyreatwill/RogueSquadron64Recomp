@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7447 (2026-11-15).
+Compact operational handoff, as of Session 7448 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,10 +215,17 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Class DD CLOSED s7447 (direct-stderr-bypass). Next: class DE (HYPOTHESIS-ID quiet-harness-markers).** See NEXT.md:
-   ROGUESQ_DIAG_QUIET=1 now drops harness markers the tools wait on ([initMission] in generated C), so QUIET cannot be used
-   with g1_level_coverage_common.zsh; enumerate every tag tools/ + scratch/agent harnesses grep for, keep those in
-   rs64_diag_keep. Fold SOAK-RESULTS s7447_route_levels (L4/L7/L12, new build) first.
+1. **Class DE CLOSED s7448 (quiet-harness-markers). Next: class DF (HYPOTHESIS-ID quiet-crash-passthrough)**, see NEXT.md:
+   rs64_diag_keep matches the FORMAT string, so a crash/abort report printed through a non-literal or "%s" format is
+   dropped under QUIET; enumerate those sites. Soak s7448_quiet_levels (L7/L12 under QUIET) queued.
+   DE (s7448) CLOSED H-few, one change: src/main/main.cpp rs64_diag_keep also passes format prefixes [initMission],
+   [autopilot], [vi] update_screen, [f5-phase5-target-store], [godmode], [g1b], [stall- (the tags the live harnesses
+   m6_god_common.sh / g1_level_coverage_common.zsh, s7230/s7257/s7229 scorers, boot_freeze_hunt.sh gate on; [fbhash and
+   [autopilot] fire were already raw). ROGUESQ_DIAG_QUIET_HARNESS=0 = old. 150 s owner recipe lvl1 (s7431 tool), QUIET:
+   keep arm [initMission] 1 / [autopilot] armed 1 / [vi] update_screen 143, 501 KB; HARNESS=0 control 0 / 0 / 0, 484 KB;
+   fbhash 8826 / 8834 both. g1_level_coverage_common.zsh L4 under QUIET: mission_t 72 s, flight 136 s, 0 VI stall, 0 crash,
+   run.log 595 KB (s7447 default same recipe: 164.8 MB, mission_t 73 s). QUIET is now usable in every harness.
+   s7447_route_levels fold: L4/L7/L12 137-138 s flight, 0 crash, 0 stall (DD build qualifies on 3 levels).
    DD (s7447) CLOSED H-hidden, one change: include/rs64_diag_route.h force-included (CMake option RS64_DIAG_ROUTE, default ON)
    into src/main + src/rsp (not factor5_ucode*) and the rt64 / librecomp / ultramodern C++ TUs, so every direct fprintf /
    std::fprintf goes through rs64_diag_fprintf; `(fprintf)(...)` keeps a site raw ([diag-quiet], [fbhash, [autopilot] fire).

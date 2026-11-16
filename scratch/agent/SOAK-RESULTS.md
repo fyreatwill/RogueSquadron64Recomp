@@ -1540,3 +1540,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-181938 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-181938.log
 20261115-183221 | s7428_audio_route_arms | rc=2 | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-183221.log
 20261115 | s7433 fold: s7428_audio_route_arms 5/5 VOID (no injected key reached the game; arms A/B pass) -> retired; F9 persist gate stays code-reading only (single-source).
+20261115-205142 | s7447_route_levels | rc=0 | 630s | scratch/agent/soak_results/s7447_route_levels_20261115-205142.log
+20261115 | s7448 fold: s7447_route_levels rc=0: L4/L7/L12 131 s hold, 137-138 s flight, 0 crash, 0 VI stall -> rs64_diag_route.h build (class DD) qualifies on 3 levels; no lib-TU regression.

@@ -1,16 +1,20 @@
-# NEXT (s7448)
-HYPOTHESIS-ID: quiet-harness-markers
+# NEXT (s7449)
+HYPOTHESIS-ID: quiet-crash-passthrough
 
-First: fold SOAK-RESULTS line for s7447_route_levels (L4/L7/L12 120 s flight, build with include/rs64_diag_route.h). A crash
-there that the s7447 150 s lvl1 runs did not show -> suspect the lib TU recompile (RS64_DIAG_ROUTE=OFF arm to split).
+First: fold SOAK-RESULTS line for s7448_quiet_levels (L7/L12, harness under ROGUESQ_DIAG_QUIET=1). Pass = inits=1,
+alive_at_end=1, vi_stalls30s=0, crashlines=0 both -> class DE second line.
 
-Class DE: since s7447 ROGUESQ_DIAG_QUIET=1 drops every non-crash diagnostic line, including markers the harnesses wait on
-([initMission] from generated C makes g1_level_coverage_common.zsh MISSION_INIT=1 time out). QUIET is the cheapest owner-like
-logging arm, so it should be usable in every harness.
-Step 1 (offline): grep tools/*.{sh,zsh,py} + scratch/agent/*.{sh,zsh} for the stderr tags they match (grep -a '\[...', re
-patterns); list them. Step 2 (one run each arm, 150 s, tools/s7431_stderr_volume.sh): default vs ROGUESQ_DIAG_QUIET=1; a
-harness tag present in default but 0 in QUIET = class member.
-Hypotheses: H-few (a handful of markers: [initMission], [osViSwapBuffer, VI/phase markers -> add to rs64_diag_keep or (fprintf)),
-H-many (consumers depend on high-rate per-frame tags -> QUIET stays a non-harness arm, document), H-none.
-Discriminator: count of harness-consumed tags dropped under QUIET. Positive control: [initMission] must show as dropped.
-Close with g1_level_coverage_common.zsh running one level to flight under XENV_EXTRA=ROGUESQ_DIAG_QUIET=1.
+Class DF: rs64_diag_keep (src/main/main.cpp) decides on the FORMAT string. A failure report whose keyword lives in an
+argument (fprintf(stderr, "%s\n", buf) with buf="... SIGSEGV ..."; 9 "%s"-leading sites in src, e.g.
+upstream_compat.cpp:9009) or in an unrouted path is either dropped under QUIET or never routed at all. QUIET must never
+hide a crash.
+Step 1 (offline): list every failure-report path: signal handlers (grep sigaction/signal( in src + lib/N64ModernRuntime),
+ultramodern error/abort handlers, recomp unhandled-op / exit paths, assert macros, fputs/puts/write(2) sites; for each,
+say: raw (write/fputs/(fprintf)), routed+keyword-in-fmt (kept), routed+keyword-in-arg (DROPPED = class member).
+Step 2 (one run, positive control): a planted crash under QUIET. Find an existing fault-injection env (grep ROGUESQ_.*FAULT|
+PLANT|FORCE_CRASH in src); if none, add ROGUESQ_PLANT_SEGV=<sec> (raise SIGSEGV on the guest thread at t=sec). Arms: default
+vs QUIET=1, same plant; compare the crash report lines. Members: lines in default that QUIET loses.
+Hypotheses: H-none (every crash path is raw or keyword-in-fmt), H-few (some "%s" crash lines dropped -> route via (fprintf) or
+check the formatted text when fmt starts "%s"), H-unrouted (a handler bypasses stderr capture entirely - not a QUIET issue).
+Discriminator: count of default-arm crash-report lines missing in the QUIET arm. Positive control: the plant must produce a
+crash line in the default arm and crashlines>0 in m6-style grep.

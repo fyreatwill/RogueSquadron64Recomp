@@ -5139,9 +5139,19 @@ static void rs64_diag_spin_us(int us) {
     const auto t = std::chrono::steady_clock::now() + std::chrono::microseconds(us);
     while (std::chrono::steady_clock::now() < t) {}
 }
+// s7448 class DE: harness markers survive QUIET (format-string prefix match). The live harnesses
+// (scratch/agent/m6_god_common.sh via g1_level_coverage_common.zsh, tools/s7230_headroom.py / s7257_dip_runs.py /
+// s7229_flat30_cost.py, tools/boot_freeze_hunt.sh) gate on these; all are low-rate (lvl4 211 s default: [vi] 194,
+// [autopilot] 75, [godmode] 3, [initMission] 1 lines) or opt-in ([g1b], [stall-*]). ROGUESQ_DIAG_QUIET_HARNESS=0 drops them too.
+static const int s_dq_keep_harness = rs64_env_int("ROGUESQ_DIAG_QUIET_HARNESS", 1);
 static bool rs64_diag_keep(const char* f) {
     static const char* const k[] = {"CRASH", "crash", "abort", "FATAL", "fatal", "SIG", "ERROR", "assert"};
     for (const char* w : k) if (strstr(f, w)) return true;
+    if (s_dq_keep_harness && f[0] == '[') {
+        static const char* const h[] = {"[initMission]", "[autopilot]", "[vi] update_screen", "[f5-phase5-target-store]",
+                                        "[godmode]", "[g1b]", "[stall-"};
+        for (const char* w : h) if (strncmp(f, w, strlen(w)) == 0) return true;
+    }
     return false;
 }
 extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...) {

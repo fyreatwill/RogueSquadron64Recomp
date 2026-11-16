@@ -197404,3 +197404,33 @@ Queued scratch/agent/soak_queue/s7447_route_levels.sh: L4/L7/L12 120 s flight de
 Verdict: selects H-hidden (12 ungated-recurring bypass tags fired in owner flight; routed, QUIET residual 163 B/10s), refutes
 H-clean and H-dead. Next discriminator (class DE): count of harness-consumed stderr tags present in the default arm but 0 under
 ROGUESQ_DIAG_QUIET=1 ([initMission] = positive control).
+
+## Session 7448 (2026-11-15) — class DE closed H-few: ROGUESQ_DIAG_QUIET=1 keeps the harness markers ([initMission], [autopilot], [vi] update_screen, [f5-phase5-target-store], [godmode], [g1b], [stall-); g1_level_coverage_common.zsh L4 reaches flight under QUIET with a 595 KB log (default 164.8 MB), 0 crash, 0 stall
+
+Fold: SOAK-RESULTS s7447_route_levels rc=0: L4/L7/L12 131 s hold, 137-138 s flight, 0 crash, 0 VI stall (class DD
+rs64_diag_route.h build qualifies on 3 levels; no lib-TU regression, so the RS64_DIAG_ROUTE=OFF split is not needed).
+
+Enumeration (offline). Live harnesses = the scripts the last 60 queued soaks call: scratch/agent/g1_level_coverage_common.zsh
+-> m6_god_common.sh (20), tools/s7230_headroom.py / g1e_owner_quiet_arms.zsh (17), s7257_dip_runs.py (15),
+s7229_flat30_cost.py (12), boot_freeze_hunt.sh, s7431_stderr_volume.sh. Stderr tags they gate on, and the emitter:
+[initMission] (generated C, fixup_game_funcs_vendored.py, routed -> DROPPED), [autopilot] armed (main.cpp:11322, routed ->
+DROPPED), [autopilot] fire (raw (fprintf), kept), [vi] update_screen origin=/width= (rt64_render_context.cpp:1455, routed ->
+DROPPED; m6 VI-stall detector counts origin= lines, so QUIET also made every run read as stalled),
+[f5-phase5-target-store] (dpc_bridge.cpp:1706, routed -> DROPPED), [godmode] (main.cpp:11701, DROPPED), [fbhash (raw, kept),
+[g1b] (ultramodern events.cpp:1053, opt-in G1B, DROPPED), [stall-dump]/[stall-cf0] (opt-in, DROPPED). [Game] is a thread
+name in a sample file, not stderr. Rates in the s7447 L4 default log (211 s): [vi] 194, [autopilot] 75, [godmode] 3,
+[initMission] 1 lines -> all cheap to keep. H-many refuted (no per-frame tag is harness-consumed except [fbhash, already raw).
+
+Change: src/main/main.cpp rs64_diag_keep also passes formats starting with those 7 prefixes (strncmp, only when fmt[0]=='[').
+ROGUESQ_DIAG_QUIET_HARNESS=0 restores the old drop. Diagnostic routing only; no guest state touched.
+
+Runs (one at a time, screen unlocked). tools/s7431_stderr_volume.sh 150 s, owner recipe lvl1, QUIET=1:
+  arm K (HARNESS default 1): [initMission] 1, [autopilot] armed 1, fire 47, [vi] update_screen 143, [fbhash 8826, 501 KB, 0 crash
+  arm X (HARNESS=0, control): 0, 0, 47, 0, 8834, 484 KB, 0 crash  -> positive control: the old drop is seen ([initMission] 0)
+  and the planted [fbhash runs in both arms.
+Closer: g1_level_coverage_common.zsh LEVEL=4 HOLD_S=120 WIDE_ROUTE=1 XENV_EXTRA="FPS60 dd4 16:9 ROGUESQ_DIAG_QUIET=1":
+  att=1 mission_t=72s hold=130s inits=1 flight_s=136 alive_at_end=1 vi_stalls30s=0 godrefills=2 crashlines=0; run.log
+  595 KB vs s7447 default same recipe 164.8 MB (mission_t 73 s). Two lines: the per-tag count A/B and the harness itself.
+Verdict: H-few selected; H-many and H-none refuted. QUIET is now usable as the owner-like logging arm in every harness.
+Queued: scratch/agent/soak_queue/s7448_quiet_levels.sh (L7/L12 under QUIET). Next: class DF quiet-crash-passthrough
+(keep decides on the format, so a crash report with the keyword in a "%s" argument would be dropped).
