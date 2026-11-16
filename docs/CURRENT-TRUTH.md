@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7464 (2026-11-16).
+Compact operational handoff, as of Session 7468 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,14 +216,20 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. Next: see NEXT.md. One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. Next: see NEXT.md (class DZ). One line each:
+   - **DY s7468 ASan+UBSan with the RSP ucode TUs instrumented, CLOSED (H-ucode-clean):** tools/build_asan.sh UCODE=1 (now the
+     default; sets ROGUESQ_ASAN_UCODE=ON, only the 6 ucode TUs rebuild). Two controls: nm shows __asan_report/__ubsan_handle refs
+     in all 6 ucode objects; runtime ucode-TU plant ROGUESQ_S7468_UCODE_PLANT=1 (src/rsp/factor5_ucode_nmac.cpp, dmem[0x1000]
+     global-buffer-overflow + INT_MAX+1) scored by s7467_san_report.py --uplant p = PASS, main plant PASS. L4 p/L4/L12 dd4 16:9
+     HOLD=150: all 3 arms initMission=1, vi_stalls30s=0, 0 NEW groups, 0 reports in ucode code (H-ucode-slow refuted too). Scorer
+     plant match made line-shift robust (old s7467r logs re-score identically). Queued s7468_asan_uc_routes (L7, L15 dd8 21:9).
+     DX note: s7467_asan_routes rc=0, 0 NEW, control PASS, but w15 (L15 dd8 21:9) initMission=0 in 150 s = title/select coverage only.
    - **DW s7467 ASan+UBSan owner-recipe flight, CLOSED:** tools/build_asan.sh (C++ only, recoverable; ROGUESQ_S7467_ASAN_PLANT=1
      planted control) + tools/s7467_san_report.py --plant p --known tools/s7467_san_reviewed.tsv. L4/L12 dd4 16:9 HOLD=150: control
      PASS, 0 ASan outside the plant, 13 UBSan groups: 1 REAL FIXED (plume_metal MetalGraphicsPipeline left dynamicDepthBiasEnabled +
      3 bias floats uninit on no-bias pipelines, read by every depth-bias apply; value 0xBE = ASan fill), 12 FP (rt64_rdp negative
      shifts, GET_MEMBER offsetof idiom, ObjC tagged NSString). Post-fix: group gone, others still fire; normal build
-     ROGUESQ_S7467_BIASPROBE=1 garbage=0/64+ (latent with the system allocator, single-source). Coverage soak queued:
-     s7467_asan_routes (L7 dd4, L15 dd8 21:9).
+     ROGUESQ_S7467_BIASPROBE=1 garbage=0/64+ (latent with the system allocator, single-source). s7467_asan_routes folded s7468.
    - **DV s7466 remaining clang-analyzer crash families (UAF/double-free unix.Malloc+cplusplus.NewDelete, MismatchedDeallocator,
      DivideZero, BitwiseShift, StdCLibraryFunctions, Stream, BlockInCriticalSection), CLOSED:** tools/s7466_analyzer_rest_census.py
      --controls (planted lines 3-8 PASS) rc 0 over 150 TUs: 0 UAF/double-free/mismatch; 6 sites = 2 fixed (main.cpp s4243 PCM

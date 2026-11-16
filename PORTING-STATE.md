@@ -197957,3 +197957,30 @@ Verdict (s7467): the ASan+UBSan flight **selects H-asan-hit** (one real cross-TU
 the plume depth-bias uninit read, fixed) and **refutes H-asan-clean** for the pre-fix build; post-fix it selects H-asan-clean
 on L4/L12 dd4 16:9 (0 NEW groups, control PASS). Next discriminator: class DY, ASan over the RSP ucode TUs
 (H-ucode-clean vs H-ucode-hit vs H-ucode-slow, NEXT.md), after folding soak s7467_asan_routes.
+
+## Session 7468 (2026-11-16) — class DY closed: ASan+UBSan over the RSP ucode TUs (build_asan UCODE=1), ucode-TU plant + main plant PASS, 0 new groups in owner-recipe flight (H-ucode-clean)
+
+**Fold.** s7467_asan_routes rc=0: arms p (L4 dd4 + plant), l7 (L7 dd4 16:9), w15 (L15 dd8 21:9) alive, 0 crash, 0 stall,
+0 NEW ASan/UBSan groups (the 12 known FP groups fire), control PASS. Caveat: w15 initMission=0 within HOLD=150, so the 21:9 dd8
+arm covered title/level select, not L15 flight. Class DX closed.
+
+**Unit (class DY).** s7467 left the 6 RSP ucode TUs (gfx main/tls/lean/nmac, audio ucode_b, boot) out of build_asan. They index
+the host DMEM/IMEM arrays with guest-derived addresses. Hypotheses: H-ucode-clean / H-ucode-hit (an out-of-array access named by
+its stack) / H-ucode-slow (instrumented ucode too slow to reach flight).
+- tools/build_asan.sh: UCODE switch (sets -DROGUESQ_ASAN_UCODE=ON) and B=<dir>. Toggling rebuilds only the ucode TUs (90 s).
+  Default is now UCODE=1 because the result below shows no cost to reaching flight.
+- Control 1 (build level): nm -u on all 6 ucode objects in build_asan shows __asan_report (7-11) and __ubsan_handle (5-6) refs.
+- Control 2 (runtime): new `rs64_s7468_ucode_plant` in src/rsp/factor5_ucode_nmac.cpp. It sits in a ucode TU, so it gets exactly
+  the ucode flags. It reads dmem[0x1000] (global-buffer-overflow, one byte past the DMEM array) and computes INT_MAX+1. main.cpp
+  calls it only in an ASan build with ROGUESQ_S7468_UCODE_PLANT=1. tools/s7467_san_report.py gets `--uplant <arm>`: the ucode
+  control must show both reports, or exit 3.
+- Scorer fix: plant matching used main.cpp line numbers. My 3-line main.cpp edit made the old s7467r logs re-score as
+  control FAIL plus 1 NEW group. It now matches the heap plant by frame (main / rs64_s7467_asan_plant) and the overflow by its
+  exact message. The old s7467r logs re-score identically again (0 NEW, PASS).
+- Run: scratch/s7468/asan_uc_flight.sh (the s7467 recipe on the UCODE=1 build, both plants in arm p), L4 p / L4 / L12, dd4 16:9,
+  HOLD=150, quiet harness. Result: all 3 arms alive_at_end=1, crashlines=0, vi_stalls30s=0, initMission=1. ucode_control=PASS
+  (uplant_asan=1 uplant_ubsan=1, stack at factor5_ucode_nmac.cpp:19/21), control=PASS, new_groups=0. No report sits in ucode code.
+**Verdict:** H-ucode-clean selected; H-ucode-hit refuted for this route (both controls live in the same run); H-ucode-slow refuted
+(flight reached in all arms with no stalls). Two lines of evidence: build-level instrumentation refs plus the runtime ucode-TU plant.
+Rules out: a host-array DMEM/stack overrun in the ucode TUs on forced-level dd4 flight. Not covered: hangar/abort route, L15 flight.
+Queued: scratch/agent/soak_queue/s7468_asan_uc_routes.sh (L7 dd4, L15 dd8 21:9 on the UCODE build, both controls).

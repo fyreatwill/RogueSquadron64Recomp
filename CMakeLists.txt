@@ -381,7 +381,7 @@ endif()
 
 # s7467 class DW: same exemption for the ASan+UBSan arm (tools/build_asan.sh). The ucode touches only DMEM (masked) and guest
 # RDRAM (one big host map, so ASan cannot see guest-side overruns anyway); instrumenting it only slows the gfx thread.
-# ROGUESQ_ASAN_UCODE=ON instruments it.
+# ROGUESQ_ASAN_UCODE=ON instruments it (tools/build_asan.sh UCODE=1, its default since s7468: no flight cost, 0 ucode reports).
 if (CMAKE_CXX_FLAGS_DEBUG MATCHES "fsanitize=address" OR CMAKE_CXX_FLAGS MATCHES "fsanitize=address")
     option(ROGUESQ_ASAN_UCODE "Instrument the RSP ucode TUs under ASan/UBSan" OFF)
     if (NOT ROGUESQ_ASAN_UCODE)

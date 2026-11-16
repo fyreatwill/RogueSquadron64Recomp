@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """s7467 class DW: score an ASan+UBSan soak (tools/build_asan.sh build, scratch/agent/soak_queue/s7467_asan_flight.sh).
 
-usage: s7467_san_report.py <R dir> <arm>... [--plant <arm>] [--known tools/s7467_san_reviewed.tsv]
+usage: s7467_san_report.py <R dir> <arm>... [--plant <arm>] [--uplant <arm>] [--known tools/s7467_san_reviewed.tsv]
 --known: groups matching a KNOWN (kind prefix, file basename) row are reviewed; exit 1 only on a NEW group.
 Per arm reads <R>/san_<arm>.* (ASAN_OPTIONS/UBSAN_OPTIONS log_path) and <R>/log_<arm>.txt (stderr fallback).
 Groups reports by (kind, first frame in our code). The plant arm must show BOTH planted reports
 (heap-buffer-overflow in rs64_s7467_asan_plant, signed-integer-overflow at the plant line) = positive control.
-Prints one line per arm and one line per non-plant group; exit 0 = control PASS and 0 non-plant groups,
+--uplant (s7468 class DY): that arm must ALSO show the ucode-TU plant (global-buffer-overflow + signed overflow at the\n"s7468 UCODE PLANT" lines of src/rsp/factor5_ucode_nmac.cpp) = proof the ucode TUs are instrumented.\nPrints one line per arm and one line per non-plant group; exit 0 = control PASS and 0 non-plant groups,
 1 = control PASS and >=1 non-plant group (H-asan-hit), 3 = control FAIL (instrument blind, result void).
 """
 import glob, os, re, sys
@@ -62,11 +62,26 @@ def arm_reports(R, arm):
     return by_src.get('san') or by_src.get('log') or []
 
 
-def is_plant(kind, site):
-    # The plant is inlined into main(), so match by source line, not function name.
-    if 'main.cpp' not in site or not _plant_line(site):
+def is_uplant(kind, site):
+    # s7468 class DY: the ucode-TU plant (src/rsp/factor5_ucode_nmac.cpp rs64_s7468_ucode_plant).
+    # Generated ucode lines are attributed to factor5_ucode_recompiled.c, so any frame AT factor5_ucode_nmac.cpp is the
+    # plant's own code; no line-number match (line numbers shift with edits and broke re-scoring of old logs, s7468).
+    if 'factor5_ucode_nmac.cpp' not in site:
         return False
-    return kind == 'asan:heap-buffer-overflow' or kind.startswith('ubsan:signed integer overflow')
+    return (kind == 'asan:global-buffer-overflow' and 'rs64_s7468_ucode_plant' in site) or kind.startswith('ubsan:signed integer overflow')
+
+
+def is_plant(kind, site):
+    if is_uplant(kind, site):
+        return True
+    # The plant is inlined into main(). s7468: match by the plant's frame (main / rs64_s7467_asan_plant in main.cpp) for the
+    # heap read, and by its exact message for the overflow (INT_MAX + 1 in type int), not by line: lines shift with edits.
+    if 'main.cpp' not in site:
+        return False
+    if kind == 'asan:heap-buffer-overflow':
+        return site.split(' ')[0] in ('main', 'rs64_s7467_asan_plant') or _plant_line(site)
+    return kind == "ubsan:signed integer overflow: N + N cannot be represented in type 'int'" or (
+        kind.startswith('ubsan:signed integer overflow') and _plant_line(site))
 
 
 _PL = None
@@ -98,6 +113,10 @@ def main(a):
             if len(f) == 3 and f[0] == 'KNOWN':
                 known.append((f[1], f[2]))
         del a[k:k + 2]
+    uplant = None
+    if '--uplant' in a:
+        k = a.index('--uplant'); uplant = a[k + 1]; del a[k:k + 2]
+    uctl = None
     if '--plant' in a:
         k = a.index('--plant'); plant = a[k + 1]; del a[k:k + 2]
     R, arms = a[0], a[1:]
@@ -107,7 +126,13 @@ def main(a):
         reps = arm_reports(R, arm)
         np = [(k, s) for k, s in reps if not is_plant(k, s)]
         pa = sum(1 for k, s in reps if is_plant(k, s) and k.startswith('asan'))
-        pu = sum(1 for k, s in reps if is_plant(k, s) and k.startswith('ubsan'))
+        pu = sum(1 for k, s in reps if is_plant(k, s) and not is_uplant(k, s) and k.startswith('ubsan'))
+        pa -= sum(1 for k, s in reps if is_uplant(k, s) and k.startswith('asan'))
+        ua = sum(1 for k, s in reps if is_uplant(k, s) and k.startswith('asan'))
+        uu = sum(1 for k, s in reps if is_uplant(k, s) and k.startswith('ubsan'))
+        if arm == uplant:
+            uctl = ua >= 1 and uu >= 1
+            print('s7468 arm=%s uplant_asan=%d uplant_ubsan=%d' % (arm, ua, uu))
         for k, s in np:
             groups.setdefault((k, s), set()).add(arm)
         print('s7467 arm=%s reports=%d plant_asan=%d plant_ubsan=%d nonplant=%d nonplant_groups=%d' % (
@@ -122,6 +147,10 @@ def main(a):
         print('s7467 group kind=%s site=%s arms=%s%s' % (k, s.replace(' ', '@'), ','.join(sorted(arms_)), ' known' if kn else ' NEW'))
     if known:
         print('s7467 new_groups=%d' % new)
+    if uplant is not None:
+        print('s7468 ucode_control=%s' % ('PASS' if uctl else 'FAIL'))
+        if not uctl:
+            return 3
     if plant is not None:
         print('s7467 control=%s' % ('PASS' if ctl else 'FAIL'))
         if not ctl:

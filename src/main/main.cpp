@@ -13144,6 +13144,8 @@ static __attribute__((noinline)) int s7427_plant_latch() { static const int v = 
 #    define RS64_S7467_ASAN 1
 #  endif
 #endif
+// s7468 class DY: ucode-TU plant (src/rsp/factor5_ucode_nmac.cpp), proves the ucode TUs are ASan-instrumented.
+extern "C" void rs64_s7468_ucode_plant(unsigned idx);
 static void rs64_s7467_asan_plant() {
     const char* p = std::getenv("ROGUESQ_S7467_ASAN_PLANT"); if (!p || *p != '1') return;
 #if defined(RS64_S7467_ASAN)
@@ -13161,6 +13163,9 @@ static void rs64_s7467_asan_plant() {
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
     rs64_s7467_asan_plant();
+#if defined(RS64_S7467_ASAN)
+    { const char* p = std::getenv("ROGUESQ_S7468_UCODE_PLANT"); if (p && *p == '1') rs64_s7468_ucode_plant(0x1000); }
+#endif
     { const char* p = std::getenv("ROGUESQ_S7427_PLANT"); if (p && *p == '1') std::fprintf(stderr, "[s7427] plant latch=%d\n", s7427_plant_latch()); }
     s7354_race_ctl_start();
     s7382_qos_start();
