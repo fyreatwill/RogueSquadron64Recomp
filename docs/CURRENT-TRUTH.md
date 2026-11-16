@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7433 (2026-11-15).
+Compact operational handoff, as of Session 7435 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,9 +215,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CR, host busy-wait / poll loops (HYPOTHESIS-ID host-spin-loops).** See scratch/agent/NEXT.md.
-   Lead (s7434, same samples): VI Thread ~290 samples / 12 s window self in mach_continuous_time (~3% of one core of polling);
-   RT64 TMEM hashing is NOT a new class (s6942-s6961, s7070 closed it), so CR does not reopen it.
+1. **Next audit: class CS, per-frame host heap allocation (HYPOTHESIS-ID host-alloc-cost).** See scratch/agent/NEXT.md.
+   Offline first on the s7435 capture (scratch/s7435, local, gitignored): malloc/free/operator new/xzm/nanov2 self and inclusive
+   share per thread, with the same in-capture control.
+   CR (s7435) CLOSED H-tail: tools/s7435_spin_cost.py over one tools/s7433_probe_cost.sh owner-recipe run (lvl1 flight, 8 x 12 s
+   /usr/bin/sample windows, control DIAG_BUSY_GUEST_US=500 toggled 30 s: +0.0345 core vs 0.030 expected, PASS). All host spins
+   together 0.049 of one core: VI deadline tail spin (events.cpp:850, deliberate s6456/s6967, VI_NOSPIN / VI_RT_SPIN_US exist)
+   0.0325, moodycamel LightweightSemaphore partial spin (maxSpins 10000, mostly the idle guest thread's wait_for_resumed) 0.0088,
+   other clock polls 0.0062, yields 0.0012. Second lines: s7433 capture 0.031/0.011, s7381 counters 3.0%. wait_one_frame
+   (vi.cpp:47) has no caller. No change landed (nothing >= 0.01 core outside the deliberate VI tail).
    CQ (s7434) CLOSED H-known: tools/s7434_gfx_glue.py on scratch/s7433/sample_{4,8}.txt (owner recipe dd4 16:9 FPS60, lvl1
    flight, busy-off windows) charges each running Gfx Thread sample to its innermost owned frame: 8.97 ms/frame = F5 ucode 3.85
    (43%, matches s7014's 41%) + RT64 3.21 (36%) + our glue 1.92 (21%). Our glue = rsp_dpc_submit_impl self 1.07 (per-DPC_END-bump

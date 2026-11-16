@@ -1,20 +1,15 @@
-# NEXT (s7435)
-HYPOTHESIS-ID: host-spin-loops
+# NEXT (s7436)
+HYPOTHESIS-ID: host-alloc-cost
 
-Class CR (CURRENT-TRUTH Next steps item 1): host busy-wait / poll loops (G1b H-host: only 5 P-cores; every spinning host
-thread competes with the guest MAIN and Gfx threads). s7434 lead from the s7433 sample(1) captures (scratch/s7433/sample_{4,8}.txt,
-owner recipe dd4 16:9 FPS60, lvl1 flight): the VI Thread shows ~290 samples per 12 s window as self time in mach_continuous_time /
-clock_gettime_nsec_np, i.e. a clock-polling loop (~3% of one core). wait_for_resumed self 7% on guest threads is the moodycamel
-semaphore spin (s7433 note).
-Step 1 (offline, no build): grep-enumerate the whole idiom class in src/ and lib/N64ModernRuntime (and lib/rt64/src only for
-rs64-patched code): `while (...clock|mach_absolute_time|mach_continuous_time|now()...)` loops, `std::this_thread::yield` /
-`sched_yield` / `__builtin_arm_yield` / `_mm_pause` loops, spin-count semaphores (moodycamel LightweightSemaphore spin count),
-`while (!flag.load())` without a wait. Classify every site: tail-spin (bounded, after a sleep), unbounded spin, diag-only
-(env-gated), dead. Table in the session entry, with file:line.
-Step 2: per live default-on site, its CPU from the s7433 samples (tools/s7434_gfx_glue.py --threads '<thread name>' gives the
-owned-frame split). Hypotheses: H-tail (every live spin is a bounded tail after a sleep, total < 0.05 core -> close),
-H-spin (a site spins unbounded or for > 1 ms per wake, >= 0.1 core -> fix to a timed wait, kill-switch env, same-run toggle
-qualification with a control), H-sem (the moodycamel spin count before blocking is the largest term -> lower it behind an env and
-measure tasks/s + thread CPU in one toggled run).
-Discriminator: per-site share of a core; positive control in any run: a planted ROGUESQ_DIAG_BUSY_US spin must read back.
-If H-tail: close CR and take the next 3c rung (new idiom class; renaming is closed since s6868).
+Class CS (CURRENT-TRUTH Next steps item 1): per-frame host heap allocation cost (G1b H-host family after CM-CR). On 5 P-cores,
+malloc/free churn on the Gfx, guest MAIN and RT64 threads is CPU the game threads compete for, and macOS xzm/nanov2 locks can
+serialize threads.
+Step 1 (offline, no build, no run): new tools/s7436_alloc_cost.py over scratch/s7435/sample_*.txt (+ samples.idx, run.tlog flip
+lines; owner recipe FPS60 dd4 16:9, lvl1 flight, 8 x 12 s windows; reuse the parse() of tools/s7435_spin_cost.py). Per thread and
+per window: self samples in allocator frames (malloc, free, calloc, realloc, operator new/delete, _xzm_*, xzm_*, nanov2_*, szone_*,
+_malloc_zone_*, mfm_*), plus the innermost OWNED caller of every allocator sample (std::vector growth -> its owner frame).
+In-capture positive control: the ctrl column (rs64_diag_spin_us, busy=1 minus busy=0) must read back ~0.030 core as in s7435.
+Hypotheses: H-free (allocator total < 0.02 core, close), H-hot (one owned caller >= 0.01 core / >= 0.15 ms/frame on Gfx or MAIN ->
+fix: reserve/reuse the buffer, kill-switch env, then a same-run toggled run with the control), H-lock (allocator samples sit in
+lock waits (__ulock_wait / _os_unfair_lock_lock_slow under malloc) >= 0.01 core -> contention, name the two threads).
+Discriminator: allocator share per thread + top owned callers. If H-free: close CS and take the next 3c rung (new idiom class).

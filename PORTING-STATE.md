@@ -197040,3 +197040,40 @@ Rules out: a whole-buffer copy per task (H-copy); a new owned Gfx-thread glue te
 Conclusion: this selects H-known (H-rt64 for the remainder) and refutes H-copy and a new H-walk. Next discriminator (class CR, NEXT.md):
 grep-enumerate host busy-wait / poll loops and measure each live site's share of a core (H-tail vs H-spin vs H-sem), led by the
 VI Thread clock polling.
+
+## Session 7435 (2026-11-15) — class CR host busy-wait / poll loops closed H-tail: every host spin together costs 0.049 of one core in owner-recipe flight (VI deadline tail spin 0.0325, guest semaphore partial spin 0.0088, other clock polls 0.0062, yields 0.0012); planted 500 us/swap control read back +0.0345 vs 0.030 expected (PASS)
+
+HYPOTHESIS-ID: host-spin-loops. Hypotheses: H-tail (every live spin is a bounded tail, total < 0.05 core), H-spin (one site
+>= 0.1 core, unbounded), H-sem (moodycamel LightweightSemaphore partial spin is the largest non-VI term, >= 0.02 core).
+**Census (grep, src/ + lib/N64ModernRuntime; class AW s7381 already enumerated 75 rows by correctness, this pass is by CPU):**
+| site | file:line | class | default-on |
+| VI deadline spin after sleep_until(next - 500 us/2 ms) | lib/N64ModernRuntime/ultramodern/src/events.cpp:850 | bounded tail (s6456/s6967 precision) | yes |
+| LightweightSemaphore::waitWithPartialSpinning, maxSpins 10000 then block | thirdparty/concurrentqueue/lightweightsemaphore.h:279,316,349 | bounded spin before a kernel wait | yes (wait_for_resumed, gfx/task queues) |
+| wait_one_frame yield poll on total_vis | librecomp/src/vi.cpp:47-51 | unbounded yield poll | no caller in src/ or RecompiledFuncs (dead) |
+| rs64_cine_yield (yield every 16th call) | src/main/upstream_compat.cpp:5769 | yield, not a loop | caller-driven |
+| guest osYieldThread -> std::this_thread::yield | src/main/upstream_compat.cpp:972-973 | yield | s7381: 0 calls in play |
+| rs64_diag_spin_us | src/main/main.cpp:5133 | DIAG (planted control) | env ROGUESQ_DIAG_BUSY_* only |
+| s7382 QoS control spinner | src/main/main.cpp:12952 | DIAG | env ROGUESQ_S7382_QOS_CTL only |
+| S7026 submit spin | src/rsp/dpc_bridge.cpp:6036 | DIAG | env ROGUESQ_S7026_SPIN_NS only |
+| rs64_g1e_aq_spin | src/rsp/dpc_bridge.cpp:8456 | DIAG | g_rs64_aq_spin_ns > 0 only |
+| pi.cpp save write_sempahore timed wait / mods.cpp 1 s timed dequeue / timer.cpp | librecomp, ultramodern | blocking waits, not spins | - |
+RT64 barrier spins were converted to condvars in s7381 (ROGUESQ_S7381_BARRIER_CV default on).
+**Runtime (external profiler, not our runtime):** new tools/s7435_spin_cost.py over a tools/s7433_probe_cost.sh capture (owner recipe
+FPS60 dd4 16:9 via tools/s7431_stderr_volume.sh, copied folder, autopilot lvl1 flight, ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled every
+30 s in-run, 8 x 12 s /usr/bin/sample windows from t=95 s). Each running self sample is charged to one site (vi_spin = VI Thread
+under vi_thread_func outside sleep_until; sem_spin = self in LightweightSemaphore::wait*/wait_for_resumed; yield = swtch_pri/
+sched_yield; clk_other = clock leaves elsewhere; ctrl = rs64_diag_spin_us/rs64_store_diag_tick), share = self / thread samples.
+Capture kept locally in scratch/s7435/ (gitignored).
+| windows | vi_spin | sem_spin | yield | clk_other | ctrl |
+| busy=0 (3 clean) | 0.0325 | 0.0088 | 0.0012 | 0.0062 | 0.0021 |
+| busy=1 (2 clean) | 0.0323 | 0.0102 | 0.0014 | 0.0057 | 0.0366 |
+CONTROL ctrl delta 0.0345 core vs expected 500 us x 60/s = 0.030: PASS. 0 crash lines, 60 tasks/s (s7433 analyzer on the same run:
+probe 0.113 ms/frame, control +0.598, H-free, agreeing with s7433).
+Per thread: VI Thread 1466 vi_spin samples; sem_spin mostly "[Game] 0" (the idle guest thread's wait_for_resumed) 361, MAIN 29.
+Second line: the independent s7433 run (scratch/s7433/sample_{4,8}.txt, busy-off windows) reads vi_spin 0.0321/0.0310, sem_spin
+0.0106/0.0113, and s7381's own counter build measured the VI spin at 3.0% of one core. Three sources agree.
+Rules out: a host spin or poll loop as a G1b H-host CPU term (nothing >= 0.01 core except the deliberate VI tail at 0.03); lowering
+the moodycamel spin count (< 0.01 core to win). No code change: the only term worth a knob (VI tail) already has ROGUESQ_VI_NOSPIN
+and ROGUESQ_VI_RT_SPIN_US. wait_one_frame is dead (no caller).
+Conclusion: this selects H-tail and refutes H-spin and H-sem. Closes class CR. Next discriminator (class CS, NEXT.md): per-frame
+host heap allocation (malloc/free/operator new self + inclusive per thread) from the same scratch/s7435 capture, offline.
