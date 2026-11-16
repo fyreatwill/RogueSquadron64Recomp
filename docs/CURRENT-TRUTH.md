@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7442 (2026-11-15).
+Compact operational handoff, as of Session 7443 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,10 +215,17 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CZ, the remaining default-on rs64_* guest hooks (HYPOTHESIS-ID guest-hook-trim).** See NEXT.md:
-   rs64_s6287 (0.010 ms/f self, ROGUESQ_PPLOG test inside), rs64_s6285_en (0.004), rs64_s6963_pre (0.023 incl, cell-index
-   memo) in src/main/upstream_compat.cpp; if together < 0.05 ms/f after reading them, close the guest-hook trim campaign
-   and take item 20.
+1. **Next audit: class DA, ungated periodic-summary prints in src/ (HYPOTHESIS-ID ungated-summary-prints).** See NEXT.md:
+   the 10 `(n & 0xMASK) == 0|1) ... fprintf` sites (grep in NEXT.md) in main.cpp / upstream_compat.cpp / dpc_bridge.cpp, the
+   idiom s7443 found in rs64_s5660_ustore. Classify each GATED (env/latch before the counter) vs UNGATED; latch the UNGATED
+   diag ones (G1E_TRIM=0 restores). Guest-hook trim campaign (CM-CZ) is CLOSED.
+   CZ (s7443) CLOSED H-trivial + one latch: the four hooks left by s7441_rs64_census sum 0.022 ms/f self. rs64_s6287
+   (ppcount, 5 sites funcs_3.c) GATED-INSIDE (cached ROGUESQ_PPLOG); rs64_s6285_en (11 sites) NEEDED (dlpool grow gate,
+   static latch); rs64_s6963_pre (funcs_10.c clampGridCellLookup) NEEDED (cell-index memo; S.calls++ only); rs64_s5660_ustore
+   (4+ swl/swr sites) was UNGATED-DIAG: atomic counters + [ustore-all] every 2^18 calls (42 lines / run) with no env. Now
+   latched on ROGUESQ_VSRC_STORES / ROGUESQ_LOG_USTORE (g1d_blk pc + s6843 STORE_WATCH stay unconditional), G1E_TRIM=0 old.
+   scratch/s7443, 150 s owner recipe lvl1 flight each: default [ustore-all] 0, consumer LOG_USTORE=1 24 (PASS), 0 crash both.
+   Trap: any ROGUESQ_LOG_* env turns on [storediag] (reason=ROGUESQ_LOG_USTORE): consumer stderr 9.8 -> 109 MB.
    CY (s7442) CLOSED H-hidden: tools/s7442_probe_gate_census.py (every rsNNNN helper the apply_s*.py patches inserted, call
    sites from guest functions, GATED / GATED-INSIDE / UNGATED + sample ms/f via --samples) on scratch/s7441: 12/40/9; the 9
    read by hand are renamed-body wrappers or latched (regex misses) except rs5908_call (apply_s5908_callers.py, every

@@ -197268,3 +197268,27 @@ Remaining default-on guest rs64_* hooks (tools/s7441_rs64_census.py scratch/s744
 is the DIAG_BUSY control itself.
 Conclusion: selects H-hidden (one site, gated, stderr drops); H-needed for the renamed-body wrappers.
 Next: class CZ, the remaining default-on rs64_* guest hooks in upstream_compat.cpp (s6287, s6285_en, s6963_pre).
+
+## Session 7443 (2026-11-15) — class CZ closed H-trivial: the last four default-on rs64 guest hooks sum 0.022 ms/f; rs64_s5660_ustore's census printed [ustore-all] with no env, now latched; guest-hook trim campaign closed
+
+Work unit: NEXT.md class CZ (HYPOTHESIS-ID guest-hook-trim). Offline read of each hook and its generated call sites
+(N64Recomp/RecompiledFuncs):
+- rs64_s6287 (src/main/upstream_compat.cpp:3707; funcs_3.c push/pop sites at 0x800079CC/79E0/7A30/7A44/7A8C): GATED-INSIDE,
+  cached ROGUESQ_PPLOG test, body is one ++map only when armed. 0.010 ms/f self = call overhead. Kept.
+- rs64_s6285_en (11 sites funcs_3.c, dlpool topup/finder-grow): UNGATED-NEEDED, static latch + s6286 armed flag (behaviour gate).
+- rs64_s6963_pre (funcs_10.c:10981, clampGridCellLookup cell-index memo): UNGATED-NEEDED (answers walks from the host index);
+  per-call diag is S.calls++ only (tick already gated s7433). 0.006 self.
+- rs64_s5660_ustore (src/main/main.cpp, swl/swr/sdl/sdr sites funcs_0.c, funcs_12.c, ...): UNGATED-DIAG. Atomic all/wide/
+  narrow counters, a forward to rs64_s5654_vstore (which returns at entry without ROGUESQ_VSRC_STORES) and a [ustore-all]
+  print every 2^18 calls: 42 lines in the s7442 4-min owner run, no env. 0.002 ms/f.
+Sum of all four 0.022 ms/f < 0.05 -> H-trivial for cost; H-hidden for the print. Change: rs64_s5660_ustore returns after the
+g1d_blk pc set and the s6843 STORE_WATCH range check unless ROGUESQ_VSRC_STORES / ROGUESQ_LOG_USTORE (=1) or
+ROGUESQ_G1E_TRIM=0 (old always-on census). cmake build only (src change, no regen).
+Runs (tools/s7431_stderr_volume.sh 150, owner recipe FPS60 dd4 16:9, forced lvl1 autopilot, copied folder, sequential):
+default arm [ustore-all] 0, 9.8 MB stderr, autopilot 48 lines, 0 crash; consumer arm ROGUESQ_LOG_USTORE=1 [ustore-all] 24
+(positive control PASS), 0 crash. Logs scratch/s7443/{run,consumer}.tlog (gitignored size permitting).
+Trap found: any ROGUESQ_LOG_* env switches on [storediag] (logged "reason=ROGUESQ_LOG_USTORE"), so the consumer arm stderr was
+109 MB, not a cost of this hook. Consumer controls with a LOG_* var measure the storediag blanket too.
+ORIGIN: not a mitigation; diagnostic census (s5660) left default-on after its investigation closed.
+Rules out: any remaining default-on rs64 guest hook >= 0.01 ms/f doing diagnostic-only work. Campaign CM-CZ closed.
+Next: class DA, the 10 `(n & MASK) == 0|1 ... fprintf` periodic-summary sites in src/.

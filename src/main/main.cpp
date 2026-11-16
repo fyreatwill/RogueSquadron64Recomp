@@ -2152,6 +2152,13 @@ static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const cha
 extern "C" void rs64_s5660_ustore(uint32_t pc, uint32_t addr, uint32_t value, char width) {
     rs64_g1d_blk_set_ustore_pc(pc);
     if (((addr & 0x1FFFFFFFu) - rs64_s6843_lo) < rs64_s6843_len) rs64_s6843_note(pc, addr & 0x1FFFFFFFu, 4u, nullptr); // s6843
+    /* s7443 class CZ: the census below (atomic counters, [ustore-all] every 2^18 calls, s5654 forward) ran on every guest
+       swl/swr/sdl/sdr with no env (42 lines per 4-min owner run). Its only consumers are ROGUESQ_VSRC_STORES (s5654, which
+       returns at entry without it) and the [ustore-all] control line itself: latch both on VSRC_STORES / LOG_USTORE.
+       ROGUESQ_G1E_TRIM=0 restores the old always-on census. g1d_blk pc and the s6843 store watch above stay unconditional. */
+    static const bool cen = [] { auto on = [](const char* n) { const char* e = std::getenv(n); return e && e[0] && e[0] != '0'; };
+        const char* t = std::getenv("ROGUESQ_G1E_TRIM"); return on("ROGUESQ_VSRC_STORES") || on("ROGUESQ_LOG_USTORE") || (t && *t == '0'); }();
+    if (!cen) return;
     static std::atomic<uint64_t> all{0}, wide{0}, narrow{0};
     uint64_t a = ++all; const uint32_t p = addr & 0x1FFFFFFFu;
     if (p >= 0x1B2C60u && p < 0x29DFB8u) { ++wide; if (p < 0x1B3600u) ++narrow; rs64_s5654_vstore(pc, p, value, width); }
