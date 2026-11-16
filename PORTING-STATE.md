@@ -197905,3 +197905,7 @@ deref" for 9 of 10 remaining sites (invariant proved), 1 known-parked. Next disc
   runtime behaviour change with the env unset. No soak needed (dump-path only, env unset in every recipe).
 - Rules out: host use-after-free / double free / mismatched dealloc / divide-zero as a source of the remaining crash classes,
   within what the path-sensitive analyzer can see (single-TU, no cross-TU inlining).
+- Verdict: the DT soak refutes H-fillrect-reached (fillrect_null=0 in both flight arms, both alive) and closes DT as latent-only.
+  The DV census (control PASS, same run) refutes H-host-uaf (no use-after-free, double free or mismatched dealloc in any of the
+  150 single-TU host files) and closes DV. Next discriminator: ASan+UBSan build-asan soak (class DW, NEXT.md) with a planted
+  heap-overflow control arm, which splits H-asan-clean from H-asan-hit across TUs and at runtime.
