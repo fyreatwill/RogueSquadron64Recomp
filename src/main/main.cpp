@@ -8046,12 +8046,17 @@ static void audio_route_apply_cycle() {
     while (presses-- > 0) pos = (pos + 1 >= n) ? -1 : pos + 1;
     const char* next = (pos >= 0) ? SDL_GetAudioDeviceName(pos, 0) : nullptr;
     g_audio_route_pref = next ? next : "default";
-    if (FILE* f = fopen(audio_route_file_path().c_str(), "w")) {
-        fprintf(f, "%s\n", g_audio_route_pref.c_str());
-        fclose(f);
+    // s7428 class CK: audio_device.txt is the only owner-facing state a run persists besides the save. Probe/test runs
+    // (ROGUESQ_NO_SAVE_WRITE, exported by tools/agent/runner.sh) must not change the next run's default, same as the save.
+    const bool persist = !std::getenv("ROGUESQ_NO_SAVE_WRITE");
+    if (persist) {
+        if (FILE* f = fopen(audio_route_file_path().c_str(), "w")) {
+            fprintf(f, "%s\n", g_audio_route_pref.c_str());
+            fclose(f);
+        }
     }
-    fprintf(stderr, "[audio-route] F9 -> '%s' (saved to %s)\n", g_audio_route_pref.c_str(),
-            audio_route_file_path().c_str());
+    fprintf(stderr, "[audio-route] F9 -> '%s' (%s %s)\n", g_audio_route_pref.c_str(),
+            persist ? "saved to" : "NOT saved (ROGUESQ_NO_SAVE_WRITE):", audio_route_file_path().c_str());
     std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     if (audio_device) {
         SDL_CloseAudioDevice(audio_device);

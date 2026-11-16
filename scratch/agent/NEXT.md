@@ -1,22 +1,21 @@
-# NEXT (s7428)
-HYPOTHESIS-ID: config-env-precedence
+# NEXT (s7429)
+HYPOTHESIS-ID: save-flush-on-quit
 
-First fold any new scratch/agent/SOAK-RESULTS.md lines.
+First fold new scratch/agent/SOAK-RESULTS.md lines, especially s7428_audio_route_arms (rc 0 = F9 gate verified two-arm;
+2 = VOID again: then debug why winctl key no longer reaches the game, compare tools/agent/m6_mission_tmpl.sh.in, which runs
+from build/; 3 = control failed).
 
-Class CK (CURRENT-TRUTH Next steps item 1): s7427 closed env-policy ORDER (H-ordered after the rs64_g5b_tg_fix re-arm fix).
-Open: settings that can come from a FILE as well as from ROGUESQ_* env. main.cpp:~13297 recomp::register_config_path(cwd);
-librecomp recomp.cpp / mods.cpp read .json files; RT64 has its own user configuration (resolution, aspect, msaa, vsync...)
-that RT64's init may load or default; build/saves holds the owner's save (never touch it).
-1. Enumerate every file the game reads at boot (offline: grep fopen/ifstream/std::filesystem/json parse in src/, librecomp,
-   ultramodern, rt64 src/hle+common; runtime: one boot with fs_usage -w -f filesys on the pid for ~10 s, or a DYLD-free
-   open() trace via the existing env-cache style interposer if fs_usage is denied) -> list of (path, reader, keys).
-2. For each key that an env var also controls (ROGUESQ_RESMULT, ASPECT, FULLSCREEN, WINDOW_*, MSAA, VSYNC, FPS60, ...):
-   which is applied last, and does that match docs/OWNER-OPT-INS.md? A file value that beats an explicit env value, or a
-   file written by one run that changes the next run's default = drift.
-3. Positive control: a planted config file in a COPY of the game folder (never build/saves) with a key that the env also sets
-   must be reported (offline: planted text into the parser model; runtime: run from the copied folder).
-Hypotheses: H-env-wins (env always overrides, files hold only non-overlapping state) vs H-file-wins (>=1 overlapping key where
-a file silently overrides env, or a run persists state that changes the next default). Name who is affected (owner recipe or
-test-only) and fix.
-Write tools/s7428_config_precedence.py. Exit 0 = env-wins, 1 = drift, 3 = control failed.
-Reuse: tools/s7427_env_policy_order.py (call graph, functions()), tools/s7426_env_defaults.py (sources()).
+Class CL (CURRENT-TRUTH Next steps item 1): save durability on quit. The owner quits with Cmd+Q / window close: SDL_QUIT ->
+std::quick_exit in main.cpp poll_input (s5380). The save is written by librecomp's saving thread (pi.cpp update_save_file:
+open_output_file_with_backup -> write -> finalize: temp + .bak + rename, s7357 class AH checks).
+Hypotheses: H-durable (any quit point leaves either the old or the new complete save, never a truncated or missing one, and
+the loader falls back to .bak) vs H-window (>=1 quit point between the game's EEPROM write and the file finalize loses the
+write or leaves only a .bak / a truncated temp) vs H-stale (pending save_buffer changes still queued when quick_exit runs
+are dropped: how long after the in-game "saved" is the file current?).
+1. Offline: read pi.cpp saving thread + files.cpp finalize; list each state (temp written, .bak renamed, final renamed) and
+   what the loader (open_input_file_with_backup) does from each. Measure the debounce from EEPROM write to file write.
+2. Runtime in a COPY of the game folder (never build/saves; env -u ROGUESQ_NO_SAVE_WRITE only in the copy): force a save
+   (the s5705 forced-route recipe pokes progression; or call the save path directly via a test env) and SIGKILL at offsets
+   0..N ms after the EEPROM write; after each kill, restart and check the save file loads with the expected bytes.
+   Positive control: a kill before the write must show the OLD save, a kill well after must show the NEW one.
+Write tools/s7429_save_quit.py (+ a .sh for the arms). Exit 0 = H-durable, 1 = window found, 3 = control failed.

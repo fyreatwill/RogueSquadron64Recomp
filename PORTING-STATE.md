@@ -196759,3 +196759,40 @@ Conclusion: the pre-fix arm (DRAW_DISTANCE=4x, REINIT=0: tg_fix stays 1 at retai
 the fix arm (1 -> 0) removes it; with the fix the static audit and the runtime trace together select H-ordered and refute
 H-race for the other 35 policy vars, all 5 steps and all 8 overwrites. Class CJ closed. Next discriminator: class CK, whether
 any config-file key overrides an explicit ROGUESQ_* env value (H-env-wins vs H-file-wins), scratch/agent/NEXT.md.
+
+## Session 7428 (2026-11-15) — class CK config-file vs env precedence closed H-env-wins after one fix: F9 audio-route persistence ignored ROGUESQ_NO_SAVE_WRITE
+
+Soak fold: no new verdicts since s7426 (only a loop "leftover game SIGKILLed" line).
+
+Work unit (NEXT s7428, HYPOTHESIS-ID config-env-precedence). Hypotheses: H-env-wins (env always overrides, files hold only
+non-overlapping state) vs H-file-wins (a file silently overrides env, or a run persists state that changes the next default).
+
+Offline: tools/s7428_config_precedence.py enumerates every open site (fopen / ifstream / ofstream / *_with_backup /
+read_file / write_file) in src/, librecomp, ultramodern and rt64 hle: 110 sites = 77 output-only writes, 5 env-named paths
+(PAD_OVERRIDE_FILE, POSE_REF, RDRAM_SNAP_DIR trigger, two RT64 dump paths), 25 reviewed fixed-path rows, 0 unreviewed
+fixed-path reads. The fixed-path files: (1) RT64 user config: never read or written, because rt64_render_context.cpp sets
+appConfig.useConfigurationFile=false and detectDataPath=false (userPaths empty), so every RT64 setting (aspect, resmult,
+API, buffering) comes from ROGUESQ_* env; (2) audio_device.txt in SDL_GetBasePath (build/): audio_route_load_pref tests
+ROGUESQ_AUDIO_DEVICE before opening it (env wins); (3) the save (write gated by ROGUESQ_NO_SAVE_WRITE since s5721); (4) the
+stored ROM copy / ROM import (no env key selects a ROM); (5) mods/, mod_config/, mods.json (empty, no env overlap).
+DEFECT: audio_route_apply_cycle (F9) rewrote audio_device.txt unconditionally, so a probe run under ROGUESQ_NO_SAVE_WRITE could
+change the owner's next-run audio default, the only owner-facing state besides the save that a run persists. Fixed in
+src/main/main.cpp: the write is skipped under ROGUESQ_NO_SAVE_WRITE and the log says "NOT saved". The owner (no
+NO_SAVE_WRITE) keeps the F9 save. build/audio_device.txt today = "MacBook Pro Speakers" (= the built-in default, Oct 19), so
+no live drift was found. The behaviour was also undocumented: OWNER-OPT-INS now has a row for it.
+ORIGIN: the writer is audio_route_apply_cycle (F9 handler, s6739). The value it wrote is legitimate for the owner; for test
+runs it is out of contract (runner.sh exports NO_SAVE_WRITE precisely so that probe runs leave owner state untouched).
+Control: four planted drifts (file opened before env, ungated persist write, RT64 useConfigurationFile=true, ungated save
+write) all flagged, plus a planted fixed-path read; and the HEAD version of main.cpp fails persist-gated (natural control).
+
+Runtime (second line, tools/s7428_audio_route_arms.sh, COPY of the game folder in /tmp/rs64_s7428, planted
+audio_device.txt="plantfile"): arm A (env xyzzyA + file) -> "preference from ROGUESQ_AUDIO_DEVICE: 'xyzzyA'"; arm B (file
+only) -> "preference from .../audio_device.txt: 'plantfile'". So env-wins is confirmed at runtime. Arms C (NO_SAVE_WRITE + F9:
+file must stay) and D (F9 without it: file must change, positive control) VOID: winctl activate/key returned 0 and
+`winctl trusted` = yes, but no injected key reached poll_input, Return included (no "[pad-sdl] site=key" line; screen not
+locked, HID idle 22 min). The first attempt had no injection check and read as CONTROL FAIL. The script now sends Return
+first and exits 2 (VOID) if it is not seen. Queued as scratch/agent/soak_queue/s7428_audio_route_arms.sh
+(SOAK_NEEDS_IDLE=300). Rules out H-file-wins for every overlapping key; the F9 gate itself still needs the runtime arm C/D
+verdict (offline-verified only, single-source until the soak lands).
+
+Next: class CL, save durability on quit (NEXT.md).

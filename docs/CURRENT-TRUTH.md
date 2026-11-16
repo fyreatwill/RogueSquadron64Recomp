@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7427 (2026-11-15).
+Compact operational handoff, as of Session 7428 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,9 +215,19 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CK, config-file vs env precedence (HYPOTHESIS-ID config-env-precedence).** Settings reachable from both
-   a config file (RT64/graphics config, librecomp config/save dirs) and a ROGUESQ_* env var: which wins, does that match
-   docs/OWNER-OPT-INS.md, and can a stale file silently override the owner's env? scratch/agent/NEXT.md.
+1. **Next audit: class CL, save durability on quit (HYPOTHESIS-ID save-flush-on-quit).** The owner quits with Cmd+Q / window
+   close (SDL_QUIT -> std::quick_exit, main.cpp poll_input) and the save is written by librecomp's saving thread
+   (pi.cpp update_save_file, temp + backup + rename). Can a quit inside the write window lose or truncate the owner's save, or
+   leave only the .bak? scratch/agent/NEXT.md.
+   CK (s7428) CLOSED H-env-wins after one fix: tools/s7428_config_precedence.py (110 open sites in src/, librecomp,
+   ultramodern, rt64 hle; 0 unreviewed fixed-path reads; control PASS: planted file-before-env read, ungated persist write,
+   RT64 config on, ungated save write all flagged; HEAD~ main.cpp flags persist-gated). Config files the game reads: RT64
+   user config NEVER (rt64_render_context.cpp useConfigurationFile=false, detectDataPath=false: every RT64 setting comes from
+   ROGUESQ_* env), audio_device.txt (exe dir; ROGUESQ_AUDIO_DEVICE wins, runtime arms A/B in a copied folder confirm), save,
+   stored ROM, mods/ (empty). DEFECT fixed: the F9 audio-route cycle persisted audio_device.txt even under
+   ROGUESQ_NO_SAVE_WRITE, so a probe run could change the owner's next default; now gated like the save. F9 arms C/D
+   (tools/s7428_audio_route_arms.sh, injected-Return void check) VOID in-session (no injected key reached the game, Return
+   included) -> queued scratch/agent/soak_queue/s7428_audio_route_arms.sh (SOAK_NEEDS_IDLE=300).
    CJ (s7427) CLOSED H-ordered after one fix: tools/s7427_env_policy_order.py --control (planted pre-policy static latch /
    step-order inversion / unguarded overwrite all flagged) + runtime trace ROGUESQ_S7427_ENVTRACE=1 (rs64_env_cache.cpp, phase
    pre/in policy; ROGUESQ_S7427_PLANT=1 control seen). 36 policy vars, 5 steps, 8 overwrites (sanitiser 4 / guarded 1 / ASPECT
