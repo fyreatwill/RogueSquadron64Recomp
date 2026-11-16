@@ -196755,3 +196755,7 @@ include in-policy reads, so only phase.log is a valid trace input.)
 Rules out: pre-policy latch drift beyond the 4 already re-armed readers; inter-step read-before-set; unguarded overwrites of
 user values. Not covered: env reads by dylibs (SDL, MoltenVK) — no ROGUESQ_ names there.
 Next: class CK, config-file vs env precedence (scratch/agent/NEXT.md).
+Conclusion: the pre-fix arm (DRAW_DISTANCE=4x, REINIT=0: tg_fix stays 1 at retail dd1) selects H-race for rs64_g5b_tg_fix and
+the fix arm (1 -> 0) removes it; with the fix the static audit and the runtime trace together select H-ordered and refute
+H-race for the other 35 policy vars, all 5 steps and all 8 overwrites. Class CJ closed. Next discriminator: class CK, whether
+any config-file key overrides an explicit ROGUESQ_* env value (H-env-wins vs H-file-wins), scratch/agent/NEXT.md.
