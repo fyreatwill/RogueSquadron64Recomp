@@ -197506,3 +197506,30 @@ Verdict restated: the quick-arm per-scorer count (0 in all 5 old scorers, 1 in t
 PLANT_FAIL control (>=37 everywhere) selects H-few and refutes H-none; the switch arm refutes "switch_error is missed"
 (caught via SIGABRT). Next discriminator (class DH): the (b)+(c) count of the 21 exit/_Exit/quick_exit/abort sites
 classified against tools/agent/fatal_patterns.txt.
+
+## Session 7451 (2026-11-15) — class DH closed H-none (Debug build: every fatal exit site prints a matched line); s7450 soak exposed m6_god_common.sh retrying post-mission-gate deaths as void attempts, now terminal with exitrc + fatal score
+
+Fold: s7450_fatal_harness rc=137 (900 s cap). Arm P (L1, ROGUESQ_PLANT_EXIT=110 KIND=quick): mission gate at t=71-72 in
+attempts 1,2,4,5, nomission in 3; the plant fired at 110 s inside the 130 s verify sleep, so each attempt was logged
+"died_in_verify-attN" and retried; fail_att1/2/4 each carry the "Exiting with exit status '1'" line (fatal_scan 1),
+summary "allattempts-failed" with no score; arm C (L4) never ran. Single-source (one run), but the code reading agrees:
+`sleep 130; kill -0 $p || { fail died_in_verify; continue; }` discards the death's exit status and text.
+Finding: any m6/g1 soak whose game died within 130 s of the mission gate has reported it as a route failure, not a crash.
+Fix (scratch/agent/m6_god_common.sh): died_in_verify is terminal: summary `died_in_verify=1 inits= died_within_s=130
+alive_at_end=0 crashlines= exitrc=` and exit 1 (DIED_RETRY=1 restores the retry); fail() logs `exitrc=<rc|killed>` and
+`fatal_scan` per attempt; allattempts-failed now carries `deaths= fatal_total=`. Controls (fake BUILD binaries in
+/tmp/s7451fake, no game): die after gate -> `died_in_verify=1 ... crashlines=1 exitrc=1`; die before gate x2 (switch_error
+text) -> `deaths=2 fatal_total=2`; live game killed by harness -> `exitrc=killed`, `deaths=0`. Re-queued
+scratch/agent/soak_queue/s7451_fatal_harness.sh (same arms, tags s7451fx{P,C}).
+Class DH (offline): 21 raw exit/_Exit/quick_exit/abort matches in src/ + librecomp + ultramodern -> 13 live fatal sites,
+2 comments, 1 normal shutdown (main.cpp:11108 quick_exit(EXIT_SUCCESS)), plant sites, Windows-only _Exit(3/4).
+All 13 print a fatal_patterns.txt line in the current build: text matches (switch_error, do_break, Unhandled status,
+Failed to find function, SDL_Init/CreateWindow, quick_exit), abort() sites ([s7356] FATAL x3, [FATAL] syscall) via the
+unconditional macOS SIGABRT sigaction handler -> "[CRASH] caught signal", and assert(false) sites live because
+build/CMakeCache CMAKE_BUILD_TYPE=Debug. Under NDEBUG two would go unmatched ("Cannot partially unload section",
+overlays.cpp:324; and the "FATAL" abort texts if the handler were bypassed) -> both added to tools/agent/fatal_patterns.txt;
+fatal_scan --selftest 19/19 (pos 18/18, neg 0); 7 clean flight logs (s7447/s7448/s7449) still 0; synthetic "[FATAL]
+syscall" line scores 1. Verdict: H-none for the Debug build (refutes H-few/H-many), 2 NDEBUG members hardened.
+Rules out: silent non-signal exit sites in our runtime as an unseen crash family. Does not cover lib/rt64 or SDL internals.
+Next: class DI harness-death-as-void: 46 harness scripts carry their own fail/retry copies (g1_fly/aim/steer/...); classify
+which are live and whether they void a post-gate death.

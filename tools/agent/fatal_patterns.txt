@@ -15,3 +15,5 @@ Assertion failed
 SDL_Init failed
 SDL_CreateWindow failed
 libc\+\+abi: terminating
+Cannot partially unload section
+\] FATAL |^\[FATAL\] 

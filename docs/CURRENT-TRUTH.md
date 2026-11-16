@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7448 (2026-11-15).
+Compact operational handoff, as of Session 7451 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,8 +215,20 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Class DG CLOSED s7450 (harness-fatal-exit-coverage) H-few. Next: class DH (HYPOTHESIS-ID harness-death-exit-status)**,
-   see NEXT.md. DG: ONE shared fatal list tools/agent/fatal_patterns.txt (17 ERE: [CRASH] SIGSEGV SIGBUS SIGABRT abort
+1. **Class DH CLOSED s7451 (harness-death-exit-status) H-none in the Debug build; DG in-harness defect fixed. Next: class DI (HYPOTHESIS-ID harness-death-as-void)**,
+   see NEXT.md. DH: every exit(/_Exit(/quick_exit(/abort( in src/ + librecomp + ultramodern (21 raw, 13 live sites)
+   already prints a fatal_patterns line: abort() sites via the unconditional macOS SIGABRT handler ([CRASH] caught signal 6),
+   assert(false) sites live because build/ is CMAKE_BUILD_TYPE=Debug (no NDEBUG) -> "Assertion failed". NDEBUG-silent
+   pair hardened: +"Cannot partially unload section" (overlays.cpp:324) +"\] FATAL |^\[FATAL\] " ([s7356] FATAL + abort,
+   [FATAL] syscall); selftest 19/19, 0 hits on 7 clean flight logs. s7450_fatal_harness soak FAILED for a harness reason
+   (single-source, one run): planted _Exit at 110 s fired after the mission gate (t=71) -> m6_god_common.sh "died_in_verify"
+   retried it as a void attempt 4/5, summary "allattempts-failed", fatal line never scored, 900 s cap hit before arm C.
+   So every m6/g1 soak since the retry was written would have reported an early-mission crash as a route failure.
+   Fix (m6_god_common.sh): died_in_verify is terminal (summary died_in_verify=1 ... crashlines exitrc; DIED_RETRY=1 = old),
+   fail() logs exitrc=<rc|killed> + fatal_scan per attempt, allattempts-failed carries deaths= fatal_total=. Synthetic
+   controls (fake BUILD binaries, /tmp/s7451fake): die-after-gate -> exitrc=1 crashlines=1; die-before-gate x2 -> deaths=2
+   fatal_total=2; live-killed -> exitrc=killed deaths=0. Re-queued as soak s7451_fatal_harness.
+   DG: ONE shared fatal list tools/agent/fatal_patterns.txt (17 ERE: [CRASH] SIGSEGV SIGBUS SIGABRT abort
    Switch-case / Encountered break / Exiting with exit status / Unhandled status register / Failed to allocate memory /
    ^[Error] / exited unexpectedly / Failed to find function / Assertion failed / SDL_Init / SDL_CreateWindow failed /
    libc++abi: terminating) + tools/agent/fatal_scan.sh (--selftest 17/17 pos, 0 neg); used by m6_god_common.sh crashlines
@@ -225,8 +237,6 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
    -> SIGABRT -> [CRASH], so old greps already saw 37-40: incidental non-member); quick arm rc=1, all 5 old scorers 0,
    new 1 (MEMBER); silent _Exit rc=1, every grep 0 -> only alive/exitrc catch it; PLANT_FAIL control >=37 everywhere.
    Clean flight logs (7, incl. 3 x 115-165 MB) new list 0 = old 0. In-harness check queued: soak s7450_fatal_harness.
-   s7449_argck_levels fold: L10 pass; L4 inits=2 (call#2 a0 0xAE->0x9A, in-mission restart, 45/91 prior L4 summaries
-   also inits=2), alive, 0 crash/stall, 564/623 KB -> DF flight line stands; rc=1 was the recipe's inits=1 bar.
    DF (s7449) CLOSED H-few, one change: rs64_diag_keep words + (fmt has "%s") the FORMATTED text is checked. Members found
    by audit: ultramodern message_box "%s\n" + our callback "[Error] %s\n", quick_exit "Exiting with exit status", librecomp
    "Failed to find function at", "RSP ucode %u exited unexpectedly", [s7357-io] "... failed", [s6892] "%s\n" walker-guard
@@ -234,7 +244,6 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
    backtrace_symbols_fd), assert (libc raw), switch_error/do_break (printf = stdout, unrouted). Positive control
    ROGUESQ_PLANT_FAIL=15 (7 planted lines then SIGSEGV), scratch/s7449: default 7/7 planted, 37 [CRASH] + 12 bt frames;
    QUIET ARGCHECK=0 (s7448 filter) 1/7, 37 + 12; QUIET new 7/7, 37 + 12; boot log 5937 -> 6346 B. ARGCHECK=0 = old.
-   s7448_quiet_levels fold: L7/L12 QUIET 135 s flight, 0 crash, 0 stall (DE second line).
    DE (s7448) CLOSED H-few, one change: src/main/main.cpp rs64_diag_keep also passes format prefixes [initMission],
    [autopilot], [vi] update_screen, [f5-phase5-target-store], [godmode], [g1b], [stall- (the tags the live harnesses
    m6_god_common.sh / g1_level_coverage_common.zsh, s7230/s7257/s7229 scorers, boot_freeze_hunt.sh gate on; [fbhash and

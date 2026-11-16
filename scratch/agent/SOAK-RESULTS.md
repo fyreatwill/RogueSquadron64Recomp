@@ -1544,3 +1544,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7448 fold: s7447_route_levels rc=0: L4/L7/L12 131 s hold, 137-138 s flight, 0 crash, 0 VI stall -> rs64_diag_route.h build (class DD) qualifies on 3 levels; no lib-TU regression.
 20261115-211446 | s7448_quiet_levels | rc=0 | 404s | scratch/agent/soak_results/s7448_quiet_levels_20261115-211446.log
 20261115-212636 | s7449_argck_levels | rc=1 | 410s | scratch/agent/soak_results/s7449_argck_levels_20261115-212636.log
+20261115-213946 | s7450_fatal_harness | rc=137 | 901s | scratch/agent/soak_results/s7450_fatal_harness_20261115-213946.log

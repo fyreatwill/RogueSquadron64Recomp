@@ -36,7 +36,8 @@ for att in $(seq 1 ${MAXATT:-5}); do
   p=$!; t0=$SECONDS
   has() { grep -aq "$1" $L; }
   key() { :; }  # no-op: autopilot injects keys
-  fail() { echo "$1-att$att" >> $K; kill -9 $p 2>/dev/null; wait $p 2>/dev/null; cp $L $OUT/fail_att$att.log; }
+  # s7451: fail() records how the attempt ended (exitrc=killed when the harness killed a live game, else the game's own status) and its fatal_scan score; before s7451 a void attempt's crash text was never scored.
+  fail() { local lv=1; kill -0 $p 2>/dev/null || lv=0; kill -9 $p 2>/dev/null; wait $p 2>/dev/null; frc=$?; [ $lv = 1 ] && frc=killed; echo "$1-att$att exitrc=$frc $(zsh $ROOT/tools/agent/fatal_scan.sh $L)" >> $K; cp $L $OUT/fail_att$att.log; }
   # s6434: wide-aspect arms move every framebuffer origin (FB_WIDTH 796/1024), so the 0x790400/0x6AB400 gates false-fail (s6433: 6/6 'notitle' while the autopilot reached hangar+flight). WIDE_ROUTE=1 gates on autopilot-armed and skips the hangar origin gates.
   [ "${WIDE_ROUTE:-0}" = 1 ] && { TITLE_OPTIONAL=1; AP_OVERRIDE_WIDE=1; }
   if [ "${TITLE_OPTIONAL:-0}" = 1 ]; then
@@ -76,7 +77,10 @@ for att in $(seq 1 ${MAXATT:-5}); do
   [ $mt -ge 0 ] || { fail nomission; continue; }
   echo "att=$att mission t=$((mt-t0))" >> $K
   # s5394: the attract demo also shows 0x690400 and ends at ~167 s; a real mission must outlast it.
-  sleep 130; kill -0 $p 2>/dev/null || { fail died_in_verify; continue; }
+  # s7451: a game death after the mission gate is a datum, not a void route: s7450 arm P (planted _Exit at 110 s) died_in_verify 4/5,
+  # was retried each time, and its summary read "allattempts-failed" with the fatal line unscored. Now terminal; DIED_RETRY=1 restores the retry.
+  sleep 130; kill -0 $p 2>/dev/null || { fail died_in_verify; [ "${DIED_RETRY:-0}" = 1 ] && continue
+    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) died_within_s=130 alive_at_end=0 vi_stalls30s=0 crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
   echo "att=$att mission_verified_130s" >> $K
   last=$(grep -ac origin= $L); lastt=$SECONDS; stalls=0
   while kill -0 $p 2>/dev/null && [ $((SECONDS-mt)) -lt $HOLD ]; do
@@ -90,4 +94,4 @@ for att in $(seq 1 ${MAXATT:-5}); do
   echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc"  # s7450 class DG: shared fatal list | tee $OUT/summary
   exit 0
 done
-echo "tag=$TAG allattempts-failed" | tee $OUT/summary; exit 1
+echo "tag=$TAG allattempts-failed $(grep -a -- '-att[0-9]* exitrc=' $K | awk '{f=$3; sub("fatal=","",f); n+=f; if($2!="exitrc=killed") d++} END{printf "deaths=%d fatal_total=%d", d, n}')" | tee $OUT/summary; exit 1
