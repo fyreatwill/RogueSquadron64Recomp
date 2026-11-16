@@ -15,6 +15,53 @@ DECLARATIONS = (
 )
 
 
+S7490_MARK = "/* s7490 class EO patch store/load hooks */"
+S7490_DEFS = S7490_MARK + r"""
+extern unsigned char* g_rs64_s7475_bm; extern int g_rs64_s7484_on;
+extern int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn);
+extern int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn);
+static inline int rs64_s7490_mk(uint32_t a, int w) { const uint32_t o = a - 0x80000000u, e = o + (uint32_t)w - 1u;
+    return g_rs64_s7475_bm && e < 0x1800000u && o < 0x1800000u && (((g_rs64_s7475_bm[o >> 3] >> (o & 7u)) | (g_rs64_s7475_bm[e >> 3] >> (e & 7u))) & 1u); }
+#define RS64_S7490_PST(pc, off, base, w) do { const uint32_t _a7490 = (uint32_t)((base) + (off)); if (__builtin_expect(rs64_s7490_mk(_a7490, (w)), 0)) rs64_s7475_store((pc), _a7490, (w), __func__); } while (0)
+#define RS64_S7490_PLD(pc, off, base, w) do { if (__builtin_expect(g_rs64_s7484_on, 0)) { const uint32_t _a7490 = (uint32_t)((base) + (off)); if (rs64_s7490_mk(_a7490, (w))) rs64_s7484_load((pc), _a7490, (w), __func__); } } while (0)
+"""
+_S7490_W = {"sw": 4, "sh": 2, "sb": 1, "lw": 4, "lh": 2, "lhu": 2, "lb": 1, "lbu": 1}
+
+
+def s7490_hooks(text: str) -> str:
+    """s7490 class EO: PatchesLib bodies (RecompiledPatches/patches.c) override generated game functions (findAndUnlinkSmallestEntry,
+    110 guest call sites; setRngSeed; isCinematicActive) but carried NO RS64_S5798_ST / RS64_S7484_LD hooks, so the EB/EH/EI heap
+    watches were blind to their stores/loads. Every generated sw/sh/sb gets RS64_S7490_PST after it and every lw/lh/lhu/lb/lbu gets
+    RS64_S7490_PLD before it (same host entry points as the game hooks; no-op unless the s7475 bitmap is armed)."""
+    if S7490_MARK in text:
+        return text
+    import re
+    lines = text.split("\n"); out = []; pend = None; fn = ""; n_st = n_ld = 0
+    st = re.compile(r"^(\s*)MEM_([WHB])\((-?0X[0-9A-F]+), (ctx->r\d+)\) = [^;]+;$")
+    ld = re.compile(r"^(\s*)ctx->r\d+ = MEM_(W|H|HU|B|BU)\((ctx->r\d+), (-?0X[0-9A-F]+)\);$")  # loads print (base, off)
+    cm = re.compile(r"^\s*// (0x[0-9A-F]{8}): +(\w+) ")
+    for ln in lines:
+        m = re.match(r"^RECOMP_FUNC void (\w+)\(", ln)
+        if m: fn = m.group(1)
+        c = cm.match(ln)
+        if c: pend = (c.group(1), c.group(2)); out.append(ln); continue
+        live = not fn.startswith("unused_patch_") and not re.search(r"_[0-9A-F]{8}$", fn)  # heap_guards.c predicates walk free chains by design
+        ms = st.match(ln) if live and pend and pend[1] in ("sw", "sh", "sb") else None
+        ml = ld.match(ln) if live and pend and pend[1] in ("lw", "lh", "lhu", "lb", "lbu") else None
+        if ms:
+            out.append(ln); out.append(f"{ms.group(1)}RS64_S7490_PST({pend[0]}u, {ms.group(3)}, {ms.group(4)}, {_S7490_W[pend[1]]});"); n_st += 1
+        elif ml:
+            out.append(f"{ml.group(1)}RS64_S7490_PLD({pend[0]}u, {ml.group(4)}, {ml.group(3)}, {_S7490_W[pend[1]]});"); out.append(ln); n_ld += 1
+        else:
+            out.append(ln)
+        if ln.strip() and not ln.strip().startswith("//"): pend = None if (ms or ml or not c) else pend
+    text = "\n".join(out)
+    anchor = '#include "funcs.h"\n'
+    text = text.replace(anchor, anchor + S7490_DEFS, 1)
+    print(f"[s7490] patches.c hooks: stores={n_st} loads={n_ld}")
+    return text
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit(f"usage: {Path(sys.argv[0]).name} GENERATED_PATCHES_C")
@@ -25,6 +72,9 @@ def main() -> int:
     if text.count(anchor) != 1:
         raise SystemExit(f"{path}: expected one funcs.h include")
     if "extern char* getenv(const char*);" in text:
+        hooked = s7490_hooks(text)
+        if hooked != text:
+            path.write_text(hooked)
         return 0
 
     text = text.replace(anchor, anchor + "#include <stdio.h>\n" + DECLARATIONS, 1)
@@ -109,6 +159,7 @@ def main() -> int:
     stale = "RECOMP_FUNC void allocateDisplayListBuffer("
     if text.count(stale) == 1:
         text = text.replace(stale, "RECOMP_FUNC void unused_patch_allocateDisplayListBuffer(", 1)
+    text = s7490_hooks(text)
     path.write_text(text)
     return 0
 

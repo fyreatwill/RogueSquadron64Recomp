@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7489 (2026-11-16).
+Compact operational handoff, as of Session 7490 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -244,7 +244,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      on arm applied once after the 3rd re-entry (v1 0x80986800 -> 0x8093B800) and mission 4 loaded clean -> H-route-clean, H-route-shrink refuted.
    - **EI s7484-s7485 guest loads from freed blocks: CLOSED 6 levels (H-load-clean).** EJ s7485 over-reads: CLOSED retail-benign. EK s7486 host reads: CLOSED 6 levels (H-host-clean).
    - **EL s7487 lwl/lwr loads: CLOSED 6 levels (H-lwl-clean). EM s7488 swl/swr stores: CLOSED 6 levels (H-ust-clean; levels soak s7488_ustwatch_levels score=0, folded s7489).** Full EI-EM text: PROJECT-OVERVIEW "(s7489 migration)".
-   - **EN s7489 store paths that bypass rs64_s7475_store: guest side CLOSED (H-paths-covered), host DMA writes CLOSED on L4/L15 (H-hostwrite-clean), levels soak queued.**
+   - **EN s7489 store paths that bypass rs64_s7475_store: guest side CLOSED (H-paths-covered), host DMA writes CLOSED 6 levels (H-hostwrite-clean; soak s7489_hostwrite_levels score=0, folded s7490).**
      tools/s7489_store_path_census.py (exit 0 = every live store form hooked): sw 25425, swc1 10567, sb 5260, sh 4506, sdc1 1253, sd 46 via
      RS64_S5798_ST; swl 203 / swr 202 via s7488; not live: 775 data_gap_ texts, 37 cache no-ops, 1 trap. Before s7489 12 live texts were blind:
      the s5520 [b40w] logger (9 sb 0xB40 texts) and the s4984 atomic voice pair (0x8008F0EC sw, 0x8008F0CC sh) replaced the store without the
@@ -254,6 +254,18 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      score=0, host_wF=0 host_wUrec=0 both arms (L4 sp_wr_gfx 366M ranges, 5 freed-record hits all U; L15 188M, 64 hits U2/N62; pi_dma recs N only;
      sp_wr_aud never touches heap), write plant DETECTED kind=sp_wr_gfx in flight both (0.003 / 0.010 s). Not covered: host writes through guest
      pointers outside DMA (OSMesg / IoMesg / controller / RT64 readback) = class EO. Soak s7489_hostwrite_levels (L1 dd8 21:9, L7/L10/L12) queued.
+   - **EO s7490 host code standing in for game functions: 2 blind paths FOUND and hooked; zmemcpy CLOSED on L4/L15 (H-eo-clean), levels soak queued.**
+     RECOMP_FUNC is weak on clang, so a strong definition elsewhere silently replaces the generated (hooked) body. tools/s7490_hostwrite_census.py
+     reads the linked binary's debug map: exactly 5 overrides: zmemcpy -> upstream_compat.cpp host body (72 guest call sites, ~70k calls / 7 MB
+     per 200 s of L4, 99.9% into heap blocks); findAndUnlinkSmallestEntry (110 sites), setRngSeed, isCinematicActive -> PatchesLib; main. So
+     EB/EH/EI (and the s7489 census, which counted the dead generated zmemcpy as hooked) never saw a guest memcpy or the DL-finder's 11
+     pointer stores. Fix (measurement only): zmemcpy routes each bitmap-marked byte through rs64_s7475_store / rs64_s7484_load (fn=zmemcpy_host,
+     ROGUESQ_S7490_ZHOOK=0 = old); tools/fixup_patches_host.py s7490_hooks adds RS64_S7490_PST/PLD to every patch-body sw/sh/sb and lw/lh/lb
+     (11 + 26; heap_guards predicates excluded). Census exit 0 after, 3 BLIND before. Control ROGUESQ_S7490_ZPLANT=<s> (records the live block a
+     host memcpy is about to write as freed). tools/s7490_zmemcpy_recipe.zsh LV="4:4 15:8" HOLD=220: score=0, both alive, vi_stalls30s=0,
+     zplant DETECTED fn=zmemcpy_host both; 0 zmemcpy F/Urec store or load rows, 0 slack stores; s7480 loc_F=0 Urec=0. Caveats: no load-side
+     plant (rmark=0), patch hooks built after that run (unrun in flight). Part B inventory (OS-call host stores: osRecvMesg/SendMesg, cont,
+     save_read, IoMesg, OSThread) stays unhooked = class EP. Soak s7490_zmemcpy_levels (L1 dd8 21:9, L7/L10/L12) queued.
    - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
      ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
      marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:

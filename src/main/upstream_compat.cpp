@@ -4025,8 +4025,10 @@ static void s7486_sum(double now) {
     if (g_rs64_s7489_on) std::fprintf(stderr, "[s7489] sum t=%.1f host_wF=%llu host_wUrec=%llu wplant=%d sp_wr_gfx_ctl=%llu sp_wr_aud_ctl=%llu pi_dma_ctl=%llu sp_wr_gfx_rng=%llu sp_wr_aud_rng=%llu pi_dma_rng=%llu marked=%llu/%llu/%llu\n", now - s_s7475_t0,
         (unsigned long long)wF, (unsigned long long)wR, s_s7489_wplant, (unsigned long long)s_s7486_ctl[6], (unsigned long long)s_s7486_ctl[7], (unsigned long long)s_s7486_ctl[8],
         (unsigned long long)s_s7486_rng[6], (unsigned long long)s_s7486_rng[7], (unsigned long long)s_s7486_rng[8], (unsigned long long)s_s7486_mark[6], (unsigned long long)s_s7486_mark[7], (unsigned long long)s_s7486_mark[8]); }
+extern "C" void rs64_s7490_sum(double now);  /* s7490 class EO, defined at zmemcpy */
 static void s7480_sum(double now) {
     if (!s7480_on()) return;
+    rs64_s7490_sum(now);
     s7486_sum(now);
     if (g_rs64_s7484_on) std::fprintf(stderr, "[s7484] sum t=%.1f hits=%llu recs=%llu loc_U=%llu loc_F=%llu loc_N=%llu loc_Urec=%llu loc_S=%llu pcs=%zu slack=%llu slack_pcs=%zu internal=%llu p1=%llu retired=%llu ctl=%llu plant=%d tries=%d\n", now - s_s7475_t0,
         (unsigned long long)s_s7484_hits, (unsigned long long)s_s7484_recs, (unsigned long long)s_s7484_loc[0], (unsigned long long)s_s7484_loc[1], (unsigned long long)s_s7484_loc[2], (unsigned long long)s_s7484_loc[3], (unsigned long long)s_s7484_loc[4],
@@ -6179,6 +6181,34 @@ extern "C" void osGetMemSize_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
 //   a0/r4 = dest (MIPS virtual address)
 //   a1/r5 = source (MIPS virtual address)
 //   a2/r6 = len (byte count)
+/* s7490 class EO: the LIVE zmemcpy is this host body (RECOMP_FUNC is weak on clang, so the generated, hooked 0x80018EF4 body is
+   dead code; 72 guest call sites). Its byte stores and loads bypassed RS64_S5798_ST / RS64_S7484_LD, so the s7475 slack canary (EB),
+   s7480 UAF-store (EH) and s7484 UAF-load (EI) watches never saw a guest memcpy. Each marked byte now goes through the same host entry
+   points (fn=zmemcpy_host, pc = the generated sb 0x80018F30 / lbu 0x80018F28). ROGUESQ_S7490_ZHOOK=0 = old (unhooked). Control:
+   ROGUESQ_S7490_ZPLANT=<s> (needs S7480_UAF; replaces S7480_PLANT): <s> s after arming, the first zmemcpy whose dest lies inside a
+   live canary block (req >= 0x40) records that block as freed (s7480 plant 1, guest memory untouched) BEFORE the copy, so the copy's
+   own first byte MUST log `[s7480] plant DETECTED ... fn=zmemcpy_host`. `[s7490] sum` = calls/bytes/marked bytes. Measurement only. */
+extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn);
+static uint64_t s_s7490_calls = 0, s_s7490_bytes = 0, s_s7490_wmark = 0, s_s7490_rmark = 0, s_s7490_heap = 0;
+static int s_s7490_plant = 0;
+static bool s7490_zhook() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7490_ZHOOK"); return !(e && e[0] == '0'); }(); return on; }
+static inline bool s7490_marked(uint32_t a) {
+    const uint32_t o = a - 0x80000000u; return o < 0x1800000u && ((g_rs64_s7475_bm[o >> 3] >> (o & 7u)) & 1u); }
+static void s7490_pre(uint32_t dst, uint32_t len) {
+    ++s_s7490_calls; s_s7490_bytes += len;
+    static const double zp = [] { const char* e = std::getenv("ROGUESQ_S7490_ZPLANT"); if (!e || !*e || *e == '0') return -1.0; return std::atof(e); }();
+    std::lock_guard<std::mutex> lk(s_s7475_mu);
+    auto it = s_s7475_live.upper_bound(dst); bool inheap = false;
+    if (it != s_s7475_live.begin()) { --it; inheap = dst < it->first + it->second.sz; }
+    if (inheap) ++s_s7490_heap;
+    if (zp < 0 || s_s7490_plant || !inheap || !s7480_on() || s_s7480_plant != 0 || it->second.req < 0x40u || dst >= it->first + it->second.req) return;
+    const double now = s7325_now(); if (now - s_s7475_t0 < zp) return;
+    s_s7490_plant = 1; ++s_s7480_ptries; s7480_add(it->first, it->second.req, now, 1); s_s7480_plant = 1; s_s7480_ptime = now;
+    std::fprintf(stderr, "[s7490] zplant SET blk=%08X req=%X dst=%08X len=%X t=%.1f\n", it->first, it->second.req, dst, len, now - s_s7475_t0); }
+extern "C" void rs64_s7490_sum(double now) {
+    std::fprintf(stderr, "[s7490] sum t=%.1f zhook=%d calls=%llu bytes=%llu heap_calls=%llu wmark=%llu rmark=%llu zplant=%d\n", now - s_s7475_t0, (int)s7490_zhook(),
+                 (unsigned long long)s_s7490_calls, (unsigned long long)s_s7490_bytes, (unsigned long long)s_s7490_heap,
+                 (unsigned long long)s_s7490_wmark, (unsigned long long)s_s7490_rmark, s_s7490_plant); }
 extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     // Use the full 64-bit register values for the bounds check. The MEM_BU
     // macro does (reg + offset) ^ 3 - 0xFFFFFFFF80000000 in 64-bit, so
@@ -6219,6 +6249,15 @@ extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     gpr src_reg  = ctx->r5;
     uint32_t len = (uint32_t)len_full;
     rs64_f5_host_write_begin(rdram, (uint32_t)dest_reg & 0x1FFFFFFFu, len, "zmemcpy");
+    if (g_rs64_s7475_bm && s7490_zhook()) {  /* s7490 class EO: route marked bytes through the guest store/load watches */
+        const uint32_t d0 = (uint32_t)dest_reg, s0 = (uint32_t)src_reg; s7490_pre(d0, len);
+        for (uint32_t i = 0; i < len; ++i) {
+            if (g_rs64_s7484_on && s7490_marked(s0 + i)) { ++s_s7490_rmark; rs64_s7484_load(0x80018F28u, s0 + i, 1, "zmemcpy_host"); }
+            ctx->r2 = MEM_BU(i, src_reg);
+            MEM_B(i, dest_reg) = ctx->r2;
+            if (s7490_marked(d0 + i)) { ++s_s7490_wmark; rs64_s7475_store(0x80018F30u, d0 + i, 1, "zmemcpy_host"); }
+        }
+    } else
     for (uint32_t i = 0; i < len; ++i) {
         ctx->r2 = MEM_BU(i, src_reg);
         MEM_B(i, dest_reg) = ctx->r2;

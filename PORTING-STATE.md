@@ -198604,3 +198604,32 @@ Hypotheses: H-paths-covered / H-fpu-gap (swc1/sdc1 unhooked) / H-host-gap (host 
    RT64 framebuffer readback) -> class EO next.
 Levels soak queued: s7489_hostwrite_levels (L1 dd8 21:9, L7/L10/L12 dd4). Measurement only, default off.
 CURRENT-TRUTH: EN bullet added; EI-EM bullets compressed, verbatim text migrated to PROJECT-OVERVIEW "(s7489 migration)".
+
+## Session 7490 (2026-11-16) — class EO: host zmemcpy and PatchesLib bodies were blind to the heap watches (weak RECOMP_FUNC override); hooked, census exit 0, L4/L15 zmemcpy score=0 with plant DETECTED; EN closed 6 levels
+Fold: soak s7489_hostwrite_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: host_wF=0 host_wUrec=0, host_F=0, write plant DETECTED kind=sp_wr_gfx
+in flight on all 4, all alive, vi_stalls30s=0) -> class EN host-DMA side CLOSED for 6 levels.
+Work unit EO (host writes through guest pointers outside DMA). Offline census first, which turned up a bigger gap than the planned OS-call one:
+- RECOMP_FUNC is `extern inline __attribute__((weak,noinline))` on clang (recomp.h:22). A strong definition anywhere wins at link time and the
+  generated body, with its RS64_S5798_ST / RS64_S7484_LD hooks, is dead. From the binary's debug map (nm -a -p, OSO per FUN), exactly 5 of the
+  2504 generated bodies are overridden: zmemcpy (upstream_compat.cpp host body, 72 guest call sites), findAndUnlinkSmallestEntry (PatchesLib,
+  110 sites), setRngSeed, isCinematicActive (PatchesLib), main. RecompiledPatches/patches.c had 0 hooks; host zmemcpy writes MEM_B in a loop.
+  The s7489 store census marked the generated zmemcpy sb as hooked: that coverage claim was false for the live code.
+- ORIGIN (why it was believable): the generated funcs_4.c zmemcpy is fully hooked and the s7489 census reads generated text, not the link map.
+Changes (measurement only, default no-op unless the s7475 bitmap is armed):
+- src/main/upstream_compat.cpp zmemcpy: each bitmap-marked dest byte -> rs64_s7475_store(0x80018F30, a, 1, "zmemcpy_host") after the store,
+  each marked src byte -> rs64_s7484_load(0x80018F28, ...) before the load. ROGUESQ_S7490_ZHOOK=0 = old. `[s7490] sum` (calls/bytes/heap_calls/
+  wmark/rmark) printed with the s7480 sum. Control ROGUESQ_S7490_ZPLANT=<s>: the first memcpy after <s> s whose dest is inside a live canary block
+  (req>=0x40) records that block as freed (s7480 plant 1) before the copy.
+- tools/fixup_patches_host.py s7490_hooks (runs in the cmake patches step, idempotent): RS64_S7490_PST after every generated sw/sh/sb and
+  RS64_S7490_PLD before every lw/lh/lhu/lb/lbu in patch bodies (11 stores + 26 loads; heap_guards *_XXXXXXXX predicates and unused_patch_* skipped).
+- tools/s7490_hostwrite_census.py: Part A (overrides from the link map; exit 1 if any memory-touching overrider lacks hooks) + Part B inventory.
+  Before the patch rebuild: part_a_blind=3 (scratch/s7490_census_pre.txt); after: 0 (scratch/s7490_census_post.txt).
+Run tools/s7490_zmemcpy_recipe.zsh LV="4:4 15:8" HOLD=220 (canary+UAF-store+UAF-load, store plant replaced by ZPLANT=20), zmemcpy hook build:
+- L4 dd4 16:9: 69,630 zmemcpy calls / 7.06 MB, 69,601 into heap blocks; zplant SET 801E9300 t=20.2, DETECTED fn=zmemcpy_host 0.000 s later
+  (the copy's first byte). 0 non-plant zmemcpy uaf-store rows, 0 F/Urec loads, 0 slack stores; s7480 loc_F=0 Urec=0. Alive, vi_stalls30s=0.
+- L15 dd8 21:9: 47,377 calls / 6.65 MB; zplant DETECTED; same zeros. score=0.
+Verdict: H-eo-clean for host memcpy on L4/L15: no memcpy wrote or read a still-free block or past a request. H-eo-none refuted (the host does
+write heap through guest pointers, ~350 calls/s). Caveats: wmark=1 = only the plant byte was ever marked, so the clean result rests on the
+plant control; the load side has no plant (rmark=0, single-source); the PatchesLib hooks were built after this run and are unrun in flight.
+Not covered: Part B OS-call host stores (osRecvMesg/osSendMesg msg slots, cont pad data, save_read, IoMesg, OSThread) = class EP.
+Soak queued: s7490_zmemcpy_levels (L1 dd8 21:9, L7/L10/L12 dd4) on the patch-hooked build; it also scores patch-body rows.
