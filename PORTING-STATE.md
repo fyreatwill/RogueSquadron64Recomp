@@ -196601,3 +196601,39 @@ Rules out: a default-on fix that exists in the chain but not in the shipped buil
 lines (the [streamdump] bounds fields print 0 in the live build until the next regen; regen is correct). No game run (offline audit).
 Next: class CG, stale objects (is every built object newer than, and compiled from, the live source it claims).
 Conclusion: selects H-diag, refutes H-behaviour (0 open BEHAVIOUR rows, controls PASS); closes class CF. Next discriminator: class CG H-fresh vs H-stale (linked objects vs live source mtime/path/orphans, tools/s7424_stale_objects.py).
+
+## Session 7424 (2026-11-15) — class CG stale objects closed (H-fresh): all 415 objects linked into the game are newer than their source and every .d dependency, archives byte-match their member objects, RecompiledFuncs compiled from the live tree with 0 orphans and 2504/2504 RECOMP_FUNC symbols present; make -n's only pending work (spirv-cross relink -> 56-shader chain) regenerates byte-identical
+
+Question: s7423 proved the live SOURCE carries every behaviour patch. Does the shipped BINARY (build/RogueSquadron64Recomp,
+linked 10:21) match that source? H-fresh (every linked object current, from the live path) vs H-stale (>=1 stale/orphan object).
+
+New tool tools/s7424_stale_objects.py [--control] [--make-n]. Link closure from CMakeFiles/RogueSquadron64Recomp.dir/link.txt
+(24 objects + 15 project archives, each archive's members from its own link.txt). Checks: A object newer than its source and every
+dep in its .d; B archive member set == link.txt list, each member byte-identical to the .o on disk (ar x + compare), archive newer
+than members; C binary newer than every linked object/archive; D RecompiledFuncs sources are the live
+../N64Recomp/RecompiledFuncs, CONFIGURE_DEPENDS glob == compiled set, no orphan .o; E per file, RECOMP_FUNC definitions in the
+source == defined text symbols in the .o (content check independent of mtimes; -Dmain=rs_main mapped); F PatchesLib chain
+patches/*.c -> patches.elf -> RecompiledPatches/patches.c ordering. Two tool bugs fixed before the result: ar's "__.SYMDEF SORTED"
+member split into two tokens, and compile_commands 'output' is relative to the top build dir, not the entry's directory.
+
+Controls (same run) PASS: planted newer source copy -> A src-newer; planted .d naming a fresh header -> A dep-newer; planted extra
+RECOMP_FUNC in a funcs_9 copy -> E flagged (clean funcs_9 pair: 0 findings, 50 defs); libPatchesLib.a with a byte-flipped member
+-> B bytes-differ; ghost member -> B member-set; clean archive -> 0 findings.
+Result: 415 objects, 52 RecompiledFuncs files, 2504 RECOMP_FUNC defs, findings 0, VERDICT H-fresh, rc 0
+(scratch/agent/s7424_stale_objects.out).
+
+Second line: `make -n RogueSquadron64Recomp` (make's own view). It would redo only: 3 spirv-cross static libs, then the rt64 shader
+chain (56 shaders x .metal/.ir/.metallib/.metal.c/.o, no .spv, so no HLSL source changed), then rt64.a. Cause: a cmake reconfigure at
+12:41 (after the 10:21 link) rewrote ONLY spirv-cross's build.make/link.txt (the new link.txt quotes object paths), and CMake archive
+rules depend on build.make/link.txt; spirv_cross_msl is a dependency of every .metal rule. Is that pending work content-relevant?
+Ran the current bin/spirv_cross_msl on all 56 build/src/shaders/*.hlsl.spv into /tmp/s7424_sh: 56/56 byte-identical to the
+shipped .metal (control: a planted line in a copy is detected). So the pending rebuild is a no-op in content. The shaders were last
+regenerated 04:32 after the 04:17 configure, which fits "every reconfigure rewrites spirv-cross and re-triggers the shader chain"
+(single-source; costs build time only, not correctness).
+
+Rules out: a stale or orphan object, a non-live RecompiledFuncs path, a function present in source but missing from the binary, an
+archive member out of step with its .o, or a stale patches.c. Limitation: the mtime checks (A) trust mtimes for non-RecompiledFuncs
+sources; E is a symbol-set check, not a body check. No game run (offline audit).
+Next: class CH, build-option drift (CMAKE_BUILD_TYPE=Debug in CMakeCache; diagnostic defines such as RS64_BYTE_WATCH; per-target
+flags in flags.make vs CMakeLists intent).
+Conclusion: selects H-fresh, refutes H-stale (0 findings, controls PASS, make -n residue regenerates byte-identical); closes class CG. Next discriminator: class CH H-intended vs H-drift (shipped compile flags/defines vs CMakeLists defaults, tools/s7425_build_options.py).

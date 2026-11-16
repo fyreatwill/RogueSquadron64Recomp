@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7421 (2026-11-15).
+Compact operational handoff, as of Session 7424 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,9 +215,13 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CG, stale objects (HYPOTHESIS-ID stale-object).** Is every object linked into build/ compiled from the
-   current live RecompiledFuncs / src text (mtime + content hash vs the .o's dependency, cmake paths pointing at the live tree, no
-   orphan .o from a deleted/renamed file)? scratch/agent/NEXT.md.
+1. **Next audit: class CH, build-option drift (HYPOTHESIS-ID build-option-drift).** Do the shipped compile flags and defines
+   match CMakeLists intent (CMakeCache CMAKE_BUILD_TYPE=Debug; diagnostic defines such as RS64_BYTE_WATCH; per-target flags.make;
+   cache options vs defaults)? scratch/agent/NEXT.md.
+   CG (s7424) CLOSED H-fresh: tools/s7424_stale_objects.py --control --make-n PASS: 415 linked objects (24 + 15 archives) newer
+   than source and every .d dep, archives byte-match their .o, RecompiledFuncs from the live tree, glob == compiled set, 0 orphans,
+   2504/2504 RECOMP_FUNC symbols in the .o. make -n residue = spirv-cross relink (a 12:41 reconfigure rewrote only its
+   build.make/link.txt) -> 56-shader chain; current spirv_cross_msl regenerates all 56 .metal byte-identical, so no-op in content.
    CF (s7423) CLOSED H-diag: tools/s7423_live_stale.py live vs fresh regen, every function text-level, --control PASS (known funcs_9
    lines listed DIAG, planted store BEHAVIOUR, planted print DIAG): 124 regen-only statements = DIAG 25 / FILE-DIAG 5 / ORDER-DIAG 10
    / GUEST 4 + REGEN-FUNC 1 (the s6871 sizing set) / 3 reviewed ORDER rows (tools/s7423_live_stale_accept.tsv: diag swap, goto-less
