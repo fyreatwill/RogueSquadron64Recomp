@@ -196546,3 +196546,27 @@ Rules out: a live hand edit with no fixup hiding in the s6881->s7420 drift (woul
 Not covered: 13 more apply/fixup scripts use a windowed idempotence check (class CE); s5856/s6497 regen>live tags unexplained.
 Next: class CE, windowed idempotence census over all apply/fixup scripts.
 Conclusion: selects H-mirrored, refutes H-lost (0 LOST over 50 new rows, control PASS, tag census agrees); closes class CD.
+
+## Session 7422 (2026-11-15) — class CE windowed idempotence closed (H-once): 8 of 13 windowed scripts run twice per regen, none doubled in the real chain, 7 of 8 would once a later block lands at their anchor; all 8 now check the whole function; s5856/s6497 regen>live residue explained
+What ran: enumerated the idiom (`in text[a:b+N]` / `find(T, k, k+N)`) over tools/*.py: 13 scripts. Call sites in
+tools/fixup_game_funcs_vendored.py: 8 run inline AND in RS64_REPLAY (s5811, s5812, s5813, s5829, s5887, s5893, s5953, s5960);
+5 run once (s5693, s5697, s6303, s6311, fixup_preempt_point) -> SAFE.
+New tools/s7422_idem_class_test.py: apply to the pristine front file (/tmp/s7420/front), insert a 450 KB foreign block in front of
+each of the script's own tagged lines (= a later script inserting at the same anchor), apply again. Control arm = d1c50d659 copies.
+Result: fixed copies reapply=0 for all 8 (PASS); old copies reapply 1/1/3/1/1/3/1 for s5811/s5812/s5813/s5887/s5893/s5953/s5960
+(control PASS: the interposer reaches past every old window); s5829 old reapply=0 because its anchor is ANC + the following
+`// 0x800CB800: blez` comment, which its own insert breaks (safe by anchor shape; fixed anyway). s7421_idem_test still PASS.
+Change: those 8 scripts test the tag over the whole function (`_fe`: up to the next "RECOMP_FUNC ").
+Second line: fresh replay (cp -R /tmp/s7420/front /tmp/s7422/R; tools/regen_replay.sh, rc 0, 4m43s): `diff -rq /tmp/s7421/R2
+/tmp/s7422/R` = 0 files, PATCH-tag census unchanged, 12 HUDBIT tags live == regen. So no double happened in the current chain
+(H-once); the windows held by luck of block sizes. Fix is output-neutral.
+Residue (item 3): s5856 regen 3 vs live 2 = the same `extern uint32_t rs5907_hitobj; ... rs5856_sinobj ...` declaration line, tagged
+"PATCH: s5904" in live (incremental s5904 step) and "PATCH: s5856" by the pristine pass -> label only. s6497 regen 5 vs live 4 = live
+funcs_9 LACKS two lines the chain applies before `// 0x800429C0`: the s6497 rasterizer-bounds read (`s6497_x0 = MEM_W(0x80132DB0)`..)
+and the s6789 `rs64_g3e_trace(8, ...)` loop; live only zeroes s6497_x0..z1, so a live [streamdump] prints bounds=0,0,0,0 and G3E
+trace has no kind 8. Diag-only (env-gated), the regen is correct, the next rebuild from a regen restores them. Opens class CF: live
+can trail the chain; s7421 only proved 0 LOST in the live->regen direction.
+ORIGIN: no mitigation added; tooling idempotence fix (writer = the second RS64_REPLAY call of each script).
+Rules out: any HUDBIT/objective diag block applied twice in the current regen (byte-identical replay + tag census).
+Next: class CF, live-stale patches (regen-only lines vs live; BEHAVIOUR rows matter, the shipped binary is built from live).
+Conclusion: selects H-once, refutes H-double (0 doubled in the chain; 7 at-risk fixed, control PASS); closes class CE.

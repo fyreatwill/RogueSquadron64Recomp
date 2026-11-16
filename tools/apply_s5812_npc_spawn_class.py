@@ -9,13 +9,14 @@ BLK = ('    { /* ' + TAG + ' */ static int s_e = -1; static unsigned s_c[5], s_t
        'if (s_e) { uint32_t d = U32(ctx->r18); unsigned k = d ? (unsigned)MEM_W(ctx->r18, 0X70) : 99u; unsigned ki = k < 4 ? k : 4; s_c[ki]++; s_t++; '
        'if (ki == 1) { fprintf(stderr, "[spawn1] #%u desc=0x%08X npc=0x%08X id=0x%X w=", s_c[1], d, U32(ctx->r17), (unsigned)MEM_W(ctx->r18, 0X78)); for (int q = 0; q < 0x90; q += 4) fprintf(stderr, "%08X ", (unsigned)MEM_W(ctx->r18, q)); fprintf(stderr, "\\n"); } '
        'if (s_t <= 64 || (s_t & 15) == 0) fprintf(stderr, "[spawntally] total=%u c0=%u c1=%u c2=%u c3=%u other=%u sum_ok=%d\\n", s_t, s_c[0], s_c[1], s_c[2], s_c[3], s_c[4], (int)(s_c[0]+s_c[1]+s_c[2]+s_c[3]+s_c[4] == s_t)); } }\n')
+_fe = lambda t, i: (lambda e: len(t) if e < 0 else e)(t.find("RECOMP_FUNC ", i + 12))   # s7422: whole-function idempotence
 def apply(text, funcs=None):
     i = text.find("RECOMP_FUNC void npcProbeDriod(")
     if i < 0: return text, 0
     a = text.find("L_800CAC40:", i); assert a > 0
     anc = "    ctx->r17 = ADD32(ctx->r2, 0);\n"
     j = text.find(anc, a); assert 0 < j - a < 3000
-    if TAG in text[a:j + 2000]: return text, 0
+    if TAG in text[i:_fe(text, i)]: return text, 0
     k = j + len(anc)
     return text[:k] + BLK + text[k:], 1
 if __name__ == "__main__":

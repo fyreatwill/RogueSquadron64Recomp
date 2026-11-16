@@ -215,10 +215,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CE, windowed idempotence checks in apply/fixup scripts (HYPOTHESIS-ID apply-idempotence-window).**
-   13 apply/fixup scripts test "already applied?" only in a fixed window after their anchor; called twice (inline fixer +
-   RS64_REPLAY) after another block lands at the same anchor, they apply twice in a regen. Classify SAFE / DOUBLE / AT-RISK, fix
-   to whole-body checks, extend tools/s7421_idem_test.py; explain the remaining regen>live tags s5856 and s6497 (scratch/agent/NEXT.md).
+1. **Next audit: class CF, live-stale patches (HYPOTHESIS-ID live-stale-patch).** The built tree is the LIVE RecompiledFuncs, not
+   the regen. s7422 found live funcs_9 lacks two lines the chain applies (s6497 rasterizer-bounds read + s6789 rs64_g3e_trace kind 8,
+   both before `// 0x800429C0`, diag-only), so live can trail the chain. s7421 only proved the other direction (0 LOST from live).
+   Enumerate every regen-only line/statement vs live (tools/s7421_regen_drift.py rows + tag census), classify DIAG / BEHAVIOUR /
+   ORDER-ONLY, and for every BEHAVIOUR row say whether the shipped binary misses it (scratch/agent/NEXT.md).
+   CE (s7422) CLOSED H-once: of 13 windowed-idempotence scripts, 8 are called twice (inline fixer + RS64_REPLAY); 0 doubled in
+   the real chain (fresh replay /tmp/s7422/R byte-identical to s7421 R2), but 7 of 8 double once a later block lands at their anchor
+   (tools/s7422_idem_class_test.py control) -> whole-function tag checks; s5829 safe by anchor shape; s5693/s5697/s6303/s6311/
+   fixup_preempt_point called once (SAFE). Residue explained: s5856 regen>live = same decl line labelled s5904 in live (label only);
+   s6497 regen>live = live lost the two funcs_9 lines above (regen correct).
    CD (s7421) CLOSED H-mirrored: tools/s7421_regen_drift.py --control rc 0 (plant LOST / plant-diag ENVDIAG PASS) over a fresh
    replay (2664/114/18/3, = s7420; 2671/107/18/3 after the idempotence fix): all 47 new diffs + 3 new one-sided = funcs_13 store-diag handler rs64_s5798_st reorder
    (diag, inlined into 45 callers) + 6 stale ROGUESQ_TICK_TRACE hooks; 0 LOST; baseline residue in tools/s7421_regen_accept.tsv.
@@ -256,7 +262,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     tools/s7241_merge_test/run.sh; tools/s7243_resume_test.zsh; loop: tools/agent/test_soak_idle_gate.sh.
     After any host-code edit: every class census in item 15 with `--controls` (exit 1 = survivor or failed control).
     After a regen replay: tools/s7421_regen_drift.py <live> <regen> <compare.json> --control (exit 1 = LOST/REORDER not in
-    tools/s7421_regen_accept.tsv); after an apply-script edit: tools/s7421_idem_test.py.
+    tools/s7421_regen_accept.tsv); after an apply-script edit: tools/s7421_idem_test.py + tools/s7422_idem_class_test.py.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).

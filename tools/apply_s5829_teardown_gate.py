@@ -13,11 +13,12 @@ LOG = ('    { /* ' + TAG + ' */ static int s_e = -1; static unsigned s_n, s_p; '
        '(unsigned)MEM_W(dsc, 0X78), (unsigned)MEM_W((int32_t)0x80130000, 0X7CE4), (int)ctx->r2, s_p, '
        '(unsigned)MEM_W(dsc, 0X6C), (unsigned)MEM_W(dsc, 0X70), (unsigned)MEM_W(dsc, 0X74), (unsigned)MEM_W(dsc, 0X78), '
        '(unsigned)MEM_W(ctx->r17, 0X8)); } }\n')
+_fe = lambda t, i: (lambda e: len(t) if e < 0 else e)(t.find("RECOMP_FUNC ", i + 12))   # s7422: whole-function idempotence
 def apply(text, funcs=None):
     i = text.find("RECOMP_FUNC void npcProbeDriod(")
     if i < 0: return text, 0
     j = text.find(ANC + "    // 0x800CB800: blez", i)
-    if j < 0 or TAG in text[j:j + 3000]: return text, 0
+    if j < 0 or TAG in text[i:_fe(text, i)]: return text, 0
     k = j + len(ANC)
     return text[:k] + LOG + text[k:], 1
 if __name__ == "__main__":

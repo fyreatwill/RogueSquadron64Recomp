@@ -12,12 +12,13 @@ BLK = ('    { /* ' + TAG + ' */ static int s_e = -1; static unsigned s_c[256][8]
        'unsigned id = (unsigned)MEM_W((int64_t)(int32_t)d, 0X78) & 255u, m = (uint32_t)ctx->r5 < 8 ? (uint32_t)ctx->r5 : 0; s_c[id][m]++; s_n++; '
        'if (m == 5) { s_m5++; fprintf(stderr, "[m5id] #%u id=0x%X desc=0x%08X s10=%08X s14=%08X cnt m2=%u m3=%u m4=%u m5=%u\\n", s_m5, id, d, (unsigned)MEM_W(ctx->r21, 0X10), (unsigned)MEM_W(ctx->r21, 0X14), s_c[id][2], s_c[id][3], s_c[id][4], s_c[id][5]); } '
        'if ((s_n & 0xFFFF) == 0) { fprintf(stderr, "[m5tab] n=%u m5=%u", s_n, s_m5); for (unsigned q = 0; q < 256; q++) if (s_c[q][2] + s_c[q][3] + s_c[q][4] + s_c[q][5]) fprintf(stderr, " %02X:%u/%u/%u/%u", q, s_c[q][2], s_c[q][3], s_c[q][4], s_c[q][5]); fprintf(stderr, "\\n"); } } } }\n')
+_fe = lambda t, i: (lambda e: len(t) if e < 0 else e)(t.find("RECOMP_FUNC ", i + 12))   # s7422: whole-function idempotence
 def apply(text, funcs=None):
     i = text.find("RECOMP_FUNC void npcProbeDriod(")
     if i < 0: return text, 0
     anc = "    ctx->r17 = MEM_W(ctx->r21, 0X4);\n"
     j = text.find(anc, i); assert 0 < j - i < 12000
-    if TAG in text[i:j + 3000]: return text, 0
+    if TAG in text[i:_fe(text, i)]: return text, 0
     k = j + len(anc)
     # skip the s5813 msg line if present, keep ours after it
     nl = text.find("PATCH: s5813 msg", k)

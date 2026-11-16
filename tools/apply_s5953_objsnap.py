@@ -9,6 +9,7 @@ BLOCK = ('    { static int s_e = -1, s_k = 0; static uint32_t s_p[16]; static in
          'if (s_e && s_k < 400) { for (int q = 0; q < 15; q++) { uint32_t v_ = (uint32_t)MEM_W((int32_t)(q * 4), S32((int32_t)0x80138060)); '
          'if (!s_init) { s_p[q] = v_; } else if (v_ != s_p[q]) { s_k++; fprintf(stderr, "[objsnap] id=%d %u->%u ra=0x%08X\\n", q + 1, s_p[q], v_, (unsigned)ctx->r31); s_p[q] = v_; } } s_init = 1; } } /* ' + TAG + ' */\n')
 FUNCS = ("setObjectiveCount", "increaseObjectiveCount", "getObjectiveCount")
+_fe = lambda t, i: (lambda e: len(t) if e < 0 else e)(t.find("RECOMP_FUNC ", i + 12))   # s7422: whole-function idempotence
 def apply(text):
     n = 0
     for f in FUNCS:
@@ -16,7 +17,7 @@ def apply(text):
         if i < 0: continue
         j = text.find("    int c1cs = 0;\n", i); assert 0 < j - i < 300
         k = j + len("    int c1cs = 0;\n")
-        if TAG in text[k:k + 40 + len(BLOCK) + 2500]: continue
+        if TAG in text[i:_fe(text, i)]: continue
         text = text[:k] + BLOCK + text[k:]; n += 1
     return text, n
 if __name__ == "__main__":

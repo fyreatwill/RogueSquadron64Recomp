@@ -6,12 +6,13 @@ TAG = "PATCH: s5811 ctr1 bt"
 BLK = ('    { /* ' + TAG + ' */ extern int backtrace(void**, int); extern void backtrace_symbols_fd(void* const*, int, int); static int s_e2 = -1, s_b = 0; '
        'if (s_e2 < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e2 = (e && e[0]) ? 1 : 0; } '
        'if (s_e2 && U32(ctx->r6) == 1 && s_b < 8) { s_b++; void* bt[16]; int nb = backtrace(bt, 16); fprintf(stderr, "[ctr1-bt] #%d id=0x%X\\n", s_b, (unsigned)ctx->r4); backtrace_symbols_fd(bt, nb, 2); } }\n')
+_fe = lambda t, i: (lambda e: len(t) if e < 0 else e)(t.find("RECOMP_FUNC ", i + 12))   # s7422: whole-function idempotence
 def apply(text, funcs=None):
     i = text.find("RECOMP_FUNC void datItemSetObjectiveBooleanCount(")
     if i < 0: return text, 0
     j = text.find("    int c1cs = 0;\n", i); assert 0 < j - i < 2000
     k = j + len("    int c1cs = 0;\n")
-    if TAG in text[i:j + 3000]: return text, 0
+    if TAG in text[i:_fe(text, i)]: return text, 0
     return text[:k] + BLK + text[k:], 1
 if __name__ == "__main__":
     p = base / "funcs_15.c"; t = p.read_text(); t2, n = apply(t)

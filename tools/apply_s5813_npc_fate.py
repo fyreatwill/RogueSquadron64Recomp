@@ -47,22 +47,23 @@ void rs5813_free(uint32_t ra) {
     }
 }
 '''
+_fe = lambda t, i: (lambda e: len(t) if e < 0 else e)(t.find("RECOMP_FUNC ", i + 12))   # s7422: whole-function idempotence
 def apply(text, funcs=None):
     n = 0
     if "PATCH: s5813 helpers" not in text and "RECOMP_FUNC void npcProbeDriod(" in text:
         i = text.find("RECOMP_FUNC void npcProbeDriod("); text = text[:i] + HELP + text[i:]; n += 1
     i = text.find("RECOMP_FUNC void npcProbeDriod(")
-    if i >= 0 and T1 not in text[i:i+400000]:
+    if i >= 0 and T1 not in text[i:_fe(text, i)]:
         a = text.find("L_800CAC40:", i); anc = "    ctx->r17 = ADD32(ctx->r2, 0);\n"
         j = text.find(anc, a); assert 0 < j - a < 3000
         k = j + len(anc); text = text[:k] + TRK + text[k:]; n += 1
     i = text.find("RECOMP_FUNC void npcProbeDriod(")
-    if i >= 0 and T2 not in text[i:i+400000]:
+    if i >= 0 and T2 not in text[i:_fe(text, i)]:
         anc = "    ctx->r17 = MEM_W(ctx->r21, 0X4);\n"; j = text.find(anc, i); assert 0 < j - i < 12000
         k = j + len(anc)
         text = text[:k] + MSG.replace("rs5813_en_()", "rs5813_en()").replace("extern void rs5813_msg", "extern void rs5813_msg") + text[k:]; n += 1
     i = text.find("RECOMP_FUNC void unregisterAndFreeNpcSlot(")
-    if i >= 0 and T3 not in text[i:i+3000]:
+    if i >= 0 and T3 not in text[i:_fe(text, i)]:
         anc = "    int c1cs = 0;\n"; j = text.find(anc, i); assert 0 < j - i < 300
         k = j + len(anc); text = text[:k] + FREE + text[k:]; n += 1
     return text, n

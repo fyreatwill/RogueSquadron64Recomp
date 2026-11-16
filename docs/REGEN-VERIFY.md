@@ -120,3 +120,13 @@ it. Fixed (whole-body check); `tools/s7421_idem_test.py` re-applies each after a
 3/2/1/2 added (control). 13 more apply/fixup scripts use a windowed check (class CE).
 After the fix, second fresh replay: 2671 same / 107 differ / 18 live-only / 3 regen-only (`scratch/s7421/regen_compare_after.json`);
 s5787 3/3, s5790 2/2, s5791 1/1, s5809 2/2 tags live/regen; s7421_regen_drift --control rc 0, H-mirrored.
+
+## s7422: class CE, windowed idempotence (H-once)
+13 apply/fixup scripts tested "already applied?" in a fixed window. 8 run twice per regen (inline in fixup_game_funcs_vendored.py
+and again in RS64_REPLAY): s5811/s5812/s5813/s5829/s5887/s5893/s5953/s5960. `tools/s7422_idem_class_test.py` applies each to the
+pristine file, puts a 450 KB foreign block in front of each of its own tagged lines, applies again: fixed copies add 0; the
+d1c50d659 copies add 1/1/3/-/1/1/3/1 (control; s5829 adds 0 because its anchor includes the next comment line, which its own insert
+breaks). All 8 now check the whole function body. Fresh replay `/tmp/s7422/R` is byte-identical to `/tmp/s7421/R2` (diff -rq 0),
+so no double happened in the real chain; the fix only removes the risk. Called once: s5693, s5697, s6303, s6311, fixup_preempt_point.
+Regen>live tags: s5856 (live labels the same rs5907/rs5856_sinobj declaration line "s5904"), s6497 (live funcs_9 lost the s6497
+bounds read and the s6789 `rs64_g3e_trace(8, ...)` line before `// 0x800429C0`; regen has both; diag-only) -> class CF.
