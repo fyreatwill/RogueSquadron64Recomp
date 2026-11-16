@@ -198703,3 +198703,36 @@ named since s7472 is hooked (guest stores/loads, host reads, host DMA writes, zm
 RT64 writeback). Levels soak s7492_eq_levels queued (L1 dd8 21:9 tq_link, L7 rt64fb, L10 tq_head, L12 rt64fb). Next discriminator:
 class ER, RT64 writeback liveness (is every copyNativeToRAM target a colour/depth image the game set in the current frame?), seeded
 by the loc=N row.
+
+## Session 7493 (2026-11-16) — class ER: RT64 writeback liveness: every copyNativeToRAM target is an image the RDP stream set in the same swap (L4 dd1 51.7k / L15 dd8 51.6k writebacks, 0 stale, colour + depth controls caught); seed loc=N row = the game's own boot 640x480 fb over a block it freed 0.217 s earlier (H-wb-live, H-wb-stale refuted); EQ closed 6 levels
+Fold: soak s7492_eq_levels (L1 dd8 21:9 os_tq_link, L7 dd4 os_rt64fb, L10 dd4 os_tq_head, L12 dd4 os_rt64fb) score=0, all 4 alive,
+vi_stalls30s=0 -> class EQ CLOSED for 6 levels (L1/L4/L15 s7492 + these). Each arm again carries the boot loc=N os_rt64fb row
+(a=80B87810 n=6C30 age~0.22, t=0.9), i.e. the class-ER seed is deterministic.
+Change (one build): lib/rt64 rt64_rdp.cpp RDP::setColorImage / setDepthImage call rs64_s7493_img(kind, addr, width, siz) on EVERY set
+(before the changed-params test); rt64_state.cpp calls rs64_s7493_base(colorFb/depthFb->addressStart) before each of the 4
+rs64_wbw_post sites. src/main/main.cpp s7493_wb (ROGUESQ_S7493_WBLIVE=1): per writeback, look up the exact image base in a per-kind
+map of last sets; age in swaps (g_rs64_swap_n) -> age0/age1/age>=2/never; `[s7493] sum` every 10 s with nobase (posts with no base).
+ROGUESQ_S7493_WBLIVE_CTL=<k>: at the k-th writeback erase AND blacklist that image's future sets, so its next writebacks must log
+`never ... CTL`. ROGUESQ_S7493_WBLIVE_WATCH=<hex phys,...> logs every writeback covering those addresses. lib/ exported (rt64.patch).
+Recipe tools/s7493_er_recipe.zsh = s7492 EQ recipe + the above, scores the last sum (exit 4 = a stale/never writeback outside CTL).
+Run 1 (v1 lookup: greatest image base <= phys) L4 dd1 + L15 dd8: score=3. color age2=7715 / 5385, ctl_never=0. Read the rows: every
+age>=2 row was a partial-row writeback (phys = base + rowStart*stride) of a 640/1024-wide image matched to an older 320/640-wide boot
+image whose base lay between (e.g. phys=7F5600 w=640 rows=34 -> base=7DD000 iw=320 age 58 s): an instrument artefact, not a stale
+pair. CTL failed because the stream re-sets the depth image every frame, refilling the erased entry.
+Run 2 (v2: youngest covering image of the same width; CTL blacklists): L4 0 stale, CTL caught 1285; L15 0 stale but CTL NOT caught
+(the blacklisted 1024-wide B56000 was masked by another 1024-wide image covering it) -> v2's null on L15 was unscored; the covering
+rule could hide a stale pair. So v3 passes the exact base from RT64.
+Run 3 (v3, exact base) HOLD=220 MPLANT_S=20: score=0, both alive, s7492 contract held (os_FR=0 os_slack=0, s7480 F0 Urec0,
+mplant os_rt64fb DETECTED). L4 dd1: wb=51678, sets 67931 colour / 42046 depth, colour age0=39364, depth age0=11025, age1=0, age>=2=0,
+never=1289 = all CTL (colour base 5DE900, w=796), nobase=0. L15 dd8 21:9: wb=51612, colour age0=41229, depth age0=8999, never=1384 =
+all CTL (depth base B56000), nobase=0. Seed (WATCH 787810/B87810): writeback #81 at t=0.740, colour 640x480 base=76A000 (L15
+B6A000) set age_sw=0 (2 ms earlier, swap 42); the s7480 row right after it says the 0x80787810 block was freed 0.217 s earlier by
+freeManifestSegmentAssets <- runIdleFramesAndLoadSaveData. So the game first released that heap region, then its own display list set a
+640x480 colour image over it in the same swap the writeback ran.
+ORIGIN: no mitigation landed. Writer of the seed bytes = RT64 copyNativeToRAM of the 640x480 boot colour image at 0x76A000 (L15
+0xB6A000) that the game's RDP stream set this swap; the value (rendered pixels) is legitimate, the block was free for 0.217 s.
+Verdict: selects H-wb-live (two lines: exact-base age table 0 stale over 103k writebacks with both kind controls caught, and the
+seed's watch row naming a same-swap set). Refutes H-wb-stale. Class ER CLOSED on L4/L15; levels soak s7493_er_levels queued (L1 dd8
+21:9, L7/L10/L12 dd4). With ER, the M3 heap-audit store/load series (s7472-s7493) has no open class. Open, not a defect claim: whether
+retail also puts its boot 640x480 fb over a heap block it just released (port layout vs retail layout) -> class ES, oracle check
+(NEXT.md). Single-source until the oracle answers.

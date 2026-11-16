@@ -228,15 +228,16 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      EO host zmemcpy + PatchesLib weak-override bodies hooked (6 levels, s7490 soak folded s7491); EP OS-call host stores (6 levels); EQ thread queues + RT64 writeback (s7492, below).
      Recipes: tools/s7475_canary_recipe.zsh, s7480_uaf, s7484, s7486, s7487, s7488, s7489_hostwrite, s7490_zmemcpy, s7491_ep, s7492_eq (*_recipe.zsh).
    - EP s7491 OS-call host stores: CLOSED 6 levels (L4/L15 s7491, soak L1/L7/L10/L12 folded s7492; full text PORTING-STATE s7491).
-   - **EQ s7492 thread-queue links + RT64 writeback: CLOSED on L1/L4/L15 (H-eq-clean), levels soak queued (s7492_eq_levels).**
-     threadqueue.cpp s7492_tq after insert/pop/remove link stores (fn=os_tq_link / os_tq_head; host running-queue head skipped);
-     main.cpp rs64_wbw_post (after all 4 RT64 copyNativeToRAM sites) -> fn=os_rt64fb, phys < 24 MB. ROGUESQ_S7491_MPLANT_KIND=<kind>
-     = per-kind plant. tools/s7492_eq_recipe.zsh LV="<lvl>:<dd>:<kind>": tq ~760k link / 280k head stores per arm, plants DETECTED in
-     flight (t~120-150 s) for os_tq_head (L4), os_tq_link (L1), os_rt64fb (L4 dd1, L15 dd8); 0 os_* F/R/slack. osPfsNumFiles: correct
-     TO_PTR pointer, 0 game callers. Census part_b_blind=0. Open datum (class ER, below): one boot-time loc=N row per arm, an RT64
-     writeback over a block freed 0.24 s earlier by freeManifestSegmentAssets (a=80787810 L4 / 80B87810 L15, n=6C30).
-   - **ER next: RT64 writeback liveness.** Is every copyNativeToRAM target a colour/depth image the game set this frame, or can RT64
-     write a stale framebuffer pair into memory the game released/reallocated? Seed = the EQ loc=N row. NEXT.md has the design.
+   - EQ s7492 thread-queue links + RT64 writeback: CLOSED 6 levels (L1/L4/L15 s7492 + soak L1/L7/L10/L12 folded s7493; full text
+     PORTING-STATE s7492). Recipe tools/s7492_eq_recipe.zsh LV="<lvl>:<dd>:<plant kind>".
+   - **ER s7493 RT64 writeback liveness: CLOSED L4/L15 (H-wb-live), levels soak queued (s7493_er_levels).** rt64_rdp.cpp
+     setColorImage/setDepthImage -> rs64_s7493_img; rt64_state.cpp rs64_s7493_base(addressStart) before each rs64_wbw_post; main.cpp
+     s7493_wb, ROGUESQ_S7493_WBLIVE=1 (+_CTL=<k> erase+blacklist one image, +_WATCH=<hex,...>). Exact-base age table: 51.7k / 51.6k
+     writebacks, every one set in the same swap, 0 age>=2 / never outside CTL, colour (L4) and depth (L15) controls caught, nobase=0.
+     Seed loc=N row = the game's own boot 640x480 colour image at 0x76A000 (dd8 0xB6A000) set the same swap, over a block freed
+     0.217 s earlier. Lookup pitfall: greatest-base and youngest-covering lookups were artefacts / masked the control (s7493 runs 1-2).
+     The heap-audit store/load series s7472-s7493 has no open class.
+   - **ES next: is the boot 640x480 fb over a just-released heap block retail layout?** Oracle check, NEXT.md (single-source today).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

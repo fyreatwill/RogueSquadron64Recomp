@@ -10480,6 +10480,65 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
 static bool fl_zero_try_handle_fault(void*, void*) { return false; }
 #endif
 
+// s7493 class ER: RT64 writeback liveness. ROGUESQ_S7493_WBLIVE=1. RDP::setColorImage / setDepthImage (lib/rt64 rt64_rdp.cpp)
+// call rs64_s7493_img for EVERY image set the RDP stream carries; each writeback [phys, phys+bytes) is looked up against the last
+// set of the image that contains phys (same kind: 0 colour, 1 depth; greatest base <= phys within base + 1024 rows of the image
+// row bytes). Age in swaps (g_rs64_swap_n) since that set: age0 / age1 / age>=2 / never. First 20 age>=2|never rows are logged,
+// plus the first 40 writebacks of the run (seed timing: set age in seconds vs the s7480 free age). Positive control:
+// ROGUESQ_S7493_WBLIVE_CTL=<k>: at the k-th writeback the ring entry for that writeback's image is erased, so the same image's
+// next writeback (unless the stream re-sets it first) must log `never ... CTL`; reported as ctl_armed / ctl_never.
+extern std::atomic<int> g_rs64_swap_n;
+namespace {
+struct S7493Img { double t; int sw; uint32_t width, siz; uint64_t n; };
+std::mutex g_s7493_mu; std::map<uint32_t, S7493Img> g_s7493_img[2];
+uint64_t g_s7493_cnt[2][4] = {}, g_s7493_wb = 0, g_s7493_sets[2] = {}; int g_s7493_logged = 0; uint32_t g_s7493_ctl_base = 0xFFFFFFFFu; int g_s7493_ctl_kind = -1;
+uint64_t g_s7493_ctl_armed = 0, g_s7493_ctl_never = 0; double g_s7493_t0 = 0, g_s7493_last_sum = 0;
+int g_s7493_wlog = 0; std::atomic<uint32_t> g_s7493_next_base{0xFFFFFFFFu}; uint64_t g_s7493_nobase = 0;
+uint32_t g_s7493_w[4]; uint32_t g_s7493_nw = 0xFFFFFFFFu;
+uint32_t s7493_nwatch() { if (g_s7493_nw == 0xFFFFFFFFu) { g_s7493_nw = 0; if (const char* e = std::getenv("ROGUESQ_S7493_WBLIVE_WATCH")) { const char* q = e;
+        while (*q && g_s7493_nw < 4) { char* x; const unsigned long v = std::strtoul(q, &x, 16); if (x == q) break; g_s7493_w[g_s7493_nw++] = (uint32_t)v & 0xFFFFFFu; q = (*x == ',') ? x + 1 : x; if (!*x) break; } } }
+    return g_s7493_nw; }
+uint32_t s7493_watch(uint32_t i) { return g_s7493_w[i]; }
+bool s7493_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7493_WBLIVE"); return e && *e && *e != '0'; }(); return on; }
+double s7493_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+}
+extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
+    if (!s7493_on() || kind > 1) return;
+    std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
+    if (g_s7493_ctl_kind == (int)kind && (addr & 0xFFFFFFu) == g_s7493_ctl_base) return;  /* control: this image's sets are no longer recorded */
+    S7493Img& m = g_s7493_img[kind][addr & 0xFFFFFFu]; m.t = now; m.sw = g_rs64_swap_n.load(std::memory_order_relaxed); m.width = width; m.siz = siz; m.n++;
+    g_s7493_sets[kind]++;
+}
+extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); }
+static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    if (!s7493_on() || kind > 1 || !bytes) return;
+    static const uint64_t ctl_k = [] { const char* e = std::getenv("ROGUESQ_S7493_WBLIVE_CTL"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
+    std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
+    const int sw = g_rs64_swap_n.load(std::memory_order_relaxed); const uint64_t k = ++g_s7493_wb;
+    auto& mp = g_s7493_img[kind]; bool found = false; uint32_t base = 0; double aget = -1; int ages = -1; uint32_t iw = 0;
+    /* s7493 v3: RT64 hands the exact image base (rs64_s7493_base, colorFb/depthFb->addressStart) before each post; look that image up.
+       v1 (greatest base <= phys) matched older images in between; v2 (youngest covering same-width image) masked the L15 control. */
+    { const uint32_t eb = g_s7493_next_base.exchange(0xFFFFFFFFu); base = eb;
+      if (eb != 0xFFFFFFFFu) { auto it = mp.find(eb & 0xFFFFFFu); if (it != mp.end()) { found = true; aget = now - it->second.t; ages = sw - it->second.sw; iw = it->second.width; } }
+      else ++g_s7493_nobase; }
+    for (uint32_t i = 0; i < s7493_nwatch(); i++) { const uint32_t wa = s7493_watch(i); if (wa >= phys && wa < phys + bytes && g_s7493_wlog < 60) { ++g_s7493_wlog;
+        std::fprintf(stderr, "[s7493] watch %06X wb #%llu kind=%u phys=%06X bytes=%u w=%u rows=%u found=%d base=%06X age_sw=%d age_s=%.3f sw=%d t=%.3f\n", wa, (unsigned long long)k, kind, phys, bytes, width, rows, (int)found, base, ages, aget, sw, now - g_s7493_t0); } }
+    const int cls = !found ? 3 : ages <= 0 ? 0 : ages == 1 ? 1 : 2; g_s7493_cnt[kind][cls]++;
+    const bool isctl = cls >= 2 && g_s7493_ctl_kind == (int)kind && (base & 0xFFFFFFu) == g_s7493_ctl_base;
+    if (isctl) g_s7493_ctl_never++;
+    if ((cls >= 2 && g_s7493_logged < 20) || k <= 40 || (isctl && g_s7493_ctl_never <= 3)) { if (cls >= 2 && !isctl) ++g_s7493_logged;
+        std::fprintf(stderr, "[s7493] wb #%llu %s kind=%u phys=%06X bytes=%u w=%u rows=%u base=%06X iw=%u age_sw=%d age_s=%.3f sw=%d t=%.3f%s\n", (unsigned long long)k,
+            cls == 0 ? "age0" : cls == 1 ? "age1" : cls == 2 ? "age>=2" : "never", kind, phys, bytes, width, rows, base, iw, ages, aget, sw, now - g_s7493_t0, isctl ? " CTL" : ""); }
+    if (ctl_k && k == ctl_k && found) { mp.erase(base); g_s7493_ctl_base = base; g_s7493_ctl_kind = (int)kind; g_s7493_ctl_armed++;
+        std::fprintf(stderr, "[s7493] ctl armed at wb #%llu: erased + blacklisted kind=%u base=%06X (its next writebacks must be age>=2|never CTL)\n", (unsigned long long)k, kind, base); }
+    if (now - g_s7493_last_sum >= 10.0) { g_s7493_last_sum = now;
+        std::fprintf(stderr, "[s7493] sum t=%.1f wb=%llu sets=%llu/%llu color age0=%llu age1=%llu age2=%llu never=%llu depth age0=%llu age1=%llu age2=%llu never=%llu ctl_armed=%llu ctl_never=%llu nobase=%llu\n",
+            now - g_s7493_t0, (unsigned long long)g_s7493_wb, (unsigned long long)g_s7493_sets[0], (unsigned long long)g_s7493_sets[1],
+            (unsigned long long)g_s7493_cnt[0][0], (unsigned long long)g_s7493_cnt[0][1], (unsigned long long)g_s7493_cnt[0][2], (unsigned long long)g_s7493_cnt[0][3],
+            (unsigned long long)g_s7493_cnt[1][0], (unsigned long long)g_s7493_cnt[1][1], (unsigned long long)g_s7493_cnt[1][2], (unsigned long long)g_s7493_cnt[1][3],
+            (unsigned long long)g_s7493_ctl_armed, (unsigned long long)g_s7493_ctl_never, (unsigned long long)g_s7493_nobase); }
+}
+
 // s6938 G1e H-wb-dead instrument (ROGUESQ_G1E_WBW=1, off by default). After each RT64 colour/depth
 // writeback into RDRAM, the written pages are made PROT_NONE. The first touch of each page faults here:
 // we record phys, host pc/lr offset (resolve with atos) and read/write (ESR WnR), unprotect, retry.
@@ -10635,6 +10694,7 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
     {   static std::atomic<uint64_t> n{0}; const uint64_t k = ++n;  /* s7492: first-call / periodic marker = the hook's reach control */
         if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
                                                        (unsigned long long)k, phys, bytes, kind, width, rows); }
+    s7493_wb(phys, bytes, kind, width, rows);
     if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb");
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     uint32_t slot = kWbwMax;
@@ -10655,7 +10715,7 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
 extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
 extern "C" void rs64_wbw_self(int) {}
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
-extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t, uint32_t, uint32_t) { if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
+extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 
