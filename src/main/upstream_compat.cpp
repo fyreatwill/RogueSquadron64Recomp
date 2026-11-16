@@ -3639,8 +3639,138 @@ static void s7472_check(const char* why, uint32_t ra) {
                          (unsigned long long)nused, badthis, (unsigned long long)s_s7472_nbad, s_s7472_seen.size());
     }
 }
+/* s7475 class ED: in-block tail overrun canary. ROGUESQ_S7475_CANARY=1 (default off): at rs_malloc exit, for a block
+   below rs64_ram_top whose header (ptr-0x10: u16 flags 2|6, u32 size) passes the layout test, fill the slack bytes
+   [ptr+req, ptr+size) with 0xA5 and record (blk, req, size, ra). The slack is checked at rs_free entry and on a walk of
+   every live record at most every ROGUESQ_S7475_CANARY_MS (default 250) ms. A changed slack byte logs
+   `[s7475] tail-hit why= blk= req= size= off= val= alloc_ra= free_ra= gpc= t=` (40 distinct rows max). A record whose header
+   no longer matches (block re-carved by an arena reset that bypasses rs_free) is dropped as stale, not scored. A malloc
+   drops every record overlapping the new block. Planted control ROGUESQ_S7475_CANARY_PLANT=<s> (1 -> 60): <s> s after the
+   first record, write 0x5A at ptr+req of the live slack block with the largest req; the next walk MUST log it with PLANT. */
+namespace {
+struct S7475R { uint32_t req, sz, ra; double t; void* hpc; };
+static std::map<uint32_t, S7475R> s_s7475_live;
+static std::mutex s_s7475_mu;
+static std::set<std::pair<uint32_t, uint32_t>> s_s7475_seen;
+static uint64_t s_s7475_rec = 0, s_s7475_noslack = 0, s_s7475_hdrbad = 0, s_s7475_stale = 0, s_s7475_hits = 0, s_s7475_walks = 0,
+                s_s7475_freechk = 0, s_s7475_overlap = 0;
+static double s_s7475_t0 = 0, s_s7475_last = 0, s_s7475_ptime = 0;
+static int s_s7475_plant = 0; static uint32_t s_s7475_pblk = 0;
+static inline uint8_t s7475_rb(volatile uint8_t* r, uint32_t va) { return r[(va - 0x80000000u) ^ 3u]; }
+static inline void s7475_wb(volatile uint8_t* r, uint32_t va, uint8_t v) { r[(va - 0x80000000u) ^ 3u] = v; }
+}
+extern "C" { unsigned char* g_rs64_s7475_bm = nullptr; }  /* 1 bit per slack byte, KSEG0 0x80000000..0x81800000 (tools/apply_s7475_slackwatch.py) */
+namespace {
+static inline void s7475_mark(uint32_t blk, const S7475R& b, bool on) {
+    if (!g_rs64_s7475_bm) return;
+    for (uint32_t a = blk + b.req; a < blk + b.sz; ++a) { const uint32_t o = a - 0x80000000u; if (o >= 0x1800000u) break;
+        if (on) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); else g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); } }
+struct S7475W { uint64_t n; uint32_t blk, req, sz, off; int w; void* hpc; const char* fn; };
+static std::map<uint32_t, S7475W> s_s7475_wpc;  /* per store pc */
+static uint64_t s_s7475_stores = 0;
+static std::string s7475_sym(void* pc) { char b[160]; rs64_s7324_sym(pc, b, sizeof b); return b; }
+static uint8_t s7475_fill() { static const uint8_t f = [] { const char* e = std::getenv("ROGUESQ_S7475_FILL"); return (uint8_t)(e && *e ? std::strtoul(e, nullptr, 0) : 0xA5u); }(); return f; }
+static bool s7475_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7475_CANARY"); return e && e[0] && e[0] != '0'; }(); return on; }
+/* returns false if the record is stale (header changed) */
+static bool s7475_hdr_ok(volatile uint8_t* r, uint32_t blk, const S7475R& b) {
+    const uint32_t w0 = s7472_rd(r, blk - 0x10u), sz = s7472_rd(r, blk - 0x0Cu), fl = w0 >> 16;
+    return (fl == 2u || fl == 6u) && sz == b.sz; }
+/* checks one record; returns number of hit bytes */
+static int s7475_check1(volatile uint8_t* r, uint32_t blk, const S7475R& b, const char* why, uint32_t fra, double now) {
+    int nh = 0;
+    for (uint32_t o = b.req; o < b.sz; ++o) {
+        const uint8_t v = s7475_rb(r, blk + o);
+        if (v == s7475_fill()) continue;
+        ++nh; const bool pl = (s_s7475_plant == 1 && blk == s_s7475_pblk);
+        if (s_s7475_seen.insert({blk, o}).second && s_s7475_seen.size() <= 40)
+            std::fprintf(stderr, "[s7475] tail-hit why=%s blk=%08X req=%X size=%X off=%X val=%02X alloc=%s free_ra=%08X gpc=%08X age=%.2f t=%.1f%s\n",
+                         why, blk, b.req, b.sz, o, v, s7475_sym(b.hpc).c_str(), fra, (uint32_t)g_rs64_last_guest_pc, now - b.t, now - s_s7475_t0, pl ? " PLANT" : "");
+    }
+    if (nh) { ++s_s7475_hits; if (s_s7475_plant == 1 && blk == s_s7475_pblk) { s_s7475_plant = 2; std::fprintf(stderr, "[s7475] plant DETECTED blk=%08X after %.3f s why=%s\n", blk, now - s_s7475_ptime, why); }
+              for (uint32_t o = b.req; o < b.sz; ++o) s7475_wb(r, blk + o, s7475_fill()); }  /* re-arm so a repeat writer is seen once per distinct (blk,off) */
+    return nh; }
+static void s7475_walk(volatile uint8_t* r, double now) {
+    ++s_s7475_walks;
+    for (auto it = s_s7475_live.begin(); it != s_s7475_live.end();) {
+        if (!s7475_hdr_ok(r, it->first, it->second)) { ++s_s7475_stale; if (s_s7475_plant == 1 && it->first == s_s7475_pblk) { s_s7475_plant = 2; std::fprintf(stderr, "[s7475] plant LOST blk=%08X (stale)\n", it->first); } s7475_mark(it->first, it->second, false); it = s_s7475_live.erase(it); continue; }
+        s7475_check1(r, it->first, it->second, "walk", 0, now); ++it; }
+    if (s_s7475_walks % 40 == 1) { static int ns = 0; if (ns++ < 400)
+        std::fprintf(stderr, "[s7475] sum walks=%llu t=%.1f live=%zu rec=%llu noslack=%llu hdrbad=%llu stale=%llu overlap=%llu freechk=%llu hits=%llu distinct=%zu plant=%d\n",
+                     (unsigned long long)s_s7475_walks, now - s_s7475_t0, s_s7475_live.size(), (unsigned long long)s_s7475_rec, (unsigned long long)s_s7475_noslack,
+                     (unsigned long long)s_s7475_hdrbad, (unsigned long long)s_s7475_stale, (unsigned long long)s_s7475_overlap, (unsigned long long)s_s7475_freechk,
+                     (unsigned long long)s_s7475_hits, s_s7475_seen.size(), s_s7475_plant);
+        std::fprintf(stderr, "[s7475] stores=%llu wpcs=%zu\n", (unsigned long long)s_s7475_stores, s_s7475_wpc.size());
+        if (ns <= 400 && s_s7475_walks % 400 == 1) for (auto& kv : s_s7475_wpc) std::fprintf(stderr, "[s7475] wpc pc=%08X fn=%s n=%llu first_blk=%08X req=%X off=%X w=%d alloc=%s\n",
+                     kv.first, kv.second.fn ? kv.second.fn : "?", (unsigned long long)kv.second.n, kv.second.blk, kv.second.req, kv.second.off, kv.second.w, s7475_sym(kv.second.hpc).c_str()); } }
+static void s7475_tick(volatile uint8_t* r, double now) {
+    static const double ms = [] { const char* e = std::getenv("ROGUESQ_S7475_CANARY_MS"); return e ? std::atof(e) : 250.0; }();
+    static const double plant_s = [] { const char* e = std::getenv("ROGUESQ_S7475_CANARY_PLANT"); if (!e || !*e || *e == '0') return -1.0; double v = std::atof(e); return v <= 1.0 ? 60.0 : v; }();
+    if (s_s7475_last != 0 && (now - s_s7475_last) * 1000.0 < ms && s_s7475_plant != 1) return;
+    s_s7475_last = now; s7475_walk(r, now);
+    if (s_s7475_plant == 0 && plant_s >= 0 && now - s_s7475_t0 >= plant_s) {
+        uint32_t pb = 0, preq = 0; for (auto& kv : s_s7475_live) if (kv.second.req > preq) { preq = kv.second.req; pb = kv.first; }
+        if (pb) { s7475_wb(r, pb + preq, (uint8_t)(s7475_fill() ^ 0xFFu)); s_s7475_pblk = pb; s_s7475_plant = 1; s_s7475_ptime = now;
+                  std::fprintf(stderr, "[s7475] plant SET blk=%08X req=%X size=%X t=%.1f\n", pb, preq, s_s7475_live[pb].sz, now - s_s7475_t0); } } }
+}
+static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
+    if (!s7475_on()) return;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    const double now = s7325_now();
+    std::lock_guard<std::mutex> lk(s_s7475_mu);
+    if (s_s7475_t0 == 0) { s_s7475_t0 = now; g_rs64_s7475_bm = (unsigned char*)std::calloc(0x1800000u >> 3, 1); if (g_rs64_s7475_bm) g_rs64_s7475_bm[(0x8011A890u - 0x80000000u) >> 3] |= (unsigned char)(1u << (0x8011A890u & 7u)); std::fprintf(stderr, "[s7475] canary armed top=%08X bitmap=%d\n", rs64_ram_top, g_rs64_s7475_bm != nullptr); }
+    if (ptr && ptr >= 0x80000010u && ptr < rs64_ram_top && req) {
+        const uint32_t w0 = s7472_rd(r, ptr - 0x10u), sz = s7472_rd(r, ptr - 0x0Cu), fl = w0 >> 16;
+        /* drop every record overlapping [ptr-0x10, ptr+sz) */
+        const uint32_t lo = ptr - 0x10u, hi = ptr + ((fl == 2u || fl == 6u) && sz >= req ? sz : req);
+        auto it = s_s7475_live.upper_bound(lo); if (it != s_s7475_live.begin()) --it;
+        while (it != s_s7475_live.end() && it->first - 0x10u < hi) {
+            if (it->first + it->second.sz > lo) { ++s_s7475_overlap; if (s_s7475_plant == 1 && it->first == s_s7475_pblk) { s_s7475_plant = 2; std::fprintf(stderr, "[s7475] plant LOST blk=%08X (overlap)\n", it->first); } s7475_mark(it->first, it->second, false); it = s_s7475_live.erase(it); }
+            else ++it; }
+        if (!((fl == 2u || fl == 6u) && sz >= req && !(sz & 0xFu) && ptr + sz <= rs64_ram_top)) {
+            if (s_s7475_hdrbad++ < 8) std::fprintf(stderr, "[s7475] hdr-mismatch ptr=%08X req=%X w0=%08X size=%08X ra=%08X\n", ptr, req, w0, sz, ra); }
+        else if (sz == req) ++s_s7475_noslack;
+        else {
+            /* ROGUESQ_S7475_SEL=<lo>-<hi>: canary only slack blocks with ordinal in [lo, hi] (bisect a slack reader); ROGUESQ_S7475_LOGREC=<n>: log the first n records */
+            static uint64_t ord = 0; const uint64_t k = ord++;
+            static const std::pair<uint64_t, uint64_t> sel = [] { const char* e = std::getenv("ROGUESQ_S7475_SEL"); uint64_t a = 0, b = ~0ull;
+                if (e && *e) { char* q; a = std::strtoull(e, &q, 0); b = (*q == '-') ? std::strtoull(q + 1, nullptr, 0) : a; } return std::make_pair(a, b); }();
+            static const long logrec = [] { const char* e = std::getenv("ROGUESQ_S7475_LOGREC"); return e ? std::atol(e) : 0L; }();
+            if ((long)k < logrec) std::fprintf(stderr, "[s7475] rec #%llu blk=%08X req=%X size=%X alloc=%s t=%.2f%s\n", (unsigned long long)k, ptr, req, sz, s7475_sym(hpc).c_str(), now - s_s7475_t0, (k >= sel.first && k <= sel.second) ? "" : " unsel");
+            if (k >= sel.first && k <= sel.second) {
+                for (uint32_t o = req; o < sz; ++o) s7475_wb(r, ptr + o, s7475_fill()); s_s7475_live[ptr] = S7475R{req, sz, ra, now, hpc}; s7475_mark(ptr, s_s7475_live[ptr], true); ++s_s7475_rec; } }
+    }
+    s7475_tick(r, now); }
+extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    /* returns 1 when the store is ours (slack or the control word): the s5798 dispatcher then returns */
+    /* watch positive control (ROGUESQ_S7475_CANARY on): the frame counter 0x8011A890 is marked at arming; the first guest store to it must land here */
+    if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { static uint64_t nc = 0; if (nc++ == 0) std::fprintf(stderr, "[s7475] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
+    std::lock_guard<std::mutex> lk(s_s7475_mu);
+    auto it = s_s7475_live.upper_bound(a + (uint32_t)w - 1u); if (it == s_s7475_live.begin()) return 1; --it;
+    const uint32_t blk = it->first; const S7475R& b = it->second;
+    const uint32_t lo = blk + b.req, hi = blk + b.sz;
+    if (a + (uint32_t)w <= lo || a >= hi) return 1;  /* bitmap bit stale or store outside this block's slack */
+    ++s_s7475_stores;
+    const bool plant = false;
+    auto& e = s_s7475_wpc[pc]; const bool first = e.n == 0; ++e.n;
+    if (first) { e = S7475W{1, blk, b.req, b.sz, a - blk, w, b.hpc, fn};
+        if (s_s7475_wpc.size() <= 60) std::fprintf(stderr, "[s7475] slack-store pc=%08X fn=%s a=%08X w=%d blk=%08X req=%X size=%X off=%X over=%u alloc=%s t=%.1f%s\n",
+            pc, fn ? fn : "?", a, w, blk, b.req, b.sz, a - blk, a + (uint32_t)w - lo, s7475_sym(b.hpc).c_str(), s7325_now() - s_s7475_t0, plant ? " PLANT" : ""); }
+    return 1; }
+static void s7475_free(uint32_t ptr, uint32_t ra) {
+    if (!s7475_on()) return;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    const double now = s7325_now();
+    std::lock_guard<std::mutex> lk(s_s7475_mu);
+    if (s_s7475_t0 == 0) return;
+    auto it = s_s7475_live.find(ptr);
+    if (it != s_s7475_live.end()) {
+        if (s7475_hdr_ok(r, ptr, it->second)) { ++s_s7475_freechk; s7475_check1(r, ptr, it->second, "free", ra, now); } else ++s_s7475_stale;
+        if (s_s7475_plant == 1 && ptr == s_s7475_pblk) { s_s7475_plant = 2; std::fprintf(stderr, "[s7475] plant LOST blk=%08X (freed before check)\n", ptr); }
+        s7475_mark(it->first, it->second, false); s_s7475_live.erase(it); }
+    s7475_tick(r, now); }
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     s7472_check("malloc", ra);
+    { void** fp = (void**)__builtin_frame_address(0); void* hpc = (fp && fp[0]) ? ((void**)fp[0])[1] : nullptr; s7475_malloc(req, ptr, ra, hpc); }
     rs64_floor_ownership("malloc", ptr, req, ra);
     if (ptr && s7317_on()) {
         S7317B b{ req, { __builtin_return_address(0), nullptr, nullptr }, 0.0, g_s6127_flags };
@@ -3669,6 +3799,7 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
 }
 extern "C" void rs64_s6063_free(uint32_t ptr) {
     s7472_check("free", 0);
+    s7475_free(ptr, 0);
     rs64_floor_ownership("free", ptr, 0, 0);
     s7317_free(ptr);
     if (!s6063_on() || !ptr) return;

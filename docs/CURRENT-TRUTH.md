@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7474 (2026-11-16).
+Compact operational handoff, as of Session 7475 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,16 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. ED next (NEXT.md). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. ED OPEN s7475 (voice-array overrun found; root cause next, NEXT.md). One line each:
+   - **ED s7475 in-block heap overrun: FOUND a MusyX voice-array overrun (single run set, writer named by store watch + causal A/B):**
+     ROGUESQ_S7475_CANARY=1 (slack fill + bitmap, upstream_compat.cpp) + tools/apply_s7475_slackwatch.py (per-store bitmap test, needs
+     ROGUESQ_STORE_DIAG=1; watch-ctl control). At boot reapplyAudioConfig (via reapplyDisplayMode, a1 -> 0x80141AD0) re-allocates the
+     voice array (0x801496F8, stride 0x88, count u16 0x80149700) with count=1 at t=0.94 (initAudioSubsystem had 20; reapply 16 at
+     t=5.24), while voice index 1 stays in use: musyxSetVoicePitchBend (0x800923B8, +0x04) and beginVoiceFadeRelease (0x800924C4,
+     +0x01) write voice[1], past the 0x88 block; voice[1] fields +0x30..+0x6C land in the next block's data. isAudioSlotActive(1) READS
+     voice[1]+0 from the slack: with a 0xA5 fill boot hangs in runMenuModelViewerScreen (A/B same build: off ok, 00 ok, A5 hang).
+     s4711 (oracle, single-source): retail never runs reapplyAudioConfig at boot/attract -> count=1 re-init likely port-only (M5).
+     Canary recipe tools/s7475_canary_recipe.zsh now FILL=0 + STORE_DIAG=1; flight sweep pending the fix.
    - **EC s7474 `[s4279-BAD]` sample-stream LRU walker, CLOSED (H-walker-wrong):** the 40-row BAD burst at n~8870-9040 in all
      23 EB arms was bad=10 (8|2) only: the walker (tools/apply_s4279_nodeinvariant.py) hard-coded the node region
      0x801F9C00..0x801FB400, while the game legitimately runs the LRU list from a 60-node pool at 0x80192C40 in that front-end

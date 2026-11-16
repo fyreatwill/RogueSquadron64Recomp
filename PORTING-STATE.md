@@ -198144,3 +198144,37 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
   region. It also closes EB (selects H-heap-clean, refutes H-heap-hit on all 19 levels).
 - Next discriminator: class ED, a slack-byte tail canary with a planted in-flight slack write (scratch/agent/NEXT.md).
   0 non-plant hits selects H-slack-clean; any hit names the caller RA, then a write watch names the writer.
+
+## Session 7475 (2026-11-16) — class ED: heap-slack canary + store watch name a MusyX voice-array overrun: reapplyAudioConfig shrinks the voice array to 1 voice at t=0.94 while voice index 1 stays in use (musyxSetVoicePitchBend / beginVoiceFadeRelease write past the block)
+- **Instrument (one build):** ROGUESQ_S7475_CANARY=1 (src/main/upstream_compat.cpp s7475_*): at rs_malloc exit, fill the slack
+  [ptr+req, ptr+size) (header at ptr-0x10) with ROGUESQ_S7475_FILL (default 0xA5) and mark it in a 1-bit/byte bitmap
+  g_rs64_s7475_bm; check at rs_free entry and on a <=4/s walk (`[s7475] tail-hit`); stale records (header changed) dropped.
+  Plant ROGUESQ_S7475_CANARY_PLANT=<s>. tools/apply_s7475_slackwatch.py (in fixup_game_funcs_vendored list) adds a bitmap test of
+  each store's first/last byte to the s5798 per-store macro (needs ROGUESQ_STORE_DIAG=1): `[s7475] slack-store pc= fn= blk= req= off=
+  alloc=<host caller symbol>`; watch positive control = frame-counter word 0x8011A890 marked at arming (`watch-ctl PASS`).
+  ROGUESQ_S7475_SEL=<lo>-<hi> / ROGUESQ_S7475_LOGREC=<n> for bisects. Guest r31 is not set by jal in N64Recomp, so alloc_ra=0;
+  the host caller symbol replaces it.
+- **Run 1 (tools/s7475_canary_recipe.zsh, L4 arm, A5 fill):** boot hit at t=0.9: blk 0x801714D0 req 0x88 size 0x90, bytes +0x8C/+0x8D
+  written 0x00. The arm then never reached a mission (LEVEL MISMATCH, log 1.6 MB vs ~12 MB): stuck in runMenuModelViewerScreen's
+  anyAudioSlotActive spin. Run killed (SIGKILL).
+- **Boot A/B, same build (tools/s7475_boot_ab.zsh, 40-75 s, no keys):** off -> cineBody reached; A5 fill -> stuck (mmv spin 6384);
+  00 fill -> cineBody reached. So the fill is causal: guest code READS the slack and expects 0 there.
+  v1 of the store hook fell through into the s5798 tail and SIGBUSed (rs64_s5798_st+4880, out-of-range table index); it now returns.
+- **Writer named (A5 + STORE_DIAG, watch-ctl PASS):** `slack-store pc=800923B8 fn=musyxSetVoicePitchBend a=8017155C w=2 off=8C`
+  (t=1.0) and `pc=800924C4 fn=beginVoiceFadeRelease a=80171559 w=1 off=89` (t=5.0), alloc=initN64RspMixer+0x52c. Voice stride is
+  17*8 = 0x88 (isAudioSlotActive / musyxSetVoicePitchBend / beginVoiceFadeRelease all use base *0x801496F8 + i*0x88), and
+  allocateSongChannelArray (0x8008F0A0) allocates count*0x88 with count stored at 0x80149700. So the 0x88 block holds ONE voice
+  and these are voice[1] stores (+0x01, +0x04). The hang is isAudioSlotActive(1) reading voice[1]+0 = 0xA5 from slack.
+  voice[1] spans blk+0x88..0x110, so its other fields (+0x30, +0x58..+0x6C) land in the NEXT heap block's data (invisible to the
+  canary, header untouched, consistent with EB's clean header walk).
+- **ORIGIN (sequence, boot3 run with ROGUESQ_LOG_ALLOC_CALLERS=1):** initAudioSubsystem -> allocateSongChannelArray count=20 (t=0.19);
+  reapplyAudioConfig (pc 0x80091D14, via reapplyDisplayMode 0x8008EB5C, which stores its a1 to 0x80141AD0) -> count=1 (t=0.94,
+  blk 0x801714D0); reapplyAudioConfig -> count=16 (t=5.24). Voice index 1 stays live across the count=1 window. s4711 (oracle,
+  single-source) saw retail run initN64RspMixer once at boot/attract and never reapplyAudioConfig/reapplyDisplayMode in 120 s, so
+  the count=1 re-init is most likely port-only (M5 de-stub territory: the s4700/s4701 B40 gate lives in the same functions).
+  Legitimacy of count=1 not yet settled: the caller of reapplyDisplayMode(a1=1) is not named yet.
+- **Discrimination:** refutes H-slack-clean (there is a real in-block overrun) and H-req-unknown (req/size recovered for every block,
+  hdrbad=0). Selects H-slack-hit with the writer named; the root cause (count=1 reapply) is the next unit.
+- **Instrument caveat:** the A5 fill is not neutral (it changes the voice[1] read). The recipe now defaults FILL=0 + STORE_DIAG=1
+  (the store watch is the writer detector; canary-only would miss 0-valued writes) and fails the control without watch-ctl PASS.
+- Not done: the planned 4-level flight canary sweep (invalidated by the A5 hang; re-run with FILL=0 after the voice fix).
