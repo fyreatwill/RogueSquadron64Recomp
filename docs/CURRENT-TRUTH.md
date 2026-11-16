@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7431 (2026-11-15).
+Compact operational handoff, as of Session 7433 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,8 +215,18 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CP, default-on probe BOOKKEEPING cost on the guest thread (HYPOTHESIS-ID default-probe-bookkeeping).**
-   See scratch/agent/NEXT.md. tasks/s is pinned at 60 at FPS60, so the next metric is guest-thread CPU ms per frame.
+1. **Next audit: class CQ, gfx-thread host glue decomposition (HYPOTHESIS-ID gfx-glue-cost).** See scratch/agent/NEXT.md.
+   The Gfx Thread runs ~9 ms/frame at the owner recipe (dd4 16:9 FPS60, lvl1 flight) and bounds dd8 headroom;
+   rs64_dpc_defer_end_impl is 1.50 ms/frame inclusive and memmove 5% of it (sample files scratch/s7433/sample_{4,8}.txt).
+   CP (s7433) CLOSED H-free, measured by /usr/bin/sample (external profiler): tools/s7433_probe_cost.{sh,py} (owner recipe via
+   tools/s7431_stderr_volume.sh, 8 x 12 s windows, control ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled 30 s in-run: +0.68/+0.63 ms
+   per frame vs 0.50 expected, PASS both runs). Guest threads run 2.5 ms/frame; probe helpers (own frames + library calls
+   beneath, wrappers not charged for wrapped game code) 0.144 ms/frame, mostly the CO fprintf and s6963_tick. FIX: s6963_tick
+   read mach_absolute_time on every clampGridCellLookup for a tick that does nothing with no toggle/log; now skipped
+   (ROGUESQ_S7433_TICK_ALWAYS=1 = old): 43 -> 5 samples, 0.108 ms/frame after, 0 crash, 60 tasks/s. Gfx-thread probes
+   0.054 ms/frame. Traps: osViSwapBuffer self 9% is the runner's planted [fbhash] (FB_HASH=1); wait_for_resumed self 7% is the
+   moodycamel semaphore spin. The default-on diagnostic-cost family (CM-CP) is closed.
+   s7428 F9 arms C/D retired after 5/5 VOID (no injected key reaches the game): the F9 persist gate is code-reading only.
    CO (s7432) CLOSED H-free: include/rsp_dpc_macros.h now routes every generated-C fprintf (50 objects, 0 direct) through
    rs64_diag_fprintf (main.cpp), as do [dpc-fwd]/[osViSetMode]/[vi-mode-table]/[lle task]; ROGUESQ_DIAG_QUIET=1 drops them at
    source (crash formats pass), opt-in, default 0. Same-run 2x2 (quiet 15 s x busy 30 s, owner recipe lvl1 flight, FAST=1

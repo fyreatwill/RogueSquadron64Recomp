@@ -1538,3 +1538,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-173813 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-173813.log
 20261115-175140 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 3/5, re-queued | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-175140.log
 20261115-181938 | s7428_audio_route_arms | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-181938.log
+20261115-183221 | s7428_audio_route_arms | rc=2 | 67s | scratch/agent/soak_results/s7428_audio_route_arms_20261115-183221.log
+20261115 | s7433 fold: s7428_audio_route_arms 5/5 VOID (no injected key reached the game; arms A/B pass) -> retired; F9 persist gate stays code-reading only (single-source).

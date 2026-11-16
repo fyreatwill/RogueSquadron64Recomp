@@ -196964,3 +196964,43 @@ runs without printing (s5855 table updates every call, osViSetMode guest peeks +
 Conclusion: selects H-free (quiet effect +0.086 ms/task inside noise vs the same-run 1 ms control at +0.934, direct cost 0.3%
 of one core) and refutes H-cost and H-guest; closes class CO. Next discriminator: class CP, a census of default-on
 apply_s*.py probe bookkeeping on guest hot paths plus guest-thread CPU ms per frame (thread_info) with and without it.
+
+## Session 7433 (2026-11-15) — class CP default-on probe bookkeeping on the guest threads: H-free selected by an external profiler (probe helpers 0.144 ms/frame of 2.5 ms guest CPU, control 500 us/swap read back as +0.68 ms/frame PASS); one avoidable cost fixed (s6963_tick clock read per cell lookup), 43 -> 5 samples
+HYPOTHESIS-ID: default-probe-bookkeeping
+- Fold: s7428_audio_route_arms 5th run rc=2 (VOID, "injected Return not seen"), now 5/5 voids -> retired to done/. Arms A/B
+  (file vs env precedence) pass every time; the F9 arms C/D never got a key into the game in 5 idle-gated tries. The F9
+  persist gate stays verified by code reading only (single-source); a key-free arm (call the cycle function from an env
+  timer) would be the way to close it.
+- Method change vs NEXT.md: instead of a static census of 453 apply_s*.py scripts (100k PATCH markers), measured where the
+  guest CPU actually goes with /usr/bin/sample (independent of our runtime). NEW tools/s7433_probe_cost.sh (runs
+  tools/s7431_stderr_volume.sh: copied folder, owner recipe FPS60 dd4 16:9 + autopilot lvl1 flight, no logging env, plus
+  ROGUESQ_DIAG_BUSY_TOGGLE=30 ROGUESQ_DIAG_BUSY_GUEST_US=500; 8 back-to-back 12 s sample windows from t=95 s) and
+  tools/s7433_probe_cost.py (parses sample call trees per thread, threads '[Game] *' by default or --threads; self samples
+  not at a wait leaf = running; probe = innermost rs[2-7]NNNN_/rs64_sNNNN/rs64_*{probe,note,tally,...} frame with only
+  library frames beneath it, so a probe WRAPPER calling game code (rs5908_call -> findSegmentObjectSphereHit) is not
+  charged for the game work; control = samples under rs64_store_diag_tick, busy-on minus busy-off >= 0.5 x busy_us).
+- Run P (old binary): guest running 2.515 ms/frame (busy off), probe 0.144 ms/frame; CONTROL delta 0.678 ms/frame vs
+  0.500 expected PASS (running delta +0.535). Busy-off probe split: rs64_diag_fprintf 68 samples (the CO print cost, already
+  H-free), rs64_s6963_pre 43 (of which mach_absolute_time 39), rs64_s6287 15 (env-gated call overhead), every other helper <= 3.
+  Guest top self is game code (renderFlatMeshFaceGroup 15%, streamTerrainGridCellsByDistance 13%, processGridCellByDistance
+  10%). Two traps caught on the way: (1) osViSwapBuffer_recomp self 9% = the [fbhash] FNV loop, i.e. the runner's planted
+  control ROGUESQ_FB_HASH=1 (otool: hot pc 0x1000541e4 is the ldrb in the hash loop), not a default-on cost; (2) the first
+  attribution charged rs5908_call for its wrapped game call (0.205 -> 0.144 ms/frame once fixed).
+  wait_for_resumed self 7% is the moodycamel LightweightSemaphore spin-before-block (inlined), not the s443 live-ctx check.
+- ORIGIN of the one defect: s7024's s6963_tick reads mach_absolute_time on EVERY clampGridCellLookup call to run a
+  once-per-second tick, but with no toggle and no log (default; CHECK implies lg) the tick changes nothing (act == mode set
+  in the constructor; the per-second counters are only printed under lg). Fix (src/main/upstream_compat.cpp): early return
+  when !tog && !lg; ROGUESQ_S7433_TICK_ALWAYS=1 restores the per-call tick.
+- Run N (new binary, same recipe): s6963_pre 43 -> 5 samples (the 39 clock reads gone), probe 0.144 -> 0.108 ms/frame,
+  running 2.488 ms/frame, CONTROL delta 0.632 PASS, 0 crash lines, 60 tasks/s. Verdict H-free in both (probe < control/4
+  and < 0.25 ms/frame). Second line of evidence: s7432's independent fprintf timer (0.3% of a core) agrees with the
+  diag_fprintf share here; s7432's 1 ms/swap busy did not move tasks/s (guest runs 2.5 of 16.7 ms per frame).
+- Offline, same sample files (capture once): Gfx Thread runs 8.97 ms/frame (factor5_ucode_nmac 42%, rsp_dpc_submit_impl 9%,
+  memmove 5%, rs64_dpc_record_submit_impl 4% = the default-on bridge edit walkers, s7016/s7097, a feature not a probe);
+  probe helpers there 0.054 ms/frame (rs64_floor_note 30, rs64_note_image_word 17, diag_fprintf 10). All threads, inclusive:
+  rs64_run_lle_gfx 6.76 ms/frame, rs64_dpc_defer_end_impl 1.50, rs64_dpc_record_submit_impl 0.32, rs64LoadBlockRuns 0.24,
+  every rs64_*/rsNNNN probe <= 0.07.
+- Rules out: default-on probe bookkeeping as a frame-time cost on any thread (sum < 0.2 ms/frame; guest has >14 ms headroom).
+  Closes class CP and, with CM-CO, the default-on diagnostic-cost family.
+- Next: class CQ, gfx-thread host glue decomposition: rs64_dpc_defer_end_impl 1.5 ms/frame inclusive and memmove 5% on the
+  thread that bounds dd8 headroom; offline first on /tmp/rs64_s7431/{P,N}/sample_*.txt (copied to scratch/s7433/).

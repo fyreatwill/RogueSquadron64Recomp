@@ -9101,6 +9101,11 @@ inline uint32_t s6963_w(const uint8_t* rd, uint32_t a) { return *(const uint32_t
 inline bool s6963_ok(uint32_t a) { return a >= 0x80000000u && a < 0x9FFFFF00u; }
 inline uint64_t s6963_key(uint32_t s0, int32_t x, int32_t z) { return ((uint64_t)s0 << 32) | ((uint64_t)(uint16_t)x << 16) | (uint16_t)z; }
 inline void s6963_tick(S6963& S) {  /* s7024: one tick compare per call; mode/tog/log work runs only at second boundaries */
+    /* s7433 class CP: with no toggle and no log (the default; check implies lg) the tick changes nothing (act == mode from the
+       constructor, the per-second counters are only printed under lg), yet read the clock on every clampGridCellLookup call:
+       ~0.04 ms/frame of guest CPU at dd4 by sample(1). ROGUESQ_S7433_TICK_ALWAYS=1 restores the old per-call tick. */
+    static const bool always = [] { const char* e = std::getenv("ROGUESQ_S7433_TICK_ALWAYS"); return e && *e == '1'; }();
+    if (!S.tog && !S.lg && !always) return;
     const uint64_t t = mach_absolute_time(); if (t < S.nextt) return;
     const uint64_t now = t / 24000000ull; S.nextt = (now + 1) * 24000000ull;
     if (S.tog) { const uint64_t b = now / (uint64_t)S.blk; if (b != S.lastblk) { S.lastblk = b; S.on = (int)(b & 1); S.u.clearc(); S.f.clearc(); } }

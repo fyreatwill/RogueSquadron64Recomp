@@ -1,19 +1,18 @@
-# NEXT (s7433)
-HYPOTHESIS-ID: default-probe-bookkeeping
+# NEXT (s7434)
+HYPOTHESIS-ID: gfx-glue-cost
 
-Fold new scratch/agent/SOAK-RESULTS.md lines first (s7428_audio_route_arms: rc 0 = F9 gate two-arm verified; 2 = VOID; it is at 4/5 voids).
-
-Class CP (CURRENT-TRUTH Next steps item 1). s7432 closed CO H-free: the default-on fprintf calls cost 0.3% of one core and
-silencing them (ROGUESQ_DIAG_QUIET=1) moves nothing. But the probes' NON-printing work still runs every call: tables,
-counters, guest peeks (e.g. [s5855] sphere-probe table update per call, printing every 1024th; [s5908] caller table;
-osViSetMode guest_u32 peeks + dladdr; s3290/s3294 stall-probe bookkeeping). tasks/s is pinned at 60 at FPS60 and a 1 ms
-guest busy-wait did not move it, so tasks/s cannot see this; measure guest-thread CPU time per frame instead.
-Step 1 (offline, static): census every tools/apply_s*.py / fixup insert compiled into RecompiledFuncs: for each, is it gated
-by an env read once (cheap) or does it run unconditionally; is it a diagnostic or a needed guard (guards stay). Classify
-all; no runtime yet. Positive control for the census: the [s5855] probe must classify "ungated diagnostic".
-Step 2 (one build, one run): per-swap guest-thread CPU time (thread_info THREAD_BASIC_INFO user+system on the thread that
-calls osViSwapBuffer) and gfx-thread CPU time, as a [diag-cpu] line per 10 s; gate the ungated diagnostic bookkeeping behind
-rs64_diag_quiet (reuse s7432's flag and ROGUESQ_DIAG_QUIET_TOGGLE in-run, ROGUESQ_DIAG_BUSY_GUEST_US=500 as the control
-toggle). H-free: guest CPU ms/frame differs < control/4 -> close. H-cost: >= 0.25 ms/frame -> gate those sites by default
-(probes become opt-in), after grepping scratch/agent/*.sh and tools/*.sh for every tag they parse.
-Runner: env S7431_ARM=P zsh tools/s7431_stderr_volume.sh 320 ROGUESQ_G1E_AQ=2 ... ; analyzer tools/s7432_diag_quiet_ab.py (extend).
+Class CQ (CURRENT-TRUTH Next steps item 1): what the Gfx Thread spends outside the F5 ucode. s7433's sample(1) run
+(owner recipe FPS60 dd4 16:9, lvl1 autopilot flight) puts the Gfx Thread at ~9 ms/frame: factor5_ucode_nmac 42% self,
+rsp_dpc_submit_impl 9%, _platform_memmove 5%, rs64_dpc_record_submit_impl 4% (bridge edit walkers), TMEMHasher 4%,
+rs64LoadBlockRuns 3.5%; rs64_dpc_defer_end_impl 1.50 ms/frame inclusive.
+Step 1 (offline, no run): python3 tools/s7433_probe_cost.py-style tree walk on scratch/s7433/sample_{4,8}.txt (busy-off
+windows) for threads 'Gfx Thread': inclusive ms/frame per child of rs64_run_lle_gfx and of rs64_dpc_defer_end_impl, and
+the callers of every _platform_memmove sample. Hypotheses: H-copy (memmove is a whole-buffer copy per task that could be
+a range copy: name the caller and the byte count), H-walk (the bridge walkers re-scan the same RDP bytes several times:
+record + defer_end + submit each walk the stream), H-rt64 (most of defer_end is RT64's own processRDPLists/TMEM hashing,
+which we do not own -> close). Discriminator: the share of defer_end + record_submit that is our code (rs64_*/dpc_bridge
+frames with only library calls beneath) vs RT64:: frames.
+Step 2 only if H-copy or H-walk >= 0.5 ms/frame: fix it, then rerun env S7431_ARM=N zsh tools/s7433_probe_cost.sh with
+--threads 'Gfx Thread' analysis (control: ROGUESQ_DIAG_BUSY_US=500 busy per gfx task must read back on the Gfx Thread),
+old vs new by an env kill-switch in ONE run if possible (toggle), else two runs same recipe.
+If H-rt64: close CQ and take ITERATION.md 3c's next rung (new idiom-class audit or the G5 renaming sweep).
