@@ -196637,3 +196637,35 @@ sources; E is a symbol-set check, not a body check. No game run (offline audit).
 Next: class CH, build-option drift (CMAKE_BUILD_TYPE=Debug in CMakeCache; diagnostic defines such as RS64_BYTE_WATCH; per-target
 flags in flags.make vs CMakeLists intent).
 Conclusion: selects H-fresh, refutes H-stale (0 findings, controls PASS, make -n residue regenerates byte-identical); closes class CG. Next discriminator: class CH H-intended vs H-drift (shipped compile flags/defines vs CMakeLists defaults, tools/s7425_build_options.py).
+
+## Session 7425 (2026-11-15) — class CH build-option drift: one diagnostic define live in the shipped build (RS64_BYTE_WATCH on all 52 RecompiledFuncs TUs); now ROGUESQ_BYTE_WATCH default OFF, rebuilt, audit H-intended
+
+Question: s7424 proved every linked object is current. Were they compiled with the intended options? Offline audit,
+tools/s7425_build_options.py (exit 0 intended / 1 drift / 3 control failed): (1) the 16 CMakeLists option()/CACHE defaults vs
+build/CMakeCache.txt; (2) every compile_commands entry (463), grouped by target: -O level, diagnostic defines (RS64_BYTE_WATCH,
+RS64_FB_LDWATCH, RS64_SP_WATCH, D3D12_DEBUG_LAYER_ENABLED, unexpected DEBUGLEVEL), -fsanitize; hot targets must be -O2 when their
+*_OPT option is ON; the gfx ucode TU must carry -inline-threshold; (3) each object newer than its target's flags.make; (4) nm of the
+game: no __tsan_/__asan_, rs64_bwatch present iff RS64_BYTE_WATCH compiled in.
+Controls (same run) PASS: a planted librecomp entry with -O0 -DRS64_BYTE_WATCH -> DIAG-DEFINE + OPT flagged; a planted cache
+ROGUESQ_SP_WATCH=ON -> CACHE flagged.
+Result before the fix: every cache value at its default (MIPS_TOOLCHAIN_DIR/MIPS_GCC/MIPS_LD/N64RECOMP_EXE are host paths);
+CMAKE_BUILD_TYPE=Debug with empty global flags (-g), and every hot target at -O2 via its option (RecompiledFuncs 52, PatchesLib 1,
+game 24, librecomp 27, ultramodern 15, rt64 211, plume 3); 4 gfx ucode TUs with -inline-threshold=4000; 0 sanitizer flags or
+symbols; 454/454 objects newer than flags.make. ONE finding, VERDICT H-drift: -DRS64_BYTE_WATCH on all 52 RecompiledFuncs TUs,
+defined unconditionally in CMakeLists since s5690 (a one-off bool-store hunt). recomp.h then routes every MEM_B through
+rs64_bwatch: identity unless ROGUESQ_BOOLSTORE_WATCH is set, but an inlined load+test of a function static on every guest byte
+access, plus 118 out-of-line copies. Cost measured: funcs_9 rebuilt with and without the define, __text 626,576 vs 611,036 B
+(+2.5%). No consumer: grep finds ROGUESQ_BOOLSTORE_WATCH in no tool, soak recipe or doc.
+Change: CMakeLists option ROGUESQ_BYTE_WATCH (default OFF) gates the define. Rebuilt build/: 51 RecompiledFuncs TUs + relink; the
+reconfigure also re-ran the rt64 shader chain, which s7424 proved regenerates byte-identical. After: rs64_bwatch symbols 118 -> 0,
+game __text 31,439,992 -> 30,864,104 B (-575,888, -1.8%), tool rc 0 VERDICT H-intended (scratch/agent/s7425_build_options.out).
+Pre-fix binary kept at /tmp/s7425/RogueSquadron64Recomp.pre (not durable).
+Cold libs linked at -O0 by design (not drift): LiveRecomp, N64Recomp, rabbitizer, SymbolLists, fmt, miniz, nfd, re-spirv, zstd (zstd's
+-DDEBUGLEVEL=1 comes from its own AddZstdCompilationFlags.cmake under Debug; asserts only, texture-pack path).
+Runtime qualification queued, not yet run: scratch/agent/soak_queue/s7425_nobw_levels.sh (L1/L5/L10, FPS60 dd4 16:9, 120 s hold,
+pass = alive and 0 crash lines each). Equivalence with the env unset is single-source (reading recomp.h); the soak is the second line.
+Rules out: a sanitizer, watch or debug-layer build in the shipped binary; an -O0 hot target; cache options moved off their defaults;
+compile flags newer than the objects. Limitation: wall-clock frame-time gain not measured (code size only).
+ORIGIN: no mitigation; the define's writer is CMakeLists.txt line ~100 (s5690), a diagnostic left on; removed from the default build.
+Next: class CI, env-default drift (compiled ROGUESQ_* getenv defaults vs the documented defaults).
+Conclusion: selects H-drift (one undocumented diagnostic define live), fixed by gating it OFF; post-fix audit H-intended; closes class CH.

@@ -1,19 +1,19 @@
-# NEXT (s7425)
-HYPOTHESIS-ID: build-option-drift
+# NEXT (s7426)
+HYPOTHESIS-ID: env-default-drift
 
-Class CH (CURRENT-TRUTH Next steps item 1): s7424 proved every linked object is current with the live source. Are the OPTIONS it
-was compiled with the intended ones? Offline only.
-1. Enumerate every option()/cache variable in CMakeLists.txt (ROGUESQ_* at lines 27-423: NO_ITER_DEBUG, DX12_DEBUG, RT64_OPT,
-   PLUME_OPT, FB_LDWATCH, SP_WATCH, UCODE_NO_OPT, TSAN_UCODE, SRC_OPT, FUNCS_OPT, plus RS64_BYTE_WATCH at line ~102 and any
-   RECOMP_FUNCS_DIR / N64RECOMP_EXE / MIPS_GCC path vars) with its default; read build/CMakeCache.txt for the value in force.
-2. Per linked object (compile_commands.json, s7424 closure): extract -O level, -D defines, -fsanitize, -g; group by target. Flag:
-   diagnostic defines on (RS64_BYTE_WATCH, FB_LDWATCH, SP_WATCH, TSAN), -O0 where an *_OPT option says -O2, objects whose flags
-   differ from their target's flags.make (stale flags), cache values differing from defaults without a documented reason
-   (grep CURRENT-TRUTH/OWNER-OPT-INS for each).
-3. Cross-check against the binary: `nm` for watch/tsan/asan symbols (e.g. __tsan_*, __asan_*, rs64 byte-watch hooks) so a define
-   claimed off is also absent in the linked image.
-4. Positive control: a planted compile entry copy with -DRS64_BYTE_WATCH -O0 must be flagged; a planted cache value != default must
-   be flagged.
-Hypotheses: H-intended (every option at its default or a documented choice; no diagnostic define in the shipped build) vs H-drift
-(>=1 undocumented non-default / diagnostic flag live; then say what it costs: frame time, behaviour, and whether to reset it).
-Write tools/s7425_build_options.py. Exit 0 = intended, 1 = drift, 3 = control failed.
+First fold scratch/agent/SOAK-RESULTS.md for s7425_nobw_levels (RS64_BYTE_WATCH-off build/ qualification, L1/L5/L10). rc!=0 ->
+read its log, and if a crash came from the change, set ROGUESQ_BYTE_WATCH=ON back and rebuild before anything else.
+
+Class CI (CURRENT-TRUTH Next steps item 1): class CH showed the compile options are as intended. Are the RUNTIME defaults? Offline.
+1. Enumerate every getenv("ROGUESQ_*"/"RS64_*") in src/, lib/N64ModernRuntime/{librecomp,ultramodern}, lib/rt64/src (our patches),
+   include/, and the fixup-injected code in ../N64Recomp/RecompiledFuncs + build/factor5_ucode. For each: the default when unset
+   (the else value / the parse of a missing var) and how it is parsed (atoi vs e[0]=='1' vs presence: "0" meaning ON is a bug).
+   Note rs64_env_cache.cpp may cache/override getenv.
+2. Compare with the documented defaults: docs/OWNER-OPT-INS.md, CURRENT-TRUTH (CULL_SPIKE on, DD_FARMAX 32767, DD_FOG_ALT,
+   QOS_ALL, RETINA, RENDER_TO_RAM=0, NO_SAVE_WRITE exported by runner.sh, WIDE_EARLY, G5G hangar cam default on).
+3. Flag: documented default != compiled default; one var parsed two different ways in two places; a presence-test var where docs
+   say "=0 disables"; vars read but undocumented that change behaviour (not just logging).
+4. Positive control: a planted copy of a source with a flipped default and one with a presence test must both be flagged.
+Hypotheses: H-consistent (every documented default = compiled default, parse styles agree) vs H-drift (>=1 mismatch; then say who it
+affects: owner recipe or test only, and fix it or fix the doc).
+Write tools/s7426_env_defaults.py. Exit 0 = consistent, 1 = drift, 3 = control failed.

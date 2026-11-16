@@ -99,13 +99,21 @@ if (MSVC)
     # Rename game's 'main' to avoid MSVC treating it as the entry point
     target_compile_definitions(RecompiledFuncs PRIVATE main=rs_main)
 else()
-    target_compile_definitions(RecompiledFuncs PRIVATE main=rs_main RS64_BYTE_WATCH)
+    target_compile_definitions(RecompiledFuncs PRIVATE main=rs_main)
     target_compile_options(RecompiledFuncs PRIVATE
         -fno-strict-aliasing
         -Wno-unused-variable
         -Wno-implicit-function-declaration
         -include ${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h
     )
+endif()
+
+# s5690 bool-store watch (recomp.h MEM_B -> rs64_bwatch, env ROGUESQ_BOOLSTORE_WATCH=1). Was defined unconditionally since
+# s5690; s7425 (class CH) found it the only diagnostic define live in build/: identity unless the env is set, but an inlined
+# static load + test on every guest byte access (+2.5% __text in funcs_9) and no remaining consumer. OFF = shipped build.
+option(ROGUESQ_BYTE_WATCH "s5690 diagnostic: log guest byte stores into 0x8013889F..0x8013891E" OFF)
+if (ROGUESQ_BYTE_WATCH AND NOT MSVC)
+    target_compile_definitions(RecompiledFuncs PRIVATE RS64_BYTE_WATCH)
 endif()
 
 # s7389: framebuffer-load watch (separate build dir only, tools/build_fbld.sh). include/fbld/recomp.h wraps the guest

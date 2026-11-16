@@ -215,9 +215,19 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CH, build-option drift (HYPOTHESIS-ID build-option-drift).** Do the shipped compile flags and defines
-   match CMakeLists intent (CMakeCache CMAKE_BUILD_TYPE=Debug; diagnostic defines such as RS64_BYTE_WATCH; per-target flags.make;
-   cache options vs defaults)? scratch/agent/NEXT.md.
+1. **Next audit: class CI, env-default drift (HYPOTHESIS-ID env-default-drift).** Does every ROGUESQ_* getenv default compiled
+   into build/ (src/, librecomp, ultramodern, rt64 patches, fixup-injected diag) match the default documented in
+   docs/OWNER-OPT-INS.md / this file (CULL_SPIKE on, DD_FARMAX 32767, DD_FOG_ALT, QOS, NO_SAVE_WRITE ...)? scratch/agent/NEXT.md.
+   CH (s7425) DRIFT FOUND + FIXED: tools/s7425_build_options.py --control (planted -O0 -DRS64_BYTE_WATCH librecomp entry and
+   planted cache SP_WATCH=ON both flagged). 16 options/cache vars all at default (MIPS_*/N64RECOMP_EXE = host paths); hot targets
+   (RecompiledFuncs 52, PatchesLib, game 24, librecomp 27, ultramodern 15, rt64 211, plume 3) all -O2; gfx ucode keeps
+   -inline-threshold=4000; 0 sanitizer flags/symbols; 454 objects newer than flags.make. One finding: -DRS64_BYTE_WATCH (s5690
+   bool-store watch, no remaining consumer) on all 52 RecompiledFuncs TUs = inlined static load+test on every guest byte access,
+   +2.5% __text (funcs_9). Now option ROGUESQ_BYTE_WATCH default OFF; rebuilt: rs64_bwatch 118 -> 0 symbols, game __text
+   -575,888 B (1.8%), tool VERDICT H-intended rc 0. Identity when ROGUESQ_BOOLSTORE_WATCH unset (single-source reading of
+   recomp.h); runtime qualification soak queued: scratch/agent/soak_queue/s7425_nobw_levels.sh (L1/L5/L10 owner recipe, 120 s).
+   Cold -O0 libs linked by design: LiveRecomp/N64Recomp/rabbitizer/fmt/miniz/nfd/re-spirv/zstd (zstd -DDEBUGLEVEL=1 is zstd's
+   own Debug default). tools s7413-s7418 compile forms with -DRS64_BYTE_WATCH "as CMakeLists sets it": drop it when rerun.
    CG (s7424) CLOSED H-fresh: tools/s7424_stale_objects.py --control --make-n PASS: 415 linked objects (24 + 15 archives) newer
    than source and every .d dep, archives byte-match their .o, RecompiledFuncs from the live tree, glob == compiled set, 0 orphans,
    2504/2504 RECOMP_FUNC symbols in the .o. make -n residue = spirv-cross relink (a 12:41 reconfigure rewrote only its
