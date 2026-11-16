@@ -1555,3 +1555,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-234830 | s7460_plant_hold_ctl | rc=1 | 393s | scratch/agent/soak_results/s7460_plant_hold_ctl_20261115-234830.log | arms=2 alive=2/2 crash_arms=0 stall_arms=2 fatal=0 first=none stall_na=0
 20261115 | s7461 fold: s7460_plant_hold_ctl rc=1: g1e ph PASS (vi_stalls30s=1 max_vihold_ms=39916); m6 fs_holds=1 max_fs_hold_vi=2368 but live vi_stalls30s=0 -> poller blind in the 130 s verify sleep (class DQ), fixed; s7461_m6_verify_window_ctl queued.
 20261116-000148 | s7461_m6_verify_window_ctl | rc=0 | 203s | scratch/agent/soak_results/s7461_m6_verify_window_ctl_20261116-000148.log | arms=1 alive=1/1 crash_arms=0 stall_arms=1 fatal=0 first=none stall_na=0
+20261116-001942 | s7462_m6_void_holds_ctl | rc=0 | 325s | scratch/agent/soak_results/s7462_m6_void_holds_ctl_20261116-001942.log | arms=2 alive=1/2 crash_arms=0 stall_arms=1 fatal=0 first=none stall_na=0
+20261116 | s7463 fold: s7462_m6_void_holds_ctl rc=0: P allattempts-failed void_holds=1 (nomission-att1 fs_holds=1 max_fs_hold_vi=6592), C alive_at_end=1 void_holds=0, CONTROL PASS -> class DR closed; m6 stall series done.

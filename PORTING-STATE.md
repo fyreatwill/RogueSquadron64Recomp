@@ -197797,3 +197797,39 @@ Regression: tools/s7459_m6_stall_test.zsh (incl. s7453_harness_death_test.zsh) 0
 - Real-game control queued: scratch/agent/soak_queue/s7462_m6_void_holds_ctl.sh (arm P ROGUESQ_PLANT_HOLD=10,150 MAXATT=1 WAITN=24
   -> allattempts-failed void_holds>=1 + keys fs_holds>=1; arm C clean -> alive_at_end=1 void_holds=0 crashlines=0).
 - Rules out: "m6 sees every stall" was false for pre-gate attempts until now. Not a guest/runtime change.
+
+## Session 7463 (2026-11-16) — class DS opened (host uninitialized reads / missing returns): 2-line clang census rc 0 over 150 host TUs; 1 real defect class found, 3 padded structs (ReinterpretHashData, FramebufferTile, DrawCallKey) hashed by XXH3 with uninitialised padding, now padding-zeroed (ROGUESQ_S7463_PADFIX=0 old); in-game H-const with planted-variation control; s7462 void-holds control folded PASS
+HYPOTHESIS-ID: host-uninit-padhash (previous soak-stall-measure-coverage closed)
+
+Fold: s7462_m6_void_holds_ctl rc=0 CONTROL PASS (P allattempts-failed void_holds=1, nomission-att1 fs_holds=1 max_fs_hold_vi=6592;
+C alive_at_end=1 void_holds=0). Class DR closed; m6 stall series DN-DR done.
+
+New class DS (not covered by S..BZ host classes): tools/s7463_uninit_census.py re-runs every in-scope compile_commands entry
+(src/main, src/rsp, RecompiledPatches, build/factor5_ucode, ultramodern, librecomp, rt64 common/gbi/hle/render/rhi/apple/preset/shared,
+plume_metal/apple; 150 TUs) twice: line A clang -fsyntax-only with only -Wuninitialized -Wsometimes-uninitialized
+-Wconditional-uninitialized -Wreturn-type -Wreturn-stack-address -Wdangling -Wuninitialized-const-reference; line B clang --analyze
+(path-sensitive), filtered to uninitialized/garbage/undefined. Control: planted TU (sometimes-uninit, uninit by value, missing return)
+compiled with main.cpp's own command: A flagged lines 2,4,5, B 2,4, both PASS. Analyzer health check: real warnings on main.cpp,
+dpc_bridge.cpp, rt64_rdp.cpp, plume_metal.cpp (dead stores, null derefs), so B is running, not silently failing.
+Findings: A 5 sites, all FP-by-construction (rsp.hpp:101/118/127 byte-loop loads write every byte: i^3 over 0..3, (i+2)^3 over 0..1;
+rsp_vu_impl.hpp:210/211 CTC2 switch on rd&3 is total). B 1 site REAL: xxhash.h:3255 UndefReturn on the path from
+rt64_state.cpp:1891 XXH3_64bits(&hashData, sizeof) where ReinterpretHashData has sizeof 40 / dsize 36.
+Class sweep (grep every XXH3/memcmp over struct bytes, record layouts via -fdump-record-layouts-complete, tools/s7463_hash_layouts.py):
+CallMatchKey, RenderTargetKey, RenderFramebufferKey, ShaderDescription (union value covers it) packed; 3 padded:
+ReinterpretHashData 36-39, FramebufferTile 6-7 (rt64_rdp.cpp:382 `FramebufferTile fbTile;` -> tile-copy cache key), DrawCallKey 84-87
+(fromDrawCall `DrawCallKey key;`, hashed for every game draw call into PresetDrawCallLibrary::cachedKeyMap, which is cleared only on
+a preset change).
+ORIGIN: the writer is nobody: default-initialised locals (`DrawCallKey key;`, `FramebufferTile fbTile;`, the NSDMI struct
+ReinterpretHashData) leave padding indeterminate, so the hashed bytes are stack garbage, never a legitimate value.
+Fix (lib/rt64, exported): rs64_s7463_hash (rt64_framebuffer.cpp) hashes a copy with the padding range zeroed: identical to the old
+hash whenever the padding was zero. ROGUESQ_S7463_PADFIX=0 old raw hash. ROGUESQ_S7463_PADCOUNT=1 counts per site: calls, padding
+nonzero, distinct raw vs distinct padding-zeroed hashes (same run), dck_newkey = cachedKeyMap size; =ctl plants VARYING nonzero
+padding (call counter).
+Runtime, same build, no-key title+attract 100 s each (tools/s7463_padcount_run.zsh scratch/s7463/run2 100 cnt:1 ctl:ctl):
+cnt drawcallkey calls 524288 padnz 524288 distinct raw 651 = fixed 651; fbtile 8192/8192, 18 = 18; reinterpret 0 calls;
+cachedKeyMap 1024 keys and growing. ctl drawcallkey raw 511270 vs fixed 651, fbtile 8165 vs 18, fixdiff 0 everywhere.
+-> H-const in this phase: the garbage is nonzero on every call but stable, so no key is split yet; the defect is latent (depends on
+stack contents) and the fix removes it. Instrument discriminates (ctl). Single-source on the in-flight phase: soak
+s7463_padhash_flight queued (L4 cnt, L1 ctl, HOLD=150). Census rerun after the fix: rc 0, 0 survivors, both controls PASS.
+Latent, noted not changed: DrawCallKey::operator== returns memcmp() (true when keys DIFFER), 0 callers.
+Rules out: uninitialised-read UB in any in-scope host TU beyond these (two independent lines, controls PASS); the 5 compiler sites.

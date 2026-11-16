@@ -1,0 +1,7 @@
+# s7463 class DS reviewed sites: file<TAB>line<TAB>verdict<TAB>why
+lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp	101	FP-by-construction	RSP_MEM_W_LOAD byte loop i=0..3 writes bytes i^3 = {3,2,1,0}: all 4 bytes of out
+lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp	118	FP-by-construction	RSP_MEM_HU_LOAD loop i=0..1 writes bytes (i+2)^3 = {1,0}: both bytes of uint16 out
+lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp	127	FP-by-construction	RSP_MEM_H_LOAD same {1,0} byte cover of int16 out
+lib/N64ModernRuntime/librecomp/include/librecomp/rsp_vu_impl.hpp	210	FP-by-construction	CTC2 switch (rd & 3) has all 4 cases, each sets hi and lo
+lib/N64ModernRuntime/librecomp/include/librecomp/rsp_vu_impl.hpp	211	FP-by-construction	same switch
+lib/rt64/src/contrib/xxHash/xxhash.h	3255	FIXED-s7463	path from rt64_state.cpp:1891 XXH3 over ReinterpretHashData incl. 4 uninit tail padding bytes; class sweep found FramebufferTile + DrawCallKey too; rs64_s7463_hash (PADFIX=0 old)

@@ -1899,10 +1899,20 @@ index c702055..f5fa89f 100644
  
          va_end(va1);
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..44b94fd 100644
+index 873883d..9a90c7c 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
-@@ -15,6 +15,74 @@
+@@ -5,6 +5,9 @@
+ #include "rt64_framebuffer.h"
+ 
+ #include <algorithm>
++#include <cstddef>
++#include <cstring>
++#include <cstdio>
+ #include <cassert>
+ #include <memory.h>
+ #include <stdlib.h>
+@@ -15,6 +18,75 @@
  #include "common/rt64_elapsed_timer.h"
  
  #include "render/rt64_render_worker.h"
@@ -1910,6 +1920,7 @@ index 873883d..44b94fd 100644
 +
 +#include <atomic>
 +#include <mutex>
++#include <unordered_set>
 +
 +// Session 32: phase ordinal for phase-scoped diagnostics (weak, host-provided).
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
@@ -1977,7 +1988,7 @@ index 873883d..44b94fd 100644
  
  #ifdef __GNUC__
  #define _byteswap_ulong __builtin_bswap32
-@@ -25,6 +93,12 @@
+@@ -25,6 +97,12 @@
  #endif
  
  namespace RT64 {
@@ -1990,7 +2001,7 @@ index 873883d..44b94fd 100644
      // Framebuffer
  
      Framebuffer::Framebuffer() {
-@@ -81,17 +155,68 @@ namespace RT64 {
+@@ -81,17 +159,68 @@ namespace RT64 {
              nativeSwappedRAM.resize(nativeSize);
          }
  
@@ -2062,7 +2073,7 @@ index 873883d..44b94fd 100644
          return differentPixels;
      }
  
-@@ -141,18 +266,169 @@ namespace RT64 {
+@@ -141,18 +270,169 @@ namespace RT64 {
  
          // Copy native target to RDRAM.
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
@@ -2236,14 +2247,14 @@ index 873883d..44b94fd 100644
              }
          }
          // Special case when the total amount of bytes is smaller than a word.
-@@ -162,9 +438,105 @@ namespace RT64 {
+@@ -162,9 +442,105 @@ namespace RT64 {
                  dstFirstWordU8[i ^ 3] = dstBytes[i];
              }
  
 -            dstWords[0] = dstFirstWord;
 +            rs64StoreWord(dstWords, dstFirstWord);
-         }
- 
++        }
++
 +        rs64FloorRdramNoteSwap(dstBytes, rdramPhys0, bytesToSwap, &rdramSnap);
 +
 +        nativeTarget.captureFloorRAM(dstBytes, bytesToSwap);
@@ -2336,20 +2347,111 @@ index 873883d..44b94fd 100644
 +        } else if (fl_snap) {
 +            free(fl_snap);
 +            fl_snap = nullptr;
-+        }
-+
+         }
+ 
 +        rs64FloorRdramLog("a", dstBytes, rdramPhys0, bytesToSwap, &rdramSnap, do_fl_restore ? 1 : 0);
 +
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
-@@ -199,4 +571,4 @@ namespace RT64 {
+@@ -197,6 +573,72 @@ namespace RT64 {
+     }
+ 
      uint64_t FramebufferTile::hash() const {
-         return XXH3_64bits(this, sizeof(FramebufferTile));
+-        return XXH3_64bits(this, sizeof(FramebufferTile));
++        return rs64_s7463_hash(this, sizeof(FramebufferTile), offsetof(FramebufferTile, fmt) + sizeof(fmt), offsetof(FramebufferTile, left), 0);
++    }
++
++    // s7463 class DS (see rt64_framebuffer.h).
++    int rs64_s7463_mode() {
++        static const int mode = []() {
++            const char *f = std::getenv("ROGUESQ_S7463_PADFIX");
++            const char *c = std::getenv("ROGUESQ_S7463_PADCOUNT");
++            int m = (f && f[0] == '0') ? 0 : 1;
++            if (c && c[0] && c[0] != '0') m |= 2;
++            if (c && strcmp(c, "ctl") == 0) m |= 4;
++            if (m & 2) fprintf(stderr, "[s7463] mode padfix=%d count=1 ctl=%d\n", m & 1, (m >> 2) & 1);
++            return m;
++        }();
++        return mode;
++    }
++
++    // Distinct raw vs padding-zeroed hashes per site (same run): raw > fixed means the padding garbage VARIES,
++    // so equal keys hash apart (cache fragmentation); raw == fixed means constant garbage (benign).
++    static std::mutex s7463Mutex;
++    static std::unordered_set<uint64_t> s7463Raw[3], s7463Fix[3];
++
++    void rs64_s7463_note(int site, bool padNonzero, bool fixDiff, uint64_t extra) {
++        static std::atomic<uint64_t> calls[4], nz[4], fd[4];
++        static const char *names[4] = { "fbtile", "drawcallkey", "reinterpret", "dck_newkey" };
++        if (site < 0 || site > 3) return;
++        const uint64_t c = calls[site].fetch_add(1, std::memory_order_relaxed) + 1;
++        const uint64_t n = nz[site].fetch_add(padNonzero ? 1 : 0, std::memory_order_relaxed) + (padNonzero ? 1 : 0);
++        const uint64_t d = fd[site].fetch_add(fixDiff ? 1 : 0, std::memory_order_relaxed) + (fixDiff ? 1 : 0);
++        const bool pr = (c == 1 || c == 64 || c == 1024 || c == 8192 || c == 65536 || (c % 262144) == 0 || (site == 3 && (c % 1024) == 0));
++        if (pr) {
++            size_t dr = 0, df = 0;
++            if (site < 3) { std::lock_guard<std::mutex> lk(s7463Mutex); dr = s7463Raw[site].size(); df = s7463Fix[site].size(); }
++            fprintf(stderr, "[s7463] site=%s calls=%llu padnz=%llu fixdiff=%llu extra=%llu distinct_raw=%zu distinct_fixed=%zu\n", names[site],
++                (unsigned long long)c, (unsigned long long)n, (unsigned long long)d, (unsigned long long)extra, dr, df);
++        }
++    }
++
++    uint64_t rs64_s7463_hash(const void *p, size_t size, size_t padBeg, size_t padEnd, int site) {
++        const int m = rs64_s7463_mode();
++        unsigned char raw[256], z[256];
++        if (size > sizeof(raw) || padEnd > size || padBeg > padEnd) return XXH3_64bits(p, size);
++        if (!(m & 2)) {
++            if (!(m & 1)) return XXH3_64bits(p, size);
++            memcpy(z, p, size); memset(z + padBeg, 0, padEnd - padBeg);
++            return XXH3_64bits(z, size);
++        }
++        memcpy(raw, p, size);
++        if (m & 4) {
++            // Control: plant VARYING nonzero padding (call counter), so distinct_raw must exceed distinct_fixed.
++            static std::atomic<uint32_t> plant{ 0 };
++            const uint32_t v = plant.fetch_add(1, std::memory_order_relaxed);
++            for (size_t i = padBeg; i < padEnd; i++) raw[i] = (unsigned char)((v >> (8 * ((i - padBeg) & 3))) | 0x80);
++        }
++        bool padNonzero = false;
++        for (size_t i = padBeg; i < padEnd; i++) padNonzero |= (raw[i] != 0);
++        memcpy(z, raw, size); memset(z + padBeg, 0, padEnd - padBeg);
++        const uint64_t hf = XXH3_64bits(z, size);
++        const uint64_t hr = XXH3_64bits(raw, size);
++        memcpy(z, p, size); memset(z + padBeg, 0, padEnd - padBeg);
++        if (site >= 0 && site < 3) {
++            std::lock_guard<std::mutex> lk(s7463Mutex);
++            if (s7463Raw[site].size() < 4000000) s7463Raw[site].insert(hr);
++            if (s7463Fix[site].size() < 4000000) s7463Fix[site].insert(hf);
++        }
++        rs64_s7463_note(site, padNonzero, hf != XXH3_64bits(z, size), 0);
++        return (m & 1) ? hf : hr;
      }
 -};
 \ No newline at end of file
 +};
+diff --git a/src/hle/rt64_framebuffer.h b/src/hle/rt64_framebuffer.h
+index 6e8c9b8..81bc476 100644
+--- a/src/hle/rt64_framebuffer.h
++++ b/src/hle/rt64_framebuffer.h
+@@ -79,6 +79,17 @@ namespace RT64 {
+         uint32_t bestDitherPattern() const;
+     };
+ 
++    // s7463 class DS: XXH3 over a struct's raw bytes hashes its padding, which nothing initialises
++    // (FramebufferTile 6-7, DrawCallKey 84-87, ReinterpretHashData 36-39), so equal keys could hash
++    // apart. rs64_s7463_hash zeroes [padBeg,padEnd) on a copy first (ROGUESQ_S7463_PADFIX=0 = old raw
++    // hash; the result equals the old hash whenever the padding happened to be zero).
++    // ROGUESQ_S7463_PADCOUNT=1 counts calls whose padding was nonzero; =ctl plants 0xA5 there (control:
++    // padnz must equal calls and fixdiff must stay 0). Sites: 0 fbtile, 1 drawcallkey, 2 reinterpret,
++    // 3 drawcallkey cache new key (extra = cachedKeyMap size).
++    int rs64_s7463_mode();
++    void rs64_s7463_note(int site, bool padNonzero, bool fixDiff, uint64_t extra);
++    uint64_t rs64_s7463_hash(const void *p, size_t size, size_t padBeg, size_t padEnd, int site);
++
+     struct FramebufferTile {
+         uint32_t address;
+         uint8_t siz;
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
 index 7d385fa..702b727 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
@@ -7854,7 +7956,7 @@ index 8858dac..6b31d86 100644
          std::condition_variable interpolatedCondition;
          std::mutex workloadMutex;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..40b3b4a 100644
+index 10f98af..b4845e4 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -9200,6 +9302,15 @@ index 10f98af..40b3b4a 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
+@@ -709,7 +1888,7 @@ namespace RT64 {
+                 hashData.reinterpretSiz = callTile.reinterpretSiz;
+                 hashData.reinterpretFmt = callTile.reinterpretFmt;
+ 
+-                uint64_t reinterpretHash = XXH3_64bits(&hashData, sizeof(hashData));
++                uint64_t reinterpretHash = rs64_s7463_hash(&hashData, sizeof(hashData), offsetof(ReinterpretHashData, texelMask) + sizeof(hashData.texelMask), sizeof(hashData), 2);
+                 auto it = framebufferManager.reinterpretTileCache.find(reinterpretHash);
+                 if (it != framebufferManager.reinterpretTileCache.end()) {
+                     callTile.tmemHashOrID = it->second;
 @@ -762,8 +1941,65 @@ namespace RT64 {
      }
  
@@ -11049,6 +11160,36 @@ index bde2f03..db3879b 100644
          uint64_t workloadId;
          uint64_t lastPresentId;
          std::mutex workloadIdMutex;
+diff --git a/src/preset/rt64_preset_draw_call.cpp b/src/preset/rt64_preset_draw_call.cpp
+index b625749..9ee3f60 100644
+--- a/src/preset/rt64_preset_draw_call.cpp
++++ b/src/preset/rt64_preset_draw_call.cpp
+@@ -6,6 +6,8 @@
+ 
+ #include "imgui/imgui.h"
+ #include "xxHash/xxh3.h"
++#include "hle/rt64_framebuffer.h"
++#include <cstddef>
+ 
+ #include "gui/rt64_file_dialog.h"
+ 
+@@ -50,7 +52,7 @@ namespace RT64 {
+     }
+ 
+     uint64_t DrawCallKey::hash() const {
+-        return XXH3_64bits(this, sizeof(DrawCallKey));
++        return rs64_s7463_hash(this, sizeof(DrawCallKey), offsetof(DrawCallKey, geometryMode) + sizeof(geometryMode), sizeof(DrawCallKey), 1);
+     }
+ 
+     DrawCallKey DrawCallKey::fromDrawCall(const DrawCall &call, const DrawData &drawData, const TextureCache &textureCache) {
+@@ -213,6 +215,7 @@ namespace RT64 {
+ 
+         // Build material matches for the cache.
+         keyProcessed = true;
++        if (rs64_s7463_mode() & 2) rs64_s7463_note(3, false, false, cachedKeyMap.size());
+ 
+         for (const auto &preset : presetMap) {
+             if (!preset.second.enabled || !preset.second.matches(drawCallKey)) {
 diff --git a/src/render/rt64_buffer_uploader.cpp b/src/render/rt64_buffer_uploader.cpp
 index de997a0..9e7f715 100644
 --- a/src/render/rt64_buffer_uploader.cpp

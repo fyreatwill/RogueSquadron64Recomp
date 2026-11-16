@@ -216,8 +216,20 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: fold s7462_m6_void_holds_ctl (class DR), see NEXT.md. One line each:
-   - **DR s7462 H-void (m6):** void attempts (notitle/nohangar/nomission/died_in_verify) were retried with stalls unscored, so a
+   m6 stall-measure series (DN-DR) CLOSED s7463. Next: fold s7463_padhash_flight (class DS), see NEXT.md. One line each:
+   - **DS s7463 host uninitialized reads + missing returns (new idiom class, host C/C++):** tools/s7463_uninit_census.py --controls
+     (150 in-scope TUs from compile_commands: src/, ultramodern, librecomp, rt64 common/gbi/hle/render/rhi/preset, plume_metal; line A
+     clang -Wsometimes/-Wconditional-uninitialized/-Wreturn-type/-Wdangling, line B clang static analyzer; planted control flagged by both)
+     rc 0: 5 compiler sites FP-by-construction (rsp.hpp byte-loop loads, CTC2 total switch; tools/s7463_uninit_reviewed.tsv), 1 analyzer site
+     REAL: XXH3 over ReinterpretHashData's 4 uninit tail padding bytes (rt64_state.cpp:1891). Class sweep of every raw-bytes struct hash
+     (tools/s7463_hash_layouts.py, record layouts from clang): 7 structs, 3 padded = ReinterpretHashData 36-39, FramebufferTile 6-7
+     (fb tile-copy cache key), DrawCallKey 84-87 (every draw call, preset cachedKeyMap never cleared). All 3 now hash through
+     rs64_s7463_hash (padding zeroed on a copy; ROGUESQ_S7463_PADFIX=0 old). Runtime (title+attract, same build, ROGUESQ_S7463_PADCOUNT=1):
+     padding nonzero on 100% of calls (dck 524288, fbtile 8192) but distinct_raw == distinct_fixed (651/651, 18/18) -> H-const (stable
+     garbage, no split keys yet; latent, depends on stack contents); ctl (=ctl plants varying padding) raw 511270 vs fixed 651, fixdiff 0.
+     Reinterpret site not reached in attract: soak s7463_padhash_flight queued (L4 cnt + L1 ctl). Latent, no callers: DrawCallKey::operator==
+     returns memcmp() (true when DIFFERENT). Analyzer also lists null-deref/dead-store findings (not this class; candidate class DT).
+   - **DR s7462 H-void (m6), CLOSED s7463:** s7462_m6_void_holds_ctl CONTROL PASS (P void_holds=1, C 0). void attempts (notitle/nohangar/nomission/died_in_verify) were retried with stalls unscored, so a
      pre-gate held frame (s6993 boot-freeze shape) vanished behind a later good attempt. fail() now scores each void log with
      vilog_stalls.py (keys line gains fs_holds=/max_fs_hold_vi=), every summary carries void_holds=<sum>, soak_verdict_fields counts
      void_holds>0 as a stall arm; M6_VOID_BLIND=1 old (mutation). tools/s7462_m6_void_holds_test.zsh 11/11 (planted + real s61 held log,
@@ -310,7 +322,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     tools/s7241_merge_test/run.sh; tools/s7243_resume_test.zsh; loop: tools/agent/test_soak_idle_gate.sh.
     After any host-code edit: every class census in item 15 with `--controls` (exit 1 = survivor or failed control).
     After a regen replay: tools/s7421_regen_drift.py <live> <regen> <compare.json> --control (exit 1 = LOST/REORDER not in
-    tools/s7421_regen_accept.tsv); after an apply-script edit: tools/s7421_idem_test.py + tools/s7422_idem_class_test.py.
+    tools/s7421_regen_accept.tsv); after a host/rt64 edit: tools/s7463_uninit_census.py --controls (rc 0) + tools/s7463_hash_layouts.py
+    (any new padded struct hashed by raw bytes must go through rs64_s7463_hash); after an apply-script edit: tools/s7421_idem_test.py + tools/s7422_idem_class_test.py.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).

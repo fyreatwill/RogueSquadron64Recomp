@@ -1,15 +1,18 @@
-# NEXT (s7463)
-HYPOTHESIS-ID: soak-stall-measure-coverage
+# NEXT (s7464)
+HYPOTHESIS-ID: host-uninit-padhash
 
-s7462 (class DR): m6 void attempts now score stalls (fail() -> vilog_stalls.py, summaries void_holds=, verdict counts it;
-M6_VOID_BLIND=1 old). Queued scratch/agent/soak_queue/s7462_m6_void_holds_ctl.sh.
+s7463 opened class DS (host uninitialized reads / padded-struct hashes): census rc 0, 3 padded hash keys routed through
+rs64_s7463_hash (ROGUESQ_S7463_PADFIX=0 old); title+attract H-const (stable garbage). Queued
+scratch/agent/soak_queue/s7463_padhash_flight.sh (L4 cnt PADCOUNT=1, L1 ctl PADCOUNT=ctl; HOLD=150).
 
-Step 1: fold s7462_m6_void_holds_ctl from SOAK-RESULTS.md / its log.
-  - CONTROL PASS (P allattempts-failed void_holds>=1, keys "-att1 exitrc=... fs_holds>=1"; C alive_at_end=1 void_holds=0) ->
-    close class DR in CURRENT-TRUTH item 1 (one line) and LEAVE this slug: the m6 stall series is done.
-  - P void_holds=0 with plant begin in fail_att1.log -> check whether the log has fs= rows during the hold (DIAG_QUIET may
-    suppress [vi] rows pre-mission); fix the scorer input, re-queue once.
-  - P passed the gate (no void) -> the hold ended before WAITN expired; raise dur, re-queue once.
-Step 2 (new slug): next ladder item. Owner items (CURRENT-TRUTH 2-9) await the owner; take an M3 idiom-class audit
-  (ITERATION item 3) with a new class, or the G5 renaming sweep (item 4). Do not open another harness-meta class unless a
-  fold shows a concrete misread.
+Hypotheses for flight: H-const (raw==fixed distinct counts at every site: fix is latent-only) vs H-split (raw>fixed at some site:
+the old code fragmented that cache in flight; the fix is a live perf/memory fix - quantify cachedKeyMap / tileCopy growth from
+dck_newkey extra=) vs H-unreached (reinterpret site 0 calls in flight too: leave it as static-only, say so).
+
+Step 1: fold s7463_padhash_flight from SOAK-RESULTS.md + scratch/s7463q/s7463.txt.
+  - CONTROL PASS -> write one line under item 1 DS with the per-site verdicts; close DS.
+  - CONTROL FAIL with arm alive -> read log_ctl.txt for [s7463] lines (mode line printed? PADCOUNT passed through ARMS env?).
+  - void (rc 2) -> the loop re-queues; do Step 2 meanwhile.
+Step 2 (new slug): class DT, analyzer null-deref / CallAndMessage findings in host code (tools/s7463_uninit_census.py line B,
+  widen B_RE to "null pointer|Called C\\+\\+ object pointer is null"; main.cpp:12987, plume_metal.cpp:1958/1976/2571/3906 seen);
+  classify each as FP (prove the non-null invariant) or guard with an ORIGIN: line naming the writer.
