@@ -198432,3 +198432,25 @@ HYPOTHESIS-ID: g1d-retarget-unreserved-pool (closed this session). Work unit fro
    any allocation on this route). Detector live in both arms (CONTROL fired). Caveat: the run.log has no `VI #` marker so the
    recipe's last= field printed none; aliveness is from 0 crash lines + the 4th initMission reached in both arms.
 Item 1a CLOSED. Rules out nothing about guest LOADS from freed rs_malloc blocks (EH covered stores only) -> next unit.
+
+## Session 7484 (2026-11-16) — class EI guest-load UAF watch landed (50,632 loads wrapped); L4/L15 0 freed-block loads with in-flight load plant DETECTED (H-load-clean)
+
+Work unit: NEXT.md s7484, class EI = guest LOADS of freed rs_malloc blocks (EH covered stores only).
+- Boring first: no load-side hook existed (s5798/s7475 wrap stores only). New tools/apply_s7484_loadwatch.py wraps every generated
+  `ctx->X = MEM_W|MEM_H|MEM_HU|MEM_B|MEM_BU|LD(a, b);` whose preceding recompiler comment is lw/lwc1/lh/lhu/lb/lbu/ld/ldc1 as
+  `{ RS64_S7484_LD(pc, a, b, w); load }` (check before the load so rD==base is safe): 50,632 sites in 50 files. Gate g_rs64_s7484_on
+  (set at s7475 arming only with ROGUESQ_S7484_UAFLOAD=1 and s7480 on), then a first/last-byte bitmap test of g_rs64_s7475_bm.
+  Registered in fixup_game_funcs_vendored.py just before apply_s7069 (after every script anchoring on load text). Not covered: lwl/lwr, host readers.
+- Host (upstream_compat.cpp s7484_*): rs64_s7484_load under s_s7475_mu; frame-counter word -> watch-ctl; slack-band loads counted;
+  freed-record loads skip allocator-internal fns, locate (s7480 classes) at the record's first load and each pc's first load, log
+  `[s7484] uaf-load` per pc (<=80), backtrace for F rows, retire a record after 4096 loads. Load plant ROGUESQ_S7484_PLANT=<s>: the
+  newest live canary block (age>=0.5 s, req>=0x40) recorded as freed (plant=2); store-first / trim / 10 s silence re-plant (60 tries).
+- Recipe tools/s7484_uafload_recipe.zsh (s7480 recipe + load scoring). Run `env LV="4:4 15:8" HOLD=220` score=0, rc=0:
+  L4 dd4: initMission=2, alive, vi_stalls30s=0; s7484 hits=0 recs=0, slack=36, ctl=47988, plant DETECTED (try 2: try 1 STORE-FIRST by
+  clearVec4QuadStruct; try 2 blk 805B5430 read by randomBurstNpcHandlerVariant pc 80040574 at 0.000 s). s7480 side 1025 hits U488/N536/F0.
+  L15 dd8 21:9: initMission=1, alive, vi_stalls30s=0; hits=0, slack=92, plant DETECTED 0.008 s (pc 8004064C). s7480 642 hits U390/N251 = s7481 numbers.
+- Verdict: H-load-clean selected (0 guest loads from 634/662 still-freed records over 27.6k/21.3k frees), H-load-uaf and H-load-recarve
+  refuted for these two levels: the re-carved regions are written before they are read (store hits erase the record first).
+  Single instrument, two levels + in-flight positive control; levels soak s7484_uafload_levels queued (L1 dd8 21:9, L7/L10/L12 dd4).
+- Side datum (unscored): byte loads 1-16 past the request in swizzleTextureRowsToTmem (0x800248CC-F0, a=80B87F70.., arming time) and
+  decodeJpegScanToImage (0x800C96AC.., L15 t=11) = over-reads into the PAD band, reads only.

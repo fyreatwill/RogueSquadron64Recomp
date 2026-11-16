@@ -1,17 +1,14 @@
-# NEXT (s7484)
+# NEXT (s7485)
 HYPOTHESIS-ID: m3-guest-uaf-loads
 
-Item 1a closed s7483. Next idiom class (CURRENT-TRUTH item 1, EH "Not covered: guest LOADS of freed blocks"): class EI,
-guest LOADS from freed rs_malloc blocks (use-after-free reads), whole-class, same model as EH.
+s7484 landed the EI load watch (tools/apply_s7484_loadwatch.py + upstream_compat.cpp s7484_*, recipe tools/s7484_uafload_recipe.zsh);
+L4/L15 H-load-clean with in-flight load plant DETECTED. Queued soak s7484_uafload_levels (L1 dd8 21:9, L7/L10/L12 dd4).
 
-1. Boring first: does the s7475/s7480 STORE_DIAG hook have a load-side twin? grep src/main/upstream_compat.cpp for s7480_ and
-   tools/apply_s7475_slackwatch.py for the store hook emission; check whether the recompiler emits MEM_W/MEM_B reads through a
-   hookable macro (N64Recomp output headers in build/ or src/). If no load hook exists, add one behind ROGUESQ_S7484_UAFLOAD=1
-   via a fixup script (not a hand edit of generated code).
-2. Instrument (one build): on each guest load, test the s7480 freed bitmap; classify with the s7480 locator at load time
-   (F = block still free = real UAF read, U/N = re-carved region, Urec = trim defect). Positive control: an in-flight
-   premature-free plant that is then READ (ROGUESQ_S7484_PLANT), plus the s7480 locator control.
-3. Run tools/s7480_uaf_recipe.zsh-style arms L4/L15 (dd4/dd8), HOLD=220, in one invocation.
-Hypotheses: H-load-clean (0 F loads outside the plant) / H-load-uaf (F loads, name the pc + the freeing caller) /
-H-load-recarve (all hits U/N, the s7331 scene-reset reader class). Discriminator = locator class of each hit at load time.
-If a load hook costs too much frame time to run 220 s, sample (every Nth load) and say so.
+1. Fold s7484_uafload_levels from SOAK-RESULTS.md / scratch/s7484_uafload_levels/out.txt: score=0 with load_plant=1 and load_ctl=1 on
+   every arm -> close class EI in CURRENT-TRUTH (6 levels). score=1 -> read the `[s7484] uaf-load ... loc=F` rows + load-bt/free-bt,
+   name the reader and the freeing caller (that is the work unit). score=3 -> fix the control (plant tries/timeout) first.
+2. Then the next idiom class: the EI side datum, byte over-reads past the rs_malloc request (class EJ): swizzleTextureRowsToTmem
+   0x800248CC..F0 and decodeJpegScanToImage 0x800C96AC..; decide per site whether the over-read is bounded by retail alignment
+   (texture row padding / JPEG bit-reader lookahead = H-benign) or reads a neighbour block's data into output (H-overread). Discriminator:
+   the request size vs the loop bound in each function (offline disasm in build RecompiledFuncs), plus whether the read value reaches a store.
+Hypotheses (item 1): H-load-clean (0 F/Urec) / H-load-uaf (F rows). Discriminator: locator class at load time.

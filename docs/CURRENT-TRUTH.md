@@ -219,7 +219,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EH CLOSED s7481 (0 guest UAF on L1/L4/L7/L10/L12/L15; the L7 hits are the s6202 retarget pool in free heap, item 1a, FIXED s7482). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EI s7484 H-load-clean L4/L15 (levels soak queued). EH CLOSED s7481 (0 guest UAF on L1/L4/L7/L10/L12/L15; the L7 hits are the s6202 retarget pool in free heap, item 1a, FIXED s7482). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
    - **ED s7475-s7476 MusyX voice-array overrun: ROOT CAUSE FIXED (s7476, port bug; two lines: retail oracle + same-build A/B):**
      s7475 instrument (ROGUESQ_S7475_CANARY=1 slack fill/bitmap + tools/apply_s7475_slackwatch.py store watch, STORE_DIAG=1) saw the
      first-scene reapplyAudioConfig allocate a 1-voice array (0x801496F8, stride 0x88) while voice[1] stayed live (musyxSetVoicePitchBend
@@ -252,6 +252,16 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      applied/skipped lines) = coverage only. s7483 route A/B (tools/s7483_route_reserve.zsh, owner hangar abort/re-entry schedule,
      FPS60 dd8 21:9, one build): both arms 3 hangar entries + 4 initMission, 0 crash, 0 collide (CONTROL fired both), 0 arena full;
      on arm applied once after the 3rd re-entry (v1 0x80986800 -> 0x8093B800) and mission 4 loaded clean -> H-route-clean, H-route-shrink refuted.
+   - **EI s7484 guest LOADS from FREED rs_malloc blocks (use-after-free reads): H-load-clean on L4 dd4 / L15 dd8 21:9 (single instrument, two levels; levels soak queued):**
+     tools/apply_s7484_loadwatch.py (registered before apply_s7069 in fixup_game_funcs_vendored.py) wraps 50,632 generated lw/lwc1/lh/lhu/lb/lbu/ld/ldc1
+     (`{ RS64_S7484_LD(pc,a,b,w); load }`, check BEFORE the load) with a test of the s7475/s7480 bitmap, gate g_rs64_s7484_on (only under
+     ROGUESQ_S7484_UAFLOAD=1 + S7480_UAF + S7475_CANARY); host upstream_compat.cpp s7484_* classifies each freed-record load at the record's first load
+     (same F/Urec/U/N/S locator as EH). Recipe tools/s7484_uafload_recipe.zsh (LV/HOLD as s7480). Run L4/L15 HOLD=220 score=0: load hits=0 on 634/662
+     live freed records (frees 27.6k/21.3k), load_F=0, load_Urec=0; controls same run: load watch-ctl (frame counter word, ctl=48k/50k), in-flight load
+     plant ROGUESQ_S7484_PLANT=150 DETECTED (live NPC record read by randomBurstNpcHandlerVariant within 0.008 s; one STORE-FIRST re-plant on L4),
+     s7480 store plant + locator ctl PASS; store side reproduced EH (L15 642 hits/16 pcs, U 390 N 251). 60/s, vi_stalls30s=0 both. Side datum: 36/92
+     loads into the PAD=16 slack band past request (swizzleTextureRowsToTmem 0x800248CC.., decodeJpegScanToImage 0x800C96AC..): byte over-reads, not
+     stores, unscored. Not covered: lwl/lwr, host readers (RSP/RDP DMA). Queued soak s7484_uafload_levels (L1 dd8 21:9, L7/L10/L12 dd4).
    - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
      ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
      marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:
