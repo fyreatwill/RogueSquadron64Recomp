@@ -1,18 +1,20 @@
-# NEXT (s7434)
-HYPOTHESIS-ID: gfx-glue-cost
+# NEXT (s7435)
+HYPOTHESIS-ID: host-spin-loops
 
-Class CQ (CURRENT-TRUTH Next steps item 1): what the Gfx Thread spends outside the F5 ucode. s7433's sample(1) run
-(owner recipe FPS60 dd4 16:9, lvl1 autopilot flight) puts the Gfx Thread at ~9 ms/frame: factor5_ucode_nmac 42% self,
-rsp_dpc_submit_impl 9%, _platform_memmove 5%, rs64_dpc_record_submit_impl 4% (bridge edit walkers), TMEMHasher 4%,
-rs64LoadBlockRuns 3.5%; rs64_dpc_defer_end_impl 1.50 ms/frame inclusive.
-Step 1 (offline, no run): python3 tools/s7433_probe_cost.py-style tree walk on scratch/s7433/sample_{4,8}.txt (busy-off
-windows) for threads 'Gfx Thread': inclusive ms/frame per child of rs64_run_lle_gfx and of rs64_dpc_defer_end_impl, and
-the callers of every _platform_memmove sample. Hypotheses: H-copy (memmove is a whole-buffer copy per task that could be
-a range copy: name the caller and the byte count), H-walk (the bridge walkers re-scan the same RDP bytes several times:
-record + defer_end + submit each walk the stream), H-rt64 (most of defer_end is RT64's own processRDPLists/TMEM hashing,
-which we do not own -> close). Discriminator: the share of defer_end + record_submit that is our code (rs64_*/dpc_bridge
-frames with only library calls beneath) vs RT64:: frames.
-Step 2 only if H-copy or H-walk >= 0.5 ms/frame: fix it, then rerun env S7431_ARM=N zsh tools/s7433_probe_cost.sh with
---threads 'Gfx Thread' analysis (control: ROGUESQ_DIAG_BUSY_US=500 busy per gfx task must read back on the Gfx Thread),
-old vs new by an env kill-switch in ONE run if possible (toggle), else two runs same recipe.
-If H-rt64: close CQ and take ITERATION.md 3c's next rung (new idiom-class audit or the G5 renaming sweep).
+Class CR (CURRENT-TRUTH Next steps item 1): host busy-wait / poll loops (G1b H-host: only 5 P-cores; every spinning host
+thread competes with the guest MAIN and Gfx threads). s7434 lead from the s7433 sample(1) captures (scratch/s7433/sample_{4,8}.txt,
+owner recipe dd4 16:9 FPS60, lvl1 flight): the VI Thread shows ~290 samples per 12 s window as self time in mach_continuous_time /
+clock_gettime_nsec_np, i.e. a clock-polling loop (~3% of one core). wait_for_resumed self 7% on guest threads is the moodycamel
+semaphore spin (s7433 note).
+Step 1 (offline, no build): grep-enumerate the whole idiom class in src/ and lib/N64ModernRuntime (and lib/rt64/src only for
+rs64-patched code): `while (...clock|mach_absolute_time|mach_continuous_time|now()...)` loops, `std::this_thread::yield` /
+`sched_yield` / `__builtin_arm_yield` / `_mm_pause` loops, spin-count semaphores (moodycamel LightweightSemaphore spin count),
+`while (!flag.load())` without a wait. Classify every site: tail-spin (bounded, after a sleep), unbounded spin, diag-only
+(env-gated), dead. Table in the session entry, with file:line.
+Step 2: per live default-on site, its CPU from the s7433 samples (tools/s7434_gfx_glue.py --threads '<thread name>' gives the
+owned-frame split). Hypotheses: H-tail (every live spin is a bounded tail after a sleep, total < 0.05 core -> close),
+H-spin (a site spins unbounded or for > 1 ms per wake, >= 0.1 core -> fix to a timed wait, kill-switch env, same-run toggle
+qualification with a control), H-sem (the moodycamel spin count before blocking is the largest term -> lower it behind an env and
+measure tasks/s + thread CPU in one toggled run).
+Discriminator: per-site share of a core; positive control in any run: a planted ROGUESQ_DIAG_BUSY_US spin must read back.
+If H-tail: close CR and take the next 3c rung (new idiom class; renaming is closed since s6868).

@@ -197008,3 +197008,35 @@ HYPOTHESIS-ID: default-probe-bookkeeping
   0.25 ms/frame and control/4 thresholds, control PASS in both runs), and closes class CP. Next discriminator (class CQ):
   share of the Gfx Thread's rs64_dpc_defer_end_impl + rs64_dpc_record_submit_impl samples that is our code vs RT64:: frames,
   plus the callers of _platform_memmove, on scratch/s7433/sample_{4,8}.txt (H-copy / H-walk vs H-rt64).
+
+## Session 7434 (2026-11-15) — class CQ gfx-thread host glue closed H-known: our glue is 1.92 of 8.97 ms/frame (21%; ucode 43%, RT64 36%); every owned term >= 0.5 ms/frame is the s7028/s7029 per-bump bridge or the s7018 walkers, already split and closed; H-copy refuted (largest memmove caller 0.163 ms/frame)
+HYPOTHESIS-ID: gfx-glue-cost. Offline only, no build, no run (NEXT step 1).
+What ran: new tools/s7434_gfx_glue.py on scratch/s7433/sample_4.txt + sample_8.txt (the two busy-off 12 s windows of s7433's
+owner-recipe run: FPS60 dd4 16:9, lvl1 autopilot flight, binary build/RogueSquadron64Recomp 18:43, the s7433 run binary). Each
+running (non-wait-leaf) Gfx Thread sample is charged to its innermost owned frame, with library frames below charged to that frame.
+Classes: ucode (factor5_ucode_*), rt64 (RT64::, plume, AGX/Metal, XXH3), ours (everything else owned). Also: inclusive per child of
+rs64_run_lle_gfx / rs64_dpc_defer_end_impl and the owned caller of every memmove/memcpy sample. Hot PCs resolved with
+dsymutil + atos (/tmp/rs64_s7434.dSYM, load address 0x10468c000) and objdump.
+Result (18132 thread samples, 9763 running = 8.97 ms/frame at 60 tasks/s):
+- ucode 3.85 ms/frame (43%; s7014 xctrace gave 41%, a second line), rt64 3.21 (36%), ours 1.92 (21%).
+- ours: rsp_dpc_submit_impl self 1.07. Its two hot PCs (+632, +1512) sit right after the ldaddal/ldadd of the per-bump counters
+  (dpc_bridge.cpp:6799 s_fwd_submits/s_fwd_bytes, :6826-6828 g_task_rdp_*), plus the per-bump call/push. That is s7028's
+  15.7 ns/bump split (atomics 3.3, push/call 10.7), closed at s7029 as H-call, and BUMPFAST=2 (plain counters) stays opt-in
+  at ~3-5 ns/bump. rs64_dpc_record_submit_impl 0.42 (pillar scan :6062, region/floor scan :6082; s7018 measured these walks at
+  0.23-0.45 ms/frame by mach timers and closed them, a second line). ultramodern::submit_rdp_range 0.08, rs64_dpc_current_read 0.05.
+- defer_end 1.99 inclusive (all of it submit_deferred_merged): 1.91 RT64 processDisplayLists, 0.085 ours.
+- memmove/memcpy 0.50 ms/frame in total, spread out: rsp_dpc_submit_impl's std::vector insert 0.163, ucode 0.077,
+  TMEMHasher 0.060, RT64 updateScreen/FramebufferStorage/copyToRAM 0.12. H-copy REFUTED (no single caller >= 0.5).
+- H-walk by the tool's rule 0.505 (defer ours 0.085 + record 0.42) is borderline and IS the already-closed s7018 walk term, not
+  a new re-scan. Largest RT64 terms: TMEMHasher::hash + XXH3 0.57, rs64LoadBlockRuns (our lib/rt64 patch) 0.32, decodeTriangles
+  0.28, processRDPLists 0.27. TMEM hashing was worked and closed in s6942-s6961 / s7070 and is not reopened.
+Control: no planted gfx-side busy in this capture (s7433's control was guest-side). This is an attribution pass on an existing
+capture; the check is that the known terms come back at the sizes independent mach-timer instruments measured (ucode share
+s7014, walks s7018, per-bump bridge s7028). All three agree.
+Per-thread pass over the same files: Gfx 0.70-0.79 (normalized by the largest thread group, so relative only), MAIN 0.17,
+VI Thread ~290 samples / window self in mach_continuous_time (a clock-polling loop, ~3% of a core). The audio IOThread count is
+semaphore_wait_signal_trap (a wait, not CPU; that trap is missing from the WAIT regex, harmless for the Gfx split).
+Rules out: a whole-buffer copy per task (H-copy); a new owned Gfx-thread glue term. Closes class CQ.
+Conclusion: this selects H-known (H-rt64 for the remainder) and refutes H-copy and a new H-walk. Next discriminator (class CR, NEXT.md):
+grep-enumerate host busy-wait / poll loops and measure each live site's share of a core (H-tail vs H-spin vs H-sem), led by the
+VI Thread clock polling.

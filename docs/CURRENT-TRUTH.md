@@ -215,9 +215,18 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CQ, gfx-thread host glue decomposition (HYPOTHESIS-ID gfx-glue-cost).** See scratch/agent/NEXT.md.
-   The Gfx Thread runs ~9 ms/frame at the owner recipe (dd4 16:9 FPS60, lvl1 flight) and bounds dd8 headroom;
-   rs64_dpc_defer_end_impl is 1.50 ms/frame inclusive and memmove 5% of it (sample files scratch/s7433/sample_{4,8}.txt).
+1. **Next audit: class CR, host busy-wait / poll loops (HYPOTHESIS-ID host-spin-loops).** See scratch/agent/NEXT.md.
+   Lead (s7434, same samples): VI Thread ~290 samples / 12 s window self in mach_continuous_time (~3% of one core of polling);
+   RT64 TMEM hashing is NOT a new class (s6942-s6961, s7070 closed it), so CR does not reopen it.
+   CQ (s7434) CLOSED H-known: tools/s7434_gfx_glue.py on scratch/s7433/sample_{4,8}.txt (owner recipe dd4 16:9 FPS60, lvl1
+   flight, busy-off windows) charges each running Gfx Thread sample to its innermost owned frame: 8.97 ms/frame = F5 ucode 3.85
+   (43%, matches s7014's 41%) + RT64 3.21 (36%) + our glue 1.92 (21%). Our glue = rsp_dpc_submit_impl self 1.07 (per-DPC_END-bump
+   bridge: hot PCs sit right after the s_fwd/g_task_rdp ldadd counters, = s7028/s7029's split, closed H-call; BUMPFAST=2 stays
+   opt-in) + record_submit walkers 0.42 (= s7018's 0.23-0.45, closed) + submit_rdp_range 0.08. H-copy REFUTED: memmove/memcpy
+   0.50 ms/frame in total, largest owned caller rsp_dpc_submit_impl's vector insert 0.163. defer_end is 1.99 inclusive, of which
+   0.085 ours (the rest RT64 processDisplayLists). Two lines (sampling profiler here, mach-timer splits s7018/s7028), so no
+   owned term >= 0.5 ms/frame is left that is not already split and closed. Largest RT64 terms: TMEMHasher::hash + XXH3
+   0.57, rs64LoadBlockRuns (our lib/rt64 patch) 0.32, decodeTriangles 0.28, processRDPLists 0.27 ms/frame.
    CP (s7433) CLOSED H-free, measured by /usr/bin/sample (external profiler): tools/s7433_probe_cost.{sh,py} (owner recipe via
    tools/s7431_stderr_volume.sh, 8 x 12 s windows, control ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled 30 s in-run: +0.68/+0.63 ms
    per frame vs 0.50 expected, PASS both runs). Guest threads run 2.5 ms/frame; probe helpers (own frames + library calls
