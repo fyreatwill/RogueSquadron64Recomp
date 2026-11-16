@@ -197653,3 +197653,25 @@ HYPOTHESIS-ID: soak-verdict-line-fields. Offline + fake-recipe controls, no game
   `*_abort` tag -> `arms=0 ... fatal=0`. Mutation control (bare `abort` restored) -> v3 FAIL, others pass.
 - Rules out: rc being a reliable verdict on its own (2/30 wrong). Not covered: the 60 no-summary recipes (rc-only by design) and
   the 1231 pruned logs.
+
+## Session 7457 (2026-11-15) — class DM closed H-few: 5 live soak launchers wrote no per-arm `tag=` line into the soak log (g1e_owner_quiet_arms 64 recipes, boot_freeze_hunt 11, s7263 5, s7277 6, s7272 1); all now emit one, verdict gains stall_na=; fake-binary test 25/25 with 2 mutation controls
+
+Class DM (HYPOTHESIS-ID soak-recipe-summary-coverage), offline + fake-binary controls, no game run.
+- Census: 103 soak logs in scratch/agent/soak_results, 72 read `arms=0` under tools/agent/soak_verdict_fields.sh (s7456). Launcher use
+  over all 1311 done recipes: g1_level_coverage_common.zsh 395 / m6_god_common.sh 214 (full summary: tag= alive_at_end vi_stalls30s
+  crashlines, cat'ed into the log), g1e_owner_quiet_arms.zsh 64 (NONE: done line only in $R/arms.log), boot_freeze_hunt.sh 11 (NONE:
+  `bootN ... crash= OK|EXITED|FROZEN`), s7277_toggle_load_arm.zsh 6 (NONE: child output to $R/$T.out), s7263_widewin_edge_arms.zsh 5 and
+  s7272_g5c_hold_arm.zsh 1 (PARTIAL: m6 summary reached the log only via arm.txt `cut -c1-200`/`tail`, alive_at_end often cut off).
+  g1e_level_fps.py, g1_objective_response_run.py, mk_lldb_hold.py, gen_plume_lldb_soak.py: 0 queued recipes (not soak launchers in use).
+  -> H-few (5 partial/none live launchers), H-none refuted.
+- Fix: g1e_owner_quiet_arms.zsh prints `tag=g1eq_<arm> alive_at_end= crashlines=<fatal_scan n> vi_stalls30s=na hold= level_ok=0|1|resumed|latevoid`
+  on the done, RESUME-kept and VOID_OK_AFTER-kept paths (voided arms print none: the recipe exits 2 and is re-queued);
+  boot_freeze_hunt.sh `tag=bootN alive_at_end=(0 if EXITED) crashlines= frozen=0|1 fs=`; s7272/s7263 cat the full m6 summary
+  (fallback line alive_at_end=0 nosummary=1); s7277 greps the child's tag= lines into its stdout.
+- soak_verdict_fields.sh: frozen=1 now counts as a stall arm; `vi_stalls30s=na` is not a stall; new trailing `stall_na=<k>` = arms with
+  no stall measure, so the g1e harness's stall_arms=0 (it runs with no game logging, s6932) no longer reads as a measured zero.
+- Tests: tools/s7453_harness_death_test.zsh 25/25 (12 new: verdict per fake die/silent/live/frozen binary for both launchers, stall_na,
+  level_ok; mutation controls: each launcher with its tag line sed'ed out reads arms=0); s7243 resume test passes inside it;
+  tools/agent/test_soak_idle_gate.sh 22 PASS (existing verdict-string checks unchanged, stall_na appended at the end); fatal_scan 20/20.
+- Not covered: the 72 historical arms=0 logs are not re-scored (no tag lines exist in them); g1e arms still have no stall measure
+  (stall_na=1) — next unit DN gives them one from the present ring.

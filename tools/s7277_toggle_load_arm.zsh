@@ -14,4 +14,6 @@ off(){ if [[ $LOAD == gpu ]]; then pkill -9 -f scratch/s7277/gpu_busy; else pkil
 ( /bin/sleep $ST; echo "off $(now)" >> $TG; k=0; while (( ST + (k+1)*PER < 120 + DU )); do /bin/sleep $PER; (( k % 2 == 0 )) && on || off; k=$((k+1)); done; off ) & tp=$!
 env PLAIN=1 FS=1 KEEP=1 DUR=$DU LEVEL=$LV TAG=$T ASP=16:9 CW=480 XE="ROGUESQ_PRESENT_RING=$R/ring_$T.txt ${GXE:-}" zsh tools/s7272_g5c_hold_arm.zsh > $R/$T.out 2>&1; rc=$?
 kill -9 $tp 2>/dev/null; pkill -9 -x yes; pkill -9 -f scratch/s7277/gpu_busy; echo "end $(now)" >> $TG
-cp scratch/s7272/$T/ctl.txt $R/$T.ctl 2>/dev/null; echo "rc=$rc" >> $R/$T.out; exit $rc
+cp scratch/s7272/$T/ctl.txt $R/$T.ctl 2>/dev/null; echo "rc=$rc" >> $R/$T.out
+grep -a '^tag=' $R/$T.out || echo "tag=s7277_$T alive_at_end=0 crashlines=na vi_stalls30s=na nosummary=1"  # s7457 class DM: per-arm line into the soak log
+exit $rc

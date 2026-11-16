@@ -24,4 +24,6 @@ grep -a -h 's7258\|s7010-clk\|CRASH\|SIGSEGV\|SIGBUS' scratch/agent/m6/g1_lvl${L
 c=$(grep -o 'caught .*' $O/hold.txt | grep -o '[0-9]*ms' | tr -d ms | awk '$1>=900' | wc -l); echo "control_hits $c"
 grep -a -cE -f tools/agent/fatal_patterns.txt scratch/agent/m6/g1_lvl${LV}s7009$T/run.log | read cr;  # s7453 DI: shared fatal list
  echo "crash_lines $cr"
+# s7457 class DM: the m6 summary (tag= alive_at_end crashlines vi_stalls30s) reached the soak log only cut to 200 chars via arm.txt.
+cat scratch/agent/m6/g1_lvl${LV}s7009$T/summary 2>/dev/null || echo "tag=s7272_$T alive_at_end=0 crashlines=${cr:-0} vi_stalls30s=na nosummary=1"
 (( cr > 0 )) && exit 1; (( c < 3 )) && exit 3; exit 0

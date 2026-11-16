@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7456 (2026-11-15).
+Compact operational handoff, as of Session 7457 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: class DM (HYPOTHESIS-ID soak-recipe-summary-coverage), see NEXT.md. One line each:
+   Next: class DN (HYPOTHESIS-ID soak-stall-measure-coverage), see NEXT.md. One line each:
+   - **DM s7457 H-few:** 5 live launchers put no per-arm tag= line in the soak log (g1e_owner_quiet_arms 64 recipes, boot_freeze_hunt 11,
+     s7277 6, s7263 5, s7272 1; 72/103 logs arms=0). All now emit one; verdict: frozen=1 = stall arm, trailing stall_na=<k> (arms with no
+     stall measure; g1e arms are stall_na=1). tools/s7453_harness_death_test.zsh 25/25 incl. 2 mutation controls.
    - **DL s7456 H-few:** rc vs per-arm summaries over 30 summarised soaks: 2 misreads (s7449 false fail, s7452 planted dead arm read
      as rc=0). loop.sh verdict line now appends tools/agent/soak_verdict_fields.sh fields. fatal_patterns `abort` word-bounded (s7331_abort
      tag lines scored fatal=2) + `Abort trap`; fatal_scan selftest 20/20, test_soak_idle_gate.sh 20/20, both with mutation controls.

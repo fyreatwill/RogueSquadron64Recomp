@@ -10,6 +10,11 @@ R=${R:-$PWD/scratch/s6932}; DHZ=${DHZ:-$PWD/scratch/s6931/dhz}; HOLD=${HOLD:-300
 TOOLS=$PWD/tools; [ -x $TOOLS/s7250_duty ] || cc -O2 -o $TOOLS/s7250_duty $TOOLS/s7250_duty.c; [ -x $TOOLS/s7253_clkprobe ] || cc -O2 -o $TOOLS/s7253_clkprobe $TOOLS/s7253_clkprobe.c
 GAMEDIR=${GAMEDIR:-build}; GAME=${GAME:-./RogueSquadron64Recomp}
 armkey(){ echo "$(stat -f '%m:%z' $GAMEDIR/$GAME 2>/dev/null) H=$HOLD S=$1"; }
+# s7457 class DM: one stdout "tag=" line per scored arm (loop.sh verdict fields, tools/agent/soak_verdict_fields.sh). Before s7457 the
+# done line went only to $R/arms.log, so every g1e soak (s7264-s7311) read arms=0 and was scored on rc alone. vi_stalls30s=na: this
+# harness runs with NO game logging (s6932), so it has no VI origin stream; the verdict counts such arms as stall_na.
+tagline(){ local d=$2 al fa; al=${d##* alive=}; al=${al%% *}; fa=${d##* fatal=}; [[ $fa == "$d" ]] && fa=0; fa=${fa%% *}
+  echo "tag=g1eq_$1 alive_at_end=$al crashlines=$fa vi_stalls30s=na hold=$HOLD level_ok=${3:-na}"; }
 EARLY=""; e=10
 for i in $(seq 1 20); do if (( i % 2 == 0 || e > 74 )); then k=z; else k=start; fi; EARLY="$EARLY$e:$k,"; e=$((e+4)); done
 FL=""; t=95
@@ -39,7 +44,7 @@ watch_human(){ local p=$(idle) c t=0 f0="" f w0=$(date +%s) w; while kill -0 $1 
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
   if [[ $RESUME == 1 && -e $R/ok_$arm && $(head -1 $R/ok_$arm) == "$(armkey $spec)" && -s ${LOGTO:-$R/log_$arm.txt} ]]; then
-    echo "$(date +%T) $arm resume: key match, arm kept" >> $R/arms.log; tail -1 $R/ok_$arm >> $R/arms.log; continue; fi
+    echo "$(date +%T) $arm resume: key match, arm kept" >> $R/arms.log; tail -1 $R/ok_$arm >> $R/arms.log; tagline $arm "$(tail -1 $R/ok_$arm)" resumed; continue; fi
   rm -f $R/ok_$arm
   pw=$(pwr); ck=$(clk); echo "$(date +%T) $arm start idle=$i pwr=$pw clk=$ck" >> $R/arms.log
   [[ $ck != NA && $ALLOW_SLOW != 1 ]] && (( ck > ${CLK_MAX:-1.15} )) && { echo "$(date +%T) host clock capped (clk=$ck > ${CLK_MAX:-1.15}, pwr=$pw), stopping" >> $R/arms.log; echo slowclk > $R/quiet.done; exit 2; }
@@ -68,15 +73,15 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   if [ -e $R/void_$arm ]; then vt=$(awk '{print $2; exit}' $R/void_$arm); vk=$(awk '{print $3; exit}' $R/void_$arm)
     if [[ -n $VOID_OK_AFTER && $vk == human && -n $vt ]] && (( vt >= VOID_OK_AFTER )); then
       dl="$(date +%T) $arm done alive=1 latevoid=t$vt log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log
-      printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; fi
+      printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; tagline $arm "$dl" latevoid; fi
     echo human > $R/quiet.done; exit 2; fi
   cm=$(grep -a -m1 -o 'cursorMask)=0x[0-9A-Fa-f]*' ${LOGTO:-$R/log_$arm.txt} | sed 's/.*=//'); want=$(printf '0x%08X' $((1 << lv)))
-  [[ $cm == $want ]] || echo "$(date +%T) $arm LEVEL MISMATCH want lvl $lv mask $want got ${cm:-none}" >> $R/arms.log
+  lok=1; [[ $cm == $want ]] || { lok=0; echo "$(date +%T) $arm LEVEL MISMATCH want lvl $lv mask $want got ${cm:-none}" >> $R/arms.log; }
   # s7453 class DI: an arm whose game died before HOLD (alive=0) or printed a fatal line used to log "done alive=0" and exit 0.
   # Now the done line carries the shared fatal_scan score and the recipe exits 1 at the end (all arms still run).
   fs=$(zsh $TOOLS/agent/fatal_scan.sh ${LOGTO:-$R/log_$arm.txt}); [[ $alive == 0 || $fs != fatal=0* ]] && died=1
   dl="$(date +%T) $arm done alive=$alive log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) $fs pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log
-  printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; /bin/sleep ${ARM_GAP:-3}
+  printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; tagline $arm "$dl" $lok; /bin/sleep ${ARM_GAP:-3}
 done
 echo done > $R/${DONE:-quiet.done}
 [[ -n $died ]] && { echo "$(date +%T) DIED: an arm died or printed a fatal line (s7453), exit 1" >> $R/arms.log; exit 1; }

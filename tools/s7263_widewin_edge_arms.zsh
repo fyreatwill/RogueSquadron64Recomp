@@ -26,5 +26,7 @@ for spec in ${=ARMS:-"a169:16:9:960 a219:21:9:1260"}; do
   grep -a -c -E -f tools/agent/fatal_patterns.txt scratch/agent/m6/g1_lvl4s7009s7263$n/*.log 2>/dev/null | awk -F: '{s+=$2}END{print "crash_lines",s+0}' > $O/crash_$n.txt
   grep -q 'crash_lines 0' $O/crash_$n.txt || rc=1
   echo "== $n ($asp)"; cat $O/edge_$n.txt $O/crash_$n.txt $O/capfps_$n.txt $O/arm_$n.txt | tail -n 12
+  # s7457 class DM: full m6 summary line for the loop verdict (it was cut to 200 chars inside arm_$n.txt).
+  cat scratch/agent/m6/g1_lvl4s7009s7263$n/summary 2>/dev/null || echo "tag=s7263_$n alive_at_end=0 crashlines=$(awk '{print $2}' $O/crash_$n.txt) vi_stalls30s=na nosummary=1"
 done
 exit $rc

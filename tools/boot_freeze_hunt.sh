@@ -58,6 +58,8 @@ for i in $(seq 1 $N); do
   vo=$(tail -c 400000 $L | grep -a -o 'origin=0x[0-9A-Fa-f]*' | tail -1)
   [[ $st == FROZEN ]] || { tail -200 $L > $O/boot$i.tail.log; rm -f $L; }
   echo "boot$i fs=$fs t=$t $vo crash=$crash $st"
+  # s7457 class DM: standard per-arm line for the loop verdict (soak_verdict_fields.sh); frozen=1 counts as a stall arm.
+  al=1; [[ $st == EXITED* ]] && al=0; fz=0; [[ $st == FROZEN ]] && fz=1; echo "tag=boot$i alive_at_end=$al crashlines=$crash frozen=$fz fs=$fs"
   [[ $st == FROZEN ]] && { grep -aE "\[stall-(dump|wait)\]" $O/boot${i}_freeze.tail.log | head -20; grep -a "\[stall-cf0\]" $O/boot${i}_freeze.tail.log | tail -12; }
   print -l $O/rs64_stall_*.sample.txt(N) | sed 's/^/runtime self-sample: /'
   if [[ -n $HUNT_CONTROL && $i == 1 ]]; then
