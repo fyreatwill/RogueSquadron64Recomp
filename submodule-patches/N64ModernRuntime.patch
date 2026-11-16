@@ -1002,10 +1002,10 @@ index dbf46b2..fa76436 100644
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..4330ea4 100644
+index 0195f2b..7fe0536 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,231 @@
+@@ -1,29 +1,233 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -1213,6 +1213,7 @@ index 0195f2b..4330ea4 100644
 +}
 +
 +extern "C" bool rs64_spai_guard_bad(const char* what, uint64_t addr, uint64_t size);
++extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len);  // s7486 EK host-read UAF watch (no-op unless armed)
 +
  extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
 +    if (rs64_spai_guard_bad("osAiSetNextBuffer", static_cast<uint64_t>(ctx->r4), static_cast<uint64_t>(ctx->r5) & 0xFFFFFFFFull)) {
@@ -1222,6 +1223,7 @@ index 0195f2b..4330ea4 100644
 +    rs64_s4245_tick(2, 1);
 +    rs64_s4245_tick(3, ctx->r5);
 +    rs64_log_ai_output(rdram, ctx->r4, ctx->r5);
++    rs64_s7486_hostread(5, (uint32_t)ctx->r4, (uint32_t)ctx->r5);
      ultramodern::queue_audio_buffer(rdram, ctx->r4, ctx->r5);
      ctx->r2 = 0;
 +    rs64_log_ai_status("set-next", ctx->r2,

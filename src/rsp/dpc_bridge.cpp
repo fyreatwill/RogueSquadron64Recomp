@@ -6512,6 +6512,33 @@ struct Rs64BfGuard {
 };
 static Rs64BfGuard g_bf_guard;
 struct Rs64BfScope { ~Rs64BfScope() { g_bf_guard.returned_early(); } };
+// s7486 class EK: host-read UAF watch on the RDP side (upstream_compat.cpp rs64_s7486_hostread; no-op unless ROGUESQ_S7486_HOSTUAF
+// armed it). Per newly forwarded command range: the range itself (kind 2 rdp_cmd) and, from a parse of its commands, the RDRAM source
+// span of every LoadBlock / LoadTile (kind 3 rdp_tex) and LoadTLUT (kind 4) against the last SetTextureImage (state kept across calls).
+extern "C" int g_rs64_s7486_on;
+extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len);
+static void rs64_s7486_rdp(const uint8_t* rdram, uint32_t from, uint32_t to) {
+    if (!g_rs64_s7486_on || to <= from || to - from > 0x100000u) return;
+    rs64_s7486_hostread(2, from, to - from);
+    static uint32_t timg = 0, tw = 1, tsiz = 2;
+    for (uint32_t p = from & ~7u; p + 8u <= to;) {
+        const uint32_t w0 = *(const uint32_t*)(rdram + p), w1 = *(const uint32_t*)(rdram + p + 4u), op = (w0 >> 24) & 0x3Fu;
+        uint32_t n = 8u;
+        if (op >= 0x08u && op <= 0x0Fu) n = 32u + ((op & 4u) ? 64u : 0u) + ((op & 2u) ? 64u : 0u) + ((op & 1u) ? 16u : 0u);
+        else if (op == 0x24u || op == 0x25u) n = 16u;
+        else if (op == 0x3Du) { timg = w1 & 0xFFFFFFu; tw = (w0 & 0x3FFu) + 1u; tsiz = (w0 >> 19) & 3u; }
+        else if (op == 0x33u) {  // LoadBlock: sl, tl integer texels; sh = last texel
+            const uint32_t sl = (w0 >> 12) & 0xFFFu, tl = w0 & 0xFFFu, sh = (w1 >> 12) & 0xFFFu;
+            if (sh >= sl) rs64_s7486_hostread(3, timg + (((tl * tw + sl) << tsiz) >> 1), ((sh - sl + 1u) << tsiz) >> 1);
+        } else if (op == 0x34u || op == 0x30u) {  // LoadTile / LoadTLUT: 10.2 coords
+            const uint32_t uls = (w0 >> 14) & 0x3FFu, ult = (w0 >> 2) & 0x3FFu, lrs = (w1 >> 14) & 0x3FFu, lrt = (w1 >> 2) & 0x3FFu;
+            const uint32_t b = timg + (((ult * tw + uls) << tsiz) >> 1), e = timg + (((lrt * tw + lrs + 1u) << tsiz) >> 1);
+            if (lrt >= ult && lrs >= uls && e > b) rs64_s7486_hostread(op == 0x30u ? 4 : 3, b, e - b);
+        }
+        p += n;
+    }
+}
+
 static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
     Rs64BfScope bf_scope_;
     if (end <= start) {
@@ -6545,6 +6572,10 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
             }
             ++s_winn;
         }
+    }
+    if (g_rs64_s7486_on && end_phys > start_phys) {  // s7486 EK: the same "new bytes" window the forwarder uses
+        const uint32_t from = (start_phys != s_dl_base) ? start_phys : s_last_end;
+        if (end_phys > from) rs64_s7486_rdp(rdram, from, end_phys);
     }
     if (start_phys != s_dl_base) {
         s_dl_base = start_phys;

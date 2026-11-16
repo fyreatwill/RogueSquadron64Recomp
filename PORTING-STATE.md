@@ -198480,3 +198480,36 @@ Rules out: guest UAF reads (6 levels) and slack over-reads as a crash/corruption
 (NEXT.md s7486, HYPOTHESIS-ID m3-host-uaf-reads).
 Verdict wording (s7485): selects H-load-clean (EI) and H-benign (EJ), refutes H-load-uaf and H-overread; next discriminator = host-read
 locator class at DMA time (EK).
+
+## Session 7486 (2026-11-16) — class EK host-read UAF watch landed (RSP DMA, RDP cmd/texture, AI); L4/L15 0 host reads of still-free blocks, host plant DETECTED in flight (H-host-clean)
+
+Work unit (NEXT s7486, HYPOTHESIS-ID m3-host-uaf-reads): the one reader of freed heap that EH (guest stores) and EI (guest loads)
+did not cover is the host side. Hypotheses: H-host-clean / H-host-uaf (a host DMA or RDP fetch reads a block that is still free in the
+guest's chains) / H-host-stale-DL (Urec/S at read time).
+
+Instrument (one build): ROGUESQ_S7486_HOSTUAF=1 on top of S7480_UAF + S7475_CANARY. `rs64_s7486_hostread(kind, addr, len)` in
+src/main/upstream_compat.cpp scans the s7475 bitmap over the range. A marked byte is attributed under s_s7475_mu: if it is in a freed s7480
+record, the record is classified once per (record, kind) in the guest's own chains at read time (F/U/N/Urec(R)/S, same classes as EH/EI).
+If it is in live canary slack, that counts as ctl. Anything else counts as stale. Hooks: kind 0/1 sp_dma gfx/aud in src/rsp/s7094_dma_shape.cpp
+(rdram->dmem only, IMEM skipped; S7486 arms the s7094 hook as S7324 does), kind 2 rdp_cmd = the new forwarded window in dpc_bridge.cpp
+rsp_dpc_submit_impl, and kind 3/4 = LoadBlock/LoadTile/LoadTLUT source spans from a command parse against the last SetTextureImage. Kind 5
+ai_dma is in lib/N64ModernRuntime/librecomp/src/ai.cpp osAiSetNextBuffer_recomp (submodule patch exported).
+Plant ROGUESQ_S7486_PLANT=<s> (record type 3: guest stores and loads into it are ignored, guest memory is untouched): it prefers the live
+canary block of the latest gfx-DMA ctl hit, else the exact 8 bytes of a recent gfx DMA or texture-load source. Timeout is 2 s, 30 tries.
+
+Runs (tools/s7486_hostuaf_recipe.zsh, LV="4:4 15:8" HOLD=220, owner recipe):
+- try1: score=3. The plant never set because every recent gfx DMA source lies in the fl=6 carve, which overlaps freed records. Data was
+  otherwise identical to try3.
+- try2: L4 PASS. On L15 the plant took an audio ctl block that is read only at boot and timed out with no retry candidate. Fix: gfx-only
+  ctl preference plus the exact-source fallback.
+- try3 (final build): **score=0**, both arms alive, vi_stalls30s=0, 0 crashlines.
+  L4: sp_dma_gfx 42.7M ranges, 32 records U; rdp_cmd 339M ranges, 5 records U; rdp_tex 16.4M, 0 marked; ai 23.9k, 0 marked; host_F=0
+  host_Urec=0; ctl gfx 416, aud 42; plant via ctl(sp_dma_gfx) DETECTED kind=sp_dma_gfx after 0.029 s (after initMission).
+  L15 dd8 21:9: rdp_cmd 64 records = U2 + N62. All N rows were freed into the nested temp arena with head 0x80989000, whose head is now 0
+  (arena torn down, the scene-reset re-carve class closed under EH). Also tex 1 marked / 0 records, host_F=0 host_Urec=0, ctl gfx 188, aud 53,
+  plant via recent DETECTED kind=rdp_tex after 0.013 s.
+Result: H-host-clean. No host reader touches a block that is still free in the guest allocator. The only marked host reads are RSP-written
+RDP command and DL regions inside re-carved or torn-down arenas, the same U/N population EH found for guest stores. H-host-uaf and
+H-host-stale-DL are refuted on L4/L15. Rule-4 second line: the levels soak s7486_hostuaf_levels (L1 dd8 21:9, L7/L10/L12 dd4) is queued.
+Cost note: rdp_cmd reads inside U records take the mutex on every command (3.2M marked on L4) with no VI stall; measurement only, default off.
+Not covered: RT64's own deferred reads (RDP_ASYNC), VI framebuffer scanout (reserved fb memory, not heap).
