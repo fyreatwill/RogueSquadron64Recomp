@@ -58,5 +58,18 @@ B = [('osRecvMesg_recomp', 'ultramodern mesgqueue.cpp do_recv: *msg_ out + mq->f
      ('osContGetQuery_recomp', 'cont.cpp status', 'none'), ('osEepromLongRead_recomp', 'pi.cpp save_read MEM_B loop', 'none'),
      ('osPiStartDma_recomp', 'pi.cpp:722 IoMesg fields + do_rom_read', 'pi_dma (data only)'), ('osDpGetCounters_recomp', 'upstream_compat 8 words', 'none'),
      ('osPfsReadWriteFile_recomp', 'pak.cpp buffer', 'none')]
-for n, what, k in B: print(f'  {n:28s} callers={calls[n]:3d}  {what:55s} kind={k}')
-print(f'census: part_a_blind={bad}'); sys.exit(1 if bad else 0)
+# s7491 class EP: Part B sites now call RS64_S7491(a, w, "<kind>") after their stores (lib/ ultramodern + librecomp, upstream_compat
+# osDpGetCounters). A function is covered when every kind it needs appears as a call in the sources; osPfsReadWriteFile stores nothing.
+NEED = {'osRecvMesg_recomp': ['os_recv', 'os_recv_out'], 'osSendMesg_recomp': ['os_send'], 'osJamMesg_recomp': ['os_jam'],
+        'osCreateMesgQueue_recomp': ['os_createmq'], 'osCreateThread_recomp': ['os_createthread'], 'osContGetReadData_recomp': ['os_contread'],
+        'osContInit_recomp': ['os_continit'], 'osContGetQuery_recomp': ['os_contquery'], 'osEepromLongRead_recomp': ['os_saveread'],
+        'osPiStartDma_recomp': ['os_iomesg'], 'osDpGetCounters_recomp': ['os_dpcounters'], 'osPfsReadWriteFile_recomp': []}
+LIB = os.path.join(ROOT, 'lib', 'N64ModernRuntime')
+src = ''.join(open(f, errors='ignore').read() for f in glob.glob(os.path.join(LIB, 'ultramodern', 'src', '*.cpp')) + glob.glob(os.path.join(LIB, 'librecomp', 'src', '*.cpp'))) + uc
+have = set(re.findall(r'RS64_S7491\([^;]*"(os_\w+)"\)', src)) | set(re.findall(r'rs64_s7491_hst\([^;]*"(os_\w+)"\)', src))
+bblind = 0
+for n, what, k in B:
+    need = NEED.get(n, ['?']); cov = all(x in have for x in need); bblind += not cov
+    tag = 'no store (returns PFS_ERR_NOPACK)' if not need else ('s7491 ' + '/'.join(need) if cov else 'BLIND')
+    print(f'  {n:28s} callers={calls[n]:3d}  {what:55s} kind={k} ep={tag}')
+print(f'census: part_a_blind={bad} part_b_blind={bblind}'); sys.exit(1 if bad or bblind else 0)

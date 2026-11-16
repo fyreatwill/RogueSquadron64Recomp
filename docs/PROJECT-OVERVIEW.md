@@ -13813,3 +13813,188 @@ Classes EI-EM (s7484-s7488), verbatim from CURRENT-TRUTH s7488:
      tools/s7488_ustwatch_recipe.zsh = s7487 recipe + EM). L4: 18.8M execs / 238 sites, 154 heap sites; L15: 44.5M / 236, 156 heap sites. ust_F=0 ust_Urec=0
      ust_slack=0; control ROGUESQ_S7488_USTCTL=160 (live block an swl/swr just wrote, recorded freed) DETECTED in flight by the next swl/swr both arms (0.000 s);
      all s7480/s7484/s7487 controls PASS, alive, vi_stalls30s=0. H-ust-none refuted. Slack scoring shares the s7475 path (its own plants: ED/EG); single-source for slack.
+
+## Migrated from CURRENT-TRUTH (s7491 migration)
+
+Item-1 class sub-bullets (DG-EO, s7450-s7490), verbatim from CURRENT-TRUTH s7490:
+
+   - **ED s7475-s7476 MusyX voice-array overrun: FIXED s7476 (port bug):** the s4889 patch (tools/apply_s4889_first_dereg.py) let
+     findAndZeroTableSlotMatching clobber $a1, so the scene voice count 17 became 1. The patch now preserves $a1/$v0/$v1 (ROGUESQ_S7476_A1FIX=0 = old).
+     Retail oracle never allocates 1 voice; same-build A/B plus the 4-level flight canary soak are clean. Full text: PORTING-STATE s7475-s7477.
+   - **EE s7477 injected-guest-call register clobber, CLOSED (H-class-single):** tools/s7477_injected_call_audit.py enumerates every
+     `f(rdram, ctx)` inside a PATCH line or an unmarked non-jal site of RecompiledFuncs (44 sites), computes the callee's transitive
+     caller-saved writes (generated + src/ host bodies), the caller's read-before-write set after the site (follows gotos/labels,
+     callee entry live-in at the next call), minus the patch's own restores. Result: 0 BUG, 33 SAFE, 10 REPLACE (the patch stands in
+     for the site's own jal: ABI already lets it clobber), 1 INTENT (s6904 fog deliberately rewrites $f0/$f4). Controls: the pre-s7476
+     s4889 text flags r5 and the fixed text passes; synthetic pos/neg pair flags r3,r5 / nothing. s4889 was the only live clobber.
+   - **1a. s6202 G1d retarget pool in UNRESERVED heap: FIXED s7482, CLOSED s7483 (port defect, was latent; default on, ROGUESQ_RETARGET_RESERVE=0 = old).**
+     ORIGIN: partitionFramebufferMemory (0x80000DD4) returns $v1 = bottom of its descending reservation via *(t5)/*(t6) to heap init
+     0x80002150 (a3 / hole start); the s6202 retarget moved the pool to base = ec - t2 BELOW that bottom without lowering $v1, so the
+     heap owned [base, ec). Fix (tools/apply_s6031_far.py apply_s7482_reserve, registered in fixup_game_funcs_vendored.py): at
+     L_80001060, when the retarget took "ok" and $v1 == ec, set $v1 = base, so the game's own reservation covers the pool. Host
+     detector (upstream_compat.cpp s7482_check, always on): any rs_malloc block overlapping the live span logs `[s7482] pool-collide`;
+     ROGUESQ_S7482_CTL=1 emits one CONTROL line. Same-build A/B s7482_reserve_ab2 (L7 dd4 16:9, HOLD=300, both arms reached the "ok"
+     scene after a mission restart): RESERVE=0 loc_S=151, RESERVE=1 loc_S=0 (v1 0x809B8600 -> 0x8096D600), 0 collisions in both
+     (H-collide refuted: the defect was latent), loc_F=0, controls PASS, both alive, vi_stalls30s=0. Wider sweep queued
+     (soak s7482_reserve_levels: L4/L12 dd4, L1/L15 dd8 21:9): rc 0, all alive, but the retarget never took "ok" there (0
+     applied/skipped lines) = coverage only. s7483 route A/B (tools/s7483_route_reserve.zsh, owner hangar abort/re-entry schedule,
+     FPS60 dd8 21:9, one build): both arms 3 hangar entries + 4 initMission, 0 crash, 0 collide (CONTROL fired both), 0 arena full;
+     on arm applied once after the 3rd re-entry (v1 0x80986800 -> 0x8093B800) and mission 4 loaded clean -> H-route-clean, H-route-shrink refuted.
+   - **EI s7484-s7485 guest loads from freed blocks: CLOSED 6 levels (H-load-clean).** EJ s7485 over-reads: CLOSED retail-benign. EK s7486 host reads: CLOSED 6 levels (H-host-clean).
+   - **EL s7487 lwl/lwr loads: CLOSED 6 levels (H-lwl-clean). EM s7488 swl/swr stores: CLOSED 6 levels (H-ust-clean; levels soak s7488_ustwatch_levels score=0, folded s7489).** Full EI-EM text: PROJECT-OVERVIEW "(s7489 migration)".
+   - **EN s7489 store paths that bypass rs64_s7475_store: guest side CLOSED (H-paths-covered), host DMA writes CLOSED 6 levels (H-hostwrite-clean; soak s7489_hostwrite_levels score=0, folded s7490).**
+     tools/s7489_store_path_census.py (exit 0 = every live store form hooked): sw 25425, swc1 10567, sb 5260, sh 4506, sdc1 1253, sd 46 via
+     RS64_S5798_ST; swl 203 / swr 202 via s7488; not live: 775 data_gap_ texts, 37 cache no-ops, 1 trap. Before s7489 12 live texts were blind:
+     the s5520 [b40w] logger (9 sb 0xB40 texts) and the s4984 atomic voice pair (0x8008F0EC sw, 0x8008F0CC sh) replaced the store without the
+     hook; tools/apply_s7489_storegap.py (registered after s7488) re-adds it. Host writes: ROGUESQ_S7489_HOSTWRITE=1 (+S7486_HOSTUAF) adds kinds
+     sp_wr_gfx / sp_wr_aud (rsp.hpp dma_dmem_to_rdram via the s7094 hook) and pi_dma (pi.cpp do_dma before do_rom_read) to the s7486 classifier;
+     ROGUESQ_S7489_WPLANT=1 aims the s7486 plant at a recent host-write destination. Recipe tools/s7489_hostwrite_recipe.zsh, LV="4:4 15:8" HOLD=220:
+     score=0, host_wF=0 host_wUrec=0 both arms (L4 sp_wr_gfx 366M ranges, 5 freed-record hits all U; L15 188M, 64 hits U2/N62; pi_dma recs N only;
+     sp_wr_aud never touches heap), write plant DETECTED kind=sp_wr_gfx in flight both (0.003 / 0.010 s). Not covered: host writes through guest
+     pointers outside DMA (OSMesg / IoMesg / controller / RT64 readback) = class EO. Soak s7489_hostwrite_levels (L1 dd8 21:9, L7/L10/L12) queued.
+   - **EO s7490 host code standing in for game functions: 2 blind paths FOUND and hooked; zmemcpy CLOSED on L4/L15 (H-eo-clean), levels soak queued.**
+     RECOMP_FUNC is weak on clang, so a strong definition elsewhere silently replaces the generated (hooked) body. tools/s7490_hostwrite_census.py
+     reads the linked binary's debug map: exactly 5 overrides: zmemcpy -> upstream_compat.cpp host body (72 guest call sites, ~70k calls / 7 MB
+     per 200 s of L4, 99.9% into heap blocks); findAndUnlinkSmallestEntry (110 sites), setRngSeed, isCinematicActive -> PatchesLib; main. So
+     EB/EH/EI (and the s7489 census, which counted the dead generated zmemcpy as hooked) never saw a guest memcpy or the DL-finder's 11
+     pointer stores. Fix (measurement only): zmemcpy routes each bitmap-marked byte through rs64_s7475_store / rs64_s7484_load (fn=zmemcpy_host,
+     ROGUESQ_S7490_ZHOOK=0 = old); tools/fixup_patches_host.py s7490_hooks adds RS64_S7490_PST/PLD to every patch-body sw/sh/sb and lw/lh/lb
+     (11 + 26; heap_guards predicates excluded). Census exit 0 after, 3 BLIND before. Control ROGUESQ_S7490_ZPLANT=<s> (records the live block a
+     host memcpy is about to write as freed). tools/s7490_zmemcpy_recipe.zsh LV="4:4 15:8" HOLD=220: score=0, both alive, vi_stalls30s=0,
+     zplant DETECTED fn=zmemcpy_host both; 0 zmemcpy F/Urec store or load rows, 0 slack stores; s7480 loc_F=0 Urec=0. Caveats: no load-side
+     plant (rmark=0), patch hooks built after that run (unrun in flight). Part B inventory (OS-call host stores: osRecvMesg/SendMesg, cont,
+     save_read, IoMesg, OSThread) stays unhooked = class EP. Soak s7490_zmemcpy_levels (L1 dd8 21:9, L7/L10/L12) queued.
+   - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
+     ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
+     marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:
+     F = block still free (real UAF), Urec = inside an rs_malloc-recorded block (trim defect), U/N = the arena it was freed into is gone.
+     Result: every non-plant hit (19-55 pcs/run, DL/texture builders: loadTextureTile, emitMaterial*DL, swizzleTextureRowsToTmem,
+     parseImageFile...) is U-in-a-fl=6-block-no-rs_malloc-made or N, with head 0x8010FEFC changed/zeroed between free and store: blocks
+     freed into the nested temp arena, then the scene reset (coalesceFreeHeapBlocks, the s7332-s7334 fl=6 carve holding fbs / temp arena /
+     RDP FIFO; RSP task out=0x8089E600 = carve base) re-carves the region. Two lines: s7332 store-watch attribution + this run's head values.
+     Final same-build run s7480_uaf_ab score=0: L4 802 hits/23 pcs (U 265, N 536), L15 642/16 (U 390, N 251), uaf_free=0, trim_defect=0 both. Controls same run: in-flight premature-free plant (ROGUESQ_S7480_PLANT) DETECTED, locator control (free
+     block -> F, used -> U on the live chain) PASS, allocator-internal split-header stores 19-30k. Stale-pointer stores into a re-carved
+     region are the s7331 scene-reset-writer class (closed). Not covered: guest LOADS of freed blocks, host writers.
+   - **EG s7479 overruns of zero-slack rs_malloc blocks, CLOSED for guest stores (H-clean):** ~80% of blocks had req == size (no canary
+     band). ROGUESQ_S7475_PAD=<n> (tools/apply_s7479_mallocpad.py + rs64_s7479_pad; only under ROGUESQ_S7475_CANARY=1, else pass-through)
+     asks the allocator for req+n while the canary records req; recipe `env PAD=16 zsh tools/s7475_canary_recipe.zsh`. L4/L7/L12 dd4,
+     L15 dd8 21:9 HOLD=220: noslack 0 (rec 21.7k-28.4k), 0 slack-stores, 0 non-plant tail hits, watch-ctl + in-flight plant PASS, all
+     alive, 0 stalls (H-pad-perturbs refuted). Host writers storing zero are invisible at FILL=0: queued s7479_canary_pad_a5 (FILL=0xA5).
+   - **EF s7477-s7478 two "1-byte-past-request" canary stores, CLOSED (H-attr, canary defect):** both hit DEAD records. (1) rs_memset
+     0x800CDB38 = ROM overlay loader BSS zero-fill (processOverlayDmaStruct 0x800033A0 < loadOverlay) over a cutscene arena whose block header the
+     overlay DMA had already replaced with code words (w0=A4820022); it sweeps 3 contiguous dead blocks. (2) parseImageFile 0x809B601C (L15) into a
+     region whose header and body are zero. Control same build: ED overrun (A1FIX=0) shows hdr_ok=1. Fix: canary store path drops stale records
+     (`[s7478] stale-drop`, ROGUESQ_S7478_STALECHK=0 old); ROGUESQ_S7475_BT=1 prints host alloc/store chains + header. L4/L15 rerun score=0;
+     full 4-level re-score queued (s7478_canary_restale).
+   - **EB s7472-s7474 guest-heap chain integrity, CLOSED (H-heap-clean, header level):** ROGUESQ_S7472_HEAPCHK=1 (upstream_compat.cpp
+     s7472_check, <=4/s at rs_malloc exit / rs_free entry, arenas 0x8010FEFC/FF00/FF18; valid flags {1,2,6,8}). With
+     tools/s7472_heapchk_recipe.zsh LV lists, all 19 levels flew HOLD=220 (dd4 16:9 / dd8 21:9) with heap_bad_nonplant=0 and every
+     recipe's in-flight plant DETECTED. Not covered: writes inside a block's data, or a header restored within one check interval.
+   - **DY s7468 ASan+UBSan with the RSP ucode TUs instrumented, CLOSED (H-ucode-clean):** tools/build_asan.sh UCODE=1 (now the
+     default; sets ROGUESQ_ASAN_UCODE=ON, only the 6 ucode TUs rebuild). Two controls: nm shows __asan_report/__ubsan_handle refs
+     in all 6 ucode objects; runtime ucode-TU plant ROGUESQ_S7468_UCODE_PLANT=1 (src/rsp/factor5_ucode_nmac.cpp, dmem[0x1000]
+     global-buffer-overflow + INT_MAX+1) scored by s7467_san_report.py --uplant p = PASS, main plant PASS. L4 p/L4/L12 dd4 16:9
+     HOLD=150: all 3 arms initMission=1, vi_stalls30s=0, 0 NEW groups, 0 reports in ucode code (H-ucode-slow refuted too). Scorer
+     plant match made line-shift robust (old s7467r logs re-score identically). Queued s7468_asan_uc_routes (L7, L15 dd8 21:9).
+     DX note: s7467_asan_routes rc=0, 0 NEW, control PASS, but w15 (L15 dd8 21:9) initMission=0 in 150 s = title/select coverage only.
+   - **DW s7467 ASan+UBSan owner-recipe flight, CLOSED:** tools/build_asan.sh (C++ only, recoverable; ROGUESQ_S7467_ASAN_PLANT=1
+     planted control) + tools/s7467_san_report.py --plant p --known tools/s7467_san_reviewed.tsv. L4/L12 dd4 16:9 HOLD=150: control
+     PASS, 0 ASan outside the plant, 13 UBSan groups: 1 REAL FIXED (plume_metal MetalGraphicsPipeline left dynamicDepthBiasEnabled +
+     3 bias floats uninit on no-bias pipelines, read by every depth-bias apply; value 0xBE = ASan fill), 12 FP (rt64_rdp negative
+     shifts, GET_MEMBER offsetof idiom, ObjC tagged NSString). Post-fix: group gone, others still fire; normal build
+     ROGUESQ_S7467_BIASPROBE=1 garbage=0/64+ (latent with the system allocator, single-source). s7467_asan_routes folded s7468.
+   - **DV s7466 remaining clang-analyzer crash families (UAF/double-free unix.Malloc+cplusplus.NewDelete, MismatchedDeallocator,
+     DivideZero, BitwiseShift, StdCLibraryFunctions, Stream, BlockInCriticalSection), CLOSED:** tools/s7466_analyzer_rest_census.py
+     --controls (planted lines 3-8 PASS) rc 0 over 150 TUs: 0 UAF/double-free/mismatch; 6 sites = 2 fixed (main.cpp s4243 PCM
+     double getenv, s7106_rsptri fopen(e) null-safe), 4 reviewed (events.cpp:1924 static-const hz FP, rt64 dumpRDRAM DEAD no
+     caller, main.cpp:8132 one-shot fgets under mutex, s7064 env-gated FP). Unscored counts: DeadStores 263, NullPassedToNonnull 2.
+   - **DT s7465 host null-pointer derefs (analyzer core.NullDereference/CallAndMessage/NullArg), CLOSED (s7465_dt_guard_flight soak PASS s7466: L4+L12 dd4 alive, 0 crash/stall, fillrect_null=0 both arms):**
+     tools/s7465_nullderef_census.py --controls (s7463 TU scope + runner, null-family regex; planted control lines 3/4/5 PASS) rc 0,
+     11 sites: 1 GUARDED (rt64_framebuffer_renderer.cpp FillRect read chosenTarget->width when the fbStorage has neither colour nor
+     depth target; writer RenderFramebufferManager::get() with both keys empty; the null-colour case is reached in this port, the
+     both-null case never observed -> skip + `[s7465] fillrect-null-target` log, census no longer flags it), 1 KNOWN-parked (plume
+     createFramebuffer null colour attachment = s5377 title plume), 2 INTENTIONAL (crash-reporter controls), 7 FP with the invariant
+     written in tools/s7465_nullderef_reviewed.tsv (Tier2 flag re-read, env-gated getenv derefs, draw-without-pipeline contract).
+     Regression soak s7465_dt_guard_flight queued (L4+L12 dd4 HOLD=150, fillrect_null count expected 0).
+   - **DU s7464 quiet-arms spec split, CLOSED:** g1e_owner_quiet_arms.zsh splits ARMS on whitespace, so s7463_padhash_flight's
+     "4:cnt:A=1 B=2" ran 4 arms (two named "" with dd=<env assignment>); the 2nd "" arm overwrote log_.txt, cnt data lost, CONTROL FAIL
+     on a phantom arm. Now every spec is validated first (dd numeric, arm [A-Za-z0-9_]+, unique; else exit 3, never re-queued);
+     tools/agent/test_quiet_arms_spec.sh 8/8 (the s7463 spec is the negative case); s7243 resume test still passes. Scan of 1317 done
+     recipes: s7463 was the only g1e victim. Incidental in-flight datum (surviving "" arm = PADCOUNT=ctl, L1): drawcallkey
+     distinct_raw 2277124 vs distinct_fixed 2266 over 2.36M calls -> the planted control fires in flight too. Re-queued s7464_padhash_flight.
+   - **DS s7463 host uninitialized reads + missing returns, CLOSED s7465:** tools/s7463_uninit_census.py --controls
+     (150 in-scope TUs from compile_commands: src/, ultramodern, librecomp, rt64 common/gbi/hle/render/rhi/preset, plume_metal; line A
+     clang -Wsometimes/-Wconditional-uninitialized/-Wreturn-type/-Wdangling, line B clang static analyzer; planted control flagged by both)
+     rc 0: 5 compiler sites FP-by-construction (rsp.hpp byte-loop loads, CTC2 total switch; tools/s7463_uninit_reviewed.tsv), 1 analyzer site
+     REAL: XXH3 over ReinterpretHashData's 4 uninit tail padding bytes (rt64_state.cpp:1891). Class sweep of every raw-bytes struct hash
+     (tools/s7463_hash_layouts.py, record layouts from clang): 7 structs, 3 padded = ReinterpretHashData 36-39, FramebufferTile 6-7
+     (fb tile-copy cache key), DrawCallKey 84-87 (every draw call, preset cachedKeyMap never cleared). All 3 now hash through
+     rs64_s7463_hash (padding zeroed on a copy; ROGUESQ_S7463_PADFIX=0 old). Runtime (title+attract, same build, ROGUESQ_S7463_PADCOUNT=1):
+     padding nonzero on 100% of calls (dck 524288, fbtile 8192) but distinct_raw == distinct_fixed (651/651, 18/18) -> H-const (stable
+     garbage, no split keys yet; latent, depends on stack contents); ctl (=ctl plants varying padding) raw 511270 vs fixed 651, fixdiff 0.
+     Flight (s7464_padhash_flight, L4 cnt / L1 ctl dd4 150 s, CONTROL PASS): drawcallkey cnt 9.18M calls, padnz 100%, distinct_raw
+     2922 == fixed 2922 -> H-const in flight too; ctl raw 4.0M vs fixed 2307; reinterpret + fbtile 0 calls in flight (H-unreached).
+     CLOSED s7465: fix is latent-only (no cache fragmentation observed), stays default on. Latent, no callers: DrawCallKey::operator==
+     returns memcmp() (true when DIFFERENT). Analyzer also lists null-deref/dead-store findings (not this class; candidate class DT).
+   - **DR s7462 H-void (m6), CLOSED s7463:** s7462_m6_void_holds_ctl CONTROL PASS (P void_holds=1, C 0). void attempts (notitle/nohangar/nomission/died_in_verify) were retried with stalls unscored, so a
+     pre-gate held frame (s6993 boot-freeze shape) vanished behind a later good attempt. fail() now scores each void log with
+     vilog_stalls.py (keys line gains fs_holds=/max_fs_hold_vi=), every summary carries void_holds=<sum>, soak_verdict_fields counts
+     void_holds>0 as a stall arm; M6_VOID_BLIND=1 old (mutation). tools/s7462_m6_void_holds_test.zsh 11/11 (planted + real s61 held log,
+     advancing + real s7450 void log, sum, mutation, verdict). Census of the 15 surviving fail_att logs: 0 holds (11 scored, 4 no fs=).
+     Real-game control queued: soak_queue/s7462_m6_void_holds_ctl.sh (P plant 10,150 MAXATT=1 -> void_holds>=1; C clean -> 0).
+   - **Stall-measure series DN/DO/DP/DQ CLOSED s7462:** s7461_m6_verify_window_ctl CONTROL PASS (mission t=71, stall t=156,
+     vi_stalls30s=1 fs_holds=1 max_fs_hold_vi=2368, alive_at_end=1).
+   - **DQ s7461 H-window (m6):** s7460_plant_hold_ctl folded: g1e arm PASS (vi_stalls30s=1 max_vihold_ms=39916); m6 arm CONTROL
+     FAIL only on vi_stalls30s=0 while offline fs_holds=1 max_fs_hold_vi=2368 (~39.5 s). Cause is none of the s7460 hypotheses: the
+     m6 live poller started only AFTER the 130 s mission-verify sleep (gate t=72 s -> polling from ~202 s), and the plant ran
+     120-160 s, inside it. Any hold in mission t 0-130 s was unscored live (offline fs_holds still saw it). Fix: m6_god_common.sh
+     polls vtick through the verify window (M6_VERIFY_BLIND=1 = old sleep, mutation). tools/s7461_m6_verify_window_test.zsh 3/3
+     (held -> stall, advancing -> 0, mutation -> 0). Real-game re-control queued: soak_queue/s7461_m6_verify_window_ctl.sh.
+   - **DP s7460:** ROGUESQ_PLANT_HOLD=<s>[,<dur>] (main.cpp rs64_diag_plant_hold_tick, beside PLANT_EXIT; default dur 40) blocks the
+     guest thread once inside osViSwapBuffer_recomp while host VI keeps ticking: the in-game held-frame positive control. Fired in
+     both arms of s7460_plant_hold_ctl (begin/end lines); both scorers (m6 fs_holds, g1e ring) flagged it.
+   - **DO s7459 H-blind (m6):** m6_god_common.sh (g1_level_coverage_common: 25 of the last ~60 recipes; s7263/s7272/s7277 cat its summary)
+     scored vi_stalls30s by [vi] row COUNT, but rows print every 64 VIs whatever the game does: a held frame with VI ticking read 0.
+     Now the newest row's fs= (M6_STALL_LINES=1 old) + summary fs_holds/max_fs_hold_vi (tools/agent/vilog_stalls.py, fs unchanged
+     >=1800 VIs); verdict counts fs_holds>0 as a stall; dead arm vi_stalls30s=na. Census 321 logs: 221 clean (max hold 1216 VIs ~20 s,
+     loads), 90 no fs, 10 flagged = s61_death_repro run4 (fs=2199 held 3776 VIs) + 9 s43xx boots stuck fs=0. Test
+     tools/s7459_m6_stall_test.zsh incl. 2 mutation controls + real-log control. s7458 SIGSTOP soak: CONTROL PASS (ok 0, stp 1 @35 s).
+     Remaining stall_na: none in live launchers (boot_freeze_hunt frozen=, g1e ring, m6 fs).
+   - **DN s7458 H-blind:** g1e arms now score vi_stalls30s from their present ring (tools/agent/ring_stalls.py): present gap >= 30 s, OR
+     presents flowing with the VI origin unchanged >= 30 s, OR a silent ring tail before a live arm's SIGKILL. Gaps alone are blind: the
+     s6993 L4 boot freeze held one origin 235 s with a max present gap of 77 ms (it agrees with that session's log, fs stuck at 273).
+     The census of 374 historical rings found that 1 episode and nothing else (365 at 0, 8 empty; normal max hold 17.4 s). Fake-ring tests:
+     s7453_harness_death_test.zsh 33/33, including 2 mutation controls. Real-game SIGSTOP control queued (s7458_ring_stall_ctl).
+   - **DM s7457 H-few:** 5 live launchers put no per-arm tag= line in the soak log (g1e_owner_quiet_arms 64 recipes, boot_freeze_hunt 11,
+     s7277 6, s7263 5, s7272 1; 72/103 logs arms=0). All now emit one; verdict: frozen=1 = stall arm, trailing stall_na=<k> (arms with no
+     stall measure; g1e arms are stall_na=1). tools/s7453_harness_death_test.zsh 25/25 incl. 2 mutation controls.
+   - **DL s7456 H-few:** rc vs per-arm summaries over 30 summarised soaks: 2 misreads (s7449 false fail, s7452 planted dead arm read
+     as rc=0). loop.sh verdict line now appends tools/agent/soak_verdict_fields.sh fields. fatal_patterns `abort` word-bounded (s7331_abort
+     tag lines scored fatal=2) + `Abort trap`; fatal_scan selftest 20/20, test_soak_idle_gate.sh 20/20, both with mutation controls.
+   - **DK s7455 H-none in data:** summary pass checks were prefix matches (`grep -q 'inits=1'` s7448/s7449, `*exitrc=1*` s7450-s7452
+     passes exitrc=134); 0/11740 historical checks over 2348 m6 summaries flipped. New recipes score with
+     `sh tools/agent/summary_field.sh $D/summary <key> eq|le|ge|is <v>` (exact key, selftest tools/agent/test_summary_field.sh 21/21).
+   - **DJ s7454 H-none:** inits= was always per-process (each attempt rewrites run.log), so inits>1 = same-process mission restart;
+     m6 summaries now add launches=$att mission_restarts=<call#>=2 count> (restart-control in harness; tools/s7454_restart_test.zsh
+     6/6 incl. real s7449 L4=1/L10=0, mutation control caught). 0 live templates gate on inits=1 (2 one-shot done recipes only).
+   - **DI s7453 H-few:** 4 of 6 live launchers passed a dead game: boot_freeze_hunt.sh (silent EXITED -> now bad=1 exitrc=),
+     g1e_owner_quiet_arms.zsh (alive=0 exit 0 -> done line fatal=, exit 1), s7272/s7263 (old CRASH grep -> fatal_patterns.txt,
+     s7263 rc=1). 47 fail()/retry copies are dead (newest ref <= s5921). Test tools/s7453_harness_death_test.zsh 13/13.
+     s7452 tee fix run-verified (s7452_fatal_harness rc=0). s7449 L4 rc=1 = same-process mission re-init (inits=2, endMissionCleanup), not a crash.
+   - DH s7451 H-none (Debug build): all 13 live exit/abort sites print a fatal_patterns line; NDEBUG pair hardened (selftest 19/19).
+     m6_god_common.sh died_in_verify is now terminal (DIED_RETRY=1 = old): post-gate deaths used to be retried as void attempts.
+   - **s7452 harness fix:** since s7450 (d354bfbdf) m6_god_common.sh:94 had `# comment | tee $OUT/summary`, so NO passing run wrote
+     a summary; s7449/s7450/s7451 control-arm "failures" (arm C summary missing) were this, not the game. Re-queued s7452_fatal_harness.
+   - DG s7450 H-few: shared tools/agent/fatal_patterns.txt + fatal_scan.sh feed m6_god_common.sh (+exitrc), g1e_level_fps.py,
+     g1_objective_response_run.py; ROGUESQ_PLANT_EXIT=<s> KIND=switch|quick|silent plant.
+   - DF s7449 H-few: rs64_diag_keep checks formatted "%s" text (ROGUESQ_PLANT_FAIL plant). DE s7448: diag_keep passes
+     [initMission]-class prefixes. DD s7447: include/rs64_diag_route.h force-included (RS64_DIAG_ROUTE, default ON), qualified L4/L7/L12.
+   - DC s7446 spill bump line; DB s7445 burst latch (apply_s7445); DA s7444 periodic print latch; CZ s7443 hooks 0.022 ms/f;
+     CY s7442 probe-gate census; CX s7441 rs64 census + rs64SkipDraw latch; CW s7440 image-word op test at call site;
+     CV s7439 decodeTriangles shade work gated (G1E_TRIM=0 old). All diagnostic-only, no guest store changed.
+   - CU-CP s7433-s7438 cost censuses by /usr/bin/sample: H-known/H-free/H-tail, no change needed.
+   - CO s7432 generated-C fprintf routed via include/rsp_dpc_macros.h; CN s7431 per-frame stderr writer fixed (39.5 MB/260 s cut);
+     CM s7430 rs64_s6892.log rotation; CL s7429 save finalize window fixed (S7429_NO_QUIT_FLUSH=1 old; not runtime-verified).
+   - CK s7428 env wins over config files, RT64 config persist gated like the save; CJ s7427 env policy order; CI s7426 env defaults;
+     CH s7425 build-option drift fixed (BYTE_WATCH off qualified L1/L5/L10); CG s7424 no stale objects; CF s7423 live vs regen;
+     CE s7422 windowed idempotence; CD s7421 regen drift; CC s7420 weak-aware RECOMP_FUNC regex.

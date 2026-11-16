@@ -198636,3 +198636,32 @@ Soak queued: s7490_zmemcpy_levels (L1 dd8 21:9, L7/L10/L12 dd4) on the patch-hoo
 Discrimination: selects H-eo-clean (host memcpy, L4/L15) and refutes H-eo-none (the host writes heap through guest pointers, ~350 calls/s) and
 the s7489 claim that every live store form was hooked (2 linked overriders were blind). Next discriminator: the class EP OS-call store hook with
 an osRecvMesg msg-out plant (H-ep-clean vs H-mesg-uaf vs H-ep-none), plus the s7490_zmemcpy_levels soak's fn=rs64_find_body rows.
+
+## Session 7491 (2026-11-16) — class EP: OS-call host stores through guest pointers hooked (17 sites, lib/ + osDpGetCounters); L4/L15 score=0 with mplant DETECTED fn=os_send (H-ep-clean, H-ep-none refuted); EO closed 6 levels; CURRENT-TRUTH 59.4 -> 37.7 KB
+
+Fold: soak s7490_zmemcpy_levels (L1 dd8 21:9, L7/L10/L12 dd4) score=0: zmemcpy_host F/Urec store and load rows 0, slack 0, s7480 loc_F=0
+Urec=0, zplant DETECTED fn=zmemcpy_host on all 4 arms, all alive, vi_stalls30s=0 -> class EO CLOSED for 6 levels. 0 uaf rows from the
+PatchesLib bodies (fn=findAndUnlinkSmallestEntry etc.); no plant targets those bodies, so that half is unscored by a control.
+
+Work unit (class EP, NEXT s7491). Hypotheses: H-ep-clean (no OS-call host store lands in a freed / slack block), H-mesg-uaf (a freed
+message buffer or queue is written by the host scheduler), H-ep-none (every destination is static .bss).
+Change: weak `rs64_s7491_hst(a, w, kind)` + macro RS64_S7491 called after each host store through a guest pointer:
+ultramodern mesgqueue.cpp osCreateMesgQueue (whole mq), do_send (slot + validCount; jam also first), do_recv (msg out + first/validCount),
+threads.cpp osCreateThread (OSThread through context); librecomp cont.cpp osContInit (status + bitpattern), osContGetQuery, osContGetReadData
+(per pad), pi.cpp save_read, osPiStartDma OSIoMesg fill; upstream_compat.cpp osDpGetCounters. Handler (upstream_compat.cpp, before
+zmemcpy): per-kind calls, destination class H (live canary block) / B (< 0x80140000) / O, marked bytes, address range; marked bytes go
+through rs64_s7475_store (pc 0xE0000000+k, fn=os_<kind>) so the s7475 canary and s7480 UAF watch see them; `[s7491] sum` from s7480_sum.
+Control ROGUESQ_S7491_MPLANT=<s>: first EP store into a live block (req>=0x40) after <s> s is recorded as freed before routing (fallback
+after +30 s: any destination). lib/ edits exported (submodule-patches/N64ModernRuntime.patch). Census tools/s7490_hostwrite_census.py now
+scores Part B: part_b_blind=0, rc 0; negative control (one kind renamed) -> BLIND, rc 1. osPfsReadWriteFile returns NOPACK, no store.
+Run tools/s7491_ep_recipe.zsh LV="4:4 15:8" HOLD=220 (canary + UAF store/load, PAD=16): score=0. Both arms alive, initMission=1,
+vi_stalls30s=0. L4: send 1.20M calls (H 21.7k), recv 598k (H 10.9k), recv_out 83.9k (H 35.8k), createthread 21 (H 16), dpcounters 12.9k
+(all H), createmq 146 (H 17), contread/contquery/iomesg all static; L15 similar (send 1.45M, H 20.0k). 0 os_* uaf-store rows outside the
+plant, 0 os_* slack stores, s7480 loc_F=0 Urec=0. mplant SET kind=os_send class=H blk=80154700 -> `[s7480] plant DETECTED ... fn=os_send`
+on both arms (t=20 s since arming, before the mission: route control passes but it is not an in-flight control).
+Result: H-ep-clean selected (single run of 2 levels; 4-level soak s7491_ep_levels queued as the second line). H-ep-none refuted
+(heap destinations are common: message buffers, thread structs, DP counter buffer live in rs_malloc blocks). H-mesg-uaf: no instance.
+Not covered (class EQ): ultramodern thread-queue link writes (mq blocked_on_recv/send, OSThread next/queue in thread_queue_insert/pop),
+osPfsNumFiles `_arg<1, s32*>` stores, RT64 framebuffer readback into guest RAM.
+Maintenance: CURRENT-TRUTH item-1 sub-bullets DG-EO (180 lines) migrated verbatim to PROJECT-OVERVIEW "(s7491 migration)", replaced by
+a one-line-per-class index; 59398 -> 37666 bytes.

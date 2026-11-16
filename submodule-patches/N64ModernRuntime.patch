@@ -1246,7 +1246,7 @@ index 0195f2b..7fe0536 100644
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/cont.cpp b/librecomp/src/cont.cpp
-index 7ad6c21..2645ddc 100644
+index 7ad6c21..5537f3c 100644
 --- a/librecomp/src/cont.cpp
 +++ b/librecomp/src/cont.cpp
 @@ -1,6 +1,11 @@
@@ -1261,7 +1261,28 @@ index 7ad6c21..2645ddc 100644
  
  #define MAXCONTROLLERS 4
  
-@@ -42,21 +47,86 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
+@@ -12,6 +17,9 @@ extern "C" void recomp_measure_latency(uint8_t* rdram, recomp_context* ctx) {
+     ultramodern::measure_input_latency();
+ }
+ 
++// s7491 class EP: host stores through guest pointers -> src/main upstream_compat.cpp class-EP watch (weak; unresolved = off).
++extern "C" __attribute__((weak)) void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
++#define RS64_S7491(a, w, k) do { if (rs64_s7491_hst) rs64_s7491_hst((uint32_t)(a), (uint32_t)(w), (k)); } while (0)
+ extern "C" void osContInit_recomp(uint8_t* rdram, recomp_context* ctx) {
+     PTR(OSMesgQueue) mq = _arg<0, PTR(OSMesgQueue)>(rdram, ctx);
+     PTR(u8) bitpattern = _arg<1, PTR(u8)>(rdram, ctx);
+@@ -19,8 +27,10 @@ extern "C" void osContInit_recomp(uint8_t* rdram, recomp_context* ctx) {
+     u8 bitpattern_local = 0;
+ 
+     s32 ret = osContInit(PASS_RDRAM mq, &bitpattern_local, data);
++    RS64_S7491(data, 4 * MAXCONTROLLERS, "os_continit");
+ 
+     MEM_B(0, bitpattern) = bitpattern_local;
++    RS64_S7491(bitpattern, 1, "os_continit");
+ 
+     _return<s32>(ctx, ret);
+ }
+@@ -42,21 +52,88 @@ extern "C" void osContStartReadData_recomp(uint8_t* rdram, recomp_context* ctx)
      _return<s32>(ctx, ret);
  }
  
@@ -1336,8 +1357,10 @@ index 7ad6c21..2645ddc 100644
              MEM_B(6 * controller + 2, data) = dummy_data[controller].stick_x;
              MEM_B(6 * controller + 3, data) = dummy_data[controller].stick_y;
              MEM_B(6 * controller + 4, data) = dummy_data[controller].err_no;
++            RS64_S7491((uint32_t)data + 6u * controller, 5, "os_contread");
 +        } else if (contfix) {
 +            MEM_B(6 * controller + 4, data) = dummy_data[controller].err_no;
++            RS64_S7491((uint32_t)data + 6u * controller + 4u, 1, "os_contread");
          }
      }
 +    if (pad_ctl > 0 && (ctl_win || pad_calls == pad_ctl - 1 || pad_calls == pad_ctl + 30)) {
@@ -1348,6 +1371,14 @@ index 7ad6c21..2645ddc 100644
  }
  
  extern "C" void osContStartQuery_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -71,6 +148,7 @@ extern "C" void osContGetQuery_recomp(uint8_t * rdram, recomp_context * ctx) {
+     PTR(OSContStatus) data = _arg<0, PTR(OSContStatus)>(rdram, ctx);
+ 
+     osContGetQuery(PASS_RDRAM data);
++    RS64_S7491(data, 4 * MAXCONTROLLERS, "os_contquery");
+ }
+ 
+ extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/eep.cpp b/librecomp/src/eep.cpp
 index 048246e..5811902 100644
 --- a/librecomp/src/eep.cpp
@@ -2017,7 +2048,7 @@ index 8c8e5d1..636836a 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..33e3cfb 100644
+index 43509ba..91873a6 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -2261,7 +2292,7 @@ index 43509ba..33e3cfb 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -181,22 +339,49 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+@@ -181,22 +339,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
          for (gpr i = 0; i < count; i++) {
              save_context.save_buffer[offset + i] = MEM_B(i, rdram_address);
          }
@@ -2271,6 +2302,9 @@ index 43509ba..33e3cfb 100644
      save_context.write_sempahore.signal();
  }
  
++// s7491 class EP: host stores through guest pointers -> src/main upstream_compat.cpp class-EP watch (weak; unresolved = off).
++extern "C" __attribute__((weak)) void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
++#define RS64_S7491(a, w, k) do { if (rs64_s7491_hst) rs64_s7491_hst((uint32_t)(a), (uint32_t)(w), (k)); } while (0)
  void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
 +    if ((uint64_t)offset + count > save_context.save_buffer.size()) {
 +        // ROGUESQ s5235: guest-supplied EEPROM/SRAM offset+count leaves the save buffer (assert is compiled out in release).
@@ -2284,6 +2318,7 @@ index 43509ba..33e3cfb 100644
      for (gpr i = 0; i < count; i++) {
          MEM_B(i, rdram_address) = save_context.save_buffer[offset + i];
      }
++    RS64_S7491(rdram_address, count, "os_saveread");
 +    if (getenv("RS64_EEP_TRACE") && (uint64_t)offset + 8 <= save_context.save_buffer.size()) { // s7364: the b0..7 dump read past the buffer
 +        static int n = 0;
 +        if (n++ < 200) {
@@ -2312,7 +2347,7 @@ index 43509ba..33e3cfb 100644
  
      {
          std::lock_guard lock { save_context.save_buffer_mutex };
-@@ -233,6 +418,28 @@ void read_save_file() {
+@@ -233,6 +422,28 @@ void read_save_file() {
      std::ifstream save_file = recomp::open_input_file_with_backup(save_file_path, std::ios_base::binary);
      if (save_file.good()) {
          save_file.read(save_context.save_buffer.data(), save_context.save_buffer.size());
@@ -2341,7 +2376,7 @@ index 43509ba..33e3cfb 100644
      }
      else {
          // Otherwise clear the save file to all zeroes.
-@@ -260,22 +467,179 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
+@@ -260,22 +471,179 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
      read_save_file();
  }
  
@@ -2522,7 +2557,7 @@ index 43509ba..33e3cfb 100644
          } else if (physical_addr >= recomp::sram_base) {
              if (!recomp::sram_allowed()) {
                  ultramodern::error_handling::message_box("Attempted to use SRAM saving with other save type");
-@@ -285,9 +649,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -285,9 +653,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_read(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2534,7 +2569,7 @@ index 43509ba..33e3cfb 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,9 +667,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,9 +671,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2546,7 +2581,7 @@ index 43509ba..33e3cfb 100644
          }
      }
  }
-@@ -313,15 +679,68 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,15 +683,69 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
@@ -2596,6 +2631,7 @@ index 43509ba..33e3cfb 100644
 +        MEM_W(8, (gpr)(int32_t)mb) = (int32_t)(uint32_t)dramAddr;
 +        MEM_W(12, (gpr)(int32_t)mb) = (int32_t)raw_r7;
 +        MEM_W(16, (gpr)(int32_t)mb) = (int32_t)size;
++        RS64_S7491(mb, 20, "os_iomesg");
 +        s7398_msg = mb;
 +        const unsigned long n = fills.fetch_add(1) + 1;
 +        if (s7398_ctl()) {
@@ -2615,7 +2651,7 @@ index 43509ba..33e3cfb 100644
  
      ctx->r2 = 0;
  }
-@@ -336,9 +755,14 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +760,14 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -7076,7 +7112,7 @@ index 149e770..cb31f06 100644
  
  void ultramodern::join_event_threads() {
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..1901291 100644
+index 9944a02..8ae748c 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
 @@ -1,18 +1,323 @@
@@ -7403,7 +7439,7 @@ index 9944a02..1901291 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -27,47 +332,212 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -27,47 +332,215 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
      requeue_enabled.set(static_cast<int>(EventMessageSource::Dp), mqc.requeue_dp);
  }
  
@@ -7483,6 +7519,9 @@ index 9944a02..1901291 100644
      external_messages.enqueue({mq, msg, jam, requeue_if_blocked});
  }
  
++// s7491 class EP: host stores through guest pointers -> src/main upstream_compat.cpp class-EP watch (weak; unresolved = off).
++extern "C" __attribute__((weak)) void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
++#define RS64_S7491(a, w, k) do { if (rs64_s7491_hst) rs64_s7491_hst((uint32_t)(a), (uint32_t)(w), (k)); } while (0)
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
  
 -void dequeue_external_messages(RDRAM_ARG1) {
@@ -7621,10 +7660,11 @@ index 9944a02..1901291 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      mq->blocked_on_recv = NULLPTR;
      mq->blocked_on_send = NULLPTR;
-@@ -75,6 +545,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+@@ -75,6 +548,27 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
      mq->msg = msg;
      mq->validCount = 0;
      mq->first = 0;
++    RS64_S7491(mq_, sizeof(OSMesgQueue), "os_createmq");
 +    if (recv_trace_env()) {
 +        static std::atomic<uint32_t> rows{0};
 +        const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
@@ -7648,7 +7688,7 @@ index 9944a02..1901291 100644
  }
  
  s32 MQ_GET_COUNT(OSMesgQueue *mq) {
-@@ -90,6 +580,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +584,11 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -7660,7 +7700,7 @@ index 9944a02..1901291 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +601,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,17 +605,27 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -7675,7 +7715,20 @@ index 9944a02..1901291 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -128,7 +631,71 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+         TO_PTR(OSMesg, mq->msg)[mq->first] = msg;
+         mq->validCount++;
++        RS64_S7491((uint32_t)mq->msg + 4u * (uint32_t)mq->first, 4, "os_jam"); RS64_S7491((uint32_t)mq_ + 8u, 8, "os_jam");
+     }
+     else {
+         // Sends insert at the tail of the message queue's buffer.
+         s32 last = (mq->first + mq->validCount) % mq->msgCount;
+         TO_PTR(OSMesg, mq->msg)[last] = msg;
+         mq->validCount++;
++        RS64_S7491((uint32_t)mq->msg + 4u * (uint32_t)last, 4, "os_send"); RS64_S7491((uint32_t)mq_ + 8u, 4, "os_send");
+     }
+ 
+     // If any threads were blocked on receiving from this message queue, pop the first one and schedule it.
+@@ -128,7 +637,71 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
      return true;
  }
  
@@ -7747,7 +7800,7 @@ index 9944a02..1901291 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +712,14 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,11 +718,20 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -7758,12 +7811,18 @@ index 9944a02..1901291 100644
 +        }
 +        g_last_received_message = TO_PTR(OSMesg, mq->msg)[mq->first];
 +        *TO_PTR(OSMesg, msg_) = g_last_received_message;
++        RS64_S7491(msg_, 4, "os_recv_out");
 +    } else if (!mesgqueue_guard_refuse("do_recv:msg", mq->msg)) {
 +        g_last_received_message = TO_PTR(OSMesg, mq->msg)[mq->first];
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -160,8 +734,155 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+     mq->validCount--;
++    RS64_S7491((uint32_t)mq_ + 8u, 8, "os_recv");
+ 
+     // If any threads were blocked on sending to this message queue, pop the first one and schedule it.
+     PTR(PTR(OSThread)) blocked_queue = GET_MEMBER(OSMesgQueue, mq_, blocked_on_send);
+@@ -160,8 +742,155 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      return true;
  }
  
@@ -7920,7 +7979,7 @@ index 9944a02..1901291 100644
      bool jam = false;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -173,8 +894,34 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -173,8 +902,34 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
      // Handle any messages that have been received from an external thread.
      dequeue_external_messages(PASS_RDRAM1);
  
@@ -7955,7 +8014,7 @@ index 9944a02..1901291 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-@@ -183,7 +930,12 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,7 +938,12 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -7969,7 +8028,7 @@ index 9944a02..1901291 100644
      bool jam = true;
      
      // Don't directly send to the message queue if this isn't a game thread to avoid contention.
-@@ -205,18 +957,100 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +965,100 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -8323,7 +8382,7 @@ index f9c0fa1..d8571fd 100644
      PTR(OSThread)* queue = queue_to_ptr(PASS_RDRAM queue_);
      return *queue == NULLPTR;
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..58f198a 100644
+index 812c556..824bfff 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,23 @@
@@ -8812,7 +8871,7 @@ index 812c556..58f198a 100644
  
      // Set the thread name
      ultramodern::set_native_thread_name(ultramodern::threads::get_game_thread_name(self));
-@@ -239,12 +653,15 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,12 +653,18 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -8824,15 +8883,19 @@ index 812c556..58f198a 100644
  
 +extern "C" void rs64_s7396_tq_tag(const char* t); // s7396 (threadqueue.cpp)
 +extern "C" void rs64_s7396_tq_poke(RDRAM_ARG1);
++// s7491 class EP: host stores through guest pointers -> src/main upstream_compat.cpp class-EP watch (weak; unresolved = off).
++extern "C" __attribute__((weak)) void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
++#define RS64_S7491(a, w, k) do { if (rs64_s7491_hst) rs64_s7491_hst((uint32_t)(a), (uint32_t)(w), (k)); } while (0)
  extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_func_t) entrypoint, PTR(void) arg, PTR(void) sp, OSPri pri) {
 +    rs64_s7396_tq_poke(PASS_RDRAM1);
      debug_printf("[os] Create Thread %d\n", id);
      OSThread *t = TO_PTR(OSThread, t_);
      
-@@ -259,6 +676,20 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +679,21 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
++    RS64_S7491(t_, offsetof(OSThread, context) + sizeof(t->context), "os_createthread");
 +    thr_live_add(context);
 +    // Always-on, cheap: lets a same-run [thr-resume-skip] (id=%d thr=%p) be matched
 +    // back to the specific thread it names, since guest code creates most threads
@@ -8850,7 +8913,7 @@ index 812c556..58f198a 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,17 +717,36 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -286,17 +721,36 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -8887,7 +8950,7 @@ index 812c556..58f198a 100644
          cur_context->running.signal();
      }
  }
-@@ -311,6 +761,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
+@@ -311,6 +765,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
          t->priority = pri;
  
          if (t_ != ultramodern::this_thread() && t->state != OSThreadState::STOPPED) {
@@ -8895,7 +8958,7 @@ index 812c556..58f198a 100644
              ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
              ultramodern::thread_queue_insert(PASS_RDRAM t->queue, t_);
          }
-@@ -337,6 +788,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +792,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -8916,7 +8979,7 @@ index 812c556..58f198a 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +812,18 @@ void thread_cleaner_func() {
+@@ -347,8 +816,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -8935,7 +8998,7 @@ index 812c556..58f198a 100644
              delete to_delete;
          }
      }
-@@ -359,6 +834,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +838,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {

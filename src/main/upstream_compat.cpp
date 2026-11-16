@@ -936,6 +936,7 @@ extern "C" void __osPfsSelectBank_recomp(uint8_t* /*rdram*/, recomp_context* ctx
     _return<s32>(ctx, 1);  // PFS_ERR_NOPACK — no memory pak
 }
 
+extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);  /* s7491 class EP */
 extern "C" void osDpGetCounters_recomp(uint8_t* rdram, recomp_context* ctx) {
     // Zero out the 8 DP counters. buf_ptr stays gpr (64-bit) so the
     // sign-extended MIPS address survives MEM_W's KSEG0 unmasking.
@@ -954,6 +955,7 @@ extern "C" void osDpGetCounters_recomp(uint8_t* rdram, recomp_context* ctx) {
     for (int i = 0; i < 8; i++) {
         MEM_W(i * 4, buf_ptr) = 0;
     }
+    rs64_s7491_hst((uint32_t)buf_ptr, 32, "os_dpcounters");  /* s7491 class EP */
 }
 
 extern "C" void osViGetCurrentField_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
@@ -4026,9 +4028,11 @@ static void s7486_sum(double now) {
         (unsigned long long)wF, (unsigned long long)wR, s_s7489_wplant, (unsigned long long)s_s7486_ctl[6], (unsigned long long)s_s7486_ctl[7], (unsigned long long)s_s7486_ctl[8],
         (unsigned long long)s_s7486_rng[6], (unsigned long long)s_s7486_rng[7], (unsigned long long)s_s7486_rng[8], (unsigned long long)s_s7486_mark[6], (unsigned long long)s_s7486_mark[7], (unsigned long long)s_s7486_mark[8]); }
 extern "C" void rs64_s7490_sum(double now);  /* s7490 class EO, defined at zmemcpy */
+extern "C" void rs64_s7491_sum(double now);  /* s7491 class EP, defined before zmemcpy */
 static void s7480_sum(double now) {
     if (!s7480_on()) return;
     rs64_s7490_sum(now);
+    rs64_s7491_sum(now);
     s7486_sum(now);
     if (g_rs64_s7484_on) std::fprintf(stderr, "[s7484] sum t=%.1f hits=%llu recs=%llu loc_U=%llu loc_F=%llu loc_N=%llu loc_Urec=%llu loc_S=%llu pcs=%zu slack=%llu slack_pcs=%zu internal=%llu p1=%llu retired=%llu ctl=%llu plant=%d tries=%d\n", now - s_s7475_t0,
         (unsigned long long)s_s7484_hits, (unsigned long long)s_s7484_recs, (unsigned long long)s_s7484_loc[0], (unsigned long long)s_s7484_loc[1], (unsigned long long)s_s7484_loc[2], (unsigned long long)s_s7484_loc[3], (unsigned long long)s_s7484_loc[4],
@@ -6209,6 +6213,47 @@ extern "C" void rs64_s7490_sum(double now) {
     std::fprintf(stderr, "[s7490] sum t=%.1f zhook=%d calls=%llu bytes=%llu heap_calls=%llu wmark=%llu rmark=%llu zplant=%d\n", now - s_s7475_t0, (int)s7490_zhook(),
                  (unsigned long long)s_s7490_calls, (unsigned long long)s_s7490_bytes, (unsigned long long)s_s7490_heap,
                  (unsigned long long)s_s7490_wmark, (unsigned long long)s_s7490_rmark, s_s7490_plant); }
+/* s7491 class EP: host stores through guest pointers made by OS-call bodies (ultramodern mesgqueue do_send/do_recv/osCreateMesgQueue,
+   osCreateThread; librecomp cont.cpp osContInit/GetQuery/GetReadData, pi.cpp save_read + OSIoMesg fill; osDpGetCounters here). Each
+   site calls RS64_S7491(a, w, kind) after its store (weak decl in lib/, resolved here). Marked bytes go through rs64_s7475_store with
+   pc = 0xE0000000 + kind index and fn = the kind, so the s7475 slack canary and s7480 UAF-store watch see them (rows fn=os_*).
+   Every call is classed by destination: H = inside a live canary-recorded rs_malloc block, B = static image (< 0x80140000, .data/.bss),
+   O = other (stack / arena / framebuffer region). Control ROGUESQ_S7491_MPLANT=<s> (needs S7480_UAF, no other s7480 plant):
+   <s> s after arming, the first EP store into a live canary block (req >= 0x40) records that block as freed (guest memory
+   untouched) before routing, so the same store MUST log `[s7480] plant DETECTED ... fn=os_*`; if no heap destination appears within
+   <s>+30 s, the next EP destination of any class is planted instead (route control for static destinations). Measurement only. */
+static const char* const k_s7491_kind[] = {"os_createmq", "os_send", "os_jam", "os_recv", "os_recv_out", "os_createthread", "os_continit",
+    "os_contquery", "os_contread", "os_saveread", "os_iomesg", "os_dpcounters"};
+enum { S7491_NK = 12 };
+static uint64_t s_s7491_calls[S7491_NK] = {0}, s_s7491_cls[S7491_NK][3] = {{0}}, s_s7491_mark[S7491_NK] = {0};
+static uint32_t s_s7491_lo[S7491_NK] = {0}, s_s7491_hi[S7491_NK] = {0};
+static int s_s7491_plant = 0;
+extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn);
+extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind) {
+    if (!g_rs64_s7475_bm || !kind || w == 0 || w > 0x10000u || a < 0x80000000u || a >= 0x81800000u) return;
+    int k = 0; while (k < S7491_NK && std::strcmp(kind, k_s7491_kind[k])) ++k; if (k == S7491_NK) return;
+    static const double mp = [] { const char* e = std::getenv("ROGUESQ_S7491_MPLANT"); if (!e || !*e || *e == '0') return -1.0; return std::atof(e); }();
+    {   std::lock_guard<std::mutex> lk(s_s7475_mu);
+        ++s_s7491_calls[k]; if (!s_s7491_lo[k] || a < s_s7491_lo[k]) s_s7491_lo[k] = a; if (a + w > s_s7491_hi[k]) s_s7491_hi[k] = a + w;
+        auto it = s_s7475_live.upper_bound(a); bool inheap = false;
+        if (it != s_s7475_live.begin()) { --it; inheap = a < it->first + it->second.sz; }
+        const int c = inheap ? 0 : a < 0x80140000u ? 1 : 2; ++s_s7491_cls[k][c];
+        if (mp >= 0 && !s_s7491_plant && s7480_on() && s_s7480_plant == 0) {
+            const double now = s7325_now(), age = now - s_s7475_t0;
+            const bool heap_ok = inheap && it->second.req >= 0x40u && a + w <= it->first + it->second.req;
+            if (age >= mp && (heap_ok || age >= mp + 30.0)) {
+                const uint32_t pb = heap_ok ? it->first : (a & ~0xFu), pn = heap_ok ? it->second.req : ((a + w + 0xFu) & ~0xFu) - (a & ~0xFu);
+                s_s7491_plant = heap_ok ? 1 : 2; ++s_s7480_ptries; s7480_add(pb, pn, now, 1); s_s7480_plant = 1; s_s7480_ptime = now;
+                std::fprintf(stderr, "[s7491] mplant SET kind=%s class=%c blk=%08X n=%X a=%08X w=%u t=%.1f\n", kind, heap_ok ? 'H' : "HBO"[c], pb, pn, a, w, age); } } }
+    for (uint32_t i = 0; i < w; ++i) {
+        const uint32_t b = a + i, o = b - 0x80000000u;
+        if ((g_rs64_s7475_bm[o >> 3] >> (o & 7u)) & 1u) { ++s_s7491_mark[k]; rs64_s7475_store(0xE0000000u + (uint32_t)k, b, 1, kind); } } }
+extern "C" void rs64_s7491_sum(double now) {
+    std::string b; char t[160];
+    for (int k = 0; k < S7491_NK; ++k) { if (!s_s7491_calls[k]) continue;
+        snprintf(t, sizeof t, " %s=%llu:H%llu,B%llu,O%llu,m%llu[%08X-%08X]", k_s7491_kind[k], (unsigned long long)s_s7491_calls[k], (unsigned long long)s_s7491_cls[k][0],
+                 (unsigned long long)s_s7491_cls[k][1], (unsigned long long)s_s7491_cls[k][2], (unsigned long long)s_s7491_mark[k], s_s7491_lo[k], s_s7491_hi[k]); b += t; }
+    std::fprintf(stderr, "[s7491] sum t=%.1f mplant=%d kinds(calls:heap,static,other,marked[range])%s\n", now - s_s7475_t0, s_s7491_plant, b.c_str()); }
 extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     // Use the full 64-bit register values for the bounds check. The MEM_BU
     // macro does (reg + offset) ^ 3 - 0xFFFFFFFF80000000 in 64-bit, so
