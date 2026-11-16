@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7441 (2026-11-15).
+Compact operational handoff, as of Session 7442 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,10 +215,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CY, ungated guest-side diag probes from the closed aim/hit thread (HYPOTHESIS-ID guest-probe-gates).**
-   See scratch/agent/NEXT.md: enumerate every tools/apply_s5[0-9]*.py / apply_s6*.py patch whose inserted call site runs
-   without an env latch (s5835 was one: its docstring said "under ROGUESQ_LOG_HITS" but the call was unconditional), rank by
-   tools/s7441_rs64_census.py + guest-function inclusive samples on scratch/s7441, gate the UNGATED-DIAG ones at the call site.
+1. **Next audit: class CZ, the remaining default-on rs64_* guest hooks (HYPOTHESIS-ID guest-hook-trim).** See NEXT.md:
+   rs64_s6287 (0.010 ms/f self, ROGUESQ_PPLOG test inside), rs64_s6285_en (0.004), rs64_s6963_pre (0.023 incl, cell-index
+   memo) in src/main/upstream_compat.cpp; if together < 0.05 ms/f after reading them, close the guest-hook trim campaign
+   and take item 20.
+   CY (s7442) CLOSED H-hidden: tools/s7442_probe_gate_census.py (every rsNNNN helper the apply_s*.py patches inserted, call
+   sites from guest functions, GATED / GATED-INSIDE / UNGATED + sample ms/f via --samples) on scratch/s7441: 12/40/9; the 9
+   read by hand are renamed-body wrappers or latched (regex misses) except rs5908_call (apply_s5908_callers.py, every
+   findSegmentObjectSphereHit call, printed [s5908] every 1024 calls: 2127 lines / 529 KB per run). Now latched on
+   ROGUESQ_LOG_HITS / G1E_TRIM=0; script re-insert bug fixed. scratch/s7442: control PASS, [s5908] 0, stderr 16.45 -> 15.92 MB,
+   0 crash; consumer control LOG_HITS=1 [s5908] 983.
    CX (s7441) CLOSED H-hidden, three changes. Census tool tools/s7441_rs64_census.py (every rs64*-named frame, all threads,
    self/incl ms/f, defining file) on scratch/s7440: NO rs64 frame >= 0.003 ms/f in render/framebuffer_renderer, hle/state,
    framebuffer*, present_queue, rdp_tmem, workload_queue (H-small for the named files). Found elsewhere: (1) the s5835 sphere

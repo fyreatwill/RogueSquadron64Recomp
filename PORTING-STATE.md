@@ -197240,3 +197240,31 @@ Remaining owner-recipe stderr (16.4 MB / 4 min to a file): [s2020-svc] 2.1 MB, [
 Conclusion: selects H-hidden (a hook >= 0.05 ms/f, gated, samples drop), refutes H-small for the class as a whole; H-needed
 holds only for TELE_BOLT (kept under its own env).
 Next: class CY, the other apply_s5*/s6* guest-probe patches whose call sites may also be ungated.
+
+## Session 7442 (2026-11-15) — class CY closed H-hidden: guest-probe gate census finds one more ungated aim-thread probe (s5908 per-caller sphere-hit tally, 2127 [s5908] lines / 529 KB stderr per run), now gated; every other rsNNNN helper is gated at the call site or returns on a latch
+What ran: new tools/s7442_probe_gate_census.py over N64Recomp/RecompiledFuncs/funcs_*.c: every rsNNNN_* helper an
+apply_s*.py patch inserted, every call site from a GUEST function (calls from inside other helpers are skipped), classified
+GATED (if/latch on the call line) / GATED-INSIDE (body returns on a getenv/flag latch in its first lines) / UNGATED, joined
+with sample-weighted self/incl ms/f from a tools/s7433_probe_cost.sh capture (--samples). On scratch/s7441: GATED 12,
+GATED-INSIDE 40, UNGATED 9. Hand read of the 9: rs5858_inner / rs5857_inner = renamed bodies of hooked guest functions
+(UNGATED-NEEDED, the wrapper is latched); rs5857_hp = 3 loads after the en test; rs6661/rs6664_transport, rs6673_wingman,
+rs6679/rs6685_fallback all test rs6657_enabled() / an _active flag first (regex miss, really GATED-INSIDE). The one
+UNGATED-DIAG: rs5908_call (tools/apply_s5908_callers.py, 13 call sites = every findSegmentObjectSphereHit caller) tallied
+per caller and printed "[s5908] callers ..." every 1024 calls with no env: scratch/s7441/run.tlog 2127 lines, 528878 bytes.
+Change: the helper now latches on ROGUESQ_LOG_HITS=1 (its consumer, same as s7441) or ROGUESQ_G1E_TRIM=0 (old path) and
+otherwise calls findSegmentObjectSphereHit and returns. Idempotent upgrade step in the apply script. Also fixed a latent
+bug there: its "helper already present" test split on the findSegmentObjectSphereHit marker, but the helper is inserted
+AFTER it, so every re-run inserted another copy (found when two runs left 3 definitions; tree repaired to one gated copy,
+guard now tests the PATCH tag; re-run = 0 edits, 1 definition).
+Measurement (env S7431_ARM=CY zsh tools/s7433_probe_cost.sh; samples + run.tlog in scratch/s7442): tools/s7438_rt64_terms.py
+CONTROL +0.0345 core vs 0.030 PASS; s7433 guest probe verdict H-free 0.0588 ms/f (control 0.616). [s5908] 2127 -> 0 lines,
+run.tlog 16.45 -> 15.92 MB (-526 KB, matches the 529 KB of [s5908]); rs5908_call self 0.001 -> 0.000 ms/f (incl 0.008 = the
+game function under it). 0 crash. Census on scratch/s7442: no UNGATED helper with self >= 0.001 ms/f.
+Consumer positive control, same session, same build (env S7431_ARM=CYC zsh tools/s7431_stderr_volume.sh 150
+ROGUESQ_LOG_HITS=1; log scratch/s7442/consumer.tlog): [s5908] 983, [s5901] 35592, [s5841] 246, [s5857] 6, 0 crash.
+ORIGIN: rs5908_call written ungated in s5908 (aim thread, closed as harness work 2026-10-22) and never revisited.
+Remaining default-on guest rs64_* hooks (tools/s7441_rs64_census.py scratch/s7442, [Game] threads): rs64_s6963_pre 0.023 incl
+(cell-index memo, behaviour), rs64_s6287 0.010 self, rs64_s6285_en 0.004, rs64_s5660_ustore 0.002; rs64_store_diag_tick 0.35
+is the DIAG_BUSY control itself.
+Conclusion: selects H-hidden (one site, gated, stderr drops); H-needed for the renamed-body wrappers.
+Next: class CZ, the remaining default-on rs64_* guest hooks in upstream_compat.cpp (s6287, s6285_en, s6963_pre).
