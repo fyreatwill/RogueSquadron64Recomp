@@ -247,6 +247,40 @@ def apply_s6202_retarget(text):
         return text, 0
     return text.replace(old, new, 1), 1
 
+# s7482: the s6202 retarget puts the wide frame pool at base = ec - t2, BELOW the lowest descending block, but the routine
+# still returns $v1 = ec as the bottom of its reserved span (*(t5) / *(t6) -> heap init 0x80002150 a3 / hole), so the heap
+# owns [base, ec) and the live pool sits in a free heap block (s7481 loc_S). Lower $v1 to base before the out stores so the
+# game's own reservation covers the pool. ROGUESQ_RETARGET_RESERVE=0 restores the old (unreserved) span.
+# g_rs64_s7482_base/_ec publish the live pool span to the host rs_malloc collision detector (upstream_compat.cpp s7482).
+S7482_DECL = (
+    "extern volatile uint32_t g_rs64_s7482_base, g_rs64_s7482_ec; /* PATCH: s7482 reserve */\n"
+    "static int rs64_s7482_pend; static uint32_t rs64_s7482_b, rs64_s7482_e;\n"
+    "static int rs64_s7482_on(void) { static int on = -1; if (on < 0) { const char* e = getenv(\"ROGUESQ_RETARGET_RESERVE\"); on = !(e && *e == '0'); } return on; }\n"
+)
+def apply_s7482_reserve(text):
+    if "PATCH: s7482 reserve" in text:
+        return text, 0
+    anchor = "RECOMP_FUNC void partitionFramebufferMemory("
+    ok = "          else { MEM_W(0X63E8, ctx->r1) = (int32_t)base; "
+    tail = "L_80001060:\n    // 0x80001060: bne         $a0, $zero, L_80001074\n"
+    if text.count(anchor) != 1 or text.count(ok) != 1 or text.count(tail) != 1:
+        return text, 0
+    text = text.replace(anchor, S7482_DECL + anchor, 1)
+    text = text.replace(ok, ok + "rs64_s7482_pend = 1; rs64_s7482_b = base; rs64_s7482_e = ec; /* PATCH: s7482 reserve ok */ ", 1)
+    tail_new = (
+        "L_80001060:\n"
+        "    { /* PATCH: s7482 reserve tail */ static int n7482; uint32_t v1 = U32(ctx->r3);\n"
+        "      if (rs64_s7482_pend) { int res = rs64_s7482_on() && v1 == rs64_s7482_e;\n"
+        "        if (res) ctx->r3 = (gpr)(int64_t)(int32_t)rs64_s7482_b;\n"
+        "        g_rs64_s7482_base = rs64_s7482_b; g_rs64_s7482_ec = rs64_s7482_e;\n"
+        "        if (n7482 < 16) { fprintf(stderr, \"[s7482] reserve %s v1=0x%08X -> 0x%08X pool=0x%08X..0x%08X a0=0x%08X on=%d\\n\", res ? \"applied\" : \"skipped\", v1, U32(ctx->r3), rs64_s7482_b, rs64_s7482_e, U32(ctx->r4), rs64_s7482_on()); fflush(stderr); ++n7482; }\n"
+        "      } else { g_rs64_s7482_base = 0; g_rs64_s7482_ec = 0; }\n"
+        "      rs64_s7482_pend = 0; }\n"
+        "    // 0x80001060: bne         $a0, $zero, L_80001074\n"
+    )
+    text = text.replace(tail, tail_new, 1)
+    return text, 1
+
 def apply_s6203_heapclass(text):
     if "PATCH: s6203 heapclass" in text:
         return text, 0
@@ -654,6 +688,7 @@ if __name__ == "__main__":
     p0 = base / "funcs_0.c"; t = p0.read_text(); t2, n = applypfm(t)
     t2, c = apply_s6201_carve(t2)
     t2, r = apply_s6202_retarget(t2)
+    t2, rr = apply_s7482_reserve(t2); r += rr
     t2, h = apply_s6203_heapclass(t2)
     t2, d = apply_s6207_drop(t2)
     t2, cap = apply_s6631_heapcap(t2)

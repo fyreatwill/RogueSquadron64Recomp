@@ -3847,7 +3847,24 @@ static void s7480_sum(double now) {
                  (unsigned long long)s_s7480_frees, (unsigned long long)s_s7480_skip, s_s7480_freed.size(), (unsigned long long)bytes, (unsigned long long)s_s7480_trims,
                  (unsigned long long)s_s7480_hits, s_s7480_pcs.size(), s_s7480_plant, s_s7480_ptries, in.c_str()); }
 }
+/* s7482: live s6202 wide frame-pool span, published by the partitionFramebufferMemory tail patch (tools/apply_s6031_far.py
+   apply_s7482_reserve; 0/0 when no retarget is live). Every rs_malloc exit checks [ptr, ptr+req) against it: an overlap means
+   the allocator handed out memory the DL builders are writing as the frame pool (H-collide). ROGUESQ_S7482_CTL=1 = positive
+   control: the first malloc seen while a span is live is reported as a CONTROL line (not counted). Always on; cost = 2 loads. */
+extern "C" { volatile uint32_t g_rs64_s7482_base = 0, g_rs64_s7482_ec = 0; }
+static uint64_t s_s7482_live_mallocs = 0, s_s7482_collide = 0;
+static void s7482_check(uint32_t req, uint32_t ptr, uint32_t ra) {
+    const uint32_t b = g_rs64_s7482_base, e = g_rs64_s7482_ec; if (!b || !ptr || !req) return;
+    static const bool ctl = [] { const char* v = std::getenv("ROGUESQ_S7482_CTL"); return v && v[0] && v[0] != '0'; }();
+    static int nlog = 0; const uint64_t k = s_s7482_live_mallocs++;
+    const bool hit = ptr < e && ptr + req > b, fake = ctl && k == 0;
+    if (hit) ++s_s7482_collide;
+    if ((hit || fake) && nlog < 24) { ++nlog; volatile uint8_t* r = g_recomp_rdram_for_wp_raw;
+        std::fprintf(stderr, "[s7482] pool-collide%s ptr=%08X req=%X base=%08X ec=%08X e8=%08X ra=%08X live_mallocs=%llu collide=%llu\n", hit ? "" : " CONTROL", ptr, req, b, e,
+                     r ? s7472_rd(r, 0x801163E8u) : 0u, ra, (unsigned long long)k + 1, (unsigned long long)s_s7482_collide); std::fflush(stderr); }
+    if ((k & 0xFFFu) == 0xFFFu) { std::fprintf(stderr, "[s7482] sum live_mallocs=%llu collide=%llu span=%08X..%08X\n", (unsigned long long)k + 1, (unsigned long long)s_s7482_collide, b, e); std::fflush(stderr); } }
 static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
+    s7482_check(req, ptr, ra);
     if (!s7475_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
     const double now = s7325_now();

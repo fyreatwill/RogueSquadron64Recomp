@@ -13,11 +13,14 @@ n=${NAME:-s7480_uaf}; R=$PWD/scratch/$n; mkdir -p $R; rm -f $R/quiet.done $R/voi
 C="ROGUESQ_S7475_CANARY=1+ROGUESQ_S7475_FILL=0+ROGUESQ_STORE_DIAG=1+ROGUESQ_S7475_PAD=16+ROGUESQ_S7480_UAF=1+ROGUESQ_S7475_BT=1+ROGUESQ_S7480_PLANT=${PLANT_S:-150}"
 lv=(${=${LV:-4:4 7:4 12:4 15:8}}); arms=(); tags=()
 for e in $lv; do
-  l=${e%%:*}; d=${e##*:}
+  # s7482: optional third field = per-arm extra env, '+'-joined (e.g. 7:4:ROGUESQ_RETARGET_RESERVE=0); such arms get tag l<lvl>x<k>
+  l=${e%%:*}; rest=${e#*:}; d=${rest%%:*}; x=; [[ $rest == *:* ]] && x=${rest#*:}
   [[ $l == <0-18> && $d == <1-8> && $e == *:* ]] || { echo "$n bad LV entry '$e'"; exit 3; }
-  s="${d}:l${l}:ROGUESQ_FORCE_SAVE_MISSION=${l}+${C}"
+  tg=l$l; [[ -n $x ]] && tg=l${l}x$(( ${#tags} + 1 ))
+  s="${d}:${tg}:ROGUESQ_FORCE_SAVE_MISSION=${l}+${C}"
   (( d >= 8 )) && s="$s+ROGUESQ_ASPECT=21:9"
-  arms+=$s; tags+=l$l
+  [[ -n $x ]] && s="$s+$x"
+  arms+=$s; tags+=$tg
 done
 env R=$R HOLD=${HOLD:-220} DONE=quiet.done ARMS="${(j: :)arms}" zsh tools/g1e_owner_quiet_arms.zsh | tee $R/out.txt; rc=${pipestatus[1]}
 (( rc == 2 )) && exit 2
@@ -34,8 +37,13 @@ for a in $tags; do L=$R/log_$a.txt
   ls7481=$(print -r -- "$last" | sed -n 's/.* loc_S=\([0-9]*\).*/\1/p'); [[ -z $ls7481 ]] && ls7481=na  # s7481: F hits in the frame DL span (free block ending at RSP task out)
   [[ -z $lf || -z $lu ]] && { lf=-1; lu=-1; }
   lcf=$(grep -a -c '\[s7480\] locate-ctl free .* got=F PASS' $L 2>/dev/null); lcu=$(grep -a -c '\[s7480\] locate-ctl used .* got=U PASS' $L 2>/dev/null)
+  rsa=$(grep -a -c '\[s7482\] reserve applied' $L 2>/dev/null); rss=$(grep -a -c '\[s7482\] reserve skipped' $L 2>/dev/null)
+  pcl=$(grep -a '\[s7482\] pool-collide ' $L 2>/dev/null | grep -a -v -c CONTROL); pcc=$(grep -a -c '\[s7482\] pool-collide CONTROL' $L 2>/dev/null)
+  echo "$n arm=$a s7482_reserve_applied=$rsa s7482_reserve_skipped=$rss s7482_pool_collide=$pcl s7482_collide_ctl=$pcc" | tee -a $R/out.txt
   echo "$n arm=$a initMission=$im armed=$armed uaf_rows_nonplant=$hit uaf_free=$lf trim_defect=$lu recarve_U=$lc recarve_N=$ln frame_span_S=$ls7481 plant_detected=$pl plant_inflight=$infl internal=$intl locate_ctl=$lcf$lcu last={$last}" | tee -a $R/out.txt
   (( armed == 0 || pl == 0 || intl == 0 || lf < 0 || lcf == 0 || lcu == 0 )) && sr=3; (( (lf > 0 || lu > 0) && sr == 0 )) && sr=1
+  # s7482: an rs_malloc block overlapping the live retarget pool, or frame-span hits in an arm whose pool was reserved, is a failure
+  (( pcl > 0 && sr == 0 )) && sr=1; [[ $ls7481 == <-> ]] && (( rsa > 0 && ls7481 > 0 && sr == 0 )) && sr=1
 done
 echo "$n score=$sr" | tee -a $R/out.txt
 (( rc != 0 )) && exit $rc

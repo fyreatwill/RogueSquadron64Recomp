@@ -198374,3 +198374,36 @@ Next: reserve the retarget span in the heap (or reject when base falls inside a 
 Verdict wording: selects H-retarget-unreserved and H-recarve, refutes H-uaf (a guest use-after-free store) on all 6 flown levels.
 Next discriminator: the s7482 pool-collide detector (rs_malloc return overlapping [e8, ec) in the wide phase) with
 ROGUESQ_RETARGET_RESERVE=0 vs 1 in one build. Collisions > 0 select H-collide; 0 with RESERVE=1 loc_S=0 selects H-reserve-safe.
+
+## Session 7482 (2026-11-16) — s6202 G1d retarget pool reserved by the game's own span: ORIGIN named (partitionFramebufferMemory returns $v1 = ec as the heap boundary), fix default on, same-build A/B loc_S 151 -> 0, H-collide refuted (latent)
+
+HYPOTHESIS-ID: g1d-retarget-unreserved-pool. Work unit from NEXT s7482 (CURRENT-TRUTH item 1a).
+
+ORIGIN (read from the binary, funcs_0.c 0x80000DD4..0x80001080 + both callers 0x80001180/0x800013F0): partitionFramebufferMemory
+places F0/F4/E8/F8/EC either upward from the bump cursor $a0 or downward from $v1; at the end it stores $v1 (lowest descending
+block) to *(t6) (a0==0 path, returns 0) or *(t5) with size a0-v1 (returns 1), and the callers pass that to heap init 0x80002150
+(a3 = *(sp+0x48) or the 0x8010D200 hole struct). So $v1 = ec is the heap's reserved-span boundary. The s6202 retarget writes
+E8 = base = ec - t2, BELOW ec, and never lowered $v1, so the heap re-init owned [base, ec): that is why the s7481 locator found the
+live pool inside the big free block 0x8023E7F0 (data end 0x809B85F0, next data = task out = ec). The writer is our patch; the
+retail value is not involved.
+
+Fix: tools/apply_s6031_far.py apply_s7482_reserve (live script __main__ + fixup_game_funcs_vendored.py funcs_0 block, right after
+s6202): the ok branch records base/ec; at L_80001060 (before both out stores and the a0-v1 size), if ROGUESQ_RETARGET_RESERVE != 0
+and $v1 == ec, $v1 = base. Logs `[s7482] reserve applied|skipped v1= -> pool= a0= on=`. Default ON (port bug fix); =0 restores the
+old span. Detector: upstream_compat.cpp s7482_check at every rs_malloc exit (rs64_s6063_malloc -> s7475_malloc, unconditional):
+[ptr, ptr+req) vs the live span published through g_rs64_s7482_base/_ec (cleared on every call that does not take "ok"), logs
+`[s7482] pool-collide`; ROGUESQ_S7482_CTL=1 reports the first live-span malloc as a CONTROL line. Recipe tools/s7480_uaf_recipe.zsh:
+LV entries take an optional third field of per-arm env (`7:4:ENV+ENV`, tag l<lvl>x<k>), prints s7482_reserve_applied/skipped,
+s7482_pool_collide, s7482_collide_ctl, and scores rc 1 on any collision or on frame_span_S>0 in an arm whose reserve applied.
+
+Runs (one build, screen unlocked, HID idle >52000 s):
+- s7482_reserve_ab (L7 dd4 16:9, HOLD=220): RESERVE=0 arm never reached the "ok" scene (no mission restart; 4 retarget lines, all
+  reject/skip) -> void for the A/B; RESERVE=1 arm did (initMission=2): reserve applied v1 0x809B8600 -> 0x8096D600 (a0=0 path),
+  CONTROL fired, pool_collide=0, loc_S=0, loc_F=0, controls PASS, alive.
+- s7482_reserve_ab2 (same, HOLD=300, both arms initMission=2, both reached "ok"): RESERVE=0: reserve skipped, frame_span_S=151
+  (the exact s7481 count), loc_F=0, collide=0, CONTROL fired; RESERVE=1: applied, frame_span_S=0, loc_F=0, collide=0, CONTROL fired.
+  Both alive_at_end=1, crashlines=0, vi_stalls30s=0, max_gap 146-147 ms; score=0.
+Two lines for the conclusion: the reserve log shows the boundary moved, and the s7481 pool-pointer classifier's 151 S hits vanish
+in the same build. Selects H-reserve-safe; refutes H-collide (0 rs_malloc overlaps in either arm, detector CONTROL live): the defect
+was latent on this route. Rules out nothing about the hangar abort/re-entry route (not run under RESERVE=1) or other levels'
+wide-phase scenes. Queued soak s7482_reserve_levels (L4/L12 dd4, L1/L15 dd8 21:9, HOLD=300, CTL armed).

@@ -37885,6 +37885,10 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6202:
             changed = True
             report.append(f"{p.name}: s6202 retarget x{_n6202}")
+        text, _n7482 = _a6031p.apply_s7482_reserve(text)
+        if _n7482:
+            changed = True
+            report.append(f"{p.name}: s7482 reserve x{_n7482}")
         text, _n6203 = _a6031p.apply_s6203_heapclass(text)
         if _n6203:
             changed = True
