@@ -215,11 +215,14 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CF, live-stale patches (HYPOTHESIS-ID live-stale-patch).** The built tree is the LIVE RecompiledFuncs, not
-   the regen. s7422 found live funcs_9 lacks two lines the chain applies (s6497 rasterizer-bounds read + s6789 rs64_g3e_trace kind 8,
-   both before `// 0x800429C0`, diag-only), so live can trail the chain. s7421 only proved the other direction (0 LOST from live).
-   Enumerate every regen-only line/statement vs live (tools/s7421_regen_drift.py rows + tag census), classify DIAG / BEHAVIOUR /
-   ORDER-ONLY, and for every BEHAVIOUR row say whether the shipped binary misses it (scratch/agent/NEXT.md).
+1. **Next audit: class CG, stale objects (HYPOTHESIS-ID stale-object).** Is every object linked into build/ compiled from the
+   current live RecompiledFuncs / src text (mtime + content hash vs the .o's dependency, cmake paths pointing at the live tree, no
+   orphan .o from a deleted/renamed file)? scratch/agent/NEXT.md.
+   CF (s7423) CLOSED H-diag: tools/s7423_live_stale.py live vs fresh regen, every function text-level, --control PASS (known funcs_9
+   lines listed DIAG, planted store BEHAVIOUR, planted print DIAG): 124 regen-only statements = DIAG 25 / FILE-DIAG 5 / ORDER-DIAG 10
+   / GUEST 4 + REGEN-FUNC 1 (the s6871 sizing set) / 3 reviewed ORDER rows (tools/s7423_live_stale_accept.tsv: diag swap, goto-less
+   labels, dead post-return copy). 0 behaviour patches missing from the shipped build. Live funcs_9 [streamdump] bounds print 0 until
+   the next regen (diag only).
    CE (s7422) CLOSED H-once: of 13 windowed-idempotence scripts, 8 are called twice (inline fixer + RS64_REPLAY); 0 doubled in
    the real chain (fresh replay /tmp/s7422/R byte-identical to s7421 R2), but 7 of 8 double once a later block lands at their anchor
    (tools/s7422_idem_class_test.py control) -> whole-function tag checks; s5829 safe by anchor shape; s5693/s5697/s6303/s6311/

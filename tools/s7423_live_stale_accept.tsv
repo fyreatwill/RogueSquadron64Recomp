@@ -1,0 +1,4 @@
+# s7423 reviewed ORDER-BEHAVIOUR rows (file<TAB>func<TAB>why). Exit code ignores these.
+funcs_13.c	audioCueDispatcherNpcHandler	rs5854_spawn (ROGUESQ_LOG_HITS census, read-only) swapped with s5798_init (ROGUESQ_LOG_HUDBIT recwatch): two env-gated diag helpers
+funcs_27.c	audioCompandS16	live carries 10 extra L_xxxxxxxx: labels with no goto (pre-s6870 sizing); statements identical
+funcs_49.c	lvj_checkComplexObjectives	regen keeps the dead delay-slot copy ctx->r2=0 after return; live has it cut by s6869 (dead code)

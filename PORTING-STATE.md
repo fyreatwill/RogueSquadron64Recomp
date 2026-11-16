@@ -196570,3 +196570,33 @@ ORIGIN: no mitigation added; tooling idempotence fix (writer = the second RS64_R
 Rules out: any HUDBIT/objective diag block applied twice in the current regen (byte-identical replay + tag census).
 Next: class CF, live-stale patches (regen-only lines vs live; BEHAVIOUR rows matter, the shipped binary is built from live).
 Conclusion: selects H-once, refutes H-double (0 doubled in the chain; 7 at-risk fixed, control PASS); closes class CE.
+
+## Session 7423 (2026-11-15) — class CF live-stale patches closed (H-diag): every regen-only statement vs the live (built) tree is diagnostic, label-only or dead code; 0 behaviour patches missing from the shipped build
+
+Question: the binary is built from LIVE RecompiledFuncs. s7422 found live funcs_9 missing two chain-applied lines, so live can trail
+the fixup chain. s7421 only proved live->regen (0 LOST), and only over functions whose OBJECT differed. H-diag (every regen-only
+statement is diagnostic) vs H-behaviour (>=1 behaviour patch the shipped build lacks).
+
+New tool tools/s7423_live_stale.py <live> <regen> [--json] [--control]: walks EVERY function of every regen file at text level
+(s7421 split/untaint reused: comments + PATCH labels dropped), lists regen-only statements and pure reorders, classifies
+DIAG / BEHAVIOUR / ORDER-DIAG / ORDER-BEHAVIOUR / GUEST (data-gap/preamble sizing) / REGEN-FUNC / FILE-*. Reviewed rows in
+tools/s7423_live_stale_accept.tsv. Run: live vs /tmp/s7422/R (fresh replay, = s7421 R2). Output scratch/agent/s7423_live_stale.{out,json}.
+
+Controls (same run) PASS: (1) the two known funcs_9 binPolygonIntoTerrainGrid lines (s6789b g3e kind 8 loop, s6497 bounds capture)
+are listed, as DIAG; (2) a planted `MEM_W(0, ctx->r29) = ...` in a copy of a regen funcs_20 function -> BEHAVIOUR; (3) a planted
+getenv-gated fprintf -> DIAG.
+
+Result: 48 rows, 124 regen-only statements. DIAG 25 (22x lvN_/initMission `[lvinit-bt]` backtrace print under ROGUESQ_LOG_HUDBIT,
+rs5834_post s5856/s5897 prints, binPolygonIntoTerrainGrid g3e trace(2)+(8) + s6497 static capture read only by the
+ROGUESQ_FORFACE_LOG [streamdump] print), FILE-DIAG 5 (extern decls), ORDER-DIAG 10, GUEST 4 (rspbootTextPreamble,
+data_gap_800AF6A8, data_gap_800CC3D4, data_gap_80024A0C = exactly the s6871 sizing set, docs/REGEN-VERIFY.md; live keeps the
+trap/cut forms), REGEN-FUNC-DIAG 1 (static_5_800CC4E4, s6871). A first pass flagged streamTerrainGridCellsByDistance BEHAVIOUR:
+it is the same ROGUESQ_FORFACE_LOG print with a 25 vs 100 budget (counter declared in the getenv-gated static decl) - tool now
+treats such counters as diag. ORDER-BEHAVIOUR 3, reviewed by diff and accepted: audioCueDispatcherNpcHandler (two env-gated diag
+helpers rs5854_spawn / s5798_init swapped), audioCompandS16 (live has 10 extra goto-less L_ labels, statements identical),
+lvj_checkComplexObjectives (regen keeps the dead delay-slot copy after `return;`, live has it cut by s6869). rc 0, VERDICT H-diag.
+Two lines: the text census, and agreement with the object-level s6871/s7421 accounting of the same GUEST/REGEN-FUNC set.
+
+Rules out: a default-on fix that exists in the chain but not in the shipped build. Not done: live funcs_9 still lacks the two diag
+lines (the [streamdump] bounds fields print 0 in the live build until the next regen; regen is correct). No game run (offline audit).
+Next: class CG, stale objects (is every built object newer than, and compiled from, the live source it claims).
