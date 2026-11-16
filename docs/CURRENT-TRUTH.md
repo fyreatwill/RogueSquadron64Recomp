@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7437 (2026-11-15).
+Compact operational handoff, as of Session 7439 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,12 +215,18 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CV, default-on per-primitive diagnostic hooks inside lib/rt64 hot loops (HYPOTHESIS-ID
-   rt64-perprim-diag).** See scratch/agent/NEXT.md. Grep-enumerate every rs64_* / getenv-latched call reached per triangle,
-   per load or per draw call in lib/rt64 (decodeTriangles, drawTris, loadBlock/TLUT, fullSyncFramebufferPairTiles), classify
-   each gated (cached bool, returns before work) vs ungated (does work with logging off), cost the class with tools/s7438
-   --under. Lead: rs64_shade_ordinal takes a mutex + unordered_map insert on EVERY triangle (rt64_gbi_rdp.cpp:584) though its
-   value is only read by log paths and rs64_floor_note; rs64_floor_texel/note/cover run per tri too.
+1. **Next audit: class CW, the remaining default-on per-command / per-rect rs64 hooks in lib/rt64 (HYPOTHESIS-ID
+   rt64-percmd-diag).** See scratch/agent/NEXT.md: rs64_note_image_word (per RDP command, 0.016 ms/f under processRDPLists),
+   rs64_floor_rect (per rect), rs64LogLoad (0.002+0.002), rs64SkipDraw (0.003); plus the ROGUESQ_LOG_FLOOR=1 / LOG_SHADE_RAW=1
+   consumer positive control for CV (logs must still fire with the s7439 gates).
+   CV (s7439) LANDED H-gated: rt64_gbi_rdp.cpp decodeTriangles now computes shadeTask/shadeOrdinal/submit serial only when
+   ROGUESQ_LOG_SHADE_RAW / FIX_ZERO_SHADE / LOG_FLOOR_MESH / SHADE_DIAG=1 is armed, and builds the floor_note/cover/texel/untex
+   argument blocks only under ROGUESQ_LOG_FLOOR / LOG_FLOOR_MESH (every callee already returned at once without them).
+   ROGUESQ_G1E_TRIM=0 restores the old always-run path. Measured by /usr/bin/sample, owner recipe lvl1 flight (scratch/s7439,
+   control +0.0384 vs 0.030 PASS) vs s7435: decodeTriangles self 0.373 -> 0.176 ms/f, inclusive 0.726 -> 0.468, every rs64_floor_*
+   / mutex / __hash_table / getter row gone from --under; Gfx thread 8.71 -> 8.00 ms/f (cross-run, single-source for the total).
+   0 crash over the ~233 s run. Other hot loops (drawTris, loadBlock, loadTLUT, fullSync, pairTiles) carry <= 0.02 ms/f of rs64
+   hooks (H-spread refuted). Logged ord/task read 0 in FIX_ZERO_SHADE lines unless SHADE_DIAG=1 (only behaviour change, log-only).
    CU (s7438) CLOSED H-closed: tools/s7438_rt64_terms.py on scratch/s7435 (control +0.0345 vs 0.030 PASS; second capture
    scratch/s7433 same ranking within 0.03): RT64 self terms >= 0.2 ms/f = TMEMHasher::hash 0.49 (closed s7437/s6961),
    decodeTriangles 0.37 (--under split: upstream setup self 0.27 + our per-tri diag hooks ~0.10: floor_texel 0.028,

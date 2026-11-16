@@ -197148,3 +197148,32 @@ Verdict: selects H-closed (no RT64 term >= 0.3 ms/frame without a prior lever), 
 >= 0.2). Gfx thread 8.7 of 16.7 ms/frame, so none of it is on a budget edge. No change landed.
 Rules out: a hidden RT64 Gfx-thread hotspot as a frame-time lever at the owner recipe. Opens class CV: default-on
 per-primitive diag hooks in lib/rt64 hot loops (~0.10 ms/frame in decodeTriangles alone, unenumerated elsewhere).
+
+## Session 7439 (2026-11-15) — class CV per-triangle diag hooks gated H-gated: decodeTriangles shade-ordinal mutex/map + floor_* argument building now run only when a consumer log is armed; decodeTriangles self 0.373 -> 0.176 ms/frame, inclusive 0.726 -> 0.468, control +0.0384 vs 0.030 PASS
+
+HYPOTHESIS-ID: rt64-perprim-diag. Step 1 (offline enumeration): in lib/rt64/src/gbi/rt64_gbi_rdp.cpp decodeTriangles, per
+triangle and with logging off: rs64_e9prov_current_task + rs64_shade_ordinal (static mutex + unordered_map ++next[key]) + both
+dpc submit getters, whose values are read only by the ROGUESQ_LOG_SHADE_RAW logs (shade-raw, tri-source-join), the
+ROGUESQ_FIX_ZERO_SHADE log (default off since s5971) and the ROGUESQ_LOG_FLOOR_MESH flags; and per textured triangle the
+floor block (sample-point math, scissor read, rs64_floor_note/cover/texel calls with ~60 args), per untextured triangle
+rs64_floor_note + rs64_floor_untex. Every floor callee in src/rsp/dpc_bridge.cpp starts with `if (!on) return` on
+ROGUESQ_LOG_FLOOR (cover additionally op/tile/line). Classification: all UNGATED-DIAG, none feeds default-on behaviour
+(H-needed refuted by reading every consumer). Other hot loops via tools/s7438_rt64_terms.py --under on scratch/s7435: drawTris
+rs64SkipDraw 0.003, loadBlockOperation rs64LogLoad 0.002, processRDPLists rs64_note_image_word 0.016 (per command; returns
+unless op FF/FE), pairTiles rs64LogLoad 0.002, loadTLUT none -> H-spread refuted (<= 0.02 ms/f outside decodeTriangles).
+Step 2 (change, lib/rt64): shade task/ordinal/submit computed only when s_shadeDiag (LOG_SHADE_RAW / FIX_ZERO_SHADE /
+LOG_FLOOR_MESH / new ROGUESQ_SHADE_DIAG=1) or !g_rs64_trim; the textured floor block wrapped in
+`if (LOG_FLOOR || LOG_FLOOR_MESH || !g_rs64_trim)`, the untextured one in `if (LOG_FLOOR || !g_rs64_trim)`.
+ROGUESQ_G1E_TRIM=0 restores the old always-run path (s6934's trim knob). Only behaviour change: the FIX_ZERO_SHADE log line
+prints task/ord 0 unless SHADE_DIAG=1. submodule-patches/rt64.patch refreshed.
+Measurement: one tools/s7433_probe_cost.sh run (S7431_ARM=CV, owner recipe, autopilot lvl1 flight, 8 x 12 s /usr/bin/sample
+windows, control ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled 30 s), samples kept in scratch/s7439. tools/s7438_rt64_terms.py:
+CONTROL +0.0384 core vs 0.030 PASS. decodeTriangles self 0.373 -> 0.176 ms/f; --under decodeTriangles now shows only
+drawTris 0.285, self 0.165, vector 0.011, rs64SkipDraw 0.003 (rs64_floor_texel 0.028, floor_note 0.018, mutex 0.020,
+__hash_table 0.006, floor_cover 0.006, getters 0.005 all gone); inclusive 0.726 -> 0.468; Gfx thread running 8.71 -> 8.00
+ms/frame (cross-run vs s7435, same recipe; the total is single-source, the per-row disappearance is the discriminator).
+s7433 guest-probe verdict same run: H-free 0.108 ms/frame (control 0.653). 0 crash in run.tlog.
+Rules out: other per-triangle/per-load rs64 hooks as a frame-time term (all <= 0.02 ms/f). Not done: consumer positive control
+(ROGUESQ_LOG_FLOOR=1 / LOG_SHADE_RAW=1 still log) - code-reading only, queued as the first step of class CW.
+Conclusion: selects H-gated (the ~0.10 found by s7438 was the whole class, now gated, measured saving ~0.2 ms/f self), refutes
+H-spread and H-needed. Next discriminator: class CW, per-command/per-rect hooks + CV consumer control.
