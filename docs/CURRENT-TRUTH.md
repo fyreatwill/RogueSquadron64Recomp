@@ -215,10 +215,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class DA, ungated periodic-summary prints in src/ (HYPOTHESIS-ID ungated-summary-prints).** See NEXT.md:
-   the 10 `(n & 0xMASK) == 0|1) ... fprintf` sites (grep in NEXT.md) in main.cpp / upstream_compat.cpp / dpc_bridge.cpp, the
-   idiom s7443 found in rs64_s5660_ustore. Classify each GATED (env/latch before the counter) vs UNGATED; latch the UNGATED
-   diag ones (G1E_TRIM=0 restores). Guest-hook trim campaign (CM-CZ) is CLOSED.
+1. **Next audit: class DB, default-on burst/one-shot diag prints (HYPOTHESIS-ID default-diag-bursts).** See NEXT.md:
+   the non-PERSISTENT tags in the default-arm stderr scratch/s7444/run.tlog ([s4234-ENTRY] 149 KB in one second at t=6.5 s,
+   [newbtn], [drain-path]; sites in tools/apply_s4234_entryprobe.py / fixup_game_funcs_vendored.py, so latches need a regen).
+   DA (s7444) CLOSED H-hidden, one latch: 14 periodic `(n & MASK) == 0|1` print sites read by hand. GATED (env/latch before
+   the counter): s6955-bc (G1E_BATCH_CHECK), s6933-wm, s6945-coal, s6934-tbl (G1E_TRIM tbl check), s6936-walk, s4272-latetot /
+   s4280-tot / s4284-tot (G1E_CDIAG), s4638-tally (LOG_S4299), s7318 (S7318_BCMP), s6911 (DD_VARCLAMP_LOG), g3d toggle,
+   s4779-ctl (LOG_S4457), ustore/vstore (s7443). UNGATED-DIAG: [s6956-cdiag] (dpc_bridge.cpp rs64_dpc_defer_end_impl, every
+   1024 commits, 8 lines / 150 s, the only DA tag in the s7443 default stderr). Now latched on ROGUESQ_G1E_CDIAG (any value) /
+   G1E_TRIM=0. scratch/s7444, 150 s owner recipe lvl1 flight: default 0 lines, consumer G1E_CDIAG=1 8 (PASS), fbhash control
+   PASS, 0 crash both.
    CZ (s7443) CLOSED H-trivial + one latch: the four hooks left by s7441_rs64_census sum 0.022 ms/f self. rs64_s6287
    (ppcount, 5 sites funcs_3.c) GATED-INSIDE (cached ROGUESQ_PPLOG); rs64_s6285_en (11 sites) NEEDED (dlpool grow gate,
    static latch); rs64_s6963_pre (funcs_10.c clampGridCellLookup) NEEDED (cell-index memo; S.calls++ only); rs64_s5660_ustore

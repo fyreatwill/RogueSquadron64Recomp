@@ -8068,7 +8068,11 @@ static void rs64_dpc_defer_end_impl(int commit) {
     g_defer_active = false;
     if (!commit && rs64_s7096_on) for (const auto &r : g_deferred_ranges) rs64_s7096_drop(r.first, r.second, 7);
     if (commit) rs64_g1e_bc_check("commit");
-    if (commit) {   // s6956: per-arm task tally (positive control: cmpWords must advance only with on-tasks)
+    /* s7444 class DA: this tally printed [s6956-cdiag] every 1024 commits with no env (8 lines per 150 s owner run). Its only
+       consumer is the ROGUESQ_G1E_CDIAG experiment; latch it on that env. ROGUESQ_G1E_TRIM=0 restores the old always-on tally. */
+    static const bool s_cdiag_tally = [] { const char *c = std::getenv("ROGUESQ_G1E_CDIAG"), *t = std::getenv("ROGUESQ_G1E_TRIM");
+        return (c && *c) || (t && *t == '0'); }();
+    if (commit && s_cdiag_tally) {   // s6956: per-arm task tally (positive control: cmpWords must advance only with on-tasks)
         static unsigned long onT = 0, offT = 0; (g_rs64_g1e_cdiag ? onT : offT)++;
         if (((onT + offT) & 0x3FF) == 0) fprintf(stderr, "[s6956-cdiag] onTasks=%lu offTasks=%lu\n", onT, offT);
     }

@@ -197296,3 +197296,28 @@ Next discriminator: class DA, per-site GATED vs UNGATED read of the 10 periodic-
 count in the default-arm stderr scratch/s7443/run.tlog (a tag present there with no env = UNGATED, second line of evidence).
 Rules out: any remaining default-on rs64 guest hook >= 0.01 ms/f doing diagnostic-only work. Campaign CM-CZ closed.
 Next: class DA, the 10 `(n & MASK) == 0|1 ... fprintf` periodic-summary sites in src/.
+
+## Session 7444 (2026-11-15) — class DA closed H-hidden: 14 periodic-summary print sites classified, 13 gated, [s6956-cdiag] printed with no env and is now latched on ROGUESQ_G1E_CDIAG; default 0 lines, consumer control 8, 0 crash
+Work unit (NEXT.md s7444): the `(n & MASK) == 0|1 ... fprintf` idiom s7443 found in rs64_s5660_ustore, over src/.
+Enumeration: the NEXT.md grep (10 single-line sites) widened to `& 0x[0-9A-F]{3,}) == [01]` without getenv -> 14 periodic
+print sites (the rest of that grep are pointer/origin masks). Classification by reading each enclosing gate:
+- GATED: dpc_bridge.cpp [s6955-bc] (rs64_g1e_bc_check returns on g_bc_on = ROGUESQ_G1E_BATCH_CHECK), [s6933-wm] (s_wm_chk),
+  [s6945-coal] (cc_on), [s6934-tbl] (s_tbl_chk), [s6936-walk] (s_wstat), [s4272-latetot] / [s4280-tot] / [s4284-tot]
+  (g_rs64_g1e_cdiag = ROGUESQ_G1E_CDIAG, default 0); upstream_compat.cpp [s4638-tally] (rs64_s4299_store_watch returns
+  without ROGUESQ_LOG_S4299), s7318 dump (S7318Init needs ROGUESQ_S7318_BCMP), [s6911] (lg = ROGUESQ_DD_VARCLAMP_LOG; the
+  seen/fixed counters stay, off-map path only); main.cpp g3d legacy toggle (g_g3d_toggle_s > 0), [s4779-ctl]
+  (rs64_s4457_list_check, rs64_s4457_on()), ustore/vstore (s7443 latch).
+- UNGATED-DIAG: [s6956-cdiag] (dpc_bridge.cpp rs64_dpc_defer_end_impl): an onT/offT tally of the G1E_CDIAG arm, printed
+  every 1024 commits for any run. Second line of evidence: it is the ONLY DA tag in the s7443 default-arm stderr (8 lines /
+  150 s; every other DA tag 0 there).
+Change: the tally and print run only when ROGUESQ_G1E_CDIAG is set (any value, so =0 still reports the off-arm count) or
+ROGUESQ_G1E_TRIM=0 (old always-on). cmake build only (src change, no regen).
+Runs (tools/s7431_stderr_volume.sh 150, owner recipe FPS60 dd4 16:9, forced lvl1 autopilot, copied folder, sequential, same
+build): default arm S7431_ARM=DA [s6956-cdiag] 0, 9.84 MB stderr, autopilot 48 lines, fbhash control PASS, 0 crash; consumer
+arm ROGUESQ_G1E_CDIAG=1 [s6956-cdiag] 8 (positive control PASS) plus [s4272-latetot] 13, 0 crash. Logs scratch/s7444/.
+Cost is nil (one counter + a 1-in-1024 print); this is an output-hygiene latch, not a frame-time change.
+ORIGIN: not a mitigation; diagnostic tally (s6956) left default-on after its experiment closed.
+Verdict: selects H-hidden (one ungated diag site), refutes H-clean; 0 vs 8 lines in same-build arms discriminates the latch.
+Rules out: any remaining periodic `(n & MASK)` summary print in src/ that fires at the owner recipe without env.
+Next: class DB, the non-PERSISTENT burst tags in the default stderr ([s4234-ENTRY] 149 KB in one second at t=6.5 s,
+[newbtn], [drain-path]), sites in generated-code apply/fixup scripts.
