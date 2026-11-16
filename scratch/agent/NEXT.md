@@ -1,15 +1,15 @@
-# NEXT (s7462)
+# NEXT (s7463)
 HYPOTHESIS-ID: soak-stall-measure-coverage
 
-s7461 (class DQ): the m6 live stall poller was blind during the 130 s mission-verify sleep; it now polls through it
-(scratch/agent/m6_god_common.sh vtick; M6_VERIFY_BLIND=1 = old behaviour). Queued scratch/agent/soak_queue/s7461_m6_verify_window_ctl.sh
-(same recipe as the s7460 m6 arm: L4 FPS60 dd4 16:9, ROGUESQ_PLANT_HOLD=120,40).
+s7462 (class DR): m6 void attempts now score stalls (fail() -> vilog_stalls.py, summaries void_holds=, verdict counts it;
+M6_VOID_BLIND=1 old). Queued scratch/agent/soak_queue/s7462_m6_void_holds_ctl.sh.
 
-Step 1: fold s7461_m6_verify_window_ctl from SOAK-RESULTS.md / its log.
-  - CONTROL PASS (alive_at_end=1 fs_holds>=1 vi_stalls30s>=1, keys.log has a "stall t=" line in ~150-200 s) -> H-ok: close the
-    stall-measure series DN/DO/DP/DQ in CURRENT-TRUTH item 1 (one line), and take the next ladder item: an M3 idiom-class audit
-    (ITERATION item 3) or the top open owner G5 item in CURRENT-TRUTH.
-  - vi_stalls30s=0 with plant begin present -> the mission gate moved later than 120 s (check "mission t=" in keys.log); move the
-    plant to mission_t+30 and re-queue once.
-  - "VOID: plant never fired" or dead arm -> grep run.log for the killer; do not re-queue blind.
-Step 2: if the soak voids 5x on idle, run it by hand when HID idle allows.
+Step 1: fold s7462_m6_void_holds_ctl from SOAK-RESULTS.md / its log.
+  - CONTROL PASS (P allattempts-failed void_holds>=1, keys "-att1 exitrc=... fs_holds>=1"; C alive_at_end=1 void_holds=0) ->
+    close class DR in CURRENT-TRUTH item 1 (one line) and LEAVE this slug: the m6 stall series is done.
+  - P void_holds=0 with plant begin in fail_att1.log -> check whether the log has fs= rows during the hold (DIAG_QUIET may
+    suppress [vi] rows pre-mission); fix the scorer input, re-queue once.
+  - P passed the gate (no void) -> the hold ended before WAITN expired; raise dur, re-queue once.
+Step 2 (new slug): next ladder item. Owner items (CURRENT-TRUTH 2-9) await the owner; take an M3 idiom-class audit
+  (ITERATION item 3) with a new class, or the G5 renaming sweep (item 4). Do not open another harness-meta class unless a
+  fold shows a concrete misread.

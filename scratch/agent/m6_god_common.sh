@@ -36,6 +36,7 @@ COMMON=(${=XENV} ROGUESQ_GODMODE=${GODV:-1} ROGUESQ_AUTOPILOT=$AP ROGUESQ_OVL2C_
 if [ "${ROGUESQ_NO_PKILL:-0}" != 1 ]; then
   pkill -KILL -x RogueSquadron64Recomp >/dev/null 2>&1 || true
 fi
+void_holds=0
 for att in $(seq 1 ${MAXATT:-5}); do
   L=$OUT/run.log
   ( cd $BUILD && exec env "${COMMON[@]}" ./RogueSquadron64Recomp ) > $L 2>&1 &
@@ -43,7 +44,13 @@ for att in $(seq 1 ${MAXATT:-5}); do
   has() { grep -aq "$1" $L; }
   key() { :; }  # no-op: autopilot injects keys
   # s7451: fail() records how the attempt ended (exitrc=killed when the harness killed a live game, else the game's own status) and its fatal_scan score; before s7451 a void attempt's crash text was never scored.
-  fail() { local lv=1; kill -0 $p 2>/dev/null || lv=0; kill -9 $p 2>/dev/null; wait $p 2>/dev/null; frc=$?; [ $lv = 1 ] && frc=killed; echo "$1-att$att exitrc=$frc $(zsh $ROOT/tools/agent/fatal_scan.sh $L)" >> $K; cp $L $OUT/fail_att$att.log; }
+  # s7462 class DR: a void attempt (notitle/nohangar/nomission/died_in_verify) was retried with its stalls unscored, so a pre-gate
+  # held frame (the s6993 boot-freeze shape: fs stuck while VI ticks, title gate times out -> notitle) vanished behind a later
+  # good attempt. fail() now scores the attempt's log with vilog_stalls.py and sums fs_holds into void_holds=, which every summary
+  # carries (soak_verdict_fields counts void_holds>0 as a stall arm). M6_VOID_BLIND=1 restores the unscored void (mutation control).
+  fail() { local lv=1 vs="" vn; kill -0 $p 2>/dev/null || lv=0; kill -9 $p 2>/dev/null; wait $p 2>/dev/null; frc=$?; [ $lv = 1 ] && frc=killed
+    if [ "${M6_VOID_BLIND:-0}" != 1 ]; then vs=$(python3 $ROOT/tools/agent/vilog_stalls.py $L 2>/dev/null | cut -d" " -f1-2); vn=${${vs%% *}#fs_holds=}; [[ $vn == <-> ]] && void_holds=$((void_holds+vn)); fi
+    echo "$1-att$att exitrc=$frc $(zsh $ROOT/tools/agent/fatal_scan.sh $L) $vs" >> $K; cp $L $OUT/fail_att$att.log; }
   # s6434: wide-aspect arms move every framebuffer origin (FB_WIDTH 796/1024), so the 0x790400/0x6AB400 gates false-fail (s6433: 6/6 'notitle' while the autopilot reached hangar+flight). WIDE_ROUTE=1 gates on autopilot-armed and skips the hangar origin gates.
   [ "${WIDE_ROUTE:-0}" = 1 ] && { TITLE_OPTIONAL=1; AP_OVERRIDE_WIDE=1; }
   if [ "${TITLE_OPTIONAL:-0}" = 1 ]; then
@@ -98,13 +105,13 @@ for att in $(seq 1 ${MAXATT:-5}); do
   if [ "${M6_VERIFY_BLIND:-0}" = 1 ]; then sleep 130
   else for n in $(seq 1 26); do sleep 5; kill -0 $p 2>/dev/null || break; vtick; done; fi
   kill -0 $p 2>/dev/null || { fail died_in_verify; [ "${DIED_RETRY:-0}" = 1 ] && continue
-    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) launches=$att mission_restarts=$(restarts $L) died_within_s=130 alive_at_end=0 vi_stalls30s=na crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
+    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) launches=$att mission_restarts=$(restarts $L) died_within_s=130 alive_at_end=0 vi_stalls30s=na void_holds=$void_holds crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
   echo "att=$att mission_verified_130s" >> $K
   while kill -0 $p 2>/dev/null && [ $((SECONDS-mt)) -lt $HOLD ]; do sleep 5; vtick; done
   alive=0; kill -0 $p 2>/dev/null && alive=1
   kill -9 $p 2>/dev/null; wait $p 2>/dev/null; xrc=$?; [ $alive = 1 ] && xrc=held  # s7450: a death's own exit status (non-signal exits print no CRASH)
   echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
-  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) launches=$att mission_restarts=$(restarts $L) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) $(python3 $ROOT/tools/agent/vilog_stalls.py $L 2>/dev/null | cut -d" " -f1-2) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc" | tee $OUT/summary  # s7450 class DG: shared fatal list; s7452: this comment used to precede the tee, so no passing run wrote a summary
+  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) launches=$att mission_restarts=$(restarts $L) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) void_holds=$void_holds $(python3 $ROOT/tools/agent/vilog_stalls.py $L 2>/dev/null | cut -d" " -f1-2) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc" | tee $OUT/summary  # s7450 class DG: shared fatal list; s7452: this comment used to precede the tee, so no passing run wrote a summary
   exit 0
 done
-echo "tag=$TAG allattempts-failed $(grep -a -- '-att[0-9]* exitrc=' $K | awk '{f=$3; sub("fatal=","",f); n+=f; if($2!="exitrc=killed") d++} END{printf "deaths=%d fatal_total=%d", d, n}')" | tee $OUT/summary; exit 1
+echo "tag=$TAG allattempts-failed void_holds=$void_holds $(grep -a -- '-att[0-9]* exitrc=' $K | awk '{f=$3; sub("fatal=","",f); n+=f; if($2!="exitrc=killed") d++} END{printf "deaths=%d fatal_total=%d", d, n}')" | tee $OUT/summary; exit 1

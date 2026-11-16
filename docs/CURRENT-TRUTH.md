@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7460 (2026-11-15).
+Compact operational handoff, as of Session 7462 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,15 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: fold s7461_m6_verify_window_ctl (class DQ), then close the stall-measure series, see NEXT.md. One line each:
+   Next: fold s7462_m6_void_holds_ctl (class DR), see NEXT.md. One line each:
+   - **DR s7462 H-void (m6):** void attempts (notitle/nohangar/nomission/died_in_verify) were retried with stalls unscored, so a
+     pre-gate held frame (s6993 boot-freeze shape) vanished behind a later good attempt. fail() now scores each void log with
+     vilog_stalls.py (keys line gains fs_holds=/max_fs_hold_vi=), every summary carries void_holds=<sum>, soak_verdict_fields counts
+     void_holds>0 as a stall arm; M6_VOID_BLIND=1 old (mutation). tools/s7462_m6_void_holds_test.zsh 11/11 (planted + real s61 held log,
+     advancing + real s7450 void log, sum, mutation, verdict). Census of the 15 surviving fail_att logs: 0 holds (11 scored, 4 no fs=).
+     Real-game control queued: soak_queue/s7462_m6_void_holds_ctl.sh (P plant 10,150 MAXATT=1 -> void_holds>=1; C clean -> 0).
+   - **Stall-measure series DN/DO/DP/DQ CLOSED s7462:** s7461_m6_verify_window_ctl CONTROL PASS (mission t=71, stall t=156,
+     vi_stalls30s=1 fs_holds=1 max_fs_hold_vi=2368, alive_at_end=1).
    - **DQ s7461 H-window (m6):** s7460_plant_hold_ctl folded: g1e arm PASS (vi_stalls30s=1 max_vihold_ms=39916); m6 arm CONTROL
      FAIL only on vi_stalls30s=0 while offline fs_holds=1 max_fs_hold_vi=2368 (~39.5 s). Cause is none of the s7460 hypotheses: the
      m6 live poller started only AFTER the 130 s mission-verify sleep (gate t=72 s -> polling from ~202 s), and the plant ran

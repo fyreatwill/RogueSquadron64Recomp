@@ -197774,3 +197774,26 @@ logs: held fs -> stall, advancing fs -> 0 (negative control), M6_VERIFY_BLIND=1 
 Rules out: H-m6-blind and H-ring-blind for the plant; the m6 fs probe itself is sound (offline saw the hold).
 Queued: scratch/agent/soak_queue/s7461_m6_verify_window_ctl.sh (same m6 recipe; must read fs_holds>=1 vi_stalls30s>=1).
 Regression: tools/s7459_m6_stall_test.zsh (incl. s7453_harness_death_test.zsh) 0 failures after the change.
+
+## Session 7462 (2026-11-16) — class DR closed H-void (m6): void attempts were retried with their stalls unscored, so a pre-gate held frame (s6993 boot-freeze shape) vanished behind a later good attempt; fail() now scores each void log, summaries carry void_holds=, verdict counts it; test 11/11 with mutation control; s7461 verify-window control folded PASS
+
+- Fold: s7461_m6_verify_window_ctl rc=0, CONTROL PASS: L4 FPS60 dd4 16:9 plant 120,40: mission t=71, live "stall t=156",
+  vi_stalls30s=1 fs_holds=1 max_fs_hold_vi=2368 alive_at_end=1 crashlines=0. Class DQ real-game verified; the stall-measure
+  series DN/DO/DP/DQ is closed (g1e ring, m6 fs, in-game plant, m6 verify window all controlled).
+- Class DR (next gap in the same harness): m6_god_common.sh fail() recorded exitrc + fatal_scan only, then `continue`d to a
+  new launch. A held frame before the mission gate (boot freeze: fs stuck, VI ticking, title/mission gate times out) was
+  therefore a silent void; if attempt 2 passed, the summary read vi_stalls30s=0 / fs_holds=0 for a run that froze. M6 asks for
+  every stall, so this is a blind spot, not a design choice.
+- Change: fail() runs tools/agent/vilog_stalls.py on the attempt's run.log, appends `fs_holds= max_fs_hold_vi=` to the keys line,
+  sums fs_holds into void_holds (init before the attempt loop); all 3 summary forms (pass, died_in_verify, allattempts-failed)
+  carry void_holds=; tools/agent/soak_verdict_fields.sh counts void_holds>0 as a stall arm. M6_VOID_BLIND=1 = old (mutation).
+- Test tools/s7462_m6_void_holds_test.zsh (harness fail() extracted verbatim, run with fake pids): planted held void -> 1 and
+  keys line fs_holds=1; REAL held log scratch/s61_death_repro/run4 -> 1; advancing fake -> 0; REAL void log s7450 fxP att1 -> 0;
+  held+adv+held -> 2; M6_VOID_BLIND=1 -> 0 with no fs_holds on the line (mutation caught); verdict void_holds=1 / 0 /
+  allattempts-failed 2 -> stall/clean/stall. 11/11. Regression: s7459 failures 0, s7461 3/3, s7453 failures 0, s7454 6/6, summary_field selftest 21/21.
+- Census: only 15 fail_att*.log survive scratch pruning (keys.log tallies across 3532 m6 dirs: 14 died_in_verify, 10 nomission,
+  5 notitle). 11 have fs= rows: all fs_holds=0 (max hold 63 VIs); 4 (s7451 fake-binary ctl dirs) have none. Single-source null on
+  a small sample; the scorer itself passed its planted + real-log controls in the same test.
+- Real-game control queued: scratch/agent/soak_queue/s7462_m6_void_holds_ctl.sh (arm P ROGUESQ_PLANT_HOLD=10,150 MAXATT=1 WAITN=24
+  -> allattempts-failed void_holds>=1 + keys fs_holds>=1; arm C clean -> alive_at_end=1 void_holds=0 crashlines=0).
+- Rules out: "m6 sees every stall" was false for pre-gate attempts until now. Not a guest/runtime change.
