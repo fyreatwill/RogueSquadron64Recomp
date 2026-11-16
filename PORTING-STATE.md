@@ -198260,3 +198260,6 @@ that take values (e.g. rs64_s4540_call(ctx->r4)) cannot write guest regs through
   canary's: its store path scored dead records. Two lines: header state at store (code words / zeros vs the control's live header) + host chains.
 - Queued scratch/agent/soak_queue/s7478_canary_restale.sh (s7476 recipe, 220 s, 4 levels, with stale check + BT) for the full re-score.
 - Rules out: a port-shrunk request (H-port-size) and a live 1-byte overrun for both sites. Selects H-attr (canary attribution/staleness).
+- Verdict: the store-time header state (hdr_ok=0 on both EF sites vs hdr_ok=1 on the same-build ED control) selects H-attr and refutes
+  H-port-size and H-retail-overrun for both sites; this closes class EF. Next discriminator (NEXT.md, class EG): ROGUESQ_S7475_PAD=16 gives the
+  ~4780 zero-slack blocks a canary band; 0 live slack-stores selects H-clean, a live one names the writer via the s7478 chains.
