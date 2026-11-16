@@ -198178,3 +198178,34 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
 - **Instrument caveat:** the A5 fill is not neutral (it changes the voice[1] read). The recipe now defaults FILL=0 + STORE_DIAG=1
   (the store watch is the writer detector; canary-only would miss 0-valued writes) and fails the control without watch-ctl PASS.
 - Not done: the planned 4-level flight canary sweep (invalidated by the A5 hang; re-run with FILL=0 after the voice fix).
+
+## Session 7476 (2026-11-16) — class ED root cause: the port's s4889 dereg patch clobbers $a1 (voice count 17 -> 1) before initN64RspMixer; retail oracle shows counts 20/17/16/15/18, never 1; fix preserves $a1/$v0/$v1, same-build A/B clears the A5 boot hang and both slack-stores
+- **Retail oracle (rs64_oracle, Rice video, Start presses 6..56 s, 70 s; whole-RDRAM write watch = positive control, 9.9M hits):**
+  exec watches 0x80001354 (scene/mode init, misnamed runVideoFrameTick), reapplyDisplayMode 0x8008EB5C, reapplyAudioConfig 0x80091C88,
+  allocateSongChannelArray 0x8008F0A0: boot alloc count 0x14=20 (via initAudioSubsystem), then per scene 0x80001354 -> reapplyDisplayMode
+  -> reapplyAudioConfig -> alloc with a0 = 17 (t=2.1, menuOverlayInit 0x800C5A18), 16 (t=6.7, initSceneForMission 0x800A9C70),
+  15 (t=17.3, title), 18 (t=38.4, hangar). Never 1. A first undriven dummy-video run stayed in boot 320 and saw only the boot alloc:
+  that is exactly why s4711 (dummy video) concluded "retail never calls reapplyDisplayMode" -> superseded.
+- **ROM scene table:** menuOverlayInit copies byte 8 of entry idx (table 0x800CD2B0, stride 0x1A, idx = u16 0x800CFF50) to the
+  descriptor byte 0x80037580 (runVideoFrameTick's a1 = lbu 4($s2)). Entries 0-10 hold counts 18,18,15,17,17,17,32,17,32,17,32: no 1.
+- **Port point store watch (ROGUESQ_STORE_WATCH_PTS=037570,037580,0CFF50, one boot):** descriptor byte 0x80037580 = 0x11 (17) in the
+  port too (pc 800C59BC, swap 40), so the 17 -> 1 change is downstream. Reading reapplyDisplayMode / reapplyAudioConfig generated code:
+  the arg path is clean up to 0x80091D14, where the port patch `s4889 first gate-zero dereg` calls findAndZeroTableSlotMatching
+  (0x8000794C: `addu a1,0` ... `addiu a1,a1,1` slot loop over 0x8011A8A4[4]) and restores only $a0.
+- **ORIGIN:** writer = findAndZeroTableSlotMatching's slot index left in $a1 by the port's own s4889 hook (not legitimate: retail
+  never runs that hook, and retail passes 17). The synth callback 0x8009123C sits in slot 1, so a1 = 1 -> allocateSongChannelArray(1)
+  -> a 1-voice array while voice[1] remains live -> the s7475 overrun (musyxSetVoicePitchBend / beginVoiceFadeRelease past the block,
+  isAudioSlotActive(1) reading slack).
+- **Fix (tools/apply_s4889_first_dereg.py, default on):** save/restore $a1/$v0/$v1 around the call; upgrades an existing application in
+  place; logs `[s7476] dereg a1 before= after= fix=`. ROGUESQ_S7476_A1FIX=0 restores the clobber for A/B. Fresh-apply path tested on a
+  temp file. Rebuilt (cmake), funcs_24.c patched by the script (fixup list already includes it).
+- **A/B, one build (tools/s7475_boot_ab.zsh, scratch/s7476_boot, 40-60 s boots):**
+  off_a5 (A1FIX=0, A5 fill, STORE_DIAG): before=17 after=1, count=1, cineBody=0, mmv spin 3008, tail-hits 2, slack-store 2, watch-ctl PASS.
+  fix_a5: count=17 then 16, cineBody=1, spin 0, tail-hits 0, slack-store 0, watch-ctl PASS. fix_plain: count=17/16, cineBody=1.
+  Two independent lines (retail oracle counts + causal same-build A/B) -> ED root cause closed at boot.
+- **Rules out:** H-retail-count1 (retail never allocates 1), H-stale-index (voice index 1 is fine once the array holds 17),
+  H-port-reapply as stated (the reapply itself is retail; only the a1 clobber is port).
+- **Queued:** scratch/agent/soak_queue/s7476_canary_flight.sh (L4/L7/L12 dd4, L15 dd8 21:9, FILL=0 + STORE_DIAG + heap walk,
+  in-flight plant control; pass = control DETECTED, 0 non-plant tail-hits, 0 slack-store rows).
+- Lesson worth a class audit: every port patch that calls a guest function mid-flow must preserve the caller-saved registers the
+  surrounding generated code still needs. s4889 saved one of four.

@@ -96,6 +96,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s4711 "retail never runs reapplyAudioConfig/reapplyDisplayMode at boot/attract" (superseded s7476).** Believable because the oracle
+  ran 120 s with 0 hits; but it ran with dummy video, which never leaves the 320 boot phase. With Rice + Start presses retail calls
+  reapplyDisplayMode on every scene (t=2.1/6.7/17.3/38.4 s). The count=1 re-init was the port's s4889 patch clobbering $a1.
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
 - s7418 "32 live cache ops". Believable: RecompiledFuncs census with a passing liveness control. s7419: its liveness keyed on objdump
   names, so 147 renamed functions were `nofn`; one live CDE (clearMemory16ByteBlocks 0x8000041C, boot) was skipped -> 33, still safe.
@@ -216,16 +219,17 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. ED OPEN s7475 (voice-array overrun found; root cause next, NEXT.md). One line each:
-   - **ED s7475 in-block heap overrun: FOUND a MusyX voice-array overrun (single run set, writer named by store watch + causal A/B):**
-     ROGUESQ_S7475_CANARY=1 (slack fill + bitmap, upstream_compat.cpp) + tools/apply_s7475_slackwatch.py (per-store bitmap test, needs
-     ROGUESQ_STORE_DIAG=1; watch-ctl control). At boot reapplyAudioConfig (via reapplyDisplayMode, a1 -> 0x80141AD0) re-allocates the
-     voice array (0x801496F8, stride 0x88, count u16 0x80149700) with count=1 at t=0.94 (initAudioSubsystem had 20; reapply 16 at
-     t=5.24), while voice index 1 stays in use: musyxSetVoicePitchBend (0x800923B8, +0x04) and beginVoiceFadeRelease (0x800924C4,
-     +0x01) write voice[1], past the 0x88 block; voice[1] fields +0x30..+0x6C land in the next block's data. isAudioSlotActive(1) READS
-     voice[1]+0 from the slack: with a 0xA5 fill boot hangs in runMenuModelViewerScreen (A/B same build: off ok, 00 ok, A5 hang).
-     s4711 (oracle, single-source): retail never runs reapplyAudioConfig at boot/attract -> count=1 re-init likely port-only (M5).
-     Canary recipe tools/s7475_canary_recipe.zsh now FILL=0 + STORE_DIAG=1; flight sweep pending the fix.
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
+   - **ED s7475-s7476 MusyX voice-array overrun: ROOT CAUSE FIXED (s7476, port bug; two lines: retail oracle + same-build A/B):**
+     s7475 instrument (ROGUESQ_S7475_CANARY=1 slack fill/bitmap + tools/apply_s7475_slackwatch.py store watch, STORE_DIAG=1) saw the
+     first-scene reapplyAudioConfig allocate a 1-voice array (0x801496F8, stride 0x88) while voice[1] stayed live (musyxSetVoicePitchBend
+     0x800923B8 / beginVoiceFadeRelease 0x800924C4 write past the block; A5 fill hung boot). ORIGIN (s7476): the PORT patch s4889
+     (tools/apply_s4889_first_dereg.py) calls findAndZeroTableSlotMatching (0x8000794C) just before initN64RspMixer and saved only $a0;
+     that callee uses $a1 as its slot loop index, so the scene voice count 17 became 1 (the synth entry sits in slot 1). Retail oracle
+     (rs64_oracle + Rice, driven): allocateSongChannelArray counts 20 (boot), 17, 16, 15 (title), 18 (hangar); never 1; the ROM scene
+     table (0x800CD2B0, 0x1A stride, byte 8) has no count-1 entry. Fix: the patch now preserves $a1/$v0/$v1 (default on,
+     ROGUESQ_S7476_A1FIX=0 = old clobber). A/B one build (tools/s7475_boot_ab.zsh, scratch/s7476_boot): off -> count=1, A5 hang,
+     2 slack-stores; fix -> count=17, cineBody reached, 0 slack-stores, watch-ctl PASS. Flight sweep queued (s7476_canary_flight).
    - **EC s7474 `[s4279-BAD]` sample-stream LRU walker, CLOSED (H-walker-wrong):** the 40-row BAD burst at n~8870-9040 in all
      23 EB arms was bad=10 (8|2) only: the walker (tools/apply_s4279_nodeinvariant.py) hard-coded the node region
      0x801F9C00..0x801FB400, while the game legitimately runs the LRU list from a 60-node pool at 0x80192C40 in that front-end
