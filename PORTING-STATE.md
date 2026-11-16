@@ -198810,3 +198810,7 @@ rows are an extent ESTIMATE on a placeholder depth address (SETZIMG 0): whether 
 Single-source caveat: a real Z write there would hit low RAM (exception vectors at 0x80000000) and the run held 215 s clean, which argues
 against it, but that is reasoning, not a measurement. Next = class EV. Levels soak queued: scratch/agent/soak_queue/s7496_eu_levels.sh
 (L1 dd8 21:9, L7/L10/L12 dd4; recipe scores Z=0 rows apart as z0_live).
+
+Verdict: this selects H-eu-clean for the pool, colour and non-zero depth partitions (container rows 19 + 20, 0 partial live, control 10/10 +
+9/9) and refutes H-eu-dd and H-eu-live outside the Z=0 placeholder. Next discriminator (class EV): count Z_UPD draws and depth writebacks while
+depthImage.address == 0 against a non-zero-Z positive control; 0 with control > 0 selects H-ev-placeholder and closes EU.
