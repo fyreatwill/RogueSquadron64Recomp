@@ -215,10 +215,21 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CL, save durability on quit (HYPOTHESIS-ID save-flush-on-quit).** The owner quits with Cmd+Q / window
-   close (SDL_QUIT -> std::quick_exit, main.cpp poll_input) and the save is written by librecomp's saving thread
-   (pi.cpp update_save_file, temp + backup + rename). Can a quit inside the write window lose or truncate the owner's save, or
-   leave only the .bak? scratch/agent/NEXT.md.
+1. **Next audit: class CM, unbounded default-on file growth (HYPOTHESIS-ID default-file-growth).** Which files does an owner-recipe
+   run (no logging env) create or append in build/ (or the exe dir) each run, which grow without bound across runs, and is
+   any of them written on the hot path? scratch/agent/NEXT.md.
+   CL (s7429) WINDOW FOUND + FIXED: librecomp finalize_output_file_with_backup copied temp -> final with copy_file, which
+   truncates final first; a quit/crash/kill inside the copy left a short or 0-byte final save, and the loader opened it (it
+   exists) instead of the whole .bak, then zero-filled = profile wiped. tools/s7429_save_quit/harness.cpp (real files.cpp,
+   fork + SIGKILL at 50-3000 us during continuous saves): old finalize 236-259/2000 bad loads (all 0-byte), new 0/4000, same
+   binary toggled by ROGUESQ_S7429_OLD_FINALIZE=1. Fix: fsync the temp, rename it over final (atomic); read_save_file now
+   loads the whole .bak when final is short ([s7429-io] line; runtime arm R1 in a copied folder fired, control R1c with no
+   .bak zero-fills). Second gap (code reading only, single-source): SDL_QUIT -> quick_exit never joined the saving thread,
+   which writes only after a 10 ms gap with no new writes, so a quit inside that window dropped the newest save; main.cpp now
+   calls ultramodern::flush_save_file() first (writes only if the write_gen counter is ahead; keeps the NO_SAVE_WRITE gate;
+   ROGUESQ_S7429_NO_QUIT_FLUSH=1 = old). NOT runtime-verified: no injected quit reached the game (s7428 key VOID), and a
+   40 s forced boot wrote no save, so the rename path is verified by the harness only. tools/s7429_save_quit.sh (exit 0
+   H-durable). Owner save untouched (mtime 2026-11-08).
    CK (s7428) CLOSED H-env-wins after one fix: tools/s7428_config_precedence.py (110 open sites in src/, librecomp,
    ultramodern, rt64 hle; 0 unreviewed fixed-path reads; control PASS: planted file-before-env read, ungated persist write,
    RT64 config on, ungated save write all flagged; HEAD~ main.cpp flags persist-gated). Config files the game reads: RT64

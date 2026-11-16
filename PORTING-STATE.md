@@ -196796,3 +196796,36 @@ first and exits 2 (VOID) if it is not seen. Queued as scratch/agent/soak_queue/s
 verdict (offline-verified only, single-source until the soak lands).
 
 Next: class CL, save durability on quit (NEXT.md).
+
+## Session 7429 (2026-11-15) — class CL save durability on quit: copy-based finalize left a 0-byte save on a mid-copy kill (236-259/2000 kills) and the loader never fell back to the whole .bak; fixed (fsync + atomic rename, short-file .bak fallback, flush before SDL_QUIT quick_exit)
+
+Soak fold: s7428_audio_route_arms rc=2 VOID again (1/5, re-queued by the loop; arm C "injected Return not seen").
+
+Offline read (librecomp files.cpp / pi.cpp): update_save_file writes <save>.temp, then finalize copies final -> .bak
+(final stays whole) and copy_file(temp -> final, overwrite_existing), which truncates final before copying. The loader
+open_input_file_with_backup falls back to .bak only when final fails to OPEN, so a short final is read and zero-filled
+(s7357 path) = the profile is lost while a whole .bak sits beside it. Separately, the saving thread writes only after 10 ms
+with no new save_write (coalescing up to 128), and SDL_QUIT -> std::quick_exit (main.cpp poll_input) never joins it.
+
+Measurement: tools/s7429_save_quit/harness.cpp #includes the real files.cpp, forks a writer doing the exact
+update_save_file sequence with alternating whole 512-byte saves A/B, SIGKILLs it at a random 50-3000 us, then loads as
+read_save_file does. Same binary, two arms: ROGUESQ_S7429_OLD_FINALIZE=1 (old copy) -> 259/2000 and 236/2000 bad loads
+(all short, got=0, none mixed); new finalize -> 0/4000 twice (A/B split ~50/50, so the kills land throughout the cycle).
+H-window SELECTED for the finalize; H-durable holds after the fix.
+
+Fix (lib/N64ModernRuntime, patch exported): finalize fsyncs the temp and std::filesystem::rename()s it over final (atomic on
+POSIX; the old copy is kept behind ROGUESQ_S7429_OLD_FINALIZE=1). read_save_file: when final is short and the .bak is whole,
+load the .bak ([s7429-io] line). pi.cpp counts buffer writes (write_gen) vs the last written generation; new
+ultramodern::flush_save_file() writes the buffer if it is behind (serialised with the saving thread by a file mutex; keeps
+the ROGUESQ_NO_SAVE_WRITE gate; ROGUESQ_S7429_NO_QUIT_FLUSH=1 skips it); main.cpp SDL_QUIT calls it before quick_exit and
+logs [s7429-quit] save flush=N.
+
+Runtime (tools/s7429_save_quit.sh, copied folder /tmp/rs64_s7429, never build/saves): R1 0-byte final + whole .bak ->
+"[s7429-io] ... loaded the complete .bak" (1 line); control R1c 0-byte final, no .bak -> [s7357-io] zero-fill (1 line).
+R2 unforced write run (NO_SAVE_WRITE unset in the copy, FORCE_UNLOCK + FORCE_SAVE_MISSION=3, 40 s): the game wrote NO save
+(mtime unchanged), so the game itself never ran the rename path: harness evidence only. The quit flush is code reading
+only (single-source): no injected quit reaches the game (s7428 VOID). Script exit 0 = VERDICT H-durable. Owner save
+build/saves untouched (mtime 2026-11-08, md5 f8b29b66...).
+Rules out: the .bak ever protecting against a mid-finalize kill in the old code (it could not: the loader never reached it).
+Open: runtime proof of the quit flush needs a real SDL_QUIT (owner Cmd+Q, or a working key/quit injector).
+Next: class CM, unbounded default-on file growth in build/.

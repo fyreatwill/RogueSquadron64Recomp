@@ -1408,6 +1408,41 @@ index 048246e..5811902 100644
      save_read(rdram, buffer, eep_address * eeprom_block_size, nbytes);
  
      ctx->r2 = 0;
+diff --git a/librecomp/src/files.cpp b/librecomp/src/files.cpp
+index af6f18d..e5dee75 100644
+--- a/librecomp/src/files.cpp
++++ b/librecomp/src/files.cpp
+@@ -1,5 +1,9 @@
+ #include "files.hpp"
+ 
++#include <cstdlib>
++#include <fcntl.h>
++#include <unistd.h>
++
+ constexpr std::u8string_view backup_suffix = u8".bak";
+ constexpr std::u8string_view temp_suffix = u8".temp";
+ 
+@@ -42,6 +46,20 @@ bool recomp::finalize_output_file_with_backup(const std::filesystem::path& filep
+             return false;
+         }
+     }
++    // ROGUESQ s7429 class CL: copy_file(temp -> final) truncates final first, so a quit/kill inside it left a
++    // short or empty final save; the loader opens that (it exists) and never reaches the complete .bak
++    // (tools/s7429_save_quit: 259/2000 kills -> 0-byte save). Flush the temp to disk, then rename it over the
++    // final file: rename is atomic on POSIX, so final is always either the old or the new complete save.
++    // ROGUESQ_S7429_OLD_FINALIZE=1 restores the copy (for the two-arm harness).
++    if (getenv("ROGUESQ_S7429_OLD_FINALIZE") == nullptr) {
++        int fd = ::open(temp_path.c_str(), O_RDONLY);
++        if (fd >= 0) {
++            ::fsync(fd);
++            ::close(fd);
++        }
++        std::filesystem::rename(temp_path, filepath, ec);
++        return !ec;
++    }
+     std::filesystem::copy_file(temp_path, filepath, std::filesystem::copy_options::overwrite_existing, ec);
+     if (ec) {
+         return false;
 diff --git a/librecomp/src/math_routines.cpp b/librecomp/src/math_routines.cpp
 index 4d6a01d..e93a084 100644
 --- a/librecomp/src/math_routines.cpp
@@ -1980,7 +2015,7 @@ index 8c8e5d1..636836a 100644
  }
  
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..9a9b673 100644
+index 43509ba..8a5e389 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -2144,20 +2179,35 @@ index 43509ba..9a9b673 100644
      uint8_t* rom_addr = rom.data() + physical_addr - recomp::rom_base;
      MEM_B(0, ram_address) = *rom_addr++;
      MEM_B(1, ram_address) = *rom_addr++;
-@@ -113,6 +237,9 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
+@@ -94,6 +218,11 @@ struct {
+     // Used to tell the consumer thread that the saving thread is ready for a file swap.
+     moodycamel::LightweightSemaphore swap_file_ready_sempahore;
+     std::mutex save_buffer_mutex;
++    // ROGUESQ s7429 class CL: serialises update_save_file between the saving thread and the quit flush, and
++    // counts buffer changes so the flush knows whether the file is behind the buffer.
++    std::mutex save_file_mutex;
++    std::atomic<uint64_t> write_gen{0};
++    uint64_t saved_gen = 0;
+ } save_context;
+ 
+ const std::u8string save_folder = u8"saves";
+@@ -113,13 +242,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
  }
  
  void update_save_file() {
 +    // s5721: probe runs (ROGUESQ_FORCE_UNLOCK etc.) poke progression into RDRAM, and the game then
 +    // persists it; this env keeps such runs from polluting the save that later unforced runs load.
 +    if (getenv("ROGUESQ_NO_SAVE_WRITE")) { return; }
++    std::lock_guard file_lock{ save_context.save_file_mutex };
      bool saving_failed = false;
++    uint64_t pending_gen = 0;
      {
          std::ofstream save_file = recomp::open_output_file_with_backup(ultramodern::get_save_file_path(), std::ios_base::binary);
-@@ -120,6 +247,13 @@ void update_save_file() {
+ 
          if (save_file.good()) {
              std::lock_guard lock{ save_context.save_buffer_mutex };
              save_file.write(save_context.save_buffer.data(), save_context.save_buffer.size());
++            pending_gen = save_context.write_gen.load();
 +            // ROGUESQ s7357 class AH: an unchecked write (disk full, I/O error) let finalize copy a truncated temp
 +            // file over the real save. Flush + close and test before finalizing.
 +            save_file.close();
@@ -2168,7 +2218,17 @@ index 43509ba..9a9b673 100644
          }
          else {
              saving_failed = true;
-@@ -163,6 +297,12 @@ void saving_thread_func(RDRAM_ARG1) {
+@@ -128,6 +270,9 @@ void update_save_file() {
+     if (!saving_failed) {
+         saving_failed = !recomp::finalize_output_file_with_backup(ultramodern::get_save_file_path());
+     }
++    if (!saving_failed) {
++        save_context.saved_gen = pending_gen;
++    }
+     if (saving_failed) {
+         ultramodern::error_handling::message_box("Failed to write to the save file. Check your file permissions and whether the save folder has been moved to Dropbox or similar, as this can cause issues.");
+     }
+@@ -163,17 +308,30 @@ void saving_thread_func(RDRAM_ARG1) {
  }
  
  void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
@@ -2181,7 +2241,12 @@ index 43509ba..9a9b673 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -174,6 +314,12 @@ void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
+         std::lock_guard lock { save_context.save_buffer_mutex };
+         memcpy(&save_context.save_buffer[offset], in, count);
++        save_context.write_gen.fetch_add(1);
+     }
+     
+     save_context.write_sempahore.signal();
  }
  
  void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
@@ -2194,7 +2259,14 @@ index 43509ba..9a9b673 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -187,16 +333,42 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+@@ -181,22 +339,49 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+         for (gpr i = 0; i < count; i++) {
+             save_context.save_buffer[offset + i] = MEM_B(i, rdram_address);
+         }
++        save_context.write_gen.fetch_add(1);
+     }
+ 
+     save_context.write_sempahore.signal();
  }
  
  void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count) {
@@ -2238,13 +2310,27 @@ index 43509ba..9a9b673 100644
  
      {
          std::lock_guard lock { save_context.save_buffer_mutex };
-@@ -233,6 +405,14 @@ void read_save_file() {
+@@ -233,6 +418,28 @@ void read_save_file() {
      std::ifstream save_file = recomp::open_input_file_with_backup(save_file_path, std::ios_base::binary);
      if (save_file.good()) {
          save_file.read(save_context.save_buffer.data(), save_context.save_buffer.size());
 +        // ROGUESQ s7357 class AH: a short save file left the buffer tail holding whatever was there before (the
 +        // previous profile's bytes after change_save_file). Zero it, as for a missing file, and say so.
-+        const size_t got = static_cast<size_t>(save_file.gcount());
++        size_t got = static_cast<size_t>(save_file.gcount());
++        // ROGUESQ s7429 class CL: a short final file (left by a pre-s7429 copy-based finalize killed mid-copy) is
++        // opened in preference to the complete .bak; use the .bak when it is whole.
++        if (got < save_context.save_buffer.size()) {
++            std::vector<char> bak(save_context.save_buffer.size());
++            std::ifstream bf = recomp::open_input_backup_file(save_file_path, std::ios_base::binary);
++            if (bf.good()) {
++                bf.read(bak.data(), bak.size());
++                if (static_cast<size_t>(bf.gcount()) == bak.size()) {
++                    fprintf(stderr, "[s7429-io] save file short (%zu bytes): loaded the complete .bak instead\n", got);
++                    std::copy(bak.begin(), bak.end(), save_context.save_buffer.begin());
++                    got = bak.size();
++                }
++            }
++        }
 +        if (got < save_context.save_buffer.size()) {
 +            fprintf(stderr, "[s7357-io] save file short: read %zu of %zu bytes, zero-filling the rest\n",
 +                    got, save_context.save_buffer.size());
@@ -2253,7 +2339,30 @@ index 43509ba..9a9b673 100644
      }
      else {
          // Otherwise clear the save file to all zeroes.
-@@ -266,16 +446,154 @@ void ultramodern::join_saving_thread() {
+@@ -260,22 +467,177 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
+     read_save_file();
+ }
+ 
++// ROGUESQ s7429 class CL: the SDL_QUIT path std::quick_exit()s without joining the saving thread, which only
++// writes after 10 ms without new writes, so a quit inside that window dropped the game's latest save. Write the
++// buffer now if the file is behind it (update_save_file keeps the ROGUESQ_NO_SAVE_WRITE gate).
++// Returns 1 if a write was needed. ROGUESQ_S7429_NO_QUIT_FLUSH=1 skips it.
++int ultramodern::flush_save_file() {
++    if (getenv("ROGUESQ_S7429_NO_QUIT_FLUSH")) { return 0; }
++    if (save_context.save_buffer.empty()) { return 0; }
++    uint64_t gen;
++    {
++        std::lock_guard file_lock{ save_context.save_file_mutex };
++        gen = save_context.write_gen.load();
++        if (gen == save_context.saved_gen) { return 0; }
++    }
++    update_save_file();
++    return 1;
++}
++
+ void ultramodern::join_saving_thread() {
+     if (save_context.saving_thread.joinable()) {
+         save_context.saving_thread.join();
      }
  }
  
@@ -2409,7 +2518,7 @@ index 43509ba..9a9b673 100644
          } else if (physical_addr >= recomp::sram_base) {
              if (!recomp::sram_allowed()) {
                  ultramodern::error_handling::message_box("Attempted to use SRAM saving with other save type");
-@@ -285,9 +603,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -285,9 +647,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_read(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2421,7 +2530,7 @@ index 43509ba..9a9b673 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,9 +621,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,9 +665,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2433,7 +2542,7 @@ index 43509ba..9a9b673 100644
          }
      }
  }
-@@ -313,15 +633,68 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -313,15 +677,68 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
@@ -2502,7 +2611,7 @@ index 43509ba..9a9b673 100644
  
      ctx->r2 = 0;
  }
-@@ -336,9 +709,14 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +753,14 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -5224,7 +5333,7 @@ index 31eb106..0f4381e 100644
  #  ifdef __cplusplus
  #    define NULLPTR (PTR(void))0
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
-index 57db6f6..a8d37c4 100644
+index 57db6f6..d953560 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
 +++ b/ultramodern/include/ultramodern/ultramodern.hpp
 @@ -120,9 +120,17 @@ void init_audio();
@@ -5246,6 +5355,15 @@ index 57db6f6..a8d37c4 100644
      using get_samples_remaining_t = size_t();
      using set_frequency_t = void(uint32_t);
      queue_samples_t* queue_samples;
+@@ -147,6 +155,8 @@ void quit();
+ void join_event_threads();
+ void join_thread_cleaner_thread();
+ void join_saving_thread();
++// ROGUESQ s7429: write a pending save before a quick_exit quit; returns 1 if a write was needed.
++int flush_save_file();
+ 
+ void set_audio_callbacks(const audio_callbacks_t& callbacks);
+ 
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
 index 3198be0..c25d889 100644
 --- a/ultramodern/src/audio.cpp

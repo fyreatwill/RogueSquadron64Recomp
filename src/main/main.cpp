@@ -10952,6 +10952,8 @@ static void poll_input() {
     while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) > 0) {
         if (e.type == SDL_QUIT) {
             fprintf(stderr, "[main] SDL_QUIT received, exiting\n");
+            // s7429 class CL: write a save still inside the saving thread's 10 ms coalescing window.
+            fprintf(stderr, "[s7429-quit] save flush=%d\n", ultramodern::flush_save_file());
             fflush(stderr);
             // quick_exit: exit() here runs static destructors while guest/audio threads
             // are live and ends in std::terminate -> SIGABRT (s5380).
