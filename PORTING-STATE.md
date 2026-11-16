@@ -198140,4 +198140,7 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
   fires. initMission=0 in 60 s, so this check covers the front end only; in-flight rows in the 23 EB logs were already bad=0.
 - **Verdict:** EC H-walker-wrong selected by two lines: (1) the offline consistency of the 40-row bursts, and (2) the fixed
   walker's full off-region walks staying bad=0 while the same-run plant fires. Rules out an LRU inconsistency in that phase.
-- Next: class ED, a tail canary for in-block slack overruns (scratch/agent/NEXT.md).
+- **Discrimination:** this selects H-walker-wrong for EC and refutes H-lru-corrupt; the root cause is the walker's hard-coded
+  region. It also closes EB (selects H-heap-clean, refutes H-heap-hit on all 19 levels).
+- Next discriminator: class ED, a slack-byte tail canary with a planted in-flight slack write (scratch/agent/NEXT.md).
+  0 non-plant hits selects H-slack-clean; any hit names the caller RA, then a write watch names the writer.
