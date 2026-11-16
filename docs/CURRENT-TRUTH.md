@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7435 (2026-11-15).
+Compact operational handoff, as of Session 7436 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,9 +215,14 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CS, per-frame host heap allocation (HYPOTHESIS-ID host-alloc-cost).** See scratch/agent/NEXT.md.
-   Offline first on the s7435 capture (scratch/s7435, local, gitignored): malloc/free/operator new/xzm/nanov2 self and inclusive
-   share per thread, with the same in-capture control.
+1. **Next audit: class CT, RT64 TMEM hashing (HYPOTHESIS-ID rt64-tmem-hash).** See scratch/agent/NEXT.md. Largest RT64
+   term in the s7434 split: TMEMHasher::hash + XXH3 0.57 ms/frame. H-needed vs H-redundant (same TMEM bytes rehashed per frame).
+   CS (s7436) CLOSED H-free: tools/s7436_alloc_cost.py on scratch/s7435 (8 x 12 s windows, owner recipe lvl1 flight; control
+   DIAG_BUSY_GUEST_US=500 +0.0345 core vs 0.030, PASS): every allocator sample (libsystem_malloc frames, operator new/delete)
+   together 0.0122 of one core = 0.20 ms/frame spread over all threads; RT64 Idle 0.0031 / RT64 Workload 0.0030 / Gfx 0.0028,
+   guest threads <= 0.0002; 0 lock-wait samples under malloc (H-lock refuted). Largest owned caller RT64::TextureMap::use
+   (Workload+Gfx 0.0035 core) then plume executeCommandLists 0.0022, all < 0.01. Second line: scratch/s7433 sample_{4,8}
+   (--second-line, its control passed in s7433) alloc 0.0127, same callers. No change landed.
    CR (s7435) CLOSED H-tail: tools/s7435_spin_cost.py over one tools/s7433_probe_cost.sh owner-recipe run (lvl1 flight, 8 x 12 s
    /usr/bin/sample windows, control DIAG_BUSY_GUEST_US=500 toggled 30 s: +0.0345 core vs 0.030 expected, PASS). All host spins
    together 0.049 of one core: VI deadline tail spin (events.cpp:850, deliberate s6456/s6967, VI_NOSPIN / VI_RT_SPIN_US exist)

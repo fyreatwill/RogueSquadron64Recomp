@@ -197077,3 +197077,19 @@ the moodycamel spin count (< 0.01 core to win). No code change: the only term wo
 and ROGUESQ_VI_RT_SPIN_US. wait_one_frame is dead (no caller).
 Conclusion: this selects H-tail and refutes H-spin and H-sem. Closes class CR. Next discriminator (class CS, NEXT.md): per-frame
 host heap allocation (malloc/free/operator new self + inclusive per thread) from the same scratch/s7435 capture, offline.
+
+## Session 7436 (2026-11-15) — class CS host heap allocation closed H-free: all allocator samples 0.0122 of one core (0.20 ms/frame, spread over RT64 Idle/Workload/Gfx, guest <= 0.0002), 0 lock waits under malloc; control +0.0345 vs 0.030 PASS; second capture 0.0127
+
+What ran: new tools/s7436_alloc_cost.py (offline, no build/run) over the s7435 capture (scratch/s7435, owner recipe FPS60 dd4
+16:9 lvl1 flight, 8 x 12 s /usr/bin/sample windows, planted ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled 30 s). Running self samples
+with any libsystem_malloc frame or operator new/delete on the path are allocator cost; lock leaves under malloc are tallied
+separately; each sample is charged to its innermost owned frame (non-std:: frame in the game image, else nearest non-malloc lib).
+Results: CONTROL ctrl delta 0.0345 core vs 0.030 expected, PASS. Allocator per window 0.0106-0.0132 (flat, busy-independent),
+mean 0.0122 core = 0.203 ms/frame. Per thread: RT64 Idle 0.0031, RT64 Workload 0.0030, Gfx Thread 0.0028, unnamed
+(dispatch/Block) 0.0017, RT64 Present 0.0005, stderr-wr 0.0003, [Game] threads <= 0.0002. Owned callers: RT64::TextureMap::use
+0.0020 (Workload) + 0.0015 (Gfx), plume MetalCommandQueue::executeCommandLists 0.0022, Block_release 0.0006, rest < 0.0005.
+Lock-under-malloc 0.0000 (H-lock refuted). Leaves: _xzm_free 0.0031, malloc_tiny 0.0016, freelist_outlined 0.0012.
+Second line: scratch/s7433 sample_{4,8} (busy-off windows, control passed in s7433's own tool; new --second-line flag):
+alloc 0.0127, same top callers (TextureMap::use 0.0046, executeCommandLists 0.0023).
+Verdict H-free (< 0.02 core). Rules out: allocator churn and malloc lock contention as a G1b H-host term. No code change.
+Next: class CT, RT64 TMEM hashing (TMEMHasher::hash + XXH3 0.57 ms/frame in s7434), H-needed vs H-redundant.
