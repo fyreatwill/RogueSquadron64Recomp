@@ -198333,3 +198333,7 @@ Rules out: stale-pointer writes into still-free heap blocks on L4/L15. Stale sto
 scene-reset-writer class, which is closed.
 Not covered: guest loads, host writers.
 Queued: soak_queue/s7480_uaf_flight.sh (L7/L12 dd4, L1 dd8 21:9, L10 dd4).
+Verdict wording (s7480): the store-time chain location (F vs Urec vs U/N, with arena head values at free and at store) selects
+H-recarve and refutes H-uaf and H-trim-defect on L4/L15. This closes class EG for host writers. Next discriminator: the same
+uaf_free / trim_defect counters across L1/L7/L10/L12 (s7480_uaf_flight). After that, a load-side twin of the hook for guest reads of
+freed blocks.
