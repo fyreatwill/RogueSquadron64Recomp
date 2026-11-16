@@ -198758,3 +198758,27 @@ Verdict: selects H-retail-same (two lines: port s7493 watch row + retail oracle 
 CLOSED. Not explained yet (next unit, class ET): retail's 6.6 s CPU stores by buildAndRegisterDefaultMaterial land inside the 640 Z
 extent at 0x787830+ - is that a live allocation inside the Z region in retail too, and does the port make the same stores there?
 ORIGIN: no mitigation landed; the writer of the block bytes in both runtimes is the game (rs_free header, then the 640 Z clear).
+
+## Session 7495 (2026-11-16) — class ET: the 6.6 s buildAndRegisterDefaultMaterial stores are the game's fixed DL-chunk pool [0x720000, end) re-sized per display mode; port == retail (same base, same three ends 0x777768/0x738F18/0x792780, same order), 640x340 Z at 0x795C00 sits above the pool, 0 depth sets / 0 writebacks inside the live pool (H-et-same; H-et-port-moved, H-et-zlive refuted); ET closed
+Work unit (NEXT s7495, class ET): retail's 210 stores by buildAndRegisterDefaultMaterial (0x8001804c/5c, stride 0x108) at 6.6 s land in
+0x787830..0x78E374, inside the 640x480 Z extent 0x76A000-0x800000. Same in the port? Live Z + live object at once?
+Static read (funcs_4.c 0x80017FFC-0x80018094): the stores are the chunk-pool relink loop; pool = [$s2, $s2 + ($s7/0x108)*0x108), both
+stack args of buildAndRegisterDefaultMaterial; head stored at 0x80018094 (the s6909/s6564 anchor).
+Retail (oracle, retail ROM, Rice, 14 s, exec watches 0x80017B88 + 0x80018034, block write watch 0x787810:0x78E440): 3 calls
+  t=0.3 s (320,224)  pool 0x80720000..0x80777768
+  t=1.9 s (640,480)  pool 0x80720000..0x80738F18  (below the 640x480 Z 0x76A000)
+  t=6.5 s (640,340)  pool 0x80720000..0x80792780  (covers 0x787810: the 225 block writes = 4 heap-header + 210 relink + rest, reproduced)
+Port (new instrument, build of this session: tools/apply_s7495_poolwatch.py at the 0x80018094 head store -> rs64_s7495_pool(base,size)
+in main.cpp; RDP depth sets checked in rs64_s7493_img; ROGUESQ_S7495_POOL=1 + S7493_WBLIVE=1 + WBLIVE_WATCH=787830,790000; dd1 title
+boot 28 s, scratch/s7495/port.log): pool #1 720000..777768 (1357 chunks), #2 720000..738F18 (387) at 1.52 s, #3 720000..792780 (1776) at
+5.80 s - byte-identical to retail. Depth images: 7DD000 (320 phase), 76A000 (640x480, 1.54 s), 795C00 (640x340, 5.89 s, just above the
+pool end; 0x800000 - 640*340*2 = 0x795C00). live-overlap=0 over 1572 depth sets. Positive control fired in the same run: hist-overlap
+pool#3 z=76A000 (the old 640x480 Z, set 0.25 s before the rebuild, is inside the new pool) - the overlap check can fire. Writeback watch:
+30 rows covering 0x787830 / 0x790000, all the 640x480 76A000 z-clear image at t<=2.0 s (control: the watch fires); 0 after the
+pool #3 rebuild while 2096 writebacks ran to t=20 s.
+Verdict: selects H-et-same (two lines: retail oracle pool ends + port pool log, identical). Refutes H-et-port-moved (same base/ends/order)
+and H-et-zlive (no depth set or writeback inside the live pool; the mode's Z moves up to 0x795C00 when the pool grows). The 640x480 Z
+extent simply stops being Z when the mode changes; the game re-partitions [0x720000, Z) as its chunk pool by design. Class ET CLOSED.
+ORIGIN: no mitigation landed; writer = the game's own pool relink in buildAndRegisterDefaultMaterial, retail-identical.
+Next: class EU - at each pool rebuild and each new colour/depth image, does any rs_malloc block the s7480 map holds as LIVE overlap the
+new partition (pool or image extent)? Retail tolerates the overlay only because the overlaid blocks are already freed (ES/ET).

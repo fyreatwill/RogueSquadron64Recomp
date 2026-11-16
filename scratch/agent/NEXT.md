@@ -1,17 +1,18 @@
-# NEXT (s7495)
-HYPOTHESIS-ID: m3-zbuffer-region-live-stores
+# NEXT (s7496)
+HYPOTHESIS-ID: m3-partition-over-live-block
 
-Work unit: class ET, the residue of ES (s7494). Retail (tools/s7494_es_oracle.zsh) shows buildAndRegisterDefaultMaterial
-(stores at 0x8001804c/0x8001805c) writing 210 words, stride 0x108, into 0x787830..0x78E374 at t=6.6 s, i.e. INSIDE the 640 Z-buffer
-extent 0x76A000-0x800000 (640x480; 0x7D4400 for 640x340), right after its own (640,340) call. Questions:
-H-et-same (the port makes the same stores at the same addresses in the same phase: both runtimes put a live object in the Z region;
-benign if the Z-buffer is not used again in that phase, retail design) / H-et-port-moved (port stores go elsewhere or the port's heap
-hands out a different block: layout divergence, find the allocator input that differs) / H-et-zlive (the region is a live Z target
-AND a live object at once in both: a retail bug the RDP Z clear / RT64 writeback would stomp; check whether RT64 writeback covers it).
-Discriminator, ONE port run (dd1, L4 title boot is enough, ~15 s): arm the s7480 store tracker / ROGUESQ_S7493_WBLIVE_WATCH=787830 and
-an exec log of buildAndRegisterDefaultMaterial (a0,a1, and the base pointer it stores through) + rs_malloc returns covering 0x787830;
-retail side: rerun tools/s7494_es_oracle.zsh 0x787830 0x78E380 12 and add --watch-pc 0x80001acc (rs_malloc) to name the allocation.
-Positive control: the s7494 oracle rows reproduce (225 block writes) and the port watch must log the 0.74 s Z-clear writeback.
-Outcomes: same PC/addresses/order in both -> H-et-same, close ET; port differs -> H-et-port-moved; a writeback covering the live
-stores after 6.6 s -> H-et-zlive.
-After ET: take the next ITERATION 3c rung with an engineering action (CURRENT-TRUTH Next steps 2-9 are owner-look).
+Work unit: class EU. ES/ET (s7494/s7495) showed the game re-partitions fixed RAM per display mode: the DL-chunk pool
+[0x720000, end) (end 0x777768 / 0x738F18 / 0x792780 for 320 / 640x480 / 640x340) and the mode's Z/colour images, laid over heap
+blocks it freed shortly before (port == retail). Open question: is EVERY rs_malloc block under a new partition already freed, in every
+scene (boot, hangar, mission load, abort/re-entry), on dd1 AND dd>1 (spill arena / OSMEM 12 change the heap top)?
+Hypotheses: H-eu-clean (0 live blocks under any partition; retail design holds) / H-eu-live (a live block sits under the pool or an
+image extent: name the block's allocator ra and whether retail does the same via the oracle) / H-eu-dd (only dd>1 arms overlap: our
+heap-top / spill change moved a live block under a retail partition = port defect, fix it).
+Instrument, ONE build: export from src/main/upstream_compat.cpp a query `rs64_s7475_live_overlap(lo, hi, cb)` over s_s7475_live
+(needs ROGUESQ_S7475_CANARY=1); call it from rs64_s7495_pool (pool extent) and from rs64_s7495_img for each NEW colour image
+(extent = addr .. addr + w*rows*siz, rows 480 cap) and depth image (w = last colour width, 2 B/px). Log `[s7495] live-under kind=
+pool|cimg|zimg blk= req= ra= age=` (first 20) + counts in `[s7495] sum`. Positive control (same run): ROGUESQ_S7495_CTL=1 records a
+fake live block at 0x80787810 size 0x6C30 just before pool #3 -> MUST log live-under kind=pool blk=80787810.
+Run: L4 dd1 and L15 dd8 21:9 via the s7493 recipe (`env LV="4:1:os_rt64fb 15:8:os_rt64fb" WBWATCH=787830 zsh tools/s7493_er_recipe.zsh`,
+add ROGUESQ_S7495_POOL=1 to its C string) + a hangar abort/re-entry arm (s7483 route). Outcomes: 0 live-under with control caught ->
+H-eu-clean, close EU; rows only at dd>1 -> H-eu-dd; rows in dd1 too -> oracle-check that block (tools/s7494_es_oracle.zsh lo hi secs).

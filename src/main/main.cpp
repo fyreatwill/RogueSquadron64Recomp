@@ -10502,7 +10502,31 @@ uint32_t s7493_watch(uint32_t i) { return g_s7493_w[i]; }
 bool s7493_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7493_WBLIVE"); return e && *e && *e != '0'; }(); return on; }
 double s7493_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 }
+// s7495 class ET: the game's fixed DL-chunk pool (tools/apply_s7495_poolwatch.py) vs RDP depth images. ROGUESQ_S7495_POOL=1.
+namespace { bool s7495_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7495_POOL"); return e && *e && *e != '0'; }(); return on; }
+std::mutex g_s7495_mu; uint32_t g_s7495_lo = 0, g_s7495_hi = 0, g_s7495_cw = 0; int g_s7495_np = 0; uint64_t g_s7495_zsets = 0, g_s7495_live = 0, g_s7495_hist = 0;
+std::map<uint32_t, double> g_s7495_z; double g_s7495_t0 = 0; }
+extern "C" void rs64_s7495_pool(uint32_t base, uint32_t size) {
+    if (!s7495_on()) return;
+    std::lock_guard<std::mutex> lk(g_s7495_mu); const double now = s7493_now(); if (g_s7495_t0 == 0) g_s7495_t0 = now;
+    const uint32_t lo = base & 0xFFFFFFu, hi = lo + (size / 0x108u) * 0x108u; g_s7495_lo = lo; g_s7495_hi = hi; ++g_s7495_np;
+    std::fprintf(stderr, "[s7495] pool #%d t=%.3f base=%06X end=%06X size=%X chunks=%u cimg_w=%u zsets=%llu\n", g_s7495_np, now - g_s7495_t0, lo, hi, size,
+                 size / 0x108u, g_s7495_cw, (unsigned long long)g_s7495_zsets);
+    for (auto& kv : g_s7495_z) if (kv.first >= lo && kv.first < hi) { ++g_s7495_hist;
+        std::fprintf(stderr, "[s7495] hist-overlap pool#%d z=%06X (set %.3f s before this rebuild)\n", g_s7495_np, kv.first, now - kv.second); }
+    std::fprintf(stderr, "[s7495] sum pools=%d zsets=%llu live=%llu hist=%llu\n", g_s7495_np, (unsigned long long)g_s7495_zsets, (unsigned long long)g_s7495_live, (unsigned long long)g_s7495_hist);
+}
+static void rs64_s7495_img(uint32_t kind, uint32_t addr, uint32_t width) {
+    std::lock_guard<std::mutex> lk(g_s7495_mu); const uint32_t a = addr & 0xFFFFFFu;
+    if (kind == 0) { g_s7495_cw = width; return; }
+    ++g_s7495_zsets; const bool fresh = g_s7495_z.find(a) == g_s7495_z.end(); const double now = s7493_now(); if (g_s7495_t0 == 0) g_s7495_t0 = now; g_s7495_z[a] = now;
+    if (fresh) std::fprintf(stderr, "[s7495] zimg new z=%06X t=%.3f cimg_w=%u pool=[%06X,%06X)%s\n", a, now - g_s7495_t0, g_s7495_cw, g_s7495_lo, g_s7495_hi,
+                            (a >= g_s7495_lo && a < g_s7495_hi) ? " LIVE-OVERLAP" : "");
+    if (g_s7495_np > 0 && a >= g_s7495_lo && a < g_s7495_hi && ++g_s7495_live <= 20)
+        std::fprintf(stderr, "[s7495] live-overlap z=%06X pool#%d [%06X,%06X) t=%.3f\n", a, g_s7495_np, g_s7495_lo, g_s7495_hi, now - g_s7495_t0);
+}
 extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
+    if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width);
     if (!s7493_on() || kind > 1) return;
     std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
     if (g_s7493_ctl_kind == (int)kind && (addr & 0xFFFFFFu) == g_s7493_ctl_base) return;  /* control: this image's sets are no longer recorded */
