@@ -196600,3 +196600,4 @@ Two lines: the text census, and agreement with the object-level s6871/s7421 acco
 Rules out: a default-on fix that exists in the chain but not in the shipped build. Not done: live funcs_9 still lacks the two diag
 lines (the [streamdump] bounds fields print 0 in the live build until the next regen; regen is correct). No game run (offline audit).
 Next: class CG, stale objects (is every built object newer than, and compiled from, the live source it claims).
+Conclusion: selects H-diag, refutes H-behaviour (0 open BEHAVIOUR rows, controls PASS); closes class CF. Next discriminator: class CG H-fresh vs H-stale (linked objects vs live source mtime/path/orphans, tools/s7424_stale_objects.py).
