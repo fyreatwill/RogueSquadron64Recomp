@@ -13765,3 +13765,24 @@ Classes CC-DH (s7420-s7451), every number, control and tool flag, as CURRENT-TRU
    PATCH-tag census agrees (live-only tags = documented opt-in list). Found and fixed: s5787/s5790/s5791/s5809 HUDBIT logs
    double-applied in a regen (windowed idempotence; diag only). docs/REGEN-VERIFY.md "s7421".
    CC (s7420) CLOSED H-clean. Use the weak-aware regex `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC` in new parsers.
+
+
+## Migrated from CURRENT-TRUTH (s7488 migration)
+
+Closed classes EC, EA, DZ moved verbatim from Next steps item 1.
+
+   - **EC s7474 `[s4279-BAD]` sample-stream LRU walker, CLOSED (H-walker-wrong):** the 40-row BAD burst at n~8870-9040 in all
+     23 EB arms was bad=10 (8|2) only: the walker (tools/apply_s4279_nodeinvariant.py) hard-coded the node region
+     0x801F9C00..0x801FB400, while the game legitimately runs the LRU list from a 60-node pool at 0x80192C40 in that front-end
+     phase. Walker now accepts any aligned KSEG0 pointer <0x81000000 and prints offreg=1 instead. Same-run check (L4, L12 HOLD=60):
+     135 offreg=1 walks per arm, all bad=0, len+poollen=60; ROGUESQ_S7474_LRU_PLANT=<n> (host-side next^1, guest memory untouched)
+     gave exactly 1 BAD row per arm, at the planted n. The list is not corrupt.
+   - **EA s7470-s7471 ASan+UBSan per-level sweep, CLOSED (H-lv-clean):** tools/s7470_gen_asan_lv.zsh recipes a-e + s7467-s7469 runs:
+     all 19 levels L0-L18 flown on build_asan UCODE=1 (dd4 16:9 / dd8 21:9, HOLD=220; L15 needs HOLD=300), every arm alive,
+     vi_stalls30s=0, 0 NEW groups (12 reviewed FP only), main + ucode plants PASS in every recipe. Guest code not covered (not
+     instrumented). L6/L17 initMission=3 = in-mission restarts under idle autopilot, not a defect.
+   - **DZ s7469 ASan+UBSan over the owner hangar abort/re-entry route, CLOSED (H-route-clean):** tools/s7469_asan_hangar_route.zsh
+     (s7326 schedule on build_asan UCODE=1, FPS60 dd8 21:9 WIDEWIN, owner save copied into build_asan/saves and restored;
+     tools/g3_port_capture.sh GAMEDIR=<dir>). 650 s: 3 hangar entries, 4 initMission, 0 crash; both plants PASS, 0 NEW groups.
+     Route reached at ASan speed (H-route-unreached refuted). s7468_asan_uc_routes folded: 0 NEW, PASS, w15 initMission=0 again ->
+     s7469_asan_w15_hold300 queued (HOLD=300).

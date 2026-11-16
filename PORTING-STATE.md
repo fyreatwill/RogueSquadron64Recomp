@@ -198543,3 +198543,34 @@ Levels soak queued: s7487_lwlwatch_levels (L1 dd8 21:9, L7/L10/L12 dd4).
 New gap found (class EM, next): swl/swr stores (405 sites, 404 carry the s5660 hook) go to rs64_s5660_ustore in main.cpp. That function never calls
 rs64_s7475_store, so the ED/EG/EH store watches have been blind to unaligned stores. It also gets only the aligned word address.
 Measurement only: no game value changed, default off (the gate is a single predicted-false branch).
+
+## Session 7488 (2026-11-16) — class EM swl/swr unaligned-store watch landed; L4/L15 0 freed-block / slack stores over 63.3M executions, ust-ctl plant DETECTED in flight (H-ust-clean); EL closed for 6 levels
+
+Fold: soak s7487_lwlwatch_levels rc=0 score=0 (L1 dd8 21:9, L7/L10/L12 dd4): 8.2-10.9M lwl/lwr execs per arm over 216-250 sites,
+126-142 heap sites, lwl_F=0 lwl_Urec=0, lwl-ctl DETECTED in flight every arm, all alive, vi_stalls30s=0 -> class EL CLOSED on 6 levels.
+
+Work unit (class EM, HYPOTHESIS-ID m3-unaligned-store-uaf). Gap: swl/swr go to rs64_s5660_ustore (main.cpp) with only the aligned
+word, and that never calls rs64_s7475_store, so the ED canary, EG pad and EH UAF store watches were blind to unaligned stores.
+Census (this regen): 405 sites = 203 swl + 202 swr, 0 sdl/sdr. 404 carry the s5660 hook; the one without it is funcs_7.c 8002A098
+`swl $zero, 0x0($a0)` (`do_swl(rdram, 0X0, ctx->r4, 0)`: literal 0 value, the s5660 regex missed it).
+Landed: tools/apply_s7488_ustorewatch.py (idempotent per site, registered in fixup_game_funcs_vendored.py after apply_s7487_lwlwatch.py,
+run on RecompiledFuncs, cmake build OK). Each site does `RS64_S7488_UST(pc, idx, base, off, isl)` BEFORE the store: census
+g_rs64_s7488_cnt[idx]++, then the exact bytes written (swl [a, a|3], swr [a&~3, a]) tested in the s7475 bitmap; a marked byte goes to
+rs64_s7488_ust(marked=1) -> rs64_s7475_store with thread_local t_s7488_ust set, i.e. the s7480 freed-record classifier (F/Urec/U/N/S,
+`[s7488] ust-hit`) and the s7475 slack canary (`[s7488] ust-slack`). Every 64th exec per site is sampled for the live-heap census and
+the control. Host: src/main/upstream_compat.cpp (plant type 5 handled in s7480_store / s7484_load, ignored by s7486 host reads;
+`[s7488] sum` line in s7480_sum; arming ROGUESQ_S7488_USTOREWATCH=1 under S7475_CANARY + S7480_UAF). Control ROGUESQ_S7488_USTCTL=<s>:
+a LIVE block an swl/swr just wrote is recorded as freed; only a later swl/swr store can detect it (other stores/loads ignored, guest
+memory untouched).
+Run: tools/s7488_ustwatch_recipe.zsh (= s7487 recipe + USTOREWATCH=1 + USTCTL=160), LV="4:4 15:8", HOLD=220, owner recipe. score=0.
+- L4 dd4 16:9: 18.8M execs (16.3M in flight) over 238 sites, 154 sites wrote live heap (58.8k samples), marked=1, ust_F=0 ust_Urec=0
+  slack=0. Control SET blk 80163EB0 by multiEventTemplateNpcHandler swr 80070958 at t=160, DETECTED 0.000 s later by 8007095C (in flight).
+- L15 dd8 21:9: 44.5M execs (40.6M in flight) over 236 sites, 156 heap sites (526k samples), marked=5, ust_F=0 ust_Urec=0 slack=0.
+  Control SET blk 802347D0 by computeNpcGroupCentroidAndCull 80041840, DETECTED 0.000 s by 80041844 (in flight).
+- All s7480/s7484/s7487 controls PASS (store plant, load watch-ctl, load plant, locator, lwl-ctl); uaf_free=0, load_F=0. Both alive, vi_stalls30s=0.
+Top heap-writing sites: loadSkyHorizonHob 24, initializeRadar 20, multiEventTemplateNpcHandler 18, allocNameEntryLetterWheel 16.
+Verdict: selects H-ust-clean on L4/L15; refutes H-ust-uaf and H-ust-overrun (no F/Urec rows, no slack stores); H-ust-none refuted
+(sites run in flight and write heap, so the zero is measured). Caveat: the slack branch is the shared s7475 path, controlled by the
+ED/EG plants in earlier sessions, not by an swl-specific slack plant this run (single-source for the slack half).
+Levels soak queued: s7488_ustwatch_levels (L1 dd8 21:9, L7/L10/L12 dd4). Measurement only, default off.
+CURRENT-TRUTH: EL/EM bullets updated; closed EC/EA/DZ bullets migrated to PROJECT-OVERVIEW "(s7488 migration)" to stay under 60 KB.
