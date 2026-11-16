@@ -198633,3 +198633,6 @@ write heap through guest pointers, ~350 calls/s). Caveats: wmark=1 = only the pl
 plant control; the load side has no plant (rmark=0, single-source); the PatchesLib hooks were built after this run and are unrun in flight.
 Not covered: Part B OS-call host stores (osRecvMesg/osSendMesg msg slots, cont pad data, save_read, IoMesg, OSThread) = class EP.
 Soak queued: s7490_zmemcpy_levels (L1 dd8 21:9, L7/L10/L12 dd4) on the patch-hooked build; it also scores patch-body rows.
+Discrimination: selects H-eo-clean (host memcpy, L4/L15) and refutes H-eo-none (the host writes heap through guest pointers, ~350 calls/s) and
+the s7489 claim that every live store form was hooked (2 linked overriders were blind). Next discriminator: the class EP OS-call store hook with
+an osRecvMesg msg-out plant (H-ep-clean vs H-mesg-uaf vs H-ep-none), plus the s7490_zmemcpy_levels soak's fn=rs64_find_body rows.
