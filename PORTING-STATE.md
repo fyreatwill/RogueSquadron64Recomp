@@ -198736,3 +198736,25 @@ seed's watch row naming a same-swap set). Refutes H-wb-stale. Class ER CLOSED on
 21:9, L7/L10/L12 dd4). With ER, the M3 heap-audit store/load series (s7472-s7493) has no open class. Open, not a defect claim: whether
 retail also puts its boot 640x480 fb over a heap block it just released (port layout vs retail layout) -> class ES, oracle check
 (NEXT.md). Single-source until the oracle answers.
+
+## Session 7494 (2026-11-16) — class ES: retail oracle shows the boot 640x480 image over the freed 0x80787810 block is retail layout (same free path, same order); ER soak folded, ER closed 6 levels
+Fold: soak s7493_er_levels (L1 dd8 21:9, L7/L10/L12 dd4) rc=0 score=0, all 4 alive, vi_stalls30s=0 -> class ER CLOSED for 6 levels.
+Work unit (NEXT s7494, class ES): is the port's boot sequence (rs_free 0x80787810 n=6C30 by freeManifestSegmentAssets <-
+runIdleFramesAndLoadSaveData, then 0.217 s later a 640x480 image at 0x76A000 covering 0x76A000-0x800000) the retail layout?
+Oracle runs (retail ROM, mupen64plus DEBUGGER core, rsp-hle; new tool tools/s7494_es_oracle.zsh):
+- Run 1, dummy video, 40 s: stuck at 320 (1 osViSwapBuffer) as README says -> unscored for any later phase; switched to Rice.
+- Positive control (separate 8 s run): whole-RDRAM write watch 10000 hits (fires). In-run: the block watch itself fired 225 writes and
+  every exec watch fired, so the result below is not a null.
+- Run 2, Rice, 30 s, block write watch + osViSwapBuffer: 640 colour buffers 0x5D4000/0x66A000 then 0x62B800/0x695C00 (vi-swap table);
+  block writes: rs_malloc/rs_free header stores (0x80001c18-0x80001d3c) at 0.3 s and 1.4 s, then 210 stores by
+  buildAndRegisterDefaultMaterial (0x8001804c/5c) at 6.7 s, stride 0x108, 0x787830..0x78E374.
+- Run 3 (+ exec watches) and a rerun through the new tool (reproduced to 0.1 s): rs_free(a0=0x80787810) with prev_pc 0x80004a80
+  (inside freeManifestSegmentAssets), which ran from prev 0x8006da84 (inside runIdleFramesAndLoadSaveData) at t=1.3-1.4 s; 640 mode
+  starts 1.9-2.0 s (VI width 320->640, buildAndRegisterDefaultMaterial(a0=640,a1=480)).
+Reading: 0x76A000 is the 640 phase's Z-buffer (s9: SETZIMG names it; z = second colour buffer + 0x100000); the s7493 "colour image"
+at 0x76A000 is the standard z-clear idiom (colour image pointed at the Z buffer, filled). Retail frees the same block through the same
+call chain and enters the 640x480 mode ~0.6 s later, so the Z region lands on a block the game has just released, by design.
+Verdict: selects H-retail-same (two lines: port s7493 watch row + retail oracle call chain and order). Refutes H-port-layout. Class ES
+CLOSED. Not explained yet (next unit, class ET): retail's 6.6 s CPU stores by buildAndRegisterDefaultMaterial land inside the 640 Z
+extent at 0x787830+ - is that a live allocation inside the Z region in retail too, and does the port make the same stores there?
+ORIGIN: no mitigation landed; the writer of the block bytes in both runtimes is the game (rs_free header, then the 640 Z clear).

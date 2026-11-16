@@ -230,14 +230,19 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
    - EP s7491 OS-call host stores: CLOSED 6 levels (L4/L15 s7491, soak L1/L7/L10/L12 folded s7492; full text PORTING-STATE s7491).
    - EQ s7492 thread-queue links + RT64 writeback: CLOSED 6 levels (L1/L4/L15 s7492 + soak L1/L7/L10/L12 folded s7493; full text
      PORTING-STATE s7492). Recipe tools/s7492_eq_recipe.zsh LV="<lvl>:<dd>:<plant kind>".
-   - **ER s7493 RT64 writeback liveness: CLOSED L4/L15 (H-wb-live), levels soak queued (s7493_er_levels).** rt64_rdp.cpp
+   - **ER s7493 RT64 writeback liveness: CLOSED 6 levels (H-wb-live; soak folded s7494).** rt64_rdp.cpp
      setColorImage/setDepthImage -> rs64_s7493_img; rt64_state.cpp rs64_s7493_base(addressStart) before each rs64_wbw_post; main.cpp
      s7493_wb, ROGUESQ_S7493_WBLIVE=1 (+_CTL=<k> erase+blacklist one image, +_WATCH=<hex,...>). Exact-base age table: 51.7k / 51.6k
      writebacks, every one set in the same swap, 0 age>=2 / never outside CTL, colour (L4) and depth (L15) controls caught, nobase=0.
      Seed loc=N row = the game's own boot 640x480 colour image at 0x76A000 (dd8 0xB6A000) set the same swap, over a block freed
      0.217 s earlier. Lookup pitfall: greatest-base and youngest-covering lookups were artefacts / masked the control (s7493 runs 1-2).
      The heap-audit store/load series s7472-s7493 has no open class.
-   - **ES next: is the boot 640x480 fb over a just-released heap block retail layout?** Oracle check, NEXT.md (single-source today).
+   - **ES s7494 boot image over a freed block: CLOSED, retail layout (H-retail-same).** Oracle (tools/s7494_es_oracle.zsh, retail ROM,
+     Rice): retail rs_free(0x80787810) <- freeManifestSegmentAssets <- runIdleFramesAndLoadSaveData at t=1.3-1.4 s, then the 640x480
+     mode at 1.9-2.0 s (buildAndRegisterDefaultMaterial(640,480)); 0x76A000-0x800000 is the 640 Z-buffer (s9: SETZIMG; the s7493
+     "colour image" is the z-clear idiom); retail CPU later stores into the block (0x8001804c/5c, 210 words, t=6.6 s). Same order as
+     the port (free, 0.217 s, image). Two lines: port s7493 row + retail oracle. ER soak folded: L1/L7/L10/L12 score=0 -> ER CLOSED 6 levels.
+   - **ET next: retail's 6.6 s buildAndRegisterDefaultMaterial stores land inside the 640 Z extent (0x787830+): same in the port?** NEXT.md.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
