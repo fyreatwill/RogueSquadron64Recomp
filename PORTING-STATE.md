@@ -197603,3 +197603,29 @@ What ran (offline, no game run). Class DJ = recipe pass criteria that cannot tel
 - Side finding (next class DK): `grep -q 'inits=1'` also matches inits=10..19; summary field pass checks are prefix greps.
 Rules out: a live harness or template that fails a healthy run on a mission restart. Not runtime-verified: the new fields
 appear in the next m6 summary (no soak queued; the change is print-only and its control runs at every harness start).
+
+## Session 7455 (2026-11-15) — class DK closed H-none (in data): summary pass checks are prefix matches, 0 of 11740 historical checks flipped; new exact-field helper tools/agent/summary_field.sh + selftest 21/21
+What ran (offline, no game run). Class DK = harness pass checks written as prefix matches on `key=N` summary fields.
+- Census (tools/ + scratch/agent depth<=2, excluding done/cancelled; liveness = referenced by CURRENT-TRUTH/ITERATION/
+  OWNER-OPT-INS/loop/stop_gate/queued recipes, or touched since 2026-11-08): 42 candidate `key=N`-then-quote matches in live files.
+  All classify as boundary-safe by value domain or dead: alive_at_end (0/1), crashlines/vi_stalls30s `=0` (decimal counts
+  have no leading zeros, so `=0` cannot prefix another value), phase=6, test fixtures (s7453/s7243 compare exact grep -o
+  output), g1_objective_response_run.py `'seq=2' in s` / `'force_seq=2'` substrings (G1(d) is owner-parked, left as is).
+  Live templates m6_god_common.sh / m6_mission_tmpl.sh.in write summaries but never gate on them.
+- Recipe pass checks (soak_queue/done, s6703-s7452): `alive_at_end=1`, `crashlines=0`, `vi_stalls30s=0` are safe; two real
+  prefix hazards, both in one-shot done recipes: `grep -q 'inits=1'` (s7448, s7449: passes inits=10..19) and NEW
+  `[[ $S == *exitrc=1* ]]` (s7450-s7452 arm P: passes exitrc=134 SIGABRT and any 1xx). Left-boundary hazard: `restarts=N`
+  also matches mission_restarts=N (no recipe uses it yet; s7454 told recipes to grep 'mission_restarts=0 ').
+- Fix: tools/agent/summary_field.sh <summary> <key> eq|ne|le|ge|lt|gt|is <value>: exact key token, numeric compare,
+  missing key or non-numeric value fails (exit 1), usage error 2; scans all lines, last occurrence wins.
+  Selftest tools/agent/test_summary_field.sh 21/21, with mutation controls showing the old idioms false-pass on the same
+  inputs (inits=12, exitrc=134, mission_restarts=3). First version read only the last line; the historical re-score caught
+  s5745_crawlshot (a `shots=` line appended after the summary) -> switched to all lines; `shots=      26` (space-split) is
+  rejected as non-numeric, by design.
+- Historical re-score: all 2348 scratch/agent/m6/*/summary files x {alive_at_end=1, crashlines=0, vi_stalls30s=0, inits=1,
+  exitrc=1}: old idiom vs helper disagree 0/11740 -> no past verdict was a false pass (no inits>=10 or exitrc=1xx ever met
+  one of these checks). Positive control for the re-score: the last-line version disagreed on s5745 (3 rows), so the
+  comparison can see a difference.
+- ITERATION.md soak-queue section now tells new recipes to use summary_field.sh.
+Rules out: a past soak verdict that passed on a prefix collision. Not done: rewriting done/ recipes (one-shot, history).
+ORIGIN: none (harness scoring helper, no mitigation machinery).

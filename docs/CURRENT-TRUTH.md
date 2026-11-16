@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7454 (2026-11-15).
+Compact operational handoff, as of Session 7455 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: class DK (HYPOTHESIS-ID harness-summary-field-match), see NEXT.md. One line each:
+   Next: class DL (HYPOTHESIS-ID soak-verdict-line-fields), see NEXT.md. One line each:
+   - **DK s7455 H-none in data:** summary pass checks were prefix matches (`grep -q 'inits=1'` s7448/s7449, `*exitrc=1*` s7450-s7452
+     passes exitrc=134); 0/11740 historical checks over 2348 m6 summaries flipped. New recipes score with
+     `sh tools/agent/summary_field.sh $D/summary <key> eq|le|ge|is <v>` (exact key, selftest tools/agent/test_summary_field.sh 21/21).
    - **DJ s7454 H-none:** inits= was always per-process (each attempt rewrites run.log), so inits>1 = same-process mission restart;
      m6 summaries now add launches=$att mission_restarts=<call#>=2 count> (restart-control in harness; tools/s7454_restart_test.zsh
      6/6 incl. real s7449 L4=1/L10=0, mutation control caught). 0 live templates gate on inits=1 (2 one-shot done recipes only).
