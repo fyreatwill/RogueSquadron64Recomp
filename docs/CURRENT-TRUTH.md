@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7458 (2026-11-15).
+Compact operational handoff, as of Session 7460 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: fold s7459_m6_fs_ctl, then class DP (real-game held-frame plant), see NEXT.md. One line each:
+   Next: fold s7460_plant_hold_ctl (class DP), then close the stall-measure series, see NEXT.md. One line each:
+   - **DP s7460 (plant landed, verdict pending):** ROGUESQ_PLANT_HOLD=<s>[,<dur>] (main.cpp rs64_diag_plant_hold_tick, beside
+     PLANT_EXIT; default dur 40) blocks the guest thread once inside osViSwapBuffer_recomp while host VI keeps ticking: the first
+     in-game held-frame positive control (before it only historical logs s61 run4 / s6993 ring, and SIGSTOP which also stops VI).
+     Queued scratch/agent/soak_queue/s7460_plant_hold_ctl.sh: m6 L4 (plant 120,40) expects fs_holds>=1 vi_stalls30s>=1; g1e dd4
+     (plant 100,40) expects vi_stalls30s>=1 max_vihold_ms>=35000. s7459_m6_fs_ctl folded: CONTROL PASS (A/L fs_holds=0, max 3 VIs).
    - **DO s7459 H-blind (m6):** m6_god_common.sh (g1_level_coverage_common: 25 of the last ~60 recipes; s7263/s7272/s7277 cat its summary)
      scored vi_stalls30s by [vi] row COUNT, but rows print every 64 VIs whatever the game does: a held frame with VI ticking read 0.
      Now the newest row's fs= (M6_STALL_LINES=1 old) + summary fs_holds/max_fs_hold_vi (tools/agent/vilog_stalls.py, fs unchanged

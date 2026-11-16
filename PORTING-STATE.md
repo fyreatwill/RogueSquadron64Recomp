@@ -197738,3 +197738,20 @@ both must read vi_stalls30s=0 fs_holds=0 (negative control on a live game; the p
 
 Rules out: "m6 vi_stalls30s=0 means no freeze" for every m6 summary before s7459 — it meant only "VI thread alive". Historical m6 logs
 in scratch/agent/m6 (60) rescored: 0 fs holds, so no past m6 verdict flips.
+
+## Session 7460 (2026-11-15) — class DP plant landed: ROGUESQ_PLANT_HOLD=<s>[,<dur>] blocks the guest thread inside osViSwapBuffer_recomp while VI keeps ticking (first in-game held-frame positive control); s7459_m6_fs_ctl folded CONTROL PASS; s7460_plant_hold_ctl queued
+
+- Fold s7459_m6_fs_ctl (rc=0, 405 s): arms A (fs probe) and L (M6_STALL_LINES=1) L4 FPS60 dd4 16:9, both alive_at_end=1,
+  vi_stalls30s=0, fs_holds=0, max_fs_hold_vi=3, crashlines=0 -> CONTROL PASS. The fs probe raises no false positive in flight (negative
+  control, real game). Positive side still rests on historical logs only (s61 run4, s6993 ring) and the s7458 SIGSTOP soak, which
+  freezes VI too, so it never exercised "VI ticking, frame held" in a live run.
+- Change: src/main/main.cpp rs64_diag_plant_hold_tick() (called from rs64_diag_quiet_tick, i.e. osViSwapBuffer_recomp via
+  rs64_store_diag_tick, on the guest thread). Env ROGUESQ_PLANT_HOLD=<s>[,<dur_s>], dur default 40: once, at t>=<s> from the first swap,
+  prints `[s7460-plant-hold] begin dur=` then sleeps dur s, then `end`. Unset = no-op (static on-flag). Build OK (cmake --build build).
+- Queued scratch/agent/soak_queue/s7460_plant_hold_ctl.sh (SOAK_NEEDS_IDLE=180): m6 arm (g1_level_coverage_common L4, HOLD_S=120,
+  plant 120,40) must read alive_at_end=1 fs_holds>=1 vi_stalls30s>=1; g1e arm (g1e_owner_quiet_arms dd4 HOLD=180, plant 100,40) must
+  read vi_stalls30s>=1 max_vihold_ms>=35000; each arm VOID if the begin line is missing. Outcomes: H-ok both flag -> stall-measure series
+  closes; H-m6-blind fs advances during the block (fs is not driven by the swapping thread) -> m6 needs a swap-count field; H-ring-blind
+  ring shows a new origin during the block -> ring_stalls hold logic is wrong.
+- Not run in-session (host may be in owner use; the queue gates on idle). The plant itself is therefore unverified until the soak's
+  begin-line check fires.

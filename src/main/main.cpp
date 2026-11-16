@@ -5228,9 +5228,29 @@ static void rs64_diag_plant_exit_tick() {
     printf("Switch-case out of bounds in %s at 0x%08X for jump table at 0x%08X\n", "s7450_plant", 0x80001234u, 0x800A0000u);
     exit(EXIT_FAILURE);
 }
+// s7460 class DP: ROGUESQ_PLANT_HOLD=<s>[,<dur_s>] positive control for a HELD frame (no crash, no exit). Once, at
+// t>=<s> after the first swap, the guest thread blocks <dur_s> (default 40) inside osViSwapBuffer_recomp, so no new
+// frame/gfx task is produced while the host VI thread keeps ticking. Every stall scorer (m6 fs_holds, g1e ring
+// vi_stalls30s) must flag it.
+static void rs64_diag_plant_hold_tick() {
+    static double sec = 0, dur = 40; static bool done = false;
+    static const bool on = [] {
+        const char* e = getenv("ROGUESQ_PLANT_HOLD"); if (!e || !*e) return false;
+        sec = atof(e); if (const char* c = strchr(e, ',')) dur = atof(c + 1);
+        return sec > 0 && dur > 0;
+    }();
+    if (!on || done) return;
+    static const auto t0 = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < sec) return;
+    done = true;
+    (fprintf)(stderr, "[s7460-plant-hold] begin dur=%.1f s\n", dur); fflush(stderr);
+    std::this_thread::sleep_for(std::chrono::duration<double>(dur));
+    (fprintf)(stderr, "[s7460-plant-hold] end\n"); fflush(stderr);
+}
 static void rs64_diag_quiet_tick() {
     rs64_diag_plant_tick();
     rs64_diag_plant_exit_tick();
+    rs64_diag_plant_hold_tick();
     if (rs64_diag_busy.load(std::memory_order_relaxed)) rs64_diag_spin_us(s_dq_busy_guest_us);
     if (!s_dq_stat) return;
     static const auto t0 = std::chrono::steady_clock::now(); static auto tq = t0, tb = t0, tw = t0;

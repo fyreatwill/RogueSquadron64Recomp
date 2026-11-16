@@ -1550,3 +1550,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7453 fold: s7452_fatal_harness rc=0: arm P died_in_verify=1 exitrc=1 crashlines=1, arm C L4 alive_at_end=1 crashlines=0 summary present -> s7452 tee fix verified. s7449_argck_levels rc=1 = L4 inits=2 from a same-process mission re-init (endMissionCleanup), not a crash.
 20261115-231519 | s7458_ring_stall_ctl | rc=0 | 380s | scratch/agent/soak_results/s7458_ring_stall_ctl_20261115-231519.log | arms=2 alive=2/2 crash_arms=0 stall_arms=1 fatal=0 first=none stall_na=0
 20261115 | s7459 fold: s7458_ring_stall_ctl rc=0: ok vi_stalls30s=0, stp (SIGSTOP 35 s) vi_stalls30s=1 max_gap_ms=35028, CONTROL PASS -> class DN ring scorer real-game verified.
+20261115-233920 | s7459_m6_fs_ctl | rc=0 | 405s | scratch/agent/soak_results/s7459_m6_fs_ctl_20261115-233920.log | arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
