@@ -198513,3 +198513,6 @@ RDP command and DL regions inside re-carved or torn-down arenas, the same U/N po
 H-host-stale-DL are refuted on L4/L15. Rule-4 second line: the levels soak s7486_hostuaf_levels (L1 dd8 21:9, L7/L10/L12 dd4) is queued.
 Cost note: rdp_cmd reads inside U records take the mutex on every command (3.2M marked on L4) with no VI stall; measurement only, default off.
 Not covered: RT64's own deferred reads (RDP_ASYNC), VI framebuffer scanout (reserved fb memory, not heap).
+Verdict: this selects H-host-clean and refutes H-host-uaf and H-host-stale-DL on L4/L15 (locator class at read time, both plants DETECTED),
+and closes class EK pending the levels soak. Next discriminator: the same per-kind locator class on L1/L7/L10/L12 in s7486_hostuaf_levels.
+Any F/Urec row there reopens EK and names the kind and the freeing caller.
