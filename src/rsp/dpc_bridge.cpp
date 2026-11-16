@@ -6436,6 +6436,7 @@ static size_t g_bfsh_pk_sh = 0, g_bfsh_pk_shadow = 0, g_bfsh_pk_ranges = 0;
 static uint64_t g_bf2_fwd_bytes = 0, g_bf2_fwd_subs = 0, g_bf2_g1e_bytes = 0; static uint32_t g_bf2_task_bytes = 0, g_bf2_task_cmds = 0;
 static uint32_t g_bf2_ops[64] = {}; static bool g_bf2_dirty = false;
 static std::atomic<uint64_t> g_bf2_ref_bytes{0}, g_bf2_ref_cmds{0}, g_bf2_ref_ops{0};
+extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...);  // s7432
 static std::atomic<uint64_t> s_fwd_bytes{0};    // s7028: hoisted from rsp_dpc_submit_impl (the [dpc-fwd] pair)
 static std::atomic<uint64_t> s_fwd_submits{0};
 static bool g_bf_check_flag();
@@ -6797,7 +6798,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                    bytes = s_fwd_bytes.load(std::memory_order_relaxed) + g_bf2_fwd_bytes; submits = s_fwd_submits.load(std::memory_order_relaxed) + g_bf2_fwd_subs; }
         else { bytes = s_fwd_bytes.fetch_add(submit_hi - submit_lo) + (submit_hi - submit_lo); submits = s_fwd_submits.fetch_add(1) + 1; }
         if ((submits % 16384) == 0) {
-            fprintf(stderr, "[dpc-fwd] submits=%llu bytes=%llu (%.1f MB)\n",
+            rs64_diag_fprintf(stderr, "[dpc-fwd] submits=%llu bytes=%llu (%.1f MB)\n",
                     (unsigned long long)submits, (unsigned long long)bytes, bytes / 1048576.0);
             fflush(stderr);
         }

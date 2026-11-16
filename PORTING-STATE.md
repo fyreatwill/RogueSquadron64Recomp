@@ -196926,3 +196926,41 @@ Conclusion: selects H-perframe (37 non-control tags PERSISTENT in every flight w
 and refutes H-capped (flight 1.71 MB/10 s is the loudest phase, not boot); H-burst also present ([s4234-ENTRY], [s5855]) but
 secondary. Closes class CN with the writer-side cap. Next discriminator: the in-run ROGUESQ_DIAG_QUIET_AT toggle of the top
 per-frame sites against gfx-task ms / game fps (class CO, scratch/agent/NEXT.md), with a 1 ms busy-wait positive control.
+
+## Session 7432 (2026-11-15) — class CO default-on fprintf cost on the calling threads: H-free selected (silencing every generated-C diagnostic fprintf at source moves gfx-task ms by +0.086 ms, noise, vs +0.934 ms for a 1 ms busy control in the same run; direct cost 0.3% of one core)
+
+Soak fold: s7428_audio_route_arms VOID 4/5 (human/lock/sleep), still re-queued; no verdict.
+
+Instrument (new, one build, recompile only, no regen): include/rsp_dpc_macros.h (force-included into RecompiledFuncs) now
+includes <stdio.h> then `#define fprintf(...) rs64_diag_fprintf(__VA_ARGS__)` for C, so every fprintf in the generated code
+([s2020-svc], [s3290-stall], [s3294-stall], [s5855], [s5908], ...) goes through one function in src/main/main.cpp; nm: 50
+objects reference _rs64_diag_fprintf, 0 reference _fprintf. The C++ per-frame sites [dpc-fwd] (dpc_bridge.cpp),
+[osViSetMode]/[vi-mode-table] (upstream_compat.cpp) and [lle task] (main.cpp) call it directly. ROGUESQ_DIAG_QUIET=1 drops
+stderr lines at source unless the format holds CRASH/crash/abort/FATAL/fatal/SIG/ERROR/assert; default 0 = old behaviour
+(vfprintf, one relaxed atomic load extra). ROGUESQ_DIAG_STAT=1 (implied by any toggle) times each call (calls/ns/bytes/drops,
+split by in-gfx-task via g_rs64_lle_depth vs other threads). ROGUESQ_DIAG_QUIET_TOGGLE=<s> and ROGUESQ_DIAG_BUSY_TOGGLE=<s>
+flip at osViSwapBuffer (rs64_store_diag_tick), one "[diag-quiet] win/flip" line each. Positive control: ROGUESQ_DIAG_BUSY_US
+busy-wait per gfx task inside the [g1e-split] ucode window, ROGUESQ_DIAG_BUSY_GUEST_US per swap on the guest thread.
+Analyzer tools/s7432_diag_quiet_ab.py (2x2 state means from the timestamped tlog; row after a flip dropped; exit 3 if the
+busy control does not move ucode_ms by >= half its size).
+
+Run: tools/s7431_stderr_volume.sh 320 (copied folder /tmp/rs64_s7431/Q, owner save copied, owner recipe FPS60 dd4 16:9,
+forced lvl1 autopilot flight from 68 s) + ROGUESQ_G1E_AQ=2 QUIET_TOGGLE=15 BUSY_TOGGLE=30 BUSY_US=1000 BUSY_GUEST_US=1000.
+Markers: [g1e-fast] on=1 no-diag-env, [g1e-probes] on=0 (owner defaults), 31 flips, crashlines=0. From t>=80 s:
+| state (quiet,busy) | rows | ucode ms/task | tasks/s | fprintf gfx-task thr ms/s, calls/s, KB/s | other thr ms/s, calls/s, KB/s | dropped/s |
+| 0,0 | 56 | 5.708+-0.054 | 60.6 | 0.708, 388, 31.0 | 2.200, 1507, 164.9 | 0 |
+| 0,1 | 55 | 6.488+-0.063 | 60.5 | 0.680, 385, 30.7 | 1.947, 1248, 139.8 | 0 |
+| 1,0 | 55 | 5.640+-0.047 | 60.6 | 0 | 0 | 400 + 1363 |
+| 1,1 | 55 | 6.728+-0.058 | 60.5 | 0 | 0 | 399 + 1277 |
+Effects: busy +0.934 ms/task ucode, tasks/s -0.1 (CONTROL PASS); quiet +0.086 ms/task (pairs -0.068 and +0.240: noise,
+resolution ~0.1 ms), tasks/s +0.0. Two lines: (1) the in-run toggle shows no effect at a resolution the control proves;
+(2) the direct timing says the formatting + pipe write costs ~0.012 ms per gfx task and 2.9 ms per second in all, 0.3% of
+one core. The guest 1 ms/frame busy did not lower tasks/s: the guest thread has >= 1 ms per frame of slack at 60 tasks/s, so
+tasks/s cannot show a smaller guest cost (that is why the next class measures guest-thread CPU time instead).
+Not made default-on (H-free: nothing to gain, and harness gates parse these lines). docs/OWNER-OPT-INS.md mentions
+ROGUESQ_DIAG_QUIET=1 as tidiness only.
+Rules out: H-cost and H-guest for the default-on fprintf sites at the owner recipe. Not measured: the probe BOOKKEEPING that
+runs without printing (s5855 table updates every call, osViSetMode guest peeks + dladdr, generated stall-probe counters).
+Conclusion: selects H-free (quiet effect +0.086 ms/task inside noise vs the same-run 1 ms control at +0.934, direct cost 0.3%
+of one core) and refutes H-cost and H-guest; closes class CO. Next discriminator: class CP, a census of default-on
+apply_s*.py probe bookkeeping on guest hot paths plus guest-thread CPU ms per frame (thread_info) with and without it.

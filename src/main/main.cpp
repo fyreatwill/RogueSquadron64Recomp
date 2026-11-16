@@ -4,6 +4,7 @@
 #include "rs64_rdram_peek.h"
 #include <dlfcn.h>
 #include <cstdio>
+#include <cstdarg>
 #include <cstdlib>
 #include <cstring>
 #include <csignal>
@@ -5110,7 +5111,74 @@ static void rs64_g1e_nmac_tick() {
             std::chrono::duration<double>(now - t0).count(), (unsigned long long)rs64_g1e_nmac_tasks[0].exchange(0),
             (unsigned long long)rs64_g1e_nmac_tasks[1].exchange(0));
 }
+// s7432 class CO: default-on diagnostic fprintf cost on the calling threads. include/rsp_dpc_macros.h routes every fprintf
+// in the generated C (RecompiledFuncs: [s2020-svc], [s3290-stall], [s5855], [s5908], ...) through rs64_diag_fprintf, and the
+// per-frame src sites ([dpc-fwd], [osViSetMode], [vi-mode-table], [lle task]) call it directly. ROGUESQ_DIAG_QUIET=1 drops
+// their stderr lines at source (crash/abort/fatal/SIG/ERROR/assert formats always pass). Measurement (ROGUESQ_DIAG_STAT=1 or
+// any toggle): per-window calls/ns/bytes split by in-gfx-task vs other threads. ROGUESQ_DIAG_QUIET_TOGGLE=<s> flips quiet,
+// ROGUESQ_DIAG_BUSY_TOGGLE=<s> flips the positive control: ROGUESQ_DIAG_BUSY_US busy-wait per gfx task (inside the
+// [g1e-split] ucode window) and ROGUESQ_DIAG_BUSY_GUEST_US per osViSwapBuffer on the guest thread. One [diag-quiet] line per flip.
+static int rs64_env_int(const char* n, int d) { const char* e = getenv(n); return (e && *e) ? atoi(e) : d; }
+extern "C" int rs64_diag_quiet = [] { const int q = rs64_env_int("ROGUESQ_DIAG_QUIET", 0) != 0;
+    fprintf(stderr, "[diag-quiet] init quiet=%d\n", q); return q; }();
+static const double s_dq_qtog = [] { const char* e = getenv("ROGUESQ_DIAG_QUIET_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+static const double s_dq_btog = [] { const char* e = getenv("ROGUESQ_DIAG_BUSY_TOGGLE"); return (e && *e) ? atof(e) : 0.0; }();
+static const int s_dq_stat = rs64_env_int("ROGUESQ_DIAG_STAT", 0) || s_dq_qtog > 0 || s_dq_btog > 0;
+static const int s_dq_busy_us = rs64_env_int("ROGUESQ_DIAG_BUSY_US", 0), s_dq_busy_guest_us = rs64_env_int("ROGUESQ_DIAG_BUSY_GUEST_US", 0);
+static std::atomic<int> rs64_diag_busy{0};
+static std::atomic<uint64_t> s_dq_calls[2], s_dq_ns[2], s_dq_bytes[2], s_dq_drop[2];
+static void rs64_diag_spin_us(int us) {
+    if (us <= 0) return;
+    const auto t = std::chrono::steady_clock::now() + std::chrono::microseconds(us);
+    while (std::chrono::steady_clock::now() < t) {}
+}
+static bool rs64_diag_keep(const char* f) {
+    static const char* const k[] = {"CRASH", "crash", "abort", "FATAL", "fatal", "SIG", "ERROR", "assert"};
+    for (const char* w : k) if (strstr(f, w)) return true;
+    return false;
+}
+extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...) {
+    const int task = g_rs64_lle_depth.load(std::memory_order_relaxed) > 0;
+    if (rs64_diag_quiet && f == stderr && !rs64_diag_keep(fmt)) {
+        if (s_dq_stat) s_dq_drop[task].fetch_add(1, std::memory_order_relaxed);
+        return 0;
+    }
+    va_list ap; va_start(ap, fmt);
+    if (!s_dq_stat || f != stderr) { const int r = vfprintf(f, fmt, ap); va_end(ap); return r; }
+    const auto t0 = std::chrono::steady_clock::now();
+    const int r = vfprintf(f, fmt, ap);
+    const auto t1 = std::chrono::steady_clock::now();
+    va_end(ap);
+    s_dq_calls[task].fetch_add(1, std::memory_order_relaxed);
+    s_dq_ns[task].fetch_add((uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(), std::memory_order_relaxed);
+    if (r > 0) s_dq_bytes[task].fetch_add((uint64_t)r, std::memory_order_relaxed);
+    return r;
+}
+extern "C" void rs64_diag_busy_task(void) { if (rs64_diag_busy.load(std::memory_order_relaxed)) rs64_diag_spin_us(s_dq_busy_us); }
+static void rs64_diag_quiet_tick() {
+    if (rs64_diag_busy.load(std::memory_order_relaxed)) rs64_diag_spin_us(s_dq_busy_guest_us);
+    if (!s_dq_stat) return;
+    static const auto t0 = std::chrono::steady_clock::now(); static auto tq = t0, tb = t0, tw = t0;
+    const auto now = std::chrono::steady_clock::now();
+    const bool fq = s_dq_qtog > 0 && std::chrono::duration<double>(now - tq).count() >= s_dq_qtog;
+    const bool fb = s_dq_btog > 0 && std::chrono::duration<double>(now - tb).count() >= s_dq_btog;
+    const bool fw = !s_dq_qtog && !s_dq_btog && std::chrono::duration<double>(now - tw).count() >= 10.0;
+    if (!fq && !fb && !fw) return;
+    const double win = std::chrono::duration<double>(now - tw).count(); tw = now;
+    uint64_t c[2], ns[2], by[2], dr[2];
+    for (int i = 0; i < 2; ++i) { c[i] = s_dq_calls[i].exchange(0); ns[i] = s_dq_ns[i].exchange(0); by[i] = s_dq_bytes[i].exchange(0); dr[i] = s_dq_drop[i].exchange(0); }
+    // window stats belong to the state BEFORE this flip
+    fprintf(stderr, "[diag-quiet] win quiet=%d busy=%d t=%.3f secs=%.3f task_calls=%llu task_ms=%.3f task_bytes=%llu task_drop=%llu "
+            "oth_calls=%llu oth_ms=%.3f oth_bytes=%llu oth_drop=%llu\n", rs64_diag_quiet, rs64_diag_busy.load(),
+            std::chrono::duration<double>(now - t0).count(), win, (unsigned long long)c[1], ns[1] / 1e6, (unsigned long long)by[1],
+            (unsigned long long)dr[1], (unsigned long long)c[0], ns[0] / 1e6, (unsigned long long)by[0], (unsigned long long)dr[0]);
+    if (fq) { tq = now; rs64_diag_quiet = !rs64_diag_quiet; }
+    if (fb) { tb = now; rs64_diag_busy = !rs64_diag_busy.load(); }
+    if (fq || fb) fprintf(stderr, "[diag-quiet] flip quiet=%d busy=%d t=%.3f\n", rs64_diag_quiet, rs64_diag_busy.load(),
+                          std::chrono::duration<double>(now - t0).count());
+}
 extern "C" void rs64_store_diag_tick(void) {
+    rs64_diag_quiet_tick();
     rs64_g1e_fast_tick();
     rs64_g1e_dmem_tick();
     rs64_g1e_dmembase_tick();
@@ -7051,6 +7119,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                              g_rs64_s7026_smp_n, g_rs64_s7026_smp_w, g_rs64_s7026_smp_c};  // s7026
     const int s26cap = g_rs64_s7026 ? rs64_s7012_cap() : 0;
     const auto aq_t0 = g_rs64_aq_on > 0 ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+    rs64_diag_busy_task();  // s7432 positive control (ROGUESQ_DIAG_BUSY_US)
     RspExitReason r;
     if (rs64_g1e_dmembase && g_dmem_cur == dmem) {
         const int lean = rs64_g1e_lean && !rs64_rsp_hooks_on && !rs64_g1e_probes;
@@ -7692,7 +7761,7 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     poke(0xFC0 + 0x38, (uint32_t)task->t.yield_data_ptr);
     poke(0xFC0 + 0x3C, (uint32_t)task->t.yield_data_size);
     { extern volatile uint32_t g_rs64_g1cf_tasks, g_rs64_g1cf_dsize; ++g_rs64_g1cf_tasks; g_rs64_g1cf_dsize += (uint32_t)task->t.data_size; } // s6070 g1cf
-    fprintf(stderr, "[lle task] flags=0x%X yield_ptr=0x%08X yield_size=0x%X data=0x%08X dsize=0x%X out=0x%08X\n",
+    rs64_diag_fprintf(stderr, "[lle task] flags=0x%X yield_ptr=0x%08X yield_size=0x%X data=0x%08X dsize=0x%X out=0x%08X\n",
             (uint32_t)task->t.flags, (uint32_t)task->t.yield_data_ptr,
             (uint32_t)task->t.yield_data_size, (uint32_t)task->t.data_ptr,
             (uint32_t)task->t.data_size, (uint32_t)task->t.output_buff);

@@ -215,10 +215,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CO, per-frame default-on fprintf cost on game/gfx threads (HYPOTHESIS-ID default-fprintf-cost).**
-   CN capped what reaches the terminal, but the 37 default-on per-frame tags still FORMAT ~170 KB/s on the calling threads
-   (fprintf runs before the pipe). Does gating them at source move the gfx-task ms / game fps at the owner recipe? See
-   scratch/agent/NEXT.md.
+1. **Next audit: class CP, default-on probe BOOKKEEPING cost on the guest thread (HYPOTHESIS-ID default-probe-bookkeeping).**
+   See scratch/agent/NEXT.md. tasks/s is pinned at 60 at FPS60, so the next metric is guest-thread CPU ms per frame.
+   CO (s7432) CLOSED H-free: include/rsp_dpc_macros.h now routes every generated-C fprintf (50 objects, 0 direct) through
+   rs64_diag_fprintf (main.cpp), as do [dpc-fwd]/[osViSetMode]/[vi-mode-table]/[lle task]; ROGUESQ_DIAG_QUIET=1 drops them at
+   source (crash formats pass), opt-in, default 0. Same-run 2x2 (quiet 15 s x busy 30 s, owner recipe lvl1 flight, FAST=1
+   PROBES=0, tools/s7432_diag_quiet_ab.py): control 1 ms busy per gfx task = +0.934 ms/task ucode (PASS); quiet = +0.086 ms
+   (noise, sign differs between the two pairs), tasks/s 60.6 vs 60.6. Direct cost: 0.71 ms/s on gfx-task threads (388
+   calls/s, 31 KB/s, ~0.012 ms per task) + 2.2 ms/s elsewhere (1507 calls/s, 165 KB/s) = 0.3% of one core. Guest 1 ms busy
+   per swap moved tasks/s by -0.1 (headroom >= 1 ms/frame). The s7431 writer cap is enough.
    CN (s7431) CLOSED H-perframe FOUND + FIXED (writer-side): tools/s7431_stderr_volume.{sh,py} (copied folder, owner recipe
    FPS60 dd4 16:9 + forced lvl1 autopilot, no logging env, per-line arrival timestamps; planted per-frame control
    ROGUESQ_FB_HASH=1). Old binary 260 s: 39.5 MB, flight 1.71 MB/10 s, 37 tags print in every flight window ([s5855] 800 KB/10s

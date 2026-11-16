@@ -13,6 +13,15 @@
     (*(uint32_t*)(rdram + ((((reg) + (offset))) - 0xFFFFFFFF80000000)))
 #endif
 
+#ifndef __cplusplus
+// s7432 class CO: every fprintf in the generated C goes through rs64_diag_fprintf (src/main/main.cpp): ROGUESQ_DIAG_QUIET=1
+// drops diagnostic stderr lines at source, ROGUESQ_DIAG_STAT=1 / *_TOGGLE measure their cost. stdio.h first so the macro
+// cannot rewrite its declaration (later #include <stdio.h> is guarded).
+#include <stdio.h>
+int rs64_diag_fprintf(FILE* f, const char* fmt, ...);
+#define fprintf(...) rs64_diag_fprintf(__VA_ARGS__)
+#endif
+
 #ifdef __cplusplus
 
 // RSP-side DPC MMIO macros emitted by RSPRecomp when the RSP ucode does

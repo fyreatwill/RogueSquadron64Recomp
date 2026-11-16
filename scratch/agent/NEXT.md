@@ -1,18 +1,19 @@
-# NEXT (s7432)
-HYPOTHESIS-ID: default-fprintf-cost
+# NEXT (s7433)
+HYPOTHESIS-ID: default-probe-bookkeeping
 
-Fold new scratch/agent/SOAK-RESULTS.md lines first (s7428_audio_route_arms: rc 0 = F9 gate two-arm verified; 2 = VOID).
+Fold new scratch/agent/SOAK-RESULTS.md lines first (s7428_audio_route_arms: rc 0 = F9 gate two-arm verified; 2 = VOID; it is at 4/5 voids).
 
-Class CO (CURRENT-TRUTH Next steps item 1): s7431 capped what reaches the terminal, but 37 default-on tags still format every
-frame on the calling threads (gfx thread: [dpc-fwd], [lle, [vi-mode-table]/[osViSetMode]; guest thread: [s2020-svc],
-[s3290-stall], [s5855] ~5 KB/line, [s3294-stall], ...). Hypotheses: H-free (formatting + pipe write < 0.1 ms per frame on each
-thread: the cap is enough) vs H-cost (gating the per-frame default-on sites at source lowers gfx-task ms or raises game fps at
-FPS60 dd4 16:9 by a measurable amount) vs H-guest (cost lands on the guest thread only: game frame time, not gfx).
-Discriminator, ONE build: a single global switch ROGUESQ_DIAG_QUIET=1 (read once into a global) that the top ~15 per-frame
-sites test before fprintf (sites listed in the s7431 PORTING-STATE entry; generated sites go into their tools/apply_*.py /
-fixup scripts, never hand-edit RecompiledFuncs), toggled IN-RUN at a fixed second (ROGUESQ_DIAG_QUIET_AT=<s>, phase-gated,
-same-run A/B) on lvl1 flight with OWNER_TIMING-style gfx path and the G1b per-VI timing ring (ROGUESQ_PRESENT_RING) dumped
-at exit. Compare gfx task host-ms and game fps before vs after the switch. Positive control: an injected 1 ms busy-wait
-per frame toggled at a second time point must show up in the same metric. Then: if H-cost, make the quiet switch default-on
-(sites become opt-in via ROGUESQ_DIAG_LOUD=1 for harnesses that parse them - check every grep in scratch/agent/*.sh first).
-Reuse tools/s7431_stderr_volume.sh copied-folder runner.
+Class CP (CURRENT-TRUTH Next steps item 1). s7432 closed CO H-free: the default-on fprintf calls cost 0.3% of one core and
+silencing them (ROGUESQ_DIAG_QUIET=1) moves nothing. But the probes' NON-printing work still runs every call: tables,
+counters, guest peeks (e.g. [s5855] sphere-probe table update per call, printing every 1024th; [s5908] caller table;
+osViSetMode guest_u32 peeks + dladdr; s3290/s3294 stall-probe bookkeeping). tasks/s is pinned at 60 at FPS60 and a 1 ms
+guest busy-wait did not move it, so tasks/s cannot see this; measure guest-thread CPU time per frame instead.
+Step 1 (offline, static): census every tools/apply_s*.py / fixup insert compiled into RecompiledFuncs: for each, is it gated
+by an env read once (cheap) or does it run unconditionally; is it a diagnostic or a needed guard (guards stay). Classify
+all; no runtime yet. Positive control for the census: the [s5855] probe must classify "ungated diagnostic".
+Step 2 (one build, one run): per-swap guest-thread CPU time (thread_info THREAD_BASIC_INFO user+system on the thread that
+calls osViSwapBuffer) and gfx-thread CPU time, as a [diag-cpu] line per 10 s; gate the ungated diagnostic bookkeeping behind
+rs64_diag_quiet (reuse s7432's flag and ROGUESQ_DIAG_QUIET_TOGGLE in-run, ROGUESQ_DIAG_BUSY_GUEST_US=500 as the control
+toggle). H-free: guest CPU ms/frame differs < control/4 -> close. H-cost: >= 0.25 ms/frame -> gate those sites by default
+(probes become opt-in), after grepping scratch/agent/*.sh and tools/*.sh for every tag they parse.
+Runner: env S7431_ARM=P zsh tools/s7431_stderr_volume.sh 320 ROGUESQ_G1E_AQ=2 ... ; analyzer tools/s7432_diag_quiet_ab.py (extend).

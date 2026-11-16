@@ -1077,6 +1077,7 @@ extern "C" void rs64_s5078_flight_store(uint32_t pc, uint32_t addr) {
 
 extern std::atomic<int> g_rs64_swap_n;
 extern "C" void rs64_store_diag_tick(void);
+extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...);  // s7432
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     g_rs64_g1d_rdram.store(rdram, std::memory_order_relaxed);
     static int s_count = 0;
@@ -1562,7 +1563,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
     }
 #endif
-    fprintf(stderr,
+    rs64_diag_fprintf(stderr,
         "[osViSetMode #%d] mode_ptr=0x%08X  type=0x%08X ctrl=0x%08X "
         "width=%u xScale=0x%08X yScale=0x%08X ra=0x%08X site=%s\n",
         n, mode_ptr, type, ctrl, width, xScale, yScale, ra, site);
@@ -1582,7 +1583,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         const uint32_t slot3 = guest_u32(0x80128E40u + 8u);
         const uint32_t pendingA = guest_u32(0x80128E94u);
         const uint32_t pendingB = guest_u32(0x80128E90u);
-        fprintf(stderr,
+        rs64_diag_fprintf(stderr,
             "[vi-mode-table] call=%d mode_ptr=0x%08X requested_width=%u "
             "slot0=%u slot1=%u slot2=%u slot3=%u "
             "pendingA=0x%08X pendingB=0x%08X pending_mask9=0x%X "
