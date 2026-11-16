@@ -3669,6 +3669,8 @@ static inline void s7475_mark(uint32_t blk, const S7475R& b, bool on) {
         if (on) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); else g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); } }
 struct S7475W { uint64_t n; uint32_t blk, req, sz, off; int w; void* hpc; const char* fn; };
 static std::map<uint32_t, S7475W> s_s7475_wpc;  /* per store pc */
+static void s7480_sum(double now);  /* s7480 class EH, defined below */
+static volatile int g_s7480_inmalloc = 0;  /* s7480: between rs_malloc entry (rs64_s7479_pad) and exit (s6063 hook) */
 static uint64_t s_s7475_stores = 0;
 static std::string s7475_sym(void* pc) { char b[160]; rs64_s7324_sym(pc, b, sizeof b); return b; }
 /* s7478 class EF: ROGUESQ_S7475_BT=1 keeps an 8-frame host backtrace per canary record (alloc chain) and prints it, plus the
@@ -3707,6 +3709,7 @@ static void s7475_walk(volatile uint8_t* r, double now) {
                      (unsigned long long)s_s7475_hdrbad, (unsigned long long)s_s7475_stale, (unsigned long long)s_s7475_overlap, (unsigned long long)s_s7475_freechk,
                      (unsigned long long)s_s7475_hits, s_s7475_seen.size(), s_s7475_plant, (unsigned long long)s_s7479_padded);
         std::fprintf(stderr, "[s7475] stores=%llu wpcs=%zu\n", (unsigned long long)s_s7475_stores, s_s7475_wpc.size());
+        s7480_sum(now);
         if (ns <= 400 && s_s7475_walks % 400 == 1) for (auto& kv : s_s7475_wpc) std::fprintf(stderr, "[s7475] wpc pc=%08X fn=%s n=%llu first_blk=%08X req=%X off=%X w=%d alloc=%s\n",
                      kv.first, kv.second.fn ? kv.second.fn : "?", (unsigned long long)kv.second.n, kv.second.blk, kv.second.req, kv.second.off, kv.second.w, s7475_sym(kv.second.hpc).c_str()); } }
 static void s7475_tick(volatile uint8_t* r, double now) {
@@ -3726,8 +3729,118 @@ extern "C" uint32_t rs64_s7479_pad(uint32_t rq) {
     static const uint32_t pad = [] { const char* e = std::getenv("ROGUESQ_S7475_PAD"); const char* c = std::getenv("ROGUESQ_S7475_CANARY");
         uint32_t v = (e && *e && c && c[0] && c[0] != '0') ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; v = (v + 15u) & ~15u;
         if (v) std::fprintf(stderr, "[s7479] pad armed n=%u\n", v); return v; }();
+    g_s7480_inmalloc = 1;  /* s7480: rs_malloc entry (cleared at the s6063 exit hook) */
     if (!pad || !rq || rq > 0x7FFFFFF0u - pad) return rq;
     __atomic_add_fetch(&s_s7479_padded, 1, __ATOMIC_RELAXED); return rq + pad; }
+/* s7480 class EH: guest stores into FREED rs_malloc blocks (use-after-free writes). ROGUESQ_S7480_UAF=1 (default off; needs
+   ROGUESQ_S7475_CANARY=1 for the store bitmap and ROGUESQ_STORE_DIAG=1 for the per-store hook): at rs_free entry the block's data
+   [ptr, ptr+size) (size from its header) is recorded and marked in g_rs64_s7475_bm; an rs_malloc exit trims every freed record
+   overlapping the new block (keeping both remainders, minus the split header). A marked guest store then lands in rs64_s7475_store:
+   allocator-internal writers (rs_malloc family / heap list helpers; rs_memset only between rs_malloc entry and exit) are counted
+   per fn as `internal` (natural positive control: the split header of a reused freed block MUST land here) and only the stored
+   bytes are unmarked; anything else logs `[s7480] uaf-store pc= fn= a= w= blk= n= off= age= hdr= size=` once per freed record
+   (then the record is dropped) with ROGUESQ_S7475_BT=1 adding the host free/store chains (= guest call chains). Planted control
+   ROGUESQ_S7480_PLANT=<s> (1 -> 60): <s> s after arming, the next rs_malloc block with req >= 0x40 is ALSO recorded as freed
+   (guest memory untouched); the game's own first store into it MUST log `PLANT` + `[s7480] plant DETECTED`. Measurement only. */
+namespace {
+struct S7480F { uint32_t n; double t; int plant; void* bt[8]; int nbt; uint32_t far, fh[3]; };
+static std::map<uint32_t, S7480F> s_s7480_freed;
+static std::map<std::string, uint64_t> s_s7480_internal;
+static std::map<uint32_t, uint64_t> s_s7480_pcs;
+static uint64_t s_s7480_loc[4] = {0, 0, 0, 0};  /* non-plant hits located in U used (carve / torn-down arena parent) / F free (= real use-after-free) / N no chain (arena gone) / U whose block is a malloc-hook record (= trim defect) */
+static uint64_t s_s7480_frees = 0, s_s7480_trims = 0, s_s7480_hits = 0, s_s7480_skip = 0;
+static int s_s7480_plant = 0, s_s7480_ptries = 0; static double s_s7480_ptime = 0;
+static bool s7480_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7480_UAF"); const bool v = e && e[0] && e[0] != '0' && s7475_on();
+    if (v) std::fprintf(stderr, "[s7480] uaf watch armed\n"); return v; }(); return on; }
+static void s7480_range(uint32_t lo, uint32_t hi, bool on) {
+    if (!g_rs64_s7475_bm) return;
+    for (uint32_t a = lo; a < hi; ) { const uint32_t o = a - 0x80000000u; if (o >= 0x1800000u) break;
+        if ((o & 7u) == 0 && a + 8u <= hi) { g_rs64_s7475_bm[o >> 3] = on ? 0xFFu : 0u; a += 8u; continue; }
+        if (on) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); else g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); ++a; } }
+static void s7480_add(uint32_t blk, uint32_t n, double now, int plant) {
+    S7480F f{n, now, plant, {}, 0, 0, {0, 0, 0}}; if (s7478_bt_on()) f.nbt = backtrace(f.bt, 8);
+    s_s7480_freed[blk] = f; s7480_range(blk, blk + n, true); }
+/* drop/trim every freed record overlapping [lo, hi); right remainder starts after a 0x10 split header */
+static void s7480_trim(uint32_t lo, uint32_t hi) {
+    auto it = s_s7480_freed.upper_bound(lo); if (it != s_s7480_freed.begin()) --it;
+    std::vector<std::pair<uint32_t, S7480F>> keep;
+    while (it != s_s7480_freed.end() && it->first < hi) {
+        const uint32_t s = it->first, e = s + it->second.n;
+        if (e <= lo) { ++it; continue; }
+        ++s_s7480_trims; S7480F f = it->second;
+        if (f.plant && s_s7480_plant == 1) { s_s7480_plant = 0; std::fprintf(stderr, "[s7480] plant LOST blk=%08X (realloc/free before a store)\n", s); }
+        s7480_range(s, e, false); it = s_s7480_freed.erase(it);
+        if (f.plant) continue;
+        if (s < lo && lo - s >= 0x10u) { S7480F l = f; l.n = lo - s; keep.emplace_back(s, l); }
+        if (e > hi + 0x10u) { S7480F r2 = f; r2.n = e - (hi + 0x10u); keep.emplace_back(hi + 0x10u, r2); } }
+    for (auto& k : keep) { s_s7480_freed[k.first] = k.second; s7480_range(k.first, k.first + k.second.n, true); } }
+/* which guest-chain block holds a right now: walks the 3 arena heads (s7472 layout). kind U=used F=free N=in no chain */
+static char s7480_locate(volatile uint8_t* r, uint32_t a, uint32_t* lb, uint32_t* ls, uint32_t* lf, uint32_t* arena) {
+    *lb = 0; *ls = 0;
+    static const uint32_t heads[3] = {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u}; const uint32_t top = rs64_ram_top; uint32_t seen[3] = {0, 0, 0}; int na = 0;
+    for (int i = 0; i < 3; ++i) { const uint32_t h0 = s7472_rd(r, heads[i]); if (h0 < 0x80000000u || h0 >= top) continue;
+        bool dup = false; for (int j = 0; j < na; ++j) dup |= seen[j] == h0; if (dup) continue; seen[na++] = h0;
+        uint32_t b = h0; for (int g = 0; g < 400000; ++g) { const uint32_t w0 = s7472_rd(r, b), sz = s7472_rd(r, b + 4u), fl = w0 >> 16;
+            if ((fl & 8u) || (fl != 1u && fl != 2u && fl != 6u) || (sz & 0xFu) || b + 0x10u + sz <= b || b + 0x10u + sz >= top) break;
+            if (a >= b && a < b + 0x10u + sz && (!*lb || sz < *ls)) { *lb = b + 0x10u; *ls = sz; *lf = fl; *arena = h0; }  /* innermost over all arenas */
+            b += 0x10u + sz; } }
+    if (!*lb) { *ls = *lf = *arena = 0; return 'N'; } return *lf == 1u ? 'F' : 'U'; }
+static void s7480_free(volatile uint8_t* r, uint32_t ptr, double now) {
+    if (!s7480_on() || !g_rs64_s7475_bm || ptr < 0x80000010u || ptr >= rs64_ram_top) return;
+    const uint32_t w0 = s7472_rd(r, ptr - 0x10u), sz = s7472_rd(r, ptr - 0x0Cu), fl = w0 >> 16;
+    if (!((fl == 2u || fl == 6u) && sz && !(sz & 0xFu) && ptr + sz <= rs64_ram_top)) { ++s_s7480_skip; return; }
+    s7480_trim(ptr - 0x10u, ptr + sz); s7480_add(ptr, sz, now, 0); ++s_s7480_frees;
+    { S7480F& f = s_s7480_freed[ptr]; uint32_t lb, ls, lf; s7480_locate(r, ptr, &lb, &ls, &lf, &f.far);
+      f.fh[0] = s7472_rd(r, 0x8010FEFCu); f.fh[1] = s7472_rd(r, 0x8010FF00u); f.fh[2] = s7472_rd(r, 0x8010FF18u); } }
+static void s7480_malloc(uint32_t req, uint32_t ptr, double now) {
+    g_s7480_inmalloc = 0;
+    if (!s7480_on() || !g_rs64_s7475_bm || !ptr || ptr < 0x80000010u || ptr >= rs64_ram_top) return;
+    const uint32_t sz = s7472_rd(g_recomp_rdram_for_wp_raw, ptr - 0x0Cu); const uint32_t hi = ptr + (sz >= req && sz < 0x1000000u ? sz : req);
+    s7480_trim(ptr - 0x10u, hi);
+    static const double plant_s = [] { const char* e = std::getenv("ROGUESQ_S7480_PLANT"); if (!e || !*e || *e == '0') return -1.0; double v = std::atof(e); return v <= 1.0 ? 60.0 : v; }();
+    if (s_s7480_plant == 0 && plant_s >= 0 && now - s_s7475_t0 >= plant_s && req >= 0x40u && s_s7480_ptries < 20) {
+        ++s_s7480_ptries; s7480_add(ptr, req, now, 1); s_s7480_plant = 1; s_s7480_ptime = now;
+        std::fprintf(stderr, "[s7480] plant SET blk=%08X req=%X try=%d t=%.1f\n", ptr, req, s_s7480_ptries, now - s_s7475_t0); } }
+static bool s7480_internal_fn(const char* fn) {
+    static const char* const k[] = {"rs_malloc", "rs_malloc_s5041_inner", "rs_free", "ensureHeapInitialized", "buildHeapFreeList", "coalesceFreeHeapBlocks",
+        "coalesceFreeHeapBlocks_s7325_inner", "heapFreeListDequeue", "heapFreeListInsert", "initMainHeap", "initRsMallocHeap", "findLargestFreeHeapChunk"};
+    if (!fn) return false; for (const char* s : k) if (!std::strcmp(fn, s)) return true;
+    return g_s7480_inmalloc && !std::strcmp(fn, "rs_memset"); }
+/* returns 1 when the store hit a freed record (handled) */
+static int s7480_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (!s7480_on() || s_s7480_freed.empty()) return 0;
+    auto it = s_s7480_freed.upper_bound(a + (uint32_t)w - 1u); if (it == s_s7480_freed.begin()) return 0; --it;
+    const uint32_t blk = it->first; const S7480F f = it->second;
+    if (a >= blk + f.n || a + (uint32_t)w <= blk) return 0;
+    if (s7480_internal_fn(fn)) { ++s_s7480_internal[fn]; s7480_range(a < blk ? blk : a, a + (uint32_t)w, false); return 1; }
+    ++s_s7480_hits; const bool first = s_s7480_pcs[pc]++ == 0; volatile uint8_t* rr = g_recomp_rdram_for_wp_raw; const double now = s7325_now();
+    uint32_t lb = 0, ls = 0, lf = 0, lar = 0; const char lk = rr ? s7480_locate(rr, a, &lb, &ls, &lf, &lar) : '?';
+    if (!f.plant) { const int ki = lk == 'U' ? 0 : lk == 'F' ? 1 : 2; ++s_s7480_loc[ki]; if (lk == 'U' && s_s7475_live.count(lb)) ++s_s7480_loc[3]; }  /* plant excluded: F = still free in its chain (UAF), Urec = trim defect */
+    if (first && s_s7480_pcs.size() <= 60)
+        std::fprintf(stderr, "[s7480] uaf-store pc=%08X fn=%s a=%08X w=%d blk=%08X n=%X off=%X age=%.3f hdr=%08X size=%08X inmalloc=%d loc=%c lblk=%08X lsz=%X lfl=%X arena=%08X lrec=%d free_arena=%08X heads_free=%08X/%08X/%08X heads_now=%08X/%08X/%08X t=%.1f%s\n", pc, fn ? fn : "?", a, w, blk, f.n,
+                     a - blk, now - f.t, rr ? s7472_rd(rr, blk - 0x10u) : 0u, rr ? s7472_rd(rr, blk - 0x0Cu) : 0u, (int)g_s7480_inmalloc, lk, lb, ls, lf, lar, (int)s_s7475_live.count(lb), f.far, f.fh[0], f.fh[1], f.fh[2],
+                     rr ? s7472_rd(rr, 0x8010FEFCu) : 0u, rr ? s7472_rd(rr, 0x8010FF00u) : 0u, rr ? s7472_rd(rr, 0x8010FF18u) : 0u, now - s_s7475_t0, f.plant ? " PLANT" : "");
+    if (first && s7478_bt_on() && s_s7480_pcs.size() <= 60) { void* sb[10]; const int ns = backtrace(sb, 10);
+        std::fprintf(stderr, "[s7480] store-bt pc=%08X chain=%s\n", pc, s7478_chain(sb, ns).c_str());
+        std::fprintf(stderr, "[s7480] free-bt blk=%08X chain=%s\n", blk, s7478_chain(f.bt, f.nbt).c_str()); }
+    if (f.plant && s_s7480_plant == 1) { s_s7480_plant = 2; std::fprintf(stderr, "[s7480] plant DETECTED blk=%08X after %.3f s pc=%08X fn=%s\n", blk, now - s_s7480_ptime, pc, fn ? fn : "?"); }
+    s7480_range(blk, blk + f.n, false); s_s7480_freed.erase(it); return 1; }
+static void s7480_sum(double now) {
+    if (!s7480_on()) return;
+    { /* locator control: on the live main arena chain, a free block MUST classify F and a used one U (each logged once) */
+      static int fok = 0, uok = 0; volatile uint8_t* r = g_recomp_rdram_for_wp_raw; const uint32_t h0 = r ? s7472_rd(r, 0x8010FF18u) : 0u;
+      if (r && (!fok || !uok) && h0 >= 0x80000000u && h0 < rs64_ram_top) { uint32_t b = h0;
+        for (int g = 0; g < 400000; ++g) { const uint32_t w0 = s7472_rd(r, b), sz = s7472_rd(r, b + 4u), fl = w0 >> 16;
+            if ((fl & 8u) || (fl != 1u && fl != 2u && fl != 6u) || (sz & 0xFu) || !sz || b + 0x10u + sz >= rs64_ram_top) break;
+            uint32_t lb, ls, lf, la; const char k = s7480_locate(r, b + 0x10u + (sz >> 1), &lb, &ls, &lf, &la);
+            if (fl == 1u && !fok) { fok = 1; std::fprintf(stderr, "[s7480] locate-ctl free blk=%08X sz=%X got=%c %s\n", b + 0x10u, sz, k, k == 'F' ? "PASS" : "FAIL"); }
+            if (fl == 2u && !uok) { uok = 1; std::fprintf(stderr, "[s7480] locate-ctl used blk=%08X sz=%X got=%c %s\n", b + 0x10u, sz, k, k == 'U' ? "PASS" : "FAIL"); }
+            if (fok && uok) break; b += 0x10u + sz; } } } std::string in; for (auto& kv : s_s7480_internal) { char b[96]; snprintf(b, sizeof b, " %s:%llu", kv.first.c_str(), (unsigned long long)kv.second); in += b; }
+    uint64_t bytes = 0; for (auto& kv : s_s7480_freed) bytes += kv.second.n;
+    std::fprintf(stderr, "[s7480] sum t=%.1f loc_U=%llu loc_F=%llu loc_N=%llu loc_Urec=%llu top=%08X frees=%llu skip=%llu freed_recs=%zu freed_bytes=%llu trims=%llu hits=%llu pcs=%zu plant=%d tries=%d internal={%s }\n", now - s_s7475_t0, (unsigned long long)s_s7480_loc[0], (unsigned long long)s_s7480_loc[1], (unsigned long long)s_s7480_loc[2], (unsigned long long)s_s7480_loc[3], rs64_ram_top,
+                 (unsigned long long)s_s7480_frees, (unsigned long long)s_s7480_skip, s_s7480_freed.size(), (unsigned long long)bytes, (unsigned long long)s_s7480_trims,
+                 (unsigned long long)s_s7480_hits, s_s7480_pcs.size(), s_s7480_plant, s_s7480_ptries, in.c_str()); }
+}
 static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
     if (!s7475_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
@@ -3755,12 +3868,14 @@ static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
             if (k >= sel.first && k <= sel.second) {
                 for (uint32_t o = req; o < sz; ++o) s7475_wb(r, ptr + o, s7475_fill()); s_s7475_live[ptr] = S7475R{req, sz, ra, now, hpc, {}, 0}; if (s7478_bt_on()) s_s7475_live[ptr].nbt = backtrace(s_s7475_live[ptr].bt, 8); s7475_mark(ptr, s_s7475_live[ptr], true); ++s_s7475_rec; } }
     }
+    s7480_malloc(req, ptr, now);
     s7475_tick(r, now); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
     /* returns 1 when the store is ours (slack or the control word): the s5798 dispatcher then returns */
     /* watch positive control (ROGUESQ_S7475_CANARY on): the frame counter 0x8011A890 is marked at arming; the first guest store to it must land here */
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { static uint64_t nc = 0; if (nc++ == 0) std::fprintf(stderr, "[s7475] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu);
+    if (s7480_store(pc, a, w, fn)) return 1;  /* s7480 class EH */
     auto it = s_s7475_live.upper_bound(a + (uint32_t)w - 1u); if (it == s_s7475_live.begin()) return 1; --it;
     const uint32_t blk = it->first; const S7475R& b = it->second;
     const uint32_t lo = blk + b.req, hi = blk + b.sz;
@@ -3797,6 +3912,7 @@ static void s7475_free(uint32_t ptr, uint32_t ra) {
         if (s7475_hdr_ok(r, ptr, it->second)) { ++s_s7475_freechk; s7475_check1(r, ptr, it->second, "free", ra, now); } else ++s_s7475_stale;
         if (s_s7475_plant == 1 && ptr == s_s7475_pblk) { s_s7475_plant = 2; std::fprintf(stderr, "[s7475] plant LOST blk=%08X (freed before check)\n", ptr); }
         s7475_mark(it->first, it->second, false); s_s7475_live.erase(it); }
+    s7480_free(r, ptr, now);
     s7475_tick(r, now); }
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     s7472_check("malloc", ra);

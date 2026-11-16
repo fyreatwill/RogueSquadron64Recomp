@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7479 (2026-11-16).
+Compact operational handoff, as of Session 7480 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -219,7 +219,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores (pad 16 -> noslack 0, 0 overruns; A5-fill host-writer arm queued). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EH s7480 freed-block stores: 0 real UAF on L4/L15 (L1/L7/L10/L12 soak queued). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
    - **ED s7475-s7476 MusyX voice-array overrun: ROOT CAUSE FIXED (s7476, port bug; two lines: retail oracle + same-build A/B):**
      s7475 instrument (ROGUESQ_S7475_CANARY=1 slack fill/bitmap + tools/apply_s7475_slackwatch.py store watch, STORE_DIAG=1) saw the
      first-scene reapplyAudioConfig allocate a 1-voice array (0x801496F8, stride 0x88) while voice[1] stayed live (musyxSetVoicePitchBend
@@ -239,6 +239,17 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      callee entry live-in at the next call), minus the patch's own restores. Result: 0 BUG, 33 SAFE, 10 REPLACE (the patch stands in
      for the site's own jal: ABI already lets it clobber), 1 INTENT (s6904 fog deliberately rewrites $f0/$f4). Controls: the pre-s7476
      s4889 text flags r5 and the fixed text passes; synthetic pos/neg pair flags r3,r5 / nothing. s4889 was the only live clobber.
+   - **EH s7480 guest stores into FREED rs_malloc blocks (use-after-free writes): H-recarve, 0 real UAF (L4 dd4, L15 dd8 21:9):**
+     ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
+     marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:
+     F = block still free (real UAF), Urec = inside an rs_malloc-recorded block (trim defect), U/N = the arena it was freed into is gone.
+     Result: every non-plant hit (19-55 pcs/run, DL/texture builders: loadTextureTile, emitMaterial*DL, swizzleTextureRowsToTmem,
+     parseImageFile...) is U-in-a-fl=6-block-no-rs_malloc-made or N, with head 0x8010FEFC changed/zeroed between free and store: blocks
+     freed into the nested temp arena, then the scene reset (coalesceFreeHeapBlocks, the s7332-s7334 fl=6 carve holding fbs / temp arena /
+     RDP FIFO; RSP task out=0x8089E600 = carve base) re-carves the region. Two lines: s7332 store-watch attribution + this run's head values.
+     Final same-build run s7480_uaf_ab score=0: L4 802 hits/23 pcs (U 265, N 536), L15 642/16 (U 390, N 251), uaf_free=0, trim_defect=0 both. Controls same run: in-flight premature-free plant (ROGUESQ_S7480_PLANT) DETECTED, locator control (free
+     block -> F, used -> U on the live chain) PASS, allocator-internal split-header stores 19-30k. Stale-pointer stores into a re-carved
+     region are the s7331 scene-reset-writer class (closed). Not covered: guest LOADS of freed blocks, host writers.
    - **EG s7479 overruns of zero-slack rs_malloc blocks, CLOSED for guest stores (H-clean):** ~80% of blocks had req == size (no canary
      band). ROGUESQ_S7475_PAD=<n> (tools/apply_s7479_mallocpad.py + rs64_s7479_pad; only under ROGUESQ_S7475_CANARY=1, else pass-through)
      asks the allocator for req+n while the canary records req; recipe `env PAD=16 zsh tools/s7475_canary_recipe.zsh`. L4/L7/L12 dd4,

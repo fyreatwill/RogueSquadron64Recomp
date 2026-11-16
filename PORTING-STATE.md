@@ -198298,3 +198298,38 @@ a request is invisible to the tail walk. Queued scratch/agent/soak_queue/s7479_c
 Rules out: a live in-guest overrun of zero-slack rs_malloc blocks on L4/L7/L12 dd4 and L15 dd8 21:9 in 220 s holds.
 Verdict (gate wording): selects H-clean, refutes H-hidden and H-pad-perturbs for in-guest stores. Next discriminator: the FILL=0xA5 arm
 (s7479_canary_pad_a5) splits H-host-clean (0 tail hits) from H-host-overrun (a tail hit with no slack-store row, named by its alloc-bt).
+
+## Session 7480 (2026-11-16) — class EG closed for host writers (A5 soak PASS); class EH opened and run: guest stores into freed rs_malloc blocks are all scene-reset re-carves, 0 real use-after-free on L4/L15
+
+Fold: s7479_canary_pad_a5 rc=0. With PAD=16 and FILL=0xA5, all 4 arms (L4/L7/L12 dd4, L15 dd8 21:9) booted (so the s7476 ED fix removed
+the A5 boot hang) and showed noslack=0, 0 non-plant tail hits, slack_store=0 and no stalls; the L4 plant was DETECTED. Class EG is
+now CLOSED for host writers as well as guest stores.
+
+New class EH: guest stores into FREED heap blocks (use-after-free writes). No existing class covered these: EB checks headers only,
+ED/EG cover past-end stores, and s7330 covers audio only. The instrument is ROGUESQ_S7480_UAF=1 (src/main/upstream_compat.cpp
+s7480_*), built on the s7475 bitmap and the STORE_DIAG store hook, with no regen. rs_free marks the block data [ptr, ptr+size), and
+rs_malloc exit trims any overlapping records, keeping both remainders. Allocator-internal stores are only counted: the rs_malloc
+family and heap-list helpers, plus rs_memset while inside rs_malloc (from rs64_s7479_pad entry to the s6063 exit hook). Every other
+hit is logged once per record. At store time it is located in the guest's own 3 arena chains: F = block still free (a real UAF),
+Urec = inside an rs_malloc-recorded block (an instrument trim defect), U/N = the region now belongs to a block no rs_malloc made, or to
+no chain at all. Recipe: tools/s7480_uaf_recipe.zsh.
+
+Run 1 (L4 dd4): 55 pcs. Every one is a DL or texture builder (loadTextureTile, emitMaterial*DL, swizzleTextureRowsToTmem,
+parseImageFile, ...) writing blocks freed 0.2-102 s earlier whose headers already hold DL words (E7000000, F5..., BA...).
+Run 2 added the locator. 50/55 hits land in a fl=6 block of about 3 MB (0x80887600 / 0x8089E600) that the malloc hook never recorded.
+Run 3 added innermost-block search and the arena head values at free time and at store time. The freed blocks belonged to the nested
+temp arena (head 0x8010FEFC = 0x809DE900 / 0x809BAE00 / 0x80A12600 at free time), and that head is zeroed or re-pointed by the time of
+the store. Two hits were freed into the main arena and then covered by the same carve.
+ORIGIN: the writer that re-owns the memory is the scene reset. coalesceFreeHeapBlocks writes the per-scene fl=6 carve holding the
+framebuffers, the temp arena and the RDP FIFO (s7332-s7334 store-watch attribution, PROJECT-OVERVIEW item 24). The RSP task log in
+this run shows out=0x8089E600, the carve base. These values are legitimate: no stale pointer is involved.
+Final same-build run s7480_uaf_ab (L4 dd4 + L15 dd8 21:9, HOLD=180), score=0. L4: 802 hits / 23 pcs (U 265, N 536). L15: 642 / 16
+(U 390, N 251). Both arms: uaf_free=0 and trim_defect=0, both alive with 0 stalls. Controls in the same run:
+- the in-flight premature-free plant (ROGUESQ_S7480_PLANT, records a live new block as freed, guest memory untouched) was DETECTED;
+- the locator control on the live chain classified a free block F and a used block U (PASS);
+- 20-30k allocator-internal split-header stores were counted.
+Verdict: H-recarve selected, H-uaf refuted on 2 levels.
+Rules out: stale-pointer writes into still-free heap blocks on L4/L15. Stale stores into a re-carved region belong to the s7331
+scene-reset-writer class, which is closed.
+Not covered: guest loads, host writers.
+Queued: soak_queue/s7480_uaf_flight.sh (L7/L12 dd4, L1 dd8 21:9, L10 dd4).
