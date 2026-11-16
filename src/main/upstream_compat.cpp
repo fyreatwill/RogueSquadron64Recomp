@@ -3672,7 +3672,9 @@ static std::map<uint32_t, S7475W> s_s7475_wpc;  /* per store pc */
 static void s7480_sum(double now);  /* s7480 class EH, defined below */
 static void s7484_tick(double now);  /* s7484 class EI load plant, defined below */
 static void s7486_tick(double now);  /* s7486 class EK host-read plant, defined below */
-extern "C" { int g_rs64_s7486_on = 0; }  /* s7486 class EK host-read watch gate */
+extern "C" { int g_rs64_s7486_on = 0; int g_rs64_s7489_on = 0; }  /* s7489 class EN: host-WRITE kinds 6-8 ride the s7486 path */
+static int s_s7489_wplant = 0;  /* ROGUESQ_S7489_WPLANT=1: the s7486 plant targets host-write destinations (kinds 6-8) instead of read sources */
+  /* s7486 class EK host-read watch gate */
 extern "C" { int g_rs64_s7484_on = 0; }  /* s7484 class EI load watch gate (tools/apply_s7484_loadwatch.py) */
 static volatile int g_s7480_inmalloc = 0;  /* s7480: between rs_malloc entry (rs64_s7479_pad) and exit (s6063 hook) */
 static uint64_t s_s7475_stores = 0;
@@ -3747,7 +3749,7 @@ extern "C" uint32_t rs64_s7479_pad(uint32_t rq) {
    ROGUESQ_S7480_PLANT=<s> (1 -> 60): <s> s after arming, the next rs_malloc block with req >= 0x40 is ALSO recorded as freed
    (guest memory untouched); the game's own first store into it MUST log `PLANT` + `[s7480] plant DETECTED`. Measurement only. */
 namespace {
-struct S7480F { uint32_t n; double t; int plant; void* bt[8]; int nbt; uint32_t far, fh[3]; uint32_t nld = 0; char lk = 0; uint8_t hk = 0; };  /* s7486: hk = host-read kinds seen (bit per kind) */  /* s7484: plant 2 = load plant; nld/lk = load hits + class at first load */
+struct S7480F { uint32_t n; double t; int plant; void* bt[8]; int nbt; uint32_t far, fh[3]; uint32_t nld = 0; char lk = 0; uint16_t hk = 0; };  /* s7486: hk = host-read kinds seen (bit per kind; s7489: 9 kinds incl. host writes) */  /* s7484: plant 2 = load plant; nld/lk = load hits + class at first load */
 static std::map<uint32_t, S7480F> s_s7480_freed;
 static std::map<std::string, uint64_t> s_s7480_internal;
 static std::map<uint32_t, uint64_t> s_s7480_pcs;
@@ -3935,17 +3937,24 @@ static void s7484_tick(double now) {
    ctl = C ranges per kind (must be > 0 for sp_dma_gfx); ROGUESQ_S7486_PLANT=<s>: <s> s after arming, the LIVE heap block holding a
    recent sp_dma_gfx source (located in the guest chains) is recorded as freed with plant=3 (guest stores / loads into it ignored,
    guest memory untouched); the next host read of it MUST log `[s7486] plant DETECTED kind=` (2 s timeout, 30 tries). Measurement only. */
-static const char* const k_s7486_kind[6] = {"sp_dma_gfx", "sp_dma_aud", "rdp_cmd", "rdp_tex", "rdp_tlut", "ai_dma"};
-static uint64_t s_s7486_rng[6], s_s7486_mark[6], s_s7486_ctl[6], s_s7486_rec[6], s_s7486_stale[6], s_s7486_loc[6][5], s_s7486_bytes[6];
+/* s7489 class EN: kinds 6 sp_wr_gfx / 7 sp_wr_aud (librecomp rsp.hpp dma_dmem_to_rdram via the s7094 hook, called BEFORE the copy) and
+   8 pi_dma (pi.cpp do_dma ROM -> RDRAM, called before do_rom_read) are host WRITES into guest RDRAM, classified exactly like the reads:
+   F = a host DMA wrote a still-free block (real host use-after-free write), Urec = trim defect, ctl = write into a live block's canary
+   slack (DMA length rounding inside the block's own allocation, harmless; proves the bitmap path sees host writes). Gate
+   ROGUESQ_S7489_HOSTWRITE=1 on top of S7486_HOSTUAF; ROGUESQ_S7489_WPLANT=1 points the s7486 plant at a recent host-write destination
+   (with S7486_PLANT=<s>), so `[s7486] plant DETECTED kind=sp_wr_*|pi_dma` is the write-path positive control. Measurement only. */
+static const char* const k_s7486_kind[9] = {"sp_dma_gfx", "sp_dma_aud", "rdp_cmd", "rdp_tex", "rdp_tlut", "ai_dma", "sp_wr_gfx", "sp_wr_aud", "pi_dma"};
+static uint64_t s_s7486_rng[9], s_s7486_mark[9], s_s7486_ctl[9], s_s7486_rec[9], s_s7486_stale[9], s_s7486_loc[9][5], s_s7486_bytes[9];
 static int s_s7486_plant = 0, s_s7486_ptries = 0; static double s_s7486_ptime = 0; static uint32_t s_s7486_pblk = 0;
 static std::atomic<uint32_t> s_s7486_recent[16]; static std::atomic<uint32_t> s_s7486_ri{0};
 static int s_s7486_nlog = 0; static uint32_t s_s7486_ctlblk = 0; static int s_s7486_ctlkind = 0;  /* last live canary block a host read covered (plant target) */
 extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len) {
-    if (!g_rs64_s7486_on || kind < 0 || kind > 5 || !len) return;
+    if (!g_rs64_s7486_on || kind < 0 || kind > 8 || !len) return;
+    if (kind >= 6 && !g_rs64_s7489_on) return;
     const uint32_t a = (addr & 0x00FFFFFFu) | 0x80000000u; if (len > 0x100000u) len = 0x100000u;
     if (a + len > rs64_ram_top || a + len < a) return;
     __atomic_add_fetch(&s_s7486_rng[kind], 1, __ATOMIC_RELAXED); __atomic_add_fetch(&s_s7486_bytes[kind], len, __ATOMIC_RELAXED);
-    if ((kind == 0 || kind == 3) && len >= 8u) s_s7486_recent[s_s7486_ri.fetch_add(1, std::memory_order_relaxed) & 15u].store(a, std::memory_order_relaxed);  /* plant fallback sources (len >= 8 => [a, a+8) inside the read) */
+    if ((s_s7489_wplant ? kind >= 6 : (kind == 0 || kind == 3)) && len >= 8u) s_s7486_recent[s_s7486_ri.fetch_add(1, std::memory_order_relaxed) & 15u].store(a, std::memory_order_relaxed);  /* plant fallback sources (len >= 8 => [a, a+8) inside the read) */
     const unsigned char* bm = g_rs64_s7475_bm; if (!bm) return;
     const uint32_t o0 = a - 0x80000000u, o1 = o0 + len;
     uint32_t hit = 0; bool any = false;
@@ -3967,7 +3976,7 @@ extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len) {
         if (f.plant == 3) { if (s_s7486_plant == 1) { s_s7486_plant = 2; std::fprintf(stderr, "[s7486] plant DETECTED kind=%s blk=%08X after %.3f s a=%08X len=%X\n", k_s7486_kind[kind], blk, now - s_s7486_ptime, a, len);
                 std::fflush(stderr); s7480_range(blk, blk + f.n, false); s_s7480_freed.erase(it); } return; }
         if (f.plant) continue;
-        if (f.hk & (1u << kind)) continue; f.hk |= (uint8_t)(1u << kind); ++s_s7486_rec[kind];
+        if (f.hk & (1u << kind)) continue; f.hk |= (uint16_t)(1u << kind); ++s_s7486_rec[kind];
         volatile uint8_t* rr = g_recomp_rdram_for_wp_raw; uint32_t lb = 0, ls = 0, lf = 0, lar = 0;
         const char lk0 = rr ? s7480_locate(rr, ra, &lb, &ls, &lf, &lar) : 'N'; char lk2 = lk0;
         if (lk0 == 'F' && g_rs64_s7481_task_out && lb + ls + 0x10u == g_rs64_s7481_task_out) lk2 = 'S';
@@ -3983,7 +3992,7 @@ extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len) {
                 std::fprintf(stderr, "[s7486] free-bt blk=%08X chain=%s\n", blk, s7478_chain(f.bt, f.nbt).c_str()); } } }
     if (rec_any) return;
     auto lv = s_s7475_live.upper_bound(ha); if (lv != s_s7475_live.begin()) { --lv; if (ha >= lv->first + lv->second.req && ha < lv->first + lv->second.sz) {
-        if (kind == 0) { s_s7486_ctlblk = lv->first; s_s7486_ctlkind = kind; }
+        if (s_s7489_wplant ? kind >= 6 : kind == 0) { s_s7486_ctlblk = lv->first; s_s7486_ctlkind = kind; }
         if (s_s7486_ctl[kind]++ == 0) std::fprintf(stderr, "[s7486] ctl PASS kind=%s a=%08X len=%X slack_blk=%08X req=%X size=%X hit=%08X\n", k_s7486_kind[kind], a, len, lv->first, lv->second.req, lv->second.sz, ha);
         return; } }
     ++s_s7486_stale[kind]; }
@@ -4008,11 +4017,14 @@ static void s7486_tick(double now) {  /* called from s7475_tick, s_s7475_mu held
         std::fprintf(stderr, "[s7486] plant SET blk=%08X size=8 via=recent try=%d t=%.1f\n", a, s_s7486_ptries, now - s_s7475_t0); return; } }
 static void s7486_sum(double now) {
     if (!g_rs64_s7486_on) return;
-    std::string b; uint64_t F = 0, R = 0;
-    for (int k = 0; k < 6; ++k) { if (k == 4) continue; char t[320]; F += s_s7486_loc[k][1]; R += s_s7486_loc[k][3];
+    std::string b; uint64_t F = 0, R = 0, wF = 0, wR = 0;
+    for (int k = 0; k < (g_rs64_s7489_on ? 9 : 6); ++k) { if (k == 4) continue; char t[320]; if (k >= 6) { wF += s_s7486_loc[k][1]; wR += s_s7486_loc[k][3]; } else { F += s_s7486_loc[k][1]; R += s_s7486_loc[k][3]; }
         snprintf(t, sizeof t, " %s=%llu/%llu/%llu/%llu:U%llu,F%llu,N%llu,R%llu,S%llu,ctl%llu,stale%llu", k_s7486_kind[k], (unsigned long long)s_s7486_rng[k], (unsigned long long)s_s7486_bytes[k], (unsigned long long)s_s7486_mark[k], (unsigned long long)s_s7486_rec[k],
                  (unsigned long long)s_s7486_loc[k][0], (unsigned long long)s_s7486_loc[k][1], (unsigned long long)s_s7486_loc[k][2], (unsigned long long)s_s7486_loc[k][3], (unsigned long long)s_s7486_loc[k][4], (unsigned long long)s_s7486_ctl[k], (unsigned long long)s_s7486_stale[k]); b += t; }
-    std::fprintf(stderr, "[s7486] sum t=%.1f host_F=%llu host_Urec=%llu plant=%d tries=%d kinds(rng/bytes/marked/recs:class)%s\n", now - s_s7475_t0, (unsigned long long)F, (unsigned long long)R, s_s7486_plant, s_s7486_ptries, b.c_str()); }
+    std::fprintf(stderr, "[s7486] sum t=%.1f host_F=%llu host_Urec=%llu plant=%d tries=%d kinds(rng/bytes/marked/recs:class)%s\n", now - s_s7475_t0, (unsigned long long)F, (unsigned long long)R, s_s7486_plant, s_s7486_ptries, b.c_str());
+    if (g_rs64_s7489_on) std::fprintf(stderr, "[s7489] sum t=%.1f host_wF=%llu host_wUrec=%llu wplant=%d sp_wr_gfx_ctl=%llu sp_wr_aud_ctl=%llu pi_dma_ctl=%llu sp_wr_gfx_rng=%llu sp_wr_aud_rng=%llu pi_dma_rng=%llu marked=%llu/%llu/%llu\n", now - s_s7475_t0,
+        (unsigned long long)wF, (unsigned long long)wR, s_s7489_wplant, (unsigned long long)s_s7486_ctl[6], (unsigned long long)s_s7486_ctl[7], (unsigned long long)s_s7486_ctl[8],
+        (unsigned long long)s_s7486_rng[6], (unsigned long long)s_s7486_rng[7], (unsigned long long)s_s7486_rng[8], (unsigned long long)s_s7486_mark[6], (unsigned long long)s_s7486_mark[7], (unsigned long long)s_s7486_mark[8]); }
 static void s7480_sum(double now) {
     if (!s7480_on()) return;
     s7486_sum(now);
@@ -4071,7 +4083,9 @@ static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
         { const char* e = std::getenv("ROGUESQ_S7484_UAFLOAD"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7484_on = 1; std::fprintf(stderr, "[s7484] load watch armed\n");
               const char* e7 = std::getenv("ROGUESQ_S7487_LWLWATCH"); if (e7 && e7[0] && e7[0] != '0') { g_rs64_s7487_on = 1; std::fprintf(stderr, "[s7487] lwl/lwr watch armed\n"); } } }
         { const char* e = std::getenv("ROGUESQ_S7488_USTOREWATCH"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7488_on = 1; std::fprintf(stderr, "[s7488] swl/swr watch armed\n"); } }
-        { const char* e = std::getenv("ROGUESQ_S7486_HOSTUAF"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7486_on = 1; std::fprintf(stderr, "[s7486] host-read watch armed\n"); } } }
+        { const char* e = std::getenv("ROGUESQ_S7486_HOSTUAF"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7486_on = 1; std::fprintf(stderr, "[s7486] host-read watch armed\n");
+              const char* e9 = std::getenv("ROGUESQ_S7489_HOSTWRITE"); if (e9 && e9[0] && e9[0] != '0') { g_rs64_s7489_on = 1; const char* p9 = std::getenv("ROGUESQ_S7489_WPLANT"); s_s7489_wplant = p9 && p9[0] && p9[0] != '0';
+                  std::fprintf(stderr, "[s7489] host-write watch armed wplant=%d\n", s_s7489_wplant); } } } }
     if (ptr && ptr >= 0x80000010u && ptr < rs64_ram_top && req) {
         const uint32_t w0 = s7472_rd(r, ptr - 0x10u), sz = s7472_rd(r, ptr - 0x0Cu), fl = w0 >> 16;
         /* drop every record overlapping [ptr-0x10, ptr+sz) */

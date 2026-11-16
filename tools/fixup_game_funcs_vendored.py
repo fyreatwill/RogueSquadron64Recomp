@@ -42158,6 +42158,7 @@ RS64_REPLAY = [
     "apply_s7484_loadwatch.py",  # s7484: class EI guest-load UAF watch on the s7475/s7480 bitmap, ROGUESQ_S7484_UAFLOAD=1 (+S7480_UAF+S7475_CANARY; measurement only; after every load-text anchor)
     "apply_s7487_lwlwatch.py",  # s7487: class EL lwl/lwr UAF watch + execution census on the s7475 bitmap, ROGUESQ_S7487_LWLWATCH=1 (+S7484_UAFLOAD; measurement only; LWLCTL=<s> live-block plant control)
     "apply_s7488_ustorewatch.py",  # s7488: class EM swl/swr UAF + slack-canary watch + execution census on the s7475 bitmap, ROGUESQ_S7488_USTOREWATCH=1 (+S7480_UAF+S7475_CANARY; measurement only; USTCTL=<s> live-block plant control)
+    "apply_s7489_storegap.py",  # s7489: class EN re-hooks the 12 guest store texts whose s5520 b40w / s4984 atomic rewrites dropped RS64_S5798_ST (census tools/s7489_store_path_census.py; measurement only)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 

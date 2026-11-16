@@ -198574,3 +198574,33 @@ Verdict: selects H-ust-clean on L4/L15; refutes H-ust-uaf and H-ust-overrun (no 
 ED/EG plants in earlier sessions, not by an swl-specific slack plant this run (single-source for the slack half).
 Levels soak queued: s7488_ustwatch_levels (L1 dd8 21:9, L7/L10/L12 dd4). Measurement only, default off.
 CURRENT-TRUTH: EL/EM bullets updated; closed EC/EA/DZ bullets migrated to PROJECT-OVERVIEW "(s7488 migration)" to stay under 60 KB.
+
+## Session 7489 (2026-11-16) — class EN store-path census: 12 blind guest store texts re-hooked (H-paths-covered); host DMA write watch L4/L15 host_wF=0, write plant DETECTED in flight (H-hostwrite-clean); EM closed 6 levels
+
+Fold: soak s7488_ustwatch_levels score=0 (L1 dd8 21:9 / L7 / L10 / L12: ust_F=0 ust_Urec=0 ust_slack=0, 6.5-11.4M swl/swr execs,
+ust-ctl DETECTED in flight every arm, all alive, vi_stalls30s=0) -> class EM CLOSED for 6 levels.
+
+Work unit EN (NEXT s7489): which guest/host write paths never reach rs64_s7475_store (s7475 canary / s7480 freed-block test)?
+Hypotheses: H-paths-covered / H-fpu-gap (swc1/sdc1 unhooked) / H-host-gap (host DMA writers).
+1. Offline census, new tools/s7489_store_path_census.py (scans every `// 0xPC: <store>` text to the next comment for RS64_S5798_ST or
+   RS64_S7488_UST). Result before the fix: swc1 10567/10567, sdc1 1253/1253, sd 46/46 hooked (H-fpu-gap REFUTED); swl/swr 405/405 (s7488);
+   but 12 live texts unhooked: the s5520 [b40w] logger rewrote 9 `sb ..,0xB40(base)` texts (6 pcs: 8003E1EC/E284/E2E4/E4B8, 8006DC2C/E974,
+   800A5E5C, 800C5B8C) and the s4984 atomic voice pair rewrote 8008F0EC sw / 8008F0CC sh, each without the hook. Not live: 775 texts in
+   data_gap_80024A0C-style functions ($zero-based stores into KUSEG = data decoded as code), 37 cache no-ops, 1 do_break trap.
+   Fix: tools/apply_s7489_storegap.py (registered in fixup_game_funcs_vendored.py after s7488) appends RS64_S5798_ST after the rewritten
+   statement. Census now exit 0: unhooked_total=0, verdict H-paths-covered. (These targets are globals 0x80130B40 / 0x801496F8/F00, so the
+   gap was latent; the hook path itself is the one the s7480 store plant controls every run.)
+2. Host writes: the s7486 classifier extended with kinds 6 sp_wr_gfx / 7 sp_wr_aud (src/rsp/s7094_dma_shape.cpp, dir=1, before the copy)
+   and 8 pi_dma (lib/N64ModernRuntime pi.cpp do_dma before do_rom_read; export.sh run). Gate ROGUESQ_S7489_HOSTWRITE=1; ROGUESQ_S7489_WPLANT=1
+   aims the s7486 plant at a recent host-write destination. `[s7489] sum` line. hk widened to uint16_t (9 kinds).
+   Run tools/s7489_hostwrite_recipe.zsh LV="4:4 15:8" HOLD=220 (one build, both arms concurrent): score=0, both alive, vi_stalls30s=0.
+   - L4 dd4 16:9: sp_wr_gfx 366M ranges / 11.4 GB, 2.80M marked, 5 freed records hit, all U (re-carved arena); sp_wr_aud 70.8k, 0 marked;
+     pi_dma 19.3k, 2 recs N (torn-down arena), ctl=19 (DMA tail into a live block's canary slack). Write plant SET 807B3FA0 t=150.3, DETECTED
+     kind=sp_wr_gfx 0.003 s later (in flight). host_wF=0 host_wUrec=0; read side host_F=0 host_Urec=0, all s7480 controls PASS.
+   - L15 dd8 21:9: sp_wr_gfx 188M / 7.9 GB, 64 recs U2/N62, F0; pi_dma 18.1k, N1, ctl=17; plant 80720C50 DETECTED kind=sp_wr_gfx 0.010 s.
+   Verdict: selects H-hostwrite-clean on L4/L15 (no host DMA wrote a still-free block); the guest half of H-host-gap refuted by the census.
+   Caveat: the write plant exercised sp_wr_gfx only; pi_dma's path is shown live by its N records and slack ctl hits, not by a plant (single-source).
+   Not covered: host writes through guest pointers outside DMA (osRecvMesg message stores, IoMesg fields pi.cpp:722, controller data,
+   RT64 framebuffer readback) -> class EO next.
+Levels soak queued: s7489_hostwrite_levels (L1 dd8 21:9, L7/L10/L12 dd4). Measurement only, default off.
+CURRENT-TRUTH: EN bullet added; EI-EM bullets compressed, verbatim text migrated to PROJECT-OVERVIEW "(s7489 migration)".

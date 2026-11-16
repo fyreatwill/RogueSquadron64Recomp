@@ -13786,3 +13786,30 @@ Closed classes EC, EA, DZ moved verbatim from Next steps item 1.
      tools/g3_port_capture.sh GAMEDIR=<dir>). 650 s: 3 hangar entries, 4 initMission, 0 crash; both plants PASS, 0 NEW groups.
      Route reached at ASan speed (H-route-unreached refuted). s7468_asan_uc_routes folded: 0 NEW, PASS, w15 initMission=0 again ->
      s7469_asan_w15_hold300 queued (HOLD=300).
+
+## Migrated from CURRENT-TRUTH (s7489 migration)
+
+Classes EI-EM (s7484-s7488), verbatim from CURRENT-TRUTH s7488:
+
+   - **EI s7484-s7485 guest LOADS from FREED rs_malloc blocks: CLOSED, H-load-clean on 6 levels (L1 dd8 21:9, L4, L7, L10, L12 dd4, L15 dd8 21:9):**
+     tools/apply_s7484_loadwatch.py wraps 50,632 generated loads (ROGUESQ_S7484_UAFLOAD=1 + S7480_UAF + S7475_CANARY; recipe tools/s7484_uafload_recipe.zsh).
+     load_F=0 load_Urec=0 hits=0 every arm; same-run controls watch-ctl ~50k and in-flight load plant DETECTED on all 6. Not covered: lwl/lwr, host readers (item EK).
+   - **EJ s7485 byte over-reads past the request: CLOSED as retail-benign (offline, tools/s7485_overread_bound.py, exit 0 = EJ-bounded):**
+     swizzleTextureRowsToTmem rereads a3/2 bytes per row and rewinds a3/2-(a2+1)/2; its only caller (parseImageFile 0x8001EE8C) passes
+     a3=(a2+15)&0xFFF0, so the last row over-reads <=7 bytes (seen 4, 80B87F70-73) into pad texels past the tile width. decodeJpegScanToImage
+     chroma upsampler taps +1 column / row past the last sample (1 byte, seen once per plane at L15 boot). Both are retail code paths, loads only,
+     values reach pad texels / one 3/16 chroma tap; second line = s7484 levels soak: 4-8 slack-load pcs on every arm, all these pcs, 0 stores.
+   - **EK s7486 HOST reads of FREED rs_malloc blocks: CLOSED on 6 levels (H-host-clean):** ROGUESQ_S7486_HOSTUAF=1 (upstream_compat.cpp
+     rs64_s7486_hostread; recipe tools/s7486_hostuaf_recipe.zsh): sp_dma gfx/aud, rdp_cmd + LoadBlock/Tile/TLUT source, ai_dma vs the s7475 bitmap.
+     L4/L15 (s7486) and L1 dd8 21:9 / L7 / L10 / L12 (soak s7486_hostuaf_levels, folded s7487): host_F=0 host_Urec=0, ctl PASS, host plant DETECTED in flight every arm.
+   - **EL s7487 guest UNALIGNED loads lwl/lwr from freed blocks: CLOSED on 6 levels (H-lwl-clean):** 410 sites (207 lwl + 203 lwr, 0 ldl/ldr),
+     tools/apply_s7487_lwlwatch.py (ROGUESQ_S7487_LWLWATCH=1, recipe tools/s7487_lwlwatch_recipe.zsh; exact bytes lwl [a,a|3], lwr [a&~3,a]).
+     L4/L15 (s7487) + L1 dd8 21:9 / L7 / L10 / L12 (soak s7487_lwlwatch_levels, folded s7488): 8-44M execs per arm, 126-150 heap sites, lwl_F=0 lwl_Urec=0,
+     LWLCTL live-block plant DETECTED in flight every arm.
+   - **EM s7488 guest UNALIGNED STORES swl/swr into freed blocks or canary slack: CLOSED on L4/L15 (H-ust-clean), levels soak queued (s7488_ustwatch_levels L1/L7/L10/L12):**
+     the s5660 hook (main.cpp rs64_s5660_ustore) never reached rs64_s7475_store, so ED/EG/EH were blind to swl/swr. Census 405 sites (203 swl + 202 swr, 0 sdl/sdr;
+     the one without the s5660 hook = 8002A098 `swl $zero,0($a0)`), all wrapped by tools/apply_s7488_ustorewatch.py (ROGUESQ_S7488_USTOREWATCH=1 under
+     S7475_CANARY+S7480_UAF; exact bytes swl [a,a|3], swr [a&~3,a] -> rs64_s7475_store = s7480 freed-record classifier + s7475 slack canary; recipe
+     tools/s7488_ustwatch_recipe.zsh = s7487 recipe + EM). L4: 18.8M execs / 238 sites, 154 heap sites; L15: 44.5M / 236, 156 heap sites. ust_F=0 ust_Urec=0
+     ust_slack=0; control ROGUESQ_S7488_USTCTL=160 (live block an swl/swr just wrote, recorded freed) DETECTED in flight by the next swl/swr both arms (0.000 s);
+     all s7480/s7484/s7487 controls PASS, alive, vi_stalls30s=0. H-ust-none refuted. Slack scoring shares the s7475 path (its own plants: ED/EG); single-source for slack.

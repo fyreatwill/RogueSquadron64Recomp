@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7488 (2026-11-16).
+Compact operational handoff, as of Session 7489 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -242,28 +242,18 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      applied/skipped lines) = coverage only. s7483 route A/B (tools/s7483_route_reserve.zsh, owner hangar abort/re-entry schedule,
      FPS60 dd8 21:9, one build): both arms 3 hangar entries + 4 initMission, 0 crash, 0 collide (CONTROL fired both), 0 arena full;
      on arm applied once after the 3rd re-entry (v1 0x80986800 -> 0x8093B800) and mission 4 loaded clean -> H-route-clean, H-route-shrink refuted.
-   - **EI s7484-s7485 guest LOADS from FREED rs_malloc blocks: CLOSED, H-load-clean on 6 levels (L1 dd8 21:9, L4, L7, L10, L12 dd4, L15 dd8 21:9):**
-     tools/apply_s7484_loadwatch.py wraps 50,632 generated loads (ROGUESQ_S7484_UAFLOAD=1 + S7480_UAF + S7475_CANARY; recipe tools/s7484_uafload_recipe.zsh).
-     load_F=0 load_Urec=0 hits=0 every arm; same-run controls watch-ctl ~50k and in-flight load plant DETECTED on all 6. Not covered: lwl/lwr, host readers (item EK).
-   - **EJ s7485 byte over-reads past the request: CLOSED as retail-benign (offline, tools/s7485_overread_bound.py, exit 0 = EJ-bounded):**
-     swizzleTextureRowsToTmem rereads a3/2 bytes per row and rewinds a3/2-(a2+1)/2; its only caller (parseImageFile 0x8001EE8C) passes
-     a3=(a2+15)&0xFFF0, so the last row over-reads <=7 bytes (seen 4, 80B87F70-73) into pad texels past the tile width. decodeJpegScanToImage
-     chroma upsampler taps +1 column / row past the last sample (1 byte, seen once per plane at L15 boot). Both are retail code paths, loads only,
-     values reach pad texels / one 3/16 chroma tap; second line = s7484 levels soak: 4-8 slack-load pcs on every arm, all these pcs, 0 stores.
-   - **EK s7486 HOST reads of FREED rs_malloc blocks: CLOSED on 6 levels (H-host-clean):** ROGUESQ_S7486_HOSTUAF=1 (upstream_compat.cpp
-     rs64_s7486_hostread; recipe tools/s7486_hostuaf_recipe.zsh): sp_dma gfx/aud, rdp_cmd + LoadBlock/Tile/TLUT source, ai_dma vs the s7475 bitmap.
-     L4/L15 (s7486) and L1 dd8 21:9 / L7 / L10 / L12 (soak s7486_hostuaf_levels, folded s7487): host_F=0 host_Urec=0, ctl PASS, host plant DETECTED in flight every arm.
-   - **EL s7487 guest UNALIGNED loads lwl/lwr from freed blocks: CLOSED on 6 levels (H-lwl-clean):** 410 sites (207 lwl + 203 lwr, 0 ldl/ldr),
-     tools/apply_s7487_lwlwatch.py (ROGUESQ_S7487_LWLWATCH=1, recipe tools/s7487_lwlwatch_recipe.zsh; exact bytes lwl [a,a|3], lwr [a&~3,a]).
-     L4/L15 (s7487) + L1 dd8 21:9 / L7 / L10 / L12 (soak s7487_lwlwatch_levels, folded s7488): 8-44M execs per arm, 126-150 heap sites, lwl_F=0 lwl_Urec=0,
-     LWLCTL live-block plant DETECTED in flight every arm.
-   - **EM s7488 guest UNALIGNED STORES swl/swr into freed blocks or canary slack: CLOSED on L4/L15 (H-ust-clean), levels soak queued (s7488_ustwatch_levels L1/L7/L10/L12):**
-     the s5660 hook (main.cpp rs64_s5660_ustore) never reached rs64_s7475_store, so ED/EG/EH were blind to swl/swr. Census 405 sites (203 swl + 202 swr, 0 sdl/sdr;
-     the one without the s5660 hook = 8002A098 `swl $zero,0($a0)`), all wrapped by tools/apply_s7488_ustorewatch.py (ROGUESQ_S7488_USTOREWATCH=1 under
-     S7475_CANARY+S7480_UAF; exact bytes swl [a,a|3], swr [a&~3,a] -> rs64_s7475_store = s7480 freed-record classifier + s7475 slack canary; recipe
-     tools/s7488_ustwatch_recipe.zsh = s7487 recipe + EM). L4: 18.8M execs / 238 sites, 154 heap sites; L15: 44.5M / 236, 156 heap sites. ust_F=0 ust_Urec=0
-     ust_slack=0; control ROGUESQ_S7488_USTCTL=160 (live block an swl/swr just wrote, recorded freed) DETECTED in flight by the next swl/swr both arms (0.000 s);
-     all s7480/s7484/s7487 controls PASS, alive, vi_stalls30s=0. H-ust-none refuted. Slack scoring shares the s7475 path (its own plants: ED/EG); single-source for slack.
+   - **EI s7484-s7485 guest loads from freed blocks: CLOSED 6 levels (H-load-clean).** EJ s7485 over-reads: CLOSED retail-benign. EK s7486 host reads: CLOSED 6 levels (H-host-clean).
+   - **EL s7487 lwl/lwr loads: CLOSED 6 levels (H-lwl-clean). EM s7488 swl/swr stores: CLOSED 6 levels (H-ust-clean; levels soak s7488_ustwatch_levels score=0, folded s7489).** Full EI-EM text: PROJECT-OVERVIEW "(s7489 migration)".
+   - **EN s7489 store paths that bypass rs64_s7475_store: guest side CLOSED (H-paths-covered), host DMA writes CLOSED on L4/L15 (H-hostwrite-clean), levels soak queued.**
+     tools/s7489_store_path_census.py (exit 0 = every live store form hooked): sw 25425, swc1 10567, sb 5260, sh 4506, sdc1 1253, sd 46 via
+     RS64_S5798_ST; swl 203 / swr 202 via s7488; not live: 775 data_gap_ texts, 37 cache no-ops, 1 trap. Before s7489 12 live texts were blind:
+     the s5520 [b40w] logger (9 sb 0xB40 texts) and the s4984 atomic voice pair (0x8008F0EC sw, 0x8008F0CC sh) replaced the store without the
+     hook; tools/apply_s7489_storegap.py (registered after s7488) re-adds it. Host writes: ROGUESQ_S7489_HOSTWRITE=1 (+S7486_HOSTUAF) adds kinds
+     sp_wr_gfx / sp_wr_aud (rsp.hpp dma_dmem_to_rdram via the s7094 hook) and pi_dma (pi.cpp do_dma before do_rom_read) to the s7486 classifier;
+     ROGUESQ_S7489_WPLANT=1 aims the s7486 plant at a recent host-write destination. Recipe tools/s7489_hostwrite_recipe.zsh, LV="4:4 15:8" HOLD=220:
+     score=0, host_wF=0 host_wUrec=0 both arms (L4 sp_wr_gfx 366M ranges, 5 freed-record hits all U; L15 188M, 64 hits U2/N62; pi_dma recs N only;
+     sp_wr_aud never touches heap), write plant DETECTED kind=sp_wr_gfx in flight both (0.003 / 0.010 s). Not covered: host writes through guest
+     pointers outside DMA (OSMesg / IoMesg / controller / RT64 readback) = class EO. Soak s7489_hostwrite_levels (L1 dd8 21:9, L7/L10/L12) queued.
    - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
      ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
      marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:
