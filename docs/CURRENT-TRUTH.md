@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7482 (2026-11-16).
+Compact operational handoff, as of Session 7483 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -239,7 +239,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      callee entry live-in at the next call), minus the patch's own restores. Result: 0 BUG, 33 SAFE, 10 REPLACE (the patch stands in
      for the site's own jal: ABI already lets it clobber), 1 INTENT (s6904 fog deliberately rewrites $f0/$f4). Controls: the pre-s7476
      s4889 text flags r5 and the fixed text passes; synthetic pos/neg pair flags r3,r5 / nothing. s4889 was the only live clobber.
-   - **1a. s6202 G1d retarget pool in UNRESERVED heap: FIXED s7482 (port defect, was latent; default on, ROGUESQ_RETARGET_RESERVE=0 = old).**
+   - **1a. s6202 G1d retarget pool in UNRESERVED heap: FIXED s7482, CLOSED s7483 (port defect, was latent; default on, ROGUESQ_RETARGET_RESERVE=0 = old).**
      ORIGIN: partitionFramebufferMemory (0x80000DD4) returns $v1 = bottom of its descending reservation via *(t5)/*(t6) to heap init
      0x80002150 (a3 / hole start); the s6202 retarget moved the pool to base = ec - t2 BELOW that bottom without lowering $v1, so the
      heap owned [base, ec). Fix (tools/apply_s6031_far.py apply_s7482_reserve, registered in fixup_game_funcs_vendored.py): at
@@ -248,7 +248,10 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      ROGUESQ_S7482_CTL=1 emits one CONTROL line. Same-build A/B s7482_reserve_ab2 (L7 dd4 16:9, HOLD=300, both arms reached the "ok"
      scene after a mission restart): RESERVE=0 loc_S=151, RESERVE=1 loc_S=0 (v1 0x809B8600 -> 0x8096D600), 0 collisions in both
      (H-collide refuted: the defect was latent), loc_F=0, controls PASS, both alive, vi_stalls30s=0. Wider sweep queued
-     (soak s7482_reserve_levels: L4/L12 dd4, L1/L15 dd8 21:9). Not yet run: the hangar abort/re-entry route under RESERVE=1.
+     (soak s7482_reserve_levels: L4/L12 dd4, L1/L15 dd8 21:9): rc 0, all alive, but the retarget never took "ok" there (0
+     applied/skipped lines) = coverage only. s7483 route A/B (tools/s7483_route_reserve.zsh, owner hangar abort/re-entry schedule,
+     FPS60 dd8 21:9, one build): both arms 3 hangar entries + 4 initMission, 0 crash, 0 collide (CONTROL fired both), 0 arena full;
+     on arm applied once after the 3rd re-entry (v1 0x80986800 -> 0x8093B800) and mission 4 loaded clean -> H-route-clean, H-route-shrink refuted.
    - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
      ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
      marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:

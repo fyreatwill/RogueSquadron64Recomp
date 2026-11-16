@@ -1,14 +1,17 @@
-# NEXT (s7483)
-HYPOTHESIS-ID: g1d-retarget-unreserved-pool
+# NEXT (s7484)
+HYPOTHESIS-ID: m3-guest-uaf-loads
 
-s7482 fixed item 1a: ROGUESQ_RETARGET_RESERVE (default on) lowers partitionFramebufferMemory's returned $v1 from ec to the
-retarget pool base. Same-build A/B on L7: loc_S 151 -> 0, 0 collisions. Two gaps remain before closing the item:
+Item 1a closed s7483. Next idiom class (CURRENT-TRUTH item 1, EH "Not covered: guest LOADS of freed blocks"): class EI,
+guest LOADS from freed rs_malloc blocks (use-after-free reads), whole-class, same model as EH.
 
-1. Fold soak s7482_reserve_levels (L4/L12 dd4, L1/L15 dd8 21:9) from SOAK-RESULTS. Pass = rc 0. Count per arm whether
-   `[s7482] reserve applied` fired at all (if 0 on a level, the retarget never took "ok" there and the arm is coverage only).
-2. Hangar abort/re-entry route under the default (RESERVE on): the s7468/s7469 route recipe (grep SOAK-RESULTS s7468_asan_uc_routes,
-   find its script in scratch/agent/soak_queue/done/) with ROGUESQ_S7482_CTL=1 and ROGUESQ_LOG_G1D_TASK unset. Hypotheses:
-   H-route-clean (alive, 0 pool-collide, menu frames normal) vs H-route-shrink (the heap lost 0x4B000 at the re-entry carve and an
-   rs_malloc fails / spills: grep `[s6569]` spill lines and rs_malloc NULL returns vs a RESERVE=0 arm in the same invocation).
-   Build both arms in one invocation (LV third field or arm env).
-If both pass: close item 1a in CURRENT-TRUTH, change the HYPOTHESIS-ID and take the next ladder item (CURRENT-TRUTH Next steps).
+1. Boring first: does the s7475/s7480 STORE_DIAG hook have a load-side twin? grep src/main/upstream_compat.cpp for s7480_ and
+   tools/apply_s7475_slackwatch.py for the store hook emission; check whether the recompiler emits MEM_W/MEM_B reads through a
+   hookable macro (N64Recomp output headers in build/ or src/). If no load hook exists, add one behind ROGUESQ_S7484_UAFLOAD=1
+   via a fixup script (not a hand edit of generated code).
+2. Instrument (one build): on each guest load, test the s7480 freed bitmap; classify with the s7480 locator at load time
+   (F = block still free = real UAF read, U/N = re-carved region, Urec = trim defect). Positive control: an in-flight
+   premature-free plant that is then READ (ROGUESQ_S7484_PLANT), plus the s7480 locator control.
+3. Run tools/s7480_uaf_recipe.zsh-style arms L4/L15 (dd4/dd8), HOLD=220, in one invocation.
+Hypotheses: H-load-clean (0 F loads outside the plant) / H-load-uaf (F loads, name the pc + the freeing caller) /
+H-load-recarve (all hits U/N, the s7331 scene-reset reader class). Discriminator = locator class of each hit at load time.
+If a load hook costs too much frame time to run 220 s, sample (every Nth load) and say so.

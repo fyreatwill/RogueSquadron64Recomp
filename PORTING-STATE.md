@@ -198407,3 +198407,28 @@ Two lines for the conclusion: the reserve log shows the boundary moved, and the 
 in the same build. Selects H-reserve-safe; refutes H-collide (0 rs_malloc overlaps in either arm, detector CONTROL live): the defect
 was latent on this route. Rules out nothing about the hangar abort/re-entry route (not run under RESERVE=1) or other levels'
 wide-phase scenes. Queued soak s7482_reserve_levels (L4/L12 dd4, L1/L15 dd8 21:9, HOLD=300, CTL armed).
+
+## Session 7483 (2026-11-16) — item 1a closed: s7482 retarget-pool reservation clean over the owner hangar abort/re-entry route (same-build on/off A/B, 0 collide, 0 arena full, 4 mission loads both arms); levels soak is coverage only
+
+HYPOTHESIS-ID: g1d-retarget-unreserved-pool (closed this session). Work unit from NEXT s7483 (CURRENT-TRUTH item 1a, gaps 1-2).
+
+1. Fold s7482_reserve_levels (L4/L12 dd4, L1/L15 dd8 21:9, HOLD=300): rc 0, 4/4 alive, crashlines=0, vi_stalls30s=0,
+   uaf_free=0, trim_defect=0, frame_span_S=0, pool_collide=0, plant DETECTED all arms. But s7482_reserve_applied=0 AND
+   _skipped=0 AND collide_ctl=0 on every arm: the s6202 retarget never took its "ok" branch on these scenes (the CONTROL line
+   only fires while a live span is published), so these arms say nothing about the reservation: coverage only.
+2. New tools/s7483_route_reserve.zsh (self-contained): the s7326/s7469 owner route schedule (4 mission loads, 3 PAUSE/ABORT ->
+   SELECT YOUR CRAFT re-entries) at FPS60 dd8 DD_UNSAFE WIDEWIN 21:9, normal build, owner save read-only (g3_port_capture, no
+   SAVE_FROM, NO_SAVE_WRITE=1), ROGUESQ_S7482_CTL=1 + S7326_CTL=1, two arms one after the other in one invocation: on (default)
+   and off (ROGUESQ_RETARGET_RESERVE=0). Screen unlocked, HID idle 54600 s at start.
+   Run scratch/s7483/r (620 s per arm):
+   - on : hangar_entries=3 initMission=4 (B40 0x0F,0x0F,0x0F,0x10) reserve_applied=1 (log line 2.16M, after the 3rd re-entry,
+          before initMission#4: v1 0x80986800 -> 0x8093B800, pool 0x8093B800..0x80986800 = 0x4B000, a0=0 path) collide_ctl=1
+          collide=0 arena_full=0 spill_reuse=1 crashlines=0.
+   - off: hangar_entries=3 initMission=4 (same B40 sequence) reserve_skipped=1 (same v1/pool values, on=0) collide_ctl=1
+          collide=0 arena_full=0 spill_reuse=1 crashlines=0.
+   score=0. Two lines: (a) the reserve log shows the boundary moved by exactly the pool span on the re-entry carve, and
+   (b) the mission load that followed it completed with no spill arena-full / rs_malloc NULL and no crash, identical to the
+   off arm's counts. Selects H-route-clean; refutes H-route-shrink (the heap losing 0x4B000 at the re-entry carve does not starve
+   any allocation on this route). Detector live in both arms (CONTROL fired). Caveat: the run.log has no `VI #` marker so the
+   recipe's last= field printed none; aliveness is from 0 crash lines + the 4th initMission reached in both arms.
+Item 1a CLOSED. Rules out nothing about guest LOADS from freed rs_malloc blocks (EH covered stores only) -> next unit.
