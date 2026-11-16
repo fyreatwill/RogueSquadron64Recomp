@@ -197346,3 +197346,8 @@ Results, scratch/s7445 (tools/s7431_stderr_volume.sh 150, owner recipe dd4 16:9 
 Left: [spill] (src/main/upstream_compat.cpp spill arena, 757 lines / 41.7 KB in one second at t=12.4 s) is now the only
 non-PERSISTENT tag; it is class DC. Default stderr 9.24 -> 8.80 MB / 150 s (cross-run, single-source).
 ORIGIN: not a mitigation; diagnostic print latches only.
+VERDICT: selects H-hidden (3 UNGATED-DIAG burst sites printed with no env; latched, default 0 lines, consumer control restores
+2101/796/432), refutes H-clean (the sites were not needed: consumer-only output) and refutes H-stall (the ~200 ms gaps persist
+with the bursts off, same t in both runs = scene loads).
+Next discriminator: class DC [spill] - default-arm [spill] per-request line count with the per-request print latched vs a
+consumer arm with its env (757 expected); H-needed vs H-hidden vs H-clean as in NEXT.md.
