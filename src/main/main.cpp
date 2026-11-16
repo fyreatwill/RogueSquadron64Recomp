@@ -10630,7 +10630,12 @@ extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
 }
 
 // Called right after copyNativeToRAM: arm the range.
+extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);  /* s7492 class EQ: RT64 writeback -> fn=os_rt64fb */
 extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    {   static std::atomic<uint64_t> n{0}; const uint64_t k = ++n;  /* s7492: first-call / periodic marker = the hook's reach control */
+        if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
+                                                       (unsigned long long)k, phys, bytes, kind, width, rows); }
+    if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb");
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     uint32_t slot = kWbwMax;
     for (uint32_t i = 0; i < kWbwMax; i++) if (!g_wbw_r[i].active) { slot = i; break; }
@@ -10649,7 +10654,8 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
 #else
 extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
 extern "C" void rs64_wbw_self(int) {}
-extern "C" void rs64_wbw_post(uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) {}
+extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
+extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t, uint32_t, uint32_t) { if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 

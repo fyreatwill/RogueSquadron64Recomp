@@ -6223,22 +6223,25 @@ extern "C" void rs64_s7490_sum(double now) {
    untouched) before routing, so the same store MUST log `[s7480] plant DETECTED ... fn=os_*`; if no heap destination appears within
    <s>+30 s, the next EP destination of any class is planted instead (route control for static destinations). Measurement only. */
 static const char* const k_s7491_kind[] = {"os_createmq", "os_send", "os_jam", "os_recv", "os_recv_out", "os_createthread", "os_continit",
-    "os_contquery", "os_contread", "os_saveread", "os_iomesg", "os_dpcounters"};
-enum { S7491_NK = 12 };
+    "os_contquery", "os_contread", "os_saveread", "os_iomesg", "os_dpcounters", "os_tq_link", "os_tq_head", "os_rt64fb"};
+enum { S7491_NK = 15 };  /* s7492 class EQ: +os_tq_link/os_tq_head (threadqueue.cpp), +os_rt64fb (RT64 copyNativeToRAM, main.cpp) */
 static uint64_t s_s7491_calls[S7491_NK] = {0}, s_s7491_cls[S7491_NK][3] = {{0}}, s_s7491_mark[S7491_NK] = {0};
 static uint32_t s_s7491_lo[S7491_NK] = {0}, s_s7491_hi[S7491_NK] = {0};
 static int s_s7491_plant = 0;
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn);
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind) {
-    if (!g_rs64_s7475_bm || !kind || w == 0 || w > 0x10000u || a < 0x80000000u || a >= 0x81800000u) return;
+    if (!g_rs64_s7475_bm || !kind || w == 0 || w > 0x200000u || a < 0x80000000u || a >= 0x81800000u) return;
     int k = 0; while (k < S7491_NK && std::strcmp(kind, k_s7491_kind[k])) ++k; if (k == S7491_NK) return;
+    if (w > 0x10000u && k != 14) return;  /* only the RT64 framebuffer writeback is allowed whole-image widths */
     static const double mp = [] { const char* e = std::getenv("ROGUESQ_S7491_MPLANT"); if (!e || !*e || *e == '0') return -1.0; return std::atof(e); }();
+    /* s7492: ROGUESQ_S7491_MPLANT_KIND=<kind> restricts the plant to one kind (per-site positive control for the EQ hooks) */
+    static const char* const mpk = [] { const char* e = std::getenv("ROGUESQ_S7491_MPLANT_KIND"); return (e && *e) ? e : (const char*)nullptr; }();
     {   std::lock_guard<std::mutex> lk(s_s7475_mu);
         ++s_s7491_calls[k]; if (!s_s7491_lo[k] || a < s_s7491_lo[k]) s_s7491_lo[k] = a; if (a + w > s_s7491_hi[k]) s_s7491_hi[k] = a + w;
         auto it = s_s7475_live.upper_bound(a); bool inheap = false;
         if (it != s_s7475_live.begin()) { --it; inheap = a < it->first + it->second.sz; }
         const int c = inheap ? 0 : a < 0x80140000u ? 1 : 2; ++s_s7491_cls[k][c];
-        if (mp >= 0 && !s_s7491_plant && s7480_on() && s_s7480_plant == 0) {
+        if (mp >= 0 && !s_s7491_plant && s7480_on() && s_s7480_plant == 0 && (!mpk || !std::strcmp(mpk, kind))) {
             const double now = s7325_now(), age = now - s_s7475_t0;
             const bool heap_ok = inheap && it->second.req >= 0x40u && a + w <= it->first + it->second.req;
             if (age >= mp && (heap_ok || age >= mp + 30.0)) {

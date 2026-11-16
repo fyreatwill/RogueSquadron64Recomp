@@ -57,16 +57,24 @@ B = [('osRecvMesg_recomp', 'ultramodern mesgqueue.cpp do_recv: *msg_ out + mq->f
      ('osContGetReadData_recomp', 'cont.cpp pad[6*n] button/stick/err', 'none'), ('osContInit_recomp', 'cont.cpp bitpattern byte + status', 'none'),
      ('osContGetQuery_recomp', 'cont.cpp status', 'none'), ('osEepromLongRead_recomp', 'pi.cpp save_read MEM_B loop', 'none'),
      ('osPiStartDma_recomp', 'pi.cpp:722 IoMesg fields + do_rom_read', 'pi_dma (data only)'), ('osDpGetCounters_recomp', 'upstream_compat 8 words', 'none'),
-     ('osPfsReadWriteFile_recomp', 'pak.cpp buffer', 'none')]
+     ('osPfsReadWriteFile_recomp', 'pak.cpp buffer', 'none'),
+     # s7492 class EQ: ultramodern thread-queue link stores (threadqueue.cpp insert/pop/remove) reached from these OS calls;
+     # osPfsNumFiles (pak.cpp, the only pak.cpp body that stores) has 0 game callers; RT64 copyNativeToRAM -> os_rt64fb (main.cpp).
+     ('osStartThread_recomp', 'threadqueue.cpp insert/pop: OSThread next/queue + queue head', 'none'),
+     ('osSetThreadPri_recomp', 'threadqueue.cpp remove+insert', 'none'), ('osStopThread_recomp', 'threadqueue.cpp remove', 'none'),
+     ('osPfsNumFiles_recomp', 'pak.cpp *max_files/*files_used (s32 via _arg TO_PTR: correct guest pointer)', 'none')]
 # s7491 class EP: Part B sites now call RS64_S7491(a, w, "<kind>") after their stores (lib/ ultramodern + librecomp, upstream_compat
 # osDpGetCounters). A function is covered when every kind it needs appears as a call in the sources; osPfsReadWriteFile stores nothing.
 NEED = {'osRecvMesg_recomp': ['os_recv', 'os_recv_out'], 'osSendMesg_recomp': ['os_send'], 'osJamMesg_recomp': ['os_jam'],
         'osCreateMesgQueue_recomp': ['os_createmq'], 'osCreateThread_recomp': ['os_createthread'], 'osContGetReadData_recomp': ['os_contread'],
         'osContInit_recomp': ['os_continit'], 'osContGetQuery_recomp': ['os_contquery'], 'osEepromLongRead_recomp': ['os_saveread'],
-        'osPiStartDma_recomp': ['os_iomesg'], 'osDpGetCounters_recomp': ['os_dpcounters'], 'osPfsReadWriteFile_recomp': []}
+        'osPiStartDma_recomp': ['os_iomesg'], 'osDpGetCounters_recomp': ['os_dpcounters'], 'osPfsReadWriteFile_recomp': [],
+        'osStartThread_recomp': ['os_tq_link', 'os_tq_head'], 'osSetThreadPri_recomp': ['os_tq_link', 'os_tq_head'],
+        'osStopThread_recomp': ['os_tq_head'], 'osPfsNumFiles_recomp': []}
 LIB = os.path.join(ROOT, 'lib', 'N64ModernRuntime')
 src = ''.join(open(f, errors='ignore').read() for f in glob.glob(os.path.join(LIB, 'ultramodern', 'src', '*.cpp')) + glob.glob(os.path.join(LIB, 'librecomp', 'src', '*.cpp'))) + uc
-have = set(re.findall(r'RS64_S7491\([^;]*"(os_\w+)"\)', src)) | set(re.findall(r'rs64_s7491_hst\([^;]*"(os_\w+)"\)', src))
+have = set(re.findall(r'RS64_S7491\([^;]*"(os_\w+)"\)', src)) | set(re.findall(r'rs64_s7491_hst\([^;]*"(os_\w+)"\)', src)) \
+    | set(re.findall(r's7492_tq\([^;]*"(os_\w+)"\)', src))
 bblind = 0
 for n, what, k in B:
     need = NEED.get(n, ['?']); cov = all(x in have for x in need); bblind += not cov

@@ -198667,3 +198667,39 @@ Maintenance: CURRENT-TRUTH item-1 sub-bullets DG-EO (180 lines) migrated verbati
 a one-line-per-class index; 59398 -> 37666 bytes.
 Verdict: selects H-ep-clean, refutes H-ep-none (heap destinations measured), H-mesg-uaf no instance. Next discriminator: class EQ
 thread-queue link / osPfsNumFiles / RT64 readback writes with an in-flight mplant (MPLANT_S ~ 120), plus the s7491_ep_levels fold.
+
+## Session 7492 (2026-11-16) — class EQ: thread-queue link/head stores and RT64 framebuffer writeback hooked; per-kind in-flight plants DETECTED on L1/L4/L15; 0 os_* F/Urec/slack rows (H-eq-clean, H-tq-uaf and H-pfs-wild refuted); EP closed 6 levels
+Fold: soak s7491_ep_levels (L1 dd8 21:9, L7/L10/L12 dd4) score=0: all 4 alive, mplant DETECTED fn=os_send (L1/L7/L10) / os_dpcounters
+(L12), os_FR=0 os_slack=0, s7480 F0 Urec0 -> class EP CLOSED for 6 levels (L4/L15 s7491 + these 4).
+Change (one build): (a) lib/N64ModernRuntime ultramodern/src/threadqueue.cpp: s7492_tq() after every link store in thread_queue_insert
+(OSThread next/priority/queue 12 B = os_tq_link, predecessor link word = os_tq_head), thread_queue_pop (head + popped thread) and both
+s7396 remove walks (os_tq_head); the host-static running_queue_impl head is skipped (not guest memory), anything outside rdram[0,16 MB)
+skipped. (c) src/main/main.cpp rs64_wbw_post (called by RT64 right after all 4 copyNativeToRAM sites in rt64_state.cpp, colour + depth)
+now calls rs64_s7491_hst(0x80000000|phys, bytes, "os_rt64fb") with a `[s7492] rt64 writeback #n` power-of-two marker. upstream_compat
+k_s7491_kind +3 kinds (S7491_NK 15); widths >0x10000 allowed only for os_rt64fb (whole images, up to 0x200000); new
+ROGUESQ_S7491_MPLANT_KIND=<kind> restricts the plant to one kind = a per-site positive control. lib/ exported
+(submodule-patches/N64ModernRuntime.patch). (b) osPfsNumFiles: read, not hooked: `_arg<1, s32*>` = TO_PTR(s32, a1) = a correctly
+translated rdram pointer (aligned s32 store is right in word-swapped rdram), and the game has 0 call sites (grep RecompiledFuncs: osPfs
+calls are AllocateFile 1, DeleteFile 1, FindFile 2, InitPak 1, ReadWriteFile 3, RepairId 1, SelectBank 5, all return-only). H-pfs-wild
+refuted (single read; dead code either way). Census tools/s7490_hostwrite_census.py Part B + osStartThread/osSetThreadPri/osStopThread
+(os_tq_*), osPfsNumFiles (no-store): part_a_blind=0 part_b_blind=0, rc 0.
+Run 1 tools/s7492_eq_recipe.zsh (new; LV="<lvl>:<dd>:<plant kind>") LV="4:4:os_tq_head 15:8:os_rt64fb 1:4:os_tq_link" HOLD=220
+MPLANT_S=120: all 3 alive, vi_stalls30s=0, initMission=1. L4: tq_link 764k calls (H 157k, B 532k, O 75k), tq_head 279k (H 15.3k);
+mplant SET kind=os_tq_head class=H blk=80154700 t=121.5 -> `[s7480] plant DETECTED ... fn=os_tq_head`. L1: tq_link 754k; plant
+os_tq_link class=H blk=80163EB0 t=120 -> DETECTED fn=os_tq_link. L15 tq 729k/269k. 0 os_* uaf-store F/R rows, 0 os_* slack, s7480
+F0 Urec0 on all. But os_rt64fb=0 calls on every arm, so the L15 plant never set (score=3): my guard `phys < 0x800000` dropped every
+writeback (the L15 21:9 colour image sits at 0x80A92000; [fbw] swap#1 log). Fixed to phys < 0x1800000 (hst's own window) + marker.
+Run 2 (same build after the fix) NAME=s7492_eqfb LV="4:1:os_rt64fb 15:8:os_rt64fb": score=0, both alive. Writebacks: L4 51.6k calls,
+L15 50.5k (all class O, 1830 / 1142 marked bytes routed); `[s7492] rt64 writeback #32768 phys=638C00 bytes=713216 w=796 rows=448` (L4),
+`phys=B20000 bytes=915456 kind=1 w=1024` (L15 depth). Plants: os_rt64fb class=O blk=80751E00 n=AE200 (L4) / 80B20000 n=E0000 (L15)
+t=150 -> DETECTED fn=os_rt64fb both (in flight). One non-plant row per arm: `uaf-store fn=os_rt64fb a=80787810 (L15 80B87810) n=6C30
+age=0.24 loc=N` = a boot-time block freed by freeManifestSegmentAssets <- runIdleFramesAndLoadSaveData (free-bt), then overwritten by a
+writeback 0.24 s later with no live heap block covering it (loc=N, not F/R); swap#42, pre-mission. Read: the game released that region
+and an RT64 writeback of a colour image lands there; whether that colour image was set by the game THIS frame (legit reuse) or is a
+stale RT64 framebuffer pair (a host writer into freed memory) is NOT determined here (single-source datum, opens class ER).
+Verdict: selects H-eq-clean for guest-thread queue links (in-flight per-kind plants, 3 levels) and RT64 writeback (2 levels, 0 F/R);
+refutes H-tq-uaf (no instance over ~2.2M link stores), H-pfs-wild (correct pointer, 0 callers). With EQ, every host writer class
+named since s7472 is hooked (guest stores/loads, host reads, host DMA writes, zmemcpy, PatchesLib bodies, OS calls, thread queues,
+RT64 writeback). Levels soak s7492_eq_levels queued (L1 dd8 21:9 tq_link, L7 rt64fb, L10 tq_head, L12 rt64fb). Next discriminator:
+class ER, RT64 writeback liveness (is every copyNativeToRAM target a colour/depth image the game set in the current frame?), seeded
+by the loc=N row.

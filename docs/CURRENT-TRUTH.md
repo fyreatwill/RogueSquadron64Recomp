@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7491 (2026-11-16).
+Compact operational handoff, as of Session 7492 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -225,19 +225,18 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      EB chain headers 19 levels; ED s4889 $a1 clobber FIXED (A1FIX); EE 0 live injected-call clobbers; EF dead-record canary FP (STALECHK);
      EG zero-slack overruns (PAD); EH guest UAF stores 0 real (L7 = item 1a pool); 1a s6202 retarget pool FIXED s7482 (RETARGET_RESERVE);
      EI guest UAF loads; EJ over-reads retail-benign; EK host reads; EL lwl/lwr; EM swl/swr; EN store-path census + host DMA writes;
-     EO host zmemcpy + PatchesLib weak-override bodies hooked (6 levels, s7490 soak folded s7491); EP OS-call host stores (s7491, below).
-     Recipes: tools/s7475_canary_recipe.zsh, s7480_uaf, s7484, s7486, s7487, s7488, s7489_hostwrite, s7490_zmemcpy, s7491_ep (*_recipe.zsh).
-   - **EP s7491 OS-call host stores through guest pointers: CLOSED on L4/L15 (H-ep-clean), levels soak queued (s7491_ep_levels).**
-     17 RS64_S7491(a, w, kind) calls after the stores in lib/ (ultramodern mesgqueue.cpp osCreateMesgQueue / do_send / do_recv + msg
-     out, threads.cpp osCreateThread; librecomp cont.cpp osContInit/GetQuery/GetReadData, pi.cpp save_read + OSIoMesg fill) and
-     osDpGetCounters; weak decl, resolved by upstream_compat.cpp rs64_s7491_hst, which routes marked bytes through rs64_s7475_store
-     (fn=os_<kind>, pc=0xE00000xx). Covers host-thread event sends too (do_send). Census tools/s7490_hostwrite_census.py now also
-     scores Part B (part_b_blind=0; negative control: a missing kind -> BLIND, rc 1; osPfsReadWriteFile stores nothing).
-     tools/s7491_ep_recipe.zsh LV="4:4 15:8" HOLD=220: score=0, both alive, vi_stalls30s=0; 0 os_* uaf-store F/Urec rows, 0 os_*
-     slack stores, s7480 loc_F=0 Urec=0. H-ep-none REFUTED: real heap destinations (L4: send 21.7k/1.2M, recv_out 35.8k/83.9k,
-     createthread 16/21, dpcounters all 12.9k, createmq 17/146). Control ROGUESQ_S7491_MPLANT=20: plant on an os_send slot in a
-     live block DETECTED fn=os_send both arms (t=20 s, pre-mission: caveat, not in flight). Not covered: ultramodern thread-queue
-     link writes (mq blocked_on_*, OSThread next), osPfsNumFiles host-pointer stores, RT64 framebuffer readback = class EQ.
+     EO host zmemcpy + PatchesLib weak-override bodies hooked (6 levels, s7490 soak folded s7491); EP OS-call host stores (6 levels); EQ thread queues + RT64 writeback (s7492, below).
+     Recipes: tools/s7475_canary_recipe.zsh, s7480_uaf, s7484, s7486, s7487, s7488, s7489_hostwrite, s7490_zmemcpy, s7491_ep, s7492_eq (*_recipe.zsh).
+   - EP s7491 OS-call host stores: CLOSED 6 levels (L4/L15 s7491, soak L1/L7/L10/L12 folded s7492; full text PORTING-STATE s7491).
+   - **EQ s7492 thread-queue links + RT64 writeback: CLOSED on L1/L4/L15 (H-eq-clean), levels soak queued (s7492_eq_levels).**
+     threadqueue.cpp s7492_tq after insert/pop/remove link stores (fn=os_tq_link / os_tq_head; host running-queue head skipped);
+     main.cpp rs64_wbw_post (after all 4 RT64 copyNativeToRAM sites) -> fn=os_rt64fb, phys < 24 MB. ROGUESQ_S7491_MPLANT_KIND=<kind>
+     = per-kind plant. tools/s7492_eq_recipe.zsh LV="<lvl>:<dd>:<kind>": tq ~760k link / 280k head stores per arm, plants DETECTED in
+     flight (t~120-150 s) for os_tq_head (L4), os_tq_link (L1), os_rt64fb (L4 dd1, L15 dd8); 0 os_* F/R/slack. osPfsNumFiles: correct
+     TO_PTR pointer, 0 game callers. Census part_b_blind=0. Open datum (class ER, below): one boot-time loc=N row per arm, an RT64
+     writeback over a block freed 0.24 s earlier by freeManifestSegmentAssets (a=80787810 L4 / 80B87810 L15, n=6C30).
+   - **ER next: RT64 writeback liveness.** Is every copyNativeToRAM target a colour/depth image the game set this frame, or can RT64
+     write a stale framebuffer pair into memory the game released/reallocated? Seed = the EQ loc=N row. NEXT.md has the design.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
