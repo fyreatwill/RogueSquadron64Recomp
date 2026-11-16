@@ -197952,3 +197952,8 @@ uninit); do not cite this as an explanation for G5b terrain drops.
 Rules out (150 s per arm, L4/L12 dd4 16:9): any ASan-visible heap/stack/global overflow or UAF in the instrumented C++ host
 (runtime, RT64, plume, RSP bridge, main) on that route; any UBSan class beyond the 13 groups. Does not cover: generated C,
 ucode TUs, 21:9/dd8, other levels, hangar/cutscene routes -> queued soak_queue/s7467_asan_routes.sh (p + L7 dd4 + L15 dd8 21:9).
+
+Verdict (s7467): the ASan+UBSan flight **selects H-asan-hit** (one real cross-TU runtime defect the single-TU analyzer missed:
+the plume depth-bias uninit read, fixed) and **refutes H-asan-clean** for the pre-fix build; post-fix it selects H-asan-clean
+on L4/L12 dd4 16:9 (0 NEW groups, control PASS). Next discriminator: class DY, ASan over the RSP ucode TUs
+(H-ucode-clean vs H-ucode-hit vs H-ucode-slow, NEXT.md), after folding soak s7467_asan_routes.
