@@ -42148,6 +42148,7 @@ RS64_REPLAY = [
     "apply_s7320_bdiff_probe.py",  # s7320: class-C field pointer-difference classifier (shares the s7318 table, idx>=256), ROGUESQ_S7318_BCMP=1|<path> (measurement only; needs ROGUESQ_S7317_ALLOCMAP=1)
     "apply_s7321_trunc_probe.py",  # s7321: class-D 24-bit truncation classifier (shares the s7318 table, idx 512-767), ROGUESQ_S7318_BCMP=1|<path> (measurement only; needs ROGUESQ_S7317_ALLOCMAP=1)
     "apply_s7325_heaprebuild.py",  # s7325: buildHeapFreeList entry hook (retail scene heap reset bypasses rs_free): drops dead blocks from host alloc maps, logs spill live at each rebuild under ROGUESQ_S7317_ALLOCMAP
+    "apply_s7445_burst_latch.py",  # s7445: class DB latch of default-on [s4234-ENTRY] / [newbtn] / [drain-*] burst prints (ROGUESQ_S4234_ENTRY / NEWBTN_LOG / DRAIN_DUMP =1, G1E_TRIM=0 old)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
 ]
 

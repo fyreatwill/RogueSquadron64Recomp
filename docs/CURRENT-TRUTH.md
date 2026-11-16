@@ -215,9 +215,17 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class DB, default-on burst/one-shot diag prints (HYPOTHESIS-ID default-diag-bursts).** See NEXT.md:
-   the non-PERSISTENT tags in the default-arm stderr scratch/s7444/run.tlog ([s4234-ENTRY] 149 KB in one second at t=6.5 s,
-   [newbtn], [drain-path]; sites in tools/apply_s4234_entryprobe.py / fixup_game_funcs_vendored.py, so latches need a regen).
+1. **Next audit: class DC, the [spill] allocation-log burst (HYPOTHESIS-ID default-diag-bursts).** See NEXT.md: the only
+   non-PERSISTENT tag left in the default-arm stderr scratch/s7445/run_default.tlog is [spill] (757 lines / 41.7 KB, all in
+   one second at t=12.4 s, src/main/upstream_compat.cpp dd>1 spill arena). Classify (needed by the s6702/s7326 heap triage?)
+   and latch or keep.
+   DB (s7445) CLOSED H-hidden, one change: tools/apply_s7445_burst_latch.py (in the fixup apply list before s7069) latches
+   [s4234-ENTRY] (funcs_24.c, ROGUESQ_S4234_ENTRY=1; rs64_s4234_g still counts), [newbtn] (funcs_19.c, ROGUESQ_NEWBTN_LOG=1)
+   and the s1976-s1982 [drain-tick/slots/cross/cursor/path/base/hdr] dump block (funcs_30.c, ROGUESQ_DRAIN_DUMP=1);
+   G1E_TRIM=0 restores all. Diagnostic only, no guest store changed. scratch/s7445, 150 s owner recipe lvl1 flight: default
+   0 / 0 / 2 lines (2 = the one-shot drain-inloop-gate + drain-exit), consumer arm 2101 / 796 / 432 (= s7444's 2101 / 791 /
+   ~450, PASS), fbhash control PASS both, 0 crash both. H-stall REFUTED (two runs): the ~200 ms fbhash gaps at t=6.2 s and
+   44.8 s are there with the bursts latched (204 / 203 ms vs 206 / 203 ms in s7444), so they are scene loads.
    DA (s7444) CLOSED H-hidden, one latch: 14 periodic `(n & MASK) == 0|1` print sites read by hand. GATED (env/latch before
    the counter): s6955-bc (G1E_BATCH_CHECK), s6933-wm, s6945-coal, s6934-tbl (G1E_TRIM tbl check), s6936-walk, s4272-latetot /
    s4280-tot / s4284-tot (G1E_CDIAG), s4638-tally (LOG_S4299), s7318 (S7318_BCMP), s6911 (DD_VARCLAMP_LOG), g3d toggle,

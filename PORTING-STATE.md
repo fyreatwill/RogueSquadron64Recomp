@@ -197321,3 +197321,28 @@ Verdict: selects H-hidden (one ungated diag site), refutes H-clean; 0 vs 8 lines
 Rules out: any remaining periodic `(n & MASK)` summary print in src/ that fires at the owner recipe without env.
 Next: class DB, the non-PERSISTENT burst tags in the default stderr ([s4234-ENTRY] 149 KB in one second at t=6.5 s,
 [newbtn], [drain-path]), sites in generated-code apply/fixup scripts.
+
+## Session 7445 (2026-11-15) — class DB closed H-hidden: [s4234-ENTRY], [newbtn] and the [drain-*] dump block printed bursts with no env, now latched; default 0 lines, consumer control restores the old counts, 0 crash; H-stall refuted
+
+Work unit: NEXT.md class DB, default-on burst/one-shot diag prints in the owner-recipe stderr (scratch/s7444/run.tlog).
+Enumerated with tools/s7431_stderr_volume.py: three non-PERSISTENT tags, [s4234-ENTRY] 257 KB / 2101 lines (150 KB in one
+second at t=6.5 s), [newbtn] 84 KB / 791, [drain-path] 61 KB / 209 (plus its family drain-cursor 198, -hdr 22, -slots/-cross/
+-base/-tick 11 each).
+Sites, all in generated code (N64Recomp/RecompiledFuncs), all UNGATED-DIAG (investigations closed: s4234-s4280 sample-stream
+list, s577 START edge, s1976-s1982 speech-drain walk):
+- funcs_24.c fillSampleStreamRange entry (apply_s4234_entryprobe.py + the s4278 9500-9600 window) -> ROGUESQ_S4234_ENTRY=1.
+  The rs64_s4234_g ordinal other probes read keeps counting.
+- funcs_19.c newbtn edge (fixup_game_funcs_vendored.py s577) -> ROGUESQ_NEWBTN_LOG=1.
+- funcs_30.c drainAudioAndFinalizeSpeechBuffer `iters <= 8 || % 100000` dump block (drain-tick..drain-hdr; its only state,
+  s1980 prev_pos/have_sample, is read only inside the block) -> ROGUESQ_DRAIN_DUMP=1. The s1993 in-loop tick gate (functional,
+  outside the block) and the one-shot [drain-inloop-gate]/[drain-exit] lines are unchanged.
+ROGUESQ_G1E_TRIM=0 restores all three. Change: new tools/apply_s7445_burst_latch.py (idempotent, verified by a second run that
+patches 0), listed in fixup_game_funcs_vendored.py just before the must-be-last apply_s7069. Applied in place + cmake build.
+Results, scratch/s7445 (tools/s7431_stderr_volume.sh 150, owner recipe dd4 16:9 FPS60, lvl1 flight from 68.5 s):
+- default arm: [s4234-ENTRY] 0, [newbtn] 0, [drain-*] 2 (the one-shots); fbhash control PASS (8821); 0 crash.
+- consumer arm (the three envs =1): 2101 / 796 / 432 [drain-*] ([drain-path] 190), matching s7444; control PASS; 0 crash.
+- H-stall REFUTED, two runs: fbhash gaps > 150 ms sit at 6.2 / 12.1 / 29.5 / 44.8 / 60.0 / 68.2 s in BOTH s7444 (bursts on)
+  and s7445 default (bursts off), 203-206 ms each, so they are scene loads, not the bursts.
+Left: [spill] (src/main/upstream_compat.cpp spill arena, 757 lines / 41.7 KB in one second at t=12.4 s) is now the only
+non-PERSISTENT tag; it is class DC. Default stderr 9.24 -> 8.80 MB / 150 s (cross-run, single-source).
+ORIGIN: not a mitigation; diagnostic print latches only.
