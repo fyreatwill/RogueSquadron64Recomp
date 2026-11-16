@@ -198296,3 +198296,5 @@ liveness and stall profile as s7478; L4 initMission=2 is an idle-autopilot resta
 Limit: FILL=0 (kept from s7475 because 0xA5 hung boot before the s7476 fix), so a HOST writer (memcpy, PI DMA, RSP) storing zeros past
 a request is invisible to the tail walk. Queued scratch/agent/soak_queue/s7479_canary_pad_a5.sh (PAD=16 FILL=0xA5, same 4 levels).
 Rules out: a live in-guest overrun of zero-slack rs_malloc blocks on L4/L7/L12 dd4 and L15 dd8 21:9 in 220 s holds.
+Verdict (gate wording): selects H-clean, refutes H-hidden and H-pad-perturbs for in-guest stores. Next discriminator: the FILL=0xA5 arm
+(s7479_canary_pad_a5) splits H-host-clean (0 tail hits) from H-host-overrun (a tail hit with no slack-store row, named by its alloc-bt).
