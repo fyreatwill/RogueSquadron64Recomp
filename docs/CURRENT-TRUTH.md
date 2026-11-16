@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7486 (2026-11-16).
+Compact operational handoff, as of Session 7487 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -219,7 +219,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EI CLOSED s7485 (6 levels). EK CLOSED s7486 (L4/L15). EJ CLOSED s7485 (retail-benign over-reads). EH CLOSED s7481 (0 guest UAF on L1/L4/L7/L10/L12/L15; the L7 hits are the s6202 retarget pool in free heap, item 1a, FIXED s7482). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EI CLOSED s7485 (6 levels). EK CLOSED s7487 (6 levels). EL CLOSED s7487 (L4/L15, levels soak queued). EM next: swl/swr stores. CLOSED s7486 (L4/L15). EJ CLOSED s7485 (retail-benign over-reads). EH CLOSED s7481 (0 guest UAF on L1/L4/L7/L10/L12/L15; the L7 hits are the s6202 retarget pool in free heap, item 1a, FIXED s7482). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
    - **ED s7475-s7476 MusyX voice-array overrun: FIXED s7476 (port bug):** the s4889 patch (tools/apply_s4889_first_dereg.py) let
      findAndZeroTableSlotMatching clobber $a1, so the scene voice count 17 became 1. The patch now preserves $a1/$v0/$v1 (ROGUESQ_S7476_A1FIX=0 = old).
      Retail oracle never allocates 1 voice; same-build A/B plus the 4-level flight canary soak are clean. Full text: PORTING-STATE s7475-s7477.
@@ -250,11 +250,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      a3=(a2+15)&0xFFF0, so the last row over-reads <=7 bytes (seen 4, 80B87F70-73) into pad texels past the tile width. decodeJpegScanToImage
      chroma upsampler taps +1 column / row past the last sample (1 byte, seen once per plane at L15 boot). Both are retail code paths, loads only,
      values reach pad texels / one 3/16 chroma tap; second line = s7484 levels soak: 4-8 slack-load pcs on every arm, all these pcs, 0 stores.
-   - **EK s7486 HOST reads of FREED rs_malloc blocks: CLOSED on L4/L15 (H-host-clean), levels soak queued (s7486_hostuaf_levels L1/L7/L10/L12):**
-     ROGUESQ_S7486_HOSTUAF=1 (upstream_compat.cpp rs64_s7486_hostread; recipe tools/s7486_hostuaf_recipe.zsh) tests every host read vs the s7475 bitmap:
-     sp_dma gfx/aud (s7094 hook), rdp_cmd range + LoadBlock/LoadTile/LoadTLUT source (dpc_bridge.cpp), ai_dma (librecomp ai.cpp). 220 s each, score=0:
-     host_F=0 host_Urec=0; L4 rdp_cmd 5 / gfx 32 records all U (fl=6 carve), L15 rdp_cmd 62 N (temp arena 0x80989000 torn down = EH re-carve class), 0 tex/ai.
-     Same-run controls: ctl PASS gfx+aud (canary slack read by DMA), host plant DETECTED in flight (L4 sp_dma_gfx 0.029 s, L15 rdp_tex 0.013 s).
+   - **EK s7486 HOST reads of FREED rs_malloc blocks: CLOSED on 6 levels (H-host-clean):** ROGUESQ_S7486_HOSTUAF=1 (upstream_compat.cpp
+     rs64_s7486_hostread; recipe tools/s7486_hostuaf_recipe.zsh): sp_dma gfx/aud, rdp_cmd + LoadBlock/Tile/TLUT source, ai_dma vs the s7475 bitmap.
+     L4/L15 (s7486) and L1 dd8 21:9 / L7 / L10 / L12 (soak s7486_hostuaf_levels, folded s7487): host_F=0 host_Urec=0, ctl PASS, host plant DETECTED in flight every arm.
+   - **EL s7487 guest UNALIGNED loads lwl/lwr from freed blocks: CLOSED on L4/L15 (H-lwl-clean), levels soak queued (s7487_lwlwatch_levels L1/L7/L10/L12):**
+     census 410 sites (207 lwl + 203 lwr, 0 ldl/ldr), all wrapped by tools/apply_s7487_lwlwatch.py (ROGUESQ_S7487_LWLWATCH=1 on the s7484 recipe; exact bytes
+     read: lwl [a,a|3], lwr [a&~3,a]; recipe tools/s7487_lwlwatch_recipe.zsh). L4: 20.9M execs / 246 sites, 150 sites read heap; L15: 40.9M / 236, 142 heap.
+     lwl_F=0 lwl_Urec=0, marked=1 (the control only). Control ROGUESQ_S7487_LWLCTL=150 (live block an lwl just read, recorded freed) DETECTED in flight by the
+     paired lwr both arms (0.000 / 0.008 s). H-lwl-none refuted (sites run and read heap). Next gap: swl/swr STORES (item EM).
    - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
      ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
      marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:

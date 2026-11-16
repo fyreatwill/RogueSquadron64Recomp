@@ -3820,7 +3820,7 @@ static int s7480_store(uint32_t pc, uint32_t a, int w, const char* fn) {
     const uint32_t blk = it->first; const S7480F f = it->second;
     if (a >= blk + f.n || a + (uint32_t)w <= blk) return 0;
     if (s7480_internal_fn(fn)) { ++s_s7480_internal[fn]; s7480_range(a < blk ? blk : a, a + (uint32_t)w, false); return 1; }
-    if (f.plant == 3) return 1;  /* s7486 host-read plant: a LIVE block, guest stores into it are expected */
+    if (f.plant == 3 || f.plant == 4) return 1;  /* s7486 host-read plant / s7487 EL control: a LIVE block, guest stores into it are expected */
     if (f.plant == 2) { if (s_s7484_plant == 1) { s_s7484_plant = 0; std::fprintf(stderr, "[s7484] plant STORE-FIRST blk=%08X pc=%08X fn=%s (re-plant)\n", blk, pc, fn ? fn : "?"); }
         s7480_range(blk, blk + f.n, false); s_s7480_freed.erase(it); return 1; }  /* s7484 load plant: a store came first, retry on another block */
     ++s_s7480_hits; const bool first = s_s7480_pcs[pc]++ == 0; volatile uint8_t* rr = g_recomp_rdram_for_wp_raw; const double now = s7325_now();
@@ -3851,6 +3851,15 @@ static int s7480_store(uint32_t pc, uint32_t a, int w, const char* fn) {
    freed (guest memory untouched); the game's next load of it MUST log `[s7484] plant DETECTED` (a store first = STORE-FIRST,
    re-plant after 10 s silence too, 20 tries). Measurement only. */
 static std::map<uint32_t, uint64_t> s_s7484_pcs, s_s7484_spcs;
+/* s7487 class EL: lwl/lwr (tools/apply_s7487_lwlwatch.py). g_rs64_s7487_cnt[idx] = executions per generated site; t_s7487_lwx = the
+   current s7484_load call came from an lwl/lwr site; plant 4 = EL control (a LIVE heap block an lwl/lwr just read, recorded as freed:
+   the next lwl/lwr read of it MUST log `[s7487] lwl-ctl DETECTED`). s_s7487_loc = class of each lwl/lwr pc's first freed-record hit. */
+extern "C" { int g_rs64_s7487_on = 0; unsigned int g_rs64_s7487_cnt[1024] = {0}; }
+static thread_local int t_s7487_lwx = 0;
+struct S7487S { uint32_t pc = 0; uint64_t samp = 0, heap = 0; uint32_t a0 = 0, ah = 0; std::string fn; };
+static std::map<int, S7487S> s_s7487_site;
+static uint64_t s_s7487_marked = 0, s_s7487_hits = 0, s_s7487_loc[5] = {0, 0, 0, 0, 0};  /* U F N Urec S */
+static int s_s7487_ctl = 0, s_s7487_ctries = 0; static double s_s7487_ctime = 0; static uint32_t s_s7487_cblk = 0;
 static uint64_t s_s7484_hits = 0, s_s7484_slack = 0, s_s7484_intl = 0, s_s7484_retired = 0, s_s7484_recs = 0, s_s7484_ctl = 0, s_s7484_p1 = 0;
 static uint64_t s_s7484_loc[5] = {0, 0, 0, 0, 0};  /* per record at its first load: U F N Urec S */
 static int s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
@@ -3861,6 +3870,9 @@ static int s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
     const uint32_t blk = it->first; S7480F& f = it->second; const double now = s7325_now();
     if (f.plant == 2) { if (s_s7484_plant == 1) { s_s7484_plant = 2; std::fprintf(stderr, "[s7484] plant DETECTED blk=%08X after %.3f s pc=%08X fn=%s a=%08X\n", blk, now - s_s7484_ptime, pc, fn ? fn : "?", a); }
         s7480_range(blk, blk + f.n, false); s_s7480_freed.erase(it); return 1; }
+    if (f.plant == 4) { if (!t_s7487_lwx) return 1;  /* s7487 EL control: live block, only an lwl/lwr read counts */
+        if (s_s7487_ctl == 1) { s_s7487_ctl = 2; std::fprintf(stderr, "[s7487] lwl-ctl DETECTED blk=%08X after %.3f s pc=%08X fn=%s a=%08X w=%d\n", blk, now - s_s7487_ctime, pc, fn ? fn : "?", a, w); }
+        s7480_range(blk, blk + f.n, false); s_s7480_freed.erase(it); return 1; }
     if (f.plant == 1) { ++s_s7484_p1; return 1; }
     if (f.plant == 3) return 1;  /* s7486 host-read plant: live block, guest loads expected */  /* s7480 store plant read before its first store: not a free block */
     ++s_s7484_hits; const bool first = s_s7484_pcs[pc]++ == 0; volatile uint8_t* rr = g_recomp_rdram_for_wp_raw;
@@ -3870,6 +3882,9 @@ static int s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
         if (lk == 'F') { const uint32_t e8 = s7472_rd(rr, 0x801163E8u); if (e8 >= lb && e8 < lb + ls && a >= e8 && a < lb + ls) lk2 = 'S'; }
         if (!f.lk) { f.lk = (lk == 'U' && s_s7475_live.count(lb)) ? 'R' : lk2; ++s_s7484_recs;
             ++s_s7484_loc[f.lk == 'U' ? 0 : f.lk == 'F' ? 1 : f.lk == 'R' ? 3 : f.lk == 'S' ? 4 : 2]; } }
+    if (t_s7487_lwx) { ++s_s7487_hits; if (first) { const char c7 = (lk == 'U' && s_s7475_live.count(lb)) ? 'R' : lk2;
+        ++s_s7487_loc[c7 == 'U' ? 0 : c7 == 'F' ? 1 : c7 == 'R' ? 3 : c7 == 'S' ? 4 : 2];
+        std::fprintf(stderr, "[s7487] lwl-hit pc=%08X fn=%s a=%08X w=%d blk=%08X loc=%c age=%.3f t=%.1f\n", pc, fn ? fn : "?", a, w, blk, c7, now - f.t, now - s_s7475_t0); } }
     if (first && s_s7484_pcs.size() <= 80)
         std::fprintf(stderr, "[s7484] uaf-load pc=%08X fn=%s a=%08X w=%d blk=%08X n=%X off=%X age=%.3f loc=%c rec=%c lblk=%08X lsz=%X lfl=%X arena=%08X lrec=%d free_arena=%08X hdr=%08X size=%08X val=%08X heads_free=%08X/%08X/%08X heads_now=%08X/%08X/%08X t=%.1f\n",
                      pc, fn ? fn : "?", a, w, blk, f.n, a - blk, now - f.t, lk2, f.lk ? f.lk : '?', lb, ls, lf, lar, (int)s_s7475_live.count(lb), f.far,
@@ -3987,6 +4002,12 @@ static void s7480_sum(double now) {
     if (g_rs64_s7484_on) std::fprintf(stderr, "[s7484] sum t=%.1f hits=%llu recs=%llu loc_U=%llu loc_F=%llu loc_N=%llu loc_Urec=%llu loc_S=%llu pcs=%zu slack=%llu slack_pcs=%zu internal=%llu p1=%llu retired=%llu ctl=%llu plant=%d tries=%d\n", now - s_s7475_t0,
         (unsigned long long)s_s7484_hits, (unsigned long long)s_s7484_recs, (unsigned long long)s_s7484_loc[0], (unsigned long long)s_s7484_loc[1], (unsigned long long)s_s7484_loc[2], (unsigned long long)s_s7484_loc[3], (unsigned long long)s_s7484_loc[4],
         s_s7484_pcs.size(), (unsigned long long)s_s7484_slack, s_s7484_spcs.size(), (unsigned long long)s_s7484_intl, (unsigned long long)s_s7484_p1, (unsigned long long)s_s7484_retired, (unsigned long long)s_s7484_ctl, s_s7484_plant, s_s7484_ptries);
+    if (g_rs64_s7487_on) { uint64_t ex = 0; int es = 0, hs = 0; uint64_t sm = 0, hp = 0;
+        for (int i = 0; i < 1024; ++i) if (g_rs64_s7487_cnt[i]) { ex += g_rs64_s7487_cnt[i]; ++es; }
+        for (auto& kv : s_s7487_site) { sm += kv.second.samp; hp += kv.second.heap; if (kv.second.heap) ++hs; }
+        std::fprintf(stderr, "[s7487] sum t=%.1f exec=%llu exec_sites=%d samples=%llu heap_samples=%llu heap_sites=%d marked=%llu hits=%llu lwl_U=%llu lwl_F=%llu lwl_N=%llu lwl_Urec=%llu lwl_S=%llu ctl=%d ctl_tries=%d\n", now - s_s7475_t0,
+            (unsigned long long)ex, es, (unsigned long long)sm, (unsigned long long)hp, hs, (unsigned long long)s_s7487_marked, (unsigned long long)s_s7487_hits,
+            (unsigned long long)s_s7487_loc[0], (unsigned long long)s_s7487_loc[1], (unsigned long long)s_s7487_loc[2], (unsigned long long)s_s7487_loc[3], (unsigned long long)s_s7487_loc[4], s_s7487_ctl, s_s7487_ctries); }
     { /* locator control: on the live main arena chain, a free block MUST classify F and a used one U (each logged once) */
       static int fok = 0, uok = 0; volatile uint8_t* r = g_recomp_rdram_for_wp_raw; const uint32_t h0 = r ? s7472_rd(r, 0x8010FF18u) : 0u;
       if (r && (!fok || !uok) && h0 >= 0x80000000u && h0 < rs64_ram_top) { uint32_t b = h0;
@@ -4024,7 +4045,8 @@ static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
     const double now = s7325_now();
     std::lock_guard<std::mutex> lk(s_s7475_mu);
     if (s_s7475_t0 == 0) { s_s7475_t0 = now; g_rs64_s7475_bm = (unsigned char*)std::calloc(0x1800000u >> 3, 1); if (g_rs64_s7475_bm) g_rs64_s7475_bm[(0x8011A890u - 0x80000000u) >> 3] |= (unsigned char)(1u << (0x8011A890u & 7u)); std::fprintf(stderr, "[s7475] canary armed top=%08X bitmap=%d\n", rs64_ram_top, g_rs64_s7475_bm != nullptr);
-        { const char* e = std::getenv("ROGUESQ_S7484_UAFLOAD"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7484_on = 1; std::fprintf(stderr, "[s7484] load watch armed\n"); } }
+        { const char* e = std::getenv("ROGUESQ_S7484_UAFLOAD"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7484_on = 1; std::fprintf(stderr, "[s7484] load watch armed\n");
+              const char* e7 = std::getenv("ROGUESQ_S7487_LWLWATCH"); if (e7 && e7[0] && e7[0] != '0') { g_rs64_s7487_on = 1; std::fprintf(stderr, "[s7487] lwl/lwr watch armed\n"); } } }
         { const char* e = std::getenv("ROGUESQ_S7486_HOSTUAF"); if (g_rs64_s7475_bm && e && e[0] && e[0] != '0' && s7480_on()) { g_rs64_s7486_on = 1; std::fprintf(stderr, "[s7486] host-read watch armed\n"); } } }
     if (ptr && ptr >= 0x80000010u && ptr < rs64_ram_top && req) {
         const uint32_t w0 = s7472_rd(r, ptr - 0x10u), sz = s7472_rd(r, ptr - 0x0Cu), fl = w0 >> 16;
@@ -4049,6 +4071,22 @@ static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
     }
     s7480_malloc(req, ptr, now);
     s7475_tick(r, now); }
+extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn);
+extern "C" int rs64_s7487_lwx(uint32_t pc, int idx, uint32_t a, int w, const char* fn, int marked) {
+    if (marked) { { std::lock_guard<std::mutex> lk(s_s7475_mu); ++s_s7487_marked; } t_s7487_lwx = 1; const int r = rs64_s7484_load(pc, a, w, fn); t_s7487_lwx = 0; return r; }
+    static const double ctl_s = [] { const char* e = std::getenv("ROGUESQ_S7487_LWLCTL"); if (!e || !*e || *e == '0') return -1.0; double v = std::atof(e); return v <= 1.0 ? 150.0 : v; }();
+    std::lock_guard<std::mutex> lk(s_s7475_mu); const double now = s7325_now();
+    S7487S& s = s_s7487_site[idx]; if (!s.samp) { s.pc = pc; s.a0 = a; s.fn = fn ? fn : "?"; } ++s.samp;
+    uint32_t blk = 0, req = 0; { auto it = s_s7475_live.upper_bound(a); if (it != s_s7475_live.begin()) { --it; if (a < it->first + it->second.req) { blk = it->first; req = it->second.req; } } }
+    if (blk) { if (!s.heap) { s.ah = a; std::fprintf(stderr, "[s7487] heap-site idx=%d pc=%08X fn=%s a=%08X blk=%08X req=%X t=%.1f\n", idx, pc, s.fn.c_str(), a, blk, req, now - s_s7475_t0); } ++s.heap; }
+    if (ctl_s >= 0) {
+        if (s_s7487_ctl == 1 && (now - s_s7487_ctime > 10.0 || !s_s7480_freed.count(s_s7487_cblk) || s_s7480_freed[s_s7487_cblk].plant != 4)) {
+            auto it = s_s7480_freed.find(s_s7487_cblk); if (it != s_s7480_freed.end() && it->second.plant == 4) { s7480_range(it->first, it->first + it->second.n, false); s_s7480_freed.erase(it); }
+            s_s7487_ctl = 0; std::fprintf(stderr, "[s7487] lwl-ctl TIMEOUT/LOST try=%d\n", s_s7487_ctries); }
+        if (s_s7487_ctl == 0 && blk && s_s7487_ctries < 60 && now - s_s7475_t0 >= ctl_s && !s_s7480_freed.count(blk)) {
+            ++s_s7487_ctries; s7480_add(blk, req, now, 4); s_s7487_ctl = 1; s_s7487_ctime = now; s_s7487_cblk = blk;
+            std::fprintf(stderr, "[s7487] lwl-ctl SET blk=%08X req=%X by pc=%08X fn=%s a=%08X try=%d t=%.1f\n", blk, req, pc, s.fn.c_str(), a, s_s7487_ctries, now - s_s7475_t0); } }
+    return 0; }
 extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu); return s7484_load(pc, a, w, fn); }

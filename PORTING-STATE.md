@@ -198516,3 +198516,30 @@ Not covered: RT64's own deferred reads (RDP_ASYNC), VI framebuffer scanout (rese
 Verdict: this selects H-host-clean and refutes H-host-uaf and H-host-stale-DL on L4/L15 (locator class at read time, both plants DETECTED),
 and closes class EK pending the levels soak. Next discriminator: the same per-kind locator class on L1/L7/L10/L12 in s7486_hostuaf_levels.
 Any F/Urec row there reopens EK and names the kind and the freeing caller.
+
+## Session 7487 (2026-11-16) — class EL lwl/lwr freed-block watch landed; L4/L15 0 freed-block unaligned reads over 61.8M executions, in-flight lwl-ctl plant DETECTED (H-lwl-clean); EK closed for 6 levels
+
+Fold: soak s7486_hostuaf_levels (L1 dd8 21:9, L7/L10/L12 dd4, HOLD=220) score=0: every arm alive, vi_stalls30s=0, host_F=0 host_Urec=0,
+ctl PASS (sp_dma_aud, sp_dma_gfx), host plant DETECTED in flight (L1/L7 rdp_tex, L10/L12 sp_dma_gfx). EK is CLOSED for 6 levels.
+
+Work unit (NEXT s7487, HYPOTHESIS-ID m3-unaligned-load-uaf): class EL, the unaligned loads that the s7484 EI wrapper skipped.
+Census of RecompiledFuncs: 207 lwl and 203 lwr sites, 0 ldl/ldr. Of these, 16 sit behind a `g_rs64_last_guest_pc` line and 8 sit inside s4307
+synth-read PATCH lines. tools/apply_s7487_lwlwatch.py wraps all 410 sites. It is idempotent per site, registered in fixup_game_funcs_vendored.py
+after apply_s7484_loadwatch.py, and was run on the current RecompiledFuncs, then built with cmake. Each wrapped site increments g_rs64_s7487_cnt[idx], then tests
+the exact bytes read (lwl [a, a|3], lwr [a&~3, a]) in the s7475 bitmap. A marked byte goes to the s7484 freed-record classifier with
+thread_local t_s7487_lwx set. Every 64th execution per site is sampled for the live-heap census. Host code is in src/main/upstream_compat.cpp
+(rs64_s7487_lwx, plant type 4, and a `[s7487] sum` line in s7480_sum). Control ROGUESQ_S7487_LWLCTL=<s> records a LIVE block that an lwl/lwr just
+read as freed. Only an lwl/lwr read can then detect it: other loads and stores into it are ignored, and guest memory is untouched.
+Run: tools/s7487_lwlwatch_recipe.zsh, which is the s7484 recipe plus LWLWATCH=1 and LWLCTL=150. Settings: LV="4:4 15:8", HOLD=220, owner recipe. Result: score=0.
+- L4 dd4 16:9: 20.9M executions (18.3M in flight) over 246 sites, 150 sites read live heap (256k samples), marked=1, lwl_F=0 lwl_Urec=0.
+  The control SET on blk 80163EB0 via buildOrientedFaceGeometry lwl 80012750 at t=150 was DETECTED 0.000 s later by its paired lwr 80012754 (in flight).
+- L15 dd8 21:9: 40.9M executions (37.0M in flight) over 236 sites, 142 heap sites, lwl_F=0 lwl_Urec=0. The control was DETECTED after 0.008 s by
+  multiEventTemplateNpcHandler pc 80070948 (in flight).
+- All s7484/s7480 controls also PASS (load watch-ctl, load plant, store plant, locator). load_F=0 and uaf_free=0. Both arms alive, vi_stalls30s=0.
+Biggest site holders: applyNamedEffectParameterDefaults 42, loadSkyHorizonHob 24, initializeRadar 20, initHudStruct 20, heapFreeListDequeue 16
+(allocator-internal, excluded by s7480_internal_fn).
+Verdict: this selects H-lwl-clean on L4/L15 and refutes H-lwl-uaf. H-lwl-none is also refuted: the sites execute in flight and read heap, so the zero is a measured zero.
+Levels soak queued: s7487_lwlwatch_levels (L1 dd8 21:9, L7/L10/L12 dd4).
+New gap found (class EM, next): swl/swr stores (405 sites, 404 carry the s5660 hook) go to rs64_s5660_ustore in main.cpp. That function never calls
+rs64_s7475_store, so the ED/EG/EH store watches have been blind to unaligned stores. It also gets only the aligned word address.
+Measurement only: no game value changed, default off (the gate is a single predicted-false branch).
