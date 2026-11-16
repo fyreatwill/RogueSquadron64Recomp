@@ -197290,5 +197290,9 @@ default arm [ustore-all] 0, 9.8 MB stderr, autopilot 48 lines, 0 crash; consumer
 Trap found: any ROGUESQ_LOG_* env switches on [storediag] (logged "reason=ROGUESQ_LOG_USTORE"), so the consumer arm stderr was
 109 MB, not a cost of this hook. Consumer controls with a LOG_* var measure the storediag blanket too.
 ORIGIN: not a mitigation; diagnostic census (s5660) left default-on after its investigation closed.
+Verdict: this selects H-trivial for cost (0.022 < 0.05 ms/f) and refutes H-clean for output (s5660 printed with no env;
+default arm 0 vs consumer 24 lines discriminates the latch). It closes the guest-hook trim campaign CM-CZ.
+Next discriminator: class DA, per-site GATED vs UNGATED read of the 10 periodic-summary fprintf sites, cross-checked by tag
+count in the default-arm stderr scratch/s7443/run.tlog (a tag present there with no env = UNGATED, second line of evidence).
 Rules out: any remaining default-on rs64 guest hook >= 0.01 ms/f doing diagnostic-only work. Campaign CM-CZ closed.
 Next: class DA, the 10 `(n & MASK) == 0|1 ... fprintf` periodic-summary sites in src/.
