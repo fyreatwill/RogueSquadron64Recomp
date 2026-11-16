@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7436 (2026-11-15).
+Compact operational handoff, as of Session 7437 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,8 +215,15 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CT, RT64 TMEM hashing (HYPOTHESIS-ID rt64-tmem-hash).** See scratch/agent/NEXT.md. Largest RT64
-   term in the s7434 split: TMEMHasher::hash + XXH3 0.57 ms/frame. H-needed vs H-redundant (same TMEM bytes rehashed per frame).
+1. **Next audit: class CU, remaining RT64 Gfx-thread terms (HYPOTHESIS-ID rt64-gfx-terms).** See scratch/agent/NEXT.md. One
+   ranked inclusive table of every RT64 frame on the Gfx thread (rs64LoadBlockRuns 0.32, decodeTriangles 0.28, processRDPLists
+   0.27 ms/frame in s7434), each checked against its prior closure. H-closed vs H-new (a term >= 0.3 ms/f with no prior lever).
+   CT (s7437) CLOSED H-known: tools/s7437_tmem_hash.py on scratch/s7435 (control +0.0345 vs 0.030 PASS): TMEMHasher::hash
+   0.0292 core = 0.49 ms/frame (body/CI4 scan 0.38, XXH3 0.11), 100% from TextureManager::uploadTexture on the Gfx thread; other
+   XXH users 0.11 (FramebufferManager::checkRAM 0.05). Second capture scratch/s7433: 0.50 + 0.13. Redundancy already measured:
+   s6942 TMEM-generation memo 0 hits in 2.29M flight calls (H-redundant refuted, ROGUESQ_G1E_TMEMMEMO opt-in), s6960 exact
+   provenance cache (ROGUESQ_G1E_PROVCACHE) 0 wrong in 10.9M hits but costs more than it saves; s6942 NEON CI4 scan default on.
+   No build: the planned step-2 counter would have re-measured s6942. No change landed.
    CS (s7436) CLOSED H-free: tools/s7436_alloc_cost.py on scratch/s7435 (8 x 12 s windows, owner recipe lvl1 flight; control
    DIAG_BUSY_GUEST_US=500 +0.0345 core vs 0.030, PASS): every allocator sample (libsystem_malloc frames, operator new/delete)
    together 0.0122 of one core = 0.20 ms/frame spread over all threads; RT64 Idle 0.0031 / RT64 Workload 0.0030 / Gfx 0.0028,

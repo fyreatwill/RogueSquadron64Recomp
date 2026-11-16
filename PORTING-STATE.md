@@ -197095,3 +197095,23 @@ Verdict H-free (< 0.02 core). Rules out: allocator churn and malloc lock content
 Next: class CT, RT64 TMEM hashing (TMEMHasher::hash + XXH3 0.57 ms/frame in s7434), H-needed vs H-redundant.
 Conclusion: selects H-free, refutes H-hot (no owned caller >= 0.01 core; largest 0.0035) and H-lock (0 lock samples under
 malloc), on two captures. Next discriminator: TMEMHasher repeat-hash fraction (H-needed vs H-redundant), class CT.
+
+## Session 7437 (2026-11-15) — class CT RT64 TMEM hashing closed H-known: TMEMHasher::hash 0.49 ms/frame (CI4 scan body 0.38, XXH3 0.11), all from TextureManager::uploadTexture on the Gfx thread; control +0.0345 vs 0.030 PASS, second capture 0.50; redundancy already refuted by s6942 (memo 0 hits / 2.29M) and s6960 (exact cache does not pay)
+
+What ran: new tools/s7437_tmem_hash.py (offline, no build/run; same /usr/bin/sample parser as s7436) over scratch/s7435
+(owner recipe FPS60 dd4 16:9 lvl1 flight, 8 x 12 s windows, planted ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled 30 s) and
+scratch/s7433 sample_{4,8} (--second-line). Running self samples with RT64::TMEMHasher::hash on the path = hasher (split self
+vs XXH leaf), each charged to the frame above the outermost hash frame; XXH leaves without a hasher frame = xxh_other.
+Results s7435: CONTROL ctrl delta 0.0345 core vs 0.030 expected, PASS. hasher 0.0260-0.0335 per window (busy-independent),
+mean 0.0292 core = 0.487 ms/frame: body 0.378 (the CI4 TLUT index scan / unswizzle lambda), XXH3 0.109. Thread: Gfx Thread
+only. Caller: RT64::TextureManager::uploadTexture 100%. xxh_other 0.106 ms/f: FramebufferManager::checkRAM 0.050, hashTracking
+0.028, State::updateScreen 0.027. Second line s7433: hasher 0.504 ms/f (body 0.413, XXH3 0.091), xxh_other 0.127, same callers.
+The tool's 0.3 ms/frame threshold said H-candidate (step 2: repeat-fraction counter), but reading lib/rt64/src/hle/
+rt64_rdp_tmem.cpp before building showed that counter already exists and was run: s6942 TMEM-generation memo 0 hits in 2.29M
+flight calls (every upload follows its own TMEM load; H-redundant refuted), s6959 provenance census + s6960 exact provenance
+cache 0 wrong in 10.9M hits but per-load tagging (27 ms/s) costs more than the hashing it saves (25.5 ms/s); s6942 already
+landed the NEON CI4 scan (default on, 748 -> 221 ns per 2 KB tile). Two lines: sampling profiler now, counters s6942/s6960.
+Verdict H-known; no build, no change. Rules out: TMEM re-hashing as an unexplored G1b term.
+Next: class CU, the remaining RT64 Gfx-thread terms in one ranked table against prior closures.
+Conclusion: selects H-known (cost real, 0.49 ms/frame on two captures, but its levers were already built and measured), refutes
+H-redundant (s6942 0 memo hits) and H-small (0.49 >= 0.3). Next discriminator: RT64 Gfx-thread inclusive term table, class CU.
