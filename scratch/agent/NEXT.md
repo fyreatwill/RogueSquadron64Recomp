@@ -1,15 +1,15 @@
-# NEXT (s7461)
+# NEXT (s7462)
 HYPOTHESIS-ID: soak-stall-measure-coverage
 
-s7460 landed ROGUESQ_PLANT_HOLD=<s>[,<dur>] (main.cpp rs64_diag_plant_hold_tick: guest thread sleeps <dur> s once inside
-osViSwapBuffer_recomp, host VI keeps ticking) and queued scratch/agent/soak_queue/s7460_plant_hold_ctl.sh.
+s7461 (class DQ): the m6 live stall poller was blind during the 130 s mission-verify sleep; it now polls through it
+(scratch/agent/m6_god_common.sh vtick; M6_VERIFY_BLIND=1 = old behaviour). Queued scratch/agent/soak_queue/s7461_m6_verify_window_ctl.sh
+(same recipe as the s7460 m6 arm: L4 FPS60 dd4 16:9, ROGUESQ_PLANT_HOLD=120,40).
 
-Step 1: fold s7460_plant_hold_ctl from SOAK-RESULTS.md / its log.
-  - CONTROL PASS (m6 fs_holds>=1 vi_stalls30s>=1; g1e vi_stalls30s>=1 max_vihold_ms>=35000) -> H-ok: close the stall-measure series
-    (class DN/DO/DP) in CURRENT-TRUTH item 1 and take the next ladder item (prefer an M3 idiom-class audit, ITERATION item 3).
-  - "VOID: plant never fired" -> rs64_store_diag_tick is not reached on this route; move the call to the top of osViSwapBuffer_recomp.
-  - m6 fs_holds=0 with begin line present -> H-m6-blind: fs (cumulative RDP fullsyncs) advances while the swapping thread sleeps, so a
-    second guest thread submits gfx; add a swap-count field to the [vi] row and score holds on it.
-  - g1e vi_stalls30s=0 with begin line present -> H-ring-blind: inspect ring_ph.txt origins over the 40 s window.
-  - Dead arm (alive_at_end=0) -> the 40 s block tripped a watchdog/timeout somewhere: grep the log for the killer and shorten dur to 35.
-Step 2: if the soak voids 5x on idle, run it by hand when HID idle allows; do not re-queue blind.
+Step 1: fold s7461_m6_verify_window_ctl from SOAK-RESULTS.md / its log.
+  - CONTROL PASS (alive_at_end=1 fs_holds>=1 vi_stalls30s>=1, keys.log has a "stall t=" line in ~150-200 s) -> H-ok: close the
+    stall-measure series DN/DO/DP/DQ in CURRENT-TRUTH item 1 (one line), and take the next ladder item: an M3 idiom-class audit
+    (ITERATION item 3) or the top open owner G5 item in CURRENT-TRUTH.
+  - vi_stalls30s=0 with plant begin present -> the mission gate moved later than 120 s (check "mission t=" in keys.log); move the
+    plant to mission_t+30 and re-queue once.
+  - "VOID: plant never fired" or dead arm -> grep run.log for the killer; do not re-queue blind.
+Step 2: if the soak voids 5x on idle, run it by hand when HID idle allows.

@@ -216,12 +216,16 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: fold s7460_plant_hold_ctl (class DP), then close the stall-measure series, see NEXT.md. One line each:
-   - **DP s7460 (plant landed, verdict pending):** ROGUESQ_PLANT_HOLD=<s>[,<dur>] (main.cpp rs64_diag_plant_hold_tick, beside
-     PLANT_EXIT; default dur 40) blocks the guest thread once inside osViSwapBuffer_recomp while host VI keeps ticking: the first
-     in-game held-frame positive control (before it only historical logs s61 run4 / s6993 ring, and SIGSTOP which also stops VI).
-     Queued scratch/agent/soak_queue/s7460_plant_hold_ctl.sh: m6 L4 (plant 120,40) expects fs_holds>=1 vi_stalls30s>=1; g1e dd4
-     (plant 100,40) expects vi_stalls30s>=1 max_vihold_ms>=35000. s7459_m6_fs_ctl folded: CONTROL PASS (A/L fs_holds=0, max 3 VIs).
+   Next: fold s7461_m6_verify_window_ctl (class DQ), then close the stall-measure series, see NEXT.md. One line each:
+   - **DQ s7461 H-window (m6):** s7460_plant_hold_ctl folded: g1e arm PASS (vi_stalls30s=1 max_vihold_ms=39916); m6 arm CONTROL
+     FAIL only on vi_stalls30s=0 while offline fs_holds=1 max_fs_hold_vi=2368 (~39.5 s). Cause is none of the s7460 hypotheses: the
+     m6 live poller started only AFTER the 130 s mission-verify sleep (gate t=72 s -> polling from ~202 s), and the plant ran
+     120-160 s, inside it. Any hold in mission t 0-130 s was unscored live (offline fs_holds still saw it). Fix: m6_god_common.sh
+     polls vtick through the verify window (M6_VERIFY_BLIND=1 = old sleep, mutation). tools/s7461_m6_verify_window_test.zsh 3/3
+     (held -> stall, advancing -> 0, mutation -> 0). Real-game re-control queued: soak_queue/s7461_m6_verify_window_ctl.sh.
+   - **DP s7460:** ROGUESQ_PLANT_HOLD=<s>[,<dur>] (main.cpp rs64_diag_plant_hold_tick, beside PLANT_EXIT; default dur 40) blocks the
+     guest thread once inside osViSwapBuffer_recomp while host VI keeps ticking: the in-game held-frame positive control. Fired in
+     both arms of s7460_plant_hold_ctl (begin/end lines); both scorers (m6 fs_holds, g1e ring) flagged it.
    - **DO s7459 H-blind (m6):** m6_god_common.sh (g1_level_coverage_common: 25 of the last ~60 recipes; s7263/s7272/s7277 cat its summary)
      scored vi_stalls30s by [vi] row COUNT, but rows print every 64 VIs whatever the game does: a held frame with VI ticking read 0.
      Now the newest row's fs= (M6_STALL_LINES=1 old) + summary fs_holds/max_fs_hold_vi (tools/agent/vilog_stalls.py, fs unchanged

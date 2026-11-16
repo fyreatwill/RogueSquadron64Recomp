@@ -197755,3 +197755,22 @@ in scratch/agent/m6 (60) rescored: 0 fs holds, so no past m6 verdict flips.
   ring shows a new origin during the block -> ring_stalls hold logic is wrong.
 - Not run in-session (host may be in owner use; the queue gates on idle). The plant itself is therefore unverified until the soak's
   begin-line check fires.
+
+## Session 7461 (2026-11-15) — class DQ closed H-window (m6): the s7460 plant-hold control's m6 arm read vi_stalls30s=0 because the live stall poller started only after the 130 s mission-verify sleep and the planted 40 s hold (120-160 s) fell inside it; poller now runs through the verify window; offline test 3/3 with mutation control; real-game re-control queued
+
+What ran: folded s7460_plant_hold_ctl (rc=1, CONTROL FAIL, 393 s). Both arms logged `[s7460-plant-hold] begin dur=40.0 s` / `end`.
+- g1e arm (dd4, plant 100,40): vi_stalls30s=1 max_vihold_ms=39916 max_gap_ms=148 -> the ring scorer catches a held origin with
+  presents still flowing. PASS.
+- m6 arm (L4 FPS60 dd4 16:9, plant 120,40): fs_holds=1 max_fs_hold_vi=2368 (~39.5 s at 60 Hz, offline vilog_stalls.py over the whole
+  log) but live vi_stalls30s=0 -> the only FAIL.
+Cause (read from keys.log + harness): mission gate at t=72 s, then `sleep 130` (died_in_verify check), and only then did the vprog
+poller start (~202 s). The plant window 120-160 s sat wholly inside the unpolled verify sleep. None of the s7460 NEXT hypotheses
+(H-m6-blind fs advancing, H-ring-blind) held: fs stayed frozen, as the offline scan shows. So every m6 summary so far was blind
+live to holds in mission t 0-130 s (offline fs_holds, added s7459, was not).
+Change: scratch/agent/m6_god_common.sh defines vtick() (the old per-5 s compare) before the verify window and runs it every 5 s
+through the 130 s wait (26 x 5 s, breaking on death); the hold loop calls the same vtick. M6_VERIFY_BLIND=1 restores the old sleep.
+Test: tools/s7461_m6_verify_window_test.zsh extracts the harness block verbatim, runs it with a SECONDS-advancing sleep shim on fake
+logs: held fs -> stall, advancing fs -> 0 (negative control), M6_VERIFY_BLIND=1 on held -> 0 (mutation control). 3/3.
+Rules out: H-m6-blind and H-ring-blind for the plant; the m6 fs probe itself is sound (offline saw the hold).
+Queued: scratch/agent/soak_queue/s7461_m6_verify_window_ctl.sh (same m6 recipe; must read fs_holds>=1 vi_stalls30s>=1).
+Regression: tools/s7459_m6_stall_test.zsh (incl. s7453_harness_death_test.zsh) 0 failures after the change.

@@ -85,19 +85,22 @@ for att in $(seq 1 ${MAXATT:-5}); do
   # s5394: the attract demo also shows 0x690400 and ends at ~167 s; a real mission must outlast it.
   # s7451: a game death after the mission gate is a datum, not a void route: s7450 arm P (planted _Exit at 110 s) died_in_verify 4/5,
   # was retried each time, and its summary read "allattempts-failed" with the fatal line unscored. Now terminal; DIED_RETRY=1 restores the retry.
-  sleep 130; kill -0 $p 2>/dev/null || { fail died_in_verify; [ "${DIED_RETRY:-0}" = 1 ] && continue
-    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) launches=$att mission_restarts=$(restarts $L) died_within_s=130 alive_at_end=0 vi_stalls30s=na crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
-  echo "att=$att mission_verified_130s" >> $K
   # s7459 class DO: [vi] update_screen rows print every 64 VIs whatever the game does, so a growing row COUNT proves only that the
   # VI thread ticks: a game holding one frame (s6993 boot freeze shape, fs stuck) scored 0 here. Progress = the newest row's fs=
   # (game frame-swap counter); no fs= in the log -> row count (old). M6_STALL_LINES=1 restores the row count (mutation control).
   vprog(){ local f; [ "${M6_STALL_LINES:-0}" = 1 ] || f=$(grep -a 'update_screen #' $L | tail -1 | grep -oE 'fs=[0-9]+'); [ -n "$f" ] && echo "$f" || grep -ac origin= $L; }
   last=$(vprog); lastt=$SECONDS; stalls=0
-  while kill -0 $p 2>/dev/null && [ $((SECONDS-mt)) -lt $HOLD ]; do
-    sleep 5; c=$(vprog)
-    [ "$c" != "$last" ] && { last=$c; lastt=$SECONDS; }
-    [ $((SECONDS-lastt)) -gt 30 ] && { stalls=$((stalls+1)); echo "stall t=$((SECONDS-t0))" >> $K; lastt=$SECONDS; }
-  done
+  vtick(){ local c; c=$(vprog); [ "$c" != "$last" ] && { last=$c; lastt=$SECONDS; }
+    [ $((SECONDS-lastt)) -gt 30 ] && { stalls=$((stalls+1)); echo "stall t=$((SECONDS-t0))" >> $K; lastt=$SECONDS; }; }
+  # s7461 class DQ: the poller used to start only after this 130 s verify sleep, so a held frame in mission t 0-130 s scored
+  # vi_stalls30s=0 (s7460 plant 120-160 s: live 0, offline fs_holds=1 max 2368 VIs). It now polls through the verify window too.
+  # M6_VERIFY_BLIND=1 restores the old blind sleep (mutation control).
+  if [ "${M6_VERIFY_BLIND:-0}" = 1 ]; then sleep 130
+  else for n in $(seq 1 26); do sleep 5; kill -0 $p 2>/dev/null || break; vtick; done; fi
+  kill -0 $p 2>/dev/null || { fail died_in_verify; [ "${DIED_RETRY:-0}" = 1 ] && continue
+    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) launches=$att mission_restarts=$(restarts $L) died_within_s=130 alive_at_end=0 vi_stalls30s=na crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
+  echo "att=$att mission_verified_130s" >> $K
+  while kill -0 $p 2>/dev/null && [ $((SECONDS-mt)) -lt $HOLD ]; do sleep 5; vtick; done
   alive=0; kill -0 $p 2>/dev/null && alive=1
   kill -9 $p 2>/dev/null; wait $p 2>/dev/null; xrc=$?; [ $alive = 1 ] && xrc=held  # s7450: a death's own exit status (non-signal exits print no CRASH)
   echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
