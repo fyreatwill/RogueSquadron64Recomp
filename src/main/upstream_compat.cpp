@@ -3747,7 +3747,8 @@ struct S7480F { uint32_t n; double t; int plant; void* bt[8]; int nbt; uint32_t 
 static std::map<uint32_t, S7480F> s_s7480_freed;
 static std::map<std::string, uint64_t> s_s7480_internal;
 static std::map<uint32_t, uint64_t> s_s7480_pcs;
-static uint64_t s_s7480_loc[4] = {0, 0, 0, 0};  /* non-plant hits located in U used (carve / torn-down arena parent) / F free (= real use-after-free) / N no chain (arena gone) / U whose block is a malloc-hook record (= trim defect) */
+extern "C" { volatile uint32_t g_rs64_s7481_task_out = 0; }  /* s7481: last gfx RSP task output_buff (KSEG0), set in main.cpp at the [lle task] site */
+static uint64_t s_s7480_loc[5] = {0, 0, 0, 0, 0};  /* [4] s7481 S = F hit whose covering free block is followed directly by the RSP task out block (data end + 0x10 hdr == out): the game's tail-of-free-span frame DL arena (s6202/s6205 coalesce carve), not a UAF */  /* non-plant hits located in U used (carve / torn-down arena parent) / F free (= real use-after-free) / N no chain (arena gone) / U whose block is a malloc-hook record (= trim defect) */
 static uint64_t s_s7480_frees = 0, s_s7480_trims = 0, s_s7480_hits = 0, s_s7480_skip = 0;
 static int s_s7480_plant = 0, s_s7480_ptries = 0; static double s_s7480_ptime = 0;
 static bool s7480_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7480_UAF"); const bool v = e && e[0] && e[0] != '0' && s7475_on();
@@ -3815,10 +3816,15 @@ static int s7480_store(uint32_t pc, uint32_t a, int w, const char* fn) {
     if (s7480_internal_fn(fn)) { ++s_s7480_internal[fn]; s7480_range(a < blk ? blk : a, a + (uint32_t)w, false); return 1; }
     ++s_s7480_hits; const bool first = s_s7480_pcs[pc]++ == 0; volatile uint8_t* rr = g_recomp_rdram_for_wp_raw; const double now = s7325_now();
     uint32_t lb = 0, ls = 0, lf = 0, lar = 0; const char lk = rr ? s7480_locate(rr, a, &lb, &ls, &lf, &lar) : '?';
-    if (!f.plant) { const int ki = lk == 'U' ? 0 : lk == 'F' ? 1 : 2; ++s_s7480_loc[ki]; if (lk == 'U' && s_s7475_live.count(lb)) ++s_s7480_loc[3]; }  /* plant excluded: F = still free in its chain (UAF), Urec = trim defect */
+    char lk2 = lk; if (lk == 'F' && g_rs64_s7481_task_out && lb + ls + 0x10u == g_rs64_s7481_task_out) lk2 = 'S';
+    if (lk == 'F' && rr) { const uint32_t e8 = s7472_rd(rr, 0x801163E8u);  /* s7481: frame pool ptr; the s6202 g1d retarget puts it at ec-t2 inside a FREE heap block */
+        if (e8 >= lb && e8 < lb + ls && a >= e8 && a < lb + ls) lk2 = 'S'; }
+    { static int s7481_nf = 0; if (!f.plant && lk2 == 'F' && s7481_nf < 60) { ++s7481_nf;  /* s7481: every F (non-S) hit, capped, with the span end vs task out */
+        std::fprintf(stderr, "[s7481] F-hit pc=%08X fn=%s a=%08X blk=%08X n=%X age=%.3f lblk=%08X lend=%08X task_out=%08X t=%.1f\n", pc, fn ? fn : "?", a, blk, f.n, now - f.t, lb, lb + ls + 0x10u, (unsigned)g_rs64_s7481_task_out, now - s_s7475_t0); } }
+    if (!f.plant) { const int ki = lk2 == 'S' ? 4 : lk == 'U' ? 0 : lk == 'F' ? 1 : 2; ++s_s7480_loc[ki]; if (lk == 'U' && s_s7475_live.count(lb)) ++s_s7480_loc[3]; }  /* plant excluded: F = still free in its chain (UAF), Urec = trim defect */
     if (first && s_s7480_pcs.size() <= 60)
         std::fprintf(stderr, "[s7480] uaf-store pc=%08X fn=%s a=%08X w=%d blk=%08X n=%X off=%X age=%.3f hdr=%08X size=%08X inmalloc=%d loc=%c lblk=%08X lsz=%X lfl=%X arena=%08X lrec=%d free_arena=%08X heads_free=%08X/%08X/%08X heads_now=%08X/%08X/%08X t=%.1f%s\n", pc, fn ? fn : "?", a, w, blk, f.n,
-                     a - blk, now - f.t, rr ? s7472_rd(rr, blk - 0x10u) : 0u, rr ? s7472_rd(rr, blk - 0x0Cu) : 0u, (int)g_s7480_inmalloc, lk, lb, ls, lf, lar, (int)s_s7475_live.count(lb), f.far, f.fh[0], f.fh[1], f.fh[2],
+                     a - blk, now - f.t, rr ? s7472_rd(rr, blk - 0x10u) : 0u, rr ? s7472_rd(rr, blk - 0x0Cu) : 0u, (int)g_s7480_inmalloc, lk2, lb, ls, lf, lar, (int)s_s7475_live.count(lb), f.far, f.fh[0], f.fh[1], f.fh[2],
                      rr ? s7472_rd(rr, 0x8010FEFCu) : 0u, rr ? s7472_rd(rr, 0x8010FF00u) : 0u, rr ? s7472_rd(rr, 0x8010FF18u) : 0u, now - s_s7475_t0, f.plant ? " PLANT" : "");
     if (first && s7478_bt_on() && s_s7480_pcs.size() <= 60) { void* sb[10]; const int ns = backtrace(sb, 10);
         std::fprintf(stderr, "[s7480] store-bt pc=%08X chain=%s\n", pc, s7478_chain(sb, ns).c_str());
@@ -3837,7 +3843,7 @@ static void s7480_sum(double now) {
             if (fl == 2u && !uok) { uok = 1; std::fprintf(stderr, "[s7480] locate-ctl used blk=%08X sz=%X got=%c %s\n", b + 0x10u, sz, k, k == 'U' ? "PASS" : "FAIL"); }
             if (fok && uok) break; b += 0x10u + sz; } } } std::string in; for (auto& kv : s_s7480_internal) { char b[96]; snprintf(b, sizeof b, " %s:%llu", kv.first.c_str(), (unsigned long long)kv.second); in += b; }
     uint64_t bytes = 0; for (auto& kv : s_s7480_freed) bytes += kv.second.n;
-    std::fprintf(stderr, "[s7480] sum t=%.1f loc_U=%llu loc_F=%llu loc_N=%llu loc_Urec=%llu top=%08X frees=%llu skip=%llu freed_recs=%zu freed_bytes=%llu trims=%llu hits=%llu pcs=%zu plant=%d tries=%d internal={%s }\n", now - s_s7475_t0, (unsigned long long)s_s7480_loc[0], (unsigned long long)s_s7480_loc[1], (unsigned long long)s_s7480_loc[2], (unsigned long long)s_s7480_loc[3], rs64_ram_top,
+    std::fprintf(stderr, "[s7480] sum t=%.1f loc_U=%llu loc_F=%llu loc_N=%llu loc_Urec=%llu loc_S=%llu task_out=%08X top=%08X frees=%llu skip=%llu freed_recs=%zu freed_bytes=%llu trims=%llu hits=%llu pcs=%zu plant=%d tries=%d internal={%s }\n", now - s_s7475_t0, (unsigned long long)s_s7480_loc[0], (unsigned long long)s_s7480_loc[1], (unsigned long long)s_s7480_loc[2], (unsigned long long)s_s7480_loc[3], (unsigned long long)s_s7480_loc[4], (unsigned)g_rs64_s7481_task_out, rs64_ram_top,
                  (unsigned long long)s_s7480_frees, (unsigned long long)s_s7480_skip, s_s7480_freed.size(), (unsigned long long)bytes, (unsigned long long)s_s7480_trims,
                  (unsigned long long)s_s7480_hits, s_s7480_pcs.size(), s_s7480_plant, s_s7480_ptries, in.c_str()); }
 }

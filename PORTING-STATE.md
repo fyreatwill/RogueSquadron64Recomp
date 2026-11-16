@@ -198337,3 +198337,37 @@ Verdict wording (s7480): the store-time chain location (F vs Urec vs U/N, with a
 H-recarve and refutes H-uaf and H-trim-defect on L4/L15. This closes class EG for host writers. Next discriminator: the same
 uaf_free / trim_defect counters across L1/L7/L10/L12 (s7480_uaf_flight). After that, a load-side twin of the hook for guest reads of
 freed blocks.
+
+## Session 7481 (2026-11-16) — class EH closed on all 6 flown levels: the L7 "real UAF" hits are the s6202 G1d retarget's frame pool, which sits inside a FREE main-heap block (port defect named, reservation fix queued)
+
+Fold: s7480_uaf_flight rc=1. L12/L1/L10: uaf_free=0, trim_defect=0, controls PASS (plant DETECTED in flight, locate_ctl=11,
+internal>0), all alive with 0 stalls. L7 dd4: uaf_free=151 (11 printed rows, all loc=F), trim_defect=0, controls PASS.
+L7 rows: stores at t=205-209 by DL/HUD builders (loadTextureTile, emitMaterialRenderStateDL, emitFaceDLCommands, drawSubtitleText,
+drawTextGlyphRect, appendRdpStateDl, beginFrameDLChunk, buildAndRegisterDefaultMaterial) into 0x8098AA..0x8099CE. The records were
+inflate scratch freed about 140 s earlier (free-bt: zcfree < inflateEnd / inflate_trees_free). Store-bt goes through menuOverlayInit /
+menuControllerInput: L7's mission hands over to a menu scene at about t=205 (1592-wide VI). The covering block is a 7.8 MB fl=1 FREE block
+in the main arena (head 0x80154690) whose data ends 0x10 below the RSP task output buffer out=0x809B8600 (the fl=6 carve, ec).
+In-session reruns, same recipe, L7 only, HOLD=220 (`env NAME=s7481_uaf_l7X LV="7:4" HOLD=220 zsh tools/s7480_uaf_recipe.zsh`):
+- l7: reproduced exactly (loc_F=151). A first S rule (free block end == task out) matched 0 because of an off-by-0x10 (lb is the data
+  start, so the match must be lb+ls+0x10).
+- l7b: with +0x10, S=43 and F=108. Rows print only once per PC, so a capped per-hit `[s7481] F-hit` log was added.
+- l7c: all 60 logged F hits are buildAndRegisterDefaultMaterial at t=205.4 in the same free block (lend=0x809B8600), with
+  task_out still 0x80967C00 (the previous scene's). They come right after `[g1d-retarget] ok base=0x8096D600 span_end=0x809B8600
+  t2=0x4B000 cur=0x80AE6E00 heap_end=0x80967BF0`.
+ORIGIN: the writer that puts live data in free heap memory is OUR s6202 G1d retarget (tools/apply_s6031_far.py
+apply_s6202_retarget). In the wide (>=1024) phase it moves the frame pool pointer *(0x801163E8) from cur to base=ec-t2, just below
+the game's fl=6 carve. Its safety check walks the heap and rejects only when a block HEADER lies above base. The last header
+(0x80967BF0) is below base, but that block is FREE and extends to the carve, so the 0x4B000 pool is unreserved heap. The guest's
+DL builders then legitimately write their per-frame pool there. No guest stale pointer is involved (not a guest UAF). The risk is
+real but latent: any rs_malloc split reaching the top of that free block during the wide phase would overlap the live DL pool.
+- l7d (final build): S also covers F hits inside [e8, end of the free block) when e8=*(0x801163E8) lies in that block. Result:
+  score=0, loc_F=0, loc_S=151, loc_U=454, loc_N=572, trim_defect=0. Controls in the same run: plant DETECTED in flight, locate_ctl
+  F/U PASS, internal=25463. Alive, 0 stalls.
+Two lines of evidence: (1) the [g1d-retarget] ok log gives the span [0x8096D600, 0x809B8600), which contains every L7 hit (all 11
+rows and all 60 F-hit rows); (2) the pool-pointer classifier moves all 151 hits, and the task-out classifier independently moves
+43 of them.
+Verdict: class EH (guest stores into freed blocks) CLOSED for L1/L4/L7/L10/L12/L15, with 0 guest use-after-free stores. H-uaf
+refuted. H-recarve (s7480) and the new H-retarget-unreserved selected. Code: src/main/upstream_compat.cpp s7481 S class + F-hit
+log, main.cpp g_rs64_s7481_task_out, recipe prints frame_span_S=. Rules out: a guest free-then-write bug on these levels.
+Next: reserve the retarget span in the heap (or reject when base falls inside a free block's extent), plus a collision detector
+(rs_malloc return overlapping [base, ec) while the retarget is active).

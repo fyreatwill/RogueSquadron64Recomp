@@ -7855,6 +7855,7 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     poke(0xFC0 + 0x34, (uint32_t)task->t.data_size);
     poke(0xFC0 + 0x38, (uint32_t)task->t.yield_data_ptr);
     poke(0xFC0 + 0x3C, (uint32_t)task->t.yield_data_size);
+    { extern volatile uint32_t g_rs64_s7481_task_out; g_rs64_s7481_task_out = (uint32_t)task->t.output_buff | 0x80000000u; } // s7481 EH frame-span class
     { extern volatile uint32_t g_rs64_g1cf_tasks, g_rs64_g1cf_dsize; ++g_rs64_g1cf_tasks; g_rs64_g1cf_dsize += (uint32_t)task->t.data_size; } // s6070 g1cf
     rs64_diag_fprintf(stderr, "[lle task] flags=0x%X yield_ptr=0x%08X yield_size=0x%X data=0x%08X dsize=0x%X out=0x%08X\n",
             (uint32_t)task->t.flags, (uint32_t)task->t.yield_data_ptr,

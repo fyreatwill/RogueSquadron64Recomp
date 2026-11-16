@@ -219,7 +219,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EH s7480 freed-block stores: 0 real UAF on L4/L15 (L1/L7/L10/L12 soak queued). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EH CLOSED s7481 (0 guest UAF on L1/L4/L7/L10/L12/L15; the L7 hits are the s6202 retarget pool in free heap, item 1a). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
    - **ED s7475-s7476 MusyX voice-array overrun: ROOT CAUSE FIXED (s7476, port bug; two lines: retail oracle + same-build A/B):**
      s7475 instrument (ROGUESQ_S7475_CANARY=1 slack fill/bitmap + tools/apply_s7475_slackwatch.py store watch, STORE_DIAG=1) saw the
      first-scene reapplyAudioConfig allocate a 1-voice array (0x801496F8, stride 0x88) while voice[1] stayed live (musyxSetVoicePitchBend
@@ -239,7 +239,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      callee entry live-in at the next call), minus the patch's own restores. Result: 0 BUG, 33 SAFE, 10 REPLACE (the patch stands in
      for the site's own jal: ABI already lets it clobber), 1 INTENT (s6904 fog deliberately rewrites $f0/$f4). Controls: the pre-s7476
      s4889 text flags r5 and the fixed text passes; synthetic pos/neg pair flags r3,r5 / nothing. s4889 was the only live clobber.
-   - **EH s7480 guest stores into FREED rs_malloc blocks (use-after-free writes): H-recarve, 0 real UAF (L4 dd4, L15 dd8 21:9):**
+   - **1a. s6202 G1d retarget pool sits in UNRESERVED heap (s7481, port defect, latent; fix NEXT):** in the wide phase
+     (menus/title at 1592 VI) apply_s6202_retarget (tools/apply_s6031_far.py) moves the frame pool *(0x801163E8) to base=ec-t2
+     (L7: 0x8096D600..0x809B8600, t2=0x4B000) below the fl=6 carve. Its check rejects only when a heap block HEADER is above base,
+     but the last header (0x80967BF0) is a FREE block that extends to the carve, so DL builders write the live pool into memory
+     the allocator can hand out. Two lines: the [g1d-retarget] ok span contains all 151 L7 hits, and the s7481 pool-pointer
+     classifier (ROGUESQ_S7480_UAF loc_S) moves all of them. Any rs_malloc split reaching the top of that block during the wide
+     phase would overlap the live pool. Fix: reserve the span (split the free block / mark it used) or reject on free-block extent.
+   - **EH s7480-s7481 guest stores into FREED rs_malloc blocks (use-after-free writes): CLOSED, 0 real UAF (L1/L4/L7/L10/L12/L15; L7's F hits = item 1a pool, s7481 loc_S):**
      ROGUESQ_S7480_UAF=1 (upstream_compat.cpp s7480_*, on the s7475 bitmap + STORE_DIAG hook; recipe tools/s7480_uaf_recipe.zsh): rs_free
      marks [ptr, ptr+size), rs_malloc exit trims overlapping records; each hit is located in the guest's own 3 arena chains AT STORE TIME:
      F = block still free (real UAF), Urec = inside an rs_malloc-recorded block (trim defect), U/N = the arena it was freed into is gone.
