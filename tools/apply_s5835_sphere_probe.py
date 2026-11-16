@@ -185,11 +185,16 @@ def apply(text, name=None):
         i = text.find(FN); a = "    transformObjectColliderCenter(rdram, ctx);\n        goto after_0;"
         j = text.find(a, i)
         if j > 0: text = text[:j] + "    rs5839_obj = (uint32_t)ctx->r4; /* PATCH: s5839 */\n" + text[j:]; n += 1
+    # s7441: the probe ran on every sphere test at the owner recipe (224 profiler samples of fprintf on the game thread,
+    # s7440 capture); gate it on ROGUESQ_LOG_HITS / ROGUESQ_TELE_BOLT (the only guest write) / ROGUESQ_G1E_TRIM=0 (old path).
+    U_OLD = "    rs5835_probe(rdram, ctx); /* %s */\n" % T
+    if U_OLD in text and "PATCH: s7441 gate" not in text:
+        text = text.replace(U_OLD, ("    { static int rs7441_on = -1; if (rs7441_on < 0) { const char *h = getenv(\"ROGUESQ_LOG_HITS\"), *t = getenv(\"ROGUESQ_TELE_BOLT\"), *g = getenv(\"ROGUESQ_G1E_TRIM\"); rs7441_on = (h && h[0] == \'1\') || (t && t[0] == \'1\') || (g && g[0] == \'0\'); } if (rs7441_on) rs5835_probe(rdram, ctx); } /* " + T + " */ /* PATCH: s7441 gate */\n"), 1); n += 1
     if n and T in text: return text, n
     if T in text: return text, n
     i = text.find(FN); j = text.find(ANC, i)
     if j < 0: return text, n
-    text = text[:j] + "    after_0:\n    rs5835_probe(rdram, ctx); /* %s */\n    // 0x8006AE68: mfc1        $t0, $f20\n" % T + text[j+len(ANC):]
+    text = text[:j] + "    after_0:\n    { static int rs7441_on = -1; if (rs7441_on < 0) { const char *h = getenv(\"ROGUESQ_LOG_HITS\"), *t = getenv(\"ROGUESQ_TELE_BOLT\"), *g = getenv(\"ROGUESQ_G1E_TRIM\"); rs7441_on = (h && h[0] == \'1\') || (t && t[0] == \'1\') || (g && g[0] == \'0\'); } if (rs7441_on) rs5835_probe(rdram, ctx); } /* %s */ /* PATCH: s7441 gate */\n    // 0x8006AE68: mfc1        $t0, $f20\n" % T + text[j+len(ANC):]
     i = text.find(FN)
     return text[:i] + H + text[i:], n + 1
 if __name__ == "__main__":

@@ -3022,12 +3022,14 @@ extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uin
 
 extern "C" void rs64_e9prov_frame_pop(uint32_t slot, uint32_t saved_target, uint32_t saved_pc) {
     if (dlwalk_on()) dlw_event(3, slot, saved_target & 0x7FFFFFu, saved_pc & 0x7FFFFFu);
+    if (!log_e9_provenance()) return;  // s7441: bookkeeping below feeds only the provenance report
     rs64_e9prov_frame_event(2, slot, saved_target, saved_pc);
     g_e9prov.pending_pop_slot = slot;
     g_e9prov.pending_pop_pc = saved_pc;
 }
 
 extern "C" void rs64_e9prov_frame_resume(uint32_t slot, uint32_t resumed_pc) {
+    if (!log_e9_provenance()) return;  // s7441: map find + 2 erases per DL return fed only the provenance report
     rs64_e9prov_frame_event(3, slot, 0, resumed_pc);
     if (slot == 0) ++g_e9prov.frame_zero_resume;
     if (g_e9prov.pending_pop_slot != slot || g_e9prov.pending_pop_pc != resumed_pc) ++g_e9prov.frame_resume_mismatch;

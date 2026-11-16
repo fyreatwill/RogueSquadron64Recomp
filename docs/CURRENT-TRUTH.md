@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7439 (2026-11-15).
+Compact operational handoff, as of Session 7441 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,10 +215,23 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CX, per-draw rs64 hooks outside the interpreter/RDP/GBI files (HYPOTHESIS-ID rt64-perdraw-diag).**
-   See scratch/agent/NEXT.md: enumerate default-on rs64 calls in lib/rt64/src/render/rt64_framebuffer_renderer.cpp,
-   hle/rt64_state.cpp, hle/rt64_framebuffer*.cpp, hle/rt64_present_queue.cpp, rdp_tmem.cpp; split rs64SkipDraw (0.012 ms/f, per tri/
-   rect) into an inline env latch + slow path in the same build. Expect H-small (close) unless a term >= 0.05 ms/f shows.
+1. **Next audit: class CY, ungated guest-side diag probes from the closed aim/hit thread (HYPOTHESIS-ID guest-probe-gates).**
+   See scratch/agent/NEXT.md: enumerate every tools/apply_s5[0-9]*.py / apply_s6*.py patch whose inserted call site runs
+   without an env latch (s5835 was one: its docstring said "under ROGUESQ_LOG_HITS" but the call was unconditional), rank by
+   tools/s7441_rs64_census.py + guest-function inclusive samples on scratch/s7441, gate the UNGATED-DIAG ones at the call site.
+   CX (s7441) CLOSED H-hidden, three changes. Census tool tools/s7441_rs64_census.py (every rs64*-named frame, all threads,
+   self/incl ms/f, defining file) on scratch/s7440: NO rs64 frame >= 0.003 ms/f in render/framebuffer_renderer, hle/state,
+   framebuffer*, present_queue, rdp_tmem, workload_queue (H-small for the named files). Found elsewhere: (1) the s5835 sphere
+   probe (tools/apply_s5835_sphere_probe.py, intersectSegmentWithObjectSphere, every guest sphere test) ran at the owner
+   recipe and printed [s5901] per bolt position up to 60000 lines; call site now latched on ROGUESQ_LOG_HITS / TELE_BOLT (its only
+   guest write) / G1E_TRIM=0. Guest inclusive 0.096 -> 0.005 ms/f (intersect) and 0.098 -> 0.007 (findSegmentObjectSphereHit),
+   fprintf samples under it 224 -> 0; second line: same-recipe stderr 36.9 MB (s7439, [s5901] 60000) -> 16.4 MB ([s5901] 0).
+   (2) rs64_e9prov_frame_pop/resume (dpc_bridge.cpp, per DL return) did map find + 2 erases ungated; now return unless
+   ROGUESQ_LOG_E9_PROVENANCE (dlwalk event kept). (3) rs64SkipDraw -> load-time latch + slow path. Capture scratch/s7441 control
+   +0.0352 vs 0.030 PASS, guest probe verdict H-free 0.074 (control 0.63), 0 crash. Consumer control (LOG_HITS=1 +
+   LOG_E9_PROVENANCE=1, 150 s): [s5901] 21212, [s5841] 146, [sph39] 158, [e9-prov] push=pop=resume=160 mis 0, 0 crash.
+   Left in owner-recipe stderr (16.4 MB / 4 min, file sink, no cap): [s2020-svc] 2.1 MB, [vi-mode-table], [dpc-fwd],
+   [osViSetMode], [s3290-stall] ~1.8 MB each: routed via rs64_diag_fprintf, closed s7431/s7432 (terminal cap, 0.3% core).
    CW (s7440) CLOSED H-small, one change: rs64_note_image_word was an out-of-line call per RDP command that returned unless op
    FF/FE; the op test is now at the rt64_interpreter.cpp call site (same ring; consumer = the default-on [ost-wb] wild-width
    freelist log in rt64_state.cpp, so the ring stays). rs64_floor_rect call (rt64_rdp.cpp, per rect) now skips its argument
@@ -235,14 +248,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
    / mutex / __hash_table / getter row gone from --under; Gfx thread 8.71 -> 8.00 ms/f (cross-run, single-source for the total).
    0 crash over the ~233 s run. Other hot loops (drawTris, loadBlock, loadTLUT, fullSync, pairTiles) carry <= 0.02 ms/f of rs64
    hooks (H-spread refuted). Logged ord/task read 0 in FIX_ZERO_SHADE lines unless SHADE_DIAG=1 (only behaviour change, log-only).
-   CU (s7438) CLOSED H-closed: tools/s7438_rt64_terms.py on scratch/s7435 (control +0.0345 vs 0.030 PASS; second capture
-   scratch/s7433 same ranking within 0.03): RT64 self terms >= 0.2 ms/f = TMEMHasher::hash 0.49 (closed s7437/s6961),
-   decodeTriangles 0.37 (--under split: upstream setup self 0.27 + our per-tri diag hooks ~0.10: floor_texel 0.028,
-   floor_note 0.018, mutex/hash/vector of rs64_shade_ordinal ~0.045, getters 0.004), rs64LoadBlockRuns 0.30 (our s6957 fast
-   path, memory traffic), processRDPLists 0.28 (interpreter dispatch; diag call-site gates already landed s7068), submitRasterScene
-   0.24 Gfx + 0.24 Workload (command recording, s6961 13%), RT64 Idle idleThreadLoop 0.30 (upstream deliberate GPU
-   keep-alive dispatch, off the critical path). Inclusive: processRDPLists 3.26, fullSync 1.79, pairTiles 0.97. Gfx thread
-   8.7 ms/frame of 16.7. No term >= 0.3 without a prior lever; no build, no change. The ~0.10 ms/f diag tax seeds class CV.
+   CU (s7438) CLOSED H-closed (RT64 self terms all have prior closures; full text PORTING-STATE s7438).
    CT (s7437) CLOSED H-known: tools/s7437_tmem_hash.py on scratch/s7435 (control +0.0345 vs 0.030 PASS): TMEMHasher::hash
    0.0292 core = 0.49 ms/frame (body/CI4 scan 0.38, XXH3 0.11), 100% from TextureManager::uploadTexture on the Gfx thread; other
    XXH users 0.11 (FramebufferManager::checkRAM 0.05). Second capture scratch/s7433: 0.50 + 0.13. Redundancy already measured:

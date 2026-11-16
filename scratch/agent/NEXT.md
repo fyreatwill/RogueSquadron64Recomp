@@ -1,14 +1,19 @@
-# NEXT (s7441)
-HYPOTHESIS-ID: rt64-perdraw-diag
+# NEXT (s7442)
+HYPOTHESIS-ID: guest-probe-gates
 
-Class CX (CURRENT-TRUTH Next steps item 1). One build, one measuring run.
-Step 1 (offline): grep default-on rs64_* / getenv-latched calls in lib/rt64/src/render/rt64_framebuffer_renderer.cpp,
-hle/rt64_state.cpp, hle/rt64_framebuffer.cpp, hle/rt64_framebuffer_manager.cpp, hle/rt64_present_queue.cpp,
-hle/rt64_rdp_tmem.cpp, hle/rt64_workload_queue.cpp. Classify per call frequency (per draw call / per texture / per frame)
-as GATED / UNGATED-NEEDED / UNGATED-DIAG (read every consumer).
-Step 2 (change, same build): rs64SkipDraw (rt64_rdp.cpp) -> inline static env latch + slow path; any UNGATED-DIAG per-draw
-hook found in step 1 gets a call-site latch (ROGUESQ_G1E_TRIM=0 = old path).
-Measure: env S7431_ARM=CX zsh tools/s7433_probe_cost.sh; then the top-of-stack python pass used in s7440 (PORTING-STATE)
-against scratch/s7440; copy samples to scratch/s7441. Positive control = the probe script's DIAG_BUSY toggle (must PASS).
-Outcomes: H-small (all < 0.03 ms/f -> close the diag-cost family for lib/rt64), H-hidden (a hook >= 0.05 ms/f -> gate it,
-show its samples drop), H-needed (feeds a default-on fix -> keep, document). lib/rt64 edit => ./submodule-patches/export.sh.
+Class CY (CURRENT-TRUTH Next steps item 1). s7441 found the s5835 aim-thread probe running ungated on every guest sphere
+test (0.096 ms/f + 20 MB stderr per run). Its siblings may share the defect.
+Step 1 (offline, one pass): for every tools/apply_s5*.py and tools/apply_s6*.py that inserts code into RecompiledFuncs,
+find the inserted call site in /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c (grep its PATCH tag)
+and classify: GATED (env latch before any work), GATED-INSIDE (call is out-of-line but returns at once), UNGATED-DIAG (work or
+prints with no env), UNGATED-NEEDED (behaviour: guard/fix, keep). Write the table with a small script
+(tools/s7442_probe_gate_census.py) so it re-runs.
+Step 2 (same build): gate every UNGATED-DIAG site at the call site (=ROGUESQ_G1E_TRIM=0 restores), via the apply script's
+idempotent upgrade step like s7441 (the fixup imports apply()). Rebuild with
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8.
+Measure: env S7431_ARM=CY zsh tools/s7433_probe_cost.sh; python3 tools/s7438_rt64_terms.py scratch/s7442 (CONTROL PASS);
+python3 tools/s7441_rs64_census.py scratch/s7442; guest-function inclusive for each gated site vs scratch/s7441 (python pass in
+PORTING-STATE s7441); stderr tag ranking of run.tlog vs scratch/s7441/run.tlog. Consumer control: one 150 s
+tools/s7431_stderr_volume.sh arm with every gated probe's env armed; each must print.
+Outcomes: H-clean (no UNGATED-DIAG site -> close CY), H-hidden (sites found, gated, samples/stderr drop), H-needed (a site
+feeds a default-on fix -> document and keep).

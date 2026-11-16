@@ -197200,3 +197200,43 @@ Rules out: any per-command / per-rect rs64 hook in the interpreter/RDP files as 
 Conclusion: selects H-small (with the free call-site fix), refutes H-hidden; H-needed holds only for the image-word ring.
 Next discriminator: class CX, per-draw rs64 hooks in render/ framebuffer/ state/ present files (not yet enumerated) + inline
 rs64SkipDraw latch.
+
+## Session 7441 (2026-11-15) — class CX closed H-hidden: rs64 census finds nothing in the RT64 render/fb/present files, but the s5835 sphere probe ran ungated on every guest sphere test (0.096 -> 0.005 ms/f, stderr 36.9 -> 16.4 MB per run); e9prov pop/resume and rs64SkipDraw latched
+
+HYPOTHESIS-ID: rt64-perdraw-diag (closed).
+Step 1 (offline census, new tool tools/s7441_rs64_census.py): every rs64*-named frame on every thread of the s7440
+/usr/bin/sample capture, self + inclusive ms/frame, mapped to its defining file. No rs64 frame >= 0.003 ms/f is defined in
+render/rt64_framebuffer_renderer.cpp, hle/rt64_state.cpp, hle/rt64_framebuffer*.cpp, hle/rt64_present_queue.cpp,
+hle/rt64_rdp_tmem.cpp or hle/rt64_workload_queue.cpp (their hooks run per fb op / per present, not per draw) -> H-small for
+the named file set. Caveat: hooks inlined into an RT64 caller are invisible to a symbol census (charged to the caller's self).
+The census instead surfaced terms outside the named files:
+- rs64_diag_fprintf parents: intersectSegmentWithObjectSphere 224 samples on [Game] MAIN. Writer: tools/apply_s5835_sphere_probe.py
+  (s5835-s5907 aim/hit thread, CLOSED as harness work). Docstring says "under ROGUESQ_LOG_HITS=1" but the inserted call
+  `rs5835_probe(rdram, ctx)` after transformObjectColliderCenter was unconditional (siblings s5831/s5832/s5834/s5838 do gate on
+  LOG_HITS). It reads ~40 guest words, scans 256-entry tables, calls clock_gettime, and printed [s5901] per distinct bolt
+  position up to its 60000-line cap, plus [s5841]/[sph39]/[fn41] every 4096 tests. Value not legitimate at the owner recipe
+  (pure diagnostics); its only guest write is the ROGUESQ_TELE_BOLT forced-hit lever.
+  FIX: call site wrapped in a function-static latch: run iff ROGUESQ_LOG_HITS=1 or ROGUESQ_TELE_BOLT=1 or ROGUESQ_G1E_TRIM=0
+  (old path). Idempotent upgrade step in the apply script (re-run = 0 edits), carried by the vendored fixup import.
+- rs64_e9prov_frame_pop / _resume (src/rsp/dpc_bridge.cpp, called by the generated ucode per DL push/return): the event was
+  gated but the bookkeeping after it (pending slot stores; resume = unordered_map find + 2 erases + counters) ran always; only
+  the [e9-prov] report reads it. Now both return unless ROGUESQ_LOG_E9_PROVENANCE (the dlwalk event in pop is kept before it).
+- rs64SkipDraw (rt64_rdp.cpp, per tri/rect/fill) -> inline wrapper over a load-time g_rs64SkipDrawArmed latch; the old body
+  is rs64SkipDrawSlow, unchanged. submodule-patches/rt64.patch refreshed.
+Measurement (env S7431_ARM=CX zsh tools/s7433_probe_cost.sh; samples + run.tlog in scratch/s7441):
+tools/s7438_rt64_terms.py CONTROL +0.0352 core vs 0.030 PASS; s7433 guest probe verdict H-free 0.074 ms/f (control 0.626).
+Guest inclusive (cross-run, same recipe): intersectSegmentWithObjectSphere 0.096 -> 0.005 ms/f, findSegmentObjectSphereHit
+0.098 -> 0.007; fprintf samples under it 224 -> 0. rs64_e9prov_frame_event/pop/resume 0.011/0.004/0.004 -> < 0.003 (gone from
+census), rs64SkipDraw 0.008 -> gone. Second line (stderr, same recipe): s7439 run.tlog 36.9 MB with [s5901] 60000 lines (cap)
+-> s7441 16.4 MB with [s5901] 0. 0 crash.
+Consumer positive control, same session, same build (env S7431_ARM=CXA zsh tools/s7431_stderr_volume.sh 150 ROGUESQ_LOG_HITS=1
+ROGUESQ_LOG_E9_PROVENANCE=1): [s5901] 21212, [s5841] 146, [sph39] 158, [fn41] 145, [ctx41] 24; [e9-prov] 1024 lines,
+frame=push:160,pop:160,resume:160, mis:0; 0 crash. The gates pass their consumers.
+ORIGIN: the s5835 probe call site was written ungated in s5835 (aim thread) and never revisited when the thread closed; the
+e9prov bookkeeping was written ungated in s694-s695 (provenance audit).
+Rules out: any default-on rs64 frame >= 0.003 ms/f in the RT64 render/fb/present/tmem/workload files.
+Remaining owner-recipe stderr (16.4 MB / 4 min to a file): [s2020-svc] 2.1 MB, [vi-mode-table] 2.0, [dpc-fwd] 2.0,
+[osViSetMode] 1.8, [s3290-stall] 1.8, [lle 1.5: all via rs64_diag_fprintf, closed s7431/s7432 (terminal cap; 0.3% core).
+Conclusion: selects H-hidden (a hook >= 0.05 ms/f, gated, samples drop), refutes H-small for the class as a whole; H-needed
+holds only for TELE_BOLT (kept under its own env).
+Next: class CY, the other apply_s5*/s6* guest-probe patches whose call sites may also be ungated.
