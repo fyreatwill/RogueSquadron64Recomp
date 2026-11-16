@@ -6492,7 +6492,11 @@ uint32_t g_rsp_last_chunk_len = 0;
 // base 0x80099FE0 — arrives via ucode_data DMA'd over DMEM[0xFD0], the outer
 // OSTask always says 0x80024A10) can be recompiled offline. Written into the
 // build dir (cwd).
+// s7430 class CM: was default-on (512 KB per distinct ucode into the exe dir on every run, nothing reads it back);
+// now opt-in, ROGUESQ_DUMP_UCODE_BIN=1.
 static void rs64_dump_ucode(uint8_t* rdram, uint32_t phys) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_DUMP_UCODE_BIN"); return e && *e && *e != '0'; }();
+    if (!on) return;
     static std::vector<uint32_t> s_dumped;
     const uint32_t up = phys & 0x00FFFFF8;
     if (up == 0 || up >= 0x800000) return;

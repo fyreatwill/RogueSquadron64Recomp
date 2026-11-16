@@ -215,9 +215,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CM, unbounded default-on file growth (HYPOTHESIS-ID default-file-growth).** Which files does an owner-recipe
-   run (no logging env) create or append in build/ (or the exe dir) each run, which grow without bound across runs, and is
-   any of them written on the hot path? scratch/agent/NEXT.md.
+1. **Next audit: class CN, default-on stderr volume (HYPOTHESIS-ID default-stderr-volume).** A no-logging-env owner run
+   writes ~1.5 MB of stderr per 40 s of boot (s7430 R1: [s3290-stall] 328 KB, [s4234-ENTRY] 257 KB, [lle 235 KB, ...).
+   Which default-on tags are unbounded per run, which fire per frame in flight (G5c H-log), and which should be opt-in?
+   scratch/agent/NEXT.md.
+   CM (s7430) CLOSED H-bounded after two fixes: tools/s7430_file_growth.py (105 write sites, 8 default-on, each bounded;
+   control PASS; --rev HEAD flags both defects) + tools/s7430_file_growth.sh (copied folders: old binary creates
+   ucode_024A10.bin, new binary R1/R2 create nothing, DUMP_UCODE_BIN=1 control creates it, planted 300 KiB s6892 log
+   rotates, NO_ROTATE=1 keeps it). Fixes: rs64_s6892.log rotated to .1 above 256 KiB at process start + per-run header
+   (ROGUESQ_S7430_NO_ROTATE=1 = old); boot ucode dump now opt-in ROGUESQ_DUMP_UCODE_BIN=1. rs64_s6893_rdram.bin (20 MB,
+   once per run on the first real s6892 repair, guest thread) left: bounded, a one-off G5c stall candidate.
    CL (s7429) WINDOW FOUND + FIXED: librecomp finalize_output_file_with_backup copied temp -> final with copy_file, which
    truncates final first; a quit/crash/kill inside the copy left a short or 0-byte final save, and the loader opened it (it
    exists) instead of the whole .bak, then zero-filled = profile wiped. tools/s7429_save_quit/harness.cpp (real files.cpp,

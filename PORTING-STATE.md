@@ -196834,3 +196834,45 @@ H-window for the fsync + rename finalize (0/4000), which closes the finalize hal
 quit-time save loss. H-stale (the 10 ms coalescing window dropped at quick_exit) is fixed but unverified; next
 discriminator: a real SDL_QUIT right after a save write, two arms ROGUESQ_S7429_NO_QUIT_FLUSH=1 vs default, comparing
 the save bytes after reload.
+
+## Session 7430 (2026-11-15) — class CM default-on file growth closed H-bounded after two fixes: rs64_s6892.log appended across runs with no cap (now rotated to .1 above 256 KiB at process start) and the boot ucode dump rewrote 512 KB ucode_*.bin into the exe dir every run (now opt-in ROGUESQ_DUMP_UCODE_BIN=1)
+
+Soak fold: s7428_audio_route_arms VOID 2/5 (human/lock/sleep), re-queued by the loop; nothing new to fold.
+
+Question (NEXT.md): which files does an owner-recipe run (FPS60, dd4, 16:9, NO_SAVE_WRITE, no logging env) create or grow in
+the exe dir, run after run? H-bounded / H-growth / H-hot.
+
+Static line: tools/s7430_file_growth.py enumerates every write-mode open (fopen w/a, ofstream, open_output_file_with_backup)
+in src/, librecomp, ultramodern, rt64 hle/render/common/gui: 105 sites, 95 opt-in (env path or env gate), 2 helpers, 8
+default-on, each with mode + bound. Positive control (always run): planted ungated fixed-path "a" fopen -> GROWTH and an
+unreviewed "w" fopen -> UNREVIEWED, both flagged. `--rev HEAD` (pre-fix tree) flags exactly the two defects below.
+Lesson, single-source until now: my first pass marked the ucode dump OPTIN because a 40-line look-back picked up a getenv
+from the neighbouring function; the runtime line caught it. The tool now resolves `fopen(name, ...)` by its enclosing
+function body.
+
+Runtime line: tools/s7430_file_growth.sh, a copied folder per arm, 40 s each, file snapshots (name + size) before/after:
+  O  (pre-fix binary)              created ucode_024A10.bin 524288   <- the first run (60 s) showed the same
+  R1, R2 (new binary, same folder) created/changed: none, none       -> H-bounded
+  G  new + ROGUESQ_DUMP_UCODE_BIN=1 created ucode_024A10.bin          -> positive control: the gated writer + detector work
+  K  planted 300 KiB rs64_s6892.log -> rs64_s6892.log.1 307200, "[s7430] ... rotated" line
+  KN same + ROGUESQ_S7430_NO_ROTATE=1 -> rs64_s6892.log 307200 unchanged (old behaviour)
+Exit 0 VERDICT H-bounded.
+
+Defects and fixes:
+1. rs64_s6892.log (G5a walker guard, default-on, src/main/upstream_compat.cpp s6892_log): "a" mode, 32 lines per run, never
+   capped across runs. Kept as append (a crash run's lines must survive into the next session) but S7430Rotate (static
+   init) renames it to .1 when over 256 KiB (ROGUESQ_S7430_CAP), so it is bounded at about 2x cap; each run's first line
+   now writes a "[s6892] run start pid= t=" header. ROGUESQ_S7430_NO_ROTATE=1 = old.
+2. rs64_dump_ucode (src/main/main.cpp): one-shot dump of every distinct ucode image, written byte by byte into cwd on every
+   boot (512 KB for 0x024A10, plus 0x099FE0 once in mission). It was used once for the offline ucode recompile; nothing reads
+   it back (grep of src/, lib/, tools). Now opt-in ROGUESQ_DUMP_UCODE_BIN=1.
+Bounded default-on writers, left as is: save (16 KB, NO_SAVE_WRITE-gated), audio_device.txt (F9 only, gated s7428), stored
+ROM (on import), /dev/null RT64 log sink, rs64_s6893_rdram.bin + spill.txt (truncated, once per run, only on the first real
+s6892 repair; the 20 MB write happens on the guest thread, a one-off stall candidate for G5c, code reading only).
+H-hot: no default-on per-frame file write in the table (static only; fs_usage needs root, so no syscall-level runtime line).
+ORIGIN: both writers are ours (s6892 guard s6892-s6893; ucode dump from the early F5 ucode recompile), neither is the game's.
+
+Side datum for the next class: a no-logging-env owner run writes ~1.5 MB of stderr per 40 s of boot (R1 1,543,003 B), top
+tags [s3290-stall] 328 KB, [s4234-ENTRY] 257 KB, [lle 235 KB, [s3294-stall] 93 KB, [s3295-disp] 66 KB, [s5901] 57 KB. A
+launcher redirecting stderr to a file grows without bound, and the volume is G5c H-log. -> class CN.
+Owner save untouched (build/saves never written; every arm used a copied folder).

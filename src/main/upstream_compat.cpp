@@ -21,10 +21,12 @@
 #include <tuple>
 #include <string>
 #include <chrono>
+#include <ctime>
 #ifdef __APPLE__
 #include <mach/mach_time.h>
 #endif
 #include <pthread.h>
+#include <unistd.h>
 #if !defined(_WIN32)
 #include <dlfcn.h>
 #endif
@@ -8975,6 +8977,18 @@ struct S6892Rec { uint32_t s2, mesh; };
 S6892Rec s6892_rec[16];
 unsigned s6892_next = 0, s6892_logged = 0;
 unsigned long s6892_reads = 0;
+// s7430 class CM: rs64_s6892.log is default-on and appended across runs (a crash run's lines survive for the next
+// session) but had no cross-run cap. At process start: rotate it to .1 when it exceeds 256 KiB (ROGUESQ_S7430_CAP
+// overrides), so it is bounded at ~2x cap. Writes nothing when the file is absent or small.
+// ROGUESQ_S7430_NO_ROTATE=1 = old unbounded append.
+struct S7430Rotate { S7430Rotate() {
+    const char* nr = std::getenv("ROGUESQ_S7430_NO_ROTATE"); if (nr && *nr && *nr != '0') return;
+    FILE* r = fopen("rs64_s6892.log", "r"); if (!r) return;
+    fseek(r, 0, SEEK_END); const long sz = ftell(r); fclose(r);
+    const char* c = std::getenv("ROGUESQ_S7430_CAP"); long cap = c ? atol(c) : 0; if (cap <= 0) cap = 256L * 1024;
+    if (sz > cap && std::rename("rs64_s6892.log", "rs64_s6892.log.1") == 0)
+        fprintf(stderr, "[s7430] rs64_s6892.log %ld B > cap %ld: rotated to rs64_s6892.log.1\n", sz, cap);
+} } s7430_rotate;
 bool s6892_valid(uint32_t v) { return (v & 3) == 0 && v >= 0x80000400u && v < 0x81800000u; } // s6893: covers the 0x81000000 spill arena of the wide bundles
 uint32_t* s6892_word(uint8_t* rdram, uint32_t a) { return reinterpret_cast<uint32_t*>(rdram + (a - 0x80000000u)); }
 bool s6892_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S6892"); return !(e && *e == '0'); }(); return on; }
@@ -8987,6 +9001,9 @@ void s6892_log(uint8_t* rdram, uint32_t s2, uint32_t bad, uint32_t good, uint32_
     if (s6892_valid(s2))
         for (uint32_t o = 0; o < 0x60 && n < 960; o += 4) n = rs64_apf(line, sizeof line, n, " %08X", *s6892_word(rdram, s2 + o));
     fprintf(stderr, "%s\n", line);
+    static bool s7430_first = true;  // s7430: one run header per run, so appended runs can be told apart
+    if (s7430_first) { s7430_first = false;
+        if (FILE* f = fopen("rs64_s6892.log", "a")) { fprintf(f, "[s6892] run start pid=%d t=%ld\n", (int)getpid(), (long)time(nullptr)); fclose(f); } }
     if (FILE* f = fopen("rs64_s6892.log", "a")) { fprintf(f, "%s\n", line); fclose(f); }
 }
 }

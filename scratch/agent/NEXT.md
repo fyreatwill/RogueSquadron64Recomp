@@ -1,18 +1,17 @@
-# NEXT (s7430)
-HYPOTHESIS-ID: default-file-growth
+# NEXT (s7431)
+HYPOTHESIS-ID: default-stderr-volume
 
 First fold new scratch/agent/SOAK-RESULTS.md lines (s7428_audio_route_arms: rc 0 = F9 gate two-arm verified; 2 = VOID).
 
-Class CM (CURRENT-TRUTH Next steps item 1): unbounded default-on file growth. An owner-recipe run (ROGUESQ_FPS60=1
-ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9, no logging env) may create/append files in the exe dir (build/rs64_s6892.log,
-other rs64_*.log / dumps, stderr capture) on every run.
-Hypotheses: H-bounded (every default-on file is truncated per run or capped) vs H-growth (>=1 file appends across runs
-without a cap, so build/ grows each session) vs H-hot (>=1 default-on write happens per frame, a G5c stall candidate).
-1. Offline: grep src/, lib/N64ModernRuntime, lib/rt64 for fopen/ofstream/open( with write/append modes; classify each by gate
-   (env opt-in / default-on), mode (w / a), cap, and call frequency. Planted control: an ungated "a" fopen in a scratch copy
-   must be flagged.
-2. Runtime, copied folder: run the owner recipe twice 60 s each (no keys), list new/changed files and sizes after each run
-   (fs_usage or a before/after find -newer); a file growing between run 1 and run 2 = H-growth.
-Write tools/s7430_file_growth.py. Exit 0 = H-bounded, 1 = growth/hot found, 3 = control failed.
-Also open from s7429: the SDL_QUIT save flush ([s7429-quit] save flush=N) is not runtime-verified; if a quit injector works
-(osascript 'tell application "System Events" to keystroke "q" using command down' with the game frontmost), check it.
+Class CN (CURRENT-TRUTH Next steps item 1): default-on stderr volume. s7430: a no-logging-env owner-recipe run
+(ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9 ROGUESQ_NO_SAVE_WRITE=1) writes ~1.5 MB per 40 s of boot.
+Hypotheses: H-capped (every default-on tag has a per-run line budget; volume is boot-front-loaded and flight is quiet)
+vs H-perframe (>=1 default-on tag prints per frame/task in flight: unbounded per run and a G5c H-log stall source)
+vs H-burst (budgets exist but one event fans out to >100 KB in one frame).
+Discriminating measurement, ONE run: forced-level route to flight (s5705-s5720 recipe, LEVEL=1, no keys needed?) for
+>=180 s with stderr to a file, then offline: bytes per tag per 10 s window (boot / title / flight). A tag whose rate in the
+last 60 s of flight is > 0 and flat = H-perframe. Static half: grep the top 15 tags' fprintf sites, record each budget
+(counter cap or none) and gate. Positive control: plant ROGUESQ_<a known opt-in log>=1 and see its tag appear at its
+expected rate. Fix: move per-frame/unbudgeted default-on tags behind an opt-in env (keep crash breadcrumbs default-on
+but budgeted). Tool: tools/s7431_stderr_volume.py (exit 0 H-capped, 1 found, 3 control fail).
+Reuse tools/s7430_file_growth.sh's copied-folder pattern (/tmp/rs64_s7430/R/1.runlog is a boot-only sample).
