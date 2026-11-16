@@ -197836,3 +197836,21 @@ Rules out: uninitialised-read UB in any in-scope host TU beyond these (two indep
 Verdict: selects H-const, refutes H-split for title+attract (distinct raw == distinct fixed at both firing sites, while the planted
 varying-padding control splits 511270 vs 651 in the same build). Next discriminator: s7463_padhash_flight in-flight raw vs fixed distinct
 counts per site (H-split if raw > fixed at any site), plus whether the reinterpret site is reached at all (H-unreached).
+
+## Session 7464 (2026-11-16) — class DU closed: g1e_owner_quiet_arms split space-joined arm env into phantom arms (s7463_padhash_flight CONTROL FAIL was a harness artifact); specs now validated, test 8/8; padhash flight re-queued
+
+Fold: s7463_padhash_flight rc=1 "CONTROL FAIL", arms=4 alive=4/4. Cause read from the recipe + harness, not the game:
+the recipe passed ARMS="4:cnt:ROGUESQ_FORCE_SAVE_MISSION=4 ROGUESQ_S7463_PADCOUNT=1 1:ctl:... ROGUESQ_S7463_PADCOUNT=ctl";
+tools/g1e_owner_quiet_arms.zsh iterates `${=ARMS}` (whitespace) and its usage line says a spec's env is "+"-joined. So 4 arms ran:
+cnt (L4, no PADCOUNT), "" (spec "ROGUESQ_S7463_PADCOUNT=1": dd=the whole assignment, L1), ctl (L1, no PADCOUNT), "" again
+(PADCOUNT=ctl) which overwrote log_.txt/ring_.txt. log_cnt/log_ctl carry 0 [s7463] lines (expected: no PADCOUNT); the scorer's
+"arm=cnt"/"arm=ctl" lines were empty -> CONTROL FAIL. The real cnt measurement was lost.
+Incidental datum (single-source, the surviving "" arm = PADCOUNT=ctl, L1, dd garbage): drawcallkey calls=2359296 padnz=all
+distinct_raw=2277124 distinct_fixed=2266 -> planted-variation control fires in flight; says nothing about H-const vs H-split.
+Fix (class DU): before launching anything the harness validates every spec (needs dd:arm:..., dd numeric, arm [A-Za-z0-9_]+,
+names unique) and exits 3 on a bad one (not 2, so the loop never re-queues it); SPEC_CHECK_ONLY=1 validates and exits.
+tools/agent/test_quiet_arms_spec.sh: 8/8 (3 good specs incl. "+"-joined, 5 bad incl. the verbatim s7463 spec as negative control);
+tools/s7243_resume_test.zsh failures: 0. Exposure scan of 1317 done recipes through the validator: 8 flagged, 7 belong to other
+harnesses with their own ARMS formats (s4252_ab, s6820 arms.sh, s7264-s7268 XENV_), so s7463 was the only g1e victim.
+Re-queued as scratch/agent/soak_queue/s7464_padhash_flight.sh ("+"-joined; both arms dd4; R=scratch/s7464q).
+Rules out: nothing about DS itself (no valid cnt arm yet). ORIGIN: not a mitigation; writer of the bad arm list = the recipe text.

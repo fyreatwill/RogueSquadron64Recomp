@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7462 (2026-11-16).
+Compact operational handoff, as of Session 7464 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. Next: fold s7463_padhash_flight (class DS), see NEXT.md. One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. Next: fold s7464_padhash_flight (class DS), see NEXT.md. One line each:
+   - **DU s7464 quiet-arms spec split, CLOSED:** g1e_owner_quiet_arms.zsh splits ARMS on whitespace, so s7463_padhash_flight's
+     "4:cnt:A=1 B=2" ran 4 arms (two named "" with dd=<env assignment>); the 2nd "" arm overwrote log_.txt, cnt data lost, CONTROL FAIL
+     on a phantom arm. Now every spec is validated first (dd numeric, arm [A-Za-z0-9_]+, unique; else exit 3, never re-queued);
+     tools/agent/test_quiet_arms_spec.sh 8/8 (the s7463 spec is the negative case); s7243 resume test still passes. Scan of 1317 done
+     recipes: s7463 was the only g1e victim. Incidental in-flight datum (surviving "" arm = PADCOUNT=ctl, L1): drawcallkey
+     distinct_raw 2277124 vs distinct_fixed 2266 over 2.36M calls -> the planted control fires in flight too. Re-queued s7464_padhash_flight.
    - **DS s7463 host uninitialized reads + missing returns (new idiom class, host C/C++):** tools/s7463_uninit_census.py --controls
      (150 in-scope TUs from compile_commands: src/, ultramodern, librecomp, rt64 common/gbi/hle/render/rhi/preset, plume_metal; line A
      clang -Wsometimes/-Wconditional-uninitialized/-Wreturn-type/-Wdangling, line B clang static analyzer; planted control flagged by both)

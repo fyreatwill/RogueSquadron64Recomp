@@ -45,6 +45,15 @@ locked(){ /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes'
 watch_human(){ local p=$(idle) c t=0 f0="" f w0=$(date +%s) w; while kill -0 $1 2>/dev/null; do /bin/sleep 2; t=$((t+2)); c=$(idle);
   w=$(date +%s); if (( w - w0 > 20 )) || locked; then echo "$(date +%T) $2 host slept/locked t=$t wall +$((w-w0))s, arm void" >> $R/arms.log; echo "void $t lock" > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; w0=$w
   f=$(front); [[ -n $f && $f != $f0 ]] && { echo "$(date +%T) $2 front t=$t $f" >> $R/arms.log; f0=$f; }; if (( c + 1 < p )); then echo "$(date +%T) $2 human input t=$t idle $p -> $c, arm void" >> $R/arms.log; echo "void $t human" > $R/void_$2; kill -KILL $1 2>/dev/null; return; fi; p=$c; done; }
+# s7464 class DU: specs are whitespace-separated, so a spec's own env vars must be joined with "+". s7463_padhash_flight wrote
+# "4:cnt:A=1 B=2": the loop ran 4 arms, two with an empty name and dd=<an env assignment>, and the second empty arm overwrote the
+# first's log_.txt, so the measuring arm's data were lost and the control read FAIL on an arm that never existed. Validate every
+# spec before launching anything: dd numeric, arm name [A-Za-z0-9_]+, names unique. Bad spec -> exit 3 (not 2: never re-queue).
+# Test: tools/agent/test_quiet_arms_spec.sh.
+typeset -A seen; for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do a=("${(@s/:/)spec}")
+  if [[ $spec != *:*:* || ! $a[1] =~ '^[0-9]+(\.[0-9]+)?$' || ! $a[2] =~ '^[A-Za-z0-9_]+$' || -n ${seen[$a[2]]} ]]; then
+    echo "bad arm spec '$spec' (want dd:arm:ENV1=v+ENV2=v, unique arm names)" | tee -a $R/arms.log >&2; exit 3; fi; seen[$a[2]]=1; done
+[[ $SPEC_CHECK_ONLY == 1 ]] && { echo "spec ok"; exit 0; }
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
   if [[ $RESUME == 1 && -e $R/ok_$arm && $(head -1 $R/ok_$arm) == "$(armkey $spec)" && -s ${LOGTO:-$R/log_$arm.txt} ]]; then
