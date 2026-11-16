@@ -22,7 +22,9 @@ for spec in ${=ARMS:-"a169:16:9:960 a219:21:9:1260"}; do
     # s7267: SHEET=1 keeps an owner sheet (adjacent WIDEWIN off/on frame pairs) before the raw is deleted.
     [[ -n ${SHEET:-} ]] && python3 tools/s7267_tog_sheet.py $raw $O/sheet_$n.png "$n $asp WIDEWIN off|on" 6 24e6 640 > $O/sheet_$n.txt 2>&1
     rm -f $raw; else echo "no raw" > $O/edge_$n.txt; rc=1; fi
-  grep -a -c 'CRASH\|SIGSEGV\|SIGBUS' scratch/agent/m6/g1_lvl4s7009s7263$n/*.log 2>/dev/null | awk -F: '{s+=$2}END{print "crash_lines",s+0}' > $O/crash_$n.txt
+  # s7453 class DI: shared fatal list, and a fatal line now fails the recipe (rc=1); it used to be printed only.
+  grep -a -c -E -f tools/agent/fatal_patterns.txt scratch/agent/m6/g1_lvl4s7009s7263$n/*.log 2>/dev/null | awk -F: '{s+=$2}END{print "crash_lines",s+0}' > $O/crash_$n.txt
+  grep -q 'crash_lines 0' $O/crash_$n.txt || rc=1
   echo "== $n ($asp)"; cat $O/edge_$n.txt $O/crash_$n.txt $O/capfps_$n.txt $O/arm_$n.txt | tail -n 12
 done
 exit $rc

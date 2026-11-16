@@ -197549,3 +197549,37 @@ MAINTENANCE iteration (Step 0: CURRENT-TRUTH 60376 B > 60000). No experiments ru
   Fix: tee moved before the comment (zsh -n OK). Not run-verified this iteration (maintenance); s7452_fatal_harness re-queued
   (same P/C arms) as the verification: pass = both summaries present, P died_in_verify exitrc=1, C alive_at_end=1 crashlines=0.
 - ORIGIN: none (harness fix, no mitigation machinery).
+
+## Session 7453 (2026-11-15) — class DI closed H-few: 4 live launchers passed a dead game (boot_freeze_hunt silent EXITED, g1e_owner_quiet_arms alive=0 exit 0, s7272/s7263 old crash grep); fixed + fake-binary test 13/13
+
+- Soak fold s7452_fatal_harness rc=0: arm P `died_in_verify=1 alive_at_end=0 crashlines=1 exitrc=1` (plant scored, terminal);
+  arm C L4 `alive_at_end=1 flight_s=135 vi_stalls30s=0 crashlines=0 exitrc=held`, summary file present -> the s7452 tee fix
+  (m6_god_common.sh:94) is run-verified, and the s7451 terminal-death edit is verified a second time.
+- s7449_argck_levels rc=1 re-read: NOT the tee defect (that run predates s7450 and both summaries exist). L10 passed; L4 failed
+  only the recipe's `inits=1` check: inits=2 with alive_at_end=1, crashlines=0, and between call#1 (line 4068) and call#2
+  (line 10120) the log has an endMissionCleanup <- mainGameLoop backtrace, so the game ended the mission and re-inited it in
+  the same process (a mission cycle, not a relaunch or crash). Single-source (one log). The `inits=1` criterion cannot tell
+  a same-process mission restart from a relaunch: that is the next class (DJ).
+- Class DI (HYPOTHESIS-ID harness-death-as-void) audit, offline. Population A: 48 scripts carry a fail()/retry copy
+  (grep died_in_verify|fail (nomission|notitle|nohangar)|allattempts-failed over scratch/agent + tools, sh/zsh/py, done/
+  excluded). Liveness = newest session number of any file that references it: only m6_god_common.sh is live (s7452);
+  the other 47 are dead (newest reference s5921 or none; 3 are in soak_queue/cancelled). Population B (the grep missed them
+  because they do not copy fail()): launchers invoked by the 78 done recipes of s7152+: g1_level_coverage_common.zsh (26,
+  execs m6_god_common.sh: covered), g1e_owner_quiet_arms.zsh (25), boot_freeze_hunt.sh (12), s7277_toggle_load_arm.zsh ->
+  s7272_g5c_hold_arm.zsh (6), s7263_widewin_edge_arms.zsh (6); the .py scorers were done in DG.
+  Members (death after the gate not ending the run as a failure):
+  1. boot_freeze_hunt.sh: `kill -0 || st=EXITED` never set bad; a boot that exited with no CRASH/SIGSEGV/SIGBUS/abort text
+     passed (quick_exit, switch_error, silent exit). Now EXITED = bad=1 with `exitrc=`, crash= uses fatal_patterns.txt.
+  2. g1e_owner_quiet_arms.zsh: an arm whose game died before HOLD logged `done alive=0` and the recipe exited 0, no fatal
+     score. Now the done line carries `fatal=<n> first=...` and the recipe exits 1 after all arms if any died/fataled.
+  3. s7272_g5c_hold_arm.zsh: crash_lines grep was CRASH|SIGSEGV|SIGBUS (misses non-signal exits) -> fatal_patterns.txt.
+  4. s7263_widewin_edge_arms.zsh: same old grep AND a crash only printed crash_lines (rc unchanged) -> fatal list + rc=1.
+  The s7452 defect shape (`#` before `| tee`/`> $` on a code line) grep: 0 live hits (3 false positives inside strings).
+  Verdict H-few: 4 of the 6 live launchers (2 already correct: m6_god_common after s7451/s7452, py scorers after DG).
+- Control: tools/s7453_harness_death_test.zsh (fake binaries via new GAMEDIR/GAME override in boot_freeze_hunt.sh):
+  bfh fatal death -> exit 1 `crash=1 EXITED exitrc=1`; silent exit 0 -> exit 1 `crash=0 EXITED exitrc=0`; live -> exit 0
+  `crash=0 OK`; quiet arms fatal -> exit 1 `alive=0 fatal=1`, silent -> exit 1 `alive=0 fatal=0`, live -> exit 0
+  `alive=1 fatal=0`; tools/s7243_resume_test.zsh still passes. 13/13. s7272/s7263 edits: zsh -n + grep pipeline checked on
+  a planted [CRASH] line (crash_lines 1) only, no fake run (they wrap scratch/s7009/arm.zsh + capture).
+- Rules out: harness-side "dead game scored as pass" in every live launcher. Not covered: the 47 dead copies (left as is).
+- ORIGIN: none (harness scoring fix, no mitigation machinery).

@@ -15,6 +15,9 @@
 # Prints "CONTROL dump=PASS|FAIL frozen=PASS|FAIL"; a control FAIL exits 3 (instrument broken, nulls void), a control
 # PASS does not count as a freeze. ROGUESQ_STALL_SAMPLE_DIR defaults to <outdir> for every boot.
 # HUNT_OWNER=1 adds the s6993 freeze env (owner recipe as run by tools/g1e_owner_quiet_arms.zsh arm L4).
+# s7453 class DI: a boot that EXITS before BOOT_SECS is a death (bad=1, st=EXITED exitrc=<status>) even with no crash text, and
+# crash= is the shared tools/agent/fatal_scan.sh count (was CRASH|SIGSEGV|SIGBUS|abort: missed quick_exit/switch_error exits).
+# GAMEDIR/GAME override the binary (fake-binary control: tools/s7453_harness_death_test.zsh).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 O=${1:?outdir}; N=${2:-12}; BOOT_SECS=${3:-40}; STALL=${4:-12}; mkdir -p $O; O=${O:A}; bad=0; ctlbad=0
 OWNER_ENV="ROGUESQ_FORCE_SAVE_MISSION=4 ROGUESQ_FORCE_UNLOCK=4 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_GODMODE=1 ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ROGUESQ_VI_LOCK=1 ROGUESQ_VI_LOCK_TARGET_MS=10 ROGUESQ_QOS_ALL=1 ROGUESQ_G1B=1"
@@ -24,12 +27,12 @@ fsof() { grep -a -o 'fs=[0-9]*' $1 2>/dev/null | tail -1 | cut -d= -f2; }
 for i in $(seq 1 $N); do
   L=$O/boot$i.log
   CE=""; [[ -n $HUNT_CONTROL && $i == 1 ]] && CE="ROGUESQ_STALL_DUMP_TEST=300"
-  ( cd build && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_STALL_SAMPLE_DIR=$O ${=HUNT_ENV} ${=CE} ./RogueSquadron64Recomp ) > $L 2>&1 &
+  ( cd ${GAMEDIR:-build} && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_STALL_SAMPLE_DIR=$O ${=HUNT_ENV} ${=CE} ${GAME:-./RogueSquadron64Recomp} ) > $L 2>&1 &
   P=$!; t=0; last=-1; since=0; st=OK
   while (( t < BOOT_SECS )); do
     sleep 2; t=$(( t + 2 ))
     [[ -n $HUNT_SELFTEST && $i == 1 && $t == 18 ]] && kill -STOP $P
-    kill -0 $P 2>/dev/null || { st=EXITED; break; }
+    kill -0 $P 2>/dev/null || { wait $P 2>/dev/null; st="EXITED exitrc=$?"; bad=1; break; }
     fs=$(fsof $L); fs=${fs:-0}
     if (( fs != last )); then last=$fs; since=$t; fi
     if (( t - since >= STALL && t >= 16 )); then st=FROZEN; break; fi
@@ -50,8 +53,8 @@ for i in $(seq 1 $N); do
     tail -c 2000000 $L > $O/boot${i}_freeze.tail.log
   fi
   kill -9 $P 2>/dev/null; wait $P 2>/dev/null
-  crash=$(grep -a -c -i 'SIGSEGV\|SIGBUS\|abort\|CRASH' $L)
-  (( crash > 0 )) && { bad=1; grep -a -i -m5 'SIGSEGV\|SIGBUS\|abort\|CRASH' $L > $O/boot${i}_crash.txt; }
+  FP=tools/agent/fatal_patterns.txt; crash=$(grep -a -c -E -f $FP $L)
+  (( crash > 0 )) && { bad=1; grep -a -E -m5 -f $FP $L > $O/boot${i}_crash.txt; }
   vo=$(tail -c 400000 $L | grep -a -o 'origin=0x[0-9A-Fa-f]*' | tail -1)
   [[ $st == FROZEN ]] || { tail -200 $L > $O/boot$i.tail.log; rm -f $L; }
   echo "boot$i fs=$fs t=$t $vo crash=$crash $st"

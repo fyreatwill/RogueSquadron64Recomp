@@ -22,5 +22,6 @@ python3 tools/g5c_frozen_runs.py scratch/s7009/$T.raw 250 > $O/frozen.txt 2>&1
 grep -a -h 's7258\|s7010-clk\|CRASH\|SIGSEGV\|SIGBUS' scratch/agent/m6/g1_lvl${LV}s7009$T/*.log 2>/dev/null | head -8 > $O/log.txt
 [[ -n $KEEP ]] && python3 tools/s7273_hold_sheet.py scratch/s7009/$T.raw $O/holds_sheet.jpg 250 $O/ctl.txt 0.5 > $O/sheet.txt 2>&1; rm -f scratch/s7009/$T.raw; cat $O/hold.txt $O/frozen.txt $O/log.txt; tail -3 $O/arm.txt
 c=$(grep -o 'caught .*' $O/hold.txt | grep -o '[0-9]*ms' | tr -d ms | awk '$1>=900' | wc -l); echo "control_hits $c"
-grep -a -cE 'CRASH|SIGSEGV|SIGBUS' scratch/agent/m6/g1_lvl${LV}s7009$T/run.log | read cr; echo "crash_lines $cr"
+grep -a -cE -f tools/agent/fatal_patterns.txt scratch/agent/m6/g1_lvl${LV}s7009$T/run.log | read cr;  # s7453 DI: shared fatal list
+ echo "crash_lines $cr"
 (( cr > 0 )) && exit 1; (( c < 3 )) && exit 3; exit 0

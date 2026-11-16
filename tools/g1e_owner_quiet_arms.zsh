@@ -72,7 +72,12 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
     echo human > $R/quiet.done; exit 2; fi
   cm=$(grep -a -m1 -o 'cursorMask)=0x[0-9A-Fa-f]*' ${LOGTO:-$R/log_$arm.txt} | sed 's/.*=//'); want=$(printf '0x%08X' $((1 << lv)))
   [[ $cm == $want ]] || echo "$(date +%T) $arm LEVEL MISMATCH want lvl $lv mask $want got ${cm:-none}" >> $R/arms.log
-  dl="$(date +%T) $arm done alive=$alive log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log
+  # s7453 class DI: an arm whose game died before HOLD (alive=0) or printed a fatal line used to log "done alive=0" and exit 0.
+  # Now the done line carries the shared fatal_scan score and the recipe exits 1 at the end (all arms still run).
+  fs=$(zsh $TOOLS/agent/fatal_scan.sh ${LOGTO:-$R/log_$arm.txt}); [[ $alive == 0 || $fs != fatal=0* ]] && died=1
+  dl="$(date +%T) $arm done alive=$alive log=$(wc -c < ${LOGTO:-$R/log_$arm.txt}) $fs pwr=$(pwr) clk=$(clk)"; echo "$dl" >> $R/arms.log
   printf '%s\n%s\n' "$(armkey $spec)" "$dl" > $R/ok_$arm; /bin/sleep ${ARM_GAP:-3}
 done
 echo done > $R/${DONE:-quiet.done}
+[[ -n $died ]] && { echo "$(date +%T) DIED: an arm died or printed a fatal line (s7453), exit 1" >> $R/arms.log; exit 1; }
+exit 0

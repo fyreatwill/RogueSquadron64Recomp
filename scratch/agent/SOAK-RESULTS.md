@@ -1546,3 +1546,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-212636 | s7449_argck_levels | rc=1 | 410s | scratch/agent/soak_results/s7449_argck_levels_20261115-212636.log
 20261115-213946 | s7450_fatal_harness | rc=137 | 901s | scratch/agent/soak_results/s7450_fatal_harness_20261115-213946.log
 20261115-220452 | s7451_fatal_harness | rc=1 | 405s | scratch/agent/soak_results/s7451_fatal_harness_20261115-220452.log
+20261115-221341 | s7452_fatal_harness | rc=0 | 407s | scratch/agent/soak_results/s7452_fatal_harness_20261115-221341.log
+20261115 | s7453 fold: s7452_fatal_harness rc=0: arm P died_in_verify=1 exitrc=1 crashlines=1, arm C L4 alive_at_end=1 crashlines=0 summary present -> s7452 tee fix verified. s7449_argck_levels rc=1 = L4 inits=2 from a same-process mission re-init (endMissionCleanup), not a crash.

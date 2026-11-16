@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7452 (2026-11-15).
+Compact operational handoff, as of Session 7453 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: class DI (HYPOTHESIS-ID harness-death-as-void), see NEXT.md. One line each:
+   Next: class DJ (HYPOTHESIS-ID harness-inits-restart), see NEXT.md. One line each:
+   - **DI s7453 H-few:** 4 of 6 live launchers passed a dead game: boot_freeze_hunt.sh (silent EXITED -> now bad=1 exitrc=),
+     g1e_owner_quiet_arms.zsh (alive=0 exit 0 -> done line fatal=, exit 1), s7272/s7263 (old CRASH grep -> fatal_patterns.txt,
+     s7263 rc=1). 47 fail()/retry copies are dead (newest ref <= s5921). Test tools/s7453_harness_death_test.zsh 13/13.
+     s7452 tee fix run-verified (s7452_fatal_harness rc=0). s7449 L4 rc=1 = same-process mission re-init (inits=2, endMissionCleanup), not a crash.
    - DH s7451 H-none (Debug build): all 13 live exit/abort sites print a fatal_patterns line; NDEBUG pair hardened (selftest 19/19).
      m6_god_common.sh died_in_verify is now terminal (DIED_RETRY=1 = old): post-gate deaths used to be retried as void attempts.
    - **s7452 harness fix:** since s7450 (d354bfbdf) m6_god_common.sh:94 had `# comment | tee $OUT/summary`, so NO passing run wrote
