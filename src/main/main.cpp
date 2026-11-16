@@ -5211,8 +5211,26 @@ static void rs64_diag_plant_tick() {
     fflush(stderr);
     raise(SIGSEGV);
 }
+// s7450 class DG: ROGUESQ_PLANT_EXIT=<s> positive control for NON-signal fatal exits (harness scorers grepped only
+// CRASH|SIGSEGV|abort). KIND (ROGUESQ_PLANT_EXIT_KIND): switch = librecomp switch_error's exact printf (stdout) + exit(1);
+// quick = ultramodern quick_exit's exact stderr line + _Exit(1); silent = _Exit(1) with no text.
+static void rs64_diag_plant_exit_tick() {
+    static const double sec = [] { const char* e = getenv("ROGUESQ_PLANT_EXIT"); return (e && *e) ? atof(e) : 0.0; }();
+    if (sec <= 0) return;
+    static const auto t0 = std::chrono::steady_clock::now();
+    if (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < sec) return;
+    const char* k = getenv("ROGUESQ_PLANT_EXIT_KIND"); const std::string kind = k ? k : "switch";
+    if (kind == "quick") {
+        (fprintf)(stderr, "Exiting with exit status '%i'. Function %s, at file %s:%i\n", 1, "s7450_plant", __FILE__, __LINE__);
+        std::_Exit(1);
+    }
+    if (kind == "silent") std::_Exit(1);
+    printf("Switch-case out of bounds in %s at 0x%08X for jump table at 0x%08X\n", "s7450_plant", 0x80001234u, 0x800A0000u);
+    exit(EXIT_FAILURE);
+}
 static void rs64_diag_quiet_tick() {
     rs64_diag_plant_tick();
+    rs64_diag_plant_exit_tick();
     if (rs64_diag_busy.load(std::memory_order_relaxed)) rs64_diag_spin_us(s_dq_busy_guest_us);
     if (!s_dq_stat) return;
     static const auto t0 = std::chrono::steady_clock::now(); static auto tq = t0, tb = t0, tw = t0;

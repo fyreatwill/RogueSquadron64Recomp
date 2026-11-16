@@ -11,6 +11,9 @@ window. s6996: the s6993 L7/L16/L17 shortfall was entirely non-flight time (miss
 cur (s6991) = level the level-select cursor actually opened on = log2 of the first [lvsel] init cursorMask; it must
 equal lvl, else the arm flew another level (FORCE_UNLOCK clamp, see tools/g1e_owner_quiet_arms.zsh).
 usage: g1e_level_fps.py DIR ARM... [--from 95]   (DIR holds log_<ARM>.txt and ring_<ARM>.txt)"""
+# s7450 class DG: shared fatal-exit list (tools/agent/fatal_patterns.txt), also used by m6_god_common.sh / fatal_scan.sh
+import pathlib as _pl
+_FATAL = '|'.join('(?:%s)' % l for l in (_pl.Path(__file__).resolve().parent / 'agent' / 'fatal_patterns.txt').read_text().splitlines() if l)
 import re, sys, statistics as st
 a = sys.argv[1:]; frm = 95.0
 if '--from' in a: i = a.index('--from'); frm = float(a[i+1]); del a[i:i+2]
@@ -32,7 +35,7 @@ for A in arms:
         if b'[saveslot]' in l and b'force=' in l and lvl == '?': lvl = re.search(rb'force=(-?\d+)', l)[1].decode()
         if cur == '?' and b'cursorMask)=0x' in l: cur = str(int(re.search(rb'cursorMask\)=0x([0-9A-Fa-f]+)', l)[1], 16).bit_length() - 1)
         if b'initMission' in l: mi += 1
-        if re.search(rb'CRASH|SIGSEGV|SIGBUS|abort', l): cr += 1
+        if re.search(_FATAL.encode(), l): cr += 1
 
     Q = {}; P = {}; t0 = None
     try:

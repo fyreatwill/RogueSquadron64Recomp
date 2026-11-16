@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """One selected-level flight; kill the recipe process group on probe completion."""
+# s7450 class DG: shared fatal-exit list (tools/agent/fatal_patterns.txt), also used by m6_god_common.sh / fatal_scan.sh
+import pathlib as _pl
+_FATAL = '|'.join('(?:%s)' % l for l in (_pl.Path(__file__).resolve().parent / 'agent' / 'fatal_patterns.txt').read_text().splitlines() if l)
 import argparse
 import hashlib
 import json
@@ -164,7 +167,7 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
                     if '[objresp-done]' in line:
                         done = line.strip()
                         in_epoch = False
-                if re.search(r'CRASH|SIGSEGV|SIGBUS|abort', line):
+                if re.search(_FATAL, line):
                     crash += 1
     for join in joins:
         for read in changes:

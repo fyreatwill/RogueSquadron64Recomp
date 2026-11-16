@@ -197468,3 +197468,37 @@ Next: class DG harness-fatal-exit-coverage (crashlines grep misses non-signal fa
 Verdict restated: the arm-B vs arm-C planted-line count (1/7 vs 7/7) selects H-few and refutes H-none and H-unrouted (crash
 handler 37 lines in every arm). Next discriminator (class DG): per-scorer crash verdict on a ROGUESQ_PLANT_EXIT log
 (non-signal fatal exit) vs the PLANT_FAIL positive control.
+
+## Session 7450 (2026-11-15) — class DG closed H-few: harness crash greps (CRASH|SIGSEGV|abort) scored a planted quick_exit 0 in all 5 scorers; one shared list tools/agent/fatal_patterns.txt + fatal_scan.sh (selftest 17/17) now feeds m6_god_common.sh (+ exitrc field), g1e_level_fps.py, g1_objective_response_run.py
+
+Fold: s7449_argck_levels rc=1. L10 passes (inits=1, 132 s flight, alive, 0 stall, 0 crash, 623 KB). L4: inits=2, but
+[initMission] call#2 (a0 0xAE -> 0x9A) is an in-mission restart, seen in 45 of 91 earlier L4 summaries (36 inits=1, 9
+inits=3, 1 inits=7); alive, 0 stall, 0 crash, 564 KB. So rc=1 came from the recipe's inits=1 bar, not a failure ->
+class DF flight line stands on L4/L10.
+
+Class DG (harness-fatal-exit-coverage). Step 1 (audit) scorers that call a run crashed: scratch/agent/m6_god_common.sh
+(crashlines, feeds every g1_level_coverage_common.zsh soak), tools/g1e_level_fps.py, tools/g1_objective_response_run.py
+(two regexes), tools/s7431_stderr_volume.sh, tools/verify_sdl_quit.sh; ~200 older scratch/agent/run_s*/s4xxx recipes are
+retired one-offs (not touched). tools/agent/loop.sh scores soaks by recipe rc only.
+Plant: src/main/main.cpp ROGUESQ_PLANT_EXIT=<s>, KIND switch (librecomp switch_error's exact printf + exit(1)), quick
+(ultramodern quick_exit's exact stderr line + _Exit(1)), silent (_Exit(1)). scratch/s7450/arms.sh, plant at 15 s:
+  arm         rc   m6_old g1e_fps objresp s7431 sdlquit | NEW fatal_scan
+  switch     134     38     38      37     37     40    |  40 (first: libc++abi: terminating)
+  quick        1      0      0       0      0      0    |   1 (Exiting with exit status)
+  silent       1      0      0       0      0      0    |   0
+  PLANT_FAIL  (s7449 arm_A, SIGSEGV control)  38 38 38 38 37 | 43
+Reading: exit() from a non-main thread runs static destructors while guest threads run -> libc++abi terminating ->
+SIGABRT -> our [CRASH] handler, so switch_error/do_break are caught by accident (non-member). quick_exit (_Exit on Apple)
+is a MEMBER of every old scorer. A silent _Exit is invisible to every text scan; only alive_at_end/exit status sees it.
+Verdict: H-few selected (quick class missed by all 5), H-none refuted (quick arm 0 everywhere while the positive control
+fires >=37 everywhere in the same build), H-stdout not tested separately (switch's stdout line did land in the log: line
+3694, after the abort text, so stdout is captured).
+Change: tools/agent/fatal_patterns.txt (17 ERE), tools/agent/fatal_scan.sh (<log> -> fatal=/first=; --selftest: every
+pattern hits a planted line, 16/16 lines, a clean harness-tag log scores 0). m6_god_common.sh: crashlines = grep -Ef the
+shared list, new exitrc=<rc|held> (the game's own wait status when it died before the kill), selftest at start beside the
+fbrun/mcycles/flight controls. g1e_level_fps.py and g1_objective_response_run.py line 167 read the same file.
+Second line (no false positives): 7 clean flight logs (s7447 L4/L7/L12 full volume 115-165 MB, s7448/s7449 QUIET
+448-623 KB) score new 0 = old 0. In-harness check queued: scratch/agent/soak_queue/s7450_fatal_harness.sh (planted quick
+exit in L1 flight must give alive_at_end=0 crashlines>=1 exitrc=1; L4 clean control crashlines=0 exitrc=held).
+ORIGIN: not a mitigation; the writer of the false zeros is our own scorer regex, which predates the non-signal exit paths.
+Next: class DH harness-death-exit-status (classify all 21 exit/_Exit/quick_exit/abort sites; silent ones get a line).

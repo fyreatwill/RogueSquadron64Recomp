@@ -1,18 +1,18 @@
-# NEXT (s7450)
-HYPOTHESIS-ID: harness-fatal-exit-coverage
+# NEXT (s7451)
+HYPOTHESIS-ID: harness-death-exit-status
 
-First: fold SOAK-RESULTS line for s7449_argck_levels (L4/L10 under QUIET with the s7449 argcheck filter). Pass = inits=1,
-alive_at_end=1, vi_stalls30s=0, crashlines=0 both, run.log size in the s7448 range (450-610 KB) -> class DF flight line.
+First: fold SOAK-RESULTS line for s7450_fatal_harness (arm P L1 ROGUESQ_PLANT_EXIT=110 KIND=quick; arm C L4 clean).
+Pass = VERDICT rc=0: P alive_at_end=0 crashlines>=1 exitrc=1; C alive_at_end=1 crashlines=0 exitrc=held vi_stalls30s=0.
+If P shows exitrc=held or crashlines=0, the m6_god_common.sh wait/exitrc wiring is wrong (fix, re-queue).
 
-Class DG: scratch/agent/m6_god_common.sh:89 crashlines = grep 'CRASH\|SIGSEGV\|abort'. Non-signal fatal exits print other
-words: librecomp recomp.cpp:465 switch_error "Switch-case out of bounds" (printf stdout + exit), :471 do_break "Encountered
-break", ultramodern quick_exit "Exiting with exit status", message_box "Failed to allocate memory!"/"[Error] ...", RSP
-"exited unexpectedly", plus SIGBUS without "SIGSEGV" text. alive_at_end=0 would flag the death but not name it.
-Step 1 (offline): list every harness/scorer that classifies a run (grep crashlines|CRASH in scratch/agent/*.sh *.zsh,
-tools/*.py, tools/agent/loop.sh soak verdicts); for each, which fatal-exit classes it would miss.
-Step 2 (one run per class is NOT needed): reuse ROGUESQ_PLANT_FAIL (s7449, prints all classes then SIGSEGV) plus add a
-ROGUESQ_PLANT_EXIT=<s> mode that prints the switch_error line and exit(1) without a signal; run each harness scorer on the
-two logs. Members: scorers that report crash=0 on the PLANT_EXIT log.
-Hypotheses: H-none (every scorer also gates on alive/exit code), H-few (some scorers miss non-signal exits -> one shared
-fatal-pattern list, e.g. tools/agent/fatal_patterns.txt, used by all), H-stdout (stdout not captured in some recipes).
-Discriminator: per-scorer verdict on the PLANT_EXIT log. Positive control: PLANT_FAIL log must score crash>0 everywhere.
+Class DH (silent fatal exits): s7450 showed a `_Exit(1)` with no text scores 0 in every grep; only alive/exitrc see it,
+and only the m6 harness records exitrc. Step 1 (offline, one pass): enumerate every exit( / _Exit( / quick_exit( / abort(
+call in src/ and lib/N64ModernRuntime/{librecomp,ultramodern}/src (21 raw matches at s7450, grep -rnE '\b(exit|_Exit|quick_exit|abort)\(').
+Classify each: (a) prints a tools/agent/fatal_patterns.txt line on stderr/stdout before exiting, (b) prints a line that
+no pattern matches, (c) silent, (d) normal shutdown (SDL quit, EXIT_SUCCESS) - not a fatal.
+Step 2: members = (b)+(c). Fix: either add their text to fatal_patterns.txt (b) or a one-line "[FATAL] <site>" stderr print
+before the exit (c) (no lib/ edits without export.sh + commit). Positive control: ROGUESQ_PLANT_EXIT KIND=silent must score
+fatal=0 before and the new [FATAL] line must not apply to it (it is a plant, not a site) - so add KIND=site that calls one
+real (c) site's wrapper if one exists, else report the counts only.
+Hypotheses: H-none (every fatal site already prints a matched line), H-few (a handful of (b)/(c) sites), H-many.
+Discriminator: the (b)+(c) count from the classification table.

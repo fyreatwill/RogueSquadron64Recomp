@@ -215,10 +215,18 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Class DF CLOSED s7449 (quiet-crash-passthrough). Next: class DG (HYPOTHESIS-ID harness-fatal-exit-coverage)**, see
-   NEXT.md: m6_god_common.sh crashlines greps only 'CRASH\|SIGSEGV\|abort', so non-signal fatal exits (librecomp
-   switch_error "Switch-case out of bounds" / do_break "Encountered break" via printf+exit, quick_exit "Exiting with exit
-   status", message_box "Failed to allocate memory!") score crashlines=0. Soak s7449_argck_levels (L4/L10 QUIET) queued.
+1. **Class DG CLOSED s7450 (harness-fatal-exit-coverage) H-few. Next: class DH (HYPOTHESIS-ID harness-death-exit-status)**,
+   see NEXT.md. DG: ONE shared fatal list tools/agent/fatal_patterns.txt (17 ERE: [CRASH] SIGSEGV SIGBUS SIGABRT abort
+   Switch-case / Encountered break / Exiting with exit status / Unhandled status register / Failed to allocate memory /
+   ^[Error] / exited unexpectedly / Failed to find function / Assertion failed / SDL_Init / SDL_CreateWindow failed /
+   libc++abi: terminating) + tools/agent/fatal_scan.sh (--selftest 17/17 pos, 0 neg); used by m6_god_common.sh crashlines
+   (+ new exitrc=<rc|held> field), tools/g1e_level_fps.py, tools/g1_objective_response_run.py. Plant ROGUESQ_PLANT_EXIT=<s>
+   KIND=switch|quick|silent (main.cpp). scratch/s7450: switch arm rc=134 (exit() -> static dtors -> libc++abi terminating
+   -> SIGABRT -> [CRASH], so old greps already saw 37-40: incidental non-member); quick arm rc=1, all 5 old scorers 0,
+   new 1 (MEMBER); silent _Exit rc=1, every grep 0 -> only alive/exitrc catch it; PLANT_FAIL control >=37 everywhere.
+   Clean flight logs (7, incl. 3 x 115-165 MB) new list 0 = old 0. In-harness check queued: soak s7450_fatal_harness.
+   s7449_argck_levels fold: L10 pass; L4 inits=2 (call#2 a0 0xAE->0x9A, in-mission restart, 45/91 prior L4 summaries
+   also inits=2), alive, 0 crash/stall, 564/623 KB -> DF flight line stands; rc=1 was the recipe's inits=1 bar.
    DF (s7449) CLOSED H-few, one change: rs64_diag_keep words + (fmt has "%s") the FORMATTED text is checked. Members found
    by audit: ultramodern message_box "%s\n" + our callback "[Error] %s\n", quick_exit "Exiting with exit status", librecomp
    "Failed to find function at", "RSP ucode %u exited unexpectedly", [s7357-io] "... failed", [s6892] "%s\n" walker-guard

@@ -1,0 +1,17 @@
+\[CRASH\]
+SIGSEGV
+SIGBUS
+SIGABRT
+abort
+Switch-case out of bounds
+Encountered break at original vram
+Exiting with exit status
+Unhandled status register bits changed
+Failed to allocate memory
+^\[Error\] 
+exited unexpectedly
+Failed to find function at
+Assertion failed
+SDL_Init failed
+SDL_CreateWindow failed
+libc\+\+abi: terminating

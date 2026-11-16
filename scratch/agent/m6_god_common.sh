@@ -14,6 +14,7 @@ printf '[vi] update_screen origin=0x006AB400\n[vi] update_screen origin=0x006904
 flightline() { awk -v end="$2" '/^\[autopilot\] fire/{ if (match($0,/t=[0-9.]+/)) t=substr($0,RSTART+2,RLENGTH-2)+0 } /^\[initMission\]/{ n++; if (n==1) i=t } END{ if (n) printf "inits=%d flight_s=%d", n, end-i; else printf "inits=0 flight_s=none" }' "$1"; }
 printf '[autopilot] fire t=30.0\n[initMission] x\n[autopilot] fire t=50.0\n[initMission] y\n' > $OUT/fl_ctl.txt
 [ "$(flightline $OUT/fl_ctl.txt 100)" = "inits=2 flight_s=70" ] && echo 'flight-control OK' >> $K || { echo 'flight-control FAIL' >> $K; exit 1; }
+zsh $ROOT/tools/agent/fatal_scan.sh --selftest >> $K || { echo 'fatal-control FAIL' >> $K; exit 1; }
 /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes' && { echo "SCREEN LOCKED" | tee $OUT/summary; exit 4; }
 # s5416: winctl keys never reach SDL (macOS refuses to activate the game: isfrontmost=NULL, 0 SDL key events). Use the in-process autopilot.
 # s5435: schedule continues past the results screen (LATE s): a/start alternate; the old 62-event list ended at t=254 s, before results.
@@ -84,9 +85,9 @@ for att in $(seq 1 ${MAXATT:-5}); do
     [ $((SECONDS-lastt)) -gt 30 ] && { stalls=$((stalls+1)); echo "stall t=$((SECONDS-t0))" >> $K; lastt=$SECONDS; }
   done
   alive=0; kill -0 $p 2>/dev/null && alive=1
-  kill -9 $p 2>/dev/null; wait $p 2>/dev/null
+  kill -9 $p 2>/dev/null; wait $p 2>/dev/null; xrc=$?; [ $alive = 1 ] && xrc=held  # s7450: a death's own exit status (non-signal exits print no CRASH)
   echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
-  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -ac 'CRASH\|SIGSEGV\|abort' $L)" | tee $OUT/summary
+  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc"  # s7450 class DG: shared fatal list | tee $OUT/summary
   exit 0
 done
 echo "tag=$TAG allattempts-failed" | tee $OUT/summary; exit 1
