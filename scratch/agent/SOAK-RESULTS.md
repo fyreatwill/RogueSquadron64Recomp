@@ -1545,3 +1545,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115-211446 | s7448_quiet_levels | rc=0 | 404s | scratch/agent/soak_results/s7448_quiet_levels_20261115-211446.log
 20261115-212636 | s7449_argck_levels | rc=1 | 410s | scratch/agent/soak_results/s7449_argck_levels_20261115-212636.log
 20261115-213946 | s7450_fatal_harness | rc=137 | 901s | scratch/agent/soak_results/s7450_fatal_harness_20261115-213946.log
+20261115-220452 | s7451_fatal_harness | rc=1 | 405s | scratch/agent/soak_results/s7451_fatal_harness_20261115-220452.log

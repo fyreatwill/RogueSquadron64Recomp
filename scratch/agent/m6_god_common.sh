@@ -91,7 +91,7 @@ for att in $(seq 1 ${MAXATT:-5}); do
   alive=0; kill -0 $p 2>/dev/null && alive=1
   kill -9 $p 2>/dev/null; wait $p 2>/dev/null; xrc=$?; [ $alive = 1 ] && xrc=held  # s7450: a death's own exit status (non-signal exits print no CRASH)
   echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
-  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc"  # s7450 class DG: shared fatal list | tee $OUT/summary
+  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc" | tee $OUT/summary  # s7450 class DG: shared fatal list; s7452: this comment used to precede the tee, so no passing run wrote a summary
   exit 0
 done
 echo "tag=$TAG allattempts-failed $(grep -a -- '-att[0-9]* exitrc=' $K | awk '{f=$3; sub("fatal=","",f); n+=f; if($2!="exitrc=killed") d++} END{printf "deaths=%d fatal_total=%d", d, n}')" | tee $OUT/summary; exit 1

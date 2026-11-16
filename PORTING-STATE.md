@@ -197533,3 +197533,19 @@ syscall" line scores 1. Verdict: H-none for the Debug build (refutes H-few/H-man
 Rules out: silent non-signal exit sites in our runtime as an unseen crash family. Does not cover lib/rt64 or SDL internals.
 Next: class DI harness-death-as-void: 46 harness scripts carry their own fail/retry copies (g1_fly/aim/steer/...); classify
 which are live and whether they void a post-gate death.
+
+## Session 7452 (2026-11-15) — maintenance: CURRENT-TRUTH 60376 -> 35759 B; m6_god_common.sh summary tee was commented out since s7450
+
+MAINTENANCE iteration (Step 0: CURRENT-TRUTH 60376 B > 60000). No experiments run.
+- Compaction: Next-steps item 1 (classes CC-DH s7420-s7451, 226 lines, 26952 B) archived verbatim to PROJECT-OVERVIEW
+  "Migrated from CURRENT-TRUTH (s7452 maintenance)" and replaced by a one-line-per-class summary. Headline "as of" refreshed,
+  archive pointer and chronology window updated. Net -209 lines, -24617 B. Backlog numbering 1-20 already monotonic.
+- Soak fold s7451_fatal_harness rc=1: arm P PASSED (died_in_verify=1 alive_at_end=0 crashlines=1 exitrc=1: the s7451
+  terminal-death edit works, plant scored). Arm C (L4) flew normally (mission t=71, mission_verified_130s, fbhash distinct
+  10037/11302, all three controls OK) but `cat $D/summary` failed: no summary file.
+- ROOT CAUSE (read from the script, git log -S): s7450 commit d354bfbdf appended `# s7450 class DG: shared fatal list` to
+  m6_god_common.sh:94 BEFORE `| tee $OUT/summary`, so the pipe became comment text and no passing run has written a
+  summary since. The s7449_argck_levels rc=1 / s7450 / s7451 control-arm verdicts are this harness defect, not game failures.
+  Fix: tee moved before the comment (zsh -n OK). Not run-verified this iteration (maintenance); s7452_fatal_harness re-queued
+  (same P/C arms) as the verification: pass = both summaries present, P died_in_verify exitrc=1, C alive_at_end=1 crashlines=0.
+- ORIGIN: none (harness fix, no mitigation machinery).

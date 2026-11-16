@@ -1,9 +1,9 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7451 (2026-11-15).
+Compact operational handoff, as of Session 7452 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
-controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
+controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
 s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "(s7307 maintenance)"; older text in
 "(s7187 maintenance)" and "(s6994 maintenance)". Grep there for any sNNNN.
 
@@ -215,232 +215,25 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Class DH CLOSED s7451 (harness-death-exit-status) H-none in the Debug build; DG in-harness defect fixed. Next: class DI (HYPOTHESIS-ID harness-death-as-void)**,
-   see NEXT.md. DH: every exit(/_Exit(/quick_exit(/abort( in src/ + librecomp + ultramodern (21 raw, 13 live sites)
-   already prints a fatal_patterns line: abort() sites via the unconditional macOS SIGABRT handler ([CRASH] caught signal 6),
-   assert(false) sites live because build/ is CMAKE_BUILD_TYPE=Debug (no NDEBUG) -> "Assertion failed". NDEBUG-silent
-   pair hardened: +"Cannot partially unload section" (overlays.cpp:324) +"\] FATAL |^\[FATAL\] " ([s7356] FATAL + abort,
-   [FATAL] syscall); selftest 19/19, 0 hits on 7 clean flight logs. s7450_fatal_harness soak FAILED for a harness reason
-   (single-source, one run): planted _Exit at 110 s fired after the mission gate (t=71) -> m6_god_common.sh "died_in_verify"
-   retried it as a void attempt 4/5, summary "allattempts-failed", fatal line never scored, 900 s cap hit before arm C.
-   So every m6/g1 soak since the retry was written would have reported an early-mission crash as a route failure.
-   Fix (m6_god_common.sh): died_in_verify is terminal (summary died_in_verify=1 ... crashlines exitrc; DIED_RETRY=1 = old),
-   fail() logs exitrc=<rc|killed> + fatal_scan per attempt, allattempts-failed carries deaths= fatal_total=. Synthetic
-   controls (fake BUILD binaries, /tmp/s7451fake): die-after-gate -> exitrc=1 crashlines=1; die-before-gate x2 -> deaths=2
-   fatal_total=2; live-killed -> exitrc=killed deaths=0. Re-queued as soak s7451_fatal_harness.
-   DG: ONE shared fatal list tools/agent/fatal_patterns.txt (17 ERE: [CRASH] SIGSEGV SIGBUS SIGABRT abort
-   Switch-case / Encountered break / Exiting with exit status / Unhandled status register / Failed to allocate memory /
-   ^[Error] / exited unexpectedly / Failed to find function / Assertion failed / SDL_Init / SDL_CreateWindow failed /
-   libc++abi: terminating) + tools/agent/fatal_scan.sh (--selftest 17/17 pos, 0 neg); used by m6_god_common.sh crashlines
-   (+ new exitrc=<rc|held> field), tools/g1e_level_fps.py, tools/g1_objective_response_run.py. Plant ROGUESQ_PLANT_EXIT=<s>
-   KIND=switch|quick|silent (main.cpp). scratch/s7450: switch arm rc=134 (exit() -> static dtors -> libc++abi terminating
-   -> SIGABRT -> [CRASH], so old greps already saw 37-40: incidental non-member); quick arm rc=1, all 5 old scorers 0,
-   new 1 (MEMBER); silent _Exit rc=1, every grep 0 -> only alive/exitrc catch it; PLANT_FAIL control >=37 everywhere.
-   Clean flight logs (7, incl. 3 x 115-165 MB) new list 0 = old 0. In-harness check queued: soak s7450_fatal_harness.
-   DF (s7449) CLOSED H-few, one change: rs64_diag_keep words + (fmt has "%s") the FORMATTED text is checked. Members found
-   by audit: ultramodern message_box "%s\n" + our callback "[Error] %s\n", quick_exit "Exiting with exit status", librecomp
-   "Failed to find function at", "RSP ucode %u exited unexpectedly", [s7357-io] "... failed", [s6892] "%s\n" walker-guard
-   repairs (G5a breadcrumb). Non-members: the macOS SIGSEGV/SIGBUS/SIGABRT handler (every line "[CRASH]..." + raw
-   backtrace_symbols_fd), assert (libc raw), switch_error/do_break (printf = stdout, unrouted). Positive control
-   ROGUESQ_PLANT_FAIL=15 (7 planted lines then SIGSEGV), scratch/s7449: default 7/7 planted, 37 [CRASH] + 12 bt frames;
-   QUIET ARGCHECK=0 (s7448 filter) 1/7, 37 + 12; QUIET new 7/7, 37 + 12; boot log 5937 -> 6346 B. ARGCHECK=0 = old.
-   DE (s7448) CLOSED H-few, one change: src/main/main.cpp rs64_diag_keep also passes format prefixes [initMission],
-   [autopilot], [vi] update_screen, [f5-phase5-target-store], [godmode], [g1b], [stall- (the tags the live harnesses
-   m6_god_common.sh / g1_level_coverage_common.zsh, s7230/s7257/s7229 scorers, boot_freeze_hunt.sh gate on; [fbhash and
-   [autopilot] fire were already raw). ROGUESQ_DIAG_QUIET_HARNESS=0 = old. 150 s owner recipe lvl1 (s7431 tool), QUIET:
-   keep arm [initMission] 1 / [autopilot] armed 1 / [vi] update_screen 143, 501 KB; HARNESS=0 control 0 / 0 / 0, 484 KB;
-   fbhash 8826 / 8834 both. g1_level_coverage_common.zsh L4 under QUIET: mission_t 72 s, flight 136 s, 0 VI stall, 0 crash,
-   run.log 595 KB (s7447 default same recipe: 164.8 MB, mission_t 73 s). QUIET is now usable in every harness.
-   s7447_route_levels fold: L4/L7/L12 137-138 s flight, 0 crash, 0 stall (DD build qualifies on 3 levels).
-   DD (s7447) CLOSED H-hidden, one change: include/rs64_diag_route.h force-included (CMake option RS64_DIAG_ROUTE, default ON)
-   into src/main + src/rsp (not factor5_ucode*) and the rt64 / librecomp / ultramodern C++ TUs, so every direct fprintf /
-   std::fprintf goes through rs64_diag_fprintf; `(fprintf)(...)` keeps a site raw ([diag-quiet], [fbhash, [autopilot] fire).
-   150 s owner recipe lvl1 (scratch/s7447): QUIET flight residual 18.8 KB/10s (12 periodic bypass tags) -> 163 B/10s, control
-   [fbhash 8830 -> 8833; default arm 8.770 -> 8.772 MB, same tags, flight_from 68.4 s both; 0 crash all four runs.
-   DC (s7446) CLOSED H-hidden, one change: src/main/upstream_compat.cpp rs64_s6569_spill per-request bump line
-   "[spill] req=.. -> .." latched on ROGUESQ_SPILL_LOG=1 (G1E_TRIM=0 = old); arena-full breadcrumb and the 1-in-256
-   reuse/free summaries stay unconditional; placement stays in the s6893 ring / S7317_ALLOCMAP. scratch/s7446, 150 s owner
-   recipe lvl1 flight (tools/s7431_stderr_volume.sh): default [spill] req 0 (reuse 1, free 4 kept), consumer arm 752 (= s7445
-   752), fbhash control PASS both (8803 / 8825), 0 crash both. No [spill] per-request consumer in tools/ (only retired soaks).
-   DB (s7445) CLOSED H-hidden, one change: tools/apply_s7445_burst_latch.py (in the fixup apply list before s7069) latches
-   [s4234-ENTRY] (funcs_24.c, ROGUESQ_S4234_ENTRY=1; rs64_s4234_g still counts), [newbtn] (funcs_19.c, ROGUESQ_NEWBTN_LOG=1)
-   and the s1976-s1982 [drain-tick/slots/cross/cursor/path/base/hdr] dump block (funcs_30.c, ROGUESQ_DRAIN_DUMP=1);
-   G1E_TRIM=0 restores all. Diagnostic only, no guest store changed. scratch/s7445, 150 s owner recipe lvl1 flight: default
-   0 / 0 / 2 lines (2 = the one-shot drain-inloop-gate + drain-exit), consumer arm 2101 / 796 / 432 (= s7444's 2101 / 791 /
-   ~450, PASS), fbhash control PASS both, 0 crash both. H-stall REFUTED (two runs): the ~200 ms fbhash gaps at t=6.2 s and
-   44.8 s are there with the bursts latched (204 / 203 ms vs 206 / 203 ms in s7444), so they are scene loads.
-   DA (s7444) CLOSED H-hidden, one latch: 14 periodic `(n & MASK) == 0|1` print sites read by hand. GATED (env/latch before
-   the counter): s6955-bc (G1E_BATCH_CHECK), s6933-wm, s6945-coal, s6934-tbl (G1E_TRIM tbl check), s6936-walk, s4272-latetot /
-   s4280-tot / s4284-tot (G1E_CDIAG), s4638-tally (LOG_S4299), s7318 (S7318_BCMP), s6911 (DD_VARCLAMP_LOG), g3d toggle,
-   s4779-ctl (LOG_S4457), ustore/vstore (s7443). UNGATED-DIAG: [s6956-cdiag] (dpc_bridge.cpp rs64_dpc_defer_end_impl, every
-   1024 commits, 8 lines / 150 s, the only DA tag in the s7443 default stderr). Now latched on ROGUESQ_G1E_CDIAG (any value) /
-   G1E_TRIM=0. scratch/s7444, 150 s owner recipe lvl1 flight: default 0 lines, consumer G1E_CDIAG=1 8 (PASS), fbhash control
-   PASS, 0 crash both.
-   CZ (s7443) CLOSED H-trivial + one latch: the four hooks left by s7441_rs64_census sum 0.022 ms/f self. rs64_s6287
-   (ppcount, 5 sites funcs_3.c) GATED-INSIDE (cached ROGUESQ_PPLOG); rs64_s6285_en (11 sites) NEEDED (dlpool grow gate,
-   static latch); rs64_s6963_pre (funcs_10.c clampGridCellLookup) NEEDED (cell-index memo; S.calls++ only); rs64_s5660_ustore
-   (4+ swl/swr sites) was UNGATED-DIAG: atomic counters + [ustore-all] every 2^18 calls (42 lines / run) with no env. Now
-   latched on ROGUESQ_VSRC_STORES / ROGUESQ_LOG_USTORE (g1d_blk pc + s6843 STORE_WATCH stay unconditional), G1E_TRIM=0 old.
-   scratch/s7443, 150 s owner recipe lvl1 flight each: default [ustore-all] 0, consumer LOG_USTORE=1 24 (PASS), 0 crash both.
-   Trap: any ROGUESQ_LOG_* env turns on [storediag] (reason=ROGUESQ_LOG_USTORE): consumer stderr 9.8 -> 109 MB.
-   CY (s7442) CLOSED H-hidden: tools/s7442_probe_gate_census.py (every rsNNNN helper the apply_s*.py patches inserted, call
-   sites from guest functions, GATED / GATED-INSIDE / UNGATED + sample ms/f via --samples) on scratch/s7441: 12/40/9; the 9
-   read by hand are renamed-body wrappers or latched (regex misses) except rs5908_call (apply_s5908_callers.py, every
-   findSegmentObjectSphereHit call, printed [s5908] every 1024 calls: 2127 lines / 529 KB per run). Now latched on
-   ROGUESQ_LOG_HITS / G1E_TRIM=0; script re-insert bug fixed. scratch/s7442: control PASS, [s5908] 0, stderr 16.45 -> 15.92 MB,
-   0 crash; consumer control LOG_HITS=1 [s5908] 983.
-   CX (s7441) CLOSED H-hidden, three changes. Census tool tools/s7441_rs64_census.py (every rs64*-named frame, all threads,
-   self/incl ms/f, defining file) on scratch/s7440: NO rs64 frame >= 0.003 ms/f in render/framebuffer_renderer, hle/state,
-   framebuffer*, present_queue, rdp_tmem, workload_queue (H-small for the named files). Found elsewhere: (1) the s5835 sphere
-   probe (tools/apply_s5835_sphere_probe.py, intersectSegmentWithObjectSphere, every guest sphere test) ran at the owner
-   recipe and printed [s5901] per bolt position up to 60000 lines; call site now latched on ROGUESQ_LOG_HITS / TELE_BOLT (its only
-   guest write) / G1E_TRIM=0. Guest inclusive 0.096 -> 0.005 ms/f (intersect) and 0.098 -> 0.007 (findSegmentObjectSphereHit),
-   fprintf samples under it 224 -> 0; second line: same-recipe stderr 36.9 MB (s7439, [s5901] 60000) -> 16.4 MB ([s5901] 0).
-   (2) rs64_e9prov_frame_pop/resume (dpc_bridge.cpp, per DL return) did map find + 2 erases ungated; now return unless
-   ROGUESQ_LOG_E9_PROVENANCE (dlwalk event kept). (3) rs64SkipDraw -> load-time latch + slow path. Capture scratch/s7441 control
-   +0.0352 vs 0.030 PASS, guest probe verdict H-free 0.074 (control 0.63), 0 crash. Consumer control (LOG_HITS=1 +
-   LOG_E9_PROVENANCE=1, 150 s): [s5901] 21212, [s5841] 146, [sph39] 158, [e9-prov] push=pop=resume=160 mis 0, 0 crash.
-   Left in owner-recipe stderr (16.4 MB / 4 min, file sink, no cap): [s2020-svc] 2.1 MB, [vi-mode-table], [dpc-fwd],
-   [osViSetMode], [s3290-stall] ~1.8 MB each: routed via rs64_diag_fprintf, closed s7431/s7432 (terminal cap, 0.3% core).
-   CW (s7440) CLOSED H-small, one change: rs64_note_image_word was an out-of-line call per RDP command that returned unless op
-   FF/FE; the op test is now at the rt64_interpreter.cpp call site (same ring; consumer = the default-on [ost-wb] wild-width
-   freelist log in rt64_state.cpp, so the ring stays). rs64_floor_rect call (rt64_rdp.cpp, per rect) now skips its argument
-   building unless ROGUESQ_LOG_FLOOR (or G1E_TRIM=0). rs64LogLoad (6 samples) and rs64SkipDraw (27) are already env-gated at
-   entry, < 0.015 ms/f each. /usr/bin/sample top-of-stack, owner recipe lvl1, scratch/s7440 (control +0.0355 vs 0.030 PASS):
-   note_image_word 35 -> 0 samples vs scratch/s7439; 0 crash. CV consumer control PASS (same session, LOG_SHADE_RAW/FLOOR/
-   FLOOR_MESH=1): shade-raw 4751 lines with ord>=1, tri-source-join 4751, [floor*] 55745 incl. census rect counts > 0,
-   [s4531-img] control 1 (ring still fed after the call-site gate).
-   CV (s7439) LANDED H-gated: rt64_gbi_rdp.cpp decodeTriangles now computes shadeTask/shadeOrdinal/submit serial only when
-   ROGUESQ_LOG_SHADE_RAW / FIX_ZERO_SHADE / LOG_FLOOR_MESH / SHADE_DIAG=1 is armed, and builds the floor_note/cover/texel/untex
-   argument blocks only under ROGUESQ_LOG_FLOOR / LOG_FLOOR_MESH (every callee already returned at once without them).
-   ROGUESQ_G1E_TRIM=0 restores the old always-run path. Measured by /usr/bin/sample, owner recipe lvl1 flight (scratch/s7439,
-   control +0.0384 vs 0.030 PASS) vs s7435: decodeTriangles self 0.373 -> 0.176 ms/f, inclusive 0.726 -> 0.468, every rs64_floor_*
-   / mutex / __hash_table / getter row gone from --under; Gfx thread 8.71 -> 8.00 ms/f (cross-run, single-source for the total).
-   0 crash over the ~233 s run. Other hot loops (drawTris, loadBlock, loadTLUT, fullSync, pairTiles) carry <= 0.02 ms/f of rs64
-   hooks (H-spread refuted). Logged ord/task read 0 in FIX_ZERO_SHADE lines unless SHADE_DIAG=1 (only behaviour change, log-only).
-   CU (s7438) CLOSED H-closed (RT64 self terms all have prior closures; full text PORTING-STATE s7438).
-   CT (s7437) CLOSED H-known: tools/s7437_tmem_hash.py on scratch/s7435 (control +0.0345 vs 0.030 PASS): TMEMHasher::hash
-   0.0292 core = 0.49 ms/frame (body/CI4 scan 0.38, XXH3 0.11), 100% from TextureManager::uploadTexture on the Gfx thread; other
-   XXH users 0.11 (FramebufferManager::checkRAM 0.05). Second capture scratch/s7433: 0.50 + 0.13. Redundancy already measured:
-   s6942 TMEM-generation memo 0 hits in 2.29M flight calls (H-redundant refuted, ROGUESQ_G1E_TMEMMEMO opt-in), s6960 exact
-   provenance cache (ROGUESQ_G1E_PROVCACHE) 0 wrong in 10.9M hits but costs more than it saves; s6942 NEON CI4 scan default on.
-   No build: the planned step-2 counter would have re-measured s6942. No change landed.
-   CS (s7436) CLOSED H-free: tools/s7436_alloc_cost.py on scratch/s7435 (8 x 12 s windows, owner recipe lvl1 flight; control
-   DIAG_BUSY_GUEST_US=500 +0.0345 core vs 0.030, PASS): every allocator sample (libsystem_malloc frames, operator new/delete)
-   together 0.0122 of one core = 0.20 ms/frame spread over all threads; RT64 Idle 0.0031 / RT64 Workload 0.0030 / Gfx 0.0028,
-   guest threads <= 0.0002; 0 lock-wait samples under malloc (H-lock refuted). Largest owned caller RT64::TextureMap::use
-   (Workload+Gfx 0.0035 core) then plume executeCommandLists 0.0022, all < 0.01. Second line: scratch/s7433 sample_{4,8}
-   (--second-line, its control passed in s7433) alloc 0.0127, same callers. No change landed.
-   CR (s7435) CLOSED H-tail: tools/s7435_spin_cost.py over one tools/s7433_probe_cost.sh owner-recipe run (lvl1 flight, 8 x 12 s
-   /usr/bin/sample windows, control DIAG_BUSY_GUEST_US=500 toggled 30 s: +0.0345 core vs 0.030 expected, PASS). All host spins
-   together 0.049 of one core: VI deadline tail spin (events.cpp:850, deliberate s6456/s6967, VI_NOSPIN / VI_RT_SPIN_US exist)
-   0.0325, moodycamel LightweightSemaphore partial spin (maxSpins 10000, mostly the idle guest thread's wait_for_resumed) 0.0088,
-   other clock polls 0.0062, yields 0.0012. Second lines: s7433 capture 0.031/0.011, s7381 counters 3.0%. wait_one_frame
-   (vi.cpp:47) has no caller. No change landed (nothing >= 0.01 core outside the deliberate VI tail).
-   CQ (s7434) CLOSED H-known: tools/s7434_gfx_glue.py on scratch/s7433/sample_{4,8}.txt (owner recipe dd4 16:9 FPS60, lvl1
-   flight, busy-off windows) charges each running Gfx Thread sample to its innermost owned frame: 8.97 ms/frame = F5 ucode 3.85
-   (43%, matches s7014's 41%) + RT64 3.21 (36%) + our glue 1.92 (21%). Our glue = rsp_dpc_submit_impl self 1.07 (per-DPC_END-bump
-   bridge: hot PCs sit right after the s_fwd/g_task_rdp ldadd counters, = s7028/s7029's split, closed H-call; BUMPFAST=2 stays
-   opt-in) + record_submit walkers 0.42 (= s7018's 0.23-0.45, closed) + submit_rdp_range 0.08. H-copy REFUTED: memmove/memcpy
-   0.50 ms/frame in total, largest owned caller rsp_dpc_submit_impl's vector insert 0.163. defer_end is 1.99 inclusive, of which
-   0.085 ours (the rest RT64 processDisplayLists). Two lines (sampling profiler here, mach-timer splits s7018/s7028), so no
-   owned term >= 0.5 ms/frame is left that is not already split and closed. Largest RT64 terms: TMEMHasher::hash + XXH3
-   0.57, rs64LoadBlockRuns (our lib/rt64 patch) 0.32, decodeTriangles 0.28, processRDPLists 0.27 ms/frame.
-   CP (s7433) CLOSED H-free, measured by /usr/bin/sample (external profiler): tools/s7433_probe_cost.{sh,py} (owner recipe via
-   tools/s7431_stderr_volume.sh, 8 x 12 s windows, control ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled 30 s in-run: +0.68/+0.63 ms
-   per frame vs 0.50 expected, PASS both runs). Guest threads run 2.5 ms/frame; probe helpers (own frames + library calls
-   beneath, wrappers not charged for wrapped game code) 0.144 ms/frame, mostly the CO fprintf and s6963_tick. FIX: s6963_tick
-   read mach_absolute_time on every clampGridCellLookup for a tick that does nothing with no toggle/log; now skipped
-   (ROGUESQ_S7433_TICK_ALWAYS=1 = old): 43 -> 5 samples, 0.108 ms/frame after, 0 crash, 60 tasks/s. Gfx-thread probes
-   0.054 ms/frame. Traps: osViSwapBuffer self 9% is the runner's planted [fbhash] (FB_HASH=1); wait_for_resumed self 7% is the
-   moodycamel semaphore spin. The default-on diagnostic-cost family (CM-CP) is closed.
-   s7428 F9 arms C/D retired after 5/5 VOID (no injected key reaches the game): the F9 persist gate is code-reading only.
-   CO (s7432) CLOSED H-free: include/rsp_dpc_macros.h now routes every generated-C fprintf (50 objects, 0 direct) through
-   rs64_diag_fprintf (main.cpp), as do [dpc-fwd]/[osViSetMode]/[vi-mode-table]/[lle task]; ROGUESQ_DIAG_QUIET=1 drops them at
-   source (crash formats pass), opt-in, default 0. Same-run 2x2 (quiet 15 s x busy 30 s, owner recipe lvl1 flight, FAST=1
-   PROBES=0, tools/s7432_diag_quiet_ab.py): control 1 ms busy per gfx task = +0.934 ms/task ucode (PASS); quiet = +0.086 ms
-   (noise, sign differs between the two pairs), tasks/s 60.6 vs 60.6. Direct cost: 0.71 ms/s on gfx-task threads (388
-   calls/s, 31 KB/s, ~0.012 ms per task) + 2.2 ms/s elsewhere (1507 calls/s, 165 KB/s) = 0.3% of one core. Guest 1 ms busy
-   per swap moved tasks/s by -0.1 (headroom >= 1 ms/frame). The s7431 writer cap is enough.
-   CN (s7431) CLOSED H-perframe FOUND + FIXED (writer-side): tools/s7431_stderr_volume.{sh,py} (copied folder, owner recipe
-   FPS60 dd4 16:9 + forced lvl1 autopilot, no logging env, per-line arrival timestamps; planted per-frame control
-   ROGUESQ_FB_HASH=1). Old binary 260 s: 39.5 MB, flight 1.71 MB/10 s, 37 tags print in every flight window ([s5855] 800 KB/10s
-   at 5 KB/line, [vi-mode-table]/[osViSetMode] 60 lines/s, [dpc-fwd], [s2020-svc], [s3290-stall], [lle ...); burst
-   [s4234-ENTRY] 165 KB in 1 s at boot. Fix: per-tag token bucket in the s6979 async-stderr WRITER thread (game threads pay
-   nothing): 200-token burst, 0.2 tokens/s, a line costs 1+bytes/512; CRASH/abort/FATAL/SIG/ERROR/assert lines always pass; a
-   "[stderr-cap] dropped" summary every 30 s. ROGUESQ_STDERR_CAP unset = on iff the original stderr is a terminal (owner's
-   Terminal launch; harness pipes/files keep every line their gates parse), =1 force, =0 off; _BURST/_RATE tunable. Arms, new
-   binary: C (file, CAP=1) 1.33 MB/260 s, flight 11.5 KB/10 s (149x less), control [fbhash held to 2 lines/window; N (file,
-   unset) cap=0, 2.1 MB/10 s = unchanged; T (pty via script(1), unset) cap=1, 11.5 KB/10 s; crash control
-   ROGUESQ_TEST_CRASH_AT=25 under CAP=1 printed the whole [CRASH] block.
-   CM (s7430) CLOSED H-bounded after two fixes: rs64_s6892.log rotated to .1 above 256 KiB at start (ROGUESQ_S7430_NO_ROTATE=1
-   = old); boot ucode dump opt-in ROGUESQ_DUMP_UCODE_BIN=1 (tools/s7430_file_growth.{py,sh}). rs64_s6893_rdram.bin (20 MB,
-   once per run on the first real s6892 repair) left: bounded, a one-off G5c stall candidate.
-   CL (s7429) WINDOW FOUND + FIXED: librecomp finalize_output_file_with_backup copied temp -> final with copy_file, which
-   truncates final first; a quit/crash/kill inside the copy left a short or 0-byte final save, and the loader opened it (it
-   exists) instead of the whole .bak, then zero-filled = profile wiped. tools/s7429_save_quit/harness.cpp (real files.cpp,
-   fork + SIGKILL at 50-3000 us during continuous saves): old finalize 236-259/2000 bad loads (all 0-byte), new 0/4000, same
-   binary toggled by ROGUESQ_S7429_OLD_FINALIZE=1. Fix: fsync the temp, rename it over final (atomic); read_save_file now
-   loads the whole .bak when final is short ([s7429-io] line; runtime arm R1 in a copied folder fired, control R1c with no
-   .bak zero-fills). Second gap (code reading only, single-source): SDL_QUIT -> quick_exit never joined the saving thread,
-   which writes only after a 10 ms gap with no new writes, so a quit inside that window dropped the newest save; main.cpp now
-   calls ultramodern::flush_save_file() first (writes only if the write_gen counter is ahead; keeps the NO_SAVE_WRITE gate;
-   ROGUESQ_S7429_NO_QUIT_FLUSH=1 = old). NOT runtime-verified: no injected quit reached the game (s7428 key VOID), and a
-   40 s forced boot wrote no save, so the rename path is verified by the harness only. tools/s7429_save_quit.sh (exit 0
-   H-durable). Owner save untouched (mtime 2026-11-08).
-   CK (s7428) CLOSED H-env-wins after one fix: tools/s7428_config_precedence.py (110 open sites in src/, librecomp,
-   ultramodern, rt64 hle; 0 unreviewed fixed-path reads; control PASS: planted file-before-env read, ungated persist write,
-   RT64 config on, ungated save write all flagged; HEAD~ main.cpp flags persist-gated). Config files the game reads: RT64
-   user config NEVER (rt64_render_context.cpp useConfigurationFile=false, detectDataPath=false: every RT64 setting comes from
-   ROGUESQ_* env), audio_device.txt (exe dir; ROGUESQ_AUDIO_DEVICE wins, runtime arms A/B in a copied folder confirm), save,
-   stored ROM, mods/ (empty). DEFECT fixed: the F9 audio-route cycle persisted audio_device.txt even under
-   ROGUESQ_NO_SAVE_WRITE, so a probe run could change the owner's next default; now gated like the save. F9 arms C/D
-   (tools/s7428_audio_route_arms.sh, injected-Return void check) VOID in-session (no injected key reached the game, Return
-   included) -> queued scratch/agent/soak_queue/s7428_audio_route_arms.sh (SOAK_NEEDS_IDLE=300).
-   CJ (s7427) CLOSED H-ordered after one fix: tools/s7427_env_policy_order.py --control (planted pre-policy static latch /
-   step-order inversion / unguarded overwrite all flagged) + runtime trace ROGUESQ_S7427_ENVTRACE=1 (rs64_env_cache.cpp, phase
-   pre/in policy; ROGUESQ_S7427_PLANT=1 control seen). 36 policy vars, 5 steps, 8 overwrites (sanitiser 4 / guarded 1 / ASPECT
-   normalisation 3), 0 inter-step read-before-set. Pre-policy readers at runtime: g_rs64_s7030, S7239Init/S7246Init (re-armed
-   by rs64_s7258_merge_reinit), events.cpp GFX_QOS (reads QOS_ALL itself), and the DEFECT rs64_g5b_tg_fix (dpc_bridge.cpp,
-   static init read the RAW DRAW_DISTANCE: "4x"/"inf" ran retail dd1 with the dd>1 TriGen fix armed). Fixed:
-   rs64_s7427_tg_fix_reinit() after the policy (ROGUESQ_S7427_REINIT=0 = old); arms 4x -> 1->0, 4x+REINIT=0 -> stays 1,
-   dd4 -> unchanged. Owner recipe unaffected (valid values).
-   CI (s7426) CLOSED H-consistent after one fix: tools/s7426_env_defaults.py --control PASS (planted flipped default / presence /
-   file-scope policy latch all flagged); 3,789 sites, 703 lambdas compiled+evaluated, 86 documented vars, reviewed rows in
-   tools/s7426_env_accept.tsv. Defect fixed: ROGUESQ_DD_UNSAFE was a presence test (=0 unlocked dd 8); now a value test in
-   apply_s6036_dd.py + live funcs_9.c, two-arm verified (=0 -> multiplier 4, =1 -> 8). OWNER-OPT-INS header corrected. 154
-   undocumented default-ON vars = internal fix kill-switches/caps (inventory, not drift).
-   CH (s7425) qualified at runtime: s7425_nobw_levels L1/L5/L10 alive, 0 crash.
-   CH (s7425) DRIFT FOUND + FIXED: tools/s7425_build_options.py --control (planted -O0 -DRS64_BYTE_WATCH librecomp entry and
-   planted cache SP_WATCH=ON both flagged). 16 options/cache vars all at default (MIPS_*/N64RECOMP_EXE = host paths); hot targets
-   (RecompiledFuncs 52, PatchesLib, game 24, librecomp 27, ultramodern 15, rt64 211, plume 3) all -O2; gfx ucode keeps
-   -inline-threshold=4000; 0 sanitizer flags/symbols; 454 objects newer than flags.make. One finding: -DRS64_BYTE_WATCH (s5690
-   bool-store watch, no remaining consumer) on all 52 RecompiledFuncs TUs = inlined static load+test on every guest byte access,
-   +2.5% __text (funcs_9). Now option ROGUESQ_BYTE_WATCH default OFF; rebuilt: rs64_bwatch 118 -> 0 symbols, game __text
-   -575,888 B (1.8%), tool VERDICT H-intended rc 0. Identity when ROGUESQ_BOOLSTORE_WATCH unset (single-source reading of
-   recomp.h); runtime qualification soak queued: scratch/agent/soak_queue/s7425_nobw_levels.sh (L1/L5/L10 owner recipe, 120 s).
-   Cold -O0 libs linked by design: LiveRecomp/N64Recomp/rabbitizer/fmt/miniz/nfd/re-spirv/zstd (zstd -DDEBUGLEVEL=1 is zstd's
-   own Debug default). tools s7413-s7418 compile forms with -DRS64_BYTE_WATCH "as CMakeLists sets it": drop it when rerun.
-   CG (s7424) CLOSED H-fresh: tools/s7424_stale_objects.py --control --make-n PASS: 415 linked objects (24 + 15 archives) newer
-   than source and every .d dep, archives byte-match their .o, RecompiledFuncs from the live tree, glob == compiled set, 0 orphans,
-   2504/2504 RECOMP_FUNC symbols in the .o. make -n residue = spirv-cross relink (a 12:41 reconfigure rewrote only its
-   build.make/link.txt) -> 56-shader chain; current spirv_cross_msl regenerates all 56 .metal byte-identical, so no-op in content.
-   CF (s7423) CLOSED H-diag: tools/s7423_live_stale.py live vs fresh regen, every function text-level, --control PASS (known funcs_9
-   lines listed DIAG, planted store BEHAVIOUR, planted print DIAG): 124 regen-only statements = DIAG 25 / FILE-DIAG 5 / ORDER-DIAG 10
-   / GUEST 4 + REGEN-FUNC 1 (the s6871 sizing set) / 3 reviewed ORDER rows (tools/s7423_live_stale_accept.tsv: diag swap, goto-less
-   labels, dead post-return copy). 0 behaviour patches missing from the shipped build. Live funcs_9 [streamdump] bounds print 0 until
-   the next regen (diag only).
-   CE (s7422) CLOSED H-once: of 13 windowed-idempotence scripts, 8 are called twice (inline fixer + RS64_REPLAY); 0 doubled in
-   the real chain (fresh replay /tmp/s7422/R byte-identical to s7421 R2), but 7 of 8 double once a later block lands at their anchor
-   (tools/s7422_idem_class_test.py control) -> whole-function tag checks; s5829 safe by anchor shape; s5693/s5697/s6303/s6311/
-   fixup_preempt_point called once (SAFE). Residue explained: s5856 regen>live = same decl line labelled s5904 in live (label only);
-   s6497 regen>live = live lost the two funcs_9 lines above (regen correct).
-   CD (s7421) CLOSED H-mirrored: tools/s7421_regen_drift.py --control rc 0 (plant LOST / plant-diag ENVDIAG PASS) over a fresh
-   replay (2664/114/18/3, = s7420; 2671/107/18/3 after the idempotence fix): all 47 new diffs + 3 new one-sided = funcs_13 store-diag handler rs64_s5798_st reorder
-   (diag, inlined into 45 callers) + 6 stale ROGUESQ_TICK_TRACE hooks; 0 LOST; baseline residue in tools/s7421_regen_accept.tsv.
-   PATCH-tag census agrees (live-only tags = documented opt-in list). Found and fixed: s5787/s5790/s5791/s5809 HUDBIT logs
-   double-applied in a regen (windowed idempotence; diag only). docs/REGEN-VERIFY.md "s7421".
-   CC (s7420) CLOSED H-clean. Use the weak-aware regex `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC` in new parsers.
+1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
+   Next: class DI (HYPOTHESIS-ID harness-death-as-void), see NEXT.md. One line each:
+   - DH s7451 H-none (Debug build): all 13 live exit/abort sites print a fatal_patterns line; NDEBUG pair hardened (selftest 19/19).
+     m6_god_common.sh died_in_verify is now terminal (DIED_RETRY=1 = old): post-gate deaths used to be retried as void attempts.
+   - **s7452 harness fix:** since s7450 (d354bfbdf) m6_god_common.sh:94 had `# comment | tee $OUT/summary`, so NO passing run wrote
+     a summary; s7449/s7450/s7451 control-arm "failures" (arm C summary missing) were this, not the game. Re-queued s7452_fatal_harness.
+   - DG s7450 H-few: shared tools/agent/fatal_patterns.txt + fatal_scan.sh feed m6_god_common.sh (+exitrc), g1e_level_fps.py,
+     g1_objective_response_run.py; ROGUESQ_PLANT_EXIT=<s> KIND=switch|quick|silent plant.
+   - DF s7449 H-few: rs64_diag_keep checks formatted "%s" text (ROGUESQ_PLANT_FAIL plant). DE s7448: diag_keep passes
+     [initMission]-class prefixes. DD s7447: include/rs64_diag_route.h force-included (RS64_DIAG_ROUTE, default ON), qualified L4/L7/L12.
+   - DC s7446 spill bump line; DB s7445 burst latch (apply_s7445); DA s7444 periodic print latch; CZ s7443 hooks 0.022 ms/f;
+     CY s7442 probe-gate census; CX s7441 rs64 census + rs64SkipDraw latch; CW s7440 image-word op test at call site;
+     CV s7439 decodeTriangles shade work gated (G1E_TRIM=0 old). All diagnostic-only, no guest store changed.
+   - CU-CP s7433-s7438 cost censuses by /usr/bin/sample: H-known/H-free/H-tail, no change needed.
+   - CO s7432 generated-C fprintf routed via include/rsp_dpc_macros.h; CN s7431 per-frame stderr writer fixed (39.5 MB/260 s cut);
+     CM s7430 rs64_s6892.log rotation; CL s7429 save finalize window fixed (S7429_NO_QUIT_FLUSH=1 old; not runtime-verified).
+   - CK s7428 env wins over config files, RT64 config persist gated like the save; CJ s7427 env policy order; CI s7426 env defaults;
+     CH s7425 build-option drift fixed (BYTE_WATCH off qualified L1/L5/L10); CG s7424 no stale objects; CF s7423 live vs regen;
+     CE s7422 windowed idempotence; CD s7421 regen drift; CC s7420 weak-aware RECOMP_FUNC regex.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -554,4 +347,4 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png/jpg.
 - Queued-soak verdicts `scratch/agent/SOAK-RESULTS.md`; loop.sh edits take effect before the next soak phase
   (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
-- Recent chronology: PORTING-STATE sessions 7370-7417; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 7417-7452; search bounded windows only.
