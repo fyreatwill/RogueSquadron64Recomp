@@ -196829,3 +196829,8 @@ build/saves untouched (mtime 2026-11-08, md5 f8b29b66...).
 Rules out: the .bak ever protecting against a mid-finalize kill in the old code (it could not: the loader never reached it).
 Open: runtime proof of the quit flush needs a real SDL_QUIT (owner Cmd+Q, or a working key/quit injector).
 Next: class CM, unbounded default-on file growth in build/.
+Conclusion: the kill harness selects H-window for the old copy-based finalize (236-259/2000 0-byte loads) and refutes
+H-window for the fsync + rename finalize (0/4000), which closes the finalize half of class CL as the root cause of
+quit-time save loss. H-stale (the 10 ms coalescing window dropped at quick_exit) is fixed but unverified; next
+discriminator: a real SDL_QUIT right after a save write, two arms ROGUESQ_S7429_NO_QUIT_FLUSH=1 vs default, comparing
+the save bytes after reload.
