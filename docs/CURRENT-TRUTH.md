@@ -215,9 +215,20 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CU, remaining RT64 Gfx-thread terms (HYPOTHESIS-ID rt64-gfx-terms).** See scratch/agent/NEXT.md. One
-   ranked inclusive table of every RT64 frame on the Gfx thread (rs64LoadBlockRuns 0.32, decodeTriangles 0.28, processRDPLists
-   0.27 ms/frame in s7434), each checked against its prior closure. H-closed vs H-new (a term >= 0.3 ms/f with no prior lever).
+1. **Next audit: class CV, default-on per-primitive diagnostic hooks inside lib/rt64 hot loops (HYPOTHESIS-ID
+   rt64-perprim-diag).** See scratch/agent/NEXT.md. Grep-enumerate every rs64_* / getenv-latched call reached per triangle,
+   per load or per draw call in lib/rt64 (decodeTriangles, drawTris, loadBlock/TLUT, fullSyncFramebufferPairTiles), classify
+   each gated (cached bool, returns before work) vs ungated (does work with logging off), cost the class with tools/s7438
+   --under. Lead: rs64_shade_ordinal takes a mutex + unordered_map insert on EVERY triangle (rt64_gbi_rdp.cpp:584) though its
+   value is only read by log paths and rs64_floor_note; rs64_floor_texel/note/cover run per tri too.
+   CU (s7438) CLOSED H-closed: tools/s7438_rt64_terms.py on scratch/s7435 (control +0.0345 vs 0.030 PASS; second capture
+   scratch/s7433 same ranking within 0.03): RT64 self terms >= 0.2 ms/f = TMEMHasher::hash 0.49 (closed s7437/s6961),
+   decodeTriangles 0.37 (--under split: upstream setup self 0.27 + our per-tri diag hooks ~0.10: floor_texel 0.028,
+   floor_note 0.018, mutex/hash/vector of rs64_shade_ordinal ~0.045, getters 0.004), rs64LoadBlockRuns 0.30 (our s6957 fast
+   path, memory traffic), processRDPLists 0.28 (interpreter dispatch; diag call-site gates already landed s7068), submitRasterScene
+   0.24 Gfx + 0.24 Workload (command recording, s6961 13%), RT64 Idle idleThreadLoop 0.30 (upstream deliberate GPU
+   keep-alive dispatch, off the critical path). Inclusive: processRDPLists 3.26, fullSync 1.79, pairTiles 0.97. Gfx thread
+   8.7 ms/frame of 16.7. No term >= 0.3 without a prior lever; no build, no change. The ~0.10 ms/f diag tax seeds class CV.
    CT (s7437) CLOSED H-known: tools/s7437_tmem_hash.py on scratch/s7435 (control +0.0345 vs 0.030 PASS): TMEMHasher::hash
    0.0292 core = 0.49 ms/frame (body/CI4 scan 0.38, XXH3 0.11), 100% from TextureManager::uploadTexture on the Gfx thread; other
    XXH users 0.11 (FramebufferManager::checkRAM 0.05). Second capture scratch/s7433: 0.50 + 0.13. Redundancy already measured:

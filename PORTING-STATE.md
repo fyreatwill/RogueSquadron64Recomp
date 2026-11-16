@@ -197115,3 +197115,36 @@ Verdict H-known; no build, no change. Rules out: TMEM re-hashing as an unexplore
 Next: class CU, the remaining RT64 Gfx-thread terms in one ranked table against prior closures.
 Conclusion: selects H-known (cost real, 0.49 ms/frame on two captures, but its levers were already built and measured), refutes
 H-redundant (s6942 0 memo hits) and H-small (0.49 >= 0.3). Next discriminator: RT64 Gfx-thread inclusive term table, class CU.
+
+## Session 7438 (2026-11-15) — class CU RT64 Gfx-thread terms closed H-closed: every RT64 self term >= 0.2 ms/frame already has a measured closure or is upstream-deliberate; decodeTriangles 0.37 = upstream setup 0.27 + ~0.10 of our per-triangle diag hooks (seeds class CV); control +0.0345 vs 0.030 PASS, second capture agrees
+
+HYPOTHESIS-ID: rt64-gfx-terms. Offline only, no build, no game run. New tool tools/s7438_rt64_terms.py (parse/tname from
+tools/s7437_tmem_hash.py): on every thread named Gfx Thread or RT64*, each running self sample (wait leaves dropped) is
+charged to its innermost RT64:: / rs64[A-Z] frame (self table) and to every distinct RT64 frame on its path (inclusive table);
+--under PREFIX splits the Gfx samples below that frame by first child. Control = planted rs64_diag_spin_us busy/quiet delta.
+
+Run 1, scratch/s7435 (8 x 12 s windows, owner recipe lvl1 flight): CONTROL +0.0345 core vs 0.030 expected PASS. Gfx thread
+running 8.71 ms/frame (non-RT64 path = ucode + our bridge 5.43, closed CQ s7434). RT64 self, ms/frame:
+TMEMHasher::hash 0.487 | GBI_RDP::decodeTriangles 0.373 | rs64LoadBlockRuns 0.296 | RT64 Idle WorkloadQueue::idleThreadLoop
+0.296 | Interpreter::processRDPLists 0.281 | FramebufferRenderer::submitRasterScene 0.240 (Gfx) + 0.235 (Workload) |
+RenderWorker::execute (Idle) 0.128 | RDP::drawTris 0.127 | loadDrawState 0.088 | loadTLUTOperation 0.086 | rest < 0.085.
+Inclusive Gfx: processDisplayLists 3.27, processRDPLists 3.26, fullSync 1.79, fullSyncFramebufferPairTiles 0.97, tri 0.75,
+decodeTriangles 0.73, uploadTexture 0.53, loadBlockOperation 0.36, drawTris 0.35.
+Run 2, scratch/s7433 --second-line (2 windows, dd4 16:9 FPS60): same order, each term within 0.03 (hash 0.504, decode 0.362,
+LBRuns 0.315, idle 0.310, processRDPLists 0.287, submitRasterScene 0.261/0.245).
+--under RT64::GBI_RDP::decodeTriangles (run 1): drawTris 0.345 (child), self 0.269, rs64_floor_texel 0.028, rs64_floor_note
+0.018, std::mutex unlock/lock 0.020, vector 0.017, __hash_table 0.006, rs64_floor_cover 0.006, rs64SkipDraw 0.004,
+submit getters 0.004 -> our per-triangle hooks ~0.10 ms/frame. Source: rt64_gbi_rdp.cpp:582-589 calls
+rs64_e9prov_current_task, rs64_shade_ordinal (static mutex + unordered_map ++next[key] on every triangle, s6902 bounded it
+per task but it still runs) and both submit getters on EVERY tri, logging off; their values are read only by gated log
+paths (lines 732-751, 1234) and the floor note (1591).
+Prior-closure check per term: TMEMHasher = s7437/s6961/s6942 (closed); rs64LoadBlockRuns = our s6957 LBFAST fast path
+(byte-equivalent, -0.225 ms/task, remaining cost is memory traffic, s6961); processRDPLists self = interpreter dispatch,
+its per-command diag calls gated at the call site s7068; submitRasterScene = command recording (s6961 13% "recordFramebuffer/
+submitRasterScene", AGX encode); idleThreadLoop = upstream RT64 deliberate GPU keep-alive (comment at
+rt64_workload_queue.cpp:1521: keeps drivers from downclocking), its own thread, off the critical path; decodeTriangles self
+0.27 = upstream triangle setup math (s6794 EXACT_EDGES adds a fan only when an edge misses by > 1/256 px).
+Verdict: selects H-closed (no RT64 term >= 0.3 ms/frame without a prior lever), refutes H-new; H-diffuse refuted (7 terms
+>= 0.2). Gfx thread 8.7 of 16.7 ms/frame, so none of it is on a budget edge. No change landed.
+Rules out: a hidden RT64 Gfx-thread hotspot as a frame-time lever at the owner recipe. Opens class CV: default-on
+per-primitive diag hooks in lib/rt64 hot loops (~0.10 ms/frame in decodeTriangles alone, unenumerated elsewhere).
