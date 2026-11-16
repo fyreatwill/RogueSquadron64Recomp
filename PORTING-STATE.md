@@ -197351,3 +197351,24 @@ VERDICT: selects H-hidden (3 UNGATED-DIAG burst sites printed with no env; latch
 with the bursts off, same t in both runs = scene loads).
 Next discriminator: class DC [spill] - default-arm [spill] per-request line count with the per-request print latched vs a
 consumer arm with its env (757 expected); H-needed vs H-hidden vs H-clean as in NEXT.md.
+
+## Session 7446 (2026-11-15) — class DC closed H-hidden: the [spill] per-request bump log (752 lines in one second at mission load) is latched on ROGUESQ_SPILL_LOG=1; default 0 lines, consumer control 752, 0 crash; default-diag burst campaign closed
+- Unit (NEXT s7446): class DC, the last non-PERSISTENT tag in the s7445 default-arm stderr. Hypotheses H-needed (heap triage
+  reads the per-request lines), H-hidden (consumer-only output, latch it), H-clean (one-time 41 KB, leave it).
+- Classification: s7445 default tlog [spill] = 752 bump lines "req=.. -> .." + 1 reuse# + 4 free# (1-in-256 summaries).
+  Consumers: no tool in tools/ parses the per-request line (grep: only retired soak recipes s6702/s7326 in soak_queue/done);
+  placement is already recorded in the s6893 event ring and ROGUESQ_S7317_ALLOCMAP. -> H-needed refuted.
+- Change: src/main/upstream_compat.cpp rs64_s6569_spill: the bump print is behind a load-time latch
+  (ROGUESQ_SPILL_LOG=1 or ROGUESQ_G1E_TRIM=0 = old). "[spill] arena full" (crash breadcrumb, s7326), reuse#/free# summaries and
+  the "free of unknown" line stay unconditional. No allocator behaviour changed. Build OK.
+- Runs (tools/s7431_stderr_volume.sh 150, owner recipe FPS60 dd4 16:9, forced lvl1 autopilot flight from 68.6 s, copied folder):
+  default arm (S7431_ARM=DC): [spill] req 0, reuse 1, free 4; fbhash control PASS (8803); crash 0; 8.75 MB.
+  consumer arm (DCc, ROGUESQ_SPILL_LOG=1): [spill] req 752 (= s7445's 752; tag 757 lines / 41698 B at t=12.3 s); control PASS
+  (8825); crash 0. Logs scratch/s7446/run_{default,consumer}.tlog (gitignored).
+- The remaining default stderr is all PERSISTENT per-frame tags routed via rs64_diag_fprintf, closed s7431/s7432 (terminal
+  stderr cap; DIAG_QUIET opt-in). The CZ-DC default-diag burst audit campaign is closed.
+ORIGIN: not a mitigation; a diagnostic print latch only.
+VERDICT: selects H-hidden (consumer-only output, latched: default 0, consumer control 752), refutes H-needed (no parser, placement
+recorded elsewhere) and H-clean (it was the last ungated burst in the owner-recipe stderr).
+Next discriminator: class DD - hand-written src fprintf(stderr) sites (1468 in src/main + src/rsp) that bypass rs64_diag_fprintf:
+census by kind (one-shot / crash / env-gated / ungated-recurring) with a same-run fired count in the owner-recipe default arm.

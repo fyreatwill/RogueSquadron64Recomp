@@ -3926,7 +3926,12 @@ extern "C" uint32_t rs64_s6569_spill(uint32_t req) {
     uint32_t p = rs64_s6587_spill_base() + s_s6569_bump; s_s6569_bump += sz;
     s_s6702_live[p] = sz; s_s6702_live_bytes += sz; s6893_ev(0, req, p);
     s_s7326_tag[p] = g_s6127_flags; s_s7326_released.erase(p);
-    std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X live 0x%X)\n", req, p, s_s6569_bump, s_s6702_live_bytes);
+    /* s7446 class DC: the per-request bump line (752 lines / ~41 KB in one second at mission load, owner recipe) is latched on
+       ROGUESQ_SPILL_LOG=1 (or ROGUESQ_G1E_TRIM=0 = old). Placement stays recorded in the s6893 ring and ROGUESQ_S7317_ALLOCMAP;
+       the arena-full crash breadcrumb and the 1-in-256 reuse/free summaries stay unconditional. */
+    static const bool s7446_log = [] { const char* e = std::getenv("ROGUESQ_SPILL_LOG"), *g = std::getenv("ROGUESQ_G1E_TRIM");
+        return (e && e[0] == '1') || (g && g[0] == '0'); }();
+    if (s7446_log) std::fprintf(stderr, "[spill] req=0x%X -> %08X (used 0x%X live 0x%X)\n", req, p, s_s6569_bump, s_s6702_live_bytes);
     return p;
 }
 extern "C" void rs64_s6570_svcnull(char k, uint32_t a, uint32_t ra, uint32_t b) {

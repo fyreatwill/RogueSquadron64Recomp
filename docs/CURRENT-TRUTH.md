@@ -215,10 +215,14 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class DC, the [spill] allocation-log burst (HYPOTHESIS-ID default-diag-bursts).** See NEXT.md: the only
-   non-PERSISTENT tag left in the default-arm stderr scratch/s7445/run_default.tlog is [spill] (757 lines / 41.7 KB, all in
-   one second at t=12.4 s, src/main/upstream_compat.cpp dd>1 spill arena). Classify (needed by the s6702/s7326 heap triage?)
-   and latch or keep.
+1. **Default-diag burst audit campaign (CZ-DC) CLOSED s7446. Next: class DD (HYPOTHESIS-ID direct-stderr-bypass).** See
+   NEXT.md: hand-written src/main + src/rsp `fprintf(stderr` sites that bypass rs64_diag_fprintf (so ROGUESQ_DIAG_QUIET=1 cannot
+   drop them); enumerate, classify one-shot / crash-breadcrumb / gated / ungated-recurring, route or latch the recurring ones.
+   DC (s7446) CLOSED H-hidden, one change: src/main/upstream_compat.cpp rs64_s6569_spill per-request bump line
+   "[spill] req=.. -> .." latched on ROGUESQ_SPILL_LOG=1 (G1E_TRIM=0 = old); arena-full breadcrumb and the 1-in-256
+   reuse/free summaries stay unconditional; placement stays in the s6893 ring / S7317_ALLOCMAP. scratch/s7446, 150 s owner
+   recipe lvl1 flight (tools/s7431_stderr_volume.sh): default [spill] req 0 (reuse 1, free 4 kept), consumer arm 752 (= s7445
+   752), fbhash control PASS both (8803 / 8825), 0 crash both. No [spill] per-request consumer in tools/ (only retired soaks).
    DB (s7445) CLOSED H-hidden, one change: tools/apply_s7445_burst_latch.py (in the fixup apply list before s7069) latches
    [s4234-ENTRY] (funcs_24.c, ROGUESQ_S4234_ENTRY=1; rs64_s4234_g still counts), [newbtn] (funcs_19.c, ROGUESQ_NEWBTN_LOG=1)
    and the s1976-s1982 [drain-tick/slots/cross/cursor/path/base/hdr] dump block (funcs_30.c, ROGUESQ_DRAIN_DUMP=1);
