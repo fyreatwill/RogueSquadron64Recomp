@@ -198232,3 +198232,31 @@ labels, and counted callee-saved s-regs, which callee bodies restore), and one w
 ORIGIN: no new mitigation; s4889 (fixed s7476) was the only live clobber -> H-class-single selected, H-class-multi refuted.
 Rules out: injected guest calls as a source of other wrong-argument bugs. Coverage limit: only hooks taking `(rdram, ctx)`; hooks
 that take values (e.g. rs64_s4540_call(ctx->r4)) cannot write guest regs through ctx, so they are out of scope by construction.
+
+## Session 7478 (2026-11-16) — class EF closed: both "1-byte-past-request" canary stores hit DEAD records (header already overwritten), not live-block overruns; canary store path now drops stale records; same-build ED control still scores
+- **Instrument (src/main/upstream_compat.cpp, no regen):** ROGUESQ_S7475_BT=1 keeps an 8-frame host backtrace per canary record and prints
+  `[s7478] store-bt` / `alloc-bt` (host chains, unslid @addr for atos) plus `[s7478] store-hdr` (block header words, hdr_ok, nonzero body words)
+  on each first slack-store. The recompiled jal leaves guest $ra = 0 (ra_rec=00000000), so host chains are the only caller witness.
+- **Site 1 (rs_memset 0x800078EC a=0x800CDB38, blk 0x800CAE80 req 0x2CB8, all arms):** store chain = rs_memset < processOverlayDmaStruct+0x1ec
+  < loadOverlay < mainGameLoop: the ROM's overlay loader (0x800033A0: synchronousDmaTransfer then `rs_memset(MEM_W(s2+0x64), 0, MEM_W(s2+0x68))`,
+  the BSS zero-fill). Alloc chain = load_hmt_and_hob < spawnCutsceneObjectsFromList < load_cutscene < cinematicLoopBody (cutscene arena, 5.7 s
+  earlier). At the store the header reads w0=A4820022 size=24020800 = MIPS code (`sh v0,0x22(a0)`, `li v0,0x800`): the overlay DMA had already
+  overwritten the block header, i.e. the block was dead (its arena abandoned without rs_free) and the menu overlay was loaded over it. With the
+  stale check on, the same memset sweeps 3 contiguous dead cutscene blocks (0x800CAE80, 0x800CDB50 req 0x4B4, 0x800CE020 req 0x111C, header 0):
+  one continuous BSS fill, the old per-pc dedupe only ever printed the first. Not an overrun.
+- **Site 2 (parseImageFile 0x8001EE04 a=0x809B601C, blk 0x809B6010 req 0xC, L15 21:9 dd8):** store chain = parseImageFile < loadTextureToMemory <
+  parseHmtMaterials < registerHmtTextureInTable < loadCharTextureSet < initFrontendMenuResources < menuOverlayInit; alloc chain = load_hmt_and_hob <
+  loadDatFile < loadLevelAssets < setupCutsceneLevel (6 s earlier). Header AND body are zero at the store (hdr_ok=0, 0/3 nonzero words): the record
+  is dead, the region re-carved. (Offline read of the loop: 4bpp rows padded to 16 px, stride (w+15&~15)/2, odd rows xor 4 within the stride; a
+  12-byte req with 16 written would be a retail size/pad mismatch, but that is moot: no live block is there.) No fixup touches parseImageFile.
+- **Positive control, same build:** boot arm ROGUESQ_S7476_A1FIX=0 (the real ED overrun) -> `slack-store musyxSetVoicePitchBend blk=801714D0`
+  with store-hdr w0=00020000 size=90 hdr_ok=1 (live block). So hdr_ok discriminates live overrun vs dead record.
+- **Fix (canary, default on, ROGUESQ_S7478_STALECHK=0 = old scoring):** rs64_s7475_store drops a record whose header no longer matches (as the walk
+  path already does), logging `[s7478] stale-drop` (first 20). Re-run same build: ED control arm still sstore=1, 0 stale-drop; flight L15 dd8 21:9
+  + L4 dd4 HOLD=40 (scratch/s7478_fix): slack_store_pcs=0 both, 3 stale-drops each, plant DETECTED (L15, PLANT_S=25), tail_hit_nonplant=0,
+  heap_bad=0, alive, vi_stalls30s=0, score=0.
+- ORIGIN: writer 1 = retail overlay BSS zero-fill over memory whose rs_malloc header the same overlay's DMA had already replaced (legitimate);
+  writer 2 = retail texture decode into a re-carved region (header/body zeroed; legitimate as far as the canary can see). The defect was the
+  canary's: its store path scored dead records. Two lines: header state at store (code words / zeros vs the control's live header) + host chains.
+- Queued scratch/agent/soak_queue/s7478_canary_restale.sh (s7476 recipe, 220 s, 4 levels, with stale check + BT) for the full re-score.
+- Rules out: a port-shrunk request (H-port-size) and a live 1-byte overrun for both sites. Selects H-attr (canary attribution/staleness).

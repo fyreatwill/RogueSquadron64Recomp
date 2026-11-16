@@ -219,7 +219,7 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
    - **ED s7475-s7476 MusyX voice-array overrun: ROOT CAUSE FIXED (s7476, port bug; two lines: retail oracle + same-build A/B):**
      s7475 instrument (ROGUESQ_S7475_CANARY=1 slack fill/bitmap + tools/apply_s7475_slackwatch.py store watch, STORE_DIAG=1) saw the
      first-scene reapplyAudioConfig allocate a 1-voice array (0x801496F8, stride 0x88) while voice[1] stayed live (musyxSetVoicePitchBend
@@ -239,10 +239,12 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      callee entry live-in at the next call), minus the patch's own restores. Result: 0 BUG, 33 SAFE, 10 REPLACE (the patch stands in
      for the site's own jal: ABI already lets it clobber), 1 INTENT (s6904 fog deliberately rewrites $f0/$f4). Controls: the pre-s7476
      s4889 text flags r5 and the fixed text passes; synthetic pos/neg pair flags r3,r5 / nothing. s4889 was the only live clobber.
-   - **EF s7477 OPEN: two 1-byte-past-request guest stores (canary, every flight arm, boot phase t~11 s):** (1) rs_memset pc=0x800078EC
-     a=0x800CDB38 blk=0x800CAE80 req=0x2CB8 (alloc site logged as spawnCutsceneObjectsFromList+0x214c), all 4 arms; (2) parseImageFile
-     pc=0x8001EE04 a=0x809B601C blk=0x809B6010 req=0xC (loadDatFile+0x8de0), L15 21:9 only. Both land in the 8-byte rounding slack,
-     so no neighbour is hit. Question: retail off-by-one (oracle: same req and same store) or a port-shrunk request size.
+   - **EF s7477-s7478 two "1-byte-past-request" canary stores, CLOSED (H-attr, canary defect):** both hit DEAD records. (1) rs_memset
+     0x800CDB38 = ROM overlay loader BSS zero-fill (processOverlayDmaStruct 0x800033A0 < loadOverlay) over a cutscene arena whose block header the
+     overlay DMA had already replaced with code words (w0=A4820022); it sweeps 3 contiguous dead blocks. (2) parseImageFile 0x809B601C (L15) into a
+     region whose header and body are zero. Control same build: ED overrun (A1FIX=0) shows hdr_ok=1. Fix: canary store path drops stale records
+     (`[s7478] stale-drop`, ROGUESQ_S7478_STALECHK=0 old); ROGUESQ_S7475_BT=1 prints host alloc/store chains + header. L4/L15 rerun score=0;
+     full 4-level re-score queued (s7478_canary_restale).
    - **EC s7474 `[s4279-BAD]` sample-stream LRU walker, CLOSED (H-walker-wrong):** the 40-row BAD burst at n~8870-9040 in all
      23 EB arms was bad=10 (8|2) only: the walker (tools/apply_s4279_nodeinvariant.py) hard-coded the node region
      0x801F9C00..0x801FB400, while the game legitimately runs the LRU list from a 60-node pool at 0x80192C40 in that front-end

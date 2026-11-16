@@ -1,18 +1,17 @@
-# NEXT (s7478)
-HYPOTHESIS-ID: canary-one-byte-past-request
+# NEXT (s7479)
+HYPOTHESIS-ID: canary-zero-slack-blocks
 
-Class EF (M3 idiom-class): the s7475 slack canary still reports two 1-byte stores exactly at offset == request size, in the
-8-byte rounding slack (s7476_canary_flight logs scratch/s7476_canary/log_l*.txt, `[s7475] slack-store`):
-  (1) rs_memset pc=0x800078EC a=0x800CDB38 blk=0x800CAE80 req=0x2CB8 alloc=spawnCutsceneObjectsFromList+0x214c t=10.9 (all arms)
-  (2) parseImageFile pc=0x8001EE04 a=0x809B601C blk=0x809B6010 req=0xC alloc=loadDatFile+0x8de0 t=11.1 (L15 21:9 dd8 only)
-Hypotheses: H-retail (retail code writes req+1 bytes: an off-by-one the 8-byte rounding hides; same store on hardware) vs
-H-port-size (a port patch shrinks the request, e.g. a dd/wide size computation or a size fixup) vs H-attr (the canary's
-alloc attribution / req is wrong: spawnCutsceneObjectsFromList+0x214c is past any real function end, and 0x800CAE80 is in the
-static .bss range, not an rs_malloc arena -> check how the canary registered that block).
-Discriminator, offline first (no build):
- 1. Disassemble both writer sites in the ROM ELF (tools/make_elf.py output, mips64-elf-objdump) and the caller of rs_memset that
-    passes length; read whether the length is req+1 or the memset starts at +req (string NUL / terminator idiom).
- 2. Check the canary registration path for blk=0x800CAE80 (grep s7475 canary in src/main/upstream_compat.cpp): is it a heap block?
- 3. If still open: oracle (tools/oracle/README.md) write-watch physical 0x0CDB38 and 0x9B601C w/ positive control; same PC ->
-    H-retail (whitelist the two sites in the canary, document); none/different -> H-port-size, name the writer.
-Close with: each site classified, canary allowlist or fix landed, s7476_canary_flight re-scored clean.
+0. Fold scratch/agent/SOAK-RESULTS.md: s7478_canary_restale (L4/L7/L12 dd4, L15 dd8 21:9, HOLD=220). Pass = plant DETECTED,
+   tail_hit_nonplant=0, slack_store=0 on all arms, stale_drop>0 expected. A non-zero slack_store row now means a LIVE block (hdr_ok=1):
+   read its [s7478] store-bt/alloc-bt chain and name the writer (that is a real class, not EF).
+
+Class EG (M3 idiom-class, heap overruns the s7475 canary cannot see): every s7475 summary shows noslack ~4780 vs rec ~3910, i.e. MORE
+THAN HALF the rs_malloc blocks have req == rounded size and carry no canary band at all (and the walker only checks headers).
+Hypotheses: H-clean (no live overrun in zero-slack blocks either) vs H-hidden (an overrun exists but lands in the next block's
+header/body, which s7472 only sees when it breaks a header) vs H-pad-perturbs (padding changes layout enough to move/hide a bug).
+Instrument (one build): ROGUESQ_S7475_PAD=<n> (default 0): under the canary, rs_malloc entry adds n (16) bytes to the request
+(guest a0 at 0x80001ACC entry via the existing s6063 malloc hook path, or a tools/apply_* fixup at the rs_malloc prologue), records the
+ORIGINAL req so [req, size) is the canary band for every block. Positive controls: existing in-flight PLANT + boot A1FIX=0 arm (ED overrun
+must still score, hdr_ok=1). Run tools/s7475_canary_recipe.zsh LV="4:4 7:4 12:4 15:8" with PAD=16 (queue as soak if host busy).
+Outcome: 0 live slack-stores with noslack~0 -> H-clean, class closed; live store -> name writer via the s7478 chains; boot hang or
+behaviour change with PAD only -> H-pad-perturbs, record and fall back to a store-watch on next-block headers.

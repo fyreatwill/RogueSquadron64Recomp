@@ -49,6 +49,7 @@
 #include <algorithm>
 #include <atomic>
 #include <execinfo.h>
+#include <mach-o/dyld.h>
 
 #include "recomp.h"
 #include "hle/rt64_vi.h"
@@ -3648,7 +3649,7 @@ static void s7472_check(const char* why, uint32_t ra) {
    drops every record overlapping the new block. Planted control ROGUESQ_S7475_CANARY_PLANT=<s> (1 -> 60): <s> s after the
    first record, write 0x5A at ptr+req of the live slack block with the largest req; the next walk MUST log it with PLANT. */
 namespace {
-struct S7475R { uint32_t req, sz, ra; double t; void* hpc; };
+struct S7475R { uint32_t req, sz, ra; double t; void* hpc; void* bt[8]; int nbt; };
 static std::map<uint32_t, S7475R> s_s7475_live;
 static std::mutex s_s7475_mu;
 static std::set<std::pair<uint32_t, uint32_t>> s_s7475_seen;
@@ -3669,6 +3670,11 @@ struct S7475W { uint64_t n; uint32_t blk, req, sz, off; int w; void* hpc; const 
 static std::map<uint32_t, S7475W> s_s7475_wpc;  /* per store pc */
 static uint64_t s_s7475_stores = 0;
 static std::string s7475_sym(void* pc) { char b[160]; rs64_s7324_sym(pc, b, sizeof b); return b; }
+/* s7478 class EF: ROGUESQ_S7475_BT=1 keeps an 8-frame host backtrace per canary record (alloc chain) and prints it, plus the
+   store's own host chain, on each first slack-store row ([s7478] alloc-bt / store-bt). Names the guest caller of rs_memset /
+   rs_malloc, whose $ra the recompiled jal does not set. */
+static bool s7478_bt_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7475_BT"); return e && e[0] && e[0] != '0'; }(); return on; }
+static std::string s7478_chain(void* const* f, int n) { std::string s; for (int i = 0; i < n; ++i) { if (i) s += " < "; char h[24]; snprintf(h, sizeof h, "@%lx:", (unsigned long)((uintptr_t)f[i] - (uintptr_t)_dyld_get_image_vmaddr_slide(0))); s += h; s += s7475_sym(f[i]); } return s; }
 static uint8_t s7475_fill() { static const uint8_t f = [] { const char* e = std::getenv("ROGUESQ_S7475_FILL"); return (uint8_t)(e && *e ? std::strtoul(e, nullptr, 0) : 0xA5u); }(); return f; }
 static bool s7475_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7475_CANARY"); return e && e[0] && e[0] != '0'; }(); return on; }
 /* returns false if the record is stale (header changed) */
@@ -3737,7 +3743,7 @@ static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
             static const long logrec = [] { const char* e = std::getenv("ROGUESQ_S7475_LOGREC"); return e ? std::atol(e) : 0L; }();
             if ((long)k < logrec) std::fprintf(stderr, "[s7475] rec #%llu blk=%08X req=%X size=%X alloc=%s t=%.2f%s\n", (unsigned long long)k, ptr, req, sz, s7475_sym(hpc).c_str(), now - s_s7475_t0, (k >= sel.first && k <= sel.second) ? "" : " unsel");
             if (k >= sel.first && k <= sel.second) {
-                for (uint32_t o = req; o < sz; ++o) s7475_wb(r, ptr + o, s7475_fill()); s_s7475_live[ptr] = S7475R{req, sz, ra, now, hpc}; s7475_mark(ptr, s_s7475_live[ptr], true); ++s_s7475_rec; } }
+                for (uint32_t o = req; o < sz; ++o) s7475_wb(r, ptr + o, s7475_fill()); s_s7475_live[ptr] = S7475R{req, sz, ra, now, hpc, {}, 0}; if (s7478_bt_on()) s_s7475_live[ptr].nbt = backtrace(s_s7475_live[ptr].bt, 8); s7475_mark(ptr, s_s7475_live[ptr], true); ++s_s7475_rec; } }
     }
     s7475_tick(r, now); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
@@ -3749,12 +3755,26 @@ extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) 
     const uint32_t blk = it->first; const S7475R& b = it->second;
     const uint32_t lo = blk + b.req, hi = blk + b.sz;
     if (a + (uint32_t)w <= lo || a >= hi) return 1;  /* bitmap bit stale or store outside this block's slack */
+    /* s7478 class EF: a record whose header no longer matches is a dead block (arena re-carved or overwritten without rs_free:
+       loadOverlay DMA + bss memset over a cutscene arena, s7478), not an overrun: drop it, as the walk path does. ROGUESQ_S7478_STALECHK=0 = old scoring. */
+    static const bool stalechk = [] { const char* e = std::getenv("ROGUESQ_S7478_STALECHK"); return !(e && e[0] == '0'); }();
+    if (stalechk) { volatile uint8_t* rr = g_recomp_rdram_for_wp_raw;
+        if (rr && !s7475_hdr_ok(rr, blk, b)) { static int nl = 0; ++s_s7475_stale;
+            if (nl++ < 20) std::fprintf(stderr, "[s7478] stale-drop pc=%08X fn=%s a=%08X blk=%08X req=%X w0=%08X size=%08X age=%.2f alloc=%s\n", pc, fn ? fn : "?", a, blk, b.req,
+                                        s7472_rd(rr, blk - 0x10u), s7472_rd(rr, blk - 0x0Cu), s7325_now() - b.t, s7475_sym(b.hpc).c_str());
+            s7475_mark(blk, b, false); s_s7475_live.erase(it); return 1; } }
     ++s_s7475_stores;
     const bool plant = false;
     auto& e = s_s7475_wpc[pc]; const bool first = e.n == 0; ++e.n;
     if (first) { e = S7475W{1, blk, b.req, b.sz, a - blk, w, b.hpc, fn};
         if (s_s7475_wpc.size() <= 60) std::fprintf(stderr, "[s7475] slack-store pc=%08X fn=%s a=%08X w=%d blk=%08X req=%X size=%X off=%X over=%u alloc=%s t=%.1f%s\n",
-            pc, fn ? fn : "?", a, w, blk, b.req, b.sz, a - blk, a + (uint32_t)w - lo, s7475_sym(b.hpc).c_str(), s7325_now() - s_s7475_t0, plant ? " PLANT" : ""); }
+            pc, fn ? fn : "?", a, w, blk, b.req, b.sz, a - blk, a + (uint32_t)w - lo, s7475_sym(b.hpc).c_str(), s7325_now() - s_s7475_t0, plant ? " PLANT" : ""); 
+        if (s7478_bt_on() && s_s7475_wpc.size() <= 60) { void* sb[10]; const int ns = backtrace(sb, 10);
+            std::fprintf(stderr, "[s7478] store-bt pc=%08X a=%08X ra_rec=%08X chain=%s\n", pc, a, b.ra, s7478_chain(sb, ns).c_str());
+            std::fprintf(stderr, "[s7478] alloc-bt blk=%08X req=%X chain=%s\n", blk, b.req, s7478_chain(b.bt, b.nbt).c_str());
+            volatile uint8_t* rr = g_recomp_rdram_for_wp_raw; if (rr) { uint32_t nz = 0; for (uint32_t o = 0; o < b.req; o += 4) nz += s7472_rd(rr, blk + o) != 0;
+                std::fprintf(stderr, "[s7478] store-hdr blk=%08X w0=%08X size=%08X hdr_ok=%d body_nonzero_words=%u/%u age=%.2f\n", blk, s7472_rd(rr, blk - 0x10u), s7472_rd(rr, blk - 0x0Cu),
+                             (int)s7475_hdr_ok(rr, blk, b), nz, (b.req + 3) / 4, s7325_now() - b.t); } } }
     return 1; }
 static void s7475_free(uint32_t ptr, uint32_t ra) {
     if (!s7475_on()) return;
