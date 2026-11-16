@@ -198665,3 +198665,5 @@ Not covered (class EQ): ultramodern thread-queue link writes (mq blocked_on_recv
 osPfsNumFiles `_arg<1, s32*>` stores, RT64 framebuffer readback into guest RAM.
 Maintenance: CURRENT-TRUTH item-1 sub-bullets DG-EO (180 lines) migrated verbatim to PROJECT-OVERVIEW "(s7491 migration)", replaced by
 a one-line-per-class index; 59398 -> 37666 bytes.
+Verdict: selects H-ep-clean, refutes H-ep-none (heap destinations measured), H-mesg-uaf no instance. Next discriminator: class EQ
+thread-queue link / osPfsNumFiles / RT64 readback writes with an in-flight mplant (MPLANT_S ~ 120), plus the s7491_ep_levels fold.
