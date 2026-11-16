@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7455 (2026-11-15).
+Compact operational handoff, as of Session 7456 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -184,7 +184,7 @@ Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, 
 - Oracle missions: tools/g3_eep_patch.py sets +0x31; use --save-dir, never swap a save over the user .eep.
 - Slow builds (TSan/ASan): `ROGUESQ_AUTOPILOT_CLOCK=frames ROGUESQ_AUTOPILOT_FPS=58` (FPS60) keys autopilot to fullsyncs,
   but front-end screens are VI-timed, so the route still diverges at TSan speed; gate with `<s>:w<width>` events (s7371).
-- Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc. Recipes that
+- Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc (since s7456 the loop's line carries `arms= alive=a/k crash_arms= stall_arms= fatal=`; arms=0 = recipe printed no summary). Recipes that
   drive the window carry `# SOAK_NEEDS_IDLE=<secs>`; zsh recipes run under their shebang shell (s7287).
 - Knob tables: PROJECT-OVERVIEW "G1c draw-distance knob and recipe reference"; docs/DRAW-DISTANCE.md;
   owner commands docs/OWNER-OPT-INS.md.
@@ -216,7 +216,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: class DL (HYPOTHESIS-ID soak-verdict-line-fields), see NEXT.md. One line each:
+   Next: class DM (HYPOTHESIS-ID soak-recipe-summary-coverage), see NEXT.md. One line each:
+   - **DL s7456 H-few:** rc vs per-arm summaries over 30 summarised soaks: 2 misreads (s7449 false fail, s7452 planted dead arm read
+     as rc=0). loop.sh verdict line now appends tools/agent/soak_verdict_fields.sh fields. fatal_patterns `abort` word-bounded (s7331_abort
+     tag lines scored fatal=2) + `Abort trap`; fatal_scan selftest 20/20, test_soak_idle_gate.sh 20/20, both with mutation controls.
    - **DK s7455 H-none in data:** summary pass checks were prefix matches (`grep -q 'inits=1'` s7448/s7449, `*exitrc=1*` s7450-s7452
      passes exitrc=134); 0/11740 historical checks over 2348 m6 summaries flipped. New recipes score with
      `sh tools/agent/summary_field.sh $D/summary <key> eq|le|ge|is <v>` (exact key, selftest tools/agent/test_summary_field.sh 21/21).

@@ -56,6 +56,16 @@ if printf '#include <unistd.h>\n#include <stdlib.h>\nint main(int c,char**v){sle
   wait $fk 2>/dev/null; pkill -9 -x $SOAK_GAME_NAME 2>/dev/null
 else echo "FAIL s7314 fake game build (clang)"; fail=1; fi
 unset SOAK_GAME_NAME
+# s7456 class DL: verdict line carries the recipe's per-arm summary fields (positive + negative + no-summary controls).
+export SOAK_VERDICT_TOOL=$here/soak_verdict_fields.sh SOAK_IDLE_WAIT=0
+printf '#!/bin/bash\necho "tag=g1_a att=1 inits=2 alive_at_end=1 vi_stalls30s=0 crashlines=0"\necho "tag=g1_b att=1 inits=1 alive_at_end=1 vi_stalls30s=0 crashlines=0"\nexit 1\n' > "$q/v1.sh"
+printf '#!/bin/bash\necho "tag=g1_c att=1 alive_at_end=0 vi_stalls30s=2 crashlines=3"\necho "[CRASH] caught signal 11 (SIGSEGV)"\nexit 0\n' > "$q/v2.sh"
+run_soak_pass
+printf '#!/bin/bash\necho "s7331_abort crash=0 resets=24"\nexit 0\n' > "$q/v3.sh"; run_soak_pass
+chk "clean rc=1 recipe: verdict shows alive=2/2 fatal=0" 'grep "| v1 | rc=1 |" $AG/SOAK-RESULTS.md | grep -q "arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0"'
+chk "rc=0 recipe with dead arm + crash line: verdict shows it" 'grep "| v2 | rc=0 |" $AG/SOAK-RESULTS.md | grep -q "arms=1 alive=0/1 crash_arms=1 stall_arms=1 fatal=1"'
+chk "no-summary recipe with an *_abort tag: arms=0 fatal=0" 'grep "| v3 | rc=0 |" $AG/SOAK-RESULTS.md | grep -q "arms=0 alive=0/0 crash_arms=0 stall_arms=0 fatal=0"'
+unset SOAK_VERDICT_TOOL
 # s7235: the soak phase must run under the current loop.sh (re-exec first, soaks run by the new process).
 L=$here/loop.sh
 w=$(grep -n '^while \[ "\$ITER_CAP"' "$L" | head -1 | cut -d: -f1)

@@ -197629,3 +197629,27 @@ What ran (offline, no game run). Class DK = harness pass checks written as prefi
 - ITERATION.md soak-queue section now tells new recipes to use summary_field.sh.
 Rules out: a past soak verdict that passed on a prefix collision. Not done: rewriting done/ recipes (one-shot, history).
 ORIGIN: none (harness scoring helper, no mitigation machinery).
+
+## Session 7456 (2026-11-15) — class DL closed H-few: soak rc misread 2 of 30 summarised runs; loop.sh verdict line now carries arms=/alive=/crash_arms=/stall_arms=/fatal= (tools/agent/soak_verdict_fields.sh); fatal pattern `abort` was matching recipe tags (s7331_abort), now word-bounded
+
+HYPOTHESIS-ID: soak-verdict-line-fields. Offline + fake-recipe controls, no game run.
+
+- **Census** (new tools/agent/s7456_verdict_census.py): every SOAK-RESULTS line, rc vs the per-arm `tag=` summaries in its log
+  (+ fatal_patterns lines). Of 1323 non-void lines, 1231 logs are pruned, 60 have no summary, 30 summarised:
+  agree 28, rc-false-fail 1 (s7449_argck_levels rc=1, both arms alive_at_end=1 crashlines=0: same-process mission re-init,
+  s7453), rc-false-pass 1 (s7452_fatal_harness rc=0 with arm P alive_at_end=0 crashlines=1: the deliberate plant, but the line
+  alone cannot say so). s7450 rc=137 (cap) agrees once a summary without alive_at_end (`allattempts-failed`) counts as not alive.
+  -> H-few. Fixed: loop.sh run_soak_pass appends `| arms=<k> alive=<a>/<k> crash_arms=<c> stall_arms=<s> fatal=<n> first=<line>`
+  from tools/agent/soak_verdict_fields.sh (reads the recipe's `tag=` lines; fatal scan excludes the recipe's own `tag=`/`== `
+  echo lines; arms=0 = recipe printed no summary, rc is then the only signal). Log path stays field 5, so existing parsers hold.
+- **Side finding (bug):** fatal_patterns.txt `abort` was unanchored, so s7331_abort_resetw (rc=0, clean) scored fatal=2 from its
+  own `s7331_abort crash=0 ...` result lines. Now `(^|[^_A-Za-z0-9])abort([^_A-Za-z0-9]|$)` (ERE- and Python-re-portable, used by
+  fatal_scan.sh, m6_god_common.sh, g1e_level_fps.py, g1_objective_response_run.py) plus `Abort trap`. Over all 163 surviving
+  run.log/soak logs the only lines the old pattern matched and the new one drops are the two s7331 lines; no real abort line exists
+  in them (true-positive coverage is the selftest: `abort() called`, `zsh: abort ...`, `Abort trap: 6`). fatal_scan selftest 20/20;
+  mutation (old bare `abort`) -> selftest rc=1 "negative log matched".
+- **Tests:** tools/agent/test_soak_idle_gate.sh +3 (20/20 PASS): v1 clean rc=1 recipe -> `arms=2 alive=2/2 ... fatal=0`; v2 rc=0
+  recipe with a dead arm + [CRASH] line -> `arms=1 alive=0/1 crash_arms=1 stall_arms=1 fatal=1`; v3 no-summary recipe with an
+  `*_abort` tag -> `arms=0 ... fatal=0`. Mutation control (bare `abort` restored) -> v3 FAIL, others pass.
+- Rules out: rc being a reliable verdict on its own (2/30 wrong). Not covered: the 60 no-summary recipes (rc-only by design) and
+  the 1231 pruned logs.

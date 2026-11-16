@@ -500,6 +500,8 @@ A soak that only re-runs an existing recipe belongs to the loop, not to you.
 - Score summary fields with `sh tools/agent/summary_field.sh $D/summary <key> eq|ne|le|ge|lt|gt|is <value>`
   (exact key, numeric compare, missing key fails), never `grep -q 'key=N'` or `[[ $S == *key=N* ]]`: those pass
   inits=12 for `inits=1`, exitrc=134 for `exitrc=1`, mission_restarts=3 for `restarts=3` (s7455, test_summary_field.sh).
+- Since s7456 each verdict line ends `arms=<k> alive=<a>/<k> crash_arms= stall_arms= fatal=` from the recipe's own `tag=`
+  summary lines (tools/agent/soak_verdict_fields.sh); fold from those, not rc. arms=0 means the recipe printed no summary.
 - Consume: read the new SOAK-RESULTS.md lines at session start (read list #3)
   and fold them into the ledger like any other run evidence.
 

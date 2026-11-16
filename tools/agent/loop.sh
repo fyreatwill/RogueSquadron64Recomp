@@ -341,7 +341,11 @@ run_soak_pass() {
       fi
     fi
     rm -f "$vfile"
-    printf '%s | %s | rc=%s | %ss | %s%s\n' "$ts" "$name" "$rc" "$dur" "$slog" "$note" >> "$AG/SOAK-RESULTS.md"
+    # s7456 class DL: rc alone misread 3 of 30 summarised runs (s7449 rc=1 benign re-init, s7450 rc=137 cap,
+    # s7452 rc=0 with a planted dead arm), so the line also carries the recipe's own per-arm summary fields.
+    local ev
+    ev="$(zsh "${SOAK_VERDICT_TOOL:-tools/agent/soak_verdict_fields.sh}" "$slog" 2>/dev/null | head -1)"
+    printf '%s | %s | rc=%s | %ss | %s%s | %s\n' "$ts" "$name" "$rc" "$dur" "$slog" "$note" "${ev:-arms=? (verdict tool failed)}" >> "$AG/SOAK-RESULTS.md"
     mv "$recipe" "$qdir/done/${name}_${ts}.sh"
     log "soak $name finished rc=$rc after ${dur}s"
     ran=$((ran+1)); _soak_ran=$ran

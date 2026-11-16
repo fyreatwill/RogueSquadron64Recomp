@@ -1,15 +1,14 @@
-# NEXT (s7456)
-HYPOTHESIS-ID: soak-verdict-line-fields
+# NEXT (s7457)
+HYPOTHESIS-ID: soak-recipe-summary-coverage
 
-Class DL (offline + fake-recipe controls): the loop's SOAK-RESULTS verdict line (tools/agent/loop.sh:344) records only the
-recipe's rc. CURRENT-TRUTH says "read alive_at_end / crashlines, never rc", yet every fold since s7406 had to open the
-soak log by hand to get them, and s7449 rc=1 (benign mission re-init) read like a failure until a session dug it out.
-Step 1: census SOAK-RESULTS.md lines since s7400: for each, does rc agree with the recipe's own per-arm summaries
-(m6/<tag>/summary via tools/agent/summary_field.sh: alive_at_end, crashlines, vi_stalls30s, exitrc)? Classify agree /
-rc-false-fail / rc-false-pass.
-Step 2 (if any disagreement or always, cheap): loop.sh appends to the verdict line `fatal=<n>` from
-tools/agent/fatal_scan.sh over the soak log, plus `arms=<k> alive=<a>/<k>` from `== arm` summary lines the recipe printed
-(no recipe change needed: recipes already cat $D/summary into the log). Test in tools/agent/test_soak_idle_gate.sh with fake
-recipes: one with a planted fatal line + rc=0 must show fatal>=1, a clean rc=1 recipe must show fatal=0.
-Hypotheses: H-agree (rc always matched the summaries: fields are convenience only), H-few (1-3 mismatches), H-many.
-Discriminator: mismatch count in Step 1.
+Class DM (offline + fake-recipe controls). s7456 made the loop's verdict line carry per-arm fields from the recipe's `tag=`
+summary lines; a recipe that prints none shows `arms=0` and is scored on rc alone (60 historical runs). Question: which LIVE
+recipe generators/templates (tools/*.zsh|sh|py that write scratch/agent/soak_queue/*.sh, tools/agent/m6_mission_tmpl.sh.in,
+m6_god_common.sh callers, g1e_level_fps.py / g1_objective_response_run.py launchers) emit a soak whose log carries no `tag=`
+line, or a `tag=` line missing alive_at_end / crashlines / vi_stalls30s?
+Step 1: census (grep the generators; run each template's summary path against a fake binary where one exists, as s7453 did
+with tools/s7453_harness_death_test.zsh). Classify: full-summary / partial / none.
+Step 2: for partial/none live generators, emit a standard `tag=<name> alive_at_end= crashlines= vi_stalls30s=` line
+(from fatal_scan.sh + the generator's own alive check). Test with fake recipes that the loop's verdict shows arms>=1.
+Hypotheses: H-none (every live generator already prints one: arms=0 runs are all retired one-shots), H-few, H-many.
+Discriminator: count of live generators classified partial/none in Step 1.
