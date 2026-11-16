@@ -216,10 +216,11 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA OPEN s7470 (see NEXT.md). One line each:
-   - **EA s7470 ASan+UBSan per-level sweep, OPEN:** tools/s7470_gen_asan_lv.zsh writes the recipes (first arm both plants). Recipe a
-     L0 dd4/L1 dd8 21:9/L2 dd4 HOLD=220: all flew, 0 NEW, both plants PASS. s7469_asan_w15_hold300 folded: L15 dd8 21:9 flew at
-     HOLD=300, 0 NEW, PASS. Queued b-e (L3,5,6,8-11,13,14,17,18). Close when every level has a flown arm and each plant arm passes.
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB OPEN s7471 (see NEXT.md). One line each:
+   - **EA s7470-s7471 ASan+UBSan per-level sweep, CLOSED (H-lv-clean):** tools/s7470_gen_asan_lv.zsh recipes a-e + s7467-s7469 runs:
+     all 19 levels L0-L18 flown on build_asan UCODE=1 (dd4 16:9 / dd8 21:9, HOLD=220; L15 needs HOLD=300), every arm alive,
+     vi_stalls30s=0, 0 NEW groups (12 reviewed FP only), main + ucode plants PASS in every recipe. Guest code not covered (not
+     instrumented). L6/L17 initMission=3 = in-mission restarts under idle autopilot, not a defect.
    - **DZ s7469 ASan+UBSan over the owner hangar abort/re-entry route, CLOSED (H-route-clean):** tools/s7469_asan_hangar_route.zsh
      (s7326 schedule on build_asan UCODE=1, FPS60 dd8 21:9 WIDEWIN, owner save copied into build_asan/saves and restored;
      tools/g3_port_capture.sh GAMEDIR=<dir>). 650 s: 3 hangar entries, 4 initMission, 0 crash; both plants PASS, 0 NEW groups.

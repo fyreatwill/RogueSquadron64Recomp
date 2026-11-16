@@ -198038,3 +198038,25 @@ stack) / H-lv-unreached (arm initMission=0).
 run; all arms flew). Two lines: runtime plant control in the same boot + per-arm initMission/route markers. Rules out host
 ASan/UBSan defects outside the 12 reviewed FP groups in flight on L0-L2 at dd4 16:9 / dd8 21:9 (guest code is not instrumented).
 EA stays open on L3,5,6,8-11,13,14,17,18 (queued).
+
+## Session 7471 (2026-11-16) — class EA closed: ASan+UBSan per-level sweep covers all 19 levels in flight, 0 new groups, every recipe's plants PASS (H-lv-clean)
+
+**Fold.** Loop ran s7470_asan_lv_b (L3 dd8 21:9 + plants, L5 dd4, L6 dd8 21:9) and _c (L8 dd4 + plants, L9 dd8 21:9, L10 dd4),
+HOLD=220 on build_asan (UCODE=1): rc=0 both; all 6 arms alive_at_end=1, crashlines=0, vi_stalls30s=0, max_gap_ms <=151;
+initMission=1 except L6=3 (mission restarted in-session under the idle autopilot, i.e. flight reached); new_groups=0 (every
+non-plant report in the 12 reviewed FP groups), control=PASS and ucode_control=PASS in both.
+
+**Unit (class EA, finish).** HID idle 9 h, so _d and _e were run in-session (moved to running_manual, then done/).
+- _d (L11 dd8 21:9 + plants, L13 dd4, L14 dd8 21:9): rc=0, all initMission=1, alive, vi_stalls30s=0, reports 16/12/12 =
+  4 plant + 12 known groups; new_groups=0; control PASS, ucode_control PASS. scratch/s7470_asan_lv_d.
+- _e (L17 dd4 + plants, L18 dd8 21:9): rc=0, L17 initMission=3 (restarts), L18 1, alive, vi_stalls30s=0, reports 16/9;
+  new_groups=0; both controls PASS. scratch/s7470_asan_lv_e.
+- Harness note (no repo change): a `pgrep -f <recipe>.sh` wait loop matches its own command line and never exits; wait on an rc
+  file written after the recipe instead.
+**Verdict:** ASan flight coverage is now L0-L18 (a-e + s7467-s7469 for L4/L7/L12/L15/L16). Every recipe carried a same-run
+runtime plant (main TU ASan+UBSan, ucode TU ASan+UBSan) that fired, and each arm's initMission marker shows flight was reached.
+Selects H-lv-clean on all 19 levels; refutes H-lv-hit and H-lv-unreached. Two lines: plant controls + route markers per arm.
+Rules out host-side (C++ runtime, RT64, plume, ultramodern, librecomp, RSP ucode) ASan/UBSan defects outside the 12 reviewed FP
+groups during 220 s flight at the owner recipe (dd4 16:9 / dd8 21:9). Does NOT cover guest-code memory errors (RecompiledFuncs
+are not instrumented: guest accesses go through rdram and are invisible to ASan). Class EA CLOSED. Next: class EB, guest-heap
+chain integrity per level (NEXT.md).
