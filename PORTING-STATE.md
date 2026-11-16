@@ -197984,3 +197984,5 @@ its stack) / H-ucode-slow (instrumented ucode too slow to reach flight).
 (flight reached in all arms with no stalls). Two lines of evidence: build-level instrumentation refs plus the runtime ucode-TU plant.
 Rules out: a host-array DMEM/stack overrun in the ucode TUs on forced-level dd4 flight. Not covered: hangar/abort route, L15 flight.
 Queued: scratch/agent/soak_queue/s7468_asan_uc_routes.sh (L7 dd4, L15 dd8 21:9 on the UCODE build, both controls).
+Verdict line: this run selects H-ucode-clean and refutes H-ucode-hit and H-ucode-slow for forced-level dd4 flight. The next
+discriminator is class DZ: ASan over the owner hangar abort/re-entry route (scratch/s7326/run.zsh on build_asan, both plants).
