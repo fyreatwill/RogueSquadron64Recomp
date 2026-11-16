@@ -198085,3 +198085,7 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
   s7472_heapchk_inflight.sh (PLANT_S=150, same arms) to place the control in flight.
 - Rules out (header level only): a guest overrun across a block boundary that reaches the next header's flags/size in these
   4 levels. Does not rule out writes inside a block's data or a corrupted header restored before the next check (250 ms).
+- **Verdict:** run 2 selects H-heap-clean and refutes H-heap-hit for L4/L7/L12/L15 at header level (0 non-plant bad headers
+  over 2524 in-flight-spanning walks, plant detected in the same build); refutes H-walker-wrong after the 0x6 fix (flag histogram
+  {1,2,6,8} only, other=0, every arm). Next discriminator: the in-flight plant (s7472_heapchk_inflight, PLANT_S=150) — detected
+  = the in-flight null stands; not detected = the walker is blind in the mission phase and run 2 says nothing about flight.
