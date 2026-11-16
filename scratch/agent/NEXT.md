@@ -1,14 +1,18 @@
-# NEXT (s7485)
-HYPOTHESIS-ID: m3-guest-uaf-loads
+# NEXT (s7486)
+HYPOTHESIS-ID: m3-host-uaf-reads
 
-s7484 landed the EI load watch (tools/apply_s7484_loadwatch.py + upstream_compat.cpp s7484_*, recipe tools/s7484_uafload_recipe.zsh);
-L4/L15 H-load-clean with in-flight load plant DETECTED. Queued soak s7484_uafload_levels (L1 dd8 21:9, L7/L10/L12 dd4).
+s7485 closed EI (guest loads of freed blocks, 6 levels, plant DETECTED every arm) and EJ (retail-benign over-reads,
+tools/s7485_overread_bound.py). The remaining uncovered reader of freed heap is the HOST side (class EK).
 
-1. Fold s7484_uafload_levels from SOAK-RESULTS.md / scratch/s7484_uafload_levels/out.txt: score=0 with load_plant=1 and load_ctl=1 on
-   every arm -> close class EI in CURRENT-TRUTH (6 levels). score=1 -> read the `[s7484] uaf-load ... loc=F` rows + load-bt/free-bt,
-   name the reader and the freeing caller (that is the work unit). score=3 -> fix the control (plant tries/timeout) first.
-2. Then the next idiom class: the EI side datum, byte over-reads past the rs_malloc request (class EJ): swizzleTextureRowsToTmem
-   0x800248CC..F0 and decodeJpegScanToImage 0x800C96AC..; decide per site whether the over-read is bounded by retail alignment
-   (texture row padding / JPEG bit-reader lookahead = H-benign) or reads a neighbour block's data into output (H-overread). Discriminator:
-   the request size vs the loop bound in each function (offline disasm in build RecompiledFuncs), plus whether the read value reaches a store.
-Hypotheses (item 1): H-load-clean (0 F/Urec) / H-load-uaf (F rows). Discriminator: locator class at load time.
+Work unit: one instrument, one build. Under ROGUESQ_S7486_HOSTUAF=1 (+ S7480_UAF + S7475_CANARY), hook every host read of guest
+RDRAM that can follow a guest pointer: RSP SP DMA RDRAM->DMEM (lib/N64ModernRuntime/librecomp/src/rsp.cpp + src/rsp/s7094_dma_shape.cpp
+for the shape), RDP command/texture fetch addresses as dpc_bridge.cpp hands them to RT64 (LoadBlock/LoadTile/SetTextureImage +
+DL segment reads), AI DMA source. For each range call a new rs64_s7486_hostread(kind, addr, len) beside rs64_s7484_load in
+src/main/upstream_compat.cpp: bitmap test, locator class F/Urec/U/N/S (same as EH/EI), per-kind first-hit log + summary.
+Controls (same run): ctl = count of DMA ranges inside LIVE canary blocks (must be >0, proves the bitmap path sees host reads);
+plant = mark the block holding the current gfx task's DL as freed for one frame (ROGUESQ_S7486_PLANT=<s>) -> must be DETECTED kind=sp_dma.
+Recipe: copy tools/s7484_uafload_recipe.zsh -> tools/s7486_hostuaf_recipe.zsh, LV="4:4 15:8" HOLD=220 in-session, then queue L1/L7/L10/L12.
+If lib/ is edited: ./submodule-patches/export.sh + commit.
+Hypotheses: H-host-clean (0 F/Urec host reads) / H-host-uaf (F rows name the DMA kind and the freeing caller; G5b terrain-drop lead if
+kind=rdp_tex or sp_dma on dd>1) / H-host-stale-DL (a DL references a block freed earlier the same frame: S/Urec rows at task time).
+Discriminator: locator class at DMA time, per kind, with the plant DETECTED.

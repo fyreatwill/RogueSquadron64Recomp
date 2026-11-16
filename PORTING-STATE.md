@@ -198456,3 +198456,27 @@ Work unit: NEXT.md s7484, class EI = guest LOADS of freed rs_malloc blocks (EH c
   decodeJpegScanToImage (0x800C96AC.., L15 t=11) = over-reads into the PAD band, reads only.
 - Verdict wording (s7484): this run selects H-load-clean and refutes H-load-uaf and H-load-recarve for L4/L15. Next discriminator: the queued
   s7484_uafload_levels soak (L1/L7/L10/L12) locator class at load time; any loc=F row there reopens it and names the reader.
+
+## Session 7485 (2026-11-16) — class EI closed on 6 levels (s7484 levels soak score=0, load plant DETECTED every arm); class EJ over-reads closed as retail-benign by offline bound (tools/s7485_overread_bound.py)
+
+Fold: s7484_uafload_levels rc=0 score=0 (scratch/s7484_uafload_levels/out.txt): L1 dd8 21:9, L7/L10/L12 dd4, HOLD=220, all initMission=1,
+alive, vi_stalls30s=0. Load side every arm: load_F=0 load_Urec=0 hits=0, watch-ctl 50.2k-52.0k, load_plant=1 (DETECTED, try 1). Store side
+(s7480) reproduces EH: uaf_free=0, loc_F=0, frame_span_S=0 (s7482 reservation applied on L7). With s7484 (L4/L15) class EI = 6 levels
+H-load-clean, H-load-uaf refuted: CLOSED.
+
+Class EJ (byte over-reads into the PAD=16 slack band, s7484 side datum), offline, from the recompiler disasm comments:
+- swizzleTextureRowsToTmem 0x80024880(dst a0, src a1, w a2, pw a3, rows sp+16): per row copies (a3>>4) groups of 8 bytes = a3/2 bytes, then
+  src -= t7 = a3/2 - (a2+1)/2 (0x80024888-94), so the source stride is ceil(a2/2) and the LAST row reads t7 bytes past the image. Sole caller
+  parseImageFile passes a3 = (a2+15)&0xFFF0 (0x8001EE8C/90 -> jal 0x8001EED8, delay slot a3=s0): t7 <= 7 for every a2 (checked 1..1024).
+  The soak saw exactly pcs 800248CC/D8/E4/F0 (bytes 4-7 of the last group) at 80B87F70-73 = 4-byte over-read, on all 4 arms. The values are
+  stored (sd) into TMEM-staging texels past the tile width = pad texels; loads only from the source block.
+- decodeJpegScanToImage chroma upsampler 0x800C9680-0x800C9700: centre + column-neighbour (t1 = +/-1 by parity, 0 only at column 0 / width-1)
+  + row-neighbour (s4) taps on both chroma planes (0x734/0x760); weights 10/3/3 >> 4. Seen: 96AC+96E8 at 801FEAE0 and 96D4+9700 at 80200B00, the
+  same byte from the column and diagonal tap (s4=0 row) = 1 byte past each plane once, L15/L1 boot. Reads only; reaches one 3/16 tap of an edge pixel.
+- Verdict: H-benign selected for both (retail code paths, bounded <= 7 / 1 byte, inside the pad band, no store into a neighbour block);
+  H-overread refuted. Two lines: code bound (tool exits 0 = EJ-bounded) + observed addresses/pcs on 6 levels match the bound. CLOSED.
+- New tool tools/s7485_overread_bound.py (reads ../N64Recomp/RecompiledFuncs; exit 1 if a regen moves the pattern).
+Rules out: guest UAF reads (6 levels) and slack over-reads as a crash/corruption source. Not covered: lwl/lwr and HOST readers -> class EK
+(NEXT.md s7486, HYPOTHESIS-ID m3-host-uaf-reads).
+Verdict wording (s7485): selects H-load-clean (EI) and H-benign (EJ), refutes H-load-uaf and H-overread; next discriminator = host-read
+locator class at DMA time (EK).
