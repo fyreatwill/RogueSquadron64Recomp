@@ -9,7 +9,7 @@
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp || exit 1
 n=${NAME:-s7475_canary}; R=$PWD/scratch/$n; mkdir -p $R; rm -f $R/quiet.done $R/void_*(N) $R/ok_*(N) $R/ring_*.txt(N)
 # FILL=0: the 0xA5 fill hangs boot (s7475: voice[1] state byte read from the 1-voice array slack); the store watch (STORE_DIAG) is the writer detector
-C="ROGUESQ_S7475_CANARY=1+ROGUESQ_S7475_FILL=${FILL:-0}+ROGUESQ_STORE_DIAG=1+ROGUESQ_S7472_HEAPCHK=1"
+C="ROGUESQ_S7475_CANARY=1+ROGUESQ_S7475_FILL=${FILL:-0}+ROGUESQ_STORE_DIAG=1+ROGUESQ_S7472_HEAPCHK=1${PAD:++ROGUESQ_S7475_PAD=$PAD}"  # s7479 class EG: PAD=16 gives zero-slack blocks a band
 lv=(${=${LV:-4:4 7:4 12:4 15:8}}); arms=(); tags=()
 for e in $lv; do
   l=${e%%:*}; d=${e##*:}
@@ -29,8 +29,9 @@ for a in $tags; do L=$R/log_$a.txt
   pln=$(grep -a -n '\[s7475\] plant SET' $L 2>/dev/null | head -1 | cut -d: -f1); imn=$(grep -a -n 'initMission\] call' $L 2>/dev/null | head -1 | cut -d: -f1)
   infl=0; [[ -n $pln && -n $imn ]] && (( pln > imn )) && infl=1
   last=$(grep -a '\[s7475\] sum ' $L 2>/dev/null | tail -1)
-  echo "$n arm=$a initMission=$im armed=$armed tail_hit_nonplant=$hit plant_detected=$pl plant_inflight=$infl heap_bad=$hb slack_store_pcs=$ss watch_ctl=$wc last={$last}" | tee -a $R/out.txt
-  (( armed == 0 || wc == 0 )) && sr=3; (( hit > 0 && sr == 0 )) && sr=1
+  pa=$(grep -a -c '\[s7479\] pad armed' $L 2>/dev/null)
+  echo "$n arm=$a initMission=$im armed=$armed tail_hit_nonplant=$hit plant_detected=$pl plant_inflight=$infl heap_bad=$hb slack_store_pcs=$ss watch_ctl=$wc pad_armed=$pa last={$last}" | tee -a $R/out.txt
+  (( armed == 0 || wc == 0 )) && sr=3; [[ -n $PAD && $PAD != 0 ]] && (( pa == 0 )) && sr=3; (( hit > 0 && sr == 0 )) && sr=1
   [[ $a == $tags[1] ]] && (( pl == 0 )) && sr=3
 done
 echo "$n score=$sr" | tee -a $R/out.txt

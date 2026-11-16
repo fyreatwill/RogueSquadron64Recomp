@@ -198263,3 +198263,36 @@ that take values (e.g. rs64_s4540_call(ctx->r4)) cannot write guest regs through
 - Verdict: the store-time header state (hdr_ok=0 on both EF sites vs hdr_ok=1 on the same-build ED control) selects H-attr and refutes
   H-port-size and H-retail-overrun for both sites; this closes class EF. Next discriminator (NEXT.md, class EG): ROGUESQ_S7475_PAD=16 gives the
   ~4780 zero-slack blocks a canary band; 0 live slack-stores selects H-clean, a live one names the writer via the s7478 chains.
+
+## Session 7479 (2026-11-16) — class EG closed for guest stores: padding every rs_malloc request by 16 bytes gives all blocks a canary band (noslack ~80% -> 0) and 4 flown levels show 0 overruns; s7478 re-score folded PASS
+
+**Fold.** s7478_canary_restale (soak, rc=0): L4/L7/L12 dd4, L15 dd8 21:9, HOLD=220, all alive, vi_stalls30s=0, tail_hit_nonplant=0,
+slack_store=0, stale_drop 3/3/3/5, L4 in-flight plant DETECTED -> class EF re-score PASS.
+
+**Class EG (M3 idiom audit: overruns of zero-slack heap blocks).** The s7478 summaries show noslack=9216-10061 of rec=12072-13060
+blocks (~80%, not "more than half"): req is already 16-aligned, so the s7475 canary had no band to fill and an overrun would land in
+the next block. Hypotheses: H-clean / H-hidden / H-pad-perturbs.
+Instrument (one build): tools/apply_s7479_mallocpad.py (in the fixup apply list) makes the rs_malloc wrapper (funcs_0.c, s5041/s6063
+wrap) pass rs64_s7479_pad(_rq) to rs_malloc_s5041_inner; host side (upstream_compat.cpp) returns _rq + ROGUESQ_S7475_PAD (rounded to 16)
+only when ROGUESQ_S7475_CANARY=1, else _rq (pure pass-through by default). Every hook after the inner call (spill, s5041, s6063 ->
+s7475 canary) still gets the ORIGINAL request, so [req, size) is a >=16-byte band for every block. `[s7475] sum` gains padded=.
+tools/s7475_canary_recipe.zsh gains PAD= (adds ROGUESQ_S7475_PAD to every arm, scores pad_armed, control FAIL if not armed).
+Run (in-session, scratch/s7479_canary_pad, `env NAME=s7479_canary_pad PAD=16 zsh tools/s7475_canary_recipe.zsh`, score=0):
+
+| arm | initMission | rec | noslack | padded | tail_hit_nonplant | slack_store | plant | alive / vi_stalls30s |
+|---|---|---|---|---|---|---|---|---|
+| L4 dd4 | 2 | 28416 | 0 | 29246 | 0 | 0 | DETECTED in flight | 1 / 0 |
+| L7 dd4 | 1 | 22470 | 0 | 23300 | 0 | 0 | - | 1 / 0 |
+| L12 dd4 | 1 | 21731 | 0 | 22561 | 0 | 0 | - | 1 / 0 |
+| L15 dd8 21:9 | 1 | 22277 | 0 | 23110 | 0 | 0 | - | 1 / 0 |
+
+Controls same run: watch-ctl PASS every arm (guest store watch fires on the frame counter), in-flight plant on L4 DETECTED (tail
+walk), pad armed n=16 every arm. Records ~1.8x s7478 (now every block is recorded, not just the slack ones). Stale-drop rows are the
+known EF set plus rs_malloc_s5041_inner 0x80001C38/0x80001C48 writing new headers into records already freed by the bulk scene reset
+(w0=00010000): the allocator, on dead records, dropped as designed.
+Verdict: H-clean selected for GUEST stores (two lines: store watch over every block's band with a passing watch control, and the
+header walk / tail walk with a passing plant); H-hidden refuted for in-guest writers on these 4 levels; H-pad-perturbs refuted (same
+liveness and stall profile as s7478; L4 initMission=2 is an idle-autopilot restart, seen before on L6/L17).
+Limit: FILL=0 (kept from s7475 because 0xA5 hung boot before the s7476 fix), so a HOST writer (memcpy, PI DMA, RSP) storing zeros past
+a request is invisible to the tail walk. Queued scratch/agent/soak_queue/s7479_canary_pad_a5.sh (PAD=16 FILL=0xA5, same 4 levels).
+Rules out: a live in-guest overrun of zero-slack rs_malloc blocks on L4/L7/L12 dd4 and L15 dd8 21:9 in 220 s holds.

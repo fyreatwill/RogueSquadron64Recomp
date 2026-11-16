@@ -3652,6 +3652,7 @@ namespace {
 struct S7475R { uint32_t req, sz, ra; double t; void* hpc; void* bt[8]; int nbt; };
 static std::map<uint32_t, S7475R> s_s7475_live;
 static std::mutex s_s7475_mu;
+static uint64_t s_s7479_padded = 0;  /* s7479 class EG pad count (rs64_s7479_pad) */
 static std::set<std::pair<uint32_t, uint32_t>> s_s7475_seen;
 static uint64_t s_s7475_rec = 0, s_s7475_noslack = 0, s_s7475_hdrbad = 0, s_s7475_stale = 0, s_s7475_hits = 0, s_s7475_walks = 0,
                 s_s7475_freechk = 0, s_s7475_overlap = 0;
@@ -3701,10 +3702,10 @@ static void s7475_walk(volatile uint8_t* r, double now) {
         if (!s7475_hdr_ok(r, it->first, it->second)) { ++s_s7475_stale; if (s_s7475_plant == 1 && it->first == s_s7475_pblk) { s_s7475_plant = 2; std::fprintf(stderr, "[s7475] plant LOST blk=%08X (stale)\n", it->first); } s7475_mark(it->first, it->second, false); it = s_s7475_live.erase(it); continue; }
         s7475_check1(r, it->first, it->second, "walk", 0, now); ++it; }
     if (s_s7475_walks % 40 == 1) { static int ns = 0; if (ns++ < 400)
-        std::fprintf(stderr, "[s7475] sum walks=%llu t=%.1f live=%zu rec=%llu noslack=%llu hdrbad=%llu stale=%llu overlap=%llu freechk=%llu hits=%llu distinct=%zu plant=%d\n",
+        std::fprintf(stderr, "[s7475] sum walks=%llu t=%.1f live=%zu rec=%llu noslack=%llu hdrbad=%llu stale=%llu overlap=%llu freechk=%llu hits=%llu distinct=%zu plant=%d padded=%llu\n",
                      (unsigned long long)s_s7475_walks, now - s_s7475_t0, s_s7475_live.size(), (unsigned long long)s_s7475_rec, (unsigned long long)s_s7475_noslack,
                      (unsigned long long)s_s7475_hdrbad, (unsigned long long)s_s7475_stale, (unsigned long long)s_s7475_overlap, (unsigned long long)s_s7475_freechk,
-                     (unsigned long long)s_s7475_hits, s_s7475_seen.size(), s_s7475_plant);
+                     (unsigned long long)s_s7475_hits, s_s7475_seen.size(), s_s7475_plant, (unsigned long long)s_s7479_padded);
         std::fprintf(stderr, "[s7475] stores=%llu wpcs=%zu\n", (unsigned long long)s_s7475_stores, s_s7475_wpc.size());
         if (ns <= 400 && s_s7475_walks % 400 == 1) for (auto& kv : s_s7475_wpc) std::fprintf(stderr, "[s7475] wpc pc=%08X fn=%s n=%llu first_blk=%08X req=%X off=%X w=%d alloc=%s\n",
                      kv.first, kv.second.fn ? kv.second.fn : "?", (unsigned long long)kv.second.n, kv.second.blk, kv.second.req, kv.second.off, kv.second.w, s7475_sym(kv.second.hpc).c_str()); } }
@@ -3718,6 +3719,15 @@ static void s7475_tick(volatile uint8_t* r, double now) {
         if (pb) { s7475_wb(r, pb + preq, (uint8_t)(s7475_fill() ^ 0xFFu)); s_s7475_pblk = pb; s_s7475_plant = 1; s_s7475_ptime = now;
                   std::fprintf(stderr, "[s7475] plant SET blk=%08X req=%X size=%X t=%.1f\n", pb, preq, s_s7475_live[pb].sz, now - s_s7475_t0); } } }
 }
+/* s7479 class EG: ROGUESQ_S7475_PAD=<n> (default 0, needs ROGUESQ_S7475_CANARY=1): the rs_malloc wrapper (tools/apply_s7479_mallocpad.py)
+   asks the inner allocator for req+n (n rounded up to 16) while the canary records the ORIGINAL req, so every block - including the
+   ~80% whose req is already 16-aligned (noslack) - carries a >=n-byte band [req, size). Measurement only; 0 = pass-through. */
+extern "C" uint32_t rs64_s7479_pad(uint32_t rq) {
+    static const uint32_t pad = [] { const char* e = std::getenv("ROGUESQ_S7475_PAD"); const char* c = std::getenv("ROGUESQ_S7475_CANARY");
+        uint32_t v = (e && *e && c && c[0] && c[0] != '0') ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; v = (v + 15u) & ~15u;
+        if (v) std::fprintf(stderr, "[s7479] pad armed n=%u\n", v); return v; }();
+    if (!pad || !rq || rq > 0x7FFFFFF0u - pad) return rq;
+    __atomic_add_fetch(&s_s7479_padded, 1, __ATOMIC_RELAXED); return rq + pad; }
 static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
     if (!s7475_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
