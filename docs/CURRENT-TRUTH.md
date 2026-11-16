@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7495 (2026-11-16).
+Compact operational handoff, as of Session 7496 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -246,7 +246,13 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      fixed DL-chunk pool [0x720000, end), end per mode: 320 0x777768, 640x480 0x738F18, 640x340 0x792780; port (tools/apply_s7495_poolwatch.py,
      ROGUESQ_S7495_POOL=1 + S7493_WBLIVE=1) == retail oracle byte for byte. 640x340 Z = 0x795C00, above the pool; 0 live overlaps / 0 pool
      writebacks after the rebuild; hist-overlap control (old 76A000 Z inside the new pool) fired.
-   - **EU next: any LIVE rs_malloc block under a new partition (pool rebuild / new colour or depth image)?** NEXT.md.
+   - **EU s7496 heap blocks under a new partition: H-eu-clean for pool + colour + non-zero Z (L4 dd1, L15 dd8 21:9).** Chain walk of the real
+     arenas (upstream_compat.cpp rs64_s7496_overlap, main.cpp s7496_query; ROGUESQ_S7495_POOL=1, recipe tools/s7496_eu_recipe.zsh): every
+     pool rebuild and every colour extent that hits the heap lies INSIDE one used top-down (fl=6) block = the game carves its partitions out
+     of its own allocation (19 / 20 container rows, 0 partial). Control (youngest s7475 malloc record found used by the walk) 10/10, 9/9;
+     qbad=0. H-eu-dd refuted. Only live rows: the game's Z=0 placeholder depth image (set once at t~11.2 s in BOTH arms) whose 480-row
+     extent [0, w*960) is my estimate; at dd8 width 1024 it reaches 3 low blocks 0x0D03E0-0x0DA630. Levels soak queued (s7496_eu_levels).
+     **EV next: is depth ever written through the Z=0 placeholder?** NEXT.md.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

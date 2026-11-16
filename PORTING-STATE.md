@@ -198782,3 +198782,31 @@ extent simply stops being Z when the mode changes; the game re-partitions [0x720
 ORIGIN: no mitigation landed; writer = the game's own pool relink in buildAndRegisterDefaultMaterial, retail-identical.
 Next: class EU - at each pool rebuild and each new colour/depth image, does any rs_malloc block the s7480 map holds as LIVE overlap the
 new partition (pool or image extent)? Retail tolerates the overlay only because the overlaid blocks are already freed (ES/ET).
+
+## Session 7496 (2026-11-16) — class EU: every DL-chunk pool rebuild and colour extent over the heap sits inside one used top-down heap block (game-owned container), 0 partial live overlaps at L4 dd1 and L15 dd8 21:9 (H-eu-clean; H-eu-dd refuted); only live rows come from the game's Z=0 placeholder depth image; class EV seeded
+
+What ran. Planned instrument (query over s_s7475_live) rejected before building: s7475 records only SLACK blocks, so a no-slack live
+block would be invisible. New: `rs64_s7496_overlap(lo, hi, cb, u)` (src/main/upstream_compat.cpp) walks the real rs_malloc arena chains
+(s7472 layout, heads 0x8010FEFC/FF00/FF18) and reports every block intersecting [lo, hi) with flags, size and s7475 ra/age when
+recorded; returns -1 on a broken walk (race; qbad). main.cpp `s7496_query` calls it from rs64_s7495_pool (pool extent) and from
+rs64_s7495_img for every NEW (kind, addr, width) colour/depth image (extent addr + w*480*bpp; depth uses the last colour width, 2 B/px);
+rows `[s7496] under kind= ext= hdr= end= size= fl= ra= age= cls=container|live|free`, counts in `[s7496] sum`. Control at every pool
+rebuild: the youngest s7475 malloc-hook record must be found used by the chain walk (second source). tools/s7493_er_recipe.zsh gains
+XC=<extra env>; tools/s7496_eu_recipe.zsh wraps it with ROGUESQ_S7495_POOL=1 and scores EU.
+
+Run (one run, two arms, `zsh tools/s7496_eu_recipe.zsh`, L4 dd1 + L15 dd8 21:9, HOLD 220): s7493/s7492 contracts hold (score=0: wb
+51.8k/51.7k, 0 stale, CTL caught; mplant DETECTED both). EU:
+- L4 dd1: pools=11, q=37, qbad=0, live=0, container=19, free=0, ctl 10/10.
+- L15 dd8: pools=9 (bases move with the mode: B20000, 943800, AB5000, 925000, 8FF800, 824800), q=39, qbad=0, container=20, free=1,
+  ctl 9/9, live=3. All 3 live rows + the free row are ONE query: zimg ext=[000000,0F0000) at t=11.161 (cimg_w 1024), blocks
+  0x0D03E0/0x0D4C20/0x0D7B90 (fl=2, age 0.09 s, no s7475 ra). L4 sets the same Z=0 at t=11.175, but at w=640 the estimated extent
+  stops short of the low blocks.
+Container blocks are fl=6 (used, top-down) e.g. 0x623DF0 size 0x163A00 holding pool [720000,777768) and colour images at boot; each
+mode change re-uses a new top-down container (49E5F0, 5140F0, 54C0F0, 5BADF0, 623DF0 on L4).
+
+What it shows. The game allocates each display mode's pool + images as a heap block and partitions INSIDE it, so "partition over a live
+block" is the game's own block (H-eu-clean for pool, colour and non-zero Z, two arms incl. dd8 heap layout; H-eu-dd refuted). The Z=0
+rows are an extent ESTIMATE on a placeholder depth address (SETZIMG 0): whether any depth write lands at phys 0..0xF0000 is unmeasured.
+Single-source caveat: a real Z write there would hit low RAM (exception vectors at 0x80000000) and the run held 215 s clean, which argues
+against it, but that is reasoning, not a measurement. Next = class EV. Levels soak queued: scratch/agent/soak_queue/s7496_eu_levels.sh
+(L1 dd8 21:9, L7/L10/L12 dd4; recipe scores Z=0 rows apart as z0_live).

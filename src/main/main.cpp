@@ -10,6 +10,7 @@
 #include <csignal>
 #include <vector>
 #include <map>
+#include <set>
 #include <mutex>
 #include <cinttypes>
 #include <filesystem>
@@ -10506,6 +10507,26 @@ double s7493_now() { return std::chrono::duration<double>(std::chrono::steady_cl
 namespace { bool s7495_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7495_POOL"); return e && *e && *e != '0'; }(); return on; }
 std::mutex g_s7495_mu; uint32_t g_s7495_lo = 0, g_s7495_hi = 0, g_s7495_cw = 0; int g_s7495_np = 0; uint64_t g_s7495_zsets = 0, g_s7495_live = 0, g_s7495_hist = 0;
 std::map<uint32_t, double> g_s7495_z; double g_s7495_t0 = 0; }
+// s7496 class EU: every guest-heap block under a new partition (pool rebuild, new colour/depth image extent), walked from the real
+// arena chains (upstream_compat.cpp rs64_s7496_overlap). Rows: `[s7496] under kind= lo= hi= hdr= size= fl= ra= age= cls=` where
+// cls = container (one used block holds the whole extent), live (used, partial), free. Counts in `[s7496] sum`. ROGUESQ_S7495_POOL=1.
+extern "C" int rs64_s7496_overlap(uint32_t, uint32_t, void (*)(uint32_t, uint32_t, uint32_t, uint32_t, double, void*), void*);
+extern "C" int rs64_s7496_ctl(uint32_t*);
+namespace { uint64_t g_s7496_q = 0, g_s7496_qbad = 0, g_s7496_live = 0, g_s7496_cont = 0, g_s7496_free = 0, g_s7496_freehdr = 0, g_s7496_rows = 0, g_s7496_ctln = 0, g_s7496_ctlok = 0;
+void s7496_query(const char* kind, uint32_t lo, uint32_t hi, double t) {
+    struct Q { const char* kind; uint32_t lo, hi; double t; int nl, nc, nf; } q{kind, lo, hi, t, 0, 0, 0};
+    const int n = rs64_s7496_overlap(lo, hi, [](uint32_t h, uint32_t sz, uint32_t fl, uint32_t ra, double age, void* u) {
+        Q* p = (Q*)u; const uint32_t hp = h & 0xFFFFFFu, ep = hp + 0x10u + sz;
+        const char* cls = fl == 1u ? "free" : (hp + 0x10u <= p->lo && ep >= p->hi) ? "container" : "live";
+        if (fl == 1u) { ++p->nf; ++g_s7496_free; if (hp >= p->lo && hp < p->hi) ++g_s7496_freehdr; } else if (cls[0] == 'c') { ++p->nc; ++g_s7496_cont; } else { ++p->nl; ++g_s7496_live; }
+        if (fl != 1u ? ++g_s7496_rows <= 60 : false)
+            std::fprintf(stderr, "[s7496] under kind=%s ext=[%06X,%06X) hdr=%06X end=%06X size=%X fl=%X ra=%08X age=%.2f cls=%s t=%.3f\n", p->kind, p->lo, p->hi, hp, ep, sz, fl, ra, age, cls, p->t);
+    }, &q);
+    ++g_s7496_q; if (n < 0) ++g_s7496_qbad;
+    std::fprintf(stderr, "[s7496] q kind=%s ext=[%06X,%06X) walked=%d live=%d container=%d free=%d t=%.3f\n", kind, lo, hi, n, q.nl, q.nc, q.nf, t);
+    std::fprintf(stderr, "[s7496] sum q=%llu qbad=%llu live=%llu container=%llu free=%llu freehdr=%llu ctl=%llu/%llu\n", (unsigned long long)g_s7496_q, (unsigned long long)g_s7496_qbad,
+                 (unsigned long long)g_s7496_live, (unsigned long long)g_s7496_cont, (unsigned long long)g_s7496_free, (unsigned long long)g_s7496_freehdr, (unsigned long long)g_s7496_ctlok, (unsigned long long)g_s7496_ctln);
+} std::set<std::pair<uint32_t, uint32_t>> g_s7496_imgs; }
 extern "C" void rs64_s7495_pool(uint32_t base, uint32_t size) {
     if (!s7495_on()) return;
     std::lock_guard<std::mutex> lk(g_s7495_mu); const double now = s7493_now(); if (g_s7495_t0 == 0) g_s7495_t0 = now;
@@ -10515,9 +10536,15 @@ extern "C" void rs64_s7495_pool(uint32_t base, uint32_t size) {
     for (auto& kv : g_s7495_z) if (kv.first >= lo && kv.first < hi) { ++g_s7495_hist;
         std::fprintf(stderr, "[s7495] hist-overlap pool#%d z=%06X (set %.3f s before this rebuild)\n", g_s7495_np, kv.first, now - kv.second); }
     std::fprintf(stderr, "[s7495] sum pools=%d zsets=%llu live=%llu hist=%llu\n", g_s7495_np, (unsigned long long)g_s7495_zsets, (unsigned long long)g_s7495_live, (unsigned long long)g_s7495_hist);
+    s7496_query("pool", lo, hi, now - g_s7495_t0);
+    { uint32_t cb = 0; const int c = rs64_s7496_ctl(&cb); ++g_s7496_ctln; if (c == 1) ++g_s7496_ctlok;
+      std::fprintf(stderr, "[s7496] ctl pool#%d youngest_rec=%08X found_used=%d\n", g_s7495_np, cb, c); }
 }
-static void rs64_s7495_img(uint32_t kind, uint32_t addr, uint32_t width) {
+static void rs64_s7495_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
     std::lock_guard<std::mutex> lk(g_s7495_mu); const uint32_t a = addr & 0xFFFFFFu;
+    { const uint32_t w = kind == 0 ? width : g_s7495_cw, bpp = siz >= 3 ? 4u : siz == 2 ? 2u : 1u;  /* s7496: new (kind, addr, width) extents */
+      if (w && g_s7496_imgs.insert({(kind << 24) | a, w}).second) { const double now = s7493_now(); if (g_s7495_t0 == 0) g_s7495_t0 = now;
+          s7496_query(kind == 0 ? "cimg" : "zimg", a, a + w * 480u * bpp, now - g_s7495_t0); } }
     if (kind == 0) { g_s7495_cw = width; return; }
     ++g_s7495_zsets; const bool fresh = g_s7495_z.find(a) == g_s7495_z.end(); const double now = s7493_now(); if (g_s7495_t0 == 0) g_s7495_t0 = now; g_s7495_z[a] = now;
     if (fresh) std::fprintf(stderr, "[s7495] zimg new z=%06X t=%.3f cimg_w=%u pool=[%06X,%06X)%s\n", a, now - g_s7495_t0, g_s7495_cw, g_s7495_lo, g_s7495_hi,
@@ -10526,7 +10553,7 @@ static void rs64_s7495_img(uint32_t kind, uint32_t addr, uint32_t width) {
         std::fprintf(stderr, "[s7495] live-overlap z=%06X pool#%d [%06X,%06X) t=%.3f\n", a, g_s7495_np, g_s7495_lo, g_s7495_hi, now - g_s7495_t0);
 }
 extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
-    if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width);
+    if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width, siz);
     if (!s7493_on() || kind > 1) return;
     std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
     if (g_s7493_ctl_kind == (int)kind && (addr & 0xFFFFFFu) == g_s7493_ctl_base) return;  /* control: this image's sets are no longer recorded */

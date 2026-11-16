@@ -1,18 +1,16 @@
-# NEXT (s7496)
+# NEXT (s7497)
 HYPOTHESIS-ID: m3-partition-over-live-block
 
-Work unit: class EU. ES/ET (s7494/s7495) showed the game re-partitions fixed RAM per display mode: the DL-chunk pool
-[0x720000, end) (end 0x777768 / 0x738F18 / 0x792780 for 320 / 640x480 / 640x340) and the mode's Z/colour images, laid over heap
-blocks it freed shortly before (port == retail). Open question: is EVERY rs_malloc block under a new partition already freed, in every
-scene (boot, hangar, mission load, abort/re-entry), on dd1 AND dd>1 (spill arena / OSMEM 12 change the heap top)?
-Hypotheses: H-eu-clean (0 live blocks under any partition; retail design holds) / H-eu-live (a live block sits under the pool or an
-image extent: name the block's allocator ra and whether retail does the same via the oracle) / H-eu-dd (only dd>1 arms overlap: our
-heap-top / spill change moved a live block under a retail partition = port defect, fix it).
-Instrument, ONE build: export from src/main/upstream_compat.cpp a query `rs64_s7475_live_overlap(lo, hi, cb)` over s_s7475_live
-(needs ROGUESQ_S7475_CANARY=1); call it from rs64_s7495_pool (pool extent) and from rs64_s7495_img for each NEW colour image
-(extent = addr .. addr + w*rows*siz, rows 480 cap) and depth image (w = last colour width, 2 B/px). Log `[s7495] live-under kind=
-pool|cimg|zimg blk= req= ra= age=` (first 20) + counts in `[s7495] sum`. Positive control (same run): ROGUESQ_S7495_CTL=1 records a
-fake live block at 0x80787810 size 0x6C30 just before pool #3 -> MUST log live-under kind=pool blk=80787810.
-Run: L4 dd1 and L15 dd8 21:9 via the s7493 recipe (`env LV="4:1:os_rt64fb 15:8:os_rt64fb" WBWATCH=787830 zsh tools/s7493_er_recipe.zsh`,
-add ROGUESQ_S7495_POOL=1 to its C string) + a hangar abort/re-entry arm (s7483 route). Outcomes: 0 live-under with control caught ->
-H-eu-clean, close EU; rows only at dd>1 -> H-eu-dd; rows in dd1 too -> oracle-check that block (tools/s7494_es_oracle.zsh lo hi secs).
+Fold first: SOAK-RESULTS line for s7496_eu_levels (tools/s7496_eu_recipe.zsh; `s7496_eu_levels eu arm=` rows in its out.txt): live=0
+outside Z=0 + ctl ok==n on L1/L7/L10/L12 -> EU closed 6 levels.
+
+Work unit: class EV. s7496 found the game sets a depth image at address 0 once (~t 11.2 s, both L4 dd1 and L15 dd8); with the guessed
+480-row extent it covers live heap blocks 0x0D03E0..0x0DA630 at width 1024. Question: does the RDP/RT64 ever WRITE depth while Z=0?
+Hypotheses: H-ev-placeholder (Z=0 is set while no z-update draws run; 0 depth writes / 0 writebacks to [0, w*960)) / H-ev-write (draws
+with Z_UPD run while Z=0: RT64 writes depth into low RAM -> name the scene, compare retail) / H-ev-retail (retail oracle sets SETZIMG 0
+at the same scene: tools/s7494_es_oracle.zsh reports RDP command order).
+Instrument, ONE build: in lib/rt64 rt64_rdp.cpp count draws with othermode Z_UPD while depthImage.address == 0, and in main.cpp
+s7493_wb count depth writebacks with base 0 (`[s7497] z0 draws_zupd= wb_base0= sets=`). Positive control: ROGUESQ_S7497_CTL=1 counts the
+same for the CURRENT non-zero depth image (must be > 0). lib/ edit -> ./submodule-patches/export.sh + commit.
+Run: `env XC=ROGUESQ_S7497_Z0=1 zsh tools/s7496_eu_recipe.zsh` (L4 dd1, L15 dd8). Outcomes: 0 with control > 0 -> H-ev-placeholder,
+close EU/EV; > 0 -> oracle the scene.

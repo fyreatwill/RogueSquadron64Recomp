@@ -10000,3 +10000,45 @@ extern "C" void rs64_s7064_synth(uint8_t* rdram) {
     if (s.in && s.frames < 96) { s.frames++; const uint64_t m = s.scan(rdram);
         s.put("F %.3f k=%u mask=%016llX", s.ms(mach_absolute_time()), s.frames, (unsigned long long)m); s.snap(rdram, 'S', s.emask); }
 }
+
+/* s7496 class EU: which guest-heap blocks lie under a new fixed-RAM partition (DL-chunk pool rebuild, new colour/depth image)?
+   rs64_s7496_overlap(lo, hi, cb, u) walks every rs_malloc arena chain (s7472 layout: heads 0x8010FEFC/FF00/FF18, 16 B headers,
+   u16 flags 1 free / 2|6 used / 8 end, u32 size, next = h + 0x10 + size) and calls cb(hdr, size, flags, ra, age) for every block
+   whose [hdr, hdr+0x10+size) intersects the physical range [lo, hi) (KSEG0 or physical, masked to 24 bits... callers pass phys).
+   ra/age come from the s7475 live-record map when that block has a record (ROGUESQ_S7475_CANARY=1), else 0 / -1.
+   Returns blocks visited, or -1 when a chain walk broke (a racing rs_malloc/rs_free on the guest thread: not scored).
+   Self-control rs64_s7496_ctl(): the youngest s7475 record (malloc hook = second source) MUST be found used by the walk. */
+extern "C" int rs64_s7496_overlap(uint32_t lo, uint32_t hi, void (*cb)(uint32_t, uint32_t, uint32_t, uint32_t, double, void*), void* u) {
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return -1;
+    static const uint32_t heads[3] = {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u};
+    const uint32_t top = rs64_ram_top, vlo = 0x80000000u | lo, vhi = 0x80000000u | hi; uint32_t seen[3] = {0, 0, 0}; int narena = 0, nv = 0;
+    const double now = s7325_now();
+    for (int i = 0; i < 3; ++i) {
+        const uint32_t h0 = s7472_rd(r, heads[i]);
+        if (h0 < 0x80000000u || h0 >= top) continue;
+        bool dup = false; for (int j = 0; j < narena; ++j) if (seen[j] == h0) dup = true;
+        if (dup) continue; seen[narena++] = h0;
+        uint32_t a = h0; int g = 0;
+        for (; g < 400000; ++g) {
+            const uint32_t w0 = s7472_rd(r, a), sz = s7472_rd(r, a + 4u), fl = w0 >> 16;
+            if (fl & 8u) break;
+            const uint32_t nx = a + 0x10u + sz;
+            if ((fl != 1u && fl != 2u && fl != 6u) || (sz & 0xFu) || nx <= a || nx >= top) return -1;
+            ++nv;
+            if (a < vhi && nx > vlo && cb) {
+                uint32_t ra = 0; double age = -1;
+                { std::lock_guard<std::mutex> lk(s_s7475_mu); auto it = s_s7475_live.find(a + 0x10u); if (it != s_s7475_live.end()) { ra = it->second.ra; age = now - it->second.t; } }
+                cb(a, sz, fl, ra, age, u); }
+            a = nx; }
+        if (g >= 400000) return -1; }
+    return nv;
+}
+extern "C" int rs64_s7496_ctl(uint32_t* blk_out) {
+    uint32_t best = 0; double bt = -1;
+    { std::lock_guard<std::mutex> lk(s_s7475_mu); for (auto& kv : s_s7475_live) if (kv.second.t > bt) { bt = kv.second.t; best = kv.first; } }
+    if (blk_out) *blk_out = best; if (!best) return -2;
+    struct C { uint32_t want; int found; } c{best - 0x10u, 0};
+    const int n = rs64_s7496_overlap((best - 0x10u) & 0xFFFFFFu, (best & 0xFFFFFFu) + 1u,
+        [](uint32_t h, uint32_t, uint32_t fl, uint32_t, double, void* u) { C* p = (C*)u; if (h == p->want && fl != 1u) p->found = 1; }, &c);
+    return n < 0 ? -1 : c.found;
+}

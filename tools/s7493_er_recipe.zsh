@@ -7,6 +7,7 @@
 # 4 = a stale (age>=2) or never-set writeback (H-wb-stale: read the `[s7493] wb ... age>=2|never` rows).
 # SOAK_NEEDS_IDLE=180
 # SOAK_TIMEOUT=1400
+# XC=<a=b+c=d>: extra env appended to every arm (s7496).
 # s7492 class EQ = the s7491 recipe with per-arm plant kinds: LV="<level>:<dd>:<kind> ..." (default "4:4:os_tq_head 15:8:os_rt64fb
 # 1:4:os_tq_link"); ROGUESQ_S7491_MPLANT_KIND=<kind> restricts the plant to that kind, so each new EQ hook site gets its own
 # positive control (`[s7480] plant DETECTED ... fn=<kind>`). Exit 0 = every arm: plant SET+DETECTED for its kind, the EQ kinds
@@ -21,7 +22,7 @@
 # rows, 0 os_* slack-stores. 1 = an os_* F/Urec/slack hit (chase its row); 3 = control FAIL; harness rc wins.
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp || exit 1
 n=${NAME:-s7493_er}; R=$PWD/scratch/$n; mkdir -p $R; rm -f $R/quiet.done $R/void_*(N) $R/ok_*(N) $R/ring_*.txt(N)
-C="ROGUESQ_S7475_CANARY=1+ROGUESQ_S7475_FILL=0+ROGUESQ_STORE_DIAG=1+ROGUESQ_S7475_PAD=16+ROGUESQ_S7480_UAF=1+ROGUESQ_S7475_BT=1+ROGUESQ_S7491_MPLANT=${MPLANT_S:-20}+ROGUESQ_S7484_UAFLOAD=1+ROGUESQ_S7493_WBLIVE=1+ROGUESQ_S7493_WBLIVE_CTL=${WBCTL:-3000}+ROGUESQ_S7493_WBLIVE_WATCH=${WBWATCH:-787810,B87810}"
+C="ROGUESQ_S7475_CANARY=1+ROGUESQ_S7475_FILL=0+ROGUESQ_STORE_DIAG=1+ROGUESQ_S7475_PAD=16+ROGUESQ_S7480_UAF=1+ROGUESQ_S7475_BT=1+ROGUESQ_S7491_MPLANT=${MPLANT_S:-20}+ROGUESQ_S7484_UAFLOAD=1+ROGUESQ_S7493_WBLIVE=1+ROGUESQ_S7493_WBLIVE_CTL=${WBCTL:-3000}+ROGUESQ_S7493_WBLIVE_WATCH=${WBWATCH:-787810,B87810}${XC:++$XC}"
 lv=(${=${LV:-4:1:os_rt64fb 15:8:os_rt64fb}}); arms=(); tags=(); typeset -A kd
 for e in $lv; do
   l=${e%%:*}; r=${e#*:}; d=${r%%:*}; k=${r#*:}
