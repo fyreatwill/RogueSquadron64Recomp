@@ -197883,3 +197883,7 @@ sites, 11 survivors. Classification, each read against the analyzer path notes:
 Run 2 after the guard: 10 sites, 0 survivors, rc 0, control PASS. Build OK (rt64.a relinked). submodule-patches exported.
 Regression soak scratch/agent/soak_queue/s7465_dt_guard_flight.sh queued (L4 + L12 dd4 HOLD=150, counts fillrect_null; 0 expected).
 Rules out: undiagnosed host null-deref paths in the 150 in-scope TUs beyond the parked plume site.
+Verdict: DS selects H-const and refutes H-split (cnt distinct_raw == distinct_fixed in flight, with the ctl arm proving the counter
+splits when padding varies) and selects H-unreached for the reinterpret/fbtile sites. DT: refutes "unguarded reachable host null
+deref" for 9 of 10 remaining sites (invariant proved), 1 known-parked. Next discriminator: s7465_dt_guard_flight fillrect_null count
+(0 = latent; >0 = the both-null storage is reached in flight, then name its framebuffer key).
