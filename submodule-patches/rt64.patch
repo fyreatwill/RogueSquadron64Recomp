@@ -11261,7 +11261,7 @@ index 69a82ac..6e82095 100644
  
              if (device != nullptr) {
 diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
-index b9cb1f5..a35d672 100644
+index b9cb1f5..c86135d 100644
 --- a/src/render/rt64_framebuffer_renderer.cpp
 +++ b/src/render/rt64_framebuffer_renderer.cpp
 @@ -1,13 +1,21 @@
@@ -12901,7 +12901,22 @@ index b9cb1f5..a35d672 100644
                      previousPipeline = nullptr;
                  }
  
-@@ -735,13 +2213,70 @@ namespace RT64 {
+@@ -706,6 +2184,14 @@ namespace RT64 {
+             case InstanceDrawCall::Type::FillRect: {
+                 const auto &clearRect = drawCall.clearRect;
+                 RenderTarget *chosenTarget = (fbStorage->colorTarget != nullptr) ? fbStorage->colorTarget : fbStorage->depthTarget;
++                // s7465 class DT: RenderFramebufferManager::get() hands back a storage with BOTH targets null when both
++                // framebuffer keys are empty; the colorTarget==nullptr skip above (ROGUESQ) shows the null-colour case is
++                // reached in this port. A FillRect there would read chosenTarget->width. Skip it and count (never seen yet).
++                if (chosenTarget == nullptr) {
++                    static uint32_t s7465_n = 0;
++                    if (s7465_n++ < 8) fprintf(stderr, "[s7465] fillrect-null-target n=%u\n", s7465_n);
++                    break;
++                }
+                 bool rectCoversWholeTarget = (clearRect.rect.left == 0) && (clearRect.rect.top == 0) && (uint32_t(clearRect.rect.right) == chosenTarget->width) && (uint32_t(clearRect.rect.bottom) == chosenTarget->height);
+ 
+                 // ROGUESQ_NO_FULLSCREEN_FILLRECT — ported from reverted commit
+@@ -735,13 +2221,70 @@ namespace RT64 {
                      break;
                  }
  
@@ -12972,7 +12987,7 @@ index b9cb1f5..a35d672 100644
                  }
  
                  break;
-@@ -773,6 +2308,158 @@ namespace RT64 {
+@@ -773,6 +2316,158 @@ namespace RT64 {
              }
          }
  
@@ -13131,7 +13146,7 @@ index b9cb1f5..a35d672 100644
          // Mark targets for resolve.
          if (fbStorage->colorTarget != nullptr) {
              fbStorage->colorTarget->markForResolve();
-@@ -1462,6 +3149,15 @@ namespace RT64 {
+@@ -1462,6 +3157,15 @@ namespace RT64 {
          fbParams.horizontalMisalignment = p.horizontalMisalignment;
          framebufferCount++;
  
@@ -13147,7 +13162,7 @@ index b9cb1f5..a35d672 100644
          while (framebufferCount > framebufferVector.size()) {
              framebufferVector.emplace_back();
              framebufferVector.back().paramsBuffer = p.worker->device->createBuffer(RenderBufferDesc::UploadBuffer(256, RenderBufferFlag::CONSTANT));
-@@ -1470,6 +3166,8 @@ namespace RT64 {
+@@ -1470,6 +3174,8 @@ namespace RT64 {
          }
  
          Framebuffer &framebuffer = framebufferVector[framebufferCount - 1];
@@ -13156,7 +13171,7 @@ index b9cb1f5..a35d672 100644
          void *paramBufferBytes = framebuffer.paramsBuffer->map();
          memcpy(paramBufferBytes, &fbParams, sizeof(interop::FramebufferParams));
          framebuffer.paramsBuffer->unmap();
-@@ -1569,7 +3267,12 @@ namespace RT64 {
+@@ -1569,7 +3275,12 @@ namespace RT64 {
          const float SimilarityPercentage = 0.1f; // TODO: Make more strict once VI ratios are in.
          const float scissorRatio = static_cast<float>(fbPair.scissorRect.width(false, true)) / static_cast<float>(fbPair.scissorRect.height(false, true));
          const bool adjustRatio = (abs((scissorRatio / p.aspectRatioSource) - 1.0f) < SimilarityPercentage);
@@ -13170,7 +13185,7 @@ index b9cb1f5..a35d672 100644
          InstanceDrawCall instanceDrawCall;
          interop::RenderIndices renderIndices;
          uint32_t globalCallIndex = 0;
-@@ -1643,6 +3346,17 @@ namespace RT64 {
+@@ -1643,6 +3354,17 @@ namespace RT64 {
  
              for (uint32_t d = 0; (d < proj.gameCallCount) && (globalCallIndex < p.maxGameCall); d++) {
                  const GameCall &call = proj.gameCalls[d];
@@ -13188,7 +13203,7 @@ index b9cb1f5..a35d672 100644
                  renderIndices.instanceIndex = call.callDesc.callIndex;
                  renderIndices.faceIndicesStart = call.meshDesc.faceIndicesStart;
                  renderIndices.rdpTileIndex = call.callDesc.tileIndex;
-@@ -1789,6 +3503,22 @@ namespace RT64 {
+@@ -1789,6 +3511,22 @@ namespace RT64 {
  
                              RenderViewport viewportRect = convertViewportRect(call.callDesc.rect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, horizontalMisalignment, call.callDesc.rectLeftOrigin, call.callDesc.rectRightOrigin);
                              triangles.screenScale = { viewportRect.width / framebuffer.viewport.width, viewportRect.height / framebuffer.viewport.height };

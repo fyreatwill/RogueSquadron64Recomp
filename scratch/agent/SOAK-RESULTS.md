@@ -1559,3 +1559,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261116 | s7463 fold: s7462_m6_void_holds_ctl rc=0: P allattempts-failed void_holds=1 (nomission-att1 fs_holds=1 max_fs_hold_vi=6592), C alive_at_end=1 void_holds=0, CONTROL PASS -> class DR closed; m6 stall series done.
 20261116-004656 | s7463_padhash_flight | rc=1 | 638s | scratch/agent/soak_results/s7463_padhash_flight_20261116-004656.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=2
 20261116 | s7464 fold: s7463_padhash_flight rc=1 CONTROL FAIL = harness artifact: space-joined ARMS ran 4 arms, 2 phantom "" arms, cnt data overwritten (class DU, harness now exit 3 on bad spec, test 8/8) -> re-queued s7464_padhash_flight.
+20261116-010222 | s7464_padhash_flight | rc=0 | 319s | scratch/agent/soak_results/s7464_padhash_flight_20261116-010222.log | arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261116 | s7465 fold: s7464_padhash_flight rc=0 CONTROL PASS: L4 cnt drawcallkey 9.18M calls raw 2922 == fixed 2922 (H-const), L1 ctl raw 4.0M vs 2307; reinterpret/fbtile unreached in flight -> class DS closed (fix latent-only).

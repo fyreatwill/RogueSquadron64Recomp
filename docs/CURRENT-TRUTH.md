@@ -216,14 +216,22 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. Next: fold s7464_padhash_flight (class DS), see NEXT.md. One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. Next: fold s7465_dt_guard_flight (class DT), see NEXT.md. One line each:
+   - **DT s7465 host null-pointer derefs (analyzer core.NullDereference/CallAndMessage/NullArg), CLOSED pending soak:**
+     tools/s7465_nullderef_census.py --controls (s7463 TU scope + runner, null-family regex; planted control lines 3/4/5 PASS) rc 0,
+     11 sites: 1 GUARDED (rt64_framebuffer_renderer.cpp FillRect read chosenTarget->width when the fbStorage has neither colour nor
+     depth target; writer RenderFramebufferManager::get() with both keys empty; the null-colour case is reached in this port, the
+     both-null case never observed -> skip + `[s7465] fillrect-null-target` log, census no longer flags it), 1 KNOWN-parked (plume
+     createFramebuffer null colour attachment = s5377 title plume), 2 INTENTIONAL (crash-reporter controls), 7 FP with the invariant
+     written in tools/s7465_nullderef_reviewed.tsv (Tier2 flag re-read, env-gated getenv derefs, draw-without-pipeline contract).
+     Regression soak s7465_dt_guard_flight queued (L4+L12 dd4 HOLD=150, fillrect_null count expected 0).
    - **DU s7464 quiet-arms spec split, CLOSED:** g1e_owner_quiet_arms.zsh splits ARMS on whitespace, so s7463_padhash_flight's
      "4:cnt:A=1 B=2" ran 4 arms (two named "" with dd=<env assignment>); the 2nd "" arm overwrote log_.txt, cnt data lost, CONTROL FAIL
      on a phantom arm. Now every spec is validated first (dd numeric, arm [A-Za-z0-9_]+, unique; else exit 3, never re-queued);
      tools/agent/test_quiet_arms_spec.sh 8/8 (the s7463 spec is the negative case); s7243 resume test still passes. Scan of 1317 done
      recipes: s7463 was the only g1e victim. Incidental in-flight datum (surviving "" arm = PADCOUNT=ctl, L1): drawcallkey
      distinct_raw 2277124 vs distinct_fixed 2266 over 2.36M calls -> the planted control fires in flight too. Re-queued s7464_padhash_flight.
-   - **DS s7463 host uninitialized reads + missing returns (new idiom class, host C/C++):** tools/s7463_uninit_census.py --controls
+   - **DS s7463 host uninitialized reads + missing returns, CLOSED s7465:** tools/s7463_uninit_census.py --controls
      (150 in-scope TUs from compile_commands: src/, ultramodern, librecomp, rt64 common/gbi/hle/render/rhi/preset, plume_metal; line A
      clang -Wsometimes/-Wconditional-uninitialized/-Wreturn-type/-Wdangling, line B clang static analyzer; planted control flagged by both)
      rc 0: 5 compiler sites FP-by-construction (rsp.hpp byte-loop loads, CTC2 total switch; tools/s7463_uninit_reviewed.tsv), 1 analyzer site
@@ -233,7 +241,9 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      rs64_s7463_hash (padding zeroed on a copy; ROGUESQ_S7463_PADFIX=0 old). Runtime (title+attract, same build, ROGUESQ_S7463_PADCOUNT=1):
      padding nonzero on 100% of calls (dck 524288, fbtile 8192) but distinct_raw == distinct_fixed (651/651, 18/18) -> H-const (stable
      garbage, no split keys yet; latent, depends on stack contents); ctl (=ctl plants varying padding) raw 511270 vs fixed 651, fixdiff 0.
-     Reinterpret site not reached in attract: soak s7463_padhash_flight queued (L4 cnt + L1 ctl). Latent, no callers: DrawCallKey::operator==
+     Flight (s7464_padhash_flight, L4 cnt / L1 ctl dd4 150 s, CONTROL PASS): drawcallkey cnt 9.18M calls, padnz 100%, distinct_raw
+     2922 == fixed 2922 -> H-const in flight too; ctl raw 4.0M vs fixed 2307; reinterpret + fbtile 0 calls in flight (H-unreached).
+     CLOSED s7465: fix is latent-only (no cache fragmentation observed), stays default on. Latent, no callers: DrawCallKey::operator==
      returns memcmp() (true when DIFFERENT). Analyzer also lists null-deref/dead-store findings (not this class; candidate class DT).
    - **DR s7462 H-void (m6), CLOSED s7463:** s7462_m6_void_holds_ctl CONTROL PASS (P void_holds=1, C 0). void attempts (notitle/nohangar/nomission/died_in_verify) were retried with stalls unscored, so a
      pre-gate held frame (s6993 boot-freeze shape) vanished behind a later good attempt. fail() now scores each void log with

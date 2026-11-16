@@ -1,17 +1,15 @@
-# NEXT (s7465)
-HYPOTHESIS-ID: host-uninit-padhash
+# NEXT (s7466)
+HYPOTHESIS-ID: host-null-deref-audit
 
-s7464 closed class DU (quiet-arms spec split: s7463_padhash_flight's CONTROL FAIL was 4 phantom arms, cnt data lost; harness now
-rejects bad specs, exit 3). Re-queued scratch/agent/soak_queue/s7464_padhash_flight.sh (L4 cnt PADCOUNT=1, L1 ctl PADCOUNT=ctl,
-both dd4, HOLD=150, R=scratch/s7464q).
+s7465 closed DS (flight H-const, control PASS) and ran class DT (tools/s7465_nullderef_census.py --controls rc 0; 1 guard in
+rt64_framebuffer_renderer FillRect, 10 classified). Queued scratch/agent/soak_queue/s7465_dt_guard_flight.sh (L4 + L12 dd4 HOLD=150).
 
-Hypotheses for flight: H-const (cnt distinct_raw==distinct_fixed at every site: fix is latent-only) vs H-split (raw>fixed at some
-site: old code fragmented that cache in flight; quantify from dck_newkey extra=) vs H-unreached (reinterpret site 0 calls in flight).
-
-Step 1: fold s7464_padhash_flight from SOAK-RESULTS.md + scratch/s7464q/s7463.txt.
-  - CONTROL PASS -> one line under item 1 DS with per-site verdicts; close DS.
-  - CONTROL FAIL with arm alive -> grep '[s7463] mode' scratch/s7464q/log_ctl.txt (env reached the game?).
+Step 1: fold s7465_dt_guard_flight from SOAK-RESULTS.md + scratch/s7465q/s7465.txt.
+  - both arms alive, 0 crash/stall -> one line under CURRENT-TRUTH item 1 DT ("soak PASS"); fillrect_null>0 is a datum: the
+    both-null storage IS reached, name the framebuffer key (add key logging to the guard) before calling it closed.
+  - dead arm -> backtrace from log_<arm>.txt, root-cause.
   - not yet run / void -> do Step 2 meanwhile.
-Step 2 (new slug host-null-deref-audit): class DT, analyzer null-deref / CallAndMessage findings in host code
-  (tools/s7463_uninit_census.py line B, widen B_RE to "null pointer|Called C\\+\\+ object pointer is null"; main.cpp:12987,
-  plume_metal.cpp:1958/1976/2571/3906 seen); classify each FP (prove non-null invariant) or guard with an ORIGIN: line.
+Step 2 (new slug host-analyzer-rest): class DV, the remaining clang static-analyzer families on the same 150 TUs that DS/DT did
+  not cover (unix.Malloc / cplusplus.NewDelete use-after-free & double-free, core.DivideZero, core.UndefinedBinaryOperatorResult
+  shifts, alpha.security.ArrayBound off). Copy tools/s7465_nullderef_census.py, widen the regex to those checker names, plant one
+  control line per family, classify every site (FP with invariant, or fix with an ORIGIN: line).

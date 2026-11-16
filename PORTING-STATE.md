@@ -197854,3 +197854,32 @@ tools/s7243_resume_test.zsh failures: 0. Exposure scan of 1317 done recipes thro
 harnesses with their own ARMS formats (s4252_ab, s6820 arms.sh, s7264-s7268 XENV_), so s7463 was the only g1e victim.
 Re-queued as scratch/agent/soak_queue/s7464_padhash_flight.sh ("+"-joined; both arms dd4; R=scratch/s7464q).
 Rules out: nothing about DS itself (no valid cnt arm yet). ORIGIN: not a mitigation; writer of the bad arm list = the recipe text.
+
+## Session 7465 (2026-11-16) — class DS closed (padhash flight: drawcallkey H-const in flight, control PASS); class DT opened and closed: analyzer null-deref census over 150 host TUs, 1 guard (FillRect with no colour/depth target), 10 sites classified
+
+**Fold s7464_padhash_flight (rc 0, arms=2 alive=2/2, 0 crash, 0 VI stall, CONTROL PASS).** scratch/s7464q/s7463.txt, both arms
+logged `[s7463] mode padfix=1 count=1` (env reached the game). L4 cnt: drawcallkey 9,175,040 calls, padding nonzero on all of them,
+distinct_raw 2922 == distinct_fixed 2922 -> H-const in flight as in attract (the garbage padding is stable per key, so the old code
+never split the preset cache). L1 ctl (planted varying padding): raw 4,000,000 vs fixed 2307 -> instrument discriminates in flight.
+Reinterpret and fbtile sites logged 0 calls in flight (H-unreached). Two lines (title/attract s7463 + flight s7464) agree: the s7463
+padding fix is latent-only. Default on stays. Class DS CLOSED.
+
+**Class DT (host null-pointer dereferences).** New tools/s7465_nullderef_census.py reuses s7463's TU scope and analyzer runner
+(line B) with a null-family regex and its own reviewed list (tools/s7465_nullderef_reviewed.tsv). Positive control: a planted TU
+compiled with main.cpp's command, with a null deref, a null member call and a null store, flagged on all 3 lines (PASS). Run 1: 11
+sites, 11 survivors. Classification, each read against the analyzer path notes:
+- rt64_framebuffer_renderer.cpp:2187 FillRect `chosenTarget->width`, chosenTarget = colorTarget ?: depthTarget. ORIGIN: the writer is
+  RenderFramebufferManager::get(key, colorTarget, depthTarget) -> RenderFramebufferStorage::setup, which accepts both null when both
+  framebuffer keys are empty. The null colour target IS reached in this port (the existing ROGUESQ skip at :1989 was added because it
+  killed the game); the both-null case has never been observed. Not legitimate to draw into: GUARDED, skip the FillRect and log
+  `[s7465] fillrect-null-target n=` (8 lines max). Latent, so no runtime positive control exists; the census no longer flags the site.
+- plume_metal.cpp:2571 null colour attachment in createFramebuffer: KNOWN-parked (s5377 title plume si_addr=0x58; the s5383
+  diagnostic keeps the fault on purpose).
+- main.cpp:12987, 13129: INTENTIONAL null writes (crash-reporter positive controls).
+- FP with the invariant written down: plume_metal.cpp:1958/1976 (the path needs useArgumentBuffersTier2 false then true; it is
+  written once at device init, :4335), :3906 (activeRenderState null only for a draw without setPipeline; drawInstanced derefs it
+  itself at :2933 and RT64 never calls commandList->setDepthBias), rt64_state.cpp:3700, rt64_native_target.cpp:486/531,
+  s7106_rsptri.cpp:214 (all env-gated getenv derefs whose gate checks the same getenv).
+Run 2 after the guard: 10 sites, 0 survivors, rc 0, control PASS. Build OK (rt64.a relinked). submodule-patches exported.
+Regression soak scratch/agent/soak_queue/s7465_dt_guard_flight.sh queued (L4 + L12 dd4 HOLD=150, counts fillrect_null; 0 expected).
+Rules out: undiagnosed host null-deref paths in the 150 in-scope TUs beyond the parked plume site.
