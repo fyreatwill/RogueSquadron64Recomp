@@ -197986,3 +197986,33 @@ Rules out: a host-array DMEM/stack overrun in the ucode TUs on forced-level dd4 
 Queued: scratch/agent/soak_queue/s7468_asan_uc_routes.sh (L7 dd4, L15 dd8 21:9 on the UCODE build, both controls).
 Verdict line: this run selects H-ucode-clean and refutes H-ucode-hit and H-ucode-slow for forced-level dd4 flight. The next
 discriminator is class DZ: ASan over the owner hangar abort/re-entry route (scratch/s7326/run.zsh on build_asan, both plants).
+
+## Session 7469 (2026-11-16) — class DZ closed: ASan+UBSan over the owner hangar abort/re-entry route (3 re-entries, 4 mission loads), both plants PASS, 0 new groups (H-route-clean)
+
+**Fold.** s7468_asan_uc_routes rc=0: arms p (L4 dd4, both plants), l7 (L7 dd4 16:9), w15 (L15 dd8 21:9) all alive, 0 crash,
+vi_stalls30s=0, 0 NEW groups (12 known FP groups), control PASS, ucode_control PASS. w15 again initMission=0 in HOLD=150 (second
+time), so L15 dd8 21:9 flight is still not covered by ASan. Queued scratch/agent/soak_queue/s7469_asan_w15_hold300.sh (same arm,
+HOLD=300, both plants on that arm).
+
+**Unit (class DZ).** The forced-level ASan arms (s7467/s7468) never take the owner route that frees and rebuilds the mission and
+hangar objects (PAUSE/ABORT -> SELECT YOUR CRAFT -> reload), which is where a host use-after-free or stale pointer would show.
+Hypotheses: H-route-clean (0 NEW groups over >=2 abort/re-entry cycles) / H-route-hit (NEW group, named by stack) /
+H-route-unreached (ASan too slow for the time-keyed route).
+- tools/g3_port_capture.sh: `GAMEDIR=<dir>` override (default build), so a capture can run the build_asan binary.
+- tools/s7469_asan_hangar_route.zsh (new, self-contained): the s7326 schedule (4 mission loads, 3 aborts) at FPS60 dd8 21:9
+  WIDEWIN on build_asan (UCODE=1), both plants on the same boot, per-leg markers (hangarmenu-a0-entry, initMission call),
+  scored by tools/s7467_san_report.py --plant/--uplant --known. Owner save: COPIED into build_asan/saves (build_asan's own
+  Oct-19 file backed up to scratch/s7469/asan_save_backup and restored on exit, cmp-verified); build/saves untouched (mtime Nov 8),
+  ROGUESQ_NO_SAVE_WRITE=1. Screen unlocked, HID idle 8 h at start.
+- Run (scratch/s7469/h, 650 s): hangar_entries=3, initMission=4 (B40 0x0F,0x0F,0x10,0x10 — same leg structure as the full-speed
+  s7332_abort5 reference: 2 hangar entries logged by line 1.04M, 4 initMission), crash=0, s7326 resets=25 late=0 arenafull=0,
+  VI #37760 at kill. Report: control=PASS (plant_asan=1 plant_ubsan=1), ucode_control=PASS, 16 reports = 4 plant + 12 in the 12
+  known FP groups (rt64_rdp shifts, mesgqueue GET_MEMBER, ObjC NSString), new_groups=0. Offline re-score of the san_h files alone
+  gives the same verdict.
+**Verdict:** H-route-clean selected; H-route-hit refuted for this route (both controls live in the same run); H-route-unreached
+refuted (all 4 mission loads and 3 re-entries happened under ASan, matching the full-speed leg structure). Two lines: runtime
+plants on the same boot + per-leg route markers. Rules out: a host heap/stack overrun, UAF or UB (outside the 12 reviewed FP
+groups) in the C++ runtime/RT64/RSP code on abort/re-entry teardown and rebuild. Not covered: guest-side (RecompiledFuncs is
+not instrumented; guest RAM is one host map), L15 dd8 flight (queued), levels other than L4/L7/L12/L15/L16.
+Verdict line: this run selects H-route-clean and refutes H-route-hit and H-route-unreached. Next discriminator is class EA: an
+ASan level sweep over the remaining forced levels at the owner recipe (queued as soaks), see NEXT.md.

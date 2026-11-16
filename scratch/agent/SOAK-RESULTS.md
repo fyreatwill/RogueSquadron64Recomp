@@ -1565,3 +1565,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261116 | s7466 fold: s7465_dt_guard_flight rc=0: L4/L12 dd4 alive_at_end=1 crashlines=0 vi_stalls30s=0, fillrect_null=0 both -> class DT closed (guard latent, both-null storage not reached in flight).
 20261116-020242 | s7467_asan_routes | rc=0 | 477s | scratch/agent/soak_results/s7467_asan_routes_20261116-020242.log | arms=3 alive=3/3 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261116 | s7468 fold: s7467_asan_routes rc=0: p/l7/w15 alive, 0 NEW groups (12 known), control PASS; w15 L15 dd8 21:9 initMission=0 in 150 s (title/select coverage only) -> class DX closed.
+20261116-022446 | s7468_asan_uc_routes | rc=0 | 477s | scratch/agent/soak_results/s7468_asan_uc_routes_20261116-022446.log | arms=3 alive=3/3 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261116 | s7469 fold: s7468_asan_uc_routes rc=0: p/l7/w15 alive, 0 NEW groups, control+ucode_control PASS; w15 initMission=0 again -> s7469_asan_w15_hold300 queued. Class DZ (hangar abort/re-entry ASan, in-session) H-route-clean.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7468 (2026-11-16).
+Compact operational handoff, as of Session 7469 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. Next: see NEXT.md (class DZ). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. Next: see NEXT.md (class EA). One line each:
+   - **DZ s7469 ASan+UBSan over the owner hangar abort/re-entry route, CLOSED (H-route-clean):** tools/s7469_asan_hangar_route.zsh
+     (s7326 schedule on build_asan UCODE=1, FPS60 dd8 21:9 WIDEWIN, owner save copied into build_asan/saves and restored;
+     tools/g3_port_capture.sh GAMEDIR=<dir>). 650 s: 3 hangar entries, 4 initMission, 0 crash; both plants PASS, 0 NEW groups.
+     Route reached at ASan speed (H-route-unreached refuted). s7468_asan_uc_routes folded: 0 NEW, PASS, w15 initMission=0 again ->
+     s7469_asan_w15_hold300 queued (HOLD=300).
    - **DY s7468 ASan+UBSan with the RSP ucode TUs instrumented, CLOSED (H-ucode-clean):** tools/build_asan.sh UCODE=1 (now the
      default; sets ROGUESQ_ASAN_UCODE=ON, only the 6 ucode TUs rebuild). Two controls: nm shows __asan_report/__ubsan_handle refs
      in all 6 ucode objects; runtime ucode-TU plant ROGUESQ_S7468_UCODE_PLANT=1 (src/rsp/factor5_ucode_nmac.cpp, dmem[0x1000]
