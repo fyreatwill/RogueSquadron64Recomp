@@ -1,19 +1,17 @@
-# NEXT (s7472)
+# NEXT (s7473)
 HYPOTHESIS-ID: guest-heap-integrity
 
-Class EA (host ASan per-level) CLOSED s7471: L0-L18 flown, 0 NEW. Its blind spot is guest code: RecompiledFuncs access guest
-memory through rdram, so a guest overrun into a neighbouring rs_malloc block is invisible to ASan. Class EB closes that gap.
+Class EB (guest-heap chain integrity) OPEN since s7472: walker ROGUESQ_S7472_HEAPCHK=1 landed (src/main/upstream_compat.cpp
+s7472_check), run 2 L4/L7/L12 dd4 16:9 + L15 dd8 21:9 HOLD=220 = 0 bad headers, plant PASS but in the front-end phase.
 
-Unit (class EB): guest-heap chain integrity per level, ONE instrument, ONE build.
-1. Read the existing heap tooling first (no new discovery cost): tools/apply_s6063_heaplog.py, tools/apply_s7325_heaprebuild.py,
-   ROGUESQ_S7317_ALLOCMAP=1 (PORTING-STATE s7317), tools/audit_heap_addr_tests.py, PROJECT-OVERVIEW heapWalker section. Get the
-   rs_malloc arena base/end, block-header layout (size/flags/next) and the dd>1 spill arena (s6858, 0x8082xxxx).
-2. Host-side walker (src/, env ROGUESQ_S7472_HEAPCHK=1, default off): every N VIs (and at each initMission) walk the guest block
-   chain from host C++ reading rdram; check size alignment, next within arena, next == this+size, flags sane, free-list links
-   inside the arena; log the first bad header per phase `[s7472] heap-bad arena= blk= field= val= prev_ok=` + the last guest PC.
-   Planted control ROGUESQ_S7472_HEAPCHK_PLANT=1: after mission load, corrupt one free block's size word; the walker MUST report it.
-3. Recipe via tools/s7470_gen_asan_lv.zsh pattern on the normal build (plant on arm 1): L4, L7, L12 dd4 16:9 + L15 dd8 21:9,
-   HOLD=220. Queue as soak if the host is busy.
-Hypotheses: H-heap-clean (0 bad headers outside the plant, all arms in flight) / H-heap-hit (a bad header: name the writer with a
-write watch on that header word, fix root cause, ORIGIN line) / H-walker-wrong (bad headers on every arm at load = layout misread;
-fix the walker against the s7317 alloc map before any verdict). Plant not firing = instrument blind, no verdict.
+1. Fold scratch/agent/SOAK-RESULTS.md line for s7472_heapchk_inflight (PLANT_S=150 => plant in flight on L4). Read
+   scratch/s7472_heapchk_inflight/out.txt: expect `arm=l4 ... plant_detected=1` and grep log_l4.txt that `plant SET` comes AFTER
+   `[initMission] call#1`. If the soak has not run yet, run it in-session: `zsh scratch/agent/soak_queue/s7472_heapchk_inflight.sh`
+   (needs HID idle >= 180 s, ~22 min) and move it to soak_queue/done/.
+2. If in-flight control PASS and 0 non-plant bad headers: widen to the remaining levels in one recipe pair (make the arm list an
+   env in tools/s7472_heapchk_recipe.zsh: L0-L3,L5,L6,L8-L11,L13,L14,L16-L18 alternating dd4 16:9 / dd8 21:9) and queue them;
+   then close EB H-heap-clean once all 19 levels are walked with a same-recipe in-flight plant.
+3. If a non-plant heap-bad appears: arm a write watch on that header word (tools/oracle or ROGUESQ_DEBUG_WRITE recipe) to name
+   the writer; fix root cause with an ORIGIN line.
+Hypotheses: H-heap-clean / H-heap-hit / H-walker-wrong (flags {1,2,6} valid; any new flag value on every arm at load = layout
+gap, check rs_malloc a1 bits before scoring).

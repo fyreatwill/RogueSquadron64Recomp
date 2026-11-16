@@ -198060,3 +198060,28 @@ Rules out host-side (C++ runtime, RT64, plume, ultramodern, librecomp, RSP ucode
 groups during 220 s flight at the owner recipe (dd4 16:9 / dd8 21:9). Does NOT cover guest-code memory errors (RecompiledFuncs
 are not instrumented: guest accesses go through rdram and are invisible to ASan). Class EA CLOSED. Next: class EB, guest-heap
 chain integrity per level (NEXT.md).
+
+## Session 7472 (2026-11-16) — class EB opened: host-side guest-heap chain walker (ROGUESQ_S7472_HEAPCHK), L4/L7/L12 dd4 16:9 + L15 dd8 21:9 0 bad headers, plant PASS (H-heap-clean, pre-mission control only)
+
+Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overrun into a neighbouring rs_malloc block).
+- **Instrument (src/main/upstream_compat.cpp `s7472_check`, env ROGUESQ_S7472_HEAPCHK=1, default off, C++ only, no regen):**
+  runs on the guest thread from the existing rs_malloc-exit (`rs64_s6063_malloc`) and rs_free-entry (`rs64_s6063_free`) hooks,
+  at most every ROGUESQ_S7472_HEAPCHK_MS=250 ms, so the chain is never read mid-update. Walks the three arena heads
+  0x8010FEFC/FF00/FF18 (deduped); header u16 flags, u16 tag, u32 size, 16 B, next = h+0x10+size (linear first-fit, rs_malloc
+  0x80001ACC; no free-list links exist). Checks flags valid, size 16-aligned, next > h and < rs64_ram_top, terminator reached.
+  Logs `[s7472] heap-bad why= arena= blk= field= val= prev_ok= idx= gpc=` once per distinct header, `[s7472] chk` summaries,
+  and a flag histogram at the first check (layout self-test). Plant ROGUESQ_S7472_HEAPCHK_PLANT=<s>: <s> s after the first
+  check, set the largest free block's flags to 0x0010; the next check must report it, then the word is restored.
+- **Run 1 = H-walker-wrong, fixed in-session:** every check reported `field=flags w0=00060000` on one huge block at the top of
+  the arena (e.g. 80A23DF0 size 163A00). Flags 0x0006 = used + bit 4, the top-down allocation flag (rs_malloc tests a1&4 at
+  0x80001B18); legitimate. The walker stopped at that block, so the plant (then 0x0004, colliding with the real bit) never
+  armed. Valid set now {1,2,6} (+8 end), plant bit 0x0010. Without the first-check histogram this would have read as 398 hits.
+- **Run 2 (tools/s7472_heapchk_recipe.zsh, normal build, owner recipe, HOLD=220) rc=0 score=0:** l4 (plant) / l7 / l12 dd4 16:9,
+  l15 dd8 21:9 all alive_at_end=1, crashlines=0, vi_stalls30s=0, initMission 2/1/1/1, 561-721 checks per arm, 110-239 blocks per
+  walk in flight, terminator reached every walk, heap_bad_nonplant=0 on all four. Control: `plant SET blk=800C4C90` t=60.1 ->
+  `heap-bad ... PLANT` -> `plant DETECTED after 0.000 s; restored`. The flag histogram matched the layout on all arms.
+- Caveat (iron rule 3): the plant fired at log line 28750, before initMission#1 (line 32668) = front-end heap phase, so the
+  in-flight null is controlled by the same walker but not in the same phase. Queued scratch/agent/soak_queue/
+  s7472_heapchk_inflight.sh (PLANT_S=150, same arms) to place the control in flight.
+- Rules out (header level only): a guest overrun across a block boundary that reaches the next header's flags/size in these
+  4 levels. Does not rule out writes inside a block's data or a corrupted header restored before the next check (250 ms).

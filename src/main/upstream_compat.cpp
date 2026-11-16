@@ -3559,7 +3559,88 @@ extern "C" uint32_t rs64_s7324_lowspill() {
     return (it != s_s7317_live.end() && s7318_sp(it->first)) ? it->first : 0u; }
 extern "C" void rs64_s7324_sym(void* pc, char* out, size_t n) {
     Dl_info di; if (pc && dladdr(pc, &di) && di.dli_sname) snprintf(out, n, "%s+0x%lx", di.dli_sname, (unsigned long)((char*)pc - (char*)di.dli_saddr)); else snprintf(out, n, "?%p", pc); }
+/* s7472 class EB: guest-heap chain integrity. ROGUESQ_S7472_HEAPCHK=1 (default off) walks every rs_malloc arena (heads
+   0x8010FEFC / FF00 / FF18, deduped; header u16 flags (1 free, 2 used, 8 terminator) u16 tag, u32 size, 16 B; next =
+   h + 0x10 + size, linear first-fit chain, rs_malloc 0x80001ACC) from the guest thread at rs_malloc exit / rs_free entry, at most
+   every ROGUESQ_S7472_HEAPCHK_MS (default 250) ms. Checks: flags in {1,2,6} (or 8 = end), size 16-aligned, next > h and below
+   rs64_ram_top, terminator reached. Logs the first bad header per (arena, blk, w0, size) `[s7472] heap-bad ...`, a per-check
+   summary every 40 checks, and a flag histogram at the first check (layout self-test). Planted control
+   ROGUESQ_S7472_HEAPCHK_PLANT=<s> (default 60 when set to 1): <s> seconds after the first check, set the flags of the largest
+   free block of the first arena to 0x0010 (unused bit; 0x0006 = used + top-down bit 4, rs_malloc a1&4, is legitimate, s7472 run 1); the next check MUST log heap-bad field=flags, then the word is restored. */
+extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
+extern "C" uint32_t rs64_ram_top;
+namespace {
+static inline uint32_t s7472_rd(volatile uint8_t* r, uint32_t va) { return *(volatile uint32_t*)(r + ((va - 0x80000000u) & ~3u)); }
+static inline void s7472_wr(volatile uint8_t* r, uint32_t va, uint32_t v) { *(volatile uint32_t*)(r + ((va - 0x80000000u) & ~3u)) = v; }
+struct S7472Bad { uint32_t arena, blk, w0, sz; bool operator<(const S7472Bad& o) const { return std::tie(arena, blk, w0, sz) < std::tie(o.arena, o.blk, o.w0, o.sz); } };
+static std::set<S7472Bad> s_s7472_seen;
+static uint64_t s_s7472_n = 0, s_s7472_nbad = 0; static double s_s7472_t0 = 0, s_s7472_last = 0;
+static int s_s7472_plant = 0; /* 0 idle, 1 planted (await report), 2 reported+restored */
+static uint32_t s_s7472_pa = 0, s_s7472_pw0 = 0; static double s_s7472_ptime = 0;
+}
+static void s7472_check(const char* why, uint32_t ra) {
+    static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7472_HEAPCHK"); return e && e[0] && e[0] != '0'; }();
+    if (!on) return;
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    static const double ms = [] { const char* e = std::getenv("ROGUESQ_S7472_HEAPCHK_MS"); return e ? std::atof(e) : 250.0; }();
+    static const double plant_s = [] { const char* e = std::getenv("ROGUESQ_S7472_HEAPCHK_PLANT"); if (!e || !*e || *e == '0') return -1.0; double v = std::atof(e); return v <= 1.0 ? 60.0 : v; }();
+    const double now = s7325_now();
+    if (s_s7472_last != 0 && (now - s_s7472_last) * 1000.0 < ms && s_s7472_plant != 1) return;
+    s_s7472_last = now; if (s_s7472_t0 == 0) s_s7472_t0 = now; ++s_s7472_n;
+    static const uint32_t heads[3] = {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u};
+    uint32_t seen[3] = {0, 0, 0}; int narena = 0; uint64_t nblk = 0, nfree = 0, nused = 0; int badthis = 0; bool plant_hit = false;
+    uint32_t fhist[8] = {0}; uint32_t big_a = 0, big_sz = 0; const uint32_t top = rs64_ram_top;
+    for (int i = 0; i < 3; ++i) {
+        const uint32_t h0 = s7472_rd(r, heads[i]);
+        if (h0 < 0x80000000u || h0 >= top) continue;
+        bool dup = false; for (int j = 0; j < narena; ++j) if (seen[j] == h0) dup = true;
+        if (dup) continue; seen[narena++] = h0;
+        uint32_t a = h0, prev = 0; bool ended = false; int g = 0;
+        for (; g < 400000; ++g) {
+            const uint32_t w0 = s7472_rd(r, a), sz = s7472_rd(r, a + 4u), fl = w0 >> 16;
+            fhist[fl == 1 ? 0 : fl == 2 ? 1 : fl == 8 ? 2 : fl == 6 ? 3 : 4]++;
+            if (fl & 8u) { ended = true; break; }
+            const char* field = nullptr; uint32_t val = 0;
+            const uint32_t nx = a + 0x10u + sz;
+            if (fl != 1u && fl != 2u && fl != 6u) { field = "flags"; val = w0; }
+            else if (sz & 0xFu) { field = "size-align"; val = sz; }
+            else if (nx <= a || nx >= top) { field = "next-range"; val = nx; }
+            if (field) {
+                ++badthis; if (s_s7472_plant == 1 && a == s_s7472_pa && !std::strcmp(field, "flags")) plant_hit = true;
+                if (s_s7472_seen.insert({h0, a, w0, sz}).second && s_s7472_seen.size() <= 64)
+                    std::fprintf(stderr, "[s7472] heap-bad why=%s arena=%08X blk=%08X field=%s val=%08X w0=%08X size=%08X prev_ok=%08X idx=%d t=%.1f ra=%08X gpc=%08X%s\n",
+                                 why, h0, a, field, val, w0, sz, prev, g, now - s_s7472_t0, ra, (uint32_t)g_rs64_last_guest_pc,
+                                 (s_s7472_plant == 1 && a == s_s7472_pa) ? " PLANT" : "");
+                break;
+            }
+            ++nblk; if (fl == 1u) { ++nfree; if (i == 0 || narena == 1) { if (sz > big_sz) { big_sz = sz; big_a = a; } } } else ++nused;
+            prev = a; a = nx;
+        }
+        if (!ended && badthis == 0) {
+            ++badthis;
+            if (s_s7472_seen.insert({h0, a, 0xFFFFFFFFu, (uint32_t)g}).second && s_s7472_seen.size() <= 64)
+                std::fprintf(stderr, "[s7472] heap-bad why=%s arena=%08X blk=%08X field=no-terminator val=%d prev_ok=%08X t=%.1f\n", why, h0, a, g, prev, now - s_s7472_t0);
+        }
+    }
+    if (badthis) s_s7472_nbad += badthis;
+    if (s_s7472_n == 1) std::fprintf(stderr, "[s7472] heapchk armed ms=%.0f plant_s=%.0f top=%08X arenas=%d blocks=%llu fl1=%u fl2=%u fl8=%u fl6=%u other=%u\n",
+                                     ms, plant_s, top, narena, (unsigned long long)nblk, fhist[0], fhist[1], fhist[2], fhist[3], fhist[4]);
+    if (s_s7472_plant == 1) {
+        if (plant_hit) { s7472_wr(r, s_s7472_pa, s_s7472_pw0); s_s7472_plant = 2; std::fprintf(stderr, "[s7472] plant DETECTED blk=%08X after %.3f s; restored w0=%08X\n", s_s7472_pa, now - s_s7472_ptime, s_s7472_pw0); }
+        else if (s7472_rd(r, s_s7472_pa) != ((s_s7472_pw0 & 0xFFFFu) | 0x00100000u)) { s_s7472_plant = 2; std::fprintf(stderr, "[s7472] plant LOST blk=%08X (guest rewrote it before a check) w0 now %08X\n", s_s7472_pa, s7472_rd(r, s_s7472_pa)); }
+    } else if (s_s7472_plant == 0 && plant_s >= 0 && now - s_s7472_t0 >= plant_s && big_a && badthis == 0) {
+        s_s7472_pa = big_a; s_s7472_pw0 = s7472_rd(r, big_a); s7472_wr(r, big_a, (s_s7472_pw0 & 0xFFFFu) | 0x00100000u); s_s7472_plant = 1; s_s7472_ptime = now;
+        std::fprintf(stderr, "[s7472] plant SET blk=%08X size=%08X w0 %08X -> %08X t=%.1f\n", big_a, big_sz, s_s7472_pw0, s7472_rd(r, big_a), now - s_s7472_t0);
+    }
+    if (s_s7472_n % 40 == 1 || badthis) {
+        static int nsum = 0; if (nsum++ < 400)
+            std::fprintf(stderr, "[s7472] chk n=%llu t=%.1f arenas=%d blocks=%llu free=%llu used=%llu bad_this=%d bad_total=%llu distinct=%zu\n",
+                         (unsigned long long)s_s7472_n, now - s_s7472_t0, narena, (unsigned long long)nblk, (unsigned long long)nfree,
+                         (unsigned long long)nused, badthis, (unsigned long long)s_s7472_nbad, s_s7472_seen.size());
+    }
+}
 extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
+    s7472_check("malloc", ra);
     rs64_floor_ownership("malloc", ptr, req, ra);
     if (ptr && s7317_on()) {
         S7317B b{ req, { __builtin_return_address(0), nullptr, nullptr }, 0.0, g_s6127_flags };
@@ -3587,6 +3668,7 @@ extern "C" void rs64_s6063_malloc(uint32_t req, uint32_t ptr, uint32_t ra) {
     }
 }
 extern "C" void rs64_s6063_free(uint32_t ptr) {
+    s7472_check("free", 0);
     rs64_floor_ownership("free", ptr, 0, 0);
     s7317_free(ptr);
     if (!s6063_on() || !ptr) return;
