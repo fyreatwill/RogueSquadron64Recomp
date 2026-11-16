@@ -1533,3 +1533,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261115 | s7416 fold: s7415_ioc_levels rc=0: L5/L10/L15 134-136 s flight alive, 0 crash, 0 VI stall, CONTROL PASS 8/8 + VERDICT H-none (stmt_idc=0 ioc=0) x3 -> class BY holds at runtime on 3 levels.
 20261115-163414 | s7425_nobw_levels | rc=0 | 645s | scratch/agent/soak_results/s7425_nobw_levels_20261115-163414.log
 20261115 | s7426 fold: s7425_nobw_levels rc=0: L1/L5/L10 134-138 s flight alive, 0 crash, 0 VI stall -> ROGUESQ_BYTE_WATCH=OFF build qualifies on 3 levels (second line for class CH).
+20261115-170822 | loop | leftover game alive after the iteration, SIGKILLed: pids 53662

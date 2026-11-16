@@ -3520,6 +3520,15 @@ static int g5b_tg_fix_init() {
     return (d && *d && atof(d) > 1.0) ? 1 : 0;
 }
 extern "C" { int rs64_g5b_tg_fix = g5b_tg_fix_init(); }
+// s7427 class CJ: the latch above runs at static init, before main()'s env policy, so it saw the RAW ROGUESQ_DRAW_DISTANCE.
+// The s7358 sanitiser unsets a non-number ("4x" -> atof 4, "inf") so the game runs retail dd1, but this latch had already armed
+// the dd>1 TriGen fix. main() calls this after the policy; ROGUESQ_S7427_REINIT=0 keeps the pre-policy value (old).
+extern "C" int rs64_s7427_tg_fix_reinit() {
+    const int pre = rs64_g5b_tg_fix;
+    const char *o = std::getenv("ROGUESQ_S7427_REINIT");
+    if (!(o && *o == '0')) rs64_g5b_tg_fix = g5b_tg_fix_init();
+    return pre;
+}
 extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9) {
     if (((w0 >> 8) & 0xFF) != 2) return 0;
     // s6898 G5b lever: ROGUESQ_G5B_TG_REACH=<r> zeroes the step of mode 2 quads with a base past r, =<r>t in odd mach seconds only. Test lever, off by default.

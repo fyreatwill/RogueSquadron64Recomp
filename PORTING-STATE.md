@@ -196707,3 +196707,51 @@ reading values a later step sets, are class CJ (next).
 ORIGIN: no mitigation; the defect's writer is tools/apply_s6036_dd.py (s6036 NEW text), fixed at the source.
 Next: class CJ env-policy order (scratch/agent/NEXT.md).
 Conclusion: selects H-consistent for documented defaults after fixing one presence-test drift (DD_UNSAFE); closes class CI.
+
+## Session 7427 (2026-11-15) — class CJ env-policy order closed (H-ordered after one fix): rs64_g5b_tg_fix latched the RAW ROGUESQ_DRAW_DISTANCE at static init, before the s7358 sanitiser; now re-armed after the policy, two-arm verified; static + runtime trace agree on every other pre-policy reader
+
+HYPOTHESIS-ID env-policy-order. Hypotheses: H-ordered (every policy var is read only after main()'s setenv sequence, or its
+early reader is re-armed; every overwrite guarded) vs H-race (a reader latches before the policy, a step reads what a later
+step sets, or a setenv(...,1) clobbers a user value).
+
+Instrument 1 (static): tools/s7427_env_policy_order.py. Name-based call graph over 9,351 host function definitions
+(RecompiledFuncs/ucode excluded: guest code cannot run before main), roots = main()'s calls before the policy (6) + 295
+file-scope initializers / class-type global constructors / __attribute__((constructor)); 36 policy vars (s7426 policy_vars()).
+Checks PRE (reachable reader, LATCH if in a static initializer), PRE-FILE (direct file-scope latch), STEP (step i or its
+callees reads a var a later step sets; 48 reads, 43 writes over the 5 steps), OW (8 overwrites: 4 sanitiser, 1 guarded
+by !getenv, 3 ASPECT normalisations of the user's own value: auto -> r:1, odd width -> x4 (s7188), >1024 -> 1024:448), DUP
+(3 vars defaulted twice; RAMTOP 24-before-16, OSMEM 12/12, WIDEWIN_R 128-before-88, all intended orderings).
+--control PASS: planted pre-policy function-local static latch of ROGUESQ_OSMEM_MB (PRE-LATCH), planted sanitiser read of
+ROGUESQ_VPW_SCALE that aspect sets later (STEP), planted unguarded setenv(ROGUESQ_UCODE_CAP,"1",1) (OW) all flagged.
+Instrument fixes during the session: same-file definition preference + std:: skip (an `init` name collision first routed
+s6979se::init into recomp.cpp and rt64), preprocessor lines no longer hide file-scope statements, class-type globals root
+their constructor.
+
+Instrument 2 (runtime, the second line): src/main/rs64_env_cache.cpp ROGUESQ_S7427_ENVTRACE=1 records every ROGUESQ_* getenv
+by name + caller return address, phase "pre" (before rs64_s7427_policy_begin() at the top of the policy) vs "in";
+rs64_s7427_policy_done() prints the rows; --trace folds them via atos. ROGUESQ_S7427_PLANT=1 = runtime positive control (a
+function-local static latch of OSMEM_MB in main before the policy). Run (owner-like boot: dd4, FPS60, 16:9, QOS_ALL=1,
+DD_WIDEWIN=1, 12 s, SIGKILL): pre=96 rows / in-policy=37; TRACE CONTROL PASS (plant seen). Pre-policy reads of policy vars,
+exactly 5 real ones + the plant:
+  DD_OFFMAPCULL  _GLOBAL__sub_I_upstream_compat (g_rs64_s7030; dd policy sets it =1 itself, s7037)
+  DD_WIDEWIN_MERGE / _MERGE_E  S7239Init / S7246Init (re-run by rs64_s7258_merge_reinit in the dd policy)
+  GFX_QOS  _GLOBAL__sub_I_events.cpp (s6975_gfx_qos reads QOS_ALL itself)
+  DRAW_DISTANCE  _GLOBAL__sub_I_dpc_bridge.cpp  <- DEFECT
+Static's only other hit (recomp.cpp init: OSMEM_MB/RAMTOP_MB via rt64 Metal checkActiveRenderEncoder -> init) is a name
+collision: the trace has no pre-policy read there (its caller is recomp::start). Two lines agree.
+
+DEFECT + FIX. ORIGIN: src/rsp/dpc_bridge.cpp `int rs64_g5b_tg_fix = g5b_tg_fix_init();` (s6896, default on at dd>1) is a
+file-scope initializer that reads ROGUESQ_DRAW_DISTANCE with atof before main(). The s7358 sanitiser later UNSETS non-numbers
+("4x", "inf", "4abc") so the game runs retail dd1, but the latch had already armed the dd>1 TriGen s16 edge fix: the value
+is legitimately derived, from the wrong (unsanitised) input. Fix: rs64_s7427_tg_fix_reinit() re-evaluates the latch after the
+whole policy (main, after the drain-tick step); ROGUESQ_S7427_REINIT=0 = old. Arms, same build, same boot recipe:
+  DRAW_DISTANCE=4x        sanitiser "ignored (retail)" + "[s7427] g5b_tg_fix 1 -> 0"   (fixed)
+  DRAW_DISTANCE=4x REINIT=0  sanitiser ignored, no change line: fix stays 1 at dd1   (the defect, pre-fix arm)
+  DRAW_DISTANCE=4         ddbundle dd=4, no change line (1 stays 1): identity for valid values.
+Owner recipe unaffected (valid dd values; the sanitiser is a no-op there). Only fires on a mistyped/non-finite dd.
+After the fix: tools/s7427_env_policy_order.py --control --trace scratch/agent/s7427/phase.log --trace-control -> CONTROL
+PASS, TRACE CONTROL PASS, VERDICT H-ordered (0 findings), rc 0. (typo/norearm logs predate the phase marker: their "pre" rows
+include in-policy reads, so only phase.log is a valid trace input.)
+Rules out: pre-policy latch drift beyond the 4 already re-armed readers; inter-step read-before-set; unguarded overwrites of
+user values. Not covered: env reads by dylibs (SDL, MoltenVK) — no ROGUESQ_ names there.
+Next: class CK, config-file vs env precedence (scratch/agent/NEXT.md).

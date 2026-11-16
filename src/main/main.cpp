@@ -12898,13 +12898,22 @@ static void rs64_s7355_test_triggers() {
         _malloc_fork_prepare(); *(volatile int*)nullptr = 1; }).detach();
 }
 #endif
+// s7427 class CJ: runtime half of tools/s7427_env_policy_order.py. ROGUESQ_S7427_PLANT=1 = positive control: a function-local
+// static latch of a policy var (ROGUESQ_OSMEM_MB) read before the policy; the env trace must list it.
+extern "C" void rs64_s7427_policy_done();
+extern "C" void rs64_s7427_policy_begin();
+extern "C" int rs64_s7427_tg_fix_reinit();
+extern "C" int rs64_g5b_tg_fix;
+static __attribute__((noinline)) int s7427_plant_latch() { static const int v = std::getenv("ROGUESQ_OSMEM_MB") ? 1 : 0; return v; }
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
+    { const char* p = std::getenv("ROGUESQ_S7427_PLANT"); if (p && *p == '1') std::fprintf(stderr, "[s7427] plant latch=%d\n", s7427_plant_latch()); }
     s7354_race_ctl_start();
     s7382_qos_start();
 #if !defined(_WIN32)
     s6979se::init(); std::atexit([] { rs64_stderr_async_restore(); }); std::at_quick_exit([] { rs64_stderr_async_restore(); });
 #endif
+    rs64_s7427_policy_begin();
     // s6989 G1e: ROGUESQ_QOS_ALL=1 = one owner knob for the five QoS opt-ins (s6975-s6988). Each stays individually
     // overridable (=0 wins; setenv overwrite=0). GFX_QOS is read by a file-scope static in events.cpp before main, so that
     // reader checks QOS_ALL itself; the other four are read lazily on their threads, after this.
@@ -12919,6 +12928,10 @@ int main(int argc, char* argv[]) {
     // The drain-loop tick is a port-only injection; keep the retail-shaped
     // path as the default while retaining an explicit rollback arm.
     rs64_m5_apply_drain_tick_policy();
+    // s7427 class CJ: static-init latches of policy vars re-read after the policy (see rs64_s7427_tg_fix_reinit).
+    { const int pre = rs64_s7427_tg_fix_reinit();
+      if (pre != rs64_g5b_tg_fix) std::fprintf(stderr, "[s7427] g5b_tg_fix %d -> %d (post-policy DRAW_DISTANCE)\n", pre, rs64_g5b_tg_fix); }
+    rs64_s7427_policy_done();
 
 #ifdef _WIN32
     // Log PE base so we can resolve absolute addresses from SEH logs to RVAs

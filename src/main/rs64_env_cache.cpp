@@ -64,9 +64,55 @@ int mode() {
 }
 
 void invalidate() { g_gen.fetch_add(1, std::memory_order_acq_rel); }
+
+// s7427 class CJ: ROGUESQ_S7427_ENVTRACE=1 records every ROGUESQ_* getenv made before main() finishes its env policy
+// (rs64_s7427_policy_done()), keyed by name + caller return address, so tools/s7427_env_policy_order.py --trace can name every
+// reader that sees a PRE-policy value. Constant-initialised: safe from static constructors. Off = one relaxed load per getenv.
+struct TraceRow { const char* name; uintptr_t ra; uint32_t n; int phase; };
+constexpr unsigned kTrace = 1024;
+TraceRow g_trace[kTrace];
+unsigned g_trace_n = 0;
+std::atomic<int> g_trace_mode{-1};    // -1 unknown, 0 off, 1 on, 2 done
+std::atomic<int> g_trace_phase{0};    // 0 before main()'s policy, 1 inside it (rs64_s7427_policy_begin)
+pthread_mutex_t g_trace_mu = PTHREAD_MUTEX_INITIALIZER;
+
+void trace(const char* name, void* ra) {
+    int m = g_trace_mode.load(std::memory_order_relaxed);
+    if (m == 0 || m == 2) return;
+    if (m < 0) {
+        const char* e = real_getenv("ROGUESQ_S7427_ENVTRACE");
+        m = (e && e[0] == '1') ? 1 : 0;
+        int exp = -1; g_trace_mode.compare_exchange_strong(exp, m);
+        m = g_trace_mode.load();
+        if (m != 1) return;
+    }
+    pthread_mutex_lock(&g_trace_mu);
+    const int ph = g_trace_phase.load();
+    unsigned i = 0;
+    for (; i < g_trace_n; ++i)
+        if (g_trace[i].ra == (uintptr_t)ra && g_trace[i].phase == ph && std::strcmp(g_trace[i].name, name) == 0) { g_trace[i].n++; break; }
+    if (i == g_trace_n && g_trace_n < kTrace) g_trace[g_trace_n++] = TraceRow{strdup(name), (uintptr_t)ra, 1, ph};
+    pthread_mutex_unlock(&g_trace_mu);
+}
 }  // namespace
 
-extern "C" char* getenv(const char* name) {
+#include <mach-o/dyld.h>
+extern "C" void rs64_s7427_policy_begin() { g_trace_phase.store(1); }
+extern "C" void rs64_s7427_policy_done() {
+    if (g_trace_mode.load() != 1) { g_trace_mode.store(2); return; }
+    pthread_mutex_lock(&g_trace_mu);
+    g_trace_mode.store(2);
+    const intptr_t slide = _dyld_get_image_vmaddr_slide(0);
+    for (unsigned i = 0; i < g_trace_n; ++i)
+        std::fprintf(stderr, "[s7427] %s name=%s n=%u ra=0x%llx\n", g_trace[i].phase ? "in" : "pre", g_trace[i].name, g_trace[i].n,
+                     (unsigned long long)(g_trace[i].ra - (uintptr_t)slide - 0x100000000ull));
+    std::fprintf(stderr, "[s7427] policy-done rows=%u%s\n", g_trace_n, g_trace_n >= kTrace ? " (FULL)" : "");
+    pthread_mutex_unlock(&g_trace_mu);
+}
+
+extern "C" __attribute__((noinline)) char* getenv(const char* name) {
+    if (name && std::strncmp(name, "ROGUESQ_", 8) == 0 && g_trace_mode.load(std::memory_order_relaxed) != 2)
+        trace(name, __builtin_return_address(0));
     if (!name || std::strncmp(name, "ROGUESQ_", 8) != 0 || !mode()) return real_getenv(name);
     const uint32_t h = hash_name(name);
     const uint32_t cur = g_gen.load(std::memory_order_acquire);

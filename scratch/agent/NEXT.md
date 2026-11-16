@@ -1,23 +1,22 @@
-# NEXT (s7427)
-HYPOTHESIS-ID: env-policy-order
+# NEXT (s7428)
+HYPOTHESIS-ID: config-env-precedence
 
 First fold any new scratch/agent/SOAK-RESULTS.md lines.
 
-Class CJ (CURRENT-TRUTH Next steps item 1): s7426 (class CI) found the documented defaults match the code (one presence-test
-bug, DD_UNSAFE, fixed). Its ORDER check only covers FILE-SCOPE static latches. Open: main() applies env policy in a sequence
-(QOS_ALL loop, rs64_s7358_sanitize_env, rs64_g1d_apply_aspect_policy, rs64_g1c_apply_dd_policy, the ASPECT/FB_WIDTH/OSMEM
-setenvs at main.cpp ~12470-12710), but code runs BEFORE that sequence: s7354_race_ctl_start, s7382_qos_start, s6979se::init
-(threads), and C++ static constructors in librecomp/ultramodern/rt64. Offline:
-1. List every policy target (tools/s7426_env_defaults.py policy_vars(), 36 vars: literal setenv + the QOS_ALL name loop) and every
-   setenv(...,1) overwrite in main.cpp. For each overwrite: is it sanitising (s7358) or guarded by "no explicit user value"? An
-   unguarded overwrite of a user-set value = drift.
-2. Build a call graph slice: functions reachable from the pre-policy calls in main() and from global constructors (any
-   `static T x = f()` / `[]{...}()` at file scope, or __attribute__((constructor))). Any function-local static latch of a policy
-   var reachable from there latches before the policy = drift (the s7030 kind, but not at file scope).
-3. Policy order inside main: a policy step that reads a var another step sets LATER (e.g. dd policy reading ASPECT/FB_WIDTH
-   before aspect policy sets them) = drift. The s7258 rs64_s7258_merge_reinit() exists because of such a latch: find its siblings.
-4. Positive control: planted function-local static latch of ROGUESQ_OSMEM_MB called from a planted pre-policy call, and a planted
-   unguarded setenv("ROGUESQ_ASPECT", x, 1) must both be flagged.
-Hypotheses: H-ordered (every policy var is read only after its setenv, every overwrite guarded) vs H-race (>=1 reader latches
-before the policy or one policy step reads a value set by a later step; then name who: owner recipe or test-only, and fix).
-Write tools/s7427_env_policy_order.py. Exit 0 = ordered, 1 = drift, 3 = control failed.
+Class CK (CURRENT-TRUTH Next steps item 1): s7427 closed env-policy ORDER (H-ordered after the rs64_g5b_tg_fix re-arm fix).
+Open: settings that can come from a FILE as well as from ROGUESQ_* env. main.cpp:~13297 recomp::register_config_path(cwd);
+librecomp recomp.cpp / mods.cpp read .json files; RT64 has its own user configuration (resolution, aspect, msaa, vsync...)
+that RT64's init may load or default; build/saves holds the owner's save (never touch it).
+1. Enumerate every file the game reads at boot (offline: grep fopen/ifstream/std::filesystem/json parse in src/, librecomp,
+   ultramodern, rt64 src/hle+common; runtime: one boot with fs_usage -w -f filesys on the pid for ~10 s, or a DYLD-free
+   open() trace via the existing env-cache style interposer if fs_usage is denied) -> list of (path, reader, keys).
+2. For each key that an env var also controls (ROGUESQ_RESMULT, ASPECT, FULLSCREEN, WINDOW_*, MSAA, VSYNC, FPS60, ...):
+   which is applied last, and does that match docs/OWNER-OPT-INS.md? A file value that beats an explicit env value, or a
+   file written by one run that changes the next run's default = drift.
+3. Positive control: a planted config file in a COPY of the game folder (never build/saves) with a key that the env also sets
+   must be reported (offline: planted text into the parser model; runtime: run from the copied folder).
+Hypotheses: H-env-wins (env always overrides, files hold only non-overlapping state) vs H-file-wins (>=1 overlapping key where
+a file silently overrides env, or a run persists state that changes the next default). Name who is affected (owner recipe or
+test-only) and fix.
+Write tools/s7428_config_precedence.py. Exit 0 = env-wins, 1 = drift, 3 = control failed.
+Reuse: tools/s7427_env_policy_order.py (call graph, functions()), tools/s7426_env_defaults.py (sources()).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7424 (2026-11-15).
+Compact operational handoff, as of Session 7427 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)";
@@ -215,9 +215,17 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
-1. **Next audit: class CJ, env-policy order (HYPOTHESIS-ID env-policy-order).** Do readers latch policy vars before main()'s
-   setenv sequence (function-local statics reached from pre-policy calls / global ctors), does one policy step read a value a later
-   step sets, is any setenv(...,1) an unguarded overwrite of a user value? scratch/agent/NEXT.md.
+1. **Next audit: class CK, config-file vs env precedence (HYPOTHESIS-ID config-env-precedence).** Settings reachable from both
+   a config file (RT64/graphics config, librecomp config/save dirs) and a ROGUESQ_* env var: which wins, does that match
+   docs/OWNER-OPT-INS.md, and can a stale file silently override the owner's env? scratch/agent/NEXT.md.
+   CJ (s7427) CLOSED H-ordered after one fix: tools/s7427_env_policy_order.py --control (planted pre-policy static latch /
+   step-order inversion / unguarded overwrite all flagged) + runtime trace ROGUESQ_S7427_ENVTRACE=1 (rs64_env_cache.cpp, phase
+   pre/in policy; ROGUESQ_S7427_PLANT=1 control seen). 36 policy vars, 5 steps, 8 overwrites (sanitiser 4 / guarded 1 / ASPECT
+   normalisation 3), 0 inter-step read-before-set. Pre-policy readers at runtime: g_rs64_s7030, S7239Init/S7246Init (re-armed
+   by rs64_s7258_merge_reinit), events.cpp GFX_QOS (reads QOS_ALL itself), and the DEFECT rs64_g5b_tg_fix (dpc_bridge.cpp,
+   static init read the RAW DRAW_DISTANCE: "4x"/"inf" ran retail dd1 with the dd>1 TriGen fix armed). Fixed:
+   rs64_s7427_tg_fix_reinit() after the policy (ROGUESQ_S7427_REINIT=0 = old); arms 4x -> 1->0, 4x+REINIT=0 -> stays 1,
+   dd4 -> unchanged. Owner recipe unaffected (valid values).
    CI (s7426) CLOSED H-consistent after one fix: tools/s7426_env_defaults.py --control PASS (planted flipped default / presence /
    file-scope policy latch all flagged); 3,789 sites, 703 lambdas compiled+evaluated, 86 documented vars, reviewed rows in
    tools/s7426_env_accept.tsv. Defect fixed: ROGUESQ_DD_UNSAFE was a presence test (=0 unlocked dd 8); now a value test in
