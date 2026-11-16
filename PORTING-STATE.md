@@ -196922,3 +196922,7 @@ measured rate through a real pty.
 Rules out: H-capped (flight is the loudest phase). Not addressed (next, class CO): the per-frame tags still FORMAT on the
 calling threads (~170 KB/s of snprintf work); whether gating them at source moves gfx-task ms is unmeasured.
 docs/OWNER-OPT-INS.md: the Terminal tip now says the cap is automatic, ROGUESQ_STDERR_CAP=0 shows everything.
+Conclusion: selects H-perframe (37 non-control tags PERSISTENT in every flight window with the planted [fbhash control PASS)
+and refutes H-capped (flight 1.71 MB/10 s is the loudest phase, not boot); H-burst also present ([s4234-ENTRY], [s5855]) but
+secondary. Closes class CN with the writer-side cap. Next discriminator: the in-run ROGUESQ_DIAG_QUIET_AT toggle of the top
+per-frame sites against gfx-task ms / game fps (class CO, scratch/agent/NEXT.md), with a 1 ms busy-wait positive control.
