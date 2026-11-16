@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7453 (2026-11-15).
+Compact operational handoff, as of Session 7454 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,10 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: class DJ (HYPOTHESIS-ID harness-inits-restart), see NEXT.md. One line each:
+   Next: class DK (HYPOTHESIS-ID harness-summary-field-match), see NEXT.md. One line each:
+   - **DJ s7454 H-none:** inits= was always per-process (each attempt rewrites run.log), so inits>1 = same-process mission restart;
+     m6 summaries now add launches=$att mission_restarts=<call#>=2 count> (restart-control in harness; tools/s7454_restart_test.zsh
+     6/6 incl. real s7449 L4=1/L10=0, mutation control caught). 0 live templates gate on inits=1 (2 one-shot done recipes only).
    - **DI s7453 H-few:** 4 of 6 live launchers passed a dead game: boot_freeze_hunt.sh (silent EXITED -> now bad=1 exitrc=),
      g1e_owner_quiet_arms.zsh (alive=0 exit 0 -> done line fatal=, exit 1), s7272/s7263 (old CRASH grep -> fatal_patterns.txt,
      s7263 rc=1). 47 fail()/retry copies are dead (newest ref <= s5921). Test tools/s7453_harness_death_test.zsh 13/13.

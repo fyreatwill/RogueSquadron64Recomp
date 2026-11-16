@@ -10,8 +10,14 @@ fbrun() { awk '{h=$NF} h==p {r++} h!=p {r=1;p=h} r>m {m=r} !(h in d) {d[h]=1;n++
 mcycles() { grep -a '^\[vi\] update_screen' "$1" | grep -o 'origin=0x[0-9A-Fa-f]*' | uniq | awk '/690400/{m=1} m&&/6AB400/{n++} END{print n+0}'; }
 printf '[vi] update_screen origin=0x006AB400\n[vi] update_screen origin=0x00690400\n[vi] update_screen origin=0x006AB400\n[vi] update_screen origin=0x00690400\n[vi] update_screen origin=0x006AB400\n' > $OUT/mc_ctl.txt
 [ "$(mcycles $OUT/mc_ctl.txt)" = 2 ] && echo 'mcycles-control OK' >> $K || { echo 'mcycles-control FAIL' >> $K; exit 1; }
-# s6867: mcycles is a false zero wherever the origins move (dd>1, wide), and hold counts from the gate, so the summary now states real flight: inits = [initMission] lines (a relaunch adds one), flight_s = run seconds minus the run clock at the first [initMission]. Control: synthetic log must give 2 and 70.
+# s6867: mcycles is a false zero wherever the origins move (dd>1, wide), and hold counts from the gate, so the summary now states real flight: inits = [initMission] lines in THIS attempt's run.log (s7454 class DJ: each attempt rewrites run.log with '>', so a relaunch never adds one; inits>1 = a same-process mission restart, see mission_restarts=), flight_s = run seconds minus the run clock at the first [initMission]. Control: synthetic log must give 2 and 70.
 flightline() { awk -v end="$2" '/^\[autopilot\] fire/{ if (match($0,/t=[0-9.]+/)) t=substr($0,RSTART+2,RLENGTH-2)+0 } /^\[initMission\]/{ n++; if (n==1) i=t } END{ if (n) printf "inits=%d flight_s=%d", n, end-i; else printf "inits=0 flight_s=none" }' "$1"; }
+# s7454 class DJ: launches= is the harness attempt count (processes started, one run.log each); mission_restarts= counts
+# same-process re-inits ([initMission] call#>=2, the game's per-process counter). inits=1 alone could not tell these apart
+# (s7449 L4 inits=2 = call#2 after endMissionCleanup <- mainGameLoop, alive, 0 crash). Pass checks should grep 'mission_restarts=0 '.
+restarts() { awk '/^\[initMission\] call#/{ if (match($0,/call#[0-9]+/) && substr($0,RSTART+5,RLENGTH-5)+0 >= 2) n++ } END{ printf "%d", n }' "$1"; }
+printf '[initMission] call#1 x\n[initMission] call#2 y\n[initMission] call#12 z\n' > $OUT/rs_ctl.txt; printf '[initMission] call#1 x\n' > $OUT/rs_ctl0.txt
+[ "$(restarts $OUT/rs_ctl.txt)" = 2 ] && [ "$(restarts $OUT/rs_ctl0.txt)" = 0 ] && echo 'restart-control OK' >> $K || { echo 'restart-control FAIL' >> $K; exit 1; }
 printf '[autopilot] fire t=30.0\n[initMission] x\n[autopilot] fire t=50.0\n[initMission] y\n' > $OUT/fl_ctl.txt
 [ "$(flightline $OUT/fl_ctl.txt 100)" = "inits=2 flight_s=70" ] && echo 'flight-control OK' >> $K || { echo 'flight-control FAIL' >> $K; exit 1; }
 zsh $ROOT/tools/agent/fatal_scan.sh --selftest >> $K || { echo 'fatal-control FAIL' >> $K; exit 1; }
@@ -80,7 +86,7 @@ for att in $(seq 1 ${MAXATT:-5}); do
   # s7451: a game death after the mission gate is a datum, not a void route: s7450 arm P (planted _Exit at 110 s) died_in_verify 4/5,
   # was retried each time, and its summary read "allattempts-failed" with the fatal line unscored. Now terminal; DIED_RETRY=1 restores the retry.
   sleep 130; kill -0 $p 2>/dev/null || { fail died_in_verify; [ "${DIED_RETRY:-0}" = 1 ] && continue
-    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) died_within_s=130 alive_at_end=0 vi_stalls30s=0 crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
+    echo "tag=$TAG att=$att mission_t=$((mt-t0))s died_in_verify=1 inits=$(grep -ac "^.initMission" $L) launches=$att mission_restarts=$(restarts $L) died_within_s=130 alive_at_end=0 vi_stalls30s=0 crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$frc" | tee $OUT/summary; exit 1; }
   echo "att=$att mission_verified_130s" >> $K
   last=$(grep -ac origin= $L); lastt=$SECONDS; stalls=0
   while kill -0 $p 2>/dev/null && [ $((SECONDS-mt)) -lt $HOLD ]; do
@@ -91,7 +97,7 @@ for att in $(seq 1 ${MAXATT:-5}); do
   alive=0; kill -0 $p 2>/dev/null && alive=1
   kill -9 $p 2>/dev/null; wait $p 2>/dev/null; xrc=$?; [ $alive = 1 ] && xrc=held  # s7450: a death's own exit status (non-signal exits print no CRASH)
   echo "fbhash $(grep -a '^.fbhash' $L | sed 's/.*h=//' | fbrun)" >> $K
-  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc" | tee $OUT/summary  # s7450 class DG: shared fatal list; s7452: this comment used to precede the tee, so no passing run wrote a summary
+  echo "tag=$TAG att=$att mission_t=$((mt-t0))s hold=$((SECONDS-mt))s $(flightline $L $((SECONDS-t0))) launches=$att mission_restarts=$(restarts $L) alive_at_end=$alive vi_stalls30s=$stalls godrefills=$(grep -ac "^.godmode" $L) mission_cycles=$(mcycles $L) crashlines=$(grep -acEf $ROOT/tools/agent/fatal_patterns.txt $L) exitrc=$xrc" | tee $OUT/summary  # s7450 class DG: shared fatal list; s7452: this comment used to precede the tee, so no passing run wrote a summary
   exit 0
 done
 echo "tag=$TAG allattempts-failed $(grep -a -- '-att[0-9]* exitrc=' $K | awk '{f=$3; sub("fatal=","",f); n+=f; if($2!="exitrc=killed") d++} END{printf "deaths=%d fatal_total=%d", d, n}')" | tee $OUT/summary; exit 1

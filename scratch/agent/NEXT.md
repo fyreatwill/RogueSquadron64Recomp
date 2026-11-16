@@ -1,14 +1,14 @@
-# NEXT (s7454)
-HYPOTHESIS-ID: harness-inits-restart
+# NEXT (s7455)
+HYPOTHESIS-ID: harness-summary-field-match
 
-Class DJ (offline + fake-log controls): recipe pass criteria that cannot tell a same-process mission restart from a relaunch.
-Datum: s7449_argck_levels L4 failed `grep -q inits=1` with inits=2, alive_at_end=1, crashlines=0; between [initMission]
-call#1 and call#2 the log has endMissionCleanup <- mainGameLoop (game ended and re-inited the mission in one process).
-m6_god_common.sh's `inits=` counts [initMission] lines, and its comment says "a relaunch adds one" - two meanings, one number.
-Step 1: in m6_god_common.sh summary, add `launches=<n>` (process starts by the harness) and `mission_restarts=<n>`
-(same-process [initMission] call#>=2 or endMissionCleanup lines), keep inits= unchanged. Controls: synthetic logs
-(1 launch + 2 initMission calls -> launches=1 mission_restarts=1; 2 launches each call#1 -> launches=2 mission_restarts=0).
-Step 2: grep every soak_queue/done recipe of s7152+ for `inits=1`; classify which ones mean "no relaunch" (should check
-launches=1) vs "no restart". Fix the live templates only (recipes are one-shot).
-Hypotheses: H-none (no live recipe template depends on inits=1), H-few, H-many. Discriminator: count of live templates.
-If H-none, close in one session and take the next ladder rung per ITERATION.md 3c.
+Class DK (offline + synthetic controls): summary pass checks done as prefix greps on `key=N` fields.
+Datum (s7454): recipes check `grep -q 'inits=1' $D/summary`, which also passes inits=10..19; `crashlines=0` is safe only
+because the field is last-but-one and digits follow. Any `key=N` check without a terminating boundary can false-pass.
+Step 1: add tools/agent/summary_field.sh <summary> key op value (op = eq|le|ge), exact field parse (split on spaces, key=),
+exit 1 on missing field. Controls: synthetic summary with inits=12 must FAIL `inits eq 1`, mission_restarts=0 must PASS
+`mission_restarts eq 0`, missing field must FAIL.
+Step 2: census every live template/launcher (scratch/agent/*.zsh|*.sh not in done/, tools/*.zsh|*.sh, tools/agent/*.sh)
+for `grep -q '<key>=<digits>'` and `grep .*=0` style checks on summary files; classify each as boundary-safe or prefix-hazard;
+switch hazards to summary_field.sh. Document the helper in ITERATION.md's soak-queue section so new recipes use it.
+Hypotheses: H-none (0 live hazards: helper only), H-few, H-many. Discriminator: hazard count in live templates.
+If H-none, close in one session and take the next ITERATION.md 3c rung or a new idiom-class audit (CURRENT-TRUTH item 20).

@@ -197583,3 +197583,23 @@ MAINTENANCE iteration (Step 0: CURRENT-TRUTH 60376 B > 60000). No experiments ru
   a planted [CRASH] line (crash_lines 1) only, no fake run (they wrap scratch/s7009/arm.zsh + capture).
 - Rules out: harness-side "dead game scored as pass" in every live launcher. Not covered: the 47 dead copies (left as is).
 - ORIGIN: none (harness scoring fix, no mitigation machinery).
+
+## Session 7454 (2026-11-15) — class DJ closed H-none: m6_god_common.sh summaries now print launches= and mission_restarts=; inits= never counted relaunches
+What ran (offline, no game run). Class DJ = recipe pass criteria that cannot tell a same-process mission restart from a relaunch.
+- Reading m6_god_common.sh: every attempt starts the game with `> $L` (L=$OUT/run.log), so each run.log holds exactly one process.
+  The s6867 comment "inits = [initMission] lines (a relaunch adds one)" was wrong: inits>1 can ONLY mean a same-process re-init.
+  The game's own counter is per process: `[initMission] call#%d` (static s_n, apply_s5523_im_ra.py format).
+- Real datum: s7449 L4 run.log has call#1 (line 4068), a diagnostic rs5846_log backtrace endMissionCleanup <- mainGameLoop
+  (line 9185, not a crash), call#2 (line 10120): one restart, game alive, crashlines=0. L10 has call#1 only.
+- Fix: new restarts() (counts call#>=2) + summary fields `launches=$att mission_restarts=<n>` in both the held and the
+  died_in_verify summaries; inits= kept unchanged for old parsers; in-harness control `restart-control OK` (synthetic
+  call#1/2/12 -> 2, call#1 -> 0; ran via the harness head with TAG=s7454ctl: fbrun/mcycles/restart controls OK).
+  Comment corrected in m6_god_common.sh and tools/audit_hold_flight.py.
+- Test tools/s7454_restart_test.zsh (extracts restarts() from the harness): 6/6 cases incl. real s7449 L4 -> 1, L10 -> 0;
+  mutation control (call#>=1) fails 5/6 cases, so the test can see a wrong counter. rc 0.
+- Step 2 census: `inits=1` as a pass check appears in exactly 2 recipes, both one-shot done/ (s7448_quiet_levels,
+  s7449_argck_levels); 0 in live templates (scratch/agent/*.zsh|*.sh, tools/, tools/agent/, soak_queue hold/running).
+  audit_hold_flight.py / audit_hold_segments.py only report inits, never gate on it. -> H-none.
+- Side finding (next class DK): `grep -q 'inits=1'` also matches inits=10..19; summary field pass checks are prefix greps.
+Rules out: a live harness or template that fails a healthy run on a mission restart. Not runtime-verified: the new fields
+appear in the next m6 summary (no soak queued; the change is print-only and its control runs at every harness start).

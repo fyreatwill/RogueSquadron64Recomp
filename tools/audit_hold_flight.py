@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """s6865: how much of a G1 "hold" was flight? m6_god_common counts the hold from its mission gate; with a loose origin gate that is
 boot, and lvl5/10 only reach [initMission] at ~185 s. Prints per run: reported hold, seconds from [initMission] to the last autopilot
-fire (autopilot t is the game's run clock), and s6867: inits ([initMission] lines; a relaunch adds one, so flight past the first is not one
+fire (autopilot t is the game's run clock), and s6867: inits ([initMission] lines; s7454: per-attempt run.log, so >1 = same-process mission restart, not a relaunch, so flight past the first is not one
 continuous mission) and wall_s = gate_t + hold - init_t, which is not capped by the key schedule's last fire at ~520 s.
 Usage: tools/audit_hold_flight.py <m6 run dir>..."""
 import gzip, io, pathlib, re, subprocess, sys
