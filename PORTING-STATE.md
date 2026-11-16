@@ -197703,3 +197703,38 @@ Class DM (HYPOTHESIS-ID soak-recipe-summary-coverage), offline + fake-binary con
   must read 0, and stp (SIGSTOP 35 s at ~100 s into its ring) must read 1 with max_gap_ms>=34000. It exits 1 otherwise.
 - Rules out: a g1e qualification hold with a frozen image reading clean. Not covered: the real-game plant has not run yet, and launchers
   other than g1e may still be stall_na (class DO, NEXT.md).
+
+## Session 7459 (2026-11-15) — class DO closed H-blind (m6): the m6 hold harness counted `[vi]` rows, which print every 64 VIs whatever the game does, so a held frame scored vi_stalls30s=0; it now follows fs= progress, summaries add fs_holds/max_fs_hold_vi (tools/agent/vilog_stalls.py), verdict counts fs_holds>0; 321-log census + real-log control; test 12/12 with 2 mutation controls
+
+**Fold.** s7458_ring_stall_ctl rc=0: ok arm vi_stalls30s=0 max_gap_ms=146 max_vihold_ms=17300; stp (SIGSTOP 35 s) vi_stalls30s=1
+max_gap_ms=35028; verdict stall_arms=1 stall_na=0; CONTROL PASS. Class DN's ring scorer is now real-game verified.
+
+**Census (class DO: which live launchers have no or a false stall measure).** Live launchers in recent recipes: g1_level_coverage_common.zsh
+-> scratch/agent/m6_god_common.sh (25 of the s73xx/s74xx done recipes; s7263/s7272/s7277 cat its summary), g1e_owner_quiet_arms.zsh (ring,
+s7458), boot_freeze_hunt.sh (frozen= from fs, s7457). hold/ has 2 m6 recipes and 1 g1e recipe. m6 was not stall_na, it was WORSE: its loop
+did `c=$(grep -ac origin= $L)` and called "count unchanged 30 s" a stall. The `[vi] update_screen #N` rows print every 64 VIs (checked
+g1_lvl4s7452fxC/run.log: #11264, #11328, ... step 64, same origin over many rows), so the count grows while the VI thread ticks even if the
+game never swaps again. A held-frame freeze (the s6993 shape, fs stuck at 273) would score vi_stalls30s=0. Only a dead VI thread counted.
+
+**Change.** m6_god_common.sh: progress probe vprog = the newest update_screen row's fs= (game frame-swap counter), falling back to the row
+count when the log has no fs=; M6_STALL_LINES=1 restores the row count. Summary adds `fs_holds=<n> max_fs_hold_vi=<m>` from new
+tools/agent/vilog_stalls.py (an episode = same fs across >= 1800 VIs = 30 s at real-time VI; offline, a second line beside the polled
+vi_stalls30s). died_in_verify writes vi_stalls30s=na (a dead arm had no hold to measure; it was a hard-coded 0). soak_verdict_fields.sh
+counts fs_holds>0 as a stall arm, and an arm is stall_na only if fs_holds is also absent/na.
+
+**Historical census (vilog_stalls.py over every scratch log with update_screen rows, 321):** 90 carry no fs= (old builds, na), 221 clean
+(largest same-fs run 1216 VIs ~20 s, loads; agrees with s7458's ring census max hold 17.4 s), 10 flagged: scratch/s61_death_repro/run4
+(fs=2199 held VI 4480..8256 = 3776 VIs ~63 s to the end of the log, a death-repro freeze) and 9 copies of the s43xx scope_backport boot log
+with fs=0 for 4352 VIs (never swapped). No healthy flight log flags. Margin is 20 s normal vs 30 s threshold — thin; noted for the soak.
+
+**Test** tools/s7459_m6_stall_test.zsh 12/12: vprog held log -> no progress, advancing -> progress (neg ctl); MUTATION M6_STALL_LINES=1
+reads the held log as progress (the old defect reproduced); vilog fake advancing 0, fake held 1, REAL s61 run4 1, no rows na; MUTATION
+scorer with the hold test removed misses the held log; verdict fs_holds=1 + vi_stalls30s=0 -> stall_arms=1, fs_holds=0 clean, dead
+arm na -> stall_na=1; then tools/s7453_harness_death_test.zsh still passes. (First test draft had a bug: the mutation's appended row lacked
+origin=, so the row count did not move; fixed in the test, not the code.)
+
+**Queued** scratch/agent/soak_queue/s7459_m6_fs_ctl.sh: real-game L4 owner recipe 120 s, arm A (fs probe) and arm L (M6_STALL_LINES=1),
+both must read vi_stalls30s=0 fs_holds=0 (negative control on a live game; the positive control is class DP's planned hold plant).
+
+Rules out: "m6 vi_stalls30s=0 means no freeze" for every m6 summary before s7459 — it meant only "VI thread alive". Historical m6 logs
+in scratch/agent/m6 (60) rescored: 0 fs holds, so no past m6 verdict flips.

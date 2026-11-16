@@ -216,7 +216,14 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: fold the queued s7458_ring_stall_ctl soak, then class DO (stall_na census of the remaining launchers), see NEXT.md. One line each:
+   Next: fold s7459_m6_fs_ctl, then class DP (real-game held-frame plant), see NEXT.md. One line each:
+   - **DO s7459 H-blind (m6):** m6_god_common.sh (g1_level_coverage_common: 25 of the last ~60 recipes; s7263/s7272/s7277 cat its summary)
+     scored vi_stalls30s by [vi] row COUNT, but rows print every 64 VIs whatever the game does: a held frame with VI ticking read 0.
+     Now the newest row's fs= (M6_STALL_LINES=1 old) + summary fs_holds/max_fs_hold_vi (tools/agent/vilog_stalls.py, fs unchanged
+     >=1800 VIs); verdict counts fs_holds>0 as a stall; dead arm vi_stalls30s=na. Census 321 logs: 221 clean (max hold 1216 VIs ~20 s,
+     loads), 90 no fs, 10 flagged = s61_death_repro run4 (fs=2199 held 3776 VIs) + 9 s43xx boots stuck fs=0. Test
+     tools/s7459_m6_stall_test.zsh incl. 2 mutation controls + real-log control. s7458 SIGSTOP soak: CONTROL PASS (ok 0, stp 1 @35 s).
+     Remaining stall_na: none in live launchers (boot_freeze_hunt frozen=, g1e ring, m6 fs).
    - **DN s7458 H-blind:** g1e arms now score vi_stalls30s from their present ring (tools/agent/ring_stalls.py): present gap >= 30 s, OR
      presents flowing with the VI origin unchanged >= 30 s, OR a silent ring tail before a live arm's SIGKILL. Gaps alone are blind: the
      s6993 L4 boot freeze held one origin 235 s with a max present gap of 77 ms (it agrees with that session's log, fs stuck at 273).

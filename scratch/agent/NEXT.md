@@ -1,15 +1,18 @@
-# NEXT (s7459)
+# NEXT (s7460)
 HYPOTHESIS-ID: soak-stall-measure-coverage
 
-s7458 (class DN) gave the g1e owner-recipe harness a real stall score from its present ring (tools/agent/ring_stalls.py, wired into
-tagline in tools/g1e_owner_quiet_arms.zsh): present gap >= 30 s, OR presents flowing but VI origin unchanged >= 30 s (the s6993 L4 boot
-freeze shape: 235 s hold, max present gap 77 ms), OR a silent tail before the SIGKILL of a live arm. Fake-ring controls + 2 mutation
-controls in tools/s7453_harness_death_test.zsh. Real-game control is QUEUED: scratch/agent/soak_queue/s7458_ring_stall_ctl.sh.
+s7459 (class DO) fixed the last blind stall measure: m6_god_common.sh counted [vi] rows (printed every 64 VIs whatever the game does),
+so a held frame scored 0. It now follows the newest row's fs= and its summary carries fs_holds/max_fs_hold_vi (tools/agent/vilog_stalls.py);
+the verdict counts fs_holds>0. Census of live launchers: no stall_na left (boot_freeze_hunt frozen=, g1e present ring, m6 fs).
+Real-game negative control QUEUED: scratch/agent/soak_queue/s7459_m6_fs_ctl.sh.
 
-Step 1: fold s7458_ring_stall_ctl from SOAK-RESULTS.md. Expected: ok arm vi_stalls30s=0, stp arm vi_stalls30s=1 max_gap_ms>=34000,
-  verdict stall_arms=1 stall_na=0, "CONTROL PASS". If stp reads 0 -> the ring did not see a SIGSTOP (H-blind in a new form: present thread
-  not stopped? impossible under SIGSTOP; check the ring row times around the plant); if ok reads 1 -> false positive, print the episode.
-Step 2 (class DO, offline): census every recipe in scratch/agent/soak_queue/ (top level + hold/) and every live launcher for arms that
-  would still print stall_na (no VI stream, no ring, no frozen=). For each: does it launch with ROGUESQ_PRESENT_RING or a [vi] log? Give
-  each a measure (ring_stalls.py is reusable: any launcher can set ROGUESQ_PRESENT_RING) or prove it boot-only/one-shot. Hypotheses:
-  H-none (only g1e had none, now fixed), H-few (some s72xx launchers / boot hunts still na). Test: extend s7453_harness_death_test.zsh.
+Step 1: fold s7459_m6_fs_ctl. Expected: arms A and L both alive_at_end=1 vi_stalls30s=0 fs_holds=0, "CONTROL PASS". fs_holds>=1 on a
+  healthy flight arm -> false positive: print max_fs_hold_vi and the held fs range (vilog_stalls.py prints episodes on stderr); if it is a
+  load, raise nothing, check whether fs pauses in that scene (cutscene/menu) and gate --from-vi on the mission gate.
+Step 2 (class DP, one build): the only REAL-game positive controls for a held frame are historical logs (s61 run4, s6993 ring). Add a
+  plant ROGUESQ_PLANT_HOLD=<s>[,<dur_s>] in main.cpp beside ROGUESQ_PLANT_EXIT (s7450): at t=<s> the guest thread blocks <dur_s> (default
+  40) before its next osViSwapBuffer while the VI thread keeps ticking. Then one soak, two arms (m6 L4 + g1e L4), each plant 40 s:
+  expected m6 vi_stalls30s>=1 fs_holds=1, g1e vi_stalls30s=1 with max_vihold_ms>=40000 and max_gap_ms small. Hypotheses: H-ok (both see
+  it), H-m6-blind (fs keeps counting while blocked -> fs is not the swap count), H-ring-blind (present re-shows a new origin).
+Step 3: after DP the stall-measure class series closes; take the next ladder item (CURRENT-TRUTH Next steps; everything else waits on
+  the owner, so prefer an M3 idiom-class audit per ITERATION item 3).
