@@ -197675,3 +197675,31 @@ Class DM (HYPOTHESIS-ID soak-recipe-summary-coverage), offline + fake-binary con
   tools/agent/test_soak_idle_gate.sh 22 PASS (existing verdict-string checks unchanged, stall_na appended at the end); fatal_scan 20/20.
 - Not covered: the 72 historical arms=0 logs are not re-scored (no tag lines exist in them); g1e arms still have no stall measure
   (stall_na=1) — next unit DN gives them one from the present ring.
+
+## Session 7458 (2026-11-15) — class DN closed H-blind: g1e harness arms now carry a real vi_stalls30s from the present ring (tools/agent/ring_stalls.py); present gaps alone miss a frozen guest (s6993 L4: 235 s held VI origin, max present gap 77 ms); fake-ring test 33/33 with 2 mutation controls; real-game SIGSTOP control queued
+
+- Question: s7457 left every tools/g1e_owner_quiet_arms.zsh arm at `vi_stalls30s=na` (stall_na=1). That harness runs with no game logging,
+  but it always sets ROGUESQ_PRESENT_RING. Is the ring a valid stall witness? Hypotheses: H-ring (present gaps are enough), H-blind (presents
+  keep flowing while the guest is frozen), H-absent (no ring in the harness env).
+- Ring format (lib/rt64 rt64_present_queue.cpp ~1312): one `Q <mach_s> id= wl= skip= vi=<VI origin> fb= gen= ...` row per present, flushed
+  every 64 rows. Also P/S/W/T/D rows; only Q is used.
+- Offline census, 374 historical rings (scratch/*/ring_*.txt.zst): 365 score 0 stalls, 8 have no Q rows (na), 1 scores a stall:
+  scratch/s6993s/ring_L4 holds VI origin 9BAE00 from t=5 s for 235.6 s while presents kept arriving (max gap 77 ms). That is the boot
+  freeze s6993 logged independently ("arm L4 froze at the first fade, t~5, fs stuck at 273, VI kept running"), so this is a second line
+  of evidence from a different instrument. -> H-blind selected: a gap-only scorer would read that arm clean. H-absent refuted for runs
+  that reach the renderer. Longest normal hold in the other 365 rings is 17.4 s (boot/intro screens), so the 30 s threshold holds.
+- Fix: tools/agent/ring_stalls.py <ring[.zst]> [gap_s=30] [--end-wall <epoch>] prints `vi_stalls30s=<n> max_gap_ms= max_vihold_ms=
+  tail_ms= rows=`. An episode is any span >= gap_s with no Q row, or with Q rows but no VI origin change; overlapping spans are merged.
+  --end-wall adds the silent tail (alive-check wall time minus ring mtime), because a fully hung game writes nothing. Only live arms pass
+  it: a dead game's tail is a death, not a stall. A partial last line is dropped. g1e_owner_quiet_arms.zsh: tagline calls it
+  (RING_GAP_S, default 30); `ke=$(date +%s)` is taken at the alive check; the arm's ring is removed before launch, so a game that dies before
+  opening it reads na rather than the previous run's ring. RESUME-kept arms are scored without a tail.
+- Tests: tools/s7453_harness_death_test.zsh 33/33 (8 new). Fake games write Q rows into the harness's real ring path (RING_GAP_S=3): steady
+  -> 0 (negative control), held origin -> 1, 4 s gap -> 1, silent hang -> 1 (tail), and the verdict reads steady stall_arms=0 stall_na=0 and
+  hold stall_arms=1. Mutation controls: the scorer with its hold-append removed reads the held ring as 0; the hang ring without --end-wall
+  reads 0. My first hold mutation (`if x is None`) did NOT kill the hold check, because the end sentinel still closed one run-long hold.
+  It was replaced; the failure is recorded here.
+- Queued: scratch/agent/soak_queue/s7458_ring_stall_ctl.sh is the real-game control. Two L1 dd4 16:9 arms with HOLD=180 in one run: ok
+  must read 0, and stp (SIGSTOP 35 s at ~100 s into its ring) must read 1 with max_gap_ms>=34000. It exits 1 otherwise.
+- Rules out: a g1e qualification hold with a frozen image reading clean. Not covered: the real-game plant has not run yet, and launchers
+  other than g1e may still be stall_na (class DO, NEXT.md).

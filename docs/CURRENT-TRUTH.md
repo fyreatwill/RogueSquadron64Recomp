@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7457 (2026-11-15).
+Compact operational handoff, as of Session 7458 (2026-11-15).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,12 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   Next: class DN (HYPOTHESIS-ID soak-stall-measure-coverage), see NEXT.md. One line each:
+   Next: fold the queued s7458_ring_stall_ctl soak, then class DO (stall_na census of the remaining launchers), see NEXT.md. One line each:
+   - **DN s7458 H-blind:** g1e arms now score vi_stalls30s from their present ring (tools/agent/ring_stalls.py): present gap >= 30 s, OR
+     presents flowing with the VI origin unchanged >= 30 s, OR a silent ring tail before a live arm's SIGKILL. Gaps alone are blind: the
+     s6993 L4 boot freeze held one origin 235 s with a max present gap of 77 ms (it agrees with that session's log, fs stuck at 273).
+     The census of 374 historical rings found that 1 episode and nothing else (365 at 0, 8 empty; normal max hold 17.4 s). Fake-ring tests:
+     s7453_harness_death_test.zsh 33/33, including 2 mutation controls. Real-game SIGSTOP control queued (s7458_ring_stall_ctl).
    - **DM s7457 H-few:** 5 live launchers put no per-arm tag= line in the soak log (g1e_owner_quiet_arms 64 recipes, boot_freeze_hunt 11,
      s7277 6, s7263 5, s7272 1; 72/103 logs arms=0). All now emit one; verdict: frozen=1 = stall arm, trailing stall_na=<k> (arms with no
      stall measure; g1e arms are stall_na=1). tools/s7453_harness_death_test.zsh 25/25 incl. 2 mutation controls.

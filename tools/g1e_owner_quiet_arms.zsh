@@ -11,10 +11,14 @@ TOOLS=$PWD/tools; [ -x $TOOLS/s7250_duty ] || cc -O2 -o $TOOLS/s7250_duty $TOOLS
 GAMEDIR=${GAMEDIR:-build}; GAME=${GAME:-./RogueSquadron64Recomp}
 armkey(){ echo "$(stat -f '%m:%z' $GAMEDIR/$GAME 2>/dev/null) H=$HOLD S=$1"; }
 # s7457 class DM: one stdout "tag=" line per scored arm (loop.sh verdict fields, tools/agent/soak_verdict_fields.sh). Before s7457 the
-# done line went only to $R/arms.log, so every g1e soak (s7264-s7311) read arms=0 and was scored on rc alone. vi_stalls30s=na: this
-# harness runs with NO game logging (s6932), so it has no VI origin stream; the verdict counts such arms as stall_na.
-tagline(){ local d=$2 al fa; al=${d##* alive=}; al=${al%% *}; fa=${d##* fatal=}; [[ $fa == "$d" ]] && fa=0; fa=${fa%% *}
-  echo "tag=g1eq_$1 alive_at_end=$al crashlines=$fa vi_stalls30s=na hold=$HOLD level_ok=${3:-na}"; }
+# done line went only to $R/arms.log, so every g1e soak (s7264-s7311) read arms=0 and was scored on rc alone.
+# s7458 class DN: vi_stalls30s comes from the arm's present ring (tools/agent/ring_stalls.py; no game log needed): episodes >= RING_GAP_S
+# (default 30) with no present, or with presents but an unchanged VI origin (s6993 L4 boot freeze: 235 s hold, max present gap 77 ms),
+# or a silent ring tail before the SIGKILL of a live arm (ke = wall time of the alive check). No ring rows -> na (stall_na).
+tagline(){ local d=$2 al fa rs ew=(); al=${d##* alive=}; al=${al%% *}; fa=${d##* fatal=}; [[ $fa == "$d" ]] && fa=0; fa=${fa%% *}
+  [[ $al == 1 && -n $ke && $3 != resumed ]] && ew=(--end-wall $ke)
+  rs=$(python3 $TOOLS/agent/ring_stalls.py $R/ring_$1.txt ${RING_GAP_S:-30} $ew 2>/dev/null); [[ $rs == vi_stalls30s=* ]] || rs="vi_stalls30s=na"
+  echo "tag=g1eq_$1 alive_at_end=$al crashlines=$fa $rs hold=$HOLD level_ok=${3:-na}"; }
 EARLY=""; e=10
 for i in $(seq 1 20); do if (( i % 2 == 0 || e > 74 )); then k=z; else k=start; fi; EARLY="$EARLY$e:$k,"; e=$((e+4)); done
 FL=""; t=95
@@ -58,6 +62,7 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   du=""; [[ " $x " == *" DUTY="* ]] && { du=${x##*DUTY=}; du=${du%% *}; x=${x//DUTY=$du/}; }
   lv=1; [[ " $x " == *" ROGUESQ_FORCE_SAVE_MISSION="* ]] && { lv=${x##*ROGUESQ_FORCE_SAVE_MISSION=}; lv=${lv%% *}; }
   [[ " $x " == *" ROGUESQ_FORCE_UNLOCK="* ]] || x="ROGUESQ_FORCE_UNLOCK=$lv $x"
+  rm -f $R/ring_$arm.txt  # s7458: a game that dies before opening its ring must not be scored on the previous run's ring
   $DHZ 60 $((HOLD+30)) > $R/hz_$arm.txt 2>&1 & hp=$!; /bin/sleep 3
   ( cd $GAMEDIR && exec env ROGUESQ_FORCE_SAVE_MISSION=1 ROGUESQ_FORCE_UNLOCK=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_GODMODE=1 ROGUESQ_AUTOPILOT_HOLD_MS=1800 ROGUESQ_AUTOPILOT=$AP ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=$dd ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ROGUESQ_PRESENT_RING=$R/ring_$arm.txt ${=x} $GAME ) > ${LOGTO:-$R/log_$arm.txt} 2>&1 & gp=$!
   dp=""; [ -n "$du" ] && { $TOOLS/s7250_duty $gp $du ${DUTY_PERIOD:-8000} 2> $R/duty_$arm.txt & dp=$!; echo "$(date +%T) $arm duty=$du" >> $R/arms.log; }
@@ -65,7 +70,7 @@ for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   rm -f $R/void_$arm; watch_human $gp $arm & wp=$!
   # s7205: SHOTS="150,160,..." = screencapture -x at those seconds after launch (same autopilot timeline in every arm).
   if [ -n "$SHOTS" ]; then ( t0=$SECONDS; k=0; for s in ${(s:,:)SHOTS}; do k=$((k+1)); while (( SECONDS - t0 < s )); do /bin/sleep 0.5; done; [ -e $R/void_$arm ] && break; screencapture -x $R/shot_${arm}_c$k.png; done ) & sp=$!; fi
-  for ((n=0; n<HOLD; n+=2)); do /bin/sleep 2; [ -e $R/void_$arm ] && break; done; [ -n "$sp" ] && kill $sp 2>/dev/null; alive=0; kill -0 $gp 2>/dev/null && alive=1
+  for ((n=0; n<HOLD; n+=2)); do /bin/sleep 2; [ -e $R/void_$arm ] && break; done; [ -n "$sp" ] && kill $sp 2>/dev/null; alive=0; kill -0 $gp 2>/dev/null && alive=1; ke=$(date +%s)
   kill -KILL $gp 2>/dev/null; kill $rp 2>/dev/null; kill $wp 2>/dev/null; kill -KILL $hp 2>/dev/null; [ -n "$dp" ] && kill $dp 2>/dev/null
   # s7256: VOID_OK_AFTER=<s> keeps an arm voided by HUMAN input at watch t >= s (its scored window, e.g. L4 t=77-97, already ran clean):
   # ok_<arm> is written so RESUME=1 skips it, then the recipe still stops (exit 2) because a human is on. A lock/sleep void is never kept
