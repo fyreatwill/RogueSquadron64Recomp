@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7472 (2026-11-16).
+Compact operational handoff, as of Session 7473 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,11 +216,13 @@ Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into on
 numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
 
 1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB OPEN s7472 (walker landed, in-flight control soak queued; see NEXT.md). One line each:
+   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB OPEN s7472 (8/19 levels clean with in-flight plant s7473; lv_b/c/d queued; see NEXT.md). One line each:
    - **EB s7472 guest-heap chain integrity (OPEN, H-heap-clean so far):** ROGUESQ_S7472_HEAPCHK=1 (upstream_compat.cpp s7472_check, guest
      thread at rs_malloc exit / rs_free entry, <=4/s) walks arenas 0x8010FEFC/FF00/FF18; valid flags {1,2,6,8} (6 = used + top-down
      bit 4, NOT corruption: run 1 misread it). tools/s7472_heapchk_recipe.zsh L4(plant)/L7/L12 dd4 16:9 + L15 dd8 21:9 HOLD=220: 0
-     bad headers, all alive, plant PASS but fired pre-mission; s7472_heapchk_inflight (PLANT_S=150) queued for an in-flight control.
+     bad headers, all alive. s7473: in-flight plant PASS (L4 SET t=150 after initMission, DETECTED 0.084 s); recipe takes
+     LV="lvl:dd ..." (first arm = plant, prints plant_inflight=); lv_a L0/L1/L2/L3 score=0. Clean so far: L0-L4, L7, L12, L15.
+     Queued lv_b (5,6,8,9) / lv_c (10,11,13,14) / lv_d (16,17,18); close EB when all score=0 with plant_inflight=1.
    - **EA s7470-s7471 ASan+UBSan per-level sweep, CLOSED (H-lv-clean):** tools/s7470_gen_asan_lv.zsh recipes a-e + s7467-s7469 runs:
      all 19 levels L0-L18 flown on build_asan UCODE=1 (dd4 16:9 / dd8 21:9, HOLD=220; L15 needs HOLD=300), every arm alive,
      vi_stalls30s=0, 0 NEW groups (12 reviewed FP only), main + ucode plants PASS in every recipe. Guest code not covered (not

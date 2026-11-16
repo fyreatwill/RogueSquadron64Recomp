@@ -198089,3 +198089,24 @@ Class EB = the guest-code blind spot of class EA (ASan cannot see a guest overru
   over 2524 in-flight-spanning walks, plant detected in the same build); refutes H-walker-wrong after the 0x6 fix (flag histogram
   {1,2,6,8} only, other=0, every arm). Next discriminator: the in-flight plant (s7472_heapchk_inflight, PLANT_S=150) — detected
   = the in-flight null stands; not detected = the walker is blind in the mission phase and run 2 says nothing about flight.
+
+## Session 7473 (2026-11-16) — class EB: in-flight heap plant PASS on L4; recipe takes an LV level list; L0-L3 walked clean with an in-flight plant; 11 levels queued
+
+- **Fold s7472_heapchk_inflight (loop soak, rc=0, 924 s):** l4/l7/l12 dd4 16:9 + l15 dd8 21:9, all alive_at_end=1, crashlines=0,
+  vi_stalls30s=0. Control: l4 `[initMission] call#1` at log line 32824, `plant SET blk=805BAD20 size=001E0CC0 t=150.1` at line
+  85194 -> `heap-bad ... PLANT` -> `plant DETECTED after 0.084 s; restored`. heap_bad_nonplant=0 on all four arms, no `plant LOST`.
+  This closes the s7472 caveat: the in-flight null for L4/L7/L12/L15 is now controlled in the same phase (iron rule 3).
+- **Tool change:** tools/s7472_heapchk_recipe.zsh now takes `LV="<level>:<dd> ..."` (default the s7472 arms), dd>=8 adds
+  ROGUESQ_ASPECT=21:9, the FIRST arm carries the plant, a bad entry exits 3, and each arm prints `plant_inflight=` (plant SET
+  line after the first initMission line). First attempt failed closed: `"$d:l$l:"` is zsh's `:l` lowercase modifier, so the spec
+  became `40:ROGUESQ...`; the harness rejected it (`bad arm spec`, score=3, no game launched). Fixed with braces.
+- **In-session s7473_heapchk_lv_a (LV="0:4 1:8 2:4 3:8", PLANT_S=150, HOLD=220) score=0:** l0/l1/l2/l3 alive_at_end=1,
+  crashlines=0, vi_stalls30s=0, initMission=1 each, flag histogram other=0 on every arm, heap_bad_nonplant=0 on all four.
+  Control: l0 `plant SET blk=8057E540 t=150.2` (plant_inflight=1) -> DETECTED. Last walks 120-220 blocks, terminator reached.
+- Side note (passive, not chased): `[s4279-BAD]` (sample-stream LRU invariant, apply_s4279_nodeinvariant.py) prints its full
+  40-row budget at the same front-end point in all 8 arms (head=80192C40 len=0 poollen=0); deterministic and identical across
+  levels, pre-mission, no crash follows. Single-source; left as an open curiosity, not an EB finding.
+- Queued scratch/agent/soak_queue/s7473_heapchk_lv_{b,c,d}.sh: 5:4 6:8 8:4 9:8 / 10:4 11:8 13:4 14:8 / 16:4 17:8 18:4.
+- **Verdict:** H-heap-clean selected at header level for L0-L4, L7, L12, L15 (8 levels, in-flight plant detected in both
+  recipes); H-heap-hit refuted there. Rules out a cross-boundary overrun that reaches the next header within 250 ms on those
+  levels. Not ruled out: writes inside a block's data or a header restored within one check interval. 11 levels remain.
