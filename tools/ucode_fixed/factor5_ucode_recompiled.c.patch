@@ -1,6 +1,6 @@
 --- a/factor5_ucode_recompiled.c
 +++ b/factor5_ucode_recompiled.c
-@@ -1,2541 +1,5986 @@
+@@ -1,2541 +1,5988 @@
  #include "librecomp/rsp.hpp"
  #include "librecomp/rsp_vu_impl.hpp"
 -RspExitReason factor5_ucode(uint8_t* rdram, [[maybe_unused]] uint32_t ucode_addr) {
@@ -2569,6 +2569,7 @@
 +extern "C" void rs64_m4_y8000_store(uint32_t r16);  /* fixup: M4 store attest */
 +extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1);  /* fixup: F5 state census v1 */
 +extern "C" void rs64_f5_vtx_probe(uint32_t pc, uint32_t w0, uint32_t w1, const uint8_t *rdram);  /* fixup: F5 VTX source probe v1 */
++extern "C" int rs64_s7112_on; extern "C" void rs64_s7112_tri(const uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t);  /* fixup: s7112 tri */
 +extern "C" int rs64_s7106_on; extern "C" void rs64_s7106_fetch(const uint8_t*, uint32_t, uint32_t, uint32_t); extern "C" void rs64_s7106_flush(const uint8_t*, uint32_t);  /* fixup: s7106 rsptri */
 +extern "C" int rs64_g5b_tg_on; extern "C" void rs64_g5b_trigen(uint32_t pc, uint32_t w0, uint32_t w1, uint32_t p8, uint32_t p9);  /* fixup: s6896 G5b TriGen base witness */
 +extern "C" int rs64_g5b_tg_fix; extern "C" int rs64_g5b_tg_edge(uint32_t w0, uint32_t *p8, uint32_t *p9);  /* fixup: s6896 G5b TriGen s16 edge */
@@ -4115,6 +4116,7 @@
 +    rsp.VMADH<0>(rsp.vpu.r[27], rsp.vpu.r[27], rsp.vpu.r[25]);
 +L_17F0:
 +    rs64_cs.eval++;  /* fixup: cullstats */
++    if (__builtin_expect(rs64_s7112_on, 0)) rs64_s7112_tri((const uint8_t*)RS64_DMEM_BASE, r11, r12, r13, r16);  /* fixup: s7112 tri */
 +    // lhu         $6, 0x24($13)
 +    r6 = RSP_MEM_HU_LOAD(0X24, r13);
 +    // lhu         $2, 0x24($12)

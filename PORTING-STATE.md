@@ -199139,3 +199139,47 @@ ORIGIN: no mitigation. This is a generator correctness fix. The writer is N64Rec
 Next: class FD, the same control-flow audit for RSPRecomp output (build/factor5_ucode/*.c). jr/jalr already latch jump_target there, but the
 branch condition/slot order, resume_delay paths and the do_indirect_jump coverage were never audited (scratch/agent/NEXT.md).
 Files: ../N64Recomp b684176, ../N64Recomp/RecompiledFuncs/funcs_7.c (live tree, untracked output), tools/s7416_ctrl_flow.py, docs. No lib/ edits.
+
+## Session 7507 (2026-11-16) — class FD: RSPRecomp control-flow emission audit, 0 defects in the generator output (12 files) and 0 in the compiled live composite (9 spliced overlay streams, 68 overlay routes); 8/8 mutation controls PASS
+
+Step 0: CURRENT-TRUTH 48,697 B, no maintenance. Work unit = NEXT.md FD (BZ/s7416 for the RSP side). No game run (H-live not selected).
+Tool: tools/s7507_rsp_ctrl_flow.py. It decodes every ucode image itself from the toml ROM bytes (big-endian words, not the C comments)
+and walks the emitted C one instruction at a time. Each step is gated by alignment: a control op must sit under a comment with the same
+mnemonic, and a non-control op under a non-control comment.
+ R1 cond branches: the branch segment holds only `if (COND) {`, so COND runs before the slot. COND must equal the expected text (beq/bne on
+    uint32_t rN, RSP_SIGNED for bgez/bltz/bgtz/blez). The copy target must equal the decoded target, and the slot copy must equal the linear slot.
+ R2 jal: `r31 = 0xV+8` comes before the slot, and every return address has a switch case that reaches its label.
+ R3 jr/jalr: jump_target is latched before the slot. The 2 slot-writes-rS sites per gfx image (10C4/10D4 `jr $2; negu/ori $2`) read the
+    latch, which is correct. 0 jalr. jr sites by register are listed per file.
+ R4 0 control ops in a delay slot. 0 resume labels (no file is built with has_overlays). One mtc0 SP_RD_LEN sits in a slot in ucode B,
+    which has no overlays, so the DMA runs in both copies.
+ R5 COND forms were compiled with rsp.hpp's RSP_SIGNED and checked over 81 edge pairs: 0 mismatches. Mutants were flagged 36/15/36.
+ R6 controls on the live main composite, each giving +defects > 0: slot before cond, wrong copy target, diverging copy, unsigned bgez,
+    jr latch after the slot, wrong jal ra, dropped `case 0x1090`, splice goto redirected to base. 8/8 PASS.
+Result (scratch/s7507_fd.txt):
+- Pristine RSPRecomp output (tools/ucode_regen.sh verify): 0 defects in all 12 files (boot, ucode B, main gfx, 9 overlay references).
+  Totals: main cond 59 / j 27 / jal 18 / jr 15. B cond 55, plus one `b` (beq $0,$0, emitted as unconditional: correct) / jal 45 / jr 19.
+- Live compiled files (CMakeLists: main, B and boot only): 0 defects. The main composite has 133 cond / 57 j / 57 jal / 23 jr across the
+  base stream plus 9 spliced streams (CLIP, OVL10/12/14/18/1C/20/24/2C), 86 switch cases and 68 overlay routes.
+  The tool classifies (not counts) these deliberate fixups:
+  (a) The IMEM-wrap `bgez $2, L_0000` at 1FF0 goes to RS64_UCODE_ENTRY (the old self-restart fixup).
+  (b) 6 OVL20 `jal 0x1ED4` go to OVL1C_1ED4, and the byte-0x20 routes to OVL1C_1ED4/1F04 do too. Overlay 0x20's DMA covers only 0x12A0..0x13F7
+      (s759), so ovl1c's image is what is resident there. The tool checks this by image region: each region is the set of words where that
+      composite differs from base.
+  (c) Byte 0x04 routes to OVL24_12xx (ovl24-04ret). 0x12xx is outside the clip image (ovl4 = 0x1DB0+), so ovl24's code is resident there.
+  (d) The OVL20 stream is trimmed after `j L_1268` at 13F0. Its dead linear slot is dropped, and there is no label or case at 13F4.
+  (e) Patch hooks sit at labels (L_1090 iteration cap, L_1298 ovltrace). The tool now attributes these to the next instruction, not to the
+      slot copy.
+  21 splice exits into base code (goto L_x) land on words identical to the overlay's own: 21/21.
+- The uncompiled reference build/factor5_ucode_ovl20 has a hand-edited 1FF0 comment (5 flags). It is reported but not counted.
+- Runtime cross-check (single-source, weak): 146 game logs s7484-s7506 contain 0 `Unhandled jump target/resume target` lines. stderr capture
+  is live there (2.48M [dpc-fwd] lines). But that printf goes to stdout, which may be lost on SIGKILL, so the result rests on the static audit.
+Verdict: **H-equal. FD CLOSED.** The RSP side of the generator lowers branches, jumps, calls and delay slots correctly. The hand-built
+composite's routing and cross-overlay gotos are consistent with the overlay image regions.
+Side fix: tools/ucode_fixed/factor5_ucode_recompiled.c.patch was missing the s7112 tri diag line, so verify showed DIFF for main.
+`tools/ucode_regen.sh snapshot` refreshed it: verify now gives 12/12 SAME, census 0 unexplained, 0 splice breaks.
+ORIGIN: no mitigation landed. This was an audit plus a patch snapshot.
+Rules out: RSPRecomp branch/slot order, condition signedness, jal ra, jr latch, and switch coverage as a source of LLE gfx/audio divergence.
+Next: class FE, RSPRecomp scalar emission semantics (ALU/shift/slt/load-store with DMEM wrap), compiled and driven against a MIPS32 model
+(the s7412/s7413 shape for the RSP side). See scratch/agent/NEXT.md.
+Files: tools/s7507_rsp_ctrl_flow.py (new), tools/ucode_fixed/factor5_ucode_recompiled.c.patch, docs. No lib/ edits.
