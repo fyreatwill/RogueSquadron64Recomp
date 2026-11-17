@@ -1,23 +1,19 @@
-# NEXT (s7553)
-HYPOTHESIS-ID: class-gm-premission-out-of-rect-writeback
+# NEXT (s7554)
+HYPOTHESIS-ID: class-gn-async-writeback-clobber
 
-GL CLOSED s7552 (mission rtOut = NOISE re-dither of undrawn pixels, benign). GM: in pre-mission phases RT64's writeback changes
-pixels OUTSIDE the pair's drawColorRect with real content. scratch/s7552_gl log_l1/l4/l12 (identical on all 3, shared boot route):
-ph=3 fb 640x316 rect 62-639 (pat NOISE): cols 41-56 row ~151 go 0x294B->0x2109, 0x2109->0x18C7 (all channels darker, |d| 1-2, F-rejected);
-ph=5 w=796 rows=339 rect 0-795, ph=6 w=640 rect 0-639 also log [s7552-unm]; depth rtOut ph=3 6.5 MB/150 wb, ph=4 28 kB.
+GM CLOSED s7553 (sync RDP: every out-of-rect writeback change is RT64 re-emitting its own previous writeback; tools/s7553_gm_score.py).
+GK (s7551) and GM (s7553) covered the SYNC RDP only. GN: the same two checks under the owner opt-in ROGUESQ_RDP_ASYNC=1
+ROGUESQ_RDP_NODRAIN=3 (OWNER-OPT-INS recommends =3), where fullSync and its colour/depth writebacks run on the RT64 worker AFTER the
+guest is told reads are done, so the guest can legitimately write the fb/zbuffer span before RT64's full-row writeback lands.
 
 Hypotheses:
-- H-unmerged-draw: a draw reaches those columns but is not merged into drawColorRect (texrect/fillrect path rt64_rsp.cpp:1194 or a
-  rdp.cpp path without merge, or a draw whose rect is clipped by a different scissor) -> hardware draws them too, instrument boundary.
-- H-stale-native: the native/render target holds content that never matched RAM there (e.g. a previous fb at the same address with a
-  different width, or a fade drawn on a different pair aliasing the address) -> real host write of foreign content.
-- H-depth-req: depth rtOut = FbWriteDepthCS requantisation of undrawn depth (float -> 16-bit round trip not exact), benign like GL.
-Discriminating measurement, ONE build: in RT64 record per pair the union rect of EVERY draw call (tri, texrect, fillrect; before
-scissor) alongside drawColorRect and scissorRect, pass it with rs64_s7551_gk_rect; in s7551::post classify rtPx vs that union rect
-and log for kind Z the depth-value delta histogram (|d| small = requant). Also log the fb's previous registered width at that address.
-Run 3 arms as s7552 (HOLD 90 is enough, ph=3-6 is the boot/menu route):
-  env R=$PWD/scratch/s7553_gm HOLD=90 ARMS="4:l12:ROGUESQ_FORCE_SAVE_MISSION=12+$E 1:l1:ROGUESQ_FORCE_SAVE_MISSION=1+$E"
-  zsh tools/g1e_owner_quiet_arms.zsh   (E="ROGUESQ_S7551_GK=1+ROGUESQ_S7551_GK_PLANT=1"; mkdir -p the R dir first; ONE launch only)
-Score: python3 tools/s7552_gl_score.py <log> --from 0 (pre-mission). Outcomes: out-of-rect px inside the union draw rect -> H-unmerged-draw
-(close, or fix the merge if RT64 uses drawColorRect for anything else); outside every draw -> H-stale-native, name the aliasing fb.
+- H-clean: gch/clob 0 as in sync (the guest never writes a pending writeback span before it lands) and GM verdicts unchanged.
+- H-clobber: clob > 0 (RT64's async full-row writeback reverts guest/host bytes written after dp_complete) -> name the writer (s7551-ev
+  first= address -> store watch) and fix (e.g. wait-for-writeback before the guest's next touch of that span, or write only drawn rows/cols).
+- H-blind: the s7551 hooks do not fire on the worker path (wb=0 or plants not seen) -> fix the hook first, then rerun in the same session.
+Discriminating run, ONE launch (same build as s7553, no rebuild):
+  mkdir -p scratch/s7554_gn; E="ROGUESQ_S7551_GK=1+ROGUESQ_S7551_GK_PLANT=1+ROGUESQ_RDP_ASYNC=1+ROGUESQ_RDP_NODRAIN=3"
+  env R=$PWD/scratch/s7554_gn HOLD=120 ARMS="4:l12:ROGUESQ_FORCE_SAVE_MISSION=12+$E 4:l4:ROGUESQ_FORCE_SAVE_MISSION=4+$E 1:l1:ROGUESQ_FORCE_SAVE_MISSION=1+$E" zsh tools/g1e_owner_quiet_arms.zsh
+Score: python3 tools/s7551_gk_score.py scratch/s7554_gn/log_*.txt ; python3 tools/s7553_gm_score.py scratch/s7554_gn/log_*.txt
+(and --from 72 for mission-only). Positive control: plants seen/clobbered >= 97% per arm (both scorers check it).
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7552 (2026-11-17).
+Compact operational handoff, as of Session 7553 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -148,6 +148,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7552 "pre-mission out-of-rect colour change is real content (a darkening fade)" (superseded s7553).** Believable: samples
+  0x294B->0x2109 failed RT64's requant test F(pre,d). But F only models upward dither from pre; the source is the retained float.
+  s7553 shadow: pre == RT64's own last writeback for 100% of those px, post within ±1, dark/bright balanced, outside every draw.
 - **s4711 "retail never runs reapplyAudioConfig/reapplyDisplayMode at boot/attract" (superseded s7476).** Believable because the oracle
   ran 120 s with 0 hits; but it ran with dummy video, which never leaves the 320 boot phase. With Rice + Start presses retail calls
   reapplyDisplayMode on every scene (t=2.1/6.7/17.3/38.4 s). The count=1 re-init was the port's s4889 patch clobbering $a1.
@@ -358,9 +361,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Class GL CLOSED s7552 (H-dither, benign; tools/s7552_gl_score.py --controls 5/5; two lines: per-pixel numbers + FbWriteColorCS):**
     mission colour rtOut is RT64 re-dithering undrawn columns from the retained render target on each writeback when the fb's
     bestDitherPattern is NOISE (L12 dd4: 436,631 px, all ±1, up/down balanced, 97% col 795 = outside the scissor, rest a rect 28-774
-    frame); MAGICSQ fbs (L1, L4) give 0. No guest reader, present uses the render target: no fix. Open GM (NEXT.md): PRE-mission (ph=3,
-    5, 6) out-of-rect colour changes are real content (a darkening fade at cols 41-56 of a 640x316 rect-62 fb) and depth rtOut is
-    6.5 MB at ph=3 on every arm; name the draw/writer.
+    frame); MAGICSQ fbs (L1, L4) give 0. No guest reader, present uses the render target: no fix.
+    **Class GM CLOSED s7553 (tools/s7553_gm_score.py --controls 5/5; ROGUESQ_S7551_GK=1 + rs64RawRect pre-scissor draw union + 16 MB
+    shadow of RT64's last writeback):** every out-of-rect writeback change in every phase (L12 5.4M colour / 10.9M depth px, L1) has
+    pre == RT64's own previous writeback (1.00000); colour post within ±1 of it, dark/bright balanced (re-dither); depth keeps z
+    (post>>2 == pre>>2) and only rewrites dz (game Z-clear fill 0xFFFE -> depth target 0xFFFC). The s7552 pre-mission "fade" cols
+    41-56 are outside every draw and ±1 like the rest (s7552 F test accepted only upward moves). Open GN (NEXT.md): GK+GM under RDP_ASYNC=1 NODRAIN=3.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

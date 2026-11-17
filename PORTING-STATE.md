@@ -200766,3 +200766,31 @@ Rules out: GL as a mission-time host corruption. Leaves: GM (pre-mission out-of-
 Verdict: selects H-dither (mission), refutes H-rect-edge as the whole story and refutes H-stale-native for mission time.
 Next discriminator (GM, NEXT.md): per-pair union rect of every draw call vs the pre-mission out-of-rect pixels, plus a depth-delta
 histogram for kind Z (H-unmerged-draw vs H-stale-native vs H-depth-req).
+
+## Session 7553 (2026-11-17) — class GM CLOSED: pre-mission out-of-rect writeback bytes are RT64 re-emitting its OWN previous writeback (colour ±1 NOISE/BAYER re-dither, depth dz-bits FFFE->FFFC); no foreign content, no draw outside the merge
+Work unit: NEXT.md GM. Hypotheses H-unmerged-draw / H-stale-native / H-depth-req.
+Instrument (one build, default off, under ROGUESQ_S7551_GK=1): RT64 FramebufferPair gains rs64RawRect = union of every draw rect
+BEFORE the scissor intersection (rt64_rdp.cpp drawTris + drawRect (fill/tex rect), rt64_rsp.cpp tri path); fullSync passes raw and
+scissor-union rects via rs64_s7553_rects. main.cpp s7551::post GM block, per out-of-rect rtPx pixel (both kinds): rawIn, scIn, a 16 MB
+per-byte shadow of the last value RT64 wrote back (any geometry, any kind) -> preIsLast / eqLast / near1 (colour |post-last|<=1 per
+channel), depth |dz| histogram + zSameZ (post>>2 == pre>>2), previous width at the same phys (wchg). [s7553] / [s7553-px] / [s7553-w].
+Scorer tools/s7553_gm_score.py (--controls 5/5).
+Runs: scratch/s7553_gm (v1, per-span last keyed by kind+geometry) and scratch/s7553_gm2 (v2, shadow), L12 dd4 + L1 dd1, 16:9 FPS60,
+HOLD 90, both alive, 0 stall. Controls: plants seen/clobbered 3160/3172 (L12), 3815/3816 (L1); GJ census rc 0, --controls 8/8.
+Result (v2, whole run incl. pre-mission, --from 0):
+- Colour: L12 5.41M rtPx, L1 345k: preIsLast 1.00000 / 0.99994 and near1 the same: RAM before the writeback is exactly RT64's own
+  previous writeback at that address, post is within one 5-bit step of it, dark 2706760 vs bright 2707099 (balanced), wchg 0. The
+  s7552 "darkening fade" cols 41-56 of the 640x316 rect-62 fb are OUTSIDE every draw (rawIn 0 for that group) and are ±1 like the rest:
+  RT64 Float4ToRGBA16 adds dither 0..7 to the retained float, so re-dithering a float whose previous dither rounded up looks like
+  darkening; the s7552 F(pre,d) test could only accept upward moves, so it read downward ±1 as "real content". That reading is
+  SUPERSEDED. Residual: 22-23 px (0.1%) of the ph=5 group (col 795, outside the scissor) with pre != last, unlogged (single-source).
+- Depth: L12 10.9M, L1 11.1M rtPx: preIsLast 1.00000, zSameZ 1.00000, all |dz| 2-4 (FFFE -> FFFC samples): the game's Z clear is a
+  colour fill writing 0xFFFE into the zbuffer address; RT64's later depth writeback re-encodes undrawn depth from its native depth
+  target as 0xFFFC (same 14-bit z, dz field 2 -> 0). v1 had read this as "post == last depth writeback while RAM moved" because its
+  last was keyed per kind; the cross-kind shadow shows the mover is RT64's own colour Z-clear writeback. Hardware would leave 0xFFFE.
+  Consequence: z equal, only dz differs on far/undrawn pixels before the next clear; no guest CPU reader of the zbuffer known
+  (s7391 fbld census covers colour only) -> benign, H-depth-req.
+Two lines: per-pixel shadow equality + the delta structure (|Δ|=1 balanced colour, z-field-preserving depth) matched against RT64's
+FbWriteColorCS/Float4ToRGBA16 source.
+Verdict: selects H-dither (colour) + H-depth-req (depth) for every phase; refutes H-unmerged-draw (the s7552 group lies outside the raw
+union) and H-stale-native (no pixel shows content RT64 did not itself write there). GM CLOSED. Not covered: RDP_ASYNC=1 (GN, NEXT.md).

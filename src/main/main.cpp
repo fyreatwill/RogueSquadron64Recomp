@@ -11226,6 +11226,16 @@ static inline uint16_t F(uint16_t v, uint32_t d) {
 static int nlogGL = 0; static uint32_t nlogGLPh = 0xFFFFFFFFu;
 static Cnt c[2];
 static thread_local int32_t t_rect[4] = { 0, 0, 0, 0 };
+// s7553 class GM: per out-of-rect rtPx pixel (both kinds), is the column inside the pair's raw (pre-scissor) draw union / scissor
+// union, and does post equal what RT64 itself wrote at this span's previous writeback (last) -> RT64 re-emits its own earlier output
+// although RAM moved on (pre != last) = stale native; post outside every draw and != last = foreign content.
+static thread_local int32_t t_raw[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }; // rawL rawR rawT rawB scL scR scT scB
+struct GM { uint64_t rt = 0, rawIn = 0, rawRowIn = 0, scIn = 0, hasLast = 0, eqLast = 0, eqLastMoved = 0, dark = 0, bright = 0, zd1 = 0, zd4 = 0, zd64 = 0, zbig = 0, wchg = 0, wb = 0, noRaw = 0, near1 = 0, zSameZ = 0, preIsLast = 0; };
+static std::vector<uint8_t> g_shadow, g_shadowOk; // s7553 v2: per-byte last value RT64 wrote back (16 MB), any geometry
+static GM gm[2];
+static std::vector<std::pair<uint32_t, uint32_t>> g_prevW; // phys -> width of the previous writeback there
+static inline bool bpp_ok_s7553(uint32_t bytes, uint32_t rows, uint32_t width) { return rows && width && (bytes / rows) / width == 2 && (bytes / rows) % 2 == 0; }
+static int nlogGM = 0; static uint32_t nlogGMPh = 0xFFFFFFFFu;
 static thread_local std::vector<uint8_t> t_pre;
 static thread_local uint32_t t_prePhys = 0, t_preBytes = 0;
 static std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now(), tlast = t0;
@@ -11244,6 +11254,12 @@ static void report(bool force) {
             (unsigned long long)x.rtOut, (unsigned long long)x.plants, (unsigned long long)x.pseen, (unsigned long long)x.pclob);
         c[k] = Cnt{}; }
     checks = 0;
+    for (int k = 0; k < 2; k++) { const GM& m = gm[k];
+        std::fprintf(stderr, "[s7553] t=%.1f ph=%u kind=%s wb=%llu rt=%llu rawIn=%llu rawRowIn=%llu scIn=%llu noRaw=%llu hasLast=%llu eqLast=%llu eqLastMoved=%llu dark=%llu bright=%llu zd1=%llu zd4=%llu zd64=%llu zbig=%llu wchg=%llu near1=%llu zSameZ=%llu preIsLast=%llu\n",
+            t, rs64_phase_ord(), k ? "Z" : "C", (unsigned long long)m.wb, (unsigned long long)m.rt, (unsigned long long)m.rawIn, (unsigned long long)m.rawRowIn, (unsigned long long)m.scIn,
+            (unsigned long long)m.noRaw, (unsigned long long)m.hasLast, (unsigned long long)m.eqLast, (unsigned long long)m.eqLastMoved, (unsigned long long)m.dark, (unsigned long long)m.bright,
+            (unsigned long long)m.zd1, (unsigned long long)m.zd4, (unsigned long long)m.zd64, (unsigned long long)m.zbig, (unsigned long long)m.wchg, (unsigned long long)m.near1, (unsigned long long)m.zSameZ, (unsigned long long)m.preIsLast);
+        gm[k] = GM{}; }
     { const GL& g = gl;
       std::fprintf(stderr, "[s7552] t=%.1f ph=%u outPx=%llu rtPx=%llu mPat=%llu mAny=%llu mZero=%llu unm=%llu alpha=%llu up=%llu down=%llu d1=%llu d2=%llu d3=%llu "
           "e0=%llu e1=%llu e2=%llu e4=%llu e16=%llu inChg=%llu inAny=%llu b4=%llu wbPat=%llu,%llu,%llu,%llu,%llu rtPat=%llu,%llu,%llu,%llu,%llu\n", t, rs64_phase_ord(),
@@ -11367,6 +11383,40 @@ static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint
                 ph, kind ? "Z" : "C", phys, bytes, width, rows, rl, rr, (unsigned long long)g, (unsigned long long)cl, fw, rel / rowB, (rel % rowB) / bpp, sw, qw, pw);
         }
     }
+    { // s7553 class GM (uses s, t_pre, the span's previous writeback output)
+        GM& m = gm[kind]; ++m.wb;
+        const uint32_t ph = rs64_phase_ord(); if (ph != nlogGMPh) { nlogGMPh = ph; nlogGM = 0; }
+        bool fw = false; for (auto& pw : g_prevW) if (pw.first == phys) { fw = true; if (pw.second != width) { ++m.wchg; if (nlogGM++ < 24) std::fprintf(stderr, "[s7553-w] ph=%u kind=%s phys=0x%06X w=%u prevW=%u rows=%u\n", ph, kind ? "Z" : "C", phys, width, pw.second, rows); } pw.second = width; break; }
+        if (!fw && g_prevW.size() < 64) g_prevW.push_back({ phys, width });
+        if (g_shadow.empty()) { g_shadow.assign(0x1000000u, 0); g_shadowOk.assign(0x1000000u, 0); }
+        const int32_t rl = t_rect[kind * 2], rr = t_rect[kind * 2 + 1];
+        const bool rawNull = t_raw[0] == 0 && t_raw[1] == 0;
+        if (s && bpp_ok_s7553(bytes, rows, width) && !(phys & 1u)) {
+            const uint32_t rowB = bytes / rows, off = phys - s->phys, base = g_s7493_next_base.load();
+            const uint32_t y0 = (kind == 0 && base != 0xFFFFFFFFu && base <= phys) ? (phys - base) / rowB : 0;
+            for (uint32_t L = 0; L + 2 <= bytes; L += 2) {
+                const uint32_t A = ((phys + L) ^ 2u) - phys; if (A + 2 > bytes) continue;
+                uint16_t sv16, pv16, qv16; std::memcpy(&sv16, s->snap.data() + off + A, 2); std::memcpy(&pv16, t_pre.data() + A, 2); std::memcpy(&qv16, rd + phys + A, 2);
+                const int32_t col = (int32_t)((L % rowB) / 2), y = (int32_t)(y0 + L / rowB);
+                if (col >= rl && col < rr) continue;
+                if (pv16 != sv16 || qv16 == pv16) continue;
+                bool isPlant = false; for (uint32_t p : g_plants) if (phys + L + 2 > p && phys + L < p + 4) { isPlant = true; break; }
+                if (isPlant) continue;
+                ++m.rt; if (rawNull) ++m.noRaw;
+                const bool rin = !rawNull && col >= t_raw[0] && col < t_raw[1]; if (rin) { ++m.rawIn; if (y >= t_raw[2] && y < t_raw[3]) ++m.rawRowIn; }
+                if (col >= t_raw[4] && col < t_raw[5]) ++m.scIn;
+                uint16_t lv16 = 0; const bool lastOk = g_shadowOk[phys + A] && g_shadowOk[phys + A + 1];
+                if (lastOk) { ++m.hasLast; std::memcpy(&lv16, g_shadow.data() + phys + A, 2); if (lv16 == pv16) ++m.preIsLast; if (lv16 == qv16) { ++m.eqLast; if (pv16 != lv16) ++m.eqLastMoved; }
+                    if (kind == 0) { int dm = 0; for (int sh = 11; sh >= 1; sh -= 5) dm = std::max(dm, std::abs((int)((qv16 >> sh) & 31u) - (int)((lv16 >> sh) & 31u))); if (dm <= 1) ++m.near1; } }
+                if (kind == 1 && (qv16 >> 2) == (pv16 >> 2)) ++m.zSameZ;
+                if (kind == 0) { bool up = false, dn = false; for (int sh = 11; sh >= 1; sh -= 5) { const int dd = (int)((qv16 >> sh) & 31u) - (int)((pv16 >> sh) & 31u); if (dd > 0) up = true; if (dd < 0) dn = true; } if (dn && !up) ++m.dark; if (up && !dn) ++m.bright; }
+                else { const int dz = std::abs((int)qv16 - (int)pv16); if (dz <= 1) ++m.zd1; else if (dz <= 4) ++m.zd4; else if (dz <= 64) ++m.zd64; else ++m.zbig; }
+                if (nlogGM++ < 24) std::fprintf(stderr, "[s7553-px] ph=%u kind=%s phys=0x%06X w=%u rows=%u x=%d y=%d rect=%d-%d raw=%d-%d,%d-%d sc=%d-%d,%d-%d snap=%04X pre=%04X post=%04X last=%s%04X\n",
+                    ph, kind ? "Z" : "C", phys, width, rows, col, y, rl, rr, t_raw[0], t_raw[1], t_raw[2], t_raw[3], t_raw[4], t_raw[5], t_raw[6], t_raw[7], sv16, pv16, qv16, lastOk ? "" : "na:", lv16);
+            }
+        }
+        std::memcpy(g_shadow.data() + phys, rd + phys, bytes); std::memset(g_shadowOk.data() + phys, 1, bytes);
+    }
     for (Span& q : spans) if (q.seq == seq && q.phys < phys + bytes && phys < q.phys + q.bytes) { // RT64's own output is not a guest change
         const uint32_t a = std::max(q.phys, phys), e = std::min(q.phys + q.bytes, phys + bytes);
         std::memcpy(q.snap.data() + (a - q.phys), rd + a, e - a);
@@ -11377,6 +11427,8 @@ static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint
 }
 } // namespace s7551
 extern "C" void rs64_s7551_gk_check(uint8_t* rd) { s7551::check(rd); }
+extern "C" void rs64_s7553_rects(int32_t a, int32_t b, int32_t c2, int32_t d, int32_t e, int32_t f, int32_t g, int32_t h) {
+    s7551::t_raw[0] = a; s7551::t_raw[1] = b; s7551::t_raw[2] = c2; s7551::t_raw[3] = d; s7551::t_raw[4] = e; s7551::t_raw[5] = f; s7551::t_raw[6] = g; s7551::t_raw[7] = h; } // s7553 class GM
 extern "C" void rs64_s7552_dith(int32_t p) { s7551::t_dith = p; } // s7552: colorFb->bestDitherPattern() of the next colour writeback
 extern "C" void rs64_s7551_gk_rect(int32_t cl, int32_t cr, int32_t zl, int32_t zr) {
     s7551::t_rect[0] = cl; s7551::t_rect[1] = cr; s7551::t_rect[2] = zl; s7551::t_rect[3] = zr; }
