@@ -200436,7 +200436,7 @@ missed. The resolver now follows straight-line register assignments within the f
 failed at first (the mutation hit osCreateThread's priority store; wait_for_resumed was not in the row set). Both are fixed and
 every control is now PASS.
 
-Selects H-atomic/H-yield-safe for every row; rules out H-torn. Limits: the store detector is text-based and branch-insensitive. It is
+Verdict: this selects H-atomic / H-yield-safe for every row and refutes H-torn (closes class GD). Next discriminator (class GE): whether any replacement's OSThread state/queue transition differs from libultra's AND is read by the game or a later replacement. Limits: the store detector is text-based and branch-insensitive. It is
 conservative: host `->` stores count too, and every branch case needs a rule. B and C only see generated game code; libultra's own
 critical sections are replaced, so their order is section A. This is a static census, two lines (A ordering and B/C region
 placement), with no runtime arm.
