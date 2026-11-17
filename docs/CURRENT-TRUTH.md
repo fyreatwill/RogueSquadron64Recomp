@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7556 (2026-11-17).
+Compact operational handoff, as of Session 7557 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -387,7 +387,16 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     osClockRate (3 fns; no hardcoded 46.875/62.5 MHz in game code); host 46875 ticks/ms, osClockRate fix default-on. Sim dt
     (timeSnapshotFiller +0x20) = dstamp/clock + getViModePeriod()*0.001*N (N = VIs per frame if >=2, else 1; ROM K=K'=0.001,
     period 16.667/20 ms): linear in VI count, so FPS60 single-VI frames get exactly one VI (s7402 runtime histogram: 1-VI frames
-    exist and sum tracks wall). Durations reach only the gated profiler or write-only globals. Next: class GQ (NEXT.md).
+    exist and sum tracks wall). Durations reach only the gated profiler or write-only globals.
+    **Class GQ CLOSED s7557 (H-unlisted, fixed by listing; tools/s7557_gq_census.py rc 0, --controls 11/11; static):** code->docs
+    direction of s7426 (which checked docs->code). 3934 built sources incl. generated RecompiledFuncs, 3877 getenv sites + defaulting
+    helpers: 215 default-active names = 115 behaviour levers ON when unset, 23 diag-only, 77 feature parameters (value defaults,
+    inert unless their feature is on). Every ON lever has =0 by construction (the parse idiom is the switch) -> H-no-switch cannot
+    arise for an env read. 97 listed; 17 had NO row in OWNER-OPT-INS/CURRENT-TRUTH/FPS60-FIXES/PROJECT-OVERVIEW (AUDIO_PRIVATE_DMEM,
+    AUDIO_WAIT_NOPUMP, COPY_GUARD, DD_OFFMAPCULL_EYE, DPC_KEEP_PIPE, DPC_WRAP_FLUSH, FL_HDR_HARD_SKIP, G1D_OVL_WRAP, HLE_PATCH_ALPHA,
+    PIO_GUARD, PI_DMA_GUARD, PI_UNK_COMPLETE, PREEMPT_POINT, S4272, S6892, SPAI_GUARD, WRAP_RESTORE), 1 no session (G1D_FPDEPTH).
+    Fix: generated docs/DEFAULT-ON-LEVERS.md (every ON lever, sessions, source comment; `--write` regenerates), linked from
+    OWNER-OPT-INS. Not covered: unconditional fixups with no env at all -> class GR (NEXT.md).
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

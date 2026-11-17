@@ -200888,3 +200888,39 @@ VERDICT: this selects H-unit-ok and refutes H-unit-mismatch (no consumer uses an
 (the dt arm is linear in VI count; the K'=0.002 control shows the census would see it). Closes class GP. Next discriminator:
 class GQ, default-on behaviour levers (NEXT.md).
 Files: tools/s7556_gp_census.py (new), docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md.
+
+## Session 7557 (2026-11-17) — class GQ closed H-unlisted: 115 default-on behaviour levers in the built code, all with =0 by construction; 17 had no doc row and 1 no session, now listed in generated docs/DEFAULT-ON-LEVERS.md
+
+HYPOTHESIS-ID: class-gq-default-on-levers (closed) -> class-gr-unconditional-fixups.
+Boring thing first: s7426 tools/s7426_env_defaults.py already checks docs->code (every documented default matches the code). GQ is
+the other direction: code->docs, i.e. what the owner gets by default that no owner-facing doc names.
+New tools/s7557_gq_census.py (static; rc 0; --controls 11/11). Sources = what is compiled: src/, lib/N64ModernRuntime/{librecomp,
+ultramodern}/src, lib/rt64/src, the GENERATED ../N64Recomp/RecompiledFuncs/*.c and build/factor5_ucode/*.c (so dead apply_*.py
+text - 107 of 462 apply scripts are not in any fixup list - is not counted). 3934 files, 3877 getenv("ROGUESQ_*") sites, plus the
+defaulting helpers s7397_env/s7396_env(n,true), s6919_mode(n,1), rs64_env_int(n,d), !rs64_s7355_env_is(n,"0").
+Default class per read from the parse idiom bound to the result variable (10 ON idioms incl. !(e&&*e=='0'), !e||*e!='0',
+(!e||!e[0])?2:..., and the inverse 'off' flag `return e && e[0]=='0'`, found by a residual scan of reads mentioning '0' that the first
+pass missed: COPY_GUARD, PIO/PI_DMA/SPAI_GUARD, S7339, SPILL_RESET, DLPOOLX_RECLAIM, G1D_OVL_WRAP, G1D_WIPE_EPS, RADAR_GATE_EPOCH;
+AUDIO_WAIT_NOPUMP). main()'s policy setenv calls checked by hand: all but DRAIN_INLOOP_TICK=0 sit inside the dd/aspect opt-in bundles.
+Result: 215 default-active names = 115 ON behaviour levers, 23 diag-only (name tokens LOG/DUMP/CTL/CHK/WATCH/...; WAITTAB,
+STALL_DUMP, STALL_SAMPLE by hand), 77 feature parameters (value defaults such as DRAW_DISTANCE 1.0, OSMEM_MB 8, VI_HZ 60, log caps:
+inert unless their feature is on; 21 show no 0/old mapping at the read, informational).
+- Every ON lever's =0 path exists by construction (the idiom is the switch) -> H-no-switch cannot arise for an env read.
+- 97 H-listed (named in OWNER-OPT-INS / CURRENT-TRUTH / FPS60-FIXES / PROJECT-OVERVIEW and in a session), incl. coverage rows
+  CULL_SPIKE and S7402_CLOCKFIX.
+- 17 H-unlisted: AUDIO_PRIVATE_DMEM (s4250-4256), AUDIO_WAIT_NOPUMP, COPY_GUARD (s5037), DD_OFFMAPCULL_EYE (s7032, dd>1 only),
+  DPC_KEEP_PIPE (s4272), DPC_WRAP_FLUSH + S4272 (s4549), FL_HDR_HARD_SKIP (s4548; an s659 line calling it opt-in is superseded),
+  G1D_OVL_WRAP (s6848), HLE_PATCH_ALPHA (rt64, no session names it), PIO_GUARD/PI_DMA_GUARD/SPAI_GUARD (s5061-5064),
+  PI_UNK_COMPLETE (s7196), PREEMPT_POINT (s6808), S6892 (the G5a walker guard; CURRENT-TRUTH names the guard, not the env var),
+  WRAP_RESTORE (s4287). 1 H-no-session: G1D_FPDEPTH (s6879 patch, PROJECT-OVERVIEW row only).
+Controls (all flip): planted ON with no doc -> H-unlisted; same name with a doc row + session -> H-listed; LOG-named ON -> diag-only;
+value default with/without '=0 old' comment -> param / param-nosw; opt-in read -> not reported; helper(n,true) -> H-unlisted,
+helper(n,false) -> not reported; inverse-off flag -> H-unlisted; coverage CULL_SPIKE / S7402_CLOCKFIX -> H-listed.
+Two lines for the classification: the idiom match and the source comment at each read (docs/DEFAULT-ON-LEVERS.md column; e.g.
+DPC_WRAP_FLUSH/S4272 "s4549: default on (=0 disables)", WRAP_RESTORE "s4287: default on", AUDIO_PRIVATE_DMEM "s4256: default ON").
+Single-source caveat: completeness of the idiom set rests on the residual scan, not on an independent enumerator.
+Fix (documentation the owner can see, no default changed): new generated docs/DEFAULT-ON-LEVERS.md (115 rows: lever, verdict,
+sessions, docs, file, source comment; `python3 tools/s7557_gq_census.py --write` regenerates), pointer in OWNER-OPT-INS header.
+No build or game run this session.
+VERDICT: selects H-unlisted (17 + 1), refutes H-listed as stated and H-no-switch for env reads. Closes class GQ. Not covered:
+fixups that change behaviour with no env read at all (141 apply scripts contain no ROGUESQ_ name) -> class GR.
