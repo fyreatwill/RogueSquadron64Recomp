@@ -199939,3 +199939,7 @@ Scorer tools/s7528_evict_score.py (--controls old-must-fail / new-must-pass: PAS
 Levels soak queued: scratch/agent/soak_queue/s7528_evict_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s, CTL armed).
 Rules out: a live stale-overlay dispatch at L4 (gf_stale 0 both arms). Does not rule out: other levels until the soak folds.
 Next: class FV (NEXT.md) — host-side containers keyed by guest address that are never invalidated on guest reuse.
+DISCRIMINATION: selects H-latent over H-dead for the FQ func_map state (old arm: stale entries exist after every swap and a planted lookup
+of one returns the previous overlay's function, 4/4), refutes H-live (no real call reached a stale entry: gf_stale 0 in both arms). The fix
+is an engineering change (submodule-patches/N64ModernRuntime.patch + tools/s7528_evict_score.py), not a diagnostic. Next discriminator:
+the s7528_evict_levels soak score (L1/L7/L10/L12), then class FV census.
