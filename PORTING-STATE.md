@@ -199179,7 +199179,7 @@ composite's routing and cross-overlay gotos are consistent with the overlay imag
 Side fix: tools/ucode_fixed/factor5_ucode_recompiled.c.patch was missing the s7112 tri diag line, so verify showed DIFF for main.
 `tools/ucode_regen.sh snapshot` refreshed it: verify now gives 12/12 SAME, census 0 unexplained, 0 splice breaks.
 ORIGIN: no mitigation landed. This was an audit plus a patch snapshot.
-Rules out: RSPRecomp branch/slot order, condition signedness, jal ra, jr latch, and switch coverage as a source of LLE gfx/audio divergence.
+In words: this selects H-equal, refutes H-latent and H-live, and closes FD. Rules out: RSPRecomp branch/slot order, condition signedness, jal ra, jr latch, and switch coverage as a source of LLE gfx/audio divergence.
 Next discriminator: class FE, RSPRecomp scalar emission semantics (ALU/shift/slt/load-store with DMEM wrap), compiled and driven against a MIPS32 model
 (the s7412/s7413 shape for the RSP side). See scratch/agent/NEXT.md.
 Files: tools/s7507_rsp_ctrl_flow.py (new), tools/ucode_fixed/factor5_ucode_recompiled.c.patch, docs. No lib/ edits.
