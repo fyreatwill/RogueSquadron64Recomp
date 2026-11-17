@@ -7769,7 +7769,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 // factor5_gfx_runner reads, writes the OSTask struct to DMEM[0xFC0..0x1000]
 // (real SP_BOOT does this DMA-style; the runner mimics SP_BOOT but skips
 // this step), then invokes the LLE runner.
+extern "C" void rs64_s7521_task(uint8_t* rdram, const OSTask* task); extern "C" int rs64_s7521_on;  // s7521 class FR
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
+    if (rs64_s7521_on) rs64_s7521_task(rdram, task);
     // The host owns both buffers; a teardown can invalidate the callback
     // context before the scheduler drops its last task reference.
     if (rdram == nullptr || g_dmem_cur == nullptr || task == nullptr) {

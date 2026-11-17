@@ -199655,3 +199655,52 @@ fake_func_800AF6A8's first two words (jal/nop) are classed DATA via the rename m
 Files: lib/N64ModernRuntime/librecomp/src/{overlays,pi,ultra_translation}.cpp (patch exported), src/main/upstream_compat.cpp,
 tools/s7520_elf_vs_rom.py, tools/s7520_code_bytes.py (new), scratch/agent/soak_queue/s7520_fq_levels.sh.
 Run: `env R=$PWD/scratch/s7520_fq2 HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_S7520_CODEWATCH=1+ROGUESQ_S7520_CTL=1 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_S7520_CODEWATCH=1+ROGUESQ_S7520_CTL=1+ROGUESQ_ASPECT=21:9" zsh tools/g1e_owner_quiet_arms.zsh`
+
+## Session 7521 (2026-11-17) — class FR: executed RSP code bytes vs the RSPRecomp images; 2 task tuples, boot/text 0 diff bytes, every IMEM DMA a ROM image that a compiled composite or hand route covers; overlay 0 runs 8 bytes lower on hardware than the boot copy main compiled, but the one instruction whose meaning changes (path A `j 0x1E5C`) is never taken; FQ levels closed
+
+**Fold.** s7520_fq_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4; 0 exec_diff / gf_stale / dma_main, both ctls caught, 4/4 alive) -> FQ CLOSED 6 levels.
+
+**Question.** The port selects RSP code by task TYPE only (main.cpp get_rsp_microcode / rs64_run_lle_gfx) and skips every IMEM DMA
+(rsp.hpp). A real RSP runs whatever the task's ucode_boot / ucode / ucode_data and the ucode's own IMEM DMAs bring from RDRAM.
+Hypotheses: H-canon (all those bytes == ROM images RSPRecomp compiled), H-dead (some differ only where the compiled path never looks),
+H-live (game patches ucode, a second ucode, or an IMEM image no toml compiled).
+
+**Instrument** (one build): src/rsp/s7521_ucode_watch.cpp, ROGUESQ_S7521_UCODEWATCH=1. Per SP task (hooks: librecomp rsp.cpp run_task
+= audio; main.cpp rs64_run_lle_gfx = gfx; **gfx tasks never pass run_task**, first run saw gfx=0): distinct tuple rows; boot/text/data
+RDRAM vs ROM (main segment ROM 0x1000..0xA5D30 <- 0x80000400; ranges past the segment end compared on the ROM-backed prefix, TAIL row).
+Per IMEM DMA (rsp.hpp skip branch): source bytes vs ROM, distinct (mem, dram, len). Hardware window model: gfx task start = boot image;
+DMA into 0x1DB0 = that image; at every L_1DB0 entry (rs64_e9prov_l1db0_reset) and branch (rs64_inline_probe_trigen_branch, 0..5) count
+by resident image (needs ROGUESQ_G1E_PROBES=1 so the probe TU runs). Ctl ROGUESQ_S7521_CTL=1: gfx task 600 flips boot+0x10 / text+0x100 /
+data+0x40 around the compare; first IMEM DMA after gfx 900 flips a source byte; after gfx 700 one forced "RDP busy" DPC_CURRENT read
+(dpc_bridge rs64_dpc_current_read) inside L_1DB0 must produce path A. Scorer tools/s7521_ucode_bytes.py --controls --ctl (static check +
+7/7 synthetic).
+
+**Static.** The factor5_rsp / factor5b / boot toml text images == ROM at 0x25610 / 0x9ABE0 / 0x831D0 = the task ucode addresses.
+
+**Run** (scratch/s7521_fr, g1e_owner_quiet_arms HOLD=120, both alive, 0 VI stalls; L4 dd1, L15 dd8 21:9): score 0 both arms.
+- 2 tuples only: gfx boot 800825D0/D0 ucode 80024A10/1000 data 80038D00/800; audio same boot, ucode 80099FE0/1000 data 800A4E00/800.
+  Type-only dispatch is sound.
+- boot + text: 0 differing bytes in ~6.3k gfx + ~5.7k audio tasks per arm.
+- ucode_data: differing bytes are CPU-written fields (gfx DMEM 0x33F, 0x404..0x40F; audio 0x320.. = rodata main/A5D20). Same RDRAM on
+  hardware; none in the DMEM dispatch tables the tomls baked as extra_indirect_branch_targets. Audio declares 0x800 but only 0x330 is
+  main segment; the rest is the overlay window at 0x800A5130 (hardware reads the same bytes).
+- IMEM DMAs: 3.77M (L4) / 24.9M (L15), all ROM bytes, 12 distinct images, each == a compiled composite (main text, ovl4/10/12/14/18/
+  1C/2C at 0x1DB0, ovl20/24 at 0x12A0) except two: overlay 0x28 (ROM 0x27348, 7 words: addiu $17,32; restore-DMA main text+0x220 ->
+  0x12A0 len 0x330; j 0x122C with ra 0x10D8) = the fixup 6c hand route, and **overlay 0** (ROM 0x26348, 0xD4 bytes, table DMEM 0x7C).
+- **Overlay 0 placement.** The boot text DMA puts ROM 0x26340 at 0x1DB0 (two nops, then the init code); overlay 0 puts ROM 0x26348
+  there, so the same code sits 8 bytes lower. Relative branches agree; resident j/jal targets agree; the absolute `j 0x1E5C` (path A:
+  DPC idle-check passes but DPC_CURRENT != DPC_END, i.e. RDP still busy) lands past mtc0 DPC_START/END in the overlay copy and on them
+  in the boot copy. main.c compiled the boot copy (L_1E5C = mtc0s) and the port routes DMEM 0x153 == 0 to it. Window model: **all
+  6288 / 6329 L_1DB0 entries ran with overlay 0 resident**, so hardware always runs the shifted copy. But path A (b5) was taken 0 times:
+  every entry took b3 (DPC_CURRENT == 0: rs64_dpc_reset zeroes it per task), going L_1E48 -> mtc0s in both copies. H-dead. The forced
+  ctl took path A once per arm (seen as win=ovl0 ev=5), the game stayed alive: the port's extra START=END=$4 submits an empty range.
+  Not changed: honouring hardware's skip would leave g_rsp_dpc_start at the previous task's start and the port's submit(start,end)
+  would resubmit it; it only matters if the DPC model ever reports a busy RDP at task start.
+- All 5 ctls caught on both arms (text 1, boot 1, data rows, imem 1, l1db0 1).
+
+**Rules out:** a second ucode / patched ucode text / boot (H-live text), uncompiled IMEM images in the 0x1DB0 and 0x12A0 windows,
+dispatch-table drift in ucode_data. **Gap:** the 0x12A0 window (ovl20, ovl24, ovl28's restore) is not modelled at port dispatch time
+(FD audited the routes statically). Levels soak queued: scratch/agent/soak_queue/s7521_fr_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4).
+
+Run: `env R=$PWD/scratch/s7521_fr HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1+ROGUESQ_ASPECT=21:9" zsh tools/g1e_owner_quiet_arms.zsh`;
+score `python3 tools/s7521_ucode_bytes.py --controls --ctl scratch/s7521_fr/log_l4.txt scratch/s7521_fr/log_l15.txt` (rc 0).

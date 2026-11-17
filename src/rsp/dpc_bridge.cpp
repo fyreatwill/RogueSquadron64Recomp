@@ -168,10 +168,12 @@ extern "C" void rs64_dpc_reset() {
     s_submit_last_end = 0;
 }
 
+extern "C" int rs64_s7521_force_cur(); extern "C" void rs64_s7521_l1db0(int ev);  // s7521 class FR (src/rsp/s7521_ucode_watch.cpp)
 uint32_t rs64_dpc_current_read() {
     uint32_t& s_last = s_dpc_poll_last;
     int& s_repeats = s_dpc_poll_repeats;
     uint32_t v = g_rsp_dpc_current;
+    if (rs64_s7521_force_cur()) return v + 8;  // s7521 ctl: one forced busy read inside L_1DB0
     if (v == s_last) {
         if (++s_repeats >= 64) {
             s_repeats = 0;
@@ -2578,6 +2580,7 @@ extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dr
 extern "C" void rs64_inline_probe_trigen_branch(uint32_t r17, uint32_t source_dram,
                                                    uint32_t dpc_end, uint32_t dpc_current,
                                                    uint32_t branch) {
+    rs64_s7521_l1db0((int)branch);
     if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
     if (!g_e9prov.target) return;
     if (g_e9prov.trigen_sample == 0xFFFFFFFFu) {
@@ -2771,6 +2774,7 @@ extern "C" void rs64_e9prov_l12a0_source(uint32_t source, uint32_t r17, uint32_t
 }
 
 extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident) {
+    rs64_s7521_l1db0(6);
     if (!log_e9_provenance()) return;
     ++g_e9prov.lifecycle_seq;
     ++g_e9prov.l1db0_reset;

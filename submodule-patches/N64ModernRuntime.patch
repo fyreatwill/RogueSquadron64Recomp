@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..ecd006a 100644
+index b0d6bef..4963a18 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,9 @@
@@ -128,7 +128,7 @@ index b0d6bef..ecd006a 100644
  }
  
  #define RSP_ADD32(a, b) \
-@@ -94,36 +149,287 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,36 +149,292 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -207,6 +207,10 @@ index b0d6bef..ecd006a 100644
 +// s7094: passive DMA shape census vs hardware SP DMA rules (src/rsp/s7094_dma_shape.cpp, ROGUESQ_S7094_DMASHAPE=1).
 +extern "C" int rs64_s7094_on;
 +extern "C" void rs64_s7094_dma_shape(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud);
++// s7521 class FR: IMEM DMA source bytes vs ROM + per-task ucode bytes vs ROM (src/rsp/s7521_ucode_watch.cpp, ROGUESQ_S7521_UCODEWATCH=1).
++extern "C" int rs64_s7521_on;
++extern "C" void rs64_s7521_imem(uint8_t* rdram, uint32_t mem, uint32_t dram, uint32_t len, int aud);
++extern "C" void rs64_s7521_task(uint8_t* rdram, const OSTask* task);
 +inline thread_local uint64_t g_s4248_dma_rd_bytes = 0, g_s4248_dma_rd_calls = 0, g_s4248_dma_wr_bytes = 0, g_s4248_dma_wr_calls = 0;
 +
 +// s7327: RSP DMA address width. Hardware drops DRAM_ADDR bits 24+, but the port's dd>1 spill arena sits at phys 0x01000000-0x017FFFFF
@@ -267,6 +271,7 @@ index b0d6bef..ecd006a 100644
      // DMEM at the masked offset.
 -    if (dmem_addr & 0x1000) return;
 +    if (dmem_addr & 0x1000) {
++        if (rs64_s7521_on) rs64_s7521_imem(rdram, dmem_addr, dram_addr, rd_len, RS64_DMEM_BASE == dmem_audio);
 +        // Diag (ROGUESQ_DUMP_IMEM_DMA=1): the skip above is also what breaks
 +        // the Factor 5 overlay window swap (s46) — the overlay images only
 +        // exist materialized in RDRAM, so capture them here for offline
@@ -3297,7 +3302,7 @@ index 4276b7d..3f5ca29 100644
          ultramodern::set_native_thread_name("Game Start Thread");
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..541fdb9 100644
+index 1cb3f6a..5cd43b2 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,8 +1,16 @@
@@ -3325,7 +3330,7 @@ index 1cb3f6a..541fdb9 100644
  uint16_t rspReciprocals[512];
  uint16_t rspInverseSquareRoots[512];
  
-@@ -32,24 +41,2123 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +41,2124 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -4973,6 +4978,7 @@ index 1cb3f6a..541fdb9 100644
 +    rs64_s4215_dump(rdram, task);
 +    rs64_s4213_census(task);
 +    { static const bool on2 = [] { const char* e = std::getenv("ROGUESQ_LOG_S4213"); return e && e[0] && e[0] != '0'; }(); static uint32_t pk = 0xFFFFFFFFu; static unsigned sn; if (on2) { uint32_t ph = rs64_phase_ord(); if (ph != pk) { pk = ph; sn = 0; } rs64_s4214_scan(rdram, task, ph, ++sn); } }
++    if (rs64_s7521_on) rs64_s7521_task(rdram, task);  // s7521 class FR: task ucode bytes vs ROM (src/rsp/s7521_ucode_watch.cpp)
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
      RspUcodeFunc* ucode_func = rsp_callbacks.get_rsp_microcode(task);
  
@@ -5452,7 +5458,7 @@ index 1cb3f6a..541fdb9 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2166,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2167,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  

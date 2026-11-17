@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7520 (2026-11-17).
+Compact operational handoff, as of Session 7521 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -456,7 +456,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     dirty line); tools/s7519_store_side.py --controls --ctl. ~0.9 / 1.3 G tracked stores: 0 dirty-over-DMA, 0 discards, 0 live rows outside ctl;
     ctl = 3 dirty-over-DMA rows (zmemcpy, rs_free) then resolved dead by the inv-after. Gaps: stores before a line's first marking, no eviction
     model. **FO+FP exhaust the libultra replaced-function surface** (census PORTING-STATE s7518).
-    **FQ L4/L15 (s7520): executed CPU code bytes == the recompiled image (H-canon).** Offline: tools/s7520_elf_vs_rom.py (rc 0, 5/5 ctl):
+    **FQ CLOSED 6 levels (s7520, soak folded s7521: L1 dd8 21:9 + L7/L10/L12 dd4 score 0): executed CPU code bytes == the recompiled image (H-canon).** Offline: tools/s7520_elf_vs_rom.py (rc 0, 5/5 ctl):
     regen ELF == ROM over every FuncEntry extent (2542 funcs, 304,259 words). Runtime ROGUESQ_S7520_CODEWATCH=1 (librecomp overlays.cpp
     s7520 block; hooks pi.cpp / ultra_translation.cpp iinv / upstream_compat.cpp swap) + ctl ROGUESQ_S7520_CTL=1 (main code flip swap
     600-660, overlay flip at first overlay call after swap 900); tools/s7520_code_bytes.py --controls --ctl classifies each changed word by
@@ -465,7 +465,18 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     361k overlay get_function calls each byte-checked: 0 exec_diff, 0 stale func_map, 0 DMA into main code; all 55 overlay-window DMAs
     carry a section's own ROM bytes at its link address (boot worker 0x80000D04 preloads the mission tail ROM 0x101000 -> 0x80100400
     then the one boot osInvalICache). Both ctls caught on both arms. Gap: load_overlay never erases a replaced overlay's func_map
-    entries (0 calls hit one). Levels soak queued (s7520_fq_levels).
+    entries (0 calls hit one).
+    **FR L4/L15 (s7521): executed RSP code bytes == the RSPRecomp images (H-canon; one placement difference H-dead).** Static (tools/s7521_ucode_bytes.py
+    --controls, 7/7 synthetic): the main/B/boot toml images == ROM at the task ucode addresses. Runtime ROGUESQ_S7521_UCODEWATCH=1 (src/rsp/s7521_ucode_watch.cpp;
+    hooks librecomp rsp.cpp run_task [audio], main.cpp rs64_run_lle_gfx [gfx], rsp.hpp IMEM-DMA skip, dpc_bridge L_1DB0 probes - needs ROGUESQ_G1E_PROBES=1)
+    + ctl ROGUESQ_S7521_CTL=1: exactly 2 task tuples (gfx 80024A10/data 80038D00, audio 80099FE0/data 800A4E00), so type-only dispatch is sound; boot+text
+    0 diff bytes in ~12k tasks/arm; ucode_data diffs are CPU-written fields (gfx DMEM 0x33F, 0x404.., audio 0x320 = rodata A5D20; same RDRAM on hardware, no
+    dispatch-table byte); audio data 0x800 reads 0x4D0 past the main segment into the overlay window (TAIL, hardware-identical). 3.8M / 24.9M IMEM DMAs,
+    all ROM bytes, 12 distinct images each = a compiled composite, except overlay 0 (ROM 0x26348 -> 0x1DB0, 8 bytes below the boot image main compiled) and
+    overlay 0x28 (hand route). Window model: all 12.6k L_1DB0 entries run with overlay 0 resident, so hardware runs the shifted copy where `j 0x1E5C`
+    skips mtc0 DPC_START/END; the port runs the boot copy. H-dead: that path (b5, RDP busy at task start) is taken 0 times (b3 every time: our DPC model
+    zeroes DPC_CURRENT per task); the planted forced-busy read takes it once, is seen, game stays alive (port's extra writes submit an empty range).
+    All 5 ctls caught both arms. Gap: the 0x12A0 window (ovl20/24, ovl28 restore) is not modelled. Levels soak queued (s7521_fr_levels).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
