@@ -199371,6 +199371,7 @@ guest bytes sx/sy +-85 at polls 482/602/722/842; =0 -> +-127 at the same polls; 
 on.log rc 0, off.log as ctl-off PASS, mutant (off.log relabelled on=1) rc 1 with 4 out-of-gate rows.
 DISCRIMINATION: H-live for the stick range (selected by the ROM divisors + live guest bytes); H-dead for the status byte and ContRam returns;
 H-canon for errno/type/pattern/button. Refuted: H-canon for the whole SI surface.
+This selects H-live for the stick range (fixed at its source) and refutes H-canon for the SI surface as a whole; the status byte and ContRam rows select H-dead.
 ORIGIN: writer of the out-of-range value = ultramodern osContGetReadData's (int8_t)(127 * x) fed by main.cpp get_n64_input's unit-range
 stick; retail value for full stick = ~85 counts (OEM gate). Not a mitigation: the input is mapped to the hardware range at its source.
 Owner: steering is now less twitchy (full turn needs ~88% stick travel sideways); OWNER-OPT-INS row added, =0 restores the old feel.
