@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7524 (2026-11-17).
+Compact operational handoff, as of Session 7525 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -493,8 +493,11 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     _VirtualToPhysicalTask (0x80033D20), so DMEM 0xFC0 holds KSEG0 pointers (11.1M/11.1M ring DMAs hi8 set) and the L_116C/L_115C wrap
     waits (dest - 24-bit CURRENT) never spin; same reason as s7523's b2 "every task fresh". Opt-in ROGUESQ_S7524_V2P=1 (main.cpp
     rs64_run_lle_gfx, DMEM copy only) -> 0 rewritten bytes in 2.09 GB, waits spin, s7096 exact. Invisible with the default instant
-    RDP. **Next (NEXT.md): qualify V2P under the default bridge** (s7095 'pend' snaps CURRENT to the new START: L_115C may spin to the
-    escape), then decide default-on with two-arm render/forwarding evidence.
+    RDP. **s7525: V2P under the DEFAULT instant bridge = H-same in output** (L4 dd1, L15 dd8 21:9, off/on same build, 6 arms): 0 escapes
+    every arm (H-spin refuted: L_115C waits BEFORE the DPC_START write, so the bridge's CURRENT snap can't trip it), s7096 MAIN 0
+    missing/dup/order, content_diff/B equal, alive, 0 stalls; positive control gfx ring DMA writes hi8 33.4M -> 0. Only change: L_1DB0
+    entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak s7525_v2p_levels queued (L1 dd8
+    21:9, L7/L10/L12 dd4; tools/s7525_v2p_score.py). On pass: **owner decision: V2P default-on** (retail fidelity, no visible change).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

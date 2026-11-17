@@ -199816,3 +199816,31 @@ is not a retail ucode property; it is the port's missing virtual->physical task 
 Not run: L15 dd8 21:9 arm (A's attribution is total; L15 rate was 0.004%). Not yet known: V2P under the default instant-DPC bridge
 (s7095 'pend': the bridge snaps CURRENT to the new START at a wrap, which with a physical base makes L_115C spin to the 64-poll escape).
 Next: NEXT.md (qualify V2P with the default instant bridge: escape fires, s7096 forwarding, task-entry branches, render H-equal).
+
+## Session 7525 (2026-11-17) — ROGUESQ_S7524_V2P qualified under the default instant-DPC bridge: output H-same (0 escapes, forwarding exact), only the L_1DB0 entry test changes (b3 -> b2, same target); levels soak queued
+
+Work unit (NEXT.md s7525, HYPOTHESIS-ID rsp-task-v2p): does the retail virtual->physical DMEM task conversion change anything under the
+default instant RDP? H-same (nothing observable), H-spin (bridge snaps CURRENT to the new START at a wrap, physical base -> L_115C spins
+to the 64-poll escape), H-branch (task-entry L_1DB0 decision changes). Same build (binary newer than every source), arms back-to-back.
+Batch 1 (scratch/s7525_v2p, L4 dd1 120 s, S7096_FWD + S7095_DPC + S7521_UCODEWATCH): off/on both alive, 0 crash, 0 VI stall; s7095 escapes
+0/0, spin115/116 0/0, DIV pend cur = wraps in both (10289/10300: the known START snap); s7096 MAIN hw=fwd=matched (1.50/1.62 GB), 0
+missing/dup/order. No proof yet that V2P altered what the ucode did -> batch 2 adds the control.
+Batch 2 (scratch/s7525_v2p/r2, 100 s each, + S7094_DMASHAPE + G1E_PROBES + S7521_CTL), L4 dd1 and L15 dd8 21:9, off/on:
+| arm | alive | escapes | s7096 missing/dup/order | content_diff/B | gfx DMA wr hi8 | gfx DMA rd hi8 | L_1DB0 b2/b3 |
+| L4 off | 1 | 0 | 0/0/0 | 7.31e-5 | 33,398,105/33,398,105 | 7.89M | 0/5231 |
+| L4 on | 1 | 0 | 0/0/0 | 7.30e-5 | 0/33,237,516 | 5.03M | 5236/0 |
+| L15 off | 1 | 0 | 0/0/0 | 4.03e-5 | 30,028,688/all | 19.8M | 0/5151 |
+| L15 on | 1 | 0 | 0/0/0 | 4.03e-5 | 0/30,021,769 | 4.72M | 5148/0 |
+Positive controls: gfx ring write hi8 -> 0 (V2P live in the ucode); s7095 selftest pass (escape detector fires 2/130 crafted polls); s7096
+selftest pass; s7521 ctl=1 rows fired in all arms. Remaining hi8 gfx reads in the on arms = KSEG0 pointers the game writes into its own
+display lists (segment data, not task fields), as retail.
+Reading build/factor5_ucode L_1DB0/L_115C explains both: L_1DB0 b2 = `output_buff - DPC_END > 0` (END=0 after rs64_dpc_reset):
+0x807xxxxx is a negative int32, so the off arm falls through to b3 (`CURRENT == 0`); physical 0x007xxxxx takes b2. Both go to L_1E48
+(fresh START=END). L_115C waits on CURRENT == base BEFORE `mtc0 DPC_START`, so the bridge's CURRENT=START snap happens after the wait
+and L_116C then sees base-CURRENT = 0 >= 0 -> proceed: H-spin is impossible with the instant bridge (0 escapes measured, two lines).
+DISCRIMINATION: H-spin refuted (escapes 0 in 6 arms + code path); H-branch selected only at the test level (b3->b2 100%, same
+destination); H-same selected for every output measured (forwarding byte-exact, content_diff equal, alive, stalls 0).
+Not measured: framebuffer equality of a fixed frame (no fixed-frame hash in this recipe; forwarding identity is byte-level RDP input).
+New: tools/s7525_v2p_score.py (per-arm PASS needs escapes 0, forwarding exact, gfx wr hi8 0, b2>0 b3==0; the off arm scores FAIL =
+negative control). Soak scratch/agent/soak_queue/s7525_v2p_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s, V2P on).
+Next: fold the soak; on score 0 ask the owner to approve V2P default-on (=0 restores today's KSEG0 DMEM task), docs/OWNER-OPT-INS.md.
