@@ -8,6 +8,9 @@
 
 #include "rs64_apf.h"  // s7359 class AJ
 #include <cmath>
+#include <chrono>
+extern "C" volatile uint32_t rs64_vi_n_g;  // s7514
+extern "C" unsigned long long osGetTime();  // s7514 (ultramodern timer.cpp, OSTime = u64)
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1429,6 +1432,28 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
             static const int s_bytes = ev("ROGUESQ_RDRAM_DUMP_BYTES", 0x680000);  /* s7317: 0x1400000 covers OSMEM 12 heap + 0x81000000 spill arena */
             if (FILE* f = fopen(path, "wb")) { fwrite(rdram, 1, (size_t)(s_bytes > 0x1400000 ? 0x1400000 : s_bytes), f); fclose(f); }
             { extern void rs64_s7317_write(const char*); snprintf(path, sizeof path, "%s/alloc_%07d.txt", s_rd, n); rs64_s7317_write(path); }
+        }
+    }
+    // s7514 class FK (time shape): ROGUESQ_LOG_TIME_SHAPE=1 prints every 30th swap one [s7514-time] row: swap, VI ordinal,
+    // host steady ns, osGetTime(), the game's last VI-retrace stamp 0x80128ED8 and frame interval 0x80128EB4, the gfx task
+    // duration 0x80128D34, osClockRate lo 0x80039104 and the profiler-bar gate byte 0x80038CE0 (ROM 1, mainGameLoop clears it;
+    // emitProfilerBarSegment 0x80023D40 draws host-time-length bars only while it is set). ROGUESQ_TIME_SHAPE_CTL=<swap>
+    // positive control: sets the gate to 1 for swaps [ctl, ctl+120) then restores 0, so the bars must appear in fb dumps there.
+    {
+        static const bool s_ts = [] { const char* e = std::getenv("ROGUESQ_LOG_TIME_SHAPE"); return e && *e == '1'; }();
+        static const int s_ts_ctl = [] { const char* e = std::getenv("ROGUESQ_TIME_SHAPE_CTL"); return e ? atoi(e) : 0; }();
+        if (s_ts || s_ts_ctl > 0) {
+            auto b = [&](uint32_t a) { return (unsigned)rdram[a ^ 3]; };
+            auto w = [&](uint32_t a) { return (b(a) << 24) | (b(a + 1) << 16) | (b(a + 2) << 8) | b(a + 3); };
+            if (s_ts_ctl > 0 && n == s_ts_ctl) rdram[0x38CE0 ^ 3] = 1;
+            if (s_ts_ctl > 0 && n == s_ts_ctl + 120) rdram[0x38CE0 ^ 3] = 0;
+            if (s_ts && (n % 30 == 0 || n == s_ts_ctl || n == s_ts_ctl + 60 || n == s_ts_ctl + 120)) {
+                const long long ns = (long long)std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count();
+                fprintf(stderr, "[s7514-time] n=%d vi=%u ns=%lld ostime=%llu vit=%u fint=%u gfxd=%u clk=%u gate=%u ctl=%d\n", n,
+                        (unsigned)rs64_vi_n_g, ns, (unsigned long long)osGetTime(), w(0x128ED8), w(0x128EB4), w(0x128D34),
+                        w(0x39104), b(0x38CE0), (s_ts_ctl > 0 && n >= s_ts_ctl && n < s_ts_ctl + 120) ? 1 : 0);
+            }
         }
     }
     // ROGUESQ_WATCH_LOG=1 (s5076): per-swap log of the stick struct (0x80130B88 port0),

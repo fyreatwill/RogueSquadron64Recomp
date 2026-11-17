@@ -199378,3 +199378,41 @@ Owner: steering is now less twitchy (full turn needs ~88% stick travel sideways)
 Levels soak queued (s7513_fj_levels: L1 dd8 21:9, L7/L10 dd4 gated, L4 dd1 STICK_GATE=0 ctl). Next: FK timer/Count shape (NEXT.md).
 Files: src/main/rs64_stick_gate.h (new), src/main/main.cpp, tools/test_stick_gate.cpp (new), tools/s7513_stick_gate_score.py (new),
 scratch/agent/soak_queue/s7513_fj_levels.sh, docs/OWNER-OPT-INS.md, docs/CURRENT-TRUTH.md.
+
+## Session 7514 (2026-11-17) — class FK: guest time/Count shape vs hardware; osGetTime is hardware-rate and monotone on L4 dd1 / L15 dd8 21:9, and every host-speed-dependent duration the game measures (gfx task time, audio service time) feeds only write-only globals or the profiler-bar overlay, whose gate the game clears at mainGameLoop entry — no game decision reads one
+HYPOTHESIS-ID: timer-count-shape-vs-hardware.
+Fold: s7513_fj_levels score=0 (L1 dd8 21:9, L7/L10 dd4: guest stick max (85,0), out_of_gate 0; L4 STICK_GATE=0 ctl max 127 -> ctl PASS;
+4/4 alive, 0 VI stalls) -> FJ CLOSED 6 levels (stick feel still owner-judged).
+Boring check / prior coverage: BG s7397 (osSetTimer re-arm race fixed; the one live site installPeriodicCallback is gated off on route),
+BL s7402 (osClockRate 46875000 fix; sim dt takes the VI-count branch), s7087 (osGetCount sign-extension). Not re-done.
+Static (new tools/s7514_time_refs.py: lui/addiu/off(reg) resolver over RecompiledFuncs asm comments, lists every function touching an
+address range): osGetTime 14 sites / 10 functions; osGetCount, osSetTime, osStopTimer 0 callers; osSetTimer 1. Consumers:
+viRetraceHandlerThread -> VI stamp 0x80128ED8 (computeFrameDeltaTime/submitGfxFrame/timeSnapshotFiller = BL path) and present record
+0x80128EB0-EBC (readBufferSwapState -> timeSnapshotFiller); spTaskSchedulerThread start 0x80128D30 / getTimeLow32 0x80128C78 ->
+dpInterruptHandlerThread gfx task duration 0x80128D34 -> bufferArbiterProducerMark slot record -> present record; 0x80128EDC
+(getTimeSinceLastFrame) and 0x80128EE0 (task low32 duration) read only by drawFrameProfilerBars; musyx synth duration 0x801499E8 and
+voice-pool 0x80154678/0x80154680 are write-only; computeElapsedMillis has 0 callers. drawFrameProfilerBars runs every frame on 13
+screens, but each bar goes through emitProfilerBarSegment 0x80023D40, which branches out unless byte 0x80038CE0 != 0. That byte is
+ROM data 1 (checked in the ROM image; mapping validated on osClockRate = 62500000) and its only store is setProfilerBarGate, called
+once with a0 = 0 as the first call of mainGameLoop.
+Hypotheses: H-canon (guest time = 46875 ticks per host ms, monotone, consistent with the VI stamp) / H-dead (host-dependent values
+reach only dead or gated outputs) / H-live (a live reader sees a different rate or step, or a host-speed duration drives a decision).
+Instrument (one build): ROGUESQ_LOG_TIME_SHAPE=1 in src/main/upstream_compat.cpp swap hook, every 30th swap: VI ordinal, host steady ns,
+osGetTime, VI stamp, frame interval, gfx duration, osClockRate, gate byte; ROGUESQ_TIME_SHAPE_CTL=<swap> pokes the gate to 1 for 120
+swaps (positive control). Offline new tools/s7514_time_shape.py --controls (synthetic good + mutants rate 62500/ms, backwards step,
+gate leak, unscaled clk: all flip, PASS).
+Run: tools/g1e_owner_quiet_arms.zsh HOLD=200, R=scratch/s7514, CTL=600, fb dumps every 60 swaps: l4 = L4 dd1, l15 = L15 dd8 21:9.
+Both alive, level_ok 1, 0 crash, 0 VI stall, max_gap 141/148 ms.
+Result: both rc 0, 391 rows each: rate 46875.0 ticks/ms, 0 steps outside 2%, 0 backwards, VI stamp monotone at 781,250 ticks/VI (host
+60 Hz; hardware NTSC ~780k, 0.1% off, single-source figure, consumed nowhere that matters), clk 46875000, gate 0 on every row from swap 30
+except the 4 ctl rows (4/4 = 1). gfx task duration max 7.7 ms (L4) / 13.8 ms (L15), frame interval median 16.7 ms.
+Positive control, second line: RDRAM fb dumps show the profiler bars (pixels 32/65 grey, bottom band) only in the 2 dumps rendered under
+the ctl (L4 swaps 660/720: 3360 px each, 0 in all 23 other dumps up to swap 1500; L15 1932 px, 0 before; after the ctl only 112 stale px in
+the undrawn 21:9 side margin). scratch/s7514/ctl_660_vs_840.png shows it.
+DISCRIMINATION: H-canon for the time base and H-dead for host-dependent durations (gated profiler, write-only stores); H-live refuted on
+two lines (static reader map + runtime gate rows with the bar ctl). No fix needed. The only host-vs-hardware difference is the VI period
+(60.000 Hz host vs ~59.94-60.1 Hz NTSC), which the game sees only through VI counts.
+Levels soak queued (s7514_fk_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by tools/s7514_time_shape.py).
+Next: class FL, EEPROM/save-path shape (NEXT.md), under the owner save rule.
+Files: src/main/upstream_compat.cpp (census + ctl), tools/s7514_time_refs.py (new), tools/s7514_time_shape.py (new),
+scratch/agent/soak_queue/s7514_fk_levels.sh, docs/CURRENT-TRUTH.md.

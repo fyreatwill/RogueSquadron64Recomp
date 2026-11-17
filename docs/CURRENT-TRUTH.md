@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7512 (2026-11-16).
+Compact operational handoff, as of Session 7514 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -465,7 +465,20 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     (70,70) diagonal. tools/test_stick_gate.cpp ALL PASS + mutant ctl; live title arms on/off: guest bytes +-85 vs +-127 same schedule
     (tools/s7513_stick_gate_score.py, ctl PASS, mutant rc 1). Gate constants 85/70 = OEM-pad figures (single-source, no pad measured
     here); 75/80 game divisors are ROM-read. **Owner to judge feel** (OWNER-OPT-INS row). Levels soak queued (s7513_fj_levels).
-    Next: FK (NEXT.md).
+    **Levels fold (s7514): s7513_fj_levels score=0 (L1 dd8 21:9, L7/L10 dd4: guest stick max 85, 0 out of the 85/70 octagon; L4 STICK_GATE=0
+    ctl max 127 PASS; 4/4 alive) -> FJ CLOSED 6 levels.** Stick feel still owner-judged.
+    **FK CLOSED L4/L15 (s7514): time/Count shape H-canon + host-dependent durations H-dead.** Static reader map (tools/s7514_time_refs.py,
+    lui/addiu resolver over RecompiledFuncs): 14 osGetTime sites in 10 functions, osGetCount/osSetTime/osStopTimer 0 callers, osSetTimer 1
+    (installPeriodicCallback, BG: gated off on route). Every osGetTime-derived value goes to (a) timeSnapshotFiller (BL s7402: sim dt takes
+    the VI-count branch), (b) write-only durations (musyx 0x801499E8, voice pool 0x80154678/80), or (c) the profiler-bar overlay:
+    gfx task time 0x80128D34 -> arbiter record -> readBufferSwapState, 0x80128EDC/EE0 -> drawFrameProfilerBars -> emitProfilerBarSegment
+    0x80023D40, which returns at once unless gate byte 0x80038CE0 != 0 (ROM data 1; mainGameLoop clears it first thing, its only store).
+    No game decision reads a host-speed-dependent duration. Runtime ROGUESQ_LOG_TIME_SHAPE=1 (src/main/upstream_compat.cpp, every 30th
+    swap) + ctl ROGUESQ_TIME_SHAPE_CTL=<swap> (gate=1 for 120 swaps), tools/s7514_time_shape.py --controls (synthetic + 4 mutants PASS):
+    L4 dd1 + L15 dd8 21:9, 391 rows each: 46875.0 ticks/host ms, 0 steps off by >2%, monotone, VI stamp 781,250 ticks/VI (60 Hz host;
+    hardware NTSC ~780k), clk 46875000, gate 0 on every row from swap 30 except ctl 4/4 = 1. Second line: fb dumps show the bars only
+    in the 2 dumps rendered under ctl (L4 3360 px, L15 1932 px; 0 before; after = stale pixels in the undrawn wide margin only).
+    Levels soak queued (s7514_fk_levels). Next: FL EEPROM/save-path shape (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
