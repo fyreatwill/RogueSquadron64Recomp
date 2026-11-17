@@ -1,22 +1,18 @@
-# NEXT (s7513)
-HYPOTHESIS-ID: si-cont-shape-vs-hardware
+# NEXT (s7514)
+HYPOTHESIS-ID: timer-count-shape-vs-hardware
 
-First: fold s7512_fi_levels from SOAK-RESULTS if it ran (score 0 -> FI CLOSED 6 levels in CURRENT-TRUTH item 20; score 1 -> read the
-diff rows in scratch/s7512_fi_levels/out.txt; a live diff with ROGUESQ_VI_BLACK_RETAIL on is a real regression -> fix or flip the default).
+First: fold s7513_fj_levels from SOAK-RESULTS if it ran (score 0 -> FJ CLOSED 6 levels in CURRENT-TRUTH item 20; score 1 -> a gated arm
+sent a stick count outside the 85/70 octagon: read scratch/s7513_fj_levels/out.txt; 3 -> the l4off ctl did not print on=0; 4 -> an arm
+never polled input). The stick gate needs the OWNER's feel verdict (OWNER-OPT-INS row); do not retune 85/70 without one.
 
-Work unit: class FJ, SI / controller (joybus) data shape vs hardware. The game reaches the SI only through libultra wrappers librecomp
-replaces (lib/N64ModernRuntime/librecomp/src/cont.cpp: osContInit / Reset / StartReadData / GetReadData / StartQuery / GetQuery /
-SetCh, motor; EEPROM/Pfs in librecomp too). Boring check first: which wrappers have callers in
-/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs (s7512 grep pattern: `<name>_recomp(rdram, ctx)`), and whether any
-retail __osSiRawStartDma / __osContRamRead path is still recompiled from the ROM (syms 0x8002AC30 osContStartReadData etc.).
-Hardware/libultra: OSContPad {u16 button, s8 stick_x, s8 stick_y, u8 errno}, OSContStatus {u16 type, u8 status, u8 errno}; retail
-osContGetReadData copies from the PIF block with CONT_NO_RESPONSE_ERROR when absent; button mask 0xFFFF but bits 0x0030 (reserved) and
-the stick range +-127 (real pads ~+-80). Reference: retail ROM disassembly (mips64-elf-objdump, ROM off = vram-0x80000440+0x1040),
-mupen64plus-core src/device/controllers in lib/rt64/src/contrib/mupen64plus-core or the rs64-oracle checkout.
-Hypotheses: H-canon (every OSContPad/Status written to guest RAM is a shape a real pad + PIF can produce) / H-dead (odd shapes only with no
-pad, at boot) / H-live (a live write differs: e.g. errno for ports 2-4, status bits, type 0x0005 vs pak, stick beyond the s8 clamp,
-reserved buttons set) -> fix to the hardware rule.
-Measurement: one census env (ROGUESQ_LOG_CONT_SHAPE=1, every guest write from the cont wrappers: n, t, wrapper, port, raw bytes), 2 arms
-(L4 dd1, L15 dd8 21:9) via tools/g1e_owner_quiet_arms.zsh (command shape as s7512, R=scratch/s7513), offline tools/s7513_cont_shape.py
-with synthetic + mutant controls and an in-run positive control (e.g. ROGUESQ_CONT_SHAPE_CTL=<n> writes one out-of-range stick into the
-census record only).
+Work unit: class FK, CP0 Count / osGetTime / osSetTimer shape vs hardware. Live wrappers: osGetTime 14 callers, osSetTimer 1, osGetCount
+0 (ultramodern timer.cpp:250-270, librecomp ultra_translation.cpp:12 note on the game dividing osGetTime deltas). Hardware: Count ticks
+at 46.875 MHz (CPU 93.75 MHz / 2), osGetTime = 64-bit __osCurrentTime + (Count - __osBaseCounter), wraps Count at 2^32 (~91.6 s).
+Hypotheses: H-canon (every guest-visible time value advances at 46875 ticks/ms of wall time, monotone, consistent with the VI count:
+1 VI = 781,250 ticks at 60 Hz NTSC... check: 46.875e6/60 = 781,250) / H-dead (differences only at boot or in unused high bits) / H-live
+(a live reader sees a different rate, a non-monotone step, or a 32-bit wrap that retail would not produce at that uptime; or osSetTimer
+fires at a different count than retail for the same interval) -> fix to the hardware rule.
+Measurement: one census env (ROGUESQ_LOG_TIME_SHAPE=1: every osGetTime return with host ns + VI ordinal, every osSetTimer arm/fire with
+countdown/interval and host ns), 2 arms (L4 dd1, L15 dd8 21:9) via tools/g1e_owner_quiet_arms.zsh (command shape as s7512), offline
+tools/s7514_time_shape.py: ticks per host ms, ticks per VI, monotonicity, timer fire error vs interval; synthetic + mutant controls and
+an in-run ctl (ROGUESQ_TIME_SHAPE_CTL=<n>: one census record skewed, screen untouched).

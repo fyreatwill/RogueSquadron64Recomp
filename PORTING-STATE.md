@@ -199336,3 +199336,44 @@ not added to.
 Levels soak queued (s7512_fi_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by the classifier).
 Files: lib/N64ModernRuntime/ultramodern/src/events.cpp (submodule-patches/N64ModernRuntime.patch exported), src/main/upstream_compat.cpp,
 tools/s7512_vi_shape.py (new), scratch/agent/soak_queue/s7512_fi_levels.sh, docs.
+
+## Session 7513 (2026-11-17) — class FJ: SI/joybus shape vs hardware; status/pak/RAM rows H-canon or dead, one H-live row fixed: the host stick reached 127 counts where the game (x/75, y/80 clamp) and a real pad (~85 / 70,70 octagon) expect ~85, i.e. ~1.6x retail steering sensitivity; ROGUESQ_STICK_GATE default on
+HYPOTHESIS-ID: si-cont-shape-vs-hardware.
+Fold: s7512_fi_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: ~12k commits each, diff {}, oor {}, ctl PASS, 4/4 alive) -> FI CLOSED 6 levels.
+Boring check: live SI wrappers in RecompiledFuncs: osContInit 1, osContStartQuery/GetQuery 4 each, StartReadData/GetReadData 1
+(siServiceThread 0x80002E10: Init -> status 0x80110788 / pattern 0x80110798; loop StartQuery, GetQuery, StartReadData, GetReadData ->
+0x8010FF30, processPolledControllerData), osMotorInit 4 / Start 1 / Stop 4, osPfsInitPak 1 + Find 2 / Allocate 1 / ReadWrite 3 / Delete 1
+(initMemoryPack + save dispatch), osEepromProbe 1 / LongRead 3 / LongWrite 3; osContReset/SetCh, osPfsFreeBlocks/FileState/NumFiles and
+every __osSiRaw* have 0 callers.
+Hypotheses: H-canon (every OSContStatus/OSContPad byte is a shape a real pad + PIF produces) / H-dead (odd shapes only in bytes the game
+never reads) / H-live (a read byte differs from hardware).
+Code read (two sources: ultramodern input.cpp/cont.cpp vs mupen64plus-core game_controller.c in rs64-oracle, and the game's own loads):
+- Status: ultramodern writes type 0x0005, status 0x00, errno 0 on port 0; errno 8 and nothing else on ports 1-3 (= libultra
+  __osContGetInitData). mupen/hardware report status 0x02 (PAK_CHANGED) with no pak. Game loads of the status array: errno (+3) in
+  pollControllerInputs 0x80003048, initMemoryPack 0x80005A48, writeSave* 0x80005CD8/0x80006048, rumble 0x80002CB8/0x80002D7C; type&1 at
+  0x8000305C; no load of +2 anywhere -> H-dead, not changed (would be a lib/ edit for a byte nobody reads).
+- Pad: errno + button/stick copied by pollControllerInputs into 0x80130B88 (6-byte records, +4 valid flag). Stick readers: tickControllerInput
+  0x800BF0D0: x / 75.0f (ROM 0x800A622C), y / 80.0f (0x800A6230), clamp to [-1, 1] (0x800A6220/24), dead zone 0.015 (0x800A6228);
+  getControllerStick{X,Y}Percentage 0x8007A068/A8: x 1/128 (0x8003D4E0), unclamped. ROM constants read with off = vram - 0x7FFFF400.
+  ultramodern: (int8_t)(127 * x) from SDL axis / 32767 and keyboard 1.0 / 0.7071 -> up to +-127 cardinal, (89, 89) keyboard diagonal.
+  Real OEM pad gate: ~85 cardinal, (70, 70) diagonal (single-source figure, no pad measured here); mupen64plus-input-sdl also scales to ~80.
+  So the host reached full turn at 75/127 = 59% (x) and 80/127 = 63% (y) of stick travel, ~1.6x retail sensitivity, and the unclamped
+  percentage readers saw 0.99 where retail tops out at ~0.66 -> H-live.
+- __osContRamRead/Write return -1 (no libultra code) but their only callers __osBlockSum/__osClearPage sit under __osPfsReleasePages /
+  __osPfsDeclarePage, reached only from the stubbed osPfs* -> dead. osPfsInitPak returns 1 (NOPACK) = retail with no pak.
+Fix: src/main/rs64_stick_gate.h (new) + get_n64_input: ROGUESQ_STICK_GATE (unset/1 = on 85/70, 0 = old raw 127, "C,D" custom) maps the host
+vector (|v| clamped to 1) onto the octagon boundary in its direction, rounds to whole counts and pre-biases so ultramodern's truncation
+yields that count. [stick-gate] line at first poll. No lib/ edit.
+Tests: tools/test_stick_gate.cpp (new; c++ -std=c++17 -I src/main) ALL PASS: cardinals 85, keyboard/square diagonals (70,70), SDL -32768
+-> -85, 0.5 -> 43, 3601-angle sweep inside the gate with max 85 / min major axis 70, =0 -> 127; mutant gate 90,70 detected (ctl PASS).
+Live (build/, title screen, ROGUESQ_AUTOPILOT 8:sr,10:su,12:sl,14:sd hold 1000 ms, ROGUESQ_PAD_LOG=1, 20 s each, SIGKILL): gate on ->
+guest bytes sx/sy +-85 at polls 482/602/722/842; =0 -> +-127 at the same polls; 0 CRASH both. tools/s7513_stick_gate_score.py (new):
+on.log rc 0, off.log as ctl-off PASS, mutant (off.log relabelled on=1) rc 1 with 4 out-of-gate rows.
+DISCRIMINATION: H-live for the stick range (selected by the ROM divisors + live guest bytes); H-dead for the status byte and ContRam returns;
+H-canon for errno/type/pattern/button. Refuted: H-canon for the whole SI surface.
+ORIGIN: writer of the out-of-range value = ultramodern osContGetReadData's (int8_t)(127 * x) fed by main.cpp get_n64_input's unit-range
+stick; retail value for full stick = ~85 counts (OEM gate). Not a mitigation: the input is mapped to the hardware range at its source.
+Owner: steering is now less twitchy (full turn needs ~88% stick travel sideways); OWNER-OPT-INS row added, =0 restores the old feel.
+Levels soak queued (s7513_fj_levels: L1 dd8 21:9, L7/L10 dd4 gated, L4 dd1 STICK_GATE=0 ctl). Next: FK timer/Count shape (NEXT.md).
+Files: src/main/rs64_stick_gate.h (new), src/main/main.cpp, tools/test_stick_gate.cpp (new), tools/s7513_stick_gate_score.py (new),
+scratch/agent/soak_queue/s7513_fj_levels.sh, docs/OWNER-OPT-INS.md, docs/CURRENT-TRUTH.md.

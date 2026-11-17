@@ -11925,6 +11925,7 @@ extern "C" unsigned long rs64_s5773_ord(void) {
     return n.fetch_add(1, std::memory_order_relaxed) + 1;
 }
 
+#include "rs64_stick_gate.h"
 static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
     if (controller_num != 0) {
         *buttons = 0; *x = 0.0f; *y = 0.0f;
@@ -12761,6 +12762,15 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         }
     }
 
+    // s7513 class FJ: host stick -> OEM N64 gate (85 cardinal / 70,70 diagonal), see rs64_stick_gate.h. ROGUESQ_STICK_GATE=0 = old 127.
+    {
+        static const rs64_stick_gate_cfg s_gate = [] {
+            const rs64_stick_gate_cfg g = rs64_stick_gate_parse(std::getenv("ROGUESQ_STICK_GATE"));
+            fprintf(stderr, "[stick-gate] on=%d card=%.0f diag=%.0f\n", (int)g.on, (double)g.card, (double)g.diag);
+            return g;
+        }();
+        rs64_stick_gate_apply(s_gate, &stick_x, &stick_y);
+    }
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;

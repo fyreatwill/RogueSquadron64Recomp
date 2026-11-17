@@ -452,7 +452,20 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     widths): 11,956 / 11,987 commits equal in every register, 0 out of width (max origin 0xB20800, width 0x800), ctl 30/30. RT64 decodeVI
     already masks at hardware widths. Fix ROGUESQ_VI_BLACK_RETAIL (default on, =0 old): osViSetMode resets VI state = 1 and init seeds
     BLACK + mode ctrl like retail (ROM 0x800352D0 / 0x80034C50), osViBlack honoured (the old no-op is gone); =0 arm differs on 5 boot VIs
-    only. Levels soak queued (s7512_fi_levels). Next: FJ SI/PIF joybus shape (NEXT.md).
+    only. **Levels fold (s7513): s7512_fi_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4, ~12k commits each, diff {}, ctl PASS) -> FI CLOSED 6 levels.**
+    **FJ L4 title (s7513): SI/joybus shape - one H-live row FIXED (stick range), rest H-canon/H-dead.** Live SI wrappers: osContInit 1,
+    StartQuery/GetQuery 4, StartReadData/GetReadData 1 (siServiceThread 0x80002E10 -> status 0x80110788, pads 0x8010FF30), osMotor* 9,
+    osPfsInitPak/Find/Allocate/ReadWrite/Delete 8 (Controller Pak save path), osEepromProbe/LongRead/LongWrite; 0 raw __osSiRaw* callers.
+    Game reads of SI data (code read): status errno (+3) and type&1 only (pollControllerInputs 0x8000305C, initMemoryPack, rumble), pad
+    button/stick/errno -> 0x80130B88. Status byte: ours 0x00, hardware/mupen 0x02 (no pak) - no game load of it -> H-dead, left as is.
+    __osContRamRead/Write return -1 (not a libultra code) but only __osPfsReleasePages/DeclarePage (behind stubbed osPfs*) call them -> dead.
+    **H-live: stick.** tickControllerInput 0x800BF0D0 divides x by 75 / y by 80 (ROM 0x800A622C/30), clamps [-1,1], dead zone 0.015;
+    getControllerStick*Percentage x 1/128 unclamped. ultramodern sent (int8)(127*x): full turn at 59%/63% host travel (~1.6x retail).
+    Fix ROGUESQ_STICK_GATE (default on, =0 old, "C,D" custom; src/main/rs64_stick_gate.h): host vector -> OEM octagon 85 cardinal /
+    (70,70) diagonal. tools/test_stick_gate.cpp ALL PASS + mutant ctl; live title arms on/off: guest bytes +-85 vs +-127 same schedule
+    (tools/s7513_stick_gate_score.py, ctl PASS, mutant rc 1). Gate constants 85/70 = OEM-pad figures (single-source, no pad measured
+    here); 75/80 game divisors are ROM-read. **Owner to judge feel** (OWNER-OPT-INS row). Levels soak queued (s7513_fj_levels).
+    Next: FK (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
