@@ -22,6 +22,8 @@ extern "C" int rs64_s7094_on = [] {
     if (!v && h && *h && *h != '0') v = 1;
     const char* z = getenv("ROGUESQ_S7501_EZ");  // s7501 class EZ: RSP DMEM->RDRAM writes into tracked framebuffers ride this hook
     if (!v && z && *z && *z != '0') v = 1;
+    const char* ft = getenv("ROGUESQ_S7523_SLOWRDP");  // s7524 FT writer attribution rides this hook (src/rsp/s7523_slow_rdp.cpp rs64_s7523_dma)
+    if (!v && ft && *ft && *ft != '0') v = 1;
     if (v) fprintf(stderr, "[s7094] dma shape census armed mode=%s\n", v == 2 ? "ctl" : "on");
     return v;
 }();
@@ -85,7 +87,9 @@ const bool g_selftest = [] {
 extern "C" int rs64_s7324_on; extern "C" void rs64_s7324_dma(int dir, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" int rs64_s7331_on; extern "C" void rs64_s7331_dma(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len);
+extern "C" int rs64_s7523_on; extern "C" void rs64_s7523_dma(int dir, uint32_t mem, uint32_t dram, uint32_t raw, int aud);
 extern "C" void rs64_s7094_dma_shape(int dir, uint32_t mem, uint32_t dram, uint32_t raw, int aud_in) {
+    if (rs64_s7523_on) rs64_s7523_dma(dir, mem, dram, raw, aud_in);  // s7524 FT writer attribution
     if (!dir && !(mem & 0x1000)) rs64_s7486_hostread(aud_in ? 1 : 0, dram, raw >= 0xFFFu ? 0x1000u : raw + 1u);  // s7486 EK (no-op unless armed)
     if (dir && !(mem & 0x1000)) rs64_s7486_hostread(aud_in ? 7 : 6, dram, raw >= 0xFFFu ? 0x1000u : raw + 1u);  // s7489 EN host-write kinds (no-op unless ROGUESQ_S7489_HOSTWRITE)
     if (rs64_s7324_on && !(mem & 0x1000)) rs64_s7324_dma(dir, dram, raw, aud_in);

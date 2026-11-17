@@ -7843,21 +7843,28 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
             g_dmem_cur[(off + j) ^ 3] = (uint8_t)(val >> (24 - j * 8));
         }
     };
+    // s7524 class FT: retail osSpTaskLoad (0x80033E3C) DMAs a copy converted by _VirtualToPhysicalTask (0x80033D20: ucode,
+    // ucode_data, dram_stack, output_buff, output_buff_size, data_ptr, yield_data_ptr when non-null); the port's
+    // osSpTaskLoad_recomp skips it, so the ucode sees KSEG0 pointers against 24-bit DPC_CURRENT. ROGUESQ_S7524_V2P=1 applies
+    // the retail conversion to the DMEM copy only (opt-in; the guest's task in RDRAM is untouched, as on hardware).
+    static const bool s7524_v2p = [] { const char* e = std::getenv("ROGUESQ_S7524_V2P"); bool on = e && *e && *e != '0';
+        if (on) std::fprintf(stderr, "[s7524] DMEM OSTask virtual->physical conversion armed\n"); return on; }();
+    auto v2p = [](uint32_t v) -> uint32_t { return (s7524_v2p && v >= 0x80000000u && v < 0xC0000000u) ? (v & 0x1FFFFFFFu) : v; };
     poke(0xFC0 + 0x00, (uint32_t)task->t.type);
     poke(0xFC0 + 0x04, (uint32_t)task->t.flags);
     poke(0xFC0 + 0x08, (uint32_t)task->t.ucode_boot);
     poke(0xFC0 + 0x0C, (uint32_t)task->t.ucode_boot_size);
-    poke(0xFC0 + 0x10, (uint32_t)task->t.ucode);
+    poke(0xFC0 + 0x10, v2p((uint32_t)task->t.ucode));
     poke(0xFC0 + 0x14, (uint32_t)task->t.ucode_size);
-    poke(0xFC0 + 0x18, (uint32_t)task->t.ucode_data);
+    poke(0xFC0 + 0x18, v2p((uint32_t)task->t.ucode_data));
     poke(0xFC0 + 0x1C, (uint32_t)task->t.ucode_data_size);
-    poke(0xFC0 + 0x20, (uint32_t)task->t.dram_stack);
+    poke(0xFC0 + 0x20, v2p((uint32_t)task->t.dram_stack));
     poke(0xFC0 + 0x24, (uint32_t)task->t.dram_stack_size);
-    poke(0xFC0 + 0x28, (uint32_t)task->t.output_buff);
-    poke(0xFC0 + 0x2C, (uint32_t)task->t.output_buff_size);
-    poke(0xFC0 + 0x30, (uint32_t)task->t.data_ptr);
+    poke(0xFC0 + 0x28, v2p((uint32_t)task->t.output_buff));
+    poke(0xFC0 + 0x2C, v2p((uint32_t)task->t.output_buff_size));
+    poke(0xFC0 + 0x30, v2p((uint32_t)task->t.data_ptr));
     poke(0xFC0 + 0x34, (uint32_t)task->t.data_size);
-    poke(0xFC0 + 0x38, (uint32_t)task->t.yield_data_ptr);
+    poke(0xFC0 + 0x38, v2p((uint32_t)task->t.yield_data_ptr));
     poke(0xFC0 + 0x3C, (uint32_t)task->t.yield_data_size);
     { extern volatile uint32_t g_rs64_s7481_task_out; g_rs64_s7481_task_out = (uint32_t)task->t.output_buff | 0x80000000u; } // s7481 EH frame-span class
     { extern volatile uint32_t g_rs64_g1cf_tasks, g_rs64_g1cf_dsize; ++g_rs64_g1cf_tasks; g_rs64_g1cf_dsize += (uint32_t)task->t.data_size; } // s6070 g1cf

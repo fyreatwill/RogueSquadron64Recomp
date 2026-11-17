@@ -199785,3 +199785,34 @@ bridge commit. The port never shows it (it forwards at END time), so it is only 
 DISCRIMINATION: this selects H-dead and refutes H-live for task-entry control flow and wait-loop termination and for forwarding coverage (two lines: ungated/gated arms x 2 levels,
 s7096 exact + l1db0 branch counts); for ring content nothing is selected yet (writer open). Next discriminator: re-compare queued ranges at RSP task end vs next task start (changed at task end selects H-rsp-race; changed only after it selects H-cpu/H-bridge). No fix; instrument default off.
 Next: NEXT.md (split the late-rewrite writer: re-snapshot every queued range at the RSP task end and at the next task start).
+
+## Session 7524 (2026-11-17) — class FT writer named: the gfx ucode's own ring DMA, because the port's osSpTaskLoad skips retail _VirtualToPhysicalTask (KSEG0 pointers in DMEM kill the L_116C/L_115C wrap waits); opt-in ROGUESQ_S7524_V2P=1 removes every late rewrite under the slow-RDP model
+
+Work unit: name the writer of s7523's same-task ring late-rewrites under ROGUESQ_S7523_SLOWRDP (DP-gated). Hypotheses: H-rsp-race
+(gfx ucode overwrites queued ring bytes later in the task), H-cpu (concurrent CPU thread), H-bridge (dpc_bridge commit/edit after submit).
+Instrument (one build, src/rsp/s7523_slow_rdp.cpp, same env): queue kept as merged segments; every RSP DMEM->RDRAM DMA (s7094 hook,
+src/rsp/s7094_dma_shape.cpp now also armed by ROGUESQ_S7523_SLOWRDP) marks the queued not-yet-consumed bytes it overwrites (tch 1 gfx /
+2 audio); each consume-time mismatch byte is attributed rsp_gfx / rsp_aud / resid; every 256th END the whole queue is scanned before and
+after rsp_dpc_submit (include/rsp_dpc_macros.h rs64_s7523_pre_submit) so new untouched mismatches inside submit = bridge. Positive
+controls: DMA coverage (every pushed ring byte must have been written by a gfx RSP DMA since its last push), the s7523 planted flips.
+Run A (L4 dd1, SLOWRDP=8,0, S7096_FWD, 120 s, scratch/s7524_ft): alive, over_bytes 22,307,211 in 1.52 GB (as s7523), **att_rsp_gfx
+22,307,211 = 100%, att_rsp_aud 0, att_resid 0**, bridge 0 hits in 176,533 pre/post pairs; ctl cov 1.0000 (1.52 GB), planted 45,319/45,321.
+-> H-rsp-race selected, H-cpu and H-bridge refuted. Example: ring wrapped to 0x720000, old lap 0x7344C8-0x73FF60 still queued,
+CURRENT read 0x7344C8, ucode then DMAs 176 B at 0x734448 (CURRENT inside the write) after ONE CURRENT read. The L_116C predicate
+(build/factor5_ucode/factor5_ucode_recompiled.c: proceed if dest-CURRENT >= 0, spin while CURRENT in (dest,dest+len]) should spin there.
+Run B (60 s, + raw DMA address): dma_gfx_hi8 = 11,098,663 / 11,098,663 -> every gfx ring DMA address carries KSEG0 bits, so
+dest(0x80xxxxxx) - CURRENT(24-bit) is always a positive int32 and the wait never spins (L_115C beq CURRENT==base never matches either;
+s7523's "b2 routes every task fresh" is the same: the task buffer start is KSEG0, END is 24-bit).
+ORIGIN: retail osSpTaskLoad (0x80033E3C) DMAs a copy converted by _VirtualToPhysicalTask (0x80033D20, 7 osVirtualToPhysical calls in
+N64Recomp/RecompiledFuncs/funcs_8.c: ucode, ucode_data, dram_stack, output_buff, output_buff_size, data_ptr, yield_data_ptr); the port
+replaces it with osSpTaskLoad_recomp -> rs64_m5_port_task_load and rs64_run_lle_gfx pokes the raw KSEG0 fields into DMEM 0xFC0.
+The value is not legitimate on hardware (retail DMEM sees physical pointers). Fix (opt-in, default unchanged): ROGUESQ_S7524_V2P=1 in
+rs64_run_lle_gfx converts the same 7 fields (only 0x80000000-0xBFFFFFFF) in the DMEM copy, guest task untouched.
+Run C (L4, SLOWRDP=8,0 + V2P=1 + S7096_FWD, 150 s): alive, 0 crash, VI ok; **over_bytes 0 in 2.09 GB consumed**, ov_dma 0, dma_gfx_hi8 0,
+escapes 0, max_spin 41,142 (waits now spin on model progress); ctl cov 1.0000, planted 63,464/63,468 (the 4 = never-compared, as s7523);
+s7096 MAIN hw=fwd=matched 2.05 GB, 0 missing/dup/order (content_diff 9.2e-5/B vs 8.5e-5 baseline in A and s7523).
+DISCRIMINATION: two lines (A attribution 100% gfx DMA + C fix arm zero) select H-rsp-race with a port root cause: the ring late-rewrite
+is not a retail ucode property; it is the port's missing virtual->physical task conversion, invisible with the instant RDP (CURRENT==END).
+Not run: L15 dd8 21:9 arm (A's attribution is total; L15 rate was 0.004%). Not yet known: V2P under the default instant-DPC bridge
+(s7095 'pend': the bridge snaps CURRENT to the new START at a wrap, which with a physical base makes L_115C spin to the 64-poll escape).
+Next: NEXT.md (qualify V2P with the default instant bridge: escape fires, s7096 forwarding, task-entry branches, render H-equal).

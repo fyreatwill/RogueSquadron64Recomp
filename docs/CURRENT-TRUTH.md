@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7521 (2026-11-17).
+Compact operational handoff, as of Session 7524 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -487,16 +487,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     after the restore) and 0x153=0x04 routed to ovl24/ovl20 composites; 0 stray / unhandled / unmodelled. Ctl (one real 0x1DB0 overlay DMA modelled 8
     bytes off after gfx 800) = 92 live dispatches both arms. Gaps: a later partial DMA inside a run is not re-split; direct (non-dispatch) entries into a
     window are covered only for L_1DB0 (FR). Soak s7522_fs_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive): **FS CLOSED 6 levels.**
-    **FT (s7523): finite-rate RDP vs the port's instant DPC model: H-dead for control flow and forwarding; ring late-rewrite open.**
-    s7095 closed the DPC regs vs an INSTANT RDP only. Opt-in ROGUESQ_S7523_SLOWRDP=<B/poll>[,<B/task>] (src/rsp/s7523_slow_rdp.cpp, hooks
-    include/rsp_dpc_macros.h + dpc_bridge rs64_dpc_current_read/reset) serves every DPC read (CURRENT/END/STATUS incl. START_VALID 0x400,
-    DMA_BUSY) from a queue model of the RDP that drains per poll; snapshot ctl every 997th range (45k/50k planted, all but <=4 caught).
-    4 runs 120 s, L4 dd1 8 B/poll + L15 dd8 21:9 64 B/poll+4 KB/task, ungated and DP-gated (drain at each forwarded FULL_SYNC): all alive,
-    0 escapes (every wait loop exits on model progress; 195M busy polls), s7096 MAIN 0 missing/dup/order over 1.49-2.38 GB per run.
-    Ungated: RDP busy at 97% of L4 task entries yet path A (b5) taken 2/6.3k: b2 (END below the task buffer start) routes ~every task fresh
-    whatever the timing. Gated: busy at 0 entries. OPEN: same-task ring bytes rewritten after the END write before a slow RDP reads them
-    (L4 8 B/poll 1.5% of bytes, L15 64 B/poll 0.004%; strongly rate-dependent; writer unnamed: RSP in-task vs concurrent CPU thread vs
-    bridge). Port never shows it (it forwards at END). Next: NEXT.md (re-snapshot at task end to split RSP vs post-task writers).
+    **FT (s7523-s7524): finite-rate RDP model (opt-in ROGUESQ_S7523_SLOWRDP, src/rsp/s7523_slow_rdp.cpp): control flow and forwarding
+    H-dead; ring late-rewrite ROOT-CAUSED (port).** s7524 attribution (RSP DMA marks via the s7094 hook, pre/post-submit scans): 100% of
+    22.3M rewritten bytes = gfx ucode ring DMA, 0 CPU, 0 bridge (ctl DMA coverage 1.0). Cause: the port's osSpTaskLoad_recomp skips retail
+    _VirtualToPhysicalTask (0x80033D20), so DMEM 0xFC0 holds KSEG0 pointers (11.1M/11.1M ring DMAs hi8 set) and the L_116C/L_115C wrap
+    waits (dest - 24-bit CURRENT) never spin; same reason as s7523's b2 "every task fresh". Opt-in ROGUESQ_S7524_V2P=1 (main.cpp
+    rs64_run_lle_gfx, DMEM copy only) -> 0 rewritten bytes in 2.09 GB, waits spin, s7096 exact. Invisible with the default instant
+    RDP. **Next (NEXT.md): qualify V2P under the default bridge** (s7095 'pend' snaps CURRENT to the new START: L_115C may spin to the
+    escape), then decide default-on with two-arm render/forwarding evidence.
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
