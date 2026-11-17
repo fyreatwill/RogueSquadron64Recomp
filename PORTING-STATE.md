@@ -200513,3 +200513,5 @@ tools/s7537_ring_cost.py --from 72: L5 gen/s 59.4/59.4/59.5/59.4/59.4/59.4 (n1,n
 wl50 3.4-3.5 ms everywhere; L5 maxgap 435-479 ms in every arm alike (same-scene transition). 12/12 alive, 0 crash, 0 VI stall.
 -> NODRAIN=3 costs no game rate vs =1 or drained where the game holds 60 (single-source; the CPU-bound case is not exercised by this
 recipe). Item 18(a) CLOSED.
+Verdict (s7545): selects H-none and refutes H-reader and H-ctx for class GE (0 live-thread guest accesses, controls fired in all 3
+arms); closes GE. Next discriminator: class GF census of host OSThread reads reachable after osDestroyThread (H-safe vs H-deref).
