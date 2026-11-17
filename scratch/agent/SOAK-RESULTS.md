@@ -1644,3 +1644,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117 | s7529 fold: s7528_evict_levels score=0 (tools/s7528_evict_score.py; L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive) -> FQ evict fix qualified 6 levels. In-session s7529 FV static census: 0 new H-latent-fix rows.
 20261117-081754 | s7532_fy_levels | rc=0 | 909s | scratch/agent/soak_results/s7532_fy_levels_20261117-081754.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117-084900 | s7533_fz_levels | rc=0 | 909s | scratch/agent/soak_results/s7533_fz_levels_20261117-084900.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117-094556 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-094556.log
+20261117 | s7537 fold: s7536_splate_cost voided on battery (clk 1.53); rerun in-session ALLOW_SLOW (scratch/s7537_splate_cost_batt, 16 arms alive, fatal=0): SP_LATE 0 vs 1 gen/s 60.0 vs 60.0 at L1/L4/L12 dd1/dd4 except CPU-bound L12 dd4 3v3 ABBA 52.9-54.6 vs 51.4-52.9 (unresolved) -> H-free, owner opt-in; census exits 0. AC repeat stays queued.

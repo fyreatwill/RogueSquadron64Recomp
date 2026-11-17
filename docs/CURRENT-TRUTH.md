@@ -19,7 +19,9 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   streaming (0x110 chunks, link at +0x10C) is SP-done-independent = hardware concurrency. Fix candidate ROGUESQ_S7535_LATE=1
   is now standalone ROGUESQ_SP_LATE=0|1|alt (s7536). **s7536: no geometry consequence** (spikes / big hulls per task equal in both
   states, 5 same-run alt arms L4 dd2/dd4 16:9 + L1 dd8 21:9, 2 reseeded; ctl 32285/32292) -> H-colour-only, not a G5b/G5f source.
-  FPS60 cost soak queued (Next steps 17).
+  **s7537: FPS60 cost nil where the game holds 60** (L1/L4/L12 dd1/dd4 16:9 fullscreen, 60.0 vs 60.0 /s; L12 dd4 on a 1.53x
+  battery clock CPU-bound 3v3 ABBA early 52.9-54.6 vs late 51.4-52.9, unresolved) -> SP_LATE=1 listed in OWNER-OPT-INS, census
+  rows H-latent-FIXED(opt-in), census exits 0. Default unchanged (owner).
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -235,7 +237,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
    Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
    left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
+4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
@@ -266,13 +268,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 16. **Default-on fixes from the audits (=0 / old value restores the previous behaviour):** full list verbatim in
     PROJECT-OVERVIEW "(s7534 maintenance)" (SPILL_RESET, RSP_DMA25, S7334-S7364, CF0_DUPDROP, DLPOOLX_ARM_REBUILD, S7376-S7405
     locks/fixes, FTZ, STICK_GATE s7513, S7528_EVICT, the s7533 FPS60 clamp byte CAS).
-17. **Class GA (s7535) OPEN, fidelity-only (s7536).** Static census tools/s7535_ga_census.py (565 sites, 0 unclassified, --controls
-    10/10; exits 1 on the 2 open dma_rdram_to_dmem rows). Done: (a) knob ROGUESQ_SP_LATE=0|1|alt (+ ROGUESQ_SP_LATE_SEED; the alt split
-    is deterministic per task index, reseed for replicates); (b) H-colour-only: per-state spikes / big hulls equal (tools/s7536_splate_score.py,
-    runs scratch/s7536_splate). Next: (c) fold scratch/agent/soak_queue/s7536_splate_cost.sh (FPS60 fl_shown, SP_LATE 0 vs 1, L1/L4/L12
-    dd1/dd4, scratch/s7536_splate_cost/fps.txt); if late holds 60/s add SP_LATE=1 to OWNER-OPT-INS as a fidelity opt-in, mark the census
-    rows H-latent-FIXED(opt-in) so it exits 0; default unchanged without the owner. If late costs frames: deliver SP done at the LLE's
-    last input fetch instead of after send_dl.
+17. **Class GA (s7535) CLOSED as owner opt-in (s7537).** tools/s7535_ga_census.py (565 sites, 0 open H-latent-fix, exits 0,
+    --controls 10/10); knob ROGUESQ_SP_LATE=0|1|alt (+SEED); (b) H-colour-only (s7536); (c) cost scored from the present ring by
+    tools/s7537_ring_cost.py (quiet harness has no [g1b]; score from --from 72, the mission load is 62-67 s), runs
+    scratch/s7537_splate_cost_batt. Open only: the queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (runs when on AC;
+    fold with `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`); if AC L12 dd4 late < early - 0.5 in a
+    3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
 18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

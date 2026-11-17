@@ -200191,3 +200191,31 @@ and sign-flipping; ctl proves the per-state attribution path). So G5b/G5f do NOT
 next-frame shade bytes (+-1 colour steps). Rules out: the early sp_complete as a knife-spike / sheet source.
 Open: (c) FPS60 cost of SP_LATE=1 queued as scratch/agent/soak_queue/s7536_splate_cost.sh (L1/L4/L12 x dd1/dd4 x 0/1, AC only via
 CLK_MAX). Then: fidelity-only fix -> opt-in for the owner if it holds 60/s, default unchanged.
+
+## Session 7537 (2026-11-17) — class GA (c): hardware-order gfx sp_complete (ROGUESQ_SP_LATE=1) costs nothing at FPS60 where the game holds 60/s; CPU-bound L12 dd4 3v3 ABBA within noise -> owner opt-in, census exits 0
+
+What ran. The queued s7536_splate_cost soak voided (exit 2): the host is on battery, clk=1.525 > CLK_MAX 1.15. A slow clock
+makes a cost test harder to pass, not easier: if late holds 60 at 1.53x slower it holds on AC. So I ran the same 12 arms myself
+with ALLOW_SLOW=1 ALLOW_BATT=1 (scratch/s7537_splate_cost_batt/run.zsh; tools/g1e_owner_quiet_arms.zsh, owner recipe FPS60
+16:9 fullscreen godmode, NO_SAVE_WRITE, HOLD 120), interleaved early (SP_LATE=0) / late (=1) per level L1/L4/L12 x dd1/dd4.
+Then a 4-arm ABBA repeat of L12 dd4 (l, e, e, l). clk 1.522-1.531 on every arm, idle > 900 s, screen unlocked, 16/16 alive, fatal=0.
+Each log carries the "[s7536] ROGUESQ_SP_LATE=<v>" banner, so the knob took effect in every arm.
+
+Instrument. The quiet harness writes no [g1b] lines, so g1e_level_fps.py tasks/fl_* columns read 0 (not a measurement). New
+tools/s7537_ring_cost.py scores from the present ring alone: gen/s, shown/s, seconds under 57, wl_ms p50/p90, max gap between
+new frames, and per-pair verdicts. Window: every arm shows a 640-wide stretch at 62-67 s (the mission load, ~450 ms gap in both
+settings), with flight at 796 wide from 70 s on, so I scored [72,120). Positive control: the same instrument reads L12 dd4 at
+51-55/s with 15-18 slow seconds, so it does resolve a below-60 rate. Fixed g1e_level_fps.py crashing (KeyError 'at') on a ring
+row truncated by SIGKILL.
+
+Result (gen/s, [72,120)):
+  L1 dd1 60.0/60.0, L1 dd4 60.0/60.0, L4 dd1 60.0/60.0, L4 dd4 60.0/59.9, L12 dd1 60.0/60.0 (early/late).
+  L12 dd4 (CPU-bound on battery): early 53.3, 54.6, 52.9; late 51.4, 52.7, 52.9. Mean delta -1.3/s, ranges touch (52.9), not resolved.
+  wl_ms p50 the same per pair (dd4 3.1-3.3, dd1 1.8-2.5).
+-> H-free selected where the game has headroom. H-cost is not shown: at most a ~2% cost under CPU saturation, within the spread.
+Rules out SP_LATE=1 as a frame-rate regression at the owner recipe on L1/L4/L12.
+
+Changes. docs/OWNER-OPT-INS.md row for ROGUESQ_SP_LATE=1 (accuracy-only, owner decides; default unchanged). In
+tools/s7535_ga_census.py the 2 dma_rdram_to_dmem rows are now H-latent-FIXED(opt-in), the class is documented, and the live-census
+control asserts 0 open H-latent-fix. The census exits 0 (565 sites, fails=0), --controls 10/10. The queued AC repeat
+(soak_queue/s7536_splate_cost.sh) stays queued and is folded with s7537_ring_cost.py --from 72.

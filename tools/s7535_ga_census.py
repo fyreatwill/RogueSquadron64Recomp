@@ -22,6 +22,7 @@ Classes: H-guest-thread (runs on the guest CPU thread: syscall replacement / rec
          H-dead (value written once at init / never rewritten while the read can run)
          H-instrument-only (env-gated diagnostic, default off; or the read only selects what to log)
          H-latent-fix (non-guest thread, guest running, a torn/stale decision possible) -> must be fixed/instrumented
+         H-latent-FIXED(opt-in) (an H-latent-fix whose fix exists behind an owner opt-in; default unchanged by owner rule)
          UNCLASSIFIED -> FAIL
 
   python3 tools/s7535_ga_census.py              # every row + summary, exit 1 on any FAIL
@@ -160,8 +161,10 @@ def F(f, fn, flag, lines=None, why=DIAG, thr="any"):
 
 RULES = [
     # --- the gfx/audio RSP DMA read: device semantics; gfx window measured by s7535 ROGUESQ_S7535_GA_CHK -----------------------
-    (RSPI, "dma_rdram_to_dmem", (380, 400), "H-latent-fix", "task/gfx",
-     "OPEN s7535: RSP SP_RD DMA. Audio tasks run before their sp_complete (canon). Gfx tasks get sp_complete EARLY (events.cpp, "
+    (RSPI, "dma_rdram_to_dmem", (380, 400), "H-latent-FIXED(opt-in)", "task/gfx",
+     "FIXED(opt-in) s7537: ROGUESQ_SP_LATE=1 (hardware-order sp_complete) is free at FPS60 wherever the game holds 60/s "
+     "(s7537 L1/L4/L12 dd1/dd4: 60.0 vs 60.0) and within noise when CPU-bound (L12 dd4 on battery, 3v3 ABBA early 52.9-54.6 vs "
+     "late 51.4-52.9); listed in docs/OWNER-OPT-INS.md, default early until the owner chooses. Was OPEN s7535: RSP SP_RD DMA. Audio tasks run before their sp_complete (canon). Gfx tasks get sp_complete EARLY (events.cpp, "
      "before send_dl), and the guest builds the next frame into the gfx pool 0x720000-0x75FFFF that the in-flight F5 LLE is still "
      "fetching: ROGUESQ_S7535_GA_CHK + LATE=alt same-run A/B, L4 flight diff bytes in that pool early 1.19 MB vs late 6.7 kB "
      "(0x100 vertex loads, shade bytes +-1). Fix candidate = hardware-order sp_complete (ROGUESQ_S7535_LATE=1); needs FPS60 "
@@ -437,10 +440,11 @@ def controls():
     res.append(("coverage: rule-less census sees >=250 UNCLASSIFIED", fails >= 250, "fails=%d" % fails))
     rows, fails = census(fw.files_under(ROOTS))
     open_ = [r for r in rows if r[6] == "H-latent-fix"]
+    fixed = [r for r in rows if r[6] == "H-latent-FIXED(opt-in)"]
     res.append(("live census: 0 UNCLASSIFIED/FAIL-check", not [r for r in rows if r[6] in ("UNCLASSIFIED", "FAIL-check")],
                 [r for r in rows if r[6] in ("UNCLASSIFIED", "FAIL-check")][:4]))
-    res.append(("live census: open H-latent-fix rows are only the s7535 gfx DMA", all(r[4] == "dma_rdram_to_dmem" for r in open_) and open_,
-                open_[:3]))
+    res.append(("live census: 0 open H-latent-fix; FIXED(opt-in) = the s7535 gfx DMA", not open_ and fixed and all(r[4] == "dma_rdram_to_dmem" for r in fixed),
+                (open_ or fixed)[:3]))
     ok = True
     for name, good, detail in res:
         print("control %-56s %s %s" % (name, "PASS" if good else "FAIL", "" if good else str(detail)[:300]))

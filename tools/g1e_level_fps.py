@@ -46,8 +46,8 @@ for A in arms:
             if t - t0 < frm: continue
             kv = dict(x.split('=', 1) for x in f[2:] if '=' in x)
             if f[0] == 'Q' and 'gen' in kv: gs.setdefault(int(t - t0), set()).add(kv['gen'])
-            if f[0] == 'Q' and 'mtl' in kv: Q[kv['mtl']] = (t, kv['gen'])
-            elif f[0] == 'P' and 'mtl' in kv: P[kv['mtl']] = float(kv['at'])
+            if f[0] == 'Q' and 'mtl' in kv and 'gen' in kv: Q[kv['mtl']] = (t, kv['gen'])
+            elif f[0] == 'P' and 'mtl' in kv and 'at' in kv: P[kv['mtl']] = float(kv['at'])  # s7537: truncated P row mid-field
     except OSError: pass
     qs = sorted(Q.values())
     span = (qs[-1][0] - qs[0][0]) if len(qs) > 1 else 0
