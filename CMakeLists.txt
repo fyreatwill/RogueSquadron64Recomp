@@ -410,6 +410,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7389_fbld.cpp
     ${CMAKE_SOURCE_DIR}/src/main/s7391_spwm.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7521_ucode_watch.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7523_slow_rdp.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7106_rsptri.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}

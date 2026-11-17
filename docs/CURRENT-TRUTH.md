@@ -486,7 +486,17 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     canon except 6.3k L_1DB0-under-ovl0 entries (= FR's H-dead case); 0x12A0 window 57M / 134M dispatches incl. 0x153=0x28 (60M / 120M, main code
     after the restore) and 0x153=0x04 routed to ovl24/ovl20 composites; 0 stray / unhandled / unmodelled. Ctl (one real 0x1DB0 overlay DMA modelled 8
     bytes off after gfx 800) = 92 live dispatches both arms. Gaps: a later partial DMA inside a run is not re-split; direct (non-dispatch) entries into a
-    window are covered only for L_1DB0 (FR). Levels soak queued (s7522_fs_levels, scores max(FS, FR)).
+    window are covered only for L_1DB0 (FR). Soak s7522_fs_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive): **FS CLOSED 6 levels.**
+    **FT (s7523): finite-rate RDP vs the port's instant DPC model: H-dead for control flow and forwarding; ring late-rewrite open.**
+    s7095 closed the DPC regs vs an INSTANT RDP only. Opt-in ROGUESQ_S7523_SLOWRDP=<B/poll>[,<B/task>] (src/rsp/s7523_slow_rdp.cpp, hooks
+    include/rsp_dpc_macros.h + dpc_bridge rs64_dpc_current_read/reset) serves every DPC read (CURRENT/END/STATUS incl. START_VALID 0x400,
+    DMA_BUSY) from a queue model of the RDP that drains per poll; snapshot ctl every 997th range (45k/50k planted, all but <=4 caught).
+    4 runs 120 s, L4 dd1 8 B/poll + L15 dd8 21:9 64 B/poll+4 KB/task, ungated and DP-gated (drain at each forwarded FULL_SYNC): all alive,
+    0 escapes (every wait loop exits on model progress; 195M busy polls), s7096 MAIN 0 missing/dup/order over 1.49-2.38 GB per run.
+    Ungated: RDP busy at 97% of L4 task entries yet path A (b5) taken 2/6.3k: b2 (END below the task buffer start) routes ~every task fresh
+    whatever the timing. Gated: busy at 0 entries. OPEN: same-task ring bytes rewritten after the END write before a slow RDP reads them
+    (L4 8 B/poll 1.5% of bytes, L15 64 B/poll 0.004%; strongly rate-dependent; writer unnamed: RSP in-task vs concurrent CPU thread vs
+    bridge). Port never shows it (it forwards at END). Next: NEXT.md (re-snapshot at task end to split RSP vs post-task writers).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -156,7 +156,9 @@ extern "C" int rs64_s7095_on; extern "C" void rs64_s7095_task(); extern "C" void
 extern "C" int rs64_s7096_on; extern "C" void rs64_s7096_task(); extern "C" void rs64_s7096_fwd(uint32_t lo, uint32_t hi, int site);
 extern "C" void rs64_s7096_drop(uint32_t lo, uint32_t hi, int why);
 #define RS64_S7096_DROP(lo, hi, why) do { if (rs64_s7096_on) rs64_s7096_drop((lo), (hi), (why)); } while (0)
+extern "C" int rs64_s7523_on; extern "C" void rs64_s7523_task(); extern "C" uint32_t rs64_s7523_cur_read();  // s7523 class FT
 extern "C" void rs64_dpc_reset() {
+    if (rs64_s7523_on) rs64_s7523_task();
     if (rs64_s7095_on) rs64_s7095_task();
     if (rs64_s7096_on) rs64_s7096_task();
     g_rsp_dpc_start = 0;
@@ -172,6 +174,7 @@ extern "C" int rs64_s7521_force_cur(); extern "C" void rs64_s7521_l1db0(int ev);
 uint32_t rs64_dpc_current_read() {
     uint32_t& s_last = s_dpc_poll_last;
     int& s_repeats = s_dpc_poll_repeats;
+    if (__builtin_expect(rs64_s7523_on, 0)) return rs64_s7523_cur_read();  // s7523: finite-rate RDP model
     uint32_t v = g_rsp_dpc_current;
     if (rs64_s7521_force_cur()) return v + 8;  // s7521 ctl: one forced busy read inside L_1DB0
     if (v == s_last) {

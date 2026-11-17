@@ -59,10 +59,16 @@ extern "C" void rs64_s7095_status_read();
 extern "C" int rs64_s7096_on;
 extern "C" void rs64_s7096_start(uint32_t v);
 extern "C" void rs64_s7096_end(uint32_t v, const uint8_t* rdram);
-static inline uint32_t rs64_dpc_end_read_hook() { if (rs64_s7095_on) rs64_s7095_end_read(g_rsp_dpc_end); return g_rsp_dpc_end; }
-static inline uint32_t rs64_dpc_status_read_hook() { if (rs64_s7095_on) rs64_s7095_status_read(); return 0u; }
-#define RSP_DPC_START(value)   do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_start(_v); if (rs64_s7096_on) rs64_s7096_start(_v); g_rsp_dpc_start = _v; g_rsp_dpc_current = _v; } while (0)
-#define RSP_DPC_END(value)     do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_end(_v); if (rs64_s7096_on) rs64_s7096_end(_v, rdram); g_rsp_dpc_end = _v; g_rsp_dpc_current = _v; rsp_dpc_submit(rdram, g_rsp_dpc_start, _v); } while (0)
+// s7523: ROGUESQ_S7523_SLOWRDP=<rate>[,<gap>] serves every DPC read from a finite-rate RDP model (src/rsp/s7523_slow_rdp.cpp).
+extern "C" int rs64_s7523_on;
+extern "C" void rs64_s7523_start(uint32_t v);
+extern "C" void rs64_s7523_end(uint32_t v, const uint8_t* rdram);
+extern "C" uint32_t rs64_s7523_end_read();
+extern "C" uint32_t rs64_s7523_status_read();
+static inline uint32_t rs64_dpc_end_read_hook() { if (__builtin_expect(rs64_s7523_on, 0)) return rs64_s7523_end_read(); if (rs64_s7095_on) rs64_s7095_end_read(g_rsp_dpc_end); return g_rsp_dpc_end; }
+static inline uint32_t rs64_dpc_status_read_hook() { if (__builtin_expect(rs64_s7523_on, 0)) return rs64_s7523_status_read(); if (rs64_s7095_on) rs64_s7095_status_read(); return 0u; }
+#define RSP_DPC_START(value)   do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_start(_v); if (rs64_s7096_on) rs64_s7096_start(_v); if (rs64_s7523_on) rs64_s7523_start(_v); g_rsp_dpc_start = _v; g_rsp_dpc_current = _v; } while (0)
+#define RSP_DPC_END(value)     do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_end(_v); if (rs64_s7096_on) rs64_s7096_end(_v, rdram); g_rsp_dpc_end = _v; g_rsp_dpc_current = _v; rsp_dpc_submit(rdram, g_rsp_dpc_start, _v); if (rs64_s7523_on) rs64_s7523_end(_v, rdram); } while (0)
 #define RSP_DPC_END_READ()     (rs64_dpc_end_read_hook())
 #define RSP_DPC_CURRENT_READ() (rs64_dpc_current_read())
 #define RSP_DPC_STATUS_WRITE(value) do { uint32_t _v = (uint32_t)(value); if (rs64_s7095_on) rs64_s7095_status_write(_v); (void)_v; } while (0)

@@ -199747,3 +199747,41 @@ Levels soak queued: scratch/agent/soak_queue/s7522_fs_levels.sh (L1 dd8 21:9, L7
 Run: `mkdir -p scratch/s7522_fs; env R=$PWD/scratch/s7522_fs HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1+ROGUESQ_ASPECT=21:9" zsh tools/g1e_owner_quiet_arms.zsh`
 (the harness does not create R: the first attempt died on a missing dir), score
 `python3 tools/s7522_imem_residency.py --controls --ctl scratch/s7522_fs/log_l4.txt scratch/s7522_fs/log_l15.txt` (rc 0).
+
+## Session 7523 (2026-11-17) — class FT: finite-rate RDP model for the RSP DPC registers; path A and every ring wait run live, forwarding stays exact, control flow H-dead; same-task ring late-rewrite found, writer open
+HYPOTHESIS-ID: rsp-dpc-register-model.
+Fold: s7522_fs_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4; FS canon, FR live 0, ctl 92 live per arm, 4/4 alive) -> FS CLOSED 6 levels.
+Unit (NEXT.md class FT). Boring-first check: s7094/s7095 had already closed the RSP cop0 + DPC register model, but only against an
+INSTANT RDP (s7095 shadow: END loads CURRENT then consumes at once). The open part is a finite-rate RDP: a task that starts while the
+previous list still drains (CURRENT != END), which makes the L_1DB0 resume path (b5, j L_1E5C) and the wait loops L_114C (START_VALID),
+L_115C, L_116C (CURRENT inside the next chunk) and L_1E48 live. Hypotheses: H-canon (same branches), H-dead (branches differ, output
+identical), H-live (a wait is skipped or the RDP would read different bytes than RT64 got).
+Instrument (one build): opt-in ROGUESQ_S7523_SLOWRDP=<bytes per DPC poll>[,<bytes per task gap>] (new src/rsp/s7523_slow_rdp.cpp;
+hooks in include/rsp_dpc_macros.h END/STATUS reads + START/END writes, dpc_bridge.cpp rs64_dpc_current_read + rs64_dpc_reset).
+Every DPC read is served by a queue model of the RDP (ranges per END write; START binds a new list; STATUS = CBUF_READY | DMA/CMD_BUSY
+while queued | START_VALID while a bound START is not yet begun); END persists across tasks. Each queued range is snapshotted after
+the bridge submit; when the model consumes it, bytes are compared (OVERWRITE = what a slow hardware RDP would read differently from
+RT64). Ctl: every 997th range gets one planted snapshot flip. A mutex was needed: ucode B on the RSP task thread also reads
+DPC_STATUS (first run aborted, "pointer being freed was not allocated" in consume, concurrent with the gfx thread).
+Second gate (DP-gated arm): the port raises DP at FULL_SYNC forward time; hardware only once the RDP consumes it, so the gated model
+drains at each forwarded FULL_SYNC (rs64_dpc_get_cumulative_fullsyncs) at the next END or task reset.
+Runs (tools/g1e_owner_quiet_arms.zsh, HOLD 120, + ROGUESQ_S7096_FWD=c, S7521_UCODEWATCH, G1E_PROBES; scratch/s7523_ft/):
+| arm | alive | entry busy | b5 path A | busy polls | escapes | s7096 MAIN missing/dup/order | over bytes (same/next task) | ctl |
+| L4 dd1 8 B/poll ungated | 120 s | 6631/6795 | 2 (b2 6309) | 190M | 0 | 0/0/0 of 1.50 GB | 12.0M / 11.1M | 45159/45160 |
+| L15 dd8 21:9 64+4096 ungated | 120 s | 1929/6356 | 0 (b4 2) | 68M | 0 | 0/0/0 of 2.37 GB | 109k / 17k | 50465/50465 |
+| L4 gated | 120 s | 0/6788 | 0 | 86M | 0 | 0/0/0 of 1.49 GB | 22.7M / 0 | 45037/45041 |
+| L15 gated | 120 s | 0/6355 | 0 | 67M | 0 | 0/0/0 of 2.38 GB | 103k / 0 | 50525/50525 |
+s7096 CTL caught 6/6 (L4) and 5/6 (L15: one ctl task lacked one mutation kind; s7096's own ctl, not this instrument).
+Readings: (1) every wait loop exits on model progress (0 deadlock escapes in 330M+ busy polls), so the ucode's DPC protocol is
+satisfied under a slow RDP as compiled; (2) the resume path is structurally near-unreachable on this game: b2 (END below the task's
+buffer start) sends ~every task to the fresh path whatever the timing, path A ran 2 times in the most pessimistic arm and those tasks
+forwarded exactly (tasks_bad 0); (3) under DP gating the RDP is idle at every task entry, which is what the port's per-task
+DPC reset reports. Ungated cross-task overwrites were SET_SCISSOR (0xED) commands at fixed ring addresses rewritten by the next task
+(snap ED000000 02C70700 -> ED238000 02A38700): an artifact of an RDP lagging past the CPU's completion signal, gone under gating.
+OPEN (single-source, not yet explained): same-task late rewrites persist under gating (L4 8 B/poll 1.5% of consumed bytes, L15
+64 B/poll 0.004%; strongly rate-dependent; e.g. L4 0x7344C8.. triangle coefficient bytes zeroed, L15 0x714BE0.. 46/56 bytes changed).
+The writer is unnamed: the RSP later in the same task (ring overwrite the ucode's wait should forbid), the concurrent CPU thread, or a
+bridge commit. The port never shows it (it forwards at END time), so it is only a would-be divergence for a much slower RDP.
+DISCRIMINATION: H-dead selected for task-entry control flow and for forwarding coverage (two lines: ungated/gated arms x 2 levels,
+s7096 exact + l1db0 branch counts); H-live for ring content is neither selected nor refuted (writer open). No fix; instrument default off.
+Next: NEXT.md (split the late-rewrite writer: re-snapshot every queued range at the RSP task end and at the next task start).
