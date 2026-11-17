@@ -1651,3 +1651,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-105413 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-105413.log
 20261117-110628 | s7536_splate_cost | rc=2 | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-110628.log | arms=0 alive=0/0 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117-110629 | s7540_rwait_cost | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 1s | scratch/agent/soak_results/s7540_rwait_cost_20261117-110629.log
+20261117-111844 | s7540_rwait_cost | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 1s | scratch/agent/soak_results/s7540_rwait_cost_20261117-111844.log
+20261117-111845 | s7541_wbw_rwait | rc=0 | 393s | scratch/agent/soak_results/s7541_wbw_rwait_20261117-111845.log | arms=3 alive=3/3 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117 | s7542 fold: s7541_wbw_rwait (NODRAIN=3 WBW, L4/L12 dd4, L1 dd8 21:9, 3/3 alive, ctl fired): late-writeback readers only RT64 updateScreen XXH3 (VI hash) + copyRAMToNativeAndChanges -> 18(c) CLOSED. In-session s7542 class GC census (tools/s7542_gc_census.py): 158 host-write sites, 0 unclassified/0 open, controls 8/8 -> GC CLOSED.

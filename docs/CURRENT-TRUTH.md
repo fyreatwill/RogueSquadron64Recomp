@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7541 (2026-11-17).
+Compact operational handoff, as of Session 7542 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -35,6 +35,12 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   rs64_s7540_reads_done(), called by RT64 fullSync after its last fullSyncFramebufferPairTiles). Same-run NODRAIN=4 cycle
   (drain/nodrain/reads-wait per task) L1/L4/L12: reads-wait 0 post-signal loads, nodrain 43/50/196 torn (controls caught);
   Gfx wait per task 1.2-1.6 ms vs 3.3-4.3 drained, 0 nodrain. OWNER-OPT-INS recommends =3; census exits 0. **s7541: the rest of fullSync after reads_done is clean too** (rs64_s7541_span, tools/s7541_gb_score.py, NODRAIN=4 + ROGUESQ_S7541_HOLD=1, L4/L12/L1): fb read-ins, writeback targets and hashTracking spans 0 guest changes after the post, controls planted==caught, same-run nodrain loads torn. Residual H-late-write: ~84% of writebacks land after dp_complete; no guest reader known (s6938, s7391; NODRAIN=3 WBW rerun queued). Item 18.
+- **Class GC (s7542): CLOSED.** tools/s7542_gc_census.py (rules tools/s7542_gc_rules.py) enumerates every host-side write into guest
+  RDRAM (10 idioms, 158 sites, 176 rows, 0 unclassified, 0 open, --controls 8/8): default config = before its signal (PI, SRAM, audio
+  RSP, sync RT64), on the guest thread (58 rows: libultra replacements, OSMesgQueue stores only in dequeue_external_messages), init,
+  env diag/lever, or dead. Late rows: GA (F5 DMA writes, opt-in fix SP_LATE=1) and GB writebacks under NODRAIN (s7541_wbw_rwait: flight
+  readers only RT64 updateScreen XXH3 / copyRAMToNativeAndChanges, ctl fired). Timer thread re-arms OSTimer after posting = hardware
+  order, OSTimer libultra-private (H-os-private, single-source).
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -269,7 +275,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
@@ -289,9 +295,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
 18. **Class GB follow-ups (s7540-s7541).** (a) game-fps cost of NODRAIN=3 vs =1 vs drained: queued soak
     scratch/agent/soak_queue/s7540_rwait_cost.sh (L5/L12 dd4, needs AC); fold with tools/g1e_level_fps.py. (b) CLOSED s7541: post-
-    reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) queued scratch/agent/soak_queue/s7541_wbw_rwait.sh:
-    WBW reader census under NODRAIN=3 (late writebacks): fold = any non-self [wbw] live reader names a real consumer -> move the
-    writeback before the post for that span; ctl must be > 0. (d) NEXT.md: class GC census (host writes into guest RAM vs their signal).
+    reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) CLOSED s7542: s7541_wbw_rwait
+    (NODRAIN=3, L4/L12 dd4, L1 dd8 21:9) live readers only RT64 updateScreen XXH3, ctl fired. (d) CLOSED s7542: class GC census (headline).
 19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

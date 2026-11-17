@@ -200357,3 +200357,40 @@ refutes H-readin-torn, H-clobber and H-hash-miss on 3 levels; it adds H-late-wri
 own hashes, s7391 found no CPU colour-image reader on L5/L10/L15 -> two lines, but neither under NODRAIN; queued
 scratch/agent/soak_queue/s7541_wbw_rwait.sh (WBW + CTL under NODRAIN=3, same 3 levels) as the direct check.
 ORIGIN: no mitigation added (instrument only). Not covered: on-screen effect (none expected), levels other than L1/L4/L12.
+
+## Session 7542 (2026-11-17) — class GC CLOSED: every host-side write into guest RDRAM (158 sites, 176 mode rows) lands before its signal, on the guest thread, at init, or (opt-in late rows) with no guest reader; s7541_wbw_rwait fold: under NODRAIN=3 the only flight readers of late writebacks are RT64's own hashes
+
+Soak folded: s7541_wbw_rwait rc=0 (393 s, 3/3 alive, 0 crash, 0 stall; ROGUESQ_RDP_ASYNC=1 NODRAIN=3 G1E_WBW=1 _CTL=1, L4 dd4 / L12 dd4 /
+L1 dd8 21:9, HOLD 120). Last [wbw] windows: L4/L12 every colour/depth writeback dead or ctl (live=0); L1 VI images 0x8F5000/0x9D5000
+(w=1024) live=30/s each, reads 1710. [wbw-pc] resolved with atos against the 11:09 build (soak ran 11:18): kind 0 (colour) readers =
+XXH3_hashLong_64b_default+148 <- RT64::State::updateScreen+2528 only (the VI hash, same as s6938); kind 1 (depth) = RT64
+Framebuffer::copyRAMToNativeAndChanges+356; kind 9 (edge, page shared outside a range) = coalesceFreeHeapBlocks_s7325_inner and
+FramebufferStorage::store; kind 8 = rs64_wbw_pre ctl (fired 9-10/window -> positive control). No guest/RSP consumer of a late writeback:
+CURRENT-TRUTH item 18(c) CLOSED (WB_NODRAIN rows below cite it). s7536_splate_cost hit SOAK_MAX_VOIDS (5 voids, done/ arms=0);
+s7540_rwait_cost still queued (AC).
+
+What ran (offline, NEXT.md unit): tools/s7542_gc_census.py + rule table tools/s7542_gc_rules.py (engine reused from
+tools/s7538_gb_census.py). Enumerates 10 write idioms (MEM_W/H/B/D stores, memcpy/memset/std::copy into rdram, rdram[..]=, cast stores,
+non-const guest pointer locals incl. TO_PTR, TO_PTR(..)->field stores, __atomic_* on rdram, copyNativeToRAM, DO_DMA_WRITE /
+dma_dmem_to_rdram, OSMesg slot stores) over src/main, src/rsp, librecomp src + include, ultramodern, lib/rt64/src and
+build/factor5_ucode/*.c. 158 sites -> 176 rows: H-guest-thread 58, H-diag 40, H-before 21, H-latent-FIXED(opt-in) 10 (F5 gfx DO_DMA_WRITE
+in the main ucode + 9 overlays under default early sp_complete = class GA), H-dead 10 (osEPi*/osCartRomInit/osDriveRomInit/osFlash*: not
+imported), H-init 8, H-def 7, read-alias 6, H-os-private 6, H-lever 4 (DD rodata scaler, FPS60 CAS), H-late-noreader 4 (RT64 colour/depth
+writebacks under NODRAIN), not-guest 2 (mupen contrib rdram struct, which is not the guest RAM). 0 unclassified, 0 FAIL-check, 0 H-late-reader -> exit 0.
+Each row carries code checks: order regexes (PI do_rom_read before its Pi message with no message between; save_read then message;
+audio run_task before sp_complete; send_dl before dp_complete / late sp_complete; task_exit drain), nm -u imports for every guest-thread
+replacement, env gate within N chars before every diag write, no-store-through-name for read aliases.
+Controls (--controls) 8/8: planted fixture (9 idioms, comment + const read skipped -> 9 UNCLASSIFIED); PI read moved after its message
+-> rom row FAIL; FORCE_SEL gate renamed -> poller rows FAIL; task_exit drain removed -> fullSync 'drained' rows FAIL; one rule deleted ->
+5 UNCLASSIFIED; nm lib without osContGetReadData_recomp -> its rows FAIL; rule-less census -> all 158 UNCLASSIFIED; live 0/0/0.
+Notable rows: timer_thread (host Timer thread) writes OSTimer fields (s7397 carry) and re-arms timestamp AFTER posting the Timer message,
+the same order as hardware __osTimerInterrupt; OSTimer is libultra-private and every reader is host-replaced -> H-os-private, single-source
+(code reading, no runtime guest-reader census of OSTimer). Host device messages reach the guest's OSMesgQueue only in
+dequeue_external_messages on a guest thread (osSendMesg/osJamMesg/osRecvMesg/rs64_preempt_point), so no host thread writes a guest
+queue directly.
+Verdict: selects H-before / H-guest-thread for every default-config writer; the only late writers are GA (fixed opt-in SP_LATE=1) and
+GB writebacks under NODRAIN (measured no reader, s6938 + s7541_wbw_rwait). Refutes H-late-reader for the enumerated idioms. Class GC CLOSED.
+ORIGIN: no mitigation added (census tool only).
+Not covered: writes through pointers passed into helpers outside the enumerated idioms (e.g. a uint8_t* dst parameter filled by a callee
+that is not copyNativeToRAM / dma_dmem_to_rdram), lambda writers whose body is a helper call (s6848 lambda bodies are enumerated),
+RT64 code outside the scanned roots' idioms. OSTimer reader census not run.
