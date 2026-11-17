@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7551 (2026-11-17).
+Compact operational handoff, as of Session 7552 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -355,8 +355,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     16:9 FPS60: 0 bytes changed between DL start and writeback in ~45 GB compared (H-clean), planted control 99.5-100% seen and
     clobbered (depth-kind 376/376 pre-mission; mission depth span is first written back as a colour Z-clear pass at the same
     address, which consumes its plant). The full-row writeback never reverts a guest/host write. Not covered: RDP_ASYNC=1.
-    Open GL (NEXT.md): rtOut = bytes RT64 changes outside the pair's colour rect with no prior change: L12 1.06 MB / 9614 wb in
-    mission, L1/L4 0.
+    **Class GL CLOSED s7552 (H-dither, benign; tools/s7552_gl_score.py --controls 5/5; two lines: per-pixel numbers + FbWriteColorCS):**
+    mission colour rtOut is RT64 re-dithering undrawn columns from the retained render target on each writeback when the fb's
+    bestDitherPattern is NOISE (L12 dd4: 436,631 px, all ±1, up/down balanced, 97% col 795 = outside the scissor, rest a rect 28-774
+    frame); MAGICSQ fbs (L1, L4) give 0. No guest reader, present uses the render target: no fix. Open GM (NEXT.md): PRE-mission (ph=3,
+    5, 6) out-of-rect colour changes are real content (a darkening fade at cols 41-56 of a 640x316 rect-62 fb) and depth rtOut is
+    6.5 MB at ph=3 on every arm; name the draw/writer.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -11208,6 +11208,22 @@ static std::mutex mu;
 static std::vector<Span> spans;
 static uint64_t seq = 0, checks = 0;
 static std::vector<uint32_t> g_plants; // plant addresses of the current check (host XOR, control)
+// s7552 class GL: classify rtOut pixels (16-bit colour, outside the rect, unchanged since DL start, changed by the writeback)
+// against RT64's own requantisation F(pre,d) = Float4ToRGBA16(RGBA16ToFloat4(pre), d): c8=(c5<<3)|(c5>>2); c5'=min(c8+d,255)>>3,
+// alpha kept. d = the fb's bestDitherPattern value at (x,y): MAGICSQ / BAYER table, NOISE any 0..7, DISABLE 0.
+static thread_local int32_t t_dith = -1;
+struct GL { uint64_t outPx = 0, rtPx = 0, mPat = 0, mAny = 0, mZero = 0, unm = 0, alpha = 0, up = 0, down = 0, d1 = 0, d2 = 0, d3 = 0,
+            e0 = 0, e1 = 0, e2 = 0, e4 = 0, e16 = 0, inChg = 0, inAny = 0, wbPat[5] = {0, 0, 0, 0, 0}, rtPat[5] = {0, 0, 0, 0, 0}, b4 = 0; };
+static GL gl;
+struct GLKey { uint32_t phys, w, rows; int32_t rl, rr; int32_t pat; uint64_t n; };
+static std::vector<GLKey> glk;
+static const uint8_t kMS[16] = { 0, 6, 1, 7, 4, 2, 5, 3, 3, 5, 2, 4, 7, 1, 6, 0 };
+static const uint8_t kBY[16] = { 0, 4, 1, 5, 4, 0, 5, 1, 3, 7, 2, 6, 7, 3, 6, 2 };
+static inline uint16_t F(uint16_t v, uint32_t d) {
+    uint16_t o = v & 1u;
+    for (int sh = 11; sh >= 1; sh -= 5) { const uint32_t c5 = (v >> sh) & 31u, c8 = (c5 << 3) | (c5 >> 2); o |= (uint16_t)((std::min<uint32_t>(c8 + d, 255u) >> 3) << sh); }
+    return o; }
+static int nlogGL = 0; static uint32_t nlogGLPh = 0xFFFFFFFFu;
 static Cnt c[2];
 static thread_local int32_t t_rect[4] = { 0, 0, 0, 0 };
 static thread_local std::vector<uint8_t> t_pre;
@@ -11228,6 +11244,19 @@ static void report(bool force) {
             (unsigned long long)x.rtOut, (unsigned long long)x.plants, (unsigned long long)x.pseen, (unsigned long long)x.pclob);
         c[k] = Cnt{}; }
     checks = 0;
+    { const GL& g = gl;
+      std::fprintf(stderr, "[s7552] t=%.1f ph=%u outPx=%llu rtPx=%llu mPat=%llu mAny=%llu mZero=%llu unm=%llu alpha=%llu up=%llu down=%llu d1=%llu d2=%llu d3=%llu "
+          "e0=%llu e1=%llu e2=%llu e4=%llu e16=%llu inChg=%llu inAny=%llu b4=%llu wbPat=%llu,%llu,%llu,%llu,%llu rtPat=%llu,%llu,%llu,%llu,%llu\n", t, rs64_phase_ord(),
+          (unsigned long long)g.outPx, (unsigned long long)g.rtPx, (unsigned long long)g.mPat, (unsigned long long)g.mAny, (unsigned long long)g.mZero,
+          (unsigned long long)g.unm, (unsigned long long)g.alpha, (unsigned long long)g.up, (unsigned long long)g.down, (unsigned long long)g.d1,
+          (unsigned long long)g.d2, (unsigned long long)g.d3, (unsigned long long)g.e0, (unsigned long long)g.e1, (unsigned long long)g.e2,
+          (unsigned long long)g.e4, (unsigned long long)g.e16, (unsigned long long)g.inChg, (unsigned long long)g.inAny, (unsigned long long)g.b4,
+          (unsigned long long)g.wbPat[0], (unsigned long long)g.wbPat[1], (unsigned long long)g.wbPat[2], (unsigned long long)g.wbPat[3], (unsigned long long)g.wbPat[4],
+          (unsigned long long)g.rtPat[0], (unsigned long long)g.rtPat[1], (unsigned long long)g.rtPat[2], (unsigned long long)g.rtPat[3], (unsigned long long)g.rtPat[4]);
+      std::sort(glk.begin(), glk.end(), [](const GLKey& a, const GLKey& b) { return a.n > b.n; });
+      for (size_t i = 0; i < glk.size() && i < 8; i++) if (glk[i].n)
+          std::fprintf(stderr, "[s7552-key] t=%.1f phys=0x%06X w=%u rows=%u rect=%d-%d pat=%d rtPx=%llu\n", t, glk[i].phys, glk[i].w, glk[i].rows, glk[i].rl, glk[i].rr, glk[i].pat, (unsigned long long)glk[i].n);
+      gl = GL{}; glk.clear(); }
     std::fflush(stderr);
 }
 static void check(uint8_t* rd) {
@@ -11294,6 +11323,42 @@ static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint
             } else if (qv[i] != pv[i] && !in) x.rtOut++;
         }
         x.gch += g; x.clob += cl; if (g) x.gwb++; if (cl) x.cwb++;
+        if (kind == 0) { // s7552 class GL
+            const int32_t pat = t_dith >= 0 && t_dith <= 3 ? t_dith : 4; gl.wbPat[pat]++;
+            const uint32_t base = g_s7493_next_base.load();
+            if (bpp != 2 || (phys & 3u) || rowB % 2) gl.b4++;
+            else {
+                const uint32_t y0 = (base != 0xFFFFFFFFu && base <= phys) ? (phys - base) / rowB : 0;
+                uint64_t keyN = 0;
+                for (uint32_t L = 0; L + 2 <= bytes; L += 2) {
+                    const uint32_t A = ((phys + L) ^ 2u) - phys; // stored halfword offset
+                    uint16_t sv16, pv16, qv16; std::memcpy(&sv16, s->snap.data() + off + A, 2); std::memcpy(&pv16, t_pre.data() + A, 2); std::memcpy(&qv16, rd + phys + A, 2);
+                    const uint32_t col = (L % rowB) / 2, y = y0 + L / rowB; const bool in = (int32_t)col >= rl && (int32_t)col < rr;
+                    bool isPlant = false; for (uint32_t p : g_plants) if (phys + L + 2 > p && phys + L < p + 4) { isPlant = true; break; }
+                    if (isPlant) continue;
+                    bool any = false; for (uint32_t d = 0; d < 8 && !any; d++) any = F(pv16, d) == qv16;
+                    if (in) { if (qv16 != pv16) { gl.inChg++; if (any) gl.inAny++; } continue; }
+                    gl.outPx++;
+                    if (pv16 != sv16 || qv16 == pv16) continue;
+                    gl.rtPx++; gl.rtPat[pat]++; keyN++;
+                    const uint32_t di = ((y & 3u) << 2) | (col & 3u);
+                    const uint32_t dp = pat == 0 ? kMS[di] : pat == 1 ? kBY[di] : 0u;
+                    const bool mp = (pat == 0 || pat == 1 || pat == 3) ? F(pv16, dp) == qv16 : any;
+                    if (mp) gl.mPat++; if (any) gl.mAny++; if (F(pv16, 0) == qv16) gl.mZero++;
+                    if ((pv16 ^ qv16) & 1u) gl.alpha++;
+                    int dmax = 0; bool up = false, down = false;
+                    for (int sh = 11; sh >= 1; sh -= 5) { const int dd = (int)((qv16 >> sh) & 31u) - (int)((pv16 >> sh) & 31u); if (dd > 0) up = true; if (dd < 0) down = true; dmax = std::max(dmax, std::abs(dd)); }
+                    if (up) gl.up++; if (down) gl.down++; if (dmax == 1) gl.d1++; else if (dmax == 2) gl.d2++; else if (dmax >= 3) gl.d3++;
+                    const int32_t ed = std::min(std::abs((int32_t)col - rl), std::abs((int32_t)col - (rr - 1)));
+                    if (ed == 0) gl.e0++; else if (ed == 1) gl.e1++; else if (ed < 4) gl.e2++; else if (ed < 16) gl.e4++; else gl.e16++;
+                    if (!any) { gl.unm++;
+                        const uint32_t ph = rs64_phase_ord(); if (ph != nlogGLPh) { nlogGLPh = ph; nlogGL = 0; }
+                        if (nlogGL++ < 16) std::fprintf(stderr, "[s7552-unm] ph=%u phys=0x%06X w=%u rows=%u rect=%d-%d pat=%d x=%u y=%u pre=%04X post=%04X\n", ph, phys, width, rows, rl, rr, pat, col, y, pv16, qv16); }
+                }
+                if (keyN) { bool f = false; for (GLKey& k : glk) if (k.phys == phys && k.w == width && k.rows == rows && k.rl == rl && k.rr == rr && k.pat == pat) { k.n += keyN; f = true; break; }
+                    if (!f && glk.size() < 256) glk.push_back(GLKey{ phys, width, rows, rl, rr, pat, keyN }); }
+            }
+        }
         const uint32_t ph = rs64_phase_ord(); if (ph != nlogPh) { nlogPh = ph; nlog = 0; }
         if (g && nlog++ < 24) {
             const uint32_t f = firstC != 0xFFFFFFFFu ? firstC : firstG, rel = ((phys + f) ^ 3u) - phys, fw = (phys + f) & ~3u;
@@ -11312,6 +11377,7 @@ static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint
 }
 } // namespace s7551
 extern "C" void rs64_s7551_gk_check(uint8_t* rd) { s7551::check(rd); }
+extern "C" void rs64_s7552_dith(int32_t p) { s7551::t_dith = p; } // s7552: colorFb->bestDitherPattern() of the next colour writeback
 extern "C" void rs64_s7551_gk_rect(int32_t cl, int32_t cr, int32_t zl, int32_t zr) {
     s7551::t_rect[0] = cl; s7551::t_rect[1] = cr; s7551::t_rect[2] = zl; s7551::t_rect[3] = zr; }
 

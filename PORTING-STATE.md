@@ -200728,3 +200728,38 @@ Not covered: ROGUESQ_RDP_ASYNC=1 (checkRDRAM and fullSync on different threads; 
 Discrimination: selects H-clean; refutes H-clobber and H-clobber-benign (no changed byte exists for the writeback to replace).
 Next discriminator (GL, NEXT.md): per-byte column-distance histogram + pre/post xor bit pattern + foreign-snapshot match for rtOut
 bytes on L12 dd4 vs L1 dd1, which splits H-rect-edge / H-dither / H-stale-native.
+
+## Session 7552 (2026-11-17) — class GL CLOSED as H-dither (benign): RT64's colour rtOut in mission is a ±1-LSB re-dither of undrawn columns from the retained render target under NOISE dither; pre-mission (ph=3) colour/depth rtOut is real content and opens GM
+
+What ran: extended the s7551 instrument (src/main/main.cpp, still ROGUESQ_S7551_GK=1) with an s7552 classifier per 16-bit colour
+pixel outside the pair's drawColorRect that was unchanged since DL start but changed by the writeback (rtPx): post tested against
+RT64's own requantisation F(pre,d) (RGBA16ToFloat4 -> Float4ToRGBA16 with dither d; table d for MAGICSQ/BAYER, any 0..7 for NOISE),
+channel delta histogram (up/down, |d| 1/2/3+), distance to the rect edge, the fb's bestDitherPattern (new RT64 hook rs64_s7552_dith
+at the s7551 rect call, lib/rt64 patch exported), top (phys,w,rows,rect,pat) keys, and a rejection control (fraction of changed
+DRAWN pixels the F-test accepts). Scorer tools/s7552_gl_score.py (--controls 5/5). Run scratch/s7552_gl (tools/g1e_owner_quiet_arms.zsh,
+HOLD 120, FPS60 16:9 fullscreen, AC, clk 0.97): L12 dd4, L1 dd1, L4 dd4, 3/3 alive, 0 stall, plants 1239/1248, 1798/1808, 950/952 clobbered.
+(A first launch overlapped a second one and one game killed the other; that dir is kept as scratch/s7552_gl_contaminated_overlap, not scored.)
+
+Result (t >= 72, mission):
+| arm | rtPx | edge 0-1 px | up / down | |d|=1 | F-accept | dither pattern of the writebacks | rejection ctl inAny/inChg |
+| L12 dd4 | 436,631 | 424,266 (97.2%) | 218,561 / 218,070 | 100% | 38.9% | NOISE 3133 + MAGICSQ 3208; every rtPx on a NOISE fb | 0.30% |
+| L1 dd1 | 0 | - | - | - | - | MAGICSQ 11447 | 17.7% |
+| L4 dd4 | 0 | - | - | - | - | MAGICSQ 6402 | 2.1% |
+Edge pixels are column 795 of the 796-wide mission fbs 0x98AA00 / 0xA38C00 (rect 0-795 = scissor ∩ draw, so col 795 is outside the
+scissor and the RDP never draws it). One L12 window (t=80) had a pair with rect 28-774: 12,365 pixels 2-48 columns outside it changed,
+again only ±1 and balanced up/down. Reading: FbWriteColorCS dithers EVERY pixel of the copied rows with ditherRandomSeed++ per copy;
+under NOISE the retained high-precision render-target value of an undrawn pixel re-quantises to an adjacent 5-bit value each writeback
+(balanced ±1, never |d|>1); MAGICSQ is deterministic per (x,y), so the same value comes back and rtOut = 0 (L1/L4, and L12's MAGICSQ
+writebacks). Two lines: per-pixel numbers (±1 only, balanced, NOISE-only, far-outside columns in the 28-774 frame) + the shader code.
+H-rect-edge (instrument boundary only) is REFUTED as the whole story: the rect is the scissor, and the 28-774 frame cannot be rounding.
+H-stale-native REFUTED for mission (no |d|>1 pixel, F-accept irrelevant). Defect is real but benign: ±1 LSB on pixels no guest code
+reads (s7391: no CPU reader of live colour images), the presented image comes from the render target, and RT64 hashes its own writes
+(storeRAM) so the flicker does not read as a CPU change. No fix landed (would need a per-pixel drawn mask in copyToNative).
+
+New datum, opens class GM: in PRE-MISSION phases the rtOut is real content, not dither. ph=3 (boot/menu, all three arms identical
+because the route is shared): a 640x316 fb with rect 62-639 changes columns 41-56 from 0x294B to 0x2109 / 0x2109 to 0x18C7 (|d| 1-2
+in all channels, monotonic darker = a fade) and ph=5/ph=6 w=796/640 fbs show similar F-rejected changes; depth (kind Z) rtOut is
+6.5 MB / 150 wb at ph=3 and 28 kB at ph=4 on every arm (s7551's "Z rtOut" was not split by phase before). ORIGIN of the ph=3 change:
+not yet named: either a draw that is not merged into drawColorRect (texrect via the rsp.cpp:1194 path, or a fill not scissored the
+same way) or native content that never matched RAM there.
+Rules out: GL as a mission-time host corruption. Leaves: GM (pre-mission out-of-rect colour fade + depth rtOut).
