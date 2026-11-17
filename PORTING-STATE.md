@@ -199329,6 +199329,7 @@ Result: l4 11,956 commits, l15 11,987: diff {} , oor {}, ctrl_extra 0, live blac
 Max values: origin 0xB20800 (< 16 MB), width 0x800 (< 0xFFF), ctrl 0x13046 (< 0x1FFFF). l4old: 5 live black diffs + 5 ctrl mismatches,
 all the boot VIs before the first osViSetMode (retail black, we showed fb 0 with hStart on, ~80 ms), everything else equal.
 DISCRIMINATION: H-canon for every register on both levels with the fix; the old rule was H-dead (boot only, 5 VIs). H-live refuted.
+This selects H-canon (with the fix) and refutes H-live; the same-run l4old arm selects H-dead for the old rule, and the fix closes that gap.
 ORIGIN: writer of the divergent value = ultramodern osViSetMode / VI init (state never reset to 1, never seeded BLACK); the value retail
 writes is hStart 0 until the first osViSetMode. The RS64 osViBlack_recomp no-op was the mitigation; it is replaced by the libultra rule,
 not added to.
