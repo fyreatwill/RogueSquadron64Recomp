@@ -199782,6 +199782,6 @@ OPEN (single-source, not yet explained): same-task late rewrites persist under g
 64 B/poll 0.004%; strongly rate-dependent; e.g. L4 0x7344C8.. triangle coefficient bytes zeroed, L15 0x714BE0.. 46/56 bytes changed).
 The writer is unnamed: the RSP later in the same task (ring overwrite the ucode's wait should forbid), the concurrent CPU thread, or a
 bridge commit. The port never shows it (it forwards at END time), so it is only a would-be divergence for a much slower RDP.
-DISCRIMINATION: H-dead selected for task-entry control flow and for forwarding coverage (two lines: ungated/gated arms x 2 levels,
-s7096 exact + l1db0 branch counts); H-live for ring content is neither selected nor refuted (writer open). No fix; instrument default off.
+DISCRIMINATION: this selects H-dead and refutes H-live for task-entry control flow and wait-loop termination and for forwarding coverage (two lines: ungated/gated arms x 2 levels,
+s7096 exact + l1db0 branch counts); for ring content nothing is selected yet (writer open). Next discriminator: re-compare queued ranges at RSP task end vs next task start (changed at task end selects H-rsp-race; changed only after it selects H-cpu/H-bridge). No fix; instrument default off.
 Next: NEXT.md (split the late-rewrite writer: re-snapshot every queued range at the RSP task end and at the next task start).
