@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7536 (2026-11-17).
+Compact operational handoff, as of Session 7539 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -28,7 +28,10 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   at osAiSetNextBuffer, SI polled before, audio RSP synchronous, DP after send_dl, VI = hardware scan-out) except GA (opt-in fixed).
   OPEN: ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (an OWNER-OPT-INS row) posts dp_complete while the RT64 worker still holds the
   task's tail job(s) (s6709 pend_jobs 2.0, ~3.3 ms fullSync), which read textures from RDRAM and write fb copies to RDRAM after
-  the guest was told the RDP is done. Consequence unmeasured (next: same-run NODRAIN=2 A/B).
+  the guest was told the RDP is done. **s7539 measured: TORN** (tools/s7539_gb_score.py, ROGUESQ_S7539_GB_CHK=1): L1/L4/L12 167/297/354
+  of ~8-13M post-signal loads read bytes the guest rewrote after dp_complete, all one 2 KB 64x64 4-bit texture re-decoded every
+  frame by swizzleTextureRowsToTmem (0x800249B4/E4, via parseImageFile; store watch). Controls: planted == caught, older-snapshot
+  diffs fire, witness ~0.5-0.7 MB/window. Legitimate guest writes; on-screen effect unmeasured. Fix pending (item 18).
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -281,10 +284,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7537_splate_cost_batt. Open only: the queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (runs when on AC;
     fold with `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`); if AC L12 dd4 late < early - 0.5 in a
     3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
-18. **Class GB (s7538): completion-signal census, 1 OPEN row (opt-in ASYNC+NODRAIN dp_complete).** tools/s7538_gb_census.py
-    exits 1 until the row is measured and ruled. Next: same-run ROGUESQ_RDP_NODRAIN=2 A/B, snapshot at dp_complete vs worker
-    RDRAM reads (NEXT.md). If torn bytes appear only in as=3 -> fix (drain only the RDRAM-reading part, or copy texture sources)
-    or demote the OWNER-OPT-INS row; if 0 with the control caught -> H-quiet, row becomes H-canon(measured).
+18. **Class GB (s7538-s7539): 1 OPEN row, MEASURED TORN (opt-in ASYNC+NODRAIN dp_complete).** tools/s7538_gb_census.py exits 1
+    until fixed. RT64 reads textures only in fullSync (rt64_state.cpp ~3110-3140, loads interleaved with renderAndSynchronize per fb
+    pair). Next (NEXT.md): fix as an opt-in mode that ends the window, e.g. ROGUESQ_RDP_NODRAIN=3 = task exit waits for a
+    reads-done signal after the last fullSyncFramebufferPairTiles; qualify with the s7539 instrument (diff_loads 0, controls caught)
+    and its cost with [g1e-aq] drain ms vs NODRAIN=1. Note NODRAIN=2 never alternates with ASYNC fixed on (async_windows counts 0->1).
 19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

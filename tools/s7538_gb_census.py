@@ -91,12 +91,12 @@ RULES = [
                        r"\{ ultramodern::rs64_rdpq_task_exit\(\); \} \} rdpq_scope;"),
           ("fnbody", RC, "rs64_rdpq_task_exit", r"rdpq::drain\(\);")]),
         ("async-nodrain", "H-latent-fix",
-         "OPEN. ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (listed in docs/OWNER-OPT-INS.md): rs64_rdpq_task_exit only "
+         "OPEN, MEASURED s7539 = TORN (tools/s7539_gb_score.py: L1/L4/L12 167/297/354 post-signal texture loads read bytes the guest rewrote after dp_complete, 2 KB 4-bit texture re-decoded every frame by swizzleTextureRowsToTmem 0x800249B4/E4 via parseImageFile; controls planted==caught, older-snapshot diffs, witness ~0.7 MB/window). ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (listed in docs/OWNER-OPT-INS.md): rs64_rdpq_task_exit only "
          "flush_pend()s, so send_dl returns and dp_complete is posted while the worker still has the task's tail job(s) "
          "queued. Those jobs read texture bytes from core.RDRAM (only the command words are copied) and RT64 writes "
          "framebuffer copies back to RDRAM, after the guest was told the RDP is done. Hardware posts DP full-sync only "
          "after the last RDP memory access. Lever for the same-run A/B: ROGUESQ_RDP_NODRAIN=2 (alternates per async window)",
-         [("fnbody", RC, "rs64_rdpq_task_exit", r"if \(in_task == 0 && task_nodrain\) \{ flush_pend\(\); return; \}"),
+         [("fnbody", RC, "rs64_rdpq_task_exit", r"if \(in_task == 0 && task_nodrain\) \{ flush_pend\(\);(?: if \(gb::on\) \{[^}]*\})? return; \}"),
           ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_RDP_NODRAIN=1")])]),
     # --- VI / AI -------------------------------------------------------------------------------------------------------------
     (EV, "vi_thread_func", (1040, 1056), [("vi", "H-canon",
@@ -283,7 +283,7 @@ def controls():
         # 2 mutation: the NODRAIN drain restored in a copy -> the open row's check FAILs (instrument reads the code)
         src = open(os.path.join(REPO, RC), errors="replace").read()
         m2 = os.path.join(d, "rc_drain.cpp")
-        open(m2, "w").write(src.replace("if (in_task == 0 && task_nodrain) { flush_pend(); return; }", "/* drained */"))
+        open(m2, "w").write(re.sub(r"if \(in_task == 0 && task_nodrain\) \{ flush_pend\(\);(?: if \(gb::on\) \{[^}]*\})? return; \}", "/* drained */", src))
         rows, _ = census(files, over={RC: m2}, quiet=True)
         tests.append(("mutation: NODRAIN early-return removed -> async-nodrain row FAIL-check",
                       any(r[1] == "async-nodrain" and r[2] == "FAIL-check" for r in rows)))

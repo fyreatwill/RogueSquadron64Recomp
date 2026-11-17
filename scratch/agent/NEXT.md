@@ -1,28 +1,27 @@
-# NEXT (s7539)
+# NEXT (s7540)
 HYPOTHESIS-ID: class-gb-device-done-before-read
 
-s7538 class GB census (tools/s7538_gb_census.py, 29 sites / 31 rows, --controls 7/7) found ONE open sibling of GA: under the
-owner opt-in ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1, rs64_rdpq_task_exit only flush_pend()s (src/main/rt64_render_context.cpp
-~1716), so send_dl returns and dp_complete (events.cpp ~1750) is posted while the RT64 worker still holds the task's tail jobs
-(s6709 pend_jobs 2.0, fullSync ~3.3 ms). Those jobs read texture sources from core.RDRAM (RDP::loadTile/loadBlock/loadTLUT,
-lib/rt64/src/hle/rt64_rdp.cpp 1507/1636/1813; only command words are copied) and fullSync writes fb copies to RDRAM.
-Read PORTING-STATE s7538 first. Fold first if SOAK-RESULTS has a non-VOID s7536_splate_cost line (recipe in CURRENT-TRUTH item 17).
+s7539 measured the open GB row TORN: under ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 RT64's fullSync tail (the only place RT64 reads
+texture sources from RDRAM: State::fullSyncFramebufferPairTiles -> load*Operation(deferred=false), lib/rt64/src/hle/rt64_state.cpp
+~3110-3140) runs after dp_complete; on L1/L4/L12 one 2 KB 4-bit texture re-decoded every frame by swizzleTextureRowsToTmem
+(0x800249B4/E4, via parseImageFile) is read while the CPU rewrites it (167-354 torn loads per 2-min flight). Read PORTING-STATE s7539.
 
-Work unit: same-run A/B of the open row, ONE instrument, ONE build (separate build dir, e.g. build_gb; lib/rt64 edits -> export.sh).
-- Arm: ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=2 (alternates per async window: as=2 drained vs as=3 not drained; [g1e-aq] as= tags it).
-- Instrument ROGUESQ_S7539_GB_CHK=1: Gfx thread, right before dp_complete, snapshot guest RAM [0, osmem) (+spill 16-24 MB) and stamp
-  dp_seq; tag every queued Job with its task's dp_seq. In loadTile/loadBlock/loadTLUT (worker thread only), when the job's dp_seq is
-  already posted, compare the RDRAM source bytes with the snapshot -> diff bytes/loads per arm (as=2 must be 0 by construction:
-  drained before the post = built-in negative arm). Also count fullSync RDRAM writes after the post, and guest loads... (skip: the
-  s7391 fb-cpu-reader census says the guest never loads a live colour image).
-- Positive control: every 64th post-signal load compared against a snapshot with one byte flipped (caught == planted).
-- Activity witness: every 32nd post, count all bytes changed in RAM between post and the tail job's end (guest IS running).
-- Runs: tools/g1e_owner_quiet_arms.zsh HOLD 120, owner recipe FPS60 16:9 fullscreen dd4, L4 + L12 (+ L1 dd8 21:9), NO_SAVE_WRITE.
+Work unit: land an opt-in fix that ends the read window and keeps most of the overlap, then qualify it in ONE build, same-run arms.
+- Mode ROGUESQ_RDP_NODRAIN=3: the worker sets a per-task "reads done" flag (+cv) right after the LAST fullSyncFramebufferPairTiles
+  call of the job that runs fullSync (and after checkRDRAM/storeRAM reads, check what else in fullSync reads RDRAM first: grep
+  RDRAM in State::fullSync 1945-3200); rs64_rdpq_task_exit in mode 3 waits for that flag instead of drain(). Hook from rt64 via an
+  extern "C" rs64_s7540_reads_done() like rs64_s7539_load. Note the loop at ~3110 calls renderAndSynchronize per fb pair when
+  fbPair.syncRequired (f>0 && !copyWithGPU), so with several fb pairs the wait still includes intermediate GPU syncs; measure.
+- Also fix NODRAIN=2 so it alternates per TASK when async stays on (today async_windows only counts 0->1 flips, so =2 == =1),
+  or add =4 alternating 1/3 per task: that gives a same-run A/B of torn loads and drain cost.
+- Qualify: tools/g1e_owner_quiet_arms.zsh HOLD 120, owner recipe FPS60 16:9 fullscreen, L4 dd4 + L12 dd4 + L1 dd8 21:9, env
+  ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=<alternating mode> ROGUESQ_S7539_GB_CHK=1 ROGUESQ_G1B=1 (for [g1e-aq] drain ms per as=).
+  Score with python3 tools/s7539_gb_score.py <logs> (it reads as=3 rows; extend it to report each mode tag).
 Hypotheses / outcomes:
-- H-quiet: post-signal loads exist (count > 0, witness > 0, ctl caught) but diff 0 in as=3 -> row H-canon(measured), census exits 0.
-- H-torn: as=3 diff > 0 (as=2 0) -> name the writer (address histogram as in s7535: terrain texture stream? dynamic textures?),
-  then fix: keep the fullSync tail async but run the job's texture loads before the post, or copy load sources at submit; or demote
-  the OWNER-OPT-INS row. Measure visible consequence with the s7536-style per-state counters.
-- H-no-window: 0 post-signal loads in as=3 (the tail is pure fullSync encode/GPU, all loads already processed) -> reads row
-  H-ordered for reads; then only the fb-copy writes remain (check the guest never reads them before the next drain).
+- H-fix-cheap: mode-3 diff_loads 0 (planted caught, older-snapshot diffs > 0) and drain ms well below a full drain (~3.3 ms)
+  -> recommend NODRAIN=3 in OWNER-OPT-INS instead of =1; census row -> H-latent-FIXED(opt-in), census exits 0.
+- H-fix-costly: diff 0 but drain ~= full drain (reads finish late, e.g. many fb pairs) -> capture the load sources on the producer
+  instead (parse SetTextureImage/SetTile/Load* in submit(), copy those bytes into the job, have the load hook read them).
+- H-residual: mode-3 diff_loads > 0 -> some RDRAM read sits after the flag; find it with the gbd events.
+Battery note: on battery (clk ~1.5) timing arms need ALLOW_SLOW=1 and are only comparable within the same run.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

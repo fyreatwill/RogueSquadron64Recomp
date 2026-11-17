@@ -1647,3 +1647,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-094556 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-094556.log
 20261117 | s7537 fold: s7536_splate_cost voided on battery (clk 1.53); rerun in-session ALLOW_SLOW (scratch/s7537_splate_cost_batt, 16 arms alive, fatal=0): SP_LATE 0 vs 1 gen/s 60.0 vs 60.0 at L1/L4/L12 dd1/dd4 except CPU-bound L12 dd4 3v3 ABBA 52.9-54.6 vs 51.4-52.9 (unresolved) -> H-free, owner opt-in; census exits 0. AC repeat stays queued.
 20261117-102358 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-102358.log
+20261117-103027 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 3/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-103027.log

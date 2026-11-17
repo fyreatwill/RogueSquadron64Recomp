@@ -1546,7 +1546,7 @@ namespace ultramodern {
     // is FIFO; send_dl (RAII guard) and update_screen drain the queue, so dp_complete and present still follow every
     // range of the task. Submits outside send_dl run synchronously. ROGUESQ_RDP_ASYNC_TOGGLE=<s> (events.cpp) flips it.
     namespace rdpq {
-        struct Job { uint32_t lo = 0, hi = 0; std::vector<uint8_t> w; bool screen = false; };
+        struct Job { uint32_t lo = 0, hi = 0; std::vector<uint8_t> w; bool screen = false; uint64_t gb_seq = 0; int gb_mode = 0; }; // s7539 tags
         static std::mutex m;
         static std::condition_variable cv_job, cv_idle;
         static std::deque<Job> q;
@@ -1600,6 +1600,68 @@ namespace ultramodern {
                 x = AqAcc{};
             }
         }
+        // s7539 class GB: ROGUESQ_S7539_GB_CHK=1. At task exit (just before send_dl returns and dp_complete is posted) the Gfx
+        // thread snapshots guest RAM [0,16 MB) into one of two ping-pong buffers (async no-drain tasks only; drained tasks only
+        // advance gb_posted). Every non-deferred RT64 texture load (fullSync -> load{Tile,Block,TLUT}Operation, rt64_rdp.cpp)
+        // on the worker whose job's task is already posted compares its RDRAM source rows against that task's snapshot.
+        // Controls: real-world (the same rows vs the OLDER snapshot, an earlier task's exit: frame-to-frame texture changes),
+        // planted (every 64th compared load re-run against a copy with one byte flipped; caught == planted), activity witness
+        // (every 32nd snapshot, bytes of [0,16 MB) changed between the post and the end of that task's last worker job).
+        namespace gb {
+            static const bool on = [] { const char *e = std::getenv("ROGUESQ_S7539_GB_CHK"); return e && *e && *e != '0'; }();
+            static constexpr uint32_t SZ = 16u << 20;
+            static uint8_t *snap[2] = {nullptr, nullptr}; static uint64_t snap_seq[2] = {0, 0}; static int cur = -1; static uint64_t n_snap = 0;
+            static uint64_t snap_no[2] = {0, 0};
+            static std::mutex sm;
+            static uint64_t task_seq = 0;                    // Gfx thread
+            static std::atomic<uint64_t> posted{0};          // highest task seq whose exit (post) happened
+            static thread_local uint64_t wk_seq = 0; static thread_local int wk_mode = -1;
+            struct C { uint64_t loads = 0, pre = 0, post = 0, post_nosnap = 0, bytes = 0, dl = 0, db = 0, prev = 0, prev_dl = 0, prev_db = 0,
+                       planted = 0, caught = 0, wit_n = 0, wit_bytes = 0, wit_max = 0; };
+            static C c[4]; static uint64_t hist[256]; static uint64_t prev_hist[256]; // diff bytes per 64 KB bucket (as=3)
+            static std::mutex cm;
+            static uint64_t rows_cmp(const uint8_t *a, const uint8_t *b, uint32_t start, uint32_t stride, uint32_t rowBytes, uint32_t rows, uint64_t *h) {
+                uint64_t d = 0;
+                for (uint32_t r = 0; r < rows; ++r) {
+                    uint32_t s0 = (start + r * stride) & 0xFFFFFFu, e0 = s0 + rowBytes; s0 &= ~3u; e0 = (e0 + 3u) & ~3u; if (e0 > SZ) e0 = SZ;
+                    for (uint32_t i = s0; i < e0; ++i) if (a[i] != b[i]) { ++d; if (h) ++h[i >> 16]; }
+                }
+                return d;
+            }
+            static void print_locked(const char *why) {
+                for (int m = 0; m < 4; ++m) { const C &x = c[m]; if (!x.loads) continue;
+                    std::fprintf(stderr, "[s7539-gb] %s as=%d loads=%llu pre=%llu post=%llu post_nosnap=%llu cmp_bytes=%llu diff_loads=%llu diff_bytes=%llu "
+                        "prev_cmp=%llu prev_diff_loads=%llu prev_diff_bytes=%llu ctl_planted=%llu ctl_caught=%llu wit_n=%llu wit_bytes=%llu wit_max=%llu snaps=%llu\n",
+                        why, m, (unsigned long long)x.loads, (unsigned long long)x.pre, (unsigned long long)x.post, (unsigned long long)x.post_nosnap,
+                        (unsigned long long)x.bytes, (unsigned long long)x.dl, (unsigned long long)x.db, (unsigned long long)x.prev, (unsigned long long)x.prev_dl,
+                        (unsigned long long)x.prev_db, (unsigned long long)x.planted, (unsigned long long)x.caught, (unsigned long long)x.wit_n,
+                        (unsigned long long)x.wit_bytes, (unsigned long long)x.wit_max, (unsigned long long)n_snap); }
+                std::string hs, ps; for (int b = 0; b < 256; ++b) { if (hist[b]) hs += " " + std::to_string(b) + ":" + std::to_string(hist[b]); if (prev_hist[b]) ps += " " + std::to_string(b) + ":" + std::to_string(prev_hist[b]); }
+                std::fprintf(stderr, "[s7539-gbh] %s diff64k=%s | prev64k=%s\n", why, hs.empty() ? " none" : hs.c_str(), ps.empty() ? " none" : ps.c_str());
+            }
+            // Gfx thread, outer task exit, after flush_pend()/drain().
+            static void at_exit(const uint8_t *rdram, bool nd_async) {
+                if (nd_async && rdram) {
+                    std::lock_guard<std::mutex> lk(sm);
+                    if (!snap[0]) { snap[0] = (uint8_t *)std::malloc(SZ); snap[1] = (uint8_t *)std::malloc(SZ); }
+                    const int i = cur < 0 ? 0 : (cur ^ 1);
+                    std::memcpy(snap[i], rdram, SZ); snap_seq[i] = task_seq; snap_no[i] = ++n_snap; cur = i;
+                }
+                posted.store(task_seq, std::memory_order_release);
+                static uint64_t np = 0; if ((++np % 600) == 0) { std::lock_guard<std::mutex> lk(cm); char t[32]; std::snprintf(t, sizeof t, "p%llu", (unsigned long long)np); print_locked(t); }
+            }
+            // Worker thread: end of a job; witness on the last job of a snapshotted task.
+            static void job_end(const uint8_t *rdram, uint64_t seq, bool last_of_task) {
+                if (!last_of_task || !rdram) return;
+                std::lock_guard<std::mutex> lk(sm);
+                for (int b = 0; b < 2; ++b) if (snap[b] && snap_seq[b] == seq && (snap_no[b] % 32) == 0) {
+                    uint64_t d = 0; const uint32_t *x = (const uint32_t *)snap[b], *y = (const uint32_t *)rdram;
+                    for (uint32_t k = 0; k < SZ / 4; ++k) d += (x[k] != y[k]);
+                    std::lock_guard<std::mutex> lc(cm); C &cc = c[3]; ++cc.wit_n; cc.wit_bytes += d * 4; if (d * 4 > cc.wit_max) cc.wit_max = d * 4;
+                }
+            }
+            static void dump_exit() { if (!on) return; std::lock_guard<std::mutex> lk(cm); print_locked("exit"); }
+        }
         static void worker() {
             pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
             pthread_setname_np("RS64 RDP async");
@@ -1617,8 +1679,12 @@ namespace ultramodern {
                     if (app) app->updateScreen();
                     screen_pend.fetch_sub(1);
                 }
-                else if (app && !s_rdp_disabled.load(std::memory_order_relaxed))
+                else if (app && !s_rdp_disabled.load(std::memory_order_relaxed)) {
+                    gb::wk_seq = j.gb_seq; gb::wk_mode = j.gb_mode; // s7539
                     app->processDisplayLists(j.w.data() - j.lo, j.lo, j.hi, /*isHLE*/ false);
+                    gb::wk_mode = -1;
+                    if (gb::on) { bool last; { std::lock_guard<std::mutex> lk(m); last = q.empty() || q.front().gb_seq != j.gb_seq; } gb::job_end(app->core.RDRAM, j.gb_seq, last); }
+                }
                 if (aq_on) {
                     const uint64_t ns = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(aclk::now() - jt0).count();
                     wk_busy_ns += ns; wk_last_ns = ns; wk_last_bytes = (uint32_t)j.w.size();
@@ -1635,6 +1701,7 @@ namespace ultramodern {
             if (!pend_has) return;
             pend_has = false;
             if (aq_on) { t_bytes += pend.w.size(); ++t_jobs; }
+            pend.gb_seq = gb::task_seq; pend.gb_mode = task_nodrain ? 3 : (task_stream ? 2 : 1); // s7539 (task_stream/nodrain latched at entry)
             std::lock_guard<std::mutex> lk(m);
             if (!started) { started = true; std::thread(worker).detach(); }
             q.push_back(std::move(pend)); ++n_jobs;
@@ -1683,6 +1750,7 @@ namespace ultramodern {
     void rs64_rdpq_task_enter() {
         using namespace rdpq;
         if (in_task == 0) {
+            ++gb::task_seq; // s7539
             if (rs64_rdp_async_on && !last_async) ++async_windows;
             last_async = rs64_rdp_async_on;
             task_stream = (rs64_rdp_async_on && stream_bytes && (!stream_toggle || (async_windows & 1) == 0)) ? stream_bytes : 0;
@@ -1713,8 +1781,48 @@ namespace ultramodern {
             if (aq_sec < 0) aq_sec = sec;
             if (sec != aq_sec) { aq_print(aq_sec); aq_sec = sec; }
         }
-        if (in_task == 0 && task_nodrain) { flush_pend(); return; } // s6708: task_async stays set until a real drain
-        rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; } }
+        if (in_task == 0 && task_nodrain) { flush_pend(); if (gb::on) { RT64::Application *a = g_rt64_app.load(); gb::at_exit(a ? a->core.RDRAM : nullptr, task_async); } return; } // s6708: task_async stays set until a real drain
+        rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; }
+        if (gb::on && in_task == 0) gb::at_exit(nullptr, false); } // s7539: drained task posts with no worker job left
+}
+// s7539 class GB: called by RT64 (rt64_rdp.cpp load{Tile,Block,TLUT}Operation, non-deferred = the real RDRAM read in fullSync).
+extern "C" int rs64_s7539_on = [] { const char *e = std::getenv("ROGUESQ_S7539_GB_CHK"); return (e && *e && *e != '0') ? 1 : 0; }();
+extern "C" void rs64_s7539_load(const uint8_t *rdram, uint32_t start, uint32_t stride, uint32_t rowBytes, uint32_t rows) {
+    using namespace ultramodern::rdpq;
+    if (!rdram || !rows || !rowBytes) return;
+    const int m = gb::wk_mode < 0 ? 0 : gb::wk_mode;
+    std::lock_guard<std::mutex> lc(gb::cm);
+    gb::C &x = gb::c[m]; ++x.loads;
+    if (gb::wk_mode < 0 || gb::wk_seq > gb::posted.load(std::memory_order_acquire)) { ++x.pre; return; }
+    ++x.post;
+    std::lock_guard<std::mutex> ls(gb::sm);
+    int b = -1; for (int k = 0; k < 2; ++k) if (gb::snap[k] && gb::snap_seq[k] == gb::wk_seq) b = k;
+    if (b < 0) { ++x.post_nosnap; return; }
+    const uint64_t d = gb::rows_cmp(gb::snap[b], rdram, start, stride, rowBytes, rows, m == 3 ? gb::hist : nullptr);
+    x.bytes += (uint64_t)rowBytes * rows; if (d) { ++x.dl; x.db += d; }
+    if (d && m == 3) { // s7539b: name the bytes: first differing word (old snapshot value -> value the worker reads), lag in tasks
+        static int ne = 0;
+        if (ne++ < 60) for (uint32_t r = 0; r < rows; ++r) {
+            uint32_t s0 = ((start + r * stride) & 0xFFFFFFu) & ~3u, e0 = ((((start + r * stride) & 0xFFFFFFu) + rowBytes + 3u) & ~3u); if (e0 > gb::SZ) e0 = gb::SZ;
+            uint32_t f = 0xFFFFFFFFu, nw = 0; for (uint32_t i = s0; i < e0; i += 4) if (std::memcmp(gb::snap[b] + i, rdram + i, 4)) { if (f == 0xFFFFFFFFu) f = i; ++nw; }
+            if (f == 0xFFFFFFFFu) continue;
+            uint32_t ov, nv; std::memcpy(&ov, gb::snap[b] + f, 4); std::memcpy(&nv, rdram + f, 4);
+            std::fprintf(stderr, "[s7539-gbd] seq=%llu lag=%llu load=0x%06X stride=%u rowB=%u rows=%u row=%u first=0x%06X words=%u old=%08X new=%08X diff=%llu\n",
+                (unsigned long long)gb::wk_seq, (unsigned long long)(gb::posted.load() - gb::wk_seq), start & 0xFFFFFFu, stride, rowBytes, rows, r, f, nw, ov, nv, (unsigned long long)d);
+            break;
+        }
+    }
+    const int o = b ^ 1;
+    if (gb::snap[o] && gb::snap_seq[o] < gb::wk_seq) {
+        const uint64_t pd = gb::rows_cmp(gb::snap[o], rdram, start, stride, rowBytes, rows, m == 3 ? gb::prev_hist : nullptr);
+        ++x.prev; if (pd) { ++x.prev_dl; x.prev_db += pd; }
+    }
+    if ((x.post % 64) == 0) { // planted control: flip one source byte in the snapshot, the comparator must see exactly that change
+        const uint32_t a = (start + (uint32_t)(x.post / 64 % rows) * stride) & 0xFFFFFFu;
+        if (a < gb::SZ) { ++x.planted; gb::snap[b][a] ^= 0x5A;
+            const uint64_t d2 = gb::rows_cmp(gb::snap[b], rdram, start, stride, rowBytes, rows, nullptr);
+            gb::snap[b][a] ^= 0x5A; if (d2 != d) ++x.caught; }
+    }
 }
 extern "C" int rs64_rdpq_task_async() { return ultramodern::rdpq::task_async ? 1 : 0; }
 extern "C" uint32_t rs64_rdpq_task_stream() { return ultramodern::rdpq::in_task ? ultramodern::rdpq::task_stream : 0; }

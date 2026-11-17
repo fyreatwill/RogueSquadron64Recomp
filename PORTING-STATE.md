@@ -200253,3 +200253,41 @@ except GA, already fixed opt-in) and refutes H-none for the opt-in RDP_ASYNC+NOD
 window (single-source: code reading + the s6709 pend_jobs figure; whether the guest actually writes texture bytes inside the ~3 ms
 window is unmeasured). H-ai refuted (copy at submit). No mitigation landed. docs/OWNER-OPT-INS.md NODRAIN row gains an accuracy
 caveat; default unchanged. Next: same-run ROGUESQ_RDP_NODRAIN=2 A/B with a dp_complete snapshot vs worker texture reads (NEXT.md).
+
+## Session 7539 (2026-11-17) — class GB measured: under the opt-in RDP_ASYNC+NODRAIN, RT64's fullSync tail reads a per-frame guest-rewritten texture after dp_complete on L1/L4/L12 (TORN; writer swizzleTextureRowsToTmem via parseImageFile; controls planted==caught, older-snapshot diffs, witness)
+
+Work unit (NEXT s7539): same-run measure of the one open GB row. Fold: s7536_splate_cost voided 3/5 (human/lock/sleep), nothing to fold.
+Boring-first finding before building: RT64 reads texture sources from RDRAM only in fullSync (State::fullSyncFramebufferPairTiles ->
+load{Tile,Block,TLUT}Operation(deferred=false), rt64_state.cpp ~3130/3140); the command-time step only records the op. So under
+NODRAIN nearly every load of a task runs in the async tail; in sync / drained modes all run inside send_dl, before dp_complete.
+Instrument ROGUESQ_S7539_GB_CHK=1 (src/main/rt64_render_context.cpp namespace rdpq::gb + rs64_s7539_load; lib/rt64 rt64_rdp.cpp hooks in
+the three non-deferred load branches; export.sh run): Jobs carry their task seq + mode; at the outer task exit (after flush_pend, just
+before send_dl returns and dp_complete is posted) the Gfx thread copies guest RAM [0,16 MB) into one of two ping-pong buffers. Each
+worker load whose task is already posted compares its source rows (word-aligned per row; TLUT a superset span) with that task's
+snapshot. Controls in the same run: planted (every 64th compared load re-run with one snapshot byte flipped), real-world (the same rows vs
+the OLDER snapshot = frame-to-frame texture changes the comparator must see), activity witness (every 32nd snapshot: RAM bytes changed
+between the post and the end of that task's last worker job). Cost note: the 16 MB copy blocks the worker ~2-4 ms (widens the window).
+Runs (g1e_owner_quiet_arms HOLD 120, FPS60 16:9 fullscreen, NO_SAVE_WRITE, battery clk 1.53, ALLOW_SLOW, timing not used):
+run 1 (scratch/s7539_gb_run1, NODRAIN=2 + ASYNC_TOGGLE=6) printed only every 3600 posts = front end only; NODRAIN=2 also never
+alternated (async_windows only counts 0->1 flips of rs64_rdp_async_on and the TOGGLE tick did not flip it here) -> effectively NODRAIN=1.
+Run 2 (scratch/s7539_gb, NODRAIN=1, prints every 600 posts + [s7539-gbd] events), scored by new tools/s7539_gb_score.py (--controls 5/5):
+- L4 dd4: TORN. post-signal loads 7.68M (pre 2.63M), 8.4 GB compared, diff_loads 300 / 24195 B; older-snapshot diff loads 1742;
+  planted 119982 = caught; witness 187 windows, ~541 kB/window changed (tail ~723 kB).
+- L12 dd4: TORN. post 12.6M, diff_loads 354 / 1893 B; older 4882; planted 197124 = caught; witness ~631 kB/window.
+- L1 dd8 21:9: TORN. post 7.8M, diff_loads 167 / 1226 B; older 1238; planted 121965 = caught; witness ~538 kB/window.
+- Torn source per level: ONE 2048-byte LoadBlock (64x64 4-bit), L4 0x8488F0, L12 0x83CE20, L1 0x7981F0 (all 60 logged events each);
+  values are nibble pixels (e.g. 77777777 -> 77777666). Front end L4 only: 3 loads at 0x97CEE0 read a block reused after the post
+  (old 00000000 -> new 809874F8, a pointer: freed texture memory reallocated).
+- Writer (separate L4 arm scratch/s7539_sw, ROGUESQ_STORE_WATCH=8488F0:8490F0, same address confirmed by its own gbd events):
+  swizzleTextureRowsToTmem pc 0x800249B4 + 0x800249E4, 128 sd each = the whole 2 KB, EVERY swap 3901-5496 (all of flight); its only
+  direct caller is parseImageFile. One 4-byte write at swap 487 by renderLitMeshFaceGroup 0x80014488 (front end, before allocation).
+ORIGIN: the value is legitimate: the game re-decodes this image into the same buffer each frame (next frame's texels). On hardware the
+RDP read it before full-sync; with NODRAIN RT64 reads it after dp_complete while the CPU rewrites it -> partly next-frame / torn texels.
+Verdict: H-torn selected (three levels, controls passed), H-quiet and H-no-window refuted. Visible consequence unmeasured (a few
+bytes of one small per-frame texture; likely invisible, not shown). No mitigation landed. OWNER-OPT-INS NODRAIN caveat now carries the
+measured result. tools/s7538_gb_census.py: row text records the measurement, check regex follows the instrument line (census rc 1 = 1
+open row, fail 0, --controls 7/7). Not covered: RT64's render-to-RAM writebacks after the post (the s7391 census says the guest never
+loads a live colour image; a guest write being clobbered by a late writeback is not measured).
+Fix shape for next: in State::fullSync the loads interleave with renderAndSynchronize per fb pair (rt64_state.cpp ~3110-3135), so
+"drain only the reads" needs either a reads-done signal after the last fullSyncFramebufferPairTiles (only cheap when one fb pair or
+copyWithGPU) or producer-side capture of load sources.
