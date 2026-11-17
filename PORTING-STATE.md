@@ -200185,7 +200185,7 @@ Work unit (NEXT s7536): visible consequence + cost of the hardware-order gfx sp_
    - big hulls per task equal in flight everywhere (0.18-0.24 both states). One apparent 2x (pre-flight phase 5/6 big 16 vs 34,
      29 vs 59) repeated in all 3 default-seed runs and vanished/flipped with seeds (22/28, 30/20) = a deterministic split artifact.
    (iii) terrain-drop frames per state not attributable per task (presented frames mix tasks) -> skipped as planned.
-Verdict: H-colour-only selected over H-visible for spikes and big-hull sheets: early-state tasks carry no more guard-band spikes
+Verdict: the same-run per-state split selects H-colour-only and refutes H-visible for spikes and big-hull sheets: early-state tasks carry no more guard-band spikes
 or big hulls than hardware-order tasks at dd2/dd4/dd8, 16:9 and 21:9 (two lines: 5 arms incl. 2 reseeded replicates, z within +-2.3
 and sign-flipping; ctl proves the per-state attribution path). So G5b/G5f do NOT share this cause; the s7535 race only tears
 next-frame shade bytes (+-1 colour steps). Rules out: the early sp_complete as a knife-spike / sheet source.
