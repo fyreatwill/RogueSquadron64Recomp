@@ -198978,3 +198978,5 @@ same-run control per arm. Rules out an unexplained host-side or DMA write into l
 residual stays open. New lead: RT64 uploads allocator headers into images whose RAM the game freed (stale tracking); harmless only if
 those images are never shown before a fill (EY says re-set images are filled first).
 Levels soak queued (scratch/agent/soak_queue/s7501_ez_levels.sh). Next discriminator (FA): are allocator-metadata uploads into a LIVE image.
+This selects H-ez-cpu and H-ez-cover (minor H-ez-dma, H-ez-hash) and refutes an unknown host or DMA writer into live framebuffer RAM at L4 dd1 and L15 dd8 21:9.
+Next discriminator (FA): whether the allocator-metadata uploads land in a live image (NEXT.md).
