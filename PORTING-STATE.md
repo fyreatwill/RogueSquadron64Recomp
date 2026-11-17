@@ -199616,3 +199616,42 @@ eviction model; 120 s per arm. FO+FP close the libultra replaced-function surfac
 Files: src/main/upstream_compat.cpp, lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp (patch exported), tools/s7519_store_side.py
 (new), scratch/agent/soak_queue/s7519_fp_levels.sh.
 Run: `env R=$PWD/scratch/s7519_fp3 HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_STORE_DIAG=1+ROGUESQ_CACHE_SHAPE_CTL_WB=600 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_STORE_DIAG=1+ROGUESQ_ASPECT=21:9+ROGUESQ_CACHE_SHAPE_CTL_WB=700" zsh tools/g1e_owner_quiet_arms.zsh`
+
+## Session 7520 (2026-11-17) — class FQ: executed CPU code bytes vs the recompiled image; regen ELF == ROM over every recompiled function extent, and at run time 0 code words differ from the ROM, 0 overlay calls into non-resident bytes and 0 stale func_map dispatches on L4 dd1 / L15 dd8 21:9 (planted code flips caught on both arms); FP levels closed
+HYPOTHESIS-ID: executed-code-bytes-census.
+**FP levels fold.** s7519_fp_levels rc=0 score=0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive, ctl ok) -> FP CLOSED 6 levels.
+**Question.** A static recompile runs the code the ROM held at regen time; a VR4300 runs whatever bytes sit in RAM when the I-cache
+fetches them. Port and hardware differ if the game writes code at run time (patching, self-modifying code, decompressed code), if an
+overlay's RAM text differs from the ROM image N64Recomp compiled, or if the port dispatches into an overlay whose bytes are not
+resident (the 3 overlays mission/menu/cinematic share 0x800A5130). Hypotheses: H-canon (RAM text == ROM wherever code runs), H-dead
+(differences only in words never executed), H-live (the port runs different instructions than hardware).
+**Offline line (tools/s7520_elf_vs_rom.py, new, rc 0).** Every FuncEntry extent of recomp_overlays.inl (5 sections, 2542 funcs,
+304,259 words): regen ELF bytes == build/rogue_squadron.z64 bytes. Ctl: one byte flipped per section -> exactly 1 DIFF each (5/5).
+**Runtime instrument (one build; librecomp overlays.cpp s7520 block, patch exported).** ROGUESQ_S7520_CODEWATCH=1: at every
+osViSwapBuffer, osInvalICache and overlay registration, compare the RAM words of every FuncEntry extent of the main sections and of
+each overlay section with the ROM; log every address entering/leaving the differing set ([s7520-w]); overlay state vs the section
+registered last; every get_function into 0x800A5130-0x8010B6D0 checked against the registered section's func_map (gf_stale /
+gf_funcdiff) and the called function's bytes vs ROM (exec_diff); every PI DMA into main code (dma_main) or the overlay window
+([s7520-odma], does the ROM offset equal some section's own image at its link address?). Ctl ROGUESQ_S7520_CTL=1: swap 600 flips one
+byte of a main code word (0x800599C4), restored at 660; after swap 900 the first overlay call flips a byte inside the called function
+(0x800B3654), restored once caught. Scorer tools/s7520_code_bytes.py --controls --ctl (9 synthetic PASS): changed words classified
+DATA (ELF OBJECT symbol, data_gap_* / renamed data gap, or a non-code splat subsegment in roguesquadron.yaml) vs CODE.
+**Dead ends (recorded).** v1 (scratch/s7520_fq) logged only state transitions: main was "bad" from swap 2 (17 words, first rngSeed
+0x80003470, an OBJECT inside setRngSeed's 0x20 extent) so the main ctl was invisible; v2 logs the per-address set. The first v2 scoring
+called 82 / 65 words CODE because the ELF sizes audioCompandS16 (0x8009DD7C, 29,620 B) and __OSGlobalIntMask (0x80039110, 19,984 B)
+over the main .data; the splat subsegment types (rodata/data, not asm) fixed the classifier. My wait loops pgrep'd their own command line.
+**Run** (scratch/s7520_fq2, g1e_owner_quiet_arms HOLD=120, both alive, 0 VI stalls): L4 dd1 / L15 dd8 21:9 6,902 checks each; changed
+words 269 / 283, all DATA (rngSeed, main .data under audioCompandS16 / __OSGlobalIntMask, data_gap_800CC3D4 menu, fake_func_800AF6A8 =
+data_gap cinematic), 0 CODE outside ctl; overlay get_function 428,183 / 360,939, each byte-checked: exec_diff 0 outside ctl,
+gf_stale 0, gf_funcdiff 0; dma_main 0; 55 overlay-window DMAs each = a section's own ROM image (mission 27 incl. the boot worker's
+0x80000D04 preload of the mission tail ROM 0x101000 -> 0x80100400 n=0xCE00 before the only osInvalICache, menu 22, cinematic 6).
+Overlay order menu -> cinematic -> menu -> cinematic -> mission. Ctl: main flip caught as a CODE word (+ then -), exec flip caught as
+exec_diff ctl=1, both arms.
+DISCRIMINATION: selects H-canon (RAM code == the ROM image N64Recomp compiled wherever the port runs it; no run-time code writes,
+no overlay dispatch into non-resident bytes); refutes H-live; the data-in-text words are H-dead by type (data symbols / data
+subsegments; recompiled code never executes them). Gaps (stated): load_overlay overwrites func_map entries but never erases a replaced
+overlay's leftovers (0 calls reached one here, gf_stale 0); main code direct calls are covered by the per-swap byte compare, not per call;
+fake_func_800AF6A8's first two words (jal/nop) are classed DATA via the rename map; 120 s per arm. Levels soak queued (s7520_fq_levels).
+Files: lib/N64ModernRuntime/librecomp/src/{overlays,pi,ultra_translation}.cpp (patch exported), src/main/upstream_compat.cpp,
+tools/s7520_elf_vs_rom.py, tools/s7520_code_bytes.py (new), scratch/agent/soak_queue/s7520_fq_levels.sh.
+Run: `env R=$PWD/scratch/s7520_fq2 HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_S7520_CODEWATCH=1+ROGUESQ_S7520_CTL=1 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_S7520_CODEWATCH=1+ROGUESQ_S7520_CTL=1+ROGUESQ_ASPECT=21:9" zsh tools/g1e_owner_quiet_arms.zsh`

@@ -1805,10 +1805,10 @@ index ff40212..ae1fb16 100644
          GenericFunction func = mod.code_handle->get_function_handle(callback.function_index);
          size_t event_index = 0;
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..636836a 100644
+index 8c8e5d1..7280d97 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
-@@ -1,9 +1,12 @@
+@@ -1,9 +1,15 @@
  #include <algorithm>
 +#include <atomic>
  #include <cassert>
@@ -1818,10 +1818,13 @@ index 8c8e5d1..636836a 100644
  #include <unordered_map>
  #include <vector>
 +#include <execinfo.h>
++#include <mutex>
++#include <map>
++#include "librecomp/game.hpp"
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,9 +15,46 @@
+@@ -12,9 +18,46 @@
  #include "overlays.hpp"
  #include "sections.h"
  
@@ -1868,7 +1871,23 @@ index 8c8e5d1..636836a 100644
  static SectionTableEntry* patch_code_sections = nullptr;
  size_t num_patch_code_sections = 0;
  static std::vector<char> patch_data;
-@@ -186,6 +226,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
+@@ -150,6 +193,7 @@ void recomp::overlays::add_loaded_function(int32_t ram, recomp_func_t* func) {
+     func_map[ram] = func;
+ }
+ 
++static void rs64_s7520_note_load_fwd(size_t idx, int32_t ram);
+ void load_overlay(size_t section_table_index, int32_t ram) {
+     const SectionTableEntry& section = sections_info.code_sections[section_table_index];
+ 
+@@ -160,6 +204,7 @@ void load_overlay(size_t section_table_index, int32_t ram) {
+ 
+     loaded_sections.emplace_back(ram, section_table_index);
+     section_addresses[section.index] = ram;
++    rs64_s7520_note_load_fwd(section_table_index, ram);  // s7520 class FQ
+ }
+ 
+ static void load_special_overlay(const SectionTableEntry& section, int32_t ram) {
+@@ -186,6 +231,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
  }
  
  extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
@@ -1876,7 +1895,7 @@ index 8c8e5d1..636836a 100644
      // Search for the first section that's included in the loaded rom range
      // Sections were sorted by `init_overlays` so we can use the bounds functions
      auto lower = std::lower_bound(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections], rom,
-@@ -198,8 +239,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +244,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -1894,7 +1913,7 @@ index 8c8e5d1..636836a 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +286,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +291,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -1922,7 +1941,7 @@ index 8c8e5d1..636836a 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -274,6 +343,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
+@@ -274,6 +348,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
  void recomp::overlays::init_overlays() {
      func_map.clear();
      section_addresses = (int32_t *)calloc(sections_info.total_num_sections, sizeof(int32_t));
@@ -1935,7 +1954,7 @@ index 8c8e5d1..636836a 100644
  
      // Sort the executable sections by rom address
      std::sort(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections],
-@@ -361,13 +436,244 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +441,499 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -2151,6 +2170,260 @@ index 8c8e5d1..636836a 100644
 +    }
 +}
 +
++// ROGUESQ s7520 class FQ: executed code bytes vs the recompiled image. A static recompile runs the code the ROM held at
++// regen time; a VR4300 runs whatever bytes sit in RAM. ROGUESQ_S7520_CODEWATCH=1 compares, at every osViSwapBuffer, every
++// osInvalICache and every overlay registration, the RAM words of every recompiled function (FuncEntry offset/rom_size) of
++// the resident main sections and of each overlay section at 0x800A5130 with the ROM words N64Recomp compiled; logs state
++// transitions ([s7520] kind=...), checks every get_function into the overlay window against the section registered last
++// (stale func_map entries / bytes not resident), flags PI DMAs into main code, prints [s7520-sum] every 300 swaps.
++// Ctl ROGUESQ_S7520_CTL=1: swap 600 flips one byte of a main function (restored at swap 660); after swap 900 the first
++// get_function into the overlay window flips a byte inside that function (restored once the row prints).
++namespace {
++struct S7520 {
++    bool on = false, init = false;
++    std::vector<size_t> main_idx, ovl_idx;
++    std::vector<std::unordered_map<uint32_t, recomp_func_t*>> offmap;  // per code section index
++    std::unordered_map<recomp_func_t*, int> patchset;
++    int reg_ovl = -1;                 // code section index registered last at the overlay window
++    uint32_t ovl_lo = 0, ovl_hi = 0;  // window
++    int last_main_bad = -1, last_ovl_state = -99, swaps = 0;
++    unsigned long checks = 0, main_bad_checks = 0, ovl_ok = 0, ovl_partial = 0, ovl_other = 0, ovl_none = 0, ovl_unreg = 0;
++    unsigned long gf_ovl = 0, gf_stale = 0, gf_funcdiff = 0, exec_checks = 0, exec_diff = 0, dma_main = 0, iinv = 0, iinv_bad = 0;
++    bool dirty = true;
++    int ctl = 0; bool ctl_main_on = false; uint32_t ctl_main_addr = 0; int ctl_ovl_state = 0; uint32_t ctl_ovl_addr = 0;
++    uint8_t* rdram = nullptr;
++    std::vector<std::map<uint32_t, std::pair<uint32_t, uint32_t>>> prevbad;  // per code section idx
++    long wlines = 0;
++};
++S7520 s7;
++std::mutex s7m;
++inline uint32_t s7_be32(const uint8_t* p) { return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3]; }
++inline uint32_t s7_ramw(uint8_t* rdram, uint32_t va) { return *reinterpret_cast<uint32_t*>(rdram + (va - 0x80000000u)); }
++void s7_init() {
++    if (s7.init) return;
++    s7.init = true;
++    const char* e = std::getenv("ROGUESQ_S7520_CODEWATCH");
++    s7.on = e && e[0] && e[0] != '0';
++    if (!s7.on) return;
++    const char* c = std::getenv("ROGUESQ_S7520_CTL"); s7.ctl = c ? std::atoi(c) : 0;
++    s7.offmap.resize(sections_info.num_code_sections);
++    s7.prevbad.resize(sections_info.num_code_sections);
++    std::unordered_map<uint32_t, int> ramcount;
++    for (size_t i = 0; i < sections_info.num_code_sections; i++) ramcount[sections_info.code_sections[i].ram_addr]++;
++    for (size_t i = 0; i < sections_info.num_code_sections; i++) {
++        const auto& s = sections_info.code_sections[i];
++        for (size_t f = 0; f < s.num_funcs; f++) s7.offmap[i][s.funcs[f].offset] = s.funcs[f].func;
++        if (ramcount[s.ram_addr] > 1) { s7.ovl_idx.push_back(i); s7.ovl_lo = s.ram_addr;
++            if (s.ram_addr + s.size > s7.ovl_hi) s7.ovl_hi = s.ram_addr + s.size; }
++        else s7.main_idx.push_back(i);
++        std::fprintf(stderr, "[s7520-sec] idx=%zu index=%zu rom=%08X ram=%08X size=%X funcs=%zu %s\n", i, s.index, s.rom_addr, s.ram_addr,
++                     s.size, s.num_funcs, ramcount[s.ram_addr] > 1 ? "ovl" : "main");
++    }
++    for (size_t i = 0; i < num_patch_code_sections; i++)
++        for (size_t f = 0; f < patch_code_sections[i].num_funcs; f++) s7.patchset[patch_code_sections[i].funcs[f].func] = 1;
++    std::fprintf(stderr, "[s7520-init] main=%zu ovl=%zu window=%08X-%08X patchfuncs=%zu ctl=%d\n", s7.main_idx.size(), s7.ovl_idx.size(),
++                 s7.ovl_lo, s7.ovl_hi, s7.patchset.size(), s7.ctl);
++}
++// mismatching code words of section i (as loaded at its ram_addr); first mismatch reported via out params
++unsigned long s7_section_diff(uint8_t* rdram, size_t i, uint32_t* first_va, uint32_t* ramw, uint32_t* romw, unsigned long* words,
++                              std::map<uint32_t, std::pair<uint32_t, uint32_t>>* out = nullptr) {
++    const auto& s = sections_info.code_sections[i];
++    auto rom = recomp::get_rom();
++    unsigned long bad = 0, n = 0;
++    for (size_t f = 0; f < s.num_funcs; f++) {
++        uint32_t off = s.funcs[f].offset, sz = s.funcs[f].rom_size;
++        if ((uint64_t)s.rom_addr + off + sz > rom.size()) continue;
++        for (uint32_t o = off; o + 4 <= off + sz; o += 4) {
++            ++n;
++            uint32_t a = s7_ramw(rdram, s.ram_addr + o), b = s7_be32(rom.data() + s.rom_addr + o);
++            if (a != b) { if (!bad && first_va) { *first_va = s.ram_addr + o; *ramw = a; *romw = b; } ++bad;
++                          if (out) (*out)[s.ram_addr + o] = {a, b}; }
++        }
++    }
++    if (words) *words = n;
++    return bad;
++}
++// print +/- changes of a section's differing-word set (s7520 v2), budgeted
++void s7_emit(size_t i, const std::map<uint32_t, std::pair<uint32_t, uint32_t>>& now, const char* why, int ctl) {
++    auto& prev = s7.prevbad[i];
++    for (auto& [va, v] : now) if (!prev.count(va) && s7.wlines++ < 6000)
++        std::fprintf(stderr, "[s7520-w] sec=%zu op=+ va=%08X ram=%08X rom=%08X why=%s swap=%d ctl=%d\n", i, va, v.first, v.second, why, s7.swaps, ctl);
++    for (auto& [va, v] : prev) if (!now.count(va) && s7.wlines++ < 6000)
++        std::fprintf(stderr, "[s7520-w] sec=%zu op=- va=%08X why=%s swap=%d ctl=%d\n", i, va, why, s7.swaps, ctl);
++    prev = now;
++}
++void s7_sum(const char* why) {
++    std::fprintf(stderr, "[s7520-sum] why=%s swaps=%d checks=%lu main_bad_checks=%lu ovl_ok=%lu ovl_partial=%lu ovl_other=%lu ovl_none=%lu "
++                 "ovl_unreg=%lu gf_ovl=%lu gf_stale=%lu gf_funcdiff=%lu exec_checks=%lu exec_diff=%lu dma_main=%lu iinv=%lu iinv_bad=%lu reg=%d\n",
++                 why, s7.swaps, s7.checks, s7.main_bad_checks, s7.ovl_ok, s7.ovl_partial, s7.ovl_other, s7.ovl_none, s7.ovl_unreg,
++                 s7.gf_ovl, s7.gf_stale, s7.gf_funcdiff, s7.exec_checks, s7.exec_diff, s7.dma_main, s7.iinv, s7.iinv_bad, s7.reg_ovl);
++    std::fflush(stderr);
++}
++// returns overlay state: 0 ok, 1 partial (registered section mismatches but no other matches), 2 other section resident, 3 none, 4 unregistered
++int s7_check(uint8_t* rdram, const char* why, bool force_log) {
++    ++s7.checks;
++    uint32_t fva = 0, rw = 0, ow = 0; unsigned long words = 0, mbad = 0;
++    for (size_t i : s7.main_idx) { uint32_t a = 0, b = 0, c = 0; unsigned long w = 0;
++        std::map<uint32_t, std::pair<uint32_t, uint32_t>> bm;
++        unsigned long d = s7_section_diff(rdram, i, &a, &b, &c, &w, &bm); words += w;
++        s7_emit(i, bm, why, s7.ctl_main_on ? 1 : 0);
++        if (d && !mbad) { fva = a; rw = b; ow = c; } mbad += d; }
++    if (mbad) ++s7.main_bad_checks;
++    if ((int)(mbad != 0) != s7.last_main_bad || (force_log && mbad)) {
++        std::fprintf(stderr, "[s7520] kind=main why=%s swap=%d bad_words=%lu of=%lu first=%08X ram=%08X rom=%08X ctl=%d\n", why, s7.swaps,
++                     mbad, words, fva, rw, ow, s7.ctl_main_on ? 1 : 0);
++        s7.last_main_bad = mbad != 0;
++    }
++    int st; unsigned long regbad = 0, regwords = 0; int match = -1;
++    uint32_t ofva = 0, orw = 0, oow = 0;
++    for (size_t i : s7.ovl_idx) {
++        uint32_t a = 0, b = 0, c = 0; unsigned long w = 0;
++        std::map<uint32_t, std::pair<uint32_t, uint32_t>> bm;
++        unsigned long d = s7_section_diff(rdram, i, &a, &b, &c, &w, (int)i == s7.reg_ovl ? &bm : nullptr);
++        if ((int)i == s7.reg_ovl) { regbad = d; regwords = w; ofva = a; orw = b; oow = c; s7_emit(i, bm, why, 0); }
++        if (!d && match < 0) match = (int)i;
++    }
++    if (s7.reg_ovl < 0) st = 4;
++    else if (!regbad) st = 0;
++    else if (match >= 0) st = 2;
++    else st = 1;
++    if (st == 1 && regbad * 2 > regwords) st = 3;
++    switch (st) { case 0: ++s7.ovl_ok; break; case 1: ++s7.ovl_partial; break; case 2: ++s7.ovl_other; break; case 3: ++s7.ovl_none; break; default: ++s7.ovl_unreg; }
++    if (st != s7.last_ovl_state || force_log) {
++        std::fprintf(stderr, "[s7520] kind=ovl why=%s swap=%d state=%d reg=%d resident_match=%d reg_bad=%lu of=%lu first=%08X ram=%08X rom=%08X ctl=%d\n",
++                     why, s7.swaps, st, s7.reg_ovl, match, regbad, regwords, ofva, orw, oow, s7.ctl_ovl_state == 1 ? 1 : 0);
++        s7.last_ovl_state = st;
++    }
++    s7.dirty = (mbad != 0) || st != 0;
++    return st;
++}
++}  // namespace
++
++extern "C" void rs64_s7520_swap(uint8_t* rdram) {
++    s7_init(); if (!s7.on) return;
++    std::lock_guard<std::mutex> lk(s7m);
++    s7.rdram = rdram;
++    ++s7.swaps;
++    if (s7.ctl && s7.swaps == 600 && !s7.main_idx.empty()) {
++        const auto& s = sections_info.code_sections[s7.main_idx.back()];
++        const auto& f = s.funcs[s.num_funcs / 2];
++        s7.ctl_main_addr = s.ram_addr + f.offset + 4;
++        rdram[(s7.ctl_main_addr ^ 3) - 0x80000000u] ^= 0x01;  // MEM_B layout
++        s7.ctl_main_on = true;
++        std::fprintf(stderr, "[s7520-ctl] main flip at %08X swap=%d\n", s7.ctl_main_addr, s7.swaps);
++    }
++    if (s7.ctl_main_on && s7.swaps == 660) {
++        rdram[(s7.ctl_main_addr ^ 3) - 0x80000000u] ^= 0x01;
++        std::fprintf(stderr, "[s7520-ctl] main restore at %08X swap=%d\n", s7.ctl_main_addr, s7.swaps);
++        s7_check(rdram, "ctlrestore", false);
++        s7.ctl_main_on = false;
++    }
++    s7_check(rdram, "swap", false);
++    if (s7.swaps % 300 == 0) s7_sum("periodic");
++}
++extern "C" void rs64_s7520_iinv(uint8_t* rdram, uint32_t a, uint32_t n, uint32_t ra) {
++    s7_init(); if (!s7.on) return;
++    std::lock_guard<std::mutex> lk(s7m);
++    s7.rdram = rdram;
++    ++s7.iinv;
++    std::fprintf(stderr, "[s7520-iinv] a=%08X n=%X ra=%08X swap=%d\n", a, n, ra, s7.swaps);
++    int st = s7_check(rdram, "iinv", true);
++    for (size_t i = 0; i < s7.prevbad.size(); i++) {
++        if (std::find(s7.main_idx.begin(), s7.main_idx.end(), i) == s7.main_idx.end() && (int)i != s7.reg_ovl) continue;
++        int k = 0;
++        for (auto& [va, v] : s7.prevbad[i]) if (k++ < 64)
++            std::fprintf(stderr, "[s7520-iw] sec=%zu va=%08X ram=%08X rom=%08X swap=%d\n", i, va, v.first, v.second, s7.swaps);
++    }
++    if (st != 0) ++s7.iinv_bad;
++}
++extern "C" void rs64_s7520_dma(uint8_t* rdram, uint32_t ram, uint32_t size, uint32_t rom_off) {
++    s7_init(); if (!s7.on) return;
++    std::lock_guard<std::mutex> lk(s7m);
++    s7.rdram = rdram;
++    uint32_t lo = ram | 0x80000000u, hi = lo + size;
++    if (hi > s7.ovl_lo && lo < s7.ovl_hi) {
++        s7.dirty = true;
++        static int nshown = 0;
++        // expected ROM offset if this DMA carries some overlay section's own bytes at its link address
++        int self = -1;
++        for (size_t i : s7.ovl_idx) { const auto& s = sections_info.code_sections[i];
++            if (rom_off == s.rom_addr + (lo - s.ram_addr)) { self = (int)i; break; } }
++        if (nshown++ < 400) std::fprintf(stderr, "[s7520-odma] ram=%08X size=%X rom=%08X self_section=%d reg=%d swap=%d\n", lo, size, rom_off, self, s7.reg_ovl, s7.swaps);
++    }
++    for (size_t i : s7.main_idx) {
++        const auto& s = sections_info.code_sections[i];
++        if (!(hi > s.ram_addr && lo < s.ram_addr + s.size)) continue;
++        for (size_t f = 0; f < s.num_funcs; f++) {
++            uint32_t fa = s.ram_addr + s.funcs[f].offset, fb = fa + s.funcs[f].rom_size;
++            if (hi > fa && lo < fb) {
++                ++s7.dma_main;
++                bool same = (uint64_t)rom_off + (fa - lo) < recomp::get_rom().size() && rom_off == s.rom_addr + (lo - s.ram_addr);
++                std::fprintf(stderr, "[s7520] kind=dma_main ram=%08X size=%X rom=%08X func=%08X self_image=%d swap=%d\n", lo, size, rom_off, fa,
++                             same ? 1 : 0, s7.swaps);
++                break;
++            }
++        }
++    }
++}
++static void rs64_s7520_note_load(size_t idx, int32_t ram) {
++    s7_init(); if (!s7.on) return;
++    std::lock_guard<std::mutex> lk(s7m);
++    if (std::find(s7.ovl_idx.begin(), s7.ovl_idx.end(), idx) == s7.ovl_idx.end()) return;
++    std::fprintf(stderr, "[s7520-load] idx=%zu ram=%08X prev=%d swap=%d\n", idx, (uint32_t)ram, s7.reg_ovl, s7.swaps);
++    s7.reg_ovl = (int)idx;
++    s7.dirty = true;
++    s7.prevbad[idx].clear();
++    if (s7.wlines < 6000) std::fprintf(stderr, "[s7520-w] sec=%zu op=reset swap=%d\n", idx, s7.swaps);
++    s7.last_ovl_state = -99;  // log the next state
++}
++static void rs64_s7520_note_load_fwd(size_t idx, int32_t ram) { rs64_s7520_note_load(idx, ram); }
++static void rs64_s7520_gf(int32_t addr, recomp_func_t* got) {
++    if (!s7.init) s7_init();
++    if (!s7.on) return;
++    uint32_t a = (uint32_t)addr;
++    if (a < s7.ovl_lo || a >= s7.ovl_hi) return;
++    std::lock_guard<std::mutex> lk(s7m);
++    ++s7.gf_ovl;
++    uint8_t* rdram = s7.rdram;
++    if (s7.reg_ovl < 0) return;
++    const auto& s = sections_info.code_sections[s7.reg_ovl];
++    auto it = s7.offmap[s7.reg_ovl].find(a - s.ram_addr);
++    bool patch = s7.patchset.count(got) != 0;
++    if (it == s7.offmap[s7.reg_ovl].end()) {
++        ++s7.gf_stale;
++        if (s7.gf_stale <= 64) std::fprintf(stderr, "[s7520] kind=gf_stale addr=%08X reg=%d patch=%d swap=%d\n", a, s7.reg_ovl, patch ? 1 : 0, s7.swaps);
++        return;
++    }
++    if (it->second != got && !patch) {
++        ++s7.gf_funcdiff;
++        if (s7.gf_funcdiff <= 64) std::fprintf(stderr, "[s7520] kind=gf_funcdiff addr=%08X reg=%d swap=%d\n", a, s7.reg_ovl, s7.swaps);
++    }
++    if (!rdram) return;
++    if (s7.ctl && s7.ctl_ovl_state == 0 && s7.swaps >= 900) {
++        s7.ctl_ovl_addr = a + 4; rdram[(s7.ctl_ovl_addr ^ 3) - 0x80000000u] ^= 0x01; s7.ctl_ovl_state = 1; s7.dirty = true;
++        std::fprintf(stderr, "[s7520-ctl] ovl flip at %08X swap=%d\n", s7.ctl_ovl_addr, s7.swaps);
++    }
++    if (!s7.dirty) return;
++    // bytes of this function vs the registered section's ROM image
++    ++s7.exec_checks;
++    uint32_t off = a - s.ram_addr, sz = 0;
++    for (size_t f = 0; f < s.num_funcs; f++) if (s.funcs[f].offset == off) { sz = s.funcs[f].rom_size; break; }
++    auto rom = recomp::get_rom();
++    unsigned long bad = 0; uint32_t fva = 0, rw = 0, ow = 0;
++    for (uint32_t o = off; o + 4 <= off + sz && (uint64_t)s.rom_addr + o + 4 <= rom.size(); o += 4) {
++        uint32_t x = s7_ramw(rdram, s.ram_addr + o), y = s7_be32(rom.data() + s.rom_addr + o);
++        if (x != y) { if (!bad) { fva = s.ram_addr + o; rw = x; ow = y; } ++bad; }
++    }
++    if (bad) {
++        ++s7.exec_diff;
++        int c = s7.ctl_ovl_state == 1 ? 1 : 0;
++        if (s7.exec_diff <= 64 || c) std::fprintf(stderr, "[s7520] kind=exec_diff addr=%08X size=%X bad_words=%lu first=%08X ram=%08X rom=%08X reg=%d swap=%d ctl=%d\n",
++                                                 a, sz, bad, fva, rw, ow, s7.reg_ovl, s7.swaps, c);
++        if (c) { rdram[(s7.ctl_ovl_addr ^ 3) - 0x80000000u] ^= 0x01; s7.ctl_ovl_state = 2;
++                 std::fprintf(stderr, "[s7520-ctl] ovl restore at %08X swap=%d\n", s7.ctl_ovl_addr, s7.swaps); }
++    }
++}
++
  extern "C" recomp_func_t * get_function(int32_t addr) {
 +    rs64_m5_dispatch_boundary(static_cast<uint32_t>(addr));
 +    rs64_log_dma_ring_caller(addr);
@@ -2177,6 +2450,7 @@ index 8c8e5d1..636836a 100644
          std::exit(EXIT_FAILURE);
      }
 +    rs64_log_service_resolution(addr, func_find->second);
++    rs64_s7520_gf(addr, func_find->second);  // s7520 class FQ
      return func_find->second;
  }
  
@@ -2247,7 +2521,7 @@ index 0be1513..47922ad 100644
 +    RS64_PAK("osPfsRepairId", ctx->r4, -1);
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..28320e5 100644
+index 43509ba..242c51d 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -2280,12 +2554,13 @@ index 43509ba..28320e5 100644
  static std::vector<uint8_t> rom;
  
  bool recomp::is_rom_loaded() {
-@@ -61,22 +77,130 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -61,22 +77,131 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
      ;
  }
  
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
 +extern "C" uint32_t rs64_ram_top;
++extern "C" void rs64_s7520_dma(uint8_t* rdram, uint32_t ram, uint32_t size, uint32_t rom_off);
  void recomp::do_rom_read(uint8_t* rdram, gpr ram_address, uint32_t physical_addr, size_t num_bytes) {
      // TODO use word copies when possible
  
@@ -2411,7 +2686,7 @@ index 43509ba..28320e5 100644
      uint8_t* rom_addr = rom.data() + physical_addr - recomp::rom_base;
      MEM_B(0, ram_address) = *rom_addr++;
      MEM_B(1, ram_address) = *rom_addr++;
-@@ -94,6 +218,11 @@ struct {
+@@ -94,6 +219,11 @@ struct {
      // Used to tell the consumer thread that the saving thread is ready for a file swap.
      moodycamel::LightweightSemaphore swap_file_ready_sempahore;
      std::mutex save_buffer_mutex;
@@ -2423,7 +2698,7 @@ index 43509ba..28320e5 100644
  } save_context;
  
  const std::u8string save_folder = u8"saves";
-@@ -113,13 +242,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
+@@ -113,13 +243,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
  }
  
  void update_save_file() {
@@ -2450,7 +2725,7 @@ index 43509ba..28320e5 100644
          }
          else {
              saving_failed = true;
-@@ -128,6 +270,9 @@ void update_save_file() {
+@@ -128,6 +271,9 @@ void update_save_file() {
      if (!saving_failed) {
          saving_failed = !recomp::finalize_output_file_with_backup(ultramodern::get_save_file_path());
      }
@@ -2460,7 +2735,7 @@ index 43509ba..28320e5 100644
      if (saving_failed) {
          ultramodern::error_handling::message_box("Failed to write to the save file. Check your file permissions and whether the save folder has been moved to Dropbox or similar, as this can cause issues.");
      }
-@@ -163,17 +308,30 @@ void saving_thread_func(RDRAM_ARG1) {
+@@ -163,17 +309,30 @@ void saving_thread_func(RDRAM_ARG1) {
  }
  
  void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
@@ -2491,7 +2766,7 @@ index 43509ba..28320e5 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -181,22 +339,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+@@ -181,22 +340,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
          for (gpr i = 0; i < count; i++) {
              save_context.save_buffer[offset + i] = MEM_B(i, rdram_address);
          }
@@ -2546,7 +2821,7 @@ index 43509ba..28320e5 100644
  
      {
          std::lock_guard lock { save_context.save_buffer_mutex };
-@@ -233,6 +422,28 @@ void read_save_file() {
+@@ -233,6 +423,28 @@ void read_save_file() {
      std::ifstream save_file = recomp::open_input_file_with_backup(save_file_path, std::ios_base::binary);
      if (save_file.good()) {
          save_file.read(save_context.save_buffer.data(), save_context.save_buffer.size());
@@ -2575,7 +2850,7 @@ index 43509ba..28320e5 100644
      }
      else {
          // Otherwise clear the save file to all zeroes.
-@@ -260,22 +471,179 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
+@@ -260,22 +472,180 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
      read_save_file();
  }
  
@@ -2748,6 +3023,7 @@ index 43509ba..28320e5 100644
 +            // whose first transfer only contains the section's ROM start.
 +            load_overlays(rom_offset, (int32_t)rdram_address, size);
 +            load_overlays_by_start(rom_offset, (int32_t)rdram_address, size);
++            rs64_s7520_dma(rdram, (uint32_t)rdram_address, size, rom_offset);  // s7520 class FQ (overlays.cpp)
  
              // Send a message to the mq to indicate that the transfer completed
 -            ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
@@ -2756,7 +3032,7 @@ index 43509ba..28320e5 100644
          } else if (physical_addr >= recomp::sram_base) {
              if (!recomp::sram_allowed()) {
                  ultramodern::error_handling::message_box("Attempted to use SRAM saving with other save type");
-@@ -285,9 +653,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -285,9 +655,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_read(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2768,7 +3044,7 @@ index 43509ba..28320e5 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,26 +671,85 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,26 +673,85 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2855,7 +3131,7 @@ index 43509ba..28320e5 100644
  
      ctx->r2 = 0;
  }
-@@ -336,9 +764,16 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +766,16 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -5363,7 +5639,7 @@ index ae0f44f..0e1b7f9 100644
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..2b1033f 100644
+index e0d367e..0706025 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
 @@ -1,10 +1,30 @@
@@ -5481,7 +5757,7 @@ index e0d367e..2b1033f 100644
      ctx->r2 = (int32_t)(total_count >> 32);
      ctx->r3 = (int32_t)(total_count >> 0);
  }
-@@ -102,20 +146,42 @@ extern "C" void osVirtualToPhysical_recomp(uint8_t * rdram, recomp_context * ctx
+@@ -102,20 +146,44 @@ extern "C" void osVirtualToPhysical_recomp(uint8_t * rdram, recomp_context * ctx
      ctx->r2 = osVirtualToPhysical((int32_t)ctx->r4);
  }
  
@@ -5512,9 +5788,11 @@ index e0d367e..2b1033f 100644
 +    rs64_s7518_cache_op("inv", (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31);
  }
  
++extern "C" void rs64_s7520_iinv(uint8_t* rdram, uint32_t a, uint32_t n, uint32_t ra);  // s7520 class FQ (overlays.cpp)
  extern "C" void osInvalICache_recomp(uint8_t * rdram, recomp_context * ctx) {
 -    ;
 +    rs64_s7518_cache_op("iinv", (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31);
++    rs64_s7520_iinv(rdram, (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31);
  }
  
  extern "C" void osWritebackDCache_recomp(uint8_t * rdram, recomp_context * ctx) {
@@ -5528,7 +5806,7 @@ index e0d367e..2b1033f 100644
  }
  
  extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
-@@ -123,7 +189,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -123,7 +191,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
  }
  
  extern "C" void __osDisableInt_recomp(uint8_t * rdram, recomp_context * ctx) {
@@ -5542,7 +5820,7 @@ index e0d367e..2b1033f 100644
  }
  
  extern "C" void __osRestoreInt_recomp(uint8_t * rdram, recomp_context * ctx) {
-@@ -170,3 +241,26 @@ extern "C" void __osSetFpcCsr_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -170,3 +243,26 @@ extern "C" void __osSetFpcCsr_recomp(uint8_t * rdram, recomp_context * ctx) {
  //extern "C" int32_t osGetThreadEx(void) {
  //    return ultramodern::this_thread();
  //}

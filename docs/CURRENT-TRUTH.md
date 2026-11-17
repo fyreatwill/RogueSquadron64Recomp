@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7519 (2026-11-17).
+Compact operational handoff, as of Session 7520 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -451,11 +451,21 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     **FO CLOSED 6 levels (s7518, soak folded s7519): D-cache load side H-canon / H-dead.** Cache calls stay host no-ops. ROGUESQ_LOG_CACHE_SHAPE=1
     ([cache] lines) + ROGUESQ_S7518_STALEWATCH=1 (stale-load watch) + ctl ROGUESQ_CACHE_SHAPE_CTL=<k> (drop k-th inv); tools/s7518_cache_shape.py
     --controls --ctl. Slot DMAs wb -> DMA -> inv-after; 0 STALE loads outside ctl; every RSP task flushed; MusyX stream ring RSP-only (H-dead).
-    **FP L4/L15 (s7519): D-cache store side H-canon.** Same env + ROGUESQ_STORE_DIAG=1: per-line dirty state (s7519 block, upstream_compat.cpp)
+    **FP CLOSED 6 levels (s7519, soak folded s7520: L1 dd8 21:9 + L7/L10/L12 dd4 score 0): D-cache store side H-canon.** Same env + ROGUESQ_STORE_DIAG=1: per-line dirty state (s7519 block, upstream_compat.cpp)
     vs wb / inv edge+interior / index ops / PI DMA; ctl ROGUESQ_CACHE_SHAPE_CTL_WB=<k> (drop the first wb at/after k of a past DMA slot with a
     dirty line); tools/s7519_store_side.py --controls --ctl. ~0.9 / 1.3 G tracked stores: 0 dirty-over-DMA, 0 discards, 0 live rows outside ctl;
     ctl = 3 dirty-over-DMA rows (zmemcpy, rs_free) then resolved dead by the inv-after. Gaps: stores before a line's first marking, no eviction
-    model. Levels soak queued (s7519_fp_levels). **FO+FP exhaust the libultra replaced-function surface** (census PORTING-STATE s7518).
+    model. **FO+FP exhaust the libultra replaced-function surface** (census PORTING-STATE s7518).
+    **FQ L4/L15 (s7520): executed CPU code bytes == the recompiled image (H-canon).** Offline: tools/s7520_elf_vs_rom.py (rc 0, 5/5 ctl):
+    regen ELF == ROM over every FuncEntry extent (2542 funcs, 304,259 words). Runtime ROGUESQ_S7520_CODEWATCH=1 (librecomp overlays.cpp
+    s7520 block; hooks pi.cpp / ultra_translation.cpp iinv / upstream_compat.cpp swap) + ctl ROGUESQ_S7520_CTL=1 (main code flip swap
+    600-660, overlay flip at first overlay call after swap 900); tools/s7520_code_bytes.py --controls --ctl classifies each changed word by
+    ELF OBJECT / data_gap symbol + the splat yaml subsegment type. Per arm ~6.9k checks: 0 CODE words changed outside ctl (269/283 DATA
+    words: rngSeed, .data that N64Recomp folds into the last function audioCompandS16 and __OSGlobalIntMask extents, data_gap_*), ~430k /
+    361k overlay get_function calls each byte-checked: 0 exec_diff, 0 stale func_map, 0 DMA into main code; all 55 overlay-window DMAs
+    carry a section's own ROM bytes at its link address (boot worker 0x80000D04 preloads the mission tail ROM 0x101000 -> 0x80100400
+    then the one boot osInvalICache). Both ctls caught on both arms. Gap: load_overlay never erases a replaced overlay's func_map
+    entries (0 calls hit one). Levels soak queued (s7520_fq_levels).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -1,20 +1,19 @@
-# NEXT (s7520)
-HYPOTHESIS-ID: executed-code-bytes-census
+# NEXT (s7521)
+HYPOTHESIS-ID: rsp-executed-code-bytes-census
 
-First: fold s7519_fp_levels from SOAK-RESULTS if it ran (score 0 -> FP CLOSED 6 levels in CURRENT-TRUTH item 20; 1 -> read
-scratch/s7519_fp_levels/out.txt OUTSIDE rows (kind, line, st_pc); 3 -> no arm's planted wb hit a DMA slot with dirty lines: try another
-ROGUESQ_CACHE_SHAPE_CTL_WB k (s7519 L4/L15 landed at k=783/773 on slot 0x801B4ED0); 4 -> no [s7519-sum]).
+First: fold s7520_fq_levels from SOAK-RESULTS if it ran (score 0 -> FQ CLOSED 6 levels in CURRENT-TRUTH item 20; 1 -> read
+scratch/s7520_fq_levels/out.txt LIVE rows (class, sym@subsegment; a CODE word = a real run-time code write, name the writer);
+3 -> a ctl did not fire on some arm (check [s7520-ctl] lines); 4 -> no [s7520-sum]).
 
-FO+FP closed the libultra replaced-function surface. New idiom class (CURRENT-TRUTH item 21) FQ = executed code bytes vs the
-recompiled image. A static recompiler runs the code the ROM held at regen time; hardware runs whatever bytes sit in RAM when the
-I-cache fetches them. osInvalICache has 2 sites (s7518 census) = code-overlay loads. Hypotheses: H-canon (every overlay's RAM text at
-each osInvalICache / first execution equals the ROM bytes N64Recomp compiled for that overlay slot, relocations applied), H-dead (some
-text bytes differ - e.g. runtime-relocated jal targets or data in a text section - but the recompiled code reaches the same targets),
-H-live (the game writes code at run time - patching, self-modifying, a decompressed overlay that differs from the ROM image - so the
-port runs different instructions than hardware).
-Instrument: at each [cache] op=iinv (ROGUESQ_LOG_CACHE_SHAPE=1, ultra_translation.cpp) and at each loadOverlay completion, hash the
-RAM range and compare it with the ROM bytes of the overlay section mapped there (overlay table from the regen ELF / N64Recomp section
-list; tools/ already has make_elf.py section data). Also a store watch over the loaded text (mark the range in the s7475 bitmap; any
-guest store or DMA into executing text after load = row). Ctl: plant one byte flip in a loaded overlay's RAM text (env) and require a
-DIFF row. Runs: L4 dd1 + L15 dd8 21:9 via tools/g1e_owner_quiet_arms.zsh, then a levels soak.
+FQ closed the CPU side of "executed bytes vs recompiled image". New class FR = the RSP analogue. RSPRecomp compiled the Factor 5
+ucode (main + B + boot + overlays 4/10/12/14/18/1C/20/24/2C) from ROM bytes; the RSP runs whatever DMEM/IMEM bytes the task and the
+ucode's own IMEM overlay DMAs bring in from RDRAM. Hypotheses: H-canon (at every SP task start the RDRAM ucode text/data the task
+points at equals the ROM bytes RSPRecomp compiled, and every in-ucode IMEM DMA source equals the ROM overlay image), H-dead (some
+differ but only in bytes the compiled path never reads, e.g. DMEM data patched per task by design), H-live (the game patches ucode
+in RDRAM, or an IMEM DMA pulls bytes RSPRecomp never saw, so the port runs different RSP code).
+Instrument: at each SP task start (upstream_compat.cpp task hook), hash RDRAM [ucode, ucode_size] and [ucode_data, ucode_data_size]
+against the ROM images (locate by the regen inputs: tools/ucode_regen.sh, factor5*_rsp.toml rom offsets); at each RSP-side SP DMA
+into IMEM (the rsp DMA path used by the LLE ucode) compare the source RDRAM bytes with the ROM overlay image the toml compiled.
+Ctl: env flips one byte of the ucode text in RDRAM before the Nth task and requires a DIFF row. Runs: L4 dd1 + L15 dd8 21:9 via
+tools/g1e_owner_quiet_arms.zsh, then a levels soak. Read docs/F5-UCODE-REFERENCE.md first.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

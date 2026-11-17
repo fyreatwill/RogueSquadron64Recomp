@@ -1093,8 +1093,10 @@ extern std::atomic<int> g_rs64_swap_n;
 extern "C" void rs64_store_diag_tick(void);
 extern "C" void rs64_s7503_swap(int, uint32_t);
 extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...);  // s7432
+extern "C" void rs64_s7520_swap(uint8_t* rdram);  // s7520 class FQ (librecomp overlays.cpp)
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     g_rs64_g1d_rdram.store(rdram, std::memory_order_relaxed);
+    rs64_s7520_swap(rdram);
     static int s_count = 0;
     int n = ++s_count;
     g_rs64_swap_n.store(n, std::memory_order_relaxed);
