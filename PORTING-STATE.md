@@ -198937,5 +198937,6 @@ A=77BD80 depth covered it; L15 B80800 colour+depth, 9B6000, A35800, B20000.
 re-set B before its clear) on both arms.** Single runtime (retail not consulted); two measurement points (RDP-stream set/fill/draw hooks
 and the RT64 texture-load/upload path), both with a same-run control.
 Rules out: stale bytes from one RT64 writeback being consumed through a later re-use of a covered image's address, at these 2 levels.
+This selects H-ey-rewrite (with H-ey-dead for the never re-set images) and refutes H-ey-read at L4 dd1 and L15 dd8 21:9.
 Levels soak queued (scratch/agent/soak_queue/s7500_ey_levels.sh).
-Next (EZ): the 31/37 RT64 checkRAM uploads per run: whose write changed each live framebuffer's RAM (NEXT.md).
+Next discriminator (EZ): the 31/37 RT64 checkRAM uploads per run: whose write changed each live framebuffer's RAM (NEXT.md).
