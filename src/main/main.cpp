@@ -10556,8 +10556,10 @@ static void s7497_img(uint32_t, uint32_t);
 static void s7500_set(uint32_t, uint32_t);
 static void s7500_cover(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t, int, int);
 static void s7500_wb(uint32_t, uint32_t);
+static void s7503_set(uint32_t, uint32_t); static void s7503_fill(uint32_t); static void s7503_wb(uint32_t, uint32_t);
+extern "C" void rs64_s7503_arm(uint32_t, uint32_t, uint32_t, const char*, int);
 extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
-    s7497_img(kind, addr); s7500_set(kind, addr);
+    s7497_img(kind, addr); s7500_set(kind, addr); s7503_set(kind, addr);
     if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width, siz);
     if (!s7493_on() || kind > 1) return;
     std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
@@ -10584,7 +10586,7 @@ namespace { std::mutex g_s7497_mu; std::map<uint32_t, uint64_t> g_s7497_zd[3], g
 }
 static void s7500_fill(uint32_t);
 extern "C" void rs64_s7497_zdraw(uint32_t k, uint32_t zaddr, uint32_t caddr, uint32_t cw, uint32_t cyc) {
-  if (k == 2) s7500_fill(caddr);
+  if (k == 2) { s7500_fill(caddr); s7503_fill(caddr); }
   if (!s7497_on() || k > 2) return;
   std::lock_guard<std::mutex> lk(g_s7497_mu); const double now = s7497_now(); if (g_s7497_t0 == 0) g_s7497_t0 = now;
   const uint32_t key = (k == 2 ? caddr : zaddr) & 0xFFFFFFu; g_s7497_zd[k][key]++;
@@ -10701,6 +10703,94 @@ static void s7499_ex(uint32_t lo, uint32_t hi, uint32_t kind, uint32_t base, uin
     g_s7499_cb = (lo + (hi - lo) / 2) & ~7u; g_s7499_cw = width; g_s7499_csw = sw;
     std::fprintf(stderr, "[s7499] ctl armed wb#%llu A kind=%u base=%06X fake=%06X\n", (unsigned long long)k, kind, base, g_s7499_cb); }
   if (now - g_s7499_last >= 10.0) { g_s7499_last = now; s7499_sum(now); } }
+// s7503 class FA: are the freed-fb-RAM uploads (EZ cls=cpu, writer = allocator metadata or packTlutEntriesRgba5551) into an image
+// that is LIVE? ROGUESQ_S7503_FA=1 (needs S7501_EZ + S7500_EY for the draw/tex/up hooks). rs64_s7501_up arms a watch on the fb when
+// the newest window writer is rs_malloc* / rs_free / coalesceFreeHeap* / buildHeapFreeList / packTlut*; then every later event on that
+// fb is logged in order with its swap offset: set (SETCIMG/SETZIMG exact base), fill, draw / zread / zupd (exact base), tex (load range
+// overlaps), up / upP (RT64 checkRAM upload, draw / present path), wb (RT64 writeback, exact base), vi (osViSwapBuffer target or
+// committed VI origin inside the fb within 3 swaps). Verdict per watch (skipping draw-path re-uploads): fill = fill first, or set then
+// fill; live = draw / zread / zupd / tex / upP / vi first, set then a non-fill, or the arming upload itself on the present path;
+// rewrite = wb first; dead = nothing within 5 s and 3 swaps. Controls (same matcher, same run, t >= 30 s, one each): ctlC = arm on
+// the colour image last set (must see an event), ctlV = arm on the fb holding the committed VI origin (must see vi).
+namespace {
+struct S7503W { uint32_t a, bytes, w; std::string fn; double t; int sw, ctl, done; bool present; std::string seq; int nev; char verdict[12]; };
+std::mutex g_s7503_mu; std::vector<S7503W> g_s7503; std::atomic<int> g_s7503_act{0};
+uint64_t g_s7503_v[5] = {}; double g_s7503_t0 = 0, g_s7503_last = 0; int g_s7503_ctlc = -2, g_s7503_ctlv = -2, g_s7503_rows = 0;
+uint32_t g_s7503_lastc = 0xFFFFFFFFu; std::map<std::string, uint64_t> g_s7503_livefn;
+bool s7503_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7503_FA"); return e && *e && *e != '0'; }(); return on; }
+double s7503_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+const char* s7503_vn(int i) { static const char* k[5] = {"fill", "live", "rewrite", "dead", "pend"}; return k[i]; }
+void s7503_sum_locked(double now) {
+  uint64_t pend = 0; for (auto& w : g_s7503) if (!w.done && !w.ctl) ++pend;
+  std::string lf; for (auto& kv : g_s7503_livefn) { char t[96]; std::snprintf(t, sizeof t, "%s%s:%llu", lf.empty() ? "" : ",", kv.first.c_str(), (unsigned long long)kv.second); lf += t; }
+  auto cs = [](int c) { return c == 1 ? "ok" : c == 0 ? "FAIL" : c == -1 ? "pending" : "unarmed"; };
+  std::fprintf(stderr, "[s7503] sum t=%.1f armed=%llu fill=%llu live=%llu rewrite=%llu dead=%llu pend=%llu livefn=%s ctlC=%s ctlV=%s\n", now - g_s7503_t0,
+    (unsigned long long)(g_s7503_v[0] + g_s7503_v[1] + g_s7503_v[2] + g_s7503_v[3] + pend), (unsigned long long)g_s7503_v[0], (unsigned long long)g_s7503_v[1],
+    (unsigned long long)g_s7503_v[2], (unsigned long long)g_s7503_v[3], (unsigned long long)pend, lf.empty() ? "none" : lf.c_str(), cs(g_s7503_ctlc), cs(g_s7503_ctlv)); }
+void s7503_finish_locked(S7503W& w, int v, double now) {
+  if (w.done) return; w.done = 1; g_s7503_act.fetch_sub(1); std::snprintf(w.verdict, sizeof w.verdict, "%s", s7503_vn(v));
+  if (w.ctl == 1) g_s7503_ctlc = (v != 3) ? 1 : 0;
+  else if (w.ctl == 2) g_s7503_ctlv = (w.seq.find("vi@") != std::string::npos) ? 1 : 0;
+  else { ++g_s7503_v[v]; if (v == 1) ++g_s7503_livefn[w.fn]; }
+  if (++g_s7503_rows <= 300 || w.ctl)
+    std::fprintf(stderr, "[s7503] verdict=%s%s fb=%06X w=%u bytes=%u fn=%s armpath=%s seq=%s t_arm=%.3f t=%.3f\n", w.verdict, w.ctl == 1 ? " CTL-C" : w.ctl == 2 ? " CTL-V" : "",
+      w.a, w.w, w.bytes, w.fn.c_str(), w.present ? "present" : "draw", w.seq.empty() ? "-" : w.seq.c_str(), w.t - g_s7503_t0, now - g_s7503_t0); }
+void s7503_decide_locked(S7503W& w, double now, bool expire) {
+  /* tokens "cls@sw"; skip draw-path re-uploads; decide on the first meaningful one (two after a set) */
+  std::vector<std::string> k; size_t p = 0; while (p < w.seq.size()) { size_t q = w.seq.find(',', p); std::string t = w.seq.substr(p, q == std::string::npos ? std::string::npos : q - p);
+    t = t.substr(0, t.find('@')); if (t != "up" && t != "vin") k.push_back(t); if (q == std::string::npos) break; p = q + 1; }
+  if (w.present && !w.ctl) { s7503_finish_locked(w, 1, now); return; }
+  if (w.ctl == 2) { if (w.seq.find("vi@") != std::string::npos || expire) s7503_finish_locked(w, w.seq.find("vi@") != std::string::npos ? 1 : 3, now); return; }
+  if (k.empty()) { if (expire) s7503_finish_locked(w, 3, now); return; }
+  const std::string& f = k[0];
+  if (f == "fill") s7503_finish_locked(w, 0, now);
+  else if (f == "wb") s7503_finish_locked(w, 2, now);
+  else if (f == "set") { if (k.size() >= 2) s7503_finish_locked(w, k[1] == "fill" ? 0 : k[1] == "wb" ? 2 : 1, now); else if (expire) s7503_finish_locked(w, 3, now); }
+  else s7503_finish_locked(w, 1, now); }
+void s7503_ev_locked(S7503W& w, const char* c, double now) {
+  if (w.done || w.nev >= 12) return; ++w.nev; char t[40]; std::snprintf(t, sizeof t, "%s%s@%d", w.seq.empty() ? "" : ",", c, g_rs64_swap_n.load(std::memory_order_relaxed) - w.sw); w.seq += t;
+  s7503_decide_locked(w, now, false); }
+void s7503_arm_locked(uint32_t a, uint32_t bytes, uint32_t width, const char* fn, bool present, int ctl, double now) {
+  for (auto& w : g_s7503) if (!w.done && w.a == a && w.ctl == ctl) return;  /* one open watch per fb */
+  if (g_s7503.size() >= 4000) return;
+  S7503W w{a, bytes, width, fn ? fn : "-", now, g_rs64_swap_n.load(std::memory_order_relaxed), ctl, 0, present, {}, 0, {}}; g_s7503.push_back(w); g_s7503_act.fetch_add(1);
+  if (g_s7503_rows < 300 || ctl) std::fprintf(stderr, "[s7503] arm%s fb=%06X w=%u bytes=%u fn=%s path=%s vi=%06X sw=%d t=%.3f\n", ctl == 1 ? " CTL-C" : ctl == 2 ? " CTL-V" : "",
+    a, width, bytes, w.fn.c_str(), present ? "present" : "draw", rs64_vi_committed_origin() & 0xFFFFFFu, w.sw, now - g_s7503_t0);
+  if (present && !ctl) s7503_decide_locked(g_s7503.back(), now, false); }
+template <class F> void s7503_each(F f) { if (g_s7503_act.load(std::memory_order_relaxed) <= 0) return; std::lock_guard<std::mutex> lk(g_s7503_mu); const double now = s7503_now();
+  for (auto& w : g_s7503) if (!w.done) f(w, now); }
+}
+extern "C" void rs64_s7503_arm(uint32_t a, uint32_t bytes, uint32_t width, const char* fn, int present) {
+  if (!s7503_on() || !fn) return;
+  if (!(std::strstr(fn, "rs_malloc") || std::strstr(fn, "rs_free") || std::strstr(fn, "coalesceFreeHeap") || std::strstr(fn, "buildHeapFreeList") || std::strstr(fn, "packTlut"))) return;
+  std::lock_guard<std::mutex> lk(g_s7503_mu); const double now = s7503_now(); if (g_s7503_t0 == 0) g_s7503_t0 = now; s7503_arm_locked(a & 0xFFFFFFu, bytes, width, fn, present != 0, 0, now); }
+static void s7503_set(uint32_t kind, uint32_t addr) {
+  if (!s7503_on()) return; addr &= 0xFFFFFFu; if (kind == 0) { std::lock_guard<std::mutex> lk(g_s7503_mu); g_s7503_lastc = addr; }
+  s7503_each([&](S7503W& w, double now) { if (w.a == addr && kind <= 1) s7503_ev_locked(w, "set", now); }); }
+static void s7503_fill(uint32_t c) { if (!s7503_on()) return; c &= 0xFFFFFFu; s7503_each([&](S7503W& w, double now) { if (w.a == c) s7503_ev_locked(w, "fill", now); }); }
+static void s7503_draw(uint32_t c, uint32_t z, uint32_t f) { if (!s7503_on()) return; c &= 0xFFFFFFu; z &= 0xFFFFFFu;
+  s7503_each([&](S7503W& w, double now) { if (w.a == c) s7503_ev_locked(w, "draw", now); else if ((f & 3u) && w.a == z) s7503_ev_locked(w, (f & 1u) ? "zread" : "zupd", now); }); }
+static void s7503_tex(uint32_t lo, uint32_t hi) { if (!s7503_on()) return; lo &= 0xFFFFFFu; hi &= 0xFFFFFFu;
+  s7503_each([&](S7503W& w, double now) { if (lo < w.a + w.bytes && hi > w.a) s7503_ev_locked(w, "tex", now); }); }
+static void s7503_up(uint32_t a, int fl) { if (!s7503_on()) return; a &= 0xFFFFFFu; s7503_each([&](S7503W& w, double now) { if (w.a == a) s7503_ev_locked(w, (fl & 2) ? "upP" : "up", now); }); }
+static void s7503_wb(uint32_t kind, uint32_t base) { if (!s7503_on() || kind > 1) return; base &= 0xFFFFFFu; s7503_each([&](S7503W& w, double now) { if (w.a == base) s7503_ev_locked(w, "wb", now); }); }
+extern "C" void rs64_s7503_swap(int n, uint32_t req) {
+  if (!s7503_on()) return; std::lock_guard<std::mutex> lk(g_s7503_mu); const double now = s7503_now(); if (g_s7503_t0 == 0) g_s7503_t0 = now;
+  const uint32_t vo = rs64_vi_committed_origin() & 0xFFFFFFu; req &= 0xFFFFFFu;
+  for (auto& w : g_s7503) { if (w.done) continue; const int ds = n - w.sw;
+    /* vi = origin / swap target within 16 rows of the fb base (RT64 presents the fb at origin - row offset); a hit deeper inside the
+       extent is another fb nested in a stale record (run 1: VI 67CF00 = live 67CA00 inside stale 650E00) -> "vin", not live */
+    const uint32_t near = std::max<uint32_t>(w.w, 320u) * 4u * 16u;
+    if (ds <= 3) { const bool vn = (vo >= w.a && vo - w.a < near) || (req >= w.a && req - w.a < near);
+      const bool vi = !vn && ((vo >= w.a && vo < w.a + w.bytes) || (req >= w.a && req < w.a + w.bytes));
+      if (vn && w.seq.find("vi@") == std::string::npos) s7503_ev_locked(w, "vi", now);
+      else if (vi && w.seq.find("vin@") == std::string::npos && w.nev < 12) { ++w.nev; char t[40]; std::snprintf(t, sizeof t, "%svin@%d", w.seq.empty() ? "" : ",", ds); w.seq += t; } }
+    if (!w.done && now - w.t >= 5.0 && ds >= 3) s7503_decide_locked(w, now, true); }
+  if (now - g_s7503_t0 >= 30.0) {
+    if (g_s7503_ctlc == -2 && g_s7503_lastc != 0xFFFFFFFFu) { g_s7503_ctlc = -1; s7503_arm_locked(g_s7503_lastc, 0x100u, 0, "ctl_cimg", false, 1, now); }
+    if (g_s7503_ctlv == -2 && vo) { g_s7503_ctlv = -1; s7503_arm_locked(vo, 0x100u, 0, "ctl_vi", false, 2, now); } }
+  if (now - g_s7503_last >= 10.0) { g_s7503_last = now; s7503_sum_locked(now); }
+  if (g_s7503.size() > 3000) { std::vector<S7503W> keep; for (auto& w : g_s7503) if (!w.done) keep.push_back(w); g_s7503.swap(keep); } }
 // s7500 class EY: resurrection of a stale-covered image. s7499_ex scores pairs (A writeback covers image B, B last set >= 2 swaps
 // earlier or never written back) as dead; EY asks whether such a B is ever SET again, and what touches it first after that.
 // ROGUESQ_S7500_EY=1 (needs S7493_WBLIVE + S7499_EX). Per covered B (kind, base): cover = latest A + wb# + swap. When the RDP stream
@@ -10771,10 +10861,12 @@ static void s7500_set(uint32_t kind, uint32_t addr) {
   auto it = g_s7500.find(((uint64_t)kind << 32) | addr); if (it == g_s7500.end()) return;
   S7500B& b = it->second; if (b.state == 0) s7500_reset_locked(b, now, b.ctl == 1 ? " CTL-A" : ""); }
 static void s7500_wb(uint32_t kind, uint32_t base) {
+  s7503_wb(kind, base);
   if (!rs64_s7500_on || g_s7500_pend.load() <= 0) return;
   std::lock_guard<std::mutex> lk(g_s7500_mu); auto it = g_s7500.find(((uint64_t)kind << 32) | (base & 0xFFFFFFu));
   if (it != g_s7500.end()) s7500_event_locked(it->second, 6, "", s7500_now()); }
 extern "C" void rs64_s7500_draw(uint32_t caddr, uint32_t zaddr, uint32_t f) {
+  s7503_draw(caddr, zaddr, f);
   g_s7500_hook[0].fetch_add(1, std::memory_order_relaxed);
   if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
   std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); caddr &= 0xFFFFFFu; zaddr &= 0xFFFFFFu;
@@ -10788,11 +10880,13 @@ static void s7500_fill(uint32_t caddr) {
   std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); caddr &= 0xFFFFFFu;
   for (uint32_t k = 0; k < 2; ++k) { auto it = g_s7500.find(((uint64_t)k << 32) | caddr); if (it != g_s7500.end() && it->second.state == 1) s7500_event_locked(it->second, 0, "", now); } }
 extern "C" void rs64_s7500_tex(uint32_t lo, uint32_t hi) {
+  s7503_tex(lo, hi);
   g_s7500_hook[1].fetch_add(1, std::memory_order_relaxed);
   if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
   std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); lo &= 0xFFFFFFu; hi &= 0xFFFFFFu;
   for (auto& kv : g_s7500) { S7500B& b = kv.second; if (b.state == 1 && lo < b.hi && hi > b.lo) { char t[48]; std::snprintf(t, sizeof t, "tex=[%06X,%06X)", lo, hi); s7500_event_locked(b, 3, t, now); } } }
 extern "C" void rs64_s7500_up(uint32_t addr, uint32_t w, uint32_t siz, uint32_t diffpx, int fl) {
+  s7503_up(addr, fl);
   std::lock_guard<std::mutex> lk(g_s7500_mu); ++g_s7500_hook[2]; const double now = s7500_now(); s7500_tick_locked(now); addr &= 0xFFFFFFu;
   if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
   for (uint32_t k = 0; k < 2; ++k) { auto it = g_s7500.find(((uint64_t)k << 32) | addr); if (it != g_s7500.end() && it->second.state == 1) { char t[72];
@@ -10940,6 +11034,7 @@ extern "C" void rs64_s7501_up(uint32_t addr, uint32_t w, uint32_t h, uint32_t si
   if (isctl && (mask & (1u << Z_CTL))) { g_s7501_ctl = 1; std::fprintf(stderr, "[s7501] ctl DETECTED fb=%06X poked_fb=%06X word=%06X cls=%s try=%d\n", addr, g_s7501_ctlfb, g_s7501_ctla, s7501_cls(cls), g_s7501_ctries); }
   else if (isctl) std::fprintf(stderr, "[s7501] ctl MISSED fb=%06X word=%06X cls=%s mask=%X try=%d\n", addr, g_s7501_ctla, s7501_cls(cls), mask, g_s7501_ctries);
   if (cls != Z_CTL && !isctl) ++g_s7501_n[cls];
+  if (cls == Z_CPU && top) rs64_s7503_arm(addr, bytes, w, top->fn, (fl & 2) ? 1 : 0);  /* s7503 FA */
   if (++g_s7501_rows <= 400) {
     std::string m; for (int c = 0; c < Z_N; ++c) if (mask & (1u << c)) { if (!m.empty()) m += '|'; m += s7501_cls(c); }
     std::fprintf(stderr, "[s7501] up fb=%06X w=%u h=%u siz=%u bytes=%u diffpx=%u nchg=%u bbox=[%06X,%06X) path=%s%s win=%.3fs cls=%s mask=%s nwin=%llu top=[%06X,%06X) base=%06X pc=%08X fn=%s ups=%llu hbytes=%u%s%s rmask=%X rtop=%s:[%06X,%06X) sw=%d t=%.3f\n",

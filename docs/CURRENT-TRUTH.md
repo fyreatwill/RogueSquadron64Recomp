@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7502 (2026-11-16).
+Compact operational handoff, as of Session 7503 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -292,7 +292,15 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      the parseImageFile stores. Walk-back to the nearest marked covering fb + per-4KB-page writer table for trunc + pre-scan window edge
      (H-race refuted: race=0). Re-run L4/L15: EZ score 0, none=0 trunc=0, ctl ok both. New writer packTlutEntriesRgba5551 (TLUT into the
      tail of an fb idle 6-15 s, freed-RAM reuse family). Levels re-score queued (s7502_ez2_levels).
-     **FA next: are the allocator/TLUT freed-RAM uploads into an image that is LIVE (set this/next swap) and drawn/presented before a fill?** (NEXT.md).
+     **s7503 fold: s7502_ez2_levels L1 dd8 21:9 / L7 / L10 / L12 dd4 EZ score 0 (none=0 trunc=0, ctl ok) -> EZ CLOSED 6 levels.**
+   - **FA s7503 allocator/TLUT freed-fb-RAM uploads: 15/21 dead, 6/21 live, all upload-synced (L4 dd1, L15 dd8 21:9).** ROGUESQ_S7503_FA=1
+     (main.cpp s7503_*, rs64_s7503_swap in osViSwapBuffer_recomp), tools/s7503_fa_recipe.zsh; ctlC (cimg -> set,draw) / ctlV (VI fb -> vi) ok.
+     Live shapes: present-path upload at the mission load t=28.2 (VI = that fb; RT64 diffpx=4 = one coalesce header pair) and 961000 t=58.7;
+     game CPU-composes (zmemcpy) a freshly malloc'd block then sets+draws it (t=43.6); TLUT load inside a stale record's extent. In every
+     row RT64's diff upload copies guest RAM just before the use = what hardware VI/RDP reads: retail-equivalent by construction.
+     Possibly visible: 4 header pixels on the mission-load present frame (2 swaps); retail RAM there unchecked (single-source).
+     Run-1 defect: vi matched anywhere in the extent (nested live fb in a stale record), fixed to 16 rows ("vin" unscored).
+     Levels soak queued (s7503_fa_levels, expect score 5 by design: read verdict rows). **FB next: header pixels in the presented image?** (NEXT.md).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

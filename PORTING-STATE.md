@@ -199009,3 +199009,43 @@ Files: src/main/main.cpp (s7501 lookup walk, page table, pre-scan window, race/p
 (rs64_s7501_pre), submodule-patches/rt64.patch, tools/s7501_ez_recipe.zsh (race/pgres columns).
 Verdict: this selects H-lookup and refutes H-race (run 1 race=0 with the none still present; run 2 lookup walk-back none=0 on the same
 upload) and resolves the L15 trunc (same root cause). Next discriminator: class FA, live-vs-dead of the freed-fb-RAM uploads (NEXT.md).
+
+## Session 7503 (2026-11-16) — class FA: 6/21 allocator/TLUT freed-fb-RAM uploads feed a live image (3 present, 2 set+draw, 1 tex), each a correct RT64 diff-sync to guest RAM; 15 dead; EZ closed 6 levels
+Fold: s7502_ez2_levels (L1 dd8 21:9, L7/L10/L12 dd4) EZ score=0: none=0 trunc=0 race=0 pgres=0, ctlst=ok all 4, alive 4/4 (soak rc=3
+is the inherited wrapped-EQ L15 plant, not EZ) -> **EZ CLOSED 6 levels.**
+Work unit (class FA, HYPOTHESIS-ID m3-partition-over-live-block). Instrument: main.cpp s7503_* (ROGUESQ_S7503_FA=1). rs64_s7501_up
+arms a watch on the fb when the upload class is cpu and the newest window writer is rs_malloc* / rs_free / coalesceFreeHeap* /
+buildHeapFreeList / packTlut*; every later event on that fb is logged in order with its swap offset (set = SETCIMG/SETZIMG exact base
+via rs64_s7493_img; fill via rs64_s7497_zdraw k=2; draw/zread/zupd via rs64_s7500_draw; tex = load range overlap via rs64_s7500_tex;
+up/upP via rs64_s7500_up; wb via s7500_wb; vi = osViSwapBuffer target or committed VI origin within 16 rows of the base, within 3 swaps,
+new hook rs64_s7503_swap in upstream_compat osViSwapBuffer_recomp). Verdict: fill / live / rewrite / dead (5 s and 3 swaps). Controls,
+same matcher, same run, t>=30 s: ctlC (last colour image set -> must see an event), ctlV (fb at the committed VI origin -> must see vi).
+Recipe tools/s7503_fa_recipe.zsh (wraps s7501_ez_recipe; exit 0 live=0 + ctls ok, 5 live>0, 3 ctl fail).
+Run 1 (scratch/s7503_fa_run1, killed at t~16 s): INSTRUMENT DEFECT - vi matched anywhere inside the fb extent, so VI origin 67CF00 (the
+live 640x340 fb 67CA00 + 1 row) counted as "vi" on the stale 640x480 record 650E00 whose extent contains it. Fixed: vi only within 16
+rows of the base; a deeper hit is logged "vin" and not scored. Run 2 = the result.
+Run 2 (scratch/s7503_fa, L4 dd1 / L15 dd8 21:9): ctlC ok (set@1,draw@1) and ctlV ok (vi@2) both arms; EZ score 0 same run.
+armed L4 10 / L15 11: dead 8 / 7, live 2 / 4, fill 0, rewrite 0, pend 0. Every dead watch = draw-path upload then nothing but further
+draw-path re-uploads or "vin" (another fb nested in the stale record is presented) for 5 s: the stale RT64 record is never set, drawn,
+sampled or presented again (boot 640x480 records at t~5.2, 640x340 at 11.2 / 67-75 s, mission-load 58.9 s).
+The live rows, three shapes:
+ (1) present-path arm (L4 751E00 796x447, L15 B20000 1024x447 at t=28.2 sw 1640, the mission-load transition; L15 961000 at 58.7):
+     the VI origin really is this fb (752438 = base + 1 row) and RT64's own diff count is diffpx=4 (2 words = one coalesce header pair
+     at 75C004 / B20004) while my word diff vs nativeSwappedRAM says nchg=114435 (the two counters disagree; RT64 uploads by its own diff).
+     Next swap the fb is re-uploaded (rs_free header, pi) and the swap after overwritten by another image's writeback (wbo).
+ (2) up@0,set@0,draw@0 at t=43.6 (L4 5DE900, L15 961000): window mask zmem|cpu|wbself, diffpx 83.7k - the game CPU-composes the image
+     (zmemcpy blit) into a freshly malloc'd block (rs_malloc header 5E8944 / 96B044 in the same window), then sets it and draws over it.
+ (3) up@0,tex@0 (L15 961000 t=59.1 packTlut): the load that triggered checkRAM is the game reading its own TLUT at 9F92E0, inside the
+     stale record's extent.
+Reading: in every live row the RT64 upload immediately precedes the use and copies the guest's current RAM into RT64's native copy, which
+is exactly what the hardware VI / RDP would read from RDRAM. So H-fa-live is SELECTED as a fact (6/21) but it is retail-equivalent by
+construction: RT64 never shows stale native bytes over a freed-RAM write; it shows the RAM. The only possibly-visible content from the
+allocator is shape (1): 2 header words (4 pixels) on the mission-load present frame, gone 2 swaps later. Two lines: the s7503 event
+order (upload before every use) + the s7501 RT64 diffpx (=4 on the present uploads). Whether retail RAM holds the same header word at that
+moment is unchecked (the oracle does not reach mission load): single-source for H-fa-retail.
+Rules out: H-fa-dead as the whole story; RT64 drawing or presenting a native copy that disagrees with guest RAM after an allocator write
+(L4/L15). Not ruled out: 4-pixel header garbage on the mission-load frame being port-only (retail heap layout matched at boot, ES/ET).
+Files: src/main/main.cpp (s7503 block + hooks in rs64_s7493_img / zdraw fill / s7500_wb / draw / tex / up / s7501_up), src/main/
+upstream_compat.cpp (rs64_s7503_swap), tools/s7503_fa_recipe.zsh, scratch/agent/soak_queue/s7503_fa_levels.sh (L1 dd8 21:9, L7/L10/L12).
+No lib/ edits. Verdict: selects H-fa-live (upload-synced) for 6/21 and H-fa-dead for 15/21, refutes "RT64 shows stale bytes";
+next discriminator FB: are the shape-(1) header pixels in the PRESENTED image (RT64 readback at the present vs RAM), and on retail.

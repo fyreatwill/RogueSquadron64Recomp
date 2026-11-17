@@ -1,19 +1,19 @@
-# NEXT (s7503)
+# NEXT (s7504)
 HYPOTHESIS-ID: m3-partition-over-live-block
 
-Fold first: SOAK-RESULTS line for s7502_ez2_levels (rows `s7502_ez2_levels ez arm=` in scratch/s7502_ez2_levels/out.txt).
-EZ score 0 on L1 dd8 21:9 / L7 / L10 / L12 dd4 with ctlst=ok -> EZ CLOSED 6 levels. Note the wrapped EQ base recipe can make rc=3 on
-its own (L15 os_rt64fb plant not detected in s7501 and s7502); judge EZ by the `ez score=` line. Any remaining none: read the `up cls=none`
-row, check for another overlapping fb-record or a store path outside rs64_s7475_store. trunc left after pgres: ring too short, note it.
+Fold first: SOAK-RESULTS line for s7503_fa_levels (rows `s7503_fa_levels fa arm=` in scratch/s7503_fa_levels/out.txt). Score 5 is
+EXPECTED (live>0 by design since s7503); judge by ctlC/ctlV=ok and by the `[s7503] verdict=live` rows: each must be one of the three
+s7503 shapes (present-path upload with small RT64 diffpx; up,set,draw after a zmem/cpu compose; tex load inside a stale extent). Any
+other live shape (draw/zread on a stale record with NO upload before it, or upP long after a cpu write) is new: read it.
 
-Work unit, class FA (unchanged from s7502 plan, now with the s7502 writer list): uploads whose writer is guest code reusing freed fb RAM:
-allocator headers (buildHeapFreeList / rs_free / rs_malloc / coalesceFreeHeapBlocks) and packTlutEntriesRgba5551 (0x200 TLUT at the
-tail of an fb idle 6-15 s). Hypotheses: H-fa-dead (image never set again, or set and filled before any draw/present/tex: harmless stale
-RT64 tracking) / H-fa-live (image set this or next swap, or presented by VI, and RT64 shows/samples the uploaded bytes: visible garbage)
-/ H-fa-retail (retail reuses the same RAM the same way).
-Discriminator, ONE build: in rs64_s7501_up, when cls=cpu and fn is an allocator or packTlut*, register the fb with the s7500 EY tracker
-(rs64_s7500_* classifies the first later event on an image: fill / draw / zread / tex / up / wb) and log whether VI origin == that fb
-within the next 3 swaps. Control: the s7501 ctl word on a live fb must classify live (draw/present).
-Run: `env XC=ROGUESQ_S7500_EY=1+ROGUESQ_S7500_CTL=1 zsh tools/s7501_ez_recipe.zsh` (L4 dd1, L15 dd8 21:9).
-Outcome: all -> dead/fill-first => H-fa-dead, class closed; any draw/present/tex before fill => H-fa-live, then why RT64 keeps a freed fb
-live, and check retail via the oracle (mupen watch on that block).
+Work unit, class FB: is the allocator header that RT64 uploads on the present path (shape 1: L4 751E00 hdr 75C004, L15 B20000 hdr
+B20004, t~28.2 sw 1640 mission load; L15 961000 t~58.7) visible in the PRESENTED image, and is it retail?
+Hypotheses: H-fb-visible (the presented frame at that swap shows the 2 header words as 4 odd pixels at the header's x,y) /
+H-fb-covered (VI scanout window / HUD / later draw covers it, or the frame is black: osViBlack is ignored by the port s982, check the
+VI control/type) / H-fb-retail (retail RAM holds the same header there at that frame).
+Discriminator, ONE build: at the present-path upload of an s7503-armed fb, compute the header word's (x,y) from (addr - base)/(w*2),
+read RT64's presented texture at that pixel (or dump the presented frame, tools/ framebuffer capture used by the G3 sheets) and the
+VI h/v start window; log pixel value vs RAM word. Control: plant a host write of a bright word at the same row in a live presented fb
+(t>=30 s) and see it in the readback. Retail: the oracle does not reach mission load; if H-fb-visible, ask whether an oracle savestate
+at the mission load exists (tools/oracle/README.md) before claiming port-only.
+Run: `env NAME=s7504_fb zsh tools/s7503_fa_recipe.zsh` with the new flag in XC.
