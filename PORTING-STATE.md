@@ -200763,3 +200763,6 @@ in all channels, monotonic darker = a fade) and ph=5/ph=6 w=796/640 fbs show sim
 not yet named: either a draw that is not merged into drawColorRect (texrect via the rsp.cpp:1194 path, or a fill not scissored the
 same way) or native content that never matched RAM there.
 Rules out: GL as a mission-time host corruption. Leaves: GM (pre-mission out-of-rect colour fade + depth rtOut).
+Verdict: selects H-dither (mission), refutes H-rect-edge as the whole story and refutes H-stale-native for mission time.
+Next discriminator (GM, NEXT.md): per-pair union rect of every draw call vs the pre-mission out-of-rect pixels, plus a depth-delta
+histogram for kind Z (H-unmerged-draw vs H-stale-native vs H-depth-req).
