@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7542 (2026-11-17).
+Compact operational handoff, as of Session 7543 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -41,6 +41,15 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   env diag/lever, or dead. Late rows: GA (F5 DMA writes, opt-in fix SP_LATE=1) and GB writebacks under NODRAIN (s7541_wbw_rwait: flight
   readers only RT64 updateScreen XXH3 / copyRAMToNativeAndChanges, ctl fired). Timer thread re-arms OSTimer after posting = hardware
   order, OSTimer libultra-private (H-os-private, single-source).
+- **Class GD (s7543): CLOSED.** tools/s7543_gd_census.py (exit 0, --controls 9/9): no port yield splits two dependent guest-struct
+  stores. Guest threads hold one run token and lose it only at an explicit yield; __osDisableInt/__osRestoreInt are no-ops. (A) 49
+  runtime replacements, stores vs yields in body order with one level of callee followed: 36 atomic (no yield or tail yield only), 6
+  yield-safe with a named invariant (do_send/do_recv block in a while(full/empty) re-check before any queue store; s7195 park never
+  returns; osStopThread(NULL), osStartThread, _thread_func and the osSendMesg dup-drop branch-split), 7 hand-off primitives where nothing
+  touches guest RAM between running.signal() and the caller's running.wait(). (B) generated-code critical sections: one DisableInt
+  region (musyxSynthFrame_s4562_impl, no call inside); all 13 cop0 Status writes resolve to the FR-bit FPU toggle, not IE. (C) 51
+  injected yields in 31 guest functions all sit outside every region, so hardware could switch threads there via an interrupt too.
+  Side note for class GE: osStopThread_recomp(NULL) yields without setting state=STOPPED (libultra sets it).
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -275,7 +284,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
@@ -297,7 +306,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/agent/soak_queue/s7540_rwait_cost.sh (L5/L12 dd4, needs AC); fold with tools/g1e_level_fps.py. (b) CLOSED s7541: post-
     reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) CLOSED s7542: s7541_wbw_rwait
     (NODRAIN=3, L4/L12 dd4, L1 dd8 21:9) live readers only RT64 updateScreen XXH3, ctl fired. (d) CLOSED s7542: class GC census (headline).
-19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+19. **Class GE (next, NEXT.md): libultra thread-state fidelity of the replacements.** Every OSThread state/queue/priority
+    transition the runtime makes vs libultra's (STOPPED/RUNNABLE/RUNNING/WAITING, which queue t->queue names). Seed: osStopThread(NULL)
+    leaves the state RUNNING (s7543). Census first, then a runtime counter only for rows the census cannot settle.
+20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

@@ -200394,3 +200394,52 @@ ORIGIN: no mitigation added (census tool only).
 Not covered: writes through pointers passed into helpers outside the enumerated idioms (e.g. a uint8_t* dst parameter filled by a callee
 that is not copyNativeToRAM / dma_dmem_to_rdram), lambda writers whose body is a helper call (s6848 lambda bodies are enumerated),
 RT64 code outside the scanned roots' idioms. OSTimer reader census not run.
+
+## Session 7543 (2026-11-17) — class GD CLOSED: no port yield splits two dependent guest-struct stores (49 replacement functions, 1 guest critical section, 13 cop0 Status writes, 51 injected yields; tools/s7543_gd_census.py exit 0, controls 9/9)
+
+Soak fold: nothing new to score. s7540_rwait_cost voided again (3/5, human/lock/sleep), still queued; fold rule unchanged (NEXT.md s7542).
+
+Question (from s7542 GC): guest threads run one at a time, so the remaining exposure is atomicity. Does any yield the port makes
+fall between two dependent guest-struct stores, so another guest thread sees a half-updated OSMesgQueue / OSThread / OSTimer /
+OSIoMesg / cont buffer that hardware never shows? Hypotheses: H-atomic (no yield between dependent stores), H-yield-safe (a yield,
+but the struct is consistent there), H-torn (a real split).
+
+Boring check first: `__osDisableInt_recomp` / `__osRestoreInt_recomp` are no-ops (ultra_translation.cpp:193-204), so the port
+never models interrupt masking. Hardware only switches threads inside an OS call (block / wake a higher priority) or at an interrupt,
+and interrupts cannot land inside a DisableInt region. So the census needs three sections, not one.
+
+Tool: tools/s7543_gd_census.py (reuses the GB/GC/FZ engines; the GC H-guest-thread set + every runtime function calling a yield primitive).
+- A, 49 runtime functions: guest-struct stores (S) and yields (Y) in body order, one level of callee followed (a call to a yielding
+  or storing runtime function counts as Y/S). 36 H-atomic (no yield, or tail yields only). 6 H-yield-safe, each with a named span
+  and invariant: do_send blocks in `while (MQ_IS_FULL(mq))` (only the sender is queued, slot/first/validCount untouched, re-read after
+  resume); do_recv `while (MQ_IS_EMPTY)` + the s7195 park, which never returns; _thread_func (first park precedes guest work; the exit
+  store runs only while it still owns the OSThread and holds the token, because a destroyed thread's context is cleared before its wake
+  signal and the dying host thread only reads); osStopThread_recomp (self-stop branch returns at once); osStartThread (branch split:
+  the state store is the init else-branch); osSendMesg (dup-drop yields and returns -1; the later on_result store is the host-side
+  s4260 Ent table). 7 H-def hand-off primitives (run_next_thread(_and_wait), resume_thread_tagged/_and_wait, wait_for_resumed,
+  swap_to_thread, check_running_queue): nothing touches guest RAM between `running.signal()` and the caller's `running.wait()`, so the
+  outgoing host thread cannot overlap the incoming one.
+- B, generated code (../N64Recomp/RecompiledFuncs/funcs_*.c): exactly one DisableInt..RestoreInt region (funcs_24.c:7835-7869,
+  musyxSynthFrame_s4562_impl), no call inside. All 13 cop0_status_write sites (7 math functions in funcs_4.c, 0x80018860-0x800196B4)
+  resolve by a backward constant resolver to SR|0x04000000 or SR&~0x04000000: the FR FPU-mode toggle, not IE/EXL.
+- C, 51 yields the port injected into guest code (yield_self*, rs64_preempt_point, check_running_queue, osYieldThread_recomp ... in
+  31 functions: audio waits, video thread, SI service, menus, JPEG decoder) all lie outside every B region, so each is a point where
+  hardware could also switch threads (by interrupt).
+
+Controls (--controls 9/9): planted rs64_preempt_point between do_send's slot store and validCount++ -> do_send H-torn-OPEN; planted
+swap_to_thread after osSetThreadPri's priority store (callee followed) -> OPEN; do_send rule deleted -> OPEN; planted guest read before
+wait_for_resumed's running.wait() -> FAIL-check; fixture with a call inside a DisableInt region -> B OPEN; fixture IE-bit Status write
+(resolved ('SR',1,0)) -> B OPEN; fixture yield inside the region -> C OPEN and after it -> H-int-enabled; rule-less A -> all 6
+yield-safe rows OPEN; live 49/14/51 rows, all 7 hand-off primitives present, 0 OPEN/FAIL.
+First live run had 4 B OPEN rows: the clear side builds ~FR via `nor` of a register loaded earlier, which the first 14-line window
+missed. The resolver now follows straight-line register assignments within the function, and all 13 resolve. Two controls also
+failed at first (the mutation hit osCreateThread's priority store; wait_for_resumed was not in the row set). Both are fixed and
+every control is now PASS.
+
+Selects H-atomic/H-yield-safe for every row; rules out H-torn. Limits: the store detector is text-based and branch-insensitive. It is
+conservative: host `->` stores count too, and every branch case needs a rule. B and C only see generated game code; libultra's own
+critical sections are replaced, so their order is section A. This is a static census, two lines (A ordering and B/C region
+placement), with no runtime arm.
+Side finding for class GE: osStopThread_recomp(NULL) calls run_next_thread_and_wait without setting state=STOPPED (libultra sets
+OS_STATE_STOPPED before __osEnqueueAndYield), so a self-stopped thread stays RUNNING in guest RAM.
+Rerun rule added to CURRENT-TRUTH item 12: after a scheduler/replacement or injected-yield change, run tools/s7543_gd_census.py --controls.
