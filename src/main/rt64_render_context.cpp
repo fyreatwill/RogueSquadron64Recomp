@@ -1570,7 +1570,7 @@ namespace ultramodern {
         static double t_copy = 0, t_sync = 0; static uint64_t t_bytes = 0, t_jobs = 0, t_calls = 0;
         struct AqAcc { uint64_t n = 0; double rsp = 0, drain = 0, wk = 0, wk_tail = 0, copy = 0, sync = 0, bytes = 0, jobs = 0, calls = 0,
                        pend_jobs = 0, last_kb = 0, last_ms = 0, max_ms = 0, total = 0; };
-        static AqAcc aq[4]; static int aq_sec = -1;
+        static AqAcc aq[5]; static int aq_sec = -1;
         // s6707 G1e: as=2 = async task whose deferred RDP ranges the bridge streams to the worker every ROGUESQ_RDP_STREAM_KB
         // (default 16, 0 = off) while the RSP runs, instead of one commit after it exits. ROGUESQ_RDP_STREAM_TOGGLE=1 streams
         // only every other async window (same-run as=1 vs as=2). Latched per task at entry.
@@ -1584,14 +1584,24 @@ namespace ultramodern {
         // as=2 drained vs as=3 not drained). Latched per task at entry.
         static const int nodrain_env = [] { const char *e = std::getenv("ROGUESQ_RDP_NODRAIN"); return e ? atoi(e) : 0; }();
         static bool task_nodrain = false;
+        // s7540 class GB fix: ROGUESQ_RDP_NODRAIN=3 = "reads-wait": send_dl returns once the worker has done the RDRAM texture
+        // reads of the task (RT64 State::fullSync calls rs64_s7540_reads_done() after its last fullSyncFramebufferPairTiles),
+        // not after the whole tail (renderAndSynchronize GPU work). =2 now alternates per TASK drain/nodrain (s7539: it counted
+        // async windows, which never flipped, so =2 == =1). =4 cycles per task full drain / nodrain / reads-wait (same-run A/B/C:
+        // aq as=1|2 / as=3 / as=4, s7539-gb as=1 / as=3 / as=4).
+        static bool task_rwait = false;
+        static bool cur_rd = false;                    // under m: the job the worker is running signalled reads-done
+        static uint64_t rw_sig = 0, rw_idle = 0;       // Gfx thread: reads-wait ended by the signal / by an idle worker
         static const bool screen_job_env = [] { const char *e = std::getenv("ROGUESQ_RDP_SCREEN_JOB"); return e && *e && *e != '0'; }();
         static std::atomic<int> screen_pend{0}; // at 2 queued the next VI takes the drain path, so the worker cannot run away
         static double scr_drain = 0, scr_pre = 0, scr_up = 0, scr_upmax = 0; static uint64_t scr_n = 0; // Gfx thread only
         static void aq_print(int sec) {
+            if (rw_sig + rw_idle) std::fprintf(stderr, "[s7540-rw] t=%d sig=%llu idle=%llu\n", sec, (unsigned long long)rw_sig, (unsigned long long)rw_idle);
+            rw_sig = rw_idle = 0;
             if (scr_n) std::fprintf(stderr, "[g1e-scr] t=%d n=%llu drain=%.2f pre=%.3f up=%.2f up_max=%.2f\n", sec, (unsigned long long)scr_n,
                                     scr_drain / scr_n, scr_pre / scr_n, scr_up / scr_n, scr_upmax);
             scr_drain = scr_pre = scr_up = scr_upmax = 0; scr_n = 0;
-            for (int a = 0; a < 4; ++a) {
+            for (int a = 0; a < 5; ++a) {
                 AqAcc &x = aq[a]; if (!x.n) continue; const double n = (double)x.n;
                 std::fprintf(stderr, "[g1e-aq] t=%d as=%d n=%llu total=%.2f rsp=%.2f drain=%.2f wk=%.2f wk_tail=%.2f copy=%.3f sync_rt64=%.2f "
                     "kB=%.1f jobs=%.1f calls=%.1f pend_jobs=%.2f last_kB=%.2f last_ms=%.2f max_job_ms=%.2f\n", sec, a, (unsigned long long)x.n,
@@ -1618,7 +1628,7 @@ namespace ultramodern {
             static thread_local uint64_t wk_seq = 0; static thread_local int wk_mode = -1;
             struct C { uint64_t loads = 0, pre = 0, post = 0, post_nosnap = 0, bytes = 0, dl = 0, db = 0, prev = 0, prev_dl = 0, prev_db = 0,
                        planted = 0, caught = 0, wit_n = 0, wit_bytes = 0, wit_max = 0; };
-            static C c[4]; static uint64_t hist[256]; static uint64_t prev_hist[256]; // diff bytes per 64 KB bucket (as=3)
+            static C c[5]; static uint64_t hist[256]; static uint64_t prev_hist[256]; // diff bytes per 64 KB bucket (as=3)
             static std::mutex cm;
             static uint64_t rows_cmp(const uint8_t *a, const uint8_t *b, uint32_t start, uint32_t stride, uint32_t rowBytes, uint32_t rows, uint64_t *h) {
                 uint64_t d = 0;
@@ -1629,7 +1639,7 @@ namespace ultramodern {
                 return d;
             }
             static void print_locked(const char *why) {
-                for (int m = 0; m < 4; ++m) { const C &x = c[m]; if (!x.loads) continue;
+                for (int m = 0; m < 5; ++m) { const C &x = c[m]; if (!x.loads) continue;
                     std::fprintf(stderr, "[s7539-gb] %s as=%d loads=%llu pre=%llu post=%llu post_nosnap=%llu cmp_bytes=%llu diff_loads=%llu diff_bytes=%llu "
                         "prev_cmp=%llu prev_diff_loads=%llu prev_diff_bytes=%llu ctl_planted=%llu ctl_caught=%llu wit_n=%llu wit_bytes=%llu wit_max=%llu snaps=%llu\n",
                         why, m, (unsigned long long)x.loads, (unsigned long long)x.pre, (unsigned long long)x.post, (unsigned long long)x.post_nosnap,
@@ -1670,7 +1680,7 @@ namespace ultramodern {
                 {
                     std::unique_lock<std::mutex> lk(m);
                     cv_job.wait(lk, [] { return !q.empty(); });
-                    j = std::move(q.front()); q.pop_front(); busy = true;
+                    j = std::move(q.front()); q.pop_front(); busy = true; cur_rd = false;
                 }
                 RT64::Application *app = g_rt64_app.load();
                 const aclk::time_point jt0 = aq_on ? aclk::now() : aclk::time_point{};
@@ -1701,7 +1711,7 @@ namespace ultramodern {
             if (!pend_has) return;
             pend_has = false;
             if (aq_on) { t_bytes += pend.w.size(); ++t_jobs; }
-            pend.gb_seq = gb::task_seq; pend.gb_mode = task_nodrain ? 3 : (task_stream ? 2 : 1); // s7539 (task_stream/nodrain latched at entry)
+            pend.gb_seq = gb::task_seq; pend.gb_mode = task_nodrain ? (task_rwait ? 4 : 3) : (task_stream ? 2 : 1); // s7539 (task_stream/nodrain latched at entry)
             std::lock_guard<std::mutex> lk(m);
             if (!started) { started = true; std::thread(worker).detach(); }
             q.push_back(std::move(pend)); ++n_jobs;
@@ -1714,6 +1724,14 @@ namespace ultramodern {
             if (!started) return;
             std::unique_lock<std::mutex> lk(m);
             cv_idle.wait(lk, [] { return q.empty() && !busy; });
+        }
+        // s7540: all jobs popped and the running one has done its fullSync texture reads (or the worker is idle).
+        static void reads_wait() {
+            flush_pend();
+            if (!started) return;
+            std::unique_lock<std::mutex> lk(m);
+            cv_idle.wait(lk, [] { return q.empty() && (!busy || cur_rd); });
+            if (busy) ++rw_sig; else ++rw_idle;
         }
         // true = queued; false = caller must process synchronously.
         static bool submit(RT64::Application *app, uint32_t lo, uint32_t hi) {
@@ -1754,10 +1772,12 @@ namespace ultramodern {
             if (rs64_rdp_async_on && !last_async) ++async_windows;
             last_async = rs64_rdp_async_on;
             task_stream = (rs64_rdp_async_on && stream_bytes && (!stream_toggle || (async_windows & 1) == 0)) ? stream_bytes : 0;
-            task_nodrain = rs64_rdp_async_on && (nodrain_env == 1 || (nodrain_env == 2 && (async_windows & 1) == 1));
+            const uint64_t ts = gb::task_seq;
+            task_nodrain = rs64_rdp_async_on && (nodrain_env == 1 || nodrain_env == 3 || (nodrain_env == 2 && (ts & 1) == 1) || (nodrain_env == 4 && ts % 3 != 0));
+            task_rwait = task_nodrain && (nodrain_env == 3 || (nodrain_env == 4 && ts % 3 == 2));
         }
         if (in_task++ == 0 && aq_on) {
-            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? (task_nodrain ? 3 : task_stream ? 2 : 1) : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
+            task_t0 = aclk::now(); task_mode = rs64_rdp_async_on ? (task_nodrain ? (task_rwait ? 4 : 3) : task_stream ? 2 : 1) : 0; t_copy = t_sync = 0; t_bytes = t_jobs = t_calls = 0;
             wk_busy_ns = 0; wk_max_ns = 0; wk_last_ns = 0; wk_last_bytes = 0;
         }
     }
@@ -1769,7 +1789,7 @@ namespace ultramodern {
             const aclk::time_point d0 = aclk::now();
             double pj = 0; uint64_t wk0;
             { std::lock_guard<std::mutex> lk(m); pj = (double)q.size() + (busy ? 1 : 0) + (pend_has ? 1 : 0); wk0 = wk_busy_ns.load(); }
-            if (task_nodrain) flush_pend(); else drain();
+            if (task_rwait) reads_wait(); else if (task_nodrain) flush_pend(); else drain();
             const aclk::time_point d1 = aclk::now();
             AqAcc &x = aq[task_mode]; ++x.n;
             x.rsp += aq_ms(task_t0, d0); x.drain += aq_ms(d0, d1); x.total += aq_ms(task_t0, d1);
@@ -1781,7 +1801,7 @@ namespace ultramodern {
             if (aq_sec < 0) aq_sec = sec;
             if (sec != aq_sec) { aq_print(aq_sec); aq_sec = sec; }
         }
-        if (in_task == 0 && task_nodrain) { flush_pend(); if (gb::on) { RT64::Application *a = g_rt64_app.load(); gb::at_exit(a ? a->core.RDRAM : nullptr, task_async); } return; } // s6708: task_async stays set until a real drain
+        if (in_task == 0 && task_nodrain) { if (task_rwait) reads_wait(); else flush_pend(); if (gb::on) { RT64::Application *a = g_rt64_app.load(); gb::at_exit(a ? a->core.RDRAM : nullptr, task_async); } return; } // s6708: task_async stays set until a real drain
         rdpq::drain(); if (rdpq::task_async) { rdpq::task_async = false; RT64::g_s4280_n = 0; }
         if (gb::on && in_task == 0) gb::at_exit(nullptr, false); } // s7539: drained task posts with no worker job left
 }
@@ -1823,6 +1843,12 @@ extern "C" void rs64_s7539_load(const uint8_t *rdram, uint32_t start, uint32_t s
             const uint64_t d2 = gb::rows_cmp(gb::snap[b], rdram, start, stride, rowBytes, rows, nullptr);
             gb::snap[b][a] ^= 0x5A; if (d2 != d) ++x.caught; }
     }
+}
+// s7540: RT64 State::fullSync, after the last fullSyncFramebufferPairTiles (no more texture-source RDRAM reads in this job).
+extern "C" void rs64_s7540_reads_done() {
+    using namespace ultramodern::rdpq;
+    if (gb::wk_mode < 0) return; // Gfx-thread (synchronous) fullSync
+    std::lock_guard<std::mutex> lk(m); cur_rd = true; cv_idle.notify_all();
 }
 extern "C" int rs64_rdpq_task_async() { return ultramodern::rdpq::task_async ? 1 : 0; }
 extern "C" uint32_t rs64_rdpq_task_stream() { return ultramodern::rdpq::in_task ? ultramodern::rdpq::task_stream : 0; }

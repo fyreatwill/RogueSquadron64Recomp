@@ -90,14 +90,22 @@ RULES = [
          [("file", RC, r"struct RdpqScope \{ RdpqScope\(\) \{ ultramodern::rs64_rdpq_task_enter\(\); \} ~RdpqScope\(\) "
                        r"\{ ultramodern::rs64_rdpq_task_exit\(\); \} \} rdpq_scope;"),
           ("fnbody", RC, "rs64_rdpq_task_exit", r"rdpq::drain\(\);")]),
-        ("async-nodrain", "H-latent-fix",
-         "OPEN, MEASURED s7539 = TORN (tools/s7539_gb_score.py: L1/L4/L12 167/297/354 post-signal texture loads read bytes the guest rewrote after dp_complete, 2 KB 4-bit texture re-decoded every frame by swizzleTextureRowsToTmem 0x800249B4/E4 via parseImageFile; controls planted==caught, older-snapshot diffs, witness ~0.7 MB/window). ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (listed in docs/OWNER-OPT-INS.md): rs64_rdpq_task_exit only "
+        ("async-nodrain", "H-latent-FIXED(opt-in)",
+         "FIXED(opt-in) s7540 by ROGUESQ_RDP_NODRAIN=3 (row async-rwait). MEASURED s7539 = TORN (tools/s7539_gb_score.py: L1/L4/L12 167/297/354 post-signal texture loads read bytes the guest rewrote after dp_complete, 2 KB 4-bit texture re-decoded every frame by swizzleTextureRowsToTmem 0x800249B4/E4 via parseImageFile; controls planted==caught, older-snapshot diffs, witness ~0.7 MB/window). ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (listed in docs/OWNER-OPT-INS.md): rs64_rdpq_task_exit only "
          "flush_pend()s, so send_dl returns and dp_complete is posted while the worker still has the task's tail job(s) "
          "queued. Those jobs read texture bytes from core.RDRAM (only the command words are copied) and RT64 writes "
          "framebuffer copies back to RDRAM, after the guest was told the RDP is done. Hardware posts DP full-sync only "
          "after the last RDP memory access. Lever for the same-run A/B: ROGUESQ_RDP_NODRAIN=2 (alternates per async window)",
-         [("fnbody", RC, "rs64_rdpq_task_exit", r"if \(in_task == 0 && task_nodrain\) \{ flush_pend\(\);(?: if \(gb::on\) \{[^}]*\})? return; \}"),
-          ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_RDP_NODRAIN=1")])]),
+         [("fnbody", RC, "rs64_rdpq_task_exit", r"if \(in_task == 0 && task_nodrain\) \{ if \(task_rwait\) reads_wait\(\); else flush_pend\(\);(?: if \(gb::on\) \{[^}]*\})? return; \}"),
+          ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_RDP_NODRAIN=3")]),
+        ("async-rwait", "H-ordered",
+         "s7540 ROGUESQ_RDP_NODRAIN=3: task exit waits (reads_wait) until every job of the task is popped and the running one has "
+         "called rs64_s7540_reads_done() after State::fullSync's last fullSyncFramebufferPairTiles, so every texture-source RDRAM read "
+         "precedes dp_complete (measured s7540 NODRAIN=4 same-run: as=4 post-signal loads 0). Still after the post: the final "
+         "renderAndSynchronize (fb read-in via fbStorage.store, writebacks) and hashTracking, not measured by s7539's instrument",
+         [("fnbody", RC, "reads_wait", r"cv_idle\.wait\(lk, \[\] \{ return q\.empty\(\) && \(!busy \|\| cur_rd\); \}\);"),
+          ("file", "lib/rt64/src/hle/rt64_state.cpp", r"fullSyncFramebufferPairTiles\(workload, fbPair, loadOpCursor, rdpTileCursor\);\s*\}\s*\}\s*rs64_s7540_reads_done\(\);"),
+          ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_RDP_NODRAIN=3")])]),
     # --- VI / AI -------------------------------------------------------------------------------------------------------------
     (EV, "vi_thread_func", (1040, 1056), [("vi", "H-canon",
      "VI retrace message: the device reads the displayed framebuffer after it, as hardware VI scans the origin through the "
@@ -283,7 +291,7 @@ def controls():
         # 2 mutation: the NODRAIN drain restored in a copy -> the open row's check FAILs (instrument reads the code)
         src = open(os.path.join(REPO, RC), errors="replace").read()
         m2 = os.path.join(d, "rc_drain.cpp")
-        open(m2, "w").write(re.sub(r"if \(in_task == 0 && task_nodrain\) \{ flush_pend\(\);(?: if \(gb::on\) \{[^}]*\})? return; \}", "/* drained */", src))
+        open(m2, "w").write(re.sub(r"if \(in_task == 0 && task_nodrain\) \{ if \(task_rwait\) reads_wait\(\); else flush_pend\(\);(?: if \(gb::on\) \{[^}]*\})? return; \}", "/* drained */", src))
         rows, _ = census(files, over={RC: m2}, quiet=True)
         tests.append(("mutation: NODRAIN early-return removed -> async-nodrain row FAIL-check",
                       any(r[1] == "async-nodrain" and r[2] == "FAIL-check" for r in rows)))
@@ -293,6 +301,12 @@ def controls():
         rows, _ = census(files, over={RC: m3}, quiet=True)
         tests.append(("mutation: drain() removed -> async-drain row FAIL-check",
                       any(r[1] == "async-drain" and r[2] == "FAIL-check" for r in rows)))
+        # 3b mutation (s7540): reads_wait without the reads-done predicate -> async-rwait H-ordered FAILs
+        m3b = os.path.join(d, "rc_norwait.cpp")
+        open(m3b, "w").write(src.replace("return q.empty() && (!busy || cur_rd); });", "return true; });"))
+        rows, _ = census(files, over={RC: m3b}, quiet=True)
+        tests.append(("mutation: reads-done predicate removed -> async-rwait row FAIL-check",
+                      any(r[1] == "async-rwait" and r[2] == "FAIL-check" for r in rows)))
         # 4 mutation: dp_complete moved before send_dl in a copy of events.cpp -> the dp rows' 'before' check FAILs
         evp = "lib/N64ModernRuntime/" + EV
         ev = open(os.path.join(REPO, evp), errors="replace").read()

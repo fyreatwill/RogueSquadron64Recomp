@@ -200293,3 +200293,34 @@ Fix shape for next: in State::fullSync the loads interleave with renderAndSynchr
 copyWithGPU) or producer-side capture of load sources.
 Verdict line: this selects H-torn for the opt-in NODRAIN dp_complete row (3 levels, controls passed) and refutes H-quiet and
 H-no-window. Next discriminator: a NODRAIN=3 reads-done wait, run in the same session alternating with =1, decides H-fix-cheap vs H-fix-costly vs H-residual (NEXT.md).
+
+## Session 7540 (2026-11-17) — class GB fixed (opt-in): ROGUESQ_RDP_NODRAIN=3 reads-wait closes the post-dp_complete texture-read window (same-run L1/L4/L12: 0 late loads vs 43-196 under =1) at 1.2-1.6 ms per task vs 3.3-4.3 ms full drain
+
+Work unit (NEXT s7540). Fold: nothing new in SOAK-RESULTS (s7536_splate_cost voided 4/5, still queued).
+Change (src/main/rt64_render_context.cpp rdpq, lib/rt64 rt64_state.cpp, export.sh run):
+- ROGUESQ_RDP_NODRAIN=3 "reads-wait": RT64 State::fullSync calls extern "C" rs64_s7540_reads_done() right after its last
+  fullSyncFramebufferPairTiles (both the renderToRDRAM branch and the else branch); the worker sets cur_rd under the queue mutex
+  (cleared at every job pop). rs64_rdpq_task_exit in mode 3 runs reads_wait(): flush_pend, then wait until q is empty and the
+  running job signalled (or the worker is idle). Still posted before: the final renderAndSynchronize (fb read-in/writeback GPU work)
+  and hashTracking.
+- NODRAIN=2 fixed: alternates per TASK (task_seq parity), not per async window (s7539: never flipped). NODRAIN=4 cycles per task
+  drain / nodrain / reads-wait (seq%3), aq rows as=2|3|4 and s7539-gb rows as=2|3|4. New [s7540-rw] t= sig= idle= line (G1B).
+- tools/s7539_gb_score.py: as=4 row + FIX verdict (FIX-OK/FIX-RESIDUAL/FIX-CTL), [g1e-aq] drain ms per as= (tail half);
+  --controls 8/8. tools/s7538_gb_census.py: async-nodrain -> H-latent-FIXED(opt-in) (fix NODRAIN=3), new async-rwait H-ordered row
+  (reads_wait predicate + rt64 hook placement + OWNER-OPT-INS), new mutation control (predicate removed -> FAIL-check);
+  --controls 8/8, live census fail=0 open_latent=0 -> exits 0.
+Run (scratch/s7540_rw, g1e_owner_quiet_arms HOLD 120, FPS60 16:9 fullscreen, NO_SAVE_WRITE, battery clk 1.53 ALLOW_SLOW, env
+ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=4 ROGUESQ_S7539_GB_CHK=1 ROGUESQ_G1B=1; 3/3 alive, fatal 0, vi_stalls30s 0, level_ok 1):
+| level | as=3 nodrain post / diff_loads (ctl planted=caught, older diffs) | as=4 reads-wait post / pre / diff | drain ms as=2 / 3 / 4 | rw sig/idle |
+| L4 dd4      | 3.10M / 50  (48511=48511, 991)  | 0 / 4.26M / 0 | 3.34 / 0.00 / 1.17 | 4482/0 |
+| L12 dd4     | 4.07M / 196 (63581=63581, 2577) | 0 / 4.93M / 0 | 4.31 / 0.00 / 1.63 | 4116/0 |
+| L1 dd8 21:9 | 3.32M / 43  (51926=51926, 1804) | 0 / 4.52M / 0 | 3.31 / 0.00 / 1.17 | 4018/0 |
+Gfx-thread total per task (L4): drained 12.75, nodrain 9.40, reads-wait 10.58 ms. Caveat: in the =4 cycle a drained task follows a
+reads-wait task and may absorb its leftover tail, so as=2 is an upper bound for a pure drain (s6708 measured ~3.3 ms alone, agrees).
+Every reads-wait ended on the signal (idle 0): every gfx task's last job runs a fullSync.
+ORIGIN: the late reads are legitimate guest rewrites (s7539: swizzleTextureRowsToTmem re-decoding a per-frame texture); the defect
+was ours (NODRAIN posted dp_complete before RT64's fullSync read the task's textures). The fix orders the reads, it guards nothing.
+Verdict line: this selects H-fix-cheap (as=4 0 late loads on 3 levels with same-run as=3 TORN and controls caught; reads-wait
+costs ~35% of a full drain) and refutes H-residual and H-fix-costly. OWNER-OPT-INS now recommends =3 over =1; game-fps cost vs =1
+is queued (scratch/agent/soak_queue/s7540_rwait_cost.sh, L5/L12 dd4 ABCCBA, needs AC). Not covered: RT64's post-signal fb
+read-ins/writebacks/hashTracking (after reads_done) are still unmeasured.

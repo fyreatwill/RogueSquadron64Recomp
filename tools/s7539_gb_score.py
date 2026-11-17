@@ -9,6 +9,10 @@ Verdict per log:
   NO-WINDOW  post-signal loads 0
   QUIET      controls pass, diff_loads 0
   TORN       controls pass, diff_loads > 0 (events listed)
+s7540: ROGUESQ_RDP_NODRAIN=4 cycles drain (as=1) / nodrain (as=3) / reads-wait (as=4) per task in one run. When as=4 rows exist the
+log also gets a FIX verdict: FIX-OK (as=3 controls pass and TORN or QUIET, as=4 diff_loads 0), FIX-RESIDUAL (as=4 diff_loads > 0),
+FIX-CTL (as=3 controls fail, so an as=4 zero means nothing). Drain ms per as= comes from the mean of the [g1e-aq] rows (ROGUESQ_G1B=1)
+in the tail half of the run, plus [s7540-rw] sig/idle totals.
 usage: python3 tools/s7539_gb_score.py <log> [<log> ...]       exit 0 iff every log is QUIET or TORN with controls passing
        python3 tools/s7539_gb_score.py --controls               synthetic logs, one per verdict
 """
@@ -18,17 +22,37 @@ RX = re.compile(r"\[s7539-gb\] (\S+) as=(\d) (.*)")
 KV = re.compile(r"(\w+)=(\d+)")
 
 
-def parse(path):
+AQ = re.compile(r"\[g1e-aq\] t=\d+ as=(\d) n=(\d+) total=([\d.]+) rsp=[\d.]+ drain=([\d.]+)")
+RW = re.compile(r"\[s7540-rw\] t=\d+ sig=(\d+) idle=(\d+)")
+
+
+def parse(path, mode="3", extra=None):
     rows, events = [], []
     with open(path, "rb") as f:
         for raw in f:
             line = raw.decode("latin-1", "replace")
             m = RX.search(line)
-            if m and m.group(2) == "3":
+            if m and m.group(2) == mode:
                 rows.append(dict((k, int(v)) for k, v in KV.findall(m.group(3))))
             elif "[s7539-gbd]" in line:
                 events.append(line.strip()[line.find("[s7539-gbd]"):])
+            elif extra is not None:
+                a = AQ.search(line)
+                if a:
+                    extra.setdefault("aq", []).append((int(a.group(1)), int(a.group(2)), float(a.group(3)), float(a.group(4))))
+                r = RW.search(line)
+                if r:
+                    extra["sig"] = extra.get("sig", 0) + int(r.group(1)); extra["idle"] = extra.get("idle", 0) + int(r.group(2))
     return rows, events
+
+
+def fix_verdict(rows3, rows4):
+    v3 = verdict(rows3)[0]
+    if not rows4:
+        return "NO-AS4"
+    if v3 not in ("QUIET", "TORN"):
+        return "FIX-CTL"
+    return "FIX-OK" if rows4[-1]["diff_loads"] == 0 else "FIX-RESIDUAL"
 
 
 def verdict(rows):
@@ -63,6 +87,25 @@ def report(path):
         print("  " + e)
     if len(events) > 12:
         print(f"  ... {len(events) - 12} more events")
+    ex = {}
+    rows4 = parse(path, "4", ex)[0]
+    if rows4:
+        l4 = rows4[-1]
+        fv = fix_verdict(rows, rows4)
+        print(f"  as=4 reads-wait: post={l4['post']} pre={l4['pre']} diff_loads={l4['diff_loads']} diff_bytes={l4['diff_bytes']} "
+              f"post_nosnap={l4['post_nosnap']} planted={l4['ctl_planted']} caught={l4['ctl_caught']} -> {fv}")
+        rows1 = parse(path, "1")[0]
+        if rows1:
+            print(f"  as=1 drained: loads={rows1[-1]['loads']} pre={rows1[-1]['pre']} post={rows1[-1]['post']}")
+        aq = ex.get("aq", [])
+        half = aq[len(aq) // 2:]
+        for a in sorted({r[0] for r in half}):
+            xs = [r for r in half if r[0] == a]; n = sum(r[1] for r in xs)
+            if n:
+                print(f"  aq as={a}: tasks={n} drain_ms={sum(r[1] * r[3] for r in xs) / n:.2f} total_ms={sum(r[1] * r[2] for r in xs) / n:.2f}")
+        print(f"  reads-wait ended by signal={ex.get('sig', 0)} by idle={ex.get('idle', 0)}")
+        if fv != "FIX-OK":
+            v = fv
     return v
 
 
@@ -79,11 +122,18 @@ def controls():
             print(f"control {want}: got {got} {'PASS' if got == want else 'FAIL'}"); ok += got == want
         p = os.path.join(td, "none.log"); open(p, "w").write("nothing\n")
         got = verdict(parse(p)[0])[0]; print(f"control NO-DATA: got {got} {'PASS' if got == 'NO-DATA' else 'FAIL'}"); ok += got == "NO-DATA"
-    print(f"controls {ok}/5"); return 0 if ok == 5 else 1
+        t3 = "[s7539-gb] p600 as=3 " + base.format(post=5, dl=1, db=3, pd=2, pl=1, ca=1)
+        bad3 = "[s7539-gb] p600 as=3 " + base.format(post=5, dl=1, db=3, pd=0, pl=1, ca=1)
+        for want, l3, dl4 in (("FIX-OK", t3, 0), ("FIX-RESIDUAL", t3, 2), ("FIX-CTL", bad3, 0)):
+            p = os.path.join(td, want + ".log")
+            open(p, "w").write(l3 + "\n[s7539-gb] p600 as=4 " + base.format(post=0, dl=dl4, db=dl4, pd=0, pl=0, ca=0) + "\n")
+            got = fix_verdict(parse(p, "3")[0], parse(p, "4")[0])
+            print(f"control {want}: got {got} {'PASS' if got == want else 'FAIL'}"); ok += got == want
+    print(f"controls {ok}/8"); return 0 if ok == 8 else 1
 
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["--controls"]:
         sys.exit(controls())
     vs = [report(p) for p in sys.argv[1:]]
-    sys.exit(0 if vs and all(v in ("QUIET", "TORN") for v in vs) else 1)
+    sys.exit(0 if vs and all(v in ("QUIET", "TORN") for v in vs) else 1)  # a FIX-RESIDUAL / FIX-CTL replaces v, so exits 1
