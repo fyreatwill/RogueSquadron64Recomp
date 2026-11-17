@@ -200577,3 +200577,41 @@ Verdict: selects H-static; H-stale refuted (no heap object is ever retained); H-
 Residual (not covered): src/main's own statics (27.5k lines of port hooks/guards/diagnostics) were sampled, not enumerated;
 most hold constant guard addresses. That is the successor class GH.
 Next: class GH, port-side (src/main) host statics that capture a guest address at one call and dereference it later.
+
+## Session 7548 (2026-11-17) — class GH CLOSED: of 272 src/main statics that capture a guest-derived value, the 23 that are dereferenced later or escape are all in-flight task pointers, default-off diagnostics, the rdram base, host shadows, per-frame-refreshed bounds or scalar values; 0 open
+
+Work unit (NEXT.md s7548, HYPOTHESIS-ID class-gh-port-static-guest-ptrs): static census of port host statics holding guest
+addresses. No new soak verdicts to fold (SOAK-RESULTS tail unchanged since the s7545 fold).
+
+Tool: tools/s7548_gh_census.py (offline, ~17 s; --controls ~3 min). Brace-scoped C++ scan of src/main/*.cpp|.mm with comments and
+strings blanked: enumerates static-storage scalars/atomics/PTR/arrays, pointers and std:: containers (namespace scope, anon
+namespace, static/thread_local locals; struct members and plain locals excluded); a capture is an assignment/store/insert whose
+RHS is guest-derived (ctx->rN, task->t.*, MEM_*/TO_PTR/rdram_be*/rs64_rdram_u*, rdram[], any function or lambda whose body reads
+guest memory with one of its params, or a local tainted by those through a fixpoint over the enclosing function seeded with its
+params and with every already-captured static). A deref is the static, a local derived from it, or a getter returning it, inside
+a guest accessor's arguments or an rdram-base index; an escape is a getter referenced from ultramodern/librecomp/rt64 src or
+from tools/fixup_*.py / apply_*.py (C injected into RecompiledFuncs).
+
+Result (rc 0): 272 captured statics; 249 H-diag (never dereferenced, never escape). The 23 others, each with a rule whose proof
+regex must be present (DRIFT otherwise):
+- H-inflight 2: s_pending_task_data_ptr (thread_local, re-set from the OSTask in get_rsp_microcode M_GFXTASK/M_AUDTASK and on the
+  direct path right before factor5_gfx_runner; 30 deref sites all in that task's runner = class GA), s_pending_audio_task.
+- H-gated 6 (gate token verified in every deref site's enclosing function, or a gate helper it returns through): s4457 ring
+  (ROGUESQ_LOG_S4457), g_m5_task_fault_pending_phys (ROGUESQ_LOG_M5_TASK_WRITE_FAULT), rt64 s_ti_w1 (ROGUESQ_LOG_G1D_CMD),
+  s_s7472_pa/pw0 (ROGUESQ_S7472_HEAPCHK), g_rsp_dma_shadow2_addr (ROGUESQ_SHADOW2, default off).
+- H-base 2 (s7033_rd, g_s6127_rd = rdram), H-host 3 (g_s5229_* calloc shadows), H-refresh 2 (s7031_w/hgt: terrain dims re-read
+  from 0x80136DF8 by the per-frame hook before s7033 uses them, and only as clamp bounds; hm/rt bases re-read per call).
+- H-value 8 escapes: guest PCs printed by librecomp rsp.cpp / the s2447 fixup, s6848 VI bound, s6919_org/lastb (far-cutoff float
+  bits handed back to the patched guest as a value; DD_CUT_LIVE default off), s6893_cap (tile slot clamp).
+Controls 10/10: planted MEM_W capture + later MEM_W deref -> UNCLASSIFIED; planted rdram+guest pointer static + p[3] ->
+UNCLASSIFIED; print-only capture -> H-diag; getter used by injected C -> UNCLASSIFIED with the escape named; two-hop local taint ->
+UNCLASSIFIED; deleted rule -> UNCLASSIFIED; renamed gate token -> DRIFT; broken H-base proof -> DRIFT; stale rule row -> DRIFT;
+real tree 0 bad rows. Control 1 FAILED on the first run (MEM_* are macros, not detected accessor functions, so MEM_W(…, p) was not
+a deref site); fixing it surfaced 3 extra rows (shadow2, s7031_w/hgt), classified above. That failed control is why the
+positive control has to come before the verdict.
+Single-source (static reasoning only). Limits: the gate check is per enclosing function, not per branch; aliasing through struct
+fields of non-static objects and through function-pointer calls is not followed.
+ORIGIN: no mitigation landed; every dereferenced capture's writer is named in its rule (get_rsp_microcode, the per-frame s7031
+hook, env-gated diag code), and none holds a guest heap pointer across a guest free on a default-on path.
+Rules out H-stale for src/main statics; selects H-diag-only + H-refresh. Next: class GI, statics declared inside C that the fixup
+and apply scripts inject into RecompiledFuncs (4387 `static` lines in the generated funcs_*.c), same engine.

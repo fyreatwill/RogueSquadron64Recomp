@@ -298,7 +298,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
@@ -331,7 +331,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Class GG CLOSED s7547** (tools/s7547_gg_census.py, rc 0, --controls 6/6): every guest pointer ultramodern/librecomp retain
     past the call (event/VI mq, VI mode + fb, timer, PI retQueue) resolves to a static object < heap base 0x80154690 (derived from
     initMainHeap) or the top-of-RAM fb carve (fb slot table 0x80128E98 writers verified = initVideoSubsystem only); 0 heap objects
-    retained. Event queues match the s7395 runtime list one for one. Next: class GH (NEXT.md), src/main port statics holding guest addresses.
+    retained. Event queues match the s7395 runtime list one for one.
+    **Class GH CLOSED s7548** (tools/s7548_gh_census.py, rc 0, --controls 10/10; static, single-source): 272 src/main statics
+    (247 int/atomic, 7 pointer, 18 container) capture a guest-derived value; 249 are never dereferenced and never escape (H-diag);
+    the 23 that are: 2 H-inflight (s_pending_task_data_ptr / s_pending_audio_task, re-set per task in get_rsp_microcode), 6 H-gated
+    (default-off env, verified per deref site), 2 H-base (rdram itself), 3 H-host (calloc shadows), 2 H-refresh (s7031 terrain dims
+    re-read per frame), 8 H-value escapes (PCs, s6919 cutoff float bits, s6893 clamp). 0 OPEN. Control 1 first FAILED (MEM_* macros
+    were not deref sites) and was fixed before the verdict. Next: class GI (NEXT.md), statics injected into RecompiledFuncs.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
