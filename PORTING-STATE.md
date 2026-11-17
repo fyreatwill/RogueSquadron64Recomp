@@ -200515,3 +200515,30 @@ wl50 3.4-3.5 ms everywhere; L5 maxgap 435-479 ms in every arm alike (same-scene 
 recipe). Item 18(a) CLOSED.
 Verdict (s7545): selects H-none and refutes H-reader and H-ctx for class GE (0 live-thread guest accesses, controls fired in all 3
 arms); closes GE. Next discriminator: class GF census of host OSThread reads reachable after osDestroyThread (H-safe vs H-deref).
+
+## Session 7546 (2026-11-17) — class GF CLOSED: every host read of an OSThread field that is reachable after osDestroyThread(other) is an equality compare of ->context against the woken thread's own captured context (or guarded by one), so a heap-reused struct always self-terminates; the guest never names a freed thread struct
+HYPOTHESIS-ID: class-gf-host-reads-destroyed-thread
+What ran: new tools/s7546_gf_census.py (offline, no build). It scans lib/N64ModernRuntime ultramodern/src + librecomp/src and
+src/main for every `x->next/priority/queue/state/flags/id/context/sp` on an OSThread* or TO_PTR(OSThread, ...), tracks function and
+the after-destroy region (wait_for_resumed after running.wait(); _thread_func after its first wait), and classifies each row by rule.
+It also checks the after-destroy region semantically (only `->context ==/!= thread_context` or the true side of it), independent of the rule
+table, and checks the guest side in the generated code.
+Result: 122 rows, 0 OPEN, 0 UNCLASSIFIED, rc 0: H-live 75, H-diag 42 (env-gated prints, plus debug_printf, which compiles to nothing at
+ultramodern.hpp:186), H-cmp 3 (threads.cpp:289, 621, 635), H-guarded 2 (625 run_thread_function(self->sp) and 636 context=nullptr, both
+inside `if (self->context == thread_context)`). Any value the guest writes at +0x20 after reuse is != the captured host pointer, which
+leads to osDestroyThread(NULL), then throw thread_terminated, then skipping run_next_thread, then cleanup_thread. That is the correct
+outcome for any value (H-safe).
+Guest side (generated code): registerServiceWorker rs_mallocs a node (OSThread at +0x20) and keys it with ++*(0x801128D4)
+(monotonic, never reused). unregisterServiceWorker walks the live list 0x801128D0 by key, destroys, unlinks, and only then calls
+rs_free. setServiceWorkerPriority walks the same list. So no guest osDestroyThread/osSetThreadPri can name a freed struct. A missed
+key falls through to node 0 with r4=0x20, which is the retail path and not a stale struct (noted, not reached: 0 such calls in s7545).
+Controls 5/5: planted `->context->running.signal()` after the wake -> OPEN; planted `->sp` read after the wake -> OPEN; deleted
+resume_thread_tagged rule -> UNCLASSIFIED; real tree rc 0 with post-destroy rows 7; guest rs_free moved before the unlink -> OPEN.
+Second line (runtime, re-read from the s7545 v2 logs scratch/s7545_thrwatch/log_{l1,l4,l12}.txt): each level shows 8 thr-del of
+another thread, each followed by thr-del-unknown on the same address. That second event is the woken thread's own
+osDestroyThread(NULL) from wait_for_resumed:290, i.e. the H-cmp path taken 8/8. The logs also show [wait-resumed-dead-ctx] 0 and
+[thr-resume-skip] 0, and 0x801937F0 destroyed at 43.5 s and re-created as a new OSThread at 43.7 s (reuse as a thread witnessed),
+all arms alive.
+Rules out: H-deref (no host path dereferences a destroyed struct's context or sp). It also rules out H-none in the strict sense:
+after-destroy reads exist but all of them only compare. Selects H-safe. Class GF CLOSED. No code change was needed. The tool is
+added to the rerun list for scheduler changes.

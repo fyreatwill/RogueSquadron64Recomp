@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7545 (2026-11-17).
+Compact operational handoff, as of Session 7546 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -298,7 +298,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
@@ -322,8 +322,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) CLOSED s7542: s7541_wbw_rwait
     (NODRAIN=3, L4/L12 dd4, L1 dd8 21:9) live readers only RT64 updateScreen XXH3, ctl fired. (d) CLOSED s7542: class GC census (headline).
 19. **Class GE CLOSED (static s7544 + runtime s7545, headline).** Reopen only if a guest code path reads OSThread fields.
-    Follow-up = class GF (NEXT.md): host-side reads of OSThread fields through a pointer to a thread the guest has destroyed and
-    whose struct it reuses (s7545 v1 shows reuse within 2 s; e.g. wait_for_resumed threads.cpp:289 reads this_thread()->context).
+    **Class GF CLOSED s7546** (tools/s7546_gf_census.py, rc 0, --controls 5/5): 122 host OSThread-field reads; the 7 reachable after
+    osDestroyThread(other) (wait_for_resumed:289, _thread_func:621/625/635/636) are equality compares of ->context against the
+    thread's own captured context, or on the true side of one, so any reused value self-terminates (H-safe); the rest are live/diag.
+    Guest: service-worker keys are monotonic (0x801128D4) and unregister unlinks before rs_free, so no OS call names a freed struct.
+    Runtime (s7545 logs): 8/8 destroys per level followed by the woken thread's self-destroy re-call, 0 dead-ctx, 0 resume-skip,
+    0x801937F0 reused as a new thread 0.2 s later. Next: class GG (NEXT.md), host-retained guest pointers outliving the guest object.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
