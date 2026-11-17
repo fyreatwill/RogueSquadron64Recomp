@@ -199530,6 +199530,8 @@ DISCRIMINATION: H-canon for every call and for gamma (gamma follows the bit, ctl
 only in zero-line VIs) and for CTRL_SET; H-live refuted for gamma. One residual H-live-minor: 2 of 15 transitions hold a dim image
 for 33-50 ms where hardware shows black - left as is (matching would add a black blink; not a defect anyone sees). VI filters:
 design difference, single-source (code read + time census), reported only. FN CLOSED L4/L15; levels soak queued (s7517_fn_levels).
+This selects H-canon for the special-features calls and the gamma path, selects H-dead for gamma in play (zero-line VIs only)
+and refutes H-live for gamma; the zero-line hold is the one H-live-minor residual, measured (2/15 dim) and left as is.
 Rules slip, recorded: one `git checkout -p -- src/render/rt64_vi_renderer.cpp` was run inside lib/rt64 (forbidden); stdin was /dev/null
 so it quit at the first prompt and discarded nothing - the file's diff was verified line-identical to submodule-patches/rt64.patch.
 Files: lib/N64ModernRuntime/ultramodern/src/events.cpp, lib/rt64/src/hle/rt64_present_queue.cpp (patches exported),
