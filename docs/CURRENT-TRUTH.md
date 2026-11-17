@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7543 (2026-11-17).
+Compact operational handoff, as of Session 7544 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -49,7 +49,17 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   touches guest RAM between running.signal() and the caller's running.wait(). (B) generated-code critical sections: one DisableInt
   region (musyxSynthFrame_s4562_impl, no call inside); all 13 cop0 Status writes resolve to the FR-bit FPU toggle, not IE. (C) 51
   injected yields in 31 guest functions all sit outside every region, so hardware could switch threads there via an interrupt too.
-  Side note for class GE: osStopThread_recomp(NULL) yields without setting state=STOPPED (libultra sets it).
+- **Class GE (s7544): CLOSED statically.** tools/s7544_ge_census.py (exit 0, --controls 13/13). Boring check: the port's OSThreadState
+  enum is STOPPED=0 QUEUED=1 RUNNING=2 BLOCKED=3 (libultra 1/2/4/8) and RUNNING/BLOCKED are never stored, so every running or
+  mesg-blocked thread reads QUEUED. (A) 18 transition rows in 11 replacements, each H-equal or H-benign vs libultra (osStartThread on a
+  mesg-blocked STOPPED thread: port makes it runnable, the do_recv/do_send while-loop re-blocks it). (B) 0 guest loads/stores into the
+  11 static OSThread structs (constant-address propagation) or worker+0x20..0x4F in the service-worker fns: nothing reads the
+  divergent values. (C) 40 thread-API call sites: the 3 osStopThread sites all stop ANOTHER thread (mainBootstrapWorker -> 0x8010D3D0;
+  waitForSerialIdle -> siServiceThread, unreachable from it by direct calls) or are dead (stopServiceWorker); no osStopThread(NULL)
+  caller, so the s7543 seed row is dead code. Every osStartThread targets a fresh or stopped thread (port re-inserts a RUNNABLE one,
+  libultra ignores it): direct create in the same fn, startServiceWorker after registerServiceWorker, releaseSerialLock paired W/R
+  with waitForSerialIdle, restartServiceWorker dead. Limits (single-source, static): heap-carried thread pointers are not followed;
+  reachability is direct calls only. Runtime witness = next unit.
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -306,9 +316,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/agent/soak_queue/s7540_rwait_cost.sh (L5/L12 dd4, needs AC); fold with tools/g1e_level_fps.py. (b) CLOSED s7541: post-
     reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) CLOSED s7542: s7541_wbw_rwait
     (NODRAIN=3, L4/L12 dd4, L1 dd8 21:9) live readers only RT64 updateScreen XXH3, ctl fired. (d) CLOSED s7542: class GC census (headline).
-19. **Class GE (next, NEXT.md): libultra thread-state fidelity of the replacements.** Every OSThread state/queue/priority
-    transition the runtime makes vs libultra's (STOPPED/RUNNABLE/RUNNING/WAITING, which queue t->queue names). Seed: osStopThread(NULL)
-    leaves the state RUNNING (s7543). Census first, then a runtime counter only for rows the census cannot settle.
+19. **Class GE CLOSED statically s7544 (headline). Next (NEXT.md): runtime witness** for the census limits: a guest load/store into
+    any live OSThread [t, t+0x30) (static + worker + dynamic, tracked at osCreateThread/osDestroyThread) via the s7484 load hook and
+    the s5798 store hook, one build, L1/L4/L12 holds; positive control = plant a guest-style read of a live thread's state. 0 hits with
+    the plant caught closes the limit; a hit names the reader and its pc.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

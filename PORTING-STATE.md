@@ -200443,3 +200443,41 @@ placement), with no runtime arm.
 Side finding for class GE: osStopThread_recomp(NULL) calls run_next_thread_and_wait without setting state=STOPPED (libultra sets
 OS_STATE_STOPPED before __osEnqueueAndYield), so a self-stopped thread stays RUNNING in guest RAM.
 Rerun rule added to CURRENT-TRUTH item 12: after a scheduler/replacement or injected-yield change, run tools/s7543_gd_census.py --controls.
+
+## Session 7544 (2026-11-17) — class GE CLOSED statically: no guest code reads the OSThread state/queue values where the port differs from libultra (enum 0-3 vs 1/2/4/8, RUNNING/BLOCKED never stored); every osStopThread site stops another thread or is dead, every osStartThread targets a fresh or stopped thread
+
+Work unit: NEXT.md s7544, class GE (libultra thread-state fidelity of the runtime replacements). Offline, one tool:
+tools/s7544_ge_census.py (exit 0; --controls 13/13).
+- Boring check: ultramodern ultra64.h OSThreadState = STOPPED 0, QUEUED 1, RUNNING 2, BLOCKED 3, not libultra STOPPED 1 RUNNABLE 2
+  RUNNING 4 WAITING 8. The port stores only STOPPED and QUEUED: a running thread and a thread blocked on a mesg queue both read QUEUED.
+  Port OSThread layout: next 0, pri 4, queue 8, state u16 at guest 0x10, flags 0x12, id 0x14, host UltraThreadContext* at 0x20..0x27,
+  sp 0x28. osCreateThread does not zero flags (libultra does).
+- A, 18 rows over osCreateThread, osStartThread (guest + init path), osStopThread_recomp, osDestroyThread, osSetThreadPri,
+  schedule_running_thread, swap_to_thread, check_running_queue, run_next_thread, do_send, do_recv: every state/queue/priority store and
+  queue op is matched by a rule (H-equal 10, H-benign 8: stored value differs, or check_running_queue/run_next pop clears t->queue where
+  __osPopThread does not; osStartThread on a STOPPED thread whose t->queue is a mesg queue is runnable in the port vs WAITING in libultra,
+  and the blocked do_recv/do_send while-loop re-tests and re-queues itself, so the outcome is the same).
+- B, guest readers: 0 loads/stores in RecompiledFuncs resolve (straight-line lui/addiu propagation) into any of the 11 static OSThread
+  structs (addresses from the [thr-create-id] log: 0x80163E20, 0x80154B40, 0x80154710, 0x8010D3D0, 0x8010DDA0, 0x801494B0,
+  0x8011CED8, 0x8011DA98, 0x8010FF70, 0x8011CD28, 0x8010D218), and 0 accesses at worker+0x20..0x4F inside register/stop/
+  unregister/setServiceWorkerPriority (the worker OSThread sits at +0x20). Resolver positive controls on the real tree: the
+  startSiPollingThread osCreateThread a0 resolves to 0x8010FF70 and waitForSerialIdle's flag load to 0x80110741.
+- C, 40 thread-API call sites. osStopThread x3: mainBootstrapWorker (runs on thread 0x80163E20) stops 0x8010D3D0; waitForSerialIdle
+  stops siServiceThread 0x8010FF70 and siServiceThread cannot reach waitForSerialIdle by direct calls; stopServiceWorker has no direct
+  caller and no constant reference to 0x800072CC (dead). So the port's non-NULL self-stop gap (returns instead of parking) and the s7543
+  seed row osStopThread(NULL) (yields without STOPPED; a later osSetThreadPri would then insert into queue 0) are both unreachable.
+  osStartThread x12: the port re-inserts an already-RUNNABLE thread (libultra ignores it), so each site must target a fresh or stopped
+  thread: 8 have osCreateThread earlier in the same function; startServiceWorker's 7 callers all call registerServiceWorker first;
+  releaseSerialLock (restarts siServiceThread) is paired with waitForSerialIdle in all 4 callers (W/R order fixed: initSaveData
+  WRWRWRR, the RR tail being the two branches of the 3rd W's osEepromLongWrite result); restartServiceWorker dead. osDestroyThread x1
+  (unregisterServiceWorker), osSetThreadPri x2 (idle self-pri 0, setServiceWorkerPriority), osYieldThread x22 (host yield only;
+  s7381 0 calls in play).
+- Controls 13/13: planted state store in osSetThreadPri -> A OPEN; deleted rule -> unclassified; stale rule regex -> FAIL; planted guest
+  MEM_HU(0x8010FF70+0x10) -> B OPEN; planted osStopThread(NULL) -> C OPEN; planted stopServiceWorker caller -> OPEN; siServiceThread
+  reaching waitForSerialIdle -> OPEN; bare osStartThread -> unclassified; unpaired releaseSerialLock -> OPEN; restartServiceWorker caller
+  -> OPEN; both resolver controls; enum edit detected.
+Soak fold: s7540_rwait_cost voided 4/5 (battery); still queued, no data.
+Rules out: a guest branch on a libultra thread-state value the port does not store (for constant-address and worker-fn accesses); a
+self-stop or double-start reaching the port's divergent paths through direct calls.
+Limits (single-source, static): thread pointers carried through the heap to other code and LOOKUP_FUNC indirect calls are not followed.
+Next: runtime witness (NEXT.md s7545): log any guest load/store into a live OSThread range via the s7484/s5798 hooks, with a plant.
