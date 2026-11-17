@@ -1,11 +1,11 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7528 (2026-11-17).
+Compact operational handoff, as of Session 7534 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
 s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "(s7307 maintenance)"; older text in
-"(s7187 maintenance)" and "(s6994 maintenance)". Grep there for any sNNNN.
+"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)". Grep there for any sNNNN.
 
 ## Headline
 
@@ -215,111 +215,12 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7417 into one sequence 1-20 (the s7416
-numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive).
+Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7534 into one sequence 1-18 (the s7533 numbering 1-22 is archived
+verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 
-1. **Classes CC-DH s7420-s7451: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW "(s7452 maintenance)").
-   m6 stall-measure series (DN-DR) CLOSED s7463. DS CLOSED s7465. DT CLOSED s7466 (soak PASS). DV CLOSED s7466. DW CLOSED s7467. DY CLOSED s7468. DZ CLOSED s7469. EA CLOSED s7471. EB CLOSED s7474 (all 19 levels). EC CLOSED s7474. (EC/EA/DZ full text: PROJECT-OVERVIEW "(s7488 migration)".) EE CLOSED s7477 (0 live clobbers in 44 injected-call sites). EF CLOSED s7478 (dead-record canary FP, stale check landed). EF re-score soak PASS (s7479 fold). EG CLOSED s7479 for guest stores and s7480 for host writers (A5-fill soak PASS). EI CLOSED s7485 (6 levels). EK CLOSED s7487 (6 levels). EL CLOSED s7487 (L4/L15, levels soak queued). EM next: swl/swr stores. CLOSED s7486 (L4/L15). EJ CLOSED s7485 (retail-benign over-reads). EH CLOSED s7481 (0 guest UAF on L1/L4/L7/L10/L12/L15; the L7 hits are the s6202 retarget pool in free heap, item 1a, FIXED s7482). ED FIXED s7476 (s4889 patch clobbered $a1 = voice count; flight canary soak queued). One line each:
-   - Full text of every class DG-EO (numbers, controls, tool flags, recipes): PROJECT-OVERVIEW "(s7491 migration)"; older classes in
-     "(s7489 migration)", "(s7488 migration)", "(s7452 maintenance)". Heap-audit store/load series (s7472-s7491), one line each:
-     EB chain headers 19 levels; ED s4889 $a1 clobber FIXED (A1FIX); EE 0 live injected-call clobbers; EF dead-record canary FP (STALECHK);
-     EG zero-slack overruns (PAD); EH guest UAF stores 0 real (L7 = item 1a pool); 1a s6202 retarget pool FIXED s7482 (RETARGET_RESERVE);
-     EI guest UAF loads; EJ over-reads retail-benign; EK host reads; EL lwl/lwr; EM swl/swr; EN store-path census + host DMA writes;
-     EO host zmemcpy + PatchesLib weak-override bodies hooked (6 levels, s7490 soak folded s7491); EP OS-call host stores (6 levels); EQ thread queues + RT64 writeback (s7492, below).
-     Recipes: tools/s7475_canary_recipe.zsh, s7480_uaf, s7484, s7486, s7487, s7488, s7489_hostwrite, s7490_zmemcpy, s7491_ep, s7492_eq (*_recipe.zsh).
-   - EP s7491 OS-call host stores: CLOSED 6 levels (L4/L15 s7491, soak L1/L7/L10/L12 folded s7492; full text PORTING-STATE s7491).
-   - EQ s7492 thread-queue links + RT64 writeback: CLOSED 6 levels (L1/L4/L15 s7492 + soak L1/L7/L10/L12 folded s7493; full text
-     PORTING-STATE s7492). Recipe tools/s7492_eq_recipe.zsh LV="<lvl>:<dd>:<plant kind>".
-   - **ER s7493 RT64 writeback liveness: CLOSED 6 levels (H-wb-live; soak folded s7494).** rt64_rdp.cpp
-     setColorImage/setDepthImage -> rs64_s7493_img; rt64_state.cpp rs64_s7493_base(addressStart) before each rs64_wbw_post; main.cpp
-     s7493_wb, ROGUESQ_S7493_WBLIVE=1 (+_CTL=<k> erase+blacklist one image, +_WATCH=<hex,...>). Exact-base age table: 51.7k / 51.6k
-     writebacks, every one set in the same swap, 0 age>=2 / never outside CTL, colour (L4) and depth (L15) controls caught, nobase=0.
-     Seed loc=N row = the game's own boot 640x480 colour image at 0x76A000 (dd8 0xB6A000) set the same swap, over a block freed
-     0.217 s earlier.
-     The heap-audit store/load series s7472-s7493 has no open class.
-   - **ES s7494 boot image over a freed block: CLOSED, retail layout (H-retail-same).** Oracle (tools/s7494_es_oracle.zsh, retail ROM,
-     Rice): retail rs_free(0x80787810) <- freeManifestSegmentAssets <- runIdleFramesAndLoadSaveData at t=1.3-1.4 s, then the 640x480
-     mode at 1.9-2.0 s (buildAndRegisterDefaultMaterial(640,480)); 0x76A000-0x800000 is the 640 Z-buffer (s9: SETZIMG; the s7493
-     "colour image" is the z-clear idiom); retail CPU later stores into the block (0x8001804c/5c, 210 words, t=6.6 s). Same order as
-     the port (free, 0.217 s, image). Two lines: port s7493 row + retail oracle. ER soak folded: L1/L7/L10/L12 score=0 -> ER CLOSED 6 levels.
-   - **ET s7495 chunk pool vs Z: CLOSED, retail layout (H-et-same).** The 6.6 s stores are buildAndRegisterDefaultMaterial relinking the
-     fixed DL-chunk pool [0x720000, end), end per mode: 320 0x777768, 640x480 0x738F18, 640x340 0x792780; port (tools/apply_s7495_poolwatch.py,
-     ROGUESQ_S7495_POOL=1 + S7493_WBLIVE=1) == retail oracle byte for byte. 640x340 Z = 0x795C00, above the pool; 0 live overlaps / 0 pool
-     writebacks after the rebuild; hist-overlap control (old 76A000 Z inside the new pool) fired.
-   - **EU s7496 heap blocks under a new partition: H-eu-clean for pool + colour + non-zero Z (L4 dd1, L15 dd8 21:9).** Chain walk of the real
-     arenas (upstream_compat.cpp rs64_s7496_overlap, main.cpp s7496_query; ROGUESQ_S7495_POOL=1, recipe tools/s7496_eu_recipe.zsh): every
-     pool rebuild and every colour extent that hits the heap lies INSIDE one used top-down (fl=6) block = the game carves its partitions out
-     of its own allocation (19 / 20 container rows, 0 partial). Control (youngest s7475 malloc record found used by the walk) 10/10, 9/9;
-     qbad=0. H-eu-dd refuted. Only live rows: the game's Z=0 placeholder depth image (set once at t~11.2 s in BOTH arms) whose 480-row
-     extent [0, w*960) is my estimate; at dd8 width 1024 it reaches 3 low blocks 0x0D03E0-0x0DA630. Levels soak queued (s7496_eu_levels).
-     **Levels soak folded s7497: L1 dd8 21:9 / L7 / L10 / L12 dd4 live=0, ctl ok==n -> EU CLOSED 6 levels.**
-   - **EV s7497 depth through the Z=0 placeholder: H-ev-placeholder (L4 dd1, L15 dd8 21:9).** The game holds SETZIMG 0 from t=11.04 to 28.29 s
-     (both arms, before the mission Z 77BD80 / B56000). In that window and all run: 0 z-update tri/rect draws keyed to Z=0, 0 fills into colour
-     image 0 (z-clear idiom), 0 depth writebacks with base 0, 0 writebacks of any kind touching [0,0x100000). Same keyed maps, busiest
-     non-zero Z: 11.6M / 41.0M zupd tris, 17.4k / 18.4k z-clear fills, 8.5k / 8.6k depth writebacks. Two measurement points (draw site
-     rt64_rdp.cpp drawTris/drawRect/fillRect -> main.cpp rs64_s7497_zdraw; writeback site s7497_wb), one runtime; retail not checked
-     (single-runtime). ROGUESQ_S7497_Z0=1, tools/s7497_ev_recipe.zsh (scorer neg-tested: planted z0 -> 5, ctl_wb=0 -> 3). Levels soak queued.
-     **Levels soak folded s7498: L1 dd8 21:9 / L7 / L10 / L12 dd4 z0_sum=0, ctl > 0 -> EV CLOSED 6 levels.**
-   - **EW s7498 RT64 writeback extents vs the container heap block: H-ew-inside (L4 dd1, L15 dd8 21:9).** main.cpp s7498_wb
-     (ROGUESQ_S7498_EW=1, _CTL=<n>; tools/s7498_ew_recipe.zsh wraps the EV recipe): per (kind, base, width) the range [base, end) RT64
-     really writes is re-walked each time its end grows. 0 partial / 0 free in both arms; 10/10 container (colour images inside one used
-     block), 41/23 nonheap, all in [arena top, RAM top) = [751E00,800000) dd1, [B20000,C00000) dd8 (none past RAM top). Control: the
-     first container query at/after #20 re-walked 0x100 past its block -> partial, both arms. qbad=0, nobase=0. Levels soak queued.
-     **Levels soak folded s7499: L1 dd8 21:9 / L7 / L10 / L12 dd4 partial=0 free=0 ctl=ok -> EW CLOSED 6 levels.**
-   - **EX s7499 cross-image overlap: H-ex-zclear (L4 dd1, L15 dd8 21:9).** main.cpp s7499_ex (ROGUESQ_S7499_EX=1, _CTL=<n>, needs
-     S7493_WBLIVE; tools/s7499_ex_recipe.zsh wraps EW): every writeback range of image A is tested against every other image B the RDP
-     stream set (both kinds; B extent = B's own largest writeback range, else 240-row estimate). live (B set this/previous swap, base
-     != A) = 0 in both arms; same-base pairs 8 / 6 = colour==depth z-clear idiom (76A000, 795C00 / B6A000, B56000); stale 72 / 50 and
-     est 8 / 27 all age >= 2 swaps (e.g. 320-wide boot images under the 640 image, mode change at t~0.7 s). Control (fake image at wb
-     #20 phys+bytes/2) hit 10.3k times, both arms. Levels soak queued (s7499_ex_levels).
-     **Levels soak folded s7500: L1 dd8 21:9 / L7 / L10 / L12 dd4 live=0 ctlst=ok -> EX CLOSED 6 levels.**
-   - **EY s7500 stale-covered image re-use: H-ey-rewrite (L4 dd1, L15 dd8 21:9).** ROGUESQ_S7500_EY=1 (+_CTL=1), tools/s7500_ey_recipe.zsh;
-     hooks lib/rt64 rs64_s7500_draw/tex/up + main.cpp s7500_*. Of the covered images only 5 per arm are ever set again (scene changes);
-     each is filled in the same swap it is set, before any draw, z-compare, texture load or RT64 upload; read=0. Rest never re-set.
-     Controls ctlA (A's own next set classified fill) and ctlB (artificial reset logged) ok both arms. Levels soak queued (s7500_ey_levels).
-     **Levels soak folded s7501: L1 dd8 21:9 / L7 / L10 / L12 dd4 read=0 ctlA/ctlB ok -> EY CLOSED 6 levels.**
-   - **EZ s7501 writer behind each RT64 checkRAM upload: every upload has a legitimate writer (L4 dd1 38 ups, L15 dd8 21:9 32 ups).**
-     ROGUESQ_S7501_EZ=1 (+_CTL=1; needs S7475_CANARY+STORE_DIAG for the store bitmap), tools/s7501_ez_recipe.zsh; hooks lib/rt64
-     checkRAM/hashTracking/uploadRAM (rs64_s7501_chk/hash/up, changed-word bbox vs nativeSwappedRAM) + main.cpp s7501_* writer ring
-     (RT64 writebacks, RSP/PI DMA writes into tracked fbs, guest stores into marked fb bytes). Window = since that fb's previous upload
-     (run 1 used "since last re-hash" and the L4 control missed: hashTracking re-hashes without refreshing the native copy). Classes L4/L15:
-     guest cpu 14/13 (rs_memset clears, parseImageFile decodes, AND allocator metadata: buildHeapFreeList / rs_free / rs_malloc / coalesce
-     writing headers into freed fb RAM that RT64 still tracks), other image's writeback 18/9 (mostly boot/mode-change overlaps <30 s),
-     own writeback 2/2, sp_gfx 0/3, pi 1/0, hash-only (0 words differ) 4/3, none 1/0 (L4 t=18.05 16 ms window), trunc 0/1. Control
-     (host XOR of one fb word) detected both arms. Single runtime. Levels soak queued (s7501_ez_levels).
-     **s7502 fold: levels soak scored 5 (L10/L12 t~18.05 none, L7 3 none, L1 trunc) = INSTRUMENT DEFECT, fixed:** rs64_s7501_cpu looked
-     up only the nearest fb record at/below a store; expired boot 320x224 records (6A0E00, 6C3E00) inside the live 640x340 67CA00 swallowed
-     the parseImageFile stores. Walk-back to the nearest marked covering fb + per-4KB-page writer table for trunc + pre-scan window edge
-     (H-race refuted: race=0). Re-run L4/L15: EZ score 0, none=0 trunc=0, ctl ok both. New writer packTlutEntriesRgba5551 (TLUT into the
-     tail of an fb idle 6-15 s, freed-RAM reuse family). Levels re-score queued (s7502_ez2_levels).
-     **s7503 fold: s7502_ez2_levels L1 dd8 21:9 / L7 / L10 / L12 dd4 EZ score 0 (none=0 trunc=0, ctl ok) -> EZ CLOSED 6 levels.**
-   - **FA s7503 allocator/TLUT freed-fb-RAM uploads: 15/21 dead, 6/21 live, all upload-synced (L4 dd1, L15 dd8 21:9).** ROGUESQ_S7503_FA=1
-     (main.cpp s7503_*, rs64_s7503_swap in osViSwapBuffer_recomp), tools/s7503_fa_recipe.zsh; ctlC (cimg -> set,draw) / ctlV (VI fb -> vi) ok.
-     Live shapes: present-path upload at the mission load t=28.2 (VI = that fb; RT64 diffpx=4 = one coalesce header pair) and 961000 t=58.7;
-     game CPU-composes (zmemcpy) a freshly malloc'd block then sets+draws it (t=43.6); TLUT load inside a stale record's extent. In every
-     row RT64's diff upload copies guest RAM just before the use = what hardware VI/RDP reads: retail-equivalent by construction.
-     Possibly visible: 4 header pixels on the mission-load present frame (2 swaps); retail RAM there unchecked (single-source).
-     Run-1 defect: vi matched anywhere in the extent (nested live fb in a stale record), fixed to 16 rows ("vin" unscored).
-     **Levels soak folded s7504: L1 dd8 21:9 / L7 / L10 / L12 dd4 every live row an s7503 shape, ctlC/ctlV ok -> FA CLOSED 6 levels.**
-   - **FB s7504 allocator header in the presented frame: hidden at the mission load, 2-4 dim px elsewhere, same at retail aspect.**
-     ROGUESQ_S7504_FB=1 (+_DIR=<ppm dir>; main.cpp s7504_fb from rs64_s7501_up present-path allocator uploads, ctl per swap in
-     rs64_s7503_swap every 5 s from t=35), tools/s7504_fb_recipe.zsh (wraps FA). At the upload RAM == RT64 native copy except the
-     uploaded px (s7501 diffpx), so RAM over the VI window = presented image. Mission-load pair (t~28.2, every arm: L4 dd1 16:9, L15 dd8
-     21:9, L4/L1 dd1 4:3 in the retail 512-wide 0x790000 fb): VI_WIDTH = 2x fb width (one field), header on an odd unscanned row, or
-     (dd8 B20004) before the VI origin -> not shown. Later present-path pairs (L4 t217 16:9 x274 y35, L15 t58.7 x1018 y18, L4 4:3 t173
-     x506 y21): in the window, 2-4 px of luma 0-0.45 on a black/near-black frame for <=2 swaps; also at 4:3 = the game's own allocator,
-     hardware VI would scan the same RAM. Retail RAM itself unchecked (oracle stops at attract): single-runtime. Control run 1 FAIL (one
-     try at t=35 hit a black frame), fixed to per-swap retries: ncol 1260/1271 mean luma 0.15 (4:3 L4/L1). No fix: diverging from the
-     scanned RAM would diverge from hardware. New: at 4:3 buildHeapFreeList writes a fresh block later set as Z (up,set,zupd t=43.8) =
-     shape 2 as depth, upload-synced. Levels soak queued (s7504_fb_levels, expect 5: read rows).
-     **Levels soak folded s7505: L1 dd8 21:9 / L7 / L10 / L12 dd4 fb score 0 (all hdr rows in0, ctl ok) -> FB CLOSED 6 levels.**
-   - **FC s7505 any live heap header on a scanned VI pixel, per swap, whole run: H-fc-load.** main.cpp s7505_fc (ROGUESQ_S7505_FC=1, from
-     rs64_s7503_swap; chain walk rs64_s7496_overlap), tools/s7505_fc_recipe.zsh (wraps FB). 49.7k swaps on 4 arms (L4 dd1 16:9, L15 dd8
-     21:9, 4:3 L4/L1 dd1): ONE episode, L15 t58.9 hdr 96AFF0 x1016 y18, black frame, 1 swap = the FB upload row in the same run (two
-     instruments). 0 hits on any lit frame. Controls: synth every swap, arena-head window ctl 413/412/413/416 all hit. Limit: FC sees
-     LIVE chain headers only; stale header bytes (4:3 L4 FB row 790000) are covered by FB at upload. **Heap-on-screen class and the
-     m3-partition-over-live-block series (EU-FC) CLOSED.** Levels soak folded s7506: L1 dd8 21:9 / L7 / L10 / L12 dd4 fc score 0
-     (8.4k-12.4k swaps each, 0 hits, synth + ctl ok) -> FC CLOSED 6 levels.
+1. **Audit classes CC-FZ s7420-s7533: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW
+   "(s7452 maintenance)" for CC-DH, "(s7488)/(s7491 migration)" for DG-EO, "(s7534 maintenance)" for the rest incl.
+   FD-FZ). Last fold: s7533_fz_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive) -> FZ CLOSED 6 levels.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -342,170 +243,25 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     mission (s7385); abort-cut stale-upload stripe fixed (s7387, ROGUESQ_R2R_CPUUP=1 old); soaks L1/L4/L12 300 s pass (s7389);
     fb-cpu-reader census CLOSED s7391 (0 guest loads from a live colour image on 6 levels; build_fbld, ROGUESQ_S7389_FBLD=1).
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
-12. **Rerun-after-change censuses (all CLOSED, 0 defects):** after a regen: tools/scan_selfbranch.py +
-    tools/s7081_selfbranch_test, tools/s708[2-7]_* lowering, host-shim s7088/s7089; after a fixup edit:
-    tools/s7090_fixup_statement_census.py (exit 1 = defect); after RSPRecomp/ucode fixups: tools/ucode_regen.sh
-    `verify`, tools/s7093_su_census.py --controls; after rsp_vu*.hpp / DMEM: tools/s7092_vu_mem_test; after rsp DMA:
-    tools/s7094_dma_test + s7094_dma_census.py; after dpc_bridge submit/defer/wrap: ROGUESQ_S7095_DPC /
-    S7096_FWD=ctl / S7097_EDIT=ctl (missing/dup/order/unattributed must stay 0); after an rs64_s7239 edit:
-    tools/s7241_merge_test/run.sh; tools/s7243_resume_test.zsh; loop: tools/agent/test_soak_idle_gate.sh.
-    After any host-code edit: every class census in item 15 with `--controls` (exit 1 = survivor or failed control).
-    After a regen replay: tools/s7421_regen_drift.py <live> <regen> <compare.json> --control (exit 1 = LOST/REORDER not in
-    tools/s7421_regen_accept.tsv); after a host/rt64 edit: tools/s7463_uninit_census.py --controls (rc 0) + tools/s7463_hash_layouts.py
-    (any new padded struct hashed by raw bytes must go through rs64_s7463_hash); after an apply-script edit: tools/s7421_idem_test.py + tools/s7422_idem_class_test.py.
+12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
+    after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
+    + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
+    replacement change tools/s7527_host_replace_audit.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
 14. **Harness discipline (CLOSED s7313-s7314, s7332):** iteration tools take the pid from tools/rs64_game_pid.zsh;
     loop.sh SIGKILLs any game alive around each soak recipe and names it in SOAK-RESULTS (a kill line = that run's
     frame times are contaminated). Soak recipes take the analyser's own rc (`${pipestatus[1]}`), never a grep's.
-15. **Idiom-class audits s7315-s7366: ALL CLOSED** (full text, numbers and controls: s7370 archive). Census tool per class:
-    - guest-side: retail RAM bound s7315 (tools/s7315_retail_bound_census.py, single-source); DATA-word bound s7316
-      (s7316_data_bound_census.py); spill holders / class B compares / C diffs s7317-s7320 (ROGUESQ_S7317_ALLOCMAP=1,
-      s7317_spill_holders.py, apply_s7318_bcmp_probe.py); D 24-bit truncation s7321 (s7317_field_compare_census.py,
-      s7321_trunc_report.py); E KSEG re-tag s7322; F addr-derived index s7323 (s7323_addr_index_census.py); G RCP-visible
-      spill refs s7324 -> FIXED s7327 (s7324_rcp_report.py); audio heap-gap reads s7325 (artefact); audio freed-block
-      access s7330 (s7330_task_free_report.py); scene-reset dangling writers s7331 (s7331_reset_writer_report.py);
-      flags&4 carve s7332-s7334 (s7333_carve_report.py); fb-layout bound consumers s7335; host arena layout s7336
-      (s7336_host_arena_table.py); R stale 8 MB bounds s7337; M 8 MB masks s7338; N 16 MB masks s7339 (latent);
-      O KSEG0 16 MB bounds s7340; P top-byte tests s7341; L zero-extended bases s7361 (apply_s7361_sext_bases.py);
-      AM raw rdram+X s7362 (s7362_rdramraw_census.py); **BA guest thread stack headroom s7391** (build_spwm:
-      include/spwm/recomp.h checks all 68k generated $sp adjusts, tools/build_spwm.sh + s7391_spwm_run.zsh +
-      s7391_spwm_report.py, ROGUESQ_S7391_SPWM=1 [+_CTL=1]): 27 threads on the s7386 route all inside their stacks, deepest
-      mainBootstrapWorker 6848/8192 B, 1 KB audio stack uses 120 B; line B (service-worker stack snapshot, exact bounds from
-      the registerServiceWorker descriptor) dirties 16-44 B above the $sp min, canaries intact, planted control seen ->
-      H-fits. Soak s7391_spwm_levels (L4/L7/L12) queued. Tools are tools/s73NN_*_census.py.
-    - host C/C++: S addr-indexed tables s7342 (single-source); T fixed buffers s7343; U wrap-prone bounds s7344;
-      V mul overflow s7345 (single-source); W signed len s7346; X float->int s7347; Y div/mod s7348; Z shift s7349;
-      AA overlapping memcpy s7350; AB cast loads s7351; AC signed overflow s7352; AD bool/enum s7353; AE data races s7354
-      (TSan, tools/build_tsan.sh; COV=1 coverage arm s7372); AQ lockset s7366/s7373; AR lazy-init statics s7374; AS NOLOCK containers s7375, AS2 lockless files s7376 (AT present-thread maps open); AF signal safety s7355; AG unchecked alloc s7356;
-      AH I/O lengths s7357; AI env parses s7358; AJ string copies s7359 (src/main/rs64_apf.h); AK guest string reads
-      s7360; AN fixed arrays s7363, AO heap buffers s7364, AP container invalidation s7365 (each: census + independent
-      reviews + ASan + gate); AQ cross-thread containers s7366 (static lockset census) + runtime half s7372/s7373 (COV=1 arm,
-    tools/s7372_aq_runtime_cross.py, tools/s7373_aq_gate_table.py): CLOSED.
-16. **Classes AQ-BZ s7373-s7416: ALL CLOSED** (full text, numbers, controls, tool flags: s7417 archive). One line each:
-    - TSan/lockset follow-ups: AQ s7373 gate table; AR s7374 lazy statics (1 site fixed); AS s7375 NOLOCK containers, AS2 s7376
-      present inserts locked (S7376_PQLOCK); AT s7377 present colour-target under lock (S7377_EARLYLOCK); AU s7378 shared res
-      (S7378_SHLOCK); AV s7380 condvars H-shutdown; AW s7381 spins -> barrier CV (S7381_BARRIER_CV); AX s7382 thread QoS H-gap
-      (QOS_ALL evidence); AY s7383 fb addr+width packed atomic (S7383_FBPACK); AZ s7384 0 default-path races (S7384_LDGFX opt-in).
-    - Guest stack BA s7391 (build_spwm): 27 threads inside their stacks, deepest 6848/8192 B -> H-fits.
-    - libultra/OS contracts: BB s7392 mesg drops benign; BC s7393 queue re-create H-none; BD s7394 heap-mutex re-seed window
-      (S7394_HOLDFIX); BE s7395 event wiring H-none; BF s7396 upstream thread_queue_remove walk (S7396_TQFIX); BG s7397 upstream
-      osSetTimer re-arm (S7397_TIMERFIX); BH s7398 osPiStartDma OSIoMesg (S7398_IOFIX); BI s7399 event payloads H-none; BJ s7400
-      output contract 2 latent (S7400_CONTFIX); BK s7401 args 1 latent (S7401_FLAGFIX); BL s7402 clock divergence
-      (S7402_CLOCKFIX); BM s7403 boot globals == retail 8 MB cold boot; BN s7404 direct RCP/cart access H-none; BO s7405 FCSR.FS
-      (ROGUESQ_FTZ default on); BP s7406 FP corners after FTZ H-none.
-    - Recompiler emission semantics (each tool rc 0 = still H-equal; re-run after any ROM/asm/generator change): BQ s7407 libm
-      replacements (s7407_libm_census.py); BR s7408 FP->int (s7408_cvt_contract.py); BS s7409 FR/odd-FPR views; BT s7410
-      callee-saved across FR=1 asm; BU s7411 unaligned ld/st; BV s7412 integer 64-bit GPR; BW s7413 aligned ld/st; BX s7414
-      FP compare + bc1x (unordered-cond generator table wrong on NaN, 0 game sites); BY s7415 FP arith + moves (0 FMA); BZ s7416
-      control flow + delay slots; CA s7418 opcode residue (s7418_opcode_residue.py: 0 live gap, cvt int/FP->FP exact, live cache
-      = CDE/HWB-D no-op-safe). BZ latent jr/jalr slot-before-read FIXED s7506 in N64Recomp
-      (b684176: latch `gpr jr_target_A = rS` only when the slot writes rS; old vs new generator output differs ONLY at the 2
-      data_gap_80024A0C sites; s7416 tool S4 accepts the latch, HAZARDS 2 -> 0, latch control: reverted copy 2 hazards, wrong reg BAD).
-    - **CB s7419 objdump decode blind spot: CLOSED H-clean.** The ELF is flagged `o32, mips1`, so plain `objdump -d` left every
-      MIPS II/III op undecoded (ldc1 1386, sdc1 1255, trunc 1094 as `c1`, 8 branch-likely forms 2445 [s7392 parse patched 4],
-      sqrt.s 94, cache 33, 64-bit ~140, eret), dumped size-0 OBJECT labels inside FUNCs as bytes (texPackTlutAtAllocSlot's 66
-      instrs; __osException's rcp/prenmi/... sub-handlers, then mis-named LIVE functions) and skipped zero runs. Canonical
-      listing tools/s7419_canon_dis.py (strip those 10 labels on a temp copy, `-d -z -m mips:4300 -M cp0-names=r3000`), now the
-      auto-built default of s7392 parse (warns on any other listing), s7407, s7418. tools/s7419_dis_agree.py: 243,426 SAME (operands
-      equal) + 42,275 alias spellings vs rabbitizer, 0 survivors outside data_gap/ucode/REVIEWED; control = plain listing flagged
-      (6,799 survivors). Census re-runs: s7392-s7402 + s7407 byte-identical; s7403/s7404 rows move to IGNORED (__osException,
-      s7403 now honours ignored_funcs); s7405 gains only cache (43 LIVE rows = s7418's set + 1 unrecompiled data word) + IGNORED
-      eret/cop0. s7418 had tagged 147 renamed functions `nofn`; with the vote name join (s7419_dis_agree.name_map) it stays
-      H-equal rc 0, live cache = 33 (18 CDE + 15 HWB-D; +clearMemory16ByteBlocks CDE then full 16 B sd/sd = no-op-safe).
-17. **Default-on fixes from the audits and TSan thread (=0 / old value restores the previous behaviour):**
-    ROGUESQ_SPILL_RESET + 8 MB spill arena 0x81000000 (s7326, SPILL_MB=4 old); RSP_DMA25 (s7327); S7334_CLASS5;
-    S7335_CLAMP; S7336; S7337; S7339; ALTSTACK (s7355); S7358_ENVCHECK; S7364_WLRESET; CF0_DUPDROP (s7367, guest
-    video-ack deadlock = the s6993 boot freeze mechanism under starvation; host-load soaks 5/5 clean in both arms);
-    DLPOOLX_ARM_REBUILD (s7368, pool grows armed at the game's own pool init, not a frame-count proxy);
-    build_tsan ucode exemption (s7369, ROGUESQ_TSAN_UCODE=ON old). Detail per session in PORTING-STATE. s7394-s7405 add (each =0 old): S7394_HOLDFIX, S7396_TQFIX, S7397_TIMERFIX,
-    S7398_IOFIX, S7400_CONTFIX, S7401_FLAGFIX, S7402_CLOCKFIX, FTZ; s7376-s7383 add S7376_PQLOCK, S7377_EARLYLOCK,
-    S7378_SHLOCK, S7381_BARRIER_CV, S7383_FBPACK.
-18. **Runtime soak folds for the AQ-BZ classes all PASSED** (SOAK-RESULTS s7392-s7416: L4/L7/L12 or L5/L10/L15, 0 crash, 0 VI
-    stall, controls PASS). No class soak is outstanding.
-19. **Rerun the emission tools after any regen:** tools/s7407-s7416 + s7418 + s7419_dis_agree.py --controls (rc 0 expected) alongside item 12;
-    after a ucode regen: tools/ucode_regen.sh verify then tools/s7507_rsp_ctrl_flow.py + tools/s7508_rsp_scalar_gaps.py + tools/s7509_rsp_vec_operands.py (rc 0).
-20. **FD CLOSED (s7507): RSPRecomp control-flow emission H-equal.** tools/s7507_rsp_ctrl_flow.py (independent ROM decode vs emitted C,
-    rc 0): pristine 12 files 0 defects; compiled main/B/boot 0 (main composite 9 splice streams, 68 routes, cross-overlay gotos checked
-    by image region; IMEM-wrap restart / ovl20->OVL1C_1ED4 / 04->OVL24 / trimmed OVL20 slot classified as deliberate); 8/8 mutation ctl.
-    ucode patch snapshot refreshed (verify 12/12 SAME).
-    **FE CLOSED (s7508): RSP scalar lowering H-equal.** s7093_su_census.py already covered it (re-run PASS). tools/s7508_rsp_scalar_gaps.py
-    (rc 0) adds the live composite vs ROM, every record incl. 9 splice streams + slot copies, with exact current-template lines (1651 scalar,
-    696 in splices, 0 defects, 0 zero-dest), plus the s7093 D harness at production -O2/inline-4000 (185k cases 0 bad); 4/4 ctl.
-    **FF CLOSED (s7509): RSPRecomp vector-op operand extraction H-equal.** tools/s7509_rsp_vec_operands.py (rc 0): 1252 live vector
-    records (main 859 incl. 384 in splices + 25 slot copies, B 393) rebuilt from an independent ROM decode (not rabbitizer) = the only
-    rsp.* line, 0 defects, coverage = every rsp.* line; 24 LxV/SxV scale by the hardware size (lpv/luv/spv/suv 8); 4/4 ctl.
-    **The RSP generator classes (FD/FE/FF + s7091/s7092/s7093) are exhausted.**
-    **libultra/host surface classes FG-FN: ALL CLOSED 6 levels (L4 dd1, L15 dd8 21:9 in session, then L1 dd8 21:9 + L7/L10/L12 dd4
-    levels soak; full text, numbers and tool flags: PORTING-STATE s7510-s7518).** Each: logging env + scorer --controls (+ --ctl in-run
-    positive control); re-run the scorer after any change to the replaced function.
-    - FG s7510 PI DMA shape H-canon (ROGUESQ_LOG_DMA, tools/s7510_pi_dma_shape.py). FH s7511 AI DMA H-canon (ROGUESQ_LOG_AI_SHAPE,
-      s7511_ai_dma_shape.py; carry path dead). FI s7512 VI registers H-canon + boot fix ROGUESQ_VI_BLACK_RETAIL (default on).
-    - FJ s7513 SI/joybus: stick range FIXED, ROGUESQ_STICK_GATE default on (85/70 OEM octagon; =0 old 127) - **owner judges feel**
-      (OWNER-OPT-INS row); status byte 0x00 vs 0x02 H-dead. FK s7514 osGetTime hardware-rate; host-speed durations feed only write-only
-      globals / the profiler bars (gate cleared at mainGameLoop entry).
-    - FL s7515 EEPROM 4K shape H-canon (LongWrite live on L7). FM s7516 Rumble/Controller Pak H-canon, pak paths H-dead with no pak
-      (ctl ROGUESQ_PAK_SHAPE_CTL=1 runs them). FN s7517 VI special features H-canon; gamma only in zero-line transition VIs; RT64 holds
-      the last image on those (2/15 dim 33-50 ms, left as is); no RT64 VI filter stage (design difference, single-source).
-    **FO CLOSED 6 levels (s7518, soak folded s7519): D-cache load side H-canon / H-dead.** Cache calls stay host no-ops. ROGUESQ_LOG_CACHE_SHAPE=1
-    ([cache] lines) + ROGUESQ_S7518_STALEWATCH=1 (stale-load watch) + ctl ROGUESQ_CACHE_SHAPE_CTL=<k> (drop k-th inv); tools/s7518_cache_shape.py
-    --controls --ctl. Slot DMAs wb -> DMA -> inv-after; 0 STALE loads outside ctl; every RSP task flushed; MusyX stream ring RSP-only (H-dead).
-    **FP CLOSED 6 levels (s7519, soak folded s7520: L1 dd8 21:9 + L7/L10/L12 dd4 score 0): D-cache store side H-canon.** Same env + ROGUESQ_STORE_DIAG=1: per-line dirty state (s7519 block, upstream_compat.cpp)
-    vs wb / inv edge+interior / index ops / PI DMA; ctl ROGUESQ_CACHE_SHAPE_CTL_WB=<k> (drop the first wb at/after k of a past DMA slot with a
-    dirty line); tools/s7519_store_side.py --controls --ctl. ~0.9 / 1.3 G tracked stores: 0 dirty-over-DMA, 0 discards, 0 live rows outside ctl;
-    ctl = 3 dirty-over-DMA rows (zmemcpy, rs_free) then resolved dead by the inv-after. Gaps: stores before a line's first marking, no eviction
-    model. **FO+FP exhaust the libultra replaced-function surface** (census PORTING-STATE s7518).
-    **FQ CLOSED 6 levels (s7520, soak folded s7521: L1 dd8 21:9 + L7/L10/L12 dd4 score 0): executed CPU code bytes == the recompiled image (H-canon).** Offline: tools/s7520_elf_vs_rom.py (rc 0, 5/5 ctl):
-    regen ELF == ROM over every FuncEntry extent (2542 funcs, 304,259 words). Runtime ROGUESQ_S7520_CODEWATCH=1 (librecomp overlays.cpp
-    s7520 block; hooks pi.cpp / ultra_translation.cpp iinv / upstream_compat.cpp swap) + ctl ROGUESQ_S7520_CTL=1 (main code flip swap
-    600-660, overlay flip at first overlay call after swap 900); tools/s7520_code_bytes.py --controls --ctl classifies each changed word by
-    ELF OBJECT / data_gap symbol + the splat yaml subsegment type. Per arm ~6.9k checks: 0 CODE words changed outside ctl (269/283 DATA
-    words: rngSeed, .data that N64Recomp folds into the last function audioCompandS16 and __OSGlobalIntMask extents, data_gap_*), ~430k /
-    361k overlay get_function calls each byte-checked: 0 exec_diff, 0 stale func_map, 0 DMA into main code; all 55 overlay-window DMAs
-    carry a section's own ROM bytes at its link address (boot worker 0x80000D04 preloads the mission tail ROM 0x101000 -> 0x80100400
-    then the one boot osInvalICache). Both ctls caught on both arms. Gap FIXED s7528: load_overlay now evicts overlapping loaded sections
-    (ROGUESQ_S7528_EVICT default on, =0 old; tools/s7528_evict_score.py).
-    **FR CLOSED 6 levels (s7521, soak folded s7522: L1 dd8 21:9 + L7/L10/L12 dd4 live=0 after a scorer fix, ctl 5/5): executed RSP code bytes == the RSPRecomp images (H-canon; one placement difference H-dead).** Static (tools/s7521_ucode_bytes.py
-    --controls, 7/7 synthetic): the main/B/boot toml images == ROM at the task ucode addresses. Runtime ROGUESQ_S7521_UCODEWATCH=1 (src/rsp/s7521_ucode_watch.cpp;
-    hooks librecomp rsp.cpp run_task [audio], main.cpp rs64_run_lle_gfx [gfx], rsp.hpp IMEM-DMA skip, dpc_bridge L_1DB0 probes - needs ROGUESQ_G1E_PROBES=1)
-    + ctl ROGUESQ_S7521_CTL=1: exactly 2 task tuples (gfx 80024A10/data 80038D00, audio 80099FE0/data 800A4E00), so type-only dispatch is sound; boot+text
-    0 diff bytes in ~12k tasks/arm; ucode_data diffs are CPU-written fields (gfx DMEM 0x33F, 0x404.., audio 0x320 = rodata A5D20; same RDRAM on hardware, no
-    dispatch-table byte); audio data 0x800 reads 0x4D0 past the main segment into the overlay window (TAIL, hardware-identical). 3.8M / 24.9M IMEM DMAs,
-    all ROM bytes, 12 distinct images each = a compiled composite, except overlay 0 (ROM 0x26348 -> 0x1DB0, 8 bytes below the boot image main compiled) and
-    overlay 0x28 (hand route). Window model: all 12.6k L_1DB0 entries run with overlay 0 resident, so hardware runs the shifted copy where `j 0x1E5C`
-    skips mtc0 DPC_START/END; the port runs the boot copy. H-dead: that path (b5, RDP busy at task start) is taken 0 times (b3 every time: our DPC model
-    zeroes DPC_CURRENT per task); the planted forced-busy read takes it once, is seen, game stays alive (port's extra writes submit an empty range).
-    All 5 ctls caught both arms. (Soak L10 first scored 1: an [s2020-svc] line interleaved after the last sum pushed the window rows out of a fixed
-    3-line slice; scorer now takes the first row per window, 2 new synthetic cases. L10's ~4 IMEM DMAs/task vs ~3.4k elsewhere = cloud level, no terrain.)
-    **FS L4/L15 (s7522): at every port dispatch the code routed to == the code hardware has resident (H-canon).** Runtime: s7521 watch keeps a per-word
-    model of gfx IMEM (RDRAM source of every word) from the IMEM DMA stream + the restore DMA the ovl28 hand route skips (decoded: lw 0x10(r1)+0x220,
-    0x330 bytes -> 0x12A0; logged source always 0x024C30 = main's own bytes); fixup "s7522 imem residency" hooks do_indirect_jump (target, DMEM 0x153).
-    tools/s7522_imem_residency.py --controls (7/7) parses the generated dispatch switch (86 cases, 74 0x153 rules) into route -> compiled composite and
-    byte-compares it with the resident ROM bytes from the target to the end of the resident DMA extent. 179M / 377M dispatches (254 / 252 keys): all
-    canon except 6.3k L_1DB0-under-ovl0 entries (= FR's H-dead case); 0x12A0 window 57M / 134M dispatches incl. 0x153=0x28 (60M / 120M, main code
-    after the restore) and 0x153=0x04 routed to ovl24/ovl20 composites; 0 stray / unhandled / unmodelled. Ctl (one real 0x1DB0 overlay DMA modelled 8
-    bytes off after gfx 800) = 92 live dispatches both arms. Gaps: a later partial DMA inside a run is not re-split; direct (non-dispatch) entries into a
-    window are covered only for L_1DB0 (FR). Soak s7522_fs_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive): **FS CLOSED 6 levels.**
-    **FT (s7523-s7524): finite-rate RDP model (opt-in ROGUESQ_S7523_SLOWRDP, src/rsp/s7523_slow_rdp.cpp): control flow and forwarding
-    H-dead; ring late-rewrite ROOT-CAUSED (port).** s7524 attribution (RSP DMA marks via the s7094 hook, pre/post-submit scans): 100% of
-    22.3M rewritten bytes = gfx ucode ring DMA, 0 CPU, 0 bridge (ctl DMA coverage 1.0). Cause: the port's osSpTaskLoad_recomp skips retail
-    _VirtualToPhysicalTask (0x80033D20), so DMEM 0xFC0 holds KSEG0 pointers (11.1M/11.1M ring DMAs hi8 set) and the L_116C/L_115C wrap
-    waits (dest - 24-bit CURRENT) never spin; same reason as s7523's b2 "every task fresh". Opt-in ROGUESQ_S7524_V2P=1 (main.cpp
-    rs64_run_lle_gfx, DMEM copy only) -> 0 rewritten bytes in 2.09 GB, waits spin, s7096 exact. Invisible with the default instant
-    RDP. **s7525: V2P under the DEFAULT instant bridge = H-same in output** (L4 dd1, L15 dd8 21:9, off/on same build, 6 arms): 0 escapes
-    every arm, s7096 MAIN 0
-    missing/dup/order, content_diff/B equal, alive, 0 stalls; positive control gfx ring DMA writes hi8 33.4M -> 0. Only change: L_1DB0
-    entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive). **s7526 same-run render-input twin: H-same** (ROGUESQ_S7524_V2P=alt, pseudo-random per gfx task, src/rsp/s7526_v2p_twin.cpp hashes every byte rs64_rt_submit forwards): L4 dd1 static phases 2-4 repeats cross/same 264/261; ctl (=ctl folds a constant into V2P-on digests) cross 0 / same 418 -> detector live; flight tasks never repeat (no info there, single-source for flight = s7525 control-flow reading). Mixed on/off tasks: alive, 0 stalls, s7096 exact. **V2P CLOSED: owner decision default-on (docs/OWNER-OPT-INS.md row), do not flip without the owner.**
-21. **FU CLOSED (s7527, static): host libultra replacements skip no read side effect except V2P (closed s7524-s7526).** tools/s7527_host_replace_audit.py --controls (8/8): 153 replaced funcs, helper/G/O/pointer joins; H-canon 57, H-dead 95, H-gap 1 = osSpTaskLoad.
-    Rerun it after any librecomp/ultramodern replacement change.
-    **Gap ledger s7528:** only FQ func_map was H-latent-fix: FIXED (L4 old/new: stale entries 25-274/0, planted lookup hit 4/4 / 0/4,
-    loaded_sections 3->7 / 3; gf_stale 0 both = latent). Other gaps instrument-only or closed (PORTING-STATE s7528). Soak score 0 (L1/L7/L10/L12): FQ fix qualified.
-    **FV CLOSED (s7529, static):** tools/s7529_fv_census.py 4/4: 90 guest-keyed containers, only H-latent-fix = FQ func_map.
-    **FW+FX+FY CLOSED (s7530-32):** fw (175 latches), fx (rt64 32), s7532_fy_census.py 7/7 (84 guest-byte copies): 0 H-latent-fix.
-    Undo race window (S7532_UNDO_CHK): 0 foreign bytes, ctl 1/1; levels soak 0. **FZ CLOSED (s7533):** s7533_fz_census.py 7/7, 107 host
-    guest writes, only H-latent-fix = FPS60 clamp RMW on Gfx thread -> byte CAS (FZ_CHK ctl 1/1 L4/L15, cas_fail 0). Next: fold s7533_fz_levels.
-22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+15. **Idiom-class audits s7315-s7416 (AQ-BZ) and their runtime soak folds: ALL CLOSED/PASSED** (archives: s7370, s7417,
+    s7534 maintenance). No class soak is outstanding.
+16. **Default-on fixes from the audits (=0 / old value restores the previous behaviour):** full list verbatim in
+    PROJECT-OVERVIEW "(s7534 maintenance)" (SPILL_RESET, RSP_DMA25, S7334-S7364, CF0_DUPDROP, DLPOOLX_ARM_REBUILD, S7376-S7405
+    locks/fixes, FTZ, STICK_GATE s7513, S7528_EVICT, the s7533 FPS60 clamp byte CAS).
+17. **Next agent unit: a new idiom-class audit, GA** (candidate: host-thread read-decide on guest bytes the guest
+    changes in the same window, e.g. render-context / dpc_bridge decisions; static census + same-run positive control,
+    the FV-FZ model), else the G5 rename sweep.
+18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

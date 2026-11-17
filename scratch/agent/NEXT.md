@@ -1,15 +1,16 @@
-# NEXT (s7534)
-HYPOTHESIS-ID: ct-maintenance
+# NEXT (s7535)
+HYPOTHESIS-ID: class-ga-host-read-decide
 
-`wc -c < docs/CURRENT-TRUTH.md` = 60,142 B after s7533 (>60000) -> s7534 is a MAINTENANCE iteration (ITERATION.md Step 0):
-compact CURRENT-TRUTH toward ~35 KB (migrate the closed class-audit ledger, Next steps item 21 FJ..FZ, to PROJECT-OVERVIEW.md;
-prune superseded/closed items; one monotonic backlog numbering; refresh the headline). No experiments.
+CURRENT-TRUTH is 26.9 KB after s7534 maintenance; no maintenance due. FZ qualified (s7533_fz_levels score 0).
 
-Fold first (any iteration): SOAK-RESULTS line for s7533_fz_levels; score with
-`python3 tools/s7533_fz_score.py scratch/s7533_fz_levels l1 l7 l10 l12` (each arm: clamps>2, control=1, cas_fail=0).
-cas_fail>0 on any arm = a guest store the pre-s7533 clamp would have lost (the fix already prevents it; record which level).
-
-After maintenance: the class-audit series FJ..FZ is complete. Next rung per ITERATION.md 3c: a new idiom-class audit
-(candidate: host-thread READ-modify decisions on guest bytes beyond writes, e.g. render-context / dpc_bridge decisions taken on a
-guest byte the guest changes in the same window) or the G5 rename sweep.
+Work unit: class GA static census (FV-FZ model: tools/s7529_fv_census.py .. tools/s7533_fz_census.py as templates).
+Idiom: host-thread code that READS a guest RDRAM byte/word and takes a decision (branch, size, skip, index) while the
+guest may change it in the same window (render-context / dpc_bridge / main.cpp present / FPS60 arbiter readers,
+lib/rt64 hle readers already covered by FX are excluded).
+Hypotheses per site: H-canon (read happens on the guest thread or under a guest-stopped barrier), H-dead (value
+cannot change in the window: written once at init), H-latent-fix (torn/stale decision possible -> fix: snapshot once
+under the existing lock, or move the read to the guest side).
+Discriminator: census rows with thread + window evidence; for each H-latent-fix a same-run plant control
+(ROGUESQ_S7535_GA_CHK) on L4 dd1 + L15 dd8 21:9; then queue a levels soak like s7533_fz_levels.
+Tool: tools/s7535_ga_census.py --controls (synthetic rows must fire). Gate: 0 unclassified.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

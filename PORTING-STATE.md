@@ -200101,3 +200101,16 @@ RMW on a byte the guest also writes).
 Rules out: any other host-thread guest write active in the owner recipe outside device semantics / the RSP ring.
 Queued: scratch/agent/soak_queue/s7533_fz_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s). lib/ edit exported
 (submodule-patches/N64ModernRuntime.patch).
+
+## Session 7534 (2026-11-17) — maintenance: CURRENT-TRUTH 60,142 -> ~26.9 KB; s7533_fz_levels folded (score 0)
+
+Step 0 triggered (60,142 B > 60,000). No experiments.
+- Fold: `python3 tools/s7533_fz_score.py scratch/s7533_fz_levels l1 l7 l10 l12` -> score=0; every arm ok, vi=11400,
+  clamps 7/9/8/7, guest_changes 6/8/7/6 (L1 dd8 21:9, L7/L10/L12 dd4; SOAK-RESULTS rc=0, 4/4 alive, 0 crash/stall arms).
+  FZ byte-CAS fix qualified on 6 levels (L4/L15 in session s7533 + these 4).
+- Compaction: s7533 Next-steps items 1 (CC-EO roll-up), 12 (rerun censuses), 15-21 (AQ-BZ archives, default-on fix list,
+  soak folds, emission-tool reruns, FD-FZ class ledger) migrated verbatim to PROJECT-OVERVIEW
+  "Migrated from CURRENT-TRUTH (s7534 maintenance)" and replaced by short pointers. Backlog renumbered into one sequence
+  1-18; new item 17 = next agent unit (class GA audit, host read-decide on guest bytes). Headline date refreshed.
+  CURRENT-TRUTH net -244 lines / ~33 KB.
+- Rules out nothing new; the class-audit series FD-FZ is complete.
