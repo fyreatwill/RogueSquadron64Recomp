@@ -198901,3 +198901,5 @@ the image is never re-set). Added tools/s7499_ex_recipe.zsh (exit 0 = live=0 + c
 scratch/agent/soak_queue/s7499_ex_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4).
 Next: class EY. Is a stale-covered image B ever set again after an A writeback covered it, and then read (RT64 fb-as-texture or a guest
 load) before B's own writeback restores it?
+Verdict (s7499): this selects H-ex-zclear and refutes H-ex-clobber on L4 dd1 + L15 dd8 21:9 (0 live cross pairs, ctl hit both arms); it closes
+EW on 6 levels. Next discriminator: class EY, whether a stale-covered image is set again and read before its own writeback (NEXT.md).
