@@ -10797,7 +10797,141 @@ extern "C" void rs64_s7500_up(uint32_t addr, uint32_t w, uint32_t siz, uint32_t 
   if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
   for (uint32_t k = 0; k < 2; ++k) { auto it = g_s7500.find(((uint64_t)k << 32) | addr); if (it != g_s7500.end() && it->second.state == 1) { char t[72];
       std::snprintf(t, sizeof t, "up w=%u siz=%u diffpx=%u path=%s", w, siz, diffpx, (fl & 2) ? "present" : "draw"); s7500_event_locked(it->second, (fl & 1) ? 5 : 4, t, now); } } }
-extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); g_s7498_base.store(b); }
+// s7501 class EZ: who wrote the RDRAM behind each RT64 checkRAM upload? RT64 uploads a framebuffer (copyRAMToNativeAndChanges) when
+// its RDRAM hash moved since RT64 last hashed it. ROGUESQ_S7501_EZ=1. Hooks: lib/rt64 rt64_framebuffer_manager.cpp checkRAM (every fb,
+// every workload: rs64_s7501_chk -> seen / hash epoch), hashTracking + rt64_state.cpp s7387 skip (rs64_s7501_hash), uploadRAM
+// (rs64_s7501_up with the byte bbox of words that differ from RT64's own last native copy). Writers go into one time-stamped ring:
+// wb (rs64_wbw_post, exact base via rs64_s7493_base: wbself when base == the uploaded fb, else wbo = another image's writeback),
+// sp_gfx / sp_aud / pi (rs64_s7486_hostread kinds 6-8, before the copy), and guest stores: every seen fb's bytes are marked in the s7475
+// store bitmap (needs ROGUESQ_S7475_CANARY + STORE_DIAG), so rs64_s7475_store hands them here first -> cpu (fn = recompiled fn),
+// zmem (fn zmemcpy_host), os (fn os_*). Upload classes: new (fb never hashed before: first adoption of whatever RAM was there),
+// hash (0 words differ from the native copy), a writer class (newest ring event in (prev hash, now] overlapping the bbox; mask = all
+// classes seen), none (no writer: unexplained), trunc (window older than the ring). Control ROGUESQ_S7501_CTL=1: from t>=30 s, after an
+// upload the host XORs one word in the middle of that fb's RAM and logs a ctl event; the next upload of that fb whose bbox covers the
+// word MUST class ctl (retries every 20 s, max 12). Rows `[s7501] up`, `[s7501] sum` every 10 s. Measurement only (the ctl word is
+// the only guest-RAM change, one 32-bit word per try).
+extern "C" int rs64_s7501_on = [] { const char* e = std::getenv("ROGUESQ_S7501_EZ"); return (e && *e && *e != '0') ? 1 : 0; }();
+extern "C" unsigned char* g_rs64_s7475_bm;
+namespace {
+struct S7501E { uint32_t lo, hi, base, pc; double t; int cls; const char* fn; };
+struct S7501F { uint32_t bytes = 0, hbytes = 0, pbytes = 0; double hash_t = 0, pend_t = -1, seen = 0, mark_t = 0; bool marked = false; uint64_t ups = 0; double up_t = 0, first_t = 0; };  /* up_t: last upload = RT64 native copy re-synced to RAM */
+constexpr uint32_t kS7501Ring = 1u << 21;
+std::mutex g_s7501_mu; std::vector<S7501E> g_s7501_ring; uint64_t g_s7501_rn = 0; std::map<uint32_t, S7501F> g_s7501_fb;
+std::atomic<uint32_t> g_s7501_base{0xFFFFFFFFu};
+enum { Z_WB, Z_SPG, Z_SPA, Z_PI, Z_ZMEM, Z_OS, Z_CPU, Z_CTL, Z_WBSELF, Z_NEW, Z_HASH, Z_NONE, Z_TRUNC, Z_RESIZE, Z_SHORT, Z_REVERT, Z_N };
+const char* s7501_cls(int c) { static const char* k[Z_N] = {"wbo", "sp_gfx", "sp_aud", "pi", "zmem", "os", "cpu", "ctl", "wbself", "new", "hash", "none", "trunc", "resize", "short", "revert"}; return k[c % Z_N]; }
+uint64_t g_s7501_n[Z_N] = {}, g_s7501_ev[Z_N] = {}, g_s7501_ups = 0, g_s7501_chk = 0; double g_s7501_t0 = 0, g_s7501_last = 0;
+int g_s7501_rows = 0, g_s7501_ctl = -2, g_s7501_ctries = 0, g_s7501_clost = 0; uint32_t g_s7501_ctla = 0, g_s7501_ctlfb = 0; double g_s7501_ctlt = 0;
+std::map<uint32_t, uint64_t> g_s7501_cpupc;  // pc -> stores into seen fbs
+double s7501_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+bool s7501_ctl_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7501_CTL"); return e && *e && *e != '0'; }(); return on; }
+inline bool now_ok_s7501(const S7501F& f) { return f.marked; }
+void s7501_mark(uint32_t a, uint32_t n, bool on) {  // a = phys
+  if (!g_rs64_s7475_bm) return;
+  for (uint32_t o = a; o < a + n && o < 0x1800000u; ) {
+    if ((o & 7u) == 0 && o + 8u <= a + n) { g_rs64_s7475_bm[o >> 3] = on ? 0xFFu : 0u; o += 8u; continue; }
+    if (on) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); else g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); ++o; } }
+void s7501_push_locked(uint32_t lo, uint32_t hi, int cls, uint32_t base, uint32_t pc, const char* fn, double now) {
+  if (g_s7501_ring.empty()) g_s7501_ring.resize(kS7501Ring);
+  g_s7501_ring[g_s7501_rn++ & (kS7501Ring - 1)] = S7501E{lo, hi, base, pc, now, cls, fn}; ++g_s7501_ev[cls]; }
+void s7501_sum_locked(double now) {
+  std::string top; { std::vector<std::pair<uint64_t, uint32_t>> v; for (auto& kv : g_s7501_cpupc) v.push_back({kv.second, kv.first});
+    std::sort(v.rbegin(), v.rend()); char t[40]; for (size_t i = 0; i < v.size() && i < 6; ++i) { std::snprintf(t, sizeof t, "%s%08X:%llu", i ? "," : "", v[i].second, (unsigned long long)v[i].first); top += t; } }
+  std::string b; char t[48]; for (int c = 0; c < Z_N; ++c) { std::snprintf(t, sizeof t, " %s=%llu", s7501_cls(c), (unsigned long long)g_s7501_n[c]); b += t; }
+  std::string e; for (int c = 0; c <= Z_CTL; ++c) { std::snprintf(t, sizeof t, "%s%s:%llu", c ? "," : "", s7501_cls(c), (unsigned long long)g_s7501_ev[c]); e += t; }
+  std::fprintf(stderr, "[s7501] sum t=%.1f ups=%llu fbs=%zu chk=%llu cls%s ev=%s cpu_pcs=%s ctlst=%s ctl_tries=%d ctl_lost=%d bm=%d\n", now - g_s7501_t0, (unsigned long long)g_s7501_ups,
+    g_s7501_fb.size(), (unsigned long long)g_s7501_chk, b.c_str(), e.c_str(), top.empty() ? "none" : top.c_str(),
+    g_s7501_ctl == 1 ? "ok" : g_s7501_ctl == -1 ? "pending" : g_s7501_ctl == 0 ? "idle" : "unarmed", g_s7501_ctries, g_s7501_clost, g_rs64_s7475_bm != nullptr); }
+void s7501_tick_locked(double now) {
+  if (g_s7501_t0 == 0) g_s7501_t0 = now;
+  if (now - g_s7501_last < 10.0) return; g_s7501_last = now; s7501_sum_locked(now);
+  for (auto& kv : g_s7501_fb) { S7501F& f = kv.second;  // expire fbs unseen for 5 s (their bytes may be heap again); re-mark live ones
+    if (f.marked && now - f.seen > 5.0) { s7501_mark(kv.first, f.bytes, false); f.marked = false; }
+    else if (!f.marked && now - f.seen <= 5.0) { s7501_mark(kv.first, f.bytes, true); f.marked = true; }
+    else if (f.marked) s7501_mark(kv.first, f.bytes, true); } }
+}  // namespace
+extern "C" void rs64_s7501_w(uint32_t addr, uint32_t len, int kind) {  // host DMA writes (upstream_compat rs64_s7486_hostread kinds 6-8)
+  if (!rs64_s7501_on || !len) return; const uint32_t a = addr & 0x1FFFFFFu;
+  std::lock_guard<std::mutex> lk(g_s7501_mu);
+  /* only DMA writes overlapping a tracked fb enter the ring (s7501 run 1: 99M-187M sp_gfx events/run wrapped the ring in ~2 s) */
+  bool hit = false; for (auto it = g_s7501_fb.lower_bound(a + len); it != g_s7501_fb.begin(); ) { --it; if (it->first + it->second.bytes > a && now_ok_s7501(it->second)) { hit = true; break; } }
+  if (hit) s7501_push_locked(a, a + len, kind == 6 ? Z_SPG : kind == 7 ? Z_SPA : Z_PI, 0, 0, nullptr, s7501_now()); }
+extern "C" int rs64_s7501_cpu(uint32_t pc, uint32_t va, int w, const char* fn) {  // rs64_s7475_store first: 1 = an fb byte (claimed)
+  if (!rs64_s7501_on) return 0; const uint32_t a = va & 0x1FFFFFFu;
+  std::lock_guard<std::mutex> lk(g_s7501_mu);
+  auto it = g_s7501_fb.upper_bound(a); if (it == g_s7501_fb.begin()) return 0; --it;
+  if (!it->second.marked || a >= it->first + it->second.bytes) return 0;
+  const int c = (fn && !std::strncmp(fn, "zmemcpy", 7)) ? Z_ZMEM : (fn && !std::strncmp(fn, "os_", 3)) ? Z_OS : Z_CPU;
+  if (c == Z_CPU) ++g_s7501_cpupc[pc];
+  const double now = s7501_now();
+  /* coalesce: a store adjacent to one of the last 4 events from the same pc within 5 ms extends it (memset / decode loops) */
+  for (uint64_t i = 1; i <= 4 && i <= g_s7501_rn; ++i) { S7501E& e = g_s7501_ring[(g_s7501_rn - i) & (kS7501Ring - 1)];
+    if (e.cls == c && e.pc == pc && e.base == it->first && now - e.t < 0.005 && a <= e.hi + 8u && a + (uint32_t)w + 8u >= e.lo) {
+      e.lo = std::min(e.lo, a); e.hi = std::max(e.hi, a + (uint32_t)w); e.t = now; ++g_s7501_ev[c]; return 1; } }
+  s7501_push_locked(a, a + (uint32_t)w, c, it->first, pc, fn, now); return 1; }
+static void s7501_wb(uint32_t phys, uint32_t bytes) {
+  const uint32_t b = g_s7501_base.exchange(0xFFFFFFFFu); if (!rs64_s7501_on || !bytes) return;
+  std::lock_guard<std::mutex> lk(g_s7501_mu); s7501_push_locked(phys & 0x1FFFFFFu, (phys & 0x1FFFFFFu) + bytes, Z_WB, b & 0x1FFFFFFu, 0, nullptr, s7501_now()); }
+extern "C" void rs64_s7501_chk(uint32_t addr, uint32_t bytes, int differs) {
+  std::lock_guard<std::mutex> lk(g_s7501_mu); const double now = s7501_now(); s7501_tick_locked(now); ++g_s7501_chk; addr &= 0x1FFFFFFu;
+  S7501F& f = g_s7501_fb[addr]; f.seen = now; if (f.first_t == 0) f.first_t = now;
+  if (bytes != f.bytes) { if (f.marked) s7501_mark(addr, f.bytes, false); f.bytes = bytes; f.marked = false; }
+  /* re-mark every pass: the s7475 canary clears bitmap bits when it (un)marks heap slack / freed records over reused fb memory */
+  s7501_mark(addr, bytes, true); f.marked = true; f.mark_t = now;
+  if (differs) { f.pend_t = f.hash_t; f.pbytes = f.hbytes; f.hash_t = now; f.hbytes = bytes; }
+  /* control from checkRAM too: an fb not re-hashed for >= 2 s (not being drawn), so the poke is not adopted by hashTracking */
+  else if (s7501_ctl_on() && g_s7501_ctl != 1 && g_s7501_t0 > 0 && now - g_s7501_t0 >= 30.0 && g_s7501_ctries < 40 && f.hash_t > 0 && now - f.hash_t >= 2.0 &&
+           bytes >= 16 && (g_s7501_ctl != -1 || g_s7501_ctlt == 0 || now - g_s7501_ctlt > 10.0)) {
+    volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+    if (rd) { const uint32_t a = (addr + bytes / 2) & ~3u; volatile uint32_t* p = (volatile uint32_t*)(rd + a); *p = *p ^ 0x00FF00FFu;
+      g_s7501_ctl = -1; g_s7501_ctla = a; g_s7501_ctlfb = addr; g_s7501_ctlt = now; ++g_s7501_ctries; s7501_push_locked(a, a + 4, Z_CTL, addr, 0, "ctl", now);
+      std::fprintf(stderr, "[s7501] ctl poke(chk) fb=%06X word=%06X idle=%.1fs try=%d t=%.3f\n", addr, a, now - f.hash_t, g_s7501_ctries, now - g_s7501_t0); } } }
+extern "C" void rs64_s7501_hash(uint32_t addr, uint32_t bytes) {
+  std::lock_guard<std::mutex> lk(g_s7501_mu); const double now = s7501_now(); addr &= 0x1FFFFFFu;
+  S7501F& f = g_s7501_fb[addr]; f.seen = now; if (f.first_t == 0) f.first_t = now; f.hash_t = now; f.hbytes = bytes; f.pend_t = -1; if (!f.bytes) f.bytes = bytes;
+  if (g_s7501_ctl == -1 && addr == g_s7501_ctlfb && g_s7501_ctlt > 0 && g_s7501_clost < 1000) { ++g_s7501_clost;  /* fb re-hashed after the poke: the upload window (since last upload) still holds it, no retry */
+    if (g_s7501_clost <= 3) std::fprintf(stderr, "[s7501] ctl rehash (fb %06X re-hashed after poke, kept) try=%d\n", addr, g_s7501_ctries); } }
+extern "C" void rs64_s7501_up(uint32_t addr, uint32_t w, uint32_t h, uint32_t siz, uint32_t bytes, uint32_t diffpx, int fl, uint32_t blo, uint32_t bhi, uint32_t nchg) {
+  std::lock_guard<std::mutex> lk(g_s7501_mu); const double now = s7501_now(); s7501_tick_locked(now); addr &= 0x1FFFFFFu; ++g_s7501_ups;
+  S7501F& f = g_s7501_fb[addr]; f.seen = now; if (!f.bytes) f.bytes = bytes; ++f.ups; if (f.first_t == 0) f.first_t = now;
+  const bool pend = f.pend_t >= 0; const double wh = pend ? f.pend_t : f.hash_t;
+  /* window = since RT64's native copy last matched RAM (this fb's previous upload, else first sighting), not since the last re-hash:
+     hashTracking / an overlapping fb's draw re-hash RAM without refreshing nativeSwappedRAM (s7501 run 1, L4 ctl word classed revert) */
+  const double ws = wh <= 0 ? wh : (f.up_t > 0 ? f.up_t : f.first_t); f.up_t = now; const uint32_t wsb = pend ? f.pbytes : f.hbytes; f.pend_t = -1;
+  if (fl & 2) { f.hash_t = now; f.hbytes = bytes; }
+  const bool resized = ws > 0 && wsb != 0 && wsb != bytes, shortnat = (fl & 4) != 0;  /* hash range grew/shrank; RT64 native copy shorter than RAMBytes */  /* present path adopts the hash after the upload */
+  const uint32_t lo = addr + blo, hi = addr + bhi;
+  int cls = Z_NONE; uint32_t mask = 0, rmask = 0; uint64_t nwin = 0; const S7501E* top = nullptr; const S7501E* rtop = nullptr; bool trunc = false;
+  if (ws <= 0) cls = Z_NEW;
+  else if (nchg == 0) cls = Z_HASH;
+  else {
+    const uint64_t n = std::min<uint64_t>(g_s7501_rn, kS7501Ring); uint64_t i = 0;
+    for (; i < n; ++i) { const S7501E& e = g_s7501_ring[(g_s7501_rn - 1 - i) & (kS7501Ring - 1)]; if (e.t <= ws) break;
+      if (e.lo < hi && e.hi > lo) { const int c = (e.cls == Z_WB && e.base == addr) ? Z_WBSELF : e.cls; mask |= 1u << c; ++nwin; if (!top) top = &e; } }
+    if (i == n && n == kS7501Ring) trunc = true;
+    if (top) cls = (top->cls == Z_WB && top->base == addr) ? Z_WBSELF : top->cls; else if (trunc) cls = Z_TRUNC; else if (resized) cls = Z_RESIZE; else if (shortnat) cls = Z_SHORT;
+    if (cls == Z_NONE) {  /* a writer in the window over the fb but outside the still-different bytes: it changed RAM back to RT64's own copy */
+      for (uint64_t j = 0; j < n; ++j) { const S7501E& e = g_s7501_ring[(g_s7501_rn - 1 - j) & (kS7501Ring - 1)]; if (e.t <= ws) break;
+        if (e.lo < addr + bytes && e.hi > addr) { const int c = (e.cls == Z_WB && e.base == addr) ? Z_WBSELF : e.cls; rmask |= 1u << c; if (!rtop) rtop = &e; } }
+      if (rtop) cls = Z_REVERT; } }
+  const bool isctl = g_s7501_ctl == -1 && g_s7501_ctla >= lo && g_s7501_ctla < hi;  /* any fb whose bbox covers the poked word (fbs overlap) */
+  if (isctl && (mask & (1u << Z_CTL))) { g_s7501_ctl = 1; std::fprintf(stderr, "[s7501] ctl DETECTED fb=%06X poked_fb=%06X word=%06X cls=%s try=%d\n", addr, g_s7501_ctlfb, g_s7501_ctla, s7501_cls(cls), g_s7501_ctries); }
+  else if (isctl) std::fprintf(stderr, "[s7501] ctl MISSED fb=%06X word=%06X cls=%s mask=%X try=%d\n", addr, g_s7501_ctla, s7501_cls(cls), mask, g_s7501_ctries);
+  if (cls != Z_CTL && !isctl) ++g_s7501_n[cls];
+  if (++g_s7501_rows <= 400) {
+    std::string m; for (int c = 0; c < Z_N; ++c) if (mask & (1u << c)) { if (!m.empty()) m += '|'; m += s7501_cls(c); }
+    std::fprintf(stderr, "[s7501] up fb=%06X w=%u h=%u siz=%u bytes=%u diffpx=%u nchg=%u bbox=[%06X,%06X) path=%s%s win=%.3fs cls=%s mask=%s nwin=%llu top=[%06X,%06X) base=%06X pc=%08X fn=%s ups=%llu hbytes=%u%s%s rmask=%X rtop=%s:[%06X,%06X) sw=%d t=%.3f\n",
+      addr, w, h, siz, bytes, diffpx, nchg, lo, hi, (fl & 2) ? "present" : "draw", (fl & 1) ? " discard" : "", ws > 0 ? now - ws : -1.0, s7501_cls(cls),
+      m.empty() ? "-" : m.c_str(), (unsigned long long)nwin, top ? top->lo : 0, top ? top->hi : 0, top ? top->base : 0, top ? top->pc : 0,
+      (top && top->fn) ? top->fn : "-", (unsigned long long)f.ups, wsb, resized ? " RESIZED" : "", shortnat ? " SHORTNAT" : "", rmask, rtop ? s7501_cls(rtop->cls) : "-", rtop ? rtop->lo : 0, rtop ? rtop->hi : 0, g_rs64_swap_n.load(std::memory_order_relaxed), now - g_s7501_t0); }
+  /* positive control: poke one word of this fb (host write, logged as ctl) */
+  if (s7501_ctl_on() && g_s7501_ctl != 1 && now - g_s7501_t0 >= 30.0 && g_s7501_ctries < 40 && (g_s7501_ctl != -1 || g_s7501_ctlt == 0 || now - g_s7501_ctlt > 10.0) && bytes >= 16) {
+    volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+    if (rd) { const uint32_t a = (addr + bytes / 2) & ~3u; volatile uint32_t* p = (volatile uint32_t*)(rd + a); *p = *p ^ 0x00FF00FFu;
+      const double tp = s7501_now() + 1e-6;  /* strictly after this upload's window edge (present path sets hash_t = now) */
+      g_s7501_ctl = -1; g_s7501_ctla = a; g_s7501_ctlfb = addr; g_s7501_ctlt = tp; ++g_s7501_ctries; s7501_push_locked(a, a + 4, Z_CTL, addr, 0, "ctl", tp);
+      std::fprintf(stderr, "[s7501] ctl poke fb=%06X word=%06X try=%d t=%.3f\n", addr, a, g_s7501_ctries, now - g_s7501_t0); } } }
+extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); g_s7498_base.store(b); g_s7501_base.store(b); }
 static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
     if (!s7493_on() || kind > 1 || !bytes) return;
     static const uint64_t ctl_k = [] { const char* e = std::getenv("ROGUESQ_S7493_WBLIVE_CTL"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
@@ -10984,6 +11118,7 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
         if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
                                                        (unsigned long long)k, phys, bytes, kind, width, rows); }
     s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows);
+    s7501_wb(phys, bytes);  /* s7501 class EZ */
     if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb");
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     uint32_t slot = kWbwMax;
@@ -11005,7 +11140,7 @@ extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
 extern "C" void rs64_wbw_self(int) {}
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
 static void s7497_wb(uint32_t, uint32_t, uint32_t);
-extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
+extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); s7501_wb(phys, bytes); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 

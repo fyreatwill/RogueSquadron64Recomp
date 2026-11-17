@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7500 (2026-11-16).
+Compact operational handoff, as of Session 7501 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -277,7 +277,17 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      hooks lib/rt64 rs64_s7500_draw/tex/up + main.cpp s7500_*. Of the covered images only 5 per arm are ever set again (scene changes);
      each is filled in the same swap it is set, before any draw, z-compare, texture load or RT64 upload; read=0. Rest never re-set.
      Controls ctlA (A's own next set classified fill) and ctlB (artificial reset logged) ok both arms. Levels soak queued (s7500_ey_levels).
-     **EZ next: name the writer behind each RT64 checkRAM upload (31-37 per run)** (NEXT.md).
+     **Levels soak folded s7501: L1 dd8 21:9 / L7 / L10 / L12 dd4 read=0 ctlA/ctlB ok -> EY CLOSED 6 levels.**
+   - **EZ s7501 writer behind each RT64 checkRAM upload: every upload has a legitimate writer (L4 dd1 38 ups, L15 dd8 21:9 32 ups).**
+     ROGUESQ_S7501_EZ=1 (+_CTL=1; needs S7475_CANARY+STORE_DIAG for the store bitmap), tools/s7501_ez_recipe.zsh; hooks lib/rt64
+     checkRAM/hashTracking/uploadRAM (rs64_s7501_chk/hash/up, changed-word bbox vs nativeSwappedRAM) + main.cpp s7501_* writer ring
+     (RT64 writebacks, RSP/PI DMA writes into tracked fbs, guest stores into marked fb bytes). Window = since that fb's previous upload
+     (run 1 used "since last re-hash" and the L4 control missed: hashTracking re-hashes without refreshing the native copy). Classes L4/L15:
+     guest cpu 14/13 (rs_memset clears, parseImageFile decodes, AND allocator metadata: buildHeapFreeList / rs_free / rs_malloc / coalesce
+     writing headers into freed fb RAM that RT64 still tracks), other image's writeback 18/9 (mostly boot/mode-change overlaps <30 s),
+     own writeback 2/2, sp_gfx 0/3, pi 1/0, hash-only (0 words differ) 4/3, none 1/0 (L4 t=18.05 16 ms window), trunc 0/1. Control
+     (host XOR of one fb word) detected both arms. Single runtime. Levels soak queued (s7501_ez_levels).
+     **FA next: are the allocator-metadata uploads into an image that is LIVE (set this/next swap) and drawn/presented before a fill?** (NEXT.md).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

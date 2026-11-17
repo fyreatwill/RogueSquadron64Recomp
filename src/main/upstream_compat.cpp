@@ -3950,7 +3950,9 @@ static uint64_t s_s7486_rng[9], s_s7486_mark[9], s_s7486_ctl[9], s_s7486_rec[9],
 static int s_s7486_plant = 0, s_s7486_ptries = 0; static double s_s7486_ptime = 0; static uint32_t s_s7486_pblk = 0;
 static std::atomic<uint32_t> s_s7486_recent[16]; static std::atomic<uint32_t> s_s7486_ri{0};
 static int s_s7486_nlog = 0; static uint32_t s_s7486_ctlblk = 0; static int s_s7486_ctlkind = 0;  /* last live canary block a host read covered (plant target) */
+extern "C" int rs64_s7501_on; extern "C" void rs64_s7501_w(uint32_t, uint32_t, int); extern "C" int rs64_s7501_cpu(uint32_t, uint32_t, int, const char*);  /* s7501 EZ (main.cpp) */
 extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len) {
+    if (rs64_s7501_on && kind >= 6 && kind <= 8 && len) rs64_s7501_w(addr, len, kind);  /* s7501 EZ: host DMA write, before any gate */
     if (!g_rs64_s7486_on || kind < 0 || kind > 8 || !len) return;
     if (kind >= 6 && !g_rs64_s7489_on) return;
     const uint32_t a = (addr & 0x00FFFFFFu) | 0x80000000u; if (len > 0x100000u) len = 0x100000u;
@@ -4151,6 +4153,7 @@ extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu); return s7484_load(pc, a, w, fn); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (rs64_s7501_on && rs64_s7501_cpu(pc, a, w, fn)) return 1;  /* s7501 EZ: guest store into a seen framebuffer (bits marked by main.cpp) */
     /* returns 1 when the store is ours (slack or the control word): the s5798 dispatcher then returns */
     /* watch positive control (ROGUESQ_S7475_CANARY on): the frame counter 0x8011A890 is marked at arming; the first guest store to it must land here */
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { static uint64_t nc = 0; if (nc++ == 0) std::fprintf(stderr, "[s7475] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
@@ -6248,6 +6251,7 @@ extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind) {
                 const uint32_t pb = heap_ok ? it->first : (a & ~0xFu), pn = heap_ok ? it->second.req : ((a + w + 0xFu) & ~0xFu) - (a & ~0xFu);
                 s_s7491_plant = heap_ok ? 1 : 2; ++s_s7480_ptries; s7480_add(pb, pn, now, 1); s_s7480_plant = 1; s_s7480_ptime = now;
                 std::fprintf(stderr, "[s7491] mplant SET kind=%s class=%c blk=%08X n=%X a=%08X w=%u t=%.1f\n", kind, heap_ok ? 'H' : "HBO"[c], pb, pn, a, w, age); } } }
+    if (k == 14 && rs64_s7501_on) return;  /* s7501 EZ: fb bytes are marked; the writeback itself is already a ring event (main.cpp s7501_wb) */
     for (uint32_t i = 0; i < w; ++i) {
         const uint32_t b = a + i, o = b - 0x80000000u;
         if ((g_rs64_s7475_bm[o >> 3] >> (o & 7u)) & 1u) { ++s_s7491_mark[k]; rs64_s7475_store(0xE0000000u + (uint32_t)k, b, 1, kind); } } }

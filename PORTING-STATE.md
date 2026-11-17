@@ -198940,3 +198940,41 @@ Rules out: stale bytes from one RT64 writeback being consumed through a later re
 This selects H-ey-rewrite (with H-ey-dead for the never re-set images) and refutes H-ey-read at L4 dd1 and L15 dd8 21:9.
 Levels soak queued (scratch/agent/soak_queue/s7500_ey_levels.sh).
 Next discriminator (EZ): the 31/37 RT64 checkRAM uploads per run: whose write changed each live framebuffer's RAM (NEXT.md).
+
+## Session 7501 (2026-11-16) — class EZ: every RT64 checkRAM upload has a named legitimate writer (guest clears/decodes, allocator headers in freed fb RAM, overlapping writebacks); EY closed 6 levels
+
+Fold: s7500_ey_levels soak (L1 dd8 21:9, L7/L10/L12 dd4): read=0, ctlA=ok/fill, ctlB=ok, all alive -> **class EY CLOSED 6 levels.**
+
+Work unit, class EZ (seeded s7500): RT64 checkRAM finds a tracked framebuffer's RDRAM hash moved and uploads RAM into its GPU image
+(31-37 per run). Who wrote that RAM? Hypotheses: H-ez-cover (another image's RT64 writeback) / H-ez-cpu (guest stores) / H-ez-dma
+(RSP/PI DMA) / H-ez-hash (hash moved with no real change).
+
+Instrument, ONE build (ROGUESQ_S7501_EZ=1, ROGUESQ_S7501_CTL=1; rides S7475_CANARY+STORE_DIAG store bitmap):
+- lib/rt64 rt64_framebuffer_manager.cpp: checkRAM -> rs64_s7501_chk (every fb, every pass), hashTracking + rt64_state.cpp s7387 skip ->
+  rs64_s7501_hash, uploadRAM -> rs64_s7501_up with the byte bbox of words differing from nativeSwappedRAM (before the refresh). Patch exported.
+- main.cpp s7501_*: one time-stamped writer ring: RT64 writebacks (exact base via rs64_s7493_base: wbself / wbo), host DMA writes
+  (upstream_compat rs64_s7486_hostread kinds 6-8 -> sp_gfx / sp_aud / pi, filtered to ranges overlapping a tracked fb), guest stores
+  (every tracked fb's bytes marked in the s7475 bitmap; rs64_s7475_store hands them over first -> cpu / zmem / os, with pc and fn).
+  Upload class = newest ring event in the window overlapping the bbox; hash = 0 words differ; none / trunc otherwise.
+- Control: from t>=30 s the host XORs one word in the middle of a just-uploaded fb; the next upload covering the word must carry ctl.
+
+Run 1 (same build minus two fixes): L15 ctl DETECTED, **L4 ctl MISSED**: the upload at t=67.1 s had bbox exactly the poked word but the
+window started at the fb's last re-hash (0.47 s), after the poke (58.8 s). hashTracking / overlapping draws re-hash RAM without refreshing
+RT64's native copy, so the window must start at the fb's previous upload (native copy == RAM). Also 99M-187M sp_gfx events/run wrapped the
+1M ring in ~2 s. Fixed in-session: window = since previous upload (else first sighting); DMA events kept only when they overlap a tracked
+fb; ring 2M. Instrument defect, not a result.
+
+Run 2 `zsh tools/s7501_ez_recipe.zsh` (L4 dd1, L15 dd8 21:9), both alive, ctl DETECTED both arms (L4 try 1 after 3 re-hashes, L15 try 1):
+| arm | ups | cpu | wbo | wbself | sp_gfx | pi | hash | none | trunc |
+| L4 dd1 | 38 | 14 | 18 | 2 | 0 | 1 | 4 | 1 | 0 |
+| L15 dd8 21:9 | 32 | 13 | 9 | 2 | 3 | 0 | 3 | 0 | 1 |
+(table counts include the control upload; recipe score=5 only for the 1 none / 1 trunc.) Writers by function: cpu = rs_memset (clears),
+parseImageFile (image decode into the fb), hudDisplayUpdateWorker, and **allocator metadata: buildHeapFreeList, rs_free,
+rs_malloc_s5041_inner, coalesceFreeHeapBlocks_s7325_inner** writing headers into freed framebuffer RAM that RT64 still tracks (4-5 per arm,
+some in flight). wbo = mostly the boot / mode-change overlap sequence (<30 s: 76A000 x9, 7DD000 x5; BDD000 x5). none = L4 67CA00 at
+t=18.05 (bbox [6A6818,6BE80C), 16 ms window, during the boot parseImageFile decode into that fb). trunc = L15 A35800 at 75.1 s (64 s window).
+**Verdict: H-ez-cpu + H-ez-cover (with a few H-ez-dma, 3-4 H-ez-hash); no unknown writer.** Single runtime (retail not consulted), one
+same-run control per arm. Rules out an unexplained host-side or DMA write into live framebuffer RAM at these 2 levels; 1 none + 1 trunc
+residual stays open. New lead: RT64 uploads allocator headers into images whose RAM the game freed (stale tracking); harmless only if
+those images are never shown before a fill (EY says re-set images are filled first).
+Levels soak queued (scratch/agent/soak_queue/s7501_ez_levels.sh). Next discriminator (FA): are allocator-metadata uploads into a LIVE image.

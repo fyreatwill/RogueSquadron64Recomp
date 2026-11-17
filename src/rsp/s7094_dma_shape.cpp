@@ -20,6 +20,8 @@ extern "C" int rs64_s7094_on = [] {
     if (!v && g && *g && *g != '0') v = 1;
     const char* h = getenv("ROGUESQ_S7486_HOSTUAF");  // s7486 class EK host-read UAF watch rides this hook (upstream_compat.cpp rs64_s7486_hostread)
     if (!v && h && *h && *h != '0') v = 1;
+    const char* z = getenv("ROGUESQ_S7501_EZ");  // s7501 class EZ: RSP DMEM->RDRAM writes into tracked framebuffers ride this hook
+    if (!v && z && *z && *z != '0') v = 1;
     if (v) fprintf(stderr, "[s7094] dma shape census armed mode=%s\n", v == 2 ? "ctl" : "on");
     return v;
 }();
