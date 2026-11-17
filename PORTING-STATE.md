@@ -200545,3 +200545,6 @@ added to the rerun list for scheduler changes.
 Verdict (s7546): selects H-safe and refutes H-deref for class GF (7 post-destroy host reads, all compare-only or guarded; guest never
 names a freed struct; controls 5/5; runtime 8/8 self-destroy per level); closes GF. Next discriminator: class GG census of host-retained
 guest pointers (event/timer/IO message queues) outliving a freed guest object (H-static vs H-unreg vs H-stale, NEXT.md).
+ORIGIN: no mitigation landed (the "guard"/"skip" words are the census tool's classification labels). The value read after destroy at
+OSThread+0x20 is written by the guest heap's next owner of the rs_free'd service-worker node (s7545: e.g. musyxRenderVoiceSamples, or
+osCreateThread for a new worker at 0x801937F0); legitimate guest data, and the port only compares it.
