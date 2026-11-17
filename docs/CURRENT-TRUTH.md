@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7505 (2026-11-16).
+Compact operational handoff, as of Session 7506 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -318,7 +318,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      21:9, 4:3 L4/L1 dd1): ONE episode, L15 t58.9 hdr 96AFF0 x1016 y18, black frame, 1 swap = the FB upload row in the same run (two
      instruments). 0 hits on any lit frame. Controls: synth every swap, arena-head window ctl 413/412/413/416 all hit. Limit: FC sees
      LIVE chain headers only; stale header bytes (4:3 L4 FB row 790000) are covered by FB at upload. **Heap-on-screen class and the
-     m3-partition-over-live-block series (EU-FC) CLOSED**, pending levels soak s7505_fc_levels (expect fc score 0; 5 = read BAD= rows).
+     m3-partition-over-live-block series (EU-FC) CLOSED.** Levels soak folded s7506: L1 dd8 21:9 / L7 / L10 / L12 dd4 fc score 0
+     (8.4k-12.4k swaps each, 0 hits, synth + ctl ok) -> FC CLOSED 6 levels.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -399,7 +400,9 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
       callee-saved across FR=1 asm; BU s7411 unaligned ld/st; BV s7412 integer 64-bit GPR; BW s7413 aligned ld/st; BX s7414
       FP compare + bc1x (unordered-cond generator table wrong on NaN, 0 game sites); BY s7415 FP arith + moves (0 FMA); BZ s7416
       control flow + delay slots; CA s7418 opcode residue (s7418_opcode_residue.py: 0 live gap, cvt int/FP->FP exact, live cache
-      = CDE/HWB-D no-op-safe). LATENT from BZ: jr/jalr emit the slot BEFORE reading rS (2 sites, dead data_gap_80024A0C).
+      = CDE/HWB-D no-op-safe). BZ latent jr/jalr slot-before-read FIXED s7506 in N64Recomp
+      (b684176: latch `gpr jr_target_A = rS` only when the slot writes rS; old vs new generator output differs ONLY at the 2
+      data_gap_80024A0C sites; s7416 tool S4 accepts the latch, HAZARDS 2 -> 0, latch control: reverted copy 2 hazards, wrong reg BAD).
     - **CB s7419 objdump decode blind spot: CLOSED H-clean.** The ELF is flagged `o32, mips1`, so plain `objdump -d` left every
       MIPS II/III op undecoded (ldc1 1386, sdc1 1255, trunc 1094 as `c1`, 8 branch-likely forms 2445 [s7392 parse patched 4],
       sqrt.s 94, cache 33, 64-bit ~140, eret), dumped size-0 OBJECT labels inside FUNCs as bytes (texPackTlutAtAllocSlot's 66
@@ -422,7 +425,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
 18. **Runtime soak folds for the AQ-BZ classes all PASSED** (SOAK-RESULTS s7392-s7416: L4/L7/L12 or L5/L10/L15, 0 crash, 0 VI
     stall, controls PASS). No class soak is outstanding.
 19. **Rerun the emission tools after any regen:** tools/s7407-s7416 + s7418 + s7419_dis_agree.py --controls (rc 0 expected) alongside item 12.
-20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+20. **FD (s7507 next): RSPRecomp control-flow emission audit** = BZ for build/factor5_ucode/*.c (scratch/agent/NEXT.md).
+21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

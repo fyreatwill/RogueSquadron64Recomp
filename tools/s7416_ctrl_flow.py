@@ -20,6 +20,8 @@ Checks (all over ../N64Recomp/RecompiledFuncs, pass-through prefixes stripped):
     mutants (32-bit compare, signed<->unsigned, operator flip) must flag.
  S7 structural positive control: synthetic emissions with the slot moved before the condition, the likely skip
     dropped / added, a wrong target, a diverging slot copy must each be flagged by the S1 checker.
+s7506: the generator now latches rS before a slot that writes it (S4 accepts `gpr jr_target_A = ctx->rS;` +
+    LOOKUP_FUNC(jr_target_A); latch control: reverted copy must show the 2 hazards again).
 Usage: tools/s7416_ctrl_flow.py   rc 0 = H-equal + all controls PASS, rc 3 otherwise."""
 import os, re, sys, struct, subprocess, tempfile, collections, random
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
@@ -229,6 +231,10 @@ def harvest(files):
                     res[('j_selfloop_pause', True)] += 1; continue
                 if pre and op != 'jr' and all(PATCHLINE.search(x[1]) or re.match(r'rs64_\w+\(', x[1]) for x in pre if x[0] == 'X'):
                     res[(op + '_patched_prefix', True)] += 1; pre = []
+                # s7506: N64Recomp latches the jump register before a slot that overwrites it: `gpr jr_target_A = ctx->rS;`
+                latch = None
+                if op in ('jr', 'jalr') and pre and pre[-1][0] == 'X' and pre[-1][1].startswith('gpr jr_target_%08X = ' % a):
+                    latch = pre[-1][1]; pre = pre[:-1]
                 if pre and pre[0] == ('X', 'do_break(%d);' % a):
                     res[(op + '_do_break_trap', True)] += 1; continue
                 if pre and op != 'jr':
@@ -285,11 +291,16 @@ def harvest(files):
                         res[('jtable', ok)] += 1
                         if not ok: bad.append((name, '%08X' % a, op, args, 'jtable mism=%d undef=%d cap=%r' % (len(mism), len(undef), cap)))
                     else:
-                        want = 'LOOKUP_FUNC(%s)(rdram, ctx);' % rx(rs)
-                        ok = want in body
-                        res[(op + '_reg', ok)] += 1
-                        if not ok: bad.append((name, '%08X' % a, op, args, 'body %r' % (body[-3:],)))
-                        if sd is not None and sd == rs and rs != 0:
+                        if latch is not None:
+                            want = 'LOOKUP_FUNC(jr_target_%08X)(rdram, ctx);' % a
+                            ok = want in body and latch == 'gpr jr_target_%08X = %s;' % (a, rx(rs))
+                            res[(op + '_reg_latched', ok)] += 1
+                        else:
+                            want = 'LOOKUP_FUNC(%s)(rdram, ctx);' % rx(rs)
+                            ok = want in body
+                            res[(op + '_reg', ok)] += 1
+                        if not ok: bad.append((name, '%08X' % a, op, args, 'body %r latch %r' % (body[-3:], latch)))
+                        if sd is not None and sd == rs and rs != 0 and latch is None:
                             haz.append((name, '%08X' % a, '%s slot writes jump reg' % op, slot[2], slot[3]))
                         if op == 'jalr' and sd == 31:
                             haz.append((name, '%08X' % a, 'jalr slot writes $ra', slot[2], slot[3]))
@@ -405,6 +416,26 @@ def main():
     for n, got, exp in ctl:
         if got != exp: print('S7 CONTROL miss:', n, got, exp)
     print('S7 structural control %d/%d -> %s' % (sum(g == e for _, g, e in ctl), len(ctl), 'PASS' if sctl else 'FAIL'))
+    # s7506 S4 latch control: the live data_gap_80024A0C (latched) must give 0 hazards / 0 bad; reverted to the
+    # pre-s7506 slot-first emission it must give 2 hazards; a latch of the wrong register must be BAD.
+    f7 = os.path.join(FUNCS, 'funcs_7.c'); src7 = open(f7, errors='replace').read()
+    m7 = re.search(r'RECOMP_FUNC void data_gap_80024A0C\(.*?\n;?}', src7, re.S)
+    lctl = False
+    if m7 and 'jr_target_80024A54' in m7.group(0):
+        fn = m7.group(0)
+        rev = re.sub(r'    gpr jr_target_([0-9A-F]{8}) = ctx->r2;\n', '', fn)
+        rev = re.sub(r'LOOKUP_FUNC\(jr_target_[0-9A-F]{8}\)', 'LOOKUP_FUNC(ctx->r2)', rev)
+        wrong = fn.replace('gpr jr_target_80024A54 = ctx->r2;', 'gpr jr_target_80024A54 = ctx->r3;')
+        outs = []
+        for txt in (fn, rev, wrong):
+            with tempfile.NamedTemporaryFile('w', suffix='.c', delete=False) as tf: tf.write(txt)
+            r_, b_, _, h_, _ = harvest([tf.name]); os.unlink(tf.name)
+            outs.append((sum(1 for h in h_ if 'jump reg' in h[2]), sum(1 for b in b_ if b[2] in ('jr', 'jalr') and 'latch' in b[4])))
+        lctl = outs[0] == (0, 0) and outs[1][0] == 2 and outs[2][1] >= 1
+        print('S4 latch control live=%s reverted=%s wrong-reg=%s -> %s' % (outs[0], outs[1], outs[2], 'PASS' if lctl else 'FAIL'))
+    else:
+        print('S4 latch control: data_gap_80024A0C not latched in live tree -> FAIL')
+    sctl = sctl and lctl
     res, bad, conds, haz, jt = harvest(files)
     print('S1-S5 census:')
     for k in sorted(res): print('  %-10s ok=%-5s %d' % (k[0], k[1], res[k]))

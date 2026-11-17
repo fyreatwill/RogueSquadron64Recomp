@@ -1,18 +1,24 @@
-# NEXT (s7506)
-HYPOTHESIS-ID: bz-jr-slotorder-latent
+# NEXT (s7507)
+HYPOTHESIS-ID: fd-rsprecomp-ctrlflow
 
-Fold first: SOAK-RESULTS line for s7505_fc_levels (rows `tag=s7505_fc_levels fc arm=` in scratch/s7505_fc_levels/out.txt). Pass = fc
-score 0 (ctl ok, no BAD= list) -> FC CLOSED 6 levels and the m3-partition-over-live-block series stays closed. A BAD= episode on a lit
-frame (ml>0.05) or shown>2 swaps is new: read the `[s7505] ep` row, name the block owner (s7475 record ra) before anything else.
-(fb score 5 inside that soak is expected: the FB present-path rows.)
+Context: s7506 fixed the N64Recomp jr/jalr slot-order defect (N64Recomp b684176; BZ tool S4 latch control PASS, HAZARDS 2 -> 0).
+The game-side generator is now audited end to end (BZ s7416). The RSP side never was: RSPRecomp (../N64Recomp/RSPRecomp/src/rsp_recomp.cpp)
+emits the F5 gfx/audio ucode that runs LLE every frame (build/factor5_ucode/*.c, ~15 files incl. overlays + clip composite).
 
-Work unit (ITERATION 3c / CURRENT-TRUTH item 20: the heap series is closed; bounded engineering, not a census): fix the LATENT generator
-defect found by class BZ s7416 (PORTING-STATE line ~196354): N64Recomp emits a jr/jalr delay slot BEFORE `LOOKUP_FUNC(ctx->rS)`, but MIPS
-reads rS before the slot. 2 known sites, both in dead data_gap_80024A0C (jr $v0 with negu/ori $v0 in the slot).
-Hypotheses: H-fix-local (latching rS into a temp before the slot changes ONLY those 2 sites' emitted C; every other function
-byte-identical) / H-fix-wide (the latch changes other emission, e.g. register-allocated jump-table jr: then restrict to slots that write rS).
-Steps: 1) find the jr/jalr emission in /Users/williambuckley/Documents/Tools/N64Recomp (grep LOOKUP_FUNC / process_instruction jr); emit
-`gpr jr_target = ctx->rS;` before the slot only when the slot writes rS (keeps all other output identical). 2) Regen in order make_elf.py ->
-N64Recomp -> fixup_game_funcs.py -> cmake into a scratch output, then tools/s7421_regen_drift.py <live> <regen> <compare.json> --control:
-the diff must be exactly the 2 data_gap_80024A0C sites. 3) Re-run tools/s7416 BZ tool --controls (hazard count must drop to 0, mutant
-control still caught). 4) Build + one L4 300 s hold. Commit the N64Recomp change (it is its own repo: commit there too, note the hash).
+Work unit: class FD = the BZ audit for RSPRecomp output. One offline tool, tools/s7507_rsp_ctrl_flow.py, over build/factor5_ucode/*.c
+against the ucode images (tomls factor5_rsp_*.toml in ../N64Recomp give text offsets/sizes):
+ R1 every conditional branch: condition text == op/regs (RSP gprs are 32-bit; bgez/bltz signed), condition evaluated BEFORE the slot
+    (if the slot writes rs/rt, the emitted C must latch the compare - check print_branch_condition / print_branch order), goto target ==
+    disasm target, slot copy present on both paths.
+ R2 jal: $ra written = vram+8 (MIPS writes ra at the jal; slot sees new ra = correct), target label exists.
+ R3 jr/jalr: jump_target latched before the slot (already, lines ~523-528); jalr with rd == rs: MIPS reads rs before writing rd -
+    emitted `jump_target = rs; rd = ...` order is right; flag any rd==rs site anyway. do_indirect_jump switch covers every jr target
+    reachable (resume_targets / overlay entry list) - list switch cases vs label set.
+ R4 branch-in-delay-slot / resume_delay paths (lines ~576-599): every R_xxxx_delay label is preceded by the slot it resumes.
+ R5 positive controls: synthetic emissions (slot before cond, wrong target, missing latch, 64-bit compare) must each be flagged; mutate
+    one real site in a temp copy and require the tool to catch it.
+Hypotheses: H-equal (0 defects, like BZ) / H-latent (defects only in unreachable ucode) / H-live (a reachable site reads a reg after its
+slot overwrote it -> RSP output differs from hardware: then fix in rsp_recomp.cpp, regen via tools/ucode_regen.sh, diff old/new outputs
+must be only the flagged sites, build, one L4 300 s hold, and compare RDP stream vs angrylion on one frame).
+Discriminating outcome: R1-R4 defect list split by reachability (ucode task entry + overlay map in PROJECT-OVERVIEW "F5 ucode").
+Read docs/F5-UCODE-REFERENCE.md first. No game run unless H-live.

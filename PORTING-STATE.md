@@ -199115,3 +199115,27 @@ Verdict: selects H-fc-load (only at a load transition, black frame, <=2 swaps), 
 levels soak (s7505_fc_levels queued, L1 dd8 21:9, L7/L10/L12 dd4, expect fc score 0). Next: ITERATION 3c / CURRENT-TRUTH item 20, a new
 bounded engineering unit: fix the latent BZ jr/jalr slot-order generator defect (s7416) and prove the regen is byte-identical elsewhere.
 Files: src/main/main.cpp (s7505_fc, +<array>), tools/s7505_fc_recipe.zsh, scratch/agent/soak_queue/s7505_fc_levels.sh. No lib/ edits.
+
+## Session 7506 (2026-11-16) — N64Recomp jr/jalr delay-slot read order fixed (latch rS only when the slot writes it): generator output byte-identical except the 2 data_gap_80024A0C sites; BZ hazards 2 -> 0; FC closed 6 levels
+HYPOTHESIS-ID: bz-jr-slotorder-latent.
+Fold: s7505_fc_levels fc score 0 on L1 dd8 21:9 / L7 / L10 / L12 dd4 (8409-12449 swaps, 0 hits, synth and ctl ok; fb rows all in0) -> FC
+CLOSED 6 levels; the heap-on-screen series stays closed.
+Change: ../N64Recomp commit b684176 (src/recompilation.cpp print_func_call_by_register, src/cgenerator.cpp, include/recompiler/generator.h).
+When the delay slot of a jr/jalr through a register writes that register (rabbitizer modifiesRd/modifiesRt == rS), emit
+`gpr jr_target_<vram> = ctx->rS;` before the slot and `LOOKUP_FUNC(jr_target_<vram>)` after it. MIPS reads rS before the slot runs. Every
+other site is emitted as before. New Generator virtuals have defaults that keep the old order (LiveGenerator is unchanged).
+Discriminator (H-fix-local vs H-fix-wide): old and new N64Recomp binaries run on the same roguesquadron.elf (/tmp/s7506/old, new): diff -rq
+gives 1 file (funcs_7.c), 4 lines at the 2 sites 0x80024A54 (negu $v0 slot) and 0x80024A64 (ori $v0 slot). Selects H-fix-local. Jump-table
+jr already latched jr_addend, so it is untouched. The same 4-line edit was applied to the live tree ../N64Recomp/RecompiledFuncs/funcs_7.c.
+That is what a regen with the new generator emits, so it survives a regen.
+Tool: tools/s7416_ctrl_flow.py S4 now accepts the latched form (jr_reg_latched ok 2) and flags a hazard only when there is no latch. New
+S4 latch control (folded into sctl): live data_gap_80024A0C gives (0 hazards, 0 bad). A copy reverted to slot-first gives 2 hazards. A copy
+latching the wrong register (r3) gives 1 BAD. PASS. Full run rc 0: HAZARDS 0 (was 2), S7 11/11, mutants PASS, UNEXPLAINED 0, VERDICT
+H-equal. The BAD 70 (16 dead DATA_GAP + 54 FIXUP_PATCH) are the s7416 baseline classes.
+Runtime: rebuilt build/RogueSquadron64Recomp. One L4 dd1 300 s hold (tools/g1e_owner_quiet_arms.zsh, scratch/s7506_hold): alive_at_end=1,
+crashlines 0, vi_stalls30s 0, max present gap 148 ms, max VI hold 17.3 s (mission load), level_ok 1. The sites are in a dead data_gap (0
+callers), so this hold only shows that nothing regressed. It cannot show a behaviour change.
+ORIGIN: no mitigation. This is a generator correctness fix. The writer is N64Recomp's own emission order.
+Next: class FD, the same control-flow audit for RSPRecomp output (build/factor5_ucode/*.c). jr/jalr already latch jump_target there, but the
+branch condition/slot order, resume_delay paths and the do_indirect_jump coverage were never audited (scratch/agent/NEXT.md).
+Files: ../N64Recomp b684176, ../N64Recomp/RecompiledFuncs/funcs_7.c (live tree, untracked output), tools/s7416_ctrl_flow.py, docs. No lib/ edits.
