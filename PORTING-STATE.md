@@ -200851,3 +200851,7 @@ ROM/float immediates ignored, physical 0x0440 caught; osPiStartDma without do_dm
 Rules out: a stale or ordering-inconsistent polled status as a source of the async/NODRAIN/SP_LATE/FPS60 symptoms; the osAiSetNextBuffer
 busy-return divergence as an audio-pacing cause. Single-source (static) except osViGetCurrentField (oracle). CURRENT-TRUTH item 19 + item 12
 rerun line updated. Next: class GP, guest time consumers (osGetTime units / FPS60 mixing), NEXT.md.
+Discrimination: this selects H-consistent for the 6 imported status rows plus H-unused for every DP/AI/PI busy getter (proved by nm plus 0
+register-base constants), and refutes H-stale: 0 rows, with the planted mis-ordered osSpTaskYielded control classifying H-stale. It closes
+class GO. Next discriminator (class GP, NEXT.md): per osGetTime call site, does the guest's conversion constant match the host clock
+(46875 ticks/ms), and does any site mix a time delta with a frame count (H-unit-ok vs H-unit-mismatch vs H-mixed)?
