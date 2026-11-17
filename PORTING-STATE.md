@@ -199238,3 +199238,30 @@ FE (scalar), FF (vector operands), s7091 (live==pristine), s7092 (vector impls) 
 audited end to end.
 Next: CURRENT-TRUTH item 21, a new guest/host idiom-class audit (NEXT.md).
 Files: tools/s7509_rsp_vec_operands.py (new), docs. No lib/ edits.
+
+## Session 7510 (2026-11-16) — class FG: PI cart->RDRAM DMA shape vs hardware H-canon; 32,681 live ROM copies on L4 dd1 / L15 dd8 21:9 are all canonical (cart even, dram 8-aligned, size even), 0 differ from the hardware PI model, controls pass
+HYPOTHESIS-ID: pi-dma-shape-vs-hardware. Rescope: the s7509 NEXT candidate (RSP DMA address/length vs ares) was already CLOSED by
+s7094 (host differential 560k compares + 83M live DMAs, one off-by-one fixed), s7327 (25-bit mask) and s7344 (length clamp), so FG =
+the next unaudited RCP DMA model: PI cart->RDRAM, where pi.cpp still says "TODO implement unaligned DMA correctly".
+Hypotheses: H-canon (every live copy canonical -> our exact byte copy = hardware, the TODO is dead) / H-dead (non-canonical only on
+guard-skipped garbage) / H-live (a live shape differs -> fix to hardware semantics).
+Hardware model: mupen64plus-core pi_controller.c dma_pi_write (rs64-oracle checkout, encodes n64brew "Unaligned DMA transfer"):
+cart &~1, dram &0xFFFFFE, len = WR_LEN+1 (= size: libultra writes size-1); odd len >= 0x7F gets +1; len <= 0x80 shrinks by dram&7.
+Ours (pi.cpp do_rom_read): byte copy of exactly size bytes cart -> dram.
+Instrument: no build. Existing ROGUESQ_LOG_DMA=1 lines ([rom-read] = every do_rom_read, i.e. every copy past the s5061 guard;
+[pi-start-dma] = guest request) captured once on 2 arms (tools/g1e_owner_quiet_arms.zsh, HOLD=200, R=scratch/s7510: l4 = L4 dd1,
+l15 = L15 dd8 21:9), classified offline by the new tools/s7510_pi_dma_shape.py (--controls).
+Result: L4 rom_reads 15,961 (pi_start_dma 15,960 + the boot entrypoint load), L15 16,720 (16,719 + 1); guard lines 0; shapes
+canon 15,961 / 16,720; diffs 0 / 0 (rc 0). Sizes: 0x100 dominates (14.8k / 15.4k), then 0x1000, 0x820, 0x400, 0x4000.
+Both arms alive at end, initMission 1, vi_stalls30s 0, crashlines 0.
+Controls: 7 synthetic shapes (canon, cart_odd, dram_odd, short dram_mis8, long dram_mis8, odd>=0x7F, odd<0x7F) classified and
+EQUAL/DIFF as expected; 2 mutants (drop odd rounding, drop short shrink) each flip their case -> PASS. Live "mark everything":
+rom_reads == pi_start_dma + 1 in both arms (every guest request reached the census).
+Second line: the build is CMAKE_BUILD_TYPE=Debug, so do_rom_read's asserts (cart&1, ram&7) are live; cart_odd / dram_mis8 would
+abort, not copy silently (that is how s4298/s4588 found the musyx "wing" odd address, long since guarded). The only silent
+divergence is odd size >= 0x7F or short misaligned, and 0 live copies have either shape.
+DISCRIMINATION: selects H-canon on both arms; refutes H-live for L4 and L15; H-dead not needed (no non-canonical shape at all).
+Rules out PI DMA shape semantics as a source of RDRAM corruption on these routes. Levels soak queued (s7510_fg_levels: L1 dd8 21:9,
+L7/L10/L12 dd4, scored by the classifier).
+Next: class FH, AI DMA shape vs hardware (osAiSetNextBuffer: AI_DRAM_ADDR 8-byte aligned 24-bit, AI_LEN &0x3FFF8) (NEXT.md).
+Files: tools/s7510_pi_dma_shape.py (new), scratch/agent/soak_queue/s7510_fg_levels.sh, docs. No lib/ edits.

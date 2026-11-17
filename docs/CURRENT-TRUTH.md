@@ -437,6 +437,9 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     records (main 859 incl. 384 in splices + 25 slot copies, B 393) rebuilt from an independent ROM decode (not rabbitizer) = the only
     rsp.* line, 0 defects, coverage = every rsp.* line; 24 LxV/SxV scale by the hardware size (lpv/luv/spv/suv 8); 4/4 ctl.
     **The RSP generator classes (FD/FE/FF + s7091/s7092/s7093) are exhausted.**
+    **FG CLOSED L4/L15 (s7510): PI cart->RDRAM DMA shape H-canon.** ROGUESQ_LOG_DMA=1 census, tools/s7510_pi_dma_shape.py --controls
+    (hardware model = mupen dma_pi_write / n64brew unaligned rules): 15,961 + 16,720 live copies (L4 dd1, L15 dd8 21:9) all canonical,
+    0 diffs, 7 synthetic + 2 mutant ctl PASS; Debug-build asserts make cart_odd/dram_mis8 fail-stop. Levels soak queued (s7510_fg_levels).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
