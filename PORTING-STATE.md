@@ -199183,3 +199183,31 @@ In words: this selects H-equal, refutes H-latent and H-live, and closes FD. Rule
 Next discriminator: class FE, RSPRecomp scalar emission semantics (ALU/shift/slt/load-store with DMEM wrap), compiled and driven against a MIPS32 model
 (the s7412/s7413 shape for the RSP side). See scratch/agent/NEXT.md.
 Files: tools/s7507_rsp_ctrl_flow.py (new), tools/ucode_fixed/factor5_ucode_recompiled.c.patch, docs. No lib/ edits.
+
+## Session 7508 (2026-11-16) — class FE: RSP scalar-unit lowering H-equal; the s7093 census already covered most of FE, new tool closes its two gaps (spliced overlay records vs ROM, production compile flags), 0 defects, 4/4 controls
+Boring thing first: NEXT.md said the RSP scalar lowering "was never audited against a model". That is wrong. tools/s7093_su_census.py
+(s7093) already does it, and a re-run today on the current tree gives verdict PASS. It covers A (ROM fields == comment on every pristine
+base record), B/C (control flow, cop0/cop2) and D (1083 distinct live scalar lines, 94,060 cases + 91,360 synthetic, DMEM fast path on
+and off, 0 bad). Its controls all fire. So FE was mostly done. This session audited only what s7093 leaves open:
+- G1: the live composite against the ROM. The 1329 records of the 9 spliced overlay streams exist only in the live
+  factor5_ucode_recompiled.c, and s7093 decodes their fields from the disassembly comment, never from the ROM.
+  The new tool tools/s7508_rsp_scalar_gaps.py walks every live record of main/B/boot (2440 + 1119 + 65, including 410 slot copies). It
+  resyncs at every stream label and reads each record's ROM word from that stream's own toml image (s7507 load_instrs), with its own
+  decoder (s7093 decode). Checks: the mnemonic and fields equal the comment, and each scalar record's first non-fixup line equals the line
+  RSPRecomp's CURRENT template (re-typed from rsp_recomp.cpp process_instruction, including the s7093 sltiu U32 cast) builds from the ROM
+  fields. Result: 0 defects. All 2440 main segments were walked across 9 streams (CLIP 15, OVL10 13, OVL12 17, OVL14 12, OVL18 11, OVL1C 23,
+  OVL20 17, OVL24 21, OVL2C 8 labels). Exact-template matches: 1651 (main 1138, of which 696 are in splices; B 500; boot 13). There are
+  0 zero-destination records, so the unguarded `0 = ...` forms (sub/or/ori/... with rd/rt=$zero, which would not compile) are never used.
+- G2: compile flags. s7093 D builds its harness at -O1, but the production gfx TU is -O2 -mllvm -inline-threshold=4000. Re-run at those
+  flags: live 94,060 cases with 0 bad, synthetic 91,360 with 0 bad. Mutants still flag (sra 7/7, lh->lhu 9/9, lb->lbu 2/2, sltiu signed 1/1).
+Controls (same run): c1 one ROM rt bit flipped in a CLIP word (CLIP_1E34) gave fields+template defects; c2 one spliced ori imm changed
+gave a template defect; c3 one spliced sra emitted as srl gave a template defect; c4 the O2 mutants above. 4/4 PASS. rc 0.
+Hypotheses: H-equal SELECTED (two independent lines: s7093 model semantics + this exact-template-from-ROM check, which includes the
+splices). H-dead not needed (0 defects anywhere). H-live REFUTED. **FE CLOSED.** No game run (none needed unless H-live).
+ORIGIN: no mitigation landed. This was an audit tool only.
+Rules out: RSPRecomp scalar ALU/shift/slt/load/store lowering, and rabbitizer field decode of the spliced overlay records, as a source
+of LLE gfx/audio divergence.
+Next: class FF, RSPRecomp VECTOR-op operand emission (vd/vs/vt/element/de/Imm7 offset) vs an independent ROM decode, plus the RSP::
+load/store offset scaling per access size (NEXT.md). s7092 covered the implementations and s7091 live==pristine text. Nothing has checked
+the generator's operand extraction for vector ops against the ROM bits.
+Files: tools/s7508_rsp_scalar_gaps.py (new), docs.

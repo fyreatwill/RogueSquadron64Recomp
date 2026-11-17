@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7507 (2026-11-16).
+Compact operational handoff, as of Session 7508 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -425,11 +425,15 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
 18. **Runtime soak folds for the AQ-BZ classes all PASSED** (SOAK-RESULTS s7392-s7416: L4/L7/L12 or L5/L10/L15, 0 crash, 0 VI
     stall, controls PASS). No class soak is outstanding.
 19. **Rerun the emission tools after any regen:** tools/s7407-s7416 + s7418 + s7419_dis_agree.py --controls (rc 0 expected) alongside item 12;
-    after a ucode regen: tools/ucode_regen.sh verify then tools/s7507_rsp_ctrl_flow.py (rc 0).
+    after a ucode regen: tools/ucode_regen.sh verify then tools/s7507_rsp_ctrl_flow.py + tools/s7508_rsp_scalar_gaps.py (rc 0).
 20. **FD CLOSED (s7507): RSPRecomp control-flow emission H-equal.** tools/s7507_rsp_ctrl_flow.py (independent ROM decode vs emitted C,
     rc 0): pristine 12 files 0 defects; compiled main/B/boot 0 (main composite 9 splice streams, 68 routes, cross-overlay gotos checked
     by image region; IMEM-wrap restart / ovl20->OVL1C_1ED4 / 04->OVL24 / trimmed OVL20 slot classified as deliberate); 8/8 mutation ctl.
-    ucode patch snapshot refreshed (verify 12/12 SAME). **FE next:** RSPRecomp scalar emission semantics (NEXT.md).
+    ucode patch snapshot refreshed (verify 12/12 SAME).
+    **FE CLOSED (s7508): RSP scalar lowering H-equal.** s7093_su_census.py already covered it (re-run PASS). tools/s7508_rsp_scalar_gaps.py
+    (rc 0) adds the live composite vs ROM, every record incl. 9 splice streams + slot copies, with exact current-template lines (1651 scalar,
+    696 in splices, 0 defects, 0 zero-dest), plus the s7093 D harness at production -O2/inline-4000 (185k cases 0 bad); 4/4 ctl.
+    **FF next:** RSPRecomp vector-op operand emission (vd/vs/vt/e/de/Imm7) vs independent ROM decode (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
