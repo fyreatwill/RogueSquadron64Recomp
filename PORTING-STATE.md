@@ -199211,3 +199211,30 @@ Next: class FF, RSPRecomp VECTOR-op operand emission (vd/vs/vt/element/de/Imm7 o
 load/store offset scaling per access size (NEXT.md). s7092 covered the implementations and s7091 live==pristine text. Nothing has checked
 the generator's operand extraction for vector ops against the ROM bits.
 Files: tools/s7508_rsp_scalar_gaps.py (new), docs.
+
+## Session 7509 (2026-11-16) — class FF: RSPRecomp vector-op operand extraction H-equal; 1252 live vector records rebuilt from an independent ROM decode match the emitted rsp.* line exactly, LxV/SxV offset scaling matches hardware, 0 defects, 4/4 controls
+Gap closed: s7091 compares live to pristine generator text (same generator on both sides) and s7092 checks the vector
+implementations only. Neither would see a rabbitizer field slip in RSPRecomp's operand extraction (GetRsp_vd/vs/vt, elementhigh
+vs elementlow, GetRsp_de()&7, the Imm7 sign extension, VtIndex/VsIndex). New tool tools/s7509_rsp_vec_operands.py reuses the
+s7508 walk (every live record of main/B/boot, resync at each splice label, ROM word from that stream's toml image, slot copies).
+- V1: for each cop2 (computational + mfc2/mtc2/cfc2/ctc2), lwc2 or swc2 word, an INDEPENDENT decoder (RSP manual field layout:
+  e=21-24, vt=16-20, vs=11-15, vd=6-10, funct; lwc2/swc2 base/vt/sub-op 11-15/element 7-10/7-bit signed offset) rebuilds the exact
+  `rsp.NAME<e>(args);` line in rsp_recomp.cpp vector_operands order (De ops use vs&7, vrndn/p VsIndex, ltv/stv VtIndex,
+  vmacq/vnop/cfc2/ctc2 no element). Result: main 859 vector records (384 in splices, 25 slot copies), B 393, boot 0; ok 1252/1252,
+  0 defects, 24 negative offsets, all immediates in -64..63. Coverage check: rsp.* lines in each TU's instruction region equal
+  the vector record count (859/393/0), so no vector line went unchecked. 47 distinct ops used (vmadh 114, mtc2 94, ldv 93, ...).
+  The only non-call lines in vector records are 2 multi-line fixup diagnostic blocks (fflush/asm barrier at L_1FF4/L_1FFC).
+- V2: all 24 LxV/SxV in librecomp rsp_vu_impl.hpp compute `rs + imm * size` with the hardware size (b 1, s 2, l 4, d/p/u 8,
+  q/r/h/f/w/t 16) and take imm as s8. Note: NEXT.md listed lpv/luv as 16; hardware (ares) is 8, and so is ours.
+  V2 was done as a static source parse, not the compiled probe NEXT.md suggested. The parse reads the exact address expression.
+Controls (same run): (a) element bits flipped in a spliced ROM word (CLIP_1ED0 vmudh) gave an operands defect; (b) vs/vt swapped in
+live L_144C gave a defect; (c) Imm7 sign dropped (0x7F mask) on the negative-offset sdv L_1C34 gave a defect; (d) a size table with
+lpv=16 flagged lpv+spv. 4/4 PASS, rc 0.
+Hypotheses: H-equal SELECTED (independent ROM decode vs emitted text, plus implementation scale parse; s7092 is the second line for
+the implementations). H-dead / H-live REFUTED (0 defects anywhere). **FF CLOSED.** No game run (none needed without H-live).
+ORIGIN: no mitigation landed. This was an audit tool only.
+Rules out: RSPRecomp vector operand / element / offset extraction as a source of LLE gfx/audio divergence. With FD (control flow),
+FE (scalar), FF (vector operands), s7091 (live==pristine), s7092 (vector impls) and s7093 (scalar semantics) the RSP generator is
+audited end to end.
+Next: CURRENT-TRUTH item 21, a new guest/host idiom-class audit (NEXT.md).
+Files: tools/s7509_rsp_vec_operands.py (new), docs. No lib/ edits.
