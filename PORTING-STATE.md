@@ -200219,3 +200219,37 @@ Changes. docs/OWNER-OPT-INS.md row for ROGUESQ_SP_LATE=1 (accuracy-only, owner d
 tools/s7535_ga_census.py the 2 dma_rdram_to_dmem rows are now H-latent-FIXED(opt-in), the class is documented, and the live-census
 control asserts 0 open H-latent-fix. The census exits 0 (565 sites, fails=0), --controls 10/10. The queued AC repeat
 (soak_queue/s7536_splate_cost.sh) stays queued and is folded with s7537_ring_cost.py --from 72.
+
+## Session 7538 (2026-11-17) — class GB: completion-signal census (29 sites, 31 mode rows, 0 unclassified, controls 7/7); default config clean, ONE open sibling of GA under the opt-in RDP_ASYNC+NODRAIN (dp_complete posted before the RT64 worker reads the tail job's textures)
+
+Work unit (NEXT s7538): static idiom-class audit of every completion signal the runtime raises to the guest. Fold: the queued
+s7536_splate_cost soak voided again (2/5, human/lock/sleep); nothing new to fold.
+New tools/s7538_gb_census.py. Idioms: enqueue_external_message_src(.., EventMessageSource::X), enqueue_external_message, sp_complete(),
+dp_complete(), send_si_message(), dispatch_displaylist_events() over librecomp src, ultramodern src, src/main, src/rsp (definitions and
+comments skipped). Each site -> (file, function, line range) rule -> one row per env mode, each row carrying code checks (pattern
+before the site in the same function / in a named function of another file / `nm -u build/libRecompiledFuncs.a` import present or
+absent). Exit 1 on UNCLASSIFIED, a failed check, or an open H-latent-fix.
+Rows (29 sites):
+- SP: audio/non-gfx task (task_thread_func) H-ordered (run_task synchronous before sp_complete); gfx early = GA, H-latent-FIXED(opt-in)
+  (SP_LATE=1); gfx late H-ordered (after send_dl). DL-event extension (4 sites) H-dead: osExQueueDisplaylistEvent_recomp not imported.
+- DP (gfx_thread_func, 3 mode rows): sync H-ordered (RT64 interprets inside send_dl); RDP_ASYNC drained H-ordered (RdpqScope dtor ->
+  rs64_rdpq_task_exit -> drain()); **RDP_ASYNC+NODRAIN H-latent-fix OPEN**: task_exit only flush_pend()s, send_dl returns, dp_complete
+  is posted while the worker still holds the task's tail job(s) (s6709 measured pend_jobs 2.0 at task exit, fullSync ~3.3 ms). The
+  jobs copy only the command words; RDP::loadTile/loadBlock/loadTLUT read texture sources from core.RDRAM and fullSync writes fb
+  copies to RDRAM, after the guest was told the RDP is done. Hardware posts DP full-sync after the last memory access.
+- VI H-canon (scan-out after the retrace is hardware behaviour; RT64's RDRAM present copies into present.storage on the Gfx thread).
+- AI (3 posting sites: VI tick, drain thread, Hz thread) H-copy: osAiSetNextBuffer_recomp (guest thread) -> queue_audio_buffer ->
+  queue_samples byte-swaps every sample into a host std::vector before SDL_QueueAudio; no PCM byte is read after any AI message.
+- SI H-ordered: osContStartReadData polls host input before the message; the pad block is written by the guest-thread
+  osContGetReadData. PI: rom read H-ordered (synchronous do_rom_read on the guest thread), sram read H-ordered (unreachable, Eep4k),
+  sram write H-copy (memcpy into save_buffer under its mutex), guard/unknown completions H-ordered (no transfer); flash H-dead
+  (not imported). Timer H-nomem; osSendMesg/osJamMesg not-device; s7392/s7399 self-tests H-instrument-only (env CTL, off).
+Controls (--controls 7/7): planted unknown completion -> 1 site UNCLASSIFIED with its definition + comment skipped; mutation
+(NODRAIN early return removed) -> async-nodrain row FAIL; mutation (drain() removed) -> async-drain FAIL; mutation (send_dl call
+removed) -> sync + late rows FAIL; nm control (DL-event import added) -> 4 dl-event rows FAIL; rule-less census -> all 29
+UNCLASSIFIED; live census 0 unclassified / 0 FAIL.
+Verdict: the static census selects H-none for the default configuration (no device touches guest RAM after its completion signal
+except GA, already fixed opt-in) and refutes H-none for the opt-in RDP_ASYNC+NODRAIN pair: H-rdp-async selected as a code-level
+window (single-source: code reading + the s6709 pend_jobs figure; whether the guest actually writes texture bytes inside the ~3 ms
+window is unmeasured). H-ai refuted (copy at submit). No mitigation landed. docs/OWNER-OPT-INS.md NODRAIN row gains an accuracy
+caveat; default unchanged. Next: same-run ROGUESQ_RDP_NODRAIN=2 A/B with a dp_complete snapshot vs worker texture reads (NEXT.md).

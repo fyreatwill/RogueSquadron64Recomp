@@ -22,6 +22,13 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   **s7537: FPS60 cost nil where the game holds 60** (L1/L4/L12 dd1/dd4 16:9 fullscreen, 60.0 vs 60.0 /s; L12 dd4 on a 1.53x
   battery clock CPU-bound 3v3 ABBA early 52.9-54.6 vs late 51.4-52.9, unresolved) -> SP_LATE=1 listed in OWNER-OPT-INS, census
   rows H-latent-FIXED(opt-in), census exits 0. Default unchanged (owner).
+- **NEW s7538 (class GB, static): one sibling of GA is OPEN, opt-in only.** tools/s7538_gb_census.py enumerates every
+  completion signal the runtime posts to the guest (29 sites, 31 mode rows, 0 unclassified, --controls 7/7). Default config: every
+  device finishes or copies its guest-RAM access before the signal (PI rom/sram synchronous, AI PCM byte-swapped into a host vector
+  at osAiSetNextBuffer, SI polled before, audio RSP synchronous, DP after send_dl, VI = hardware scan-out) except GA (opt-in fixed).
+  OPEN: ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (an OWNER-OPT-INS row) posts dp_complete while the RT64 worker still holds the
+  task's tail job(s) (s6709 pend_jobs 2.0, ~3.3 ms fullSync), which read textures from RDRAM and write fb copies to RDRAM after
+  the guest was told the RDP is done. Consequence unmeasured (next: same-run NODRAIN=2 A/B).
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -274,7 +281,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7537_splate_cost_batt. Open only: the queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (runs when on AC;
     fold with `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`); if AC L12 dd4 late < early - 0.5 in a
     3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
-18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+18. **Class GB (s7538): completion-signal census, 1 OPEN row (opt-in ASYNC+NODRAIN dp_complete).** tools/s7538_gb_census.py
+    exits 1 until the row is measured and ruled. Next: same-run ROGUESQ_RDP_NODRAIN=2 A/B, snapshot at dp_complete vs worker
+    RDRAM reads (NEXT.md). If torn bytes appear only in as=3 -> fix (drain only the RDRAM-reading part, or copy texture sources)
+    or demote the OWNER-OPT-INS row; if 0 with the control caught -> H-quiet, row becomes H-canon(measured).
+19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index
