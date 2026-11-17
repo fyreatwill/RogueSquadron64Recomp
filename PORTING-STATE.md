@@ -199007,3 +199007,5 @@ Rules out: any unexplained RDRAM writer behind RT64 uploads on L4/L15; the s7501
 upstream_compat.cpp rs64_s7475_store); earlier classes' store attribution is unaffected.
 Files: src/main/main.cpp (s7501 lookup walk, page table, pre-scan window, race/pgres sum fields), lib/rt64 rt64_framebuffer_manager.cpp
 (rs64_s7501_pre), submodule-patches/rt64.patch, tools/s7501_ez_recipe.zsh (race/pgres columns).
+Verdict: this selects H-lookup and refutes H-race (run 1 race=0 with the none still present; run 2 lookup walk-back none=0 on the same
+upload) and resolves the L15 trunc (same root cause). Next discriminator: class FA, live-vs-dead of the freed-fb-RAM uploads (NEXT.md).
