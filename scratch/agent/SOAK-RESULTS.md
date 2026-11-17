@@ -1610,3 +1610,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261116-165321 | s7498_ew_levels | rc=0 | 929s | scratch/agent/soak_results/s7498_ew_levels_20261116-165321.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261116-172009 | s7499_ex_levels | rc=0 | 929s | scratch/agent/soak_results/s7499_ex_levels_20261116-172009.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261116-174913 | s7500_ey_levels | rc=0 | 930s | scratch/agent/soak_results/s7500_ey_levels_20261116-174913.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261116-191844 | s7501_ez_levels | rc=3 | 929s | scratch/agent/soak_results/s7501_ez_levels_20261116-191844.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0

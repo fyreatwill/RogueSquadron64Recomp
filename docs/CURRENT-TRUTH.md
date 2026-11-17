@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7501 (2026-11-16).
+Compact operational handoff, as of Session 7502 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -287,7 +287,12 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      writing headers into freed fb RAM that RT64 still tracks), other image's writeback 18/9 (mostly boot/mode-change overlaps <30 s),
      own writeback 2/2, sp_gfx 0/3, pi 1/0, hash-only (0 words differ) 4/3, none 1/0 (L4 t=18.05 16 ms window), trunc 0/1. Control
      (host XOR of one fb word) detected both arms. Single runtime. Levels soak queued (s7501_ez_levels).
-     **FA next: are the allocator-metadata uploads into an image that is LIVE (set this/next swap) and drawn/presented before a fill?** (NEXT.md).
+     **s7502 fold: levels soak scored 5 (L10/L12 t~18.05 none, L7 3 none, L1 trunc) = INSTRUMENT DEFECT, fixed:** rs64_s7501_cpu looked
+     up only the nearest fb record at/below a store; expired boot 320x224 records (6A0E00, 6C3E00) inside the live 640x340 67CA00 swallowed
+     the parseImageFile stores. Walk-back to the nearest marked covering fb + per-4KB-page writer table for trunc + pre-scan window edge
+     (H-race refuted: race=0). Re-run L4/L15: EZ score 0, none=0 trunc=0, ctl ok both. New writer packTlutEntriesRgba5551 (TLUT into the
+     tail of an fb idle 6-15 s, freed-RAM reuse family). Levels re-score queued (s7502_ez2_levels).
+     **FA next: are the allocator/TLUT freed-RAM uploads into an image that is LIVE (set this/next swap) and drawn/presented before a fill?** (NEXT.md).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

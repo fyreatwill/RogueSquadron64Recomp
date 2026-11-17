@@ -198980,3 +198980,30 @@ those images are never shown before a fill (EY says re-set images are filled fir
 Levels soak queued (scratch/agent/soak_queue/s7501_ez_levels.sh). Next discriminator (FA): are allocator-metadata uploads into a LIVE image.
 This selects H-ez-cpu and H-ez-cover (minor H-ez-dma, H-ez-hash) and refutes an unknown host or DMA writer into live framebuffer RAM at L4 dd1 and L15 dd8 21:9.
 Next discriminator (FA): whether the allocator-metadata uploads land in a live image (NEXT.md).
+
+## Session 7502 (2026-11-16) — class EZ fold: the 5 unattributed uploads were an instrument lookup defect (expired fb record inside a live fb swallowed guest stores); fixed, L4/L15 re-score 0
+Fold: s7501_ez_levels (L1 dd8 21:9, L7/L10/L12 dd4) EZ score=5: none = L10 1, L12 1, L7 3; trunc L1 1. eu/ev/ew/ex/ey all score 0
+(ctl ok). L10/L12 none = fb A7CA00 640x340 t~18.05, bbox [AA6818..AC680C) = fb+0x29E18, 17 ms window, the 3rd 16 ms slice of the boot
+parseImageFile decode (the two preceding slices classed cpu parseImageFile); same offset as the s7501 L4 none (67CA00, [6A6818,..)).
+Hypotheses: H-race (guest stores between RT64's uploadRAM diff scan/RAM copy and the rs64_s7501_up log stamp fall outside both windows)
+vs H-lookup (the stores never reach the ring).
+Run 1 (scratch/s7502_fa, L4 dd1 + L15 dd8 21:9, build with H-race fix: lib/rt64 uploadRAM calls new rs64_s7501_pre() before the scan,
+window start = that pre-scan stamp, old log stamp kept as up_t3; `[s7502] race` counts uploads attributed only through the gap):
+race=0 both arms, L4 none=1 again at t=18.067 bbox [6A6818,6C680C) -> H-race REFUTED. Previous slice's writer extent ended exactly at
+6A0E00 = start of an expired 320x224 boot fb record (6A0E00, 143360 bytes; another at 6C3E00) lying INSIDE the live 640x340 67CA00.
+rs64_s7501_cpu looked up only the nearest fb at/below the store (map upper_bound - 1); that record was unmarked -> return 0 -> store
+dropped -> H-lookup SELECTED. Run 1 also exercised the new per-4KB-page newest-writer table: L15 trunc (A35800, 64 s window older than the
+2M-event ring) resolved pgres=1 -> wbo at 66.652 s.
+Fix (main.cpp rs64_s7501_cpu): walk back up to 64 fb records to the nearest MARKED fb covering the address.
+Run 2 (scratch/s7502_fb, same arms): EZ score=0 both; none=0 trunc=0 race=0 pgres=0 (the L15 64 s window now finds rs_memset in the
+ring - the trunc was the same swallowed-store defect); ctl DETECTED both (L4 cls=cpu with ctl in mask, L15 cls=ctl). t=18.034 slice
+now cls=cpu parseImageFile. Two lines: same-run old-vs-new attribution of the same upload (run 1 none -> run 2 parseImageFile), and the
+trunc disappearing for the same mechanism. cpu writer fns in run 2: buildHeapFreeList 6, parseImageFile 6, coalesceFreeHeapBlocks 4,
+rs_free 4, rs_malloc 4, rs_memset 4, packTlutEntriesRgba5551 2 (new name: a 0x200-byte TLUT written at the tail of an fb not drawn
+for 6-15 s: L4 67CA00 t=11.0, L15 961000 t=58.9 - same freed-fb-RAM-reuse family as the allocator rows), hudDisplayUpdateWorker 1.
+Wrapped EQ base recipe scores 3 in both runs (L15 os_rt64fb mplant_detected=0), identical to s7501 - inherited, not EZ.
+Rules out: any unexplained RDRAM writer behind RT64 uploads on L4/L15; the s7501 none/trunc rows. Levels re-score queued
+(scratch/agent/soak_queue/s7502_ez2_levels.sh). Scope of the defect: only class EZ (s7501) used rs64_s7501_cpu (sole caller
+upstream_compat.cpp rs64_s7475_store); earlier classes' store attribution is unaffected.
+Files: src/main/main.cpp (s7501 lookup walk, page table, pre-scan window, race/pgres sum fields), lib/rt64 rt64_framebuffer_manager.cpp
+(rs64_s7501_pre), submodule-patches/rt64.patch, tools/s7501_ez_recipe.zsh (race/pgres columns).

@@ -2453,7 +2453,7 @@ index 6e8c9b8..81bc476 100644
          uint32_t address;
          uint8_t siz;
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
-index 7d385fa..59a4117 100644
+index 7d385fa..b2d8479 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
 +++ b/src/hle/rt64_framebuffer_manager.cpp
 @@ -6,9 +6,20 @@
@@ -2470,7 +2470,7 @@ index 7d385fa..59a4117 100644
  
 +extern "C" int rs64_g1d_vi_epoch;
 +extern "C" int rs64_s7501_on; extern "C" void rs64_s7501_chk(uint32_t, uint32_t, int); extern "C" void rs64_s7501_hash(uint32_t, uint32_t);  // s7501 class EZ (main.cpp)
-+extern "C" void rs64_s7501_up(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, int, uint32_t, uint32_t, uint32_t);
++extern "C" void rs64_s7501_up(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, int, uint32_t, uint32_t, uint32_t); extern "C" void rs64_s7501_pre();
 +extern "C" int rs64_s7500_on; extern "C" void rs64_s7500_up(uint32_t, uint32_t, uint32_t, uint32_t, int); // s7500 class EY (main.cpp)  // s6729 (src/main/upstream_compat.cpp)
 +extern std::atomic<int> g_rs64_swap_n;  // s6729 (src/rsp/dpc_bridge.cpp)
 +
@@ -2827,7 +2827,7 @@ index 7d385fa..59a4117 100644
              if (currentHash != it->second.RAMHash) {
                  differentFbs.push_back(&it->second);
  
-@@ -829,12 +1073,47 @@ namespace RT64 {
+@@ -829,12 +1073,48 @@ namespace RT64 {
              FramebufferChange &fbChange = fbChangePool.use(renderWorker, fbChangeType, fb->width, fb->height, shaderLibrary->usesHDR);
              const uint32_t DifferenceFractionNum = 1;
              const uint32_t DifferenceFractionDiv = 4;
@@ -2851,6 +2851,7 @@ index 7d385fa..59a4117 100644
 +            // s7501 class EZ: byte bbox of words differing from RT64's last native copy (before it is refreshed)
 +            uint32_t z0 = 0, z1 = 0, zn = 0; int zshort = 0;
 +            if (rs64_s7501_on) {
++                rs64_s7501_pre();  // s7502: window edge before the scan + copy (guest stores race them)
 +                const std::vector<uint8_t> &old = fb->nativeSwappedRAM;
 +                const uint32_t nw = (uint32_t)(std::min<size_t>(old.size(), fb->RAMBytes) / 4), tw = fb->RAMBytes / 4;
 +                const uint32_t *ow = reinterpret_cast<const uint32_t *>(old.data());
@@ -2875,7 +2876,7 @@ index 7d385fa..59a4117 100644
              if (discardFb) {
                  fbDiscards.emplace_back(fb->addressStart);
              }
-@@ -864,6 +1143,7 @@ namespace RT64 {
+@@ -864,6 +1144,7 @@ namespace RT64 {
          while (it != framebuffers.end()) {
              if ((it->second.maxHeight > 0) && (it->second.RAMBytes > 0)) {
                  it->second.RAMHash = XXH3_64bits(&RDRAM[it->first], it->second.RAMBytes);

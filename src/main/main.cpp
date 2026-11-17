@@ -10814,7 +10814,7 @@ extern "C" int rs64_s7501_on = [] { const char* e = std::getenv("ROGUESQ_S7501_E
 extern "C" unsigned char* g_rs64_s7475_bm;
 namespace {
 struct S7501E { uint32_t lo, hi, base, pc; double t; int cls; const char* fn; };
-struct S7501F { uint32_t bytes = 0, hbytes = 0, pbytes = 0; double hash_t = 0, pend_t = -1, seen = 0, mark_t = 0; bool marked = false; uint64_t ups = 0; double up_t = 0, first_t = 0; };  /* up_t: last upload = RT64 native copy re-synced to RAM */
+struct S7501F { uint32_t bytes = 0, hbytes = 0, pbytes = 0; double hash_t = 0, pend_t = -1, seen = 0, mark_t = 0; bool marked = false; uint64_t ups = 0; double up_t = 0, up_t3 = 0, first_t = 0; };  /* up_t: last upload = RT64 native copy re-synced to RAM */
 constexpr uint32_t kS7501Ring = 1u << 21;
 std::mutex g_s7501_mu; std::vector<S7501E> g_s7501_ring; uint64_t g_s7501_rn = 0; std::map<uint32_t, S7501F> g_s7501_fb;
 std::atomic<uint32_t> g_s7501_base{0xFFFFFFFFu};
@@ -10823,6 +10823,10 @@ const char* s7501_cls(int c) { static const char* k[Z_N] = {"wbo", "sp_gfx", "sp
 uint64_t g_s7501_n[Z_N] = {}, g_s7501_ev[Z_N] = {}, g_s7501_ups = 0, g_s7501_chk = 0; double g_s7501_t0 = 0, g_s7501_last = 0;
 int g_s7501_rows = 0, g_s7501_ctl = -2, g_s7501_ctries = 0, g_s7501_clost = 0; uint32_t g_s7501_ctla = 0, g_s7501_ctlfb = 0; double g_s7501_ctlt = 0;
 std::map<uint32_t, uint64_t> g_s7501_cpupc;  // pc -> stores into seen fbs
+/* s7502 FA-pre: per-4KB-page newest writer (survives the ring wrap -> resolves trunc windows), uploads only the pre-scan window
+   start attributes (race: the writer stored between RT64's previous RAM copy and that upload's log stamp), its pre-scan stamp */
+constexpr uint32_t kS7501Pages = 0x1800000u >> 12; std::vector<S7501E> g_s7501_pg; uint64_t g_s7501_race = 0, g_s7501_pgres = 0;
+thread_local double t_s7501_pre = 0;
 double s7501_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 bool s7501_ctl_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7501_CTL"); return e && *e && *e != '0'; }(); return on; }
 inline bool now_ok_s7501(const S7501F& f) { return f.marked; }
@@ -10833,15 +10837,17 @@ void s7501_mark(uint32_t a, uint32_t n, bool on) {  // a = phys
     if (on) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); else g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); ++o; } }
 void s7501_push_locked(uint32_t lo, uint32_t hi, int cls, uint32_t base, uint32_t pc, const char* fn, double now) {
   if (g_s7501_ring.empty()) g_s7501_ring.resize(kS7501Ring);
-  g_s7501_ring[g_s7501_rn++ & (kS7501Ring - 1)] = S7501E{lo, hi, base, pc, now, cls, fn}; ++g_s7501_ev[cls]; }
+  g_s7501_ring[g_s7501_rn++ & (kS7501Ring - 1)] = S7501E{lo, hi, base, pc, now, cls, fn}; ++g_s7501_ev[cls];
+  if (g_s7501_pg.empty()) g_s7501_pg.resize(kS7501Pages);
+  for (uint32_t pg = lo >> 12; pg <= ((hi ? hi - 1 : lo) >> 12) && pg < kS7501Pages; ++pg) g_s7501_pg[pg] = S7501E{lo, hi, base, pc, now, cls, fn}; }
 void s7501_sum_locked(double now) {
   std::string top; { std::vector<std::pair<uint64_t, uint32_t>> v; for (auto& kv : g_s7501_cpupc) v.push_back({kv.second, kv.first});
     std::sort(v.rbegin(), v.rend()); char t[40]; for (size_t i = 0; i < v.size() && i < 6; ++i) { std::snprintf(t, sizeof t, "%s%08X:%llu", i ? "," : "", v[i].second, (unsigned long long)v[i].first); top += t; } }
   std::string b; char t[48]; for (int c = 0; c < Z_N; ++c) { std::snprintf(t, sizeof t, " %s=%llu", s7501_cls(c), (unsigned long long)g_s7501_n[c]); b += t; }
   std::string e; for (int c = 0; c <= Z_CTL; ++c) { std::snprintf(t, sizeof t, "%s%s:%llu", c ? "," : "", s7501_cls(c), (unsigned long long)g_s7501_ev[c]); e += t; }
-  std::fprintf(stderr, "[s7501] sum t=%.1f ups=%llu fbs=%zu chk=%llu cls%s ev=%s cpu_pcs=%s ctlst=%s ctl_tries=%d ctl_lost=%d bm=%d\n", now - g_s7501_t0, (unsigned long long)g_s7501_ups,
+  std::fprintf(stderr, "[s7501] sum t=%.1f ups=%llu fbs=%zu chk=%llu cls%s ev=%s cpu_pcs=%s ctlst=%s ctl_tries=%d ctl_lost=%d bm=%d race=%llu pgres=%llu\n", now - g_s7501_t0, (unsigned long long)g_s7501_ups,
     g_s7501_fb.size(), (unsigned long long)g_s7501_chk, b.c_str(), e.c_str(), top.empty() ? "none" : top.c_str(),
-    g_s7501_ctl == 1 ? "ok" : g_s7501_ctl == -1 ? "pending" : g_s7501_ctl == 0 ? "idle" : "unarmed", g_s7501_ctries, g_s7501_clost, g_rs64_s7475_bm != nullptr); }
+    g_s7501_ctl == 1 ? "ok" : g_s7501_ctl == -1 ? "pending" : g_s7501_ctl == 0 ? "idle" : "unarmed", g_s7501_ctries, g_s7501_clost, g_rs64_s7475_bm != nullptr, (unsigned long long)g_s7501_race, (unsigned long long)g_s7501_pgres); }
 void s7501_tick_locked(double now) {
   if (g_s7501_t0 == 0) g_s7501_t0 = now;
   if (now - g_s7501_last < 10.0) return; g_s7501_last = now; s7501_sum_locked(now);
@@ -10859,15 +10865,19 @@ extern "C" void rs64_s7501_w(uint32_t addr, uint32_t len, int kind) {  // host D
 extern "C" int rs64_s7501_cpu(uint32_t pc, uint32_t va, int w, const char* fn) {  // rs64_s7475_store first: 1 = an fb byte (claimed)
   if (!rs64_s7501_on) return 0; const uint32_t a = va & 0x1FFFFFFu;
   std::lock_guard<std::mutex> lk(g_s7501_mu);
-  auto it = g_s7501_fb.upper_bound(a); if (it == g_s7501_fb.begin()) return 0; --it;
-  if (!it->second.marked || a >= it->first + it->second.bytes) return 0;
+  /* s7502: walk back to the nearest MARKED fb covering a; an expired small fb record starting inside a live one (boot 320x224
+     images at 6A0E00/6C3E00 inside the 640x340 67CA00) used to swallow the store -> the EZ `none` uploads at t~18.05 */
+  auto it = g_s7501_fb.upper_bound(a); bool cov = false;
+  for (int k = 0; k < 64 && it != g_s7501_fb.begin(); ++k) { --it; if (it->second.marked && a < it->first + it->second.bytes) { cov = true; break; } }
+  if (!cov) return 0;
   const int c = (fn && !std::strncmp(fn, "zmemcpy", 7)) ? Z_ZMEM : (fn && !std::strncmp(fn, "os_", 3)) ? Z_OS : Z_CPU;
   if (c == Z_CPU) ++g_s7501_cpupc[pc];
   const double now = s7501_now();
   /* coalesce: a store adjacent to one of the last 4 events from the same pc within 5 ms extends it (memset / decode loops) */
   for (uint64_t i = 1; i <= 4 && i <= g_s7501_rn; ++i) { S7501E& e = g_s7501_ring[(g_s7501_rn - i) & (kS7501Ring - 1)];
     if (e.cls == c && e.pc == pc && e.base == it->first && now - e.t < 0.005 && a <= e.hi + 8u && a + (uint32_t)w + 8u >= e.lo) {
-      e.lo = std::min(e.lo, a); e.hi = std::max(e.hi, a + (uint32_t)w); e.t = now; ++g_s7501_ev[c]; return 1; } }
+      e.lo = std::min(e.lo, a); e.hi = std::max(e.hi, a + (uint32_t)w); e.t = now; ++g_s7501_ev[c];
+      if (!g_s7501_pg.empty() && (a >> 12) < kS7501Pages) g_s7501_pg[a >> 12] = e; return 1; } }
   s7501_push_locked(a, a + (uint32_t)w, c, it->first, pc, fn, now); return 1; }
 static void s7501_wb(uint32_t phys, uint32_t bytes) {
   const uint32_t b = g_s7501_base.exchange(0xFFFFFFFFu); if (!rs64_s7501_on || !bytes) return;
@@ -10886,6 +10896,7 @@ extern "C" void rs64_s7501_chk(uint32_t addr, uint32_t bytes, int differs) {
     if (rd) { const uint32_t a = (addr + bytes / 2) & ~3u; volatile uint32_t* p = (volatile uint32_t*)(rd + a); *p = *p ^ 0x00FF00FFu;
       g_s7501_ctl = -1; g_s7501_ctla = a; g_s7501_ctlfb = addr; g_s7501_ctlt = now; ++g_s7501_ctries; s7501_push_locked(a, a + 4, Z_CTL, addr, 0, "ctl", now);
       std::fprintf(stderr, "[s7501] ctl poke(chk) fb=%06X word=%06X idle=%.1fs try=%d t=%.3f\n", addr, a, now - f.hash_t, g_s7501_ctries, now - g_s7501_t0); } } }
+extern "C" void rs64_s7501_pre() { t_s7501_pre = s7501_now(); }  /* s7502: RT64 uploadRAM, before its diff scan + RAM copy */
 extern "C" void rs64_s7501_hash(uint32_t addr, uint32_t bytes) {
   std::lock_guard<std::mutex> lk(g_s7501_mu); const double now = s7501_now(); addr &= 0x1FFFFFFu;
   S7501F& f = g_s7501_fb[addr]; f.seen = now; if (f.first_t == 0) f.first_t = now; f.hash_t = now; f.hbytes = bytes; f.pend_t = -1; if (!f.bytes) f.bytes = bytes;
@@ -10897,7 +10908,8 @@ extern "C" void rs64_s7501_up(uint32_t addr, uint32_t w, uint32_t h, uint32_t si
   const bool pend = f.pend_t >= 0; const double wh = pend ? f.pend_t : f.hash_t;
   /* window = since RT64's native copy last matched RAM (this fb's previous upload, else first sighting), not since the last re-hash:
      hashTracking / an overlapping fb's draw re-hash RAM without refreshing nativeSwappedRAM (s7501 run 1, L4 ctl word classed revert) */
-  const double ws = wh <= 0 ? wh : (f.up_t > 0 ? f.up_t : f.first_t); f.up_t = now; const uint32_t wsb = pend ? f.pbytes : f.hbytes; f.pend_t = -1;
+  const double ws = wh <= 0 ? wh : (f.up_t > 0 ? f.up_t : f.first_t), ws_old = wh <= 0 ? wh : (f.up_t3 > 0 ? f.up_t3 : f.first_t);
+  f.up_t = (t_s7501_pre > 0 && t_s7501_pre <= now) ? t_s7501_pre : now; f.up_t3 = now; t_s7501_pre = 0; const uint32_t wsb = pend ? f.pbytes : f.hbytes; f.pend_t = -1;
   if (fl & 2) { f.hash_t = now; f.hbytes = bytes; }
   const bool resized = ws > 0 && wsb != 0 && wsb != bytes, shortnat = (fl & 4) != 0;  /* hash range grew/shrank; RT64 native copy shorter than RAMBytes */  /* present path adopts the hash after the upload */
   const uint32_t lo = addr + blo, hi = addr + bhi;
@@ -10909,6 +10921,16 @@ extern "C" void rs64_s7501_up(uint32_t addr, uint32_t w, uint32_t h, uint32_t si
     for (; i < n; ++i) { const S7501E& e = g_s7501_ring[(g_s7501_rn - 1 - i) & (kS7501Ring - 1)]; if (e.t <= ws) break;
       if (e.lo < hi && e.hi > lo) { const int c = (e.cls == Z_WB && e.base == addr) ? Z_WBSELF : e.cls; mask |= 1u << c; ++nwin; if (!top) top = &e; } }
     if (i == n && n == kS7501Ring) trunc = true;
+    S7501E pgtop{}; bool pgres = false;
+    if (!top && trunc && !g_s7501_pg.empty()) {  /* s7502: window older than the ring -> newest per-page writer over the bbox, inside the window */
+      for (uint32_t pg = lo >> 12; pg <= ((hi ? hi - 1 : lo) >> 12) && pg < kS7501Pages; ++pg) { const S7501E& e = g_s7501_pg[pg];
+        if (e.t > ws && e.lo < hi && e.hi > lo && (!pgres || e.t > pgtop.t)) { pgtop = e; pgres = true; } }
+      if (pgres) { top = &pgtop; trunc = false; ++g_s7501_pgres; mask |= 1u << ((pgtop.cls == Z_WB && pgtop.base == addr) ? Z_WBSELF : pgtop.cls); } }
+    if (top && !pgres && ws_old > ws) {  /* race: every overlapping writer in the window sits in [pre-scan, log stamp) of the previous upload */
+      bool late = false; for (uint64_t j = 0; j < n; ++j) { const S7501E& e = g_s7501_ring[(g_s7501_rn - 1 - j) & (kS7501Ring - 1)]; if (e.t <= ws_old) break;
+        if (e.lo < hi && e.hi > lo) { late = true; break; } }
+      if (!late) { ++g_s7501_race; std::fprintf(stderr, "[s7502] race fb=%06X bbox=[%06X,%06X) gap=%.4fs top=%s pc=%08X fn=%s t=%.3f\n", addr, lo, hi, ws_old - ws, s7501_cls(top->cls), top->pc, top->fn ? top->fn : "-", now - g_s7501_t0); } }
+    if (pgres) std::fprintf(stderr, "[s7502] pgres fb=%06X bbox=[%06X,%06X) win=%.1fs top=%s pc=%08X fn=%s at=%.3f t=%.3f\n", addr, lo, hi, now - ws, s7501_cls(pgtop.cls), pgtop.pc, pgtop.fn ? pgtop.fn : "-", pgtop.t - g_s7501_t0, now - g_s7501_t0);
     if (top) cls = (top->cls == Z_WB && top->base == addr) ? Z_WBSELF : top->cls; else if (trunc) cls = Z_TRUNC; else if (resized) cls = Z_RESIZE; else if (shortnat) cls = Z_SHORT;
     if (cls == Z_NONE) {  /* a writer in the window over the fb but outside the still-different bytes: it changed RAM back to RT64's own copy */
       for (uint64_t j = 0; j < n; ++j) { const S7501E& e = g_s7501_ring[(g_s7501_rn - 1 - j) & (kS7501Ring - 1)]; if (e.t <= ws) break;
