@@ -199971,3 +199971,39 @@ latches of guest addresses (e.g. g_cine_last_cimg_addr, `static uint32_t last_*`
 DISCRIMINATION: selects H-canon/H-dead for all 89 non-FQ containers over H-latent-fix (eraser regex present or key space immutable /
 host-only / write-only; planted missing-eraser fixture caught). Engineering change: new tool tools/s7529_fv_census.py.
 Next: class FW (NEXT.md) — static scalar guest-pointer latches in functional code.
+
+## Session 7530 (2026-11-17) — class FW closed (static census): 175 scalar guest-address/position latches in librecomp, ultramodern, src/main, src/rsp classified, 0 unclassified, 0 H-latent-fix; the one unvalidated stale re-submit (rsp_force_fullsync) has no caller in the linked binary
+No new SOAK-RESULTS lines (none queued by s7529). CURRENT-TRUTH 59.9 KB at start (<60000, not maintenance).
+Work unit (HYPOTHESIS-ID fw-static-scalar-guest-pointer-latch): new tool tools/s7530_fw_census.py, the scalar twin of FV
+(s7529). Enumerates every file-scope / function-static / thread_local scalar (u)int32/64_t, uintptr_t, gpr, PTR, unsigned,
+std::atomic of those, whose name contains addr|ptr|base|last|cur|first|start|prev|origin|src|dst|zimg|cimg|fb|seg, in
+librecomp/src, ultramodern/src, src/main, src/rsp. For each site it finds FUNCTIONAL reads (statement-aware: not the declaration,
+not a pure write, not inside a printf/fputs/fwrite statement; comments stripped). No functional read = instr-only(auto). Otherwise
+an explicit rule row with checks that must hold: verify=<regex> (re-set / reset / gate present in file), nocaller=<sym> (objdump of
+build/RogueSquadron64Recomp: 0 `bl <sym>` and 0 adrp-page+add-offset address-takes), envoff=<VAR> (gate env not armed in runner.sh
+or OWNER-OPT-INS.md); or a diagnostic GROUPS family (g_rs64_m5_*, g_flz_last_*, g_last_* log_dpc mux snapshot, g_cine_last_settimg_*).
+Controls (--controls 6/6 PASS, same run): planted functional latch -> UNCLASSIFIED; planted log-only latch -> instr-only(auto);
+ruled with reset regex absent -> FAIL-check; binary positive: _rs64_dpc_reset has callers (nocaller check would FAIL); binary
+_rsp_force_fullsync 0 calls / 0 takes; live census 0 fails. Binary mtime 07:18 is newer than the last dpc_bridge.cpp commit (07:01).
+Result: 175 sites: instr-only(auto) 49, H-instrument-only 61, group diag 37, diag file 6, H-canon 16, H-dead 6, fails 0.
+| latch | reader | why not stale | class |
+| main s_pending_task_data_ptr | factor5_gfx_runner dl_ptr | thread_local, re-set from task->t.data_ptr in get_rsp_microcode just before the runner | H-canon |
+| main g_rs64_pcm_task_data_ptr | accessor (logs) | re-set every M_AUDTASK | H-canon |
+| dpc s_submit_dl_base / s_submit_last_end | forward window | re-set on DPC_START change, zeroed in rs64_dpc_reset per task (s7096/s7523 exact) | H-canon |
+| dpc g_rsp_dpc_current / s_dpc_poll_last / s_task_first,last_lo,hi | DPC model / range accessor | zeroed per task | H-canon |
+| dpc s_zimg, s_clast (G1d region gate, default on) | SETCIMG frame-start test | RDP register mirrors re-set by every SET_Z_IMAGE / SETCIMG | H-canon |
+| upstream s_last_mode | G1d VI epoch | edge detector; keys are ROM-static osViModeTable | H-canon |
+| dpc g_last_fullsync_addr | rsp_force_fullsync re-submits the 8 bytes at the latched addr WITHOUT re-checking E9 | no caller / no address-take in binary; FS_PIPE_INJECT (default off) re-reads the cell op | H-dead |
+| dpc g_last_wrap_start/seen | should_drop_wrap_rdp sticky window | ROGUESQ_DROP_WRAP_RDP default off | H-dead |
+| main g_rsp_dma_shadow2_addr | diff log | ucode image immutable (s7521) | H-dead |
+| dpc g_pak_last_tlut_addr, g_cine_last_cimg_addr, g_last_* | inside log branches | - | H-instrument-only |
+ORIGIN: no mitigation added; the census only classifies. Single-source (static) for the H-canon rows except s_submit_* (runtime
+s7096/s7523 forwarding exactness) and the dead entry point (binary disassembly, second source).
+Stale-able but opt-in only: rsp_force_fullsync (dead), ROGUESQ_DROP_WRAP_RDP, ROGUESQ_FS_PIPE_INJECT=2. Arming any of them would
+need a re-check of the latched bytes first.
+Scope gap measured this session: the same tool over lib/rt64/src/hle + gbi gives 27 sites, 20 with functional reads and no rule
+(s_rs64_pending_start_address, g_rs64LastSyncedViAddress, s_op01_last_ram, g_rs64LastRGBA32Addr, s_rdp_advance_first_consumer_*,
+...) -> class FX (NEXT.md).
+DISCRIMINATION: selects H-canon/H-dead/instrument-only for all 175 sites over H-latent-fix (planted functional latch caught;
+nocaller check proven able to fail on a called function). Engineering change: new tool tools/s7530_fw_census.py.
+Next: class FX — RT64 hle/gbi scalar latches (NEXT.md).
