@@ -200114,3 +200114,48 @@ Step 0 triggered (60,142 B > 60,000). No experiments.
   1-18; new item 17 = next agent unit (class GA audit, host read-decide on guest bytes). Headline date refreshed.
   CURRENT-TRUTH net -244 lines / ~33 KB.
 - Rules out nothing new; the class-audit series FD-FZ is complete.
+
+## Session 7535 (2026-11-17) — class GA: the early gfx sp_complete lets the guest overwrite the in-flight F5 task's vertex/DL inputs in flight (same-run A/B: 3.6x/7.6x diff bytes per task early vs hardware-order sp_complete, excess all in the 0x720000-0x75FFFF gfx pool); static census 565 read sites, 0 unclassified
+
+Work unit GA (NEXT s7535): host-thread reads of guest RDRAM that take decisions while the guest may change the bytes.
+1. Static census, new tools/s7535_ga_census.py (--controls 10/10): reads (guest[..] / alias[..] rvalues, MEM_x, *(T*)(guest+..),
+   __atomic_load_n) across librecomp src+include, ultramodern, src/main, src/rsp (rt64 hle/gbi/render = FX/FY domain, excluded),
+   decision/value/log mode per statement, enclosing function via fz.func_spans. New: name-based call graph + splice index (symbols
+   declared extern by tools/{apply,fixup}_*.py that target RecompiledFuncs -> guest thread; UCODE_TOOLS rs64_* hooks -> RSP thread;
+   ultramodern thread functions as roots) auto-rules a function H-guest-thread only when every caller chain ends in the guest.
+   Result: 565 sites (363 decisions) = H-guest-thread 158 (auto), H-canon 143 (ring readers in rsp_dpc_submit_impl/spike scan:
+   RDP command bytes the guest never stores into; audio task reads before sp_complete), H-instrument-only 202 (env/flag gated,
+   envoff-checked against runner.sh / OWNER-OPT-INS), H-harness-lever 5 (route pollers), H-latent-FIXED 2 (s7533 CAS), H-pre-guest 1,
+   log-only 49, not-guest 3, **H-latent-fix 2 (OPEN): dma_rdram_to_dmem, the gfx RSP DMA fetch**, 0 unclassified.
+   Controls: planted gfx decision read / alias read -> UNCLASSIFIED; fprintf-only -> log-only; store not a read; recomp_context fn
+   and its helper -> auto guest; mutation (instrument removed from a copy of rsp.hpp) -> FAIL-check; rule-less >=250 UNCLASSIFIED.
+2. The open row. ultramodern events.cpp sends sp_complete BEFORE send_dl ("Games usually preserve the RSP inputs until the RDP
+   is finished"), so the whole F5 LLE (every DL/vertex/matrix DMA fetch) runs while the guest already believes the RSP is done.
+   Never measured before. New instrument src/rsp/s7535_ga_chk.cpp, ROGUESQ_S7535_GA_CHK=1: Gfx thread snapshots guest RAM
+   [0, osmem) + spill [16,24 MB) right before the early sp_complete; every gfx-thread dma_rdram_to_dmem compares the fetched bytes
+   with the snapshot (diff = changed between SP-done and the fetch); the LLE's own dma_dmem_to_rdram writes are mirrored into the
+   snapshot (RAII in rsp.hpp, covers every return); thread filter = Gfx pthread (audio may share dmem). Control: every 64th task's
+   first fetch re-compared with one snapshot byte flipped (caught must == planted); activity witness: every 32nd window counts all
+   changed bytes. ROGUESQ_S7535_LATE=alt: per task (splitmix64(task)&1) sp_complete is delivered AFTER send_dl instead (hardware
+   order; =1 every task). Scorer tools/s7535_ga_score.py (--controls 6/6). Runs: g1e_owner_quiet_arms HOLD 120, FPS60 fullscreen,
+   NO_SAVE_WRITE; scratch/s7535_ga/run1 (early only), run2 (alt, L4 dd1 + L15 dd8 21:9), top level (alt, L4 dd1, histogram; battery,
+   ALLOW_SLOW=1 - byte counts are not timing scores). All arms alive, 0 fatal, oob 0, controls 106/106, 107/107, 102/102, 106/106,
+   witness >0 in every sampled window (213/213 ...).
+   - run1 early only: diff in 82.5% (L4) / 70% (L15) of gfx tasks, 3.4 MB / 2.9 MB.
+   - Two kinds. (a) 0x110-byte DL chunks with a link word at +0x10C going 0->ptr (guest appends chunks) or ptr->0 (recycled) while
+     the task runs. Independent of SP-done: diff_tasks early/late 82.5/82.5% (L4), 69.4/65.8% (L15); clear/task 2.73/2.85 (L4
+     flight); refetch exactly 2.0/task in both states. = a concurrent guest->RSP stream, hardware-equivalent concurrency (H-canon).
+     Bytes at 0x52-0x5D in flight are equal in both states too (same class).
+   - (b) SP-done-reactive overwrites. Flight diff bytes per task early 635 vs late 164 (L4), 472 vs 53 (L15), with the window activity
+     witness about equal (477k vs 444k; 394k vs 354k bytes per sampled window), pre-mission no difference. Third run reproduced
+     (495.6 vs 139.0 per task). Histogram (flight, L4): 0x720000-0x75FFFF early 1,191,222 bytes vs late 6,737; everything else equal.
+     Rows: 0x100-byte fetches (16 vertices x 16 B) whose shade/colour bytes moved by +-1 (354A6200 -> 354B6300) = next-frame vertex
+     data written into the buffer the in-flight task is still reading.
+   ORIGIN: the writer is the game's own next-frame gfx build into its dynamic gfx pool (0x720000-0x75FFFF at L4); the value is
+   legitimate for the NEXT frame. The defect is ours: the port tells the guest "RSP done" before the RSP read its inputs, which
+   hardware never does. No mitigation landed; LATE is a measurement lever only.
+Rules out: "the guest preserves gfx RSP inputs until dp_complete" (the upstream comment) for this game in flight; the chunk-link
+stream as the cause (it is SP-done-independent). Open: the visible consequence (torn vertex colours certainly; positions would give
+knife spikes / G5b-style drops, and the window grows with dd because the LLE takes longer) and the cost of the hardware-order fix
+(the guest can no longer overlap the next frame with LLE+RT64; FPS60 60/s must hold). lib/ edits exported
+(submodule-patches/N64ModernRuntime.patch).

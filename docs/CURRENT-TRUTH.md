@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7534 (2026-11-17).
+Compact operational handoff, as of Session 7535 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7535 (class GA, OPEN H-latent-fix): early gfx sp_complete races the F5 LLE's inputs in flight.** ultramodern sends
+  sp_complete before send_dl, so the game starts the next frame while the LLE still fetches. Same-run A/B (ROGUESQ_S7535_GA_CHK=1
+  ROGUESQ_S7535_LATE=alt, controls 106/106, 3 runs): flight diff bytes/task early 635 vs hardware-order 164 (L4), 472 vs 53 (L15 dd8
+  21:9); the excess is all in the 0x720000-0x75FFFF gfx pool (1.19 MB vs 6.7 kB), next-frame vertex shade bytes. DL chunk-link
+  streaming (0x110 chunks, link at +0x10C) is SP-done-independent = hardware concurrency. Fix candidate ROGUESQ_S7535_LATE=1
+  (needs GA_CHK today); not default until FPS60 rate + visible-consequence qualification (Next steps 17).
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -258,9 +264,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 16. **Default-on fixes from the audits (=0 / old value restores the previous behaviour):** full list verbatim in
     PROJECT-OVERVIEW "(s7534 maintenance)" (SPILL_RESET, RSP_DMA25, S7334-S7364, CF0_DUPDROP, DLPOOLX_ARM_REBUILD, S7376-S7405
     locks/fixes, FTZ, STICK_GATE s7513, S7528_EVICT, the s7533 FPS60 clamp byte CAS).
-17. **Next agent unit: a new idiom-class audit, GA** (candidate: host-thread read-decide on guest bytes the guest
-    changes in the same window, e.g. render-context / dpc_bridge decisions; static census + same-run positive control,
-    the FV-FZ model), else the G5 rename sweep.
+17. **Class GA (s7535) OPEN: hardware-order gfx sp_complete.** Static census tools/s7535_ga_census.py (565 sites, 0 unclassified,
+    --controls 10/10; exits 1 on the 2 open dma_rdram_to_dmem rows). Next: (a) make the late sp_complete a standalone knob
+    (ROGUESQ_SP_LATE, independent of GA_CHK; =alt per-task); (b) visible consequence, same run, per task state: spike/wedge count and
+    terrain-drop frames at dd2/dd4 (G5b/G5f may share this cause: the window grows with LLE time = dd); (c) cost: FPS60 owner recipe
+    fl_shown / tasks/s at L1/L4/L12 dd1 and dd4, early vs late; (d) only if (c) holds 60/s and (b) shows a gain, propose default with
+    =0 old. Scorer tools/s7535_ga_score.py; runs scratch/s7535_ga.
 18. **When 1-17 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
