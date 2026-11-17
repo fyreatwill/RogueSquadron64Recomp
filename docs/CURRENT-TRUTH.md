@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7496 (2026-11-16).
+Compact operational handoff, as of Session 7497 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -252,7 +252,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      of its own allocation (19 / 20 container rows, 0 partial). Control (youngest s7475 malloc record found used by the walk) 10/10, 9/9;
      qbad=0. H-eu-dd refuted. Only live rows: the game's Z=0 placeholder depth image (set once at t~11.2 s in BOTH arms) whose 480-row
      extent [0, w*960) is my estimate; at dd8 width 1024 it reaches 3 low blocks 0x0D03E0-0x0DA630. Levels soak queued (s7496_eu_levels).
-     **EV next: is depth ever written through the Z=0 placeholder?** NEXT.md.
+     **Levels soak folded s7497: L1 dd8 21:9 / L7 / L10 / L12 dd4 live=0, ctl ok==n -> EU CLOSED 6 levels.**
+   - **EV s7497 depth through the Z=0 placeholder: H-ev-placeholder (L4 dd1, L15 dd8 21:9).** The game holds SETZIMG 0 from t=11.04 to 28.29 s
+     (both arms, before the mission Z 77BD80 / B56000). In that window and all run: 0 z-update tri/rect draws keyed to Z=0, 0 fills into colour
+     image 0 (z-clear idiom), 0 depth writebacks with base 0, 0 writebacks of any kind touching [0,0x100000). Same keyed maps, busiest
+     non-zero Z: 11.6M / 41.0M zupd tris, 17.4k / 18.4k z-clear fills, 8.5k / 8.6k depth writebacks. Two measurement points (draw site
+     rt64_rdp.cpp drawTris/drawRect/fillRect -> main.cpp rs64_s7497_zdraw; writeback site s7497_wb), one runtime; retail not checked
+     (single-runtime). ROGUESQ_S7497_Z0=1, tools/s7497_ev_recipe.zsh (scorer neg-tested: planted z0 -> 5, ctl_wb=0 -> 3). Levels soak queued.
+     **EW next: RT64 writeback extents vs the container heap block.** NEXT.md.
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

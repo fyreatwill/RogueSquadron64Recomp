@@ -198814,3 +198814,34 @@ against it, but that is reasoning, not a measurement. Next = class EV. Levels so
 Verdict: this selects H-eu-clean for the pool, colour and non-zero depth partitions (container rows 19 + 20, 0 partial live, control 10/10 +
 9/9) and refutes H-eu-dd and H-eu-live outside the Z=0 placeholder. Next discriminator (class EV): count Z_UPD draws and depth writebacks while
 depthImage.address == 0 against a non-zero-Z positive control; 0 with control > 0 selects H-ev-placeholder and closes EU.
+
+## Session 7497 (2026-11-16) — class EV: no depth is ever written through the game's Z=0 placeholder depth image (0 z-update draws, 0 z-clear fills, 0 base-0 / low-RAM writebacks over the 17 s Z=0 window at L4 dd1 and L15 dd8 21:9, non-zero-Z control 11.6M/41.0M draws, 8.5k/8.6k writebacks); H-ev-placeholder; EU closed 6 levels; class EW seeded
+
+Fold. SOAK-RESULTS s7496_eu_levels (L1 dd8 21:9, L7/L10/L12 dd4, HOLD 220): eu score=0, live=0 every arm, ctl 8/8, 11/11, 9/9, 8/8,
+qbad=0, all 4 alive, 0 VI stalls (L1 z0_live=3 = the same Z=0 placeholder rows as L15). -> class EU CLOSED 6 levels.
+
+What ran. Instrument (one build): lib/rt64 rt64_rdp.cpp calls `rs64_s7497_zdraw(k, depthImage.address, colorImage.address, width, cycle)`
+in drawTris (k=0) and drawRect (k=1) exactly where a z-update draw that survived the scissor merges fbPair.drawDepthRect (the condition
+that makes RT64 write depth back to RDRAM), and at fillRect entry (k=2, keyed by the COLOUR address: the z-clear idiom points colour at
+the depth buffer). main.cpp (ROGUESQ_S7497_Z0=1): per-address maps for the three draw kinds and for depth writebacks by exact base
+(rs64_s7493_base now also feeds g_s7497_base), a counter of every writeback of any kind touching [0, 0x100000), and `[s7497] zimg a -> b`
+transition rows. Positive control in the same maps: the busiest non-zero depth address must show zupd tris, z-clear fills and depth
+writebacks > 0. New tools/s7497_ev_recipe.zsh wraps tools/s7496_eu_recipe.zsh. First scorer draft used `\b` in BSD sed (unsupported):
+every key parsed empty and defaulted to 0 (ctl_wb=0 gave score=3, which is how it was caught); fixed to match " key=", a missing key now
+scores 3; negative tests: planted z0 tri=5/wb_base0=2 -> score 5, ctl wb=0 -> score 3, real logs -> 0. lib/ exported (rt64.patch).
+
+Run: `env NAME=s7497_ev XC=ROGUESQ_S7497_Z0=1 zsh tools/s7496_eu_recipe.zsh` (L4 dd1, L15 dd8 21:9, HOLD 220), scored offline with the
+fixed scorer. Inherited contracts hold: EQ score=0 (mplant DETECTED both), ER score=0 (wb 54.3k / 51.7k, 0 stale, CTL caught), EU score=0.
+- Z=0 window: L4 795C00 -> 000000 at t=11.035, 000000 -> 77BD80 at t=28.287; L15 B80800 -> 000000 at 11.037, -> B56000 at 28.286 (17.25 s,
+  one window per arm, in the boot -> mission transition).
+- z0: tri_zupd=0 rect_zupd=0 fill_c0=0 wb_base0=0 wb_low=0 in BOTH arms (run-lifetime counts, so they cover the window).
+- ctl: L4 Z=751E00 tri_zupd=11,583,734 rect 152 fill_cz=17,417 wb=8,467; L15 Z=B20000 tri_zupd=41,042,048 fill_cz=18,440 wb=8,589.
+
+What it shows. While the game points the depth image at 0 it draws nothing that updates Z and clears nothing there, and RT64 never writes
+back into low RAM, so the s7496 "live" rows under [0, w*960) are a declared-but-unused extent, not a write. Two measurement points (draw
+site, writeback site) in one runtime; retail was not checked (oracle is undriven past attract and cannot see RDP writes), so the claim
+that retail also sets Z=0 here is single-source/unverified. Rules out H-ev-write. Levels soak queued: scratch/agent/soak_queue/s7497_ev_levels.sh.
+
+Verdict: selects H-ev-placeholder (0 of 5 z0 counters in 2 arms, control > 0 on every counter), refutes H-ev-write; H-ev-retail not run.
+Next discriminator (class EW): classify each distinct RT64 writeback range [phys, phys+bytes) against the heap chain walk (container /
+partial / free / non-heap) with a +0x40000 extended-range control; partial > 0 would name a writeback spilling past its buffer.

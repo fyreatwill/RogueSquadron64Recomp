@@ -1,16 +1,20 @@
-# NEXT (s7497)
+# NEXT (s7498)
 HYPOTHESIS-ID: m3-partition-over-live-block
 
-Fold first: SOAK-RESULTS line for s7496_eu_levels (tools/s7496_eu_recipe.zsh; `s7496_eu_levels eu arm=` rows in its out.txt): live=0
-outside Z=0 + ctl ok==n on L1/L7/L10/L12 -> EU closed 6 levels.
+Fold first: SOAK-RESULTS line for s7497_ev_levels (tools/s7497_ev_recipe.zsh; `s7497_ev_levels ev arm=` rows in its out.txt): z0_sum=0
+with ctl_tri/ctl_fill/ctl_wb > 0 on L1 dd8 21:9 / L7 / L10 / L12 dd4 -> EV CLOSED 6 levels (z0_windows may be 0 on a level that never
+sets Z=0; that arm then scores the control only - say so).
 
-Work unit: class EV. s7496 found the game sets a depth image at address 0 once (~t 11.2 s, both L4 dd1 and L15 dd8); with the guessed
-480-row extent it covers live heap blocks 0x0D03E0..0x0DA630 at width 1024. Question: does the RDP/RT64 ever WRITE depth while Z=0?
-Hypotheses: H-ev-placeholder (Z=0 is set while no z-update draws run; 0 depth writes / 0 writebacks to [0, w*960)) / H-ev-write (draws
-with Z_UPD run while Z=0: RT64 writes depth into low RAM -> name the scene, compare retail) / H-ev-retail (retail oracle sets SETZIMG 0
-at the same scene: tools/s7494_es_oracle.zsh reports RDP command order).
-Instrument, ONE build: in lib/rt64 rt64_rdp.cpp count draws with othermode Z_UPD while depthImage.address == 0, and in main.cpp
-s7493_wb count depth writebacks with base 0 (`[s7497] z0 draws_zupd= wb_base0= sets=`). Positive control: ROGUESQ_S7497_CTL=1 counts the
-same for the CURRENT non-zero depth image (must be > 0). lib/ edit -> ./submodule-patches/export.sh + commit.
-Run: `env XC=ROGUESQ_S7497_Z0=1 zsh tools/s7496_eu_recipe.zsh` (L4 dd1, L15 dd8). Outcomes: 0 with control > 0 -> H-ev-placeholder,
-close EU/EV; > 0 -> oracle the scene.
+Work unit: class EW, RT64 writeback EXTENT vs the game's container block. EU (s7496) checked the image extent the game declares
+(addr + w*480*bpp, an estimate); ER (s7493) checked that each writeback's image is live. Neither checked that the bytes RT64 actually
+writes back, [phys, phys+bytes), stay inside the used heap block (or fixed partition) that holds that image: a writeback with more rows
+than the game's buffer (dd8 1024-wide, RESMULT, scissor > buffer) would spill into the neighbouring block.
+Hypotheses: H-ew-inside (every writeback range lies inside one used container block or a non-heap fixed region) / H-ew-spill (some
+writeback ranges run past their container's end: name image, rows, width, the neighbour block's s7475 ra) / H-ew-retail (the spill is
+the game's own sizing: retail buffer heights equal ours; check with the oracle's buffer sizes).
+Instrument, ONE build: in main.cpp s7497_wb (rs64_wbw_post), for each NEW (base, width, rows, kind) key call rs64_s7496_overlap(phys,
+phys+bytes) and classify container / partial (live spill) / free / non-heap; rows `[s7498] wb ext=` + `[s7498] sum`. Positive control,
+same run: ROGUESQ_S7498_CTL=<n> extends the n-th distinct writeback query's range by 0x40000 bytes past its end, which must classify as
+partial or free (not container).
+Run: `env XC=ROGUESQ_S7498_EW=1+ROGUESQ_S7498_CTL=20 zsh tools/s7497_ev_recipe.zsh` (L4 dd1, L15 dd8 21:9). Outcomes: 0 partial with
+the control caught -> H-ew-inside, queue the levels soak; partial > 0 -> name the image and compare its height with retail.

@@ -10552,7 +10552,9 @@ static void rs64_s7495_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_
     if (g_s7495_np > 0 && a >= g_s7495_lo && a < g_s7495_hi && ++g_s7495_live <= 20)
         std::fprintf(stderr, "[s7495] live-overlap z=%06X pool#%d [%06X,%06X) t=%.3f\n", a, g_s7495_np, g_s7495_lo, g_s7495_hi, now - g_s7495_t0);
 }
+static void s7497_img(uint32_t, uint32_t);
 extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
+    s7497_img(kind, addr);
     if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width, siz);
     if (!s7493_on() || kind > 1) return;
     std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
@@ -10560,7 +10562,43 @@ extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uin
     S7493Img& m = g_s7493_img[kind][addr & 0xFFFFFFu]; m.t = now; m.sw = g_rs64_swap_n.load(std::memory_order_relaxed); m.width = width; m.siz = siz; m.n++;
     g_s7493_sets[kind]++;
 }
-extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); }
+// s7497 class EV: is depth ever WRITTEN through the game's Z=0 placeholder depth image (SETZIMG 0, s7496)? ROGUESQ_S7497_Z0=1.
+// lib/rt64 rt64_rdp.cpp calls rs64_s7497_zdraw for every z-update tri (k=0) / rect (k=1) draw that survives the scissor (the exact
+// branch that merges fbPair.drawDepthRect, i.e. what makes RT64 write depth back), and every fill rect (k=2, keyed by COLOUR address:
+// the z-clear idiom points the colour image at the depth buffer). Depth writebacks are keyed by their exact base (rs64_s7493_base,
+// kind 1) plus any depth/colour writeback whose range touches [0, 0x100000). Positive control, same run, same keyed code: the busiest
+// NON-zero depth address must show zupd draws > 0, depth writebacks > 0 and z-clear fills > 0.
+namespace { std::mutex g_s7497_mu; std::map<uint32_t, uint64_t> g_s7497_zd[3], g_s7497_wbd; uint64_t g_s7497_wblow = 0, g_s7497_tr = 0;
+  uint32_t g_s7497_lastz = 0xFFFFFFFFu; double g_s7497_t0 = 0, g_s7497_last = 0; int g_s7497_log = 0; std::atomic<uint32_t> g_s7497_base{0xFFFFFFFFu};
+  bool s7497_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7497_Z0"); return e && *e && *e != '0'; }(); return on; }
+  double s7497_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+  void s7497_sum_locked(double now) {
+    uint32_t ca = 0; uint64_t cn = 0; for (auto& kv : g_s7497_zd[0]) if (kv.first != 0 && kv.second > cn) { cn = kv.second; ca = kv.first; }
+    auto g = [](std::map<uint32_t, uint64_t>& m, uint32_t a) -> unsigned long long { auto it = m.find(a); return it == m.end() ? 0ull : (unsigned long long)it->second; };
+    std::fprintf(stderr, "[s7497] sum t=%.1f z0 tri_zupd=%llu rect_zupd=%llu fill_c0=%llu wb_base0=%llu wb_low=%llu ztrans=%llu ctl z=%06X tri_zupd=%llu rect_zupd=%llu fill_cz=%llu wb=%llu zaddrs=%zu\n",
+      now - g_s7497_t0, g(g_s7497_zd[0], 0), g(g_s7497_zd[1], 0), g(g_s7497_zd[2], 0), g(g_s7497_wbd, 0), (unsigned long long)g_s7497_wblow, (unsigned long long)g_s7497_tr,
+      ca, (unsigned long long)cn, g(g_s7497_zd[1], ca), g(g_s7497_zd[2], ca), g(g_s7497_wbd, ca), g_s7497_zd[0].size()); }
+}
+extern "C" void rs64_s7497_zdraw(uint32_t k, uint32_t zaddr, uint32_t caddr, uint32_t cw, uint32_t cyc) {
+  if (!s7497_on() || k > 2) return;
+  std::lock_guard<std::mutex> lk(g_s7497_mu); const double now = s7497_now(); if (g_s7497_t0 == 0) g_s7497_t0 = now;
+  const uint32_t key = (k == 2 ? caddr : zaddr) & 0xFFFFFFu; g_s7497_zd[k][key]++;
+  if (key == 0 && g_s7497_log < 30) { ++g_s7497_log;
+    std::fprintf(stderr, "[s7497] z0 %s z=%06X c=%06X cw=%u cyc=%u t=%.3f\n", k == 0 ? "tri_zupd" : k == 1 ? "rect_zupd" : "fill_c0", zaddr, caddr, cw, cyc, now - g_s7497_t0); }
+  if (now - g_s7497_last >= 10.0) { g_s7497_last = now; s7497_sum_locked(now); }
+}
+static void s7497_img(uint32_t kind, uint32_t addr) {
+  if (!s7497_on() || kind != 1) return; std::lock_guard<std::mutex> lk(g_s7497_mu); const double now = s7497_now(); if (g_s7497_t0 == 0) g_s7497_t0 = now;
+  addr &= 0xFFFFFFu; if (addr == g_s7497_lastz) return; ++g_s7497_tr;
+  if (g_s7497_tr <= 40 || addr == 0 || g_s7497_lastz == 0) std::fprintf(stderr, "[s7497] zimg %06X -> %06X t=%.3f\n", g_s7497_lastz, addr, now - g_s7497_t0);
+  g_s7497_lastz = addr; }
+static void s7497_wb(uint32_t phys, uint32_t bytes, uint32_t kind) {
+  const uint32_t b = g_s7497_base.exchange(0xFFFFFFFFu); if (!s7497_on() || !bytes) return;
+  std::lock_guard<std::mutex> lk(g_s7497_mu); const double now = s7497_now(); if (g_s7497_t0 == 0) g_s7497_t0 = now;
+  if (kind == 1 && b != 0xFFFFFFFFu) g_s7497_wbd[b & 0xFFFFFFu]++;
+  if ((phys & 0xFFFFFFu) < 0x100000u) { ++g_s7497_wblow; if (g_s7497_log < 30) { ++g_s7497_log;
+    std::fprintf(stderr, "[s7497] wb_low kind=%u phys=%06X bytes=%u base=%06X t=%.3f\n", kind, phys, bytes, b, now - g_s7497_t0); } } }
+extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); }
 static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
     if (!s7493_on() || kind > 1 || !bytes) return;
     static const uint64_t ctl_k = [] { const char* e = std::getenv("ROGUESQ_S7493_WBLIVE_CTL"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
@@ -10741,11 +10779,12 @@ extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
 
 // Called right after copyNativeToRAM: arm the range.
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);  /* s7492 class EQ: RT64 writeback -> fn=os_rt64fb */
+static void s7497_wb(uint32_t, uint32_t, uint32_t);
 extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
     {   static std::atomic<uint64_t> n{0}; const uint64_t k = ++n;  /* s7492: first-call / periodic marker = the hook's reach control */
         if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
                                                        (unsigned long long)k, phys, bytes, kind, width, rows); }
-    s7493_wb(phys, bytes, kind, width, rows);
+    s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind);
     if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb");
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     uint32_t slot = kWbwMax;
@@ -10766,7 +10805,8 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
 extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
 extern "C" void rs64_wbw_self(int) {}
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
-extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
+static void s7497_wb(uint32_t, uint32_t, uint32_t);
+extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 
