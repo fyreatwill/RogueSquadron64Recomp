@@ -199446,3 +199446,7 @@ H-canon single-source (static). Hardware osEepromLongWrite also waits ~15 ms per
 write and waits on its own callback, no host-speed decision found -> timing H-dead (single-source, static).
 Rules out: H-live (no wrong probe type, no out-of-range block, no return the game branches on differs). FL CLOSED L4/L15; levels soak
 queued (scratch/agent/soak_queue/s7515_fl_levels.sh). lib/ edit exported (submodule-patches/N64ModernRuntime.patch).
+Discrimination: the L4/L15 census selects H-canon and refutes H-live for the EEPROM read path (probe type, block range, transfer and
+return all equal the re-derived libultra 4K model; the planted ctl row proves the scorer flags a divergence). H-dead holds for the
+write-path timing. Next discriminator: class FM Rumble/Controller Pak return shape (NEXT.md), H-canon vs H-live on the game's
+osMotor/osPfs branches.
