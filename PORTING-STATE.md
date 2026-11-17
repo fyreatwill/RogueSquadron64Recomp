@@ -200542,3 +200542,6 @@ all arms alive.
 Rules out: H-deref (no host path dereferences a destroyed struct's context or sp). It also rules out H-none in the strict sense:
 after-destroy reads exist but all of them only compare. Selects H-safe. Class GF CLOSED. No code change was needed. The tool is
 added to the rerun list for scheduler changes.
+Verdict (s7546): selects H-safe and refutes H-deref for class GF (7 post-destroy host reads, all compare-only or guarded; guest never
+names a freed struct; controls 5/5; runtime 8/8 self-destroy per level); closes GF. Next discriminator: class GG census of host-retained
+guest pointers (event/timer/IO message queues) outliving a freed guest object (H-static vs H-unreg vs H-stale, NEXT.md).
