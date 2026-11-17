@@ -199087,3 +199087,6 @@ bytes are still the VI fb; legitimate allocator behaviour, no mitigation landed 
 Rules out: the mission-load header pixels being on screen (every config); wide-only origin for the later pairs.
 Files: src/main/main.cpp (s7504_fb + hooks in rs64_s7501_up and rs64_s7503_swap), tools/s7504_fb_recipe.zsh,
 scratch/agent/soak_queue/s7504_fb_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4). No lib/ edits.
+Verdict: selects H-fb-covered for the mission-load header (4/4 arms) and H-fb-visible for the later present-path headers (3 rows, 2-4 dim
+px <=2 swaps), refutes "the mission-load header is on screen" and "wide-only"; next discriminator FC: per-swap heap-header-in-scanned-window
+census over a whole run (NEXT.md).
