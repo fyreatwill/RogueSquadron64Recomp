@@ -199867,3 +199867,45 @@ Bug in my first run: the dump path was build/rs64_s7526.log relative to build/ (
 Doc: docs/OWNER-OPT-INS.md row "Retail graphics-chip task addresses" (proposed default-on, owner decides; default unchanged).
 This selects H-same and refutes H-diff for the renderer input in static phases (CROSS 264 vs SAME 261; ctl CROSS 0), and closes
 rsp-task-v2p. Next discriminator: class FU host-replacement side-effect audit (NEXT.md), H-canon / H-dead / H-gap per replaced routine.
+
+## Session 7527 (2026-11-17) — class FU closed (static): of 153 replaced libultra functions in the ELF, the only retail side effect a host replacement skips and a game reader sees is osSpTaskLoad's _VirtualToPhysicalTask (already closed s7524-s7526); 8/8 controls
+
+HYPOTHESIS-ID: host-libultra-side-effects (closed) -> closed-class-gap-ledger.
+
+Soak folds: none new since s7526 (last line s7526 fold).
+
+New tools/s7527_host_replace_audit.py (+ tools/s7527_annot.py manual verdicts; table scratch/agent/s7527_fu_table.tsv; ~2.4 s; --controls rc 0).
+Enumeration: N64Recomp src/symbol_lists.cpp reimplemented_funcs (116) + ignored_funcs (358) intersected with the game ELF symbols =
+153 functions (64 reimplemented, 89 ignored-only); rogue_squadron.toml has no ignored/renamed lists of its own; PatchesLib overrides
+14 symbols, none libultra (game funcs + active-queue checkers); fixup scripts only edit call sites. Per row, from the RETAIL body:
+- helpers: retail callees that are NOT replaced (recompiled guest code whose effect the host must reproduce itself = the s7524 shape),
+  checked against the host *_recomp body + one level of same-file callees (name or address);
+- G-join: absolute-address stores (lui/addiu tracking, cleared after jal delay slots and, for temps, at branch targets) joined with
+  loads in recompiled code;
+- O-join (new vs s7402 BL, which only did absolute globals): the objects passed in a0..a2 at every jal into a replaced function
+  (MQs, threads, timer, OSIoMesg, OSTask, pad/status arrays: 28 objects), then every function that takes an address inside one and
+  its field-level R/W;
+- pointer scan: replaced-function addresses built by lui/addiu in recompiled code or present as a word in loadable section data.
+Result: 58 rows have jal callers in recompiled code. 6 have a skipped retail helper: osSpTaskLoad -> _VirtualToPhysicalTask (H-gap,
+measured s7524-s7526: render input H-same, V2P opt-in owner row); osInitialize -> bzero(osAppNMIBuffer; readers unreachable s7403,
+host RDRAM zero); osPfsAllocateFile/DeleteFile/InitPak/RepairId -> __osPfsDeclarePage/ReleasePages/__osIdCheckSum (host returns
+PFS_ERR_NOPACK, retail with no pak fails at the same call before any helper; s7516 FM). G-join: the only absolute global with a
+recompiled reader is osClockRate (fixed s7402). O-join: 0 direct field loads/stores of any MQ/thread/timer/OSIoMesg in recompiled code;
+gspTask fields written by the game only at +0x8..+0x3C, never +4 (flags), so osSpTaskLoad/osSpTaskYielded flag writes are unread;
+pads/statuses read at button/x/y/errno, all written by the host (s7400). osViGetCurrentField (retail VI_CURRENT bit 0, host constant
+0): the s2199/s2211 oracle measured 415/415 retail returns = 0. 95 rows have no caller and no address taken (pointer scan: only
+rspbootTextStart, RSP boot ucode data stored into OSTask.ucode_boot). Final: H-canon 57, H-dead 95, H-gap 1 (closed), REVIEW 0.
+Sibling check, same scanner: 0 recompiled functions load/store a KSEG1 RCP/PI address directly (replaced code shows them, e.g.
+osViGetCurrentField 0xA4400010), matching s7404.
+Controls (--controls, 8/8 PASS): osSpTaskLoad H-gap by default, H-canon with --credit ...=src/main/main.cpp:ROGUESQ_S7524_V2P, H-gap
+with a credit pattern absent from the file; G-join finds timeSnapshotFiller reading osClockRate (s7402 known reader); O-join finds
+pollControllerInputs taking gControllerPads; pointer scan finds rspbootTextStart; osSpTaskLoad is the only H-gap row; no REVIEW rows.
+Dead ends in-session (artifacts fixed before the result): stale-lui resolution across jal (v0 clobber) and branch joins invented
+reads of the SI thread 0x8010FF70 / an "MQ" at 0x80110000 (registerServiceWorker's heap struct s5+464); raw-file word scan counted
+.symtab entries as function pointers. Both fixed; the final run has no such rows.
+Two lines of evidence: this static table (single-source for the new O-join rows) + each annotated row cites a closed runtime class
+(s7400 CONTFIX, s7402 BL, s7403 BM, s7492 EQ, s7514 FK, s7516 FM, s7518 FO, s7520 FQ, s7521 FR, s7524-s7526 V2P, oracle s2199/s2211).
+Rerun after any change to librecomp/ultramodern replacements or a regen: `python3 tools/s7527_host_replace_audit.py --controls`.
+VERDICT: class FU H-canon/H-dead except the already-measured V2P row; the replaced-libultra surface (BL, BM, FG-FU) is exhausted.
+Next: closed-class gap ledger (NEXT.md): fix or prove each "Gap:" left open by the closed classes (e.g. FQ load_overlay never erasing a
+replaced overlay's func_map entries; FS partial-DMA re-split).

@@ -498,7 +498,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     missing/dup/order, content_diff/B equal, alive, 0 stalls; positive control gfx ring DMA writes hi8 33.4M -> 0. Only change: L_1DB0
     entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak s7525_v2p_levels queued (L1 dd8
     21:9, L7/L10/L12 dd4; tools/s7525_v2p_score.py). Soak score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive). **s7526 same-run render-input twin: H-same** (ROGUESQ_S7524_V2P=alt, pseudo-random per gfx task, src/rsp/s7526_v2p_twin.cpp hashes every byte rs64_rt_submit forwards): L4 dd1 static phases 2-4 repeats cross/same 264/261; ctl (=ctl folds a constant into V2P-on digests) cross 0 / same 418 -> detector live; flight tasks never repeat (no info there, single-source for flight = s7525 control-flow reading). Mixed on/off tasks: alive, 0 stalls, s7096 exact. **V2P CLOSED: owner decision default-on (docs/OWNER-OPT-INS.md row), do not flip without the owner.**
-21. **Class FU (next, NEXT.md s7527): retail side effects skipped by host libultra replacements** (s7524's skipped _VirtualToPhysicalTask generalised).
+21. **FU CLOSED (s7527, static): host libultra replacements skip no read side effect except V2P (closed s7524-s7526).** tools/s7527_host_replace_audit.py --controls (8/8): 153 replaced funcs, helper/G/O/pointer joins; H-canon 57, H-dead 95, H-gap 1 = osSpTaskLoad.
+    Rerun it after any librecomp/ultramodern replacement change. Next: closed-class gap ledger (NEXT.md s7528).
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
