@@ -198903,3 +198903,39 @@ Next: class EY. Is a stale-covered image B ever set again after an A writeback c
 load) before B's own writeback restores it?
 Verdict (s7499): this selects H-ex-zclear and refutes H-ex-clobber on L4 dd1 + L15 dd8 21:9 (0 live cross pairs, ctl hit both arms); it closes
 EW on 6 levels. Next discriminator: class EY, whether a stale-covered image is set again and read before its own writeback (NEXT.md).
+
+## Session 7500 (2026-11-16) — class EY: stale-covered images that come back are cleared first (H-ey-rewrite)
+
+Fold: s7499_ex_levels soak (L1 dd8 21:9, L7/L10/L12 dd4): live=0 on all 4, ctlst=ok, all alive -> **class EX CLOSED 6 levels.**
+
+Work unit, class EY (seeded s7499): EX's stale/est pairs (A's writeback covers image B, B last set >= 2 swaps earlier) were scored
+dead because age only counts swaps since B's last set. Does such a B ever get set again, and does anything read A's bytes through B?
+Hypotheses: H-ey-dead (B never set again) / H-ey-rewrite (set again, cleared or redrawn before any read) / H-ey-read (set again and read:
+z-compare, fb-as-texture load, or RT64 RAM->GPU upload of A's bytes into B).
+
+Instrument, ONE build (ROGUESQ_S7500_EY=1, ROGUESQ_S7500_CTL=1; needs S7493_WBLIVE + S7499_EX):
+- lib/rt64 rt64_rdp.cpp: rs64_s7500_draw(caddr, zaddr, zcmp|zupd) at both drawColorRect.merge sites (tris, rects);
+  rs64_s7500_tex(start, end) in loadTile/loadBlockOperation (deferred path, before checkImageOverlap). rt64_framebuffer_manager.cpp
+  uploadRAM: rs64_s7500_up(addressStart, w, siz, diffPx, discard|present). Fill via the existing rs64_s7497_zdraw k=2 call. Patch exported.
+- main.cpp s7500_*: s7499_ex's stale/est pairs register B (kind, base, extent, latest A). rs64_s7493_img on a registered B logs
+  `[s7500] reset` (gap since cover / since B's previous set); the FIRST event on B then classifies: fill / draw / zupd / zread / tex /
+  up / updisc / wb; next 5 events go in a `seq` row. Read classes = zread, tex, up.
+- Controls: ctlA = the first covering A is registered as a tracked image, so its own next set must classify a first event through the
+  same hooks; ctlB = the first covered B is reset artificially and must log `reset ... CTL`.
+- Recipe tools/s7500_ey_recipe.zsh (wraps s7499; exit 0 / 5 read>0 / 3 ctl fail). Scorer fix in-session: the first-event fields share
+  names with the `hooks` totals, so a greedy sed read hook totals; it now parses the prefix before ` hooks ` (re-scored offline, same verdict).
+
+Run `zsh tools/s7500_ey_recipe.zsh` (L4 dd1, L15 dd8 21:9), score=0, both alive, EX live=0 ctlst=ok:
+| arm | tracked | never re-set | resets | first event | read (zread+tex+up) | hooks draw/tex/up/fill/set | ctlA | ctlB |
+| L4 dd1 | 17 | 14 | 5 | fill 5/5 @0 s | 0 | 15.7M / 4.90M / 37 / 39.5k / 116k | ok (fill) | ok |
+| L15 dd8 21:9 | 21 | 18 | 5 | fill 5/5 @0 s | 0 | 44.6M / 9.72M / 31 / 38.5k / 116k | ok (fill) | ok |
+(tracked/never-re-set counts include the 2 control entries.) Every reset is a scene change at t~58.8/67.1 s (L4) and 67.1/75.0 s (L15),
+gap 2-470 swaps since the cover, 2274-3291 since B's own previous set; each image is filled in the same swap it is set (reset_after 0.000 s),
+then draw, then wb (seq rows `fill@0,draw@0,wb@0,fill@1,...`). Examples: L4 795C00 colour+depth (640x340 Z / z-clear idiom) re-set after
+A=77BD80 depth covered it; L15 B80800 colour+depth, 9B6000, A35800, B20000.
+**Verdict: H-ey-rewrite for the 5 re-set images, H-ey-dead for the rest; H-ey-read refuted (0 z-compare, texture-load or upload of a
+re-set B before its clear) on both arms.** Single runtime (retail not consulted); two measurement points (RDP-stream set/fill/draw hooks
+and the RT64 texture-load/upload path), both with a same-run control.
+Rules out: stale bytes from one RT64 writeback being consumed through a later re-use of a covered image's address, at these 2 levels.
+Levels soak queued (scratch/agent/soak_queue/s7500_ey_levels.sh).
+Next (EZ): the 31/37 RT64 checkRAM uploads per run: whose write changed each live framebuffer's RAM (NEXT.md).

@@ -10553,8 +10553,11 @@ static void rs64_s7495_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_
         std::fprintf(stderr, "[s7495] live-overlap z=%06X pool#%d [%06X,%06X) t=%.3f\n", a, g_s7495_np, g_s7495_lo, g_s7495_hi, now - g_s7495_t0);
 }
 static void s7497_img(uint32_t, uint32_t);
+static void s7500_set(uint32_t, uint32_t);
+static void s7500_cover(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t, int, int);
+static void s7500_wb(uint32_t, uint32_t);
 extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
-    s7497_img(kind, addr);
+    s7497_img(kind, addr); s7500_set(kind, addr);
     if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width, siz);
     if (!s7493_on() || kind > 1) return;
     std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;
@@ -10579,7 +10582,9 @@ namespace { std::mutex g_s7497_mu; std::map<uint32_t, uint64_t> g_s7497_zd[3], g
       now - g_s7497_t0, g(g_s7497_zd[0], 0), g(g_s7497_zd[1], 0), g(g_s7497_zd[2], 0), g(g_s7497_wbd, 0), (unsigned long long)g_s7497_wblow, (unsigned long long)g_s7497_tr,
       ca, (unsigned long long)cn, g(g_s7497_zd[1], ca), g(g_s7497_zd[2], ca), g(g_s7497_wbd, ca), g_s7497_zd[0].size()); }
 }
+static void s7500_fill(uint32_t);
 extern "C" void rs64_s7497_zdraw(uint32_t k, uint32_t zaddr, uint32_t caddr, uint32_t cw, uint32_t cyc) {
+  if (k == 2) s7500_fill(caddr);
   if (!s7497_on() || k > 2) return;
   std::lock_guard<std::mutex> lk(g_s7497_mu); const double now = s7497_now(); if (g_s7497_t0 == 0) g_s7497_t0 = now;
   const uint32_t key = (k == 2 ? caddr : zaddr) & 0xFFFFFFu; g_s7497_zd[k][key]++;
@@ -10673,6 +10678,7 @@ static void s7499_ex(uint32_t lo, uint32_t hi, uint32_t kind, uint32_t base, uin
   std::lock_guard<std::mutex> l1(g_s7493_mu); std::lock_guard<std::mutex> l2(g_s7499_mu);
   const double now = s7493_now(); if (g_s7499_t0 == 0) g_s7499_t0 = now; const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
   const uint64_t k = ++g_s7499_wb; if (g_s7499_ctl == -2 && s7499_ctl_at() > 0) g_s7499_ctl = -1;
+  s7500_wb(kind, base);
   const uint64_t ak = ((uint64_t)kind << 32) | base; uint32_t& ae = g_s7499_end[ak]; if (hi > ae) ae = hi;
   auto test = [&](uint32_t bk, uint32_t bb, uint32_t bw, uint32_t siz, int bsw) {
     if (bk == kind && bb == base) return;
@@ -10681,6 +10687,7 @@ static void s7499_ex(uint32_t lo, uint32_t hi, uint32_t kind, uint32_t base, uin
     if (!(bb < hi && be > lo)) return;
     const int age = sw - bsw; const int c = bk == 2 ? 4 : bb == base ? 0 : !haswb ? 3 : age <= 1 ? 1 : 2;
     if (c == 4) ++g_s7499_ctlhit;
+    if (c == 2 || c == 3) s7500_cover(bk, bb, be, kind, base, width, k, sw, bsw);
     const uint64_t pk = ((uint64_t)kind << 62) | ((uint64_t)bk << 60) | ((uint64_t)(base & 0xFFFFFFu) << 32) | ((uint64_t)(bb & 0xFFFFFFu) << 8) | (uint64_t)(c << 1);
     if (!g_s7499_pairs.insert(pk).second) return;
     ++g_s7499_n[c]; if (c == 4 && g_s7499_ctl == -1) g_s7499_ctl = 1;
@@ -10694,6 +10701,102 @@ static void s7499_ex(uint32_t lo, uint32_t hi, uint32_t kind, uint32_t base, uin
     g_s7499_cb = (lo + (hi - lo) / 2) & ~7u; g_s7499_cw = width; g_s7499_csw = sw;
     std::fprintf(stderr, "[s7499] ctl armed wb#%llu A kind=%u base=%06X fake=%06X\n", (unsigned long long)k, kind, base, g_s7499_cb); }
   if (now - g_s7499_last >= 10.0) { g_s7499_last = now; s7499_sum(now); } }
+// s7500 class EY: resurrection of a stale-covered image. s7499_ex scores pairs (A writeback covers image B, B last set >= 2 swaps
+// earlier or never written back) as dead; EY asks whether such a B is ever SET again, and what touches it first after that.
+// ROGUESQ_S7500_EY=1 (needs S7493_WBLIVE + S7499_EX). Per covered B (kind, base): cover = latest A + wb# + swap. When the RDP stream
+// sets B again: `[s7500] reset` (gap in swaps since the cover and since B's own previous set), then the FIRST event on B classifies
+// it: fill (fill rect with colour image == B: clear / z-clear idiom), draw (colour draw into B, no z compare), zread (z-compare draw
+// with depth image == B before any clear: reads A's bytes as depth), tex (texture load overlapping B's extent: fb-as-texture read),
+// up (RT64 checkRAM found B's RAM changed and uploaded it into B's GPU image, i.e. consumed A's bytes; updisc = it discarded instead),
+// wb (B written back). Hooks: lib/rt64 rt64_rdp.cpp drawTris/drawRect (rs64_s7500_draw), loadTile/loadBlockOperation
+// (rs64_s7500_tex), rt64_framebuffer_manager.cpp uploadRAM (rs64_s7500_up); fill via rs64_s7497_zdraw k=2. Read classes = zread,
+// tex, up. Positive controls ROGUESQ_S7500_CTL=1: (a) ctlB = the first covered B is reset artificially at cover time and must log
+// `reset ... CTL`; (b) ctlA = the first covering A itself is entered as a tracked image, so A's own next set must classify a first
+// event (fill/draw/...) through the same hooks, proving the event keys match real images.
+extern "C" int rs64_s7500_on = [] { const char* e = std::getenv("ROGUESQ_S7500_EY"); return (e && *e && *e != '0') ? 1 : 0; }();
+namespace {
+struct S7500B { uint32_t kind, base, lo, hi, akind, abase, aw; uint64_t wb; int csw, bsw, rsw, state, ctl, cyc; double rt; std::string seq; };
+std::mutex g_s7500_mu; std::map<uint64_t, S7500B> g_s7500; std::atomic<int> g_s7500_pend{0};
+uint64_t g_s7500_n[9] = {}, g_s7500_cov = 0, g_s7500_reset = 0; std::atomic<uint64_t> g_s7500_hook[5] = {}; int g_s7500_rows = 0, g_s7500_ctla = -2, g_s7500_ctlb = -2;
+std::string g_s7500_ctla_cls = "none"; double g_s7500_t0 = 0, g_s7500_last = 0;
+const char* s7500_cls(int c) { static const char* k[9] = {"fill", "draw", "zread", "tex", "up", "updisc", "wb", "none", "zupd"}; return k[c % 9]; }
+bool s7500_ctl() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7500_CTL"); return e && *e && *e != '0'; }(); return on; }
+void s7500_sum_locked(double now) {
+  uint64_t pend = 0, cov0 = 0; for (auto& kv : g_s7500) { if (kv.second.state == 1) ++pend; else if (kv.second.state == 0) ++cov0; }
+  std::fprintf(stderr, "[s7500] sum t=%.1f tracked=%zu covers=%llu covered_unset=%llu resets=%llu pending=%llu first fill=%llu draw=%llu zread=%llu tex=%llu up=%llu updisc=%llu wb=%llu zupd=%llu"
+    " read=%llu hooks draw=%llu tex=%llu up=%llu fill=%llu set=%llu ctlA=%s ctlA_cls=%s ctlB=%s\n", now - g_s7500_t0, g_s7500.size(), (unsigned long long)g_s7500_cov,
+    (unsigned long long)cov0, (unsigned long long)g_s7500_reset, (unsigned long long)pend,
+    (unsigned long long)g_s7500_n[0], (unsigned long long)g_s7500_n[1], (unsigned long long)g_s7500_n[2], (unsigned long long)g_s7500_n[3], (unsigned long long)g_s7500_n[4],
+    (unsigned long long)g_s7500_n[5], (unsigned long long)g_s7500_n[6], (unsigned long long)g_s7500_n[8], (unsigned long long)(g_s7500_n[2] + g_s7500_n[3] + g_s7500_n[4]),
+    (unsigned long long)g_s7500_hook[0].load(), (unsigned long long)g_s7500_hook[1].load(), (unsigned long long)g_s7500_hook[2].load(), (unsigned long long)g_s7500_hook[3].load(), (unsigned long long)g_s7500_hook[4].load(),
+    g_s7500_ctla == 1 ? "ok" : g_s7500_ctla == -1 ? "pending" : g_s7500_ctla == 0 ? "FAIL" : "unarmed", g_s7500_ctla_cls.c_str(),
+    g_s7500_ctlb == 1 ? "ok" : g_s7500_ctlb == -1 ? "pending" : "unarmed"); }
+void s7500_tick_locked(double now) { if (g_s7500_t0 == 0) g_s7500_t0 = now; if (now - g_s7500_last >= 10.0) { g_s7500_last = now; s7500_sum_locked(now); } }
+// first-event classification of a pending (state 1) entry; later events (up to 6) only extend its logged sequence.
+void s7500_event_locked(S7500B& b, int c, const char* extra, double now) {
+  if (b.state != 1) return; const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+  if (b.seq.size() < 120) { char t[64]; std::snprintf(t, sizeof t, "%s%s@%d", b.seq.empty() ? "" : ",", s7500_cls(c), sw - b.rsw); b.seq += t; }
+  if (b.seq.find(',') != std::string::npos) { if (std::count(b.seq.begin(), b.seq.end(), ',') >= 5) { b.state = 2; g_s7500_pend.fetch_sub(1);
+      static int srows = 0; if (++srows <= 60) std::fprintf(stderr, "[s7500] seq B kind=%u base=%06X%s %s\n", b.kind, b.base, b.ctl ? " CTL" : "", b.seq.c_str()); } return; }
+  if (!b.ctl) ++g_s7500_n[c];
+  if (b.ctl == 1 && g_s7500_ctla == -1) { g_s7500_ctla = 1; g_s7500_ctla_cls = s7500_cls(c); }
+  const bool rd = c == 2 || c == 3 || c == 4;
+  if (++g_s7500_rows <= 80 || (rd && g_s7500_rows <= 400))
+    std::fprintf(stderr, "[s7500] first cls=%s%s B kind=%u base=%06X ext=[%06X,%06X) A kind=%u base=%06X w=%u wb#%llu reset_after=%.3fs sw=%d %s t=%.3f\n", s7500_cls(c),
+      b.ctl == 1 ? " CTL-A" : b.ctl == 2 ? " CTL-B" : "", b.kind, b.base, b.lo, b.hi, b.akind, b.abase, b.aw, (unsigned long long)b.wb, now - b.rt, sw, extra, now - g_s7500_t0); }
+}
+static double s7500_now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static void s7500_reset_locked(S7500B& b, double now, const char* why) {
+  const int sw = g_rs64_swap_n.load(std::memory_order_relaxed); b.state = 1; b.rsw = sw; b.rt = now; b.seq.clear(); ++b.cyc; g_s7500_pend.fetch_add(1);
+  if (!b.ctl) ++g_s7500_reset;
+  if (++g_s7500_rows <= 80 || b.ctl)
+    std::fprintf(stderr, "[s7500] reset%s B kind=%u base=%06X ext=[%06X,%06X) A kind=%u base=%06X w=%u wb#%llu gap_cover=%d gap_bset=%d cyc=%d t=%.3f\n", why,
+      b.kind, b.base, b.lo, b.hi, b.akind, b.abase, b.aw, (unsigned long long)b.wb, sw - b.csw, sw - b.bsw, b.cyc, now - g_s7500_t0); }
+static void s7500_cover(uint32_t bk, uint32_t bb, uint32_t be, uint32_t ak, uint32_t ab, uint32_t aw, uint64_t wb, int sw, int bsw) {
+  if (!rs64_s7500_on || bk > 1) return;
+  std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); s7500_tick_locked(now);
+  const uint64_t key = ((uint64_t)bk << 32) | bb; auto it = g_s7500.find(key); ++g_s7500_cov;
+  if (it == g_s7500.end()) it = g_s7500.emplace(key, S7500B{bk, bb, bb, be, ak, ab, aw, wb, sw, bsw, 0, 0, 0, 0, 0.0, {}}).first;
+  S7500B& b = it->second; if (b.ctl) return;
+  if (b.state != 0) { if (b.state == 1) g_s7500_pend.fetch_sub(1); b.state = 0; }  // re-covered: a new cycle starts at the next set
+  b.akind = ak; b.abase = ab; b.aw = aw; b.wb = wb; b.csw = sw; b.bsw = bsw; if (be > b.hi) b.hi = be;
+  if (s7500_ctl() && g_s7500_ctlb == -2) { g_s7500_ctlb = -1;
+    S7500B c = b; c.ctl = 2; /* distinct key (kind|4): no hook ever looks it up */ auto ci = g_s7500.emplace((((uint64_t)bk | 4u) << 32) | bb, c).first;
+    s7500_reset_locked(ci->second, now, " CTL"); ci->second.state = 2; g_s7500_pend.fetch_sub(1); g_s7500_ctlb = 1; }
+  if (s7500_ctl() && g_s7500_ctla == -2) { g_s7500_ctla = -1;
+    S7500B a{ak, ab, ab, ab + 0x100u, ak, ab, aw, wb, sw, sw, 0, 0, 1, 0, 0.0, {}}; if (!g_s7500.emplace(((uint64_t)ak << 32) | ab, a).second) g_s7500_ctla = -2; } }
+static void s7500_set(uint32_t kind, uint32_t addr) {
+  if (!rs64_s7500_on || kind > 1) return; addr &= 0xFFFFFFu;
+  std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); s7500_tick_locked(now); ++g_s7500_hook[4];
+  auto it = g_s7500.find(((uint64_t)kind << 32) | addr); if (it == g_s7500.end()) return;
+  S7500B& b = it->second; if (b.state == 0) s7500_reset_locked(b, now, b.ctl == 1 ? " CTL-A" : ""); }
+static void s7500_wb(uint32_t kind, uint32_t base) {
+  if (!rs64_s7500_on || g_s7500_pend.load() <= 0) return;
+  std::lock_guard<std::mutex> lk(g_s7500_mu); auto it = g_s7500.find(((uint64_t)kind << 32) | (base & 0xFFFFFFu));
+  if (it != g_s7500.end()) s7500_event_locked(it->second, 6, "", s7500_now()); }
+extern "C" void rs64_s7500_draw(uint32_t caddr, uint32_t zaddr, uint32_t f) {
+  g_s7500_hook[0].fetch_add(1, std::memory_order_relaxed);
+  if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
+  std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); caddr &= 0xFFFFFFu; zaddr &= 0xFFFFFFu;
+  auto c = g_s7500.find(caddr); if (c != g_s7500.end() && c->second.state == 1) s7500_event_locked(c->second, 1, "", now);
+  if (f & 3u) { auto z = g_s7500.find((1ull << 32) | zaddr); if (z != g_s7500.end() && z->second.state == 1) s7500_event_locked(z->second, (f & 1u) ? 2 : 8, "", now); }
+  /* z-clear idiom / colour drawn at a depth image's address */
+  auto cz = g_s7500.find((1ull << 32) | caddr); if (cz != g_s7500.end() && cz->second.state == 1) s7500_event_locked(cz->second, 1, "cimg=zaddr", now); }
+static void s7500_fill(uint32_t caddr) {
+  if (!rs64_s7500_on) return; g_s7500_hook[3].fetch_add(1, std::memory_order_relaxed);
+  if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
+  std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); caddr &= 0xFFFFFFu;
+  for (uint32_t k = 0; k < 2; ++k) { auto it = g_s7500.find(((uint64_t)k << 32) | caddr); if (it != g_s7500.end() && it->second.state == 1) s7500_event_locked(it->second, 0, "", now); } }
+extern "C" void rs64_s7500_tex(uint32_t lo, uint32_t hi) {
+  g_s7500_hook[1].fetch_add(1, std::memory_order_relaxed);
+  if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
+  std::lock_guard<std::mutex> lk(g_s7500_mu); const double now = s7500_now(); lo &= 0xFFFFFFu; hi &= 0xFFFFFFu;
+  for (auto& kv : g_s7500) { S7500B& b = kv.second; if (b.state == 1 && lo < b.hi && hi > b.lo) { char t[48]; std::snprintf(t, sizeof t, "tex=[%06X,%06X)", lo, hi); s7500_event_locked(b, 3, t, now); } } }
+extern "C" void rs64_s7500_up(uint32_t addr, uint32_t w, uint32_t siz, uint32_t diffpx, int fl) {
+  std::lock_guard<std::mutex> lk(g_s7500_mu); ++g_s7500_hook[2]; const double now = s7500_now(); s7500_tick_locked(now); addr &= 0xFFFFFFu;
+  if (g_s7500_pend.load(std::memory_order_relaxed) <= 0) return;
+  for (uint32_t k = 0; k < 2; ++k) { auto it = g_s7500.find(((uint64_t)k << 32) | addr); if (it != g_s7500.end() && it->second.state == 1) { char t[72];
+      std::snprintf(t, sizeof t, "up w=%u siz=%u diffpx=%u path=%s", w, siz, diffpx, (fl & 2) ? "present" : "draw"); s7500_event_locked(it->second, (fl & 1) ? 5 : 4, t, now); } } }
 extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); g_s7498_base.store(b); }
 static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
     if (!s7493_on() || kind > 1 || !bytes) return;

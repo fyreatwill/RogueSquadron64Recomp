@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7499 (2026-11-16).
+Compact operational handoff, as of Session 7500 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -272,7 +272,12 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      != A) = 0 in both arms; same-base pairs 8 / 6 = colour==depth z-clear idiom (76A000, 795C00 / B6A000, B56000); stale 72 / 50 and
      est 8 / 27 all age >= 2 swaps (e.g. 320-wide boot images under the 640 image, mode change at t~0.7 s). Control (fake image at wb
      #20 phys+bytes/2) hit 10.3k times, both arms. Levels soak queued (s7499_ex_levels).
-     **EY next: does a stale-covered image ever come back** (NEXT.md).
+     **Levels soak folded s7500: L1 dd8 21:9 / L7 / L10 / L12 dd4 live=0 ctlst=ok -> EX CLOSED 6 levels.**
+   - **EY s7500 stale-covered image re-use: H-ey-rewrite (L4 dd1, L15 dd8 21:9).** ROGUESQ_S7500_EY=1 (+_CTL=1), tools/s7500_ey_recipe.zsh;
+     hooks lib/rt64 rs64_s7500_draw/tex/up + main.cpp s7500_*. Of the covered images only 5 per arm are ever set again (scene changes);
+     each is filled in the same swap it is set, before any draw, z-compare, texture load or RT64 upload; read=0. Rest never re-set.
+     Controls ctlA (A's own next set classified fill) and ctlB (artificial reset logged) ok both arms. Levels soak queued (s7500_ey_levels).
+     **EZ next: name the writer behind each RT64 checkRAM upload (31-37 per run)** (NEXT.md).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
