@@ -18,7 +18,7 @@ Discriminating measurement, ONE build, ONE env (ROGUESQ_S7551_GK=1, default off,
   s7539 store-watch hook can name it.
   Positive control (same run): ROGUESQ_S7551_GK_PLANT=1 makes the host write a marker pattern into an undrawn column of the
   span right after checkRDRAM; it must show up as guest_changed and clobbered.
-Arms (concurrent per iron rule 13 is not allowed for game runs: run sequentially in one session): L1 dd1 (retail), L4 dd4 16:9,
+Arms, all built in one iteration and run one game at a time: L1 dd1 (retail), L4 dd4 16:9,
 L12 dd4, owner recipe FPS60; >=120 s flight each, plus title/hangar.
 Outcomes: clobbered 0 outside the plant -> H-clean, close GK. Nonzero -> name the guest writer (store watch) and decide whether
 the fix is a column-exact writeback (only drawColorRect columns) or re-hash at fullSync before writeback.
