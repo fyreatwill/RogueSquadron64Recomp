@@ -6031,8 +6031,10 @@ static inline void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_dpc_record_submit_impl(lo, hi);
     g_rs64_s7026_rec_ns += clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - t0; ++g_rs64_s7026_rec_n;
 }
+extern "C" int rs64_s7526_alt; extern "C" void rs64_s7526_fwd(uint32_t lo, uint32_t hi, const uint8_t* rdram);  // s7526 V2P twin
 static inline void rs64_rt_submit(uint32_t lo, uint32_t hi, int site) {
     if (rs64_s7096_on) rs64_s7096_fwd(lo, hi, site);
+    if (rs64_s7526_alt) rs64_s7526_fwd(lo, hi, g_rdram_for_submit);
     if (!g_rs64_s7026) { ultramodern::submit_rdp_range(lo, hi); return; }
     static const uint64_t spin = [] { const char *e = std::getenv("ROGUESQ_S7026_SPIN_NS"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
     const bool smp = (g_rs64_s7026_rt_n & 15u) == 0;

@@ -199844,3 +199844,25 @@ Not measured: framebuffer equality of a fixed frame (no fixed-frame hash in this
 New: tools/s7525_v2p_score.py (per-arm PASS needs escapes 0, forwarding exact, gfx wr hi8 0, b2>0 b3==0; the off arm scores FAIL =
 negative control). Soak scratch/agent/soak_queue/s7525_v2p_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s, V2P on).
 Next: fold the soak; on score 0 ask the owner to approve V2P default-on (=0 restores today's KSEG0 DMEM task), docs/OWNER-OPT-INS.md.
+
+## Session 7526 (2026-11-17) — ROGUESQ_S7524_V2P closed: same-run render-input twin H-same (cross/same repeats 264/261, ctl cross 0), levels soak score 0; owner decision row added
+
+Work unit (NEXT.md s7526, HYPOTHESIS-ID rsp-task-v2p): fold the levels soak, then close the last gap (render equality V2P off vs on).
+Fold: soak s7525_v2p_levels rc=0, `tools/s7525_v2p_score.py` score 0: L1 dd8 21:9, L7/L10/L12 dd4 all PASS (escapes 0, s7096 exact,
+gfx ring wr hi8 0 of 37.5M-285M, L_1DB0 b2 7.6k-11.6k / b3 0), 4/4 alive.
+Render gap: hypotheses H-same (V2P leaves the renderer input unchanged) vs H-diff (a hidden consumer of the KSEG0 task fields changes
+what RT64 receives). Cross-run fb comparison is barred (animating scenes), so a SAME-RUN twin: new `ROGUESQ_S7524_V2P=alt`
+(src/rsp/s7526_v2p_twin.cpp + hooks in main.cpp rs64_run_lle_gfx and dpc_bridge.cpp rs64_rt_submit) switches V2P per gfx task by
+splitmix64(task)&1 and FNV-hashes, in order, every byte forwarded to RT64 per task. A task digest repeated within the last 64 tasks is
+classed SAME (equal V2P state) or CROSS. H-diff predicts CROSS=0; H-same predicts CROSS~SAME. Control `ROGUESQ_S7526_TWIN=ctl` folds a
+constant into V2P-on digests (a V2P-correlated 1-byte change): CROSS must go to 0. Runs (scratch/s7526_twin, g1e_owner_quiet_arms,
+L4 dd1 120 s, + S7096_FWD):
+| arm | phase2 same/cross | phase3 | phase4 | phases 5-7 (flight) | alive | stalls | s7096 missing/dup/order |
+| twin | 21/17 | 70/77 | 170/167 | all unique (0-1 repeats) | 1 | 0 | 0/0/0 (1.51 GB) |
+| ctl  | 36/0  | 137/0 | 245/0   | all unique | 1 | 0 | 0/0/0 (1.51 GB) |
+DISCRIMINATION: H-same selected for the renderer input (CROSS 264 ~ SAME 261 over static phases; ctl proves the detector catches a
+V2P-correlated change). Flight tasks never repeat, so flight is covered only by s7525's control-flow reading + forwarding (single-source
+there). Also new: per-task alternating V2P (mixed KSEG0/physical task sequence) runs clean (alive, 0 stalls, forwarding exact).
+Bug in my first run: the dump path was build/rs64_s7526.log relative to build/ (no log); fixed to cwd, rerun above.
+Doc: docs/OWNER-OPT-INS.md row "Retail graphics-chip task addresses" (proposed default-on, owner decides; default unchanged).
+CLOSED: rsp-task-v2p. Next: class FU host-replacement side-effect audit (NEXT.md).

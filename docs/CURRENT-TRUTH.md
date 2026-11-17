@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7525 (2026-11-17).
+Compact operational handoff, as of Session 7526 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -326,7 +326,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
    Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
    left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
+4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
@@ -497,8 +497,9 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     every arm (H-spin refuted: L_115C waits BEFORE the DPC_START write, so the bridge's CURRENT snap can't trip it), s7096 MAIN 0
     missing/dup/order, content_diff/B equal, alive, 0 stalls; positive control gfx ring DMA writes hi8 33.4M -> 0. Only change: L_1DB0
     entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak s7525_v2p_levels queued (L1 dd8
-    21:9, L7/L10/L12 dd4; tools/s7525_v2p_score.py). On pass: **owner decision: V2P default-on** (retail fidelity, no visible change).
-21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    21:9, L7/L10/L12 dd4; tools/s7525_v2p_score.py). Soak score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive). **s7526 same-run render-input twin: H-same** (ROGUESQ_S7524_V2P=alt, pseudo-random per gfx task, src/rsp/s7526_v2p_twin.cpp hashes every byte rs64_rt_submit forwards): L4 dd1 static phases 2-4 repeats cross/same 264/261; ctl (=ctl folds a constant into V2P-on digests) cross 0 / same 418 -> detector live; flight tasks never repeat (no info there, single-source for flight = s7525 control-flow reading). Mixed on/off tasks: alive, 0 stalls, s7096 exact. **V2P CLOSED: owner decision default-on (docs/OWNER-OPT-INS.md row), do not flip without the owner.**
+21. **Class FU (next, NEXT.md s7527): retail side effects skipped by host libultra replacements** (s7524's skipped _VirtualToPhysicalTask generalised).
+22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

@@ -7770,6 +7770,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 // (real SP_BOOT does this DMA-style; the runner mimics SP_BOOT but skips
 // this step), then invokes the LLE runner.
 extern "C" void rs64_s7521_task(uint8_t* rdram, const OSTask* task); extern "C" int rs64_s7521_on;  // s7521 class FR
+extern "C" int rs64_s7526_alt; extern "C" int rs64_s7526_task_begin();  // s7526 V2P twin (src/rsp/s7526_v2p_twin.cpp)
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     if (rs64_s7521_on) rs64_s7521_task(rdram, task);
     // The host owns both buffers; a teardown can invalidate the callback
@@ -7849,7 +7850,9 @@ extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     // the retail conversion to the DMEM copy only (opt-in; the guest's task in RDRAM is untouched, as on hardware).
     static const bool s7524_v2p = [] { const char* e = std::getenv("ROGUESQ_S7524_V2P"); bool on = e && *e && *e != '0';
         if (on) std::fprintf(stderr, "[s7524] DMEM OSTask virtual->physical conversion armed\n"); return on; }();
-    auto v2p = [](uint32_t v) -> uint32_t { return (s7524_v2p && v >= 0x80000000u && v < 0xC0000000u) ? (v & 0x1FFFFFFFu) : v; };
+    // s7526: ROGUESQ_S7524_V2P=alt -> per-task pseudo-random on/off + forwarded-byte twin digest (src/rsp/s7526_v2p_twin.cpp).
+    const bool v2p_on = rs64_s7526_alt ? rs64_s7526_task_begin() != 0 : s7524_v2p;
+    auto v2p = [v2p_on](uint32_t v) -> uint32_t { return (v2p_on && v >= 0x80000000u && v < 0xC0000000u) ? (v & 0x1FFFFFFFu) : v; };
     poke(0xFC0 + 0x00, (uint32_t)task->t.type);
     poke(0xFC0 + 0x04, (uint32_t)task->t.flags);
     poke(0xFC0 + 0x08, (uint32_t)task->t.ucode_boot);
