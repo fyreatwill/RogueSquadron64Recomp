@@ -6737,7 +6737,45 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
                         if (wm_runs <= 4 || (wm_runs & 0x3FF) == 0)
                             fprintf(stderr, "[s6933-wm] runs=%lu ranges=%lu bad=%lu control=%lu\n", wm_runs, wm_ranges, wm_bad, wm_ctl);
                     }
+                    // s7532 FY: ROGUESQ_S7532_UNDO_CHK=1 (default off). gfx tasks signal sp_complete before send_dl, so the guest CPU runs
+                    // while this thread holds bump-time shadow bytes in RDRAM and then writes the wm_live snapshot back (undo). A guest store
+                    // into an undo range inside that window would be lost. Snapshot the bytes RT64 is handed, compare them right before the
+                    // undo: a difference inside an undo range = a foreign writer in the window. Run 2 plants a flip (positive control, the
+                    // undo then rewrites it with live bytes, so the plant is harmless).
+                    static const bool s_uchk = [] { const char *e = std::getenv("ROGUESQ_S7532_UNDO_CHK"); return e && *e == '1'; }();
+                    static thread_local std::vector<uint8_t> uc_post;
+                    static unsigned long uc_runs = 0, uc_undo_runs = 0, uc_foreign = 0, uc_fbytes = 0, uc_ctl = 0, uc_any = 0;
+                    static uint64_t uc_ns = 0, uc_max_ns = 0, uc_ubytes = 0;
+                    const bool uc_on = s_uchk && g_rdram_for_submit;
+                    std::chrono::steady_clock::time_point uc_t0;
+                    if (uc_on) { uc_post.assign(g_rdram_for_submit + wm_lo, g_rdram_for_submit + wm_hi); uc_t0 = std::chrono::steady_clock::now(); }
                     rs64_rt_submit(wm_lo, wm_hi, 2);
+                    if (uc_on) {
+                        ++uc_runs;
+                        if (!wm_undo.empty()) {
+                            ++uc_undo_runs;
+                            const bool plant = uc_undo_runs == 2;
+                            if (plant) g_rdram_for_submit[wm_undo[0].lo] ^= 0x5A;
+                            unsigned long fb = 0; bool anyd = false;
+                            for (const WmUndo &u : wm_undo) {
+                                uc_ubytes += u.hi - u.lo;
+                                if (u.lo < wm_lo || u.hi > wm_hi) continue;
+                                const uint8_t *a = g_rdram_for_submit + u.lo, *b = uc_post.data() + (u.lo - wm_lo);
+                                for (uint32_t i = 0; i < u.hi - u.lo; ++i) fb += a[i] != b[i];
+                            }
+                            if (memcmp(g_rdram_for_submit + wm_lo, uc_post.data(), wm_hi - wm_lo) != 0) anyd = true;
+                            if (plant) { if (fb) ++uc_ctl; } else if (fb) { ++uc_foreign; uc_fbytes += fb; }
+                            if (!plant && anyd) ++uc_any;
+                        }
+                        const uint64_t ns = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - uc_t0).count();
+                        uc_ns += ns; if (ns > uc_max_ns) uc_max_ns = ns;
+                        static auto uc_last = std::chrono::steady_clock::now(); const auto uc_now = std::chrono::steady_clock::now();
+                        const bool uc_tick = uc_now - uc_last >= std::chrono::seconds(5);   // time cadence: a 120 s hold has < 16k runs
+                        if (uc_tick) uc_last = uc_now;
+                        if (uc_runs <= 4 || uc_tick)
+                            fprintf(stderr, "[s7532-undo] runs=%lu undo_runs=%lu undo_bytes=%llu foreign_runs=%lu foreign_bytes=%lu any_diff_runs=%lu control(must be 1)=%lu window_ms_total=%.1f window_us_max=%.1f\n",
+                                    uc_runs, uc_undo_runs, (unsigned long long)uc_ubytes, uc_foreign, uc_fbytes, uc_any, uc_ctl, uc_ns / 1e6, uc_max_ns / 1e3);
+                    }
                 }
                 for (const WmUndo &u : wm_undo) {
                     memcpy(g_rdram_for_submit + u.lo, wm_live.data() + u.off, u.hi - u.lo);

@@ -200033,3 +200033,33 @@ DISCRIMINATION: selects H-canon/instrument-only for all 32 RT64 sites over H-lat
 verify check can fail on the real file). With FW this closes scalar guest-address latches across all RS64-owned host code.
 Engineering change: new tool tools/s7531_fx_census.py.
 Next: class FY — host shadow copies of guest bytes (memcpy/snapshot of an RDRAM range read later without a re-copy) (NEXT.md).
+
+## Session 7532 (2026-11-17) — class FY closed: 84 host copies of guest RDRAM bytes classified (0 unclassified, 0 H-latent-fix); the one live race window (wrap-restore undo while the guest CPU runs) measured clean, 0 foreign bytes in 3.1 GB
+
+Work unit (NEXT s7532): idiom-class audit FY = host buffers holding a COPY of guest bytes read later (content twin of FW/FX).
+Tool: tools/s7532_fy_census.py (reuses s7530 run_checks). Scans memcpy/memmove/std::copy/.insert/.assign whose SOURCE names
+guest memory, plus element loops `dst[i] = ...RDRAM[...]`, over librecomp, ultramodern, src/main, src/rsp, rt64 hle/gbi/render.
+Destination resolved by a brace-kind depth map (namespace/struct/extern "C"/initialiser braces do not count as code scope; the
+first indentation-based resolver called RT64's namespace-scope `g_s4280_ev` local, caught on spot-check and fixed).
+Result: 84 in-class sites: 50 H-local(auto), 16 H-canon, 17 H-instrument-only (all env-gated, envoff checked against runner.sh /
+OWNER-OPT-INS), 1 H-dead (sp.cpp ramdump: dump_frame never set). --controls 7/7: planted persistent copy -> UNCLASSIFIED, local
+copy -> auto, guest->guest copy -> guest-write, mutation (shadow clear removed from a dpc_bridge copy) -> FAIL-check, rule-less
+census >=25 UNCLASSIFIED, live census 0 fails.
+H-canon rows (copy IS the modelled semantic): g_s4272_shadow (bump-time bytes the RDP would have consumed, s4286/s4287), present.storage
+(per-VI scanout snapshot), RT64 FramebufferStorage (workload-end), TMEM (hardware copies RDRAM->TMEM too), S2DEX struct buffer
+(loaded right before its command), and wm_live (the undo snapshot).
+The one site with a real race window: wm_live. Gfx tasks get sp_complete BEFORE send_dl (events.cpp), so the guest CPU runs while
+the gfx thread writes bump-time shadow bytes into RDRAM for RT64 and then writes the wm_live snapshot back (undo). A guest store
+into an undo range in that window would be silently lost. Instrument ROGUESQ_S7532_UNDO_CHK=1 (dpc_bridge.cpp wm_flush, default
+off): snapshot of the bytes handed to rs64_rt_submit, compared right before the undo; run 2 plants a flip in wm_undo[0] (control;
+the undo rewrites it, harmless). First run printed only runs<=4 (cadence bug: <16k runs per 120 s), fixed to a 5 s cadence, re-run.
+Run (scratch/s7532_fy/run.zsh, one build, g1e_owner_quiet_arms, HOLD 120, FPS60 16:9 fullscreen godmode, NO_SAVE_WRITE):
+  L4 dd1:        runs 2955, undo 723 MB, window 1.04 s total (max 2.9 ms), foreign 0, any_diff 0, control 1; alive, 0 stalls, level_ok.
+  L15 dd8 21:9:  runs 9946, undo 2.41 GB, window 2.30 s total (max 1.7 ms), foreign 0, any_diff 0, control 1; alive, 0 stalls.
+Second line of evidence (independent): s7524 attribution named 100% of ring rewrites as gfx-ucode ring DMA, 0 CPU, so no guest
+writer of the ring exists to race the undo. Scorer tools/s7532_undo_score.py (--controls 4/4) scores 0 on both arms.
+Selects H-canon for wm_live (window real, writer absent); refutes H-latent-fix for every FY row. FY CLOSED.
+Rules out: lost guest writes through the wrap-restore undo at dd1 and dd8 21:9 over 120 s each. Not covered: the short
+snapshot->restore gap before record_submit (not in the compare window; same ranges, same absent writer).
+Soak queued: scratch/agent/soak_queue/s7532_fy_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s, UNDO_CHK armed, scorer above).
+Next: class FZ = host-thread writes INTO guest RDRAM (the census's guest-write rows and direct stores) from non-guest threads.
