@@ -200815,3 +200815,39 @@ dp_complete, so NODRAIN=3 has no writeback hazard. Rules out: async late writeba
 Doc fix: docs/OWNER-OPT-INS.md "Renderer overlap" row command now `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=3` (it still said =1 although
 s7540 made =3 the recommendation) and the "frame rate vs =1 not yet measured" caveat replaced with the s7545 measurement. No default changed.
 Next: class GO, device status values returned to the guest vs completion ordering (NEXT.md).
+
+## Session 7555 (2026-11-17) — class GO CLOSED: no device status value returned to the guest disagrees with its completion signal in any mode; nothing polls DP/AI/PI busy (getters not imported, 0 register-base constants); osAiSetNextBuffer's always-0 is unread
+Work unit (NEXT s7555, HYPOTHESIS-ID class-go-device-status-reads): static census of every device STATUS / progress value the runtime
+returns to the guest, the polled twin of GB (s7538). New tool tools/s7555_go_census.py, rc 0, --controls 7/7, 1.4 s.
+Method: (A) every `X_recomp` definition under librecomp/ultramodern/src/main/src/rsp whose body assigns ctx->r2, plus out-param getters
+(osContGetQuery/GetReadData, osDpGetCounters) and 26 libultra device getters by name; imported? from `nm -u build/libRecompiledFuncs.a`;
+weak definitions shadowed by a strong one; each imported row needs a rule whose code checks pass (a failing H-consistent check becomes
+H-stale = open). (B) every guest call site in N64Recomp/RecompiledFuncs, $v0 read / killed / unknown after the call (a call to a replacement
+that always sets r2 kills it). (C) MMIO: no lui of 0x03F0-0x04FF / 0xA3F0-0xA4FF / 0x1FC0 in the generated code.
+Result: 74 definitions, 29 imported rows, 168 guest call sites, 0 unclassified / 0 fail / 0 stale / 0 MMIO:
+- H-unused (nm-absent) 51, incl. every DP/AI/PI status getter: osAiGetLength, osAiGetStatus, osDpGetStatus, osPiGetStatus, osEPiReadIo,
+  osViGetCurrentFramebuffer/NextFramebuffer, osGetCount, and (no host def, not imported) __osAiDeviceBusy, __osSpGetStatus,
+  __osSpDeviceBusy, __osPiDeviceBusy, __osSiDeviceBusy, osViGetCurrentLine/Mode/Status. With 0 register-base constants in game code,
+  the game cannot poll any device busy bit, so ASYNC/NODRAIN/SP_LATE have no status channel to go stale through. Their only guest-visible
+  channel is the completion signal (GB, closed).
+- H-consistent 6: osSpTaskYielded (only caller spTaskSchedulerThread 0x80019E14, on the SP-done message for a task asked to yield; result ->
+  0x8011A89F "resume yielded gfx"; port returns 0 = completed, correct because the F5 LLE never yields a running task and every
+  osSpTaskStartGo resets the request; mode-independent; legacy ROGUESQ_SP_YIELDED_REQUEST_ONLY=1 off), osViGetCurrentField (0 constant;
+  read by getInactiveBufferIndex / postSwapRdpReset; retail oracle s2199/s2211 415/415 = 0, second line), osPiStartDma (0 after the
+  synchronous do_dma), osEepromLongRead/Write (synchronous save_read/save_write), osContGetQuery/GetReadData (SI, GB si rows).
+- H-ret-unused 2: osAiSetNextBuffer always returns 0 where retail returns -1 while the AI FIFO is full. Both callers
+  (runAiAudioStreamPlaybackLoop 0x8008EE08 -> next is a blocking osRecvMesg that sets $v0; 0x8008EE84 -> delay slot andi v0,s1) drop it,
+  so the divergence cannot reach game logic. osDpGetCounters both sites kill $v0 (profiler).
+- H-signal 3 (osSend/Recv/JamMesg results = the queue itself), H-shadowed 2 (weak ultra_translation osRecvMesg/osSendMesg),
+  H-nopak 5, H-nostatus 13 (time, arithmetic, constant success).
+Instrument failures caught before the verdict (recorded): (1) `ctx->r29` matched the `ctx->r2` substring, so an osAiSetNextBuffer site
+first read as "read" -> fixed to ctx->r2(?!\d); (2) s7533 fz.func_spans names `__attribute__((weak)) void f()` spans "__attribute__", so weak
+twins were skipped -> the planted-weak control FAILED, name now resolved from the header; (3) 0xBFC0 matched as PIF in the MMIO regex but is
+-1.5f (0x8006D168, scaleVec3ByRandomRange) -> KSEG1 PIF dropped (PIF is reached only by SI, all replaced).
+Controls 7/7: baseline (>=20 rows, >=100 sites, 0 open); planted rule-less getter UNCLASSIFIED + weak twin H-shadowed; mutation
+osSpTaskYielded answers "yielded" -> H-stale exit 1; nm control (osDpGetStatus imported -> UNCLASSIFIED; osViGetCurrentLine imported with no
+def -> FAIL); ret-use classifier on planted generated code (read + kill) with osAiSetNextBuffer read -> H-stale and planted lui 0xA440 caught;
+ROM/float immediates ignored, physical 0x0440 caught; osPiStartDma without do_dma -> H-stale.
+Rules out: a stale or ordering-inconsistent polled status as a source of the async/NODRAIN/SP_LATE/FPS60 symptoms; the osAiSetNextBuffer
+busy-return divergence as an audio-pacing cause. Single-source (static) except osViGetCurrentField (oracle). CURRENT-TRUTH item 19 + item 12
+rerun line updated. Next: class GP, guest time consumers (osGetTime units / FPS60 mixing), NEXT.md.

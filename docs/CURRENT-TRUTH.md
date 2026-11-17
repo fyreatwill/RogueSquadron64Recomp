@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7554 (2026-11-17).
+Compact operational handoff, as of Session 7555 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -301,7 +301,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a librecomp/ultramodern getter or a new os*_recomp import tools/s7555_go_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
@@ -371,7 +371,17 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     phases, ~18 GB compared; plant control 1130/1136, 1208/1212, 1478/1484; GM verdicts identical to sync (C H-dither, Z H-depth-req,
     preIsLast 0.99994-1.0). Async witness same run (scratch/s7554_gn_ctl, L4 + ROGUESQ_G1B=1): [s7540-rw] sig=9427 idle=0, GK H-clean,
     ctl 890/892. The guest never touches a pending writeback span, so the worker's late full-row writeback reverts nothing. All 4
-    GJ write sites carry the hook. OWNER-OPT-INS row now gives NODRAIN=3. Next: class GO (NEXT.md).
+    GJ write sites carry the hook. OWNER-OPT-INS row now gives NODRAIN=3.
+    **Class GO CLOSED s7555** (tools/s7555_go_census.py, rc 0, --controls 7/7; static, single-source except osViGetCurrentField =
+    retail oracle s2199/s2211): every value-returning replacement (74 defs) and every device-status getter. Of 29 the game imports
+    (168 guest call sites, $v0 read/kill per site): 0 device-status getters other than osSpTaskYielded and osViGetCurrentField.
+    osAiGetLength/GetStatus, osDpGetStatus, osPiGetStatus, osViGetCurrent/NextFramebuffer, osGetCount and every __os*DeviceBusy are
+    not imported (nm), and the generated code forms no 0x04xx/0xA4xx/0x1FC0 register base, so nothing polls DP/AI/PI busy and
+    NODRAIN/ASYNC cannot hand out a stale status. osSpTaskYielded (spTaskSchedulerThread 0x80019E14, sets resume flag 0x8011A89F)
+    returns 0 = completed, right because the LLE never yields a running task, whatever the mode. osAiSetNextBuffer always returns 0
+    (retail -1 when the FIFO is full), but both runAiAudioStreamPlaybackLoop sites kill $v0 (H-ret-unused). The rest are synchronous
+    (PI, EEPROM, SI), no-pak, queue results, or not status values. Instrument bug fixed before the verdict: ctx->r29 matched
+    ctx->r2. Next: class GP (NEXT.md).
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
