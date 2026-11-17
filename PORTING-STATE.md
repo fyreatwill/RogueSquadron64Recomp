@@ -199417,3 +199417,32 @@ Levels soak queued (s7514_fk_levels: L1 dd8 21:9Levels soak queued (s7514_fk_lev
 Next: class FL, EEPROM/save-path shape (NEXT.md), under the owner save rule.
 Files: src/main/upstream_compat.cpp (census + ctl), tools/s7514_time_refs.py (new), tools/s7514_time_shape.py (new),
 scratch/agent/soak_queue/s7514_fk_levels.sh, docs/CURRENT-TRUTH.md.
+
+## Session 7515 (2026-11-17) — class FL: EEPROM / save-path shape vs the libultra 4K rules; H-canon on L4 dd1 and L15 dd8 21:9, write path canon by static reading (single-source), FK levels closed
+
+**FK levels fold.** s7514_fk_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: 46875.0 ticks/ms, 781,250 ticks/VI, monotone, gate_leak=0,
+ctl 4/4 each, controls PASS, 4/4 alive) -> FK CLOSED 6 levels.
+
+**FL static census** (../N64Recomp/RecompiledFuncs/funcs_2.c). Live: osEepromProbe 1 (initSaveData 0x800063F4: `sltu v0,0,v0` ->
+present flag 0x801126EC), osEepromLongRead 3, osEepromLongWrite 3, osEepromRead/Write 0. Layout: 0x20-byte header at block 0 (magic
+F5F5F5F5 + 'GAME'/'GSYS' compare), records at block (slot*rsz + 0x20) >> 3 (`andi 0xFF`), rsz = 0x80112728. initSaveData branches on the
+header LongRead return (nonzero -> callback 9, retry or present=0/state 2), on the magic memcmp (callback 8 -> format) and on
+capacity 0x801126C4 >= cnt*rsz + 0x20 (else callback 2). Writes: format = LongWrite block 0 with nbytes = capacity; header = block 0,
+0x20; record (saveLoadDispatcher 0x800068C0) = record block, rsz bytes; op mode s2 < 4 checked in both dispatchers.
+
+**FL runtime census.** New ROGUESQ_LOG_EEP_SHAPE=1 (lib/N64ModernRuntime/librecomp/src/eep.cpp, logging only): every probe/Read/Write/
+LongRead/LongWrite with block address, nbytes, host return, a libultra hardware-model return (Long*: address > MAXBLOCKS -> -1; per
+block >= MAXBLOCKS -> -1; 4K MAXBLOCKS=64), whether the host transferred, first 8 bytes, and the game's capacity/count/rsz/flag.
+ROGUESQ_EEP_SHAPE_CTL=1 adds one synthetic never-executed row (addr 70, 16 bytes) after the first LongRead. Scorer
+tools/s7515_eep_shape.py re-derives the hardware return independently; --controls: synthetic + 5 mutants (past_end block 63+16 B,
+nbytes remainder, probe 16K, capacity 0x800, no ctl) PASS.
+Run (g1e_owner_quiet_arms, HOLD=120, scratch/s7515_fl): L4 dd1 + L15 dd8 21:9, both alive, 0 stalls. Each: probe ret 1 (4K), LongRead
+block 0 32 B (header b8 371407C3F5F5F5F5), LongRead block 4 200 B (record 0); globals cap 0x200 (= 64 blocks, the game's own 4K
+figure), cnt 2, rsz 0xC8 -> 2*200 + 32 = 432 <= 512; record 1 = blocks 29..53 < 64. live_bad=0, ctl row flagged (host 0 vs hw -1) both
+-> score 0. Second line for the 4K type: the game's capacity global 0x200 and the 512-byte owner save file agree with the probe.
+**Not exercised at runtime:** LongWrite (no save event on the forced-mission route; NO_SAVE_WRITE only suppresses the file flush,
+buffer writes would still happen). Its shapes are the same block math as the reads, capacity-bounded by the game's own check ->
+H-canon single-source (static). Hardware osEepromLongWrite also waits ~15 ms per block; host returns at once: the game issues the
+write and waits on its own callback, no host-speed decision found -> timing H-dead (single-source, static).
+Rules out: H-live (no wrong probe type, no out-of-range block, no return the game branches on differs). FL CLOSED L4/L15; levels soak
+queued (scratch/agent/soak_queue/s7515_fl_levels.sh). lib/ edit exported (submodule-patches/N64ModernRuntime.patch).

@@ -1,24 +1,17 @@
-# NEXT (s7515)
-HYPOTHESIS-ID: eeprom-save-shape-vs-hardware
+# NEXT (s7516)
+HYPOTHESIS-ID: motor-pak-shape-vs-hardware
 
-First: fold s7514_fk_levels from SOAK-RESULTS if it ran (score 0 -> FK CLOSED 6 levels in CURRENT-TRUTH item 20; 1 -> a live rate/
-monotonicity/clk/gate defect: read scratch/s7514_fk_levels/out.txt for the field; 3 -> ctl rows missing/gate not 1 under ctl;
-4 -> no [s7514-time] rows).
+First: fold s7515_fl_levels from SOAK-RESULTS if it ran (score 0 -> FL CLOSED 6 levels in CURRENT-TRUTH item 20; 1 -> a live
+EEPROM divergence: read scratch/s7515_fl_levels/out.txt BAD lines; 3 -> ctl row missing; 4 -> no [s7515-eep] rows).
 
-Work unit: class FL, EEPROM / save-path shape vs hardware. Live wrappers (RecompiledFuncs): osEepromProbe 1 (initSaveData),
-osEepromLongRead 3 (initSaveData, loadOrSaveAllEepromRecords, loadOrSaveEepromRecord), osEepromLongWrite 3 (initSaveData x2,
-saveLoadDispatcher); osEepromRead/Write 0. Host side: lib/N64ModernRuntime/librecomp/src/eep.cpp. Hardware rules (libultra +
-n64brew): probe returns EEPROM_TYPE_4K (1) or 16K (2) per the cart (RS64 = 4 Kbit? check the ROM header / game's own use of the
-probe result); LongRead/LongWrite address is a BLOCK index (8 bytes), nbytes multiple of 8, address+nbytes/8 <= 64 (4K) or 256
-(16K), errors return -1 / CONT_NO_RESPONSE_ERROR; LongWrite waits ~15 ms per block on hardware (osEepromLongWrite busy-waits
-EEPROM_WAIT); retail return value 0 on success.
-Hypotheses: H-canon (every live call's address/length in range for the probed type, return codes = libultra, bytes round-trip) /
-H-dead (differences only in paths behind ROGUESQ_NO_SAVE_WRITE or unused types) / H-live (the probe type disagrees with the
-size the game indexes, an out-of-range block silently wraps or succeeds where hardware errors, or a return code differs where the
-game branches on it) -> fix to the hardware rule.
-OWNER SAVE RULE: build/saves is the owner's real save; NEVER clear ROGUESQ_NO_SAVE_WRITE. Measure reads only, plus writes as
-logged-and-suppressed calls. A test needing a writable save copies the game to its own folder.
-Measurement: static census (args at each jal, game branches on the return), one runtime census env (ROGUESQ_LOG_EEP_SHAPE=1: every
-probe/LongRead/LongWrite with address, nbytes, return, first 8 bytes) on L4 dd1 boot->mission and a hangar route, offline scorer
-with synthetic + mutant controls and an in-run ctl (ROGUESQ_EEP_SHAPE_CTL: one logged call with a planted out-of-range address
-that the scorer must flag).
+Work unit: class FM, Rumble Pak (osMotorInit/Start/Stop, 9 live callers per s7513) and Controller Pak (osPfs* 8, stubbed) shape vs
+hardware. Hardware: with no pak, osMotorInit returns PFS_ERR_NOPACK (1) / PFS_ERR_DEVICE (11) for a non-rumble pak; osMotorStart/Stop
+on an uninitialised OSPfs return an error; osPfsInitPak with no pak -> PFS_ERR_NOPACK. Read the host stubs (grep osMotor / osPfs in
+lib/N64ModernRuntime and src/), list what each returns, then read every game branch on those returns (statically, as s7515 did for
+initSaveData). Hypotheses: H-canon (host returns = hardware no-pak / rumble-pak returns) / H-dead (differences only feed unused paths) /
+H-live (the game takes a path hardware never takes with the reported pak, e.g. believes a rumble pak exists and retries per frame,
+or reports a Controller Pak it cannot read) -> fix to the hardware rule (decide which pak the port reports: SDL rumble = rumble pak).
+Measurement: static census + one runtime env ROGUESQ_LOG_PAK_SHAPE=1 (every osMotor*/osPfs* call: args, return, game caller ra) with a
+planted ctl row, scorer with synthetic + mutant controls; L4 dd1 + L15 dd8 21:9 via tools/g1e_owner_quiet_arms.zsh (s7515 command in
+PORTING-STATE), levels soak queued after.
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

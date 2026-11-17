@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7514 (2026-11-17).
+Compact operational handoff, as of Session 7515 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -478,7 +478,12 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     L4 dd1 + L15 dd8 21:9, 391 rows each: 46875.0 ticks/host ms, 0 steps off by >2%, monotone, VI stamp 781,250 ticks/VI (60 Hz host;
     hardware NTSC ~780k), clk 46875000, gate 0 on every row from swap 30 except ctl 4/4 = 1. Second line: fb dumps show the bars only
     in the 2 dumps rendered under ctl (L4 3360 px, L15 1932 px; 0 before; after = stale pixels in the undrawn wide margin only).
-    Levels soak queued (s7514_fk_levels). Next: FL EEPROM/save-path shape (NEXT.md).
+    Levels soak queued (s7514_fk_levels). **Levels fold (s7515): score=0 on L1 dd8 21:9, L7/L10/L12 dd4 -> FK CLOSED 6 levels.**
+    **FL CLOSED L4/L15 (s7515): EEPROM shape H-canon.** ROGUESQ_LOG_EEP_SHAPE=1 (librecomp eep.cpp, logging only; ctl ROGUESQ_EEP_SHAPE_CTL=1
+    plants one never-executed addr-70 row) + tools/s7515_eep_shape.py --controls (re-derived libultra 4K model, 5 mutants PASS): probe 1 (4K),
+    LongRead blk0 32 B + blk4 200 B; game capacity 0x200 = 64 blocks (matches probe + 512-byte save), 2 records x 0xC8 + 0x20 = 432 B; 0 live
+    divergence, ctl flagged. LongWrite not hit on the route: same block math, game capacity check -> canon by static reading (single-source);
+    no-wait-per-block timing H-dead (static). Levels soak queued (s7515_fl_levels). Next: FM Rumble Pak / osMotor shape (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

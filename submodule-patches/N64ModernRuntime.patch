@@ -1391,20 +1391,70 @@ index 7ad6c21..5537f3c 100644
  
  extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/eep.cpp b/librecomp/src/eep.cpp
-index 048246e..5811902 100644
+index 048246e..5d5c245 100644
 --- a/librecomp/src/eep.cpp
 +++ b/librecomp/src/eep.cpp
-@@ -8,6 +8,9 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
+@@ -8,6 +8,51 @@ void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t coun
  
  constexpr int eeprom_block_size = 8;
  
 +// s5064: reuse the s5063 census-first guard (sp.cpp) for EEPROM buffer pointers.
 +extern "C" bool rs64_spai_guard_bad(const char* what, uint64_t addr, uint64_t size);
 +
++// s7515 class FL: EEPROM shape census vs the libultra 4K/16K rules. ROGUESQ_LOG_EEP_SHAPE=1 logs every call:
++// fn, block address, nbytes, buffer, host return, hardware-model return (osEepromLongRead/Write: address > MAXBLOCKS -> -1 up
++// front; per block address >= MAXBLOCKS -> -1 after the earlier blocks), whether the host transferred, the first 8 bytes and the
++// game's save globals (capacity 0x801126C4, record count u16 0x801126CE, record size 0x80112728, present flag 0x801126EC).
++// ROGUESQ_EEP_SHAPE_CTL=1 adds ONE synthetic row (ctl=1, never executed) after the first LongRead: address 70, 16 bytes, which
++// the scorer must flag as host/hardware divergent. Logging only: no behaviour change.
++#include <atomic>
++#include <chrono>
++static int rs64_eep_log() { static int v = -1; if (v < 0) { const char* e = getenv("ROGUESQ_LOG_EEP_SHAPE"); v = (e && *e && *e != '0') ? 1 : 0; } return v; }
++static int rs64_eep_maxblocks() { return recomp::get_save_type() == recomp::SaveType::Eep4k ? 64 : 256; }
++static int rs64_eep_hw_ret(bool is_long, uint32_t addr, int32_t nbytes) {
++    int maxb = rs64_eep_maxblocks();
++    if (is_long && (int)addr > maxb) return -1;
++    if (!is_long) return (int)addr >= maxb ? -1 : 0;
++    for (int32_t n = nbytes; n > 0; n -= eeprom_block_size, addr++) if ((int)addr >= maxb) return -1;
++    return 0;
++}
++static void rs64_eep_row(uint8_t* rdram, const char* fn, uint32_t addr, int32_t nbytes, gpr buffer, int host_ret, bool xfer, int ctl) {
++    static std::atomic<int> seq{0};
++    static auto t0 = std::chrono::steady_clock::now();
++    double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
++    bool is_long = fn[8] == 'L';
++    int hw = rs64_eep_hw_ret(is_long, addr, nbytes);
++    char b8[24] = "-";
++    if (xfer && !ctl) { for (int i = 0; i < 8; i++) snprintf(b8 + 2 * i, 3, "%02X", (unsigned)MEM_BU(i, buffer)); }
++    uint32_t cap = MEM_W(0, (gpr)(int32_t)0x801126C4), rsz = MEM_W(0, (gpr)(int32_t)0x80112728);
++    uint32_t cnt = MEM_HU(0, (gpr)(int32_t)0x801126CE), flag = MEM_BU(0, (gpr)(int32_t)0x801126EC);
++    fprintf(stderr, "[s7515-eep] seq=%d t=%.3f fn=%s addr=%u nbytes=%d buf=0x%08X host_ret=%d hw_ret=%d xfer=%d maxb=%d b8=%s cap=0x%X cnt=%u rsz=0x%X flag=%u ctl=%d\n",
++        seq++, t, fn, addr, nbytes, (uint32_t)buffer, host_ret, hw, xfer ? 1 : 0, rs64_eep_maxblocks(), b8, cap, cnt, rsz, flag, ctl);
++}
++static void rs64_eep_ctl_once(uint8_t* rdram, gpr buffer) {
++    static std::atomic<bool> done{false};
++    const char* e = getenv("ROGUESQ_EEP_SHAPE_CTL");
++    if (!e || *e == '0' || done.exchange(true)) return;
++    uint32_t addr = 70; int32_t nb = 16;
++    bool host_xfer = (uint64_t)addr * eeprom_block_size + nb <= 0x200; // host save_read/save_write skip when out of the buffer
++    rs64_eep_row(rdram, "osEepromLongRead", addr, nb, buffer, 0, host_xfer, 1);
++}
++static bool rs64_eep_fits(uint32_t addr, int32_t nbytes) {
++    return (uint64_t)addr * eeprom_block_size + (uint64_t)(uint32_t)nbytes <= (recomp::get_save_type() == recomp::SaveType::Eep4k ? 0x200u : 0x800u);
++}
++
  extern "C" void osEepromProbe_recomp(uint8_t* rdram, recomp_context* ctx) {
      switch (recomp::get_save_type()) {
          case recomp::SaveType::AllowAll:
-@@ -33,6 +36,11 @@ extern "C" void osEepromWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -21,6 +66,7 @@ extern "C" void osEepromProbe_recomp(uint8_t* rdram, recomp_context* ctx) {
+             ctx->r2 = 0x00;
+             break;
+     }
++    if (rs64_eep_log()) rs64_eep_row(rdram, "osEepromProbe", 0, 0, 0, (int)ctx->r2, false, 0);
+ }
+ 
+ extern "C" void osEepromWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -33,9 +79,15 @@ extern "C" void osEepromWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
      gpr buffer = ctx->r6;
      int32_t nbytes = eeprom_block_size;
  
@@ -1416,7 +1466,11 @@ index 048246e..5811902 100644
      save_write(rdram, buffer, eep_address * eeprom_block_size, nbytes);
  
      ctx->r2 = 0;
-@@ -50,6 +58,11 @@ extern "C" void osEepromLongWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
++    if (rs64_eep_log()) { rs64_eep_row(rdram, "osEepromWrite", eep_address, nbytes, buffer, 0, rs64_eep_fits(eep_address, nbytes), 0); }
+ }
+ 
+ extern "C" void osEepromLongWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -50,9 +102,15 @@ extern "C" void osEepromLongWrite_recomp(uint8_t* rdram, recomp_context* ctx) {
  
      assert((nbytes % eeprom_block_size) == 0);
  
@@ -1428,7 +1482,11 @@ index 048246e..5811902 100644
      save_write(rdram, buffer, eep_address * eeprom_block_size, nbytes);
  
      ctx->r2 = 0;
-@@ -65,6 +78,11 @@ extern "C" void osEepromRead_recomp(uint8_t* rdram, recomp_context* ctx) {
++    if (rs64_eep_log()) { rs64_eep_row(rdram, "osEepromLongWrite", eep_address, nbytes, buffer, 0, rs64_eep_fits(eep_address, nbytes), 0); }
+ }
+ 
+ extern "C" void osEepromRead_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -65,9 +123,15 @@ extern "C" void osEepromRead_recomp(uint8_t* rdram, recomp_context* ctx) {
      gpr buffer = ctx->r6;
      int32_t nbytes = eeprom_block_size;
  
@@ -1440,7 +1498,11 @@ index 048246e..5811902 100644
      save_read(rdram, buffer, eep_address * eeprom_block_size, nbytes);
  
      ctx->r2 = 0;
-@@ -82,6 +100,11 @@ extern "C" void osEepromLongRead_recomp(uint8_t* rdram, recomp_context* ctx) {
++    if (rs64_eep_log()) { rs64_eep_row(rdram, "osEepromRead", eep_address, nbytes, buffer, 0, rs64_eep_fits(eep_address, nbytes), 0); }
+ }
+ 
+ extern "C" void osEepromLongRead_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -82,7 +146,13 @@ extern "C" void osEepromLongRead_recomp(uint8_t* rdram, recomp_context* ctx) {
  
      assert((nbytes % eeprom_block_size) == 0);
  
@@ -1452,6 +1514,8 @@ index 048246e..5811902 100644
      save_read(rdram, buffer, eep_address * eeprom_block_size, nbytes);
  
      ctx->r2 = 0;
++    if (rs64_eep_log()) { rs64_eep_row(rdram, "osEepromLongRead", eep_address, nbytes, buffer, 0, rs64_eep_fits(eep_address, nbytes), 0); rs64_eep_ctl_once(rdram, buffer); }
+ }
 diff --git a/librecomp/src/files.cpp b/librecomp/src/files.cpp
 index af6f18d..e5dee75 100644
 --- a/librecomp/src/files.cpp
