@@ -199412,7 +199412,8 @@ the undrawn 21:9 side margin). scratch/s7514/ctl_660_vs_840.png shows it.
 DISCRIMINATION: H-canon for the time base and H-dead for host-dependent durations (gated profiler, write-only stores); H-live refuted on
 two lines (static reader map + runtime gate rows with the bar ctl). No fix needed. The only host-vs-hardware difference is the VI period
 (60.000 Hz host vs ~59.94-60.1 Hz NTSC), which the game sees only through VI counts.
-Levels soak queued (s7514_fk_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by tools/s7514_time_shape.py).
+This selects H-canon (time base) and H-dead (host-speed durations) and refutes H-live; the next discriminator is the FL EEPROM census.
+Levels soak queued (s7514_fk_levels: L1 dd8 21:9Levels soak queued (s7514_fk_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by tools/s7514_time_shape.py).
 Next: class FL, EEPROM/save-path shape (NEXT.md), under the owner save rule.
 Files: src/main/upstream_compat.cpp (census + ctl), tools/s7514_time_refs.py (new), tools/s7514_time_shape.py (new),
 scratch/agent/soak_queue/s7514_fk_levels.sh, docs/CURRENT-TRUTH.md.
