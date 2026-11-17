@@ -200159,3 +200159,7 @@ stream as the cause (it is SP-done-independent). Open: the visible consequence (
 knife spikes / G5b-style drops, and the window grows with dd because the LLE takes longer) and the cost of the hardware-order fix
 (the guest can no longer overlap the next frame with LLE+RT64; FPS60 60/s must hold). lib/ edits exported
 (submodule-patches/N64ModernRuntime.patch).
+Verdict: the same-run LATE=alt A/B selects H-latent-fix for the gfx RSP-input window in flight (SP-done-reactive guest writes into
+the in-flight task's vertex/DL pool) and refutes H-canon ("inputs preserved until dp_complete") there; it refutes the DL chunk-link
+stream as the source (identical in both states). Next discriminator: per-task-state spike/drop counts + FPS60 cost of
+ROGUESQ_SP_LATE (NEXT.md).
