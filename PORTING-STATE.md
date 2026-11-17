@@ -200063,3 +200063,41 @@ Rules out: lost guest writes through the wrap-restore undo at dd1 and dd8 21:9 o
 snapshot->restore gap before record_submit (not in the compare window; same ranges, same absent writer).
 Soak queued: scratch/agent/soak_queue/s7532_fy_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s, UNDO_CHK armed, scorer above).
 Next: class FZ = host-thread writes INTO guest RDRAM (the census's guest-write rows and direct stores) from non-guest threads.
+
+## Session 7533 (2026-11-17) — class FZ closed (static census tools/s7533_fz_census.py --controls 7/7): 107 host writes into guest RDRAM classified, 0 unclassified; the one H-latent-fix (FPS60 arbiter clamp, a read-modify-write on the Gfx thread while the guest runs) FIXED with a byte CAS, plant control 1/1 L4 dd1 + L15 dd8 21:9
+
+Fold: soak s7532_fy_levels score=0 (tools/s7532_undo_score.py; L1 dd8 21:9, L7/L10/L12 dd4: runs 435-34498, 0 foreign undo bytes,
+control 1/1, 4/4 alive) -> class FY CLOSED 6 levels.
+
+Work unit FZ (reverse of FY): host code that WRITES guest RDRAM from a non-guest thread while the guest is running.
+Hypotheses per site: H-guest-thread, H-pre-guest, H-canon (device semantics or before the completion the guest waits on),
+H-instrument-only (env-gated, off in runner.sh / OWNER-OPT-INS), H-harness-lever, H-latent-fix (non-guest thread, guest running,
+RMW on a byte the guest also writes).
+1. New tools/s7533_fz_census.py: scans memcpy/memmove/memset/std::copy/fill/__atomic_* destinations, guest[..] =, MEM_x(..) =,
+   *(T*)(guest+..) = and copyNativeToRAM(guest..) calls, with per-function local alias tracking (`T* p = rdram + x`), across
+   librecomp src+include, ultramodern, src/main, src/rsp, rt64 hle/gbi/render. Each site resolves to its enclosing function and
+   is ruled by (file, function, line regex) with s7530 run_checks (verify / envoff).
+   Result: 107 sites = H-guest-thread 33, H-pre-guest 8, H-canon 23, H-instrument-only 34, H-harness-lever 2, not-guest 4
+   (alias false positives: local b[] arrays, struct initialisers), H-latent-FIXED 3, 0 unclassified.
+   H-canon rows: RSP SP_WR DMA (rsp.hpp dma_dmem_to_rdram, device semantics); RT64 colour/depth write-back copyNativeToRAM in
+   fullSync (inside send_dl, BEFORE dp_complete in events.cpp); dpc_bridge ring rewriters (CULL_SPIKE default on, DD_MELT, aspect
+   region/rect-wrap/pause-dim/title scissor, s4286 wrap restore/undo) - all RDP command bytes in the RSP-output ring, which the
+   guest never stores into (s7532 0 foreign bytes in 3.1 GB of the same window; s7489 host_wF=0); g1d title clear memset of a
+   wide cimg before the RDP draws it.
+   Controls 7/7: planted gfx-thread index store, alias store and memset -> UNCLASSIFIED; host local array -> not a site;
+   mutation (pre-s7533 RMW clamp put back in a copy of events.cpp) -> UNCLASSIFIED; rule-less census >=100 UNCLASSIFIED; live 0.
+2. The H-latent-fix: ultramodern events.cpp g1e::apply, ROGUESQ_FPS60=1 (owner recipe): `if (b[0x128EAF]==2) b = 1;` runs on
+   the Gfx thread at every ScreenUpdateAction while the guest CPU runs. A guest store to the arbiter limit byte landing between
+   the host read and the host write was overwritten with 1 (lost write; e.g. a menu/cutscene setting a different limit).
+   ORIGIN: the writer is our own host lever (g1e FPS60 clamp), not the game; the guest's value is legitimate and must win.
+   Fix: __atomic_compare_exchange_n on the byte (replaces only a 2). ROGUESQ_S7533_FZ_CHK=1 counts clamps, CAS failures
+   (= stores the old code would have lost), guest value changes, and plants one host store inside the read..CAS window at the
+   3rd clamp (control). First run planted at the 600th clamp and never fired (the game writes the byte only 5-7 times per run,
+   not per frame) - control dead, so rerun after moving it.
+   Run 2 (scratch/s7533_fz, g1e_owner_quiet_arms HOLD 120, FPS60 fullscreen godmode, NO_SAVE_WRITE): L4 dd1 clamps=7
+   guest_changes=6 cas_fail=0 control=1; L15 dd8 21:9 clamps=8 guest_changes=7 cas_fail=0 control=1; both alive, 0 crash lines.
+   tools/s7533_fz_score.py (--controls 5/5) score=0. So the race window was real but never hit in these runs (guest writes
+   are rare); the CAS removes it rather than leaving it to timing.
+Rules out: any other host-thread guest write active in the owner recipe outside device semantics / the RSP ring.
+Queued: scratch/agent/soak_queue/s7533_fz_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s). lib/ edit exported
+(submodule-patches/N64ModernRuntime.patch).

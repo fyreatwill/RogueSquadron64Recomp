@@ -1642,3 +1642,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117 | s7526 fold: s7525_v2p_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive) -> V2P CLOSED levels. In-session s7526 same-run twin (V2P=alt per task, forwarded-byte digests, L4 dd1): cross/same 264/261, ctl cross 0 -> render input H-same; owner row added.
 20261117-072454 | s7528_evict_levels | rc=0 | 908s | scratch/agent/soak_results/s7528_evict_levels_20261117-072454.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117 | s7529 fold: s7528_evict_levels score=0 (tools/s7528_evict_score.py; L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive) -> FQ evict fix qualified 6 levels. In-session s7529 FV static census: 0 new H-latent-fix rows.
+20261117-081754 | s7532_fy_levels | rc=0 | 909s | scratch/agent/soak_results/s7532_fy_levels_20261117-081754.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0

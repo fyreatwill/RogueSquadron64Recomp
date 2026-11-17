@@ -6094,7 +6094,7 @@ index 3198be0..c25d889 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..025d019 100644
+index 149e770..4f8325e 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,471 @@
@@ -7088,7 +7088,7 @@ index 149e770..025d019 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +1065,443 @@ void vi_thread_func() {
+@@ -249,15 +1065,469 @@ void vi_thread_func() {
      }
  }
  
@@ -7443,7 +7443,33 @@ index 149e770..025d019 100644
 +static void apply(uint8_t* rdram) {
 +    // ROGUESQ_FPS60=1 (opt-in, default retail 30 game fps): clamp the arbiter limit byte 2 -> 1 so flight produces a frame per VI.
 +    static const bool fps60 = [] { const char* e = std::getenv("ROGUESQ_FPS60"); return e && *e && *e != '0'; }();
-+    if (fps60 && rdram[0x128EAF ^ 3] == 2) rdram[0x128EAF ^ 3] = 1;
++    // s7533 class FZ: this runs on the Gfx thread (ScreenUpdateAction) while the guest CPU thread runs, so the old
++    // `if (b == 2) b = 1;` was a read-modify-write race: a guest store landing between the read and the write (e.g. the game
++    // setting a menu/cutscene limit) was overwritten with 1. A byte compare-exchange only ever replaces a 2 with a 1.
++    // ROGUESQ_S7533_FZ_CHK=1 counts clamps, CAS failures (= guest stores the old code would have lost) and guest-side value
++    // changes between VIs; it plants one host store inside the read..CAS window at the 3rd clamp (control, must fail once).
++    if (fps60) {
++        static const bool chk = [] { const char* e = std::getenv("ROGUESQ_S7533_FZ_CHK"); return e && *e && *e != '0'; }();
++        static uint64_t n_clamp = 0, n_fail = 0, n_ctl = 0, n_vi = 0, n_guest_chg = 0; static int last = -1;
++        uint8_t* lb = &rdram[0x128EAF ^ 3];
++        uint8_t cur = __atomic_load_n(lb, __ATOMIC_RELAXED);
++        if (chk) { ++n_vi; if (last >= 0 && cur != (uint8_t)last && !(last == 1 && cur == 1)) ++n_guest_chg; }
++        if (cur == 2) {
++            const bool plant = chk && n_clamp == 2;
++            if (plant) __atomic_store_n(lb, (uint8_t)3, __ATOMIC_RELAXED);  // stands in for a guest store inside the window
++            uint8_t expect = 2;
++            if (__atomic_compare_exchange_n(lb, &expect, (uint8_t)1, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) ++n_clamp;
++            else if (plant) { ++n_ctl; ++n_clamp; __atomic_store_n(lb, (uint8_t)2, __ATOMIC_RELAXED); }
++            else ++n_fail;
++        }
++        if (chk) {
++            last = __atomic_load_n(lb, __ATOMIC_RELAXED);
++            if ((n_vi % 600) == 0)
++                std::fprintf(stderr, "[s7533-fz] vi=%llu clamps=%llu cas_fail=%llu guest_changes=%llu control(must be 1 once clamps>2)=%llu\n",
++                             (unsigned long long)n_vi, (unsigned long long)n_clamp, (unsigned long long)n_fail,
++                             (unsigned long long)n_guest_chg, (unsigned long long)n_ctl);
++        }
++    }
 +    static const char* le = std::getenv("ROGUESQ_G1E_LIMIT"); static const bool on = le && *le;
 +    if (!on) return;
 +    static const int lim = std::atoi(le); static const int win = [] { const char* e = std::getenv("ROGUESQ_G1E_WIN"); return (e && *e) ? std::atoi(e) : 1200; }();
@@ -7532,7 +7558,7 @@ index 149e770..025d019 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1521,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1547,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -7586,7 +7612,7 @@ index 149e770..025d019 100644
  
          (void)task_type;
      }
-@@ -325,6 +1603,34 @@ void ultramodern::trigger_config_action() {
+@@ -325,6 +1629,34 @@ void ultramodern::trigger_config_action() {
  std::atomic<ultramodern::renderer::SetupResult> renderer_setup_result = ultramodern::renderer::SetupResult::Success;
  std::atomic<ultramodern::renderer::GraphicsApi> renderer_chosen_api = ultramodern::renderer::GraphicsApi::Auto;
  
@@ -7621,7 +7647,7 @@ index 149e770..025d019 100644
  void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready, ultramodern::renderer::WindowHandle window_handle) {
      bool enabled_instant_present = false;
      using namespace std::chrono_literals;
-@@ -354,11 +1660,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -354,11 +1686,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
      thread_ready->signal();
  
      while (!exited) {
@@ -7639,7 +7665,7 @@ index 149e770..025d019 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1680,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1706,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -7663,7 +7689,7 @@ index 149e770..025d019 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1706,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1732,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
@@ -7708,7 +7734,7 @@ index 149e770..025d019 100644
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1804,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1830,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -7716,7 +7742,7 @@ index 149e770..025d019 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,9 +1812,27 @@ void set_dummy_vi(bool odd) {
+@@ -463,9 +1838,27 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -7744,7 +7770,7 @@ index 149e770..025d019 100644
  }
  
  extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
-@@ -473,7 +1840,13 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,7 +1866,13 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -7758,7 +7784,7 @@ index 149e770..025d019 100644
  }
  
  #define OS_VI_GAMMA_ON          0x0001
-@@ -489,6 +1862,7 @@ extern "C" void osViSetSpecialFeatures(uint32_t func) {
+@@ -489,6 +1888,7 @@ extern "C" void osViSetSpecialFeatures(uint32_t func) {
      std::lock_guard lock{ events_context.message_mutex };
      ViState* next_state = events_context.vi.get_next_state();
      uint32_t* control_out = &next_state->control;
@@ -7766,7 +7792,7 @@ index 149e770..025d019 100644
      if ((func & OS_VI_GAMMA_ON) != 0) {
          *control_out |= VI_CTRL_GAMMA_ON;
      }
-@@ -522,6 +1896,12 @@ extern "C" void osViSetSpecialFeatures(uint32_t func) {
+@@ -522,6 +1922,12 @@ extern "C" void osViSetSpecialFeatures(uint32_t func) {
          *control_out &= ~VI_CTRL_DITHER_FILTER_ON;
          *control_out |= next_state->mode->comRegs.ctrl & VI_CTRL_ANTIALIAS_MASK;
      }
@@ -7779,7 +7805,7 @@ index 149e770..025d019 100644
  }
  
  extern "C" void osViBlack(uint8_t active) {
-@@ -530,11 +1910,20 @@ extern "C" void osViBlack(uint8_t active) {
+@@ -530,11 +1936,20 @@ extern "C" void osViBlack(uint8_t active) {
      uint32_t* state_out = &next_state->state;
      if (active) {
          *state_out |= VI_STATE_BLACK;
@@ -7800,7 +7826,7 @@ index 149e770..025d019 100644
  extern "C" void osViRepeatLine(uint8_t active) {
      std::lock_guard lock{ events_context.message_mutex };
      ViState* next_state = events_context.vi.get_next_state();
-@@ -559,24 +1948,34 @@ extern "C" void osViSetYScale(float scale) {
+@@ -559,24 +1974,34 @@ extern "C" void osViSetYScale(float scale) {
  }
  
  extern "C" PTR(void) osViGetNextFramebuffer() {
@@ -7835,7 +7861,7 @@ index 149e770..025d019 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -589,6 +1988,7 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -589,6 +2014,7 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      moodycamel::LightweightSemaphore gfx_thread_ready;
      moodycamel::LightweightSemaphore task_thread_ready;
      events_context.rdram = rdram;
@@ -7843,7 +7869,7 @@ index 149e770..025d019 100644
      events_context.sp.gfx_thread = std::thread{ gfx_thread_func, rdram, &gfx_thread_ready, window_handle };
      events_context.sp.task_thread = std::thread{ task_thread_func, rdram, &task_thread_ready };
  
-@@ -630,8 +2030,73 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -630,8 +2056,73 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      // calling osViSetMode. Otherwise update_vi dereferences a null mode.
      events_context.vi.states[0].mode = &dummy_mode;
      events_context.vi.states[1].mode = &dummy_mode;

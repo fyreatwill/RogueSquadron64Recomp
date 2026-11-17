@@ -503,7 +503,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     loaded_sections 3->7 / 3; gf_stale 0 both = latent). Other gaps instrument-only or closed (PORTING-STATE s7528). Soak score 0 (L1/L7/L10/L12): FQ fix qualified.
     **FV CLOSED (s7529, static):** tools/s7529_fv_census.py 4/4: 90 guest-keyed containers, only H-latent-fix = FQ func_map.
     **FW+FX+FY CLOSED (s7530-32):** fw (175 latches), fx (rt64 32), s7532_fy_census.py 7/7 (84 guest-byte copies): 0 H-latent-fix.
-    Wrap-restore undo race window (S7532_UNDO_CHK, L4/L15): 0 foreign bytes in 3.1 GB, ctl 1/1. Next: FZ host-thread guest writes.
+    Undo race window (S7532_UNDO_CHK): 0 foreign bytes, ctl 1/1; levels soak 0. **FZ CLOSED (s7533):** s7533_fz_census.py 7/7, 107 host
+    guest writes, only H-latent-fix = FPS60 clamp RMW on Gfx thread -> byte CAS (FZ_CHK ctl 1/1 L4/L15, cas_fail 0). Next: fold s7533_fz_levels.
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
