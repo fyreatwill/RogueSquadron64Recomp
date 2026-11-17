@@ -1627,3 +1627,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-003433 | s7514_fk_levels | rc=0 | 909s | scratch/agent/soak_results/s7514_fk_levels_20261117-003433.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117-005900 | s7515_fl_levels | rc=0 | 909s | scratch/agent/soak_results/s7515_fl_levels_20261117-005900.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117-012758 | s7516_fm_levels | rc=0 | 910s | scratch/agent/soak_results/s7516_fm_levels_20261117-012758.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117-020013 | s7517_fn_levels | rc=0 | 910s | scratch/agent/soak_results/s7517_fn_levels_20261117-020013.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117 | s7518 fold: s7517_fn_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: 0 rule mismatches, ctl gamma drawn, 4/4 alive) -> FN CLOSED 6 levels. In-session s7518 FO (L4 dd1/L15 dd8 21:9): D-cache contract, 0 CPU stale loads outside ctl (ctl L4 caught: inflate_codes), all RSP tasks flushed, MusyX stream ring H-dead; levels soak queued.

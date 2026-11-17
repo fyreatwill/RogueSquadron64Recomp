@@ -2247,7 +2247,7 @@ index 0be1513..47922ad 100644
 +    RS64_PAK("osPfsRepairId", ctx->r4, -1);
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..91873a6 100644
+index 43509ba..28320e5 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -2768,7 +2768,7 @@ index 43509ba..91873a6 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,9 +671,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,26 +671,85 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -2780,7 +2780,10 @@ index 43509ba..91873a6 100644
          }
      }
  }
-@@ -313,15 +683,69 @@ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+ 
++extern "C" int rs64_s7518_cache_on(void);  // s7518 class FO (ultra_translation.cpp)
++extern "C" void rs64_s7518_event(int op, uint32_t a, uint32_t n);  // s7518 (src/main/upstream_compat.cpp)
+ extern "C" void osPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      uint32_t mb = ctx->r4;
      uint32_t pri = ctx->r5;
      uint32_t direction = ctx->r6;
@@ -2845,12 +2848,14 @@ index 43509ba..91873a6 100644
 +    } else if (s7398_ctl() && s7398_fix()) {
 +        fprintf(stderr, "[s7398-io] skip mb=0x%08X (outside RDRAM)\n", mb);
 +    }
++    if (rs64_s7518_cache_on()) { fprintf(stderr, "[cache] op=dma%u a=%08X n=%X ra=%08X\n", direction, (uint32_t)dramAddr, size, (uint32_t)ctx->r31);
++        if (direction == 0) rs64_s7518_event(1, (uint32_t)dramAddr, size); }
      do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
 +    s7398_msg = 0;
  
      ctx->r2 = 0;
  }
-@@ -336,9 +760,14 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +764,16 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -2860,6 +2865,8 @@ index 43509ba..91873a6 100644
      debug_printf("[pi] DMA from 0x%08X into 0x%08X of size 0x%08X\n", devAddr, dramAddr, size);
  
 +    if (s7398_fix()) s7398_msg = (uint32_t)ctx->r5;  // caller filled the OSIoMesg; complete with it like the PI manager
++    if (rs64_s7518_cache_on()) { fprintf(stderr, "[cache] op=dma%u a=%08X n=%X ra=%08X\n", direction, (uint32_t)dramAddr, size, (uint32_t)ctx->r31);
++        if (direction == 0) rs64_s7518_event(1, (uint32_t)dramAddr, size); }
      do_dma(PASS_RDRAM mq, dramAddr, physical_addr, size, direction);
 +    s7398_msg = 0;
  
@@ -5356,7 +5363,7 @@ index ae0f44f..0e1b7f9 100644
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..840337f 100644
+index e0d367e..1ef12c4 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
 @@ -1,10 +1,30 @@
@@ -5474,7 +5481,52 @@ index e0d367e..840337f 100644
      ctx->r2 = (int32_t)(total_count >> 32);
      ctx->r3 = (int32_t)(total_count >> 0);
  }
-@@ -123,7 +167,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -102,20 +146,40 @@ extern "C" void osVirtualToPhysical_recomp(uint8_t * rdram, recomp_context * ctx
+     ctx->r2 = osVirtualToPhysical((int32_t)ctx->r4);
+ }
+ 
++// s7518 class FO: D-cache maintenance contract census. The host memory is coherent, so the four cache calls stay no-ops; with
++// ROGUESQ_LOG_CACHE_SHAPE=1 each call, each PI DMA (pi.cpp) and each SP task start (upstream_compat.cpp) prints one [cache] line in
++// call order, scored offline against VR4300 semantics by tools/s7518_cache_shape.py. Positive control ROGUESQ_CACHE_SHAPE_CTL=<n>:
++// the n-th osInvalDCache call is not logged (a planted missing invalidate; [cache-ctl] names it), so the scorer must flag its DMA.
++extern "C" int rs64_s7518_cache_on(void) {
++    static const int on = [] { const char* e = std::getenv("ROGUESQ_LOG_CACHE_SHAPE"); return (e && e[0] && e[0] != '0') ? 1 : 0; }();
++    return on;
++}
++extern "C" void rs64_s7518_event(int op, uint32_t a, uint32_t n);  // s7518 stale-load watch (src/main/upstream_compat.cpp)
++static void rs64_s7518_cache_op(const char* op, uint32_t a, uint32_t n, uint32_t ra) {
++    if (!rs64_s7518_cache_on()) return;
++    if (op[0] == 'i' && op[1] == 'n') {
++        static const long ctl = [] { const char* e = std::getenv("ROGUESQ_CACHE_SHAPE_CTL"); return e ? std::strtol(e, nullptr, 0) : 0L; }();
++        static long k = 0;
++        if (++k == ctl) { std::fprintf(stderr, "[cache-ctl] dropped inv k=%ld a=%08X n=%X ra=%08X\n", k, a, n, ra); return; }
++    }
++    std::fprintf(stderr, "[cache] op=%s a=%08X n=%X ra=%08X\n", op, a, n, ra);
++    if (op[0] == 'i' && op[1] == 'n') rs64_s7518_event(0, a, n);
++}
++
+ extern "C" void osInvalDCache_recomp(uint8_t * rdram, recomp_context * ctx) {
+-    ;
++    rs64_s7518_cache_op("inv", (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31);
+ }
+ 
+ extern "C" void osInvalICache_recomp(uint8_t * rdram, recomp_context * ctx) {
+-    ;
++    rs64_s7518_cache_op("iinv", (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31);
+ }
+ 
+ extern "C" void osWritebackDCache_recomp(uint8_t * rdram, recomp_context * ctx) {
+-    ;
++    rs64_s7518_cache_op("wb", (uint32_t)ctx->r4, (uint32_t)ctx->r5, (uint32_t)ctx->r31);
+ }
+ 
+ extern "C" void osWritebackDCacheAll_recomp(uint8_t * rdram, recomp_context * ctx) {
+-    ;
++    rs64_s7518_cache_op("wball", 0, 0, (uint32_t)ctx->r31);
+ }
+ 
+ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -123,7 +187,12 @@ extern "C" void osSetIntMask_recomp(uint8_t * rdram, recomp_context * ctx) {
  }
  
  extern "C" void __osDisableInt_recomp(uint8_t * rdram, recomp_context * ctx) {
@@ -5488,7 +5540,7 @@ index e0d367e..840337f 100644
  }
  
  extern "C" void __osRestoreInt_recomp(uint8_t * rdram, recomp_context * ctx) {
-@@ -170,3 +219,26 @@ extern "C" void __osSetFpcCsr_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -170,3 +239,26 @@ extern "C" void __osSetFpcCsr_recomp(uint8_t * rdram, recomp_context * ctx) {
  //extern "C" int32_t osGetThreadEx(void) {
  //    return ultramodern::this_thread();
  //}

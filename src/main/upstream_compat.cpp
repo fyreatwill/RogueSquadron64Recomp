@@ -4184,7 +4184,57 @@ extern "C" int rs64_s7488_ust(uint32_t pc, int idx, uint32_t a, int w, const cha
             ++s_s7488_ctries; s7480_add(blk, req, now, 5); s_s7488_ctl = 1; s_s7488_ctime = now; s_s7488_cblk = blk;
             std::fprintf(stderr, "[s7488] ust-ctl SET blk=%08X req=%X by pc=%08X fn=%s a=%08X try=%d t=%.1f\n", blk, req, pc, s.fn.c_str(), a, s_s7488_ctries, now - s_s7475_t0); } }
     return 0; }
+/* s7518 class FO second line: CPU loads that a VR4300 could serve from a stale D-cache line (ROGUESQ_S7518_STALEWATCH=1, needs
+   ROGUESQ_LOG_CACHE_SHAPE=1). Per 16-byte line a residency state, driven by osInvalDCache, PI cart->RDRAM DMA and the guest loads
+   the s7484 load watch sees (every invalidated or DMA'd line is marked in its bitmap, never unmarked):
+     C unknown (may be resident)   N invalidated, not re-cached   R resident, fresh   F DMA'd while uncached (fresh)   S DMA'd while
+     possibly resident (a cached copy is stale).
+     inv -> N (n >= 8192: every line, ROM index writeback-invalidate path).  DMA: N/F -> F, C/R/S -> S.
+     load: N/F -> R (counted fresh_load when F), R stays, S -> STALE row (hardware could return the pre-DMA bytes), C ignored.
+   Conservative (no eviction modelled, an 8 KB cache evicts sooner) and loads only: stores (write-allocate) and lwl/lwr are not seen.
+   Same-run controls: fresh_load > 0 (the CPU reads DMA'd data), and ROGUESQ_CACHE_SHAPE_CTL drops one invalidate-after-DMA, which
+   must turn the next CPU read of that buffer into a STALE row. Measurement only. */
+static std::vector<uint8_t> s_s7518_ln;
+static std::atomic<uint64_t> s_s7518_stale{0}, s_s7518_fresh{0}, s_s7518_res{0}, s_s7518_dmaS{0}, s_s7518_dmaF{0};
+static std::mutex s_s7518_mu; static std::map<uint32_t, std::pair<uint64_t, uint32_t>> s_s7518_pcs;
+extern "C" void rs64_s7518_summary(void);
+static bool s7518_watch() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7518_STALEWATCH"); return e && e[0] && e[0] != '0'; }(); return on; }
+enum { S7518_C = 0, S7518_N, S7518_R, S7518_F, S7518_S };
+static void s7518_markln(uint32_t l) { const uint32_t b = l * 16u; if (b + 16u > 0x17FFFF0u) return; g_rs64_s7475_bm[b >> 3] = 0xFF; g_rs64_s7475_bm[(b >> 3) + 1] = 0xFF; }
+extern "C" void rs64_s7518_event(int op, uint32_t a, uint32_t n) {  /* op 0 inv, 1 dma0 */
+    if (!s7518_watch()) return;
+    if (s_s7518_ln.empty()) { s_s7518_ln.assign(0x1800000u / 16u, S7518_C);
+        if (!g_rs64_s7475_bm) g_rs64_s7475_bm = (unsigned char*)std::calloc(0x1800000u >> 3, 1);
+        g_rs64_s7484_on = g_rs64_s7475_bm ? 1 : 0; std::fprintf(stderr, "[s7518] stale watch armed bm=%d\n", g_rs64_s7484_on); }
+    if (!g_rs64_s7484_on || !n) return;
+    const uint32_t o = (a & 0x1FFFFFFFu); if (o >= 0x1800000u) return;
+    const uint32_t lo = o / 16u, hi = std::min<uint32_t>((o + n - 1u) / 16u, 0x1800000u / 16u - 1u);
+    if (op == 0) {
+        if (n >= 8192) { for (auto& v : s_s7518_ln) v = S7518_N; return; }
+        for (uint32_t l = lo; l <= hi; l++) { s_s7518_ln[l] = S7518_N; s7518_markln(l); }
+        return; }
+    for (uint32_t l = lo; l <= hi; l++) { uint8_t& v = s_s7518_ln[l];
+        if (v == S7518_N || v == S7518_F) { v = S7518_F; ++s_s7518_dmaF; } else { v = S7518_S; ++s_s7518_dmaS; } s7518_markln(l); }
+    static uint64_t nd = 0; if ((++nd & 2047u) == 0) rs64_s7518_summary();
+}
+static int s7518_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    const uint32_t o = a - 0x80000000u; if (o >= 0x1800000u || s_s7518_ln.empty()) return 0;
+    for (uint32_t l = o / 16u; l <= (o + (uint32_t)w - 1u) / 16u; l++) { uint8_t& v = s_s7518_ln[l];
+        if (v == S7518_S) { const uint64_t k = ++s_s7518_stale; v = S7518_R; std::lock_guard<std::mutex> lk(s_s7518_mu); auto& e = s_s7518_pcs[pc];
+            if (!e.first) { e.second = a; std::fprintf(stderr, "[s7518-load] STALE pc=%08X fn=%s a=%08X w=%d k=%llu\n", pc, fn ? fn : "?", a, w, (unsigned long long)k); }
+            ++e.first; }
+        else if (v == S7518_F) { const uint64_t k = ++s_s7518_fresh; v = S7518_R;
+            if ((k & (k - 1)) == 0) std::fprintf(stderr, "[s7518-load] fresh pc=%08X fn=%s a=%08X k=%llu\n", pc, fn ? fn : "?", a, (unsigned long long)k); }
+        else if (v == S7518_N) { v = S7518_R; ++s_s7518_res; } }
+    return 1;
+}
+extern "C" void rs64_s7518_summary(void) {
+    if (!s7518_watch()) return;
+    std::fprintf(stderr, "[s7518-sum] stale_load=%llu fresh_load=%llu inv_then_load=%llu dma_lines_fresh=%llu dma_lines_over_resident=%llu stale_pcs=%zu\n",
+        (unsigned long long)s_s7518_stale.load(), (unsigned long long)s_s7518_fresh.load(), (unsigned long long)s_s7518_res.load(),
+        (unsigned long long)s_s7518_dmaF.load(), (unsigned long long)s_s7518_dmaS.load(), s_s7518_pcs.size()); }
 extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7518_watch()) return s7518_load(pc, a, w, fn);
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu); return s7484_load(pc, a, w, fn); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
@@ -6687,6 +6737,7 @@ static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
     return ok;
 }
 
+extern "C" int rs64_s7518_cache_on(void);  // s7518 class FO (librecomp ultra_translation.cpp)
 extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
     rs64_m5_raw_task_boundary("start", rdram, static_cast<uint32_t>(ctx->r4));
     if (!rs64_guest_range_valid(static_cast<uint64_t>(ctx->r4), sizeof(OSTask))) {
@@ -6698,6 +6749,12 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
         return;
     }
     rs64_sp_reset_yield_request();
+    { /* s7518 class FO: task ranges the RSP reads, in [cache] call order */
+      if (rs64_s7518_cache_on()) { OSTask* t18 = TO_PTR(OSTask, ctx->r4);
+        std::fprintf(stderr, "[cache] op=sp%u a=%08X n=%X ra=%08X uc=%08X ucn=%X ud=%08X udn=%X out=%08X stk=%08X yld=%08X\n",
+            (uint32_t)t18->t.type, (uint32_t)t18->t.data_ptr, (uint32_t)t18->t.data_size, (uint32_t)ctx->r31, (uint32_t)t18->t.ucode,
+            (uint32_t)t18->t.ucode_size, (uint32_t)t18->t.ucode_data, (uint32_t)t18->t.ucode_data_size, (uint32_t)t18->t.output_buff,
+            (uint32_t)t18->t.dram_stack, (uint32_t)t18->t.yield_data_ptr); } }
     { if (rs64_s7324_on) { OSTask* t30 = TO_PTR(OSTask, ctx->r4); if (t30->t.type == 2u) rs64_s7330_aud_submit((uint32_t)t30->t.data_ptr); } }  /* s7330 */
     { if (rs64_s7331_on) { OSTask* t32 = TO_PTR(OSTask, ctx->r4); const uint32_t f[9] = { (uint32_t)t32->t.type, (uint32_t)t32->t.ucode, (uint32_t)t32->t.dram_stack,
         (uint32_t)t32->t.output_buff, (uint32_t)t32->t.output_buff_size, (uint32_t)t32->t.data_ptr, (uint32_t)t32->t.data_size, (uint32_t)t32->t.yield_data_ptr,

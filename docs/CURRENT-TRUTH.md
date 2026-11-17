@@ -437,72 +437,28 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     records (main 859 incl. 384 in splices + 25 slot copies, B 393) rebuilt from an independent ROM decode (not rabbitizer) = the only
     rsp.* line, 0 defects, coverage = every rsp.* line; 24 LxV/SxV scale by the hardware size (lpv/luv/spv/suv 8); 4/4 ctl.
     **The RSP generator classes (FD/FE/FF + s7091/s7092/s7093) are exhausted.**
-    **FG CLOSED L4/L15 (s7510): PI cart->RDRAM DMA shape H-canon.** ROGUESQ_LOG_DMA=1 census, tools/s7510_pi_dma_shape.py --controls
-    (hardware model = mupen dma_pi_write / n64brew unaligned rules): 15,961 + 16,720 live copies (L4 dd1, L15 dd8 21:9) all canonical,
-    0 diffs, 7 synthetic + 2 mutant ctl PASS; Debug-build asserts make cart_odd/dram_mis8 fail-stop. **Levels fold (s7511): s7510_fg_levels
-    score=0 (L1 dd8 21:9, L7/L10/L12 dd4: 62,751 copies all canon, 0 diffs) -> FG CLOSED 6 levels.**
-    **FH CLOSED L4/L15 (s7511): AI DMA shape H-canon.** ROGUESQ_LOG_AI_SHAPE=1 (librecomp ai.cpp, every osAiSetNextBuffer before the
-    guard), tools/s7511_ai_dma_shape.py --controls (hardware model = retail libultra 0x80029E80 hdwrBugFlag -0x2000, disassembled from
-    the ROM, + mupen ai_controller.c AI_LEN&~7 / delayed carry +0x2000): 22,819 + 23,295 live calls all len 0x300, 8-aligned, 0 diffs,
-    0 buffer ends on an 8 KB boundary (carry path dead), census complete (n contiguous, bytes/s = DAC rate x4 ratio 1.000), 7+2 ctl PASS.
-    0 `lui 0xA4xx` in recompiled game code (no raw RCP register writes); osAiGetLength/osAiGetStatus never called by the game.
-    **Levels fold (s7512): s7511_fh_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4, 91,860 calls canon) -> FH CLOSED 6 levels.**
-    **FI CLOSED L4/L15 (s7512): VI register shape H-canon + one boot gap FIXED.** ROGUESQ_LOG_VI_SHAPE=1 (ultramodern update_vi, + in-run
-    ctl ROGUESQ_VI_SHAPE_CTL=<swap>), tools/s7512_vi_shape.py --controls (libultra __osViSwapContext model from raw mode words + hardware
-    widths): 11,956 / 11,987 commits equal in every register, 0 out of width (max origin 0xB20800, width 0x800), ctl 30/30. RT64 decodeVI
-    already masks at hardware widths. Fix ROGUESQ_VI_BLACK_RETAIL (default on, =0 old): osViSetMode resets VI state = 1 and init seeds
-    BLACK + mode ctrl like retail (ROM 0x800352D0 / 0x80034C50), osViBlack honoured (the old no-op is gone); =0 arm differs on 5 boot VIs
-    only. **Levels fold (s7513): s7512_fi_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4, ~12k commits each, diff {}, ctl PASS) -> FI CLOSED 6 levels.**
-    **FJ L4 title (s7513): SI/joybus shape - one H-live row FIXED (stick range), rest H-canon/H-dead.** Live SI wrappers: osContInit 1,
-    StartQuery/GetQuery 4, StartReadData/GetReadData 1 (siServiceThread 0x80002E10 -> status 0x80110788, pads 0x8010FF30), osMotor* 9,
-    osPfsInitPak/Find/Allocate/ReadWrite/Delete 8 (Controller Pak save path), osEepromProbe/LongRead/LongWrite; 0 raw __osSiRaw* callers.
-    Game reads of SI data (code read): status errno (+3) and type&1 only (pollControllerInputs 0x8000305C, initMemoryPack, rumble), pad
-    button/stick/errno -> 0x80130B88. Status byte: ours 0x00, hardware/mupen 0x02 (no pak) - no game load of it -> H-dead, left as is.
-    __osContRamRead/Write return -1 (not a libultra code) but only __osPfsReleasePages/DeclarePage (behind stubbed osPfs*) call them -> dead.
-    **H-live: stick.** tickControllerInput 0x800BF0D0 divides x by 75 / y by 80 (ROM 0x800A622C/30), clamps [-1,1], dead zone 0.015;
-    getControllerStick*Percentage x 1/128 unclamped. ultramodern sent (int8)(127*x): full turn at 59%/63% host travel (~1.6x retail).
-    Fix ROGUESQ_STICK_GATE (default on, =0 old, "C,D" custom; src/main/rs64_stick_gate.h): host vector -> OEM octagon 85 cardinal /
-    (70,70) diagonal. tools/test_stick_gate.cpp ALL PASS + mutant ctl; live title arms on/off: guest bytes +-85 vs +-127 same schedule
-    (tools/s7513_stick_gate_score.py, ctl PASS, mutant rc 1). Gate constants 85/70 = OEM-pad figures (single-source, no pad measured
-    here); 75/80 game divisors are ROM-read. **Owner to judge feel** (OWNER-OPT-INS row). Levels soak queued (s7513_fj_levels).
-    **Levels fold (s7514): s7513_fj_levels score=0 (L1 dd8 21:9, L7/L10 dd4: guest stick max 85, 0 out of the 85/70 octagon; L4 STICK_GATE=0
-    ctl max 127 PASS; 4/4 alive) -> FJ CLOSED 6 levels.** Stick feel still owner-judged.
-    **FK CLOSED L4/L15 (s7514): time/Count shape H-canon + host-dependent durations H-dead.** Static reader map (tools/s7514_time_refs.py,
-    lui/addiu resolver over RecompiledFuncs): 14 osGetTime sites in 10 functions, osGetCount/osSetTime/osStopTimer 0 callers, osSetTimer 1
-    (installPeriodicCallback, BG: gated off on route). Every osGetTime-derived value goes to (a) timeSnapshotFiller (BL s7402: sim dt takes
-    the VI-count branch), (b) write-only durations (musyx 0x801499E8, voice pool 0x80154678/80), or (c) the profiler-bar overlay:
-    gfx task time 0x80128D34 -> arbiter record -> readBufferSwapState, 0x80128EDC/EE0 -> drawFrameProfilerBars -> emitProfilerBarSegment
-    0x80023D40, which returns at once unless gate byte 0x80038CE0 != 0 (ROM data 1; mainGameLoop clears it first thing, its only store).
-    No game decision reads a host-speed-dependent duration. Runtime ROGUESQ_LOG_TIME_SHAPE=1 (src/main/upstream_compat.cpp, every 30th
-    swap) + ctl ROGUESQ_TIME_SHAPE_CTL=<swap> (gate=1 for 120 swaps), tools/s7514_time_shape.py --controls (synthetic + 4 mutants PASS):
-    L4 dd1 + L15 dd8 21:9, 391 rows each: 46875.0 ticks/host ms, 0 steps off by >2%, monotone, VI stamp 781,250 ticks/VI (60 Hz host;
-    hardware NTSC ~780k), clk 46875000, gate 0 on every row from swap 30 except ctl 4/4 = 1. Second line: fb dumps show the bars only
-    in the 2 dumps rendered under ctl (L4 3360 px, L15 1932 px; 0 before; after = stale pixels in the undrawn wide margin only).
-    Levels soak queued (s7514_fk_levels). **Levels fold (s7515): score=0 on L1 dd8 21:9, L7/L10/L12 dd4 -> FK CLOSED 6 levels.**
-    **FL CLOSED L4/L15 (s7515): EEPROM shape H-canon.** ROGUESQ_LOG_EEP_SHAPE=1 (librecomp eep.cpp, logging only; ctl ROGUESQ_EEP_SHAPE_CTL=1
-    plants one never-executed addr-70 row) + tools/s7515_eep_shape.py --controls (re-derived libultra 4K model, 5 mutants PASS): probe 1 (4K),
-    LongRead blk0 32 B + blk4 200 B; game capacity 0x200 = 64 blocks (matches probe + 512-byte save), 2 records x 0xC8 + 0x20 = 432 B; 0 live
-    divergence, ctl flagged. LongWrite not hit on the route: same block math, game capacity check -> canon by static reading (single-source);
-    no-wait-per-block timing H-dead (static). Levels soak queued (s7515_fl_levels).
-    **Levels fold (s7516): s7515_fl_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4); L7 ran 2 live LongWrites (blocks 29 + 4, 200 B, canon)
-    = the runtime second line for the write path -> FL CLOSED 6 levels.**
-    **FM CLOSED L4/L15 (s7516): Rumble/Controller Pak shape H-canon, pak paths H-dead with no pak.** Port reports a pad, no pak, on
-    port 0 (main.cpp get_connected_device_info). Static (roguesquadron.elf disasm): every osMotorStart/Stop (processPolledControllerData,
-    initRumblePakSlots, serviceRumblePakMotors) sits behind the game's present flag pfs+104, set only by osMotorInit == 0; Init is
-    latched by pfs+105 (cleared by errno 8/4 and by clearControllerPakPresence at mission start/end); osPfs* only via initMemoryPack on
-    save device 2 (0x80112720; 1 = EEPROM when the probe succeeds); initMemoryPack's osContStartQuery/osRecvMesg uses the SI event queue
-    0x80110770 (= siServiceThread's), so the host's send_si_message wakes it. Game libultra is the 2.0D motor form (per-channel init
-    table, PFS_ERR_INVALID 5). Runtime ROGUESQ_LOG_PAK_SHAPE=1 (librecomp cont.cpp/pak.cpp, logging only), scorer tools/s7516_pak_shape.py
-    --controls (6 mutants) --ctl: L4 dd1 / L15 dd8 21:9 = 3 osMotorInit ret 1 each (t~0, mission transitions, tried=0 each), 0 Start/Stop,
-    0 osPfs, dev=1; ctl arm ROGUESQ_PAK_SHAPE_CTL=1 (port reports a Rumble Pak) = Init ret 0 x6, Stop x6, Start x4 (t=84.6 rumble), all
-    canon -> score 0. **Levels fold (s7517): s7516_fm_levels score=0 (L1/L7/L10 no pak canon, ctl L12 Init/Start/Stop ok) -> FM CLOSED 6 levels.**
-    **FN CLOSED L4/L15 (s7517): VI special features H-canon / gamma H-dead in play.** 12 sites pass only gamma 1/2, divot 10/20, dither
-    filter 40/80; ROM rule == ultramodern (CTRL_SET bit 8 write-only). Gamma on only in mode 0x80128C90 zero-line VIs (2-3 per mode switch,
-    vStart == vEnd = hardware black). ROGUESQ_LOG_VI_FEAT=1 (+ ctl ROGUESQ_VI_FEAT_CTL=<swap>), tools/s7517_vi_feat.py --controls --ctl:
-    ~11k calls per arm, 0 rule mismatches, RT64 pow exponent follows the bit, 0 zero-line VIs drawn; ctl shows gamma on screen. RT64 holds
-    the last image on zero-line VIs (13/15 black, 2 dim for 33-50 ms; left as is) and takes VI_STATUS per game swap (ctl on a still screen
-    is not shown). No VI filter stage in RT64 (divot boot logos, dither filter pre-mission): design difference, single-source.
-    Levels soak queued (s7517_fn_levels). Next: class FO (NEXT.md).
+    **libultra/host surface classes FG-FN: ALL CLOSED 6 levels (L4 dd1, L15 dd8 21:9 in session, then L1 dd8 21:9 + L7/L10/L12 dd4
+    levels soak; full text, numbers and tool flags: PORTING-STATE s7510-s7518).** Each: logging env + scorer --controls (+ --ctl in-run
+    positive control); re-run the scorer after any change to the replaced function.
+    - FG s7510 PI DMA shape H-canon (ROGUESQ_LOG_DMA, tools/s7510_pi_dma_shape.py). FH s7511 AI DMA H-canon (ROGUESQ_LOG_AI_SHAPE,
+      s7511_ai_dma_shape.py; carry path dead). FI s7512 VI registers H-canon + boot fix ROGUESQ_VI_BLACK_RETAIL (default on).
+    - FJ s7513 SI/joybus: stick range FIXED, ROGUESQ_STICK_GATE default on (85/70 OEM octagon; =0 old 127) - **owner judges feel**
+      (OWNER-OPT-INS row); status byte 0x00 vs 0x02 H-dead. FK s7514 osGetTime hardware-rate; host-speed durations feed only write-only
+      globals / the profiler bars (gate cleared at mainGameLoop entry).
+    - FL s7515 EEPROM 4K shape H-canon (LongWrite live on L7). FM s7516 Rumble/Controller Pak H-canon, pak paths H-dead with no pak
+      (ctl ROGUESQ_PAK_SHAPE_CTL=1 runs them). FN s7517 VI special features H-canon; gamma only in zero-line transition VIs; RT64 holds
+      the last image on those (2/15 dim 33-50 ms, left as is); no RT64 VI filter stage (design difference, single-source).
+    **FO L4/L15 (s7518): D-cache maintenance contract H-canon / H-dead.** The 4 cache calls stay host no-ops (coherent memory).
+    ROGUESQ_LOG_CACHE_SHAPE=1 ([cache] line per osInvalDCache/WritebackDCache/All/InvalICache, PI DMA, SP task start, call order) +
+    runtime stale-load watch ROGUESQ_S7518_STALEWATCH=1 (per-16B-line residency N/R/F/S on the s7484 load-watch bitmap; a guest load
+    on a line DMA'd while possibly resident = STALE row) + ctl ROGUESQ_CACHE_SHAPE_CTL=<k> (drops the k-th invalidate), scorer
+    tools/s7518_cache_shape.py --controls --ctl (8 synthetic PASS). Game idiom (static + log): slot DMAs wb -> DMA -> inv-after
+    (pollDmaSlotStep), inv >= 8 KB takes the ROM index writeback-invalidate path (no data loss). L4 dd1 / L15 dd8 21:9: 0 STALE loads
+    outside ctl (75k post-invalidate loads each); ctl L4 = exactly 1 STALE row (inflate_codes on the dropped 0x80766C40 buffer),
+    L15 ctl landed on a non-resident HUD buffer (dead, read fresh). Every RSP task flushed since the previous boundary (gfx wball,
+    audio wb covering data_ptr; 13,263 + 12,391, 0 unflushed). ~5.7k DMAs/arm into the MusyX stream ring (0x17C000-0x1AA000,
+    musyxSynthFrame -> submitDmaRequestBatch -> piDmaWorker) never invalidated: RSP-read, 0 CPU loads -> H-dead. Gaps: stores
+    (write-allocate) and lwl/lwr not watched; no eviction model (conservative). Levels soak queued (s7518_fo_levels).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

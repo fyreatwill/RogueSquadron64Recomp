@@ -199537,3 +199537,48 @@ so it quit at the first prompt and discarded nothing - the file's diff was verif
 Files: lib/N64ModernRuntime/ultramodern/src/events.cpp, lib/rt64/src/hle/rt64_present_queue.cpp (patches exported),
 tools/s7517_vi_feat.py (new), scratch/agent/soak_queue/s7517_fn_levels.sh.
 Next: class FO - pick the next unaudited libultra/host surface (NEXT.md).
+
+## Session 7518 (2026-11-17) — class FO: D-cache maintenance contract vs VR4300 semantics; the game's slot DMAs use writeback -> DMA -> invalidate-after, 0 CPU loads a VR4300 could serve stale outside a planted missing invalidate (which the watch catches), every RSP task's input flushed; MusyX stream-ring DMAs never invalidated but RSP-only (H-dead); FN levels closed
+HYPOTHESIS-ID: libultra-host-surface-census.
+**FN levels fold.** s7517_fn_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: ~25k calls/arm, 0 rule mismatches, flags {02,10,20,40,80},
+ctl gamma drawn on L7/L10/L12, 7 controls PASS, 4/4 alive) -> FN CLOSED 6 levels.
+**Census of what is left of the replaced libultra surface** (jal counts, roguesquadron.elf objdump; N64Recomp symbol_lists.cpp
+reimplemented_funcs): threads/mesg/timers/args/output contracts/math were closed in BB-BP (s7392-s7406) and s7349; FG-FN closed PI, AI,
+VI, SI, time, EEPROM, pak, VI features. Unaudited: the cache calls (osInvalDCache 5 sites, osWritebackDCache 14, osWritebackDCacheAll 2,
+osInvalICache 2), all host no-ops (librecomp ultra_translation.cpp). That is class FO.
+**Static (ROM).** osInvalDCache 0x8002C280 = libultra: n >= 8192 -> cache op 0x01 Index_Writeback_Invalidate over the whole cache (no
+data loss); else edge lines op 0x15 Hit_Writeback_Invalidate, interior op 0x11 Hit_Invalidate (discards dirty data). Sites: DMA slot
+path (submitDmaSlot wb, waitDmaSlotComplete inv+wb, pollDmaSlotStep inv+wb, all before osPiStartDma), piDmaWorker (no cache op),
+buildSongDecodeBufferRing / initSampleStreamBlockCache (inv right after rs_malloc, sizes n*256 / n*1536, no CPU write between),
+__osSiRawStartDma (libultra wb/inv, replaced -> dead), osSpTaskLoad (libultra wb of the task, replaced), submitGfxFrame + postSwapRdpReset
+wball, musyx wb sites (synth frame, song tables, halfword helpers).
+Hypotheses: H-canon (every DMA'd line the CPU reads is invalidated after the DMA or uncached at it; every RSP input written back) /
+H-dead (lines a VR4300 could hold stale exist but the CPU never loads them before an invalidate) / H-live (a CPU load that hardware
+would serve from a stale line, or an RSP task reading unflushed CPU data: port and retail differ).
+**Instrument (one build, logging only):** ROGUESQ_LOG_CACHE_SHAPE=1 -> one [cache] line per cache call (librecomp
+ultra_translation.cpp), per PI DMA (pi.cpp osPiStartDma/osEPiStartDma) and per SP task start (upstream_compat.cpp, task ranges), in call
+order. ra is always 0 (recompiled jal does not set r31) so attribution is by range + sequence. Runtime second line
+ROGUESQ_S7518_STALEWATCH=1 (upstream_compat.cpp, routed from rs64_s7484_load): per-16-byte residency state (C unknown, N invalidated,
+R resident, F DMA'd while uncached, S DMA'd while possibly resident) on the s7484 load-watch bitmap (every invalidated/DMA'd line
+marked, never unmarked); a guest load on an S line = [s7518-load] STALE row. Ctl ROGUESQ_CACHE_SHAPE_CTL=<k> drops the k-th invalidate
+(log + watch). Scorer tools/s7518_cache_shape.py --controls --ctl (8 synthetic controls PASS: clean, no_inv, index_inv, partial_inv,
+sp_unflushed, sp_wb_other, stale_load, ctl_stale).
+**Dead end first (recorded):** run 2 (scratch/s7518_fo2) unmarked lines on invalidate and judged staleness at DMA time; it saw only
+8-11 CPU loads of DMA'd data and the ctl read "clean" - because the game invalidates AFTER the DMA (wb -> DMA -> inv, read from the
+log), so every legitimate read happened on an unmarked line. Run 1 (s7518_fo) ctl k=3000/1500 exceeded the 951/1270 invalidates.
+**Run 3** (g1e_owner_quiet_arms HOLD=120, scratch/s7518_fo3): L4 dd1 ctl k=600, L15 dd8 21:9 ctl k=700, both alive, 0 VI stalls.
+~42.7k events/arm: 12.5k/14.7k PI DMAs, 951/1267 inv (95/100 on the 8 KB index path), 9.0k/8.4k wb, 6972/6112 wball, 13,263/12,391
+SP tasks. Watch: 0 STALE loads outside ctl on either arm; 75.6k / 74.9k loads after an invalidate; L4 ctl (dropped inv of the
+0x80766C40+0x1000 inflate scratch) -> exactly one STALE row, pc 0x8002871C inflate_codes = positive control PASS. L15 ctl (0x808965C0
++0x820, HUD) read fresh: the line was not resident at the DMA, so the missing inv was itself dead.
+RSP: every task flushed since the previous task boundary - gfx by osWritebackDCacheAll (submitGfxFrame), audio by a wb covering
+data_ptr (musyxSynthFrame 0x80091788); 0 unflushed. Offline "DMA over a line not invalidated since its previous DMA": ~5.7k/6.5k rows,
+all 0x100-0x600 B into 0x17C000-0x1AA000 = the MusyX stream ring (musyxSynthFrame -> submitDmaRequestBatch -> piDmaWorker, s6125),
+invalidated once at allocation; RSP-read, 0 CPU loads in the watch -> H-dead.
+DISCRIMINATION: selects H-canon for the slot DMA path and every RSP input, H-dead for the stream ring; refutes H-live for CPU loads
+(0 stale loads, ctl proves the watch sees one). Gaps (stated, not closed): stores (write-allocate dirty lines evicted over DMA data)
+and lwl/lwr are not watched; no eviction model (conservative: overstates staleness). Next: class FP = the store side (NEXT.md).
+CURRENT-TRUTH: closed FG-FN paragraphs compressed to one-liners (-6 KB, 58.8 -> 52.8 KB), FO added.
+Files: lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp, pi.cpp (patch exported), src/main/upstream_compat.cpp,
+tools/s7518_cache_shape.py (new), scratch/agent/soak_queue/s7518_fo_levels.sh.
+Run: `env R=$PWD/scratch/s7518_fo3 HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_CACHE_SHAPE_CTL=600 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_ASPECT=21:9+ROGUESQ_CACHE_SHAPE_CTL=700" zsh tools/g1e_owner_quiet_arms.zsh`
