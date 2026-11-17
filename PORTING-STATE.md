@@ -199493,3 +199493,45 @@ Discrimination: the census selects H-canon for osMotor* returns (three arms, two
 (0 rows, device 1, static gating), and refutes H-live (no motor call without a pak, no retry storm, no pak save path). FM CLOSED L4/L15;
 levels soak queued (scratch/agent/soak_queue/s7516_fm_levels.sh: L1 dd8 21:9, L7/L10 dd4, ctl arm L12 dd4). lib/ edit exported.
 Next: FN VI special features (osViSetSpecialFeatures 12 call sites: gamma / dither / divot / gamma-dither) + osViBlack vs hardware.
+
+## Session 7517 (2026-11-17) — class FN: VI special features vs hardware; every osViSetSpecialFeatures call equals the ROM rule, RT64 applies the gamma bit (positive control), gamma is only ever on in zero-line transition VIs; RT64 holds the last image on those 2-3 VIs where hardware blanks (13/15 held images already black); RT64 has no VI filter stage (divot / dither filter / AA resample, design difference); FM levels closed
+HYPOTHESIS-ID: vi-special-features-vs-hardware.
+**FM levels fold.** s7516_fm_levels score=0 (L1 dd8 21:9 3 inits ret 1, L7 5, L10 3, all canon; ctl L12 Init ok x8, Stop x16, Start x14,
+controls 8/8 PASS, 4/4 alive) -> FM CLOSED 6 levels.
+**Static census (roguesquadron.elf objdump).** osViSetSpecialFeatures: 3 sites in initVideoSubsystem (0x8001B744/5C/74) + 9 in
+applyPendingViChanges (0x8001B918-0x8001BA68); flags passed are only 0x01/0x02 (gamma on/off), 0x10/0x20 (divot), 0x40/0x80 (dither
+filter), chosen from config bytes; never GAMMA_DITHER 0x04/0x08. osViBlack: idle_thread_handle at boot + preNmiResetThread (reset only).
+ROM osViSetSpecialFeatures 0x80035340 = libultra rule bit for bit, identical to ultramodern's except the final `__osViNext->state |= 8`
+(VI_STATE_CTRL_SET); the ROM __osViSwapContext tests state bits 1/2/4/0x20/0x40/0x80 only, never 8 -> write-only, H-dead.
+**Offline re-analysis of the s7512 capture (capture once):** committed ctrl over 200 s: gamma bit on ONLY in mode 0x80128C90, which the
+game sets for 2-3 VIs at each mode switch with vStart == vEnd (vstart 0x00350035 etc.: zero active lines = hardware black). Flight
+ctrl 0x3246 (gamma off, divot off, dfilt off, AA mode 2 resample); divot on in the boot logos (~4 s, mode DF0); dither filter on in
+mode E40 ctrl 0x13046 (~8 s L4, ~21 s L15, pre-mission).
+**RT64 (code read):** VI::gamma() = 1/2.2 when the bit is set, pushed to VideoInterfacePS as pow(); divot / dither filter / aaMode have
+no consumer outside the debugger (no VI filter stage: RT64 renders hi-res 32-bit; a design difference, not emulated). A zero-line VI
+has fbSize (0,0): the VI draw is skipped after clearColor.
+Hypotheses: H-canon (calls and the presented picture follow hardware) / H-dead (the bits that differ never reach a visible frame) /
+H-live (gamma on a visible frame RT64 ignores, or a blanked VI shown with content).
+**Instrument (one build, logging only):** ROGUESQ_LOG_VI_FEAT=1 -> [vi-feat] per call (func, ctrl before/after, mode ctrl) and
+[vi-feat-commit] per committed VI_STATUS/vStart change (ultramodern events.cpp), [vi-feat-rt] per presented-tuple change (RT64
+present_queue: status bits, pow exponent, fb size, drawn). Second build adds to zero-line commits the mean luma / lit fraction of the
+last visible fb (the image a host that skips the VI keeps showing). Positive control ROGUESQ_VI_FEAT_CTL=<swap>: VI_STATUS |= GAMMA_ON
+for 120 commits, game control untouched. Scorer tools/s7517_vi_feat.py (ROM rule, flag set, gamma-vs-bit, zero-line-not-drawn,
+live-gamma, filter time, ctl) --controls: clean + 6 mutants PASS.
+**Runs** (g1e_owner_quiet_arms HOLD=120): scratch/s7517_fn (L4 dd1, L15 dd8 21:9, ctl 1500) and scratch/s7517_fn2 (luma build, ctl
+2400/1500). All 4 arms alive, 0 VI stalls. 11,928 / 10,689 / 11,997 / 10,698 calls, 0 rule mismatches, flags {02,10,20,40,80} only;
+0 RT64 presents with gamma on outside ctl, 0 zero-line VIs drawn, RT64 pow exponent equals the bit on every row.
+Ctl: fired in fn/L15 and fn2/L4 (drawn present, gamma 0.4545); in fn/L4 and fn2/L15 it landed on the 17 s still screen (max_vihold
+17.3 s) where the game does not swap, and RT64 kept re-presenting the last swap's VI snapshot with gamma 0 -> RT64 takes VI_STATUS
+per game swap, not per VI (fine for this game: every real feature change sits in applyPendingViChanges next to a mode change and a swap).
+Zero-line episodes: 15 (7 L4, 8 L15), 0 presented by RT64 (it holds the last image 2-3 VIs where hardware blanks). Held image: 13 black
+(luma <= 3.5, lit <= 2.6 %), 2 dim (luma 26.1 lit 22 %, luma 16.2 lit 15 %, the ~58 s / ~75 s mission-load transitions).
+DISCRIMINATION: H-canon for every call and for gamma (gamma follows the bit, ctl shows it on screen); H-dead for gamma in game play (on
+only in zero-line VIs) and for CTRL_SET; H-live refuted for gamma. One residual H-live-minor: 2 of 15 transitions hold a dim image
+for 33-50 ms where hardware shows black - left as is (matching would add a black blink; not a defect anyone sees). VI filters:
+design difference, single-source (code read + time census), reported only. FN CLOSED L4/L15; levels soak queued (s7517_fn_levels).
+Rules slip, recorded: one `git checkout -p -- src/render/rt64_vi_renderer.cpp` was run inside lib/rt64 (forbidden); stdin was /dev/null
+so it quit at the first prompt and discarded nothing - the file's diff was verified line-identical to submodule-patches/rt64.patch.
+Files: lib/N64ModernRuntime/ultramodern/src/events.cpp, lib/rt64/src/hle/rt64_present_queue.cpp (patches exported),
+tools/s7517_vi_feat.py (new), scratch/agent/soak_queue/s7517_fn_levels.sh.
+Next: class FO - pick the next unaudited libultra/host surface (NEXT.md).

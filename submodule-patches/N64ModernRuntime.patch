@@ -5698,7 +5698,7 @@ index 3198be0..c25d889 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..e663f9f 100644
+index 149e770..025d019 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,471 @@
@@ -6181,7 +6181,7 @@ index 149e770..e663f9f 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,17 +486,42 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,17 +486,80 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -6220,11 +6220,49 @@ index 149e770..e663f9f 100644
 +}
 +static int rs64_vi_shape_ctl_left = 0;
 +static uint64_t rs64_vi_shape_n = 0;
++// s7517 class FN: ROGUESQ_LOG_VI_FEAT=1 logs every osViSetSpecialFeatures call ([vi-feat]: func, control before/after, mode)
++// and every committed VI_STATUS change ([vi-feat-commit]: control, vStart field reg, mode). Logging only.
++// ROGUESQ_VI_FEAT_CTL=<swap n>: positive control, OR VI_CTRL_GAMMA_ON (0x8) into the committed VI_STATUS for 120 commits from swap n
++// (screen-visible: RT64 applies pow(1/2.2), the picture brightens). The game's own control word is untouched.
++static bool rs64_vi_feat_log() {
++    static const bool on = [] { const char* e = std::getenv("ROGUESQ_LOG_VI_FEAT"); return e && e[0] && e[0] != '0'; }();
++    return on;
++}
++static uint32_t rs64_vi_feat_ctl_swap() {
++    static const uint32_t n = [] { const char* e = std::getenv("ROGUESQ_VI_FEAT_CTL"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; }();
++    return n;
++}
++static int rs64_vi_feat_ctl_left = 0;
++static uint8_t* rs64_vi_feat_rdram = nullptr;
++// Mean luma (0..255) and lit fraction (luma > 16) of a 64x48 sample grid of the fb at origin (phys), w = VI width reg, type 2/3.
++static void rs64_vi_feat_luma(uint32_t origin, uint32_t w, uint32_t type, double* mean, double* lit) {
++    *mean = -1; *lit = -1;
++    if (!rs64_vi_feat_rdram || w == 0 || w > 4096 || (type != 2 && type != 3)) return;
++    const uint32_t bpp = type == 2 ? 2 : 4, h = (w * 3) / 4;
++    const uint64_t end = (uint64_t)origin + (uint64_t)w * h * bpp;
++    if (end >= 0x01800000ull) return;
++    double sum = 0; uint32_t n = 0, nl = 0;
++    for (uint32_t gy = 0; gy < 48; gy++) for (uint32_t gx = 0; gx < 64; gx++) {
++        const uint32_t x = (gx * w) / 64 + 1, y = (gy * h) / 48 + 1;
++        const uint32_t a = origin + (y * w + x) * bpp;
++        double l;
++        if (bpp == 2) {
++            // RDRAM is stored word-swapped: guest byte a lives at host a ^ 3.
++            const uint16_t px = (uint16_t)((rs64_vi_feat_rdram[(a) ^ 3] << 8) | rs64_vi_feat_rdram[(a + 1) ^ 3]);
++            l = (((px >> 11) & 31) + ((px >> 6) & 31) + ((px >> 1) & 31)) * (255.0 / 93.0);
++        } else {
++            l = (rs64_vi_feat_rdram[(a) ^ 3] + rs64_vi_feat_rdram[(a + 1) ^ 3] + rs64_vi_feat_rdram[(a + 2) ^ 3]) / 3.0;
++        }
++        sum += l; n++; if (l > 16) nl++;
++    }
++    *mean = sum / n; *lit = (double)nl / n;
++}
++static uint64_t rs64_vi_feat_commits = 0;
 +
  static struct {
      struct {
          std::thread thread;
-@@ -65,11 +537,15 @@ static struct {
+@@ -65,11 +575,15 @@ static struct {
          ViState* get_cur_state() {
              return &states[cur_state];
          }
@@ -6242,7 +6280,7 @@ index 149e770..e663f9f 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,11 +561,27 @@ static struct {
+@@ -85,11 +599,27 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -6270,11 +6308,33 @@ index 149e770..e663f9f 100644
              regs.VI_TIMING_REG = common_regs->burst;
              regs.VI_V_SYNC_REG = common_regs->vSync;
              regs.VI_H_SYNC_REG = common_regs->hSync;
-@@ -101,7 +593,60 @@ static struct {
+@@ -101,7 +631,82 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
 -            
++            rs64_vi_feat_commits++;
++            if (rs64_vi_feat_ctl_left > 0) {
++                rs64_vi_feat_ctl_left--;
++                regs.VI_STATUS_REG = next_state->control | 0x8u; // s7517 ctl: gamma on
++            }
++            if (rs64_vi_feat_log()) {
++                static uint32_t last_ctrl = 0xFFFFFFFFu, last_vs = 0xFFFFFFFFu, last_ctl = 2;
++                const uint32_t ctlnow = (regs.VI_STATUS_REG != next_state->control) ? 1u : 0u;
++                static uint32_t vis_origin = 0, vis_width = 0, vis_type = 0;
++                const bool zero_line = ((field_regs->vStart >> 16) & 0x3FF) == (field_regs->vStart & 0x3FF);
++                if (regs.VI_STATUS_REG != last_ctrl || field_regs->vStart != last_vs || ctlnow != last_ctl) {
++                    const double t = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
++                    double pm = -1, pl = -1;
++                    if (zero_line) rs64_vi_feat_luma(vis_origin, vis_width, vis_type, &pm, &pl); // the image a host that skips this VI keeps showing
++                    fprintf(stderr, "[vi-feat-commit] c=%" PRIu64 " ts=%.3f ctrl=%05X game=%05X ctl=%u vstart=%08X hstart=%08X mode=%08X st=%X zl=%u prevluma=%.1f prevlit=%.3f\n",
++                        rs64_vi_feat_commits, t, (unsigned)regs.VI_STATUS_REG, (unsigned)next_state->control, ctlnow,
++                        (unsigned)field_regs->vStart, (unsigned)hStart, (uint32_t)next_state->mode_guest, (unsigned)next_state->state,
++                        zero_line ? 1u : 0u, pm, pl);
++                    last_ctrl = regs.VI_STATUS_REG; last_vs = field_regs->vStart; last_ctl = ctlnow;
++                }
++                if (!zero_line && hStart != 0) { vis_origin = (uint32_t)origin; vis_width = common_regs->width; vis_type = next_state->control & 3u; }
++            }
 +
 +            if (rs64_vi_shape_log()) {
 +                static uint32_t last[16] = {};
@@ -6332,7 +6392,7 @@ index 149e770..e663f9f 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +685,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +745,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -6341,7 +6401,7 @@ index 149e770..e663f9f 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -161,13 +708,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
+@@ -161,13 +768,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
  
  extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 retrace_count) {
      std::lock_guard lock{ events_context.message_mutex };
@@ -6375,7 +6435,7 @@ index 149e770..e663f9f 100644
  
  
  extern std::atomic_bool exited;
-@@ -175,8 +742,108 @@ extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
+@@ -175,8 +802,108 @@ extern moodycamel::LightweightSemaphore graphics_shutdown_ready;
  
  void set_dummy_vi(bool odd);
  
@@ -6484,7 +6544,7 @@ index 149e770..e663f9f 100644
      // This thread should be prioritized over every other thread in the application, as it's what allows
      // the game to generate new audio and gfx lists.
      ultramodern::set_native_thread_priority(ultramodern::ThreadPriority::Critical);
-@@ -186,7 +853,34 @@ void vi_thread_func() {
+@@ -186,7 +913,34 @@ void vi_thread_func() {
  
      while (!exited) {
          // Determine the next VI time (more accurate than adding 16ms each VI interrupt)
@@ -6520,7 +6580,7 @@ index 149e770..e663f9f 100644
          //if (next > std::chrono::high_resolution_clock::now()) {
          //    printf("Sleeping for %" PRIu64 " us to get from %" PRIu64 " us to %" PRIu64 " us \n",
          //        (next - std::chrono::high_resolution_clock::now()) / 1us,
-@@ -200,28 +894,79 @@ void vi_thread_func() {
+@@ -200,28 +954,79 @@ void vi_thread_func() {
              // printf("Skipping the next VI wait\n");
              next = std::chrono::high_resolution_clock::now();
          }
@@ -6606,7 +6666,7 @@ index 149e770..e663f9f 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,13 +976,24 @@ void vi_thread_func() {
+@@ -231,13 +1036,24 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -6632,7 +6692,7 @@ index 149e770..e663f9f 100644
                  // Send a message to the VI queue, and do not set it to be requeued if the queue was full for the same reason as the VI message above.
                  ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
              }
-@@ -249,15 +1005,443 @@ void vi_thread_func() {
+@@ -249,15 +1065,443 @@ void vi_thread_func() {
      }
  }
  
@@ -7076,7 +7136,7 @@ index 149e770..e663f9f 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +1461,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +1521,51 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -7130,7 +7190,7 @@ index 149e770..e663f9f 100644
  
          (void)task_type;
      }
-@@ -325,6 +1543,34 @@ void ultramodern::trigger_config_action() {
+@@ -325,6 +1603,34 @@ void ultramodern::trigger_config_action() {
  std::atomic<ultramodern::renderer::SetupResult> renderer_setup_result = ultramodern::renderer::SetupResult::Success;
  std::atomic<ultramodern::renderer::GraphicsApi> renderer_chosen_api = ultramodern::renderer::GraphicsApi::Auto;
  
@@ -7165,7 +7225,7 @@ index 149e770..e663f9f 100644
  void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_ready, ultramodern::renderer::WindowHandle window_handle) {
      bool enabled_instant_present = false;
      using namespace std::chrono_literals;
-@@ -354,11 +1600,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -354,11 +1660,17 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
      thread_ready->signal();
  
      while (!exited) {
@@ -7183,7 +7243,7 @@ index 149e770..e663f9f 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +1620,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +1680,22 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -7207,7 +7267,7 @@ index 149e770..e663f9f 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -383,18 +1646,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -383,18 +1706,43 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // bypasses the registered GBI and submits raw RDP that
                  // confuses RT64 state. See project_factor5_lle_breakthrough.md
                  // for context but supersede with HLE path.
@@ -7252,7 +7312,7 @@ index 149e770..e663f9f 100644
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
              }
-@@ -456,6 +1744,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1804,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -7260,7 +7320,7 @@ index 149e770..e663f9f 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -463,9 +1752,23 @@ void set_dummy_vi(bool odd) {
+@@ -463,9 +1812,27 @@ void set_dummy_vi(bool odd) {
      }
  }
  
@@ -7281,10 +7341,14 @@ index 149e770..e663f9f 100644
 +        rs64_vi_shape_ctl_left = 30;
 +        fprintf(stderr, "[vi-shape-ctl] armed at swap %u\n", rs64_vi_shape_ctl_swap());
 +    }
++    if (rs64_vi_feat_ctl_swap() != 0 && g_s4908_swap_all.load() == rs64_vi_feat_ctl_swap()) {
++        rs64_vi_feat_ctl_left = 120;
++        fprintf(stderr, "[vi-feat-ctl] armed at swap %u commit %" PRIu64 "\n", rs64_vi_feat_ctl_swap(), rs64_vi_feat_commits);
++    }
  }
  
  extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
-@@ -473,7 +1776,13 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,7 +1840,13 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -7298,7 +7362,28 @@ index 149e770..e663f9f 100644
  }
  
  #define OS_VI_GAMMA_ON          0x0001
-@@ -530,11 +1839,20 @@ extern "C" void osViBlack(uint8_t active) {
+@@ -489,6 +1862,7 @@ extern "C" void osViSetSpecialFeatures(uint32_t func) {
+     std::lock_guard lock{ events_context.message_mutex };
+     ViState* next_state = events_context.vi.get_next_state();
+     uint32_t* control_out = &next_state->control;
++    const uint32_t rs64_ctrl_before = *control_out;
+     if ((func & OS_VI_GAMMA_ON) != 0) {
+         *control_out |= VI_CTRL_GAMMA_ON;
+     }
+@@ -522,6 +1896,12 @@ extern "C" void osViSetSpecialFeatures(uint32_t func) {
+         *control_out &= ~VI_CTRL_DITHER_FILTER_ON;
+         *control_out |= next_state->mode->comRegs.ctrl & VI_CTRL_ANTIALIAS_MASK;
+     }
++    if (rs64_vi_feat_log()) {
++        const double t = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
++        fprintf(stderr, "[vi-feat] c=%" PRIu64 " ts=%.3f func=%02X before=%05X after=%05X modectrl=%05X mode=%08X\n", rs64_vi_feat_commits, t,
++            (unsigned)func, (unsigned)rs64_ctrl_before, (unsigned)*control_out, (unsigned)next_state->mode->comRegs.ctrl,
++            (uint32_t)next_state->mode_guest);
++    }
+ }
+ 
+ extern "C" void osViBlack(uint8_t active) {
+@@ -530,11 +1910,20 @@ extern "C" void osViBlack(uint8_t active) {
      uint32_t* state_out = &next_state->state;
      if (active) {
          *state_out |= VI_STATE_BLACK;
@@ -7319,7 +7404,7 @@ index 149e770..e663f9f 100644
  extern "C" void osViRepeatLine(uint8_t active) {
      std::lock_guard lock{ events_context.message_mutex };
      ViState* next_state = events_context.vi.get_next_state();
-@@ -559,24 +1877,34 @@ extern "C" void osViSetYScale(float scale) {
+@@ -559,24 +1948,34 @@ extern "C" void osViSetYScale(float scale) {
  }
  
  extern "C" PTR(void) osViGetNextFramebuffer() {
@@ -7354,7 +7439,15 @@ index 149e770..e663f9f 100644
          events_context.sp_task_queue.enqueue(task);
      }
  }
-@@ -630,8 +1958,73 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+@@ -589,6 +1988,7 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
+     moodycamel::LightweightSemaphore gfx_thread_ready;
+     moodycamel::LightweightSemaphore task_thread_ready;
+     events_context.rdram = rdram;
++    rs64_vi_feat_rdram = rdram;
+     events_context.sp.gfx_thread = std::thread{ gfx_thread_func, rdram, &gfx_thread_ready, window_handle };
+     events_context.sp.task_thread = std::thread{ task_thread_func, rdram, &task_thread_ready };
+ 
+@@ -630,8 +2030,73 @@ void ultramodern::init_events(RDRAM_ARG ultramodern::renderer::WindowHandle wind
      // calling osViSetMode. Otherwise update_vi dereferences a null mode.
      events_context.vi.states[0].mode = &dummy_mode;
      events_context.vi.states[1].mode = &dummy_mode;

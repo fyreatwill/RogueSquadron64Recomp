@@ -4088,7 +4088,7 @@ index dccaa87..f7e869e 100644
                  dl++;
              }
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
-index f17db9b..baf7c5b 100644
+index f17db9b..458651e 100644
 --- a/src/hle/rt64_present_queue.cpp
 +++ b/src/hle/rt64_present_queue.cpp
 @@ -4,24 +4,138 @@
@@ -4859,7 +4859,39 @@ index f17db9b..baf7c5b 100644
  
                      const bool useDownsampling = (colorTarget->downsampleMultiplier > 1);
                      if (useDownsampling) {
-@@ -545,8 +1100,14 @@ namespace RT64 {
+@@ -524,6 +1079,31 @@ namespace RT64 {
+                         std::fflush(stderr);
+                     }
+                 }
++                // s7517 class FN: ROGUESQ_LOG_VI_FEAT=1, one [vi-feat-rt] line whenever the presented VI's control word, fb size or
++                // draw outcome changes (rep = presents of the previous tuple). drawn=0: no texture or a zero-size VI (the VI renderer's
++                // guard returns), so this present shows only the clear colour above (black), as hardware shows black for a zero-line
++                // VI. gamma = the pow() exponent the VI shader applies. Logging only.
++                {
++                    static const bool s_featLog = [](){ const char *v = std::getenv("ROGUESQ_LOG_VI_FEAT"); return v && v[0] && v[0] != '0'; }();
++                    if (s_featLog) {
++                        static uint32_t s_lw = 0xFFFFFFFFu, s_lx = 0xFFFFFFFFu, s_ly = 0xFFFFFFFFu, s_ld = 2; static unsigned long long s_rep = 0, s_tot = 0;
++                        const VI &fv = present.screenVI;
++                        const hlslpp::uint2 ffb = fv.fbSize();
++                        const uint32_t w = fv.status.word, fx = uint32_t(ffb.x), fy = uint32_t(ffb.y);
++                        const uint32_t drawn = (renderParams.texture != nullptr && fx != 0 && fy != 0) ? 1u : 0u;
++                        s_tot++;
++                        if (w != s_lw || fx != s_lx || fy != s_ly || drawn != s_ld) {
++                            const double t = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
++                            std::fprintf(stderr, "[vi-feat-rt] p=%llu ts=%.3f rep=%llu ctrl=%05X gamma=%.4f gbit=%u dfilt=%u divot=%u aa=%u fb=%ux%u drawn=%u tex=%u vs=%u ve=%u hs=%u\n",
++                                s_tot, t, s_rep, (unsigned)(w & 0x1FFFFu), fv.gamma(), (unsigned)fv.status.gammaEnable, (unsigned)fv.status.ditherFilter,
++                                (unsigned)fv.status.divotEnable, (unsigned)fv.status.aaMode, fx, fy, drawn, renderParams.texture != nullptr ? 1u : 0u,
++                                (unsigned)fv.vRegion.vStart, (unsigned)fv.vRegion.vEnd, (unsigned)fv.hRegion.hStart);
++                            s_lw = w; s_lx = fx; s_ly = fy; s_ld = drawn; s_rep = 0;
++                        } else {
++                            s_rep++;
++                        }
++                    }
++                }
+                 if (renderParams.texture != nullptr) {
+                     commandList->barriers(RenderBarrierStage::GRAPHICS, RenderTextureBarrier(renderParams.texture, RenderTextureLayout::SHADER_READ));
+                     viRenderer->render(renderParams);
+@@ -545,8 +1125,14 @@ namespace RT64 {
                      const RenderCommandList *commandList = ext.presentGraphicsWorker->commandList.get();
                      RenderCommandSemaphore *waitSemaphore = acquiredSemaphore.get();
                      RenderCommandSemaphore *signalSemaphore = drawSemaphores[swapChainIndex].get();
@@ -4874,7 +4906,7 @@ index f17db9b..baf7c5b 100644
                  }
              }
  
-@@ -566,6 +1127,7 @@ namespace RT64 {
+@@ -566,6 +1152,7 @@ namespace RT64 {
  
              // As soon as we're done with the first render target, we notify the workload queue it can proceed.
              if (i == 0) {
@@ -4882,7 +4914,7 @@ index f17db9b..baf7c5b 100644
                  notifyPresentId(present);
              }
  
-@@ -622,12 +1184,20 @@ namespace RT64 {
+@@ -622,12 +1209,20 @@ namespace RT64 {
      }
      
      void PresentQueue::threadAdvanceBarrier() {
@@ -4905,7 +4937,7 @@ index f17db9b..baf7c5b 100644
  
          // Create the semaphore the acquire method will use.
          acquiredSemaphore = ext.device->createCommandSemaphore();
-@@ -646,6 +1216,7 @@ namespace RT64 {
+@@ -646,6 +1241,7 @@ namespace RT64 {
          const bool displayTiming = ext.device->getCapabilities().displayTiming;
          bool swapChainValid = !ext.swapChain->needsResize();
          while (presentThreadRunning) {
@@ -4913,7 +4945,7 @@ index f17db9b..baf7c5b 100644
              {
                  std::unique_lock<std::mutex> cursorLock(cursorMutex);
                  cursorCondition.wait(cursorLock, [&]() {
-@@ -661,6 +1232,7 @@ namespace RT64 {
+@@ -661,6 +1257,7 @@ namespace RT64 {
  
              if (processCursor >= 0) {
                  std::unique_lock<std::mutex> threadLock(threadMutex);
@@ -4921,7 +4953,7 @@ index f17db9b..baf7c5b 100644
                  const bool needsResize = ext.swapChain->needsResize() || !swapChainValid;
                  if (needsResize) {
                      ext.presentGraphicsWorker->commandList->begin();
-@@ -700,12 +1272,20 @@ namespace RT64 {
+@@ -700,12 +1297,20 @@ namespace RT64 {
                  skipPresent = skipPresent || ext.swapChain->isEmpty();
  
                  Present &present = presents[processCursor];
@@ -4942,7 +4974,7 @@ index f17db9b..baf7c5b 100644
                  if (skipPresent) {
                      skipInterpolation();
                      notifyPresentId(present);
-@@ -713,6 +1293,36 @@ namespace RT64 {
+@@ -713,6 +1318,36 @@ namespace RT64 {
                  else {
                      threadPresent(present, swapChainValid);
                  }

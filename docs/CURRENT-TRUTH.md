@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7516 (2026-11-17).
+Compact operational handoff, as of Session 7517 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -495,7 +495,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     table, PFS_ERR_INVALID 5). Runtime ROGUESQ_LOG_PAK_SHAPE=1 (librecomp cont.cpp/pak.cpp, logging only), scorer tools/s7516_pak_shape.py
     --controls (6 mutants) --ctl: L4 dd1 / L15 dd8 21:9 = 3 osMotorInit ret 1 each (t~0, mission transitions, tried=0 each), 0 Start/Stop,
     0 osPfs, dev=1; ctl arm ROGUESQ_PAK_SHAPE_CTL=1 (port reports a Rumble Pak) = Init ret 0 x6, Stop x6, Start x4 (t=84.6 rumble), all
-    canon -> score 0. Levels soak queued (s7516_fm_levels, ctl arm L12). Next: FN VI special features / osViBlack (NEXT.md).
+    canon -> score 0. **Levels fold (s7517): s7516_fm_levels score=0 (L1/L7/L10 no pak canon, ctl L12 Init/Start/Stop ok) -> FM CLOSED 6 levels.**
+    **FN CLOSED L4/L15 (s7517): VI special features H-canon / gamma H-dead in play.** 12 sites pass only gamma 1/2, divot 10/20, dither
+    filter 40/80; ROM rule == ultramodern (CTRL_SET bit 8 write-only). Gamma on only in mode 0x80128C90 zero-line VIs (2-3 per mode switch,
+    vStart == vEnd = hardware black). ROGUESQ_LOG_VI_FEAT=1 (+ ctl ROGUESQ_VI_FEAT_CTL=<swap>), tools/s7517_vi_feat.py --controls --ctl:
+    ~11k calls per arm, 0 rule mismatches, RT64 pow exponent follows the bit, 0 zero-line VIs drawn; ctl shows gamma on screen. RT64 holds
+    the last image on zero-line VIs (13/15 black, 2 dim for 33-50 ms; left as is) and takes VI_STATUS per game swap (ctl on a still screen
+    is not shown). No VI filter stage in RT64 (divot boot logos, dither filter pre-mission): design difference, single-source.
+    Levels soak queued (s7517_fn_levels). Next: class FO (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
