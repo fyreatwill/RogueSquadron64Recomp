@@ -4317,11 +4317,91 @@ extern "C" void rs64_s7519_summary(void) {
     std::string s; char b[64]; for (int i = 0; i < 12; i++) { std::snprintf(b, sizeof b, " %s=%llu", s7519_kn[i], (unsigned long long)s_s7519_n[i]); s += b; }
     std::fprintf(stderr, "[s7519-sum]%s pending_dirty=%llu pending_over_dma=%llu pending_lost=%llu row_keys=%zu\n", s.c_str(), (unsigned long long)pd,
         (unsigned long long)px, (unsigned long long)pl, s_s7519_rows.size()); }
+/* s7545 class GE runtime witness (ROGUESQ_S7545_THRWATCH=1, exclusive with the s7475/s7484/s7518 watches). s7544's static census
+   found 0 guest accesses to OSThread fields but resolves only constant addresses and direct calls. Here every OSThread the runtime
+   creates (osCreateThread -> the RS64_S7491 "os_createthread" hook, no lib edit) has [t, t+0x1B0) marked in g_rs64_s7475_bm, so the
+   generated lw/lh/lb/ld test (tools/apply_s7484_loadwatch.py) and the s5798 store test (apply_s7475_slackwatch.py, needs
+   ROGUESQ_STORE_DIAG=1) route every guest access to it here. Off < 0x30 = port OSThread fields (next/pri/queue/state/flags/id;
+   0x20..0x2F = host context pointer + sp), >= 0x30 = the retail __OSThreadContext tail the port leaves unused. Host writes through
+   the S7491 hooks are counted per kind (kind=H). Controls: the frame counter 0x8011A890 is marked (generated-code path live:
+   ctl_ld/ctl_st > 0), and ROGUESQ_S7545_PLANT=<s> (default 150) calls the same load/store entry points for siServiceThread
+   (0x8010FF70, else the first thread) +0x10 after the bitmap test, as a generated access would -> `[s7545] plant DETECTED`.
+   osDestroyThread is not hooked (destroyed structs stay marked; rows name the thread so a reuse is visible). Measurement only. */
+static bool s7545_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7545_THRWATCH"); return e && e[0] && e[0] != '0'; }(); return on; }
+struct S7545Row { uint64_t n = 0; const char* fn = nullptr; uint32_t t = 0, val = 0; double t1 = 0; };
+static std::mutex s_s7545_mu; static std::vector<uint32_t> s_s7545_thr; static std::vector<double> s_s7545_tc;
+static std::map<uint64_t, S7545Row> s_s7545_rows;  /* key = pc<<32 | kind<<24 | w<<16 | off */
+static std::map<uint32_t, uint32_t> s_s7545_pcn;
+static std::map<std::string, uint64_t> s_s7545_hostk;
+static uint64_t s_s7545_ld = 0, s_s7545_st = 0, s_s7545_tail = 0, s_s7545_ctl_ld = 0, s_s7545_ctl_st = 0, s_s7545_pl_ld = 0, s_s7545_pl_st = 0, s_s7545_unk = 0;
+static double s_s7545_t0 = 0;
+static void s7545_mark(uint32_t a, uint32_t n) { if (!g_rs64_s7475_bm) return; for (uint32_t b = a; b < a + n; ++b) { const uint32_t o = b - 0x80000000u; if (o < 0x1800000u) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); } }
+static bool s7545_marked(uint32_t a) { const uint32_t o = a - 0x80000000u; return g_rs64_s7475_bm && o < 0x1800000u && ((g_rs64_s7475_bm[o >> 3] >> (o & 7u)) & 1u); }
+static uint32_t s7545_rdw(uint32_t a) { volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return 0; const uint32_t o = (a & ~3u) - 0x80000000u; if (o >= 0x1800000u) return 0; return *(volatile uint32_t*)(r + o); }
+static int s7545_find(uint32_t a) { for (size_t i = 0; i < s_s7545_thr.size(); ++i) if (a - s_s7545_thr[i] < 0x1B0u) return (int)i; return -1; }
+static void s7545_sum(bool rows) {
+    std::lock_guard<std::mutex> lk(s_s7545_mu);
+    uint64_t port = 0, ctxp = 0; for (auto& kv : s_s7545_rows) { const uint32_t off = (uint32_t)(kv.first & 0xFFFFu); if (off < 0x30u) { port += kv.second.n; if (off >= 0x20u) ctxp += kv.second.n; } }
+    std::string hk; for (auto& kv : s_s7545_hostk) { char b[96]; std::snprintf(b, sizeof b, "%s%s:%llu", hk.empty() ? "" : ",", kv.first.c_str(), (unsigned long long)kv.second); hk += b; }
+    std::fprintf(stderr, "[s7545] sum t=%.1f thr=%zu loads=%llu stores=%llu port_field=%llu ctxptr=%llu tail=%llu unk=%llu rows=%zu pcs=%zu ctl_ld=%llu ctl_st=%llu plant_ld=%llu plant_st=%llu host={%s}\n",
+        s7325_now() - s_s7545_t0, s_s7545_thr.size(), (unsigned long long)s_s7545_ld, (unsigned long long)s_s7545_st, (unsigned long long)port, (unsigned long long)ctxp,
+        (unsigned long long)s_s7545_tail, (unsigned long long)s_s7545_unk, s_s7545_rows.size(), s_s7545_pcn.size(), (unsigned long long)s_s7545_ctl_ld, (unsigned long long)s_s7545_ctl_st,
+        (unsigned long long)s_s7545_pl_ld, (unsigned long long)s_s7545_pl_st, hk.c_str());
+    if (rows) for (auto& kv : s_s7545_rows) std::fprintf(stderr, "[s7545] row pc=%08X fn=%s kind=%c w=%u off=%02X thr=%08X n=%llu last_val=%08X\n", (uint32_t)(kv.first >> 32), kv.second.fn ? kv.second.fn : "?",
+        (char)((kv.first >> 24) & 0xFFu), (unsigned)((kv.first >> 16) & 0xFFu), (unsigned)(kv.first & 0xFFFFu), kv.second.t, (unsigned long long)kv.second.n, kv.second.val);
+    std::fflush(stderr); }
+static int s7545_access(uint32_t pc, uint32_t a, int w, const char* fn, char kind) {
+    if (!s7545_marked(a) && !s7545_marked(a + (uint32_t)w - 1u)) return 0;  /* s5798 range hits reach rs64_s7475_store unmarked: not ours */
+    if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { std::lock_guard<std::mutex> lk(s_s7545_mu); uint64_t& c = kind == 'L' ? s_s7545_ctl_ld : s_s7545_ctl_st;
+        if (c++ == 0) std::fprintf(stderr, "[s7545] watch-ctl PASS kind=%c pc=%08X fn=%s w=%d\n", kind, pc, fn ? fn : "?", w); return 1; }
+    const bool plant = fn && !std::strcmp(fn, "s7545_plant");
+    std::lock_guard<std::mutex> lk(s_s7545_mu);
+    const int i = s7545_find(a); if (i < 0) { ++s_s7545_unk; return 1; }
+    const uint32_t t = s_s7545_thr[i], off = a - t;
+    if (plant) { uint64_t& c = kind == 'L' ? s_s7545_pl_ld : s_s7545_pl_st; if (c++ == 0) std::fprintf(stderr, "[s7545] plant DETECTED kind=%c thr=%08X off=%02X t=%.1f\n", kind, t, off, s7325_now() - s_s7545_t0); return 1; }
+    (kind == 'L' ? s_s7545_ld : s_s7545_st)++; if (off >= 0x30u) ++s_s7545_tail;
+    S7545Row& r = s_s7545_rows[((uint64_t)pc << 32) | ((uint64_t)(uint8_t)kind << 24) | ((uint64_t)(w & 0xFF) << 16) | off];
+    r.fn = fn; r.t = t; r.val = s7545_rdw(a); r.t1 = s7325_now() - s_s7545_t0;
+    if (r.n++ == 0 && s_s7545_pcn[pc]++ < 64u && s_s7545_rows.size() <= 4000u)
+        std::fprintf(stderr, "[s7545] thr-access pc=%08X fn=%s addr=%08X thr=%08X off=%02X kind=%c w=%d val=%08X id=%08X t=%.1f\n", pc, fn ? fn : "?", a, t, off, kind, w, r.val,
+                     s7545_rdw(t + 0x14u), r.t1);
+    return 1; }
+extern "C" void rs64_s7545_create(uint32_t t) {
+    if (!s7545_on() || t < 0x80000000u || t >= 0x81800000u - 0x1B0u) return;
+    bool first = false;
+    {   std::lock_guard<std::mutex> lk(s_s7545_mu);
+        if (s_s7545_t0 == 0) { s_s7545_t0 = s7325_now(); first = true;
+            if (!g_rs64_s7475_bm) g_rs64_s7475_bm = (unsigned char*)std::calloc(0x1800000u >> 3, 1);
+            s7545_mark(0x8011A890u, 4); g_rs64_s7484_on = g_rs64_s7475_bm ? 1 : 0;
+            std::fprintf(stderr, "[s7545] thread watch armed bm=%d store_diag_needed=ROGUESQ_STORE_DIAG=1\n", g_rs64_s7484_on); }
+        for (uint32_t x : s_s7545_thr) if (x == t) { std::fprintf(stderr, "[s7545] thr-recreate thr=%08X\n", t); return; }
+        s_s7545_thr.push_back(t); s_s7545_tc.push_back(s7325_now() - s_s7545_t0); s7545_mark(t, 0x1B0u);
+        std::fprintf(stderr, "[s7545] thr-add thr=%08X n=%zu t=%.1f\n", t, s_s7545_thr.size(), s_s7545_tc.back()); }
+    if (first) std::thread([] {
+        const double plant_s = [] { const char* e = std::getenv("ROGUESQ_S7545_PLANT"); return (e && *e) ? std::atof(e) : 150.0; }();
+        bool planted = false; int k = 0;
+        for (;;) { std::this_thread::sleep_for(std::chrono::seconds(5)); ++k; const double now = s7325_now() - s_s7545_t0;
+            if (!planted && plant_s > 0 && now >= plant_s) { planted = true; uint32_t t = 0;
+                { std::lock_guard<std::mutex> lk(s_s7545_mu); for (uint32_t x : s_s7545_thr) if (x == 0x8010FF70u) t = x; if (!t && !s_s7545_thr.empty()) t = s_s7545_thr[0]; }
+                std::fprintf(stderr, "[s7545] plant SET thr=%08X marked=%d t=%.1f\n", t, t ? (int)s7545_marked(t + 0x10u) : 0, now);
+                if (t && s7545_marked(t + 0x10u)) { rs64_s7484_load(0x80DEAD10u, t + 0x10u, 2, "s7545_plant"); rs64_s7475_store(0x80DEAD14u, t + 0x10u, 2, "s7545_plant"); } }
+            s7545_sum(k % 12 == 0); } }).detach(); }
+static void s7545_unmark(uint32_t a, uint32_t n) { if (!g_rs64_s7475_bm) return; for (uint32_t b = a; b < a + n; ++b) { const uint32_t o = b - 0x80000000u; if (o < 0x1800000u) g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); } }
+static void rs64_s7545_destroy(uint32_t t) {  /* osDestroyThread (self or other; thread exit runs it with NULL -> self): stop watching */
+    std::lock_guard<std::mutex> lk(s_s7545_mu);
+    for (size_t i = 0; i < s_s7545_thr.size(); ++i) if (s_s7545_thr[i] == t) { s7545_unmark(t, 0x1B0u); s_s7545_thr.erase(s_s7545_thr.begin() + i); s_s7545_tc.erase(s_s7545_tc.begin() + i);
+        std::fprintf(stderr, "[s7545] thr-del thr=%08X n=%zu t=%.1f\n", t, s_s7545_thr.size(), s7325_now() - s_s7545_t0); return; }
+    std::fprintf(stderr, "[s7545] thr-del-unknown thr=%08X\n", t); }
+static void s7545_host(uint32_t a, uint32_t w, const char* kind) {
+    std::lock_guard<std::mutex> lk(s_s7545_mu);
+    for (uint32_t t : s_s7545_thr) if (a < t + 0x1B0u && t < a + w) { ++s_s7545_hostk[kind ? kind : "?"]; return; } }
 extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7545_on()) return s7545_access(pc, a, w, fn, 'L');  /* s7545 class GE thread watch (exclusive) */
     if (s7518_watch()) { s7519_load(pc, a, w, fn); return s7518_load(pc, a, w, fn); }
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu); return s7484_load(pc, a, w, fn); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7545_on()) return s7545_access(pc, a, w, fn, pc >= 0xE0000000u ? 'H' : 'S');  /* s7545 class GE */
     if (s7518_watch()) return s7519_store(pc, a, w, fn);  /* s7519 class FP (exclusive mode, as the s7518 load watch) */
     if (rs64_s7501_on && rs64_s7501_cpu(pc, a, w, fn)) return 1;  /* s7501 EZ: guest store into a seen framebuffer (bits marked by main.cpp) */
     /* returns 1 when the store is ours (slack or the control word): the s5798 dispatcher then returns */
@@ -6403,6 +6483,7 @@ static uint32_t s_s7491_lo[S7491_NK] = {0}, s_s7491_hi[S7491_NK] = {0};
 static int s_s7491_plant = 0;
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn);
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind) {
+    if (s7545_on()) { if (kind && !std::strcmp(kind, "os_createthread")) rs64_s7545_create(a); if (kind && !std::strcmp(kind, "os_destroythread")) rs64_s7545_destroy(a); if (kind && w) s7545_host(a, w, kind); return; }  /* s7545 class GE */
     if (!g_rs64_s7475_bm || !kind || w == 0 || w > 0x200000u || a < 0x80000000u || a >= 0x81800000u) return;
     int k = 0; while (k < S7491_NK && std::strcmp(kind, k_s7491_kind[k])) ++k; if (k == S7491_NK) return;
     if (w > 0x10000u && k != 14) return;  /* only the RT64 framebuffer writeback is allowed whole-image widths */

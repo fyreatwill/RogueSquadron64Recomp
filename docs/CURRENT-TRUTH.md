@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7544 (2026-11-17).
+Compact operational handoff, as of Session 7545 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -59,7 +59,11 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   caller, so the s7543 seed row is dead code. Every osStartThread targets a fresh or stopped thread (port re-inserts a RUNNABLE one,
   libultra ignores it): direct create in the same fn, startServiceWorker after registerServiceWorker, releaseSerialLock paired W/R
   with waitForSerialIdle, restartServiceWorker dead. Limits (single-source, static): heap-carried thread pointers are not followed;
-  reachability is direct calls only. Runtime witness = next unit.
+  reachability is direct calls only. **s7545 runtime witness: CLOSED.** ROGUESQ_S7545_THRWATCH=1 (+STORE_DIAG=1) marks every created
+  OSThread [t, t+0x1B0) (osCreateThread/osDestroyThread via the RS64_S7491 hook) in the s7484 load / s5798 store bitmaps; L1 dd1, L4/L12
+  dd4, 220 s each (tools/s7545_thrwatch_recipe.zsh, score 0): 20 threads created, 8 destroyed, 0 guest loads/stores into any LIVE
+  thread; controls watch-ctl L+S and plant L+S (siServiceThread+0x10 at 150 s) fired in all 3. v1 without destroy tracking saw ~20k
+  stores/20 s: MusyX voice render + heap code reusing the structs of 4 destroyed threads (saveServiceWorker x2 etc.) = legitimate.
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -312,14 +316,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7537_splate_cost_batt. Open only: the queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (runs when on AC;
     fold with `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`); if AC L12 dd4 late < early - 0.5 in a
     3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
-18. **Class GB follow-ups (s7540-s7541).** (a) game-fps cost of NODRAIN=3 vs =1 vs drained: queued soak
-    scratch/agent/soak_queue/s7540_rwait_cost.sh (L5/L12 dd4, needs AC); fold with tools/g1e_level_fps.py. (b) CLOSED s7541: post-
+18. **Class GB follow-ups (s7540-s7541).** (a) CLOSED s7545: NODRAIN=3 vs =1 vs 0 (ASYNC=1, owner recipe, L5/L12 dd4, ABCCBA,
+    battery clk 1.44-1.53 ALLOW_SLOW, scratch/s7540_rwait_cost, tools/s7537_ring_cost.py --from 72): gen/s L5 59.4-59.5, L12 59.8-60.0 in
+    every arm, 12/12 alive, 0 stall -> no game-rate cost where the game holds 60 (single-source; CPU-bound case not exercised). (b) CLOSED s7541: post-
     reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) CLOSED s7542: s7541_wbw_rwait
     (NODRAIN=3, L4/L12 dd4, L1 dd8 21:9) live readers only RT64 updateScreen XXH3, ctl fired. (d) CLOSED s7542: class GC census (headline).
-19. **Class GE CLOSED statically s7544 (headline). Next (NEXT.md): runtime witness** for the census limits: a guest load/store into
-    any live OSThread [t, t+0x30) (static + worker + dynamic, tracked at osCreateThread/osDestroyThread) via the s7484 load hook and
-    the s5798 store hook, one build, L1/L4/L12 holds; positive control = plant a guest-style read of a live thread's state. 0 hits with
-    the plant caught closes the limit; a hit names the reader and its pc.
+19. **Class GE CLOSED (static s7544 + runtime s7545, headline).** Reopen only if a guest code path reads OSThread fields.
+    Follow-up = class GF (NEXT.md): host-side reads of OSThread fields through a pointer to a thread the guest has destroyed and
+    whose struct it reuses (s7545 v1 shows reuse within 2 s; e.g. wait_for_resumed threads.cpp:289 reads this_thread()->context).
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -1,21 +1,19 @@
-# NEXT (s7545)
-HYPOTHESIS-ID: class-ge-thread-state-fidelity
+# NEXT (s7546)
+HYPOTHESIS-ID: class-gf-host-reads-destroyed-thread
 
-Fold first: SOAK-RESULTS lines for s7540_rwait_cost (voided 4/5 on battery as of s7544). If it voids out (5/5), rerun in-session with
-ALLOW_SLOW=1 ALLOW_BATT=1 and score in-run only (tools/g1e_level_fps.py).
+Class GE is CLOSED (static s7544 + runtime s7545 score 0). s7545 v1 (no destroy tracking) showed the guest reuses a destroyed
+thread's OSThread struct within ~2 s (0x80193050 destroyed t=4.9, MusyX voice render writes it at 6.8, incl. +0x20 where the port
+keeps its host UltraThreadContext* and +0x28 sp). So the port must never read a destroyed thread's struct afterwards.
 
-Work unit: class GE runtime witness. s7544's static census (tools/s7544_ge_census.py) found 0 guest accesses to OSThread fields, but
-it only resolves constant addresses (+ the service-worker fns) and direct calls. Close that limit at runtime, one build:
-- Track live OSThread guest addresses: osCreateThread adds [t_, t_+0x30), osDestroyThread removes (host side, a small array under a
-  mutex or an atomic bitmap; ~20 threads).
-- Hook guest loads (RS64_S7484_LD in tools/apply_s7484_loadwatch.py / rs64_s7484_load in src/main/upstream_compat.cpp; it is gated by
-  g_rs64_s7484_on, check how to arm it without the UAF machinery, or add a sibling gate ROGUESQ_S7545_THRWATCH=1) and guest stores
-  (RS64_S5798_ST) for addresses inside a live thread range. Log `[s7545] thr-access pc=.. addr=.. thr=.. off=.. kind=L|S w=..`, first
-  64 per pc, counts per (pc, off) at exit.
-- Positive control ROGUESQ_S7545_PLANT=1: once in mission, a guest-path read via the same hook function of thread 0x8010FF70+0x10
-  (call the hook exactly as a generated load would) -> must log.
-Hypotheses: H-none (0 hits with the plant caught: GE fully closed), H-reader (a guest pc reads state/queue/flags/id: classify vs the
-port's enum values; if it branches on them, fix the port's stored value with an =0 knob), H-ctx (a guest store lands in 0x20..0x2F,
-the host context pointer the port keeps in guest RAM: that is a crash risk, name the writer).
-Arms: L1 dd1, L4 dd4, L12 dd4, 220 s holds each (tools/s7484_uafload_recipe.zsh shape), all in one run sequence.
+Work unit: class GF static census (tools/s7546_gf_census.py, --controls), then a runtime witness only if a row is OPEN.
+- Enumerate every ultramodern/librecomp host read of an OSThread field: `TO_PTR(OSThread, ...)->`, `OSThread* x = TO_PTR(...)` then
+  `x->next/priority/queue/state/flags/id/context/sp` (threads.cpp, scheduling.cpp, threadqueue.cpp, mesgqueue.cpp, ultra_translation).
+- Classify each read: H-live (the thread is the caller itself and running, or is in a queue/run list = not destroyed), H-after-destroy
+  (reachable after osDestroyThread(other) for that thread: e.g. wait_for_resumed threads.cpp:289 reads this_thread()->context
+  when a destroyed thread wakes; thread_queue_remove on a stale queue pointer), H-dead (unreachable in this game).
+- For each H-after-destroy row: what value the guest can have written there (s7545 v1 log scratch/s7545_thrwatch_v1/log_l1.txt has
+  real reuse values) and whether the read then derefs it as a host pointer (crash) or only compares it (benign).
+- Controls: planted read of a destroyed-thread field in a fake function -> OPEN; deleted rule -> unclassified.
+Hypotheses: H-safe (every post-destroy read only compares, e.g. context != mine -> self-destroy), H-deref (some path derefs
+t->context of a reused struct -> fix: keep context host-side in a map keyed by t_, =0 knob), H-none (no post-destroy reads).
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

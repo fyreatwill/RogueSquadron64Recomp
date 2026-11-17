@@ -200481,3 +200481,35 @@ Rules out: a guest branch on a libultra thread-state value the port does not sto
 self-stop or double-start reaching the port's divergent paths through direct calls.
 Limits (single-source, static): thread pointers carried through the heap to other code and LOOKUP_FUNC indirect calls are not followed.
 Next: runtime witness (NEXT.md s7545): log any guest load/store into a live OSThread range via the s7484/s5798 hooks, with a plant.
+
+## Session 7545 (2026-11-17) — class GE runtime witness CLOSED: 0 guest loads/stores into any live OSThread on L1/L4/L12 (20 threads tracked create->destroy, watch-ctl and plant L+S fired in every arm); the guest reuses destroyed threads' structs within ~2 s (legitimate, seeds class GF)
+What ran: ROGUESQ_S7545_THRWATCH=1 (src/main/upstream_compat.cpp s7545_*, exclusive with the s7475/s7484/s7518 watches). Threads are
+tracked host-side: osCreateThread's existing RS64_S7491 "os_createthread" hook adds [t, t+0x1B0) (port fields 0x00-0x2F + the unused
+retail __OSThreadContext tail) to g_rs64_s7475_bm; a new one-line RS64_S7491(t_, 0, "os_destroythread") at the top of osDestroyThread
+(lib/N64ModernRuntime threads.cpp, exported; w=0 so the s7491 EP path ignores it) unmarks it. The generated lw/lh/lb/ld bitmap test
+(apply_s7484_loadwatch) and the s5798 store test (apply_s7475_slackwatch, STORE_DIAG=1) route every marked guest access to
+s7545_access; host writes through the S7491 hooks are counted per kind. Recipe tools/s7545_thrwatch_recipe.zsh (owner quiet harness,
+L1 dd1 / L4 dd4 / L12 dd4, HOLD 220, battery clk 1.53 with ALLOW_SLOW: not a timing run).
+v1 (no destroy tracking, L1, killed at ~25 s): 19,992 guest stores by t=20 s into 4 dynamic threads 0x80193050 / 0x801B3FC0 /
+0x801BDBB0 / 0x801DD170 (musyxRenderVoiceSamples 0x800902D4.., pcs 0x8009DB2C, 0x80018F30, ...), whole-struct patterns incl. +0x20
+(the port's host context pointer) and +0x28. The v2 destroy log names all four as destroyed before their first foreign write
+(0x80193050 = saveServiceWorker id 4, thr-del t=4.9, first MusyX write t=6.8; 0x801B3FC0 saveServiceWorker id 6 / 0x801DD170 at 28.2;
+0x801BDBB0 at 43.5): heap reuse of freed thread structs, legitimate guest writes.
+v2 (destroy tracked), score 0, all arms alive, 0 crash, 0 VI stall:
+- L1/L4/L12 each: 20 thr-add, 8 thr-del (each destroy logs twice: other then self, the 2nd = thr-del-unknown), 12 live at end.
+- loads=0 stores=0 port_field=0 ctxptr=0 tail=0 into live threads; controls: watch-ctl PASS kind=L and kind=S (frame counter
+  0x8011A890 marked: ctl_ld 34.9k-50.8k, ctl_st 8.8k-12.7k), plant DETECTED kind=L and kind=S (siServiceThread 0x8010FF70+0x10 via the
+  same entry points after the bitmap test, t=150 s = in flight). Host kinds into thread structs: os_createthread, os_tq_head, os_tq_link
+  (the port's own queue links) only.
+Rules out (two lines with s7544's static census): a guest reader or writer of a live thread's state/queue/flags/id/context/sp
+fields (H-reader, H-ctx) in boot, front end, mission load and flight on 3 levels, including heap-carried pointers and LOOKUP_FUNC
+paths the static census could not follow. Class GE CLOSED.
+New datum (single-source): destroyed thread structs are reused within ~2 s, so any HOST read of a destroyed thread's struct
+(wait_for_resumed threads.cpp:289 reads this_thread()->context when a destroyed thread wakes; queue ops on stale pointers) reads
+guest data. Next: class GF census of host OSThread reads after destroy (NEXT.md).
+Soak fold: s7540_rwait_cost voided 5/5 on battery; rerun in-session (ALLOW_SLOW=1 ALLOW_BATT=1, clk 1.44-1.53, ASYNC=1, owner recipe,
+L5/L12 dd4, ABCCBA per level, HOLD 120). tools/g1e_level_fps.py scores fl_s=0 here (quiet harness has no [g1b]); ring scorer
+tools/s7537_ring_cost.py --from 72: L5 gen/s 59.4/59.4/59.5/59.4/59.4/59.4 (n1,n3,n0,n0,n3,n1), L12 60.0/60.0/59.9/59.8/60.0/60.0;
+wl50 3.4-3.5 ms everywhere; L5 maxgap 435-479 ms in every arm alike (same-scene transition). 12/12 alive, 0 crash, 0 VI stall.
+-> NODRAIN=3 costs no game rate vs =1 or drained where the game holds 60 (single-source; the CPU-bound case is not exercised by this
+recipe). Item 18(a) CLOSED.

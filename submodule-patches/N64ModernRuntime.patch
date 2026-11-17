@@ -9261,7 +9261,7 @@ index f9c0fa1..dab773b 100644
      PTR(OSThread)* queue = queue_to_ptr(PASS_RDRAM queue_);
      return *queue == NULLPTR;
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..824bfff 100644
+index 812c556..cc99c52 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,23 @@
@@ -9792,7 +9792,11 @@ index 812c556..824bfff 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -286,17 +721,36 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -283,20 +718,40 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+     if (t_ == NULLPTR) {
+         t_ = thread_self;
+     }
++    RS64_S7491(t_, 0, "os_destroythread");  // s7545 class GE thread watch: unmark the struct (w=0: the s7491 EP path ignores it)
      OSThread* t = TO_PTR(OSThread, t_);
      // Check if the thread is destroying itself (arg is null or thread_self)
      if (t_ == thread_self) {
@@ -9829,7 +9833,7 @@ index 812c556..824bfff 100644
          cur_context->running.signal();
      }
  }
-@@ -311,6 +765,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
+@@ -311,6 +766,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
          t->priority = pri;
  
          if (t_ != ultramodern::this_thread() && t->state != OSThreadState::STOPPED) {
@@ -9837,7 +9841,7 @@ index 812c556..824bfff 100644
              ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
              ultramodern::thread_queue_insert(PASS_RDRAM t->queue, t_);
          }
-@@ -337,6 +792,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +793,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -9858,7 +9862,7 @@ index 812c556..824bfff 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +816,18 @@ void thread_cleaner_func() {
+@@ -347,8 +817,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -9877,7 +9881,7 @@ index 812c556..824bfff 100644
              delete to_delete;
          }
      }
-@@ -359,6 +838,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +839,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {
