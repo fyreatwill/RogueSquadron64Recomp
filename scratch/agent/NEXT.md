@@ -1,23 +1,18 @@
-# NEXT (s7528)
-HYPOTHESIS-ID: closed-class-gap-ledger
+# NEXT (s7529)
+HYPOTHESIS-ID: fv-host-guest-keyed-cache-lifetime
 
-Check `wc -c < docs/CURRENT-TRUTH.md` first (59.6 KB after s7527; >60000 = MAINTENANCE iteration instead).
+Check `wc -c < docs/CURRENT-TRUTH.md` first (59.9 KB after s7528; >60000 = MAINTENANCE iteration instead).
+Fold first: scratch/agent/SOAK-RESULTS.md line for s7528_evict_levels (tools/s7528_evict_score.py score=0 -> gap FQ fix qualified 4 levels;
+any FAIL: read scratch/agent/soak_results/s7528_evict_levels_*.log, the [s7528] lines name the load).
 
-FU CLOSED s7527 (tools/s7527_host_replace_audit.py --controls 8/8). The replaced-libultra surface (BL, BM, FG-FU) is exhausted.
-The closed classes left named, unfixed gaps. One work unit: build the gap ledger, then fix or prove the top row in the same session.
-
-1. Ledger (offline, one pass): grep CURRENT-TRUTH + PORTING-STATE s7400-s7527 for "Gap:"/"Gaps:" and "not modelled"/"never erases".
-   Known rows so far:
-   - FQ s7520: librecomp load_overlay never erases a replaced overlay's func_map entries (0 calls hit one in the s7520 runs).
-     H-latent (a call into a stale entry would run the previous overlay's code) vs H-dead (every overlay swap reloads the same
-     window and every lookup goes through the new section table). Fix candidate: erase the old section's entries on replace
-     (lib/N64ModernRuntime -> ./submodule-patches/export.sh + commit SAME session); control = s7520 ROGUESQ_S7520_CTL=1 still caught,
-     plus a planted lookup of a stale vram after an overlay swap that must now miss (logged) instead of returning the old func.
-   - FS s7522: a later partial DMA inside a resident IMEM run is not re-split (tools/s7522_imem_residency.py assumption).
-   - FP s7519: stores before a line's first marking, no eviction model.
-   - EM s7486: swl/swr routed to rs64_s5660_ustore with only the aligned check.
-   Classify each: H-latent-fix (real code change), H-dead (name why nothing can reach it), H-instrument-only (gap in a closed tool).
-2. Take the highest H-latent-fix row (expected FQ func_map) and land it with its two-arm control in the same iteration
-   (L4 dd1 forced route, HOLD 120, old vs new arm in one build via an env toggle, default stays retail-equivalent).
-Expected: >=1 real code change; others proven dead or recorded as instrument-only.
+Class FV (idiom-class audit, generalises the s7528 FQ finding): every host-side container in librecomp / ultramodern / src/ keyed by a guest
+address (unordered_map / map / set / vector of guest vram/rdram addresses, static caches) that is filled when guest state appears but never
+invalidated when the guest reuses the address (overlay swap, rs_free/heap reuse, DMA overwrite, task end).
+1. Census (offline, one pass): grep -nE 'static .*(unordered_map|std::map|unordered_set|std::set)<(u?int32_t|uint32_t|gpr)' plus
+   member containers in lib/N64ModernRuntime/{librecomp,ultramodern}/src, src/main, src/rsp, src/game. Exclude pure diagnostics (rs64_s7xxx
+   logging-only maps). For each: key meaning, filler, eraser (or none), reuse event that should erase.
+2. Classify: H-canon (erased on the reuse event), H-dead (key space never reused: name why), H-latent-fix (needs an erase; land it with a
+   same-build =0 arm and a planted-stale control like ROGUESQ_S7528_CTL), H-instrument-only.
+3. Land the top H-latent-fix row with its control in the same session (L4 dd1 forced, HOLD 120, two arms one build).
+Expected: a classified table (tool: tools/s7529_fv_census.py --controls with a planted missing-eraser fixture) and >=0 fixes.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

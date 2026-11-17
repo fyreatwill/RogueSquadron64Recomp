@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7526 (2026-11-17).
+Compact operational handoff, as of Session 7528 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -464,8 +464,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     words: rngSeed, .data that N64Recomp folds into the last function audioCompandS16 and __OSGlobalIntMask extents, data_gap_*), ~430k /
     361k overlay get_function calls each byte-checked: 0 exec_diff, 0 stale func_map, 0 DMA into main code; all 55 overlay-window DMAs
     carry a section's own ROM bytes at its link address (boot worker 0x80000D04 preloads the mission tail ROM 0x101000 -> 0x80100400
-    then the one boot osInvalICache). Both ctls caught on both arms. Gap: load_overlay never erases a replaced overlay's func_map
-    entries (0 calls hit one).
+    then the one boot osInvalICache). Both ctls caught on both arms. Gap FIXED s7528: load_overlay now evicts overlapping loaded sections
+    (ROGUESQ_S7528_EVICT default on, =0 old; tools/s7528_evict_score.py).
     **FR CLOSED 6 levels (s7521, soak folded s7522: L1 dd8 21:9 + L7/L10/L12 dd4 live=0 after a scorer fix, ctl 5/5): executed RSP code bytes == the RSPRecomp images (H-canon; one placement difference H-dead).** Static (tools/s7521_ucode_bytes.py
     --controls, 7/7 synthetic): the main/B/boot toml images == ROM at the task ucode addresses. Runtime ROGUESQ_S7521_UCODEWATCH=1 (src/rsp/s7521_ucode_watch.cpp;
     hooks librecomp rsp.cpp run_task [audio], main.cpp rs64_run_lle_gfx [gfx], rsp.hpp IMEM-DMA skip, dpc_bridge L_1DB0 probes - needs ROGUESQ_G1E_PROBES=1)
@@ -499,7 +499,9 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak s7525_v2p_levels queued (L1 dd8
     21:9, L7/L10/L12 dd4; tools/s7525_v2p_score.py). Soak score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive). **s7526 same-run render-input twin: H-same** (ROGUESQ_S7524_V2P=alt, pseudo-random per gfx task, src/rsp/s7526_v2p_twin.cpp hashes every byte rs64_rt_submit forwards): L4 dd1 static phases 2-4 repeats cross/same 264/261; ctl (=ctl folds a constant into V2P-on digests) cross 0 / same 418 -> detector live; flight tasks never repeat (no info there, single-source for flight = s7525 control-flow reading). Mixed on/off tasks: alive, 0 stalls, s7096 exact. **V2P CLOSED: owner decision default-on (docs/OWNER-OPT-INS.md row), do not flip without the owner.**
 21. **FU CLOSED (s7527, static): host libultra replacements skip no read side effect except V2P (closed s7524-s7526).** tools/s7527_host_replace_audit.py --controls (8/8): 153 replaced funcs, helper/G/O/pointer joins; H-canon 57, H-dead 95, H-gap 1 = osSpTaskLoad.
-    Rerun it after any librecomp/ultramodern replacement change. Next: closed-class gap ledger (NEXT.md s7528).
+    Rerun it after any librecomp/ultramodern replacement change.
+    **Gap ledger s7528:** only FQ func_map was H-latent-fix: FIXED (L4 old/new: stale entries 25-274/0, planted lookup hit 4/4 / 0/4,
+    loaded_sections 3->7 / 3; gf_stale 0 both = latent). Other gaps instrument-only or closed (PORTING-STATE s7528). Soak queued.
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -199909,3 +199909,33 @@ Rerun after any change to librecomp/ultramodern replacements or a regen: `python
 VERDICT: class FU H-canon/H-dead except the already-measured V2P row; the replaced-libultra surface (BL, BM, FG-FU) is exhausted.
 Next: closed-class gap ledger (NEXT.md): fix or prove each "Gap:" left open by the closed classes (e.g. FQ load_overlay never erasing a
 replaced overlay's func_map entries; FS partial-DMA re-split).
+
+## Session 7528 (2026-11-17) — closed-class gap ledger: FQ func_map gap FIXED (load_overlay evicts overlapping sections, default on, =0 old); same-build two-arm control L4 stale 25-274 -> 0, planted stale lookup 4/4 hit -> 0/4; other gaps instrument-only
+Soak folds: none new since s7526 (SOAK-RESULTS last line = s7526 fold). CURRENT-TRUTH 59.6 KB (<60000, not maintenance).
+Work unit (HYPOTHESIS-ID closed-class-gap-ledger). Ledger of the "Gap:" rows the closed classes left, from CURRENT-TRUTH + PORTING-STATE s7486-s7527:
+| row | gap | class |
+| FQ s7520 | load_overlay never erases a replaced overlay's func_map entries | H-latent-fix -> FIXED here |
+| FO s7518 | lwl/lwr + stores not watched, no eviction model | instrument-only (store side closed by FP s7519; lwl/lwr by EL; no-eviction only overstates staleness = false positives, 0 found) |
+| FP s7519 | stores before a line's first marking, no eviction model | instrument-only (the port has no D-cache; the model predicts retail-only differences, conservative) |
+| FR s7521 | 0x12A0 window not modelled at port dispatch time | closed by FS s7522 (57M/134M 0x12A0 dispatches modelled) |
+| FS s7522 | partial DMA inside a resident run not re-split; direct entries only for L_1DB0 | instrument-only (tool assumption, offline) |
+| EM s7486 | swl/swr routed to rs64_s5660_ustore with only the aligned check | closed by s7488 (tools/apply_s7488_ustorewatch.py, 405 sites) |
+FQ mechanism (read from lib/N64ModernRuntime/librecomp/src/overlays.cpp): pi.cpp calls load_overlays + load_overlays_by_start on every ROM DMA;
+sections 2/3/4 all link at 0x800A5130 (sizes 0x665A0 / 0x283F0 / 0xB810). load_overlay only inserted the new section's func_map keys and
+emplace_back'd loaded_sections, so every function start of the previous overlay that is not also a start in the new one stayed live (a call
+there would run the old overlay's C instead of failing) and loaded_sections grew one duplicate per swap.
+ORIGIN: the writer is librecomp load_overlay itself (upstream design: unload is explicit via unload_overlays/unload_overlay_by_id, which
+this game's chunked-DMA route through pi.cpp never calls). Values are legitimate function pointers of a non-resident overlay, not corruption.
+Fix (overlays.cpp rs64_s7528_pre_load/post_load, patch exported): before registering, unload every loaded section whose [ram, ram+size)
+overlaps the new one, same body as unload_overlays (erase each func key, reset section_addresses, erase loaded_sections). Default on;
+ROGUESQ_S7528_EVICT=0 = old. Census per load: [s7528] pre (evicted_secs/funcs) + post (stale_window_entries, loaded_sections);
+ROGUESQ_S7528_CTL=1 plants one func_map lookup of an old-overlay function address not in the new section, per swap.
+Run (one build, two arms, scratch/s7528_evict/run.zsh: L4 dd1 forced, HOLD 120, + S7520_CODEWATCH + S7528_CTL):
+  new: swaps 4 (3->4->3->4->2), evicted 216/59/216/59 funcs, stale_window_entries 0 every load, ctl probe hit 0/4, loaded_sections flat 3.
+  old (EVICT=0): stale 25/59/25/274, ctl probe hit 4/4, loaded_sections 3->7. Both alive_at_end=1, 0 crash, vi_stalls30s 0, max_gap 147-148 ms.
+  s7520 gf_stale 0 in both (430k / 428k overlay lookups), 0 'Failed to find function' -> nothing ever called a stale entry: the gap was
+  latent, the fix changes no live dispatch. Two lines: per-load census + planted-lookup control, and s7520's independent gf_stale join.
+Scorer tools/s7528_evict_score.py (--controls old-must-fail / new-must-pass: PASS/PASS; live: new PASS, old FAIL score 1).
+Levels soak queued: scratch/agent/soak_queue/s7528_evict_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4, 200 s, CTL armed).
+Rules out: a live stale-overlay dispatch at L4 (gf_stale 0 both arms). Does not rule out: other levels until the soak folds.
+Next: class FV (NEXT.md) — host-side containers keyed by guest address that are never invalidated on guest reuse.

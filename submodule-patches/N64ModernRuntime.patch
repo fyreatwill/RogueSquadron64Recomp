@@ -1810,10 +1810,10 @@ index ff40212..ae1fb16 100644
          GenericFunction func = mod.code_handle->get_function_handle(callback.function_index);
          size_t event_index = 0;
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..7280d97 100644
+index 8c8e5d1..4c8cc08 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
-@@ -1,9 +1,15 @@
+@@ -1,9 +1,16 @@
  #include <algorithm>
 +#include <atomic>
  #include <cassert>
@@ -1821,6 +1821,7 @@ index 8c8e5d1..7280d97 100644
 +#include <cstdlib>
  #include <cstring>
  #include <unordered_map>
++#include <unordered_set>
  #include <vector>
 +#include <execinfo.h>
 +#include <mutex>
@@ -1829,7 +1830,7 @@ index 8c8e5d1..7280d97 100644
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,9 +18,46 @@
+@@ -12,9 +19,46 @@
  #include "overlays.hpp"
  #include "sections.h"
  
@@ -1876,23 +1877,80 @@ index 8c8e5d1..7280d97 100644
  static SectionTableEntry* patch_code_sections = nullptr;
  size_t num_patch_code_sections = 0;
  static std::vector<char> patch_data;
-@@ -150,6 +193,7 @@ void recomp::overlays::add_loaded_function(int32_t ram, recomp_func_t* func) {
+@@ -150,8 +194,62 @@ void recomp::overlays::add_loaded_function(int32_t ram, recomp_func_t* func) {
      func_map[ram] = func;
  }
  
 +static void rs64_s7520_note_load_fwd(size_t idx, int32_t ram);
++
++// s7528 gap FQ (s7520): load_overlay never evicted a section already resident in the same RAM window, so after an
++// overlay swap the previous overlay's func_map entries (every function address that is not also a function start
++// of the new overlay) stayed live and a call there would run the old overlay's code instead of failing; and
++// loaded_sections grew by one duplicate entry per swap. Fix (default on; ROGUESQ_S7528_EVICT=0 = old behaviour):
++// before registering, unload every loaded section whose [ram, ram+size) overlaps the new one, exactly as
++// unload_overlays does. ROGUESQ_S7528_CTL=1 plants a lookup of one stale address per swap (must miss with the fix,
++// hit without it). Every load prints one [s7528] census line: evictions, stale window entries left, loaded count.
++static void rs64_s7528_pre_load(size_t idx, int32_t ram, uint32_t* probe) {
++    static const int evict = [] { const char* e = std::getenv("ROGUESQ_S7528_EVICT"); return e && *e == '0' ? 0 : 1; }();
++    static const int ctl = [] { const char* e = std::getenv("ROGUESQ_S7528_CTL"); return e && *e == '1' ? 1 : 0; }();
++    const SectionTableEntry& ns = sections_info.code_sections[idx];
++    *probe = 0;
++    unsigned secs = 0, funcs = 0;
++    for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
++        const SectionTableEntry& s = sections_info.code_sections[it->section_table_index];
++        bool overlap = ns.size && s.size && ram < (int32_t)(it->loaded_ram_addr + s.size) && it->loaded_ram_addr < (int32_t)(ram + ns.size);
++        if (!overlap) { ++it; continue; }
++        if (ctl && *probe == 0 && it->section_table_index != idx) {
++            for (size_t f = 0; f < s.num_funcs && *probe == 0; f++) {
++                uint32_t va = s.funcs[f].offset + it->loaded_ram_addr;
++                bool in_new = false;
++                for (size_t g = 0; g < ns.num_funcs; g++) if (ns.funcs[g].offset + (uint32_t)ram == va) { in_new = true; break; }
++                if (!in_new && va >= (uint32_t)ram && va < (uint32_t)ram + ns.size) *probe = va;
++            }
++        }
++        if (!evict) { ++it; continue; }
++        for (size_t f = 0; f < s.num_funcs; f++) { func_map.erase(s.funcs[f].offset + it->loaded_ram_addr); ++funcs; }
++        section_addresses[s.index] = s.ram_addr;
++        ++secs;
++        it = loaded_sections.erase(it);
++    }
++    std::fprintf(stderr, "[s7528] pre idx=%zu ram=%08X size=%X evict=%d evicted_secs=%u evicted_funcs=%u\n",
++                 idx, (uint32_t)ram, ns.size, evict, secs, funcs);
++}
++static void rs64_s7528_post_load(size_t idx, int32_t ram, uint32_t probe) {
++    const SectionTableEntry& ns = sections_info.code_sections[idx];
++    std::unordered_set<uint32_t> own;
++    for (size_t g = 0; g < ns.num_funcs; g++) own.insert(ns.funcs[g].offset + (uint32_t)ram);
++    unsigned long stale = 0;
++    for (const auto& kv : func_map) {
++        uint32_t a = (uint32_t)kv.first;
++        if (a >= (uint32_t)ram && a < (uint32_t)ram + ns.size && !own.count(a)) ++stale;
++    }
++    std::fprintf(stderr, "[s7528] post idx=%zu ram=%08X funcs=%zu stale_window_entries=%lu loaded_sections=%zu",
++                 idx, (uint32_t)ram, ns.num_funcs, stale, loaded_sections.size());
++    if (probe) std::fprintf(stderr, " ctl_probe=%08X ctl_hit=%d", probe, func_map.count((int32_t)probe) ? 1 : 0);
++    std::fprintf(stderr, "\n");
++    std::fflush(stderr);
++}
++
  void load_overlay(size_t section_table_index, int32_t ram) {
      const SectionTableEntry& section = sections_info.code_sections[section_table_index];
++    uint32_t s7528_probe = 0;
++    rs64_s7528_pre_load(section_table_index, ram, &s7528_probe);
  
-@@ -160,6 +204,7 @@ void load_overlay(size_t section_table_index, int32_t ram) {
+     for (size_t function_index = 0; function_index < section.num_funcs; function_index++) {
+         const FuncEntry& func = section.funcs[function_index];
+@@ -159,7 +257,9 @@ void load_overlay(size_t section_table_index, int32_t ram) {
+     }
  
      loaded_sections.emplace_back(ram, section_table_index);
++    rs64_s7528_post_load(section_table_index, ram, s7528_probe);
      section_addresses[section.index] = ram;
 +    rs64_s7520_note_load_fwd(section_table_index, ram);  // s7520 class FQ
  }
  
  static void load_special_overlay(const SectionTableEntry& section, int32_t ram) {
-@@ -186,6 +231,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
+@@ -186,6 +286,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
  }
  
  extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
@@ -1900,7 +1958,7 @@ index 8c8e5d1..7280d97 100644
      // Search for the first section that's included in the loaded rom range
      // Sections were sorted by `init_overlays` so we can use the bounds functions
      auto lower = std::lower_bound(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections], rom,
-@@ -198,8 +244,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +299,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -1918,7 +1976,7 @@ index 8c8e5d1..7280d97 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +291,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +346,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -1946,7 +2004,7 @@ index 8c8e5d1..7280d97 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -274,6 +348,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
+@@ -274,6 +403,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
  void recomp::overlays::init_overlays() {
      func_map.clear();
      section_addresses = (int32_t *)calloc(sections_info.total_num_sections, sizeof(int32_t));
@@ -1959,7 +2017,7 @@ index 8c8e5d1..7280d97 100644
  
      // Sort the executable sections by rom address
      std::sort(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections],
-@@ -361,13 +441,499 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +496,499 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
