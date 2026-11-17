@@ -199174,12 +199174,12 @@ Result (scratch/s7507_fd.txt):
 - The uncompiled reference build/factor5_ucode_ovl20 has a hand-edited 1FF0 comment (5 flags). It is reported but not counted.
 - Runtime cross-check (single-source, weak): 146 game logs s7484-s7506 contain 0 `Unhandled jump target/resume target` lines. stderr capture
   is live there (2.48M [dpc-fwd] lines). But that printf goes to stdout, which may be lost on SIGKILL, so the result rests on the static audit.
-Verdict: **H-equal. FD CLOSED.** The RSP side of the generator lowers branches, jumps, calls and delay slots correctly. The hand-built
+Verdict: **H-equal SELECTED; H-latent REFUTED (0 defects even in the 9 uncompiled overlay references); H-live REFUTED. FD CLOSED.** The RSP side of the generator lowers branches, jumps, calls and delay slots correctly. The hand-built
 composite's routing and cross-overlay gotos are consistent with the overlay image regions.
 Side fix: tools/ucode_fixed/factor5_ucode_recompiled.c.patch was missing the s7112 tri diag line, so verify showed DIFF for main.
 `tools/ucode_regen.sh snapshot` refreshed it: verify now gives 12/12 SAME, census 0 unexplained, 0 splice breaks.
 ORIGIN: no mitigation landed. This was an audit plus a patch snapshot.
 Rules out: RSPRecomp branch/slot order, condition signedness, jal ra, jr latch, and switch coverage as a source of LLE gfx/audio divergence.
-Next: class FE, RSPRecomp scalar emission semantics (ALU/shift/slt/load-store with DMEM wrap), compiled and driven against a MIPS32 model
+Next discriminator: class FE, RSPRecomp scalar emission semantics (ALU/shift/slt/load-store with DMEM wrap), compiled and driven against a MIPS32 model
 (the s7412/s7413 shape for the RSP side). See scratch/agent/NEXT.md.
 Files: tools/s7507_rsp_ctrl_flow.py (new), tools/ucode_fixed/factor5_ucode_recompiled.c.patch, docs. No lib/ edits.
