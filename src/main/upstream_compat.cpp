@@ -4198,6 +4198,7 @@ static std::vector<uint8_t> s_s7518_ln;
 static std::atomic<uint64_t> s_s7518_stale{0}, s_s7518_fresh{0}, s_s7518_res{0}, s_s7518_dmaS{0}, s_s7518_dmaF{0};
 static std::mutex s_s7518_mu; static std::map<uint32_t, std::pair<uint64_t, uint32_t>> s_s7518_pcs;
 extern "C" void rs64_s7518_summary(void);
+static void s7519_ev(int op, uint32_t lo, uint32_t hi, uint32_t a, uint32_t n); extern "C" void rs64_s7519_summary(void);  /* s7519 FP, below */
 static bool s7518_watch() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7518_STALEWATCH"); return e && e[0] && e[0] != '0'; }(); return on; }
 enum { S7518_C = 0, S7518_N, S7518_R, S7518_F, S7518_S };
 static void s7518_markln(uint32_t l) { const uint32_t b = l * 16u; if (b + 16u > 0x17FFFF0u) return; g_rs64_s7475_bm[b >> 3] = 0xFF; g_rs64_s7475_bm[(b >> 3) + 1] = 0xFF; }
@@ -4210,9 +4211,11 @@ extern "C" void rs64_s7518_event(int op, uint32_t a, uint32_t n) {  /* op 0 inv,
     const uint32_t o = (a & 0x1FFFFFFFu); if (o >= 0x1800000u) return;
     const uint32_t lo = o / 16u, hi = std::min<uint32_t>((o + n - 1u) / 16u, 0x1800000u / 16u - 1u);
     if (op == 0) {
-        if (n >= 8192) { for (auto& v : s_s7518_ln) v = S7518_N; return; }
+        if (n >= 8192) { s7519_ev(3, 0, 0, a, n); for (auto& v : s_s7518_ln) v = S7518_N; return; }
+        s7519_ev(0, lo, hi, a, n);
         for (uint32_t l = lo; l <= hi; l++) { s_s7518_ln[l] = S7518_N; s7518_markln(l); }
         return; }
+    s7519_ev(1, lo, hi, a, n);
     for (uint32_t l = lo; l <= hi; l++) { uint8_t& v = s_s7518_ln[l];
         if (v == S7518_N || v == S7518_F) { v = S7518_F; ++s_s7518_dmaF; } else { v = S7518_S; ++s_s7518_dmaS; } s7518_markln(l); }
     static uint64_t nd = 0; if ((++nd & 2047u) == 0) rs64_s7518_summary();
@@ -4232,12 +4235,92 @@ extern "C" void rs64_s7518_summary(void) {
     if (!s7518_watch()) return;
     std::fprintf(stderr, "[s7518-sum] stale_load=%llu fresh_load=%llu inv_then_load=%llu dma_lines_fresh=%llu dma_lines_over_resident=%llu stale_pcs=%zu\n",
         (unsigned long long)s_s7518_stale.load(), (unsigned long long)s_s7518_fresh.load(), (unsigned long long)s_s7518_res.load(),
-        (unsigned long long)s_s7518_dmaF.load(), (unsigned long long)s_s7518_dmaS.load(), s_s7518_pcs.size()); }
+        (unsigned long long)s_s7518_dmaF.load(), (unsigned long long)s_s7518_dmaS.load(), s_s7518_pcs.size());
+    rs64_s7519_summary(); }
+/* s7519 class FP: the STORE side of FO. The VR4300 D-cache is write-back + write-allocate: a guest store leaves a dirty 16-byte line
+   that hardware writes back only on a writeback/eviction/index op, while the port writes RAM at once. Per tracked line (the s7518
+   bitmap: every invalidated, written-back or DMA'd line) a dirty state:
+     0 clean   1 D dirty (cache = RAM + stores)   2 X dirty over a DMA (RAM holds the DMA bytes, the cache holds pre-DMA + stores:
+     port = DMA data, hardware = whatever wins later)   3 L lost (an interior Hit_Invalidate discarded a dirty line: hardware RAM lacks
+     the store, port has it).
+   store: 0/1 -> 1 (on residency S: -> 2, counted st_on_S, conservative), 2 stays, 3 stays.  wb / wball / index inv (n >= 8192) /
+   osInvalDCache edge line (Hit_Writeback_Invalidate): 1 -> 0 clean; 2 -> LIVE row kind=wb (hardware writes the cached line over the
+   DMA bytes). osInvalDCache interior line (Hit_Invalidate): 1 -> 3 DISCARD row; 2 -> 0 resolved dead (dd_inv_ok, DMA wins as in the
+   port). DMA cart->RDRAM: 1 -> 2 (DMA_OVER_DIRTY row), 3 -> 0 (lost bytes overwritten, dead). load: 2 -> LIVE row kind=load
+   (hardware returns the cached bytes), 3 -> LIVE row kind=lost. Still 2/3 at the end = pending (an eviction would resolve it).
+   Ctl ROGUESQ_CACHE_SHAPE_CTL_WB=<k>: the first osWritebackDCache at or after the k-th that starts at a past DMA address (a slot)
+   and covers a dirty tracked line is dropped
+   (logged [cache-ctl] dropped wb ... dirty=N), so its lines must reach a DMA_OVER_DIRTY row if the next DMA covers them.
+   Gaps: stores to a line before it is first marked are unseen; no eviction model. Measurement only. */
+static std::vector<uint8_t> s_s7519_dt; static std::vector<uint32_t> s_s7519_pc; static std::set<uint32_t> s_s7519_set;
+static std::map<std::pair<int, uint32_t>, uint64_t> s_s7519_rows;
+static uint64_t s_s7519_n[12];  /* 0 st_seen 1 st_on_S 2 wb_clean 3 dma_over_dirty 4 dd_inv_ok 5 live_wb 6 live_load 7 discard 8 live_lost 9 lost_dma_ok 10 ctl_lines 11 st_ctl_wb */
+static const char* const s7519_kn[] = {"st_seen","st_on_S","wb_clean","dma_over_dirty","dd_inv_ok","live_wb","live_load","discard","live_lost","lost_dma_ok","ctl_lines","ctl_wb_hit"};
+static std::set<uint32_t> s_s7519_ctlln;  /* lines whose wb the control dropped */
+static std::set<uint32_t> s_s7519_dmaA;  /* start addresses of past cart->RDRAM DMAs (ctl targets a wb of a DMA slot) */
+static void s7519_init() { if (s_s7519_dt.empty()) { s_s7519_dt.assign(0x1800000u / 16u, 0); s_s7519_pc.assign(0x1800000u / 16u, 0); } }
+static void s7519_row(int k, uint32_t l, uint32_t pc, const char* fn) {
+    ++s_s7519_n[k]; const bool ctl = s_s7519_ctlln.count(l) != 0; auto& c = s_s7519_rows[{k, s_s7519_pc[l]}];
+    if (c++ < 2 || ctl) { static int nl = 0; if (nl++ < 400 || ctl) std::fprintf(stderr, "[s7519] %s line=%08X st_pc=%08X at_pc=%08X fn=%s ctl=%d n=%llu\n", s7519_kn[k],
+        0x80000000u + l * 16u, s_s7519_pc[l], pc, fn ? fn : "?", ctl ? 1 : 0, (unsigned long long)c); } }
+static void s7519_wbline(uint32_t l, uint32_t pc) {  /* caller holds s_s7518_mu; l is dirty */
+    uint8_t& d = s_s7519_dt[l]; if (d == 1) { d = 0; ++s_s7519_n[2]; s_s7519_set.erase(l); } else if (d == 2) { s7519_row(5, l, pc, "writeback"); d = 0; s_s7519_set.erase(l); } }
+static void s7519_ev(int op, uint32_t lo, uint32_t hi, uint32_t a, uint32_t n) {  /* op 0 inv, 1 dma0, 2 wb, 3 wball / index */
+    std::lock_guard<std::mutex> lk(s_s7518_mu); s7519_init();
+    if (op == 3) { std::vector<uint32_t> v(s_s7519_set.begin(), s_s7519_set.end()); for (uint32_t l : v) s7519_wbline(l, 0); return; }
+    auto it = s_s7519_set.lower_bound(lo);
+    std::vector<uint32_t> v; for (; it != s_s7519_set.end() && *it <= hi; ++it) v.push_back(*it);
+    if (op == 1) { if (s_s7519_dmaA.size() < 65536) s_s7519_dmaA.insert(a & 0x1FFFFFFFu);
+        for (uint32_t l = lo; l <= hi; l++) { uint8_t& d = s_s7519_dt[l];
+            if (d == 1) { d = 2; s7519_row(3, l, 0, "dma"); } else if (d == 3) { d = 0; ++s_s7519_n[9]; s_s7519_set.erase(l); } } return; }
+    if (op == 2) { for (uint32_t l : v) s7519_wbline(l, 0); return; }
+    const bool e0 = (a & 15u) != 0, e1 = ((a + n) & 15u) != 0;
+    for (uint32_t l : v) { if ((l == lo && e0) || (l == hi && e1)) { s7519_wbline(l, 0); continue; }
+        uint8_t& d = s_s7519_dt[l]; if (d == 1) { d = 3; s7519_row(7, l, 0, "inv"); } else if (d == 2) { d = 0; ++s_s7519_n[4]; s_s7519_set.erase(l); } }
+}
+extern "C" int rs64_s7519_wbev(uint32_t a, uint32_t n, int all) {  /* from ultra_translation.cpp; returns 1 = ctl dropped this wb */
+    if (!s7518_watch() || s_s7518_ln.empty() || !g_rs64_s7484_on) return 0;
+    if (all || n >= 8192) { s7519_ev(3, 0, 0, a, n); return 0; }
+    if (!n) return 0;
+    const uint32_t o = (a & 0x1FFFFFFFu); if (o >= 0x1800000u) return 0;
+    const uint32_t lo = o / 16u, hi = std::min<uint32_t>((o + n - 1u) / 16u, 0x1800000u / 16u - 1u);
+    static const long ctl = [] { const char* e = std::getenv("ROGUESQ_CACHE_SHAPE_CTL_WB"); return e ? std::strtol(e, nullptr, 0) : 0L; }();
+    static long k = 0; static bool done = false; ++k;
+    if (ctl > 0 && !done && k >= ctl) { std::lock_guard<std::mutex> lk(s_s7518_mu); s7519_init(); uint32_t nd = 0; if (!s_s7519_dmaA.count(o)) goto noctl;
+        for (auto it = s_s7519_set.lower_bound(lo); it != s_s7519_set.end() && *it <= hi; ++it) if (s_s7519_dt[*it] == 1) { ++nd; s_s7519_ctlln.insert(*it); }
+        if (nd) { done = true; s_s7519_n[10] = nd; std::fprintf(stderr, "[cache-ctl] dropped wb k=%ld a=%08X n=%X dirty=%u\n", k, a, n, nd); return 1; }
+        s_s7519_ctlln.clear(); }
+    noctl:
+    for (uint32_t l = lo; l <= hi; l++) { s7518_markln(l); if (s_s7518_ln[l] == S7518_C) s_s7518_ln[l] = S7518_R; }
+    s7519_ev(2, lo, hi, a, n); return 0; }
+static int s7519_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    const uint32_t o = a - 0x80000000u; if (o >= 0x1800000u || s_s7518_ln.empty()) return 1;
+    std::lock_guard<std::mutex> lk(s_s7518_mu); s7519_init();
+    for (uint32_t l = o / 16u; l <= (o + (uint32_t)w - 1u) / 16u; l++) { uint8_t& v = s_s7518_ln[l];
+        ++s_s7519_n[0]; uint8_t& d = s_s7519_dt[l];
+        if (v == S7518_S) { ++s_s7519_n[1]; if (d < 2) { d = 2; s_s7519_pc[l] = pc; s_s7519_set.insert(l); s7519_row(1, l, pc, fn); } }
+        else if (d < 2) { d = 1; s_s7519_pc[l] = pc; s_s7519_set.insert(l); }
+        if (s_s7519_ctlln.count(l)) ++s_s7519_n[11];
+        v = S7518_R; }
+    return 1; }  /* 1 always: the s5798 tail must not see a marked address (s7475 v1 SIGBUS; s7519 run 1 SIGSEGV in loadTxtFile) */
+static void s7519_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    const uint32_t o = a - 0x80000000u; if (o >= 0x1800000u || s_s7519_dt.empty()) return;
+    std::lock_guard<std::mutex> lk(s_s7518_mu);
+    for (uint32_t l = o / 16u; l <= (o + (uint32_t)w - 1u) / 16u; l++) { uint8_t& d = s_s7519_dt[l];
+        if (d == 2) { s7519_row(6, l, pc, fn); d = 1; } else if (d == 3) { s7519_row(8, l, pc, fn); d = 0; s_s7519_set.erase(l); } } }
+extern "C" void rs64_s7519_summary(void) {
+    if (!s7518_watch() || s_s7519_dt.empty()) return;
+    std::lock_guard<std::mutex> lk(s_s7518_mu); uint64_t px = 0, pl = 0, pd = 0;
+    for (uint32_t l : s_s7519_set) { const uint8_t d = s_s7519_dt[l]; if (d == 2) ++px; else if (d == 3) ++pl; else if (d == 1) ++pd; }
+    std::string s; char b[64]; for (int i = 0; i < 12; i++) { std::snprintf(b, sizeof b, " %s=%llu", s7519_kn[i], (unsigned long long)s_s7519_n[i]); s += b; }
+    std::fprintf(stderr, "[s7519-sum]%s pending_dirty=%llu pending_over_dma=%llu pending_lost=%llu row_keys=%zu\n", s.c_str(), (unsigned long long)pd,
+        (unsigned long long)px, (unsigned long long)pl, s_s7519_rows.size()); }
 extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
-    if (s7518_watch()) return s7518_load(pc, a, w, fn);
+    if (s7518_watch()) { s7519_load(pc, a, w, fn); return s7518_load(pc, a, w, fn); }
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu); return s7484_load(pc, a, w, fn); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7518_watch()) return s7519_store(pc, a, w, fn);  /* s7519 class FP (exclusive mode, as the s7518 load watch) */
     if (rs64_s7501_on && rs64_s7501_cpu(pc, a, w, fn)) return 1;  /* s7501 EZ: guest store into a seen framebuffer (bits marked by main.cpp) */
     /* returns 1 when the store is ours (slack or the control word): the s5798 dispatcher then returns */
     /* watch positive control (ROGUESQ_S7475_CANARY on): the frame counter 0x8011A890 is marked at arming; the first guest store to it must land here */

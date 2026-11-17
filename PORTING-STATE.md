@@ -199582,3 +199582,37 @@ CURRENT-TRUTH: closed FG-FN paragraphs compressed to one-liners (-6 KB, 58.8 -> 
 Files: lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp, pi.cpp (patch exported), src/main/upstream_compat.cpp,
 tools/s7518_cache_shape.py (new), scratch/agent/soak_queue/s7518_fo_levels.sh.
 Run: `env R=$PWD/scratch/s7518_fo3 HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_CACHE_SHAPE_CTL=600 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_ASPECT=21:9+ROGUESQ_CACHE_SHAPE_CTL=700" zsh tools/g1e_owner_quiet_arms.zsh`
+
+## Session 7519 (2026-11-17) — class FP: D-cache store side (write-back + write-allocate dirty lines vs PI DMA); 0 dirty lines under a cart->RDRAM DMA, 0 dirty discards and 0 live rows outside a planted missing writeback on L4 dd1 / L15 dd8 21:9 (~0.9 / 1.3 billion tracked stores), the planted miss is caught (3 dirty-over-DMA rows) and then resolved dead by the game's invalidate-after; FO levels closed
+HYPOTHESIS-ID: libultra-host-surface-census.
+**FO levels fold.** s7518_fo_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: stale_load only in ctl, 4/4 alive) -> FO CLOSED 6 levels.
+**Question.** On a VR4300 a guest store dirties a 16 B D-cache line that reaches RAM only on writeback / eviction / index op; the port
+writes RAM at once. Port and hardware differ if a dirty line meets a PI DMA into the same line (eviction or writeback later puts the
+CPU's copy over the DMA bytes, or a load returns it), or if an interior osInvalDCache Hit_Invalidate discards a dirty line (hardware
+loses the store). Hypotheses: H-canon (every DMA'd line the CPU stored to is written back before the DMA: wb -> DMA -> inv idiom),
+H-dead (dirty-at-DMA lines exist but the invalidate-after discards them before anything reads or evicts them), H-live (a dirty line
+survives a DMA, or a discarded store is later read).
+**Instrument (one build, logging only; src/main/upstream_compat.cpp s7519 block + librecomp ultra_translation.cpp hook).** Per tracked
+16 B line (the s7518 bitmap; wb'd lines now marked too) dirty state 0 clean / 1 D / 2 X dirty-over-DMA / 3 L lost, driven by guest stores
+(s5798 store hook, ROGUESQ_STORE_DIAG=1, routed exclusively to s7519_store under ROGUESQ_S7518_STALEWATCH=1), osWritebackDCache /
+osWritebackDCacheAll (rs64_s7519_wbev), osInvalDCache (edge lines Hit_Writeback_Invalidate, interior Hit_Invalidate, n >= 8192 index
+writeback-invalidate) and PI DMA. Rows: dma_over_dirty, discard, live_wb, live_load, live_lost, st_on_S; [s7519-sum] counters.
+Ctl ROGUESQ_CACHE_SHAPE_CTL_WB=<k>: the first wb at/after the k-th that starts at a past DMA address and covers a dirty line is dropped.
+Scorer tools/s7519_store_side.py --controls --ctl (7 synthetic PASS).
+**Dead ends (recorded).** Run 1: the store hook returned 0, so the s5798 dispatcher fell through into its fixed table with a marked
+address -> SIGSEGV in rs64_s5798_st (loadTxtFile), both arms (same failure as s7475 v1); fixed by returning 1 always. Run 2
+(scratch/s7519_fp): ctl dropped wb k=600 at 0x8018FB70 (a CPU-written buffer no DMA follows) -> 0 rows, ctl unproven; the ctl was
+then restricted to wbs of past DMA slots.
+**Run 3** (scratch/s7519_fp3, g1e_owner_quiet_arms HOLD=120, both alive, 0 VI stalls): L4 dd1 st_seen=905.7M, wb_clean=26.6M,
+L15 dd8 21:9 st_seen=1312.0M, wb_clean=39.8M; outside ctl dma_over_dirty=0, discard=0, live_wb=live_load=live_lost=0, st_on_S=0,
+pending_over_dma=0, pending_lost=0 (pending_dirty 641 / 23,604 = ordinary dirty data). Ctl (both arms landed on slot 0x801B4ED0+0x104,
+k=783 / 773): exactly 3 dma_over_dirty rows, all ctl=1, stores from zmemcpy (0x80018F30) and rs_free (0x80001D3C); all 3 then
+dd_inv_ok (the interior Hit_Invalidate after the DMA discards the cache copy, so the DMA bytes win as in the port) = positive control
+PASS and evidence that even a missed wb is dead in this idiom unless the dirty line is an unaligned edge.
+DISCRIMINATION: selects H-canon (every DMA slot the CPU stores to is written back first; 0 dirty-over-DMA outside ctl), with the idiom
+also H-dead-robust (inv-after discards a dirty-over-DMA line, ctl). Refutes H-live for stores (0 live rows, 0 discards; the MusyX stream
+ring takes no CPU stores after its allocation invalidate). Gaps (stated): stores to a line before its first marking are unseen; no
+eviction model; 120 s per arm. FO+FP close the libultra replaced-function surface (s7518 census). Levels soak queued (s7519_fp_levels).
+Files: src/main/upstream_compat.cpp, lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp (patch exported), tools/s7519_store_side.py
+(new), scratch/agent/soak_queue/s7519_fp_levels.sh.
+Run: `env R=$PWD/scratch/s7519_fp3 HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_STORE_DIAG=1+ROGUESQ_CACHE_SHAPE_CTL_WB=600 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_LOG_CACHE_SHAPE=1+ROGUESQ_S7518_STALEWATCH=1+ROGUESQ_STORE_DIAG=1+ROGUESQ_ASPECT=21:9+ROGUESQ_CACHE_SHAPE_CTL_WB=700" zsh tools/g1e_owner_quiet_arms.zsh`

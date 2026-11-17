@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7517 (2026-11-17).
+Compact operational handoff, as of Session 7519 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -448,17 +448,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     - FL s7515 EEPROM 4K shape H-canon (LongWrite live on L7). FM s7516 Rumble/Controller Pak H-canon, pak paths H-dead with no pak
       (ctl ROGUESQ_PAK_SHAPE_CTL=1 runs them). FN s7517 VI special features H-canon; gamma only in zero-line transition VIs; RT64 holds
       the last image on those (2/15 dim 33-50 ms, left as is); no RT64 VI filter stage (design difference, single-source).
-    **FO L4/L15 (s7518): D-cache maintenance contract H-canon / H-dead.** The 4 cache calls stay host no-ops (coherent memory).
-    ROGUESQ_LOG_CACHE_SHAPE=1 ([cache] line per osInvalDCache/WritebackDCache/All/InvalICache, PI DMA, SP task start, call order) +
-    runtime stale-load watch ROGUESQ_S7518_STALEWATCH=1 (per-16B-line residency N/R/F/S on the s7484 load-watch bitmap; a guest load
-    on a line DMA'd while possibly resident = STALE row) + ctl ROGUESQ_CACHE_SHAPE_CTL=<k> (drops the k-th invalidate), scorer
-    tools/s7518_cache_shape.py --controls --ctl (8 synthetic PASS). Game idiom (static + log): slot DMAs wb -> DMA -> inv-after
-    (pollDmaSlotStep), inv >= 8 KB takes the ROM index writeback-invalidate path (no data loss). L4 dd1 / L15 dd8 21:9: 0 STALE loads
-    outside ctl (75k post-invalidate loads each); ctl L4 = exactly 1 STALE row (inflate_codes on the dropped 0x80766C40 buffer),
-    L15 ctl landed on a non-resident HUD buffer (dead, read fresh). Every RSP task flushed since the previous boundary (gfx wball,
-    audio wb covering data_ptr; 13,263 + 12,391, 0 unflushed). ~5.7k DMAs/arm into the MusyX stream ring (0x17C000-0x1AA000,
-    musyxSynthFrame -> submitDmaRequestBatch -> piDmaWorker) never invalidated: RSP-read, 0 CPU loads -> H-dead. Gaps: stores
-    (write-allocate) and lwl/lwr not watched; no eviction model (conservative). Levels soak queued (s7518_fo_levels).
+    **FO CLOSED 6 levels (s7518, soak folded s7519): D-cache load side H-canon / H-dead.** Cache calls stay host no-ops. ROGUESQ_LOG_CACHE_SHAPE=1
+    ([cache] lines) + ROGUESQ_S7518_STALEWATCH=1 (stale-load watch) + ctl ROGUESQ_CACHE_SHAPE_CTL=<k> (drop k-th inv); tools/s7518_cache_shape.py
+    --controls --ctl. Slot DMAs wb -> DMA -> inv-after; 0 STALE loads outside ctl; every RSP task flushed; MusyX stream ring RSP-only (H-dead).
+    **FP L4/L15 (s7519): D-cache store side H-canon.** Same env + ROGUESQ_STORE_DIAG=1: per-line dirty state (s7519 block, upstream_compat.cpp)
+    vs wb / inv edge+interior / index ops / PI DMA; ctl ROGUESQ_CACHE_SHAPE_CTL_WB=<k> (drop the first wb at/after k of a past DMA slot with a
+    dirty line); tools/s7519_store_side.py --controls --ctl. ~0.9 / 1.3 G tracked stores: 0 dirty-over-DMA, 0 discards, 0 live rows outside ctl;
+    ctl = 3 dirty-over-DMA rows (zmemcpy, rs_free) then resolved dead by the inv-after. Gaps: stores before a line's first marking, no eviction
+    model. Levels soak queued (s7519_fp_levels). **FO+FP exhaust the libultra replaced-function surface** (census PORTING-STATE s7518).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
