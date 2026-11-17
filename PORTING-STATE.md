@@ -200615,3 +200615,40 @@ ORIGIN: no mitigation landed; every dereferenced capture's writer is named in it
 hook, env-gated diag code), and none holds a guest heap pointer across a guest free on a default-on path.
 Rules out H-stale for src/main statics; selects H-diag-only + H-refresh. Next: class GI, statics declared inside C that the fixup
 and apply scripts inject into RecompiledFuncs (4387 `static` lines in the generated funcs_*.c), same engine.
+
+## Session 7549 (2026-11-17) — class GI CLOSED: of 5174 statics injected into the generated guest functions, the 8 whose captured guest value reaches a guest deref, a ctx register or a guest store are same-call (in-flight or re-read) or scalar values; 0 open
+
+Ran (offline, no game): new tools/s7549_gi_census.py over the patched tree /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+(51 funcs_*.c, as built). Standalone engine (s7548's C++ engine did not fit generated C): comments/strings blanked with positions kept;
+top-level function bodies found by brace matching; every non-const, non-float `static` declarator (every comma declarator, function-
+local scoped to its enclosing { } block, incl. ({ }) statement exprs) plus every file-scope variable definition. Capture = an
+assignment, compound assignment, member store or memcpy whose RHS is ctx->rN/fN/hi/lo, MEM_*(, TO_PTR(, rdram[ or a local tainted by
+them. Sinks for the static and every local derived from it: addr (inside MEM_*/TO_PTR/RS64_* args, rdram[ / rdram +), reg (RHS of
+ctx->rN =), store (RHS of MEM_*(..) =), call (host function args, recorded with the callee). Rows grouped by (name, PATCH tag).
+Two engine bugs were found and fixed before the verdict: (1) splitting functions at "\n}\n" put file-scope helper statics inside
+RECOMP_FUNCs and attributed them to file-header PATCH tags (24 false rows); (2) function-wide (not block-wide) scope let generated
+locals hi/lo/n collide with patch statics. Member stores (c.u = org6418) and memcpy were then added, which surfaced org6418/6421/7011.
+Result: 5174 declarators, 101 rows capture a guest value, 93 H-diag (no guest-facing sink). The 4 call-escaping rows' host callees
+(rs64_s4571_ascii_word, rs64_g3e_trace, rs64_s6919_base/_wrote, rs64_s7023_cs) take values only (read). The 8 sink rows, each
+with a proof regex on the injecting script:
+  H-inflight rs64_s7482_b (apply_s6031_far.py): set in partitionFramebufferMemory, consumed at L_80001060 of the same call, pend
+             cleared every pass, no return between; the value is the fb-partition carve.
+  H-inflight s7108_s2 (apply_s7108_camwide.py): = $s2 at 0x8004CE58; the only reader s7108_x is called later in the same function
+             with no label between (it derefs s2 before checking its own default-off gate; same-call, harmless).
+  H-inflight rs5839_obj (apply_s5835_sphere_probe.py): = a0 at intersectSegmentWithObjectSphere entry, read by rs5835_probe right
+             after, only under ROGUESQ_LOG_HITS/TELE_BOLT/G1E_TRIM=0 (default off).
+  H-refresh  s6496_a0 (apply_s6496_bin_inputs.py): re-assigned from a0 in the same statement before every deref.
+  H-value    org6418 / org6421 / org7011: float bits of the static-image constants 0x8009DEB4 and 0x8009DE94..A0 (< heap base
+             0x80154690), written back to the same constant addresses. og6112: viewport w/h ints, stored to live ctx->r17, the cam
+             key is compare-only, block gated by ROGUESQ_VPW_SCALE.
+Controls 9/9: planted cross-call heap ptr deref -> UNCLASSIFIED; planted cross-call ptr into ctx->r2 -> UNCLASSIFIED; planted 2nd
+comma declarator of a file-scope static -> UNCLASSIFIED; planted print-only capture -> H-diag; capture inside a comment -> no row;
+deleted rule -> UNCLASSIFIED; proof text removed from the script -> DRIFT; rule naming a vanished row -> drift list; real tree rc 0.
+Limits (single-source, static): flow inside a block is not path-sensitive (the same-call claims for s7482/s7108 were checked by hand
+from labels/gotos); pointers stored into struct fields of non-static objects, and guest values passed through host helpers that keep
+them in their own statics, are GH's scope (closed s7548).
+ORIGIN: no mitigation landed; every captured value's writer is named in its rule (partitionFramebufferMemory, 0x8004CE58 $s2,
+intersectSegmentWithObjectSphere a0, binPolygonIntoTerrainGrid a0, static constant tables) and none keeps a guest heap pointer
+across a guest free on a default-on path.
+Rules out H-stale for injected statics; selects H-value-only + H-refresh + in-flight. Next: class GJ, RT64-side retained RDRAM
+addresses (framebuffer / texture / tile tracking keyed by guest address), the last host layer the s7545 heap-reuse hazard could reach.
