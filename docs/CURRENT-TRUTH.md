@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7504 (2026-11-16).
+Compact operational handoff, as of Session 7505 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -312,6 +312,13 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      try at t=35 hit a black frame), fixed to per-swap retries: ncol 1260/1271 mean luma 0.15 (4:3 L4/L1). No fix: diverging from the
      scanned RAM would diverge from hardware. New: at 4:3 buildHeapFreeList writes a fresh block later set as Z (up,set,zupd t=43.8) =
      shape 2 as depth, upload-synced. Levels soak queued (s7504_fb_levels, expect 5: read rows).
+     **Levels soak folded s7505: L1 dd8 21:9 / L7 / L10 / L12 dd4 fb score 0 (all hdr rows in0, ctl ok) -> FB CLOSED 6 levels.**
+   - **FC s7505 any live heap header on a scanned VI pixel, per swap, whole run: H-fc-load.** main.cpp s7505_fc (ROGUESQ_S7505_FC=1, from
+     rs64_s7503_swap; chain walk rs64_s7496_overlap), tools/s7505_fc_recipe.zsh (wraps FB). 49.7k swaps on 4 arms (L4 dd1 16:9, L15 dd8
+     21:9, 4:3 L4/L1 dd1): ONE episode, L15 t58.9 hdr 96AFF0 x1016 y18, black frame, 1 swap = the FB upload row in the same run (two
+     instruments). 0 hits on any lit frame. Controls: synth every swap, arena-head window ctl 413/412/413/416 all hit. Limit: FC sees
+     LIVE chain headers only; stale header bytes (4:3 L4 FB row 790000) are covered by FB at upload. **Heap-on-screen class and the
+     m3-partition-over-live-block series (EU-FC) CLOSED**, pending levels soak s7505_fc_levels (expect fc score 0; 5 = read BAD= rows).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

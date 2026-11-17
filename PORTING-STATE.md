@@ -199090,3 +199090,28 @@ scratch/agent/soak_queue/s7504_fb_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4). No li
 Verdict: selects H-fb-covered for the mission-load header (4/4 arms) and H-fb-visible for the later present-path headers (3 rows, 2-4 dim
 px <=2 swaps), refutes "the mission-load header is on screen" and "wide-only"; next discriminator FC: per-swap heap-header-in-scanned-window
 census over a whole run (NEXT.md).
+
+## Session 7505 (2026-11-16) — class FC: across 49.7k swaps on 4 arms one live heap header ever sits on a scanned VI pixel (L15 dd8 t58.9, black frame, 1 swap, same spot FB saw); FB closed 6 levels; heap-on-screen idiom class closed
+Fold: s7504_fb_levels (L1 dd8 21:9, L7/L10/L12 dd4) fb score 0: ctl=ok every arm (ncol 1102-1315), every hdr row in0 (mission-load
+pair B20000 / B51E00 hidden: x838 >= cols 795, or before origin), vis=0; ew/ex/ey/ez score 0, fa score 5 = the s7503 shapes. The loop's
+`alive=4/8 stall_na=4` comes from the 4 extra fb tag lines, not dead arms. -> FB CLOSED 6 levels.
+Work unit FC (H-fc-load / H-fc-flight / H-fc-none): main.cpp s7505_fc, called per osViSwapBuffer from rs64_s7503_swap, ROGUESQ_S7505_FC=1.
+Per swap: committed VI origin, VI_WIDTH x bpp (VI_STATUS type) stride, visible cols x rows (s7504 rule x < min(cols, vw), y < rows);
+rs64_s7496_overlap walks every arena chain over [origin, origin + rows*stride); each live header whose first pixel is in-window is a hit,
+grouped into episodes (consecutive swaps); per episode frame mean luma (1/16 subsample), header luma vs ring, fl. Controls: synth
+(classifier on origin + 40 rows, every swap) and ctl (every 30th swap the same walk + classifier on a same-geometry window placed at the
+first arena head: real headers, must hit). Recipe tools/s7505_fc_recipe.zsh (wraps s7504 FB).
+Run 1 s7505_fc (L4 dd1 16:9, L15 dd8 21:9): fc score 0. L4 12414 swaps, hits 0, synth 12403/12403, ctl 413/413, bad 0. L15 12388 swaps,
+1 episode: hdr 96AFF0 fl6 (used) x1016 y18 shown 1 swap t=58.87 frame ml 0.000 (black), header luma 0.059 vs ring 0.000; ctl 412/412.
+FB in the same run saw the same thing at upload time (961000 in1 x1018 y18 ml 0.000) = second instrument, same run.
+Run 2 s7505_fc43 (ASPECT=4:3, L4 dd1, L1 dd1): fc score 0, hits 0 both (12421 / 12482 swaps), ctl 413/413, 416/416. FB in the same run
+logged an in-window upload on L4 (790000 x506 y21 words 00000000,00010001, ml 0) that FC never saw as a live chain header at any swap:
+those bytes are no longer a chain member when presented (coalesced / rewritten), so FC covers LIVE headers only and FB covers the
+upload-time bytes; together the two cover both.
+ORIGIN: no mitigation added (diagnostic only). The one live hit is the game's own allocator header in the fb RAM it presents during the
+L15 load transition, black frame, 1 swap; hardware VI scans the same RAM, so there is nothing to diverge from.
+Verdict: selects H-fc-load (only at a load transition, black frame, <=2 swaps), refutes H-fc-flight (0 hits on any lit frame, 4 arms,
+49.7k swaps). The heap-on-screen idiom class and the m3-partition-over-live-block series (EU-FC, s7496-s7505) are CLOSED pending the
+levels soak (s7505_fc_levels queued, L1 dd8 21:9, L7/L10/L12 dd4, expect fc score 0). Next: ITERATION 3c / CURRENT-TRUTH item 20, a new
+bounded engineering unit: fix the latent BZ jr/jalr slot-order generator defect (s7416) and prove the regen is byte-identical elsewhere.
+Files: src/main/main.cpp (s7505_fc, +<array>), tools/s7505_fc_recipe.zsh, scratch/agent/soak_queue/s7505_fc_levels.sh. No lib/ edits.

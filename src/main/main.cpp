@@ -10,6 +10,7 @@
 #include <csignal>
 #include <vector>
 #include <map>
+#include <array>
 #include <set>
 #include <mutex>
 #include <cinttypes>
@@ -10809,6 +10810,64 @@ static void s7503_tex(uint32_t lo, uint32_t hi) { if (!s7503_on()) return; lo &=
   s7503_each([&](S7503W& w, double now) { if (lo < w.a + w.bytes && hi > w.a) s7503_ev_locked(w, "tex", now); }); }
 static void s7503_up(uint32_t a, int fl) { if (!s7503_on()) return; a &= 0xFFFFFFu; s7503_each([&](S7503W& w, double now) { if (w.a == a) s7503_ev_locked(w, (fl & 2) ? "upP" : "up", now); }); }
 static void s7503_wb(uint32_t kind, uint32_t base) { if (!s7503_on() || kind > 1) return; base &= 0xFFFFFFu; s7503_each([&](S7503W& w, double now) { if (w.a == base) s7503_ev_locked(w, "wb", now); }); }
+// s7505 class FC: over a whole run, how often does ANY live heap header (rs_malloc chain, s7472 layout) sit on a SCANNED pixel of the
+// committed VI framebuffer? Generalises FB (which only looked at upload-armed allocator writes). Per swap (rs64_s7503_swap): VI regs ->
+// origin, stride (VI_WIDTH x bpp from VI_STATUS type), visible cols x rows (s7504 rule: x < min(cols, vw), y < rows; the odd fb rows of a
+// field-stride VI fall outside cols); rs64_s7496_overlap walks every arena chain over [origin, origin + rows*stride) and each 16 B header
+// whose first pixel is in-window is a hit. Episodes = consecutive swaps with the same header in-window; per episode one row with the
+// frame mean luma (subsampled), header pixel luma vs a 2-row ring, fl, t. ROGUESQ_S7505_FC=1 (needs S7503_FA, i.e. the FB recipe).
+// Controls: synth = the classifier on origin + 40 rows (must be in-window every swap with rows > 40); ctl = every 30th swap the SAME
+// walk + classifier on a window of the same geometry placed at the first arena head (real headers there, must hit > 0).
+struct S7505E { uint32_t hdr, fl, sz; int x, y, first, last, shown; double t0, ml, hl, ring; bool open; };
+static void s7505_fc(int n, double now) {
+  static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7505_FC"); return e && *e && *e != '0'; }(); if (!on) return;
+  uint8_t* rd = (uint8_t*)g_recomp_rdram_for_wp_raw; if (!rd) return;
+  static std::map<uint32_t, S7505E> eps; static uint64_t swaps = 0, walked = 0, bad = 0, hits = 0, neps = 0, lit = 0, lng = 0, synth = 0, synth_n = 0,
+    ctl_sw = 0, ctl_hit = 0, ctl_bad = 0, rows_out = 0, novi = 0; static double last = 0, maxml = 0;
+  const auto* vi = ultramodern::renderer::get_vi_regs();
+  const uint32_t org = rs64_vi_committed_origin() & 0xFFFFFFu, vw = vi->VI_WIDTH_REG & 0xFFFu, hs = vi->VI_H_START_REG, vs = vi->VI_V_START_REG;
+  const uint32_t xs = vi->VI_X_SCALE_REG & 0xFFFu, ys = vi->VI_Y_SCALE_REG & 0xFFFu, st = vi->VI_STATUS_REG, bpp = ((st & 3u) == 3u) ? 4u : 2u;
+  const uint32_t h0 = (hs >> 16) & 0x3FFu, h1 = hs & 0x3FFu, v0 = (vs >> 16) & 0x3FFu, v1 = vs & 0x3FFu;
+  const uint32_t cols = (h1 > h0) ? (h1 - h0) * xs / 1024u : 0u, rows = (v1 > v0) ? ((v1 - v0) / 2u) * ys / 1024u : 0u, stride = vw * bpp;
+  auto t = now - g_s7503_t0;
+  auto flush = [&](bool all) {
+    for (auto it = eps.begin(); it != eps.end();) { S7505E& e = it->second;
+      if (all || e.last < n) { ++neps; const bool L = e.ml > 0.05, G = e.shown > 2; lit += L; lng += G;
+        if (rows_out < 300) { ++rows_out; std::fprintf(stderr, "[s7505] ep hdr=%06X fl=%u sz=%X x=%d y=%d shown=%d sw=%d-%d t=%.3f ml=%.3f hlum=%.3f ring=%.3f lit=%d long=%d\n",
+          e.hdr, e.fl, e.sz, e.x, e.y, e.shown, e.first, e.last, e.t0, e.ml, e.hl, e.ring, L ? 1 : 0, G ? 1 : 0); }
+        it = eps.erase(it); } else ++it; } };
+  auto sum = [&] { std::fprintf(stderr, "[s7505] fc sum t=%.1f swaps=%llu novi=%llu walked=%llu bad=%llu hits=%llu eps=%llu lit=%llu long=%llu synth=%llu/%llu ctl=%llu/%llu ctlbad=%llu maxml=%.3f\n", t,
+      (unsigned long long)swaps, (unsigned long long)novi, (unsigned long long)walked, (unsigned long long)bad, (unsigned long long)hits, (unsigned long long)neps,
+      (unsigned long long)lit, (unsigned long long)lng, (unsigned long long)synth, (unsigned long long)synth_n, (unsigned long long)ctl_hit, (unsigned long long)ctl_sw,
+      (unsigned long long)ctl_bad, maxml); };
+  ++swaps;
+  if (!org || !vw || !rows || !cols) { ++novi; flush(false); if (now - last >= 10.0) { last = now; sum(); } return; }
+  const uint32_t vc = std::min(cols, vw);
+  auto inwin = [&](uint32_t base, uint32_t a, int& x, int& y) { if (a < base) return false; y = (int)((a - base) / stride); x = (int)(((a - base) % stride) / bpp);
+    return (uint32_t)y < rows && (uint32_t)x < vc; };
+  auto lum = [&](uint32_t a) -> double { a &= 0xFFFFFCu; if (a + 4 > 0x1000000u) return 0;
+    if (bpp == 2) { const uint16_t c = *(uint16_t*)(rd + ((a & ~1u) ^ 2u)); return (((c >> 11) & 31) * 299 + ((c >> 6) & 31) * 587 + ((c >> 1) & 31) * 114) / (31.0 * 1000.0); }
+    const uint32_t c = *(uint32_t*)(rd + a); return (((c >> 24) & 255) * 299 + ((c >> 16) & 255) * 587 + ((c >> 8) & 255) * 114) / (255.0 * 1000.0); };
+  { int x, y; ++synth_n; synth += (rows > 40 && inwin(org, org + 40u * stride, x, y)) ? 1 : 0; }
+  struct Ctx { std::vector<std::array<uint32_t, 3>> h; } c;
+  auto cb = [](uint32_t h, uint32_t sz, uint32_t fl, uint32_t, double, void* u) { ((Ctx*)u)->h.push_back({h & 0xFFFFFFu, sz, fl}); };
+  const int nv = rs64_s7496_overlap(org, org + rows * stride, cb, &c);
+  if (nv < 0) ++bad; else { walked += (uint64_t)nv; double ml = -1;
+    for (auto& h : c.h) { int x, y; if (!inwin(org, h[0], x, y)) continue; ++hits;
+      auto it = eps.find(h[0]);
+      if (it != eps.end() && it->second.last == n - 1) { it->second.last = n; ++it->second.shown; continue; }
+      if (it != eps.end()) { flush(false); }
+      if (ml < 0) { double s = 0; uint64_t k = 0; for (uint32_t yy = 0; yy < rows; yy += 4) for (uint32_t xx = 0; xx < vc; xx += 4) { s += lum(org + yy * stride + xx * bpp); ++k; } ml = k ? s / k : 0; maxml = std::max(maxml, ml); }
+      double hl = 0; for (uint32_t k = 0; k < 16; k += bpp) hl = std::max(hl, lum(h[0] + k));
+      double rg = 0; int nr = 0; for (int dy = -2; dy <= 2; dy += 4) { const int yy = y + dy; if (yy < 0 || (uint32_t)yy >= rows) continue;
+        for (int dx = 0; dx < (int)(16 / bpp); ++dx) { const int xx = x + dx; if ((uint32_t)xx >= vc) continue; rg += lum(org + (uint32_t)yy * stride + (uint32_t)xx * bpp); ++nr; } }
+      eps[h[0]] = S7505E{h[0], h[2], h[1], x, y, n, n, 1, t, ml, hl, nr ? rg / nr : 0.0, true}; } }
+  flush(false);
+  if (swaps % 30 == 0) { static const uint32_t heads[3] = {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u}; uint32_t h0a = 0;
+    for (uint32_t hd : heads) { const uint32_t v = *(uint32_t*)(rd + (hd & 0xFFFFFCu)); if (v >= 0x80000000u && v < rs64_ram_top) { h0a = v & 0xFFFFFFu; break; } }
+    if (h0a) { ++ctl_sw; Ctx cc; const int m = rs64_s7496_overlap(h0a, h0a + rows * stride, cb, &cc); int got = 0;
+      if (m < 0) ++ctl_bad; else for (auto& h : cc.h) { int x, y; if (inwin(h0a, h[0], x, y)) { got = 1; break; } } ctl_hit += got; } }
+  if (now - last >= 10.0) { last = now; sum(); } }
 extern "C" void rs64_s7503_swap(int n, uint32_t req) {
   if (!s7503_on()) return; std::lock_guard<std::mutex> lk(g_s7503_mu); const double now = s7503_now(); if (g_s7503_t0 == 0) g_s7503_t0 = now;
   const uint32_t vo = rs64_vi_committed_origin() & 0xFFFFFFu; req &= 0xFFFFFFu;
@@ -10827,6 +10886,7 @@ extern "C" void rs64_s7503_swap(int n, uint32_t req) {
   if (now - g_s7503_last >= 10.0) { g_s7503_last = now; s7503_sum_locked(now); }
   { static double ctl_t = 35.0; if (now - g_s7503_t0 >= ctl_t && vo) { ctl_t += 5.0;  /* s7504 control: live VI fb, per swap */
       s7504_fb("ctl", vo, 0, vo + 40u * 1600u, vo + 40u * 1600u + 4u, now - g_s7503_t0); } }
+  s7505_fc(n, now);
   if (g_s7503.size() > 3000) { std::vector<S7503W> keep; for (auto& w : g_s7503) if (!w.done) keep.push_back(w); g_s7503.swap(keep); } }
 // s7500 class EY: resurrection of a stale-covered image. s7499_ex scores pairs (A writeback covers image B, B last set >= 2 swaps
 // earlier or never written back) as dead; EY asks whether such a B is ever SET again, and what touches it first after that.
