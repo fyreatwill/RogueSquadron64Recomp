@@ -200291,3 +200291,5 @@ loads a live colour image; a guest write being clobbered by a late writeback is 
 Fix shape for next: in State::fullSync the loads interleave with renderAndSynchronize per fb pair (rt64_state.cpp ~3110-3135), so
 "drain only the reads" needs either a reads-done signal after the last fullSyncFramebufferPairTiles (only cheap when one fb pair or
 copyWithGPU) or producer-side capture of load sources.
+Verdict line: this selects H-torn for the opt-in NODRAIN dp_complete row (3 levels, controls passed) and refutes H-quiet and
+H-no-window. Next discriminator: a NODRAIN=3 reads-done wait, run in the same session alternating with =1, decides H-fix-cheap vs H-fix-costly vs H-residual (NEXT.md).
