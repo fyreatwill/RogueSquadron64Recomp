@@ -199049,3 +199049,41 @@ Files: src/main/main.cpp (s7503 block + hooks in rs64_s7493_img / zdraw fill / s
 upstream_compat.cpp (rs64_s7503_swap), tools/s7503_fa_recipe.zsh, scratch/agent/soak_queue/s7503_fa_levels.sh (L1 dd8 21:9, L7/L10/L12).
 No lib/ edits. Verdict: selects H-fa-live (upload-synced) for 6/21 and H-fa-dead for 15/21, refutes "RT64 shows stale bytes";
 next discriminator FB: are the shape-(1) header pixels in the PRESENTED image (RT64 readback at the present vs RAM), and on retail.
+
+## Session 7504 (2026-11-16) — class FB: the mission-load allocator header is never scanned out (field-stride VI, odd row / before origin); later present-path headers show as 2-4 dim px for <=2 swaps, at retail aspect too; FA closed 6 levels
+
+Fold: s7503_fa_levels rc=5 = expected. L1 dd8 21:9 / L7 / L10 / L12 dd4: live 2/4/3/2, every live row one of the three s7503 shapes
+(present-path coalesceFreeHeapBlocks pair t~28.36; rs_malloc fb 9DE900/961000 up,set,draw t~43.8; L10 packTlut up,tex t=59.1), ctlC/ctlV
+ok all arms -> FA CLOSED 6 levels.
+
+Work unit FB (NEXT s7504). Hypotheses: H-fb-visible / H-fb-covered (VI window or black frame) / H-fb-retail. Instrument: main.cpp
+s7504_fb (ROGUESQ_S7504_FB=1, ROGUESQ_S7504_DIR=<dir>), called from rs64_s7501_up on every present-path upload whose newest writer is
+rs_malloc*/rs_free/coalesceFreeHeap*/buildHeapFreeList/packTlut*: logs the writer range words, the VI regs (origin, width, h/v start,
+x/y scale -> visible cols x rows), the header (x,y) from the VI origin with VI_WIDTH as the line stride, inwin, header pixel luma vs a
+36-px ring mean, frame nz/mean luma/colour count, and a PPM of the VI window from guest RAM. Why RAM is the presented image here: at that
+upload RAM == RT64's native copy except the uploaded px (s7501 diffpx=4), RT64 uploads exactly those = two lines (diffpx + RAM dump).
+Recipe tools/s7504_fb_recipe.zsh (wraps tools/s7503_fa_recipe.zsh; exit 0 invisible + ctl ok, 5 header in-window, 3 ctl/no row).
+
+Run 1 voided (owner active, HID idle 85 s < 180 s gate); re-run in-session once idle reached 195 s.
+Run 1b s7504_fb (L4 dd1 16:9 w=796, L15 dd8 21:9 w=1024), alive both, score 3 (ctl FAIL):
+- L4 t=28.18 hdr 75C004 words 0001FD60,00000000: VI_WIDTH 1592 = 2 x 796 (field stride, ys 1024, rows 221) -> hx=838 > 795 cols,
+  i.e. fb row 25 (odd) is the unscanned field: inwin=0. Window black (175.5k of 175.7k px 000000, ncol 7).
+- L15 t=28.18 hdr B20004: before the VI origin B20800 (row -1): inwin=0.
+- L4 t=217.2 hdr 760004 words 00035BE0,00010001: VI_WIDTH 796, inwin=1 x274 y35, header luma 0.449 on ring 0.000, frame mean 0.000.
+- L15 t=58.67 fb 961000 hdr 96AFF4 words 0020B000,00010001: inwin=1 x1018 y18 (right edge of 1023 cols), luma 0.06/0.21 on 0.001.
+- ctl (one try, first upload after t=35 = t43.6): VI fb all zero in both arms -> FAIL. Defect: the ctl sat in the upload path (~40
+  uploads per run) and took one try; moved to rs64_s7503_swap, every 5 s from t=35, 6 tries.
+Run 2 s7504_fb43 (XC ROGUESQ_ASPECT=4:3, L4 dd1, L1 dd1), alive both, score 5, ctl ok (ncol 1260 / 1271, mean luma 0.154, nz 1000):
+- L4 + L1 t=28.18: the same coalesce pair in the retail 512-wide load fb 0x790000 (hdr 79C004, words 0000EFE0,00010001): VI_WIDTH
+  1024 = 2 x 512, hx=514 > 511 -> unscanned odd row, inwin=0.
+- L4 t=173.2 hdr 795BF4 words 00000000,00010001: inwin=1 x506 y21, 2 black px inside a lit ring (0.139).
+- New livefn at 4:3: buildHeapFreeList writes fresh block 7AB000, then up,set,zupd at t=43.78 = s7503 shape 2 as a depth image.
+Verdict: H-fb-covered SELECTED for the mission-load pair on all 4 arms that hit it (field-stride VI or before origin, measured from the
+VI regs + the RAM window); H-fb-visible SELECTED for the later present-path pairs (3 rows, 3 configs incl. 4:3): 2-4 px of luma 0-0.45 for
+<=2 swaps on a black or near-black frame. They appear at retail aspect from the game's own recompiled allocator, and the hardware VI
+scans the same RAM, so the expected retail look is the same; retail RAM itself unchecked (oracle stops at attract): single-runtime for
+H-fb-retail. ORIGIN: the writer is coalesceFreeHeapBlocks_s7325_inner / buildHeapFreeList writing a heap header into a freed block whose
+bytes are still the VI fb; legitimate allocator behaviour, no mitigation landed (a host mask would diverge from scanned RAM).
+Rules out: the mission-load header pixels being on screen (every config); wide-only origin for the later pairs.
+Files: src/main/main.cpp (s7504_fb + hooks in rs64_s7501_up and rs64_s7503_swap), tools/s7504_fb_recipe.zsh,
+scratch/agent/soak_queue/s7504_fb_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4). No lib/ edits.

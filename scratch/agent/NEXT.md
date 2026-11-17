@@ -1,19 +1,15 @@
-# NEXT (s7504)
+# NEXT (s7505)
 HYPOTHESIS-ID: m3-partition-over-live-block
 
-Fold first: SOAK-RESULTS line for s7503_fa_levels (rows `s7503_fa_levels fa arm=` in scratch/s7503_fa_levels/out.txt). Score 5 is
-EXPECTED (live>0 by design since s7503); judge by ctlC/ctlV=ok and by the `[s7503] verdict=live` rows: each must be one of the three
-s7503 shapes (present-path upload with small RT64 diffpx; up,set,draw after a zmem/cpu compose; tex load inside a stale extent). Any
-other live shape (draw/zread on a stale record with NO upload before it, or upP long after a cpu write) is new: read it.
+Fold first: SOAK-RESULTS line for s7504_fb_levels (rows `tag=s7504_fb_levels fb arm=` in scratch/s7504_fb_levels/out.txt). Score 5 is
+EXPECTED. Pass = ctl=ok every arm, every t~28.2 mission-load row in0 (field stride / before origin), every in1 row <=4 px for <=2 swaps.
+An in1 row on a LIT frame (meanlum > 0.05) or a header shown for > 2 swaps is new: read it. Then FB CLOSED 6 levels.
 
-Work unit, class FB: is the allocator header that RT64 uploads on the present path (shape 1: L4 751E00 hdr 75C004, L15 B20000 hdr
-B20004, t~28.2 sw 1640 mission load; L15 961000 t~58.7) visible in the PRESENTED image, and is it retail?
-Hypotheses: H-fb-visible (the presented frame at that swap shows the 2 header words as 4 odd pixels at the header's x,y) /
-H-fb-covered (VI scanout window / HUD / later draw covers it, or the frame is black: osViBlack is ignored by the port s982, check the
-VI control/type) / H-fb-retail (retail RAM holds the same header there at that frame).
-Discriminator, ONE build: at the present-path upload of an s7503-armed fb, compute the header word's (x,y) from (addr - base)/(w*2),
-read RT64's presented texture at that pixel (or dump the presented frame, tools/ framebuffer capture used by the G3 sheets) and the
-VI h/v start window; log pixel value vs RAM word. Control: plant a host write of a bright word at the same row in a live presented fb
-(t>=30 s) and see it in the readback. Retail: the oracle does not reach mission load; if H-fb-visible, ask whether an oracle savestate
-at the mission load exists (tools/oracle/README.md) before claiming port-only.
-Run: `env NAME=s7504_fb zsh tools/s7503_fa_recipe.zsh` with the new flag in XC.
+Work unit, class FC (generalises FB beyond upload-armed fbs; one instrument, one run): over a whole run, how often does ANY heap header
+appear inside the scanned VI window? Per swap (rs64_s7503_swap), walk the live heap chain (upstream_compat rs64_s7496 walker) and test each
+block header address against the scanned rows of the committed VI fb (VI_WIDTH stride, h/v window, odd-row field rule from s7504).
+Hypotheses: H-fc-load (hits only at load/abort transitions, black frames, <=2 swaps: closes the heap-on-screen idiom class) /
+H-fc-flight (a header inside a lit flight frame: real visible garbage, name the block owner) / H-fc-none (0 hits outside FB's rows).
+Control: synthetic header address = VI origin + 40 rows (must hit every swap the ctl runs). Recipe: wrap tools/s7504_fb_recipe.zsh with
+ROGUESQ_S7505_FC=1, LV default (L4 dd1, L15 dd8) + XC ROGUESQ_ASPECT=4:3 arm. If H-fc-load/none on both: close the heap-audit series
+(m3-partition-over-live-block) in CURRENT-TRUTH and take the next ladder rung per ITERATION 3c.

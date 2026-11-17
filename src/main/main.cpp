@@ -10760,6 +10760,41 @@ void s7503_arm_locked(uint32_t a, uint32_t bytes, uint32_t width, const char* fn
 template <class F> void s7503_each(F f) { if (g_s7503_act.load(std::memory_order_relaxed) <= 0) return; std::lock_guard<std::mutex> lk(g_s7503_mu); const double now = s7503_now();
   for (auto& w : g_s7503) if (!w.done) f(w, now); }
 }
+// s7504 class FB: is the allocator header that RT64 uploads on the present path (s7503 shape 1) inside the VI scanout window, and
+// what does it look like against the frame around it? ROGUESQ_S7504_FB=1 (+ROGUESQ_S7504_DIR=<dir> for PPMs). At the upload, guest RAM
+// == RT64's native copy except the uploaded words (s7501 diffpx), so RAM over the VI window is the presented image. Per call: the writer
+// range words, VI regs (origin/width/h,v start/x,y scale) -> visible cols x rows, header (x,y) from the VI origin, inwin, the header
+// pixels vs the 3x3-ring mean of the 16 pixels around them, frame nz per mille / mean luma / distinct colours, and a PPM of the window.
+// tag=ctl: the same dump of the committed VI fb every 5 s from t=35 s, 6 tries (s7504 run 1: the single t=35 try hit a black
+// pre-flight frame both arms); positive control = any try shows content.
+static void s7504_fb(const char* tag, uint32_t fb, uint32_t width, uint32_t lo, uint32_t hi, double t) {
+  static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7504_FB"); return e && *e && *e != '0'; }();
+  static int left = 8, cleft = 6; int& bud = (tag[0] == 'c') ? cleft : left; if (!on || bud <= 0) return; uint8_t* rd = (uint8_t*)g_recomp_rdram_for_wp_raw; if (!rd) return; --bud;
+  const auto* vi = ultramodern::renderer::get_vi_regs();
+  const uint32_t org = vi->VI_ORIGIN_REG & 0xFFFFFFu, vw = vi->VI_WIDTH_REG & 0xFFFu, hs = vi->VI_H_START_REG, vs = vi->VI_V_START_REG;
+  const uint32_t xs = vi->VI_X_SCALE_REG & 0xFFFu, ys = vi->VI_Y_SCALE_REG & 0xFFFu, st = vi->VI_STATUS_REG;
+  const uint32_t h0 = (hs >> 16) & 0x3FFu, h1 = hs & 0x3FFu, v0 = (vs >> 16) & 0x3FFu, v1 = vs & 0x3FFu;
+  const uint32_t cols = (h1 > h0) ? (h1 - h0) * xs / 1024u : 0u, rows = (v1 > v0) ? ((v1 - v0) / 2u) * ys / 1024u : 0u;
+  auto px = [&](uint32_t a) -> uint16_t { a &= 0xFFFFFEu; return (a + 2 <= 0x1000000u) ? *(uint16_t*)(rd + (a ^ 2u)) : 0; };
+  auto lum = [](uint16_t c) { return (double)(((c >> 11) & 31) * 299 + ((c >> 6) & 31) * 587 + ((c >> 1) & 31) * 114) / (31.0 * 1000.0); };
+  const uint32_t w0 = (lo & 3u) == 0 ? *(uint32_t*)(rd + (lo & 0xFFFFFCu)) : 0, w1 = *(uint32_t*)(rd + ((lo + 4) & 0xFFFFFCu));
+  const uint32_t stride = vw ? vw * 2u : 1u; int hx = -1, hy = -1; bool inwin = false;
+  if (lo >= org && vw) { hy = (int)((lo - org) / stride); hx = (int)(((lo - org) % stride) / 2u); inwin = (uint32_t)hy < rows && (uint32_t)hx < std::min(cols, vw); }
+  double ring = 0; int nr = 0; uint16_t hp[4] = {};
+  for (int k = 0; k < 4; ++k) hp[k] = px(lo + 2u * k);
+  if (hy >= 0) for (int dy = -2; dy <= 2; ++dy) for (int dx = -2; dx <= 5; ++dx) { if (dy == 0 && dx >= 0 && dx < 4) continue; const int y = hy + dy, x = hx + dx;
+    if (y < 0 || x < 0 || (uint32_t)x >= vw) continue; ring += lum(px(org + (uint32_t)y * stride + 2u * (uint32_t)x)); ++nr; }
+  uint64_t nz = 0, n = 0; double ls = 0; std::set<uint16_t> col; std::string path = "-";
+  const uint32_t R = std::min<uint32_t>(rows, 720), C = std::min<uint32_t>(std::min(cols, vw), 1600);
+  std::vector<uint8_t> img; img.reserve((size_t)R * C * 3);
+  for (uint32_t y = 0; y < R; ++y) for (uint32_t x = 0; x < C; ++x) { const uint16_t c = px(org + y * stride + 2u * x); ++n; nz += c != 0; ls += lum(c);
+    if (col.size() < 4096) col.insert(c); img.push_back((uint8_t)(((c >> 11) & 31) * 255 / 31)); img.push_back((uint8_t)(((c >> 6) & 31) * 255 / 31)); img.push_back((uint8_t)(((c >> 1) & 31) * 255 / 31)); }
+  if (const char* d = std::getenv("ROGUESQ_S7504_DIR"); d && *d && R && C) { char fp[512]; std::snprintf(fp, sizeof fp, "%s/s7504_%s_%06X_t%.0f.ppm", d, tag, fb, t);
+    if (FILE* f = std::fopen(fp, "wb")) { std::fprintf(f, "P6\n%u %u\n255\n", C, R); std::fwrite(img.data(), 1, img.size(), f); std::fclose(f); path = fp; } }
+  std::fprintf(stderr, "[s7504] fb tag=%s fb=%06X w=%u wr=[%06X,%06X) words=%08X,%08X vi_org=%06X vi_w=%u h=%u-%u v=%u-%u xs=%u ys=%u st=%08X cols=%u rows=%u"
+    " hx=%d hy=%d inwin=%d hpx=%04X,%04X,%04X,%04X hlum=%.3f,%.3f,%.3f,%.3f ring=%.3f nr=%d nz_pm=%llu meanlum=%.3f ncol=%zu ppm=%s t=%.3f\n",
+    tag, fb, width, lo, hi, w0, w1, org, vw, h0, h1, v0, v1, xs, ys, st, cols, rows, hx, hy, inwin ? 1 : 0, hp[0], hp[1], hp[2], hp[3],
+    lum(hp[0]), lum(hp[1]), lum(hp[2]), lum(hp[3]), nr ? ring / nr : 0.0, nr, (unsigned long long)(n ? nz * 1000 / n : 0), n ? ls / n : 0.0, col.size(), path.c_str(), t); }
 extern "C" void rs64_s7503_arm(uint32_t a, uint32_t bytes, uint32_t width, const char* fn, int present) {
   if (!s7503_on() || !fn) return;
   if (!(std::strstr(fn, "rs_malloc") || std::strstr(fn, "rs_free") || std::strstr(fn, "coalesceFreeHeap") || std::strstr(fn, "buildHeapFreeList") || std::strstr(fn, "packTlut"))) return;
@@ -10790,6 +10825,8 @@ extern "C" void rs64_s7503_swap(int n, uint32_t req) {
     if (g_s7503_ctlc == -2 && g_s7503_lastc != 0xFFFFFFFFu) { g_s7503_ctlc = -1; s7503_arm_locked(g_s7503_lastc, 0x100u, 0, "ctl_cimg", false, 1, now); }
     if (g_s7503_ctlv == -2 && vo) { g_s7503_ctlv = -1; s7503_arm_locked(vo, 0x100u, 0, "ctl_vi", false, 2, now); } }
   if (now - g_s7503_last >= 10.0) { g_s7503_last = now; s7503_sum_locked(now); }
+  { static double ctl_t = 35.0; if (now - g_s7503_t0 >= ctl_t && vo) { ctl_t += 5.0;  /* s7504 control: live VI fb, per swap */
+      s7504_fb("ctl", vo, 0, vo + 40u * 1600u, vo + 40u * 1600u + 4u, now - g_s7503_t0); } }
   if (g_s7503.size() > 3000) { std::vector<S7503W> keep; for (auto& w : g_s7503) if (!w.done) keep.push_back(w); g_s7503.swap(keep); } }
 // s7500 class EY: resurrection of a stale-covered image. s7499_ex scores pairs (A writeback covers image B, B last set >= 2 swaps
 // earlier or never written back) as dead; EY asks whether such a B is ever SET again, and what touches it first after that.
@@ -11035,6 +11072,8 @@ extern "C" void rs64_s7501_up(uint32_t addr, uint32_t w, uint32_t h, uint32_t si
   else if (isctl) std::fprintf(stderr, "[s7501] ctl MISSED fb=%06X word=%06X cls=%s mask=%X try=%d\n", addr, g_s7501_ctla, s7501_cls(cls), mask, g_s7501_ctries);
   if (cls != Z_CTL && !isctl) ++g_s7501_n[cls];
   if (cls == Z_CPU && top) rs64_s7503_arm(addr, bytes, w, top->fn, (fl & 2) ? 1 : 0);  /* s7503 FA */
+  if (cls == Z_CPU && top && (fl & 2) && top->fn && (std::strstr(top->fn, "rs_malloc") || std::strstr(top->fn, "rs_free") || std::strstr(top->fn, "coalesceFreeHeap") ||
+      std::strstr(top->fn, "buildHeapFreeList") || std::strstr(top->fn, "packTlut"))) s7504_fb("hdr", addr, w, top->lo, top->hi, now - g_s7501_t0);  /* s7504 FB */
   if (++g_s7501_rows <= 400) {
     std::string m; for (int c = 0; c < Z_N; ++c) if (mask & (1u << c)) { if (!m.empty()) m += '|'; m += s7501_cls(c); }
     std::fprintf(stderr, "[s7501] up fb=%06X w=%u h=%u siz=%u bytes=%u diffpx=%u nchg=%u bbox=[%06X,%06X) path=%s%s win=%.3fs cls=%s mask=%s nwin=%llu top=[%06X,%06X) base=%06X pc=%08X fn=%s ups=%llu hbytes=%u%s%s rmask=%X rtop=%s:[%06X,%06X) sw=%d t=%.3f\n",

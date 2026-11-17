@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7503 (2026-11-16).
+Compact operational handoff, as of Session 7504 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -300,7 +300,18 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      row RT64's diff upload copies guest RAM just before the use = what hardware VI/RDP reads: retail-equivalent by construction.
      Possibly visible: 4 header pixels on the mission-load present frame (2 swaps); retail RAM there unchecked (single-source).
      Run-1 defect: vi matched anywhere in the extent (nested live fb in a stale record), fixed to 16 rows ("vin" unscored).
-     Levels soak queued (s7503_fa_levels, expect score 5 by design: read verdict rows). **FB next: header pixels in the presented image?** (NEXT.md).
+     **Levels soak folded s7504: L1 dd8 21:9 / L7 / L10 / L12 dd4 every live row an s7503 shape, ctlC/ctlV ok -> FA CLOSED 6 levels.**
+   - **FB s7504 allocator header in the presented frame: hidden at the mission load, 2-4 dim px elsewhere, same at retail aspect.**
+     ROGUESQ_S7504_FB=1 (+_DIR=<ppm dir>; main.cpp s7504_fb from rs64_s7501_up present-path allocator uploads, ctl per swap in
+     rs64_s7503_swap every 5 s from t=35), tools/s7504_fb_recipe.zsh (wraps FA). At the upload RAM == RT64 native copy except the
+     uploaded px (s7501 diffpx), so RAM over the VI window = presented image. Mission-load pair (t~28.2, every arm: L4 dd1 16:9, L15 dd8
+     21:9, L4/L1 dd1 4:3 in the retail 512-wide 0x790000 fb): VI_WIDTH = 2x fb width (one field), header on an odd unscanned row, or
+     (dd8 B20004) before the VI origin -> not shown. Later present-path pairs (L4 t217 16:9 x274 y35, L15 t58.7 x1018 y18, L4 4:3 t173
+     x506 y21): in the window, 2-4 px of luma 0-0.45 on a black/near-black frame for <=2 swaps; also at 4:3 = the game's own allocator,
+     hardware VI would scan the same RAM. Retail RAM itself unchecked (oracle stops at attract): single-runtime. Control run 1 FAIL (one
+     try at t=35 hit a black frame), fixed to per-swap retries: ncol 1260/1271 mean luma 0.15 (4:3 L4/L1). No fix: diverging from the
+     scanned RAM would diverge from hardware. New: at 4:3 buildHeapFreeList writes a fresh block later set as Z (up,set,zupd t=43.8) =
+     shape 2 as depth, upload-synced. Levels soak queued (s7504_fb_levels, expect 5: read rows).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
