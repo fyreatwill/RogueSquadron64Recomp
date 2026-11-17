@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7547 (2026-11-17).
+Compact operational handoff, as of Session 7550 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -298,7 +298,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
@@ -345,7 +345,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pend cleared each pass; s7108_s2 read by s7108_x later in the same function, no label between; rs5839_obj read by the
     default-off rs5835 probe right after entry), 1 H-refresh (s6496_a0, re-read from a0 before each deref), 4 H-value (org6418 /
     org6421 / org7011 float bits of static 0x8009DEB4 / 0x8009DE94 constants, og6112 viewport ints, VPW_SCALE-gated). 0 OPEN.
-    Next: class GJ (NEXT.md), RT64-side retained RDRAM addresses.
+    **Class GJ CLOSED s7550** (tools/s7550_gj_census.py, rc 0, --controls 8/8; static, single-source): RT64's 4 default-on RDRAM
+    writes (fullSync colour/depth copyNativeToRAM; renderToRAM defaults on) take address = current pair SETCIMG/SETZIMG, width =
+    colorImg.width, rows = drawColorRect/drawDepthRect, the retained fb.height only as a min() clamp; the registry walks (storeRAM,
+    checkRAM, uploadRAM, hashTracking) take const RDRAM; present reads the current VI origin; 0 open. Host side of the s7545
+    heap-reuse family (GF-GJ) closed. Open: GK (NEXT.md), bytes written into undrawn columns of the span come from the retained
+    native target, revalidated only at checkRDRAM (DL start); a guest write into the span between DL start and writeback is
+    unmeasured.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

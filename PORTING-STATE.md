@@ -200652,3 +200652,37 @@ intersectSegmentWithObjectSphere a0, binPolygonIntoTerrainGrid a0, static consta
 across a guest free on a default-on path.
 Rules out H-stale for injected statics; selects H-value-only + H-refresh + in-flight. Next: class GJ, RT64-side retained RDRAM
 addresses (framebuffer / texture / tile tracking keyed by guest address), the last host layer the s7545 heap-reuse hazard could reach.
+
+## Session 7550 (2026-11-17) — class GJ CLOSED: every RT64 write into guest RAM takes its address, width and rows from the current workload's SETCIMG/SETZIMG and draw rect; the retained framebuffer registry is only read (const RDRAM, hash-revalidated); 0 open
+
+Work unit (NEXT s7550, offline, static): tools/s7550_gj_census.py (rc 0, --controls 8/8, 1.2 s). Question: RT64 keeps RDRAM
+addresses across frames (FramebufferManager::framebuffers keyed by address, with retained maxHeight / RAMBytes / RAMHash; fb
+storage; the present-side screen fb). Could a default-on host write into guest RAM go through one of those after the guest freed
+and reused the block (s7545 heap reuse)? GB/GC (s7538-s7542) covered WHEN RT64 writes; GJ covers WHERE the address comes from.
+Part A reuses the s7542 GC write-idiom engine over lib/rt64/src (contrib/, imgui/ excluded): 7 write sites, all ruled.
+  H-percmd x4: the colour (2961/2979) and depth (3039/3044) copyNativeToRAM writebacks in fullSync. Proofs (regex, all hold):
+    the writeback loop re-runs getFramebufferPairs(pairCursor); fbPair = workload.fbPairs[f]; colorFb =
+    framebufferManager.get(fbPair.colorImage.address, siz, width, ...), depthFb = get(fbPair.depthImage.address, ...); get() sets
+    fb.addressStart = address (the map key); write width = colorImg.width; rows = drawColorRect / drawDepthRect top..bottom; the
+    retained fb.height (maxHeight) enters only as cRowEnd = std::min(colorRowEnd, colorFb->height) / dRowEnd likewise, so it can
+    shrink the span, never extend it past the current command's rect.
+  H-gated-diag x2: ROGUESQ_RI_CLEAR and ROGUESQ_WB_CLEAR memsets (default off). H-def x2: copyNativeToRAM definition/declaration.
+  H-read x1: getGBIForUCode's non-const scan cursor, with a negative proof that nothing stores through it.
+  No write site exists in hle/rt64_rdp.cpp (TMEM loads read const RDRAM at the current load command's address) or render/.
+Part B, every line that indexes RDRAM by a registry key/entry/storage/screen address (19 rows): storeRAM, checkRAM, uploadRAM,
+  hashTracking are H-hash-read (registry walk through a `const uint8_t *RDRAM` parameter, compiler-enforced read-only; changed
+  hashes upload RAM -> native on the host GPU only); the fb read-ins store into host fbStorage from storageAddress =
+  colorImg/depthImg.address + rows (H-percmd-read); present reads the current VI origin (newVI.fbAddress() -> find) into host
+  present storage (H-percmd-read); 3 env-gated diag pixel/floor reads; the 4 writebacks = Part A.
+Info: renderToRAM defaults ON (rt64_emulator_configuration.cpp), so the writebacks are live in the default config.
+Controls 8/8: planted registry-walk copyNativeToRAM(&RDRAM[it->first]) -> UNCLASSIFIED; deleted colour rule -> UNCLASSIFIED;
+cRowEnd = retained colorFb->height (no min) -> OPEN; renamed getGBIForUCode -> DRIFT; const dropped from checkRAM's RDRAM -> OPEN;
+depthFb from a registry find -> OPEN; store through the gbi cursor -> OPEN; real tree rc 0. One engine bug fixed before the
+verdict: the gbi negative proof matched the cursor's own declaration (`uint8_t *rdramCursor =`).
+Limits (single-source, static): proves the ADDRESS and EXTENT are current-command; the BYTES written in columns of the span the
+pair did not draw come from the retained native target, revalidated only by checkRAM's XXH3 at checkRDRAM (DL start). A guest
+write into the fb span after checkRDRAM but before the writeback would be overwritten by older native content: not covered here
+(GB measured only post-dp_complete reads). That window is the next unit (NEXT.md, class GK, runtime).
+ORIGIN: no mitigation landed; writer of every RT64 RDRAM write = fullSync copyNativeToRAM with the current pair's SETCIMG/SETZIMG.
+Rules out H-stale-write via a retained RT64 address; selects H-percmd + H-hash. Closes the s7545 heap-reuse family on the host side
+(GF threads, GG ultramodern/librecomp, GH src/main statics, GI injected statics, GJ RT64).
