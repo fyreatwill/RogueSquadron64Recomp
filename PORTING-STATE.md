@@ -200725,3 +200725,6 @@ Side datum (open, GL): rtOut — bytes RT64 itself changes OUTSIDE the pair's co
 1,062,781 over 9614 colour writebacks (~110 B/wb). (Z rtOut is meaningless: depth rect is usually null -> every column "outside".)
 On hardware those bytes would stay. Next: classify them (NEXT.md).
 Not covered: ROGUESQ_RDP_ASYNC=1 (checkRDRAM and fullSync on different threads; snapshots would race) — single-source for sync.
+Discrimination: selects H-clean; refutes H-clobber and H-clobber-benign (no changed byte exists for the writeback to replace).
+Next discriminator (GL, NEXT.md): per-byte column-distance histogram + pre/post xor bit pattern + foreign-snapshot match for rtOut
+bytes on L12 dd4 vs L1 dd1, which splits H-rect-edge / H-dither / H-stale-native.
