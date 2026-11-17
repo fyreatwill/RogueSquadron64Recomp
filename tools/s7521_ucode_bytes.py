@@ -84,6 +84,8 @@ def known_route(rom, dr, ln):
     if (dr, ln) == (0x026748, 0x1C) and [rom[ro + i:ro + i + 4].hex() for i in range(0, 0x1C, 4)] == OVL28_WORDS:
         c = open(os.path.join(ROOT, 'build/factor5_ucode/factor5_ucode_recompiled.c')).read()
         # addiu $17,32; restore DMA main text+0x220 -> IMEM 0x12A0 len 0x330 (= main's compiled bytes); return 0x10D8
+        # s7522 inserts the passive restore-model call between the route and the r17 update: strip it before matching
+        c = c.replace(' if (__builtin_expect(rs64_s7521_on, 0)) rs64_s7522_ovl28(RSP_MEM_W_LOAD(0X10, r1) + 0x220);', '')
         if OVL28_ROUTE in c: return ['OVL28 hand route (r17+=32, restore-DMA of main L_12A0 no-op, goto L_10D8)']
     return []
 
@@ -142,7 +144,10 @@ def score(paths, want_ctl, imgs, rom, quiet=False):
         # mtc0 DPC_START/END, so path A (b5) under win=ovl0 is LIVE, and any L_1DB0 entry under another overlay is LIVE.
         si = max(i for i, l in enumerate(L) if l.startswith('[s7521-sum]'))
         wl = {}
-        for l in L[si + 1:si + 4]:
+        # s7522: the three window rows follow the last sum but other threads' stderr lines interleave (L10 soak s7521:
+        # an [s2020-svc] pair landed between them), so take the first row per window after the sum, not a fixed slice.
+        for l in L[si + 1:si + 200]:
+            if len(wl) == 3: break
             m = re.match(r'\[s7521-l1db0\] why=\S+ win=(\w+) entry=(\d+) b0=(\d+) b1=(\d+) b2=(\d+) b3=(\d+) b4=(\d+) b5=(\d+)', l)
             if m: wl[m.group(1)] = [int(m.group(i)) for i in range(2, 9)]
         if want_ctl and len(wl) != 3: live.append(f'{p}: no l1db0 window rows'); nlive += 1
@@ -181,6 +186,9 @@ def controls(imgs, rom):
              ('live text', base + ctlr + ['[s7521-reg] kind=DIFF region=text type=1 va=80024A10 off=200 ram=00 rom=11 romoff=0 task=7 ctl=0'] + s, True, 1),
              ('wrong tuple', ['[s7521-tuple] type=1 boot=800825D0/D0 ucode=80100000/1000 data=80038D00/800 flags=0 task=1'] + ctlr + s, True, 1),
              ('uncompiled imem', base + ctlr + ['[s7521-imem] new mem=1080 dram=030000 len=100 aud=0 rom=30C00 state=ROM bad=0 first=0 task=3'] + s, True, 1),
+             ('interleaved rows', base + ctlr + ['[s7521-sum] why=periodic tasks=2000', '[s2020-svc] edge=entry call=1',
+                                                  '[s2020-svc] edge=exit call=1'] + W(0), True, 0),
+             ('interleaved path A', base + ctlr + ['[s7521-sum] why=periodic tasks=2000', '[s2020-svc] edge=entry call=1'] + W(1), True, 1),
              ('path A under ovl0', base + ctlr + ['[s7521-sum] why=periodic tasks=2000'] + W(1), True, 1),
              ('no sum', base, False, 4)]
     ok = True

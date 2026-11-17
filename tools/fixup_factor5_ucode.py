@@ -3778,6 +3778,27 @@ if is_main_ucode and CAPG_MARKER not in text and "        static int rs64_cap_fi
     text = text.replace('extern "C" void rsp_task_log_and_reset(',
                         'extern "C" volatile uint32_t rs64_ucode_cap_fires_g;  ' + CAPG_MARKER + '\nextern "C" void rsp_task_log_and_reset(', 1)
 
+# s7522 class FS: hardware IMEM residency vs the port's overlay route. At every do_indirect_jump the dispatch target and
+# DMEM 0x153 go to src/rsp/s7521_ucode_watch.cpp (rs64_s7522_disp), which keeps a per-word model of the RDRAM source of
+# every IMEM word from the gfx IMEM DMA stream; the ovl28 hand route skips hardware's restore DMA of main's 0x12A0..0x15CF
+# (ovl28 at 0x1DB0: r2 = lw 0x10(r1) + 0x220, 0x330 bytes -> IMEM 0x12A0), so it reports that DMA to the model
+# (rs64_s7522_ovl28). Passive: both calls are gated on ROGUESQ_S7521_UCODEWATCH. Scored by tools/s7522_imem_residency.py.
+FS_MARKER = "/* fixup: s7522 imem residency */"
+if is_main_ucode and FS_MARKER not in text:
+    text, f1 = re.subn(r"(RspExitReason factor5_ucode\()",
+        lambda m: 'extern "C" int rs64_s7521_on; extern "C" void rs64_s7522_disp(uint32_t target, uint32_t b153); '
+                  'extern "C" void rs64_s7522_ovl28(uint32_t src);  ' + FS_MARKER + "\n" + m.group(1), text, count=1)
+    text, f2 = re.subn(r"(^do_indirect_jump:\n)",
+        lambda m: m.group(1) + "    if (__builtin_expect(rs64_s7521_on, 0)) rs64_s7522_disp(jump_target, RSP_MEM_BU(0X153, 0));  " + FS_MARKER + "\n",
+        text, count=1, flags=re.MULTILINE)
+    _o28 = "{ rs64_e9prov_ovl_route(0x28, 0x1DB0); r17 = RSP_ADD32(r17, 0X20); goto L_10D8; }"
+    f3 = text.count(_o28)
+    text = text.replace(_o28, "{ rs64_e9prov_ovl_route(0x28, 0x1DB0); if (__builtin_expect(rs64_s7521_on, 0)) "
+                        "rs64_s7522_ovl28(RSP_MEM_W_LOAD(0X10, r1) + 0x220); r17 = RSP_ADD32(r17, 0X20); goto L_10D8; }")
+    if (f1, f2, f3) != (1, 1, 1):
+        print("fixup_factor5_ucode: s7522 ANCHOR FAILED", (f1, f2, f3), file=sys.stderr)
+        sys.exit(1)
+
 if text == original:
     sys.exit(0)
 

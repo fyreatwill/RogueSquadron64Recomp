@@ -199704,3 +199704,44 @@ dispatch-table drift in ucode_data. **Gap:** the 0x12A0 window (ovl20, ovl24, ov
 
 Run: `env R=$PWD/scratch/s7521_fr HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1+ROGUESQ_ASPECT=21:9" zsh tools/g1e_owner_quiet_arms.zsh`;
 score `python3 tools/s7521_ucode_bytes.py --controls --ctl scratch/s7521_fr/log_l4.txt scratch/s7521_fr/log_l15.txt` (rc 0).
+
+## Session 7522 (2026-11-17) — class FS: hardware IMEM residency vs the port's overlay route at every RSP dispatch; 179M (L4 dd1) / 377M (L15 dd8 21:9) dispatches all run the resident code except FR's known L_1DB0-under-overlay-0 case, planted 8-byte model shift caught on both arms; FR levels closed after a scorer fix
+
+**Fold s7521_fr_levels (rc=1).** The one LIVE row was `log_l10.txt: no l1db0 window rows`. The rows are there: an `[s2020-svc]`
+entry/exit pair from another thread landed between the last `[s7521-sum]` and the three `[s7521-l1db0]` window rows, and the
+scorer read a fixed `L[si+1:si+4]` slice. tools/s7521_ucode_bytes.py now takes the first row per window in the 200 lines after the
+sum (2 new synthetic cases: interleaved clean = 0, interleaved path A = 1; 9/9 pass). Re-score: L1/L7/L10/L12 live=0, ctl 5/5 each,
+ovl0 b5 = 0 everywhere -> **FR CLOSED 6 levels.** Side datum: L10 does ~4 IMEM DMAs per task against ~3.4k on L1/L7/L12 (bytes
+checked 0.2 G vs 15-19 G). L10 is the cloud level with no terrain grid (CURRENT-TRUTH run recipes), so this is benign.
+
+**FS hypotheses.** H-canon: the code the port routes to equals the code hardware has resident at every dispatch. H-dead: mismatches
+only where the bytes are equal. H-live: the port runs another overlay's code. The port picks overlay code by DMEM 0x153 in the
+do_indirect_jump switch, while hardware runs whatever the last IMEM DMA left. Windows can overlap partially: ovl20 (0x158 bytes)
+is longer than ovl24 (0xE4) at 0x12A0, so a per-window model would miss leftovers. The model is per word.
+
+**Instrument** (one build). src/rsp/s7521_ucode_watch.cpp: `isrc[1024]` = RDRAM source of every gfx IMEM word, reset per gfx task
+and updated in the IMEM-DMA hook before FR's ctl branch. `rs64_s7522_disp(target, 0x153)` counts (target, 0x153, isrc[target],
+ctl). `rs64_s7522_ovl28(src)` models the restore DMA the ovl28 hand route skips. ovl28 decoded from ROM: `addiu r17,0x20; lw r2,0x10(r1);
+ori r3,0x12A0; ori r4,0x32F; addiu r2,0x220; j 0x122C; ori r31,0x10D8` = 0x330 bytes into 0x12A0. tools/fixup_factor5_ucode.py block
+"s7522 imem residency" inserts both calls, gated on rs64_s7521_on. Rows dump at each sum, before FR's rows. Ctl (ROGUESQ_S7521_CTL=1):
+after gfx task 800, the next real overlay DMA into 0x1DB0 (not ovl0) is modelled 8 bytes off until the next 0x1DB0 DMA.
+Scorer tools/s7522_imem_residency.py --controls (7/7 synthetic). It parses the generated switch (86 cases, 74 0x153 rules, brace and
+brace-less forms, OVL2C mode 0, 0x28 hand route) into the compiled composite each (target, 0x153) runs. It byte-compares that image
+with ROM at the modelled source, from the target to the end of the resident DMA extent.
+
+**Result** (L4 dd1 + L15 dd8 21:9, HOLD 120, both alive, 0 stalls). L4: 178.9M dispatches, 254 keys. L15: 376.6M, 252 keys. Every
+key is canon except L_1DB0 with overlay 0 resident (6,285 / 6,309), which is FR's placement case, H-dead by FR's path-A count.
+0x12A0-window dispatches: 57M / 134M. These include 0x153=0x28 routed to main (60M / 120M; resident bytes = main after the
+modelled restore, src28 always 0x024C30) and 0x153=0x04 routed into the ovl24/ovl20 composites (canon: the 0x12A0 window still holds
+that overlay while ovl4 sits at 0x1DB0). 0 rs64_clip_stray, 0 unhandled, 0 unmodelled. Ctl: perturbed ovl4 DMA (0x025820) at gfx
+1639/1643 -> 92 live dispatches on each arm -> caught. FR scorer on the same logs: live=0, ctl 5/5, after a second fix. The FR
+ovl28 known_route string match broke because the s7522 call now sits inside the route, so the scorer strips that call before
+matching. **FS H-canon on L4/L15.**
+**Rules out:** the port running a stale or other overlay at any dispatch, ovl20 leftovers under the ovl24 route, a wrong ovl28 restore
+source. **Gaps:** a later partial DMA inside a resident run is not re-split (the compare assumes the run is contiguous from the
+target). Direct (non-dispatch) entries into a window are covered only for L_1DB0 (FR).
+Levels soak queued: scratch/agent/soak_queue/s7522_fs_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4; score = max(FS, FR)).
+
+Run: `mkdir -p scratch/s7522_fs; env R=$PWD/scratch/s7522_fs HOLD=120 DONE=quiet.done ARMS="1:l4:ROGUESQ_FORCE_SAVE_MISSION=4+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1 8:l15:ROGUESQ_FORCE_SAVE_MISSION=15+ROGUESQ_S7521_UCODEWATCH=1+ROGUESQ_S7521_CTL=1+ROGUESQ_G1E_PROBES=1+ROGUESQ_ASPECT=21:9" zsh tools/g1e_owner_quiet_arms.zsh`
+(the harness does not create R: the first attempt died on a missing dir), score
+`python3 tools/s7522_imem_residency.py --controls --ctl scratch/s7522_fs/log_l4.txt scratch/s7522_fs/log_l15.txt` (rc 0).

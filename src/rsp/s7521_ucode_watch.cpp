@@ -38,10 +38,28 @@ bool imem_ctl_pending = false, imem_ctl_done = false;
 // hardware IMEM window model (gfx): 0 = boot image (text DMA to 0x1080), else phys source of the last DMA into 0x1DB0
 uint32_t win = 0; unsigned long l1db0[3][7] = {}; int force_state = 0;  // 0 idle, 1 armed, 2 done
 constexpr uint32_t kOvl0 = 0x025748;
+// s7522 class FS: per-word model of hardware IMEM (gfx): isrc[w] = RDRAM phys of the byte DMA'd into IMEM word w (0 = none this task).
+// ctl (ROGUESQ_S7521_CTL=1): after gfx task 800 the next real overlay DMA into 0x1DB0 (not ovl0) is modelled 8 bytes off, so the
+// dispatches into it until the next 0x1DB0 DMA must score as non-resident code (their rows carry ctl=1).
+uint32_t isrc[1024] = {}; int fs_ctl = 0;  // 0 idle, 2 perturbed, 3 done
+unsigned long ndisp = 0, n28 = 0, fs_gen = 0, fs_ctl_dmas = 0;
+std::map<std::tuple<uint32_t, uint32_t, uint32_t, int>, unsigned long> disp;
+std::set<uint32_t> src28;
+int ctl_get();
+void fs_dma(uint32_t mem, uint32_t phys, uint32_t len, unsigned long gfxn, unsigned long taskn) {
+    int shift = 0;
+    if ((mem & 0x1FFF) == 0x1DB0) {
+        if (fs_ctl == 2) fs_ctl = 3;
+        else if (fs_ctl == 0 && ctl_get() == 1 && gfxn >= 800 && phys != kOvl0) { fs_ctl = 2; shift = 8; ++fs_ctl_dmas;
+            std::fprintf(stderr, "[s7522-ctl] perturb mem=%04X dram=%06X len=%X task=%lu gfx=%lu\n", mem, phys, len, taskn, gfxn); }
+    }
+    for (uint32_t i = 0; i < len && i < 0x1000; i += 4) isrc[(((mem & 0xFFF) + i) >> 2) & 1023] = phys + i + shift;
+}
 inline int wkind() { return win == 0 ? 0 : win == kOvl0 ? 1 : 2; }
 
 inline uint8_t ramb(const uint8_t* rdram, uint32_t phys) { return rdram[phys ^ 3]; }
 inline void ctl_init() { if (ctl < 0) { const char* c = std::getenv("ROGUESQ_S7521_CTL"); ctl = c ? std::atoi(c) : 0; } }
+int ctl_get() { ctl_init(); return ctl; }
 
 // returns differing byte count; -1 if the range is outside the ROM-backed main segment
 long cmp_rom(const uint8_t* rdram, uint32_t phys, uint32_t len, uint32_t* first) {
@@ -90,6 +108,13 @@ void region(const uint8_t* rdram, int kind, const char* nm, uint32_t type, uint3
     }
 }
 void sum(const char* why) {
+    ++fs_gen;  // s7522 rows first: the FR scorer reads the l1db0 rows that follow [s7521-sum]
+    std::fprintf(stderr, "[s7522-sum] gen=%lu why=%s ndisp=%lu keys=%zu n28=%lu src28=%zu ctl_dmas=%lu fs_ctl=%d\n", fs_gen, why, ndisp, disp.size(), n28,
+                 src28.size(), fs_ctl_dmas, fs_ctl);
+    for (uint32_t v : src28) std::fprintf(stderr, "[s7522-src28] gen=%lu src=%06X\n", fs_gen, v);
+    for (auto& kv : disp)
+        std::fprintf(stderr, "[s7522-disp] gen=%lu t=%04X b153=%02X src=%06X ctl=%d n=%lu\n", fs_gen, std::get<0>(kv.first), std::get<1>(kv.first),
+                     std::get<2>(kv.first), std::get<3>(kv.first), kv.second);
     std::fprintf(stderr, "[s7521-sum] why=%s tasks=%lu gfx=%lu aud=%lu other=%lu tuples=%zu reg_checks=%lu reg_bad=%lu reg_nonrom=%lu bytes=%lu "
                  "imem=%lu imem_ok=%lu imem_bad=%lu imem_nonrom=%lu imem_distinct=%zu ctl_rows=%lu ctl=%d\n", why, tasks, gfx, aud, other,
                  tuples.size(), reg_checks, reg_bad, reg_nonrom, bytes_checked, imem, imem_ok, imem_bad, imem_nonrom, imem_seen.size(), ctl_rows, ctl);
@@ -106,7 +131,7 @@ extern "C" void rs64_s7521_task(uint8_t* rdram, const OSTask* task) {
     ctl_init();
     ++tasks;
     const uint32_t type = task->t.type;
-    if (type == M_GFXTASK) { ++gfx; win = 0; }  // rspboot reloads the ucode text (IMEM 0x1080..) at every task start
+    if (type == M_GFXTASK) { ++gfx; win = 0; for (auto& w : isrc) w = 0; }  // rspboot reloads the ucode text (IMEM 0x1080..) at every task start
     else if (type == M_AUDTASK) ++aud; else ++other;
     const uint32_t bt = (uint32_t)task->t.ucode_boot, bs = task->t.ucode_boot_size, tx = (uint32_t)task->t.ucode,
                    ts = task->t.ucode_size, dt = (uint32_t)task->t.ucode_data, ds = task->t.ucode_data_size;
@@ -149,6 +174,7 @@ extern "C" void rs64_s7521_imem(uint8_t* rdram, uint32_t mem, uint32_t dram, uin
     ctl_init();
     ++imem;
     const uint32_t phys = dram & 0x1FFFFFFFu;
+    if (!aud && (mem & 0x1000)) fs_dma(mem, phys, len, gfx, tasks);  // s7522: model first (the FR ctl branch below returns early)
     const bool c = imem_ctl_pending && !aud;
     if (c) { rdram[(phys + len / 2) ^ 3] ^= 0x5A; }
     uint32_t first = 0;
@@ -169,4 +195,20 @@ extern "C" void rs64_s7521_imem(uint8_t* rdram, uint32_t mem, uint32_t dram, uin
         if (st && rows < 600) { ++rows; std::fprintf(stderr, "[s7521-imem] bad mem=%04X dram=%06X len=%X aud=%d state=%s bad=%ld first=%X task=%lu\n",
                                                      mem, phys, len, aud, st == 1 ? "DIFF" : "NONROM", bad, first, tasks); }
     }
+}
+
+// s7522 class FS: every do_indirect_jump (target, DMEM 0x153) against the modelled resident source of the target word
+extern "C" void rs64_s7522_disp(uint32_t target, uint32_t b153) {
+    if (!rs64_s7521_on) return;
+    std::lock_guard<std::mutex> g(m);
+    const uint32_t t = (target | 0x1000) & 0x1FFF;
+    ++ndisp; ++disp[std::make_tuple(t, b153 & 0xFF, isrc[(t & 0xFFF) >> 2], fs_ctl == 2 ? 1 : 0)];
+}
+// the ovl28 hand route: hardware DMAs 0x330 bytes from src into IMEM 0x12A0 (main's L_12A0..L_15CC restore) before j 0x122C
+extern "C" void rs64_s7522_ovl28(uint32_t src) {
+    if (!rs64_s7521_on) return;
+    std::lock_guard<std::mutex> g(m);
+    const uint32_t phys = src & 0x1FFFFFFFu;
+    ++n28; src28.insert(phys);
+    fs_dma(0x12A0, phys, 0x330, gfx, tasks);
 }

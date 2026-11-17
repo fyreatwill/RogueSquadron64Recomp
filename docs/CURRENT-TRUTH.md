@@ -466,7 +466,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     carry a section's own ROM bytes at its link address (boot worker 0x80000D04 preloads the mission tail ROM 0x101000 -> 0x80100400
     then the one boot osInvalICache). Both ctls caught on both arms. Gap: load_overlay never erases a replaced overlay's func_map
     entries (0 calls hit one).
-    **FR L4/L15 (s7521): executed RSP code bytes == the RSPRecomp images (H-canon; one placement difference H-dead).** Static (tools/s7521_ucode_bytes.py
+    **FR CLOSED 6 levels (s7521, soak folded s7522: L1 dd8 21:9 + L7/L10/L12 dd4 live=0 after a scorer fix, ctl 5/5): executed RSP code bytes == the RSPRecomp images (H-canon; one placement difference H-dead).** Static (tools/s7521_ucode_bytes.py
     --controls, 7/7 synthetic): the main/B/boot toml images == ROM at the task ucode addresses. Runtime ROGUESQ_S7521_UCODEWATCH=1 (src/rsp/s7521_ucode_watch.cpp;
     hooks librecomp rsp.cpp run_task [audio], main.cpp rs64_run_lle_gfx [gfx], rsp.hpp IMEM-DMA skip, dpc_bridge L_1DB0 probes - needs ROGUESQ_G1E_PROBES=1)
     + ctl ROGUESQ_S7521_CTL=1: exactly 2 task tuples (gfx 80024A10/data 80038D00, audio 80099FE0/data 800A4E00), so type-only dispatch is sound; boot+text
@@ -476,7 +476,17 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     overlay 0x28 (hand route). Window model: all 12.6k L_1DB0 entries run with overlay 0 resident, so hardware runs the shifted copy where `j 0x1E5C`
     skips mtc0 DPC_START/END; the port runs the boot copy. H-dead: that path (b5, RDP busy at task start) is taken 0 times (b3 every time: our DPC model
     zeroes DPC_CURRENT per task); the planted forced-busy read takes it once, is seen, game stays alive (port's extra writes submit an empty range).
-    All 5 ctls caught both arms. Gap: the 0x12A0 window (ovl20/24, ovl28 restore) is not modelled. Levels soak queued (s7521_fr_levels).
+    All 5 ctls caught both arms. (Soak L10 first scored 1: an [s2020-svc] line interleaved after the last sum pushed the window rows out of a fixed
+    3-line slice; scorer now takes the first row per window, 2 new synthetic cases. L10's ~4 IMEM DMAs/task vs ~3.4k elsewhere = cloud level, no terrain.)
+    **FS L4/L15 (s7522): at every port dispatch the code routed to == the code hardware has resident (H-canon).** Runtime: s7521 watch keeps a per-word
+    model of gfx IMEM (RDRAM source of every word) from the IMEM DMA stream + the restore DMA the ovl28 hand route skips (decoded: lw 0x10(r1)+0x220,
+    0x330 bytes -> 0x12A0; logged source always 0x024C30 = main's own bytes); fixup "s7522 imem residency" hooks do_indirect_jump (target, DMEM 0x153).
+    tools/s7522_imem_residency.py --controls (7/7) parses the generated dispatch switch (86 cases, 74 0x153 rules) into route -> compiled composite and
+    byte-compares it with the resident ROM bytes from the target to the end of the resident DMA extent. 179M / 377M dispatches (254 / 252 keys): all
+    canon except 6.3k L_1DB0-under-ovl0 entries (= FR's H-dead case); 0x12A0 window 57M / 134M dispatches incl. 0x153=0x28 (60M / 120M, main code
+    after the restore) and 0x153=0x04 routed to ovl24/ovl20 composites; 0 stray / unhandled / unmodelled. Ctl (one real 0x1DB0 overlay DMA modelled 8
+    bytes off after gfx 800) = 92 live dispatches both arms. Gaps: a later partial DMA inside a run is not re-split; direct (non-dispatch) entries into a
+    window are covered only for L_1DB0 (FR). Levels soak queued (s7522_fs_levels, scores max(FS, FR)).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
