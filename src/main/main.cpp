@@ -11320,7 +11320,9 @@ extern "C" void rs64_wbw_self(int on) {
 }
 
 // Called on the RT64 thread immediately before copyNativeToRAM of [phys, phys+bytes).
+extern "C" void rs64_s7541_span(int, const uint8_t*, uint32_t, uint32_t); extern "C" int rs64_s7539_on; // s7541
 extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
+    if (rs64_s7539_on && rd && bytes) rs64_s7541_span(2, rd, phys, bytes); // s7541
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     if (!g_wbw_rd.load()) {
         for (uint32_t i = 0; i < _dyld_image_count(); i++) if (_dyld_get_image_header(i)->filetype == MH_EXECUTE) { g_wbw_slide = (uint64_t)_dyld_get_image_vmaddr_slide(i); break; }
@@ -11342,6 +11344,7 @@ extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);  /* s7492 class EQ: RT64 writeback -> fn=os_rt64fb */
 static void s7497_wb(uint32_t, uint32_t, uint32_t);
 extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    if (rs64_s7539_on && rd && bytes) rs64_s7541_span(3, rd, phys, bytes); // s7541
     {   static std::atomic<uint64_t> n{0}; const uint64_t k = ++n;  /* s7492: first-call / periodic marker = the hook's reach control */
         if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
                                                        (unsigned long long)k, phys, bytes, kind, width, rows); }
@@ -11364,11 +11367,12 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
     }
 }
 #else
-extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
+extern "C" void rs64_s7541_span(int, const uint8_t*, uint32_t, uint32_t); extern "C" int rs64_s7539_on; // s7541
+extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) { if (rs64_s7539_on && rd && bytes) rs64_s7541_span(2, rd, phys, bytes); }
 extern "C" void rs64_wbw_self(int) {}
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
 static void s7497_wb(uint32_t, uint32_t, uint32_t);
-extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); s7501_wb(phys, bytes); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
+extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { if (rs64_s7539_on && rd && bytes) rs64_s7541_span(3, rd, phys, bytes); s7493_wb(phys, bytes, kind, width, rows); s7501_wb(phys, bytes); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 

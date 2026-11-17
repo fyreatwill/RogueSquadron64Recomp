@@ -1649,3 +1649,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-102358 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-102358.log
 20261117-103027 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 3/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-103027.log
 20261117-105413 | s7536_splate_cost | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-105413.log
+20261117-110628 | s7536_splate_cost | rc=2 | 1s | scratch/agent/soak_results/s7536_splate_cost_20261117-110628.log | arms=0 alive=0/0 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117-110629 | s7540_rwait_cost | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 1s | scratch/agent/soak_results/s7540_rwait_cost_20261117-110629.log

@@ -102,9 +102,13 @@ RULES = [
          "s7540 ROGUESQ_RDP_NODRAIN=3: task exit waits (reads_wait) until every job of the task is popped and the running one has "
          "called rs64_s7540_reads_done() after State::fullSync's last fullSyncFramebufferPairTiles, so every texture-source RDRAM read "
          "precedes dp_complete (measured s7540 NODRAIN=4 same-run: as=4 post-signal loads 0). Still after the post: the final "
-         "renderAndSynchronize (fb read-in via fbStorage.store, writebacks) and hashTracking, not measured by s7539's instrument",
+         "renderAndSynchronize (fb read-in via fbStorage.store, writebacks) and hashTracking: s7541 measured them (rs64_s7541_span, "
+         "tools/s7541_gb_score.py, NODRAIN=4 + S7541_HOLD=1, L4/L12/L1): 0 read-in / clobber / hash spans differ from the guest's view at "
+         "the post, controls planted==caught; writebacks themselves land late (~84% change bytes after the post), no guest reader "
+         "(s6938 WBW, s7391; NODRAIN=3 WBW rerun queued s7541_wbw_rwait)",
          [("fnbody", RC, "reads_wait", r"cv_idle\.wait\(lk, \[\] \{ return q\.empty\(\) && \(!busy \|\| cur_rd\); \}\);"),
           ("file", "lib/rt64/src/hle/rt64_state.cpp", r"fullSyncFramebufferPairTiles\(workload, fbPair, loadOpCursor, rdpTileCursor\);\s*\}\s*\}\s*rs64_s7540_reads_done\(\);"),
+          ("file", "lib/rt64/src/hle/rt64_framebuffer_manager.cpp", r"rs64_s7541_span\(4, RDRAM"),
           ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_RDP_NODRAIN=3")])]),
     # --- VI / AI -------------------------------------------------------------------------------------------------------------
     (EV, "vi_thread_func", (1040, 1056), [("vi", "H-canon",

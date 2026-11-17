@@ -200324,3 +200324,36 @@ Verdict line: this selects H-fix-cheap (as=4 0 late loads on 3 levels with same-
 costs ~35% of a full drain) and refutes H-residual and H-fix-costly. OWNER-OPT-INS now recommends =3 over =1; game-fps cost vs =1
 is queued (scratch/agent/soak_queue/s7540_rwait_cost.sh, L5/L12 dd4 ABCCBA, needs AC). Not covered: RT64's post-signal fb
 read-ins/writebacks/hashTracking (after reads_done) are still unmeasured.
+
+## Session 7541 (2026-11-17) — class GB residual measured: under ROGUESQ_RDP_NODRAIN=3 RT64's post-reads_done fb read-ins, writeback targets and hashTracking spans see 0 guest changes after dp_complete (L4/L12/L1, controls planted==caught); writebacks land late (~84%) with no known guest reader
+
+Work unit (NEXT s7541). Fold: SOAK-RESULTS has nothing new (s7536_splate_cost exhausted 5/5 voids on battery; s7540_rwait_cost voided 1/5, still queued, needs AC).
+Instrument (one build): extern "C" rs64_s7541_span(kind, rdram, addr, bytes) in src/main/rt64_render_context.cpp (gb::C2, under
+ROGUESQ_S7539_GB_CHK=1). Hooks: lib/rt64 rt64_state.cpp both fbStorage.store read-ins (kind 0 colour, 1 depth), main.cpp
+rs64_wbw_pre/rs64_wbw_post (both #if variants; kind 2 = writeback target vs the task's post snapshot = guest bytes the writeback
+would clobber, kind 3 = after the write, bytes now differing from the guest's view at the post = late-visible RDP output; the span is
+then written through into the snapshot so kind 4 sees only guest changes), rt64_framebuffer_manager.cpp hashTracking (kind 4 = guest
+change inside a tracked fb hashed after the post = a change RT64 would not notice). Controls per row: planted (every 16th post-signal
+span, one snapshot byte flipped, comparator must move by exactly that byte), older snapshot (prev_diff), structural (drained as=2
+rows must have post=0). ROGUESQ_S7541_HOLD=1: an as=4 job holds after reads_done until its task is posted (<=50 ms; the 16 MB
+snapshot memcpy would otherwise delay the post past most accesses and read as a false "pre"). [s7541-gb]/[s7541-hold]/[s7541-gbd]
+lines with the s7539 periodic print. tools/s7541_gb_score.py (verdicts H-none / H-readin-torn / H-clobber / H-hash-miss, CTL-FAIL,
+STRUCT-FAIL; --controls 9/9). lib/rt64 edited -> export.sh run (rt64.patch). Census row async-rwait text + a hook-presence check
+updated; tools/s7538_gb_census.py live fail=0 open_latent=0, --controls 8/8.
+Run (scratch/s7541_gb, g1e_owner_quiet_arms HOLD 120, FPS60 16:9 fullscreen, NO_SAVE_WRITE, battery clk ~1.5 ALLOW_SLOW (timing
+not used); env ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=4 ROGUESQ_S7539_GB_CHK=1 ROGUESQ_G1B=1 ROGUESQ_S7541_HOLD=1; 3/3 alive,
+crashlines 0, vi_stalls30s 0, level_ok 1). Last periodic block per log, as=4 (reads-wait) rows:
+| level | readin post/diff | wb_pre (clobber) post/diff | wb_post late post/diff_n (bytes) | hash post/diff | ctl caught/planted | hold n/timeouts |
+| L4 dd4      | 7/0 | 7284/0 | 7284/6145 (2.83 GB) | 3658/0 | 1720/1720 | 2000/0 |
+| L12 dd4     | 8/0 | 6500/0 | 6500/5589 (2.39 GB) | 3259/0 | 1534/1534 | 1800/0 |
+| L1 dd8 21:9 | 7/0 | 5862/0 | 5862/4955 (3.30 GB) | 3658/0 | 1440/1440 | 2000/0 |
+as=3 (nodrain) rows: same zeros for read-in/clobber/hash, late writes ~same. as=2 (drained): every access pre (post 0) = structural
+control holds. Same-run positive control that the guest was actively racing: s7539 as=3 texture loads TORN 77/165/50 (prev 549/1967/1833),
+as=4 loads post 0. Older-snapshot diffs fire on wb_pre/hash (2435-5064 spans), so the comparator does see changes in these spans.
+Late-write spans: 614400-byte colour images 0xB6A000/0xA50E00/0x9BAE00/0xA1F000/0x989000 plus small 0xBCxxxx spans.
+Verdict line: this selects H-none for guest-visible tearing (no guest write races a post-signal read-in, writeback or hash) and
+refutes H-readin-torn, H-clobber and H-hash-miss on 3 levels; it adds H-late-write: RDP output reaches RDRAM after dp_complete for
+~84% of writebacks. That is harmless only while no guest/RSP reader touches those pages: s6938 WBW (L1, sync mode) found only RT64's
+own hashes, s7391 found no CPU colour-image reader on L5/L10/L15 -> two lines, but neither under NODRAIN; queued
+scratch/agent/soak_queue/s7541_wbw_rwait.sh (WBW + CTL under NODRAIN=3, same 3 levels) as the direct check.
+ORIGIN: no mitigation added (instrument only). Not covered: on-screen effect (none expected), levels other than L1/L4/L12.

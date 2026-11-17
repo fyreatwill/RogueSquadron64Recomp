@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7540 (2026-11-17).
+Compact operational handoff, as of Session 7541 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -34,7 +34,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   diffs fire, witness ~0.5-0.7 MB/window. Legitimate guest writes; on-screen effect unmeasured. **s7540 fix: ROGUESQ_RDP_NODRAIN=3** (reads-wait: task exit waits for
   rs64_s7540_reads_done(), called by RT64 fullSync after its last fullSyncFramebufferPairTiles). Same-run NODRAIN=4 cycle
   (drain/nodrain/reads-wait per task) L1/L4/L12: reads-wait 0 post-signal loads, nodrain 43/50/196 torn (controls caught);
-  Gfx wait per task 1.2-1.6 ms vs 3.3-4.3 drained, 0 nodrain. OWNER-OPT-INS recommends =3; census exits 0. Item 18.
+  Gfx wait per task 1.2-1.6 ms vs 3.3-4.3 drained, 0 nodrain. OWNER-OPT-INS recommends =3; census exits 0. **s7541: the rest of fullSync after reads_done is clean too** (rs64_s7541_span, tools/s7541_gb_score.py, NODRAIN=4 + ROGUESQ_S7541_HOLD=1, L4/L12/L1): fb read-ins, writeback targets and hashTracking spans 0 guest changes after the post, controls planted==caught, same-run nodrain loads torn. Residual H-late-write: ~84% of writebacks land after dp_complete; no guest reader known (s6938, s7391; NODRAIN=3 WBW rerun queued). Item 18.
 - **G3 render fidelity: H-equal everywhere scored (s7122-s7217).** RT64 == angrylion to the retail floor at
   4:3, 16:9, 21:9, fullscreen 16:9 and ASPECT=auto fullscreen, flight L0-L18, menus, cutscenes, front end,
   LEVEL DESCRIPTION. Only large residuals: the deliberate W_SHEET_PX / W_SHEET_POS guard-band sky-sheet culls.
@@ -287,10 +287,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7537_splate_cost_batt. Open only: the queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (runs when on AC;
     fold with `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`); if AC L12 dd4 late < early - 0.5 in a
     3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
-18. **Class GB follow-ups (s7540).** (a) game-fps cost of NODRAIN=3 vs =1 vs drained: queued soak
-    scratch/agent/soak_queue/s7540_rwait_cost.sh (L5/L12 dd4, needs AC); fold with tools/g1e_level_fps.py. (b) NEXT.md: the RT64
-    RDRAM accesses still after the post under =3 (final renderAndSynchronize fb read-in fbStorage.store, copyNativeToRAM
-    writebacks, hashTracking) are unmeasured: one instrument over all three, same-run vs a drained control.
+18. **Class GB follow-ups (s7540-s7541).** (a) game-fps cost of NODRAIN=3 vs =1 vs drained: queued soak
+    scratch/agent/soak_queue/s7540_rwait_cost.sh (L5/L12 dd4, needs AC); fold with tools/g1e_level_fps.py. (b) CLOSED s7541: post-
+    reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) queued scratch/agent/soak_queue/s7541_wbw_rwait.sh:
+    WBW reader census under NODRAIN=3 (late writebacks): fold = any non-self [wbw] live reader names a real consumer -> move the
+    writeback before the post for that span; ctl must be > 0. (d) NEXT.md: class GC census (host writes into guest RAM vs their signal).
 19. **When 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
