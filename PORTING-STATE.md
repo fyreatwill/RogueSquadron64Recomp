@@ -199737,6 +199737,8 @@ that overlay while ovl4 sits at 0x1DB0). 0 rs64_clip_stray, 0 unhandled, 0 unmod
 1639/1643 -> 92 live dispatches on each arm -> caught. FR scorer on the same logs: live=0, ctl 5/5, after a second fix. The FR
 ovl28 known_route string match broke because the s7522 call now sits inside the route, so the scorer strips that call before
 matching. **FS H-canon on L4/L15.**
+**Discrimination:** selects H-canon, refutes H-live (0 non-resident dispatches in 555M with the planted shift caught) and leaves H-dead
+only for the FR L_1DB0 case. Next discriminator: the FS levels soak, then class FT (DPC/SP status read model, NEXT.md).
 **Rules out:** the port running a stale or other overlay at any dispatch, ovl20 leftovers under the ovl24 route, a wrong ovl28 restore
 source. **Gaps:** a later partial DMA inside a resident run is not re-split (the compare assumes the run is contiguous from the
 target). Direct (non-dispatch) entries into a window are covered only for L_1DB0 (FR).
