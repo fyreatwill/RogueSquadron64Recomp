@@ -10605,6 +10605,7 @@ static void s7497_wb(uint32_t phys, uint32_t bytes, uint32_t kind) {
 // broken walk (racing guest malloc, n<0) counts qbad and is retried on the next writeback. Control ROGUESQ_S7498_CTL=<n>: the first
 // container query at or after the n-th query is re-run with its end extended 0x100 past that container's end; it MUST classify
 // non-container (proves the classifier sees a spill one block over).
+static void s7499_ex(uint32_t lo, uint32_t hi, uint32_t kind, uint32_t base, uint32_t width);
 namespace { std::mutex g_s7498_mu; std::atomic<uint32_t> g_s7498_base{0xFFFFFFFFu}; std::map<uint64_t, uint32_t> g_s7498_max;
   uint64_t g_s7498_q = 0, g_s7498_qbad = 0, g_s7498_n[4] = {0, 0, 0, 0}, g_s7498_wb = 0, g_s7498_nobase = 0; int g_s7498_rows = 0, g_s7498_ctl = -2;
   double g_s7498_t0 = 0, g_s7498_last = 0;
@@ -10631,6 +10632,7 @@ namespace { std::mutex g_s7498_mu; std::atomic<uint32_t> g_s7498_base{0xFFFFFFFF
     if (g_s7498_ctl == -2 && s7498_ctl_at() > 0) g_s7498_ctl = -1;
     ++g_s7498_wb; if (b == 0xFFFFFFFFu) ++g_s7498_nobase;
     const uint32_t lo = phys & 0xFFFFFFu, hi = lo + bytes, base = (b == 0xFFFFFFFFu ? lo : b) & 0xFFFFFFu;
+    s7499_ex(lo, hi, kind, base, width);
     const uint64_t key = ((uint64_t)(kind & 0xFu) << 48) | ((uint64_t)base << 16) | (width & 0xFFFFu);
     auto it = g_s7498_max.find(key);
     if (it == g_s7498_max.end() || hi > it->second) {
@@ -10646,6 +10648,52 @@ namespace { std::mutex g_s7498_mu; std::atomic<uint32_t> g_s7498_base{0xFFFFFFFF
             std::fprintf(stderr, "[s7498] ctl q#%llu ext=[%06X,%06X) container_end=%06X -> cls=%s (%s)\n", (unsigned long long)g_s7498_q, c.lo, c.hi, q.cend, s7498_cls(cc), g_s7498_ctl ? "ok" : "FAIL"); } } } }
     if (now - g_s7498_last >= 10.0) { g_s7498_last = now; s7498_sum_locked(now); } }
 }
+// s7499 class EX: cross-image overlap. Does the range one RT64 writeback really writes, [phys, phys+bytes) of image A (kind, base,
+// width; base from rs64_s7493_base), cover bytes of a DIFFERENT image B the RDP stream has set (g_s7493_img, both kinds; needs
+// ROGUESQ_S7493_WBLIVE=1)? ROGUESQ_S7499_EX=1. B's extent = the largest range B's own writebacks have covered (wb), else its first row
+// estimate base + width*bpp*240 (est). Classes per (A, B) pair, counted once per pair and swap-age bucket: same (B.base == A.base: the
+// colour==depth z-clear idiom), live (B set this swap or the previous one), stale (B last set >= 2 swaps ago), est (B never written
+// back; estimated extent only). Rows `[s7499] x` (first 60 pairs), `[s7499] sum` every 10 s. Positive control ROGUESQ_S7499_CTL=<n>:
+// at the n-th writeback a fake image (kind 2) is registered at that writeback's phys + bytes/2 (8-aligned) with A's width, set "now";
+// A's next writebacks MUST count it as ctl (kept apart from live).
+namespace { std::mutex g_s7499_mu; std::map<uint64_t, uint32_t> g_s7499_end; std::set<uint64_t> g_s7499_pairs;
+  uint64_t g_s7499_wb = 0, g_s7499_n[5] = {0, 0, 0, 0, 0}, g_s7499_imgs = 0; int g_s7499_rows = 0; double g_s7499_t0 = 0, g_s7499_last = 0;
+  uint32_t g_s7499_cb = 0xFFFFFFFFu, g_s7499_cw = 0; int g_s7499_csw = 0; uint64_t g_s7499_ctlhit = 0; int g_s7499_ctl = -2;
+  bool s7499_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7499_EX"); return e && *e && *e != '0'; }(); return on; }
+  long s7499_ctl_at() { static const long n = [] { const char* e = std::getenv("ROGUESQ_S7499_CTL"); return e && *e ? std::strtol(e, nullptr, 10) : 0L; }(); return n; }
+  const char* s7499_cls(int c) { static const char* k[5] = {"same", "live", "stale", "est", "ctl"}; return k[c % 5]; }
+  void s7499_sum(double now) {
+    std::fprintf(stderr, "[s7499] sum t=%.1f wb=%llu imgs=%llu pairs=%zu same=%llu live=%llu stale=%llu est=%llu ctl=%llu ctlhit=%llu ctlst=%s\n", now - g_s7499_t0,
+      (unsigned long long)g_s7499_wb, (unsigned long long)g_s7499_imgs, g_s7499_pairs.size(), (unsigned long long)g_s7499_n[0], (unsigned long long)g_s7499_n[1],
+      (unsigned long long)g_s7499_n[2], (unsigned long long)g_s7499_n[3], (unsigned long long)g_s7499_n[4], (unsigned long long)g_s7499_ctlhit,
+      g_s7499_ctl == 1 ? "ok" : g_s7499_ctl == -1 ? "pending" : g_s7499_ctl == 0 ? "FAIL" : "unarmed"); }
+}
+static void s7499_ex(uint32_t lo, uint32_t hi, uint32_t kind, uint32_t base, uint32_t width) {
+  if (!s7499_on() || kind > 1 || hi <= lo) return;
+  std::lock_guard<std::mutex> l1(g_s7493_mu); std::lock_guard<std::mutex> l2(g_s7499_mu);
+  const double now = s7493_now(); if (g_s7499_t0 == 0) g_s7499_t0 = now; const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
+  const uint64_t k = ++g_s7499_wb; if (g_s7499_ctl == -2 && s7499_ctl_at() > 0) g_s7499_ctl = -1;
+  const uint64_t ak = ((uint64_t)kind << 32) | base; uint32_t& ae = g_s7499_end[ak]; if (hi > ae) ae = hi;
+  auto test = [&](uint32_t bk, uint32_t bb, uint32_t bw, uint32_t siz, int bsw) {
+    if (bk == kind && bb == base) return;
+    const auto ei = g_s7499_end.find(((uint64_t)bk << 32) | bb); const bool haswb = ei != g_s7499_end.end();
+    const uint32_t bpp = siz >= 3 ? 4u : siz == 2 ? 2u : 1u, be = haswb ? ei->second : bb + bw * bpp * 240u;
+    if (!(bb < hi && be > lo)) return;
+    const int age = sw - bsw; const int c = bk == 2 ? 4 : bb == base ? 0 : !haswb ? 3 : age <= 1 ? 1 : 2;
+    if (c == 4) ++g_s7499_ctlhit;
+    const uint64_t pk = ((uint64_t)kind << 62) | ((uint64_t)bk << 60) | ((uint64_t)(base & 0xFFFFFFu) << 32) | ((uint64_t)(bb & 0xFFFFFFu) << 8) | (uint64_t)(c << 1);
+    if (!g_s7499_pairs.insert(pk).second) return;
+    ++g_s7499_n[c]; if (c == 4 && g_s7499_ctl == -1) g_s7499_ctl = 1;
+    if (++g_s7499_rows <= 60 || c == 1)
+      std::fprintf(stderr, "[s7499] x cls=%s A kind=%u base=%06X w=%u wb=[%06X,%06X) B kind=%u base=%06X w=%u siz=%u ext=[%06X,%06X)%s age=%d wb#%llu t=%.3f\n", s7499_cls(c),
+        kind, base, width, lo, hi, bk, bb, bw, siz, bb, be, haswb ? "" : " est", age, (unsigned long long)k, now - g_s7499_t0); };
+  for (uint32_t bk = 0; bk < 2; ++bk) for (auto& kv : g_s7493_img[bk]) test(bk, kv.first, kv.second.width, kv.second.siz, kv.second.sw);
+  if (g_s7499_cb != 0xFFFFFFFFu) test(2, g_s7499_cb, g_s7499_cw, 2, g_s7499_csw);
+  g_s7499_imgs = g_s7493_img[0].size() + g_s7493_img[1].size();
+  if (g_s7499_ctl == -1 && g_s7499_cb == 0xFFFFFFFFu && (long)k >= s7499_ctl_at() && hi - lo >= 16) {
+    g_s7499_cb = (lo + (hi - lo) / 2) & ~7u; g_s7499_cw = width; g_s7499_csw = sw;
+    std::fprintf(stderr, "[s7499] ctl armed wb#%llu A kind=%u base=%06X fake=%06X\n", (unsigned long long)k, kind, base, g_s7499_cb); }
+  if (now - g_s7499_last >= 10.0) { g_s7499_last = now; s7499_sum(now); } }
 extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); g_s7498_base.store(b); }
 static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
     if (!s7493_on() || kind > 1 || !bytes) return;

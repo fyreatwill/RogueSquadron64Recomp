@@ -198874,3 +198874,30 @@ Levels soak queued: scratch/agent/soak_queue/s7498_ew_levels.sh (L1 dd8 21:9, L7
 Verdict: selects H-ew-inside, refutes H-ew-spill. Next discriminator (class EX): in the non-heap top region several images share the
 space (colour 751E00 to 800000 at dd1 covers the 76A000 depth extent); check whether a writeback of image A overwrites bytes of a
 DIFFERENT image B that the RDP stream set in the same swap (cross-image clobber), with a planted overlap control.
+
+## Session 7499 (2026-11-16) — class EX: no RT64 writeback covers a different live image (0 live cross pairs, L4 dd1 + L15 dd8 21:9; only same-base z-clear pairs and age>=2 stale images; fake-image control hit both arms); EW closed 6 levels
+
+Fold: s7498_ew_levels (L1 dd8 21:9, L7/L10/L12 dd4): partial=0 free=0 ctl=ok all four arms, all alive, 0 crash/stall -> EW CLOSED 6 levels.
+
+Work unit (HYPOTHESIS-ID m3-partition-over-live-block), class EX. Instrument: src/main/main.cpp s7499_ex, called from s7498_wb with the
+exact image base (rs64_s7493_base). Every writeback range [phys, phys+bytes) of image A (kind, base) is tested against every image B in
+g_s7493_img (both kinds, ROGUESQ_S7493_WBLIVE=1) plus a control fake. B extent = largest range B's own writebacks covered, else a
+240-row estimate. Pair classes, counted once per pair: same (B.base == A.base), live (B set this or the previous swap), stale (age >= 2),
+est (B never written back), ctl. Control ROGUESQ_S7499_CTL=20: fake image at writeback #20's phys + bytes/2, A's width.
+Run: `env NAME=s7499_ex XC=ROGUESQ_S7499_EX=1+ROGUESQ_S7499_CTL=20 zsh tools/s7498_ew_recipe.zsh` (L4 dd1, L15 dd8 21:9).
+
+| arm | wb | imgs | pairs | same | live | stale | est | ctl pairs / hits |
+|---|---|---|---|---|---|---|---|---|
+| L4 dd1 | 54222 | 21 | 94 | 8 | 0 | 72 | 8 | 6 / 10289 |
+| L15 dd8 21:9 | 51556 | 24 | 88 | 6 | 0 | 50 | 27 | 5 / 10292 |
+
+Same-base pairs are the z-clear idiom: colour image set at the depth base (76A000, 795C00 at dd1; B6A000, B56000 at dd8). Every stale and
+est pair has B age >= 2 swaps (min 2, max 1797 / 3404). The first ones are the 320-wide boot images (7DD000 / BDD000, 6A0E00 / A6F000) that
+the 640 image covers after the mode change at t~0.7 s. EV and EW re-scored in the same run: z0_sum=0, partial=0 free=0, ctl ok, both arms.
+Result: H-ex-zclear selected (the only overlaps with an image set in the current swap are same-base z-clear pairs). H-ex-clobber is refuted on
+these two levels. H-ex-disjoint is refuted in the strict sense, because overlaps with dead images exist. Evidence: one runtime plus the
+control. Retail not checked: single-source for the "dead" reading of stale pairs (age is counted in swaps since the last set; it does not prove
+the image is never re-set). Added tools/s7499_ex_recipe.zsh (exit 0 = live=0 + ctl ok; 5 = live>0; 3 = ctl FAIL) and queued
+scratch/agent/soak_queue/s7499_ex_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4).
+Next: class EY. Is a stale-covered image B ever set again after an A writeback covered it, and then read (RT64 fb-as-texture or a guest
+load) before B's own writeback restores it?

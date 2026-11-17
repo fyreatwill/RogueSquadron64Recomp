@@ -1,16 +1,16 @@
-# NEXT (s7499)
+# NEXT (s7500)
 HYPOTHESIS-ID: m3-partition-over-live-block
 
-Fold first: SOAK-RESULTS line for s7498_ew_levels (tools/s7498_ew_recipe.zsh; `s7498_ew_levels ew arm=` rows in its out.txt):
-partial=0 free=0 ctl=ok on L1 dd8 21:9 / L7 / L10 / L12 dd4 -> EW CLOSED 6 levels.
+Fold first: SOAK-RESULTS line for s7499_ex_levels (tools/s7499_ex_recipe.zsh; `s7499_ex_levels ex arm=` rows in scratch/s7499_ex_levels/out.txt):
+live=0 ctlst=ok on L1 dd8 21:9 / L7 / L10 / L12 dd4 -> EX CLOSED 6 levels. live>0 -> read `[s7499] x cls=live` rows first (that is the work unit).
 
-Work unit: class EX, cross-image overlap in the non-heap top region. s7498: every writeback range is inside one used heap block or in
-[arena top, RAM top) (dd1 [751E00,800000), dd8 [B20000,C00000)); several images share that region (colour 751E00..800000 at dd1 spans
-the 76A000 depth extent; z-clear idiom sets colour = Z base). EW cannot see one image's writeback landing on ANOTHER image.
-Hypotheses: H-ex-disjoint (no writeback of image A covers bytes of an image B, B != A's own base, set in the same swap) / H-ex-zclear
-(the only overlaps are colour==depth same-base z-clear pairs, benign by design) / H-ex-clobber (a writeback of A covers a live B: name
-A, B, rows, and whether the guest/RDP reads B after it).
-Instrument, ONE build: in main.cpp s7498_wb, keep per swap the set of images (base, width, kind) from rs64_s7493_img; for each writeback
-range list every other image whose [base, base + width*rows_set*bpp) intersects; classify same-base / disjoint / cross. Rows `[s7499] x`,
-`[s7499] sum`. Control: ROGUESQ_S7499_CTL=<n> registers a fake image at the n-th writeback's phys+bytes/2 -> must count cross.
-Run: `env XC=ROGUESQ_S7499_EX=1+ROGUESQ_S7499_CTL=20 zsh tools/s7498_ew_recipe.zsh` (L4 dd1, L15 dd8 21:9).
+Work unit: class EY, resurrection of a stale-covered image. s7499: 50-72 (A, B) pairs where A's writeback covers an image B last set >= 2
+swaps earlier (e.g. 320-wide boot images under the 640 image). EX scored them as dead, but age is only "swaps since the last set".
+Hypotheses: H-ey-dead (no covered B is ever set again) / H-ey-rewrite (B is set again, but RT64 or the game redraws or clears it before any
+read, so no stale bytes are consumed) / H-ey-read (B is set again and read, as an fb-as-texture load or a guest load, while it still holds A's
+bytes: name A, B, the reader).
+Instrument, ONE build: in s7499_ex, record each stale/est cover event (B key, A key, wb#, swap). In rs64_s7493_img, when a covered B is set
+again, log `[s7500] reset` with the gap in swaps and the first event on B after that: a fill/clear (rt64 fillRect keyed by colour address,
+the s7497 zdraw hook), a draw, or an fb-as-texture read (find RT64's fb-texture load path in lib/rt64; edits under lib/ need export.sh).
+Control: ROGUESQ_S7500_CTL re-sets the first covered B artificially, which must log `reset`.
+Run: `env XC=ROGUESQ_S7500_EY=1+ROGUESQ_S7500_CTL=1 zsh tools/s7499_ex_recipe.zsh` (L4 dd1, L15 dd8 21:9).

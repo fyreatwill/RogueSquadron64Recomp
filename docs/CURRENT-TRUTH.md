@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7498 (2026-11-16).
+Compact operational handoff, as of Session 7499 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -265,7 +265,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      really writes is re-walked each time its end grows. 0 partial / 0 free in both arms; 10/10 container (colour images inside one used
      block), 41/23 nonheap, all in [arena top, RAM top) = [751E00,800000) dd1, [B20000,C00000) dd8 (none past RAM top). Control: the
      first container query at/after #20 re-walked 0x100 past its block -> partial, both arms. qbad=0, nobase=0. Levels soak queued.
-     **EX next: cross-image overlap inside the non-heap top region** (NEXT.md).
+     **Levels soak folded s7499: L1 dd8 21:9 / L7 / L10 / L12 dd4 partial=0 free=0 ctl=ok -> EW CLOSED 6 levels.**
+   - **EX s7499 cross-image overlap: H-ex-zclear (L4 dd1, L15 dd8 21:9).** main.cpp s7499_ex (ROGUESQ_S7499_EX=1, _CTL=<n>, needs
+     S7493_WBLIVE; tools/s7499_ex_recipe.zsh wraps EW): every writeback range of image A is tested against every other image B the RDP
+     stream set (both kinds; B extent = B's own largest writeback range, else 240-row estimate). live (B set this/previous swap, base
+     != A) = 0 in both arms; same-base pairs 8 / 6 = colour==depth z-clear idiom (76A000, 795C00 / B6A000, B56000); stale 72 / 50 and
+     est 8 / 27 all age >= 2 swaps (e.g. 320-wide boot images under the 640 image, mode change at t~0.7 s). Control (fake image at wb
+     #20 phys+bytes/2) hit 10.3k times, both arms. Levels soak queued (s7499_ex_levels).
+     **EY next: does a stale-covered image ever come back** (NEXT.md).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
