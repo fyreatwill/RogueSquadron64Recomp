@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7509 (2026-11-16).
+Compact operational handoff, as of Session 7511 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -439,7 +439,14 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     **The RSP generator classes (FD/FE/FF + s7091/s7092/s7093) are exhausted.**
     **FG CLOSED L4/L15 (s7510): PI cart->RDRAM DMA shape H-canon.** ROGUESQ_LOG_DMA=1 census, tools/s7510_pi_dma_shape.py --controls
     (hardware model = mupen dma_pi_write / n64brew unaligned rules): 15,961 + 16,720 live copies (L4 dd1, L15 dd8 21:9) all canonical,
-    0 diffs, 7 synthetic + 2 mutant ctl PASS; Debug-build asserts make cart_odd/dram_mis8 fail-stop. Levels soak queued (s7510_fg_levels).
+    0 diffs, 7 synthetic + 2 mutant ctl PASS; Debug-build asserts make cart_odd/dram_mis8 fail-stop. **Levels fold (s7511): s7510_fg_levels
+    score=0 (L1 dd8 21:9, L7/L10/L12 dd4: 62,751 copies all canon, 0 diffs) -> FG CLOSED 6 levels.**
+    **FH CLOSED L4/L15 (s7511): AI DMA shape H-canon.** ROGUESQ_LOG_AI_SHAPE=1 (librecomp ai.cpp, every osAiSetNextBuffer before the
+    guard), tools/s7511_ai_dma_shape.py --controls (hardware model = retail libultra 0x80029E80 hdwrBugFlag -0x2000, disassembled from
+    the ROM, + mupen ai_controller.c AI_LEN&~7 / delayed carry +0x2000): 22,819 + 23,295 live calls all len 0x300, 8-aligned, 0 diffs,
+    0 buffer ends on an 8 KB boundary (carry path dead), census complete (n contiguous, bytes/s = DAC rate x4 ratio 1.000), 7+2 ctl PASS.
+    0 `lui 0xA4xx` in recompiled game code (no raw RCP register writes); osAiGetLength/osAiGetStatus never called by the game.
+    Levels soak queued (s7511_fh_levels). Next: FI VI register shape (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

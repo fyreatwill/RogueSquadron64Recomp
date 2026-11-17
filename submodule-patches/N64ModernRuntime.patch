@@ -1002,10 +1002,10 @@ index dbf46b2..fa76436 100644
          cr128 vte = vt(e);
          for (u32 n = 0; n < 8; n++) {
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..7fe0536 100644
+index 0195f2b..1069113 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,29 +1,233 @@
+@@ -1,29 +1,244 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -1216,6 +1216,17 @@ index 0195f2b..7fe0536 100644
 +extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len);  // s7486 EK host-read UAF watch (no-op unless armed)
 +
  extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
++    // s7511 class FH: census of every guest osAiSetNextBuffer (vaddr, nbytes) before the guard, so the offline
++    // classifier (tools/s7511_ai_dma_shape.py) can compare our HLE (queue exactly nbytes at vaddr) with the
++    // hardware model (libultra hdwrBugFlag -0x2000 + AI delayed carry +0x2000, AI_LEN & 0x3FFF8, addr & 0xFFFFF8).
++    static const bool s7511 = [] { const char* e = std::getenv("ROGUESQ_LOG_AI_SHAPE"); return e && e[0] && e[0] != '0'; }();
++    if (s7511) {
++        static uint32_t n = 0;
++        static const auto t0 = std::chrono::steady_clock::now();
++        std::fprintf(stderr, "[ai-shape] n=%u t=%.4f addr=0x%08X len=0x%X ra=0x%08X freq=%u\n", ++n,
++                     std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(), (uint32_t)ctx->r4,
++                     (uint32_t)ctx->r5, (uint32_t)ctx->r31, ultramodern::get_audio_frequency());
++    }
 +    if (rs64_spai_guard_bad("osAiSetNextBuffer", static_cast<uint64_t>(ctx->r4), static_cast<uint64_t>(ctx->r5) & 0xFFFFFFFFull)) {
 +        ctx->r2 = 0;
 +        return;

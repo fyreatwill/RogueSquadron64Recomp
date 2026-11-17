@@ -199265,3 +199265,38 @@ Rules out PI DMA shape semantics as a source of RDRAM corruption on these routes
 L7/L10/L12 dd4, scored by the classifier).
 Next: class FH, AI DMA shape vs hardware (osAiSetNextBuffer: AI_DRAM_ADDR 8-byte aligned 24-bit, AI_LEN &0x3FFF8) (NEXT.md).
 Files: tools/s7510_pi_dma_shape.py (new), scratch/agent/soak_queue/s7510_fg_levels.sh, docs. No lib/ edits.
+
+## Session 7511 (2026-11-16) — class FH: AI DMA shape vs hardware H-canon; 46,114 live osAiSetNextBuffer calls on L4 dd1 / L15 dd8 21:9 are all len 0x300 / 8-aligned, 0 differ from the hardware AI model (libultra hdwrBugFlag + delayed carry + register masks), census complete, controls pass; FG levels fold CLOSED
+HYPOTHESIS-ID: ai-dma-shape-vs-hardware.
+Fold: s7510_fg_levels score=0 (L1 dd8 21:9 14,376, L7 20,411, L10 14,782, L12 13,182 live PI copies, all canon, 0 diffs, ctl PASS,
+4/4 arms alive, vi_stalls30s 0) -> FG CLOSED on 6 levels.
+Boring checks first: (1) the recompiled game code (N64Recomp/RecompiledFuncs, 24,264 lui) has 0 `lui 0xA4xx`, so the game never
+touches RCP registers directly: AI is reached only through osAiSetNextBuffer_recomp (2 call sites, funcs_23.c). osAiGetLength /
+osAiGetStatus have no caller, so AI readback semantics are dead for this game. (2) The retail osAiSetNextBuffer (0x80029E80,
+disassembled from the ROM with mips64-elf-objdump) is stock libultra: hdwrBugFlag byte at 0x800390C0, bptr -= 0x2000 when the
+previous buffer ended on an 8 KB boundary, then AI_DRAM_ADDR = osVirtualToPhysical(bptr), AI_LEN = nbytes. The hardware
+(mupen64plus-core ai_controller.c do_dma) adds the 0x2000 back via delayed_carry, and fifo_push masks AI_LEN & ~7. Our HLE drops
+both halves and queues exactly nbytes at vaddr: equal to hardware iff nbytes&7 == 0 (carry and flag then key on the same sum),
+addr 8-aligned, len < 0x40000.
+Hypotheses: H-canon (every live call canonical -> identical) / H-dead (non-canonical only at boot/silence) / H-live (a live call
+differs -> we play extra/fewer samples or the wrong 8 KB page; fix to the hardware rule).
+Instrument (one lib/ edit, exported): ROGUESQ_LOG_AI_SHAPE=1 in librecomp ai.cpp logs every osAiSetNextBuffer (n, steady t, vaddr,
+nbytes, freq) BEFORE the s5063 guard. Offline: new tools/s7511_ai_dma_shape.py replays the call sequence through our model and
+the hardware model (libultra flag -> AI masks -> delayed carry).
+Run: tools/g1e_owner_quiet_arms.zsh HOLD=200, R=scratch/s7511: l4 = L4 dd1, l15 = L15 dd8 ASPECT=21:9. Both alive at end,
+level_ok 1, crashlines 0, vi_stalls30s 0, max_gap 146/147 ms.
+Result: L4 22,819 calls, L15 23,295; shapes canon 22,819 / 23,295; diffs 0 / 0 (rc 0). Every len = 0x300 (192 stereo frames);
+buffers rotate through a ring at 0x80166450 + k*0x300 (38 / 43 distinct addresses); 0 buffer ends on an 8 KB boundary, so the
+hdwrBugFlag/carry path never arms. freq 22047 Hz (L15 also 1,337 calls at 32006 Hz, a different-rate scene). Guard census at
+16,384 calls: bad 0.
+Controls: 7 synthetic sequences (canon, canon crossing an 8 KB boundary, len_mis8, addr_mis8, len 0x40000, boundary + len_mis8,
+len 0) classified EQUAL/DIFF as expected; 2 mutants (no libultra flag flips the boundary-canon case to DIFF; no AI length mask
+flips len_mis8 to EQUAL) -> PASS. Completeness ("mark everything"): n is contiguous from 1 (0 gaps), and the second-half queued
+bytes/s = 88,188 / 88,177 vs DAC rate x 4 = 88,188 (ratio 1.000 both arms): an independent line showing every buffer the audio
+device played went through the census.
+DISCRIMINATION: selects H-canon on both arms; refutes H-live; H-dead not needed (no non-canonical shape). Rules out AI DMA shape
+(length rounding, alignment, the 8 KB hardware bug) as a source of audio drift or RDRAM misreads on these routes.
+Levels soak queued (s7511_fh_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by the classifier).
+Next: class FI, VI register shape vs hardware (NEXT.md).
+Files: lib/N64ModernRuntime/librecomp/src/ai.cpp (census line; submodule-patches/N64ModernRuntime.patch exported),
+tools/s7511_ai_dma_shape.py (new), scratch/agent/soak_queue/s7511_fh_levels.sh, docs.
