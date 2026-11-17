@@ -200855,3 +200855,36 @@ Discrimination: this selects H-consistent for the 6 imported status rows plus H-
 register-base constants), and refutes H-stale: 0 rows, with the planted mis-ordered osSpTaskYielded control classifying H-stale. It closes
 class GO. Next discriminator (class GP, NEXT.md): per osGetTime call site, does the guest's conversion constant match the host clock
 (46875 ticks/ms), and does any site mix a time delta with a frame count (H-unit-ok vs H-unit-mismatch vs H-mixed)?
+
+## Session 7556 (2026-11-17) — class GP closed H-unit-ok: every guest time consumer uses the host clock's unit; all 14 osGetTime sites use only $v1, the sim dt is linear in VI count so FPS60 single-VI frames get one VI period
+
+HYPOTHESIS-ID: class-gp-guest-time-consumers (closed) -> class-gq-default-on-levers.
+Prior coverage checked first (boring thing): s7514 FK (time base 46875.0 ticks/ms monotone at runtime, consumer map), s7402 BL
+(osClockRate 62500000 -> 46875000 fix, sim dt histograms), FPS60-FIXES (per-tick quanta s6819-s6831, mission clocks s6256-s6258).
+GP adds what those did not check: which WORD of the 64-bit osGetTime each site uses, every divisor/constant, and the +0x20 formula's
+VI-count arm under FPS60.
+New tools/s7556_gp_census.py (static, rc 0, 27 rows; --controls 9/9):
+- (A) 14 osGetTime sites / 10 functions (coverage asserted). Every site's first $v1 use is a read and no site reads $v0 on the
+  straight line (8 kill, 5 unknown at a call/jump, 1 return). s7555 GO's ret_use tracked $v0 only, so its 'kill' at osGetTime sites
+  was right for $v0 but said nothing about the value: the low word IS consumed everywhere. Classes: H-sim-dt 1 (timeSnapshotFiller),
+  H-stamp 6, H-profiler 2, H-write-only 4 (musyx 0x801499E8, voice pool 0x8015466C/78/80), H-dead-fn computeElapsedMillis (0 callers).
+- (B) time-derived globals' touchers within allowed sets. One resolver artifact named and allow-listed: 0x80128EE0 'addr' in
+  selectAndApplyViMode/swapBufferWithViMode is `beql; addiu $v1,$v1,0xF0` on a VI-mode table pointer (copies 0x50 bytes to
+  0x80128C90), not a time ref. 0x80128EE0 sw by spTaskSchedulerThread 0x80019F18, read only by drawFrameProfilerBars.
+- (C) host counter_per_ms 46875, speed_multiplier 1; ROM osClockRate 62500000 and osInitialize_recomp default-on fix; 0 lui/ori
+  halves of 46875000/62500000 in game code (only osClockRate divides time deltas: computeElapsedMillis, emitProfilerBarSegment,
+  timeSnapshotFiller).
+- (D) timeSnapshotFiller +0x20 (sim dt for runInMissionFrame / cinematicComputeDt / advanceWrappingPhaseAccumulator), asm shape
+  checked: dstamp/clock + getViModePeriod()*K*N when N = b[0x80128EAF]-b[0x80128EAE] >= 2, else K'*period. ROM K = K' = 0.001,
+  period 16.667 (NTSC) / 20.0 (PAL) ms -> 1 VI = 0.016667 s, 2 VI = 0.033333 s: linear. FPS60 only clamps limiter 0x80128EAF 2->1
+  (events.cpp), i.e. the N<2 arm = one VI period. Flags-clear arm = [0x8011A904] measured ticks / clock (no frame count).
+Controls (all flip): K' 0.002 -> H-mixed; counter_per_ms 62'500 -> OPEN; dropped site -> coverage FAIL; planted unruled site ->
+UNCLASSIFIED; $v0 read at a ruled site -> OPEN; planted reader of 0x801499E8 -> OPEN; planted lui 0x2CB -> OPEN; FPS60 lever
+text drift -> FAIL; baseline clean.
+Two lines: (1) this static census; (2) runtime s7402 (+0x20 quantised histogram 1-VI 1254 / 2-VI 5196 frames, sum 193.6 s over
+195.7 s wall: the N<2 arm yields one VI) and s6256-s6258 (mission clocks / craft path per real second equal at FPS60).
+No fix needed; no build or game run this session.
+VERDICT: this selects H-unit-ok and refutes H-unit-mismatch (no consumer uses another rate or a hardcoded constant) and H-mixed
+(the dt arm is linear in VI count; the K'=0.002 control shows the census would see it). Closes class GP. Next discriminator:
+class GQ, default-on behaviour levers (NEXT.md).
+Files: tools/s7556_gp_census.py (new), docs/CURRENT-TRUTH.md, scratch/agent/NEXT.md.

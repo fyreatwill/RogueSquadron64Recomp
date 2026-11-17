@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7555 (2026-11-17).
+Compact operational handoff, as of Session 7556 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -381,7 +381,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     returns 0 = completed, right because the LLE never yields a running task, whatever the mode. osAiSetNextBuffer always returns 0
     (retail -1 when the FIFO is full), but both runAiAudioStreamPlaybackLoop sites kill $v0 (H-ret-unused). The rest are synchronous
     (PI, EEPROM, SI), no-pak, queue results, or not status values. Instrument bug fixed before the verdict: ctx->r29 matched
-    ctx->r2. Next: class GP (NEXT.md).
+    ctx->r2.
+    **Class GP CLOSED s7556 (H-unit-ok; tools/s7556_gp_census.py rc 0, --controls 9/9; static + s7402/s6256 runtime):** all 14 osGetTime
+    sites consume only the low word $v1 (GO's $v0-only scan read 'kill' there); none reads the 64-bit value. Every time divisor reads
+    osClockRate (3 fns; no hardcoded 46.875/62.5 MHz in game code); host 46875 ticks/ms, osClockRate fix default-on. Sim dt
+    (timeSnapshotFiller +0x20) = dstamp/clock + getViModePeriod()*0.001*N (N = VIs per frame if >=2, else 1; ROM K=K'=0.001,
+    period 16.667/20 ms): linear in VI count, so FPS60 single-VI frames get exactly one VI (s7402 runtime histogram: 1-VI frames
+    exist and sum tracks wall). Durations reach only the gated profiler or write-only globals. Next: class GQ (NEXT.md).
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

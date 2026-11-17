@@ -1,20 +1,19 @@
-# NEXT (s7556)
-HYPOTHESIS-ID: class-gp-guest-time-consumers
+# NEXT (s7557)
+HYPOTHESIS-ID: class-gq-default-on-levers
 
-GO CLOSED s7555 (tools/s7555_go_census.py rc 0, controls 7/7): no stale device status anywhere; the only time-valued getter the game
-imports is osGetTime (14 guest call sites, s7555 table). GP asks whether every TIME value the guest consumes uses the same unit and
-clock as the host provides, in default config and under ROGUESQ_FPS60=1 (where the frame/VI ratio changes).
-Static census, tools/s7556_gp_census.py (reuse s7555 call_sites/ret_use):
-- every osGetTime call site (14): enclosing function, what the 64-bit $v0:$v1 feeds (delta-time, timer deadline, RNG seed, profiler,
-  audio pacing), and the conversion constant the guest applies (e.g. 0x800026AC loads 0x3B9ACA00 = 1e9: OS_CYCLES_TO_NSEC needs
-  osClockRate 62.5 MHz count = 46875 ticks/ms, s7514 FK / s7402 BL);
-- every guest read of osClockRate / osViClock / any VI-count global used as time, and every osSetTimer deadline the guest computes;
-- under FPS60: sites that combine a time delta with a frame count (time per frame assumed 1/30 s or 1/20 s).
-Hypotheses:
-- H-unit-ok: every consumer's constant matches the host clock and nothing mixes osGetTime with frame counts (0 open rows).
-- H-unit-mismatch: a site assumes a different rate (e.g. 46.875 MHz vs 62.5 MHz, or a hardcoded ticks/frame) -> name it, measure the
-  value with a counter in one run (default vs FPS60, L1), fix.
-- H-mixed: a site divides a time delta by frames or the reverse, so FPS60 changes game speed -> same-run FPS60 alt measure.
-Controls (--controls): planted call site with a wrong constant -> open; a site whose value is killed -> H-ret-unused; coverage
-control: the 14 sites from s7555 all appear.
+GP CLOSED s7556 (tools/s7556_gp_census.py rc 0, controls 9/9): every guest time consumer uses the host unit; FPS60 dt linear.
+GQ asks: does every DEFAULT-ON behaviour change the port makes to the game (env lever read with a `!(e && e[0]=='0')`-style
+default, or an unconditional fixup) have (1) a working =0 retail switch, (2) a row in docs/OWNER-OPT-INS.md or CURRENT-TRUTH
+naming it, and (3) a qualifying session? Owner rule: no default flips without the owner - a default-on lever nobody listed is
+exactly what the owner cannot see.
+Static census, tools/s7557_gq_census.py:
+- enumerate every getenv("ROGUESQ_*") under src/, lib/N64ModernRuntime/*/src, lib/rt64 patches and tools/fixup_*.py emitted code;
+  classify the default from the parse expression (on when unset / off when unset / value default), and whether it changes guest-
+  visible state (guest RAM write, control flow of generated code, RDP/present output) or is diagnostic-only (log/counter).
+- join each default-on behaviour lever with docs (OWNER-OPT-INS.md, CURRENT-TRUTH, FPS60-FIXES.md) and with PORTING-STATE (grep
+  the name for the qualifying session).
+Hypotheses: H-listed (every default-on behaviour lever has =0 + a doc row + a session) / H-unlisted (a default-on lever with no
+doc row: list it for the owner) / H-no-switch (a default-on change with no =0 path: add one).
+Controls (--controls): planted default-on getenv with no doc row -> H-unlisted; planted diag-only getenv -> not a lever; planted
+lever whose =0 branch is missing -> H-no-switch; coverage: CULL_SPIKE (default on, owner 2026-10-31) and S7402_CLOCKFIX appear.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.
