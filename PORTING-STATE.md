@@ -200007,3 +200007,29 @@ Scope gap measured this session: the same tool over lib/rt64/src/hle + gbi gives
 DISCRIMINATION: selects H-canon/H-dead/instrument-only for all 175 sites over H-latent-fix (planted functional latch caught;
 nocaller check proven able to fail on a called function). Engineering change: new tool tools/s7530_fw_census.py.
 Next: class FX — RT64 hle/gbi scalar latches (NEXT.md).
+
+## Session 7531 (2026-11-17) — class FX closed (static census): 32 scalar guest-address/position latches in lib/rt64 hle, gbi and render classified, 0 unclassified, 0 H-latent-fix; the three functional readers are compare-only edge detectors
+No new SOAK-RESULTS lines (none queued by s7530). CURRENT-TRUTH 59.9 KB at start (<60000, not maintenance).
+Work unit (HYPOTHESIS-ID fx-rt64-scalar-guest-latch): new tool tools/s7531_fx_census.py. It imports the s7530 scanner unchanged
+(same latch definition and functional-read rules) and runs it over lib/rt64/src/hle, gbi and (added this session) render with an
+RT64 rule table. contrib/ (mupen64plus-core, boost, spirv-cross) is third-party and out of scope (11 hits, none RS64 code).
+Controls (--controls 5/5 PASS, same run): planted functional latch -> UNCLASSIFIED; mutation control (copy of rt64_state.cpp with
+the `g_rs64LastSyncedViAddress = viAddress;` re-set removed) -> that row FAIL-check; coverage control (rule-less census sees >=25
+UNCLASSIFIED, so the scanner does reach the RT64 files); live RT64 census 0 fails; s7530 FW live census still 0 fails (and
+s7530 --controls still 6/6).
+Result: 32 sites: instr-only(auto) 7, H-instrument-only 22, H-canon 3, fails 0.
+| latch | reader | why not stale | class |
+| state g_rs64LastSyncedViAddress | VI_FULLSYNC addressChanged | compare-only, re-set on every change; stale-equal only drops a 'swap' edge and the >100 ms 'stalled' fallback fires | H-canon |
+| state s_lastPresentedDrawn | forceAdvance drawnChanged | compare-only edge, re-set on change; staticViRefresh covers a held value | H-canon |
+| gbi_rdp lastTask | shade-ordinal map | map cleared and re-keyed on every task change (host task id) | H-canon |
+| interp s_rs64_pending_start_address | rs64LogE9Boundary*, rs64_e9prov_* | cleared to ~0 after each pending command; every reader returns unless ROGUESQ_LOG_E9_* | H-instrument-only |
+| interp s_rdp_advance_first_consumer_* | dpc_bridge [e9-task-join] fprintf | zeroed in rs64_rdp_advance_reset | H-instrument-only |
+| f3dfactor5 s_op01_last_ram | op02 #1 matrix decode | decoded only to print it | H-instrument-only |
+| native_target lastPhase | floor readback budget | ROGUESQ_FLOOR_PIPE_DIR only (envoff checked) | H-instrument-only |
+| rdp g_rs64LastRGBA32*, state g_ost_last_ctx, lastPhase x3, lastWidth x2, rdphist prev, vishape s_lastCols/Lines, ... | log rows | - | H-instrument-only |
+ORIGIN: no mitigation added; the census only classifies. Single-source (static reading) for the three H-canon rows; for the VI
+sync row the second source is the s80-era runtime: the 'stalled' fallback is what keeps a single-buffer phase presenting.
+DISCRIMINATION: selects H-canon/instrument-only for all 32 RT64 sites over H-latent-fix (planted latch caught; mutation proves the
+verify check can fail on the real file). With FW this closes scalar guest-address latches across all RS64-owned host code.
+Engineering change: new tool tools/s7531_fx_census.py.
+Next: class FY — host shadow copies of guest bytes (memcpy/snapshot of an RDRAM range read later without a re-copy) (NEXT.md).

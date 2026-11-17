@@ -501,8 +501,8 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     Rerun it after any librecomp/ultramodern replacement change.
     **Gap ledger s7528:** only FQ func_map was H-latent-fix: FIXED (L4 old/new: stale entries 25-274/0, planted lookup hit 4/4 / 0/4,
     loaded_sections 3->7 / 3; gf_stale 0 both = latent). Other gaps instrument-only or closed (PORTING-STATE s7528). Soak score 0 (L1/L7/L10/L12): FQ fix qualified.
-    **FV CLOSED (s7529, static):** tools/s7529_fv_census.py --controls 4/4: 90 guest-keyed containers, only H-latent-fix = FQ func_map (s7528).
-    **FW CLOSED (s7530, static):** tools/s7530_fw_census.py --controls 6/6: 175 scalar latches, 0 H-latent-fix (rsp_force_fullsync: no caller). FX = lib/rt64.
+    **FV CLOSED (s7529, static):** tools/s7529_fv_census.py 4/4: 90 guest-keyed containers, only H-latent-fix = FQ func_map.
+    **FW+FX CLOSED (s7530-31, static):** tools/s7530_fw_census.py 6/6 (175) + s7531_fx_census.py 5/5 (rt64, 32): 0 H-latent-fix. Next: FY shadow copies.
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
