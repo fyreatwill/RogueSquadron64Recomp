@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7497 (2026-11-16).
+Compact operational handoff, as of Session 7498 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -259,7 +259,13 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      non-zero Z: 11.6M / 41.0M zupd tris, 17.4k / 18.4k z-clear fills, 8.5k / 8.6k depth writebacks. Two measurement points (draw site
      rt64_rdp.cpp drawTris/drawRect/fillRect -> main.cpp rs64_s7497_zdraw; writeback site s7497_wb), one runtime; retail not checked
      (single-runtime). ROGUESQ_S7497_Z0=1, tools/s7497_ev_recipe.zsh (scorer neg-tested: planted z0 -> 5, ctl_wb=0 -> 3). Levels soak queued.
-     **EW next: RT64 writeback extents vs the container heap block.** NEXT.md.
+     **Levels soak folded s7498: L1 dd8 21:9 / L7 / L10 / L12 dd4 z0_sum=0, ctl > 0 -> EV CLOSED 6 levels.**
+   - **EW s7498 RT64 writeback extents vs the container heap block: H-ew-inside (L4 dd1, L15 dd8 21:9).** main.cpp s7498_wb
+     (ROGUESQ_S7498_EW=1, _CTL=<n>; tools/s7498_ew_recipe.zsh wraps the EV recipe): per (kind, base, width) the range [base, end) RT64
+     really writes is re-walked each time its end grows. 0 partial / 0 free in both arms; 10/10 container (colour images inside one used
+     block), 41/23 nonheap, all in [arena top, RAM top) = [751E00,800000) dd1, [B20000,C00000) dd8 (none past RAM top). Control: the
+     first container query at/after #20 re-walked 0x100 past its block -> partial, both arms. qbad=0, nobase=0. Levels soak queued.
+     **EX next: cross-image overlap inside the non-heap top region** (NEXT.md).
 2. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

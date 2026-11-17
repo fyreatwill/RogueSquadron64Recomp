@@ -10598,7 +10598,55 @@ static void s7497_wb(uint32_t phys, uint32_t bytes, uint32_t kind) {
   if (kind == 1 && b != 0xFFFFFFFFu) g_s7497_wbd[b & 0xFFFFFFu]++;
   if ((phys & 0xFFFFFFu) < 0x100000u) { ++g_s7497_wblow; if (g_s7497_log < 30) { ++g_s7497_log;
     std::fprintf(stderr, "[s7497] wb_low kind=%u phys=%06X bytes=%u base=%06X t=%.3f\n", kind, phys, bytes, b, now - g_s7497_t0); } } }
-extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); }
+// s7498 class EW: does the byte range RT64 actually writes back, [phys, phys+bytes), stay inside ONE used guest-heap block (or a
+// non-heap region)? ROGUESQ_S7498_EW=1. Per (kind, image base, width) the range [base, end) is re-queried whenever its end grows past
+// the largest end already checked (rs64_s7496_overlap chain walk). cls: container (one used block holds the range), partial (a used
+// block intersects but none contains it = spill into a neighbour), free (only free blocks), nonheap (no arena block intersects). A
+// broken walk (racing guest malloc, n<0) counts qbad and is retried on the next writeback. Control ROGUESQ_S7498_CTL=<n>: the first
+// container query at or after the n-th query is re-run with its end extended 0x100 past that container's end; it MUST classify
+// non-container (proves the classifier sees a spill one block over).
+namespace { std::mutex g_s7498_mu; std::atomic<uint32_t> g_s7498_base{0xFFFFFFFFu}; std::map<uint64_t, uint32_t> g_s7498_max;
+  uint64_t g_s7498_q = 0, g_s7498_qbad = 0, g_s7498_n[4] = {0, 0, 0, 0}, g_s7498_wb = 0, g_s7498_nobase = 0; int g_s7498_rows = 0, g_s7498_ctl = -2;
+  double g_s7498_t0 = 0, g_s7498_last = 0;
+  bool s7498_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7498_EW"); return e && *e && *e != '0'; }(); return on; }
+  long s7498_ctl_at() { static const long n = [] { const char* e = std::getenv("ROGUESQ_S7498_CTL"); return e && *e ? std::strtol(e, nullptr, 10) : 0L; }(); return n; }
+  struct S7498Q { uint32_t lo, hi; int nc, nl, nf; uint32_t cend, lhdr, lend, lra; };
+  int s7498_walk(S7498Q& q) {
+    q.nc = q.nl = q.nf = 0; q.cend = q.lhdr = q.lend = q.lra = 0;
+    return rs64_s7496_overlap(q.lo, q.hi, [](uint32_t h, uint32_t sz, uint32_t fl, uint32_t ra, double, void* u) {
+      S7498Q* p = (S7498Q*)u; const uint32_t hp = h & 0xFFFFFFu, ep = hp + 0x10u + sz;
+      if (fl == 1u) ++p->nf;
+      else if (hp + 0x10u <= p->lo && ep >= p->hi) { ++p->nc; p->cend = ep; }
+      else { if (!p->nl) { p->lhdr = hp; p->lend = ep; p->lra = ra; } ++p->nl; } }, &q); }
+  int s7498_ci(const S7498Q& q) { return q.nc ? 0 : q.nl ? 1 : q.nf ? 2 : 3; }
+  const char* s7498_cls(int ci) { static const char* k[4] = {"container", "partial", "free", "nonheap"}; return k[ci & 3]; }
+  void s7498_sum_locked(double now) {
+    std::fprintf(stderr, "[s7498] sum t=%.1f wb=%llu nobase=%llu keys=%zu q=%llu qbad=%llu container=%llu partial=%llu free=%llu nonheap=%llu ctl=%s\n", now - g_s7498_t0,
+      (unsigned long long)g_s7498_wb, (unsigned long long)g_s7498_nobase, g_s7498_max.size(), (unsigned long long)g_s7498_q, (unsigned long long)g_s7498_qbad,
+      (unsigned long long)g_s7498_n[0], (unsigned long long)g_s7498_n[1], (unsigned long long)g_s7498_n[2], (unsigned long long)g_s7498_n[3],
+      g_s7498_ctl == 1 ? "ok" : g_s7498_ctl == 0 ? "FAIL" : g_s7498_ctl == -1 ? "pending" : "unarmed"); }
+  void s7498_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    const uint32_t b = g_s7498_base.exchange(0xFFFFFFFFu); if (!s7498_on() || !bytes) return;
+    std::lock_guard<std::mutex> lk(g_s7498_mu); const double now = s7493_now(); if (g_s7498_t0 == 0) g_s7498_t0 = now;
+    if (g_s7498_ctl == -2 && s7498_ctl_at() > 0) g_s7498_ctl = -1;
+    ++g_s7498_wb; if (b == 0xFFFFFFFFu) ++g_s7498_nobase;
+    const uint32_t lo = phys & 0xFFFFFFu, hi = lo + bytes, base = (b == 0xFFFFFFFFu ? lo : b) & 0xFFFFFFu;
+    const uint64_t key = ((uint64_t)(kind & 0xFu) << 48) | ((uint64_t)base << 16) | (width & 0xFFFFu);
+    auto it = g_s7498_max.find(key);
+    if (it == g_s7498_max.end() || hi > it->second) {
+      S7498Q q{base < lo ? base : lo, hi}; const int n = s7498_walk(q); ++g_s7498_q;
+      if (n < 0) ++g_s7498_qbad;
+      else { g_s7498_max[key] = hi; const int ci = s7498_ci(q); ++g_s7498_n[ci];
+        if ((ci != 0 && ci != 3) || ++g_s7498_rows <= 60)
+          std::fprintf(stderr, "[s7498] wb ext=[%06X,%06X) kind=%u base=%06X w=%u rows=%u bytes=%u cls=%s nc=%d nl=%d nf=%d cend=%06X spill_hdr=%06X spill_end=%06X spill_ra=%08X t=%.3f\n",
+            q.lo, q.hi, kind, base, width, rows, bytes, s7498_cls(ci), q.nc, q.nl, q.nf, q.cend, q.lhdr, q.lend, q.lra, now - g_s7498_t0);
+        if (g_s7498_ctl == -1 && ci == 0 && (long)g_s7498_q >= s7498_ctl_at()) {
+          S7498Q c{q.lo, q.cend + 0x100u}; const int m = s7498_walk(c);
+          if (m >= 0) { const int cc = s7498_ci(c); g_s7498_ctl = cc != 0 ? 1 : 0;
+            std::fprintf(stderr, "[s7498] ctl q#%llu ext=[%06X,%06X) container_end=%06X -> cls=%s (%s)\n", (unsigned long long)g_s7498_q, c.lo, c.hi, q.cend, s7498_cls(cc), g_s7498_ctl ? "ok" : "FAIL"); } } } }
+    if (now - g_s7498_last >= 10.0) { g_s7498_last = now; s7498_sum_locked(now); } }
+}
+extern "C" void rs64_s7493_base(uint32_t b) { g_s7493_next_base.store(b); g_s7497_base.store(b); g_s7498_base.store(b); }
 static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
     if (!s7493_on() || kind > 1 || !bytes) return;
     static const uint64_t ctl_k = [] { const char* e = std::getenv("ROGUESQ_S7493_WBLIVE_CTL"); return e ? (uint64_t)std::strtoull(e, nullptr, 0) : 0ull; }();
@@ -10784,7 +10832,7 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
     {   static std::atomic<uint64_t> n{0}; const uint64_t k = ++n;  /* s7492: first-call / periodic marker = the hook's reach control */
         if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
                                                        (unsigned long long)k, phys, bytes, kind, width, rows); }
-    s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind);
+    s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows);
     if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb");
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     uint32_t slot = kWbwMax;
@@ -10806,7 +10854,7 @@ extern "C" void rs64_wbw_pre(uint8_t*, uint32_t, uint32_t) {}
 extern "C" void rs64_wbw_self(int) {}
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
 static void s7497_wb(uint32_t, uint32_t, uint32_t);
-extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
+extern "C" void rs64_wbw_post(uint8_t*, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7493_wb(phys, bytes, kind, width, rows); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 

@@ -198845,3 +198845,32 @@ that retail also sets Z=0 here is single-source/unverified. Rules out H-ev-write
 Verdict: selects H-ev-placeholder (0 of 5 z0 counters in 2 arms, control > 0 on every counter), refutes H-ev-write; H-ev-retail not run.
 Next discriminator (class EW): classify each distinct RT64 writeback range [phys, phys+bytes) against the heap chain walk (container /
 partial / free / non-heap) with a +0x40000 extended-range control; partial > 0 would name a writeback spilling past its buffer.
+
+## Session 7498 (2026-11-16) — class EW: every RT64 writeback range lies inside one used heap block or the non-heap top region (0 partial / 0 free, L4 dd1 + L15 dd8 21:9, spill control caught both); EV closed 6 levels; class EX seeded
+
+Fold. SOAK-RESULTS s7497_ev_levels (L1 dd8 21:9, L7/L10/L12 dd4, HOLD 220): ev score=0, z0_sum=0 every arm, ctl_tri 2.8M-59.9M,
+ctl_fill 1.3k-18.6k, ctl_wb 7.2k-9.1k, Z=0 window seen (1, L7 2), all 4 alive, 0 VI stalls; eu/er/eq score=0. -> class EV CLOSED 6 levels.
+
+What ran. Instrument (one build, host only, no lib/ edit): main.cpp s7498_wb called from rs64_wbw_post (both #if branches), image base
+from rs64_s7493_base (new g_s7498_base). ROGUESQ_S7498_EW=1: per key (kind, exact image base, width) the byte range RT64 actually writes,
+[min(base, phys), phys+bytes), is walked with rs64_s7496_overlap whenever its end grows past the largest end already checked, and
+classified container (one used block holds it) / partial (a used block intersects, none contains it = spill into a neighbour, row names
+the neighbour hdr/end/ra) / free / nonheap; a broken walk counts qbad and retries. Control ROGUESQ_S7498_CTL=20: the first container
+query at/after #20 is re-walked with its end 0x100 past that container's end and MUST classify non-container. New
+tools/s7498_ew_recipe.zsh wraps tools/s7497_ev_recipe.zsh (so EV/EU/ER/EQ contracts re-score in the same run).
+
+Run: `zsh tools/s7498_ew_recipe.zsh` (L4 dd1, L15 dd8 21:9, HOLD 220): rc 0, ew/ev/eu/er score=0, both alive, 0 VI stalls.
+- L4: wb=54,306 keys=19 q=51 qbad=0 container=10 partial=0 free=0 nonheap=41; ctl q#23 [612600,792900) past block end 792800 -> partial ok.
+- L15: wb=51,584 keys=18 q=33 qbad=0 container=10 partial=0 free=0 nonheap=23; ctl q#24 [961000,B20100) past B20000 -> partial ok.
+- Containers: colour images w=320/640/796 (L4) and 320/640/1024 (L15), max end 6E6E00 / AB5000. Nonheap: every one in
+  [751E00,800000) (L4) / [B20000,C00000) (L15), i.e. above the arena tops and never past RAM top (8 MB / 12 MB). Early boot writebacks
+  (before the arena heads are valid) also read nonheap.
+
+What it shows. No RT64 writeback, at the rows and widths it really writes, spills out of the game's buffer into a neighbouring heap
+block; the ER/EU checks (image live / declared extent inside a block) now hold for the actual written bytes too. Single runtime
+(retail RDP writes cannot be watched by the oracle), two arms + same-run control. Rules out H-ew-spill; H-ew-retail moot.
+Levels soak queued: scratch/agent/soak_queue/s7498_ew_levels.sh (L1 dd8 21:9, L7/L10/L12 dd4).
+
+Verdict: selects H-ew-inside, refutes H-ew-spill. Next discriminator (class EX): in the non-heap top region several images share the
+space (colour 751E00 to 800000 at dd1 covers the 76A000 depth extent); check whether a writeback of image A overwrites bytes of a
+DIFFERENT image B that the RDP stream set in the same swap (cross-image clobber), with a planted overlap control.
