@@ -199943,3 +199943,31 @@ DISCRIMINATION: selects H-latent over H-dead for the FQ func_map state (old arm:
 of one returns the previous overlay's function, 4/4), refutes H-live (no real call reached a stale entry: gf_stale 0 in both arms). The fix
 is an engineering change (submodule-patches/N64ModernRuntime.patch + tools/s7528_evict_score.py), not a diagnostic. Next discriminator:
 the s7528_evict_levels soak score (L1/L7/L10/L12), then class FV census.
+
+## Session 7529 (2026-11-17) — class FV closed (static census): 90 guest-address-keyed host containers classified, 0 unclassified, only H-latent-fix row = FQ func_map (fixed s7528); s7528 evict soak score 0
+Soak fold: s7528_evict_levels (rc=0, 4/4 alive) re-scored with tools/s7528_evict_score.py: score=0 -> FQ evict fix qualified on
+L1 dd8 21:9 + L7/L10/L12 dd4 (6 levels with s7528's L4 two-arm). CURRENT-TRUTH 59.9 KB at start (<60000, not maintenance).
+Work unit (HYPOTHESIS-ID fv-host-guest-keyed-cache-lifetime): new tool tools/s7529_fv_census.py enumerates every
+map/set/multimap declaration with an integer/PTR key in librecomp/src, ultramodern/src, rt64/src/hle, src/main, src/rsp, skips
+function parameters / return types, and classifies each by an explicit rule table (key, filler, eraser regex that must match in the
+file, reuse event) or as diag (sNNNN logging state) / local (function lifetime). Any static/global/member without a rule = FAIL.
+Controls (--controls 4/4 PASS): planted unruled static cache -> UNCLASSIFIED; ruled with eraser absent -> FAIL-eraser-missing;
+same with eraser added -> H-canon; live tree must yield the s7528 func_map row.
+Result (live): local 16, diag 51, H-canon 16, H-dead 6, H-latent-fix 1, fails 0.
+| container | key | eraser / reason | class |
+| overlays.cpp func_map | func vram | s7528 overlap eviction | H-latent-fix -> FIXED s7528 |
+| code_sections_by_rom / patch_code_sections_by_rom / manual_patch_symbols_by_vram | ROM / static vram | immutable tables | H-dead |
+| timer.cpp active_timers | guest OSTimer* | erase on stop/fire; s7397 re-set scan | H-canon |
+| rt64 framebuffers / tileCopies / reinterpretTileCache | fb addr | RAMHash recheck + performDiscards / clear (EZ s7500-01) | H-canon |
+| rt64 colorImageAddressSet, game_frame workloadsModified / call hash maps | fb addr / hash | thread_local, cleared each use | H-canon |
+| rt64 tmem hashSet / dumpedSet | content hash | address-free | H-dead |
+| threads.cpp g_live_ctx | HOST ctx* | erased in dtor | H-dead (not a guest key) |
+| dpc_bridge g_cine_fb_owner_slot | fb addr24 | write-only: rt64_cine_fb_is_slot_owned has no caller in src/ or lib/ | H-dead |
+| upstream_compat spill s6702 free/live, s7326 tag/released, s5041 freed, s7317 live, s7332 carve | guest heap addr | erase on rs_free / realloc / heapsync walk / scene reset | H-canon |
+ORIGIN: no mitigation added; the census only classifies. Single-source (static): the H-canon heap rows have runtime lines from earlier
+sessions (s7317-s7333 heapsync, s7480 UAF, s7397 timers, s7500-s7501 RT64 fb), the census adds the eraser-present check.
+Rules out: a second func_map-style missing eraser in any guest-keyed host container in these trees. Does not cover: static SCALAR
+latches of guest addresses (e.g. g_cine_last_cimg_addr, `static uint32_t last_*`), which hold one value and are not containers -> FW.
+DISCRIMINATION: selects H-canon/H-dead for all 89 non-FQ containers over H-latent-fix (eraser regex present or key space immutable /
+host-only / write-only; planted missing-eraser fixture caught). Engineering change: new tool tools/s7529_fv_census.py.
+Next: class FW (NEXT.md) — static scalar guest-pointer latches in functional code.

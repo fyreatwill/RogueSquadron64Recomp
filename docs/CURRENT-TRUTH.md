@@ -235,7 +235,7 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
      s7493_wb, ROGUESQ_S7493_WBLIVE=1 (+_CTL=<k> erase+blacklist one image, +_WATCH=<hex,...>). Exact-base age table: 51.7k / 51.6k
      writebacks, every one set in the same swap, 0 age>=2 / never outside CTL, colour (L4) and depth (L15) controls caught, nobase=0.
      Seed loc=N row = the game's own boot 640x480 colour image at 0x76A000 (dd8 0xB6A000) set the same swap, over a block freed
-     0.217 s earlier. Lookup pitfall: greatest-base and youngest-covering lookups were artefacts / masked the control (s7493 runs 1-2).
+     0.217 s earlier.
      The heap-audit store/load series s7472-s7493 has no open class.
    - **ES s7494 boot image over a freed block: CLOSED, retail layout (H-retail-same).** Oracle (tools/s7494_es_oracle.zsh, retail ROM,
      Rice): retail rs_free(0x80787810) <- freeManifestSegmentAssets <- runIdleFramesAndLoadSaveData at t=1.3-1.4 s, then the 640x480
@@ -494,14 +494,15 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     waits (dest - 24-bit CURRENT) never spin; same reason as s7523's b2 "every task fresh". Opt-in ROGUESQ_S7524_V2P=1 (main.cpp
     rs64_run_lle_gfx, DMEM copy only) -> 0 rewritten bytes in 2.09 GB, waits spin, s7096 exact. Invisible with the default instant
     RDP. **s7525: V2P under the DEFAULT instant bridge = H-same in output** (L4 dd1, L15 dd8 21:9, off/on same build, 6 arms): 0 escapes
-    every arm (H-spin refuted: L_115C waits BEFORE the DPC_START write, so the bridge's CURRENT snap can't trip it), s7096 MAIN 0
+    every arm, s7096 MAIN 0
     missing/dup/order, content_diff/B equal, alive, 0 stalls; positive control gfx ring DMA writes hi8 33.4M -> 0. Only change: L_1DB0
-    entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak s7525_v2p_levels queued (L1 dd8
-    21:9, L7/L10/L12 dd4; tools/s7525_v2p_score.py). Soak score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive). **s7526 same-run render-input twin: H-same** (ROGUESQ_S7524_V2P=alt, pseudo-random per gfx task, src/rsp/s7526_v2p_twin.cpp hashes every byte rs64_rt_submit forwards): L4 dd1 static phases 2-4 repeats cross/same 264/261; ctl (=ctl folds a constant into V2P-on digests) cross 0 / same 418 -> detector live; flight tasks never repeat (no info there, single-source for flight = s7525 control-flow reading). Mixed on/off tasks: alive, 0 stalls, s7096 exact. **V2P CLOSED: owner decision default-on (docs/OWNER-OPT-INS.md row), do not flip without the owner.**
+    entry test b3 (CURRENT==0) -> b2 (phys output_buff - END > 0), same fresh-path target L_1E48. Soak score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive). **s7526 same-run render-input twin: H-same** (ROGUESQ_S7524_V2P=alt, pseudo-random per gfx task, src/rsp/s7526_v2p_twin.cpp hashes every byte rs64_rt_submit forwards): L4 dd1 static phases 2-4 repeats cross/same 264/261; ctl (=ctl folds a constant into V2P-on digests) cross 0 / same 418 -> detector live; flight tasks never repeat (no info there, single-source for flight = s7525 control-flow reading). Mixed on/off tasks: alive, 0 stalls, s7096 exact. **V2P CLOSED: owner decision default-on (docs/OWNER-OPT-INS.md row), do not flip without the owner.**
 21. **FU CLOSED (s7527, static): host libultra replacements skip no read side effect except V2P (closed s7524-s7526).** tools/s7527_host_replace_audit.py --controls (8/8): 153 replaced funcs, helper/G/O/pointer joins; H-canon 57, H-dead 95, H-gap 1 = osSpTaskLoad.
     Rerun it after any librecomp/ultramodern replacement change.
     **Gap ledger s7528:** only FQ func_map was H-latent-fix: FIXED (L4 old/new: stale entries 25-274/0, planted lookup hit 4/4 / 0/4,
-    loaded_sections 3->7 / 3; gf_stale 0 both = latent). Other gaps instrument-only or closed (PORTING-STATE s7528). Soak queued.
+    loaded_sections 3->7 / 3; gf_stale 0 both = latent). Other gaps instrument-only or closed (PORTING-STATE s7528). Soak score 0 (L1/L7/L10/L12): FQ fix qualified.
+    **FV CLOSED (s7529, static, single-source):** tools/s7529_fv_census.py --controls (4/4): 90 guest-keyed host containers, 0 unclassified,
+    H-canon 16 (eraser regex verified), H-dead 6, diag 51, local 16, H-latent-fix 1 = FQ func_map (fixed s7528). g_cine_fb_owner_slot is write-only.
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
