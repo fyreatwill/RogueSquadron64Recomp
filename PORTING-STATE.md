@@ -199865,4 +199865,5 @@ V2P-correlated change). Flight tasks never repeat, so flight is covered only by 
 there). Also new: per-task alternating V2P (mixed KSEG0/physical task sequence) runs clean (alive, 0 stalls, forwarding exact).
 Bug in my first run: the dump path was build/rs64_s7526.log relative to build/ (no log); fixed to cwd, rerun above.
 Doc: docs/OWNER-OPT-INS.md row "Retail graphics-chip task addresses" (proposed default-on, owner decides; default unchanged).
-CLOSED: rsp-task-v2p. Next: class FU host-replacement side-effect audit (NEXT.md).
+This selects H-same and refutes H-diff for the renderer input in static phases (CROSS 264 vs SAME 261; ctl CROSS 0), and closes
+rsp-task-v2p. Next discriminator: class FU host-replacement side-effect audit (NEXT.md), H-canon / H-dead / H-gap per replaced routine.
