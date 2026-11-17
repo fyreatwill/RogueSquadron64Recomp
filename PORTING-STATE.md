@@ -200548,3 +200548,32 @@ guest pointers (event/timer/IO message queues) outliving a freed guest object (H
 ORIGIN: no mitigation landed (the "guard"/"skip" words are the census tool's classification labels). The value read after destroy at
 OSThread+0x20 is written by the guest heap's next owner of the rs_free'd service-worker node (s7545: e.g. musyxRenderVoiceSamples, or
 osCreateThread for a new worker at 0x801937F0); legitimate guest data, and the port only compares it.
+
+## Session 7547 (2026-11-17) — class GG CLOSED: every guest pointer the host retains past the call is a static object (or the top-of-RAM fb carve); 0 heap objects retained, so guest heap reuse cannot reach a host-held pointer
+
+Work unit (NEXT.md s7547, offline, no build/run). New `tools/s7547_gg_census.py` (+ `--controls`), over the canonical listing.
+Part A, host side: 19 rows located by regex in ultramodern/librecomp/src/main (missing regex = DRIFT failure). 12 RETAIN
+(osSetEventMesg sp/dp/ai/si mq, osViSetEvent mq, osViSetMode mode, osViSwapBuffer fb, osSetTimer timer + mq, osPiStartDma
+retQueue, osEPiStartDma retQueue, osExQueueDisplaylistEvent mq), 2 DERIVED (mesgqueue QueuedMessage / g_audio_sp_deliveries
+carry mqs from RETAIN rows), 4 NOTRET (osContStartReadData ignores its mq -> si event; osAiSetNextBuffer copies PCM; input.cpp
+pfs->queue is a store into the guest OSPfs; osSpTaskStartGo -> submit_rsp_task copies the OSTask by value, its in-flight data
+pointers are class GA), 1 DIAG (s_pending_task_guest_ptr, print only).
+Part B, guest side: every jal of a retaining API, retained arg resolved by a new call-aware backward resolver (callee-saved
+regs survive a jal, delay slot ordered, spill-slot reloads followed, base+index -> array element). Heap base derived from the
+listing: initMainHeap a2 at thread3_video_handle = 0x8010D200+0x47490 = **0x80154690**. Result, 28 rows: 17 H-static, 2
+H-loaded, 9 H-dead, 0 OPEN, 0 UNCLASSIFIED, rc 0.
+- Events: PRENMI 0x8010DFD8, SI 0x80110770, VI 0x80114388, SP 0x8011A420, DP 0x8011A408, AI 0x80149670 -- all < heap base.
+  These equal the s7395 RUNTIME list (ROGUESQ_LOG_EVENT_WIRING, owner + retail arms) one for one: two independent lines.
+- PI: ring mqs = element of static array 0x801108C0 (submitDmaSlot, pollDmaSlotStep, waitDmaSlotComplete via its sp+36 spill),
+  piDmaWorker 0x80111290. Timer: installPeriodicCallback t 0x801128F0 / mq 0x80112910 (s7397 runtime: never armed on route).
+- osViSetMode: 0x80039BF0, 0x80128DF0, 0x80128C90 (static). osViSwapBuffer: loaded from the fb slot table 0x80128E98..A0;
+  the tool verifies its writer set from the listing = exactly initVideoSubsystem 0x8001A140/160/16C, whose cfg arg is the
+  partitionFramebufferMemory table (s7335) -> fbs at/above the heap hi, never rs_malloc (single-source static + verified writers).
+- H-dead: osEepromLongWrite / osContInit stack timers, osCreatePiManager / osCreateViManager bindings (librecomp-replaced
+  callers); osEPiStartDma and osExQueueDisplaylistEvent have 0 guest jal sites.
+Controls 6/6: planted heap-address retention -> OPEN; planted stack mq with no blocking recv -> OPEN; deleted fb rule ->
+UNCLASSIFIED; host regex removed -> DRIFT; fb writer set short one PC -> OPEN x2; real tree -> rc 0.
+Verdict: selects H-static; H-stale refuted (no heap object is ever retained); H-unreg vacuous. Class GG CLOSED.
+Residual (not covered): src/main's own statics (27.5k lines of port hooks/guards/diagnostics) were sampled, not enumerated;
+most hold constant guard addresses. That is the successor class GH.
+Next: class GH, port-side (src/main) host statics that capture a guest address at one call and dereference it later.
