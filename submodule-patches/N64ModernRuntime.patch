@@ -1257,7 +1257,7 @@ index 0195f2b..1069113 100644
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/cont.cpp b/librecomp/src/cont.cpp
-index 7ad6c21..5537f3c 100644
+index 7ad6c21..6af6e8b 100644
 --- a/librecomp/src/cont.cpp
 +++ b/librecomp/src/cont.cpp
 @@ -1,6 +1,11 @@
@@ -1390,6 +1390,64 @@ index 7ad6c21..5537f3c 100644
  }
  
  extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -81,11 +159,33 @@ extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
+     _return<s32>(ctx, ret);
+ }
+ 
++
++// s7516 class FM: Rumble/Controller Pak shape census. ROGUESQ_LOG_PAK_SHAPE=1 logs every osMotor*/osPfs* call: fn, OSPfs
++// pointer, channel, host return, the game's view of that port (OSContStatus array 0x80110788: status +2, errno +3), the game's
++// per-port rumble flags (pfs+104 present, +105 tried, +106 motor on) and the save device selector 0x80112720 (1 EEPROM, 2 pak).
++// The scorer re-derives the hardware return from those bytes. Logging only: no behaviour change.
++#include <atomic>
++#include <chrono>
++extern "C" int rs64_pak_log() { static int v = -1; if (v < 0) { const char* e = getenv("ROGUESQ_LOG_PAK_SHAPE"); v = (e && *e && *e != '0') ? 1 : 0; } return v; }
++extern "C" void rs64_pak_row(uint8_t* rdram, const char* fn, uint32_t pfs, int ch, int host_ret) {
++    static std::atomic<int> seq{0};
++    static auto t0 = std::chrono::steady_clock::now();
++    double t = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
++    if (ch < 0 && pfs) ch = (int)MEM_W(8, (gpr)(int32_t)pfs);
++    unsigned st = 0xFF, er = 0xFF;
++    if (ch >= 0 && ch < 4) { st = MEM_BU(4 * ch + 2, (gpr)(int32_t)0x80110788); er = MEM_BU(4 * ch + 3, (gpr)(int32_t)0x80110788); }
++    unsigned pr = 0xFF, tr = 0xFF, on = 0xFF;
++    if (pfs >= 0x80110520u && pfs < 0x80110520u + 4 * 136) { pr = MEM_BU(104, (gpr)(int32_t)pfs); tr = MEM_BU(105, (gpr)(int32_t)pfs); on = MEM_BU(106, (gpr)(int32_t)pfs); }
++    fprintf(stderr, "[s7516-pak] seq=%d t=%.3f fn=%s pfs=0x%08X ch=%d host_ret=%d st=%u errno=%u present=%u tried=%u on=%u dev=%u\n",
++        seq++, t, fn, pfs, ch, host_ret, st, er, pr, tr, on, (unsigned)MEM_W(0, (gpr)(int32_t)0x80112720));
++}
++
+ extern "C" void __osMotorAccess_recomp(uint8_t* rdram, recomp_context* ctx) {
+     PTR(OSPfs) pfs = _arg<0, PTR(OSPfs)>(rdram, ctx);
+     s32 flag = _arg<1, s32>(rdram, ctx);
+ 
+     s32 ret = __osMotorAccess(PASS_RDRAM pfs, flag);
++    if (rs64_pak_log()) rs64_pak_row(rdram, flag ? "__osMotorAccess1" : "__osMotorAccess0", (uint32_t)pfs, -1, ret);
+ 
+     _return<s32>(ctx, ret);
+ }
+@@ -96,6 +196,7 @@ extern "C" void osMotorInit_recomp(uint8_t* rdram, recomp_context* ctx) {
+     int channel = _arg<2, s32>(rdram, ctx);
+ 
+     s32 ret = osMotorInit(PASS_RDRAM mq, pfs, channel);
++    if (rs64_pak_log()) rs64_pak_row(rdram, "osMotorInit", (uint32_t)pfs, channel, ret);
+ 
+     _return<s32>(ctx, ret);
+ }
+@@ -104,6 +205,7 @@ extern "C" void osMotorStart_recomp(uint8_t* rdram, recomp_context* ctx) {
+     PTR(OSPfs) pfs = _arg<0, PTR(OSPfs)>(rdram, ctx);
+ 
+     s32 ret = osMotorStart(PASS_RDRAM pfs);
++    if (rs64_pak_log()) rs64_pak_row(rdram, "osMotorStart", (uint32_t)pfs, -1, ret);
+ 
+     _return<s32>(ctx, ret);
+ }
+@@ -112,6 +214,7 @@ extern "C" void osMotorStop_recomp(uint8_t* rdram, recomp_context* ctx) {
+     PTR(OSPfs) pfs = _arg<0, PTR(OSPfs)>(rdram, ctx);
+ 
+     s32 ret = osMotorStop(PASS_RDRAM pfs);
++    if (rs64_pak_log()) rs64_pak_row(rdram, "osMotorStop", (uint32_t)pfs, -1, ret);
+ 
+     _return<s32>(ctx, ret);
+ }
 diff --git a/librecomp/src/eep.cpp b/librecomp/src/eep.cpp
 index 048246e..5d5c245 100644
 --- a/librecomp/src/eep.cpp
@@ -2122,6 +2180,72 @@ index 8c8e5d1..636836a 100644
      return func_find->second;
  }
  
+diff --git a/librecomp/src/pak.cpp b/librecomp/src/pak.cpp
+index 0be1513..47922ad 100644
+--- a/librecomp/src/pak.cpp
++++ b/librecomp/src/pak.cpp
+@@ -4,36 +4,50 @@
+ #include "recomp.h"
+ #include "helpers.hpp"
+ 
++// s7516 class FM: logging only (cont.cpp rs64_pak_row). pfs = a1 for InitPak/RepairId-less calls, a0 otherwise; ch from the
++// OSPfs or the InitPak channel argument.
++extern "C" int rs64_pak_log();
++extern "C" void rs64_pak_row(uint8_t* rdram, const char* fn, uint32_t pfs, int ch, int host_ret);
++#define RS64_PAK(fn, pfs, ch) do { if (rs64_pak_log()) rs64_pak_row(rdram, fn, (uint32_t)(pfs), (ch), (int)(int32_t)ctx->r2); } while (0)
++
+ extern "C" void osPfsInitPak_recomp(uint8_t * rdram, recomp_context* ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsInitPak", ctx->r5, (int)ctx->r6);
+ }
+ 
+ extern "C" void osPfsFreeBlocks_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsFreeBlocks", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsAllocateFile_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsAllocateFile", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsDeleteFile_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsDeleteFile", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsFileState_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsFileState", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsFindFile_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsFindFile", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsReadWriteFile_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsReadWriteFile", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsChecker_recomp(uint8_t * rdram, recomp_context * ctx) {
+     ctx->r2 = 1; // PFS_ERR_NOPACK
++    RS64_PAK("osPfsChecker", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsNumFiles_recomp(uint8_t * rdram, recomp_context * ctx) {
+@@ -44,8 +58,10 @@ extern "C" void osPfsNumFiles_recomp(uint8_t * rdram, recomp_context * ctx) {
+     *files_used = 0;
+ 
+     _return<s32>(ctx, 1); // PFS_ERR_NOPACK
++    RS64_PAK("osPfsNumFiles", ctx->r4, -1);
+ }
+ 
+ extern "C" void osPfsRepairId_recomp(uint8_t * rdram, recomp_context * ctx) {
+     _return<s32>(ctx, 1); // PFS_ERR_NOPACK
++    RS64_PAK("osPfsRepairId", ctx->r4, -1);
+ }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
 index 43509ba..91873a6 100644
 --- a/librecomp/src/pi.cpp

@@ -1625,3 +1625,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-000357 | s7513_fj_levels | rc=0 | 841s | scratch/agent/soak_results/s7513_fj_levels_20261117-000357.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117 | s7514 fold: s7513_fj_levels score=0 (L1 dd8 21:9, L7/L10 dd4 stick max 85, L4off ctl 127 PASS) -> FJ CLOSED 6 levels. In-session s7514 FK (L4 dd1/L15 dd8 21:9): osGetTime 46875.0 ticks/ms monotone, 781,250 ticks/VI, profiler gate 0 outside ctl, ctl 4/4 + bars only in ctl fb dumps -> FK H-canon/H-dead; levels soak queued.
 20261117-003433 | s7514_fk_levels | rc=0 | 909s | scratch/agent/soak_results/s7514_fk_levels_20261117-003433.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117-005900 | s7515_fl_levels | rc=0 | 909s | scratch/agent/soak_results/s7515_fl_levels_20261117-005900.log | arms=4 alive=4/4 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0

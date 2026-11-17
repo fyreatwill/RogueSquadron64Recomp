@@ -12832,6 +12832,10 @@ static void set_rumble(int, bool) {}
 
 static ultramodern::input::connected_device_info_t get_connected_device_info(int controller_num) {
     if (controller_num == 0) {
+        // s7516 class FM positive control: ROGUESQ_PAK_SHAPE_CTL=1 reports a Rumble Pak on port 0 (set_rumble stays a no-op),
+        // so the game's present-gated osMotorStart/Stop paths run and the [s7516-pak] log must show them. Default: no pak.
+        static const int pak_ctl = [] { const char* e = getenv("ROGUESQ_PAK_SHAPE_CTL"); return (e && *e && *e != '0') ? 1 : 0; }();
+        if (pak_ctl) return { ultramodern::input::Device::Controller, ultramodern::input::Pak::RumblePak };
         return { ultramodern::input::Device::Controller, ultramodern::input::Pak::None };
     }
     return { ultramodern::input::Device::None, ultramodern::input::Pak::None };

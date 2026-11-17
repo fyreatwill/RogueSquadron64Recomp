@@ -199450,3 +199450,46 @@ Discrimination: the L4/L15 census selects H-canon and refutes H-live for the EEP
 return all equal the re-derived libultra 4K model; the planted ctl row proves the scorer flags a divergence). H-dead holds for the
 write-path timing. Next discriminator: class FM Rumble/Controller Pak return shape (NEXT.md), H-canon vs H-live on the game's
 osMotor/osPfs branches.
+
+## Session 7516 (2026-11-17) — class FM: Rumble/Controller Pak shape vs hardware; every osMotor* return equals the libultra 2.0D no-pak / rumble-pak model on L4 dd1 and L15 dd8 21:9, every motor Start/Stop and every osPfs* call is gated behind a successful init / the pak save device, positive control (port reports a Rumble Pak) shows the gated paths running; FL levels closed
+
+**FL levels fold.** s7515_fl_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4: probe 1, LongRead 0/32 B + 4/200 B, cap 0x200, ctl flagged
+each). L7 also issued two live osEepromLongWrite (block 29 and block 4, 200 B, host 0 = hw 0, transferred) - the runtime second line
+s7515 lacked for the write path (NO_SAVE_WRITE only suppresses the file flush). FL CLOSED 6 levels.
+
+**FM static census** (../rogue_squadron64/build/roguesquadron.elf, objdump). Host: port 0 = Controller + Pak::None (src/main/main.cpp
+get_connected_device_info), ports 1-3 absent; ultramodern osMotorInit returns CONTRFAIL/NOPACK/DEVICE per device info, osMotorStart/
+Stop return PFS_ERR_INVALID 5 unless initialised; every osPfs* stub returns 1 (NOPACK). Game libultra: osMotorStop 0x8002D3D0 /
+osMotorStart 0x8002D570 are the pre-__osMotorAccess form (per-channel table at 0x80039120, 5 when unset); osMotorInit 0x8002D88C.
+Game branches:
+- processPolledControllerData 0x800027C0 (per port, OSPfs+state at 0x80110520 + 136*ch, status 0x80110788): errno 8 or 4 -> clear
+  tried (+105); else if !present (+104) && !tried -> osMotorInit, present = (ret == 0), tried = 1. Start/Stop at 0x80002A40/64 only
+  when effect active (+107) AND present; failure sets +108 bit 1. Re-init+Stop at 0x80002968 only when present.
+- initRumblePakSlots 0x80002C5C, serviceRumblePakMotors 0x80002D28: Init+Stop only when present.
+- clearControllerPakPresence 0x80003188 (from initPlayerCraftTrailBuffers 0x800AE410 at mission start, endMissionEndTransition
+  0x800FB14C) clears present + tried -> one re-init per mission transition by design.
+- osPfs*: only initMemoryPack 0x80005960 <- writeSaveBodyToEeprom / writeSaveDataBodyToEeprom / copySaveUnk08 <- saveLoadDispatcher
+  family when device 0x80112720 == 2. initSaveData sets device 1 (asset field +4 nonzero) and drops to 2 only when the EEPROM probe/
+  header read fails. initMemoryPack checks pattern bit + type&5 == 5, then osPfsInitPak; ret 1 -> osContStartQuery(0x80110770) +
+  osRecvMesg(0x80110770, block) - 0x80110770 is siServiceThread's OS_EVENT_SI queue (osSetEventMesg(5) at 0x80002E50), so the host
+  send_si_message wakes it (no hang).
+Hypotheses: H-canon (host returns = hardware) / H-dead (differences feed unused paths) / H-live (game takes a path hardware never
+takes with no pak: motor calls without a pak, an Init retry per frame, a pak save path on the EEPROM device).
+**Runtime.** New ROGUESQ_LOG_PAK_SHAPE=1 (lib/N64ModernRuntime/librecomp/src/cont.cpp rs64_pak_row + pak.cpp RS64_PAK, logging only):
+every osMotorInit/Start/Stop/__osMotorAccess/osPfs* with pfs, channel, host return, the game's status/errno bytes for the port,
+present/tried/on, device selector. Positive control ROGUESQ_PAK_SHAPE_CTL=1 (main.cpp): port 0 reports a Rumble Pak (set_rumble still
+a no-op). Scorer tools/s7516_pak_shape.py re-derives the hardware return from the game's status bytes + history (2.0D: failed init does
+not clear the channel's init flag), invariants: no Start/Stop with present 0, no Init with tried 1 && present 0, no osPfs on dev 1;
+--controls 6 mutants + clean + reinit-after-clear + ctl detect PASS.
+Run (g1e_owner_quiet_arms HOLD=120, scratch/s7516_fm): L4 dd1, L15 dd8 21:9, L4ctl dd1 - all alive, 0 VI stalls.
+- L4 / L15: 3 rows each, osMotorInit ch0 ret 1 (st 0 errno 0 -> hw NOPACK 1) at t=0, 67/75 (L4), 75/96 (L15), tried=0 every time
+  (mission-transition clears). 0 Start/Stop, 0 osPfs, dev=1 after initSaveData.
+- L4ctl: Init ret 0 x6 (st 1), Stop ret 0 x6, Start ret 0 x4 (t=84.6, 30 Hz on/off pulses) - the present-gated paths run and log.
+Score 0. Instrument defect found and fixed in-session: run 1 scoring used "<= 2 inits per channel per run" (my guess) and flagged all
+three arms; the disasm shows the latch is cleared by the game at mission start/end, so the invariant is now "Init while the latch is
+still set". Not exercised: Controller Pak (osPfs) at runtime with a pak - the port never reports one and the save device stays 1;
+H-dead by static + 0 runtime rows.
+Discrimination: the census selects H-canon for osMotor* returns (three arms, two pak states) and H-dead for the osPfs/ContRam surface
+(0 rows, device 1, static gating), and refutes H-live (no motor call without a pak, no retry storm, no pak save path). FM CLOSED L4/L15;
+levels soak queued (scratch/agent/soak_queue/s7516_fm_levels.sh: L1 dd8 21:9, L7/L10 dd4, ctl arm L12 dd4). lib/ edit exported.
+Next: FN VI special features (osViSetSpecialFeatures 12 call sites: gamma / dither / divot / gamma-dither) + osViBlack vs hardware.

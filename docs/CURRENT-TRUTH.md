@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7515 (2026-11-17).
+Compact operational handoff, as of Session 7516 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -483,7 +483,19 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     plants one never-executed addr-70 row) + tools/s7515_eep_shape.py --controls (re-derived libultra 4K model, 5 mutants PASS): probe 1 (4K),
     LongRead blk0 32 B + blk4 200 B; game capacity 0x200 = 64 blocks (matches probe + 512-byte save), 2 records x 0xC8 + 0x20 = 432 B; 0 live
     divergence, ctl flagged. LongWrite not hit on the route: same block math, game capacity check -> canon by static reading (single-source);
-    no-wait-per-block timing H-dead (static). Levels soak queued (s7515_fl_levels). Next: FM Rumble Pak / osMotor shape (NEXT.md).
+    no-wait-per-block timing H-dead (static). Levels soak queued (s7515_fl_levels).
+    **Levels fold (s7516): s7515_fl_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4); L7 ran 2 live LongWrites (blocks 29 + 4, 200 B, canon)
+    = the runtime second line for the write path -> FL CLOSED 6 levels.**
+    **FM CLOSED L4/L15 (s7516): Rumble/Controller Pak shape H-canon, pak paths H-dead with no pak.** Port reports a pad, no pak, on
+    port 0 (main.cpp get_connected_device_info). Static (roguesquadron.elf disasm): every osMotorStart/Stop (processPolledControllerData,
+    initRumblePakSlots, serviceRumblePakMotors) sits behind the game's present flag pfs+104, set only by osMotorInit == 0; Init is
+    latched by pfs+105 (cleared by errno 8/4 and by clearControllerPakPresence at mission start/end); osPfs* only via initMemoryPack on
+    save device 2 (0x80112720; 1 = EEPROM when the probe succeeds); initMemoryPack's osContStartQuery/osRecvMesg uses the SI event queue
+    0x80110770 (= siServiceThread's), so the host's send_si_message wakes it. Game libultra is the 2.0D motor form (per-channel init
+    table, PFS_ERR_INVALID 5). Runtime ROGUESQ_LOG_PAK_SHAPE=1 (librecomp cont.cpp/pak.cpp, logging only), scorer tools/s7516_pak_shape.py
+    --controls (6 mutants) --ctl: L4 dd1 / L15 dd8 21:9 = 3 osMotorInit ret 1 each (t~0, mission transitions, tried=0 each), 0 Start/Stop,
+    0 osPfs, dev=1; ctl arm ROGUESQ_PAK_SHAPE_CTL=1 (port reports a Rumble Pak) = Init ret 0 x6, Stop x6, Start x4 (t=84.6 rumble), all
+    canon -> score 0. Levels soak queued (s7516_fm_levels, ctl arm L12). Next: FN VI special features / osViBlack (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
