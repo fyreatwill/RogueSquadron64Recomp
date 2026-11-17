@@ -173,3 +173,66 @@ extern "C" void rs64_s7535_close(const uint8_t* rdram) {
 
 // events.cpp asks once per gfx task (after snap): 1 = deliver sp_complete after send_dl instead of before it.
 extern "C" int rs64_s7535_late(void) { return g_open ? g_late : 0; }
+
+// s7536: ROGUESQ_SP_LATE=0|1|alt, the hardware-order gfx sp_complete as a standalone knob (no GA_CHK needed).
+//   0 / unset: upstream early sp_complete (before send_dl).  1: every gfx task gets sp_complete after send_dl (hardware order:
+//   the guest learns "SP done" only once the LLE fetched every input).  alt: per task, splitmix64(task)&1 (same split as
+//   ROGUESQ_S7535_LATE=alt), so both states see the same scenes in one run.  ROGUESQ_S7535_LATE still works under GA_CHK.
+// Per-state visible-consequence counters (on when SP_LATE=alt or ROGUESQ_S7536_CNT=1): per phase x state, gfx tasks, RDP
+// triangles seen by rs64_spike_scan, guard-band spikes (the CULL_SPIKE test), spikes culled, big hulls (>100000 px^2, the G5b
+// sheet class).  Dump rs64_s7536.log in cwd every 5 s.  Control: ROGUESQ_S7536_CTL=<n> flags every n-th triangle of state-1
+// tasks as a spike, so the per-state split must show the excess in late=1 only (the attribution path really keys on state).
+extern "C" int rs64_sp_late_cur = 0;
+namespace {
+const int s_sp_mode = [] {
+    const char* e = getenv("ROGUESQ_SP_LATE");
+    int m = -1;
+    if (e && *e) m = (*e == 'a') ? 2 : (*e == '0' ? 0 : 1);
+    if (m >= 0) fprintf(stderr, "[s7536] ROGUESQ_SP_LATE=%s: gfx sp_complete %s\n", e, m == 0 ? "early (upstream)" : m == 1 ? "after send_dl (hardware order)" : "alternates per task (splitmix64)");
+    return m;
+}();
+const int s_cnt_on = [] { const char* e = getenv("ROGUESQ_S7536_CNT"); return (e && *e && *e != '0') || s_sp_mode == 2 ? 1 : 0; }();
+const unsigned s_ctl_n = [] { const char* e = getenv("ROGUESQ_S7536_CTL"); return e && *e ? (unsigned)atoi(e) : 0u; }();
+unsigned long long c_task[16][2], c_tri[16][2], c_bad[16][2], c_cul[16][2], c_big[16][2], c_ctl[16][2];
+// ROGUESQ_SP_LATE_SEED=<n>: offsets the alt split's task index, so a repeat run gives the same scenes a different early/late
+// assignment (the default split is deterministic per task index: identical runs are not independent replicates).
+unsigned long long s_n = [] { const char* e = getenv("ROGUESQ_SP_LATE_SEED"); return e && *e ? strtoull(e, nullptr, 0) << 32 : 0ull; }();
+time_t c_last = 0;
+void c_dump() {
+    FILE* f = fopen("rs64_s7536.log", "w");
+    if (!f) return;
+    fprintf(f, "[s7536-mode] sp_late=%d ctl_n=%u\n", s_sp_mode, s_ctl_n);
+    for (int p = 0; p < 16; ++p) for (int l = 0; l < 2; ++l)
+        if (c_task[p][l] || c_tri[p][l])
+            fprintf(f, "[s7536-sum] phase=%d late=%d tasks=%llu tris=%llu spikes=%llu culled=%llu big=%llu ctl=%llu\n", p, l, c_task[p][l], c_tri[p][l],
+                    c_bad[p][l], c_cul[p][l], c_big[p][l], c_ctl[p][l]);
+    fclose(f);
+}
+}  // namespace
+extern "C" int rs64_s7536_cnt_on = s_cnt_on;
+extern "C" int rs64_sp_late_task(void) {
+    int l;
+    if (s_sp_mode < 0) l = rs64_s7535_on ? rs64_s7535_late() : 0;
+    else if (s_sp_mode == 2) l = rs64_s7535_on && g_open ? g_late : (int)(mix(++s_n) & 1u);
+    else l = s_sp_mode;
+    rs64_sp_late_cur = l;
+    if (s_cnt_on) {
+        const uint32_t p = rs64_phase_ord();
+        ++c_task[p < 16 ? p : 15][l];
+        const time_t now = time(nullptr);
+        if (now - c_last >= 5) { c_last = now; c_dump(); }
+    }
+    return l;
+}
+// rs64_spike_scan, per RDP triangle: bad = outside the guard band, cul = zeroed by CULL_SPIKE, big = hull > 100000 px^2.
+// Returns 1 when the control wants this triangle treated as a spike.
+extern "C" int rs64_s7536_tri(int bad, int cul, int big) {
+    const uint32_t p0 = rs64_phase_ord(); const int p = p0 < 16 ? (int)p0 : 15, l = rs64_sp_late_cur;
+    ++c_tri[p][l];
+    int ctl = 0;
+    if (s_ctl_n && l == 1 && (c_tri[p][l] % s_ctl_n) == 0) { ctl = 1; ++c_ctl[p][l]; }
+    if (bad) ++c_bad[p][l];
+    if (cul) ++c_cul[p][l];
+    if (big) ++c_big[p][l];
+    return ctl;
+}

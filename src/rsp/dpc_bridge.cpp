@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <mach/mach_time.h>
 #include <chrono>
+extern "C" int rs64_s7536_cnt_on; extern "C" int rs64_s7536_tri(int, int, int);  // s7536 s7535_ga_chk.cpp
 extern "C" int rs64_tog_odd(uint64_t mt); extern "C" void rs64_tog_anchor(uint64_t mt);  // s7017 upstream_compat.cpp
 #include <map>
 #include <set>
@@ -3906,14 +3907,18 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
         const double xr = 320.0 + guard + (s_cw > 640u ? (double)s_cw - 320.0 : 0.0);
         for (auto &p : v) if (p[0] < -guard || p[0] > xr || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
         s_tris++; s_swap_tris++;
+        bool s7536_cul = false;
         // s6792: 4:3 hi-res images (321..640 wide: cinematics, AT THE MOVIES) are never culled. Their legit cloud/sky
         // tris overrun even a width-scaled bound (retail dump: 26869 tris past the 320 bound, 4424 past a 640x480 one),
         // and zeroing them left a black notch at the right edge. The wedges (s6083) were 320-wide flight frames.
         if (bad && cull && (s_cw <= 320u || s_cw > 640u) && (!cull_tog || rs64_tog_odd(mach_absolute_time()))) {
             // s6084: zero the triangle height (yl=ym=yh=0) so the rasteriser emits no scanlines; length is unchanged.
             uint32_t n0 = w0 & ~0x3FFFu, n1 = 0; memcpy(g_rdram_for_submit + (a & kSubmitRamMask), &n0, 4); memcpy(g_rdram_for_submit + ((a + 4) & kSubmitRamMask), &n1, 4);
-            s_culled++;
+            s_culled++; s7536_cul = true;
         }
+        {  // s7536: per sp_complete-state spike/big-hull counts (s7535_ga_chk.cpp)
+          if (rs64_s7536_cnt_on) { double ar = 0; for (int i = 0; i < 5; i++) { const int j = (i + 1) % 5; ar += v[i][0] * v[j][1] - v[j][0] * v[i][1]; }
+            (void)rs64_s7536_tri(bad ? 1 : 0, s7536_cul ? 1 : 0, fabs(ar) / 2 > 100000.0 ? 1 : 0); } }
         if (bad && on) {
             s_bad++; s_swap_bad++;
             if (s_logged++ < 600) {

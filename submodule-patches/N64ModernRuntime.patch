@@ -6101,7 +6101,7 @@ index 3198be0..c25d889 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..c2d0188 100644
+index 149e770..cea4c62 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,472 @@
@@ -6145,7 +6145,7 @@ index 149e770..c2d0188 100644
  #include "ultramodern/rsp.hpp"
  #include "ultramodern/renderer_context.hpp"
 +extern "C" int rs64_tl_on; extern "C" void rs64_tl(uint32_t code, uint32_t arg); extern "C" void rs64_tl_flush(); // s6711 (mesgqueue.cpp)
-+extern "C" int rs64_s7535_on; extern "C" void rs64_s7535_snap(const uint8_t* rdram); extern "C" void rs64_s7535_close(const uint8_t* rdram); extern "C" int rs64_s7535_late(void); // s7535 class GA
++extern "C" int rs64_s7535_on; extern "C" void rs64_s7535_snap(const uint8_t* rdram); extern "C" void rs64_s7535_close(const uint8_t* rdram); extern "C" int rs64_s7535_late(void); extern "C" int rs64_sp_late_task(void); // s7535 class GA; s7536 ROGUESQ_SP_LATE
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -7684,7 +7684,7 @@ index 149e770..c2d0188 100644
 +                if (rs64_tl_on) rs64_tl(6, displaylist); // s6711 Gfx thread task start
 +                if (rs64_s4899_ev) rs64_s4899_ev('B'); // s4903
 +                if (rs64_s7535_on) rs64_s7535_snap(rdram); // s7535 class GA: snapshot the gfx inputs at the early sp_complete
-+                const bool s7535_late = rs64_s7535_on && rs64_s7535_late(); // ROGUESQ_S7535_LATE: hardware-order sp_complete A/B
++                const bool s7535_late = rs64_sp_late_task() != 0; // s7536 ROGUESQ_SP_LATE=0|1|alt (ROGUESQ_S7535_LATE under GA_CHK): hardware-order sp_complete
 +                if (!s7535_late) sp_complete();
 +                const auto s4265_b = s4265::clk::now();
 +                if (rs64_m5_host_edge != nullptr) {

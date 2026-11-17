@@ -1,24 +1,16 @@
-# NEXT (s7536)
+# NEXT (s7537)
 HYPOTHESIS-ID: class-ga-early-spcomplete
 
-s7535 found an OPEN H-latent-fix: ultramodern events.cpp sends the gfx sp_complete BEFORE send_dl, so in flight the game builds the
-next frame into the 0x720000-0x75FFFF gfx pool while the F5 LLE still fetches it (same-run A/B ROGUESQ_S7535_GA_CHK=1 +
-ROGUESQ_S7535_LATE=alt: diff bytes/task early 635 vs hardware-order 164 at L4, 472 vs 53 at L15 dd8 21:9; pool 1.19 MB vs 6.7 kB).
-Read PORTING-STATE s7535 first.
+s7536: ROGUESQ_SP_LATE=0|1|alt landed; per-state spikes/big hulls equal -> H-colour-only (fidelity only, not a G5b/G5f cause).
+Read PORTING-STATE s7536.
 
-Work unit (ONE build, every arm in one iteration, iron rule 13):
-1. Standalone knob: ROGUESQ_SP_LATE=0|1|alt in events.cpp (the s7535 `s7535_late` decision without needing GA_CHK; alt = the same
-   splitmix64(task)&1 per-task split). Echo the mode at boot. Keep ROGUESQ_S7535_LATE working (GA_CHK runs).
-2. Visible consequence, same run, per task state (alt): count per state (i) CULL_SPIKE wedges culled (rs64_spike_scan: add a
-   per-state counter), (ii) vertex-fetch diffs in the gfx pool (GA_CHK), (iii) terrain pixel fraction drops on presented frames if a
-   per-task attribution is feasible (else per-second with alt period 1 s? NO - per-task split only; skip (iii) if not attributable).
-   Arms: L4 dd2 16:9, L4 dd4 16:9, L1 dd8 21:9 (window grows with dd).
-3. Cost: owner recipe FPS60 fullscreen, ROGUESQ_SP_LATE=0 vs =1 (two arms each, not alt: frame pacing is per run), L1/L4/L12 at dd1
-   and dd4, OWNER_TIMING=1: fl_shown / tasks/s / [g1b] sd_wall. AC power only (battery x1.4: check pmset first; CLK_MAX refusal).
-Hypotheses: H-visible (early-state tasks carry more spikes/drops -> the race is user-visible; fix is worth its cost), H-colour-only
-(only shade bytes differ; no geometry effect -> fix is fidelity-only), H-cost (late SPC drops FPS60 below 60/s -> keep opt-in, or
-deliver SP done at the LLE's last input fetch instead of after send_dl).
-Discriminator: per-state spike count ratio (alt, same run) + fl_shown early vs late.
-Gate: census tools/s7535_ga_census.py exits 0 only after the fix lands (rule -> H-latent-FIXED with a verify on the knob).
-Never flip a default without the owner (Durable constraints); propose with =0 old.
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+Work unit: fold the FPS60 cost soak.
+1. tail scratch/agent/SOAK-RESULTS.md for s7536_splate_cost; read scratch/s7536_splate_cost/fps.txt (tools/g1e_level_fps.py rows,
+   arms l{1,4,12}d{1,4}{e,l}; e = SP_LATE=0, l = SP_LATE=1). Check cur == lvl and pwr AC / clk <= 1.15 on the arms.log lines.
+   If the soak has not run (battery / idle gate), run it yourself on AC: `zsh scratch/agent/soak_queue/s7536_splate_cost.sh`
+   (~30 min; split per level if needed, each g1e invocation is one arm).
+2. Hypotheses: H-free (late fl_shown within 0.5/s of early on every pair -> SP_LATE=1 becomes an owner fidelity opt-in in
+   docs/OWNER-OPT-INS.md; mark the 2 census rows H-latent-FIXED(opt-in) in tools/s7535_ga_census.py so it exits 0 with --controls),
+   H-cost (late drops below 59/s anywhere -> deliver sp_complete at the LLE's last RSP input fetch instead of after send_dl:
+   instrument the fetch index of the last dma_rdram_to_dmem per task first, GA_CHK has the hook).
+3. Never flip the default (owner). OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

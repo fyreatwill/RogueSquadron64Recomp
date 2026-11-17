@@ -200163,3 +200163,31 @@ Verdict: the same-run LATE=alt A/B selects H-latent-fix for the gfx RSP-input wi
 the in-flight task's vertex/DL pool) and refutes H-canon ("inputs preserved until dp_complete") there; it refutes the DL chunk-link
 stream as the source (identical in both states). Next discriminator: per-task-state spike/drop counts + FPS60 cost of
 ROGUESQ_SP_LATE (NEXT.md).
+
+## Session 7536 (2026-11-17) — class GA (b): the early gfx sp_complete has no geometry consequence (spikes / big hulls equal per task state, 5 same-run alt arms, controls 32285/32292); ROGUESQ_SP_LATE standalone knob landed; FPS60 cost soak queued
+
+Work unit (NEXT s7536): visible consequence + cost of the hardware-order gfx sp_complete found by s7535.
+1. New standalone knob ROGUESQ_SP_LATE=0|1|alt (src/rsp/s7535_ga_chk.cpp rs64_sp_late_task, events.cpp calls it per gfx task; no
+   GA_CHK needed; boot echo `[s7536] ROGUESQ_SP_LATE=...`; ROGUESQ_S7535_LATE still works under GA_CHK). alt = splitmix64(task)&1;
+   ROGUESQ_SP_LATE_SEED=<n> offsets the split (the default split is deterministic per task index, so identical runs are NOT independent
+   replicates: found this session). lib/ edit exported (submodule-patches/N64ModernRuntime.patch).
+2. Per-state counters (on with SP_LATE=alt or ROGUESQ_S7536_CNT=1): rs64_spike_scan (dpc_bridge.cpp) reports every RDP triangle
+   to rs64_s7536_tri: tris, guard-band spikes (the CULL_SPIKE test), culled, big hulls > 100000 px^2 (G5b sheet class), per phase x
+   state, build/rs64_s7536.log. Control ROGUESQ_S7536_CTL=997 flags every 997th late-state triangle in a separate counter: must
+   appear in late=1 only at tris_late/997. Scorer tools/s7536_splate_score.py (--controls 6/6: equal, 4x, ctl missed, ctl in early,
+   pre-flight only, scene mismatch).
+3. Runs (scratch/s7536_splate, g1e_owner_quiet_arms HOLD 120, FPS60 fullscreen, NO_SAVE_WRITE, battery clk 1.53 ALLOW_SLOW=1: counts,
+   not timing). All 5 arms alive, fatal 0, tris/task late/early 0.99-1.01, ctl 5956/5958, 8116/8118, 6670/6671, 5784/5785, 5759/5760.
+   Phases >= 5, early vs late spikes per 1k tris (Poisson z):
+   - L4 dd2 16:9: 0.026 vs 0.028 (z -0.7); seed 1: 0.024 vs 0.030 (-2.3); seed 2: 0.029 vs 0.025 (+2.1) -> sign flips with the seed.
+   - L4 dd4 16:9: 0.004 vs 0.004 (0.1); in-flight phase 7: 0 vs 0 spikes, big 509 vs 484 per ~1.07k tasks.
+   - L1 dd8 21:9: 0.005 vs 0.006 (-1.2); flight phase 8: 0 vs 0, big 487/1177 vs 485/1193.
+   - big hulls per task equal in flight everywhere (0.18-0.24 both states). One apparent 2x (pre-flight phase 5/6 big 16 vs 34,
+     29 vs 59) repeated in all 3 default-seed runs and vanished/flipped with seeds (22/28, 30/20) = a deterministic split artifact.
+   (iii) terrain-drop frames per state not attributable per task (presented frames mix tasks) -> skipped as planned.
+Verdict: H-colour-only selected over H-visible for spikes and big-hull sheets: early-state tasks carry no more guard-band spikes
+or big hulls than hardware-order tasks at dd2/dd4/dd8, 16:9 and 21:9 (two lines: 5 arms incl. 2 reseeded replicates, z within +-2.3
+and sign-flipping; ctl proves the per-state attribution path). So G5b/G5f do NOT share this cause; the s7535 race only tears
+next-frame shade bytes (+-1 colour steps). Rules out: the early sp_complete as a knife-spike / sheet source.
+Open: (c) FPS60 cost of SP_LATE=1 queued as scratch/agent/soak_queue/s7536_splate_cost.sh (L1/L4/L12 x dd1/dd4 x 0/1, AC only via
+CLK_MAX). Then: fidelity-only fix -> opt-in for the owner if it holds 60/s, default unchanged.
