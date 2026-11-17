@@ -1,25 +1,24 @@
-# NEXT (s7551)
-HYPOTHESIS-ID: class-gk-writeback-stale-native-columns
+# NEXT (s7552)
+HYPOTHESIS-ID: class-gl-writeback-undrawn-column-drift
 
-GJ CLOSED s7550: RT64 writebacks use current-command addresses and extents. Residual: copyNativeToRAM writes FULL rows
-[drawRect.top, min(bottom, fb.height)) x colorImg.width, but the pair only drew drawColorRect's columns. The other columns' bytes
-come from the native target, refreshed from RAM only when checkRAM's XXH3 differs at checkRDRAM (DL start, interpreter thread).
-A guest CPU write into the span between checkRDRAM and the writeback (e.g. a CPU-drawn HUD/text pass, a heap block reused inside
-a fb carve) would be silently replaced by older native content.
+GK CLOSED s7551 (H-clean, see CURRENT-TRUTH item 19). Side datum: RT64's colour writeback changes bytes OUTSIDE the pair's
+drawColorRect columns with no prior RAM change (rtOut): mission L12 dd4 1,062,781 bytes / 9614 writebacks; L1 dd1 and L4 dd4 0.
+Hardware leaves undrawn pixels untouched, so these are host-made changes to guest RAM.
 
-Hypotheses: H-clean (0 such bytes: the guest never CPU-writes an fb span during a DL in flight); H-clobber-benign (bytes overwritten
-but the guest rewrites them before the next read / they're the same values); H-clobber (guest-written bytes lost, guest or VI reads
-them -> visible defect or data loss).
-Discriminating measurement, ONE build, ONE env (ROGUESQ_S7551_GK=1, default off, in lib/rt64 -> export.sh + commit):
-  at checkRDRAM, snapshot (copy) RAM of every fb span that a pair in this workload will write back (or simply every registry fb
-  with RAMBytes <= 1.2 MB, phase-budgeted); immediately before each copyNativeToRAM, diff RAM vs snapshot over the write span
-  -> guest_changed_bytes; after the writeback, count how many of those bytes now differ from the guest's value -> clobbered_bytes,
-  split inside/outside drawColorRect columns; log per phase writer address range (first changed offset) and the guest PC if the
-  s7539 store-watch hook can name it.
-  Positive control (same run): ROGUESQ_S7551_GK_PLANT=1 makes the host write a marker pattern into an undrawn column of the
-  span right after checkRDRAM; it must show up as guest_changed and clobbered.
-Arms, all built in one iteration and run one game at a time: L1 dd1 (retail), L4 dd4 16:9,
-L12 dd4, owner recipe FPS60; >=120 s flight each, plus title/hangar.
-Outcomes: clobbered 0 outside the plant -> H-clean, close GK. Nonzero -> name the guest writer (store watch) and decide whether
-the fix is a column-exact writeback (only drawColorRect columns) or re-hash at fullSync before writeback.
+Hypotheses:
+- H-rect-edge: drawColorRect rounding (left(false)/right(true)) or a draw not merged into drawColorRect (fill/tex rect, a
+  scissor-clipped tri) means the "outside" columns were really drawn -> no defect, instrument boundary only.
+- H-dither: copyNativeToRAM re-quantises a high-precision native target with a per-writeback random dither seed -> low bits of
+  undrawn pixels flicker each writeback (xor pattern confined to the low 1-3 bits of each 5-bit channel).
+- H-stale-native: the native target holds content that never matched RAM in those columns (upload skipped / partial upload /
+  a different fb aliased at that address), so the writeback paints old or foreign content -> real defect.
+Discriminating measurement, ONE build (extend src/main/main.cpp s7551::post, still ROGUESQ_S7551_GK=1): for rtOut bytes record
+(a) column histogram relative to rect (distance to rl/rr: 0-1 px = edge), (b) per-16-bit-pixel xor of pre/post (popcount and
+whether it touches only channel low bits), (c) whether post equals the value at the same offset in ANY other registered span's
+snapshot (foreign content), (d) span phys/width/rect for the top 8 (phys, rect) keys. Positive control: the existing plant.
+Run L12 dd4 (the only level with rtOut) + L1 dd1 control arm, HOLD 120, tools/g1e_owner_quiet_arms.zsh
+  (E="ROGUESQ_S7551_GK=1+ROGUESQ_S7551_GK_PLANT=1"; ARMS="4:l12:ROGUESQ_FORCE_SAVE_MISSION=12+$E 1:l1:ROGUESQ_FORCE_SAVE_MISSION=1+$E").
+Outcomes: edge-only -> H-rect-edge, close GL. Low-bit xor spread across interior undrawn columns -> H-dither (decide whether
+the guest ever reads those pixels: s7391 says no CPU reader of live colour images; then close as benign). Foreign/structured
+content -> H-stale-native: name the aliasing fb and fix the upload/writeback extent.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7550 (2026-11-17).
+Compact operational handoff, as of Session 7551 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -349,9 +349,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     writes (fullSync colour/depth copyNativeToRAM; renderToRAM defaults on) take address = current pair SETCIMG/SETZIMG, width =
     colorImg.width, rows = drawColorRect/drawDepthRect, the retained fb.height only as a min() clamp; the registry walks (storeRAM,
     checkRAM, uploadRAM, hashTracking) take const RDRAM; present reads the current VI origin; 0 open. Host side of the s7545
-    heap-reuse family (GF-GJ) closed. Open: GK (NEXT.md), bytes written into undrawn columns of the span come from the retained
-    native target, revalidated only at checkRDRAM (DL start); a guest write into the span between DL start and writeback is
-    unmeasured.
+    heap-reuse family (GF-GJ) closed.
+    **Class GK CLOSED s7551** (ROGUESQ_S7551_GK=1 + _PLANT=1, tools/s7551_gk_score.py --controls 4/4; runtime, sync RDP only):
+    snapshot every written-back span at checkRDRAM, diff snapshot/pre/post per byte at each writeback, L1 dd1 / L4 dd4 / L12 dd4
+    16:9 FPS60: 0 bytes changed between DL start and writeback in ~45 GB compared (H-clean), planted control 99.5-100% seen and
+    clobbered (depth-kind 376/376 pre-mission; mission depth span is first written back as a colour Z-clear pass at the same
+    address, which consumes its plant). The full-row writeback never reverts a guest/host write. Not covered: RDP_ASYNC=1.
+    Open GL (NEXT.md): rtOut = bytes RT64 changes outside the pair's colour rect with no prior change: L12 1.06 MB / 9614 wb in
+    mission, L1/L4 0.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

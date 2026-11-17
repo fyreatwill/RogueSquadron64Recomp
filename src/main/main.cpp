@@ -11189,6 +11189,132 @@ static void s7493_wb(uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t widt
             (unsigned long long)g_s7493_ctl_armed, (unsigned long long)g_s7493_ctl_never, (unsigned long long)g_s7493_nobase); }
 }
 
+// s7551 class GK instrument (ROGUESQ_S7551_GK=1, off by default). RT64 copyNativeToRAM writes FULL rows of the pair's
+// span; bytes outside the drawn rect come from the retained native target, revalidated from RAM only at checkRDRAM (DL
+// start). At each checkRDRAM we snapshot every recently written-back span; around each writeback we diff
+// snapshot / pre / post per byte: gch = bytes something other than RT64's writeback changed since DL start, clob = of those,
+// bytes the writeback then replaced, split inside/outside the pair's draw rect columns (rect via rs64_s7551_gk_rect).
+// Control ROGUESQ_S7551_GK_PLANT=1: every 16th check the host XORs 4 bytes of the span (outside the last rect when it can)
+// right after the snapshot; those bytes must be seen changed and clobbered (plants/pseen/pclob) and are excluded from gch.
+namespace s7551 {
+static bool envon(const char* n) { const char* e = std::getenv(n); return e && *e && *e != '0'; }
+static const bool on = envon("ROGUESQ_S7551_GK");
+static const bool plant = envon("ROGUESQ_S7551_GK_PLANT");
+struct Span { uint32_t phys = 0, bytes = 0, kind = 0, width = 0, rows = 0; int32_t rl = 0, rr = 0;
+              std::vector<uint8_t> snap; uint64_t seq = 0, used = 0; uint32_t plantAt = 0xFFFFFFFFu; };
+struct Cnt { uint64_t wb = 0, nosnap = 0, bytes = 0, gch = 0, gchIn = 0, gchOut = 0, clob = 0, clobIn = 0, clobOut = 0, revert = 0,
+             rtOut = 0, plants = 0, pseen = 0, pclob = 0, gwb = 0, cwb = 0; };
+static std::mutex mu;
+static std::vector<Span> spans;
+static uint64_t seq = 0, checks = 0;
+static std::vector<uint32_t> g_plants; // plant addresses of the current check (host XOR, control)
+static Cnt c[2];
+static thread_local int32_t t_rect[4] = { 0, 0, 0, 0 };
+static thread_local std::vector<uint8_t> t_pre;
+static thread_local uint32_t t_prePhys = 0, t_preBytes = 0;
+static std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now(), tlast = t0;
+static int nlog = 0; static uint32_t nlogPh = 0xFFFFFFFFu;
+static void report(bool force) {
+    const auto now = std::chrono::steady_clock::now();
+    if (!force && std::chrono::duration<double>(now - tlast).count() < 5.0) return;
+    tlast = now;
+    const double t = std::chrono::duration<double>(now - t0).count();
+    for (int k = 0; k < 2; k++) { const Cnt& x = c[k];
+        std::fprintf(stderr, "[s7551] t=%.1f ph=%u kind=%s checks=%llu spans=%zu wb=%llu nosnap=%llu bytes=%llu gwb=%llu gch=%llu gchIn=%llu gchOut=%llu "
+            "cwb=%llu clob=%llu clobIn=%llu clobOut=%llu revert=%llu rtOut=%llu plants=%llu pseen=%llu pclob=%llu\n", t, rs64_phase_ord(), k ? "Z" : "C",
+            (unsigned long long)checks, spans.size(), (unsigned long long)x.wb, (unsigned long long)x.nosnap, (unsigned long long)x.bytes,
+            (unsigned long long)x.gwb, (unsigned long long)x.gch, (unsigned long long)x.gchIn, (unsigned long long)x.gchOut, (unsigned long long)x.cwb,
+            (unsigned long long)x.clob, (unsigned long long)x.clobIn, (unsigned long long)x.clobOut, (unsigned long long)x.revert,
+            (unsigned long long)x.rtOut, (unsigned long long)x.plants, (unsigned long long)x.pseen, (unsigned long long)x.pclob);
+        c[k] = Cnt{}; }
+    checks = 0;
+    std::fflush(stderr);
+}
+static void check(uint8_t* rd) {
+    if (!on || !rd) return;
+    std::lock_guard<std::mutex> lk(mu);
+    ++seq; ++checks;
+    size_t total = 0;
+    for (size_t i = 0; i < spans.size();) { // drop spans unused for 600 checks
+        if (seq - spans[i].used > 600) { spans.erase(spans.begin() + i); continue; } ++i; }
+    Span* best = nullptr;
+    for (Span& s : spans) {
+        if (total + s.bytes > (6u << 20)) { s.seq = 0; continue; }
+        total += s.bytes; s.snap.resize(s.bytes); std::memcpy(s.snap.data(), rd + s.phys, s.bytes); s.seq = seq; s.plantAt = 0xFFFFFFFFu;
+        if (s.kind == 0 && s.width && s.rows && (!best || s.used > best->used)) best = &s;
+    }
+    g_plants.clear();
+    if (plant && (seq % 16) == 0) for (Span& q : spans) { // every fresh span gets one 4-byte plant (outside its last rect when it can)
+        if (q.seq != seq || !q.width || !q.rows) continue;
+        const uint32_t rowB = q.bytes / q.rows, bpp = rowB / q.width ? rowB / q.width : 1;
+        uint32_t col = q.width / 2;
+        if (q.rr < (int32_t)q.width - 2) col = q.width - 2; else if (q.rl > 2) col = 0;
+        const uint32_t a = q.phys + (((q.rows / 2) * rowB + col * bpp) & ~3u);
+        bool dup = false; for (uint32_t p : g_plants) if (a < p + 4 && p < a + 4) dup = true;
+        if (dup || a + 4 > q.phys + q.bytes) continue;
+        for (int b = 0; b < 4; b++) rd[a + b] ^= 0x5A;
+        g_plants.push_back(a); c[q.kind].plants++;
+        { static uint32_t ph0 = 0xFFFFFFFFu; static int n = 0; const uint32_t ph = rs64_phase_ord(); if (ph != ph0) { ph0 = ph; n = 0; }
+          if (q.kind == 1 && n++ < 4) std::fprintf(stderr, "[s7551-plant] ph=%u seq=%llu Z addr=0x%06X span=0x%06X+%u w=%u rows=%u\n", ph, (unsigned long long)seq, a, q.phys, q.bytes, q.width, q.rows); }
+    }
+    (void)best;
+}
+static void pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
+    if (!on || !rd || !bytes || (uint64_t)phys + bytes > 0x1000000u) return;
+    t_pre.resize(bytes); std::memcpy(t_pre.data(), rd + phys, bytes); t_prePhys = phys; t_preBytes = bytes;
+}
+static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    if (!on || !rd || !bytes || !rows || !width || kind > 1 || (uint64_t)phys + bytes > 0x1000000u) return;
+    if (t_prePhys != phys || t_preBytes != bytes) return;
+    std::lock_guard<std::mutex> lk(mu);
+    Cnt& x = c[kind]; ++x.wb;
+    { static uint32_t ph0 = 0xFFFFFFFFu; static int n = 0; const uint32_t ph = rs64_phase_ord(); if (ph != ph0) { ph0 = ph; n = 0; }
+      if (kind == 1 && n++ < 6) std::fprintf(stderr, "[s7551-zwb] ph=%u seq=%llu phys=0x%06X bytes=%u w=%u rows=%u plants=%zu\n", ph, (unsigned long long)seq, phys, bytes, width, rows, g_plants.size()); }
+    const int32_t rl = t_rect[kind * 2], rr = t_rect[kind * 2 + 1];
+    Span* s = nullptr;
+    for (Span& q : spans) if (q.seq == seq && q.phys <= phys && phys + bytes <= q.phys + q.bytes) { s = &q; break; }
+    if (!s) {
+        ++x.nosnap;
+        Span* ex = nullptr; for (Span& q : spans) if (q.phys == phys && q.kind == kind) { ex = &q; break; }
+        if (!ex && spans.size() < 16) { spans.emplace_back(); ex = &spans.back(); }
+        if (ex) { ex->phys = phys; ex->bytes = std::max(ex->bytes, bytes); ex->kind = kind; ex->width = width; ex->rows = rows; ex->rl = rl; ex->rr = rr; ex->used = seq; ex->seq = 0; }
+    } else {
+        s->used = seq; if (s->phys == phys) { s->kind = kind; s->width = width; s->rows = rows; s->rl = rl; s->rr = rr; }
+        const uint32_t rowB = bytes / rows, bpp = rowB / width ? rowB / width : 1, off = phys - s->phys;
+        const uint8_t* sv = s->snap.data() + off; const uint8_t* pv = t_pre.data(); const uint8_t* qv = rd + phys;
+        x.bytes += bytes;
+        uint64_t g = 0, cl = 0; uint32_t firstG = 0xFFFFFFFFu, firstC = 0xFFFFFFFFu;
+        for (uint32_t i = 0; i < bytes; i++) {
+            const uint32_t rel = ((phys + i) ^ 3u) - phys; const uint32_t col = (rel % rowB) / bpp; const bool in = (int32_t)col >= rl && (int32_t)col < rr;
+            bool isPlant = false; for (uint32_t p : g_plants) if (phys + i >= p && phys + i < p + 4) { isPlant = true; break; }
+            if (pv[i] != sv[i]) {
+                if (isPlant) { x.pseen++; if (qv[i] != pv[i]) x.pclob++; continue; }
+                ++g; (in ? x.gchIn : x.gchOut)++; if (firstG == 0xFFFFFFFFu) firstG = i;
+                if (qv[i] != pv[i]) { ++cl; (in ? x.clobIn : x.clobOut)++; if (qv[i] == sv[i]) x.revert++; if (firstC == 0xFFFFFFFFu) firstC = i; }
+            } else if (qv[i] != pv[i] && !in) x.rtOut++;
+        }
+        x.gch += g; x.clob += cl; if (g) x.gwb++; if (cl) x.cwb++;
+        const uint32_t ph = rs64_phase_ord(); if (ph != nlogPh) { nlogPh = ph; nlog = 0; }
+        if (g && nlog++ < 24) {
+            const uint32_t f = firstC != 0xFFFFFFFFu ? firstC : firstG, rel = ((phys + f) ^ 3u) - phys, fw = (phys + f) & ~3u;
+            uint32_t sw, pw, qw; std::memcpy(&sw, s->snap.data() + (fw - s->phys), 4); std::memcpy(&pw, rd + fw, 4); std::memcpy(&qw, t_pre.data() + (fw - phys), 4);
+            std::fprintf(stderr, "[s7551-ev] ph=%u kind=%s phys=0x%06X bytes=%u w=%u rows=%u rect=%d-%d gch=%llu clob=%llu first=0x%06X row=%u col=%u snap=%08X pre=%08X post=%08X\n",
+                ph, kind ? "Z" : "C", phys, bytes, width, rows, rl, rr, (unsigned long long)g, (unsigned long long)cl, fw, rel / rowB, (rel % rowB) / bpp, sw, qw, pw);
+        }
+    }
+    for (Span& q : spans) if (q.seq == seq && q.phys < phys + bytes && phys < q.phys + q.bytes) { // RT64's own output is not a guest change
+        const uint32_t a = std::max(q.phys, phys), e = std::min(q.phys + q.bytes, phys + bytes);
+        std::memcpy(q.snap.data() + (a - q.phys), rd + a, e - a);
+        if (q.plantAt >= a && q.plantAt < e) q.plantAt = 0xFFFFFFFFu;
+    }
+    for (size_t k = 0; k < g_plants.size();) { if (g_plants[k] < phys + bytes && phys < g_plants[k] + 4) g_plants.erase(g_plants.begin() + k); else ++k; }
+    report(false);
+}
+} // namespace s7551
+extern "C" void rs64_s7551_gk_check(uint8_t* rd) { s7551::check(rd); }
+extern "C" void rs64_s7551_gk_rect(int32_t cl, int32_t cr, int32_t zl, int32_t zr) {
+    s7551::t_rect[0] = cl; s7551::t_rect[1] = cr; s7551::t_rect[2] = zl; s7551::t_rect[3] = zr; }
+
 // s6938 G1e H-wb-dead instrument (ROGUESQ_G1E_WBW=1, off by default). After each RT64 colour/depth
 // writeback into RDRAM, the written pages are made PROT_NONE. The first touch of each page faults here:
 // we record phys, host pc/lr offset (resolve with atos) and read/write (ESR WnR), unprotect, retry.
@@ -11322,6 +11448,7 @@ extern "C" void rs64_wbw_self(int on) {
 // Called on the RT64 thread immediately before copyNativeToRAM of [phys, phys+bytes).
 extern "C" void rs64_s7541_span(int, const uint8_t*, uint32_t, uint32_t); extern "C" int rs64_s7539_on; // s7541
 extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
+    s7551::pre(rd, phys, bytes); // s7551
     if (rs64_s7539_on && rd && bytes) rs64_s7541_span(2, rd, phys, bytes); // s7541
     if (!wbw_on() || !rd || bytes == 0 || (uint64_t)phys + bytes > 0x1000000u) return;
     if (!g_wbw_rd.load()) {
@@ -11344,6 +11471,7 @@ extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) {
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);  /* s7492 class EQ: RT64 writeback -> fn=os_rt64fb */
 static void s7497_wb(uint32_t, uint32_t, uint32_t);
 extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) {
+    s7551::post(rd, phys, bytes, kind, width, rows); // s7551
     if (rs64_s7539_on && rd && bytes) rs64_s7541_span(3, rd, phys, bytes); // s7541
     {   static std::atomic<uint64_t> n{0}; const uint64_t k = ++n;  /* s7492: first-call / periodic marker = the hook's reach control */
         if (k == 1 || (k & (k - 1)) == 0) std::fprintf(stderr, "[s7492] rt64 writeback #%llu phys=%06X bytes=%u kind=%u w=%u rows=%u\n",
@@ -11368,11 +11496,11 @@ extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32
 }
 #else
 extern "C" void rs64_s7541_span(int, const uint8_t*, uint32_t, uint32_t); extern "C" int rs64_s7539_on; // s7541
-extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) { if (rs64_s7539_on && rd && bytes) rs64_s7541_span(2, rd, phys, bytes); }
+extern "C" void rs64_wbw_pre(uint8_t* rd, uint32_t phys, uint32_t bytes) { s7551::pre(rd, phys, bytes); if (rs64_s7539_on && rd && bytes) rs64_s7541_span(2, rd, phys, bytes); }
 extern "C" void rs64_wbw_self(int) {}
 extern "C" void rs64_s7491_hst(uint32_t a, uint32_t w, const char* kind);
 static void s7497_wb(uint32_t, uint32_t, uint32_t);
-extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { if (rs64_s7539_on && rd && bytes) rs64_s7541_span(3, rd, phys, bytes); s7493_wb(phys, bytes, kind, width, rows); s7501_wb(phys, bytes); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
+extern "C" void rs64_wbw_post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint32_t width, uint32_t rows) { s7551::post(rd, phys, bytes, kind, width, rows); if (rs64_s7539_on && rd && bytes) rs64_s7541_span(3, rd, phys, bytes); s7493_wb(phys, bytes, kind, width, rows); s7501_wb(phys, bytes); s7497_wb(phys, bytes, kind); s7498_wb(phys, bytes, kind, width, rows); if (bytes && phys < 0x1800000u) rs64_s7491_hst(0x80000000u | phys, bytes, "os_rt64fb"); }
 static bool wbw_try_handle_fault(void*, void*) { return false; }
 #endif
 

@@ -200686,3 +200686,42 @@ write into the fb span after checkRDRAM but before the writeback would be overwr
 ORIGIN: no mitigation landed; writer of every RT64 RDRAM write = fullSync copyNativeToRAM with the current pair's SETCIMG/SETZIMG.
 Rules out H-stale-write via a retained RT64 address; selects H-percmd + H-hash. Closes the s7545 heap-reuse family on the host side
 (GF threads, GG ultramodern/librecomp, GH src/main statics, GI injected statics, GJ RT64).
+
+## Session 7551 (2026-11-17) — class GK CLOSED: no byte of any written-back span changes between checkRDRAM (DL start) and RT64's writeback on L1/L4/L12, so the full-row writeback from the retained native target never replaces a guest (or other host) write; planted control 99.5-100%
+Question (NEXT s7551): copyNativeToRAM writes full rows [drawRect.top, min(bottom, fb.height)) x colorImg.width; the columns the pair
+did not draw come from the native target, revalidated from RAM only at checkRDRAM. A guest CPU write into the span in between
+would be silently reverted. Hypotheses H-clean / H-clobber-benign / H-clobber.
+Instrument (one build, ROGUESQ_S7551_GK=1, default off): src/main/main.cpp namespace s7551 (hooked from rs64_wbw_pre/post, both
+#if branches) + lib/rt64 rt64_state.cpp two calls: rs64_s7551_gk_check(RDRAM) in checkRDRAM after checkRAM (snapshot every span
+written back in the last 600 checks, cap 6 MB) and rs64_s7551_gk_rect(colour rect, depth rect) before each pair's writeback. Per
+writeback byte: snapshot vs pre vs post -> gch (changed since DL start by anything but RT64's writeback; RT64's own output refreshes
+overlapping snapshots), clob (of those, replaced by the writeback), split inside/outside the pair's rect columns (RDRAM ^3 byte
+order), revert, rtOut (bytes RT64 changed outside the rect with no prior change). Control ROGUESQ_S7551_GK_PLANT=1: every 16th
+check the host XORs 0x5A into 4 bytes of every fresh span (outside its last rect when possible); seen/clobbered tallied apart and
+excluded from gch. Scorer tools/s7551_gk_score.py (verdicts H-clean / H-clobber-benign-candidate / H-clobber / CTL-FAIL, control
+pclob >= 97% pseen since a drawn plant pixel redraws to the planted byte with p~1/256; --controls 4/4). lib/rt64 -> export.sh.
+Dead ends this session, fixed before the verdict: (1) the first build called drawDepthRect.left() unconditionally and RT64
+asserts on a null rect (Assertion !isNull, rt64_common.cpp:97, L1 boot) -> guarded with isNull/isEmpty; this call is NOT env-gated,
+so the guard matters for default builds. (2) The first plant went into the most recently written colour span; with double
+buffering the next DL writes the OTHER buffer, so plants=19 pseen=0 in mission; and plant bytes were booked to whichever
+overlapping span matched (24 [s7551-ev] events in ph5 were the plant: snap ^ 5A5A5A5A == pre). Fixed: one global plant list,
+a plant in every fresh span.
+Run (scratch/s7551_gk, g1e_owner_quiet_arms HOLD 120, FPS60 16:9 fullscreen, NO_SAVE_WRITE, AC clk 0.97; L1 dd1, L4 dd4, L12 dd4;
+3/3 alive, crashlines 0, vi_stalls30s 0, level_ok 1). Whole run (t>=0) / mission (t>=72):
+| level | C wb | C bytes cmp | gch | clob | C plants seen/clobbered (bytes) | Z wb | Z gch | Z plants seen/clob |
+| L1 dd1  | 19499 / 11397 | 11.5 GB / 7.3 GB | 0 | 0 | 4100/4095 ; 1448/1444 | 5883 | 0 | 376/376 (pre-mission) |
+| L4 dd4  | 20507 / 12404 | 12.2 GB / 8.0 GB | 0 | 0 | 4528/4526 ; 1820/1820 | 6137 | 0 | 376/376 (pre-mission) |
+| L12 dd4 | 17937 / 9614  | 10.2 GB / 6.0 GB | 0 | 0 | 4172/4158 ; 1496/1488 | 5808 | 0 | 376/376 (pre-mission) |
+Depth control in mission: debug rerun scratch/s7551_gk_z (L4, HOLD 110, [s7551-plant]/[s7551-zwb]): the mission depth writeback
+(0xB51E00, w=796, 447 rows) is first written back as a COLOUR pass at the same address (Z-clear via SETCIMG=Z), so its plants are
+registered and consumed by the colour-kind writeback (same comparator, same bytes); the Z-kind plants went to a stale ph6 span
+(0xB95C00 w=640) that is no longer written. The depth-kind path itself fired 376/376 pre-mission in each run. Mission depth: same
+function, control via the colour pass at that address (indirect; labelled).
+Verdict: H-clean on all 4 logs (0 non-plant changed bytes in ~45 GB compared). Nothing CPU- or host-writes a framebuffer span while a
+display list for it is in flight, so the full-row writeback is behaviour-equivalent to hardware's drawn-pixels-only write here.
+Rules out: lost CPU HUD/text writes, heap blocks inside an fb carve being reverted, other host writers racing the writeback.
+Census reruns: tools/s7550_gj_census.py rc 0, --controls 8/8 (RT64 fullSync edited).
+Side datum (open, GL): rtOut — bytes RT64 itself changes OUTSIDE the pair's colour rect with no prior change: mission L1/L4 0, L12
+1,062,781 over 9614 colour writebacks (~110 B/wb). (Z rtOut is meaningless: depth rect is usually null -> every column "outside".)
+On hardware those bytes would stay. Next: classify them (NEXT.md).
+Not covered: ROGUESQ_RDP_ASYNC=1 (checkRDRAM and fullSync on different threads; snapshots would race) — single-source for sync.
