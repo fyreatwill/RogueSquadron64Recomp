@@ -1,19 +1,18 @@
-# NEXT (s7554)
-HYPOTHESIS-ID: class-gn-async-writeback-clobber
+# NEXT (s7555)
+HYPOTHESIS-ID: class-go-device-status-reads
 
-GM CLOSED s7553 (sync RDP: every out-of-rect writeback change is RT64 re-emitting its own previous writeback; tools/s7553_gm_score.py).
-GK (s7551) and GM (s7553) covered the SYNC RDP only. GN: the same two checks under the owner opt-in ROGUESQ_RDP_ASYNC=1
-ROGUESQ_RDP_NODRAIN=3 (OWNER-OPT-INS recommends =3), where fullSync and its colour/depth writebacks run on the RT64 worker AFTER the
-guest is told reads are done, so the guest can legitimately write the fb/zbuffer span before RT64's full-row writeback lands.
-
+GN CLOSED s7554 (async RDP NODRAIN=3: 0 clobbers, async witness sig=9427). GB (s7538) enumerated every completion SIGNAL the runtime
+posts; GO is its polled twin: every device STATUS/progress value the runtime RETURNS to the guest, and whether each is consistent
+with the hardware ordering (busy until the matching signal, then idle) in default config and under RDP_ASYNC=1 NODRAIN=3, SP_LATE=1, FPS60.
+Sites to enumerate (static census, tools/s7555_go_census.py, like tools/s7538_gb_census.py): librecomp ai.cpp:233 osAiGetLength,
+ai.cpp:239 osAiGetStatus, dp.cpp:36 osDpGetStatus, sp.cpp:162 osSpTaskYielded, pi.cpp:800 osPiGetStatus, vi.cpp:29/33
+osViGetCurrent/NextFramebuffer, ultra_translation.cpp:102 osGetCount, plus any osViGetCurrentLine / __osSpGetStatus / SI busy /
+MEM_ reads of mapped device registers (grep 0xA4xxxxxx / 0x04xxxxxx in src/ and the fixups), and every guest call site of each
+(grep RecompiledFuncs for the _recomp names) with what the caller does with the value.
 Hypotheses:
-- H-clean: gch/clob 0 as in sync (the guest never writes a pending writeback span before it lands) and GM verdicts unchanged.
-- H-clobber: clob > 0 (RT64's async full-row writeback reverts guest/host bytes written after dp_complete) -> name the writer (s7551-ev
-  first= address -> store watch) and fix (e.g. wait-for-writeback before the guest's next touch of that span, or write only drawn rows/cols).
-- H-blind: the s7551 hooks do not fire on the worker path (wb=0 or plants not seen) -> fix the hook first, then rerun in the same session.
-Discriminating run, ONE launch (same build as s7553, no rebuild):
-  mkdir -p scratch/s7554_gn; E="ROGUESQ_S7551_GK=1+ROGUESQ_S7551_GK_PLANT=1+ROGUESQ_RDP_ASYNC=1+ROGUESQ_RDP_NODRAIN=3"
-  env R=$PWD/scratch/s7554_gn HOLD=120 ARMS="4:l12:ROGUESQ_FORCE_SAVE_MISSION=12+$E 4:l4:ROGUESQ_FORCE_SAVE_MISSION=4+$E 1:l1:ROGUESQ_FORCE_SAVE_MISSION=1+$E" zsh tools/g1e_owner_quiet_arms.zsh
-Score: python3 tools/s7551_gk_score.py scratch/s7554_gn/log_*.txt ; python3 tools/s7553_gm_score.py scratch/s7554_gn/log_*.txt
-(and --from 72 for mission-only). Positive control: plants seen/clobbered >= 97% per arm (both scorers check it).
+- H-consistent: every returned value is ordered with its signal in every mode (0 open rows).
+- H-stale: some value reports idle/done while the worker still owns the job (e.g. osDpGetStatus under NODRAIN), or busy forever
+  -> name the guest caller, measure with a counter in one run, fix (status reads from the same state the signal uses).
+- H-unused: the guest never calls the function (dead row; prove with the call-site grep, not assumed).
+Controls (--controls): synthetic rows for each verdict + a planted mis-ordered site must classify H-stale; census exits 0 only on 0 open.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

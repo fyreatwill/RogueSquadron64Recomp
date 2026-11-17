@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7553 (2026-11-17).
+Compact operational handoff, as of Session 7554 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -366,7 +366,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     shadow of RT64's last writeback):** every out-of-rect writeback change in every phase (L12 5.4M colour / 10.9M depth px, L1) has
     pre == RT64's own previous writeback (1.00000); colour post within ±1 of it, dark/bright balanced (re-dither); depth keeps z
     (post>>2 == pre>>2) and only rewrites dz (game Z-clear fill 0xFFFE -> depth target 0xFFFC). The s7552 pre-mission "fade" cols
-    41-56 are outside every draw and ±1 like the rest (s7552 F test accepted only upward moves). Open GN (NEXT.md): GK+GM under RDP_ASYNC=1 NODRAIN=3.
+    41-56 are outside every draw and ±1 like the rest (s7552 F test accepted only upward moves). **Class GN CLOSED s7554 (H-clean, async):** GK+GM rerun under
+    ROGUESQ_RDP_ASYNC=1 NODRAIN=3 (L12/L4 dd4, L1 dd1, 16:9 FPS60, 120 s; scratch/s7554_gn): gwb=gch=clob=0 colour and depth, all
+    phases, ~18 GB compared; plant control 1130/1136, 1208/1212, 1478/1484; GM verdicts identical to sync (C H-dither, Z H-depth-req,
+    preIsLast 0.99994-1.0). Async witness same run (scratch/s7554_gn_ctl, L4 + ROGUESQ_G1B=1): [s7540-rw] sig=9427 idle=0, GK H-clean,
+    ctl 890/892. The guest never touches a pending writeback span, so the worker's late full-row writeback reverts nothing. All 4
+    GJ write sites carry the hook. OWNER-OPT-INS row now gives NODRAIN=3. Next: class GO (NEXT.md).
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

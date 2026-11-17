@@ -200794,3 +200794,24 @@ Two lines: per-pixel shadow equality + the delta structure (|Δ|=1 balanced colo
 FbWriteColorCS/Float4ToRGBA16 source.
 Verdict: selects H-dither (colour) + H-depth-req (depth) for every phase; refutes H-unmerged-draw (the s7552 group lies outside the raw
 union) and H-stale-native (no pixel shows content RT64 did not itself write there). GM CLOSED. Not covered: RDP_ASYNC=1 (GN, NEXT.md).
+
+## Session 7554 (2026-11-17) — class GN CLOSED H-clean: under ROGUESQ_RDP_ASYNC=1 NODRAIN=3 the RT64 worker's late full-row writebacks revert nothing (0 guest changes to any pending span, L1/L4/L12); async path witnessed same run; OWNER-OPT-INS row now NODRAIN=3
+
+Ran the NEXT.md discriminator (same build as s7553, no rebuild). `tools/g1e_owner_quiet_arms.zsh` HOLD=120, arms L12 dd4, L4 dd4, L1 dd1,
+each `ROGUESQ_S7551_GK=1 ROGUESQ_S7551_GK_PLANT=1 ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=3` (env verified on the live pid via ps eww),
+AC power clk 0.968, 3/3 alive, 0 crash, 0 VI stall (scratch/s7554_gn).
+- tools/s7551_gk_score.py (default --from 72 and --from 0): every arm H-clean, colour and depth: gwb=gch=clob=revert=0.
+  Colour wb 7442/8984/9004, ~4.6-5.8 GB compared per arm; plant control 1130/1136 (L12), 1208/1212 (L4), 1478/1484 (L1) seen+clobbered.
+  Depth plants pseen=0 as in the sync baselines (s7551/s7553 logs: same 0; mission depth span consumed by the colour Z-clear pass).
+- tools/s7553_gm_score.py: identical verdicts to sync: C H-dither (preIsLast 0.99994-1.0, near1 same, dark/bright balanced; L12 rt 7.77M,
+  L4/L1 345k), Z H-depth-req (zSameZ 1.0, zd4 only).
+- H-blind check: the s7551 hooks sit on all 4 GJ write sites (rt64_state.cpp:2968/2986/3046/3051 rs64_wbw_pre) and fired (wb>0). Direct
+  async witness, separate arm same build (scratch/s7554_gn_ctl, L4 dd4 + ROGUESQ_G1B=1, 100 s; host had gone to battery clk 1.52, ALLOW_SLOW,
+  path witness not timing): [s7540-rw] 99 lines sig=9427 idle=0 (every task released by the worker's reads_done), GK H-clean, ctl 890/892.
+  The first attempt was refused by the harness clock gate (clk 1.523 > 1.15) - recorded, rerun with ALLOW_SLOW.
+Result: H-clean selected, H-clobber and H-blind refuted (two lines: per-byte GK diff with planted control + GM per-pixel provenance, and the
+reads-wait witness). The guest never writes a written-back span between DL start and the writeback even when the writeback lands after
+dp_complete, so NODRAIN=3 has no writeback hazard. Rules out: async late writeback as a source of fb/zbuffer corruption or G5b drops.
+Doc fix: docs/OWNER-OPT-INS.md "Renderer overlap" row command now `ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=3` (it still said =1 although
+s7540 made =3 the recommendation) and the "frame rate vs =1 not yet measured" caveat replaced with the s7545 measurement. No default changed.
+Next: class GO, device status values returned to the guest vs completion ordering (NEXT.md).
