@@ -199300,3 +199300,38 @@ Levels soak queued (s7511_fh_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by the 
 Next: class FI, VI register shape vs hardware (NEXT.md).
 Files: lib/N64ModernRuntime/librecomp/src/ai.cpp (census line; submodule-patches/N64ModernRuntime.patch exported),
 tools/s7511_ai_dma_shape.py (new), scratch/agent/soak_queue/s7511_fh_levels.sh, docs.
+
+## Session 7512 (2026-11-16) — class FI: VI register shape vs hardware; 23,943 live VI commits on L4 dd1 / L15 dd8 21:9 equal the retail libultra __osViSwapContext model in every register and sit inside every hardware register width; the one gap (ultramodern never reset VI state on osViSetMode / never seeded BLACK at init, masked by an osViBlack no-op) fixed to the retail rule, default on
+HYPOTHESIS-ID: vi-register-shape-vs-hardware.
+Fold: s7511_fh_levels score=0 (L1 dd8 21:9 22,910, L7 22,745, L10 23,303, L12 22,902 live osAiSetNextBuffer, all canon len 0x300, 0 diffs,
+rate ratio 1.000, ctl PASS, 4/4 alive, 0 VI stalls; L10 also 1,337 calls at 32006 Hz) -> FH CLOSED on 6 levels.
+Boring checks first: 0 of 24,485 `lui` in RecompiledFuncs load 0xA4xx (no raw RCP/VI register access). Live VI wrappers: osViSetSpecialFeatures
+(12 sites), osViSetMode (5), osViBlack (2; 1 fires per run, at boot), osViSwapBuffer (2), osViSetEvent (1); osViSetXScale/YScale/Fade/
+ExtendVStart/RepeatLine/Get* have no caller, so ultramodern's assert-only X/Y scale and missing fade are dead for this game.
+RT64 Application::Core::decodeVI masks origin 24 bits, width 12, intr/vCurrent/vSync 10, and decodes every other register through
+bitfields of exactly the n64brew widths, so RT64 already wraps any oversized field the way hardware does (code read).
+Retail ROM (mips64-elf-objdump): osViSetMode 0x800352D0 stores __osViNext->state = 1 (clears VI_STATE_BLACK 0x20); osViBlack 0x80034BE0
+sets/clears 0x20; osViSwapBuffer |= 0x10; __osViInit 0x80034C50 seeds state = 0x20, framep 0x80000000, control = mode ctrl;
+__osViSwapContext 0x80035550 is stock (origin = phys(fb) + fld origin unmasked, hStart 0 when BLACK). Ultramodern's osViSetMode never
+touched state and init seeded state 0 / control 0; an old RS64 fix made osViBlack_recomp a no-op because the black bit could never clear.
+Hypotheses: H-canon (every live register = libultra model, in hardware width) / H-dead (differences only at boot or black frames) /
+H-live (a live field differs or exceeds its register width).
+Instrument (one build): ROGUESQ_LOG_VI_SHAPE=1 in ultramodern events.cpp update_vi: [vi-shape] per commit whose 13-register tuple changed
+(with rep counts, our state, a libultra shadow state, field, mode, fb), [vi-mode] the 20 raw mode words whenever they change;
+ROGUESQ_VI_SHAPE_CTL=<swap> forces the shadow black for 30 commits (screen untouched) as an in-run positive control. Fix in the same build:
+ROGUESQ_VI_BLACK_RETAIL (default on, =0 old): osViSetMode resets state = 1, init seeds BLACK + mode ctrl, osViBlack honoured.
+Offline: new tools/s7512_vi_shape.py recomputes every register from the raw mode words + fb + field + shadow state (libultra rule) and
+checks each field against the hardware width; --controls = 1 synthetic + 5 mutants (origin bit 24, vstart, black, ctl-already-black, ctrl).
+Run: tools/g1e_owner_quiet_arms.zsh HOLD=200, R=scratch/s7512, CTL=600: l4 = L4 dd1, l15 = L15 dd8 21:9, l4old = L4 dd1 VI_BLACK_RETAIL=0.
+All 3 alive, level_ok 1, crashlines 0, vi_stalls30s 0, max_gap 145/147/149 ms. (A first run, scratch/s7512_pre, lacked the init seed:
+its 5 pre-SetMode commits classified as ctrl mismatches against the dummy mode, which is how the __osViInit gap was found.)
+Result: l4 11,956 commits, l15 11,987: diff {} , oor {}, ctrl_extra 0, live black diffs 0; ctl 30/30 black diffs caught in each arm.
+Max values: origin 0xB20800 (< 16 MB), width 0x800 (< 0xFFF), ctrl 0x13046 (< 0x1FFFF). l4old: 5 live black diffs + 5 ctrl mismatches,
+all the boot VIs before the first osViSetMode (retail black, we showed fb 0 with hStart on, ~80 ms), everything else equal.
+DISCRIMINATION: H-canon for every register on both levels with the fix; the old rule was H-dead (boot only, 5 VIs). H-live refuted.
+ORIGIN: writer of the divergent value = ultramodern osViSetMode / VI init (state never reset to 1, never seeded BLACK); the value retail
+writes is hStart 0 until the first osViSetMode. The RS64 osViBlack_recomp no-op was the mitigation; it is replaced by the libultra rule,
+not added to.
+Levels soak queued (s7512_fi_levels: L1 dd8 21:9, L7/L10/L12 dd4, scored by the classifier).
+Files: lib/N64ModernRuntime/ultramodern/src/events.cpp (submodule-patches/N64ModernRuntime.patch exported), src/main/upstream_compat.cpp,
+tools/s7512_vi_shape.py (new), scratch/agent/soak_queue/s7512_fi_levels.sh, docs.

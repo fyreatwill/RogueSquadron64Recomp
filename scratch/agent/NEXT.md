@@ -1,24 +1,22 @@
-# NEXT (s7512)
-HYPOTHESIS-ID: vi-register-shape-vs-hardware
+# NEXT (s7513)
+HYPOTHESIS-ID: si-cont-shape-vs-hardware
 
-First: fold s7511_fh_levels from SOAK-RESULTS if it ran (score 0 -> FH CLOSED 6 levels in CURRENT-TRUTH item 20; score 1 -> read
-the DIFF rows in scratch/s7511_fh_levels/out.txt, and if a live non-canonical AI buffer exists, fix osAiSetNextBuffer_recomp to the
-hardware rule (len & 0x3FFF8, addr & 0xFFFFF8, libultra hdwrBugFlag + AI delayed carry), export.sh + commit).
-The recipe sits in soak_queue/ (moved there from hold/ at the end of s7511).
+First: fold s7512_fi_levels from SOAK-RESULTS if it ran (score 0 -> FI CLOSED 6 levels in CURRENT-TRUTH item 20; score 1 -> read the
+diff rows in scratch/s7512_fi_levels/out.txt; a live diff with ROGUESQ_VI_BLACK_RETAIL on is a real regression -> fix or flip the default).
 
-Work unit: class FI, VI register shape vs hardware. The game reaches the VI only through the libultra wrappers librecomp
-replaces (src/main/upstream_compat.cpp osViSwapBuffer_recomp / osViBlack_recomp; lib/N64ModernRuntime/librecomp/src/vi.cpp
-osViSetMode / SetSpecialFeatures / SetXScale / SetYScale). Check the boring thing first: the s7511 grep showed 0 `lui 0xA4xx`
-in the recompiled game code, so no raw VI register writes; re-check for 0xA440 specifically.
-Hardware: VI_ORIGIN & 0xFFFFFF, VI_WIDTH & 0xFFF, VI_X_SCALE/Y_SCALE 12-bit fixed 2.10 (+ offset field), VI_CONTROL type/AA/gamma
-bits; libultra osViSwapBuffer stores the framebuffer vaddr and __osViSwapContext writes osVirtualToPhysical(fb) (+ the mode's
-origin offset). Reference: mupen64plus-core src/device/rcp/vi/vi_controller.c in the rs64-oracle checkout, n64brew VI page.
-Ours: what values RT64 receives (ultramodern VI state -> RT64 VI regs) per swap/mode change.
-Hypotheses: H-canon (every live origin/width/scale already in hardware range -> masks are no-ops) / H-dead (out-of-range only at
-boot/black frames) / H-live (a live field exceeds its hardware width, e.g. origin above 16 MB or width > 0xFFF at dd8 21:9 wide
-fb, and RT64 uses the unmasked value -> hardware would wrap: decide which is right, fix or prove intended).
-Measurement: one census log (one env flag, existing [phase]/swap logs if they carry the fields, else a new ROGUESQ_LOG_VI_SHAPE line),
-2 arms (L4 dd1, L15 dd8 21:9) via tools/g1e_owner_quiet_arms.zsh (same command shape as s7511, R=scratch/s7512, mkdir R first),
-offline classifier tools/s7512_vi_shape.py with synthetic + mutant controls. Outcome = per-field live in-range / out-of-range counts.
-Note: the wide-fb opt-ins (ROGUESQ_ASPECT, FB_WIDTH > 796) deliberately go past retail widths; classify them separately from
-retail-shaped values, they are not defects unless they exceed the hardware register width.
+Work unit: class FJ, SI / controller (joybus) data shape vs hardware. The game reaches the SI only through libultra wrappers librecomp
+replaces (lib/N64ModernRuntime/librecomp/src/cont.cpp: osContInit / Reset / StartReadData / GetReadData / StartQuery / GetQuery /
+SetCh, motor; EEPROM/Pfs in librecomp too). Boring check first: which wrappers have callers in
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs (s7512 grep pattern: `<name>_recomp(rdram, ctx)`), and whether any
+retail __osSiRawStartDma / __osContRamRead path is still recompiled from the ROM (syms 0x8002AC30 osContStartReadData etc.).
+Hardware/libultra: OSContPad {u16 button, s8 stick_x, s8 stick_y, u8 errno}, OSContStatus {u16 type, u8 status, u8 errno}; retail
+osContGetReadData copies from the PIF block with CONT_NO_RESPONSE_ERROR when absent; button mask 0xFFFF but bits 0x0030 (reserved) and
+the stick range +-127 (real pads ~+-80). Reference: retail ROM disassembly (mips64-elf-objdump, ROM off = vram-0x80000440+0x1040),
+mupen64plus-core src/device/controllers in lib/rt64/src/contrib/mupen64plus-core or the rs64-oracle checkout.
+Hypotheses: H-canon (every OSContPad/Status written to guest RAM is a shape a real pad + PIF can produce) / H-dead (odd shapes only with no
+pad, at boot) / H-live (a live write differs: e.g. errno for ports 2-4, status bits, type 0x0005 vs pak, stick beyond the s8 clamp,
+reserved buttons set) -> fix to the hardware rule.
+Measurement: one census env (ROGUESQ_LOG_CONT_SHAPE=1, every guest write from the cont wrappers: n, t, wrapper, port, raw bytes), 2 arms
+(L4 dd1, L15 dd8 21:9) via tools/g1e_owner_quiet_arms.zsh (command shape as s7512, R=scratch/s7513), offline tools/s7513_cont_shape.py
+with synthetic + mutant controls and an in-run positive control (e.g. ROGUESQ_CONT_SHAPE_CTL=<n> writes one out-of-range stick into the
+census record only).

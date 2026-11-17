@@ -984,14 +984,22 @@ extern "C" void rs64_s7381_yield_ctl() { recomp_context c{}; c.r31 = (gpr)(int32
 // forever → hStart forced to 0 → VI::visible() returns false in RT64 →
 // PresentEarly matcher fails → no presents fire. Override the recomp wrapper
 // so the game's calls are no-ops (visibility stays on by default).
+// s7512 class FI: the real defect was ultramodern osViSetMode never resetting the VI state (retail ROM 0x800352D0 stores
+// __osViNext->state = 1, clearing BLACK). With ROGUESQ_VI_BLACK_RETAIL (default on, events.cpp) that reset exists, so
+// osViBlack is honoured exactly as libultra does it; =0 restores the no-op (the retail shadow still tracks it for the census).
+extern "C" int rs64_vi_black_retail_on();
+extern "C" void rs64_vi_black_shadow(uint8_t active);
+extern "C" void osViBlack(uint8_t active);
 extern "C" void osViBlack_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
+    const int honored = rs64_vi_black_retail_on();
     if (n <= 8) {
-        fprintf(stderr, "[osViBlack #%d] active=%u (ignored — RS64 fix)\n",
-                n, (uint32_t)ctx->r4);
+        fprintf(stderr, "[osViBlack #%d] active=%u (%s)\n",
+                n, (uint32_t)ctx->r4, honored ? "honoured, s7512 retail" : "ignored — RS64 fix");
         fflush(stderr);
     }
+    if (honored) osViBlack((uint8_t)ctx->r4); else rs64_vi_black_shadow((uint8_t)ctx->r4);
 }
 
 // Diagnostic: log osViSwapBuffer calls. The game tells VI which fb to display

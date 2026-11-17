@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7511 (2026-11-16).
+Compact operational handoff, as of Session 7512 (2026-11-16).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -446,7 +446,13 @@ numbering 1-27, with class sub-items AQ-BP under item 1, is in the s7417 archive
     the ROM, + mupen ai_controller.c AI_LEN&~7 / delayed carry +0x2000): 22,819 + 23,295 live calls all len 0x300, 8-aligned, 0 diffs,
     0 buffer ends on an 8 KB boundary (carry path dead), census complete (n contiguous, bytes/s = DAC rate x4 ratio 1.000), 7+2 ctl PASS.
     0 `lui 0xA4xx` in recompiled game code (no raw RCP register writes); osAiGetLength/osAiGetStatus never called by the game.
-    Levels soak queued (s7511_fh_levels). Next: FI VI register shape (NEXT.md).
+    **Levels fold (s7512): s7511_fh_levels score=0 (L1 dd8 21:9, L7/L10/L12 dd4, 91,860 calls canon) -> FH CLOSED 6 levels.**
+    **FI CLOSED L4/L15 (s7512): VI register shape H-canon + one boot gap FIXED.** ROGUESQ_LOG_VI_SHAPE=1 (ultramodern update_vi, + in-run
+    ctl ROGUESQ_VI_SHAPE_CTL=<swap>), tools/s7512_vi_shape.py --controls (libultra __osViSwapContext model from raw mode words + hardware
+    widths): 11,956 / 11,987 commits equal in every register, 0 out of width (max origin 0xB20800, width 0x800), ctl 30/30. RT64 decodeVI
+    already masks at hardware widths. Fix ROGUESQ_VI_BLACK_RETAIL (default on, =0 old): osViSetMode resets VI state = 1 and init seeds
+    BLACK + mode ctrl like retail (ROM 0x800352D0 / 0x80034C50), osViBlack honoured (the old no-op is gone); =0 arm differs on 5 boot VIs
+    only. Levels soak queued (s7512_fi_levels). Next: FJ SI/PIF joybus shape (NEXT.md).
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
