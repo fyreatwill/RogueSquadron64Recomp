@@ -62,10 +62,10 @@ void consume(uint32_t n) {
         uint32_t take = h.hi - h.lo; if (take > n) take = n;
         // compare what the model RDP reads now with what RT64 got at the END write
         if (g_rd) {
-            const uint8_t* s = &snap[h.off - snap_base];
+            const uint8_t* s = snap.data() + (h.off - snap_base);   // s7560 AO: data()+ (an empty START-only range has off - snap_base == snap.size(), &v[size()] is UB)
             uint32_t bad = 0;
             for (uint32_t i = 0; i < take; i++) if (g_rd[(h.lo + i) ^ 3] != s[i]) bad++;
-            if (bad && !h.ctl) { const uint8_t* t = &tch[h.off - snap_base]; for (uint32_t i = 0; i < take; i++) if (g_rd[(h.lo + i) ^ 3] != s[i]) { int k = t[i] == 1 ? 0 : t[i] == 2 ? 1 : 2; att[k]++;
+            if (bad && !h.ctl) { const uint8_t* t = tch.data() + (h.off - snap_base); for (uint32_t i = 0; i < take; i++) if (g_rd[(h.lo + i) ^ 3] != s[i]) { int k = t[i] == 1 ? 0 : t[i] == 2 ? 1 : 2; att[k]++;
                   if (k == 2 && nrex < 8) snprintf(rex[nrex++], sizeof rex[0], "task=%llu push=%llu a=0x%06X snap=%02X now=%02X", (unsigned long long)tasks, (unsigned long long)h.task, h.lo + i, s[i], g_rd[(h.lo + i) ^ 3]); } }
             if (bad) {
                 if (h.ctl) { ctl_caught++; h.ctl = false; }
@@ -99,7 +99,7 @@ void push(uint32_t lo, uint32_t hi, bool st) {
 }
 uint64_t scan_bad() {   // untouched, non-ctl mismatching queued bytes
     uint64_t b = 0; if (!g_rd) return 0;
-    for (const R& h : q) { if (h.ctl) continue; const uint8_t* sp = &snap[h.off - snap_base]; const uint8_t* t = &tch[h.off - snap_base];
+    for (const R& h : q) { if (h.ctl) continue; const uint8_t* sp = snap.data() + (h.off - snap_base); const uint8_t* t = tch.data() + (h.off - snap_base);  // s7560 AO: see consume()
         for (uint32_t i = 0; i < h.hi - h.lo; i++) if (!t[i] && g_rd[(h.lo + i) ^ 3] != sp[i]) b++; }
     return b;
 }

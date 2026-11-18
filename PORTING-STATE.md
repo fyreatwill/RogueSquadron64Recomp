@@ -200992,3 +200992,41 @@ Two lines: object-level compare + normalised-source classifier, and the independ
 Rules out: H-missing-step (no live tag lacks a replay step beyond the documented opt-in list), H-live-handedit (0 open LOST),
 H-replay-extra (no regen-only tag). Selects H-layout for the 141-vs-114 growth. Next: 19b(b) host census debt (s7363 rt64 27,
 s7366 82) so regen_replay runs to ok.
+
+## Session 7560 (2026-11-17) — 19b(b) closed: regen_replay.sh runs to "ok" for the first time since s7484; 180 host-census rows reviewed, 1 real lock race + 5 latent out-of-range reads fixed in diagnostic code
+HYPOTHESIS-ID: regen-fidelity-drift.
+**Unit.** Clear the s7363 / s7364 / s7366 host-code census debt (s7480-s7535 diagnostic code) that stopped tools/regen_replay.sh.
+Hypotheses per row: H-bounded (verdict row), H-real (fix code), H-analyser (census misreads an idiom).
+**s7363 host arrays (27 rows, 24 keys): all H-bounded**, verdicts in tools/s7363_hostarr_reviewed.tsv, each with the bound and
+line (callers pass literals 0..8 into g_s7500_n[9]; post() returns if kind > 1 before t_rect[kind*2+1]; di = ((y&3)<<2)|(col&3);
+h[k++] guarded by k < sizeof h - 1; rt64_framebuffer raw[256] guarded at line 616 size <= 256, padEnd <= size; ...). Analyser
+gap (H-analyser, not fixed): the clamp ternary `p < 16 ? p : 15` (s7535_ga_chk.cpp:57) reads as B-HOST. Control: planted
+scratch/s7560/plant.cpp `g_s7560_plant[x]` comes back OPEN (and the clamp ternary too, which shows the gap); --selftest PASS.
+**s7364 heap buffers (71 rows, 41 keys + 1 OOB):** 29 BOUNDED, 1 TRUST, 11 FIXED, 1 PLANT. The OOB row (main.cpp:14139
+`b[16]` after malloc(16)) is the deliberate s7467 ASan positive control (ASan builds only, ROGUESQ_S7467_ASAN_PLANT=1); --check
+never let any verdict clear an OOB, so **regen_replay could not have passed since s7467**. Census change: an OOB row clears only
+with a verdict starting `PLANT ` (BOUNDED cannot); --selftest asserts both rules. H-real fixes (all diagnostic, env-gated, latent):
+main.cpp s7552 loop 2-byte over-read of t_pre/snap when bytes%4==2 (guard as the s7553 loop); main.cpp [s7551-ev] 4-byte reads
+at (phys+f)&~3 could start before phys / end past phys+bytes (now bounds-checked, else 0); upstream_compat rs64_s7491_hst per-byte
+loop could run up to 256 KB past the 0x300000-byte s7475 bitmap (a < 0x81800000, w <= 0x200000; loop now stops at 0x81800000);
+s7523_slow_rdp &snap[size()] / &tch[size()] on empty START-only ranges (UB, now .data()+off); s7535_ga_chk w(g_sh, first+4)
+read 4 bytes past kSpHi (g_sh +8 pad).
+**s7366 lockset (82 rows):** 48 H-safe-caller (every caller holds the lock, traced), 26 H-safe-other (same-name locals /
+parameters: 17 `kind`, seq, spans, top, seen; the census header says it skips function locals but declared() does not), 1
+H-analyser (s7551 t_pre is static thread_local), **1 H-race fixed (closes 7 rows)**: s_s7518_ln (vector, lazily assign()ed in
+rs64_s7518_event) was read/written with no lock by s7518_load / s7519_store / rs64_s7519_wbev, and rs64_s7519_wbev /
+s7519_store are reached from host threads (rs64_s7491_hst -> rs64_s7475_store from the RT64 writeback, main.cpp:11599, and the
+ultramodern queue/thread writers); s_s7519_dt.empty() raced s7519_init's assign the same way. Writer: the lazy assign on the guest
+thread vs host-thread readers, only under ROGUESQ_S7518_STALEWATCH=1. Fix: every s_s7518_ln access and each s_s7519_dt.empty()
+under s_s7518_mu; s7519_ev (locks itself) called outside the new blocks.
+ORIGIN: the out-of-range reads and the race are in our own s7491/s7518/s7519/s7523/s7535/s7551/s7552 diagnostic code, written by
+those sessions; values are host-side indices, not guest data; no game behaviour changes when those env levers are off.
+**Validation.** Build clean (main, upstream_compat, s7523, s7535 objects rebuilt). Runtime witness of the lock change: L4 dd1
+120 s hold with ROGUESQ_S7518_STALEWATCH=1 ROGUESQ_STORE_DIAG=1 ROGUESQ_CACHE_SHAPE_CTL_WB=600 (scratch/s7560/fp, battery,
+ALLOW_SLOW): alive_at_end=1 crashlines=0 vi_stalls30s=0, 886 M tracked stores, no deadlock; positive control fired as in s7519
+(planted missed writeback -> dma_over_dirty=3, ctl_lines=3, resolved dd_inv_ok=3, live_lost=0). Fresh replay:
+`cp -R scratch/s7558/pristine scratch/s7560/replay; tools/regen_replay.sh scratch/s7560/replay` -> **"regen_replay: ok"** (7m49s;
+all six gates OPEN 0, selftests PASS); regen_verify -> files 50 same 2607 diff 141 only_a 18 only_b 4, identical to s7558 (the
+s7559 H-layout set), so the gate changes altered no generated output. Two lines: regen_replay gates + object compare.
+Rules out: H-real anywhere in the 180 rows beyond the 6 fixed sites. Open: 19b(c) B40 A/B soak (voided 2/5 so far, still queued).
+Next: s7366 local-scope / s7363 clamp-ternary analyser precision (26 + 1 false rows), then 19b(c).

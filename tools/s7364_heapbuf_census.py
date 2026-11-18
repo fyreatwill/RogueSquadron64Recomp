@@ -16,7 +16,7 @@ Row classes:
   SIZED (memcpy)    the length is `name.size()` / sizeof / a FIXED extent; otherwise B.
   B-GUEST / B-PARAM / B-CTR / B-HOST   unproven; the suffix is the index taint (guest source, a function parameter,
                     a host post-increment counter, host-only). Every B row needs a hand verdict in s7364_heapbuf_reviewed.tsv.
-`--check` exits 1 on an unreviewed B. `--selftest` runs planted rows of every class.
+`--check` exits 1 on an unreviewed B or an OOB without a `PLANT ` verdict (deliberate positive control). `--selftest` runs planted rows of every class.
 """
 import re, sys, os, glob
 from collections import Counter
@@ -441,12 +441,17 @@ def pkey(path):
 def verdict(r):
     return REVIEWED.get((pkey(r[0]), r[2], r[4]))
 
+def cleared(cls, v):
+    """s7560: a B row is cleared by any verdict; an OOB row (a provable out-of-bounds subscript) only by a `PLANT ` verdict = a
+    deliberate positive-control defect (e.g. the s7467 ASan heap-overflow plant), so a real OOB can never be waved through."""
+    return v is not None and (cls != 'OOB' or v.startswith('PLANT '))
+
 def main():
     global GEN
     if '--selftest' in sys.argv:
         rows = scan('selftest', SELFTEST, {})
         got = [r[5] for r in rows]
-        ok = got == EXPECT
+        ok = got == EXPECT and cleared('OOB', 'PLANT x') and not cleared('OOB', 'BOUNDED x') and not cleared('B-HOST', None) and cleared('B-HOST', 'BOUNDED x')
         print('selftest', 'PASS' if ok else 'FAIL', got)
         if not ok:
             for r, x in zip(rows, EXPECT):
@@ -479,9 +484,9 @@ def main():
     for r in rows:
         if r[5].startswith('B') or r[5] == 'OOB':
             v = verdict(r)
-            if v is None or r[5] == 'OOB':
+            if not cleared(r[5], v):
                 bad += 1
-            if (v is None and '-q' not in sys.argv) or '-v' in sys.argv:
+            if (not cleared(r[5], v) and '-q' not in sys.argv) or '-v' in sys.argv:
                 print('%s:%d %s [%s] %s %s' % (r[0], r[1], r[2], r[4], r[5], v or ''))
     keys = {(pkey(r[0]), r[2], r[4]) for r in rows if r[5].startswith('B') and verdict(r) is None}
     print('OPEN', bad, 'keys', len(keys))
@@ -490,7 +495,7 @@ def main():
             seen = set()
             for r in rows:
                 k = (pkey(r[0]), r[2], r[4])
-                if (r[5].startswith('B') or r[5] == 'OOB') and verdict(r) is None and k not in seen:
+                if (r[5].startswith('B') or r[5] == 'OOB') and not cleared(r[5], verdict(r)) and k not in seen:
                     seen.add(k)
                     o.write('%s\t%s\t%s\t%s:%d\n' % (k[0], k[1], k[2], r[5], r[1]))
     if '--check' in sys.argv:

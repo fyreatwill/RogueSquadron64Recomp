@@ -348,3 +348,27 @@ src/main/upstream_compat.cpp	tab	ntab++	BOUNDED s7420 hand: lookup loop i < ntab
 src/main/upstream_compat.cpp	tid_recv	(tid >= 0 && tid < 64) ? tid : 65	BOUNDED s7420 hand: ternary -> 0..63 or 65 < 66
 src/rsp/s7389_fbld.cpp	s_pg_ctl	p	BOUNDED s7420 hand: line 39 p <= (hi-1)>>12 with hi <= 0x1000000 -> p <= 0xFFF; line 91 phys from include/fbld/recomp.h rs64_fbld_chk, called only when a < 0x1000000 -> p < 4096
 src/rsp/s7389_fbld.cpp	s_pg_c	p	BOUNDED s7420 hand: phys from rs64_fbld_chk, called only when a < 0x1000000 -> p < 4096
+lib/rt64/src/hle/rt64_framebuffer.cpp	raw	i	BOUNDED s7560 hand: i in [padBeg, padEnd); line 616 returns before memcpy unless size <= 256 and padBeg <= padEnd <= size -> i < 256
+src/main/main.cpp	s_dq_calls	task	BOUNDED s7560 hand: main.cpp:5175 task = (g_rs64_lle_depth > 0), a bool -> 0..1 < 2
+src/main/main.cpp	g_s7493_w	i	BOUNDED s7560 hand: s7493_watch(i) only caller main.cpp:11174 loops i < s7493_nwatch(); nwatch fills while g_s7493_nw < 4 -> i <= 3
+src/main/main.cpp	k	i	BOUNDED s7560 hand: s7503_vn(i) only caller main.cpp:10744 passes v; every s7503_finish_locked caller (10755-10762) passes literal 0..3 -> < 5
+src/main/main.cpp	g_s7503_v	v	BOUNDED s7560 hand: v from s7503_finish_locked callers 10755-10762, all literal 0..3 -> < 5
+src/main/main.cpp	g_s7500_n	c	BOUNDED s7560 hand: s7500_event_locked callers 10976-11002 pass literal 0,1,2,3,4,5,6,8 -> < 9
+src/main/main.cpp	c	q.kind	BOUNDED s7560 hand: Span.kind defaults 0 (11203) and is only assigned from post()'s kind (11325/11327), which returns early if kind > 1 (11312) -> < 2
+src/main/main.cpp	t_rect	kind * 2	BOUNDED s7560 hand: post() returns early if kind > 1 (main.cpp:11312) -> kind*2 <= 2 < 4
+src/main/main.cpp	t_rect	kind * 2 + 1	BOUNDED s7560 hand: post() returns early if kind > 1 (main.cpp:11312) -> kind*2+1 <= 3 < 4
+src/main/main.cpp	kMS	di	BOUNDED s7560 hand: di = ((y & 3) << 2) | (col & 3) (main.cpp:11360) -> 0..15 < 16
+src/main/main.cpp	kBY	di	BOUNDED s7560 hand: di = ((y & 3) << 2) | (col & 3) (main.cpp:11360) -> 0..15 < 16
+src/main/main.cpp	h	k++	BOUNDED s7560 hand: h[k++] only under k > 0 && k < sizeof h - 1 (main.cpp:13950) -> k <= 510 < 512
+src/main/rt64_render_context.cpp	snap	i	BOUNDED s7560 hand: i = cur < 0 ? 0 : cur ^ 1; cur starts -1 (1623) and is only set to i -> 0..1 < 2
+src/main/rt64_render_context.cpp	snap_seq	i	BOUNDED s7560 hand: i = cur < 0 ? 0 : cur ^ 1; cur starts -1 (1623) and is only set to i -> 0..1 < 2
+src/main/rt64_render_context.cpp	snap_no	i	BOUNDED s7560 hand: i = cur < 0 ? 0 : cur ^ 1; cur starts -1 (1623) and is only set to i -> 0..1 < 2
+src/main/upstream_compat.cpp	fhist	fl == 1 ? 0 : fl == 2 ? 1 : fl == 8 ? 2 : fl == 6 ? 3 : 4	BOUNDED s7560 hand: index is a ternary chain yielding 0..4 (upstream_compat.cpp:3641) < 8
+src/main/upstream_compat.cpp	s_s7480_loc	ki	BOUNDED s7560 hand: ki = lk2==S ? 4 : U ? 0 : F ? 1 : 2 (upstream_compat.cpp:3887), plus literal [3] -> 0..4 < 5
+src/main/upstream_compat.cpp	s_s7484_loc	f.lk == 'U' ? 0 : f.lk == 'F' ? 1 : f.lk == 'R' ? 3 : f.lk == 'S' ? 4 	BOUNDED s7560 hand: ternary chain yielding 0..4 (upstream_compat.cpp:3942) < 5
+src/main/upstream_compat.cpp	k_s7486_kind	k	BOUNDED s7560 hand: loop k < (g_rs64_s7489_on ? 9 : 6) (upstream_compat.cpp:4062), arrays sized 9 (3985-3986)
+src/main/upstream_compat.cpp	s_s7486_rng	k	BOUNDED s7560 hand: loop k < (g_rs64_s7489_on ? 9 : 6) (upstream_compat.cpp:4062), arrays sized 9 (3985-3986)
+src/main/upstream_compat.cpp	s_s7519_n	k	BOUNDED s7560 hand: s7519_row callers (upstream_compat.cpp:4269-4312) pass literal 1,3,5,6,7,8 -> < 12
+src/main/upstream_compat.cpp	seen	j	BOUNDED s7560 hand: j < narena; narena only increments inside for i < 3 at most once per i (10279-10282) -> narena <= 3, j <= 2 (same at 3638-3640)
+src/main/upstream_compat.cpp	seen	narena++	BOUNDED s7560 hand: one increment per i of for (i = 0; i < 3) (upstream_compat.cpp:10276-10282 and 3636-3640) -> index <= 2 < 3
+src/rsp/s7535_ga_chk.cpp	g_st	p < 16 ? p : 15	BOUNDED s7560 hand: ternary -> 0..15 < 16 (s7535_ga_chk.cpp:57); census misses the clamp ternary form

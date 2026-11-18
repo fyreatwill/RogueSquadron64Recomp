@@ -1,15 +1,16 @@
-# NEXT (s7560)
+# NEXT (s7561)
 HYPOTHESIS-ID: regen-fidelity-drift
 
-19b(a) CLOSED s7559 (H-layout: 35 new rows SLOTPERM = s7487 slot order, 0 open LOST; docs/REGEN-VERIFY.md s7559).
-Unit: 19b(b), the host-code census debt that stops tools/regen_replay.sh before it can print "ok":
-  python3 tools/s7363_hostarr_census.py --rt64 --check          -> OPEN 27 (rows from s7480-s7535 host code, e.g. s7535_ga_chk g_st[16])
-  python3 tools/s7364_heapbuf_census.py --rt64 --check -q       -> OPEN 71 keys 41
-  python3 tools/s7366_lockset_census.py --check                 -> OPEN 82 (e.g. s7523_slow_rdp scan_bad unlocked@102)
-  (--gen scratch/s7558/replay variants: 0 open.)
-Per row: H-bounded (index provably in range: write the verdict row in the *_reviewed.tsv with the reason) /
-H-real (a real out-of-range or unlocked access: fix the code, re-run) / H-analyser (census misreads an idiom: fix the census,
-add a control). Discriminator: read each site; use --emit-open to stub rows. Controls: each census's --selftest/--controls must
-still pass and a planted unbounded subscript must come back OPEN. Done when regen_replay.sh scratch/s7560/replay runs to "ok".
-Then 19b(c): fold s7558_b40_ab when SOAK-RESULTS has it, then ask the owner about the B40 default.
+19b(b) CLOSED s7560: tools/regen_replay.sh scratch/s7560/replay -> "regen_replay: ok"; regen_verify 2607 same / 141 differ (= s7559 H-layout set).
+Unit: 19b(d) census analyser precision (H-analyser rows found in s7560), one change, controls kept:
+  1. tools/s7366_lockset_census.py: declared() treats function-local declarations and parameters with the same name as a
+     file-scope container (26 s7560 H-safe-other rows: 17 `kind`, seq, spans, top, seen). Header claims locals are skipped.
+  2. tools/s7363_hostarr_census.py: clamp ternary `p < N ? p : N-1` (s7535_ga_chk.cpp:57) classed B-HOST; add a CLAMP/TERN rule.
+Hypotheses: H-scope-fixable (scope-aware lookup drops those rows; verdict rows become stale and can be pruned) vs H-collateral
+(the scope fix also hides a real shared-container access: a global and a local with the same name in one function). Discriminator:
+after the fix, re-run --check and diff the MIXED set: every row that disappears must be one of the 26 H-safe-other keys; any other
+disappearance = H-collateral, revert that part. Controls: --selftest PASS + new selftest cases (local shadow -> not MIXED; global
+accessed unlocked beside a same-name local in another function -> still MIXED); planted scratch/s7560/plant.cpp unbounded
+subscript still OPEN; regen_replay gates still OPEN 0.
+Then 19b(c): fold s7558_b40_ab when SOAK-RESULTS has it (voided 2/5 so far), then ask the owner about the B40 default.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

@@ -93,7 +93,7 @@ extern "C" void rs64_s7535_snap(const uint8_t* rdram) {
     if (g_sh.empty()) {
         g_top = rs64_ram_top - 0x80000000u;
         if (g_top > kSpLo) g_top = kSpLo;
-        g_sh.resize(kSpHi);
+        g_sh.resize(kSpHi + 8u);  // s7560 AO: +8 pad, the fdiff row reads w(g_sh.data(), first + 4) with first up to kSpHi - 1
     }
     memcpy(g_sh.data(), rdram, g_top);
     memcpy(g_sh.data() + kSpLo, rdram + kSpLo, kSpHi - kSpLo);

@@ -11348,6 +11348,7 @@ static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint
                 uint64_t keyN = 0;
                 for (uint32_t L = 0; L + 2 <= bytes; L += 2) {
                     const uint32_t A = ((phys + L) ^ 2u) - phys; // stored halfword offset
+                    if (A + 2 > bytes) continue;  // s7560 class AO: bytes % 4 == 2 -> last L has A = L + 2 = bytes (2-byte over-read of t_pre / snap; s7553 loop already guards this)
                     uint16_t sv16, pv16, qv16; std::memcpy(&sv16, s->snap.data() + off + A, 2); std::memcpy(&pv16, t_pre.data() + A, 2); std::memcpy(&qv16, rd + phys + A, 2);
                     const uint32_t col = (L % rowB) / 2, y = y0 + L / rowB; const bool in = (int32_t)col >= rl && (int32_t)col < rr;
                     bool isPlant = false; for (uint32_t p : g_plants) if (phys + L + 2 > p && phys + L < p + 4) { isPlant = true; break; }
@@ -11378,7 +11379,8 @@ static void post(uint8_t* rd, uint32_t phys, uint32_t bytes, uint32_t kind, uint
         const uint32_t ph = rs64_phase_ord(); if (ph != nlogPh) { nlogPh = ph; nlog = 0; }
         if (g && nlog++ < 24) {
             const uint32_t f = firstC != 0xFFFFFFFFu ? firstC : firstG, rel = ((phys + f) ^ 3u) - phys, fw = (phys + f) & ~3u;
-            uint32_t sw, pw, qw; std::memcpy(&sw, s->snap.data() + (fw - s->phys), 4); std::memcpy(&pw, rd + fw, 4); std::memcpy(&qw, t_pre.data() + (fw - phys), 4);
+            uint32_t sw = 0, pw = 0, qw = 0;  /* s7560 class AO: fw = (phys+f)&~3 can start before phys (unaligned phys) or end past phys+bytes (bytes % 4 != 0) */
+            if (fw >= phys && (uint64_t)fw + 4u <= (uint64_t)phys + bytes) { std::memcpy(&sw, s->snap.data() + (fw - s->phys), 4); std::memcpy(&pw, rd + fw, 4); std::memcpy(&qw, t_pre.data() + (fw - phys), 4); }
             std::fprintf(stderr, "[s7551-ev] ph=%u kind=%s phys=0x%06X bytes=%u w=%u rows=%u rect=%d-%d gch=%llu clob=%llu first=0x%06X row=%u col=%u snap=%08X pre=%08X post=%08X\n",
                 ph, kind ? "Z" : "C", phys, bytes, width, rows, rl, rr, (unsigned long long)g, (unsigned long long)cl, fw, rel / rowB, (rel % rowB) / bpp, sw, qw, pw);
         }

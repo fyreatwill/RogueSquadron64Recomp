@@ -102,3 +102,78 @@ src/main/upstream_compat.cpp	seen	osViSwapBuffer_recomp	H-safe-other	s7420: 'sta
 src/main/upstream_compat.cpp	seen	rs64_m5_b40_route_title_transition	H-safe-other	s7420: 'static std::atomic<bool> seen' is a function-local atomic, not the s7393 cq 'seen'
 src/main/upstream_compat.cpp	seen	rs64_s6911_mapidx	H-safe-other	s7420: 'static uint64_t seen' is a function-local diag counter of rs64_s6911_mapidx, not the s7393 cq 'seen'
 src/main/upstream_compat.cpp	tab	dump_locked	H-safe-caller	s7420: both dump_locked (s7392 8253, s7393 8388) are called only from note paths that hold std::lock_guard(mu) (8273->8287, 8408->8438)
+src/main/main.cpp	g_s7497_zd	s7497_sum_locked	H-safe-caller	s7560: only caller rs64_s7497_zdraw 10608, holds lock_guard(g_s7497_mu) 10604
+src/main/main.cpp	g_s7498_max	s7498_sum_locked	H-safe-caller	s7560: only caller s7498_wb 10669, holds lock_guard(g_s7498_mu) 10651
+src/main/main.cpp	g_s7499_pairs	s7499_sum	H-safe-caller	s7560: only caller s7499_ex 10718, holds lock_guard l2(g_s7499_mu) 10693
+src/main/main.cpp	g_s7500	s7500_sum_locked	H-safe-caller	s7560: only caller s7500_tick_locked 10933 <- 10956/10969/10999, each holding lock_guard(g_s7500_mu)
+src/main/main.cpp	g_s7501_cpupc	s7501_sum_locked	H-safe-caller	s7560: sum_locked only from s7501_tick_locked 11056; tick_locked only from rs64_s7501_chk 11089 / rs64_s7501_up 11109, both lock_guard(g_s7501_mu)
+src/main/main.cpp	g_s7501_fb	s7501_sum_locked	H-safe-caller	s7560: sum_locked only from s7501_tick_locked 11056; tick_locked only from rs64_s7501_chk 11089 / rs64_s7501_up 11109, both lock_guard(g_s7501_mu)
+src/main/main.cpp	g_s7501_fb	s7501_tick_locked	H-safe-caller	s7560: sum_locked only from s7501_tick_locked 11056; tick_locked only from rs64_s7501_chk 11089 / rs64_s7501_up 11109, both lock_guard(g_s7501_mu)
+src/main/main.cpp	g_s7501_pg	s7501_push_locked	H-safe-caller	s7560: callers 11067 rs64_s7501_w, 11084 rs64_s7501_cpu, 11087 s7501_wb, 11100 rs64_s7501_chk, 11160 rs64_s7501_up: all hold lock_guard(g_s7501_mu)
+src/main/main.cpp	g_s7501_ring	s7501_push_locked	H-safe-caller	s7560: callers 11067 rs64_s7501_w, 11084 rs64_s7501_cpu, 11087 s7501_wb, 11100 rs64_s7501_chk, 11160 rs64_s7501_up: all hold lock_guard(g_s7501_mu)
+src/main/main.cpp	g_s7503	s7503_arm_locked	H-safe-caller	s7560: callers rs64_s7503_arm 10814 and rs64_s7503_swap 10896/10897, both hold lock_guard(g_s7503_mu)
+src/main/main.cpp	g_s7503	s7503_sum_locked	H-safe-caller	s7560: only caller rs64_s7503_swap 10898, holds lock_guard(g_s7503_mu) 10884
+src/main/main.cpp	glk	report	H-safe-caller	s7560: s7551::report only called at 11426 at the end of s7551::post, which holds function-scope lock_guard(mu) from 11314
+src/main/main.cpp	kind	post	H-safe-other	s7560: uint32_t kind parameter of s7551::post (11311); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	rs64_m5_callback_teardown_event	H-safe-other	s7560: uint32_t kind parameter (392); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	rs64_m5_pcm_writer_snapshot	H-safe-other	s7560: uint32_t* kind out-parameter (2890); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	rs64_s4429_heap_probe	H-safe-other	s7560: const char* kind parameter (5696); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	rs64_s7493_img	H-safe-other	s7560: uint32_t kind parameter (10574); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	rs64_vld_note	H-safe-other	s7560: const char* kind parameter (5296); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	rs64_wbw_post	H-safe-other	s7560: uint32_t kind parameter (11591/11621); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7493_wb	H-safe-other	s7560: uint32_t kind parameter (11163); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7496_query	H-safe-other	s7560: const char* kind parameter (10529); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7497_img	H-safe-other	s7560: uint32_t kind parameter (10610); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7499_ex	H-safe-other	s7560: uint32_t kind parameter (10691); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7500_set	H-safe-other	s7560: uint32_t kind parameter (10967); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7500_wb	H-safe-other	s7560: uint32_t kind parameter (10972); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7503_set	H-safe-other	s7560: uint32_t kind parameter (10815); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	s7503_wb	H-safe-other	s7560: uint32_t kind parameter (10824); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	start_fl_zero_poller	H-safe-other	s7560: block-local const char* kind (11720); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	kind	wbw_report	H-safe-other	s7560: block-local uint32_t kind (11530); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
+src/main/main.cpp	seq	rs64_m5_b40_writer_event	H-safe-other	s7560: 'seq' here is a const uint32_t local from an atomic fetch_add (3873); the locked 'seq' is the s7551 namespace uint64_t counter, not a container
+src/main/main.cpp	seq	rs64_m5_pre_dma_writer_store	H-safe-other	s7560: 'seq' is a const uint64_t local from atomic fetch_add (1341); not a container
+src/main/main.cpp	seq	rs64_m5_task_lifetime_edge	H-safe-other	s7560: 'static uint32_t seq' function-local scalar (4386, the declaration line); its only use 4393 is under lock_guard(mutex)
+src/main/main.cpp	spans	report	H-safe-caller	s7560: s7551::report only called from s7551::post 11426 under lock_guard(mu) 11314
+src/main/main.cpp	spans	rs64_m5_field348_store	H-safe-other	s7560: 'static const uint32_t spans[2]' function-local constant (5621), read-only, not s7551::spans
+src/main/main.cpp	spans	rs64_m5_preclear_snapshot	H-safe-other	s7560: 'const uint32_t spans[][2]' is a function-local constant table (902), not s7551::spans
+src/main/main.cpp	t_pre	pre	H-analyser	s7560: t_pre is 'static thread_local std::vector' (11239): per-thread, never shared; pre/post run on the same writeback thread
+src/main/main.cpp	top	rs64_g1d_apply_aspect_policy	H-safe-other	s7560: 'const double top' block local (13779); the other 'top' is a std::string local in s7501_sum_locked
+src/main/upstream_compat.cpp	s_s7475_live	s7475_tick	H-safe-caller	s7560: s_s7475_mu held: callers s7475_malloc 4156 (lock 4126) and s7475_free (lock at its top), nothing else
+src/main/upstream_compat.cpp	s_s7475_live	s7475_walk	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 <- s7475_malloc 4156 / s7475_free (end), both lock_guard(s_s7475_mu) at function scope
+src/main/upstream_compat.cpp	s_s7475_live	s7480_store	H-safe-caller	s7560: s_s7475_mu held: only caller rs64_s7475_store, lock_guard(s_s7475_mu) on the line before the call
+src/main/upstream_compat.cpp	s_s7475_live	s7484_load	H-safe-caller	s7560: s_s7475_mu held: only caller rs64_s7484_load, lock_guard(s_s7475_mu) in the same statement as the call
+src/main/upstream_compat.cpp	s_s7475_live	s7484_tick	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 (under s_s7475_mu via s7475_malloc/free)
+src/main/upstream_compat.cpp	s_s7475_live	s7486_tick	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 (comment at 4040 agrees)
+src/main/upstream_compat.cpp	s_s7475_wpc	s7475_walk	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 <- s7475_malloc / s7475_free, both lock_guard(s_s7475_mu)
+src/main/upstream_compat.cpp	s_s7480_freed	s7480_add	H-safe-caller	s7560: s_s7475_mu held: callers s7480_free/s7480_malloc (<- s7475_free/s7475_malloc), s7484_tick, s7486_tick, rs64_s7487_lwx 4170 (lock 4161), rs64_s7488_ust 4186 (lock 4177), s7490_pre (lock), rs64_s7491_hst (inside its lock block)
+src/main/upstream_compat.cpp	s_s7480_freed	s7480_free	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_free, under lock_guard(s_s7475_mu)
+src/main/upstream_compat.cpp	s_s7480_freed	s7480_store	H-safe-caller	s7560: s_s7475_mu held: only caller rs64_s7475_store, lock_guard(s_s7475_mu) on the line before the call
+src/main/upstream_compat.cpp	s_s7480_freed	s7480_sum	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_walk 3757 <- s7475_tick <- s7475_malloc/s7475_free
+src/main/upstream_compat.cpp	s_s7480_freed	s7480_trim	H-safe-caller	s7560: s_s7475_mu held: callers s7480_free 3840 and s7480_malloc 3847, reached only from s7475_free/s7475_malloc under lock_guard(s_s7475_mu)
+src/main/upstream_compat.cpp	s_s7480_freed	s7484_load	H-safe-caller	s7560: s_s7475_mu held: only caller rs64_s7484_load, lock_guard(s_s7475_mu) in the same statement as the call
+src/main/upstream_compat.cpp	s_s7480_freed	s7484_tick	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 (under s_s7475_mu via s7475_malloc/free)
+src/main/upstream_compat.cpp	s_s7480_freed	s7486_tick	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 (comment at 4040 agrees)
+src/main/upstream_compat.cpp	s_s7487_site	s7480_sum	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_walk 3757 <- s7475_tick <- s7475_malloc/s7475_free
+src/main/upstream_compat.cpp	s_s7488_site	s7480_sum	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_walk 3757 <- s7475_tick <- s7475_malloc/s7475_free
+src/main/upstream_compat.cpp	s_s7519_ctlln	s7519_row	H-safe-caller	s7560: callers s7519_wbline 4276, s7519_ev 4284/4288, s7519_store 4311, s7519_load 4320, all under lock_guard(s_s7518_mu)
+src/main/upstream_compat.cpp	s_s7519_dt	s7519_init	H-safe-caller	s7560: after the s7560 H-race fix (every s_s7518_ln / s_s7519_dt empty() check now under s_s7518_mu): callers s7519_ev 4278, rs64_s7519_wbev ctl block 4299, s7519_store 4308 all hold lock_guard(s_s7518_mu)
+src/main/upstream_compat.cpp	s_s7519_dt	s7519_wbline	H-safe-caller	s7560: its comment says caller holds s_s7518_mu: callers 4279/4285/4287 are all inside s7519_ev, lock_guard(s_s7518_mu) 4278
+src/main/upstream_compat.cpp	s_s7519_pc	s7519_init	H-safe-caller	s7560: after the s7560 H-race fix (every s_s7518_ln / s_s7519_dt empty() check now under s_s7518_mu): same callers as s_s7519_dt/s7519_init (4278/4299/4308, all locked)
+src/main/upstream_compat.cpp	s_s7519_pc	s7519_row	H-safe-caller	s7560: callers s7519_wbline 4276, s7519_ev 4284/4288, s7519_store 4311, s7519_load 4320, all under lock_guard(s_s7518_mu)
+src/main/upstream_compat.cpp	s_s7519_rows	s7519_row	H-safe-caller	s7560: callers s7519_wbline 4276, s7519_ev 4284/4288, s7519_store 4311, s7519_load 4320, all under lock_guard(s_s7518_mu)
+src/main/upstream_compat.cpp	s_s7519_set	s7519_wbline	H-safe-caller	s7560: its comment says caller holds s_s7518_mu: callers 4279/4285/4287 are all inside s7519_ev, lock_guard(s_s7518_mu) 4278
+src/main/upstream_compat.cpp	s_s7545_thr	s7545_find	H-safe-caller	s7560: only caller s7545_access 4367, which holds lock_guard(s_s7545_mu) 4366
+src/main/upstream_compat.cpp	seen	rs64_s7496_overlap	H-safe-other	s7560: 'uint32_t seen[3]' is a stack-local array of rs64_s7496_overlap (arena dedupe), not the s7393 cq 'seen' locked under mu
+src/main/upstream_compat.cpp	seen	s7472_check	H-safe-other	s7560: 'uint32_t seen[3]' is a stack-local array of s7472_check (arena dedupe), not the s7393 cq 'seen' locked under mu
+src/main/upstream_compat.cpp	seen	s7480_locate	H-safe-other	s7560: 'uint32_t seen[3]' is a stack-local array of s7480_locate (arena dedupe), not the s7393 cq 'seen' locked under mu
+src/rsp/s7521_ucode_watch.cpp	disp	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
+src/rsp/s7521_ucode_watch.cpp	imem_seen	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
+src/rsp/s7521_ucode_watch.cpp	src28	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
+src/rsp/s7521_ucode_watch.cpp	tuples	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
+src/rsp/s7523_slow_rdp.cpp	snap	consume	H-safe-caller	s7560: consume() callers: fs_gate (54) <- rs64_s7523_task 140/rs64_s7523_end 153, on_read (129) <- cur/end/status_read 156/162/164, rs64_s7523_task 141; every extern entry takes lock_guard(g_mu) first
+src/rsp/s7523_slow_rdp.cpp	snap	push	H-safe-caller	s7560: push() only caller rs64_s7523_end 151, which holds lock_guard(g_mu) from 143
+src/rsp/s7523_slow_rdp.cpp	snap	scan_bad	H-safe-caller	s7560: scan_bad() callers rs64_s7523_end 145 and rs64_s7523_pre_submit 190, both hold lock_guard(g_mu)
+src/rsp/s7523_slow_rdp.cpp	tch	consume	H-safe-caller	s7560: consume() callers: fs_gate (54) <- rs64_s7523_task 140/rs64_s7523_end 153, on_read (129) <- cur/end/status_read 156/162/164, rs64_s7523_task 141; every extern entry takes lock_guard(g_mu) first
+src/rsp/s7523_slow_rdp.cpp	tch	push	H-safe-caller	s7560: push() only caller rs64_s7523_end 151, which holds lock_guard(g_mu) from 143
+src/rsp/s7523_slow_rdp.cpp	tch	scan_bad	H-safe-caller	s7560: scan_bad() callers rs64_s7523_end 145 and rs64_s7523_pre_submit 190, both hold lock_guard(g_mu)
