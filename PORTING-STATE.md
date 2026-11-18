@@ -202416,3 +202416,52 @@ HYPOTHESIS-ID: host-fpr-view-census
 - Discrimination: selects H-clean, refutes H-bad-gated and H-bad-live. Static + logged-run data; no game run, no code change
   outside the two new tools. Class HC CLOSED. Next: class UW (C++ exception unwinding through generated C frames:
   thread_terminated throws vs try roots and unwind tables).
+
+## Session 7607 (2026-11-18) — class UW closed: exception unwinding through generated C frames (2 throw paths, 40 host blocking frames, 0 open, controls 7/7, witness 2/2), H-bad-gated, one fix
+
+- Tool tools/s7607_uw_census.py --controls --witness (exit 0). Seven checks: T throws, R catch roots, C callers, H host
+  frames, F build flags, U compact unwind per object, P paired host state in guest frames; plus B/D for the blocking path.
+- T: 5 C++ throws in src + librecomp + ultramodern. 1 `caught` (osDestroyThread self -> ultramodern::thread_terminated),
+  4 `fatal` std::runtime_error (ROM DMA write, renderer init, bad thread priority, empty run queue). No catch(...) or
+  catch(std::exception) anywhere on these paths, so a fatal stays fatal.
+- R: 3 roots, all catch(thread_terminated): the _thread_func pre-start wait, _thread_func around run_thread_function, and
+  the Game Start try around game_entry.entrypoint. Both host->guest entries sit inside a try.
+- TWO throw paths, not one. (1) a guest self-destroy: unregisterServiceWorker (0x800070BC, the only generated caller of
+  osDestroyThread_recomp, 6 teardown callers) -> osDestroyThread(self) -> throw. (2) NEW: osDestroyThread(other) clears
+  t->context and signals the target. The target wakes in wait_for_resumed, sees the context replaced and calls
+  osDestroyThread(NULL) -> throw from INSIDE whatever blocking stub it was in (osRecvMesg/osSendMesg/osJamMesg,
+  osStartThread, osSetThreadPri, osStopThread, yield/pause_self, rs64_preempt_point). Runtime logs show both paths live:
+  '[thr-destroy] id=9 ... [thr-destroy] self id=9 ... (throw terminated)' (loop.log.pre-s5016), and the process carries on.
+- B: host name-graph ancestors of wait_for_resumed/osDestroyThread = 40 frames. Verdicts: root 1, ok 25, ok-gated 8 (skipped
+  post-wait code is diagnostics only: s4259/g1b/s4908/s7392/s7394/s7399), dead 6 (port_main.c example + #if 0 main).
+  s7394fix::holder (default on) is set only after a SUCCESSFUL recv, so a thread that dies blocked never becomes holder. Its
+  release is skipped only when the sender dies blocked in its own send. Then the token was never posted, the guest mutex
+  is lost in retail too, and the stale mirror matches that state.
+  No non-RAII lock before any blocking call; no lock_guard/unique_lock alive across one.
+- D: 8 RAII locals destruct during the unwind (Rs64WaitScope, S4913RecvScope, Rs64Cf0Delay, S7590PortRel, lock_guards).
+  **BAD-gated, fixed: ~Rs64Cf0Delay BLOCKS** (nested osRecvMesg on a scratch queue, ROGUESQ_CF0_DELAY_TEST test arm). On a
+  thread destroyed while blocked in osRecvMesg_recomp, the destructor would run during the unwind, re-enter
+  wait_for_resumed on the dead context, and throw again inside a destructor -> std::terminate. Fix
+  (src/main/upstream_compat.cpp): `if (std::uncaught_exceptions() > 0) return;` at the top of the destructor. The tool now
+  requires that bail-out in any rowed destructor that calls a blocker. With the fix reverted the D check goes OPEN
+  (verified). ORIGIN: port test instrument (s7192), not retail; default path unaffected (cf0 false unless the env is set).
+- F: no -fno-exceptions / -fno-unwind-tables / -fno-asynchronous-unwind-tables in RecompiledFuncs, PatchesLib,
+  RogueSquadron64Recomp, librecomp or ultramodern flags (only nfd, unrelated, has one).
+- U: 56 objects (53 RecompiledFuncs/PatchesLib + the exe's C objects), 729 text symbols: every one has a compact-unwind
+  entry at its address.
+- P: generated + patch bodies split per function. Seeds: osDestroyThread_recomp plus the 11 blocking host functions
+  generated code calls. Direct ancestors 938; conservative on-path set 1023 of 2501 (adds every function with an unresolved
+  LOOKUP_FUNC and its ancestors). Paired static/_Thread_local/g_ state set before a guest call and restored after: 1 on-path
+  site, clampGridCellLookup g_s7025_in (ROGUESQ_S7022_ST timing flag, ok-gated); 71 off-path (log counters `_k`, sbx target).
+  The s175 processSceneNode depth counter is not on any self-destroy stack.
+- Controls 7/7 on tree copies: unrowed throw (second throw sharing a row's text), non-RAII lock before the throw,
+  -fno-exceptions on RecompiledFuncs, row dropped, try removed before run_thread_function, paired flag planted across the
+  destroy call in unregisterServiceWorker, object built without unwind tables. All OPEN.
+- Witness (second source, tools/s7607_uw_witness.{c,cpp}): a 3-frame generated-shape C chain built with the REAL
+  RecompiledFuncs C_FLAGS/C_INCLUDES from flags.make, called inside try/catch with a lock_guard held. The host stub throws:
+  caught=1, post-call code in every C frame skipped (after=0), lock released. The control arm (same C TU,
+  -fno-asynchronous-unwind-tables -fno-unwind-tables) dies in std::terminate (rc -6).
+- Build: cmake --build build OK with the fix. No game run (static + compiled witness + logged-run evidence).
+- Discrimination: selects H-bad-gated (one test-arm destructor that would terminate during an unwind, fixed), refutes
+  H-bad-live (no default-path skipped lock/flag) and H-clean. Class UW CLOSED. Next: class TK, host state keyed by guest
+  thread id that outlives a destroyed thread (tid reuse).

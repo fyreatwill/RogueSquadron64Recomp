@@ -1,21 +1,24 @@
-# NEXT (s7607)
-HYPOTHESIS-ID: exception-unwind-census
+# NEXT (s7608)
+HYPOTHESIS-ID: thread-keyed-state-census
 
-Class HC closed s7606 (tools/s7606_hc_census.py, 8 sites 0 open, controls 7/7, witness 9/9).
-Next idiom class UW: C++ exceptions that unwind THROUGH generated C frames. ultramodern::thread_terminated is thrown from
-host stubs (osDestroyThread/osStopThread of self, wait_for_resumed, ...) called from recompiled C, and caught at the thread
-roots (_thread_func, wait_for_game_started). Enumerate: (1) every `throw` of thread_terminated (grep lib/N64ModernRuntime src);
-(2) every try/catch root; (3) every host frame between a throw and its root that holds a lock, a std::unique_lock, a
-heap allocation without RAII, or a static state flag (s7392/s7394-style guards) that the unwind would skip; (4) build flags of
-the RecompiledFuncs / factor5_ucode / src TUs: any -fno-exceptions, -fno-unwind-tables, -fno-asynchronous-unwind-tables, or
-C TUs compiled without unwind info on arm64 (Darwin default emits it: verify with `otool -l` / `objdump --unwind-info`
-on one funcs_N.c.o: every function must have a compact-unwind entry).
-Contract per throw path: unwind reaches a catch, every skipped host frame is RAII-clean or explicitly restored.
-Verdicts: ok, ok-gated, BAD. Hypotheses: H-clean, H-bad-gated, H-bad-live (a default-path throw skips a lock/flag release).
-Tool tools/s7607_uw_census.py --controls: (1) plant a throw site with no reaching catch root -> OPEN; (2) plant a
-mutex.lock() (non-RAII) on a throw path -> OPEN; (3) plant -fno-exceptions on the funcs target in a CMake copy -> OPEN;
-(4) drop a row -> OPEN.
-Second source: a witness that links one real generated funcs_N.c.o-style C frame (compile a tiny C function calling a host
-callback that throws) and checks the catch fires with -fexceptions off for the C TU (Darwin unwind tables) — and a control
-TU built with -fno-asynchronous-unwind-tables -fno-unwind-tables that must terminate().
+Class UW closed s7607 (tools/s7607_uw_census.py, 0 open, controls 7/7, witness 2/2; ~Rs64Cf0Delay unwind fix).
+Next idiom class TK: host state keyed by guest thread identity that OUTLIVES the thread. s7607 showed worker threads
+are destroyed (and the destroyed thread unwinds out of a blocking stub, skipping its post-wait code). Workers are then
+re-created with the SAME OSId and often the same OSThread struct. Any host table indexed by OSId / rogue_current_thread_id
+/ OSThread address / UltraThreadContext* that is not reset on destroy carries the dead thread's state into the new one.
+Examples seen in s7607: g_rs64_waittab[tid&63], g_s4259[tid], s7394fix::holder (tid), g1b slots, s4580::blk_pending,
+s7545 thread list, thr_live set.
+Enumerate: every host array/map/atomic indexed or compared by a thread id/pointer (grep rogue_current_thread_id,
+->id, thread_self, this_thread(), UltraThreadContext*, & 63 index) in src + librecomp + ultramodern. Classify:
+reset-on-destroy (osDestroyThread / cleanup_thread / osCreateThread re-init), keyed-by-generation (safe), diag-gated,
+BAD (default-path decision reads a stale entry).
+Contract: a default-path read of thread-keyed state either cannot see a previous incarnation's entry or the stale
+entry is retail-equivalent (named reason).
+Hypotheses: H-clean, H-bad-gated, H-bad-live.
+Tool tools/s7608_tk_census.py --controls: (1) plant a tid-indexed default-path table with no reset -> OPEN; (2) drop a row
+-> OPEN; (3) remove the reset in cleanup_thread for a rowed reset-on-destroy entry -> OPEN; (4) plant a stale-read
+use of s7394fix::holder in a default path -> OPEN.
+Second source: a runtime witness from an existing log with ROGUESQ_LOG_THREAD_RESUME (scratch/agent/loop.log.pre-s5016
+has [thr-destroy]/[thr-create-id] rows): list the OSIds re-created after a destroy and check each rowed table's reset
+fires between them, or a compiled witness that destroys and re-creates a thread id through the real tables.
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.

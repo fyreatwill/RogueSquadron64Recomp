@@ -9,6 +9,7 @@
 #include "rs64_apf.h"  // s7359 class AJ
 #include <cmath>
 #include <chrono>
+#include <exception> // s7607: std::uncaught_exceptions in ~Rs64Cf0Delay
 extern "C" volatile uint32_t rs64_vi_n_g;  // s7514
 extern "C" unsigned long long osGetTime();  // s7514 (ultramodern timer.cpp, OSTime = u64)
 #include <cstdio>
@@ -9190,6 +9191,10 @@ struct Rs64Cf0Delay {
     static int ms_arm() { static const int m = [] { const char* e = std::getenv("ROGUESQ_CF0_DELAY_TEST"); const char* c = e ? std::strchr(e, ':') : nullptr; return c ? atoi(c + 1) : 40; }(); return m; }
     Rs64Cf0Delay(uint8_t* r, recomp_context* c) : rdram(r), ctx(c), cf0(k_arm() > 0 && (uint32_t)c->r4 == 0x80128CF0u && (s32)c->r6 != 0) {}
     ~Rs64Cf0Delay() {
+        // s7607 class UW: a destroyed thread unwinds thread_terminated through osRecvMesg_recomp. Blocking here (the
+        // nested osRecvMesg below) during that unwind re-enters wait_for_resumed on a dead context, which throws again
+        // inside a destructor -> std::terminate. The delay is a test arm; never run it while unwinding.
+        if (std::uncaught_exceptions() > 0) return;
         if (!cf0 || (s32)ctx->r2 != 0) return;
         static std::atomic<int> n{0};
         if (n.fetch_add(1) + 1 != k_arm()) return;

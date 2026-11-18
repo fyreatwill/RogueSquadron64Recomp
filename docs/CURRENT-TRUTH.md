@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7606: class HC (host calls into guest functions) CLOSED, H-clean.** tools/s7606_hc_census.py --controls (7/7): 8 sites
+- **NEW s7607: class UW (exceptions unwinding through generated C frames) CLOSED, H-bad-gated, one fix.**
+  tools/s7607_uw_census.py --controls --witness (7/7, 2/2): 5 throws (1 thread_terminated, 4 fatal), 3 catch roots, TWO
+  throw paths (self-destroy via unregisterServiceWorker; and destroy-of-other waking the target inside any blocking stub ->
+  wait_for_resumed -> osDestroyThread(NULL)), 40 host blocking frames rowed, 729/729 text symbols carry compact unwind, no
+  -fno-exceptions/-fno-unwind-tables. Fix: ~Rs64Cf0Delay (ROGUESQ_CF0_DELAY_TEST arm) blocked inside its destructor ->
+  std::terminate on unwind; now bails when std::uncaught_exceptions() > 0.
+- **s7606: class HC (host calls into guest functions) CLOSED, H-clean.** tools/s7606_hc_census.py --controls (7/7): 8 sites
   (fresh 3: run_thread_function x2 + boot entrypoint; reused 1; dead 2 GameEntry callbacks; gated 2 mod dispatch), 0 open.
   OSThread.sp int32 -> sign-extended r29, t->sp = sp - 0x10 arg area, FR=0, get_function miss fatal, gp read only in data_gap/diag;
   12 logged thread entries are function starts with 8-aligned sp. Witness tools/s7606_hc_witness.cpp 9/9. No game run.
@@ -428,9 +434,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     ctx->rN; a 64-bit use (uint64_t/gpr/size_t, compare, index) needs a cast, a 32-bit parameter, or a SITE_ROWS reason.
 36. **Class FR CLOSED s7605** (headline). Rerun tools/s7605_fr_census.py --controls after adding host code touching
     ctx->fN / f_odd or a host stub of a float-prototype function (add a SITE_ROWS / FLOATPROTO entry naming the prototype).
-37. **NEXT (s7606): class HC, host code invoking guest functions** (NEXT.md): every host->guest call (LOOKUP_FUNC, direct
-    *_recomp / recomp_func_t calls from src/librecomp/ultramodern): fresh vs reused ctx, sp 8-aligned with a 16-byte arg area
-    inside guest stack, a0-a3 sign-extended, FR=0 + f_odd init on a fresh ctx, caller state restored after the call.
+37. **Class HC CLOSED s7606** (headline). Rerun tools/s7606_hc_census.py --controls after a threads.cpp/recomp.cpp
+    thread-entry edit.
+38. **Class UW CLOSED s7607** (headline). Rerun tools/s7607_uw_census.py --controls after adding a throw/catch, a blocking
+    host stub, an RAII local in one (a blocking destructor needs an uncaught_exceptions() bail-out), or a build-flag change.
+39. **NEXT (s7608): class TK, host state keyed by guest thread id that outlives a destroyed thread** (NEXT.md).
 
 ## Evidence index
 
