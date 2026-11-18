@@ -201082,7 +201082,7 @@ call sites:
   -> CALLER-LOCKED. s_s7472_seen: s7472_check is called only from rs64_s6063_malloc/free, the apply_s6063_heaplog.py hooks in
   recompiled rs_malloc/rs_free -> GUEST-SERIAL (same basis as s_s6063_live).
 - s7521_ucode_watch.cpp seen_off: region() only from rs64_s7521_task (lock_guard(m) at entry) -> CALLER-LOCKED.
-Result: H-confined selected for all 8; H-race refuted (no unlocked cross-thread write); the '?' attributions are unresolved
+Result: this selects H-confined for all 8 and refutes H-race (no unlocked cross-thread write); the '?' attributions are unresolved
 callers that all funnel through a locked entry. 8 verdict rows added to tools/s7375_nolock_reviewed.tsv; --check OPEN 0.
 tools/regen_replay.sh now runs `s7375 --selftest && --check` after the s7366 gate. Controls: selftest PASS; planted a
 std::vector touched in a guest-exported fn and a std::thread lambda in s7521_ucode_watch.cpp -> REVIEW, OPEN 1, rc 1 (file
