@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7594 (2026-11-18).
+Compact operational handoff, as of Session 7595 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,17 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7594: class SG (signal dispositions) CLOSED, one fix.** tools/s7594_sg_census.py --controls (3/3): 16 sites, 0 open, 6 binary
+- **NEW s7595: class SV (save I/O failure) CLOSED, one defect fixed (two sites).** tools/s7595_sv_census.py --controls (2/2): 21 rows
+  (files.cpp, pi.cpp save functions, recomp.cpp initialize_mods), 0 open. Write path, offline harness (--harness, the REAL
+  update_save_file/read_save_file text compiled with stubs; scratch/s7595/harness.txt): read-only dir, rename failure, main-is-dir,
+  1 MB full disk all keep main intact + one message line (stderr only, <=0.3 ms, non-blocking: H-block refuted); planted pre-s7357
+  unchecked close on the full disk -> main 0 bytes silently (control). Defect (H-crash, not on the list): read_save_file and
+  initialize_mods used the THROWING create_directories, so an unusable saves/mods path (a file of that name, a read-only game
+  folder) aborted the game at boot (rc134 in 0.3-0.7 s, uncaught filesystem_error). Now error_code + `[s7595-io]` line and play
+  continues (ROGUESQ_S7595_DIRS=0 = old). Runtime boot witness in copied folders (scratch/s7595/run.zsh, owner save only copied,
+  NO_SAVE_WRITE kept): pre saves_file/mods_file rc134; post all 7 arms alive at 40 s incl. ro_cwd; same-binary old arm rc134;
+  zero-byte main loads the .bak, 100-byte main zero-fills; copies' sha256 unchanged. ~30 other throwing std::filesystem calls -> class FS.
+- **s7594: class SG (signal dispositions) CLOSED, one fix.** tools/s7594_sg_census.py --controls (3/3): 16 sites, 0 open, 6 binary
   imports covered. SIGHUP (closing the launching Terminal), SIGQUIT and SIGPIPE (dead stdout/stderr reader) kept default dispositions:
   old rc 129/131/141, no save flush. Now HUP/QUIT -> flag -> main-tick quit path (flush + quick_exit), PIPE ignored
   (ROGUESQ_S7594_SIG=0 = old); taken only over inherited SIG_DFL, so nohup still works. 18 arms (scratch/s7594): new rc0 <=78 ms with
@@ -27,20 +37,9 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   once 37 / transient 9, 0 per-event, 0 unjoined, 0 open (raw-grep cross-check: only zstd pthread wrappers extra, joined in POOL_join).
   Runtime witness, one L1 dd4 fullscreen run: 12 synthetic F11 + resize events thread count 68 -> 67; plant ROGUESQ_S7592_PLANT_FROM=12
   (one parked thread per later event) 67 -> 72 over 6 events. RT64 MSAA re-create joins the old pipeline threads.
-- **s7591: class MR (Mach rights our code owns) CLOSED.** tools/s7591_mr_census.py --controls (plant 11/11): 12 rows in src/ +
-  lib/ (task_threads x3, mach_thread_self x3, host_processor_info, mach_host_self, semaphore_create, IOKit x2): 9 released, 2 bounded,
-  1 leak, gated: the ROGUESQ_G1E_THREADS sampler passed mach_host_self() inline every 10 ms (+100 send urefs/s, saturates at 65535,
-  scratch/s7591/uref.c). Cached (ROGUESQ_S7591_HOSTPORT=0 = old). Same binary, G1E_THREADS on, probe tools/s7591_hostrefs.dylib:
-  old +500-501/5 s, fixed +0 (+2 once); plant +50/sample read exactly +50 in both. CF/dispatch creates (3 sites) all released. 0 open.
-- **s7590: HR-2 CLOSED, H-dead selected and FIXED.** The per-load Mach-port step was dead names: every guest thread's
-  _thread_func (ultramodern threads.cpp) stored mach_thread_self() in the G1B slot table and never released the ref, so each guest
-  thread that exits leaves one dead name (+8/+9 per mission cycle). Fix (default; ROGUESQ_S7590_THRPORT=0 = old): RAII guard clears
-  the slot + mach_port_deallocate at thread exit; the s4587 sampler's per-ms mach_thread_self() is now cached. Same s7469 route
-  (3 re-entries, 4 loads, 0 crash): old binary D 9/18/27/35 (2 runs), fixed D 0/0/0/0; plant (R port + semaphore + dead name every
-  30 s) +4/+4/+4 in both. Two lines: in-process census tools/s7590_portcensus.dylib (mach_port_names + mach_port_kobject_description
-  + interposed creator backtraces, per-name transitions; scorer tools/s7590_pc_report.py) and outside top #PORTS (fixed steps
-  +0/+2/+1 vs old +10/+1/+12). Also seen, not ours: a one-time +27 XPC connection-port block (_xpc_connection_derive_connection_port)
-  that appears in some runs only (2 of 4), at any time, then stays flat. DYLD injection needs the Bash sandbox off.
+- **s7591: class MR CLOSED** (12 Mach-right sites, 1 gated G1E_THREADS host-port uref leak fixed, ROGUESQ_S7591_HOSTPORT=0 = old).
+- **s7590: HR-2 CLOSED, FIXED:** guest-thread mach_thread_self() dead names (+8/+9 per mission cycle) released at thread exit
+  (ROGUESQ_S7590_THRPORT=0 = old); fixed 0/0/0/0 vs old 9/18/27/35; tools/s7590_portcensus.dylib. Full text: PORTING-STATE s7590/s7591.
 - **s7589: class HR CLOSED (H-flat):** fds/threads/IOSurface flat 1200 s / 4 loads (tools/s7589_hr*); port step -> s7590.
 - **s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean:** all MRC, 0 unbalanced sites (tools/s7588_apple_tu_census.py --controls);
   the main run loop drains the per-present dispatch_async blocks (plant 1648/1648), so ROGUESQ_APPLE_POOL stays opt-in (default 0).
@@ -295,7 +294,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
-    + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a librecomp/ultramodern
+    + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a save/files.cpp edit tools/s7595_sv_census.py --controls + --harness; after a librecomp/ultramodern
     replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a librecomp/ultramodern getter or a new os*_recomp import tools/s7555_go_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU

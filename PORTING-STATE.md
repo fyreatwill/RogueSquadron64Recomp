@@ -202012,3 +202012,39 @@ Work unit: NEXT s7594 class SG, hypotheses H-clean / H-silent / H-hang.
   refutes H-clean (3 owner-reachable signals died unflushed) and refutes H-hang (every quit <= 188 ms, no blocked handler).
   Fixed: flag handler -> flushed quit path, PIPE ignored. Next discriminator: class SV (save I/O failure), H-clean vs H-destroy
   vs H-block, measured as sha256 survival of main/.bak + saving-thread liveness under forced write failures (scratch/agent/NEXT.md).
+
+## Session 7595 (2026-11-18) — class SV closed: save I/O failure census (21 rows, 0 open, controls 2/2) + offline write/read harness + 7-arm boot witness; an unusable saves/mods folder aborted the game at boot (rc134), fixed
+
+Work unit: NEXT s7595 class SV, hypotheses H-clean / H-destroy / H-block.
+- Census, new tool tools/s7595_sv_census.py [--controls]: every file-system call (ifstream/ofstream/::open/fsync/close/
+  std::filesystem::*/.write/.read/.close/open_*_with_backup/finalize/create_directories/message_box) in librecomp files.cpp, pi.cpp
+  update_save_file/read_save_file/flush_save_file and recomp.cpp initialize_mods, matched to a classified row. 21 rows, 0 open,
+  0 missing; controls 2/2 (planted fopen in read_save_file caught; dropped .close row caught as open).
+- Write path, offline (owner rule: NO_SAVE_WRITE never cleared, build/saves never touched): --harness extracts the REAL
+  update_save_file + read_save_file text from pi.cpp (gate dropped), compiles with files.cpp + stubs (message_box = the ultramodern
+  fprintf + our main.cpp callback fprintf). Results (scratch/s7595/harness.txt; A=old main, B=old bak, N=new):
+    w_ok main A->N bak B->A | w_rodir main A, bak B, 1 msg | w_rename_fail (0555 dir, writable .temp) main A, bak A, 1 msg
+    w_main_is_dir untouched, 1 msg | w_rodir_x100 100 msgs, 1.1 ms total | w_disk_full (1 MB HFS+ image, pre-existing .temp) main A, 1 msg
+    PLANT pre-s7357 unchecked close, same full disk: main -> 0 bytes, 0 msgs, saved_gen advanced  <- positive control (silent destroy seen)
+  -> H-destroy refuted for the current code; H-block refuted (message_box is stderr-only, every call <=0.3 ms, no dialog/wait).
+  Not covered: a full disk hitting the main->.bak copy_file (then .bak may be short; main is still intact, single-source code reading).
+- Read path, harness: missing -> zeros; 0-byte main + full bak -> bak; 100-byte main -> 100 + zero fill; garbage -> loaded as-is
+  (game checksum's job); bak only -> bak; 1000-byte main -> first 512; mode-000 main -> bak; main-is-dir -> bak. All non-mutating.
+  Two arms THREW: saves is a regular file ("File exists") and read-only parent with no saves ("Permission denied").
+- Runtime boot witness scratch/s7595/run.zsh (copied folders with symlinked binary+ROM and a COPY of the owner save, NO_SAVE_WRITE=1,
+  boot-only 40 s, one game at a time). Pre-fix (results_pre.txt): ctl alive; saves_file rc134 at 0.7 s ("libc++abi: terminating due
+  to uncaught exception ... filesystem_error ... create_directories: File exists"); mods_file (a file named mods) rc134 at 0.3 s;
+  zero_main alive "[s7429-io] ... loaded the complete .bak"; trunc_main alive "[s7357-io] ... zero-filling". sha256 of every copy unchanged.
+- ORIGIN: the writer is upstream librecomp itself: read_save_file (pi.cpp) and recomp::mods::initialize_mods (recomp.cpp) call the
+  throwing std::filesystem::create_directories overload; init_saving / start have no try, so any unusable folder (a file of that
+  name, a read-only or locked game folder, e.g. a game copied onto a read-only volume) becomes std::terminate at boot. Not legitimate.
+- Fix (default; ROGUESQ_S7595_DIRS=0 = old): error_code overload at all three calls; on failure one "[s7595-io] cannot create ..."
+  line and play continues (save reads -> zeroed save, later writes fail with the existing message; mods: RS64 ships none).
+  Post-fix (results_post.txt, results_post_ro.txt): all 7 arms alive at 40 s, 0 crash lines: ctl, saves_file, mods_file, zero_main,
+  trunc_main, ro_cwd (0555 game folder: 3 [s7595-io] lines); same-binary old_saves_file (DIRS=0) rc134 at 0.7 s = control.
+  Harness on the fixed code: r_saves_is_file / r_ro_parent_no_saves thrown=0.
+- lib/ edit -> submodule-patches/export.sh refreshed (N64ModernRuntime.patch).
+- Verdict: selects H-clean for the write path (every forced failure keeps main, reports once, never blocks; plant shows the
+  instrument sees a destroy) and refutes H-destroy and H-block; the read path held a fourth outcome, H-crash (boot abort on an
+  unusable folder), fixed. Next discriminator: class FS, the ~30 other throwing-form std::filesystem calls in src/, librecomp,
+  ultramodern and rt64/src (scratch/agent/NEXT.md).
