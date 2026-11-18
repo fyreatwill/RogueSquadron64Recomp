@@ -201215,4 +201215,5 @@ Change: ROGUESQ_S7567_CUTW diag (default off); tools/s7565_comp_chain.py retire 
 regenerated, --check ok; s7557 GQ census exit 0). No default changed.
 ORIGIN: no new mitigation; the counter is a passive diag. The value 0x8009DEB4 is the game's per-scene far cutoff
 (computeGridLayerScrollOffset writes it, s6919); the only foreign writer is our s6418 block.
+Verdict: this selects H-dead-parent and refutes H-confinable and H-interlocked for CUT_LIVE; 19d CUT_LIVE closes.
 Next: 19d SHADE_ORD_RESET vs its diag map.
