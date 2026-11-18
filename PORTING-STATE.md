@@ -202008,3 +202008,7 @@ Work unit: NEXT s7594 class SG, hypotheses H-clean / H-silent / H-hang.
 - Not covered: a real pty teardown (Terminal window close) after HUP, i.e. stderr writes then hitting EIO; wr_all breaks on any
   non-EINTR error, so this is expected harmless, single-source (code reading).
 - Rules out: owner-reachable signals ending in an unflushed death. SG CLOSED.
+- Verdict: selects H-silent (old HUP rc129 / QUIT rc131 / PIPE rc141, no save flush; same-run plant TERM->DFL rc143 = control),
+  refutes H-clean (3 owner-reachable signals died unflushed) and refutes H-hang (every quit <= 188 ms, no blocked handler).
+  Fixed: flag handler -> flushed quit path, PIPE ignored. Next discriminator: class SV (save I/O failure), H-clean vs H-destroy
+  vs H-block, measured as sha256 survival of main/.bak + saving-thread liveness under forced write failures (scratch/agent/NEXT.md).
