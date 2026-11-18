@@ -202178,3 +202178,39 @@ Hypotheses H-bounded / H-grow / H-gated.
 - Verdict: this selects H-bounded (and H-gated for every diagnostic store) and refutes H-grow (406-unit source census with
   3/3 controls + the AZ-1/footprint flight run), and closes class GR. Next: class GX, host arrays indexed by guest-derived
   values without a mask or range check.
+
+## Session 7600 (2026-11-18) — class GX closed: host arrays indexed by guest-derived values (249 units, 0 open, 0 oob, controls 3/3); scanner nested-subscript blind spot found by its own control and fixed
+
+- Work unit (NEXT s7600, HYPOTHESIS-ID guest-indexed-host-array-census): census every fixed-size host array / std::array
+  subscripted by a non-literal in src/, librecomp/src, ultramodern/src, lib/rt64/src (tests/tools/gui/imgui skipped).
+  Hypotheses: H-masked (every guest-derived index masked to its field width <= table size), H-oob (a field wider than its
+  table, or a raw guest word), H-gated (only diagnostics index raw).
+- Tool: tools/s7600_gx_census.py (+ rows in tools/s7600_gx_rows.py). Array set = every `T name[N]` / `std::array<T,N> name`
+  declared in scope, size resolved from literals/#define/constexpr. Auto site verdicts: loop (for-variable), mask (`& M` with
+  M < declared size, or `% N`), maskvar (index variable assigned from such a mask / `%` / numeric clamp ternary within 15
+  lines), checked (a < <= > >= compare of the index base within 12 lines), stacktop (`[xStackSize - 1]` where that stack's
+  push is guarded `< SIZE` and pop `> 1`), ternary (all-literal arms). Everything else is a (file, array) unit needing a row.
+- Result: auto sites loop 983, checked 274, stacktop 144, mask 113, maskvar 87, ternary 4; 249 units: gated 146, host 63,
+  bounded 26, masked 14; open 0, oob 0, stale 0. Controls 3/3: (1) plant `s_gx_plant[rdram[a]]` in a copy of rt64_rdp.cpp,
+  (2) drop the rt64_rdp.cpp `tiles` row, (3) plant a too-wide mask `s_gx_plant2[w & 0xFF]` on an 8-entry table: all OPEN.
+- Control 1 first MISSED: the subscript regex took `[^\[\]]+`, so any `a[b[i]]` was invisible. Fixed (2 nested levels,
+  every start position scanned); it surfaced 4 new sites, all bounded: tmem_hasher tlutBitset[byte >> 6] (0..3 into [4]),
+  tlutSeen[byte] (uint8 into [256]), gbi_rdp vp[idx[k]] (s6895 stats fan over <= 6 verts), the plant.
+- The live guest-facing surface (LLE: the F5 ucode output reaches RT64 only as RDP commands): tile index p1(24,3) /
+  (w0>>16)&7 in every gbi_rdp decoder; RDP opcode & 0x3F into map[256] / commandWordLengths<256>; TMEM loads masked
+  MASK8/MASK16 with 8-aligned tmem<<3 / line<<3 / advance 8, so +0..7 ^ xor 4 stays in its word; TLUT palette 0x800 +
+  palette<<7 + index*8 <= 0x1000 (CI4 bitset 16 bits); s7343 clampTmemRange on the TLUT hash (default on);
+  lastLoadOpByTMEM 256 + palette<<4 < 512; RDP colour/scissor stacks push-guarded `< RDP_EXTENDED_STACK_SIZE` and
+  pop-guarded `> 1`, primDepth fixed at 1. The HLE RSP side (rt64_rsp.cpp vertexAddresses[vertexElement], indices[],
+  matrix-id stacks, light_manager, gbi_f3dfactor5 rdram) is reached only with ROGUESQ_LLE_FORCE=0 (s6738 default LLE skips
+  processDisplayLists), so it is gated, not proven bounded. Guest thread id indexes are masked (s4259 tid & 63) or
+  ternary-clamped (tid_recv). s7239 hash ((e>>2)*K)>>15 = 17 bits into S7239_HN 1<<17 (DD_WIDEWIN_MERGE, opt-in).
+- Spot audit of the loosest auto rule (checked), guest-facing files: 6/6 sampled (gbi_rdp map[commandId] loop, triName
+  op 0x08..0x0F, s4280_ev n < 256, s_seen n < 16, s_pairs n < 32, gbi textSegments) are genuine bounds. Single-source
+  (static census + sample); no runtime arm ran because no oob row exists to witness.
+- Rules out: an unmasked guest-derived subscript into a fixed host array on the default LLE path at the current tree.
+  Residual: the HLE RSP path (LLE_FORCE=0) is gated, not audited for bounds; `checked` is a proximity heuristic (a compare
+  can bound a different variable); std::vector/pointer subscripts (no declared size) are out of this class.
+- Verdict: this selects H-masked (live decoders) + H-gated (diagnostics, HLE path) and refutes H-oob (249-unit census,
+  controls 3/3, checked-rule sample 6/6), and closes class GX. Next: class BS, host multi-byte reads/writes of guest RAM and
+  their byte-swizzle (^3 bytes, ^2 halves, aligned words) correctness.

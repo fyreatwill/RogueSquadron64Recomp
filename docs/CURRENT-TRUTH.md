@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7599: class GR (long-lived host containers grown per guest event) CLOSED, H-bounded.** tools/s7599_gr_census.py
+- **NEW s7600: class GX (host arrays indexed by guest-derived values) CLOSED, H-masked/H-gated.** tools/s7600_gx_census.py
+  --controls (3/3; rows in tools/s7600_gx_rows.py): 249 (file, array) units, 0 open, 0 oob (gated 146, host 63, bounded 26,
+  masked 14) + 1605 auto sites (loop/checked/stacktop/mask/maskvar). Live LLE surface bounded: tile p1(24,3), opcode & 0x3F
+  into [256], TMEM MASK8/16 with 8-aligned addresses, TLUT <= 0x1000, s7343 TLUT clamp, RDP stacks push/pop guarded. The HLE
+  RSP side (rt64_rsp.cpp vertex/matrix tables) runs only with ROGUESQ_LLE_FORCE=0: gated, not audited. Control 1 exposed a
+  scanner blind spot (nested `a[b[i]]` invisible), fixed in-session. Single-source static census + 6/6 `checked` sample.
+- **s7599: class GR (long-lived host containers grown per guest event) CLOSED, H-bounded.** tools/s7599_gr_census.py
   --controls (3/3): 639 growth ops (push_back/emplace/insert/try_emplace/push_front) = 406 (file, receiver) units, 105 static or
   thread_local; 0 open, 0 grow: scoped 133, gated 102, host 82, bounded 75, local 14. Statics always need their own row (file rules
   cover only non-static per-workload RT64 code); auto rule = static/thread_local scratch .clear()ed within 6 lines of its decl.
@@ -377,9 +383,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 29. **Class AZ CLOSED s7598** (headline). Rerun tools/s7598_az_census.py --controls after adding an allocation or createTexture.
     AZ-1 flight folded s7599: 0 clamp lines on L1/L4 dd4 (inert on retail flight).
 30. **Class GR CLOSED s7599** (headline). Rerun tools/s7599_gr_census.py --controls after adding a long-lived container.
-31. **NEXT (s7600): class GX, host arrays indexed by guest-derived values** (NEXT.md): fixed-size host arrays/tables
-    (C arrays, std::array, sized vectors) subscripted by a value taken from RDP/RSP command fields, guest RAM words, OS
-    message/event ids or thread priorities without a mask, clamp or range check -> out-of-bounds host read/write.
+31. **Class GX CLOSED s7600** (headline). Rerun tools/s7600_gx_census.py --controls after adding a fixed host array indexed
+    by guest data; `--list <kind>` prints the auto-verdict sites of one kind for auditing.
+32. **NEXT (s7601): class BS, guest-RAM byte swizzle** (NEXT.md): host code that reads/writes guest RAM through the
+    byte-swapped rdram view must use ^3 for bytes, ^2 for halfwords and aligned plain words; a wrong or missing swizzle
+    is a silent wrong value (no crash, soaks miss it).
 
 ## Evidence index
 
