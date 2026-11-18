@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7602 (2026-11-18).
+Compact operational handoff, as of Session 7603 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7602: class TP (guest RAM viewed as a host type) CLOSED, H-clean.** tools/s7602_tp_census.py --controls (5/5): 144
+- **NEW s7603: class RX (host writes into guest registers) CLOSED, H-clean.** tools/s7603_rx_census.py --controls (5/5): 151
+  write sites (ok-sext 71, ok-small 64, ok-copy 2, fpr 11, consumer 1) + 81 no-r2 stubs (dead 31 incl. every non-void one such as
+  osSetIntMask/__osSpSetPc/osVoice*, void 30, hook 21); 0 open. _return sign-extends u32. osVirtualToPhysical's zero-extended u32
+  reaches only guest `sw` (7/7 calls). Second source tools/s7603_rx_witness.cpp 9/9 (real helper + real osVirtualToPhysical;
+  zero-extended form fails a lui compare as control). Static; no game run, no runtime change.
+- **s7602: class TP (guest RAM viewed as a host type) CLOSED, H-clean.** tools/s7602_tp_census.py --controls (5/5): 144
   TO_PTR / _arg<N, T*> / GET_MEMBER sites = ok-word 67, ok-swizzled 48, host-private 24, generic 1, consumer 2, gated 1, addr 1;
   0 open. `_arg<N, PTR(T)>` is NOT a view (PTR(T) = int32_t). OSContPad's host decl is unswizzled but never viewed (cont.cpp
   writes the pad via MEM_H/MEM_B). OSPfs id/label (funky-endian TODO) never accessed (pak stubbed). Only risky members used:
@@ -404,9 +409,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     writes guest RAM through rdram/RDRAM/g_rdram_for_submit, or a TO_PTR struct with sub-word members (add it to STRUCTS).
 33. **Class TP CLOSED s7602** (headline). Rerun tools/s7602_tp_census.py --controls after adding a TO_PTR / _arg<N, T*> view
     or a guest-visible struct member; a sub-word or 64-bit member needs a swizzle proof or a TYPE_ROWS host-private row.
-34. **NEXT (s7603): class RX, host writes into guest registers** (NEXT.md): 127 `ctx->rN =` / `_return<T>` sites in src/ and
-    librecomp/ultramodern; a 32-bit result must reach the 64-bit gpr sign-extended (MIPS64 rule; s4884 fixed one idiom), 64-bit
-    returns split r2 hi / r3 lo, floats go to f0. Zero-extended 0x80xxxxxx pointers break slt/beq on the guest side.
+34. **Class RX CLOSED s7603** (headline). Rerun tools/s7603_rx_census.py --controls after adding a host stub or any
+    `ctx->rN =` write; a new called stub that sets no r2 needs a void retail prototype (RETAIL_VOID) or it is OPEN.
+35. **NEXT (s7604): class RA, host reads of guest argument registers** (NEXT.md): ctx->r4..r7 and stack args used in host
+    compares/indices/arithmetic without (uint32_t)/(int32_t) truncation; a KSEG0 pointer arrives as 0xFFFFFFFF8xxxxxxx.
 
 ## Evidence index
 

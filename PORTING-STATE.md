@@ -202283,3 +202283,34 @@ ultramodern/{src,include}; comments stripped, `#\s*define` lines skipped.
 Rules out H-bad (no default-path host-typed sub-word view reads wrong bytes) and H-gated-only; selects H-clean. No code change,
 no game run (static census + disassembly scan; nothing to witness at runtime since 0 BAD rows).
 Next: class RX (host writes into guest registers: ctx->rN = / _return<T>, 127 sites) - sign extension of 32-bit results.
+
+## Session 7603 (2026-11-18) — class RX closed: host writes into guest registers (159 write sites + 81 no-r2 stubs, 0 open, controls 5/5, witness 9/9); every value is sign-extended or provably < 2^31, the one zero-extended u32 (osVirtualToPhysical) only reaches guest sw
+HYPOTHESIS-ID: host-register-write-sign-extension-census
+- Contract: gpr is uint64_t (N64Recomp recomp.h:91); a 32-bit result must be sign-extended or recompiled 64-bit beq/slt against
+  a lui-built constant (0xFFFFFFFF8xxxxxxx) misses. tools/s7603_rx_census.py --controls, scope src/ + librecomp + ultramodern
+  (tests skipped, comments stripped).
+- A) 151 write sites (ctx->rN =/op=, _return<T>, ctx->fN): ok-sext 71 ((int32_t)/(gpr)(int32_t) casts, int32_t locals and
+  constexpr handles cart/drive/flash, s32/int/OSPri/OSId/PTR(void) ultra64.h returns, + 0xFFFFFFFF80000000ULL heap/mod addrs,
+  every _return), ok-small 64 (literals incl. negative, 8*1024*1024, MEM_BU, u16/u8 casts; rows: AI queue bytes,
+  AI_STATUS_FIFO_FULL = 0x40000000u bit 30, osSpTaskYielded 0/1, rdp_state, printf size, osGetMemSize <= 512 MB, s6963 index),
+  ok-copy 2, fpr 11, consumer 1. 64-bit returns (osGetTime, math_routines __ll*/__ull*) set r2 = (int32_t)(v>>32),
+  r3 = (int32_t)v: correct. helpers.hpp _return does ctx->r2 = int32_t(val): sign-extends u32 too (checked as a rule).
+- B) 81 stub definitions that never write r2: dead 31 (0 calls in ../N64Recomp/RecompiledFuncs, incl. every non-void one:
+  osSetIntMask, __osSpSetPc, osVoice* x8, osDpSetNextBuffer, osFlash*), void 30 (called, retail libultra prototype void, e.g.
+  osContGetQuery/ReadData, osStopThread, osYieldThread, osViSetSpecialFeatures, __osRestoreInt), hook 21 (rs64_*/recomp_* probes and
+  mod API). The scanner first missed `__attribute__((weak))` definitions (osSpTaskStartGo); widening it surfaced osYieldThread,
+  classified void.
+- C) osVirtualToPhysical returns u32 (zero-extended; KSEG0/1 -> & 0x1FFFFFFF, anything else returned as-is). All 7 guest calls
+  (0x80033D58.., the osSpTaskLoad-class pointer-conversion block) consume v0 first with `sw` (MEM_W(..) = ctx->r2), so the high
+  word is never observed: mechanical check, C-sw 7/7 (diag store-probe lines skipped).
+- Controls 5/5: (1) `ctx->r2 = (uint32_t)0x80001000u` planted in a copy of print.cpp -> OPEN; (2) r2 write removed from
+  osSpTaskYielded (called once, retail OSYieldResult) -> B OPEN; (3) drop the AI-bytes row -> OPEN; (4) synthetic
+  `if (ctx->r2 == ctx->r4)` after an osVirtualToPhysical call -> C OPEN; (5) helpers.hpp _return made to zero-extend -> OPEN.
+  First control run caught a wrong control 2 (osAiGetStatus has 0 guest calls, so the stub is dead): retargeted.
+- Second source: tools/s7603_rx_witness.cpp compiles the REAL helpers.hpp _return and ultramodern misc_ultra.cpp
+  osVirtualToPhysical and checks r2 against a lui-built constant: 9/9, with the zero-extended store form failing the compare as
+  the positive control.
+Selects H-clean; rules out H-bad (no zero-extended KSEG0/negative value reaches a guest compare) and H-dead is moot (bad
+prototypes exist only in dead stubs). No runtime code change; no game run (nothing BAD to witness in-game).
+Next: class RA (host READS of guest argument registers: ctx->r4..r7 / MEM_W(0x10+, r29) used in host compares, indices or
+arithmetic without (uint32_t)/(int32_t) truncation; a KSEG0 pointer arrives as 0xFFFFFFFF8xxxxxxx).
