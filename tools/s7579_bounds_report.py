@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """s7579: group UBSan reports from build_ubsanb arms (tools/build_ubsanc.sh SAN=array-bounds,signed-integer-overflow).
 
-usage: tools/s7579_bounds_report.py <dir> [--plant-arm p2] [--plant-kind bounds] (repeatable pairs, s7580: shift/misaligned)
+usage: tools/s7579_bounds_report.py <dir> [--plant-arm p2] [--plant-kind bounds] (repeatable pairs, s7580: shift/misaligned, s7582: ptrovf/nonnull)
 Reads <dir>/san_<arm>.* (UBSAN_OPTIONS log_path files), classifies each "runtime error:" line as bounds (index ... out of
 bounds) or overflow, groups by file:line per arm. Exit 0 = plant arm reported the s7578_ubsanc_plant.h bounds control AND no
 non-plant report in any arm; 1 = a real report (H-diag-oob / H-game-oob, listed); 2 = control did not fire (null is void).
@@ -21,7 +21,10 @@ def main():
             m = rx.match(ln.strip())
             if not m: continue
             path, line, msg = m.groups()
-            kind = ('shift' if 'shift exponent' in msg or 'left shift of' in msg else
+            kind = ('ptrovf' if 'pointer index expression' in msg or 'non-zero offset' in msg or
+                    ('unsigned offset' in msg and 'overflowed' in msg) or 'null pointer' in msg and 'offset' in msg else
+                    'nonnull' if 'nonnull' in msg or 'null pointer passed' in msg else
+                    'shift' if 'shift exponent' in msg or 'left shift of' in msg else
                     'misaligned' if 'misaligned' in msg else
                     'bounds' if 'out of bounds' in msg else 'overflow' if 'overflow' in msg else 'other')
             if 's7578_ubsanc_plant.h' in path:

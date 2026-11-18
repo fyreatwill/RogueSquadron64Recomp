@@ -201599,3 +201599,24 @@ fixes and owner decisions those classes produced), item 17 (all closed + the one
 commands, which were spread across old items 19b and 21), item 19 (NEXT pointer). Backlog is one monotonic sequence 1-20 again.
 Headline refreshed to "as of Session 7581". The NEXT.md work unit (gen-c-pointer-overflow-audit) carries over unchanged to s7582.
 Tool: scratch/s7581/compact.py.
+
+## Session 7582 (2026-11-17) — pointer-overflow UB class closed over the generated game C: build_ubsanp (pointer-overflow + nonnull-attribute + signed-overflow UBSan, all 51 RecompiledFuncs objects instrumented) shows 0 reports at L1 dd4, L4 dd2, L12 dd4 150 s and L1 dd1 60 s; pointer-wrap plant PLANT=5 fired
+
+HYPOTHESIS-ID gen-c-pointer-overflow-audit (NEXT.md from s7580, carried over the s7581 maintenance).
+- Hypotheses: H-clean (0 reports), H-macro (the MEM_* `rdram + ((reg+off) - 0xFFFFFFFF80000000)` add wraps a host pointer, a
+  report on every macro expansion), H-patch (a fixup patch builds a wild host pointer). Discriminator: reports grouped by file:line.
+- Instrument: `tools/s7578_ubsanc_plant.h` gains PLANT=5 (char* at (uintptr_t)0-4, + 16: "addition of unsigned offset ...
+  overflowed"); `tools/s7579_bounds_report.py` gains kinds ptrovf and nonnull. Build
+  `env SAN=pointer-overflow,nonnull-attribute,signed-integer-overflow B=build_ubsanp zsh tools/build_ubsanc.sh` rc 0 (FIXUP 24
+  ANCHOR FAILED x4 is in the s7580 build log too, so it predates this change). `nm build_ubsanp/libRecompiledFuncs.a | grep -c
+  ___ubsan_handle_pointer_overflow` = 51 (every TU).
+- Runs (host idle 1,900 s+, AC): control scratch/s7582/run_p.zsh (L1 dd1 60 s, PLANT=5): alive, 0 stall, control fired, 0 other
+  sites. Main scratch/s7582/run.zsh (owner recipe, g1e_owner_quiet_arms, GAMEDIR=build_ubsanp): l1 dd4, l4 dd2 (FORCE_SAVE_MISSION=4),
+  l12 dd4, HOLD 150: all alive, level_ok=1, crashlines 0, vi_stalls30s 0, max_gap 148-163 ms. No san_l* log was created (UBSan
+  writes one only on a report). Scorer: `controls=['p5']/['p5'] control_fired=1 real_sites=0` rc 0.
+- Result: **H-clean** selected; H-macro and H-patch refuted. Why it holds: guest pointers in GPRs are sign-extended KSEG0, so
+  `reg - 0xFFFFFFFF80000000` is a small positive offset and the host add never wraps; only a KUSEG or zero-extended guest address
+  (which would itself be a wild guest access) could trip it, and none was executed on these routes. Second line of evidence: the same
+  launcher/env path delivered the PLANT=5 env and UBSAN_OPTIONS to the control arm, and its report was scored.
+- Caveat: nonnull-attribute had no positive control (0 reports, single-source). Scope: L1/L4/L12 boot + flight routes only.
+- Next: gen-c-residual-ub-audit, the last UBSan group in one build with a plant per kind (NEXT.md).
