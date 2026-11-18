@@ -201884,3 +201884,31 @@ Verdict: selects H-dead (dead names carry the whole per-load step; after the fix
 Ruled out: per-load growth of any live Mach right owned by the game/RT64/SDL/CoreAudio; IOKit/IOSurface object growth per load.
 Not covered: other Mach-right-producing call sites in our code (task_threads in gated samplers, main.cpp fl-zero mach_thread_self).
   -> NEXT.md class MR (census of every right-returning call, classified).
+
+## Session 7591 (2026-11-18) — class MR closed: Mach-right release census of our code (12 rows, 1 gated uref leak in the G1E_THREADS sampler, fixed; runtime witness + plant)
+
+No new soak lines to fold (last: s7588_applepool_default, folded s7589).
+Hypotheses (NEXT.md s7591): H-clean (0 leaked rows), H-gated (only leaked rows behind a diagnostic env), H-default (a default-path leak).
+- New tools/s7591_mr_census.py --controls: regex-enumerates every call that hands back an owned Mach right / kernel buffer
+  (task_threads, host_processor_info, mach_thread_self, mach_host_self, semaphore_create, IOService*/IORegistry*/IOIterator*,
+  mach_port_allocate/construct, vm_allocate/mach_vm_read) in src/, lib/N64ModernRuntime, lib/rt64/src (incl. plume), comments and
+  literals blanked, and looks for the matching release in the enclosing function/class (task_threads needs both the array
+  vm_deallocate and the per-element mach_port_deallocate). Plant file: 11 sites, one per verdict (released, leaked-elem,
+  leaked-array, leaked-uref inline, bounded static, ctor/dtor semaphore, ...): 11/11 classified correctly.
+- Result: 12 rows, 9 released, 2 bounded (threads.cpp:323 s7590 cached self port; the new cache), 1 leak, env-gated:
+  events.cpp g1et::run (ROGUESQ_G1E_THREADS) called host_processor_info(mach_host_self(), ...) every 10th 1 ms sample -> one send
+  uref on the host port name per 10 ms, never released. The NEXT.md suspicion that the 1 kHz task_threads leaked th[i] was WRONG:
+  th[i] is deallocated at the loop end and the array after it (my first grep window cut it off). fl-zero (main.cpp:9611/9620):
+  the `continue` paths do not leak - a separate loop deallocates every element incl. self, and self's mach_thread_self ref is
+  released. s7382 dump, concurrentqueue Semaphore (dtor semaphore_destroy), plume IOKit pair: released. 0 default-path leaks.
+- Mechanism check, standalone (scratch/s7591/uref.c): 1000 x mach_host_self() -> urefs +1000; 71000 -> pegged at 65535, kr 0,
+  same name. So the leak saturates harmlessly (no new names, no failure) - unowned, not dangerous.
+- Fix (default; ROGUESQ_S7591_HOSTPORT=0 = old per-call form): host port fetched once into a function static.
+- Runtime witness, same binary, two sequential 70 s title-boot arms with ROGUESQ_G1E_THREADS on (sampler alive: 14.4/14.5 MB bins),
+  probe tools/s7591_hostrefs.dylib (DYLD_INSERT, sandbox off; logs host-port send urefs every 5 s; plant RS64_HR_PLANT=50 leaks 50
+  refs per sample from 30 s): old d=500-501 per 5 s (= 100/s = 1 per 10 ms) then 550-551 with plant; fixed d=+2 once then 0, then
+  exactly +50 with plant. Both arms 0 crash. Selects H-gated; H-default refuted (census + the fixed arm's flat line).
+- Also checked: CF/dispatch create sites in plume (CFArrayCreate 1193 -> release; dispatch_data_create 1456 -> s7586 release;
+  dispatch_semaphore_create 4189 -> dtor dispatch_release): all released.
+- lib/ edited -> submodule-patches exported (N64ModernRuntime.patch). Logs: scratch/s7591/hr_{old,new}.log, game_{old,new}.log.
+Next: class TH (thread/timer creation-site census) - see NEXT.md.

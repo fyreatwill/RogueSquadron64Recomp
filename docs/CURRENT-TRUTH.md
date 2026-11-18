@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7590 (2026-11-18).
+Compact operational handoff, as of Session 7591 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7590: HR-2 CLOSED, H-dead selected and FIXED.** The per-load Mach-port step was dead names: every guest thread's
+- **NEW s7591: class MR (Mach rights our code owns) CLOSED.** tools/s7591_mr_census.py --controls (plant 11/11): 12 rows in src/ +
+  lib/ (task_threads x3, mach_thread_self x3, host_processor_info, mach_host_self, semaphore_create, IOKit x2): 9 released, 2 bounded,
+  1 leak, gated: the ROGUESQ_G1E_THREADS sampler passed mach_host_self() inline every 10 ms (+100 send urefs/s, saturates at 65535,
+  scratch/s7591/uref.c). Cached (ROGUESQ_S7591_HOSTPORT=0 = old). Same binary, G1E_THREADS on, probe tools/s7591_hostrefs.dylib:
+  old +500-501/5 s, fixed +0 (+2 once); plant +50/sample read exactly +50 in both. CF/dispatch creates (3 sites) all released. 0 open.
+- **s7590: HR-2 CLOSED, H-dead selected and FIXED.** The per-load Mach-port step was dead names: every guest thread's
   _thread_func (ultramodern threads.cpp) stored mach_thread_self() in the G1B slot table and never released the ref, so each guest
   thread that exits leaves one dead name (+8/+9 per mission cycle). Fix (default; ROGUESQ_S7590_THRPORT=0 = old): RAII guard clears
   the slot + mach_port_deallocate at thread exit; the s4587 sampler's per-ms mach_thread_self() is now cached. Same s7469 route
@@ -310,9 +315,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 23. **Class HR CLOSED s7589** (headline). Sampler gotcha: lsof pipe fds carry no mode letter ("2 PIPE"); filter /^[0-9]+/.
 24. **HR-2 CLOSED s7590** (headline, H-dead fixed: guest-thread port refs; ROGUESQ_S7590_THRPORT=0 = old). H-cache/H-leak refuted
     for the per-load step (live rights flat over 3 same-mission reloads).
-25. **NEXT (s7591): class MR, Mach-right release census of OUR code** (NEXT.md): every call that hands back a right (task_threads,
-    mach_thread_self, pthread_mach_thread_np, IOService*/IOIterator*, semaphore_create, host_self, mach_port_allocate) in src/ and
-    lib/, each site classified released / borrowed / leaked-gated / leaked-default, with the s7590 census as the runtime witness.
+25. **Class MR CLOSED s7591** (headline). Tool exit 1 on any default-path leak or unknown row; rerun after lib/ edits.
+26. **NEXT (s7592): class TH, thread/timer creation-site census** (NEXT.md): every std::thread / pthread_create / SDL_CreateThread /
+    dispatch_source / NSTimer in src/ + lib/, classified joined / detached-once / per-event (bounded?) / gated, so paths the HR
+    route never exercised (resize, fullscreen, menus) are covered; runtime witness = s7589 sampler thread count.
 
 ## Evidence index
 
