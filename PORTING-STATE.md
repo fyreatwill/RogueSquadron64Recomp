@@ -201715,4 +201715,6 @@ Ran (all AC, clk 1.00, host idle >5000 s; one game at a time):
   1281 -> 1579 MB. Both alive, crash 0, vi_stalls30s 0, max present gap 1.6 s (fix) vs 2.4 s (old).
 Shows: the port grew ~4.5-5 GB per hour of play from this alone. Rules out H-flat for the pre-fix build. Residual after the fix:
 CFString +15k objects / 210 s (~1 MB, also present pre-fix) and one 17 MB CoreFSCache realloc (system cache) — both small.
-Open: per-load (H-leak) slope on the hangar route, now measurable without the masking growth; a longer hold for the residual.
+Verdict: this selects H-cache (time-linear reachable growth, root cause the plume wait-buffer autorelease leak, fixed) and refutes
+H-flat for the pre-fix build; H-leak (per-load) is not yet discriminated. Next discriminator (NEXT.md): heap -s diffs between
+consecutive hangar entries on the fixed build (per-entry delta > 5 MB selects H-leak) plus a 1200 s hold (residual > 0.05 MB/s selects H-slow).
