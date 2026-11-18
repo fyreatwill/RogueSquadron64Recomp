@@ -1739,6 +1739,23 @@ index 4d6a01d..e93a084 100644
  
      ctx->r2 = (int32_t)(ret >> 32);
      ctx->r3 = (int32_t)(ret >> 0);
+diff --git a/librecomp/src/mod_hooks.cpp b/librecomp/src/mod_hooks.cpp
+index 596b6e8..c249c69 100644
+--- a/librecomp/src/mod_hooks.cpp
++++ b/librecomp/src/mod_hooks.cpp
+@@ -135,8 +135,10 @@ void recomphook_get_return_float(uint8_t* rdram, recomp_context* ctx) {
+ }
+ 
+ void recomphook_get_return_double(uint8_t* rdram, recomp_context* ctx) {
+-    ctx->f0.fl = (gpr)(uint8_t)hook_contexts.back().f0.fl;
+-    ctx->f1.fl = (gpr)(uint8_t)hook_contexts.back().f1.fl;
++    // [s7605] class FR: N64Recomp keeps a double in the WHOLE 64-bit even register (ctx->fN.d, both FR modes; odd halves
++    // reach it via f_odd only for mtc1/mfc1/lwc1/swc1). The old body pushed the float view through (uint8_t) and wrote f1,
++    // so a mod reading a hooked double got a truncated small integer in f0's low word and the high word untouched.
++    ctx->f0.d = hook_contexts.back().f0.d;
+ }
+ 
+ #define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
 diff --git a/librecomp/src/mod_manifest.cpp b/librecomp/src/mod_manifest.cpp
 index a75d253..e6808be 100644
 --- a/librecomp/src/mod_manifest.cpp

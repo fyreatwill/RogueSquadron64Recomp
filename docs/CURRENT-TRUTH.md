@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7604: class RA (host reads of guest registers) CLOSED, H-bad-gated, one dead-path fix.** tools/s7604_ra_census.py
+- **NEW s7605: class FR (host access to guest FPRs) CLOSED, H-bad-gated, one dead-path fix.** tools/s7605_fr_census.py
+  --controls (6/6): 24 host FPR lines (src + librecomp + ultramodern), every view matches the retail prototype / consumer
+  (f12.fl float a0, f14.fl, f0.fl/f0.d returns, s6904 fog hook .fl = what trunc.w.s reads), 0 odd FPR in FR=0 host code,
+  helpers.hpp contract held; 6 float-prototype host stubs, 0 game call sites. One BAD: mod_hooks recomphook_get_return_double
+  cast f0.fl through (uint8_t) and wrote f1; fixed to f0.d (mod export, no game path). Witness tools/s7605_fr_witness.cpp 11/11.
+- **s7604: class RA (host reads of guest registers) CLOSED, H-bad-gated, one dead-path fix.** tools/s7604_ra_census.py
   --controls (6/6): 528 ctx->rN reads = ok-cast 399, ok-hilo 46, ok-macro 24, ok-param 24 (signature map), ok-alias 3, ok-copy 2,
   row 30 (64-bit range guards accepting both sext/zext forms), 0 open. One BAD: recomp_alloc (mod export, 0 game calls) sized
   (size_t)ctx->r4 and returned a junk pointer on NULL; fixed (ROGUESQ_S7604_ALLOC=0 = old). Witness tools/s7604_ra_witness.cpp 12/12.
@@ -417,8 +422,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     `ctx->rN =` write; a new called stub that sets no r2 needs a void retail prototype (RETAIL_VOID) or it is OPEN.
 35. **Class RA CLOSED s7604** (headline). Rerun tools/s7604_ra_census.py --controls after adding host code that reads
     ctx->rN; a 64-bit use (uint64_t/gpr/size_t, compare, index) needs a cast, a 32-bit parameter, or a SITE_ROWS reason.
-36. **NEXT (s7605): class FR, host access to guest FPRs** (NEXT.md): 21 ctx->fN sites; view (.fl/.d/.u32l) must match the
-    retail prototype (float a0 in f12, a1 in f14, double in f12 .d) and the FR mode the recompiler emits.
+36. **Class FR CLOSED s7605** (headline). Rerun tools/s7605_fr_census.py --controls after adding host code touching
+    ctx->fN / f_odd or a host stub of a float-prototype function (add a SITE_ROWS / FLOATPROTO entry naming the prototype).
+37. **NEXT (s7606): class HC, host code invoking guest functions** (NEXT.md): every host->guest call (LOOKUP_FUNC, direct
+    *_recomp / recomp_func_t calls from src/librecomp/ultramodern): fresh vs reused ctx, sp 8-aligned with a 16-byte arg area
+    inside guest stack, a0-a3 sign-extended, FR=0 + f_odd init on a fresh ctx, caller state restored after the call.
 
 ## Evidence index
 

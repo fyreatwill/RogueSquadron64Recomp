@@ -202351,3 +202351,38 @@ HYPOTHESIS-ID: host-register-read-truncation-census
   the 21 ctx->fN sites, view vs retail prototype.
 - Rules out: H-bad-live (no default-path read misuses sign fill). Class RA CLOSED. Next: class FR (host reads/writes of guest
   FPRs, 21 ctx->fN sites: view .fl/.d/.u32l vs retail prototype and FR mode).
+
+## Session 7605 (2026-11-18) — class FR closed: host access to guest FPRs (24 sites, 0 open, controls 6/6, witness 11/11); recomphook_get_return_double truncated the double through uint8_t and wrote f1, fixed (mod export, no game path)
+HYPOTHESIS-ID: host-fpr-view-census
+- Contract first (boring check): N64Recomp cgenerator.cpp emits singles as ctx->fN.fl and doubles as the WHOLE 64-bit
+  ctx->fN.d in both FR modes; only odd-register mtc1/mfc1/lwc1/swc1 go through f_odd[(N-1)*2] (FR=0 -> f(N-1).u32h, FR=1 ->
+  fN.u32l). Generated-code census confirms: f12.d 102, f14.d 38, f0.d 493, odd .d 0. Host-called code runs FR=0
+  (run_thread_function and reset init FR=0; the 7 hand-asm FR=1 routines restore it, s7409/s7410 closed that side). So the
+  o32 contract for host stubs is f12.fl/f14.fl float args, f12.d double arg, f0.fl/f0.d returns, float after an int arg in a1.
+- tools/s7605_fr_census.py --controls: every host token ctx->fN.(fl|fh|d|u32l|u32h|u64) / f_odd in src + librecomp +
+  ultramodern (comments blanked) must match a SITE_ROWS entry whose expected token list equals the line's (so a view change is
+  OPEN even if the line still matches); odd FPRs in host code OPEN unless the row says FR=1; an FPR store from an integer cast
+  OPEN; helpers.hpp _arg<.,float>/_arg_float_a1/_arg_float_f14/_return<float> checked as rules; every host *_recomp stub with
+  a float-bearing libm/libultra/gu name needs a FLOATPROTO row.
+- Result: 24 lines, all row: osViSetX/YScale (f32 arg0 = f12.fl, both the upstream_compat override and the weak vi.cpp
+  default, + 2 env logs), math_routines __ull_to_d f0.d / __ull_to_f, __ll_to_f f0.fl / __f_to_ll f12.fl, mod_config
+  recomp_get_config_double f0.d x3, recomphook_get_return_float f0.fl, f_odd mapping x4 (address only), helpers x3, and the one
+  LIVE writer: the s6904 fog hook writes f4.fl/f0.fl immediately before 0x8001726C trunc.w.s $f2,$f4 and 0x80017274
+  trunc.w.s $f2,$f0 (read from the generated funcs_4.c), so its view is the consumer's. 137 host stubs, 6 FLOATPROTO, 0 game
+  call sites for any of them (or __osSetFpcCsr) in ../N64Recomp/RecompiledFuncs. setjmp/longjmp host stubs are commented out.
+- ONE BAD, H-bad-gated (dead path): mod_hooks.cpp recomphook_get_return_double did `ctx->f0.fl = (gpr)(uint8_t)hook.f0.fl;
+  ctx->f1.fl = (gpr)(uint8_t)hook.f1.fl;`, which pushes the double's low-word float view through uint8_t and leaves f0's high
+  word stale, so a mod reading a hooked double return got a small integer pattern. ORIGIN: upstream N64ModernRuntime mod-hook
+  export, reached only by a mod return hook on a double-returning function (no mods, 0 game calls). Fixed to
+  `ctx->f0.d = hook_contexts.back().f0.d;` (correct in both FR modes). Build OK (librecomp + game relinked); no game run
+  (no default-path caller). submodule-patches exported.
+- Controls 6/6 on tree copies: (1) plant `ctx->f0.d = 1.0` -> OPEN; (2) plant an f13.fl read -> OPEN (odd FPR, FR=0);
+  (3) drop all rows -> OPEN; (4) _arg_float_a1 reads _arg<2,u32> -> OPEN; (5) host sinf_recomp stub -> OPEN; (6) pre-fix
+  recomphook_get_return_double -> OPEN (int-cast + odd f1). The scanner's first pass also flagged two false positives
+  (__f_to_ll's legitimate float->int64 conversion as int-cast; a helper regex stopping at `} ret{}`); both rules tightened.
+- Second source tools/s7605_fr_witness.cpp 11/11 against the real recomp.h/helpers.hpp: fpr is one 64-bit slot, f12.d halves
+  = u32l/u32h, FR=0 f_odd[(13-1)*2] aliases f12.u32h and FR=1 aliases f13.u32l, _arg<0,float>/_arg_float_a1 (sign-extended
+  float bits)/_arg_float_f14/_return<float>, the pre-fix double return loses 3.25 (control), the fix returns 3.25.
+- Discrimination: selects H-bad-gated (one BAD, on an uncalled mod path), refutes H-bad-live (the only live host FPR writer is
+  view-correct) and H-clean. Rules out FPR-view mismatches in host stubs as a cause of any in-game float defect.
+  Class FR CLOSED. Next: class HC (host code invoking guest functions: ctx setup, sp/arg area, FR init, state restore).
