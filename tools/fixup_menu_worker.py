@@ -10,7 +10,7 @@ Fix: after a successful send, record (message pointer, id) in a host FIFO (rs64_
 lbu, replace $v0 with the id recorded for that pointer (rs64_menu_worker_recv). No guest memory or scheduling change;
 each received completion carries the id it was sent with, as on hardware. ROGUESQ_MENU_WORKER_FIFO=0 = old behaviour.
 Idempotent. Usage: fixup_menu_worker.py <RecompiledFuncs dir>"""
-import pathlib, sys
+import pathlib, re, sys
 
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6781 menu worker ids */"
@@ -18,11 +18,14 @@ sent = "    rs64_menu_worker_sent(rdram, (const uint64_t*)&ctx->r0); " + TAG + "
 recv = "    ctx->r2 = rs64_menu_worker_recv((uint32_t)ctx->r3, (uint32_t)ctx->r2); " + TAG + "\n"
 decl = ("extern void rs64_menu_worker_sent(const uint8_t* rdram, const uint64_t* gpr); extern uint64_t rs64_menu_worker_recv(uint32_t msg, uint32_t v0); "
         + TAG + "\n")
-lbu = "    // 0x800B4004: lbu         $v0, 0x17($v1)\n    ctx->r2 = MEM_BU(ctx->r3, 0X17);\n"
+# s7558: the vendored chain runs apply_s7484_loadwatch first, which wraps the load as
+# "{ RS64_S7484_LD(...); ctx->r2 = MEM_BU(ctx->r3, 0X17); }"; the bare-only anchor made every regen abort here.
+lbu_re = re.compile(r"    // 0x800B4004: lbu         \$v0, 0x17\(\$v1\)\n"
+                    r"    (?:\{ RS64_S7484_LD\(0x800B4004u, ctx->r3, 0X17, 1\); )?ctx->r2 = MEM_BU\(ctx->r3, 0X17\);(?: \})?\n")
 done = 0
 for p in sorted(base.glob("funcs_*.c")):
     s = p.read_text()
-    if "// 0x800B380C: jal         0x80006F78" not in s or lbu not in s:
+    if "// 0x800B380C: jal         0x80006F78" not in s or not lbu_re.search(s):
         continue
     done += 1
     if TAG in s:
@@ -38,9 +41,9 @@ for p in sorted(base.glob("funcs_*.c")):
         sys.exit("s6781 menu worker ids: after_ label not found")
     k = s.index("\n", k) + 1
     s = s[:k] + sent + s[k:]
-    if s.count(lbu) != 1:
+    if len(lbu_re.findall(s)) != 1:
         sys.exit("s6781 menu worker ids: lbu anchor not unique")
-    s = s.replace(lbu, lbu + recv)
+    s = lbu_re.sub(lambda m: m.group(0) + recv, s, count=1)
     s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + decl, 1)
     p.write_text(s)
     print(f"[s6781] menu worker ids added to {p.name}")

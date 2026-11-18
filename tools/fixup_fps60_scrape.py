@@ -9,6 +9,7 @@ of 2 (s6816). Under ROGUESQ_FPS60 the ten case multiplies use max(dt, 1/30); the
 the real dt. ROGUESQ_FPS60_SCRAPE=0 restores. Retail (no FPS60) unchanged. Idempotent.
 Usage: fixup_fps60_scrape.py <RecompiledFuncs dir>"""
 import pathlib, re, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent)); import rs64_anchor  # s7558
 
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6817 fps60 scrape */"
@@ -61,9 +62,9 @@ for p in sorted(base.glob("funcs_*.c")):
     if HEAD2 not in s:
         continue
     if TAG2 not in s:
-        if s.count(SITE2) != 1:
-            sys.exit(f"s6819 fps60 scrape dmg: expected 1 site 0x800B29D4 in {p.name}, found {s.count(SITE2)}")
-        s = s.replace(SITE2, NEW2, 1)
+        if rs64_anchor.count(s, SITE2) != 1:  # s7558: tolerate the s7484 load wrap the vendored chain applies first
+            sys.exit(f"s6819 fps60 scrape dmg: expected 1 site 0x800B29D4 in {p.name}, found {rs64_anchor.count(s, SITE2)}")
+        s = rs64_anchor.sub_once(s, SITE2, NEW2[len(SITE2):])
         s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + HELPER2, 1)
         p.write_text(s)
     done += 1

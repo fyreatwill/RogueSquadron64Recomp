@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7557 (2026-11-17).
+Compact operational handoff, as of Session 7558 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7558 (class GR CLOSED, tools/s7558_gr_census.py --check rc 0, --controls 16/16): one hidden default.** The MusyX gate store
+  setDisplayMode 0x8008EB40 -> 0x800A0F50 **defaults to 0** (retail v0 only with ROGUESQ_M5_B40_VALUE=1), contradicting s4701's
+  documented pass-through default (B40=0: 2 crashes/4; pass-through 0/15, s4700-s4703). The fixer writes the s4701 form; s5544's
+  fixup_live_replay "B40 ternary polarity" rule flips it back to what live had (default-0 already at the N64Recomp repo's first
+  funcs_23 commit, s5484). Owner decides; A/B soak queued (scratch/agent/soak_queue/s7558_b40_ab.sh). All other 109,737 fixup hunks
+  are gated, inert, wild-pointer guards (826), recompiler-correctness or host plumbing. Also: **the regen chain aborted at
+  fixup_menu_worker since s7484** (s7484 load wraps broke bare-load anchors in 6 fixups) -> fixed with tools/rs64_anchor.py; regen
+  now stops at the s7363 host-array gate (27 + s7364 71 + s7366 82 unreviewed rows from s7480-s7535), and replay vs live is
+  2607 same / 141 differ (s6870 baseline 2688 / 78) -> Next steps 19b.
 - **NEW s7535 (class GA, OPEN H-latent-fix): early gfx sp_complete races the F5 LLE's inputs in flight.** ultramodern sends
   sp_complete before send_dl, so the game starts the next frame while the LLE still fetches. Same-run A/B (ROGUESQ_S7535_GA_CHK=1
   ROGUESQ_S7535_LATE=alt, controls 106/106, 3 runs): flight diff bytes/task early 635 vs hardware-order 164 (L4), 472 vs 53 (L15 dd8
@@ -282,7 +291,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
    Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
    left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-4. **Owner decisions on defaults:** RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
+4. **Owner decisions on defaults:** M5_B40_VALUE (s7558: built default 0 contradicts s4701 pass-through), RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
@@ -397,6 +406,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     PIO_GUARD, PI_DMA_GUARD, PI_UNK_COMPLETE, PREEMPT_POINT, S4272, S6892, SPAI_GUARD, WRAP_RESTORE), 1 no session (G1D_FPDEPTH).
     Fix: generated docs/DEFAULT-ON-LEVERS.md (every ON lever, sessions, source comment; `--write` regenerates), linked from
     OWNER-OPT-INS. Not covered: unconditional fixups with no env at all -> class GR (NEXT.md).
+    **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
+19b. **Regen health (s7558, OPEN, next).** (a) replay vs live 141 differing functions vs the s6870 baseline 78: classify each new
+    one (moved helper / missing apply step / live hand edit) and fix the replay so a regen builds the live code; (b) clear the
+    host-code census debt that now stops tools/regen_replay.sh: s7363 27 rows, s7364 71, s7366 82 (verdicts or fixes);
+    (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
+    Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
+    tools/regen_verify.sh D/replay D/verify.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

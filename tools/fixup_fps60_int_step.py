@@ -13,6 +13,7 @@ ROGUESQ_FPS60_INTSTEP=0 restores the per-tick step (same build A/B). The load ge
 (rs64_tctr pc 0x8006C124, value = +0x1E before the step) for tools/g1e_int_step_rates.py.
 Must run after fixup_fps60_ticks.py. Idempotent. Usage: fixup_fps60_int_step.py <RecompiledFuncs dir>"""
 import pathlib, re, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent)); import rs64_anchor  # s7558
 
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6831 fps60 int step */"
@@ -33,10 +34,10 @@ for p in sorted(base.glob("funcs_*.c")):
     j = s.find("RECOMP_FUNC void", i + 10)
     j = len(s) if j < 0 else j
     body = s[i:j]
-    k = body.find(LOAD + LOAD_C)
-    if k < 0:
+    sp = rs64_anchor.span(body, LOAD + LOAD_C)  # s7558: tolerate the s7484 load wrap
+    if sp is None:
         sys.exit("s6831 fps60 int step: load 0x8006C124 not found in " + p.name)
-    k += len(LOAD + LOAD_C)
+    k = sp[1]
     if not body[k:].startswith(HOOK):
         body = body[:k] + HOOK + body[k:]
     # both copies of the bgez delay-slot addiu 0x8006C134 (taken and fall-through paths)

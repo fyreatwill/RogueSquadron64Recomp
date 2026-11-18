@@ -156,6 +156,8 @@ def scan(path, text):
 
 # Hand verdicts for every non-contained row (s7362).  key: (path suffix, expression prefix) -> verdict.
 REVIEWED = {
+    ('dpc_bridge.cpp', 'p + 4u'): 'MASK: p in [from&~7, to-8], to = end & 0x3FFFFFF (s7486 EK window; s7558 verdict)',
+    ('s7521_ucode_watch.cpp', 'f.phys ^ 3'): 'MASK: (ucode ptr & 0x1FFFFFFF) + <=0x100 (s7521 ctl flip; s7558 verdict)',
     ('mod_config_api.cpp', 'offset'): 'SEXT-BIASED: str_rdram - 0xFFFFFFFF80000000 in [0,4G)',
     ('sp.cpp', 'i ^ 3'): 'BOUNDED: i < 0x800000',
     ('events.cpp', 'addrs[0]'): 'U32-ENV: ROGUESQ_DD_ADDRS strtoul->uint32, in [0,4G)',

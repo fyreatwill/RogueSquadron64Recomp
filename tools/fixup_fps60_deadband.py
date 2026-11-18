@@ -6,6 +6,7 @@ Default off. s6876 result: this is NOT the source of the dt-dependent camera pit
 at 1/60 and 1/20 (2101/3796 camera rows common against a 3794/3796 repeat floor) and leaves that pitch unchanged. Idempotent.
 Usage: fixup_fps60_deadband.py <RecompiledFuncs dir>"""
 import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent)); import rs64_anchor  # s7558
 
 base = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "../N64Recomp/RecompiledFuncs")
 TAG = "/* PATCH: s6876 fps60 deadband */"
@@ -24,10 +25,11 @@ for p in sorted(base.glob("funcs_*.c")):
         continue
     i = s.index(HEAD)
     a = s.index("// 0x800B3358:", i)
-    b = s.index(LOAD, a)
-    if b - a > 80:
+    sp = rs64_anchor.span(s, LOAD, a)  # s7558: tolerate the s7484 load wrap
+    if sp is None or sp[0] - a > 80:
         sys.exit("s6876 fps60 deadband: load not found at 0x800B3358")
-    s = s[:b + len(LOAD)] + "    ctx->f2.fl *= rs64_deadband_scale((uint32_t)MEM_W(0X1DC, ctx->r29)); " + TAG + "\n" + s[b + len(LOAD):]
+    b = sp[1]
+    s = s[:b] + "    ctx->f2.fl *= rs64_deadband_scale((uint32_t)MEM_W(0X1DC, ctx->r29)); " + TAG + "\n" + s[b:]
     s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + HELPER, 1)
     p.write_text(s)
 if done != 1:

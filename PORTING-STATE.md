@@ -200924,3 +200924,45 @@ sessions, docs, file, source comment; `python3 tools/s7557_gq_census.py --write`
 No build or game run this session.
 VERDICT: selects H-unlisted (17 + 1), refutes H-listed as stated and H-no-switch for env reads. Closes class GQ. Not covered:
 fixups that change behaviour with no env read at all (141 apply scripts contain no ROGUESQ_ name) -> class GR.
+
+## Session 7558 (2026-11-17) — class GR closed: the regen chain had been aborting since s7484 (fixed); 109,738 fixup hunks classified, 1 hidden default (MusyX gate B40 stores 0, contradicting s4701)
+
+What ran (offline, no game run): `tools/regen_front.sh scratch/s7558/pristine` (make_elf -> N64Recomp), a renamed-only copy
+(`rename_generated_symbols.py`) and a full `tools/regen_replay.sh` copy; then the new census `tools/s7558_gr_census.py`
+(diff pristine-renamed vs replay per function, classify every changed hunk) and `tools/regen_verify.sh` (replay vs live objects).
+
+1. **The regen chain was broken (H-dead, fixed).** `fixup_game_funcs_vendored.py` replays `apply_s7484_loadwatch` (and s7487/
+   s7488) before it check_calls the standalone fixups, so their bare-load anchors no longer matched: fixup_menu_worker (s6781) aborted
+   every regen, then fixup_fps60_scrape (s6819), fixup_fps60_ticks (s6821), fixup_fps60_int_step (s6831), fixup_fps60_float_trace
+   (s6826) and fixup_fps60_deadband (s6876, which would have thrown ValueError). The live tree never noticed: it got the wrappers
+   after the fixups. New `tools/rs64_anchor.py` (selftest ok) matches a site with any line optionally wrapped by one RS64_S74xx_*
+   hook; all six fixups use it. After the fix the whole vendored chain + movz/movn + strip + live_replay + weaken + cut + rename runs.
+2. **The regen's trailing host-code census gates had silently accumulated debt** (nobody ran a regen since s7484): s7362 3 OPEN
+   (dpc_bridge.cpp:6539 s7486 window, s7521_ucode_watch.cpp:144/148) -> hand verdicts added (MASK: end & 0x3FFFFFF; ucode ptr &
+   0x1FFFFFFF + <=0x100), --check open 0, --selftest PASS. Still open, not fixed this session: s7363 27 B-HOST/B-GUEST rows,
+   s7364 71 rows (41 keys), s7366 82 mixed-lock rows (all s7480-s7535 measurement code). regen_replay.sh stops at s7363.
+3. **Regen fidelity drifted:** regen_verify replay vs live = 2607 same, 141 differ, 18 only-live / 4 only-regen functions, funcs_50.c
+   live-only (s6870 baseline: 2688 / 78 / 17). Source diff of the worst file (funcs_13, 46) is mostly moved helper blocks; not yet
+   classified -> NEXT.md.
+4. **GR census** (`tools/s7558_gr_census.py --check` rc 0, `--controls` 16/16: inert, gated, ungated clamp, log-only guard,
+   one-line getenv block, `||force`, statement-expression condition, gated-helper rewrite, ungated rewrite, load wrap, wild guard,
+   rule-table unknown/correct). 109,738 hunks: GATED 99,486 (env-derived condition / gated helper / ternary whose flag-off form is
+   the pristine statement), INERT 9,339 (pristine statements kept verbatim, no guest-state write), WILDGUARD 826 hunks / 74 tags
+   (ungated by design, every effect under a condition true only for a guest pointer outside KSEG0 RDRAM, misaligned, hi word not
+   sign-extended, or 0: the s252-s613 M3 guard families, s4805 a9 predicate), UNGATED 87 with hand verdicts: CORRECT 49 (s1971
+   bltzal link, s2475 jal link, s3277 delay slot, s7081 selfbranch, $zero writes, label realign, data-gap traps), GUARD 9
+   (musyxKeyOnVoice teq div-by-zero traps, s1978 drain-timeout hang breaker, dlentry tail walk), HOSTPLUMB 6, GATED 11 (gate the
+   analyser cannot see, each named), INERT 11, **BEHAV 1**.
+   Analyser bugs found by the controls and fixed before the verdicts: one-line `if (x < 0) { getenv }` left a stale gate on the
+   condition stack (hid ~1,200 guard hunks as GATED); braces inside a `({ })` condition were taken as the body (hid s6285 topup).
+5. **H-hidden-change SELECTED, one site:** `setDisplayMode` 0x8008EB40 `sb v0, 0xF50($at)` (MusyX gate 0x800A0F50) is emitted as
+   `(ROGUESQ_M5_B40_VALUE set && != '0') ? v0 : 0`, i.e. **default stores 0**, retail store only with `ROGUESQ_M5_B40_VALUE=1`.
+   s4701 documented the opposite (default pass-through, `=0` rollback; evidence s4700/s4701/s4703: B40=0 2 crashes/4, pass-through
+   0/15). Two lines: the vendored fixer still writes the s4701 form (fixup_game_funcs_vendored.py:8411), and s5544's
+   `fixup_live_replay.py:268` rule "B40 ternary polarity" flips it back to match live; the live funcs_23.c already had the default-0
+   form when first committed to the N64Recomp repo (23c56d4, s5484, 2026-10-18). So the s4701 flip was lost in the live tree between
+   s4701 and s5484, and s5544 encoded the loss into the replay. Sister site C88 (0x8008EC88) is default retail (=0 opt-out). Not
+   flipped: the owner has played and approved audio (G2) on the current default; queued A/B soak
+   scratch/agent/soak_queue/s7558_b40_ab.sh (L4 dd2 / L1 / L12, default vs ROGUESQ_M5_B40_VALUE=1, 240 s each).
+Rules out: H-correctness-only (one BEHAV site), H-dead as a current state (fixed). ORIGIN (B40): writer is our fixer chain
+(fixup_live_replay b40_polarity_23), value 0 is not retail.

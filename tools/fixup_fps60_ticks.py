@@ -16,6 +16,7 @@ Two parts, one pass:
      tick logs {1, step it would have used before s6822, 0, tick#}.
 Idempotent. Usage: fixup_fps60_ticks.py <RecompiledFuncs dir>"""
 import pathlib, re, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent)); import rs64_anchor  # s7558
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from g3_tick_counter_audit import scan
 
@@ -104,7 +105,7 @@ for p in sorted(base.glob("funcs_*.c")):
         if m and fn and (fn, int(m.group(1), 16)) in want and i + 1 < len(lines):
             pc = int(m.group(1), 16); r = want[(fn, pc)]
             c = lines[i + 1]; out.append(c); i += 1
-            cm = re.match(r"    ctx->r(\d+) = MEM_\w+\(ctx->r(\d+), (-?0X[0-9A-F]+)\);", c)
+            cm = re.match(r"    " + rs64_anchor.WRAP_OPEN + r"ctx->r(\d+) = MEM_\w+\(ctx->r(\d+), (-?0X[0-9A-F]+)\);", c)  # s7558: s7484 wrap
             if not cm:
                 sys.exit(f"s6821 fps60 ticks: unexpected load line {p.name}:{i + 1}: {c.strip()}")
             hook = f"    rs64_tctr(rdram, 0x{pc:08X}u, (uint32_t)(ctx->r{cm.group(2)} + {cm.group(3)}), (int32_t)ctx->r{cm.group(1)}); {TAG}\n"

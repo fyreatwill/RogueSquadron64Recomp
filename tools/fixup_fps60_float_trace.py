@@ -7,6 +7,7 @@ same per-tick {0, game time, dt, tick#} rows. Off unless ROGUESQ_TICK_TRACE is s
 Loads sitting in a branch delay slot are hooked on the fall-through copy only. Idempotent; run after fixup_fps60_ticks.py.
 Usage: fixup_fps60_float_trace.py <RecompiledFuncs dir>"""
 import pathlib, re, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent)); import rs64_anchor  # s7558
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from g3_float_quanta_audit import scan, CONTROLS
 
@@ -17,7 +18,7 @@ rows = scan(str(base))
 want = {(r[0], r[1]) for r in rows if r[6] and (r[5] != 'ok' or (r[0], r[1]) in CONTROLS
         or (r[0] == 'stepObjectOrientationTowardTarget' and 0x800FF47C <= r[1] < 0x800FF98C))}
 COMMENT = re.compile(r"    // 0x([0-9A-F]{8}): lwc1 ")
-LOAD = re.compile(r"    ctx->f(\d+)\.u32l = MEM_W\(ctx->r(\d+), (-?0X[0-9A-F]+)\);")
+LOAD = re.compile(r"    " + rs64_anchor.WRAP_OPEN + r"ctx->f(\d+)\.u32l = MEM_W\(ctx->r(\d+), (-?0X[0-9A-F]+)\);")  # s7558: s7484 wrap
 hooked = set()
 for p in sorted(base.glob("funcs_*.c")):
     lines = p.read_text().splitlines(True)
