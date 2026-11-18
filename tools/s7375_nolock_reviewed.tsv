@@ -222,3 +222,4 @@ src/rsp/s7096_fwd_cover.cpp	drops	CONFINED	env-gated diag (ROGUESQ_S7096_FWD): e
 src/rsp/s7096_fwd_cover.cpp	pend	CONFINED	env-gated diag (ROGUESQ_S7096_FWD): every entry point is called from the gfx RSP task path; clear/finish labels are name collisions
 src/rsp/s7096_fwd_cover.cpp	snap	CONFINED	env-gated diag (ROGUESQ_S7096_FWD): every entry point is called from the gfx RSP task path; clear/finish labels are name collisions
 src/rsp/s7097_edit_census.cpp	g_cmds	CONFINED	env-gated diag (ROGUESQ_S7097_EDIT): begin/pre/post/end from the gfx RSP task path; find() labels are a name collision
+lib/rt64/src/render/rt64_texture_cache.cpp	replacementDirectories	CALLER-LOCKED	s7561: was MIXED in s7366 only through the const& parameter of loadReplacementDirectories (now shadowed); the member is touched only in ReplacementMap::clear, whose one caller (texture cache clearReplacementDirectories :1534) holds unique_lock(textureMapMutex) at :1531

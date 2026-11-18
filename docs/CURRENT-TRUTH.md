@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7560 (2026-11-17).
+Compact operational handoff, as of Session 7561 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7560 (19b(b) CLOSED): `tools/regen_replay.sh` runs to "ok"** (first time since s7484; and since s7467 the s7364 OOB
+- **NEW s7561 (19b(d) CLOSED): census analysers tightened, H-collateral refuted.** s7366 lockset: scope-aware declared() +
+  param/local shadow test -> 71 false MIXED rows gone (68 local/param, 3 explained), 1 access the OLD analyser had hidden
+  surfaced (g_audio_route_pref@audio_route_resolve, reviewed H-safe-thread); gap kept and documented: static locals and locals
+  captured by thread lambdas are never lockset-checked. s7363: clamp ternary with any constant arm (`p < 16 ? p : 15`) is CLAMP,
+  3 keys reclassified. Selftests extended with negative controls (HEAD fails them), plant still OPEN, fresh regen_replay "ok".
+- **s7560 (19b(b) CLOSED): `tools/regen_replay.sh` runs to "ok"** (first time since s7484; and since s7467 the s7364 OOB
   ASan plant could never be cleared). 180 census rows reviewed (s7363 24 keys BOUNDED; s7364 29 BOUNDED/11 FIXED/1 TRUST/1 PLANT, OOB
   now clears only with a `PLANT ` verdict; s7366 48 caller-locked/26 same-name locals/1 thread_local). Real defects fixed, all in
   env-gated diagnostic code: 1 lock race (s_s7518_ln / s_s7519_dt vs host-thread rs64_s7491_hst writers, STALEWATCH only; L4 hold
@@ -416,9 +421,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
 19b. **Regen health (s7558, OPEN, next).** (a) CLOSED s7559 H-layout: `tools/s7421_regen_drift.py <live> <replay> <compare.json>
     --baseline scratch/s7421/regen_compare.json --control` rc 0, controls 4/4 (new class SLOTPERM), 0 open LOST (docs/REGEN-VERIFY.md
-    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) NEXT: analyser precision, s7366 declared() treats
-    function locals/params as the shared container (26 false rows) and s7363 misses the clamp ternary `p < N ? p : N-1`;
-    fix both with selftest cases, keep the planted-OPEN control; (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
+    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) CLOSED s7561 (headline); (e) NEXT: tools/s7375_nolock_threads.py
+    --check OPEN 8 (s7472-s7521 containers never reviewed; s7375 is not a regen gate) -> review, then add it to regen_replay.sh;
+    then s7420_parser_census OPEN 1 (fixup_patches_host.py weak-blind, since s7490); (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
     Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
     tools/regen_verify.sh D/replay D/verify.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,

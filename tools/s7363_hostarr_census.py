@@ -344,10 +344,17 @@ def classify(t, pos, name, n, expr, consts, depth=0):
             x, op, k = cm.group(1), cm.group(2), cm.group(3)
             kv = ival(k, consts)
             a1, a2 = strip_par(tq[0]), strip_par(tq[1])
-            if kv is not None and ((op in ('<', '<=') and a1 == x and a2 == k) or (op in ('>', '>=') and a1 == k and a2 == x)):
-                hi = kv + 1 if op in ('<', '>') or op in ('<=', '>=') else kv
-                if 0 <= kv < n and not re.search(r'\b(int|int32_t|int64_t|short|long)\b\s+%s\b' % re.escape(x.split('.')[-1]), t[func_start(t, pos):pos]):
-                    return 'CLAMP', '%s %s %s' % (x, op, k)
+            # s7561: the clamp arm may be any constant c, not only the bound itself (`p < 16 ? p : 15`). Max index =
+            # max(largest x the condition lets through, c): x < k -> k-1, x <= k -> k (true arm x); x > k / x >= k
+            # select the constant, so the x arm sees x <= k / x <= k-1.
+            xmax = cv = None
+            if kv is not None and op in ('<', '<=') and a1 == x:
+                xmax, cv = (kv - 1 if op == '<' else kv), ival(a2, consts)
+            elif kv is not None and op in ('>', '>=') and a2 == x:
+                xmax, cv = (kv if op == '>' else kv - 1), ival(a1, consts)
+            if xmax is not None and cv is not None and 0 <= cv and max(xmax, cv) < n:
+                if not re.search(r'\b(int|int32_t|int64_t|short|long)\b\s+%s\b' % re.escape(x.split('.')[-1]), t[func_start(t, pos):pos]):
+                    return 'CLAMP', '%s %s %s : %s' % (x, op, k, cv)
     if tq and depth < 3:
         c1, w1 = classify(t, pos, name, n, tq[0], consts, depth + 1)
         c2, w2 = classify(t, pos, name, n, tq[1], consts, depth + 1)
@@ -525,6 +532,10 @@ void f(uint8_t* rdram, recomp_context* ctx, uint32_t w) {
     const uint32_t sl = w == 1024u ? 0u : 1u;
     tab[sl] = 1;                        // DEFMASK (ternary of constants)
     tab[w < 7 ? w : 7] = 1;             // CLAMP (unsigned clamp)
+    tab[w < 8 ? w : 7] = 1;             // CLAMP (s7561: clamp arm N-1, bound N)
+    tab[w > 7 ? 7 : w] = 1;             // CLAMP (reversed form)
+    tab[w < 9 ? w : 7] = 1;             // B (s7561: bound one too wide, w=8 escapes)
+    tab[w < 8 ? w : 8] = 1;             // not CLAMP (constant arm out of range)
     for (int i = 0; i < 4; i++) {}
     int j; for (j = 0; j < NT; j++) {}
     tab[j] = 1;                         // B (index after the loop exits = NT)
@@ -541,7 +552,7 @@ void f(uint8_t* rdram, recomp_context* ctx, uint32_t w) {
     for (size_t q = 0; q < sizeof(wide); q++) wide[q] = 0;   // B (sizeof is bytes, not elements)
 }
 '''
-EXPECT = ['CONST', 'MASK', 'FIELD', 'MOD', 'LOOP', 'CHECKED', 'OOB', 'B-GUEST', 'B-HOST', 'DEFMASK', 'CLAMP', 'B-HOST', 'CHECKED', 'B-CTR', 'B-HOST', 'LOOP',
+EXPECT = ['CONST', 'MASK', 'FIELD', 'MOD', 'LOOP', 'CHECKED', 'OOB', 'B-GUEST', 'B-HOST', 'DEFMASK', 'CLAMP', 'CLAMP', 'CLAMP', 'B-HOST', 'B-HOST', 'B-HOST', 'CHECKED', 'B-CTR', 'B-HOST', 'LOOP',
           'B-CTR', 'B-HOST', 'B-HOST']
 
 # Hand verdicts for B rows, line-agnostic: tools/s7363_hostarr_reviewed.tsv = path-key TAB array TAB index-expr TAB verdict.

@@ -73,7 +73,6 @@ lib/rt64/src/hle/rt64_rdp.cpp	rs64ChkCopy	(tmemStart & RDP_TMEM_MASK8) ^ 1	BOUND
 lib/rt64/src/hle/rt64_rdp.cpp	bucket	b	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	g_guestSlots	sample	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	rawBe	slot	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
-lib/rt64/src/render/rt64_framebuffer_renderer.cpp	bySiz	bucket	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	rawCol	slot	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	dec	slot	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	alt	slot	BOUNDED s7363 hand: uint8 TMEM bytes into [256]/>>6 into [4], >>52 hashes into [4096], slot = col*71+row <= 141, 0/1 cols, i/j/k in 0..2, checked i < 32
@@ -152,7 +151,6 @@ src/main/upstream_compat.cpp	seen	i	BOUNDED s7363 review B: s7030_ph = (mt/24e6)
 src/main/upstream_compat.cpp	cnt	k	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
 src/main/upstream_compat.cpp	rows	cls	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
 src/main/upstream_compat.cpp	tot	cls	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
-src/main/upstream_compat.cpp	control	bucket	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
 src/main/upstream_compat.cpp	ex	k	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
 src/main/upstream_compat.cpp	ex	s.nex++	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
 src/main/upstream_compat.cpp	runs	i	BOUNDED s7363 review B: s7030_ph = (mt/24e6)%3, guarded counters (nb==4 return, npc>=16 return, nk>=256 return, x.n<8), backtrace(bt,10), kRecvMqCap clamp, nruns<24
@@ -371,4 +369,3 @@ src/main/upstream_compat.cpp	s_s7486_rng	k	BOUNDED s7560 hand: loop k < (g_rs64_
 src/main/upstream_compat.cpp	s_s7519_n	k	BOUNDED s7560 hand: s7519_row callers (upstream_compat.cpp:4269-4312) pass literal 1,3,5,6,7,8 -> < 12
 src/main/upstream_compat.cpp	seen	j	BOUNDED s7560 hand: j < narena; narena only increments inside for i < 3 at most once per i (10279-10282) -> narena <= 3, j <= 2 (same at 3638-3640)
 src/main/upstream_compat.cpp	seen	narena++	BOUNDED s7560 hand: one increment per i of for (i = 0; i < 3) (upstream_compat.cpp:10276-10282 and 3636-3640) -> index <= 2 < 3
-src/rsp/s7535_ga_chk.cpp	g_st	p < 16 ? p : 15	BOUNDED s7560 hand: ternary -> 0..15 < 16 (s7535_ga_chk.cpp:57); census misses the clamp ternary form

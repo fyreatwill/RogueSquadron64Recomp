@@ -1,16 +1,17 @@
-# NEXT (s7561)
+# NEXT (s7562)
 HYPOTHESIS-ID: regen-fidelity-drift
 
-19b(b) CLOSED s7560: tools/regen_replay.sh scratch/s7560/replay -> "regen_replay: ok"; regen_verify 2607 same / 141 differ (= s7559 H-layout set).
-Unit: 19b(d) census analyser precision (H-analyser rows found in s7560), one change, controls kept:
-  1. tools/s7366_lockset_census.py: declared() treats function-local declarations and parameters with the same name as a
-     file-scope container (26 s7560 H-safe-other rows: 17 `kind`, seq, spans, top, seen). Header claims locals are skipped.
-  2. tools/s7363_hostarr_census.py: clamp ternary `p < N ? p : N-1` (s7535_ga_chk.cpp:57) classed B-HOST; add a CLAMP/TERN rule.
-Hypotheses: H-scope-fixable (scope-aware lookup drops those rows; verdict rows become stale and can be pruned) vs H-collateral
-(the scope fix also hides a real shared-container access: a global and a local with the same name in one function). Discriminator:
-after the fix, re-run --check and diff the MIXED set: every row that disappears must be one of the 26 H-safe-other keys; any other
-disappearance = H-collateral, revert that part. Controls: --selftest PASS + new selftest cases (local shadow -> not MIXED; global
-accessed unlocked beside a same-name local in another function -> still MIXED); planted scratch/s7560/plant.cpp unbounded
-subscript still OPEN; regen_replay gates still OPEN 0.
-Then 19b(c): fold s7558_b40_ab when SOAK-RESULTS has it (voided 2/5 so far), then ask the owner about the B40 default.
+19b(d) CLOSED s7561 (s7366 scope fix, s7363 clamp ternary; regen_replay ok). Unit: 19b(e) s7375 NOLOCK thread census.
+`python3 tools/s7375_nolock_threads.py --check -v` -> OPEN 8, all s7472-s7521 diagnostic containers never reviewed because
+s7375 is not run by tools/regen_replay.sh: main.cpp g_s7500_ctla_cls, g_s7503_livefn; upstream_compat.cpp s_s7472_seen,
+s_s7475_seen, s_s7480_internal, s_s7480_pcs, s_s7488_pcs; s7521_ucode_watch.cpp seen_off.
+Hypotheses: H-confined (each is touched by one thread or only inside *_locked helpers whose callers hold a lock -> verdict rows)
+vs H-race (a gfx/task-thread writer beside a guest reader with no lock, e.g. s7480_store has gfx|guest|lambda@4388 callers ->
+fix with a mutex, env-gated diag code only) vs H-attrib (the thread attribution is wrong: '?' callers unresolved).
+Discriminator: per row, read every accessing function and its real call sites; any pair of distinct threads with an unlocked
+write = H-race (fix + rerun the owning recipe's env on L4 for a liveness check). Then add
+`python3 tools/s7375_nolock_threads.py --check` to tools/regen_replay.sh beside the s7366 gate; controls: s7375 --selftest PASS,
+plant a scratch NOLOCK container touched from a std::thread lambda and the guest (must be REVIEW/OPEN), fresh regen_replay ok.
+Then s7420_parser_census OPEN 1 (fixup_patches_host.py STANDALONE weak-blind, since s7490).
+Then 19b(c): fold s7558_b40_ab when SOAK-RESULTS has it (voided 3/5 so far), then ask the owner about the B40 default.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.

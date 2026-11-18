@@ -23,7 +23,6 @@ lib/rt64/src/hle/rt64_present_queue.cpp	drawSemaphores	threadPresent	H-safe-call
 lib/rt64/src/hle/rt64_present_queue.cpp	presents	advanceToNextPresent	H-safe-other	presents is std::array<Present,PRESENT_QUEUE_SIZE>; size() is a compile-time constant, no container access
 lib/rt64/src/hle/rt64_present_queue.cpp	presents	previousWriteCursor	H-safe-other	std::array size() constant; no element access
 lib/rt64/src/hle/rt64_present_queue.cpp	swapChainFramebuffers	threadPresent	H-safe-caller	caller threadLoop holds threadMutex (1053) across threadPresent; Present-thread only member (clear at 1061 same thread)
-lib/rt64/src/hle/rt64_rdp.cpp	bucket	drawTris	H-safe-other	line 2480 is the static zero-initialised declaration (thread-safe static init); all reads/writes at 2497-2532 are under mu
 lib/rt64/src/hle/rt64_state.cpp	samples	BandWriteback	H-safe-other	samples is a member of a stack-local RAII BandWriteback; bandSourceMutex guards the global source list, not this per-instance vector
 lib/rt64/src/hle/rt64_workload_queue.cpp	workloads	advanceToNextWorkload	H-safe-other	workloads is std::array<Workload,WORKLOAD_QUEUE_SIZE>; size() constant
 lib/rt64/src/hle/rt64_workload_queue.cpp	workloads	previousWriteCursor	H-safe-other	std::array size() constant
@@ -36,50 +35,18 @@ lib/rt64/src/render/rt64_framebuffer_renderer.cpp	dynamicTextureBarrierVector	re
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	dynamicTextureViewVector	getTextureIndex	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	dynamicTextureViewVector	submitRasterScene	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	dynamicTextureViewVector	updateShaderDescriptorSet	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
-lib/rt64/src/render/rt64_framebuffer_renderer.cpp	raw	rdramFillCols	H-safe-other	function-local uint16_t raw / uint16_t raw[142]; unrelated to the std::string raw under log.mu at 976
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	raw	rs64DepthHistFlush	H-safe-other	function-local uint16_t raw / uint16_t raw[142]; unrelated to the std::string raw under log.mu at 976
-lib/rt64/src/render/rt64_framebuffer_renderer.cpp	raw	rs64FloorRdramNoteSwap	H-safe-other	function-local uint16_t raw / uint16_t raw[142]; unrelated to the std::string raw under log.mu at 976
-lib/rt64/src/render/rt64_framebuffer_renderer.cpp	raw	rs64FloorRdramPrepare	H-safe-other	function-local uint16_t raw / uint16_t raw[142]; unrelated to the std::string raw under log.mu at 976
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	textureCacheFreeSpaces	getDestinationIndex	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	textureCacheTextureReplacements	submitRasterScene	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	textureCacheTextureReplacements	updateShaderDescriptorSet	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	textureCacheTextures	submitRasterScene	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	textureCacheTextures	updateShaderDescriptorSet	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp	textureCacheVersions	updateShaderDescriptorSet	H-safe-thread	FramebufferRenderer member snapshot; the lock guards the source textureCache->textureMap copied in updateTextureCache. State and WorkloadQueue each own a separate FramebufferRenderer, and each is only used on its owner thread (Gfx/State fullSync or RT64 Workload)
-lib/rt64/src/render/rt64_texture_cache.cpp	relativePath	addLoadedTexture	H-safe-other	relativePath is a const std::string& parameter (entry.relativePath is a fresh map entry); callers 1057/1205 hold textureMapMutex
-lib/rt64/src/render/rt64_texture_cache.cpp	relativePath	getFromRelativePath	H-safe-other	const std::string& parameter, not a shared container (see summary note on the unlocked caller at 1159)
-lib/rt64/src/render/rt64_texture_cache.cpp	relativePath	hashFromRelativePath	H-safe-other	const std::string& parameter hashed locally
-lib/rt64/src/render/rt64_texture_cache.cpp	replacementDirectories	clear	H-safe-caller	ReplacementMap::clear only called from clearReplacementDirectories:1532 with textureMapMutex held (1530)
 lib/rt64/src/render/rt64_texture_cache.cpp	tmemUploadResources	TextureCache	H-safe-thread	destructor (CTOR-ish row): clear at 535 runs after uploadThread->join() at 530; only the upload thread otherwise touches it
 lib/rt64/src/render/rt64_texture_cache.cpp	tmemUploadResources	uploadThreadLoop	H-safe-thread	only the RT64 Texture upload thread touches tmemUploadResources (emplace under uploadResourcePoolMutex is incidental; stream threads take that mutex only for uploadResourcePool)
 lib/rt64/src/tools/texture_packer/texture_packer.cpp	inputQueue	main	H-safe-thread	offline tool: addToQueue (462) runs on main before compression threads are created at 492; workers only pop under inputQueueMutex
-src/main/main.cpp	cur	rs64_s6843_note	H-safe-other	2184 is the declaration 'static int cur = -1' (function-local static); every use (2201-2206) is under that function's own static mu
-src/main/main.cpp	cur	rs64_s7355_altstack_drop	H-safe-other	'stack_t cur{}' is a stack local filled by sigaltstack(); unrelated to any locked 'cur'
-src/main/main.cpp	cur	rs64_s7355_altstack_here	H-safe-other	'stack_t cur{}' is a stack local; no sharing
-src/main/main.cpp	cur	s4578_poll	H-safe-other	'const uint32_t cur = hw()' is a loop local of the poll thread; the lock (g_s4578_mu) guards g_s4578_ring, not cur
-src/main/main.cpp	cur	start_fl_zero_poller	H-safe-other	'uint8_t cur[16]' is a loop local of the poller thread lambda
-src/main/main.cpp	cur	start_fs_slot_poller	H-safe-other	'uint8_t cur[16]' is a loop local of the poller thread lambda
-src/main/main.cpp	cur	start_level_poller	H-safe-other	'uint32_t cur = rdram_be32(...)' is a loop local of the poller thread lambda
-src/main/main.cpp	cur	start_state_poller	H-safe-other	'uint32_t cur[16]' is a loop local of the poller thread lambda
 src/main/main.cpp	g_audio_route_pref	audio_route_apply_cycle	H-safe-thread	only reached from queue_samples <- osAiSetNextBuffer_recomp (guest thread); other users (open_audio_output, audio_hotplug_apply, set_frequency<-osAiSetFrequency_recomp) are guest threads (serialized) or main thread in ultramodern::preinit->init_audio before guest threads exist; F9 handler only bumps atomic g_audio_route_cycle
 src/main/main.cpp	g_audio_route_pref	audio_route_load_pref	H-safe-thread	unlocked call is from audio_route_apply_cycle (guest thread via queue_samples); locked call from open_audio_output (main at preinit, then guest threads); no non-guest thread reads/writes the string
-src/main/rt64_render_context.cpp	pool	submit_rdp_range	H-safe-other	'uint32_t pool = 0' is a block-local at 2095; the locked 'pool' is the static vector<vector<uint8_t>> local to another function (1541)
-src/main/upstream_compat.cpp	big	rs64_s6063_malloc	H-safe-other	3574 'std::multimap big' is a block local (the s_s6063_live it iterates is a separate container, guest-thread only)
-src/main/upstream_compat.cpp	big	rs64_s6094_tick	H-safe-other	3792 'bool big' is a local
-src/main/upstream_compat.cpp	big	s6127_walk	H-safe-other	4045 'uint32_t big[5]' is a local array; locked 'big' (3953) is a local uint32_t in rs64_s7326_spill_reset
-src/main/upstream_compat.cpp	caller	osViSwapBuffer_recomp	H-safe-other	'caller' is a local const and a field of a CallerRow struct; the static rows[] is touched only in this guest-thread hook
-src/main/upstream_compat.cpp	caller	rs64_m5_route_candidate	H-safe-other	'caller' is a by-value uint32_t parameter
-src/main/upstream_compat.cpp	caller	rs64_m5_route_prepare_inputs	H-safe-other	'caller' is a by-value uint32_t parameter
-src/main/upstream_compat.cpp	caller	rs64_m5_scheduler_recv_identity	H-safe-other	'caller' is a by-value uint32_t parameter
-src/main/upstream_compat.cpp	caller	rs64_m5_vi_commit_handoff	H-safe-other	by-value parameter; 1746 stores into g_m5_vi_commit.caller which is std::atomic<uint32_t>
-src/main/upstream_compat.cpp	caller	rs64_s4602_strncpy_caller	H-safe-other	'caller' is a by-value uint32_t parameter
-src/main/upstream_compat.cpp	cur	rs64_cine_progress_log	H-safe-other	'uint64_t cur' is a local loaded from atomic g_cine_iter
-src/main/upstream_compat.cpp	cur	rs64_s4222_chain	H-safe-other	'uint32_t cur' is a block local
-src/main/upstream_compat.cpp	cur	rs64_s6919_base	H-safe-other	'cur' is a by-value parameter
-src/main/upstream_compat.cpp	cur	rs64_s7326_scan	H-safe-other	'uint64_t cur' is a local counter (incremented inside the lock block, printed after; still a stack local)
-src/main/upstream_compat.cpp	out	g5a_walk	H-safe-caller	'out' is a vector& parameter; every caller passes a stack-local vector except 4746 which passes its static b while holding its static mu
-src/main/upstream_compat.cpp	out	get	H-safe-other	S7024Flat::get 'uint16_t& out' output parameter, unrelated to any locked 'out'
-src/main/upstream_compat.cpp	out	rs64_s7324_sym	H-safe-other	'char* out' parameter; callers (s7324_rcp_spill.cpp 111/112/142) pass their own local buffers
 src/main/upstream_compat.cpp	s7331_q	rs64_s7325_heapsync	H-safe-thread	all accesses (4624 clear, 3959 push in rs64_s7326_spill_reset, 4628 read) run on the guest thread: spill_reset is called only from heapsync, heapsync only from the coalesceFreeHeapBlocks wrapper (recompiled guest code)
 src/main/upstream_compat.cpp	s_s7317_live	s7318_blk	H-safe-caller	all callers hold s_s7317_mu: s7318_class (3491), rs64_s7324_class (3531), rs64_s7325_gap (4563)
 src/main/upstream_compat.cpp	s_s7326_tag	s6702_release_locked	H-safe-caller	both callers hold s_s6702_mu: rs64_s7326_spill_reset (3951) and rs64_s6569_isspill (3970)
@@ -87,21 +54,9 @@ src/main/upstream_compat.cpp	s_s7332_carve	s7318_blk	H-safe-caller	same as s_s73
 src/main/upstream_compat.cpp	s_s7332_carve	s7333_boot_register	H-safe-caller	only called from s7318_blk (3473), whose callers all hold s_s7317_mu
 src/main/upstream_compat.cpp	s_s7333_keys	s7333_boot_register	H-safe-caller	only called from s7318_blk under s_s7317_mu
 src/main/upstream_compat.cpp	s_s7333_keys	s7333_ev	H-safe-caller	all callers hold s_s7317_mu: s7317_free (3417), s7318_blk (callers locked), rs64_s6063_malloc (3559), heaprebuild (4597), heapsync (4640)
-src/main/upstream_compat.cpp	sig	rs64_s4230_poll_start	H-safe-other	'uint32_t sig' is a loop local of the poll thread; locked st.sig (4223) is a member of a different struct
-src/rsp/dpc_bridge.cpp	first	rs64_f5_vtx_probe	H-safe-other	'const uint32_t first' is a local
-src/rsp/dpc_bridge.cpp	first	rs64_floor_cover_emit	H-safe-other	'int first' is a loop local
-src/rsp/dpc_bridge.cpp	first	rs64_m4_end_probe	H-safe-other	'bool first' is a loop local
 src/rsp/dpc_bridge.cpp	g_f5_last_writer	rs64_f5_dump_join	H-race-diag-FIXED-s7366	unlocked empty()/resize() at 1791-1792 on the Gfx thread (factor5 ucode vtx probe) vs the same unlocked first-touch resize in rs64_f5_last_writer_update on a guest thread; needs ROGUESQ_LOG_F5_VTX plus ROGUESQ_LOG_F5_STORE_SHADOW or ROGUESQ_LOG_ALL; one-time window, torn or double-allocated vector
 src/rsp/dpc_bridge.cpp	g_f5_last_writer	rs64_f5_last_writer_update	H-race-diag-FIXED-s7366	unlocked empty()/resize() at 1685-1686 on the guest store hook vs dump_join's unlocked resize and its locked element reads (1851/1889) on the Gfx thread; diag-only (same env gates); first-touch only
-src/rsp/dpc_bridge.cpp	last	rs64_dpc_defer_begin	H-safe-other	'static uint64_t last' is a function-local static used only here
-src/rsp/dpc_bridge.cpp	last	rs64_floor_cover_emit	H-safe-other	'int last' is a loop local
-src/rsp/dpc_bridge.cpp	last	rs64_g5b_frame	H-safe-other	'static int last' is a function-local static used only in this function; the locked 'last' (1712/1744) is a local const in another function
 src/rsp/dpc_bridge.cpp	g_f5_last_writer	rs64_f5_last_writer_ensure	H-safe-caller	s7366 fix: resize inside std::call_once
-src/main/upstream_compat.cpp	seen	g5a_walk	H-safe-other	s7420: 'uint32_t seen[3]' is a stack local of g5a_walk; the locked 'seen' (s7393 cq, 8412) is a different namespace-scope array
-src/main/upstream_compat.cpp	seen	osViSwapBuffer_recomp	H-safe-other	s7420: 'static uint32_t seen[24]' is a function-local static of the [fbw] swap log, not the s7393 cq 'seen' locked under mu
-src/main/upstream_compat.cpp	seen	rs64_m5_b40_route_title_transition	H-safe-other	s7420: 'static std::atomic<bool> seen' is a function-local atomic, not the s7393 cq 'seen'
-src/main/upstream_compat.cpp	seen	rs64_s6911_mapidx	H-safe-other	s7420: 'static uint64_t seen' is a function-local diag counter of rs64_s6911_mapidx, not the s7393 cq 'seen'
-src/main/upstream_compat.cpp	tab	dump_locked	H-safe-caller	s7420: both dump_locked (s7392 8253, s7393 8388) are called only from note paths that hold std::lock_guard(mu) (8273->8287, 8408->8438)
 src/main/main.cpp	g_s7497_zd	s7497_sum_locked	H-safe-caller	s7560: only caller rs64_s7497_zdraw 10608, holds lock_guard(g_s7497_mu) 10604
 src/main/main.cpp	g_s7498_max	s7498_sum_locked	H-safe-caller	s7560: only caller s7498_wb 10669, holds lock_guard(g_s7498_mu) 10651
 src/main/main.cpp	g_s7499_pairs	s7499_sum	H-safe-caller	s7560: only caller s7499_ex 10718, holds lock_guard l2(g_s7499_mu) 10693
@@ -114,31 +69,8 @@ src/main/main.cpp	g_s7501_ring	s7501_push_locked	H-safe-caller	s7560: callers 11
 src/main/main.cpp	g_s7503	s7503_arm_locked	H-safe-caller	s7560: callers rs64_s7503_arm 10814 and rs64_s7503_swap 10896/10897, both hold lock_guard(g_s7503_mu)
 src/main/main.cpp	g_s7503	s7503_sum_locked	H-safe-caller	s7560: only caller rs64_s7503_swap 10898, holds lock_guard(g_s7503_mu) 10884
 src/main/main.cpp	glk	report	H-safe-caller	s7560: s7551::report only called at 11426 at the end of s7551::post, which holds function-scope lock_guard(mu) from 11314
-src/main/main.cpp	kind	post	H-safe-other	s7560: uint32_t kind parameter of s7551::post (11311); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	rs64_m5_callback_teardown_event	H-safe-other	s7560: uint32_t kind parameter (392); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	rs64_m5_pcm_writer_snapshot	H-safe-other	s7560: uint32_t* kind out-parameter (2890); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	rs64_s4429_heap_probe	H-safe-other	s7560: const char* kind parameter (5696); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	rs64_s7493_img	H-safe-other	s7560: uint32_t kind parameter (10574); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	rs64_vld_note	H-safe-other	s7560: const char* kind parameter (5296); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	rs64_wbw_post	H-safe-other	s7560: uint32_t kind parameter (11591/11621); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7493_wb	H-safe-other	s7560: uint32_t kind parameter (11163); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7496_query	H-safe-other	s7560: const char* kind parameter (10529); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7497_img	H-safe-other	s7560: uint32_t kind parameter (10610); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7499_ex	H-safe-other	s7560: uint32_t kind parameter (10691); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7500_set	H-safe-other	s7560: uint32_t kind parameter (10967); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7500_wb	H-safe-other	s7560: uint32_t kind parameter (10972); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7503_set	H-safe-other	s7560: uint32_t kind parameter (10815); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	s7503_wb	H-safe-other	s7560: uint32_t kind parameter (10824); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	start_fl_zero_poller	H-safe-other	s7560: block-local const char* kind (11720); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	kind	wbw_report	H-safe-other	s7560: block-local uint32_t kind (11530); the only std::string kind in main.cpp is a function-local const in another function (5224); no shared container named kind exists
-src/main/main.cpp	seq	rs64_m5_b40_writer_event	H-safe-other	s7560: 'seq' here is a const uint32_t local from an atomic fetch_add (3873); the locked 'seq' is the s7551 namespace uint64_t counter, not a container
-src/main/main.cpp	seq	rs64_m5_pre_dma_writer_store	H-safe-other	s7560: 'seq' is a const uint64_t local from atomic fetch_add (1341); not a container
-src/main/main.cpp	seq	rs64_m5_task_lifetime_edge	H-safe-other	s7560: 'static uint32_t seq' function-local scalar (4386, the declaration line); its only use 4393 is under lock_guard(mutex)
 src/main/main.cpp	spans	report	H-safe-caller	s7560: s7551::report only called from s7551::post 11426 under lock_guard(mu) 11314
-src/main/main.cpp	spans	rs64_m5_field348_store	H-safe-other	s7560: 'static const uint32_t spans[2]' function-local constant (5621), read-only, not s7551::spans
-src/main/main.cpp	spans	rs64_m5_preclear_snapshot	H-safe-other	s7560: 'const uint32_t spans[][2]' is a function-local constant table (902), not s7551::spans
 src/main/main.cpp	t_pre	pre	H-analyser	s7560: t_pre is 'static thread_local std::vector' (11239): per-thread, never shared; pre/post run on the same writeback thread
-src/main/main.cpp	top	rs64_g1d_apply_aspect_policy	H-safe-other	s7560: 'const double top' block local (13779); the other 'top' is a std::string local in s7501_sum_locked
 src/main/upstream_compat.cpp	s_s7475_live	s7475_tick	H-safe-caller	s7560: s_s7475_mu held: callers s7475_malloc 4156 (lock 4126) and s7475_free (lock at its top), nothing else
 src/main/upstream_compat.cpp	s_s7475_live	s7475_walk	H-safe-caller	s7560: s_s7475_mu held: only caller s7475_tick 3764 <- s7475_malloc 4156 / s7475_free (end), both lock_guard(s_s7475_mu) at function scope
 src/main/upstream_compat.cpp	s_s7475_live	s7480_store	H-safe-caller	s7560: s_s7475_mu held: only caller rs64_s7475_store, lock_guard(s_s7475_mu) on the line before the call
@@ -164,9 +96,6 @@ src/main/upstream_compat.cpp	s_s7519_pc	s7519_row	H-safe-caller	s7560: callers s
 src/main/upstream_compat.cpp	s_s7519_rows	s7519_row	H-safe-caller	s7560: callers s7519_wbline 4276, s7519_ev 4284/4288, s7519_store 4311, s7519_load 4320, all under lock_guard(s_s7518_mu)
 src/main/upstream_compat.cpp	s_s7519_set	s7519_wbline	H-safe-caller	s7560: its comment says caller holds s_s7518_mu: callers 4279/4285/4287 are all inside s7519_ev, lock_guard(s_s7518_mu) 4278
 src/main/upstream_compat.cpp	s_s7545_thr	s7545_find	H-safe-caller	s7560: only caller s7545_access 4367, which holds lock_guard(s_s7545_mu) 4366
-src/main/upstream_compat.cpp	seen	rs64_s7496_overlap	H-safe-other	s7560: 'uint32_t seen[3]' is a stack-local array of rs64_s7496_overlap (arena dedupe), not the s7393 cq 'seen' locked under mu
-src/main/upstream_compat.cpp	seen	s7472_check	H-safe-other	s7560: 'uint32_t seen[3]' is a stack-local array of s7472_check (arena dedupe), not the s7393 cq 'seen' locked under mu
-src/main/upstream_compat.cpp	seen	s7480_locate	H-safe-other	s7560: 'uint32_t seen[3]' is a stack-local array of s7480_locate (arena dedupe), not the s7393 cq 'seen' locked under mu
 src/rsp/s7521_ucode_watch.cpp	disp	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
 src/rsp/s7521_ucode_watch.cpp	imem_seen	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
 src/rsp/s7521_ucode_watch.cpp	src28	sum	H-safe-caller	s7560: sum() only caller is rs64_s7521_task 150, which holds lock_guard(m) from 130
@@ -177,3 +106,4 @@ src/rsp/s7523_slow_rdp.cpp	snap	scan_bad	H-safe-caller	s7560: scan_bad() callers
 src/rsp/s7523_slow_rdp.cpp	tch	consume	H-safe-caller	s7560: consume() callers: fs_gate (54) <- rs64_s7523_task 140/rs64_s7523_end 153, on_read (129) <- cur/end/status_read 156/162/164, rs64_s7523_task 141; every extern entry takes lock_guard(g_mu) first
 src/rsp/s7523_slow_rdp.cpp	tch	push	H-safe-caller	s7560: push() only caller rs64_s7523_end 151, which holds lock_guard(g_mu) from 143
 src/rsp/s7523_slow_rdp.cpp	tch	scan_bad	H-safe-caller	s7560: scan_bad() callers rs64_s7523_end 145 and rs64_s7523_pre_submit 190, both hold lock_guard(g_mu)
+src/main/main.cpp	g_audio_route_pref	audio_route_resolve	H-safe-thread	s7561: surfaced by the scope fix (the old in-function container skip matched `std::string want = g_audio_route_pref` and hid it). Callers: open_audio_output (holds audio_device_mutex), audio_route_apply_cycle and audio_hotplug_apply (8329), both from queue_samples on the guest thread (8397-8398); same thread set as the audio_route_load_pref / apply_cycle verdicts

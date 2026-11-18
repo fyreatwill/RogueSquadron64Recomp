@@ -201030,3 +201030,41 @@ all six gates OPEN 0, selftests PASS); regen_verify -> files 50 same 2607 diff 1
 s7559 H-layout set), so the gate changes altered no generated output. Two lines: regen_replay gates + object compare.
 Rules out: H-real anywhere in the 180 rows beyond the 6 fixed sites. Open: 19b(c) B40 A/B soak (voided 2/5 so far, still queued).
 Next: s7366 local-scope / s7363 clamp-ternary analyser precision (26 + 1 false rows), then 19b(c).
+
+## Session 7561 (2026-11-17) — 19b(d) closed: s7366 lockset scope fix drops 71 false rows and surfaces 1 hidden access; s7363 clamp ternary generalised
+HYPOTHESIS-ID: regen-fidelity-drift. Unit from NEXT.md: census analyser precision, H-scope-fixable vs H-collateral.
+**s7366 (tools/s7366_lockset_census.py).** declared() now returns name -> scopes (None = class/file scope, else the declaring
+function's body). Accesses inside a function that declares a local container of the name stay skipped (pre-s7561 behaviour);
+elsewhere a name with no file-scope declaration is dropped, and a file-scope name is dropped in a function whose parameter list
+or body declares its own variable of that name, any type (new shadowed()/params_of(); `a * x` / `a & x` count as a declaration
+only when `a` looks like a type). Header carry-over takes only class/file-scope names. First cut also scanned function-local
+containers inside their own function (lambda captures): +67 OPEN rows, nearly all the declaration statements themselves ->
+reverted to the old skip; the gap (static locals, locals captured by thread lambdas, never lockset-checked) is now documented
+in the code. A second bug found on the way: the template part of the type regex read `exact < 0 || source.join_event >` as
+`<...>`, shadowing g_audio_image_sources (rsp.cpp, real global) -> template args restricted to `[\w\s:,*]` (nested once).
+**Discriminator (diff of -v MIXED rows, scratch/s7561/lock_before.txt vs lock_after.txt):** 173 -> 103 rows, 71 gone, 1 new.
+Gone: 68 H-safe-other (all verdict texts say local/param/by-value/unrelated), 3 H-safe-caller each explained: out@g5a_walk is
+the vector& parameter; tab@dump_locked was a C array `static Ent tab[512]` paired by name with a std:: local `tab` in another
+function; replacementDirectories@ReplacementMap::clear was MIXED only via loadReplacementDirectories' const& parameter (now
+NOLOCK; s7375 verdict CALLER-LOCKED added: one caller holds unique_lock(textureMapMutex), :1531). -> **H-scope-fixable selected,
+H-collateral refuted** (0 real shared access lost). New: g_audio_route_pref@audio_route_resolve (main.cpp:8167) was HIDDEN by
+the old in-function skip (`std::string want = g_audio_route_pref` matched the container-decl regex) -> reviewed H-safe-thread
+(callers open_audio_output under audio_device_mutex, audio_route_apply_cycle + audio_hotplug_apply from queue_samples, guest).
+71 stale verdict rows pruned (copy scratch/s7561/s7366_pruned.tsv). --check OPEN 0; accesses 2124 -> 1289.
+Selftest extended: shadowVec (param, `const uint32_t*` local) -> CONSISTENT, realVec (unlocked clear in g5 beside a std::string
+local in g4) -> MIXED with exactly {g5} unlocked, trapVec (`a < 0 || b > trapVec[0]`) -> MIXED, onlyLocal (local container vs a
+same-name int param) absent. Negative control: HEAD's analyser on the new selftest fails (shadowVec MIXED, onlyLocal present).
+**s7363 (tools/s7363_hostarr_census.py).** CLAMP accepted only `x < k ? x : k` with k < n. Now any constant clamp arm c:
+max index = max(k-1 | k, c) for `<`/`<=` (true arm x) and the reversed `x > k ? c : x` / `>=`; signed-x exclusion kept.
+Selftest +4 (`w<8?w:7` CLAMP, `w>7?7:w` CLAMP, `w<9?w:7` B, `w<8?w:8` B). Diff vs before: exactly 3 keys reclassified, all the
+same clamp form: g_st[p<16?p:15] (s7535_ga_chk.cpp:57), control[bucket] (upstream_compat.cpp:3252/3282, bucket = phase<64u?phase:63u)
+and bySiz[bucket] (rt64_framebuffer_renderer.cpp:1006, siz<8u?siz:7u) -> 3 stale verdicts pruned; OPEN 0 both scopes.
+Planted control: scratch/s7560/plant.cpp still OPEN 2 (g_s7560_plant[x], and g_st2[p<16?p:15] stays B because p is `int`:
+correct, a negative p passes the test).
+**Second line, end to end:** fresh tools/regen_front.sh scratch/s7561/rr/pristine -> cp -> tools/regen_replay.sh -> "regen_replay: ok"
+(7m49s, all gates OPEN 0). Analysers only; no generated or built output changed, so no regen_verify rerun.
+Side findings (pre-existing, not gates): s7375_nolock_threads --check OPEN 8 (s7472-s7521 era containers never reviewed: g_s7500_ctla_cls,
+g_s7503_livefn, s_s7472_seen, s_s7475_seen, s_s7480_internal, s_s7480_pcs, s_s7488_pcs, seen_off; HEAD analyser had 11 incl. these);
+s7420_parser_census OPEN 1 (fixup_patches_host.py STANDALONE weak-blind, since s7490). Neither is in regen_replay.sh.
+Rules out: the analyser change hiding a real shared-container access (H-collateral). Open: 19b(c) B40 soak (voided 3/5, queued).
+Next: s7375 8 unreviewed rows + put s7375 --check in regen_replay.sh, then the s7420 fixup_patches_host row.
