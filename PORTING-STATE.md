@@ -202073,3 +202073,7 @@ Same-binary old/new arms are the control pair. Rules out H-clean. The 18 other t
 DIRS=0), 3 mod exports + 1 Win32 branch (no mods), 3 RT64 user-path calls (dataPath empty in RS64), 8 F1-inspector
 texture-pack/dump calls (dev GUI only; an unreadable pack subfolder would still terminate there, left as gated-dev).
 lib/ edited -> submodule-patches/export.sh refreshed N64ModernRuntime.patch. Next: class XC (other uncaught exceptions).
+Verdict: the same-binary old/new arm pair (rc134 vs alive, both bad-copy variants) selects H-crash and refutes H-clean and
+H-gated for the stored-ROM remove; this closes class FS (code fix in librecomp recomp.cpp + main.cpp, not diagnostics).
+Next discriminator: class XC census (scratch/agent/NEXT.md), whether an owner-reachable json::parse/.at()/thread-ctor throw
+aborts boot or play, split by an old-arm-aborts / fixed-arm-alive witness.
