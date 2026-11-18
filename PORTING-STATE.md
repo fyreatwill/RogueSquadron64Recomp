@@ -201584,3 +201584,7 @@ Rules out: H-diag/H-behav shift UB in the executed code at these routes; misalig
 Not done: a fresh make_elf -> N64Recomp regen through the chain (the pass is idempotent and last; the anchors it rewrites are its own).
 Host note: the quiet-arms harness voids when HIDIdle < 120 s (two voids at 22:31 while idle was ~105 s); wait for >= 130 s.
 Next: gen-c-pointer-overflow-audit (NEXT.md).
+Verdict: selects H-gen-lui (the executed shift UB is the generator's signed LUI literal, fixed machine-code-neutrally) and H-behav
+for the s7009 spannarrow residual (behaviour patch, fixed to the equal multiply); refutes H-clean for shift pre-fix and H-diag as the
+main source; selects H-clean for alignment (0 reports, plant fired). Next discriminator: pointer-overflow UBSan arm (NEXT.md) splits
+H-macro (MEM_* host-pointer wrap, class-wide) from H-patch (wild fixup pointer) from H-clean.
