@@ -201187,4 +201187,7 @@ KEEP_PIPE (the "parent" is only the =0 restore path; nothing to confine) and H-i
 a live repair of a real lap gap, s4273, so its restore/shadow children stay). Refutes H-confinable for this trio. Single run per arm.
 Change: tools/s7565_comp_chain.py retire text carries the 19d verdicts (docs/COMPENSATION-CHAINS.md regenerated, --check ok;
 s7557 GQ census exit 0); comment-only notes at both drop sites in src/rsp/dpc_bridge.cpp. No default changed.
+ORIGIN: no new mitigation; the flagged lines are comments on existing drops. The values are ours: rs64_dpc_defer_begin/_end
+(main.cpp factor5_gfx_runner) are the only writers of g_defer_active, and the dropped PIPESYNC/wrap bytes are the game's
+legitimate RDP stream, dropped only by our own =0 restore paths (s4272/s4273 ORIGINs).
 Next: 19d CUT_LIVE vs s6418 far cutoff (upstream_compat.cpp s6919 block), then SHADE_ORD_RESET.
