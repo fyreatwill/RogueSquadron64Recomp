@@ -201277,3 +201277,23 @@ verdicts; COMPENSATION-CHAINS.md regenerated (--check rc 0); s7557 GQ census rc 
 ORIGIN: no mitigation added (env-gated counters only, default behaviour unchanged).
 Rules out: any present-thread follow-draw access outside workloadMutex at defaults; a tear-free FBPACK=0 at defaults (the Gfx writer is unlocked).
 Next: 19d S7478 canary, then G1D_EDGE_CONTENT.
+
+## Session 7570 (2026-11-17) — 19d S7478_STALECHK H-dead-parent: the stale-record drop lives inside the default-off s7475 canary; L1 dd1 default 0 arms/0 drops, CANARY=1 ctl 7 drops, STALECHK=0 rescores 2 false slack-stores
+- **Offline:** `ROGUESQ_S7478_STALECHK` (src/main/upstream_compat.cpp rs64_s7475_store) runs only after a `s_s7475_live` lookup
+  finds a record covering the store. `s_s7475_live` is filled only in s7475_malloc behind `s7475_on()` = ROGUESQ_S7475_CANARY=1
+  (default off). The slack bitmap g_rs64_s7475_bm can also be allocated by the S7518_STALEWATCH / S7545_THRWATCH watches, but with
+  no canary records the lookup returns before the stale check. So the parent is a measurement-only canary, and STALECHK is the
+  canary correcting its own scoring (s7478), not a game compensation.
+- **Runtime witness (scratch/s7570, g1e_owner_quiet_arms, L1 dd1 FPS60 16:9 owner recipe, HOLD 75, ALLOW_SLOW on battery):**
+  sa default: `[s7475] canary armed` 0, watch-ctl 0, stale-drop 0, slack-store 0.
+  sb CANARY=1+STORE_DIAG=1 (positive control): armed 1, watch-ctl PASS 1, stale-drop 7 (os_rt64fb into 2 dead loadDatFile records
+  w0/size=FFFFFFFF, and the s7478 site-1 overlay-BSS rs_memset 0x800078EC into blk 0x800CAE80, header = MIPS code), slack-store 0.
+  sc CANARY=1+STORE_DIAG=1+STALECHK=0: armed 1, stale-drop 0, slack-store 2 (the same two dead-record sites, now scored as 1-byte
+  overruns = the pre-s7478 false positive). All 3 arms alive_at_end=1, crashlines=0, vi_stalls30s=0.
+- Verdict: selects H-dead-parent (refutes H-interlocked: the check cannot execute without CANARY=1, and the default arm never
+  arms it), and H-confinable is already the case (the parent is env-gated). Keep it: canary runs need it, defaults never see it.
+- Change: tools/s7565_comp_chain.py S7478 retire text carries the verdict; docs/COMPENSATION-CHAINS.md + DEFAULT-ON-LEVERS.md
+  regenerated (GQ census + chain --check rc 0).
+- ORIGIN: no mitigation added (no code change; measurement via existing env-gated canary lines).
+- Rules out: any default-route effect of S7478_STALECHK.
+- Next: 19d G1D_EDGE_CONTENT vs its parent G1D_EDGE (dpc_bridge.cpp rs64_g1d_pillar_scan), the last 19d retail-route chain.

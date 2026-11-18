@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7569 (2026-11-17).
+Compact operational handoff, as of Session 7570 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7569 (19d follow-draw mode-3 chain):** S7376_PQLOCK H-dead-parent (s7377 EARLYLOCK already holds workloadMutex for the
+- **NEW s7570 (19d S7478_STALECHK):** H-dead-parent. The stale drop runs only on s7475 canary records (ROGUESQ_S7475_CANARY=1,
+  default off). L1 dd1: default 0 arms/0 drops; CANARY=1 ctl 7 stale-drops; STALECHK=0 rescores 2 as false slack-stores. Keep. Item 19d.
+- **s7569 (19d follow-draw mode-3 chain):** S7376_PQLOCK H-dead-parent (s7377 EARLYLOCK already holds workloadMutex for the
   whole lookup; ROGUESQ_S7569_FD L1 dd1: 4800/4800 mode-3 entries pre-locked, PQLOCK taken 0, EARLYLOCK=0 ctl 4800). S7383_FBPACK
   interlocked: the Gfx-thread renderToRDRAM writer publishes unlocked (1.0M, all 3742 address changes); LDGFX=0 -> 0 unlocked,
   so LDGFX=0 would confine it. Defaults kept; owner decides. Item 19d.
@@ -472,7 +474,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **s7568 SHADE_ORD_RESET DONE: H-dead-parent** (map filled only when shadeDiagOn; ROGUESQ_S7568_SHORD default/=0 0 calls,
     SHADE_DIAG ctl =0 4233 vs 1; scratch/s7568).
     **s7569 follow-draw trio DONE:** PQLOCK H-dead-parent (subsumed by s7377 EARLYLOCK); FBPACK H-interlocked with the unlocked
-    Gfx-thread publish, confinable by S7384_LDGFX=0 (opt-in lever, not a compensation); scratch/s7569. Next: S7478, G1D_EDGE_CONTENT.
+    Gfx-thread publish, confinable by S7384_LDGFX=0 (opt-in lever, not a compensation); scratch/s7569.
+    **s7570 S7478_STALECHK DONE: H-dead-parent** (parent = default-off s7475 canary; default 0 arms, CANARY=1 ctl 7 drops, =0 2 false
+    slack-stores; scratch/s7570). Next (last): G1D_EDGE_CONTENT.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
