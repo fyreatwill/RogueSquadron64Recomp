@@ -3262,7 +3262,7 @@ index 944e9fe..415f0fc 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..207179e 100644
+index 4276b7d..575cd1d 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -84,8 +84,20 @@ bool recomp::register_game(const recomp::GameEntry& entry) {
@@ -3312,7 +3312,7 @@ index 4276b7d..207179e 100644
      }
  
      return ret;
-@@ -178,8 +202,9 @@ bool write_file(const std::filesystem::path& path, const std::vector<uint8_t>& d
+@@ -178,8 +202,24 @@ bool write_file(const std::filesystem::path& path, const std::vector<uint8_t>& d
      }
  
      out_file.write(reinterpret_cast<const char*>(data.data()), data.size());
@@ -3320,10 +3320,43 @@ index 4276b7d..207179e 100644
  
 -    return true;
 +    return out_file.good();  // ROGUESQ s7357 class AH: a failed/short write used to report success
++}
++
++// ROGUESQ s7596 class FS (FS-1): the throwing std::filesystem::remove aborted boot (std::terminate) when a stale/corrupt
++// stored ROM copy could not be deleted (immutable/read-only file, read-only folder, a non-empty folder of that name).
++// Report and treat the copy as invalid instead. ROGUESQ_S7596_RM=0 restores the old throwing form.
++static void remove_stored_rom(const std::filesystem::path& path) {
++    if (const char* e = std::getenv("ROGUESQ_S7596_RM"); e && *e == '0') {
++        std::filesystem::remove(path);
++        return;
++    }
++    std::error_code rm_ec;
++    std::filesystem::remove(path, rm_ec);
++    if (rm_ec) {
++        std::fprintf(stderr, "[s7596-io] cannot remove the invalid stored ROM %s: %s; ignoring it\n", path.string().c_str(), rm_ec.message().c_str());
++    }
  }
  
  bool check_stored_rom(const recomp::GameEntry& game_entry) {
-@@ -393,12 +418,15 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
+@@ -187,7 +227,7 @@ bool check_stored_rom(const recomp::GameEntry& game_entry) {
+ 
+     if (!check_hash(stored_rom_data, game_entry.rom_hash)) {
+         // Incorrect hash, remove the stored ROM file if it exists.
+-        std::filesystem::remove(config_path / game_entry.stored_filename());
++        remove_stored_rom(config_path / game_entry.stored_filename());
+         return false;
+     }
+ 
+@@ -219,7 +259,7 @@ bool recomp::load_stored_rom(std::u8string& game_id) {
+ 
+     if (!check_hash(stored_rom_data, find_it->second.rom_hash)) {
+         // The ROM no longer has the right hash, delete it.
+-        std::filesystem::remove(config_path / find_it->second.stored_filename());
++        remove_stored_rom(config_path / find_it->second.stored_filename());
+         return false;
+     }
+ 
+@@ -393,12 +433,15 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
          }
      }
  
@@ -3341,7 +3374,7 @@ index 4276b7d..207179e 100644
      ctx->r2 = 8 * 1024 * 1024;
  }
  
-@@ -452,7 +480,10 @@ extern "C" void switch_error(const char* func, uint32_t vram, uint32_t jtbl) {
+@@ -452,7 +495,10 @@ extern "C" void switch_error(const char* func, uint32_t vram, uint32_t jtbl) {
  }
  
  extern "C" void do_break(uint32_t vram) {
@@ -3353,7 +3386,7 @@ index 4276b7d..207179e 100644
      assert(false);
      exit(EXIT_FAILURE);
  }
-@@ -470,6 +501,20 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
+@@ -470,6 +516,20 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
      ctx.mips3_float_mode = 0;
      ctx.f_odd = &ctx.f0.u32h;
  
@@ -3374,7 +3407,7 @@ index 4276b7d..207179e 100644
      if (game_entry.thread_create_callback != nullptr) {
          game_entry.thread_create_callback(rdram, &ctx);
      }
-@@ -543,7 +588,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
+@@ -543,7 +603,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
      MEM_W(osTvType, 0) = 1; // NTSC
      MEM_W(osRomBase, 0) = 0xB0000000u; // standard rom base
      MEM_W(osResetType, 0) = 0; // cold reset
@@ -3394,7 +3427,7 @@ index 4276b7d..207179e 100644
  }
  
  std::u8string recomp::current_game_id() {
-@@ -726,6 +782,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -726,6 +797,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
                  save_type = game_entry.save_type;
                  ultramodern::init_saving(rdram);
  
@@ -3412,7 +3445,7 @@ index 4276b7d..207179e 100644
                  try {
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
-@@ -839,6 +906,7 @@ void recomp::start(const recomp::Configuration& cfg) {
+@@ -839,6 +921,7 @@ void recomp::start(const recomp::Configuration& cfg) {
  
      std::thread game_thread{[](ultramodern::renderer::WindowHandle window_handle, uint8_t* rdram) {
          debug_printf("[Recomp] Starting\n");

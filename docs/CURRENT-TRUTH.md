@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7595 (2026-11-18).
+Compact operational handoff, as of Session 7596 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,18 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7595: class SV (save I/O failure) CLOSED, one defect fixed (two sites).** tools/s7595_sv_census.py --controls (2/2): 21 rows
+- **NEW s7596: class FS (throwing std::filesystem calls) CLOSED, two fixes.** tools/s7596_fs_census.py --controls (2/2): every
+  std::filesystem call in src/, librecomp, ultramodern, rt64/src parsed (balanced parens): 22 ec-form, 20 throwing rows, 0 open,
+  0 stale. FS-1 (H-crash): check_stored_rom/load_stored_rom deleted an invalid stored ROM copy (rs64.n64.us.1.0.z64) with the
+  THROWING remove() on every boot -> an undeletable bad copy (immutable/read-only file, non-empty folder of that name) aborted
+  boot. Now remove_stored_rom() ec + `[s7596-io]` (ROGUESQ_S7596_RM=0 = old). FS-2: main.cpp current_path() throws when the launch
+  folder is gone -> ec form, falls back to ".". Witness scratch/s7596/run.zsh (copied folders, no owner save, NO_SAVE_WRITE):
+  ctl alive; uchg_old rc134 0.2 s ("remove: Operation not permitted"), dir_old rc134 0.1 s ("Directory not empty"); uchg_new,
+  dir_new, cwdgone alive at 30 s with the [s7596-io] line, then the normal "[ROM] Place your ROM" path (the copy cannot be
+  replaced, so no game; was an abort). The other 18 throwing rows are gated: mods exports (no mods shipped), RT64 user paths
+  (empty dataPath), F1-inspector texture-pack load/save (dev GUI only; an unreadable pack subfolder WOULD still terminate), or
+  the old-form env arms.
+- **s7595: class SV (save I/O failure) CLOSED, one defect fixed (two sites).** tools/s7595_sv_census.py --controls (2/2): 21 rows
   (files.cpp, pi.cpp save functions, recomp.cpp initialize_mods), 0 open. Write path, offline harness (--harness, the REAL
   update_save_file/read_save_file text compiled with stubs; scratch/s7595/harness.txt): read-only dir, rename failure, main-is-dir,
   1 MB full disk all keep main intact + one message line (stderr only, <=0.3 ms, non-blocking: H-block refuted); planted pre-s7357
@@ -331,8 +342,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 25. **Class MR CLOSED s7591** (headline). Tool exit 1 on any default-path leak or unknown row; rerun after lib/ edits.
 26. **Class TH CLOSED s7592; class EX CLOSED s7593** (headline). Rerun tools/s7593_ex_census.py --controls after adding any exit,
     abort, atexit or SDL event-consumer site.
-27. **NEXT (s7594): class SG, signal dispositions** (NEXT.md): SIGHUP/SIGPIPE/SIGINT/SIGTERM/SIGQUIT handling when the owner's
-    Terminal closes or a pipe reader dies; does the game save-flush and exit cleanly, or die silently.
+27. **Classes SG s7594, SV s7595, FS s7596 CLOSED** (headline). Rerun tools/s7596_fs_census.py --controls after any lib/ or
+    src/ edit that adds a std::filesystem call.
+28. **NEXT (s7597): class XC, other uncaught-exception sources** (NEXT.md): json::parse (4), throw (10), .at( (15), std::thread
+    ctors (67) outside a try in owner-reachable code.
 
 ## Evidence index
 

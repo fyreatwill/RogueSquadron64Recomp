@@ -202048,3 +202048,28 @@ Work unit: NEXT s7595 class SV, hypotheses H-clean / H-destroy / H-block.
   instrument sees a destroy) and refutes H-destroy and H-block; the read path held a fourth outcome, H-crash (boot abort on an
   unusable folder), fixed. Next discriminator: class FS, the ~30 other throwing-form std::filesystem calls in src/, librecomp,
   ultramodern and rt64/src (scratch/agent/NEXT.md).
+
+## Session 7596 (2026-11-18) — class FS closed: throwing std::filesystem census (20 rows, 0 open, controls 2/2); undeletable invalid stored ROM aborted boot (rc134) -> ec form, current_path fallback; 6-arm boot witness
+
+What ran: tools/s7596_fs_census.py (new): parses every std::filesystem::<fn>(...) / iterator ctor in src/, librecomp/src,
+ultramodern/src, lib/rt64/src (balanced parens, comments stripped); ec-form = argument names an error_code. 22 ec-form, 20
+throwing, all classified, 0 open, 0 stale; --controls plant (throwing remove in check_all_stored_roms) FIRED, drop-row FIRED.
+Defects (H-crash selected over H-clean/H-gated):
+- FS-1 librecomp recomp.cpp check_stored_rom + load_stored_rom: std::filesystem::remove(stored ROM) throwing form, reached at
+  every boot (main.cpp calls check_all_stored_roms twice) whenever the stored copy fails its hash. Fixed: remove_stored_rom()
+  with error_code + `[s7596-io] cannot remove the invalid stored ROM ...`; ROGUESQ_S7596_RM=0 keeps the old form.
+- FS-2 src/main/main.cpp: std::filesystem::current_path() throwing (getcwd fails when the launch folder was deleted) -> ec
+  form, fallback "." and reused for the ROM-import candidates.
+ORIGIN: the writer of the abort is libc++ std::filesystem::remove/current_path raising filesystem_error with no handler on
+the boot thread (uncaught -> std::terminate -> SIGABRT rc134); the values (EPERM/ENOTEMPTY/ENOENT) are legitimate OS
+answers, the defect is the throwing overload choice in upstream librecomp/our main.
+Witness scratch/s7596/run.zsh tag a (boot-only 30 s, copied folders, symlinked binary + import ROM, no owner save, NO_SAVE_WRITE=1;
+results scratch/s7596/results_a.txt): ctl alive (6019 log lines, game runs); uchg_old (4 KB corrupt copy, chflags uchg,
+RM=0) rc134 at 0.2 s "in remove: Operation not permitted"; dir_old (non-empty folder named as the copy, RM=0) rc134 at 0.1 s
+"Directory not empty"; uchg_new / dir_new alive 30 s, [s7596-io] line, import ok but the copy cannot be stored ([s7357-io]),
+so the "[ROM] Place your ROM" message and no game (abort -> explained no-ROM state); cwdgone (folder deleted before exec)
+alive with "[s7596-io] current_path failed: No such file or directory; using ".""; then the s7595 mods/mod_config lines.
+Same-binary old/new arms are the control pair. Rules out H-clean. The 18 other throwing rows: 3 old-form env arms (s7595
+DIRS=0), 3 mod exports + 1 Win32 branch (no mods), 3 RT64 user-path calls (dataPath empty in RS64), 8 F1-inspector
+texture-pack/dump calls (dev GUI only; an unreadable pack subfolder would still terminate there, left as gated-dev).
+lib/ edited -> submodule-patches/export.sh refreshed N64ModernRuntime.patch. Next: class XC (other uncaught exceptions).

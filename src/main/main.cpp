@@ -14688,7 +14688,18 @@ int main(int argc, char* argv[]) {
     }
 
     // Use the working directory as the config/data path (portable mode).
-    recomp::register_config_path(std::filesystem::current_path());
+    // ROGUESQ s7596 class FS (FS-2): the throwing current_path() aborts boot when getcwd fails (the launch folder was
+    // deleted or made unsearchable under a running shell). Fall back to "." (relative paths still resolve).
+    std::filesystem::path rs_cwd;
+    {
+        std::error_code cwd_ec;
+        rs_cwd = std::filesystem::current_path(cwd_ec);
+        if (cwd_ec || rs_cwd.empty()) {
+            fprintf(stderr, "[s7596-io] current_path failed: %s; using \".\"\n", cwd_ec.message().c_str());
+            rs_cwd = ".";
+        }
+    }
+    recomp::register_config_path(rs_cwd);
 
     for (const auto& game : supported_games) {
         recomp::register_game(game);
@@ -14705,7 +14716,7 @@ int main(int argc, char* argv[]) {
             "rs64.z64",
         };
         for (const char* name : rom_candidates) {
-            std::filesystem::path p = std::filesystem::current_path() / name;
+            std::filesystem::path p = rs_cwd / name;
             auto result = recomp::select_rom(p, rs_game_id);
             if (result == recomp::RomValidationError::Good) {
                 fprintf(stderr, "[ROM] Imported %s\n", name);
