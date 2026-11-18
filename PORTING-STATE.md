@@ -202139,3 +202139,7 @@ data, in src/, librecomp/src, ultramodern/src, lib/rt64/src. Hypotheses H-clampe
   queued scratch/agent/soak_queue/s7598_maskclamp_flight.sh (L1 + L4 dd4 owner recipe, 180 s each, reports clamp lines).
 - Rules out: guest-sized bad_alloc / multi-GB commit / oversize Metal texture in owner-reachable code at the current tree.
   Open but gated: dpc_bridge e9 provenance `frame_depths.resize(depth + 1)` (depth from a 32-bit slot word; diagnostic only).
+- Verdict: this selects H-clamped and refutes H-unbounded and H-gpu (source read of every row + the masks=15 plant run: old arm
+  alive, max upload 65x65, 0 over 4096), and closes class AZ. The clamp itself is a behaviour change in RDP::setTile, not
+  instrumentation. Next discriminator: soak s7598_maskclamp_flight clamp-line count (0 = AZ-1 is inert on retail flight; >0 =
+  a same-run MASK=0 vs default frame pair decides whether the view changes).
