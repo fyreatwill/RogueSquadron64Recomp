@@ -201386,3 +201386,5 @@ anyway, so this does not change the verdict: the guard is dead code at defaults 
 Verdict: GUARD-6 6/6 decided (COPY/PI_DMA/SPAI/s1978 H-dead, PIO unreached, musyx div-trap H-dead with ctl). Item 20 CLOSED.
 Rules out: the musyx div-trap as a source of audio or crash behaviour at the owner recipe.
 Note for later: 1380 `do_break(` sites remain in generated code, unpatched; the next idiom-class audit is their census (NEXT.md).
+Verdict line: selects H-dead for the musyx div-trap guard (refutes H-unreached: 0x80090A3C entered ~721k times; refutes H-late
+for the 150 s routes; H-env refined to "census VI-phase gated"). Next discriminator: the do_break idiom-class census (NEXT.md).
