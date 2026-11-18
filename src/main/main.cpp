@@ -28,6 +28,7 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
                                                 uint32_t phase, uint32_t width,
                                                 uint32_t origin, uint32_t accepted);
 #include "ultramodern/events.hpp"
+#include "ultramodern/error_handling.hpp"
 #include "librecomp/game.hpp"
 #include "librecomp/rsp.hpp"
 #include "common/rt64_common.h"
@@ -5228,6 +5229,13 @@ static void rs64_diag_plant_exit_tick() {
         std::_Exit(1);
     }
     if (kind == "silent") std::_Exit(1);
+    // s7593: uquick = a burst of ROGUESQ_S7593_FLOOD (default 5000) numbered lines, then the real ULTRAMODERN fatal exit, so the
+    // log shows whether the lines queued in async stderr (s6979) survive the exit (scorer: count "[s7593-flood]" + the exit line).
+    if (kind == "uquick") {
+        const char* fe = getenv("ROGUESQ_S7593_FLOOD"); const int fn = (fe && *fe) ? atoi(fe) : 5000;
+        for (int i = 0; i < fn; i++) (fprintf)(stderr, "[s7593-flood] %d padpadpadpadpadpadpadpadpadpadpadpadpadpadpadpadpadpad\n", i);
+        ultramodern::error_handling::quick_exit(__FILE__, __LINE__, "s7593_plant", 1);
+    }
     printf("Switch-case out of bounds in %s at 0x%08X for jump table at 0x%08X\n", "s7450_plant", 0x80001234u, 0x800A0000u);
     exit(EXIT_FAILURE);
 }
@@ -12071,7 +12079,84 @@ static void rs64_pad_test_tick() {
     }
 }
 
+// s7593 class EX (quit path). Cmd+Q / window close / SIGTERM all become SDL_QUIT, and before s7593 the only consumer was the
+// SDL_PeepEvents loop in poll_input(), i.e. the guest's osContStartReadData. A guest that is not polling (a load, a stall, a
+// hang) left the quit queued: the app ignored Cmd+Q until the next poll. ROGUESQ_S7593_MAINQUIT (default 1; =0 = old) also
+// peeks for SDL_QUIT on the main thread right after SDL_PumpEvents (update_gfx), so quit no longer waits on the guest.
+// Levers (unset = off): ROGUESQ_S7593_QUIT_AT=<s> pushes SDL_QUIT <s> seconds after the first update_gfx;
+// ROGUESQ_S7593_QUIT_ON_GAP_MS=<ms> pushes it the first time the guest has not polled input for <ms> (after
+// ROGUESQ_S7593_QUIT_AFTER=<s>, default 20); ROGUESQ_S7593_POLLGAP=1 logs every poll gap >= 250 ms.
+// Plants (ROGUESQ_S7593_PLANT): nopoll = poll_input skips its SDL drain for 20 s after the push (a guest that stops
+// polling); crash = an at_quick_exit handler faults; hang = an at_quick_exit handler never returns; exit = std::exit (s5380).
+static int64_t rs64_s7593_now_ns() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+static std::atomic<int64_t> g_s7593_last_poll_ns{0};
+static std::atomic<int64_t> g_s7593_push_ns{0};
+static std::atomic<int64_t> g_s7593_max_gap_ns{0};
+static double rs64_s7593_epoch() { return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(); }
+static const std::string& rs64_s7593_plant() {
+    static const std::string p = [] { const char* e = std::getenv("ROGUESQ_S7593_PLANT"); return std::string(e ? e : ""); }();
+    return p;
+}
+[[noreturn]] static void rs64_s7593_quit_now(const char* who) {
+    static std::atomic<bool> once{false};
+    if (once.exchange(true)) { for (;;) std::this_thread::sleep_for(std::chrono::hours(1)); } // the other consumer is exiting
+    const int64_t p = g_s7593_push_ns.load(), n = rs64_s7593_now_ns();
+    fprintf(stderr, "[main] SDL_QUIT received, exiting\n");
+    fprintf(stderr, "[s7593] quit by=%s latency_ms=%.1f max_poll_gap_ms=%.1f wall=%.3f plant=%s\n", who, p ? (n - p) / 1e6 : -1.0,
+            g_s7593_max_gap_ns.load() / 1e6, rs64_s7593_epoch(), rs64_s7593_plant().c_str());
+    // s7429 class CL: write a save still inside the saving thread's 10 ms coalescing window.
+    fprintf(stderr, "[s7429-quit] save flush=%d\n", ultramodern::flush_save_file());
+    fflush(stderr);
+    const std::string& pl = rs64_s7593_plant();
+    if (pl == "crash") std::at_quick_exit([] { fprintf(stderr, "[s7593] plant crash\n"); fflush(stderr); *(volatile int*)8 = 1; });
+    if (pl == "hang") std::at_quick_exit([] { fprintf(stderr, "[s7593] plant hang\n"); fflush(stderr); for (;;) pause(); });
+    if (pl == "exit") std::exit(EXIT_SUCCESS);
+    // quick_exit: exit() here runs static destructors while guest/audio threads
+    // are live and ends in std::terminate -> SIGABRT (s5380).
+    std::quick_exit(EXIT_SUCCESS);
+}
+static void rs64_s7593_push_quit(const char* why, double t) {
+    if (g_s7593_push_ns.load()) return;
+    g_s7593_push_ns.store(rs64_s7593_now_ns());
+    SDL_Event q{}; q.type = SDL_QUIT; SDL_PushEvent(&q);
+    const int64_t lp = g_s7593_last_poll_ns.load();
+    fprintf(stderr, "[s7593] quit pushed why=%s t=%.1f wall=%.3f since_poll_ms=%.1f origin=0x%08X\n", why, t, rs64_s7593_epoch(),
+            lp ? (g_s7593_push_ns.load() - lp) / 1e6 : -1.0, (unsigned)rs64_vi_committed_origin());
+    fflush(stderr);
+}
+// Main thread, after SDL_PumpEvents.
+static void rs64_s7593_main_tick() {
+    static const double at = [] { const char* e = std::getenv("ROGUESQ_S7593_QUIT_AT"); return (e && *e) ? std::atof(e) : -1.0; }();
+    static const double gap = [] { const char* e = std::getenv("ROGUESQ_S7593_QUIT_ON_GAP_MS"); return (e && *e) ? std::atof(e) : -1.0; }();
+    static const double after = [] { const char* e = std::getenv("ROGUESQ_S7593_QUIT_AFTER"); return (e && *e) ? std::atof(e) : 20.0; }();
+    static const bool mainq = [] { const char* e = std::getenv("ROGUESQ_S7593_MAINQUIT"); return !(e && *e == '0'); }();
+    static const int64_t t0 = rs64_s7593_now_ns();
+    const int64_t n = rs64_s7593_now_ns();
+    const double t = (n - t0) / 1e9;
+    if (at >= 0 && t >= at) rs64_s7593_push_quit("at", t);
+    if (gap > 0 && t >= after) {
+        const int64_t lp = g_s7593_last_poll_ns.load();
+        if (lp && (n - lp) / 1e6 >= gap) rs64_s7593_push_quit("gap", t);
+    }
+    if (mainq) {
+        SDL_Event e;
+        if (SDL_PeepEvents(&e, 1, SDL_PEEKEVENT, SDL_QUIT, SDL_QUIT) > 0) rs64_s7593_quit_now("main");
+    }
+}
+
 static void poll_input() {
+    {
+        static const bool gl = [] { const char* e = std::getenv("ROGUESQ_S7593_POLLGAP"); return e && *e == '1'; }();
+        const int64_t n = rs64_s7593_now_ns(), lp = g_s7593_last_poll_ns.exchange(n);
+        if (lp && n - lp > g_s7593_max_gap_ns.load()) g_s7593_max_gap_ns.store(n - lp);
+        if (gl && lp && n - lp >= 250000000) {
+            fprintf(stderr, "[s7593] pollgap ms=%.0f origin=0x%08X\n", (n - lp) / 1e6, (unsigned)rs64_vi_committed_origin());
+        }
+        const int64_t p = g_s7593_push_ns.load();
+        if (p && rs64_s7593_plant() == "nopoll" && n - p < 20000000000LL) return; // plant: a guest that stopped polling
+    }
     // Heartbeat: a quiet [pad-sdl] site=key after title 1024 is
     // H-poll-stopped if this dies, H-sdl-late-drop if it keeps climbing.
     {
@@ -12091,15 +12176,7 @@ static void poll_input() {
     // On macOS only the main thread may pump Cocoa events (update_gfx does);
     // here we must only dequeue already-pumped events.
     while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) > 0) {
-        if (e.type == SDL_QUIT) {
-            fprintf(stderr, "[main] SDL_QUIT received, exiting\n");
-            // s7429 class CL: write a save still inside the saving thread's 10 ms coalescing window.
-            fprintf(stderr, "[s7429-quit] save flush=%d\n", ultramodern::flush_save_file());
-            fflush(stderr);
-            // quick_exit: exit() here runs static destructors while guest/audio threads
-            // are live and ends in std::terminate -> SIGABRT (s5380).
-            std::quick_exit(EXIT_SUCCESS);
-        }
+        if (e.type == SDL_QUIT) rs64_s7593_quit_now("poll");
         if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) &&
             (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_z)) {
             static int s_pad_sdl_n = 0;
@@ -13441,6 +13518,7 @@ void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
     // intercepts F1-F4 here (filters run before SDL_PollEvent dequeues), so
     // the controller-input poll on the game thread never sees those keys.
     SDL_PumpEvents();
+    rs64_s7593_main_tick();
     rs64_g1f_apply_fs_toggle();
     rs64_display_hotplug_tick();
 }

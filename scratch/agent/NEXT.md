@@ -1,19 +1,16 @@
-# NEXT (s7593)
-HYPOTHESIS-ID: exit-path-census
+# NEXT (s7594)
+HYPOTHESIS-ID: signal-disposition-census
 
-Class TH closed s7592 (64 sites, 0 open; resize/fullscreen flat at runtime, plant fired). Class EX = the quit path. s7592 found 37
-"once" threads that are detached or static and never joined: they keep running while exit() runs static destructors and atexit
-handlers (stderr-async restore, RT64 / ultramodern statics). The owner quits with Cmd+Q / window close; a crash or hang there is
-invisible in soaks because every soak ends with SIGKILL.
-Census (offline, one tool tools/s7593_ex_census.py --controls): every exit route (SDL_QUIT handling, recomp shutdown, std::exit /
-_exit / quick_exit / abort calls, atexit / at_quick_exit registrations) and, for each once-detached thread from s7592, which statics it
-touches after exit starts (globals with non-trivial destructors in the same TU). Classify: safe (exit uses _exit/quick_exit, or the
-thread only touches trivially-destructible state) | race (thread can touch a destroyed static) | join-hang (joined thread waits on
-a condition nothing signals after quit).
-Hypotheses: H-clean (quit returns rc 0 promptly every time), H-race (a detached thread touches a destroyed static -> SIGSEGV/abort
-at quit), H-hang (a join at shutdown never returns).
-Runtime witness: N quits of a live L1 fullscreen game via a pushed SDL_QUIT (add a gated lever ROGUESQ_S7593_QUIT_AT=<s>, like
-ROGUESQ_FS_TEST_TOGGLE_LIST_S in src/main/main.cpp), record exit rc, wall time to exit and any crash report
-(~/Library/Logs/DiagnosticReports newer than the run). Plant: ROGUESQ_S7593_PLANT=1 starts a detached thread that touches a static
-std::string in a loop (must produce a crash/abnormal rc at quit in some runs, or the instrument is blind). Quit at hangar, in mission,
-and during a load. OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+Class EX closed s7593 (62 exit rows, 0 open; quit now consumed on the main thread; ultramodern fatal exit drains async stderr).
+Class SG = what the process does on the signals the owner can cause without Cmd+Q: closing the Terminal tab/window that launched
+the game (SIGHUP to the foreground job), Ctrl+C (SIGINT), Ctrl+\ (SIGQUIT), `kill` (SIGTERM), and a dead stderr/stdout reader
+(SIGPIPE: e.g. the game piped into `tee`/`less` that exits). SDL turns SIGINT/SIGTERM into SDL_QUIT (s7593 sigterm arms rc0, save
+flush ran); SIGHUP/SIGPIPE/SIGQUIT have default dispositions unless something installs handlers -> process dies with no save flush.
+Census (offline, tools/s7594_sg_census.py --controls): every signal()/sigaction()/SDL_HINT_NO_SIGNAL_HANDLERS/sigprocmask/pthread_sigmask
+site in src/ + lib/ (incl. the s7355 crash handlers), per signal: handler, mask, which threads, and the resulting action.
+Hypotheses: H-clean (every owner-reachable signal ends in save flush + rc0, or is harmless), H-silent (SIGHUP/SIGPIPE kill the game
+with no flush and no log line), H-hang (a handler blocks, e.g. the async-stderr writer on a dead pipe -> game stalls).
+Runtime witness (scratch/s7594/run.zsh, reuse scratch/s7593/run.zsh shape, one game at a time, L1 owner recipe): per signal
+(HUP, PIPE via a reader that exits, INT, QUIT, TERM) record rc, exit wall ms, whether "[s7429-quit] save flush" printed, crash lines.
+Positive controls: TERM (known rc0 + flush, s7593) and a plant ROGUESQ_S7594_PLANT=<sig> that installs SIG_DFL for TERM (must turn
+the TERM arm into rc 143 with no flush). OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

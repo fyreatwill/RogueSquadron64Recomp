@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7592 (2026-11-18).
+Compact operational handoff, as of Session 7593 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7592: class TH (thread/timer creation sites) CLOSED, H-clean.** tools/s7592_th_census.py --controls (8/8): 64 rows, joined 18 /
+- **NEW s7593: class EX (exit routes) CLOSED, two fixes.** tools/s7593_ex_census.py --controls (8/8 + pre-fix re-check): 62 rows,
+  0 open. (1) SDL_QUIT (Cmd+Q / close / SIGTERM) was consumed only by poll_input on the guest thread, so quit waited on the guest's
+  next input poll; now also peeked on the main thread (ROGUESQ_S7593_MAINQUIT=0 = old). Plant nopoll: old 20012 ms, new 58 ms; natural
+  poll gaps <=104 ms. (2) ultramodern fatal quick_exit used _Exit on Apple, skipping the async-stderr drain: 2563/5000 queued lines +
+  the fatal line lost; now quick_exit (ROGUESQ_S7593_UQ_EXIT=0 = old) 5000/5000 = direct control. 15 quit arms (scratch/s7593).
+- **s7592: class TH (thread/timer creation sites) CLOSED, H-clean.** tools/s7592_th_census.py --controls (8/8): 64 rows, joined 18 /
   once 37 / transient 9, 0 per-event, 0 unjoined, 0 open (raw-grep cross-check: only zstd pthread wrappers extra, joined in POOL_join).
   Runtime witness, one L1 dd4 fullscreen run: 12 synthetic F11 + resize events thread count 68 -> 67; plant ROGUESQ_S7592_PLANT_FROM=12
   (one parked thread per later event) 67 -> 72 over 6 events. RT64 MSAA re-create joins the old pipeline threads.
@@ -320,9 +325,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 24. **HR-2 CLOSED s7590** (headline, H-dead fixed: guest-thread port refs; ROGUESQ_S7590_THRPORT=0 = old). H-cache/H-leak refuted
     for the per-load step (live rights flat over 3 same-mission reloads).
 25. **Class MR CLOSED s7591** (headline). Tool exit 1 on any default-path leak or unknown row; rerun after lib/ edits.
-26. **NEXT (s7592): class TH, thread/timer creation-site census** (NEXT.md): every std::thread / pthread_create / SDL_CreateThread /
-    dispatch_source / NSTimer in src/ + lib/, classified joined / detached-once / per-event (bounded?) / gated, so paths the HR
-    route never exercised (resize, fullscreen, menus) are covered; runtime witness = s7589 sampler thread count.
+26. **Class TH CLOSED s7592; class EX CLOSED s7593** (headline). Rerun tools/s7593_ex_census.py --controls after adding any exit,
+    abort, atexit or SDL event-consumer site.
+27. **NEXT (s7594): class SG, signal dispositions** (NEXT.md): SIGHUP/SIGPIPE/SIGINT/SIGTERM/SIGQUIT handling when the owner's
+    Terminal closes or a pipe reader dies; does the game save-flush and exit cleanly, or die silently.
 
 ## Evidence index
 

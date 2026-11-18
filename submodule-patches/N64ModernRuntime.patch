@@ -6112,6 +6112,30 @@ index 3198be0..c25d889 100644
      }
  }
  
+diff --git a/ultramodern/src/error_handling.cpp b/ultramodern/src/error_handling.cpp
+index 8ca779e..985f5e5 100644
+--- a/ultramodern/src/error_handling.cpp
++++ b/ultramodern/src/error_handling.cpp
+@@ -1,4 +1,5 @@
+ #include <cstdio>
++#include <cstdlib>
+ 
+ #include "ultramodern/error_handling.hpp"
+ 
+@@ -22,6 +23,13 @@ void ultramodern::error_handling::quick_exit(const char* filename, int line, con
+     fprintf(stderr, "Exiting with exit status '%i'. Function %s, at file %s:%i\n", exit_status, func, filename, line);
+ 
+ #ifdef __APPLE__
++    // ROGUESQ s7593 class EX: upstream _Exit()s on Apple (no at_quick_exit there once), which skips the host's at_quick_exit
++    // handlers: the RS64 async-stderr drain (s6979, default on) never ran, so this fatal line and the log lines queued just
++    // before it could be lost. std::quick_exit exists in this SDK (main.cpp already uses it). ROGUESQ_S7593_UQ_EXIT=0 = old _Exit.
++    {
++        const char* e = std::getenv("ROGUESQ_S7593_UQ_EXIT");
++        if (!(e && *e == '0')) std::quick_exit(exit_status);
++    }
+     std::_Exit(exit_status);
+ #else
+     std::quick_exit(exit_status);
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
 index 149e770..120d81f 100644
 --- a/ultramodern/src/events.cpp

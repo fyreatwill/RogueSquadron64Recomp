@@ -201944,3 +201944,38 @@ Work unit: NEXT s7592 class TH (thread / timer / queue creation sites in our cod
 - Verdict: this selects H-clean and refutes H-event and H-gated (no default or gated per-event thread row; resize/fullscreen
   flat at runtime with a same-run plant). Class TH CLOSED with a new tool + plant lever (no runtime behaviour change; plant unset = off).
 Next: class EX (exit path: what the 37 once-detached threads do during static destruction / quit) - NEXT.md.
+
+## Session 7593 (2026-11-18) — class EX closed: exit-route census (62 rows, 0 open, controls 8/8) + 15-arm quit witness; two defects fixed (quit waited on guest input polling; ultramodern fatal exit lost queued async-stderr lines)
+
+Work unit: NEXT s7593 class EX (quit path), hypotheses H-clean / H-race / H-hang.
+- Census, new tool tools/s7593_ex_census.py [--controls] (scope = s7592 roots minus unlinked tool/cli/test sources, #ifdef _WIN32
+  branches skipped): exit/std::exit, _exit/_Exit, quick_exit, ULTRAMODERN_QUICK_EXIT, abort, atexit/at_quick_exit, SDL event
+  consumers, ultramodern::quit. rows=62: no-dtor 31, abort-handled 9, plant 6, fatal-exit 5 (librecomp cop0/switch_error/do_break,
+  overlays: std::exit after assert(false), process dying anyway), handler 5 (all bounded prints / the 300 ms stderr drain), startup 2
+  (SDL_Init / CreateWindow failures), consumer 2, gated-old 1, dead 1 (ultramodern::quit has no caller), open 0. Controls 8/8 plus a
+  second line: the pre-s7593 error_handling.cpp text re-classified comes out loses-stderr (the tool would have caught defect 2).
+- Finding 1 (H-hang shape, mechanism): Cmd+Q / window close / SIGTERM all become SDL_QUIT, and the ONLY consumer was poll_input's
+  SDL_PeepEvents drain, which runs on the guest thread inside osContStartReadData. So quit waited for the guest's next input poll;
+  a guest that stops polling (load, stall, hang) ignored quit. Fix (default; ROGUESQ_S7593_MAINQUIT=0 = old): update_gfx peeks
+  SDL_QUIT on the main thread right after SDL_PumpEvents; both consumers go through rs64_s7593_quit_now (atomic once: save flush +
+  quick_exit; the loser parks).
+- Finding 2 (ORIGIN: upstream ultramodern error_handling.cpp, Apple branch): ultramodern::error_handling::quick_exit called std::_Exit
+  on Apple, which skips at_quick_exit handlers, so the s6979 async-stderr drain (default on) never ran: the fatal "Exiting with exit
+  status" line and the lines queued before it were lost. Fix (default; ROGUESQ_S7593_UQ_EXIT=0 = old _Exit): std::quick_exit on
+  Apple too (the SDK has it; main.cpp already used it). lib/ edit -> submodule-patches/N64ModernRuntime.patch exported.
+- Levers/plants (src/main/main.cpp, all unset = off): ROGUESQ_S7593_QUIT_AT=<s>, _QUIT_ON_GAP_MS=<ms> (+_QUIT_AFTER), _POLLGAP=1,
+  ROGUESQ_S7593_PLANT=nopoll|crash|hang|exit, ROGUESQ_PLANT_EXIT_KIND=uquick (+ROGUESQ_S7593_FLOOD, default 5000 lines then the real
+  ULTRAMODERN exit). Quit line now carries latency_ms, max_poll_gap_ms and wall.
+- Runtime witness, scratch/s7593/run.zsh + arms.txt, one binary, one game at a time, L1 owner recipe (FPS60 dd4 16:9 fullscreen,
+  forced route + autopilot); results scratch/s7593/results.txt:
+    title_new (t=30) rc0 exit 22 ms by=main | mission_new (t=130, flight) rc0 60 ms by=main | mission_old rc0 88 ms by=poll 2.7 ms
+    gap_new (first 100 ms poll gap, t=50.7, during the load) rc0 182 ms by=main | gap_old: no >=100 ms gap in 220 s (killed, null arm)
+    nopoll_new rc0 58 ms by=main | nopoll_old rc0 20171 ms by=poll latency 20011.9 ms  <- plant: old route waits on the guest
+    sigterm_new rc0 62 ms by=main | sigterm_old rc0 55 ms by=poll (real SDL signal -> SDL_QUIT source, second line)
+    plant_crash rc139 (38 crash lines) | plant_hang hang=1 killed at 30 s | plant_exit rc134 (s5380 std::exit abort reconfirmed)
+    uquick_new rc1 flood 5000/5000 + exit line | uquick_old rc1 flood 2563/5000, exit line LOST | uquick_direct (STDERR_ASYNC=0) 5000 + line
+  Max guest poll gap seen in any quit arm: 104 ms (POLLGAP >=250 ms: 0 events in all 15 runs, boot, load and flight).
+- Verdict: H-race refuted for the user route (quick_exit, rc0 in 8 real/pushed quits, the exit plant shows what a race looks like);
+  H-hang not reached in natural play (poll gaps <=104 ms) but the dependence is real (nopoll plant 20 s) and removed; crash/hang plants
+  prove the witness sees both. Log-loss on fatal exit selected and fixed (2563 -> 5000 vs the direct control). Class EX CLOSED.
+Next: class SG (signal dispositions: SIGHUP/SIGPIPE/SIGINT when the owner's Terminal closes) - NEXT.md.
