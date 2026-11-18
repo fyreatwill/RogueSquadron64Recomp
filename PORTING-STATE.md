@@ -201423,3 +201423,7 @@ Work unit: NEXT.md do_break idiom-class audit (1380 sites).
 - Rules out: silent do_break deletion at defaults (now structurally impossible); stdout loss of the break line.
   Single-source: "retail raises Break and halts the thread" is from libultra knowledge, not an oracle run.
 - Next: generated-C UB audit (float->int casts TRUNC/CVT are bare casts, shifts), NEXT.md gen-c-ub-audit.
+Verdict line: selects H-UB for the deleted do_break checks (refutes H-legit for 34 of 36: they come back once the divide is
+total; 3 legit value proofs remain); refutes H-false-zero (the stdout break line survives abort on macOS); selects H-dead for
+the 34 re-armed checks at defaults (L1/L4 dd2/L12 0 fires, ctl fired). Next discriminator: -O2 IR folding test for the
+float->int cast and shift UB classes (NEXT.md gen-c-ub-audit).
