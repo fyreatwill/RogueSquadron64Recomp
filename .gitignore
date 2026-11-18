@@ -127,3 +127,7 @@ tools/s7253_clkprobe
 
 # ROM-derived memory/ucode dumps (never publish)
 ucode_024A10.bin
+
+# Public build scripts (the build-* rule above would hide them)
+!tools/build-from-scratch.sh
+!tools/build-mips64-toolchain.sh
