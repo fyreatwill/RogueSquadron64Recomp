@@ -16,6 +16,11 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   branch never decides; content reach is clipped to the scissor, so it trims a superset. ROGUESQ_S7571_EDGE L1 dd1 4:3 (both rules
   per decision): 5225 decisions, scissor trims 1259 all also content trims (sc_only 0), content-only 2531; EDGE_CONTENT=0 ctl
   scissor rule fires 1260 (intro epochs 16-18). Debrief off-route (single-source: s6726 reach 512->511 = 1 col under both). Keep.
+- **s7572 (S6892 CLOSED, last UNKNOWN lever): CHAIN(ROGUESQ_TILEPOOL), dead at defaults.** Writer was already named by s6893
+  (selectGridCellTileVariant tile-pool overrun at dd>1, hw watch + ctlA/ctlC matched pair); NEXT.md's "never named" was stale.
+  LEVEL=4 owner recipe, TILEPOOL_TESTADD=45 to expose the peak (ctl: count lines printed): dd1 peak 5 of 90 entries, dd2 27
+  (retained logs: dd1 never >=45 in 100 inits, dd2 99>90 in 7/24); 3 walker notes, 0 guard fires per arm; same-build
+  S6892_TEST=5 ctl fired+repaired. 0 natural fires in every retained log. Retail cannot overrun on this route. scratch/s7572.
 - **s7570 (19d S7478_STALECHK):** H-dead-parent. The stale drop runs only on s7475 canary records (ROGUESQ_S7475_CANARY=1,
   default off). L1 dd1: default 0 arms/0 drops; CANARY=1 ctl 7 stale-drops; STALECHK=0 rescores 2 as false slack-stores. Keep. Item 19d.
 - **s7569 (19d follow-draw mode-3 chain):** S7376_PQLOCK H-dead-parent (s7377 EARLYLOCK already holds workloadMutex for the
@@ -32,7 +37,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   default 0 PIPE drops vs 17.4M B at =0); S4272/WRAP_RESTORE hang on the live WRAP_FLUSH repair, keep. Item 19d.
 - **s7565 (19c CLOSED): compensation-chain audit, H-chains selected.** tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md
   (122 rows, hand verdicts, controls 8/8): CHAIN 34 (12 on the retail route, 22 inside dd>1/ASPECT features), FEATURE 34,
-  RETAIL-GAP 41, GUARD 6, DIAG 5, OWNER 1, UNKNOWN 1 (S6892). Retail-route chains beyond s4889/s7476: WRAP_RESTORE+S4272
+  RETAIL-GAP 41, GUARD 6, DIAG 5, OWNER 1, UNKNOWN 1 (S6892; s7572 -> CHAIN(TILEPOOL), 0 UNKNOWN now). Retail-route chains beyond s4889/s7476: WRAP_RESTORE+S4272
   (WRAP_FLUSH), DPC_KEEP_PIPE (our PIPESYNC drop), CUT_LIVE (s6418 at dd1), SHADE_ORD_RESET (our diag map), S7376/S7383/S7384
   (follow-draw mode 3), S7478 (canary), G1D_EDGE_CONTENT. B40 children: only s4889/s7476 (of 196 tags in the s7558 A/B logs, the
   only gate-0-exclusive ones). GQ census fix: `e[0] == 48` idiom was invisible, S4889/S7476 now in DEFAULT-ON-LEVERS (117 ON).
@@ -483,8 +488,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     slack-stores; scratch/s7570).
     **s7571 G1D_EDGE_CONTENT DONE: H-dead-parent** (scissor branch subsumed: sc_only 0/5225, ctl EDGE_CONTENT=0 scissor 1260;
     scratch/s7571). **19d CLOSED** (12/12 chains decided; no default flipped).
-20. **NEXT (s7572, NEXT.md): the one UNKNOWN lever, ROGUESQ_S6892** (G5a walker pointer repair; writer of *(s2+0x18) never
-    named, H-spill leads). Classify it: name the writer or prove which arena the object sits in at dd1 vs dd2.
+20. **S6892 CLOSED s7572: CHAIN(ROGUESQ_TILEPOOL), dead at defaults** (headline). **NEXT (s7573, NEXT.md): GUARD-6 fire census**
+    (COPY/PIO/PI_DMA/SPAI guards + GR drain-hdr + musyx div-trap): does any fire on the retail route; name each writer or prove dead.
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -6,7 +6,7 @@ class GR ungated GUARD/HOSTPLUMB rules. Verdicts are hand reads (s7565) of each 
 comment, prompted by an auto pass that flags sentences naming a parent next to a causal cue. Owner rule: no default flips
 here; this is the list of places where choosing a parent's retail setting or simplifying the parent would retire a child.
 
-Counts: CHAIN 34, DIAG 5, FEATURE 34, GUARD 6, OWNER 1, RETAIL-GAP 41, UNKNOWN 1
+Counts: CHAIN 35, DIAG 5, FEATURE 34, GUARD 6, OWNER 1, RETAIL-GAP 41
 
 Runtime cross-check (s7565, single run set): the s7558 B40 A/B logs (6 arms, L1/L4/L12, gate-0 vs B40=1) carry 196 distinct
 breadcrumb tags; exactly two fire in every gate-0 arm and in no B40=1 arm: `[s4889` and `[s7476` (the positive control).
@@ -48,6 +48,7 @@ No other logged lever is B40-dependent. Coverage caveat: only 18 of the ON lever
 | `ROGUESQ_PTRMASK` | dd spill arena at 0x81000000 | dd spill arena at 0x81000000 (1) | s6992: the game's 0x80000000 pointer test rejects our spill arena (dd>1 only) |
 | `ROGUESQ_RADAR_GATE_EPOCH` | s6158 radar-region shift | s6158 radar-region shift (1) | s6730: our ASPECT radar-disc shift outlived flight; epoch gate (wide only) |
 | `ROGUESQ_RETARGET_RESERVE` | s6202 G1d framebuffer retarget | s6202 G1d framebuffer retarget (1) | s7481: the s6202 retarget's frame pool sits inside a FREE main-heap block; reservation repairs our retarget (ASPECT-path reachability not separated) |
+| `ROGUESQ_S6892` | ROGUESQ_TILEPOOL | ROGUESQ_TILEPOOL (1) | s6892/s6893: the walker's +0x18 junk is the dd>1 tile-variant pool overrun (selectGridCellTileVariant, hw watch + matched pair s6893); TILEPOOL bounds it (dd>1 only). s7572 dead at defaults: LEVEL=4 dd1 peak 5/90 entries, dd2 27, 0 fires/3 walker notes per arm, same-build S6892_TEST ctl fired |
 | `ROGUESQ_S7335_CLAMP` | DLPOOLX host arena | DLPOOLX host arena (1) | s7335: DLPOOLX arena (port) could start below the guest top; clamp keeps the port arena off guest memory |
 | `ROGUESQ_S7336` | spill/DLPOOLX host arenas | spill/DLPOOLX host arenas (1) | s7336: 3 opt-in arena layout defects of ours (overlap, under guest top, above ram_top) |
 | `ROGUESQ_S7337` | dd spill arena above 8 MB | dd spill arena above 8 MB (1) | s7337: stale 8 MB bounds in our ramtop fixups (latent, opt-in) |
@@ -172,4 +173,3 @@ No other logged lever is B40-dependent. Coverage caveat: only 18 of the ON lever
 
 | lever | verdict | note |
 |---|---|---|
-| `ROGUESQ_S6892` | UNKNOWN | G5a walker pointer repair; writer never named (H-spill leads, unproven): could be CHAIN(dd spill arena) |

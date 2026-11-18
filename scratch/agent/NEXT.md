@@ -1,16 +1,16 @@
-# NEXT (s7572)
-HYPOTHESIS-ID: s6892-walker-writer
+# NEXT (s7573)
+HYPOTHESIS-ID: guard6-fire-census
 
-19d CLOSED s7571 (all 12 retail-route chains decided). docs/COMPENSATION-CHAINS.md has ONE UNKNOWN lever left: ROGUESQ_S6892
-(G5a walker pointer repair, tools/apply_s6892_walker_guard.py, default on; logs build/rs64_s6892.log). The writer of
-*(s2+0x18) in cinematicSplineWalkerNpcHandler (caller of initVec4TripletFromArgs, owner crash on Liberation of Gerrard V =
-LEVEL=4, half way) was never named. Read PORTING-STATE '^## Session 6892 ' and CURRENT-TRUTH G5a lines first.
-Hypotheses: H-spill (dd>1 spill arena: object at 0x8082C870 at dd2, never used at dd1), H-overrun (dd/wide terrain writes land
-in the actor), H-fps60 (actor ticks twice, freed/reused), H-uninit (retail bug).
-Discriminator, one build: a write watch on the actor's +0x18 slot (every store, guest PC + caller) armed from the cutscene actor
-allocation, plus the allocator arena of each such actor, in arms dd1 and dd2 at the owner recipe (FPS60, 16:9), LEVEL=4 forced
-route, with the s6892 fire log. Positive control: watch fires on the legitimate initial store of +0x18 in every arm.
-If the half-way event cannot be driven, find the event's trigger offline first (the walker's spawn path) and force it.
-Outcome: name the writer -> classify S6892 (CHAIN of dd spill / GUARD of retail bug) in tools/s7565_comp_chain.py.
+S6892 closed s7572 (CHAIN(TILEPOOL), dead at defaults); docs/COMPENSATION-CHAINS.md has 0 UNKNOWN. Remaining unexplained
+default-on class: GUARD 6 (ROGUESQ_COPY_GUARD s5037, PIO_GUARD s5062, PI_DMA_GUARD s5061, SPAI_GUARD s5063, GR s1978
+drain-base/hdr hang breaker, GR musyxKeyOnVoice div-trap). Each repairs a wild value whose writer was never named (rule 11).
+Hypotheses per guard: H-dead (never fires on the retail route at defaults: keep as cheap insurance, note it), H-live-ours
+(fires, and the bad value comes from a port deviation: name it, CHAIN), H-live-retail (fires on a retail-legal value the
+real hardware tolerates: RETAIL-GAP, name the hardware behaviour).
+Discriminator, one build: a per-guard fire counter (+ first 4 fire PCs/values) dumped at exit, each with a planted control
+env that forces one fire (positive control per guard), arms L1/L4/L12 dd1 4:3 and owner recipe, 180 s each.
+First check the boring thing: grep each guard's existing stderr breadcrumb in retained scratch logs (capture once, analyze
+many, as s7572 did) — that may already answer H-dead for some without a build.
+Outcome: one verdict per guard in tools/s7565_comp_chain.py; then item 21 (next 3c rung).
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
-Run template: scratch/s7571/run.zsh (g1e_owner_quiet_arms, ALLOW_SLOW; ARMS "dd:tag:ENV+ENV").
+Run template: scratch/s7572/run.zsh (g1e_owner_quiet_arms, ALLOW_SLOW; ARMS "dd:tag:ENV+ENV").

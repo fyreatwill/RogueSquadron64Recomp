@@ -201323,3 +201323,25 @@ Verdict: selects H-dead-parent (and H-confinable: EDGE_CONTENT already confines 
 H-interlocked (no decision where only the scissor rule trims). Keep both; =0 remains the s6726 rule. No default flipped.
 tools/s7565_comp_chain.py RETAIL_SCOPE updated; census and chain check rerun (exit 0). 19d CLOSED: all 12 retail-route chains
 decided (s7566-s7571). Next: item 20, classify the one UNKNOWN lever ROGUESQ_S6892 (G5a walker pointer repair).
+
+## Session 7572 (2026-11-17) — S6892 CLOSED as CHAIN(ROGUESQ_TILEPOOL), dead at defaults: dd1 tile peak 5/90, 0 guard fires, same-build planted control fires; 0 UNKNOWN levers left
+HYPOTHESIS-ID: s6892-walker-writer (closed).
+Boring thing first: NEXT.md said the writer of the walker's *(s2+0x18) was "never named", but s6893 had already named it
+(selectGridCellTileVariant writes pool[phase]+25*count unbounded; at dd>1 the window exceeds the 90-entry LEVEL=4 pool and runs
+into the next block; hardware watch on the natural tour + ctlA/ctlC matched pair). The open question was only whether the S6892
+guard is still live at defaults (TILEPOOL on) and whether retail (dd1) can overrun.
+Offline, retained scratch logs (60 files, [s6893] lines): pool k=2 (dd1 16:9) LEVEL=4: 100 pool inits, count never reached the
+base/2=45 print threshold; k=8 (dd2): peak 99 > 90 in 7/24 inits; k=32 (dd4): 117. [s6892] pc= lines: only s7449's planted one.
+Run, scratch/s7572 (g1e_owner_quiet_arms, LEVEL=4, FPS60 16:9 owner recipe, TILEPOOL default, ROGUESQ_TILEPOOL_TESTADD=45 so the
+real peak prints; control = the count lines appear):
+| arm | dd | hold | tile peak (printed-1-45) | pool cap | walker notes | S6892 fires | end |
+|---|---|---|---|---|---|---|---|
+| t1 | 1 | 150 s | 5 of 90 | 180 | 3 | 0 | alive, 0 stalls |
+| t2 | 2 | 150 s | 27 of 90 | 720 | 3 | 0 | alive, 0 stalls |
+| tc | 2 | 60 s, ROGUESQ_S6892_TEST=5 | - | 720 | 2 | 1 (planted 26282B2B at 8005C38C, repaired 8021C88C) | alive |
+Reading: retail-size pools are never near full on this route at dd1 (5/90), so H-uninit (retail bug) is out here; the overrun
+is dd>1 only (H-spill/H-overrun as named by s6893), and TILEPOOL bounds it, so the S6892 guard is a dead child at defaults.
+Two lines: s6893 watch+matched pair (writer) and this run + retained logs (no fire at defaults, ctl fires). Natural dd2 peak
+varies a lot between runs (27 here, 99 before), as s6893 noted. Owner's own Gerrard V re-flight still the only G5a close.
+Change: tools/s7565_comp_chain.py S6892 -> CHAIN(ROGUESQ_TILEPOOL); docs/COMPENSATION-CHAINS.md regenerated (CHAIN 35, UNKNOWN 0).
+No default changed. Owner save untouched (NO_SAVE_WRITE via harness). Next: GUARD-6 fire census (NEXT.md).

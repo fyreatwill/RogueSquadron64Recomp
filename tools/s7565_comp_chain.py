@@ -231,8 +231,8 @@ HAND = {
  "GR:musyxKeyOnVoice div-trap": ("GUARD", "teq div-by-zero trap -> early return"),
  "GR:s4984 atomic": ("RETAIL-GAP", "atomic host read of the voice count/base: host audio thread concurrency (retail single CPU)"),
  "GR:s6963 cellidx": ("DIAG", "host memo of the lookup, writes no guest state (s7558 rule)"),
- # --- UNKNOWN
- "ROGUESQ_S6892": ("UNKNOWN", "G5a walker pointer repair; writer never named (H-spill leads, unproven): could be CHAIN(dd spill arena)"),
+ # --- UNKNOWN (none since s7572)
+ "ROGUESQ_S6892": ("CHAIN(ROGUESQ_TILEPOOL)", "s6892/s6893: the walker's +0x18 junk is the dd>1 tile-variant pool overrun (selectGridCellTileVariant, hw watch + matched pair s6893); TILEPOOL bounds it (dd>1 only). s7572 dead at defaults: LEVEL=4 dd1 peak 5/90 entries, dd2 27, 0 fires/3 walker notes per arm, same-build S6892_TEST ctl fired"),
 }
 
 
