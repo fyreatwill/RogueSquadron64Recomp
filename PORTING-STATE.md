@@ -201161,8 +201161,9 @@ Soak fold: no new SOAK-RESULTS lines since s7564.
   196 distinct `[tag` breadcrumbs; exactly two fire in all 3 gate-0 arms and none of the B40=1 arms: `[s4889`, `[s7476` (positive
   control, known children); no tag skews >4x between settings. So no other LOGGED lever is a B40 child. Coverage caveat: only 18 of
   117 ON levers emit a session-tagged breadcrumb, so this does not cover silent levers (the hand table does).
-- **Verdict:** H-chains selected (>=2 chains beyond s4889/s7476: 10 more on the retail route), H-isolated refuted, H-unclassifiable
-  refuted except S6892 (UNKNOWN, listed). For the B40 parent specifically H-isolated holds (two independent lines). No default flipped.
+- **Verdict:** this selects H-chains (>=2 chains beyond s4889/s7476: 10 more on the retail route) and refutes H-isolated; it refutes
+  H-unclassifiable except S6892 (UNKNOWN, listed). Next discriminator (19d): per retail-route chain, whether the parent's harmful
+  branch is reachable only in the state the child repairs (H-confinable vs H-interlocked vs H-dead-parent), dpc_bridge trio first. For the B40 parent specifically H-isolated holds (two independent lines). No default flipped.
 - ORIGIN: no mitigation landed; the chain parents are named per row in docs/COMPENSATION-CHAINS.md (writers from each lever's
   ORIGIN session), e.g. s4889's trigger = the port's own gate store 0 in setDisplayMode/reapplyDisplayMode (s4700).
 - Rules out: the GQ census as a complete default-on list before s7565 (char-48 blind spot).
