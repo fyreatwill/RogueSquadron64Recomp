@@ -201109,3 +201109,29 @@ Controls 4/4 PASS, VERDICT H-clean OPEN 0, exit 0. `s7420 --controls` added as a
 (cp -R scratch/s7558/pristine scratch/s7563/replay) -> "regen_replay: ok" 8m31s, gate controls fired in its log.
 Soak fold: s7558_b40_ab voided 5/5 (host on battery, g1e_owner_quiet_arms clk cap exit 2, arms=0) -> 19b(c) is an in-session
 ALLOW_SLOW=1 rerun next (NEXT.md). Rules out: a STANDALONE PatchesLib patch with an unresolved weak symbol.
+
+## Session 7564 (2026-11-17) — 19b(c) B40 A/B closed: gate-0 default and retail store both 6/6 clean; gate-0 survives only via the s4889+s7476 compensations
+
+Work unit: NEXT.md 19b(c). s7558_b40_ab had voided 5/5 in the queue (battery, clk cap). Rerun in-session:
+`env ALLOW_SLOW=1 zsh scratch/agent/soak_queue/done/s7558_b40_ab_20261117-172950.sh` (R=scratch/s7558_b40_ab). Host: HID idle
+>16000 s, screen-lock key absent from ioreg (unlocked), battery 79->69%, clk 1.521-1.525 on every arm. Owner recipe 16:9 FPS60,
+godmode, NO_SAVE_WRITE, 240 s holds, interleaved default/B40=1 per level.
+
+| arm | level/dd | B40 | alive | crashlines | vi_stalls30s | max_gap_ms | gen/s (>=60 s) |
+| l4d | L4 dd2 | 0 (default) | 1 | 0 | 0 | 162 | 59.5 |
+| l4b | L4 dd2 | 1 (retail) | 1 | 0 | 0 | 177 | 59.2 |
+| l1d | L1 dd4 | 0 | 1 | 0 | 0 | 162 | 37.1 |
+| l1b | L1 dd4 | 1 | 1 | 0 | 0 | 205 | 37.0 |
+| l12d | L12 dd4 | 0 | 1 | 0 | 0 | 146 | 31.0 |
+| l12b | L12 dd4 | 1 | 1 | 0 | 0 | 193 | 30.8 |
+
+Positive controls: every arm wrote its present ring, and the scorer resolves sub-60 rates (L1/L12 dd4 on the capped battery clock
+read 31-37/s, the same in both arms). Knob witness, second evidence line: a per-arm diff of log tag sets shows `[s4889]
+first-gate-zero-dereg` (fires only when MEM_BU(0x800A0F50)==0 at the first teardown) and `[s7476] dereg a1 before=17 after=1 fix=1`
+in all 3 default arms and in none of the 3 B40=1 arms. So the env took effect, and the gate-0 default reaches the first teardown
+with the gate clear and relies on the s4889 one-shot dereg (s4890) and its s7476 $a1 repair. With the retail store neither patch
+runs. The `[cineBody] B40=` field (apply_s5523_im_ra.py) reads 0x80130B40, a different address: not a gate witness.
+Selects H-gate0-safe (as built today). Refutes H-passthrough-harmful (B40=1 arms 3/3 clean). H-passthrough-needed is not shown
+today: s4700's 2/4 gate-0 crash predates s4889/s7476, which now cover that path. Single run, 240 s per arm.
+Owner decision (CURRENT-TRUTH item 4): the retail store is equally clean and needs no compensation; default not flipped.
+Next: 19c compensation-chain audit (default-on levers that exist only to repair another port deviation).

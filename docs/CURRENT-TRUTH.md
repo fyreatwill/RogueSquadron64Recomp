@@ -12,7 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7563 (19b s7420 CLOSED): s7420 parser census OPEN 1 -> 0, H-blind selected (false row).** fixup_patches_host.py's
+- **NEW s7564 (19b(c) CLOSED, 19b CLOSED): B40 A/B, H-gate0-safe selected; owner decision pending.** s7558_b40_ab rerun
+  in-session (ALLOW_SLOW, battery clk 1.52, 16:9 FPS60, L4 dd2 / L1 dd4 / L12 dd4, 240 s each): default gate-0 and B40=1 arms
+  6/6 alive, 0 crashlines, vi_stalls30s=0, gen/s per pair 59.5/59.2, 37.1/37.0, 31.0/30.8 (tools/s7537_ring_cost.py, from 60 s).
+  Same-run witness: `[s4889] first-gate-zero-dereg` (reads MEM_BU 0x800A0F50==0) and `[s7476] dereg a1 17->1 fix=1` fire in every
+  default arm and in NO B40=1 arm. So gate-0 is safe today only because two compensating patches (s4889 dereg, s7476 $a1 fix) run;
+  the retail store (B40=1) needs neither. s4700's 2/4 gate-0 crash predates both. Owner question (item 4): restore the retail
+  store as default? Not flipped. The `[cineBody] B40=` field reads 0x80130B40, NOT the gate - never use it as a witness.
+- **s7563 (19b s7420 CLOSED): s7420 parser census OPEN 1 -> 0, H-blind selected (false row).** fixup_patches_host.py's
   anchored `^RECOMP_FUNC` regex edits RecompiledPatches/patches.c (CMake step 2), which weaken_patched_funcs.py never touches:
   patches.c has 0 weak headers, its 3 override headers are strong, libPatchesLib.a defines them `T`, libRecompiledFuncs.a
   has them `weak external` (nm -m), binary carries all 3 `[patch-live]` probes, 39 s7490 hooks present. Census gained a
@@ -315,7 +322,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
    Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
    left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-4. **Owner decisions on defaults:** M5_B40_VALUE (s7558: built default 0 contradicts s4701 pass-through), RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
+4. **Owner decisions on defaults:** M5_B40_VALUE (s7558/s7564: default 0 is alive only via the s4889+s7476 compensations; =1 is retail and equally clean 6/6), RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
@@ -431,12 +438,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     Fix: generated docs/DEFAULT-ON-LEVERS.md (every ON lever, sessions, source comment; `--write` regenerates), linked from
     OWNER-OPT-INS. Not covered: unconditional fixups with no env at all -> class GR (NEXT.md).
     **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
-19b. **Regen health (s7558, OPEN, next).** (a) CLOSED s7559 H-layout: `tools/s7421_regen_drift.py <live> <replay> <compare.json>
-    --baseline scratch/s7421/regen_compare.json --control` rc 0, controls 4/4 (new class SLOTPERM), 0 open LOST (docs/REGEN-VERIFY.md
-    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) CLOSED s7561 (headline); (e) CLOSED s7562 (headline); s7420
-    census CLOSED s7563 (headline, now a gate); NEXT (c): B40 A/B soak (s7558_b40_ab voided 5/5 on battery, clk cap -> rerun in-session ALLOW_SLOW=1), then ask the owner whether to restore the s4701 pass-through default.
-    Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
+19b. **Regen health (s7558) CLOSED s7564**: (a) s7559, (b) s7560, (d) s7561, (e) s7562, s7420 census s7563, (c) B40 A/B s7564
+    (headline). Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
     tools/regen_verify.sh D/replay D/verify.
+19c. **Compensation-chain audit (s7564, OPEN, next; NEXT.md).** s7564 found default-on patches (s4889, s7476) that only exist to
+    repair another port deviation (B40 gate 0). Enumerate every default-on behaviour lever (docs/DEFAULT-ON-LEVERS.md) whose trigger
+    condition is another port deviation, classify, and write the chain table for the owner.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

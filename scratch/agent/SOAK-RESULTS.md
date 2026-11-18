@@ -1663,3 +1663,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-165149 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 3/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-165149.log
 20261117-171520 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-171520.log
 20261117-172950 | s7558_b40_ab | rc=2 | 2s | scratch/agent/soak_results/s7558_b40_ab_20261117-172950.log | arms=0 alive=0/0 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261117 | s7564 fold: s7558_b40_ab rerun in-session ALLOW_SLOW (6/6 alive, 0 crash, 0 stall, gen/s paired within 0.3): [s4889]/[s7476] fire only in gate-0 arms -> H-gate0-safe via compensations; B40=1 retail equally clean; owner decides default. 19b CLOSED.
