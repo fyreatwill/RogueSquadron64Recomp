@@ -1,15 +1,18 @@
-# NEXT (s7598)
-HYPOTHESIS-ID: guest-sized-allocation-census
+# NEXT (s7599)
+HYPOTHESIS-ID: guest-driven-container-growth-census
 
-Class XC closed s7597 (91 exception sites, 0 open; mods/ scan ELOOP/EACCES boot abort fixed). Class AZ = every host allocation
-whose SIZE derives from guest data (guest RAM words, RDP/RSP command fields, VI registers, DMA lengths) in owner-reachable code:
-std::vector resize/reserve/assign, new[], malloc/calloc/realloc, std::string(n,..), RT64 texture/framebuffer/buffer creation
-(width*height*bpp from SetColorImage/SetTextureImage/LoadBlock/VI width) in src/, librecomp/src, ultramodern/src, lib/rt64/src.
-Per site: size source; clamp present?; worst-case bytes from a 32-bit/12-bit guest field; consequence (bad_alloc ->
-terminate rc134, multi-GB commit, GPU allocation failure -> null deref).
-Hypotheses: H-clamped (every guest-sized allocation has a bound), H-unbounded (a corrupt or unusual guest field drives a
-multi-GB alloc -> abort/hang), H-gpu (RT64 texture/target creation from guest dims has no cap and fails on the Metal side).
-Tool: tools/s7598_az_census.py --controls (plant an unclamped resize(guest_word) + drop a row; both caught). Runtime witness
-for any H-unbounded row: a gated plant lever writing the extreme field, old arm aborts, clamped arm alive, ctl alive
-(pattern tools/s7597_xc_witness.zsh, copied folders).
+Class AZ closed s7598 (137 guest-sized alloc/createTexture sites, 0 open; AZ-1 SETTILE mask clamp to 10). FIRST fold soak
+s7598_maskclamp_flight from SOAK-RESULTS (clamp lines per arm L1/L4: 0 = AZ-1 never touches retail data; >0 = take a same-run
+framebuffer pair, ROGUESQ_S7598_MASK=0 vs default, at that scene and report whether the view changes).
+
+Class GR = long-lived host containers (static/global/member vectors, maps, sets, deques, strings) that grow by
+push_back/emplace/insert/operator[] once per GUEST event (draw call, DMA, RSP task, osCreateThread, message, texture hash,
+framebuffer address) and are never cleared, capped or evicted in the owner recipe. Consequence: host RSS climbs over a long
+mission (class LK s7585/s7586 measured RT64 memory flat after warm-up, so expect few hits; the census must prove it per site).
+Per site: container lifetime (per-frame / per-workload / run-lifetime); clear/erase/cap present?; growth unit; gated?
+Hypotheses: H-bounded (every run-lifetime container is capped or keyed by a bounded domain), H-grow (one grows per event ->
+RSS slope), H-gated (growth only in env-gated diagnostics).
+Tool: tools/s7599_gr_census.py --controls (plant an uncleared static vector push_back per draw in a copy of rt64_state.cpp + drop a
+row; both caught). Runtime witness for any H-grow row: RSS + container size sampled over a 300 s owner-recipe hold (queue as a
+soak with SOAK_NEEDS_IDLE=300 if the owner is active), old vs capped arm.
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.

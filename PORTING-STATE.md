@@ -202109,3 +202109,33 @@ Verdict: the same-binary old/new arm pair (rc134 vs alive on both ELOOP and EACC
 H-guest refuted by the census (no guest-indexed throwing access). Class XC closed with a code fix in librecomp mods.cpp.
 Next discriminator: class AZ census (scratch/agent/NEXT.md): whether any host allocation sized by a guest field is unclamped,
 split by an old-arm-aborts / clamped-arm-alive witness.
+
+## Session 7598 (2026-11-18) — class AZ closed: guest-sized host allocation census (137 sites, 0 open, controls 3/3); upload sizes bounded under a masks=15 plant; SETTILE mask clamp to 10 (hardware-faithful)
+
+Work unit (NEXT s7598, HYPOTHESIS-ID guest-sized-allocation-census): every host allocation whose size could come from guest
+data, in src/, librecomp/src, ultramodern/src, lib/rt64/src. Hypotheses H-clamped / H-unbounded / H-gpu.
+
+- Census `tools/s7598_az_census.py --controls`: 119 alloc sites (resize/reserve/assign, new[], malloc/calloc/realloc) + 18
+  `createTexture` sites, 73 rows + 16 whole-file rules, 0 open, 0 stale. Verdicts: const 25, host 30 (file/ROM/mod/config
+  sizes), bounded 25, gated 8, const/host 1. Controls 3/3: a planted `pv.resize(size_t(line) << 20)` in a copy of
+  rt64_rdp.cpp reports OPEN, dropping a row reports OPEN, and the AZ-1 clamp line is present.
+- The named clamps behind "bounded": FramebufferManager::get refuses width>1280 or a range past 16 MB (s78/s6130); render
+  targets and tile copies clamp to RenderTarget::MaxDimension 0x4000; present.storage is zeroed past 16 MB; nativeSwappedRAM is
+  then <=1280<<3>>1 * fb height; draw-call tiles <=8; diagnostic snapshots carry their own range checks.
+- H-gpu candidate, the texture cache decode upload (Texture2D(upload.width, upload.height)): state.cpp sampleWidth/Height =
+  min(tile, 1 << mask) with a 4-bit mask, so a wrapped mask of 15 asks for 32768 texels (past Metal's 16384). Runtime witness
+  `tools/s7598_az_witness.zsh` (copied folders, no owner save, NO_SAVE_WRITE): plant ROGUESQ_S7598_PLANT=200 +
+  ROGUESQ_S7598_PLANT_LEN (default 1e9 in the witness: every SETTILE from #200 gets masks=maskt=15 + wrap), boot/attract
+  45 s, final binary (scratch/s7598/results.txt). Arms: ctl alive, clamp lines 0; old (plant, clamp off) alive, 0 crash,
+  `[s7598-bigtex]` (logs any decode upload over 4096 per side) 0; new alive, 0 crash, 7 clamp lines (>=600000 clamps). Old arm + ROGUESQ_LOG_UPSPAN=1: 358 of 400 new uploads carried masks=15/maskt=15, and the largest
+  was 65x65. Upstream RT64 already bounds it: decode happens only when the sample fits 4 KB TMEM (requiresRawTMEM), otherwise
+  raw TMEM; samples over 4096 shrink to maxTexcoord. H-gpu refuted, H-clamped selected (two lines: source read + plant run).
+  Limit: the positive control here is the plant reaching the tile (upspan masks=15), not a fired bigtex. The bigtex counter
+  itself never fired, which is exactly the claim under test.
+- AZ-1 (fidelity fix, not an allocation defect): angrylion clamps mask_s/mask_t above 10 to 10 (g3_angrylion
+  n64video/rdp/tex.c:113 masksclamped), but RT64 used them raw (wrap period 32768 instead of 1024). RDP::setTile now clamps
+  before storing, so sample size, shader wrap and hash all see the hardware value. `[s7598-mask]` logs the 1st and every
+  100000th clamp; ROGUESQ_S7598_MASK=0 = old. Boot/attract ctl: 0 clamps. Flight unmeasured (owner active, HID idle 0 s):
+  queued scratch/agent/soak_queue/s7598_maskclamp_flight.sh (L1 + L4 dd4 owner recipe, 180 s each, reports clamp lines).
+- Rules out: guest-sized bad_alloc / multi-GB commit / oversize Metal texture in owner-reachable code at the current tree.
+  Open but gated: dpc_bridge e9 provenance `frame_depths.resize(depth + 1)` (depth from a 32-bit slot word; diagnostic only).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7596 (2026-11-18).
+Compact operational handoff, as of Session 7598 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7597: class XC (other uncaught C++ exceptions) CLOSED, one fix.** tools/s7597_xc_census.py --controls (2/2): 91 sites
+- **NEW s7598: class AZ (host allocations sized by guest data) CLOSED, H-clamped.** tools/s7598_az_census.py --controls (3/3):
+  119 alloc + 18 createTexture sites in src/, librecomp, ultramodern, rt64/src, 73 rows + 16 file rules, 0 open (const 25,
+  host 30, bounded 25, gated 8). Named bounds: FramebufferManager::get width<=1280 + 16 MB range, MaxDimension 0x4000 on
+  targets/tile copies, present.storage 16 MB, decode uploads only when the sample fits 4 KB TMEM (else raw TMEM, >4096 shrunk
+  to maxTexcoord). Witness tools/s7598_az_witness.zsh (copied folders, NO_SAVE_WRITE): every SETTILE planted masks=maskt=15
+  wrap -> old arm alive, 358/400 uploads carried mask 15, max 65x65, 0 over 4096. AZ-1 fidelity fix: RDP::setTile clamps
+  masks/maskt >10 to 10 like hardware (angrylion tex.c masksclamped; RT64 wrapped at 32768), `[s7598-mask]`,
+  ROGUESQ_S7598_MASK=0 = old. Boot ctl 0 clamps; flight check queued (soak s7598_maskclamp_flight: if retail sends >10, compare frames).
+- **s7597: class XC (other uncaught C++ exceptions) CLOSED, one fix.** tools/s7597_xc_census.py --controls (2/2): 91 sites
   (thread 61, jat 15, throw 7, parse 6, directory_entry queries 2) in src/, librecomp, ultramodern, rt64/src, 51 rows, 0 open:
   every json parse read at boot is caught or non-throwing, thread ctors are boot singletons / once / env-gated / one per guest
   thread, explicit throws are fatal-anyway, dead or caught. XC-1 (fixed): librecomp mods.cpp scan_mod_folder used the throwing
@@ -356,8 +364,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     src/ edit that adds a std::filesystem call.
 28. **Class XC CLOSED s7597** (headline). Rerun tools/s7597_xc_census.py --controls after adding a throw, json parse,
     std::thread ctor or directory_entry query.
-29. **NEXT (s7598): class AZ, host allocations sized by guest data** (NEXT.md): new/resize/reserve/malloc whose size comes from
-    guest RAM or RDP commands (std::bad_alloc -> terminate, or a multi-GB commit) in owner-reachable code.
+29. **Class AZ CLOSED s7598** (headline). Rerun tools/s7598_az_census.py --controls after adding an allocation or createTexture.
+    Fold soak s7598_maskclamp_flight: clamp lines 0 = AZ-1 never touches retail; >0 = owner-recipe frame pair MASK=0 vs default.
+30. **NEXT (s7599): class GR, guest-driven unbounded host container growth** (NEXT.md): push_back/emplace/insert into
+    long-lived containers whose element count follows guest events (draws, DMAs, threads, messages) with no clear/cap.
 
 ## Evidence index
 
