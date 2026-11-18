@@ -201268,6 +201268,10 @@ Verdicts:
   Natural tears stay 0 (latent, as s7383 measured). Keep.
 - S7384_LDGFX: not a compensation; it is the confining lever for FBPACK (parent renderToRDRAM; s7385 RENDER_TO_RAM=0 also removes
   the Gfx writer). Image equivalence of LDGFX=0 was not measured here (s7384: vi-follow-stale 32 vs 27). Opt-in; owner decides.
+s7569 conclusion: this run selects H-dead-parent for S7376_PQLOCK (refutes H-interlocked: 0 lock takes in 4800 entries, ctl 4800)
+and selects H-interlocked for S7383_FBPACK at defaults (refutes H-dead-parent: 1006506 unlocked Gfx-thread publishes), with
+H-confinable shown reachable via S7384_LDGFX=0 (0 unlocked publishes). Next discriminator: S7478 STALECHK detections at
+defaults vs a planted stale entry (NEXT.md).
 Change: ROGUESQ_S7569_FD witness in lib/rt64 (export.sh refreshed rt64.patch); s7565_comp_chain.py retire texts carry the
 verdicts; COMPENSATION-CHAINS.md regenerated (--check rc 0); s7557 GQ census rc 0.
 ORIGIN: no mitigation added (env-gated counters only, default behaviour unchanged).
