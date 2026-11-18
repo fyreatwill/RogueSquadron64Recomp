@@ -124,3 +124,6 @@ tools/oracle/build/
 *.py-E
 tools/s7250_duty
 tools/s7253_clkprobe
+
+# ROM-derived memory/ucode dumps (never publish)
+ucode_024A10.bin
