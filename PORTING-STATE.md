@@ -201458,3 +201458,38 @@ Work unit: NEXT.md gen-c-ub-audit (HYPOTHESIS-ID gen-c-ub-audit).
   shifts of negative int (UB for <<), int16/int32 casts, accumulator arithmetic.
 Verdict line: selects H-safe for the TRUNC_W class (FOLDED=0 of 1199, fold control PASS); refutes H-folded; refutes H-hit at defaults
 (0 OOR at L1/L4 dd2/L12, CTL fired 8/8). Next discriminator: -O2 UB census of the factor5_ucode RSP recompiled C (NEXT.md).
+
+## Session 7577 (2026-11-17) — RSP ucode -O2 UB class closed: 759 UB-capable sites in 6 ucode TUs all value-bounded (gate rc 0), null/alias arms change 0 functions, wrapv diff = 1 bounded diag counter + regalloc churn; 24/24 fold controls
+Work unit: NEXT.md gen-c-ub-audit (HYPOTHESIS-ID gen-c-ub-audit): does -O2 exploit C/C++ UB in the recompiled RSP microcode
+(build/factor5_ucode/*.c via the gfx main/tls/lean/nmac, audio ucode_b and boot TUs) and the librecomp RSP:: vector templates?
+- Boring facts first: the ucode TUs are C++20 (CMAKE_CXX_STANDARD 20), so signed `<<` is defined (modular) and `>>` arithmetic;
+  a shift is UB only through its count. Scalar RSP regs are uint32_t, RSP_ADD32/SUB32 add unsigned then cast (defined). The build
+  already passes -fno-strict-aliasing. On arm64 rsp_vu.hpp sets SISD=false (sse2neon), so the SISD `u16*u16` int-promoted
+  multiplies in VMADL/VMUDL (rsp_vu_impl.hpp:1056/1259, real signed-overflow UB in C++20) are discarded by `if constexpr` and never
+  instantiated (UBSan emits no check for those lines, confirming).
+- New tools/s7577_ucode_ub_census.py + tools/s7577_ucode_ctl.h: compiles every ucode TU at its compile_commands flags to asm in
+  4 arms, A as built / W -fwrapv / S -fno-strict-aliasing / N -fno-delete-null-pointer-checks, with 4 force-included fold controls
+  (x+1>x, u16*u16<0, int/float alias, deref-then-null-check). Per-function normalised asm diff (labels incl. Lloh/.loh renumbered).
+  Result: controls 24/24 (wrapv + u16mul + null FIRED in all 6 TUs; alias PRE-OFF because -fno-strict-aliasing is in the flags).
+  S and N arms: 0 ucode functions differ. W arm: 1 function per TU differs. In boot/audio it is dma_rdram_to_dmem's env-gated
+  ROGUESQ_TRACE_DMA counter `++s_n <= 4000` (A: cmp old,#3999 / W: cmp new,#4000, differ only at s_n == INT_MAX). In the gfx TUs it is
+  the ucode main function, a 16-byte stack-frame shift that churns register allocation over 23k lines (not hand-readable).
+- So the W diff is decided per source site. New tools/s7577_ubsan_sites.py <tu> --check compiles the TU at -O0 with
+  -fsanitize=signed-integer-overflow,shift, reads every handler's static file:line, and requires each site to match a class with a
+  value-range proof. Sites: gfx 174, tls 174, lean 162, nmac 164, audio 78, boot 7 (759). Classes: gen-shift-const (count < 32),
+  gen-shift-masked (&31), glue-opbyte, diag-counter, loop-small (int i < <=48), vu-ring, s8-imm-scaled (s8 * <=16), elem-bounded
+  (template e <= 15), vrcp (shift = clz(data != 0) in [0,31], input > -32768 excludes INT_MIN), mem-b-kseg0, diag-shift,
+  sse2neon-negcount, asan-plant. UNCLASSIFIED 0 in all 6, rc 0. The generated ucode C itself contributes only shifts (constant or
+  masked counts) and bounded fixup counters, so no signed arithmetic in it can overflow.
+  Positive control for the gate: before its class existed, the deliberate s7468 INT_MAX+1 plant (factor5_ucode_nmac.cpp:20-21)
+  was the only UNCLASSIFIED site in 759 (rc 1). The gate catches a real overflow site.
+- Second, independent line: s7468-s7471 ran -fsanitize=undefined (incl. signed-integer-overflow, shift) over these same 6 TUs at
+  runtime (build_asan UCODE=1) across all 19 levels and the hangar route. The in-TU INT_MAX+1 plant reported, and there were 0 reports
+  in ucode code.
+- No fix landed and none is warranted. Every nsw/shift assumption clang may use is a proven fact for all reachable inputs, so the
+  W codegen differences are legal. (Adding -fwrapv would cost codegen in the hottest TU for no semantic change.)
+Verdict line: selects H-safe for the RSP ucode TUs (759/759 sites bounded, gate control fired; S/N arms 0 diffs; controls 24/24;
+runtime UBSan 0 with plant). Refutes H-folded (no UB-grounded fold that can change a result) and H-visible (nothing to make visible;
+no runtime arm needed). Rules out: -O2 UB exploitation in the RSP ucode as a cause of any render/audio defect.
+Next discriminator: the N arm (null-check deletion, still ON) and W arm over the 52 RecompiledFuncs TUs via
+`TU_RE=RecompiledFuncs/ tools/s7577_ucode_ub_census.py` (s7575/s7576 covered div and trunc; null-deletion was never measured there).

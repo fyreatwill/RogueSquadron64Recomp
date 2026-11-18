@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7576 (2026-11-17).
+Compact operational handoff, as of Session 7577 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,31 +12,24 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7576 (generated-C float->int UB class CLOSED):** the only UB-capable emission left after s7575 was TRUNC_W_S/D (1199 bare
+- **NEW s7577 (RSP ucode -O2 UB class CLOSED, H-safe):** 6 ucode TUs (C++20: signed << defined; SISD u16*u16 VMADL/VMUDL bodies
+  never instantiated on arm64). tools/s7577_ucode_ub_census.py arms A / -fwrapv / -fno-strict-aliasing (already in flags) /
+  -fno-delete-null-pointer-checks, 24/24 fold controls: S+N 0 func diffs; W diff = env-gated diag counter + regalloc churn.
+  tools/s7577_ubsan_sites.py <tu> --check: 759/759 UB-capable sites value-bounded (gate fires on the s7468 plant). Runtime UBSan
+  s7468-s7471 0 in ucode. No fix needed. scratch/s7577.
+- **s7576 (generated-C float->int UB class CLOSED):** the only UB-capable emission left after s7575 was TRUNC_W_S/D (1199 bare
   `(int32_t)` casts; shifts are masked on unsigned gpr, mult cannot overflow, DDIV total, CVT_W via lrint). Fold control: clang -O2
   deletes `if (x==3e9f) return (int)x;`. tools/s7576_trunc_census.py --controls: FOLDED=0 of 1199 (3 legal merges, 1 hand-inspected).
   Fix landed anyway: tools/apply_s7576_trunc_total.py (chained) -> RS64_TRUNC_W_S/D (fcvtzs semantics, no UB) + [s7576-trunc] OOR
   witness. L1 / L4 dd2 / L12 150 s: 0 OOR, 0 crash, 0 stall; ROGUESQ_S7576_TRUNC_CTL=8 ctl fired 8/8. scratch/s7576.
-- **s7575 (do_break class CLOSED; -O2 UB fix landed):** RecompiledFuncs builds at -O2, and N64Recomp emits the 32-bit
-  div as C *before* the compiler's `bne b,$zero; break 7`. A zero divisor is UB in C, so clang deleted 31 data-dependent break-7
-  + 5 break-6 do_break calls (-O2 IR, tools/s7575_ir_calls.sh): a zero divisor there ran on silently with lo=garbage, and no log
-  could witness it. Fix, default on and chained in the fixup list: tools/apply_s7575_div_total.py -> RS64_DIV32/RS64_DIVU32
-  (include/rsp_dpc_macros.h), R4300-exact for b==0, identical otherwise (196-pair unit test). After it: 165 live-class checks kept,
-  3 legit value-proof deletions, BLIND=0. Census tools/s7575_break_census.py --controls (10/10) --ir: 1380 sites = 1164 data-as-code,
-  3 dead stub/data-tail (s4818), 45 static-dead (const or non-negative divisor/dividend), 168 data-dependent (every fire fatal and
-  loud, and retail raises Break too). Unchecked divides: 5 (3 const, 2 via lib recomp.h DDIVU, which is already zero-safe).
-  Runtime (owner recipe, 150 s): L1 / L4 dd2 / L12 3/3 alive, 0 [do_break], 0 crash, 0 stall. Harness ctl ROGUESQ_S7575_BREAK_CTL=1
-  printed [do_break] + SIGABRT. do_break now writes to stderr and flushes (lib recomp.cpp). The old stdout line also landed
-  (Apple's abort flushes stdout, per a C test), so the historical "0 Encountered break" greps were real zeros. Corpus: 0 in 521 retained run logs. scratch/s7575.
+- **s7575 (do_break class CLOSED; -O2 UB fix landed):** N64Recomp emits the 32-bit div before `bne b,$zero; break 7`, so
+  clang -O2 deleted 36 do_break checks via div-by-zero UB. Fix (default on, chained): tools/apply_s7575_div_total.py ->
+  RS64_DIV32/RS64_DIVU32 (R4300-exact b==0). Census tools/s7575_break_census.py --controls --ir: BLIND=0. L1/L4 dd2/L12 150 s
+  clean; ROGUESQ_S7575_BREAK_CTL=1 ctl fired. do_break now writes stderr+flush. Full numbers: PORTING-STATE s7575. scratch/s7575.
 - **s7574 (GUARD-6 CLOSED, 6/6):** musyx div-trap H-dead. s7573's silent census was gated to four early VI phases.
   Ungated tally (tools/apply_s7574_keyon_tally.py, [s7574-keyon]): L1/L4 dd2/L12 ~721k key-ons, 0 guard fires, min divisor 192;
   FORCE0=3 ctl fired. break-6 sites statically dead (divisor is lhu). Single-source: a forced early return leaves voice+0x60 = 0,
   later key-ons trap for real and the arm SIGBUSed, so the guard is not a safe sink, only dead at defaults. scratch/s7574.
-- **s7573 (GUARD-6 fire census, no build):** L1 / L4 dd2 / L12 / FORCE-ctl arms, 150 s owner recipe, 4/4 alive, 0 stall,
-  plus 208 retained game logs: 0 natural fires for COPY_GUARD, PI_DMA_GUARD, SPAI_GUARD (census 0 bad of 1.69M AI + 0.84M Cont
-  calls), s1978 drain-timeout (max drain iters 500094 against the 1e7 trip). FORCE ctl fired 16 rows each for COPY/PI_DMA/SPAI;
-  PIO FORCE 0 rows = do_rom_pio never called (unreached). SPAI's StartGo arm is dead code: the live osSpTaskStartGo is the
-  upstream_compat.cpp override with an ungated s7197 range check (0 fires). musyx div-trap UNEVALUABLE: KEYON census silent. scratch/s7573.
 - **s7571 (19d G1D_EDGE_CONTENT, last chain; 19d CLOSED):** H-dead-parent. With EDGE_CONTENT on, the s6726 scissor-rule
   branch never decides; content reach is clipped to the scissor, so it trims a superset. ROGUESQ_S7571_EDGE L1 dd1 4:3 (both rules
   per decision): 5225 decisions, scissor trims 1259 all also content trims (sc_only 0), content-only 2531; EDGE_CONTENT=0 ctl
@@ -517,8 +510,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     musyx div-trap H-dead (0/~721k, FORCE0 ctl fired; break-6 statically dead). No default flipped.
 21. **do_break class CLOSED s7575** (headline). After any regen, verify tools/s7575_ir_calls.sh +
     `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **s7576 float->int class CLOSED** (headline); after a regen
-    also run `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0, rc 0). **NEXT (s7577): same -O2 UB audit for the RSP
-    ucode C** (build/factor5_ucode/*.c; HYPOTHESIS-ID gen-c-ub-audit, scratch/agent/NEXT.md).
+    also run `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0, rc 0). **s7577 RSP ucode UB class CLOSED**; after a
+    ucode regen or rsp*.hpp edit run `tools/s7577_ubsan_sites.py <tu> --check` per ucode TU (UNCLASSIFIED 0) and
+    `tools/s7577_ucode_ub_census.py scratch/s7577` (rc 0). **NEXT (s7578): null-check-deletion (N) + wrapv arms over the 52
+    RecompiledFuncs TUs** (`TU_RE=RecompiledFuncs/`; HYPOTHESIS-ID gen-c-ub-audit, scratch/agent/NEXT.md).
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
