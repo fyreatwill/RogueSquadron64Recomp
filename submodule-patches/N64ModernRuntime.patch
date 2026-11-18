@@ -3504,7 +3504,7 @@ index 4276b7d..575cd1d 100644
          ultramodern::set_native_thread_name("Game Start Thread");
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..5cd43b2 100644
+index 1cb3f6a..60feac7 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,8 +1,16 @@
@@ -3532,7 +3532,7 @@ index 1cb3f6a..5cd43b2 100644
  uint16_t rspReciprocals[512];
  uint16_t rspInverseSquareRoots[512];
  
-@@ -32,24 +41,2124 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +41,2125 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -4748,10 +4748,11 @@ index 1cb3f6a..5cd43b2 100644
 +}
 +
 +static uint32_t audio_read_rdram_word(const uint8_t* rdram, uint32_t addr) {
-+    return (static_cast<uint32_t>(rdram[(addr + 0u) & 0x007FFFFFu]) << 24) |
-+           (static_cast<uint32_t>(rdram[(addr + 1u) & 0x007FFFFFu]) << 16) |
-+           (static_cast<uint32_t>(rdram[(addr + 2u) & 0x007FFFFFu]) << 8) |
-+           static_cast<uint32_t>(rdram[(addr + 3u) & 0x007FFFFFu]);
++    // s7601 class BS: guest byte A is rdram[A ^ 3]; the old rdram[addr+0]<<24.. composition returned the byte-reversed word.
++    return (static_cast<uint32_t>(rdram[((addr + 0u) ^ 3u) & 0x007FFFFFu]) << 24) |
++           (static_cast<uint32_t>(rdram[((addr + 1u) ^ 3u) & 0x007FFFFFu]) << 16) |
++           (static_cast<uint32_t>(rdram[((addr + 2u) ^ 3u) & 0x007FFFFFu]) << 8) |
++           static_cast<uint32_t>(rdram[((addr + 3u) ^ 3u) & 0x007FFFFFu]);
 +}
 +
 +// s7366: rs64_s4208_active is per thread. The audio LLE (SP task thread) and the gfx LLE (Gfx thread) run RSP code
@@ -5660,7 +5661,7 @@ index 1cb3f6a..5cd43b2 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2167,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2168,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  

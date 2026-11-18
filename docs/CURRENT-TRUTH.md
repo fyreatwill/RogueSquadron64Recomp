@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7599 (2026-11-18).
+Compact operational handoff, as of Session 7601 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7600: class GX (host arrays indexed by guest-derived values) CLOSED, H-masked/H-gated.** tools/s7600_gx_census.py
+- **NEW s7601: class BS (guest-RAM byte swizzle) CLOSED, H-gated; 5 diagnostic composers fixed.** tools/s7601_bs_census.py
+  --controls (4/4; rows tools/s7601_bs_rows.py): 522 raw-view sites (rdram/RDRAM/g_rdram_for_submit) = ok-byte 291, ok-word 77,
+  ok-half 7, symmetric 40, bound 1, consumer 36, gated 58, addr 12; 0 open, 0 BAD on default paths. 6 TO_PTR structs (OSThread,
+  OSIoMesgHdr, OSPiHandle, OSContStatus, OSViMode, OSPfs tail) have every sub-word member swizzled; 265 MEM_* macro sites ok by
+  construction. Wrong swizzle found only in gated logs (byte-reversed words / wrong byte, so those logs printed wrong values):
+  librecomp rsp.cpp audio_read_rdram_word, upstream_compat m5 route/voice word() x2, main.cpp m5 field post x2 -> fixed, known-value
+  witness tools/s7601_bs_witness.cpp 10/10 (old forms wrong = control). Use src/main/rs64_rdram_peek.h for new probe reads.
+  Static + synthetic witness; no game run (all changed code is env-gated).
+- **s7600: class GX (host arrays indexed by guest-derived values) CLOSED, H-masked/H-gated.** tools/s7600_gx_census.py
   --controls (3/3; rows in tools/s7600_gx_rows.py): 249 (file, array) units, 0 open, 0 oob (gated 146, host 63, bounded 26,
   masked 14) + 1605 auto sites (loop/checked/stacktop/mask/maskvar). Live LLE surface bounded: tile p1(24,3), opcode & 0x3F
   into [256], TMEM MASK8/16 with 8-aligned addresses, TLUT <= 0x1000, s7343 TLUT clamp, RDP stacks push/pop guarded. The HLE
@@ -385,9 +393,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 30. **Class GR CLOSED s7599** (headline). Rerun tools/s7599_gr_census.py --controls after adding a long-lived container.
 31. **Class GX CLOSED s7600** (headline). Rerun tools/s7600_gx_census.py --controls after adding a fixed host array indexed
     by guest data; `--list <kind>` prints the auto-verdict sites of one kind for auditing.
-32. **NEXT (s7601): class BS, guest-RAM byte swizzle** (NEXT.md): host code that reads/writes guest RAM through the
-    byte-swapped rdram view must use ^3 for bytes, ^2 for halfwords and aligned plain words; a wrong or missing swizzle
-    is a silent wrong value (no crash, soaks miss it).
+32. **Class BS CLOSED s7601** (headline). Rerun tools/s7601_bs_census.py --controls after adding host code that reads or
+    writes guest RAM through rdram/RDRAM/g_rdram_for_submit, or a TO_PTR struct with sub-word members (add it to STRUCTS).
+33. **NEXT (s7602): class TP, TO_PTR / _arg<PTR(T)> host-typed guest views** (NEXT.md): every guest pointer the runtime
+    dereferences as a host type T; sub-word scalars, sub-word arrays and structs outside the s7601 STRUCTS table need a swizzle
+    proof (struct layout pre-swapped, MEM_* use, or a consumer that swaps), else a silent wrong value.
 
 ## Evidence index
 

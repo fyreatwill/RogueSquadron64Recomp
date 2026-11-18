@@ -202214,3 +202214,39 @@ Hypotheses H-bounded / H-grow / H-gated.
 - Verdict: this selects H-masked (live decoders) + H-gated (diagnostics, HLE path) and refutes H-oob (249-unit census,
   controls 3/3, checked-rule sample 6/6), and closes class GX. Next: class BS, host multi-byte reads/writes of guest RAM and
   their byte-swizzle (^3 bytes, ^2 halves, aligned words) correctness.
+
+## Session 7601 (2026-11-18) — class BS closed: guest-RAM byte-swizzle census (522 sites, 0 open, 0 BAD on default paths, controls 4/4); 5 byte-reversed diagnostic word composers fixed
+
+- Work unit (NEXT s7601, HYPOTHESIS-ID guest-ram-byte-swizzle-census): every host access to guest RAM through the
+  byte-swapped host view in src/, librecomp/src, ultramodern/src, lib/rt64/src. Contract on this LE host: byte A = rdram[A^3],
+  half A = *(u16*)(rdram + (A^2)), word A = *(u32*)(rdram + A) with A 4-aligned. Hypotheses H-clean / H-bad (default-path
+  wrong swizzle = silent wrong value) / H-gated (only diagnostics wrong).
+- Tool: tools/s7601_bs_census.py (rows tools/s7601_bs_rows.py). Part A raw-view sites `V[e]` / `&V[e]` / `V + e` for
+  V in rdram, RDRAM, g_rdram_for_submit (all uint8_t*), comments stripped; width from the enclosing cast or memcpy size. Auto:
+  ok-byte (e ends ^3, optionally then `& 0x..F` or `- 0x80000000`), ok-half (u16 cast / 2-byte memcpy with ^2), ok-word
+  (32-bit cast / 4-byte memcpy, no xor, literal %4==0 or a ..C / ~3 / kSubmitRamMask mask), symmetric (!=0, nonzero, compare
+  to a same-layout shadow, memcmp, XXH3/fnv hash, memset 0, insert/assign shadow copies), bound. Part B: TO_PTR structs
+  (OSThread, OSIoMesgHdr, OSPiHandle, OSContStatus, OSViMode, OSPfs tail) parsed from ultra64.h, each sub-word member's host
+  offset checked against its retail BE offset ^3 / ^2. Part C: MEM_* macro sites counted (ok by construction, recomp.h).
+- Result: 522 sites = ok-byte 289+2, ok-word 40+37, ok-half 7, symmetric 40, bound 1, consumer 36, gated 58, addr 12; open 0,
+  BAD 0, stale 0. Structs 6/6 swizzled (first run flagged OSViMode `padding[3]`, a scanner bug: arrays/padding excluded). 265
+  MEM_* sites. Controls 4/4: (1) `g_rdram_for_submit[a + 0x40]` byte read with no ^3 planted in a copy of dpc_bridge.cpp ->
+  OPEN, (2) `*(uint16_t*)(g_rdram_for_submit + (a ^ 3))` -> OPEN, (3) drop the first row -> OPEN, (4) swap OSIoMesgHdr's u8
+  status/pri pair in a copy of ultra64.h -> BAD.
+- Defects found, all in env-gated diagnostics (their logs printed wrong values; no default-path behaviour): librecomp rsp.cpp
+  audio_read_rdram_word (rdram[addr+0]<<24.. = byte-reversed word; audio DMA probe field_pre/post), upstream_compat.cpp
+  word() in rs64_s3352_m5_consumer_entry and rs64_s5042_poison/voice-modulation (p[0]<<24..), main.cpp m5 field `post`
+  composers x2 (no ^3: len-4 field reversed, len-1 field 0x128C92 read guest byte 0x128C91). All fixed to the
+  rs64_rdram_peek.h convention (which already warned about exactly this, s5229/s5230). Known-value witness
+  tools/s7601_bs_witness.cpp: guest word 0x11223344 @0x100 and byte 0xAB @0x106 laid out as librecomp stores them; the old
+  forms return 0x44332211 / 0xCD (control), new forms and the reference helper return the right values: 10/10. Build OK;
+  lib/ change exported (submodule-patches/N64ModernRuntime.patch).
+- Default-path rows worth naming: RT64 upstream fb/hash/present code (written for the plugin-spec word-swapped RDRAM, ^2 per
+  16-bit pixel), s6935 loadBlock runs and tmem_hasher fast path (a&3==0 checked, bswap, equivalence tools g1e_lbfast_equiv.cpp
+  / g1e_tmemhash_equiv.cpp), events.cpp DD float rewrites (aligned literal addresses) and the FPS60 limit byte (&rdram[0x128EAF^3],
+  single byte), OSTask view (all 32-bit members), o1heap metadata (host-only).
+- Rules out: a wrong-width swizzle on any default-path raw-view guest RAM access at the current tree. Single-source (static
+  census + synthetic witness); no game run, since every changed line is env-gated. Residual: pointer aliases (`p = rdram + x`
+  then `p[i]`) are judged by row, not by tracking the alias; TO_PTR / _arg<PTR(T)> views beyond the 6 struct types
+  (OSContPad, u8/char strings, int16_t audio) are not covered -> class TP next.
+- Verdict: this selects H-gated (5 diagnostic composers wrong, now fixed) and refutes H-bad on default paths, and closes class BS.

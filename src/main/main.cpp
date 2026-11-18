@@ -2058,7 +2058,7 @@ extern "C" void rs64_m5_exact_route_dma_write(uint8_t* rdram,
         if (rows++ >= 512u) return;
         uint32_t post = 0u;
         for (uint32_t i = 0; i < field[1]; ++i) {
-            post = (post << 8) | rdram[(field[0] + i) & 0x007FFFFFu];
+            post = (post << 8) | rdram[((field[0] + i) ^ 3u) & 0x007FFFFFu];  // s7601 BS: was no ^3 (wrong byte / reversed word)
         }
         std::fprintf(stderr,
             "[m5-exact-route-dma] n=%u phase=%u width=%u origin=0x%06X "
@@ -2464,7 +2464,7 @@ extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
         if (rows++ >= 512u) return;
         uint32_t post = 0u;
         for (uint32_t i = 0; i < field.len; ++i) {
-            post = (post << 8) | rdram[(field.start + i) & 0x007FFFFFu];
+            post = (post << 8) | rdram[((field.start + i) ^ 3u) & 0x007FFFFFu];  // s7601 BS: was no ^3
         }
         std::fprintf(stderr,
             "[m5-host-write] n=%u api=%s phase=%u width=%u origin=0x%06X "

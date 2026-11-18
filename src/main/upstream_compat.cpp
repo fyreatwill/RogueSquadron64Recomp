@@ -2497,9 +2497,9 @@ extern "C" void rs64_m5_route_candidate(uint8_t* rdram, uint32_t pc,
     const auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint8_t* p = rdram + (guest - 0x80000000u);
-        return (static_cast<uint32_t>(p[0]) << 24) |
-               (static_cast<uint32_t>(p[1]) << 16) |
-               (static_cast<uint32_t>(p[2]) << 8) | p[3];
+        return (static_cast<uint32_t>(p[3]) << 24) |  /* s7601 BS: was p[0]<<24.. = byte-reversed word */
+               (static_cast<uint32_t>(p[2]) << 16) |
+               (static_cast<uint32_t>(p[1]) << 8) | p[0];
     };
     uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
     int exit_reason = 0;
@@ -5053,9 +5053,9 @@ extern "C" void rs64_m5_voice_modulation_state(uint8_t* rdram, uint32_t pc,
     const auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint8_t* p = rdram + (guest - 0x80000000u);
-        return (static_cast<uint32_t>(p[0]) << 24) |
-               (static_cast<uint32_t>(p[1]) << 16) |
-               (static_cast<uint32_t>(p[2]) << 8) | p[3];
+        return (static_cast<uint32_t>(p[3]) << 24) |  /* s7601 BS: was p[0]<<24.. = byte-reversed word */
+               (static_cast<uint32_t>(p[2]) << 16) |
+               (static_cast<uint32_t>(p[1]) << 8) | p[0];
     };
     const uint32_t voice_record = voice_ptr >= 0x80000046u
         ? voice_ptr - 0x46u : 0xFFFFFFFFu;
