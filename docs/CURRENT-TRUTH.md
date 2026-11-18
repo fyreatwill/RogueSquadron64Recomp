@@ -12,11 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7577 (RSP ucode -O2 UB class CLOSED, H-safe):** 6 ucode TUs (C++20: signed << defined; SISD u16*u16 VMADL/VMUDL bodies
-  never instantiated on arm64). tools/s7577_ucode_ub_census.py arms A / -fwrapv / -fno-strict-aliasing (already in flags) /
-  -fno-delete-null-pointer-checks, 24/24 fold controls: S+N 0 func diffs; W diff = env-gated diag counter + regalloc churn.
-  tools/s7577_ubsan_sites.py <tu> --check: 759/759 UB-capable sites value-bounded (gate fires on the s7468 plant). Runtime UBSan
-  s7468-s7471 0 in ucode. No fix needed. scratch/s7577.
+- **NEW s7578 (generated game C -O2 UB class CLOSED, H-safe; gen-c-ub-audit closed):** census over 52 RecompiledFuncs TUs
+  (`TU_RE=RecompiledFuncs/ tools/s7577_ucode_ub_census.py`): N arm 1 diff (source-dead `if (cn && ...)` on an array element, diag),
+  S 0, ctl 208/208. W 131 funcs: UB-capable sites (tools/s7578_gamec_wrap_sites.py, 2733) are all fixup C, bounded or diag
+  counters; generated arithmetic has none (gpr u64). Runtime: tools/build_ubsanc.sh (signed-overflow UBSan on all C, plant
+  ROGUESQ_S7578_PLANT=1) L1/L1dd4/L4dd2/L12dd4 150 s: 0 reports, plant fired. A new build dir needs a COPY of build/saves or the
+  forced route stalls at boot (s7578 void). **s7577:** RSP ucode 759/759 sites bounded, S/N 0 diffs, runtime UBSan 0. scratch/s7577.
 - **s7576 (generated-C float->int UB class CLOSED):** the only UB-capable emission left after s7575 was TRUNC_W_S/D (1199 bare
   `(int32_t)` casts; shifts are masked on unsigned gpr, mult cannot overflow, DDIV total, CVT_W via lrint). Fold control: clang -O2
   deletes `if (x==3e9f) return (int)x;`. tools/s7576_trunc_census.py --controls: FOLDED=0 of 1199 (3 legal merges, 1 hand-inspected).
@@ -512,8 +513,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **s7576 float->int class CLOSED** (headline); after a regen
     also run `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0, rc 0). **s7577 RSP ucode UB class CLOSED**; after a
     ucode regen or rsp*.hpp edit run `tools/s7577_ubsan_sites.py <tu> --check` per ucode TU (UNCLASSIFIED 0) and
-    `tools/s7577_ucode_ub_census.py scratch/s7577` (rc 0). **NEXT (s7578): null-check-deletion (N) + wrapv arms over the 52
-    RecompiledFuncs TUs** (`TU_RE=RecompiledFuncs/`; HYPOTHESIS-ID gen-c-ub-audit, scratch/agent/NEXT.md).
+    `tools/s7577_ucode_ub_census.py scratch/s7577` (rc 0). **s7578 game-C null/wrapv CLOSED**
+    (gen-c-ub-audit done). **NEXT (s7579): gen-c-bounds-audit**, -fsanitize=bounds over the fixup C (scratch/agent/NEXT.md).
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

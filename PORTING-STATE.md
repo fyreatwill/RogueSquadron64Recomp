@@ -201493,3 +201493,38 @@ runtime UBSan 0 with plant). Refutes H-folded (no UB-grounded fold that can chan
 no runtime arm needed). Rules out: -O2 UB exploitation in the RSP ucode as a cause of any render/audio defect.
 Next discriminator: the N arm (null-check deletion, still ON) and W arm over the 52 RecompiledFuncs TUs via
 `TU_RE=RecompiledFuncs/ tools/s7577_ucode_ub_census.py` (s7575/s7576 covered div and trunc; null-deletion was never measured there).
+
+## Session 7578 (2026-11-17) — generated game C -O2 UB class closed: null-deletion arm changes 1 function (dead diag check), wrapv arm 131 game funcs = diag counters + bounded fixup arithmetic, runtime signed-overflow UBSan over all 52 TUs at -O2 0 reports at L1/L1 dd4/L4 dd2/L12 dd4 (plant fired)
+Work unit: NEXT.md gen-c-ub-audit step 1-2: N (-fno-delete-null-pointer-checks) and W (-fwrapv) arms over the 52 RecompiledFuncs TUs.
+- `env TU_RE=RecompiledFuncs/ python3 tools/s7577_ucode_ub_census.py scratch/s7578` (1:51 at -j12): controls 208/208 (wrapv, u16mul,
+  null FIRED in every TU; alias PRE-OFF, -fno-strict-aliasing already in flags). S arm 0 diffs. **N arm: 1 function differs**,
+  destroyNpcSlotByIndex (funcs_8.c): the s5870 diag line `const char* cn = rs5817_nm[k]; if (cn && !strcmp(...))` (funcs_8.c:15096).
+  cn is an array-element address, never null, so A drops a check that is dead in the source too (N keeps `adds; b.eq`). Not a
+  deref-then-check deletion and not game behaviour. H-null refuted.
+- W arm: 163 differing functions (32 OUTLINED_*, 131 named). New tools/s7578_gamec_wrap_sites.py (-O0 IR with
+  -fsanitize=signed-integer-overflow over all 52 TUs, 9 s): 2733 add/sub/mul/neg/divrem sites in 1230 source shapes, **all in
+  hand-written fixup C or recomp.h helpers**. The generated game arithmetic has none (gpr is uint64_t; ADD32/SUB32 are unsigned,
+  MULT is S64(S32)*S64(S32) (|p| <= 2^62, cannot overflow), div is RS64_DIV32 (s7575, total)). Mapping each W-diff function to the
+  sites in its body: 101 are diag counters only (s_n++ then `% N` / `<= N`; hand-read in sayGoodWork_v0x259 and
+  lvc_checkComplexObjectives: nsw lets clang use the unsigned remainder, which differs only at s_n == INT_MAX), the terrain functions
+  are stack-slot/regalloc churn (streamTerrainGridCellsByDistance: #488 -> #504). The remaining OTHER sites are small-int fixup
+  arithmetic: terrain-window clamps (binPolygonIntoTerrainGrid s6905/s7009: u16 tw/th, 64-wide spans, cap from u16), int64 guest
+  addresses + small offsets (MEM_W(off, (int64_t)(int32_t)a)), loops < 512, `% const` with constant divisors != -1, s6523
+  divisor atoi > 0 else 1.
+- Second, independent line: runtime witness. build_asan never instrumented the generated C (s7467: C++ only). New
+  tools/build_ubsanc.sh -> build_ubsanc/: every C TU at its real flags (RecompiledFuncs -O2) + `-fsanitize=signed-integer-overflow`
+  (recoverable) + force-included tools/s7578_ubsanc_plant.h (ROGUESQ_S7578_PLANT=1: one INT_MAX+1 in a C-flag constructor).
+  Build-level control: 51/52 RecompiledFuncs objects reference __ubsan_handle_add_overflow. Run scratch/s7578/run.zsh
+  (g1e_owner_quiet_arms, GAMEDIR=build_ubsanc, HOLD 150, host idle 84 min, AC): arms p (L1 dd1 + plant), l1 (L1 dd4), l4 (L4 dd2),
+  l12 (L12 dd4): all alive_at_end=1, crashlines=0, vi_stalls30s=0, level_ok=1, initMission=1. **Plant reported in p only
+  (s7578_ubsanc_plant.h:12); 0 other UBSan reports in all 4 arms.**
+- Failed first attempt, recorded: the first run had build_ubsanc/saves EMPTY (a fresh build dir has no profile), so all 3 arms
+  sat at a 105 s VI hold with level_ok=0, initMission=0. The UBSan zero there covered boot/menus only (logs kept in
+  scratch/s7578/void_nosave). build_ubsanc.sh now COPIES build/saves/rs64.n64.us.1.0.bin* into its own dir (md5 identical, owner file
+  untouched; NO_SAVE_WRITE stays exported). Any new build dir used with the forced-level route needs the same copy.
+Verdict line: selects H-safe for the generated game C (N arm: 1 source-dead diag check; W arm: every UB-capable site is in fixup
+C and value-bounded or a diag counter; runtime -fsanitize=signed-integer-overflow 0 reports with the plant firing). Refutes H-null
+and H-wrap. gen-c-ub-audit CLOSED (div s7575, trunc s7576, ucode s7577, null/wrapv s7578). No fix warranted, so no runtime A/B.
+Rules out: -O2 UB exploitation in the generated game C as a cause of any render/audio/crash defect.
+Next: gen-c-bounds-audit. Host array bounds in the fixup C (~407 static tables) were never sanitized; same build script with
+-fsanitize=bounds and a bounds plant (NEXT.md).
