@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7589 (2026-11-18).
+Compact operational handoff, as of Session 7590 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,20 +12,19 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7589: class HR (host resources other than heap) CLOSED, H-flat in steady state.** Outside sampler tools/s7589_hrsample.zsh
-  (lsof by type, ps -M, top #PORTS since lsmp needs root, vmmap IOSurface/IOAccelerator(graphics) regions, footprint) + plant
-  tools/s7589_hrplant.dylib (DYLD_INSERT, 1 fd + 1 thread + 1 receive port every 30 s after RS64_HRPLANT_DELAY), scorer
-  tools/s7589_hr_report.py (--windows = plateau medians). L4 dd4 16:9 FPS60 1200 s (plant at 600 s): fds 10, threads 64, ports 731,
-  IOSurface 9 flat from 240 s to 600 s; plant window +20 threads / +40 ports for 20 leaks = game residual 0. s7469 hangar route (4 loads,
-  3 re-entries, dd8 21:9, 0 crash): fds/threads/IOSurface flat across every load; plant fd +3, threads +4. Only steps: Mach ports
-  +10 per re-entry load (696/706/716) and +38/+39 on a new-content load, IOAccel regions +4..+19 per load (later released, -9). Bounded
-  (10k loads before 100k ports); the port owner is not named (single-source, no lsmp without root) -> NEXT.md HR-2.
-- **s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean.** tools/s7588_apple_tu_census.py --controls (rc 0, plant 2/2): every
-  .m/.mm is MRC; built ones (rt64_apple.mm, plume_apple.mm, nfd_cocoa.m, rs64_display_mac.mm) have 0 unbalanced sites; imgui Metal/OSX
-  backends are not built. Only per-present path: CocoaWindow off-main getters dispatch_async one block per call to the main queue.
-  Same-binary L4 dd4 150 s (gauge ROGUESQ_S7588_GAUGE=1, plant ROGUESQ_S7588_PLANT=1): main-queue pool flat (3-11 entries), backlog
-  <=2, plant dealloc 1648/1648 even with no pool of ours = the main run loop drains each block; present-thread pool flat 515 over
-  25,600 posts. ROGUESQ_APPLE_POOL (own pool per block) is therefore opt-in, default 0 = upstream. Scorer tools/s7588_pool_report.py.
+- **NEW s7590: HR-2 CLOSED, H-dead selected and FIXED.** The per-load Mach-port step was dead names: every guest thread's
+  _thread_func (ultramodern threads.cpp) stored mach_thread_self() in the G1B slot table and never released the ref, so each guest
+  thread that exits leaves one dead name (+8/+9 per mission cycle). Fix (default; ROGUESQ_S7590_THRPORT=0 = old): RAII guard clears
+  the slot + mach_port_deallocate at thread exit; the s4587 sampler's per-ms mach_thread_self() is now cached. Same s7469 route
+  (3 re-entries, 4 loads, 0 crash): old binary D 9/18/27/35 (2 runs), fixed D 0/0/0/0; plant (R port + semaphore + dead name every
+  30 s) +4/+4/+4 in both. Two lines: in-process census tools/s7590_portcensus.dylib (mach_port_names + mach_port_kobject_description
+  + interposed creator backtraces, per-name transitions; scorer tools/s7590_pc_report.py) and outside top #PORTS (fixed steps
+  +0/+2/+1 vs old +10/+1/+12). Also seen, not ours: a one-time +27 XPC connection-port block (_xpc_connection_derive_connection_port)
+  that appears in some runs only (2 of 4), at any time, then stays flat. DYLD injection needs the Bash sandbox off.
+- **s7589: class HR CLOSED (H-flat steady state):** fds/threads/IOSurface flat over 1200 s and 4 loads (sampler
+  tools/s7589_hrsample.zsh, plant tools/s7589_hrplant.dylib, scorer tools/s7589_hr_report.py); per-load port step -> s7590.
+- **s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean:** all MRC, 0 unbalanced sites (tools/s7588_apple_tu_census.py --controls);
+  the main run loop drains the per-present dispatch_async blocks (plant 1648/1648), so ROGUESQ_APPLE_POOL stays opt-in (default 0).
 - **s7587: class OW (metal-cpp ownership, plume_metal.cpp) CLOSED.** tools/s7587_ownership_census.py: upstream had 6
   over-releases (+0 command buffer in begin, blit + resolve encoders, MetalShader functionName/debugName), 7 leaks (2 CopyAllDevices
   arrays = the s7586 NSArray leaks, clearColor depth state per call, 3 clear states) and 6 pool-less autoreleases; all fixed
@@ -308,10 +307,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 21. **Class OW CLOSED s7587** (headline) for plume_metal.cpp; one NEEDS-POOL row left (device-ctor name string, once).
 22. **Class OW-2 CLOSED s7588** (headline, H-clean). Smoke of the rebuilt default PASSED (soak 20261118-091041: alive, 0 stall,
     pool=0, plantD == plantA 1296/1296).
-23. **Class HR CLOSED s7589** (headline, H-flat steady state). Sampler gotcha: lsof prints pipe fds with no mode letter
-    ("2 PIPE"), so an fd filter on /[0-9]+[urw]/ misses them (arm 1 fd control failed on exactly that; fixed).
-24. **NEXT (s7590): HR-2, who owns the +10 Mach ports per mission load** (NEXT.md): in-process port census (mach_port_names by
-    right type, dead names) + a same-mission reload route, to split H-cache / H-leak / H-dead.
+23. **Class HR CLOSED s7589** (headline). Sampler gotcha: lsof pipe fds carry no mode letter ("2 PIPE"); filter /^[0-9]+/.
+24. **HR-2 CLOSED s7590** (headline, H-dead fixed: guest-thread port refs; ROGUESQ_S7590_THRPORT=0 = old). H-cache/H-leak refuted
+    for the per-load step (live rights flat over 3 same-mission reloads).
+25. **NEXT (s7591): class MR, Mach-right release census of OUR code** (NEXT.md): every call that hands back a right (task_threads,
+    mach_thread_self, pthread_mach_thread_np, IOService*/IOIterator*, semaphore_create, host_self, mach_port_allocate) in src/ and
+    lib/, each site classified released / borrowed / leaked-gated / leaked-default, with the s7590 census as the runtime witness.
 
 ## Evidence index
 

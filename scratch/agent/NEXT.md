@@ -1,20 +1,19 @@
-# NEXT (s7590)
-HYPOTHESIS-ID: host-resource-growth-audit
+# NEXT (s7591)
+HYPOTHESIS-ID: mach-right-release-census
 
-Class HR closed s7589 (H-flat steady state). Residual: Mach ports step +10 per hangar re-entry load (696/706/716) and +38/+39 on a
-new-content load; IOAccel regions +4..+19 per load. Bounded, but the owner is not named. HR-2 names it.
-Hypotheses: H-cache (ports belong to per-content caches: RT64 shader/pipeline objects, so a reload of the SAME mission adds 0),
-H-leak (every load adds ~10 whatever the content, e.g. a per-load thread/semaphore/dispatch source that is never destroyed),
-H-dead (dead names pile up: send rights to destroyed ports never deallocated).
-Instrument, no game rebuild: extend tools/s7589_hrplant.dylib (or a sibling tools/s7590_portcensus.dylib) with a census thread that
-every 10 s calls mach_port_names() on mach_task_self() and logs counts by type (RECEIVE, SEND, SEND_ONCE, PORT_SET, DEAD_NAME), plus
-for the names new since the previous census: mach_port_get_refs and, for receive rights, mach_port_get_attributes (MACH_PORT_LIMITS_INFO
-/ STATUS). Run the plant leak in the same process as the positive control (each leak = +1 RECEIVE, thread port shows as SEND).
-Route: one mission reloaded >=4 times (hangar abort -> SELECT YOUR CRAFT -> same mission; the s7469 AP schedule picks a different
-mission each time: a0 0xB1/0xB5/0x19/0x4A; drop the left/down cursor moves so the same entry is chosen), then 1 new mission.
-Outcome: per-load step 0 on same-mission reloads -> H-cache (close); >0 by RECEIVE/SEND -> H-leak, name the creator (lldb breakpoint on
-mach_port_allocate / semaphore_create / dispatch_source_create gated to the load window, backtrace) and fix env-gated (=0 old);
-step in DEAD_NAME -> H-dead.
-Sampler: tools/s7589_hrsample.zsh <out> <s> 10; scorer tools/s7589_hr_report.py --windows <plateaus>.
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Key-driven route: check HID idle and
-CGSSessionScreenIsLocked first, or queue it as a soak with # SOAK_NEEDS_IDLE=300.
+HR-2 closed s7590 (H-dead: guest-thread mach_thread_self refs, fixed, ROGUESQ_S7590_THRPORT=0 = old). Class MR = the rest of the
+idiom: every call in OUR code (src/, lib/N64ModernRuntime, lib/rt64 incl. plume, not vendored SDL/system) that returns a Mach right
+the caller owns, classified per site:
+  released (matching mach_port_deallocate / IOObjectRelease / semaphore_destroy / vm_deallocate of the array) |
+  borrowed (pthread_mach_thread_np, mach_task_self: no ref taken) | leaked-gated (only under a diagnostic env) | leaked-default.
+Known starting rows (s7590 grep): main.cpp:9611/9620 fl-zero task_threads + mach_thread_self; main.cpp:14007 s7382 task_threads
+(deallocs on the error path - check the success path and the array); events.cpp:1268 G1E_THREADS 1 kHz task_threads (each th[i]
+and the array must be freed every tick, or a gated run leaks ~65 rights per ms); events.cpp:835/1652 pthread_mach_thread_np
+(borrowed); threads.cpp:322 (borrowed) / 323 (fixed s7590).
+Hypotheses: H-clean (0 leaked-default rows left), H-gated (only leaked-gated rows: fix the ones that can flood, e.g. a 1 kHz loop),
+H-default (another default-path leak: fix env-gated, =0 old).
+Tool: tools/s7591_mr_census.py --controls: regex-enumerate the right-returning calls, print file:line + the release found within
+the same function (or none), plant control = a scratch file with one leaked and one released site that must classify correctly.
+Runtime witness for any fixed gated row: tools/s7590_portcensus.dylib (RS64_PC_OUT, RS64_PC_PLANT_DELAY) on L4 dd4 150 s with
+that env on, D and S/1 flat, plant +1/leak. Game runs with DYLD_INSERT need the Bash sandbox OFF.
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

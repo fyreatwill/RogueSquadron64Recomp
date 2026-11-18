@@ -9273,7 +9273,7 @@ index f9c0fa1..dab773b 100644
      PTR(OSThread)* queue = queue_to_ptr(PASS_RDRAM queue_);
      return *queue == NULLPTR;
 diff --git a/ultramodern/src/threads.cpp b/ultramodern/src/threads.cpp
-index 812c556..cc99c52 100644
+index 812c556..d5bfac8 100644
 --- a/ultramodern/src/threads.cpp
 +++ b/ultramodern/src/threads.cpp
 @@ -1,7 +1,23 @@
@@ -9445,7 +9445,7 @@ index 812c556..cc99c52 100644
      thread_context->running.wait();
      // If this thread's context was replaced by another thread or deleted, destroy it again from its own context.
      // This will trigger thread cleanup instead.
-@@ -155,19 +291,267 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
+@@ -155,19 +291,268 @@ void wait_for_resumed(RDRAM_ARG UltraThreadContext* thread_context) {
      }
  }
  
@@ -9479,7 +9479,8 @@ index 812c556..cc99c52 100644
 +        OSThread* t = cur_thr.load(); if (!t) continue;
 +        UltraThreadContext* c = t->context; if (!c || !thr_live_contains(c)) continue;
 +        pthread_t pt = c->host_thread.native_handle(); mach_port_t mp = pthread_mach_thread_np(pt);
-+        if (mp == MACH_PORT_NULL || mp == mach_thread_self()) continue;
++        static const mach_port_t s7590_me = mach_thread_self(); // s7590: once, not one leaked user ref per 1 ms sample
++        if (mp == MACH_PORT_NULL || mp == s7590_me) continue;
 +        const int w = (rs64_s4581_inflight && rs64_s4581_inflight()) ? 1 : 0; const int pri = (int)t->priority;
 +        arm_thread_state64_t st; mach_msg_type_number_t cnt = ARM_THREAD_STATE64_COUNT; uint64_t pc = 0; int rs = -1;
 +        if (thread_suspend(mp) != KERN_SUCCESS) continue;
@@ -9715,7 +9716,7 @@ index 812c556..cc99c52 100644
  }
  
  void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
-@@ -178,15 +562,45 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
+@@ -178,15 +563,50 @@ void ultramodern::run_next_thread_and_wait(RDRAM_ARG1) {
  
  void ultramodern::resume_thread_and_wait(RDRAM_ARG OSThread *t) {
      UltraThreadContext* cur_context = TO_PTR(OSThread, thread_self)->context;
@@ -9734,7 +9735,12 @@ index 812c556..cc99c52 100644
  static void _thread_func(RDRAM_ARG PTR(OSThread) self_, PTR(thread_func_t) entrypoint, PTR(void) arg, UltraThreadContext* thread_context) {
      OSThread *self = TO_PTR(OSThread, self_);
 +#if defined(__APPLE__)
-+    { const int k = g_g1b_nslots.fetch_add(1); if (k < 64) { g_g1b_thread_osid[k].store(self->id); g_g1b_thread_port[k].store((uint32_t)mach_thread_self()); g1b_slot = k; } }
++    // s7590 (HR-2): mach_thread_self() adds a user ref to this thread's port. Unreleased, every guest thread that exits (several
++    // per mission load) left a dead name behind (+8/+9 per load, census tools/s7590_portcensus.dylib). The guard clears the slot
++    // (the [g1b-gt] reader skips 0, as it skipped the dead name) and drops the ref at exit. ROGUESQ_S7590_THRPORT=0 = old.
++    static const bool s7590_rel = []{ const char* e = getenv("ROGUESQ_S7590_THRPORT"); return !(e && e[0] == '0'); }();
++    struct S7590PortRel { int k = -1; uint32_t p = 0; ~S7590PortRel() { if (k >= 0 && p) { uint32_t e = p; g_g1b_thread_port[k].compare_exchange_strong(e, 0u); mach_port_deallocate(mach_task_self(), p); } } } s7590_guard;
++    { const int k = g_g1b_nslots.fetch_add(1); if (k < 64) { const uint32_t p = (uint32_t)mach_thread_self(); g_g1b_thread_osid[k].store(self->id); g_g1b_thread_port[k].store(p); g1b_slot = k; if (s7590_rel) { s7590_guard.k = k; s7590_guard.p = p; } } }
 +#endif
      debug_printf("[Thread] Thread created: %d\n", self->id);
      thread_self = self_;
@@ -9762,7 +9768,7 @@ index 812c556..cc99c52 100644
  
      // Set the thread name
      ultramodern::set_native_thread_name(ultramodern::threads::get_game_thread_name(self));
-@@ -239,12 +653,18 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -239,12 +659,18 @@ extern "C" void osStartThread(RDRAM_ARG PTR(OSThread) t_) {
      // Otherwise, immediately start the thread and terminate this one.
      else {
          t->state = OSThreadState::QUEUED;
@@ -9782,7 +9788,7 @@ index 812c556..cc99c52 100644
      debug_printf("[os] Create Thread %d\n", id);
      OSThread *t = TO_PTR(OSThread, t_);
      
-@@ -259,6 +679,21 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
+@@ -259,6 +685,21 @@ extern "C" void osCreateThread(RDRAM_ARG PTR(OSThread) t_, OSId id, PTR(thread_f
      // Pass the context as an argument to the thread function to ensure that it can't get cleared before the thread captures its value.
      UltraThreadContext* context = new UltraThreadContext{};
      t->context = context;
@@ -9804,7 +9810,7 @@ index 812c556..cc99c52 100644
      context->host_thread = std::thread{_thread_func, PASS_RDRAM t_, entrypoint, arg, t->context};
  
      // Wait until the thread is initialized to indicate that it's ready to be started.
-@@ -283,20 +718,40 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
+@@ -283,20 +724,40 @@ extern "C" void osDestroyThread(RDRAM_ARG PTR(OSThread) t_) {
      if (t_ == NULLPTR) {
          t_ = thread_self;
      }
@@ -9845,7 +9851,7 @@ index 812c556..cc99c52 100644
          cur_context->running.signal();
      }
  }
-@@ -311,6 +766,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
+@@ -311,6 +772,7 @@ extern "C" void osSetThreadPri(RDRAM_ARG PTR(OSThread) t_, OSPri pri) {
          t->priority = pri;
  
          if (t_ != ultramodern::this_thread() && t->state != OSThreadState::STOPPED) {
@@ -9853,7 +9859,7 @@ index 812c556..cc99c52 100644
              ultramodern::thread_queue_remove(PASS_RDRAM t->queue, t_);
              ultramodern::thread_queue_insert(PASS_RDRAM t->queue, t_);
          }
-@@ -337,6 +793,20 @@ PTR(OSThread) ultramodern::this_thread() {
+@@ -337,6 +799,20 @@ PTR(OSThread) ultramodern::this_thread() {
      return thread_self;
  }
  
@@ -9874,7 +9880,7 @@ index 812c556..cc99c52 100644
  static std::thread thread_cleaner_thread;
  static moodycamel::BlockingConcurrentQueue<UltraThreadContext*> deleted_threads{};
  extern std::atomic_bool exited;
-@@ -347,8 +817,18 @@ void thread_cleaner_func() {
+@@ -347,8 +823,18 @@ void thread_cleaner_func() {
          UltraThreadContext* to_delete;
          if (deleted_threads.wait_dequeue_timed(to_delete, 10ms)) {
              debug_printf("[Cleanup] Deleting thread context %p\n", to_delete);
@@ -9893,7 +9899,7 @@ index 812c556..cc99c52 100644
              delete to_delete;
          }
      }
-@@ -359,6 +839,11 @@ void ultramodern::init_thread_cleanup() {
+@@ -359,6 +845,11 @@ void ultramodern::init_thread_cleanup() {
  }
  
  void ultramodern::cleanup_thread(UltraThreadContext *cur_context) {

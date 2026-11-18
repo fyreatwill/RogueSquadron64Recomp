@@ -201840,3 +201840,47 @@ Verdict: selects H-flat in steady state; refutes H-fd (0 game fds over 4 loads) 
 Ruled out: fd, thread and IOSurface growth over time or per load; any time-linear port growth.
 Next: HR-2 (NEXT.md): in-process mach_port_names census by right type + a route reloading the same mission, to split H-cache /
   H-leak / H-dead.
+
+## Session 7590 (2026-11-18) — HR-2 closed: the per-load Mach-port step was dead names from unreleased mach_thread_self() refs in ultramodern _thread_func (fixed, ROGUESQ_S7590_THRPORT=0 = old)
+
+No new soak lines to fold (last: s7588_applepool_default, folded s7589).
+
+**Unit (HR-2, NEXT.md).** s7589 saw Mach ports step +10 per hangar re-entry load with no owner named (top #PORTS only).
+Hypotheses: H-cache (per-content caches; same-mission reload adds 0), H-leak (live rights grow each load), H-dead (dead names pile up).
+- New tools/s7590_portcensus.c/.dylib (DYLD_INSERT_LIBRARIES, no game rebuild): every 10 s mach_port_names(self), each name keyed
+  rights/kobject/what. kobject from mach_port_kobject_description, which works in-process on this release kernel (1 thread,
+  2 task, 23 semaphore, 27 IOSurfaceSharedEvent, 30 IOKit object + class). "what" for user ports = creator backtrace recorded by
+  interposed mach_port_allocate/construct, mach_reply_port, semaphore_create, IOServiceOpen. Per-name key transitions (TR lines,
+  e.g. S/1 => D). Plant RS64_PC_PLANT_DELAY: every 30 s 1 receive port + 1 semaphore + 1 dead name. Scorer tools/s7590_pc_report.py
+  --windows (plateau medians, control check). Bring-up bugs fixed: interposers run during libSystem init, so a __thread guard
+  aborted in _tlv_bootstrap (now a g_ready flag); `g_kv[kidx()]` read the pointer before kidx's realloc. The Bash sandbox
+  blocks dyld from opening an inserted dylib ("file system sandbox blocked open()"), so game runs need the sandbox off.
+- Route: scratch/s7590/run.zsh on scratch/s7586/hangar.zsh (s7469 schedule, dd8 21:9 FPS60, NO_SAVE_WRITE=1, build/), outside
+  sampler tools/s7589_hrsample.zsh alongside. Failed first attempt (kept as scratch/s7590/hold1_cap, census_hold1.log): NEXT.md said
+  drop the "left" moves to reload the same mission, but `left` at 192/342/492 is YES on the abort confirm, so no abort happened
+  (1 load in 700 s). The default route already reloads the same mission: B40 0x0F,0x0F,0x0F then 0x10 (initMission a0 varies per
+  run, it is not the mission id).
+Results (plateaus 100-192 / 263-345 / 406-487 / 558-600, plant from 600 s):
+| run | binary | total | dead names D | live R / S | outside top #PORTS steps | plant D/R/sem |
+| r1 | old | 698/739/740/751 | 9/17/26/32 | 226->255->249->250 / 522->540->536->539 | +41 +1 +12 | +4/+4/+4 PASS |
+| r2 | old | 701/711/716/~725 | 9/18/27/35 | 229/230/227 / 523/524/522 | (census == top in r1) | +4/+4/+4 PASS |
+| fix | new | 724/724/726/726 | 0/0/0/0 | 258/258/259/258 / 541/541/542/543 | +0 +2 +1 | +4/+4/+4 PASS |
+r2 transitions: 19 x `S/1/unattr => D/-1/unattr` (thread-control send rights that went dead when their thread exited).
+r1's extra +27 at the first re-entry is a block of XPC connection ports (_xpc_connection_derive_connection_port, 14 R + 13 RS). It
+also appeared in hold1 at ~500 s and in the fix run before 100 s, but not in r2: one-time, run-dependent, flat afterwards. Not the
+game; not chased.
+ORIGIN: lib/N64ModernRuntime/ultramodern/src/threads.cpp _thread_func (s6710 G1B accounting) stored
+  `mach_thread_self()` in g_g1b_thread_port[k] for every guest thread and never released it. mach_thread_self adds a user ref to the
+  thread's port; when the host thread exits (several guest threads per mission load), libpthread drops its own ref and ours turns
+  into a dead name. Not a legitimate long-lived reference: the only reader ([g1b-gt], events.cpp) skips a slot when thread_info fails,
+  which a 0 slot also does. Writer = the guest-thread entry, unconditional on Apple, capped by the 64-slot table (so the leak itself
+  is bounded at 64 names, about 7 load cycles).
+Fix (default on, ROGUESQ_S7590_THRPORT=0 = old): an RAII guard in _thread_func CAS-clears the slot and mach_port_deallocate()s the ref
+  at exit (return or unwind). Also the s4587 1 kHz sampler (gated diagnostic) compared against `mach_thread_self()` per sample, one
+  leaked uref per ms on its own thread. It now caches the port once. submodule-patches/N64ModernRuntime.patch refreshed.
+Verdict: selects H-dead (dead names carry the whole per-load step; after the fix D stays 0 over 3 same-mission reloads + 1 new load).
+  Refutes H-leak (live R/S flat within +/-3 across loads in all 3 runs) and H-cache as the source of the step (same-mission reloads
+  stepped +9 each on the old binary, 0 on the fix). Two lines: in-process census and outside top #PORTS agree (r1 totals equal).
+Ruled out: per-load growth of any live Mach right owned by the game/RT64/SDL/CoreAudio; IOKit/IOSurface object growth per load.
+Not covered: other Mach-right-producing call sites in our code (task_threads in gated samplers, main.cpp fl-zero mach_thread_self).
+  -> NEXT.md class MR (census of every right-returning call, classified).
