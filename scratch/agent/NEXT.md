@@ -1,19 +1,19 @@
-# NEXT (s7579)
-HYPOTHESIS-ID: gen-c-bounds-audit
+# NEXT (s7580)
+HYPOTHESIS-ID: gen-c-shift-align-audit
 
-gen-c-ub-audit is CLOSED (s7575 div, s7576 trunc, s7577 ucode, s7578 game-C null/wrapv: N arm 1 dead diag check, W arm
-131 game funcs = diag counters / bounded fixup arithmetic, runtime -fsanitize=signed-integer-overflow on all 52 TUs at -O2
-L1/L4/L12 with plant control). Next idiom class: HOST ARRAY BOUNDS in the fixup C. The fixup scripts put ~407 static
-diagnostic/table arrays into RecompiledFuncs (pcs[npc++], rs5817_nm[k], s_prev[N], cnt[kind-10] ...). An out-of-bounds index
-there writes host .bss next to other fixup state (a host-side corruption no guest watch can see). build_asan never
-instrumented the generated C (s7467: C++ only), and ASan cannot see .bss neighbours inside one global anyway.
-1. Reuse tools/build_ubsanc.sh with B=build_ubsanb and -fsanitize=bounds (array-bounds + local-bounds) added to the C flags
-   (make the sanitizer list an env SAN=..., default signed-integer-overflow). Add a bounds plant to tools/s7578_ubsanc_plant.h
-   gated by ROGUESQ_S7578_PLANT=2 (a[idx] with volatile idx = N on int a[N]).
-2. Build-level control: nm -u on the RecompiledFuncs objects shows __ubsan_handle_out_of_bounds.
-3. Run scratch/s7578/run.zsh pattern (GAMEDIR=build_ubsanb): p (plant=2), L1 dd4, L4 dd2, L12 dd4, HOLD 150, plus the owner
-   hangar abort/re-entry route if time allows (scratch/s7326/run.zsh).
-Hypotheses: H-clean (0 out_of_bounds outside the plant), H-diag-oob (a diagnostic table overruns: fix its bound in its
-apply_*.py), H-game-oob (an OOB in a behaviour-changing patch, e.g. terrain window / s6905 tables: root-cause + fix).
-Discriminator: grep "runtime error: index" in san_<arm>.* grouped by file:line; plant must report in arm p.
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+gen-c-bounds-audit is CLOSED (s7579): build_ubsanb (SAN=array-bounds,signed-integer-overflow) carries 879 bounds checks in
+RecompiledFuncs; L1 dd1/dd4, L4 dd2, L12 dd4 150 s -> 0 reports, plant ROGUESQ_S7578_PLANT=2 fired; scorer
+tools/s7579_bounds_report.py rc 0. Next sanitizer-reachable UB classes left in the C: SHIFT (exponent >= width or negative in the
+fixup C; generated shifts are masked) and ALIGNMENT (misaligned host loads/stores through casted rdram/host pointers in fixup C).
+1. `env SAN=shift,alignment,signed-integer-overflow B=build_ubsans zsh tools/build_ubsanc.sh > scratch/s7580/build.log 2>&1`
+   Build control: `objdump -r` on RecompiledFuncs objects shows ___ubsan_handle_shift_out_of_bounds and
+   ___ubsan_handle_type_mismatch_v1 relocations (count them, s7579 pattern).
+2. Add plants to tools/s7578_ubsanc_plant.h: PLANT=3 shift (volatile int s=40; 1u<<s), PLANT=4 misaligned u32 read from a
+   char buffer at +1. Extend tools/s7579_bounds_report.py kinds (shift / misaligned) and its plant check (--plant-kind).
+3. Arms (copy scratch/s7579/run.zsh + run_p2.zsh, GAMEDIR=build_ubsans): p3, p4 (HOLD 60), l1 dd4, l4 dd2 (FORCE_SAVE_MISSION=4),
+   l12 dd4 (=12), HOLD 150.
+Hypotheses: H-clean (0 reports outside plants), H-diag (a diagnostic shift/cast in an apply_*.py: fix bound there),
+H-behav (a behaviour-changing patch shifts out of range / misaligned: root-cause + fix in its fixup script).
+Discriminator: tools/s7579_bounds_report.py grouped by file:line; both plants must report.
+Caveat: alignment UBSan may report RT64/librecomp C++? No - C flags only (C++ is built as in build/).
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves (build_ubsanc.sh COPIES the save).

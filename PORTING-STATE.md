@@ -201528,3 +201528,29 @@ and H-wrap. gen-c-ub-audit CLOSED (div s7575, trunc s7576, ucode s7577, null/wra
 Rules out: -O2 UB exploitation in the generated game C as a cause of any render/audio/crash defect.
 Next: gen-c-bounds-audit. Host array bounds in the fixup C (~407 static tables) were never sanitized; same build script with
 -fsanitize=bounds and a bounds plant (NEXT.md).
+
+## Session 7579 (2026-11-17) — fixup-C host array-bounds class closed: build_ubsanb (array-bounds + signed-overflow UBSan on all C) carries 879 bounds checks in RecompiledFuncs, 0 reports at L1 dd1/dd4, L4 dd2, L12 dd4 (bounds plant fired)
+
+HYPOTHESIS-ID gen-c-bounds-audit. Question: do any of the fixup scripts' static host arrays in RecompiledFuncs (diag tables,
+pcs[npc++], per-kind counters, s6905-style behaviour tables) get indexed out of range at the owner recipe? An OOB there writes
+host .bss beside other fixup state, invisible to every guest watch; build_asan never instrumented C (s7467).
+
+Changes: tools/build_ubsanc.sh takes SAN=<list> (default signed-integer-overflow, unchanged behaviour). tools/s7578_ubsanc_plant.h
+gains ROGUESQ_S7578_PLANT=2: read of static int a[4] at volatile idx 4 (read only, no store). New scorer
+tools/s7579_bounds_report.py <dir> (groups "runtime error:" by arm/kind/file:line, rc 0 clean + ctl, 1 real, 2 ctl missing).
+(Used SAN=array-bounds, not =bounds: local-bounds is a trap mode, not recoverable.)
+
+Build: `env SAN=array-bounds,signed-integer-overflow B=build_ubsanb zsh tools/build_ubsanc.sh` rc 0 (the 4 "FIXUP 24 ANCHOR
+FAILED" lines are pre-existing, same count in s7578 build.log). Build control: 49/50 RecompiledFuncs objects import
+___ubsan_handle_out_of_bounds; 879 relocations to it across RecompiledFuncs; factor5_ucode objects 0 (no fixed-array indexing).
+
+Runs (tools/g1e_owner_quiet_arms.zsh, GAMEDIR=build_ubsanb, AC power, HOLD 150): p L1 dd1 (PLANT=1 - sed case miss, so this
+arm was the s7578 overflow plant; it fired), l1 L1 dd4, l4 L4 dd2, l12 L12 dd4: all alive_at_end=1, crashlines 0,
+vi_stalls30s 0, level_ok 1. Separate control arm p2 (scratch/s7579/run_p2.zsh, L1 dd1, PLANT=2, HOLD 60): alive, and UBSan printed
+`s7578_ubsanc_plant.h:13:65: runtime error: index 4 out of bounds for type 'int[4]'`. Scorer: control_fired=1 real_sites=0, rc 0.
+No san_ log exists for l1/l4/l12 (UBSan writes the file only on a report).
+
+Verdict: H-clean selected (H-diag-oob, H-game-oob refuted for directly-indexed fixed arrays on these routes). Same-run controls:
+build-level reloc count + runtime plant in the same binary. Limits: array-bounds checks only direct indexing of arrays with a
+compile-time size; accesses through pointers / malloc'd buffers are not covered; the hangar abort/re-entry route was not run.
+ORIGIN: n/a (no mitigation landed). Next: gen-c-shift-align-audit (SAN=shift,alignment) in scratch/agent/NEXT.md. scratch/s7579.

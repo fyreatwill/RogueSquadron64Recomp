@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7577 (2026-11-17).
+Compact operational handoff, as of Session 7579 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,12 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7578 (generated game C -O2 UB class CLOSED, H-safe; gen-c-ub-audit closed):** census over 52 RecompiledFuncs TUs
-  (`TU_RE=RecompiledFuncs/ tools/s7577_ucode_ub_census.py`): N arm 1 diff (source-dead `if (cn && ...)` on an array element, diag),
-  S 0, ctl 208/208. W 131 funcs: UB-capable sites (tools/s7578_gamec_wrap_sites.py, 2733) are all fixup C, bounded or diag
-  counters; generated arithmetic has none (gpr u64). Runtime: tools/build_ubsanc.sh (signed-overflow UBSan on all C, plant
-  ROGUESQ_S7578_PLANT=1) L1/L1dd4/L4dd2/L12dd4 150 s: 0 reports, plant fired. A new build dir needs a COPY of build/saves or the
-  forced route stalls at boot (s7578 void). **s7577:** RSP ucode 759/759 sites bounded, S/N 0 diffs, runtime UBSan 0. scratch/s7577.
+- **NEW s7579 (fixup-C host array-bounds class CLOSED, H-clean; gen-c-bounds-audit closed):** `env SAN=array-bounds,signed-integer-overflow
+  B=build_ubsanb zsh tools/build_ubsanc.sh` = 879 bounds checks in RecompiledFuncs (ucode TUs 0: no fixed-array indexing). L1 dd1/dd4,
+  L4 dd2, L12 dd4 150 s: 0 reports, 0 crash/stall; plant ROGUESQ_S7578_PLANT=2 (int[4] idx 4) fired. Scorer tools/s7579_bounds_report.py
+  (rc 0). Scope: only directly-indexed fixed arrays are checked, not pointer-indexed buffers. **s7578:** game-C null/wrapv UB CLOSED
+  (52 TUs, signed-overflow UBSan 0 reports, plant fired; new build dirs need a COPY of build/saves). **s7577:** ucode 759/759 bounded.
 - **s7576 (generated-C float->int UB class CLOSED):** the only UB-capable emission left after s7575 was TRUNC_W_S/D (1199 bare
   `(int32_t)` casts; shifts are masked on unsigned gpr, mult cannot overflow, DDIV total, CVT_W via lrint). Fold control: clang -O2
   deletes `if (x==3e9f) return (int)x;`. tools/s7576_trunc_census.py --controls: FOLDED=0 of 1199 (3 legal merges, 1 hand-inspected).
@@ -513,8 +512,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **s7576 float->int class CLOSED** (headline); after a regen
     also run `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0, rc 0). **s7577 RSP ucode UB class CLOSED**; after a
     ucode regen or rsp*.hpp edit run `tools/s7577_ubsan_sites.py <tu> --check` per ucode TU (UNCLASSIFIED 0) and
-    `tools/s7577_ucode_ub_census.py scratch/s7577` (rc 0). **s7578 game-C null/wrapv CLOSED**
-    (gen-c-ub-audit done). **NEXT (s7579): gen-c-bounds-audit**, -fsanitize=bounds over the fixup C (scratch/agent/NEXT.md).
+    `tools/s7577_ucode_ub_census.py scratch/s7577` (rc 0). **s7578 game-C null/wrapv CLOSED**;
+    **s7579 fixup-C bounds CLOSED** (tools/s7579_bounds_report.py). **NEXT (s7580): gen-c-shift-align-audit** (NEXT.md).
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
