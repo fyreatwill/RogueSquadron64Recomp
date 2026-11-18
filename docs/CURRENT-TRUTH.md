@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7610 (2026-11-18).
+Compact operational handoff, as of Session 7611 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
+- **NEW s7611: class SN (host snapshots of guest DATA in static storage) CLOSED, H-clean, no fix.** tools/s7611_sn_census.py
+  --controls --witness (scanner tools/s7611_sn_scan.py): 169 candidates 0 open (gated 103, edge 20, base 17, refresh 5, event 5,
+  swap 5, stat 4, ...), contracts C1-C6, controls 8/8 (control 4 caught a template-comma blind spot, fixed; it surfaced
+  s_menu_fifo). Default-on units safe: s6907 aim ds reset per scroll, s4272 shadow cleared per flush, s7030/s7033 dd-cull
+  re-read per call, s_menu_fifo cleared per worker instance. Witness s6995 aim logs: 24/24 scroll starts output==raw incl.
+  re-entry after a mission, planted stale ds fails. Not covered: ctx->rN values parked in statics (class RG next).
+- **s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
   --controls --witness <logs> (6/6, PASS). Overlays 4/5/6 share vram 0x800A5130. Host: 54 rows, 0 open (func_map refreshed by
   load + s7528 evict, get_function uncached, ucode chosen by task type; RT64 HLE GBI cache keyed by text address is gated
   off by ROGUESQ_LLE_FORCE default). Generated: 14240 direct calls, 3460 into an overlay all from the same overlay, 0
@@ -461,7 +467,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     thread id/OSThread*/host thread; never key a default-path decision by OSId (ids repeat), use a host-thread incarnation token.
 40. **Class MK CLOSED s7609** (headline). Rerun tools/s7609_mk_census.py --controls --witness after adding host state keyed
     by an OSMesgQueue/OSTimer/OSIoMesg address; new host-side requeue/pending state needs a re-create witness.
-41. **NEXT (s7610): class OV, host caches keyed by guest CODE address that survive an overlay/code reload** (NEXT.md).
+41. **Class OV CLOSED s7610** (headline). Rerun tools/s7610_ov_census.py --controls after a regen or overlays.cpp edit.
+42. **Class SN CLOSED s7611** (headline). Rerun tools/s7611_sn_census.py --controls --witness after adding a static that
+    holds guest bytes; a default-on one needs a re-read per use, a content hash, or a reset on a named guest event + witness.
+43. **NEXT (s7612): class RG, guest REGISTER values (ctx->rN, incl. pointers into guest RAM) parked in host statics across
+    calls** (NEXT.md).
 
 ## Evidence index
 

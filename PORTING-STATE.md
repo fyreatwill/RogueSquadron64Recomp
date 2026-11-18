@@ -202561,3 +202561,43 @@ only in diag arms), H-bad-live (a default-on decision reads a previous incarnati
   LLE_FORCE default, so latent only for an HLE arm) and H-bad-live. Class OV CLOSED. No game run (offline audit + existing
   logs). Rerun after any regen or overlays.cpp edit. Next: class SN, host snapshots of guest DATA keyed by address with
   no content/generation check.
+
+## Session 7611 (2026-11-18) — class SN closed: host snapshots of guest data in static storage (169 candidates 0 open, contracts 6/6, controls 8/8, witness PASS), H-clean
+
+HYPOTHESIS-ID: host-snapshot-of-guest-data. Offline audit; no game run, no runtime change.
+- New scanner tools/s7611_sn_scan.py: every store of a guest-derived value into static / thread_local / file-scope storage
+  (assignment, compound assign, .store/.push_back/.insert/.emplace/.assign, member or element of a static object, or an
+  out-param of a call that also gets rdram) in src/, librecomp, ultramodern and the generated RecompiledFuncs (fixup-injected
+  statics). Guest-derived = a guest-read token on the line (MEM_*, rdram views, rs64_rdram_u*, rd8/16/32, ...) or a local
+  transitively tainted by one inside the same function. Strings/comments stripped; a name is static only if its nearest
+  declaration inside the function is static (locals declared on the same line, parameters and shadowing excluded).
+- New census tools/s7611_sn_census.py --controls --witness: 169 candidates = gated 103, edge 20 (print-on-change keys),
+  base 17 (rdram host pointer, auto), refresh 5, event 5, swap 5, stat 4, envflag 4, thread 3, stash 2, local 1; 0 open,
+  0 drift, 0 stale rows. Each gated/edge/stash row carries a proof regex that must sit in the enclosing function (or file)
+  of every site, so a moved gate reads DRIFT.
+- Default-on snapshot units and why they are safe (contracts C1-C6 all hold):
+  C1 s6907 hangar aim (ps/ds/lo): ds = camera direction at scroll start, reset on every 0x800CC3E4 -> 2 edge; ps tracked on
+  the early-return path too. C2 s4272 deferred-submit shadow (default on, s4549): bytes as of submit, swapped in for RT64
+  with live bytes saved (wm_live) and restored, cleared every flush (class GC s7542, s7532 undo check). C3 s7030/s7031/s7033
+  draw-distance cull (on at dd>1 via main.cpp setenv OFFMAPCULL=2): map dims, gCurrentLevel, height scale re-read every
+  terrain-stream call. C4 rs6663 objective table re-read per refresh (3 call sites). C5 events.cpp draw-distance originals
+  (captured once per run) stay behind ROGUESQ_DD_RADIUS/LOD/IMUL/DUMP, which ROGUESQ_DRAW_DISTANCE never sets; default
+  addresses are main-segment rodata (immutable). C6 s_menu_fifo (menu-worker completion ids keyed by guest message
+  pointer, s6781 fix, default on): cleared when a new worker instance restarts the id counter, capped 64, recv returns the
+  live guest byte unless the front entry is the same pointer.
+- Controls 8/8: planted once-read static table snapshot -> OPEN; planted address-keyed map of guest bytes -> OPEN; planted
+  member store into a static object -> OPEN; dropped row -> OPEN; removed the s6907 ds reset -> C1; removed
+  g_s4272_shadow.clear() -> C2; removed the s_menu_fifo clear -> C6; corrupted a gate proof -> DRIFT.
+  Control (4) FAILED on the first pass: a real scanner blind spot (template commas in `static std::deque<std::pair<A,B>>`
+  hid the declaration). Fixed in-session; the fix surfaced s_menu_fifo, the one default-on unit the first pass missed. A
+  second extension (stores into members of static objects) added 6 candidates (RDP async batch, F5 shadow before[], e9prov
+  hash, combine histogram), all gated/stat.
+- Witness (second source, runtime): scratch/s6995/{r1,d1-d4}.g5g.txt.zst (ROGUESQ_G5G_CAM aim logs). Every scroll's first
+  row has output == raw view (24/24 scrolls; r1 has 4 first-entry + 4 re-entry scrolls either side of an 82 s mission), so
+  the ds reset ran each time, including after the hangar re-entry. Mid-scroll rows diverge (1687 in r1), so the comparator
+  can fail. Planted stale ds (each scroll's first output := previous scroll's start view) drops start_eq to 1/8 and 1/4
+  -> CONTROL PASS.
+- Discrimination: selects H-clean; refutes H-bad-live (no default-on snapshot lacks a re-read, hash or reset) and
+  H-bad-gated (the once-per-run originals snapshot is gated AND reads immutable rodata). Class SN CLOSED.
+- Scope limits (not covered): values from guest REGISTERS (ctx->rN) parked in statics across calls; lib/rt64 internals
+  (its texture cache keys on TMEM content hash, not audited here). Next: class RG = the ctx->rN half.
