@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7609 (2026-11-18).
+Compact operational handoff, as of Session 7610 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7609: class MK (host state keyed by a guest struct address) CLOSED, H-clean, no fix.**
+- **NEW s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
+  --controls --witness <logs> (6/6, PASS). Overlays 4/5/6 share vram 0x800A5130. Host: 54 rows, 0 open (func_map refreshed by
+  load + s7528 evict, get_function uncached, ucode chosen by task type; RT64 HLE GBI cache keyed by text address is gated
+  off by ROGUESQ_LLE_FORCE default). Generated: 14240 direct calls, 3460 into an overlay all from the same overlay, 0
+  cross-overlay (agrees with s7520 runtime). Witness: 29 swaps stale 0; s7528 two-arm pair is the control.
+- **s7609: class MK (host state keyed by a guest struct address) CLOSED, H-clean, no fix.**
   tools/s7609_mk_census.py --controls --witness (4/4, PASS): 96 lines (diag 47, timer 11, retail 10, stat 9, extq 6, fresh 5,
   value 3, fix 1, print 4), 0 open. All queue incarnation state lives in the guest struct (osCreateMesgQueue resets links +
   counts); event/VI registrations store the pointer as libultra does; timers re-read t->mq at fire, s7397 carry default on;
@@ -387,7 +392,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     fb-cpu-reader census CLOSED s7391 (0 guest loads from a live colour image on 6 levels; build_fbld, ROGUESQ_S7389_FBLD=1).
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
-    after a regen run tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
+    after a regen run tools/s7610_ov_census.py --controls + tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a save/files.cpp edit tools/s7595_sv_census.py --controls + --harness; after a librecomp/ultramodern
     replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a threads.cpp/recomp.cpp thread-entry edit tools/s7606_hc_census.py --controls; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a librecomp/ultramodern getter or a new os*_recomp import tools/s7555_go_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),

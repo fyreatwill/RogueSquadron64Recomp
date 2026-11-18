@@ -202529,3 +202529,35 @@ only in diag arms), H-bad-live (a default-on decision reads a previous incarnati
   Controls now require open count > baseline.
 - Discrimination: selects H-clean, refutes H-bad-gated and H-bad-live. Class MK CLOSED. No game run (offline audit; second
   source is existing route logs). Next: class OV, host caches keyed by guest code address across overlay/code reload.
+
+## Session 7610 (2026-11-18) — class OV closed: host state keyed by a guest code address (54 host rows 0 open, 14240 generated direct calls 0 cross-overlay, controls 6/6, witness PASS), H-clean
+
+- Boring check first: RS64 does swap code at runtime. ELF/section table: .ovl.mission (sec 4, 0x665A0), .ovl.menu (sec 5,
+  0x283F0), .ovl.cinematic (sec 6, 0xB810) all link at vram 0x800A5130, PI-DMAed in by loadOverlay -> pi.cpp
+  load_overlays / load_overlays_by_start. unload_overlays / load_overlay_by_id / unload_overlay_by_id have no RS64 caller.
+  Generated code uses 0 RELOC_HI16/LO16 (section_addresses never read by game code) and 350 LOOKUP_FUNC (per call).
+- New tool tools/s7610_ov_census.py (--controls, --witness LOG...). HOST half: every line in src/ + librecomp + ultramodern
+  + RT64 rt64_interpreter.cpp that touches func_map / loaded_sections / section_addresses / code_sections_by_rom /
+  manual_patch_symbols_by_vram, holds recomp_func_t* / RspUcodeFunc* in a container, caches a fn pointer in a static, or
+  compares a ucode text address against a remembered one. 54 rows: refresh 26, static 19, mod 22 lines (mods/ empty),
+  diag 10, value 4, lookup 2, print 3; 0 open, 0 stale. Contracts held: C1 s7528 evict default on and erases func_map of
+  every overlapping loaded section; C2 load_overlay inserts every function of the new section; C3 get_function resolves via
+  func_map on every call (no cache in front); C4 get_rsp_microcode keys on task->t.type only; C5 RT64 HLE loadUCodeGBI, which
+  IS keyed by text address with no content hash (UCode.textAddress != masked -> re-pick GBI), is reachable only with
+  ROGUESQ_LLE_FORCE=0 (send_dl default LLE). RSP IMEM overlay dispatch is class FR (s7521), not re-audited.
+- GENERATED half (first static check of this kind): each of 2579 generated functions (../N64Recomp/RecompiledFuncs +
+  RecompiledPatches) mapped to its section via recomp_overlays.inl, N64Recomp static_<sec>_<vram> names (reverse of
+  tools/rename_generated_symbols.py), fixup _sNNNN_inner/_impl bodies -> wrapper's section, PatchesLib -> own section.
+  14240 direct `callee(rdram, ctx)` calls: 3460 into a swappable overlay, ALL from the same overlay; 0 main->overlay and 0
+  overlay A->overlay B direct calls (first pass flagged 22 because funcs_49 statics like handleCraftSelectInput =
+  static_5_800AF6AC were un-owned; resolved by the static-name map, not rowed away). Agrees with s7520's runtime count
+  (0 overlay calls into non-resident bytes): two independent lines.
+- Controls 6/6: planted vram fn cache in get_function (UNROWED+C3), dropped row, removed the evict erase (C1), planted ucode
+  text-address cache in get_rsp_microcode (C4), planted direct main->overlay call, planted direct overlay->overlay call.
+- Witness (existing default-build logs s7608_tk on/off, s7579 L12, s7551 L1, s7591 new): table idx 2/3/4 all loaded at
+  0x800A5130, 29 [s7528] post lines, stale_window_entries 0 on every one, evict=1. Control = s7528 same-build two-arm pair
+  (ROGUESQ_S7528_CTL=1): evict=0 arm stale>0 4, ctl_hit=1 4; evict=1 arm stale 0, ctl_hit 0/4 -> CONTROL PASS.
+- Discrimination: selects H-clean, refutes H-bad-gated (the one text-address-keyed cache, RT64 HLE GBI, is gated off by
+  LLE_FORCE default, so latent only for an HLE arm) and H-bad-live. Class OV CLOSED. No game run (offline audit + existing
+  logs). Rerun after any regen or overlays.cpp edit. Next: class SN, host snapshots of guest DATA keyed by address with
+  no content/generation check.
