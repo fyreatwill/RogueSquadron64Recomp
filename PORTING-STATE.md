@@ -201776,6 +201776,8 @@ HYPOTHESIS-ID: metal-cpp-ownership-audit. AC, clk 1.00, host idle >11000 s, one 
   OWN=0: 5 threads grow 0.46 / 1.18 / 4.59 / 4.63 / 12.15 entries per begin (~165k entries in 150 s, ~1,100/s, ~9 KB/s of pool
   pages: the same order as the s7586 0.005 MB/s residual). OWN=1: steady slope 0.0039-0.0043 per begin on every thread (=
   the plant alone; one thread has a one-time 1,544-entry startup burst, then flat). Control fired quantitatively.
-Shows: H-overrelease and H-leak both selected (latent over-releases + bounded leaks + unbounded implicit-pool growth); fixed.
+Shows: the census + gauge run selects H-overrelease and H-leak and refutes H-clean (same-binary A/B: 0.46-12 vs 0.004 entries per
+command list, plant fired); root cause = upstream +0/+1 mismatches on pool-less threads, fixed. Next discriminator: the same gauge
+A/B on the other Apple TUs (NEXT.md).
 Verdict: class OW CLOSED for plume_metal.cpp. Rules out: steady per-frame autorelease on RT64 threads in the fixed build.
 Next: the same census for the other Apple TUs (rt64_apple.mm, plume_apple.mm, imgui_impl_metal.mm): check ARC flags first.
