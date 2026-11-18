@@ -42544,3 +42544,6 @@ _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_selfbranch.py")), str(base)])
 # s7089: remove the duplicated s3531 call blocks from an already-patched tree (idempotent; no-op after the rule fix above).
 _sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_s7089_dupcall.py")), str(base)])
+# s7580 class LU: LUI literals S32(0X8011 << 16) are signed-shift UB (C17 6.5.7p4); make them unsigned. Machine-code neutral
+# (tools/s7580_lui_identity.py: 51 TUs, 24,698 rewrites, 0 object diffs; --plant control 34 diffs). Runs last: patches emit the idiom too.
+_sp5668.check_call([sys.executable, str(pathlib.Path(__file__).with_name("fixup_lui_unsigned.py")), str(base)])

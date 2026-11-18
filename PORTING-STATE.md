@@ -201554,3 +201554,33 @@ Verdict: this selects H-clean and refutes H-diag-oob and H-game-oob for directly
 build-level reloc count + runtime plant in the same binary. Limits: array-bounds checks only direct indexing of arrays with a
 compile-time size; accesses through pointers / malloc'd buffers are not covered; the hangar abort/re-entry route was not run.
 ORIGIN: n/a (no mitigation landed). Next: gen-c-shift-align-audit (SAN=shift,alignment) in scratch/agent/NEXT.md. scratch/s7579.
+
+## Session 7580 (2026-11-17) — shift/alignment UB class closed: the only executed shift UB was N64Recomp's signed LUI literal S32(0X8011 << 16) (7,136 sites at boot, 24,698 in the tree) plus 3 patch residuals; tools/fixup_lui_unsigned.py makes them unsigned with 0 object diffs at -O2, post-fix 0 reports at L1/L4/L12 (shift + misaligned plants fired)
+
+HYPOTHESIS-ID: gen-c-shift-align-audit (CLOSED). Builds: `env SAN=shift,alignment,signed-integer-overflow B=build_ubsans zsh
+tools/build_ubsanc.sh` (RecompiledFuncs archive carries 51 TUs with ___ubsan_handle_shift_out_of_bounds and _type_mismatch_v1 per nm).
+New plants in tools/s7578_ubsanc_plant.h: ROGUESQ_S7578_PLANT=3 (1u << 40), =4 (misaligned u32 load at buf+1).
+tools/s7579_bounds_report.py now takes repeated --plant-arm/--plant-kind pairs and classifies shift / misaligned.
+
+Run 1 (pre-fix, scratch/s7580/r1): controls p3/p4 (L1 dd1, 60 s) each reported their plant, plus 7,084/7,152 `left shift of 32785
+by 16 places cannot be represented in type 'int'`. Classified every distinct site (7,136): 7,093 are the generated `S32(0X.... << 16)`
+and the other 43 are the same idiom in fixup-patch text (lowercase 0x). N64Recomp src/cgenerator.cpp:233 emits Lui as
+`S32(imm << 16)` with an int literal, which is C17 6.5.7p4 UB for every imm >= 0x8000 (22,669 of 24,485 generated sites).
+ORIGIN: the generator, not the game. The value is the intended one (clang folds it modulo 2^32), so this is latent rather than a bug
+we have seen, but it is UB that an optimiser is free to exploit.
+Fix: tools/fixup_lui_unsigned.py, the LAST call in fixup_game_funcs_vendored.py (patches emit the idiom too, and the vendored script
+refuses to rerun on a patched tree, so the pass only ever sees fresh regen output). It rewrites `S32(0X8011 << 16)` ->
+`S32(0X8011u << 16)` (24,698). Same run, post-LUI, three flight arms (L1 dd4, L4 dd2, L12 dd4 150 s) left 3 residual patch sites:
+(a) s6882/s7009 spannarrow `((int64_t)(int32_t)ctx->r5 << (g_rs64_ww ? 7 : 6))` with negative r5 (left shift of negative value, all
+three levels; behaviour patch on the dd>1 terrain span path) -> `* (g_rs64_ww ? 128 : 64)`; (b) s4192 wait-spin loop
+`S32(MEM_HU(..) << 16)` where u16 promotes to int (65535 << 16, seen in p4 boot only) -> `(uint32_t)MEM_HU(..) << 16`. A static
+census of signed-cast/MEM_* shifts in patch text found one more: funcs_24 `(int32_t)(0X8015 << 16)` -> `0X8015u`. Total 24,703.
+Neutrality: tools/s7580_lui_identity.py compiles all 51 TUs at build/'s real RecompiledFuncs flags (-O2, no -g) as-is and rewritten,
+compares objdump -d -r + -s: 0 diffs (24,698 LUI rewrites, then 4 and 1 for the residual passes). Control --plant (one 0X8011u ->
+0X8012u per TU) gives 34 diffs and rc 1. So build/ machine code is unchanged; the fix only removes UB.
+Run 2 (post-fix, both builds rebuilt): p3, p4 controls fired (1 report each, plant only); l1/l4/l12 150 s 0 reports, alive 5/5,
+vi_stalls30s 0, crashlines 0. tools/s7579_bounds_report.py rc 0, real_sites=0. Alignment: 0 non-plant misaligned reports in both runs.
+Rules out: H-diag/H-behav shift UB in the executed code at these routes; misaligned host access via casted rdram pointers.
+Not done: a fresh make_elf -> N64Recomp regen through the chain (the pass is idempotent and last; the anchors it rewrites are its own).
+Host note: the quiet-arms harness voids when HIDIdle < 120 s (two voids at 22:31 while idle was ~105 s); wait for >= 130 s.
+Next: gen-c-pointer-overflow-audit (NEXT.md).

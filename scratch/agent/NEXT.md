@@ -1,19 +1,22 @@
-# NEXT (s7580)
-HYPOTHESIS-ID: gen-c-shift-align-audit
+# NEXT (s7581)
+HYPOTHESIS-ID: gen-c-pointer-overflow-audit
 
-gen-c-bounds-audit is CLOSED (s7579): build_ubsanb (SAN=array-bounds,signed-integer-overflow) carries 879 bounds checks in
-RecompiledFuncs; L1 dd1/dd4, L4 dd2, L12 dd4 150 s -> 0 reports, plant ROGUESQ_S7578_PLANT=2 fired; scorer
-tools/s7579_bounds_report.py rc 0. Next sanitizer-reachable UB classes left in the C: SHIFT (exponent >= width or negative in the
-fixup C; generated shifts are masked) and ALIGNMENT (misaligned host loads/stores through casted rdram/host pointers in fixup C).
-1. `env SAN=shift,alignment,signed-integer-overflow B=build_ubsans zsh tools/build_ubsanc.sh > scratch/s7580/build.log 2>&1`
-   Build control: `objdump -r` on RecompiledFuncs objects shows ___ubsan_handle_shift_out_of_bounds and
-   ___ubsan_handle_type_mismatch_v1 relocations (count them, s7579 pattern).
-2. Add plants to tools/s7578_ubsanc_plant.h: PLANT=3 shift (volatile int s=40; 1u<<s), PLANT=4 misaligned u32 read from a
-   char buffer at +1. Extend tools/s7579_bounds_report.py kinds (shift / misaligned) and its plant check (--plant-kind).
-3. Arms (copy scratch/s7579/run.zsh + run_p2.zsh, GAMEDIR=build_ubsans): p3, p4 (HOLD 60), l1 dd4, l4 dd2 (FORCE_SAVE_MISSION=4),
-   l12 dd4 (=12), HOLD 150.
-Hypotheses: H-clean (0 reports outside plants), H-diag (a diagnostic shift/cast in an apply_*.py: fix bound there),
-H-behav (a behaviour-changing patch shifts out of range / misaligned: root-cause + fix in its fixup script).
-Discriminator: tools/s7579_bounds_report.py grouped by file:line; both plants must report.
-Caveat: alignment UBSan may report RT64/librecomp C++? No - C flags only (C++ is built as in build/).
+gen-c-shift-align-audit CLOSED (s7580): build_ubsans (SAN=shift,alignment,signed-integer-overflow). Pre-fix the only executed
+UB was class LU: N64Recomp's LUI emit `S32(0X8011 << 16)` (signed shift into the sign bit, C17 6.5.7p4), 22,669 generated sites
++ patch copies, 7,136 executed at boot; plus 2 fixup-patch residuals (s7009 spannarrow negative int64 <<, s4192 wait-spin
+u16<<16 in int) and 1 static hand-LUI. tools/fixup_lui_unsigned.py (last pass of fixup_game_funcs_vendored.py) rewrites all
+24,703; tools/s7580_lui_identity.py: 51 TUs 0 object diffs (plant control 34 diffs). Alignment: 0 reports (plant fired).
+Last sanitizer-reachable UB class in the C: POINTER-OVERFLOW (rdram + (addr - 0xFFFFFFFF80000000) arithmetic in MEM_* macros and
+fixup host pointers) and nonnull-attribute.
+1. `env SAN=pointer-overflow,nonnull-attribute,signed-integer-overflow B=build_ubsanp zsh tools/build_ubsanc.sh > scratch/s7581/build.log 2>&1`
+   Build control: `nm build_ubsanp/**/libRecompiledFuncs.a | grep -c ___ubsan_handle_pointer_overflow` (s7580 nm pattern; objdump -r per obj is too slow).
+2. Plant PLANT=5 in tools/s7578_ubsanc_plant.h: `volatile uintptr_t z=0; char* p=(char*)z; p += 16;` style pointer wrap
+   (e.g. a char* at (char*)UINTPTR_MAX - 4 plus 16). Add kind 'ptrovf' ("pointer index expression ... overflowed" / "applying
+   non-zero offset") to tools/s7579_bounds_report.py.
+3. Copy scratch/s7580/run.zsh + run_p.zsh (GAMEDIR=build_ubsanp; controls p5). Wait HIDIdle >= 130 s before launching (the
+   harness voids at < 120).
+Hypotheses: H-clean (0 reports), H-macro (MEM_* `- 0xFFFFFFFF80000000` wraps a host pointer for every access: a class-wide
+report whose fix is in recomp.h via lib/ patch + export.sh, or a fixup-side macro override in include/rsp_dpc_macros.h),
+H-patch (a fixup patch computes a wild host pointer). Discriminator: report grouped by file:line, macro-expansion sites vs patch.
+Expect H-macro to be likely: rdram + (u64 wraps) is unsigned arithmetic, but the pointer add of a huge u64 may be flagged.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves (build_ubsanc.sh COPIES the save).
