@@ -201808,3 +201808,35 @@ Picked up an interrupted s7588 iteration: its census tool, the lib/rt64 plume_ap
 - Verdict line: selects H-clean, refutes H-arc, H-mismatch and H-pool (main-queue plant dealloc 1648/1648 with APPLE_POOL=0;
   present-thread pool slope 0 over 25,600 posts). Next discriminator: class HR outside-sampled fd/thread/port slopes with an
   fd plant (NEXT.md).
+
+## Session 7589 (2026-11-18) — class HR closed: fds, threads, Mach ports and IOSurfaces flat in steady state (plant fired); only bounded per-load port/IOAccel steps
+
+Folded soak s7588_applepool_default (20261118-091041): alive, 0 stall, pool=0, plantA=plantD=1296 -> the APPLE_POOL=0 default passes.
+
+Class HR = host resources that are not malloc heap (sibling of LK s7585-s7586 and OW/OW-2 s7587-s7588). Hypotheses H-flat / H-fd /
+H-thread / H-port. New tools, no game rebuild:
+- tools/s7589_hrsample.zsh <out> <max_s> [int]: outside sampler of the one live game: lsof fds by type, ps -M threads, top #PORTS
+  (lsmp -p fails, task_for_pid needs root), vmmap --summary IOSurface and IOAccelerator (graphics) region counts, footprint.
+- tools/s7589_hrplant.dylib (DYLD_INSERT_LIBRARIES): positive control, every 30 s after RS64_HRPLANT_DELAY it leaks 1 dup(2) fd,
+  1 parked pthread, 1 Mach receive port ("[s7589-hrplant] n=" banner). The delay gives one run a game-only window and a game+plant
+  window (in-run toggle).
+- tools/s7589_hr_report.py: least-squares slope per column per window, control check, --windows plateau medians and steps.
+Arm 1 (scratch/s7589/hold.zsh): L4 owner recipe dd4 16:9 FPS60, HOLD 1200, plant at 600 s. Alive, crashlines 0, vi_stalls30s 0.
+  Plateaus 100-165 / 200-600 / 1150-1210: threads 63/64/84, ports 693/731/771, IOSurface 9/9/9, footprint 1015/1150/1136 MB. The +38
+  ports and +1 thread land once, at t=170-187 s (mission load); 187-600 s ports 731 flat, threads 64 flat. Plant window: 20 leaks ->
+  +20 threads, +40 ports (2 per leak: receive port + thread port) = game residual 0. fd column read flat 10 in BOTH windows: an
+  instrument bug, not a result. lsof prints pipe fds with no mode letter ("2 PIPE"), the planted dup(2) is a pipe, and the filter
+  /^[0-9]+[urw]/ skipped them. Fixed to /^[0-9]+/ (12 fds in lsof_60 vs 10 counted before the fix).
+Arm 2 (scratch/s7589/hangar_run.zsh on scratch/s7586/hangar.zsh, build/, NO_SAVE_WRITE=1): s7469 route, dd8 21:9 FPS60, 4
+  initMission, 3 hangar entries, crash 0; plant at 560 s. Plateaus 96-180 / 264-337 / 408-493 / 541-588 / 636-700 (plant):
+  fds 10/10/10/10/13, threads 65/65/65/65/69, ports 696/706/716/755/766, IOSurface 8 throughout, IOAccel(g) 256/260/269/288/279,
+  footprint 882/926/943/977/940. Fixed fd counter caught the plant (+3 fds / +4 threads in the plant window, one sample of lag).
+  The scorer's slope-based port control "FAIL" here is a scoring artefact: the game-only window spans loads, so a slope over it is
+  not a baseline. The plateau steps carry the result (+11 ports for 4-5 leaks on a flat game).
+Verdict: selects H-flat in steady state; refutes H-fd (0 game fds over 4 loads) and H-thread (65 across every re-entry). H-port
+  shows only as a per-load step: +10 ports per re-entry load, +38/+39 on new-content loads, never a time slope. It is bounded (~10k
+  loads to reach 100k ports). Its owner is unnamed (single-source: no lsmp without root), so per-content cache vs per-load leak is not
+  yet split. IOAccel regions also step per load and are released later (-9), which fits RT64 resource caches.
+Ruled out: fd, thread and IOSurface growth over time or per load; any time-linear port growth.
+Next: HR-2 (NEXT.md): in-process mach_port_names census by right type + a route reloading the same mission, to split H-cache /
+  H-leak / H-dead.

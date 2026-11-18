@@ -1,18 +1,20 @@
-# NEXT (s7589)
+# NEXT (s7590)
 HYPOTHESIS-ID: host-resource-growth-audit
 
-Class LK (heap) and OW/OW-2 (ObjC ownership) are closed. Sibling class HR: host resources that are not malloc heap.
-Hypotheses: H-flat (all counts plateau after first mission load), H-fd (file descriptors grow per load / per save probe / per
-audio hot-plug check), H-thread (threads or dispatch workers grow per hangar re-entry), H-port (Mach ports / IOSurfaces / Metal
-resident allocations grow over time).
-Method, ONE run, sampled from outside every 15 s (no build needed):
-  lsof -p PID | wc -l (and by type), ps -M -p PID | wc -l, lsmp -p PID | wc -l (if lsmp present; else `sudo`-free
-  `vmmap --summary PID` IOSurface / IOAccelerator rows), footprint PID.
-Arms: (1) L4 dd4 16:9 FPS60 20 min hold, (2) s7469 hangar abort/re-entry route (3 re-entries, 4 loads, dd8 21:9).
-Positive control: a plant that opens one fd per 1000 frames (add ROGUESQ_S7589_PLANT=1 in src/main, dup(2) kept open) must show
-as a slope in the same run; without the control a flat count is not a result.
-Fold: slope per minute after warm-up and per re-entry; any non-zero slope -> name the owner (lsof name / thread name / port
-type) and fix it env-gated (=0 old). Reuse tools/s7585_memsample.zsh as the sampler skeleton.
-Also fold the queued soak s7588_applepool_default (pass = alive, 0 stall, pool=0, plantD == plantA).
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Owner may be at the machine: key-driven runs go
-through the quiet-arms tool (exits 2 when a human is active) or the soak queue.
+Class HR closed s7589 (H-flat steady state). Residual: Mach ports step +10 per hangar re-entry load (696/706/716) and +38/+39 on a
+new-content load; IOAccel regions +4..+19 per load. Bounded, but the owner is not named. HR-2 names it.
+Hypotheses: H-cache (ports belong to per-content caches: RT64 shader/pipeline objects, so a reload of the SAME mission adds 0),
+H-leak (every load adds ~10 whatever the content, e.g. a per-load thread/semaphore/dispatch source that is never destroyed),
+H-dead (dead names pile up: send rights to destroyed ports never deallocated).
+Instrument, no game rebuild: extend tools/s7589_hrplant.dylib (or a sibling tools/s7590_portcensus.dylib) with a census thread that
+every 10 s calls mach_port_names() on mach_task_self() and logs counts by type (RECEIVE, SEND, SEND_ONCE, PORT_SET, DEAD_NAME), plus
+for the names new since the previous census: mach_port_get_refs and, for receive rights, mach_port_get_attributes (MACH_PORT_LIMITS_INFO
+/ STATUS). Run the plant leak in the same process as the positive control (each leak = +1 RECEIVE, thread port shows as SEND).
+Route: one mission reloaded >=4 times (hangar abort -> SELECT YOUR CRAFT -> same mission; the s7469 AP schedule picks a different
+mission each time: a0 0xB1/0xB5/0x19/0x4A; drop the left/down cursor moves so the same entry is chosen), then 1 new mission.
+Outcome: per-load step 0 on same-mission reloads -> H-cache (close); >0 by RECEIVE/SEND -> H-leak, name the creator (lldb breakpoint on
+mach_port_allocate / semaphore_create / dispatch_source_create gated to the load window, backtrace) and fix env-gated (=0 old);
+step in DEAD_NAME -> H-dead.
+Sampler: tools/s7589_hrsample.zsh <out> <s> 10; scorer tools/s7589_hr_report.py --windows <plateaus>.
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Key-driven route: check HID idle and
+CGSSessionScreenIsLocked first, or queue it as a soak with # SOAK_NEEDS_IDLE=300.

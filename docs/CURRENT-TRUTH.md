@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7588 (2026-11-18).
+Compact operational handoff, as of Session 7589 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean.** tools/s7588_apple_tu_census.py --controls (rc 0, plant 2/2): every
+- **NEW s7589: class HR (host resources other than heap) CLOSED, H-flat in steady state.** Outside sampler tools/s7589_hrsample.zsh
+  (lsof by type, ps -M, top #PORTS since lsmp needs root, vmmap IOSurface/IOAccelerator(graphics) regions, footprint) + plant
+  tools/s7589_hrplant.dylib (DYLD_INSERT, 1 fd + 1 thread + 1 receive port every 30 s after RS64_HRPLANT_DELAY), scorer
+  tools/s7589_hr_report.py (--windows = plateau medians). L4 dd4 16:9 FPS60 1200 s (plant at 600 s): fds 10, threads 64, ports 731,
+  IOSurface 9 flat from 240 s to 600 s; plant window +20 threads / +40 ports for 20 leaks = game residual 0. s7469 hangar route (4 loads,
+  3 re-entries, dd8 21:9, 0 crash): fds/threads/IOSurface flat across every load; plant fd +3, threads +4. Only steps: Mach ports
+  +10 per re-entry load (696/706/716) and +38/+39 on a new-content load, IOAccel regions +4..+19 per load (later released, -9). Bounded
+  (10k loads before 100k ports); the port owner is not named (single-source, no lsmp without root) -> NEXT.md HR-2.
+- **s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean.** tools/s7588_apple_tu_census.py --controls (rc 0, plant 2/2): every
   .m/.mm is MRC; built ones (rt64_apple.mm, plume_apple.mm, nfd_cocoa.m, rs64_display_mac.mm) have 0 unbalanced sites; imgui Metal/OSX
   backends are not built. Only per-present path: CocoaWindow off-main getters dispatch_async one block per call to the main queue.
   Same-binary L4 dd4 150 s (gauge ROGUESQ_S7588_GAUGE=1, plant ROGUESQ_S7588_PLANT=1): main-queue pool flat (3-11 entries), backlog
@@ -298,11 +306,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 20. **Class LK host memory growth CLOSED s7586** (headline; wait-buffer leak s7585, dispatch_data leak s7586). Owner:
     ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
 21. **Class OW CLOSED s7587** (headline) for plume_metal.cpp; one NEEDS-POOL row left (device-ctor name string, once).
-22. **Class OW-2 CLOSED s7588** (headline, H-clean). Queued smoke of the rebuilt default: soak_queue/s7588_applepool_default.sh
-    (pass = alive, 0 stall, pool=0, plantD == plantA).
-23. **NEXT (s7589): class HR, host resource growth other than heap** (NEXT.md): file descriptors, threads, Mach ports, IOSurfaces /
-    Metal resident allocations over a 20 min L4 hold and the s7469 hangar re-entry route, sampled from outside (lsof, ps -M,
-    lsmp, vmmap --summary). Same shape as class LK s7585-s7586.
+22. **Class OW-2 CLOSED s7588** (headline, H-clean). Smoke of the rebuilt default PASSED (soak 20261118-091041: alive, 0 stall,
+    pool=0, plantD == plantA 1296/1296).
+23. **Class HR CLOSED s7589** (headline, H-flat steady state). Sampler gotcha: lsof prints pipe fds with no mode letter
+    ("2 PIPE"), so an fd filter on /[0-9]+[urw]/ misses them (arm 1 fd control failed on exactly that; fixed).
+24. **NEXT (s7590): HR-2, who owns the +10 Mach ports per mission load** (NEXT.md): in-process port census (mach_port_names by
+    right type, dead names) + a same-mission reload route, to split H-cache / H-leak / H-dead.
 
 ## Evidence index
 
