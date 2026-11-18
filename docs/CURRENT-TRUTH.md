@@ -12,7 +12,18 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7574 (GUARD-6 CLOSED, 6/6):** musyx div-trap H-dead. s7573's silent census was gated to four early VI phases.
+- **NEW s7575 (do_break class CLOSED; -O2 UB fix landed):** RecompiledFuncs builds at -O2, and N64Recomp emits the 32-bit
+  div as C *before* the compiler's `bne b,$zero; break 7`. A zero divisor is UB in C, so clang deleted 31 data-dependent break-7
+  + 5 break-6 do_break calls (-O2 IR, tools/s7575_ir_calls.sh): a zero divisor there ran on silently with lo=garbage, and no log
+  could witness it. Fix, default on and chained in the fixup list: tools/apply_s7575_div_total.py -> RS64_DIV32/RS64_DIVU32
+  (include/rsp_dpc_macros.h), R4300-exact for b==0, identical otherwise (196-pair unit test). After it: 165 live-class checks kept,
+  3 legit value-proof deletions, BLIND=0. Census tools/s7575_break_census.py --controls (10/10) --ir: 1380 sites = 1164 data-as-code,
+  3 dead stub/data-tail (s4818), 45 static-dead (const or non-negative divisor/dividend), 168 data-dependent (every fire fatal and
+  loud, and retail raises Break too). Unchecked divides: 5 (3 const, 2 via lib recomp.h DDIVU, which is already zero-safe).
+  Runtime (owner recipe, 150 s): L1 / L4 dd2 / L12 3/3 alive, 0 [do_break], 0 crash, 0 stall. Harness ctl ROGUESQ_S7575_BREAK_CTL=1
+  printed [do_break] + SIGABRT. do_break now writes to stderr and flushes (lib recomp.cpp). The old stdout line also landed
+  (Apple's abort flushes stdout, per a C test), so the historical "0 Encountered break" greps were real zeros. Corpus: 0 in 521 retained run logs. scratch/s7575.
+- **s7574 (GUARD-6 CLOSED, 6/6):** musyx div-trap H-dead. s7573's silent census was gated to four early VI phases.
   Ungated tally (tools/apply_s7574_keyon_tally.py, [s7574-keyon]): L1/L4 dd2/L12 ~721k key-ons, 0 guard fires, min divisor 192;
   FORCE0=3 ctl fired. break-6 sites statically dead (divisor is lhu). Single-source: a forced early return leaves voice+0x60 = 0,
   later key-ons trap for real and the arm SIGBUSed, so the guard is not a safe sink, only dead at defaults. scratch/s7574.
@@ -499,9 +510,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7571). **19d CLOSED** (12/12 chains decided; no default flipped).
 20. **S6892 CLOSED s7572; GUARD-6 CLOSED s7574 (6/6 decided)**: COPY/PI_DMA/SPAI/s1978 H-dead (s7573), PIO unreached,
     musyx div-trap H-dead (0/~721k, FORCE0 ctl fired; break-6 statically dead). No default flipped.
-21. **NEXT (s7575): do_break idiom-class audit.** 1380 `do_break(` sites remain in generated code. Enumerate them (break 7
-    div-zero / break 6 overflow / other codes), classify each statically (e.g. unsigned-halfword divisors make break 6 dead),
-    check what the runtime do_break does, and runtime-census the reachable ones with one ungated counter + forced ctl.
+21. **do_break class CLOSED s7575** (headline). After any regen, verify tools/s7575_ir_calls.sh +
+    `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **NEXT (s7576): generated-C UB audit**
+    (HYPOTHESIS-ID gen-c-ub-audit, scratch/agent/NEXT.md). TRUNC/CVT/ROUND float->int macros are bare C casts (UB for NaN or
+    out-of-range values), and shifts too. Find out whether -O2 exploits them, the same way as the s7575 divides.
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

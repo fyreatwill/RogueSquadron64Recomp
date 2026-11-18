@@ -1,0 +1,1 @@
+-std=gnu17 -arch arm64 -mmacosx-version-min=11.0 -fno-strict-aliasing -Wno-unused-variable -Wno-implicit-function-declaration -w -include include/rsp_dpc_macros.h -O2 -Iinclude -Ilib/N64ModernRuntime/librecomp/include -Ilib/N64ModernRuntime/N64Recomp/include -Ilib/N64ModernRuntime/ultramodern/include -DHLSL_CPU -Dmain=rs_main

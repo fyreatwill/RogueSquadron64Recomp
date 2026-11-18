@@ -201388,3 +201388,38 @@ Rules out: the musyx div-trap as a source of audio or crash behaviour at the own
 Note for later: 1380 `do_break(` sites remain in generated code, unpatched; the next idiom-class audit is their census (NEXT.md).
 Verdict line: selects H-dead for the musyx div-trap guard (refutes H-unreached: 0x80090A3C entered ~721k times; refutes H-late
 for the 150 s routes; H-env refined to "census VI-phase gated"). Next discriminator: the do_break idiom-class census (NEXT.md).
+
+## Session 7575 (2026-11-17) — do_break class closed; -O2 deleted 36 do_break checks via div UB, fixed with total MIPS-exact div (BLIND=0, 3/3 levels clean, ctl fired)
+Work unit: NEXT.md do_break idiom-class audit (1380 sites).
+- Runtime semantics: librecomp do_break printed to stdout, then assert(false) (Debug build) then exit. Hypothesis H-false-zero
+  (the buffered stdout line is lost on abort, so every "0 Encountered break" grep was a false zero) is REFUTED. A C test
+  (scratch/s7575/oldbreak2.c, SIGABRT handler that re-raises like main.cpp) shows Apple's abort flushes stdout first, and the
+  line lands. Still changed it to stderr plus fflush, so it orders with [CRASH] (lib/N64ModernRuntime/librecomp/src/recomp.cpp; patch exported).
+- Static census, new tools/s7575_break_census.py (--controls 10/10; --tsv; --ir): 1380 = 1164 DATA (26 data-as-code fns),
+  3 OTHER (steerOrientationTowardTargetPreamble dead stub, fillSampleStreamRange/filterVoiceSampleBlock data tails, as in s4818),
+  4 B7-CONST + 41 B6-DEAD (constant or non-negative divisor/dividend), 124 B7-LIVE + 44 B6-LIVE data-dependent.
+  Unchecked divides (no break 7): 5. computeNoteRatePairFromTableA/B divide by 0x300 and _Ldtob by 100000, all constant;
+  u64DivU64 and divideByMixerBaseFrequency go through DDIVU, which the lib/ recomp.h used by the build (:85) makes zero-safe.
+- Boring-thing check: RecompiledFuncs is compiled -O2 (flags.make). The objects hold 218 do_break relocations against 1380 in
+  source. -O2 IR (tools/s7575_ir_calls.sh, flags tools/s7575_ir_flags.txt) shows 217 calls and 0 calls outside the census.
+  Deleted: 1113 DATA (fine), 4 B7-CONST + 9 B6-DEAD (legit), but also **31 B7-LIVE + 5 B6-LIVE**, e.g.
+  tickAllAudioChannels x3, allocMenuSolidQuadSprite, computeCellGridIndices, renderFlatMeshFaceGroup, spawnNpcFormation.
+  Cause (H-UB vs H-legit): N64Recomp emits `lo = S64(a)/S64(b)` before the `if (b != 0)` check, and clang infers b != 0
+  from the dominating divide.
+- Fix (ORIGIN: the writer is N64Recomp cgenerator emit_muldiv's bare C divide; the value at b==0 was UB, not a
+  game value): new tools/apply_s7575_div_total.py, chained in fixup_game_funcs_vendored.py after s7574. It rewrites all 147
+  32-bit div/divu to RS64_DIV32/RS64_DIVU32 (include/rsp_dpc_macros.h). For b==0 they give R4300 results (div lo = a<0?1:-1,
+  divu lo = 0xFFFFFFFF, hi = a); for b != 0 they match the old code exactly (scratch/s7575/divtest.c, 196 pairs, 0 bad).
+  The script is idempotent. No knob: the old behaviour was UB.
+- After the fix, the IR keeps 165 live-class checks. 3 deletions remain, and all are legit value proofs (H-UB SELECTED,
+  34/36 restored): _Genld 0x80036AD4/AEC divides by the constant 10, and loadAssetAndIterateSubchunks 0x800550C4 sits after
+  a `beq $fp,$zero` skip. These three are allowlisted, so `--ir` reports BLIND=0 and rc 0. Same-session before/after:
+  scratch/s7575/survive_before.txt / survive_after.txt.
+- Runtime run (scratch/s7575/run.zsh, g1e_owner_quiet_arms, owner recipe, 150 s, div-total build): t1 L1 / t4 L4 dd2 /
+  t12 L12 all alive, crashlines 0, vi_stalls30s 0, level_ok 1, 0 [do_break]. So none of the 34 re-armed checks fires
+  at defaults on these routes. Ctl arm tc (ROGUESQ_S7575_BREAK_CTL=1, startup do_break hook in main.cpp) logged
+  [do_break] + caught signal 6 through the same harness.
+  Retained-log corpus: 0 do_break fires in 521 run logs (333 from November).
+- Rules out: silent do_break deletion at defaults (now structurally impossible); stdout loss of the break line.
+  Single-source: "retail raises Break and halts the thread" is from libultra knowledge, not an oracle run.
+- Next: generated-C UB audit (float->int casts TRUNC/CVT are bare casts, shifts), NEXT.md gen-c-ub-audit.

@@ -42162,6 +42162,7 @@ RS64_REPLAY = [
     "apply_s7495_poolwatch.py",  # s7495: class ET DL-chunk pool vs RDP depth images, ROGUESQ_S7495_POOL=1 (+S7493_WBLIVE; measurement only)
     "apply_s7069_callsite_gate.py",  # s7069: inline flag gate (same-name macro) for lowfield_store/synth_read calls; MUST stay last
     "apply_s7574_keyon_tally.py",  # s7574: GUARD-6 ungated musyxKeyOnVoice div-trap tally + FORCE0 control (measurement only)
+    "apply_s7575_div_total.py",  # s7575: total MIPS-exact 32-bit div/divu (RS64_DIV32/RS64_DIVU32); removes the C UB that let -O2 delete 36 do_break checks
 ]
 
 

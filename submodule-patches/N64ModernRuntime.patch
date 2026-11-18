@@ -3243,7 +3243,7 @@ index 944e9fe..415f0fc 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..3f5ca29 100644
+index 4276b7d..0381674 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -161,10 +161,22 @@ static std::vector<uint8_t> read_file(const std::filesystem::path& path) {
@@ -3299,7 +3299,19 @@ index 4276b7d..3f5ca29 100644
      ctx->r2 = 8 * 1024 * 1024;
  }
  
-@@ -470,6 +486,20 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
+@@ -452,7 +468,10 @@ extern "C" void switch_error(const char* func, uint32_t vram, uint32_t jtbl) {
+ }
+ 
+ extern "C" void do_break(uint32_t vram) {
+-    printf("Encountered break at original vram 0x%08X\n", vram);
++    // s7575: stderr, flushed. The old printf went to block-buffered stdout and assert() aborts before exit()
++    // flushes it, so a redirected log never carried this line (every "0 Encountered break" grep was a false zero).
++    fprintf(stderr, "[do_break] Encountered break at original vram 0x%08X\n", vram);
++    fflush(stderr);
+     assert(false);
+     exit(EXIT_FAILURE);
+ }
+@@ -470,6 +489,20 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
      ctx.mips3_float_mode = 0;
      ctx.f_odd = &ctx.f0.u32h;
  
@@ -3320,7 +3332,7 @@ index 4276b7d..3f5ca29 100644
      if (game_entry.thread_create_callback != nullptr) {
          game_entry.thread_create_callback(rdram, &ctx);
      }
-@@ -543,7 +573,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
+@@ -543,7 +576,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
      MEM_W(osTvType, 0) = 1; // NTSC
      MEM_W(osRomBase, 0) = 0xB0000000u; // standard rom base
      MEM_W(osResetType, 0) = 0; // cold reset
@@ -3340,7 +3352,7 @@ index 4276b7d..3f5ca29 100644
  }
  
  std::u8string recomp::current_game_id() {
-@@ -726,6 +767,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -726,6 +770,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
                  save_type = game_entry.save_type;
                  ultramodern::init_saving(rdram);
  
@@ -3358,7 +3370,7 @@ index 4276b7d..3f5ca29 100644
                  try {
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
-@@ -839,6 +891,7 @@ void recomp::start(const recomp::Configuration& cfg) {
+@@ -839,6 +894,7 @@ void recomp::start(const recomp::Configuration& cfg) {
  
      std::thread game_thread{[](ultramodern::renderer::WindowHandle window_handle, uint8_t* rdram) {
          debug_printf("[Recomp] Starting\n");

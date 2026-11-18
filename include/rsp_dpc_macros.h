@@ -8,6 +8,16 @@
 // (signed int32) and MEM_HU/MEM_BU (unsigned half/byte) but no unsigned
 // word variant. Recompile output occasionally needs it (e.g. funcs_7
 // pointer comparisons). Mirrors MEM_W layout but loads as uint32_t.
+// s7575: total 32-bit div/divu for RecompiledFuncs (tools/apply_s7575_div_total.py). The generated C divide sits
+// before the compiler's zero check; at -O2 its UB let clang delete 36 do_break checks. R4300 results on b == 0.
+// Uses the enclosing function's `lo`/`hi` locals. C-safe.
+#define RS64_DIV32(a, b) do { int32_t rs64_da_ = (int32_t)(a), rs64_db_ = (int32_t)(b); \
+    if (__builtin_expect(rs64_db_ == 0, 0)) { lo = (uint64_t)(int64_t)(rs64_da_ < 0 ? 1 : -1); hi = (uint64_t)(int64_t)rs64_da_; } \
+    else { lo = (uint64_t)(int64_t)(int32_t)((int64_t)rs64_da_ / rs64_db_); hi = (uint64_t)(int64_t)(int32_t)((int64_t)rs64_da_ % rs64_db_); } } while (0)
+#define RS64_DIVU32(a, b) do { uint32_t rs64_da_ = (uint32_t)(a), rs64_db_ = (uint32_t)(b); \
+    if (__builtin_expect(rs64_db_ == 0, 0)) { lo = (uint64_t)(int64_t)(int32_t)0xFFFFFFFFu; hi = (uint64_t)(int64_t)(int32_t)rs64_da_; } \
+    else { lo = (uint64_t)(int64_t)(int32_t)(rs64_da_ / rs64_db_); hi = (uint64_t)(int64_t)(int32_t)(rs64_da_ % rs64_db_); } } while (0)
+
 #ifndef MEM_WU
 #define MEM_WU(offset, reg) \
     (*(uint32_t*)(rdram + ((((reg) + (offset))) - 0xFFFFFFFF80000000)))

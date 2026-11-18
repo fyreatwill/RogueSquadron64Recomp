@@ -1,13 +1,22 @@
-# NEXT (s7575)
-HYPOTHESIS-ID: do-break-idiom-audit
+# NEXT (s7576)
+HYPOTHESIS-ID: gen-c-ub-audit
 
-GUARD-6 closed s7574 (musyx div-trap H-dead, 0 fires / ~721k key-ons, FORCE0 ctl fired). Next: M3-style idiom-class audit of
-the 1380 `do_break(` sites still in ../N64Recomp/RecompiledFuncs/funcs_*.c (only musyxKeyOnVoice's 8 were rewritten).
-Steps: (1) find what do_break does in the runtime (lib/N64ModernRuntime or src/: abort? log? continue?); (2) script-enumerate
-every site with its function, break code (7 = div zero, 6 = overflow, others) and the divisor's defining load (lhu/lbu ->
-break 6 statically dead; constant divisor -> both dead); (3) for the remainder, one ungated per-site counter build (like
-tools/apply_s7574_keyon_tally.py) plus a forced ctl, run L1 / L4 dd2 / L12 150 s with scratch/s7574/run.zsh as template.
-Hypotheses: H-dead (no site fires at defaults), H-live (some site fires: do_break behaviour then decides crash vs silent
-divergence; name the writer of the zero divisor), H-static (most sites provably dead offline).
-Lesson s7574: phase-gated census helpers read as false zeros at the owner recipe; check gates before trusting a silent census.
+s7575 closed the do_break class and found that RecompiledFuncs is built at -O2, so C UB in the generated code is
+something clang can exploit. The 32-bit div emission ran before its zero check and -O2 deleted 36 do_break checks;
+tools/apply_s7575_div_total.py fixed it (BLIND=0). Next, the same audit for the other UB-capable emissions.
+1. Enumerate: grep lib/N64ModernRuntime/N64Recomp/include/recomp.h for macros that are plain C casts or ops with UB:
+   TRUNC_W_S/TRUNC_W_D/TRUNC_L_*/CVT_W_*/ROUND/FLOOR/CEIL (`(int32_t)(float)` is UB for NaN or out-of-range values),
+   shifts (sllv/srlv/dsllv by amount >= width), and anything else emitted bare in cgenerator.cpp. Count the emission
+   sites per macro in ../N64Recomp/RecompiledFuncs.
+2. Static exploit test, as s7575 did: compile to -O2 IR (tools/s7575_ir_flags.txt) and look for `fptosi`/`fptoui`
+   whose result feeds a compare or branch that the optimiser folded. Control: a planted C snippet where clang provably
+   folds `if ((int)f > INT_MAX)` style code.
+3. If a class is exploitable or MIPS-inexact, write a total MIPS-exact macro behind a fixup apply script (R4300: an
+   out-of-range cvt raises an Unimplemented exception, so retail would fault). Then do one runtime arm with an ungated
+   out-of-range counter (L1 / L4 dd2 / L12, 150 s, scratch/s7575/run.zsh template) and a forced control.
+Hypotheses: H-safe (arm64 fcvtzs saturation, no folding exploited), H-folded (IR shows folded range checks),
+H-hit (the runtime counter shows out-of-range conversions at defaults: name the writer of the bad float).
+After any regen: tools/apply_s7575_div_total.py is chained, so verify with
+`mkdir -p D; ls ../N64Recomp/RecompiledFuncs/funcs_*.c | env D=D xargs -P6 -n1 sh tools/s7575_ir_calls.sh;
+python3 tools/s7575_break_census.py --controls --ir D` (wants BLIND=0, rc 0).
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

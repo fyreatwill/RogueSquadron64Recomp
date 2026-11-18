@@ -86,6 +86,7 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
 // ---------------------------------------------------------------------------
 void rs64_register_overlays();
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
+extern "C" void do_break(uint32_t vram); // librecomp; s7575 control
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_dpc_get_cumulative_fullsyncs();
 extern "C" uint32_t rs64_vi_committed_origin();
@@ -14537,6 +14538,12 @@ int main(int argc, char* argv[]) {
 #endif
 
     rs64_register_overlays();
+
+    // s7575 positive control for the do_break witness: ROGUESQ_S7575_BREAK_CTL=1 calls do_break once at startup
+    // (after the crash handler is installed) so the [do_break] line + [CRASH] backtrace must land in the log.
+    if (const char* e = std::getenv("ROGUESQ_S7575_BREAK_CTL"); e && e[0] == '1') {
+        do_break(0x80054744u);
+    }
 
     // Use the working directory as the config/data path (portable mode).
     recomp::register_config_path(std::filesystem::current_path());
