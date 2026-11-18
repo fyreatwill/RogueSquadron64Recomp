@@ -201688,3 +201688,31 @@ Refutes H-stack and H-heap on those routes. Scope: code reached on those routes 
 are scribbled only if they use the default zone; calloc and mmap memory (rdram) are zero by contract and not covered.
 Change: tools/build_autoinit.sh (new), plant 7 in tools/s7578_ubsanc_plant.h. No game code changed.
 Next: class LK, host memory growth over a long owner-recipe run (NEXT.md).
+
+## Session 7585 (2026-11-18) — class LK (host memory growth): RT64 Metal "Wait Command Buffer" autorelease leak found and fixed; in-flight heap growth 1.21-1.39 MB/s -> 0.016 MB/s
+Ran (all AC, clk 1.00, host idle >5000 s; one game at a time):
+- **Instrument (no rebuild):** tools/s7585_memsample.zsh samples the one live game (rs64_game_pid) from outside every 10 s
+  (footprint phys_footprint + ps rss) and runs `leaks` at set times. Positive control tools/s7585_leakplant.dylib, injected with
+  DYLD_INSERT_LIBRARIES (build/ is adhoc linker-signed, no hardened runtime): 64 x 1 MB malloc+memset, pointers dropped. On a toy
+  binary leaks reported exactly 64 leaks / 67108864 bytes; in the game runs it reported 60 MB (A) and 39 x 1 MB root leaks (B).
+- **Arm A** owner recipe L4 dd4 16:9 FPS60 HOLD 600 (g1e_owner_quiet_arms, a4): footprint 999 MB @60 s -> 1214 @121 -> 1748 @546,
+  linear ~1.25 MB/s in steady flight; malloc'd 449 MB @200 s -> 894 MB @560 s. leaks: only the plant. So the growth is REACHABLE
+  (H-cache), not orphaned. tag alive 1, crash 0, vi_stalls30s 0.
+- **Arm B** s7469 hangar abort/re-entry route on build/ (scratch/s7585/hangar.zsh, dd8 21:9 FPS60, 3 hangar entries, 4 initMission,
+  crash 0): malloc'd 623 MB @300 s -> 1013 MB @600 s (~1.3 MB/s) — the same per-second rate as steady flight, so it tracks time,
+  not mission loads (H-leak per load not separable yet; masked by this growth).
+- **Arm C** (naming): same recipe as A, HOLD 360, MallocStackLogging=lite (heap then labels blocks by allocating function), `heap -s`
+  at 120 s and 330 s, diffed by tools/s7585_heapdiff.py: +253 MB in 210 s, of which 153,584 AGXG17XFamilyCommandBuffer (+ its
+  _impl and ResourceGroupUsage, same count) = 260 MB, ~731/s. Everything else < 4 MB.
+- **Writer:** lib/rt64/src/contrib/plume/plume_metal.cpp MetalCommandQueue::executeCommandLists creates one autoreleased
+  `commandBufferWithUnretainedReferences()` "Wait Command Buffer" per call (ROGUESQ_MTL_SKIP_EMPTY_WAIT is off by default, so on
+  every call) on a long-lived RT64 thread with no autorelease pool: the thread's implicit pool never drains, so every buffer stays
+  alive forever. Legitimate object, never released. ORIGIN: plume upstream code path (no pool in this function), not an rs64 edit.
+- **Fix:** NS::AutoreleasePool around the function body, default on; ROGUESQ_MTL_WAITPOOL=0 restores the old behaviour. Exported
+  (submodule-patches/rt64-plume.patch). cmake --build build OK.
+- **Same-binary A/B** (runC2.zsh, HOLD 360, MSL lite, heap 120/330 s): cfix (default) +3.3 MB / 210 s = 0.016 MB/s, footprint
+  1140 -> 1116 MB, no command buffers in the diff; cold (WAITPOOL=0) +291 MB = 1.387 MB/s, 174,011 command buffers, footprint
+  1281 -> 1579 MB. Both alive, crash 0, vi_stalls30s 0, max present gap 1.6 s (fix) vs 2.4 s (old).
+Shows: the port grew ~4.5-5 GB per hour of play from this alone. Rules out H-flat for the pre-fix build. Residual after the fix:
+CFString +15k objects / 210 s (~1 MB, also present pre-fix) and one 17 MB CoreFSCache realloc (system cache) — both small.
+Open: per-load (H-leak) slope on the hangar route, now measurable without the masking growth; a longer hold for the residual.

@@ -15,7 +15,7 @@ index 1384fe9..1fdca66 100644
      }
  
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..8354e4f 100644
+index a5f30a3..fde107b 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
 @@ -9,17 +9,92 @@
@@ -671,10 +671,18 @@ index a5f30a3..8354e4f 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3685,8 +4170,23 @@ namespace plume {
+@@ -3684,9 +4169,30 @@ namespace plume {
+     void MetalCommandQueue::executeCommandLists(const RenderCommandList **commandLists, const uint32_t commandListCount, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount, RenderCommandSemaphore **signalSemaphores, const uint32_t signalSemaphoreCount, RenderCommandFence *signalFence) {
          assert(commandLists != nullptr);
          assert(commandListCount > 0);
- 
+-
++        // s7585 class LK: this runs on a long-lived RT64 thread with no autorelease pool, so the autoreleased "Wait Command Buffer"
++        // below (one per call) went to the thread's implicit pool, which never drains: 153,584 AGX command buffers (~1.2 MB/s,
++        // ~731/s) accumulated in a 210 s L4 dd4 flight (heap -s under MallocStackLogging=lite). Drain per call.
++        // ROGUESQ_MTL_WAITPOOL=0 restores the old (leaking) behaviour.
++        static const bool rs64WaitPool = []() { const char *p = getenv("ROGUESQ_MTL_WAITPOOL"); return !(p && atoi(p) == 0); }();
++        NS::AutoreleasePool *rs64Pool = rs64WaitPool ? NS::AutoreleasePool::alloc()->init() : nullptr;
++
 +        // s7283: the stamp path (g_rs64StampArmed) keeps the wait buffer so its GPU times stay measurable.
 +        g_rs64CbExec.fetch_add(1, std::memory_order_relaxed);
 +        g_rs64CbList.fetch_add(commandListCount, std::memory_order_relaxed);
@@ -696,7 +704,7 @@ index a5f30a3..8354e4f 100644
          cmdBuffer->setLabel(MTLSTR("Wait Command Buffer"));
          cmdBuffer->enqueue();
  
-@@ -3695,7 +4195,9 @@ namespace plume {
+@@ -3695,7 +4201,9 @@ namespace plume {
              cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
          }
  
@@ -706,7 +714,7 @@ index a5f30a3..8354e4f 100644
  
          // Commit all command lists except the last one
  
-@@ -3712,6 +4214,25 @@ namespace plume {
+@@ -3712,6 +4220,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  
@@ -732,6 +740,14 @@ index a5f30a3..8354e4f 100644
          if (signalFence != nullptr) {
              interfaceCommandList->mtl->addCompletedHandler([signalFence](MTL::CommandBuffer* cmdBuffer) {
                  dispatch_semaphore_signal(static_cast<MetalCommandFence *>(signalFence)->semaphore);
+@@ -3725,6 +4252,7 @@ namespace plume {
+ 
+         MetalCommandList *mutableCommandList = const_cast<MetalCommandList*>(interfaceCommandList);
+         mutableCommandList->commit();
++        if (rs64Pool) rs64Pool->release();
+     }
+ 
+     void MetalCommandQueue::waitForCommandFence(RenderCommandFence *fence) {
 diff --git a/plume_metal.h b/plume_metal.h
 index 8de188d..ffa506a 100644
 --- a/plume_metal.h

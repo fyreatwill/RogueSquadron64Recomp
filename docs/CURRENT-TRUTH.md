@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7584 (2026-11-17).
+Compact operational handoff, as of Session 7585 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7584 (class UI, uninitialized host stack/heap reads CLOSED, H-clean):** `env INIT=pattern B=build_autoinit zsh
+- **NEW s7585 (class LK, host memory growth: LEAK FOUND + FIXED):** plume_metal.cpp MetalCommandQueue::executeCommandLists made one
+  autoreleased "Wait Command Buffer" per call on an RT64 thread with no autorelease pool, so none were ever freed: 1.21-1.39 MB/s
+  (~731 AGX command buffers/s, ~4.5-5 GB per hour of play). Now drained per call (default on; ROGUESQ_MTL_WAITPOOL=0 = old). Same
+  binary, L4 dd4 16:9 FPS60, heap 120->330 s under MallocStackLogging=lite: fix 0.016 MB/s vs old 1.387 MB/s; both alive, 0 stall.
+  Tools: tools/s7585_memsample.zsh (outside sampler + leaks), tools/s7585_heapdiff.py, control tools/s7585_leakplant.dylib (fired).
+- **s7584 (class UI, uninitialized host stack/heap reads CLOSED, H-clean):** `env INIT=pattern B=build_autoinit zsh
   tools/build_autoinit.sh` (-ftrivial-auto-var-init on 248 C / 214 C++ / 3 ObjC++ TUs) + MallocScribble=1: L1 dd4, L4 dd2, L12 dd4 150 s
   and the s7469 hangar abort/re-entry route (3 re-entries, 4 loads, dd8 21:9) 0 crash/stall, same numbers as s7583. Control
   ROGUESQ_S7578_PLANT=7 read 0xAAAAAAAA on stack and heap. A plain load of fresh malloc memory is folded to undef at -O2: read via volatile.
@@ -276,8 +281,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pointer-overflow, s7583 div0/fcast/bool/builtin/vla/nonnull/unreachable CLOSED: every C-applicable UBSan check has run.
 19. **Class UI (uninit host reads) CLOSED s7584** (headline). The G5 renaming sweep is closed too (s6868: the 139 remaining
     address names are shape-only), so it is not a rung to take.
-20. **NEXT (s7585): class LK, host memory growth** over a long owner-recipe run and the hangar re-entry loop (NEXT.md). After it,
-    keep taking new idiom-class audits; do not write a backlog-exhausted block.
+20. **Class LK host memory growth: Metal wait-buffer leak FIXED s7585** (headline). NEXT (s7586): residual per-load slope on the
+    hangar re-entry route with the fix (NEXT.md) + a 20 min hold for the CFString residual. Then keep taking new idiom-class
+    audits; do not write a backlog-exhausted block. Owner: ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
 
 ## Evidence index
 

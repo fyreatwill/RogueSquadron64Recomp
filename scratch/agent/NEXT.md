@@ -1,21 +1,17 @@
-# NEXT (s7585)
+# NEXT (s7586)
 HYPOTHESIS-ID: host-memory-growth-audit
 
-s7584 closed class UI (uninitialized host stack/heap reads, H-clean, plant 7 fired). The rename sweep is CLOSED (s6868: 139 remaining
-address names are shape-only) — do not take it. Next: class LK, host memory growth (leaks / unbounded caches) in long play.
-
-Hypotheses: H-flat (footprint plateaus after the first mission load; every cache is bounded), H-leak (footprint grows linearly per
-mission load / hangar re-entry: something allocated per scene is never freed), H-cache (growth in flight with no scene change: RT64
-texture/pipeline/framebuffer caches or a diag ring growing per frame).
-Discriminator, ONE run each route, sampled from outside the process (no rebuild):
-1. Owner recipe L4 dd4 16:9 FPS60, HOLD 600 (tools/g1e_owner_quiet_arms.zsh, ALLOW_SLOW=1), plus the s7469 hangar abort/re-entry route
-   on build/ (scratch/s7584/hangar.zsh with GD=build, drop MallocScribble/PLANT; 4 loads, 3 re-entries).
-2. A sampler beside each run: every 10 s `footprint -p <pid> --summary` (or `vmmap --summary <pid>` phys_footprint) + `ps -o rss=`;
-   at t=300 s and at the end `leaks <pid>` (summary lines only; needs MallocStackLogging=lite in the env for backtraces of leaked
-   blocks). Pid from tools/rs64_game_pid.zsh.
-3. Positive control: ROGUESQ_S7578_PLANT is C-only and not a leak; add plant 8 to tools/s7578_ubsanc_plant.h (malloc 1 MB x 64 at
-   startup, drop the pointers) and confirm `leaks` reports >= 64 MB leaked in a build_autoinit run (that dir already force-includes the
-   header), or plant a leak via an env-gated malloc in src/main (build/) if leaks cannot see the C plant.
-Outcomes: slope per load/re-entry > ~5 MB -> H-leak (name the allocator from leaks' stacks, fix); slope in steady flight -> H-cache
-(name the cache, bound it); flat with control firing -> H-flat, class closed.
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves (the s7584 hangar script uses GAMEDIR's own saves copy).
+s7585 found and fixed the in-flight growth (plume executeCommandLists wait-buffer autorelease leak, 1.39 -> 0.016 MB/s, same-binary
+A/B). With that masking growth gone, finish class LK:
+Hypotheses: H-flat (no per-load growth: footprint returns to the same level after each hangar re-entry), H-leak (each mission load /
+hangar re-entry adds > ~5 MB that is never freed), H-slow (a small time-linear residual, e.g. the CFString +15k/210 s seen in both
+s7585 arms, that matters only over hours).
+Discriminator, one run each, build/ (fixed binary):
+1. Hangar route: `env GD=build SECS=650 XE2="MallocStackLogging=lite DYLD_INSERT_LIBRARIES=$PWD/tools/s7585_leakplant.dylib" zsh
+   scratch/s7585/hangar.zsh hc` with a side loop running `heap -s -q <pid>` at each hangar entry (grep [hangarmenu-a0-entry] in
+   scratch/s7585/hc/cap/run.log, or fixed times ~150/330/480/600 s), then tools/s7585_heapdiff.py between consecutive entries.
+2. Long hold: `env R=scratch/s7586/L HOLD=1200 ALLOW_SLOW=1 ARMS="4:l4:MallocStackLogging=lite" zsh tools/g1e_owner_quiet_arms.zsh`
+   with heap -s at 120/600/1150 s (copy scratch/s7585/runC2.zsh, change the times). Plant control: leaks must report it (>= 39 MB).
+Outcomes: per-entry delta > 5 MB in one class -> H-leak, name it from the heap label and fix; residual slope > 0.05 MB/s over 1200 s
+-> H-slow, name the class; both small with the control firing -> class LK CLOSED.
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
