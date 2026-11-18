@@ -7,10 +7,14 @@
 #include <stdint.h>
 #include <stddef.h>
 __attribute__((weak)) int rs64_s7578_plant_done;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuninitialized"
+__attribute__((weak, noinline)) unsigned rs64_s7584_uninit_local(void) { volatile unsigned v[4]; return v[1]; }
+#pragma clang diagnostic pop
 __attribute__((weak, noinline, nonnull)) void rs64_s7583_nn(const char* p) { (void)p; }
 static void __attribute__((constructor, used)) rs64_s7578_plant(void) {
     const char* e = getenv("ROGUESQ_S7578_PLANT");
-    if (!e || (e[0] < '1' || (e[0] > '6' && e[0] != 'u')) || rs64_s7578_plant_done) return;
+    if (!e || (e[0] < '1' || (e[0] > '7' && e[0] != 'u')) || rs64_s7578_plant_done) return;
     rs64_s7578_plant_done = 1;
     if (e[0] == '2') { /* s7579 bounds control: one-past-end index on a fixed array (build_ubsanb, -fsanitize=bounds) */
         static int a[4]; volatile int idx = 4; volatile int r = a[idx & 7]; (void)r; /* read, no store: &7 keeps idx==4 */
@@ -36,6 +40,10 @@ static void __attribute__((constructor, used)) rs64_s7578_plant(void) {
         const char* volatile np = 0; rs64_s7583_nn(np);
         volatile int vn = 0; { int vla[vn]; (void)vla; }
         fprintf(stderr, "[s7583-plant6] fired\n"); return; }
+    if (e[0] == '7') { /* s7584 uninit control (build_autoinit, -ftrivial-auto-var-init=pattern + MallocPreScribble=1):
+                        * an uninitialized local and the first word of a fresh malloc must both read 0xAAAAAAAA. */
+        unsigned st = rs64_s7584_uninit_local(); unsigned* hp = (unsigned*)malloc(64); unsigned hv = hp ? ((volatile unsigned*)hp)[1] : 0; /* volatile: -O2 folds a plain load of fresh malloc memory to undef */ free(hp);
+        fprintf(stderr, "[s7584-plant7] fired stack=0x%08X heap=0x%08X\n", st, hv); return; }
     if (e[0] == 'u') { /* s7583 unreachable control (NOT recoverable: aborts at the constructor) */
         volatile int k = 1; if (k) __builtin_unreachable(); return; }
     volatile int x = INT_MAX; int y = x + (e[0] - '0');

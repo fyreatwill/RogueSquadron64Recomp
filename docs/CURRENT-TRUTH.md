@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7583 (2026-11-17).
+Compact operational handoff, as of Session 7584 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7583 (residual UBSan classes CLOSED, H-clean; UBSan campaign s7578-s7583 complete):** `env SAN=integer-divide-by-zero,
+- **NEW s7584 (class UI, uninitialized host stack/heap reads CLOSED, H-clean):** `env INIT=pattern B=build_autoinit zsh
+  tools/build_autoinit.sh` (-ftrivial-auto-var-init on 248 C / 214 C++ / 3 ObjC++ TUs) + MallocScribble=1: L1 dd4, L4 dd2, L12 dd4 150 s
+  and the s7469 hangar abort/re-entry route (3 re-entries, 4 loads, dd8 21:9) 0 crash/stall, same numbers as s7583. Control
+  ROGUESQ_S7578_PLANT=7 read 0xAAAAAAAA on stack and heap. A plain load of fresh malloc memory is folded to undef at -O2: read via volatile.
+- **s7583 (residual UBSan classes CLOSED, H-clean; UBSan campaign s7578-s7583 complete):** `env SAN=integer-divide-by-zero,
   float-cast-overflow,bool,builtin,vla-bound,nonnull-attribute,unreachable SANREC=<same minus unreachable> B=build_ubsanr zsh
   tools/build_ubsanc.sh`. L1 dd4, L4 dd2, L12 dd4 150 s: 0 reports, 0 crash/stall. Controls: PLANT=6 fired all six recoverable kinds,
   PLANT=u aborted on unreachable (rc 134). Generated DIV/DIVU were already total (s7575 RS64_DIV32/DIVU32, s7085 DDIV). Apple clang 21
@@ -270,8 +274,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     tools/s7580_lui_identity.py (0 object diffs). UBSan builds: `env SAN=<checks> B=<dir> zsh tools/build_ubsanc.sh`, scorer
     tools/s7579_bounds_report.py, plants ROGUESQ_S7578_PLANT=1-6,u (SANREC for non-recoverable checks). s7578 null/wrapv, s7579 bounds, s7580 shift/align, s7582
     pointer-overflow, s7583 div0/fcast/bool/builtin/vla/nonnull/unreachable CLOSED: every C-applicable UBSan check has run.
-19. **NEXT (s7584), when 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
-    item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
+19. **Class UI (uninit host reads) CLOSED s7584** (headline). The G5 renaming sweep is closed too (s6868: the 139 remaining
+    address names are shape-only), so it is not a rung to take.
+20. **NEXT (s7585): class LK, host memory growth** over a long owner-recipe run and the hangar re-entry loop (NEXT.md). After it,
+    keep taking new idiom-class audits; do not write a backlog-exhausted block.
 
 ## Evidence index
 

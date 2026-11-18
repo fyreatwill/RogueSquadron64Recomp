@@ -1,20 +1,21 @@
-# NEXT (s7584)
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+# NEXT (s7585)
+HYPOTHESIS-ID: host-memory-growth-audit
 
-gen-c-residual-ub-audit CLOSED s7583 (H-clean; PLANT=6 + PLANT=u fired; 0 reports L1/L4/L12). The UBSan campaign over the game C
-(s7578 null/wrapv, s7579 bounds, s7580 shift/align, s7582 pointer-overflow, s7583 residual) is complete: every C-applicable check
-has run. -fsanitize=function is a no-op on this Apple clang (arm64), and TSan (tools/build_tsan.sh) and strict aliasing were covered
-earlier (grep PORTING-STATE). CURRENT-TRUTH item 19: take the next ITERATION.md 3c rung.
+s7584 closed class UI (uninitialized host stack/heap reads, H-clean, plant 7 fired). The rename sweep is CLOSED (s6868: 139 remaining
+address names are shape-only) — do not take it. Next: class LK, host memory growth (leaks / unbounded caches) in long play.
 
-Unit: resume the generated-symbol renaming sweep (ITERATION item 4).
-0. First run `grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 are sweep sessions, do the REVISIT instead (external
-   retail-entry boundary / M4 accumulator boundary, new angle).
-1. Count the remaining placeholder names: `grep -c 'func_0x\|func_80' <symbol map used by tools/rename*>` (find the mapping file
-   via `ls tools/rename*`), and pick the next address block in the existing order.
-2. Name each function from the evidence (callers, the strings it touches, MusyX/libultra signatures). Record the evidence per name.
-3. Regenerate in order (make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake) and build build/. Smoke-test L1 dd1 60 s.
-Hypotheses: H-name (every candidate has a unique evidence-backed name) vs H-ambiguous (several are helper thunks with no distinct
-role; leave those as func_ and list them). Discriminator: the per-function evidence table.
-CHURN WARNING: a rename-mapping edit alone counts as NO engineering change (the gate's 6/12 counter). Pair the sweep with any real
-fix it turns up, or switch to an owner-reported item if the owner has written one (check ITERATION.md G-list for new dates).
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+Hypotheses: H-flat (footprint plateaus after the first mission load; every cache is bounded), H-leak (footprint grows linearly per
+mission load / hangar re-entry: something allocated per scene is never freed), H-cache (growth in flight with no scene change: RT64
+texture/pipeline/framebuffer caches or a diag ring growing per frame).
+Discriminator, ONE run each route, sampled from outside the process (no rebuild):
+1. Owner recipe L4 dd4 16:9 FPS60, HOLD 600 (tools/g1e_owner_quiet_arms.zsh, ALLOW_SLOW=1), plus the s7469 hangar abort/re-entry route
+   on build/ (scratch/s7584/hangar.zsh with GD=build, drop MallocScribble/PLANT; 4 loads, 3 re-entries).
+2. A sampler beside each run: every 10 s `footprint -p <pid> --summary` (or `vmmap --summary <pid>` phys_footprint) + `ps -o rss=`;
+   at t=300 s and at the end `leaks <pid>` (summary lines only; needs MallocStackLogging=lite in the env for backtraces of leaked
+   blocks). Pid from tools/rs64_game_pid.zsh.
+3. Positive control: ROGUESQ_S7578_PLANT is C-only and not a leak; add plant 8 to tools/s7578_ubsanc_plant.h (malloc 1 MB x 64 at
+   startup, drop the pointers) and confirm `leaks` reports >= 64 MB leaked in a build_autoinit run (that dir already force-includes the
+   header), or plant a leak via an env-gated malloc in src/main (build/) if leaks cannot see the C plant.
+Outcomes: slope per load/re-entry > ~5 MB -> H-leak (name the allocator from leaks' stacks, fix); slope in steady flight -> H-cache
+(name the cache, bound it); flat with control firing -> H-flat, class closed.
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves (the s7584 hangar script uses GAMEDIR's own saves copy).

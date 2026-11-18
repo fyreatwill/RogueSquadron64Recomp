@@ -201656,3 +201656,35 @@ HYPOTHESIS-ID gen-c-residual-ub-audit (NEXT.md from s7582).
 - Scope: L1/L4/L12 boot + flight routes only, 150 s each.
 Verdict: selects H-clean for the residual UBSan classes over the game C (0 reports, all 7 plant kinds fired); refutes H-div, H-fcast,
 H-patch; closes gen-c-residual-ub-audit and the UBSan campaign (s7578-s7583). Next: CURRENT-TRUTH item 20 (next ITERATION 3c rung).
+
+## Session 7584 (2026-11-17) — class UI (uninitialized host stack/heap reads) closed: build_autoinit (-ftrivial-auto-var-init=pattern on 248 C + 214 C++ + 3 ObjC++ TUs) + MallocScribble=1 runs L1 dd4, L4 dd2, L12 dd4 150 s and the hangar abort/re-entry route (3 re-entries, 4 mission loads, dd8 21:9) with 0 crash/stall, numbers identical to the s7583 baseline; plant 7 read 0xAAAAAAAA on stack and heap
+
+HYPOTHESIS-ID host-uninit-read-audit (NEXT.md asked for the rename sweep; step 0 found it closed: s6868 left 139 address-named
+functions, all shape names with no evidence for a role, so a sweep step would be a churn-only toml edit. CURRENT-TRUTH item 19 allows a
+new idiom-class audit instead.)
+- Why this class: the s7466 static pass (-Wuninitialized/-Wsometimes-uninitialized/--analyze) and the s7467-s7471 ASan arms cannot see
+  a read of an uninitialized local or of fresh malloc memory at runtime (ASan does not track definedness; MSan does not exist on
+  macOS). Hypotheses: H-clean (no host or game-C path depends on uninitialized stack/heap), H-stack (some local is read before written:
+  a 0xAA..AA fill turns a lucky 0/stale value into a wild pointer, size or flag), H-heap (some malloc/new block is read before written).
+- Instrument: new tools/build_autoinit.sh (`env INIT=pattern|zero B=<dir>`): every C, C++ and ObjC++ TU at its real per-target
+  optimisation gets -ftrivial-auto-var-init=$INIT; C TUs force-include tools/s7578_ubsanc_plant.h. Flag census from
+  compile_commands: c 248/248, cxx 214/214, objcxx 3/3 (the first build missed the 3 .mm TUs: CMAKE_OBJCXX_FLAGS, fixed). Heap side:
+  libmalloc MallocScribble=1 (0xAA on alloc, 0x55 on free).
+- Control: plant 7 (ROGUESQ_S7578_PLANT=7) reads an uninitialized local and word 1 of a fresh malloc(64). build_autoinit + Scribble:
+  stack=0xAAAAAAAA heap=0xAAAAAAAA; no Scribble: heap 0; build_autoinitz (zero) + Scribble: stack 0, heap 0xAAAAAAAA. Dead end on the
+  way: the first plant read the malloc word with a plain load and printed pointer-like 0x0423C478 even with the env set; -O2 folds a load
+  of fresh malloc memory to undef. Read through volatile, it fires. (A DYLD interposer written to work round the "broken" env was
+  deleted once that was clear.)
+- Run A (scratch/s7584/run.zsh, GD=build_autoinit, owner quiet recipe, AC, HID idle 3888 s): l1 dd4 + plant 7, l4 dd2, l12 dd4, HOLD 150,
+  every arm MallocScribble=1. All alive_at_end=1 crashlines=0 vi_stalls30s=0 level_ok=1, max_gap 148/148/149 ms, max_vihold 17.3 s
+  (the boot hold; s7583 baseline 17.3 s, max_gap 148). Logs: no SIGSEGV/SIGBUS/abort/assert; the only 0xAAAAAAAA is the plant line.
+- Run B (scratch/s7584/hangar.zsh = s7469 route on build_autoinit, FPS60 dd8 DD_UNSAFE WIDEWIN 21:9, Scribble + plant 7, 650 s):
+  hangar_entries=3 initMission=4 crash=0, still presenting at the kill (threadPresent #31486), 0 fatal lines, plant fired.
+  Same entry/mission counts as s7469.
+- The zero arm (build_autoinitz) was built and its control checked but not flown: it only splits H-stack vs a pattern-specific
+  artefact if the pattern arm fails, and it did not.
+Verdict: selects H-clean, two routes (flight L1/L4/L12; hangar abort/re-entry with 4 loads), stack and heap control fired in both runs.
+Refutes H-stack and H-heap on those routes. Scope: code reached on those routes in 150 s / 650 s; blocks from malloc_zone_* calls
+are scribbled only if they use the default zone; calloc and mmap memory (rdram) are zero by contract and not covered.
+Change: tools/build_autoinit.sh (new), plant 7 in tools/s7578_ubsanc_plant.h. No game code changed.
+Next: class LK, host memory growth over a long owner-recipe run (NEXT.md).
