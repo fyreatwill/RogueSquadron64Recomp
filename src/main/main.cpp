@@ -13264,6 +13264,19 @@ static void rs64_g1f_test_toggle_tick() {
     next++;
 }
 
+// s7592 class TH runtime witness plant: ROGUESQ_S7592_PLANT_FROM=<k> starts one parked (never-ending) detached thread for every
+// test resize / test F11 event from the k-th on (0-based, counted across both lists), so an outside thread sampler sees +1 per
+// planted event while the earlier events in the same run stay unplanted (same-run positive control). Unset = off.
+static void rs64_s7592_plant_event(const char* what) {
+    static const int from = [] { const char* e = std::getenv("ROGUESQ_S7592_PLANT_FROM"); return (e && *e) ? std::atoi(e) : -1; }();
+    static int n = 0;
+    const int k = n++;
+    if (from < 0) return;
+    const bool pl = k >= from;
+    if (pl) std::thread([] { pthread_setname_np("s7592-plant"); for (;;) std::this_thread::sleep_for(std::chrono::hours(1)); }).detach();
+    fprintf(stderr, "[s7592] event k=%d %s planted=%d\n", k, what, (int)pl);
+}
+
 // s6888 test levers, same reason as above: ROGUESQ_WIN_TEST_RESIZE_S="t:w:h,.." calls SDL_SetWindowSize t seconds after the window opens (AX set size in s6887 never reached the
 // drawable); ROGUESQ_FS_TEST_TOGGLE_LIST_S="t,t,.." pushes F11 at each t, for more than the two toggles above.
 static void rs64_g1f_test_list_tick() {
@@ -13282,6 +13295,7 @@ static void rs64_g1f_test_list_tick() {
             SDL_Metal_GetDrawableSize(g_rs64_window, &dw, &dh);
 #endif
             fprintf(stderr, "[g1f] test resize t=%.1f %dx%d drawable %dx%d\n", t, w, h, dw, dh);
+            rs64_s7592_plant_event("resize");
         }
         const char* c = std::strchr(er, ',');
         er = c ? c + 1 : nullptr;
@@ -13295,6 +13309,7 @@ static void rs64_g1f_test_list_tick() {
         ev.key.keysym.scancode = SDL_SCANCODE_F11;
         SDL_PushEvent(&ev);
         fprintf(stderr, "[g1f] test F11 list t=%.1f\n", t);
+        rs64_s7592_plant_event("f11");
         const char* c = std::strchr(ef, ',');
         ef = c ? c + 1 : nullptr;
     }

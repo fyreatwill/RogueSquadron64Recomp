@@ -201915,3 +201915,32 @@ Next: class TH (thread/timer creation-site census) - see NEXT.md.
 Verdict: this selects H-gated and refutes H-default and H-clean (one gated uref leak existed; 0 default-path leaks, fixed arm flat,
 plant exact). The change also closes class MR with a code fix (events.cpp host-port cache), not only an instrument. Next discriminator:
 class TH per-event thread-creation rows (NEXT.md), split H-clean / H-gated / H-event by thread count across repeated events.
+
+## Session 7592 (2026-11-18) — class TH closed: thread/timer creation census (63 sites, 0 open, controls 8/8) + runtime witness over 12 fullscreen/resize events flat, plant +1/event fired
+
+Work unit: NEXT s7592 class TH (thread / timer / queue creation sites in our code), hypotheses H-clean / H-gated / H-event.
+- New tool tools/s7592_th_census.py [--controls]: scope src/, lib/N64ModernRuntime, lib/rt64/src incl. plume; skips unlinked contrib
+  (mupen64plus-core, imgui/im3d, examples, unit_tests, boost, zstd contrib, allocator Tests, texture_packer). Sites: std::thread
+  temporaries / named / static / assigned / new / make_unique, pthread_create, SDL_CreateThread, dispatch_source/queue_create,
+  CFRunLoopTimerCreate, NSTimer, std::async. Verdicts joined / once / transient / per-event / unjoined / unknown, gate env-gated or default;
+  ANNOT table for 10 sites read by hand (ultramodern host_thread joined by thread_cleaner_func; thread_cleaner/timer/AI drain+Hz once from
+  init; stderr-async switch_on, s7382 ctl, s7545, s4230 once; render_context flush_pend worker `if(!started)` under mutex; zstd
+  threading.h wrapper joined in POOL_join). Reuses strip()/enclosing() from s7591_mr_census.py. Line numbers come from the raw text
+  (strip() blanked a newline inside a stray quote, which put timer.cpp:219 at :207 on the first pass).
+- Result: rows=64 joined=18 once=37 transient=9 per-event=0 unjoined=0 unknown=0, gated_per_event=0, open=0, controls 8/8 (joined,
+  static once, call_once, exchange guard, transient, per-event leak, unjoined handle, gated per-event). Second line: an independent raw
+  line grep over the same files found 67 lines vs 63 tool rows; the 4 raw-only lines are zstd pool.c/threading.c/threading.h
+  ZSTD_pthread_create wrappers, all joined in POOL_join. RT64's only re-creation event (MSAA change -> Application::updateMultisampling
+  -> new RasterShaderUber) destroys the old uber, whose dtor joins its pipeline threads. Window resize / fullscreen / aspect paths
+  start no threads.
+- Runtime witness (scratch/s7592/run.zsh, one run, build/ current binary): L1 owner recipe dd4 fullscreen 360 s hold,
+  ROGUESQ_FS_TEST_TOGGLE_LIST_S 9 F11 toggles + ROGUESQ_WIN_TEST_RESIZE_S 9 resizes (1280x720 / 1600x686 / 1024x768, drawables
+  2048-3200 wide), t=60..315. New gated plant ROGUESQ_S7592_PLANT_FROM=<k> (src/main/main.cpp rs64_s7592_plant_event): events k>=12
+  each start one parked thread. Outside sampler tools/s7589_hrsample.zsh 5 s: threads 68 before the events, 66-67 across the 12
+  unplanted events (t 60-235, net -1), then 67 -> 72 over the 6 planted events (t 240-315), steady 71-72 after. Plant +1/event visible
+  (+5..+6 of 6 against +-1 sampler noise), so the flat unplanted window is a real zero. Ports: one +31 step after the first resize
+  (t~86, then flat over 10 more events) and +13 in the planted window (the plant threads' own ports). Alive, crashlines 0,
+  vi_stalls30s 0; max_vihold_ms 17330 (VI origin held 17 s somewhere in the toggle/resize window, below the 30 s stall bar; not chased).
+- Verdict: this selects H-clean and refutes H-event and H-gated (no default or gated per-event thread row; resize/fullscreen
+  flat at runtime with a same-run plant). Class TH CLOSED with a new tool + plant lever (no runtime behaviour change; plant unset = off).
+Next: class EX (exit path: what the 37 once-detached threads do during static destruction / quit) - NEXT.md.

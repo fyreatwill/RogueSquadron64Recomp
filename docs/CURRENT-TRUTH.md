@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7591 (2026-11-18).
+Compact operational handoff, as of Session 7592 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7591: class MR (Mach rights our code owns) CLOSED.** tools/s7591_mr_census.py --controls (plant 11/11): 12 rows in src/ +
+- **NEW s7592: class TH (thread/timer creation sites) CLOSED, H-clean.** tools/s7592_th_census.py --controls (8/8): 64 rows, joined 18 /
+  once 37 / transient 9, 0 per-event, 0 unjoined, 0 open (raw-grep cross-check: only zstd pthread wrappers extra, joined in POOL_join).
+  Runtime witness, one L1 dd4 fullscreen run: 12 synthetic F11 + resize events thread count 68 -> 67; plant ROGUESQ_S7592_PLANT_FROM=12
+  (one parked thread per later event) 67 -> 72 over 6 events. RT64 MSAA re-create joins the old pipeline threads.
+- **s7591: class MR (Mach rights our code owns) CLOSED.** tools/s7591_mr_census.py --controls (plant 11/11): 12 rows in src/ +
   lib/ (task_threads x3, mach_thread_self x3, host_processor_info, mach_host_self, semaphore_create, IOKit x2): 9 released, 2 bounded,
   1 leak, gated: the ROGUESQ_G1E_THREADS sampler passed mach_host_self() inline every 10 ms (+100 send urefs/s, saturates at 65535,
   scratch/s7591/uref.c). Cached (ROGUESQ_S7591_HOSTPORT=0 = old). Same binary, G1E_THREADS on, probe tools/s7591_hostrefs.dylib:
