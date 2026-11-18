@@ -10,8 +10,9 @@ Census (offline, tools/s7595_sv_census.py --controls): every fopen/ofstream/ifst
 path in librecomp/ultramodern/src, per site: error checked?, what happens on failure (message, retry, silent, abort, block).
 Hypotheses: H-clean (every failure is reported once and play continues; the existing save is never destroyed), H-destroy (a
 failed write leaves neither main nor .bak readable), H-block (message_box from the saving thread stalls quit/flush or the game).
-Runtime witness in a SEPARATE working folder (copy build/ binary + ROM + a COPY of build/saves into scratch/s7595/w/; NEVER touch
-build/saves, never clear ROGUESQ_NO_SAVE_WRITE in build/): arms chmod 0555 save dir, a 0-byte save file, a truncated save, a full
-tmpfs-like small disk image (hdiutil create -size 1m) as save dir; record boot ok, save-write result lines, quit flush rc, and
-whether the original save bytes survive (sha256 before/after). Positive control: a plant that forces update_save_file to fail once
-must print the failure line. NOTE: NO_SAVE_WRITE gates update_save_file, so the write arms need it off INSIDE scratch/s7595/w only.
+Runtime witness: OWNER SAVE RULE - never clear ROGUESQ_NO_SAVE_WRITE anywhere, never touch build/saves. So runtime arms cover
+the READ path only (a copied game folder scratch/s7595/w/ with its own save COPY: 0-byte file, truncated file, garbage, missing
+dir, read-only dir; record boot ok + read-result lines + sha256 of the copy before/after). The WRITE path is tested offline: a small
+host harness (scratch/s7595/wtest.cpp) that calls recomp::finalize_output_file_with_backup's logic on temp files under a 1 MB
+hdiutil disk image (disk full) and a 0555 dir, checking main/.bak survive. Positive control: a planted failure must print the
+failure line / leave the original bytes intact detectably.
