@@ -201620,3 +201620,7 @@ HYPOTHESIS-ID gen-c-pointer-overflow-audit (NEXT.md from s7580, carried over the
   launcher/env path delivered the PLANT=5 env and UBSAN_OPTIONS to the control arm, and its report was scored.
 - Caveat: nonnull-attribute had no positive control (0 reports, single-source). Scope: L1/L4/L12 boot + flight routes only.
 - Next: gen-c-residual-ub-audit, the last UBSan group in one build with a plant per kind (NEXT.md).
+Verdict: selects H-clean for pointer-overflow over the game C (0 reports, PLANT=5 fired, 51/51 TUs instrumented); refutes H-macro
+(MEM_* host-pointer wrap) and H-patch (wild fixup pointer); closes gen-c-pointer-overflow-audit. Next discriminator: the residual-UB
+arm (NEXT.md: divide-by-zero, float-cast-overflow, nonnull, builtin, bool, unreachable/return, each with its own plant) splits H-div
+(a guest DIV by 0 reaching host '/') from H-fcast/H-patch from H-clean.
