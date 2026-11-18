@@ -26,7 +26,7 @@ No other logged lever is B40-dependent. Coverage caveat: only 18 of the ON lever
 | `ROGUESQ_S7384_LDGFX` | ROGUESQ_VI_FOLLOW_DRAW mode 3 | ROGUESQ_VI_FOLLOW_DRAW mode 3 (1) | same parent as S7383_FBPACK |
 | `ROGUESQ_S7476_A1FIX` | ROGUESQ_S4889_FIRST_DEREG | B40 (2) | retires with its parent s4889 |
 | `ROGUESQ_S7478_STALECHK` | port heap canary | port heap canary (1) | diagnostic canary repairing itself; retire with the canary |
-| `ROGUESQ_SHADE_ORD_RESET` | port shade-order diagnostic map | port shade-order diagnostic map (1) | bounds our own diagnostic map; simplification = drop the map when its log is off |
+| `ROGUESQ_SHADE_ORD_RESET` | port shade-order diagnostic map | port shade-order diagnostic map (1) | s7568 19d H-dead-parent: s7439 (class CV) already gates the map on shadeDiagOn (SHADE_RAW/FIX_ZERO_SHADE/FLOOR_MESH/SHADE_DIAG or G1E_TRIM=0), its only readers are those logs + floor_mesh flags. ROGUESQ_S7568_SHORD L1 dd1 3.4M tris: default and =0 both 0 calls/size 0; SHADE_DIAG=1 ctl =0 size 4233 unbounded vs default 1 (4230 clears). Keep for diag arms |
 | `ROGUESQ_WRAP_RESTORE` | ROGUESQ_DPC_WRAP_FLUSH | ROGUESQ_DPC_WRAP_FLUSH (1) | s7566 19d H-interlocked: parent WRAP_FLUSH is live (real lap gap; =0 arm noflush drops 17.7G B, 96 B unexplained); restore needs it, keep both |
 
 ## Chains internal to an opt-in feature (inert at dd1 / 4:3 by their sessions)

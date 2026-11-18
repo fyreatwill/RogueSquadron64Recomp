@@ -201217,3 +201217,27 @@ ORIGIN: no new mitigation; the counter is a passive diag. The value 0x8009DEB4 i
 (computeGridLayerScrollOffset writes it, s6919); the only foreign writer is our s6418 block.
 Verdict: this selects H-dead-parent and refutes H-confinable and H-interlocked for CUT_LIVE; 19d CUT_LIVE closes.
 Next: 19d SHADE_ORD_RESET vs its diag map.
+
+## Session 7568 (2026-11-17) — 19d SHADE_ORD_RESET vs its diag map: H-dead-parent (map never touched at defaults; s7439 already confined it)
+
+Soak fold: no new SOAK-RESULTS lines since s7564.
+Work unit: NEXT.md 19d, SHADE_ORD_RESET vs the shade-ordinal diag map (s6902). Hypotheses: H-dead-parent / H-confinable / H-interlocked.
+Offline read (line 1): rs64_shade_ordinal (lib/rt64/src/gbi/rt64_gbi_rdp.cpp) has one caller, gated on shadeDiagOn = SHADE_RAW |
+FIX_ZERO_SHADE | LOG_FLOOR_MESH | SHADE_DIAG env, or G1E_TRIM=0 (s7439 class CV). Its value is read only by the [shade-raw] /
+[tri-source-join] / [fix-zero-shade] log text and the rs64_floor_mesh flags (a FLOOR_MESH log). FIX_ZERO_SHADE's colour fix itself
+does not read the ordinal. So the confinement H-confinable asks for is already in place, and H-interlocked is refuted: no live decision reads it.
+Runtime witness (line 2): new ROGUESQ_S7568_SHORD=1 (default off) prints calls/clears/size/max of the map from the triangle path every
+2^18 triangles whatever shadeDiagOn is. scratch/s7568/run.zsh via g1e_owner_quiet_arms (L1 dd1, 16:9 FPS60, 90 s, ALLOW_SLOW):
+| arm | tris | diagOn | calls | clears | size | max |
+| sd default | 3407872 | 0 | 0 | 0 | 0 | 0 |
+| s0 SHADE_ORD_RESET=0 | 3407872 | 0 | 0 | 0 | 0 | 0 |
+| pc SHADE_DIAG=1 + RESET=0 (ctl) | 3407872 | 1 | 3407871 | 0 | 4233 | 4233 |
+| pd SHADE_DIAG=1 default (ctl) | 3407872 | 1 | 3407871 | 4230 | 1 | 1 |
+All 4 arms alive, crashlines 0, vi_stalls30s 0. The positive control fires (with diag on, =0 grows one node per task without bound,
+and the default reset keeps it at 1). At defaults the map is never called, with or without the reset. This selects H-dead-parent:
+SHADE_ORD_RESET matters only in diag arms, where it still prevents the s6902 rehash stalls, so it stays. Single run per arm.
+Change: ROGUESQ_S7568_SHORD diag in lib/rt64 (export.sh refreshed rt64.patch); s7565_comp_chain.py retire text carries the verdict
+(COMPENSATION-CHAINS.md regenerated, --check ok; s7557 GQ census exit 0, DEFAULT-ON-LEVERS unchanged). No default changed.
+ORIGIN: no new mitigation; the counter is a passive diag. The map is our own diagnostic (s6902), the reset is our fix to our code.
+Verdict: this selects H-dead-parent and refutes H-confinable and H-interlocked for SHADE_ORD_RESET; 19d SHADE_ORD_RESET closes.
+Next: 19d follow-draw mode 3 chain (S7376_PQLOCK / S7383_FBPACK / S7384_LDGFX).

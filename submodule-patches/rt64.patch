@@ -481,10 +481,10 @@ index a0d4a6a..f6a56a9 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..b99c5c3 100644
+index 6255872..5d14e84 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,117 @@
+@@ -4,12 +4,125 @@
  
  #include "rt64_gbi_rdp.h"
  
@@ -524,6 +524,9 @@ index 6255872..b99c5c3 100644
 +namespace RT64 { extern const void *g_s4271_dl; extern int g_s4271_src; }
  namespace RT64 {
      namespace GBI_RDP {
++        // s7568 19d witness (ROGUESQ_S7568_SHORD=1, default off): calls/clears/size/max of the shade-ordinal map, printed from the
++        // triangle path every 2^18 triangles whether or not the map is used, so a default-arm line reading calls=0 is a measured zero.
++        static std::atomic<uint64_t> g_s7568_calls{0}, g_s7568_clears{0}, g_s7568_size{0}, g_s7568_max{0}, g_s7568_tris{0};
 +        static uint32_t rs64_shade_ordinal(uint32_t task, uint32_t dl) {
 +            static std::mutex mu;
 +            static std::unordered_map<uint64_t, uint32_t> next;
@@ -534,8 +537,13 @@ index 6255872..b99c5c3 100644
 +            static const bool reset = [] { const char *e = std::getenv("ROGUESQ_SHADE_ORD_RESET"); return !(e && *e == '0'); }();
 +            static uint32_t lastTask = 0;
 +            std::lock_guard<std::mutex> lock(mu);
-+            if (reset && task != lastTask) { next.clear(); lastTask = task; }
-+            return ++next[key];
++            if (reset && task != lastTask) { next.clear(); lastTask = task; g_s7568_clears.fetch_add(1, std::memory_order_relaxed); }
++            const uint32_t r = ++next[key];
++            g_s7568_calls.fetch_add(1, std::memory_order_relaxed);
++            const uint64_t sz = next.size();
++            g_s7568_size.store(sz, std::memory_order_relaxed);
++            if (sz > g_s7568_max.load(std::memory_order_relaxed)) g_s7568_max.store(sz, std::memory_order_relaxed);
++            return r;
 +        }
 +
 +        static const char *rs64_cc_iname(interop::ColorCombiner::ColorInput c) {
@@ -602,7 +610,7 @@ index 6255872..b99c5c3 100644
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -19,7 +124,9 @@ namespace RT64 {
+@@ -19,7 +132,9 @@ namespace RT64 {
              const uint8_t siz = (*dl)->p0(19, 2);
              const uint16_t width = (*dl)->p0(0, 12) + 1;
              const uint32_t address = (*dl)->w1;
@@ -612,7 +620,7 @@ index 6255872..b99c5c3 100644
          }
  
          void setDepthImage(State *state, DisplayList **dl) {
-@@ -138,6 +245,19 @@ namespace RT64 {
+@@ -138,6 +253,19 @@ namespace RT64 {
              const int32_t uly = (*dl)->p0(0, 12);
              const int32_t lrx = (*dl)->p1(12, 12);
              const int32_t lry = (*dl)->p1(0, 12);
@@ -632,7 +640,7 @@ index 6255872..b99c5c3 100644
              state->rdp->setScissor(mode, ulx, uly, lrx, lry);
          }
  
-@@ -253,6 +373,17 @@ namespace RT64 {
+@@ -253,6 +381,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -650,7 +658,7 @@ index 6255872..b99c5c3 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -336,9 +467,12 @@ namespace RT64 {
+@@ -336,9 +475,12 @@ namespace RT64 {
              size_t workBufferIndex = 0;
              uint32_t tile = -1;
              uint32_t level = -1;
@@ -663,7 +671,7 @@ index 6255872..b99c5c3 100644
                  // TODO flush when tile and level change
                  tile = (curData[0].w0 >> 16) & 0x7;
                  level = (curData[0].w0 >> 19) & 0x7;
-@@ -406,6 +540,23 @@ namespace RT64 {
+@@ -406,6 +548,23 @@ namespace RT64 {
                  posWorkBuffer[workBufferIndex + 1].y = y2;
                  posWorkBuffer[workBufferIndex + 2].x = x3;
                  posWorkBuffer[workBufferIndex + 2].y = y3;
@@ -687,7 +695,7 @@ index 6255872..b99c5c3 100644
  
                  curData += triangleBaseWords;
  
-@@ -420,6 +571,34 @@ namespace RT64 {
+@@ -420,6 +579,43 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -711,6 +719,15 @@ index 6255872..b99c5c3 100644
 +                    return false;
 +                }();
 +                const bool shadeDiagOn = s_shadeDiag || !g_rs64_trim;
++                static const bool s_s7568 = [] { const char *e = std::getenv("ROGUESQ_S7568_SHORD"); return e && *e && *e != '0'; }();
++                if (s_s7568) {
++                    const uint64_t t = g_s7568_tris.fetch_add(1, std::memory_order_relaxed) + 1;
++                    if (t == 1 || (t & ((1u << 18) - 1)) == 0)
++                        fprintf(stderr, "[s7568-shord] tris=%llu diagOn=%d trim=%d calls=%llu clears=%llu size=%llu max=%llu\n",
++                            (unsigned long long)t, shadeDiagOn ? 1 : 0, g_rs64_trim,
++                            (unsigned long long)g_s7568_calls.load(), (unsigned long long)g_s7568_clears.load(),
++                            (unsigned long long)g_s7568_size.load(), (unsigned long long)g_s7568_max.load());
++                }
 +                uint32_t shadeTask = (shadeDiagOn && rs64_e9prov_current_task) ? rs64_e9prov_current_task() : 0;
 +                const uint32_t shadeDl = state->displayListAddress & 0x7FFFFFu;
 +                const uint32_t shadeOrdinal = shadeDiagOn ? rs64_shade_ordinal(shadeTask, shadeDl) : 0;
@@ -722,7 +739,7 @@ index 6255872..b99c5c3 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +634,15 @@ namespace RT64 {
+@@ -455,6 +651,15 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -738,7 +755,7 @@ index 6255872..b99c5c3 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +652,179 @@ namespace RT64 {
+@@ -464,6 +669,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -918,7 +935,7 @@ index 6255872..b99c5c3 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +838,426 @@ namespace RT64 {
+@@ -477,6 +855,426 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -1345,7 +1362,7 @@ index 6255872..b99c5c3 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -520,13 +1301,149 @@ namespace RT64 {
+@@ -520,13 +1318,149 @@ namespace RT64 {
                      hlslpp::float2 v2_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_2;
                      hlslpp::float2 v3_opposite_texcoord = baseTexcoord.xy + texcoordDe.xy * dy_3;
                      hlslpp::float2 v3_texcoord = v3_opposite_texcoord + texcoordDx.xy * dx_3;
@@ -1501,7 +1518,7 @@ index 6255872..b99c5c3 100644
                      }
                      else {
                          posWorkBuffer[workBufferIndex + 0].w = 1.0f;
-@@ -537,7 +1454,167 @@ namespace RT64 {
+@@ -537,7 +1471,167 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1669,7 +1686,7 @@ index 6255872..b99c5c3 100644
                  }
                  // No texture coefficients
                  else {
-@@ -547,6 +1624,24 @@ namespace RT64 {
+@@ -547,6 +1641,24 @@ namespace RT64 {
                      texcoordWorkBuffer[workBufferIndex + 0] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 1] = interop::float2(0.0f, 0.0f);
                      texcoordWorkBuffer[workBufferIndex + 2] = interop::float2(0.0f, 0.0f);
@@ -1694,7 +1711,7 @@ index 6255872..b99c5c3 100644
                  }
  
                  if (hasDepth) {
-@@ -580,11 +1675,170 @@ namespace RT64 {
+@@ -580,11 +1692,170 @@ namespace RT64 {
                      posWorkBuffer[workBufferIndex + 2].z = 0.0f;
                  }
  
