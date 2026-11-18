@@ -202143,3 +202143,38 @@ data, in src/, librecomp/src, ultramodern/src, lib/rt64/src. Hypotheses H-clampe
   alive, max upload 65x65, 0 over 4096), and closes class AZ. The clamp itself is a behaviour change in RDP::setTile, not
   instrumentation. Next discriminator: soak s7598_maskclamp_flight clamp-line count (0 = AZ-1 is inert on retail flight; >0 =
   a same-run MASK=0 vs default frame pair decides whether the view changes).
+
+## Session 7599 (2026-11-18) — class GR closed: long-lived host container growth census (406 receivers, 0 open, controls 3/3); AZ-1 SETTILE mask clamp inert on retail flight (L1/L4 dd4, 0 clamps)
+
+Work unit (NEXT s7599, HYPOTHESIS-ID guest-driven-container-growth-census): every host container growth op in src/,
+librecomp/src, ultramodern/src, lib/rt64/src (gui/tests/tools skipped) whose container could live for the whole run and grow
+once per guest event (draw, DMA, RSP task, message, thread, texture hash, fb address) with no clear, cap or eviction.
+Hypotheses H-bounded / H-grow / H-gated.
+
+- Census `tools/s7599_gr_census.py --controls`: 639 growth ops (push_back, emplace_back, emplace, insert, try_emplace,
+  push_front, emplace_front) grouped into 406 (file, receiver) units, 105 of them static/thread_local. 0 open, 0 grow, 0 stale.
+  Verdicts: scoped 133 (per-workload/per-frame, cleared at the boundary), gated 102 (env diagnostics, gate named per row),
+  host 82 (boot tables, env parses, mod/preset/pack loads, shader setup), bounded 75 (cap or bounded key domain named),
+  local 14. Rules: 30 file rules cover only NON-static receivers (upstream RT64 per-workload code, mod loader, presets);
+  every static/thread_local receiver needs its own row, except the auto rule "static/thread_local scratch with
+  `.clear()` within 6 lines of its declaration" (the RT64 barrier/upload scratch idiom, 19 receivers).
+- Controls 3/3: planted `static std::vector<uint32_t> s_gr_plant; ... push_back(w)` in a copy of rt64_state.cpp -> OPEN;
+  same plant in rt64_rsp.cpp (a file-ruled file) -> still OPEN; dropping the s_s7333_keys row -> OPEN.
+- Default-on run-lifetime containers and their bound (read at source): s4272 g_deferred_ranges / g_s4272_shadow / g_s4272_sh
+  (cleared at every flush, 4 clear sites); s6963 cell index (default mode 3 at dd>1 uses S6963F, key table held <=65536 by
+  the rev[] record->key array, template set cleared on pool-base change; S6963U, which s7024 measured growing 7.5k->338k keys,
+  is mode 2 only); s7333 carve keys (keyed by guest heap carve address); overlays loaded_sections (s7528 evicts the stale
+  entry per swap; it was this class's one historical grow defect); ultramodern active_timers (erased on stop/fire) and
+  g_live_ctx (erased at thread exit); rdp_tmem hashSet (removeHashes on texture-cache evict); menu worker FIFO (cap 64,
+  drained); s6979se stderr queue (drained, input dropped past 256 MB queued); s4916 tag strings (finite pc x byte x value).
+- Same session, folded soak s7598_maskclamp_flight (voided 1/5 on the idle gate; rerun in-session ALLOW_SLOW, battery):
+  L1 + L4 dd4 owner recipe 180 s, 2/2 alive, 0 crash, vi_stalls30s 0/0, max_gap 152/149 ms, `[s7598-mask]` 0/0, bigtex 0/0.
+  AZ-1 never clamps on retail flight, so no MASK=0 frame pair is needed. Item 29 fold closed.
+- Side measurement (outside sampler scratch/s7599_mem/sample.zsh, footprint every 10 s): both arms plateau ~1.02 GB by
+  ~70 s; L1 1019-1025 MB over the last 100 s (0.04 MB/s), L4 1013-1043 MB (noisy, one dip to 999). Single run with no same-run
+  plant, so it only supports the census; s7586's 20 min L4 hold at 0.005 MB/s (plant fired) stays the tight runtime bound.
+- Rules out: an ungated run-lifetime host container that grows per guest event in the owner recipe at the current tree.
+  Residual: bounded-by-domain rows (carve keys, tag strings, timers) are bounded by guest behaviour, not by a cap.
+- Verdict: this selects H-bounded (and H-gated for every diagnostic store) and refutes H-grow (406-unit source census with
+  3/3 controls + the AZ-1/footprint flight run), and closes class GR. Next: class GX, host arrays indexed by guest-derived
+  values without a mask or range check.

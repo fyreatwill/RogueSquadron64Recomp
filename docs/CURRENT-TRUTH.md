@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7598 (2026-11-18).
+Compact operational handoff, as of Session 7599 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,17 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7598: class AZ (host allocations sized by guest data) CLOSED, H-clamped.** tools/s7598_az_census.py --controls (3/3):
+- **NEW s7599: class GR (long-lived host containers grown per guest event) CLOSED, H-bounded.** tools/s7599_gr_census.py
+  --controls (3/3): 639 growth ops (push_back/emplace/insert/try_emplace/push_front) = 406 (file, receiver) units, 105 static or
+  thread_local; 0 open, 0 grow: scoped 133, gated 102, host 82, bounded 75, local 14. Statics always need their own row (file rules
+  cover only non-static per-workload RT64 code); auto rule = static/thread_local scratch .clear()ed within 6 lines of its decl.
+  Default-on run-lifetime rows and their bound: s4272 deferred ranges/shadow (cleared every flush), s6963F cell index (<=65536 keys
+  via rev[], cleared on pool base change; the growing S6963U map is mode 2 only), s7333 carve keys (guest heap addresses),
+  loaded_sections (s7528 evict), active_timers / g_live_ctx (erased on stop/exit), rdp_tmem hashSet (removeHashes on evict),
+  menu FIFO (cap 64), stderr queue (drop past 256 MB). AZ-1 flight fold (same session): L1+L4 dd4 180 s 2/2 alive, 0 stall,
+  [s7598-mask] 0/0 -> SETTILE mask clamp never touches retail flight. Footprint plateaus ~1.02 GB by ~70 s (single run,
+  no same-run plant; s7586's 20 min 0.005 MB/s stays the tight bound).
+- **s7598: class AZ (host allocations sized by guest data) CLOSED, H-clamped.** tools/s7598_az_census.py --controls (3/3):
   119 alloc + 18 createTexture sites in src/, librecomp, ultramodern, rt64/src, 73 rows + 16 file rules, 0 open (const 25,
   host 30, bounded 25, gated 8). Named bounds: FramebufferManager::get width<=1280 + 16 MB range, MaxDimension 0x4000 on
   targets/tile copies, present.storage 16 MB, decode uploads only when the sample fits 4 KB TMEM (else raw TMEM, >4096 shrunk
@@ -365,9 +375,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 28. **Class XC CLOSED s7597** (headline). Rerun tools/s7597_xc_census.py --controls after adding a throw, json parse,
     std::thread ctor or directory_entry query.
 29. **Class AZ CLOSED s7598** (headline). Rerun tools/s7598_az_census.py --controls after adding an allocation or createTexture.
-    Fold soak s7598_maskclamp_flight: clamp lines 0 = AZ-1 never touches retail; >0 = owner-recipe frame pair MASK=0 vs default.
-30. **NEXT (s7599): class GR, guest-driven unbounded host container growth** (NEXT.md): push_back/emplace/insert into
-    long-lived containers whose element count follows guest events (draws, DMAs, threads, messages) with no clear/cap.
+    AZ-1 flight folded s7599: 0 clamp lines on L1/L4 dd4 (inert on retail flight).
+30. **Class GR CLOSED s7599** (headline). Rerun tools/s7599_gr_census.py --controls after adding a long-lived container.
+31. **NEXT (s7600): class GX, host arrays indexed by guest-derived values** (NEXT.md): fixed-size host arrays/tables
+    (C arrays, std::array, sized vectors) subscripted by a value taken from RDP/RSP command fields, guest RAM words, OS
+    message/event ids or thread priorities without a mask, clamp or range check -> out-of-bounds host read/write.
 
 ## Evidence index
 
