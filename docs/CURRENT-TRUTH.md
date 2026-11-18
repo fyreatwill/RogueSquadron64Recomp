@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7568 (2026-11-17).
+Compact operational handoff, as of Session 7569 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7568 (19d SHADE_ORD_RESET):** H-dead-parent. s7439 already gates the shade-ordinal map on its log envs (shadeDiagOn);
+- **NEW s7569 (19d follow-draw mode-3 chain):** S7376_PQLOCK H-dead-parent (s7377 EARLYLOCK already holds workloadMutex for the
+  whole lookup; ROGUESQ_S7569_FD L1 dd1: 4800/4800 mode-3 entries pre-locked, PQLOCK taken 0, EARLYLOCK=0 ctl 4800). S7383_FBPACK
+  interlocked: the Gfx-thread renderToRDRAM writer publishes unlocked (1.0M, all 3742 address changes); LDGFX=0 -> 0 unlocked,
+  so LDGFX=0 would confine it. Defaults kept; owner decides. Item 19d.
+- **s7568 (19d SHADE_ORD_RESET):** H-dead-parent. s7439 already gates the shade-ordinal map on its log envs (shadeDiagOn);
   only logs read it. ROGUESQ_S7568_SHORD=1 L1 dd1 3.4M tris: default and RESET=0 both 0 calls; SHADE_DIAG=1 ctl RESET=0 size 4233
   unbounded vs default 1. Keep (diag arms need it). Item 19d.
 - **s7567 (19d CUT_LIVE):** H-dead-parent. CUT_LIVE is s6418's own dd gate (keep = live && !dda), nothing to confine.
@@ -466,7 +470,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **s7567 CUT_LIVE DONE: H-dead-parent** (offline: only writer of 0x8009DEB4 in our code is the s6418 block, skipped when
     keep; runtime ROGUESQ_S7567_CUTW L1 dd1 0 writes, =0 ctl 3555, dd2 ctl 3554; scratch/s7567).
     **s7568 SHADE_ORD_RESET DONE: H-dead-parent** (map filled only when shadeDiagOn; ROGUESQ_S7568_SHORD default/=0 0 calls,
-    SHADE_DIAG ctl =0 4233 vs 1; scratch/s7568). Next: follow-draw mode 3 chain S7376/S7383/S7384, then S7478, G1D_EDGE_CONTENT.
+    SHADE_DIAG ctl =0 4233 vs 1; scratch/s7568).
+    **s7569 follow-draw trio DONE:** PQLOCK H-dead-parent (subsumed by s7377 EARLYLOCK); FBPACK H-interlocked with the unlocked
+    Gfx-thread publish, confinable by S7384_LDGFX=0 (opt-in lever, not a compensation); scratch/s7569. Next: S7478, G1D_EDGE_CONTENT.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

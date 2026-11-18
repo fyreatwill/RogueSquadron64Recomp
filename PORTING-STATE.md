@@ -201241,3 +201241,35 @@ Change: ROGUESQ_S7568_SHORD diag in lib/rt64 (export.sh refreshed rt64.patch); s
 ORIGIN: no new mitigation; the counter is a passive diag. The map is our own diagnostic (s6902), the reset is our fix to our code.
 Verdict: this selects H-dead-parent and refutes H-confinable and H-interlocked for SHADE_ORD_RESET; 19d SHADE_ORD_RESET closes.
 Next: 19d follow-draw mode 3 chain (S7376_PQLOCK / S7383_FBPACK / S7384_LDGFX).
+
+## Session 7569 (2026-11-17) — 19d follow-draw mode-3 chain: S7376_PQLOCK H-dead-parent (subsumed by s7377 EARLYLOCK), S7383_FBPACK interlocked with the Gfx-thread writer (confinable by S7384_LDGFX=0, not flipped)
+
+Work unit (NEXT s7569, HYPOTHESIS-ID retail-chain-simplification): the follow-draw mode 3 chain S7376_PQLOCK / S7383_FBPACK /
+S7384_LDGFX. Hypotheses H-dead-parent / H-confinable / H-interlocked per child.
+Offline thread map (two sources with the run below):
+- Reader: present thread, mode-3 block (rt64_present_queue.cpp ~547) and the 1024 diag (~750). s7377 EARLYLOCK (default on,
+  line ~305) takes workloadMutex for the whole lookup phase and sets lockedWorkloadMutex; the s7376 lock is
+  `if (s_pqlock && !lockedWorkloadMutex)`, so at defaults it can never run. First unlock is line ~842, after both sites.
+- Writers of the last-drawn tuple: FramebufferRenderer on the render thread, inside WorkloadQueue::threadRenderFrame, whose
+  body holds a scoped_lock on workloadMutex; and on the Gfx thread (State's renderToRDRAM pass), which never takes it.
+Instrument ROGUESQ_S7569_FD=1 (lib/rt64): thread_local g_s7569WlHeld set for the whole threadRenderFrame body; counters at the
+mode-3 site (entries, already-locked, PQLOCK lock taken), the 1024 diag, and per publish locked/unlocked (+ address changes).
+Run scratch/s7569/run.zsh (g1e_owner_quiet_arms, L1 dd1 owner recipe, HOLD 90, ALLOW_SLOW, +S7383_LOG):
+| arm | m3 | pre-locked | PQLOCK taken | publish locked (chg) | publish unlocked (chg) | s7383 tear | REGISTER | alive/stall |
+| fd default | 4800 | 4800 | 0 | 1006177 (0) | 1006506 (3742) | 0/9691 | 1 | 1 / 0 |
+| fe EARLYLOCK=0 (ctl) | 4800 | 0 | 4800 | 1006690 (2) | 1006690 (3741) | 0/9691 | 1 | 1 / 0 |
+| fg LDGFX=0 | 4800 | 4800 | 0 | 1007739 (3743) | 0 (0) | 0/9691 | 1 | 1 / 0 |
+Controls: fe fires the PQLOCK counter 4800/4800 (and clears pre-locked); the publish split moves all address changes from
+unlocked to locked when LDGFX=0, so it tells the two writer threads apart. d1024 0 in all arms (no 1024 phase on this route).
+Verdicts:
+- S7376_PQLOCK: H-dead-parent. s7377 already confined the whole lookup phase; PQLOCK is a backstop only for EARLYLOCK=0. Keep.
+- S7383_FBPACK: H-interlocked at defaults (the Gfx-thread writer publishes unlocked, 1.0M publishes carrying every address
+  change, while the reader holds the lock), H-confinable via LDGFX=0 (0 unlocked publishes -> lock-serialized, packing dead).
+  Natural tears stay 0 (latent, as s7383 measured). Keep.
+- S7384_LDGFX: not a compensation; it is the confining lever for FBPACK (parent renderToRDRAM; s7385 RENDER_TO_RAM=0 also removes
+  the Gfx writer). Image equivalence of LDGFX=0 was not measured here (s7384: vi-follow-stale 32 vs 27). Opt-in; owner decides.
+Change: ROGUESQ_S7569_FD witness in lib/rt64 (export.sh refreshed rt64.patch); s7565_comp_chain.py retire texts carry the
+verdicts; COMPENSATION-CHAINS.md regenerated (--check rc 0); s7557 GQ census rc 0.
+ORIGIN: no mitigation added (env-gated counters only, default behaviour unchanged).
+Rules out: any present-thread follow-draw access outside workloadMutex at defaults; a tear-free FBPACK=0 at defaults (the Gfx writer is unlocked).
+Next: 19d S7478 canary, then G1D_EDGE_CONTENT.
