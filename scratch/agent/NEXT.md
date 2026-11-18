@@ -1,22 +1,20 @@
-# NEXT (s7609)
-HYPOTHESIS-ID: guest-address-keyed-host-state
+# NEXT (s7610)
+HYPOTHESIS-ID: guest-code-address-keyed-host-cache
 
-Class TK closed s7608 (tools/s7608_tk_census.py --controls --witness: 119 lines, 0 open, controls 4/4, witness PASS;
-s7394fix::holder re-keyed from OSId to a host-thread incarnation token, ROGUESQ_S7608_TK=0 = old).
-Next idiom class MK: host state keyed by a GUEST STRUCT ADDRESS (OSMesgQueue*, OSThread*, OSTimer*, OSIoMesg*, heap block)
-that survives the guest re-creating, freeing or re-using that struct. s7393 showed the game re-creates live queues
-(8010FEE0 heap mutex 10x per route, queueDeferredClearRequest); TK showed OSThread structs are re-used by new incarnations.
-Any host table keyed by the address (recv_stat_for(mq), ultramodern external-message / event-queue registrations
-(osSetEventMesg, osViSetEvent, VI/SI/PI/SP/DP mq globals), timer lists, s4264 maps, s7394 MQ, osCreateMesgQueue_recomp hooks)
-that is not refreshed on re-create keeps the old queue's state (counts, blocked lists, pending flags) for the new one.
-Enumerate: grep host containers/arrays/globals whose key or value is a PTR(OSMesgQueue)/(uint32_t)mq/ctx->r4 address, plus
-every ultramodern global holding a guest queue pointer. Classify: refreshed-on-create (osCreateMesgQueue path resets it),
-value-only (re-read each use), diag-gated, BAD (default-path decision reads the stale entry).
-Contract: a default-path read of address-keyed host state either sees the current incarnation of the struct or the stale
-entry is retail-equivalent (named reason).
+Class MK closed s7609 (tools/s7609_mk_census.py --controls --witness: 96 lines, 0 open, controls 4/4, witness PASS, H-clean).
+Next idiom class OV: host caches keyed by a GUEST CODE address (vram / rom offset / section index) that survive the guest
+loading different code at that address (overlay load, osPiStartDma of code into RAM, copyToRAM s5712, osInvalICache).
+Candidates: librecomp overlays.cpp (func_map, code_sections_by_rom, manual_patch_symbols_by_vram, section_addresses /
+loaded sections, the s7 prevbad checker), get_function / LOOKUP_FUNC paths, any src/ cache of recompiled-function pointers
+by vram (jump tables, rs64 dispatch caches, s7535/s7521 ucode watch caches keyed by IMEM/DMEM address), and RSP ucode
+caches keyed by text address (rsp.cpp: ucode selection by task->t.ucode).
+First boring check: does RS64 load any code overlay at runtime at all (grep load_overlays / unload_overlays call counts,
+osInvalICache stubs, section table size)? If it never does, OV degenerates to the ucode-cache half.
+Classify every site: refreshed-on-load (load/unload path updates it), static (code never moves), diag-gated, BAD
+(default-path dispatch reads a stale entry after new code lands).
 Hypotheses: H-clean, H-bad-gated, H-bad-live.
-Tool tools/s7609_mk_census.py --controls: (1) plant an mq-keyed std::map counter read on a default path -> OPEN; (2) drop a
-row -> OPEN; (3) remove a rowed refresh-on-create reset -> OPEN; (4) plant a cached mq pointer compared after re-create -> OPEN.
-Second source: runtime witness from an existing log (osCreateMesgQueue re-create of a live queue: [s7393] rows, or a
-compiled witness through the real ultramodern queue functions) showing every rowed entry refreshes between incarnations.
+Tool tools/s7610_ov_census.py --controls: (1) plant a vram-keyed function-pointer cache with no invalidation -> OPEN;
+(2) drop a row -> OPEN; (3) remove the unload path's map erase -> OPEN; (4) plant a ucode cache keyed by text address with
+no content hash -> OPEN. Second source: runtime witness from an existing log (overlay load/unload lines, or [s7521] ucode
+rows showing one text address with two contents) or a compiled witness.
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.

@@ -202498,3 +202498,34 @@ the old one did, so no behaviour change on the observed route.
 added an H-value row -> controls 10/10. s7607_uw 7/7 and s7599_gr CLOSED rerun clean after the edit.
 - Discrimination: selects H-bad-live (latent: one default-on decision keyed by a non-unique id), refutes H-clean and
   H-bad-gated. Class TK CLOSED. Next: class MK, host state keyed by a guest struct address that survives re-create/free.
+
+## Session 7609 (2026-11-18) — class MK closed: host state keyed by a guest struct address (96 lines, 0 open, controls 4/4, witness PASS), H-clean
+
+**Class MK (HYPOTHESIS-ID guest-address-keyed-host-state).** Hypotheses: H-clean (every default-path read of host state keyed
+by an OSMesgQueue/OSTimer/OSIoMesg address sees the current incarnation or is retail-equivalent), H-bad-gated (stale entries
+only in diag arms), H-bad-live (a default-on decision reads a previous incarnation's entry). Soak queue: nothing new to fold
+(last SOAK-RESULTS line is the s7599 fold). CURRENT-TRUTH 50.7 KB < 60 KB, no maintenance.
+- Static: new `tools/s7609_mk_census.py` (reuses s7608's loader). PAT enumerates every line in src/ + librecomp + ultramodern
+  that stores a guest struct address into host state (`.mq =`, `_mq =`, s7398_msg, external_messages.enqueue, requeue
+  push_back, audio delivery list), compares host state against one (`== mq`, `.mq ==`, `*it == ->timer`, CF0 constant),
+  subscripts a container by one (`[mq]`, `[{tid, mq}]`) or declares a container keyed by PTR(OS...). 96 lines: diag 47,
+  timer 11, retail 10, stat 9 (write-only counters read by dumps: s4260 tab, s4585, waittab, CF0 ring), extq 6, fresh 5,
+  value 3, fix 1, print 4; 72 rows, 0 open, 0 stale.
+- Contracts held: C1 osCreateMesgQueue resets blocked_on_recv/blocked_on_send/validCount/first, so all queue incarnation
+  state lives in the guest struct (host has no shadow); C2 timer fire posts cur_timer->mq/msg re-read from the guest struct;
+  C3 ROGUESQ_S7397_TIMERFIX default on (re-arm carries fields, stale-key erase by pointer); C4 s7398_msg thread_local and
+  cleared at both PI call ends; C5 s7394fix::skip thread_local, holder released on every 8010FEE0 post; C6 all 3 external
+  requeue sites gated by external_requeue_ok. osSetEventMesg/osViSetEvent store the pointer exactly as libultra's
+  __osEventStateTab/__osViNext (retail). s7367 CF0 dup-drop decides on MQ_IS_FULL of the current struct.
+- The only host state that can cross an incarnation is the external-delivery deque (extq: message tagged by mq address,
+  delivered later, and requeued when full for Timer/SP/SI/DP). Witness (second source, existing logs, separate runs of the
+  same s7392 route L5/L10/L15): scratch/s7393q/report_l*.txt (ROGUESQ_S7393_CQ) re-created queues = 8 (8010FEE0, 80128D10,
+  80149730, 80149990, 801545CC, 80154600, 80154650, 801939A0), CTRL rows 3/3; scratch/s7392q/report_l*.txt (ROGUESQ_S7392_MQ)
+  external targets = 15, CONTROL PASS 3/3, rq=0 on every row. Overlap 0: no event target is ever re-created, and nothing
+  was requeued, so no in-flight message can land in a new incarnation. Caveat: the two logs are different runs (same route).
+- Controls 4/4: (1) planted `std::map<uint32_t,int>[mq_]` decision in osSendMesg -> UNROWED (first draft missed `[mq_]`
+  subscripts; PAT widened, which also surfaced the 2 g_s4264 diag sites); (2) dropped timer row -> STALE+OPEN; (3) removed
+  `mq->validCount = 0` from osCreateMesgQueue -> C1 OPEN; (4) planted a cached static mq compared on send -> UNROWED.
+  Controls now require open count > baseline.
+- Discrimination: selects H-clean, refutes H-bad-gated and H-bad-live. Class MK CLOSED. No game run (offline audit; second
+  source is existing route logs). Next: class OV, host caches keyed by guest code address across overlay/code reload.
