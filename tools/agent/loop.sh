@@ -456,6 +456,15 @@ while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
   # flight never has its log compressed out from under it.
   tools/agent/prune-scratch.sh 2>&1 | tee -a "$AG/loop.log"
 
+  # Re-publish the three public GitHub forks (main repo fast-forward + the
+  # N64Recomp / decomp source mirrors). Backgrounded so a slow network never
+  # delays an iteration; guards and results go to scratch/agent/publish.log,
+  # a refusal to scratch/agent/PUBLISH-BLOCKED.md. Never affects the loop.
+  # RS64_NO_PUBLISH=1 turns it off.
+  if [ -z "${RS64_NO_PUBLISH:-}" ] && [ -x tools/agent/publish_forks.sh ]; then
+    ( nohup tools/agent/publish_forks.sh >/dev/null 2>&1 & )
+  fi
+
   clear_stale_git_lock
   n=$((n+1))
   log "iteration $n starting $(date)"
