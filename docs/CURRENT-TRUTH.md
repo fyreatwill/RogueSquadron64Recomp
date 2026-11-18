@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7561 (2026-11-17).
+Compact operational handoff, as of Session 7563 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7562 (19b(e) CLOSED): s7375 NOLOCK thread census OPEN 8 -> 0, H-confined selected, no race.** The 8 s7472-s7521
+- **NEW s7563 (19b s7420 CLOSED): s7420 parser census OPEN 1 -> 0, H-blind selected (false row).** fixup_patches_host.py's
+  anchored `^RECOMP_FUNC` regex edits RecompiledPatches/patches.c (CMake step 2), which weaken_patched_funcs.py never touches:
+  patches.c has 0 weak headers, its 3 override headers are strong, libPatchesLib.a defines them `T`, libRecompiledFuncs.a
+  has them `weak external` (nm -m), binary carries all 3 `[patch-live]` probes, 39 s7490 hooks present. Census gained a
+  PATCHES-TREE phase (tools from CMakeLists given RECOMPILED_PATCHES_DIR) -> IMMUNE-TREE only while patches.c has 0 weak
+  headers; control (4) plants one and must reopen it (PASS, controls 4/4). `s7420 --controls` is now a regen_replay gate.
+- **s7562 (19b(e) CLOSED): s7375 NOLOCK thread census OPEN 8 -> 0, H-confined selected, no race.** The 8 s7472-s7521
   diag containers: 7 CALLER-LOCKED (s7500/s7503 helpers under g_s7500_mu/g_s7503_mu; s7475/s7480/s7488 under s_s7475_mu, the
   gfx/lambda callers arrive via rs64_s7491_hst -> rs64_s7475_store after that lock; s7521 seen_off under its file mutex m), 1
   GUEST-SERIAL (s_s7472_seen: only the rs_malloc/rs_free fixup hooks). `s7375 --selftest && --check` is now a regen_replay.sh
@@ -427,8 +433,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
 19b. **Regen health (s7558, OPEN, next).** (a) CLOSED s7559 H-layout: `tools/s7421_regen_drift.py <live> <replay> <compare.json>
     --baseline scratch/s7421/regen_compare.json --control` rc 0, controls 4/4 (new class SLOTPERM), 0 open LOST (docs/REGEN-VERIFY.md
-    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) CLOSED s7561 (headline); (e) CLOSED s7562 (headline); NEXT:
-    s7420_parser_census OPEN 1 (fixup_patches_host.py weak-blind, since s7490); (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
+    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) CLOSED s7561 (headline); (e) CLOSED s7562 (headline); s7420
+    census CLOSED s7563 (headline, now a gate); NEXT (c): B40 A/B soak (s7558_b40_ab voided 5/5 on battery, clk cap -> rerun in-session ALLOW_SLOW=1), then ask the owner whether to restore the s4701 pass-through default.
     Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
     tools/regen_verify.sh D/replay D/verify.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,

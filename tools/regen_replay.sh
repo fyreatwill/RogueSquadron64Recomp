@@ -21,4 +21,6 @@ python3 tools/s7365_invalidation_census.py --selftest >> "$LOG" 2>&1 && python3 
 python3 tools/s7366_lockset_census.py --selftest >> "$LOG" 2>&1 && python3 tools/s7366_lockset_census.py --check >> "$LOG" 2>&1 || { echo "regen_replay: s7366 unreviewed mixed-lock container access (see $LOG)"; exit 1; }
 # s7375 (s7562): no lock-free host container may be reached from two thread labels (or unresolved callers) without a hand verdict.
 python3 tools/s7375_nolock_threads.py --selftest >> "$LOG" 2>&1 && python3 tools/s7375_nolock_threads.py --check >> "$LOG" 2>&1 || { echo "regen_replay: s7375 unreviewed NOLOCK multi-thread container (see $LOG)"; exit 1; }
+# s7420 (s7563): no weak-blind RECOMP_FUNC header parser may edit an affected function in a weakened tree; 4 controls must fire.
+python3 tools/s7420_parser_census.py --controls >> "$LOG" 2>&1 || { echo "regen_replay: s7420 weak-blind header parser OPEN or control failed (see $LOG)"; exit 1; }
 echo "regen_replay: ok"

@@ -11,13 +11,15 @@ its weak form. A constant that accepts the normal line but not the weak one is W
   CHAIN-PRE   runs before weaken in tools/regen_replay.sh (RS64_REPLAY scripts, vendored fixups): never sees a weak header
   WEAKENER    weaken_patched_funcs.py itself (its anchored regex targets the un-weakened header by design: SELF)
   CHAIN-POST  runs after weaken in regen_replay.sh (cut_decoded_tails, rename, s736x censuses)
+  PATCHES-TREE tools CMake runs on RecompiledPatches/patches.c (fixup_patches_host.py): that tree is never weakened, so a
+              blind regex there is IMMUNE-TREE while patches.c has 0 weak headers, OPEN otherwise (s7563)
   STANDALONE  everything else (audits, historical apply_* run by hand on the live tree, which IS weakened)
 and its targets are intersected with the affected set (3 weak functions + the function before each one in the live tree).
 Verdict: OPEN if a blind EDITOR targets an affected function outside CHAIN-PRE, or a blind CHAIN-POST tool exists.
 Also prints how many `// 0x` rows a blind whole-tree reader mis-attributes.
 
 --controls: (1) a planted blind editor (anchored regex on setRngSeed) must be OPEN; (2) a planted weak-aware one must
-not be blind; (3) a blind split over a temp copy of funcs_1.c with a planted weak header must move rows.
+not be blind; (4) a planted weak header in the patches tree must reopen fixup_patches_host.py; (3) a blind split over a temp copy of funcs_1.c with a planted weak header must move rows.
 --dynamic: run every blind standalone audit against a live copy and a de-weakened copy in sandboxes and diff the output.
 usage: tools/s7420_parser_census.py [--verbose] [--controls] [--dynamic]   exit 1 = OPEN row or failed control
 """
@@ -54,6 +56,25 @@ def affected(split):
             while j >= 0 and split[j][1] == n: j -= 1
             if j >= 0 and split[j][0] == f: aff.setdefault(split[j][1], "pred-of-" + n)
     return aff, rows
+
+
+PATCHES_C = os.path.join(ROOT, "RecompiledPatches", "patches.c")
+
+
+def patches_tree_tools():
+    """s7563: tools CMake runs on RecompiledPatches/patches.c (N64Recomp output of patches.elf). weaken_patched_funcs.py only
+    touches RecompiledFuncs/funcs_*.c, so this tree has strong headers by construction: a weak-blind regex there is not blind
+    to anything. Derived from CMakeLists (a tools/X.py COMMAND whose args name RECOMPILED_PATCHES_DIR)."""
+    t = open(os.path.join(ROOT, "CMakeLists.txt"), errors="replace").read()
+    return set(re.findall(r'tools/(\w+\.py)"\s*\n\s*"\$\{RECOMPILED_PATCHES_DIR\}', t))
+
+
+def patches_tree_weak(text=None):
+    """weak headers in the patches tree (must be 0 for IMMUNE-TREE to hold); -1 = tree absent (cannot vouch)"""
+    if text is None:
+        if not os.path.exists(PATCHES_C): return -1
+        text = open(PATCHES_C, errors="replace").read()
+    return len(re.findall(r'^__attribute__\(\(weak\)\) RECOMP_FUNC void ', text, re.M))
 
 
 def chain_pre():
@@ -131,8 +152,10 @@ def consts(path):
     return out, src
 
 
-def audit(paths, split, aff, pre, verbose=False):
+def audit(paths, split, aff, pre, verbose=False, ptree=None, pweak=None):
     rows = []
+    ptree = patches_tree_tools() if ptree is None else ptree
+    pweak = patches_tree_weak() if pweak is None else pweak
     for path in paths:
         name = os.path.basename(path)
         cs, src = consts(path)
@@ -144,13 +167,14 @@ def audit(paths, split, aff, pre, verbose=False):
         editor = bool(re.search(r"write_text\(|open\([^)]*['\"][wa]\+?['\"]|\.write\(", src))
         reads_tree = "RecompiledFuncs" in src or "funcs_" in src or "sys.argv" in src
         phase = ("WEAKENER" if name == "weaken_patched_funcs.py" else "CHAIN-PRE" if name in pre
-                 else "CHAIN-POST" if name in POST else "STANDALONE")
+                 else "CHAIN-POST" if name in POST else "PATCHES-TREE" if name in ptree else "STANDALONE")
         hits = sorted(n for n in aff if re.search(r"\b%s\b" % re.escape(n), src))
         verdict = "ok"
         if blind and phase == "WEAKENER":
             verdict = "SELF"  # matches the un-weakened header on purpose; idempotent (re-run finds nothing to rewrite)
         elif blind:
             if phase == "CHAIN-POST": verdict = "OPEN"
+            elif phase == "PATCHES-TREE": verdict = "IMMUNE-TREE" if pweak == 0 else "OPEN"
             elif editor and hits and phase != "CHAIN-PRE": verdict = "OPEN"
             elif hits: verdict = "IMMUNE-PRE" if phase == "CHAIN-PRE" else "READ-HIT"
             else: verdict = "BLIND-NOHIT"
@@ -236,7 +260,9 @@ def main():
     print("rows a blind whole-tree split mis-attributes:", wrows, "total", sum(wrows.values()))
     paths = sorted(glob.glob(os.path.join(ROOT, "tools", "*.py")))
     paths = [p for p in paths if os.path.basename(p) != "s7420_parser_census.py"]
-    rows = audit(paths, split, aff, pre, verbose)
+    ptree, pweak = patches_tree_tools(), patches_tree_weak()
+    print("patches tree (RecompiledPatches/patches.c) tools: %s; weak headers there: %d" % (",".join(sorted(ptree)) or "-", pweak))
+    rows = audit(paths, split, aff, pre, verbose, ptree, pweak)
     from collections import Counter
     print("tools with a RECOMP_FUNC constant: %d; weak-blind: %d" % (len(rows), sum(1 for r in rows if r[5])))
     print("by phase x verdict:", dict(Counter((r[1], r[7]) for r in rows)))
@@ -294,7 +320,15 @@ def main():
             print("CONTROL planted blind editor -> %s (%s); weak-aware reader blind=%d (%s); planted weak header on %s moves %d rows (%s)"
                   % (ca[0][7], "PASS" if c1 else "FAIL", len(ca[1][5]), "PASS" if c2 else "FAIL", victim.group(1),
                      r1.get(victim.group(1), 0), "PASS" if c3 else "FAIL"))
-            ok = c1 and c2 and c3
+            # (4) s7563: the IMMUNE-TREE verdict must reopen when the patches tree carries a weak header
+            pt = open(PATCHES_C, errors="replace").read() if os.path.exists(PATCHES_C) else ""
+            pw = patches_tree_weak(re.sub(r'^RECOMP_FUNC void ', '__attribute__((weak)) RECOMP_FUNC void ', pt, count=1, flags=re.M))
+            fp = os.path.join(ROOT, "tools", "fixup_patches_host.py")
+            cl = audit([fp], split, aff, pre, ptree=ptree, pweak=pw)
+            cc = audit([fp], split, aff, pre, ptree=ptree, pweak=0)
+            c4 = bool(pt) and pw == 1 and cl[0][7] == "OPEN" and cc[0][7] == "IMMUNE-TREE"
+            print("CONTROL planted weak header in patches tree -> %s, clean -> %s (%s)" % (cl[0][7], cc[0][7], "PASS" if c4 else "FAIL"))
+            ok = c1 and c2 and c3 and c4
         finally:
             shutil.rmtree(td, ignore_errors=True)
     print("VERDICT", "H-split" if nopen else "H-clean", "OPEN", nopen)

@@ -201090,3 +201090,22 @@ restored); dropped the seen_off verdict row -> OPEN 1 (restored). Fresh replay `
 tools/regen_replay.sh scratch/s7562/replay scratch/s7562/replay.log` -> "regen_replay: ok" (8m26s; log line 1584 NOLOCK 97, OPEN 0).
 No runtime code changed (verdicts only), so no game run was needed. Rules out: a lock race in the s7472-s7521 diag code.
 Next: 19b s7420_parser_census OPEN 1 (fixup_patches_host.py STANDALONE weak-blind), then 19b(c) B40 soak fold.
+
+## Session 7563 (2026-11-17) — 19b s7420 parser census OPEN 1 -> 0: fixup_patches_host.py row was a false positive (patches tree is never weakened); census now a regen_replay gate
+
+What ran: `tools/s7420_parser_census.py --check -v` -> OPEN 1: fixup_patches_host.py (STANDALONE, editor, weak-blind regex
+`^RECOMP_FUNC void (\w+)\(` in s7490_hooks, hits the 3 PATCH_WEAKEN names). Hypotheses H-blind / H-real / H-stale.
+Discriminator, measured this session:
+- Target tree: CMakeLists step 2 runs it on ${RECOMPILED_PATCHES_DIR}/patches.c only. weaken_patched_funcs.py globs
+  RecompiledFuncs/funcs_*.c only. RecompiledPatches/patches.c: 0 `weak` occurrences; strong headers for isCinematicActive
+  (L1381), findAndUnlinkSmallestEntry (L1398), setRngSeed (L1715); 39 RS64_S7490_P* hook lines + the s7490 mark present.
+- Link: libPatchesLib.a defines all 3 as `T`; libRecompiledFuncs.a has them as `weak external` (nm -m); the built binary
+  carries the `[patch-live]` probe strings for all 3 (strings only patches.c emits) -> the strong override is the live one.
+Verdict H-blind (census misplaced the tool's tree), not H-real (no weak header ever reaches that regex), not H-stale.
+Change: census gains phase PATCHES-TREE (tools CMake passes RECOMPILED_PATCHES_DIR, parsed from CMakeLists) with verdict
+IMMUNE-TREE only while patches.c has 0 weak headers (OPEN otherwise; -1 = tree absent cannot vouch). New control (4):
+plant one weak header in a copy of patches.c -> fixup_patches_host.py row must go OPEN, clean -> IMMUNE-TREE: PASS.
+Controls 4/4 PASS, VERDICT H-clean OPEN 0, exit 0. `s7420 --controls` added as a tools/regen_replay.sh gate; fresh replay
+(cp -R scratch/s7558/pristine scratch/s7563/replay) -> "regen_replay: ok" 8m31s, gate controls fired in its log.
+Soak fold: s7558_b40_ab voided 5/5 (host on battery, g1e_owner_quiet_arms clk cap exit 2, arms=0) -> 19b(c) is an in-session
+ALLOW_SLOW=1 rerun next (NEXT.md). Rules out: a STANDALONE PatchesLib patch with an unresolved weak symbol.
