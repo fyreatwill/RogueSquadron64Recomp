@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7563 (2026-11-17).
+Compact operational handoff, as of Session 7567 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7566 (19d dpc trio):** DPC_KEEP_PIPE's parent drop is dead on every route (defer is always active at a bump; L1 dd1
+- **NEW s7567 (19d CUT_LIVE):** H-dead-parent. CUT_LIVE is s6418's own dd gate (keep = live && !dda), nothing to confine.
+  ROGUESQ_S7567_CUTW=1 L1: dd1 default 0 writes of 0x8009DEB4 / 3900 passes (game value 217.6 lives); CUT_LIVE=0 ctl 3555
+  writes of boot latch 143.3; dd2 ctl 3554 scaled writes (236.5, base = boot latch unless DD_CUT_LIVE). Item 19d.
+- **s7566 (19d dpc trio):** DPC_KEEP_PIPE's parent drop is dead on every route (defer is always active at a bump; L1 dd1
   default 0 PIPE drops vs 17.4M B at =0); S4272/WRAP_RESTORE hang on the live WRAP_FLUSH repair, keep. Item 19d.
 - **s7565 (19c CLOSED): compensation-chain audit, H-chains selected.** tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md
   (122 rows, hand verdicts, controls 8/8): CHAIN 34 (12 on the retail route, 22 inside dd>1/ASPECT features), FEATURE 34,
@@ -456,7 +459,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **s7566 dpc trio DONE:** KEEP_PIPE = H-dead-parent (every DPC_END site runs inside defer_begin/_end, so the bump-time
     PIPESYNC drop runs only with KEEP_PIPE=0; S7096_FWD L1 dd1: default 0 pipe/0 noflush drops over 8843 tasks, every hw byte
     forwarded; =0 control 17.4M B pipe + 17.7G B noflush dropped, 96 B unexplained). S4272/WRAP_RESTORE = H-interlocked
-    (parent WRAP_FLUSH is a live real-gap repair; keep). Single run per arm. Next: CUT_LIVE vs s6418, then SHADE_ORD_RESET.
+    (parent WRAP_FLUSH is a live real-gap repair; keep). Single run per arm.
+    **s7567 CUT_LIVE DONE: H-dead-parent** (offline: only writer of 0x8009DEB4 in our code is the s6418 block, skipped when
+    keep; runtime ROGUESQ_S7567_CUTW L1 dd1 0 writes, =0 ctl 3555, dd2 ctl 3554; scratch/s7567). Next: SHADE_ORD_RESET vs its diag map.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

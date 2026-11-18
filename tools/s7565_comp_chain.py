@@ -309,7 +309,7 @@ RETAIL_SCOPE = {
     "ROGUESQ_WRAP_RESTORE": "s7566 19d H-interlocked: parent WRAP_FLUSH is live (real lap gap; =0 arm noflush drops 17.7G B, 96 B unexplained); restore needs it, keep both",
     "ROGUESQ_S4272": "s7566 19d H-interlocked: shadow WRAP_RESTORE reads; same live parent, keep",
     "ROGUESQ_DPC_KEEP_PIPE": "s7566 19d H-dead-parent: g_defer_active is true at every bump (all DPC_END sites run inside defer_begin/end), so the drop is the =0 path only; L1 dd1 default 0 pipe drops / 8843 tasks vs =0 17.4M B",
-    "ROGUESQ_CUT_LIVE": "confines our s6418 far-cutoff block to dd>1; simplification = gate s6418 itself on dd>1",
+    "ROGUESQ_CUT_LIVE": "s7567 19d H-dead-parent: CUT_LIVE IS s6418's dd gate (keep = live && !dda; dda passes always write). L1 dd1 default 0 writes of 0x8009DEB4 / 3900 passes; =0 ctl 3555 writes stomp game 217.6 with boot latch 143.3; dd2 ctl 3554 scaled writes (236.5). Nothing to confine",
     "ROGUESQ_SHADE_ORD_RESET": "bounds our own diagnostic map; simplification = drop the map when its log is off",
     "ROGUESQ_S7376_PQLOCK": "locks our present-thread follow-draw code; parent is the port's present policy",
     "ROGUESQ_S7383_FBPACK": "follow-draw mode 3 is the port default since s23; mode 0 would retire it (unmeasured)",

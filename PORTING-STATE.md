@@ -201191,3 +201191,28 @@ ORIGIN: no new mitigation; the flagged lines are comments on existing drops. The
 (main.cpp factor5_gfx_runner) are the only writers of g_defer_active, and the dropped PIPESYNC/wrap bytes are the game's
 legitimate RDP stream, dropped only by our own =0 restore paths (s4272/s4273 ORIGINs).
 Next: 19d CUT_LIVE vs s6418 far cutoff (upstream_compat.cpp s6919 block), then SHADE_ORD_RESET.
+
+## Session 7567 (2026-11-17) — 19d CUT_LIVE vs s6418: H-dead-parent (CUT_LIVE is s6418's own dd gate; 0 writes of 0x8009DEB4 at dd1 default)
+
+Soak fold: no new SOAK-RESULTS lines since s7564.
+Work unit: NEXT.md 19d, CUT_LIVE vs s6418. Hypotheses: H-dead-parent / H-confinable / H-interlocked.
+Offline read (line 1): the only write of 0x8009DEB4 anywhere in our code (RecompiledFuncs, src, librecomp) is the s6418 block
+in funcs_9.c (s6036 hook), and it is skipped when s6919_keep. keep = live && !dda, with dda = (dd scale != 1 && 0x80136DC0 != 0),
+so every dda pass writes whatever CUT_LIVE says, and CUT_LIVE only matters on dda=0 passes (dd1, out of flight, sentinel scenes).
+At dda=0 the block writes the unscaled boot latch, so the CUT_LIVE=0 path is exactly the s6418 boot-latch overwrite. H-interlocked
+(CUT_LIVE changes dd>1) is refuted: keep is 0 on every dda pass whatever the mode.
+Runtime witness (line 2): new ROGUESQ_S7567_CUTW=1 (src/main/upstream_compat.cpp, rs64_s6919_base/_keep/_wrote counters, every
+300 passes), scratch/s7567/run.zsh via g1e_owner_quiet_arms (L1, 16:9 FPS60, 120 s, ALLOW_SLOW, battery):
+| arm | passes | dda | keep | our writes | livediff | game cur | boot latch | last write |
+| cd dd1 default | 3900 | 0 | 3900 | 0 | 3554 | 217.58 | 143.25 | - |
+| cc dd1 CUT_LIVE=0 (ctl) | 3900 | 0 | 0 | 3555 | 3555 | 217.58 | 143.25 | 143.25 |
+| c2 dd2 default (ctl) | 3900 | 3556 | 344 | 3554 | 3554 | 217.58 | 143.25 | 236.51 |
+All 3 arms alive, crashlines 0, vi_stalls30s 0. Both controls fire: =0 writes the stale latch (143.3) over the game's live 217.6
+every frame (the s6919 bug), dd2 writes the scaled value. Selects H-dead-parent: nothing to confine, CUT_LIVE is the dd gate
+itself, its =0 arm is the only route to the old stomp. Side note (feature-internal, not retail route): at dd2 the scale base is
+the boot latch 143.3, not the game's live 217.6, unless ROGUESQ_DD_CUT_LIVE=1 (owner opt-in, unchanged). Single run per arm.
+Change: ROGUESQ_S7567_CUTW diag (default off); tools/s7565_comp_chain.py retire text carries the verdict (COMPENSATION-CHAINS.md
+regenerated, --check ok; s7557 GQ census exit 0). No default changed.
+ORIGIN: no new mitigation; the counter is a passive diag. The value 0x8009DEB4 is the game's per-scene far cutoff
+(computeGridLayerScrollOffset writes it, s6919); the only foreign writer is our s6418 block.
+Next: 19d SHADE_ORD_RESET vs its diag map.

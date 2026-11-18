@@ -16,7 +16,7 @@ No other logged lever is B40-dependent. Coverage caveat: only 18 of the ON lever
 
 | lever | parent | root (depth) | what would retire it |
 |---|---|---|---|
-| `ROGUESQ_CUT_LIVE` | s6418 far-cutoff scaling | s6418 far-cutoff scaling (1) | confines our s6418 far-cutoff block to dd>1; simplification = gate s6418 itself on dd>1 |
+| `ROGUESQ_CUT_LIVE` | s6418 far-cutoff scaling | s6418 far-cutoff scaling (1) | s7567 19d H-dead-parent: CUT_LIVE IS s6418's dd gate (keep = live && !dda; dda passes always write). L1 dd1 default 0 writes of 0x8009DEB4 / 3900 passes; =0 ctl 3555 writes stomp game 217.6 with boot latch 143.3; dd2 ctl 3554 scaled writes (236.5). Nothing to confine |
 | `ROGUESQ_DPC_KEEP_PIPE` | dpc_bridge bump-time PIPESYNC drop | dpc_bridge bump-time PIPESYNC drop (1) | s7566 19d H-dead-parent: g_defer_active is true at every bump (all DPC_END sites run inside defer_begin/end), so the drop is the =0 path only; L1 dd1 default 0 pipe drops / 8843 tasks vs =0 17.4M B |
 | `ROGUESQ_G1D_EDGE_CONTENT` | ROGUESQ_G1D_EDGE | ROGUESQ_G1D_EDGE (1) | refines G1D_EDGE's 4:3 debrief right-edge trim |
 | `ROGUESQ_S4272` | ROGUESQ_DPC_WRAP_FLUSH | ROGUESQ_DPC_WRAP_FLUSH (1) | s7566 19d H-interlocked: shadow WRAP_RESTORE reads; same live parent, keep |

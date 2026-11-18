@@ -121,19 +121,30 @@ static int s6919_mode(const char *n, int def) { const char *e = getenv(n); retur
 static inline int s6919_live(int m) { return m == 1 || (m == 2 && ((mach_absolute_time() / 24000000ull) & 1)); }
 extern "C" { uint32_t g_rs64_s6919[12]; }
 static uint32_t s6919_lastw = 0, s6919_lastb = 0, s6919_org = 0;
+// s7567 19d witness: ROGUESQ_S7567_CUTW=1 prints every 300 s6418-block passes: passes, dda passes, keep passes, our writes of
+// 0x8009DEB4 (all of them go through rs64_s6919_wrote), passes where the game's live value differs from the boot latch, and the values.
+static int s7567_keep = 0; static uint32_t s7567_n[6]; static uint32_t s7567_cur = 0;
+static int s7567_on() { static int on = -1; if (on < 0) { const char *e = getenv("ROGUESQ_S7567_CUTW"); on = e && *e && *e != '0'; } return on; }
+static void s7567_tick(uint32_t org, uint32_t cur, int dda) {
+    if (!s7567_on()) return;
+    s7567_n[0]++; s7567_n[1] += dda != 0; s7567_n[2] += s7567_keep != 0; s7567_n[4] += (s6919_org ? s6919_org : org) != cur; s7567_cur = cur;
+    if (s7567_n[0] % 300 == 0) { union { uint32_t u; float f; } a, b, c; a.u = cur; b.u = s6919_org ? s6919_org : org; c.u = s6919_lastw;
+        fprintf(stderr, "[s7567] pass=%u dda=%u keep=%u writes=%u livediff=%u cur=%g org=%g lastw=%g\n", s7567_n[0], s7567_n[1], s7567_n[2], s7567_n[3], s7567_n[4], a.f, b.f, c.f); }
+}
 extern "C" int rs64_s6919_keep(int dda) {
     static int m = -1; if (m < 0) m = s6919_mode("ROGUESQ_CUT_LIVE", 1);
     const int live = s6919_live(m); g_rs64_s6919[11] = (uint32_t)live;
-    return live && !dda;
+    s7567_keep = live && !dda; return s7567_keep;
 }
 extern "C" uint32_t rs64_s6919_base(uint32_t org, uint32_t cur, int dda) {
     static int m = -1; if (m < 0) m = s6919_mode("ROGUESQ_DD_CUT_LIVE", 0);
+    s7567_tick(org, cur, dda);
     if (!s6919_org) s6919_org = org;
     if (!dda || !s6919_live(m)) return s6919_org;
     if (cur != s6919_lastw) s6919_lastb = cur;
     return s6919_lastb ? s6919_lastb : s6919_org;
 }
-extern "C" void rs64_s6919_wrote(uint32_t v) { s6919_lastw = v; }
+extern "C" void rs64_s6919_wrote(uint32_t v) { s6919_lastw = v; s7567_n[3]++; }
 extern "C" void rs64_s6919_cut(uint8_t *rdram, uint32_t node) {
     static int on = -1; if (on < 0) { const char *e = getenv("ROGUESQ_G5H_BAND"); on = e && *e; }
     if (!on) return;
