@@ -201550,7 +201550,7 @@ vi_stalls30s 0, level_ok 1. Separate control arm p2 (scratch/s7579/run_p2.zsh, L
 `s7578_ubsanc_plant.h:13:65: runtime error: index 4 out of bounds for type 'int[4]'`. Scorer: control_fired=1 real_sites=0, rc 0.
 No san_ log exists for l1/l4/l12 (UBSan writes the file only on a report).
 
-Verdict: H-clean selected (H-diag-oob, H-game-oob refuted for directly-indexed fixed arrays on these routes). Same-run controls:
+Verdict: this selects H-clean and refutes H-diag-oob and H-game-oob for directly-indexed fixed arrays on these routes; it closes gen-c-bounds-audit. Next discriminator: shift/alignment UBSan reports grouped by file:line against two plants (NEXT.md). Same-run controls:
 build-level reloc count + runtime plant in the same binary. Limits: array-bounds checks only direct indexing of arrays with a
 compile-time size; accesses through pointers / malloc'd buffers are not covered; the hangar abort/re-entry route was not run.
 ORIGIN: n/a (no mitigation landed). Next: gen-c-shift-align-audit (SAN=shift,alignment) in scratch/agent/NEXT.md. scratch/s7579.
