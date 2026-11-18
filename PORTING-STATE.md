@@ -202465,3 +202465,36 @@ HYPOTHESIS-ID: host-fpr-view-census
 - Discrimination: selects H-bad-gated (one test-arm destructor that would terminate during an unwind, fixed), refutes
   H-bad-live (no default-path skipped lock/flag) and H-clean. Class UW CLOSED. Next: class TK, host state keyed by guest
   thread id that outlives a destroyed thread (tid reuse).
+
+## Session 7608 (2026-11-18) — class TK closed: host state keyed by guest thread identity (119 lines, 0 open, controls 4/4, witness PASS), H-bad-live latent, s7394fix holder re-keyed by incarnation
+
+HYPOTHESIS-ID: thread-keyed-state-census.
+
+**Census.** tools/s7608_tk_census.py --controls --witness (rc 0). 119 lines in src + librecomp + ultramodern derive or store a
+thread key (rogue_current_thread_id, rs64_guest_tid, OSThread->id compares/indices, [..tid..] tables, g1b_slot, g_live_ctx /
+thr_live_*, pthread_self, GetCurrentThreadId, this_thread::get_id): diag 51 (S4259/S4262/S4580/S4586/S4908/S4913/S7394_BD/
+S7405/RECV_TRACE/G1B/G1E_TL/G1E_G/_WIN32/RETRACE_HOLD_TEST), host 17 (host-thread keys: every osCreateThread spawns a new
+std::thread, so thread_local/pthread state is fresh per guest incarnation), ptrlive 16 (g_live_ctx: erased after join and
+before delete, no ABA), print 14, naming 9, accessor 7, reset 4 (Rs64WaitScope dtor clears pending, also on the s7607
+thread_terminated unwind; g1b slots monotonic, S7590 guard clears the port), incarn 1. 70 rows, 0 open, 0 stale.
+Contracts C1-C6 (new std::thread per create, me() thread_local token + release clears holder, ~Rs64WaitScope clears, remove
+before delete, S7590 slot clear, thread_self thread_local) hold. Controls 4/4: planted tid table, dropped row, cleaner without
+thr_live_remove, old OSId compare on s7394fix::holder.
+**Witness (second source).** [thr-create-id] rows in scratch/agent/loop.log.pre-s5016: 718 creates, 20 OSIds; id 0 names 8
+DISTINCT threads (entries 0x80001088/0x800016AC/0x800017A0/0x80002E10/0x80019868/0x80019BF4/0x8001C328/0x8008ED70, each its
+own OSThread struct), id 9 names 2; 16 (entry, struct) pairs are re-created (up to 79x). So OSId is not a thread key.
+**The one default-path decision on an OSId: s7394fix::holder** (ROGUESQ_S7394_HOLDFIX, default on) compared "holder ==
+rogue_current_thread_id" at the 8010FEE0 re-create. Latent wrong cases: another live thread with the same id (8 id-0 threads,
+and the heap mutex is taken by tid 0 too), or a destroyed holder's id re-used by its next incarnation; the non-holding
+re-creator queueDeferredClearRequest (s7394 static) could then have its re-seed token dropped. Not seen in any run (H-bad-live
+latent, not observed). ORIGIN: port code (the s7394 fix itself), not a game writer.
+**Fix.** src/main/upstream_compat.cpp s7394fix::me(): holder keyed by a thread_local incarnation token (1<<32 + counter,
+never equal to an OSId, -1 or -2); ROGUESQ_S7608_TK=0 restores the OSId key. holder widened to int64_t.
+**Run (positive control, one build, two arms, L4 dd4 FPS60 owner recipe, ROGUESQ_S7394_BD=1, 120 s each, ALLOW_SLOW on battery,
+scratch/s7608_tk):** tkon and tkoff both alive, 0 crash, vi_stalls30s=0; [s7394-holdfix] fired in both; 7 held windows each
+(6 tid 2, 1 tid 0), all closed by the owner's release with cres 0; holdfix_skips=5 in both. The new key fires exactly where
+the old one did, so no behaviour change on the observed route.
+**Side fix.** tools/s7548_gh_census.py control 10 was failing on the real tree since s7567 (static s7567_keep never rowed);
+added an H-value row -> controls 10/10. s7607_uw 7/7 and s7599_gr CLOSED rerun clean after the edit.
+- Discrimination: selects H-bad-live (latent: one default-on decision keyed by a non-unique id), refutes H-clean and
+  H-bad-gated. Class TK CLOSED. Next: class MK, host state keyed by a guest struct address that survives re-create/free.

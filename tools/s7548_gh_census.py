@@ -367,6 +367,7 @@ RULES = {
     'as clamp bounds, the heightmap/record bases hm/rt are re-read from 0x80136DC0/C4 on every call'),
  ('upstream_compat.cpp', 's7031_hgt'): ('H-refresh', [r's7031_hgt = \(int\)\(uint16_t\)MEM_W\(0, \(int64_t\)\(int32_t\)0x80136DF8\);'], 'as s7031_w'),
  # escapes: getters of captured statics referenced outside src/main
+ ('upstream_compat.cpp', 's7567_keep'): ('H-value', [r's7567_keep = live && !dda; return s7567_keep;'], 's7567/s6919: 0/1 flag (CUT_LIVE live && !dda) returned to the s6919 fixup and counted by the ROGUESQ_S7567_CUTW witness; not a guest value (row added s7608)'),
  ('main.cpp', 'g_rs64_m5_pcm_callsite'): ('H-value', [r'rs64_m5_pcm_get_callsite'], 'guest PC (code address), printed by librecomp rsp.cpp'),
  ('main.cpp', 'g_rs64_audio_break_pc'): ('H-value', [r'rs64_audio_image_break_pc'], 'guest PC, printed by librecomp rsp.cpp'),
  ('main.cpp', 'g_rs64_m5_static_rs_memset_callsite'): ('H-value', [r'rs64_m5_static_rs_memset_last_callsite'], 'guest PC, printed by the s2447 fixup diag'),

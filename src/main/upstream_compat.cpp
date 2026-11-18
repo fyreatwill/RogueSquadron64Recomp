@@ -9577,14 +9577,26 @@ static void post_send(uint8_t* rdram, recomp_context* ctx, uint32_t mq, int resu
 // thread is the current holder (last successful recv, no release since), skip that one re-seed post; rs_malloc's release
 // then supplies the single token -> same end state (1 token), no free token inside the section, no dropped release.
 namespace s7394fix {
-static std::atomic<int> holder{-2}; static thread_local bool skip = false; static std::atomic<uint64_t> nskip{0};
+static std::atomic<int64_t> holder{-2}; static thread_local bool skip = false; static std::atomic<uint64_t> nskip{0};
 static bool on() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7394_HOLDFIX"); return !(e && e[0] == '0'); }(); return v; }
+// s7608 class TK fix (ROGUESQ_S7608_TK, default ON, =0 = old OSId key): OSIds are not unique (s7608 witness: 8 distinct live
+// threads carry id 0, 2 carry id 9) and a destroyed holder's id is re-used by the next incarnation, so "holder == my OSId" could
+// name a different thread. ORIGIN: port code (this s7394 fix), not a game writer. Key the holder by host-thread incarnation
+// instead: every osCreateThread spawns a new std::thread (threads.cpp), so a thread_local token is unique per guest incarnation.
+static std::atomic<int64_t> gen_ctr{0};
+static bool tk() { static const bool v = [] { const char* e = std::getenv("ROGUESQ_S7608_TK"); return !(e && e[0] == '0'); }(); return v; }
+static int64_t me(uint8_t* rdram) {
+    if (!tk()) return rogue_current_thread_id(rdram);
+    static thread_local int64_t g = 0;
+    if (!g) g = (int64_t(1) << 32) + gen_ctr.fetch_add(1) + 1; // never collides with an OSId (int32) or -1/-2
+    return g;
+}
 }
 static uint64_t s7394fix_nskip() { return s7394fix::nskip.load(); }
 extern "C" void rs64_s7393_create(uint8_t* rdram, uint32_t mq, uint64_t ra, uint32_t gra, int cnt) {
     if (s7394::on()) s7394::on_create(rdram, mq, ra, cnt); // s7394
     if (mq == 0x8010FEE0u && cnt == 1 && s7394fix::on() && TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq)->validCount == 0 &&
-        s7394fix::holder.load() == rogue_current_thread_id(rdram)) {
+        s7394fix::holder.load() == s7394fix::me(rdram)) {
         s7394fix::skip = true; // s7394 fix: next post on 8010FEE0 by this thread is the re-seed token; drop it (we hold the mutex)
         static std::atomic<bool> said{false};
         if (!said.exchange(true)) std::fprintf(stderr, "[s7394-holdfix] first held re-seed of 8010FEE0 by tid %d: re-seed post skipped (=0 retail)\n", rogue_current_thread_id(rdram));
@@ -9857,7 +9869,7 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
         ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, flag);
     }
     if (s7394::on()) s7394::post_recv(rdram, mq_addr, (int)(int32_t)ctx->r2); // s7394
-    if (mq_addr == 0x8010FEE0u && (int32_t)ctx->r2 == 0) s7394fix::holder.store(rogue_current_thread_id(rdram)); // s7394 fix
+    if (mq_addr == 0x8010FEE0u && (int32_t)ctx->r2 == 0) s7394fix::holder.store(s7394fix::me(rdram)); // s7394 fix (s7608: incarnation key)
     rs64_m5_frequency_receive_join(rdram, ctx, mq_addr, flag, (int32_t)ctx->r2,
                                    delivered_hint);
     { static const bool s4264_on = [] { const char* e = std::getenv("ROGUESQ_S4262"); return e && *e && *e != '0'; }();

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7606 (2026-11-18).
+Compact operational handoff, as of Session 7608 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7607: class UW (exceptions unwinding through generated C frames) CLOSED, H-bad-gated, one fix.**
+- **NEW s7608: class TK (host state keyed by guest thread identity) CLOSED, one latent default-path fix.**
+  tools/s7608_tk_census.py --controls --witness (4/4, PASS): 119 lines, 0 open. OSIds are NOT unique (log witness: id 0 = 8
+  distinct threads, id 9 = 2), so the default-on s7394fix::holder ("holder == my OSId") could name another thread; now keyed by a
+  thread_local incarnation token (ROGUESQ_S7608_TK=0 = old). L4 dd4 A/B: both keys 7 windows, 5 skips, 0 crash (identical).
+- **s7607: class UW (exceptions unwinding through generated C frames) CLOSED, H-bad-gated, one fix.**
   tools/s7607_uw_census.py --controls --witness (7/7, 2/2): 5 throws (1 thread_terminated, 4 fatal), 3 catch roots, TWO
   throw paths (self-destroy via unregisterServiceWorker; and destroy-of-other waking the target inside any blocking stub ->
   wait_for_resumed -> osDestroyThread(NULL)), 40 host blocking frames rowed, 729/729 text symbols carry compact unwind, no
@@ -438,7 +442,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     thread-entry edit.
 38. **Class UW CLOSED s7607** (headline). Rerun tools/s7607_uw_census.py --controls after adding a throw/catch, a blocking
     host stub, an RAII local in one (a blocking destructor needs an uncaught_exceptions() bail-out), or a build-flag change.
-39. **NEXT (s7608): class TK, host state keyed by guest thread id that outlives a destroyed thread** (NEXT.md).
+39. **Class TK CLOSED s7608** (headline). Rerun tools/s7608_tk_census.py --controls after adding host state keyed by a guest
+    thread id/OSThread*/host thread; never key a default-path decision by OSId (ids repeat), use a host-thread incarnation token.
+40. **NEXT (s7609): class MK, host state keyed by a guest struct address (mq/thread/timer) that survives re-create** (NEXT.md).
 
 ## Evidence index
 
