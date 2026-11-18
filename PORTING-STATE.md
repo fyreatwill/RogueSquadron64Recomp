@@ -201805,3 +201805,6 @@ Picked up an interrupted s7588 iteration: its census tool, the lib/rt64 plume_ap
 - Smoke of the rebuilt default could not run in-session (owner active, HID idle 95 s, the arm stopped itself with exit 2); queued
   as scratch/agent/soak_queue/s7588_applepool_default.sh (SOAK_NEEDS_IDLE=300). Arm p0 above already ran that code path.
 - Next: class HR (fds, threads, Mach ports, IOSurfaces growth), NEXT.md.
+- Verdict line: selects H-clean, refutes H-arc, H-mismatch and H-pool (main-queue plant dealloc 1648/1648 with APPLE_POOL=0;
+  present-thread pool slope 0 over 25,600 posts). Next discriminator: class HR outside-sampled fd/thread/port slopes with an
+  fd plant (NEXT.md).
