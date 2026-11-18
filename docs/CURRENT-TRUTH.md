@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7585 (2026-11-18).
+Compact operational handoff, as of Session 7586 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7585 (class LK, host memory growth: LEAK FOUND + FIXED):** plume_metal.cpp MetalCommandQueue::executeCommandLists made one
+- **NEW s7586: class LK CLOSED.** Fixed build: hangar re-entries add +1.9/+2.5 MB each (first mission load warms ~35 MB of RT64
+  caches once), 20 min L4 hold 0.005 MB/s, plant fired. Also fixed: plume MetalShader leaked one dispatch_data_t per shader
+  compile (dispatch_release added; 203-222 root leaks -> 0).
+- **s7585 (class LK, host memory growth: LEAK FOUND + FIXED):** plume_metal.cpp MetalCommandQueue::executeCommandLists made one
   autoreleased "Wait Command Buffer" per call on an RT64 thread with no autorelease pool, so none were ever freed: 1.21-1.39 MB/s
   (~731 AGX command buffers/s, ~4.5-5 GB per hour of play). Now drained per call (default on; ROGUESQ_MTL_WAITPOOL=0 = old). Same
   binary, L4 dd4 16:9 FPS60, heap 120->330 s under MallocStackLogging=lite: fix 0.016 MB/s vs old 1.387 MB/s; both alive, 0 stall.
@@ -281,9 +284,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pointer-overflow, s7583 div0/fcast/bool/builtin/vla/nonnull/unreachable CLOSED: every C-applicable UBSan check has run.
 19. **Class UI (uninit host reads) CLOSED s7584** (headline). The G5 renaming sweep is closed too (s6868: the 139 remaining
     address names are shape-only), so it is not a rung to take.
-20. **Class LK host memory growth: Metal wait-buffer leak FIXED s7585** (headline). NEXT (s7586): residual per-load slope on the
-    hangar re-entry route with the fix (NEXT.md) + a 20 min hold for the CFString residual. Then keep taking new idiom-class
-    audits; do not write a backlog-exhausted block. Owner: ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
+20. **Class LK host memory growth CLOSED s7586** (headline; wait-buffer leak s7585, dispatch_data leak s7586). Owner:
+    ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
+21. **NEXT (s7587): class OW, metal-cpp ownership audit of plume_metal.cpp** (NEXT.md): every NS/MTL acquisition classified +1
+    (alloc/new/copy/create) vs +0 (autoreleased) and matched to its release, per thread pool. Lead: MetalShader::functionName is
+    NS::String::string (+0) yet released in ~MetalShader (overrelease, latent while the compile thread never drains a pool).
 
 ## Evidence index
 

@@ -1,17 +1,20 @@
-# NEXT (s7586)
-HYPOTHESIS-ID: host-memory-growth-audit
+# NEXT (s7587)
+HYPOTHESIS-ID: metal-cpp-ownership-audit
 
-s7585 found and fixed the in-flight growth (plume executeCommandLists wait-buffer autorelease leak, 1.39 -> 0.016 MB/s, same-binary
-A/B). With that masking growth gone, finish class LK:
-Hypotheses: H-flat (no per-load growth: footprint returns to the same level after each hangar re-entry), H-leak (each mission load /
-hangar re-entry adds > ~5 MB that is never freed), H-slow (a small time-linear residual, e.g. the CFString +15k/210 s seen in both
-s7585 arms, that matters only over hours).
-Discriminator, one run each, build/ (fixed binary):
-1. Hangar route: `env GD=build SECS=650 XE2="MallocStackLogging=lite DYLD_INSERT_LIBRARIES=$PWD/tools/s7585_leakplant.dylib" zsh
-   scratch/s7585/hangar.zsh hc` with a side loop running `heap -s -q <pid>` at each hangar entry (grep [hangarmenu-a0-entry] in
-   scratch/s7585/hc/cap/run.log, or fixed times ~150/330/480/600 s), then tools/s7585_heapdiff.py between consecutive entries.
-2. Long hold: `env R=scratch/s7586/L HOLD=1200 ALLOW_SLOW=1 ARMS="4:l4:MallocStackLogging=lite" zsh tools/g1e_owner_quiet_arms.zsh`
-   with heap -s at 120/600/1150 s (copy scratch/s7585/runC2.zsh, change the times). Plant control: leaks must report it (>= 39 MB).
-Outcomes: per-entry delta > 5 MB in one class -> H-leak, name it from the heap label and fix; residual slope > 0.05 MB/s over 1200 s
--> H-slow, name the class; both small with the control firing -> class LK CLOSED.
+Class LK closed s7586 (two plume_metal.cpp ownership bugs found by leak measurement: s7585 autoreleased wait buffers on a pool-less
+thread, s7586 unreleased +1 dispatch_data_t). Both are one idiom: metal-cpp has no ARC, so every object's +1/+0 status must be
+matched by hand. Class OW = audit the whole idiom offline, then check the survivors at runtime.
+Hypotheses: H-clean (no other mismatches), H-leak (more unreleased +1 objects: bounded or per-frame), H-overrelease (a +0
+autoreleased object released by us: latent use-after-free that only fires once a pool drains; lead: MetalShader::functionName =
+NS::String::string(...) (+0) then functionName->release() in ~MetalShader, and setName's debugName the same way).
+Method, one pass:
+1. Enumerate in lib/rt64/src/contrib/plume/plume_metal.cpp every acquisition: alloc()/new*()/copy*()/*_create (+1) vs
+   class factories like NS::String::string, MTL::*Descriptor::*Descriptor(), commandBuffer*, currentDrawable (+0), and every
+   release()/retain()/autorelease()/dispatch_release. A short python pass printing site, kind, the owning member/local and the
+   matching release (tools/s7587_ownership_census.py), each row classified OK / LEAK / OVERRELEASE / NEEDS-POOL.
+2. For each OVERRELEASE: does the thread drain a pool (s7585 added one in executeCommandLists)? If so, Zombies run:
+   `NSZombieEnabled=YES` + MallocScribble on the L4 owner recipe 300 s and the hangar route; a zombie message = confirmed.
+   Positive control: a deliberate extra release behind an env plant (ROGUESQ_S7587_PLANT=1) that must log a zombie.
+3. Fix each confirmed row (retain() at acquisition or drop the release), export submodule-patches, rebuild, rerun leaks:
+   dispatch_data_t / NSArray counts and zombie count 0 with the plant firing.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

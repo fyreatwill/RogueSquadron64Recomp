@@ -201718,3 +201718,27 @@ CFString +15k objects / 210 s (~1 MB, also present pre-fix) and one 17 MB CoreFS
 Verdict: this selects H-cache (time-linear reachable growth, root cause the plume wait-buffer autorelease leak, fixed) and refutes
 H-flat for the pre-fix build; H-leak (per-load) is not yet discriminated. Next discriminator (NEXT.md): heap -s diffs between
 consecutive hangar entries on the fixed build (per-entry delta > 5 MB selects H-leak) plus a 1200 s hold (residual > 0.05 MB/s selects H-slow).
+
+## Session 7586 (2026-11-18) — class LK closed: no per-load growth (hangar re-entry +1.9/+2.5 MB per entry), no time-linear residual (0.005 MB/s over 1030 s); plume MetalShader dispatch_data_t leak (1 per shader compile) found and fixed
+Ran (AC, clk 1.00, host idle >9000 s, screen unlocked; one game at a time), build/ with the s7585 wait-pool fix:
+- **Hangar route** (scratch/s7586/run.zsh -> scratch/s7586/hangar.zsh, s7469 abort/re-entry recipe, dd8 21:9 FPS60, MSL lite +
+  tools/s7585_leakplant.dylib): 3 hangar entries, 4 initMission, crash 0. `heap -s` 10 s after each [hangarmenu-a0-entry] and at
+  631 s. Heap totals 199.0 -> 235.6 -> 237.6 -> 240.3 MB; footprint 775 -> 987 -> 1006 -> 1041 MB. e1->e2 (+35 MB) is the first
+  mission load warming RT64 caches (adjustVector<GameCall> 8.5 MB, vector<float> 7.3 MB, fullSync 3.8 MB, FramebufferStorage 3.7 MB,
+  all count ~0, i.e. vectors grown once); e2->e3 +1.9 MB (CFString 1.3 MB) and e3->end +2.5 MB net (one 17 MB CoreFSCache realloc,
+  system) — per re-entry far below the 5 MB H-leak bar. leaks at 631 s: plant 51 x 1.04 MB ROOT LEAK (control fired) + 222 x 80-byte
+  dispatch_data_t ROOT LEAKs + 2 NSArray + 1 SDL_realloc, i.e. 18 KB non-plant.
+- **Writer of the 222:** stack RT64::RasterShaderCache::CompilationThread::loop -> RasterShader ctor -> plume::MetalDevice::
+  createShader -> MetalShader::MetalShader -> dispatch_data_create. That TU has no ARC, dispatch_data_create returns +1 and
+  MTLDevice newLibrary does not consume it: one 80-byte leak per compiled shader, bounded by shader count. ORIGIN: plume upstream
+  code, not an rs64 edit; legitimate object, never released. Fix: dispatch_release(dispatchData) after newLibrary
+  (lib/rt64/src/contrib/plume/plume_metal.cpp, exported to submodule-patches/rt64-plume.patch). Built build/ OK.
+- **20 min hold, fixed binary** (scratch/s7586/hold.zsh: L4 owner recipe dd4 16:9 FPS60 HOLD 1200, MSL lite + plant, heap 120/600/
+  1150 s, leaks 1150 s; first attempt rc=1 voided, my script did not create R=, rerun): tag alive 1, crash 0, vi_stalls30s 0,
+  max_gap 2319 ms. heap +6.4 MB 120->600 s, -0.9 MB 600->1150 s, net +5.5 MB / 1030 s = 0.005 MB/s; footprint 1181/1216/1201 MB.
+  leaks 1150 s: 65 leaks = plant 55 (control fired) + 2 NSArray + 1 SDL_realloc; dispatch_data_t 0. Pre-fix same recipe
+  (s7585 memA leaks_full_200/560) had 203/211, s7585 memB 210/222, s7586 hangar 222 -> fix confirmed on two lines (count drop to
+  0 + the stack naming the exact call the fix touches).
+Shows: H-flat per load and no H-slow residual on the fixed build; CFString growth (~35k objects / 1030 s, 2.3 MB) is bounded noise.
+Verdict: class LK CLOSED (H-flat selected, H-leak and H-slow refuted, plant fired in both runs). Remaining memory is caches warmed
+once on the first mission load.
