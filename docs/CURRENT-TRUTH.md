@@ -12,6 +12,16 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7597: class XC (other uncaught C++ exceptions) CLOSED, one fix.** tools/s7597_xc_census.py --controls (2/2): 91 sites
+  (thread 61, jat 15, throw 7, parse 6, directory_entry queries 2) in src/, librecomp, ultramodern, rt64/src, 51 rows, 0 open:
+  every json parse read at boot is caught or non-throwing, thread ctors are boot singletons / once / env-gated / one per guest
+  thread, explicit throws are fatal-anyway, dead or caught. XC-1 (fixed): librecomp mods.cpp scan_mod_folder used the throwing
+  directory_entry::is_regular_file()/is_directory() and iterator ++, so ANY mods/ entry whose stat fails (symlink loop ELOOP, link
+  into an unreadable folder EACCES) aborted the game at boot (rc134, 0.3 s). Now ec forms, entry skipped with `[s7597-io]`
+  (ROGUESQ_S7597_MODSCAN=0 = old). Witness tools/s7597_xc_witness.zsh (copied folders, no owner save, NO_SAVE_WRITE): 13 malformed
+  inputs (mods.json garbage/array/wrong types/dir/binary, mods/ loop/dangling/garbage mod.json/wrong-type mod.json/empty dir/
+  garbage .nrm/.nrm dir/EACCES link): before the fix only loop + EACCES aborted; after, both alive 20 s with the skip line; old arm
+  on the same binary still rc134 (control pair). Left gated-dev: RT64 PresetLibrary::load has no try (F1 inspector only).
 - **NEW s7596: class FS (throwing std::filesystem calls) CLOSED, two fixes.** tools/s7596_fs_census.py --controls (2/2): every
   std::filesystem call in src/, librecomp, ultramodern, rt64/src parsed (balanced parens): 22 ec-form, 20 throwing rows, 0 open,
   0 stale. FS-1 (H-crash): check_stored_rom/load_stored_rom deleted an invalid stored ROM copy (rs64.n64.us.1.0.z64) with the
@@ -344,8 +354,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     abort, atexit or SDL event-consumer site.
 27. **Classes SG s7594, SV s7595, FS s7596 CLOSED** (headline). Rerun tools/s7596_fs_census.py --controls after any lib/ or
     src/ edit that adds a std::filesystem call.
-28. **NEXT (s7597): class XC, other uncaught-exception sources** (NEXT.md): json::parse (4), throw (10), .at( (15), std::thread
-    ctors (67) outside a try in owner-reachable code.
+28. **Class XC CLOSED s7597** (headline). Rerun tools/s7597_xc_census.py --controls after adding a throw, json parse,
+    std::thread ctor or directory_entry query.
+29. **NEXT (s7598): class AZ, host allocations sized by guest data** (NEXT.md): new/resize/reserve/malloc whose size comes from
+    guest RAM or RDP commands (std::bad_alloc -> terminate, or a multi-GB commit) in owner-reachable code.
 
 ## Evidence index
 

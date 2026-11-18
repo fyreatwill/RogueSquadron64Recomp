@@ -202077,3 +202077,35 @@ Verdict: the same-binary old/new arm pair (rc134 vs alive, both bad-copy variant
 H-gated for the stored-ROM remove; this closes class FS (code fix in librecomp recomp.cpp + main.cpp, not diagnostics).
 Next discriminator: class XC census (scratch/agent/NEXT.md), whether an owner-reachable json::parse/.at()/thread-ctor throw
 aborts boot or play, split by an old-arm-aborts / fixed-arm-alive witness.
+
+## Session 7597 (2026-11-18) — class XC closed: uncaught C++ exception census (91 sites, 51 rows, 0 open, controls 2/2) + 13-input boot witness; a mods/ symlink loop or unreadable link aborted boot (rc134), fixed
+
+Work unit: NEXT s7597 class XC (hypotheses H-clean / H-crash / H-guest).
+- Census, new tool tools/s7597_xc_census.py [--controls] (roots src/, librecomp/src, ultramodern/src, lib/rt64/src; comments and
+  string literals stripped): kinds parse (json::parse / `>> json`) 6, throw 7, json .at( 15, directory_entry no-ec query 2,
+  std::thread ctor 61 (static/call_once/one-shot latches = once by pattern). 51 rows, 0 open, 0 stale; verdicts ok 6, boot 17,
+  gated 18, gated-dev 4, fatal-anyway 2, guest-fatal 1 (pi.cpp ROM DMA write: retail never writes cart ROM), dead 1, bounded 1
+  (one host thread per guest thread, class TH), once 1. Controls: plant the pre-fix `mod_path.is_regular_file()` FIRED, drop-row
+  FIRED. H-guest refuted: the 15 .at( sites are RT64 preset/hlsl JSON (inspector), no guest-indexed .at( exists.
+- Every boot-read JSON is safe: mods.json (parse_mods_config, every boot) read_json catches parse_error and find() on a non-object
+  returns end; mod.json manifests parse with allow_exceptions=false + is_discarded; rt64 user config in try.
+- XC-1 (H-crash selected): librecomp mods.cpp scan_mod_folder iterated mods/ with the ec ctor but then called the THROWING
+  directory_entry::is_regular_file()/is_directory() and the throwing iterator ++. libc++ re-stats a DT_LNK entry; any error other
+  than ENOENT throws filesystem_error on the boot thread -> std::terminate rc134.
+  ORIGIN: the writer of the abort is libc++ directory_entry::__refresh raising filesystem_error ("in posix_stat: failed to determine
+  attributes") with no handler; ELOOP/EACCES are legitimate OS answers, the defect is the upstream throwing-overload choice.
+  Fix: explicit loop with increment(ec); is_regular_file(ec)/is_directory(ec); failing entry skipped with `[s7597-io] skipping mods
+  entry <path>: <reason>`; ROGUESQ_S7597_MODSCAN=0 restores the old form. lib/ edited -> export.sh refreshed N64ModernRuntime.patch.
+- Witness tools/s7597_xc_witness.zsh (copy of scratch/s7597/run.zsh; copied folders, symlinked binary + ROM, empty saves/, NO owner
+  save, NO_SAVE_WRITE=1, 20 s boot each). Tag a (pre-fix binary): ctl, mj_garbage, mj_array, mj_types, mj_dir, mj_bin, mod_dangle,
+  mod_dir_garbage, mod_dir_types, mod_dir_empty, mod_nrm_garbage, mod_nrm_dir all alive 20 s (4559-4722 log lines, 0 [CRASH]);
+  mod_loop (mods/loop -> loop) rc134 at 0.3 s "libc++abi: terminating due to uncaught exception ... filesystem_error ... posix_stat".
+  Tag b (fixed binary): ctl, mj_garbage alive; mod_loop alive with "[s7597-io] skipping ... Too many levels of symbolic links";
+  mod_eacces (mods/acc -> ../locked/x, locked chmod 000) alive with "... Permission denied". Tag c (same fixed binary,
+  ROGUESQ_S7597_MODSCAN=0): mod_loop rc134 0.3 s, mod_eacces rc134 0.3 s. Same-binary old/new pair = control.
+- Left open by design: RT64 PresetLibrary::load (rt64_preset.h) has no try; a malformed preset file would terminate, but only the F1
+  inspector calls it (gated-dev).
+Verdict: the same-binary old/new arm pair (rc134 vs alive on both ELOOP and EACCES entries) selects H-crash and refutes H-clean;
+H-guest refuted by the census (no guest-indexed throwing access). Class XC closed with a code fix in librecomp mods.cpp.
+Next discriminator: class AZ census (scratch/agent/NEXT.md): whether any host allocation sized by a guest field is unclamped,
+split by an old-arm-aborts / clamped-arm-alive witness.

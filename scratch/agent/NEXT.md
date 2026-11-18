@@ -1,14 +1,15 @@
-# NEXT (s7597)
-HYPOTHESIS-ID: uncaught-exception-census
+# NEXT (s7598)
+HYPOTHESIS-ID: guest-sized-allocation-census
 
-Class FS closed s7596 (20 throwing rows, 0 open; stored-ROM remove + current_path fixed). Class XC = every OTHER host call that
-can throw a C++ exception out to std::terminate in owner-reachable code (src/, librecomp/src, ultramodern/src, lib/rt64/src;
-skip tests/tools/contrib/examples). Raw counts at s7596: json::parse 4, explicit throw 10, .at( 15, std::thread ctor 67
-(std::system_error on thread-creation failure), plus nlohmann .get<>/operator[] on const json, std::bad_alloc on huge new.
-Per site: reachable (boot / play / quit / env-gated / dead); inside a try?; what input makes it throw (malformed config/manifest
-JSON, missing key, out-of-range index from guest data, thread limit); consequence.
-Hypotheses: H-clean (every reachable one is in a try or cannot fire), H-crash (an owner-reachable abort like FS-1: e.g. a
-malformed config file aborts boot), H-guest (a guest-data-indexed .at() can throw in play).
-Tool: tools/s7597_xc_census.py --controls (plant an untried json::parse + drop a row; both caught). Runtime witness for each
-H-crash row in copied folders (pattern scratch/s7596/run.zsh): old arm aborts, fixed arm alive, ctl alive.
+Class XC closed s7597 (91 exception sites, 0 open; mods/ scan ELOOP/EACCES boot abort fixed). Class AZ = every host allocation
+whose SIZE derives from guest data (guest RAM words, RDP/RSP command fields, VI registers, DMA lengths) in owner-reachable code:
+std::vector resize/reserve/assign, new[], malloc/calloc/realloc, std::string(n,..), RT64 texture/framebuffer/buffer creation
+(width*height*bpp from SetColorImage/SetTextureImage/LoadBlock/VI width) in src/, librecomp/src, ultramodern/src, lib/rt64/src.
+Per site: size source; clamp present?; worst-case bytes from a 32-bit/12-bit guest field; consequence (bad_alloc ->
+terminate rc134, multi-GB commit, GPU allocation failure -> null deref).
+Hypotheses: H-clamped (every guest-sized allocation has a bound), H-unbounded (a corrupt or unusual guest field drives a
+multi-GB alloc -> abort/hang), H-gpu (RT64 texture/target creation from guest dims has no cap and fails on the Metal side).
+Tool: tools/s7598_az_census.py --controls (plant an unclamped resize(guest_word) + drop a row; both caught). Runtime witness
+for any H-unbounded row: a gated plant lever writing the extreme field, old arm aborts, clamped arm alive, ctl alive
+(pattern tools/s7597_xc_witness.zsh, copied folders).
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.

@@ -1744,10 +1744,19 @@ index a75d253..e6808be 100644
      exists = true;
      return ret;
 diff --git a/librecomp/src/mods.cpp b/librecomp/src/mods.cpp
-index ff40212..ae1fb16 100644
+index ff40212..5b0d25a 100644
 --- a/librecomp/src/mods.cpp
 +++ b/librecomp/src/mods.cpp
-@@ -686,6 +686,9 @@ bool save_mod_config_storage(const std::filesystem::path &path, const std::strin
+@@ -2,6 +2,8 @@
+ #include <fstream>
+ #include <sstream>
+ #include <functional>
++#include <cstdio>
++#include <cstdlib>
+ 
+ #include "librecomp/files.hpp"
+ #include "librecomp/mods.hpp"
+@@ -686,6 +688,9 @@ bool save_mod_config_storage(const std::filesystem::path &path, const std::strin
  
      output_file << std::setw(4) << config_json;
      output_file.close();
@@ -1757,7 +1766,7 @@ index ff40212..ae1fb16 100644
  
      return recomp::finalize_output_file_with_backup(path);
  }
-@@ -727,6 +730,9 @@ bool save_mods_config(const std::filesystem::path &path, const std::unordered_se
+@@ -727,6 +732,9 @@ bool save_mods_config(const std::filesystem::path &path, const std::unordered_se
  
      output_file << std::setw(4) << config_json;
      output_file.close();
@@ -1767,7 +1776,48 @@ index ff40212..ae1fb16 100644
  
      return recomp::finalize_output_file_with_backup(path);
  }
-@@ -2231,6 +2237,9 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::init_mod_code(uint8_t*
+@@ -813,11 +821,29 @@ std::vector<recomp::mods::ModOpenErrorDetails> recomp::mods::ModContext::scan_mo
+     close_mods();
+ 
+     static const std::vector<ModContentTypeId> empty_content_types{};
+-    for (const auto& mod_path : std::filesystem::directory_iterator{mod_folder, std::filesystem::directory_options::skip_permission_denied, ec}) {
++    // s7597 class XC (XC-1): the throwing directory_entry::is_regular_file()/is_directory() and the throwing iterator
++    // increment aborted the game at boot (std::terminate, rc134) on any mods/ entry whose stat fails with something other
++    // than ENOENT, e.g. a symlink loop (ELOOP) or a link into an unreadable folder (EACCES). Now error_code forms: the entry
++    // is skipped with [s7597-io]. ROGUESQ_S7597_MODSCAN=0 restores the old throwing form.
++    static const bool s7597_old = [] { const char* e = std::getenv("ROGUESQ_S7597_MODSCAN"); return e && e[0] == '0'; }();
++    std::filesystem::directory_iterator s7597_it{mod_folder, std::filesystem::directory_options::skip_permission_denied, ec};
++    for (; s7597_it != std::filesystem::directory_iterator{}; s7597_old ? (void)++s7597_it : (void)s7597_it.increment(ec)) {
++        if (ec) {
++            std::fprintf(stderr, "[s7597-io] mods folder scan stopped: %s\n", ec.message().c_str());
++            break;
++        }
++        const std::filesystem::directory_entry& mod_path = *s7597_it;
+         bool is_mod = false;
+         bool requires_manifest = true;
+         std::reference_wrapper<const std::vector<ModContentTypeId>> supported_content_types = std::cref(empty_content_types);
+-        if (mod_path.is_regular_file()) {
++        std::error_code type_ec;
++        const bool s7597_reg = s7597_old ? mod_path.is_regular_file() : mod_path.is_regular_file(type_ec);
++        const bool s7597_dir = s7597_reg || type_ec ? false : (s7597_old ? mod_path.is_directory() : mod_path.is_directory(type_ec));
++        if (type_ec) {
++            std::fprintf(stderr, "[s7597-io] skipping mods entry %s: %s\n", mod_path.path().string().c_str(), type_ec.message().c_str());
++            continue;
++        }
++        if (s7597_reg) {
+             auto find_container_it = container_types.find(mod_path.path().extension().string());
+             if (find_container_it != container_types.end()) {
+                 is_mod = true;
+@@ -825,7 +851,7 @@ std::vector<recomp::mods::ModOpenErrorDetails> recomp::mods::ModContext::scan_mo
+                 requires_manifest = find_container_it->second.requires_manifest;
+             }
+         }
+-        else if (mod_path.is_directory()) {
++        else if (s7597_dir) {
+             is_mod = true;
+         }
+         if (is_mod) {
+@@ -2231,6 +2257,9 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::init_mod_code(uint8_t*
              mod.section_load_addresses[section_index] = section.ram_addr;
          }
          else {
@@ -1777,7 +1827,7 @@ index ff40212..ae1fb16 100644
              for (size_t i = 0; i < section.size; i++) {
                  MEM_B(i, (gpr)cur_section_addr) = binary_data[section.rom_addr + i];
              }
-@@ -2441,12 +2450,22 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+@@ -2441,12 +2470,22 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
      dependencies_ordered.resize(mod.recompiler_context->dependencies_by_name.size());
  
      for (const auto& [dependency, dependency_index] : mod.recompiler_context->dependencies_by_name) {
@@ -1800,7 +1850,7 @@ index ff40212..ae1fb16 100644
          const std::string& dependency_id = dependencies_ordered[imported_func.dependency_index];
  
          GenericFunction func_handle{};
-@@ -2499,7 +2518,15 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+@@ -2499,7 +2538,15 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
  
      // Register callbacks.
      for (const N64Recomp::Callback& callback : mod.recompiler_context->callbacks) {
