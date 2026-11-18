@@ -1658,3 +1658,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-115648 | s7540_rwait_cost | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 1s | scratch/agent/soak_results/s7540_rwait_cost_20261117-115648.log
 20261117-120448 | s7540_rwait_cost | rc=2 | 1s | scratch/agent/soak_results/s7540_rwait_cost_20261117-120448.log | arms=0 alive=0/0 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261117 | s7545 fold: s7540_rwait_cost voided 5/5 (battery); in-session rerun ALLOW_SLOW (12/12 alive, 0 stall): NODRAIN 1/3/0 gen/s L5 59.4-59.5, L12 59.8-60.0 (ring scorer) -> 18(a) CLOSED, no cost. In-session s7545 class GE runtime witness (ROGUESQ_S7545_THRWATCH, L1/L4/L12): 0 guest accesses to live OSThreads, controls L+S fired -> GE CLOSED.
+20261117-161649 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-161649.log

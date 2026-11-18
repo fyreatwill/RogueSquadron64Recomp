@@ -200971,3 +200971,24 @@ it closes H-dead as a current state (the six broken fixup anchors are fixed and 
 function, the PATCH-tag set difference live vs replay plus normalised-source equality, which splits H-layout / H-missing-step /
 H-live-handedit / H-replay-extra for the 141-vs-78 regen drift (NEXT.md); runtime side: the s7558_b40_ab soak (default vs
 ROGUESQ_M5_B40_VALUE=1 crash/stall per arm).
+
+## Session 7559 (2026-11-17) — regen drift classified H-layout: the 35 new replay-vs-live rows are s7487 counter-slot order (new SLOTPERM class), 0 open LOST
+
+What ran (offline, no game run): `tools/s7421_regen_drift.py` on the s7558 trees (live ../N64Recomp/RecompiledFuncs vs
+scratch/s7558/replay, compare.json from regen_verify: 2607 same / 141 differ / 18 live-only) against the s7421 baseline
+(scratch/s7421/regen_compare.json, 114 differ), plus a per-tag PATCH census of both trees.
+Result: first pass rc 0 / H-mirrored with 35 new ENVDIAG + 1 new CODEGEN. All 35 ENVDIAG rows differ only in the slot index of
+`RS64_S7487_LWX(pc, idx, ...)`: same 410 sites, same pcs both trees (0 one-sided), 178 equal slots, 215 shifted +16, 16 shifted
+-216 (funcs_3 0x8000D598-0x8000D640: slots 394-409 in live from a later apply pass, since apply_s7487 continues the index for
+sites added later; 178-193 in the file-order replay). Host keys reports on the pc stored with the slot (upstream_compat.cpp
+s_s7487_site), macro inert unless g_rs64_s7487_on -> no behaviour or report change. The CODEGEN row is `s6992d_note` (static
+note inlining from rs64_s5798_st, the s7421 cause). Tag census: live-only = s5904 + s6496-s6526 exactly, regen-only none, count
+deltas = s7421's list minus s5787/s5790/s5791/s5809 (fixed by s7421).
+Change: `tools/s7421_regen_drift.py` gains class SLOTPERM (differences only in s7487 slot numbers, pc multiset equal) and two
+more controls (renumbered slot -> SLOTPERM, changed pc -> not SLOTPERM). Re-run: SLOTPERM 36 (35 new), new vs baseline
+{CODEGEN 1, SLOTPERM 35}, controls PASS (LOST / ENVDIAG / SLOTPERM / ENVDIAG), rc 0. Outputs scratch/s7559/drift2.{out,json};
+docs/REGEN-VERIFY.md s7559.
+Two lines: object-level compare + normalised-source classifier, and the independent PATCH-tag census, agree.
+Rules out: H-missing-step (no live tag lacks a replay step beyond the documented opt-in list), H-live-handedit (0 open LOST),
+H-replay-extra (no regen-only tag). Selects H-layout for the 141-vs-114 growth. Next: 19b(b) host census debt (s7363 rt64 27,
+s7366 82) so regen_replay runs to ok.

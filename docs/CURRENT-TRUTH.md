@@ -20,7 +20,9 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   are gated, inert, wild-pointer guards (826), recompiler-correctness or host plumbing. Also: **the regen chain aborted at
   fixup_menu_worker since s7484** (s7484 load wraps broke bare-load anchors in 6 fixups) -> fixed with tools/rs64_anchor.py; regen
   now stops at the s7363 host-array gate (27 + s7364 71 + s7366 82 unreviewed rows from s7480-s7535), and replay vs live is
-  2607 same / 141 differ (s6870 baseline 2688 / 78) -> Next steps 19b.
+  2607 same / 141 differ. **s7559: the drift is H-layout, 0 open LOST** (vs the s7421 baseline 114: 35 new rows are SLOTPERM, the
+  s7487 lwl/lwr counter slots numbered in another order, same 410 pcs, reports pc-keyed; 1 CODEGEN static-note inlining; PATCH tags
+  equal to the s7421 census minus its fixed double-applies) -> Next steps 19b(b).
 - **NEW s7535 (class GA, OPEN H-latent-fix): early gfx sp_complete races the F5 LLE's inputs in flight.** ultramodern sends
   sp_complete before send_dl, so the game starts the next frame while the LLE still fetches. Same-run A/B (ROGUESQ_S7535_GA_CHK=1
   ROGUESQ_S7535_LATE=alt, controls 106/106, 3 runs): flight diff bytes/task early 635 vs hardware-order 164 (L4), 472 vs 53 (L15 dd8
@@ -407,8 +409,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     Fix: generated docs/DEFAULT-ON-LEVERS.md (every ON lever, sessions, source comment; `--write` regenerates), linked from
     OWNER-OPT-INS. Not covered: unconditional fixups with no env at all -> class GR (NEXT.md).
     **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
-19b. **Regen health (s7558, OPEN, next).** (a) replay vs live 141 differing functions vs the s6870 baseline 78: classify each new
-    one (moved helper / missing apply step / live hand edit) and fix the replay so a regen builds the live code; (b) clear the
+19b. **Regen health (s7558, OPEN, next).** (a) CLOSED s7559 H-layout: `tools/s7421_regen_drift.py <live> <replay> <compare.json>
+    --baseline scratch/s7421/regen_compare.json --control` rc 0, controls 4/4 (new class SLOTPERM), 0 open LOST (docs/REGEN-VERIFY.md
+    s7559); (b) NEXT: clear the
     host-code census debt that now stops tools/regen_replay.sh: s7363 27 rows, s7364 71, s7366 82 (verdicts or fixes);
     (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
     Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;

@@ -130,3 +130,23 @@ breaks). All 8 now check the whole function body. Fresh replay `/tmp/s7422/R` is
 so no double happened in the real chain; the fix only removes the risk. Called once: s5693, s5697, s6303, s6311, fixup_preempt_point.
 Regen>live tags: s5856 (live labels the same rs5907/rs5856_sinobj declaration line "s5904"), s6497 (live funcs_9 lost the s6497
 bounds read and the s6789 `rs64_g3e_trace(8, ...)` line before `// 0x800429C0`; regen has both; diag-only) -> class CF.
+
+## s7559: the s7558 drift (2607 / 141 / 18) is layout only
+
+Trees: scratch/s7558/{replay,verify}. `tools/s7421_regen_drift.py ../N64Recomp/RecompiledFuncs scratch/s7558/replay
+scratch/s7558/verify/compare.json --baseline scratch/s7421/regen_compare.json --control` exits 0, VERDICT H-mirrored.
+Against the s7421 name set: 35 new differing functions, all **SLOTPERM** (new class), and 1 new CODEGEN (`s6992d_note`, static-note
+inlining caused by `rs64_s5798_st`, as in s7421). 0 open LOST/REORDER; the 2 LOST and 2 REORDER rows are the accepted s7421 residue.
+
+SLOTPERM: the only difference is the slot index argument of `RS64_S7487_LWX(pc, idx, ...)` (s7487 lwl/lwr watch). Both trees wrap
+the same 410 sites at the same pcs (0 one-sided pcs). 178 keep their index, 215 shift by +16 and 16 by -216: the 16 funcs_3 sites at
+0x8000D598-0x8000D640 got slots 394-409 in live (a later apply pass; `apply_s7487_lwlwatch.py` continues the index for sites a
+later step adds) and 178-193 in replay (file order). The host stores the pc beside the slot on first sample
+(`src/main/upstream_compat.cpp` s_s7487_site) and reports by pc, so the order changes no report and no behaviour; the macro does
+nothing unless ROGUESQ_S7487 turns `g_rs64_s7487_on` on.
+
+Second line, PATCH-tag census per tag (funcs_50 excluded): live-only tags are exactly s5904 + s6496-s6526 (the opt-in list above),
+regen-only none. Count deltas equal the s7421 census except that s5787/s5790/s5791/s5809 now match (the s7421 idempotence fix).
+
+Controls (`--control`, all in one run): planted `ctx->r2 ^=` -> LOST, planted getenv/fprintf -> ENVDIAG, one s7487 slot renumbered
+-> SLOTPERM, one wrap's pc changed -> ENVDIAG (not SLOTPERM). Outputs: scratch/s7559/drift2.{out,json}.

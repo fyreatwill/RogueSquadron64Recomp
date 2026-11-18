@@ -16,6 +16,11 @@ File-level (outside functions) deltas are classified the same way, keyed by file
 usage: s7421_regen_drift.py <live dir> <regen dir> <compare.json> [--baseline old.json] [--json out] [--control] [--no-accept]
 Reviewed env-gated LOST/REORDER rows are listed in tools/s7421_regen_accept.tsv (exit code ignores them).
 --control plants a one-line non-diag statement into a copy of one live function and requires LOST for it (exit 3 if not).
+  SLOTPERM  (s7559) the only differences are the counter-slot index of s7487 lwl/lwr wraps (RS64_S7487_LWX(pc, idx, ...)):
+            same sites, same pcs, numbered in a different order (apply_s7487 continues the index for sites a later step adds,
+            so live numbers them in apply order and a replay in file order). The host keys every report on the pc it stores
+            with the slot (upstream_compat.cpp s_s7487_site), so the permutation changes no behaviour and no report.
+--control also renumbers one RS64_S7487_LWX slot (must be SLOTPERM) and changes one wrap's pc (must not be).
 Exit: 0 no LOST, 1 LOST present, 3 control failed."""
 import difflib, json, os, re, shutil, sys, tempfile
 
@@ -125,6 +130,10 @@ def untaint(extra, side, fname=''):
 
 SIZED = re.compile(r'^(data_gap_[0-9A-F]{8}|static_\d+_[0-9A-F]{8}|rspbootTextPreamble|fake_func_[0-9A-F]{8})$')
 
+SLOT = re.compile(r'RS64_S7487_LWX\((0x[0-9A-Fa-f]+u), \d+,')
+def slotless(x):
+    return SLOT.sub(lambda m: 'RS64_S7487_LWX(%s, #,' % m.group(1), x)
+
 def classify(lv, rg, name=''):
     """-> (class, live-only stmts, regen-only stmts, non-diag stmts that decided it)"""
     if lv == rg: return 'CODEGEN', [], [], []
@@ -137,6 +146,8 @@ def classify(lv, rg, name=''):
         # same statements, different order: harmless only if every moved statement is diagnostic
         nd = [] if name == '<file>' else untaint(lo, lv, name) + untaint(ro, rg, name)
         return ('REORDER-DIAG' if not nd else 'REORDER'), lo, ro, nd
+    if cl and sorted(map(slotless, cl)) == sorted(map(slotless, cr)) and all(SLOT.search(x) for x in cl + cr):
+        return 'SLOTPERM', cl, cr, []
     nd_l = untaint(cl, lv, name); nd_r = untaint(cr, rg, name)
     if not nd_l and not nd_r: return 'ENVDIAG', cl, cr, []
     if SIZED.match(name) or not lv or not rg and SIZED.match(name): return 'GUEST', cl, cr, nd_l + nd_r
@@ -222,8 +233,21 @@ def main(a):
         src.pop(j + 2); open(os.path.join(tmp, f), 'w').write('\n'.join(src))
         c2 = classify(split(os.path.join(tmp, f))[tgt], R[tgt], tgt)[0]
         shutil.rmtree(tmp)
-        ok = c == 'LOST' and c2 == 'ENVDIAG'
-        print('CONTROL plant-hand-edit %s -> %s ; plant-diag -> %s : %s' % (tgt, c, c2, 'PASS' if ok else 'FAIL'))
+        # s7559 slot controls on a function carrying s7487 wraps: renumbered slot -> SLOTPERM, changed pc -> not SLOTPERM
+        c3 = c4 = 'NONE'
+        for f3 in sorted(os.listdir(live)):
+            if not (f3.startswith('funcs_') and f3.endswith('.c')): continue
+            L3 = split(os.path.join(live, f3))
+            t3 = next((n for n in L3 if n != '<file>' and any(SLOT.search(x) for x in L3[n])), None)
+            if not t3: continue
+            k = next(i for i, x in enumerate(L3[t3]) if SLOT.search(x))
+            a3 = list(L3[t3]); a3[k] = SLOT.sub(lambda m: 'RS64_S7487_LWX(%s, 1023,' % m.group(1), a3[k], 1)
+            c3 = classify(L3[t3], a3, t3)[0]
+            a4 = list(L3[t3]); a4[k] = SLOT.sub(lambda m: 'RS64_S7487_LWX(0x80000000u, 1023,', a4[k], 1)
+            c4 = classify(L3[t3], a4, t3)[0]
+            break
+        ok = c == 'LOST' and c2 == 'ENVDIAG' and c3 == 'SLOTPERM' and c4 not in ('SLOTPERM', 'CODEGEN')
+        print('CONTROL plant-hand-edit %s -> %s ; plant-diag -> %s ; slot-renumber -> %s ; pc-change -> %s : %s' % (tgt, c, c2, c3, c4, 'PASS' if ok else 'FAIL'))
         if not ok: return 3
     print('VERDICT', 'H-lost' if rc else 'H-mirrored')
     return rc

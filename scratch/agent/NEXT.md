@@ -1,19 +1,15 @@
-# NEXT (s7559)
+# NEXT (s7560)
 HYPOTHESIS-ID: regen-fidelity-drift
 
-GR CLOSED s7558 (tools/s7558_gr_census.py --check rc 0, controls 16/16; 1 BEHAV = B40 gate default 0 vs s4701 pass-through,
-owner decision, A/B soak scratch/agent/soak_queue/s7558_b40_ab.sh queued: fold it if SOAK-RESULTS has it).
-s7558 also repaired the regen chain (rs64_anchor.py: 6 fixups broke on s7484 load wraps). Remaining regen health (CURRENT-TRUTH 19b):
-
-Unit: classify the regen-vs-live drift. Trees: scratch/s7558/{pristine,renamed,replay,verify} exist (rebuild per 19b if gone).
-  tools/regen_verify.sh scratch/s7558/replay scratch/s7558/verify   -> 2607 same / 141 differ / 18 only-live / funcs_50.c live-only
-  s6870 baseline (docs/REGEN-VERIFY.md): 2688 / 78 / 17 (the 78 listed in scratch/s6864/cmp2.json if present, else REGEN-VERIFY).
-Per differing function NOT in the baseline: source diff replay vs live (normalise whitespace + reorder of file-scope blocks), then
-Hypotheses: H-layout (source equal modulo moved file-scope helpers / static order; object diff from branch offsets only) /
-H-missing-step (live carries a PATCH tag no replay step emits: name the tag, add the apply script to the vendored list) /
-H-live-handedit (live text no script produces and no tag: decide keep -> write a fixup, or drop) / H-replay-extra (replay emits a
-block live lacks). Discriminator: the tag set difference per function (grep -o 'PATCH: s[0-9]+' live vs replay) + the
-normalised-source equality. Controls: plant one removed PATCH line in a copy of a live file -> H-missing-step; a pure block
-move -> H-layout. funcs_50.c (live-only file) and the 18 only-live functions get the same treatment.
-Then (b) of 19b: the s7363/s7364/s7366 host-code census debt (verdict rows) so regen_replay.sh runs to "ok".
+19b(a) CLOSED s7559 (H-layout: 35 new rows SLOTPERM = s7487 slot order, 0 open LOST; docs/REGEN-VERIFY.md s7559).
+Unit: 19b(b), the host-code census debt that stops tools/regen_replay.sh before it can print "ok":
+  python3 tools/s7363_hostarr_census.py --rt64 --check          -> OPEN 27 (rows from s7480-s7535 host code, e.g. s7535_ga_chk g_st[16])
+  python3 tools/s7364_heapbuf_census.py --rt64 --check -q       -> OPEN 71 keys 41
+  python3 tools/s7366_lockset_census.py --check                 -> OPEN 82 (e.g. s7523_slow_rdp scan_bad unlocked@102)
+  (--gen scratch/s7558/replay variants: 0 open.)
+Per row: H-bounded (index provably in range: write the verdict row in the *_reviewed.tsv with the reason) /
+H-real (a real out-of-range or unlocked access: fix the code, re-run) / H-analyser (census misreads an idiom: fix the census,
+add a control). Discriminator: read each site; use --emit-open to stub rows. Controls: each census's --selftest/--controls must
+still pass and a planted unbounded subscript must come back OPEN. Done when regen_replay.sh scratch/s7560/replay runs to "ok".
+Then 19b(c): fold s7558_b40_ab when SOAK-RESULTS has it, then ask the owner about the B40 default.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Never flip a default without the owner.
