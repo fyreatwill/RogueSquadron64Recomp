@@ -202386,3 +202386,33 @@ HYPOTHESIS-ID: host-fpr-view-census
 - Discrimination: selects H-bad-gated (one BAD, on an uncalled mod path), refutes H-bad-live (the only live host FPR writer is
   view-correct) and H-clean. Rules out FPR-view mismatches in host stubs as a cause of any in-game float defect.
   Class FR CLOSED. Next: class HC (host code invoking guest functions: ctx setup, sp/arg area, FR init, state restore).
+
+## Session 7606 (2026-11-18) — class HC closed: host calls into guest functions (8 call sites, 0 open, controls 7/7, witness 9/9), H-clean
+- Unit (NEXT s7606, HYPOTHESIS-ID host-guest-call-census): enumerate every host call of a recompiled guest function and check the
+  call contract: (a) fresh ctx -> r29 a valid 8-aligned guest stack with the 16-byte o32 arg area, FR=0 (f_odd = &f0.u32h,
+  mips3_float_mode 0), gp/ra never read live; (b) reused ctx -> nothing read from ctx after the call; (c) a0/sp sign-extended;
+  (d) target is a real function entry. Hypotheses H-clean / H-bad-gated / H-bad-live.
+- Tool tools/s7606_hc_census.py --controls (rc 0). Callee set = 2,494 RECOMP_FUNC names + 12 host names declared as
+  guest-function pointers (recomp_func_t*, (*X)(uint8_t* rdram, recomp_context*)) + GameEntry members. 8 call sites:
+  fresh 3 (run_thread_function POSIX + Win32 arms: r29 = OSThread.sp, r4 = arg, FR=0; boot game_entry.entrypoint: init() sets
+  FR=0 and recomp_entrypoint's first statement is lui $sp 0x803F / ori 0xFFF0), reused 1 (rs64_entrypoint_with_rdram_capture
+  tail-forwards ctx), dead 2 (thread_create_callback, on_init_callback: never assigned in src/), gated 2 (mod_hooks /
+  mod_events native_func: mods only). No src/ hook calls a guest function directly (grep of every NAME(rdram, X) whose NAME
+  is not host-defined: only RDRAM helpers, mmap/munmap, ucode_func (RSP) and the sites above).
+- Global contract checks, all hold: OSThread.sp int32_t; osCreateThread t->sp = sp - 0x10 (libultra's arg area);
+  osCreateThread_recomp passes entry/arg/sp as (int32_t); _thread_func carries PTR() int32 args into run_thread_function's
+  uint64 params (sign-extension); get_function's miss path is fatal unless ROGUESQ_STUB_MISSING_FUNCS (no silent mid-function
+  entry); generated gp (r28) reads: 177 refs, every one in a data_gap_* body or a diagnostic fprintf -> gp_live_reads 0.
+- Runtime data (second line, older logged run scratch/agent/loop.log.pre-s5016, ROGUESQ_LOG_M5_PRETARGET): 12 thread entries
+  (idle, video, preNMI, piDma, mainEventQueue, viRetrace, spTaskScheduler, dpInterrupt, mainBootstrap, siService,
+  aiAudioStream, saveService) are all generated function starts; every sp 8-aligned inside KSEG0 RAM (0x8010DD90-0x80193A38).
+  The 11 entries in this month's soak logs ([thr-create-id]) are the same set minus saveService. Guest stacks are retail-fixed.
+- Controls 7/7 on tree copies: (1) fresh ctx without r29 -> OPEN; (2) without f_odd -> OPEN; (3) rows dropped -> OPEN;
+  (4) reused ctx then ctx->r4 read -> OPEN; (5) t->sp = sp (no arg area) -> OPEN; (6) runtime entry 0x8008ED74 + sp
+  0x80166434 -> OPEN (mid-function, misaligned); (7) OSThread.sp as uint32_t -> OPEN.
+- Witness tools/s7606_hc_witness.cpp 9/9 against the real recomp.h + ultra64.h: r29/a0 sign-extend from the int32 fields,
+  MEM_W(0, sp) hits the logged slot, o32 home slots fill exactly [top-16, top), boot entry sp valid; controls: zero-extended
+  r29 puts MEM_W 4 GB past rdram, no -0x10 puts the a0 home slot at the stack top.
+- Discrimination: selects H-clean, refutes H-bad-gated and H-bad-live. Static + logged-run data; no game run, no code change
+  outside the two new tools. Class HC CLOSED. Next: class UW (C++ exception unwinding through generated C frames:
+  thread_terminated throws vs try roots and unwind tables).

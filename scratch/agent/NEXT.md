@@ -1,17 +1,21 @@
-# NEXT (s7606)
-HYPOTHESIS-ID: host-guest-call-census
+# NEXT (s7607)
+HYPOTHESIS-ID: exception-unwind-census
 
-Class FR closed s7605 (tools/s7605_fr_census.py, 0 open, controls 6/6, witness 11/11; recomphook_get_return_double fixed).
-Next idiom class HC: host code that CALLS a guest (recompiled) function. Enumerate every LOOKUP_FUNC(...)(rdram, ctx), direct
-call of a generated *_recomp / recomp_func_t* / get_function() target, and thread-entry/callback dispatch in src/ + librecomp
-+ ultramodern (grep 'LOOKUP_FUNC\|recomp_func_t\|get_function\|run_thread_function\|(rdram, &' ).
-Contract per call: (a) fresh ctx -> r29 inside a guest stack, 8-aligned, with >=16 bytes of o32 arg area below the caller's
-frame; FR=0 + f_odd = &f0.u32h; r31/gp sane or never read; (b) reused ctx (callback from inside a stub) -> every register the
-host stub relies on after the call (r2 result, caller's r4-r7, sp) is saved/restored or not used again; (c) args a0-a3
-sign-extended 32-bit (class RX contract); (d) the target is a real function entry, not a mid-function address.
-Per site verdict: ok (named contract), ok-diag (env-gated), BAD.
-Hypotheses: H-clean, H-bad-gated, H-bad-live (a default-path callback clobbers state the host stub then uses).
-Tool: tools/s7606_hc_census.py --controls: (1) plant a fresh ctx call without r29 -> OPEN; (2) plant a fresh ctx without
-f_odd init -> OPEN; (3) drop a row -> OPEN; (4) plant a reused-ctx call followed by a read of ctx->r4 -> OPEN.
-Second source: witness .cpp (as tools/s7605_fr_witness.cpp) or a runtime count of each live call site at L1.
+Class HC closed s7606 (tools/s7606_hc_census.py, 8 sites 0 open, controls 7/7, witness 9/9).
+Next idiom class UW: C++ exceptions that unwind THROUGH generated C frames. ultramodern::thread_terminated is thrown from
+host stubs (osDestroyThread/osStopThread of self, wait_for_resumed, ...) called from recompiled C, and caught at the thread
+roots (_thread_func, wait_for_game_started). Enumerate: (1) every `throw` of thread_terminated (grep lib/N64ModernRuntime src);
+(2) every try/catch root; (3) every host frame between a throw and its root that holds a lock, a std::unique_lock, a
+heap allocation without RAII, or a static state flag (s7392/s7394-style guards) that the unwind would skip; (4) build flags of
+the RecompiledFuncs / factor5_ucode / src TUs: any -fno-exceptions, -fno-unwind-tables, -fno-asynchronous-unwind-tables, or
+C TUs compiled without unwind info on arm64 (Darwin default emits it: verify with `otool -l` / `objdump --unwind-info`
+on one funcs_N.c.o: every function must have a compact-unwind entry).
+Contract per throw path: unwind reaches a catch, every skipped host frame is RAII-clean or explicitly restored.
+Verdicts: ok, ok-gated, BAD. Hypotheses: H-clean, H-bad-gated, H-bad-live (a default-path throw skips a lock/flag release).
+Tool tools/s7607_uw_census.py --controls: (1) plant a throw site with no reaching catch root -> OPEN; (2) plant a
+mutex.lock() (non-RAII) on a throw path -> OPEN; (3) plant -fno-exceptions on the funcs target in a CMake copy -> OPEN;
+(4) drop a row -> OPEN.
+Second source: a witness that links one real generated funcs_N.c.o-style C frame (compile a tiny C function calling a host
+callback that throws) and checks the catch fires with -fexceptions off for the C TU (Darwin unwind tables) — and a control
+TU built with -fno-asynchronous-unwind-tables -fno-unwind-tables that must terminate().
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.
