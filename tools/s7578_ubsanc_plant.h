@@ -7,9 +7,10 @@
 #include <stdint.h>
 #include <stddef.h>
 __attribute__((weak)) int rs64_s7578_plant_done;
+__attribute__((weak, noinline, nonnull)) void rs64_s7583_nn(const char* p) { (void)p; }
 static void __attribute__((constructor, used)) rs64_s7578_plant(void) {
     const char* e = getenv("ROGUESQ_S7578_PLANT");
-    if (!e || (e[0] < '1' || e[0] > '5') || rs64_s7578_plant_done) return;
+    if (!e || (e[0] < '1' || (e[0] > '6' && e[0] != 'u')) || rs64_s7578_plant_done) return;
     rs64_s7578_plant_done = 1;
     if (e[0] == '2') { /* s7579 bounds control: one-past-end index on a fixed array (build_ubsanb, -fsanitize=bounds) */
         static int a[4]; volatile int idx = 4; volatile int r = a[idx & 7]; (void)r; /* read, no store: &7 keeps idx==4 */
@@ -26,6 +27,17 @@ static void __attribute__((constructor, used)) rs64_s7578_plant(void) {
         volatile uintptr_t z = (uintptr_t)0 - 4; char* volatile p = (char*)z; volatile size_t off = 16;
         char* volatile q = p + off; (void)q;
         fprintf(stderr, "[s7582-plant5] fired\n"); return; }
+    if (e[0] == '6') { /* s7583 residual-UB controls, all recoverable kinds at once (build_ubsanr): divide by zero,
+                        * float->int out of range, invalid bool load, clz(0), nonnull arg = NULL, VLA bound 0 */
+        volatile int d = 0; volatile int q = 7 / (d | 0); (void)q;
+        volatile float f = 1e20f; volatile int fi = (int)f; (void)fi;
+        volatile unsigned char bb = 2; _Bool bv; __builtin_memcpy(&bv, (const void*)&bb, 1); volatile int bi = bv ? 1 : 0; (void)bi;
+        volatile unsigned z0 = 0; volatile int c = __builtin_clz(z0); (void)c;
+        const char* volatile np = 0; rs64_s7583_nn(np);
+        volatile int vn = 0; { int vla[vn]; (void)vla; }
+        fprintf(stderr, "[s7583-plant6] fired\n"); return; }
+    if (e[0] == 'u') { /* s7583 unreachable control (NOT recoverable: aborts at the constructor) */
+        volatile int k = 1; if (k) __builtin_unreachable(); return; }
     volatile int x = INT_MAX; int y = x + (e[0] - '0');
     fprintf(stderr, "[s7578-plant] fired y=%d\n", y);
 }

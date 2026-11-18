@@ -10,8 +10,10 @@ export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 B=${B:-build_ubsanc}
 # s7579: SAN selects the sanitizer list (default s7578 signed overflow); e.g. SAN=bounds,signed-integer-overflow B=build_ubsanb.
 SAN=${SAN:-signed-integer-overflow}
+# s7583: SANREC = recoverable subset (unreachable/return cannot be recovered); defaults to SAN.
+SANREC=${SANREC:-$SAN}
 cmake -S . -B $B -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_C_FLAGS_DEBUG="-g -fsanitize=$SAN -fsanitize-recover=$SAN -include $PWD/tools/s7578_ubsanc_plant.h" \
+  -DCMAKE_C_FLAGS_DEBUG="-g -fsanitize=$SAN -fsanitize-recover=$SANREC -include $PWD/tools/s7578_ubsanc_plant.h" \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
 cmake --build $B -j"${JOBS:-10}"
 ln -sf "$PWD/rogue_squadron.z64" $B/rogue_squadron.z64 2>/dev/null || true

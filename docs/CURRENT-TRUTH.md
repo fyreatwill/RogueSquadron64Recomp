@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7582 (2026-11-17).
+Compact operational handoff, as of Session 7583 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,11 +12,16 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7582 (pointer-overflow UB CLOSED, H-clean):** `env SAN=pointer-overflow,nonnull-attribute,signed-integer-overflow
+- **NEW s7583 (residual UBSan classes CLOSED, H-clean; UBSan campaign s7578-s7583 complete):** `env SAN=integer-divide-by-zero,
+  float-cast-overflow,bool,builtin,vla-bound,nonnull-attribute,unreachable SANREC=<same minus unreachable> B=build_ubsanr zsh
+  tools/build_ubsanc.sh`. L1 dd4, L4 dd2, L12 dd4 150 s: 0 reports, 0 crash/stall. Controls: PLANT=6 fired all six recoverable kinds,
+  PLANT=u aborted on unreachable (rc 134). Generated DIV/DIVU were already total (s7575 RS64_DIV32/DIVU32, s7085 DDIV). Apple clang 21
+  emits nothing for -fsanitize=function on arm64, so indirect-call type UB cannot be witnessed here.
+- **s7582 (pointer-overflow UB CLOSED, H-clean):** `env SAN=pointer-overflow,nonnull-attribute,signed-integer-overflow
   B=build_ubsanp zsh tools/build_ubsanc.sh`: all 51 RecompiledFuncs objects carry ___ubsan_handle_pointer_overflow. L1 dd4, L4 dd2,
   L12 dd4 150 s (owner recipe) + L1 dd1 60 s: 0 reports, 0 crash/stall; plant ROGUESQ_S7578_PLANT=5 (char* at UINTPTR_MAX-3 + 16)
   fired (scorer kind ptrovf). So the MEM_* `rdram + (addr - 0xFFFFFFFF80000000)` add never wraps a host pointer in play (no guest
-  KUSEG/zero-extended address reaches a load/store). nonnull-attribute: 0 reports but NO plant yet (single-source, uncontrolled).
+  KUSEG/zero-extended address reaches a load/store). nonnull-attribute: controlled by the s7583 plant 6.
 - **s7580 (shift/alignment UB CLOSED; class LU fixed):** `env SAN=shift,alignment,signed-integer-overflow B=build_ubsans zsh
   tools/build_ubsanc.sh`. Pre-fix: 7,136 executed sites, ALL the N64Recomp LUI emit `S32(0X8011 << 16)` (signed shift into the sign
   bit, C17 6.5.7p4 UB; 24,698 literals) + 2 patch residuals (s7009 spannarrow `int64 neg << 7`, s4192 wait-spin `u16 << 16` in int)
@@ -263,10 +268,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (BLIND=0); `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0); after a ucode regen or rsp*.hpp edit
     `tools/s7577_ubsan_sites.py <tu> --check` per ucode TU (UNCLASSIFIED 0) + `tools/s7577_ucode_ub_census.py scratch/s7577`;
     tools/s7580_lui_identity.py (0 object diffs). UBSan builds: `env SAN=<checks> B=<dir> zsh tools/build_ubsanc.sh`, scorer
-    tools/s7579_bounds_report.py, plants ROGUESQ_S7578_PLANT=1-5. s7578 null/wrapv, s7579 bounds, s7580 shift/align, s7582 pointer-overflow CLOSED.
-19. **NEXT (s7583): gen-c-residual-ub-audit** (NEXT.md): last UBSan group over the game C in ONE build (integer-divide-by-zero,
-    float-cast-overflow, bool, builtin, unreachable, return, vla-bound, nonnull-attribute) with a plant per kind, L1/L4/L12.
-20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    tools/s7579_bounds_report.py, plants ROGUESQ_S7578_PLANT=1-6,u (SANREC for non-recoverable checks). s7578 null/wrapv, s7579 bounds, s7580 shift/align, s7582
+    pointer-overflow, s7583 div0/fcast/bool/builtin/vla/nonnull/unreachable CLOSED: every C-applicable UBSan check has run.
+19. **NEXT (s7584), when 1-18 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

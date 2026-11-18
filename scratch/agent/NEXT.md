@@ -1,21 +1,20 @@
-# NEXT (s7583)
-HYPOTHESIS-ID: gen-c-residual-ub-audit
+# NEXT (s7584)
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-gen-c-pointer-overflow-audit CLOSED s7582 (H-clean, plant 5 fired, 0 reports L1/L4/L12). Classes done over the game C:
-signed overflow/null (s7578), array-bounds (s7579), shift/alignment (s7580, LUI fix), pointer-overflow (s7582). Remaining
-UBSan-checkable UB, all in ONE build (iron rule 13/14):
-  SAN=integer-divide-by-zero,float-cast-overflow,bool,builtin,unreachable,return,vla-bound,nonnull-attribute
-1. Plants in tools/s7578_ubsanc_plant.h (allow '6'-'9', or switch to a two-char PLANT value): 6 = volatile int d=0; 7/d;
-   7 = volatile float f=1e20f; (int)f; 8 = nonnull: a static __attribute__((nonnull)) fn called with a volatile NULL;
-   9 = builtin: __builtin_clz(volatile 0). Add scorer kinds ('division by zero', 'is outside the range of representable',
-   'null pointer passed as argument', 'passing zero to clz'/'builtin') to tools/s7579_bounds_report.py.
-   Check first (boring thing): does N64Recomp's DIV/DIVU emit guard divisor 0? grep RecompiledFuncs for '/ ' on ctx->r
-   and the do_div helpers; a guarded emit means a report can only come from a fixup patch.
-2. `env SAN=<list above> B=build_ubsanr zsh tools/build_ubsanc.sh > scratch/s7583/build.log 2>&1`;
-   nm build_ubsanr/libRecompiledFuncs.a | grep -c ___ubsan_handle_divrem_overflow (and float_cast_overflow).
-3. Copy scratch/s7582/run.zsh + run_p.zsh (GAMEDIR=build_ubsanr, one 60 s control arm per plant, or one arm if the plant
-   constructor fires all kinds at once). Wait HIDIdle >= 130 s.
-Hypotheses: H-clean; H-div (a guest DIV by 0 reaches host '/': hardware defines the result, C does not -> fix the emit in a
-fixup pass like fixup_lui_unsigned.py); H-fcast (a cvt/trunc of out-of-range float in a patch, despite s7576 static census);
-H-patch (nonnull/builtin in a hand patch). Discriminator: reports by file:line and kind.
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves (build_ubsanc.sh COPIES the save).
+gen-c-residual-ub-audit CLOSED s7583 (H-clean; PLANT=6 + PLANT=u fired; 0 reports L1/L4/L12). The UBSan campaign over the game C
+(s7578 null/wrapv, s7579 bounds, s7580 shift/align, s7582 pointer-overflow, s7583 residual) is complete: every C-applicable check
+has run. -fsanitize=function is a no-op on this Apple clang (arm64), and TSan (tools/build_tsan.sh) and strict aliasing were covered
+earlier (grep PORTING-STATE). CURRENT-TRUTH item 19: take the next ITERATION.md 3c rung.
+
+Unit: resume the generated-symbol renaming sweep (ITERATION item 4).
+0. First run `grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 are sweep sessions, do the REVISIT instead (external
+   retail-entry boundary / M4 accumulator boundary, new angle).
+1. Count the remaining placeholder names: `grep -c 'func_0x\|func_80' <symbol map used by tools/rename*>` (find the mapping file
+   via `ls tools/rename*`), and pick the next address block in the existing order.
+2. Name each function from the evidence (callers, the strings it touches, MusyX/libultra signatures). Record the evidence per name.
+3. Regenerate in order (make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake) and build build/. Smoke-test L1 dd1 60 s.
+Hypotheses: H-name (every candidate has a unique evidence-backed name) vs H-ambiguous (several are helper thunks with no distinct
+role; leave those as func_ and list them). Discriminator: the per-function evidence table.
+CHURN WARNING: a rename-mapping edit alone counts as NO engineering change (the gate's 6/12 counter). Pair the sweep with any real
+fix it turns up, or switch to an owner-reported item if the owner has written one (check ITERATION.md G-list for new dates).
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

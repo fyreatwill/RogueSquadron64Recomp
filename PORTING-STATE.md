@@ -201624,3 +201624,35 @@ Verdict: selects H-clean for pointer-overflow over the game C (0 reports, PLANT=
 (MEM_* host-pointer wrap) and H-patch (wild fixup pointer); closes gen-c-pointer-overflow-audit. Next discriminator: the residual-UB
 arm (NEXT.md: divide-by-zero, float-cast-overflow, nonnull, builtin, bool, unreachable/return, each with its own plant) splits H-div
 (a guest DIV by 0 reaching host '/') from H-fcast/H-patch from H-clean.
+
+## Session 7583 (2026-11-17) — residual UBSan classes closed over the generated game C: build_ubsanr (integer-divide-by-zero, float-cast-overflow, bool, builtin, vla-bound, nonnull-attribute recoverable + unreachable, 51/51 RecompiledFuncs TUs) shows 0 reports at L1 dd4, L4 dd2, L12 dd4 150 s; PLANT=6 fired all six recoverable kinds, PLANT=u fired unreachable (rc 134)
+
+HYPOTHESIS-ID gen-c-residual-ub-audit (NEXT.md from s7582).
+- Boring check first: N64Recomp's DIV/DIVU emit (`lo = S32(S64(S32(a)) / S64(S32(b)))`, cgenerator.cpp emit_muldiv) is unguarded,
+  but the generated tree carries 0 such emits: every one was already rewritten to RS64_DIV32 (96) / RS64_DIVU32 (49) by the s7575
+  "div total" fixup, and DDIV/DDIVU (recomp.h, s7085) handle b==0 the way the hardware does. So H-div could only come from a hand patch.
+- Instrument: tools/s7578_ubsanc_plant.h gains PLANT=6 (one constructor firing 7/0, (int)1e20f, a _Bool loaded from byte 2,
+  __builtin_clz(0), a NULL to a nonnull fn, VLA bound 0) and PLANT=u (__builtin_unreachable, non-recoverable). tools/build_ubsanc.sh
+  gains SANREC (recoverable subset; unreachable/return cannot take -fsanitize-recover). tools/s7579_bounds_report.py gains kinds
+  div0/fcast/bool/builtin/vla/unreachable and comma lists in --plant-kind (all listed kinds must fire). `return` was dropped from the
+  list: it is a C++-only check. Standalone check (/tmp test) fired all 7 kinds before the game build.
+- Build: `env SAN=integer-divide-by-zero,float-cast-overflow,bool,builtin,vla-bound,nonnull-attribute,unreachable
+  SANREC=<same minus unreachable> B=build_ubsanr zsh tools/build_ubsanc.sh` rc 0 (FIXUP 24 ANCHOR FAILED x4, same as s7582's log).
+  51/52 RecompiledFuncs objects carry all 7 handlers (divrem_overflow, float_cast_overflow, load_invalid_value, invalid_builtin,
+  nonnull_arg, builtin_unreachable, vla_bound). Caveat: the force-included plant constructor itself puts all 7 handlers in every
+  TU, so the count shows the flags reached every TU, not that each TU has a game-code site of each kind.
+- Runs (HID idle 2,816 s): unreachable control = direct launch of build_ubsanr with PLANT=u: rc 134 at the constructor,
+  "execution reached an unreachable program point". Control scratch/s7583/run_p.zsh (L1 dd1 60 s, PLANT=6): alive, 0 stall,
+  kinds_fired p6 = bool,builtin,div0,fcast,nonnull,vla. Main scratch/s7583/run.zsh (owner recipe, GAMEDIR=build_ubsanr): l1 dd4,
+  l4 dd2, l12 dd4, HOLD 150: all alive_at_end=1, level_ok=1, crashlines 0, vi_stalls30s 0, max_gap 148 ms. No san_l* log was created.
+  Scorer `tools/s7579_bounds_report.py scratch/s7583 --plant-arm p6 --plant-kind div0,fcast,bool,builtin,nonnull,vla`:
+  control_fired=1 real_sites=0, rc 0.
+- Result: **H-clean**; refutes H-div (no guest DIV by 0 reaches a host '/'), H-fcast (no out-of-range float->int, which agrees with the
+  s7576 static trunc census, so two lines of evidence) and H-patch (no nonnull/builtin/bool/VLA UB in hand patches). The s7582
+  nonnull-attribute null is now controlled (plant 6 nonnull fired in the same binary family).
+- Also measured: Apple clang 21 accepts -fsanitize=function but emits no check on arm64 Darwin (no __ubsan symbols, a planted
+  void(float)-called-as-void(int) mismatch ran silently, rc 0). Indirect-call type UB therefore cannot be witnessed with this
+  toolchain. With s7578/79/80/82/83 every UBSan check that applies to C on this host has now run over the game C.
+- Scope: L1/L4/L12 boot + flight routes only, 150 s each.
+Verdict: selects H-clean for the residual UBSan classes over the game C (0 reports, all 7 plant kinds fired); refutes H-div, H-fcast,
+H-patch; closes gen-c-residual-ub-audit and the UBSan campaign (s7578-s7583). Next: CURRENT-TRUTH item 20 (next ITERATION 3c rung).
