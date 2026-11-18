@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7571 (2026-11-17).
+Compact operational handoff, as of Session 7573 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7571 (19d G1D_EDGE_CONTENT, last chain; 19d CLOSED):** H-dead-parent. With EDGE_CONTENT on, the s6726 scissor-rule
+- **NEW s7573 (GUARD-6 fire census, no build):** L1 / L4 dd2 / L12 / FORCE-ctl arms, 150 s owner recipe, 4/4 alive, 0 stall,
+  plus 208 retained game logs: 0 natural fires for COPY_GUARD, PI_DMA_GUARD, SPAI_GUARD (census 0 bad of 1.69M AI + 0.84M Cont
+  calls), s1978 drain-timeout (max drain iters 500094 against the 1e7 trip). FORCE ctl fired 16 rows each for COPY/PI_DMA/SPAI;
+  PIO FORCE 0 rows = do_rom_pio never called (unreached). SPAI's StartGo arm is dead code: the live osSpTaskStartGo is the
+  upstream_compat.cpp override with an ungated s7197 range check (0 fires). musyx div-trap UNEVALUABLE: KEYON census silent. scratch/s7573.
+- **s7571 (19d G1D_EDGE_CONTENT, last chain; 19d CLOSED):** H-dead-parent. With EDGE_CONTENT on, the s6726 scissor-rule
   branch never decides; content reach is clipped to the scissor, so it trims a superset. ROGUESQ_S7571_EDGE L1 dd1 4:3 (both rules
   per decision): 5225 decisions, scissor trims 1259 all also content trims (sc_only 0), content-only 2531; EDGE_CONTENT=0 ctl
   scissor rule fires 1260 (intro epochs 16-18). Debrief off-route (single-source: s6726 reach 512->511 = 1 col under both). Keep.
@@ -488,8 +493,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     slack-stores; scratch/s7570).
     **s7571 G1D_EDGE_CONTENT DONE: H-dead-parent** (scissor branch subsumed: sc_only 0/5225, ctl EDGE_CONTENT=0 scissor 1260;
     scratch/s7571). **19d CLOSED** (12/12 chains decided; no default flipped).
-20. **S6892 CLOSED s7572: CHAIN(ROGUESQ_TILEPOOL), dead at defaults** (headline). **NEXT (s7573, NEXT.md): GUARD-6 fire census**
-    (COPY/PIO/PI_DMA/SPAI guards + GR drain-hdr + musyx div-trap): does any fire on the retail route; name each writer or prove dead.
+20. **S6892 CLOSED s7572: CHAIN(ROGUESQ_TILEPOOL), dead at defaults** (headline). **s7573 GUARD-6 census: 5/6 decided**
+    (tools/s7573_guard_census.py): COPY/PI_DMA/SPAI H-dead (0 natural fires, FORCE ctl 16 each), PIO unreached (FORCE ctl 0),
+    s1978 drain H-dead with 20x margin. **NEXT (s7574): musyx div-trap** - the KEYON census printed nothing (no entry rows, no
+    phase-ctl rows): find whether musyxKeyOnVoice runs at all on the live audio path, then decide H-dead / unreachable.
 21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

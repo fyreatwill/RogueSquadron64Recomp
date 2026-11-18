@@ -201345,3 +201345,23 @@ Two lines: s6893 watch+matched pair (writer) and this run + retained logs (no fi
 varies a lot between runs (27 here, 99 before), as s6893 noted. Owner's own Gerrard V re-flight still the only G5a close.
 Change: tools/s7565_comp_chain.py S6892 -> CHAIN(ROGUESQ_TILEPOOL); docs/COMPENSATION-CHAINS.md regenerated (CHAIN 35, UNKNOWN 0).
 No default changed. Owner save untouched (NO_SAVE_WRITE via harness). Next: GUARD-6 fire census (NEXT.md).
+
+## Session 7573 (2026-11-17) — GUARD-6 fire census: COPY/PI_DMA/SPAI/s1978 drain H-dead at defaults (ctl fired), PIO unreached, musyx div-trap unevaluable (census silent)
+
+What ran: no build. The four range guards already print on a natural fire (SKIPPED) and carry FORCE log-only controls; s1978
+prints [drain-timeout] on a trip and [drain-exit] iters=N on exit; the div-trap is counted by ROGUESQ_LOG_M5_KEYON_CENSUS.
+New scorer tools/s7573_guard_census.py (per-log or --retained DIR). Run scratch/s7573/run.zsh: g1e_owner_quiet_arms, 150 s,
+arms t1 (L1 dd1), t4 (LEVEL=4 dd2), t12 (L12 dd1), tc (L1 + COPY/PIO/PI_DMA/SPAI _FORCE=1); all with the KEYON census.
+Results: 4/4 alive, 0 crash lines, vi_stalls30s 0. Natural fires 0 in every arm and in 208 retained game logs under scratch/.
+Controls (tc): COPY 16 rows, PI_DMA 16, SPAI 16 (osContGetReadData etc.), PIO 0. FORCE marks every call bad, so PIO 0 means
+do_rom_pio is never called on this route: the PIO guard is unreached, not merely quiet. SPAI census: 0 bad of 1,687,688
+osAiSetNextBuffer and 843,844 osContGetReadData calls (retained). SPAI's osSpTaskStartGo arm in sp.cpp is weak and overridden
+by src/main/upstream_compat.cpp:6926, which has its own ungated s7197 range check ([s7197-sp-drop], 0 fires in all logs).
+s1978 drain: 0 [drain-timeout] in 171 logs; max drain iters 500094 against the 1e7 trip (20x margin, single-threshold witness).
+musyx div-trap: the KEYON census is compiled in (N64Recomp/RecompiledFuncs/funcs_24.c has the 8 div-trap patches and the
+entry/phase-control calls) and the env reached the game (the same ARMS mechanism delivered the FORCE envs), yet no
+[m5-keyon-*] row printed: no musyxKeyOnVoice entry and no phase-control call in 150 s at L1/L4/L12. Without its own control
+this is UNEVALUABLE, not a zero.
+ORIGIN: no mitigation added. Rules out H-live-ours/H-live-retail for COPY, PI_DMA, SPAI, s1978 on the retail route; no writer
+to name because no wild value occurs. Defaults kept (cheap insurance). Verdict notes in tools/s7565_comp_chain.py, doc regen.
+Next: is musyxKeyOnVoice (0x80090A3C) on the live audio path (callers, host-side key-on replacement), then decide the div-trap.

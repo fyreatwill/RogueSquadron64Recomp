@@ -1,16 +1,14 @@
-# NEXT (s7573)
+# NEXT (s7574)
 HYPOTHESIS-ID: guard6-fire-census
 
-S6892 closed s7572 (CHAIN(TILEPOOL), dead at defaults); docs/COMPENSATION-CHAINS.md has 0 UNKNOWN. Remaining unexplained
-default-on class: GUARD 6 (ROGUESQ_COPY_GUARD s5037, PIO_GUARD s5062, PI_DMA_GUARD s5061, SPAI_GUARD s5063, GR s1978
-drain-base/hdr hang breaker, GR musyxKeyOnVoice div-trap). Each repairs a wild value whose writer was never named (rule 11).
-Hypotheses per guard: H-dead (never fires on the retail route at defaults: keep as cheap insurance, note it), H-live-ours
-(fires, and the bad value comes from a port deviation: name it, CHAIN), H-live-retail (fires on a retail-legal value the
-real hardware tolerates: RETAIL-GAP, name the hardware behaviour).
-Discriminator, one build: a per-guard fire counter (+ first 4 fire PCs/values) dumped at exit, each with a planted control
-env that forces one fire (positive control per guard), arms L1/L4/L12 dd1 4:3 and owner recipe, 180 s each.
-First check the boring thing: grep each guard's existing stderr breadcrumb in retained scratch logs (capture once, analyze
-many, as s7572 did) — that may already answer H-dead for some without a build.
-Outcome: one verdict per guard in tools/s7565_comp_chain.py; then item 21 (next 3c rung).
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
-Run template: scratch/s7572/run.zsh (g1e_owner_quiet_arms, ALLOW_SLOW; ARMS "dd:tag:ENV+ENV").
+s7573 decided 5/6 GUARD levers (COPY/PI_DMA/SPAI/s1978 H-dead with FORCE ctl, PIO unreached). Left: musyxKeyOnVoice div-trap.
+The ROGUESQ_LOG_M5_KEYON_CENSUS instrument printed NOTHING in s7573 (no kind-1 entry rows, no kind-5 phase-ctl rows at 0x8008FFAC),
+though the patches are in N64Recomp/RecompiledFuncs/funcs_24.c.
+Hypotheses: H-unreached (the live audio path never calls musyxKeyOnVoice: host key-on replacement or caller gated off -> guard
+unreachable, close as dead), H-env (census gate reads a different env / is compiled out of the linked object), H-late (key-on only
+after a scripted event not reached in 150 s).
+Discriminator, offline first: grep callers of musyxKeyOnVoice in funcs_*.c and check whether their parents are on the live path
+(host overrides in src/), and check the 0x8008FFAC phase-control function. If a build is needed: one unconditional first-entry print
+in musyxKeyOnVoice via the fixup script, positive control = phase-ctl row that must fire on the title.
+Then: item 21 (next 3c rung). OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+Run template: scratch/s7573/run.zsh; scorer tools/s7573_guard_census.py.

@@ -223,12 +223,12 @@ HAND = {
  "ROGUESQ_FTZ": ("RETAIL-GAP", "s6012 host denormal mode (N64 FPU flushes)"),
  "ROGUESQ_HLE_PATCH_ALPHA": ("RETAIL-GAP", "RT64 F3DFactor5 HLE alpha patch (source comment only, no session; HLE path)"),
  # --- GUARD: acts only on a value retail would fault on
- "ROGUESQ_COPY_GUARD": ("GUARD", "s5037 wild-length / non-RDRAM copies"),
- "ROGUESQ_PIO_GUARD": ("GUARD", "s5062 do_rom_pio range"),
- "ROGUESQ_PI_DMA_GUARD": ("GUARD", "s5061 do_dma range"),
- "ROGUESQ_SPAI_GUARD": ("GUARD", "s5063 SP StartGo / AI SetNextBuffer wrapper"),
- "GR:s1978 drain-base/hdr": ("GUARD", "drain-timeout hang breaker (retail would spin forever)"),
- "GR:musyxKeyOnVoice div-trap": ("GUARD", "teq div-by-zero trap -> early return"),
+ "ROGUESQ_COPY_GUARD": ("GUARD", "s5037 wild-length / non-RDRAM copies; s7573 H-dead: 0 fires L1/L4dd2/L12 + 208 retained logs, FORCE ctl 16"),
+ "ROGUESQ_PIO_GUARD": ("GUARD", "s5062 do_rom_pio range; s7573 unreached: FORCE ctl 0 = do_rom_pio never called on the route"),
+ "ROGUESQ_PI_DMA_GUARD": ("GUARD", "s5061 do_dma range; s7573 H-dead: 0 fires 4 arms + 208 retained logs, FORCE ctl 16"),
+ "ROGUESQ_SPAI_GUARD": ("GUARD", "s5063 AI/Cont/Eeprom wrappers; s7573 H-dead: census 0 bad of 1.69M AI + 0.84M Cont calls, FORCE ctl 16; its StartGo arm is dead code (upstream_compat override, ungated s7197 check, 0 fires)"),
+ "GR:s1978 drain-base/hdr": ("GUARD", "drain-timeout hang breaker (retail would spin forever); s7573 H-dead with margin: max drain iters 500094 of 1e7 over 171 logs"),
+ "GR:musyxKeyOnVoice div-trap": ("GUARD", "teq div-by-zero trap -> early return; s7573 UNEVALUABLE: KEYON census silent (0 entry, 0 phase-ctl rows)"),
  "GR:s4984 atomic": ("RETAIL-GAP", "atomic host read of the voice count/base: host audio thread concurrency (retail single CPU)"),
  "GR:s6963 cellidx": ("DIAG", "host memo of the lookup, writes no guest state (s7558 rule)"),
  # --- UNKNOWN (none since s7572)
