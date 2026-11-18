@@ -1,16 +1,17 @@
-# NEXT (s7594)
-HYPOTHESIS-ID: signal-disposition-census
+# NEXT (s7595)
+HYPOTHESIS-ID: save-io-failure-census
 
-Class EX closed s7593 (62 exit rows, 0 open; quit now consumed on the main thread; ultramodern fatal exit drains async stderr).
-Class SG = what the process does on the signals the owner can cause without Cmd+Q: closing the Terminal tab/window that launched
-the game (SIGHUP to the foreground job), Ctrl+C (SIGINT), Ctrl+\ (SIGQUIT), `kill` (SIGTERM), and a dead stderr/stdout reader
-(SIGPIPE: e.g. the game piped into `tee`/`less` that exits). SDL turns SIGINT/SIGTERM into SDL_QUIT (s7593 sigterm arms rc0, save
-flush ran); SIGHUP/SIGPIPE/SIGQUIT have default dispositions unless something installs handlers -> process dies with no save flush.
-Census (offline, tools/s7594_sg_census.py --controls): every signal()/sigaction()/SDL_HINT_NO_SIGNAL_HANDLERS/sigprocmask/pthread_sigmask
-site in src/ + lib/ (incl. the s7355 crash handlers), per signal: handler, mask, which threads, and the resulting action.
-Hypotheses: H-clean (every owner-reachable signal ends in save flush + rc0, or is harmless), H-silent (SIGHUP/SIGPIPE kill the game
-with no flush and no log line), H-hang (a handler blocks, e.g. the async-stderr writer on a dead pipe -> game stalls).
-Runtime witness (scratch/s7594/run.zsh, reuse scratch/s7593/run.zsh shape, one game at a time, L1 owner recipe): per signal
-(HUP, PIPE via a reader that exits, INT, QUIT, TERM) record rc, exit wall ms, whether "[s7429-quit] save flush" printed, crash lines.
-Positive controls: TERM (known rc0 + flush, s7593) and a plant ROGUESQ_S7594_PLANT=<sig> that installs SIG_DFL for TERM (must turn
-the TERM arm into rc 143 with no flush). OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+Class SG closed s7594 (16 signal sites 0 open; HUP/QUIT/PIPE now take the flushed quit path).
+Class SV = what the game does when the save file cannot be read or written: save dir missing / read-only, disk full, file
+truncated or wrong size, rename failure in recomp::finalize_output_file_with_backup, a .bak but no main file. pi.cpp
+update_save_file() calls ultramodern::error_handling::message_box on the SAVING THREAD on failure (does it block that thread
+forever, or the guest, or show nothing fullscreen?), read_save_file() on a short/garbage file, change_save_file swap.
+Census (offline, tools/s7595_sv_census.py --controls): every fopen/ofstream/ifstream/rename/remove/filesystem:: call on the save
+path in librecomp/ultramodern/src, per site: error checked?, what happens on failure (message, retry, silent, abort, block).
+Hypotheses: H-clean (every failure is reported once and play continues; the existing save is never destroyed), H-destroy (a
+failed write leaves neither main nor .bak readable), H-block (message_box from the saving thread stalls quit/flush or the game).
+Runtime witness in a SEPARATE working folder (copy build/ binary + ROM + a COPY of build/saves into scratch/s7595/w/; NEVER touch
+build/saves, never clear ROGUESQ_NO_SAVE_WRITE in build/): arms chmod 0555 save dir, a 0-byte save file, a truncated save, a full
+tmpfs-like small disk image (hdiutil create -size 1m) as save dir; record boot ok, save-write result lines, quit flush rc, and
+whether the original save bytes survive (sha256 before/after). Positive control: a plant that forces update_save_file to fail once
+must print the failure line. NOTE: NO_SAVE_WRITE gates update_save_file, so the write arms need it off INSIDE scratch/s7595/w only.

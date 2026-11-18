@@ -201979,3 +201979,32 @@ Work unit: NEXT s7593 class EX (quit path), hypotheses H-clean / H-race / H-hang
   H-hang not reached in natural play (poll gaps <=104 ms) but the dependence is real (nopoll plant 20 s) and removed; crash/hang plants
   prove the witness sees both. Log-loss on fatal exit selected and fixed (2563 -> 5000 vs the direct control). Class EX CLOSED.
 Next: class SG (signal dispositions: SIGHUP/SIGPIPE/SIGINT when the owner's Terminal closes) - NEXT.md.
+
+## Session 7594 (2026-11-18) — class SG closed: signal-disposition census (16 sites, 0 open, 6 imports covered, controls 3/3) + 18-arm signal witness; SIGHUP/SIGQUIT/SIGPIPE killed the game with no save flush (rc 129/131/141), fixed
+
+Work unit: NEXT s7594 class SG, hypotheses H-clean / H-silent / H-hang.
+- Census, new tool tools/s7594_sg_census.py [--controls]: every signal/sigaction/sigprocmask/pthread_sigmask/sigaltstack/raise/kill
+  call in src/, librecomp, ultramodern, rt64/src (tests/programs/tools/demos skipped) matched to a row; second line = nm -u imports of
+  the game binary (_pthread_sigmask _raise _sigaction _sigaltstack _signal _sys_signame), each owned by game rows or SDL3.
+  16 sites, 0 open, 6 imports, 0 open; controls 3/3 (planted signal(SIGUSR1) site, dropped PIPE row, fake _sigprocmask import).
+  Before s7594 our code installed only SEGV/BUS/ABRT (s7355 crash reporter); SDL3 installs INT/TERM -> SDL_QUIT (only over SIG_DFL).
+- Third line, runtime: ROGUESQ_S7594_DISP=1 prints every disposition at the first main tick with the owning image (dladdr).
+- Fix (default; ROGUESQ_S7594_SIG=0 = old): flag-only handler for SIGHUP and SIGQUIT, installed only over an inherited SIG_DFL (so
+  nohup / background-job ignores are kept, like SDL); rs64_s7593_main_tick turns the flag into the normal quit path
+  (rs64_s7593_quit_now: [s7429-quit] save flush + quick_exit). SIGPIPE -> SIG_IGN (async-stderr wr_all already stops on EPIPE).
+  Plant ROGUESQ_S7594_PLANT=term resets SIGTERM to SIG_DFL at the first tick.
+- Witness scratch/s7594/run.zsh (one game at a time, L1 owner recipe FPS60 dd4 16:9 fullscreen, signal at 60 s; arms_r1.txt ->
+  results_r1.txt, arms.txt -> results.txt). Round 1 exposed a harness fact: the game launched as a zsh background job inherits
+  INT and QUIT as SIG_IGN (POSIX), so SDL never takes INT and the r1 new_int/old_quit "hangs" (killed at 20 s) are that artefact,
+  and r1's handler overrode the inherited ignore (would break nohup) -> install-only-over-DFL fix. Round 2 resets dispositions
+  with a perl exec wrapper (= a foreground Terminal launch):
+    new HUP rc0 58 ms by=sighup flush ran | old HUP (r1) rc129 no flush   <- H-silent: closing the launching Terminal lost the flush
+    new QUIT rc0 78 ms by=sigquit flush  | old QUIT rc131 no flush
+    new PIPE (reader SIGKILLed at 60 s): alive 15 s later, then TERM rc0 59 ms | old PIPE rc141 dead immediately (r1)
+    new INT rc0 63 ms by=main (SDL) | old INT rc0 57 ms by=main (INT was always fine in a foreground launch)
+    new TERM rc0 62 ms | old TERM rc0 62 ms | nohup arm: HUP inherited IGN, kept, game keeps running (killed at 20 s by design)
+    plant TERM->DFL: rc143 no flush, both rounds (positive control: the scorer sees a silent death)
+  0 crash lines in all 18 runs. H-hang refuted (no handler blocks; every quit <= 188 ms).
+- Not covered: a real pty teardown (Terminal window close) after HUP, i.e. stderr writes then hitting EIO; wr_all breaks on any
+  non-EINTR error, so this is expected harmless, single-source (code reading).
+- Rules out: owner-reachable signals ending in an unflushed death. SG CLOSED.

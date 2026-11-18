@@ -12126,8 +12126,54 @@ static void rs64_s7593_push_quit(const char* why, double t) {
             lp ? (g_s7593_push_ns.load() - lp) / 1e6 : -1.0, (unsigned)rs64_vi_committed_origin());
     fflush(stderr);
 }
+#ifndef _WIN32
+// s7594 class SG (signal dispositions). SDL turns SIGINT/SIGTERM into SDL_QUIT; before s7594 SIGHUP (closing the Terminal that
+// launched the game), SIGQUIT (Ctrl+\\) and SIGPIPE (a dead stdout/stderr reader, e.g. `| tee` that exits) kept their default
+// dispositions and killed the process with no save flush and no log line. ROGUESQ_S7594_SIG (default 1; =0 = old) installs a
+// flag-only handler for HUP/QUIT (the main tick turns it into the normal quit path: save flush + quick_exit) and SIG_IGN for
+// PIPE (the async-stderr writer already stops on EPIPE). HUP/QUIT are taken only when inherited as SIG_DFL (nohup keeps working). ROGUESQ_S7594_DISP=1 prints every signal disposition at the first main
+// tick. Plant ROGUESQ_S7594_PLANT=term resets SIGTERM to SIG_DFL there (positive control: TERM must become rc 143, no flush).
+static volatile sig_atomic_t g_s7594_sig = 0;
+static void rs64_s7594_handler(int sig) { if (!g_s7594_sig) g_s7594_sig = sig; }
+static bool rs64_s7594_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7594_SIG"); return !(e && *e == '0'); }(); return on; }
+static void rs64_s7594_install() {
+    if (!rs64_s7594_on()) return;
+    struct sigaction sa {}; sa.sa_handler = rs64_s7594_handler; sigemptyset(&sa.sa_mask); sa.sa_flags = SA_RESTART;
+    for (int sg : {SIGHUP, SIGQUIT}) { // like SDL: only over SIG_DFL, so an inherited ignore (nohup, a background job) is kept
+        struct sigaction o {};
+        if (sigaction(sg, nullptr, &o) == 0 && !(o.sa_flags & SA_SIGINFO) && o.sa_handler == SIG_DFL) sigaction(sg, &sa, nullptr);
+    }
+    signal(SIGPIPE, SIG_IGN);
+}
+static void rs64_s7594_first_tick() {
+    const char* pl = std::getenv("ROGUESQ_S7594_PLANT");
+    if (pl && !strcmp(pl, "term")) { signal(SIGTERM, SIG_DFL); fprintf(stderr, "[s7594] plant term: SIGTERM -> SIG_DFL\n"); }
+    const char* d = std::getenv("ROGUESQ_S7594_DISP");
+    if (!(d && *d == '1')) return;
+    sigset_t cur; sigemptyset(&cur); pthread_sigmask(SIG_BLOCK, nullptr, &cur);
+    for (int s = 1; s < NSIG; s++) {
+        struct sigaction o {}; if (sigaction(s, nullptr, &o) != 0) continue;
+        const void* h = (o.sa_flags & SA_SIGINFO) ? (const void*)o.sa_sigaction : (const void*)o.sa_handler;
+        const char* k = h == (const void*)SIG_DFL ? "DFL" : h == (const void*)SIG_IGN ? "IGN" : "handler";
+        Dl_info di {}; const char* who = (h && h != (const void*)SIG_IGN && dladdr(h, &di) && di.dli_fname) ? di.dli_fname : "-";
+        const char* sl = who ? strrchr(who, '/') : nullptr;
+        fprintf(stderr, "[s7594] disp sig=%d name=%s kind=%s lib=%s flags=0x%x main_blocked=%d\n", s, sys_signame[s], k,
+                sl ? sl + 1 : who, (unsigned)o.sa_flags, sigismember(&cur, s));
+    }
+    fflush(stderr);
+}
+#endif
 // Main thread, after SDL_PumpEvents.
 static void rs64_s7593_main_tick() {
+#ifndef _WIN32
+    static bool s7594_first = (rs64_s7594_first_tick(), true); (void)s7594_first;
+    if (g_s7594_sig) {
+        const int sg = g_s7594_sig;
+        fprintf(stderr, "[s7594] signal %d (%s) -> quit path\n", sg, sys_signame[sg]);
+        static char who[24]; snprintf(who, sizeof who, "sig%s", sys_signame[sg]);
+        rs64_s7593_quit_now(who);
+    }
+#endif
     static const double at = [] { const char* e = std::getenv("ROGUESQ_S7593_QUIT_AT"); return (e && *e) ? std::atof(e) : -1.0; }();
     static const double gap = [] { const char* e = std::getenv("ROGUESQ_S7593_QUIT_ON_GAP_MS"); return (e && *e) ? std::atof(e) : -1.0; }();
     static const double after = [] { const char* e = std::getenv("ROGUESQ_S7593_QUIT_AFTER"); return (e && *e) ? std::atof(e) : 20.0; }();
@@ -14628,6 +14674,9 @@ int main(int argc, char* argv[]) {
         sigaction(SIGBUS, &sa, nullptr);
         sigaction(SIGABRT, &sa, nullptr);
     }
+#endif
+#ifndef _WIN32
+    rs64_s7594_install();
 #endif
 
     rs64_register_overlays();

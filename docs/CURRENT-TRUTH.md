@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7593 (2026-11-18).
+Compact operational handoff, as of Session 7594 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7593: class EX (exit routes) CLOSED, two fixes.** tools/s7593_ex_census.py --controls (8/8 + pre-fix re-check): 62 rows,
+- **NEW s7594: class SG (signal dispositions) CLOSED, one fix.** tools/s7594_sg_census.py --controls (3/3): 16 sites, 0 open, 6 binary
+  imports covered. SIGHUP (closing the launching Terminal), SIGQUIT and SIGPIPE (dead stdout/stderr reader) kept default dispositions:
+  old rc 129/131/141, no save flush. Now HUP/QUIT -> flag -> main-tick quit path (flush + quick_exit), PIPE ignored
+  (ROGUESQ_S7594_SIG=0 = old); taken only over inherited SIG_DFL, so nohup still works. 18 arms (scratch/s7594): new rc0 <=78 ms with
+  flush; plant TERM->DFL rc143. INT/TERM were already fine (SDL3). Harness note: zsh background jobs inherit INT/QUIT ignored.
+  ROGUESQ_S7594_DISP=1 dumps every disposition + owner image.
+- **s7593: class EX (exit routes) CLOSED, two fixes.** tools/s7593_ex_census.py --controls (8/8 + pre-fix re-check): 62 rows,
   0 open. (1) SDL_QUIT (Cmd+Q / close / SIGTERM) was consumed only by poll_input on the guest thread, so quit waited on the guest's
   next input poll; now also peeked on the main thread (ROGUESQ_S7593_MAINQUIT=0 = old). Plant nopoll: old 20012 ms, new 58 ms; natural
   poll gaps <=104 ms. (2) ultramodern fatal quick_exit used _Exit on Apple, skipping the async-stderr drain: 2563/5000 queued lines +
@@ -35,8 +41,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   + interposed creator backtraces, per-name transitions; scorer tools/s7590_pc_report.py) and outside top #PORTS (fixed steps
   +0/+2/+1 vs old +10/+1/+12). Also seen, not ours: a one-time +27 XPC connection-port block (_xpc_connection_derive_connection_port)
   that appears in some runs only (2 of 4), at any time, then stays flat. DYLD injection needs the Bash sandbox off.
-- **s7589: class HR CLOSED (H-flat steady state):** fds/threads/IOSurface flat over 1200 s and 4 loads (sampler
-  tools/s7589_hrsample.zsh, plant tools/s7589_hrplant.dylib, scorer tools/s7589_hr_report.py); per-load port step -> s7590.
+- **s7589: class HR CLOSED (H-flat):** fds/threads/IOSurface flat 1200 s / 4 loads (tools/s7589_hr*); port step -> s7590.
 - **s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean:** all MRC, 0 unbalanced sites (tools/s7588_apple_tu_census.py --controls);
   the main run loop drains the per-present dispatch_async blocks (plant 1648/1648), so ROGUESQ_APPLE_POOL stays opt-in (default 0).
 - **s7587: class OW (metal-cpp ownership, plume_metal.cpp) CLOSED.** tools/s7587_ownership_census.py: upstream had 6
