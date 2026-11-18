@@ -14261,3 +14261,291 @@ Item-1 class sub-bullets (DG-EO, s7450-s7490), verbatim from CURRENT-TRUTH s7490
     **FW+FX+FY CLOSED (s7530-32):** fw (175 latches), fx (rt64 32), s7532_fy_census.py 7/7 (84 guest-byte copies): 0 H-latent-fix.
     Undo race window (S7532_UNDO_CHK): 0 foreign bytes, ctl 1/1; levels soak 0. **FZ CLOSED (s7533):** s7533_fz_census.py 7/7, 107 host
     guest writes, only H-latent-fix = FPS60 clamp RMW on Gfx thread -> byte CAS (FZ_CHK ctl 1/1 L4/L15, cas_fail 0). Next: fold s7533_fz_levels.
+
+## Migrated from CURRENT-TRUTH (s7581 maintenance): s7580 headline bullets s7535-s7576, Next-steps items 17-21, pre-s7300 superseded entries, verbatim
+
+### Headline bullets
+
+- **s7576 (generated-C float->int UB class CLOSED):** the only UB-capable emission left after s7575 was TRUNC_W_S/D (1199 bare
+  `(int32_t)` casts; shifts are masked on unsigned gpr, mult cannot overflow, DDIV total, CVT_W via lrint). Fold control: clang -O2
+  deletes `if (x==3e9f) return (int)x;`. tools/s7576_trunc_census.py --controls: FOLDED=0 of 1199 (3 legal merges, 1 hand-inspected).
+  Fix landed anyway: tools/apply_s7576_trunc_total.py (chained) -> RS64_TRUNC_W_S/D (fcvtzs semantics, no UB) + [s7576-trunc] OOR
+  witness. L1 / L4 dd2 / L12 150 s: 0 OOR, 0 crash, 0 stall; ROGUESQ_S7576_TRUNC_CTL=8 ctl fired 8/8. scratch/s7576.
+- **s7575 (do_break class CLOSED; -O2 UB fix landed):** N64Recomp emits the 32-bit div before `bne b,$zero; break 7`, so
+  clang -O2 deleted 36 do_break checks via div-by-zero UB. Fix (default on, chained): tools/apply_s7575_div_total.py ->
+  RS64_DIV32/RS64_DIVU32 (R4300-exact b==0). Census tools/s7575_break_census.py --controls --ir: BLIND=0. L1/L4 dd2/L12 150 s
+  clean; ROGUESQ_S7575_BREAK_CTL=1 ctl fired. do_break now writes stderr+flush. Full numbers: PORTING-STATE s7575. scratch/s7575.
+- **s7574 (GUARD-6 CLOSED, 6/6):** musyx div-trap H-dead. s7573's silent census was gated to four early VI phases.
+  Ungated tally (tools/apply_s7574_keyon_tally.py, [s7574-keyon]): L1/L4 dd2/L12 ~721k key-ons, 0 guard fires, min divisor 192;
+  FORCE0=3 ctl fired. break-6 sites statically dead (divisor is lhu). Single-source: a forced early return leaves voice+0x60 = 0,
+  later key-ons trap for real and the arm SIGBUSed, so the guard is not a safe sink, only dead at defaults. scratch/s7574.
+- **s7571 (19d G1D_EDGE_CONTENT, last chain; 19d CLOSED):** H-dead-parent. With EDGE_CONTENT on, the s6726 scissor-rule
+  branch never decides; content reach is clipped to the scissor, so it trims a superset. ROGUESQ_S7571_EDGE L1 dd1 4:3 (both rules
+  per decision): 5225 decisions, scissor trims 1259 all also content trims (sc_only 0), content-only 2531; EDGE_CONTENT=0 ctl
+  scissor rule fires 1260 (intro epochs 16-18). Debrief off-route (single-source: s6726 reach 512->511 = 1 col under both). Keep.
+- **s7572 (S6892 CLOSED, last UNKNOWN lever): CHAIN(ROGUESQ_TILEPOOL), dead at defaults.** Writer was already named by s6893
+  (selectGridCellTileVariant tile-pool overrun at dd>1, hw watch + ctlA/ctlC matched pair); NEXT.md's "never named" was stale.
+  LEVEL=4 owner recipe, TILEPOOL_TESTADD=45 to expose the peak (ctl: count lines printed): dd1 peak 5 of 90 entries, dd2 27
+  (retained logs: dd1 never >=45 in 100 inits, dd2 99>90 in 7/24); 3 walker notes, 0 guard fires per arm; same-build
+  S6892_TEST=5 ctl fired+repaired. 0 natural fires in every retained log. Retail cannot overrun on this route. scratch/s7572.
+- **s7570 (19d S7478_STALECHK):** H-dead-parent. The stale drop runs only on s7475 canary records (ROGUESQ_S7475_CANARY=1,
+  default off). L1 dd1: default 0 arms/0 drops; CANARY=1 ctl 7 stale-drops; STALECHK=0 rescores 2 as false slack-stores. Keep. Item 19d.
+- **s7569 (19d follow-draw mode-3 chain):** S7376_PQLOCK H-dead-parent (s7377 EARLYLOCK already holds workloadMutex for the
+  whole lookup; ROGUESQ_S7569_FD L1 dd1: 4800/4800 mode-3 entries pre-locked, PQLOCK taken 0, EARLYLOCK=0 ctl 4800). S7383_FBPACK
+  interlocked: the Gfx-thread renderToRDRAM writer publishes unlocked (1.0M, all 3742 address changes); LDGFX=0 -> 0 unlocked,
+  so LDGFX=0 would confine it. Defaults kept; owner decides. Item 19d.
+- **s7568 (19d SHADE_ORD_RESET):** H-dead-parent. s7439 already gates the shade-ordinal map on its log envs (shadeDiagOn);
+  only logs read it. ROGUESQ_S7568_SHORD=1 L1 dd1 3.4M tris: default and RESET=0 both 0 calls; SHADE_DIAG=1 ctl RESET=0 size 4233
+  unbounded vs default 1. Keep (diag arms need it). Item 19d.
+- **s7567 (19d CUT_LIVE):** H-dead-parent. CUT_LIVE is s6418's own dd gate (keep = live && !dda), nothing to confine.
+  ROGUESQ_S7567_CUTW=1 L1: dd1 default 0 writes of 0x8009DEB4 / 3900 passes (game value 217.6 lives); CUT_LIVE=0 ctl 3555
+  writes of boot latch 143.3; dd2 ctl 3554 scaled writes (236.5, base = boot latch unless DD_CUT_LIVE). Item 19d.
+- **s7566 (19d dpc trio):** DPC_KEEP_PIPE's parent drop is dead on every route (defer is always active at a bump; L1 dd1
+  default 0 PIPE drops vs 17.4M B at =0); S4272/WRAP_RESTORE hang on the live WRAP_FLUSH repair, keep. Item 19d.
+- **s7565 (19c CLOSED): compensation-chain audit, H-chains selected.** tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md
+  (122 rows, hand verdicts, controls 8/8): CHAIN 34 (12 on the retail route, 22 inside dd>1/ASPECT features), FEATURE 34,
+  RETAIL-GAP 41, GUARD 6, DIAG 5, OWNER 1, UNKNOWN 1 (S6892; s7572 -> CHAIN(TILEPOOL), 0 UNKNOWN now). Retail-route chains beyond s4889/s7476: WRAP_RESTORE+S4272
+  (WRAP_FLUSH), DPC_KEEP_PIPE (our PIPESYNC drop), CUT_LIVE (s6418 at dd1), SHADE_ORD_RESET (our diag map), S7376/S7383/S7384
+  (follow-draw mode 3), S7478 (canary), G1D_EDGE_CONTENT. B40 children: only s4889/s7476 (of 196 tags in the s7558 A/B logs, the
+  only gate-0-exclusive ones). GQ census fix: `e[0] == 48` idiom was invisible, S4889/S7476 now in DEFAULT-ON-LEVERS (117 ON).
+- **s7564 (19b(c) CLOSED, 19b CLOSED): B40 A/B, H-gate0-safe selected; owner decision pending.** s7558_b40_ab rerun
+  in-session (ALLOW_SLOW, battery clk 1.52, 16:9 FPS60, L4 dd2 / L1 dd4 / L12 dd4, 240 s each): default gate-0 and B40=1 arms
+  6/6 alive, 0 crashlines, vi_stalls30s=0, gen/s per pair 59.5/59.2, 37.1/37.0, 31.0/30.8 (tools/s7537_ring_cost.py, from 60 s).
+  Same-run witness: `[s4889] first-gate-zero-dereg` (reads MEM_BU 0x800A0F50==0) and `[s7476] dereg a1 17->1 fix=1` fire in every
+  default arm and in NO B40=1 arm. So gate-0 is safe today only because two compensating patches (s4889 dereg, s7476 $a1 fix) run;
+  the retail store (B40=1) needs neither. s4700's 2/4 gate-0 crash predates both. Owner question (item 4): restore the retail
+  store as default? Not flipped. The `[cineBody] B40=` field reads 0x80130B40, NOT the gate - never use it as a witness.
+- **s7563 (19b s7420 CLOSED): s7420 parser census OPEN 1 -> 0, H-blind selected (false row).** fixup_patches_host.py's
+  anchored `^RECOMP_FUNC` regex edits RecompiledPatches/patches.c (CMake step 2), which weaken_patched_funcs.py never touches:
+  patches.c has 0 weak headers, its 3 override headers are strong, libPatchesLib.a defines them `T`, libRecompiledFuncs.a
+  has them `weak external` (nm -m), binary carries all 3 `[patch-live]` probes, 39 s7490 hooks present. Census gained a
+  PATCHES-TREE phase (tools from CMakeLists given RECOMPILED_PATCHES_DIR) -> IMMUNE-TREE only while patches.c has 0 weak
+  headers; control (4) plants one and must reopen it (PASS, controls 4/4). `s7420 --controls` is now a regen_replay gate.
+- **s7562 (19b(e) CLOSED): s7375 NOLOCK thread census OPEN 8 -> 0, H-confined selected, no race.** The 8 s7472-s7521
+  diag containers: 7 CALLER-LOCKED (s7500/s7503 helpers under g_s7500_mu/g_s7503_mu; s7475/s7480/s7488 under s_s7475_mu, the
+  gfx/lambda callers arrive via rs64_s7491_hst -> rs64_s7475_store after that lock; s7521 seen_off under its file mutex m), 1
+  GUEST-SERIAL (s_s7472_seen: only the rs_malloc/rs_free fixup hooks). `s7375 --selftest && --check` is now a regen_replay.sh
+  gate; negative controls: planted std::thread-touched container -> REVIEW/OPEN 1, dropped verdict row -> OPEN 1; fresh
+  regen_replay (scratch/s7562/replay) "ok" 8m26s.
+- **s7561 (19b(d) CLOSED): census analysers tightened, H-collateral refuted.** s7366 lockset: scope-aware declared() +
+  param/local shadow test -> 71 false MIXED rows gone (68 local/param, 3 explained), 1 access the OLD analyser had hidden
+  surfaced (g_audio_route_pref@audio_route_resolve, reviewed H-safe-thread); gap kept and documented: static locals and locals
+  captured by thread lambdas are never lockset-checked. s7363: clamp ternary with any constant arm (`p < 16 ? p : 15`) is CLAMP,
+  3 keys reclassified. Selftests extended with negative controls (HEAD fails them), plant still OPEN, fresh regen_replay "ok".
+- **s7560 (19b(b) CLOSED): `tools/regen_replay.sh` runs to "ok"** (first time since s7484; and since s7467 the s7364 OOB
+  ASan plant could never be cleared). 180 census rows reviewed (s7363 24 keys BOUNDED; s7364 29 BOUNDED/11 FIXED/1 TRUST/1 PLANT, OOB
+  now clears only with a `PLANT ` verdict; s7366 48 caller-locked/26 same-name locals/1 thread_local). Real defects fixed, all in
+  env-gated diagnostic code: 1 lock race (s_s7518_ln / s_s7519_dt vs host-thread rs64_s7491_hst writers, STALEWATCH only; L4 hold
+  with it armed alive, ctl fired) + 5 latent over-reads (s7551/s7552/s7491_hst bitmap/s7523/s7535). regen_verify unchanged 2607/141.
+- **s7558 (class GR CLOSED, tools/s7558_gr_census.py --check rc 0, --controls 16/16): one hidden default.** The MusyX gate store
+  setDisplayMode 0x8008EB40 -> 0x800A0F50 **defaults to 0** (retail v0 only with ROGUESQ_M5_B40_VALUE=1), contradicting s4701's
+  documented pass-through default (B40=0: 2 crashes/4; pass-through 0/15, s4700-s4703). The fixer writes the s4701 form; s5544's
+  fixup_live_replay "B40 ternary polarity" rule flips it back to what live had (default-0 already at the N64Recomp repo's first
+  funcs_23 commit, s5484). Owner decides; A/B soak queued (scratch/agent/soak_queue/s7558_b40_ab.sh). All other 109,737 fixup hunks
+  are gated, inert, wild-pointer guards (826), recompiler-correctness or host plumbing. Also: **the regen chain aborted at
+  fixup_menu_worker since s7484** (s7484 load wraps broke bare-load anchors in 6 fixups) -> fixed with tools/rs64_anchor.py; regen
+  now stops at the s7363 host-array gate (27 + s7364 71 + s7366 82 unreviewed rows from s7480-s7535), and replay vs live is
+  2607 same / 141 differ. **s7559: the drift is H-layout, 0 open LOST** (vs the s7421 baseline 114: 35 new rows are SLOTPERM, the
+  s7487 lwl/lwr counter slots numbered in another order, same 410 pcs, reports pc-keyed; 1 CODEGEN static-note inlining; PATCH tags
+  equal to the s7421 census minus its fixed double-applies) -> Next steps 19b(b).
+- **NEW s7535 (class GA, OPEN H-latent-fix): early gfx sp_complete races the F5 LLE's inputs in flight.** ultramodern sends
+  sp_complete before send_dl, so the game starts the next frame while the LLE still fetches. Same-run A/B (ROGUESQ_S7535_GA_CHK=1
+  ROGUESQ_S7535_LATE=alt, controls 106/106, 3 runs): flight diff bytes/task early 635 vs hardware-order 164 (L4), 472 vs 53 (L15 dd8
+  21:9); the excess is all in the 0x720000-0x75FFFF gfx pool (1.19 MB vs 6.7 kB), next-frame vertex shade bytes. DL chunk-link
+  streaming (0x110 chunks, link at +0x10C) is SP-done-independent = hardware concurrency. Fix candidate ROGUESQ_S7535_LATE=1
+  is now standalone ROGUESQ_SP_LATE=0|1|alt (s7536). **s7536: no geometry consequence** (spikes / big hulls per task equal in both
+  states, 5 same-run alt arms L4 dd2/dd4 16:9 + L1 dd8 21:9, 2 reseeded; ctl 32285/32292) -> H-colour-only, not a G5b/G5f source.
+  **s7537: FPS60 cost nil where the game holds 60** (L1/L4/L12 dd1/dd4 16:9 fullscreen, 60.0 vs 60.0 /s; L12 dd4 on a 1.53x
+  battery clock CPU-bound 3v3 ABBA early 52.9-54.6 vs late 51.4-52.9, unresolved) -> SP_LATE=1 listed in OWNER-OPT-INS, census
+  rows H-latent-FIXED(opt-in), census exits 0. Default unchanged (owner).
+- **Class GB (s7538-s7540): CLOSED, fix opt-in (ROGUESQ_RDP_NODRAIN=3).** tools/s7538_gb_census.py enumerates every
+  completion signal the runtime posts to the guest (29 sites, 31 mode rows, 0 unclassified, --controls 7/7). Default config: every
+  device finishes or copies its guest-RAM access before the signal (PI rom/sram synchronous, AI PCM byte-swapped into a host vector
+  at osAiSetNextBuffer, SI polled before, audio RSP synchronous, DP after send_dl, VI = hardware scan-out) except GA (opt-in fixed).
+  OPEN: ROGUESQ_RDP_ASYNC=1 ROGUESQ_RDP_NODRAIN=1 (an OWNER-OPT-INS row) posts dp_complete while the RT64 worker still holds the
+  task's tail job(s) (s6709 pend_jobs 2.0, ~3.3 ms fullSync), which read textures from RDRAM and write fb copies to RDRAM after
+  the guest was told the RDP is done. **s7539 measured: TORN** (tools/s7539_gb_score.py, ROGUESQ_S7539_GB_CHK=1): L1/L4/L12 167/297/354
+  of ~8-13M post-signal loads read bytes the guest rewrote after dp_complete, all one 2 KB 64x64 4-bit texture re-decoded every
+  frame by swizzleTextureRowsToTmem (0x800249B4/E4, via parseImageFile; store watch). Controls: planted == caught, older-snapshot
+  diffs fire, witness ~0.5-0.7 MB/window. Legitimate guest writes; on-screen effect unmeasured. **s7540 fix: ROGUESQ_RDP_NODRAIN=3** (reads-wait: task exit waits for
+  rs64_s7540_reads_done(), called by RT64 fullSync after its last fullSyncFramebufferPairTiles). Same-run NODRAIN=4 cycle
+  (drain/nodrain/reads-wait per task) L1/L4/L12: reads-wait 0 post-signal loads, nodrain 43/50/196 torn (controls caught);
+  Gfx wait per task 1.2-1.6 ms vs 3.3-4.3 drained, 0 nodrain. OWNER-OPT-INS recommends =3; census exits 0. **s7541: the rest of fullSync after reads_done is clean too** (rs64_s7541_span, tools/s7541_gb_score.py, NODRAIN=4 + ROGUESQ_S7541_HOLD=1, L4/L12/L1): fb read-ins, writeback targets and hashTracking spans 0 guest changes after the post, controls planted==caught, same-run nodrain loads torn. Residual H-late-write: ~84% of writebacks land after dp_complete; no guest reader known (s6938, s7391; NODRAIN=3 WBW rerun queued). Item 18.
+- **Class GC (s7542): CLOSED.** tools/s7542_gc_census.py (rules tools/s7542_gc_rules.py) enumerates every host-side write into guest
+  RDRAM (10 idioms, 158 sites, 176 rows, 0 unclassified, 0 open, --controls 8/8): default config = before its signal (PI, SRAM, audio
+  RSP, sync RT64), on the guest thread (58 rows: libultra replacements, OSMesgQueue stores only in dequeue_external_messages), init,
+  env diag/lever, or dead. Late rows: GA (F5 DMA writes, opt-in fix SP_LATE=1) and GB writebacks under NODRAIN (s7541_wbw_rwait: flight
+  readers only RT64 updateScreen XXH3 / copyRAMToNativeAndChanges, ctl fired). Timer thread re-arms OSTimer after posting = hardware
+  order, OSTimer libultra-private (H-os-private, single-source).
+- **Class GD (s7543): CLOSED.** tools/s7543_gd_census.py (exit 0, --controls 9/9): no port yield splits two dependent guest-struct
+  stores. Guest threads hold one run token and lose it only at an explicit yield; __osDisableInt/__osRestoreInt are no-ops. (A) 49
+  runtime replacements, stores vs yields in body order with one level of callee followed: 36 atomic (no yield or tail yield only), 6
+  yield-safe with a named invariant (do_send/do_recv block in a while(full/empty) re-check before any queue store; s7195 park never
+  returns; osStopThread(NULL), osStartThread, _thread_func and the osSendMesg dup-drop branch-split), 7 hand-off primitives where nothing
+  touches guest RAM between running.signal() and the caller's running.wait(). (B) generated-code critical sections: one DisableInt
+  region (musyxSynthFrame_s4562_impl, no call inside); all 13 cop0 Status writes resolve to the FR-bit FPU toggle, not IE. (C) 51
+  injected yields in 31 guest functions all sit outside every region, so hardware could switch threads there via an interrupt too.
+- **Class GE (s7544): CLOSED statically.** tools/s7544_ge_census.py (exit 0, --controls 13/13). Boring check: the port's OSThreadState
+  enum is STOPPED=0 QUEUED=1 RUNNING=2 BLOCKED=3 (libultra 1/2/4/8) and RUNNING/BLOCKED are never stored, so every running or
+  mesg-blocked thread reads QUEUED. (A) 18 transition rows in 11 replacements, each H-equal or H-benign vs libultra (osStartThread on a
+  mesg-blocked STOPPED thread: port makes it runnable, the do_recv/do_send while-loop re-blocks it). (B) 0 guest loads/stores into the
+  11 static OSThread structs (constant-address propagation) or worker+0x20..0x4F in the service-worker fns: nothing reads the
+  divergent values. (C) 40 thread-API call sites: the 3 osStopThread sites all stop ANOTHER thread (mainBootstrapWorker -> 0x8010D3D0;
+  waitForSerialIdle -> siServiceThread, unreachable from it by direct calls) or are dead (stopServiceWorker); no osStopThread(NULL)
+  caller, so the s7543 seed row is dead code. Every osStartThread targets a fresh or stopped thread (port re-inserts a RUNNABLE one,
+  libultra ignores it): direct create in the same fn, startServiceWorker after registerServiceWorker, releaseSerialLock paired W/R
+  with waitForSerialIdle, restartServiceWorker dead. Limits (single-source, static): heap-carried thread pointers are not followed;
+  reachability is direct calls only. **s7545 runtime witness: CLOSED.** ROGUESQ_S7545_THRWATCH=1 (+STORE_DIAG=1) marks every created
+  OSThread [t, t+0x1B0) (osCreateThread/osDestroyThread via the RS64_S7491 hook) in the s7484 load / s5798 store bitmaps; L1 dd1, L4/L12
+  dd4, 220 s each (tools/s7545_thrwatch_recipe.zsh, score 0): 20 threads created, 8 destroyed, 0 guest loads/stores into any LIVE
+  thread; controls watch-ctl L+S and plant L+S (siServiceThread+0x10 at 150 s) fired in all 3. v1 without destroy tracking saw ~20k
+  stores/20 s: MusyX voice render + heap code reusing the structs of 4 destroyed threads (saveServiceWorker x2 etc.) = legitimate.
+
+### Next steps items 17-21 (s7580 numbering)
+
+17. **Class GA (s7535) CLOSED as owner opt-in (s7537).** tools/s7535_ga_census.py (565 sites, 0 open H-latent-fix, exits 0,
+    --controls 10/10); knob ROGUESQ_SP_LATE=0|1|alt (+SEED); (b) H-colour-only (s7536); (c) cost scored from the present ring by
+    tools/s7537_ring_cost.py (quiet harness has no [g1b]; score from --from 72, the mission load is 62-67 s), runs
+    scratch/s7537_splate_cost_batt. Open only: the queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (runs when on AC;
+    fold with `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`); if AC L12 dd4 late < early - 0.5 in a
+    3v3 ABBA, try delivering SP done at the LLE's last input fetch. Owner decides the default.
+18. **Class GB follow-ups (s7540-s7541).** (a) CLOSED s7545: NODRAIN=3 vs =1 vs 0 (ASYNC=1, owner recipe, L5/L12 dd4, ABCCBA,
+    battery clk 1.44-1.53 ALLOW_SLOW, scratch/s7540_rwait_cost, tools/s7537_ring_cost.py --from 72): gen/s L5 59.4-59.5, L12 59.8-60.0 in
+    every arm, 12/12 alive, 0 stall -> no game-rate cost where the game holds 60 (single-source; CPU-bound case not exercised). (b) CLOSED s7541: post-
+    reads_done read-ins / writeback clobbers / hashTracking 0 on L4/L12/L1. (c) CLOSED s7542: s7541_wbw_rwait
+    (NODRAIN=3, L4/L12 dd4, L1 dd8 21:9) live readers only RT64 updateScreen XXH3, ctl fired. (d) CLOSED s7542: class GC census (headline).
+19. **Class GE CLOSED (static s7544 + runtime s7545, headline).** Reopen only if a guest code path reads OSThread fields.
+    **Class GF CLOSED s7546** (tools/s7546_gf_census.py, rc 0, --controls 5/5): 122 host OSThread-field reads; the 7 reachable after
+    osDestroyThread(other) (wait_for_resumed:289, _thread_func:621/625/635/636) are equality compares of ->context against the
+    thread's own captured context, or on the true side of one, so any reused value self-terminates (H-safe); the rest are live/diag.
+    Guest: service-worker keys are monotonic (0x801128D4) and unregister unlinks before rs_free, so no OS call names a freed struct.
+    Runtime (s7545 logs): 8/8 destroys per level followed by the woken thread's self-destroy re-call, 0 dead-ctx, 0 resume-skip,
+    0x801937F0 reused as a new thread 0.2 s later.
+    **Class GG CLOSED s7547** (tools/s7547_gg_census.py, rc 0, --controls 6/6): every guest pointer ultramodern/librecomp retain
+    past the call (event/VI mq, VI mode + fb, timer, PI retQueue) resolves to a static object < heap base 0x80154690 (derived from
+    initMainHeap) or the top-of-RAM fb carve (fb slot table 0x80128E98 writers verified = initVideoSubsystem only); 0 heap objects
+    retained. Event queues match the s7395 runtime list one for one.
+    **Class GH CLOSED s7548** (tools/s7548_gh_census.py, rc 0, --controls 10/10; static, single-source): 272 src/main statics
+    (247 int/atomic, 7 pointer, 18 container) capture a guest-derived value; 249 are never dereferenced and never escape (H-diag);
+    the 23 that are: 2 H-inflight (s_pending_task_data_ptr / s_pending_audio_task, re-set per task in get_rsp_microcode), 6 H-gated
+    (default-off env, verified per deref site), 2 H-base (rdram itself), 3 H-host (calloc shadows), 2 H-refresh (s7031 terrain dims
+    re-read per frame), 8 H-value escapes (PCs, s6919 cutoff float bits, s6893 clamp). 0 OPEN. Control 1 first FAILED (MEM_* macros
+    were not deref sites) and was fixed before the verdict.
+    **Class GI CLOSED s7549** (tools/s7549_gi_census.py, rc 0, --controls 9/9, 7.5 s; static, single-source): 5174 static
+    declarators injected into RecompiledFuncs/funcs_*.c (block-scoped; file-scope incl. every comma declarator); 101 (name, PATCH tag)
+    rows capture a guest value; 93 never reach a guest deref / ctx reg / guest store (H-diag; host callees of the 4 call-escaping
+    rows take values only). The 8 that do: 3 H-inflight (s7482 reserve base, consumed in the same partitionFramebufferMemory call,
+    pend cleared each pass; s7108_s2 read by s7108_x later in the same function, no label between; rs5839_obj read by the
+    default-off rs5835 probe right after entry), 1 H-refresh (s6496_a0, re-read from a0 before each deref), 4 H-value (org6418 /
+    org6421 / org7011 float bits of static 0x8009DEB4 / 0x8009DE94 constants, og6112 viewport ints, VPW_SCALE-gated). 0 OPEN.
+    **Class GJ CLOSED s7550** (tools/s7550_gj_census.py, rc 0, --controls 8/8; static, single-source): RT64's 4 default-on RDRAM
+    writes (fullSync colour/depth copyNativeToRAM; renderToRAM defaults on) take address = current pair SETCIMG/SETZIMG, width =
+    colorImg.width, rows = drawColorRect/drawDepthRect, the retained fb.height only as a min() clamp; the registry walks (storeRAM,
+    checkRAM, uploadRAM, hashTracking) take const RDRAM; present reads the current VI origin; 0 open. Host side of the s7545
+    heap-reuse family (GF-GJ) closed.
+    **Class GK CLOSED s7551** (ROGUESQ_S7551_GK=1 + _PLANT=1, tools/s7551_gk_score.py --controls 4/4; runtime, sync RDP only):
+    snapshot every written-back span at checkRDRAM, diff snapshot/pre/post per byte at each writeback, L1 dd1 / L4 dd4 / L12 dd4
+    16:9 FPS60: 0 bytes changed between DL start and writeback in ~45 GB compared (H-clean), planted control 99.5-100% seen and
+    clobbered (depth-kind 376/376 pre-mission; mission depth span is first written back as a colour Z-clear pass at the same
+    address, which consumes its plant). The full-row writeback never reverts a guest/host write. Not covered: RDP_ASYNC=1.
+    **Class GL CLOSED s7552 (H-dither, benign; tools/s7552_gl_score.py --controls 5/5; two lines: per-pixel numbers + FbWriteColorCS):**
+    mission colour rtOut is RT64 re-dithering undrawn columns from the retained render target on each writeback when the fb's
+    bestDitherPattern is NOISE (L12 dd4: 436,631 px, all ±1, up/down balanced, 97% col 795 = outside the scissor, rest a rect 28-774
+    frame); MAGICSQ fbs (L1, L4) give 0. No guest reader, present uses the render target: no fix.
+    **Class GM CLOSED s7553 (tools/s7553_gm_score.py --controls 5/5; ROGUESQ_S7551_GK=1 + rs64RawRect pre-scissor draw union + 16 MB
+    shadow of RT64's last writeback):** every out-of-rect writeback change in every phase (L12 5.4M colour / 10.9M depth px, L1) has
+    pre == RT64's own previous writeback (1.00000); colour post within ±1 of it, dark/bright balanced (re-dither); depth keeps z
+    (post>>2 == pre>>2) and only rewrites dz (game Z-clear fill 0xFFFE -> depth target 0xFFFC). The s7552 pre-mission "fade" cols
+    41-56 are outside every draw and ±1 like the rest (s7552 F test accepted only upward moves). **Class GN CLOSED s7554 (H-clean, async):** GK+GM rerun under
+    ROGUESQ_RDP_ASYNC=1 NODRAIN=3 (L12/L4 dd4, L1 dd1, 16:9 FPS60, 120 s; scratch/s7554_gn): gwb=gch=clob=0 colour and depth, all
+    phases, ~18 GB compared; plant control 1130/1136, 1208/1212, 1478/1484; GM verdicts identical to sync (C H-dither, Z H-depth-req,
+    preIsLast 0.99994-1.0). Async witness same run (scratch/s7554_gn_ctl, L4 + ROGUESQ_G1B=1): [s7540-rw] sig=9427 idle=0, GK H-clean,
+    ctl 890/892. The guest never touches a pending writeback span, so the worker's late full-row writeback reverts nothing. All 4
+    GJ write sites carry the hook. OWNER-OPT-INS row now gives NODRAIN=3.
+    **Class GO CLOSED s7555** (tools/s7555_go_census.py, rc 0, --controls 7/7; static, single-source except osViGetCurrentField =
+    retail oracle s2199/s2211): every value-returning replacement (74 defs) and every device-status getter. Of 29 the game imports
+    (168 guest call sites, $v0 read/kill per site): 0 device-status getters other than osSpTaskYielded and osViGetCurrentField.
+    osAiGetLength/GetStatus, osDpGetStatus, osPiGetStatus, osViGetCurrent/NextFramebuffer, osGetCount and every __os*DeviceBusy are
+    not imported (nm), and the generated code forms no 0x04xx/0xA4xx/0x1FC0 register base, so nothing polls DP/AI/PI busy and
+    NODRAIN/ASYNC cannot hand out a stale status. osSpTaskYielded (spTaskSchedulerThread 0x80019E14, sets resume flag 0x8011A89F)
+    returns 0 = completed, right because the LLE never yields a running task, whatever the mode. osAiSetNextBuffer always returns 0
+    (retail -1 when the FIFO is full), but both runAiAudioStreamPlaybackLoop sites kill $v0 (H-ret-unused). The rest are synchronous
+    (PI, EEPROM, SI), no-pak, queue results, or not status values. Instrument bug fixed before the verdict: ctx->r29 matched
+    ctx->r2.
+    **Class GP CLOSED s7556 (H-unit-ok; tools/s7556_gp_census.py rc 0, --controls 9/9; static + s7402/s6256 runtime):** all 14 osGetTime
+    sites consume only the low word $v1 (GO's $v0-only scan read 'kill' there); none reads the 64-bit value. Every time divisor reads
+    osClockRate (3 fns; no hardcoded 46.875/62.5 MHz in game code); host 46875 ticks/ms, osClockRate fix default-on. Sim dt
+    (timeSnapshotFiller +0x20) = dstamp/clock + getViModePeriod()*0.001*N (N = VIs per frame if >=2, else 1; ROM K=K'=0.001,
+    period 16.667/20 ms): linear in VI count, so FPS60 single-VI frames get exactly one VI (s7402 runtime histogram: 1-VI frames
+    exist and sum tracks wall). Durations reach only the gated profiler or write-only globals.
+    **Class GQ CLOSED s7557 (H-unlisted, fixed by listing; tools/s7557_gq_census.py rc 0, --controls 11/11; static):** code->docs
+    direction of s7426 (which checked docs->code). 3934 built sources incl. generated RecompiledFuncs, 3877 getenv sites + defaulting
+    helpers: 215 default-active names = 115 behaviour levers ON when unset, 23 diag-only, 77 feature parameters (value defaults,
+    inert unless their feature is on). Every ON lever has =0 by construction (the parse idiom is the switch) -> H-no-switch cannot
+    arise for an env read. 97 listed; 17 had NO row in OWNER-OPT-INS/CURRENT-TRUTH/FPS60-FIXES/PROJECT-OVERVIEW (AUDIO_PRIVATE_DMEM,
+    AUDIO_WAIT_NOPUMP, COPY_GUARD, DD_OFFMAPCULL_EYE, DPC_KEEP_PIPE, DPC_WRAP_FLUSH, FL_HDR_HARD_SKIP, G1D_OVL_WRAP, HLE_PATCH_ALPHA,
+    PIO_GUARD, PI_DMA_GUARD, PI_UNK_COMPLETE, PREEMPT_POINT, S4272, S6892, SPAI_GUARD, WRAP_RESTORE), 1 no session (G1D_FPDEPTH).
+    Fix: generated docs/DEFAULT-ON-LEVERS.md (every ON lever, sessions, source comment; `--write` regenerates), linked from
+    OWNER-OPT-INS. Not covered: unconditional fixups with no env at all -> class GR (NEXT.md).
+    **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
+19b. **Regen health (s7558) CLOSED s7564**: (a) s7559, (b) s7560, (d) s7561, (e) s7562, s7420 census s7563, (c) B40 A/B s7564
+    (headline). Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
+    tools/regen_verify.sh D/replay D/verify.
+19c. **Compensation-chain audit CLOSED s7565** (headline; docs/COMPENSATION-CHAINS.md, `tools/s7565_comp_chain.py --write --check`).
+19d. **Retail-route chain simplification (s7565, CLOSED s7571).** For each of the 12 retail-route chains, decide offline
+    whether the parent can be confined so the child becomes dead code with identical default behaviour (start: dpc_bridge trio
+    DPC_KEEP_PIPE / S4272 / WRAP_RESTORE; then CUT_LIVE vs s6418, SHADE_ORD_RESET vs its diag map). Never flip a default.
+    **s7566 dpc trio DONE:** KEEP_PIPE = H-dead-parent (every DPC_END site runs inside defer_begin/_end, so the bump-time
+    PIPESYNC drop runs only with KEEP_PIPE=0; S7096_FWD L1 dd1: default 0 pipe/0 noflush drops over 8843 tasks, every hw byte
+    forwarded; =0 control 17.4M B pipe + 17.7G B noflush dropped, 96 B unexplained). S4272/WRAP_RESTORE = H-interlocked
+    (parent WRAP_FLUSH is a live real-gap repair; keep). Single run per arm.
+    **s7567 CUT_LIVE DONE: H-dead-parent** (offline: only writer of 0x8009DEB4 in our code is the s6418 block, skipped when
+    keep; runtime ROGUESQ_S7567_CUTW L1 dd1 0 writes, =0 ctl 3555, dd2 ctl 3554; scratch/s7567).
+    **s7568 SHADE_ORD_RESET DONE: H-dead-parent** (map filled only when shadeDiagOn; ROGUESQ_S7568_SHORD default/=0 0 calls,
+    SHADE_DIAG ctl =0 4233 vs 1; scratch/s7568).
+    **s7569 follow-draw trio DONE:** PQLOCK H-dead-parent (subsumed by s7377 EARLYLOCK); FBPACK H-interlocked with the unlocked
+    Gfx-thread publish, confinable by S7384_LDGFX=0 (opt-in lever, not a compensation); scratch/s7569.
+    **s7570 S7478_STALECHK DONE: H-dead-parent** (parent = default-off s7475 canary; default 0 arms, CANARY=1 ctl 7 drops, =0 2 false
+    slack-stores; scratch/s7570).
+    **s7571 G1D_EDGE_CONTENT DONE: H-dead-parent** (scissor branch subsumed: sc_only 0/5225, ctl EDGE_CONTENT=0 scissor 1260;
+    scratch/s7571). **19d CLOSED** (12/12 chains decided; no default flipped).
+20. **S6892 CLOSED s7572; GUARD-6 CLOSED s7574 (6/6 decided)**: COPY/PI_DMA/SPAI/s1978 H-dead (s7573), PIO unreached,
+    musyx div-trap H-dead (0/~721k, FORCE0 ctl fired; break-6 statically dead). No default flipped.
+21. **do_break class CLOSED s7575** (headline). After any regen, verify tools/s7575_ir_calls.sh +
+    `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **s7576 float->int class CLOSED** (headline); after a regen
+    also run `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0, rc 0). **s7577 RSP ucode UB class CLOSED**; after a
+    ucode regen or rsp*.hpp edit run `tools/s7577_ubsan_sites.py <tu> --check` per ucode TU (UNCLASSIFIED 0) and
+    `tools/s7577_ucode_ub_census.py scratch/s7577` (rc 0). **s7578 game-C null/wrapv CLOSED**;
+    **s7579 fixup-C bounds CLOSED** (tools/s7579_bounds_report.py). **s7580 shift/align CLOSED** (LUI fixup). **NEXT (s7581): gen-c-pointer-overflow-audit** (NEXT.md).
+
+### Superseded conclusions (pre-s7300)
+
+- s7286/s7288 "the terrain window binds from dd4; dd4->dd6 adds 1.8% cells". Believable: [s7233] in= sat at ~3550
+  dd4..dd8. s7291: in= counts only the retail-equivalent 64x64 window (constant by construction); total cells grow +24%.
+- s7283 "off-window gaps >=250 ms are the GPU saturator draining after SIGKILL". Believable: they followed lit holds
+  near +381 s. s7284: that hold is the SIGSTOP control; the gaps are black fb-relocation transitions.
+- s7247/s7259/s7262 "the WIDEWIN auto stack removes no visible ground". Believable: holes/seams scorers clean. They never
+  scored the side edge; s7264 showed R=48 erased the side gain (fixed by R=88, s7266).
+- s7230 "dd6 at 21:9 adds ~6.6 ms per task (H-dd)" and s7014-s7017 "WIDEWIN costs little at 21:9 dd4". Believable: the arms
+  seemed to differ only in radius; s7231 2x2: WIDEWIN +4.5 ms, radius +0.7 ms. s7230 also ran on battery (x1.4, s7251).
+- s7054/s7063 "L4 21:9 dd6 58.7-59.5 fps". Believable: whole-flight averages; s7230 heavy window flat 30 (battery);
+  AC s7257: 60.0/s at 14.06 ms.
+- s7227/s7228 "in-flight flat-30 under FPS60 is the game's own rate". Believable: rigid 33.3 ms swaps, free present path.
+  s7229: the harness ran the diagnostic ucode path; owner path holds 60/s.
+- s7180 "swaps 4700-5028 are LEVEL DESCRIPTION" / s7181 "Elite Rogues 0.047". s7183: it is Elite Rogues; residual =
+  weave-reference combing while it scrolls.
+- s7122 "4:3 picture off-centre". s7123: SCK pads the capture; in window points it is centred.
+- s7120 "flight camera jumps 2-16 u". s7121: the join mixed cam objects; per-cam 0 such steps.
+- s7113 "H-raymiss: collision surface ~0.2 u off the drawn mesh". s7114: common-mode rebuild bias; drawn == collision exactly.
+- s7098 "near-wall flashes only with FPS60". s7108/s7109: same rate at 30 fps and full retail.
+- s7102 "near-wall zig-zag is push vs clamp (H-fight)"; s7100 "FPS60 episodes 4.1x" (s7101: 1.6x, p=0.185).
+- s7059 "transition stalls are audio-slot polling". s7064: waits are ~14% of the gap; remainder OS-silent.
+- s7032 "the wall face occludes the craft at poses 0-4". s7033: eye above ~99% of culled cells.
+- s7009-s7013 "WIDEWIN costs ~10-25 fps": harness LOG_PHASE probe path. Any harness timing since s6713 without
+  G1E_FAST=1 PROBES=0 is suspect.
+- s6990 "60.0 fps on all 19 levels at 16:9": FORCE_UNLOCK=1 clamps the cursor to level 1. Check `cur` / cursorMask.
+- s6788-s6791 "G3e drops CLOSED" (reopened as G5b); s6895 "dd1 has no knife lines" (s6906: dd1 has the thickest).
+- PORTING-STATE line 1862 "Fog contributes nothing" (s6904): true only of the early pre-flight scene.
+- g3_aspect_crop scores s6879-s6881 scored pillarbox bars; "pinned pose" s6445-s6583 is attitude-only;
+  "300 s hold" FPS60/dd>1 s6774-s6862 counted from boot (use inits= and flight_s=).
+

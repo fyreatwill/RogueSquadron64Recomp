@@ -1,4 +1,4 @@
-# NEXT (s7581)
+# NEXT (s7582; carried over unchanged from s7581, a maintenance iteration)
 HYPOTHESIS-ID: gen-c-pointer-overflow-audit
 
 gen-c-shift-align-audit CLOSED (s7580): build_ubsans (SAN=shift,alignment,signed-integer-overflow). Pre-fix the only executed

@@ -201588,3 +201588,14 @@ Verdict: selects H-gen-lui (the executed shift UB is the generator's signed LUI 
 for the s7009 spannarrow residual (behaviour patch, fixed to the equal multiply); refutes H-clean for shift pre-fix and H-diag as the
 main source; selects H-clean for alignment (0 reports, plant fired). Next discriminator: pointer-overflow UBSan arm (NEXT.md) splits
 H-macro (MEM_* host-pointer wrap, class-wide) from H-patch (wild fixup pointer) from H-clean.
+
+## Session 7581 (2026-11-17) — maintenance: CURRENT-TRUTH compacted 60,138 -> 28,682 bytes (534 -> 274 lines)
+
+Step 0 triggered (60,138 > 60,000 bytes). No experiments run. Moved verbatim to PROJECT-OVERVIEW
+"Migrated from CURRENT-TRUTH (s7581 maintenance)": the s7535-s7576 headline bullets (classes GA-GR, 19b regen health, 19c/19d
+compensation chains, S6892, GUARD-6, do_break, float->int; 134 lines), Next-steps items 17-21 of the s7580 numbering (114 lines),
+and the pre-s7300 superseded entries (s6445-s7288, 29 lines). In their place: one headline summary bullet (the landed defaults, opt-in
+fixes and owner decisions those classes produced), item 17 (all closed + the one open AC soak fold), item 18 (after-regen UB gate
+commands, which were spread across old items 19b and 21), item 19 (NEXT pointer). Backlog is one monotonic sequence 1-20 again.
+Headline refreshed to "as of Session 7581". The NEXT.md work unit (gen-c-pointer-overflow-audit) carries over unchanged to s7582.
+Tool: scratch/s7581/compact.py.
