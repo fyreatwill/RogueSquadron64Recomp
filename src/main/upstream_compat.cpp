@@ -10323,3 +10323,41 @@ extern "C" int rs64_s7496_ctl(uint32_t* blk_out) {
         [](uint32_t h, uint32_t, uint32_t fl, uint32_t, double, void* u) { C* p = (C*)u; if (h == p->want && fl != 1u) p->found = 1; }, &c);
     return n < 0 ? -1 : c.found;
 }
+
+// s7574 GUARD-6: ungated musyxKeyOnVoice div-trap tally (tools/apply_s7574_keyon_tally.py). kind 0 = divide
+// (site = its break-7 pc), 1 = guard fire (break 7 / break 6 -> early return), 2 = entry. Returns 1 to force the
+// first divide's divisor to 0 on its Nth evaluation (ROGUESQ_S7574_KEYON_FORCE0=N, positive control).
+extern "C" int rs64_s7574_keyon(uint32_t kind, uint32_t site, uint32_t num, uint32_t div) {
+    static unsigned long ent, dv[4], gd[8], gtot; static uint32_t mind[4] = {~0u, ~0u, ~0u, ~0u};
+    static long force = -2;
+    static const uint32_t ds[4] = {0x80090CECu, 0x80090D30u, 0x80090D74u, 0x80090DB8u};
+    static const uint32_t gs[8] = {0x80090CECu, 0x80090D04u, 0x80090D30u, 0x80090D48u,
+                                   0x80090D74u, 0x80090D8Cu, 0x80090DB8u, 0x80090DD0u};
+    if (force == -2) { const char* e = getenv("ROGUESQ_S7574_KEYON_FORCE0"); force = e ? atol(e) : 0; }
+    auto summary = [&](const char* why) {
+        fprintf(stderr, "[s7574-keyon] %s entries=%lu div=%lu,%lu,%lu,%lu mindiv=%u,%u,%u,%u guards=%lu g=", why, ent,
+                dv[0], dv[1], dv[2], dv[3], mind[0], mind[1], mind[2], mind[3], gtot);
+        for (int i = 0; i < 8; i++) fprintf(stderr, "%s%lu", i ? "," : "", gd[i]);
+        fprintf(stderr, "\n"); fflush(stderr);
+    };
+    if (kind == 2) {
+        ++ent;
+        if (ent == 1 || (ent & (ent - 1)) == 0 || (ent % 4096) == 0) summary(ent == 1 ? "first" : "interval");
+        return 0;
+    }
+    if (kind == 0) {
+        for (int i = 0; i < 4; i++) if (ds[i] == site) {
+            ++dv[i]; if (div < mind[i]) mind[i] = div;
+            if (i == 0 && force > 0 && (long)dv[0] == force) {
+                fprintf(stderr, "[s7574-keyon] FORCE0 site=%08X n=%lu num=%08X div=%u->0\n", site, dv[0], num, div);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    ++gtot;
+    for (int i = 0; i < 8; i++) if (gs[i] == site) ++gd[i];
+    if (gtot <= 64) fprintf(stderr, "[s7574-keyon] GUARD site=%08X num=%08X div=%08X entries=%lu\n", site, num, div, ent);
+    summary("guard");
+    return 0;
+}

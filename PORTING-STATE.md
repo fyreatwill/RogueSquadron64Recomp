@@ -201365,3 +201365,24 @@ this is UNEVALUABLE, not a zero.
 ORIGIN: no mitigation added. Rules out H-live-ours/H-live-retail for COPY, PI_DMA, SPAI, s1978 on the retail route; no writer
 to name because no wild value occurs. Defaults kept (cheap insurance). Verdict notes in tools/s7565_comp_chain.py, doc regen.
 Next: is musyxKeyOnVoice (0x80090A3C) on the live audio path (callers, host-side key-on replacement), then decide the div-trap.
+
+## Session 7574 (2026-11-17) — GUARD-6 closed: musyxKeyOnVoice div-trap H-dead at defaults (0 fires / ~721k key-ons, FORCE0 ctl fired); break-6 sites statically dead
+Why s7573 saw nothing: the s2122 ROGUESQ_LOG_M5_KEYON_CENSUS helper records only while the committed VI is one of four
+early-era (width, origin) pairs (1024/0x790400, 640/0x696100|0x696600, 512/0x6AB400), so at the owner recipe it drops every
+event. The census was gated, not unreached (boring-thing rule 5).
+Offline: all four divides in musyxKeyOnVoice take the divisor from `lhu $a0, 0x60($s0)` (0..65535), so the four `break 6`
+guards (divisor == -1 and numerator == INT_MIN) can never fire: statically dead. That leaves the four `break 7` (divisor 0)
+guards, all on the same field 0x60.
+Instrument: tools/apply_s7574_keyon_tally.py (in RS64_REPLAY after s7069) + rs64_s7574_keyon in src/main/upstream_compat.cpp,
+always on and low rate: [s7574-keyon] first/interval/guard rows with entries, per-divide counts, min divisor, per-guard counts.
+Positive control ROGUESQ_S7574_KEYON_FORCE0=N zeroes the first divisor on its Nth evaluation.
+Run scratch/s7574/run.zsh (g1e_owner_quiet_arms, 150 s, owner recipe): t1 L1 217088 entries, t4 L4 dd2 241664, t12 L12
+262144; every arm guards=0 (8/8 sites), mindiv=192 on all four divides. tc (FORCE0=3): FORCE0 row + GUARD 0x80090CEC at
+entry 3 (control fired).
+Side result (single-source, one run): the forced early return is NOT a benign sink. After it, key-ons 4, 5 and 16 read a REAL
+zero divisor from voice+0x60 (16 with numerator 0x04C30000), and the arm SIGBUSed about 2 s later (si_addr 0x380000004, last
+guest pc 0x8000834C). One skipped key-on leaves the voice half-initialised and the zero persists. Retail would take break 7
+anyway, so this does not change the verdict: the guard is dead code at defaults and only matters on a path retail traps on.
+Verdict: GUARD-6 6/6 decided (COPY/PI_DMA/SPAI/s1978 H-dead, PIO unreached, musyx div-trap H-dead with ctl). Item 20 CLOSED.
+Rules out: the musyx div-trap as a source of audio or crash behaviour at the owner recipe.
+Note for later: 1380 `do_break(` sites remain in generated code, unpatched; the next idiom-class audit is their census (NEXT.md).

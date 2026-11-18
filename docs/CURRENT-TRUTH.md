@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7573 (GUARD-6 fire census, no build):** L1 / L4 dd2 / L12 / FORCE-ctl arms, 150 s owner recipe, 4/4 alive, 0 stall,
+- **NEW s7574 (GUARD-6 CLOSED, 6/6):** musyx div-trap H-dead. s7573's silent census was gated to four early VI phases.
+  Ungated tally (tools/apply_s7574_keyon_tally.py, [s7574-keyon]): L1/L4 dd2/L12 ~721k key-ons, 0 guard fires, min divisor 192;
+  FORCE0=3 ctl fired. break-6 sites statically dead (divisor is lhu). Single-source: a forced early return leaves voice+0x60 = 0,
+  later key-ons trap for real and the arm SIGBUSed, so the guard is not a safe sink, only dead at defaults. scratch/s7574.
+- **s7573 (GUARD-6 fire census, no build):** L1 / L4 dd2 / L12 / FORCE-ctl arms, 150 s owner recipe, 4/4 alive, 0 stall,
   plus 208 retained game logs: 0 natural fires for COPY_GUARD, PI_DMA_GUARD, SPAI_GUARD (census 0 bad of 1.69M AI + 0.84M Cont
   calls), s1978 drain-timeout (max drain iters 500094 against the 1e7 trip). FORCE ctl fired 16 rows each for COPY/PI_DMA/SPAI;
   PIO FORCE 0 rows = do_rom_pio never called (unreached). SPAI's StartGo arm is dead code: the live osSpTaskStartGo is the
@@ -493,11 +497,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     slack-stores; scratch/s7570).
     **s7571 G1D_EDGE_CONTENT DONE: H-dead-parent** (scissor branch subsumed: sc_only 0/5225, ctl EDGE_CONTENT=0 scissor 1260;
     scratch/s7571). **19d CLOSED** (12/12 chains decided; no default flipped).
-20. **S6892 CLOSED s7572: CHAIN(ROGUESQ_TILEPOOL), dead at defaults** (headline). **s7573 GUARD-6 census: 5/6 decided**
-    (tools/s7573_guard_census.py): COPY/PI_DMA/SPAI H-dead (0 natural fires, FORCE ctl 16 each), PIO unreached (FORCE ctl 0),
-    s1978 drain H-dead with 20x margin. **NEXT (s7574): musyx div-trap** - the KEYON census printed nothing (no entry rows, no
-    phase-ctl rows): find whether musyxKeyOnVoice runs at all on the live audio path, then decide H-dead / unreachable.
-21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+20. **S6892 CLOSED s7572; GUARD-6 CLOSED s7574 (6/6 decided)**: COPY/PI_DMA/SPAI/s1978 H-dead (s7573), PIO unreached,
+    musyx div-trap H-dead (0/~721k, FORCE0 ctl fired; break-6 statically dead). No default flipped.
+21. **NEXT (s7575): do_break idiom-class audit.** 1380 `do_break(` sites remain in generated code. Enumerate them (break 7
+    div-zero / break 6 overflow / other codes), classify each statically (e.g. unsigned-halfword divisors make break 6 dead),
+    check what the runtime do_break does, and runtime-census the reachable ones with one ungated counter + forced ctl.
+22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

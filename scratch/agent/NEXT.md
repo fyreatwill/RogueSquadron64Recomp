@@ -1,14 +1,13 @@
-# NEXT (s7574)
-HYPOTHESIS-ID: guard6-fire-census
+# NEXT (s7575)
+HYPOTHESIS-ID: do-break-idiom-audit
 
-s7573 decided 5/6 GUARD levers (COPY/PI_DMA/SPAI/s1978 H-dead with FORCE ctl, PIO unreached). Left: musyxKeyOnVoice div-trap.
-The ROGUESQ_LOG_M5_KEYON_CENSUS instrument printed NOTHING in s7573 (no kind-1 entry rows, no kind-5 phase-ctl rows at 0x8008FFAC),
-though the patches are in N64Recomp/RecompiledFuncs/funcs_24.c.
-Hypotheses: H-unreached (the live audio path never calls musyxKeyOnVoice: host key-on replacement or caller gated off -> guard
-unreachable, close as dead), H-env (census gate reads a different env / is compiled out of the linked object), H-late (key-on only
-after a scripted event not reached in 150 s).
-Discriminator, offline first: grep callers of musyxKeyOnVoice in funcs_*.c and check whether their parents are on the live path
-(host overrides in src/), and check the 0x8008FFAC phase-control function. If a build is needed: one unconditional first-entry print
-in musyxKeyOnVoice via the fixup script, positive control = phase-ctl row that must fire on the title.
-Then: item 21 (next 3c rung). OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
-Run template: scratch/s7573/run.zsh; scorer tools/s7573_guard_census.py.
+GUARD-6 closed s7574 (musyx div-trap H-dead, 0 fires / ~721k key-ons, FORCE0 ctl fired). Next: M3-style idiom-class audit of
+the 1380 `do_break(` sites still in ../N64Recomp/RecompiledFuncs/funcs_*.c (only musyxKeyOnVoice's 8 were rewritten).
+Steps: (1) find what do_break does in the runtime (lib/N64ModernRuntime or src/: abort? log? continue?); (2) script-enumerate
+every site with its function, break code (7 = div zero, 6 = overflow, others) and the divisor's defining load (lhu/lbu ->
+break 6 statically dead; constant divisor -> both dead); (3) for the remainder, one ungated per-site counter build (like
+tools/apply_s7574_keyon_tally.py) plus a forced ctl, run L1 / L4 dd2 / L12 150 s with scratch/s7574/run.zsh as template.
+Hypotheses: H-dead (no site fires at defaults), H-live (some site fires: do_break behaviour then decides crash vs silent
+divergence; name the writer of the zero divisor), H-static (most sites provably dead offline).
+Lesson s7574: phase-gated census helpers read as false zeros at the owner recipe; check gates before trusting a silent census.
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
