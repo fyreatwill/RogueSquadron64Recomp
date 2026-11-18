@@ -15,10 +15,10 @@ index 1384fe9..1fdca66 100644
      }
  
 diff --git a/plume_metal.cpp b/plume_metal.cpp
-index a5f30a3..7a90f85 100644
+index a5f30a3..c6bd7b3 100644
 --- a/plume_metal.cpp
 +++ b/plume_metal.cpp
-@@ -9,17 +9,92 @@
+@@ -9,17 +9,124 @@
  #define CA_PRIVATE_IMPLEMENTATION
  #define MTL_PRIVATE_IMPLEMENTATION
  
@@ -48,6 +48,38 @@ index a5f30a3..7a90f85 100644
  
 +extern "C" __attribute__((weak)) int rs64_vi_lock_on(void); extern "C" __attribute__((weak)) void rs64_vi_lock_note_vsync(double t); // s6968
  namespace plume {
++    // s7587 class OW (metal-cpp ownership): this TU has no ARC, and the RT64 threads that drive it have no autorelease pool, so a +0
++    // (autoreleased) object goes to the thread's implicit pool, which never drains until the thread exits. ROGUESQ_MTL_OWN=0 restores
++    // the upstream ownership (tools/s7587_ownership_census.py lists every site). ROGUESQ_S7587_PLANT=1: positive control, one
++    // MTLRenderPassDescriptor autoreleased with no pool every 256th command list (must show under OBJC_DEBUG_MISSING_POOLS).
++    static bool rs64MtlOwn() { static const bool on = []() { const char *p = getenv("ROGUESQ_MTL_OWN"); return !(p && atoi(p) == 0); }(); return on; }
++    static bool rs64MtlPlant() { static const bool on = []() { const char *p = getenv("ROGUESQ_S7587_PLANT"); return p && atoi(p) == 1; }(); return on; }
++    // s7587 gauge (ROGUESQ_S7587_POOLGAUGE=1): depth of the calling thread's implicit autorelease pool without printing it. A push
++    // token points into the hot AutoreleasePoolPage; the page header (magic 16 B, next, thread, parent, child, depth u32) gives the
++    // page index, so entries ~= depth * slots_per_page + slot. OBJC_DEBUG_MISSING_POOLS cannot be used: it traps at the first push.
++    extern "C" void *objc_autoreleasePoolPush(void);
++    extern "C" void objc_autoreleasePoolPop(void *);
++    static void rs64PoolGauge(const char *where) {
++        static const bool on = []() { const char *p = getenv("ROGUESQ_S7587_POOLGAUGE"); return p && atoi(p) == 1; }();
++        if (!on) return;
++        static thread_local uint64_t n = 0;
++        if ((n++ & 1023) != 0) return;
++        void *tok = objc_autoreleasePoolPush();
++        const uintptr_t t = uintptr_t(tok);
++        uintptr_t sz = 0, base = 0;
++        // t < 64 KB: EMPTY_POOL_PLACEHOLDER ((void*)1), returned when the thread has no pool page yet (entries=0).
++        if (t >= 0x10000) for (uintptr_t cand : { uintptr_t(16384), uintptr_t(4096) }) {
++            const uintptr_t b = t & ~(cand - 1);
++            if (*reinterpret_cast<const uint32_t *>(b) == 0xA1A1A1A1u) { sz = cand; base = b; break; }
++        }
++        uint64_t depth = 0, slot = 0, entries = 0;
++        if (sz) { depth = *reinterpret_cast<const uint32_t *>(base + 48); slot = (t - base - 56) / 8; entries = depth * ((sz - 56) / 8) + slot; }
++        objc_autoreleasePoolPop(tok);
++        uint64_t tid = 0; pthread_threadid_np(nullptr, &tid);
++        fprintf(stderr, "[s7587-pool] where=%s tid=%llu n=%llu page=%llu depth=%llu slot=%llu entries=%llu\n", where, (unsigned long long)tid,
++            (unsigned long long)n, (unsigned long long)sz, (unsigned long long)depth, (unsigned long long)slot, (unsigned long long)entries);
++    }
++    struct Rs64OwnPool { NS::AutoreleasePool *p; Rs64OwnPool() : p(rs64MtlOwn() ? NS::AutoreleasePool::alloc()->init() : nullptr) {} ~Rs64OwnPool() { if (p) p->release(); } };
 +    // MARK: - RS64 allocation census (ROGUESQ_LOG_ALLOC=1)
 +    //
 +    // The Metal shared-memory exhaustion under ROGUESQ_DPC_WRAP=1 is not any of
@@ -111,7 +143,7 @@ index a5f30a3..7a90f85 100644
      // MARK: - Constants
  
      static constexpr size_t MAX_DRAWABLES = 3;
-@@ -1117,6 +1192,15 @@ namespace plume {
+@@ -1117,6 +1224,15 @@ namespace plume {
  
          this->mtl = device->mtl->newBuffer(desc.size, mapResourceOption(desc.heapType));
  
@@ -127,7 +159,7 @@ index a5f30a3..7a90f85 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              // If the buffer may be used by device address, we need to make sure it will be resident.
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
-@@ -1130,6 +1214,9 @@ namespace plume {
+@@ -1130,6 +1246,9 @@ namespace plume {
      }
  
      MetalBuffer::~MetalBuffer() {
@@ -137,7 +169,15 @@ index a5f30a3..7a90f85 100644
          if (desc.flags & RenderBufferFlag::DEVICE_ADDRESSABLE) {
              std::lock_guard lock(device->gpuAddressableResourcesMutex);
              if (device->gpuAddressableResidencySet != nullptr) {
-@@ -1234,11 +1321,19 @@ namespace plume {
+@@ -1165,6 +1284,7 @@ namespace plume {
+     }
+ 
+     void MetalBuffer::setName(const std::string &name) {
++        Rs64OwnPool rs64Pool; // s7587 OW: +0 label string on a pool-less thread
+         const NS::String *label = NS::String::string(name.c_str(), NS::UTF8StringEncoding);
+         mtl->setLabel(label);
+     }
+@@ -1234,11 +1354,19 @@ namespace plume {
  
          this->mtl = device->mtl->newTexture(descriptor);
  
@@ -157,7 +197,22 @@ index a5f30a3..7a90f85 100644
          mtl->release();
      }
  
-@@ -1324,6 +1419,9 @@ namespace plume {
+@@ -1247,6 +1375,7 @@ namespace plume {
+     }
+ 
+     void MetalTexture::setName(const std::string &name) {
++        Rs64OwnPool rs64Pool; // s7587 OW
+         mtl->setLabel(NS::String::string(name.c_str(), NS::UTF8StringEncoding));
+     }
+ 
+@@ -1319,11 +1448,16 @@ namespace plume {
+         assert(format == RenderShaderFormat::METAL);
+ 
+         this->format = format;
++        Rs64OwnPool rs64Pool; // s7587 OW: drain the +0 factory string (retained below) instead of parking it in the implicit pool
+         this->functionName = (entryPointName != nullptr) ? NS::String::string(entryPointName, NS::UTF8StringEncoding) : MTLSTR("");
++        if (rs64MtlOwn()) functionName->retain(); // s7587 OW: +0 factory string, released in ~MetalShader (OVERRELEASE without this)
+ 
          NS::Error *error = nullptr;
          const dispatch_data_t dispatchData = dispatch_data_create(data, size, dispatch_get_main_queue(), ^{});
          library = device->mtl->newLibrary(dispatchData, &error);
@@ -167,7 +222,20 @@ index a5f30a3..7a90f85 100644
  
          if (error != nullptr) {
              fprintf(stderr, "MTLDevice newLibraryWithSource: failed with error %s.\n", error->localizedDescription()->utf8String());
-@@ -1575,6 +1673,23 @@ namespace plume {
+@@ -1340,10 +1474,12 @@ namespace plume {
+     }
+ 
+     void MetalShader::setName(const std::string &name) {
++        Rs64OwnPool rs64Pool; // s7587 OW
+         if (debugName) {
+             debugName->release();
+         }
+         debugName = NS::String::string(name.c_str(), NS::UTF8StringEncoding);
++        if (rs64MtlOwn()) debugName->retain(); // s7587 OW: +0, released here and in ~MetalShader
+         library->setLabel(debugName);
+     }
+ 
+@@ -1575,6 +1711,23 @@ namespace plume {
          state.renderPipelineState = device->mtl->newRenderPipelineState(descriptor, &error);
          state.primitiveType = mapPrimitiveType(desc.primitiveTopology);
          state.stencilReference = desc.stencilEnabled ? desc.stencilReference : 0;
@@ -191,7 +259,7 @@ index a5f30a3..7a90f85 100644
  
          if (desc.dynamicDepthBiasEnabled) {
              state.dynamicDepthBiasEnabled = true;
-@@ -1583,6 +1698,29 @@ namespace plume {
+@@ -1583,6 +1736,29 @@ namespace plume {
              state.depthBiasConstantFactor = static_cast<float>(desc.depthBias);
              state.depthBiasClamp = desc.depthBiasClamp;
              state.depthBiasSlopeFactor = desc.slopeScaledDepthBias;
@@ -221,7 +289,7 @@ index a5f30a3..7a90f85 100644
          }
  
          if (error != nullptr) {
-@@ -1618,6 +1756,13 @@ namespace plume {
+@@ -1618,6 +1794,13 @@ namespace plume {
          return RenderPipelineProgram();
      }
  
@@ -235,7 +303,7 @@ index a5f30a3..7a90f85 100644
      // MetalDescriptorSet
  
      MetalDescriptorSet::MetalDescriptorSet(MetalDevice *device, const RenderDescriptorSetDesc &desc) {
-@@ -1667,6 +1812,11 @@ namespace plume {
+@@ -1667,6 +1850,11 @@ namespace plume {
              .offset = 0,
          };
  
@@ -247,7 +315,7 @@ index a5f30a3..7a90f85 100644
          if (!device->useArgumentBuffersTier2) {
              argumentBuffer.argumentEncoder->setArgumentBuffer(argumentBuffer.mtl, argumentBuffer.offset);
          }
-@@ -1676,6 +1826,11 @@ namespace plume {
+@@ -1676,6 +1864,11 @@ namespace plume {
      }
  
      MetalDescriptorSet::~MetalDescriptorSet() {
@@ -259,7 +327,15 @@ index a5f30a3..7a90f85 100644
          if (residencySet != nullptr) {
              residencySet->endResidency();
              residencySet->release();
-@@ -1904,6 +2059,14 @@ namespace plume {
+@@ -1895,6 +2088,7 @@ namespace plume {
+     }
+ 
+     void MetalDrawable::setName(const std::string &name) {
++        Rs64OwnPool rs64Pool; // s7587 OW
+         mtl->texture()->setLabel(NS::String::string(name.c_str(), NS::UTF8StringEncoding));
+     }
+ 
+@@ -1904,6 +2098,14 @@ namespace plume {
          this->layer = static_cast<CA::MetalLayer*>(desc.renderWindow.view);
          layer->setDevice(commandQueue->device->mtl);
          layer->setPixelFormat(mapPixelFormat(desc.format));
@@ -274,7 +350,7 @@ index a5f30a3..7a90f85 100644
  
          this->commandQueue = commandQueue;
          this->desc = desc;
-@@ -1920,6 +2083,10 @@ namespace plume {
+@@ -1920,6 +2122,10 @@ namespace plume {
          }
  
          // set each of the drawable to have desc.flags = RenderTextureFlag::RENDER_TARGET;
@@ -285,7 +361,7 @@ index a5f30a3..7a90f85 100644
          for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
              MetalDrawable &drawable = this->drawables[i];
              drawable.desc.width = width;
-@@ -1932,6 +2099,223 @@ namespace plume {
+@@ -1932,6 +2138,223 @@ namespace plume {
      MetalSwapChain::~MetalSwapChain() {
      }
  
@@ -509,7 +585,7 @@ index a5f30a3..7a90f85 100644
      bool MetalSwapChain::present(const uint32_t textureIndex, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount) {
          assert(layer != nullptr && "Cannot present without a valid layer.");
          NS::AutoreleasePool *releasePool = NS::AutoreleasePool::alloc()->init();
-@@ -1954,11 +2338,56 @@ namespace plume {
+@@ -1954,11 +2377,56 @@ namespace plume {
          // According to Apple, presenting via scheduled handler is more performant than using the presentDrawable method.
          // We grab the underlying drawable because we might've acquired a new one by now and the old one would have been released.
          CA::MetalDrawable *drawableMtl = drawable.mtl->retain();
@@ -569,7 +645,7 @@ index a5f30a3..7a90f85 100644
              currentAvailableDrawableIndex = (currentAvailableDrawableIndex + 1) % MAX_DRAWABLES;
              drawableMtl->release();
  
-@@ -1969,7 +2398,10 @@ namespace plume {
+@@ -1969,7 +2437,10 @@ namespace plume {
              lastPresentedIdCondVar.notify_all();
          });
  
@@ -580,7 +656,7 @@ index a5f30a3..7a90f85 100644
  
          releasePool->release();
  
-@@ -1987,6 +2419,8 @@ namespace plume {
+@@ -1987,6 +2458,8 @@ namespace plume {
          }
      }
  
@@ -589,7 +665,7 @@ index a5f30a3..7a90f85 100644
      bool MetalSwapChain::resize() {
          getWindowSize(width, height);
  
-@@ -1995,7 +2429,17 @@ namespace plume {
+@@ -1995,7 +2468,17 @@ namespace plume {
          }
  
          const CGSize drawableSize = CGSizeMake(width, height);
@@ -607,7 +683,7 @@ index a5f30a3..7a90f85 100644
              layer->setDrawableSize(drawableSize);
  
              for (uint32_t i = 0; i < MAX_DRAWABLES; i++) {
-@@ -2011,7 +2455,20 @@ namespace plume {
+@@ -2011,7 +2494,20 @@ namespace plume {
      bool MetalSwapChain::needsResize() const {
          uint32_t windowWidth, windowHeight;
          getWindowSize(windowWidth, windowHeight);
@@ -629,7 +705,7 @@ index a5f30a3..7a90f85 100644
      }
  
      void MetalSwapChain::setVsyncEnabled(const bool vsyncEnabled) {
-@@ -2049,6 +2506,18 @@ namespace plume {
+@@ -2049,6 +2545,18 @@ namespace plume {
          acquireBuffer->enqueue();
          acquireBuffer->encodeSignalEvent(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue);
          acquireBuffer->commit();
@@ -648,7 +724,7 @@ index a5f30a3..7a90f85 100644
  
          CA::MetalDrawable *nextDrawable = layer->nextDrawable();
          if (nextDrawable == nullptr) {
-@@ -2118,6 +2587,14 @@ namespace plume {
+@@ -2118,6 +2626,14 @@ namespace plume {
          for (uint32_t i = 0; i < desc.colorAttachmentsCount; i++) {
              const MetalTextureView *colorAttachmentView = desc.colorAttachmentViews && desc.colorAttachmentViews[i] ? static_cast<const MetalTextureView *>(desc.colorAttachmentViews[i]) : nullptr;
              const MetalTexture *colorAttachment = colorAttachmentView ? colorAttachmentView->parentTexture : static_cast<const MetalTexture *>(desc.colorAttachments[i]);
@@ -663,7 +739,54 @@ index a5f30a3..7a90f85 100644
              assert((colorAttachment->desc.flags & RenderTextureFlag::RENDER_TARGET) && "Color attachment must be a render target.");
  
              MetalAttachment attachment;
-@@ -3008,6 +3485,17 @@ namespace plume {
+@@ -2251,9 +2767,19 @@ namespace plume {
+ 
+     void MetalCommandList::begin() {
+         assert(mtl == nullptr);
++        rs64PoolGauge("begin");
+         startedEncoding = false;
+-        mtl = queue->mtl->commandBufferWithUnretainedReferences();
+-        mtl->setLabel(MTLSTR("RT64 Command List"));
++        if (rs64MtlOwn()) {
++            // s7587 OW: commandBufferWithUnretainedReferences is +0 and commit() releases it: own it (+1) and drain the autorelease here.
++            NS::AutoreleasePool *rs64Pool = NS::AutoreleasePool::alloc()->init();
++            mtl = queue->mtl->commandBufferWithUnretainedReferences()->retain();
++            mtl->setLabel(MTLSTR("RT64 Command List"));
++            rs64Pool->release();
++        } else {
++            mtl = queue->mtl->commandBufferWithUnretainedReferences();
++            mtl->setLabel(MTLSTR("RT64 Command List"));
++        }
++        if (rs64MtlPlant()) { static uint32_t rs64N = 0; if ((rs64N++ & 255) == 0) MTL::RenderPassDescriptor::renderPassDescriptor(); }
+ 
+         // Reset fence waits and updates for new command list.
+         fenceSlots.updateDirtyBits = ~0;
+@@ -2351,6 +2877,7 @@ namespace plume {
+ 
+                 char label[100];
+                 snprintf(label, sizeof(label), "%s Fence %d", MetalBarrierStageName(stage).c_str(), fenceSlots.update[stage]);
++                Rs64OwnPool rs64Pool; // s7587 OW
+                 fence->setLabel(NS::String::string(label, NS::UTF8StringEncoding));
+             }
+         }
+@@ -2797,7 +3324,15 @@ namespace plume {
+             }
+             MTL::DepthStencilDescriptor *depthStencilDescriptor = MTL::DepthStencilDescriptor::alloc()->init();
+             depthStencilDescriptor->setDepthWriteEnabled(false);
+-            const MTL::DepthStencilState *depthStencilState = device->mtl->newDepthStencilState(depthStencilDescriptor);
++            // s7587 OW: newDepthStencilState is +1 and was never released (one +1 per clearColor with a depth target). Metal uniques
++            // identical depth-stencil states, so this was a refcount leak on one object; keep a single owned state instead.
++            const MTL::DepthStencilState *depthStencilState;
++            if (rs64MtlOwn()) {
++                static const MTL::DepthStencilState *rs64NoWriteState = device->mtl->newDepthStencilState(depthStencilDescriptor); // thread-safe init
++                depthStencilState = rs64NoWriteState;
++            } else {
++                depthStencilState = device->mtl->newDepthStencilState(depthStencilDescriptor);
++            }
+             activeRenderEncoder->setDepthStencilState(depthStencilState);
+ 
+             depthStencilDescriptor->release();
+@@ -3008,6 +3543,17 @@ namespace plume {
                  dstOrigin
              );
              activeBlitEncoder->popDebugGroup();
@@ -681,7 +804,28 @@ index a5f30a3..7a90f85 100644
          } else {
              assert(dstTexture != nullptr);
              assert(srcTexture != nullptr);
-@@ -3684,9 +4172,30 @@ namespace plume {
+@@ -3549,8 +4095,10 @@ namespace plume {
+         activeType = EncoderType::Blit;
+ 
+         if (activeBlitEncoder == nullptr) {
++            Rs64OwnPool rs64Pool; // s7587 OW: +0 encoder released in endActiveBlitEncoder -> retain (as the compute/render paths do)
+             activeBlitEncoder = mtl->blitCommandEncoder(device->sharedBlitDescriptor);
+             activeBlitEncoder->setLabel(MTLSTR("Copy Blit Encoder"));
++            if (rs64Pool.p) activeBlitEncoder->retain();
+ 
+             startedEncoding = true;
+ 
+@@ -3575,7 +4123,9 @@ namespace plume {
+         activeType = EncoderType::Resolve;
+ 
+         if (activeResolveComputeEncoder == nullptr) {
++            Rs64OwnPool rs64Pool; // s7587 OW: +0 encoder released in endActiveResolveTextureComputeEncoder -> retain
+             activeResolveComputeEncoder = mtl->computeCommandEncoder(MTL::DispatchTypeConcurrent);
++            if (rs64Pool.p) activeResolveComputeEncoder->retain();
+             activeResolveComputeEncoder->setLabel(MTLSTR("Resolve Texture Encoder"));
+             activeResolveComputeEncoder->setComputePipelineState(device->resolveTexturePipelineState);
+ 
+@@ -3684,9 +4234,30 @@ namespace plume {
      void MetalCommandQueue::executeCommandLists(const RenderCommandList **commandLists, const uint32_t commandListCount, RenderCommandSemaphore **waitSemaphores, const uint32_t waitSemaphoreCount, RenderCommandSemaphore **signalSemaphores, const uint32_t signalSemaphoreCount, RenderCommandFence *signalFence) {
          assert(commandLists != nullptr);
          assert(commandListCount > 0);
@@ -714,7 +858,7 @@ index a5f30a3..7a90f85 100644
          cmdBuffer->setLabel(MTLSTR("Wait Command Buffer"));
          cmdBuffer->enqueue();
  
-@@ -3695,7 +4204,9 @@ namespace plume {
+@@ -3695,7 +4266,9 @@ namespace plume {
              cmdBuffer->encodeWait(interfaceSemaphore->mtl, interfaceSemaphore->mtlEventValue++);
          }
  
@@ -724,7 +868,7 @@ index a5f30a3..7a90f85 100644
  
          // Commit all command lists except the last one
  
-@@ -3712,6 +4223,25 @@ namespace plume {
+@@ -3712,6 +4285,25 @@ namespace plume {
          const MetalCommandList *interfaceCommandList = static_cast<const MetalCommandList *>(commandLists[commandListCount - 1]);
          interfaceCommandList->mtl->enqueue();
  
@@ -750,7 +894,7 @@ index a5f30a3..7a90f85 100644
          if (signalFence != nullptr) {
              interfaceCommandList->mtl->addCompletedHandler([signalFence](MTL::CommandBuffer* cmdBuffer) {
                  dispatch_semaphore_signal(static_cast<MetalCommandFence *>(signalFence)->semaphore);
-@@ -3725,6 +4255,7 @@ namespace plume {
+@@ -3725,6 +4317,7 @@ namespace plume {
  
          MetalCommandList *mutableCommandList = const_cast<MetalCommandList*>(interfaceCommandList);
          mutableCommandList->commit();
@@ -758,6 +902,35 @@ index a5f30a3..7a90f85 100644
      }
  
      void MetalCommandQueue::waitForCommandFence(RenderCommandFence *fence) {
+@@ -3789,6 +4382,12 @@ namespace plume {
+             }
+         }
+ 
++        if (rs64MtlOwn()) {
++            // s7587 OW: MTLCopyAllDevices is +1 (Copy rule) and was never released (s7586 leaks: 2 NSArray ROOT LEAKs). The borrowed
++            // preferredDevice is released in ~MetalDevice, so own it before dropping the array.
++            if (preferredDevice) preferredDevice->retain();
++            const_cast<NS::Array *>(devices)->release();
++        }
+         mtl = preferredDevice ? preferredDevice : MTL::CreateSystemDefaultDevice();;
+         const std::string deviceName(mtl->name()->utf8String());
+         description.name = deviceName;
+@@ -3859,6 +4458,7 @@ namespace plume {
+         clearColorFunction->release();
+         clearDepthFunction->release();
+         sharedBlitDescriptor->release();
++        if (rs64MtlOwn()) { clearDepthState->release(); clearDepthStencilState->release(); clearStencilState->release(); } // s7587 OW: +1, never released
+ 
+         if (gpuAddressableResidencySet != nullptr) {
+             gpuAddressableResidencySet->endResidency();
+@@ -4152,6 +4752,7 @@ namespace plume {
+             NS::String* deviceName = ((MTL::Device *)devices->object(i))->name();
+             deviceNames.push_back(std::string(deviceName->utf8String()));
+         }
++        if (rs64MtlOwn()) const_cast<NS::Array *>(devices)->release(); // s7587 OW: +1 Copy, never released before
+     }
+ 
+     MetalInterface::~MetalInterface() {}
 diff --git a/plume_metal.h b/plume_metal.h
 index 8de188d..ffa506a 100644
 --- a/plume_metal.h

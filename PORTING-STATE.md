@@ -201742,3 +201742,40 @@ Ran (AC, clk 1.00, host idle >9000 s, screen unlocked; one game at a time), buil
 Shows: H-flat per load and no H-slow residual on the fixed build; CFString growth (~35k objects / 1030 s, 2.3 MB) is bounded noise.
 Verdict: class LK CLOSED (H-flat selected, H-leak and H-slow refuted, plant fired in both runs). Remaining memory is caches warmed
 once on the first mission load.
+
+## Session 7587 (2026-11-18) — class OW closed: metal-cpp ownership census of plume_metal.cpp (6 over-releases, 7 leaks, 6 pool-less autoreleases on the upstream path) fixed behind ROGUESQ_MTL_OWN; implicit-pool growth 0.46-12 entries/command list -> plant rate only
+HYPOTHESIS-ID: metal-cpp-ownership-audit. AC, clk 1.00, host idle >11000 s, one game at a time.
+- **Census (offline):** new tools/s7587_ownership_census.py pairs every acquisition in lib/rt64/src/contrib/plume/plume_metal.cpp
+  (+1 alloc/new/Copy/Create/*_create vs +0 factories: NS::String::string, commandBuffer*, *CommandEncoder, renderPassDescriptor,
+  nextDrawable) with its releases/retains by owner (local = same function, member = same class) and the live AutoreleasePool, with
+  a verified hand-off table (vector/map/return ownership transfers). 82 sites. OLD (ROGUESQ_MTL_OWN=0, upstream): OK 63,
+  OVERRELEASE 6, LEAK 7, NEEDS-POOL 6. NEW (default): OK 81, NEEDS-POOL 1 (MetalDevice ctor preferredDeviceNameNS, once per
+  device). Exit 0 = no open LEAK/OVERRELEASE.
+- **Rows fixed (all in plume_metal.cpp, exported to submodule-patches/rt64-plume.patch; ROGUESQ_MTL_OWN=0 restores upstream):**
+  OVERRELEASE (+0 object released by us): MetalCommandList::begin command buffer (released in commit()), Copy Blit Encoder and
+  Resolve Texture compute encoder (released in endActive*; the compute/render encoder paths already retained in a pool, these two
+  did not), MetalShader functionName + debugName (released in ~MetalShader/setName) -> each now retained inside a local pool.
+  LEAK (+1 never released): both MTLCopyAllDevices arrays (the 2 NSArray ROOT LEAKs in s7586 leaks; the borrowed preferredDevice
+  is retained before the array is dropped, since ~MetalDevice releases it), clearColor newDepthStencilState per call (now one
+  owned state, thread-safe static), clearDepth/DepthStencil/Stencil states (now released in ~MetalDevice). NEEDS-POOL: buffer /
+  texture / drawable / shader setName labels and fence labels now built under a local pool (Rs64OwnPool).
+  ORIGIN: plume upstream code (no ARC in this TU; the RT64 threads run with no autorelease pool, so +0 objects park in the
+  thread's implicit pool until thread exit). The over-released objects were not use-after-free in play only because those pools
+  never drain: the pool keeps a dangling pointer per object (8 B each, growing forever) and would message freed objects if the
+  thread ever exited or a caller ever wrapped the call in a pool.
+- **Runtime, run A (dead end):** OBJC_DEBUG_MISSING_POOLS=YES arms (own0/own1 + plant) both died at boot with SIGTRAP in
+  libobjc's own reporter (object_getClassName <- AutoreleasePoolPage::autoreleaseNoPage <- objc_autoreleasePoolPush <-
+  MetalDescriptorSetLayout ctor, present thread; .ips 2026-11-18-014353), identically in both arms -> instrument artifact, not the
+  fix. Plain fixed arm (no debug env) L4 dd4 FPS60 150 s: alive, vi_stalls30s 0, max_gap 148 ms.
+- **Runtime, run C (discriminator):** new ROGUESQ_S7587_POOLGAUGE=1 reads the calling thread's implicit-pool depth from the
+  push token and the AutoreleasePoolPage header (16 KB pages, depth at +48; no printing of entries), every 1024th
+  MetalCommandList::begin per thread. (Run B: my first gauge segfaulted reading address 0, because the push on a thread with no
+  page returns EMPTY_POOL_PLACEHOLDER (void*)1. Guarded.) Same binary, both arms with ROGUESQ_S7587_PLANT=1 (one autoreleased
+  MTLRenderPassDescriptor per 256 begins, expected +0.0039 entries/begin), L4 owner recipe dd4 FPS60 150 s, both alive, 0 crash,
+  vi_stalls30s 0:
+  OWN=0: 5 threads grow 0.46 / 1.18 / 4.59 / 4.63 / 12.15 entries per begin (~165k entries in 150 s, ~1,100/s, ~9 KB/s of pool
+  pages: the same order as the s7586 0.005 MB/s residual). OWN=1: steady slope 0.0039-0.0043 per begin on every thread (=
+  the plant alone; one thread has a one-time 1,544-entry startup burst, then flat). Control fired quantitatively.
+Shows: H-overrelease and H-leak both selected (latent over-releases + bounded leaks + unbounded implicit-pool growth); fixed.
+Verdict: class OW CLOSED for plume_metal.cpp. Rules out: steady per-frame autorelease on RT64 threads in the fixed build.
+Next: the same census for the other Apple TUs (rt64_apple.mm, plume_apple.mm, imgui_impl_metal.mm): check ARC flags first.

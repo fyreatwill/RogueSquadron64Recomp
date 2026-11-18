@@ -1,20 +1,20 @@
-# NEXT (s7587)
-HYPOTHESIS-ID: metal-cpp-ownership-audit
+# NEXT (s7588)
+HYPOTHESIS-ID: apple-tu-ownership-audit
 
-Class LK closed s7586 (two plume_metal.cpp ownership bugs found by leak measurement: s7585 autoreleased wait buffers on a pool-less
-thread, s7586 unreleased +1 dispatch_data_t). Both are one idiom: metal-cpp has no ARC, so every object's +1/+0 status must be
-matched by hand. Class OW = audit the whole idiom offline, then check the survivors at runtime.
-Hypotheses: H-clean (no other mismatches), H-leak (more unreleased +1 objects: bounded or per-frame), H-overrelease (a +0
-autoreleased object released by us: latent use-after-free that only fires once a pool drains; lead: MetalShader::functionName =
-NS::String::string(...) (+0) then functionName->release() in ~MetalShader, and setName's debugName the same way).
+Class OW closed s7587 for plume_metal.cpp (census tools/s7587_ownership_census.py, gauge ROGUESQ_S7587_POOLGAUGE=1). Same idiom
+may live in the other Apple TUs: lib/rt64/src/apple/rt64_apple.mm, lib/rt64/src/contrib/plume/plume_apple.mm,
+lib/rt64/src/contrib/imgui/backends/imgui_impl_metal.mm (+ imgui_impl_osx.mm, any src/*.mm).
+Hypotheses: H-arc (built with -fobjc-arc: ownership is compiler-managed, only pool placement matters), H-clean (manual RR but
+balanced), H-mismatch (+0/+1 mismatches like s7587), H-pool (autoreleases on pool-less threads, e.g. per-frame window/layer
+queries on the present thread).
 Method, one pass:
-1. Enumerate in lib/rt64/src/contrib/plume/plume_metal.cpp every acquisition: alloc()/new*()/copy*()/*_create (+1) vs
-   class factories like NS::String::string, MTL::*Descriptor::*Descriptor(), commandBuffer*, currentDrawable (+0), and every
-   release()/retain()/autorelease()/dispatch_release. A short python pass printing site, kind, the owning member/local and the
-   matching release (tools/s7587_ownership_census.py), each row classified OK / LEAK / OVERRELEASE / NEEDS-POOL.
-2. For each OVERRELEASE: does the thread drain a pool (s7585 added one in executeCommandLists)? If so, Zombies run:
-   `NSZombieEnabled=YES` + MallocScribble on the L4 owner recipe 300 s and the hangar route; a zombie message = confirmed.
-   Positive control: a deliberate extra release behind an env plant (ROGUESQ_S7587_PLANT=1) that must log a zombie.
-3. Fix each confirmed row (retain() at acquisition or drop the release), export submodule-patches, rebuild, rerun leaks:
-   dispatch_data_t / NSArray counts and zombie count 0 with the plant firing.
+1. `grep -n 'fobjc-arc' lib/rt64/CMakeLists.txt CMakeLists.txt` and the compile commands
+   (build/compile_commands.json if present) for each TU -> ARC yes/no.
+2. Non-ARC TUs: classify every alloc/new/copy (+1) vs factory (+0) and every release/retain/autorelease, by hand or by extending
+   s7587_ownership_census.py with an ObjC-message regex ([X alloc], [x release], ...). ARC TUs: list calls on non-main threads
+   with no @autoreleasepool.
+3. Runtime: the gauge only samples in MetalCommandList::begin; add a sample site in the present path (threadPresent / swap chain
+   present) if step 2 names a per-frame +0 there. Arms OWN=1 with and without any new fix, PLANT=1 in both, L4 dd4 150 s + the
+   s7469 hangar route; growth per begin must equal the plant rate (0.0039).
+Outcomes: H-arc/H-clean -> class OW-2 closed with the table; H-mismatch/H-pool -> fix (env-gated, =0 restores) + gauge proof.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.

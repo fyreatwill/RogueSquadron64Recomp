@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7586 (2026-11-18).
+Compact operational handoff, as of Session 7587 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7586: class LK CLOSED.** Fixed build: hangar re-entries add +1.9/+2.5 MB each (first mission load warms ~35 MB of RT64
+- **NEW s7587: class OW (metal-cpp ownership, plume_metal.cpp) CLOSED.** tools/s7587_ownership_census.py: upstream had 6
+  over-releases (+0 command buffer in begin, blit + resolve encoders, MetalShader functionName/debugName), 7 leaks (2 CopyAllDevices
+  arrays = the s7586 NSArray leaks, clearColor depth state per call, 3 clear states) and 6 pool-less autoreleases; all fixed
+  (default; ROGUESQ_MTL_OWN=0 = upstream). Gauge ROGUESQ_S7587_POOLGAUGE=1 (same binary, L4 dd4, plant ROGUESQ_S7587_PLANT=1):
+  implicit-pool growth 0.46-12 entries/command list -> 0.004 (= plant). OBJC_DEBUG_MISSING_POOLS traps at boot: do not use.
+- **s7586: class LK CLOSED.** Fixed build: hangar re-entries add +1.9/+2.5 MB each (first mission load warms ~35 MB of RT64
   caches once), 20 min L4 hold 0.005 MB/s, plant fired. Also fixed: plume MetalShader leaked one dispatch_data_t per shader
   compile (dispatch_release added; 203-222 root leaks -> 0).
 - **s7585 (class LK, host memory growth: LEAK FOUND + FIXED):** plume_metal.cpp MetalCommandQueue::executeCommandLists made one
@@ -286,9 +291,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     address names are shape-only), so it is not a rung to take.
 20. **Class LK host memory growth CLOSED s7586** (headline; wait-buffer leak s7585, dispatch_data leak s7586). Owner:
     ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
-21. **NEXT (s7587): class OW, metal-cpp ownership audit of plume_metal.cpp** (NEXT.md): every NS/MTL acquisition classified +1
-    (alloc/new/copy/create) vs +0 (autoreleased) and matched to its release, per thread pool. Lead: MetalShader::functionName is
-    NS::String::string (+0) yet released in ~MetalShader (overrelease, latent while the compile thread never drains a pool).
+21. **Class OW CLOSED s7587** (headline) for plume_metal.cpp; one NEEDS-POOL row left (device-ctor name string, once).
+22. **NEXT (s7588): class OW-2, ownership in the other Apple TUs** (NEXT.md): rt64_apple.mm, plume_apple.mm,
+    imgui_impl_metal.mm (+ any src/*.mm). First check whether each is built with -fobjc-arc; for non-ARC ones run the s7587 census
+    approach; then the POOLGAUGE run on the owner recipe incl. the hangar route.
 
 ## Evidence index
 
