@@ -201167,3 +201167,24 @@ Soak fold: no new SOAK-RESULTS lines since s7564.
 - ORIGIN: no mitigation landed; the chain parents are named per row in docs/COMPENSATION-CHAINS.md (writers from each lever's
   ORIGIN session), e.g. s4889's trigger = the port's own gate store 0 in setDisplayMode/reapplyDisplayMode (s4700).
 - Rules out: the GQ census as a complete default-on list before s7565 (char-48 blind spot).
+
+## Session 7566 (2026-11-17) — 19d dpc trio: DPC_KEEP_PIPE's parent drop is dead at defaults (H-dead-parent); S4272/WRAP_RESTORE interlocked with the live WRAP_FLUSH repair
+
+Soak fold: no new SOAK-RESULTS lines since s7564.
+Work unit: NEXT.md 19d, dpc_bridge trio. Hypotheses: H-confinable / H-interlocked / H-dead-parent.
+Offline read (line 1): g_defer_active has exactly two writers, rs64_dpc_defer_begin (true) and rs64_dpc_defer_end_impl (false),
+called only at main.cpp factor5_gfx_runner around the factor5_ucode{,_lean,_nmac,_tls} call. RSP_DPC_END (include/rsp_dpc_macros.h
+-> rsp_dpc_submit) appears only in the gfx ucode files (factor5_ucode + 9 overlays; 0 in factor5_boot and factor5_ucode_b audio).
+So every bump arrives with g_defer_active true, and the drop conditions `!(s_keep_pipe && g_defer_active)` (PIPESYNC) and
+`!(s_wrap_flush && g_defer_active)` (wrap) reduce to the env term alone.
+Runtime witness (line 2), existing instrument ROGUESQ_S7096_FWD, scratch/s7566/run.zsh (g1e_owner_quiet_arms, L1 dd1 16:9 FPS60,
+150 s, ALLOW_SLOW on battery, host idle 19206 s, unlocked):
+| arm | tasks | hw B | fwd B | drops pipe | drops noflush | unexplained | alive/stall |
+| kd default | 8843 | 1799750600 | 1799750600 | 0 | 0 | 0 | 1 / 0 |
+| kc KEEP_PIPE=0+WRAP_FLUSH=0 (ctl) | 4011 | 506454120 | 473257064 | 17388688 | 17674891776 | 96 | 1 / 0 (max gap 824 ms) |
+Positive control: both drop paths fire in kc and the matcher attributes the missing bytes to them. Selects H-dead-parent for
+KEEP_PIPE (the "parent" is only the =0 restore path; nothing to confine) and H-interlocked for S4272/WRAP_RESTORE (WRAP_FLUSH is
+a live repair of a real lap gap, s4273, so its restore/shadow children stay). Refutes H-confinable for this trio. Single run per arm.
+Change: tools/s7565_comp_chain.py retire text carries the 19d verdicts (docs/COMPENSATION-CHAINS.md regenerated, --check ok;
+s7557 GQ census exit 0); comment-only notes at both drop sites in src/rsp/dpc_bridge.cpp. No default changed.
+Next: 19d CUT_LIVE vs s6418 far cutoff (upstream_compat.cpp s6919 block), then SHADE_ORD_RESET.

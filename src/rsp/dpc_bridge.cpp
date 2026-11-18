@@ -6628,6 +6628,7 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         // pending ranges to RT64 now (submit is synchronous), then restart the ring mark.
         static const bool s_wrap_flush = []{ const char *e = std::getenv("ROGUESQ_DPC_WRAP_FLUSH"); return !(e && *e == '0'); }(); /* s4549: default on (=0 disables) */
         static std::atomic<uint64_t> s_wf_n{0}, s_wf_bytes{0}, s_wf_dropped{0};
+        // s7566 19d: g_defer_active is always true here (see the KEEP_PIPE note); only WRAP_FLUSH=0 reaches the drop.
         if (!(s_wrap_flush && g_defer_active)) {
             ++s_wf_dropped;
             RS64_S7096_DROP(start_phys, end_phys, 5);
@@ -7423,6 +7424,8 @@ static void rsp_dpc_submit_impl(uint8_t* rdram, uint32_t start, uint32_t end) {
         // A bump-time E7 can therefore be the future middle of a triangle; dropping it deletes 8
         // bytes of coefficients and desyncs the RDP walker. RT64 treats E7 as a no-op anyway.
         static const bool s_keep_pipe = []{ const char *e = std::getenv("ROGUESQ_DPC_KEEP_PIPE"); return !(e && *e == '0'); }();  // default ON; =0 restores the old drop
+        // s7566 19d: every DPC_END site is gfx ucode run inside rs64_dpc_defer_begin/_end (main.cpp factor5_gfx_runner), so
+        // g_defer_active is true at every bump and this drop runs only under KEEP_PIPE=0 (L1 dd1: 0 pipe drops by default).
         if (op6_head == 0x27 && !(s_keep_pipe && g_defer_active)) {
             if (inject_synth_fullsync(/*replace_pipe_hist=*/true)) {
                 RS64_S7096_DROP(submit_lo, submit_hi, 0);

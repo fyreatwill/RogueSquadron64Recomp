@@ -12,7 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7565 (19c CLOSED): compensation-chain audit, H-chains selected.** tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md
+- **NEW s7566 (19d dpc trio):** DPC_KEEP_PIPE's parent drop is dead on every route (defer is always active at a bump; L1 dd1
+  default 0 PIPE drops vs 17.4M B at =0); S4272/WRAP_RESTORE hang on the live WRAP_FLUSH repair, keep. Item 19d.
+- **s7565 (19c CLOSED): compensation-chain audit, H-chains selected.** tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md
   (122 rows, hand verdicts, controls 8/8): CHAIN 34 (12 on the retail route, 22 inside dd>1/ASPECT features), FEATURE 34,
   RETAIL-GAP 41, GUARD 6, DIAG 5, OWNER 1, UNKNOWN 1 (S6892). Retail-route chains beyond s4889/s7476: WRAP_RESTORE+S4272
   (WRAP_FLUSH), DPC_KEEP_PIPE (our PIPESYNC drop), CUT_LIVE (s6418 at dd1), SHADE_ORD_RESET (our diag map), S7376/S7383/S7384
@@ -451,6 +453,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 19d. **Retail-route chain simplification (s7565, OPEN, next; NEXT.md).** For each of the 12 retail-route chains, decide offline
     whether the parent can be confined so the child becomes dead code with identical default behaviour (start: dpc_bridge trio
     DPC_KEEP_PIPE / S4272 / WRAP_RESTORE; then CUT_LIVE vs s6418, SHADE_ORD_RESET vs its diag map). Never flip a default.
+    **s7566 dpc trio DONE:** KEEP_PIPE = H-dead-parent (every DPC_END site runs inside defer_begin/_end, so the bump-time
+    PIPESYNC drop runs only with KEEP_PIPE=0; S7096_FWD L1 dd1: default 0 pipe/0 noflush drops over 8843 tasks, every hw byte
+    forwarded; =0 control 17.4M B pipe + 17.7G B noflush dropped, 96 B unexplained). S4272/WRAP_RESTORE = H-interlocked
+    (parent WRAP_FLUSH is a live real-gap repair; keep). Single run per arm. Next: CUT_LIVE vs s6418, then SHADE_ORD_RESET.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

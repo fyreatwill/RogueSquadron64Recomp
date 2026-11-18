@@ -17,9 +17,9 @@ No other logged lever is B40-dependent. Coverage caveat: only 18 of the ON lever
 | lever | parent | root (depth) | what would retire it |
 |---|---|---|---|
 | `ROGUESQ_CUT_LIVE` | s6418 far-cutoff scaling | s6418 far-cutoff scaling (1) | confines our s6418 far-cutoff block to dd>1; simplification = gate s6418 itself on dd>1 |
-| `ROGUESQ_DPC_KEEP_PIPE` | dpc_bridge bump-time PIPESYNC drop | dpc_bridge bump-time PIPESYNC drop (1) | undoes our own bump-time PIPESYNC drop; simplification = remove the drop in deferred mode |
+| `ROGUESQ_DPC_KEEP_PIPE` | dpc_bridge bump-time PIPESYNC drop | dpc_bridge bump-time PIPESYNC drop (1) | s7566 19d H-dead-parent: g_defer_active is true at every bump (all DPC_END sites run inside defer_begin/end), so the drop is the =0 path only; L1 dd1 default 0 pipe drops / 8843 tasks vs =0 17.4M B |
 | `ROGUESQ_G1D_EDGE_CONTENT` | ROGUESQ_G1D_EDGE | ROGUESQ_G1D_EDGE (1) | refines G1D_EDGE's 4:3 debrief right-edge trim |
-| `ROGUESQ_S4272` | ROGUESQ_DPC_WRAP_FLUSH | ROGUESQ_DPC_WRAP_FLUSH (1) | enabler shadow for WRAP_RESTORE; same parent |
+| `ROGUESQ_S4272` | ROGUESQ_DPC_WRAP_FLUSH | ROGUESQ_DPC_WRAP_FLUSH (1) | s7566 19d H-interlocked: shadow WRAP_RESTORE reads; same live parent, keep |
 | `ROGUESQ_S4889_FIRST_DEREG` | B40 | B40 (1) | retire by B40=1 (retail store): s7564 6/6 clean at both settings, [s4889] gate-0 only |
 | `ROGUESQ_S7376_PQLOCK` | port present-thread diag/follow-draw code | port present-thread diag/follow-draw code (1) | locks our present-thread follow-draw code; parent is the port's present policy |
 | `ROGUESQ_S7383_FBPACK` | ROGUESQ_VI_FOLLOW_DRAW mode 3 | ROGUESQ_VI_FOLLOW_DRAW mode 3 (1) | follow-draw mode 3 is the port default since s23; mode 0 would retire it (unmeasured) |
@@ -27,7 +27,7 @@ No other logged lever is B40-dependent. Coverage caveat: only 18 of the ON lever
 | `ROGUESQ_S7476_A1FIX` | ROGUESQ_S4889_FIRST_DEREG | B40 (2) | retires with its parent s4889 |
 | `ROGUESQ_S7478_STALECHK` | port heap canary | port heap canary (1) | diagnostic canary repairing itself; retire with the canary |
 | `ROGUESQ_SHADE_ORD_RESET` | port shade-order diagnostic map | port shade-order diagnostic map (1) | bounds our own diagnostic map; simplification = drop the map when its log is off |
-| `ROGUESQ_WRAP_RESTORE` | ROGUESQ_DPC_WRAP_FLUSH | ROGUESQ_DPC_WRAP_FLUSH (1) | parent WRAP_FLUSH repairs a real bridge gap: a repair-of-a-repair, not retirable by a setting |
+| `ROGUESQ_WRAP_RESTORE` | ROGUESQ_DPC_WRAP_FLUSH | ROGUESQ_DPC_WRAP_FLUSH (1) | s7566 19d H-interlocked: parent WRAP_FLUSH is live (real lap gap; =0 arm noflush drops 17.7G B, 96 B unexplained); restore needs it, keep both |
 
 ## Chains internal to an opt-in feature (inert at dd1 / 4:3 by their sessions)
 

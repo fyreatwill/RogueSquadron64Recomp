@@ -306,9 +306,9 @@ def main():
 RETAIL_SCOPE = {
     "ROGUESQ_S4889_FIRST_DEREG": "retire by B40=1 (retail store): s7564 6/6 clean at both settings, [s4889] gate-0 only",
     "ROGUESQ_S7476_A1FIX": "retires with its parent s4889",
-    "ROGUESQ_WRAP_RESTORE": "parent WRAP_FLUSH repairs a real bridge gap: a repair-of-a-repair, not retirable by a setting",
-    "ROGUESQ_S4272": "enabler shadow for WRAP_RESTORE; same parent",
-    "ROGUESQ_DPC_KEEP_PIPE": "undoes our own bump-time PIPESYNC drop; simplification = remove the drop in deferred mode",
+    "ROGUESQ_WRAP_RESTORE": "s7566 19d H-interlocked: parent WRAP_FLUSH is live (real lap gap; =0 arm noflush drops 17.7G B, 96 B unexplained); restore needs it, keep both",
+    "ROGUESQ_S4272": "s7566 19d H-interlocked: shadow WRAP_RESTORE reads; same live parent, keep",
+    "ROGUESQ_DPC_KEEP_PIPE": "s7566 19d H-dead-parent: g_defer_active is true at every bump (all DPC_END sites run inside defer_begin/end), so the drop is the =0 path only; L1 dd1 default 0 pipe drops / 8843 tasks vs =0 17.4M B",
     "ROGUESQ_CUT_LIVE": "confines our s6418 far-cutoff block to dd>1; simplification = gate s6418 itself on dd>1",
     "ROGUESQ_SHADE_ORD_RESET": "bounds our own diagnostic map; simplification = drop the map when its log is off",
     "ROGUESQ_S7376_PQLOCK": "locks our present-thread follow-draw code; parent is the port's present policy",
