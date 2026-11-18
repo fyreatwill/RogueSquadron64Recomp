@@ -201912,3 +201912,6 @@ Hypotheses (NEXT.md s7591): H-clean (0 leaked rows), H-gated (only leaked rows b
   dispatch_semaphore_create 4189 -> dtor dispatch_release): all released.
 - lib/ edited -> submodule-patches exported (N64ModernRuntime.patch). Logs: scratch/s7591/hr_{old,new}.log, game_{old,new}.log.
 Next: class TH (thread/timer creation-site census) - see NEXT.md.
+Verdict: this selects H-gated and refutes H-default and H-clean (one gated uref leak existed; 0 default-path leaks, fixed arm flat,
+plant exact). The change also closes class MR with a code fix (events.cpp host-port cache), not only an instrument. Next discriminator:
+class TH per-event thread-creation rows (NEXT.md), split H-clean / H-gated / H-event by thread count across repeated events.
