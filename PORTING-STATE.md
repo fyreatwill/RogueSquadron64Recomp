@@ -201297,3 +201297,29 @@ Next: 19d S7478 canary, then G1D_EDGE_CONTENT.
 - ORIGIN: no mitigation added (no code change; measurement via existing env-gated canary lines).
 - Rules out: any default-route effect of S7478_STALECHK.
 - Next: 19d G1D_EDGE_CONTENT vs its parent G1D_EDGE (dpc_bridge.cpp rs64_g1d_pillar_scan), the last 19d retail-route chain.
+
+## Session 7571 (2026-11-17) — 19d G1D_EDGE_CONTENT H-dead-parent: the s6726 scissor-rule branch never decides at defaults (sc_only 0/5225 decisions, EDGE_CONTENT=0 ctl scissor trims 1260); 19d CLOSED
+
+**Unit (NEXT retail-chain-simplification, last chain).** ROGUESQ_G1D_EDGE_CONTENT (s6736) vs parent ROGUESQ_G1D_EDGE (s6726) in
+src/rsp/dpc_bridge.cpp rs64_g1d_pillar_scan. Hypotheses: H-dead-parent (with EDGE_CONTENT on, the scissor rule never decides a
+trim), H-interlocked (both rules contribute distinct trims), H-confinable (content rule could replace the scissor rule).
+**Offline.** The content reach s_erx is `min(reach, scissor xh)`, so ceil(reach) <= ceil(xh) and content cols >= scissor cols
+always; the scissor rule can only win where content n > 4 (clamped to 0) while scissor n is 1..4.
+**Instrument (kept, default off).** ROGUESQ_S7571_EDGE=1: at every edge decision evaluate BOTH rules (clamped 1..4) and log per
+VI epoch `[s7571-edge]` decisions, scissor trims, content trims, both, sc_only, ct_only, cols_differ, clip_bound (unclipped
+reach > scissor xh), held_in (trim carried over the epoch change). Output decision unchanged.
+**Run** scratch/s7571/run.zsh (g1e_owner_quiet_arms, L1 dd1 4:3, HOLD 90, ALLOW_SLOW: battery clk 1.52; both arms alive, 0 crash,
+0 VI stall):
+| arm | decisions | scissor trims | content trims | sc_only | ct_only | clip_bound | trims applied |
+| ea default | 5225 | 1259 (epochs 16-18) | 3790 | 0 | 2531 (epochs 6, 11-13, 20, 24) | 4812 | [g1d-edge] epoch 6 0->1, 9 1->0, 11 0->1 |
+| eb EDGE_CONTENT=0 | 5225 | 1260 (epochs 16-18) | 3790 | 0 | 2530 | 4812 | epochs 16, 17, 18 0->1 only |
+Positive control: the eb arm's own decisions come from the scissor rule and trim at epochs 16-18 (1260 decisions, [g1d-edge]
+lines), so the scissor branch is live when selected. Second line: the offline superset argument agrees with sc_only=0.
+clip_bound 4812/5225: content draws do extend past the scissor, so the scissor stays an input of the content rule (the clip);
+only the s6726 scissor-rule *branch* is dead at defaults.
+Not measured: the 4:3 debrief (off this route). Single-source: s6726's debrief rects reach x=512 under scissor 511, so content
+reach clipped = 511 -> cols 1 under both rules.
+Verdict: selects H-dead-parent (and H-confinable: EDGE_CONTENT already confines the scissor branch to the =0 arm); refutes
+H-interlocked (no decision where only the scissor rule trims). Keep both; =0 remains the s6726 rule. No default flipped.
+tools/s7565_comp_chain.py RETAIL_SCOPE updated; census and chain check rerun (exit 0). 19d CLOSED: all 12 retail-route chains
+decided (s7566-s7571). Next: item 20, classify the one UNKNOWN lever ROGUESQ_S6892 (G5a walker pointer repair).

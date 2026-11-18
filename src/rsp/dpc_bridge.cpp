@@ -5886,13 +5886,26 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
     // ROGUESQ_G1D_EDGE_CONTENT=0 = s6726 scissor rule.
     static const bool edge_content = [] { const char *v = std::getenv("ROGUESQ_G1D_EDGE_CONTENT"); return !(v && *v == '0'); }();
     static uint32_t s_cyc = 0; static double s_erx = 0.0;  // current cycle type; max content reach (exclusive px) this epoch
+    // s7571 19d diag: ROGUESQ_S7571_EDGE=1 evaluates BOTH trim rules at every decision and logs per epoch how often each
+    // would trim (scissor rule = s6726, content rule = s6736), how often they disagree, and whether the scissor clip of the
+    // content reach ever bound (unclipped reach > scissor xh). Decision output (rs64_g1d_edge_cols) unchanged.
+    static const bool s7571 = [] { const char *v = std::getenv("ROGUESQ_S7571_EDGE"); return v && *v == '1'; }();
+    static double s_erx_raw = 0.0; static uint32_t s71_dec = 0, s71_sc = 0, s71_ct = 0, s71_both = 0, s71_sconly = 0, s71_ctonly = 0, s71_diffn = 0, s71_clip = 0, s71_held = 0;
+    static int s71_lines = 0; static uint64_t s71_tot[8] = {};
     if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
     const int ep = __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED);
     if (ep != s_epoch) {
         if (s_lines < 200 && s_epoch >= 0) { s_lines++; fprintf(stderr, "[g1d-pillar] epoch=%d end draws=%u outside=%u crop=%d sw=%d\n", s_epoch, s_draws, s_out, rs64_g1d_pillar_crop, g_rs64_swap_n.load(std::memory_order_relaxed)); }
         // s6736: per-epoch, per-colour-width reach table (which columns any draw touches), for the right-edge column audit
         for (auto &e : s_reach) { if (e.cw && e.draws && s_rlines < 400) { s_rlines++; fprintf(stderr, "[g1d-reach] epoch=%d cw=%u draws=%u max_sc_xh=%.2f max_rect_x1=%.2f max_tri_x1=%.2f min_x0=%.2f sc_y=%.2f..%.2f content_y=%.2f..%.2f sw=%d\n", s_epoch, e.cw, e.draws, e.sx / 4.0, e.rx1, e.tx1, e.cx0, e.sy0, e.sy1, e.cy0, e.cy1, g_rs64_swap_n.load(std::memory_order_relaxed)); } e = {}; }
-        s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0; s_erx = 0.0;
+        if (s7571 && s_epoch >= 0) {
+            const uint32_t v[8] = {s71_dec, s71_sc, s71_ct, s71_both, s71_sconly, s71_ctonly, s71_diffn, s71_clip};
+            for (int i = 0; i < 8; i++) s71_tot[i] += v[i];
+            if (s71_lines < 400 && s71_dec) { s71_lines++; fprintf(stderr, "[s7571-edge] epoch=%d dec=%u sc_trim=%u ct_trim=%u both=%u sc_only=%u ct_only=%u cols_differ=%u clip_bound=%u held_in=%u cur_cols=%d tot dec=%llu sc=%llu ct=%llu sc_only=%llu ct_only=%llu differ=%llu clip=%llu content=%d sw=%d\n", s_epoch, s71_dec, s71_sc, s71_ct, s71_both, s71_sconly, s71_ctonly, s71_diffn, s71_clip, s71_held, rs64_g1d_edge_cols, (unsigned long long)s71_tot[0], (unsigned long long)s71_tot[1], (unsigned long long)s71_tot[2], (unsigned long long)s71_tot[4], (unsigned long long)s71_tot[5], (unsigned long long)s71_tot[6], (unsigned long long)s71_tot[7], (int)edge_content, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+            s71_dec = s71_sc = s71_ct = s71_both = s71_sconly = s71_ctonly = s71_diffn = s71_clip = 0;
+            s71_held = (edge_content && rs64_g1d_edge_cols) ? 1u : 0u;  // trim carried into the new epoch (s6736 hold)
+        }
+        s_epoch = ep; s_draws = 0; s_out = 0; s_edraws = 0; s_ecw = 0; s_esx = 0; s_erx = 0.0; s_erx_raw = 0.0;
         if (!edge_content) __atomic_store_n(&rs64_g1d_edge_cols, 0, __ATOMIC_RELAXED);
     }
     g_rw_walked = g_rw_fused;
@@ -5930,12 +5943,13 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
                     r->cy1 = std::max(r->cy1, std::min(incl ? y1 + 1.0 : y1, s_sy1 / 4.0));
                 }
             }
-            if (s_cw != s_ecw) { s_ecw = s_cw; s_esx = 0; s_edraws = 0; s_erx = 0.0; }
+            if (s_cw != s_ecw) { s_ecw = s_cw; s_esx = 0; s_edraws = 0; s_erx = 0.0; s_erx_raw = 0.0; }
             s_edraws++; s_esx = std::max(s_esx, s_sx1);
             const bool tri = op >= 0x08 && op <= 0x0F;
             if (!(op == 0x36 && s_cyc == 3u)) {  // fill-mode fill rects are the clear, not content
                 const double reach = (!tri && s_cyc >= 2u) ? x1 + 1.0 : x1;  // copy/fill-mode rects are inclusive
                 s_erx = std::max(s_erx, std::min(reach, s_sx1 / 4.0));
+                s_erx_raw = std::max(s_erx_raw, reach);
             }
         }
         if (s_cw <= 512u) continue;
@@ -5962,6 +5976,13 @@ static void rs64_g1d_pillar_scan(uint32_t lo, uint32_t hi) {
         const int n = edge_content ? (int)s_ecw - (int)std::ceil(s_erx - 1e-6)  // columns >= ceil(reach) only ever see the clear
                                    : (int)s_ecw - (int)((s_esx + 3u) / 4u);  // xh is exclusive: columns >= ceil(xh) are never drawn
         const int cols = (n >= 1 && n <= 4) ? n : 0;
+        if (s7571) {
+            const int nsc = (int)s_ecw - (int)((s_esx + 3u) / 4u), nct = (int)s_ecw - (int)std::ceil(s_erx - 1e-6);
+            const int csc = (nsc >= 1 && nsc <= 4) ? nsc : 0, cct = (nct >= 1 && nct <= 4) ? nct : 0;
+            s71_dec++; s71_sc += csc > 0; s71_ct += cct > 0; s71_both += (csc > 0 && cct > 0);
+            s71_sconly += (csc > 0 && cct == 0); s71_ctonly += (cct > 0 && csc == 0); s71_diffn += csc != cct;
+            s71_clip += s_erx_raw > s_esx / 4.0 + 1e-6;
+        }
         if (cols != rs64_g1d_edge_cols && s_lines < 200) { s_lines++; fprintf(stderr, "[g1d-edge] epoch=%d cols %d->%d cw=%u scissor_xh=%.2f reach=%.2f draws=%u sw=%d\n", ep, rs64_g1d_edge_cols, cols, s_ecw, s_esx / 4.0, s_erx, s_edraws, g_rs64_swap_n.load(std::memory_order_relaxed)); }
         __atomic_store_n(&rs64_g1d_edge_cw, (int)s_ecw, __ATOMIC_RELAXED);
         __atomic_store_n(&rs64_g1d_edge_cols, cols, __ATOMIC_RELAXED);

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7570 (2026-11-17).
+Compact operational handoff, as of Session 7571 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7570 (19d S7478_STALECHK):** H-dead-parent. The stale drop runs only on s7475 canary records (ROGUESQ_S7475_CANARY=1,
+- **NEW s7571 (19d G1D_EDGE_CONTENT, last chain; 19d CLOSED):** H-dead-parent. With EDGE_CONTENT on, the s6726 scissor-rule
+  branch never decides; content reach is clipped to the scissor, so it trims a superset. ROGUESQ_S7571_EDGE L1 dd1 4:3 (both rules
+  per decision): 5225 decisions, scissor trims 1259 all also content trims (sc_only 0), content-only 2531; EDGE_CONTENT=0 ctl
+  scissor rule fires 1260 (intro epochs 16-18). Debrief off-route (single-source: s6726 reach 512->511 = 1 col under both). Keep.
+- **s7570 (19d S7478_STALECHK):** H-dead-parent. The stale drop runs only on s7475 canary records (ROGUESQ_S7475_CANARY=1,
   default off). L1 dd1: default 0 arms/0 drops; CANARY=1 ctl 7 stale-drops; STALECHK=0 rescores 2 as false slack-stores. Keep. Item 19d.
 - **s7569 (19d follow-draw mode-3 chain):** S7376_PQLOCK H-dead-parent (s7377 EARLYLOCK already holds workloadMutex for the
   whole lookup; ROGUESQ_S7569_FD L1 dd1: 4800/4800 mode-3 entries pre-locked, PQLOCK taken 0, EARLYLOCK=0 ctl 4800). S7383_FBPACK
@@ -462,7 +466,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (headline). Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
     tools/regen_verify.sh D/replay D/verify.
 19c. **Compensation-chain audit CLOSED s7565** (headline; docs/COMPENSATION-CHAINS.md, `tools/s7565_comp_chain.py --write --check`).
-19d. **Retail-route chain simplification (s7565, OPEN, next; NEXT.md).** For each of the 12 retail-route chains, decide offline
+19d. **Retail-route chain simplification (s7565, CLOSED s7571).** For each of the 12 retail-route chains, decide offline
     whether the parent can be confined so the child becomes dead code with identical default behaviour (start: dpc_bridge trio
     DPC_KEEP_PIPE / S4272 / WRAP_RESTORE; then CUT_LIVE vs s6418, SHADE_ORD_RESET vs its diag map). Never flip a default.
     **s7566 dpc trio DONE:** KEEP_PIPE = H-dead-parent (every DPC_END site runs inside defer_begin/_end, so the bump-time
@@ -476,8 +480,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **s7569 follow-draw trio DONE:** PQLOCK H-dead-parent (subsumed by s7377 EARLYLOCK); FBPACK H-interlocked with the unlocked
     Gfx-thread publish, confinable by S7384_LDGFX=0 (opt-in lever, not a compensation); scratch/s7569.
     **s7570 S7478_STALECHK DONE: H-dead-parent** (parent = default-off s7475 canary; default 0 arms, CANARY=1 ctl 7 drops, =0 2 false
-    slack-stores; scratch/s7570). Next (last): G1D_EDGE_CONTENT.
-20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
+    slack-stores; scratch/s7570).
+    **s7571 G1D_EDGE_CONTENT DONE: H-dead-parent** (scissor branch subsumed: sc_only 0/5225, ctl EDGE_CONTENT=0 scissor 1260;
+    scratch/s7571). **19d CLOSED** (12/12 chains decided; no default flipped).
+20. **NEXT (s7572, NEXT.md): the one UNKNOWN lever, ROGUESQ_S6892** (G5a walker pointer repair; writer of *(s2+0x18) never
+    named, H-spill leads). Classify it: name the writer or prove which arena the object sits in at dd1 vs dd2.
+21. **When 1-20 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 
 ## Evidence index

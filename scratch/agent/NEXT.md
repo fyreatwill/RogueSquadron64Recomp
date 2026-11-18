@@ -1,16 +1,16 @@
-# NEXT (s7571)
-HYPOTHESIS-ID: retail-chain-simplification
+# NEXT (s7572)
+HYPOTHESIS-ID: s6892-walker-writer
 
-19d: dpc trio s7566, CUT_LIVE s7567, SHADE_ORD_RESET s7568, follow-draw trio s7569, S7478 s7570 DONE. Last chain:
-Unit: ROGUESQ_G1D_EDGE_CONTENT vs its parent ROGUESQ_G1D_EDGE (src/rsp/dpc_bridge.cpp rs64_g1d_pillar_scan ~5870-5960;
-PORTING-STATE '^## Session 6726 ' and '^## Session 6736 '). G1D_EDGE (s6726) trims right-edge source columns no draw reaches,
-keyed on scissor; EDGE_CONTENT (s6736) re-keys it on content-draw reach and holds the decision across VI-epoch changes.
-Hypotheses: H-dead-parent (with EDGE_CONTENT on, the s6726 scissor rule never decides a trim -> parent's scissor branch is dead),
-H-interlocked (both rules contribute trims on the 4:3 debrief / flight), H-confinable (EDGE_CONTENT could replace the scissor rule).
-Discriminator: one build counting per-epoch trim decisions by rule (scissor vs content) at defaults, on the 4:3 debrief route and
-L1 flight; positive control: EDGE_CONTENT=0 arm must show scissor-rule trims > 0 on the debrief (s6726's own case).
-If no debrief route is drivable, use L1 flight 4:3 (s6736: cw 512 flight last column) and say the debrief is unmeasured.
-Then close 19d in CURRENT-TRUTH; next = item 20 (new idiom-class audit or ladder rung). Never flip a default; owner decides.
+19d CLOSED s7571 (all 12 retail-route chains decided). docs/COMPENSATION-CHAINS.md has ONE UNKNOWN lever left: ROGUESQ_S6892
+(G5a walker pointer repair, tools/apply_s6892_walker_guard.py, default on; logs build/rs64_s6892.log). The writer of
+*(s2+0x18) in cinematicSplineWalkerNpcHandler (caller of initVec4TripletFromArgs, owner crash on Liberation of Gerrard V =
+LEVEL=4, half way) was never named. Read PORTING-STATE '^## Session 6892 ' and CURRENT-TRUTH G5a lines first.
+Hypotheses: H-spill (dd>1 spill arena: object at 0x8082C870 at dd2, never used at dd1), H-overrun (dd/wide terrain writes land
+in the actor), H-fps60 (actor ticks twice, freed/reused), H-uninit (retail bug).
+Discriminator, one build: a write watch on the actor's +0x18 slot (every store, guest PC + caller) armed from the cutscene actor
+allocation, plus the allocator arena of each such actor, in arms dd1 and dd2 at the owner recipe (FPS60, 16:9), LEVEL=4 forced
+route, with the s6892 fire log. Positive control: watch fires on the legitimate initial store of +0x18 in every arm.
+If the half-way event cannot be driven, find the event's trigger offline first (the walker's spawn path) and force it.
+Outcome: name the writer -> classify S6892 (CHAIN of dd spill / GUARD of retail bug) in tools/s7565_comp_chain.py.
 OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
-Re-run after any lever change: python3 tools/s7557_gq_census.py --write && python3 tools/s7565_comp_chain.py --write --check
-Run template: scratch/s7570/run.zsh (g1e_owner_quiet_arms, ALLOW_SLOW; ARMS "level:tag:ENV+ENV").
+Run template: scratch/s7571/run.zsh (g1e_owner_quiet_arms, ALLOW_SLOW; ARMS "dd:tag:ENV+ENV").
