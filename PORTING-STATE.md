@@ -200966,3 +200966,8 @@ What ran (offline, no game run): `tools/regen_front.sh scratch/s7558/pristine` (
    scratch/agent/soak_queue/s7558_b40_ab.sh (L4 dd2 / L1 / L12, default vs ROGUESQ_M5_B40_VALUE=1, 240 s each).
 Rules out: H-correctness-only (one BEHAV site), H-dead as a current state (fixed). ORIGIN (B40): writer is our fixer chain
 (fixup_live_replay b40_polarity_23), value 0 is not retail.
+Verdict: this selects H-hidden-change (exactly one ungated game-behaviour site, the B40 gate default) and refutes H-correctness-only;
+it closes H-dead as a current state (the six broken fixup anchors are fixed and the chain runs). Next discriminator: per differing
+function, the PATCH-tag set difference live vs replay plus normalised-source equality, which splits H-layout / H-missing-step /
+H-live-handedit / H-replay-extra for the 141-vs-78 regen drift (NEXT.md); runtime side: the s7558_b40_ab soak (default vs
+ROGUESQ_M5_B40_VALUE=1 crash/stall per arm).
