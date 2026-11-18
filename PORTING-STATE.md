@@ -202314,3 +202314,37 @@ Selects H-clean; rules out H-bad (no zero-extended KSEG0/negative value reaches 
 prototypes exist only in dead stubs). No runtime code change; no game run (nothing BAD to witness in-game).
 Next: class RA (host READS of guest argument registers: ctx->r4..r7 / MEM_W(0x10+, r29) used in host compares, indices or
 arithmetic without (uint32_t)/(int32_t) truncation; a KSEG0 pointer arrives as 0xFFFFFFFF8xxxxxxx).
+
+## Session 7604 (2026-11-18) — class RA closed: host reads of guest registers (528 read sites, 1 BAD fixed in the uncalled recomp_alloc mod export, controls 6/6, witness 12/12)
+HYPOTHESIS-ID: host-register-read-truncation-census
+- Contract: a 32-bit guest value sits sign-extended in a 64-bit gpr (KSEG0 a0 = 0xFFFFFFFF80114388), so host code that compares
+  the raw ctx->rN with a u32 constant, indexes a host array with it, right-shifts/divides it, or widens it to size_t/uint64_t
+  without truncating is wrong. tools/s7604_ra_census.py --controls; scope src/ + librecomp + ultramodern (tests/thirdparty
+  skipped, comments and string literals blanked). Every `ctx->rN` that is not an assignment LHS is classified.
+- Result: 528 reads = ok-cast 399 ((uint32_t)/(int32_t)/(s32)/(u32)/(unsigned)/(int)/(uint8_t)/(OSMesg)/(OSEvent)/PTR(),
+  U32()/S32(), static_cast<32-bit>, implicit init of a <=32-bit local, RHS of a MEM_* store), ok-hilo 46 (math_routines and
+  osSetTime `(hi << 32) | (lo & 0xFFFFFFFF)` pairs), ok-macro 24 (MEM_*/TO_PTR address operand; MEM_* subtracts
+  0xFFFFFFFF80000000 so it NEEDS the sign-extended form; TO_PTR masks & 0x1FFFFFF and takes both), ok-param 24 (callee
+  parameter <= 32-bit by a signature map built from the tree, RDRAM_ARG/PASS_RDRAM expanded: queue_audio_buffer, submit_rsp_task
+  PTR(OSTask), update_bit, osSetCount u32, rs64_log_ai_*), ok-alias 3 (gpr locals whose every read classifies ok: zmemcpy
+  dest_reg/src_reg, is_proutSyncPrintf buf), ok-copy 2, row 30 (64-bit range guards rs64_guest_range_valid_top /
+  rs64_sp_task_range_valid / rs64_spai_guard_bad that accept addr >= 0xFFFFFFFF80000000 or (addr>>32)==0; zmemcpy in_range;
+  osDpGetCounters / __osRdbSend canonical-sext checks; __osRdbSend size > 0x800000 rejected first; RS64_PAK casts
+  (uint32_t)(pfs); devAddr = base | r5 narrowed to uint32_t; do_rom_pio(gpr) / rs64_eep_row(gpr) / load_doubleword only feed
+  MEM_*). No `ctx->rN >> / % ` anywhere (grep), no raw-gpr compare with a non-zero constant outside a cast.
+- _arg<N,T> (helpers.hpp) checked as a rule: integral branch static_asserts sizeof(T) <= 4 and static_cast<T>, pointer branch
+  goes through TO_PTR.
+- ONE BAD, H-bad-gated (dead path): heap.cpp recomp_alloc passed (size_t)ctx->r4, so a >= 2 GB u32 request became
+  0xFFFFFFFF8xxxxxxx, and a failed o1heapAllocate returned (nullptr - rdram) + KSEG0 = a junk guest pointer. ORIGIN: upstream
+  N64ModernRuntime mod export, never reached by this game (0 calls in ../N64Recomp/RecompiledFuncs; positive control
+  osVirtualToPhysical_recomp found in the same grep). Fixed: (size_t)(uint32_t)ctx->r4, NULL -> r2 = 0;
+  ROGUESQ_S7604_ALLOC=0 = old form. Build OK; no game run needed (no default-path call). submodule-patches exported.
+- Controls 6/6 (each on a copy of the tree): (1) `if (ctx->r4 == 0x80114388u)` -> OPEN; (2) `rdram[ctx->r5]` -> OPEN; (3) row
+  dropped -> OPEN; (4) _arg admits sizeof(T) <= 8 -> OPEN; (5) gpr alias compared with 0x8010FEE0u -> OPEN (alias follow
+  works); (6) `(uint32_t)(ctx->r4 >> 16)` -> OPEN (cast-after-shift caught). The real tree's own old-form arm of the fix was
+  flagged OPEN until given its row: a live in-tree positive.
+- Second source tools/s7604_ra_witness.cpp 12/12 against the real recomp.h/helpers.hpp/ultra64.h with sign-extended a0: raw
+  `== u32` false (control), (uint32_t)/U32/_arg<0,u32> true, MEM_W(0, sext) and TO_PTR(both forms) hit rdram+0x114388, the
+  >>16-then-cast pulls sign fill (control), pair idiom exact, (size_t)r5 vs (size_t)(uint32_t)r5, old NULL offset nonzero.
+- Rules out: H-bad-live (no default-path read misuses sign fill). Class RA CLOSED. Next: class FR (host reads/writes of guest
+  FPRs, 21 ctx->fN sites: view .fl/.d/.u32l vs retail prototype and FR mode).

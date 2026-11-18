@@ -1621,6 +1621,30 @@ index af6f18d..e5dee75 100644
      std::filesystem::copy_file(temp_path, filepath, std::filesystem::copy_options::overwrite_existing, ec);
      if (ec) {
          return false;
+diff --git a/librecomp/src/heap.cpp b/librecomp/src/heap.cpp
+index f84ac71..d5a83bf 100644
+--- a/librecomp/src/heap.cpp
++++ b/librecomp/src/heap.cpp
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ #include "o1heap/o1heap.h"
+ 
+ #include "librecomp/addresses.hpp"
+@@ -11,7 +12,13 @@ static inline O1HeapInstance* get_heap(uint8_t* rdram) {
+ }
+ 
+ extern "C" void recomp_alloc(uint8_t* rdram, recomp_context* ctx) {
+-    uint32_t offset = reinterpret_cast<uint8_t*>(recomp::alloc(rdram, ctx->r4)) - rdram;
++    // s7604 class RA: a0 is a sign-extended u32 size; (uint32_t) keeps 0x80000000+ requests at their real size instead of
++    // 0xFFFFFFFF8xxxxxxx. A failed o1heap allocation returned (0 - rdram) + KSEG0 = a junk guest pointer; return NULL.
++    // ROGUESQ_S7604_ALLOC=0 restores the old form. Mod-export only: 0 calls in the recompiled game.
++    static const bool old_form = [] { const char* e = std::getenv("ROGUESQ_S7604_ALLOC"); return e && e[0] == '0'; }();
++    void* p = recomp::alloc(rdram, old_form ? (size_t)ctx->r4 : (size_t)(uint32_t)ctx->r4);
++    if (p == nullptr && !old_form) { ctx->r2 = 0; return; }
++    uint32_t offset = reinterpret_cast<uint8_t*>(p) - rdram;
+     ctx->r2 = offset + 0xFFFFFFFF80000000ULL;
+ }
+ 
 diff --git a/librecomp/src/math_routines.cpp b/librecomp/src/math_routines.cpp
 index 4d6a01d..e93a084 100644
 --- a/librecomp/src/math_routines.cpp

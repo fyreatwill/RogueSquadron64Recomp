@@ -1,20 +1,17 @@
-# NEXT (s7604)
-HYPOTHESIS-ID: host-register-read-truncation-census
+# NEXT (s7605)
+HYPOTHESIS-ID: host-fpr-view-census
 
-Class RX closed s7603 (tools/s7603_rx_census.py, 0 open, controls 5/5, witness 9/9). Next idiom class RA: host code READING a
-guest register. Guest gpr values are sign-extended 64-bit: a KSEG0 pointer in a0 is 0xFFFFFFFF80114388, not 0x80114388. Host
-code that uses ctx->rN (N in 4..7, 2, 3, 29, 31, s-regs in hooks) or a gpr-typed local in a compare against a u32 constant
-(`ctx->r4 == 0x80114388u` is always false), as a host array index / pointer offset (rdram + ctx->r4), in a 64-bit division,
-shift right, or a size_t length without truncating it first is wrong. MEM_W/MEM_B/TO_PTR macros mask the address themselves
-(check how: ADD32 / (int32_t) / & 0x1FFFFFFF in recomp.h) -> ok-macro.
-Scope: src/, librecomp/src, ultramodern/src, tests skipped; enumerate every `ctx->r[0-9]+` READ (not the LHS of `=`), plus
-`_arg<N, T>` (helpers.hpp: check it truncates to T).
-Per site verdict: ok-cast ((uint32_t)/(int32_t)/(s32)/(u32) applied, or passed to a parameter of 32-bit type), ok-macro
-(MEM_*/TO_PTR/ADD32 operand), ok-copy (stored back to a gpr), ok-zero (compared with 0 / nonzero test), ok-sext-compare (compared
-with a (gpr)(int32_t) constant or another gpr), BAD (64-bit use of a value whose upper half is sign fill).
-Hypotheses: H-clean, H-bad-gated (BAD only in env-gated diagnostics: fix them, they print or match wrong), H-bad-live (a
-default-path compare/index never matches -> real behavioural bug; runtime witness at a level).
-Tool: tools/s7604_ra_census.py --controls: (1) plant `if (ctx->r4 == 0x80114388u)` in a copy of upstream_compat.cpp -> OPEN;
-(2) plant `rdram[ctx->r5]` -> OPEN; (3) drop a row -> OPEN; (4) make _arg drop its truncation in a copy of helpers.hpp -> OPEN.
-For BAD rows: known-value witness (sign-extended a0 into the real function), then fix; a default-path fix needs a level run.
+Class RA closed s7604 (tools/s7604_ra_census.py, 0 open, controls 6/6, witness 12/12; recomp_alloc dead-path fix). Next idiom
+class FR: host code reading or writing a GUEST FPR (ctx->fN). ~21 sites in src/ + librecomp + ultramodern (grep 'ctx->f[0-9]').
+Contract: o32 float args arrive in f12 (a0) and f14 (a1), a double in f12/f14 as .d; float return in f0 .fl, double in f0 .d.
+The view used (.fl / .d / .u32l / .u32h) must match the retail prototype of the stubbed function, and the recompiler's FR mode
+(check recomp.h fpr union + N64Recomp's mips3_float_mode / odd-register handling: does an FR=0 double live in f12 alone or in
+the f12/f13 pair as two u32 halves?). helpers.hpp _arg<N,float> only admits index 0 (f12) and _arg_float_a1 reads a1 as u32
+bits: check that matches o32 (float a1 after a float a0 is f14, after an int a0 it is a1 in a gpr).
+Per site verdict: ok-proto (view matches the retail prototype, named), ok-diag (env-gated log), BAD (wrong register or view).
+Hypotheses: H-clean, H-bad-gated, H-bad-live (a default-path float stub reads the wrong half/register -> wrong value; runtime
+witness: call it with a known float from a level and compare).
+Tool: tools/s7605_fr_census.py --controls: (1) plant `ctx->f0.d = x` in a stub whose prototype returns float -> OPEN;
+(2) plant a read of f13 as the second float arg -> OPEN; (3) drop a row -> OPEN; (4) make _arg_float_a1 read r6 -> OPEN.
+Second source: a witness .cpp against the real recomp.h union (as tools/s7604_ra_witness.cpp).
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.

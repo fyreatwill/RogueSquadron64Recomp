@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7603: class RX (host writes into guest registers) CLOSED, H-clean.** tools/s7603_rx_census.py --controls (5/5): 151
+- **NEW s7604: class RA (host reads of guest registers) CLOSED, H-bad-gated, one dead-path fix.** tools/s7604_ra_census.py
+  --controls (6/6): 528 ctx->rN reads = ok-cast 399, ok-hilo 46, ok-macro 24, ok-param 24 (signature map), ok-alias 3, ok-copy 2,
+  row 30 (64-bit range guards accepting both sext/zext forms), 0 open. One BAD: recomp_alloc (mod export, 0 game calls) sized
+  (size_t)ctx->r4 and returned a junk pointer on NULL; fixed (ROGUESQ_S7604_ALLOC=0 = old). Witness tools/s7604_ra_witness.cpp 12/12.
+- **s7603: class RX (host writes into guest registers) CLOSED, H-clean.** tools/s7603_rx_census.py --controls (5/5): 151
   write sites (ok-sext 71, ok-small 64, ok-copy 2, fpr 11, consumer 1) + 81 no-r2 stubs (dead 31 incl. every non-void one such as
   osSetIntMask/__osSpSetPc/osVoice*, void 30, hook 21); 0 open. _return sign-extends u32. osVirtualToPhysical's zero-extended u32
   reaches only guest `sw` (7/7 calls). Second source tools/s7603_rx_witness.cpp 9/9 (real helper + real osVirtualToPhysical;
@@ -411,8 +415,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     or a guest-visible struct member; a sub-word or 64-bit member needs a swizzle proof or a TYPE_ROWS host-private row.
 34. **Class RX CLOSED s7603** (headline). Rerun tools/s7603_rx_census.py --controls after adding a host stub or any
     `ctx->rN =` write; a new called stub that sets no r2 needs a void retail prototype (RETAIL_VOID) or it is OPEN.
-35. **NEXT (s7604): class RA, host reads of guest argument registers** (NEXT.md): ctx->r4..r7 and stack args used in host
-    compares/indices/arithmetic without (uint32_t)/(int32_t) truncation; a KSEG0 pointer arrives as 0xFFFFFFFF8xxxxxxx.
+35. **Class RA CLOSED s7604** (headline). Rerun tools/s7604_ra_census.py --controls after adding host code that reads
+    ctx->rN; a 64-bit use (uint64_t/gpr/size_t, compare, index) needs a cast, a 32-bit parameter, or a SITE_ROWS reason.
+36. **NEXT (s7605): class FR, host access to guest FPRs** (NEXT.md): 21 ctx->fN sites; view (.fl/.d/.u32l) must match the
+    retail prototype (float a0 in f12, a1 in f14, double in f12 .d) and the FR mode the recompiler emits.
 
 ## Evidence index
 
