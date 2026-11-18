@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7601 (2026-11-18).
+Compact operational handoff, as of Session 7602 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7601: class BS (guest-RAM byte swizzle) CLOSED, H-gated; 5 diagnostic composers fixed.** tools/s7601_bs_census.py
+- **NEW s7602: class TP (guest RAM viewed as a host type) CLOSED, H-clean.** tools/s7602_tp_census.py --controls (5/5): 144
+  TO_PTR / _arg<N, T*> / GET_MEMBER sites = ok-word 67, ok-swizzled 48, host-private 24, generic 1, consumer 2, gated 1, addr 1;
+  0 open. `_arg<N, PTR(T)>` is NOT a view (PTR(T) = int32_t). OSContPad's host decl is unswizzled but never viewed (cont.cpp
+  writes the pad via MEM_H/MEM_B). OSPfs id/label (funky-endian TODO) never accessed (pak stubbed). Only risky members used:
+  OSThread.context (host pointer, host-private) and OSTimer.interval/timestamp (u64 halves word-swapped vs retail): two sources
+  that no guest reads them (timer.cpp code reading + /tmp/s7419_canon.dis: the one live timer 0x801128F0 has no access at +8..+23).
+  Static census; no game run, no code change.
+- **s7601: class BS (guest-RAM byte swizzle) CLOSED, H-gated; 5 diagnostic composers fixed.** tools/s7601_bs_census.py
   --controls (4/4; rows tools/s7601_bs_rows.py): 522 raw-view sites (rdram/RDRAM/g_rdram_for_submit) = ok-byte 291, ok-word 77,
   ok-half 7, symmetric 40, bound 1, consumer 36, gated 58, addr 12; 0 open, 0 BAD on default paths. 6 TO_PTR structs (OSThread,
   OSIoMesgHdr, OSPiHandle, OSContStatus, OSViMode, OSPfs tail) have every sub-word member swizzled; 265 MEM_* macro sites ok by
@@ -395,9 +402,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     by guest data; `--list <kind>` prints the auto-verdict sites of one kind for auditing.
 32. **Class BS CLOSED s7601** (headline). Rerun tools/s7601_bs_census.py --controls after adding host code that reads or
     writes guest RAM through rdram/RDRAM/g_rdram_for_submit, or a TO_PTR struct with sub-word members (add it to STRUCTS).
-33. **NEXT (s7602): class TP, TO_PTR / _arg<PTR(T)> host-typed guest views** (NEXT.md): every guest pointer the runtime
-    dereferences as a host type T; sub-word scalars, sub-word arrays and structs outside the s7601 STRUCTS table need a swizzle
-    proof (struct layout pre-swapped, MEM_* use, or a consumer that swaps), else a silent wrong value.
+33. **Class TP CLOSED s7602** (headline). Rerun tools/s7602_tp_census.py --controls after adding a TO_PTR / _arg<N, T*> view
+    or a guest-visible struct member; a sub-word or 64-bit member needs a swizzle proof or a TYPE_ROWS host-private row.
+34. **NEXT (s7603): class RX, host writes into guest registers** (NEXT.md): 127 `ctx->rN =` / `_return<T>` sites in src/ and
+    librecomp/ultramodern; a 32-bit result must reach the 64-bit gpr sign-extended (MIPS64 rule; s4884 fixed one idiom), 64-bit
+    returns split r2 hi / r3 lo, floats go to f0. Zero-extended 0x80xxxxxx pointers break slt/beq on the guest side.
 
 ## Evidence index
 

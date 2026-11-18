@@ -202250,3 +202250,36 @@ Hypotheses H-bounded / H-grow / H-gated.
   then `p[i]`) are judged by row, not by tracking the alias; TO_PTR / _arg<PTR(T)> views beyond the 6 struct types
   (OSContPad, u8/char strings, int16_t audio) are not covered -> class TP next.
 - Verdict: this selects H-gated (5 diagnostic composers wrong, now fixed) and refutes H-bad on default paths, and closes class BS.
+
+## Session 7602 (2026-11-18) — class TP closed: guest RAM viewed as a host type (144 TO_PTR/_arg<T*>/GET_MEMBER sites, 0 open, controls 5/5); OSTimer u64 halves word-swapped but no guest reader (two sources)
+
+Work unit: NEXT.md s7602 (HYPOTHESIS-ID toptr-host-typed-guest-view-census), residual of class BS s7601.
+Tool: tools/s7602_tp_census.py (imports s7601_bs_census for load/strip/struct_check). Scope src/, librecomp/{src,include},
+ultramodern/{src,include}; comments stripped, `#\s*define` lines skipped.
+- Boring thing first: `PTR(T)` expands to `int32_t` in this build (ultra64.h `#else` branch), so the ~150 `_arg<N, PTR(T)>` /
+  `PTR(T) x` sites are plain integers and never dereference. Real views are only TO_PTR(T, x), `_arg<N, T*>` (helpers.hpp
+  routes pointer T through TO_PTR) and GET_MEMBER(T, ...).
+- 144 view sites: ok-word 67 (u32/s32/OSMesg/PTR(..) scalars and word-only structs OSMesgQueue/OSTask/OSMesg; GET_MEMBER x4 on
+  OSMesgQueue, host offset == BE offset), ok-swizzled 48 (OSThread flags/state, OSIoMesgHdr, OSPiHandle, OSContStatus, OSViMode,
+  OSPfs tail: all proven by s7601 struct_check, 0 BAD), host-private 24, generic 1 (helpers.hpp template), rows 4: ai.cpp uint8_t
+  (consumer p[i^3], gated), audio.cpp int16_t queue_samples (consumer: main.cpp rebuilds samples from bytes (i*2)^3 / (i*2+1)^3),
+  audio.cpp int16_t pcm-boundary FNV (gated, cosmetic hash), heap.cpp void (addr only). 0 open, 0 stale rows.
+- Rule for struct T: "risky" members (sub-word not proven by s7601, or 64-bit/host-pointer) are allowed only if no `T* v` in the
+  file accesses `v->m`/`v.m` and no `TO_PTR(T, ..)->m`; else a TYPE_ROWS host-private row or OPEN.
+  OSPfs id/label u8[32] ("funky endianness" TODO): never accessed (pak.cpp is all PFS_ERR_NOPACK stubs) -> ok.
+  OSTask int64 force_structure_alignment: never accessed -> ok.
+  OSThread.context (8-byte host pointer in the guest register-save area): host-private (thread switching replaced).
+  OSTimer.interval/timestamp: timer.cpp's own struct stores u64 natively, so the halves are word-swapped vs retail BE u64 order.
+  Invisible unless the guest reads them. Source 1: timer.cpp code reading (host osSetTimer/timer thread are the only
+  readers/writers). Source 2: /tmp/s7419_canon.dis: the single live guest timer (s7397) is 0x801128F0, formed once as
+  mq(0x80112910)-32 in installPeriodicCallback and passed to osSetTimer; 0 instructions with lo offset 10488-10503
+  (0x801128F8..0x80112907) in the whole disassembly, and no -24..-9 access off the mq base in installPeriodicCallback /
+  periodicCallbackWorker. -> H-clean.
+- OSContPad (NEXT.md's first lead): its ultra64.h decl (u16 button, s8 x, s8 y, u8 err) is NOT swizzled, but it is used only as a
+  host-local dummy array; osContGetReadData_recomp writes guest memory with MEM_H(6c+0)/MEM_B(6c+2..4) -> correct by macro.
+- Controls 5/5: (1) `TO_PTR(uint16_t, a)[0]` planted in cont.cpp -> OPEN; (2) drop ai.cpp row -> OPEN; (3) u16 member added to
+  OSMesgQueue in a copy of ultra64.h and read in mesgqueue.cpp -> OPEN; (4) `TO_PTR(OSContPad, d)->stick_x` plant -> OPEN
+  (unswizzled decl caught); (5) drop OSTimer.interval type row -> OPEN.
+Rules out H-bad (no default-path host-typed sub-word view reads wrong bytes) and H-gated-only; selects H-clean. No code change,
+no game run (static census + disassembly scan; nothing to witness at runtime since 0 BAD rows).
+Next: class RX (host writes into guest registers: ctx->rN = / _return<T>, 127 sites) - sign extension of 32-bit results.

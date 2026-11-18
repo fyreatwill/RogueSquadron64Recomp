@@ -1,25 +1,19 @@
-# NEXT (s7602)
-HYPOTHESIS-ID: toptr-host-typed-guest-view-census
+# NEXT (s7603)
+HYPOTHESIS-ID: host-register-write-sign-extension-census
 
-Class BS closed s7601 (522 raw-view sites, 0 open, 0 BAD on default paths, controls 4/4; tools/s7601_bs_census.py). Its
-residual: guest memory dereferenced as a HOST TYPE through TO_PTR(T, x) / _arg<N, PTR(T)> / helpers.hpp, where only 6 struct
-types were layout-checked (STRUCTS in s7601_bs_census.py).
-
-Class TP = every TO_PTR / _arg<PTR(T)> / reinterpret_cast<T*>(TO_PTR...) site in librecomp/src, ultramodern/src, src/ (skip
-tests/tools). Per site name T and classify:
-  word        T is 32-bit scalar or a struct of only 32-bit members (OSMesgQueue, OSTask, OSTimer?, OSMesg) -> ok
-  swizzled    struct with sub-word members, every one pre-swapped (add T to s7601 STRUCTS and let struct_check prove it)
-  consumer    sub-word scalar/array (u8/char/int16_t/void) whose consumer applies ^3 / ^2 or swaps (named, e.g. audio
-              queue_samples int16 pairs, string reads via MEM_B)
-  gated       diagnostic
-  BAD         sub-word access with no swizzle on a default path
-Known leads to check first: cont.cpp:58 PTR(OSContPad) (6-byte struct, button u16 + 2 s8 + u8 NOT pre-swapped in ultra64.h,
-and arrays of it straddle words: how does osContGetReadData write it?), PTR(u8)/PTR(char) args (strings from guest), ai.cpp:88
-TO_PTR(uint8_t) audio buffer, audio.cpp TO_PTR(int16_t), OSPfs id/label "funky endianness" TODO, OSTimer layout.
-Hypotheses: H-clean (all swizzled/consumer), H-bad (a default-path sub-word view reads wrong bytes: e.g. controller stick
-axes swapped would show as wrong input), H-gated.
-Tool: tools/s7602_tp_census.py --controls (plant `TO_PTR(uint16_t, a)[0]` read into a copy of cont.cpp -> OPEN; drop a row ->
-OPEN; extend STRUCTS check to OSContPad and plant a swapped member -> BAD).
-Runtime witness for any BAD row: known-value test (write a known guest pattern via MEM_* in a host unit, read via the view),
-plus, if controller-facing, a keyed run reading the guest-visible pad bytes (ROGUESQ_FORCE_* recipe, copied save folder).
+Class TP closed s7602 (tools/s7602_tp_census.py, 144 views, 0 open, controls 5/5). Next idiom class RX: host code writing a
+value into a guest register. MIPS64 contract: a 32-bit result in a gpr must be sign-extended to 64 bits (recompiled code does
+64-bit compares/adds on gpr; a zero-extended 0x80xxxxxx pointer or a negative s32 stored as 0x00000000FFFFFFFF breaks slt/beq
+and address math that is not masked). s4884 fixed one generated idiom (zero-extended `ctx->rN = 0x80000000u`); s7087 osGetCount.
+Scope: `ctx->rN = ...`, `(&ctx->r4)[i] = ...`, `_return<T>(ctx, v)` (helpers.hpp: check how it extends), ctx->f0/f2 for float
+returns, r2/r3 for 64-bit returns (osGetTime: r2 = hi sign-extended, r3 = lo sign-extended), in src/, librecomp/src,
+ultramodern/src (127 sites by grep `ctx->r[0-9]+\s*=[^=]|_return<`), skip tests. Also host stubs that return nothing but the
+guest expects v0 (void _recomp with a non-void retail prototype -> stale r2).
+Per site verdict: ok-sext (value is (gpr)(int32_t)x / s32 / int / literal < 0x80000000), ok-small (provably 0..0x7FFFFFFF),
+ok-64 (value really 64-bit and the guest consumes it as such), consumer (guest only uses low 32 bits, named), BAD.
+Hypotheses: H-clean, H-bad (a zero-extended negative / KSEG0 value reaches a guest compare), H-dead (bad sites only in
+unreached stubs).
+Tool: tools/s7603_rx_census.py --controls: (1) plant `ctx->r2 = (uint32_t)0x80001000u;` in a copy of a librecomp file -> OPEN;
+(2) plant a void _recomp for a retail function that returns s32 (pick one from the symbol table) -> OPEN; (3) drop a row -> OPEN.
+Runtime witness for any BAD row: known-value host unit (call the _recomp with a ctx, check r2 high word), then a level run if live.
 Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE.
