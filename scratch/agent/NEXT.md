@@ -1,20 +1,18 @@
-# NEXT (s7588)
-HYPOTHESIS-ID: apple-tu-ownership-audit
+# NEXT (s7589)
+HYPOTHESIS-ID: host-resource-growth-audit
 
-Class OW closed s7587 for plume_metal.cpp (census tools/s7587_ownership_census.py, gauge ROGUESQ_S7587_POOLGAUGE=1). Same idiom
-may live in the other Apple TUs: lib/rt64/src/apple/rt64_apple.mm, lib/rt64/src/contrib/plume/plume_apple.mm,
-lib/rt64/src/contrib/imgui/backends/imgui_impl_metal.mm (+ imgui_impl_osx.mm, any src/*.mm).
-Hypotheses: H-arc (built with -fobjc-arc: ownership is compiler-managed, only pool placement matters), H-clean (manual RR but
-balanced), H-mismatch (+0/+1 mismatches like s7587), H-pool (autoreleases on pool-less threads, e.g. per-frame window/layer
-queries on the present thread).
-Method, one pass:
-1. `grep -n 'fobjc-arc' lib/rt64/CMakeLists.txt CMakeLists.txt` and the compile commands
-   (build/compile_commands.json if present) for each TU -> ARC yes/no.
-2. Non-ARC TUs: classify every alloc/new/copy (+1) vs factory (+0) and every release/retain/autorelease, by hand or by extending
-   s7587_ownership_census.py with an ObjC-message regex ([X alloc], [x release], ...). ARC TUs: list calls on non-main threads
-   with no @autoreleasepool.
-3. Runtime: the gauge only samples in MetalCommandList::begin; add a sample site in the present path (threadPresent / swap chain
-   present) if step 2 names a per-frame +0 there. Arms OWN=1 with and without any new fix, PLANT=1 in both, L4 dd4 150 s + the
-   s7469 hangar route; growth per begin must equal the plant rate (0.0039).
-Outcomes: H-arc/H-clean -> class OW-2 closed with the table; H-mismatch/H-pool -> fix (env-gated, =0 restores) + gauge proof.
-OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves.
+Class LK (heap) and OW/OW-2 (ObjC ownership) are closed. Sibling class HR: host resources that are not malloc heap.
+Hypotheses: H-flat (all counts plateau after first mission load), H-fd (file descriptors grow per load / per save probe / per
+audio hot-plug check), H-thread (threads or dispatch workers grow per hangar re-entry), H-port (Mach ports / IOSurfaces / Metal
+resident allocations grow over time).
+Method, ONE run, sampled from outside every 15 s (no build needed):
+  lsof -p PID | wc -l (and by type), ps -M -p PID | wc -l, lsmp -p PID | wc -l (if lsmp present; else `sudo`-free
+  `vmmap --summary PID` IOSurface / IOAccelerator rows), footprint PID.
+Arms: (1) L4 dd4 16:9 FPS60 20 min hold, (2) s7469 hangar abort/re-entry route (3 re-entries, 4 loads, dd8 21:9).
+Positive control: a plant that opens one fd per 1000 frames (add ROGUESQ_S7589_PLANT=1 in src/main, dup(2) kept open) must show
+as a slope in the same run; without the control a flat count is not a result.
+Fold: slope per minute after warm-up and per re-entry; any non-zero slope -> name the owner (lsof name / thread name / port
+type) and fix it env-gated (=0 old). Reuse tools/s7585_memsample.zsh as the sampler skeleton.
+Also fold the queued soak s7588_applepool_default (pass = alive, 0 stall, pool=0, plantD == plantA).
+OWNER SAVE RULE: never clear ROGUESQ_NO_SAVE_WRITE; never touch build/saves. Owner may be at the machine: key-driven runs go
+through the quiet-arms tool (exits 2 when a human is active) or the soak queue.

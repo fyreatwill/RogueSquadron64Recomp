@@ -201781,3 +201781,27 @@ command list, plant fired); root cause = upstream +0/+1 mismatches on pool-less 
 A/B on the other Apple TUs (NEXT.md).
 Verdict: class OW CLOSED for plume_metal.cpp. Rules out: steady per-frame autorelease on RT64 threads in the fixed build.
 Next: the same census for the other Apple TUs (rt64_apple.mm, plume_apple.mm, imgui_impl_metal.mm): check ARC flags first.
+
+## Session 7588 (2026-11-18) — class OW-2 closed: Apple ObjC TU ownership census (all MRC, 0 unbalanced sites); main run loop already drains the per-present main-queue blocks, so the pool lever goes opt-in
+
+Picked up an interrupted s7588 iteration: its census tool, the lib/rt64 plume_apple.mm instrument and the same-binary A/B run
+(scratch/s7588/A, 02:05-02:10) existed but were never analysed or committed.
+- Census `python3 tools/s7588_apple_tu_census.py --controls` (rc 0; plant MRC TU with an unbalanced alloc + raw dispatch_async reads
+  2/2 UNCLASSIFIED): every .m/.mm in src/ and lib/rt64/src is built MRC (no -fobjc-arc in compile_commands.json). Built TUs:
+  rt64_apple.mm (1 site, NSHomeDirectory only when $HOME unset), plume_apple.mm (9: IOKit/CF pairs balanced, ctor dispatch_sync
+  once, per-present dispatch_async), nfd_cocoa.m (22, upstream balanced, user file dialogs only), rs64_display_mac.mm (3, all inside
+  @autoreleasepool). imgui_impl_metal.mm / imgui_impl_osx.mm are not built. H-arc refuted (nothing is ARC), H-mismatch refuted.
+- The one per-frame path: CocoaWindow getters (detectWindowMoved, refresh rate) called off-main on the present thread post one
+  block per call to the main queue. H-pool tested with gauge ROGUESQ_S7588_GAUGE=1 + plant ROGUESQ_S7588_PLANT=1 (every 16th block
+  autoreleases a counted object), L4 dd4 owner recipe 150 s, arms APPLE_POOL=0 (upstream) vs 1 (own pool per block):
+  both alive, 0 crash, vi_stalls30s=0, max_gap 147 ms. Main-queue pool depth 3-11 entries flat, backlog (enq-exec) <= 2 of
+  26,371 posts, plant alloc 1648 / dealloc 1648 in BOTH arms. Present-thread pool (tid ...431/...214) 3 -> 515 at the second sample,
+  then flat for 24 samples (25,600 posts): one-time warm-up, no slope. s7587 begin-gauge tids: +21 entries over the first 4096
+  begins then +1 over the next 4096 (warm-up, not linear).
+- Verdict: H-clean. The plant dealloc count (positive, 1648 frees with no pool of ours) and the flat main-pool depth are two lines
+  that the main run loop drains each block. ROGUESQ_APPLE_POOL flipped to default 0 (= upstream, no change in behaviour vs retail
+  port); =1 keeps the per-block pool. Rebuilt; rt64-plume.patch exported. tools/s7588_pool_report.py now reports post slopes per tid
+  (the mixed-tid slope was misleading: -0.02 vs +0.02 between arms was just which tid sampled first).
+- Smoke of the rebuilt default could not run in-session (owner active, HID idle 95 s, the arm stopped itself with exit 2); queued
+  as scratch/agent/soak_queue/s7588_applepool_default.sh (SOAK_NEEDS_IDLE=300). Arm p0 above already ran that code path.
+- Next: class HR (fds, threads, Mach ports, IOSurfaces growth), NEXT.md.

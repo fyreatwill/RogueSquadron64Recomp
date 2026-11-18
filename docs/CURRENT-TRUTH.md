@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7587 (2026-11-18).
+Compact operational handoff, as of Session 7588 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7587: class OW (metal-cpp ownership, plume_metal.cpp) CLOSED.** tools/s7587_ownership_census.py: upstream had 6
+- **NEW s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean.** tools/s7588_apple_tu_census.py --controls (rc 0, plant 2/2): every
+  .m/.mm is MRC; built ones (rt64_apple.mm, plume_apple.mm, nfd_cocoa.m, rs64_display_mac.mm) have 0 unbalanced sites; imgui Metal/OSX
+  backends are not built. Only per-present path: CocoaWindow off-main getters dispatch_async one block per call to the main queue.
+  Same-binary L4 dd4 150 s (gauge ROGUESQ_S7588_GAUGE=1, plant ROGUESQ_S7588_PLANT=1): main-queue pool flat (3-11 entries), backlog
+  <=2, plant dealloc 1648/1648 even with no pool of ours = the main run loop drains each block; present-thread pool flat 515 over
+  25,600 posts. ROGUESQ_APPLE_POOL (own pool per block) is therefore opt-in, default 0 = upstream. Scorer tools/s7588_pool_report.py.
+- **s7587: class OW (metal-cpp ownership, plume_metal.cpp) CLOSED.** tools/s7587_ownership_census.py: upstream had 6
   over-releases (+0 command buffer in begin, blit + resolve encoders, MetalShader functionName/debugName), 7 leaks (2 CopyAllDevices
   arrays = the s7586 NSArray leaks, clearColor depth state per call, 3 clear states) and 6 pool-less autoreleases; all fixed
   (default; ROGUESQ_MTL_OWN=0 = upstream). Gauge ROGUESQ_S7587_POOLGAUGE=1 (same binary, L4 dd4, plant ROGUESQ_S7587_PLANT=1):
@@ -292,9 +298,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 20. **Class LK host memory growth CLOSED s7586** (headline; wait-buffer leak s7585, dispatch_data leak s7586). Owner:
     ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
 21. **Class OW CLOSED s7587** (headline) for plume_metal.cpp; one NEEDS-POOL row left (device-ctor name string, once).
-22. **NEXT (s7588): class OW-2, ownership in the other Apple TUs** (NEXT.md): rt64_apple.mm, plume_apple.mm,
-    imgui_impl_metal.mm (+ any src/*.mm). First check whether each is built with -fobjc-arc; for non-ARC ones run the s7587 census
-    approach; then the POOLGAUGE run on the owner recipe incl. the hangar route.
+22. **Class OW-2 CLOSED s7588** (headline, H-clean). Queued smoke of the rebuilt default: soak_queue/s7588_applepool_default.sh
+    (pass = alive, 0 stall, pool=0, plantD == plantA).
+23. **NEXT (s7589): class HR, host resource growth other than heap** (NEXT.md): file descriptors, threads, Mach ports, IOSurfaces /
+    Metal resident allocations over a 20 min L4 hold and the s7469 hangar re-entry route, sampled from outside (lsof, ps -M,
+    lsmp, vmmap --summary). Same shape as class LK s7585-s7586.
 
 ## Evidence index
 

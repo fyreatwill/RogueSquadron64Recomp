@@ -1,8 +1,71 @@
 diff --git a/plume_apple.mm b/plume_apple.mm
-index 1384fe9..1fdca66 100644
+index 1384fe9..04e9371 100644
 --- a/plume_apple.mm
 +++ b/plume_apple.mm
-@@ -50,7 +50,10 @@ CGFloat getScaleFactor(NSWindow *nsWindow) {
+@@ -10,6 +10,62 @@
+ #import <AppKit/AppKit.h>
+ #import <Foundation/Foundation.h>
+ #import <IOKit/IOKitLib.h>
++#import <objc/runtime.h>
++#include <atomic>
++#include <pthread.h>
++
++// s7588 class OW-2 (Apple TUs, MRC): CocoaWindow's off-main getters post one dispatch_async block to the main queue per call
++// (present thread: detectWindowMoved + display-timing refresh rate, every present). Instrument + fix, all env-gated:
++//   ROGUESQ_S7588_GAUGE=1  every 256th main-queue block (and every 1024th off-main getter call) prints the calling thread's
++//                          autorelease-pool depth (push token + AutoreleasePoolPage header, as s7587), the enqueue/exec counts
++//                          (backlog = enq - exec) and the plant alloc/dealloc counts.
++//   ROGUESQ_S7588_PLANT=1  positive control: every 16th block autoreleases one counted object. Drained pool -> dealloc tracks
++//                          alloc; no pool -> dealloc stays 0 and the gauge grows by 1/16 entry per block.
++//   ROGUESQ_APPLE_POOL=1   each block runs inside its own @autoreleasepool. Default 0 = upstream: s7588 measured the main run loop
++//                          already drains every main-queue block (plant dealloc 1648/1648 with no pool of ours), so it is not needed.
++extern "C" void *objc_autoreleasePoolPush(void);
++extern "C" void objc_autoreleasePoolPop(void *);
++static std::atomic<uint64_t> rs64S7588Enq{0}, rs64S7588Exec{0}, rs64S7588PlantA{0}, rs64S7588PlantD{0};
++@interface Rs64S7588Plant : NSObject
++@end
++@implementation Rs64S7588Plant
++- (void)dealloc { rs64S7588PlantD.fetch_add(1); [super dealloc]; }
++@end
++static bool rs64EnvOn(const char *k, bool dflt) { const char *p = getenv(k); return (p && *p) ? atoi(p) != 0 : dflt; }
++static bool rs64S7588Gauge() { static const bool on = rs64EnvOn("ROGUESQ_S7588_GAUGE", false); return on; }
++static bool rs64S7588PlantOn() { static const bool on = rs64EnvOn("ROGUESQ_S7588_PLANT", false); return on; }
++static bool rs64ApplePool() { static const bool on = rs64EnvOn("ROGUESQ_APPLE_POOL", false); return on; }
++static void rs64S7588Sample(const char *where) {
++    void *tok = objc_autoreleasePoolPush();
++    const uintptr_t t = uintptr_t(tok);
++    uintptr_t sz = 0, base = 0;
++    if (t >= 0x10000) for (uintptr_t cand : { uintptr_t(16384), uintptr_t(4096) }) {
++        const uintptr_t b = t & ~(cand - 1);
++        if (*reinterpret_cast<const uint32_t *>(b) == 0xA1A1A1A1u) { sz = cand; base = b; break; }
++    }
++    uint64_t depth = 0, slot = 0, entries = 0;
++    if (sz) { depth = *reinterpret_cast<const uint32_t *>(base + 48); slot = (t - base - 56) / 8; entries = depth * ((sz - 56) / 8) + slot; }
++    objc_autoreleasePoolPop(tok);
++    uint64_t tid = 0; pthread_threadid_np(nullptr, &tid);
++    fprintf(stderr, "[s7588-pool] where=%s tid=%llu main=%d entries=%llu enq=%llu exec=%llu plantA=%llu plantD=%llu pool=%d\n", where,
++        (unsigned long long)tid, (int)pthread_main_np(), (unsigned long long)entries, (unsigned long long)rs64S7588Enq.load(),
++        (unsigned long long)rs64S7588Exec.load(), (unsigned long long)rs64S7588PlantA.load(), (unsigned long long)rs64S7588PlantD.load(),
++        (int)rs64ApplePool());
++}
++// Body of one main-queue block: own pool (default), plant, gauge.
++static void rs64S7588RunBlock(void (^body)(void)) {
++    const uint64_t n = rs64S7588Exec.fetch_add(1);
++    if (rs64S7588Gauge() && (n & 255) == 0) rs64S7588Sample("block");
++    void *tok = rs64ApplePool() ? objc_autoreleasePoolPush() : nullptr;
++    body();
++    if (rs64S7588PlantOn() && (n & 15) == 0) { rs64S7588PlantA.fetch_add(1); [[[Rs64S7588Plant alloc] init] autorelease]; }
++    if (tok) objc_autoreleasePoolPop(tok);
++}
++static void rs64S7588Post(void (^body)(void)) {
++    const uint64_t n = rs64S7588Enq.fetch_add(1);
++    if (rs64S7588Gauge() && (n & 1023) == 0) rs64S7588Sample("post");
++    dispatch_async(dispatch_get_main_queue(), ^{ rs64S7588RunBlock(body); });
++}
+ 
+ static uint32_t plumeGetEntryProperty(io_registry_entry_t entry, CFStringRef propertyName) {
+     uint32_t value = 0;
+@@ -50,7 +106,10 @@ CGFloat getScaleFactor(NSWindow *nsWindow) {
  #ifdef PLUME_APPLE_RETINA_ENABLED
          return [nsWindow backingScaleFactor];
  #else
@@ -12,6 +75,24 @@ index 1384fe9..1fdca66 100644
 +        static const bool rs64Retina = [] { const char *e = getenv("ROGUESQ_RETINA"); return e && *e && *e != '0'; }();
 +        return rs64Retina ? [nsWindow backingScaleFactor] : 1.0f;
  #endif
+     }
+ 
+@@ -98,7 +157,7 @@ CGFloat getScaleFactor(NSWindow *nsWindow) {
+         if (forceSync) {
+             dispatch_sync(dispatch_get_main_queue(), updateBlock);
+         } else {
+-            dispatch_async(dispatch_get_main_queue(), updateBlock);
++            rs64S7588Post(updateBlock);
+         }
+     }
+ 
+@@ -114,7 +173,7 @@ CGFloat getScaleFactor(NSWindow *nsWindow) {
+         if (forceSync) {
+             dispatch_sync(dispatch_get_main_queue(), updateBlock);
+         } else {
+-            dispatch_async(dispatch_get_main_queue(), updateBlock);
++            rs64S7588Post(updateBlock);
+         }
      }
  
 diff --git a/plume_metal.cpp b/plume_metal.cpp
