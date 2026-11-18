@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7573 (2026-11-17).
+Compact operational handoff, as of Session 7576 (2026-11-17).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7575 (do_break class CLOSED; -O2 UB fix landed):** RecompiledFuncs builds at -O2, and N64Recomp emits the 32-bit
+- **NEW s7576 (generated-C float->int UB class CLOSED):** the only UB-capable emission left after s7575 was TRUNC_W_S/D (1199 bare
+  `(int32_t)` casts; shifts are masked on unsigned gpr, mult cannot overflow, DDIV total, CVT_W via lrint). Fold control: clang -O2
+  deletes `if (x==3e9f) return (int)x;`. tools/s7576_trunc_census.py --controls: FOLDED=0 of 1199 (3 legal merges, 1 hand-inspected).
+  Fix landed anyway: tools/apply_s7576_trunc_total.py (chained) -> RS64_TRUNC_W_S/D (fcvtzs semantics, no UB) + [s7576-trunc] OOR
+  witness. L1 / L4 dd2 / L12 150 s: 0 OOR, 0 crash, 0 stall; ROGUESQ_S7576_TRUNC_CTL=8 ctl fired 8/8. scratch/s7576.
+- **s7575 (do_break class CLOSED; -O2 UB fix landed):** RecompiledFuncs builds at -O2, and N64Recomp emits the 32-bit
   div as C *before* the compiler's `bne b,$zero; break 7`. A zero divisor is UB in C, so clang deleted 31 data-dependent break-7
   + 5 break-6 do_break calls (-O2 IR, tools/s7575_ir_calls.sh): a zero divisor there ran on silently with lo=garbage, and no log
   could witness it. Fix, default on and chained in the fixup list: tools/apply_s7575_div_total.py -> RS64_DIV32/RS64_DIVU32
@@ -511,9 +516,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 20. **S6892 CLOSED s7572; GUARD-6 CLOSED s7574 (6/6 decided)**: COPY/PI_DMA/SPAI/s1978 H-dead (s7573), PIO unreached,
     musyx div-trap H-dead (0/~721k, FORCE0 ctl fired; break-6 statically dead). No default flipped.
 21. **do_break class CLOSED s7575** (headline). After any regen, verify tools/s7575_ir_calls.sh +
-    `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **NEXT (s7576): generated-C UB audit**
-    (HYPOTHESIS-ID gen-c-ub-audit, scratch/agent/NEXT.md). TRUNC/CVT/ROUND float->int macros are bare C casts (UB for NaN or
-    out-of-range values), and shifts too. Find out whether -O2 exploits them, the same way as the s7575 divides.
+    `tools/s7575_break_census.py --controls --ir D` (BLIND=0, rc 0). **s7576 float->int class CLOSED** (headline); after a regen
+    also run `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0, rc 0). **NEXT (s7577): same -O2 UB audit for the RSP
+    ucode C** (build/factor5_ucode/*.c; HYPOTHESIS-ID gen-c-ub-audit, scratch/agent/NEXT.md).
 22. **When 1-21 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

@@ -10327,6 +10327,28 @@ extern "C" int rs64_s7496_ctl(uint32_t* blk_out) {
 // s7574 GUARD-6: ungated musyxKeyOnVoice div-trap tally (tools/apply_s7574_keyon_tally.py). kind 0 = divide
 // (site = its break-7 pc), 1 = guard fire (break 7 / break 6 -> early return), 2 = entry. Returns 1 to force the
 // first divide's divisor to 0 on its Nth evaluation (ROGUESQ_S7574_KEYON_FORCE0=N, positive control).
+// s7576: out-of-range trunc.w.s/.d witness (include/rsp_dpc_macros.h RS64_TRUNC_W_S/D, tools/apply_s7576_trunc_total.py).
+// R4300 traps on an unrepresentable trunc, so any natural hit is a port-only value: log the guest PC + value of the first
+// hit per PC (up to 64 PCs) and a power-of-two total. ROGUESQ_S7576_TRUNC_CTL=N: the first N conversions report as forced.
+extern "C" int rs64_s7576_trunc_ctl = [] { const char* e = getenv("ROGUESQ_S7576_TRUNC_CTL"); return e ? atoi(e) : 0; }();
+extern "C" void rs64_s7576_trunc_oor(uint32_t pc, double v, int is_d) {
+    static std::mutex mu; std::lock_guard<std::mutex> lk(mu);
+    static uint32_t pcs[64]; static unsigned long cnt[64], total, forced; static int npc;
+    bool oor = !(is_d ? (v > -2147483649.0 && v < 2147483648.0) : (v >= -2147483648.0 && v < 2147483648.0));
+    if (!oor) {
+        if (rs64_s7576_trunc_ctl > 0) { --rs64_s7576_trunc_ctl; ++forced;
+            fprintf(stderr, "[s7576-trunc] FORCED ctl pc=%08X v=%.9g kind=%s forced=%lu\n", pc, v, is_d ? "d" : "s", forced); fflush(stderr); }
+        return;
+    }
+    ++total; int i = 0;
+    for (; i < npc; i++) if (pcs[i] == pc) break;
+    if (i == npc && npc < 64) { pcs[npc] = pc; cnt[npc] = 0; npc++; }
+    if (i < 64) ++cnt[i];
+    if (i >= 64 || cnt[i] == 1 || (total & (total - 1)) == 0)
+        fprintf(stderr, "[s7576-trunc] OOR pc=%08X v=%.9g kind=%s pc_hits=%lu total=%lu distinct_pcs=%d\n", pc, v,
+                is_d ? "d" : "s", i < 64 ? cnt[i] : 0ul, total, npc), fflush(stderr);
+}
+
 extern "C" int rs64_s7574_keyon(uint32_t kind, uint32_t site, uint32_t num, uint32_t div) {
     static unsigned long ent, dv[4], gd[8], gtot; static uint32_t mind[4] = {~0u, ~0u, ~0u, ~0u};
     static long force = -2;

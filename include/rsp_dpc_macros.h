@@ -8,6 +8,45 @@
 // (signed int32) and MEM_HU/MEM_BU (unsigned half/byte) but no unsigned
 // word variant. Recompile output occasionally needs it (e.g. funcs_7
 // pointer comparisons). Mirrors MEM_W layout but loads as uint32_t.
+// s7576: total trunc.w.s / trunc.w.d for RecompiledFuncs (tools/apply_s7576_trunc_total.py). recomp.h's TRUNC_W_S/D are bare
+// (int32_t) casts: UB for NaN / out-of-range, and clang -O2 provably deletes code on that basis (tools/s7576_trunc_census.py
+// control). Measured s7576: no such deletion in the 1199 generated sites; these give the same arm64 fcvtzs result (saturate,
+// NaN -> 0) with no UB. R4300 traps (Unimplemented) on an unrepresentable trunc, so every out-of-range value is a port-only
+// event: it is reported (rate-limited) by rs64_s7576_trunc_oor. ROGUESQ_S7576_TRUNC_CTL=N reports the first N conversions
+// as forced (positive control). C-safe.
+#include <stdint.h>
+#if defined(__aarch64__)
+#include <arm_neon.h>
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int rs64_s7576_trunc_ctl;
+void rs64_s7576_trunc_oor(uint32_t pc, double v, int is_d);
+#ifdef __cplusplus
+}
+#endif
+static inline int32_t rs64_trunc_w_s(float v, uint32_t pc) {
+    if (__builtin_expect(!(v >= -2147483648.0f && v < 2147483648.0f) || rs64_s7576_trunc_ctl > 0, 0)) {
+        rs64_s7576_trunc_oor(pc, (double)v, 0);
+        if (!(v >= -2147483648.0f && v < 2147483648.0f)) return v != v ? 0 : (v < 0 ? INT32_MIN : INT32_MAX);
+    }
+#if defined(__aarch64__)
+    return vcvts_s32_f32(v);
+#else
+    return (int32_t)v;
+#endif
+}
+static inline int32_t rs64_trunc_w_d(double v, uint32_t pc) {
+    if (__builtin_expect(!(v > -2147483649.0 && v < 2147483648.0) || rs64_s7576_trunc_ctl > 0, 0)) {
+        rs64_s7576_trunc_oor(pc, v, 1);
+        if (!(v > -2147483649.0 && v < 2147483648.0)) return v != v ? 0 : (v < 0 ? INT32_MIN : INT32_MAX);
+    }
+    return (int32_t)v; /* in range here: defined */
+}
+#define RS64_TRUNC_W_S(v, pc) rs64_trunc_w_s((v), (pc))
+#define RS64_TRUNC_W_D(v, pc) rs64_trunc_w_d((v), (pc))
+
 // s7575: total 32-bit div/divu for RecompiledFuncs (tools/apply_s7575_div_total.py). The generated C divide sits
 // before the compiler's zero check; at -O2 its UB let clang delete 36 do_break checks. R4300 results on b == 0.
 // Uses the enclosing function's `lo`/`hi` locals. C-safe.

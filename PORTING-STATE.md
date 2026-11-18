@@ -201427,3 +201427,34 @@ Verdict line: selects H-UB for the deleted do_break checks (refutes H-legit for 
 total; 3 legit value proofs remain); refutes H-false-zero (the stdout break line survives abort on macOS); selects H-dead for
 the 34 re-armed checks at defaults (L1/L4 dd2/L12 0 fires, ctl fired). Next discriminator: -O2 IR folding test for the
 float->int cast and shift UB classes (NEXT.md gen-c-ub-audit).
+
+## Session 7576 (2026-11-17) — generated-C float->int UB class closed: -O2 folds 0 of 1199 TRUNC_W sites (control folded), total fcvtzs-exact TRUNC landed, 0 out-of-range at L1/L4 dd2/L12 (ctl fired)
+Work unit: NEXT.md gen-c-ub-audit (HYPOTHESIS-ID gen-c-ub-audit).
+- Enumeration of UB-capable emissions in RecompiledFuncs (cgenerator.cpp + lib recomp.h). gpr is uint64_t, so ADD32/SUB32/shifts
+  are unsigned arithmetic; sllv/srlv/srav/dsllv etc. are masked (&31/&63); srav is a signed right shift (implementation-defined, not
+  UB); mult is S64(S32)*S64(S32), which cannot overflow; DDIV/DDIVU are total (lib recomp.h:78); div/divu are total since s7575;
+  CVT_S_D/CVT_D_S are IEEE (Annex F); CVT_W_S/W_D (15 sites) go through lrintf/lrint, unspecified but not UB (LLVM: freeze poison).
+  ROUND/FLOOR/CEIL: 0 sites. The open class: **TRUNC_W_S (1171) + TRUNC_W_D (28) = bare `(int32_t)` casts**, UB for NaN/|v|>=2^31.
+- Positive control (scratch /tmp snippet, kept as CONTROL in the tool): clang -O2 provably exploits that UB.
+  `if (x == 3e9f) return (int32_t)x; return 5;` compiles to `return 5` (branch deleted); with fcvtzs it returns INT32_MAX.
+- Static census, new tools/s7576_trunc_census.py (--controls): per function, fcvtzs count in A (raw emission) vs B (opaque inline-asm
+  fcvtzs, nothing to fold). Suspects (A<B) get B2 (neon vcvts, defined and optimisable): A>=B2 = legal merge. Result: 51 files,
+  1199 sites, 3 suspects. playRandomCutsceneVoiceLine 3/4/3 and applyTextSlotAnimChannelKeyframe 8/12/8 are MERGED (two-branch
+  identical trunc sunk to the join). __Ldtob 1/2/2 was inspected by hand: one fcvtzs w10,d0 at loop header LBB31_173 (= L_80036EA8),
+  entered from 0x80036EA4 and the bc1tl delay slot 0x80036F54, both trunc f20 unchanged, so a legal tail-merge (allowlisted
+  with that reason). FOLDED=0, rc 0, controls PASS. -> **H-safe selected statically; H-folded refuted** (0 of 1199).
+- Fix anyway (removes the UB so a future clang cannot start folding; ORIGIN: writer is N64Recomp cgenerator TruncateWFromS/D emitting
+  a bare C cast, the value at NaN/out-of-range was UB, not a game value): new tools/apply_s7576_trunc_total.py (chained in
+  fixup_game_funcs_vendored.py after s7575) rewrites all 1199 to RS64_TRUNC_W_S/D(v, pc) (include/rsp_dpc_macros.h): arm64 fcvtzs
+  semantics (what the bare cast compiled to), plus a cold call rs64_s7576_trunc_oor (src/main/upstream_compat.cpp) that logs
+  [s7576-trunc] OOR with the guest PC when the value is unrepresentable (R4300 traps there, so any hit is port-only; single-source:
+  libultra/R4300 manual knowledge, not an oracle run). ROGUESQ_S7576_TRUNC_CTL=N forces N reports (control). Idempotent.
+- Runtime (scratch/s7576/run.zsh, g1e_owner_quiet_arms, owner recipe, 150 s, trunc-total build): t1 L1 / t4 L4 dd2 / t12 L12 alive,
+  crashlines 0, vi_stalls30s 0, level_ok 1, **0 [s7576-trunc] OOR**; tc (CTL=8) printed 8 FORCED lines from real generated sites
+  (pc 8001B40C, 8001B454, 8001B4CC ...) and stayed alive. max_vihold ~17.3 s in all arms equals s7575's (boot load, not new).
+  -> **H-hit refuted at defaults** on these routes.
+- Rules out: -O2 deletion of code through float->int UB (now impossible); out-of-range trunc at defaults on L1/L4/L12.
+- Next: the same UB audit for the generated RSP microcode (build/factor5_ucode/*.c, also -O2 via RS64_UCODE_FLAGS): signed
+  shifts of negative int (UB for <<), int16/int32 casts, accumulator arithmetic.
+Verdict line: selects H-safe for the TRUNC_W class (FOLDED=0 of 1199, fold control PASS); refutes H-folded; refutes H-hit at defaults
+(0 OOR at L1/L4 dd2/L12, CTL fired 8/8). Next discriminator: -O2 UB census of the factor5_ucode RSP recompiled C (NEXT.md).
