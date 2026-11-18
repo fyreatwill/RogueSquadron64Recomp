@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7561 (19b(d) CLOSED): census analysers tightened, H-collateral refuted.** s7366 lockset: scope-aware declared() +
+- **NEW s7562 (19b(e) CLOSED): s7375 NOLOCK thread census OPEN 8 -> 0, H-confined selected, no race.** The 8 s7472-s7521
+  diag containers: 7 CALLER-LOCKED (s7500/s7503 helpers under g_s7500_mu/g_s7503_mu; s7475/s7480/s7488 under s_s7475_mu, the
+  gfx/lambda callers arrive via rs64_s7491_hst -> rs64_s7475_store after that lock; s7521 seen_off under its file mutex m), 1
+  GUEST-SERIAL (s_s7472_seen: only the rs_malloc/rs_free fixup hooks). `s7375 --selftest && --check` is now a regen_replay.sh
+  gate; negative controls: planted std::thread-touched container -> REVIEW/OPEN 1, dropped verdict row -> OPEN 1; fresh
+  regen_replay (scratch/s7562/replay) "ok" 8m26s.
+- **s7561 (19b(d) CLOSED): census analysers tightened, H-collateral refuted.** s7366 lockset: scope-aware declared() +
   param/local shadow test -> 71 false MIXED rows gone (68 local/param, 3 explained), 1 access the OLD analyser had hidden
   surfaced (g_audio_route_pref@audio_route_resolve, reviewed H-safe-thread); gap kept and documented: static locals and locals
   captured by thread lambdas are never lockset-checked. s7363: clamp ternary with any constant arm (`p < 16 ? p : 15`) is CLAMP,
@@ -421,9 +427,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Class GR CLOSED s7558** (headline): fixup hunks with no env switch; 1 BEHAV (B40 gate, owner decision, item 4).
 19b. **Regen health (s7558, OPEN, next).** (a) CLOSED s7559 H-layout: `tools/s7421_regen_drift.py <live> <replay> <compare.json>
     --baseline scratch/s7421/regen_compare.json --control` rc 0, controls 4/4 (new class SLOTPERM), 0 open LOST (docs/REGEN-VERIFY.md
-    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) CLOSED s7561 (headline); (e) NEXT: tools/s7375_nolock_threads.py
-    --check OPEN 8 (s7472-s7521 containers never reviewed; s7375 is not a regen gate) -> review, then add it to regen_replay.sh;
-    then s7420_parser_census OPEN 1 (fixup_patches_host.py weak-blind, since s7490); (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
+    s7559); (b) CLOSED s7560: regen_replay.sh -> "ok" (headline); (d) CLOSED s7561 (headline); (e) CLOSED s7562 (headline); NEXT:
+    s7420_parser_census OPEN 1 (fixup_patches_host.py weak-blind, since s7490); (c) B40 A/B soak fold (s7558_b40_ab), then ask the owner whether to restore the s4701 pass-through default.
     Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
     tools/regen_verify.sh D/replay D/verify.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,

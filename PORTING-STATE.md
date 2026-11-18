@@ -201068,3 +201068,25 @@ g_s7503_livefn, s_s7472_seen, s_s7475_seen, s_s7480_internal, s_s7480_pcs, s_s74
 s7420_parser_census OPEN 1 (fixup_patches_host.py STANDALONE weak-blind, since s7490). Neither is in regen_replay.sh.
 Rules out: the analyser change hiding a real shared-container access (H-collateral). Open: 19b(c) B40 soak (voided 3/5, queued).
 Next: s7375 8 unreviewed rows + put s7375 --check in regen_replay.sh, then the s7420 fixup_patches_host row.
+
+## Session 7562 (2026-11-17) — 19b(e) closed: s7375 NOLOCK thread census OPEN 8 -> 0 (all confined, no race), census now a regen_replay gate
+
+Unit (NEXT s7562): the 8 s7472-s7521 diagnostic containers the s7375 census flagged REVIEW and nobody had reviewed, because
+s7375 was not run by tools/regen_replay.sh. Hypotheses H-confined / H-race / H-attrib. Read every accessing function and its
+call sites:
+- main.cpp g_s7500_ctla_cls (s7500_event_locked / s7500_sum_locked) and g_s7503_livefn (s7503_finish_locked / s7503_sum_locked):
+  every caller takes lock_guard(g_s7500_mu) / (g_s7503_mu) first -> CALLER-LOCKED.
+- upstream_compat.cpp s_s7475_seen (s7475_check1 from s7475_walk via s7475_tick and from s7475_free, all under s_s7475_mu),
+  s_s7480_internal / s_s7480_pcs / s_s7488_pcs (s7480_store, only caller rs64_s7475_store after lock_guard(s_s7475_mu) at :4417;
+  the gfx / lambda@4388 labels arrive through rs64_s7491_hst -> rs64_s7475_store, same lock; s7480_sum from s7475_walk, locked)
+  -> CALLER-LOCKED. s_s7472_seen: s7472_check is called only from rs64_s6063_malloc/free, the apply_s6063_heaplog.py hooks in
+  recompiled rs_malloc/rs_free -> GUEST-SERIAL (same basis as s_s6063_live).
+- s7521_ucode_watch.cpp seen_off: region() only from rs64_s7521_task (lock_guard(m) at entry) -> CALLER-LOCKED.
+Result: H-confined selected for all 8; H-race refuted (no unlocked cross-thread write); the '?' attributions are unresolved
+callers that all funnel through a locked entry. 8 verdict rows added to tools/s7375_nolock_reviewed.tsv; --check OPEN 0.
+tools/regen_replay.sh now runs `s7375 --selftest && --check` after the s7366 gate. Controls: selftest PASS; planted a
+std::vector touched in a guest-exported fn and a std::thread lambda in s7521_ucode_watch.cpp -> REVIEW, OPEN 1, rc 1 (file
+restored); dropped the seen_off verdict row -> OPEN 1 (restored). Fresh replay `cp -R scratch/s7558/pristine scratch/s7562/replay;
+tools/regen_replay.sh scratch/s7562/replay scratch/s7562/replay.log` -> "regen_replay: ok" (8m26s; log line 1584 NOLOCK 97, OPEN 0).
+No runtime code changed (verdicts only), so no game run was needed. Rules out: a lock race in the s7472-s7521 diag code.
+Next: 19b s7420_parser_census OPEN 1 (fixup_patches_host.py STANDALONE weak-blind), then 19b(c) B40 soak fold.

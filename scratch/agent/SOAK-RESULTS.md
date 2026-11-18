@@ -1661,3 +1661,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261117-161649 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 1/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-161649.log
 20261117-162248 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 2/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-162248.log
 20261117-165149 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 3/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-165149.log
+20261117-171520 | s7558_b40_ab | rc=2 VOID (human/lock/sleep) 4/5, re-queued | 1s | scratch/agent/soak_results/s7558_b40_ab_20261117-171520.log
