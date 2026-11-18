@@ -202346,7 +202346,7 @@ HYPOTHESIS-ID: host-register-read-truncation-census
 - Second source tools/s7604_ra_witness.cpp 12/12 against the real recomp.h/helpers.hpp/ultra64.h with sign-extended a0: raw
   `== u32` false (control), (uint32_t)/U32/_arg<0,u32> true, MEM_W(0, sext) and TO_PTR(both forms) hit rdram+0x114388, the
   >>16-then-cast pulls sign fill (control), pair idiom exact, (size_t)r5 vs (size_t)(uint32_t)r5, old NULL offset nonzero.
-- Discrimination: SELECTS H-bad-gated (the only BAD read is on an uncalled mod-export path), REFUTES H-bad-live (0 default-path
+- Discrimination: selects H-bad-gated (the only BAD read is on an uncalled mod-export path), refutes H-bad-live (0 default-path
   reads use sign fill) and H-clean (one real BAD existed). Next discriminator: class FR census (tools/s7605_fr_census.py) on
   the 21 ctx->fN sites, view vs retail prototype.
 - Rules out: H-bad-live (no default-path read misuses sign fill). Class RA CLOSED. Next: class FR (host reads/writes of guest
