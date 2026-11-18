@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7564 (19b(c) CLOSED, 19b CLOSED): B40 A/B, H-gate0-safe selected; owner decision pending.** s7558_b40_ab rerun
+- **NEW s7565 (19c CLOSED): compensation-chain audit, H-chains selected.** tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md
+  (122 rows, hand verdicts, controls 8/8): CHAIN 34 (12 on the retail route, 22 inside dd>1/ASPECT features), FEATURE 34,
+  RETAIL-GAP 41, GUARD 6, DIAG 5, OWNER 1, UNKNOWN 1 (S6892). Retail-route chains beyond s4889/s7476: WRAP_RESTORE+S4272
+  (WRAP_FLUSH), DPC_KEEP_PIPE (our PIPESYNC drop), CUT_LIVE (s6418 at dd1), SHADE_ORD_RESET (our diag map), S7376/S7383/S7384
+  (follow-draw mode 3), S7478 (canary), G1D_EDGE_CONTENT. B40 children: only s4889/s7476 (of 196 tags in the s7558 A/B logs, the
+  only gate-0-exclusive ones). GQ census fix: `e[0] == 48` idiom was invisible, S4889/S7476 now in DEFAULT-ON-LEVERS (117 ON).
+- **s7564 (19b(c) CLOSED, 19b CLOSED): B40 A/B, H-gate0-safe selected; owner decision pending.** s7558_b40_ab rerun
   in-session (ALLOW_SLOW, battery clk 1.52, 16:9 FPS60, L4 dd2 / L1 dd4 / L12 dd4, 240 s each): default gate-0 and B40=1 arms
   6/6 alive, 0 crashlines, vi_stalls30s=0, gen/s per pair 59.5/59.2, 37.1/37.0, 31.0/30.8 (tools/s7537_ring_cost.py, from 60 s).
   Same-run witness: `[s4889] first-gate-zero-dereg` (reads MEM_BU 0x800A0F50==0) and `[s7476] dereg a1 17->1 fix=1` fire in every
@@ -441,9 +447,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 19b. **Regen health (s7558) CLOSED s7564**: (a) s7559, (b) s7560, (d) s7561, (e) s7562, s7420 census s7563, (c) B40 A/B s7564
     (headline). Rebuild the trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay; tools/regen_replay.sh D/replay;
     tools/regen_verify.sh D/replay D/verify.
-19c. **Compensation-chain audit (s7564, OPEN, next; NEXT.md).** s7564 found default-on patches (s4889, s7476) that only exist to
-    repair another port deviation (B40 gate 0). Enumerate every default-on behaviour lever (docs/DEFAULT-ON-LEVERS.md) whose trigger
-    condition is another port deviation, classify, and write the chain table for the owner.
+19c. **Compensation-chain audit CLOSED s7565** (headline; docs/COMPENSATION-CHAINS.md, `tools/s7565_comp_chain.py --write --check`).
+19d. **Retail-route chain simplification (s7565, OPEN, next; NEXT.md).** For each of the 12 retail-route chains, decide offline
+    whether the parent can be confined so the child becomes dead code with identical default behaviour (start: dpc_bridge trio
+    DPC_KEEP_PIPE / S4272 / WRAP_RESTORE; then CUT_LIVE vs s6418, SHADE_ORD_RESET vs its diag map). Never flip a default.
 20. **When 1-19 offer nothing an agent can do:** take the next open ITERATION.md 3c rung (G5 renaming sweep,
     item 4) or a new idiom-class audit; do not write a backlog-exhausted block.
 

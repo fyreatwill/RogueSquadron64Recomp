@@ -83,6 +83,7 @@ PORTING-STATE session that names it. `H-unlisted` rows had no doc row before s75
 | `ROGUESQ_RECT_ASPECT` | H-listed | 7142..7181 | OWNER-OPT-INS, PROJECT-OVERVIEW | rt64_framebuffer_renderer.cpp | the RDP stream about the fb centre (RT64 vs angrylion, s7142). Defau |
 | `ROGUESQ_RETARGET_RESERVE` | H-listed | 7481..7483 | PROJECT-OVERVIEW | funcs_0.c |  |
 | `ROGUESQ_S4272` | H-unlisted | 4272..4549 | - | dpc_bridge.cpp | s4549: default on (=0 disables) |
+| `ROGUESQ_S4889_FIRST_DEREG` | H-listed | 4890..4890 | PROJECT-OVERVIEW | funcs_24.c | PATCH: s4889 first gate-zero dereg |
 | `ROGUESQ_S6892` | H-unlisted | -..- | - | upstream_compat.cpp |  |
 | `ROGUESQ_S7332_CARVE` | H-listed | 7332..7332 | PROJECT-OVERVIEW | upstream_compat.cpp |  |
 | `ROGUESQ_S7333_KEEP` | H-listed | 7333..7333 | PROJECT-OVERVIEW | upstream_compat.cpp |  |
@@ -108,6 +109,7 @@ PORTING-STATE session that names it. `H-unlisted` rows had no doc row before s75
 | `ROGUESQ_S7402_CLOCKFIX` | H-listed | 7402..7403 | PROJECT-OVERVIEW | ultra_translation.cpp |  |
 | `ROGUESQ_S7427_REINIT` | H-listed | 7427..7427 | PROJECT-OVERVIEW | dpc_bridge.cpp | the dd>1 TriGen fix. main() calls this after the policy; ROGUES |
 | `ROGUESQ_S7463_PADFIX` | H-listed | 7463..7463 | PROJECT-OVERVIEW | rt64_framebuffer.cpp | s7463 class DS (see rt64_framebuffer.h).             const char *c = std: |
+| `ROGUESQ_S7476_A1FIX` | H-listed | 7476..7478 | PROJECT-OVERVIEW | funcs_24.c | PATCH: s4889 first gate-zero dereg |
 | `ROGUESQ_S7478_STALECHK` | H-listed | 7478..7478 | PROJECT-OVERVIEW | upstream_compat.cpp |  |
 | `ROGUESQ_S7490_ZHOOK` | H-listed | 7490..7490 | PROJECT-OVERVIEW | upstream_compat.cpp |  |
 | `ROGUESQ_S7528_EVICT` | H-listed | 7528..7528 | PROJECT-OVERVIEW | overlays.cpp | hit |

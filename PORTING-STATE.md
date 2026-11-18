@@ -201135,3 +201135,34 @@ Selects H-gate0-safe (as built today). Refutes H-passthrough-harmful (B40=1 arms
 today: s4700's 2/4 gate-0 crash predates s4889/s7476, which now cover that path. Single run, 240 s per arm.
 Owner decision (CURRENT-TRUTH item 4): the retail store is equally clean and needs no compensation; default not flipped.
 Next: 19c compensation-chain audit (default-on levers that exist only to repair another port deviation).
+
+## Session 7565 (2026-11-17) — 19c compensation-chain audit closed: H-chains selected (12 retail-route chains incl. s4889/s7476, 22 feature-internal); GQ census missed `e[0] == 48` levers (S4889/S7476), fixed; B40 A/B logs: only [s4889]/[s7476] are gate-0-exclusive of 196 tags
+
+Soak fold: no new SOAK-RESULTS lines since s7564.
+- **GQ census gap found and fixed (tools/s7557_gq_census.py):** the ON-idiom regexes matched `'0'` only; generated-code fixups spell
+  it `e[0] == 48`, so ROGUESQ_S4889_FIRST_DEREG and ROGUESQ_S7476_A1FIX (the very chain 19c is about) were absent from
+  docs/DEFAULT-ON-LEVERS.md. Idioms now accept `'0'|48`; new planted control GQCTL_CHR48 + coverage control S7476_A1FIX; controls
+  13/13; DEFAULT-ON-LEVERS.md regenerated (115 -> 117 ON levers). Whole-tree scan of `== 48` reads: also S4875_DEDUP (opt-in, default 0,
+  correctly not ON) and LOG_S4700_CB (diag).
+- **New tool tools/s7565_comp_chain.py -> docs/COMPENSATION-CHAINS.md.** Universe 122 = 117 ON levers + 5 s7558 GR ungated
+  GUARD/HOSTPLUMB rules. Auto pass: per lever, every PORTING-STATE entry naming it (env name or its sNNNN tag), sentences about the
+  lever with a causal cue (clobber/repair/caused by/our own/side effect...) naming another lever, the B40 gate or a port patch, plus a
+  feature cue (dd>1/FPS60/ASPECT). Hand table HAND (122 rows) gives the verdict; an auto-flagged lever with no hand row is UNREVIEWED
+  and `--check` exits 1. Controls 8/8: auto pass alone finds parent B40 for s4889 and parent S4889 for s7476; hand verdicts and root
+  walk (S7476 -> S4889 -> B40, depth 2); planted child citing S7402_CLOCKFIX with a cue -> UNREVIEWED, planted bystander naming it
+  without a cue -> UNKNOWN; no stale hand rows. `--write --check` rc 0.
+- **Result:** CHAIN 34, FEATURE 34, RETAIL-GAP 41, GUARD 6, DIAG 5, OWNER 1 (CULL_SPIKE), UNKNOWN 1 (S6892: writer never named).
+  Retail-route chains (root live at dd1/4:3/FPS60 off), 12: S4889 (B40), S7476 (S4889), WRAP_RESTORE + S4272 (DPC_WRAP_FLUSH),
+  DPC_KEEP_PIPE (our bump-time PIPESYNC drop), CUT_LIVE (s6418 far-cutoff block at dd1), SHADE_ORD_RESET (our diag map),
+  S7376_PQLOCK / S7383_FBPACK / S7384_LDGFX (port present-thread follow-draw mode 3), S7478_STALECHK (heap canary),
+  G1D_EDGE_CONTENT (G1D_EDGE's 4:3 trim). 22 more chains are internal to dd>1 / ASPECT features (window clamps, spill arena, radar
+  shift, s6144 footprint) and inert at retail settings by their sessions' claims (single-source per row: not re-measured).
+- **Second line, runtime (capture once, analyse many):** the s7558_b40_ab logs (scratch/s7558_b40_ab, 6 arms, 0.9 GB) re-analysed:
+  196 distinct `[tag` breadcrumbs; exactly two fire in all 3 gate-0 arms and none of the B40=1 arms: `[s4889`, `[s7476` (positive
+  control, known children); no tag skews >4x between settings. So no other LOGGED lever is a B40 child. Coverage caveat: only 18 of
+  117 ON levers emit a session-tagged breadcrumb, so this does not cover silent levers (the hand table does).
+- **Verdict:** H-chains selected (>=2 chains beyond s4889/s7476: 10 more on the retail route), H-isolated refuted, H-unclassifiable
+  refuted except S6892 (UNKNOWN, listed). For the B40 parent specifically H-isolated holds (two independent lines). No default flipped.
+- ORIGIN: no mitigation landed; the chain parents are named per row in docs/COMPENSATION-CHAINS.md (writers from each lever's
+  ORIGIN session), e.g. s4889's trigger = the port's own gate store 0 in setDisplayMode/reapplyDisplayMode (s4700).
+- Rules out: the GQ census as a complete default-on list before s7565 (char-48 blind spot).

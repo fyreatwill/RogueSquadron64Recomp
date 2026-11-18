@@ -81,7 +81,8 @@ def classify_text(t):
         line = " ".join([line] + [x for x in reversed(above)] + below)  # comment_of takes the first comment found
         cls = None
         for idi in ON_IDIOMS:
-            if re.search(idi.replace("P", P).replace("V", v), w):
+            # s7565: generated-code fixups spell the char as 48 (e[0] == 48), not '0' -- missed S4889/S7476/S4875
+            if re.search(idi.replace("P", P).replace("V", v).replace("'0'", "(?:'0'|48)"), w):
                 cls = "ON"; break
         if not cls:
             vm = re.search(VAL_RE.replace("V", v), w[:200])
@@ -150,7 +151,7 @@ def main():
     cnt = collections.Counter(v for _, _, _, v in rows)
     nsites = sum(len(G.findall(t)) for _, t in texts)
     print(f"[gq] sources={len(texts)} getenv_sites={nsites} default_active_names={len(rows)} " + " ".join(f"{k}={v}" for k, v in sorted(cnt.items())))
-    for n in ("ROGUESQ_CULL_SPIKE", "ROGUESQ_S7402_CLOCKFIX"):
+    for n in ("ROGUESQ_CULL_SPIKE", "ROGUESQ_S7402_CLOCKFIX", "ROGUESQ_S7476_A1FIX"):
         hit = [v for m, _, _, v in rows if m == n]
         print(f"[gq] coverage {n}: {hit[0] if hit else 'MISSING'}")
     show = "--rows" in sys.argv
@@ -204,6 +205,7 @@ def controls(idx, sess):
         ("ROGUESQ_GQCTL_HELPER", 'static bool f = s7396_env("ROGUESQ_GQCTL_HELPER", true);', "H-unlisted"),
         ("ROGUESQ_GQCTL_INVOFF", 'static const bool off = [] { const char* e = std::getenv("ROGUESQ_GQCTL_INVOFF"); return e && e[0] == \'0\'; }();', "H-unlisted"),
         ("ROGUESQ_GQCTL_HELPER_OFF", 'static bool f = s7396_env("ROGUESQ_GQCTL_HELPER_OFF", false);', None),
+        ("ROGUESQ_GQCTL_CHR48", 'if (s_on < 0) { const char* e = getenv("ROGUESQ_GQCTL_CHR48"); s_on = !(e && e[0] == 48); }', "H-unlisted"),
     ]
     ok = 0
     for n, src, want in T:
@@ -213,10 +215,10 @@ def controls(idx, sess):
         print(f"[gq-ctl] {n:28s} want={want} got={got} {'ok' if good else 'FAIL'}")
     texts = [(f, open(f, errors="ignore").read()) for f in sources()]
     rows = census(texts, *doc_index())
-    for n in ("ROGUESQ_CULL_SPIKE", "ROGUESQ_S7402_CLOCKFIX"):
+    for n in ("ROGUESQ_CULL_SPIKE", "ROGUESQ_S7402_CLOCKFIX", "ROGUESQ_S7476_A1FIX"):
         got = next((v for m, _, _, v in rows if m == n), None); good = got == "H-listed"; ok += good
         print(f"[gq-ctl] coverage {n:19s} want=H-listed got={got} {'ok' if good else 'FAIL'}")
-    tot = len(T) + 2
+    tot = len(T) + 3
     print(f"[gq-ctl] controls {ok}/{tot}")
     return 0 if ok == tot else 1
 
