@@ -28,6 +28,8 @@ Exit 0 only if 0 open, 0 stale rows, sources agree, controls pass."""
 import importlib.util, json, os, re, sys, tempfile, copy
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import importlib.util as _ilu
+_acs = _ilu.spec_from_file_location("ast_cache", os.path.join(ROOT, "tools/ast_cache.py")); ast_cache = _ilu.module_from_spec(_acs); _acs.loader.exec_module(ast_cache)
 _sp = importlib.util.spec_from_file_location("dq_scan", os.path.join(ROOT, "tools/s7615_dq_scan.py"))
 dq = importlib.util.module_from_spec(_sp); _sp.loader.exec_module(dq)
 AST_JSON = os.path.join(ROOT, "scratch/s7614/ast.json")
@@ -58,6 +60,9 @@ qrow("mesgqueue.cpp", "external_messages", "protocol", [r"queued", r"\{mq, msg, 
       (U + "mesgqueue.cpp", r"const bool sent = do_send\(PASS_RDRAM to_send\.mq, to_send\.mesg, to_send\.jam, false\);")],
      "msg by VALUE; mq is the guest's registered event queue (osSetEventMesg/osViSetEvent, static) or a PI completion queue the "
      "requester blocks on; delivery at the next game-thread dequeue = an interrupt taken at the next exception point. Witness W")
+qrow("main.cpp", "g_rumble_edges", "host", [r"\{rs64_rumble_now_us\(\), on\}"],
+     [("src/main/main.cpp", r"static std::deque<std::pair<int64_t, bool>> g_rumble_edges;")],
+     "s7655 G6a: (host microseconds, motor on/off) pairs, no guest address; capped 512 in set_rumble, aged out in rs64_rumble_duty")
 qrow("threads.cpp", "deleted_threads", "host", [r"cur_context"], [], "UltraThreadContext* host objects")
 qrow("timer.cpp", "action_queue", "protocol", [r"CheckTimerAction\{ &pr, lo, hi \}", r"a", r"AddTimerAction\{ t_ \}", r"RemoveTimerAction\{ t_ \}"],
      [(U + "timer.cpp", r"static bool s7397_fix\(\) \{ static const bool f = s7397_env\(\"ROGUESQ_S7397_TIMERFIX\", true\);"),
@@ -311,6 +316,7 @@ def controls(scan, ast):
 
 def main():
     a = sys.argv[1:]
+    ast_cache.ensure(AST_JSON, "tools/s7614_hm_ast.py")  # s7655
     scan = dq.scan(); ast = json.load(open(AST_JSON))
     opn, rep, qc, tc, nr, na, nvr, nva = census(scan, ast)
     if "-v" in a:

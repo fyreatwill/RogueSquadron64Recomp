@@ -16,6 +16,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7616_rq_scan as S
 
 ROOT = S.ROOT
+import importlib.util as _ilu
+_acs = _ilu.spec_from_file_location("ast_cache", os.path.join(ROOT, "tools/ast_cache.py")); ast_cache = _ilu.module_from_spec(_acs); _acs.loader.exec_module(ast_cache)
 RC = "src/main/rt64_render_context.cpp"
 GFX_ROOTS = ["RT64Context::send_dl", "RT64Context::update_screen", "submit_rdp_range", "run_rdp_submission",
              "rs64_rdpq_task_exit"]
@@ -160,6 +162,7 @@ def summary(rows, dis):
 
 def main():
     a = sys.argv[1:]
+    ast_cache.ensure(os.path.join(ROOT, "scratch/s7616/ast.json"), "tools/s7616_rq_ast.py")  # s7655
     ast = json.load(open(os.path.join(ROOT, "scratch/s7616/ast.json")))
     assert not ast["failed"], ast["failed"]
     ast = ast["rows"]

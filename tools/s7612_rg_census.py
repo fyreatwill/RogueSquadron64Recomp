@@ -48,6 +48,9 @@ def row(f, names, cls, proof, why, scope="fn"):
     for n in names.split():
         R.append((f, n, cls, proof, why, scope))
 
+# ---- s7655: s7644 instrument (default off)
+row("s7644_rspdma.cpp", "t_src_ra t_src_tid", "gated", r"rs64_s7646_pi_src\(uint32_t ra, uint32_t thread\) \{\s*if \(!g_gon\) return;",
+    "s7655: s7646 PI DMA source (ra, OSThread) stash, set and read only under ROGUESQ_S7644_RSPDMA&2", scope="file")
 # ---- src/main/main.cpp
 row("main.cpp", "g_rs64_m5_object_entry", "gated", r"ROGUESQ_LOG_M5_OBJECT_ENTRY", "M5 object-entry breadcrumb, if (!enabled) return")
 row("main.cpp", "last_a1", "edge", r"if \(\(a1 != last_a1 \|\| c != last_c\) && lines\+\+ < 400\)", "[glyph-entry] print-on-change")

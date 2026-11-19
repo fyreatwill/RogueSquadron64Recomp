@@ -40,6 +40,8 @@ Contracts:
 import importlib.util, json, os, re, subprocess, sys, tempfile, collections, glob
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import importlib.util as _ilu
+_acs = _ilu.spec_from_file_location("ast_cache", os.path.join(ROOT, "tools/ast_cache.py")); ast_cache = _ilu.module_from_spec(_acs); _acs.loader.exec_module(ast_cache)
 _sp = importlib.util.spec_from_file_location("hp_scan", os.path.join(ROOT, "tools/s7613_hp_scan.py"))
 hp = importlib.util.module_from_spec(_sp); _sp.loader.exec_module(hp)
 sn = hp.sn
@@ -79,6 +81,10 @@ row("main.cpp", "controller j1 j2", "host", r"SDL_GameController\* controller|SD
 row("main.cpp", "g_rs64_window g_rs64_nswin g_rs64_layer", "host", r"static SDL_Window\* g_rs64_window", "SDL / Cocoa window handles")
 row("main.cpp", "g_rs64_s7355_prev_hook", "host", r"pthread_introspection_hook_t g_rs64_s7355_prev_hook", "host function pointer")
 row("main.cpp", "by", "host", r"std::map<uintptr_t, uint64_t> by;", "key = host return address (atos offline), gated ROGUESQ_CAM_CALLER")
+row("main.cpp", "s_pad s_hap", "host", r"static SDL_GameController\* s_pad = nullptr;\s*static SDL_Haptic\* s_hap = nullptr;", "s7655: G6a rumble path cache, SDL handles compared with `controller`")
+row("main.cpp", "s_bind_vpad", "host", r"static SDL_Joystick\* s_bind_vpad = nullptr;", "s7655: G6b ROGUESQ_BIND_SELFTEST virtual SDL joystick handle")
+row("rs64_controls_panel.cpp", "g_ctx", "host", r"ImGuiContext\* g_ctx = nullptr;", "s7655: G6b F6 panel ImGui context (host heap)")
+row("s7644_rspdma.cpp", "g_gtid", "host", r"pthread_t g_gtid;", "s7655: pthread_t handle (opaque pointer on macOS), only pthread_equal-compared; ROGUESQ_S7644_RSPDMA&2 only")
 row("rs64_env_cache.cpp", "g_real_getenv f", "host", r"std::atomic<getenv_fn> g_real_getenv|static setenv_fn f", "libc function pointers")
 row("rt64_render_context.cpp", "g_rt64_app", "host", r"std::atomic<RT64::Application\*> g_rt64_app", "RT64 application object")
 row("rt64_render_context.cpp", "snap", "host", r"snap\[0\] = \(uint8_t \*\)std::malloc\(SZ\);", "malloc snapshot buffers")
@@ -332,6 +338,8 @@ def main():
     a = sys.argv[1:]
     if "--ast" in a or not os.path.exists(AST_JSON):
         subprocess.run([sys.executable, os.path.join(ROOT, "tools/s7613_hp_ast.py"), "--out", AST_JSON], check=True)
+    else:
+        ast_cache.ensure(AST_JSON, "tools/s7613_hp_ast.py")  # s7655: regenerate when any source is newer than the cache
     ast = json.load(open(AST_JSON))
     if ast.get("failed"):
         print("AST translation units failed:", ast["failed"])

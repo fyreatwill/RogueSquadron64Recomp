@@ -16,6 +16,14 @@ ARGS_SIG = re.compile(r"IndexError: list index out of range|usage: |error: unrec
                       r"|FileNotFoundError|No such file or directory|struct\.error: unpack_from")
 
 
+# s7655: tools that report on runtime inputs the sweep cannot supply. Keyed by tool AND the exact text it prints when the input
+# is absent: if the tool's message changes (or it fails another way) it reads RED again.
+NEEDS_INPUT = {
+    "s7316_data_bound_census.py": (re.compile(r"ram_dumps=0\s*$"), "needs --ram rdram dumps (ROGUESQ_RDRAM_DUMP_DIR): G values unread"),
+    "s7573_guard_census.py": (re.compile(r"^no game logs\s*$", re.M), "needs game stderr logs (LOG... or --retained DIR)"),
+}
+
+
 def run(path):
     src = open(path, errors="replace").read()
     a = ["--controls"] if "--controls" in src else []
@@ -33,6 +41,9 @@ def run(path):
         tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
         if rc == 0:
             return os.path.basename(path), "GREEN", rc, tail
+    ni = NEEDS_INPUT.get(os.path.basename(path))
+    if ni and ni[0].search(out.strip()[-400:]):
+        return os.path.basename(path), "NEEDS-INPUT", rc, ni[1]
     return os.path.basename(path), "NEEDS-ARGS" if ARGS_SIG.search(out[-3000:]) else "RED", rc, tail
 
 
@@ -44,8 +55,14 @@ def main():
         bad, good = os.path.join(d, "ctl_red_census.py"), os.path.join(d, "ctl_green_census.py")
         open(bad, "w").write("import sys\nprint('UNCLASSIFIED 1')\nsys.exit(1)\n")
         open(good, "w").write("print('ok')\n")
+        # s7655: NEEDS-INPUT is keyed by name + text: the right text reads NEEDS-INPUT, the same name failing otherwise reads RED
+        ni_ok, ni_bad = os.path.join(d, "s7573_guard_census.py"), os.path.join(d, "ni", "s7573_guard_census.py")
+        os.makedirs(os.path.dirname(ni_bad))
+        open(ni_ok, "w").write("import sys\nprint('no game logs')\nsys.exit(1)\n")
+        open(ni_bad, "w").write("import sys\nprint('OPEN 1')\nsys.exit(1)\n")
         c = {r[0]: r[1] for r in map(run, (bad, good))}
-    cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN"}
+        c["ni_text"], c["ni_other"] = run(ni_ok)[1], run(ni_bad)[1]
+    cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
     if not cpass:
         sys.exit(3)
@@ -61,7 +78,7 @@ def main():
         with open(tsv, "w") as o:
             o.writelines(f"{n}\t{c}\t{r}\t{t}\n" for n, c, r, t in rows)
     print("[s7651] gates", len(rows), dict(Counter(r[1] for r in rows)))
-    sys.exit(1 if any(r[1] == "RED" for r in rows) else 0)
+    sys.exit(1 if any(r[1] == "RED" for r in rows) else 0)  # NEEDS-ARGS / NEEDS-INPUT allowed
 
 
 if __name__ == "__main__":

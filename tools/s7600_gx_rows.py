@@ -128,3 +128,19 @@ ROWS = {
         "printed": "host: comment text", "r": G("dlwalk_on; & 7"), "rdram": RAM, "rows": G("`on`"), "s_acc": G("ROGUESQ_G5B_FRAME_EARLY; odd 0/1"),
         "s_grp": "host: std::map keyed by std::array", "samples": G("rs64_m4_norm_enabled")},
 }
+
+# s7655: G6b bindings, G6c stand-ins, s7644 instrument and two older sites that newly reached the scan.
+for _k, _v in {
+    "rt64/src/hle/rt64_framebuffer.cpp": {"base": "gated: fl header-restore window, reached only with ROGUESQ_FL_HDR_HARD_SKIP=0 "
+        "(s4548 default 1 returns on hit first); fl_host = dst + (kFlHdrPhys - addressStart) with hit proving the header inside the range"},
+    "src/main/main.cpp": {"base": G("ROGUESQ_LOG_S4429_HEAP") + "; rd8 range-checks g in [0x80000000, 0x80800000)"},
+    "src/main/rs64_bindings_json.h": {"b": "host: nlohmann ordered_json object key from the fixed rs64_n64_names table (not an array index)",
+        "s": "host: ordered_json object keys pad_x/pad_y/invert_y/up.. (string literals)"},
+    "src/main/rs64_standins.cpp": {"r": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; rw/ww/rh/rb offset a-0x80000000 is a 32-bit value inside the 4 GB rdram reservation "
+        "(addresses.hpp allocation_size), guest-word bases pass guest() [0x80000000, 0x81700000) first",
+        "s": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; s_sg_cur is set to in_region()?1:0 on the line above (SgTally s[2])",
+        "s_dl34": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd = s_psn_side, set only to 0/1 (rs64_psn_side), <0 returns", "s_psn": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd 0/1 and k < 112 checked on entry"},
+    "src/rsp/dpc_bridge.cpp": {"kShift": "masked: kShift[16] indexed by shifts/shiftt & 15u"},
+    "src/rsp/s7644_rspdma.cpp": {"rdram": 'gated: ROGUESQ_S7644_RSPDMA (default off; every entry returns on !g_on / !g_gon)' + "; (a & pm()) <= 0x1FFFFFF inside the 512 MB mapping"},
+}.items():
+    ROWS.setdefault(_k, {}).update(_v)

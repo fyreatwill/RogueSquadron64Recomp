@@ -1,15 +1,15 @@
-# NEXT (s7655)
-HYPOTHESIS-ID: closed-gate-drift
+# NEXT (s7656)
+HYPOTHESIS-ID: gate-sweep-standing
 
 G6a/G6b/G6c and the G5 looks wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports, take that first.
 
-s7654: s7339-s7353 green via tools/census_rules.py (54 text-anchored rules, stale -> FAIL). Sweep 16 RED
-(scratch/s7654/sweep.out): s7316 s7573 s7588 s7596 s7597 s7598 s7599 s7600 s7604 s7605 s7608 s7611 s7612 s7613 s7615 s7616.
-1. s7588 s7596-s7616: run each, read its verdict exit ("FIXED ...", "RESULT FAIL", "NOT CLOSED", "OPEN"). By-design report
-   exits -> a NOT_GATE list in tools/s7651_gate_sweep.py with the reason (keyed by tool name + the verdict text it prints;
-   a tool whose verdict text changes must turn RED again). Real opens -> triage, rules keyed by text.
-2. s7316 needs --ram dumps, s7573 needs game logs: mark NEEDS-INPUT in the sweep (match the tool's own message), not RED.
-3. Grep every other tool that parses the post-regen tree for `<< 16` constant regexes without `u?` (s7653 found 3).
-Done when the sweep is 0 RED with controls passing; then close closed-gate-drift and take the next ladder rung.
-Hypotheses: H-drift (stale key) vs H-broken (instrument blind) vs H-live (default-on defect -> fix + same-run control).
+s7655 closed closed-gate-drift: tools/s7651_gate_sweep.py is 0 RED (120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS). The drift happened
+because nothing re-runs the sweep after a session adds code. Work unit: make the sweep a standing check.
+1. Make the sweep cheap enough to run every iteration: per-gate result cache keyed by (tool file hash, hash of the files the tool
+   reads = its scan roots), so an unchanged tree re-runs nothing. Measure full vs cached wall time.
+2. Run it from tools/agent/stop_gate.sh --verify (or loop.sh after the iteration) when the iteration's diff touches src/ lib/ or
+   tools/s7*_census.py; a NEW RED gate (not red at the iteration's starting commit) blocks with the gate name + tail.
+   Contract rules go in stop_gate.sh (CLAUDE.md). Positive control: a planted rowless static in a scratch copy -> RED -> blocked.
+3. The 13 NEEDS-ARGS gates: list which have an input on disk (scratch/s70xx) and give the sweep that argument, so they count.
+Hypotheses: H-cheap (cache makes it < 30 s on an unchanged tree) vs H-cost (scan roots too broad; needs per-tool roots).
 Rules: never touch build/saves; one game at a time; SIGKILL only.

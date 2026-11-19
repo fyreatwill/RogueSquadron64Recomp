@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7653 (2026-11-19).
+Compact operational handoff, as of Session 7655 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7654: s7339-s7353 (12 gates) green via ONE shared rule table, tools/census_rules.py; sweep 28 -> 16 RED, 0 behaviour
+- **NEW s7655: closed-gate drift CLOSED: full sweep 0 RED (135 gates: 120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS), 0 behaviour
+  defects.** The last 14 RED gates (s7588-s7616) were all NEW code since closure (G6a rumble, G6b bindings/F6 ImGui-Metal panel,
+  G6c stand-ins, s7644 instrument) with no row: ~80 sites read by hand, every one opt-in/env-gated, bounded, local or host-owned;
+  rows written by text. s7613/s7615/s7616 were also red from STALE clang-AST caches (80 line-shift + 6 regex-only rows): new
+  tools/ast_cache.py regenerates scratch/s761[346]/ast.json when any TU/header is newer (flock; selftest PASS; aged-cache control
+  regenerated + CLOSED). Sweep classes s7316/s7573 NEEDS-INPUT keyed by tool + printed text (control: same name, other text -> RED).
+- **s7654: s7339-s7353 (12 gates) green via ONE shared rule table, tools/census_rules.py; sweep 28 -> 16 RED, 0 behaviour
   defects.** 54 text-anchored rules (file, fn, needle, class, anchors proving the gate/bound); every census run re-proves them and a
   stale file/fn/needle/anchor FAILS the gate (control: planted anchor -> s7339 rc=1). Left: s7316/s7573 (need inputs), s7588 +
   s7596-s7616 (verdict exits unread). New rules for these censuses go in census_rules.py, never by line number.
@@ -480,6 +486,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (s7531 verify regex; s7532 6 rules; s7538/s7542 line ranges -> anchors with STALE FAIL; s7543/s7544/s7555 lui `u?`); 28 RED left:
     s7339-s7353 rules (from s7652 triage) DONE s7654 (tools/census_rules.py), s7316/s7573 need inputs, s7588-s7616 verdict exits unread. Also: any reader of the
     POST-regen tree must accept `0X....u << 16`; fixup scripts run before fixup_lui_unsigned.py and need not.
+    **s7655: CLOSED, sweep 0 RED.** s7588-s7616 rows for G6a/G6b/G6c/s7644 sites; AST caches self-refresh (tools/ast_cache.py);
+    s7316/s7573 NEEDS-INPUT. Re-run `python3 tools/s7651_gate_sweep.py` after any src/ or lib/ change (rc 0 = no RED).
 
 ## Evidence index
 

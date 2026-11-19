@@ -50,6 +50,14 @@ def row(f, names, cls, proof, why, scope="fn"):
     for n in names.split():
         R.append((f, n, cls, proof, why, scope))
 
+# ---- s7655: G6c stand-ins (ROGUESQ_STANDINS=1 and dd>1, else mode()==0 returns before any state) + s7644 instrument
+row("rs64_standins.cpp", "s_level s_frame", "refresh", r"const int m = mode\(\);\s*if \(!m\) return;[\s\S]*if \(dat != s_dat \|\| level != s_level \|\| frame < s_frame\) \{ s_level = level; rebuild",
+    "s7655: rebuild key (level number, frame counter); a new level or a frame-counter reset rebuilds the stand-in table; opt-in", scope="file")
+row("rs64_standins.cpp", "s_linked", "refresh", r"const int m = mode\(\);\s*if \(!m\) return;[\s\S]*s_linked\.clear\(\);",
+    "s7655: spawned-object list rebuilt from the guest grid every submit call (clear then refill); opt-in", scope="file")
+row("s7644_rspdma.cpp", "last_h", "gated", r"if \(!g_on\) return;", "s7655: s7644 audio image FNV, ROGUESQ_S7644_RSPDMA&1 (default off)")
+row("s7644_rspdma.cpp", "t_snap", "gated", r"const bool g_on = \(g_mode & 1\) != 0;[\s\S]*if \(!g_on \|\| g_tasks\.load\(\) == 0\) return;", "s7655: s7644 PI pre/post byte snapshot, ROGUESQ_S7644_RSPDMA&1", scope="file")
+row("s7644_rspdma.cpp", "t_g", "gated", r"t_g\.any = false;\s*if \(!g_gon\) return;", "s7655: s7645 gfx PI snapshot, ROGUESQ_S7644_RSPDMA&2", scope="file")
 # ---- src/main/main.cpp
 row("main.cpp", "g_rs64_m5_last_input_fnv", "gated", r"ROGUESQ_LOG_M5_(INPUT_WRITER|SOURCE_PRODUCER)", "M5 audio source-producer hash, log only")
 row("main.cpp", "g_rs64_m5_last_source_dma_fnv g_rs64_m5_last_source_dma_nonzero g_rs64_m5_last_source_dma3_fnv "

@@ -22,6 +22,10 @@ TABLE = {
  ('nfd_cocoa.m', '*'): ('OK', 'upstream nativefiledialog, balanced (alloc/release pairs, urls/enumerator retain freed by NFD_PathSet_Free*); only reachable from RT64 gui file dialogs (user action)'),
  ('plume_apple.mm', 's7588'): ('OK', 's7588 instrument (gauge/plant/pool)'),
  ('rs64_display_mac.mm', 'autoreleasepool'): ('OK', 'every entry point wraps its +0 AppKit queries in @autoreleasepool'),
+ # s7655: G6b F6 Controls panel (s7620). Both TUs build with -fobjc-arc (compile_commands), so alloc/new/copy are ARC-balanced;
+ # everything runs only while the panel is open (rs64_controls_panel.cpp hook_draw returns on !g_open) or once at panel init.
+ ('imgui_impl_metal.mm', '*'): ('OK', 'upstream Dear ImGui Metal backend under ARC; its one dispatch_async (command-buffer completion handler) returns the frame vertex/index MetalBuffers to bufferCache on the main queue, F6 panel open only'),
+ ('rs64_imgui_metal.mm', 'autoreleasepool'): ('OK', 's7620 ARC bridge: __bridge casts hand metal-cpp objects over without ownership change; new_frame/render wrap their +0 descriptor in @autoreleasepool'),
 }
 def classify(fname, line):
     if 'S7588' in line or 's7588' in line or 'rs64S7588' in line and 'Post(' not in line:
@@ -29,6 +33,7 @@ def classify(fname, line):
     for (f, needle), v in TABLE.items():
         if fname == f and needle in line and needle != 's7588': return v
     if fname == 'rs64_display_mac.mm': return TABLE[(fname, 'autoreleasepool')]
+    if fname == 'rs64_imgui_metal.mm' and 'autoreleasepool' in line: return TABLE[(fname, 'autoreleasepool')]
     if (fname, '*') in TABLE: return TABLE[(fname, '*')]
     return ('UNCLASSIFIED', '')
 def scan(files, compiled):

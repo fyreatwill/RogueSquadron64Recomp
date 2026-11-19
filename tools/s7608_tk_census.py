@@ -42,6 +42,9 @@ PAT = re.compile(r"rogue_current_thread_id\(|rs64_guest_tid\(|->id *(==|!=|&|\*|
 
 # (file suffix, line substring, kind, reason). One row may cover several lines (same idiom in one function).
 SITE_ROWS = [
+    ("src/rsp/s7644_rspdma.cpp", "g_gtid = pthread_self(); g_gdl = dl & pm();", "host", "s7655: s7645 gfx runner host thread "
+     "identity, ROGUESQ_S7644_RSPDMA&2 only (rs64_s7645_gfx_task returns on !g_gon)"),
+    ("src/rsp/s7644_rspdma.cpp", "if (!pthread_equal(pthread_self(), g_gtid)) {", "host", "s7655: same host thread identity compare"),
     ("src/rsp/s7535_ga_chk.cpp", "pthread_self()", "host", "s7535 GA checker: gfx host thread identity (not a guest thread)"),
     (UC, "g_cine_tid.store(GetCurrentThreadId()", "diag:_WIN32", "cine watchdog, inside #ifdef _WIN32 (not built on macOS)"),
     (UC, "tid, last_err, GetCurrentThreadId());", "diag:_WIN32", "cine watchdog print, #ifdef _WIN32"),

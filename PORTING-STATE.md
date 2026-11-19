@@ -204046,3 +204046,41 @@ HYPOTHESIS-ID closed-gate-drift, NEXT s7654 item 1 (offline; no game run, no run
   GREEN 106, NEEDS-ARGS 13, RED 16 = s7316 s7573 (need inputs) + s7588 s7596-s7616 (verdict exits unread) - exactly NEXT 2/3.
 - Selects H-drift for all 12 (stale keys: new code, no rules); refutes H-live for every site (0 behaviour defects).
   Single-source (static reads + tools' own controls). ORIGIN: no mitigation added; only census rules.
+
+## Session 7655 (2026-11-19) — closed-gate drift CLOSED: the last 14 RED census gates (s7588-s7616) green, AST caches self-refresh; full sweep 0 RED of 135, 0 behaviour defects
+
+What ran (offline only, no game run). NEXT item 1-3 from s7654.
+- Ran every RED gate from scratch/s7654/sweep.out. All 14 s7588-s7616 reds were rowless NEW code since each class closed:
+  G6a rumble (main.cpp set_rumble/g_rumble_edges, rumble path SDL handles), G6b bindings (rs64_bindings.h, rs64_bindings_json.h,
+  rs64_bind_apply, s_bind_vpad, F6 panel g_ctx, vendored imgui_impl_metal.mm + rs64_imgui_metal.mm), G6c stand-ins
+  (rs64_standins.cpp mips_call / rw-ww helpers / probes) and the s7644 RSP-vs-PI instrument. ~80 sites read by hand:
+  - s7644_rspdma.cpp: every entry returns on !g_on / !g_gon (ROGUESQ_S7644_RSPDMA, default 0) -> gated (s7598/7599/7600/7608/7611/7612/7613).
+  - rs64_standins.cpp: mode() is 0 unless ROGUESQ_STANDINS and dd>1; probes additionally need rs64_sg_probe (STANDINS_LOG/PULL/CTL).
+    Indices s_sg_cur/s_psn_side are set only to 0/1, k<112 checked; s_q_ours_mtx < 4096 and cleared per reset; s_standins cleared per
+    rebuild; rw/ww offsets are 32-bit inside the 4 GB rdram reservation (addresses.hpp allocation_size, PROT_NONE past 512 MB) and
+    guest-word bases pass guest() first. mips_call writes a0-a3 as (gpr)(int32_t) and floats to f12/f14 .fl; read in the generated
+    sampleTerrainSurfaceAtWorldXz 0x80068180 as `ctx->f30.fl = ctx->f12.fl` and `f14.u32l` (N64Recomp funcs_16.c) -> correct (s7604/s7605).
+  - G6b: json::parse(text, nullptr, false) + is_discarded, every j[...] behind contains()/is_*() (s7597 ok); bind vectors local or one
+    push per F6 keypress with duplicate rejection (s7599 bounded); json object keys not arrays (s7600 host).
+  - G6a: g_rumble_edges deque of (host us, bool), capped 512 and aged out (s7599 bounded, s7615 host).
+  - Older sites newly in scan: rt64_framebuffer.cpp:369 fl header read reached only with ROGUESQ_FL_HDR_HARD_SKIP=0 (s4548 default 1
+    returns first); main.cpp:5716 ROGUESQ_LOG_S4429_HEAP + range check; dpc_bridge kShift[16] & 15u; dpc_bridge s_shw resize only
+    under ROGUESQ_S7634_FUSE=chk|inj; mods.cpp:830 is the noexcept `directory_iterator{}` end sentinel.
+  - s7588: imgui_impl_metal.mm and rs64_imgui_metal.mm both build with -fobjc-arc (compile_commands, 2/2); draw path only while the F6
+    panel is open (hook_draw returns on !g_open).
+- Second cause, s7613/s7615/s7616: their clang-AST second sources (scratch/s7613, s7614, s7616 ast.json, 2026-11-18) predated the
+  G6/s7644 code: s7616 80 DISAGREE rows were pure line shift (regex 393 vs ast 390 ...), s7613 5 + s7615 1 regex-only rows.
+  Regenerated (each ~1 min): s7616 CLOSED unchanged, s7613/s7615 then showed only the rowless sites above. New tools/ast_cache.py
+  ensure(cache, gen) regenerates when any compile_commands TU, any header under src/ lib/rt64/src lib/N64ModernRuntime (contrib
+  excluded) or compile_commands.json is newer (flock for parallel sweep jobs); wired into s7613/s7614/s7615/s7616 censuses.
+  Controls: --selftest older-cache stale / newer-cache fresh PASS; real path: s7616 cache aged to 2001 -> "[ast-cache] ... stale ->
+  regenerating", census CLOSED disagree=0.
+- Sweep (tools/s7651_gate_sweep.py): new NEEDS-INPUT class keyed by tool name AND the text it prints without input (s7316 "ram_dumps=0",
+  s7573 "no game logs"); control extended: right name + right text -> NEEDS-INPUT, right name + other text -> RED (PASS). The s7316
+  24 heavy-spill RAM dumps are no longer on disk (only scratch/s7316 census text), so it cannot be re-run here.
+- NEXT item 3: no other post-regen reader has a `<< 16` regex without `u?` (only s7090, already normalised); apply_/fixup_ scripts
+  are fine because fixup_lui_unsigned runs last (fixup_game_funcs_vendored.py ~42553, after the replay list).
+Result: `python3 tools/s7651_gate_sweep.py` rc 0: 135 gates, 120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS, 0 RED (scratch/s7655/sweep.out).
+Every gate run with --controls passed its own controls. 0 behaviour defects; no code under src/ or lib/ changed.
+Rules out: H-live (no default-on defect in any of the ~80 sites); drift kinds were H-drift (rowless new code) + stale AST cache.
+Closes HYPOTHESIS-ID closed-gate-drift.

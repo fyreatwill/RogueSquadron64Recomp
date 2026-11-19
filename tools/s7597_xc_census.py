@@ -33,6 +33,7 @@ ONCE = re.compile(r"static std::thread|call_once|exchange\(true\)|if \(first\)|i
 G = "gated: env-gated diagnostic/plant thread, off in the owner recipe"
 ROWS = {
     # parse
+    ("src/main/rs64_bindings_json.h", "parse", "const json j = json::parse(text, nullptr, false)"): "ok: s7655 G6b controls.json: allow_exceptions=false + is_discarded check; every later j[...] / get<> is behind contains() / is_*() (G6b garbage-file controls)",
     ("librecomp/src/mod_manifest.cpp", "parse", "json::parse(manifest_data.begin(), manifest_data.end(), nullptr, false)"): "ok: allow_exceptions=false + is_discarded check (witness mod_dir_garbage/mod_dir_types alive)",
     ("librecomp/src/mods.cpp", "parse", "input_file >> json_out"): "ok: read_json try/catch parse_error; mods.json read every boot (witness mj_garbage/array/types/dir/bin alive)",
     ("librecomp/src/mod_manifest.cpp", "parse", "input_file >> json_out"): "ok: same read_json try/catch (mod config storage)",

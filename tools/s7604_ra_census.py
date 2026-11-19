@@ -40,6 +40,8 @@ REG = re.compile(r"\bctx->r(\d+)\b")
 
 # (file suffix, line substring) -> reason
 SITE_ROWS = [
+    ("src/main/rs64_standins.cpp", "gpr* regs[4] = { &ctx->r4, &ctx->r5, &ctx->r6, &ctx->r7 };", "row: s7655 G6c mips_call (opt-in ROGUESQ_STANDINS): "
+     "pointers to a0-a3 written only as *regs[i] = (gpr)(int32_t)a (canonical sext), never compared or used as an index"),
     ("src/main/upstream_compat.cpp", "gpr buf_ptr = ctx->r4;", "row: osDpGetCounters alias read only by the canonical-sext "
      "check (int64_t)buf_ptr == (int32_t)lo, a %llX log of the full value, MEM_W and (uint32_t) - all 64-bit-correct"),
     ("src/main/upstream_compat.cpp", "uint64_t dest_full = (uint64_t)ctx->r4;", "row: zmemcpy in_range() accepts sign-"

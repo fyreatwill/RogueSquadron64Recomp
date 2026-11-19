@@ -28,6 +28,7 @@ ROWS = {
     ("librecomp/src/mod_config_api.cpp", "absolute", "save_file_path"): "gated: mod export recomp_get_save_file_path; RS64 ships no mods; throws only if getcwd fails",
     ("librecomp/src/mod_config_api.cpp", "absolute", "mod_folder_path"): "gated: mod export; no mods",
     ("librecomp/src/mod_config_api.cpp", "absolute", "mod_file_path"): "gated: mod export; no mods",
+    ("librecomp/src/mods.cpp", "directory_iterator", ""): "ok: s7655 the default-constructed end sentinel `directory_iterator{}` (noexcept) in the s7597 ec-form scan loop; the real iterator is built with directory_options + ec",
     ("librecomp/src/mods.cpp", "absolute", "path"): "dead: _WIN32 LoadLibraryExW branch",
     ("rt64/src/hle/rt64_application.cpp", "is_directory", "dirPath"): "gated: checkDirectoryCreated runs only when userPaths non-empty; RS64 sets detectDataPath=false and no dataPath (rt64_render_context.cpp appConfig) -> isEmpty() short-circuits",
     ("rt64/src/hle/rt64_application.cpp", "create_directories", "dirPath"): "gated: same checkDirectoryCreated, unreachable with empty dataPath",

@@ -40,6 +40,8 @@ Contracts:
 import collections, importlib.util, json, os, re, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import importlib.util as _ilu
+_acs = _ilu.spec_from_file_location("ast_cache", os.path.join(ROOT, "tools/ast_cache.py")); ast_cache = _ilu.module_from_spec(_acs); _acs.loader.exec_module(ast_cache)
 def _load(n, p):
     sp = importlib.util.spec_from_file_location(n, os.path.join(ROOT, p)); m = importlib.util.module_from_spec(sp)
     sp.loader.exec_module(m); return m
@@ -266,6 +268,8 @@ def main():
     a = sys.argv[1:]
     if "--ast" in a or not os.path.exists(AST_JSON):
         subprocess.run([sys.executable, os.path.join(ROOT, "tools/s7614_hm_ast.py"), "--out", AST_JSON], check=True)
+    else:
+        ast_cache.ensure(AST_JSON, "tools/s7614_hm_ast.py")  # s7655: regenerate when any source is newer than the cache
     ast = json.load(open(AST_JSON))
     members = jn.members(ast)
     scan = sc.scan()

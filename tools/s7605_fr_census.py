@@ -32,6 +32,11 @@ TOK = re.compile(r"(?:\b\w+(?:\.back\(\))?)(?:->|\.)f(\d+)\.(fl|fh|d|u32l|u32h|u
 
 # (file suffix, line substring, expected tokens "fN.view" joined by ',', reason)
 SITE_ROWS = [
+    ("src/main/rs64_standins.cpp", "ctx->f12.fl = f12;", "f12.fl", "s7655 G6c mips_call (opt-in): float arg0 of sampleTerrainSurfaceAtWorldXz 0x80068180, "
+     "which reads it as mov.s $f30,$f12 -> ctx->f30.fl = ctx->f12.fl (generated funcs_16.c)"),
+    ("src/main/rs64_standins.cpp", "ctx->f14.fl = f14;", "f14.fl", "s7655 G6c mips_call: float arg1, read as swc1 $f14 -> f14.u32l (same low word)"),
+    ("src/main/rs64_standins.cpp", "const Call out{ (uint32_t)ctx->r2, ctx->f0.fl };", "f0.fl", "s7655 G6c mips_call: single-float return in f0 of "
+     "sampleTerrainSurfaceAtWorldXz; the other callees return v0 and their f0 is ignored"),
     (UC, "ctx->f4.fl = (float)(0.5 / (f4 - f6)", "f4.fl,f0.fl", "s6904 fog hook before 0x8001726C trunc.w.s $f2,$f4 / "
      "0x80017274 trunc.w.s $f2,$f0: the game's own fm/fo are singles in f4/f0, the hook overwrites them as .fl"),
     (UC, "fprintf(stderr, \"[fogp] n=%u", "f4.fl,f0.fl", "ok-diag: ROGUESQ_G5E_FOGP log of the same two singles"),

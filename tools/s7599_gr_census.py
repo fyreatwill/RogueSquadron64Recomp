@@ -166,6 +166,20 @@ ROWS = {
         "patch_code_sections_by_rom": "host: boot tables"},
 }
 
+# s7655: G6a rumble, G6b bindings, G6c stand-ins, s7644 instrument.
+for _k, _v in {
+    "src/main/main.cpp": {"g_rumble_edges": "bounded: G6a motor edge deque, popped to 512 in set_rumble and aged out (2x100 ms) in rs64_rumble_duty",
+        "buttons": "bounded: G6b rs64_bind_apply, one push per F6-panel bind keypress, identical (mask, src) rejected",
+        "d": "bounded: G6b direction key list, one push per F6 bind keypress, duplicate scancode rejected"},
+    "src/main/rs64_bindings.h": {"buttons": "bounded: rs64_bind_defaults fixed built-in list"},
+    "src/main/rs64_bindings_json.h": {"keep": "local: per-button list in rs64_bind_parse_json", "l": "local: rs64_bind_to_json list",
+        "v": "local: per-direction key list in rs64_bind_parse_json"},
+    "src/main/rs64_standins.cpp": {"s_q_ours_mtx": G("ROGUESQ_STANDINS + STANDINS_LOG/PULL/CTL (rs64_sg_probe)") + "; < 4096, cleared at each queue reset",
+        "s_standins": "bounded: ROGUESQ_STANDINS (opt-in); cleared at every rebuild, i < 4096 items"},
+    "src/rsp/s7644_rspdma.cpp": {r: G("ROGUESQ_S7644_RSPDMA&2") for r in ("g_gpi", "g_gstale", "g_srcc", "g_srcs", "v")},
+}.items():
+    ROWS.setdefault(_k, {}).update(_v)
+
 def scan(files_override=None):
     sites = {}  # (relfile, recv) -> [line, static?]
     for d in DIRS:
