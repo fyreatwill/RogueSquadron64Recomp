@@ -513,7 +513,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 46. **Class DQ CLOSED s7615, class RQ CLOSED s7616** (headline). Rerun tools/s7616_rq_census.py --controls after any lib/rt64
     edit that reads RDRAM or adds a thread; a new worker-thread reader of RDRAM needs a command-time copy or a gate.
 47. **G6 (owner 2026-11-18, ahead of everything else): G6a rumble LANDED s7617 (headline), closes on the owner feeling it.
-    NEXT: G6b rebinding (table == today's map byte-identical, controls.json, F6 panel), then G6c stand-ins (design doc first).**
+    G6b step 1 LANDED s7618: get_n64_input maps through a table (src/main/rs64_bindings.h, defaults == the old map; offline
+    tools/test_bindings.cpp 233288 cases 0 mismatches, mutant 37436; same-run virtual pad+keyboard sweep 3000 polls 0
+    mismatches vs verbatim old code, mutant 239; ROGUESQ_BIND_OLD=1 = old code, BIND_CHECK/BIND_SELFTEST instruments;
+    selftest needs SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 when unfocused). NEXT: G6b step 2 controls.json, step 3 F6 panel,
+    then G6c stand-ins (design doc first).**
 48. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

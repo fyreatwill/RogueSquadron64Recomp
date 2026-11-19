@@ -202895,3 +202895,27 @@ Not done: SDL_Haptic / SDL_JoystickRumble fallbacks (our input only opens SDL_Ga
 controllers); effect-id / damage scaling (needs guest reads). Docs: OWNER-OPT-INS row, README Controls line.
 Hypotheses tested: H-nopak (no game pulses because port 0 reported no pak) vs H-host (pulses arrive, host drops them) vs H-sdl (host sends, device never receives). The result selects H-nopak as the only cause (pak reported -> Init 0 -> Start/Stop arrive) and refutes H-host and H-sdl on the virtual device (34/34 calls received). Next discriminator for the real pad: the owner run's [rumble] sdl rc/has/err line (rc 0 + has 1 = real-pad path confirmed; rc -1 there = H-sdl on hardware, add the SDL_JoystickRumble fallback).
 Closes on the owner feeling it on a PS4/PS5 pad. Next: G6b control rebinding (NEXT.md).
+
+## Session 7618 (2026-11-18) — G6b step 1: pad + keyboard map moved into a binding table (src/main/rs64_bindings.h) whose defaults equal the old hard-coded map; offline 233288 cases 0 mismatches (mutant 37436), same-run virtual-pad + keyboard sweep 3000 polls 0 mismatches vs the verbatim old code (mutant 239)
+- Change: get_n64_input's mapping block (pad buttons, L3 -> C-Right, L2 > 16000 -> Z, R2 > 16000 -> C-Left, Back/Guide,
+  keyboard ZXC/Enter/arrows/QE/IJKL, WASD stick with 0.7071 diagonals, keyboard overrides pad stick) now runs as
+  rs64_bind_eval(rs64_bind_defaults(), snapshot). Sources: pad button, axis > thr, axis < -thr, key; several sources per
+  N64 button (OR). The old block is kept verbatim as rs64_bind_old_sdl(): ROGUESQ_BIND_OLD=1 uses it. Autopilot/stick gate
+  downstream untouched.
+- Instruments: ROGUESQ_BIND_CHECK=1 evaluates table and old code on every poll (snapshot taken before and after the old
+  code; polls where they differ are skipped as races) and logs [bind-check] counts plus a planted mutant (pad A<->X masks
+  swapped) as the same-run positive control. ROGUESQ_BIND_SELFTEST=1 attaches an SDL virtual gamepad and writes SDL's
+  keyboard state, stepping every button, each axis at 8 values, every mapped key, then pseudo-random combos.
+- Offline: tools/test_bindings.cpp (rs64_bind_legacy = transliteration of the old block) — every button, every axis and
+  axis pair at 14 boundary values (incl. 16000/16001), every scancode, every pair of the 18 mapped keys with/without pad
+  stick, 200k random combos, with/without pad and keyboard: 233288 cases, 0 mismatches (float bits compared). Mutant: 37436.
+- Runtime (same build, 60 s boot, scratch/s7618/selftest.log): first two runs showed mutant_mismatches=0 — the control
+  caught a dead instrument: SDL ignores joystick events while the window is unfocused, so the virtual pad never moved
+  (trigger rest 16383 only). With SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1: polls=3000 stable=3000 mismatches=0
+  mutant_mismatches=239, samples show stick, triggers (0/8383/16383/24383) and buttons varying.
+- Hypotheses: H-equal (table reproduces the old output for all inputs) vs H-drift (trigger threshold, stick sign, keyboard
+  override or no-pad edge differs). Two independent lines (offline exhaustive vs transliteration; runtime vs the verbatim
+  SDL-reading code) select H-equal and refute H-drift. Not yet seen: a real PS pad through the table (owner's normal play).
+- Note for later runtime input tests launched from a terminal: set SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 or pad input is
+  dropped while unfocused.
+- Next: G6b step 2 controls.json overrides, step 3 F6 panel.

@@ -12440,12 +12440,8 @@ extern "C" unsigned long rs64_s5773_ord(void) {
 }
 
 #include "rs64_stick_gate.h"
-static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
-    if (controller_num != 0) {
-        *buttons = 0; *x = 0.0f; *y = 0.0f;
-        return false;
-    }
-
+// s7618 G6b: the pre-table mapping, verbatim, kept behind ROGUESQ_BIND_OLD=1 and as the ROGUESQ_BIND_CHECK reference.
+static void rs64_bind_old_sdl(uint16_t* out_btn, float* out_x, float* out_y) {
     uint16_t btn = 0;
     float stick_x = 0.0f;
     float stick_y = 0.0f;
@@ -12529,6 +12525,117 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         stick_y = keyboard_y * (keyboard_x != 0.0f ? diagonal : 1.0f);
     }
 
+    *out_btn = btn; *out_x = stick_x; *out_y = stick_y;
+}
+
+#include "rs64_bindings.h"
+static bool rs64_bind_flag(const char* n) { const char* e = getenv(n); return e && *e && *e != '0'; }
+static void rs64_bind_snapshot(rs64_input_snapshot* s) {
+    s->have_pad = controller != nullptr;
+    for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++)
+        s->pad_btn[b] = controller && SDL_GameControllerGetButton(controller, (SDL_GameControllerButton)b);
+    for (int a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++)
+        s->pad_axis[a] = controller ? SDL_GameControllerGetAxis(controller, (SDL_GameControllerAxis)a) : 0;
+    s->keys = SDL_GetKeyboardState(&s->nkeys);
+}
+static bool rs64_snap_same(const rs64_input_snapshot& a, const rs64_input_snapshot& b, const uint8_t* keycopy) {
+    if (a.have_pad != b.have_pad || memcmp(a.pad_btn, b.pad_btn, sizeof a.pad_btn) || memcmp(a.pad_axis, b.pad_axis, sizeof a.pad_axis)) return false;
+    return !b.keys || !keycopy || !memcmp(keycopy, b.keys, (size_t)std::min(b.nkeys, (int)SDL_NUM_SCANCODES));
+}
+// ROGUESQ_BIND_SELFTEST=1: virtual pad + written keyboard state stepped once per poll (implies BIND_CHECK).
+static SDL_Joystick* s_bind_vpad = nullptr;
+static void rs64_bind_selftest_step(long step) {
+    static bool attached = false;
+    if (!attached) {
+        attached = true;
+        SDL_VirtualJoystickDesc d; SDL_zero(d);
+        d.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION; d.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+        d.naxes = SDL_CONTROLLER_AXIS_MAX; d.nbuttons = SDL_CONTROLLER_BUTTON_MAX; d.name = "RS64 bind test pad";
+        const int idx = SDL_JoystickAttachVirtualEx(&d);
+        if (controller) { SDL_GameControllerClose(controller); controller = nullptr; }
+        if (idx >= 0) controller = SDL_GameControllerOpen(idx);
+        s_bind_vpad = controller ? SDL_GameControllerGetJoystick(controller) : nullptr;
+        fprintf(stderr, "[bind-selftest] vpad idx=%d open=%d\n", idx, controller ? 1 : 0);
+    }
+    if (!s_bind_vpad) return;
+    static const int16_t axv[] = {-32768, -16001, -16000, 0, 15999, 16000, 16001, 32767};
+    uint8_t* keys = const_cast<uint8_t*>(SDL_GetKeyboardState(nullptr));
+    static const int mk[] = {SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_RETURN, SDL_SCANCODE_UP, SDL_SCANCODE_DOWN,
+        SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT, SDL_SCANCODE_Q, SDL_SCANCODE_E, SDL_SCANCODE_I, SDL_SCANCODE_K, SDL_SCANCODE_J,
+        SDL_SCANCODE_L, SDL_SCANCODE_W, SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D};
+    // Hold each state for 4 polls so the main thread's joystick update lands before the compare.
+    const long k = step / 4;
+    const long nb = SDL_CONTROLLER_BUTTON_MAX, na = SDL_CONTROLLER_AXIS_MAX * 8, nk = 18;
+    for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++) SDL_JoystickSetVirtualButton(s_bind_vpad, b, 0);
+    for (int a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++) SDL_JoystickSetVirtualAxis(s_bind_vpad, a, 0);
+    if (keys) for (int i : mk) keys[i] = 0;
+    long r = k % (nb + na + nk + 200);
+    if (r < nb) SDL_JoystickSetVirtualButton(s_bind_vpad, (int)r, 1);
+    else if ((r -= nb) < na) SDL_JoystickSetVirtualAxis(s_bind_vpad, (int)(r / 8), axv[r % 8]);
+    else if ((r -= na) < nk) { if (keys) keys[mk[r]] = 1; }
+    else {  // pseudo-random combos
+        uint32_t h = (uint32_t)(k * 2654435761u);
+        for (int b = 0; b < SDL_CONTROLLER_BUTTON_MAX; b++) { h = h * 1103515245u + 12345u; SDL_JoystickSetVirtualButton(s_bind_vpad, b, (h >> 28) == 0); }
+        for (int a = 0; a < SDL_CONTROLLER_AXIS_MAX; a++) { h = h * 1103515245u + 12345u; SDL_JoystickSetVirtualAxis(s_bind_vpad, a, axv[(h >> 16) & 7]); }
+        if (keys) for (int i : mk) { h = h * 1103515245u + 12345u; keys[i] = (h >> 29) == 0; }
+    }
+    SDL_GameControllerUpdate();  // apply the virtual state now (the stable-snapshot guard covers a concurrent pump)
+}
+static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
+    static const rs64_bind_table s_table = rs64_bind_defaults();
+    static const bool s_selftest = rs64_bind_flag("ROGUESQ_BIND_SELFTEST");
+    static const bool s_check = s_selftest || rs64_bind_flag("ROGUESQ_BIND_CHECK");
+    rs64_input_snapshot s;
+    rs64_bind_snapshot(&s);
+    rs64_bind_eval(s_table, s, btn, sx, sy);
+    if (!s_check) return;
+    // Same-run compare: verbatim old SDL code vs the table on the same snapshot; plus a planted mutant (pad A<->X) that must differ.
+    static long polls = 0, stable = 0, mism = 0, mut_mism = 0, nonzero = 0, pad_live = 0;
+    static const rs64_bind_table s_mut = [] { rs64_bind_table t = rs64_bind_defaults(); std::swap(t.buttons[0].n64_mask, t.buttons[1].n64_mask); return t; }();
+    static uint8_t keycopy[SDL_NUM_SCANCODES];
+    if (s.keys) memcpy(keycopy, s.keys, (size_t)std::min(s.nkeys, (int)SDL_NUM_SCANCODES));
+    uint16_t ob; float ox, oy;
+    rs64_bind_old_sdl(&ob, &ox, &oy);
+    rs64_input_snapshot s2;
+    rs64_bind_snapshot(&s2);
+    polls++;
+    if (rs64_snap_same(s, s2, s.keys ? keycopy : nullptr)) {
+        stable++;
+        if (ob || ox != 0.0f || oy != 0.0f) nonzero++;
+        { bool live = false; for (bool v : s.pad_btn) live |= v; for (int16_t v : s.pad_axis) live |= v != 0; if (live) pad_live++; }
+        if (ob != *btn || memcmp(&ox, sx, 4) || memcmp(&oy, sy, 4)) {
+            if (++mism <= 20) fprintf(stderr, "[bind-check] MISMATCH poll=%ld old=%04X %g %g table=%04X %g %g\n", polls, ob, ox, oy, *btn, *sx, *sy);
+        }
+        uint16_t mb; float mx, my;
+        rs64_bind_eval(s_mut, s, &mb, &mx, &my);
+        if (mb != ob) mut_mism++;
+        if (s_selftest && polls % 97 == 0)
+            fprintf(stderr, "[bind-sample] poll=%ld btn=%04X x=%g y=%g lt=%d rt=%d\n", polls, ob, ox, oy,
+                    s.pad_axis[SDL_CONTROLLER_AXIS_TRIGGERLEFT], s.pad_axis[SDL_CONTROLLER_AXIS_TRIGGERRIGHT]);
+    }
+    if (polls % 600 == 0)
+        fprintf(stderr, "[bind-check] polls=%ld stable=%ld nonzero=%ld pad_live=%ld mismatches=%ld mutant_mismatches=%ld\n", polls, stable, nonzero, pad_live, mism, mut_mism);
+    if (s_selftest) rs64_bind_selftest_step(polls);
+}
+
+static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
+    if (controller_num != 0) {
+        *buttons = 0; *x = 0.0f; *y = 0.0f;
+        return false;
+    }
+
+    uint16_t btn = 0;
+    float stick_x = 0.0f;
+    float stick_y = 0.0f;
+    // s7618 G6b: mapping from a table (rs64_bindings.h; defaults == the old hard-coded map). ROGUESQ_BIND_OLD=1 = old code.
+    // ROGUESQ_BIND_CHECK=1 evaluates both every poll and logs [bind-check] mismatches (a stable-snapshot guard skips polls
+    // where SDL state changed between the reads); ROGUESQ_BIND_SELFTEST=1 drives a virtual pad + keyboard through a sweep.
+    static const bool s_bind_old = [] { const char* e = getenv("ROGUESQ_BIND_OLD"); return e && *e && *e != '0'; }();
+    if (s_bind_old) {
+        rs64_bind_old_sdl(&btn, &stick_x, &stick_y);
+    } else {
+        rs64_bind_poll(&btn, &stick_x, &stick_y);
+    }
     // ---- Autopilot: deterministic in-game input (wasted-run fix, 2026-08-26) --
     // The game is normally driven to the hangar/mission by synthetic keypresses
     // posted to the window (winctl -> CGEventPostToPid). Those drop silently
