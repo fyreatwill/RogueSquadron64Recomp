@@ -12253,7 +12253,55 @@ static int SDLCALL rs64_rumble_vpad_cb(void*, Uint16 lo, Uint16 hi) {
     if (lo || hi) g_rumble_vpad_nonzero.fetch_add(1, std::memory_order_relaxed);
     if (rs64_rumble_log() && (n <= 40 || n % 200 == 0))
         fprintf(stderr, "[rumble-vpad] n=%ld lo=%u hi=%u\n", n, (unsigned)lo, (unsigned)hi);
-    return 0;
+    // s7638: return 1, not 0. sdl2-compat hands this SDL2 int callback to SDL3, whose Rumble returns bool, so 0 reads as
+    // failure and SDL_GameControllerRumble returned -1 although the call was delivered (scratch/s7638/vpad_rc.c: cb 0 -> rc -1,
+    // cb 1 or -1 -> rc 0). That was the s7617 "SDL returns -1 for the virtual pad" open item; real pads are not affected.
+    return 1;
+}
+// s7638 G6a fallback chain (the G6a spec's SDL_JoystickRumble / SDL_Haptic fallbacks). Path 0 = SDL_GameControllerRumble,
+// 1 = SDL_JoystickRumble on the pad's joystick, 2 = SDL_Haptic rumble (subsystem initialised lazily, only if 0 and 1 fail).
+// A failing path advances to the next; when all fail the chain idles 5 s and re-probes from 0. A new `controller` pointer
+// resets the chain. ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic starts at that path (positive control for the fallbacks).
+enum { RS64_RP_GC = 0, RS64_RP_JOY = 1, RS64_RP_HAPTIC = 2, RS64_RP_NONE = 3 };
+static int g_rumble_path = RS64_RP_GC;
+static const char* rs64_rumble_path_name(int p) { return p == 0 ? "gc" : p == 1 ? "joy" : p == 2 ? "haptic" : "none"; }
+static int rs64_rumble_first_path() {
+    static const int f = [] { const char* e = getenv("ROGUESQ_RUMBLE_FORCE_PATH");
+        if (e && !strcmp(e, "joy")) return (int)RS64_RP_JOY; if (e && !strcmp(e, "haptic")) return (int)RS64_RP_HAPTIC; return (int)RS64_RP_GC; }();
+    return f;
+}
+static int rs64_rumble_send(float s, Uint16 lo, Uint16 hi, int64_t now) {
+    static SDL_GameController* s_pad = nullptr;
+    static SDL_Haptic* s_hap = nullptr;
+    static bool s_hap_init = false;
+    static int64_t s_none_t = 0;
+    if (controller != s_pad) {
+        if (s_hap) { SDL_HapticClose(s_hap); s_hap = nullptr; s_hap_init = false; }
+        s_pad = controller; g_rumble_path = rs64_rumble_first_path();
+    }
+    if (g_rumble_path == RS64_RP_NONE) {
+        if (now - s_none_t < 5000000) return -1;
+        g_rumble_path = rs64_rumble_first_path();
+    }
+    const Uint32 ms = s > 0.0f ? 150 : 0;
+    for (;;) {
+        int rc = -1;
+        if (g_rumble_path == RS64_RP_GC) rc = SDL_GameControllerRumble(controller, lo, hi, ms);
+        else if (g_rumble_path == RS64_RP_JOY) {
+            SDL_Joystick* j = SDL_GameControllerGetJoystick(controller);
+            rc = j ? SDL_JoystickRumble(j, lo, hi, ms) : -1;
+        } else if (g_rumble_path == RS64_RP_HAPTIC) {
+            if (!s_hap) {
+                SDL_Joystick* j = SDL_GameControllerGetJoystick(controller);
+                if (j && SDL_InitSubSystem(SDL_INIT_HAPTIC) == 0 && SDL_JoystickIsHaptic(j) == 1) s_hap = SDL_HapticOpenFromJoystick(j);
+                s_hap_init = s_hap && SDL_HapticRumbleInit(s_hap) == 0;
+            }
+            if (s_hap && s_hap_init) rc = s > 0.0f ? SDL_HapticRumblePlay(s_hap, s, ms) : SDL_HapticRumbleStop(s_hap);
+        }
+        if (rc == 0) return 0;
+        if (rs64_rumble_log()) fprintf(stderr, "[rumble] path %s failed rc=%d err=%s\n", rs64_rumble_path_name(g_rumble_path), rc, SDL_GetError());
+        if (++g_rumble_path >= RS64_RP_NONE) { g_rumble_path = RS64_RP_NONE; s_none_t = now; return rc; }
+    }
 }
 static void rs64_rumble_test_attach() {
     static bool done = false;
@@ -12301,19 +12349,21 @@ static void rs64_rumble_tick() {
         int rc = -1;
         if (controller) {
             const Uint16 lo = (Uint16)(s * 65535.0f), hi = (Uint16)(s * 0.6f * 65535.0f);
-            rc = SDL_GameControllerRumble(controller, lo, hi, s > 0.0f ? 150 : 0);
+            rc = rs64_rumble_send(s, lo, hi, now);
         }
         if (rc != 0) ++s_sdl_fail; else if (s > 0.0f) ++s_sdl_on; else ++s_sdl_off;
         if (rs64_rumble_log() && (s_sdl_on + s_sdl_off + s_sdl_fail <= 40))
-            fprintf(stderr, "[rumble] sdl s=%.2f duty=%.2f rc=%d pad=%d has=%d err=%s\n", s, duty, rc, controller ? 1 : 0,
+            fprintf(stderr, "[rumble] sdl s=%.2f duty=%.2f rc=%d path=%s pad=%d has=%d err=%s\n", s, duty, rc,
+                    rs64_rumble_path_name(g_rumble_path), controller ? 1 : 0,
                     controller ? (int)SDL_GameControllerHasRumble(controller) : -1, rc ? SDL_GetError() : "");
         s_sent = s; s_sent_t = now;
     }
     if (rs64_rumble_log() && now - s_sum_t > 5000000) {
         s_sum_t = now;
-        fprintf(stderr, "[rumble] sum on=%d scale=%.2f motor_calls=%ld on_edges=%ld max_duty=%.2f sdl_on=%ld sdl_off=%ld sdl_fail=%ld vpad=%ld vpad_nz=%ld pad=%d\n",
+        fprintf(stderr, "[rumble] sum on=%d scale=%.2f motor_calls=%ld on_edges=%ld max_duty=%.2f sdl_on=%ld sdl_off=%ld sdl_fail=%ld vpad=%ld vpad_nz=%ld pad=%d path=%s\n",
                 rs64_rumble_on() ? 1 : 0, rs64_rumble_scale(), g_rumble_calls.load(), g_rumble_on_edges.load(), s_max_duty,
-                s_sdl_on, s_sdl_off, s_sdl_fail, g_rumble_vpad_calls.load(), g_rumble_vpad_nonzero.load(), controller ? 1 : 0);
+                s_sdl_on, s_sdl_off, s_sdl_fail, g_rumble_vpad_calls.load(), g_rumble_vpad_nonzero.load(), controller ? 1 : 0,
+                rs64_rumble_path_name(g_rumble_path));
         s_max_duty = 0.0f;
     }
 }

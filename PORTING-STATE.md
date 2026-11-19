@@ -203410,3 +203410,37 @@ Rules out: SP_LATE=1 as a frame-rate cost on the heaviest measured level (L12 dd
 Change: no code change. The new scratch recipe and its scored output are the evidence. Nothing new is queued.
 Discrimination: selects H-free on AC, does not test H-cost (no CPU-bound arm; control not met for the saturation claim).
 Next discriminator: none on SP_LATE. Every ladder rung now waits on the owner (G6a/b/c, G5 looks, defaults in item 4).
+
+## Session 7638 (2026-11-19) — G6a rumble open items closed: virtual-pad rc=-1 was an sdl2-compat bool artefact; GameController -> Joystick -> Haptic fallback chain landed
+
+NEXT.md asked for a ladder-item-4 REVISIT of the M4 accumulator or retail-entry boundary. Both are already closed: M4 at s5354
+(cxd4 LLE retail run, `docs/REVISIT-S5354-M4-RETAIL-PCS.md`: the 0x8000 transient lanes appear in all 657 retail hangar tasks,
+none at task end) and retail-entry at s4845 (route-absent). The rename sweep is closed too (item 19). So the revisit has no target;
+CURRENT-TRUTH Next steps now says so. Took the remaining G6a spec gaps instead (s7617 "Open" line).
+
+Hypotheses for the s7617 `rc=-1` on the virtual test pad: H-cbret (sdl2-compat passes our SDL2 `int` Rumble callback through to
+SDL3, whose callback returns `bool`, so our `return 0` = success reads as failure) vs H-real (SDL rumble genuinely fails on this
+host). Discriminator, offline, no game: `scratch/s7638/vpad_rc.c` links the same lib as the game (otool: sdl2-compat 2.32.70),
+attaches a virtual pad and calls SDL_GameControllerRumble with the callback returning -1/0/1: rc 0/-1/0, callback ran in all
+three (calls=1). Selects H-cbret; the s7617 34 "sdl_fail" were a test-pad artefact. Real pads are unaffected (their driver path
+is SDL3-native).
+
+Change (src/main/main.cpp, G6a): test-pad callback returns 1; new `rs64_rumble_send` fallback chain gc
+(SDL_GameControllerRumble) -> joy (SDL_JoystickRumble on the pad's joystick) -> haptic (SDL_INIT_HAPTIC lazily,
+SDL_HapticOpenFromJoystick + RumbleInit/Play/Stop) -> none (re-probe from the first path after 5 s; a new controller pointer
+resets the chain). `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` starts the chain there (control). Default behaviour on a working pad is
+unchanged (path gc, same call/durations). Log lines and the 5 s summary print `path=`.
+
+Run (3 arms, one at a time, title boot 32 s, ROGUESQ_RUMBLE_TEST=1 synthetic 1 s train at t=20 s, LOG_RUMBLE=1; logs
+scratch/s7638/log_{gc,joy,haptic}.txt):
+| arm | path | sdl_on/off/fail | vpad delivered (nz) |
+|---|---|---|---|
+| default | gc | 18/1/0 | 19 (18) |
+| FORCE_PATH=joy | joy | 18/2/0 | 20 (18) |
+| FORCE_PATH=haptic | haptic failed -> none | 0/0/17 | 0 (0) |
+s7617 same recipe on the old build: sdl_fail 34, sdl_on 0. The haptic arm is the negative control (virtual pads are not
+haptic devices) and shows the chain ends in `none` without delivering. Not exercised: a natural gc failure advancing to joy
+on a real pad (no such pad on this host); the advance code is the one the haptic arm ran.
+Closes on the owner feeling it on a PS4/PS5 pad (unchanged). OWNER-OPT-INS rumble row updated.
+ORIGIN: no mitigation; the fallback chain is the G6a spec's stated fallbacks, and the rc=-1 writer is named (sdl2-compat bool
+mapping of the callback return).

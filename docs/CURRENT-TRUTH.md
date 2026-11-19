@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7633 (2026-11-19).
+Compact operational handoff, as of Session 7638 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -21,9 +21,12 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   100 ms on-fraction into s = (0.25 + 0.75*duty)*scale and sends SDL_GameControllerRumble(lo=s, hi=0.6s, 150 ms), refreshed
   every 50 ms, cancelled at duty 0. Proof (scratch/s7617, L4 dd1, same build): virtual test pad (ROGUESQ_RUMBLE_TEST=1, its
   Rumble callback = witness) got 14 calls from the game's own 4 osMotorStart at t=84.6 plus 20 from the 1 s injected train;
-  RUMBLE=0+PAK_SHAPE_CTL=1 arm: same 4 Start/7 Stop, 0 pad calls. Saves: dev=1 (EEPROM) throughout. Open: SDL returns -1 for
-  the sdl2-compat virtual pad although its callback runs; the log now prints has/err for the owner's real pad. No SDL_Haptic
-  fallback (our input only opens SDL_GameController). Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
+  RUMBLE=0+PAK_SHAPE_CTL=1 arm: same 4 Start/7 Stop, 0 pad calls. Saves: dev=1 (EEPROM) throughout. **s7638 closed both open
+  items:** the virtual pad's rc=-1 was a test artefact (sdl2-compat reads the SDL2 Rumble callback's int 0 as SDL3 bool
+  false; scratch/s7638/vpad_rc.c: cb 0 -> rc -1, cb 1 -> rc 0; cb now returns 1, gc arm sdl_fail 0/19); and a fallback chain
+  SDL_GameControllerRumble -> SDL_JoystickRumble -> SDL_Haptic landed (advance on failure, 5 s re-probe after all fail,
+  `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` = control: joy 18/18 delivered, haptic on the non-haptic vpad -> path=none, 0 delivered).
+  Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
   PROJECT-OVERVIEW "(s7622 maintenance)"). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
@@ -219,6 +222,10 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
   independent lines before a conclusion enters this file.
 
 ## Next steps (single monotonic backlog)
+
+- **Ladder item 4 REVISIT has no open target (s7638):** the rename sweep is CLOSED (item 19), the M4 accumulator boundary is
+  CLOSED (s5354: cxd4 LLE retail shows the same transient 0x8000 lanes in every hangar task, docs/REVISIT-S5354-M4-RETAIL-PCS.md)
+  and the external retail-entry boundary is CLOSED route-absent (s4845). Do not schedule a revisit; take an owner item or G-rung.
 
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7534 into one sequence 1-18, s7622 folded 19-46 into 19 (1-21 now) (the s7533 numbering 1-22 is archived
 verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
