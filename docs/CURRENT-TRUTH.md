@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7612 (2026-11-18).
+Compact operational handoff, as of Session 7614 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7613: class HP (HOST pointers held in static / thread_local / file-scope storage) CLOSED, H-clean, no fix.**
+- **NEW s7614: class HM (pointer MEMBERS of static aggregates) CLOSED, H-clean, no fix.** tools/s7614_hm_census.py
+  --controls --witness <log> (regex tools/s7614_hm_scan.py; clang tools/s7614_hm_ast.py + tools/s7614_hm_join.py, 117 TUs):
+  24 statics with pointer members, both sources agree on vars and member sets; 34 rows 0 open: host 26, base 3 (B), retail 1
+  (ViState.mode = TO_PTR of the osViSetMode arg, like libultra modep, V1), fresh 1 (hook_contexts, HF), hpvar 1, dead 1, and
+  ONE default-on deferred guest view: events_context.sp_task_queue holds the audio OSTask* from submit to consume (Q1).
+  Witness (tools/s7614_hm_witness.sh, ROGUESQ_LOG_M5_TASK_LIFETIME, title): 236/236 pairs identical 16 OSTask words,
+  strict one-outstanding alternation, off-by-one control mismatches 226/235. Controls 8/8.
+- **s7613: class HP (HOST pointers held in static / thread_local / file-scope storage) CLOSED, H-clean, no fix.**
   tools/s7613_hp_census.py --controls (scanner tools/s7613_hp_scan.py; second source tools/s7613_hp_ast.py = clang -ast-dump
   over build/compile_commands.json, 117 TUs): 65 pointer-typed static-storage variables, regex and AST censuses agree exactly
   (sole regex-only g_wp_addr is #ifdef _WIN32). base 21 (rdram base / base+const watch pages; rdram mmapped once, freed after
@@ -32,12 +39,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   load + s7528 evict, get_function uncached, ucode chosen by task type; RT64 HLE GBI cache keyed by text address is gated
   off by ROGUESQ_LLE_FORCE default). Generated: 14240 direct calls, 3460 into an overlay all from the same overlay, 0
   cross-overlay (agrees with s7520 runtime). Witness: 29 swaps stale 0; s7528 two-arm pair is the control.
-- **s7609: class MK (host state keyed by a guest struct address) CLOSED, H-clean, no fix.**
-  tools/s7609_mk_census.py --controls --witness (4/4, PASS): 96 lines (diag 47, timer 11, retail 10, stat 9, extq 6, fresh 5,
-  value 3, fix 1, print 4), 0 open. All queue incarnation state lives in the guest struct (osCreateMesgQueue resets links +
-  counts); event/VI registrations store the pointer as libultra does; timers re-read t->mq at fire, s7397 carry default on;
-  only cross-incarnation host state is the external-delivery deque. Witness (s7392q/s7393q route logs L5/L10/L15, controls
-  3/3 + 3/3, two separate runs): 8 re-created queues vs 15 event targets, overlap 0, route requeues 0.
+- **s7609: class MK (host state keyed by a guest struct address) CLOSED, H-clean** (full text: PORTING-STATE s7609).
 - **s7608: class TK (host state keyed by guest thread identity) CLOSED, one latent default-path fix.**
   tools/s7608_tk_census.py --controls --witness (4/4, PASS): 119 lines, 0 open. OSIds are NOT unique (log witness: id 0 = 8
   distinct threads, id 9 = 2), so the default-on s7394fix::holder ("holder == my OSId") could name another thread; now keyed by a
@@ -485,8 +487,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 44. **Class HP CLOSED s7613** (headline). Rerun tools/s7613_hp_census.py --ast --controls after adding any static/
     thread_local pointer; a guest view (TO_PTR / OSThread* / OSTask*) kept across calls needs an env gate, a same-call
     set/restore, or a log-only reader contract.
-45. **NEXT (s7614): class HM, pointer MEMBERS of static aggregates** (struct instances, arrays/containers of structs, lambda
-    state held in static std::function) - neither HP census lists them (both read declared variable types) (NEXT.md).
+45. **Class HM CLOSED s7614** (headline). Rerun tools/s7614_hm_census.py --ast --controls after adding a static struct /
+    container whose member is a pointer; a guest view kept across calls needs a contract (retail lifetime, same-call, gated)
+    and, if default-on, a witness like W.
+46. **NEXT (s7615): class DQ, deferred guest reads through host queues** - every host queue / channel (moodycamel, deque,
+    action queues, RT64 queues) whose element carries a guest address or view read at CONSUME time, not at enqueue (NEXT.md).
 
 ## Evidence index
 

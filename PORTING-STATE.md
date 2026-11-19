@@ -202702,3 +202702,61 @@ HYPOTHESIS-ID: host-static-of-guest-register. Item 3 systematic idiom-class audi
 - Scope limits: (1) pointer MEMBERS of static aggregates (static struct instances, arrays/containers of structs with T*
   fields, static std::function / lambda state) are not VarDecl types, so neither census lists them -> class HM next;
   (2) PTR(T) statics (running_queue_impl, thread_self) are 32-bit guest addresses, not host pointers, outside HP.
+
+## Session 7614 (2026-11-18) — class HM closed: pointer members of static aggregates (34 var.member rows / 24 statics 0 open, regex and clang-AST censuses agree on vars and member sets, contracts B/V1/Q1/HF/U1, controls 8/8, runtime witness PASS 236/236), H-clean
+
+- Work unit (NEXT s7614, HYPOTHESIS-ID host-static-aggregate-pointer-member): class HM = a pointer-like MEMBER (T*, T*[N],
+  atomic<T*>, uintptr_t, iterator, a container whose ELEMENT is a pointer) of a static / thread_local / file-scope object of
+  record type (struct instance, array or std container of records, unnamed `static struct {...} x;`), holding a host view
+  into guest RAM across calls. The scope gap s7613 declared (HP read only declared variable types). Hypotheses H-clean /
+  H-bad-gated / H-bad-live.
+- New tools: tools/s7614_hm_ast.py (clang -ast-dump over build/compile_commands.json, 117 TUs, 2:20 at J=8: every in-repo
+  RecordDecl/CXXRecordDecl definition with FieldDecls and its qualified name (namespace stack, anonymous namespaces,
+  function-local records), typedef'd anonymous structs named through the TypedefDecl's Record child address, function-type
+  typedef names, every static-storage VarDecl of any type); tools/s7614_hm_join.py (qualified-name join on clang's desugared
+  spelling, own-file preference for duplicate anonymous-namespace names, function-signature parameter types stripped,
+  recursion depth 4, auto kinds fnptr/str/file/queue; a var whose own type is a pointer to a record is HP's, skipped);
+  tools/s7614_hm_scan.py (regex first source: record bodies incl. nested unnamed structs, newline-preserving clean, brace
+  stack that treats namespace / extern "C" as transparent, multi-declarator statics, HP-token member-store scan);
+  tools/s7614_hm_census.py (rows, contracts, witness, controls); tools/s7614_hm_witness.sh (90 s title-attract run).
+- Result (scratch/s7614/census.txt): AST 283 member rows (ptr 46, queue 171, fnptr 39, str 27); 24 statics with pointer
+  members, clang 24 = regex 24, member sets identical, HP-token member stores 0. 34 (var, member) rows: host 26, base 3,
+  retail 1, retailq 1, fresh 1, hpvar 1, dead 1, 0 open.
+  - base: events_context.rdram (sole store `= rdram`), overlays s7.rdram (3 stores, all `= rdram`), dpc_bridge
+    g_bf_guard.rd (set only by arm(r,...), the one call passes rdram) - contract B.
+  - retail: events_context.vi.states[].mode = TO_PTR(OSViMode, mode_) in osViSetMode, paired with mode_guest = mode_; the
+    other 3 stores are &dummy_mode (V1). libultra's __osViNext->modep keeps the same pointer across retraces; rdram is never
+    reallocated (s7613 B), so the view cannot diverge from the guest address.
+  - retailq (the one default-on deferred guest view): events_context.sp_task_queue holds the audio OSTask* (TO_PTR in
+    submit_rsp_task) until task_thread_func dequeues it and run_task reads the struct - later than hardware, where
+    osSpTaskLoad copies the task at start. Q1: enqueue only `task` there and `nullptr` at shutdown, one wait_dequeue, inside
+    task_thread_func. Gfx tasks are copied by value (SpTaskAction{*task}). Runtime witness (tools/s7614_hm_witness.sh,
+    existing ROGUESQ_LOG_M5_TASK_LIFETIME, no build): 512 rows / 256 FIFO pairs on the title phase, 236 full-word pairs
+    (20 torn by interleaved stderr) all carry identical 16 OSTask words at enqueue and consume, edges strictly alternate
+    (one task outstanding: enqueue < consume < next enqueue), positive control consume-vs-NEXT-enqueue mismatches 226/235
+    (data_ptr alternates 0x80171CE0 / 0x80173B20, data_size 2/3), so the comparison sees a changed task when there is one.
+    No crash in the run.
+  - fresh: thread_local hook_contexts (vector<recomp_context>, f_odd is a uint32_t*): push/restore/pop inside run_hook, no
+    return between; the 9 other uses read only back().r2/r3/f0 values (HF). No mods are loaded in this port anyway.
+  - hpvar: threads.cpp cur_thr (atomic<OSThread*>, s7613 gated); OSThread.context lives in the guest object, not static.
+  - dead: events_context.deleted_threads (ConcurrentQueue<OSThread*>) is never referenced (U1).
+  - host (26): generated section / overlay tables (sections_info, overlays_info), mod loader buffers (mod_context), host
+    return addresses / backtraces for symbolisation (getenv trace, cf0/waittab rings, VI caller table, s7317/s7325/s7326/
+    s7475/s7480 maps, s7324 g_ex/g_dg, s7331 Blk own/rown), s7096 g_m.ex = &g_ex.
+- Controls 8/8: planted static struct {OSMesgQueue* q} set from rdram + a: regex lists it, no row -> OPEN, member-store scan
+  flags it; planted static std::vector<S{int* p}> and the struct compiled through the real clang AST path (s7331's flags)
+  -> both listed; dropped sp_task_queue row -> OPEN; dropped hook_contexts from the regex census -> disagreement OPEN;
+  planted `next_state->mode = TO_PTR(...)` -> V1; planted second enqueue -> Q1; removed pop_back -> HF; planted
+  `s7.rdram = TO_PTR(...)` -> B. Witness control as above.
+- The second source again found real holes on the way: the regex missed std::atomic<uintptr_t> ra{0} members (brace
+  initialisers split statements), namespace-scoped globals (brace depth), `} events_context{};`; the AST join first
+  conflated same-named records across TUs (callbacks_t x7, anonymous-namespace Ex in s7096 vs s7324), missed typedef'd
+  anonymous structs (recomp_context), took parameter types of function pointers as members (func_map), and hid the
+  sp_task_queue element pointer under the queue auto-kind. All fixed before the agreement above.
+- Discrimination: selects H-clean. H-bad-live refuted for this class (the only default-on deferred guest view, the audio
+  OSTask, is witnessed unchanged between enqueue and consume with a working control); H-bad-gated: no gated member views.
+- ORIGIN: no mitigation added (audit only).
+- Scope limits: (1) the witness covers the title phase (cap 512 rows/phase); in-mission audio tasks follow the same
+  submit-then-wait protocol but are not witnessed here; (2) other host queues that carry guest ADDRESSES (PTR(OSMesgQueue)
+  in external_messages, timer action_queue, RT64 queues) are deferred reads of guest memory too, but their elements are
+  32-bit guest addresses, not host pointers -> class DQ next (deferred guest reads through host queues).
