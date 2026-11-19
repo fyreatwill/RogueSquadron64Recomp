@@ -202893,4 +202893,5 @@ Round 2 L4 dd1 HOLD 200, rebuilt with injection: on vs off(RUMBLE=0+PAK_SHAPE_CT
   sparse at our autopilot routes (one burst per L4 run, none on L12 in 130 s).
 Not done: SDL_Haptic / SDL_JoystickRumble fallbacks (our input only opens SDL_GameController; DS4/DualSense are game
 controllers); effect-id / damage scaling (needs guest reads). Docs: OWNER-OPT-INS row, README Controls line.
+Hypotheses tested: H-nopak (no game pulses because port 0 reported no pak) vs H-host (pulses arrive, host drops them) vs H-sdl (host sends, device never receives). The result selects H-nopak as the only cause (pak reported -> Init 0 -> Start/Stop arrive) and refutes H-host and H-sdl on the virtual device (34/34 calls received). Next discriminator for the real pad: the owner run's [rumble] sdl rc/has/err line (rc 0 + has 1 = real-pad path confirmed; rc -1 there = H-sdl on hardware, add the SDL_JoystickRumble fallback).
 Closes on the owner feeling it on a PS4/PS5 pad. Next: G6b control rebinding (NEXT.md).
