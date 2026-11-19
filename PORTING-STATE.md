@@ -203537,3 +203537,6 @@ Controls: (a) planted unguarded keyWindow in a Gfx-rooted fn -> OPEN, (b) same i
 NFD_Init fix entry -> OPEN, (d) getScaleFactor callers guarded 3/3: all PASS.
 Discrimination line: MTC + census select H-defect (1 live site) and refute H-clean; after the fix MTC reports 0 with the
 same-run plant reporting 1. Class AT CLOSED. Rules out: off-main AppKit in our .mm bridges, plume, ImGui Metal, F6 panel.
+Discrimination: the Main Thread Checker arms (2/1/0 reports) plus the static census selects H-defect and refutes H-clean for
+class AT; the fix closes the one live site. Next discriminator: class CF (IOKit/HID/GCController callback threads vs our
+input/rumble state), with the s7640 MTC runner reused as a same-run regression check (NEXT.md).
