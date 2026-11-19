@@ -203881,3 +203881,26 @@ Build clean; the run above is its positive control (the tex >= 8 MB rows exist o
 ORIGIN: n/a (diagnostic instrument re-key, no mitigation).
 Verdict: selects H-some (1 artefact) in the narrow sense; refutes "any standing CLOSED conclusion is an alias artefact" for
 the audited tags. Single static census plus two data lines for the one hit. Next: fix census function attribution (s7650).
+
+## Session 7650 (2026-11-19) — MK8 census attribution made brace-aware: 11 sites re-pinned, 9 lost an inherited D label, all 9 diagnostic (H-cosmetic, 0 behaviour)
+Work unit (NEXT s7650, HYPOTHESIS-ID mk8-census-attribution, offline). tools/s7648_mk8_census.py attributed each host site
+to the nearest column-0 FN regex match above it, with no brace check, so a site in a definition FN could not match
+(indented namespace/class members, lambdas at file scope) inherited the previous function's D label.
+- Change: `fn_spans` (column-0 head incl. return type on previous line / `A::b(` / one-line bodies; a definition only if
+  `{` precedes `;` at paren depth 0; span to the matching `}` with comments and literals blanked). A site belongs to the
+  innermost span; none = UNATTRIBUTED, classified only by a hand-read DIAG_SITE entry. Legacy scan kept for `--diff`.
+  First pass bug caught and fixed in-session: the head regex ran on the cleaned line, where `extern "C"` became
+  `extern " "`, leaving 148 sites unattributed; now matches the raw line (columns preserved).
+- Controls (same run): `--controls` planted=3 flagged=3 PASS. New plant: ungated `a & 0x7FFFFFu` in a class-body inline
+  member right after a getenv-gated function: legacy fn=ctl_gated (the s7648 failure mode reproduced), braced
+  UNATTRIBUTED -> unclassified. The old 2 plants still flagged.
+- Result: `--diff` 11 changes. 2 harmless (s7644_rspdma.cpp:41 now `pm`, rt64_state.h:39 already DIAG_LINE). 9 had been D
+  via the wrong function, now read by hand: rt64_render_context.cpp:1175 (s6835 [stall-dump] fprintf), :2090/:2149
+  ([g1d-tex]/[g1d-cmd] inside if (s_cmd_log)), dpc_bridge.cpp:6497/6499 (fs_slot_addr: consumed only under log_fs_slot()
+  or opt-in ROGUESQ_FS_PIPE_INJECT), rt64_gbi_f3dfactor5.cpp:1017/1023 ([gbi-f5] dump in gbi_log_enabled()), :1098
+  ([cimg-odd] print arg), rt64_gbi_rdp.cpp:612 (shadeDl: rs64_shade_ordinal when shadeDiagOn + 3 fprintf rows). All
+  diagnostic -> D*-by-site. Census H 227 = D 166 + D* 61 (was 175/52), G 25 unchanged, unclassified 0, exit 0.
+- Selects H-cosmetic, refutes H-hidden: no ungated default-on 8 MB key/bound surfaced. MK8 class verdict stands.
+  Single-source (static read), as before.
+- Found: the same backward-scan `enclosing` pattern is in 10 other census tools (s7365_invalidation, s7373_aq_gate_table,
+  s7375_nolock_threads, s7430_file_growth, s7533_fz, s7535_ga, s7549_gi, s7591_mr, s7604_ra, s7615_dq) -> NEXT s7651.

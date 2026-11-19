@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7649 (2026-11-19).
+Compact operational handoff, as of Session 7650 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7649: MK8 conclusion re-validation: 1 alias artefact, 0 standing conclusions reopened.** s6230/s6231 [g1d-tex]
+- **NEW s7650: MK8 census attribution is brace-aware; H-cosmetic, 0 behaviour sites.** The s7648 backward scan
+  mis-pinned 11 host sites (9 had inherited a D label from the previous function); all 9 re-read by hand: stall-dump,
+  [g1d-tex]/[g1d-cmd] (s_cmd_log), fs_slot_addr (log/opt-in), [gbi-f5]/[cimg-odd] prints, shadeDl (diag). H 227 = D 166 +
+  D* 61; `--controls` 3/3 (new attribution plant: legacy -> gated fn, braced -> UNATTRIBUTED). 10 other census tools use
+  the same backward scan (s7651).
+- **s7649: MK8 conclusion re-validation: 1 alias artefact, 0 standing conclusions reopened.** s6230/s6231 [g1d-tex]
   (w900 OSMEM 12) hashed/dumped `& 0x7FFFFF`-aliased low RAM for EVERY photo tile (true src >= 8 MB: s6235 1407/1407, s7649
   3017/3017); "parse-time bytes noisy" was the alias. The thread closed on the s6243 skip bisect, untouched. [g1d-tex] now
   keys 16 MB (+tex8= old key). s7391 BA safe by data (all stacks < 0x806F9BA0). Census misattributes some sites (s7650).
@@ -439,8 +444,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     s7337_bound_census.py, whose generated pattern missed 13 `0x807Fxxxx` bounds (all opt-in/diag). Single-source by
     construction (static read); D is a regex on the enclosing function, D* list in docs/MK8-KEY-ALIAS-CENSUS.md.
     s7649 re-validation (table in the doc): only s6230/s6231 [g1d-tex] was an alias artefact (intermediate, superseded by
-    s6243); instrument re-keyed. 34. **Open (s7650): census function attribution** — the FN regex can pin a site to the
-    previous definition (rt64_render_context.cpp:2088-2147 -> rs64_s7541_span), so those sites' D labels are unproven.
+    s6243); instrument re-keyed. 34. **Census function attribution: MK8 CLOSED s7650 (H-cosmetic).** fn_spans
+    (brace-aware, innermost definition; no span = UNATTRIBUTED, hand-listed in DIAG_SITE); `--diff` shows 11 changes vs
+    the s7648 scan, 9 relabelled D -> D* after reading, 0 behaviour. Open (s7651): the same backward-scan `enclosing`
+    is in 10 other census tools (s7365, s7373, s7375, s7430, s7533, s7535, s7549, s7591, s7604, s7615).
 
 ## Evidence index
 

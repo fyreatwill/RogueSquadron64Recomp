@@ -41,6 +41,18 @@ ROGUESQ_EDGE_FADE_R2_Y), s6660/s6663 objective response (ROGUESQ_OBJECTIVE_RESPO
 `--controls` plants an ungated `a & 0x7FFFFFu` host key and an ungated `a < 0x807FFF00u` generated bound in temp
 files; both must be reported unclassified (s7648: planted=2 flagged=2 PASS). `s7337_bound_census.py` still exits 0.
 
+s7650: a third plant, an ungated mask in a class-body inline member right after a gated function, must also be
+flagged (the s7648 backward scan pinned it to the gated function, legacy fn=ctl_gated): planted=3 flagged=3 PASS.
+
+## s7650 brace-aware attribution (H-cosmetic: 0 behaviour sites)
+`fn_spans` finds column-0 definition heads (return type may be on the previous line, `{` before `;` at paren depth 0)
+and their matching `}` (comments/literals blanked); a site belongs to the innermost span. `--diff`: 11 sites changed
+function vs s7648. 9 had inherited a D label and were re-read: rt64_render_context.cpp:1175 s6835 [stall-dump] print;
+:2090/:2149 [g1d-tex]/[g1d-cmd] inside `if (s_cmd_log)`; dpc_bridge.cpp:6497/6499 fs_slot_addr (used only under
+log_fs_slot() or opt-in ROGUESQ_FS_PIPE_INJECT, default slot 0x76DF60); rt64_gbi_f3dfactor5.cpp:1017/1023 [gbi-f5]
+dump in `if (gbi_log_enabled())`, :1098 [cimg-odd] print arg; rt64_gbi_rdp.cpp:612 shadeDl (shade ordinal when
+shadeDiagOn + 3 fprintf rows). Now D*-by-site (DIAG_SITE). Totals H 227 = D 166 + D* 61, G 25 unchanged.
+
 ## Limits
 D is a regex on the enclosing function body (getenv / ROGUESQ_ / enabled / _on() before the site), not a proof that
 the gate is off by default; the D* list and every always-on candidate were read by hand. **Diagnostic conclusions are

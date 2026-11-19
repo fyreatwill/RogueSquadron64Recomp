@@ -10,7 +10,10 @@ Scopes:
 Each site is classed D (inside an env-gated / diagnostic function or patch block), F (float mantissa mask, not an
 address), or listed UNCLASSIFIED. Exit 1 on any unclassified site, so a new default-on 8 MB key fails the census.
 --controls plants one ungated mask and one ungated generated bound in temp copies and requires both to be flagged.
-Usage: s7648_mk8_census.py [--funcs DIR] [--controls] [-v]"""
+s7650: host attribution is brace-aware (fn_spans): a site belongs to the innermost definition whose braces contain it;
+a site in no definition is UNATTRIBUTED and needs a DIAG_SITE entry. --diff lists sites whose function changed vs the
+s7648 backward scan.
+Usage: s7648_mk8_census.py [--funcs DIR] [--controls] [--diff] [-v]"""
 import re, sys, pathlib, tempfile, shutil
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -61,12 +64,30 @@ DIAG_FN.update({
 })
 # Header constants (no enclosing function): RT64 RDRAMSize = 0x7FFFFF sizes only the debug RDRAM fwrite dump (rt64_state.cpp).
 DIAG_LINE = {"const uint32_t RDRAMSize = 0x7FFFFF;"}
+# s7650: unattributed / re-attributed sites classified by hand: (file name, stripped line) -> reason.
+DIAG_SITE = {
+    ("rt64_render_context.cpp", "auto b = [R](uint32_t a) { return (unsigned)R[(a & 0x7FFFFF) ^ 3]; };"):
+        "s6835 [stall-dump] fprintf of arbiter/queue words (fires only after STALL_VI VIs with no fullsync, max 8)",
+    ("rt64_render_context.cpp", "const uint32_t ta = s_ti_w1 & 0xFFFFFFu, ta8 = s_ti_w1 & 0x7FFFFFu;"):
+        "[g1d-tex] inside if (s_cmd_log) (LOG_G1D_CMD); ta8 = printed old key (s7649)",
+    ("rt64_render_context.cpp", "rs64_e9prov_current_root_dl() & 0x7FFFFFu,"): "[g1d-cmd] fprintf arg inside if (s_cmd_log)",
+    ("dpc_bridge.cpp", "if (x > 0 && x < 0x800000u) a = (uint32_t)x;"):
+        "fs_slot_addr (ROGUESQ_FS_SLOT_ADDR parse): read only under log_fs_slot() or opt-in ROGUESQ_FS_PIPE_INJECT",
+    ("dpc_bridge.cpp", "return a & 0x7FFFFFu;"): "fs_slot_addr, same (default slot 0x76DF60 < 8 MB)",
+    ("rt64_gbi_f3dfactor5.cpp", "if (phys < 0x800000u) {"): "[gbi-f5] byte dump inside if (gbi_log_enabled())",
+    ("rt64_gbi_f3dfactor5.cpp", "uint8_t b = rdram[((phys + i) ^ 3) & 0x7FFFFFu];"): "[gbi-f5] byte dump, same block",
+    ("rt64_gbi_f3dfactor5.cpp", "s_oddN, ow, fmt, siz, w0, w1, off, (off >= 0 && off < 0x800000) ? 1 : 0);"):
+        "s5714 [cimg-odd] fprintf arg (in= flag only)",
+    ("rt64_gbi_rdp.cpp", "const uint32_t shadeDl = state->displayListAddress & 0x7FFFFFu;"):
+        "shadeDl feeds rs64_shade_ordinal only when shadeDiagOn and three fprintf rows (lines ~761/778/1263)",
+}
 GEN_TAG = re.compile(r"PATCH: (s\d+)|rs(?:64_s)?(\d{4})_")
 # Generated-tree patch tags hand-reviewed s7648: opt-in or diag (the guarded block is env/enabled-gated).
 GEN_OK = {"s4204", "s4207", "s4208", "s4209", "s6363", "6660", "6663", "s6660", "s6663", "s4208"}
 
 
 def enclosing(lines, i):
+    """s7648 attribution (legacy, kept for --diff): nearest column-0 FN match above line i, no brace check."""
     for j in range(i, -1, -1):
         l = lines[j]
         if l and not l[0].isspace() and not l.startswith(("if", "for", "while", "return", "}", "#", "//")):
@@ -76,20 +97,115 @@ def enclosing(lines, i):
     return "?", 0
 
 
-def host_sites(files):
+# s7650: brace-aware attribution. A candidate definition head is a column-0 line naming `ident(` (return type may be on
+# the previous line; one-line bodies allowed). It is a DEFINITION only if, at paren depth 0 after the head, a `{` comes
+# before any `;`. Its span runs to the matching `}`. A site is attributed to the innermost span containing it; a site in
+# no span (class-body inline members, unmatched heads) is UNATTRIBUTED and must be classified by hand (DIAG_SITE).
+HEAD = re.compile(r'^(?:extern "C"\s+|static\s+|inline\s+|__attribute__\(\([^)]*\)\)\s+)*(?:[A-Za-z_][\w:<>\*&,\s]*?[\s\*&])?'
+                  r'((?:[A-Za-z_]\w*::)*~?[A-Za-z_]\w*)\s*\(')
+KW = {"if", "for", "while", "switch", "return", "sizeof", "do", "else", "case", "defined", "catch"}
+
+
+def _clean(lines):
+    """Blank out comments and string/char literals (keeps columns), so braces/semicolons inside them are not counted."""
+    out, blk = [], False
+    for l in lines:
+        r, k, n = [], 0, len(l)
+        while k < n:
+            if blk:
+                e = l.find("*/", k)
+                if e < 0:
+                    r.append(" " * (n - k)); k = n
+                else:
+                    r.append(" " * (e + 2 - k)); k = e + 2; blk = False
+                continue
+            c = l[k]
+            if l.startswith("//", k):
+                r.append(" " * (n - k)); k = n
+            elif l.startswith("/*", k):
+                blk = True; r.append("  "); k += 2
+            elif c in "\"'":
+                e = k + 1
+                while e < n and l[e] != c:
+                    e += 2 if l[e] == "\\" else 1
+                r.append(c + " " * (min(e, n) - k - 1) + (c if e < n else "")); k = min(e + 1, n)
+            else:
+                r.append(c); k += 1
+        out.append("".join(r))
+    return out
+
+
+def fn_spans(lines):
+    C = _clean(lines)
+    spans = []
+    for j, l in enumerate(C):
+        if not l or l[0].isspace() or l[0] in "#}{":
+            continue
+        m = HEAD.match(lines[j])  # match the raw line (cleaning blanks `extern "C"`); columns are preserved
+        if not m or m.group(1).split("::")[-1] in KW:
+            continue
+        # find `{` before `;` at paren depth 0, starting after the head's `(`
+        k, c0, par, found = j, m.end() - 1, 0, None
+        while k < len(C) and k < j + 40 and found is None:
+            t = C[k]
+            for c in range(c0, len(t)):
+                ch = t[c]
+                if ch == "(":
+                    par += 1
+                elif ch == ")":
+                    par -= 1
+                elif par == 0 and ch == ";":
+                    found = False; break
+                elif par == 0 and ch == "{":
+                    found = (k, c); break
+            k, c0 = k + 1, 0
+        if not found:
+            continue
+        k, c0, dep, end = found[0], found[1], 0, None
+        while k < len(C) and end is None:
+            t = C[k]
+            for c in range(c0, len(t)):
+                if t[c] == "{":
+                    dep += 1
+                elif t[c] == "}":
+                    dep -= 1
+                    if dep == 0:
+                        end = k; break
+            k, c0 = k + 1, 0
+        spans.append((m.group(1).split("::")[-1], j, end if end is not None else len(C) - 1))
+    return spans
+
+
+def enclosing_braced(spans, i):
+    best = None
+    for name, a, b in spans:
+        if a <= i <= b and (best is None or a >= best[1]):
+            best = (name, a, b)
+    return (best[0], best[1]) if best else ("UNATTRIBUTED", None)
+
+
+def host_sites(files, diff=None):
     out = []
     for f in files:
         L = pathlib.Path(f).read_text(errors="replace").split("\n")
+        S = None
         for i, l in enumerate(L):
             if not (MASK.search(l) or END.search(l)) or "printf" in l or l.strip().startswith("//"):
                 continue
             if FLOAT.search(l):
                 out.append(("F", f, i + 1, "-", l)); continue
-            fn, j = enclosing(L, i)
-            body = "\n".join(L[j:i + 1])
-            if DIAG.search(body):
+            if S is None:
+                S = fn_spans(L)
+            fn, j = enclosing_braced(S, i)
+            if diff is not None:
+                ofn, _ = enclosing(L, i)
+                if ofn != fn:
+                    diff.append((f, i + 1, ofn, fn))
+            body = "\n".join(L[j:i + 1]) if j is not None else l
+            key = (pathlib.Path(f).name, l.strip())
+            if j is not None and DIAG.search(body):
                 cls = "D"
-            elif fn in DIAG_FN or l.strip() in DIAG_LINE:
+            elif fn in DIAG_FN or l.strip() in DIAG_LINE or key in DIAG_SITE:
                 cls = "D*"
             else:
                 cls = "?"
@@ -114,10 +230,15 @@ def gen_sites(files):
     return out
 
 
-def run(funcs, verbose=False, host_extra=(), gen_extra=()):
+def run(funcs, verbose=False, host_extra=(), gen_extra=(), show_diff=False):
     hf = [str(p) for g in HOST for p in sorted(ROOT.glob(g)) if "third_party" not in str(p) and "contrib" not in str(p)]
     gf = sorted(str(p) for p in pathlib.Path(funcs).glob("funcs_*.c")) + sorted(str(p) for p in UCODE.glob("*.c"))
-    H = host_sites(list(hf) + list(host_extra))
+    dl = []
+    H = host_sites(list(hf) + list(host_extra), dl)
+    if show_diff:
+        print(f"[s7650] attribution changes vs s7648 backward scan: {len(dl)}")
+        for f, ln, o, n in dl:
+            print(f"  {pathlib.Path(f).relative_to(ROOT) if str(f).startswith(str(ROOT)) else f}:{ln} {o} -> {n}")
     G = gen_sites(list(gf) + list(gen_extra))
     bad = [s for s in H + G if s[0] == "?"]
     for scope, S in (("H", H), ("G", G)):
@@ -140,14 +261,25 @@ def main():
             h = d / "ctl_host.cpp"; g = d / "funcs_ctl.c"
             h.write_text('extern "C" uint32_t rs64_ctl_key(uint32_t a) {\n    return a & 0x7FFFFFu;\n}\n')
             g.write_text('static int ok(uint32_t a) {\n    return a >= 0x80000000u && a < 0x807FFF00u;\n}\n')
-            bad = run(funcs, host_extra=[str(h)], gen_extra=[str(g)])
+            # s7650 attribution control: an ungated mask in a class-body inline member (no column-0 head) placed right
+            # after a gated function. The s7648 backward scan attributed it to the gated function (D); brace-aware
+            # attribution must leave it UNATTRIBUTED and unclassified.
+            u = d / "ctl_attr.cpp"
+            u.write_text('static void ctl_gated(void) {\n    if (getenv("ROGUESQ_CTL")) { }\n}\nstruct CtlS {\n'
+                         '    uint32_t key(uint32_t a) {\n        return a & 0x7FFFFFu;\n    }\n};\n')
+            bad = run(funcs, host_extra=[str(h), str(u)], gen_extra=[str(g)])
             hit = {pathlib.Path(s[1]).name for s in bad}
-            okc = "ctl_host.cpp" in hit and "funcs_ctl.c" in hit
-            print(f"[s7648] controls planted=2 flagged={int('ctl_host.cpp' in hit) + int('funcs_ctl.c' in hit)} {'PASS' if okc else 'FAIL'}")
+            names = ("ctl_host.cpp", "funcs_ctl.c", "ctl_attr.cpp")
+            n = sum(x in hit for x in names)
+            L = u.read_text().split("\n")
+            legacy = enclosing(L, 5)[0]
+            okc = n == 3 and legacy == "ctl_gated"
+            print(f"[s7648] controls planted=3 flagged={n} (attr ctl legacy fn={legacy} -> braced "
+                  f"{enclosing_braced(fn_spans(L), 5)[0]}) {'PASS' if okc else 'FAIL'}")
             sys.exit(0 if okc else 1)
         finally:
             shutil.rmtree(d)
-    sys.exit(1 if run(funcs, "-v" in a) else 0)
+    sys.exit(1 if run(funcs, "-v" in a, show_diff="--diff" in a) else 0)
 
 
 if __name__ == "__main__":
