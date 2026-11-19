@@ -204625,3 +204625,6 @@ depth control: first-call depth 0x0D 38-49, 0x14 33-50, 0x1E 39-49 (delay 0-1). 
 scratch/agent/soak_queue/s7675_ghost_L4.sh and s7675_ghost_L1.sh (SOAK_NEEDS_IDLE=300).
 (A first attempt at run 2 used the old binary after a compile error; discarded and re-run.)
 Rules out: H-dead, H-miss and H-other-path for the s7674 ghost. Not covered: gate vs scripted hide (queued soaks), owner look.
+Discrimination: refutes H-dead and H-miss, and refutes H-other-path (walkers draw through the bucket, only late). Selects
+H-late-walker. Next discriminator: s7675_ghost_score.py GATE vs GHOST on the queued L4/L1 depth soaks (held_dmin against the
+subtype's first-call depth).
