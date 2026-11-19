@@ -204326,4 +204326,7 @@ exists, and the last one is the deliberate s7450 plant. No default path is affec
 Shows: 0 crash reports from normal play in 7 days of loop + owner runs. The only
 one with no plant or arm is the diag-only s7523 instrument fault. Rules out: an unnoticed owner-visible crash in DiagnosticReports since 11-13.
 ORIGIN: no mitigation added (a gate + classifier, no runtime change).
+Discrimination: H-missed (an owner or loop run crashed in a default path and no one read the report) vs H-none (every
+report is a planted control, a pre-fix arm or a diag instrument). All 22 are attributed with 0 unexplained, so this selects H-none and refutes H-missed
+for 11-13..11-19. Next discriminator: the stop gate itself. Any future NEW report forces the same split on the next iteration.
 Live run after this entry: `python3 tools/crash_reports.py --since 2026-11-13` -> new=0.
