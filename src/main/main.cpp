@@ -14013,6 +14013,10 @@ void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
     // intercepts F1-F4 here (filters run before SDL_PollEvent dequeues), so
     // the controller-input poll on the game thread never sees those keys.
     SDL_PumpEvents();
+    // s7639 class ST: publish the window size for the F6 panel's draw hook (RT64 present thread), so that hook no longer
+    // calls the main-thread-only SDL_GetWindowFromID / SDL_GetWindowSize itself. Cheap: a cached-field read.
+    if (g_rs64_window) { int w = 0, h = 0; SDL_GetWindowSize(g_rs64_window, &w, &h);
+        static const uint32_t id = SDL_GetWindowID(g_rs64_window); rs64_panel_note_window(w, h, id); }
     rs64_s7593_main_tick();
     rs64_g1f_apply_fs_toggle();
     rs64_display_hotplug_tick();

@@ -11,6 +11,9 @@
 #include <chrono>
 #include <cstdio>
 #include <mutex>
+#include <cstring>
+#include <cstdlib>
+#include <pthread.h>
 #include "imgui/imgui.h"
 #include "rhi/rt64_render_hooks.h"
 #include "plume_metal.h"
@@ -32,6 +35,8 @@ ImGuiContext* g_ctx = nullptr;
 bool g_metal_ok = false;
 std::atomic<bool> g_open{false};
 std::atomic<uint32_t> g_window_id{0};
+std::atomic<uint64_t> g_win_size{0};
+std::atomic<uint32_t> g_win_id{0};    // s7639: SDL window ID, main thread (chk arm only)  // s7639: window size in points, (w << 32) | h, written by the main thread only
 std::string g_msg;              // status line (save result etc.)
 long g_draws = 0;
 
@@ -143,8 +148,35 @@ void hook_draw(plume::RenderCommandList* list, plume::RenderFramebuffer* fb) {
     ImGui::SetCurrentContext(g_ctx);
     ImGuiIO& io = ImGui::GetIO();
     const float fw = (float)mfb->width, fh = (float)mfb->height;
+    // s7639 class ST: this hook runs on RT64's present thread, and SDL3 documents SDL_GetWindowFromID / SDL_GetWindowSize
+    // as main-thread-only. update_gfx (main thread) publishes the size via rs64_panel_note_window(); ROGUESQ_S7639_ST=0
+    // restores the old direct calls, =chk computes both and logs disagreements (and this thread's main-ness) once a second.
+    static const int st_mode = [] { const char* v = getenv("ROGUESQ_S7639_ST"); return !v || !*v ? 1 : !strncmp(v, "chk", 3) ? 2 : v[0] == '0' ? 0 : 1; }();
+    static const int st_plant = [] { const char* v = getenv("ROGUESQ_S7639_ST"); return v && !strcmp(v, "chkp") ? 1 : 0; }();  // control
     int ww = 0, wh = 0;
-    if (SDL_Window* w = g_window_id.load() ? SDL_GetWindowFromID(g_window_id.load()) : nullptr) SDL_GetWindowSize(w, &ww, &wh);
+    auto old_size = [&](int& a, int& b) {
+        if (SDL_Window* w = g_window_id.load() ? SDL_GetWindowFromID(g_window_id.load()) : nullptr) SDL_GetWindowSize(w, &a, &b);
+    };
+    if (st_mode == 0) old_size(ww, wh);
+    else {
+        const uint64_t v = g_win_size.load(std::memory_order_acquire);
+        ww = (int)(uint32_t)(v >> 32) + st_plant; wh = (int)(uint32_t)v;
+        if (st_mode == 2) {
+            // Check arm: the self-test opens the panel with no F6/mouse event, so g_window_id may still be 0; use the
+            // window's real ID (published with the size) so the old SDL path actually runs, then compare after fallback.
+            if (!g_window_id.load()) g_window_id.store(g_win_id.load());
+            int ow = 0, oh = 0; old_size(ow, oh);
+            if (ow <= 0 || oh <= 0) { ow = (int)fw; oh = (int)fh; }
+            if (ww <= 0 || wh <= 0) { ww = (int)fw; wh = (int)fh; }
+            static long n = 0, bad = 0; static auto t0 = std::chrono::steady_clock::now();
+            n++; if (ow != ww || oh != wh) bad++;
+            const auto t = std::chrono::steady_clock::now();
+            if (t - t0 >= std::chrono::seconds(1)) {
+                t0 = t;
+                fprintf(stderr, "[s7639-st] chk n=%ld bad=%ld cached=%dx%d sdl=%dx%d draw_main=%d\n", n, bad, ww, wh, ow, oh, pthread_main_np());
+            }
+        }
+    }
     if (ww <= 0 || wh <= 0) { ww = (int)fw; wh = (int)fh; }
     io.DisplaySize = ImVec2((float)ww, (float)wh);
     io.DisplayFramebufferScale = ImVec2(fw / (float)ww, fh / (float)wh);
@@ -184,6 +216,11 @@ void rs64_panel_install_hooks() {
     const char* e = getenv("ROGUESQ_CONTROLS_PANEL");
     if (e && *e == '0') { fprintf(stderr, "[controls-panel] disabled (ROGUESQ_CONTROLS_PANEL=0)\n"); return; }
     RT64::SetRenderHooks(hook_init, hook_draw, hook_deinit);
+}
+
+void rs64_panel_note_window(int w, int h, uint32_t id) {
+    g_win_id.store(id, std::memory_order_relaxed);
+    g_win_size.store(((uint64_t)(uint32_t)w << 32) | (uint32_t)h, std::memory_order_release);
 }
 
 bool rs64_panel_is_open() { return g_open.load(std::memory_order_acquire); }

@@ -28,4 +28,5 @@ std::string rs64_bind_path();
 void rs64_panel_install_hooks();        // before RT64 Application::setup
 bool rs64_panel_is_open();
 void rs64_panel_set_open(bool open);
+void rs64_panel_note_window(int w, int h, uint32_t id);  // s7639: MAIN thread only (update_gfx); the draw hook reads it
 void rs64_panel_feed(const SDL_Event& e);  // input poll thread; F6 toggles, mouse/keys go to ImGui while open

@@ -203448,3 +203448,48 @@ pad has never been measured to do).
 Closes on the owner feeling it on a PS4/PS5 pad (unchanged). OWNER-OPT-INS rumble row updated.
 ORIGIN: no mitigation; the fallback chain is the G6a spec's stated fallbacks, and the rc=-1 writer is named (sdl2-compat bool
 mapping of the callback return).
+
+## Session 7639 (2026-11-19) — class ST (SDL thread affinity) audit: 231 SDL call sites, 1 live off-main violation (new G6b F6 panel draw hook), fixed default on
+
+NEXT.md: no owner report, so take a new host-side idiom-class audit. New class ST: every SDL_* call in the host files we
+compile (src/main/*, lib/rt64 rt64_application_window.cpp + imgui_impl_sdl2_custom.cpp) checked against SDL3's own
+`\threadsafety` doc line (ground truth not from our runtime; sdl2-compat forwards to SDL3, names mapped through
+SDL3/SDL_oldnames.h plus a 14-entry alias table for SDL2-only calls). Hypotheses: H-clean (no MAIN/WIN-only call reachable
+off the main thread) vs H-defect (>=1 live site).
+
+Tool: `tools/s7639_st_census.py --controls` (exit 0 = clean). Preprocessor-aware (clang -E with the compile_commands flags;
+a conditional segment is dead only if none of its lines survive, because clang -E merges multi-line macro calls). Enclosing
+function / std::thread lambda via brace scopes, thread sets propagated over a name call graph from roots read from the
+runtime source: main/create_gfx/create_window/update_gfx = MAIN (librecomp recomp.cpp:868-939), get_n64_input/set_rumble =
+GAME (ultramodern input.cpp:149/209), hook_draw = PRESENT (rt64_present_queue.cpp:1131 inside threadPresent), RT64
+ApplicationWindow::setup = GFX, thread lambdas = WORKER. Controls PASS: (a) planted SDL_SetWindowTitle in a std::thread
+lambda -> OPEN, (b) planted in update_gfx -> ok/MAIN, (c) doc parse GetTicks=ANY CreateWindow=MAIN, (e) dropping a hand
+entry re-opens its row.
+
+Result: 231 rows (ANY 144, MAIN 75, OTHER 6 scancode-name/WasInit, NODOC 6 = SDL3 haptic calls with no threadsafety line,
+IOKit-backed). main.cpp: every MAIN-class call is reached from the main thread only (0 open). Hand rows: 27 ImGui_ImplSDL2_*
+(reached only by RT64's Inspector with sdlWindow != nullptr; sdlWindow is set only under RT64_SDL_WINDOW_VULKAN, undefined
+here, and runtime `[RT64] post-setup` prints sdlWindow=0x0 usesWindowMessageFilter=0 in all 3 runs below) -> dead; 6 in the
+setup(title) overload (we pass create_window's handle) -> dead; 1 SDL_GetWindowFromID(1) in setup needs
+usesWindowMessageFilter -> dead (same log). RT64's per-present detectWindowMoved/detectRefreshRate go through plume
+CocoaWindow on macOS, which dispatch_syncs/posts to the main queue -> safe (SDL branch #if'd out).
+**One live site -> H-defect selected:** the s7620 F6 Controls panel draw hook (rs64_controls_panel.cpp hook_draw) called
+SDL_GetWindowFromID + SDL_GetWindowSize (both "main thread only" in SDL3) on RT64's present thread every frame while open.
+Runtime second source: `[s7639-st] ... draw_main=0` (pthread_main_np in hook_draw) in all arms.
+
+ORIGIN: writer = our own s7620 hook_draw; the value (window size in points) is legitimate, only the thread is wrong. Consequence
+is a data race on SDL's window list/size fields (stale size; UAF risk if the window were destroyed during a draw), not an
+observed crash.
+Fix (default on): update_gfx (main thread, after SDL_PumpEvents) publishes the size + window ID via
+rs64_panel_note_window(); hook_draw reads an atomic. `ROGUESQ_S7639_ST=0` restores the old calls, `=chk` computes both and
+logs once a second, `=chkp` plants width+1 (control).
+Run (scratch/s7639/run.zsh <arm>: ROGUESQ_BIND_PANEL_TEST=1 opens the panel, ~58 s each, one at a time):
+| arm | draws checked | mismatches | cached / SDL |
+|---|---|---|---|
+| chk | 215 | 0 | 640x480 / 640x480 |
+| chkp (planted) | 243 | 243 | 641x480 / 640x480 |
+| default | panel drew (draw n=1) | - | - |
+First chk attempt showed sdl=0x0: the self-test opens the panel with no F6/mouse event, so g_window_id was 0 and the old
+path never called SDL at all; chk now seeds the real window ID so the old SDL call actually runs. Class ST CLOSED.
+Discrimination line: the census + draw_main=0 witness select H-defect (1 live site) and refute H-clean; after the fix the census
+exits 0 with no OPEN row. Next: owner items; else another new class.
