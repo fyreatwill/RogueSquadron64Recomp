@@ -126,7 +126,32 @@ static void aud_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint
 namespace {
 const bool g_gon = (g_mode & 2) != 0;
 struct Rg { uint32_t lo, hi; };
-struct Pr { uint32_t lo, hi, rom, ctl; };
+struct Pr { uint32_t lo, hi, rom, ctl, src; };
+// s7646: issuer (osPiStartDma/osEPiStartDma ra + guest OSThread id) and the stale-order refetch test.
+thread_local uint32_t t_src_ra = 0, t_src_tid = 0xFFFFFFFFu; thread_local bool t_src_set = false;
+struct St { uint32_t lo, hi, src; bool refetch; };
+std::vector<St> g_gstale;  // spans the task read, then a PI DMA during the task changed (this task)
+std::vector<std::pair<uint32_t, uint32_t>> g_srcs;  // src index -> (ra, tid)
+struct SrcC { uint64_t pi_run, rd_after_b, stale, stale_b, refetch, refetch_b; };
+std::vector<SrcC> g_srcc;
+uint64_t g_stale_n = 0, g_stale_b = 0, g_refetch_n = 0, g_refetch_b = 0, g_stale_tasks = 0, g_refetch_ctl = 0;
+bool g_refetch_ctl_armed = false;
+uint32_t src_idx(uint32_t ra, uint32_t tid) {
+    for (uint32_t i = 0; i < g_srcs.size(); i++) if (g_srcs[i].first == ra && g_srcs[i].second == tid) return i;
+    if (g_srcs.size() >= 256) return 255;
+    g_srcs.push_back({ra, tid}); g_srcc.push_back({}); return (uint32_t)g_srcs.size() - 1;
+}
+void stale_tally() {  // g_gmu held, at task end
+    bool any = false;
+    for (const St& t : g_gstale) {
+        if (t.src == 0xFFFFFFFEu) continue;
+        const uint32_t b = t.hi - t.lo; any = true;
+        g_stale_n++; g_stale_b += b; if (t.src < g_srcc.size()) { g_srcc[t.src].stale++; g_srcc[t.src].stale_b += b; }
+        if (t.refetch) { g_refetch_n++; g_refetch_b += b; if (t.src < g_srcc.size()) { g_srcc[t.src].refetch++; g_srcc[t.src].refetch_b += b; } }
+    }
+    if (any) g_stale_tasks++;
+    g_gstale.clear();
+}
 std::mutex g_gmu;
 std::vector<Rg> g_gcur, g_gprev;
 std::vector<Pr> g_gpi;  // PI DMAs that landed during the current task
@@ -154,7 +179,12 @@ void gsum(const char* why) {  // g_gmu held
                  (unsigned long long)g_grd_after_bytes, (unsigned long long)g_gctl_rd);
     for (int k = 0; k < K_N; k++) for (int c = 0; c < 2; c++)
         if (g_gk[k][c]) std::fprintf(stderr, " %s.%s=%llu/%lluB", kK[k], c ? "chg" : "same", (unsigned long long)g_gk[k][c], (unsigned long long)g_gk_bytes[k][c]);
-    std::fprintf(stderr, " ranges_prev=%zu other_thread_reads=%llu other_ovl=%llu\n", g_gprev.size(), (unsigned long long)g_gother, (unsigned long long)g_gother_ovl);
+    std::fprintf(stderr, " ranges_prev=%zu other_thread_reads=%llu other_ovl=%llu stale=%llu/%lluB stale_tasks=%llu stale_refetch=%llu/%lluB ctl_refetch=%llu\n", g_gprev.size(), (unsigned long long)g_gother, (unsigned long long)g_gother_ovl,
+                 (unsigned long long)g_stale_n, (unsigned long long)g_stale_b, (unsigned long long)g_stale_tasks, (unsigned long long)g_refetch_n, (unsigned long long)g_refetch_b, (unsigned long long)g_refetch_ctl);
+    for (uint32_t i = 0; i < g_srcs.size() && i < 24; i++)
+        std::fprintf(stderr, "[s7646-src] ra=0x%08X tid=%d pi_run=%llu rd_after=%lluB stale=%llu/%lluB refetch=%llu/%lluB\n", g_srcs[i].first, (int)g_srcs[i].second,
+                     (unsigned long long)g_srcc[i].pi_run, (unsigned long long)g_srcc[i].rd_after_b, (unsigned long long)g_srcc[i].stale, (unsigned long long)g_srcc[i].stale_b,
+                     (unsigned long long)g_srcc[i].refetch, (unsigned long long)g_srcc[i].refetch_b);
     std::vector<std::pair<uint64_t, uint64_t>> h(g_ghist.begin(), g_ghist.end());
     std::sort(h.begin(), h.end(), [](auto& a, auto& b) { return a.second > b.second; });
     for (size_t i = 0; i < h.size() && i < 10; i++)
@@ -178,9 +208,10 @@ extern "C" void rs64_s7645_gfx_task(int edge, uint32_t dl) {
     std::lock_guard<std::mutex> lk(g_gmu);
     if (edge == 0) {
         g_gtid = pthread_self(); g_gdl = dl & 0x7FFFFFu;
-        g_gtasks++; g_grun = true; g_gcur.clear(); g_gpi.clear();
+        g_gtasks++; g_grun = true; g_gcur.clear(); g_gpi.clear(); g_gstale.clear();
         if (g_gtasks == 1 || (g_gtasks % 1800u) == 0) gsum("tasks");
     } else {
+        stale_tally();
         g_grun = false; g_gprev.swap(g_gcur); g_gcur.clear(); g_gpi.clear();
     }
 }
@@ -197,11 +228,15 @@ extern "C" void rs64_s7645_gfx_read(uint32_t mem, uint32_t dram, uint32_t raw_le
         return;
     }
     g_grd_n++; g_grd_bytes += n;
-    if (g_ctl && g_gctl_rd_armed && !g_gctl_rd_done) { g_gctl_rd_done = true; g_gpi.push_back({lo, hi, 0xFFFFFFFFu, 1}); }
+    if (g_ctl && g_gctl_rd_armed && !g_gctl_rd_done) { g_gctl_rd_done = true; g_gpi.push_back({lo, hi, 0xFFFFFFFFu, 1, 0}); }
+    // s7646 refetch control: the first read after the first stale record is also recorded as a synthetic stale span over its
+    // own range, then this same read is tested against it below (must count ctl_refetch=1 through the refetch path).
+    if (g_ctl && g_refetch_ctl_armed) { g_refetch_ctl_armed = false; g_gstale.push_back({lo, hi, 0xFFFFFFFEu, false}); }
+    for (St& t : g_gstale) if (lo < t.hi && t.lo < hi && !t.refetch) { t.refetch = true; if (t.src == 0xFFFFFFFEu) g_refetch_ctl++; }
     for (const Pr& p : g_gpi) {
         const uint32_t a = lo > p.lo ? lo : p.lo, b = hi < p.hi ? hi : p.hi;
         if (a >= b) continue;
-        if (p.ctl) g_gctl_rd++; else { g_grd_after++; g_grd_after_bytes += b - a; g_ghist[((uint64_t)(p.lo >> 12) << 40) | ((uint64_t)(mem & 0xFFF) << 16) | (p.rom >> 16)] += b - a; }
+        if (p.ctl) g_gctl_rd++; else { g_grd_after++; g_grd_after_bytes += b - a; if (p.src < g_srcc.size()) g_srcc[p.src].rd_after_b += b - a; g_ghist[((uint64_t)(p.lo >> 12) << 40) | ((uint64_t)(mem & 0xFFF) << 16) | (p.rom >> 16)] += b - a; }
         if (p.ctl || g_glines++ < 48)
             std::fprintf(stderr, "[s7645-rd] %s task=%llu dl=0x%06X mem=0x%03X read=0x%06X+0x%X span=0x%06X+0x%X pi=0x%06X+0x%X rom_off=0x%08X phase=%u\n",
                          p.ctl ? "ctl" : "live", (unsigned long long)g_gtasks, g_gdl, mem & 0x1FFF, lo, n, a, b - a, p.lo, p.hi - p.lo, p.rom, rs64_phase_ord());
@@ -236,15 +271,21 @@ static void gfx_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint
     if (!g_gon) return;
     const uint32_t d = dram & 0x7FFFFFu;
     std::lock_guard<std::mutex> lk(g_gmu);
+    const uint32_t ra = t_src_set ? t_src_ra : 0u, thr = t_src_set ? t_src_tid : 0u; t_src_set = false;
+    const uint32_t tid = (thr >= 0x80000000u && thr + 0x18u <= 0x80800000u) ? (uint32_t)*(const int32_t*)(rdram + ((thr + 0x14u) & 0x7FFFFCu)) : 0xFFFFFFFFu;
     if (g_gtasks == 0) return;
-    if (g_grun || t_g.run) g_gpi.size() < 4096 ? g_gpi.push_back({d, d + size, rom_off, 0}) : (void)0;
+    const uint32_t si = (g_grun || t_g.run) ? src_idx(ra, tid) : 0u;
+    if (g_grun || t_g.run) { g_srcc[si < g_srcc.size() ? si : 0].pi_run++; if (g_gpi.size() < 4096) g_gpi.push_back({d, d + size, rom_off, 0, si}); }
     if (!t_g.any) return;
     const uint32_t m = (uint32_t)t_g.buf.size();
     for (int k = 0; k < K_N; k++) {
         if (!t_g.nspan[k]) continue;
         uint32_t chg = 0, bytes = 0;
-        for (uint32_t j = 0; j < t_g.nspan[k]; j++)
-            for (uint32_t a = t_g.span[k][j][0]; a < t_g.span[k][j][1]; a++) { bytes++; if (a - d < m && rb(rdram, a) != t_g.buf[a - d]) chg++; }
+        for (uint32_t j = 0; j < t_g.nspan[k]; j++) {
+            uint32_t cj = 0;
+            for (uint32_t a = t_g.span[k][j][0]; a < t_g.span[k][j][1]; a++) { bytes++; if (a - d < m && rb(rdram, a) != t_g.buf[a - d]) { chg++; cj++; } }
+            if (k == K_RUN_CUR && cj && g_grun && g_gstale.size() < 8192) { g_gstale.push_back({t_g.span[k][j][0], t_g.span[k][j][1], si, false}); if (g_ctl && g_stale_n == 0 && g_gstale.size() == 1) g_refetch_ctl_armed = true; }
+        }
         const int c = chg ? 1 : 0;
         const uint64_t tot = ++g_gk[k][c]; g_gk_bytes[k][c] += bytes;
         if (k == K_CTL_PI || (tot <= 6 && g_glines++ < 48))
@@ -259,5 +300,10 @@ static void gfx_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint
 extern "C" void rs64_s7644_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) { aud_pi_pre(rdram, dram, size); gfx_pi_pre(rdram, dram, size); }
 extern "C" void rs64_s7644_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint32_t rom_off) {
     aud_pi_post(rdram, dram, size, rom_off); gfx_pi_post(rdram, dram, size, rom_off);
+}
+extern "C" void rs64_s7646_pi_src(uint32_t ra, uint32_t thread) {
+    if (!g_gon) return;
+    t_src_ra = ra; t_src_set = true;
+    t_src_tid = thread;  // OSThread VA; id (offset 0x14) read in gfx_pi_post, which has rdram
 }
 extern "C" int rs64_s7645_gfx_on() { return g_gon ? 1 : 0; }

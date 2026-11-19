@@ -1,19 +1,23 @@
-# NEXT (s7646)
-HYPOTHESIS-ID: ts4-gfx-pi-dl-stream
+# NEXT (s7647)
+HYPOTHESIS-ID: g5b-slot-recycle
 
 G6a/G6b/G6c and the G5 looks wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports, take that first.
 
-TS-4 (s7645, CURRENT-TRUTH item 32): gfx tasks fetch DL bytes (DMEM 0x170) that guest PI DMAs write during the same task; 71/120 s
-on L4 dd2 in the stale order (task read first, then PI replaced). H-clean refuted. Open: H-live (port timing: our gfx task runs
-~95% of wall time, so streamed level data lands mid-task far more often than on hardware; a candidate for G5b terrain drops,
-which the owner sees only at dd>1) vs H-retail (the same overlap is benign on hardware, e.g. the chunks are next-frame data in a
-slot the current DL no longer references).
-Work unit, ONE build, ONE recipe:
-1. Add to the gfx mode: (a) for the stale-order case, whether the task re-fetched the same range later in the task (consumed both
-   old and new) and (b) for rd.after.pi, the issuer: record the guest thread / ra at osPiStartDma (not g_rs64_last_guest_pc).
-2. Arms L4 + L5 at dd1 and dd4 (FPS60 16:9, 120 s, `ROGUESQ_S7644_RSPDMA=2 ROGUESQ_S7644_RSPDMA_CTL=1`) via
-   tools/g1e_owner_quiet_arms.zsh (mkdir -p $R first: the recipe does not create it).
-Outcomes: rd.after.pi / stale-order near 0 at dd1 and large at dd4 -> H-live leads, next build a fix arm (guest PI ROM read into a
-range the running gfx task has read or will fetch waits for task end, ROGUESQ_S7646_PISYNC=1) and compare G5b drop counts. Equal
-at dd1 and dd4 -> the overlap does not explain dd-only drops; close TS-4 as H-retail-like and return to owner items.
+s7646 (CURRENT-TRUTH item 32): PI refills of bytes a gfx DL reads happen ONLY at dd>1 (dd1 0, dd4 L4 4912 / L5 2267 per 120 s).
+H-slot-recycle: the level-data chunk cache (256-B ROM chunks issued by guest thread 1 into 0x153000 / 0x195000-0x1CB000) has
+too few slots for the dd>1 cell window, so a slot still referenced by the current/next DL is evicted and refilled.
+Competitors: H-window (the cache is large enough, but the dd>1 cell list requests a chunk for a cell already dropped from the
+cache's own visibility rule, i.e. the extended cells bypass the cache's "in use" pinning), H-dlref (the DL keeps a stale
+pointer into a slot that the cache considers free at retail too, harmless at dd1 only because the slot is never reused in
+time).
+Work unit (offline first, then ONE build):
+1. Find the cache: grep the generated code / PORTING-STATE for the thread-1 loader that issues 256-byte osPiStartDma
+   (ROM 0x2F0000-0x4B0000) into 0x195000+ (try `grep -n '0x100' ` near osPiStartDma callers in RecompiledFuncs, or arm
+   ROGUESQ_S7518 [cache] op=dma0 n=100 logging for 5 s and read its ra, which IS valid there via ctx->r31 per the s7518 log).
+   Name the slot table, slot count, and the in-use / LRU rule.
+2. One build, arms L4 dd1/dd4: log per frame (a) chunk requests, (b) evictions of a slot whose chunk a DL fetched in the
+   last 2 tasks (= the s7646 stale event, now attributed to a cache decision), (c) slot count in use.
+   Outcome: evictions-of-referenced only at dd4 and slots in use == capacity -> H-slot-recycle; fix = more slots carved
+   from the dd>1 spill area (0x80800000+, gfx-reachable below 0x81000000) behind the dd policy, then compare
+   rd.after.pi (should fall to ~0) and the G5b drop detector at dd4. Slots in use < capacity -> H-window / H-dlref.
 Rules: never launch under lldb; never touch build/saves; one game at a time; SIGKILL only.

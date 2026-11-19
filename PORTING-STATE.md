@@ -203751,3 +203751,39 @@ drops at dd>1 only, none at dd1). No fix; default behaviour unchanged.
 Rules out: H-clean; audio-task misattribution (0 reads off the gfx runner thread; audio reads use their own bank).
 Changed: src/rsp/s7644_rspdma.cpp (gfx mode), src/rsp/s7094_dma_shape.cpp (mode-2 arm + read hook), src/main/main.cpp (task
 edge RAII). Discrimination: refutes H-clean, keeps H-live and H-retail; next discriminator is the dd1 vs dd4 arm table (NEXT.md).
+
+## Session 7646 (2026-11-19) — class TS-4: gfx-task vs PI DMA overlap is dd>1-only (dd1 0, dd4 4912/2267 per 120 s, controls fired); new G5b lead H-slot-recycle
+
+Work unit (NEXT s7646): add stale-order refetch and the DMA issuer to the s7645 gfx mode, then run the dd1 vs dd4 arm table.
+
+Instrument (src/rsp/s7644_rspdma.cpp, default off, `ROGUESQ_S7644_RSPDMA=2`; lib/N64ModernRuntime pi.cpp exported):
+- New weak hook `rs64_s7646_pi_src(ra, thread)` in osPiStartDma_recomp / osEPiStartDma_recomp before do_dma; gfx_pi_post
+  resolves the OSThread id (offset 0x14) and keeps per-issuer counts (`[s7646-src]` pi_run / rd_after / stale / refetch).
+- Stale spans: every per-span changed range of a pi.run.cur overlap (task read it, then the PI changed it) is recorded; a later
+  read in the same task over it marks it refetched (task consumed old AND new). Tallied at task end.
+- Controls (`ROGUESQ_S7644_RSPDMA_CTL=1`): existing ctl.pi / ctl_rd, plus ctl_refetch: after the first real stale record, the
+  next read is also entered as a synthetic stale span over its own range and must count through the refetch path.
+
+Run: `env R=$PWD/scratch/s7646/run HOLD=120 ALLOW_SLOW=1 ARMS="1:a4:ROGUESQ_FORCE_SAVE_MISSION=4+E 4:b4:... 1:a5:...=5+E
+4:b5:...=5+E"` (E = RSPDMA=2 + CTL=1) via tools/g1e_owner_quiet_arms.zsh, host idle 6 h. All 4 arms alive, 0 crash lines,
+vi_stalls30s=0, max_gap 148-149 ms, level_ok=1.
+
+| arm | gtasks | PI during run | rd.after.pi | pi.run.cur.chg | pi.run.prev.chg | stale (tasks) | refetched | ctl_rd | ctl_refetch |
+|---|---|---|---|---|---|---|---|---|---|
+| L4 dd1 | 5400 | 10989 | 0 | 0 | 0 | 0 | 0 | 2 | n/a (no stale) |
+| L4 dd4 | 5400 | 11104 | 4912 / 649 KB | 89 | 1474 | 135 / 20 KB (39) | 51 / 7 KB | 2 | 1 |
+| L5 dd1 | 5400 | 11761 | 0 | 0 | 0 | 0 | 0 | 4 | n/a |
+| L5 dd4 | 5400 | 11770 | 2267 / 290 KB | 10 | 1218 | 34 / 4.5 KB (9) | 34 / 4.5 KB | 2 | 1 |
+
+Issuer: guest thread id 1 carries ~99% of PI DMAs and every dd4 overlap (tid 2: 0; tid 0: a few). The ra field read 0 on every
+DMA (ctx->r31 is 0 at osPiStartDma_recomp here) -> unusable, noted, not pursued. Hot pages at dd4: 0x1BA000/0x1CA000/0x153000/
+0x1B9000 (L4), 0x153000/0x19E000/0x1AF000 (L5), all DL buffer fetches (DMEM 0x170), ROM 0x2F0000-0x4A0000 + 0x84/0x87xxxx.
+Example: DL 0x1B04D8 reads 0x110 B at 0x1950A0 while a 256-B ROM chunk (0x4AED20) lands at 0x195190.
+
+What it shows: the s7645 overlap is not port timing on retail settings. At dd1 the game never refills bytes the current or
+previous gfx task read, although PI DMAs still land mid-task as often; at dd4 it refills them thousands of times per 120 s,
+and in ~40-100% of stale cases the same task reads both the old and the new bytes. Rules out H-live as stated (timing alone)
+and H-retail (dd4 has no retail). New hypothesis H-slot-recycle: the level-data chunk cache filled by thread 1 is sized for the
+retail cell window; the dd>1 window references more chunks than it holds, so slots are evicted and refilled while a display
+list still uses them -> wrong geometry for a frame = G5b candidate. Single-instrument (one hook family), two levels.
+ORIGIN: not a mitigation; no behaviour change (instrument default off).

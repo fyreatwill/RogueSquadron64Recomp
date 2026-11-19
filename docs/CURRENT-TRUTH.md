@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7645 (2026-11-19).
+Compact operational handoff, as of Session 7646 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,8 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7646: TS-4 PI-vs-gfx DL overlap is dd>1-only** (dd1 0 / dd4 4912 per 120 s, controls fired): streamed-chunk slots
+  are refilled while the display list still uses them at dd>1. New G5b lead H-slot-recycle (item 32).
 - **NEW s7620: G6b F6 Controls panel LANDED (owner to try).** RT64's F1 inspector has no Metal backend, so the panel has
   its own ImGui context drawn through RT64's public post-VI hook (RT64::SetRenderHooks) with imgui_impl_metal; closed = hook
   returns, nothing encoded. Same run (PANEL_TEST): defaults 0 mismatches, scripted bind A=pad:b 112 (control), capture took
@@ -418,7 +420,18 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     same task: L4 4494 reads/593 KB, L1 2411/313 KB; reverse order (task read, then PI changed it = task consumed the old bytes)
     L4 71/13 KB, L1 3. All on the gfx runner thread (other_thread_reads=0). Sources: 256-byte sequential ROM chunks from level
     data (ROM 0x35xxxx-0x4Axxxx) into pages 0x195000-0x1CB000. 0 overlaps before phase 5. Both orders exist, so what the RSP
-    draws depends on host timing. Leads to G5b (terrain drops at dd>1 only): next step is the dd1 vs dd4 arm table.
+    draws depends on host timing.
+    **s7646 dd1 vs dd4 arm table (scratch/s7646/run, L4+L5 FPS60 16:9 120 s, all 4 alive, vi_stalls30s=0): the overlap is
+    dd>1-ONLY.** dd1: rd.after.pi 0 (L4) / 0 (L5), pi.run.cur.chg 0/0, pi.run.prev.chg 0/0, stale 0/0, while ~11k PI DMAs per arm
+    still land during gfx tasks; controls ctl.pi and ctl_rd fired in every arm (ctl_rd 2/2/4/2). dd4: rd.after.pi 4912/649 KB (L4)
+    and 2267/290 KB (L5), pi.run.prev.chg 1474/1218, stale (task read, then PI changed it) 135/34, of which refetched later in
+    the same task 51/34 (= the task consumed BOTH old and new bytes); refetch control ctl_refetch=1 in both dd4 arms. Issuer:
+    guest thread id 1 for ~99% (tid 2 = 0 overlaps); the ra field read 0 on every DMA (ctx->r31 at osPiStartDma_recomp is 0
+    here, field unusable). Example: DL 0x1B04D8 reads 0x110 B at 0x1950A0 while a 256-B ROM chunk (0x4AED20) lands at 0x195190.
+    So at dd>1 the game refills streamed-data slots (pages 0x153000, 0x195000-0x1CB000) that the CURRENT or previous display list
+    still references; at dd1 it never does. H-retail does not apply (dd4 is ours); host timing only decides which bytes win.
+    New lead for G5b, **H-slot-recycle**: the level-data chunk cache (256-B ROM chunks, thread 1) has fewer slots than the dd>1
+    cell window needs, so slots are evicted while referenced. Single-instrument (one hook family, two levels).
 
 ## Evidence index
 
