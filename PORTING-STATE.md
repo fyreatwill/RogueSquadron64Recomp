@@ -203441,6 +203441,10 @@ scratch/s7638/log_{gc,joy,haptic}.txt):
 s7617 same recipe on the old build: sdl_fail 34, sdl_on 0. The haptic arm is the negative control (virtual pads are not
 haptic devices) and shows the chain ends in `none` without delivering. Not exercised: a natural gc failure advancing to joy
 on a real pad (no such pad on this host); the advance code is the one the haptic arm ran.
+Discrimination line: the vpad_rc.c run selects H-cbret and refutes H-real (callback ran with rc -1 only when it returned 0), and
+the s7638 gc arm resolves the s7617 open item (sdl_fail 34 -> 0). Next discriminator: the owner's real PS4/PS5 pad log line
+`[rumble] sdl ... path=` (gc with rc=0 = delivered; path=joy/haptic/none = the pad refuses controller rumble, which a real
+pad has never been measured to do).
 Closes on the owner feeling it on a PS4/PS5 pad (unchanged). OWNER-OPT-INS rumble row updated.
 ORIGIN: no mitigation; the fallback chain is the G6a spec's stated fallbacks, and the rc=-1 writer is named (sdl2-compat bool
 mapping of the callback return).
