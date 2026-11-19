@@ -203348,3 +203348,23 @@ control), with a stop rule if the bodies turn out to depend on bytes ahead of `a
 Discrimination: this selects H-walk and refutes H-body (decode-only pass = 1.49 of spike+region 7.36 per parity half; 2 passes
 removable = ~6 ms/s > the 2 ms/s H-body bound). Next discriminator: ROGUESQ_S7634_FUSE=chk memcmp of fused vs two-walk output
 per submit (0 mismatches required, injected-edit control must count exactly its edits) plus the GLUE_TIME saving on FUSE=tog.
+
+## Session 7635 (2026-11-19) — walker fusion landed (default on): spike + region bodies in one walk, equivalence proven same-run (0 live late writes / 703M commands, injected 21/21), saving only ~0.8 ms/s
+- Change: src/rsp/dpc_bridge.cpp. rs64_spike_scan / rs64_region_scan loops split into per-command `body(a) -> len` lambdas
+  (continue/break -> return len/0); rs64_spike_scan takes an optional region-body callback run after its own body on each
+  command; rs64_region_scan(lo, hi, fused) runs its prologue then drives the spike walk with its body. Dispatch in
+  rs64_dpc_record_submit_impl: ROGUESQ_S7634_FUSE default 1; 0 = old two walks; tog = old on odd GLUE_TOG=3 seconds; chk/inj =
+  fused + late-write shadow check (+ flip of one shadow word every 4096th check). Skipped (old two walks) when GLUE_TOG=1 skip
+  or G5B_FRAME_EARLY=1 (recorder sits between the two walks).
+- Why it is equivalent (static): region body reads/writes only command a's own words and never 0x2E/0x2F; spike body reads command
+  a, looks ahead only at op bytes and 0x2F words (skyish), and writes command a or late the w1 of an earlier 0x2E (DD_SKYZ put).
+  Runtime check covers the late-write half.
+- Runs (L1/L12 dd4 16:9 FPS60 via scratch/s7635/run.zsh, one game at a time, host idle 3.4 h, AC): s7635d L1 FUSE=inj DD_SKYZ=1:
+  86016 submits, 703M commands, late_live=0, late_inert=3 (all op 2E word 71, 7F6x0000 -> 7FFF0000 = SKYZ late puts),
+  injected=21 inj_seen=21 (positive control PASS). s7635c (first binning) 24 = 21 + 3, consistent.
+  Timing s7635t (GLUE_TIME, FUSE=tog): spike+tail us/half fused vs old L1 8305 vs 8674, L12 9368 vs 9765 -> ~0.75-0.8 ms/s saved.
+  All alive_at_end=1, vi_stalls30s=0, crashlines=0. Details scratch/s7635/RESULT.txt.
+- Discrimination: s7634's H-walk prediction (~6 ms/s) is refuted in magnitude (~8x over): a standalone decode-only pass does
+  not measure what fusing removes (fused walk overhead hides under body loads). H-body (cost lives in the bodies) holds.
+  Two lines: L1 and L12 tog A/B agree. Rules out further walker fusion (pillar) as worthwhile.
+- Next: item 25, spike body integer fast path (kill if <2 ms/s).

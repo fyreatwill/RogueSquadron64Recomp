@@ -3677,7 +3677,10 @@ static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
 extern "C" int rs64_s7106_on; extern "C" void rs64_s7106_btri(void);  // s7106 rsptri control
 extern "C" uint8_t rs64_s7107_pop(void);  // s7107 painter: per-triangle source-cell tag (0xFF = untagged)
 static int g_rs64_skyz_why = 7; static uint32_t g_rs64_skyz_m = 0; static bool g_rs64_skyz_sel2 = false;  // s6948: SKYZ decision for the audit
-static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
+// s7635: rb/rc = the region walker's per-command body when fused (rs64_region_scan(lo, hi, fused)); it runs right after this
+// walker's body on each command, in submit order, so it sees the same bytes as the old second pass (see the s7635 note there).
+typedef uint32_t (*rs64_rbody_fn)(void *, uint32_t);
+static void rs64_spike_scan(uint32_t lo, uint32_t hi, rs64_rbody_fn rb = nullptr, void *rc = nullptr) {
     static const bool on = [] { const char *e = std::getenv("ROGUESQ_LOG_SPIKE"); return e && *e && *e != '0'; }();
     // 2026-10-31 owner: cull is DEFAULT ON (ROGUESQ_CULL_SPIKE=0 restores retail wedges). It used to run only
     // under ROGUESQ_LOG_SPIKE=1, so the documented CULL_SPIKE=1 opt-in alone was a no-op.
@@ -3719,7 +3722,11 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     static bool s_skyz_done = true;  // the last SET_PRIM_DEPTH seen is already handled, so later sky modes under it need nothing
     uint32_t skyz_pd = 0xFFFFFFFFu;  // its address when it is in this range and so still patchable
     static struct { double area, v[5][2]; uint32_t off, op, cw, n, big, w0, w1; int swap; } s_bt = {};
-    if (!(on || cull) || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    if (g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    if (!(on || cull)) {  // s7635: spike off but fused with the region walk: the region body alone, same stride
+        if (rb) for (uint32_t a = lo & ~3u; a + 8 <= hi;) { const uint32_t m = rb(rc, a); if (!m) break; a += m; }
+        return;
+    }
     static const double guard = [] { const char *e = std::getenv("ROGUESQ_SPIKE_CTL"); return e && *e ? atof(e) : 640.0; }();
     static uint64_t s_tris = 0, s_bad = 0, s_logged = 0, s_culled = 0;
     static uint32_t s_cw = 320;  // s6695: width of the last SET_COLOR_IMAGE seen in a submitted range
@@ -3752,7 +3759,7 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
     }
     auto rd = [&](uint32_t a) { uint32_t v; memcpy(&v, g_rdram_for_submit + (a & kSubmitRamMask), 4); return v; };
     auto sx14 = [](uint32_t v) { return (double)(((int32_t)(v << 18)) >> 18) / 4.0; };
-    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+    auto body = [&](uint32_t a) -> uint32_t {  // s7635: one command; returns its length, 0 = stop
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
         if ((s_sh || killsheet || s_fg) && op >= 0x20) { s_st[op][0] = w0; s_st[op][1] = w1; }
@@ -3854,14 +3861,14 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                 if (!sky && z_pdk == 1) { bool k = false; for (uint32_t i = 0; i < z_nl; i++) k |= z_leak[i] == z_om1; if (!k && z_nl < 16) { z_leak[z_nl++] = z_om1; fprintf(s_za, "# leak om %08X %08X swap=%d\n", z_om0, z_om1, sw); } }
             }
         }
-        if (op == 0x24 || op == 0x25) { a += 16; continue; }
-        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; a += 8; continue; }
+        if (op == 0x24 || op == 0x25) return 16;
+        if (op == 0x3F) { s_cw = (w0 & 0x3FFu) + 1u; return 8; }
         if (op == 0x3D) s_timg = w1;
         if (op == 0x3C) { s_bc0 = w0; s_bc1 = w1; }
-        if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        if (op < 0x08 || op > 0x0F) return 8;
         if (s_bd) { s_bA += s_bc0 == 0xFC127E24u && s_bc1 == 0xFFFFFFFFu; s_bB += s_bc0 == 0xFC127FFFu && s_bc1 == 0xFFFFFE3Fu; }
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
-        if (a + 32 > hi) break;
+        if (a + 32 > hi) return 0;
         uint8_t s7107_tg = 0xFF;  // s7107: source-cell tag popped in forwarding order, stored in the G5B_TRIS pad byte
         if (__builtin_expect(rs64_s7106_on, 0)) { rs64_s7106_btri(); s7107_tg = rs64_s7107_pop(); }  // s7106: independent per-swap tri count (control for the ucode DMEM parse)
         const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
@@ -3966,7 +3973,12 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi) {
                 fflush(stderr);
             }
         }
-        a += len;
+        return len;
+    };
+    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+        const uint32_t n = body(a), m = rb ? rb(rc, a) : n;
+        if (!n || !m) break;
+        a += n;
     }
 }
 
@@ -5362,7 +5374,7 @@ extern "C" int rs64_g1d_hud_flight(void) {
 // triangle (bbox centre in region) and texrect (ul in region) with its range and
 // offset; ROGUESQ_SHIFT_REGION=<dx px> additionally shifts matching tris/rects in x
 // (positive control: the matched element must visibly move in the fbdump).
-static void rs64_region_scan(uint32_t lo, uint32_t hi) {
+static void rs64_region_scan(uint32_t lo, uint32_t hi, int fused = 0) {
     static double R[4]; static double dxs = 0; static int shiftOn = 0;
     static const bool on = [] {
         const char *e = std::getenv("ROGUESQ_LOG_REGION");
@@ -5370,7 +5382,8 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         const char *d = std::getenv("ROGUESQ_SHIFT_REGION");
         if (d && *d) { dxs = atof(d); shiftOn = 1; }
         return true; }();
-    if (!on || g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    if (g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    if (!on) { if (fused) rs64_spike_scan(lo, hi); return; }  // s7635: fused caller still owes the spike walk
     static uint32_t s_logged = 0, s_hits = 0;
     static const uint32_t s_cap = [] { const char *e = std::getenv("ROGUESQ_REGION_LOG_CAP"); return e && *e ? (uint32_t)atoi(e) : 400u; }();  // s6695
     const int sw = g_rs64_swap_n.load(std::memory_order_relaxed);
@@ -5434,7 +5447,7 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         for (auto &kv : s_zstat) { char b[64]; snprintf(b, sizeof b, " %s%06X=%u/%u", kv.first.second ? "T" : "R", kv.first.first, kv.second[0], kv.second[1]); o += b; }
         fprintf(stderr, "[region-zgate] swap=%d zgate=%d shifted/kept:%s\n", sw, (int)zgate, o.c_str()); fflush(stderr); s_zstat.clear();
     }
-    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+    auto body = [&](uint32_t a) -> uint32_t {  // s7635: one command; returns its length, 0 = stop
         const uint32_t w0 = rd(a), w1 = rd(a + 4);
         const uint32_t op = (w0 >> 24) & 0x3F;
         if (op == 0x2F) s_zcmp = (w1 >> 4) & 1;
@@ -5454,7 +5467,7 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
         }
         if (s_zcmp && ((op >= 0x08 && op <= 0x0F) || op == 0x24 || op == 0x25)) s_world = true;
         if (op == 0x24 || op == 0x25) {
-            if (a + 16 > hi) break;
+            if (a + 16 > hi) return 0;
             const double xh = ((w1 >> 12) & 0xFFF) / 4.0, yh = (w1 & 0xFFF) / 4.0;
             const double xl = ((w0 >> 12) & 0xFFF) / 4.0, yl = (w0 & 0xFFF) / 4.0;
             if (xl >= R[0] && xl <= R[1] && yl >= R[2] && yl <= R[3]) {
@@ -5469,11 +5482,11 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
                     const uint32_t n = sat ? (uint32_t)std::clamp(v, 0, 0xFFF) : ((uint32_t)v & 0xFFF); return (w & ~0xFFF000u) | (n << 12); };
                 if (shiftOn && radar && zok(false)) { wr(a, sx(w0)); wr(a + 4, sx(w1)); }
             }
-            a += 16; continue;
+            return 16;
         }
-        if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        if (op < 0x08 || op > 0x0F) return 8;
         const uint32_t len = 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
-        if (a + 32 > hi) break;
+        if (a + 32 > hi) return 0;
         const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
         auto fx = [&](uint32_t o) { return (double)(int32_t)rd(a + o) / 65536.0; };
         const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
@@ -5491,8 +5504,42 @@ static void rs64_region_scan(uint32_t lo, uint32_t hi) {
             if (s_logged++ < s_cap) { fprintf(stderr, "[region] swap=%d TRI off=%06X op=%02X x=%.1f..%.1f y=%.1f..%.1f range=%06X..%06X\n", sw, a, op, mn, mx, yh, yl, lo, hi); fflush(stderr); }
             if (shiftOn && radar && zok(true)) { const int32_t d = (int32_t)(dxs * 65536.0); wr(a + 8, rd(a + 8) + d); wr(a + 16, rd(a + 16) + d); wr(a + 24, rd(a + 24) + d); }
         }
-        a += len;
+        return len;
+    };
+    if (!fused) { for (uint32_t a = lo & ~3u; a + 8 <= hi;) { const uint32_t m = body(a); if (!m) break; a += m; } return; }
+    // s7635 bridge-walker-fusion: one walk runs the spike body then this body on each command (ROGUESQ_S7634_FUSE, default 1).
+    // Same bytes as the old two passes because the two bodies only meet on the current command: this body reads and writes
+    // only command a's own words (texrect x fields, tri x words at +8/+16/+24, never a 0x2E or 0x2F), and the spike body reads
+    // command a, looks ahead only at op bytes and 0x2F words (skyish), and writes command a or, late, the w1 of an earlier
+    // 0x2E (DD_SKYZ put), which this body ignores. fused=2 (=chk) checks the late-write half at runtime: it shadows each
+    // command's words right after this body ran and compares them with the range once the walk ends; any differing word is a
+    // spike write that landed after this body passed it, binned by the command's op (inert: ops this body does not read).
+    // fused=3 (=inj) also flips one shadow word every 4096th check: the comparator's positive control.
+    if (fused == 1) { rs64_spike_scan(lo, hi, [](void *c, uint32_t a) { return (*static_cast<decltype(body) *>(c))(a); }, &body); return; }
+    static std::vector<uint32_t> s_shw; static std::vector<uint8_t> s_sop;
+    static uint64_t s_runs = 0, s_cmds = 0, s_late_live = 0, s_late_inert = 0, s_inj = 0;
+    const uint32_t base = lo & ~3u, nw = (hi - base + 3u) / 4u;
+    s_shw.resize(nw); s_sop.assign(nw, 0xFF);
+    for (uint32_t i = 0; i < nw; i++) s_shw[i] = rd(base + 4 * i);
+    struct Ck { decltype(body) *b; decltype(rd) *r; uint32_t base, hi; uint64_t *cmds; } ck = {&body, &rd, base, hi, &s_cmds};
+    rs64_spike_scan(lo, hi, [](void *c, uint32_t a) {
+        Ck &k = *static_cast<Ck *>(c); const uint32_t r = (*k.b)(a), op = ((*k.r)(a) >> 24) & 0x3F; (*k.cmds)++;
+        const uint32_t span = (r && a + r <= k.hi) ? r : k.hi - a;
+        for (uint32_t o = 0; o < span; o += 4) { const uint32_t i = (a + o - k.base) / 4u; if (i < s_shw.size()) { s_shw[i] = (*k.r)(a + o); s_sop[i] = (uint8_t)op; } }
+        return r; }, &ck);
+    s_runs++;
+    static uint64_t s_inj_seen = 0; static uint32_t s_nlog = 0;
+    const bool inj = fused == 3 && (s_runs & 4095u) == 0 && nw > 1;
+    if (inj) { s_shw[1] ^= 1u; s_inj++; }
+    for (uint32_t i = 0; i < nw; i++) if (s_shw[i] != rd(base + 4 * i)) {
+        if (inj && i == 1 && (s_shw[1] ^ 1u) == rd(base + 4)) { s_inj_seen++; continue; }  // the injected flip, nothing else on that word
+        const uint32_t op = s_sop[i];
+        const bool live = op == 0x24 || op == 0x25 || op == 0x2F || op == 0x3D || op == 0x3E || op == 0x3F || (op >= 0x08 && op <= 0x0F);
+        (live ? s_late_live : s_late_inert)++;
+        if (s_nlog++ < 32) { fprintf(stderr, "[s7635-late] run=%llu word=%u op=%02X live=%d shadow=%08X now=%08X\n", (unsigned long long)s_runs, i, op, (int)live, s_shw[i], rd(base + 4 * i)); fflush(stderr); }
     }
+    if ((s_runs & 4095u) == 0) { fprintf(stderr, "[s7635-chk] runs=%llu cmds=%llu late_live=%llu late_inert=%llu injected=%llu inj_seen=%llu\n", (unsigned long long)s_runs,
+        (unsigned long long)s_cmds, (unsigned long long)s_late_live, (unsigned long long)s_late_inert, (unsigned long long)s_inj, (unsigned long long)s_inj_seen); fflush(stderr); }
 }
 
 // s6720 G1d: ROGUESQ_LOG_G1D_RECT=1 logs, per swap, the colour-image width, scissor and the x extents of texrects
@@ -6129,15 +6176,21 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     if (tm) t[3] = mach_absolute_time();
     if (!skip) { RS64_W7(5, rs64_g1d_pause_dim(lo, hi)); RS64_W7(6, rs64_g1d_rect_scan(lo, hi)); }
     if (tm) t[4] = mach_absolute_time();
-    RS64_W7(7, rs64_spike_scan(lo, hi));
+    // s7635 item 24: ROGUESQ_S7634_FUSE=1 (default) runs the spike and region walks as one walk here (rs64_region_scan fused=1);
+    // =0 the old two walks; =tog the old two on odd GLUE_TOG seconds (same-run A/B, needs ROGUESQ_GLUE_TOG=3); =chk / =inj the
+    // fused walk with the late-write check / plus its injected control. G5B_FRAME_EARLY=1 (recorder between the two) keeps two walks.
+    static const bool s_g5bEarly = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_EARLY"); return e && *e == '1'; }();
+    static const int s7635fuse = [] { const char *e = std::getenv("ROGUESQ_S7634_FUSE"); if (!(e && *e)) return 1;
+        return *e == '0' ? 0 : *e == 't' ? 4 : *e == 'c' ? 2 : *e == 'i' ? 3 : 1; }();
+    const int fz = (skip || s_g5bEarly) ? 0 : s7635fuse == 4 ? (odd ? 0 : 1) : s7635fuse;
+    if (fz) RS64_W7(7, rs64_region_scan(lo, hi, fz)); else RS64_W7(7, rs64_spike_scan(lo, hi));
     if (tm) t[5] = mach_absolute_time();
     if (s7634null) { rs64_s7634_nullwalk(lo, hi); if (s7634null == 2 && odd) rs64_s7634_nullwalk(lo, hi); }
     uint64_t t_null = 0; if (tm) { const uint64_t tn = mach_absolute_time(); t_null = tn - t[5]; t[5] = tn; }
     // s7125 G3: the G5B_FRAME recorder now runs AFTER the region shift (radar disc, s6158) and floor walkers, so the replay stream is
     // the bytes RT64 is given; before, every 16:9/21:9 capture showed the disc unshifted (~1000 px HUD diff per frame vs RT64).
     // ROGUESQ_G5B_FRAME_EARLY=1 restores the old pre-walker record point.
-    static const bool s_g5bEarly = [] { const char *e = std::getenv("ROGUESQ_G5B_FRAME_EARLY"); return e && *e == '1'; }();
-    if (!skip) { if (s_g5bEarly) RS64_W7(8, rs64_g5b_frame(lo, hi)); RS64_W7(9, rs64_region_scan(lo, hi)); RS64_W7(10, rs64_floor_scan(lo, hi));
+    if (!skip) { if (s_g5bEarly) RS64_W7(8, rs64_g5b_frame(lo, hi)); if (!fz) RS64_W7(9, rs64_region_scan(lo, hi)); RS64_W7(10, rs64_floor_scan(lo, hi));
                  if (!s_g5bEarly) RS64_W7(8, rs64_g5b_frame(lo, hi)); }
     if (tm) {
         t[6] = mach_absolute_time();
