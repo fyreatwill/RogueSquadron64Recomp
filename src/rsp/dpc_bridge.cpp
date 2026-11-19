@@ -3677,6 +3677,7 @@ static void rs64_g5b_frame(uint32_t lo, uint32_t hi) {
 extern "C" int rs64_s7106_on; extern "C" void rs64_s7106_btri(void);  // s7106 rsptri control
 extern "C" uint8_t rs64_s7107_pop(void);  // s7107 painter: per-triangle source-cell tag (0xFF = untagged)
 static int g_rs64_skyz_why = 7; static uint32_t g_rs64_skyz_m = 0; static bool g_rs64_skyz_sel2 = false;  // s6948: SKYZ decision for the audit
+static bool g_s7636_odd = false;  // s7636: GLUE_TOG parity of the current submit (set in rs64_dpc_record_submit_impl), for FASTSPIKE=tog
 // s7635: rb/rc = the region walker's per-command body when fused (rs64_region_scan(lo, hi, fused)); it runs right after this
 // walker's body on each command, in submit order, so it sees the same bytes as the old second pass (see the s7635 note there).
 typedef uint32_t (*rs64_rbody_fn)(void *, uint32_t);
@@ -3871,6 +3872,27 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi, rs64_rbody_fn rb = nullptr
         if (a + 32 > hi) return 0;
         uint8_t s7107_tg = 0xFF;  // s7107: source-cell tag popped in forwarding order, stored in the G5B_TRIS pad byte
         if (__builtin_expect(rs64_s7106_on, 0)) { rs64_s7106_btri(); s7107_tg = rs64_s7107_pop(); }  // s7106: independent per-swap tri count (control for the ucode DMEM parse)
+        // s7636 item 25: ROGUESQ_S7636_FASTSPIKE integer guard test, exact equivalent of the double test below (x words are s15.16,
+        // y words s11.2, so every double vertex coordinate is X / 2^18 with X an int64 below 2^48: both paths compare the same reals).
+        // Used only when no spike diagnostic is armed. A good tri returns here; a bad one falls through to the double path (cull, logs).
+        // Default 0 (s7636: saves only ~0.2-0.75 ms/s, A/A noise level; H-mem). =1 on, =0 off, =tog on even GLUE_TOG seconds (needs ROGUESQ_GLUE_TOG=3), =chk both paths and count disagreements of bad, with
+        // the integer verdict flipped on every 4096th tri as the comparator's positive control (inj must equal inj_seen, live must be 0).
+        static const int fast = [] { const char *e = std::getenv("ROGUESQ_S7636_FASTSPIKE"); return !(e && *e) ? 0 : *e == '0' ? 0 : *e == 't' ? 2 : *e == 'c' ? 3 : 1; }();
+        static const int64_t G4 = (int64_t)llround(guard * 4.0);  // guard in quarter px
+        static const bool gint = (double)G4 == guard * 4.0;      // fast path needs a quarter-px guard (default 640)
+        static uint64_t s_fchk = 0, s_finj = 0, s_finj_seen = 0, s_flive = 0;
+        int fbad = -1;
+        if (fast && gint && !(on || s_tf || s_sh || s_big || s_fg || killsheet || rs64_s7536_cnt_on) && (fast != 2 || !g_s7636_odd)) {
+            const int32_t yl4 = ((int32_t)(w0 << 18)) >> 18, ym4 = ((int32_t)(w1 << 2)) >> 18, yh4 = ((int32_t)(w1 << 18)) >> 18;
+            const int64_t xl = (int32_t)rd(a + 8), dl = (int32_t)rd(a + 12), xh = (int32_t)rd(a + 16), dh = (int32_t)rd(a + 20),
+                          xm = (int32_t)rd(a + 24), dm = (int32_t)rd(a + 28);
+            const int64_t X0 = xh * 4, X1 = xm * 4 + dm * (ym4 - yh4), X2 = xl * 4, X3 = xl * 4 + dl * (yl4 - ym4), X4 = xh * 4 + dh * (yl4 - yh4);
+            const int64_t XL = -G4 * 65536, XR = ((320 + (s_cw > 640u ? (int64_t)s_cw - 320 : 0)) * 4 + G4) * 65536;
+            const int64_t mn = std::min(std::min(std::min(X0, X1), std::min(X2, X3)), X4), mx = std::max(std::max(std::max(X0, X1), std::max(X2, X3)), X4);
+            fbad = !(yh4 <= ym4 && ym4 <= yl4) || mn < XL || mx > XR || yh4 < -G4 || yl4 < -G4 || ym4 < -G4 || yh4 > 960 + G4 || ym4 > 960 + G4 || yl4 > 960 + G4;
+            if (fast == 3) { if ((++s_fchk & 4095u) == 0) { s_finj++; fbad ^= 1; } }
+            else if (!fbad) { s_tris++; s_swap_tris++; return len; }
+        }
         const double yl = sx14(w0 & 0x3FFF), ym = sx14((w1 >> 16) & 0x3FFF), yh = sx14(w1 & 0x3FFF);
         auto fx = [&](uint32_t o) { return (double)(int32_t)rd(a + o) / 65536.0; };
         const double xl = fx(8), dl = fx(12), xh = fx(16), dh = fx(20), xm = fx(24), dm = fx(28);
@@ -3913,6 +3935,12 @@ static void rs64_spike_scan(uint32_t lo, uint32_t hi, rs64_rbody_fn rb = nullptr
         // than 640 (widescreen only) get the guard measured from their own right edge; <=640 is unchanged.
         const double xr = 320.0 + guard + (s_cw > 640u ? (double)s_cw - 320.0 : 0.0);
         for (auto &p : v) if (p[0] < -guard || p[0] > xr || p[1] < -guard || p[1] > 240.0 + guard) bad = true;
+        if (fast == 3 && fbad >= 0) {  // s7636 chk: integer vs double verdict
+            const bool inj = (s_fchk & 4095u) == 0;
+            if ((bool)fbad != bad) { if (inj) s_finj_seen++; else if (s_flive++ < 16) fprintf(stderr, "[s7636-live] w0=%08X w1=%08X cw=%u int=%d dbl=%d\n", w0, w1, s_cw, fbad, (int)bad); }
+            if ((s_fchk & 0xFFFFFu) == 0) fprintf(stderr, "[s7636-chk] tris=%llu inj=%llu inj_seen=%llu live=%llu\n", (unsigned long long)s_fchk,
+                (unsigned long long)s_finj, (unsigned long long)s_finj_seen, (unsigned long long)s_flive);
+        }
         s_tris++; s_swap_tris++;
         bool s7536_cul = false;
         // s6792: 4:3 hi-res images (321..640 wide: cinematics, AT THE MOVIES) are never culled. Their legit cloud/sky
@@ -6154,6 +6182,7 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
         if (!anc) { anc = true; rs64_tog_anchor(mt); }
         odd = rs64_tog_odd(mt) != 0; skip = gtog == 1 && odd;  // GLUE_TOG=2: odd seconds = unfused two-pass walk
     }
+    g_s7636_odd = odd;  // s7636: FASTSPIKE=tog parity
     static uint64_t s_acc[2][7] = {}, s_n[2] = {}, s_bytes = 0, s_last = 0;  // walks: census..wipe, pillar, rect_wrap, pause+rscan, spike, g5b..floor
     uint64_t t[8]; const bool tm = gtime;
     static const int s7634null = [] { const char *e = std::getenv("ROGUESQ_S7634_NULLWALK"); return !(e && *e && *e != '0') ? 0 : (*e == 't' ? 2 : 1); }();  // =t: 2 passes on odd GLUE_TOG seconds (dose control)

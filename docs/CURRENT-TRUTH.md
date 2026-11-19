@@ -344,8 +344,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     Equivalence, same run (L1 dd4 16:9 FPS60, DD_SKYZ=1, 703M commands): shadow late-write check 0 live, 3 inert (op 2E DD_SKYZ
     late puts, predicted), injected 21/21 seen. Saving only ~0.75-0.8 ms/s (L1, L12 GLUE_TIME tog A/B), not the s7634 ~6:
     a standalone decode walk overstates what fusing removes. Further walker fusion (pillar) is not worth it.
-25. **Spike body per-tri cost (NEXT s7636).** CULL_SPIKE body ~8 ms/s at L1 dd4; default path does double decode of every
-    tri. Integer guard fast path when no diag file is open; kill if the tog A/B saves <2 ms/s.
+25. **Spike body per-tri cost: CLOSED s7636, H-mem.** ROGUESQ_S7636_FASTSPIKE (default 0; =1 on, =tog, =chk) is an exact
+    integer guard test (vertex coords are int64/2^18). chk L1 dd4: 0 disagreements / 90.2M tris, injected 22016/22016. tog A/B:
+    saves 377 (L1) / 86 (L12) us per parity, ~0.2-0.75 ms/s, at A/A noise (pillar delta 63/-157): cost is the command loads, not
+    the double maths. Walker per-tri cost thread closed; scratch/s7636/RESULT.txt.
 
 ## Evidence index
 

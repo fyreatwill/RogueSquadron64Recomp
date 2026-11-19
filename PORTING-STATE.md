@@ -203369,3 +203369,20 @@ per submit (0 mismatches required, injected-edit control must count exactly its 
   Two lines: L1 and L12 tog A/B agree. Rules out further walker fusion (pillar) as worthwhile.
 - This refutes H-walk (as a ~6 ms/s saving) and selects H-body; it closes item 24 (fusion landed default-on, equivalence proven).
 - Next discriminator: item 25, spike body integer fast path, FASTSPIKE=tog A/B at L1/L12 (H-fp >=2 ms/s saved vs H-mem <1 ms/s).
+
+## Session 7636 (2026-11-19) — spike-body integer fast path: exact (0/90M disagreements) but saves only ~0.2-0.75 ms/s -> H-mem, item 25 closed, opt-in
+HYPOTHESIS-ID: spike-body-cost. Work unit: CURRENT-TRUTH item 25 (NEXT s7636). H-fp (double decode + guard compare dominate the
+CULL_SPIKE body; integer fast path saves >=2 ms/s) vs H-mem (cost is the tri-word loads shared with the region body; <1 ms/s).
+Change: src/rsp/dpc_bridge.cpp rs64_spike_scan body, ROGUESQ_S7636_FASTSPIKE: integer test on raw s11.2 y and s15.16 x words
+(X = x*4 + dx*dy4 in units of 2^-18 px, exact against the double path since every operand fits 48 bits); good tris return early,
+bad ones fall through to the double path (cull, logs). Used only when no spike diagnostic file/flag is armed. =tog on even GLUE_TOG
+seconds (g_s7636_odd set from the submit's parity), =chk runs both and counts disagreements, flipping every 4096th integer verdict.
+Runs (scratch/s7636/run.zsh, L dd4 16:9 FPS60 owner recipe, 242 s hold each):
+- chk L1: 90.2M tris, live=0, inj 22016 = inj_seen 22016 (comparator positive control PASS).
+- tog L1: fused spike bucket par0(fast) 8298 vs par1 8675 us/s -> 377; pillar A/A delta 63.
+- tog L12: 9664 vs 9750 -> 86; pillar A/A delta -157.
+All alive_at_end=1, vi_stalls30s=0, crashlines=0. First chain hit the 600 s background cap during the L1 tog arm; rerun clean.
+Result: saving ~0.2-0.75 ms/s, under the pre-registered 2 ms/s bar and at A/A noise -> H-fp REFUTED, H-mem selected. Default set
+to 0 (opt-in) per the pre-registered rule; code kept because chk proves it exact. Rules out further per-tri arithmetic work in the
+bridge walkers: with s7635 (fusion ~0.8 ms/s), the remaining walker cost is memory traffic over the submitted ranges.
+Next: G6a/b/c wait on the owner; ladder item 4 (generated-symbol renaming sweep) unless the owner reports.
