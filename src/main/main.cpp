@@ -6803,8 +6803,10 @@ extern "C" void rs64_g1e_tring_push(double t_ms, double w, double c) {
 extern "C" void rs64_dmem_lock()   { g_lle_task_mutex.lock(); s4249::acquired(0); }
 extern "C" void rs64_dmem_unlock() { s4249::released(); g_lle_task_mutex.unlock(); }
 
+extern "C" void rs64_s7645_gfx_task(int edge, uint32_t dl);  // s7645 TS-4 (src/rsp/s7644_rspdma.cpp; no-op unless ROGUESQ_S7644_RSPDMA&2)
 static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
+    struct S7645Edge { S7645Edge() { rs64_s7645_gfx_task(0, s_pending_task_data_ptr); } ~S7645Edge() { rs64_s7645_gfx_task(1, 0); } } s7645_edge;
     s4249::Hold s4249_hold(2);
     uint32_t dl_ptr           = s_pending_task_data_ptr;
     uint32_t ucode_data_addr  = s_pending_task_ucode_data;

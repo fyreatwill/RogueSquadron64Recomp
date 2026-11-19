@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7644 (2026-11-19).
+Compact operational handoff, as of Session 7645 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -409,6 +409,16 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     ~8.8k audio tasks, 4+4 ud overlaps all 0x800A5130+0x4D0 (overlay ROM 0x137580/0x10C2D0/0xA5D30, chg 1054-1121 bytes),
     state copy 0, torn 0, command-list (dp) overlaps 0; every image change is either one of those DMAs or a CPU write ~8 tasks
     later with no PI DMA. Hardware rspboot copies the same declared 0x800 at task start, so the tail bytes are retail-identical.
+
+32. **Class TS-4 (LLE gfx task vs guest PI DMA on RDRAM the task DMA-reads): OPEN s7645, H-clean REFUTED, H-live vs H-retail
+    open.** Instrument: `ROGUESQ_S7644_RSPDMA=2` (bit mask; 1 = audio TS-3) in src/rsp/s7644_rspdma.cpp, task edges RAII in
+    main.cpp factor5_gfx_runner, reads ride rs64_s7094_dma_shape (gfx bank, non-IMEM). `_CTL=1`: ctl.pi + ctl.rd lines (fired
+    1 + 2 per arm). L1/L4 dd2 FPS60 16:9 120 s (scratch/s7645/run, run2): ~95% of PI DMAs land while a gfx task runs (L4
+    11031/11734). Gfx tasks fetch DISPLAY LIST bytes (DMEM 0x170 DL buffer, also 0x280/0xB70) that a PI DMA wrote during the
+    same task: L4 4494 reads/593 KB, L1 2411/313 KB; reverse order (task read, then PI changed it = task consumed the old bytes)
+    L4 71/13 KB, L1 3. All on the gfx runner thread (other_thread_reads=0). Sources: 256-byte sequential ROM chunks from level
+    data (ROM 0x35xxxx-0x4Axxxx) into pages 0x195000-0x1CB000. 0 overlaps before phase 5. Both orders exist, so what the RSP
+    draws depends on host timing. Leads to G5b (terrain drops at dd>1 only): next step is the dd1 vs dd4 arm table.
 
 ## Evidence index
 

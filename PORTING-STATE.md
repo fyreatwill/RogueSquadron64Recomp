@@ -203710,3 +203710,44 @@ Discrimination: selects H-retail (with H-margin: the overlap is the declared-but
 overlaps 0, torn 0, command-list overlaps 0, with the same-run CTL line firing 1/1 per arm).
 Next discriminator: class TS-4 (scratch/agent/NEXT.md): the same classifier on gfx-task RDRAM read ranges; run-state overlaps
 with chg>0 select H-live for gfx, 0 with ctl firing selects H-clean.
+
+## Session 7645 (2026-11-19) — class TS-4: LLE gfx tasks fetch display-list bytes that guest PI DMAs write during the same task (L4 4494/120 s, 71 in the stale order); H-clean refuted
+
+Work unit (NEXT.md s7645, HYPOTHESIS-ID owner-items-wait): TS-4 = gfx LLE task vs guest PI DMA on the RDRAM a gfx task reads.
+Hypotheses: H-clean (no PI DMA lands in a range a running gfx task reads; the game double-buffers), H-live (PI chunks land in
+DL/vertex data the RSP is still reading = timing hardware would not produce), H-retail (same overlap by design).
+
+Instrument (default off; no lib/ edit): `ROGUESQ_S7644_RSPDMA` is now a bit mask (1 = TS-3 audio, unchanged; 2 = TS-4 gfx).
+src/rsp/s7644_rspdma.cpp gfx section: task edges by RAII at the top of main.cpp factor5_gfx_runner (covers every return path,
+records data_ptr and the runner thread); every RSP RDRAM->DMEM read in the gfx bank (rides rs64_s7094_dma_shape, which mode 2 arms)
+is appended to the task's read ranges; every PI ROM read is classified pi.run.cur (lands on bytes this task already read),
+pi.run.prev (bytes the previous task read), pi.idle.prev (between tasks), with changed bytes; rd.after.pi counts task reads of
+bytes a PI DMA wrote during this task, with DMEM target and a (page, ROM 64K, mem) histogram. Reads from other threads counted
+apart. Controls `ROGUESQ_S7644_RSPDMA_CTL=1`: ctl.pi (first PI during a task classified against its own range) and ctl.rd
+(synthetic PI record = the next read's range).
+
+Runs: `env R=$PWD/scratch/s7645/run HOLD=120 ALLOW_SLOW=1 ARMS="2:g1:ROGUESQ_S7644_RSPDMA=2+ROGUESQ_S7644_RSPDMA_CTL=1
+2:g4:ROGUESQ_FORCE_SAVE_MISSION=4+..." zsh tools/g1e_owner_quiet_arms.zsh`, then run2 arm h4 (L4) with mem/dl/thread/histogram
+added. Host idle 6 h, AC, clk 0.975. (First launch wrote nothing: the recipe does not mkdir $R; rerun after mkdir.)
+
+| arm | alive | stalls | level_ok | ctl.pi / ctl.rd | gfx tasks | PI (during run) | rd.after.pi | pi.run.cur chg | pi.run.prev chg | other thread |
+|---|---|---|---|---|---|---|---|---|---|---|
+| g1 L1 | 1 | 0 | 1 | 1 / 2 | 5400+ | 11142 (10440) | 2411 / 313 KB | 3 / 2.6 KB | 1382 | n/a |
+| g4 L4 | 1 | 0 | 1 | 1 / 2 | 5400+ | 11712 (11008) | 4521 / 592 KB | 74 / 15 KB | 1531 | n/a |
+| h4 L4 | 1 | 0 | 1 | 1 / 2 | 5400+ | 11734 (11031) | 4494 / 593 KB | 71 / 13 KB | 1523 | 0 |
+
+Reads after PI are DL fetches: DMEM 0x170 (the F5 DL chunk buffer, 0x110-byte fetches advancing 0x108), some 0x280/0xB70; task DL
+roots 0x1AE4E0-0x1B24D0. Sources are sequential 0x100-byte PI chunks from level ROM (64K pages 0x35, 0x39, 0x42, 0x49, 0x4A) into
+RDRAM pages 0x195000-0x1CB000; two interleaved streams (e.g. ROM 0x4AED20.. -> 0x195190.., 0x42EAB8.. -> 0x195790..). Zero
+overlaps before phase 5 in all arms; per phase h4: phase 6 3212, phase 7 +1282. The [s7645-pi] pc field is the global last guest
+pc, not the DMA issuer (it read composeEffectObjectTransformMatrix / rs_memset), so issuer attribution is still open.
+
+Conclusion: H-clean refuted (two witnesses in the same run: PI-side classification and gfx-read-side rd.after.pi, plus both
+controls). The game streams level data containing display lists from ROM in 256-byte chunks while the RSP runs DLs in that
+memory, and BOTH orders occur: mostly the task fetches bytes that arrived during it, sometimes (71/120 s on L4) it fetched first and
+the PI then replaced them. So what the RSP draws there depends on host thread timing. Not yet split H-live vs H-retail: hardware
+has the same CPU/PI/RSP concurrency, only the window differs (our gfx tasks run ~95% of wall time). Candidate link to G5b (terrain
+drops at dd>1 only, none at dd1). No fix; default behaviour unchanged.
+Rules out: H-clean; audio-task misattribution (0 reads off the gfx runner thread; audio reads use their own bank).
+Changed: src/rsp/s7644_rspdma.cpp (gfx mode), src/rsp/s7094_dma_shape.cpp (mode-2 arm + read hook), src/main/main.cpp (task
+edge RAII). Discrimination: refutes H-clean, keeps H-live and H-retail; next discriminator is the dd1 vs dd4 arm table (NEXT.md).

@@ -7,18 +7,25 @@
 // Second witness, independent of the PI hook: FNV of the ucode_data image at every audio task vs the previous task with the same
 // address (img_chg). Positive control ROGUESQ_S7644_RSPDMA_CTL=1: the first PI DMA after the first audio task is also classified
 // against a synthetic range equal to its own destination (must show one ctl line with chg counted through the same code path).
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
+#include <vector>
+#include <map>
+#include <pthread.h>
 
 extern "C" uint32_t rs64_phase_ord();
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
 
 namespace {
 bool env_on(const char* n) { const char* e = std::getenv(n); return e && *e && *e != '0'; }
-const bool g_on = env_on("ROGUESQ_S7644_RSPDMA");
+// s7645: the value is a bit mask: 1 = audio (TS-3), 2 = gfx (TS-4), 3 = both.
+const int g_mode = [] { const char* e = std::getenv("ROGUESQ_S7644_RSPDMA"); return (e && *e) ? std::atoi(e) : 0; }();
+const bool g_on = (g_mode & 1) != 0;
 const bool g_ctl = env_on("ROGUESQ_S7644_RSPDMA_CTL");
 std::atomic<uint32_t> g_ud{0}, g_uds{0}, g_dp{0}, g_ds{0}, g_state{0};  // state 0 idle, 1 copy, 2 run
 std::atomic<uint64_t> g_tasks{0}, g_dmas{0};
@@ -65,7 +72,7 @@ extern "C" void rs64_s7644_task(const uint8_t* rdram, int edge, uint32_t ud, uin
     }
 }
 
-extern "C" void rs64_s7644_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) {
+static void aud_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) {
     t_snap.any = false;
     if (!g_on || g_tasks.load() == 0) return;
     const uint64_t nd = ++g_dmas;
@@ -85,7 +92,7 @@ extern "C" void rs64_s7644_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t 
     if ((nd % 4096u) == 0) summary("dmas");
 }
 
-extern "C" void rs64_s7644_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint32_t rom_off) {
+static void aud_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint32_t rom_off) {
     if (!g_on || !t_snap.any) return;
     const uint32_t st_post = g_state.load(std::memory_order_seq_cst);
     const bool torn = st_post != t_snap.st;
@@ -104,3 +111,153 @@ extern "C" void rs64_s7644_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t
     }
     t_snap.any = false;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------
+// s7645 class TS-4 (ROGUESQ_S7644_RSPDMA=2): LLE gfx task (factor5_gfx_runner, F5 ucode) vs guest PI DMA on the RDRAM the task
+// reads through RSP DMA (display list chunks, vertices, matrices, ucode_data; NOT RDP texture reads, which RT64 does itself).
+// Tables:
+//   pi.run.cur   PI DMA landing while a gfx task runs, on bytes this task already DMA-read (chg = bytes it altered)
+//   pi.run.prev  PI DMA landing while a gfx task runs, on bytes the previous task read (likely to be read again by this one)
+//   pi.idle.prev PI DMA between gfx tasks on bytes the last task read (buffer reuse; ordinary if chg and the game owns it)
+//   rd.after.pi  a gfx task DMA-reads bytes a PI DMA wrote DURING this task (the task consumed data that arrived mid-run)
+// Positive controls (ROGUESQ_S7644_RSPDMA_CTL=1): the first PI DMA during a running gfx task is also classified against its own
+// destination (ctl.pi, must count chg through the same path) and the first gfx read after that gets a synthetic PI record equal
+// to its own range (ctl.rd, must count through the rd.after.pi path).
+namespace {
+const bool g_gon = (g_mode & 2) != 0;
+struct Rg { uint32_t lo, hi; };
+struct Pr { uint32_t lo, hi, rom, ctl; };
+std::mutex g_gmu;
+std::vector<Rg> g_gcur, g_gprev;
+std::vector<Pr> g_gpi;  // PI DMAs that landed during the current task
+bool g_grun = false;
+uint64_t g_gtasks = 0, g_gpi_n = 0, g_gpi_run_n = 0, g_grd_n = 0, g_grd_bytes = 0, g_gcap = 0;
+bool g_gctl_pi = false, g_gctl_rd_armed = false, g_gctl_rd_done = false;
+enum { K_RUN_CUR, K_RUN_PREV, K_IDLE_PREV, K_CTL_PI, K_N };
+const char* kK[K_N] = {"pi.run.cur", "pi.run.prev", "pi.idle.prev", "ctl.pi"};
+uint64_t g_gk[K_N][2], g_gk_bytes[K_N][2];
+uint64_t g_grd_after = 0, g_grd_after_bytes = 0, g_gctl_rd = 0;
+uint32_t g_glines = 0;
+pthread_t g_gtid; uint32_t g_gdl = 0; uint64_t g_gother = 0, g_gother_ovl = 0;
+std::map<uint64_t, uint64_t> g_ghist;  // key (pi dram >> 12) << 32 | (rom_off >> 16) | mem<<24 -> rd_after_pi bytes
+struct GSnap { bool any, run; uint32_t d, n; uint32_t span[K_N][16][2]; uint32_t nspan[K_N]; std::vector<uint8_t> buf; };
+thread_local GSnap t_g;
+void gadd(std::vector<Rg>& v, uint32_t lo, uint32_t hi) {
+    if (!v.empty() && v.back().hi >= lo && v.back().lo <= hi) { if (lo < v.back().lo) v.back().lo = lo; if (hi > v.back().hi) v.back().hi = hi; return; }
+    if (v.size() >= 8192) { g_gcap++; return; }
+    v.push_back({lo, hi});
+}
+void gsum(const char* why) {  // g_gmu held
+    std::fprintf(stderr, "[s7645-sum] why=%s phase=%u gtasks=%llu reads=%llu rbytes=%llu pi=%llu pi_during_run=%llu cap=%llu rd_after_pi=%llu/%lluB ctl_rd=%llu",
+                 why, rs64_phase_ord(), (unsigned long long)g_gtasks, (unsigned long long)g_grd_n, (unsigned long long)g_grd_bytes,
+                 (unsigned long long)g_gpi_n, (unsigned long long)g_gpi_run_n, (unsigned long long)g_gcap, (unsigned long long)g_grd_after,
+                 (unsigned long long)g_grd_after_bytes, (unsigned long long)g_gctl_rd);
+    for (int k = 0; k < K_N; k++) for (int c = 0; c < 2; c++)
+        if (g_gk[k][c]) std::fprintf(stderr, " %s.%s=%llu/%lluB", kK[k], c ? "chg" : "same", (unsigned long long)g_gk[k][c], (unsigned long long)g_gk_bytes[k][c]);
+    std::fprintf(stderr, " ranges_prev=%zu other_thread_reads=%llu other_ovl=%llu\n", g_gprev.size(), (unsigned long long)g_gother, (unsigned long long)g_gother_ovl);
+    std::vector<std::pair<uint64_t, uint64_t>> h(g_ghist.begin(), g_ghist.end());
+    std::sort(h.begin(), h.end(), [](auto& a, auto& b) { return a.second > b.second; });
+    for (size_t i = 0; i < h.size() && i < 10; i++)
+        std::fprintf(stderr, "[s7645-hist] page=0x%05X000 rom64k=0x%04X0000 mem=0x%03X bytes=%llu\n", (unsigned)(h[i].first >> 40),
+                     (unsigned)(h[i].first & 0xFFFF), (unsigned)((h[i].first >> 16) & 0xFFFFFF), (unsigned long long)h[i].second);
+    std::fflush(stderr);
+}
+void gspans(const std::vector<Rg>& v, uint32_t d, uint32_t e, int k) {
+    for (const Rg& r : v) {
+        const uint32_t lo = d > r.lo ? d : r.lo, hi = e < r.hi ? e : r.hi;
+        if (lo >= hi) continue;
+        if (t_g.nspan[k] < 16) { t_g.span[k][t_g.nspan[k]][0] = lo; t_g.span[k][t_g.nspan[k]][1] = hi; t_g.nspan[k]++; }
+        t_g.any = true;
+    }
+}
+}  // namespace
+
+// edge 0 = task start, 1 = task end (factor5_gfx_runner RAII, all return paths).
+extern "C" void rs64_s7645_gfx_task(int edge, uint32_t dl) {
+    if (!g_gon) return;
+    std::lock_guard<std::mutex> lk(g_gmu);
+    if (edge == 0) {
+        g_gtid = pthread_self(); g_gdl = dl & 0x7FFFFFu;
+        g_gtasks++; g_grun = true; g_gcur.clear(); g_gpi.clear();
+        if (g_gtasks == 1 || (g_gtasks % 1800u) == 0) gsum("tasks");
+    } else {
+        g_grun = false; g_gprev.swap(g_gcur); g_gcur.clear(); g_gpi.clear();
+    }
+}
+
+// Every RSP DMA RDRAM->DMEM in the gfx bank (rides rs64_s7094_dma_shape, armed by ROGUESQ_S7644_RSPDMA&2).
+extern "C" void rs64_s7645_gfx_read(uint32_t mem, uint32_t dram, uint32_t raw_len) {
+    if (!g_gon) return;
+    const uint32_t lo = dram & 0x7FFFFFu, n = raw_len >= 0xFFFu ? 0x1000u : raw_len + 1u, hi = lo + n;
+    std::lock_guard<std::mutex> lk(g_gmu);
+    if (!g_grun) return;
+    if (!pthread_equal(pthread_self(), g_gtid)) {  // not the gfx runner thread: count, do not attribute to the task
+        g_gother++;
+        for (const Pr& p : g_gpi) if (!p.ctl && (lo < p.hi && p.lo < hi)) { g_gother_ovl++; break; }
+        return;
+    }
+    g_grd_n++; g_grd_bytes += n;
+    if (g_ctl && g_gctl_rd_armed && !g_gctl_rd_done) { g_gctl_rd_done = true; g_gpi.push_back({lo, hi, 0xFFFFFFFFu, 1}); }
+    for (const Pr& p : g_gpi) {
+        const uint32_t a = lo > p.lo ? lo : p.lo, b = hi < p.hi ? hi : p.hi;
+        if (a >= b) continue;
+        if (p.ctl) g_gctl_rd++; else { g_grd_after++; g_grd_after_bytes += b - a; g_ghist[((uint64_t)(p.lo >> 12) << 40) | ((uint64_t)(mem & 0xFFF) << 16) | (p.rom >> 16)] += b - a; }
+        if (p.ctl || g_glines++ < 48)
+            std::fprintf(stderr, "[s7645-rd] %s task=%llu dl=0x%06X mem=0x%03X read=0x%06X+0x%X span=0x%06X+0x%X pi=0x%06X+0x%X rom_off=0x%08X phase=%u\n",
+                         p.ctl ? "ctl" : "live", (unsigned long long)g_gtasks, g_gdl, mem & 0x1FFF, lo, n, a, b - a, p.lo, p.hi - p.lo, p.rom, rs64_phase_ord());
+    }
+    gadd(g_gcur, lo, hi);
+}
+
+static void gfx_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) {
+    t_g.any = false;
+    if (!g_gon) return;
+    const uint32_t d = dram & 0x7FFFFFu, e = d + size;
+    std::lock_guard<std::mutex> lk(g_gmu);
+    if (g_gtasks == 0) return;
+    g_gpi_n++;
+    t_g.run = g_grun; t_g.d = d; t_g.n = size;
+    for (int k = 0; k < K_N; k++) t_g.nspan[k] = 0;
+    if (g_grun) {
+        g_gpi_run_n++;
+        gspans(g_gcur, d, e, K_RUN_CUR); gspans(g_gprev, d, e, K_RUN_PREV);
+        if (g_ctl && !g_gctl_pi) { g_gctl_pi = true; g_gctl_rd_armed = true; t_g.span[K_CTL_PI][0][0] = d; t_g.span[K_CTL_PI][0][1] = e; t_g.nspan[K_CTL_PI] = 1; t_g.any = true; }
+    } else {
+        gspans(g_gprev, d, e, K_IDLE_PREV);
+    }
+    if (t_g.any) {
+        const uint32_t m = size > 0x200000u ? 0x200000u : size;
+        t_g.buf.resize(m);
+        for (uint32_t i = 0; i < m; i++) t_g.buf[i] = rb(rdram, d + i);
+    }
+}
+
+static void gfx_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint32_t rom_off) {
+    if (!g_gon) return;
+    const uint32_t d = dram & 0x7FFFFFu;
+    std::lock_guard<std::mutex> lk(g_gmu);
+    if (g_gtasks == 0) return;
+    if (g_grun || t_g.run) g_gpi.size() < 4096 ? g_gpi.push_back({d, d + size, rom_off, 0}) : (void)0;
+    if (!t_g.any) return;
+    const uint32_t m = (uint32_t)t_g.buf.size();
+    for (int k = 0; k < K_N; k++) {
+        if (!t_g.nspan[k]) continue;
+        uint32_t chg = 0, bytes = 0;
+        for (uint32_t j = 0; j < t_g.nspan[k]; j++)
+            for (uint32_t a = t_g.span[k][j][0]; a < t_g.span[k][j][1]; a++) { bytes++; if (a - d < m && rb(rdram, a) != t_g.buf[a - d]) chg++; }
+        const int c = chg ? 1 : 0;
+        const uint64_t tot = ++g_gk[k][c]; g_gk_bytes[k][c] += bytes;
+        if (k == K_CTL_PI || (tot <= 6 && g_glines++ < 48))
+            std::fprintf(stderr, "[s7645-pi] reg=%s chg=%u bytes=%u first=0x%06X+0x%X dma=0x%06X+0x%X rom_off=0x%08X pc=0x%08X post_run=%d phase=%u task=%llu\n",
+                         kK[k], chg, bytes, t_g.span[k][0][0], t_g.span[k][0][1] - t_g.span[k][0][0], d, size, rom_off,
+                         (unsigned)g_rs64_last_guest_pc, (int)g_grun, rs64_phase_ord(), (unsigned long long)g_gtasks);
+        if (tot == 1) gsum(kK[k]);
+    }
+    t_g.any = false;
+}
+
+extern "C" void rs64_s7644_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) { aud_pi_pre(rdram, dram, size); gfx_pi_pre(rdram, dram, size); }
+extern "C" void rs64_s7644_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint32_t rom_off) {
+    aud_pi_post(rdram, dram, size, rom_off); gfx_pi_post(rdram, dram, size, rom_off);
+}
+extern "C" int rs64_s7645_gfx_on() { return g_gon ? 1 : 0; }
