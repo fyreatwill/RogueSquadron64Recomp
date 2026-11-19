@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7642 (2026-11-19).
+Compact operational handoff, as of Session 7644 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -398,6 +398,17 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     2 do_rom_read<->rsp::run_task RDRAM bytes). Both flights level_ok=1, alive, vi_stalls30s=0. Remaining non-Metal pair:
     rs64_g1d_title_vi (s7354 BENIGN, single writer). Not covered: guest RDRAM concurrency (RSP task reading bytes a guest PI DMA
     writes, do_rom_read<->run_task): guest code is uninstrumented, see NEXT.md class TS-3.
+31. **Class TS-3 (RSP audio task vs guest PI DMA on the same RDRAM bytes): CLOSED s7644, H-retail/H-margin, 0 fixes.** The s7643
+    do_rom_read<->run_task pair is the audio task's ucode_data -> DMEM byte copy (rsp.cpp dma_rdram_to_dmem, atos run_task+7108
+    on tsan3), not the s4211 hash (no s4211 dp range covers 0x800A5134). The game's OSTask declares ucode_data=0x800A4E00
+    (aspMainDataStart) size 0x800, but real data ends ~0x800A5120: then the game's vars speechSampleOffsetsLoaded/speechFileLoaded
+    and from 0x800A5130 the overlay VA region, which the game fills in 0x4000-byte PI chunks. Instrument (default off, src/rsp/
+    s7644_rspdma.cpp + hooks in librecomp rsp.cpp/pi.cpp): `ROGUESQ_S7644_RSPDMA=1` classifies every PI DMA overlapping the last
+    audio task's ucode_data or command list by task state (copy/run/idle) and bytes changed, plus an image FNV per task;
+    `ROGUESQ_S7644_RSPDMA_CTL=1` = synthetic overlap line (fired 1/1 per arm). L1 + L4 dd2 FPS60 16:9 120 s (scratch/s7644/run):
+    ~8.8k audio tasks, 4+4 ud overlaps all 0x800A5130+0x4D0 (overlay ROM 0x137580/0x10C2D0/0xA5D30, chg 1054-1121 bytes),
+    state copy 0, torn 0, command-list (dp) overlaps 0; every image change is either one of those DMAs or a CPU write ~8 tasks
+    later with no PI DMA. Hardware rspboot copies the same declared 0x800 at task start, so the tail bytes are retail-identical.
 
 ## Evidence index
 

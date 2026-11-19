@@ -414,6 +414,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7389_fbld.cpp
     ${CMAKE_SOURCE_DIR}/src/main/s7391_spwm.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7521_ucode_watch.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7644_rspdma.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7523_slow_rdp.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7526_v2p_twin.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7535_ga_chk.cpp

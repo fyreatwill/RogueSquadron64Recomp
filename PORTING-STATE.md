@@ -203666,3 +203666,43 @@ Not covered: guest RDRAM concurrency (RSP task reading bytes a guest PI DMA writ
 - guest code is uninstrumented, so TSan sees only the host-wrapper side; next class TS-3 in NEXT.md.
 Files: lib/N64ModernRuntime (lightweightsemaphore.h, librecomp/src/pi.cpp, rsp.cpp; export.sh refreshed N64ModernRuntime.patch),
 src/main/main.cpp (plant), tools/s7643_tsan_host_build.sh, tools/s7643_tsan_run.zsh, tools/s7643_tsan_pairs.py.
+
+## Session 7644 (2026-11-19) — class TS-3: RSP audio task vs guest PI DMA overlap is the game's own over-long ucode_data declaration (overlay region tail), 0 torn copies, CLOSED H-retail
+
+Work unit (NEXT.md s7644, HYPOTHESIS-ID owner-items-wait): explain the s7643 TSan pair recomp::do_rom_read (guest PI DMA,
+submitDmaSlot/registerServiceWorker thread) vs recomp::rsp::run_task (RSP task thread). Hypotheses: H-margin (bytes only in a
+diagnostic over-read), H-live (PI DMA lands in bytes an audio task is consuming = port timing hardware would not allow),
+H-retail (the game does this on hardware too).
+
+Reader identified first (offline, no run): both racing bytes 0x0003000a5137/5146 = guest 0x800A5134/0x800A5145. atos on
+build/RogueSquadron64Recomp_tsan3: run_task+7108; disassembly there is the inlined ucode_data RDRAM->DMEM byte copy loop (store to
+dmem[i^3]), i.e. rsp.cpp `dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, ...)`. NOT the s4211 hash: every s4211-new dp in
+the s7643 L1 log is 0x169F10..0x18FB70. Static layout (syms/rogue_squadron.datasyms.toml + s~95 overlay note): aspMainDataStart
+0x800A4E00, speechSampleOffsetsLoaded 0x800A5120, speechFileLoaded 0x800A5121, overlay VA region from 0x800A5130.
+
+Instrument (new src/rsp/s7644_rspdma.cpp, default off; weak hooks in lib/N64ModernRuntime librecomp rsp.cpp around the ucode_data
+copy and ucode_func, pi.cpp around do_rom_read; patches exported): ROGUESQ_S7644_RSPDMA=1 tracks the last audio task's
+[ucode_data, +size) and [data_ptr, +data_size) and state (copy/run/idle), snapshots every PI DMA's overlap before do_rom_read and
+counts changed bytes after; FNV of the image at every audio task vs the previous one (second witness, no PI hook involved).
+Control ROGUESQ_S7644_RSPDMA_CTL=1: first DMA classified against its own range.
+
+Run: `env R=$PWD/scratch/s7644/run HOLD=120 ALLOW_SLOW=1 ARMS="2:t1:ROGUESQ_S7644_RSPDMA=1+ROGUESQ_S7644_RSPDMA_CTL=1
+2:t4:ROGUESQ_FORCE_SAVE_MISSION=4+..." zsh tools/g1e_owner_quiet_arms.zsh` (host idle 6 h, AC, clk 0.97).
+
+| arm | alive | vi_stalls30s | level_ok | ctl line | audio tasks | ud overlaps (state) | dp overlaps | torn | img_chg |
+|---|---|---|---|---|---|---|---|---|---|
+| t1 L1 dd2 | 1 | 0 | 1 | 1 (chg=0, idle) | ~2.97k+ | 4 (3 idle, 1 run) | 0 | 0 | 8 |
+| t4 L4 dd2 | 1 | 0 | 1 | 1 | ~5.8k | 4 (3 idle, 1 run) | 0 | 0 | 13 |
+
+Every ud overlap is span 0x0A5130+0x4D0 from a 0x4000 chunk at 0x0A5130 (rom_off 0x137580 / 0x10C2D0 / 0xA5D30 = overlay loads,
+guest pc 0x80001F88), chg 1054-1121 bytes. The task declares ucode_data_size=0x800 (s7644-task n=1: ud=0x0A4E00 uds=0x800), so the
+declared image runs 0x4D0 bytes into the overlay region. Image changes come in pairs (t1 tasks 254/262, 567/574, 1486/1494,
+2311/2320): the first is the PI chunk, the second has no PI overlap = CPU writes into the tail (game vars / overlay init).
+
+Conclusion: H-retail/H-margin selected, H-live refuted. The OSTask (guest-built, so this is the game's own value) over-declares the
+audio data image, and hardware rspboot copies the same 0x800 bytes at task start, so the tail content the RSP sees is the same as
+retail. The port never copied while a PI DMA was in flight (copy-state overlaps 0, torn 0, ~8.8k tasks) and no DMA ever hit an
+audio command list. Two lines: runtime classification + static symbol layout (independent of the runtime). Single-source caveat:
+not cross-checked under the retail oracle (mupen64plus does not reach missions). No fix; default behaviour unchanged.
+Rules out: TS-3 as a source of audio corruption. Changed: src/rsp/s7644_rspdma.cpp (new), CMakeLists.txt,
+lib/N64ModernRuntime rsp.cpp/pi.cpp hooks (submodule-patches/N64ModernRuntime.patch).
