@@ -203388,3 +203388,25 @@ bridge walkers: with s7635 (fusion ~0.8 ms/s), the remaining walker cost is memo
 Next: G6a/b/c wait on the owner; ladder item 4 (generated-symbol renaming sweep) unless the owner reports.
 Discrimination: selects H-mem, refutes H-fp (same-run tog A/B, chk control PASS).
 Next discriminator: none left on walker cost (thread closed); next unit is ladder item 4 per NEXT.md, with a per-step caller-vs-data read to name each symbol.
+
+## Session 7637 (2026-11-19) — SP_LATE AC repeat: L12 dd4 holds 60.0 gen/s in both settings over a 4-pair ABBA (8/8 alive), so the s7537 battery H-cost lean was the slow clock; item 17 closed
+HYPOTHESIS-ID: splate-cost-ac. NEXT s7637 asked for the renaming sweep, but step 0 found it already closed (s6268: none of the 5 placeholders
+is a real function; s6868: 139 address-named left, all shape names; CURRENT-TRUTH item 19). The ladder's other rungs wait on the owner, so I
+took the one open measurement in the backlog: item 17's queued AC repeat of the SP_LATE cost test. It had voided 5/5 on battery. The host is
+on AC now (pmset: AC Power, 100%), HID idle 16257 s, screen unlocked (the quiet harness checks this). An rclone backup ran throughout and
+added the same load to every arm.
+Pre-registered (scratch/s7637_splate_ac/PREREG.md, written before results): H-cost if late < early - 0.5 gen/s AND late < early in 4/4
+pairs; otherwise H-free. Control: at least one arm must read below 60, or the run shows only "free where the game holds 60".
+Run: scratch/s7637_splate_ac/abba.zsh, tools/g1e_owner_quiet_arms.zsh (owner recipe FPS60 16:9 fullscreen, NO_SAVE_WRITE), L12 dd4,
+HOLD 120, arms p1e p1l p2l p2e p3e p3l p4l p4e (ABBA x2), scored by tools/s7537_ring_cost.py --from 72. The banner
+"[s7536] ROGUESQ_SP_LATE=<v>" matches the arm in 8/8 logs, so the knob took effect in each one.
+Result: gen/s 60.0 in every arm, slow_s 0, wl_ms p50 2.4-3.1 / p90 3.2-3.3 for both settings; pair deltas -0.02..+0.00. Every arm
+alive_at_end=1, crashlines 0, vi_stalls30s 0, max present gap 147-163 ms (the mission load; flight max gap 21-29 ms).
+-> H-free at the owner's real condition (AC). The below-60 control did NOT fire: on AC, L12 dd4 is not CPU-bound, so this run cannot say
+anything about cost under saturation. The s7537 battery ABBA (clk 1.53, 51-55 gen/s, ranges overlapping) is the only CPU-bound datum and
+stays unresolved. It does not matter for the owner, who plays on AC where both settings hold 60.
+Rules out: SP_LATE=1 as a frame-rate cost on the heaviest measured level (L12 dd4) on AC power. Item 17 closed. SP_LATE stays an owner opt-in
+(OWNER-OPT-INS row from s7537), and the default is unchanged.
+Change: no code change. The new scratch recipe and its scored output are the evidence. Nothing new is queued.
+Discrimination: selects H-free on AC, does not test H-cost (no CPU-bound arm; control not met for the saturation claim).
+Next discriminator: none on SP_LATE. Every ladder rung now waits on the owner (G6a/b/c, G5 looks, defaults in item 4).

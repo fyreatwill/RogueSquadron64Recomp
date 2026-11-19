@@ -264,9 +264,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     PROJECT-OVERVIEW "(s7534 maintenance)" (SPILL_RESET, RSP_DMA25, S7334-S7364, CF0_DUPDROP, DLPOOLX_ARM_REBUILD, S7376-S7405
     locks/fixes, FTZ, STICK_GATE s7513, S7528_EVICT, the s7533 FPS60 clamp byte CAS).
 17. **Classes GA-GR + 19b/19c/19d + S6892/GUARD-6 + do_break/float->int (s7535-s7576): ALL CLOSED** (verbatim in
-    PROJECT-OVERVIEW "(s7581 maintenance)"). Open only: queued AC repeat scratch/agent/soak_queue/s7536_splate_cost.sh (fold with
-    `python3 tools/s7537_ring_cost.py scratch/s7536_splate_cost <arms> --from 72`; if AC L12 dd4 late < early - 0.5 in a 3v3 ABBA, try
-    delivering SP done at the LLE's last input fetch). Regen trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay;
+    PROJECT-OVERVIEW "(s7581 maintenance)"). SP_LATE AC repeat DONE s7637: L12 dd4 ABBA x2 on AC holds 60.0 gen/s in both settings
+    (8/8 alive, scratch/s7637_splate_ac), so it costs nothing on AC; the battery-only CPU-bound case stays unresolved and does not matter to the owner. Regen trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay;
     tools/regen_replay.sh D/replay; tools/regen_verify.sh D/replay D/verify.
 18. **After-regen UB gates (all CLOSED, rc 0 expected):** tools/s7575_ir_calls.sh + `tools/s7575_break_census.py --controls --ir D`
     (BLIND=0); `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0); after a ucode regen or rsp*.hpp edit
