@@ -202945,3 +202945,5 @@ Hypotheses: H-equal (no/invalid file -> byte-identical to s7618) vs H-drift. Sel
    JSON` wording after a fix; run showed the old "not a JSON object" text), mismatches=0. Rules out H-drift.
 Docs: OWNER-OPT-INS row with the format. Next: G6b step 3 F6 ImGui Controls panel (bind/save/reset, writes via
 rs64_bind_to_json), then README Controls.
+Discrimination: selects H-equal, refutes H-drift (both lines above). Next discriminator: step 3 panel same-run test
+(ROGUESQ_BIND_PANEL_TEST rebind A->pad:b through the panel code -> mismatches >0, Reset -> 0 in the same run).
