@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7657 (2026-11-19).
+Compact operational handoff, as of Session 7659 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7658: every census gate counts: sweep 135 = 130 GREEN, 5 REPORT, 0 NEEDS-INPUT, 0 NEEDS-ARGS, 0 RED** (cold 455 s,
+- **NEW s7659: cold-AST sweep fits: all 6 AST caches aged, `--no-cache` sweep 130 GREEN 5 REPORT 0 RED in 530 s at load 8-14;
+  slowest s7607 240 s, s7631 189 s. Per-gate cap 300 -> 600 s (RS64_GATE_CAP; control CAP=5 -> RED timeout); `--no-cache` no
+  longer fails its own cache control. Gate-sweep thread has nothing open.**
+- **s7658: every census gate counts: sweep 135 = 130 GREEN, 5 REPORT, 0 NEEDS-INPUT, 0 NEEDS-ARGS, 0 RED** (cold 455 s,
   warm 14.8 s). The 3 NEEDS-INPUT gates got retained inputs captured once in-session (force-added under scratch/, < 1 MB each):
   s7215 scratch/s7215/shape_lines.txt.zst (57 KB numbered filter of a 196 MB L17 21:9 run.log; census output byte-identical),
   s7316 scratch/s7316/ram/*_1M5.bin.zst (2 dumps cut to 0x180000, 932 KB), s7573 --gate --retained scratch/s7573/retained
@@ -497,7 +500,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     POST-regen tree must accept `0X....u << 16`; fixup scripts run before fixup_lui_unsigned.py and need not.
     **s7655: CLOSED, sweep 0 RED.** s7588-s7616 rows for G6a/G6b/G6c/s7644 sites; AST caches self-refresh (tools/ast_cache.py);
     s7316/s7573 NEEDS-INPUT. Re-run `python3 tools/s7651_gate_sweep.py` after any src/ or lib/ change (rc 0 = no RED).
-    s7657: 0 NEEDS-ARGS (classes REPORT / NEEDS-INPUT / live-regenerated inputs); s7631 cold AST ~165 s when lib/rt64 changes.
+    s7657: 0 NEEDS-ARGS (classes REPORT / NEEDS-INPUT / live-regenerated inputs). s7659: cold AST max 240 s (s7607) loaded; cap 600 s.
     s7658: 0 NEEDS-INPUT (retained inputs, see Headline). A new G above 0x80180000 reads unclassified (RED): re-dump then.
 
 ## Evidence index

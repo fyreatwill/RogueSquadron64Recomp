@@ -3,7 +3,7 @@
 
 s7651 found 4 "closed" rerun-after-change gates (s7375, s7430, s7533, s7535) exiting nonzero after later sessions added code
 in their scope (G6b controls, G6c stand-ins, s7535-s7647 instruments): nothing re-ran them, so CURRENT-TRUTH still called
-them closed. This runs them all (with --controls when the tool takes it), 6 at a time, 300 s cap each, and classifies:
+them closed. This runs them all (with --controls when the tool takes it), 6 at a time, 600 s cap each (RS64_GATE_CAP; s7659), and classifies:
   GREEN      exit 0
   NEEDS-ARGS argparse usage / IndexError on sys.argv / missing input file: the tool needs an input (not a drift signal)
   RED        any other nonzero exit: drift or a real defect, triage by hand
@@ -70,6 +70,9 @@ TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
 CACHE, CACHE_LOCK, STATS = {}, threading.Lock(), {"hit": 0, "miss": 0, "uncacheable": 0}
 USE_CACHE = True
+# s7659: per-gate cap. Cold AST regen measured 240 s max (s7607) at load 8-14 = 80% of the old 300 s; a timeout reads RED
+# and blocks stop_gate, so the default is 600 s (a hung gate still dies). RS64_GATE_CAP overrides.
+GATE_CAP = int(os.environ.get("RS64_GATE_CAP", "600"))
 
 
 def fingerprint(argv, tr):
@@ -156,7 +159,7 @@ def traced(path, a):
     os.unlink(tf)
     try:
         p = subprocess.run([sys.executable, TRACER, path] + a, cwd=ROOT, capture_output=True, text=True, errors="replace",
-                           timeout=300, env=dict(os.environ, RS64_GATE_TRACE=tf, CC_PRINT_HEADERS="1",
+                           timeout=GATE_CAP, env=dict(os.environ, RS64_GATE_TRACE=tf, CC_PRINT_HEADERS="1",
                                                  CC_PRINT_HEADERS_FILE=tf + ".hdr"))
         rc, out = p.returncode, p.stdout + p.stderr
         try:
@@ -179,7 +182,18 @@ def traced(path, a):
                 os.unlink(f)
 
 
+TIMES = {}  # s7659: per-gate wall seconds (cache hit ~0), printed as the slowest gates vs GATE_CAP
+
+
 def run(path):
+    t = time.time()
+    try:
+        return _run(path)
+    finally:
+        TIMES[os.path.basename(path)] = time.time() - t
+
+
+def _run(path):
     key = os.path.abspath(path)
     if USE_CACHE:
         with CACHE_LOCK:
@@ -214,7 +228,7 @@ def run_uncached(path):
     try:
         rc, out, tr = traced(path, a)
     except subprocess.TimeoutExpired:
-        return (os.path.basename(path), "RED", "timeout", "timeout 300 s"), a, None
+        return (os.path.basename(path), "RED", "timeout", f"timeout {GATE_CAP} s"), a, None
     tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
     if rc == 0 and must and not re.search(must, out):
         return (os.path.basename(path), "RED", rc, f"output lacks /{must}/: {tail}"), a, tr
@@ -235,8 +249,9 @@ def run_uncached(path):
 def cache_control(d):
     """Planted tool reading an input file: GREEN, then a cache hit, then RED once the input changes; a spawning tool is
     never cached. Uses its own cache dict so the real cache is untouched."""
-    global CACHE
+    global CACHE, USE_CACHE
     saved, CACHE = CACHE, {}
+    su, USE_CACHE = USE_CACHE, True  # s7659: the control tests the cache itself; --no-cache used to fail it (exit 3)
     s0 = dict(STATS)
     try:
         inp, tool = os.path.join(d, "cc_input.txt"), os.path.join(d, "cc_input_census.py")
@@ -271,6 +286,7 @@ def cache_control(d):
         return got == ("GREEN", "GREEN", True, "RED", True, "GREEN", "GREEN", True, "RED"), got
     finally:
         CACHE = saved
+        USE_CACHE = su
         STATS.update(s0)
 
 
@@ -329,7 +345,7 @@ def main():
             print(f"  {cls:10s} rc={rc} {name}  {tail}")
     if tsv:
         with open(tsv, "w") as o:
-            o.writelines(f"{n}\t{c}\t{r}\t{t}\n" for n, c, r, t in rows)
+            o.writelines(f"{n}\t{c}\t{r}\t{t}\t{TIMES.get(n, 0):.1f}\n" for n, c, r, t in rows)
     if USE_CACHE:
         live = {os.path.abspath(t) for t in tools}
         if not only:  # drop entries for deleted tools
@@ -337,6 +353,8 @@ def main():
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
         json.dump(CACHE, open(CACHE_PATH + ".tmp", "w"))
         os.replace(CACHE_PATH + ".tmp", CACHE_PATH)
+    slow = sorted(((TIMES.get(r[0], 0), r[0]) for r in rows), reverse=True)[:5]
+    print(f"[s7659] slowest gates (s, cap {GATE_CAP}):", " ".join(f"{n}={v:.0f}" for v, n in slow))
     print("[s7651] gates", len(rows), dict(Counter(r[1] for r in rows)))
     print(f"[s7656] cache {'on' if USE_CACHE else 'off'} hit={STATS['hit']} miss={STATS['miss']} "
           f"uncacheable={STATS['uncacheable']} wall={time.time() - t0:.1f}s")

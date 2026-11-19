@@ -204169,3 +204169,23 @@ HYPOTHESIS-ID: gate-sweep-standing. No regen, no build. Two game runs (host idle
   decompress step) not needed beyond the tools' own zstd -dc read. Not done: the lib/rt64-newer s7631 timing (touching a lib/
   header forces a game rebuild; left for a session that edits rt64 anyway).
 - ORIGIN: no mitigation added.
+
+## Session 7659 (2026-11-19) — gate sweep cold-AST timing: H-fits (max 240 s s7607, s7631 189 s at load 8-14), cap 300 -> 600 s (RS64_GATE_CAP), --no-cache control bug fixed
+
+Work unit (NEXT s7659): every ladder rung is closed or waits on the owner, so the left engineering check was the s7657
+open question: does a cold clang-AST regeneration (what any lib/rt64 or src/ header edit triggers) fit the sweep's 300 s
+per-gate cap with 6 jobs? H-fits vs H-over.
+
+- Aged every AST/scan cache of s7613/s7614/s7616/s7631/s7632/s7633 (os.utime to 2020; copies kept until the run passed),
+  then `python3 tools/s7651_gate_sweep.py --no-cache --tsv scratch/s7659/sweep_cold.tsv` on a busy host (rclone backup
+  running, loadavg 8-14). All 6 ast.json regenerated (mtimes 09:01-09:03 today).
+- First attempt found a defect: with `--no-cache` the s7656 cache control always FAILED (hit=False, exit 3, no gate ran),
+  because cache_control ran under USE_CACHE=False. Fixed: the control forces USE_CACHE=True and restores it.
+- Result (new per-gate wall times, TSV column 5 + "[s7659] slowest gates" line): 135 gates = 130 GREEN, 5 REPORT, 0 RED,
+  wall 530 s. Slowest: s7607_uw 240 s, s7631_rp 189, s7613_hp 185, s7616_rq 183, s7614_hm 175, s7463 160. **H-fits**, but
+  s7607 sits at 80 % of the cap under load, and a timeout reads RED and blocks stop_gate --verify.
+- Change: per-gate cap now GATE_CAP = env RS64_GATE_CAP, default 600 s. Positive control: RS64_GATE_CAP=5 --only s7607 ->
+  `RED rc=timeout ... timeout 5 s`. Post-change sweep cached: 450 s all-miss (caches changed), then 15.5 s 129 hits, 0 RED;
+  tools/agent/test_gate_sweep.sh ALL PASS.
+- Rules out: the cold-AST path as a source of false RED at the old cap on a quiet host (all under 300 s even loaded);
+  the gate-sweep thread has nothing left open.

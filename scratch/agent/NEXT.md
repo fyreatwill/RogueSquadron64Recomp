@@ -1,11 +1,10 @@
-# NEXT (s7659)
-HYPOTHESIS-ID: gate-sweep-standing
+# NEXT (s7660)
+HYPOTHESIS-ID: owner-wait-standing
 
-G6a/G6b/G6c and the G5 looks wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports, take that first.
-
-s7658: sweep 135 = 130 GREEN, 5 REPORT, 0 NEEDS-INPUT, 0 RED. The gate-sweep thread is finished as a standing check.
-Work unit: pivot off gate tooling to the next owner-facing ladder item that is not waiting on the owner. Read the CURRENT-TRUTH
-Next-steps list for an item with an engineering step left (not an owner look); if none, take the s7631 cold-AST timing when
-an rt64 edit happens anyway, else the G5 renaming sweep (item 4) with the revisit rule.
-Hypotheses for the s7631 timing: H-fits (regen ~165 s < 300 s cap with 6 jobs) vs H-over (raise its cap or run it serially).
-Rules: never touch build/saves; one game at a time; SIGKILL only.
+s7659 closed the gate-sweep timing question (H-fits, cap now 600 s). Gate tooling is finished: do NOT start more gate work.
+G6a/G6b/G6c and every G5 item wait on the owner (docs/OWNER-OPT-INS.md). If the owner has reported anything, take that first.
+Otherwise: pick a rung of ITERATION.md 3c with an engineering step left that is not an owner look. Candidate, not yet tried:
+the 3b secondary (~1/7 title-boot plume SIGSEGV si_addr=0x58, CURRENT-TRUTH "Title plume parked"): loop title boots
+under lldb (one game at a time, SIGKILL) and read a real backtrace. Hypotheses: H-gone (0 in N>=14 boots, with a crash
+control) vs H-live (backtrace names the writer). Same-run control: an lldb-attached boot that does stop on an injected fault.
+Rules: never touch build/saves; one game at a time; SIGKILL only; re-run tools/s7651_gate_sweep.py after src/ or lib/ edits.
