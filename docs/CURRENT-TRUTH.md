@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7625 (2026-11-18).
+Compact operational handoff, as of Session 7629 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -318,8 +318,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     = inside the game's own spawn radius, expected). Flicker scorer alone is NOT proof: the s7627 N excess (547) and the s7628
     L1 dd4 top pairs are cliff-texture shimmer + laser bolts, not stand-ins (eye check); keep the eye check. Dumps show each call
     one swap late (stand-ins appear in label-0 frames). Spawns preceded by a stand-in: L1 10-11 (2-62 s early), L4 19 (0.2-5 s).
-    4/4 arms alive, 0 fatal, 0 VI stall. Next: 19 x 300 s holds STANDINS=1 dd4 queued (soak_queue/s7628_standins_hold_L*.sh),
-    then the owner sheet decides.
+    4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
+    crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); L6-L18 queued (soak_queue/s7628_standins_hold_L*.sh). Scorer
+    now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
+    a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

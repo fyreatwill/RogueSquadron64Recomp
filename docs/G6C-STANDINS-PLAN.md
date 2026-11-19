@@ -173,3 +173,13 @@ state of call n-1: stand-ins appear in the frames labelled on=0. Spawn timing ([
 shown 2-62 s before the game spawned them, L4 19 items 0.2-5 s. Owner sheet: docs/owner_sheet_s7628_standins_on_off.jpg.
 Next: 300 s holds, STANDINS=1 dd4, all 19 levels (queued one level per recipe).
 
+
+## Scorer shimmer filter (s7629)
+tools/s7628_standins_sheet.py now ranks pairs by CLUSTERED diff pixels (`--cluster 16`, default; `--cluster 0` = s7628 scorer):
+only pixels in 8x8 blocks with >= 16 set survive. Median clustered px per pair on the s7628 eye-labelled arms: L1 dd2 bunker 153,
+L4 dd4 towers 1298, L1 dd4 cliff shimmer 0, L4 dd2 (no stand-ins) 0; raw medians were 520 / 1619 / 428 / 150, so raw L1 dd4
+shimmer outscored the real L1 dd2 bunker's lower pairs. The bunker crop now lands on a 32x16 box instead of the full lower half.
+Control (`--control`, synthetic 24x24 block painted into every ON frame): 44/44 pairs per arm keep >= 382 added px with the
+filter vs >= 401 without it (the motion mask is most of the loss), PASS in all 4 arms. Rejected first: a window-2 (forced-off)
+shimmer-cell map; window 2 is ~360 frames after window 1 and its cells did not predict window 1's shimmer (L1 dd4 kept ~500 px at
+every rate/floor while the L4 towers lost up to half).

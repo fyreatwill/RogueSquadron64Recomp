@@ -203186,3 +203186,19 @@ L4 19 items 0.2-5 s early.
 Owner sheet docs/owner_sheet_s7628_standins_on_off.jpg. Queued 19 soaks scratch/agent/soak_queue/s7628_standins_hold_L0..18.sh
 (300 s, STANDINS=1, dd4, owner recipe; one level per recipe because two 300 s arms exceed the 600 s cap).
 Rules out: H-occluded-only (stand-ins are seen at true depth in open sightlines on both levels). Open: crash-freedom over 19 levels.
+
+## Session 7629 (2026-11-18) — G6c step 4: STANDINS=1 dd4 300 s holds 6/19 clean (L0-L5); stand-in scorer gets a cluster shimmer filter
+HYPOTHESIS-ID: g6-upstream-features
+- Holds (owner recipe via g1e harness, dd4 16:9 FPS60, ROGUESQ_STANDINS=1, 300 s): L0, L1 (loop, SOAK-RESULTS) and L2-L5 (in-session,
+  host idle 45 min, recipes moved to soak_queue/done/ first; logs scratch/s7629/L*.out, scratch/s7628_hold_L*): 6/6 alive_at_end=1,
+  crashlines=0, vi_stalls30s=0, max_gap_ms 142-148, level_ok=1; positive control per arm: `[standins] on mode=on` line present and
+  standins-spawn lines 16/104/223/27 (L2-L5), so stand-ins were active, not a silent off. L6-L18 remain queued (13 recipes).
+- Scorer (tools/s7628_standins_sheet.py): NEXT's proposed window-2 shimmer-cell map was built and REJECTED on the s7628 arms: window 2
+  starts ~360 frames after window 1 and its shimmer cells do not predict window 1's (L1 dd4 shimmer top pairs stayed 404-556 px at every
+  rate 0.25/0.5 x floor 4/16/48, while the true L4 dd4 towers lost up to half at rate 0.25). Pair-to-pair persistence also fails
+  (shimmer persists: L1 dd4 med 264 vs bunker 394). Spatial clustering separates all four eye-labelled arms: median px per pair in
+  8x8 blocks with >=16 set = L1 dd2 bunker 153, L4 dd4 towers 1298, L1 dd4 shimmer 0, L4 dd2 none 0 (raw 520/1619/428/150). Landed as
+  `--cluster 16` (default; 0 = old scorer); crop now lands on the object (bunker box 32x16 instead of the lower half). Control
+  `--control` (24x24 synthetic block in every ON frame, 44 pairs/arm): min added 382-444 px with the filter vs 401-486 without (motion
+  mask is most of the loss), PASS (>=288 = half painted) in 4/4. Two lines of evidence for the filter: eye labels (s7628) + synthetic control.
+- Rules out: stand-in crashes/stalls on L0-L5 at dd4 within 300 s. Not yet: L6-L18.
