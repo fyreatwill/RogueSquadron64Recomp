@@ -28,7 +28,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` = control: joy 18/18 delivered, haptic on the non-haptic vpad -> path=none, 0 delivered).
   Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
-  PROJECT-OVERVIEW "(s7622 maintenance)"). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
+  PROJECT-OVERVIEW "(s7622 maintenance)"). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
   C-applicable check run; RS64_DIV32). Bounded/gated/masked: GR s7599, GX s7600, BS s7601 (5 diag composers fixed), AZ s7598
   (ROGUESQ_S7598_MASK=0 = old). Fixes landed, default on, =0 restores old: TK ROGUESQ_S7608_TK, UW s7607 (one fix), FR s7605 /
@@ -360,6 +360,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     violation was the s7620 F6 panel hook_draw (present thread) calling SDL_GetWindowFromID/GetWindowSize; now update_gfx
     publishes the size (ROGUESQ_S7639_ST=0 old, =chk 0/215 mismatches, =chkp control 243/243). RT64 window checks use plume
     CocoaWindow (main-queue dispatch): safe.
+27. **Class AT (AppKit calls off the main thread): CLOSED s7640, 1 fix.** Runtime witness = Apple's Main Thread Checker
+    (`zsh scratch/s7640/run.zsh <tag> [ENV=..]`, DYLD_INSERT_LIBRARIES libMainThreadChecker, boot to F6 panel draw): before, 1
+    report per boot, -[NSApplication activationPolicy] in NFD_Init <- RT64::Application ctor on the Gfx Thread. Fix (lib/rt64
+    rt64_file_dialog.cpp, default on, ROGUESQ_S7640_AT=0 old): NFD_Init on the main queue (2 s bounded wait), NFD_Quit posted.
+    Arms (same build): old+plant 2 reports (Gfx + plant), fix+plant 1 (plant only), fix 0. Static half
+    `python3 tools/s7640_at_census.py --controls` (exit 0): 50 sites in 4 ObjC TUs + CAMetalLayer calls, controls a-d PASS; plume
+    CocoaWindow all guarded, NFD dialogs dead (developerMode=0), rs64_display_mac main-only. Plant: ROGUESQ_S7640_AT_PLANT=1.
 
 ## Evidence index
 

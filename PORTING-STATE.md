@@ -203493,3 +203493,47 @@ First chk attempt showed sdl=0x0: the self-test opens the panel with no F6/mouse
 path never called SDL at all; chk now seeds the real window ID so the old SDL call actually runs. Class ST CLOSED.
 Discrimination line: the census + draw_main=0 witness selects H-defect (1 live site) and refutes H-clean; after the fix the census
 exits 0 with no OPEN row. Next discriminator: class AT (AppKit calls off the main thread), same census machinery, planted-call control.
+
+## Session 7640 (2026-11-19) — class AT (AppKit thread affinity) audit: Main Thread Checker + static census, 1 live off-main call (RT64 NFD_Init on Gfx Thread), fixed default on
+
+NEXT.md: no owner report, so a new host-side idiom-class audit. Class AT = Objective-C/AppKit calls reached off the main
+thread (s7639 ST covered SDL only). Hypotheses: H-clean (every AppKit use is main-only or guarded) vs H-defect (>=1 live
+off-main AppKit call).
+
+Ground truth not from our runtime: Apple's Main Thread Checker (Xcode libMainThreadChecker.dylib via DYLD_INSERT_LIBRARIES;
+reports every AppKit API on a background thread with a backtrace). Runner scratch/s7640/run.zsh: boot with
+ROGUESQ_BIND_PANEL_TEST=1 until the F6 panel draws (~50 s), +10 s, SIGKILL. One game at a time.
+Pre-fix run (existing binary): exactly 1 report, `-[NSApplication activationPolicy]`, Thread name: Gfx Thread, backtrace
+NFD_Init <- RT64::Application::Application <- recomp::RT64Context ctor <- create_render_context <- gfx_thread_func.
+RT64's FileDialog::initialize calls nativefiledialog's NFD_Init (nfd_cocoa.m: [NSApplication sharedApplication],
+activationPolicy, setActivationPolicy if Prohibited) from the Application ctor, which ultramodern runs on the Gfx Thread.
+
+ORIGIN: writer = upstream RT64 (Application ctor -> FileDialog::initialize), not game data. The call is legitimate on
+Windows/Linux; on macOS it is an AppKit read (and potential policy write) on the wrong thread: a race on NSApplication state,
+no observed crash. NFD_Quit (Application dtor, same thread) is an AppKit setter with the same problem at teardown.
+Fix (lib/rt64 src/gui/rt64_file_dialog.cpp, default on; ROGUESQ_S7640_AT=0 = old direct calls): when off the main thread,
+initialize() posts NFD_Init to the main queue and waits up to 2 s (main is pumping update_gfx then; a timeout logs and
+continues), finish() posts NFD_Quit without waiting (a shutdown join on main cannot deadlock). Exported to
+submodule-patches/rt64.patch. Positive control: ROGUESQ_S7640_AT_PLANT=1 makes get_n64_input (guest Game thread) call
+-[NSApplication keyWindow] once (src/main/rs64_display_mac.mm rs64_s7640_at_plant).
+
+| arm (same build) | MTC reports | threads | panel drew |
+|---|---|---|---|
+| pre-fix binary | 1 | Gfx Thread (NFD_Init) | yes |
+| S7640_AT=0 + plant | 2 | Gfx Thread (activationPolicy) + [Game] 0 (keyWindow) | yes |
+| fix + plant | 1 | [Game] 0 (keyWindow) only; log `[s7640-at] NFD_Init on main queue done` | yes |
+| fix (default) | 0 | - | yes |
+All arms: developerMode=0. Logs scratch/s7640/log_{pre,old_plant,fix_plant,fix}.txt.
+
+Static second source: tools/s7640_at_census.py --controls (exit 0; scratch/s7640/census.txt). Scope = every .m/.mm in
+compile_commands (rs64_display_mac, rs64_imgui_metal, imgui_impl_metal, rt64_apple, nfd_cocoa, plume_apple) + plume_metal.cpp
+CAMetalLayer calls; AppKit uses by class/selector, guard = main-queue block or `if ([NSThread isMainThread])`, threads from
+cited roots or the s7639 call graph for extern "C" bridges. 50 rows: plume CocoaWindow 9 all guarded (ctor/getters/toggle),
+getScaleFactor callers guarded 3/3, rs64_display_top_inset_frac*/rs64_window_state_log 10 MAIN only (update_gfx/G1f paths),
+NFD dialogs 16 dead (inspector only, developerMode gate rt64_application.cpp:555/589, runtime developerMode=0), NFD_Init/Quit 4
+fixed, CAMetalLayer 9 ok (Apple's own sample code drives drawableSize/nextDrawable from a render thread), Metal/ImGui-Metal and
+NSHomeDirectory thread-safe. The census independently finds the env-gated plant as its only OPEN row before it is listed.
+Controls: (a) planted unguarded keyWindow in a Gfx-rooted fn -> OPEN, (b) same inside a main-queue block -> ok, (c) dropping the
+NFD_Init fix entry -> OPEN, (d) getScaleFactor callers guarded 3/3: all PASS.
+Discrimination line: MTC + census select H-defect (1 live site) and refute H-clean; after the fix MTC reports 0 with the
+same-run plant reporting 1. Class AT CLOSED. Rules out: off-main AppKit in our .mm bridges, plume, ImGui Metal, F6 panel.

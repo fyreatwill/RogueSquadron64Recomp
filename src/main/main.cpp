@@ -12833,7 +12833,17 @@ static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
     if (s_selftest) rs64_bind_selftest_step(polls);
 }
 
+#ifdef __APPLE__
+extern "C" void rs64_s7640_at_plant(void);
+#endif
 static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
+#ifdef __APPLE__
+    {   // s7640 class AT positive control (see rs64_display_mac.mm)
+        static const bool plant = [] { const char* e = std::getenv("ROGUESQ_S7640_AT_PLANT"); return e && *e == '1'; }();
+        static std::atomic<bool> done{false};
+        if (plant && !done.exchange(true)) rs64_s7640_at_plant();
+    }
+#endif
     if (controller_num != 0) {
         *buttons = 0; *x = 0.0f; *y = 0.0f;
         return false;

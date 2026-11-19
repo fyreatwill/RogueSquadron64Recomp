@@ -50,3 +50,12 @@ extern "C" void rs64_window_state_log(void* nswindow, void* metal_layer, const c
                 l ? l.contentsScale : 0.0, (unsigned long)[NSScreen screens].count);
     }
 }
+
+// s7640 class AT positive control: ROGUESQ_S7640_AT_PLANT=1 makes get_n64_input (guest Game thread) call one AppKit getter
+// once, so Apple's Main Thread Checker must report -[NSApplication keyWindow] in that run.
+extern "C" void rs64_s7640_at_plant(void) {
+    @autoreleasepool {
+        NSWindow* w = [[NSApplication sharedApplication] keyWindow];
+        fprintf(stderr, "[s7640-at] plant keyWindow=%p main=%d\n", (__bridge void*)w, (int)[NSThread isMainThread]);
+    }
+}

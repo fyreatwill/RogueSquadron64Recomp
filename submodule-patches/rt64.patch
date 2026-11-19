@@ -1883,6 +1883,69 @@ index 6255872..5d14e84 100644
  
              return trianglesEnd;
          }
+diff --git a/src/gui/rt64_file_dialog.cpp b/src/gui/rt64_file_dialog.cpp
+index 72faede..8a139ad 100644
+--- a/src/gui/rt64_file_dialog.cpp
++++ b/src/gui/rt64_file_dialog.cpp
+@@ -8,16 +8,58 @@
+ 
+ #include <nfd.h>
+ 
++#if defined(__APPLE__)
++#include <cstdio>
++#include <cstdlib>
++#include <dispatch/dispatch.h>
++#include <pthread.h>
++#endif
++
+ namespace RT64 {
+     // FileDialog
+ 
+     std::atomic<bool> FileDialog::isOpen = false;
+ 
++#if defined(__APPLE__)
++    // s7640 class AT: NFD_Init/NFD_Quit are AppKit ([NSApplication activationPolicy] / setActivationPolicy:), but RT64
++    // builds Application on ultramodern's Gfx Thread (gfx_thread_func -> create_render_context). Apple's Main Thread
++    // Checker flagged NFD_Init there at every boot. Default: run both on the main queue (init waits up to 2 s; the main
++    // thread is pumping update_gfx then; quit is posted, never waited on, so a shutdown join cannot deadlock).
++    // ROGUESQ_S7640_AT=0 = old direct calls.
++    static bool rs64S7640On() {
++        static const bool on = [] { const char *e = getenv("ROGUESQ_S7640_AT"); return !(e && *e == '0'); }();
++        return on;
++    }
++    static void rs64NfdInit(void *) { NFD_Init(); }
++    static void rs64NfdQuit(void *) { NFD_Quit(); }
++#endif
++
+     void FileDialog::initialize() {
++#if defined(__APPLE__)
++        if (rs64S7640On() && !pthread_main_np()) {
++            struct Ctx { dispatch_semaphore_t done; } *c = new Ctx{ dispatch_semaphore_create(0) };
++            dispatch_async_f(dispatch_get_main_queue(), c, [](void *p) {
++                Ctx *c = static_cast<Ctx *>(p);
++                rs64NfdInit(nullptr);
++                dispatch_semaphore_signal(c->done);
++            });
++            const bool ok = dispatch_semaphore_wait(c->done, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) == 0;
++            fprintf(stderr, "[s7640-at] NFD_Init on main queue %s\n", ok ? "done" : "TIMEOUT (left queued)");
++            // c is leaked on timeout on purpose (the block still references it); 1 allocation per boot.
++            if (ok) { dispatch_release(c->done); delete c; }
++            return;
++        }
++#endif
+         NFD_Init();
+     }
+ 
+     void FileDialog::finish() {
++#if defined(__APPLE__)
++        if (rs64S7640On() && !pthread_main_np()) {
++            dispatch_async_f(dispatch_get_main_queue(), nullptr, rs64NfdQuit);
++            return;
++        }
++#endif
+         NFD_Quit();
+     }
+ 
 diff --git a/src/hle/rt64_application.cpp b/src/hle/rt64_application.cpp
 index 785de27..3fc321b 100644
 --- a/src/hle/rt64_application.cpp
