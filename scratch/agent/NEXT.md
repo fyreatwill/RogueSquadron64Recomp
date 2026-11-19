@@ -1,8 +1,9 @@
-# NEXT (s7664)
+# NEXT (s7665)
 HYPOTHESIS-ID: owner-wait-standing
 
-s7663 landed owner launch presets/settings.txt (src/main/rs64_settings.cpp; OWNER-OPT-INS top row). Everything else
-(G5, G6a/b/c, owner default decisions) waits on the owner. If the owner has reported anything, take that first.
-Otherwise take the first open 3c rung per CURRENT-TRUTH Next steps; do NOT do another census-gate housekeeping pass.
-Upstream origin/main was re-read s7663: its new commits (rewind/record, MCP, co-op, combo bindings) are debug/HLE-side; nothing
-owner-requested is unported. Rules: never touch build/saves; one game at a time; SIGKILL only; at most 2 CPU-heavy jobs.
+s7664 landed tools/crash_reports.py + a stop-gate block on unread game crash reports (22 old ones folded, 0 from normal play).
+At session start run `python3 tools/crash_reports.py --since 2026-11-13`: a NEW report that nobody planted is a real crash
+and outranks everything (G4 reopens on it: backtrace from the .ips, name the writer, fix the root cause).
+Otherwise: if the owner has reported anything, take that first; else the first open 3c rung per CURRENT-TRUTH Next steps.
+Do NOT do another census-gate housekeeping pass or repeat-hold soaks (G4 parked). Rules: never touch build/saves; one game at
+a time; SIGKILL only; at most 2 CPU-heavy jobs; host was on battery (47%) at s7664, so queue game runs as soaks if still unplugged.

@@ -281,4 +281,18 @@ Each is a closed census class your change re-opened or a rule your change made s
   fi
 fi
 
+# CRASH REPORTS (s7664) - no macOS crash report of the game goes unread.
+# Nothing read ~/Library/Logs/DiagnosticReports between s6534 and s7664 (22 game reports unexamined, 11-13..11-19); an owner
+# crash in normal play would have been missed the same way. tools/crash_reports.py classifies each .ips as PLANT (deliberate
+# control), DIAG (fault inside an env-gated instrument), FOLDED (basename/stamp quoted in PORTING-STATE.md) or NEW. Block on
+# NEW. Fast (<1 s), so it runs in the hook and in --verify. RS64_CRASH_REPORTS=0 skips it (tools/crash_reports.py --selftest).
+if [ "${RS64_CRASH_REPORTS:-1}" != 0 ] && [ -d "$HOME/Library/Logs/DiagnosticReports" ]; then
+  cr_out="$(python3 tools/crash_reports.py --since 2026-11-13 --dir "${RS64_CRASH_DIR:-$HOME/Library/Logs/DiagnosticReports}" 2>&1)"
+  if [ $? = 1 ]; then
+    block "Exit contract unmet: tools/crash_reports.py found game crash reports nobody has read:
+$(printf '%s\n' "$cr_out" | grep -E '^(NEW|UNPARSED)' | cut -c1-300 | head -8)
+Read each one (python3 tools/crash_reports.py prints thread + top frames; the .ips is in ~/Library/Logs/DiagnosticReports). If it is a deliberate arm of your experiment, quote its basename (RogueSquadron64Recomp-YYYY-MM-DD-HHMMSS) in your PORTING-STATE entry with what produced it. If nobody planted it, it is a real crash: it outranks the current work unit (G4 reopens on a side-effect crash)."
+  fi
+fi
+
 allow

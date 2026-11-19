@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7662 (2026-11-19).
+Compact operational handoff, as of Session 7664 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7664: crash reports are now read.** tools/crash_reports.py classifies every game .ips in ~/Library/Logs/DiagnosticReports
+  (PLANT / DIAG / FOLDED / NEW); stop_gate.sh blocks on NEW (RS64_CRASH_REPORTS=0 skips). 22 unread reports 11-13..11-19 all attributed
+  to planted controls, pre-fix arms (s7326/s7336/s7355/s7356) or env-gated instruments: **0 crashes from normal play.** An owner crash
+  now surfaces at the next stop gate: quote its basename in the session entry, and a real one outranks the work unit (G4 reopens).
 - **NEW s7663: owner launch settings (owner to try):** `./RogueSquadron64Recomp --preset tv|ultrawide|window` or lines in
   build/settings.txt (src/main/rs64_settings.cpp; env > file > preset; self re-exec, same pid, so pre-main statics see them; loop
   exports ROGUESQ_SETTINGS=0). 5-arm proof + NOEXEC control (H-setenv-enough refuted: a pre-main static misses setenv-from-main) scratch/s7663, OWNER-OPT-INS row. No default changed.
@@ -357,6 +361,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 
 22. **s7663 launch settings/presets: owner to try.** After any edit to rs64_settings.cpp rerun tools/test_settings.cpp and
     scratch/s7663/run.zsh (5 arms; C must print `[gfx-qos] mode=1` from the file). New owner recipes go in its presets() table.
+23. **Crash-report gate (s7664):** `python3 tools/crash_reports.py` (rc 1 = NEW). Deliberate crash arms: quote the .ips basename
+    in the session entry. Test tools/agent/test_crash_reports_gate.sh. Open DIAG datum: RogueSquadron64Recomp-2026-11-17-053804
+    (s7523 SLOWRDP model consume() SIGSEGV, diag-only, single-source); fix it if the instrument is used again and it recurs.
 
 ## Evidence index
 

@@ -204285,3 +204285,45 @@ multiplier 2. Both pids alive at 25 s. -> H-setenv-enough REFUTED, H-reexec-need
 independent readers). Next discriminator: the owner's first `--preset tv` launch; if fullscreen/aspect misbehave, compare the
 same vars typed by hand vs from the preset in one session (an equal result places the fault outside rs64_settings).
 Summary: arm F vs C2 refutes H-setenv-enough and selects H-reexec-needed (scratch/s7663/F.log, scratch/s7663/C2.log).
+
+## Session 7664 (2026-11-19) — crash-report fold: 22 unread game .ips (11-13..11-19) all attributed (0 real crashes); tools/crash_reports.py + stop-gate block on any NEW report
+
+Work unit (NEXT s7664: owner-wait; take a real engineering item). Every ladder rung is closed or awaits the owner, so this
+session checked the one ground-truth source no iteration reads: ~/Library/Logs/DiagnosticReports. The last manual look was s6534.
+22 RogueSquadron64Recomp*.ips reports dated 2026-11-13..19 had never been quoted in the ledger (1 had been folded, the s7616-era
+2026-11-18-014353 RT64 Present autorelease SIGTRAP).
+
+Built: tools/crash_reports.py (classes PLANT / DIAG / FOLDED / NEW, `--selftest` 4/4 PASS) and tools/agent/test_crash_reports_gate.sh
+(rc contract 5/5 PASS). stop_gate.sh now blocks (hook + --verify, <1 s) when any report since 2026-11-13 is NEW, i.e. not a
+recognised plant, not faulting inside an env-gated instrument, and not quoted by basename/stamp in this file. RS64_CRASH_REPORTS=0 skips it, and
+RS64_CRASH_DIR points it at another directory.
+
+Attribution of every report (by thread/frames + the session that ran that arm). Positive control: the tool itself, the selftest
+NEW case plus the live run, which flagged the 14 below as NEW before this entry existed:
+- RogueSquadron64Recomp-2026-11-13-235653 (+ .000): EXC_CRASH SIGKILL "Code Signature Invalid", no frames = binary relinked
+  under a running instance (build churn, not a game fault).
+- RogueSquadron64Recomp-2026-11-14-030917 (emitGridCellTileStrip SIGBUS 0x38005ffd0), -2026-11-14-032113 and -2026-11-14-033520
+  (selectGridCellTileVariant SIGBUS 0x380000003): the s7326 spill-leak pre-fix / SPILL_RESET=0 arms (arena full -> rs_malloc NULL),
+  the table at s7326 rows a/d. Fixed by default SPILL_RESET since.
+- RogueSquadron64Recomp-2026-11-14-084325, -2026-11-14-085345: SIGABRT `ctx->f6.fl == ctx->f6.fl` assert in
+  transformWorldPosToGridSpace = s7336 opt-in defect arms (NaN), fixed s7336.
+- RogueSquadron64Recomp-2026-11-14-124322, RogueSquadron64Recomp-2026-11-14-124328, RogueSquadron64Recomp-2026-11-14-124337, RogueSquadron64Recomp-2026-11-14-124345, RogueSquadron64Recomp-2026-11-14-124420, RogueSquadron64Recomp-2026-11-14-124428, RogueSquadron64Recomp-2026-11-14-124437, RogueSquadron64Recomp-2026-11-14-124445, RogueSquadron64Recomp-2026-11-14-125502: s7355 class AF
+  crash-reporter signal-safety arms (rs64_s7355_overflow stack plants; strsignal / getenv / my_malloc under a held malloc lock;
+  pre-fix null-deref handler threads). Fixed s7355.
+- RogueSquadron64Recomp-2026-11-14-125636: s7356 forced-NULL calloc in recomp::overlays::init_overlays (pre-fix arm).
+- PLANT: -2026-11-15-212420, -2026-11-15-212449 (raise SIGSEGV from rs64_store_diag_tick = rs64_diag_plant_tick), -2026-11-15-213629
+  (SIGABRT std::terminate in __cxa_finalize_ranges after exit() from rs64_store_diag_tick = the s7450 PLANT_EXIT "switch" kind, which
+  copies librecomp switch_error's exit(1) on purpose), -2026-11-19-091538 (s7660 injected SIGSEGV on a sleeping main thread).
+- DIAG: -2026-11-16-060515, -2026-11-17-031136, -2026-11-17-031342 (rs64_s5798_st store tracer, env-gated) and -2026-11-17-053804
+  (SP Task Thread, SIGSEGV 0x100000029 in s7523_slow_rdp.cpp consume() via rs64_s7523_status_read; ROGUESQ_S7523_SLOWRDP only,
+  crashed 21 min before the s7523 commit, i.e. during development; s7560 later fixed an &v[size()] in the same function. Single-source
+  and not re-run: if it recurs the tool lists it as DIAG, and that is when to fix it.)
+
+Also audited (static) the exit() idiom class, i.e. exit() run on a non-main thread while std::threads are joinable ends in
+std::terminate: src/ has 4 exit() calls. Quit uses quick_exit (s5380), the two at SDL_Init/SDL_CreateWindow failure run on main before any game thread
+exists, and the last one is the deliberate s7450 plant. No default path is affected.
+
+Shows: 0 crash reports from normal play in 7 days of loop + owner runs. The only
+one with no plant or arm is the diag-only s7523 instrument fault. Rules out: an unnoticed owner-visible crash in DiagnosticReports since 11-13.
+ORIGIN: no mitigation added (a gate + classifier, no runtime change).
+Live run after this entry: `python3 tools/crash_reports.py --since 2026-11-13` -> new=0.
