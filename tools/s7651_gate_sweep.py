@@ -8,8 +8,16 @@ them closed. This runs them all (with --controls when the tool takes it), 6 at a
   NEEDS-ARGS argparse usage / IndexError on sys.argv / missing input file: the tool needs an input (not a drift signal)
   RED        any other nonzero exit: drift or a real defect, triage by hand
 Positive control (iron rule 1): a planted tool that exits 1 must read RED and one that exits 0 GREEN, else exit 3.
-Usage: s7651_gate_sweep.py [--jobs N] [--only REGEX] [--tsv OUT]      exit 0 iff no RED (NEEDS-ARGS allowed)."""
-import concurrent.futures as cf, os, re, subprocess, sys, tempfile
+s7656 cache: every tool runs under tools/gate_trace.py (audit hook records each file it opens for reading, each directory it
+lists, each glob); its verdict is cached in build/gate_sweep_cache.json keyed on (argv, size+mtime of every read file incl. the
+tool itself, every listed directory's names, every glob's matches). Spawns: nm/objdump/zstd-class tools are keyed on their file
+arguments; cc/c++/clang also on the exact header list clang writes to CC_PRINT_HEADERS_FILE; a program a compiler built in
+the same run is allowed; git, shells and anything else keep the tool uncacheable (their reads are invisible). Cache control (iron rule 1): a planted tool reading a temp input must read GREEN, then a cache
+HIT, then RED after the input is edited (else exit 3). --no-cache re-proves everything.
+--new-red-vs FILE: exit 1 only for RED gates NOT listed (first column) in FILE, the committed allowed-RED baseline.
+Usage: s7651_gate_sweep.py [--jobs N] [--only REGEX] [--tsv OUT] [--no-cache] [--new-red-vs FILE]
+exit 0 iff no (new) RED (NEEDS-ARGS allowed)."""
+import concurrent.futures as cf, glob, hashlib, json, os, re, subprocess, sys, tempfile, threading, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARGS_SIG = re.compile(r"IndexError: list index out of range|usage: |error: unrecognized arguments|error: the following arguments"
@@ -24,30 +32,227 @@ NEEDS_INPUT = {
 }
 
 
+# s7656: NEEDS-ARGS gates whose input lives on disk: run with that input so they count. Used only when every path exists.
+# (argv, regex the output must contain, else RED): s7409/s7410 exit 0 even on CONTROL FAIL, so the text is the gate.
+ARGS = {
+    "s7409_fodd_census.py": (["../N64Recomp/RecompiledFuncs", "--plant"], r"CONTROL PASS"),   # planted FR0 MIXED row
+    "s7410_csave_census.py": (["../N64Recomp/RecompiledFuncs", "--plant"], r"CONTROL PASS"),  # dropped ldc1 restore
+    "s7091_ucode_insn_census.py": (["scratch/s7091/pristine", "build/factor5_ucode", "--controls"], None),  # rc 1 = unexplained
+}
+TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
+CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
+CACHE, CACHE_LOCK, STATS = {}, threading.Lock(), {"hit": 0, "miss": 0, "uncacheable": 0}
+USE_CACHE = True
+
+
+def fingerprint(argv, tr):
+    h = hashlib.sha256(("\0".join(argv) + "\1").encode())
+    st = os.stat(os.path.abspath(__file__))  # a classifier change in this sweep invalidates every entry
+    h.update(f"s{st.st_size}\0{st.st_mtime_ns}\n".encode())
+    for r in tr["reads"]:
+        try:
+            st = os.stat(r)
+            h.update(f"r{r}\0{st.st_size}\0{st.st_mtime_ns}\n".encode())
+        except OSError:
+            h.update(f"r{r}\0missing\n".encode())
+    for d in tr["dirs"]:
+        try:
+            h.update(f"d{d}\0{chr(0).join(sorted(os.listdir(d)))}\n".encode())
+        except OSError:
+            h.update(f"d{d}\0missing\n".encode())
+    for g in tr["globs"]:
+        h.update(f"g{g}\0{chr(0).join(sorted(glob.glob(g, recursive=True)))}\n".encode())
+    return h.hexdigest()
+
+
+# s7656: spawns whose output is a pure function of their file arguments (and, for compilers, the headers clang reports via
+# CC_PRINT_HEADERS_FILE) can be keyed; anything else (git, a shell, an arbitrary program) keeps the tool uncacheable.
+PURE = {"nm", "objdump", "llvm-objdump", "mips64-elf-objdump", "otool", "zstd", "llvm-nm"}
+COMPILERS = {"cc", "c++", "clang", "clang++"}  # Apple cc/c++ are clang; gcc does not honour CC_PRINT_HEADERS_FILE
+IFLAGS = ("-I", "-isystem", "-iquote", "-include", "-F")
+
+
+def spawn_inputs(tr, hdr_lines):
+    """-> (cacheable, extra_reads, extra_dirs, why) for the trace's subprocesses."""
+    reads, dirs, outs, cwds, compiled = set(), set(), set(), {ROOT}, False
+    for sp in tr.get("spawn", []):
+        argv, cwd = sp["argv"], sp["cwd"]
+        cwds.add(cwd)
+        a0 = argv[0] if argv else ""
+        a0abs = os.path.normpath(os.path.join(cwd, a0)) if "/" in a0 else None
+        base = os.path.basename(a0)
+        if sp.get("shell"):
+            return False, (), (), f"shell spawn {a0[:40]}"
+        if base in COMPILERS:
+            if not sp.get("env_ok"):
+                return False, (), (), f"{base} with a custom env (no header list)"
+            compiled = True
+        elif base not in PURE and not (a0abs and a0abs in outs):
+            return False, (), (), f"spawns {base}"
+        nxt_out = False
+        for i, t in enumerate(argv[1:]):
+            if nxt_out:
+                outs.add(os.path.normpath(os.path.join(cwd, t)))
+                nxt_out = False
+                continue
+            if t == "-o":
+                nxt_out = True
+                continue
+            for f in IFLAGS:
+                if t.startswith(f) and len(t) > len(f):
+                    t = t[len(f):]
+                    break
+            if t.startswith("-"):
+                continue
+            q = os.path.normpath(os.path.join(cwd, t))
+            if os.path.isfile(q):
+                reads.add(q)
+            elif os.path.isdir(q):
+                dirs.add(q)  # an -I dir: a new header there can shadow a later one
+    if compiled:  # env_ok held for every compile, so an empty list means no #include (s7607's header-less witness .c)
+        for h in hdr_lines:
+            h = h.strip().lstrip(". ") if h.startswith(".") and not h.startswith("./") and not h.startswith("../") else h.strip()
+            if not h:
+                continue
+            if os.path.isabs(h):
+                reads.add(h)
+            else:
+                reads.update(os.path.normpath(os.path.join(c, h)) for c in cwds)
+    reads -= outs
+    return True, sorted(reads), sorted(dirs), ""
+
+
+def traced(path, a):
+    """Run path with args a under the tracer; return (rc, out, trace-or-None)."""
+    fd, tf = tempfile.mkstemp(suffix=".json")
+    os.close(fd)
+    os.unlink(tf)
+    try:
+        p = subprocess.run([sys.executable, TRACER, path] + a, cwd=ROOT, capture_output=True, text=True, errors="replace",
+                           timeout=300, env=dict(os.environ, RS64_GATE_TRACE=tf, CC_PRINT_HEADERS="1",
+                                                 CC_PRINT_HEADERS_FILE=tf + ".hdr"))
+        rc, out = p.returncode, p.stdout + p.stderr
+        try:
+            tr = json.load(open(tf))
+        except (OSError, ValueError):
+            tr = None
+        if tr is not None:
+            try:
+                hdr = open(tf + ".hdr", errors="replace").read().splitlines()
+            except OSError:
+                hdr = []
+            ok, er, ed, why = spawn_inputs(tr, hdr)
+            tr["spawn_ok"], tr["why"] = ok, why
+            tr["reads"] = sorted(set(tr["reads"]) | set(er))
+            tr["dirs"] = sorted(set(tr["dirs"]) | set(ed))
+        return rc, out, tr
+    finally:
+        for f in (tf, tf + ".hdr"):
+            if os.path.exists(f):
+                os.unlink(f)
+
+
 def run(path):
+    key = os.path.abspath(path)
+    if USE_CACHE:
+        with CACHE_LOCK:
+            ent = CACHE.get(key)
+        if ent and fingerprint(ent["argv"], ent["trace"]) == ent["fp"]:
+            with CACHE_LOCK:
+                STATS["hit"] += 1
+            return tuple(ent["row"])
+    row, argv, tr = run_uncached(path)
+    cacheable = tr is not None and tr.get("complete") and tr.get("spawn_ok") and row[2] != "timeout"
+    with CACHE_LOCK:
+        STATS["miss" if cacheable else "uncacheable"] += 1
+        if cacheable:
+            CACHE[key] = {"argv": argv, "trace": tr, "fp": fingerprint(argv, tr), "row": list(row)}
+        else:
+            CACHE.pop(key, None)
+    return row
+
+
+def run_uncached(path):
     src = open(path, errors="replace").read()
     a = ["--controls"] if "--controls" in src else []
+    fixed, must = ARGS.get(os.path.basename(path), (None, None))
+    if fixed and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if not x.startswith("-")):
+        a = list(fixed)
+    else:
+        must = None
     try:
-        p = subprocess.run([sys.executable, path] + a, cwd=ROOT, capture_output=True, text=True, errors="replace", timeout=300)
-        rc, out = p.returncode, p.stdout + p.stderr
+        rc, out, tr = traced(path, a)
     except subprocess.TimeoutExpired:
-        return os.path.basename(path), "RED", "timeout", "timeout 300 s"
+        return (os.path.basename(path), "RED", "timeout", "timeout 300 s"), a, None
     tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
+    if rc == 0 and must and not re.search(must, out):
+        return (os.path.basename(path), "RED", rc, f"output lacks /{must}/: {tail}"), a, tr
     if rc == 0:
-        return os.path.basename(path), "GREEN", rc, tail
+        return (os.path.basename(path), "GREEN", rc, tail), a, tr
     if "--controls" in a and "unrecognized arguments: --controls" in out:  # mentions --controls in text only: retry bare
-        p = subprocess.run([sys.executable, path], cwd=ROOT, capture_output=True, text=True, errors="replace", timeout=300)
-        rc, out = p.returncode, p.stdout + p.stderr
+        a = []
+        rc, out, tr = traced(path, a)
         tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
         if rc == 0:
-            return os.path.basename(path), "GREEN", rc, tail
+            return (os.path.basename(path), "GREEN", rc, tail), a, tr
     ni = NEEDS_INPUT.get(os.path.basename(path))
     if ni and ni[0].search(out.strip()[-400:]):
-        return os.path.basename(path), "NEEDS-INPUT", rc, ni[1]
-    return os.path.basename(path), "NEEDS-ARGS" if ARGS_SIG.search(out[-3000:]) else "RED", rc, tail
+        return (os.path.basename(path), "NEEDS-INPUT", rc, ni[1]), a, tr
+    return (os.path.basename(path), "NEEDS-ARGS" if ARGS_SIG.search(out[-3000:]) else "RED", rc, tail), a, tr
+
+
+def cache_control(d):
+    """Planted tool reading an input file: GREEN, then a cache hit, then RED once the input changes; a spawning tool is
+    never cached. Uses its own cache dict so the real cache is untouched."""
+    global CACHE
+    saved, CACHE = CACHE, {}
+    s0 = dict(STATS)
+    try:
+        inp, tool = os.path.join(d, "cc_input.txt"), os.path.join(d, "cc_input_census.py")
+        open(inp, "w").write("ok\n")
+        open(tool, "w").write(f"import sys\nsys.exit(0 if open({inp!r}).read().strip() == 'ok' else 1)\n")
+        r1 = run(tool)[1]
+        h1 = STATS["hit"]
+        r2 = run(tool)[1]
+        hit = STATS["hit"] == h1 + 1
+        time.sleep(0.01)
+        open(inp, "w").write("broken\n")
+        r3 = run(tool)[1]
+        sp = os.path.join(d, "cc_spawn_census.py")
+        open(sp, "w").write("import subprocess, sys\nsubprocess.run(['true'])\n")
+        run(sp)
+        spawn_uncached = os.path.abspath(sp) not in CACHE
+        # compiler control: the tool reads only its .c; the header reaches the key via CC_PRINT_HEADERS alone
+        hd, cs, ct = os.path.join(d, "cch"), os.path.join(d, "cc_m.c"), os.path.join(d, "cc_compile_census.py")
+        os.makedirs(hd, exist_ok=True)
+        open(os.path.join(hd, "cc_h.h"), "w").write("#define CC_OK 1\n")
+        open(cs, "w").write('#include "cc_h.h"\nint x[CC_OK ? 1 : -1];\n')
+        open(ct, "w").write("import subprocess, sys\n"
+                            f"sys.exit(subprocess.run(['clang', '-fsyntax-only', '-I', {hd!r}, {cs!r}]).returncode)\n")
+        c1 = run(ct)[1]
+        hc = STATS["hit"]
+        c2 = run(ct)[1]
+        chit = STATS["hit"] == hc + 1
+        time.sleep(0.01)
+        open(os.path.join(hd, "cc_h.h"), "w").write("#define CC_OK 0\n")
+        c3 = run(ct)[1]
+        got = (r1, r2, hit, r3, spawn_uncached, c1, c2, chit, c3)
+        return got == ("GREEN", "GREEN", True, "RED", True, "GREEN", "GREEN", True, "RED"), got
+    finally:
+        CACHE = saved
+        STATS.update(s0)
 
 
 def main():
+    global USE_CACHE, CACHE
+    t0 = time.time()
+    USE_CACHE = "--no-cache" not in sys.argv
+    if USE_CACHE:
+        try:
+            CACHE = json.load(open(CACHE_PATH))
+        except (OSError, ValueError):
+            CACHE = {}
+    newvs = sys.argv[sys.argv.index("--new-red-vs") + 1] if "--new-red-vs" in sys.argv else None
     jobs = int(sys.argv[sys.argv.index("--jobs") + 1]) if "--jobs" in sys.argv else 6
     only = re.compile(sys.argv[sys.argv.index("--only") + 1]) if "--only" in sys.argv else None
     tsv = sys.argv[sys.argv.index("--tsv") + 1] if "--tsv" in sys.argv else None
@@ -62,10 +267,17 @@ def main():
         open(ni_bad, "w").write("import sys\nprint('OPEN 1')\nsys.exit(1)\n")
         c = {r[0]: r[1] for r in map(run, (bad, good))}
         c["ni_text"], c["ni_other"] = run(ni_ok)[1], run(ni_bad)[1]
+        for k in list(CACHE):  # controls never persist
+            if k.startswith(os.path.abspath(d)):
+                del CACHE[k]
+        ccpass, cc = cache_control(d)
     cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
-    if not cpass:
+    print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit ->", cc, "PASS" if ccpass else "FAIL")
+    if not (cpass and ccpass):
         sys.exit(3)
+    for k in ("hit", "miss", "uncacheable"):
+        STATS[k] = 0
     tools = sorted(os.path.join(ROOT, "tools", f) for f in os.listdir(os.path.join(ROOT, "tools"))
                    if re.match(r"s7\d+_.*_census\.py$", f) and (not only or only.search(f)))
     with cf.ThreadPoolExecutor(jobs) as ex:
@@ -77,8 +289,23 @@ def main():
     if tsv:
         with open(tsv, "w") as o:
             o.writelines(f"{n}\t{c}\t{r}\t{t}\n" for n, c, r, t in rows)
+    if USE_CACHE:
+        live = {os.path.abspath(t) for t in tools}
+        if not only:  # drop entries for deleted tools
+            CACHE = {k: v for k, v in CACHE.items() if k in live}
+        os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
+        json.dump(CACHE, open(CACHE_PATH + ".tmp", "w"))
+        os.replace(CACHE_PATH + ".tmp", CACHE_PATH)
     print("[s7651] gates", len(rows), dict(Counter(r[1] for r in rows)))
-    sys.exit(1 if any(r[1] == "RED" for r in rows) else 0)  # NEEDS-ARGS / NEEDS-INPUT allowed
+    print(f"[s7656] cache {'on' if USE_CACHE else 'off'} hit={STATS['hit']} miss={STATS['miss']} "
+          f"uncacheable={STATS['uncacheable']} wall={time.time() - t0:.1f}s")
+    red = [r[0] for r in rows if r[1] == "RED"]
+    if newvs:
+        allowed = {l.split()[0] for l in open(newvs) if l.strip() and not l.startswith("#")} if os.path.exists(newvs) else set()
+        new = [n for n in red if n not in allowed]
+        print(f"[s7656] new RED vs {os.path.relpath(newvs, ROOT)}: {len(new)} {' '.join(new)}")
+        sys.exit(1 if new else 0)
+    sys.exit(1 if red else 0)  # NEEDS-ARGS / NEEDS-INPUT allowed
 
 
 if __name__ == "__main__":

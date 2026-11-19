@@ -261,5 +261,24 @@ if [ "$mitig" -ge 2 ]; then
 ' "$ps_added" | grep -q 'ORIGIN:'     || block "Exit contract unmet: this iteration adds mitigation-shaped machinery (skip/allow/guard/restore, $mitig lines) but the PORTING-STATE.md session entry has no 'ORIGIN:' line. Write one of: 'ORIGIN: <who writes the value, and whether the value is legitimate>' when you attributed it, or 'ORIGIN: unattributed - <why mitigating anyway, and the experiment that would attribute it>' when you did not. Iron rule 11."
 fi
 
+# CENSUS GATE SWEEP (s7656) - closed census gates must stay closed.
+# s7651/s7655 found "closed" tools/s7*_census.py gates gone RED after later sessions added code in their scope, because nothing
+# re-ran them. When this iteration's commits touch runtime code (src/, submodule-patches/ = lib/, patches/) or a census tool,
+# re-run tools/s7651_gate_sweep.py (result cache keyed on each tool's traced reads: an unchanged tree re-runs only the
+# subprocess-spawning gates) and block on any RED gate not in tools/gate_sweep_allowed_red.txt.
+# --verify only: a cold sweep is ~7 min, far beyond the Claude Stop hook's 30 s timeout; loop.sh runs --verify after every
+# iteration whatever the runner and re-invokes with this message. RS64_GATE_SWEEP=0 skips it and
+# RS64_GATE_SWEEP_ONLY=<regex> narrows it (tools/agent/test_gate_sweep.sh only).
+if [ "$VERIFY" = 1 ] && [ "${RS64_GATE_SWEEP:-1}" != 0 ] \
+   && printf '%s\n' "$touched" | grep -qE '^(src/|submodule-patches/|patches/|tools/s7[0-9]+_.*_census\.py$|tools/census_rules\.py$)'; then
+  sweep_out="$(python3 tools/s7651_gate_sweep.py --new-red-vs tools/gate_sweep_allowed_red.txt \
+    ${RS64_GATE_SWEEP_ONLY:+--only "$RS64_GATE_SWEEP_ONLY"} 2>&1)"
+  sweep_rc=$?
+  if [ "$sweep_rc" != 0 ]; then
+    block "Exit contract unmet: this iteration touched runtime code or a census tool, and tools/s7651_gate_sweep.py (rc=$sweep_rc) reports census gates RED that were not RED before (3 = the sweep's own controls failed):
+$(printf '%s\n' "$sweep_out" | grep -E '^  RED|new RED|control|FAIL' | head -12)
+Each is a closed census class your change re-opened or a rule your change made stale. Run 'python3 tools/<gate> --controls', classify the new site (add its row / guard / rule, as that tool's docstring says), and commit. Only if the RED is a real open defect you are leaving for a later session, add '<gate> <reason>' to tools/gate_sweep_allowed_red.txt in the same commit and log it in the session entry."
+  fi
+fi
 
 allow

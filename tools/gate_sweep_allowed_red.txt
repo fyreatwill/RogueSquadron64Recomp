@@ -1,0 +1,2 @@
+# s7656: census gates allowed to be RED (one per line: '<tool file name> <reason, session>'). stop_gate.sh --verify blocks on
+# any RED gate from tools/s7651_gate_sweep.py that is not listed here. Empty since s7655 (0 RED of 135).
