@@ -189,7 +189,7 @@ def rval(lines, names, i, r, depth=0):
         e = m.group(2).strip()
         if depth > 6:
             return None
-        k = re.fullmatch(r'S32\(0X([0-9A-F]+) << 16\)', e, re.I)
+        k = re.fullmatch(r'S32\(0X([0-9A-F]+)u? << 16\)', e, re.I)
         if k:
             return (int(k.group(1), 16) << 16) & 0xFFFFFFFF
         k = re.fullmatch(r'ADD32\(ctx->r(\d+), (-?0X[0-9A-F]+|-?\d+)\)', e, re.I) or re.fullmatch(r'ADD32\((0), (-?0X[0-9A-F]+|-?\d+)\)', e, re.I)

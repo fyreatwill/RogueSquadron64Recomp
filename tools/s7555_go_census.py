@@ -107,7 +107,7 @@ OK = {"H-unused", "H-shadowed", "H-ret-unused", "H-consistent", "H-nostatus", "H
 # lui of a device register page: RCP registers 0x03F0-0x04FF (+KSEG1 0xA3F0-0xA4FF) and physical PIF 0x1FC0.  ROM KSEG1
 # 0xB0xx is not a register; KSEG1 PIF 0xBFC0 is not matched because it collides with float immediates (0x8006D168
 # lui a2,0xBFC0 = -1.5f to scaleVec3ByRandomRange) - PIF RAM is reached only by SI (osCont*/osEeprom*, all replaced).
-MMIO = re.compile(r'S32\(0X(?:A3F|A4[0-9A-F]|03F|04[0-9A-F])[0-9A-F] << 16\)|S32\(0X1FC0 << 16\)')
+MMIO = re.compile(r'S32\(0X(?:A3F|A4[0-9A-F]|03F|04[0-9A-F])[0-9A-F]u? << 16\)|S32\(0X1FC0u? << 16\)')
 # replacements too instrumented for always_sets_r2's textual test: every arm of the dispatch assigns ctx->r2 and the body
 # has no early return (checked here, so a code change that breaks it drops the row from the killer set)
 KILLER_RULES = {"osRecvMesg": r"ctx->r2 = result;[\s\S]*\} else if \(mq_addr == 0x8010FEE0u\) \{[\s\S]*ctx->r2 = result;"

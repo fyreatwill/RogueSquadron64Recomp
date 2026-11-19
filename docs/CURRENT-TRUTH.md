@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7652 (2026-11-19).
+Compact operational handoff, as of Session 7653 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7652: full gate sweep = 39 of 135 census gates RED; 6 fixed, 0 behaviour defects.** s7090 (s7580 lui `u` spelling vs
+- **NEW s7653: the 6 gates with failing self-controls are green; sweep 39 -> 28 RED, 0 behaviour defects.** Two drift kinds:
+  (1) post-regen `lui` spelling `S32(0X8011u << 16)` (s7580) blinded the constant resolvers of s7543/s7544 and s7555's MMIO
+  scan (re-read: mmio still 0 by independent grep, u-form plant now caught); (2) line-range rules in the shared s7538 engine and
+  s7542_gc_rules (+20..+130 drift, 17 GC + 4 GB sites UNCLASSIFIED/mis-keyed) -> text anchors (`("near", rx, n)`, `("line", rx)`,
+  segment regex) with a STALE-anchor FAIL + control. s7531 verify regex + s7532 6 new rules (s7535/s7539/s7644 diag copies, all
+  env-gated, read by hand). Table scratch/s7653/sweep.out.
+- **s7652: full gate sweep = 39 of 135 census gates RED; 6 fixed, 0 behaviour defects.** s7090 (s7580 lui `u` spelling vs
   stale pristine: 20,841 false 'dropped'), s7359 + s7463/s7465/s7466 (reviews keyed by absolute line, now text anchors with
   ORPHAN/STALE exit), s7360 (2 stand-ins rules). Stand-ins log appends -> rs64_apf. ~140 sites hand-read, all opt-in or bounded.
   Six gates have FAILING self-controls (s7531/s7532/s7538/s7542/s7543/s7544): NEXT (item 35).
@@ -466,7 +472,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     s7652 full sweep: 83 green, 13 need inputs, 39 RED; fixed s7090 s7359 s7360 s7463 s7465 s7466 (line-keyed reviews ->
     text anchors; lui-u normaliser). 33 RED left: controls FAIL in s7531/s7532/s7538/s7542/s7543/s7544 (NEXT); s7339-s7353
     triaged by hand (PORTING-STATE s7652, all opt-in/bounded, rules not written); s7316 needs --ram; s7573 needs logs;
-    s7588-s7616 unread. Lesson: any review keyed by a line number WILL drift; key by text.
+    s7588-s7616 unread. Lesson: any review keyed by a line number WILL drift; key by text. s7653: all 6 control FAILs fixed
+    (s7531 verify regex; s7532 6 rules; s7538/s7542 line ranges -> anchors with STALE FAIL; s7543/s7544/s7555 lui `u?`); 28 RED left:
+    s7339-s7353 rules (from s7652 triage), s7316/s7573 need inputs, s7588-s7616 verdict exits unread. Also: any reader of the
+    POST-regen tree must accept `0X....u << 16`; fixup scripts run before fixup_lui_unsigned.py and need not.
 
 ## Evidence index
 

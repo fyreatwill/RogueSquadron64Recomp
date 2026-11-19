@@ -60,11 +60,11 @@ RULES = [
     (EV, "task_thread_func", None, [("audio", "H-ordered",
      "audio / non-gfx RSP task: run_task runs the whole ucode (every DMA in and out) synchronously on the SP task thread, "
      "then sp_complete", [("before", r"ultramodern::rsp::run_task\(PASS_RDRAM task\)")])]),
-    (EV, "gfx_thread_func", (1700, 1730), [("early", "H-latent-FIXED(opt-in)",
+    (EV, "gfx_thread_func", r"if \(!s7535_late\)\s*$", [("early", "H-latent-FIXED(opt-in)",
      "class GA (s7535-s7537): default early sp_complete before send_dl lets the guest overwrite the in-flight F5 inputs; "
      "fix = ROGUESQ_SP_LATE=1 (owner opt-in, docs/OWNER-OPT-INS.md)",
      [("before", r"rs64_sp_late_task\(\)"), ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_SP_LATE=1")])]),
-    (EV, "gfx_thread_func", (1731, 1746), [("late", "H-ordered",
+    (EV, "gfx_thread_func", r"\bif \(s7535_late\)\s*$", [("late", "H-ordered",
      "ROGUESQ_SP_LATE=1: sp_complete after send_dl returned; the F5 LLE (every RSP DMA) ran inside send_dl",
      [("before", r"renderer_context->send_dl\(&task_action->task\)")])]),
     (EXT, "dispatch_displaylist_events", None, [("dl-event", "H-dead",
@@ -78,7 +78,7 @@ RULES = [
      [("nm_absent", "osExQueueDisplaylistEvent_recomp")])]),
     # --- DP ------------------------------------------------------------------------------------------------------------------
     (EV, "dp_complete", None, [("def", "H-ordered", "the dp_complete() body: ordering is decided at its call site", [])]),
-    (EV, "gfx_thread_func", (1747, 1760), [
+    (EV, "gfx_thread_func", r"renderer_end = std::chrono", [
         ("sync", "H-ordered",
          "default (RDP_ASYNC off): RT64 interprets every RDP range inside send_dl on the Gfx thread (texture loads read "
          "core.RDRAM there, fb copies to RDRAM happen there), dp_complete follows send_dl",
@@ -111,15 +111,15 @@ RULES = [
           ("file", "lib/rt64/src/hle/rt64_framebuffer_manager.cpp", r"rs64_s7541_span\(4, RDRAM"),
           ("file", "docs/OWNER-OPT-INS.md", r"ROGUESQ_RDP_NODRAIN=3")])]),
     # --- VI / AI -------------------------------------------------------------------------------------------------------------
-    (EV, "vi_thread_func", (1040, 1056), [("vi", "H-canon",
+    (EV, "vi_thread_func", r"\[vi-enq\]", [("vi", "H-canon",
      "VI retrace message: the device reads the displayed framebuffer after it, as hardware VI scans the origin through the "
      "whole field; RT64's RDRAM-sourced present copies it into present.storage on the Gfx thread (H-copy of a scan-out the "
      "hardware also performs after the interrupt); origin/registers are host copies made in osViSwapBuffer",
      [("file", RT64ST, r"memcpy\(present\.storage\.data\(\), &RDRAM\[screenFbAddress\], screenFbBytes\)"),
       ("nm_present", "osViSwapBuffer_recomp")])]),
-    (EV, "vi_thread_func", (1057, 1062), [("ai-vi", "H-copy", AI_COPY, AI_CHECKS)]),
-    (EV, "init_events", (2090, 2115), [("ai-drain", "H-copy", AI_COPY, AI_CHECKS)]),
-    (EV, "init_events", (2116, 2130), [("ai-hz", "H-copy", AI_COPY, AI_CHECKS)]),
+    (EV, "vi_thread_func", r"!ai_event_external\(\)\) \{\s*(?:ultramodern::)?$", [("ai-vi", "H-copy", AI_COPY, AI_CHECKS)]),
+    (EV, "init_events", r"\[s7197-ai-stall\]", [("ai-drain", "H-copy", AI_COPY, AI_CHECKS)]),
+    (EV, "init_events", r"set_native_thread_name\(\"AI Hz\"\)", [("ai-hz", "H-copy", AI_COPY, AI_CHECKS)]),
     # --- SI ------------------------------------------------------------------------------------------------------------------
     (EV, "send_si_message", None, [("def", "H-ordered", "send_si_message body: ordering at its callers", [])]),
     (INP, "osContStartQuery", None, [("si", "H-ordered",
@@ -132,15 +132,15 @@ RULES = [
     # --- PI ------------------------------------------------------------------------------------------------------------------
     (PI, "s7196_unknown_region_complete", None, [("pi-unk", "H-ordered",
      "unknown-region PI completion: no transfer is performed", [])]),
-    (PI, "do_dma", (590, 615), [("pi-guard", "H-ordered", "s5061 guard skip: completion without any transfer", [])]),
-    (PI, "do_dma", (616, 652), [("pi-rom", "H-ordered",
+    (PI, "do_dma", r"\[s5061-pi-dma-guard\]", [("pi-guard", "H-ordered", "s5061 guard skip: completion without any transfer", [])]),
+    (PI, "do_dma", r"recomp::do_rom_read\(", [("pi-rom", "H-ordered",
      "ROM->RDRAM PI DMA: do_rom_read copies synchronously on the guest thread (osPiStartDma_recomp -> do_dma) before "
      "the completion message", [("before", r"recomp::do_rom_read\(rdram, rdram_address, physical_addr, size\)"),
                                  ("nm_present", "osPiStartDma_recomp")])]),
-    (PI, "do_dma", (653, 662), [("pi-sram-rd", "H-ordered",
+    (PI, "do_dma", r"\bsave_read\(", [("pi-sram-rd", "H-ordered",
      "SRAM read: save_read synchronous before the message (unreachable: save type Eep4k -> message_box exit)",
      [("before", r"save_read\(rdram, rdram_address")])]),
-    (PI, "do_dma", (663, 690), [("pi-sram-wr", "H-copy",
+    (PI, "do_dma", r"\bsave_write\(", [("pi-sram-wr", "H-copy",
      "SRAM write: save_write memcpy's the guest bytes into save_context.save_buffer under its mutex before the message; "
      "the file writer thread reads only that host buffer",
      [("before", r"save_write\(rdram, rdram_address"), ("fnbody", "lib/N64ModernRuntime/" + PI, "save_write_ptr", r"memcpy\(&save_context\.save_buffer")])]),
@@ -152,9 +152,9 @@ RULES = [
     (TM, "timer_thread", None, [("timer", "H-nomem", "osSetTimer expiry message: no guest-RAM transfer", [])]),
     (MQ, "osSendMesg", None, [("guest", "not-device", "guest-originated message", [])]),
     (MQ, "osJamMesg", None, [("guest", "not-device", "guest-originated message", [])]),
-    (UC, "control", (9150, 9220), [("ctl", "H-instrument-only", "s7392 message-queue self-test (ROGUESQ_S7392_CTL, default off)",
+    (UC, "control", r"getenv\(\"ROGUESQ_S7392_CTL\"\)", [("ctl", "H-instrument-only", "s7392 message-queue self-test (ROGUESQ_S7392_CTL, default off)",
      [("body", r"ROGUESQ_S7392_CTL")])]),
-    (UC, "control", (9221, 9300), [("ctl", "H-instrument-only", "s7399 event-post self-test (ROGUESQ_S7399_CTL, default off)",
+    (UC, "control", r"getenv\(\"ROGUESQ_S7399_CTL\"\)", [("ctl", "H-instrument-only", "s7399 event-post self-test (ROGUESQ_S7399_CTL, default off)",
      [("body", r"ROGUESQ_S7399_CTL")])]),
 ]
 OK = {"H-ordered", "H-copy", "H-canon", "H-dead", "H-nomem", "not-device", "H-instrument-only", "H-latent-FIXED(opt-in)"}
@@ -191,6 +191,7 @@ def sites(path, over=None):
     t = read(path, over)
     spans = fz.func_spans(t)
     out = []
+    last_end = {}   # s7653: per enclosing function, end of the previous signal -> the anchor segment of the next one
     for m in SIG.finditer(t):
         close = fz.split_args(t, m.end())[1] if hasattr(fz, "split_args") else m.end()
         if re.match(r'\s*(?:const\s*)?\{', t[close + 1:close + 20]) or re.match(r'\s*\{', t[close:close + 5]):
@@ -201,7 +202,9 @@ def sites(path, over=None):
         enc = [s for s in spans if s[0] <= m.start() <= s[1]]
         fn = enc[-1] if enc else (0, len(t), "<file>")
         src = re.search(r'EventMessageSource::(\w+)', t[m.start():m.start() + 200])
-        out.append(dict(path=path, line=ln, kind=m.group(1), fn=fn[2], body=t[fn[0]:fn[1] + 1], off=m.start() - fn[0],
+        seg = t[max(fn[0], last_end.get(fn[0], fn[0])):m.start()]
+        last_end[fn[0]] = m.end()
+        out.append(dict(path=path, line=ln, kind=m.group(1), fn=fn[2], body=t[fn[0]:fn[1] + 1], off=m.start() - fn[0], seg=seg,
                         src=src.group(1) if src and m.group(1).endswith("_src") else ""))
     return out
 
@@ -230,10 +233,29 @@ def run_checks(site, checks, over, lib):
     return fails
 
 
+def rule_hits(site, rule):
+    # s7653: rng is None (whole function) or a TEXT ANCHOR regex searched in the site's segment (enclosing-function text since the
+    # previous signal in that function, comments stripped). Absolute line ranges drifted silently (s7538 pi.cpp rows, +20 lines).
+    f, fn, rng, _ = rule
+    if not (site["path"].endswith(f) and site["fn"] == fn):
+        return False
+    if rng is None:
+        return True
+    if isinstance(rng, tuple) and rng and rng[0] == "near":   # ("near", rx, n): rx in the n body chars before the site
+        return re.search(rng[1], site["body"][max(0, site["off"] - rng[2]):site["off"]]) is not None
+    if isinstance(rng, tuple) and rng and rng[0] == "line":   # ("line", rx): rx on the site's own source line
+        b, o = site["body"], site["off"]
+        a = b.rfind("\n", 0, o) + 1; e = b.find("\n", o)
+        return re.search(rng[1], b[a:e if e >= 0 else len(b)]) is not None
+    if isinstance(rng, tuple):   # legacy line range: drifts silently; s7653 removed all of them from s7538/s7542
+        return rng[0] <= site["line"] <= rng[1]
+    return re.search(rng, site.get("seg", site["body"]), re.M) is not None
+
+
 def classify(site, rules):
-    for f, fn, rng, modes in rules:
-        if site["path"].endswith(f) and site["fn"] == fn and (rng is None or rng[0] <= site["line"] <= rng[1]):
-            return modes
+    for r in rules:
+        if rule_hits(site, r):
+            return r[3]
     return None
 
 
@@ -265,6 +287,16 @@ def census(files, rules=RULES, over=None, lib=LIB, quiet=False):
                 if cls == "H-latent-fix":
                     stat["open"] += 1
                 rows.append((s, mode, cls if not fails else "FAIL-check", why, fails))
+    # s7653: an anchored rule whose file was scanned but which matched no site is STALE -> FAIL (never re-scope silently)
+    scanned = {p for p in files}
+    allsites = [x for x in (r[0] for r in rows) if x.get("path")]
+    for r in rules:
+        anchored = isinstance(r[2], str) or (isinstance(r[2], tuple) and r[2] and r[2][0] in ("near", "line"))
+        if not anchored or not any(p.endswith(r[0]) for p in scanned):
+            continue
+        if not any(rule_hits(x, r) for x in allsites):
+            stat["fail"] += 1
+            rows.append((dict(path=r[0], line=0, kind="-", src="", fn=r[1]), r[3][0][0], "FAIL-check", "STALE anchor " + str(r[2]), ["stale anchor"]))
     if not quiet:
         for s, mode, cls, why, fails in rows:
             print("%s:%d %s %s [%s] %s -> %s%s" % (s["path"], s["line"], s["kind"], s["src"], s["fn"], mode, cls,
@@ -331,6 +363,9 @@ def controls():
     _, st1 = census(files, quiet=True)
     tests.append(("coverage: rule-less census -> all %d sites UNCLASSIFIED" % st0["sites"],
                   st0["unclassified"] == st0["sites"] >= 25 and st1["sites"] == st0["sites"]))
+    # 6b stale-anchor control (s7653): a rule whose anchor matches no site in a scanned file must FAIL
+    _, st2 = census(files, rules=RULES + [(PI, "do_dma", r"NO_SUCH_ANCHOR_s7653", [("x", "H-ordered", "planted", [])])], quiet=True)
+    tests.append(("stale anchor control: planted unmatched anchor -> exactly 1 extra FAIL", st2["fail"] == st1["fail"] + 1))
     # 7 live census: 0 unclassified, 0 failed checks
     tests.append(("live census: 0 unclassified, 0 FAIL-check", st1["unclassified"] == 0 and st1["fail"] == 0))
     for name, passed in tests:

@@ -204,7 +204,7 @@ def reg_val(lines, names, i, r, depth=0):
             return None
         if re.fullmatch(r'cop0_status_read\(ctx\)', e):
             return ("SR", 0, 0)
-        k = re.fullmatch(r'S32\(0X([0-9A-F]+) << 16\)', e, re.I)
+        k = re.fullmatch(r'S32\(0X([0-9A-F]+)u? << 16\)', e, re.I)
         if k:
             return (int(k.group(1), 16) << 16) & 0xFFFFFFFF
         k = re.fullmatch(r'~\(ctx->r(\d+) \| ctx->r(\d+)\)', e)

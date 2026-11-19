@@ -25,7 +25,7 @@ RULES = [
      "drawnChanged edge on the last-drawn colour image, re-set on every change; compare-only, staticViRefresh covers a held value",
      {"verify": r"if \(drawnChanged\) \{\s*s_lastPresentedDrawn = curDrawn;"}),
     (G, "lastTask", "H-canon", "shade-ordinal map is cleared and re-keyed on every task change (s-ordinal reset); host task id",
-     {"verify": r"task != lastTask\) \{ next\.clear\(\); lastTask = task; \}"}),
+     {"verify": r"task != lastTask\) \{ next\.clear\(\); lastTask = task;"}),  # s7653: s7568 added a counter before the brace
     # --- E9 provenance plumbing: every reader is ROGUESQ_LOG_E9_* gated ----------------------------------
     (I, "s_rs64_pending_start_address", "H-instrument-only",
      "set only when an E9 straddles a submit (834), cleared to ~0 after the pending command completes (707); readers are "

@@ -210,6 +210,19 @@ RULES = [
     (U, "s6883_win", "H-instrument-only", "s6883 span log, after `if (!s6883_log()) return;` (ROGUESQ_G1D_SPANLOG)",
      {"verify": r"if \(!s6883_log\(\)\) return;", "envoff": "ROGUESQ_G1D_SPANLOG"}),
     (U, "s6883_snap", "H-instrument-only", "see s6883_win (snapshot hashed and fwritten)", {"envoff": "ROGUESQ_G1D_SPANLOG"}),
+    # s7653: post-closure diagnostics (s7535/s7539-s7541/s7644); callers read by hand: events.cpp:1719 + rsp.hpp:345 behind
+    # rs64_s7535_on, rt64_render_context gb::at_exit/job_end/compare behind gb::on, s7644 pre hooks return on !g_on / !g_gon.
+    ("src/main/rt64_render_context.cpp", "snap", "H-instrument-only", "s7539/s7541 16 MB post-task snapshot, ROGUESQ_S7539_GB_CHK only",
+     {"verify": r'getenv\("ROGUESQ_S7539_GB_CHK"\)', "envoff": "ROGUESQ_S7539_GB_CHK"}),
+    ("src/main/rt64_render_context.cpp", "gb", "H-instrument-only", "s7541 kind-3 snapshot refresh after `if (!gb::on || !rdram ...) return;`",
+     {"verify": r"if \(!gb::on \|\| !rdram \|\| !bytes", "envoff": "ROGUESQ_S7539_GB_CHK"}),
+    ("src/rsp/s7535_ga_chk.cpp", "g_sh", "H-instrument-only", "s7535 gfx RSP-input window snapshot, ROGUESQ_S7535_GA_CHK only",
+     {"verify": r'getenv\("ROGUESQ_S7535_GA_CHK"\)', "envoff": "ROGUESQ_S7535_GA_CHK"}),
+    ("src/rsp/s7535_ga_chk.cpp", "g_row", "H-instrument-only", "s7535 diff rows (dumped to stderr), same gate", {"envoff": "ROGUESQ_S7535_GA_CHK"}),
+    ("src/rsp/s7644_rspdma.cpp", "t_snap", "H-instrument-only", "s7644 audio PI-vs-RSP snapshot, after `if (!g_on ...) return;`",
+     {"verify": r"if \(!g_on \|\| g_tasks\.load\(\) == 0\) return;", "envoff": "ROGUESQ_S7644_RSPDMA"}),
+    ("src/rsp/s7644_rspdma.cpp", "t_g", "H-instrument-only", "s7644 gfx PI span snapshot, after `if (!g_gon) return;`",
+     {"verify": r"if \(!g_gon\) return;", "envoff": "ROGUESQ_S7644_RSPDMA"}),
     ("librecomp/src/sp.cpp", "ram_unswapped", "H-dead", "ramdump under dump_frame, which nothing sets true",
      {"verify": r"bool dump_frame = false;"}),
 ]

@@ -203985,3 +203985,32 @@ Work unit (NEXT s7652, HYPOTHESIS-ID closed-gate-drift, offline).
   s7343 s7344 s7345 s7346 s7348 s7349 s7350 s7351 s7352 s7353 (triaged above, rules not yet written); s7573 (no game logs);
   s7588 s7596 s7597 s7598 s7599 s7600 s7604 s7605 s7608 s7611 s7612 s7613 s7615 s7616 (unread: verdict lines say NOT
   CLOSED / RESULT FAIL / OPEN, may be by-design report shapes).
+
+## Session 7653 (2026-11-19) — the six census gates with failing self-controls fixed (lui `u` spelling blinded 3 resolvers; s7538/s7542 line-range rules -> text anchors with a stale-anchor FAIL); sweep 39 -> 28 RED, 0 behaviour defects
+
+HYPOTHESIS-ID closed-gate-drift, NEXT item 1. Hypotheses: H-drift (stale key) vs H-broken (detection regressed, verdict never
+re-proved) vs H-live (a real default-on defect). Result: H-drift for all six, with two H-broken blind spots that hid nothing.
+- s7531 FX: rt64_gbi_rdp.cpp lastTask verify regex expected `lastTask = task; }`; s7568 added a counter before the brace. Regex
+  relaxed to `... lastTask = task;`. Negative: a copy with the re-set removed -> FAIL-check. controls 5/5.
+- s7532 FY: 8 UNCLASSIFIED copies of guest RAM in later code: rt64_render_context gb::snap (s7539/s7541, ROGUESQ_S7539_GB_CHK),
+  s7535_ga_chk g_sh/g_row (ROGUESQ_S7535_GA_CHK; callers events.cpp:1719 + rsp.hpp:345 behind rs64_s7535_on), s7644_rspdma
+  t_snap/t_g (return on !g_on / !g_gon, ROGUESQ_S7644_RSPDMA). All read by hand: diag only. 6 rules with verify+envoff; negative:
+  copy with `if (!g_gon) return;` removed -> t_g FAIL-check. controls 7/7, census exit 0.
+- s7538 GB: rules keyed by absolute line ranges; pi.cpp moved +20 (s7644 hooks) so the guard-skip site matched the pi-rom rule
+  (FAIL-check), sram rows shifted, sram-wr UNCLASSIFIED; upstream_compat control rows UNCLASSIFIED. All 13 ranges -> segment
+  anchors (regex over the function text since the previous signal), each verified to hit exactly 1 site. New: an anchored rule
+  matching nothing in a scanned file -> STALE FAIL row; control (planted unmatched anchor -> +1 FAIL). controls 9/9.
+- s7542 GC (shares the s7538 engine): 17 UNCLASSIFIED (dpc_bridge FS_PIPE_INJECT/PRIM_ALPHA_FF/PRIM_FF/TLUT dump ranges, rc DEBUG_WRITE
+  1373 one line past its range, 2 new rs64_standins STANDINS_PULL/STANDINS_CTL writes). Engine now takes ("near", rx, n) and
+  ("line", rx) anchors; D() replaces any given range by its own env anchor; fullSync/apply/RCP alias ranges -> line anchors; 2
+  stand-ins D rules (opt-in levers, off by default). Census 160 sites, 0 unclassified; controls 8/8 (incl. mutation FORCE_SEL rename).
+  Class counts: H-diag 26->42, read-alias 5->6 = the 17.
+- s7543 GD / s7544 GE: rval() matched `S32(0X8011 << 16)` only; the post-regen tree has `S32(0X8011u << 16)` since s7580
+  (fixup_lui_unsigned.py). Resolver controls (si thread arg 0x8010FF70, load 0x80110741) FAILED; 14 GD-B rows OPEN "not resolved".
+  `u?` added: GD 9/9 (open/fail 0), GE 13/13. Same blind spot in s7555 GO's MMIO scan: now `u?`; still mmio=0 (independent grep of
+  funcs_*.c with u? = 0 hits; planted `S32(0XA440u << 16)` -> 1 site). Fixup scripts' own lui regexes are fine: they run before
+  fixup_lui_unsigned.py.
+- Sweep (tools/s7651_gate_sweep.py, scratch/s7653/sweep.out): 135 gates, 28 RED (was 39 at s7652 before its 6 fixes), 13 NEEDS-ARGS.
+  Left: s7339-s7353 (rules from the s7652 hand triage), s7316 (needs --ram), s7573 (needs logs), s7588-s7616 (verdict exits).
+Rules out: any behaviour defect behind these six gates (every new site read is env-gated diag/opt-in). No game run (offline audit).
+ORIGIN: no mitigation added; tool-key changes only.

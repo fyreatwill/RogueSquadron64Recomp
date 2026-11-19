@@ -51,6 +51,9 @@ def G(f, fn, imp=None, why="", extra=()):
 
 def D(f, fn, env, rng=None, n=4000, why="", cls="H-diag"):
     """env-gated diagnostic / harness writer: the env name must appear in the n chars before the site"""
+    # s7653: a given line range is replaced by the env text anchor itself (line ranges drifted: 17 sites UNCLASSIFIED)
+    if rng is not None:
+        rng = ("near", env, n)
     return (f, fn, rng, [("diag", cls, why or ("only under %s (off by default)" % env), [("near", env, n)])])
 
 
@@ -94,9 +97,9 @@ RULES = [
     # --- RT64 ----------------------------------------------------------------------------------------------------------------
     ("rt64_framebuffer.cpp", "<file>", None, [("def", "H-def", "copyNativeToRAM definition (call sites in fullSync)", [])]),
     ("rt64_framebuffer.h", "<file>", None, [("def", "H-def", "copyNativeToRAM declaration", [])]),
-    ("hle/rt64_state.cpp", "fullSync", (2600, 2700), [("diag", "H-diag", "ROGUESQ_RI_CLEAR read-in clear (s6249)", [("near", "ROGUESQ_RI_CLEAR", 600)])]),
-    ("hle/rt64_state.cpp", "fullSync", (2900, 2930), [("diag", "H-diag", "ROGUESQ_WB_CLEAR (s6246)", [("near", "ROGUESQ_WB_CLEAR", 600)])]),
-    ("hle/rt64_state.cpp", "fullSync", (2940, 3100), [WB_SYNC, WB_DRAIN, WB_NODRAIN]),
+    ("hle/rt64_state.cpp", "fullSync", ("near", "ROGUESQ_RI_CLEAR", 600), [("diag", "H-diag", "ROGUESQ_RI_CLEAR read-in clear (s6249)", [("near", "ROGUESQ_RI_CLEAR", 600)])]),
+    ("hle/rt64_state.cpp", "fullSync", ("near", "ROGUESQ_WB_CLEAR", 600), [("diag", "H-diag", "ROGUESQ_WB_CLEAR (s6246)", [("near", "ROGUESQ_WB_CLEAR", 600)])]),
+    ("hle/rt64_state.cpp", "fullSync", ("line", r"copyNativeToRAM\("), [WB_SYNC, WB_DRAIN, WB_NODRAIN]),
     ("gbi/rt64_gbi.cpp", "getGBIForUCode", None, [("alias", "read-alias", "ucode text scan (read)", [("noptrwrite",)])]),
     ("mupen64plus-core/src/device/rdram/rdram.c", "poweron_rdram", None, [("own", "not-guest",
      "mupen64plus-core's own rdram device struct (regs/dram) inside RT64 contrib, not the port's guest RDRAM", [("body", r"rdram->dram")])]),
@@ -133,13 +136,13 @@ RULES = [
      [("near", r"s7\.ctl", 900), ("file", "lib/N64ModernRuntime/librecomp/src/overlays.cpp", r'getenv\("ROGUESQ_S7520_CTL"\)')])]),
     G(L + "sp.cpp", "__attribute__", imp="osSpTaskStartGo_recomp", why="osSpTaskStartGo task pointer on the guest thread"),
     # --- ultramodern -----------------------------------------------------------------------------------------------------------
-    (U + "events.cpp", "apply", (1360, 1412), [("lever", "H-lever",
+    (U + "events.cpp", "apply", ("line", r"rdram \+ (?:0x9ECB0|addrs\[i\]|ia\[i\])"), [("lever", "H-lever",
      "G1c draw-distance lever (ROGUESQ_DD_RADIUS/_LOD/_IMUL/_ADDRS): rewrites the same rodata constants to the same values each VI "
      "from the gfx thread; the game only reads them", [("body", r"ROGUESQ_DD_RADIUS")])]),
-    (U + "events.cpp", "apply", (1413, 1440), [("lever", "H-lever",
+    (U + "events.cpp", "apply", ("line", r"&rdram\[0x128EAF \^ 3\]"), [("lever", "H-lever",
      "ROGUESQ_FPS60 arbiter-limit clamp 2->1 from the gfx thread; byte CAS (class FZ s7533) never overwrites a guest store",
      [("near", r'getenv\("ROGUESQ_FPS60"\)', 1500), ("body", r"__atomic_compare_exchange_n\(lb")])]),
-    (U + "events.cpp", "apply", (1441, 1500), [("lever", "H-diag", "ROGUESQ_G1E_LIMIT arbiter lever (s6255, test only)",
+    (U + "events.cpp", "apply", ("line", r"rdram\[LIM \^ 3\]"), [("lever", "H-diag", "ROGUESQ_G1E_LIMIT arbiter lever (s6255, test only)",
      [("near", r'getenv\("ROGUESQ_G1E_LIMIT"\)', 3000)])]),
     G(U + "events.cpp", "osViSetMode", imp="osViSetMode_recomp"),
     G(U + "events.cpp", "submit_rsp_task", imp="osSpTaskStartGo_recomp", why="called from osSpTaskStartGo on the guest thread"),
@@ -181,9 +184,9 @@ RULES = [
     D(MNP, "start_level_poller", "ROGUESQ_FORCE_SEL", n=4000, why="harness level/mission force (ROGUESQ_FORCE_SEL/FORCE_MISSION/LOG_LEVEL; "
       "poller thread returns at start unless one is set)"),
     D(MNP, "start_state_poller", "ROGUESQ_FORCE_EMPTY_POOL_SENTINEL", n=800),
-    A(RCP, "?", (780, 900)),
-    D(RCP, "?", "ROGUESQ_FORCE_BUFFER_PROGRESS", rng=(1200, 1260), n=1600),
-    D(RCP, "?", "ROGUESQ_DEBUG_WRITE", rng=(1360, 1372), n=700),
+    A(RCP, "?", ("line", r"uint8_t\* rdram = app->core\.RDRAM;")),
+    D(RCP, "?", "ROGUESQ_FORCE_BUFFER_PROGRESS", rng=True, n=1600),
+    D(RCP, "?", "ROGUESQ_DEBUG_WRITE", rng=True, n=700),
     A(RCP, "submit_rdp_range"),
     D("src/main/upstream_compat.cpp", "rs64_s6883_tables", r"s6883_mode\(\) & 4", n=200,
       why="ROGUESQ_G1D_SPANCELL bit 4 only (default 3)"),
@@ -196,11 +199,16 @@ RULES = [
     G("src/main/upstream_compat.cpp", "osSpTaskStartGo_recomp"),
     G("src/main/upstream_compat.cpp", "osStopThread_recomp"),
     # --- src/rsp -------------------------------------------------------------------------------------------------------------
-    D("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", r"gate_inject \|\| s_pipe_inject == 0", rng=(7360, 7380), n=600,
+    D("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", r"gate_inject \|\| s_pipe_inject == 0", rng=True, n=600,
       why="ROGUESQ_FS_PIPE_INJECT synth FULL_SYNC scratch (off by default)"),
-    D("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", "alpha_full", rng=(7555, 7562), n=600, why="ROGUESQ_PRIM_ALPHA_FF (diag)"),
-    D("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", "ROGUESQ_PRIM_FF|prim_ff", rng=(7585, 7600), n=2500, why="ROGUESQ_PRIM_FF (diag)"),
-    A("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", (7785, 7795)),
+    D("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", "alpha_full", rng=True, n=600, why="ROGUESQ_PRIM_ALPHA_FF (diag)"),
+    D("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", "ROGUESQ_PRIM_FF|prim_ff", rng=True, n=2500, why="ROGUESQ_PRIM_FF (diag)"),
+    A("src/rsp/dpc_bridge.cpp", "rsp_dpc_submit_impl", ("line", r"\bbase = rdram \+ \(g_pak_last_tlut_addr")),
+    # s7653: G6c stand-ins opt-in levers (guest-thread scenegraph hook; matrix stack copy at sp+0x10 / control-arm zeroing)
+    D("src/main/rs64_standins.cpp", "rs64_sg_draw", r"s_pull > 0\.0f && z > s_pull", rng=True, n=400,
+      why="ROGUESQ_STANDINS_PULL depth-pull discriminator (off by default)"),
+    D("src/main/rs64_standins.cpp", "rs64_sg_draw", r"if \(s_ctl && s_sg_cur == 0", rng=True, n=300,
+      why="ROGUESQ_STANDINS_CTL real-object positive control (off by default)"),
     ("src/rsp/s7521_ucode_watch.cpp", "rs64_s7521_task", None, [("diag", "H-diag", "ROGUESQ_S7521_CTL flip/restore",
      [("file", "src/rsp/s7521_ucode_watch.cpp", r'getenv\("ROGUESQ_S7521_CTL"\)'), ("near", r"if \(c\)", 120)])]),
     ("src/rsp/s7521_ucode_watch.cpp", "rs64_s7521_imem", None, [("diag", "H-diag", "ROGUESQ_S7521_CTL imem flip",
