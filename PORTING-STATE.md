@@ -203822,3 +203822,6 @@ way (4876). Rules out H-slot-recycle, H-window, H-dlref (no PI ever touches byte
 only because nothing lives above 8 MB at dd1. TS-4 CLOSED, 0 fixes; G5b loses this lead. Not checked: L5 (same mechanism expected),
 TS-3 audio side at dd>1 (its addresses were < 8 MB in s7644).
 ORIGIN: not a mitigation (instrument key fix, default-off instrument).
+Discrimination (s7647): this selects H-alias8 and refutes H-real / H-slot-recycle (true-key overlap 0 while the same run's alias8
+counter = 4881 and the old-key arm = 4876). Next discriminator: class MK8 census of the 127 other `0x7FFFFF` keys in src (default-on
+vs diag, reachable >= 8 MB at dd>1) with a planted above-8 MB positive control for any behaviour site (scratch/agent/NEXT.md).
