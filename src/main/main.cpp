@@ -12581,8 +12581,31 @@ static void rs64_bind_selftest_step(long step) {
     }
     SDL_GameControllerUpdate();  // apply the virtual state now (the stable-snapshot guard covers a concurrent pump)
 }
+// s7619 G6b step 2: overrides from controls.json beside the executable (ROGUESQ_CONTROLS=<path> picks another file).
+// Missing file = built-in defaults; a file with any error is rejected whole (defaults kept) with one stderr line.
+// ROGUESQ_CONTROLS_DUMP=1 prints the active table as controls.json text to stderr (a starting point for editing).
+#include "rs64_bindings_json.h"
+static rs64_bind_table rs64_bind_load() {
+    std::string path;
+    if (const char* e = getenv("ROGUESQ_CONTROLS"); e && *e) path = e;
+    else { char* base = SDL_GetBasePath(); path = base ? std::string(base) + "controls.json" : "controls.json"; if (base) SDL_free(base); }
+    rs64_bind_table t = rs64_bind_defaults();
+    std::ifstream f(path, std::ios::binary);
+    if (!f) {
+        fprintf(stderr, "[controls] no %s: built-in defaults\n", path.c_str());
+    } else {
+        std::stringstream ss; ss << f.rdbuf();
+        std::string err;
+        if (rs64_bind_parse_json(ss.str(), &t, &err))
+            fprintf(stderr, "[controls] loaded %s: %zu button bindings\n", path.c_str(), t.buttons.size());
+        else
+            fprintf(stderr, "[controls] %s rejected (%s): built-in defaults\n", path.c_str(), err.c_str());
+    }
+    if (rs64_bind_flag("ROGUESQ_CONTROLS_DUMP")) fprintf(stderr, "[controls] active table:\n%s", rs64_bind_to_json(t).c_str());
+    return t;
+}
 static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
-    static const rs64_bind_table s_table = rs64_bind_defaults();
+    static const rs64_bind_table s_table = rs64_bind_load();
     static const bool s_selftest = rs64_bind_flag("ROGUESQ_BIND_SELFTEST");
     static const bool s_check = s_selftest || rs64_bind_flag("ROGUESQ_BIND_CHECK");
     rs64_input_snapshot s;

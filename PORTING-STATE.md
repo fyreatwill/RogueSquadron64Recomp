@@ -202923,3 +202923,25 @@ Closes on the owner feeling it on a PS4/PS5 pad. Next: G6b control rebinding (NE
   239, same run). The change is the table refactor itself (get_n64_input now maps via rs64_bind_eval); the [bind-*] lines are
   its proof harness. Next discriminator (step 2): with controls.json absent, the 233288-case sweep must stay 0 mismatches vs
   defaults, and a file remapping A -> pad:b must move the bit (positive control); a malformed file must fall back to defaults.
+
+## Session 7619 (2026-11-18) — G6b step 2: controls.json overrides for the binding table; missing and malformed files give exactly the defaults (offline 4.2M cases, same-run selftest 0 mismatches), a remap-A file moves A (offline + 395 runtime mismatches as positive control)
+
+What landed: src/main/rs64_bindings_json.h (parser + serializer over the s7618 table, nlohmann json from
+lib/rt64/src/contrib, SDL name functions for pad buttons / axes / scancodes). main.cpp rs64_bind_load(): reads
+controls.json beside the executable (SDL_GetBasePath, same convention as audio_device.txt) or ROGUESQ_CONTROLS=<path>;
+logs one `[controls]` line (no file / loaded N bindings / rejected (reason)); ROGUESQ_CONTROLS_DUMP=1 prints the active
+table as JSON. Semantics: a listed N64 button REPLACES its default list ([] unbinds), unlisted keep defaults; stick
+pad_x/pad_y/invert_y/up/down/left/right; any error rejects the whole file and keeps defaults. No default binding changed.
+
+Hypotheses: H-equal (no/invalid file -> byte-identical to s7618) vs H-drift. Selected H-equal, two lines:
+1. Offline tools/test_bindings.cpp (now links SDL2): defaults sweep 233288 cases 0 mismatches (mutant 37436);
+   "{}", version-only, empty sections, and the full defaults dump each 0 mismatches over the sweep; the dump round-trips
+   text-identical; 12 malformed/invalid files each rejected with a reason and 0 mismatches. Positive control: remap
+   {"A":["pad:b"]} -> 46453 sweep mismatches, pad A -> 0, pad B -> A|CD, key Z -> 0, pad X still B; a second file
+   (Z -> axis-:righty:1000 + Space, stick up -> Up, invert_y false) parses as written. TOTAL 4199184 cases, 0 failed checks.
+2. Runtime, same build, ROGUESQ_BIND_SELFTEST=1 (virtual pad + keyboard vs the verbatim old SDL code), 50 s per arm:
+   no file -> `[controls] no build/controls.json`, 2400 polls mismatches=0 (mutant 195); remap.json -> `loaded: 29 button
+   bindings`, mismatches=395 (positive control: the instrument sees the file); truncated bad.json -> `rejected (not valid
+   JSON` wording after a fix; run showed the old "not a JSON object" text), mismatches=0. Rules out H-drift.
+Docs: OWNER-OPT-INS row with the format. Next: G6b step 3 F6 ImGui Controls panel (bind/save/reset, writes via
+rs64_bind_to_json), then README Controls.
