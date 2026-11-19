@@ -207,8 +207,7 @@ When choosing the work unit, this order overrides Next-steps ordering:
    - G6 **Owner request 2026-11-18: three features borrowed from upstream, take NOW in this order, ahead of
      NEXT.md and any G5 item that is only waiting for the owner's look.** Upstream (MikeSemicolonD) main is
      fetched as `origin/main`; read it with `git show origin/main:<path>`, never merge or cherry-pick it (it
-     is HLE + toml hooks, we are LLE + fixup scripts; see the upstream comparison in PORTING-STATE s-entry
-     for 2026-11-18 if written, else this item). Every change keeps the owner's current experience as the
+     is HLE + toml hooks, we are LLE + fixup scripts; see docs/UPSTREAM-COMPARISON-2026-11.md). Every change keeps the owner's current experience as the
      default unless stated, and needs a same-run positive control like any other result.
      G6a **Rumble.** Ours is a stub: `static void set_rumble(int, bool) {}` (src/main/main.cpp ~13219), so
      the game's Rumble Pak motor pulses go nowhere. Port the HOST side of upstream src/input/rumble.cpp
