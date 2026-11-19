@@ -3032,7 +3032,7 @@ index 60b0fa4..91e819c 100644
  
          void reset();
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..f7e869e 100644
+index dccaa87..d1c80ed 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
 @@ -5,12 +5,559 @@
@@ -3595,7 +3595,42 @@ index dccaa87..f7e869e 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +616,25 @@ namespace RT64 {
+@@ -49,7 +596,34 @@ namespace RT64 {
+         }
+     }
+ 
++    // s7632 class HD: the s4281/s4282 list snapshot (below) copies min(list, 256 KB) of every >=64 KB RDP list so the 0x130393/w1033
++    // signature dump (rt64_rdp.cpp setColorImage) and ROGUESQ_S4271 can diff the list bytes. ROGUESQ_S7632_SNAP=0 skips the copy.
++    // ROGUESQ_S7632_STATS=1 times the copy and the whole call (steady_clock), one [s7632] line per 10 s; unset = no clock reads.
++    static const bool s_s7632Snap = [] { const char *e = std::getenv("ROGUESQ_S7632_SNAP"); return !(e && *e == '0'); }();
++    static const bool s_s7632Stats = [] { const char *e = std::getenv("ROGUESQ_S7632_STATS"); return e && *e && *e != '0'; }();
++    struct S7632Acc { uint64_t lists = 0, big = 0, snaps = 0, bytes = 0, cmds = 0; double callMs = 0, snapMs = 0, maxSnapMs = 0;
++                      std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now(); };
++    static S7632Acc s_s7632;
++    struct S7632Call {
++        bool on; std::chrono::steady_clock::time_point t;
++        explicit S7632Call(bool o) : on(o) { if (on) t = std::chrono::steady_clock::now(); }
++        ~S7632Call() {
++            if (!on) return;
++            const auto n = std::chrono::steady_clock::now();
++            s_s7632.lists++; s_s7632.callMs += std::chrono::duration<double, std::milli>(n - t).count();
++            const double el = std::chrono::duration<double>(n - s_s7632.t0).count();
++            if (el >= 10.0) {
++                std::fprintf(stderr, "[s7632] snap=%d secs=%.1f lists=%llu big=%llu snaps=%llu snapMB=%.1f cmds=%llu callMs/s=%.3f snapMs/s=%.3f maxSnapMs=%.3f\n",
++                    s_s7632Snap ? 1 : 0, el, (unsigned long long)s_s7632.lists, (unsigned long long)s_s7632.big, (unsigned long long)s_s7632.snaps,
++                    s_s7632.bytes / 1048576.0, (unsigned long long)s_s7632.cmds, s_s7632.callMs / el, s_s7632.snapMs / el, s_s7632.maxSnapMs);
++                s_s7632 = S7632Acc();
++            }
++        }
++    };
++
+     void Interpreter::processRDPLists(uint32_t dlStartAdddress, DisplayList *dlStart, DisplayList *dlEnd) {
++        S7632Call s7632Call(s_s7632Stats);
++        if (s_s7632Stats && dlEnd > dlStart) s_s7632.cmds += (uint64_t)(dlEnd - dlStart);
+         state->dlCpuProfiler.start();
+ 
+         // Update the state with the current display list address.
+@@ -69,6 +643,33 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -3613,15 +3648,23 @@ index dccaa87..f7e869e 100644
 +        }
 +
 +        if ((uintptr_t)dlEnd - (uintptr_t)dlStart >= 0x10000) {
-+            size_t n = std::min<size_t>((uintptr_t)dlEnd - (uintptr_t)dlStart, 0x40000);
-+            g_s4282_prev.swap(g_s4281_snap); g_s4282_prevbase = g_s4281_base;
-+            g_s4281_snap.assign((const uint8_t *)dlStart, (const uint8_t *)dlStart + n);
-+            g_s4281_base = (const uint8_t *)dlStart;
++            if (s_s7632Stats) s_s7632.big++;
++            if (s_s7632Snap) {
++                const auto st = s_s7632Stats ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point();
++                size_t n = std::min<size_t>((uintptr_t)dlEnd - (uintptr_t)dlStart, 0x40000);
++                g_s4282_prev.swap(g_s4281_snap); g_s4282_prevbase = g_s4281_base;
++                g_s4281_snap.assign((const uint8_t *)dlStart, (const uint8_t *)dlStart + n);
++                g_s4281_base = (const uint8_t *)dlStart;
++                if (s_s7632Stats) {
++                    const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - st).count();
++                    s_s7632.snaps++; s_s7632.bytes += n; s_s7632.snapMs += ms; if (ms > s_s7632.maxSnapMs) s_s7632.maxSnapMs = ms;
++                }
++            }
 +        }
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +655,47 @@ namespace RT64 {
+@@ -89,8 +690,47 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -3669,7 +3712,7 @@ index dccaa87..f7e869e 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +704,11 @@ namespace RT64 {
+@@ -99,6 +739,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -3681,7 +3724,7 @@ index dccaa87..f7e869e 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,9 +722,61 @@ namespace RT64 {
+@@ -112,9 +757,61 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -3744,7 +3787,7 @@ index dccaa87..f7e869e 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
                  cmdLength = 1;
-@@ -122,6 +784,45 @@ namespace RT64 {
+@@ -122,6 +819,45 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -3790,7 +3833,7 @@ index dccaa87..f7e869e 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +830,14 @@ namespace RT64 {
+@@ -129,6 +865,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -3805,7 +3848,7 @@ index dccaa87..f7e869e 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +845,219 @@ namespace RT64 {
+@@ -136,13 +880,219 @@ namespace RT64 {
                      break;
                  }
  
@@ -4027,7 +4070,7 @@ index dccaa87..f7e869e 100644
              }
  
              if (dl != nullptr) {
-@@ -153,6 +1068,79 @@ namespace RT64 {
+@@ -153,6 +1103,79 @@ namespace RT64 {
          state->dlCpuProfiler.end();
      }
  
@@ -4107,7 +4150,7 @@ index dccaa87..f7e869e 100644
      void Interpreter::processDisplayLists(uint32_t dlStartAdddress, DisplayList *dlStart) {
          assert(hleGBI != nullptr);
  
-@@ -169,8 +1157,11 @@ namespace RT64 {
+@@ -169,8 +1192,11 @@ namespace RT64 {
          DisplayList *dl = dlStart;
          uint8_t opCode;
          GBIFunction func;
@@ -4119,7 +4162,7 @@ index dccaa87..f7e869e 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  extendedFunction(state, &dl);
-@@ -190,6 +1181,7 @@ namespace RT64 {
+@@ -190,6 +1216,7 @@ namespace RT64 {
                  }
              }
  
@@ -7693,7 +7736,7 @@ index d1a9f4e..7fa7a5d 100644
          // with the GPU-side stage 2.5 counter, this shows how many texrects
          // enter the pipeline vs how many reach the for-loop.
 diff --git a/src/hle/rt64_rdp_tmem.cpp b/src/hle/rt64_rdp_tmem.cpp
-index 6051f4e..0449a60 100644
+index 6051f4e..99b121b 100644
 --- a/src/hle/rt64_rdp_tmem.cpp
 +++ b/src/hle/rt64_rdp_tmem.cpp
 @@ -4,8 +4,12 @@
@@ -7955,7 +7998,7 @@ index 6051f4e..0449a60 100644
          XXH3_64bits_update(&xxh3, &TMEM[byteOffset], byteCount);
          XXH3_64bits_update(&xxh3, &byteOffset, sizeof(byteOffset));
          XXH3_64bits_update(&xxh3, &byteCount, sizeof(byteCount));
-@@ -50,10 +286,47 @@ namespace RT64 {
+@@ -50,10 +286,50 @@ namespace RT64 {
      }
  
      uint64_t TextureManager::uploadTexture(State *state, const LoadTile &loadTile, TextureCache *textureCache, uint64_t creationFrame, uint16_t width, uint16_t height, uint32_t tlut) {
@@ -7967,7 +8010,10 @@ index 6051f4e..0449a60 100644
 +        // fields (e.g. lrs<=uls or lrt<=ult, a real empty-rect load) =>
 +        // legitimate degenerate LOADTILE; fields outside any real N64 tile
 +        // descriptor's range => corrupted state, another shared-race datum.
-+        if ((width == 0 || height == 0) && std::getenv("ROGUESQ_LOG_TMEM_ZERO")) {
++        // s7632 class HD: both env reads below were a getenv() (environ scan) per call; latched once like s6698.
++        static const bool s_tmemZeroLog = std::getenv("ROGUESQ_LOG_TMEM_ZERO") != nullptr;
++        static const bool s_upspanLog = std::getenv("ROGUESQ_LOG_UPSPAN") != nullptr;
++        if ((width == 0 || height == 0) && s_tmemZeroLog) {
 +            fprintf(stderr,
 +                "[tmem-zero-upload] w=%u h=%u fmt=%u siz=%u line=%u tmem=%u "
 +                "pal=%u cms=%u cmt=%u masks=%u maskt=%u shifts=%u shiftt=%u "
@@ -7991,7 +8037,7 @@ index 6051f4e..0449a60 100644
          if (hashSet.find(hash) == hashSet.end()) {
              hashSet.insert(hash);
 +            // PATCH (s6237): ROGUESQ_LOG_UPSPAN=1 logs the tile descriptor behind every new upload (first 400) to split game-span vs RT64-widened span.
-+            if (std::getenv("ROGUESQ_LOG_UPSPAN")) {
++            if (s_upspanLog) {
 +                static int s_n = 0;
 +                if (s_n++ < 400) {
 +                    fprintf(stderr, "[upspan] hash=0x%016llx w=%u h=%u fmt=%u siz=%u line=%u tmem=%u uls=%u ult=%u lrs=%u lrt=%u cms=%u cmt=%u masks=%u maskt=%u tlut=0x%X\n",
@@ -8004,7 +8050,7 @@ index 6051f4e..0449a60 100644
              textureCache->queueGPUUploadTMEM(hash, creationFrame, TMEM, RDP_TMEM_BYTES, width, height, tlut, loadTile, true);
          }
  
-@@ -85,7 +358,7 @@ namespace RT64 {
+@@ -85,7 +361,7 @@ namespace RT64 {
          }
  
          // Dump the RDRAM last loaded into the TMEM address pointed to by the tile. Required for generating hashes used by Rice.

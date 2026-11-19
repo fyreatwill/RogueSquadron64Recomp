@@ -203248,3 +203248,49 @@ HYPOTHESIS-ID: rt64-rdram-alias-lifetime
   into g_s4281_snap and swaps it into g_s4282_prev, and the s4271 ring is written per RDP command. They are only read on an
   error-signature dump. Not measured. Queued as the next unit (class DD: default-on diagnostic work in rt64 hot paths).
 - Rules out: stale RDRAM-derived pointers kept by rt64 across send_dl/processDisplayLists calls on the default path.
+
+## Session 7632 (2026-11-19) — Class HD closed: default-on diagnostic work in lib/rt64 per-list/per-command paths, 0 OPEN on two sources; the s4281 snapshot costs 0.82-1.03 ms/s (0.37-0.43% of processRDPLists) and stays; two per-call getenv latched
+HYPOTHESIS-ID: rt64-default-on-diagnostics
+- Renamed: NEXT called this "class DD", but s7447 already used DD (diag fprintf route). This class is **HD** (hot-path diagnostics).
+- Scope: the lib/rt64 files reached per RDP list or per RDP command on the default LLE path: hle/rt64_interpreter.cpp
+  (processRDPLists + helpers; processDisplayLists = HLE-only, entry gate from s7631), gbi/rt64_gbi_rdp.cpp, hle/rt64_rdp.cpp,
+  hle/rt64_rdp_tmem.cpp.
+- Sources: tools/s7632_dd_scan.py (regex) and tools/s7632_dd_ast.py (clang AST; it reuses the s7631 tree builder but takes a
+  node's file:line from its range start, or from the name location for a Decl, because the s7447 `#define fprintf` and
+  `__forceinline` macros moved every fprintf and every template into header files). Rows: print / getenv / store / copy / call.
+  Each row gets a gate from its conditions: ONCE (static-init lambda) / ENV (env token, polarity-aware: `!tok` or an
+  early-return `if (!tok) return` reversed) / BUDGET (n++ < K) / SIG (== literal >= 1000) / ALWAYS. Env tokens are
+  getenv-initialised statics, short getenv functions, and EXTERN_ENV (pcache/hgather globals set in dpc_bridge). Default-ON
+  toggles (`return !(e && *e=='0')`) do not count as gates.
+  tools/s7632_dd_census.py spreads gates through call sites to a fixpoint and joins the two sources on (file, kind, name) with
+  line +-3. Every default-on row is then classified by hand (CLASS / FNCLASS tables, each with a reason).
+- Result (scratch/s7632/census.txt): 377 joint rows (373 same gate; 4 disagreements, all in functions already gated by their
+  caller). Default-on joint rows: functional 17, scalar 27 (fixed-array rings, counters, last-value stores), once 11,
+  gated 6, budget 3, **copy 2 (g_s4281_snap assign + g_s4282_prev swap)**. One-source default-on rows: 12, all classified.
+  **OPEN 0.** Found by the class: **2 per-call getenv in TextureManager::uploadTexture**: ROGUESQ_LOG_UPSPAN on every new
+  texture upload, and ROGUESQ_LOG_TMEM_ZERO on w/h==0. Both are now static latches like s6698. The census lists them as once.
+- Controls (same census run): planted TU scratch/s7632/plant_hd.cpp. Its ring + snap rows come out ALWAYS in both sources;
+  its env-gated print/store and its SIG-only dump stay off the default path: PASS. Drop a different default-on row from each
+  source -> +1 scan-only and +1 ast-only: PASS.
+- Measurement (the only copy rows): ROGUESQ_S7632_STATS=1 times processRDPLists and the snapshot (steady_clock, one [s7632] line
+  per 10 s). ROGUESQ_S7632_SNAP=0 skips the snapshot. Both are in lib/rt64/src/hle/rt64_interpreter.cpp; default is unchanged.
+  One build, 4 arms (tools/g1e_owner_quiet_arms.zsh, dd4 owner recipe, HOLD 120, AC, host idle 2.8 h), scratch/s7632/run,
+  scorer scratch/s7632/score.py. Last 40 s of flight:
+  | arm | lists/s | >=64KB | snap MB/s | processRDPLists ms/s | snap ms/s | share |
+  | L1 snap on | 281 | 92.8% | 61.8 | 222.7 | 0.819 | 0.37% |
+  | L1 SNAP=0 | 321 | 95.7% | 0 | 232.3 | 0 | - |
+  | L4 snap on | 348 | 98.0% | 78.8 | 237.2 | 1.030 | 0.43% |
+  | L4 SNAP=0 | 348 | 97.9% | 0 | 225.0 | 0 | - |
+  All 4 arms: alive, 0 crash lines, vi_stalls30s=0, max gap <=149 ms, level_ok=1. Positive control: the off arms still count
+  the >=64 KB lists (big%) but take 0 snapshots. The cross-run callMs difference (+-5%) is noise next to the 0.4% measured in
+  the same run. Max single snapshot 0.033 ms in flight (3 us typical for 230 KB).
+- Verdict: nearly every RDP list is >=64 KB at dd4 (about 5 per frame), so the snapshot runs about 300 times/s, but it costs
+  about 0.1% of a core. **No meaningful saving -> kept default ON.** ROGUESQ_S7632_SNAP=0 stays available. The other
+  default-on rows are O(1) scalar stores. Class HD CLOSED.
+- Side datum (single-source, this run): processRDPLists alone uses 222-237 ms per second of flight at dd4 (about 23% of one
+  core) and interprets about 69 MB/s of RDP commands.
+- Smoke after the getenv latch (same binary as committed): L1 60 s hold alive, 0 crash, vi_stalls30s=0. With
+  ROGUESQ_LOG_UPSPAN=1 the latched flag still fires (403 matching lines: positive control).
+- lib/rt64 edits exported (submodule-patches/rt64.patch). Tools take `--hot a,b` to retarget (dpc_bridge runs clean: 874/1554 raw rows).
+- Rules out: default-on diagnostic copying, allocation or logging in the rt64 per-command path as a frame-time cost.
+- Next: class HB (the same question for src/rsp/dpc_bridge.cpp + rt64_render_context.cpp send_dl).

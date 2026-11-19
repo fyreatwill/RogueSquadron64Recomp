@@ -1,23 +1,26 @@
-# NEXT (s7632)
-HYPOTHESIS-ID: rt64-default-on-diagnostics
+# NEXT (s7633)
+HYPOTHESIS-ID: bridge-default-on-diagnostics
 
 G6a/G6b/G6c still wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports on any of them, take that first.
-Otherwise this is CURRENT-TRUTH item 22.
+Otherwise this is CURRENT-TRUTH item 23.
 
-Class DD: diagnostic work that runs by default in lib/rt64 per-list / per-command hot paths. s7631 found the first rows.
-In Interpreter::processRDPLists (lib/rt64/src/hle/rt64_interpreter.cpp ~630-640, ~786-790), every list >= 64 KB copies up
-to 256 KB into g_s4281_snap and swaps it into g_s4282_prev, and every RDP command writes a g_s4271_ring entry. They are only
-read by s4271DumpRing / s4282Probe, on the 0x130393/w1033 colour-image signature (rt64_rdp.cpp:514) or under ROGUESQ_S4271.
-Enumerate the WHOLE class in one pass. Regex source: in lib/rt64/src (minus contrib/imgui/tools), every s<NNNN>/g_s<NNNN>
-store, ring/vector write, fprintf or getenv in a function reached per list or per command (processRDPLists,
-processDisplayLists, the rdpGBI/extended handlers, RDP::setColorImage/loadTile/..., TMEM loads). Second source: clang AST
-(reuse tools/s7631_rp_ast.py's tree walker: calls / stores inside those functions that are not under an if whose condition
-reads a getenv-initialised static or a ROGUESQ flag). Rows: gated (env / static flag), rare-signature (bad-value trigger),
-ALWAYS (unconditional work). Controls: a planted unconditional ring write -> ALWAYS; a planted getenv-gated one -> gated;
-drop one row from each source -> disagreement.
-Then measure only the ALWAYS rows that copy or allocate. One build, two arms in the same session: default vs
-ROGUESQ_S7632_DIAG=0 (gate them off). Read host-ms per processRDPLists from the existing s4267 timer (T(5)) or the G1b
-instrument, on L1 and L4 dd4 owner recipe, 120 s holds. Outcomes: a measurable saving with byte-identical RDP output (s6785
-RDP-hash compare) -> land gate default OFF, =1 restores. No saving -> class closed as harmless, no change.
+Class HB: default-on diagnostic work in the HOST bridge per-task / per-submit paths (src/rsp/dpc_bridge.cpp, 8608 lines,
+170 getenv sites; src/main/rt64_render_context.cpp send_dl). s7632 closed the same question for lib/rt64 (class HD): the only
+default-on copy was the s4281 list snapshot, measured at 0.82 ms/s (0.37% of processRDPLists) and kept. s7068 already gated
+three per-command calls in the bridge; nobody has enumerated the whole bridge.
+Tools exist: `python3 tools/s7632_dd_scan.py --hot src/rsp/dpc_bridge.cpp,src/main/rt64_render_context.cpp --out S.json`,
+`python3 tools/s7632_dd_ast.py --hot <same> --out A.json` (both run clean on dpc_bridge: 874 / 1554 raw rows), then
+`python3 tools/s7632_dd_census.py S.json A.json --plant-scan .. --plant-ast .. --drop-control` (plant: scratch/s7632/plant_hd.cpp).
+Expect to extend CLASS / FNCLASS in the census for the bridge's names (functional rows: dpc_record_submit_impl, spike_scan,
+CULL_SPIKE, G1d rect/pause/title glue, s7018). Rows: ONCE / ENV / BUDGET / SIG / ALWAYS -> classify every ALWAYS row
+(functional / scalar / copy / UNCACHED getenv). Controls as s7632: planted ring + snap -> ALWAYS, planted env print -> gated,
+drop-one-row -> disagreement.
+Then measure ONLY rows that copy, allocate, hash or call getenv per task: one build with a ROGUESQ_S7633_STATS timer
+(steady_clock, one line per 10 s, like the [s7632] line in lib/rt64/src/hle/rt64_interpreter.cpp) around each candidate, and a
+=0 gate per candidate, same session arms via `env R=.. HOLD=120 ARMS="4:hL1:..+ROGUESQ_FORCE_SAVE_MISSION=1 4:hL4:.." zsh
+tools/g1e_owner_quiet_arms.zsh` (s7632 recipe, needs host idle >= 120 s and AC). Decision rule (s7632): gate default OFF only
+if the same-run timer shows >= 1% of the measured call cost or >= 2 ms per second (0.2% of a core); otherwise close as
+harmless, no change (the s7632 snapshot, 0.82 ms/s = 0.37%, was kept by this rule).
 Witness hygiene: start the game normally and kill ONLY that pid with SIGKILL. Never launch under lldb. Never touch
-build/saves. Never clear ROGUESQ_NO_SAVE_WRITE. One game at a time.
+build/saves. Never clear ROGUESQ_NO_SAVE_WRITE. One game at a time. Do not rebuild while a soak arm is running (each arm
+re-launches the binary).
