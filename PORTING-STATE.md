@@ -203367,4 +203367,5 @@ per submit (0 mismatches required, injected-edit control must count exactly its 
 - Discrimination: s7634's H-walk prediction (~6 ms/s) is refuted in magnitude (~8x over): a standalone decode-only pass does
   not measure what fusing removes (fused walk overhead hides under body loads). H-body (cost lives in the bodies) holds.
   Two lines: L1 and L12 tog A/B agree. Rules out further walker fusion (pillar) as worthwhile.
-- Next: item 25, spike body integer fast path (kill if <2 ms/s).
+- This refutes H-walk (as a ~6 ms/s saving) and selects H-body; it closes item 24 (fusion landed default-on, equivalence proven).
+- Next discriminator: item 25, spike body integer fast path, FASTSPIKE=tog A/B at L1/L12 (H-fp >=2 ms/s saved vs H-mem <1 ms/s).
