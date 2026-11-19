@@ -203219,3 +203219,32 @@ HYPOTHESIS-ID: g6-upstream-features
 - docs/OWNER-OPT-INS.md: new row ROGUESQ_STANDINS=1 (dd>1 only), asks the owner to judge the look and the default. Default off.
 - Rules out: stand-in crashes/stalls at dd4 within 300 s on any level. Not covered: dd2/dd3/dd8 holds, 21:9, hangar route,
   cutscene-heavy stretches beyond 300 s. G6 now waits only on the owner (G6a feel, G6b hands, G6c look). Next: Class RP.
+
+## Session 7631 (2026-11-19) — Class RP closed: RDRAM-derived pointers kept in lib/rt64 across calls, 0 OPEN on two sources
+HYPOTHESIS-ID: rt64-rdram-alias-lifetime
+- Scope: lib/rt64/src minus contrib/imgui/tools (218 files regex; 86 TUs AST from build/compile_commands.json, 0 failed).
+  Taint = State::RDRAM / Core::RDRAM / `memory` param of processDisplayLists / fromRDRAM() / getRDRAM() / any DisplayList*
+  value / locals initialised from these. Rows = a tainted POINTER value stored where it can outlive the call (member, static /
+  file-scope, `*p =` caller slot, array, push_back-style container insert).
+- Sources: tools/s7631_rp_scan.py (regex, per-function statement scan + pointer-typed-name filter) and tools/s7631_rp_ast.py
+  (clang -ast-dump; taint by decl address and by DisplayList* node type; pointer type required on the stored expression).
+  Join + classes + controls: tools/s7631_rp_census.py (output scratch/s7631/census.txt).
+- Result: 36 rows found by both, 0 regex-only, 3 ast-only, each explained (regex has no types): `*dl = popReturnAddress()`
+  (return type), Core implicit copy ctor (no source text), hleGBI (RDRAM is a call argument; GBI* is host-owned).
+  Classes: fresh 26 (`*dl` interpreter cursor, g_s4271_dl set/cleared around setColorImage), base 2 (the RDRAM base itself),
+  offset 6 (g_s4271_ring pre/post, g_s4271_start/end, g_s4281_base, g_s4282_prevbase via the propagation pass: only
+  subtracted from rdram or compared; the single deref `last - 0x100` in s4271DumpRing reads the newest ring entry, which the
+  current processRDPLists wrote), copy 1 (g_s4281_snap byte vector), host 1, gated 4 (State::returnAddressStack push and
+  the HLE processDisplayLists ring writes). **OPEN 0 -> RP CLOSED, no fix.**
+- Gated = HLE-only, two lines: (1) static, send_dl defaults ROGUESQ_LLE_FORCE=UNGATED=SOLO=1 return before
+  processDisplayLists(isHLE=true); (2) runtime, s7628 L10/L4 300 s hold logs have 566/564 `[lle send_dl #` lines and 0
+  `[hle send_dl` lines, though that HLE line prints unconditionally for the first 8 tasks. The `[lle` line from the same
+  function is the positive control.
+- Controls (same census run): planted static DisplayList* set in one fn / read in another and planted member <- &s->RDRAM[x]
+  (scratch/s7631/plant_rp.cpp) -> both sources, both OPEN, PASS; planted fresh local gives no row, PASS; drop one row from each
+  source -> 1 regex-only + 1 extra ast-only disagreement, PASS.
+- No runtime witness needed: no default-on cross-call row derefs a kept pointer.
+- Side datum: the s4281/s4282 diagnostics are default-on in the processRDPLists hot path. Each list >= 64 KB copies up to 256 KB
+  into g_s4281_snap and swaps it into g_s4282_prev, and the s4271 ring is written per RDP command. They are only read on an
+  error-signature dump. Not measured. Queued as the next unit (class DD: default-on diagnostic work in rt64 hot paths).
+- Rules out: stale RDRAM-derived pointers kept by rt64 across send_dl/processDisplayLists calls on the default path.

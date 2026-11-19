@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7629 (2026-11-18).
+Compact operational handoff, as of Session 7631 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -25,7 +25,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   the sdl2-compat virtual pad although its callback runs; the log now prints has/err for the owner's real pad. No SDL_Haptic
   fallback (our input only opens SDL_GameController). Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
-  PROJECT-OVERVIEW "(s7622 maintenance)"). H-clean, no fix: RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
+  PROJECT-OVERVIEW "(s7622 maintenance)"). H-clean, no fix: RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
   C-applicable check run; RS64_DIV32). Bounded/gated/masked: GR s7599, GX s7600, BS s7601 (5 diag composers fixed), AZ s7598
   (ROGUESQ_S7598_MASK=0 = old). Fixes landed, default on, =0 restores old: TK ROGUESQ_S7608_TK, UW s7607 (one fix), FR s7605 /
@@ -324,8 +324,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     closes on the owner's look; default stays off.** Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
-21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): NEXT (s7631)**, G6a/b/c all wait only on the owner. Scope
-    text = scratch/agent/NEXT.md (copied from the s7616 NEXT, commit 0843d0085).
+21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): CLOSED s7631, H-clean, no fix.** Regex
+    (tools/s7631_rp_scan.py) + clang AST (tools/s7631_rp_ast.py) joined by tools/s7631_rp_census.py: 36 rows both, 3 ast-only
+    explained, 0 OPEN (fresh 26, offset 6, gated 4 HLE-only, base 2, copy 1, host 1); planted OPEN / fresh / drop-row controls
+    PASS. HLE-only = static defaults + 0 `[hle send_dl` vs 566 `[lle send_dl` in a s7628 300 s hold.
+22. **Class DD (default-on diagnostic work in lib/rt64 hot paths): NEXT (s7632).** Scope in scratch/agent/NEXT.md. First
+    known rows: s4281/s4282 snapshot copies (<=256 KB per >=64 KB list) and the per-command s4271 ring in processRDPLists.
 
 ## Evidence index
 
