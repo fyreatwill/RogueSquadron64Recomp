@@ -203039,4 +203039,8 @@ run, not timing; first attempt refused by the clock gate):
 - Instrument defect fixed after the run: the per-second windows were not aligned to whole seconds, so each tog window mixed on and
   off frames (the ~200 "off" submits). Windows now start on floor(now) and tog=1 labels an on window. Rebuilt; not re-run.
 Rules out: data-address drift (N=0 outcome), grid/condition gate mismatch (submitted=0 outcome), region overlap (spill full lines 0).
+Discrimination: this run selects H-portable-live (our build's DAT/meshdef/grid addresses and gates drive the port unchanged) and
+refutes H-addr-drift (would give N=0) and H-gate-differ (would give N>0, submitted 0); the code read + clean frames refute H-rsp-reads-region.
+Next discriminator (step 3, NEXT.md): same-run whole-second tog shots at dd4 on L1 + L4; far-object pixels only in on seconds selects
+H-visible, no on/off difference selects H-culled, a doubled object at a logged spawn selects H-double, real objects missing in on seconds selects H-budget.
 Open: bucket capacity (no fill counter yet), double draw at the spawn moment, objects actually visible earlier (step 3).
