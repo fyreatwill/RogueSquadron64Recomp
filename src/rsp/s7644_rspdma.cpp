@@ -35,7 +35,11 @@ std::atomic<uint64_t> g_cnt[3][3][2];
 std::atomic<uint64_t> g_torn{0};      // state changed between pre and post (copy window crossed the DMA)
 std::atomic<uint64_t> g_lines{0};
 std::atomic<uint64_t> g_img_same{0}, g_img_chg{0};
-inline uint8_t rb(const uint8_t* rdram, uint32_t a) { return rdram[(a & 0x007FFFFFu) ^ 3]; }
+// s7647: physical key mask. The s7645/s7646 key was & 0x7FFFFF (8 MB), but the RSP DMA reads with a 25-bit mask (rsp.hpp
+// rs64_s7327_mask 0x1FFFFF8) and the dd>1 bundle (OSMEM 12, DLPOOLX, spill arena) puts gfx data above 8 MB, so a read at
+// 0x9950A0 keyed onto an audio PI at 0x195190. Default now 0x1FFFFFF; ROGUESQ_S7647_MASK8=1 = old 8 MB key.
+inline uint32_t pm() { static const uint32_t m = [] { const char* e = std::getenv("ROGUESQ_S7647_MASK8"); return (e && e[0] == '1') ? 0x7FFFFFu : 0x1FFFFFFu; }(); return m; }
+inline uint8_t rb(const uint8_t* rdram, uint32_t a) { return rdram[(a & pm()) ^ 3]; }
 struct Snap { bool any; uint32_t lo[3], hi[3]; uint32_t st; uint8_t buf[3][0x1000]; };
 thread_local Snap t_snap;
 const char* kReg[3] = {"ud", "dp", "ctl"};
@@ -162,6 +166,7 @@ enum { K_RUN_CUR, K_RUN_PREV, K_IDLE_PREV, K_CTL_PI, K_N };
 const char* kK[K_N] = {"pi.run.cur", "pi.run.prev", "pi.idle.prev", "ctl.pi"};
 uint64_t g_gk[K_N][2], g_gk_bytes[K_N][2];
 uint64_t g_grd_after = 0, g_grd_after_bytes = 0, g_gctl_rd = 0;
+uint64_t g_hi_rd = 0, g_hi_rd_b = 0, g_alias8 = 0, g_alias8_b = 0;  // s7647: reads above 8 MB; reads that overlap a PI only under the old 8 MB key
 uint32_t g_glines = 0;
 pthread_t g_gtid; uint32_t g_gdl = 0; uint64_t g_gother = 0, g_gother_ovl = 0;
 std::map<uint64_t, uint64_t> g_ghist;  // key (pi dram >> 12) << 32 | (rom_off >> 16) | mem<<24 -> rd_after_pi bytes
@@ -177,6 +182,7 @@ void gsum(const char* why) {  // g_gmu held
                  why, rs64_phase_ord(), (unsigned long long)g_gtasks, (unsigned long long)g_grd_n, (unsigned long long)g_grd_bytes,
                  (unsigned long long)g_gpi_n, (unsigned long long)g_gpi_run_n, (unsigned long long)g_gcap, (unsigned long long)g_grd_after,
                  (unsigned long long)g_grd_after_bytes, (unsigned long long)g_gctl_rd);
+    std::fprintf(stderr, " hi_reads=%llu/%lluB alias8=%llu/%lluB", (unsigned long long)g_hi_rd, (unsigned long long)g_hi_rd_b, (unsigned long long)g_alias8, (unsigned long long)g_alias8_b);
     for (int k = 0; k < K_N; k++) for (int c = 0; c < 2; c++)
         if (g_gk[k][c]) std::fprintf(stderr, " %s.%s=%llu/%lluB", kK[k], c ? "chg" : "same", (unsigned long long)g_gk[k][c], (unsigned long long)g_gk_bytes[k][c]);
     std::fprintf(stderr, " ranges_prev=%zu other_thread_reads=%llu other_ovl=%llu stale=%llu/%lluB stale_tasks=%llu stale_refetch=%llu/%lluB ctl_refetch=%llu\n", g_gprev.size(), (unsigned long long)g_gother, (unsigned long long)g_gother_ovl,
@@ -207,7 +213,7 @@ extern "C" void rs64_s7645_gfx_task(int edge, uint32_t dl) {
     if (!g_gon) return;
     std::lock_guard<std::mutex> lk(g_gmu);
     if (edge == 0) {
-        g_gtid = pthread_self(); g_gdl = dl & 0x7FFFFFu;
+        g_gtid = pthread_self(); g_gdl = dl & pm();
         g_gtasks++; g_grun = true; g_gcur.clear(); g_gpi.clear(); g_gstale.clear();
         if (g_gtasks == 1 || (g_gtasks % 1800u) == 0) gsum("tasks");
     } else {
@@ -219,7 +225,7 @@ extern "C" void rs64_s7645_gfx_task(int edge, uint32_t dl) {
 // Every RSP DMA RDRAM->DMEM in the gfx bank (rides rs64_s7094_dma_shape, armed by ROGUESQ_S7644_RSPDMA&2).
 extern "C" void rs64_s7645_gfx_read(uint32_t mem, uint32_t dram, uint32_t raw_len) {
     if (!g_gon) return;
-    const uint32_t lo = dram & 0x7FFFFFu, n = raw_len >= 0xFFFu ? 0x1000u : raw_len + 1u, hi = lo + n;
+    const uint32_t lo = dram & pm(), n = raw_len >= 0xFFFu ? 0x1000u : raw_len + 1u, hi = lo + n;
     std::lock_guard<std::mutex> lk(g_gmu);
     if (!g_grun) return;
     if (!pthread_equal(pthread_self(), g_gtid)) {  // not the gfx runner thread: count, do not attribute to the task
@@ -228,6 +234,12 @@ extern "C" void rs64_s7645_gfx_read(uint32_t mem, uint32_t dram, uint32_t raw_le
         return;
     }
     g_grd_n++; g_grd_bytes += n;
+    if (lo >= 0x800000u) { g_hi_rd++; g_hi_rd_b += n; }
+    {   // s7647 alias control: overlap under the old 8 MB key that is NOT a true physical overlap
+        const uint32_t l8 = lo & 0x7FFFFFu, h8 = l8 + n;
+        for (const Pr& p : g_gpi) { if (p.ctl) continue; const uint32_t pl = p.lo & 0x7FFFFFu, ph = pl + (p.hi - p.lo);
+            if (l8 < ph && pl < h8 && !(lo < p.hi && p.lo < hi)) { const uint32_t a = l8 > pl ? l8 : pl, b = h8 < ph ? h8 : ph; g_alias8++; g_alias8_b += b - a;
+                if (g_alias8 <= 6) std::fprintf(stderr, "[s7647-alias] task=%llu read=0x%07X+0x%X pi=0x%07X+0x%X rom_off=0x%08X mem=0x%03X\n", (unsigned long long)g_gtasks, lo, n, p.lo, p.hi - p.lo, p.rom, mem & 0x1FFF); } } }
     if (g_ctl && g_gctl_rd_armed && !g_gctl_rd_done) { g_gctl_rd_done = true; g_gpi.push_back({lo, hi, 0xFFFFFFFFu, 1, 0}); }
     // s7646 refetch control: the first read after the first stale record is also recorded as a synthetic stale span over its
     // own range, then this same read is tested against it below (must count ctl_refetch=1 through the refetch path).
@@ -247,7 +259,7 @@ extern "C" void rs64_s7645_gfx_read(uint32_t mem, uint32_t dram, uint32_t raw_le
 static void gfx_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) {
     t_g.any = false;
     if (!g_gon) return;
-    const uint32_t d = dram & 0x7FFFFFu, e = d + size;
+    const uint32_t d = dram & pm(), e = d + size;
     std::lock_guard<std::mutex> lk(g_gmu);
     if (g_gtasks == 0) return;
     g_gpi_n++;
@@ -269,7 +281,7 @@ static void gfx_pi_pre(const uint8_t* rdram, uint32_t dram, uint32_t size) {
 
 static void gfx_pi_post(const uint8_t* rdram, uint32_t dram, uint32_t size, uint32_t rom_off) {
     if (!g_gon) return;
-    const uint32_t d = dram & 0x7FFFFFu;
+    const uint32_t d = dram & pm();
     std::lock_guard<std::mutex> lk(g_gmu);
     const uint32_t ra = t_src_set ? t_src_ra : 0u, thr = t_src_set ? t_src_tid : 0u; t_src_set = false;
     const uint32_t tid = (thr >= 0x80000000u && thr + 0x18u <= 0x80800000u) ? (uint32_t)*(const int32_t*)(rdram + ((thr + 0x14u) & 0x7FFFFCu)) : 0xFFFFFFFFu;

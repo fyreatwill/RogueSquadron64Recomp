@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7646 (2026-11-19).
+Compact operational handoff, as of Session 7647 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,8 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7646: TS-4 PI-vs-gfx DL overlap is dd>1-only** (dd1 0 / dd4 4912 per 120 s, controls fired): streamed-chunk slots
-  are refilled while the display list still uses them at dd>1. New G5b lead H-slot-recycle (item 32).
+- **NEW s7647: TS-4 CLOSED as an instrument artefact (H-alias8); H-slot-recycle withdrawn.** The s7645/s7646 key was `& 0x7FFFFF`
+  but the RSP DMA mask is 25-bit (0x1FFFFF8) and the dd>1 bundle puts TriGen chunks above 8 MB (0x9950A0 aliased the MusyX stream
+  buffer 0x195190). True-key L4 dd4: rd_after_pi 0, stale 0; same run alias8 4881 (= s7646's 4912); old-key arm 4876 (item 32).
 - **NEW s7620: G6b F6 Controls panel LANDED (owner to try).** RT64's F1 inspector has no Metal backend, so the panel has
   its own ImGui context drawn through RT64's public post-VI hook (RT64::SetRenderHooks) with imgui_impl_metal; closed = hook
   returns, nothing encoded. Same run (PANEL_TEST): defaults 0 mismatches, scripted bind A=pad:b 112 (control), capture took
@@ -127,6 +128,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7645/s7646 "gfx tasks read display-list bytes that PI DMAs refill mid-task at dd>1 (L4 4912/120 s); H-slot-recycle" (superseded
+  s7647).** Believable: controls fired, dd1 arm read 0, and the issuer/ROM offsets were coherent. But both sides were keyed `& 0x7FFFFF`
+  while the RSP addresses 32 MB and dd>1 data lives above 8 MB: true-key overlap 0, alias-only overlap 4881 in the same run.
 - **s7552 "pre-mission out-of-rect colour change is real content (a darkening fade)" (superseded s7553).** Believable: samples
   0x294B->0x2109 failed RT64's requant test F(pre,d). But F only models upward dither from pre; the source is the retained float.
   s7553 shadow: pre == RT64's own last writeback for 100% of those px, post within ±1, dark/bright balanced, outside every draw.
@@ -412,26 +416,16 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     state copy 0, torn 0, command-list (dp) overlaps 0; every image change is either one of those DMAs or a CPU write ~8 tasks
     later with no PI DMA. Hardware rspboot copies the same declared 0x800 at task start, so the tail bytes are retail-identical.
 
-32. **Class TS-4 (LLE gfx task vs guest PI DMA on RDRAM the task DMA-reads): OPEN s7645, H-clean REFUTED, H-live vs H-retail
-    open.** Instrument: `ROGUESQ_S7644_RSPDMA=2` (bit mask; 1 = audio TS-3) in src/rsp/s7644_rspdma.cpp, task edges RAII in
-    main.cpp factor5_gfx_runner, reads ride rs64_s7094_dma_shape (gfx bank, non-IMEM). `_CTL=1`: ctl.pi + ctl.rd lines (fired
-    1 + 2 per arm). L1/L4 dd2 FPS60 16:9 120 s (scratch/s7645/run, run2): ~95% of PI DMAs land while a gfx task runs (L4
-    11031/11734). Gfx tasks fetch DISPLAY LIST bytes (DMEM 0x170 DL buffer, also 0x280/0xB70) that a PI DMA wrote during the
-    same task: L4 4494 reads/593 KB, L1 2411/313 KB; reverse order (task read, then PI changed it = task consumed the old bytes)
-    L4 71/13 KB, L1 3. All on the gfx runner thread (other_thread_reads=0). Sources: 256-byte sequential ROM chunks from level
-    data (ROM 0x35xxxx-0x4Axxxx) into pages 0x195000-0x1CB000. 0 overlaps before phase 5. Both orders exist, so what the RSP
-    draws depends on host timing.
-    **s7646 dd1 vs dd4 arm table (scratch/s7646/run, L4+L5 FPS60 16:9 120 s, all 4 alive, vi_stalls30s=0): the overlap is
-    dd>1-ONLY.** dd1: rd.after.pi 0 (L4) / 0 (L5), pi.run.cur.chg 0/0, pi.run.prev.chg 0/0, stale 0/0, while ~11k PI DMAs per arm
-    still land during gfx tasks; controls ctl.pi and ctl_rd fired in every arm (ctl_rd 2/2/4/2). dd4: rd.after.pi 4912/649 KB (L4)
-    and 2267/290 KB (L5), pi.run.prev.chg 1474/1218, stale (task read, then PI changed it) 135/34, of which refetched later in
-    the same task 51/34 (= the task consumed BOTH old and new bytes); refetch control ctl_refetch=1 in both dd4 arms. Issuer:
-    guest thread id 1 for ~99% (tid 2 = 0 overlaps); the ra field read 0 on every DMA (ctx->r31 at osPiStartDma_recomp is 0
-    here, field unusable). Example: DL 0x1B04D8 reads 0x110 B at 0x1950A0 while a 256-B ROM chunk (0x4AED20) lands at 0x195190.
-    So at dd>1 the game refills streamed-data slots (pages 0x153000, 0x195000-0x1CB000) that the CURRENT or previous display list
-    still references; at dd1 it never does. H-retail does not apply (dd4 is ours); host timing only decides which bytes win.
-    New lead for G5b, **H-slot-recycle**: the level-data chunk cache (256-B ROM chunks, thread 1) has fewer slots than the dd>1
-    cell window needs, so slots are evicted while referenced. Single-instrument (one hook family, two levels).
+32. **Class TS-4 (LLE gfx task vs guest PI DMA on RDRAM the task DMA-reads): CLOSED s7647, H-alias8 (instrument artefact), 0 fixes.**
+    s7645/s7646 keyed both sides `& 0x7FFFFF`; the RSP reads with rs64_s7327_mask 0x1FFFFF8, and at dd>1 (OSMEM 12 heap / DLPOOLX /
+    spill) gfx data lives above 8 MB. The 0x110-B reads at DMEM 0x170 are the ucode's TriGen chunk fetch (L_11B0, chunk word 0 =
+    next, 0x108 stride) at 0x9950A0+, which aliased the MusyX 256-B sample-stream PIs (musyxSynthFrame -> submitDmaRequestBatch ->
+    piDmaWorker, buffer 0x80195190+, 0x600 per voice). s7647 (src/rsp/s7644_rspdma.cpp pm(): key 0x1FFFFFF, `ROGUESQ_S7647_MASK8=1` =
+    old key; new same-run counters hi_reads + alias8): L4 dd4 FPS60 16:9 120 s, true key rd_after_pi 0/0 B, stale 0, refetch 0,
+    ctl_rd 5, hi_reads 11.7M; alias8 4881/647 KB in the SAME run; old-key arm m4 rd_after_pi 4876, stale 117, ctl_refetch 1. Both
+    alive, 0 crash, vi_stalls30s 0. The dd1 zero of s7646 was real only because dd1 has nothing above 8 MB. scratch/s7647/run.
+    Caveat: 127 other `0x7FFFFF` keys in src (main.cpp, dpc_bridge.cpp, rt64_render_context.cpp) may alias the same way at dd>1
+    (NEXT: class MK8 audit).
 
 ## Evidence index
 

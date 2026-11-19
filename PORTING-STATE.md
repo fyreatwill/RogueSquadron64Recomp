@@ -203787,3 +203787,38 @@ and H-retail (dd4 has no retail). New hypothesis H-slot-recycle: the level-data 
 retail cell window; the dd>1 window references more chunks than it holds, so slots are evicted and refilled while a display
 list still uses them -> wrong geometry for a frame = G5b candidate. Single-instrument (one hook family), two levels.
 ORIGIN: not a mitigation; no behaviour change (instrument default off).
+
+## Session 7647 (2026-11-19) — class TS-4 CLOSED: the dd>1-only gfx/PI overlap is an 8 MB key alias (true-key 0, alias8 4881 same run); H-slot-recycle withdrawn
+
+Work unit (NEXT s7647): find the "level-data chunk cache" behind H-slot-recycle. Offline first:
+- The 256-B PIs are NOT level data: osPiStartDma sites are submitDmaSlot / waitDmaSlotComplete / pollDmaSlotStep / piDmaWorker;
+  piDmaWorker (guest thread 1) drains the 20-B-entry ring at 0x801112B0 (head 0x801126B0, tail 0x801126B4) that only
+  submitDmaRequestBatch fills, whose caller is musyxSynthFrame (s101) = MusyX sample streaming into 0x80195190+ (0x600 per voice,
+  the s85 buffer, present at dd1 too).
+- The gfx reads at DMEM 0x170 are the F5 ucode TriGen chunk fetch (factor5_ucode_recompiled.c L_11B0: src = DMEM[0x30+r18],
+  0x110 B; L_11E4 next = chunk word 0), stride 0x108 = DL chunks. The game's fixed pool is [0x720000, ~0x792780) (s7495) and our
+  DLPOOLX arena is 0x80C00000+, so no chunk belongs at 0x1950A0.
+- The instrument keyed both sides `& 0x7FFFFF` (src/rsp/s7644_rspdma.cpp), but the RSP DMA mask is 25-bit (rsp.hpp
+  rs64_s7327_mask 0x1FFFFF8) and the dd>1 bundle (OSMEM 12 etc.) places data above 8 MB. Hypothesis H-alias8: 0x9950A0 keys onto
+  0x195190. Competitor: H-real (true physical overlap exists).
+
+Change: pm() key mask in s7644_rspdma.cpp, default 0x1FFFFFF (`ROGUESQ_S7647_MASK8=1` = old 8 MB key); new counters hi_reads
+(reads >= 8 MB) and alias8 (reads overlapping a PI under the 8 MB key but not physically), `[s7647-alias]` sample lines.
+
+Run: `env R=$PWD/scratch/s7647/run HOLD=120 ALLOW_SLOW=1 ARMS="4:c4:ROGUESQ_FORCE_SAVE_MISSION=4+E 4:m4:...+E+ROGUESQ_S7647_MASK8=1"`
+(E = S7644_RSPDMA=2 + _CTL=1), tools/g1e_owner_quiet_arms.zsh, L4 dd4 FPS60 16:9. Both alive, crashlines 0, vi_stalls30s 0, max_gap 147/148 ms.
+
+| arm | key | gtasks | PI during run | rd_after_pi | stale | refetch | ctl_rd | ctl_refetch | hi_reads | alias8 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| c4 | 25-bit | 5400 | 11097 | 0 / 0 B | 0 | 0 | 5 | 0 (no stale to arm) | 11.68M / 3.05 GB | 4881 / 647 KB |
+| m4 | 8 MB (old) | 5400 | 11111 | 4876 / 646 KB | 117 / 35 tasks | 36 | 2 | 1 | 0 (masked) | 0 |
+
+Sample: `[s7647-alias] read=0x09950A0+0x110 pi=0x0195190+0x100 rom_off=0x004AED20 mem=0x170` = exactly the s7646 example
+(DL 0x1B04D8 reading 0x1950A0), now at its real address; dl roots sit at 0xB3FB60 (above 8 MB) under the true key.
+
+Shows: the whole TS-4 overlap (s7645 dd2 L1/L4, s7646 dd4 L4/L5) is the instrument's address alias. Two lines in one run: true-key
+zero with ctl_rd firing, and the alias counter reproducing s7646's magnitude (4881 vs 4912); the old-key arm reproduces it a third
+way (4876). Rules out H-slot-recycle, H-window, H-dlref (no PI ever touches bytes a gfx task reads at dd4 L4). dd1's zero was real
+only because nothing lives above 8 MB at dd1. TS-4 CLOSED, 0 fixes; G5b loses this lead. Not checked: L5 (same mechanism expected),
+TS-3 audio side at dd>1 (its addresses were < 8 MB in s7644).
+ORIGIN: not a mitigation (instrument key fix, default-off instrument).
