@@ -42165,6 +42165,8 @@ RS64_REPLAY = [
     "apply_s7575_div_total.py",  # s7575: total MIPS-exact 32-bit div/divu (RS64_DIV32/RS64_DIVU32); removes the C UB that let -O2 delete 36 do_break checks
     "apply_s7576_trunc_total.py",  # s7576: total trunc.w.s/.d (RS64_TRUNC_W_S/D, arm64 fcvtzs semantics, no C UB) + out-of-range witness [s7576-trunc]
     "apply_s7623_standins.py",  # s7623: G6c far-object stand-ins hook at runInMissionFrame L_800FAC68, ROGUESQ_STANDINS=1|tog at dd>1 (src/main/rs64_standins.cpp)
+    "apply_s7625_viewtest_reason.py",  # s7625: G6c step 3b, tag each exit of transformVec3ToNpcLocalWithScale; host report only while rs64_vt_on (stand-in calls) (measurement only)
+    "apply_s7625_standins_far.py",  # s7625: G6c stand-in view-test far *= rs64_vt_farmul (host sets it = dd only around its own addNpcToVisibilityBucket call; 1.0 = retail)
 ]
 
 

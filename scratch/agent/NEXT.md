@@ -1,20 +1,20 @@
-# NEXT (s7625)
+# NEXT (s7626)
 HYPOTHESIS-ID: g6-upstream-features
 
-G6c step 3b (docs/G6C-STANDINS-PLAN.md "Step 3 result"): stand-ins are culled by the game's view test transformVec3ToNpcLocalWithScale
-(0x8001DC34): 0.2% accepted (s7624). Find WHICH bound rejects them, then widen it for stand-in calls only.
-Hypotheses: H-far (the far test at 0x8001E078, $f2 vs $f0, rejects: upstream multiplies $f0 by dd there); H-box (the +-125
-camera-space box at 0x8001DCEC low / 0x8001DD38 high, constants *0x8000093C / *0x80000940, rejects: upstream widens it by dd and
-relies on RT64 HLE far matrices, which our LLE path lacks); H-side (frustum x/y half-extent test ~0x8001DEAC rejects: objects simply
-off screen, correct cull).
-1. Read transformVec3ToNpcLocalWithScale in /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs (grep the RECOMP_FUNC) and
-   list each reject exit. New tools/apply_s7625_viewtest_reason.py (RS64_REPLAY): when a host flag rs64_standins_in_call is set,
-   record the exit taken (box-low, box-high, far, side-x, side-y, pass) and the camera-space xyz; rs64_standins.cpp sets the flag
-   around its addNpcToVisibilityBucket mips_call and tallies per second: `[standins-why] box=.. far=.. side=.. pass=.. zmed=..`.
-   Positive control: pass count == added count from s7624's counter in the same run.
-2. Same arms as s7624 (scratch/s7625, L1 + L4 dd4, ROGUESQ_STANDINS=1 +_LOG=1, HOLD 130, ALLOW_SLOW=1 on battery).
-Outcomes: H-far dominant -> widen $f0 by dd for stand-in calls only (no matrix risk), rerun the s7624 flicker test (ROGUESQ_STANDINS=frame
-+ STANDINS_DUMP=40:46:90 + tools/s7624_flicker_score.py --control); H-box dominant -> the fixed-point reach is the real limit: design
-the LLE answer (place at cam + (p-cam)/k with scale 1/k so the matrix stays in reach; check terrain occlusion) before widening;
-H-side dominant -> stand-ins are correctly culled, the pop-in is elsewhere (spawn radius vs our dd far): reread upstream.
-Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; fb dumps are ~180 MB per arm (gitignored).
+G6c step 3c (docs/G6C-STANDINS-PLAN.md "Step 3b result"): with ROGUESQ_STANDINS_FAR (default dd) the bucket accepts 24-30% of
+stand-in submits, but the fb flicker test still finds nothing drawn (L1 4068 vs 4206 off, L4 1813 vs 2129, control PASS).
+Hypotheses for the draw-path limit:
+- H-scale: selectMeshLodAndSubmitForRender (0x80058xxx) builds the instance matrix with scale $f22 that the game shrinks toward 0
+  at/past its stock far (upstream 0x80058304 re-scales to $f22+$f20 for "past stock far" objects) -> stand-ins drawn at ~0 size.
+- H-flag: the per-frame flag toggle at 0x80058264 ($v1 == 0x80000) hides objects past the far (upstream sets $v1 = 0 for them).
+- H-lod: the LOD slot chosen past the far is empty / a no-mesh slot, so nothing submits.
+- H-traverse: traverseSceneGraphRecursive never visits our nodes (order / per-frame list reset before conversion).
+1. Read selectMeshLodAndSubmitForRender in N64Recomp/RecompiledFuncs + `git show origin/main:src/game/toml_hooks.c` around
+   rs64_th_selectMeshLodAndSubmitForRender_80058264/_80058304 (and where s_past_stock_far is set/reset, line ~316).
+2. One instrument (new apply script, RS64_REPLAY, gated by a host flag set when the instance is a stand-in: keep a sorted host
+   set of s.inst): per call log $f22, $f20, $v1 at 0x80058264, LOD index, and whether a DL submit follows. Tally per second.
+   Positive control: the same counters for real spawned objects inside the stock far (must show nonzero scale and submits).
+3. Arms in ONE run where possible (scratch/s7626, L1 + L4 dd4, STANDINS=1 + _LOG=1, FAR default, HOLD 130, ALLOW_SLOW=1).
+Outcomes: scale ~0 -> port the upstream inflate for stand-in instances only, then re-run the s7625 pixel test (STANDINS=frame +
+STANDINS_DUMP=40:46:90 + tools/s7624_flicker_score.py --control); flag hidden -> clear it for stand-ins; no submit -> LOD table.
+Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; fb dumps ~180 MB per arm (gitignored).

@@ -231,7 +231,7 @@ void build_state(uint8_t* rdram, recomp_context* ctx, uint32_t item, uint32_t st
     mips_call(rdram, ctx, kRootMatrix, { inst + 0x28u, state, item + 0x28u });
 }
 
-struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond, added, onframes; };
+struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond, added, onframes, faron; };
 Tally s_t{};
 
 void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
@@ -285,6 +285,63 @@ extern "C" int rs64_standins_fb_on = -1;
 extern "C" uint32_t rs64_standins_fb_call = 0;
 extern "C" int rs64_standins_fb_win = 0;
 
+// s7625 G6c step 3b: which exit of the view test (transformVec3ToNpcLocalWithScale, tools/apply_s7625_viewtest_reason.py)
+// rejects the stand-ins. rs64_vt_on is set only around our addNpcToVisibilityBucket mips_call.
+extern "C" int rs64_vt_on = 0;
+extern "C" uint32_t rs64_vt_pc = 0;
+extern "C" float rs64_vt_farmul = 1.0f;  // s7625: view-test far multiplier, != 1 only inside our addNpcToVisibilityBucket call
+namespace {
+struct VtExit { uint32_t pc; const char* name; };
+constexpr VtExit kVtExits[] = {
+    { 0x8001DCF4u, "boxlo_x" }, { 0x8001DD0Cu, "boxlo_y" }, { 0x8001DD24u, "boxlo_z" }, { 0x8001DD40u, "boxhi_x" },
+    { 0x8001DD54u, "boxhi_y" }, { 0x8001DD68u, "boxhi_z" }, { 0x8001DD78u, "behind" }, { 0x8001DDA8u, "far" },
+    { 0x8001DF00u, "sphere_side" }, { 0x8001DF08u, "side_rej" }, { 0x8001DFD4u, "sphere_direct" }, { 0x8001DFFCu, "p_boxlo_x" },
+    { 0x8001E010u, "p_boxlo_y" }, { 0x8001E024u, "p_boxlo_z" }, { 0x8001E03Cu, "p_boxhi_x" }, { 0x8001E04Cu, "p_boxhi_y" },
+    { 0x8001E05Cu, "p_boxhi_z" }, { 0x8001E06Cu, "p_near" }, { 0x8001E080u, "p_far" }, { 0x8001E1B4u, "p_side_rej" },
+    { 0x8001E1E4u, "p_side" },
+};
+constexpr int kVtN = sizeof(kVtExits) / sizeof(kVtExits[0]);
+struct VtTally { uint32_t rej[kVtN + 1], pass[kVtN + 1], calls, passes; double zs[4096]; uint32_t nz; double dmin, dmax; };
+VtTally s_vt{};
+bool s_vt_consts_logged = false;
+float vt_f(const uint8_t* rdram, uint32_t a) { return rf(rdram, a); }
+}  // namespace
+extern "C" void rs64_vt_why(uint8_t* rdram, recomp_context* ctx, uint32_t pc) {
+    int i = 0;
+    while (i < kVtN && kVtExits[i].pc != pc) ++i;
+    const bool pass = (uint32_t)ctx->r2 == 1u;
+    ++s_vt.calls;
+    if (pass) { ++s_vt.pass[i]; ++s_vt.passes; } else ++s_vt.rej[i];
+    const uint32_t sp = (uint32_t)ctx->r29, view = (uint32_t)ctx->r17;
+    const float x = vt_f(rdram, sp + 0x10u), y = vt_f(rdram, sp + 0x14u), z = vt_f(rdram, sp + 0x18u);
+    const double d = std::sqrt((double)x * x + (double)y * y + (double)z * z);
+    if (s_vt.nz < 4096) s_vt.zs[s_vt.nz++] = d;
+    if (s_vt.calls == 1 || d < s_vt.dmin) s_vt.dmin = d;
+    if (s_vt.calls == 1 || d > s_vt.dmax) s_vt.dmax = d;
+    if (!s_vt_consts_logged) {
+        s_vt_consts_logged = true;
+        std::fprintf(stderr, "[standins-why-k] boxlo=%g boxhi=%g p_lo=%g p_hi=%g view=%08X near=%g far=%g first pc=%08X xyz=%g,%g,%g v0=%d\n",
+                     vt_f(rdram, 0x8000093Cu), vt_f(rdram, 0x80000940u), vt_f(rdram, 0x80000960u), vt_f(rdram, 0x80000964u), view,
+                     vt_f(rdram, view + 0x24u), vt_f(rdram, view + 0x28u), pc, x, y, z, (int)pass);
+    }
+}
+namespace {
+void vt_flush(uint32_t added) {
+    if (s_vt.calls == 0) return;
+    char buf[1024]; int o = 0;
+    o += std::snprintf(buf + o, sizeof buf - o, "[standins-why] calls=%u pass=%u added=%u", s_vt.calls, s_vt.passes, added);
+    for (int i = 0; i <= kVtN; ++i) {
+        const char* n = i < kVtN ? kVtExits[i].name : "unknown";
+        if (s_vt.rej[i]) o += std::snprintf(buf + o, sizeof buf - o, " %s=%u", n, s_vt.rej[i]);
+        if (s_vt.pass[i]) o += std::snprintf(buf + o, sizeof buf - o, " PASS_%s=%u", n, s_vt.pass[i]);
+    }
+    std::sort(s_vt.zs, s_vt.zs + s_vt.nz);
+    o += std::snprintf(buf + o, sizeof buf - o, " dmin=%.0f dmed=%.0f dmax=%.0f\n", s_vt.dmin, s_vt.nz ? s_vt.zs[s_vt.nz / 2] : 0.0, s_vt.dmax);
+    std::fputs(buf, stderr);
+    s_vt = VtTally{};
+}
+}  // namespace
+
 // Read by rs64_s7326_spill_cap (upstream_compat.cpp): the spill arena gives up its top 1 MB to the stand-in region while this is on.
 extern "C" int rs64_standins_on(void) { return mode() != 0; }
 
@@ -310,8 +367,9 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     static double s_t0 = std::floor(now);  // windows on whole seconds, so a tog window is all-on or all-off
     if (s_log && now - s_t0 >= 1.0) {
-        std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu tog=%d\n",
-                     s_t.frames, s_t.onframes, s_t.submits, s_t.added, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(),
+        vt_flush(s_t.added);
+        std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu farmul=%g faron=%u tog=%d\n",
+                     s_t.frames, s_t.onframes, s_t.submits, s_t.added, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(), (double)rs64_vt_farmul, s_t.faron,
                      m == 2 ? (int)(((long long)s_t0) & 1) ^ 1 : -1);  // tog=1: the window just logged was an on second
         s_t = Tally{};
         s_t0 = std::floor(now);
@@ -390,7 +448,25 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         if (!cutscene && mips_call(rdram, ctx, kConditionMet, { s.item }).v0 == 0) { ++s_t.cond; continue; }
         // addNpcToVisibilityBucket returns 1 only when the view test (transformVec3ToNpcLocalWithScale 0x8001DC34) passed and the
         // node was linked into the view's list (a linked list: no fixed bucket capacity, code read s7624); 0 = culled.
-        if (mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0 == 1) {
+        // s7625: ROGUESQ_STANDINS_FAR=<m> (default = the draw distance; 1 or 0 = retail far) widens the view test's far bound
+        // for this call only; =tog applies it in even seconds (same-run A/B).
+        static const double s_far = [] {
+            const char* e = std::getenv("ROGUESQ_STANDINS_FAR");
+            if (e && !std::strcmp(e, "tog")) return -1.0;
+            if (e && *e) { const double v = std::atof(e); return v > 1.0 ? v : 1.0; }
+            const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE");
+            const double v = d ? std::atof(d) : 1.0;
+            return v > 1.0 ? v : 1.0;
+        }();
+        static const double s_dd = [] { const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE"); const double v = d ? std::atof(d) : 1.0; return v > 1.0 ? v : 1.0; }();
+        const bool far_on = s_far > 0 || !(((long long)now) & 1);
+        rs64_vt_farmul = (float)(s_far > 0 ? s_far : (far_on ? s_dd : 1.0));
+        if (far_on && s_far < 0) ++s_t.faron;
+        rs64_vt_on = s_log ? 1 : 0;
+        const uint32_t add_v0 = mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0;
+        rs64_vt_on = 0;
+        rs64_vt_farmul = 1.0f;
+        if (add_v0 == 1) {
             ++s_t.added;
             if (s.first_add < 0) s.first_add = now;
             s.last_add = now;

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7622 (2026-11-18).
+Compact operational handoff, as of Session 7625 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -297,8 +297,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     toggle fb dumps: flicker per triplet toggling <= forced-off control (L1 3879 vs 4351, L4 1807 vs 2207), synthetic control
     PASS. The s7621 "no far_check port needed" was wrong: upstream widens that test's far ($f0 *= dd, 0x8001E078) and its
     +-125 camera box (0x8001DCEC/0x8001DD38, constants 0x8000093C/940) and relies on RT64 HLE far matrices for translations past
-    convertMat3x4ToN64Mtx's reach; we have neither. NEXT: which bound rejects stand-ins, then an LLE-safe widening for
-    stand-in calls only.**
+    convertMat3x4ToN64Mtx's reach; we have neither. **Step 3b (s7625): H-far selected, fixed at the bucket; the draw path culls next.**
+    Exit tally (tools/apply_s7625_viewtest_reason.py; exits sum to calls): in-front stand-ins die at the far exit 0x8001DDA8
+    (view+0x28 = 30.8 L1 / 27.8 L4 at dd4 = the retail object far; stand-ins sit at d 40-110), then side; box +-125 rejects
+    ~3%. Fix tools/apply_s7625_standins_far.py: far *= ROGUESQ_STANDINS_FAR (default dd; =1 retail, =tog) for OUR call only;
+    the box test runs first so no matrix overflow is possible. Same-run tog: pass rate L1 0.41% -> 29.6%, L4 0.47% -> 24.2%,
+    far rejects 9021 -> 0 / 27996 -> 27, 4/4 arms alive 0 stall. But fb flicker with far on still shows nothing (L1 4068 vs
+    4206 off, L4 1813 vs 2129, control PASS, 294/255 accepted in window 1) -> accepted stand-ins are not drawn: NEXT step 3c,
+    selectMeshLodAndSubmitForRender (upstream 0x80058264 flag skip + 0x80058304 far-plane scale inflate).**
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

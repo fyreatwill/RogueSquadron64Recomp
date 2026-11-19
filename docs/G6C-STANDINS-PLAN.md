@@ -120,3 +120,22 @@ window 2 forced off), L1 and L4 dd4 FPS60 16:9, scored by tools/s7624_flicker_sc
 Next (step 3b): per stand-in call, log which bound rejects (box low/high, far, frustum side) and the camera-space distance; then
 widen only for stand-in calls (flag around our mips_call). Box overflow candidate for LLE: draw a far stand-in at
 cam + (p - cam)/k with scale 1/k (same projection, inside the matrix reach), checking depth against terrain.
+
+## Step 3b result (s7625): H-far; the bucket now accepts, the draw path does not draw
+
+tools/apply_s7625_viewtest_reason.py tags each of the 21 exits of transformVec3ToNpcLocalWithScale; while rs64_vt_on (our call
+only) the host tallies `[standins-why]`. Exits sum to calls (instrument fires on every path). View near 0.117, far 30.8 (L1) /
+27.8 (L4) at dd4 = retail object far; box consts +-125. Stand-ins at camera distance 40-110 (median 67 L1, 85 L4).
+| run (130 s, dd4) | calls | behind | far | side | box | pass |
+|---|---|---|---|---|---|---|
+| L1 retail far | 42796 | 16126 | 18325 | 6660 | 1534 | 151 |
+| L4 retail far | 161033 | 61471 | 53368 | 39641 | 5794 | 759 |
+Fix (tools/apply_s7625_standins_far.py): after the far load at 0x8001DD9C / 0x8001E074, $f0 *= rs64_vt_farmul, which the host sets
+to ROGUESQ_STANDINS_FAR (default dd) around its own addNpcToVisibilityBucket call only. Box runs before far on the radius path, so
+a widened far cannot pass anything past the fixed-point reach. Same-run tog: L1 pass 0.41% -> 29.6%, L4 0.47% -> 24.2%.
+Note: `added` ~= 2 x pass: addNpcToVisibilityBucket also accepts via 0x80057D28 -> 0x80057E74 without the test (code read).
+Pixels with far on (frame toggle + dumps): no flicker excess, L1 4068 vs 4206 off, L4 1813 vs 2129, control PASS, hot px 0,
+with 294 / 255 accepts in the toggling window. So accepted stand-ins draw nothing: the next limit is after the bucket.
+Next (step 3c): selectMeshLodAndSubmitForRender. Upstream (toml_hooks.c) skips the per-frame flag toggle at 0x80058264 and
+re-scales the instance matrix at 0x80058304 for objects past the stock far ($f22 -> $f22 + $f20) - i.e. the game shrinks the
+mesh scale toward 0 at its far plane. Log per stand-in in that function: $f22, $f20, LOD chosen, submit or not.

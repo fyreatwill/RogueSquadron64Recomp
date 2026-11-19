@@ -203076,3 +203076,37 @@ constants 0x8000093C/940, widened by dd), and leans on RT64 HLE far matrices for
 Our bundle widens neither (s7134 widens only the x half-extent under ASPECT). So the port is not fully H-portable: the box part is HLE-coupled.
 Next: step 3b, log per stand-in call which bound rejects (box low/high, far, side) and the camera distance; then widen for stand-in
 calls only (flag set around our mips_call); LLE answer to box overflow candidate: place at cam + (p-cam)/k, scale 1/k.
+
+## Session 7625 (2026-11-18) — G6c step 3b: stand-ins rejected by the view test's FAR bound (H-far); far *= dd for stand-in calls lifts acceptance 0.4% -> 24-30%, but accepted stand-ins still draw no pixels
+
+What landed:
+- `tools/apply_s7625_viewtest_reason.py` (RS64_REPLAY): every `goto L_8001E1E8` in transformVec3ToNpcLocalWithScale stores its
+  branch PC in rs64_vt_pc (21 exits); at L_8001E1E8, if rs64_vt_on, rs64_vt_why() tallies exit/v0/camera-space distance. Measurement only.
+- `tools/apply_s7625_standins_far.py` (RS64_REPLAY): after the far load (0x8001DD9C radius path, 0x8001E074 point path)
+  `$f0 *= rs64_vt_farmul` when != 1. `src/main/rs64_standins.cpp` sets rs64_vt_farmul = ROGUESQ_STANDINS_FAR (default the
+  draw distance; 1/0 = retail; =tog even seconds) only around its own addNpcToVisibilityBucket call; all other callers 1.0.
+  `[standins-why]` per second with LOG=1; `[standins-s]` gains faron=.
+- `tools/s7625_far_tog_score.py`: splits the why tallies by tog window.
+ORIGIN: the far bound is legitimate retail state (view+0x28, 30.8 L1 / 27.8 L4 at dd4 = the game's object cull distance; our dd
+bundle scales only the projection far). Stand-ins sit at 40-110 units, beyond it, so the game culls them as designed. Not a defect fix:
+an opt-in lever on our own stand-in calls only.
+Runs (g1e_owner_quiet_arms, dd4 FPS60 16:9, HOLD 130, ALLOW_SLOW=1 battery clk 1.16-1.57): scratch/s7625 (L1w, L4w: retail far)
+and scratch/s7625b (L1t, L4t: FAR=tog; L1p, L4p: STANDINS=frame + dumps 40:46:90). 6/6 alive, crashlines 0, vi_stalls30s 0.
+| arm | calls | behind | far | side_rej | box | pass | rate |
+|---|---|---|---|---|---|---|---|
+| L1w retail | 42796 | 16126 | 18325 | 6660 | 1534 | 151 | 0.35% |
+| L4w retail | 161033 | 61471 | 53368 | 39641 | 5794 | 759 | 0.47% |
+| L1t retail sec | 21612 | 8279 | 9021 | 3442 | 782 | 88 | 0.41% |
+| L1t far x4 sec | 21334 | 7761 | 0 | 6498 | 753 | 6322 | 29.6% |
+| L4t retail sec | 77939 | 26919 | 27996 | 19874 | 2784 | 366 | 0.47% |
+| L4t far x4 sec | 78378 | 34232 | 27 | 22153 | 2969 | 18997 | 24.2% |
+Controls: exit counts sum to calls in every window (each path tagged, the PASS exits fire); [standins-why-k] reads the box
+constants back as -125/125 (matches upstream's comment). pass <= added always; added ~= 2 x pass because addNpcToVisibilityBucket
+also returns 1 via 0x80057D28 -> 0x80057E74 without calling the test (code read, single-source).
+Pixels (L1p/L4p, far x4): flicker per triplet toggling vs forced-off L1 4068 vs 4206, L4 1813 vs 2129; synthetic control PASS
+(2143 / 1893 >= 1056); hot px 0; accepted in toggling window 294 (L1) / 255 (L4).
+Discrimination: selects H-far for the bucket (two lines: exit tally, and the same-run tog lever moving the far exit to ~0 and the
+pass rate x60). Refutes H-box (3% of calls) and H-side as the main reject (side is the correct frustum cull and stays). New: the
+bucket is no longer the limit, yet accepted stand-ins produce no pixels -> a second limit after the bucket (H-draw).
+Next: step 3c, selectMeshLodAndSubmitForRender for stand-in instances (upstream: 0x80058264 flag-toggle skip, 0x80058304 scale
+inflate past the stock far): log $f22/$f20/LOD/submit per stand-in, same-run tog.
