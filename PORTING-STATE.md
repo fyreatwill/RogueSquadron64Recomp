@@ -203386,3 +203386,5 @@ Result: saving ~0.2-0.75 ms/s, under the pre-registered 2 ms/s bar and at A/A no
 to 0 (opt-in) per the pre-registered rule; code kept because chk proves it exact. Rules out further per-tri arithmetic work in the
 bridge walkers: with s7635 (fusion ~0.8 ms/s), the remaining walker cost is memory traffic over the submitted ranges.
 Next: G6a/b/c wait on the owner; ladder item 4 (generated-symbol renaming sweep) unless the owner reports.
+Discrimination: selects H-mem, refutes H-fp (same-run tog A/B, chk control PASS).
+Next discriminator: none left on walker cost (thread closed); next unit is ladder item 4 per NEXT.md, with a per-step caller-vs-data read to name each symbol.
