@@ -394,6 +394,9 @@ endif()
 add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp
     $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_display_mac.mm>
+    $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_controls_panel.cpp>
+    $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_imgui_metal.mm>
+    $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/imgui/backends/imgui_impl_metal.mm>
     ${CMAKE_SOURCE_DIR}/src/main/rt64_render_context.cpp
     $<$<PLATFORM_ID:Darwin>:${CMAKE_SOURCE_DIR}/src/main/rs64_env_cache.cpp>
     ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
@@ -450,6 +453,15 @@ target_include_directories(RogueSquadron64Recomp PRIVATE
     ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib
     ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/hlslpp/include
 )
+
+# s7620 G6b step 3: F6 Controls panel. Reads plume's Metal objects (metal-cpp headers) and draws with ImGui's Metal backend.
+if (APPLE)
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/main/rs64_controls_panel.cpp PROPERTIES INCLUDE_DIRECTORIES
+        "${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/plume;${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/plume/contrib/metal-cpp")
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/main/rs64_imgui_metal.mm
+        ${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/imgui/backends/imgui_impl_metal.mm PROPERTIES
+        COMPILE_OPTIONS "-fobjc-arc" INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/lib/rt64/src/contrib/imgui")
+endif()
 
 if (NOT MSVC)
     target_compile_options(RogueSquadron64Recomp PRIVATE

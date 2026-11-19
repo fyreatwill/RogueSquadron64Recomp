@@ -12317,6 +12317,7 @@ static void rs64_rumble_tick() {
         s_max_duty = 0.0f;
     }
 }
+#include "rs64_controls_panel.h"  // s7620 G6b step 3 (F6 panel)
 static void poll_input() {
     {
         static const bool gl = [] { const char* e = std::getenv("ROGUESQ_S7593_POLLGAP"); return e && *e == '1'; }();
@@ -12348,6 +12349,7 @@ static void poll_input() {
     // here we must only dequeue already-pumped events.
     while (SDL_PeepEvents(&e, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) > 0) {
         if (e.type == SDL_QUIT) rs64_s7593_quit_now("poll");
+        rs64_panel_feed(e);  // s7620 G6b: F6 Controls panel (toggle + mouse while open)
         if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) &&
             (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_z)) {
             static int s_pad_sdl_n = 0;
@@ -12585,10 +12587,13 @@ static void rs64_bind_selftest_step(long step) {
 // Missing file = built-in defaults; a file with any error is rejected whole (defaults kept) with one stderr line.
 // ROGUESQ_CONTROLS_DUMP=1 prints the active table as controls.json text to stderr (a starting point for editing).
 #include "rs64_bindings_json.h"
+std::string rs64_bind_path() {
+    if (const char* e = getenv("ROGUESQ_CONTROLS"); e && *e) return e;
+    char* base = SDL_GetBasePath(); std::string path = base ? std::string(base) + "controls.json" : "controls.json"; if (base) SDL_free(base);
+    return path;
+}
 static rs64_bind_table rs64_bind_load() {
-    std::string path;
-    if (const char* e = getenv("ROGUESQ_CONTROLS"); e && *e) path = e;
-    else { char* base = SDL_GetBasePath(); path = base ? std::string(base) + "controls.json" : "controls.json"; if (base) SDL_free(base); }
+    const std::string path = rs64_bind_path();
     rs64_bind_table t = rs64_bind_defaults();
     std::ifstream f(path, std::ios::binary);
     if (!f) {
@@ -12604,13 +12609,149 @@ static rs64_bind_table rs64_bind_load() {
     if (rs64_bind_flag("ROGUESQ_CONTROLS_DUMP")) fprintf(stderr, "[controls] active table:\n%s", rs64_bind_to_json(t).c_str());
     return t;
 }
+// s7620 G6b step 3: the table is live (the F6 panel edits it); g_bind_mu guards it and the capture state.
+#include "rs64_controls_panel.h"
+static std::mutex g_bind_mu;
+static rs64_bind_table& rs64_bind_live_ref() { static rs64_bind_table t = rs64_bind_load(); return t; }  // call under g_bind_mu
+static std::atomic<int> g_cap_target{0};
+static std::atomic<bool> g_cap_add{false};
+static std::atomic<unsigned> g_cap_gen{0};
+static std::string g_cap_last;
+rs64_bind_table rs64_bind_live_get() { std::lock_guard<std::mutex> lk(g_bind_mu); return rs64_bind_live_ref(); }
+void rs64_bind_live_set(const rs64_bind_table& t, const char* why) {
+    { std::lock_guard<std::mutex> lk(g_bind_mu); rs64_bind_live_ref() = t; }
+    fprintf(stderr, "[controls] table set (%s): %zu button bindings\n", why, t.buttons.size());
+}
+static std::vector<int>* rs64_bind_dir(rs64_bind_table* t, int target) {
+    switch (target) { case RS64_TGT_UP: return &t->key_up; case RS64_TGT_DOWN: return &t->key_down;
+                      case RS64_TGT_LEFT: return &t->key_left; case RS64_TGT_RIGHT: return &t->key_right; }
+    return nullptr;
+}
+void rs64_bind_clear(rs64_bind_table* t, int target) {
+    if (std::vector<int>* d = rs64_bind_dir(t, target)) { d->clear(); return; }
+    t->buttons.erase(std::remove_if(t->buttons.begin(), t->buttons.end(), [&](const rs64_button_bind& e) { return e.n64_mask == (uint16_t)target; }), t->buttons.end());
+}
+bool rs64_bind_apply(rs64_bind_table* t, int target, const rs64_bind_source& src, bool add) {
+    if (std::vector<int>* d = rs64_bind_dir(t, target)) {
+        if (src.kind != RS64_SRC_KEY) return false;
+        if (!add) d->clear();
+        if (std::find(d->begin(), d->end(), src.id) == d->end()) d->push_back(src.id);
+        return true;
+    }
+    if (target <= 0 || target > 0xFFFF) return false;
+    if (!add) rs64_bind_clear(t, target);
+    for (const auto& e : t->buttons)
+        if (e.n64_mask == (uint16_t)target && e.src.kind == src.kind && e.src.id == src.id) return true;
+    t->buttons.push_back({(uint16_t)target, src});
+    return true;
+}
+void rs64_bind_capture_arm(int target, bool add) {
+    g_cap_add.store(add);
+    g_cap_target.store(target);
+    g_cap_gen.fetch_add(1);
+    if (target) fprintf(stderr, "[controls] capture armed target=%d add=%d\n", target, add ? 1 : 0);
+}
+int rs64_bind_capture_target() { return g_cap_target.load(); }
+bool rs64_bind_capture_add() { return g_cap_add.load(); }
+std::string rs64_bind_capture_last() { std::lock_guard<std::mutex> lk(g_bind_mu); return g_cap_last; }
+bool rs64_bind_save(std::string* msg) {
+    const std::string text = rs64_bind_to_json(rs64_bind_live_get()), path = rs64_bind_path();
+    char buf[512];
+    if (getenv("ROGUESQ_NO_SAVE_WRITE")) {
+        snprintf(buf, sizeof buf, "NOT saved (ROGUESQ_NO_SAVE_WRITE): would write %zu bytes to %s", text.size(), path.c_str());
+        *msg = buf; fprintf(stderr, "[controls] %s\n", buf); return false;
+    }
+    const std::string tmp = path + ".tmp";
+    bool ok = false;
+    if (FILE* f = fopen(tmp.c_str(), "wb")) { ok = fwrite(text.data(), 1, text.size(), f) == text.size(); ok = (fclose(f) == 0) && ok; }
+    ok = ok && rename(tmp.c_str(), path.c_str()) == 0;
+    snprintf(buf, sizeof buf, ok ? "Saved to %s" : "SAVE FAILED: %s", path.c_str());
+    *msg = buf; fprintf(stderr, "[controls] %s\n", buf); return ok;
+}
+// Capture: the first source that turns on after arming (one already held at arming must be released first).
+static void rs64_bind_capture_step(const rs64_input_snapshot& s) {
+    static unsigned gen = 0;
+    static bool b_btn[SDL_CONTROLLER_BUTTON_MAX], b_pos[SDL_CONTROLLER_AXIS_MAX], b_neg[SDL_CONTROLLER_AXIS_MAX], b_key[SDL_NUM_SCANCODES];
+    const int target = g_cap_target.load();
+    if (!target) return;
+    constexpr int thr = 16000;
+    const int nk = std::min(s.nkeys, (int)SDL_NUM_SCANCODES);
+    auto key = [&](int k) { return s.keys && k < nk && s.keys[k] != 0; };
+    const unsigned g = g_cap_gen.load();
+    if (g != gen) {  // baseline at arming
+        gen = g;
+        for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++) b_btn[i] = s.have_pad && s.pad_btn[i];
+        for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) { b_pos[i] = s.have_pad && s.pad_axis[i] > thr; b_neg[i] = s.have_pad && s.pad_axis[i] < -thr; }
+        for (int i = 0; i < SDL_NUM_SCANCODES; i++) b_key[i] = key(i);
+        return;
+    }
+    bool got = false, cancel = false; rs64_bind_source src{RS64_SRC_KEY, 0, 0};
+    auto edge = [&](bool now, bool& base, rs64_bind_source cand) { if (now && !base && !got) { got = true; src = cand; } base = base && now; };
+    for (int i = 0; i < SDL_NUM_SCANCODES; i++) {
+        const bool now = key(i);
+        if (i == SDL_SCANCODE_F6) { b_key[i] = now; continue; }
+        if (i == SDL_SCANCODE_ESCAPE) { if (now && !b_key[i]) cancel = true; b_key[i] = now; continue; }
+        edge(now, b_key[i], {RS64_SRC_KEY, i, 0});
+    }
+    const bool keys_only = target < 0;
+    for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++) { const bool now = s.have_pad && s.pad_btn[i]; if (keys_only) b_btn[i] = now; else edge(now, b_btn[i], {RS64_SRC_PAD_BUTTON, i, 0}); }
+    for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++) {
+        const bool p = s.have_pad && s.pad_axis[i] > thr, n = s.have_pad && s.pad_axis[i] < -thr;
+        if (keys_only) { b_pos[i] = p; b_neg[i] = n; continue; }
+        edge(p, b_pos[i], {RS64_SRC_AXIS_POS, i, thr});
+        edge(n, b_neg[i], {RS64_SRC_AXIS_NEG, i, thr});
+    }
+    if (cancel) { g_cap_target.store(0); fprintf(stderr, "[controls] capture cancelled (Esc)\n"); return; }
+    if (!got) return;
+    {
+        std::lock_guard<std::mutex> lk(g_bind_mu);
+        rs64_bind_apply(&rs64_bind_live_ref(), target, src, g_cap_add.load());
+        g_cap_last = rs64_bind_source_name(src);
+    }
+    g_cap_target.store(0);
+    fprintf(stderr, "[controls] captured target=%d add=%d src=%s\n", target, g_cap_add.load() ? 1 : 0, rs64_bind_source_name(src).c_str());
+}
+void rs64_panel_test_action(const char* what);
+// ROGUESQ_BIND_PANEL_TEST=1 (implies SELFTEST): drive the panel's own actions at fixed polls and report the
+// old-code-vs-table mismatches per phase. Expected: defaults 0, bind A->pad:b >0, capture logged, reset 0, open 0.
+static void rs64_bind_panel_test_step(long polls, long stable, long mism) {
+    static long ph_start = 0, ph_stable = 0, ph_mism = 0; static const char* ph = "defaults";
+    auto close_phase = [&](const char* next) {
+        fprintf(stderr, "[bind-panel-test] phase=%s polls=%ld..%ld stable=%ld mismatches=%ld\n", ph, ph_start, polls, stable - ph_stable, mism - ph_mism);
+        ph = next; ph_start = polls; ph_stable = stable; ph_mism = mism;
+    };
+    if (polls == 900) {
+        close_phase("bindA_padb");
+        rs64_bind_table t = rs64_bind_live_get();
+        rs64_bind_apply(&t, RS64_N64_A, {RS64_SRC_PAD_BUTTON, SDL_CONTROLLER_BUTTON_B, 0}, false);
+        rs64_bind_live_set(t, "panel test bind A=pad:b");
+    } else if (polls == 1800) {
+        close_phase("capture");
+        rs64_bind_capture_arm(RS64_N64_B, true);
+    } else if (polls == 2100) {
+        close_phase("reset");
+        fprintf(stderr, "[bind-panel-test] capture pending=%d last=%s\n", rs64_bind_capture_target(), rs64_bind_capture_last().c_str());
+        rs64_panel_test_action("reset");
+        const rs64_bind_table t = rs64_bind_live_get();
+        rs64_bind_table r; std::string err;
+        const bool ok = rs64_bind_parse_json(rs64_bind_to_json(t), &r, &err) && rs64_bind_to_json(r) == rs64_bind_to_json(t);
+        fprintf(stderr, "[bind-panel-test] json roundtrip=%d bytes=%zu\n", ok ? 1 : 0, rs64_bind_to_json(t).size());
+        rs64_panel_test_action("save");
+    } else if (polls == 3000) {
+        close_phase("open");
+        rs64_panel_set_open(true);
+    } else if (polls == 3600) {
+        close_phase("end");
+    }
+}
 static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
-    static const rs64_bind_table s_table = rs64_bind_load();
-    static const bool s_selftest = rs64_bind_flag("ROGUESQ_BIND_SELFTEST");
+    static const bool s_panel_test = rs64_bind_flag("ROGUESQ_BIND_PANEL_TEST");
+    static const bool s_selftest = s_panel_test || rs64_bind_flag("ROGUESQ_BIND_SELFTEST");
     static const bool s_check = s_selftest || rs64_bind_flag("ROGUESQ_BIND_CHECK");
     rs64_input_snapshot s;
     rs64_bind_snapshot(&s);
-    rs64_bind_eval(s_table, s, btn, sx, sy);
+    rs64_bind_capture_step(s);
+    { std::lock_guard<std::mutex> lk(g_bind_mu); rs64_bind_eval(rs64_bind_live_ref(), s, btn, sx, sy); }
     if (!s_check) return;
     // Same-run compare: verbatim old SDL code vs the table on the same snapshot; plus a planted mutant (pad A<->X) that must differ.
     static long polls = 0, stable = 0, mism = 0, mut_mism = 0, nonzero = 0, pad_live = 0;
@@ -12638,6 +12779,7 @@ static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
     }
     if (polls % 600 == 0)
         fprintf(stderr, "[bind-check] polls=%ld stable=%ld nonzero=%ld pad_live=%ld mismatches=%ld mutant_mismatches=%ld\n", polls, stable, nonzero, pad_live, mism, mut_mism);
+    if (s_panel_test) rs64_bind_panel_test_step(polls, stable, mism);
     if (s_selftest) rs64_bind_selftest_step(polls);
 }
 
@@ -12659,6 +12801,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     } else {
         rs64_bind_poll(&btn, &stick_x, &stick_y);
     }
+    if (rs64_panel_is_open()) { btn = 0; stick_x = 0.0f; stick_y = 0.0f; }  // s7620: F6 panel owns the inputs while open
     // ---- Autopilot: deterministic in-game input (wasted-run fix, 2026-08-26) --
     // The game is normally driven to the hangar/mission by synthetic keypresses
     // posted to the window (winctl -> CGEventPostToPid). Those drop silently

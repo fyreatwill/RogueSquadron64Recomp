@@ -202947,3 +202947,35 @@ Docs: OWNER-OPT-INS row with the format. Next: G6b step 3 F6 ImGui Controls pane
 rs64_bind_to_json), then README Controls.
 Discrimination: selects H-equal, refutes H-drift (both lines above). Next discriminator: step 3 panel same-run test
 (ROGUESQ_BIND_PANEL_TEST rebind A->pad:b through the panel code -> mismatches >0, Reset -> 0 in the same run).
+
+## Session 7620 (2026-11-18) — G6b step 3: F6 Controls panel (ImGui on Metal via RT64's post-VI hook); same run: defaults 0 mismatches, scripted bind 112 (control), Reset back to 0, panel open 0
+
+HYPOTHESIS-ID: g6-upstream-features. Work unit: NEXT s7620 (G6b step 3). Hypotheses: H-equal (the panel, closed or
+reset, leaves the N64 output identical to the old map) vs H-drift (the live/mutable table or the panel path changes it).
+
+Boring thing first: RT64's F1 overlay (Inspector) only has D3D12/Vulkan code (lib/rt64/src/gui/rt64_inspector.cpp init/
+newFrame/draw switch), we run Metal, and developerMode is off in Release, so "add a tab to the F1 overlay" was not possible.
+Route taken, no lib/ edit: RT64 exports `RT64::SetRenderHooks(init, draw, deinit)` (rhi/rt64_render_hooks.h); the draw hook
+runs on the present thread after the VI pass with the swap-chain framebuffer. New files:
+- src/main/rs64_controls_panel.cpp: own ImGui context; init gets plume::MetalDevice->mtl; draw (only when open) does
+  setFramebuffer + checkActiveRenderEncoder on the plume::MetalCommandList, ImGui frame, imgui_impl_metal render into the
+  active encoder, endActiveRenderEncoder. Closed = early return. Mouse events fed from the input poll thread (poll_input is
+  not the Cocoa main thread, so no ImGui_ImplSDL2); keys deliberately NOT fed (a key pressed to bind must not hit a widget).
+  F6 toggles, Esc cancels a capture or closes. ROGUESQ_CONTROLS_PANEL=0 skips installing the hook.
+- src/main/rs64_imgui_metal.mm: ARC bridge to imgui_impl_metal (also added to the target, -fobjc-arc).
+- main.cpp: table now live (g_bind_mu); rs64_bind_apply/clear/capture/save; capture = first source that turns ON after
+  arming (pad button, axis past 16000 either sign, key; held-at-arm sources must be released first; stick directions take
+  keys only); Save writes controls.json via tmp+rename, skipped with a log line under ROGUESQ_NO_SAVE_WRITE; get_n64_input
+  zeroes the game's input while the panel is open (after the bind-check compare). ROGUESQ_BIND_PANEL_TEST=1 drives the
+  panel's own actions at fixed polls with per-phase mismatch counts.
+Run (scratch/s7620/run.zsh, one game, NO_SAVE_WRITE, virtual pad + keyboard sweep, log scratch/s7620/run.log):
+  phase defaults 0..900: 0 mismatches / 900 stable; bind A=pad:b 900..1800: 112 (positive control: old F002 vs table 7002
+  etc.); capture armed B add -> captured key:E (the sweep's key) and applied; reset 2100..3000: 0 / 900; panel open
+  3000..3600: 0 / 600 (panel drew: fb 640x480, 2 lists, ~3800 vtx, 600+ draws, no assert/crash); json roundtrip=1
+  (1074 bytes); Save -> "NOT saved (ROGUESQ_NO_SAVE_WRITE)". Screenshot scratch/s7620/panel.png shows the panel over the
+  title screen with the default table. Offline tools/test_bindings.cpp: 4,199,184 cases, 0 failed checks.
+Selects H-equal (two lines: same-run reset/open 0 mismatches with a 112 control, and offline harness), refutes H-drift.
+After the run only the hint text was switched to TextWrapped and the path label shortened (rebuilt, not re-run).
+Not proven: mouse clicking by a human (the test pressed the actions in code; ImGui mouse input path unexercised), and a
+real pad capture (virtual pad only). Docs: README Controls (F6 + note that F1 does not open on Metal), OWNER-OPT-INS row.
+Next: G6c stand-ins design doc.

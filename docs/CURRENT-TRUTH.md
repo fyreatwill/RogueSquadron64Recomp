@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7617 (2026-11-18).
+Compact operational handoff, as of Session 7620 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7620: G6b F6 Controls panel LANDED (owner to try).** RT64's F1 inspector has no Metal backend, so the panel has
+  its own ImGui context drawn through RT64's public post-VI hook (RT64::SetRenderHooks) with imgui_impl_metal; closed = hook
+  returns, nothing encoded. Same run (PANEL_TEST): defaults 0 mismatches, scripted bind A=pad:b 112 (control), capture took
+  key:E, Reset 0, panel open 0 (600 polls); json roundtrip ok; Save skipped under NO_SAVE_WRITE. Screenshot scratch/s7620/panel.png.
 - **NEW s7617: G6a rumble LANDED, default ON (`ROGUESQ_RUMBLE=0` = old no-pak shape, `ROGUESQ_RUMBLE_SCALE` 0..2); owner to feel it.**
   src/main/main.cpp: port 0 reports a Rumble Pak; set_rumble records motor edges, poll_input (owner of `controller`) turns the
   100 ms on-fraction into s = (0.25 + 0.75*duty)*scale and sends SDL_GameControllerRumble(lo=s, hi=0.6s, 150 ms), refreshed
@@ -512,13 +516,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     and, if default-on, a witness like W.
 46. **Class DQ CLOSED s7615, class RQ CLOSED s7616** (headline). Rerun tools/s7616_rq_census.py --controls after any lib/rt64
     edit that reads RDRAM or adds a thread; a new worker-thread reader of RDRAM needs a command-time copy or a gate.
-47. **G6 (owner 2026-11-18, ahead of everything else): G6a rumble LANDED s7617 (headline), closes on the owner feeling it.
-    G6b steps 1+2 LANDED: s7618 table (src/main/rs64_bindings.h, defaults == old map, ROGUESQ_BIND_OLD=1 = old code);
-    s7619 controls.json beside the exe (ROGUESQ_CONTROLS=<path>, src/main/rs64_bindings_json.h; listed button replaces its
-    defaults, any error rejects the whole file; ROGUESQ_CONTROLS_DUMP=1 prints the table). Proof: tools/test_bindings.cpp
-    4.2M cases 0 failed checks; same-run selftest no-file/bad-file 0 mismatches, remap-A file 395 (positive control).
-    NEXT: G6b step 3 F6 ImGui Controls panel + README Controls,
-    then G6c stand-ins (design doc first).**
+47. **G6 (owner 2026-11-18, ahead of everything else): G6a rumble LANDED s7617; G6b controls LANDED s7618-s7620 (table
+    src/main/rs64_bindings.h == old map, ROGUESQ_BIND_OLD=1; controls.json beside the exe, rs64_bindings_json.h; F6 panel
+    src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
+    hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit.
+    NEXT: G6c stand-ins, design doc docs/G6C-STANDINS-PLAN.md first.**
 48. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

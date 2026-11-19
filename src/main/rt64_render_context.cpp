@@ -1,3 +1,4 @@
+#include "rs64_controls_panel.h"
 #include <mach/mach_time.h>  // s6922: dump window clock
 #include <execinfo.h>
 #include <dlfcn.h>
@@ -575,6 +576,9 @@ public:
         uint32_t thread_id = 0;
 #ifdef _WIN32
         thread_id = window_handle.thread_id;
+#endif
+#ifdef __APPLE__
+        rs64_panel_install_hooks();  // s7620 G6b step 3: F6 Controls panel (RT64 post-VI draw hook, Metal)
 #endif
         setup_result = map_result(app->setup(thread_id));
         if (setup_result != ultramodern::renderer::SetupResult::Success) {
