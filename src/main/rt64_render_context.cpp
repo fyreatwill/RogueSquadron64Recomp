@@ -2085,10 +2085,12 @@ namespace ultramodern {
                                 if (op == 0x33 || op == 0x34) { s_lb_w0 = w0; s_lb_w1 = w1; s_lb_op = op; }
                                 if (rect && (op == 0x24 || op == 0x25) && s_cmd_rows < 4000u) {
                                     // s6230: SETTIMG source + content probe for each texrect
-                                    const uint32_t ta = s_ti_w1 & 0x7FFFFFu;
+                                    // s7649 MK8: keyed at 16 MB (dd>1 / OSMEM 12 photo tiles sit at 0x9xxxxx-0xBxxxxx; the
+                                    // old & 0x7FFFFF key hashed aliased low RAM, s6230/s6231). tex8= prints the old key.
+                                    const uint32_t ta = s_ti_w1 & 0xFFFFFFu, ta8 = s_ti_w1 & 0x7FFFFFu;
                                     uint32_t h = 2166136261u; uint32_t hist[256] = {0}; uint32_t distinct = 0;
                                     uint32_t b0 = 0;
-                                    if (ta + 64 <= 0x800000u) {
+                                    if (ta + 64 <= 0x1000000u) {
                                         for (uint32_t i = 0; i < 64; ++i) {
                                             const uint8_t bb = r[(ta + i) ^ 3];
                                             h = (h ^ bb) * 16777619u;
@@ -2097,8 +2099,8 @@ namespace ultramodern {
                                         }
                                     }
                                     std::fprintf(stderr,
-                                        "[g1d-tex] phase=%u row=%u addr=0x%06X tex=0x%06X fmt=%u siz=%u w=%u hash=0x%08X distinct64=%u b0=0x%08X\n",
-                                        phase, s_cmd_rows, a, ta, (s_ti_w0 >> 21) & 7, (s_ti_w0 >> 19) & 3,
+                                        "[g1d-tex] phase=%u row=%u addr=0x%06X tex=0x%06X tex8=0x%06X fmt=%u siz=%u w=%u hash=0x%08X distinct64=%u b0=0x%08X\n",
+                                        phase, s_cmd_rows, a, ta, ta8, (s_ti_w0 >> 21) & 7, (s_ti_w0 >> 19) & 3,
                                         (s_ti_w0 & 0xFFF) + 1, h, distinct, b0);
                                     {
                                         // s6231: SETTILE/LOAD params in force + full 4096 B tile dump
@@ -2107,7 +2109,7 @@ namespace ultramodern {
                                             "[g1d-tex2] phase=%u row=%u addr=0x%06X tile=%u st_w0=0x%08X st_w1=0x%08X st7_w0=0x%08X st0_w0=0x%08X ld_op=0x%02X ld_w0=0x%08X ld_w1=0x%08X\n",
                                             phase, s_cmd_rows, a, t7, s_st_w0[t7], s_st_w1[t7], s_st_w0[7], s_st_w0[0], s_lb_op, s_lb_w0, s_lb_w1);
                                         static uint32_t s_dumped = 0;
-                                        if (s_dumped < 70u && ta + 4096 <= 0x800000u) {
+                                        if (s_dumped < 70u && ta + 4096 <= 0x1000000u) {
                                             char fn[160];
                                             std::snprintf(fn, sizeof(fn), "scratch/agent/m6/s6231_tiles/%02u_%06X.bin", s_dumped, ta);
                                             if (FILE* df = std::fopen(fn, "wb")) {

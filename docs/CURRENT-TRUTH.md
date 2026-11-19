@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7647 (2026-11-19).
+Compact operational handoff, as of Session 7649 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7648: class MK8 (8 MB address keys/bounds at dd>1) CLOSED, H-mk8-diag-only, 0 fixes** (item 33,
+- **NEW s7649: MK8 conclusion re-validation: 1 alias artefact, 0 standing conclusions reopened.** s6230/s6231 [g1d-tex]
+  (w900 OSMEM 12) hashed/dumped `& 0x7FFFFF`-aliased low RAM for EVERY photo tile (true src >= 8 MB: s6235 1407/1407, s7649
+  3017/3017); "parse-time bytes noisy" was the alias. The thread closed on the s6243 skip bisect, untouched. [g1d-tex] now
+  keys 16 MB (+tex8= old key). s7391 BA safe by data (all stacks < 0x806F9BA0). Census misattributes some sites (s7650).
+- **s7648: class MK8 (8 MB address keys/bounds at dd>1) CLOSED, H-mk8-diag-only, 0 fixes** (item 33,
   docs/MK8-KEY-ALIAS-CENSUS.md, `python3 tools/s7648_mk8_census.py --controls`). No default-on lookup aliases dd>1 data.
 - **s7647: TS-4 CLOSED as an instrument artefact (H-alias8); H-slot-recycle withdrawn.** The s7645/s7646 key was `& 0x7FFFFF`
   but the RSP DMA mask is 25-bit (0x1FFFFF8) and the dd>1 bundle puts TriGen chunks above 8 MB (0x9950A0 aliased the MusyX stream
@@ -434,7 +438,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     hand-read), generated 25 (D 17 opt-in/diag patch blocks, F 8 float masks), ucode 0. Fills the "class M, open" gap of
     s7337_bound_census.py, whose generated pattern missed 13 `0x807Fxxxx` bounds (all opt-in/diag). Single-source by
     construction (static read); D is a regex on the enclosing function, D* list in docs/MK8-KEY-ALIAS-CENSUS.md.
-    Open follow-on: CLOSED diagnostic conclusions measured at dd>1 through one of these keys may be alias artefacts (NEXT).
+    s7649 re-validation (table in the doc): only s6230/s6231 [g1d-tex] was an alias artefact (intermediate, superseded by
+    s6243); instrument re-keyed. 34. **Open (s7650): census function attribution** — the FN regex can pin a site to the
+    previous definition (rt64_render_context.cpp:2088-2147 -> rs64_s7541_span), so those sites' D labels are unproven.
 
 ## Evidence index
 

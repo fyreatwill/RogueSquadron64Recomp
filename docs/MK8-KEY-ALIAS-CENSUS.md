@@ -46,3 +46,21 @@ D is a regex on the enclosing function body (getenv / ROGUESQ_ / enabled / _on()
 the gate is off by default; the D* list and every always-on candidate were read by hand. **Diagnostic conclusions are
 still at risk**: any CLOSED result that used one of these D/D* keys on dd>1 data may be an alias artefact like TS-4.
 That re-validation is the follow-on (NEXT s7649).
+
+## s7649 re-validation of dd>1 diagnostic conclusions (H-some, 1 artefact, 0 standing conclusions reopened)
+Question: did any CLOSED item gathered at dd>1 / OSMEM 12 rest on a D/D* 8 MB key? Table (non-audio D/D* tags; the M5
+audio tags [m5-*] [s42xx] [s4457] [s4779] date from s4xxx-s5xxx, all dd1, before OSMEM 12 / spill existed, so they are safe by era):
+
+| Item | Tag / key | dd | Data >= 8 MB? | Verdict |
+|---|---|---|---|---|
+| s6230/s6231 G1d photo tiles | [g1d-tex] `s_ti_w1 & 0x7FFFFF`, 4 KB tile dumps | w900, OSMEM 12 | **YES: every source.** s6235 unmasked load dumps 1407/1407 src >= 0x800000; s7649 rerun 3017/3017 texrects tex >= 8 MB (tex8 printed same run) | **ALIAS ARTEFACT.** s6231 "parse-time bytes noisy everywhere" read low RAM: aliased dumps entropy 4.21 bit/B (206 distinct), true-key dumps 1.91 (33 distinct; cross-run). Intermediate only: the thread closed on the s6242/s6243 skip bisect (undrawn fb RAM) + s6254, which never used this key. Instrument re-keyed 16 MB s7649. |
+| s7391 class BA stack headroom | rs64_spwm_new `a0 < 0x807FFFF0`, nz_words `>= 0x800000` | dd8 21:9 | NO: 3 route runs, all 22-27 threads' first $sp <= 0x806F9B58, max OSThread a0 0x806F9090 / top 0x806F9BA0; svc-less threads are boot/bss stacks failing the canary, not the bound | SAFE (data) |
+| s7541 class GB spans | rs64_s7541_span | dd4 | key is `& 0xFFFFFF` over a 16 MB snapshot (gb::SZ) | SAFE. Census attribution wrong: rt64_render_context.cpp:2088-2147 are the [g1d-tex]/[g1d-cmd] blocks, not rs64_s7541_span |
+| s6993 boot freeze [stall-dump] | map_result `& 0x7FFFFF` | boot | fixed OS structures 0x8011xxxx-0x8012xxxx | SAFE (static) |
+| fs-slot pollers | 0x76DF60 default | any | static < 8 MB | SAFE (static) |
+| s7441 e9prov gating | push/pop/resume counts | dd1 | counts, not keyed lookups | SAFE |
+| [g1d-wb] [g1d-fill-hi] | phys >= 0x800000 filters | dd>1 | high-aware by design (s6197) | SAFE |
+| rsp_dpc_submit s_winhi | counts start >= 8 MB | any | counts high, no alias | SAFE |
+
+Census defect found: the enclosing-function regex can attribute a site to the previous matched definition (above). D
+classification depends on the gate seen in that function, so a misattributed site's D label is unproven. s7650 follow-on.

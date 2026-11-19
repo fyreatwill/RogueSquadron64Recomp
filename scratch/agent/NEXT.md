@@ -1,17 +1,17 @@
-# NEXT (s7649)
-HYPOTHESIS-ID: mk8-conclusion-revalidation
+# NEXT (s7650)
+HYPOTHESIS-ID: mk8-census-attribution
 
 G6a/G6b/G6c and the G5 looks wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports, take that first.
 
-s7648 closed class MK8 (docs/MK8-KEY-ALIAS-CENSUS.md): no default-on code aliases dd>1 data, but 229 DIAGNOSTIC host
-sites key or bound addresses at 8 MB. s7647 showed a dd>1 conclusion (TS-4) can be an alias artefact of such a key.
+s7649: tools/s7648_mk8_census.py pinned rt64_render_context.cpp:2088-2147 ([g1d-tex]/[g1d-cmd], gated by LOG_G1D_CMD)
+to rs64_s7541_span (defined at 1884). Its FN regex misses some definitions (multi-line signatures, member functions,
+lambdas), and D ("gated") is inferred from the enclosing function, so a misattributed site's D label is unproven.
 Work unit (offline, bounded):
-1. `python3 tools/s7648_mk8_census.py -v > /tmp/mk8.txt` -> the D/D* functions and their log tags ([m5-*], [s4209], [f5-*],
-   [e9prov], [inline-*], [dl-sync-probe], [s4779-*], [s5229], fs-slot ...).
-2. For every CLOSED item in CURRENT-TRUTH / PROJECT-OVERVIEW whose evidence was gathered at dd>1 (DRAW_DISTANCE>=2, OSMEM 12,
-   DLPOOLX, spill) AND whose evidence came from one of those tags: table it (item, tag, dd, could the keyed address be >= 8 MB?).
-   Most M5 audio work predates dd>1 (dd1 only: safe). G5b/G5h/G1c-era RSP/DL instruments are the likely risk.
-3. Each at-risk conclusion: either show the keyed data is provably < 8 MB (static arena address), or re-key the instrument to
-   0x1FFFFFF with a same-run old-key arm (s7647 pattern) and rerun once (queue as a soak if it needs the screen).
-Hypotheses: H-none (no closed conclusion depends on an aliasing diag key at dd>1) vs H-some (>=1 must be reopened).
-Rules: never launch under lldb; never touch build/saves; one game at a time; SIGKILL only; pre-create R dirs for g1e_owner_quiet_arms.
+1. Make the attribution brace-aware: track brace depth from each FN match and only attribute to a function whose
+   body still contains the line. For sites with no enclosing match, report as UNATTRIBUTED and classify by hand.
+2. Add a planted control: an ungated `& 0x7FFFFFu` site placed after a gated function inside an unmatched definition
+   must come out unclassified (today it would inherit the gated function's D).
+3. Rerun `-v` and diff the attributions against s7648. Every site that changes function: re-read it and reclassify (D / D* / behaviour).
+Hypotheses: H-cosmetic (re-attribution changes names but every site is still gated: 0 behaviour) vs H-hidden (>=1
+ungated default-on key/bound at 8 MB surfaces -> fix it with a dd4 same-run control).
+Rules: never touch build/saves; one game at a time; SIGKILL only.

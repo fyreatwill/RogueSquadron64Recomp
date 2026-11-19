@@ -203855,3 +203855,29 @@ Does NOT rule out: closed DIAGNOSTIC conclusions measured at dd>1 through one of
 like TS-4 -> NEXT s7649 re-validates those. Evidence is static (single-source by construction); no game run this session.
 Next discriminator (s7649, HYPOTHESIS-ID mk8-conclusion-revalidation): for each CLOSED conclusion measured at dd>1 via a D/D*
 key, a same-run true-key (0x1FFFFFF) vs old-key arm (s7647 pattern); H-none (no conclusion moves) vs H-some (>=1 reopens).
+
+## Session 7649 (2026-11-19) — MK8 conclusion re-validation: s6230/s6231 [g1d-tex] was an 8 MB alias artefact (every photo tile src >= 8 MB); no standing conclusion reopened; [g1d-tex] re-keyed to 16 MB
+HYPOTHESIS-ID: mk8-conclusion-revalidation. Hypotheses: H-none (no CLOSED dd>1 conclusion rests on an aliasing diag key) vs
+H-some. Method: `python3 tools/s7648_mk8_census.py -v` -> D/D* functions; grepped CURRENT-TRUTH/PROJECT-OVERVIEW/PORTING-STATE
+for their tags and env flags; checked each dd>1 hit for data >= 8 MB from saved logs (table in docs/MK8-KEY-ALIAS-CENSUS.md).
+Results:
+- **s6230/s6231 (G1d photo tiles, w900, OSMEM 12, ROGUESQ_LOG_G1D_CMD): ALIAS ARTEFACT.** [g1d-tex] hashed and dumped
+  `s_ti_w1 & 0x7FFFFF`. Line 1 (saved): s6235's unmasked ROGUESQ_LOG_LOADS dumps from the same recipe have src >= 0x800000 in
+  1407/1407 files. Line 2 (this run): re-keyed build, scratch/agent/s7649_run.sh (= s6231 recipe), 2 attempts: 3017/3017
+  texrect sources at tex >= 8 MB (1489+1473 phase 4, 22+33 phase 8), tex8= old key printed beside each one (e.g. tex=0x876110
+  tex8=0x076110). 4 KB tile dumps: s6231 aliased median entropy 4.21 bit/B, 206 distinct values; true key 1.91, 33 distinct
+  (cross-run; the address identity is same-run). So s6231's "parse-time bytes noisy everywhere (even where screen is fine)" read
+  unrelated low RAM, and s6230's "source bytes look sane" also looked at the wrong bytes. Impact: none on a standing conclusion.
+  That thread's closure (s6242/s6243 skip bisect: garbage is undrawn fb RAM; s6254) never used this key.
+- s7391 class BA (dd8): rs64_spwm_new skips OSThreads a0 >= 0x807FFFF0 and nz_words stops at 8 MB. SAFE by data: 3 saved route
+  logs show all 22-27 threads' first $sp <= 0x806F9B58, max a0 0x806F9090, max top 0x806F9BA0. The 9 svc-less tids are boot/bss
+  stacks (0x8010xxxx-0x803FFFD0) failing the canary check, not the bound.
+- s7541 class GB: rs64_s7541_span keys `& 0xFFFFFF` over a 16 MB snapshot -> SAFE. The census pinned
+  rt64_render_context.cpp:2088-2147 ([g1d-tex]/[g1d-cmd]) to rs64_s7541_span: the function-attribution regex is wrong there.
+- stall-dump (fixed 0x8011-0x8012 OS structures), fs-slot (static 0x76DF60), s7441 e9prov (counts), [g1d-wb]/[g1d-fill-hi]
+  (high-aware), s_winhi (counts high): SAFE. M5 audio tags: s4xxx-s5xxx dd1 era, before OSMEM 12 existed -> SAFE by era.
+Change: src/main/rt64_render_context.cpp [g1d-tex] keys 16 MB (hash bound and 4 KB dump bound 0x1000000) and prints tex8=.
+Build clean; the run above is its positive control (the tex >= 8 MB rows exist only with the new key).
+ORIGIN: n/a (diagnostic instrument re-key, no mitigation).
+Verdict: selects H-some (1 artefact) in the narrow sense; refutes "any standing CLOSED conclusion is an alias artefact" for
+the audited tags. Single static census plus two data lines for the one hit. Next: fix census function attribution (s7650).
