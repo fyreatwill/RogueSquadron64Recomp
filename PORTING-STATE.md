@@ -204246,3 +204246,15 @@ including s7641's fix of a plume Metal drawable-index race, so the current binar
   (VOID, re-queued) on failure, so an lldb soak can never again report a null with a dead debugger.
 - Side note: s7660 plume_attach.zsh with N_DEF=0 would misbehave (macOS `seq 1 0` prints 1 and 0); not fixed, scratch only.
 - Rules out: lldb being unusable for loop sessions. The plume thread stays CLOSED (s7660 crash-handler arm was valid).
+
+## Session 7662 (2026-11-19) — CURRENT-TRUTH compaction 59077 -> ~40.7 KB: s7647-s7659 headline + Next-steps items 21-35 migrated verbatim to PROJECT-OVERVIEW
+
+Ran: Step 0 measured CURRENT-TRUTH at 59077 B (under the 60000 trigger, but 24 KB over the CLAUDE.md ~35 KB cap). Every ladder
+rung is closed or waiting on the owner (NEXT s7662 owner-wait-standing; no owner report since s7661), and the s7647-s7659 work was
+census-gate housekeeping that left 13 closed headline bullets and 15 closed Next-steps items (21-35) in the handoff. So this
+iteration compacted it with no experiment run. Moved verbatim to PROJECT-OVERVIEW "## Migrated from CURRENT-TRUTH (s7662
+maintenance)": headline bullets s7647-s7659 (50 lines) and Next-steps items 21-35 (119 lines: classes RP HD HB ST AT CF TS TS-2
+TS-3 TS-4 MK8, walker fusion, spike cost, closed-gate drift). Replaced them with one headline bullet (the gate-sweep standing check)
+and one item 21 (closed-class list, the default-on flags that stay with their =0 restores, and the rerun-after-change triggers).
+Backlog now numbers 1-21 in one monotonic sequence; the stale "item 29/30" cross-references point at item 21. Headline "as of" -> s7662.
+Rules out: nothing (no experiment). Next: owner items first; else the first open 3c rung per CURRENT-TRUTH.

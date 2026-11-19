@@ -1,11 +1,11 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7661 (2026-11-19).
+Compact operational handoff, as of Session 7662 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
 s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "(s7307 maintenance)"; older text in
-"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)"; s7535-s7576 headline + items 17-21 + pre-s7300 superseded in "(s7581 maintenance)"; s7579-s7616 headline + items 19-46 in "(s7622 maintenance)". Grep there for any sNNNN.
+"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)"; s7535-s7576 headline + items 17-21 + pre-s7300 superseded in "(s7581 maintenance)"; s7579-s7616 headline + items 19-46 in "(s7622 maintenance)"; s7647-s7659 headline + items 21-35 in "(s7662 maintenance)". Grep there for any sNNNN.
 
 ## Headline
 
@@ -18,56 +18,11 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 - **s7661: lldb attach WORKS in loop sessions (developer mode off): pid + -w + long name + s7660 control verbatim on the real game
   PASS 3/3; H-tcc/H-wait refuted, s7660 transient. New preflight tools/lldb_attach_check.sh (exit 1 = lldb nulls void; /bin/sleep
   is a platform binary and never a valid control); mk_lldb_hold.py soak wrappers run it and VOID on failure.**
-- **s7659: cold-AST sweep fits: all 6 AST caches aged, `--no-cache` sweep 130 GREEN 5 REPORT 0 RED in 530 s at load 8-14;
-  slowest s7607 240 s, s7631 189 s. Per-gate cap 300 -> 600 s (RS64_GATE_CAP; control CAP=5 -> RED timeout); `--no-cache` no
-  longer fails its own cache control. Gate-sweep thread has nothing open.**
-- **s7658: every census gate counts: sweep 135 = 130 GREEN, 5 REPORT, 0 NEEDS-INPUT, 0 NEEDS-ARGS, 0 RED** (cold 455 s,
-  warm 14.8 s). The 3 NEEDS-INPUT gates got retained inputs captured once in-session (force-added under scratch/, < 1 MB each):
-  s7215 scratch/s7215/shape_lines.txt.zst (57 KB numbered filter of a 196 MB L17 21:9 run.log; census output byte-identical),
-  s7316 scratch/s7316/ram/*_1M5.bin.zst (2 dumps cut to 0x180000, 932 KB), s7573 --gate --retained scratch/s7573/retained
-  (16 KB). Planted controls RED. s7631-s7633 regenerate from the live tree (s7657); s7317 --selftest; 5 summarisers = REPORT.
-- **s7656: census gate sweep is a standing check.** tools/s7651_gate_sweep.py caches each gate on its traced reads
-  (tools/gate_trace.py; compile gates on CC_PRINT_HEADERS): cold 454 s, unchanged tree 14.8 s. stop_gate.sh --verify re-runs it
-  when an iteration touches src/ submodule-patches/ patches/ or a census tool, and blocks on any RED gate not in
-  tools/gate_sweep_allowed_red.txt (test: tools/agent/test_gate_sweep.sh 4/4 PASS).
-- **s7655: closed-gate drift CLOSED: full sweep 0 RED (135 gates: 120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS), 0 behaviour
-  defects.** The last 14 RED gates (s7588-s7616) were all NEW code since closure (G6a rumble, G6b bindings/F6 ImGui-Metal panel,
-  G6c stand-ins, s7644 instrument) with no row: ~80 sites read by hand, every one opt-in/env-gated, bounded, local or host-owned;
-  rows written by text. s7613/s7615/s7616 were also red from STALE clang-AST caches (80 line-shift + 6 regex-only rows): new
-  tools/ast_cache.py regenerates scratch/s761[346]/ast.json when any TU/header is newer (flock; selftest PASS; aged-cache control
-  regenerated + CLOSED). Sweep classes s7316/s7573 NEEDS-INPUT keyed by tool + printed text (control: same name, other text -> RED).
-- **s7654: s7339-s7353 (12 gates) green via ONE shared rule table, tools/census_rules.py; sweep 28 -> 16 RED, 0 behaviour
-  defects.** 54 text-anchored rules (file, fn, needle, class, anchors proving the gate/bound); every census run re-proves them and a
-  stale file/fn/needle/anchor FAILS the gate (control: planted anchor -> s7339 rc=1). Left: s7316/s7573 (need inputs), s7588 +
-  s7596-s7616 (verdict exits unread). New rules for these censuses go in census_rules.py, never by line number.
-- **s7653: the 6 gates with failing self-controls are green; sweep 39 -> 28 RED, 0 behaviour defects.** Two drift kinds:
-  (1) post-regen `lui` spelling `S32(0X8011u << 16)` (s7580) blinded the constant resolvers of s7543/s7544 and s7555's MMIO
-  scan (re-read: mmio still 0 by independent grep, u-form plant now caught); (2) line-range rules in the shared s7538 engine and
-  s7542_gc_rules (+20..+130 drift, 17 GC + 4 GB sites UNCLASSIFIED/mis-keyed) -> text anchors (`("near", rx, n)`, `("line", rx)`,
-  segment regex) with a STALE-anchor FAIL + control. s7531 verify regex + s7532 6 new rules (s7535/s7539/s7644 diag copies, all
-  env-gated, read by hand). Table scratch/s7653/sweep.out.
-- **s7652: full gate sweep = 39 of 135 census gates RED; 6 fixed, 0 behaviour defects.** s7090 (s7580 lui `u` spelling vs
-  stale pristine: 20,841 false 'dropped'), s7359 + s7463/s7465/s7466 (reviews keyed by absolute line, now text anchors with
-  ORPHAN/STALE exit), s7360 (2 stand-ins rules). Stand-ins log appends -> rs64_apf. ~140 sites hand-read, all opt-in or bounded.
-  Six gates have FAILING self-controls (s7531/s7532/s7538/s7542/s7543/s7544): NEXT (item 35).
-- **s7651: 4 "closed" census gates had drifted RED; fixed, 0 behaviour sites.** New code since closure (G6b
-  controls, G6c stand-ins, s7535-s7647 instruments) put s7375/s7430/s7533/s7535 at exit 1; all 25 sites opt-in/diag or
-  locked. s7535 rules re-keyed from absolute lines to text anchors. `tools/s7651_gate_sweep.py` shows more red gates
-  (UB/bounds classes s7339-s7360, mostly rs64_standins/s7523/s7644 sites): triage is NEXT (item 35).
-- **s7650: MK8 census attribution is brace-aware; H-cosmetic, 0 behaviour sites.** The s7648 backward scan
-  mis-pinned 11 host sites (9 had inherited a D label from the previous function); all 9 re-read by hand: stall-dump,
-  [g1d-tex]/[g1d-cmd] (s_cmd_log), fs_slot_addr (log/opt-in), [gbi-f5]/[cimg-odd] prints, shadeDl (diag). H 227 = D 166 +
-  D* 61; `--controls` 3/3 (new attribution plant: legacy -> gated fn, braced -> UNATTRIBUTED). 10 other census tools use
-  the same backward scan (s7651).
-- **s7649: MK8 conclusion re-validation: 1 alias artefact, 0 standing conclusions reopened.** s6230/s6231 [g1d-tex]
-  (w900 OSMEM 12) hashed/dumped `& 0x7FFFFF`-aliased low RAM for EVERY photo tile (true src >= 8 MB: s6235 1407/1407, s7649
-  3017/3017); "parse-time bytes noisy" was the alias. The thread closed on the s6243 skip bisect, untouched. [g1d-tex] now
-  keys 16 MB (+tex8= old key). s7391 BA safe by data (all stacks < 0x806F9BA0). Census misattributes some sites (s7650).
-- **s7648: class MK8 (8 MB address keys/bounds at dd>1) CLOSED, H-mk8-diag-only, 0 fixes** (item 33,
-  docs/MK8-KEY-ALIAS-CENSUS.md, `python3 tools/s7648_mk8_census.py --controls`). No default-on lookup aliases dd>1 data.
-- **s7647: TS-4 CLOSED as an instrument artefact (H-alias8); H-slot-recycle withdrawn.** The s7645/s7646 key was `& 0x7FFFFF`
-  but the RSP DMA mask is 25-bit (0x1FFFFF8) and the dd>1 bundle puts TriGen chunks above 8 MB (0x9950A0 aliased the MusyX stream
-  buffer 0x195190). True-key L4 dd4: rd_after_pi 0, stale 0; same run alias8 4881 (= s7646's 4912); old-key arm 4876 (item 32).
+- **s7647-s7659 (census-gate sweep + classes TS-4/MK8): ALL CLOSED, 0 behaviour defects** (verbatim in PROJECT-OVERVIEW
+  "(s7662 maintenance)"). Standing check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; traced-read cache, cold ~455-530 s,
+  warm ~15 s; per-gate cap RS64_GATE_CAP=600) -> 130 GREEN, 5 REPORT, 0 RED; stop_gate.sh --verify blocks any new RED. Key reviews
+  by text anchor, never line number (tools/census_rules.py, tools/census_attr.py, tools/ast_cache.py). NEEDS-INPUT gates s7215/
+  s7316/s7573 use retained inputs under scratch/s7215, scratch/s7316/ram, scratch/s7573/retained.
 - **NEW s7620: G6b F6 Controls panel LANDED (owner to try).** RT64's F1 inspector has no Metal backend, so the panel has
   its own ImGui context drawn through RT64's public post-VI hook (RT64::SetRenderHooks) with imgui_impl_metal; closed = hook
   returns, nothing encoded. Same run (PANEL_TEST): defaults 0 mismatches, scripted bind A=pad:b 112 (control), capture took
@@ -84,7 +39,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` = control: joy 18/18 delivered, haptic on the non-haptic vpad -> path=none, 0 delivered).
   Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
-  PROJECT-OVERVIEW "(s7622 maintenance)"). TS-2 s7643 (TSan over host runtime, item 30): 1 hardening (s4211 PI ring), SEM blind spot now annotated. TS s7642 (TSan over all RT64+plume, item 29): H-clean, 0 fixes. CF s7641 (framework-callback threads, item 28): 1 fix (plume Metal drawable index race, TSan). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
+  PROJECT-OVERVIEW "(s7622 maintenance)"). TS-2 s7643 (TSan over host runtime, item 21; archived s7662): 1 hardening (s4211 PI ring), SEM blind spot now annotated. TS s7642 (TSan over all RT64+plume, item 21; archived s7662): H-clean, 0 fixes. CF s7641 (framework-callback threads, item 28): 1 fix (plume Metal drawable index race, TSan). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
   C-applicable check run; RS64_DIV32). Bounded/gated/masked: GR s7599, GX s7600, BS s7601 (5 diag composers fixed), AZ s7598
   (ROGUESQ_S7598_MASK=0 = old). Fixes landed, default on, =0 restores old: TK ROGUESQ_S7608_TK, UW s7607 (one fix), FR s7605 /
@@ -389,125 +344,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     closes on the owner's look; default stays off.** Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
-21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): CLOSED s7631, H-clean, no fix.** Regex
-    (tools/s7631_rp_scan.py) + clang AST (tools/s7631_rp_ast.py) joined by tools/s7631_rp_census.py: 36 rows both, 3 ast-only
-    explained, 0 OPEN (fresh 26, offset 6, gated 4 HLE-only, base 2, copy 1, host 1); planted OPEN / fresh / drop-row controls
-    PASS. HLE-only = static defaults + 0 `[hle send_dl` vs 566 `[lle send_dl` in a s7628 300 s hold.
-22. **Class HD (default-on diagnostic work in lib/rt64 per-list/per-command paths; NEXT said "DD", but s7447 owns DD): CLOSED
-    s7632.** tools/s7632_dd_scan.py (regex) + tools/s7632_dd_ast.py (AST) + tools/s7632_dd_census.py (gate spread through calls, join,
-    hand classes): 377 joint rows, 0 OPEN, controls PASS. Only copy rows: the s4281/s4282 list snapshot. Same-run timer
-    (ROGUESQ_S7632_STATS=1): 0.82 / 1.03 ms/s at L1 / L4 dd4 = 0.37-0.43% of processRDPLists (which uses about 23% of a core at dd4,
-    single-source), so **kept**. ROGUESQ_S7632_SNAP=0 skips it. Fixed: 2 per-call getenv in uploadTexture (UPSPAN, TMEM_ZERO) are
-    now static latches.
-23. **Class HB (default-on diagnostic work in src/rsp/dpc_bridge.cpp + rt64_render_context.cpp): CLOSED s7633, H-clean.**
-    tools/s7633_hb_census.py (s7632 scan+AST with `--hot`, bridge hand classes): 0 OPEN, 0 copy rows, controls PASS. Same run
-    (L1 dd4 16:9 FPS60, GLUE_TIME timer + `sample`, agree ~25-27 ms/s): all per-submit walker cost is functional (G1D_DEBRIEF pillar
-    12.5, CULL_SPIKE 8.2, wide-aspect radar region shift ~6 ms/s, armed by main.cpp:14403 setenv). Diag leftovers each <1 ms/s.
-    Fixed: per-commit getenv(ROGUESQ_TRACE_DISPATCH) latched.
-24. **Walker fusion: LANDED + CLOSED s7635 (ROGUESQ_S7634_FUSE default 1; =0 old two walks, =tog same-run A/B, =chk/=inj check).**
-    Spike + region bodies run per command in one walk (dpc_bridge.cpp rs64_region_scan fused -> rs64_spike_scan rb callback).
-    Equivalence, same run (L1 dd4 16:9 FPS60, DD_SKYZ=1, 703M commands): shadow late-write check 0 live, 3 inert (op 2E DD_SKYZ
-    late puts, predicted), injected 21/21 seen. Saving only ~0.75-0.8 ms/s (L1, L12 GLUE_TIME tog A/B), not the s7634 ~6:
-    a standalone decode walk overstates what fusing removes. Further walker fusion (pillar) is not worth it.
-25. **Spike body per-tri cost: CLOSED s7636, H-mem.** ROGUESQ_S7636_FASTSPIKE (default 0; =1 on, =tog, =chk) is an exact
-    integer guard test (vertex coords are int64/2^18). chk L1 dd4: 0 disagreements / 90.2M tris, injected 22016/22016. tog A/B:
-    saves 377 (L1) / 86 (L12) us per parity, ~0.2-0.75 ms/s, at A/A noise (pillar delta 63/-157): cost is the command loads, not
-    the double maths. Walker per-tri cost thread closed; scratch/s7636/RESULT.txt.
-26. **Class ST (SDL thread affinity vs SDL3 `\threadsafety` docs): CLOSED s7639, 1 fix.** `python3 tools/s7639_st_census.py
-    --controls` (exit 0; rerun after any SDL call edit or new thread): 231 sites, preprocessor-aware, roots MAIN/GAME/PRESENT/GFX/
-    WORKER, controls a/b/c/e PASS; 34 hand rows dead on macOS (ImGui SDL backend + setup paths; runtime sdlWindow=0x0). Live
-    violation was the s7620 F6 panel hook_draw (present thread) calling SDL_GetWindowFromID/GetWindowSize; now update_gfx
-    publishes the size (ROGUESQ_S7639_ST=0 old, =chk 0/215 mismatches, =chkp control 243/243). RT64 window checks use plume
-    CocoaWindow (main-queue dispatch): safe.
-27. **Class AT (AppKit calls off the main thread): CLOSED s7640, 1 fix.** Runtime witness = Apple's Main Thread Checker
-    (`zsh scratch/s7640/run.zsh <tag> [ENV=..]`, DYLD_INSERT_LIBRARIES libMainThreadChecker, boot to F6 panel draw): before, 1
-    report per boot, -[NSApplication activationPolicy] in NFD_Init <- RT64::Application ctor on the Gfx Thread. Fix (lib/rt64
-    rt64_file_dialog.cpp, default on, ROGUESQ_S7640_AT=0 old): NFD_Init on the main queue (2 s bounded wait), NFD_Quit posted.
-    Arms (same build): old+plant 2 reports (Gfx + plant), fix+plant 1 (plant only), fix 0. Static half
-    `python3 tools/s7640_at_census.py --controls` (exit 0): 50 sites in 4 ObjC TUs + CAMetalLayer calls, controls a-d PASS; plume
-    CocoaWindow all guarded, NFD dialogs dead (developerMode=0), rs64_display_mac main-only. Plant: ROGUESQ_S7640_AT_PLANT=1.
-
-28. **Class CF (framework-callback threads: Metal handlers, SDL watch/vpad, dispatch, exit hooks): CLOSED s7641, 1 fix.**
-    Witness = Thread Sanitizer on plume_metal.cpp only (`zsh tools/s7641_tsan_build.sh`, then `zsh tools/s7641_tsan_run.zsh <tag>
-    RogueSquadron64Recomp_tsan [ENV=..]`): plume present()'s completion handler did a plain RMW of currentAvailableDrawableIndex on
-    Metal threads (two threads seen) vs acquireTexture's read; now atomic CAS (lib/rt64 plume_metal, ROGUESQ_S7641_CF=0 old).
-    Arms: old 18 reports (2 on the index), fix 16 (0); the 16 are metal-cpp __block std::function copies TSan cannot order
-    (Metal handoff not intercepted), same in both. `python3 tools/s7641_cf_census.py --controls` (exit 0): 22 sites, controls a-d
-    PASS. MTC regression with fix: 0, plant 1.
-29. **Class TS (Thread Sanitizer over ALL of RT64 + plume): CLOSED s7642, H-clean, 0 fixes.** `zsh tools/s7642_tsan_rt64_build.sh`
-    (99 of 101 rt64/plume TUs instrumented; optimus/shader_compiler compile empty on macOS) -> build/RogueSquadron64Recomp_tsan2;
-    `zsh tools/s7642_tsan_run.zsh <tag> RogueSquadron64Recomp_tsan2 [ENV=..]` (boot, DUR=45), flight via g1e_owner_quiet_arms
-    (GAME=./RogueSquadron64Recomp_tsan2, TSAN_OPTIONS exported); bucket with `python3 tools/s7642_tsan_bucket.py <tsan files>`.
-    Boot: 28 reports / 3 sites (the s7641 blind spots); ctl S7641_CF=0: 30 / 5 (index pair back). L1 dd2 120 s flight
-    (level_ok=1, vi_stalls30s=0): 52 / 6 sites, all Metal-handoff blind spots (registration/pre-commit writes vs handler reads);
-    3 new sites are the PRESENT_RING Rs64SStamp init/`c` stamp vs its handlers. Scheduled->completed handler order held 3304/3304
-    S rows (no use-after-free of the stamp). No report has an RT64 worker/state/texture race pair.
-30. **Class TS-2 (TSan over the HOST runtime: ultramodern 15, librecomp 27, all 29 RogueSquadron64Recomp.dir src TUs, plus the
-    s7642 rt64/plume objects): CLOSED s7643, H-clean for host-defects, 1 hardening.** NOTE prior art: s7354 class AE already ran a
-    host TSan (tools/build_tsan.sh, tools/s7354_tsan_report.py HAND table); this pass re-derived it independently and agrees.
-    `zsh tools/s7643_tsan_host_build.sh` (needs the s7642 archives) -> build/RogueSquadron64Recomp_tsan3; runner
-    `zsh tools/s7643_tsan_run.zsh <tag> RogueSquadron64Recomp_tsan3 [ENV=..]`; bucket `python3 tools/s7643_tsan_pairs.py <files>`
-    (function pair + creating-thread role + location). Control ROGUESQ_S7643_PLANT=1 (main.cpp plain counter bumped from update_gfx
-    on main and get_n64_input on the game thread): reported 2/2 runs. NEW: lib/N64ModernRuntime thirdparty lightweightsemaphore.h
-    annotates signal()=__tsan_release / successful wait()=__tsan_acquire under `__has_feature(thread_sanitizer)` ONLY (shipped
-    binary unchanged): boot reports 1173 (32 pairs, ~1140 guest<->guest RDRAM thread/mesg queue = s7354 "SEM") -> 26 (6 pairs, all
-    the s7641 Metal-handoff class). Every future host TSan run is now clean signal. Hardening: rs64_s4211_pi_n/ring (guest PI DMA
-    writer vs RSP-thread reader, default-on diag, s7354 BENIGN) now publishes with release/acquire, scan stays 256 clear;
-    ROGUESQ_S7643_PI=0 = old plain counter. L1 dd2 120 s flight: fix 59 reports/6 pairs (0 on s4211), old 62/8 (counter pair back +
-    2 do_rom_read<->rsp::run_task RDRAM bytes). Both flights level_ok=1, alive, vi_stalls30s=0. Remaining non-Metal pair:
-    rs64_g1d_title_vi (s7354 BENIGN, single writer). Not covered: guest RDRAM concurrency (RSP task reading bytes a guest PI DMA
-    writes, do_rom_read<->run_task): guest code is uninstrumented, see NEXT.md class TS-3.
-31. **Class TS-3 (RSP audio task vs guest PI DMA on the same RDRAM bytes): CLOSED s7644, H-retail/H-margin, 0 fixes.** The s7643
-    do_rom_read<->run_task pair is the audio task's ucode_data -> DMEM byte copy (rsp.cpp dma_rdram_to_dmem, atos run_task+7108
-    on tsan3), not the s4211 hash (no s4211 dp range covers 0x800A5134). The game's OSTask declares ucode_data=0x800A4E00
-    (aspMainDataStart) size 0x800, but real data ends ~0x800A5120: then the game's vars speechSampleOffsetsLoaded/speechFileLoaded
-    and from 0x800A5130 the overlay VA region, which the game fills in 0x4000-byte PI chunks. Instrument (default off, src/rsp/
-    s7644_rspdma.cpp + hooks in librecomp rsp.cpp/pi.cpp): `ROGUESQ_S7644_RSPDMA=1` classifies every PI DMA overlapping the last
-    audio task's ucode_data or command list by task state (copy/run/idle) and bytes changed, plus an image FNV per task;
-    `ROGUESQ_S7644_RSPDMA_CTL=1` = synthetic overlap line (fired 1/1 per arm). L1 + L4 dd2 FPS60 16:9 120 s (scratch/s7644/run):
-    ~8.8k audio tasks, 4+4 ud overlaps all 0x800A5130+0x4D0 (overlay ROM 0x137580/0x10C2D0/0xA5D30, chg 1054-1121 bytes),
-    state copy 0, torn 0, command-list (dp) overlaps 0; every image change is either one of those DMAs or a CPU write ~8 tasks
-    later with no PI DMA. Hardware rspboot copies the same declared 0x800 at task start, so the tail bytes are retail-identical.
-
-32. **Class TS-4 (LLE gfx task vs guest PI DMA on RDRAM the task DMA-reads): CLOSED s7647, H-alias8 (instrument artefact), 0 fixes.**
-    s7645/s7646 keyed both sides `& 0x7FFFFF`; the RSP reads with rs64_s7327_mask 0x1FFFFF8, and at dd>1 (OSMEM 12 heap / DLPOOLX /
-    spill) gfx data lives above 8 MB. The 0x110-B reads at DMEM 0x170 are the ucode's TriGen chunk fetch (L_11B0, chunk word 0 =
-    next, 0x108 stride) at 0x9950A0+, which aliased the MusyX 256-B sample-stream PIs (musyxSynthFrame -> submitDmaRequestBatch ->
-    piDmaWorker, buffer 0x80195190+, 0x600 per voice). s7647 (src/rsp/s7644_rspdma.cpp pm(): key 0x1FFFFFF, `ROGUESQ_S7647_MASK8=1` =
-    old key; new same-run counters hi_reads + alias8): L4 dd4 FPS60 16:9 120 s, true key rd_after_pi 0/0 B, stale 0, refetch 0,
-    ctl_rd 5, hi_reads 11.7M; alias8 4881/647 KB in the SAME run; old-key arm m4 rd_after_pi 4876, stale 117, ctl_refetch 1. Both
-    alive, 0 crash, vi_stalls30s 0. The dd1 zero of s7646 was real only because dd1 has nothing above 8 MB. scratch/s7647/run.
-    The other 8 MB keys were audited as class MK8 (item 33): all diagnostic.
-
-33. **Class MK8 (8 MB phys masks `& 0x7FFFFF`, phys end checks `0x800000`, 0x807Fxxxx near-bounds): CLOSED s7648,
-    H-mk8-diag-only, 0 behaviour fixes.** `python3 tools/s7648_mk8_census.py` (exit 1 on an unclassified site; `--controls`
-    plants an ungated host key + generated bound, s7648 2/2 flagged PASS). Host src+lib 229 sites (D 177 env-gated, D* 52
-    hand-read), generated 25 (D 17 opt-in/diag patch blocks, F 8 float masks), ucode 0. Fills the "class M, open" gap of
-    s7337_bound_census.py, whose generated pattern missed 13 `0x807Fxxxx` bounds (all opt-in/diag). Single-source by
-    construction (static read); D is a regex on the enclosing function, D* list in docs/MK8-KEY-ALIAS-CENSUS.md.
-    s7649 re-validation (table in the doc): only s6230/s6231 [g1d-tex] was an alias artefact (intermediate, superseded by
-    s6243); instrument re-keyed. 34. **Census function attribution: MK8 CLOSED s7650 (H-cosmetic).** fn_spans
-    (brace-aware, innermost definition; no span = UNATTRIBUTED, hand-listed in DIAG_SITE); `--diff` shows 11 changes vs
-    the s7648 scan, 9 relabelled D -> D* after reading, 0 behaviour. s7651: the "10 other tools share the scan" premise
-    was wrong: only s7430 used it (now tools/census_attr.py, `--diff` 0 changes); the other 9 already use brace / llvm-cov /
-    call spans. 35. **Closed-gate drift (s7651): census gates go RED silently after later edits.** s7375 (1 open), s7430
-    (6 unreviewed), s7533 (2), s7535 (16) were red on arrival; all re-read by hand: every site opt-in/diag or locked, 0
-    behaviour fixes; all 4 green with controls. s7535's 22 absolute line ranges (drift +4..+842) now anchor+offset `A()`,
-    controls 12/12 (+900-line shift keeps classes; a duplicated anchor -> FAIL-check). `python3 tools/s7651_gate_sweep.py`
-    runs every tools/s7*_census.py (control: planted red/green). Partial s7651 pass, 69/135 tools (s7031-s7360): 42 green,
-    12 need inputs, 15 RED: s7090 s7316 s7339 s7342 s7343 s7344 s7345 s7346 s7348 s7349 s7350 s7351 s7353 s7359 s7360
-    (new sites in rs64_standins / s7523 / s7644 / s7535_ga_chk; s7360 :155 read by hand = bounded by leaf_end + opt-in).
-    s7652 full sweep: 83 green, 13 need inputs, 39 RED; fixed s7090 s7359 s7360 s7463 s7465 s7466 (line-keyed reviews ->
-    text anchors; lui-u normaliser). 33 RED left: controls FAIL in s7531/s7532/s7538/s7542/s7543/s7544 (NEXT); s7339-s7353
-    triaged by hand (PORTING-STATE s7652, all opt-in/bounded, rules not written); s7316 needs --ram; s7573 needs logs;
-    s7588-s7616 unread. Lesson: any review keyed by a line number WILL drift; key by text. s7653: all 6 control FAILs fixed
-    (s7531 verify regex; s7532 6 rules; s7538/s7542 line ranges -> anchors with STALE FAIL; s7543/s7544/s7555 lui `u?`); 28 RED left:
-    s7339-s7353 rules (from s7652 triage) DONE s7654 (tools/census_rules.py), s7316/s7573 need inputs, s7588-s7616 verdict exits unread. Also: any reader of the
-    POST-regen tree must accept `0X....u << 16`; fixup scripts run before fixup_lui_unsigned.py and need not.
-    **s7655: CLOSED, sweep 0 RED.** s7588-s7616 rows for G6a/G6b/G6c/s7644 sites; AST caches self-refresh (tools/ast_cache.py);
-    s7316/s7573 NEEDS-INPUT. Re-run `python3 tools/s7651_gate_sweep.py` after any src/ or lib/ change (rc 0 = no RED).
-    s7657: 0 NEEDS-ARGS (classes REPORT / NEEDS-INPUT / live-regenerated inputs). s7659: cold AST max 240 s (s7607) loaded; cap 600 s.
-    s7658: 0 NEEDS-INPUT (retained inputs, see Headline). A new G above 0x80180000 reads unclassified (RED): re-dump then.
+21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
+    ALL CLOSED** (full text, numbers, controls, tools verbatim in PROJECT-OVERVIEW "(s7662 maintenance)"). Defaults that stay
+    (=0 / old restores): ROGUESQ_S7634_FUSE=1 (walker fusion), S7639_ST, S7640_AT, S7641_CF, S7643_PI (release/acquire s4211 ring),
+    S7632_SNAP; opt-ins/diag: S7636_FASTSPIKE (default 0), S7632_STATS, S7644_RSPDMA(_CTL), S7647_MASK8. Rerun triggers:
+    tools/s7639_st_census.py after any SDL call edit or new thread; tools/s7640_at_census.py / s7641_cf_census.py after AppKit or
+    framework-callback edits; TSan builds tools/s7642_tsan_rt64_build.sh, s7643_tsan_host_build.sh (lightweightsemaphore tsan
+    annotations are TSan-only); the gate sweep after any src/ or lib/ change. A new G above 0x80180000 reads unclassified (RED): re-dump.
 
 ## Evidence index
 
