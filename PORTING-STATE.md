@@ -204377,3 +204377,25 @@ Hypotheses: H-roundtrip-ok (Save writes a file the next launch loads and applies
 unparsable, or loader/live table ignores it). Arm A wrote + arm B loaded and applied (mismatches only on bit 0x8000), with
 controls C/D behaving as designed -> selects H-roundtrip-ok, refutes H-save-broken. Next discriminator: none on this path;
 next unit per NEXT.md is another never-exercised owner path.
+
+## Session 7667 (2026-11-19) — settings.txt + controls.json combination: relative ROGUESQ_CONTROLS in a settings file silently loaded defaults; now resolves beside the settings file
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=26 new=0 (no owner crash). No owner report. NEXT.md asked for an
+owner-facing path no test had exercised end to end; took the s7663 settings file x s7619 controls.json combination.
+
+Hypotheses: H-ok (a settings-file ROGUESQ_CONTROLS reaches the controls loader after the s7663 re-exec, absolute or relative)
+vs H-cwd (relative values resolve against the launch cwd, not the settings file). Discriminator: same build, three sequential
+arms (scratch/s7667/run.zsh, BIND_SELFTEST mismatches vs the old hard-coded map at polls=2400, c.json = the s7666 file binding A=pad:b):
+- A `--settings fileA` with `preset=window` + `ROGUESQ_CONTROLS=<abs>/c.json`: re-exec summary CONTROLS(file) FPS60(preset)
+  DRAW_DISTANCE(preset); `[controls] loaded ... 29 button bindings`; dd 2; mismatches=395 (positive control).
+- B same with `ROGUESQ_CONTROLS=c.json` (file beside fileA, cwd build/): `[controls] no c.json: built-in defaults`, mismatches=0.
+- C ROGUESQ_SETTINGS=0: defaults, mismatches=0, dd 1 (negative control).
+-> H-cwd selected: an owner writing `ROGUESQ_CONTROLS=tv.json` in a settings file kept elsewhere, or launching from another
+folder, silently got the default controls. ORIGIN: rs64_settings_apply copied file values verbatim; getenv consumer opens
+the path relative to cwd. Not a mitigation; a path-semantics fix.
+
+Fix: src/main/rs64_settings.cpp `rs64_settings_resolve_value()` — for path-valued names (only ROGUESQ_CONTROLS) from a
+settings file, a relative value is prefixed with the settings file's directory, `~/` expands to $HOME, absolute untouched;
+typed env values are not touched (env stays cwd-relative as usual). tools/test_settings.cpp gains 8 resolve cases: PASS 23/23.
+Post-fix same three arms on the rebuilt game: A 395, B `loaded .../scratch/s7667/c.json` 395, C 0, all alive 40 s.
+Two lines: unit test + live loader. OWNER-OPT-INS settings row notes it. Logs scratch/s7667/*.log.zst (+ *_pre = pre-fix).

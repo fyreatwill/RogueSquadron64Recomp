@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7665 (2026-11-19).
+Compact operational handoff, as of Session 7667 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7667: settings file + controls.json combination fixed.** A relative `ROGUESQ_CONTROLS=c.json` line in a settings file
+  resolved against the cwd and silently gave default controls (arm B pre-fix mismatches=0 vs absolute-path arm A 395); it now
+  resolves beside the settings file (rs64_settings_resolve_value, `~/` = HOME; only ROGUESQ_CONTROLS is path-valued). Post-fix same
+  build A/B both 395, control C (no settings) 0; tools/test_settings.cpp 23/23. scratch/s7667/run.zsh.
 - **NEW s7664: crash reports are now read.** tools/crash_reports.py classifies every game .ips in ~/Library/Logs/DiagnosticReports
   (PLANT / DIAG / FOLDED / NEW); stop_gate.sh blocks on NEW (RS64_CRASH_REPORTS=0 skips). 22 unread reports 11-13..11-19 all attributed
   to planted controls, pre-fix arms (s7326/s7336/s7355/s7356) or env-gated instruments: **0 crashes from normal play.** An owner crash

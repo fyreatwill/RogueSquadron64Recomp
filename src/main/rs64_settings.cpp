@@ -83,6 +83,25 @@ extern "C" int rs64_settings_parse_line(const char* line, char* name, size_t nam
     return kind;
 }
 
+// s7667: a relative file path given in a settings file means "beside that settings file", not "beside wherever the game
+// was started from" (measured s7667: `ROGUESQ_CONTROLS=c.json` in a --settings file loaded nothing and silently fell back
+// to the default controls). Only path-valued names are touched; "~/" expands to $HOME. Returns the value to apply.
+extern "C" int rs64_settings_resolve_value(const char* settings_file, const char* name, const char* value, char* out, size_t out_sz) {
+    std::string v = value ? value : "";
+    const std::string n = name ? name : "";
+    const bool is_path = n == "ROGUESQ_CONTROLS";
+    if (is_path && !v.empty()) {
+        if (v.compare(0, 2, "~/") == 0) { const char* h = std::getenv("HOME"); if (h && *h) v = std::string(h) + v.substr(1); }
+        else if (v[0] != '/' && settings_file && *settings_file) {
+            const std::string f = settings_file; const size_t sl = f.rfind('/');
+            if (sl != std::string::npos) v = f.substr(0, sl + 1) + v;
+        }
+    }
+    if (v.size() + 1 > out_sz) return -1;
+    std::memcpy(out, v.c_str(), v.size() + 1);
+    return 0;
+}
+
 extern "C" void rs64_settings_apply(int argc, char** argv) {
     const char* done = std::getenv("ROGUESQ_SETTINGS_APPLIED");
     if (done && *done == '1') {
@@ -130,7 +149,7 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
                 ln++;
                 char n[256], v[1024];
                 const int k = rs64_settings_parse_line(line.c_str(), n, sizeof n, v, sizeof v);
-                if (k == 1) from_file.emplace_back(n, v);
+                if (k == 1) { char r[1300]; from_file.emplace_back(n, rs64_settings_resolve_value(file.c_str(), n, v, r, sizeof r) == 0 ? r : v); }
                 else if (k == 2) { if (preset.empty()) preset = v; }
                 else if (k < 0) { rejected++; std::fprintf(stderr, "[s7663] %s:%d ignored (only ROGUESQ_NAME=value or preset=name): %s\n", file.c_str(), ln, line.c_str()); }
             }
