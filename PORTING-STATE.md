@@ -204139,3 +204139,8 @@ HYPOTHESIS-ID: gate-sweep-standing. No regen, no game run (offline tooling only)
 - Controls: sweep planted red/green/NEEDS-INPUT/REPORT (same REPORT name with sys.exit(1) -> RED) PASS; cache control PASS; the
   s7633 census with the 4 new rows removed -> OPEN 4, rc 1 (the new exit gates); s7631 planted rows PASS on the plant-only AST.
 - Rules out: "frozen census inputs are a valid standing gate" (they hid 4 new rows for 24 sessions of code).
+- Discrimination: selects neither pure arm: refutes H-ondisk as the whole story (s7215's run.log is gone, 5 tools are not gates)
+  and refutes H-gone (4 of 10 gate on inputs the tree itself regenerates). Refutes H-frozen-ok (frozen census json is a valid
+  standing gate): the live s7633 inputs read OPEN 4 where the frozen json read 0.
+- Next discriminator: retain a filtered input for each of the 3 NEEDS-INPUT gates (s7215 shape lines, s7573 log tail, s7316 one
+  rdram dump) and split H-small (commit < 1 MB filtered lines) vs H-large (zstd + sweep decompress), scratch/agent/NEXT.md.
