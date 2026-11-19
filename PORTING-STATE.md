@@ -203149,3 +203149,7 @@ its first ~2 s on L4 only; the scorer was never fed a frame known to contain a s
 for the same reason. Still open, single question: do stand-in DL calls produce RDP pixels? Soak s7626_standins_pixels (idle-gated)
 dumps at 10/16 s where stand-ins draw, with PULL=3 and true-depth arms.
 No mitigation landed (measurement only), so no ORIGIN line applies.
+Summary: this refutes H-traverse, H-overflow and H-drain for stand-ins (walk counters + queue drain, each with a same-run
+other-node control), and refutes the s7625 "draw path drops them" reading as an artifact of a stimulus-free dump window. It selects
+"stand-in draws reach the display list" for the CPU side. The next discriminator: soak s7626_standins_pixels, flicker excess at 10/16 s
+with PULL=3 vs true depth plus a real-object toggle control; P>0 selects drawn, P=0 with draws>0 selects RSP/RDP loss.
