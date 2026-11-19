@@ -204084,3 +204084,7 @@ Result: `python3 tools/s7651_gate_sweep.py` rc 0: 135 gates, 120 GREEN, 2 NEEDS-
 Every gate run with --controls passed its own controls. 0 behaviour defects; no code under src/ or lib/ changed.
 Rules out: H-live (no default-on defect in any of the ~80 sites); drift kinds were H-drift (rowless new code) + stale AST cache.
 Closes HYPOTHESIS-ID closed-gate-drift.
+Discrimination: this selects H-drift (rowless new code, 14 gates) plus a stale-AST-cache cause (3 gates, proven by regeneration
+alone turning s7616 CLOSED with no row change) and refutes H-live (0 default-on defects in ~80 hand-read sites) and H-broken (every
+gate's own --controls passed). This closes closed-gate-drift. Next discriminator (NEXT.md, gate-sweep-standing): H-cheap vs H-cost,
+i.e. does a per-gate result cache bring an unchanged-tree sweep under 30 s so stop_gate.sh can run it every iteration.
