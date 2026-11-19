@@ -204594,3 +204594,34 @@ accepted themselves (L4 3, L1 5). Two kinds: the real object is called and rejec
 doing its far job), and one L4 item 80547410 whose real object NEVER called the bucket (real_call=-1) yet the stand-in drew 321
 frames: a possible ghost (object spawned but hidden/dead, or matching missed).
 Rules out: H-gap. Not covered: owner look; the ghost candidate.
+
+## Session 7675 (2026-11-19) — G6c "ghost" stand-in is a live AT-PT walker whose handler delays its first bucket draw (H-dead and H-miss refuted, same-run control 0.00); walker first-call delay 122-541 frames vs 0-13 for every other subtype; depth probe queued
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0. No owner report. Unit from NEXT.md (g6c-standin-ghost).
+Question: s7674's L4 item 80547410 kept a held stand-in drawing 321 frames while its real object never called
+addNpcToVisibilityBucket. Hypotheses: H-dead (destroyed/hidden right after spawn), H-miss (it drew, but the item/2-unit match missed it),
+H-other-path (draws without the bucket).
+Instrument (src/main/rs64_standins.cpp, STANDINS_LOG only): `[s7675-gh]`, logged every 60 frames from age 30 for each held stand-in that has
+no real accept yet. It records item+6 (slot), the slot-table entry `*0x80130BB0 + 8*slot` (+0 npc; 0 = freed; layout read from
+findActiveNpcInSlotChain 0x8003FC28), grid link, health, the model name, and the nearest real (non-self) bucket call over the window
+(rs64_bk_ret now probes every real call against these stand-ins).
+Run 1 (scratch/s7675, `zsh scratch/s7672/run.zsh scratch/s7675 4 odd`, owner recipe dd4 16:9 FPS60, 200 s): alive, vi_stalls30s=0,
+max gap 147 ms. Handoffs: control 21/21 blink, held 29 with 0 blinks. The ghost reproduced on the same item, 80547410, sub 0x47 = `atpt_imp`.
+For the whole hold (15 lines, ages 30-870): slot 0x2AB, npc 80219BE8 (non-zero), hp 80, near_d 34.3-38.0 (always another item).
+Positive control in the same run: all 45 other held stand-ins read near_d 0.00 with near_item = their own item (except 3 transient
+4-18 unit readings while their objects moved). H-dead refuted (slot live, hp>0). H-miss refuted (nothing within 34 units, while the
+instrument sees matched objects at 0.00).
+Cross-run table from the [s7672-ho] lines (first real call minus spawn, by subtype): L4 0x0D/0x12/0x14/0x1E/0x28 0-1 frames;
+L1 0x0D/0x13/0x14/0x2B/0x2E 0-1 and 0x4B 0-13 (outliers 58/302). Walkers only: 0x47 (L4) 122/343 or never (2 of 4), and 0x1F AT-ST
+(L1) 15-541 or never (2 of 7). When a walker does draw, it uses the bucket at dpos 0.28-5.11 from the stand-in. Held arm gap=0 (8053C028,
+8053C70C); control arm blinks 220 frames (8053C12C). So this is not H-other-path: walkers draw through the bucket, only late. The
+"ghost" is the long tail of that delay. The open question is gate vs hide: is the walker handler's draw distance-gated (the stand-in is
+then right to bridge), or is it held hidden by script (the stand-in then shows something retail would not)?
+Instrument 2 (same file): rs64_vt_on bit 2 records the camera-space depth of every view test (rs64_vt_lastd). `[s7675-fr]` logs per
+item the depth at the real object's first bucket call (fr_d) and the closest a held stand-in came (held_dmin), or delay=never.
+Scorer tools/s7675_ghost_score.py: GATE if a never-case's held_dmin is above every first-call depth for its subtype, GHOST otherwise (rc 1).
+Run 2 (scratch/s7675b, L4) was VOIDED by human input at t=104 s, before the AT-PT spawned. Its partial log still passes the
+depth control: first-call depth 0x0D 38-49, 0x14 33-50, 0x1E 39-49 (delay 0-1). Owner at the machine (HID idle 14-47 s), so queued
+scratch/agent/soak_queue/s7675_ghost_L4.sh and s7675_ghost_L1.sh (SOAK_NEEDS_IDLE=300).
+(A first attempt at run 2 used the old binary after a compile error; discarded and re-run.)
+Rules out: H-dead, H-miss and H-other-path for the s7674 ghost. Not covered: gate vs scripted hide (queued soaks), owner look.

@@ -84,6 +84,10 @@ struct Standin {
     // s7674: held culled frames by our own view-test exit class, and the real object's rejected calls while we wait for its first accept
     uint32_t si_cls[4] = {}, re_cls[4] = {}, re_rej = 0;
     uint32_t idx = 0; uint16_t sub = 0; int end_reason = -1, prev_reason = -1; float dpos = -1.0f; bool ho_logged = false, by_pos = false;
+    // s7675 ghost probe: nearest real (non-self) bucket call to this held stand-in since the last [s7675-gh] line
+    float nd2 = -1.0f; uint32_t n_state = 0, n_item = 0, n_calls = 0;
+    // s7675b: camera-space distance (view test) of our held call (min over the window / the whole hold) and of the real object's first call
+    double si_dmin = -1.0, si_dall = -1.0, fr_d = -1.0, spawn_d = -1.0;
 };
 
 uint32_t s_dat = 0;
@@ -251,6 +255,7 @@ int64_t s_bk_frame = 0;
 int rs64_bk_self = 0;
 bool s_bk_log = false;
 std::unordered_map<uint32_t, size_t> s_bk_by_item;
+std::vector<size_t> s_gh_idx;  // s7675: held stand-ins >= 30 frames past spawn, probed against every real bucket call
 size_t s_bk_gen_size = ~size_t(0);
 uint32_t s_bk_calls = 0, s_bk_item_hits = 0, s_bk_pos_hits = 0;
 const char* const kReason[] = { "added", "culled", "spawned", "unlinked", "dead", "cond" };
@@ -268,6 +273,7 @@ void ho_log(Standin& s, const char* why) {
 }  // namespace
 
 extern "C" int rs64_bk_on = 0;
+extern "C" double rs64_vt_lastd;  // s7675b, defined with the view-test hooks below
 // s7674 (tools/apply_s7674_bucket_vt.py): last view-test exit PC / v0 and call count of the current addNpcToVisibilityBucket call.
 extern "C" uint32_t rs64_bk_vt_n = 0, rs64_bk_vt_pc = 0, rs64_bk_vt_v0 = 0;
 // class: 0 off-screen (camera box, behind, side planes, point near), 1 far, 2 no view test ran, 3 view test passed (bucket rejected after)
@@ -286,6 +292,17 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
     }
     Standin* hit = nullptr;
     const uint32_t it = rw(rdram, state + 0x34u);
+    if (s_bk_log) {
+        const float gx = rf(rdram, state), gy = rf(rdram, state + 4u), gz = rf(rdram, state + 8u);
+        for (size_t gi : s_gh_idx) {
+            if (gi >= s_standins.size()) continue;
+            Standin& g = s_standins[gi];
+            ++g.n_calls;
+            const float dx = rf(rdram, g.state) - gx, dy = rf(rdram, g.state + 4u) - gy, dz = rf(rdram, g.state + 8u) - gz;
+            const float d2 = dx * dx + dy * dy + dz * dz;
+            if (g.nd2 < 0 || d2 < g.nd2) { g.nd2 = d2; g.n_state = state; g.n_item = it; }
+        }
+    }
     auto f = s_bk_by_item.find(it);
     if (f != s_bk_by_item.end()) { hit = &s_standins[f->second]; ++s_bk_item_hits; }
     const float x = rf(rdram, state), y = rf(rdram, state + 4u), z = rf(rdram, state + 8u);
@@ -301,7 +318,8 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
     // runInMissionFrame runs the draw-phase slotDispatcherIter passes (where handlers add to the bucket) BEFORE our submit hook, so
     // a real call belongs to the frame of the NEXT submit.
     const int64_t cur = s_bk_frame + 1;
-    if (s.real_call < 0) s.real_call = cur;
+    if (s.real_call < 0) { s.real_call = cur; s.fr_d = rs64_bk_vt_n ? rs64_vt_lastd : -2.0; }
+    else if (s.fr_d == -2.0 && rs64_bk_vt_n) s.fr_d = rs64_vt_lastd;  // first call reused the cached result: take the next real test
     if (v0 != 1) { if (s.real_add < 0) { ++s.re_rej; ++s.re_cls[vt_class()]; } return; }
     if (s.real_add < 0) {
         s.real_add = cur;
@@ -373,7 +391,9 @@ extern "C" int rs64_standins_fb_win = 0;
 // rejects the stand-ins. rs64_vt_on is set only around our addNpcToVisibilityBucket mips_call.
 extern "C" int rs64_vt_on = 0;
 extern "C" uint32_t rs64_vt_pc = 0;
-extern "C" float rs64_vt_farmul = 1.0f;  // s7625: view-test far multiplier, != 1 only inside our addNpcToVisibilityBucket call
+extern "C" float rs64_vt_farmul = 1.0f;
+// s7675b: rs64_vt_on bit 1 = tally (our own call), bit 2 = record depth only (every view test while STANDINS_LOG); depth of the latest test
+extern "C" double rs64_vt_lastd = -1.0;  // s7625: view-test far multiplier, != 1 only inside our addNpcToVisibilityBucket call
 namespace {
 struct VtExit { uint32_t pc; const char* name; };
 constexpr VtExit kVtExits[] = {
@@ -391,6 +411,12 @@ bool s_vt_consts_logged = false;
 float vt_f(const uint8_t* rdram, uint32_t a) { return rf(rdram, a); }
 }  // namespace
 extern "C" void rs64_vt_why(uint8_t* rdram, recomp_context* ctx, uint32_t pc) {
+    {
+        const uint32_t sp0 = (uint32_t)ctx->r29;
+        const float x0 = vt_f(rdram, sp0 + 0x10u), y0 = vt_f(rdram, sp0 + 0x14u), z0 = vt_f(rdram, sp0 + 0x18u);
+        rs64_vt_lastd = std::sqrt((double)x0 * x0 + (double)y0 * y0 + (double)z0 * z0);
+    }
+    if (!(rs64_vt_on & 1)) return;
     int i = 0;
     while (i < kVtN && kVtExits[i].pc != pc) ++i;
     const bool pass = (uint32_t)ctx->r2 == 1u;
@@ -678,6 +704,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         s.prev_reason = r;
     };
     size_t si_idx = 0;
+    s_gh_idx.clear();
     for (Standin& s : s_standins) {
         ++s_t.cand;
         const bool odd = (si_idx++ & 1u) != 0;
@@ -685,6 +712,39 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         const bool planted = (s_plant > 0 && odd && s.spawn_f >= 0 && s_calls - s.spawn_f < s_plant) ||
                              (s_hold && (s_hold == 1 || odd) && s.spawn_f >= 0 && s.real_add < 0 && s_calls - s.spawn_f < 900);
         if (s_log && s.spawn_f >= 0 && !s.ho_logged && (int64_t)s_calls - s.spawn_f > 600) ho_log(s, "timeout600");
+        if (s_log && s.spawn_f >= 0 && s.real_call >= 0 && s.fr_d != -3.0 && s.fr_d != -2.0) {
+            std::fprintf(stderr, "[s7675-fr] item %08X sub %04X odd=%u delay=%lld fr_d=%.2f spawn_d=%.2f held_dmin=%.2f\n", s.item, (unsigned)s.sub, odd ? 1u : 0u,
+                         (long long)(s.real_call - s.spawn_f), s.fr_d, s.spawn_d, s.si_dall);
+            s.fr_d = -3.0;  // logged
+        }
+        if (s_log && s.spawn_f >= 0 && s.real_call < 0 && s.fr_d != -4.0 && (int64_t)s_calls - s.spawn_f >= 899) {
+            std::fprintf(stderr, "[s7675-fr] item %08X sub %04X odd=%u delay=never fr_d=-1 spawn_d=%.2f held_dmin=%.2f\n", s.item, (unsigned)s.sub, odd ? 1u : 0u,
+                         s.spawn_d, s.si_dall);
+            s.fr_d = -4.0;
+        }
+        // s7675 ghost probe: a held stand-in whose real object never accepted. Once per 60 frames from age 30: the item's slot (+6),
+        // the slot table entry (*0x80130BB0 + 8*slot: +0 npc, 0 = freed), grid link, health, condition, and the nearest real call.
+        if (s_log && planted && s.spawn_f >= 0 && s.real_add < 0 && (int64_t)s_calls - s.spawn_f >= 30) {
+            const int64_t age = (int64_t)s_calls - s.spawn_f;
+            if (age % 60 == 30) {
+                const uint16_t slot = rh(rdram, s.item + 6u);
+                const uint32_t tbl = rw(rdram, 0x80130BB0u);
+                uint32_t npc = 0xFFFFFFFFu, n16 = 0xFFFFu;
+                if (slot != 0xFFFFu && guest(tbl) && slot < 0x800u) { npc = rw(rdram, tbl + slot * 8u); if (guest(npc)) n16 = rh(rdram, npc + 0x16u); }
+                const bool linked = std::binary_search(s_linked.begin(), s_linked.end(), s.item);
+                const int32_t hp = (int32_t)rw(rdram, s.item + 0x6Cu + diff * 4u);
+                char nm[17] = {};
+                const uint32_t mn = handler_model_name(s.sub);
+                for (int i = 0; mn && i < 16; ++i) { const uint8_t c = rb(rdram, mn + i); if (!c) break; nm[i] = (c >= 32 && c < 127) ? (char)c : '?'; }
+                std::fprintf(stderr, "[s7675-gh] item %08X sub %04X odd=%u age=%lld real_call=%lld re_rej=%u slot=%04X npc=%08X npc16=%04X linked=%d hp=%d "
+                             "held_ok=%u near_d=%.2f near_state=%08X near_item=%08X near_calls=%u si_d=%.2f model=%s pos=%.1f,%.1f,%.1f\n",
+                             s.item, (unsigned)s.sub, odd ? 1u : 0u, (long long)age, (long long)s.real_call, s.re_rej, (unsigned)slot, npc, n16, linked ? 1 : 0, hp,
+                             s.held_ok, s.nd2 < 0 ? -1.0 : std::sqrt((double)s.nd2), s.n_state, s.n_item, s.n_calls, s.si_dmin, nm,
+                             (double)rf(rdram, s.state), (double)rf(rdram, s.state + 4u), (double)rf(rdram, s.state + 8u));
+                s.nd2 = -1.0f; s.n_state = s.n_item = s.n_calls = 0; s.si_dmin = -1.0;
+            }
+            s_gh_idx.push_back(si_idx - 1);
+        }
         if (rh(rdram, s.item + 6u) != 0xFFFFu && !planted) {
             if (s.spawn_f < 0) s.spawn_f = s_calls;
             reason(s, 2);
@@ -718,12 +778,18 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         const bool far_on = s_far > 0 || !(((long long)now) & 1);
         rs64_vt_farmul = (float)(s_far > 0 ? s_far : (far_on ? s_dd : 1.0));
         if (far_on && s_far < 0) ++s_t.faron;
-        rs64_vt_on = s_log ? 1 : 0;
+        rs64_vt_on = s_log ? 3 : 0;
+        rs64_vt_lastd = -1.0;
         rs64_bk_self = 1;
         const uint32_t add_v0 = mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0;
         rs64_bk_self = 0;
         if (planted) { ++s.held; if (add_v0 == 1) ++s.held_ok; else ++s.si_cls[vt_class()]; }
-        rs64_vt_on = 0;
+        if (rs64_bk_vt_n && rs64_vt_lastd >= 0) {
+            if (planted && (s.si_dmin < 0 || rs64_vt_lastd < s.si_dmin)) s.si_dmin = rs64_vt_lastd;
+            if (planted && (s.si_dall < 0 || rs64_vt_lastd < s.si_dall)) s.si_dall = rs64_vt_lastd;
+            if (s.spawn_d < 0 && s.spawn_f >= 0) s.spawn_d = rs64_vt_lastd;
+        }
+        rs64_vt_on = s_log ? 2 : 0;
         rs64_vt_farmul = 1.0f;
         reason(s, add_v0 == 1 ? 0 : 1);
         if (add_v0 == 1) {
