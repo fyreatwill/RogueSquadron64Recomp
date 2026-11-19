@@ -303,7 +303,7 @@ def main():
         except (OSError, ValueError):
             CACHE = {}
     newvs = sys.argv[sys.argv.index("--new-red-vs") + 1] if "--new-red-vs" in sys.argv else None
-    jobs = int(sys.argv[sys.argv.index("--jobs") + 1]) if "--jobs" in sys.argv else 6
+    jobs = int(sys.argv[sys.argv.index("--jobs") + 1]) if "--jobs" in sys.argv else 2
     only = re.compile(sys.argv[sys.argv.index("--only") + 1]) if "--only" in sys.argv else None
     tsv = sys.argv[sys.argv.index("--tsv") + 1] if "--tsv" in sys.argv else None
     with tempfile.TemporaryDirectory() as d:

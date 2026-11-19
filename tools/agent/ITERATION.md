@@ -436,6 +436,9 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
   Never cat large files or dump whole logs; summarise them with a short python/awk pass.
 
 ## Iron rules (each one bought with multiple lost sessions)
+0. CPU budget (owner, 2026-11-19): the owner's fan was running flat out from
+   parallel sweeps. Run at most 2 CPU-heavy jobs at once (s7651_gate_sweep.py
+   defaults to --jobs 2). Do not raise --jobs or add wider fan-outs.
 1. A null result is WORTHLESS until the instrument passes a positive control
    in the same run ("mark everything" must visibly fire). A counter proving
    the branch ran is NOT a control.
