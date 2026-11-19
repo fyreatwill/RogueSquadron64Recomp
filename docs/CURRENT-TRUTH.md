@@ -12,7 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7647: TS-4 CLOSED as an instrument artefact (H-alias8); H-slot-recycle withdrawn.** The s7645/s7646 key was `& 0x7FFFFF`
+- **NEW s7648: class MK8 (8 MB address keys/bounds at dd>1) CLOSED, H-mk8-diag-only, 0 fixes** (item 33,
+  docs/MK8-KEY-ALIAS-CENSUS.md, `python3 tools/s7648_mk8_census.py --controls`). No default-on lookup aliases dd>1 data.
+- **s7647: TS-4 CLOSED as an instrument artefact (H-alias8); H-slot-recycle withdrawn.** The s7645/s7646 key was `& 0x7FFFFF`
   but the RSP DMA mask is 25-bit (0x1FFFFF8) and the dd>1 bundle puts TriGen chunks above 8 MB (0x9950A0 aliased the MusyX stream
   buffer 0x195190). True-key L4 dd4: rd_after_pi 0, stale 0; same run alias8 4881 (= s7646's 4912); old-key arm 4876 (item 32).
 - **NEW s7620: G6b F6 Controls panel LANDED (owner to try).** RT64's F1 inspector has no Metal backend, so the panel has
@@ -424,8 +426,15 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     old key; new same-run counters hi_reads + alias8): L4 dd4 FPS60 16:9 120 s, true key rd_after_pi 0/0 B, stale 0, refetch 0,
     ctl_rd 5, hi_reads 11.7M; alias8 4881/647 KB in the SAME run; old-key arm m4 rd_after_pi 4876, stale 117, ctl_refetch 1. Both
     alive, 0 crash, vi_stalls30s 0. The dd1 zero of s7646 was real only because dd1 has nothing above 8 MB. scratch/s7647/run.
-    Caveat: 127 other `0x7FFFFF` keys in src (main.cpp, dpc_bridge.cpp, rt64_render_context.cpp) may alias the same way at dd>1
-    (NEXT: class MK8 audit).
+    The other 8 MB keys were audited as class MK8 (item 33): all diagnostic.
+
+33. **Class MK8 (8 MB phys masks `& 0x7FFFFF`, phys end checks `0x800000`, 0x807Fxxxx near-bounds): CLOSED s7648,
+    H-mk8-diag-only, 0 behaviour fixes.** `python3 tools/s7648_mk8_census.py` (exit 1 on an unclassified site; `--controls`
+    plants an ungated host key + generated bound, s7648 2/2 flagged PASS). Host src+lib 229 sites (D 177 env-gated, D* 52
+    hand-read), generated 25 (D 17 opt-in/diag patch blocks, F 8 float masks), ucode 0. Fills the "class M, open" gap of
+    s7337_bound_census.py, whose generated pattern missed 13 `0x807Fxxxx` bounds (all opt-in/diag). Single-source by
+    construction (static read); D is a regex on the enclosing function, D* list in docs/MK8-KEY-ALIAS-CENSUS.md.
+    Open follow-on: CLOSED diagnostic conclusions measured at dd>1 through one of these keys may be alias artefacts (NEXT).
 
 ## Evidence index
 

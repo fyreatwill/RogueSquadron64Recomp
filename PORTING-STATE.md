@@ -203825,3 +203825,31 @@ ORIGIN: not a mitigation (instrument key fix, default-off instrument).
 Discrimination (s7647): this selects H-alias8 and refutes H-real / H-slot-recycle (true-key overlap 0 while the same run's alias8
 counter = 4881 and the old-key arm = 4876). Next discriminator: class MK8 census of the 127 other `0x7FFFFF` keys in src (default-on
 vs diag, reachable >= 8 MB at dd>1) with a planted above-8 MB positive control for any behaviour site (scratch/agent/NEXT.md).
+
+## Session 7648 (2026-11-19) — class MK8 CLOSED: every 8 MB address key/bound is diagnostic (254 sites, 0 behaviour fixes); census tool with controls
+
+HYPOTHESIS-ID: mk8-key-alias-audit. Offline idiom-class audit (ladder item 3 model) triggered by s7647 (TS-4 was an
+`& 0x7FFFFF` alias of dd>1 data above 8 MB). Hypotheses: H-mk8-diag-only (every aliasing site is a diagnostic) vs
+H-mk8-live (a default-on lookup/guard aliases or rejects dd>1 data: a G5b drop candidate).
+
+What ran: grep-enumerated three spellings across host src/, lib (ultramodern, librecomp, rt64 hle/gbi/render, no
+third-party), the generated RecompiledFuncs tree and build/factor5_ucode: (1) 8 MB masks `0x7FFFFF`/`0x007FFFFF`,
+(2) phys end checks `0x800000`, (3) `0x807Fxxxx` near-variant guest bounds (s7337's generated pattern matched only
+0x80800000). Read every always-called candidate in full (rs64_m5_pcm_writer_dma, s4457, s5229, s6843/vsrc,
+vtxcolor_state + its RT64 consumer, e9prov_task_begin + root_dl consumers, inline probes, librecomp rsp.cpp audio
+join/probe + s4211, filter-voice span checks, fs-slot/fl-zero pollers, the RT64 RDRAMSize constant, s4204-s4209/s6363/
+s6660 generated blocks, the m5 task-ptr guards).
+
+Result: H-mk8-diag-only selected. Host 229 sites: D 177 (env/enabled-gated function), D* 52 (always called, 8 MB value
+feeds only diag state or prints). Generated 25: D 17 (opt-in/diag patch blocks; 13 are 0x807Fxxxx bounds the s7337
+census never saw), F 8 (float mantissa masks in the s7xxx NaN checks, not addresses). ucode 0. RT64 RDRAMSize=0x7FFFFF
+only sizes a debug RDRAM dump. Also confirmed class R still clean (s7337_bound_census exit 0, generated survivors 0).
+
+Landed: tools/s7648_mk8_census.py (exit 1 on any unclassified site; D* allowlist carries a reason per function;
+`--controls` plants an ungated host key `a & 0x7FFFFFu` and an ungated generated bound `a < 0x807FFF00u` in temp files:
+planted=2 flagged=2 PASS, same run as the clean census). docs/MK8-KEY-ALIAS-CENSUS.md (table, D* list, limits).
+CURRENT-TRUTH item 33; item 32's caveat resolved.
+
+Rules out: an 8 MB alias/reject in default-on code as a cause of dd>1-only defects (G5b drops, G5h cutscene loss).
+Does NOT rule out: closed DIAGNOSTIC conclusions measured at dd>1 through one of these D/D* keys being alias artefacts
+like TS-4 -> NEXT s7649 re-validates those. Evidence is static (single-source by construction); no game run this session.
