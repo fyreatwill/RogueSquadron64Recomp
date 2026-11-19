@@ -1,15 +1,15 @@
-# NEXT (s7656)
+# NEXT (s7657)
 HYPOTHESIS-ID: gate-sweep-standing
 
 G6a/G6b/G6c and the G5 looks wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports, take that first.
 
-s7655 closed closed-gate-drift: tools/s7651_gate_sweep.py is 0 RED (120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS). The drift happened
-because nothing re-runs the sweep after a session adds code. Work unit: make the sweep a standing check.
-1. Make the sweep cheap enough to run every iteration: per-gate result cache keyed by (tool file hash, hash of the files the tool
-   reads = its scan roots), so an unchanged tree re-runs nothing. Measure full vs cached wall time.
-2. Run it from tools/agent/stop_gate.sh --verify (or loop.sh after the iteration) when the iteration's diff touches src/ lib/ or
-   tools/s7*_census.py; a NEW RED gate (not red at the iteration's starting commit) blocks with the gate name + tail.
-   Contract rules go in stop_gate.sh (CLAUDE.md). Positive control: a planted rowless static in a scratch copy -> RED -> blocked.
-3. The 13 NEEDS-ARGS gates: list which have an input on disk (scratch/s70xx) and give the sweep that argument, so they count.
-Hypotheses: H-cheap (cache makes it < 30 s on an unchanged tree) vs H-cost (scan roots too broad; needs per-tool roots).
+s7656: the sweep is a standing check (cached 14.8 s, stop_gate --verify blocks new RED). Remaining gap: 10 NEEDS-ARGS gates
+(s7031_offmap s7082_jal s7083_lowering s7210_field s7215_shape s7317_field_compare s7441_rs64 s7631_rp s7632_dd s7633_hb)
+count for nothing. Work unit: for each, read its argv usage + the session entry that ran it (grep PORTING-STATE for the tool
+name) and find the input it was run on (scratch/s70xx..., soak_results logs).
+- Input on disk -> add it to the sweep's per-gate args table (the 3 done in s7656 are the pattern) and confirm GREEN, plus
+  that a planted bad input turns it RED (not NEEDS-ARGS).
+- Input gone (gitignored / deleted log) -> classify the gate NEEDS-INPUT with a printed reason, like s7316/s7573.
+- Also make `--help` print usage instead of running a full sweep.
+Hypotheses: H-ondisk (most inputs survive in scratch/) vs H-gone (logs pruned; they become NEEDS-INPUT). Outcome table per gate.
 Rules: never touch build/saves; one game at a time; SIGKILL only.

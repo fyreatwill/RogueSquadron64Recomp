@@ -28,6 +28,7 @@ arm() { # name exit_code allow_list(0/1) touch_tool(0/1) expect(block|allow)
     [ "$allow" = 1 ] && echo "s7999_planted_census.py test arm" >> tools/gate_sweep_allowed_red.txt
     printf '\n## Session 99999 (2026-11-19) — gate sweep test arm %s\n' "$name" >> PORTING-STATE.md
     echo "<!-- test $name -->" >> docs/CURRENT-TRUTH.md
+    echo "$name" > tools/s7999_note.txt  # a non-doc change that matches no sweep trigger (keeps ADVANCED legal)
     git add -A && git -c user.name=t -c user.email=t@t commit -qm "test $name"
     echo DONE > scratch/agent/STATUS; echo ADVANCED > scratch/agent/OUTCOME
     printf 'x\nHYPOTHESIS-ID: test\n' > scratch/agent/NEXT.md

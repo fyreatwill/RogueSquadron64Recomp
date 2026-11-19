@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7655: closed-gate drift CLOSED: full sweep 0 RED (135 gates: 120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS), 0 behaviour
+- **NEW s7656: census gate sweep is a standing check.** tools/s7651_gate_sweep.py caches each gate on its traced reads
+  (tools/gate_trace.py; compile gates on CC_PRINT_HEADERS): cold 454 s, unchanged tree 14.8 s (H-cheap; 129 hit, 6 spawning
+  gates uncacheable). stop_gate.sh --verify re-runs it when an iteration touches src/ submodule-patches/ patches/ or a census
+  tool, and blocks on any RED gate not in tools/gate_sweep_allowed_red.txt (test: tools/agent/test_gate_sweep.sh 4/4 PASS).
+  Sweep now 123 GREEN, 2 NEEDS-INPUT, 10 NEEDS-ARGS, 0 RED.
+- **s7655: closed-gate drift CLOSED: full sweep 0 RED (135 gates: 120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS), 0 behaviour
   defects.** The last 14 RED gates (s7588-s7616) were all NEW code since closure (G6a rumble, G6b bindings/F6 ImGui-Metal panel,
   G6c stand-ins, s7644 instrument) with no row: ~80 sites read by hand, every one opt-in/env-gated, bounded, local or host-owned;
   rows written by text. s7613/s7615/s7616 were also red from STALE clang-AST caches (80 line-shift + 6 regex-only rows): new

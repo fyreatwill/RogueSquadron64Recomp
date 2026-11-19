@@ -204088,3 +204088,25 @@ Discrimination: this selects H-drift (rowless new code, 14 gates) plus a stale-A
 alone turning s7616 CLOSED with no row change) and refutes H-live (0 default-on defects in ~80 hand-read sites) and H-broken (every
 gate's own --controls passed). This closes closed-gate-drift. Next discriminator (NEXT.md, gate-sweep-standing): H-cheap vs H-cost,
 i.e. does a per-gate result cache bring an unchanged-tree sweep under 30 s so stop_gate.sh can run it every iteration.
+
+## Session 7656 (2026-11-19) — census gate sweep made a standing stop-gate check: traced-read result cache (454 s cold -> 14.8 s warm), new-RED block in stop_gate --verify, test 4/4 PASS
+
+What ran (code landed in commit a05e5c4b6; that commit was made before the session was cut off, so this entry and the test fix
+close it out):
+- tools/s7651_gate_sweep.py: per-gate result cache keyed on the tool's hash plus the hashes of every file it actually read
+  (tools/gate_trace.py traces opens; gates that compile key on CC_PRINT_HEADERS output). Gates that spawn subprocesses are
+  uncacheable (6). Built-in cache controls PASS in-run: read-gate green/green/hit/RED-after-edit, compile-gate
+  green/green/hit/RED-after-header-edit, spawn-gate uncached. Planted red/green/needs-input controls PASS.
+- Measured: cold sweep 454.0 s (hit=0 miss=129), immediate re-run on the unchanged tree 14.8 s (hit=129 miss=0). H-cheap
+  selected (< 30 s), H-cost refuted: no per-tool roots needed.
+- tools/agent/stop_gate.sh --verify: when the iteration's commits touch src/, submodule-patches/, patches/, a census tool or
+  tools/census_rules.py, re-run the sweep with --new-red-vs tools/gate_sweep_allowed_red.txt and block naming any new RED gate.
+  --verify only (cold sweep far exceeds the Claude Stop hook's 30 s); loop.sh runs --verify for every runner.
+- tools/agent/test_gate_sweep.sh (detached worktree under $TMPDIR, never this checkout): arms red->BLOCK, green->ALLOW,
+  allowed-list->ALLOW, untouched->ALLOW. The uncommitted fix this session: each arm now also commits a non-doc file
+  (tools/s7999_note.txt) so the faked iteration is ADVANCED-legal and the gate reaches the sweep check. 4/4 PASS, 12 s.
+- NEEDS-ARGS 13 -> 10 (3 gates given on-disk inputs). Sweep result: 135 gates, 123 GREEN, 2 NEEDS-INPUT (s7316, s7573),
+  10 NEEDS-ARGS, 0 RED, 0 new RED.
+Rules out: drift of closed census gates going unnoticed after a code-touching session (now blocked at verify).
+Not covered: the 10 NEEDS-ARGS gates (s7031 s7082 s7083 s7210 s7215 s7317 s7441 s7631 s7632 s7633) still count for nothing;
+next unit. Note: the sweep takes no --help (it ran a full sweep on that flag).
