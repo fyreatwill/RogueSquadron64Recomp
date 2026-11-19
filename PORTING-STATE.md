@@ -204373,3 +204373,7 @@ Run scratch/s7666/run.zsh (one game at a time, ~40 s each, all 4 alive, logs .zs
 - D (control) SELFTEST + corrupt file: "rejected (not valid JSON): built-in defaults", mismatches 0 at 2400 polls.
 Rules out: Save silently failing / writing an unreadable file / loader ignoring it. Not covered: the owner clicking Save with
 the mouse (the test calls the same rs64_bind_save the button calls). New crash reports this session: none (FOLDED=1 new=0).
+Hypotheses: H-roundtrip-ok (Save writes a file the next launch loads and applies) vs H-save-broken (write fails, file
+unparsable, or loader/live table ignores it). Arm A wrote + arm B loaded and applied (mismatches only on bit 0x8000), with
+controls C/D behaving as designed -> selects H-roundtrip-ok, refutes H-save-broken. Next discriminator: none on this path;
+next unit per NEXT.md is another never-exercised owner path.
