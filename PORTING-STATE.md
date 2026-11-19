@@ -202760,3 +202760,54 @@ HYPOTHESIS-ID: host-static-of-guest-register. Item 3 systematic idiom-class audi
   submit-then-wait protocol but are not witnessed here; (2) other host queues that carry guest ADDRESSES (PTR(OSMesgQueue)
   in external_messages, timer action_queue, RT64 queues) are deferred reads of guest memory too, but their elements are
   32-bit guest addresses, not host pointers -> class DQ next (deferred guest reads through host queues).
+
+## Session 7615 (2026-11-18) — class DQ closed: deferred guest reads through host queues and host threads (16 queues + 12 vectors-as-queues, regex == clang-AST on both sets, 29 producers inside their allowed-argument sets, 52 thread creations classified, controls 10/10, witness PASS: 14 deferred-message targets all static guest queues), H-clean
+
+Work unit: NEXT.md s7615 (class DQ, the scope gap s7614 declared). Audit only, no runtime code change.
+- Tools: tools/s7615_dq_scan.py (regex: queue declarations of moodycamel / std::deque / queue / priority_queue / list /
+  stack in the s7611 scope + librecomp/ultramodern headers; vectors used as queues = appended AND erased in one file;
+  producer calls enqueue/push*/emplace* on census queues; every std::thread / std::async / pthread_create /
+  dispatch_async creation with its captures, entry body and a ONE-HOP same-file callee check for guest tokens),
+  tools/s7615_dq_census.py (rows, contracts, controls, witness), tools/s7615_dq_witness.sh (title 90 s,
+  ROGUESQ_RECV_TRACE=1). Second source: scratch/s7614/ast.json (clang VarDecls + every repo record's FieldDecls).
+  Run: `python3 tools/s7615_dq_census.py --controls --witness scratch/s7615/witness.log` (rc 0; -v lists every row;
+  output scratch/s7615/census.txt).
+- Queues (16, regex == clang): copy 1 (events action_queue: OSTask and VI regs by VALUE; the DL behind task.data_ptr and
+  ScreenUpdate.framebuffer are read later = the RSP-input protocol s7535/s7536 and VI scanout s7542 18(c)); protocol 3
+  (sp_task_queue = s7614 Q1/W; external_messages; timer action_queue); key 2 (g_audio_sp_deliveries (mq,msg) compared
+  only, payload host copy; s_menu_fifo message pointer compared only, request id copied at send); gated 3 (rdpq q
+  ROGUESQ_RDP_ASYNC default off, command words copied into Job.w; s7523 q/sg); host 3 (threads deleted_threads, mods
+  queue, s7325 iterators) + host(auto) 3 (q_gfx/q_aud time points, stderr strings); dead 1 (events deleted_threads).
+- Producers (29): every call on a rowed queue matches its row's allowed-argument regex set (a new producer, or one that
+  passes a pointer, is OPEN).
+- external_messages protocol: msg by value; mq is the guest's registered event queue or a PI completion queue the
+  requester blocks on; delivery at the next game-thread dequeue = an interrupt taken at the next exception point.
+  Witness W (ROGUESQ_RECV_TRACE [hostpost], one row per distinct (mq, source)): 14 rows, Sp 8011A420, Si 80110770,
+  Ai 80149670, Vi 80114388, Dp 8011A408 (exactly one each = the registered queue), Pi 801108C0..80110968 (8 queues at
+  0x18 stride = a static OSMesgQueue[8] array) + 80111290, Timer none. All static .bss, none stack/heap-like.
+- Timer action_queue protocol: AddTimer carries the fields by VALUE (s7397 TIMERFIX default on, proof regex); the
+  OSTimer* key stays owned by the timer list until fire, as in libultra. Contract T1: 0 generated osStopTimer_recomp
+  callers (the one deferred removal); s7397 found no game timer armed.
+- Vectors used as queues (12, regex == clang): copy 1 (overlays loaded_sections, value records), dead 1 (extensions
+  pending_events, contract X1: 0 generated osExQueueDisplaylistEvent_recomp callers), gated 10 (s7551 spans/g_plants,
+  s7545 thr/tc, e9-provenance rings x3, s7096 pend, s7523 snap/tch). Found mid-session: the first queue census skipped
+  vectors, and extensions.cpp pending_events (DLEvent{mq, mesg, displaylist}) is exactly a deferred guest-queue list.
+- Threads (52): sys 7 (game, guest _thread_func, gfx, task, vi, timer, saving: their guest traffic is the queue rows),
+  gated 24 (env proof regex per row: s4578, level/state/route/b50/phase/voice/fs-slot pollers, three write-fault
+  watchers, fl-zero + its re-arm spinner, HWBP, GODMODE3, RDP_ASYNC worker, s4299/s4526/s4231/s4913 polls, s7331,
+  s4450/s4440 AI-event threads, s7545), host(auto) 21 (no guest token in the entry body or its one-hop callees, and no
+  census-queue producer).
+- Controls 10/10: planted static deque<uint32_t> with a MEM_W consumer -> UNCLASSIFIED; dropped external_messages row
+  -> OPEN; planted deque<time_point> -> host(auto); queue dropped from the clang census -> DISAGREE; planted
+  sp_task_queue.enqueue(TO_PTR(...)) -> PRODUCER OPEN; planted std::thread([rdram]{MEM_W}) -> UNCLASSIFIED; gate literal
+  ROGUESQ_LOG_FS_SLOT removed -> PROOF OPEN; planted vector-as-queue -> UNCLASSIFIED vecq; vecq dropped from clang ->
+  DISAGREE; witness with a second VI mq -> W fails.
+- Discrimination: selects H-clean for class DQ. H-bad-live (a default-on queue whose consumer reads a guest object the
+  guest may already have rewritten) refuted: every default-on guest address in a queue is either a value copy, a lookup
+  key, or a protocol-held object (registered event queues witnessed static and single per source; OSTask s7614 W; timer
+  T1). H-bad-gated: gated rows are diagnostics/opt-ins only.
+- ORIGIN: no mitigation added (audit only).
+- Scope limits: (1) the witness is the title phase only (90 s); mission-time PI queues are not enumerated (protocol is
+  the same, requester blocks); (2) lib/rt64 internal queues (workload / present / texture-upload threads that read
+  RDRAM after the gfx thread hands work over) are out of this census -> class RQ next; (3) maps/sets keyed by guest
+  addresses were covered by earlier classes (s7610 OV, s7611 SN, s7612 RG) and are not re-listed here.

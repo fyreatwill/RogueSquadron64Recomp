@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7614 (2026-11-18).
+Compact operational handoff, as of Session 7615 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7614: class HM (pointer MEMBERS of static aggregates) CLOSED, H-clean, no fix.** tools/s7614_hm_census.py
+- **NEW s7615: class DQ (deferred guest reads through host queues / threads) CLOSED, H-clean, no fix.**
+  `python3 tools/s7615_dq_census.py --controls --witness scratch/s7615/witness.log` (scan tools/s7615_dq_scan.py, clang =
+  scratch/s7614/ast.json): 16 queues + 12 vectors-used-as-queues, regex == clang on both; 29 producers inside their rows'
+  allowed-argument sets; 52 thread creations (sys 7, gated 24 env-proved, host 21 one-hop clean). Default-on guest addresses
+  in queues are value copies (action_queue OSTask/VI regs), keys (audio-sp deliveries, menu FIFO) or protocol objects:
+  external_messages witnessed (tools/s7615_dq_witness.sh, RECV_TRACE) = 14 static queues, one per Sp/Si/Ai/Vi/Dp + a PI
+  OSMesgQueue[8]; timer T1 (osStopTimer unlinked); extensions pending_events dead (X1). Controls 10/10.
+- **s7614: class HM (pointer MEMBERS of static aggregates) CLOSED, H-clean, no fix.** tools/s7614_hm_census.py
   --controls --witness <log> (regex tools/s7614_hm_scan.py; clang tools/s7614_hm_ast.py + tools/s7614_hm_join.py, 117 TUs):
   24 statics with pointer members, both sources agree on vars and member sets; 34 rows 0 open: host 26, base 3 (B), retail 1
   (ViState.mode = TO_PTR of the osViSetMode arg, like libultra modep, V1), fresh 1 (hook_contexts, HF), hpvar 1, dead 1, and
@@ -32,8 +39,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   s7103 camfix entry/exit pair (per-camera calls; 4 entry-skipping gotos see s7103_in 0), s7108_s2 and s7482 reserve set+used in
   one call, s7398 OSIoMesg set->do_dma->0, s6892 repair only when the live pointer is already junk. Witness s7103/s7108 chase
   logs: 7448/7448 and 6156/6156 exit snapshots match their own call's entry, planted stale p0 fails.
-- **s7611: class SN (host snapshots of guest DATA in statics) CLOSED, H-clean.** tools/s7611_sn_census.py --controls --witness:
-  169 candidates 0 open, contracts C1-C6, controls 8/8, witness s6995 aim logs 24/24 (full text: PORTING-STATE s7611).
+- **s7611: class SN (host snapshots of guest DATA in statics) CLOSED, H-clean** (tools/s7611_sn_census.py; PORTING-STATE s7611).
 - **s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
   --controls --witness <logs> (6/6, PASS). Overlays 4/5/6 share vram 0x800A5130. Host: 54 rows, 0 open (func_map refreshed by
   load + s7528 evict, get_function uncached, ucode chosen by task type; RT64 HLE GBI cache keyed by text address is gated
@@ -415,7 +421,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
     after a regen run tools/s7610_ov_census.py --controls + tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a save/files.cpp edit tools/s7595_sv_census.py --controls + --harness; after a librecomp/ultramodern
-    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a threads.cpp/recomp.cpp thread-entry edit tools/s7606_hc_census.py --controls; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a librecomp/ultramodern getter or a new os*_recomp import tools/s7555_go_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
+    replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a threads.cpp/recomp.cpp thread-entry edit tools/s7606_hc_census.py --controls; after a new host queue / std::thread / pending-list tools/s7615_dq_census.py --controls; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a librecomp/ultramodern getter or a new os*_recomp import tools/s7555_go_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),
     misnomer rename (s7080; tools/apply_symbol_renames.py), G1e residual (s6996), G5c freezes (s7285), GPU
     contention (s7283), WIDEWIN thread (s7271), Retina (s7224), window/aspect G1f (s7228).
