@@ -76,7 +76,10 @@ def decl_names(line):
                 out.add(mm.group(1))
     return out
 
-def scan_file(path, rel):
+def scan_file(path, rel, taint_re=None, hot=None):
+    """taint_re replaces the guest-read token set G (s7612 class RG passes the register set); hot = names of functions
+    whose parameters are tainted on entry (called somewhere with a tainted argument). Defaults = the s7611 SN behaviour."""
+    G = taint_re or globals()["G"]
     try:
         raw = open(path, errors="replace").read().split("\n")
     except OSError:
@@ -102,6 +105,14 @@ def scan_file(path, rel):
     def tainted_locals(f0, i):
         key = (f0, i)
         t = set()
+        if hot:
+            hdr = " ".join(L[f0:f0 + 4]).split("{")[0]
+            mm = re.search(r"(\w+)\s*\(([^)]*)\)", hdr)
+            if mm and mm.group(1) in hot:
+                for prm in mm.group(2).split(","):
+                    pm = re.search(r"(\w+)\s*(?:\[[^\]]*\])?\s*$", prm.strip())
+                    if pm and pm.group(1) not in ("void", "rdram", "ctx"):
+                        t.add(pm.group(1))
         for j in range(f0, i):
             l = L[j]
             for m in LOCAL.finditer(l):
@@ -179,11 +190,11 @@ def scan_file(path, rel):
             seen.add(k); ded.append(o)
     return ded
 
-def scan(root=ROOT, gen=GEN, extra=()):
+def scan(root=ROOT, gen=GEN, extra=(), taint_re=None, hot=None):
     res = []
     for p in list(scope_files(root, gen)) + list(extra):
         rel = os.path.relpath(p, root) if p.startswith(root) else "RF/" + os.path.basename(p) if p.startswith(gen) else p
-        res += scan_file(p, rel)
+        res += scan_file(p, rel, taint_re, hot)
     return res
 
 if __name__ == "__main__":

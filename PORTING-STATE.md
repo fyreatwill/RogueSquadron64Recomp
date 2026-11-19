@@ -202601,3 +202601,52 @@ HYPOTHESIS-ID: host-snapshot-of-guest-data. Offline audit; no game run, no runti
   H-bad-gated (the once-per-run originals snapshot is gated AND reads immutable rodata). Class SN CLOSED.
 - Scope limits (not covered): values from guest REGISTERS (ctx->rN) parked in statics across calls; lib/rt64 internals
   (its texture cache keys on TMEM content hash, not audited here). Next: class RG = the ctx->rN half.
+
+## Session 7612 (2026-11-18) — class RG closed: guest register values parked in host statics (242 candidates / 126 names 0 open, contracts R1-R7, controls 8/8, runtime witness PASS), H-clean
+
+HYPOTHESIS-ID: host-static-of-guest-register. Item 3 systematic idiom-class audit (s7611 named the gap). No game run, no fix.
+- Ran: new tools/s7612_rg_scan.py (reuses the s7611 static-store detector; tools/s7611_sn_scan.py.scan_file gained optional
+  `taint_re` / `hot` args, defaults unchanged: s7611 census re-run --controls --witness still PASS 169/0 open) with two taint
+  sources: REG (ctx->rN / ctx->fN / hi / lo, gpr[N] / fpr[N]) and PARM (parameters of the 174 in-scope host functions that some
+  call site passes a REG-tainted argument, one hop). New tools/s7612_rg_census.py --controls --witness.
+- Result: 242 candidates, 126 unique (file, static) keys: gated 181, stash 26, fresh 10, edge 9, event 5, stat 4, value 3,
+  keyed 2, repair 1, envflag 1; 0 open, 0 drift, 0 stale rows. stash rows are checked reader by reader (every non-store
+  reference must sit within 12 lines after the row's gate regex); that check caught 3 rows whose proof named only one of two
+  gated readers (s4572 window also read by ROGUESQ_LOG_S4575; s6063 free path `|| !ptr`; funcs_24 `key` is s4864, not HITS),
+  fixed as rows, not code.
+- Default-on cross-call units and what keeps them live (contracts, all hold):
+  R1 s7103 camfix (applyPlayerVehicleStateUpdate runs once per camera object, 8 cams, 1585 camera changes between consecutive
+  calls in the log): entry sets s7103_in=1 + NaN-resets h/d/mg, exit `if (s7103_in)` clears it, no goto/return leaves
+  (entry, exit), f20 store reached with no escape, no s7103 reader or helper call (s7103_mask, s7115_lift) outside the exit
+  block. Four gotos skip the entry and land at 26147/26171/26289; they see s7103_in == 0. R2 s7108_s2 (camwide object,
+  ctx->r18) set and consumed in one call: no escape/skip-in, s7108_x one call site, no other reader. R3 s7482 framebuffer
+  reserve: pend set with b/e, consumed under `if (pend)` and cleared there; one skip-in jumps past the set and sees pend 0.
+  R4 s7101 chase clamp: set only inside `if (f7101)` (ROGUESQ_S7101_CHASE), every path to the clamp passes the set; one
+  escape (goto L_8004D7F0) leaves s7101_valid=1 into the next call, which re-runs the set before any clamp (gated, harmless).
+  R5 s7398_msg (PI OSIoMesg, default on): thread_local, both non-zero sets are followed by do_dma and `s7398_msg = 0;` with
+  no return between. R6 s6892 walker guard (default on): returns the live value unless it is non-zero AND invalid, repairs
+  only from a record whose s2 equals the live s2. Residual, by design: a remembered mesh could itself be stale if the actor
+  at s2 was recycled, but it is used only when the live pointer is already junk (crash otherwise). R7
+  s_pending_task_guest_ptr: one reader, inside the [m5-task-handoff] fprintf. Also keyed: s_last_mode (osViSetMode pointer
+  compared against the live one; targets are immutable osViModeTable entries), s7134_cam (k re-stored every post; consumers
+  behind ROGUESQ_CULL_XFIX default off). s_menu_fifo = s7611 C6.
+- Controls 8/8: planted static guest pointer from ctx->r4 used in a later call -> OPEN; planted one-hop PARM taint (hook
+  called with ctx->r5 parks its arg) -> OPEN; dropped the s7398_msg row -> OPEN; removed the s7103 exit clear -> R1; planted
+  a second reader of s7108_s2 in another function -> R2; planted a return between the s7482 set and use -> R3; removed
+  `s7398_msg = 0;` after a do_dma -> R5; corrupted the s6496_a0 stash reader gate -> OPEN. Two controls failed on the first
+  pass and were instrument bugs, fixed in-session: (3) my first R1 rule wrongly required skip-in gotos to land after the
+  exit guard (it now checks readers outside the exit block); (5) the planted return sat on the setter line, which the
+  path check excludes.
+- Witness (second source, runtime): scratch/s7103/push_a.txt.zst and scratch/s7108/push_a.txt.zst (ROGUESQ_S7101_CHASE logs
+  of the s7103/s7108 L6 dd4 runs). Per call (segment ending at its 'pe' line): s7103: 8507 calls, 7448 ran the exit body
+  ('rx'), every rx p0 (entry snapshot of cam+0x10) == that call's first 'pu' pre (7448/7448), 1059 calls skipped the exit and
+  none of them carries post-entry body lines; 6964 s7101 clamps, 0 without a preceding set. s7108: 7173 calls, 6156/6156 p0
+  match, 1017 no-exit calls, 5293 clamps, 0 orphan. Planted copies (each rx gets the previous call's p0 = a stale snapshot
+  from another camera; one duplicated clamp) drop p0 match to 733/7448 and 1072/6156 and show 1 orphan -> CONTROL PASS.
+- Discrimination: selects H-clean; refutes H-bad-live (every default-on cross-call register value is either consumed in the
+  same call, re-validated against the live value, or a repair used only on an already-invalid value) and H-bad-gated (no
+  gated unit needed a fix to stay correct when armed: the s7101 leak is overwritten before use). Class RG CLOSED.
+- ORIGIN: no mitigation added (audit only).
+- Scope limits: host POINTERS into rdram (TO_PTR(...) / rdram + off) held in statics are matched by neither the SN token set
+  (TO_PTR text has no rdram token) nor RG unless the argument is a register: ~17 static/thread_local `T*` in src + librecomp
+  + ultramodern. Next: class HP.
