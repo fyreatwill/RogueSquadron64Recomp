@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdio>
 #include <mutex>
+#include <cmath>
 #include <cstring>
 #include <cstdlib>
 #include <pthread.h>
@@ -178,6 +179,16 @@ void hook_draw(plume::RenderCommandList* list, plume::RenderFramebuffer* fb) {
         }
     }
     if (ww <= 0 || wh <= 0) { ww = (int)fw; wh = (int)fh; }
+    // s7668: across a fullscreen toggle the drawable resizes ~33 draws before update_gfx republishes the window size, and
+    // fb/win then differ in aspect, so DisplayFramebufferScale squashed the panel for ~0.5 s. A HiDPI fb is an exact multiple
+    // of the window (same aspect); a different aspect means the cached size is stale: draw at fb size until it catches up.
+    // ROGUESQ_S7668_ASPECT=0 restores the old behaviour.
+    static const bool s7668 = [] { const char* v = getenv("ROGUESQ_S7668_ASPECT"); return !(v && *v == '0'); }();
+    if (s7668 && std::fabs((double)fw * wh - (double)fh * ww) > 0.01 * (double)fw * wh) {
+        static long stale = 0;
+        if (++stale == 1 || stale % 60 == 0) fprintf(stderr, "[controls-panel] stale window size %dx%d vs fb %.0fx%.0f (n=%ld): using fb\n", ww, wh, fw, fh, stale);
+        ww = (int)fw; wh = (int)fh;
+    }
     io.DisplaySize = ImVec2((float)ww, (float)wh);
     io.DisplayFramebufferScale = ImVec2(fw / (float)ww, fh / (float)wh);
     io.FontGlobalScale = std::min(3.0f, std::max(1.0f, (float)wh / 540.0f));
@@ -194,7 +205,10 @@ void hook_draw(plume::RenderCommandList* list, plume::RenderFramebuffer* fb) {
     cl->checkActiveRenderEncoder();
     rs64_imgui_metal_render(dd, (void*)cl->mtl, (void*)cl->activeRenderEncoder);
     cl->endActiveRenderEncoder();
-    if (++g_draws == 1 || g_draws % 600 == 0)
+    static float s_lfw = 0, s_lfh = 0; static int s_lww = 0, s_lwh = 0;  // s7668: log every size change while open
+    const bool resized = fw != s_lfw || fh != s_lfh || ww != s_lww || wh != s_lwh;
+    s_lfw = fw; s_lfh = fh; s_lww = ww; s_lwh = wh;
+    if (++g_draws == 1 || g_draws % 600 == 0 || resized)
         fprintf(stderr, "[controls-panel] draw n=%ld fb=%.0fx%.0f win=%dx%d lists=%d vtx=%d\n", g_draws, fw, fh, ww, wh,
                 dd ? dd->CmdListsCount : -1, dd ? dd->TotalVtxCount : -1);
     ImGui::SetCurrentContext(prev);

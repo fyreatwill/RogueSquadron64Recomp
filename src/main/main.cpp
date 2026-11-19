@@ -12877,6 +12877,12 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         rs64_bind_poll(&btn, &stick_x, &stick_y);
     }
     if (rs64_panel_is_open()) { btn = 0; stick_x = 0.0f; stick_y = 0.0f; }  // s7620: F6 panel owns the inputs while open
+    {   // s7668: game-thread view of the panel gate (polls gated while open / passed while closed), logged on each change.
+        static const bool on = std::getenv("ROGUESQ_PANEL_TEST_WINDOW") != nullptr;
+        static int last = -1; static long n = 0;
+        if (on) { const int o = rs64_panel_is_open() ? 1 : 0; n++;
+            if (o != last) { fprintf(stderr, "[s7668] game-thread gate=%d after %ld polls in previous state\n", o, n); last = o; n = 0; } }
+    }
     // ---- Autopilot: deterministic in-game input (wasted-run fix, 2026-08-26) --
     // The game is normally driven to the hangar/mission by synthetic keypresses
     // posted to the window (winctl -> CGEventPostToPid). Those drop silently
@@ -13912,6 +13918,23 @@ static void rs64_g1f_test_list_tick() {
     }
 }
 
+// s7668: ROGUESQ_PANEL_TEST_WINDOW="open_s,close_s[,open_s,close_s..]" opens/closes the F6 panel at those seconds after the
+// window opens (main thread, the same rs64_panel_set_open F6 calls), so a test can hold the panel open across a level-select ->
+// mission load and a fullscreen toggle. Default unset = no effect.
+static void rs64_s7668_panel_window_tick() {
+    static const char* e = std::getenv("ROGUESQ_PANEL_TEST_WINDOW");
+    if (!e || !*e || !g_rs64_window) return;
+    static Uint64 t0 = 0; static bool next_open = true;
+    if (!t0) t0 = SDL_GetPerformanceCounter();
+    const double t = (double)(SDL_GetPerformanceCounter() - t0) / SDL_GetPerformanceFrequency();
+    while (e && *e && t >= std::atof(e)) {
+        fprintf(stderr, "[s7668] panel test t=%.1f set_open=%d\n", t, next_open ? 1 : 0);
+        rs64_panel_set_open(next_open); next_open = !next_open;
+        const char* c = std::strchr(e, ',');
+        e = c ? c + 1 : nullptr;
+    }
+}
+
 static void rs64_g1f_apply_fs_toggle() {
     rs64_g1f_test_toggle_tick();
     rs64_g1f_test_list_tick();
@@ -14044,6 +14067,7 @@ void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
     if (g_rs64_window) { int w = 0, h = 0; SDL_GetWindowSize(g_rs64_window, &w, &h);
         static const uint32_t id = SDL_GetWindowID(g_rs64_window); rs64_panel_note_window(w, h, id); }
     rs64_s7593_main_tick();
+    rs64_s7668_panel_window_tick();
     rs64_g1f_apply_fs_toggle();
     rs64_display_hotplug_tick();
 }

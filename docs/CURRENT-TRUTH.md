@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7667 (2026-11-19).
+Compact operational handoff, as of Session 7668 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7668: F6 panel held open across level-select -> mission load -> flight and a fullscreen leave/re-enter (owner recipe dd4
+  16:9 FPS60, test lever ROGUESQ_PANEL_TEST_WINDOW=open,close): 0 crash, 0 stall, ~60 draws/s throughout, input gate released on
+  close; same-run control without the panel equal. Fixed: ~0.5 s squashed panel after each toggle (stale main-thread window size;
+  now draws at fb size when aspects differ, ROGUESQ_S7668_ASPECT=0 = old; control arm still shows the mismatch). scratch/s7668.**
 - **NEW s7667: settings file + controls.json combination fixed.** A relative `ROGUESQ_CONTROLS=c.json` line in a settings file
   resolved against the cwd and silently gave default controls (arm B pre-fix mismatches=0 vs absolute-path arm A 395); it now
   resolves beside the settings file (rs64_settings_resolve_value, `~/` = HOME; only ROGUESQ_CONTROLS is path-valued). Post-fix same

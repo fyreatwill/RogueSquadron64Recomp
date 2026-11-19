@@ -204399,3 +204399,32 @@ settings file, a relative value is prefixed with the settings file's directory, 
 typed env values are not touched (env stays cwd-relative as usual). tools/test_settings.cpp gains 8 resolve cases: PASS 23/23.
 Post-fix same three arms on the rebuilt game: A 395, B `loaded .../scratch/s7667/c.json` 395, C 0, all alive 40 s.
 Two lines: unit test + live loader. OWNER-OPT-INS settings row notes it. Logs scratch/s7667/*.log.zst (+ *_pre = pre-fix).
+
+## Session 7668 (2026-11-19) — F6 panel held open across a mission load + fullscreen toggle: no crash, input gate restored; fixed a ~0.5 s squashed panel after each toggle (stale window size)
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=26 new=0 (no owner crash). No owner report. NEXT.md: an owner-facing
+path never exercised end to end -> F6 panel open during level-select -> mission load, and fullscreen toggling with it open.
+Hypotheses: H-ok (panel keeps drawing through the load and resize, game survives, gate releases on close) vs H-load (panel
+draw/ImGui on RT64's present thread breaks while the game reloads the level or the drawable resizes: crash, stall, stuck
+gate) vs H-layout (it survives but draws wrongly at the new size).
+New test lever (main.cpp, main thread): `ROGUESQ_PANEL_TEST_WINDOW="open_s,close_s,.."` calls rs64_panel_set_open (the F6
+path) at those seconds after the window opens; with it set the game thread logs `[s7668] game-thread gate=` on each change.
+The panel draw hook now also logs on every fb/window size change. Default unset = no effect.
+Run 1 scratch/s7668/run.zsh (g1e owner recipe dd4 16:9 FPS60 fullscreen, forced L1, HOLD 150, one game at a time, host idle
+98 min, AC, clk 0.95-0.97):
+- T PANEL_TEST_WINDOW=40,135 + FS_TEST_TOGGLE_LIST_S=105,115: open t=40 (front end) through load_level_hmp, the 17 s VI hold
+  and flight; 5400+ panel draws at ~60/s, fb 1512x949 -> 1512x854 (windowed) -> 1512x949; closed t=135; game thread saw
+  gate=1 for 5700 polls, then gate=0 (input restored). alive, level_ok=1, vi_stalls30s=0, max_gap 178 ms.
+- C control (same toggles, panel never opened): alive, level_ok=1, 0 stalls, max_gap 148 ms, 0 panel draws.
+-> H-ok for crash/stall/gate. H-layout selected for one defect: after each toggle the drawable had resized for 33 draws (~0.5 s)
+before update_gfx republished the window size, so fb and win differed in aspect (1512x854 vs 1512x949) and
+DisplayFramebufferScale squashed the panel vertically. ORIGIN: s7639 moved the window size to a main-thread-published cache;
+the main thread lags the present thread during the macOS fullscreen transition. Not a mitigation: the size source is wrong
+for those frames.
+Fix (rs64_controls_panel.cpp): if fb and window aspect differ by >1% (a HiDPI fb is an exact multiple, same aspect) the cached
+size is stale -> draw at the fb size, log `[controls-panel] stale window size ...`. `ROGUESQ_S7668_ASPECT=0` = old.
+Run 2 scratch/s7668/run2.zsh, same rebuilt binary, window 40,125 + toggles 100,110: F (fix) stale detected on both toggles
+(n=1 and n=60 log lines), 0 aspect-mismatched draw lines; O (ASPECT=0, control) 4 mismatched draw lines. Both alive,
+level_ok=1, 0 stalls, gate 5100 polls then released. Logs scratch/s7668/r*/log_*.txt.zst (local).
+Not covered: real mouse clicks during the load (the hook drives the same set_open as F6); 21:9 ultrawide display.
+New crash reports this session: none.
