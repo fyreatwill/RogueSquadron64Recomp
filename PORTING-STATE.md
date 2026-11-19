@@ -203540,3 +203540,45 @@ same-run plant reporting 1. Class AT CLOSED. Rules out: off-main AppKit in our .
 Discrimination: the Main Thread Checker arms (2/1/0 reports) plus the static census selects H-defect and refutes H-clean for
 class AT; the fix closes the one live site. Next discriminator: class CF (IOKit/HID/GCController callback threads vs our
 input/rumble state), with the s7640 MTC runner reused as a same-run regression check (NEXT.md).
+
+## Session 7641 (2026-11-19) — class CF (framework-callback threads) audit: TSan witness + census, 1 live race (plume Metal drawable index), fixed default on
+
+NEXT.md: no owner report, so a new host-side idiom-class audit. Class CF = callbacks we hand to a framework that runs them on a
+thread of its choosing (Metal command-buffer/drawable handlers, SDL event watch/filter, SDL virtual-pad callbacks, libdispatch
+blocks, atexit/at_quick_exit). Hypotheses: H-clean (every callback body touches only atomics/locked/thread-owned state) vs
+H-defect (>=1 callback races with another thread). Boring checks first: CF/IOKit ownership was already closed by class LK s7586
+(plume IOKit vendor read releases entry/parent/property); rumble + haptic fallback run on MAIN per the s7639 census; the
+IOKit-HID / GCController callbacks are SDL-internal (SDL locks), none of our code runs in them.
+
+Ground truth not from our runtime: Thread Sanitizer. tools/s7641_tsan_build.sh recompiles ONLY plume_metal.cpp with
+-fsanitize=thread, swaps it into a copy of libplume.a and relinks build/RogueSquadron64Recomp_tsan (real binary untouched);
+tools/s7641_tsan_run.zsh boots 45 s to title presents, SIGKILL. Both arms ran to 45 s (presents flowing; ~4.8k/5.1k log lines).
+
+ORIGIN: writer = upstream plume MetalSwapChain::present's addCompletedHandler, `currentAvailableDrawableIndex = (idx+1) % 3` on a
+plain uint32_t, run on Metal's private completion threads; reader = acquireTexture on RT64's present thread. Not game data. TSan
+showed two completion handlers writing it from DIFFERENT Metal threads (T71/T56; handlers are not serialised on one thread) plus
+the acquireTexture read: a C++ data race whose worst case is a lost increment (slot index reuse, benign because each present
+retains its own drawable). Fix (lib/rt64 plume_metal.cpp/.h, default on; ROGUESQ_S7641_CF=0 = old plain field): std::atomic
+rs64AvailIdx advanced by CAS (release), loaded with acquire in acquireTexture. Exported to submodule-patches/rt64-plume.patch.
+
+| arm (same TSan binary) | TSan data-race reports | present() index pair | others |
+|---|---|---|---|
+| S7641_CF=0 (old, positive control) | 18 | 2 (handler vs handler on 2 threads; + acquireTexture read) | 16 |
+| fix (default) | 16 | 0 | 16 identical sites |
+The 16 shared reports (3 sites): metal-cpp addCompleted/ScheduledHandler wrap a std::function in a __block byref; TSan sees the
+registration-time copy (present/worker thread) vs the handler's read (Metal thread) with no edge, because Metal's own handoff
+(MTLDispatchListApply) is not intercepted. Registration precedes commit, so they are TSan blind-spot positives, identical in both
+arms; classified, not fixed.
+
+Main Thread Checker regression (s7640 runner, normal binary with the fix): default 0 reports with the F6 panel drawn (51 s);
+same binary ROGUESQ_S7640_AT_PLANT=1: 1 report (-[NSApplication keyWindow] on [Game] 0) -> instrument live, no AppKit regression.
+
+Static second source: tools/s7641_cf_census.py --controls (exit 0; scratch/s7641/census.txt): 22 callback-registration sites in
+222 non-contrib TUs + plume: 7 main-queue dispatch (s7588/s7640), 6 Metal handlers (1 fixed, 4 opt-in atomics/mutex/semaphore,
+1 scheduled present), 1 empty dispatch_data destructor, SDL event watch (SDL3: any pushing thread; body atomics + fprintf only),
+RT64 SDL event filter dead (sdlEventFilterInstalled=0), vpad Rumble cb (RUMBLE_TEST only, atomics), 6 exit hooks. Controls:
+(a) planted Metal handler -> OPEN, (b) dropped HAND row -> OPEN, (c) ungated index write -> FIX_MISSING, (d) sites >= 20: PASS.
+
+Discrimination: TSan arms (2 -> 0 on the index pair, the other 16 unchanged) plus the census select H-defect (1 live site) and
+refute H-clean. Class CF CLOSED. Rules out: races in our SDL event-watch / vpad / exit callbacks and the opt-in Metal stamp
+handlers. Not covered: TSan on the whole binary (only plume_metal.cpp instrumented); a whole-RT64 TSan build is the next class.

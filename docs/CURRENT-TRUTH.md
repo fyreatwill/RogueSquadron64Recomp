@@ -28,7 +28,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` = control: joy 18/18 delivered, haptic on the non-haptic vpad -> path=none, 0 delivered).
   Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
-  PROJECT-OVERVIEW "(s7622 maintenance)"). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
+  PROJECT-OVERVIEW "(s7622 maintenance)"). CF s7641 (framework-callback threads, item 28): 1 fix (plume Metal drawable index race, TSan). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
   C-applicable check run; RS64_DIV32). Bounded/gated/masked: GR s7599, GX s7600, BS s7601 (5 diag composers fixed), AZ s7598
   (ROGUESQ_S7598_MASK=0 = old). Fixes landed, default on, =0 restores old: TK ROGUESQ_S7608_TK, UW s7607 (one fix), FR s7605 /
@@ -367,6 +367,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     Arms (same build): old+plant 2 reports (Gfx + plant), fix+plant 1 (plant only), fix 0. Static half
     `python3 tools/s7640_at_census.py --controls` (exit 0): 50 sites in 4 ObjC TUs + CAMetalLayer calls, controls a-d PASS; plume
     CocoaWindow all guarded, NFD dialogs dead (developerMode=0), rs64_display_mac main-only. Plant: ROGUESQ_S7640_AT_PLANT=1.
+
+28. **Class CF (framework-callback threads: Metal handlers, SDL watch/vpad, dispatch, exit hooks): CLOSED s7641, 1 fix.**
+    Witness = Thread Sanitizer on plume_metal.cpp only (`zsh tools/s7641_tsan_build.sh`, then `zsh tools/s7641_tsan_run.zsh <tag>
+    RogueSquadron64Recomp_tsan [ENV=..]`): plume present()'s completion handler did a plain RMW of currentAvailableDrawableIndex on
+    Metal threads (two threads seen) vs acquireTexture's read; now atomic CAS (lib/rt64 plume_metal, ROGUESQ_S7641_CF=0 old).
+    Arms: old 18 reports (2 on the index), fix 16 (0); the 16 are metal-cpp __block std::function copies TSan cannot order
+    (Metal handoff not intercepted), same in both. `python3 tools/s7641_cf_census.py --controls` (exit 0): 22 sites, controls a-d
+    PASS. MTC regression with fix: 0, plant 1.
 
 ## Evidence index
 
