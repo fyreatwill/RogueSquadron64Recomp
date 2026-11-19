@@ -100,6 +100,13 @@ def census(scan, ast, label):
 
 def main():
     a = sys.argv[1:]
+    if not a or a[0].startswith("--"):  # s7657: no inputs -> regenerate scratch/s7631 from the live tree (sweep gate)
+        import importlib.util as _ilu
+        _sp = _ilu.spec_from_file_location("ast_cache", os.path.join(os.path.dirname(os.path.abspath(__file__)), "ast_cache.py"))
+        _ac = _ilu.module_from_spec(_sp); _sp.loader.exec_module(_ac)
+        a = _ac.fresh_census_args("scratch/s7631", "tools/s7631_rp_scan.py", "tools/s7631_rp_ast.py",
+                                  "scratch/s7631/plant_rp.cpp", scope=("lib/rt64/",),
+                                  plant_ast_args=("--only", "s7657-plant-only")) + a
     res = census(a[0], a[1], "real")
     print("== real: rows both=%d regex-only=%d ast-only=%d" % (res["both"], len(res["onlyA"]), len(res["onlyB"])))
     for t in sorted(res["table"]):

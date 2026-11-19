@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7655 (2026-11-19).
+Compact operational handoff, as of Session 7657 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,11 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7656: census gate sweep is a standing check.** tools/s7651_gate_sweep.py caches each gate on its traced reads
-  (tools/gate_trace.py; compile gates on CC_PRINT_HEADERS): cold 454 s, unchanged tree 14.8 s (H-cheap; 129 hit, 6 spawning
-  gates uncacheable). stop_gate.sh --verify re-runs it when an iteration touches src/ submodule-patches/ patches/ or a census
-  tool, and blocks on any RED gate not in tools/gate_sweep_allowed_red.txt (test: tools/agent/test_gate_sweep.sh 4/4 PASS).
-  Sweep now 123 GREEN, 2 NEEDS-INPUT, 10 NEEDS-ARGS, 0 RED.
+- **NEW s7657: every census gate now counts: sweep 135 = 127 GREEN, 3 NEEDS-INPUT, 5 REPORT, 0 NEEDS-ARGS, 0 RED.**
+  s7631/s7632/s7633 regenerate their scan/AST json from the live tree when run bare (tools/ast_cache.fresh_census_args) and
+  exit 1 on OPEN/FAIL; the live s7633 inputs found 4 rows the frozen json hid (s7634-s7636 instruments, all opt-in/scalar,
+  classified). s7317 gates on --selftest; s7215 NEEDS-INPUT (log not kept); 5 summarisers with no exit path = REPORT.
+- **s7656: census gate sweep is a standing check.** tools/s7651_gate_sweep.py caches each gate on its traced reads
+  (tools/gate_trace.py; compile gates on CC_PRINT_HEADERS): cold 454 s, unchanged tree 14.8 s. stop_gate.sh --verify re-runs it
+  when an iteration touches src/ submodule-patches/ patches/ or a census tool, and blocks on any RED gate not in
+  tools/gate_sweep_allowed_red.txt (test: tools/agent/test_gate_sweep.sh 4/4 PASS).
 - **s7655: closed-gate drift CLOSED: full sweep 0 RED (135 gates: 120 GREEN, 2 NEEDS-INPUT, 13 NEEDS-ARGS), 0 behaviour
   defects.** The last 14 RED gates (s7588-s7616) were all NEW code since closure (G6a rumble, G6b bindings/F6 ImGui-Metal panel,
   G6c stand-ins, s7644 instrument) with no row: ~80 sites read by hand, every one opt-in/env-gated, bounded, local or host-owned;
@@ -493,6 +496,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     POST-regen tree must accept `0X....u << 16`; fixup scripts run before fixup_lui_unsigned.py and need not.
     **s7655: CLOSED, sweep 0 RED.** s7588-s7616 rows for G6a/G6b/G6c/s7644 sites; AST caches self-refresh (tools/ast_cache.py);
     s7316/s7573 NEEDS-INPUT. Re-run `python3 tools/s7651_gate_sweep.py` after any src/ or lib/ change (rc 0 = no RED).
+    s7657: 0 NEEDS-ARGS (classes REPORT / NEEDS-INPUT / live-regenerated inputs); s7631 cold AST ~165 s when lib/rt64 changes.
 
 ## Evidence index
 

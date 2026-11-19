@@ -7,6 +7,10 @@ them closed. This runs them all (with --controls when the tool takes it), 6 at a
   GREEN      exit 0
   NEEDS-ARGS argparse usage / IndexError on sys.argv / missing input file: the tool needs an input (not a drift signal)
   RED        any other nonzero exit: drift or a real defect, triage by hand
+  NEEDS-INPUT (s7655) a tool listed in NEEDS_INPUT printing its exact "input absent" text (other failures stay RED)
+  REPORT     (s7657) a tool listed in REPORT whose source has no exit path: a summariser of one frozen capture, not a gate
+s7657: the two-source censuses s7631/s7632/s7633 run with no args regenerate their scan/AST json from the live tree
+(tools/ast_cache.fresh_census_args), so they gate the current code, not the s763x snapshot; --help prints this text.
 Positive control (iron rule 1): a planted tool that exits 1 must read RED and one that exits 0 GREEN, else exit 3.
 s7656 cache: every tool runs under tools/gate_trace.py (audit hook records each file it opens for reading, each directory it
 lists, each glob); its verdict is cached in build/gate_sweep_cache.json keyed on (argv, size+mtime of every read file incl. the
@@ -29,7 +33,22 @@ ARGS_SIG = re.compile(r"IndexError: list index out of range|usage: |error: unrec
 NEEDS_INPUT = {
     "s7316_data_bound_census.py": (re.compile(r"ram_dumps=0\s*$"), "needs --ram rdram dumps (ROGUESQ_RDRAM_DUMP_DIR): G values unread"),
     "s7573_guard_census.py": (re.compile(r"^no game logs\s*$", re.M), "needs game stderr logs (LOG... or --retained DIR)"),
+    # s7657: the s7215 run.log (ROGUESQ_VI_SHAPE_LOG=1, 21:9 long route) was never retained: scratch/s7215 holds 0 shape lines
+    "s7215_shape_census.py": (re.compile(r"L = open\(sys\.argv\[1\].*\n(.*\n)?IndexError: list index out of range"),
+                              "needs a ROGUESQ_VI_SHAPE_LOG=1 run.log (scratch/s7215/r.zsh); the s7215 log was not kept"),
 }
+
+# s7657: offline summarisers of ONE captured run / regen output. They have no failing exit (always 0), so a GREEN would be
+# vacuous and their frozen inputs cannot drift with the code. Verified per run: if the source gains any exit path the tool is
+# run like any other gate again.
+REPORT = {
+    "s7031_offmap_census.py": "summary of a [s7030]/[s7031] run.log (band/ring table), no verdict exit",
+    "s7082_jal_census.py": "table of N64Recomp 'No function found for jal' lines, no verdict exit",
+    "s7083_lowering_census.py": "jr/jump-table lowering table over a regen dir + ROM, no verdict exit",
+    "s7210_field_census.py": "per-swap field-bit table of a G5B_FRAME .cap stream, no verdict exit",
+    "s7441_rs64_census.py": "self-time table of rs64_* frames in sample_*.txt dumps, documented exit 0",
+}
+EXIT_PATH = re.compile(r"\bsys\.exit\(|\bexit\(|\breturn [1-9]\b|raise SystemExit")
 
 
 # s7656: NEEDS-ARGS gates whose input lives on disk: run with that input so they count. Used only when every path exists.
@@ -38,6 +57,8 @@ ARGS = {
     "s7409_fodd_census.py": (["../N64Recomp/RecompiledFuncs", "--plant"], r"CONTROL PASS"),   # planted FR0 MIXED row
     "s7410_csave_census.py": (["../N64Recomp/RecompiledFuncs", "--plant"], r"CONTROL PASS"),  # dropped ldc1 restore
     "s7091_ucode_insn_census.py": (["scratch/s7091/pristine", "build/factor5_ucode", "--controls"], None),  # rc 1 = unexplained
+    # s7657: the d8 holder dump is only kept gzipped; --selftest proves classes A-E on the built-in synthetic listing (rc 2 FAIL)
+    "s7317_field_compare_census.py": (["--selftest"], r"SELFTEST .* PASS"),
 }
 TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
@@ -174,6 +195,10 @@ def run(path):
 
 def run_uncached(path):
     src = open(path, errors="replace").read()
+    rep = REPORT.get(os.path.basename(path))
+    if rep and not EXIT_PATH.search(src):
+        return (os.path.basename(path), "REPORT", "-", rep), [], {"reads": [os.path.abspath(path)], "dirs": [], "globs": [],
+                                                                     "complete": True, "spawn_ok": True}
     a = ["--controls"] if "--controls" in src else []
     fixed, must = ARGS.get(os.path.basename(path), (None, None))
     if fixed and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if not x.startswith("-")):
@@ -245,6 +270,9 @@ def cache_control(d):
 
 def main():
     global USE_CACHE, CACHE
+    if "--help" in sys.argv or "-h" in sys.argv:  # s7657: used to run a full sweep
+        print(__doc__)
+        sys.exit(0)
     t0 = time.time()
     USE_CACHE = "--no-cache" not in sys.argv
     if USE_CACHE:
@@ -267,11 +295,18 @@ def main():
         open(ni_bad, "w").write("import sys\nprint('OPEN 1')\nsys.exit(1)\n")
         c = {r[0]: r[1] for r in map(run, (bad, good))}
         c["ni_text"], c["ni_other"] = run(ni_ok)[1], run(ni_bad)[1]
+        # s7657: REPORT holds only while the tool has no exit path: the same name failing via sys.exit must read RED
+        rp_ok, rp_bad = os.path.join(d, "rp", "s7031_offmap_census.py"), os.path.join(d, "rq", "s7031_offmap_census.py")
+        for f, body in ((rp_ok, "print('table')\n"), (rp_bad, "import sys\nprint('table')\nsys.exit(1)\n")):
+            os.makedirs(os.path.dirname(f))
+            open(f, "w").write(body)
+        c["rep_noexit"], c["rep_exit"] = run(rp_ok)[1], run(rp_bad)[1]
         for k in list(CACHE):  # controls never persist
             if k.startswith(os.path.abspath(d)):
                 del CACHE[k]
         ccpass, cc = cache_control(d)
-    cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED"}
+    cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED",
+                 "rep_noexit": "REPORT", "rep_exit": "RED"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
     print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit ->", cc, "PASS" if ccpass else "FAIL")
     if not (cpass and ccpass):

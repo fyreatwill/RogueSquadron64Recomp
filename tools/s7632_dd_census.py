@@ -177,8 +177,17 @@ def show(o, label):
         print("  ALWAYS %-10s %s:%d %s %s %s%s" % (r["cls"], r["file"].split("/")[-1], r["line"], r["fn"], r["kind"], r["name"],
               "" if r["eff_ast"] == r["eff"] else " (ast=%s)" % r["eff_ast"]))
 
+FRESH = dict(d="scratch/s7632", gen_args=(), scope=("lib/rt64/",))  # s7633 overrides: bridge files, scratch/s7633
+
+
 def main():
     a = sys.argv[1:]
+    if not a or a[0].startswith("--"):  # s7657: no inputs -> regenerate from the live tree (sweep gate), plants + drop-one
+        import importlib.util as _ilu, os as _os
+        _sp = _ilu.spec_from_file_location("ast_cache", _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "ast_cache.py"))
+        _ac = _ilu.module_from_spec(_sp); _sp.loader.exec_module(_ac)
+        a = _ac.fresh_census_args(FRESH["d"], "tools/s7632_dd_scan.py", "tools/s7632_dd_ast.py", "scratch/s7632/plant_hd.cpp",
+                                  FRESH["gen_args"], FRESH["scope"]) + (a or ["--drop-control"])
     o = census(a[0], a[1]); show(o, "lib/rt64 hot files")
     ok = True
     if "--plant-scan" in a:
@@ -204,6 +213,7 @@ def main():
     opn = [r for r in o["always"] + o["one_source"] if r["cls"] == "OPEN"]
     print("OPEN default-on rows: %d; copy rows: %s" % (len(opn), sorted(set(r["name"] for r in o["always"] if r["cls"] == "copy"))))
     print("CONTROLS", "PASS" if ok else "FAIL")
+    sys.exit(0 if ok and not opn else 1)  # s7657: was always 0, so a FAIL / OPEN row never gated anything
 
 if __name__ == "__main__":
     main()

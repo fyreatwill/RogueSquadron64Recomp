@@ -43,6 +43,15 @@ def newest(paths):
     return best, who
 
 
+def scoped(scope=None, extra=()):
+    """sources() limited to repo-relative prefixes in scope (compile_commands.json always kept), plus extra paths."""
+    src = sources()
+    if scope:
+        cc = os.path.join(ROOT, "build/compile_commands.json")
+        src = [p for p in src if p == cc or os.path.relpath(p, ROOT).startswith(tuple(scope))]
+    return src + [os.path.join(ROOT, x) for x in extra]
+
+
 def stale(cache, paths=None):
     try:
         cm = os.stat(cache).st_mtime
@@ -52,22 +61,40 @@ def stale(cache, paths=None):
     return (m > cm), (os.path.relpath(who, ROOT) if who else "")
 
 
-def ensure(cache, gen_tool):
-    s, why = stale(cache)
+def ensure(cache, gen_tool, args=(), extra=(), scope=None):
+    """s7657: args are passed to gen_tool before --out; extra (repo-relative: the generator itself, a plant file) and scope
+    (repo-relative prefixes limiting sources()) widen / narrow what makes the cache stale."""
+    paths = None if not (extra or scope) else scoped(scope, extra)
+    s, why = stale(cache, paths)
     if not s:
         return "fresh"
     os.makedirs(os.path.dirname(cache), exist_ok=True)
     with open(cache + ".lock", "w") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
-        s, why = stale(cache)  # another job may have regenerated it while we waited
+        s, why = stale(cache, paths)  # another job may have regenerated it while we waited
         if not s:
             return "fresh"
         print("[ast-cache] %s stale (newer: %s) -> regenerating" % (os.path.relpath(cache, ROOT), why), file=sys.stderr)
         tmp = cache + ".tmp"
-        subprocess.run([sys.executable, os.path.join(ROOT, gen_tool), "--out", tmp], check=True, cwd=ROOT,
+        subprocess.run([sys.executable, os.path.join(ROOT, gen_tool), *args, "--out", tmp], check=True, cwd=ROOT,
                        stdout=subprocess.DEVNULL)
         os.replace(tmp, cache)
     return "regenerated"
+
+
+def fresh_census_args(d, scan_tool, ast_tool, plant, gen_args=(), scope=None, plant_ast_args=()):
+    """s7657: the two-source censuses (s7631 RP, s7632 DD, s7633 HB) read SCAN/AST json made by a regex scanner and a clang
+    extractor. Run with no arguments they used to die on argv (sweep: NEEDS-ARGS, so they gated nothing). This regenerates
+    d/{scan,ast,scan_plant,ast_plant}.json whenever a source in scope, the generator or the plant is newer, and returns the
+    census argv the closing session used: SCAN AST --plant-scan P --plant-ast P. plant_ast_args narrows the plant AST pass
+    (s7631: `--only <no TU>` parses the plant alone, 328 s -> under the sweep cap; its census reads only PLANT/ rows)."""
+    out = []
+    for name, tool, extra_args in (("scan", scan_tool, ()), ("ast", ast_tool, ()),
+                                   ("scan_plant", scan_tool, ("--plant", plant)), ("ast_plant", ast_tool, tuple(plant_ast_args) + ("--plant", plant))):
+        c = os.path.join(ROOT, d, name + ".json")
+        ensure(c, tool, tuple(gen_args) + extra_args, extra=(tool, plant), scope=scope)
+        out.append(c)
+    return [out[0], out[1], "--plant-scan", out[2], "--plant-ast", out[3]]
 
 
 def selftest():

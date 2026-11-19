@@ -104,5 +104,16 @@ for (fn, k), v in {
     ("rs64_floor_note", "print"): ("gated", "returns at once without ROGUESQ_LOG_FLOOR (s6934)"),
 }.items(): c.FNCLASS[(fn, k)] = v
 
+# s7657: rows the live tree grew after s7633 closed (s7634-s7636 walker-fusion work), read by hand when the fresh-input sweep
+# mode first ran (frozen scratch/s7633 json had hidden them).
+c.CLASS.update({
+    "g_s7634_sink": (ENVG, "written only in rs64_s7634_nullwalk, called only `if (s7634null)` (ROGUESQ_S7634_NULLWALK latch)"),
+    "g_s7636_odd": (SC, "one bool store per submit: GLUE_TOG parity (false unless ROGUESQ_GLUE_TOG) read by FASTSPIKE=tog"),
+})
+c.FNCLASS[("rs64_region_scan", "print")] = ("gated", "[s7635-late]/[s7635-chk] only past `if (fused == 1) return`: fused=2/3 "
+                                            "need ROGUESQ_S7634_FUSE=chk|inj (default 1); late lines also <=32")
+c.FRESH.update(d="scratch/s7633", gen_args=("--hot", "src/rsp/dpc_bridge.cpp,src/main/rt64_render_context.cpp"),
+               scope=("src/", "lib/rt64/", "lib/N64ModernRuntime/"))  # s7657: no-arg sweep mode, the s7633 --hot set
+
 if __name__ == "__main__":
     c.main()

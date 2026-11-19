@@ -204110,3 +204110,32 @@ close it out):
 Rules out: drift of closed census gates going unnoticed after a code-touching session (now blocked at verify).
 Not covered: the 10 NEEDS-ARGS gates (s7031 s7082 s7083 s7210 s7215 s7317 s7441 s7631 s7632 s7633) still count for nothing;
 next unit. Note: the sweep takes no --help (it ran a full sweep on that flag).
+
+## Session 7657 (2026-11-19) — gate sweep: the 10 NEEDS-ARGS gates classified (3 live two-source gates, 1 selftest, 1 NEEDS-INPUT, 5 REPORT); live s7633 inputs exposed 4 rows the frozen json hid, all read gated/scalar
+
+HYPOTHESIS-ID: gate-sweep-standing. No regen, no game run (offline tooling only).
+- Per gate (argv usage + closing session + what is on disk):
+  - s7631_rp / s7632_dd / s7633_hb: two-source source censuses whose SCAN/AST json in scratch/s763x were frozen snapshots of the
+    tree at closure. New `tools/ast_cache.fresh_census_args` (+ `ensure(..., args, extra, scope)`): with no args each census
+    regenerates scan/ast/scan_plant/ast_plant json whenever a source in scope, the generator or the plant is newer, and runs with
+    the closing session's plants (+ --drop-control for s7632/s7633). s7632/s7633 printed CONTROLS FAIL / OPEN rows but always
+    exited 0: now `sys.exit(0 if ok and not opn else 1)`. s7631's plant AST parsed all 87 TUs (cold 328 s, over the 300 s sweep
+    cap): `--only <no TU>` for the plant pass -> plant TU alone (its census reads only PLANT/ rows; controls still PASS).
+    Cold costs measured: s7632 37 s, s7633 28 s, s7631 ~165 s real AST (only when lib/rt64 changes).
+  - s7317_field_compare: holder dump kept only gzipped; `--selftest` (synthetic listing, classes A-E) is the gate (rc 2 FAIL).
+  - s7215_shape: real gate (exit 1 = correction off a mode switch) but its run.log was never kept (scratch/s7215 has 0 shape
+    lines) -> NEEDS-INPUT keyed by tool + the IndexError on `L = open(sys.argv[1]`.
+  - s7031_offmap, s7082_jal, s7083_lowering, s7210_field, s7441_rs64: no exit path at all (summarisers of one capture) -> new
+    sweep class REPORT, honoured only while the source has no exit path (EXIT_PATH regex), so a later added verdict exit runs it
+    as a gate again.
+- Result (H-ondisk vs H-gone): split. On disk / self-contained 4 (s7631-s7633 regenerate from the tree, s7317 selftest); gone 1
+  (s7215); not gates 5. Sweep 135: 127 GREEN, 3 NEEDS-INPUT, 5 REPORT, 0 NEEDS-ARGS, 0 RED (scratch/s7657/sweep.out); cold 453 s,
+  warm 14.7 s (129 hit, 6 uncacheable); tools/agent/test_gate_sweep.sh 4/4 PASS; `--help` prints the docstring.
+- Finding: the live s7633 inputs read 4 OPEN default-on rows that the frozen json hid (all from s7634-s7636 walker work): g_s7634_sink
+  (only in rs64_s7634_nullwalk, called only `if (s7634null)`, ROGUESQ_S7634_NULLWALK), g_s7636_odd (one bool store per submit,
+  GLUE_TOG parity), two rs64_region_scan prints ([s7635-late]/[s7635-chk], only past `if (fused == 1) return`; fused 2/3 need
+  ROGUESQ_S7634_FUSE=chk|inj, default 1). Read by hand: 0 behaviour defects; classified by name/function (not line) in
+  tools/s7633_hb_census.py. ORIGIN: rows written by sessions 7634-7636 after s7633 closed; legitimate opt-in instruments.
+- Controls: sweep planted red/green/NEEDS-INPUT/REPORT (same REPORT name with sys.exit(1) -> RED) PASS; cache control PASS; the
+  s7633 census with the 4 new rows removed -> OPEN 4, rc 1 (the new exit gates); s7631 planted rows PASS on the plant-only AST.
+- Rules out: "frozen census inputs are a valid standing gate" (they hid 4 new rows for 24 sessions of code).
