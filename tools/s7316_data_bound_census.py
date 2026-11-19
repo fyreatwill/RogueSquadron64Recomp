@@ -8,7 +8,7 @@ a G holding a KSEG0 pointer (0x80000000..0x81400000) makes the site a pointer-bo
 (counts, sizes, timers) is classed automatically. Exit 1 if a pointer-valued site is unclassified.
 Method limit: linear pass, no CFG (a constant base set on one path is assumed on all later paths); G loaded through a
 register base (struct field) is not followed. Usage: tools/s7316_data_bound_census.py [--ram f.bin ...] [--all] [--selftest]"""
-import pathlib, re, struct, sys
+import pathlib, re, struct, subprocess, sys
 
 GEN = pathlib.Path(__file__).resolve().parents[2] / "N64Recomp" / "RecompiledFuncs"
 INS = re.compile(r"^\s*// (0x[0-9A-F]{8}): (\w+)\s*(.*)$")
@@ -81,7 +81,9 @@ def main():
         for f in argv[i + 1:]:
             if f.startswith("--"): break
             files.append(f)
-        rams = [pathlib.Path(f).read_bytes() for f in files]
+        # s7658: *.zst dumps (the retained scratch/s7316/ram set) are read through zstd -dc
+        rams = [subprocess.run(["zstd", "-dc", f], capture_output=True, check=True).stdout if f.endswith(".zst")
+                else pathlib.Path(f).read_bytes() for f in files]
     if "--selftest" in argv:
         s = scan([("selftest", SELFTEST)])
         ok = len(s) == 1 and s[0]["g"] == 0x8010FF18
@@ -94,7 +96,8 @@ def main():
         ptr = any(v is not None and 0x80000000 <= v < SPILL_TOP for v in vals)
         v = VERDICT.get((s["fn"], s["g"])) or GV.get(s["g"])
         if any(x is not None and 0x81000000 <= x < SPILL_TOP for x in vals): v = None; s["spill"] = 1  # H-reject candidate
-        if v is None and rams and not ptr: v = "scalar G at runtime (" + ",".join("%X" % x for x in vals if x is not None) + ")"
+        # s7658: a G no dump covers (truncated dump) has no runtime value: it stays unclassified, not "scalar ()"
+        if v is None and rams and not ptr and any(x is not None for x in vals): v = "scalar G at runtime (" + ",".join("%X" % x for x in vals if x is not None) + ")"
         if v is None: unc += 1
         s["v"] = v; s["vals"] = vals
         byg.setdefault(s["g"], []).append(s)

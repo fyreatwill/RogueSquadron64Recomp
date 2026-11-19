@@ -12,6 +12,8 @@ Scores game stderr logs for the six default-on GUARD levers:
 
 usage: s7573_guard_census.py LOG...          per-log table
        s7573_guard_census.py --retained DIR   every *.txt/*.log under DIR that carries a game-run marker
+       --gate (s7658, first arg): exit 1 on any natural fire, 3 if the set carries no FORCE control row for COPY, PI_DMA
+       and SPAI (a zero without its control is not a zero). Standing input: scratch/s7573/retained (filtered s7573 logs).
 """
 import os, re, sys
 
@@ -58,6 +60,8 @@ def row(name, r):
 
 
 def main(a):
+    gate = bool(a) and a[0] == "--gate"
+    if gate: a = a[1:]
     if a and a[0] == "--retained":
         paths = []
         for root, _, fs in os.walk(a[1]):
@@ -82,6 +86,11 @@ def main(a):
     print(row(f"TOTAL logs={n}", tot))
     nat = sum(tot[k] for k in RANGE) + tot["drain_to"] + tot["divguard"] + sum(b for _, b in tot["cen"].values())
     print(f"natural_fires={nat}")
+    if gate:
+        noctl = [k for k in ("COPY", "PIDMA", "SPAI") if tot[k + "_ctl"] == 0]
+        if nat: print(f"GATE FAIL natural_fires={nat}"); return 1
+        if noctl: print("GATE NO-CONTROL " + ",".join(noctl)); return 3
+        print("GATE PASS natural_fires=0, controls COPY/PIDMA/SPAI fired")
     return 0
 
 

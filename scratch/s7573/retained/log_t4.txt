@@ -1,0 +1,59 @@
+[s5065-wrapper-census] osContGetReadData calls=1 bad=0
+[host-start] n=0 held=0 btn=0x0000
+[s5065-wrapper-census] osAiSetNextBuffer calls=1 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=2 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=4 bad=0
+[s5065-wrapper-census] osContGetReadData calls=2 bad=0
+[host-start] n=1 held=0 btn=0x0000
+[host-start] n=2 held=0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=4 bad=0
+[host-start] n=3 held=0 btn=0x0000
+[s5065-wrapper-census] osAiSetNextBuffer calls=8 bad=0
+[host-start] n=4 held=0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=8 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=16 bad=0
+[s5065-wrapper-census] osContGetReadData calls=16 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=32 bad=0
+[s5065-wrapper-census] osEepromLongRead calls=1 bad=0
+[s5065-wrapper-census] osEepromLongRead calls=2 bad=0
+[s5065-wrapper-census] osContGetReadData calls=32 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=64 bad=0
+[s5065-wrapper-census] osContGetReadData calls=64 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=128 bad=0
+[s5065-wrapper-census] osContGetReadData calls=128 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=256 bad=0
+[s5065-wrapper-census] osContGetReadData calls=256 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=512 bad=0
+[s5065-wrapper-census] osContGetReadData calls=512 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=1024 bad=0
+[host-start] n=601 edge 0->1 btn=0x1000
+[host-start] n=709 edge 1->0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=1024 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=2048 bad=0
+[host-start] n=1081 edge 0->1 btn=0x1000
+[host-start] n=1189 edge 1->0 btn=0x0000
+[host-start] n=1561 edge 0->1 btn=0x1000
+[host-start] n=1669 edge 1->0 btn=0x0000
+[host-start] n=2000 held=0 btn=0x0000
+[host-start] n=2041 edge 0->1 btn=0x1000
+[s5065-wrapper-census] osContGetReadData calls=2048 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=4096 bad=0
+[host-start] n=2149 edge 1->0 btn=0x0000
+[host-start] n=2521 edge 0->1 btn=0x1000
+[drain-exit] call=1 iters=177822 v0=1
+[host-start] n=2629 edge 1->0 btn=0x0000
+[host-start] n=3001 edge 0->1 btn=0x1000
+[host-start] n=3109 edge 1->0 btn=0x0000
+[host-start] n=3481 edge 0->1 btn=0x1000
+[host-start] n=3589 edge 1->0 btn=0x0000
+[host-start] n=3961 edge 0->1 btn=0x1000
+[host-start] n=4000 held=1 btn=0x1000
+[host-start] n=4069 edge 1->0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=4096 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=8192 bad=0
+[host-start] n=4441 edge 0->1 btn=0x1000
+[host-start] n=4549 edge 1->0 btn=0x0000
+[host-start] n=6000 held=0 btn=0x8000
+[host-start] n=8000 held=0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=8192 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=16384 bad=0

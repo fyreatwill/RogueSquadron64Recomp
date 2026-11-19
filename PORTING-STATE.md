@@ -204144,3 +204144,28 @@ HYPOTHESIS-ID: gate-sweep-standing. No regen, no game run (offline tooling only)
   standing gate): the live s7633 inputs read OPEN 4 where the frozen json read 0.
 - Next discriminator: retain a filtered input for each of the 3 NEEDS-INPUT gates (s7215 shape lines, s7573 log tail, s7316 one
   rdram dump) and split H-small (commit < 1 MB filtered lines) vs H-large (zstd + sweep decompress), scratch/agent/NEXT.md.
+
+## Session 7658 (2026-11-19) — gate sweep: the 3 NEEDS-INPUT gates get retained inputs (2 game runs in-session); sweep 130 GREEN, 5 REPORT, 0 NEEDS-INPUT, 0 RED
+
+HYPOTHESIS-ID: gate-sweep-standing. No regen, no build. Two game runs (host idle ~50 min, screen unlocked), one at a time, SIGKILL.
+- s7316 (data-bound census): run scratch/s7658 (g1e_owner_quiet_arms, L1 dd2 16:9 FPS60, HOLD 150, ROGUESQ_RDRAM_DUMP_DIR,
+  COARSE 2000, BYTES 2097152): alive, 0 crash, vi_stalls30s=0, 4 dumps. Highest scanned G is 0x80154670, so dumps cut to
+  0x180000: retained 2 (swaps 2000/8000), zstd 932 KB, scratch/s7316/ram/. Tool reads *.zst via zstd -dc. Result: sites 303,
+  globals 41, unclassified 0, spill-valued 0 (agrees with s7316's 29-dump run). Tool fix: a G no dump covers used to read
+  "scalar G at runtime ()" (empty list = vacuous scalar); it now stays unclassified. Controls: planted 0x81000040 at 0x801163D4
+  -> 169 unclassified, rc 1; a 1 MB-truncated dump -> 86 unclassified, rc 1 (it would have read 0 before the fix).
+- s7215 (shape census): scratch/s7215/r.zsh rerun (L17 long route 21:9, VI_SHAPE_LOG): 196 MB run.log, 2597 viewport lines,
+  16 [s7213-shape] corrections, all 108-136 lines after a mode switch -> rc 0 (window 1358x594, nonfull 1). Distances are in
+  log lines, so a plain grep would shorten them: new `--filter LOG OUT` writes "# s7215-numbered" + "<line>\t<text>" rows;
+  the tool reads that form (and *.zst). Retained scratch/s7215/shape_lines.txt.zst 57 KB (2.5 MB raw); its census output is
+  byte-identical to the raw log's. Control: planted correction 5000 lines past the last row -> "1 without a mode switch", rc 1.
+- s7573 (GUARD-6): the s7573 logs were already kept (14 MB zst); filtered to the tool's tags -> scratch/s7573/retained, 16 KB.
+  New `--gate`: rc 1 on any natural fire, rc 3 if no FORCE control row for COPY/PI_DMA/SPAI. Result GATE PASS (natural 0, ctl
+  16/16/16). Controls: planted SKIPPED line -> GATE FAIL rc 1; tc log removed -> GATE NO-CONTROL rc 3.
+- Sweep: ARGS rows for all three (NEEDS_INPUT kept as the fallback when files are absent, e.g. a fresh clone). Full sweep
+  scratch/s7658/sweep.out: 135 = 130 GREEN, 5 REPORT, 0 RED, rc 0; cold 455 s (sweep edit invalidates the cache), warm 14.8 s
+  (129 hit, 6 uncacheable); test_gate_sweep.sh ALL PASS.
+- Discrimination: H-small selected for all three (57 KB / 932 KB / 16 KB, committed with git add -f); H-large (sweep
+  decompress step) not needed beyond the tools' own zstd -dc read. Not done: the lib/rt64-newer s7631 timing (touching a lib/
+  header forces a game rebuild; left for a session that edits rt64 anyway).
+- ORIGIN: no mitigation added.

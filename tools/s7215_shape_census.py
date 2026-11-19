@@ -5,11 +5,29 @@ usage: s7215_shape_census.py <run.log> [max_lines=1000]
 2. Every viewport >1% narrower/shorter than the window, with the scissor and the previous viewport line (to tell a new box from
    the game's own centred content: same scissor on the preceding frames = content, not a box).
 3. Every [s7213-shape] correction with the distance (log lines) back to the last VI mode-switch line (osViSetMode / vi-mode-table).
-   Exit 1 if a correction has no mode-switch line within max_lines (= a false fire on an ordinary frame, s7214 H-false)."""
-import re, sys, collections
-L = open(sys.argv[1], errors='replace').read().split('\n'); MAXD = int(sys.argv[2]) if len(sys.argv) > 2 else 1000
+   Exit 1 if a correction has no mode-switch line within max_lines (= a false fire on an ordinary frame, s7214 H-false).
+s7658: a run.log filtered to the shape/mode lines keeps the original line numbers (distances are in log lines) in the form
+"# s7215-numbered" then "<0-based line>\t<text>" per line; *.zst is read through zstd -dc. Standing input:
+scratch/s7215/shape_lines.txt.zst (s7658 L17 21:9 long route; tools/s7215_shape_census.py --filter <run.log> <out> makes one)."""
+import re, sys, collections, subprocess
+KEEP = re.compile(r'\[g1d-vishape-vp\]|\[s7213-shape\]|osViSetMode|\[vi-mode-table\]')
+def load(p):
+    t = subprocess.run(['zstd', '-dc', p], capture_output=True, check=True).stdout.decode(errors='replace') if p.endswith('.zst') \
+        else open(p, errors='replace').read()
+    if not t.startswith('# s7215-numbered\n'): return t.split('\n')
+    rows = [r.split('\t', 1) for r in t.split('\n')[1:] if r]
+    L = [''] * (int(rows[-1][0]) + 2 if rows else 1)
+    for n, x in rows: L[int(n)] = x
+    return L
+if len(sys.argv) > 1 and sys.argv[1] == '--filter':
+    with open(sys.argv[3], 'w') as o:
+        o.write('# s7215-numbered\n')
+        for i, l in enumerate(load(sys.argv[2])):
+            if KEEP.search(l): o.write('%d\t%s\n' % (i, l))
+    sys.exit(0)
+L = load(sys.argv[1]); MAXD = int(sys.argv[2]) if len(sys.argv) > 2 else 1000
 vp = re.compile(r'\[g1d-vishape-vp\] fb (\d+x\d+) vp ([\d.]+),([\d.]+) ([\d.]+)x([\d.]+) tex (\S+) rs (\S+).* sc (\S+),(\S+)')
-mode = re.compile(r'osViSetMode|\[vi-mode-table\]')
+mode = re.compile(r'osViSetMode|\[vi-mode-table\]')  # KEEP must cover this, vp and [s7213-shape]
 V = [(i, vp.search(l)) for i, l in enumerate(L) if '[g1d-vishape-vp]' in l]; V = [(i, m) for i, m in V if m]
 C = collections.Counter((m[1], '%.0fx%.0f' % (float(m[4]), float(m[5])), m[7]) for _, m in V)
 sz = collections.Counter((round(float(m[4])), round(float(m[5]))) for _, m in V).most_common(1)[0][0]

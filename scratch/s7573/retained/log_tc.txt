@@ -1,0 +1,107 @@
+[s5061-pi-dma-guard] dir=0 dram=0x801546A0 phys=0x10144340 size=0x40 total=1 viol=1 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x80787810 phys=0x10FF6C08 size=0x8 total=2 viol=2 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x80787810 phys=0x10FF7330 size=0x20 total=3 viol=3 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x80787840 phys=0x10FF6C10 size=0x720 total=4 viol=4 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x80100400 phys=0x10101000 size=0xCE00 total=5 viol=5 (FORCE control, not skipped)
+[s5065-wrapper-census] osContGetReadData calls=1 bad=0
+[s5063-spai-guard] osContGetReadData addr=0xFFFFFFFF8010FF30 size=0x18 FORCE(log-only)
+[host-start] n=0 held=0 btn=0x0000
+[s5065-wrapper-census] osAiSetNextBuffer calls=1 bad=0
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80166450 size=0x300 FORCE(log-only)
+[s5065-wrapper-census] osAiSetNextBuffer calls=2 bad=0
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80166750 size=0x300 FORCE(log-only)
+[s5061-pi-dma-guard] dir=0 dram=0x800A5130 phys=0x1010C2D0 size=0x4000 total=6 viol=6 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800A9130 phys=0x101102D0 size=0x4000 total=7 viol=7 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800AD130 phys=0x101142D0 size=0x4000 total=8 viol=8 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800B1130 phys=0x101182D0 size=0x4000 total=9 viol=9 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800B5130 phys=0x1011C2D0 size=0x4000 total=10 viol=10 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800B9130 phys=0x101202D0 size=0x4000 total=11 viol=11 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800BD130 phys=0x101242D0 size=0x4000 total=12 viol=12 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800C1130 phys=0x101282D0 size=0x4000 total=13 viol=13 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800C5130 phys=0x1012C2D0 size=0x4000 total=14 viol=14 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800C9130 phys=0x101302D0 size=0x4000 total=15 viol=15 (FORCE control, not skipped)
+[s5061-pi-dma-guard] dir=0 dram=0x800CD130 phys=0x101342D0 size=0x3F0 total=16 viol=16 (FORCE control, not skipped)
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80166A50 size=0x300 FORCE(log-only)
+[s5065-wrapper-census] osAiSetNextBuffer calls=4 bad=0
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80166D50 size=0x300 FORCE(log-only)
+[s5065-wrapper-census] osContGetReadData calls=2 bad=0
+[s5063-spai-guard] osContGetReadData addr=0xFFFFFFFF8010FF30 size=0x18 FORCE(log-only)
+[host-start] n=1 held=0 btn=0x0000
+[s5063-spai-guard] osContGetReadData addr=0xFFFFFFFF8010FF30 size=0x18 FORCE(log-only)
+[host-start] n=2 held=0 btn=0x0000
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80167050 size=0x300 FORCE(log-only)
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80167350 size=0x300 FORCE(log-only)
+[s5065-wrapper-census] osContGetReadData calls=4 bad=0
+[s5063-spai-guard] osContGetReadData addr=0xFFFFFFFF8010FF30 size=0x18 FORCE(log-only)
+[host-start] n=3 held=0 btn=0x0000
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80167650 size=0x300 FORCE(log-only)
+[s5063-spai-guard] osContGetReadData addr=0xFFFFFFFF8010FF30 size=0x18 FORCE(log-only)
+[host-start] n=4 held=0 btn=0x0000
+[s5065-wrapper-census] osAiSetNextBuffer calls=8 bad=0
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80167950 size=0x300 FORCE(log-only)
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80167C50 size=0x300 FORCE(log-only)
+[s5063-spai-guard] osContGetReadData addr=0xFFFFFFFF8010FF30 size=0x18 FORCE(log-only)
+[s5063-spai-guard] osAiSetNextBuffer addr=0xFFFFFFFF80167F50 size=0x300 FORCE(log-only)
+[s5065-wrapper-census] osContGetReadData calls=8 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=16 bad=0
+[s5065-wrapper-census] osContGetReadData calls=16 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=32 bad=0
+[s5065-wrapper-census] osContGetReadData calls=32 bad=0
+[s5037-copy-guard] memcpy ra=00000000 dst=801126C0 src=80194F80 len=32 viol=1 (FORCE control, not skipped)
+[s5065-wrapper-census] osEepromLongRead calls=1 bad=0
+[s5065-wrapper-census] osEepromLongRead calls=2 bad=0
+[s5037-copy-guard] memcpy ra=00000000 dst=8013A5C0 src=80194FC8 len=176 viol=2 (FORCE control, not skipped)
+[s5065-wrapper-census] osAiSetNextBuffer calls=64 bad=0
+[s5037-copy-guard] memcpy ra=00000000 dst=80165DC0 src=8003B720 len=6 viol=3 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165DC6 src=8003B65C len=7 viol=4 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165E38 src=800A72D8 len=22 viol=5 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165E4E src=8003AD82 len=4 viol=6 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165E38 src=800A72D8 len=22 viol=7 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165E4E src=8003AD82 len=4 viol=8 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165E38 src=800A72D8 len=22 viol=9 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165E4E src=8003AD9E len=4 viol=10 (FORCE control, not skipped)
+[s5065-wrapper-census] osContGetReadData calls=64 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=128 bad=0
+[s5065-wrapper-census] osContGetReadData calls=128 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=256 bad=0
+[s5065-wrapper-census] osContGetReadData calls=256 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=512 bad=0
+[s5037-copy-guard] memcpy ra=00000000 dst=80165D50 src=8003B720 len=6 viol=11 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165D56 src=8003B5D4 len=10 viol=12 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80136F80 src=8003A580 len=9 viol=13 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80136F89 src=80165DC4 len=1 viol=14 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165DD8 src=80136F80 len=10 viol=15 (FORCE control, not skipped)
+[s5037-copy-guard] memcpy ra=00000000 dst=80165DE2 src=8003A546 len=4 viol=16 (FORCE control, not skipped)
+[s5065-wrapper-census] osContGetReadData calls=512 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=1024 bad=0
+[host-start] n=601 edge 0->1 btn=0x1000
+[host-start] n=710 edge 1->0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=1024 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=2048 bad=0
+[host-start] n=1081 edge 0->1 btn=0x1000
+[host-start] n=1189 edge 1->0 btn=0x0000
+[host-start] n=1561 edge 0->1 btn=0x1000
+[host-start] n=1669 edge 1->0 btn=0x0000
+[host-start] n=2000 held=0 btn=0x0000
+[host-start] n=2041 edge 0->1 btn=0x1000
+[s5065-wrapper-census] osContGetReadData calls=2048 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=4096 bad=0
+[host-start] n=2149 edge 1->0 btn=0x0000
+[host-start] n=2521 edge 0->1 btn=0x1000
+[drain-exit] call=1 iters=241311 v0=1
+[host-start] n=2629 edge 1->0 btn=0x0000
+[host-start] n=3001 edge 0->1 btn=0x1000
+[host-start] n=3109 edge 1->0 btn=0x0000
+[host-start] n=3481 edge 0->1 btn=0x1000
+[host-start] n=3589 edge 1->0 btn=0x0000
+[host-start] n=3961 edge 0->1 btn=0x1000
+[host-start] n=4000 held=1 btn=0x1000
+[host-start] n=4069 edge 1->0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=4096 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=8192 bad=0
+[host-start] n=4441 edge 0->1 btn=0x1000
+[host-start] n=4549 edge 1->0 btn=0x0000
+[host-start] n=6000 held=0 btn=0x8000
+[host-start] n=8000 held=0 btn=0x0000
+[s5065-wrapper-census] osContGetReadData calls=8192 bad=0
+[s5065-wrapper-census] osAiSetNextBuffer calls=16384 bad=0

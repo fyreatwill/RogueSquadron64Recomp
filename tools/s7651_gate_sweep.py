@@ -59,6 +59,12 @@ ARGS = {
     "s7091_ucode_insn_census.py": (["scratch/s7091/pristine", "build/factor5_ucode", "--controls"], None),  # rc 1 = unexplained
     # s7657: the d8 holder dump is only kept gzipped; --selftest proves classes A-E on the built-in synthetic listing (rc 2 FAIL)
     "s7317_field_compare_census.py": (["--selftest"], r"SELFTEST .* PASS"),
+    # s7658: the three s7655/s7657 NEEDS-INPUT gates now carry a retained input captured once (NEEDS_INPUT stays the fallback
+    # when the files are absent, e.g. a fresh clone). Planted controls in PORTING-STATE s7658.
+    "s7215_shape_census.py": (["scratch/s7215/shape_lines.txt.zst"], r"without a mode switch within 1000 lines: 0"),
+    "s7316_data_bound_census.py": (["--ram", "scratch/s7316/ram/rdram_0002000_fb80A62B80_1M5.bin.zst",
+                                    "scratch/s7316/ram/rdram_0008000_fb8098AA00_1M5.bin.zst"], r"unclassified=0 .*ram_dumps=2"),
+    "s7573_guard_census.py": (["--gate", "--retained", "scratch/s7573/retained"], r"GATE PASS"),
 }
 TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
