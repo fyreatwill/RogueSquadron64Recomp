@@ -171,6 +171,8 @@ for _k, _v in {
     "src/main/main.cpp": {"g_rumble_edges": "bounded: G6a motor edge deque, popped to 512 in set_rumble and aged out (2x100 ms) in rs64_rumble_duty",
         "buttons": "bounded: G6b rs64_bind_apply, one push per F6-panel bind keypress, identical (mask, src) rejected",
         "d": "bounded: G6b direction key list, one push per F6 bind keypress, duplicate scancode rejected"},
+    "src/main/rs64_settings.cpp": {"from_file": "local: s7663 rs64_settings_apply settings-file (name, value) list, one per file line",
+        "keep": "local: s7663 rs64_settings_apply argv pass-through list (<= argc)"},
     "src/main/rs64_bindings.h": {"buttons": "bounded: rs64_bind_defaults fixed built-in list"},
     "src/main/rs64_bindings_json.h": {"keep": "local: per-button list in rs64_bind_parse_json", "l": "local: rs64_bind_to_json list",
         "v": "local: per-direction key list in rs64_bind_parse_json"},

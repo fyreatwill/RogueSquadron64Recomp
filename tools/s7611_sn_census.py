@@ -68,7 +68,7 @@ row("main.cpp", "prev_a0f50 prev_c1ad0 prev_array_base prev_flags", "edge", r'if
 row("main.cpp", "g_vtx_fault_pages", "gated", r"start_vtx_write_fault_watch", "host page address of rdram (watch armed only by its env)")
 row("main.cpp", "g_flz_last_in_hdr", "gated", r"if \(!g_flz_fault_enabled\.load", "fault handler returns unless the FL_ZERO watch is armed")
 row("main.cpp", "g_wp_addr", "gated", r'getenv\("ROGUESQ_HWBP_ADDR"\)', "hardware-watchpoint address, env only")
-row("main.cpp", "pend s_sum_act s_sum_ctl s_turn s_prev s_win s_pg s_pb14 s_prev_fl s_ref", "gated",
+row("main.cpp", "pend s_sum_act s_sum_ctl s_turn s_prev s_tanks s_win s_pg s_pb14 s_prev_fl s_ref", "gated",
     r"ROGUESQ_(LOG_GRIDSPAWN|AIM_TARGETS|LOG_MTM|MISSION_WIN|PLAYER_DUMP|POSE_REF|PLPOS)",
     "get_n64_input soak-harness branches (autopilot aim, mission-win poke, pose lock, player dump): each block opens on its env")
 # ---- src/main/rt64_render_context.cpp

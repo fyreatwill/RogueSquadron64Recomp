@@ -204555,3 +204555,10 @@ s7629-s7630 holds; 5 arms here clean).
 - Positive control for the new row, same session: a copy of the census with the proof altered to `PresetXX` reports
   `DRIFT src/main/rs64_settings.cpp p.vars | proof missing` and RESULT FAIL, so the row is proof-checked rather than a blanket pass.
 - Offline only; no game run, no soak queued.
+- Gate sweep follow-up (stop_gate --verify after the first commit): 4 more census gates were RED vs the empty allowed-red list,
+  all from earlier sessions' code, none from this change. Classified by hand read, rows added (text-keyed):
+  s7611_sn `s_tanks` (main.cpp gridspawn block, same ROGUESQ_LOG_GRIDSPAWN gate as `s_prev` -> gated);
+  s7599_gr rs64_settings.cpp `from_file`, `keep` (function locals of rs64_settings_apply -> local);
+  s7352_signed via tools/census_rules.py: rs64_standins.cpp rs64_bk_ret `dy + dz` (s7672; const float squared distance -> FLT);
+  s7535_ga main.cpp:13060 get_n64_input `rd[..]` (s7671 TEST-ONLY rumble lever, D rule on ROGUESQ_S7671_FX_ON_KEY, anchored range).
+  s7611 PASS 8/8, s7599 rc 0 3/3, s7535 12/12 PASS (its rule-less coverage control still sees >=250 UNCLASSIFIED). 0 defects found.

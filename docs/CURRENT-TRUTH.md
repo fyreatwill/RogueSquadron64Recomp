@@ -389,7 +389,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 22. **s7663 launch settings/presets: owner to try.** After any edit to rs64_settings.cpp rerun tools/test_settings.cpp and
     scratch/s7663/run.zsh (5 arms; C must print `[gfx-qos] mode=1` from the file). New owner recipes go in its presets() table.
 23. **s7614_hm census: CLOSED s7673.** rs64_settings.cpp `p.vars` = host (static const preset table of string literals; row
-    proof-checked, broken-proof control -> DRIFT). Census exits 0, controls 8/8. Add a row for any new static with pointer members.
+    proof-checked, broken-proof control -> DRIFT). Census exits 0, controls 8/8. Add a row for any new static with pointer members. s7673 also re-greened s7611/s7599/s7352/s7535 (rows for s7663/s7671/s7672 code): run the gate sweep after every src/ commit.
 24. **Crash-report gate (s7664):** `python3 tools/crash_reports.py` (rc 1 = NEW). Deliberate crash arms: quote the .ips basename
     in the session entry. Test tools/agent/test_crash_reports_gate.sh. DIAG datum RogueSquadron64Recomp-2026-11-17-053804
     (s7523 SLOWRDP consume() SIGSEGV) CLOSED s7665 as H-devbuild: crash 05:38, file first committed 05:59; both committed versions

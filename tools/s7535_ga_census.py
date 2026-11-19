@@ -239,6 +239,7 @@ RULES = [
     D(MN, "start_fl_zero_poller", "ROGUESQ_FL_ZERO_ADDR", thr=POLL),
     D(MN, "s7504_fb", "ROGUESQ_S7504_FB"),
     D(MN, "get_n64_input", "ROGUESQ_MISSION_WIN", A('// s5604: ROGUESQ_MISSION_WIN=<n> is a TEST-ONLY lever for the mission', -1, 74), why="harness mission-window poke (soak routing)", thr=INP),
+    D(MN, "get_n64_input", "ROGUESQ_S7671_FX_ON_KEY", A('// s7671 TEST-ONLY lever: ROGUESQ_S7671_FX_ON_KEY=1', 0, 42), why="s7671 rumble effect-slot lever (test only)", thr=INP),
     D(MN, "get_n64_input", "ROGUESQ_LOG_FL", A('// s6399: ROGUESQ_POSE_LOCK=1 is a TEST-ONLY no-input hover arm for G3', -13, 1), thr=INP),
     ("src/main/rs64_rdram_peek.h", "rs64_rdram_u8", None, "H-instrument-only", "any",
      "diagnostic peek helper ('Host-side diagnostic reads', header comment); callers are census/probe code", {"verify": r"Host-side diagnostic reads"}),
