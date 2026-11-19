@@ -203293,4 +203293,9 @@ HYPOTHESIS-ID: rt64-default-on-diagnostics
   ROGUESQ_LOG_UPSPAN=1 the latched flag still fires (403 matching lines: positive control).
 - lib/rt64 edits exported (submodule-patches/rt64.patch). Tools take `--hot a,b` to retarget (dpc_bridge runs clean: 874/1554 raw rows).
 - Rules out: default-on diagnostic copying, allocation or logging in the rt64 per-command path as a frame-time cost.
-- Next: class HB (the same question for src/rsp/dpc_bridge.cpp + rt64_render_context.cpp send_dl).
+- Discrimination: selects H-harmless (the default-on rt64 diagnostics cost <0.5% of processRDPLists, measured in the same
+  run) and refutes H-costly (that the snapshot/ring are a measurable frame-time cost worth gating off). The census also
+  refutes H-ungated-logging (0 default-on prints outside once/budget paths). The fix that landed is the getenv latch
+  (engineering change, not instrumentation only).
+- Next discriminator: class HB, the same enumeration + same-run timer for src/rsp/dpc_bridge.cpp + rt64_render_context.cpp
+  send_dl (scratch/agent/NEXT.md).
