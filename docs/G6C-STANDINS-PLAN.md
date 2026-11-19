@@ -139,3 +139,15 @@ with 294 / 255 accepts in the toggling window. So accepted stand-ins draw nothin
 Next (step 3c): selectMeshLodAndSubmitForRender. Upstream (toml_hooks.c) skips the per-frame flag toggle at 0x80058264 and
 re-scales the instance matrix at 0x80058304 for objects past the stock far ($f22 -> $f22 + $f20) - i.e. the game shrinks the
 mesh scale toward 0 at its far plane. Log per stand-in in that function: $f22, $f20, LOD chosen, submit or not.
+
+## Step 3c result (s7626): stand-ins reach the display list; earlier pixel nulls had no stimulus
+
+Stand-ins do not use selectMeshLodAndSubmitForRender (only probe droids do), so the upstream 0x80058264/0x80058304 hooks do not apply.
+tools/apply_s7626_sg_probe.py (3 parts, ROGUESQ_STANDINS_LOG=1) follows them after the bucket, with every other node as control:
+- traverseSceneGraphRecursive visits and converts them (L1 81591 conversions in 130 s; camera z 42-121; packed t*2^24 <= 2.10e9 < 2^31).
+- processSceneNode: their meshes carry flags 0x00100018 (prebuilt DL, the most common real-object value), so every leaf queues
+  mesh+0x34 with its matrix (L13C -> LFE8) and no face renderer runs, the same as real objects of those flags.
+- beginFrameDLChunk reads 100% of the queued stand-in entries (65390/65390; others 51266/51266).
+The s7624/s7625 pixel windows (dumps at 40-46 s after the first submit) fell where stand-in draws are ~0 (L1 0; L4 ~60/s for 2 s);
+stand-ins draw at 9-19 s. ROGUESQ_STANDINS_PULL=<D> scales a stand-in's camera-space matrix to depth D (same screen place and size)
+to separate depth loss / terrain occlusion from RSP loss. Next: pixel test at 10/16 s, PULL=3 vs true depth (soak s7626_standins_pixels).

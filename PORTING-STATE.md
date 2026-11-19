@@ -203110,3 +203110,42 @@ pass rate x60). Refutes H-box (3% of calls) and H-side as the main reject (side 
 bucket is no longer the limit, yet accepted stand-ins produce no pixels -> a second limit after the bucket (H-draw).
 Next: step 3c, selectMeshLodAndSubmitForRender for stand-in instances (upstream: 0x80058264 flag-toggle skip, 0x80058304 scale
 inflate past the stock far): log $f22/$f20/LOD/submit per stand-in, same-run tog.
+
+## Session 7626 (2026-11-18) — G6c step 3c: stand-ins reach the display list (walk, matrix, per-mesh queue and drain all proven); the s7624/s7625 pixel nulls had no stimulus (dump window held ~0 stand-in draws)
+NEXT.md's step 3c premise was wrong by code read: our stand-ins never call selectMeshLodAndSubmitForRender (only upstream's probe
+droids do, and we drop those). The stand-ins go through addNpcToVisibilityBucket, whose code (0x80057C8C..0x80058064, read this
+session) picks a LOD from the view-test depth (sp+0x18 vs the per-instance thresholds) and links inst+0xC at the view's list head
+with no scale step. So H-scale / H-flag / H-lod (selectMeshLod) do not apply; the remaining question was where after the bucket
+they are lost. One instrument, extended across 4 builds this session (tools/apply_s7626_sg_probe.py, RS64_REPLAY, 3 tagged parts,
+host in src/main/rs64_standins.cpp, active only with ROGUESQ_STANDINS_LOG=1 or ROGUESQ_STANDINS_PULL):
+- Part 1, traverseSceneGraphRecursive (0x80015548): node visits at L_8001558C and the matrix convert at 0x800155E4 (camera-space
+  3x4 at sp+0x10), plus $f12 at convertMat3x4ToN64Mtx 0x80018DEC. Stand-in region nodes vs every other node (control).
+- Part 2, processSceneNode (0x80014FA0): branch label tally per leaf + every face-render call and zero returns.
+- Part 3, the prebuilt-DL queue (0x80116400, 12-byte {DL, matrix, leaf}, count *0x80128C6C): at each count reset
+  (frameStartReset 0x8000A748, initRenderStateArrays 0x8000B67C) which queued entries carry a stand-in matrix (matrix addresses
+  recorded at convert time from *0x8011DC5C) and which beginFrameDLChunk read (0x8000AB4C/AD08/AE30/AF58, entry = $at+0x6400).
+- ROGUESQ_STANDINS_PULL=<D>: a stand-in node deeper than D gets its camera-space 3x4 (stack copy) scaled by D/z: same screen place
+  and size, depth D. Discriminator for depth loss (far clip, fog) and terrain occlusion.
+Runs (g1e_owner_quiet_arms, dd4 FPS60 16:9, ALLOW_SLOW=1, battery clk 1.36-1.57 except s7626g AC 1.01). All arms alive, 0
+crashlines, vi_stalls30s 0, level_ok 1:
+| run | arms | result |
+|---|---|---|
+| scratch/s7626 | L1 STANDINS=1, L4 tog, 130 s | walk visits/converts stand-ins: L1 ours visit 132727 draw 81591 (others 96844/78674), L4 92599/75415; ours camera z 42-121 (others z <= ~50); packed t*2^24 max 2.10e9 < 2^31 (fits; box +-125 holds) |
+| scratch/s7626b | L1/L4 frame + PULL=20 + dumps 40:46:90 | no flicker excess (L1 4042 vs 4208, L4 1873 vs 2153, control PASS) |
+| scratch/s7626c | L1 STANDINS=1, 110 s | processSceneNode: ours 70424 leaves, ALL L13C -> LFE8 -> L040 -> exit, 0 face-render calls, 0 zero returns; others reach L1E0 + renderers (12743) |
+| scratch/s7626d | L1, 100 s | ours mesh flags 0x00100018 (the most common real-object value, 23477 of 40.8k): prebuilt-DL meshes; mesh+0x34 DL set for 100%; queue max 11 -> 108 with stand-ins on |
+| scratch/s7626e | L1, 100 s | queue drain: others queued 51266 read 51266, ours queued 65390 read 65390 |
+| scratch/s7626f | L1 frame + PULL=3 + dumps 40:46:90 | no flicker excess (4200 vs 4306) BUT the window held 0 stand-in draws (ours draw 0, added 0 for the window's seconds) |
+| scratch/s7626g | L1 dumps 10:16 P/N | VOID: human input at t=48 (owner on the machine); queued as soak s7626_standins_pixels |
+Per-second ours draw counts (index = seconds after the first submit) peak at 9-19 s on L1 (600-900/s at frame toggle, 3600-5000/s
+always-on) and fall to 0 around 40-42 s, exactly where the s7624/s7625/s7626b/s7626f dump windows sat. Re-read of s7626b/s7625b:
+L1 window 1 added 0, L4 window 1 added 58-64 for ~2 s then 0. So none of the four pixel tests had a real stimulus.
+Discrimination: H-traverse refuted (walk visits our nodes, same list); H-overflow refuted (translation fits the s15.16 matrix);
+H-render-skip refuted as a defect (prebuilt-DL meshes take the same queue path as real objects of the same flags); H-drain
+refuted (100% of stand-in entries read). Two lines (walk counters and queue drain, each with the other-node control) put stand-in
+draws in the display list. Superseded: s7625 "accepted stand-ins draw nothing: the next limit is after the bucket" (believable:
+toggle window had 294/255 accepts and a passing scorer control, but the control is synthetic and the window's accepts were from
+its first ~2 s on L4 only; the scorer was never fed a frame known to contain a stand-in). The PULL=20/3 arms did not test depth
+for the same reason. Still open, single question: do stand-in DL calls produce RDP pixels? Soak s7626_standins_pixels (idle-gated)
+dumps at 10/16 s where stand-ins draw, with PULL=3 and true-depth arms.
+No mitigation landed (measurement only), so no ORIGIN line applies.

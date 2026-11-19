@@ -303,8 +303,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     ~3%. Fix tools/apply_s7625_standins_far.py: far *= ROGUESQ_STANDINS_FAR (default dd; =1 retail, =tog) for OUR call only;
     the box test runs first so no matrix overflow is possible. Same-run tog: pass rate L1 0.41% -> 29.6%, L4 0.47% -> 24.2%,
     far rejects 9021 -> 0 / 27996 -> 27, 4/4 arms alive 0 stall. But fb flicker with far on still shows nothing (L1 4068 vs
-    4206 off, L4 1813 vs 2129, control PASS, 294/255 accepted in window 1) -> accepted stand-ins are not drawn: NEXT step 3c,
-    selectMeshLodAndSubmitForRender (upstream 0x80058264 flag skip + 0x80058304 far-plane scale inflate).**
+    4206 off, L4 1813 vs 2129, control PASS, 294/255 accepted in window 1). **Step 3c (s7626) supersedes "accepted stand-ins
+    are not drawn": that window had no stimulus.** Stand-ins never use selectMeshLodAndSubmitForRender (probe droids only), so
+    upstream's 0x80058264/0x80058304 hooks do not apply. tools/apply_s7626_sg_probe.py (ROGUESQ_STANDINS_LOG=1, other nodes as
+    control): traverseSceneGraphRecursive visits/converts them (L1 81591 in 130 s, cam z 42-121, packed t < 2^31); their meshes
+    are prebuilt-DL (flags 0x00100018, same as most real objects) and queue mesh+0x34 at 0x80116400; beginFrameDLChunk reads
+    100% of those entries (65390/65390). The dump windows (40-46 s after first submit) held ~0 stand-in draws (L1 0, L4 ~60/s
+    for 2 s); they draw at 9-19 s. Open: RDP pixels. Soak s7626_standins_pixels (dumps 10/16 s, ROGUESQ_STANDINS_PULL=3 =
+    same screen place at depth 3, vs true depth) answers it.**
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

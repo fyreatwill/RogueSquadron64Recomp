@@ -342,6 +342,137 @@ void vt_flush(uint32_t added) {
 }
 }  // namespace
 
+// s7626 G6c step 3c: scene-graph walk probe (tools/apply_s7626_sg_probe.py). Per second: nodes visited by
+// traverseSceneGraphRecursive and nodes converted to an N64 matrix, stand-in region vs all others (control), and the packed
+// translation reach max|t*f12| (N64 matrix holds |t| < 128) with the camera-space depth of converted nodes.
+extern "C" int rs64_sg_probe = 0;
+namespace {
+struct SgSide { uint32_t visit, draw, over, pulled; double tmax, zs[2048]; uint32_t nz; };
+struct SgTally { SgSide s[2]; };  // [0] others, [1] stand-in region
+SgTally s_sg{};
+int s_sg_cur = -1;  // side of the node being converted, -1 outside a convert
+std::vector<uint32_t> s_q_ours_mtx;  // part 3: stand-in matrices converted since the last queue reset
+bool in_region(uint32_t a) { return a >= kRegion && a < kRegionEnd; }
+void sg_flush() {
+    char buf[512]; int o = std::snprintf(buf, sizeof buf, "[standins-sg]");
+    for (int k = 0; k < 2; ++k) {
+        SgSide& s = s_sg.s[k];
+        std::sort(s.zs, s.zs + s.nz);
+        o += std::snprintf(buf + o, sizeof buf - o, " %s visit=%u draw=%u pulled=%u over2^31=%u tmax=%.3g zmin=%.1f zmed=%.1f zmax=%.1f", k ? "ours" : "other",
+                           s.visit, s.draw, s.pulled, s.over, s.tmax, s.nz ? s.zs[0] : 0.0, s.nz ? s.zs[s.nz / 2] : 0.0, s.nz ? s.zs[s.nz - 1] : 0.0);
+    }
+    std::fprintf(stderr, "%s\n", buf);
+    s_sg = SgTally{};
+}
+}  // namespace
+extern "C" void rs64_sg_visit(uint32_t node) { ++s_sg.s[in_region(node) ? 1 : 0].visit; }
+extern "C" void rs64_sg_draw(uint8_t* rdram, uint32_t node, uint32_t m) {
+    s_sg_cur = in_region(node) ? 1 : 0;
+    SgSide& s = s_sg.s[s_sg_cur];
+    ++s.draw;
+    const float z = rf(rdram, m + 0x2Cu);
+    if (s.nz < 2048) s.zs[s.nz++] = z;
+    if (s_sg_cur == 1 && s_q_ours_mtx.size() < 4096) s_q_ours_mtx.push_back(rw(rdram, 0x8011DC5Cu));
+    // ROGUESQ_STANDINS_PULL=<D>: a stand-in node deeper than D has its camera-space 3x4 (a stack copy, sp+0x10) scaled by D/z, so it
+    // projects to the same screen place and size at depth D. Discriminator for depth-dependent loss (far clip, fog) after conversion.
+    static const float s_pull = [] { const char* e = std::getenv("ROGUESQ_STANDINS_PULL"); return e ? (float)std::atof(e) : 0.0f; }();
+    if (s_sg_cur == 1 && s_pull > 0.0f && z > s_pull) {
+        const float k = s_pull / z;
+        for (uint32_t i = 0; i < 12; ++i) { float v = rf(rdram, m + 4 * i) * k; uint32_t u; std::memcpy(&u, &v, 4); MEM_W(4 * i, (gpr)(int32_t)m) = (int32_t)u; }
+        ++s.pulled;
+    }
+}
+extern "C" void rs64_sg_draw_end(void) { s_sg_cur = -1; }
+// Prebuilt-DL queue probe (tools/apply_s7626_sg_probe.py part 3): matrices converted for stand-in nodes since the last queue reset,
+// entries beginFrameDLChunk read, tallied at each reset: queued/read for stand-in matrices vs others, per reset site.
+namespace {
+uint8_t s_q_read[512];
+struct QTally { uint32_t resets[2], q[2], rd[2], maxcnt; };
+QTally s_q{};
+}  // namespace
+extern "C" void rs64_q_read(uint32_t entry) {
+    if (entry < 0x80116400u) return;
+    const uint32_t i = (entry - 0x80116400u) / 12u;
+    if (i < 512) s_q_read[i] = 1;
+}
+extern "C" void rs64_q_reset(uint8_t* rdram, uint32_t pc) {
+    ++s_q.resets[pc == 0x8000B67Cu ? 1 : 0];
+    const uint32_t n = std::min<uint32_t>(rw(rdram, 0x80128C6Cu), 512u);
+    if (n > s_q.maxcnt) s_q.maxcnt = n;
+    std::sort(s_q_ours_mtx.begin(), s_q_ours_mtx.end());
+    for (uint32_t i = 0; i < n; ++i) {
+        const uint32_t m = rw(rdram, 0x80116404u + 12u * i);
+        const int side = std::binary_search(s_q_ours_mtx.begin(), s_q_ours_mtx.end(), m) ? 1 : 0;
+        ++s_q.q[side];
+        if (s_q_read[i]) ++s_q.rd[side];
+    }
+    s_q_ours_mtx.clear();
+    std::memset(s_q_read, 0, sizeof s_q_read);
+}
+namespace {
+void q_flush() {
+    std::fprintf(stderr, "[standins-q] resets frameStart=%u initRender=%u maxcnt=%u other queued=%u read=%u ours queued=%u read=%u\n",
+                 s_q.resets[0], s_q.resets[1], s_q.maxcnt, s_q.q[0], s_q.rd[0], s_q.q[1], s_q.rd[1]);
+    s_q = QTally{};
+}
+}  // namespace
+// processSceneNode branch tally (tools/apply_s7626_sg_probe.py part 2): marks 0..6 = labels L_80014FE8 (mesh already drawn this
+// frame), L_80015040, L_8001513C (first draw this frame), L_800151E0, L_80015320 (leaf flag 4 clear), L_80015360, L_80015528 (exit);
+// 99 = return to the walk (zero stops it); 100.. = face-render calls in source order, with zero returns counted separately.
+namespace {
+int s_psn_side = -1;
+uint32_t s_dl34[2][2], s_dl38[2][2], s_qmax, s_fl[2][6], s_fln[2][6];
+uint32_t s_psn[2][112], s_psn_zero[2][112];
+const char* const kPsnLab[7] = { "FE8", "040", "13C", "1E0", "320", "360", "528" };
+void psn_flush() {
+    char buf[1024];
+    for (int k = 0; k < 2; ++k) {
+        int o = std::snprintf(buf, sizeof buf, "[standins-psn] %s", k ? "ours" : "other");
+        for (int i = 0; i < 112; ++i) {
+            if (!s_psn[k][i]) continue;
+            if (i < 7) o += std::snprintf(buf + o, sizeof buf - o, " L%s=%u", kPsnLab[i], s_psn[k][i]);
+            else if (i == 99) o += std::snprintf(buf + o, sizeof buf - o, " ret=%u ret0=%u", s_psn[k][i], s_psn_zero[k][i]);
+            else if (i >= 100) o += std::snprintf(buf + o, sizeof buf - o, " r%d=%u/z%u", i - 100, s_psn[k][i], s_psn_zero[k][i]);
+        }
+        std::fprintf(stderr, "%s\n", buf);
+    }
+    for (int k = 0; k < 2; ++k) {
+        int o = std::snprintf(buf, sizeof buf, "[standins-dl] %s dl34 null=%u set=%u dl38 null=%u set=%u qmax=%u flags", k ? "ours" : "other",
+                              s_dl34[k][0], s_dl34[k][1], s_dl38[k][0], s_dl38[k][1], s_qmax);
+        for (int i = 0; i < 6 && s_fln[k][i]; ++i) o += std::snprintf(buf + o, sizeof buf - o, " %08X:%u", s_fl[k][i], s_fln[k][i]);
+        std::fprintf(stderr, "%s\n", buf);
+    }
+    std::memset(s_dl34, 0, sizeof s_dl34); std::memset(s_dl38, 0, sizeof s_dl38); s_qmax = 0; std::memset(s_fln, 0, sizeof s_fln);
+    std::memset(s_psn, 0, sizeof s_psn); std::memset(s_psn_zero, 0, sizeof s_psn_zero);
+}
+}  // namespace
+extern "C" void rs64_psn_side(uint32_t leaf) { s_psn_side = leaf ? (in_region(leaf) ? 1 : 0) : -1; }
+// mark 0 (L_80014FE8, $s0 = mesh): the queued cached DL mesh+0x34 / +0x38 null or not, the queue count *0x80128C6C (max per second);
+// mark 2 (L_8001513C): mesh+0xC flags histogram (first 6 distinct values per side).
+extern "C" void rs64_psn_mark3(uint8_t* rdram, int k, int v0, uint32_t s0) {
+    if (s_psn_side < 0 || k < 0 || k >= 112) return;
+    const int sd = s_psn_side;
+    ++s_psn[sd][k];
+    if (v0 == 0) ++s_psn_zero[sd][k];
+    if (k == 0 && guest(s0)) {
+        ++s_dl34[sd][rw(rdram, s0 + 0x34u) != 0];
+        ++s_dl38[sd][rw(rdram, s0 + 0x38u) != 0];
+        const uint32_t q = rw(rdram, 0x80128C6Cu);
+        if (q > s_qmax) s_qmax = q;
+    }
+    if (k == 2 && guest(s0)) {
+        const uint32_t fl = rw(rdram, s0 + 0xCu);
+        for (int i = 0; i < 6; ++i) { if (s_fln[sd][i] && s_fl[sd][i] == fl) { ++s_fln[sd][i]; break; } if (!s_fln[sd][i]) { s_fl[sd][i] = fl; s_fln[sd][i] = 1; break; } }
+    }
+}
+extern "C" void rs64_sg_scale(float x, float y, float z, float k) {
+    if (s_sg_cur < 0) return;
+    SgSide& s = s_sg.s[s_sg_cur];
+    const double t = std::max({ std::fabs((double)x * k), std::fabs((double)y * k), std::fabs((double)z * k) });
+    if (t > s.tmax) s.tmax = t;
+    if (t >= 2147483648.0) ++s.over;  // f12 = 2^24: the packed s15.16 x 2^8 word must fit 32 bits
+}
+
 // Read by rs64_s7326_spill_cap (upstream_compat.cpp): the spill arena gives up its top 1 MB to the stand-in region while this is on.
 extern "C" int rs64_standins_on(void) { return mode() != 0; }
 
@@ -364,10 +495,14 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     s_frame = frame;
 
     static const bool s_log = [] { const char* e = std::getenv("ROGUESQ_STANDINS_LOG"); return e && *e && *e != '0'; }();
+    rs64_sg_probe = (s_log || std::getenv("ROGUESQ_STANDINS_PULL")) ? 1 : 0;
     const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     static double s_t0 = std::floor(now);  // windows on whole seconds, so a tog window is all-on or all-off
     if (s_log && now - s_t0 >= 1.0) {
         vt_flush(s_t.added);
+        sg_flush();
+        psn_flush();
+        q_flush();
         std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu farmul=%g faron=%u tog=%d\n",
                      s_t.frames, s_t.onframes, s_t.submits, s_t.added, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(), (double)rs64_vt_farmul, s_t.faron,
                      m == 2 ? (int)(((long long)s_t0) & 1) ^ 1 : -1);  // tog=1: the window just logged was an on second

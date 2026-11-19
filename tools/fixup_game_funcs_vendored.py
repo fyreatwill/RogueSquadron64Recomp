@@ -42167,6 +42167,7 @@ RS64_REPLAY = [
     "apply_s7623_standins.py",  # s7623: G6c far-object stand-ins hook at runInMissionFrame L_800FAC68, ROGUESQ_STANDINS=1|tog at dd>1 (src/main/rs64_standins.cpp)
     "apply_s7625_viewtest_reason.py",  # s7625: G6c step 3b, tag each exit of transformVec3ToNpcLocalWithScale; host report only while rs64_vt_on (stand-in calls) (measurement only)
     "apply_s7625_standins_far.py",  # s7625: G6c stand-in view-test far *= rs64_vt_farmul (host sets it = dd only around its own addNpcToVisibilityBucket call; 1.0 = retail)
+    "apply_s7626_sg_probe.py",  # s7626: G6c step 3c, scene-graph walk visits/draws of stand-in nodes vs others, packed translation reach (measurement only, ROGUESQ_STANDINS_LOG=1)
 ]
 
 

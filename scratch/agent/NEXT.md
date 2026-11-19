@@ -1,20 +1,19 @@
-# NEXT (s7626)
+# NEXT (s7627)
 HYPOTHESIS-ID: g6-upstream-features
 
-G6c step 3c (docs/G6C-STANDINS-PLAN.md "Step 3b result"): with ROGUESQ_STANDINS_FAR (default dd) the bucket accepts 24-30% of
-stand-in submits, but the fb flicker test still finds nothing drawn (L1 4068 vs 4206 off, L4 1813 vs 2129, control PASS).
-Hypotheses for the draw-path limit:
-- H-scale: selectMeshLodAndSubmitForRender (0x80058xxx) builds the instance matrix with scale $f22 that the game shrinks toward 0
-  at/past its stock far (upstream 0x80058304 re-scales to $f22+$f20 for "past stock far" objects) -> stand-ins drawn at ~0 size.
-- H-flag: the per-frame flag toggle at 0x80058264 ($v1 == 0x80000) hides objects past the far (upstream sets $v1 = 0 for them).
-- H-lod: the LOD slot chosen past the far is empty / a no-mesh slot, so nothing submits.
-- H-traverse: traverseSceneGraphRecursive never visits our nodes (order / per-frame list reset before conversion).
-1. Read selectMeshLodAndSubmitForRender in N64Recomp/RecompiledFuncs + `git show origin/main:src/game/toml_hooks.c` around
-   rs64_th_selectMeshLodAndSubmitForRender_80058264/_80058304 (and where s_past_stock_far is set/reset, line ~316).
-2. One instrument (new apply script, RS64_REPLAY, gated by a host flag set when the instance is a stand-in: keep a sorted host
-   set of s.inst): per call log $f22, $f20, $v1 at 0x80058264, LOD index, and whether a DL submit follows. Tally per second.
-   Positive control: the same counters for real spawned objects inside the stock far (must show nonzero scale and submits).
-3. Arms in ONE run where possible (scratch/s7626, L1 + L4 dd4, STANDINS=1 + _LOG=1, FAR default, HOLD 130, ALLOW_SLOW=1).
-Outcomes: scale ~0 -> port the upstream inflate for stand-in instances only, then re-run the s7625 pixel test (STANDINS=frame +
-STANDINS_DUMP=40:46:90 + tools/s7624_flicker_score.py --control); flag hidden -> clear it for stand-ins; no submit -> LOD table.
-Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; fb dumps ~180 MB per arm (gitignored).
+G6c step 3d: do stand-in display-list calls produce RDP pixels? s7626 proved the CPU side end to end (walk visits and converts
+them, prebuilt-DL queue 0x80116400 gets them, beginFrameDLChunk reads 100%) and showed every earlier pixel test sat in a window
+with ~0 stand-in draws (docs/G6C-STANDINS-PLAN.md "Step 3c result").
+1. Fold soak s7626_standins_pixels if the loop ran it (scratch/agent/SOAK-RESULTS.md, scratch/s7626_soak). If not run yet (owner on
+   the machine), run it in-session when idle >= 300 s: `zsh scratch/agent/soak_queue/s7626_standins_pixels.sh` (moves nothing;
+   delete the queued copy after an in-session run). ~5 min, L1 dd4, dumps at 10/16 s after the first submit.
+2. ALSO add a real-object positive control so the scorer is fed a frame known to hold an object: ROGUESQ_STANDINS_CTL=frame skips
+   addNpcToVisibilityBucket for REAL spawned objects (not ours) on odd submit calls in window 1 (hook at the game's own callers is
+   overkill: a host flag checked in a tiny apply script at 0x80057C8C entry returning v0=0 when set and inst not in our region).
+   Scorer must find flicker excess in that arm, or the pixel chain itself is blind.
+Outcomes:
+- P (PULL=3) excess > 0 and N excess > 0 -> stand-ins draw; step 3 proof (frames early vs pop) on L1+L4 at dd2/dd4, then 300 s holds.
+- P > 0, N = 0 -> depth: occlusion by terrain (legit) vs far clip / fog: compare P at D=20 (inside object far) vs D=3.
+- P = 0 with window draws > 0 and the real-object control > 0 -> lost in the RSP/RDP path: dump the F5 DL for a stand-in matrix
+  address (matrix ptrs recorded in s_q_ours_mtx) and check the G_MTX + G_DL commands reach the ucode.
+Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; check idle (owner was active at 20:15).
