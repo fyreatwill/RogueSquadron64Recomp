@@ -1,12 +1,10 @@
-# NEXT (s7669)
-HYPOTHESIS-ID: owner-wait-standing
+# NEXT (s7670)
+HYPOTHESIS-ID: f6-panel-resize
 
-s7668 proved the F6 panel survives a mission load + fullscreen toggle while open and fixed a stale-size squash (scratch/s7668).
-At session start run `python3 tools/crash_reports.py --since 2026-11-13`: a NEW report nobody planted is a real crash and
-outranks everything (G4 reopens: backtrace from the .ips, name the writer, fix the root cause).
-Otherwise: an owner report first; else another owner-facing path no test has exercised end to end, e.g.
-- F6 panel at a window resize (ROGUESQ_WIN_TEST_RESIZE_S to a 21:9-class size like 1512x648 with ROGUESQ_ASPECT=auto) while open:
-  check `[controls-panel] stale` fires and draws resume at the right size; or
-- the rumble path across a mission abort -> hangar -> restart (motor stopped at abort, no stuck rumble: [rumble] duty 0 after abort).
-Hypotheses + discriminator in the session entry; same-run control arm; use tools/g1e_owner_quiet_arms.zsh arms (one game at a time).
-Do NOT do census-gate housekeeping or repeat-hold soaks (G4 parked). Rules: never touch build/saves; SIGKILL only; <=2 CPU-heavy jobs.
+s7669 closed rumble across abort/hangar (clean, control PASS; scratch/s7669). First: `python3 tools/crash_reports.py --since 2026-11-13`
+(a NEW report outranks everything). Otherwise an owner report; else the F6 panel at a live window resize:
+ROGUESQ_WIN_TEST_RESIZE_S to a 21:9-class size (1512x648) with ROGUESQ_ASPECT=auto, panel opened by ROGUESQ_PANEL_TEST_WINDOW.
+Hypotheses: H-ok (`[controls-panel] stale` fires once, draws resume at the new fb size within 0.5 s), H-squash (panel drawn at the
+old size after the resize, like the s7668 toggle case), H-crash (Metal drawable size mismatch). Discriminator: per-draw panel
+size vs fb size log across the resize; same-run control arm without the panel. tools/g1e_owner_quiet_arms.zsh arms, one game at a time.
+Do NOT do census-gate housekeeping or repeat-hold soaks (G4 parked). Never touch build/saves; SIGKILL only; <=2 CPU-heavy jobs.

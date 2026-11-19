@@ -1269,7 +1269,7 @@ index 0195f2b..1069113 100644
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/cont.cpp b/librecomp/src/cont.cpp
-index 7ad6c21..6af6e8b 100644
+index 7ad6c21..24abb92 100644
 --- a/librecomp/src/cont.cpp
 +++ b/librecomp/src/cont.cpp
 @@ -1,6 +1,11 @@
@@ -1402,7 +1402,7 @@ index 7ad6c21..6af6e8b 100644
  }
  
  extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
-@@ -81,11 +159,33 @@ extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -81,11 +159,36 @@ extern "C" void osContSetCh_recomp(uint8_t* rdram, recomp_context* ctx) {
      _return<s32>(ctx, ret);
  }
  
@@ -1414,6 +1414,7 @@ index 7ad6c21..6af6e8b 100644
 +#include <atomic>
 +#include <chrono>
 +extern "C" int rs64_pak_log() { static int v = -1; if (v < 0) { const char* e = getenv("ROGUESQ_LOG_PAK_SHAPE"); v = (e && *e && *e != '0') ? 1 : 0; } return v; }
++// s7669: + steady wall ms (aligns with [rumble] run lines). A guest $ra field was tried and read 0: direct jal calls do not load r31.
 +extern "C" void rs64_pak_row(uint8_t* rdram, const char* fn, uint32_t pfs, int ch, int host_ret) {
 +    static std::atomic<int> seq{0};
 +    static auto t0 = std::chrono::steady_clock::now();
@@ -1425,6 +1426,8 @@ index 7ad6c21..6af6e8b 100644
 +    if (pfs >= 0x80110520u && pfs < 0x80110520u + 4 * 136) { pr = MEM_BU(104, (gpr)(int32_t)pfs); tr = MEM_BU(105, (gpr)(int32_t)pfs); on = MEM_BU(106, (gpr)(int32_t)pfs); }
 +    fprintf(stderr, "[s7516-pak] seq=%d t=%.3f fn=%s pfs=0x%08X ch=%d host_ret=%d st=%u errno=%u present=%u tried=%u on=%u dev=%u\n",
 +        seq++, t, fn, pfs, ch, host_ret, st, er, pr, tr, on, (unsigned)MEM_W(0, (gpr)(int32_t)0x80112720));
++    fprintf(stderr, "[s7669-pak] fn=%s wall_ms=%lld\n", fn,
++        (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
 +}
 +
  extern "C" void __osMotorAccess_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -1436,7 +1439,7 @@ index 7ad6c21..6af6e8b 100644
  
      _return<s32>(ctx, ret);
  }
-@@ -96,6 +196,7 @@ extern "C" void osMotorInit_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -96,6 +199,7 @@ extern "C" void osMotorInit_recomp(uint8_t* rdram, recomp_context* ctx) {
      int channel = _arg<2, s32>(rdram, ctx);
  
      s32 ret = osMotorInit(PASS_RDRAM mq, pfs, channel);
@@ -1444,7 +1447,7 @@ index 7ad6c21..6af6e8b 100644
  
      _return<s32>(ctx, ret);
  }
-@@ -104,6 +205,7 @@ extern "C" void osMotorStart_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -104,6 +208,7 @@ extern "C" void osMotorStart_recomp(uint8_t* rdram, recomp_context* ctx) {
      PTR(OSPfs) pfs = _arg<0, PTR(OSPfs)>(rdram, ctx);
  
      s32 ret = osMotorStart(PASS_RDRAM pfs);
@@ -1452,7 +1455,7 @@ index 7ad6c21..6af6e8b 100644
  
      _return<s32>(ctx, ret);
  }
-@@ -112,6 +214,7 @@ extern "C" void osMotorStop_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -112,6 +217,7 @@ extern "C" void osMotorStop_recomp(uint8_t* rdram, recomp_context* ctx) {
      PTR(OSPfs) pfs = _arg<0, PTR(OSPfs)>(rdram, ctx);
  
      s32 ret = osMotorStop(PASS_RDRAM pfs);

@@ -12204,6 +12204,7 @@ static void rs64_s7593_main_tick() {
 // ROGUESQ_RUMBLE_SCALE 0..2 (default 1). ROGUESQ_LOG_RUMBLE=1 logs edges / SDL calls / a 5 s summary.
 // ROGUESQ_RUMBLE_TEST=1 attaches a virtual gamepad whose Rumble callback logs what SDL delivers to a device (positive control).
 #include <deque>
+extern "C" long long rs64_s5773_ms(void);
 static bool rs64_rumble_on() {
     static const bool on = [] { const char* e = getenv("ROGUESQ_RUMBLE"); return !(e && e[0] == '0'); }();
     return on;
@@ -12337,7 +12338,13 @@ static void rs64_rumble_tick() {
             if (dt >= 0 && dt < 1000000) {
                 const bool want = (dt % 33000) < 13000;
                 set_rumble(0, want); if (s_inj == 0) fprintf(stderr, "[rumble] inject start\n"); s_inj = 1;
-            } else if (s_inj == 1 && dt >= 1000000) { set_rumble(0, false); s_inj = 2; fprintf(stderr, "[rumble] inject end\n"); }
+            } else if (s_inj == 1 && dt >= 1000000) {
+                // s7669 positive control for the long-run detector: ROGUESQ_S7669_STUCK_PLANT=1 leaves the motor ON for 3 s after
+                // the train (a planted "stuck" motor), so the detector below must report one run of ~3000+ ms.
+                static const bool plant = [] { const char* e = getenv("ROGUESQ_S7669_STUCK_PLANT"); return e && *e == '1'; }();
+                if (plant && dt < 4000000) { if (dt < 1040000) set_rumble(0, true); }
+                else { set_rumble(0, false); s_inj = 2; fprintf(stderr, "[rumble] inject end plant=%d\n", plant ? 1 : 0); }
+            }
         }
     }
     const float duty = rs64_rumble_duty(now);
@@ -12359,6 +12366,19 @@ static void rs64_rumble_tick() {
                     rs64_rumble_path_name(g_rumble_path), controller ? 1 : 0,
                     controller ? (int)SDL_GameControllerHasRumble(controller) : -1, rc ? SDL_GetError() : "");
         s_sent = s; s_sent_t = now;
+    }
+    // s7669 long-run detector (ROGUESQ_LOG_RUMBLE=1): every continuous s>0 run is logged at its end with its length; a run longer
+    // than ROGUESQ_RUMBLE_LONG_MS (default 2000) is tagged LONG. A motor left on across an abort / menu / load shows here.
+    if (rs64_rumble_log()) {
+        static int64_t s_run_t0 = 0; static float s_run_max = 0.0f; static long s_runs = 0, s_long = 0;
+        static const int64_t long_us = [] { const char* e = getenv("ROGUESQ_RUMBLE_LONG_MS"); return (int64_t)(e && *e ? atoi(e) : 2000) * 1000; }();
+        if (s > 0.0f) { if (!s_run_t0) { s_run_t0 = now; s_run_max = 0.0f; } if (s > s_run_max) s_run_max = s; }
+        else if (s_run_t0) {
+            const int64_t len = now - s_run_t0; ++s_runs; const bool lg = len > long_us; if (lg) ++s_long;
+            fprintf(stderr, "[rumble] run n=%ld ms=%lld max_s=%.2f%s long_total=%ld wall_ms=%lld\n", s_runs, (long long)(len / 1000),
+                    s_run_max, lg ? " LONG" : "", s_long, (long long)rs64_s5773_ms());
+            s_run_t0 = 0;
+        }
     }
     if (rs64_rumble_log() && now - s_sum_t > 5000000) {
         s_sum_t = now;

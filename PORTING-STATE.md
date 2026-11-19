@@ -204431,3 +204431,27 @@ New crash reports this session: none.
 Conclusion: selects H-ok for crash/stall/input gate (refutes H-load: 0 crash, 0 stall, gate released, both runs) and selects
 H-layout for the post-toggle squash (fixed; control arm O reproduces it in the same build). Next discriminator: the same
 lever at a window resize to a 21:9-class size with ASPECT=auto (does the stale path fire and recover there too).
+
+## Session 7669 (2026-11-19) — G6a rumble across mission abort -> hangar -> restart: no stuck motor (game Init+Stop before every re-entry, 0 runs >2 s, planted 3.3 s stuck run caught); new long-run detector + stuck plant
+
+Pivot (rule 8): 'owner-wait-standing' stalled 3x; new slug g6a-rumble-abort. crash_reports.py --since 2026-11-13: FOLDED=26 new=0.
+Question: can the owner's pad be left rumbling when a mission is aborted mid-effect and the hangar re-entered?
+Hypotheses: H-game-stops (the game stops the motor on mission end), H-host-stuck (host duty stays >0 after the last edge),
+H-game-stuck (game leaves +0x6A motor-on with no further Stop across abort/menus/load).
+Code read (line 1): beginMissionEndTransition and initPlayerCraftTrailBuffers call serviceRumblePakMotors 0x80002D28, which
+per port clears effect +0x6B, handle +0x84=-1 and, when present, osMotorInit + osMotorStop and +0x6A=0. setRumbleSuspended
+0x800031D0 has no direct caller (pause does not suspend rumble; effects are finite, serviced in processPolledControllerData).
+Host: rs64_rumble_duty is a 100 ms window, so a Stop edge reaches s=0 within 100 ms, and SDL calls are 150 ms so a host stall
+self-expires; host-only stuck needs the game to hold the motor on.
+Instrument (one build): ROGUESQ_LOG_RUMBLE=1 now logs every continuous s>0 run at its end (`[rumble] run n= ms= max_s=`, LONG
+above ROGUESQ_RUMBLE_LONG_MS, default 2000); ROGUESQ_S7669_STUCK_PLANT=1 (with RUMBLE_TEST) holds the injected motor on 3 s
+after the 20 s train = positive control; cont.cpp pak rows add `[s7669-pak] fn= wall_ms=`. A guest $ra field was tried and read
+0x0 on every row (direct jal calls do not load r31): removed, attribution done by order instead.
+Run (scratch/s7669/run.zsh a; s7326 hangar schedule, owner recipe dd4 16:9 FPS60, owner save read-only, virtual pad):
+4 initMission, 3 PAUSE/ABORT -> SELECT YOUR CRAFT re-entries, 0 crash lines. Control: plant run n=2 ms=3316 LONG (PASS).
+Game stimulus: 22 osMotorStart (each mission-start burst ~6 Start/Stop, ending on a Start), host runs 600 ms at s=1.00 ended by
+the game's Init+Stop; before each of the 3 hangar entries another Init+Stop with motor already off (serviceRumblePakMotors
+pattern). Motor state at every hangar entry and initMission = off. game LONG runs 0. vpad 117 calls, sdl_fail 0.
+Selects H-game-stops; refutes H-host-stuck and H-game-stuck on this route. Not covered: an abort while an effect is live (effects
+here only fire at mission start; the code read says serviceRumblePakMotors would stop it). Scorer scratch/s7669/score.py
+(0 clean / 1 stuck / 3 control FAIL). The post-ra-removal rebuild changed logging only and was not re-run.

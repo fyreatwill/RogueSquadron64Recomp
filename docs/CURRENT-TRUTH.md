@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7668: F6 panel held open across level-select -> mission load -> flight and a fullscreen leave/re-enter (owner recipe dd4
+- **NEW s7669: rumble cannot stick across abort -> hangar -> restart.** s7326 hangar route at the owner recipe (4 loads, 3 re-entries):
+  the game Init+Stops the motor before every hangar entry (serviceRumblePakMotors, from beginMissionEndTransition), motor off at all
+  7 transitions, 0 runs >2 s; planted 3.3 s stuck run caught (ROGUESQ_S7669_STUCK_PLANT=1). Detector: ROGUESQ_LOG_RUMBLE=1 `[rumble]
+  run` lines; scorer scratch/s7669/score.py. Abort during a live effect not exercised (single-source code read).
+- **s7668: F6 panel held open across level-select -> mission load -> flight and a fullscreen leave/re-enter (owner recipe dd4
   16:9 FPS60, test lever ROGUESQ_PANEL_TEST_WINDOW=open,close): 0 crash, 0 stall, ~60 draws/s throughout, input gate released on
   close; same-run control without the panel equal. Fixed: ~0.5 s squashed panel after each toggle (stale main-thread window size;
   now draws at fb size when aspects differ, ROGUESQ_S7668_ASPECT=0 = old; control arm still shows the mismatch). scratch/s7668.**
@@ -321,7 +325,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     src/main/rs64_bindings.h == old map, ROGUESQ_BIND_OLD=1; controls.json beside the exe, rs64_bindings_json.h; F6 panel
     src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
     hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit. s7666: Save -> controls.json -> reload
-    round trip PASS (scratch/s7666/run.zsh: save, load mismatches on N64 A only, default-path guard and corrupt-file controls).
+    round trip PASS (scratch/s7666/run.zsh: save, load mismatches on N64 A only, default-path guard and corrupt-file controls). s7669 rumble abort route clean: rerun scratch/s7669/run.zsh + score.py after a rumble/input edit.
     G6c stand-ins: design docs/G6C-STANDINS-PLAN.md (s7621): H-portable (game-side visibility bucket only, no HLE state),
     all 17 upstream code addresses identical in our syms. Step 2 LANDED s7623: src/main/rs64_standins.cpp +
     tools/apply_s7623_standins.py (RS64_REPLAY), ROGUESQ_STANDINS=1|tog (+_LOG=1), dd>1 only; region 0x81700000..0x81800000
