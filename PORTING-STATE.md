@@ -204330,3 +204330,29 @@ Discrimination: H-missed (an owner or loop run crashed in a default path and no 
 report is a planted control, a pre-fix arm or a diag instrument). All 22 are attributed with 0 unexplained, so this selects H-none and refutes H-missed
 for 11-13..11-19. Next discriminator: the stop gate itself. Any future NEW report forces the same split on the next iteration.
 Live run after this entry: `python3 tools/crash_reports.py --since 2026-11-13` -> new=0.
+
+## Session 7665 (2026-11-19) — s7523 slow-RDP consume() SIGSEGV datum CLOSED as a pre-commit dev build: committed model clean under an ASan/UBSan fuzz (both versions, 2 controls); tools/test_s7523_model.sh landed
+
+Start: `python3 tools/crash_reports.py --since 2026-11-13` -> FOLDED=26 new=0 (no owner crash). No owner report. Every ladder rung is
+waiting on the owner, so this session took the one open engineering datum (CURRENT-TRUTH item 23):
+RogueSquadron64Recomp-2026-11-17-053804.ips, SP Task Thread, SIGSEGV at 0x100000029 in consume()+0x2b8 via on_read <-
+rs64_s7523_status_read <- factor5_ucode_b, 2.6 s after launch (ROGUESQ_S7523_SLOWRDP only, diag).
+Hypotheses: H-live (the committed model has an offset/erase bug that can recur whenever the instrument is armed) vs H-devbuild
+(the fault came from an uncommitted dev version). Timing: the crash is 05:38:01; src/rsp/s7523_slow_rdp.cpp was first committed at
+05:59 (cef0ce991), so the crashing binary was built from pre-commit source that cannot be recovered.
+Instrument (offline, no game run; host on battery 46%): new tools/test_s7523_model.cpp + tools/test_s7523_model.sh. It includes the
+model TU and drives random START/END (incl. ring wraps, zero-length START-only ranges)/task/status/CURRENT/END reads/RSP DMAs (KSEG0
+and physical, gfx and audio)/pre_submit/FULL_SYNC drains/guest RAM writes against a fake 16 MB rdram under ASan+UBSan
+(-fno-sanitize-recover). After every call it checks: each queued range's snapshot window lies inside snap, offsets are monotonic,
+sg bytes == q bytes, tch.size == snap.size.
+Results: current model (s7560): 6 seeds x 400k steps OK (seed 3: 285 MB consumed, 68.8k ranges, ctl 69/69, 1.3k skipped). The
+committed s7523 version (cef0ce991, pre-s7524, scratch/s7665/old) also passes 4 seeds x 400k OK. Controls, same harness: (1) one
+R.off corrupted past snap -> check() fires (rc 2); (2) the same corruption by 2^32 with check() off -> ASan aborts inside consume()
+(negative-size-param at the erase, line 84). A 4 KB skew with check() off is NOT caught by ASan (it lands in vector capacity), so
+the invariant check, not ASan, is the instrument for small skews. Second line: the committed instrument ran alive in s7523 (4 arms,
+L4 dd1 + L15 dd8 21:9, 330M+ busy polls) and in s7524 runs A-C (up to 2.09 GB consumed, 0 crash).
+DISCRIMINATION: selects H-devbuild, refutes H-live for the committed code (two lines: ASan fuzz of both committed versions with
+both controls passing, and the post-commit runtime arms alive). The 2^32-skew plant fails in the same function as the original
+0x100000029 address, so a 32-bit offset skew in the dev build fits, but that part is single-source and unverifiable.
+ORIGIN: no mitigation landed; the writer of the bad offset was pre-commit dev source, never shipped.
+Rerun trigger: tools/test_s7523_model.sh after any edit to src/rsp/s7523_slow_rdp.cpp (rc 0 = PASS).
