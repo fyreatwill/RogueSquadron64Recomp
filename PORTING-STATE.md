@@ -203491,5 +203491,5 @@ Run (scratch/s7639/run.zsh <arm>: ROGUESQ_BIND_PANEL_TEST=1 opens the panel, ~58
 | default | panel drew (draw n=1) | - | - |
 First chk attempt showed sdl=0x0: the self-test opens the panel with no F6/mouse event, so g_window_id was 0 and the old
 path never called SDL at all; chk now seeds the real window ID so the old SDL call actually runs. Class ST CLOSED.
-Discrimination line: the census + draw_main=0 witness select H-defect (1 live site) and refute H-clean; after the fix the census
-exits 0 with no OPEN row. Next: owner items; else another new class.
+Discrimination line: the census + draw_main=0 witness selects H-defect (1 live site) and refutes H-clean; after the fix the census
+exits 0 with no OPEN row. Next discriminator: class AT (AppKit calls off the main thread), same census machinery, planted-call control.
