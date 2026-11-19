@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7659 (2026-11-19).
+Compact operational handoff, as of Session 7660 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7659: cold-AST sweep fits: all 6 AST caches aged, `--no-cache` sweep 130 GREEN 5 REPORT 0 RED in 530 s at load 8-14;
+- **NEW s7660: title-boot plume si_addr=0x58 SIGSEGV: 0/20 on the current build (14 default + 6 owner 16:9), same-run
+  [CRASH]-handler control PASS; 76 clean boots since s5377 -> CLOSED as gone (H-gone). s7641 race ruled out by code: the
+  null is a render-target texture, never a swap-chain drawable. lldb attach -w is a tooling null in this session.**
+- **s7659: cold-AST sweep fits: all 6 AST caches aged, `--no-cache` sweep 130 GREEN 5 REPORT 0 RED in 530 s at load 8-14;
   slowest s7607 240 s, s7631 189 s. Per-gate cap 300 -> 600 s (RS64_GATE_CAP; control CAP=5 -> RED timeout); `--no-cache` no
   longer fails its own cache control. Gate-sweep thread has nothing open.**
 - **s7658: every census gate counts: sweep 135 = 130 GREEN, 5 REPORT, 0 NEEDS-INPUT, 0 NEEDS-ARGS, 0 RED** (cold 455 s,
@@ -266,7 +269,7 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
   `(p & 0xFF000000) == 0x80000000` unless ROGUESQ_PTRMASK (s6992). Re-check for any new arena.
 - Never reset, clean, checkout or update submodules; after editing `lib/` run `./submodule-patches/export.sh` and commit.
 - Controls: get_n64_input is the pre-6ed036b97 mapping; no changes without an owner request.
-- Title plume parked; reopen only on new evidence.
+- Title plume si_addr=0x58 CLOSED s7660 (0/76 boots); reopen only if `[plume-null-color-attachment]` prints.
 - Public forks (owner, 2026-11-18): loop.sh runs `tools/agent/publish_forks.sh` between iterations; it pushes `autonomy` to
   fyreatwill/RogueSquadron64Recomp (fast-forward only) and mirrors N64Recomp tool source + decomp tracked files to their `rs64`
   forks. Never commit ROM-derived data (*.z64, ucode/RDRAM dumps, RecompiledFuncs) or files > 50 MB, and never rewrite history,

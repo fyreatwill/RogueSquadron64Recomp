@@ -204189,3 +204189,38 @@ per-gate cap with 6 jobs? H-fits vs H-over.
   tools/agent/test_gate_sweep.sh ALL PASS.
 - Rules out: the cold-AST path as a source of false RED at the old cap on a quiet host (all under 300 s even loaded);
   the gate-sweep thread has nothing left open.
+
+## Session 7660 (2026-11-19) — title-boot plume si_addr=0x58 recheck on the current build: 0/20 boots, crash-handler control PASS; s7641 drawable race ruled out as its origin by code
+
+Work unit (NEXT s7660, ladder 3b secondary): H-gone vs H-live for the ~1/7 title-boot SIGSEGV in
+plume::MetalFramebuffer::MetalFramebuffer (s5377). The last batch (s6272, 16 boots) predates ~1400 sessions of changes,
+including s7641's fix of a plume Metal drawable-index race, so the current binary had no datum.
+
+- Offline origin check first (could s7641 have been the root cause?): NO. The fault is a deref of a null
+  `desc.colorAttachments[i]` (plume_metal.cpp MetalFramebuffer ctor; asserts compiled out). The swap-chain caller
+  (rt64_present_queue.cpp:971) passes `getTexture(i)` = `&drawables[i]`, which is never null whatever the index race did.
+  The null can only come from the other createFramebuffer callers: RenderTarget::setupColorFramebuffer /
+  setupResolveFramebuffer (texture/resolvedTexture .get()), RenderFramebufferStorage::setup (colorTarget->texture.get()),
+  or the framebuffer_manager tile copy. Writer still unnamed; s5383 breadcrumb `[plume-null-color-attachment]` stays armed.
+- Run (scratch/s7660/plume_attach.zsh, one game at a time, SIGKILL, ROGUESQ_NO_SAVE_WRITE=1, build/saves untouched):
+  same-run control = SIGSEGV injected 12 s into a boot, then 14 default boots (to title origin 0x00790400 + 8 s) and
+  6 owner-recipe boots (FPS60, dd4, 16:9; 60 s + 8 s).
+- lldb `process attach -w` never attached this session (control.lldb held only the attach line) -> the lldb half is a
+  TOOLING NULL (control=FAIL in summary). The game's own [CRASH] signal handler (the witness that recorded s5377's
+  si_addr=0x58) DID catch the injected fault in the same run (`caught signal 11`, si_addr=0x0) -> that instrument is live.
+
+| arm | boots | reached title | alive at kill | [CRASH] fires | null-attachment breadcrumb |
+|---|---|---|---|---|---|
+| control (inject SIGSEGV) | 1 | - | - | 1 | 0 |
+| default | 14 | 14 (0x00790400) | 14 | 0 | 0 |
+| owner recipe 16:9 | 6 | 6 (wide-early 0x00B52438; the script's 4:3 marker read 0) | 6 | 0 | 0 |
+
+- Reading: cumulative clean title boots on the crash-handler / breadcrumb witness since s5377: 56 (s5590 20, s5986 20,
+  s6272 16) + 20 now = 76. At the s5377 rate 1/7, P(0 of 76) ~ 1e-5, so the crash is gone at that rate (H-gone; two
+  lines: four independent batches on different builds, plus this same-run handler control). Not shown: which change
+  removed it (s5597's poke_be32 DMEM overflow fix stays the leading single-source candidate). A residual rate below
+  ~1/25 is not excluded.
+- Tooling defect noted, not fixed: lldb attach -w hangs without attaching (probably developer-tools TCC in this
+  session); future lldb soaks must check control.lldb before reading their nulls.
+- Raw logs (47 MB) deleted; per-boot table reconstructed in scratch/s7660/run/per_boot.txt, summary kept.
+- ORIGIN: no mitigation added.

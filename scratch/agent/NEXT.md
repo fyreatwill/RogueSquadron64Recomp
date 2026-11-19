@@ -1,10 +1,11 @@
-# NEXT (s7660)
+# NEXT (s7661)
 HYPOTHESIS-ID: owner-wait-standing
 
-s7659 closed the gate-sweep timing question (H-fits, cap now 600 s). Gate tooling is finished: do NOT start more gate work.
+s7660 closed the title-boot plume SIGSEGV (0/20 on the current build, 76 cumulative, crash-handler control PASS).
 G6a/G6b/G6c and every G5 item wait on the owner (docs/OWNER-OPT-INS.md). If the owner has reported anything, take that first.
-Otherwise: pick a rung of ITERATION.md 3c with an engineering step left that is not an owner look. Candidate, not yet tried:
-the 3b secondary (~1/7 title-boot plume SIGSEGV si_addr=0x58, CURRENT-TRUTH "Title plume parked"): loop title boots
-under lldb (one game at a time, SIGKILL) and read a real backtrace. Hypotheses: H-gone (0 in N>=14 boots, with a crash
-control) vs H-live (backtrace names the writer). Same-run control: an lldb-attached boot that does stop on an injected fault.
-Rules: never touch build/saves; one game at a time; SIGKILL only; re-run tools/s7651_gate_sweep.py after src/ or lib/ edits.
+Otherwise, a candidate with engineering left: lldb `process attach -n RogueSquadron64Recomp -w` no longer attaches in loop
+sessions (s7660 control.lldb showed only the attach line). Hypotheses: H-tcc (developer-tools permission missing for this
+session: `DevToolsSecurity -status`; `lldb -b -o 'process attach -p <pid>'` on a plain `sleep 60`) vs H-wait (-w name
+match broken on this lldb: attach by -p works). Discriminator: attach to a plain sleep by pid and by -w name. If H-tcc,
+NEEDS-HUMAN system-settings; if H-wait, switch attach recipes to launch-then-attach-by-pid and rerun the s7660 control.
+Rules: never touch build/saves; one game at a time; SIGKILL only.
