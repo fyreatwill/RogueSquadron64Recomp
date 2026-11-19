@@ -203324,3 +203324,7 @@ HYPOTHESIS-ID: bridge-default-on-diagnostics. No regen (src/ only).
 - Rules out: per-task diagnostics in the bridge as a frame-cost source at the owner recipe. Open lever (not diagnostic): the
   three functional walks each re-walk every submit (~25 ms/s on the Gfx thread at 16:9); fusing spike + region into the s7016
   fused pillar walk is the next measurable cut. Item 24.
+- Discrimination: the same-run timer + sampler split selects H-functional (the bridge's per-submit cost is feature walks: pillar
+  edge, CULL_SPIKE, radar shift) and refutes H-diag-cost (default-on diagnostics cost >= 2 ms/s anywhere in the bridge): the largest
+  diag leftover is ~0.9 ms/s. This closes class HB. Next discriminator (s7634, item 24): a decode-only null walk timed in its own
+  GLUE_TIME bucket in the same run -> null ~= spike+region cost selects H-walk (fuse the walks), << refutes it (H-body, close).
