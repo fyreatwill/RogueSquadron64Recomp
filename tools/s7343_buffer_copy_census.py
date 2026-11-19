@@ -17,6 +17,11 @@ Classes: C/P/G/D/R/X/S from tools/s7338_mask_census.py sites(), then
 '?' or B => exit 1. --controls plants a default-on `uint8_t b[64]; memcpy(b, rdram + a, task->data_size);` ('?'), the
 clamped twin ('L'), a gated twin ('G'), an unclamped loop ('?'), and a snprintf with a size larger than the buffer ('?')."""
 import re, sys, pathlib, importlib.util
+import importlib.util as _ilu_cr, sys as _sys_cr
+if "census_rules" not in _sys_cr.modules:  # s7654 shared text-anchored rules (one instance per process)
+    _crs = _ilu_cr.spec_from_file_location("census_rules", __import__("pathlib").Path(__file__).resolve().parent / "census_rules.py")
+    _sys_cr.modules["census_rules"] = _ilu_cr.module_from_spec(_crs); _crs.loader.exec_module(_sys_cr.modules["census_rules"])
+census_rules = _sys_cr.modules["census_rules"]
 from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 _s = importlib.util.spec_from_file_location("s7342", ROOT / "tools/s7342_addr_index_census.py")
@@ -155,7 +160,7 @@ def hand(rel, fn, text, table):
         else:
             f, needle, c, why = h
             if rel.endswith(f) and needle in text: return c, why
-    return None
+    return census_rules.lookup(rel, fn, text)  # s7654 shared rules (stale-checked in main)
 
 def census(files, pgf):
     rows = []
@@ -271,6 +276,7 @@ def main():
     if "clampTmemRange(byteOffset, byteCount)" not in tm:      # the rt64_rdp_tmem 'L' row is pinned to the s7343 clamp
         print("  DEFECT rt64_rdp_tmem.cpp uploadTMEM: s7343 TLUT clamp missing (CI4 palette 15 reads 128 B past TMEM)"); bad.append(None)
     print(f"[s7343] unclassified/defect: {len(bad)}")
+    bad = list(bad) + census_rules.report("s7343")  # s7654: a stale shared rule fails the gate (after the row printers)
     return 1 if bad else 0
 
 if __name__ == "__main__":

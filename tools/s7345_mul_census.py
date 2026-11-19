@@ -16,6 +16,11 @@ Classes: C/P/G/D from tools/s7338_mask_census.py sites() (rt64 G/D re-checked wi
 '?' or B => exit 1. --controls plants `uint32_t n = task->w * task->h * 4; if (n > cap) return; memcpy(..)` ('?'), the uint64
 twin ('W64'), the masked twin (w &= 0x3FF; h &= 0x3FF -> 'BITS'), and a gated twin ('G')."""
 import re, sys, pathlib, importlib.util
+import importlib.util as _ilu_cr, sys as _sys_cr
+if "census_rules" not in _sys_cr.modules:  # s7654 shared text-anchored rules (one instance per process)
+    _crs = _ilu_cr.spec_from_file_location("census_rules", __import__("pathlib").Path(__file__).resolve().parent / "census_rules.py")
+    _sys_cr.modules["census_rules"] = _ilu_cr.module_from_spec(_crs); _crs.loader.exec_module(_sys_cr.modules["census_rules"])
+census_rules = _sys_cr.modules["census_rules"]
 from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 def _load(name, f):
@@ -295,6 +300,7 @@ def main():
             print(f"  {r[3]} {r[0]}:{r[1]} {r[2]} {r[4]} :: {r[5][:60]} :: {r[6][:110]}")
     bad = [r for r in rows if r[3] in ("?", "B")]
     print(f"[s7345] unclassified/defect: {len(bad)}")
+    bad = list(bad) + census_rules.report("s7345")  # s7654: a stale shared rule fails the gate (after the row printers)
     return 1 if bad else 0
 
 if __name__ == "__main__":

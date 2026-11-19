@@ -204017,3 +204017,32 @@ resolvers (blind since s7580), re-proved by their controls and an independent gr
 write-up (NEXT item 1) decides H-drift vs H-live for the 12 remaining UB/bounds gates.
 Rules out: any behaviour defect behind these six gates (every new site read is env-gated diag/opt-in). No game run (offline audit).
 ORIGIN: no mitigation added; tool-key changes only.
+
+## Session 7654 (2026-11-19) — s7339-s7353 census gates green via one shared text-anchored rule table (tools/census_rules.py, 54 rules re-proved every run, stale -> FAIL); sweep 28 -> 16 RED, 0 behaviour defects
+
+HYPOTHESIS-ID closed-gate-drift, NEXT s7654 item 1 (offline; no game run, no runtime code changed).
+- The 12 RED gates (s7339 s7342 s7343 s7344 s7345 s7346 s7348 s7349 s7350 s7351 s7352 s7353) flagged ~120 '?' sites in ~57
+  functions added after they closed (s7475-s7647 instruments, G6b bind code, G6c stand-ins, rt64 s7387/s7388/s7501 probes).
+  s7652 had read them all by hand (H-diag-all) but written no rules. All 12 tools already funnel '?' sites through
+  s7343.hand() (or their own classify/blind paths), so the rules live once in tools/census_rules.py instead of 12 times.
+- Rule = (file suffix, function as the census attributes it or '*' for instrument-only files, needle in the site text or None,
+  class, anchors, reason). Anchors are the regexes that PROVE the reason (call-site env gate, getenv name, clamp, CMake
+  option OFF). census_rules.check() re-proves every rule each run: missing file, function no longer attributed, needle in no
+  line of the function, or an anchor that matches nothing -> STALE row added to `bad` (gate exits 1). No line numbers anywhere.
+- Wiring: s7343.hand() falls through to census_rules.lookup(); s7339 classify, s7342 classify + big-table path, s7352 UNTYPED
+  (blind_class) and s7353 blind-destination path call it too; every main merges census_rules.report(tag) into `bad` after
+  its row printers. One module instance per process (sys.modules) so the applied counter is real.
+- Two needle misses fixed on the way: s7344/s7345 truncate site text to 140 chars, so needles must sit early in the line
+  (F's `c8 = (c5 << 3)`, framebuffer_manager's `if (rs64_s7501_on) rs64_s7501_up(`). Two more gated functions found by the
+  s7353 blind pass: rs64_s7539_load (RT64 callers `if (rs64_s7539_on)`) and rs64_s7541_span (returns unless gb::on, span
+  clamped to gb::SZ).
+- Default-on sites covered (each by needle, not function-wide): rs64_bind_poll memcpy length std::min(nkeys,
+  SDL_NUM_SCANCODES) into keycopy[SDL_NUM_SCANCODES]; rs64_spike_scan 14-bit y sign-extension (CMAKE_CXX_STANDARD 20 defines
+  it; diffs < 2^14 into int64 products); rs64_s7528_post_load (one log row per overlay load, KSEG0 base + size < 8 MB); RT64
+  `(1u << fb->siz) >> 1` (2-bit field); writer tag scan e < 48; F() c8 + d with d < 8. Everything else is env/build-gated.
+- Results: all 12 gates exit 0 with their own --controls passing; census_rules.py controls PASS (live rule clean, planted
+  anchor and planted needle each STALE, unclamped memcpy twin not covered by the bind_poll rule); end-to-end negative:
+  replacing the s7523 call-site anchor with a planted one turns s7339 RED (rc=1). Full sweep (scratch/s7654/sweep.out):
+  GREEN 106, NEEDS-ARGS 13, RED 16 = s7316 s7573 (need inputs) + s7588 s7596-s7616 (verdict exits unread) - exactly NEXT 2/3.
+- Selects H-drift for all 12 (stale keys: new code, no rules); refutes H-live for every site (0 behaviour defects).
+  Single-source (static reads + tools' own controls). ORIGIN: no mitigation added; only census rules.

@@ -13,6 +13,11 @@ Classes: C/P/G/D from tools/s7338_mask_census.py sites() (rt64 G/D re-checked wi
 '?' or B => exit 1. --controls plants `uint32_t n = tile->shifts; return x << n;` ('?'), the masked twin ('MSK'), the checked
 twin ('RC'), a gated twin ('G') and a stream twin (`std::cout << n`, not a site)."""
 import re, sys, pathlib, importlib.util
+import importlib.util as _ilu_cr, sys as _sys_cr
+if "census_rules" not in _sys_cr.modules:  # s7654 shared text-anchored rules (one instance per process)
+    _crs = _ilu_cr.spec_from_file_location("census_rules", __import__("pathlib").Path(__file__).resolve().parent / "census_rules.py")
+    _sys_cr.modules["census_rules"] = _ilu_cr.module_from_spec(_crs); _crs.loader.exec_module(_sys_cr.modules["census_rules"])
+census_rules = _sys_cr.modules["census_rules"]
 from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 def _load(name, f):
@@ -192,6 +197,7 @@ def main():
     print(f"[s7349] fix present: guest 64-bit shift helpers count & 63 {fix}")
     bad = [r for r in rows if r[3] in ("?", "B")] + ([] if fix else [("fix-missing",)])
     print(f"[s7349] unclassified/defect: {len(bad)}")
+    bad = list(bad) + census_rules.report("s7349")  # s7654: a stale shared rule fails the gate (after the row printers)
     return 1 if bad else 0
 
 if __name__ == "__main__":

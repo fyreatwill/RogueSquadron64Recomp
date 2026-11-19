@@ -10,6 +10,11 @@ Reuses tools/s7338_mask_census.py (same scope, same C/P/G/D/R/X/S classes) with 
 Unclassified or B => exit 1. --controls plants a default-on 16 MB fold (must be '?') and an H line (must be 'H').
 Runtime second line (s7339, dd8 21:9 hangar->mission, spill live): [s7339] spai hi 0, vimode hi 0, selftest PASS."""
 import re, sys, pathlib, importlib.util
+import importlib.util as _ilu_cr, sys as _sys_cr
+if "census_rules" not in _sys_cr.modules:  # s7654 shared text-anchored rules (one instance per process)
+    _crs = _ilu_cr.spec_from_file_location("census_rules", __import__("pathlib").Path(__file__).resolve().parent / "census_rules.py")
+    _sys_cr.modules["census_rules"] = _ilu_cr.module_from_spec(_crs); _crs.loader.exec_module(_sys_cr.modules["census_rules"])
+census_rules = _sys_cr.modules["census_rules"]
 from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 _s = importlib.util.spec_from_file_location("s7338", ROOT / "tools/s7338_mask_census.py")
@@ -47,6 +52,7 @@ def classify(path, pgf):
     for (ln, fn, mk, c, text) in m.sites(path, pgf):
         if c in "?D" and HLINE.search(text): c = "H"
         elif c == "?" and fn in CLASS: c = CLASS[fn]
+        elif c == "?" and census_rules.lookup(str(path), fn, text): c = census_rules.lookup(str(path), fn, text)[0]
         elif c == "?" and "/rt64/src/hle/" in str(path) or c == "?" and "/rt64/src/gbi/" in str(path): c = "H"
         out.append((ln, fn, mk, c, text))
     return out
@@ -73,6 +79,7 @@ def main():
     for r in rows:
         if r[4] in "RSXK" or "-v" in sys.argv: print(f"  {r[4]} {r[0]}:{r[1]} {r[2]} [{r[3]}] {r[5][:110]}")
     for r in bad: print(f"  DEFECT/UNCLASSIFIED {r[0]}:{r[1]} {r[2]} [{r[3]}] :: {r[5][:120]}")
+    bad = list(bad) + census_rules.report("s7339")  # s7654: a stale shared rule fails the gate (after the row printers)
     return 1 if bad else 0
 
 if __name__ == "__main__":

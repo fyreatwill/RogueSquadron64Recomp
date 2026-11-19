@@ -23,6 +23,11 @@ Classes: C/P/G/D from tools/s7338_mask_census.py sites() (rt64 G/D re-checked wi
 an `enum class` twin (FIXED), a `: uint32_t` unscoped twin (FIXED), a masked twin `& 1` (RC), a gated twin (G), a
 `bool b = task->a;` twin (SAFE: not a site), and `memcpy(&flag, rdram + task->a, 1)` into a bool ('?')."""
 import re, sys, pathlib, importlib.util
+import importlib.util as _ilu_cr, sys as _sys_cr
+if "census_rules" not in _sys_cr.modules:  # s7654 shared text-anchored rules (one instance per process)
+    _crs = _ilu_cr.spec_from_file_location("census_rules", __import__("pathlib").Path(__file__).resolve().parent / "census_rules.py")
+    _sys_cr.modules["census_rules"] = _ilu_cr.module_from_spec(_crs); _crs.loader.exec_module(_sys_cr.modules["census_rules"])
+census_rules = _sys_cr.modules["census_rules"]
 from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 def _load(name, f):
@@ -189,7 +194,7 @@ def census(files, pgf, enums, boolstructs):
                 else:
                     st["copy-nonbool"] += 1
                     if not tb and cc_guest(args):
-                        BLIND.append((rel, ln, fn, c, dst[:60], l.strip()[:110], blind_resolved(rel, raw) or "?"))
+                        BLIND.append((rel, ln, fn, c, dst[:60], l.strip()[:110], blind_resolved(rel, raw) or ("G" if census_rules.lookup(rel, fn, raw) else "?")))
             for (kind, name, arg) in hits:
                 cc, why = c, ""
                 if cc in "GD" and rel.startswith("lib/rt64/") and not s43.body_gated(lines, ln): cc = "?"
@@ -256,6 +261,7 @@ def main():
         if "--blind" in sys.argv or b[6] == "?": print(f"  blind {b[3]} {b[0]}:{b[1]} {b[2]} dst={b[4]} -> {b[6]} :: {b[5]}")
     bad = [r for r in rows if r[3] in ("?", "B")] + unres
     print(f"[s7353] unclassified/defect: {len(bad)}")
+    bad = list(bad) + census_rules.report("s7353")  # s7654: a stale shared rule fails the gate (after the row printers)
     return 1 if bad else 0
 
 if __name__ == "__main__":

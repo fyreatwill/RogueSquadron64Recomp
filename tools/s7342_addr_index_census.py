@@ -15,6 +15,11 @@ Part 2 TABLES: every host array / resize / new[] / vector ctor with >= 0x8000 en
 '?' or B => exit 1. --controls plants a default-on `tag[(a - 0x80000000u) >> 12]` ('?'), the same via a local ('?'), and a
 log-gated one ('G')."""
 import re, sys, pathlib, importlib.util
+import importlib.util as _ilu_cr, sys as _sys_cr
+if "census_rules" not in _sys_cr.modules:  # s7654 shared text-anchored rules (one instance per process)
+    _crs = _ilu_cr.spec_from_file_location("census_rules", __import__("pathlib").Path(__file__).resolve().parent / "census_rules.py")
+    _sys_cr.modules["census_rules"] = _ilu_cr.module_from_spec(_crs); _crs.loader.exec_module(_sys_cr.modules["census_rules"])
+census_rules = _sys_cr.modules["census_rules"]
 from collections import Counter, defaultdict
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 _s = importlib.util.spec_from_file_location("s7338", ROOT / "tools/s7338_mask_census.py")
@@ -116,6 +121,7 @@ def classify(path, pgf, sizes):
             elif (fn, tab) in HAND: c, why = HAND[(fn, tab)]
             elif ("?", tab) in HAND and fn not in [f for (f, t) in HAND if t == tab]: c, why = HAND[("?", tab)]
             elif hl: c, why = hl
+            elif census_rules.lookup(str(path), fn, text): c, why = census_rules.lookup(str(path), fn, text)
             else:
                 mk = MASKRE.search(idx); n = sizes.get(tab, (None,))[0]
                 if mk and n and (int(mk.group(1), 16) >> k) < n:
@@ -157,6 +163,7 @@ def big_uses(path, pgf, big):
                     b = re.findall(r"for\s*\([^;]*;[^;]*\b%s\s*<=?\s*([^;)]*?)\s*(?:&&\s*%s\s*<\s*(\w+))?\s*;" % (idx, idx), loop)
                     lim = [ev(x[1]) for x in b if x[1]] + [ev(x[0]) for x in b]
                     if any(v is not None and v <= n for v in lim): c, why = "L", f"for-loop bound <= {n:#x}"
+            if c == "?" and census_rules.lookup(str(path), fn, text): c, why = census_rules.lookup(str(path), fn, text)
             out.append((ln, fn, tab, idx, c, why, text))
     return out
 
@@ -225,6 +232,7 @@ def main():
     for u in uses:
         if u[5] in "?B": print(f"  DEFECT/UNCLASSIFIED big-table {u[0]}:{u[1]} {u[2]} {u[3]}[{u[4]}] :: {u[7][:120]}"); bad.append(u)
     for r in [r for r in rows if r[6] in "?B"]: print(f"  DEFECT/UNCLASSIFIED {r[0]}:{r[1]} {r[2]} {r[3]}[{r[4]}] :: {r[8][:120]}")
+    bad = list(bad) + census_rules.report("s7342")  # s7654: a stale shared rule fails the gate (after the row printers)
     return 1 if bad else 0
 
 if __name__ == "__main__":

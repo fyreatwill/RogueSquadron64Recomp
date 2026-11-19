@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7653: the 6 gates with failing self-controls are green; sweep 39 -> 28 RED, 0 behaviour defects.** Two drift kinds:
+- **NEW s7654: s7339-s7353 (12 gates) green via ONE shared rule table, tools/census_rules.py; sweep 28 -> 16 RED, 0 behaviour
+  defects.** 54 text-anchored rules (file, fn, needle, class, anchors proving the gate/bound); every census run re-proves them and a
+  stale file/fn/needle/anchor FAILS the gate (control: planted anchor -> s7339 rc=1). Left: s7316/s7573 (need inputs), s7588 +
+  s7596-s7616 (verdict exits unread). New rules for these censuses go in census_rules.py, never by line number.
+- **s7653: the 6 gates with failing self-controls are green; sweep 39 -> 28 RED, 0 behaviour defects.** Two drift kinds:
   (1) post-regen `lui` spelling `S32(0X8011u << 16)` (s7580) blinded the constant resolvers of s7543/s7544 and s7555's MMIO
   scan (re-read: mmio still 0 by independent grep, u-form plant now caught); (2) line-range rules in the shared s7538 engine and
   s7542_gc_rules (+20..+130 drift, 17 GC + 4 GB sites UNCLASSIFIED/mis-keyed) -> text anchors (`("near", rx, n)`, `("line", rx)`,
@@ -474,7 +478,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     triaged by hand (PORTING-STATE s7652, all opt-in/bounded, rules not written); s7316 needs --ram; s7573 needs logs;
     s7588-s7616 unread. Lesson: any review keyed by a line number WILL drift; key by text. s7653: all 6 control FAILs fixed
     (s7531 verify regex; s7532 6 rules; s7538/s7542 line ranges -> anchors with STALE FAIL; s7543/s7544/s7555 lui `u?`); 28 RED left:
-    s7339-s7353 rules (from s7652 triage), s7316/s7573 need inputs, s7588-s7616 verdict exits unread. Also: any reader of the
+    s7339-s7353 rules (from s7652 triage) DONE s7654 (tools/census_rules.py), s7316/s7573 need inputs, s7588-s7616 verdict exits unread. Also: any reader of the
     POST-regen tree must accept `0X....u << 16`; fixup scripts run before fixup_lui_unsigned.py and need not.
 
 ## Evidence index
