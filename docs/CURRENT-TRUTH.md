@@ -14,7 +14,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 
 - **NEW s7663: owner launch settings (owner to try):** `./RogueSquadron64Recomp --preset tv|ultrawide|window` or lines in
   build/settings.txt (src/main/rs64_settings.cpp; env > file > preset; self re-exec, same pid, so pre-main statics see them; loop
-  exports ROGUESQ_SETTINGS=0). 5-arm proof scratch/s7663, OWNER-OPT-INS row. No default changed.
+  exports ROGUESQ_SETTINGS=0). 5-arm proof + NOEXEC control (H-setenv-enough refuted: a pre-main static misses setenv-from-main) scratch/s7663, OWNER-OPT-INS row. No default changed.
 - **s7660: title-boot plume si_addr=0x58 SIGSEGV: 0/20 on the current build (14 default + 6 owner 16:9), same-run
   [CRASH]-handler control PASS; 76 clean boots since s5377 -> CLOSED as gone (H-gone). s7641 race ruled out by code: the
   null is a render-target texture, never a swap-chain drawable. lldb attach -w was a tooling null in that session only.**

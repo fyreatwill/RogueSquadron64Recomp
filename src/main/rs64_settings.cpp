@@ -165,6 +165,8 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
         file.empty() ? "(off)" : file.c_str(), file.empty() ? "" : (file_read ? "" : "(absent)"),
         pp ? pp->name : "(none)", set, kept, rejected);
     if (set == 0) return;  // nothing new in the environment: no re-exec needed
+    // ROGUESQ_S7663_NOEXEC=1: control arm only (s7663): keep the setenv values but skip the re-exec, so pre-main statics miss them.
+    { const char* ne = std::getenv("ROGUESQ_S7663_NOEXEC"); if (ne && *ne == '1') { std::fprintf(stderr, "[s7663] NOEXEC control: no re-exec\n"); return; } }
 
     setenv("ROGUESQ_SETTINGS_APPLIED", "1", 1);
     setenv("ROGUESQ_SETTINGS_SUMMARY", summary.c_str(), 1);

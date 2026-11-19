@@ -204278,3 +204278,9 @@ applied, multiplier 2; E env DD=3 + --preset=window -> kept_from_env=1, multipli
 launched pid (re-exec keeps the pid, so tools/rs64_game_pid.zsh and watchdogs are unaffected). Parser unit test
 tools/test_settings.cpp 15/15 PASS (accept + reject cases).
 Rules out: nothing about game behaviour; this is a launcher convenience. Owner to try `--preset tv` / `--preset ultrawide`.
+Discrimination (same build, added after the gate asked for it): H-setenv-enough (setenv inside main() suffices) vs
+H-reexec-needed. Arm F = arm C + ROGUESQ_S7663_NOEXEC=1 (control knob, skips the execv): DD multiplier 2 (lazy reader) but NO
+`[gfx-qos]` line, so the pre-main static missed the file value; arm C2 (repeat of C, same build) printed `[gfx-qos] mode=1` +
+multiplier 2. Both pids alive at 25 s. -> H-setenv-enough REFUTED, H-reexec-needed SELECTED (2 arms + s7663 arm C, two
+independent readers). Next discriminator: the owner's first `--preset tv` launch; if fullscreen/aspect misbehave, compare the
+same vars typed by hand vs from the preset in one session (an equal result places the fault outside rs64_settings).
