@@ -2682,7 +2682,7 @@ index 0be1513..47922ad 100644
 +    RS64_PAK("osPfsRepairId", ctx->r4, -1);
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..b4d8c8e 100644
+index 43509ba..decd087 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -3030,7 +3030,7 @@ index 43509ba..b4d8c8e 100644
      }
      else {
          // Otherwise clear the save file to all zeroes.
-@@ -260,22 +484,180 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
+@@ -260,22 +484,190 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
      read_save_file();
  }
  
@@ -3061,7 +3061,15 @@ index 43509ba..b4d8c8e 100644
 +extern "C" volatile uint32_t g_rs64_last_guest_pc;
 +struct Rs64S4211Pi { uint32_t dram, size, rom_off, phase, pc; };
 +Rs64S4211Pi rs64_s4211_pi_ring[8192];
-+uint64_t rs64_s4211_pi_n;
++uint64_t rs64_s4211_pi_n; // s7643: the old plain counter, used only by the ROGUESQ_S7643_PI=0 arm
++// s7643 class TS-2: the ring is written by the guest PI-DMA thread and read by the RSP task thread (rs64_s4211_task, every audio
++// task): TSan found the plain counter racing. Default: publish each entry with a release store of this counter, read it with an
++// acquire load. ROGUESQ_S7643_PI=0 restores the plain counter (the arm the TSan witness must flag).
++std::atomic<uint64_t> rs64_s4211_pi_an{0};
++extern "C" bool rs64_s7643_pi_old() {
++    static const bool o = [] { const char* e = std::getenv("ROGUESQ_S7643_PI"); return e && *e == '0'; }();
++    return o;
++}
 +static std::atomic<uint64_t> rs64_s4622_dma_n{0};
 +static std::atomic<uint32_t> rs64_s4622_even_n{0};
 +static bool rs64_s4622_enabled() {
@@ -3092,9 +3100,11 @@ index 43509ba..b4d8c8e 100644
 +    fflush(stderr);
 +}
 +static void rs64_s4211_pi_note(uint32_t dram, uint32_t size, uint32_t rom_off) {
-+    Rs64S4211Pi& e = rs64_s4211_pi_ring[rs64_s4211_pi_n % 8192];
++    const bool old = rs64_s7643_pi_old();
++    const uint64_t n = old ? rs64_s4211_pi_n : rs64_s4211_pi_an.load(std::memory_order_relaxed);
++    Rs64S4211Pi& e = rs64_s4211_pi_ring[n % 8192];
 +    e.dram = dram & 0xFFFFFFu; e.size = size; e.rom_off = rom_off; e.phase = rs64_phase_ord(); e.pc = g_rs64_last_guest_pc;
-+    rs64_s4211_pi_n++;
++    if (old) rs64_s4211_pi_n++; else rs64_s4211_pi_an.store(n + 1, std::memory_order_release);
 +}
 +extern "C" void rs64_s4230_poll_start(uint8_t*);
 +// s7196: a PI DMA to an unmapped region still completes on hardware (the PI raises its interrupt, the
@@ -3212,7 +3222,7 @@ index 43509ba..b4d8c8e 100644
          } else if (physical_addr >= recomp::sram_base) {
              if (!recomp::sram_allowed()) {
                  ultramodern::error_handling::message_box("Attempted to use SRAM saving with other save type");
-@@ -285,9 +667,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -285,9 +677,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_read(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -3224,7 +3234,7 @@ index 43509ba..b4d8c8e 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,26 +685,85 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,26 +695,85 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -3311,7 +3321,7 @@ index 43509ba..b4d8c8e 100644
  
      ctx->r2 = 0;
  }
-@@ -336,9 +778,16 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +788,16 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -3545,7 +3555,7 @@ index 4276b7d..575cd1d 100644
          ultramodern::set_native_thread_name("Game Start Thread");
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..60feac7 100644
+index 1cb3f6a..87b9c94 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,8 +1,16 @@
@@ -3573,7 +3583,7 @@ index 1cb3f6a..60feac7 100644
  uint16_t rspReciprocals[512];
  uint16_t rspInverseSquareRoots[512];
  
-@@ -32,24 +41,2125 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +41,2130 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -4894,6 +4904,8 @@ index 1cb3f6a..60feac7 100644
 +struct Rs64S4211Pi { uint32_t dram, size, rom_off, phase, pc; };
 +extern Rs64S4211Pi rs64_s4211_pi_ring[8192];
 +extern uint64_t rs64_s4211_pi_n;
++extern std::atomic<uint64_t> rs64_s4211_pi_an; // s7643 (pi.cpp)
++extern "C" bool rs64_s7643_pi_old();
 +extern "C" void rs64_s4211_task(uint8_t* rdram, uint32_t dp_virt) {
 +    struct Slot { uint32_t dp; uint32_t hash; uint64_t tasks, changes, first_phase; };
 +    static Slot slots[32]; static int nslots;
@@ -4911,10 +4923,13 @@ index 1cb3f6a..60feac7 100644
 +    if (!s) {
 +        if (nslots >= 32) return;
 +        s = &slots[nslots++]; *s = Slot{dp, h, 0, 0, phase};
-+        std::fprintf(stderr, "[s4211-new] phase=%u dp=0x%06X pi_ring_total=%llu ascii0x10=\"", phase, dp, (unsigned long long)rs64_s4211_pi_n);
++        // s7643: one acquire load of the ring counter; the scan stays 256 entries clear of the slot the writer fills next.
++        const bool pi_old = rs64_s7643_pi_old();
++        const uint64_t total = pi_old ? rs64_s4211_pi_n : rs64_s4211_pi_an.load(std::memory_order_acquire);
++        std::fprintf(stderr, "[s4211-new] phase=%u dp=0x%06X pi_ring_total=%llu ascii0x10=\"", phase, dp, (unsigned long long)total);
 +        for (uint32_t i = 0; i < 0x30; i++) { uint8_t c = byte(dp + i); std::fputc((c >= 32 && c < 127) ? c : '.', stderr); }
 +        std::fprintf(stderr, "\"\n");
-+        uint64_t total = rs64_s4211_pi_n, avail = total < 8192 ? total : 8192; int hits = 0;
++        const uint64_t cap = pi_old ? 8192 : 8192 - 256, avail = total < cap ? total : cap; int hits = 0;
 +        for (uint64_t k = 0; k < avail && hits < 4; k++) {
 +            const Rs64S4211Pi& e = rs64_s4211_pi_ring[(total - 1 - k) % 8192];
 +            if (e.dram < lo + len && e.dram + e.size > lo) {
@@ -5702,7 +5717,7 @@ index 1cb3f6a..60feac7 100644
  
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
-@@ -58,5 +2168,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -58,5 +2173,7 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -6138,6 +6153,57 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/thirdparty/concurrentqueue/lightweightsemaphore.h b/thirdparty/concurrentqueue/lightweightsemaphore.h
+index 41ba094..457cb83 100644
+--- a/thirdparty/concurrentqueue/lightweightsemaphore.h
++++ b/thirdparty/concurrentqueue/lightweightsemaphore.h
+@@ -263,6 +263,23 @@ public:
+ //---------------------------------------------------------
+ // LightweightSemaphore
+ //---------------------------------------------------------
++// s7643 (RS64): TSan cannot see the happens-before carried by the kernel (mach/futex) wake in details::Semaphore, so a waiter
++// that blocked before signal() looks unsynchronised with the signaller. In TSan builds only, publish signal() as a release and
++// every successful wait as an acquire on this object. Compiles to nothing otherwise (the shipped binary is unchanged).
++#if defined(__has_feature)
++#if __has_feature(thread_sanitizer)
++#define RS64_LWS_TSAN 1
++#endif
++#endif
++#ifdef RS64_LWS_TSAN
++extern "C" void __tsan_acquire(void* addr);
++extern "C" void __tsan_release(void* addr);
++#define RS64_LWS_ACQ(r) do { if (r) __tsan_acquire((void*)this); } while (0)
++#define RS64_LWS_REL() __tsan_release((void*)this)
++#else
++#define RS64_LWS_ACQ(r) ((void)0)
++#define RS64_LWS_REL() ((void)0)
++#endif
+ class LightweightSemaphore
+ {
+ public:
+@@ -365,12 +382,12 @@ public:
+ 
+ 	bool wait()
+ 	{
+-		return tryWait() || waitWithPartialSpinning();
++		bool r = tryWait() || waitWithPartialSpinning(); RS64_LWS_ACQ(r); return r;
+ 	}
+ 
+ 	bool wait(std::int64_t timeout_usecs)
+ 	{
+-		return tryWait() || waitWithPartialSpinning(timeout_usecs);
++		bool r = tryWait() || waitWithPartialSpinning(timeout_usecs); RS64_LWS_ACQ(r); return r;
+ 	}
+ 
+ 	// Acquires between 0 and (greedily) max, inclusive
+@@ -407,6 +424,7 @@ public:
+ 	void signal(ssize_t count = 1)
+ 	{
+ 		assert(count >= 0);
++		RS64_LWS_REL();
+ 		ssize_t oldCount = m_count.fetch_add(count, std::memory_order_release);
+ 		ssize_t toRelease = -oldCount < count ? -oldCount : count;
+ 		if (toRelease > 0)
 diff --git a/ultramodern/include/ultramodern/ultra64.h b/ultramodern/include/ultramodern/ultra64.h
 index 31eb106..0f4381e 100644
 --- a/ultramodern/include/ultramodern/ultra64.h

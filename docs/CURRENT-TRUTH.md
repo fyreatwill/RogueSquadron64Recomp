@@ -28,7 +28,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` = control: joy 18/18 delivered, haptic on the non-haptic vpad -> path=none, 0 delivered).
   Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
-  PROJECT-OVERVIEW "(s7622 maintenance)"). TS s7642 (TSan over all RT64+plume, item 29): H-clean, 0 fixes. CF s7641 (framework-callback threads, item 28): 1 fix (plume Metal drawable index race, TSan). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
+  PROJECT-OVERVIEW "(s7622 maintenance)"). TS-2 s7643 (TSan over host runtime, item 30): 1 hardening (s4211 PI ring), SEM blind spot now annotated. TS s7642 (TSan over all RT64+plume, item 29): H-clean, 0 fixes. CF s7641 (framework-callback threads, item 28): 1 fix (plume Metal drawable index race, TSan). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
   C-applicable check run; RS64_DIV32). Bounded/gated/masked: GR s7599, GX s7600, BS s7601 (5 diag composers fixed), AZ s7598
   (ROGUESQ_S7598_MASK=0 = old). Fixes landed, default on, =0 restores old: TK ROGUESQ_S7608_TK, UW s7607 (one fix), FR s7605 /
@@ -383,6 +383,21 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (level_ok=1, vi_stalls30s=0): 52 / 6 sites, all Metal-handoff blind spots (registration/pre-commit writes vs handler reads);
     3 new sites are the PRESENT_RING Rs64SStamp init/`c` stamp vs its handlers. Scheduled->completed handler order held 3304/3304
     S rows (no use-after-free of the stamp). No report has an RT64 worker/state/texture race pair.
+30. **Class TS-2 (TSan over the HOST runtime: ultramodern 15, librecomp 27, all 29 RogueSquadron64Recomp.dir src TUs, plus the
+    s7642 rt64/plume objects): CLOSED s7643, H-clean for host-defects, 1 hardening.** NOTE prior art: s7354 class AE already ran a
+    host TSan (tools/build_tsan.sh, tools/s7354_tsan_report.py HAND table); this pass re-derived it independently and agrees.
+    `zsh tools/s7643_tsan_host_build.sh` (needs the s7642 archives) -> build/RogueSquadron64Recomp_tsan3; runner
+    `zsh tools/s7643_tsan_run.zsh <tag> RogueSquadron64Recomp_tsan3 [ENV=..]`; bucket `python3 tools/s7643_tsan_pairs.py <files>`
+    (function pair + creating-thread role + location). Control ROGUESQ_S7643_PLANT=1 (main.cpp plain counter bumped from update_gfx
+    on main and get_n64_input on the game thread): reported 2/2 runs. NEW: lib/N64ModernRuntime thirdparty lightweightsemaphore.h
+    annotates signal()=__tsan_release / successful wait()=__tsan_acquire under `__has_feature(thread_sanitizer)` ONLY (shipped
+    binary unchanged): boot reports 1173 (32 pairs, ~1140 guest<->guest RDRAM thread/mesg queue = s7354 "SEM") -> 26 (6 pairs, all
+    the s7641 Metal-handoff class). Every future host TSan run is now clean signal. Hardening: rs64_s4211_pi_n/ring (guest PI DMA
+    writer vs RSP-thread reader, default-on diag, s7354 BENIGN) now publishes with release/acquire, scan stays 256 clear;
+    ROGUESQ_S7643_PI=0 = old plain counter. L1 dd2 120 s flight: fix 59 reports/6 pairs (0 on s4211), old 62/8 (counter pair back +
+    2 do_rom_read<->rsp::run_task RDRAM bytes). Both flights level_ok=1, alive, vi_stalls30s=0. Remaining non-Metal pair:
+    rs64_g1d_title_vi (s7354 BENIGN, single writer). Not covered: guest RDRAM concurrency (RSP task reading bytes a guest PI DMA
+    writes, do_rom_read<->run_task): guest code is uninstrumented, see NEXT.md class TS-3.
 
 ## Evidence index
 

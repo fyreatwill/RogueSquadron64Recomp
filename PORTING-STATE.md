@@ -203619,3 +203619,50 @@ Discrimination: the control (index pair returns, 28->30) shows the instrument se
 show no new pair outside the Metal-handoff blind spot -> selects H-clean, refutes H-defect for RT64 + plume. Class TS CLOSED, no fix.
 Rules out: data races inside RT64's present queue, render workers, state/RDRAM sync and texture paths at boot and 120 s of flight.
 Not covered: librecomp/ultramodern/main.cpp host code (uninstrumented here); that is the next class (NEXT.md).
+
+## Session 7643 (2026-11-19) — class TS-2: TSan over the host runtime (ultramodern/librecomp/main/rsp): moodycamel semaphore TSan annotation turns 1173 boot reports into 26 (all Metal class), s4211 PI ring hardened, plant control PASS
+
+NEXT.md (no owner report): TSan over the host code s7642 left uninstrumented. Hypotheses: H-clean (only blind spots + plant) vs
+H-defect (>=1 real pair in VI/audio/input/event-queue/rumble/message code). PRIOR ART found mid-session: s7354 class AE already ran a
+host TSan (tools/build_tsan.sh, HAND table in tools/s7354_tsan_report.py: SEM class, rs64_s4211_pi_n BENIGN, events_context +
+sample_rate FIXED). s7642's NEXT.md did not know; this pass is an independent second line and agrees with s7354 everywhere it overlaps.
+
+Instrument (new): tools/s7643_tsan_host_build.sh recompiles 71 host TUs with -fsanitize=thread (ultramodern 15, librecomp 27 incl.
+o1heap, RogueSquadron64Recomp.dir 29: src/main, src/rsp, imgui metal backend; factor5_ucode + RecompiledFuncs/PatchesLib stay
+plain), links them with the s7642 rt64/plume tsan archives -> build/RogueSquadron64Recomp_tsan3 (real binary untouched; link
+substitution checked: 29/29 main objects from scratch, 0 plain left). nm: 68/71 carry tsan hooks; aspMain.cpp (9 lines, no memory
+op), misc_ultra.cpp / task_win32.cpp (empty on macOS) do not. tools/s7643_tsan_run.zsh (s7642 runner -> scratch/s7643),
+tools/s7643_tsan_pairs.py (unordered function pair + each thread's creator role + location name). Positive control (new, default
+off): ROGUESQ_S7643_PLANT=1, a plain counter in main.cpp bumped from update_gfx (main thread) and get_n64_input (game thread).
+
+| arm (boot 45 s unless noted) | reports | pairs | notes |
+|---|---|---|---|
+| boot, unannotated semaphore | 1173 | 32 | ~1140 guest<->guest (thread_queue_*/do_send/do_recv/check_running_queue in RDRAM, both threads from osCreateThread); 21 Metal; do_dma<->rs64_s4211_task on rs64_s4211_pi_n; gfx_thread_func<->init_timers (stack slot of init_events' ready semaphore) |
+| plant, unannotated | 1228 | 29 | + get_n64_input[game] <-> update_gfx[main] on g_rs64_s7643_plant -> instrument live |
+| boot, semaphore annotated (fix) | 26 | 6 | ALL MTLDispatchListApply <-> __Block_byref copy / present (s7641 class) |
+| boot annotated, ROGUESQ_S7643_PI=0 | 30 | 6 | + 2 do_rom_read<->rsp::run_task (RDRAM bytes) |
+| plant annotated | 33 | 7 | + plant pair -> control PASS in the annotated build too |
+| L1 dd2 FPS60 16:9 flight HOLD=120 (fix) | 59 | 6 | Metal class + rs64_g1d_title_vi (osViSetMode_recomp<->rs64_dpc_record_submit_impl, s7354 BENIGN) |
+| same, ROGUESQ_S7643_PI=0 | 62 | 8 | + do_dma<->rs64_s4211_task on rs64_s4211_pi_n (old race back) + do_rom_read<->run_task |
+
+SEM class, second line of evidence (s7354's was a toy sem_ctl.cpp): lightweightsemaphore.h (lib/N64ModernRuntime thirdparty) now
+calls __tsan_release in signal() and __tsan_acquire after a successful wait(), only under __has_feature(thread_sanitizer). TSan
+already saw the atomic fast path; the blind spot was the mach semaphore wake when the waiter blocked first. With the annotation
+every guest<->guest pair and the gfx_thread_func<->init_timers stack pair vanish while the plant still reports -> they were the
+run-one scheduler's real but invisible handoff, not races. Shipped binary: macros expand to nothing (rebuilt, boots, 13 presents/30 s).
+
+ORIGIN of the one host race acted on: rs64_s4211_pi_n + rs64_s4211_pi_ring (librecomp pi.cpp), written by rs64_s4211_pi_note in
+do_dma on whatever guest thread starts a PI DMA, read by rs64_s4211_task (rsp.cpp) on the RSP task thread on every audio task's
+first 32 new dp slots ([s4211-new], default on). Writer named; value legitimate; consequence is a stale/half-written diagnostic
+print only (s7354 BENIGN, agreed) - but it is UB and noise in every TSan run, so: counter is now std::atomic published with a release
+store after the entry write, read with one acquire load, scan capped 256 short of the writer's next slot. Old arm
+ROGUESQ_S7643_PI=0. Boot old arm did not re-hit it in 45 s (semaphore annotation now orders DMA-before-task-submit); flight old arm
+did (1 report), fix arm 0 in both.
+
+Discrimination: plant reports in both builds; the only non-Metal, non-diag host pair is rs64_g1d_title_vi (single writer, aligned
+int, s7354 BENIGN) -> selects H-clean for host defects, refutes H-defect. Rules out data races in ultramodern's VI/timer/event/
+message queue code, librecomp pi/rsp/ai/cont/eep, main.cpp input/rumble/panel and src/rsp bridge at boot + 120 s flight.
+Not covered: guest RDRAM concurrency (RSP task reading bytes a guest PI DMA writes concurrently, do_rom_read<->run_task, 2 reports)
+- guest code is uninstrumented, so TSan sees only the host-wrapper side; next class TS-3 in NEXT.md.
+Files: lib/N64ModernRuntime (lightweightsemaphore.h, librecomp/src/pi.cpp, rsp.cpp; export.sh refreshed N64ModernRuntime.patch),
+src/main/main.cpp (plant), tools/s7643_tsan_host_build.sh, tools/s7643_tsan_run.zsh, tools/s7643_tsan_pairs.py.

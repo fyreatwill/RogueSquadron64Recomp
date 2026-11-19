@@ -12836,8 +12836,13 @@ static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
 #ifdef __APPLE__
 extern "C" void rs64_s7640_at_plant(void);
 #endif
+// s7643 class TS-2 positive control: ROGUESQ_S7643_PLANT=1 bumps this plain (deliberately unsynchronised) counter from the main
+// thread (update_gfx) and the game thread (get_n64_input), so a TSan build of main.cpp must report one race pair. Default off.
+static bool rs64_s7643_plant_on() { static const bool p = [] { const char* e = std::getenv("ROGUESQ_S7643_PLANT"); return e && *e == '1'; }(); return p; }
+static volatile int g_rs64_s7643_plant = 0;
 static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float* y) {
 #ifdef __APPLE__
+    if (rs64_s7643_plant_on()) g_rs64_s7643_plant = g_rs64_s7643_plant + 1; // s7643 plant (game thread)
     {   // s7640 class AT positive control (see rs64_display_mac.mm)
         static const bool plant = [] { const char* e = std::getenv("ROGUESQ_S7640_AT_PLANT"); return e && *e == '1'; }();
         static std::atomic<bool> done{false};
@@ -14023,6 +14028,7 @@ void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
     // intercepts F1-F4 here (filters run before SDL_PollEvent dequeues), so
     // the controller-input poll on the game thread never sees those keys.
     SDL_PumpEvents();
+    if (rs64_s7643_plant_on()) g_rs64_s7643_plant = g_rs64_s7643_plant + 1; // s7643 plant (main thread)
     // s7639 class ST: publish the window size for the F6 panel's draw hook (RT64 present thread), so that hook no longer
     // calls the main-thread-only SDL_GetWindowFromID / SDL_GetWindowSize itself. Cheap: a cached-field read.
     if (g_rs64_window) { int w = 0, h = 0; SDL_GetWindowSize(g_rs64_window, &w, &h);
