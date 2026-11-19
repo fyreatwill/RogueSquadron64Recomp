@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7660 (2026-11-19).
+Compact operational handoff, as of Session 7661 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -14,7 +14,10 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 
 - **NEW s7660: title-boot plume si_addr=0x58 SIGSEGV: 0/20 on the current build (14 default + 6 owner 16:9), same-run
   [CRASH]-handler control PASS; 76 clean boots since s5377 -> CLOSED as gone (H-gone). s7641 race ruled out by code: the
-  null is a render-target texture, never a swap-chain drawable. lldb attach -w is a tooling null in this session.**
+  null is a render-target texture, never a swap-chain drawable. lldb attach -w was a tooling null in that session only.**
+- **s7661: lldb attach WORKS in loop sessions (developer mode off): pid + -w + long name + s7660 control verbatim on the real game
+  PASS 3/3; H-tcc/H-wait refuted, s7660 transient. New preflight tools/lldb_attach_check.sh (exit 1 = lldb nulls void; /bin/sleep
+  is a platform binary and never a valid control); mk_lldb_hold.py soak wrappers run it and VOID on failure.**
 - **s7659: cold-AST sweep fits: all 6 AST caches aged, `--no-cache` sweep 130 GREEN 5 REPORT 0 RED in 530 s at load 8-14;
   slowest s7607 240 s, s7631 189 s. Per-gate cap 300 -> 600 s (RS64_GATE_CAP; control CAP=5 -> RED timeout); `--no-cache` no
   longer fails its own cache control. Gate-sweep thread has nothing open.**

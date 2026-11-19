@@ -204224,3 +204224,25 @@ including s7641's fix of a plume Metal drawable-index race, so the current binar
   session); future lldb soaks must check control.lldb before reading their nulls.
 - Raw logs (47 MB) deleted; per-boot table reconstructed in scratch/s7660/run/per_boot.txt, summary kept.
 - ORIGIN: no mitigation added.
+
+## Session 7661 (2026-11-19) — lldb attach discriminator: H-tcc and H-wait both refuted; s7660 control recipe now PASS 3/3 on the real game; tools/lldb_attach_check.sh preflight landed
+
+- Question (NEXT s7661): why did s7660's `lldb -w` attach leave control.lldb holding only the attach line? H-tcc (no
+  developer-tools permission in loop sessions) vs H-wait (-w name match broken on lldb-2100.0.16.12).
+- Boring thing first: the NEXT recipe's control (`process attach -p` on `/bin/sleep`) is invalid: /bin/sleep is a
+  platform binary and is ALWAYS denied ("Not allowed to attach"), so a fail there says nothing. Used a clang-built
+  test binary instead (DevToolsSecurity: developer mode disabled throughout).
+- Table (all this session): test binary pid attach PASS (plain and get-task-allow signed); -w attach PASS; test binary
+  renamed `RogueSquadron64Recomp` (21 chars > 16-char p_comm): -w full name PASS, -w 16-char prefix PASS; exact s7660
+  boot() shape with the test binary (backgrounded lldb > file, pkill -SEGV, SIGKILL lldb): SIGSEGV stop in file, PASS;
+  real game `process attach -p` at title PASS (81 lines, thread list); **the s7660 control recipe verbatim on the real
+  game (scratch/s7661/ctl_only.zsh): control=PASS 3/3** (SIGSTOP attach + SIGSEGV stop in control.lldb).
+- So H-tcc refuted (attach works without developer mode, ad-hoc linker-signed binaries attachable) and H-wait refuted
+  (-w works, long names fine, output not lost to buffering at kill). s7660's failure was transient; cause unnamed
+  (single run, not reproducible now). Consequence: lldb nulls from any session must carry a same-session attach proof.
+- Landed tools/lldb_attach_check.sh: compiles a non-platform binary with the game's name, proves pid attach and the
+  backgrounded -w + SIGSEGV-stop shape, exit 0/1. Controls: normal PASS rc=0; negative arm (pid attach swapped to
+  /bin/sleep) reports pid=FAIL. tools/agent/mk_lldb_hold.py's generated soak wrappers now run it first and exit 2
+  (VOID, re-queued) on failure, so an lldb soak can never again report a null with a dead debugger.
+- Side note: s7660 plume_attach.zsh with N_DEF=0 would misbehave (macOS `seq 1 0` prints 1 and 0); not fixed, scratch only.
+- Rules out: lldb being unusable for loop sessions. The plume thread stays CLOSED (s7660 crash-handler arm was valid).

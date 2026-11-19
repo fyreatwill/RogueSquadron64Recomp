@@ -29,4 +29,6 @@ for t in "abc":
     (d / f"soak_queue/m6_lldb_{t}.sh").write_text(
         "#!/bin/zsh\n# s5455: mission hold under lldb attach; stall => bt all, crash => bt. LATE=340 autopilot as s5443.\n"
         'cd "$(git rev-parse --show-toplevel)"\n'
+        "# s7661: lldb nulls are void unless attach works in this session (exit 2 = VOID, loop re-queues).\n"
+        "zsh tools/lldb_attach_check.sh || { echo 'lldb_preflight=FAIL'; exit 2; }\n"
         f"exec env LATE=340 zsh scratch/agent/m6_keyed_hold_lldb.sh s5455_lldb_{t} 520\n")
