@@ -204284,3 +204284,4 @@ H-reexec-needed. Arm F = arm C + ROGUESQ_S7663_NOEXEC=1 (control knob, skips the
 multiplier 2. Both pids alive at 25 s. -> H-setenv-enough REFUTED, H-reexec-needed SELECTED (2 arms + s7663 arm C, two
 independent readers). Next discriminator: the owner's first `--preset tv` launch; if fullscreen/aspect misbehave, compare the
 same vars typed by hand vs from the preset in one session (an equal result places the fault outside rs64_settings).
+Summary: arm F vs C2 refutes H-setenv-enough and selects H-reexec-needed (scratch/s7663/F.log, scratch/s7663/C2.log).
