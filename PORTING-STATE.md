@@ -204476,3 +204476,34 @@ moving between two displays (one display here); a real user drag-resize (drives 
 New crash reports this session: none.
 Conclusion: selects H-ok (0 crash, 0 stall, 0 squashed draws with the fix), refutes H-crash; H-squash is real on the old path but
 only 1 draw per resize (control O), and the s7668 fix already removes it. F6 panel resize thread CLOSED.
+
+## Session 7671 (2026-11-19) — rumble with an effect LIVE at pause/abort: the game stops the motor 25 ms after the pause press; effects held live across stats screen and hangar load all end <=368 ms after their last arm; rumble abort thread closed
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=26 new=0. No owner report. NEXT.md unit (slug rumble-abort-live-effect):
+abort a mission while a rumble effect is live (s7669 only had effects at mission start). Hypotheses: H-game-stops, H-host-stuck
+(host keeps the last duty), H-game-stuck (game never sends Stop on that path).
+Lever (src/main/main.cpp, autopilot, default off): ROGUESQ_S7671_FX_ON_KEY=1 arms the port-0 effect slot 0x80110520 on each
+autopilot key with the fields startRumbleEffect 0x80002ADC writes (+0x70 effect ptr 0x8010BBD0+ROGUESQ_S7671_FX (default 0x54, the
+updatePlayerCraftPhysics effect), +0x74/+0x80=0, +0x84=handle from 0x80110744, +0x6C/+0x6B=1); ROGUESQ_S7671_FX_TRAIN_MS=N keeps
+re-arming every 200 ms for N ms after each START press. Callers of startRumbleEffect (7, all game-thread mission code) read from
+the generated code; the effect descriptor is {u32 ?, u16* curveA, u16* curveB} (processPolledControllerData 0x8000286C-0x800028F4).
+Failed first run (documented dead end): arming at boot (t=6 s) SIGBUS'd in processPolledControllerData+2036 on curve pointer
+0x3F000000 - the table is not resident at boot. Fix: arm only when both curve pointers are KSEG0 RAM (word 0 is 0x00FA0014 in
+mission, not a length, so a first length check skipped every key; relaxed).
+Runs (scratch/s7669/run.zsh <name> "<env>", s7326 hangar schedule SECS=420, owner recipe dd4 16:9 FPS60, owner save read-only,
+virtual pad + ROGUESQ_S7669_STUCK_PLANT=1; one game at a time; scorer scratch/s7671/score.py):
+- A (FX_ON_KEY=1): 3 hangar entries, 3 initMission, 0 crash. 24 arms (keys before the table is resident skipped), 24/24 reached
+  osMotorStart in the same poll (positive control); each forced effect is a ~250 ms strobe ended by the game's own Init+Stop, host
+  runs 333-350 ms, tail (run end - last arm) max 367 ms. Plant LONG caught.
+- B (+FX_TRAIN_MS=3000): 198/198 arms reached osMotorStart, 21 trains; runs up to 3.4 s while the train re-arms (lever, by design);
+  tail max 368 ms, 0 tails >800 ms. Plant LONG caught. Scorer's "motor on at hangar entry" x2 = the train still re-arming as the
+  hangar loads (lever artefact, the run ended 368 ms after the train end).
+Key datum (both arms): key 16 (t=180, PAUSE). Forced effect osMotorStart at 61868780, game osMotorInit+Stop at 61868805 with
+`[s7516-pak] on=1` (motor was on), run n=5 ended at 116 ms. Arm A the same at +26 ms. The s7669 control run has the same Init at
+t=180.034 with on=0. So the game's mission-side motor stop is at PAUSE entry, which corrects s7669's "Init+Stop before every hangar
+entry" wording (those rows were the pause press, ~45 s before the hangar). Pause does not suspend the SI effect service (lever
+re-arms in the pause menu keep playing), but the game starts no effect there itself.
+Conclusion: selects H-game-stops (two arms); refutes H-host-stuck (every run ends <=368 ms after its last arm, through pause,
+stats screen and hangar load) and H-game-stuck. Rumble abort thread CLOSED. Not covered: a natural (non-lever) effect live at the
+pause press (game effects are sparse; the lever uses the game's own slot and service so the stop path is the same).
+New crash reports this session: none (the boot SIGBUS above was the lever's, fixed in the same session).

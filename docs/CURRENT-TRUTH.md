@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7670 (2026-11-19).
+Compact operational handoff, as of Session 7671 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -16,10 +16,15 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   3 arms same build, all alive, 0 crash, 0 stall, level_ok=1. Fix arm P: stale path fired, 0 aspect-mismatched draws; old-path arm O
   (ROGUESQ_S7668_ASPECT=0, positive control): exactly 1 squashed draw per resize (~17 ms, vs ~33 draws after a fullscreen toggle);
   no-panel control C equal. A plain resize republishes the window size within one draw. scratch/s7670/run.zsh + score.py.**
-- **NEW s7669: rumble cannot stick across abort -> hangar -> restart.** s7326 hangar route at the owner recipe (4 loads, 3 re-entries):
-  the game Init+Stops the motor before every hangar entry (serviceRumblePakMotors, from beginMissionEndTransition), motor off at all
-  7 transitions, 0 runs >2 s; planted 3.3 s stuck run caught (ROGUESQ_S7669_STUCK_PLANT=1). Detector: ROGUESQ_LOG_RUMBLE=1 `[rumble]
-  run` lines; scorer scratch/s7669/score.py. Abort during a live effect not exercised (single-source code read).
+- **NEW s7671: rumble cannot stick when a mission is paused/aborted with an effect LIVE (closes the s7669 gap).** Test lever
+  ROGUESQ_S7671_FX_ON_KEY=1 arms the game's port-0 effect slot 0x80110520 (the fields startRumbleEffect writes) on every autopilot
+  key, ROGUESQ_S7671_FX_TRAIN_MS=N re-arms every 200 ms for N ms after each START. s7326 hangar route, owner recipe, 2 arms:
+  forced effects 24/24 and 198/198 reached the game's osMotorStart (positive control), the plant LONG run caught in both. At the
+  PAUSE press the game's own osMotorInit+Stop lands 25-26 ms after the forced effect starts, motor ON (run cut at 116 ms), in both
+  arms; with effects held live through the stats screen and hangar load every run ended <=368 ms after its last arm (0 tail >800 ms).
+  Correction to s7669: the game's mission-side stop is at PAUSE entry (t=180.03, 34 ms after the press), not at the hangar entry.
+  Selects H-game-stops; refutes H-host-stuck and H-game-stuck. Pause does not suspend the SI effect service (lever effects play in
+  the pause menu; the game itself starts none there). scratch/s7671/score.py. Rumble abort thread CLOSED.
 - **s7668: F6 panel held open across level-select -> mission load -> flight and a fullscreen leave/re-enter (owner recipe dd4
   16:9 FPS60, test lever ROGUESQ_PANEL_TEST_WINDOW=open,close): 0 crash, 0 stall, ~60 draws/s throughout, input gate released on
   close; same-run control without the panel equal. Fixed: ~0.5 s squashed panel after each toggle (stale main-thread window size;
@@ -329,7 +334,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     src/main/rs64_bindings.h == old map, ROGUESQ_BIND_OLD=1; controls.json beside the exe, rs64_bindings_json.h; F6 panel
     src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
     hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit. s7666: Save -> controls.json -> reload
-    round trip PASS (scratch/s7666/run.zsh: save, load mismatches on N64 A only, default-path guard and corrupt-file controls). s7669 rumble abort route clean: rerun scratch/s7669/run.zsh + score.py after a rumble/input edit.
+    round trip PASS (scratch/s7666/run.zsh: save, load mismatches on N64 A only, default-path guard and corrupt-file controls). s7669/s7671 rumble abort route clean (live effect at pause/abort stopped by the game in 25 ms): rerun scratch/s7669/run.zsh <name> "ROGUESQ_S7671_FX_ON_KEY=1 ROGUESQ_S7671_FX_TRAIN_MS=3000" + scratch/s7671/score.py after a rumble/input edit.
     G6c stand-ins: design docs/G6C-STANDINS-PLAN.md (s7621): H-portable (game-side visibility bucket only, no HLE state),
     all 17 upstream code addresses identical in our syms. Step 2 LANDED s7623: src/main/rs64_standins.cpp +
     tools/apply_s7623_standins.py (RS64_REPLAY), ROGUESQ_STANDINS=1|tog (+_LOG=1), dd>1 only; region 0x81700000..0x81800000

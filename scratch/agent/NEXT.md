@@ -1,12 +1,8 @@
-# NEXT (s7671)
-HYPOTHESIS-ID: rumble-abort-live-effect
+# NEXT (s7672)
+HYPOTHESIS-ID: g6-owner-wait-standing
 
-s7670 closed the F6 panel at a live window resize (H-ok; old-path control shows 1 squashed draw per resize; scratch/s7670).
-First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything). Otherwise an owner report; else the
-gap s7669 left: abort a mission WHILE a rumble effect is live (s7669 effects only fired at mission start, abort came later).
-Route: s7326 hangar route at the owner recipe, ROGUESQ_LOG_RUMBLE=1, force a hit/rumble effect (forced-hit lever, or the s7669
-stuck plant timing) within ~0.3 s of the abort key. Hypotheses: H-game-stops (serviceRumblePakMotors stops the motor at
-beginMissionEndTransition: run ends <=2 s), H-host-stuck (our rumble thread keeps the last duty after the game stops sending),
-H-game-stuck (game never sends Stop on that path). Discriminator: `[rumble] run` durations around the abort (scratch/s7669/score.py),
-same-run control arm ROGUESQ_RUMBLE=0, planted stuck arm ROGUESQ_S7669_STUCK_PLANT=1 must FAIL. One game at a time, SIGKILL only,
-never touch build/saves, <=2 CPU-heavy jobs. No repeat-hold soaks (G4 parked).
+s7671 closed the rumble abort thread (game stops a live effect 25 ms after PAUSE; scratch/s7671). G6a/G6b close on the owner's
+hands, G6c on the owner's look. First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything).
+Otherwise an owner report. Else take the next open item from CURRENT-TRUTH Next steps (G6c owner sheet follow-ups, or the next G5
+item not waiting on the owner). Name 2-4 hypotheses and the discriminator before building; one game at a time, SIGKILL only,
+never touch build/saves, <=2 CPU-heavy jobs, no repeat-hold soaks (G4 parked).

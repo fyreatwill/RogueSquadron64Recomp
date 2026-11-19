@@ -12205,6 +12205,7 @@ static void rs64_s7593_main_tick() {
 // ROGUESQ_RUMBLE_TEST=1 attaches a virtual gamepad whose Rumble callback logs what SDL delivers to a device (positive control).
 #include <deque>
 extern "C" long long rs64_s5773_ms(void);
+static int s7671_key = 0; static unsigned s7671_btn = 0;  // s7671 rumble lever: last autopilot key (>0 = just fired)
 static bool rs64_rumble_on() {
     static const bool on = [] { const char* e = getenv("ROGUESQ_RUMBLE"); return !(e && e[0] == '0'); }();
     return on;
@@ -13029,7 +13030,51 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                         (unsigned)rs64_vi_committed_width(), (SDL_GetTicks() - s_t0) / 1000.0,
                         (unsigned)rs64_dpc_get_cumulative_fullsyncs());
                 fflush(stderr);
+                s7671_key = s_idx + 1; s7671_btn = (unsigned)s_held;
                 s_idx++;
+            }
+            // s7671 TEST-ONLY lever: ROGUESQ_S7671_FX_ON_KEY=1 arms the game's port-0 rumble effect slot on every autopilot key
+            // press, writing the same fields startRumbleEffect 0x80002ADC writes (slot 0x80110520: +0x70 effect ptr, +0x74/+0x80
+            // = 0, +0x84 = handle from 0x80110744, then +0x6C/+0x6B = 1), so an effect is LIVE when a pause/abort/confirm key
+            // lands. The game's SI service turns it into osMotorStart/Stop as usual. ROGUESQ_S7671_FX=<hex offset into the
+            // 0x8010BBD0 effect table> picks the effect (default 0x54, updatePlayerCraftPhysics). Skipped while 0x80110740
+            // (suspended) is set. No lock is taken (startRumbleEffect's 0x80110750 queue is guest-only): test use only.
+            // ROGUESQ_S7671_FX_TRAIN_MS=N: after each START press keep re-arming every 200 ms for N ms, so an effect is live
+            // through whatever transition the press starts (abort -> beginMissionEndTransition); `[s7671-fx] train end` marks the last.
+            if (s7671_key) {
+                static const bool fx = [] { const char* e = std::getenv("ROGUESQ_S7671_FX_ON_KEY"); return e && *e == '1'; }();
+                static const uint32_t fxo = [] { const char* e = std::getenv("ROGUESQ_S7671_FX"); return e && *e ? (uint32_t)strtoul(e, nullptr, 16) : 0x54u; }();
+                static const long long train = [] { const char* e = std::getenv("ROGUESQ_S7671_FX_TRAIN_MS"); return e && *e ? atoll(e) : 0LL; }();
+                static long long s_tr_end = 0, s_tr_last = 0;
+                const long long nowms = rs64_s5773_ms();
+                bool fire = false;
+                if (s7671_key > 0) { fire = true; if (train > 0 && s7671_btn == 0x1000u) s_tr_end = nowms + train; s7671_key = -s7671_key; }
+                else if (s_tr_end) {
+                    if (nowms >= s_tr_end) { fprintf(stderr, "[s7671-fx] train end key=%d wall_ms=%lld\n", -s7671_key, nowms); s_tr_end = 0; }
+                    else if (nowms - s_tr_last >= 200) fire = true;
+                }
+                volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
+                if (fx && rd && fire) {
+                    s_tr_last = nowms;
+                    auto w32 = [&](uint32_t a, uint32_t v) { rd[a + 3] = v >> 24; rd[a + 2] = v >> 16; rd[a + 1] = v >> 8; rd[a] = v; };
+                    const uint8_t susp = rd[0x110740u ^ 3];
+                    uint32_t h = rs64_rdram_u32(rd, 0x110744u);
+                    // The descriptor is {u32 len, u16* curveA, u16* curveB} (processPolledControllerData 0x8000286C-0x800028F4);
+                    // before the effect table is resident (boot) it holds junk and the SI service faults on it (s7671 arm A,
+                    // SIGBUS at t=6 s on ptr 0x3F000000), so arm only when both curve pointers are KSEG0 RAM (word 0 is not a plain length: 0x00FA0014 in mission).
+                    const uint32_t d = (0x8010BBD0u + fxo) & 0xFFFFFFu, dl = rs64_rdram_u32(rd, d),
+                                   da = rs64_rdram_u32(rd, d + 4), db = rs64_rdram_u32(rd, d + 8);
+                    const bool ok = da >= 0x80000400u && da < 0x80800000u && db >= 0x80000400u && db < 0x80800000u;
+                    if (!ok) fprintf(stderr, "[s7671-fx] skip key=%d desc len=%u a=0x%08X b=0x%08X\n", -s7671_key, dl, da, db);
+                    if (!susp && ok) {
+                        const uint32_t s = 0x110520u;
+                        w32(s + 0x70, 0x8010BBD0u + fxo); w32(s + 0x74, 0); w32(s + 0x80, 0); w32(s + 0x84, h);
+                        w32(0x110744u, h + 1 == 0xFFFFFFFFu ? 0 : h + 1);
+                        rd[(s + 0x6C) ^ 3] = 1; rd[(s + 0x6B) ^ 3] = 1;
+                    }
+                    if (ok) fprintf(stderr, "[s7671-fx] arm key=%d btn=0x%04X fx=0x%08X handle=%u susp=%u wall_ms=%lld\n", -s7671_key,
+                            s7671_btn, 0x8010BBD0u + fxo, h, (unsigned)susp, (long long)rs64_s5773_ms());
+                }
             }
             if (stop) { s_held = 0; s_held_sx = s_held_sy = 0.0f; }
             btn |= s_held;
