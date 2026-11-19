@@ -1,17 +1,14 @@
-# NEXT (s7621)
+# NEXT (s7622)
 HYPOTHESIS-ID: g6-upstream-features
 
-G6a (s7617) and G6b (s7618-s7620, F6 panel) are landed and wait on the owner's hands. Take G6c far-object stand-ins.
-NOTE: docs/CURRENT-TRUTH.md is ~59.9 KB; if Step 0 prints >60000 this iteration is MAINTENANCE instead.
-Step 1 (this unit, offline, no game run): write docs/G6C-STANDINS-PLAN.md.
-  - `git show origin/main:src/game/static_standins.cpp`, `git show origin/main:rogue_squadron.toml | grep -n -A12 -i stand`,
-    `git show origin/main:src/game/toml_hooks.c`, `git show origin/main:src/game/hook_helpers.cpp` (only the parts the hooks call).
-  - List every guest structure/address it reads or writes; for each, verify the address in OUR build (grep our symbol names /
-    RecompiledFuncs for runInMissionFrame, selectMeshLod 0x80058264, 0x800FAC68) and mark same/different.
-  - Map each toml hook onto our generated function + a fixup/apply script registered in RS64_REPLAY (docs/REGEN-VERIFY.md).
-  - Gate: ROGUESQ_STANDINS=1 and draw distance > 1; dd1 untouched.
-Hypotheses for the design question "can it be ported without HLE matrices?": H-portable (it only touches the game's own
-visibility bucket + object templates, renderer-independent) vs H-hle (it needs RT64 HLE state we lack under LLE). The
-plan doc must state which, citing the upstream lines.
-Step 2 (next unit): implement hook 1 behind the flag with an in-run positive control.
+G6c step 2 per docs/G6C-STANDINS-PLAN.md: implement the stand-in hook, opt-in ROGUESQ_STANDINS=1, only at dd>1.
+1. Decide the host region first (one code read + one check): does setupCameraMatrices / convertMat3x4ToN64Mtx 0x80018DEC copy an
+   instance node's matrix into the DL pool (-> region may sit above 0x81000000: carve spill top 0x81700000..0x81800000, spill cap
+   7 MB when STANDINS on, add arena to tools/s7336_host_arena_table.py) or emit a pointer to it (-> carve DL-pool bottom).
+2. src/main/rs64_standins.cpp (upstream logic minus snapshot/replay/probe droid; dd from ROGUESQ_DRAW_DISTANCE) +
+   tools/apply_s7622_standins.py inserting the call after `L_800FAC68:` in runInMissionFrame, appended to RS64_REPLAY.
+   Regen order: make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake.
+3. One run, L1 dd2 forced level: positive control `[standins] N objects` N>0 and per-second submitted count >0; same build dd1
+   arm: 0 submits. Log bucket fill and spill peak. Outcomes: N=0 -> data addresses differ (re-derive from our syms);
+   N>0 but submitted 0 -> grid/condition gates differ; submitted>0 -> step 3 (tog on/off frames dd2/dd4, 2 levels).
 Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; never launch under lldb.

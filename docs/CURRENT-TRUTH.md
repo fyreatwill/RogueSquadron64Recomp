@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7620 (2026-11-18).
+Compact operational handoff, as of Session 7621 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -520,7 +520,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     src/main/rs64_bindings.h == old map, ROGUESQ_BIND_OLD=1; controls.json beside the exe, rs64_bindings_json.h; F6 panel
     src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
     hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit.
-    NEXT: G6c stand-ins, design doc docs/G6C-STANDINS-PLAN.md first.**
+    G6c stand-ins: design docs/G6C-STANDINS-PLAN.md (s7621): H-portable (game-side visibility bucket only, no HLE state),
+    all 17 upstream code addresses identical in our syms; only host RAM differs (dd>1 map full to 0x81800000 -> carve 1 MB
+    from spill top, or DL-pool bottom if the RSP reads instance matrices). NEXT: step 2, hook after L_800FAC68 + region.**
 48. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

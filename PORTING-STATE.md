@@ -202979,3 +202979,20 @@ After the run only the hint text was switched to TextWrapped and the path label 
 Not proven: mouse clicking by a human (the test pressed the actions in code; ImGui mouse input path unexercised), and a
 real pad capture (virtual pad only). Docs: README Controls (F6 + note that F1 does not open on Metal), OWNER-OPT-INS row.
 Next: G6c stand-ins design doc.
+
+## Session 7621 (2026-11-18) — G6c step 1: stand-ins design doc; H-portable selected (code read), all upstream addresses identical, host-RAM region is the only port difference
+
+Offline, no game run. Wrote docs/G6C-STANDINS-PLAN.md from `git show origin/main:src/game/static_standins.cpp` (428 lines),
+toml_hooks.c (:219, :598-:668), hook_helpers.cpp (:79-:120), util/host_ram_map.h, util/mips_call.h, rogue_squadron.toml :615-:630.
+- Upstream stand-ins are ONE hook (runInMissionFrame before 0x800FAC68 -> rs64_standins_submit). The selectMeshLod 0x80058264 /
+  0x800582F0 hooks named in the G6 brief belong to upstream's own far-plane widening (s_past_stock_far), not to stand-ins; only
+  the probe-droid path reaches them, so step 2 drops probe droids and does not port them.
+- H-portable vs H-hle: H-portable (single-source, code read): inputs are game RAM (DAT, meshdef hash, grid, difficulty, flags),
+  outputs are calls into recompiled game functions via get_function; no RT64/HLE read in the file.
+- Address check vs syms/rogue_squadron.syms.toml: 17/17 code addresses map to the same function/offset (e.g. 0x800FAC68 =
+  runInMissionFrame+0x5C4 = `L_800FAC68:` in funcs_42.c right after the render-broadcast slotDispatcherIter(a1=4)); get_function
+  is extern "C" in librecomp overlays.cpp:965. Data addresses assumed same ROM; step 2's "[standins] N objects" > 0 is their control.
+- Difference: upstream's host region 0x80A5C000..0x80B00000 is guest heap/DL pool in our dd>1 map (s7336 table: guest top
+  0x80C00000, DL pool ..0x81000000, spill ..0x81800000 = ram_top). Plan: carve 1 MB from spill top unless the bucket->DL
+  conversion makes the RSP read instance matrices (then carve below 0x81000000 from the DL pool bottom).
+Rules out nothing at runtime; next unit implements the hook (apply script in RS64_REPLAY) with an in-run positive control.
