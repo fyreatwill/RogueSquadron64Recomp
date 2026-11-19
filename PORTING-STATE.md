@@ -203582,3 +203582,6 @@ RT64 SDL event filter dead (sdlEventFilterInstalled=0), vpad Rumble cb (RUMBLE_T
 Discrimination: TSan arms (2 -> 0 on the index pair, the other 16 unchanged) plus the census select H-defect (1 live site) and
 refute H-clean. Class CF CLOSED. Rules out: races in our SDL event-watch / vpad / exit callbacks and the opt-in Metal stamp
 handlers. Not covered: TSan on the whole binary (only plume_metal.cpp instrumented); a whole-RT64 TSan build is the next class.
+Discrimination line: the TSan arms (index pair 2 -> 0, the 16 blind-spot reports unchanged) plus the census selects H-defect
+(1 live race) and refutes H-clean for class CF; the atomic fix closes the one live site. Next discriminator: class TS, TSan over
+all of librt64 + plume (NEXT.md), H-clean (only the metal-cpp __block blind spot) vs H-defect (a new race pair).
