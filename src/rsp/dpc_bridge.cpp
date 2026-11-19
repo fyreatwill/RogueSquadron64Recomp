@@ -6078,6 +6078,24 @@ extern "C" int rs64_s7097_on; extern "C" void rs64_s7097_begin(uint32_t, uint32_
 extern "C" void rs64_s7097_pre(int); extern "C" void rs64_s7097_post(int); extern "C" void rs64_s7097_end();
 #define RS64_W7(id, call) do { if (rs64_s7097_on) rs64_s7097_pre(id); call; if (rs64_s7097_on) rs64_s7097_post(id); } while (0)
 extern "C" void rs64_s7389_scan(uint32_t, uint32_t, const uint8_t *);  // s7389 fb-load watch marks
+// s7634 bridge-walker-fusion discriminator: ROGUESQ_S7634_NULLWALK=1 walks every submit with the same op-size rules as
+// rs64_spike_scan / rs64_region_scan (16 B texrects, tri lengths from op bits, 8 B otherwise) and does nothing else, timed in
+// its own [s7016-glue] bucket (null=) right after the spike walk (warm cache, as the region walk sees it). Measurement only.
+// =t with ROGUESQ_GLUE_TOG=3 runs it twice on odd seconds: the null bucket must double there (dose-response positive control).
+static volatile uint32_t g_s7634_sink = 0;
+static void rs64_s7634_nullwalk(uint32_t lo, uint32_t hi) {
+    if (g_rdram_for_submit == nullptr || hi <= lo || (hi - lo) > 0x100000u || hi > kSubmitRamEnd) return;
+    uint32_t acc = 0;
+    for (uint32_t a = lo & ~3u; a + 8 <= hi;) {
+        uint32_t w0, w1; memcpy(&w0, g_rdram_for_submit + (a & kSubmitRamMask), 4); memcpy(&w1, g_rdram_for_submit + ((a + 4) & kSubmitRamMask), 4);
+        const uint32_t op = (w0 >> 24) & 0x3F; acc += op ^ w1;
+        if (op == 0x24 || op == 0x25) { a += 16; continue; }
+        if (op < 0x08 || op > 0x0F) { a += 8; continue; }
+        if (a + 32 > hi) break;
+        a += 32 + ((op & 4) ? 64 : 0) + ((op & 2) ? 64 : 0) + ((op & 1) ? 16 : 0);
+    }
+    g_s7634_sink += acc;
+}
 static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     rs64_s7389_scan(lo, hi, g_rdram_for_submit);
     if (rs64_s7097_on) rs64_s7097_begin(lo, hi, g_rdram_for_submit);
@@ -6089,8 +6107,9 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
         if (!anc) { anc = true; rs64_tog_anchor(mt); }
         odd = rs64_tog_odd(mt) != 0; skip = gtog == 1 && odd;  // GLUE_TOG=2: odd seconds = unfused two-pass walk
     }
-    static uint64_t s_acc[2][6] = {}, s_n[2] = {}, s_bytes = 0, s_last = 0;  // walks: census..wipe, pillar, rect_wrap, pause+rscan, spike, g5b..floor
-    uint64_t t[7]; const bool tm = gtime;
+    static uint64_t s_acc[2][7] = {}, s_n[2] = {}, s_bytes = 0, s_last = 0;  // walks: census..wipe, pillar, rect_wrap, pause+rscan, spike, g5b..floor
+    uint64_t t[8]; const bool tm = gtime;
+    static const int s7634null = [] { const char *e = std::getenv("ROGUESQ_S7634_NULLWALK"); return !(e && *e && *e != '0') ? 0 : (*e == 't' ? 2 : 1); }();  // =t: 2 passes on odd GLUE_TOG seconds (dose control)
     if (tm) t[0] = mach_absolute_time();
     if (!skip) { RS64_W7(0, rs64_g3_census(lo, hi)); RS64_W7(1, rs64_g1d_title_clear(lo, hi)); RS64_W7(2, rs64_wipe_scan(lo, hi)); }
     if (tm) t[1] = mach_absolute_time();
@@ -6112,6 +6131,8 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     if (tm) t[4] = mach_absolute_time();
     RS64_W7(7, rs64_spike_scan(lo, hi));
     if (tm) t[5] = mach_absolute_time();
+    if (s7634null) { rs64_s7634_nullwalk(lo, hi); if (s7634null == 2 && odd) rs64_s7634_nullwalk(lo, hi); }
+    uint64_t t_null = 0; if (tm) { const uint64_t tn = mach_absolute_time(); t_null = tn - t[5]; t[5] = tn; }
     // s7125 G3: the G5B_FRAME recorder now runs AFTER the region shift (radar disc, s6158) and floor walkers, so the replay stream is
     // the bytes RT64 is given; before, every 16:9/21:9 capture showed the disc unshifted (~1000 px HUD diff per frame vs RT64).
     // ROGUESQ_G5B_FRAME_EARLY=1 restores the old pre-walker record point.
@@ -6121,14 +6142,15 @@ static void rs64_dpc_record_submit_impl(uint32_t lo, uint32_t hi) {
     if (tm) {
         t[6] = mach_absolute_time();
         for (int i = 0; i < 6; i++) s_acc[odd][i] += t[i + 1] - t[i];
+        s_acc[odd][6] += t_null;
         s_n[odd ? 1 : 0]++; if (hi > lo) s_bytes += hi - lo;
         if (s_last == 0) s_last = t[6];
         if (t[6] - s_last >= 240000000u) {  // 10 s at 24 MHz
             const double us = 1.0 / 24.0, sec = (t[6] - s_last) / 24e6;
             for (int q = 0; q < 2; q++)
-            fprintf(stderr, "[s7016-glue] par=%d sec=%.1f submits=%llu odd=%llu kB=%.0f us_per_s: misc=%.0f pillar=%.0f rect_wrap=%.0f pause_rscan=%.0f spike=%.0f tail=%.0f\n",
+            fprintf(stderr, "[s7016-glue] par=%d sec=%.1f submits=%llu odd=%llu kB=%.0f us_per_s: misc=%.0f pillar=%.0f rect_wrap=%.0f pause_rscan=%.0f spike=%.0f tail=%.0f null=%.0f\n",
                     q, sec, (unsigned long long)(s_n[0] + s_n[1]), (unsigned long long)s_n[1], s_bytes / 1024.0,
-                    s_acc[q][0] * us / sec, s_acc[q][1] * us / sec, s_acc[q][2] * us / sec, s_acc[q][3] * us / sec, s_acc[q][4] * us / sec, s_acc[q][5] * us / sec);
+                    s_acc[q][0] * us / sec, s_acc[q][1] * us / sec, s_acc[q][2] * us / sec, s_acc[q][3] * us / sec, s_acc[q][4] * us / sec, s_acc[q][5] * us / sec, s_acc[q][6] * us / sec);
             for (auto &r : s_acc) for (auto &x : r) x = 0; s_n[0] = s_n[1] = 0; s_bytes = 0; s_last = t[6];
         }
     }

@@ -203328,3 +203328,20 @@ HYPOTHESIS-ID: bridge-default-on-diagnostics. No regen (src/ only).
   edge, CULL_SPIKE, radar shift) and refutes H-diag-cost (default-on diagnostics cost >= 2 ms/s anywhere in the bridge): the largest
   diag leftover is ~0.9 ms/s. This closes class HB. Next discriminator (s7634, item 24): a decode-only null walk timed in its own
   GLUE_TIME bucket in the same run -> null ~= spike+region cost selects H-walk (fuse the walks), << refutes it (H-body, close).
+
+## Session 7634 (2026-11-19) — walker-fusion discriminator: a decode-only walk costs ~3.0 ms/s (dose control 1.98x), so fusing spike + region saves ~6 ms/s -> H-walk (borderline)
+
+What ran: added `ROGUESQ_S7634_NULLWALK=1|t` in src/rsp/dpc_bridge.cpp (rs64_s7634_nullwalk: walks each submit with the
+spike/region op-size rules, reads w0/w1 only, volatile sink) timed in a new `[s7016-glue]` bucket `null=` right after the
+spike walk (warm cache, as the region walk sees it). `=t` with ROGUESQ_GLUE_TOG=3 runs it twice on odd mach seconds.
+Run: scratch/s7634/run.zsh 1 (L1 dd4 16:9 FPS60 CULL_SPIKE=1, owner recipe via scratch/s7031/arm.zsh, hold 242 s,
+alive_at_end=1, vi_stalls30s=0). Last 10+10 glue rows in flight (us/s per parity half; full rate = x2):
+par0 (1 pass) pillar 5319 spike 4915 tail 2446 null 1493; par1 (2 passes) pillar 5422 spike 6447 tail 2492 null 2963.
+Positive control: null doubles on 2-pass seconds (1.98x, 10/10 rows), so the bucket measures the walk.
+Result: one decode walk = 20% of spike+region; fusing both into one walk removes 2 passes = 40% (~6 ms/s full rate,
+~0.1 ms per VI). Pre-registered split H-walk ~7 vs H-body <2 -> H-walk selected, borderline. Single-source (one level,
+one run). Unexplained: the spike bucket is +31% on 2-pass seconds in 10/10 rows although the extra pass runs after it;
+the decision uses the clean 1-pass arm.
+Rules out: H-body (per-command bodies are not ~all of the cost). Does not show the fusion is worth much: the whole ceiling is
+~0.1 ms/VI. NEXT.md: mechanical fusion behind ROGUESQ_S7634_FUSE (default 1, 0 old, tog, chk memcmp with injected-edit
+control), with a stop rule if the bodies turn out to depend on bytes ahead of `a`. Instrument stays (env-gated, default off).

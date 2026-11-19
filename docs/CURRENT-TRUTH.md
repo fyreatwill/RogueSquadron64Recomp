@@ -339,8 +339,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (L1 dd4 16:9 FPS60, GLUE_TIME timer + `sample`, agree ~25-27 ms/s): all per-submit walker cost is functional (G1D_DEBRIEF pillar
     12.5, CULL_SPIKE 8.2, wide-aspect radar region shift ~6 ms/s, armed by main.cpp:14403 setenv). Diag leftovers each <1 ms/s.
     Fixed: per-commit getenv(ROGUESQ_TRACE_DISPATCH) latched.
-24. **Walker fusion (perf, not diagnostic): NEXT (s7634).** The pillar, spike and region walks each re-walk every RDP submit
-    (~25 ms/s on the Gfx thread at 16:9 dd4). Fold spike_scan + region_scan into the s7016 fused walk; scope in NEXT.md.
+24. **Walker fusion (perf, not diagnostic): discriminator DONE s7634, H-walk selected (borderline); fusion is NEXT.**
+    ROGUESQ_S7634_NULLWALK=1|t (decode-only walk, own GLUE_TIME bucket `null=`; =t + GLUE_TOG=3 = 2 passes on odd seconds,
+    dose 1.98x, control PASS). L1 dd4 16:9 FPS60 flight: one decode walk ~3.0 ms/s full rate; spike ~9.8, region ~4.9,
+    pillar ~10.6. Fusing spike + region into the pillar walk removes 2 passes = ~6 ms/s (~40% of spike+region, ~0.1 ms/VI).
+    Single-source (one level, one run); unexplained: spike bucket +31% on 2-pass seconds. Scope + proof rules in NEXT.md.
 
 ## Evidence index
 
