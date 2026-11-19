@@ -202846,8 +202846,8 @@ Work unit: NEXT.md s7615 (class DQ, the scope gap s7614 declared). Audit only, n
   C4 internal-linkage rule off -> OPEN; C5 sole-caller rule off -> OPEN; C6 RDP_ASYNC default flipped -> OPEN; C7 planted read
   in an uncalled fn -> dead; C7b planted in a called-but-not-Gfx-reachable fn (Application::loadConfiguration) -> OPEN;
   C8 planted reader frame on RT64 Workload -> BAD; C9 workload control frames stripped -> witness FAIL.
-- Discrimination: H-clean selected for default play (two lines: static census with two sources for the rows, single-source
-  call graph for threads + an independent runtime sample). H-bad-live refuted; H-bad-gated = the RDP_ASYNC worker, already
+- Discrimination: selects H-clean for class RQ in default play, refutes H-bad-live (two lines: static census with two sources for the rows, single-source
+  call graph for threads + an independent runtime sample). H-bad-gated = the RDP_ASYNC worker, already
   measured (s7540 NODRAIN=3: 0 late texture reads).
 - Dead ends this session: (a) lldb LAUNCH of the game: the debugged process could not read build/rs64.n64.us.1.0.z64
   ("invalid stored ROM") and tried to delete it; remove_stored_rom got EPERM, file intact (16777216 bytes, Jul 9). Never launch
@@ -202861,3 +202861,5 @@ Work unit: NEXT.md s7615 (class DQ, the scope gap s7614 declared). Audit only, n
 - Scope limits: (1) witness = title/attract phase only, default recipe; (2) rows are base references: an RDRAM-derived
   pointer stored in a long-lived RT64 member or static and read in a later call is not enumerated -> class RP next;
   (3) RDP_ASYNC timing itself is s7538-s7554's ledger.
+- Next discriminator: class RP (NEXT.md) - an RDRAM-derived pointer kept in an RT64 member/static across calls; one
+  census (regex + clang) splits H-clean (all fresh/offset/copy) from H-bad-alias (a default-on kept pointer read a call later).
