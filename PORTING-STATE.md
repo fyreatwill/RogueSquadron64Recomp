@@ -203706,3 +203706,7 @@ audio command list. Two lines: runtime classification + static symbol layout (in
 not cross-checked under the retail oracle (mupen64plus does not reach missions). No fix; default behaviour unchanged.
 Rules out: TS-3 as a source of audio corruption. Changed: src/rsp/s7644_rspdma.cpp (new), CMakeLists.txt,
 lib/N64ModernRuntime rsp.cpp/pi.cpp hooks (submodule-patches/N64ModernRuntime.patch).
+Discrimination: selects H-retail (with H-margin: the overlap is the declared-but-unused image tail), refutes H-live (copy-state
+overlaps 0, torn 0, command-list overlaps 0, with the same-run CTL line firing 1/1 per arm).
+Next discriminator: class TS-4 (scratch/agent/NEXT.md): the same classifier on gfx-task RDRAM read ranges; run-state overlaps
+with chg>0 select H-live for gfx, 0 with ctl firing selects H-clean.
