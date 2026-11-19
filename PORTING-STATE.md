@@ -203165,6 +203165,7 @@ with PULL=3 vs true depth plus a real-object toggle control; P>0 selects drawn, 
   900 draws/s); C (control) 180890.8 vs 107.5 (hot 206151 px, 0 stand-in draws). Synthetic control PASS in every arm; 3/3 alive,
   0 crash, vi_stalls30s=0, max_gap 145-148 ms.
 - Shows: the RSP/RDP path draws stand-ins, also at true depth; s7624/s7625 "accepted stand-ins draw nothing" stays superseded.
-  Rules out H-rsp-loss. Smaller true-depth footprint fits terrain occlusion/size at distance. Single run, scorer only: N to be
+  This selects H-draws (stand-ins reach RDP pixels) and refutes H-rsp-loss (lost in the RSP/RDP path). Smaller true-depth footprint fits terrain occlusion/size at distance. Single run, scorer only: N to be
   confirmed by eye in the step-3 proof sheet.
-- Next: step 3 proof, L1+L4 at dd2/dd4, on/off pairs + spawn early_s (NEXT.md).
+- Next discriminator: step 3 proof, L1+L4 at dd2/dd4, on/off pairs + spawn early_s (NEXT.md); early_s > 0 selects H-early-visible,
+  excess only at dd4 selects H-inside-spawn-radius at dd2, wrong shapes select H-placement.
