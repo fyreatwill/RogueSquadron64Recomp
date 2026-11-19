@@ -319,10 +319,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     L1 dd4 top pairs are cliff-texture shimmer + laser bolts, not stand-ins (eye check); keep the eye check. Dumps show each call
     one swap late (stand-ins appear in label-0 frames). Spawns preceded by a stand-in: L1 10-11 (2-62 s early), L4 19 (0.2-5 s).
     4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
-    crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); L6-L18 queued (soak_queue/s7628_standins_hold_L*.sh). Scorer
+    crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
+    spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
+    closes on the owner's look; default stays off.** Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
-21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
+21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): NEXT (s7631)**, G6a/b/c all wait only on the owner. Scope
+    text = scratch/agent/NEXT.md (copied from the s7616 NEXT, commit 0843d0085).
 
 ## Evidence index
 

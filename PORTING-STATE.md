@@ -203202,3 +203202,20 @@ HYPOTHESIS-ID: g6-upstream-features
   `--control` (24x24 synthetic block in every ON frame, 44 pairs/arm): min added 382-444 px with the filter vs 401-486 without (motion
   mask is most of the loss), PASS (>=288 = half painted) in 4/4. Two lines of evidence for the filter: eye labels (s7628) + synthetic control.
 - Rules out: stand-in crashes/stalls on L0-L5 at dd4 within 300 s. Not yet: L6-L18.
+
+## Session 7630 (2026-11-18) — G6c step 4 closed: STANDINS=1 dd4 300 s holds clean on all 19 levels; owner row + cluster-crop sheet
+HYPOTHESIS-ID: g6-upstream-features
+- Holds (g1e harness via scratch/agent/soak_queue/done/s7628_standins_hold_L*.sh, owner recipe dd4 16:9 FPS60, ROGUESQ_STANDINS=1,
+  HOLD 300): L10/L11 by the loop (SOAK-RESULTS 22:43/22:48), L6-L9 and L12-L18 in-session sequentially (scratch/s7630/run4.zsh,
+  run7.zsh; HID idle 77 min at start, 130+ at end; recipes moved to done/ first; one game at a time). All 13: alive_at_end=1,
+  crashlines=0, vi_stalls30s=0, level_ok=1, max_gap_ms 146-162 (L7 160, L18 162; the rest <=149). Positive control per arm:
+  `[standins] on mode=on` line present and standins-spawn lines L6 157, L7 63, L8 39, L9 61, L10 91, L11 54, L12 99, L13 40,
+  L14 62, L15 39, L16 149, L17 360, L18 13, so stand-ins were active in every arm. With s7629 L0-L5: 19/19 clean.
+- No stand-in-only failure, so no STANDINS-unset control arm was needed (NEXT step 2 not triggered).
+- Owner sheet regenerated with the s7629 cluster scorer (tools/s7628_standins_sheet.py --cluster 16 --control --pairs 3 on the
+  s7628 L1 dd2 / L4 dd4 arms): med_fpx 153 / 1298, control PASS (min added 395 / 443 of 576). Crops land on the bunker and the
+  city-tower row (eye check on the sheet). docs/owner_sheet_s7630_standins_on_off.jpg. Dumps lag one swap: the second column
+  ("label0") is the stand-ins-ON frame; the owner row says so in plain words.
+- docs/OWNER-OPT-INS.md: new row ROGUESQ_STANDINS=1 (dd>1 only), asks the owner to judge the look and the default. Default off.
+- Rules out: stand-in crashes/stalls at dd4 within 300 s on any level. Not covered: dd2/dd3/dd8 holds, 21:9, hangar route,
+  cutscene-heavy stretches beyond 300 s. G6 now waits only on the owner (G6a feel, G6b hands, G6c look). Next: Class RP.
