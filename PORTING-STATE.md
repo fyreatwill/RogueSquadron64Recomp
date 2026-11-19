@@ -202919,3 +202919,7 @@ Closes on the owner feeling it on a PS4/PS5 pad. Next: G6b control rebinding (NE
 - Note for later runtime input tests launched from a terminal: set SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 or pad input is
   dropped while unfocused.
 - Next: G6b step 2 controls.json overrides, step 3 F6 panel.
+- Discrimination: this selects H-equal and refutes H-drift (offline 0/233288 with mutant 37436; runtime 0/3000 with mutant
+  239, same run). The change is the table refactor itself (get_n64_input now maps via rs64_bind_eval); the [bind-*] lines are
+  its proof harness. Next discriminator (step 2): with controls.json absent, the 233288-case sweep must stay 0 mismatches vs
+  defaults, and a file remapping A -> pad:b must move the bit (positive control); a malformed file must fall back to defaults.
