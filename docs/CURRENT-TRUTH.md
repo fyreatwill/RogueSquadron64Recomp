@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7672: G6c stand-ins no longer vanish at spawn.** The game spawns an object while its own view test still culls it, so
+- **NEW s7674: held stand-ins never leave an on-screen gap.** Every frame our own view test culls a held stand-in is an off-screen
+  exit (box/behind/side) or the game's cached copy of one (it view-tests each object on alternate frames, result bit 0x200 in
+  state+8): far 0 and pass-then-refused 0 of 10008 (L4) / 3674 (L1) culled frames; same-run control real objects far-rejected
+  1548/528. tools/apply_s7674_bucket_vt.py + tools/s7672_handoff_score.py class line (rc 1 on held far/vtpass). Handoff polish closed.
+- **s7672: G6c stand-ins no longer vanish at spawn.** The game spawns an object while its own view test still culls it, so
   the stand-in disappeared for 9-443 frames (L1 8/8, L4 36/37 on-screen handoffs) before the real object popped back. Fix
   ROGUESQ_S7672_HOLD=1 (default inside the STANDINS opt-in; =0 old, =odd same-run control): stand-in held until the real object's
   first accepted addNpcToVisibilityBucket. L4 dd4: held 31 handoffs 0 blink 0 double, control 26/27 blink; 5 arms alive 0 stall.
@@ -375,7 +379,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
     crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
-    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. Scorer
+    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); next: ghost candidate L4 item 80547410 (stand-in drew 321 frames, real object never called the bucket). Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):

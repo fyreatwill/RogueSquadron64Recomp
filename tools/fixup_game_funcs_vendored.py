@@ -42169,6 +42169,7 @@ RS64_REPLAY = [
     "apply_s7625_standins_far.py",  # s7625: G6c stand-in view-test far *= rs64_vt_farmul (host sets it = dd only around its own addNpcToVisibilityBucket call; 1.0 = retail)
     "apply_s7626_sg_probe.py",  # s7626: G6c step 3c, scene-graph walk visits/draws of stand-in nodes vs others, packed translation reach (measurement only, ROGUESQ_STANDINS_LOG=1)
     "apply_s7672_bucket_handoff.py",  # s7672: G6c stand-in -> real object handoff at spawn, addNpcToVisibilityBucket returns to the host (measurement only, ROGUESQ_STANDINS_LOG=1)
+    "apply_s7674_bucket_vt.py",  # s7674: G6c held stand-in culls, last view-test exit + v0 per addNpcToVisibilityBucket call to the host (measurement only)
 ]
 
 

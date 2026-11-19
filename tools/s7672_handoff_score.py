@@ -4,15 +4,20 @@ A handoff counts when it is the item's first life in the log, it ended by spawn,
 before the spawn (spawn_f - last_si <= 2; held stand-ins give negative values) - i.e. the object was on screen as a stand-in.
 blink = frames with neither stand-in nor real object accepted = real_add - last_si - 1 when > 0; overlap = frames with both.
 Rows split by odd= (ROGUESQ_S7672_HOLD=odd holds only odd-index stand-ins: even rows are the same-run control and must still blink;
-with no odd= field every row is one group). Usage: s7672_handoff_score.py log [log...]; rc 1 if a held group has a blink > 1 frame."""
+with no odd= field every row is one group).
+s7674: rows with si_off= (tools/apply_s7674_bucket_vt.py) also get a cull-class line per group: held stand-in culls by our own view-test
+exit (off = box/behind/side, far, novt = cached reject, the game tests each object on alternate frames, vtpass) and the real object's
+rejects while waited for. A held si_far or si_vtpass > 0 = a culled held stand-in that was not off-screen (rc 1). Usage: s7672_handoff_score.py log [log...]; rc 1 if a held group has a blink > 1 frame."""
 import sys, re, collections
 rc = 0
 for log in sys.argv[1:]:
-    seen = set(); grp = collections.defaultdict(list)
+    seen = set(); grp = collections.defaultdict(list); cls = collections.defaultdict(collections.Counter)
     for ln in open(log, errors="replace"):
         if "[s7672-ho]" not in ln: continue
         d = dict(re.findall(r"(\w+)=(\S+)", ln)); it = ln.split("item ")[1].split()[0]
         first = it not in seen; seen.add(it)
+        if first and "si_off" in d:
+            for k in ("held", "held_ok", "si_off", "si_far", "si_novt", "si_vtpass", "re_rej", "re_off", "re_far", "re_novt", "re_vtpass"): cls[d.get("odd", "all")][k] += int(d[k])
         sb = int(d["si_before_spawn"]); 
         if not first or sb == -9999 or sb > 2 or int(d["real_add"]) < 0: continue
         if d["end"] not in ("spawned", "none"): continue
@@ -23,4 +28,7 @@ for log in sys.argv[1:]:
         print(f"{log.split('/')[-1]} odd={k} handoffs={len(r)} blink>1={n_bl} blink_max={max(bl)} blink_med={sorted(bl)[len(bl)//2]} "
               f"overlap_max={max(ov)} cull_after_spawn_med={sorted(x[2] for x in r)[len(r)//2]} dpos_max={max(x[3] for x in r):.2f}")
         if k == "1" and n_bl: rc = 1
+    for k in sorted(cls):
+        c = cls[k]; print(f"{log.split('/')[-1]} odd={k} classes " + " ".join(f"{x}={c[x]}" for x in c))
+        if k == "1" and (c["si_far"] or c["si_vtpass"]): rc = 1
 sys.exit(rc)

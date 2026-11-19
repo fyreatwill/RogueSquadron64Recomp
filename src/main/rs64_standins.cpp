@@ -81,6 +81,8 @@ struct Standin {
     uint32_t item, state, inst, scale; double first_add = -1.0, last_add = -1.0; bool spawn_logged = false;
     // s7672 handoff (ROGUESQ_STANDINS_LOG=1): frame ids are our submit-call count (one per mission frame)
     int64_t last_si = -1, spawn_f = -1, real_call = -1, real_add = -1, real_last = -1; uint32_t overlap = 0, real_frames = 0, held = 0, held_ok = 0;
+    // s7674: held culled frames by our own view-test exit class, and the real object's rejected calls while we wait for its first accept
+    uint32_t si_cls[4] = {}, re_cls[4] = {}, re_rej = 0;
     uint32_t idx = 0; uint16_t sub = 0; int end_reason = -1, prev_reason = -1; float dpos = -1.0f; bool ho_logged = false, by_pos = false;
 };
 
@@ -257,14 +259,23 @@ void ho_log(Standin& s, const char* why) {
     s.ho_logged = true;
     const int64_t gap = (s.real_add >= 0 && s.last_si >= 0) ? s.real_add - s.last_si - 1 : -9999;
     std::fprintf(stderr, "[s7672-ho] item %08X sub %04X why=%s spawn_f=%lld last_si=%lld real_call=%lld real_add=%lld gap=%lld overlap=%u "
-                 "real_frames30=%u end=%s dpos=%.2f match=%s si_before_spawn=%lld odd=%u held=%u held_ok=%u\n",
+                 "real_frames30=%u end=%s dpos=%.2f match=%s si_before_spawn=%lld odd=%u held=%u held_ok=%u si_off=%u si_far=%u si_novt=%u si_vtpass=%u re_rej=%u re_off=%u re_far=%u re_novt=%u re_vtpass=%u\n",
                  s.item, (unsigned)s.sub, why, (long long)s.spawn_f, (long long)s.last_si, (long long)s.real_call, (long long)s.real_add, (long long)gap,
                  s.overlap, s.real_frames, s.end_reason >= 0 ? kReason[s.end_reason] : "none", (double)s.dpos, s.by_pos ? "pos" : "item",
-                 (long long)(s.spawn_f >= 0 && s.last_si >= 0 ? s.spawn_f - s.last_si : -9999), s.idx & 1u, s.held, s.held_ok);
+                 (long long)(s.spawn_f >= 0 && s.last_si >= 0 ? s.spawn_f - s.last_si : -9999), s.idx & 1u, s.held, s.held_ok,
+                 s.si_cls[0], s.si_cls[1], s.si_cls[2], s.si_cls[3], s.re_rej, s.re_cls[0], s.re_cls[1], s.re_cls[2], s.re_cls[3]);
 }
 }  // namespace
 
 extern "C" int rs64_bk_on = 0;
+// s7674 (tools/apply_s7674_bucket_vt.py): last view-test exit PC / v0 and call count of the current addNpcToVisibilityBucket call.
+extern "C" uint32_t rs64_bk_vt_n = 0, rs64_bk_vt_pc = 0, rs64_bk_vt_v0 = 0;
+// class: 0 off-screen (camera box, behind, side planes, point near), 1 far, 2 no view test ran, 3 view test passed (bucket rejected after)
+static int vt_class() {
+    if (rs64_bk_vt_n == 0) return 2;
+    if (rs64_bk_vt_v0 == 1u) return 3;
+    switch (rs64_bk_vt_pc) { case 0x8001DDA8u: case 0x8001E080u: return 1; default: return 0; }
+}
 extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
     if (rs64_bk_self || !guest(state)) return;
     ++s_bk_calls;
@@ -291,7 +302,7 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
     // a real call belongs to the frame of the NEXT submit.
     const int64_t cur = s_bk_frame + 1;
     if (s.real_call < 0) s.real_call = cur;
-    if (v0 != 1) return;
+    if (v0 != 1) { if (s.real_add < 0) { ++s.re_rej; ++s.re_cls[vt_class()]; } return; }
     if (s.real_add < 0) {
         s.real_add = cur;
         const float dx = rf(rdram, s.state) - x, dy = rf(rdram, s.state + 4u) - y, dz = rf(rdram, s.state + 8u) - z;
@@ -711,7 +722,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         rs64_bk_self = 1;
         const uint32_t add_v0 = mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0;
         rs64_bk_self = 0;
-        if (planted) { ++s.held; if (add_v0 == 1) ++s.held_ok; }
+        if (planted) { ++s.held; if (add_v0 == 1) ++s.held_ok; else ++s.si_cls[vt_class()]; }
         rs64_vt_on = 0;
         rs64_vt_farmul = 1.0f;
         reason(s, add_v0 == 1 ? 0 : 1);

@@ -204562,3 +204562,35 @@ s7629-s7630 holds; 5 arms here clean).
   s7352_signed via tools/census_rules.py: rs64_standins.cpp rs64_bk_ret `dy + dz` (s7672; const float squared distance -> FLT);
   s7535_ga main.cpp:13060 get_n64_input `rd[..]` (s7671 TEST-ONLY rumble lever, D rule on ROGUESQ_S7671_FX_ON_KEY, anchored range).
   s7611 PASS 8/8, s7599 rc 0 3/3, s7535 12/12 PASS (its rule-less coverage control still sees >=250 UNCLASSIFIED). 0 defects found.
+
+## Session 7674 (2026-11-19) — G6c held stand-in culls are all off-screen: our own view test never rejects a held stand-in at the far exit or after a pass (L4 0/10008, L1 0/3674 culled frames), same-run control real objects far-rejected 1548/528; H-offscreen selected, handoff polish closed
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0. No owner report. Unit from NEXT.md (g6c-standin-handoff-polish).
+Question: after ROGUESQ_S7672_HOLD, a held stand-in is often culled by our own view test while its real object is also rejected
+(s7672c L4: 10859 of 14869 held frames culled). Visible gap, or off-screen? Hypotheses: H-offscreen (every held cull is the game's
+view test saying "outside the view") vs H-gap (some held culls happen inside the view, at the far exit or in the bucket after a pass).
+The s7672 logs could not answer it (held/held_ok counts only), so ONE instrument: tools/apply_s7674_bucket_vt.py (RS64_REPLAY after
+s7672) records, per addNpcToVisibilityBucket call while rs64_bk_on, the last transformVec3ToNpcLocalWithScale exit PC (s7625
+rs64_vt_pc), its v0 and the call count (reset at entry). src/main/rs64_standins.cpp classes each culled held frame of OUR call
+(si_off = camera box / behind / side planes, si_far = far exit 0x8001DDA8/0x8001E080, si_novt = no view test ran, si_vtpass = test
+passed but the bucket refused) and each rejected real-object call while its stand-in waits (re_*); fields appended to `[s7672-ho]`.
+Code read of the bucket (funcs_12.c 0x80057C8C..0x80057E74) explains novt: the game view-tests each object only on alternate frames
+(phase flag 0x80 or 0x100 in state+8, balanced by counters 0x8013 94E2/94E4, frame parity *(0x80138 89C)&1) and on the other frame
+reuses the cached result bit 0x200 (L_80057E74). So novt = a copy of the previous frame's result, and it is ~50% of every reject.
+Runs (scratch/s7672/run.zsh, owner recipe dd4 16:9 FPS60, STANDINS=1 LOG=1 HOLD=odd, 200 s): L4 scratch/s7674 and L1 scratch/s7674b.
+Held group (odd): L4 held 13562, accepted 3554, culled off 5006 / novt 5002 / far 0 / vtpass 0; L1 held 4660, accepted 986, off
+1840 / novt 1834 / far 0 / vtpass 0. Positive control in the same runs: the even-index control rows' real objects are rejected at the
+FAR exit 1548 (L4) / 528 (L1) times while waiting = the old visible-blink mechanism (s7672), so the classifier does see far; control
+handoffs still blink (L4 21/21, L1 6/7), held handoffs 0 blink (28 and 9). Both arms alive, 0 crash; L1 vi_stalls30s=0, max gap
+163 ms (max_vihold 17.3 s = the mission-intro hold, same 17.3 s in s7672 h1 and s7672b o1).
+Result: selects H-offscreen on two levels; refutes H-gap. A held stand-in is only ever culled because the game's own test puts it
+outside the view (or caches that answer for one frame, which every retail object also does), never beyond our widened far and never
+after a pass. Its real object, at the same spot (dpos <= 2) with the narrower retail far, is then off-screen too.
+Recipe fix: scratch/s7672/run.zsh took a relative outdir, and the game runs from build/, so its present ring went nowhere and the L4
+arm scored vi_stalls30s=na (rows=0). Now `S=${1:A}`; the L1 rerun has its ring (rows 11890).
+Scorer: tools/s7672_handoff_score.py prints a per-group class line and returns rc 1 if a held group has si_far or si_vtpass > 0.
+Side finding for the next unit: held stand-ins that reach the 600-frame cap without their real object ever being accepted, while
+accepted themselves (L4 3, L1 5). Two kinds: the real object is called and rejected every frame (re_rej = 601: the stand-in is
+doing its far job), and one L4 item 80547410 whose real object NEVER called the bucket (real_call=-1) yet the stand-in drew 321
+frames: a possible ghost (object spawned but hidden/dead, or matching missed).
+Rules out: H-gap. Not covered: owner look; the ghost candidate.
