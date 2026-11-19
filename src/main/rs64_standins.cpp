@@ -381,6 +381,14 @@ extern "C" void rs64_sg_draw(uint8_t* rdram, uint32_t node, uint32_t m) {
         for (uint32_t i = 0; i < 12; ++i) { float v = rf(rdram, m + 4 * i) * k; uint32_t u; std::memcpy(&u, &v, 4); MEM_W(4 * i, (gpr)(int32_t)m) = (int32_t)u; }
         ++s.pulled;
     }
+    // s7627 ROGUESQ_STANDINS_CTL=1: real-object positive control for the pixel scorer. In dump window 1 on the off-arm submit calls,
+    // every REAL prebuilt-DL node (not ours) has its 3x3 zeroed so its triangles collapse to a point: real objects flicker exactly
+    // as a drawing stand-in would. Ours are never added in this arm. Scorer must find excess here or the pixel chain is blind.
+    static const bool s_ctl = [] { const char* e = std::getenv("ROGUESQ_STANDINS_CTL"); return e && *e && *e != '0'; }();
+    if (s_ctl && s_sg_cur == 0 && rs64_standins_fb_win == 1 && rs64_standins_fb_on == 0) {
+        for (uint32_t i = 0; i < 9; ++i) MEM_W(4 * i, (gpr)(int32_t)m) = 0;
+        ++s.pulled;
+    }
 }
 extern "C" void rs64_sg_draw_end(void) { s_sg_cur = -1; }
 // Prebuilt-DL queue probe (tools/apply_s7626_sg_probe.py part 3): matrices converted for stand-in nodes since the last queue reset,
@@ -495,7 +503,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     s_frame = frame;
 
     static const bool s_log = [] { const char* e = std::getenv("ROGUESQ_STANDINS_LOG"); return e && *e && *e != '0'; }();
-    rs64_sg_probe = (s_log || std::getenv("ROGUESQ_STANDINS_PULL")) ? 1 : 0;
+    rs64_sg_probe = (s_log || std::getenv("ROGUESQ_STANDINS_PULL") || std::getenv("ROGUESQ_STANDINS_CTL")) ? 1 : 0;
     const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     static double s_t0 = std::floor(now);  // windows on whole seconds, so a tog window is all-on or all-off
     if (s_log && now - s_t0 >= 1.0) {
@@ -532,6 +540,8 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     if (s_dwin == 2) on = false;
     rs64_standins_fb_on = on ? 1 : 0;
     rs64_standins_fb_call = s_calls;
+    static const bool s_ctl = [] { const char* e = std::getenv("ROGUESQ_STANDINS_CTL"); return e && *e && *e != '0'; }();
+    if (s_ctl) on = false;  // s7627 control arm: stand-ins never drawn, real objects flicker instead (rs64_sg_draw)
     if (!on) {
         // spawn bookkeeping still runs on off frames so the visible-before-spawn time is exact
         for (Standin& s : s_standins)

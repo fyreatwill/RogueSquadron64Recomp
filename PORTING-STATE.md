@@ -203153,3 +203153,18 @@ Summary: this refutes H-traverse, H-overflow and H-drain for stand-ins (walk cou
 other-node control), and refutes the s7625 "draw path drops them" reading as an artifact of a stimulus-free dump window. It selects
 "stand-in draws reach the display list" for the CPU side. The next discriminator: soak s7626_standins_pixels, flicker excess at 10/16 s
 with PULL=3 vs true depth plus a real-object toggle control; P>0 selects drawn, P=0 with draws>0 selects RSP/RDP loss.
+
+## Session 7627 (2026-11-18) — G6c step 3d: stand-ins DRAW RDP pixels (pulled and true depth), real-object positive control fires
+- Added ROGUESQ_STANDINS_CTL=1 (src/main/rs64_standins.cpp): a real-object positive control for the pixel scorer. In dump window 1
+  on off-arm submit calls every REAL prebuilt-DL node gets its camera-space 3x3 zeroed in rs64_sg_draw (triangles collapse), and
+  stand-ins are never added, so real objects flicker the way a drawing stand-in would.
+- Ran soak s7626_standins_pixels in-session (owner idle), 3 arms L1 dd4 STANDINS=frame, dumps 10 s (toggle) / 16 s (forced off),
+  90 swaps. First attempt with HOLD=60 dumped 0 window frames: HOLD is total wall time and 60 s never reached the mission (no
+  [standins-s] lines) -> HOLD=150. Result, flicker px/triplet window 1 vs window 2:
+  P (PULL=3) 1071.2 vs 107.5 (hot mask 881 px, window-1 stand-in draws ~1550/s); N (true depth) 546.9 vs 107.7 (hot 36 px,
+  900 draws/s); C (control) 180890.8 vs 107.5 (hot 206151 px, 0 stand-in draws). Synthetic control PASS in every arm; 3/3 alive,
+  0 crash, vi_stalls30s=0, max_gap 145-148 ms.
+- Shows: the RSP/RDP path draws stand-ins, also at true depth; s7624/s7625 "accepted stand-ins draw nothing" stays superseded.
+  Rules out H-rsp-loss. Smaller true-depth footprint fits terrain occlusion/size at distance. Single run, scorer only: N to be
+  confirmed by eye in the step-3 proof sheet.
+- Next: step 3 proof, L1+L4 at dd2/dd4, on/off pairs + spawn early_s (NEXT.md).

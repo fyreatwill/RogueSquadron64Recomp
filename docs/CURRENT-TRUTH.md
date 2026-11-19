@@ -309,8 +309,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     control): traverseSceneGraphRecursive visits/converts them (L1 81591 in 130 s, cam z 42-121, packed t < 2^31); their meshes
     are prebuilt-DL (flags 0x00100018, same as most real objects) and queue mesh+0x34 at 0x80116400; beginFrameDLChunk reads
     100% of those entries (65390/65390). The dump windows (40-46 s after first submit) held ~0 stand-in draws (L1 0, L4 ~60/s
-    for 2 s); they draw at 9-19 s. Open: RDP pixels. Soak s7626_standins_pixels (dumps 10/16 s, ROGUESQ_STANDINS_PULL=3 =
-    same screen place at depth 3, vs true depth) answers it.**
+    for 2 s); they draw at 9-19 s. **Step 3d (s7627): stand-ins DRAW RDP pixels.** L1 dd4 STANDINS=frame, dumps 10/16 s,
+    flicker px/triplet window1 vs forced-off window2: P (PULL=3) 1071 vs 107.5, N (true depth) 547 vs 108, real-object control
+    C (ROGUESQ_STANDINS_CTL=1, real nodes collapsed on off calls, ours never added) 180891 vs 107.5; synthetic control PASS all
+    arms, 3/3 alive 0 stall. Single run, scorer-only: N hot mask is small (36 px), so confirm by eye on on/off frame pairs in the
+    step-3 proof sheet (L1+L4, dd2/dd4, early-vs-pop) before the 19-level 300 s holds.
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

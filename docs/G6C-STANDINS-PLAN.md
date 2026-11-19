@@ -151,3 +151,10 @@ tools/apply_s7626_sg_probe.py (3 parts, ROGUESQ_STANDINS_LOG=1) follows them aft
 The s7624/s7625 pixel windows (dumps at 40-46 s after the first submit) fell where stand-in draws are ~0 (L1 0; L4 ~60/s for 2 s);
 stand-ins draw at 9-19 s. ROGUESQ_STANDINS_PULL=<D> scales a stand-in's camera-space matrix to depth D (same screen place and size)
 to separate depth loss / terrain occlusion from RSP loss. Next: pixel test at 10/16 s, PULL=3 vs true depth (soak s7626_standins_pixels).
+
+## Step 3d result (s7627): stand-ins produce RDP pixels
+Soak s7626_standins_pixels (L1 dd4, STANDINS=frame, dumps 90 swaps at 10 s toggling / 16 s forced off, HOLD=150; HOLD=60 never
+reached the mission). Flicker px per triplet, window 1 vs window 2: P (PULL=3) 1071 vs 107.5 (hot mask 881 px); N (true depth)
+547 vs 108 (hot 36 px); C real-object control (ROGUESQ_STANDINS_CTL=1: real prebuilt-DL nodes get a zero 3x3 on off-arm calls in
+window 1, ours never added) 180891 vs 107.5. Synthetic control PASS in all arms; window-1 stand-in draws 1547-1558/s (P), 900/s (N).
+So the RSP/RDP path draws them, at true depth too; terrain occlusion makes the true-depth footprint smaller. Next: step 3 proof sheet.

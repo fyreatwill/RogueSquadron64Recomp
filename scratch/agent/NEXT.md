@@ -1,19 +1,19 @@
-# NEXT (s7627)
+# NEXT (s7628)
 HYPOTHESIS-ID: g6-upstream-features
 
-G6c step 3d: do stand-in display-list calls produce RDP pixels? s7626 proved the CPU side end to end (walk visits and converts
-them, prebuilt-DL queue 0x80116400 gets them, beginFrameDLChunk reads 100%) and showed every earlier pixel test sat in a window
-with ~0 stand-in draws (docs/G6C-STANDINS-PLAN.md "Step 3c result").
-1. Fold soak s7626_standins_pixels if the loop ran it (scratch/agent/SOAK-RESULTS.md, scratch/s7626_soak). If not run yet (owner on
-   the machine), run it in-session when idle >= 300 s: `zsh scratch/agent/soak_queue/s7626_standins_pixels.sh` (moves nothing;
-   delete the queued copy after an in-session run). ~5 min, L1 dd4, dumps at 10/16 s after the first submit.
-2. ALSO add a real-object positive control so the scorer is fed a frame known to hold an object: ROGUESQ_STANDINS_CTL=frame skips
-   addNpcToVisibilityBucket for REAL spawned objects (not ours) on odd submit calls in window 1 (hook at the game's own callers is
-   overkill: a host flag checked in a tiny apply script at 0x80057C8C entry returning v0=0 when set and inst not in our region).
-   Scorer must find flicker excess in that arm, or the pixel chain itself is blind.
+G6c step 3 proof: stand-ins are visible early instead of popping. s7627 showed they draw RDP pixels (flicker/triplet P 1071, N 547
+vs ~108 forced-off; real-object control C 180891; docs/G6C-STANDINS-PLAN.md "Step 3d result").
+1. One recipe (scratch/agent/soak_queue/s7628_standins_proof.sh, SOAK_NEEDS_IDLE=300, HOLD=150 (60 never reaches the mission),
+   built on the s7626_standins_pixels script in soak_queue/done/): arms L1 dd2, L1 dd4, L4 dd2, L4 dd4 (the LEVEL selector of
+   tools/g1e_owner_quiet_arms.zsh), each ROGUESQ_STANDINS=frame+ROGUESQ_STANDINS_LOG=1+ROGUESQ_STANDINS_DUMP=10:16:90+FB_DUMP_DIR.
+   Same-run on/off pairs = adjacent window-1 frames (labels 0/1).
+2. Offline: per arm, the flicker score (tools/s7624_flicker_score.py, with --control) and a contact sheet of 4 on/off adjacent pairs
+   cropped around the hot mask (python + PIL; owner-viewable PNG in scratch/s7628_sheet/). Also fold [standins-spawn] early_s
+   (seconds a stand-in was visible before the real object spawned) per arm.
+3. Confirm by eye that the N-arm (true-depth) excess is stand-in shaped (s7627 hot mask only 36 px at L1 dd4).
 Outcomes:
-- P (PULL=3) excess > 0 and N excess > 0 -> stand-ins draw; step 3 proof (frames early vs pop) on L1+L4 at dd2/dd4, then 300 s holds.
-- P > 0, N = 0 -> depth: occlusion by terrain (legit) vs far clip / fog: compare P at D=20 (inside object far) vs D=3.
-- P = 0 with window draws > 0 and the real-object control > 0 -> lost in the RSP/RDP path: dump the F5 DL for a stand-in matrix
-  address (matrix ptrs recorded in s_q_ours_mtx) and check the G_MTX + G_DL commands reach the ucode.
-Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; check idle (owner was active at 20:15).
+- excess > 0 and early_s > 0 on both levels at both dd -> step 3 proof done; next: 300 s holds on all 19 levels with STANDINS=1 at dd4
+  (queue as soaks, 2 levels per recipe to stay under the 600 s cap), then the owner sheet.
+- excess only at dd4, not dd2 -> stand-ins at dd2 lie inside the game's own spawn radius (expected little gain); report, still hold.
+- excess but sheet shows wrong shapes/positions -> placement bug (place_on_path / build_state in src/main/rs64_standins.cpp).
+Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; check idle first (owner active ~21:38).
