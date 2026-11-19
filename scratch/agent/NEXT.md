@@ -1,26 +1,21 @@
-# NEXT (s7633)
-HYPOTHESIS-ID: bridge-default-on-diagnostics
+# NEXT (s7634)
+HYPOTHESIS-ID: bridge-walker-fusion
 
 G6a/G6b/G6c still wait only on the owner (docs/OWNER-OPT-INS.md). If the owner reports on any of them, take that first.
-Otherwise this is CURRENT-TRUTH item 23.
+Otherwise this is CURRENT-TRUTH item 24.
 
-Class HB: default-on diagnostic work in the HOST bridge per-task / per-submit paths (src/rsp/dpc_bridge.cpp, 8608 lines,
-170 getenv sites; src/main/rt64_render_context.cpp send_dl). s7632 closed the same question for lib/rt64 (class HD): the only
-default-on copy was the s4281 list snapshot, measured at 0.82 ms/s (0.37% of processRDPLists) and kept. s7068 already gated
-three per-command calls in the bridge; nobody has enumerated the whole bridge.
-Tools exist: `python3 tools/s7632_dd_scan.py --hot src/rsp/dpc_bridge.cpp,src/main/rt64_render_context.cpp --out S.json`,
-`python3 tools/s7632_dd_ast.py --hot <same> --out A.json` (both run clean on dpc_bridge: 874 / 1554 raw rows), then
-`python3 tools/s7632_dd_census.py S.json A.json --plant-scan .. --plant-ast .. --drop-control` (plant: scratch/s7632/plant_hd.cpp).
-Expect to extend CLASS / FNCLASS in the census for the bridge's names (functional rows: dpc_record_submit_impl, spike_scan,
-CULL_SPIKE, G1d rect/pause/title glue, s7018). Rows: ONCE / ENV / BUDGET / SIG / ALWAYS -> classify every ALWAYS row
-(functional / scalar / copy / UNCACHED getenv). Controls as s7632: planted ring + snap -> ALWAYS, planted env print -> gated,
-drop-one-row -> disagreement.
-Then measure ONLY rows that copy, allocate, hash or call getenv per task: one build with a ROGUESQ_S7633_STATS timer
-(steady_clock, one line per 10 s, like the [s7632] line in lib/rt64/src/hle/rt64_interpreter.cpp) around each candidate, and a
-=0 gate per candidate, same session arms via `env R=.. HOLD=120 ARMS="4:hL1:..+ROGUESQ_FORCE_SAVE_MISSION=1 4:hL4:.." zsh
-tools/g1e_owner_quiet_arms.zsh` (s7632 recipe, needs host idle >= 120 s and AC). Decision rule (s7632): gate default OFF only
-if the same-run timer shows >= 1% of the measured call cost or >= 2 ms per second (0.2% of a core); otherwise close as
-harmless, no change (the s7632 snapshot, 0.82 ms/s = 0.37%, was kept by this rule).
-Witness hygiene: start the game normally and kill ONLY that pid with SIGKILL. Never launch under lldb. Never touch
-build/saves. Never clear ROGUESQ_NO_SAVE_WRITE. One game at a time. Do not rebuild while a soak arm is running (each arm
-re-launches the binary).
+s7633 (class HB closed) measured the per-RDP-submit walkers in rs64_dpc_record_submit_impl (src/rsp/dpc_bridge.cpp ~6081) at
+L1 dd4 16:9 FPS60: pillar (rs64_g1d_pillar_scan, already fused with rect_wrap by s7016, rs64_glue_fuse) 12.5 ms/s, spike
+(rs64_spike_scan, CULL_SPIKE) 8.2 ms/s, tail (rs64_region_scan, armed at wide aspect by main.cpp:14403) ~6 ms/s. Each walks
+the whole submit byte range again. Timer: ROGUESQ_GLUE_TIME=1 ([s7016-glue], per walk bucket, split by mach-second parity).
+
+Hypotheses: H-walk (most of each walker's cost is the shared decode loop -> fusing saves ~half of spike+region, ~7 ms/s);
+H-body (cost is in per-command bodies (spike: per-tri vertex math; region: bbox) -> fusion saves <2 ms/s, close as not worth it).
+Discriminator, one build: add a cheap "decode-only" walk arm (ROGUESQ_S7634_NULLWALK=1 walks the submit with the same op-size
+table and does nothing) timed in its own GLUE_TIME bucket in the same run. decode-only cost ~= spike+region cost -> H-walk ->
+fuse; << -> H-body -> close, no change.
+If H-walk: fold spike + region per-command bodies into the fused walk behind ROGUESQ_S7634_FUSE (default on, =0 old, =tog
+mach-second parity like GLUE_TOG). Proof: byte-identical RDP output (ROGUESQ_G5B_FRAME recording, fused vs =0, same run via tog,
+or s7016's fused_patches check pattern) + spike cull count equal + the GLUE_TIME saving; L1 and L12 at dd4 16:9.
+Recipe: `zsh scratch/s7633/run.zsh` (arm.zsh 1 4 ..., HOLD 100+140, sampler from +90 s); needs host idle and AC.
+Witness hygiene: kill only the game pid with SIGKILL; never launch under lldb; never touch build/saves; one game at a time.

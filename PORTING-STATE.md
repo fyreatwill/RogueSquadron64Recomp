@@ -203299,3 +203299,28 @@ HYPOTHESIS-ID: rt64-default-on-diagnostics
   (engineering change, not instrumentation only).
 - Next discriminator: class HB, the same enumeration + same-run timer for src/rsp/dpc_bridge.cpp + rt64_render_context.cpp
   send_dl (scratch/agent/NEXT.md).
+
+## Session 7633 (2026-11-19) — class HB closed: host bridge default-on diag work 0 OPEN on two sources; the ~27 ms/s per-submit walker cost is all functional (pillar edge, CULL_SPIKE, wide-aspect radar shift); one per-commit getenv latched
+
+HYPOTHESIS-ID: bridge-default-on-diagnostics. No regen (src/ only).
+- Census: tools/s7632_dd_scan.py + s7632_dd_ast.py `--hot src/rsp/dpc_bridge.cpp,src/main/rt64_render_context.cpp` (950 / 600 rows
+  after propagation, joint 565), new tools/s7633_hb_census.py (imports the s7632 census, adds the bridge's hand classes; every row
+  read with the enclosing-condition walker scratch/s7633/encl.py). The two extractors miss the bridge's env-latched GLOBALS
+  (g_rs64_s7026, g_rs64_aq_on from main.cpp:7219, g_bf_check, g_bfsh_mode) and `if (s_x < 0) { getenv }` latches; with them classified:
+  joint default-on rows gated 70 / once 54 / budget 25 / functional 11 / scalar 9, **0 OPEN, 0 copy rows**, one-source rows all
+  classified. Controls PASS: planted ring+snap -> ALWAYS, planted env/sig rows kept off default, drop-one -> +1/+1 one-source rows.
+- Fixed: rs64_dpc_defer_end_impl called getenv("ROGUESQ_TRACE_DISPATCH") on every committing task; now a static latch (cheap
+  already since s7066's cached getenv, but it was the only uncached per-task getenv in the bridge).
+- Same-run measurement (scratch/s7633/run.zsh: L1 dd4 16:9 FPS60 owner recipe + ROGUESQ_GLUE_TIME=1, 242 s hold, alive,
+  vi_stalls30s=0, 0 crash lines; 178 x 1 s `sample` dumps scored by tools/s7067_selftime.py). Two lines that agree:
+  timer [s7016-glue] pillar 12.5 + spike 8.2 + tail 5.5-6.2 ms/s (~27 ms/s, 2.7% of a core); sampler (1.42 ms/sample on Gfx)
+  rs64_dpc_record_submit_impl 2780 (~22 ms/s) + rs64_rw_cmd 307 (~2.4 ms/s) = ~25 ms/s.
+  Every walker in that cost is functional: pillar = rs64_g1d_pillar_scan (ROGUESQ_G1D_DEBRIEF, default on), spike = CULL_SPIKE
+  (default on, owner), tail = rs64_region_scan, which main.cpp:14403 arms at wide aspect by setenv(ROGUESQ_LOG_REGION) = the radar
+  disc shift (log capped at 400 lines). Floor / g5b_frame / wipe walkers return at once.
+  Diagnostic leftovers on Gfx, each under the s7632 decision rule (2 ms/s): rs64_s7521_force_cur 118 samples (~0.9 ms/s, an
+  out-of-line `return on && state` per DPC_CURRENT poll), rs64_g5b_tg_edge 42, rs64_s7497_zdraw 40, rs64_e9prov_* ~180 total.
+  rs64_dpc_current_read 422 is the functional DPC poll emulation. -> **class HB CLOSED, H-clean, no gate needed.**
+- Rules out: per-task diagnostics in the bridge as a frame-cost source at the owner recipe. Open lever (not diagnostic): the
+  three functional walks each re-walk every submit (~25 ms/s on the Gfx thread at 16:9); fusing spike + region into the s7016
+  fused pillar walk is the next measurable cut. Item 24.

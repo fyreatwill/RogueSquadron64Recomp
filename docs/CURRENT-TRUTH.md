@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7632 (2026-11-19).
+Compact operational handoff, as of Session 7633 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -25,7 +25,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   the sdl2-compat virtual pad although its callback runs; the log now prints has/err for the owner's real pad. No SDL_Haptic
   fallback (our input only opens SDL_GameController). Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
-  PROJECT-OVERVIEW "(s7622 maintenance)"). H-clean, no fix: HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
+  PROJECT-OVERVIEW "(s7622 maintenance)"). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
   C-applicable check run; RS64_DIV32). Bounded/gated/masked: GR s7599, GX s7600, BS s7601 (5 diag composers fixed), AZ s7598
   (ROGUESQ_S7598_MASK=0 = old). Fixes landed, default on, =0 restores old: TK ROGUESQ_S7608_TK, UW s7607 (one fix), FR s7605 /
@@ -334,8 +334,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (ROGUESQ_S7632_STATS=1): 0.82 / 1.03 ms/s at L1 / L4 dd4 = 0.37-0.43% of processRDPLists (which uses about 23% of a core at dd4,
     single-source), so **kept**. ROGUESQ_S7632_SNAP=0 skips it. Fixed: 2 per-call getenv in uploadTexture (UPSPAN, TMEM_ZERO) are
     now static latches.
-23. **Class HB (default-on diagnostic work in src/rsp/dpc_bridge.cpp + rt64_render_context.cpp per task/submit): NEXT
-    (s7633).** Reuse the s7632 tools with `--hot`. Scope in scratch/agent/NEXT.md.
+23. **Class HB (default-on diagnostic work in src/rsp/dpc_bridge.cpp + rt64_render_context.cpp): CLOSED s7633, H-clean.**
+    tools/s7633_hb_census.py (s7632 scan+AST with `--hot`, bridge hand classes): 0 OPEN, 0 copy rows, controls PASS. Same run
+    (L1 dd4 16:9 FPS60, GLUE_TIME timer + `sample`, agree ~25-27 ms/s): all per-submit walker cost is functional (G1D_DEBRIEF pillar
+    12.5, CULL_SPIKE 8.2, wide-aspect radar region shift ~6 ms/s, armed by main.cpp:14403 setenv). Diag leftovers each <1 ms/s.
+    Fixed: per-commit getenv(ROGUESQ_TRACE_DISPATCH) latched.
+24. **Walker fusion (perf, not diagnostic): NEXT (s7634).** The pillar, spike and region walks each re-walk every RDP submit
+    (~25 ms/s on the Gfx thread at 16:9 dd4). Fold spike_scan + region_scan into the s7016 fused walk; scope in NEXT.md.
 
 ## Evidence index
 

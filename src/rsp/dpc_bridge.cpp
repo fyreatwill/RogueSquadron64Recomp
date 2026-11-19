@@ -8301,7 +8301,8 @@ static void rs64_dpc_defer_end_impl(int commit) {
         // Diag: per-task committed RDP volume (correlate with [ucode-b] lines
         // to confirm B tasks emit real work). Same gating as defer-drop.
         static int s_c = 0;
-        if (getenv("ROGUESQ_TRACE_DISPATCH") && (++s_c <= 64 || (s_c & 63) == 0)) {
+        static const bool s_trace_dispatch = getenv("ROGUESQ_TRACE_DISPATCH") != nullptr;  // s7633 class HB: was a per-commit getenv
+        if (s_trace_dispatch && (++s_c <= 64 || (s_c & 63) == 0)) {
             fprintf(stderr, "[defer-commit #%d] %zu ranges, %u bytes\n",
                     s_c, g_deferred_ranges.size(), bytes);
         }
