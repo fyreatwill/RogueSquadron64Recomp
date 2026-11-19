@@ -204,6 +204,50 @@ When choosing the work unit, this order overrides Next-steps ordering:
      4:3, 16:9 and 21:9 window sizes and a fullscreen capture on the built-in display;
      update docs/OWNER-OPT-INS.md with the one-line command for each screen. Defaults stay
      4:3 retail unless the owner says otherwise.
+   - G6 **Owner request 2026-11-18: three features borrowed from upstream, take NOW in this order, ahead of
+     NEXT.md and any G5 item that is only waiting for the owner's look.** Upstream (MikeSemicolonD) main is
+     fetched as `origin/main`; read it with `git show origin/main:<path>`, never merge or cherry-pick it (it
+     is HLE + toml hooks, we are LLE + fixup scripts; see the upstream comparison in PORTING-STATE s-entry
+     for 2026-11-18 if written, else this item). Every change keeps the owner's current experience as the
+     default unless stated, and needs a same-run positive control like any other result.
+     G6a **Rumble.** Ours is a stub: `static void set_rumble(int, bool) {}` (src/main/main.cpp ~13219), so
+     the game's Rumble Pak motor pulses go nowhere. Port the HOST side of upstream src/input/rumble.cpp
+     (446 lines) + rumble.h: a ~60 Hz rumble thread that averages the game's on/off motor pulses into a
+     duty cycle and drives SDL_GameControllerRumble (fallbacks SDL_JoystickRumble / SDL_Haptic). Lesson
+     from the owner's Starship port (memory): the game strobes the motor like PWM and zero/short-duration
+     SDL rumble calls do nothing on DualShock 4 over macOS, so stretch pulses (duty averaging, >=100 ms
+     SDL durations) rather than mirroring each edge. First check the game actually sees a Rumble Pak on
+     port 0 by default (s7516 ROGUESQ_PAK_SHAPE_CTL=1 is the existing control that reports one); if it
+     does not, report one by default so the game sends pulses, without breaking saves (EEPROM, not a
+     Controller Pak). Skip upstream's damage-scaling / death-spiral / lightbar layers unless they need
+     no guest hooks. Default ON with `ROGUESQ_RUMBLE=0` to turn it off and `ROGUESQ_RUMBLE_SCALE` (0..2).
+     Proof: log motor pulses and SDL rumble calls while firing / taking hits on a forced level, with a
+     same-run RUMBLE=0 control. Closes on the owner feeling it on a PS4/PS5 pad; add it to OWNER-OPT-INS.
+     G6b **Control rebinding tool for OUR scheme.** The owner likes the current controls and does NOT want
+     upstream's defaults. Build a way to customise our own mapping: (1) move today's hard-coded pad and
+     keyboard map in get_n64_input (main.cpp ~12330-12400, incl. R2 -> C-Left, L3 -> C-Right, left trigger
+     -> Z, WASD/ZXC/QE/IJKL/arrows/Enter) into a table whose built-in defaults are EXACTLY today's mapping
+     (byte-identical N64 button output for every input with no config file present: prove it with a
+     same-run table-vs-old comparison); (2) load overrides from a JSON file in the data folder (e.g.
+     `controls.json`, missing = defaults), allowing several bindings per N64 button and the analog
+     triggers/stick as sources; (3) an in-game rebinding panel (RT64 already has an ImGui overlay on F1;
+     add a Controls panel, e.g. F6: pick an N64 button, press the pad/key to bind, save, reset to
+     defaults). Upstream src/input/input_bindings.cpp (1314 lines) and its F6 panel are a reference for
+     format and UI only. Do not change any default binding. Document it in README Controls + OWNER-OPT-INS.
+     G6c **Far-object stand-ins (owner wants this; biggest job).** Upstream src/game/static_standins.cpp
+     (428 lines) draws stand-in models for buildings/turrets/ground units the game has not spawned yet, so
+     they stop popping in at higher draw distance (our open issue, G5b/OWNER-OPT-INS). It is renderer-
+     independent: it adds models to the game's own visibility bucket, driven by upstream toml hooks on
+     runInMissionFrame before 0x800FAC68 and selectMeshLod 0x80058264 (`git show origin/main:rogue_squadron.toml`,
+     search "stand-ins"; also src/game/toml_hooks.c and hook_helpers.cpp for what the hook bodies call).
+     We have no toml hooks: re-express each hook as a fixup/apply script registered in RS64_REPLAY (docs/
+     REGEN-VERIFY.md) so it survives regen. Write a short design doc first (docs/G6C-STANDINS-PLAN.md:
+     which guest structures it reads, which addresses differ between upstream's build and ours, and how
+     each hook maps onto our generated functions), then implement in steps. Opt-in first
+     (`ROGUESQ_STANDINS=1`), active only at draw distance > 1; at dd1 retail must be untouched. Proof:
+     same-run on/off frames at dd2 and dd4 on 2+ levels showing objects visible early instead of popping,
+     plus crash-free 300 s holds on all 19 levels with it on. Then an owner sheet; closes on the owner's
+     look, after which the owner decides whether it becomes the default at dd>1.
    - G5 **Owner playtest 2026-11-04: take NOW, in this order, ahead of NEXT.md and all G1e
      present/latency work.** Owner recipe for every arm unless stated: `ROGUESQ_FPS60=1
      ROGUESQ_DRAW_DISTANCE=4 (or 2) ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1`, no RDP_ASYNC or
