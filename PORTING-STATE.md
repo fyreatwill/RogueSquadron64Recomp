@@ -203345,3 +203345,6 @@ the decision uses the clean 1-pass arm.
 Rules out: H-body (per-command bodies are not ~all of the cost). Does not show the fusion is worth much: the whole ceiling is
 ~0.1 ms/VI. NEXT.md: mechanical fusion behind ROGUESQ_S7634_FUSE (default 1, 0 old, tog, chk memcmp with injected-edit
 control), with a stop rule if the bodies turn out to depend on bytes ahead of `a`. Instrument stays (env-gated, default off).
+Discrimination: this selects H-walk and refutes H-body (decode-only pass = 1.49 of spike+region 7.36 per parity half; 2 passes
+removable = ~6 ms/s > the 2 ms/s H-body bound). Next discriminator: ROGUESQ_S7634_FUSE=chk memcmp of fused vs two-walk output
+per submit (0 mismatches required, injected-edit control must count exactly its edits) plus the GLUE_TIME saving on FUSE=tog.
