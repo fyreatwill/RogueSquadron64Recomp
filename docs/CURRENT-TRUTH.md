@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7668 (2026-11-19).
+Compact operational handoff, as of Session 7670 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7670: F6 panel open across a live window resize (windowed, ASPECT=auto, 1226x796 -> 1512x648 21:9-class -> 1280x720):
+  3 arms same build, all alive, 0 crash, 0 stall, level_ok=1. Fix arm P: stale path fired, 0 aspect-mismatched draws; old-path arm O
+  (ROGUESQ_S7668_ASPECT=0, positive control): exactly 1 squashed draw per resize (~17 ms, vs ~33 draws after a fullscreen toggle);
+  no-panel control C equal. A plain resize republishes the window size within one draw. scratch/s7670/run.zsh + score.py.**
 - **NEW s7669: rumble cannot stick across abort -> hangar -> restart.** s7326 hangar route at the owner recipe (4 loads, 3 re-entries):
   the game Init+Stops the motor before every hangar entry (serviceRumblePakMotors, from beginMissionEndTransition), motor off at all
   7 transitions, 0 runs >2 s; planted 3.3 s stuck run caught (ROGUESQ_S7669_STUCK_PLANT=1). Detector: ROGUESQ_LOG_RUMBLE=1 `[rumble]

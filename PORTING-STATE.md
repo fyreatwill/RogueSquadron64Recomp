@@ -204455,3 +204455,24 @@ pattern). Motor state at every hangar entry and initMission = off. game LONG run
 Selects H-game-stops; refutes H-host-stuck and H-game-stuck on this route. Not covered: an abort while an effect is live (effects
 here only fire at mission start; the code read says serviceRumblePakMotors would stop it). Scorer scratch/s7669/score.py
 (0 clean / 1 stuck / 3 control FAIL). The post-ra-removal rebuild changed logging only and was not re-run.
+
+## Session 7670 (2026-11-19) — F6 panel open across a live window resize to 21:9-class and back: no crash, no stall, the s7668 stale-size fix covers resizes too (old path squashes 1 draw per resize)
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=26 new=0 (no owner crash). No owner report. NEXT.md unit: F6 panel at a
+live window resize. Hypotheses: H-ok (stale path fires, draws resume at the new fb size within 0.5 s) vs H-squash (panel drawn at the
+old size after the resize, like the s7668 toggle case) vs H-crash (Metal drawable size mismatch).
+Run scratch/s7670/run.zsh (g1e owner quiet arms, dd4 FPS60 forced L1, HOLD 130, one game at a time, host idle ~175 min, battery 78%,
+ALLOW_SLOW), all arms ROGUESQ_FULLSCREEN=0 ROGUESQ_ASPECT=auto ROGUESQ_WIN_TEST_RESIZE_S=70:1512:648,95:1280:720 (drawables
+3024x1296 and 2560x1440, HiDPI):
+- P (panel open 40..125, fix default): alive, 0 stalls, max_gap 148 ms, level_ok=1; 11 size-change draw lines, `stale window size
+  1512x648 vs fb 1226x796` fired at the first resize, 0 aspect-mismatched draws (fb 1226x796 -> 1512x648 -> 1280x720 tracked).
+- O (same + ROGUESQ_S7668_ASPECT=0, positive control): alive, 0 stalls, max_gap 163 ms; exactly 2 mismatched draws, n=1768
+  (fb 1226x796 / win 1512x648) and n=3267 (fb 1512x648 / win 1280x720), one per resize, matching the next draw.
+- C (same resizes, panel never opened): alive, 0 stalls, max_gap 148 ms, 0 panel draws.
+Note the mismatch on a plain resize is the WINDOW size leading the fb by one draw (SetWindowSize on the main thread publishes the
+new size before the drawable resizes), the reverse of the toggle case, and lasts 1 draw (~17 ms) not 33; the aspect check handles
+both directions. Not covered: a same-aspect resize (would mis-scale uniformly for 1 draw, undetectable by the aspect test, harmless);
+moving between two displays (one display here); a real user drag-resize (drives the same SDL size path, many intermediate sizes).
+New crash reports this session: none.
+Conclusion: selects H-ok (0 crash, 0 stall, 0 squashed draws with the fix), refutes H-crash; H-squash is real on the old path but
+only 1 draw per resize (control O), and the s7668 fix already removes it. F6 panel resize thread CLOSED.
