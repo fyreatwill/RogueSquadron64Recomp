@@ -22,6 +22,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <vector>
+#include "rs64_apf.h"  // s7652: s7359 class AJ bounded append for the [standins-*] log rows
 
 extern "C" recomp_func_t* get_function(int32_t vram);
 extern "C" uint32_t rs64_ram_top;
@@ -329,14 +330,14 @@ namespace {
 void vt_flush(uint32_t added) {
     if (s_vt.calls == 0) return;
     char buf[1024]; int o = 0;
-    o += std::snprintf(buf + o, sizeof buf - o, "[standins-why] calls=%u pass=%u added=%u", s_vt.calls, s_vt.passes, added);
+    o = rs64_apf(buf, sizeof buf, o, "[standins-why] calls=%u pass=%u added=%u", s_vt.calls, s_vt.passes, added);
     for (int i = 0; i <= kVtN; ++i) {
         const char* n = i < kVtN ? kVtExits[i].name : "unknown";
-        if (s_vt.rej[i]) o += std::snprintf(buf + o, sizeof buf - o, " %s=%u", n, s_vt.rej[i]);
-        if (s_vt.pass[i]) o += std::snprintf(buf + o, sizeof buf - o, " PASS_%s=%u", n, s_vt.pass[i]);
+        if (s_vt.rej[i]) o = rs64_apf(buf, sizeof buf, o, " %s=%u", n, s_vt.rej[i]);
+        if (s_vt.pass[i]) o = rs64_apf(buf, sizeof buf, o, " PASS_%s=%u", n, s_vt.pass[i]);
     }
     std::sort(s_vt.zs, s_vt.zs + s_vt.nz);
-    o += std::snprintf(buf + o, sizeof buf - o, " dmin=%.0f dmed=%.0f dmax=%.0f\n", s_vt.dmin, s_vt.nz ? s_vt.zs[s_vt.nz / 2] : 0.0, s_vt.dmax);
+    o = rs64_apf(buf, sizeof buf, o, " dmin=%.0f dmed=%.0f dmax=%.0f\n", s_vt.dmin, s_vt.nz ? s_vt.zs[s_vt.nz / 2] : 0.0, s_vt.dmax);
     std::fputs(buf, stderr);
     s_vt = VtTally{};
 }
@@ -358,7 +359,7 @@ void sg_flush() {
     for (int k = 0; k < 2; ++k) {
         SgSide& s = s_sg.s[k];
         std::sort(s.zs, s.zs + s.nz);
-        o += std::snprintf(buf + o, sizeof buf - o, " %s visit=%u draw=%u pulled=%u over2^31=%u tmax=%.3g zmin=%.1f zmed=%.1f zmax=%.1f", k ? "ours" : "other",
+        o = rs64_apf(buf, sizeof buf, o, " %s visit=%u draw=%u pulled=%u over2^31=%u tmax=%.3g zmin=%.1f zmed=%.1f zmax=%.1f", k ? "ours" : "other",
                            s.visit, s.draw, s.pulled, s.over, s.tmax, s.nz ? s.zs[0] : 0.0, s.nz ? s.zs[s.nz / 2] : 0.0, s.nz ? s.zs[s.nz - 1] : 0.0);
     }
     std::fprintf(stderr, "%s\n", buf);
@@ -438,16 +439,16 @@ void psn_flush() {
         int o = std::snprintf(buf, sizeof buf, "[standins-psn] %s", k ? "ours" : "other");
         for (int i = 0; i < 112; ++i) {
             if (!s_psn[k][i]) continue;
-            if (i < 7) o += std::snprintf(buf + o, sizeof buf - o, " L%s=%u", kPsnLab[i], s_psn[k][i]);
-            else if (i == 99) o += std::snprintf(buf + o, sizeof buf - o, " ret=%u ret0=%u", s_psn[k][i], s_psn_zero[k][i]);
-            else if (i >= 100) o += std::snprintf(buf + o, sizeof buf - o, " r%d=%u/z%u", i - 100, s_psn[k][i], s_psn_zero[k][i]);
+            if (i < 7) o = rs64_apf(buf, sizeof buf, o, " L%s=%u", kPsnLab[i], s_psn[k][i]);
+            else if (i == 99) o = rs64_apf(buf, sizeof buf, o, " ret=%u ret0=%u", s_psn[k][i], s_psn_zero[k][i]);
+            else if (i >= 100) o = rs64_apf(buf, sizeof buf, o, " r%d=%u/z%u", i - 100, s_psn[k][i], s_psn_zero[k][i]);
         }
         std::fprintf(stderr, "%s\n", buf);
     }
     for (int k = 0; k < 2; ++k) {
         int o = std::snprintf(buf, sizeof buf, "[standins-dl] %s dl34 null=%u set=%u dl38 null=%u set=%u qmax=%u flags", k ? "ours" : "other",
                               s_dl34[k][0], s_dl34[k][1], s_dl38[k][0], s_dl38[k][1], s_qmax);
-        for (int i = 0; i < 6 && s_fln[k][i]; ++i) o += std::snprintf(buf + o, sizeof buf - o, " %08X:%u", s_fl[k][i], s_fln[k][i]);
+        for (int i = 0; i < 6 && s_fln[k][i]; ++i) o = rs64_apf(buf, sizeof buf, o, " %08X:%u", s_fl[k][i], s_fln[k][i]);
         std::fprintf(stderr, "%s\n", buf);
     }
     std::memset(s_dl34, 0, sizeof s_dl34); std::memset(s_dl38, 0, sizeof s_dl38); s_qmax = 0; std::memset(s_fln, 0, sizeof s_fln);

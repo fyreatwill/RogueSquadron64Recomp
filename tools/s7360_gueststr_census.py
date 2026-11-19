@@ -84,6 +84,11 @@ def scan(lines, only=None):
 MANUAL = {
     ('librecomp/src/print.cpp', 'MEM_B(i, buf)'): ('D', '__osRdbSend: size<=0x800000 but buf unchecked; 0 callers in RecompiledFuncs+Patches; '
                                                        's7360 adds a [buf, buf+size) < rs64-style 8 MB KSEG0 range check'),
+    # s7652: G6c stand-ins (opt-in ROGUESQ_STANDINS=1 at dd>1, mode() in rs64_standins.cpp), read by hand.
+    ('src/main/rs64_standins.cpp', 'i < 64 && rb(rdram, name + i) != 0'): ('CAPPED', 'find_model name byte-sum: i < 64 cap; name passed guest() '
+                                                       '(< 0x81700000) and the 512 MB host map covers +64'),
+    ('src/main/rs64_standins.cpp', 'while (rw(rdram, lists) != 0) {'): ('CAPPED', 'build_instance leaf lists: every pass advances leaf by 0x5C and '
+                                                       'returns at leaf + 0x5C > leaf_end (leaves from the model table), so <= leaves+nodes reads'),
 }
 
 def classify(path, i, kind, what, lines):

@@ -75,8 +75,14 @@ def split_stmts(s):
     return [x for x in out if x not in (';', '')]
 
 
+LUI_U_RE = re.compile(r'S32\((0[Xx][0-9A-Fa-f]+)u << 16\)')
+
+
 def norm(stmt):
     stmt = re.sub(r'\s+', ' ', stmt).strip()
+    # s7652: s7580 tools/fixup_lui_unsigned.py (last fixup pass) rewrites every `S32(0X8011 << 16)` to `S32(0X8011u << 16)`
+    # (C17 6.5.7p4 signed-shift UB fix, same value); the pristine pass predates it. Without this, 20,841 'dropped' rows.
+    stmt = LUI_U_RE.sub(r'S32(\1 << 16)', stmt)
     if CALL_RE.match(stmt):      # symbol renames between the passes are not defects
         return 'CALL(rdram, ctx);'
     return stmt

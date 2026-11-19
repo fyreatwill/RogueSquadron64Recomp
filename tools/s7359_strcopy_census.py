@@ -74,25 +74,33 @@ def classify(lines, i):
     for m in APF.finditer(L): rows.append(('ACC', 'FIXED', m.group(1)))
     return rows
 
+# s7652: keys were 'file:LINE' (prefix-matched on the line number, so 'dpc_bridge.cpp:39' silently covered 39xx and the rest
+# went stale as files grew). Now a key is a bare file (file-wide note) or (file, anchor): the anchor must occur in the row's
+# line or the next line (multi-line snprintf). An anchor that matches no row is reported as ORPHAN (exit 1).
 # MANUAL width proofs for every GUARDED / G accumulator: (file, line-substring) -> note. A GUARDED row is only safe if the
 # largest single write fits under (cap - guard) AND the offset is not reused after the loop beyond cap.
 MANUAL = {
     'scheduling.cpp': 'o<440 of 512; "%d/%d/s%d " <= 37 chars (three ints) -> max o 476; G (s4583 trace, inflight/k<=20)',
-    'events.cpp:1027': 'n<sizeof-40 of buf; " %d.%d:%.0f/%.0f" i<64, osid int, d/blk = per-second ms deltas (<1e7) -> <=33 chars; buf[n]=0 after the loop stays < cap. G (ROGUESQ_G1B)',
-    'events.cpp:1078': 'n<2048-48; cumulative thread cpu/blocked ms %.3f (<1e9 ms = 11 days -> 14 chars) -> <=45 chars; final "\\n" append fits. G (ROGUESQ_G1E_*)',
-    'events.cpp:1098': 'n<512-16; "%d:%u," <= 14 chars (i<64, uint) -> type-bounded. G',
-    'dpc_bridge.cpp:39': 'k+6<n; "%03X " with o<0x1000 = 4 chars -> type-bounded. G (spike dmem log)',
+    ('events.cpp', '"%d:%u,", i, cs_hist[i]'): 'n<512-16; "%d:%u," <= 14 chars (i<64, uint) -> type-bounded. G',
+    ('dpc_bridge.cpp', '"%03X ", o'): 'k+6<n; "%03X " with o<0x1000 = 4 chars -> type-bounded. G (spike dmem log)',
     'fixup_game_funcs_vendored.py': 'n<(int)sizeof line gate + final n<sizeof-1 test before line[n++]; "%s%lu"/"%s%08X:%lu" (<=29 chars) into 8192 -> bounded. G (s5224/s5225 hist)',
     'rt64_state.cpp': 'rcn<440 of 512; one [wbval] rect row <=115 chars may truncate (snprintf terminates) and stops further writes; rc only used as %s -> safe. G (wbval)',
     'rt64_workload_queue.cpp': 'W row: n<140 loop then wk/lk/pid/rs %.3f ms of unbounded doubles; truncation left n>240 and the final "\\n" append wrapped -> FIXED s7359 (clamp n to sizeof-2). G (rs64_pring_on)',
-    'events.cpp:1143': 'strncpy 63 into a 64-byte slot of nr[80] = {2} (zero-filled) -> terminated. G (G1E thread names)',
-    'upstream_compat.cpp:4301': 'used+20<512; "%s%06X-%06X" of uint32 <= 18 chars -> type-bounded. G (fill-span log)',
-    'dpc_bridge.cpp:818': '8 x "%s%08X" (<=9) = 72 < char[96] -> type-bounded. G (g1d chunk words)',
-    'dpc_bridge.cpp:91': '8 x "%s%08X" (<=9) = 72 < char[96] each (pre/post) -> type-bounded. G (g1d-win)',
-    'dpc_bridge.cpp:1000': 'sig_len+8<96; "%s0x%X" off<0x200 <= 6 chars -> type-bounded. G (sig scan)',
+    ('events.cpp', 'strncpy((char *)nr + 16, xi.pth_name, 63)'): 'strncpy 63 into a 64-byte slot of nr[80] = {2} (zero-filled) -> terminated. G (G1E thread names)',
+    ('upstream_compat.cpp', 'spans + used, sizeof(spans) - used, "%s%06X-%06X"'): 'used+20<512; "%s%06X-%06X" of uint32 <= 18 chars -> type-bounded. G (fill-span log)',
+    ('dpc_bridge.cpp', 'words + n, sizeof(words) - n, "%s%08X"'): '8 x "%s%08X" (<=9) = 72 < char[96] -> type-bounded. G (g1d chunk words)',
+    ('dpc_bridge.cpp', 'pre + pn, sizeof(pre) - pn, "%s%08X"'): '8 x "%s%08X" (<=9) = 72 < char[96] (pre) -> type-bounded. G (g1d-win)',
+    ('dpc_bridge.cpp', 'post + qn, sizeof(post) - qn, "%s%08X"'): '8 x "%s%08X" (<=9) = 72 < char[96] (post) -> type-bounded. G (g1d-win)',
+    ('events.cpp', 'o += snprintf(b + o, sizeof(b) - o, " %08X", v[i])'): '20 x " %08X" (9 chars) = 180 < char[400] -> type-bounded. G (rs64_vi_shape_log, s7652)',
+    ('dpc_bridge.cpp', 'sig_offs + sig_len, sizeof(sig_offs) - sig_len'): 'sig_len+8<96; "%s0x%X" off<0x200 <= 6 chars -> type-bounded. G (sig scan)',
     'rt64_render_context.cpp': 'above<=8 x "%s0x%06X" (<=9 chars) = 72 < 96 -> type-bounded, unguarded by design. G (ROGUESQ_G1D_TI)',
+    ('main.cpp', 'k += snprintf(h + k, sizeof h - k, " %s=%llu"'): 'k<512-64 tested before every write; one " %s=%llu" row <= 70 chars '
+        '(tag e<48) may truncate: k then exceeds the gate, the loop stops and the final k<sizeof-1 test drops the line -> no wrapped size. (stderr-cap writer, s7652)',
+    ('timer.cpp', 'ol += std::snprintf(order + ol, sizeof order - ol, "%X,"'): 'ol<160-8 gate; "%X," of (p-lo)/0x20 <= 8 chars + NUL fits the 9 B left -> bounded. (s7397 CheckTimerAction, s7652)',
 }
 DEAD = ['apply_s5786_hudbit4_dump.py', 'apply_s5798_recwatch.py', 'apply_s5866_plwatch.py', 'apply_s5867_callers.py', 'apply_s6992_matwatch.py']
+
+USED = set()
 
 def census():
     rows = []
@@ -101,7 +109,10 @@ def census():
         for i in range(len(lines)):
             if only is not None and (i + 1) not in only: continue
             for t, c, what in classify(lines, i):
-                note = next((v for k, v in MANUAL.items() if (k.split(':')[0] in rel and (':' not in k or f'{i + 1}'.startswith(k.split(':')[1])))), '')
+                J = lines[i] + (lines[i + 1] if i + 1 < len(lines) else '')
+                key = next((k for k in MANUAL if (k in rel if isinstance(k, str) else (k[0] in rel and k[1] in J))), None)
+                if key is not None and not isinstance(key, str): USED.add(key)
+                note = MANUAL[key] if key is not None else ''
                 rows.append((t, c, f'{rel}:{i + 1}', what, note))
     return rows
 
@@ -126,4 +137,6 @@ if __name__ == '__main__':
         if show is None or r[1] in show: print(f'{r[0]:4s} {r[1]:9s} {r[2]} {r[3]} | {r[4] or "(no MANUAL note)"}')
     print('DEAD (not in the regen pipeline):', ', '.join(DEAD))
     bad = [r for r in rows if r[1] == 'B' or (r[1] in ('G', 'GUARDED', 'UNGUARDED', '?') and not r[4])]  # every non-FIXED/CONST/BOUNDED row needs a hand proof
-    print(f'unresolved {len(bad)}'); sys.exit(0 if ok and not bad else 1)
+    orphan = [k for k in MANUAL if not isinstance(k, str) and k not in USED]
+    for k in orphan: print(f'ORPHAN MANUAL anchor (matches no row): {k}')
+    print(f'unresolved {len(bad)} orphan {len(orphan)}'); sys.exit(0 if ok and not bad and not orphan else 1)

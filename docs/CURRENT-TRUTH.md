@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7651 (2026-11-19).
+Compact operational handoff, as of Session 7652 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7651: 4 "closed" census gates had drifted RED; fixed, 0 behaviour sites.** New code since closure (G6b
+- **NEW s7652: full gate sweep = 39 of 135 census gates RED; 6 fixed, 0 behaviour defects.** s7090 (s7580 lui `u` spelling vs
+  stale pristine: 20,841 false 'dropped'), s7359 + s7463/s7465/s7466 (reviews keyed by absolute line, now text anchors with
+  ORPHAN/STALE exit), s7360 (2 stand-ins rules). Stand-ins log appends -> rs64_apf. ~140 sites hand-read, all opt-in or bounded.
+  Six gates have FAILING self-controls (s7531/s7532/s7538/s7542/s7543/s7544): NEXT (item 35).
+- **s7651: 4 "closed" census gates had drifted RED; fixed, 0 behaviour sites.** New code since closure (G6b
   controls, G6c stand-ins, s7535-s7647 instruments) put s7375/s7430/s7533/s7535 at exit 1; all 25 sites opt-in/diag or
   locked. s7535 rules re-keyed from absolute lines to text anchors. `tools/s7651_gate_sweep.py` shows more red gates
   (UB/bounds classes s7339-s7360, mostly rs64_standins/s7523/s7644 sites): triage is NEXT (item 35).
@@ -458,7 +462,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     controls 12/12 (+900-line shift keeps classes; a duplicated anchor -> FAIL-check). `python3 tools/s7651_gate_sweep.py`
     runs every tools/s7*_census.py (control: planted red/green). Partial s7651 pass, 69/135 tools (s7031-s7360): 42 green,
     12 need inputs, 15 RED: s7090 s7316 s7339 s7342 s7343 s7344 s7345 s7346 s7348 s7349 s7350 s7351 s7353 s7359 s7360
-    (new sites in rs64_standins / s7523 / s7644 / s7535_ga_chk; s7360 :155 read by hand = bounded by leaf_end + opt-in). NEXT.
+    (new sites in rs64_standins / s7523 / s7644 / s7535_ga_chk; s7360 :155 read by hand = bounded by leaf_end + opt-in).
+    s7652 full sweep: 83 green, 13 need inputs, 39 RED; fixed s7090 s7359 s7360 s7463 s7465 s7466 (line-keyed reviews ->
+    text anchors; lui-u normaliser). 33 RED left: controls FAIL in s7531/s7532/s7538/s7542/s7543/s7544 (NEXT); s7339-s7353
+    triaged by hand (PORTING-STATE s7652, all opt-in/bounded, rules not written); s7316 needs --ram; s7573 needs logs;
+    s7588-s7616 unread. Lesson: any review keyed by a line number WILL drift; key by text.
 
 ## Evidence index
 

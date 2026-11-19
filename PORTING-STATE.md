@@ -203940,3 +203940,48 @@ Work unit (NEXT s7651, HYPOTHESIS-ID census-attribution-sweep, offline).
   rs64_standins.cpp:155 is bounded (`leaf + 0x5C > leaf_end` returns) and runs only under the opt-in stand-ins mode.
 - Selects H-cosmetic-all for attribution (0 changed sites) and refutes "the closed censuses still hold": 4 + 15 gates were
   red with no one looking. No behaviour defect found among the 25 sites read. Single-source (static reads).
+
+## Session 7652 (2026-11-19) — full gate sweep: 39/135 census gates RED; 6 fixed (s7090 lui-u normaliser, s7359/s7463-6 line-keyed reviews -> text anchors, s7360 stand-ins rules), stand-ins log appends -> rs64_apf; 0 behaviour defects in ~140 sites read
+Work unit (NEXT s7652, HYPOTHESIS-ID closed-gate-drift, offline).
+- Full `python3 tools/s7651_gate_sweep.py --tsv scratch/s7652/gates.tsv` (all 135 tools, control planted red/green PASS):
+  GREEN 83, NEEDS-ARGS 13, RED 39 (s7651's partial pass saw 15 of these). Table: scratch/s7652/sweep.out.
+- Causes found, by gate:
+  s7090 (fixup statement census): 20,841 'dropped' rows were all `S32(0X8011 << 16)` vs live `S32(0X8011u << 16)`: the
+    s7580 tools/fixup_lui_unsigned.py rewrite (signed-shift UB fix, same value) postdates the s7082 pristine pass. norm()
+    now maps the u-form back (only that spelling; a truly dropped lui still counts). Result dropped 0, foreign 0 -> GREEN.
+  s7359 (string-copy/append census): MANUAL keys were 'file:LINE' prefix-matched on the line NUMBER ('dpc_bridge.cpp:39'
+    silently covered 3972/3976; 818/91x/1000 drifted +6; events.cpp +136). Re-keyed to (file, text anchor in line or next
+    line); an anchor matching no row is ORPHAN (exit 1). 2 orphans dropped (events.cpp G1B/G1E rows now use the s7363
+    clamped `w =` form, not an accumulator). New notes: events.cpp:673 vi-shape (20 x 9 chars < 400, rs64_vi_shape_log),
+    main.cpp stderr-cap writer (k<448 tested before each write, a truncating row stops the loop and the line is dropped),
+    timer.cpp:153 s7397 CheckTimerAction (ol<152, <=8 chars + NUL fits). Code change: the 9 `o += snprintf(buf + o, ...)`
+    appends in src/main/rs64_standins.cpp ([standins-why]/-sg/-psn/-dl log rows; opt-in STANDINS + STANDINS_LOG/PULL/CTL)
+    -> rs64_apf (class AJ helper, byte-identical without truncation). Max widths were in fact under 1024 (psn: <=20 entries
+    x <=27 chars), so latent only. Build OK; tools/s7359_apf_ctl.cpp CTL PASS. unresolved 0 orphan 0 -> GREEN.
+  s7360 (guest string reads): the 2 'B' rows are stand-ins code: find_model `i < 64 &&` cap (regex missed the && form) and
+    build_instance `while (rw(lists) != 0)` (each pass leaf += 0x5C, returns at leaf + 0x5C > leaf_end). 2 MANUAL CAPPED
+    rules (text-anchored). Controls PASS -> GREEN.
+  s7463/s7465/s7466 (clang analyzer censuses, shared load in s7463_uninit_census.py): reviewed TSVs keyed (file, line);
+    all 12 survivors were reviewed sites moved +15..+1597 lines (plume_metal 1958->2024 etc.; main.cpp test-crash plants
+    12987->14584, 13129->14726) plus 1 new INTENTIONAL plant (main.cpp:12115 ROGUESQ_S7593_PLANT=crash fixed-address write).
+    TSVs get a 5th column = stripped source line; match by (file, text); an anchor absent from its file is STALE (exit 1).
+    Control (load_reviewed on a planted TSV): moved-line match True, planted bogus anchor -> 1 stale, legacy row kept: PASS.
+    Reruns with --controls: s7463 survivors 0, s7465 0 (10 sites), s7466 0 (5 sites), all controls PASS -> GREEN.
+- Hand triage, no tool change (still RED, reasons recorded here): s7339 mask16 (s7495/s7496/s7500 env-gated pool/EY
+  instruments, s7551_gk_rect `0x1000000u / kWbwPage` is a constexpr page count, s7389_fbld (fbld build + fbld_on, 16 MB
+  page table by design), s7523 (every entry behind rs64_s7523_on = ROGUESQ_S7523_SLOWRDP), s7644 (g_on/g_gon env));
+  s7342 addr-index (s7490_marked/s7518/s7519 bounded o < 0x1800000 with tables 0x1800000>>3 / /16, behind s7490_zhook /
+  s7518_watch; main.cpp:14530 is a string scan e<48, not an address; bind selftest axv[(h>>16)&7] of an 8-entry table);
+  s7343-s7353 (bind_poll memcpy min(nkeys, SDL_NUM_SCANCODES) into keycopy[SDL_NUM_SCANCODES]; F() colour min(c8+d,255);
+  rs64SkipDraw rows are rs64LoadRepCensus r<=2048 under ROGUESQ_SKIP_DRAW; rs64_spike_scan `(int32_t)(w << 18) >> 18`
+  is implementation-defined only pre-C++20, clang defines it; cont.cpp rs64_pak_row ch<4; standins mips_call i<12,
+  (sum%25)*2, w32 shifts 24..0, build_state float div (IEEE, game's own formula); rs64_apf.h is the bounded helper itself;
+  rest are s7475/s7480/s7484/s7501/s7521/s7528/s7535/s7545 env-gated watches). H-diag-all holds for every site read.
+- Selects H-diag-all (s7651 NEXT) for the ~140 sites read; refutes H-live. Three of the six fixes were the same disease as
+  s7535: reviews keyed by absolute line number. ORIGIN: no mitigation added; the rs64_apf change is the s7359 class fix.
+  Single-source (static reads + the tools' own controls); no game run (no runtime behaviour changed outside opt-in logs).
+- Still RED (33): controls FAILING in s7531 (4/5), s7532, s7538 (7/8), s7542 (7/8), s7543 (8/9), s7544 (11/13) -> those
+  instruments are untrusted until fixed (NEXT); s7316 (88 unclassified guest sltu sites, needs --ram dumps); s7339 s7342
+  s7343 s7344 s7345 s7346 s7348 s7349 s7350 s7351 s7352 s7353 (triaged above, rules not yet written); s7573 (no game logs);
+  s7588 s7596 s7597 s7598 s7599 s7600 s7604 s7605 s7608 s7611 s7612 s7613 s7615 s7616 (unread: verdict lines say NOT
+  CLOSED / RESULT FAIL / OPEN, may be by-design report shapes).

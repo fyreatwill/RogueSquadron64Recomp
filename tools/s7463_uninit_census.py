@@ -73,6 +73,33 @@ static int noret(int k) { if (k) return 1; }                           /* missin
 int s7463_control(int k) { return pick(k) + pass() + noret(k); }
 '''
 
+_SRC = {}
+def src_line(f, l):
+    """Stripped text of line l of repo file f ('' if unreadable): the s7652 review anchor."""
+    if f not in _SRC:
+        try: _SRC[f] = open(os.path.join(ROOT, f), errors='replace').read().split('\n')
+        except OSError: _SRC[f] = []
+    ls = _SRC[f]
+    return ls[l - 1].strip() if 0 < l <= len(ls) else ''
+
+def load_reviewed(path):
+    """s7652: reviewed rows were keyed (file, line) only and went stale as files grew (s7465/s7466 12 survivors were all
+    reviewed sites shifted +25..+92 lines). A row may carry a 5th column = the stripped source line at review time; it then
+    matches by (file, text) wherever the line moved. A row whose anchor no longer occurs in its file is STALE (exit 1),
+    never silently dropped. Rows without an anchor keep the old (file, line) match."""
+    rev, anch, stale = {}, {}, []
+    if not os.path.exists(path): return rev, anch, stale
+    for ln in open(path):
+        if ln.startswith('#') or not ln.strip(): continue
+        cols = ln.rstrip('\n').split('\t')
+        f, l, verdict = cols[0], int(cols[1]), cols[2]
+        a = cols[4].strip() if len(cols) > 4 and cols[4].strip() else None
+        if a is None: rev[(f, l)] = verdict; continue
+        anch[(f, a)] = verdict
+        src_line(f, 1)
+        if not any(x.strip() == a for x in _SRC[f]): stale.append((f, l, a))
+    return rev, anch, stale
+
 def main():
     args = sys.argv[1:]
     out = 'scratch/s7463'
@@ -108,17 +135,16 @@ def main():
         for r, res in ex.map(work, tus):
             allhits += res
     uniq = sorted(set(allhits), key=lambda h: (h[1], h[2], h[0]))
-    rev = {}
-    if os.path.exists(REVIEWED):
-        for ln in open(REVIEWED):
-            if ln.startswith('#') or not ln.strip(): continue
-            f, l, verdict, *why = ln.rstrip('\n').split('\t')
-            rev[(f, int(l))] = verdict
+    rev, anch, stale = load_reviewed(REVIEWED)
+    def verdict(h):
+        a = anch.get((h[1], src_line(h[1], h[2])))
+        return a if a is not None else rev.get((h[1], h[2]))
     with open(os.path.join(ROOT, out, 'findings.tsv'), 'w') as fo:
         for h in uniq:
-            v = rev.get((h[1], h[2]), 'UNREVIEWED')
-            fo.write('\t'.join([h[0], h[1], str(h[2]), h[3], v, h[4]]) + '\n')
-    surv = [h for h in uniq if (h[1], h[2]) not in rev]
+            fo.write('\t'.join([h[0], h[1], str(h[2]), h[3], verdict(h) or 'UNREVIEWED', h[4]]) + '\n')
+    surv = [h for h in uniq if verdict(h) is None]
+    for f, l, a in stale: print(f'STALE-ANCHOR {f}:{l} anchor not found in the file: {a[:120]}')
+    if stale: bad = 1
     ca = sum(1 for h in uniq if h[0] == 'A'); cb = sum(1 for h in uniq if h[0] == 'B')
     print(f'findings lineA={ca} lineB={cb} unique_sites={len({(h[1],h[2]) for h in uniq})} survivors={len(surv)}')
     for h in surv[:80]: print('SURVIVOR', h[0], f'{h[1]}:{h[2]}', h[3], h[4][:160])
