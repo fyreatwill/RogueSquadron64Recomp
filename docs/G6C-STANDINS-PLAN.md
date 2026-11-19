@@ -104,3 +104,19 @@ Landed as designed with option 1 (top 1 MB of the spill arena): convertMat3x4ToN
 converts a stack copy into `*0x8011DC5C`, so the RSP never reads the instance. L1 dd2: `[standins] 47 objects, 47 KB` (80 items:
 25 without a model name, 8 probe droids dropped, 0 names unresolved), ~22 submits per frame; dd1 off; dd4 tog alternates. 3/3 arms
 alive, 0 stalls, clean frames. PORTING-STATE s7623.
+
+## Step 3 result (s7624): H-culled — the plan's far-plane assumption was wrong
+
+`ROGUESQ_STANDINS=frame` (alternate submit calls) + `ROGUESQ_STANDINS_DUMP=40:46:90` (fb dumps every swap: window 1 toggling,
+window 2 forced off), L1 and L4 dd4 FPS60 16:9, scored by tools/s7624_flicker_score.py (synthetic 6x6 flicker control PASS on both).
+- addNpcToVisibilityBucket returns 1 only when transformVec3ToNpcLocalWithScale passes and the node is linked (linked list, no cap).
+  Accepted: L1 93 of 40018 submits, L4 361 of 151825 (0.2%). Of later spawns, 2/9 (L1) and 10/59 (L4) were ever accepted first.
+- Flicker per triplet, toggle vs forced-off: L1 3879 vs 4351, L4 1807 vs 2207: no excess; no persistent hot pixels.
+- "Risks: our far plane ... no port of upstream's far_check is needed" (above) is refuted. Upstream hooks the same test at
+  0x8001E078 (far: $f0 *= dd for render callers) and 0x8001DCEC/0x8001DD38 (the +-125 camera-space box, constants 0x8000093C /
+  0x80000940, widened by dd), and keeps translations past convertMat3x4ToN64Mtx's fixed-point reach through RT64's HLE far-matrix
+  table. That last part is the HLE dependency the H-portable reading missed: on our LLE path a widened box would overflow the
+  N64 matrix. Our dd bundle widens neither bound (only s7134 widens the x half-extent under ASPECT).
+Next (step 3b): per stand-in call, log which bound rejects (box low/high, far, frustum side) and the camera-space distance; then
+widen only for stand-in calls (flag around our mips_call). Box overflow candidate for LLE: draw a far stand-in at
+cam + (p - cam)/k with scale 1/k (same projection, inside the matrix reach), checking depth against terrain.

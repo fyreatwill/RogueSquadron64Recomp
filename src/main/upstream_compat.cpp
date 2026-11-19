@@ -1106,6 +1106,8 @@ extern "C" void rs64_store_diag_tick(void);
 extern "C" void rs64_s7503_swap(int, uint32_t);
 extern "C" int rs64_diag_fprintf(FILE* f, const char* fmt, ...);  // s7432
 extern "C" void rs64_s7520_swap(uint8_t* rdram);  // s7520 class FQ (librecomp overlays.cpp)
+extern "C" int rs64_standins_dump_left, rs64_standins_fb_on, rs64_standins_fb_win;  // s7624 G6c (rs64_standins.cpp)
+extern "C" uint32_t rs64_standins_fb_call;
 extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     g_rs64_g1d_rdram.store(rdram, std::memory_order_relaxed);
     rs64_s7520_swap(rdram);
@@ -1359,9 +1361,16 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     const bool epoch_hit = s_fbd_mode
         ? (__atomic_load_n(&rs64_last_vi_mode, __ATOMIC_RELAXED) == s_fbd_mode && n >= s_fbd_min_swap && s_fbd_epoch_left > 0)
         : (s_fbd_epoch >= 0 && __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) == s_fbd_epoch && s_fbd_epoch_left > 0);
-    if (s_fbd && *s_fbd && phase_ok && ((s_fbd_epoch >= 0 || s_fbd_mode) ? epoch_hit : (phase_gate || n % s_fbd_every == 0))) {
+    // s7624 G6c step 3: ROGUESQ_STANDINS_DUMP windows (src/main/rs64_standins.cpp) dump every swap, tagged with the stand-in state.
+    const bool si_hit = rs64_standins_dump_left > 0;
+    if (s_fbd && *s_fbd && (si_hit || (phase_ok && ((s_fbd_epoch >= 0 || s_fbd_mode) ? epoch_hit : (phase_gate || n % s_fbd_every == 0))))) {
+        if (si_hit) {
+            --rs64_standins_dump_left;
+            fprintf(stderr, "[standins-fb] n=%d win=%d on=%d call=%u\n", n, rs64_standins_fb_win, rs64_standins_fb_on, rs64_standins_fb_call);
+        } else {
         if (phase_gate) --s_fbd_phase_left;
         if (epoch_hit) --s_fbd_epoch_left;
+        }
         [&] {
             char path[512];
             const auto regs = *ultramodern::renderer::get_vi_regs();

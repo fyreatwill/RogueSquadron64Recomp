@@ -290,7 +290,15 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     all 17 upstream code addresses identical in our syms. Step 2 LANDED s7623: src/main/rs64_standins.cpp +
     tools/apply_s7623_standins.py (RS64_REPLAY), ROGUESQ_STANDINS=1|tog (+_LOG=1), dd>1 only; region 0x81700000..0x81800000
     (spill capped 7 MB; matrices reach the DL pool via a stack copy, so CPU-only). L1: 47 objects, submits > 0 at dd2/dd4,
-    0 at dd1, 3/3 arms alive 0 stall (single run, on battery). NEXT: step 3, same-run tog frames dd2/dd4 on 2 levels.**
+    0 at dd1, 3/3 arms alive 0 stall (single run, on battery). **Step 3 (s7624): H-culled.** The game's own view test
+    (transformVec3ToNpcLocalWithScale 0x8001DC34, inside addNpcToVisibilityBucket, which returns 1 only when linked; the bucket is
+    a linked list with no cap, so H-budget-at-bucket is refuted by code read) accepts 0.2% of stand-in submits (L1 93/40018,
+    L4 361/151825); only 2/9 (L1) and 10/59 (L4) later spawns were ever accepted before spawning (0.5-4.2 s early). Per-frame
+    toggle fb dumps: flicker per triplet toggling <= forced-off control (L1 3879 vs 4351, L4 1807 vs 2207), synthetic control
+    PASS. The s7621 "no far_check port needed" was wrong: upstream widens that test's far ($f0 *= dd, 0x8001E078) and its
+    +-125 camera box (0x8001DCEC/0x8001DD38, constants 0x8000093C/940) and relies on RT64 HLE far matrices for translations past
+    convertMat3x4ToN64Mtx's reach; we have neither. NEXT: which bound rejects stand-ins, then an LLE-safe widening for
+    stand-in calls only.**
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

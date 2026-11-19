@@ -203044,3 +203044,35 @@ refutes H-addr-drift (would give N=0) and H-gate-differ (would give N>0, submitt
 Next discriminator (step 3, NEXT.md): same-run whole-second tog shots at dd4 on L1 + L4; far-object pixels only in on seconds selects
 H-visible, no on/off difference selects H-culled, a doubled object at a logged spawn selects H-double, real objects missing in on seconds selects H-budget.
 Open: bucket capacity (no fill counter yet), double draw at the spawn moment, objects actually visible earlier (step 3).
+
+## Session 7624 (2026-11-18) — G6c step 3: stand-ins H-culled (game view test accepts 0.2% of submits; no pixel flicker vs same-run off control); s7621 far-plane assumption refuted
+
+What landed:
+- `src/main/rs64_standins.cpp`: `ROGUESQ_STANDINS=frame` (on in alternate submit calls); `[standins-s]` gains `on=` and `added=`
+  (addNpcToVisibilityBucket v0 == 1: view test passed and linked); `[standins-spawn]` per item when item+6 leaves 0xFFFF, with
+  first/last accepted time and `early_s`; `ROGUESQ_STANDINS_DUMP=a:b:n` opens two n-swap fb dump windows (1 toggling, 2 forced off).
+- `src/main/upstream_compat.cpp`: those windows dump every swap through the existing ROGUESQ_FB_DUMP_DIR path and log
+  `[standins-fb] n win on call`.
+- `tools/s7624_flicker_score.py` (pure python, no numpy on host): triplet flicker |b-(a+c)/2| > T with |a-c| < T/2, per window,
+  `--control` paints a 6x6 +90 square into alternate window-2 frames, `--mask` writes the accumulated hot map.
+Code read: addNpcToVisibilityBucket returns 1 only after transformVec3ToNpcLocalWithScale (0x8001DC34) passes and links the node
+into the view's list (0x80058028..48): a linked list, no fixed capacity -> H-budget at the bucket refuted.
+Run (scratch/s7624, g1e_owner_quiet_arms, dd4 FPS60 16:9 fullscreen, HOLD 130, ALLOW_SLOW=1 on battery clk 1.56, functional):
+| arm | objects | on frames | submits | accepted | spawns (t>1 s) accepted before spawn | result |
+|---|---|---|---|---|---|---|
+| L1f | 47 | 1656 | 40018 | 93 (0.2%) | 2/9 (early 2.3, 4.2 s) | alive, crash 0, vi_stalls30s 0 |
+| L4f (FORCE_SAVE_MISSION=4) | 155 | 1710 | 151825 | 361 (0.2%) | 10/59 (0.5-1.5 s typical) | alive, crash 0, vi_stalls30s 0 |
+Flicker scorer (90 swaps per window, labels alternate 89/89 in window 1, call step 1 per swap):
+| level | toggle px/triplet | forced-off px/triplet | synthetic control | accepted in window 1 |
+|---|---|---|---|---|
+| L1 | 3879.1 | 4351.2 | PASS 1927 >= 1056 | 0 |
+| L4 | 1807.5 | 2207.4 | PASS 1943 >= 1056 | 47 |
+Discrimination: selects H-culled (two lines: the accepted counter 0.2%, and no pixel excess over the same-run off window with a
+passing scorer control); refutes H-visible (objects visible earlier) for this build; H-double moot (almost nothing drawn before
+spawn); H-budget at the bucket refuted by code read. L1's window 1 had 0 accepted, so its pixel null is no test of drawing; L4's had 47.
+Superseded: G6C-STANDINS-PLAN "no port of upstream's far_check is needed" (s7621). Believable because our dd scales the camera far
+(apply_s6031_far). But upstream hooks the object view test itself: 0x8001E078 ($f0 *= dd) and 0x8001DCEC/0x8001DD38 (+-125 camera box,
+constants 0x8000093C/940, widened by dd), and leans on RT64 HLE far matrices for translations past convertMat3x4ToN64Mtx's reach.
+Our bundle widens neither (s7134 widens only the x half-extent under ASPECT). So the port is not fully H-portable: the box part is HLE-coupled.
+Next: step 3b, log per stand-in call which bound rejects (box low/high, far, side) and the camera distance; then widen for stand-in
+calls only (flag set around our mips_call); LLE answer to box overflow candidate: place at cam + (p-cam)/k, scale 1/k.

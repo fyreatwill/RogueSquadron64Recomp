@@ -75,7 +75,7 @@ constexpr uint32_t kRegionEnd = 0x81800000u;
 constexpr uint32_t kStateSize = 0x50u;
 constexpr uint16_t kSubProbeDroid = 0x0Eu;
 
-struct Standin { uint32_t item, state, inst, scale; };
+struct Standin { uint32_t item, state, inst, scale; double first_add = -1.0, last_add = -1.0; bool spawn_logged = false; };
 
 uint32_t s_dat = 0;
 std::vector<Standin> s_standins;
@@ -231,7 +231,7 @@ void build_state(uint8_t* rdram, recomp_context* ctx, uint32_t item, uint32_t st
     mips_call(rdram, ctx, kRootMatrix, { inst + 0x28u, state, item + 0x28u });
 }
 
-struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond; };
+struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond, added, onframes; };
 Tally s_t{};
 
 void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
@@ -262,20 +262,28 @@ void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
                  s_standins.size(), (at - kRegion) / 1024u, dat, count, noname, nomodel, probe, full, rw(rdram, 0x80130B70u));
 }
 
-int mode() {  // 0 off, 1 on, 2 tog
+int mode() {  // 0 off, 1 on, 2 tog (whole seconds), 3 frame (alternate submit calls)
     static const int m = [] {
         const char* e = std::getenv("ROGUESQ_STANDINS");
         const char* d = std::getenv("ROGUESQ_DRAW_DISTANCE");
-        int v = (e && *e && *e != '0') ? (std::strcmp(e, "tog") == 0 ? 2 : 1) : 0;
+        int v = (e && *e && *e != '0') ? (std::strcmp(e, "tog") == 0 ? 2 : std::strcmp(e, "frame") == 0 ? 3 : 1) : 0;
         const double dd = (d && *d) ? std::atof(d) : 1.0;
         if (v && !(dd > 1.0)) { std::fprintf(stderr, "[standins] ROGUESQ_STANDINS set but draw distance %.2f <= 1: off (retail)\n", dd); v = 0; }
-        if (v) std::fprintf(stderr, "[standins] on mode=%s dd=%.2f region %08X..%08X\n", v == 2 ? "tog" : "on", dd, kRegion, kRegionEnd);
+        if (v) std::fprintf(stderr, "[standins] on mode=%s dd=%.2f region %08X..%08X\n", v == 2 ? "tog" : v == 3 ? "frame" : "on", dd, kRegion, kRegionEnd);
         return v;
     }();
     return m;
 }
 
 }  // namespace
+
+// s7624 step 3: read by the fbdump path in upstream_compat.cpp. ROGUESQ_STANDINS_DUMP=<a>:<b>:<n> (seconds after the first
+// rebuild) opens two n-swap fb dump windows: window 1 at a with the mode's own toggling, window 2 at b with stand-ins forced off
+// (same-run negative control for the flicker scorer). rs64_standins_fb_on is the on/off state of the last submit call.
+extern "C" int rs64_standins_dump_left = 0;
+extern "C" int rs64_standins_fb_on = -1;
+extern "C" uint32_t rs64_standins_fb_call = 0;
+extern "C" int rs64_standins_fb_win = 0;
 
 // Read by rs64_s7326_spill_cap (upstream_compat.cpp): the spill arena gives up its top 1 MB to the stand-in region while this is on.
 extern "C" int rs64_standins_on(void) { return mode() != 0; }
@@ -302,14 +310,47 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     static double s_t0 = std::floor(now);  // windows on whole seconds, so a tog window is all-on or all-off
     if (s_log && now - s_t0 >= 1.0) {
-        std::fprintf(stderr, "[standins-s] frames=%u submits=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu tog=%d\n",
-                     s_t.frames, s_t.submits, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(),
+        std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu tog=%d\n",
+                     s_t.frames, s_t.onframes, s_t.submits, s_t.added, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(),
                      m == 2 ? (int)(((long long)s_t0) & 1) ^ 1 : -1);  // tog=1: the window just logged was an on second
         s_t = Tally{};
         s_t0 = std::floor(now);
     }
     ++s_t.frames;
-    if (m == 2 && (((long long)now) & 1)) return;  // tog: odd seconds are the off arm
+    static uint32_t s_calls = 0;
+    ++s_calls;
+    static double s_first = -1.0;
+    if (s_first < 0) s_first = now;
+    static int s_dwin = 0;  // 0 before window 1, 1 window 1 (toggling), 2 window 2 (forced off), 3 done
+    static const struct DumpCfg { double a, b; int n; } s_dc = [] {
+        DumpCfg c{ -1, -1, 0 };
+        if (const char* e = std::getenv("ROGUESQ_STANDINS_DUMP")) std::sscanf(e, "%lf:%lf:%d", &c.a, &c.b, &c.n);
+        return c;
+    }();
+    if (s_dc.n > 0) {
+        if (s_dwin == 0 && now - s_first >= s_dc.a) { s_dwin = 1; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 1 (toggle) at %.1f s, %d swaps\n", now - s_first, s_dc.n); }
+        else if (s_dwin == 1 && rs64_standins_dump_left <= 0 && now - s_first >= s_dc.b) { s_dwin = 2; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 2 (forced off) at %.1f s, %d swaps\n", now - s_first, s_dc.n); }
+        else if (s_dwin == 2 && rs64_standins_dump_left <= 0) s_dwin = 3;
+    }
+    rs64_standins_fb_win = (s_dwin == 1 || s_dwin == 2) ? s_dwin : 0;
+    bool on = true;
+    if (m == 2 && (((long long)now) & 1)) on = false;  // tog: odd seconds are the off arm
+    if (m == 3 && (s_calls & 1)) on = false;           // frame: odd submit calls are the off arm
+    if (s_dwin == 2) on = false;
+    rs64_standins_fb_on = on ? 1 : 0;
+    rs64_standins_fb_call = s_calls;
+    if (!on) {
+        // spawn bookkeeping still runs on off frames so the visible-before-spawn time is exact
+        for (Standin& s : s_standins)
+            if (!s.spawn_logged && rh(rdram, s.item + 6u) != 0xFFFFu) {
+                s.spawn_logged = true;
+                std::fprintf(stderr, "[standins-spawn] item %08X t=%.2f added_first=%.2f added_last=%.2f early_s=%.2f\n", s.item, now - s_first,
+                             s.first_add < 0 ? -1.0 : s.first_add - s_first, s.last_add < 0 ? -1.0 : s.last_add - s_first,
+                             s.first_add < 0 ? -1.0 : now - s.first_add);
+            }
+        return;
+    }
+    ++s_t.onframes;
 
     const uint32_t view = rw(rdram, (uint32_t)ctx->r18);
     const uint32_t diff = rw(rdram, kDifficulty) & 3u;
@@ -332,13 +373,28 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     }
     std::sort(s_linked.begin(), s_linked.end());
     const bool cutscene = rb(rdram, kCutsceneFlag) != 0;
-    for (const Standin& s : s_standins) {
+    for (Standin& s : s_standins) {
         ++s_t.cand;
-        if (rh(rdram, s.item + 6u) != 0xFFFFu) { ++s_t.spawned; continue; }
+        if (rh(rdram, s.item + 6u) != 0xFFFFu) {
+            ++s_t.spawned;
+            if (!s.spawn_logged) {
+                s.spawn_logged = true;
+                std::fprintf(stderr, "[standins-spawn] item %08X t=%.2f added_first=%.2f added_last=%.2f early_s=%.2f\n", s.item, now - s_first,
+                             s.first_add < 0 ? -1.0 : s.first_add - s_first, s.last_add < 0 ? -1.0 : s.last_add - s_first,
+                             s.first_add < 0 ? -1.0 : now - s.first_add);
+            }
+            continue;
+        }
         if (!std::binary_search(s_linked.begin(), s_linked.end(), s.item)) { ++s_t.unlinked; continue; }
         if ((int32_t)rw(rdram, s.item + 0x6Cu + diff * 4u) <= 0) { ++s_t.dead; continue; }
         if (!cutscene && mips_call(rdram, ctx, kConditionMet, { s.item }).v0 == 0) { ++s_t.cond; continue; }
-        mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale });
+        // addNpcToVisibilityBucket returns 1 only when the view test (transformVec3ToNpcLocalWithScale 0x8001DC34) passed and the
+        // node was linked into the view's list (a linked list: no fixed bucket capacity, code read s7624); 0 = culled.
+        if (mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0 == 1) {
+            ++s_t.added;
+            if (s.first_add < 0) s.first_add = now;
+            s.last_add = now;
+        }
         ++s_t.submits;
     }
 }
