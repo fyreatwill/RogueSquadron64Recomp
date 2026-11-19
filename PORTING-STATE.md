@@ -204356,3 +204356,20 @@ both controls passing, and the post-commit runtime arms alive). The 2^32-skew pl
 0x100000029 address, so a 32-bit offset skew in the dev build fits, but that part is single-source and unverifiable.
 ORIGIN: no mitigation landed; the writer of the bad offset was pre-commit dev source, never shipped.
 Rerun trigger: tools/test_s7523_model.sh after any edit to src/rsp/s7523_slow_rdp.cpp (rc 0 = PASS).
+
+## Session 7666 (2026-11-19) — G6b F6 panel Save -> controls.json -> reload round trip proven end to end (4 arms, same build); explicit ROGUESQ_CONTROLS path now writable under NO_SAVE_WRITE
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=26 new=0 (no owner crash); no owner report; all 3c rungs closed or
+owner-wait. Gap found: s7620 proved the panel's bind/capture/reset but Save was always skipped (loop exports
+ROGUESQ_NO_SAVE_WRITE), so the owner's Save -> restart -> bindings-back path had never run once.
+Change (src/main/main.cpp): rs64_bind_save honours NO_SAVE_WRITE only for the default file beside the exe; an explicit
+ROGUESQ_CONTROLS=<path> is caller-owned and is written. ROGUESQ_BIND_PANEL_TEST=2 presses Save at poll 1200 while A=pad:b is
+bound (and skips the post-Reset save), so the saved file is non-default. Owner behaviour unchanged (owner never sets NO_SAVE_WRITE).
+Run scratch/s7666/run.zsh (one game at a time, ~40 s each, all 4 alive, logs .zst):
+- A PANEL_TEST=2 + CONTROLS=scratch/s7666/c.json: "Saved to .../c.json", 1059 bytes, 29 bindings; bindA phase mismatches 112.
+- B SELFTEST + same file: "loaded ... 29 button bindings"; old-code-vs-table mismatches 75/267/395 at polls 600/1800/2400, all
+  on bit 0x8000 (N64 A) like A's bindA phase -> the saved binding is live after a restart.
+- C (control) PANEL_TEST=1, no CONTROLS: "NOT saved (ROGUESQ_NO_SAVE_WRITE)", build/controls.json still absent; defaults 0.
+- D (control) SELFTEST + corrupt file: "rejected (not valid JSON): built-in defaults", mismatches 0 at 2400 polls.
+Rules out: Save silently failing / writing an unreadable file / loader ignoring it. Not covered: the owner clicking Save with
+the mouse (the test calls the same rs64_bind_save the button calls). New crash reports this session: none (FOLDED=1 new=0).

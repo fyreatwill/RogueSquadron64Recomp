@@ -12709,7 +12709,10 @@ std::string rs64_bind_capture_last() { std::lock_guard<std::mutex> lk(g_bind_mu)
 bool rs64_bind_save(std::string* msg) {
     const std::string text = rs64_bind_to_json(rs64_bind_live_get()), path = rs64_bind_path();
     char buf[512];
-    if (getenv("ROGUESQ_NO_SAVE_WRITE")) {
+    // s7666: NO_SAVE_WRITE protects the default file beside the exe; an explicit ROGUESQ_CONTROLS path is caller-owned
+    // (the save->reload round-trip test writes one under scratch/), so it is written even then.
+    const char* explicit_path = getenv("ROGUESQ_CONTROLS");
+    if (getenv("ROGUESQ_NO_SAVE_WRITE") && !(explicit_path && *explicit_path)) {
         snprintf(buf, sizeof buf, "NOT saved (ROGUESQ_NO_SAVE_WRITE): would write %zu bytes to %s", text.size(), path.c_str());
         *msg = buf; fprintf(stderr, "[controls] %s\n", buf); return false;
     }
@@ -12772,11 +12775,16 @@ static void rs64_bind_panel_test_step(long polls, long stable, long mism) {
         fprintf(stderr, "[bind-panel-test] phase=%s polls=%ld..%ld stable=%ld mismatches=%ld\n", ph, ph_start, polls, stable - ph_stable, mism - ph_mism);
         ph = next; ph_start = polls; ph_stable = stable; ph_mism = mism;
     };
+    // s7666: ROGUESQ_BIND_PANEL_TEST=2 presses Save while A=pad:b is bound (poll 1200) and not after Reset, so the file
+    // a second run loads is non-default (round-trip test: scratch/s7666/run.zsh).
+    static const bool save_bound = [] { const char* e = getenv("ROGUESQ_BIND_PANEL_TEST"); return e && *e == '2'; }();
     if (polls == 900) {
         close_phase("bindA_padb");
         rs64_bind_table t = rs64_bind_live_get();
         rs64_bind_apply(&t, RS64_N64_A, {RS64_SRC_PAD_BUTTON, SDL_CONTROLLER_BUTTON_B, 0}, false);
         rs64_bind_live_set(t, "panel test bind A=pad:b");
+    } else if (polls == 1200 && save_bound) {
+        rs64_panel_test_action("save");
     } else if (polls == 1800) {
         close_phase("capture");
         rs64_bind_capture_arm(RS64_N64_B, true);
@@ -12788,7 +12796,7 @@ static void rs64_bind_panel_test_step(long polls, long stable, long mism) {
         rs64_bind_table r; std::string err;
         const bool ok = rs64_bind_parse_json(rs64_bind_to_json(t), &r, &err) && rs64_bind_to_json(r) == rs64_bind_to_json(t);
         fprintf(stderr, "[bind-panel-test] json roundtrip=%d bytes=%zu\n", ok ? 1 : 0, rs64_bind_to_json(t).size());
-        rs64_panel_test_action("save");
+        if (!save_bound) rs64_panel_test_action("save");
     } else if (polls == 3000) {
         close_phase("open");
         rs64_panel_set_open(true);

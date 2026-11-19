@@ -312,7 +312,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 20. **G6 (owner 2026-11-18, ahead of everything else): G6a rumble LANDED s7617; G6b controls LANDED s7618-s7620 (table
     src/main/rs64_bindings.h == old map, ROGUESQ_BIND_OLD=1; controls.json beside the exe, rs64_bindings_json.h; F6 panel
     src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
-    hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit.
+    hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit. s7666: Save -> controls.json -> reload
+    round trip PASS (scratch/s7666/run.zsh: save, load mismatches on N64 A only, default-path guard and corrupt-file controls).
     G6c stand-ins: design docs/G6C-STANDINS-PLAN.md (s7621): H-portable (game-side visibility bucket only, no HLE state),
     all 17 upstream code addresses identical in our syms. Step 2 LANDED s7623: src/main/rs64_standins.cpp +
     tools/apply_s7623_standins.py (RS64_REPLAY), ROGUESQ_STANDINS=1|tog (+_LOG=1), dd>1 only; region 0x81700000..0x81800000

@@ -1,9 +1,10 @@
-# NEXT (s7666)
+# NEXT (s7667)
 HYPOTHESIS-ID: owner-wait-standing
 
-s7665 closed the last open DIAG crash datum (s7523 consume(), H-devbuild; tools/test_s7523_model.sh).
-At session start run `python3 tools/crash_reports.py --since 2026-11-13`: a NEW report that nobody planted is a real crash
-and outranks everything (G4 reopens on it: backtrace from the .ips, name the writer, fix the root cause).
-Otherwise: if the owner has reported anything, take that first; else the first open 3c rung per CURRENT-TRUTH Next steps.
-Do NOT do another census-gate housekeeping pass or repeat-hold soaks (G4 parked). Rules: never touch build/saves; one game at
-a time; SIGKILL only; at most 2 CPU-heavy jobs; host was on battery (46%) at s7665, so queue game runs as soaks if still unplugged.
+s7666 proved the G6b panel Save -> controls.json -> reload round trip (scratch/s7666/run.zsh, 4 arms).
+At session start run `python3 tools/crash_reports.py --since 2026-11-13`: a NEW report nobody planted is a real crash and
+outranks everything (G4 reopens: backtrace from the .ips, name the writer, fix the root cause).
+Otherwise: an owner report first; else look for another owner-facing path that no test has exercised end to end (as s7666
+found Save), e.g. a --preset/settings.txt + controls.json combination, or F6 panel open/close during a mission load.
+Do NOT do census-gate housekeeping or repeat-hold soaks (G4 parked). Rules: never touch build/saves; one game at a time;
+SIGKILL only; at most 2 CPU-heavy jobs; host on battery (44%) at s7666, so keep game runs short or queue them as soaks.
