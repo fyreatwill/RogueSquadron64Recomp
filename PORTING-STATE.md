@@ -204012,5 +204012,8 @@ re-proved) vs H-live (a real default-on defect). Result: H-drift for all six, wi
   fixup_lui_unsigned.py.
 - Sweep (tools/s7651_gate_sweep.py, scratch/s7653/sweep.out): 135 gates, 28 RED (was 39 at s7652 before its 6 fixes), 13 NEEDS-ARGS.
   Left: s7339-s7353 (rules from the s7652 hand triage), s7316 (needs --ram), s7573 (needs logs), s7588-s7616 (verdict exits).
+Verdict: selects H-drift for all six gates and refutes H-live (0 default-on sites); H-broken confirmed for the s7543/s7544/s7555
+resolvers (blind since s7580), re-proved by their controls and an independent grep. Next discriminator: the s7339-s7353 rule
+write-up (NEXT item 1) decides H-drift vs H-live for the 12 remaining UB/bounds gates.
 Rules out: any behaviour defect behind these six gates (every new site read is env-gated diag/opt-in). No game run (offline audit).
 ORIGIN: no mitigation added; tool-key changes only.
