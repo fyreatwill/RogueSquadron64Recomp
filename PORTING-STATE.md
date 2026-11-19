@@ -204428,3 +204428,6 @@ Run 2 scratch/s7668/run2.zsh, same rebuilt binary, window 40,125 + toggles 100,1
 level_ok=1, 0 stalls, gate 5100 polls then released. Logs scratch/s7668/r*/log_*.txt.zst (local).
 Not covered: real mouse clicks during the load (the hook drives the same set_open as F6); 21:9 ultrawide display.
 New crash reports this session: none.
+Conclusion: selects H-ok for crash/stall/input gate (refutes H-load: 0 crash, 0 stall, gate released, both runs) and selects
+H-layout for the post-toggle squash (fixed; control arm O reproduces it in the same build). Next discriminator: the same
+lever at a window resize to a 21:9-class size with ASPECT=auto (does the stale path fire and recover there too).
