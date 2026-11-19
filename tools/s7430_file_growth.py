@@ -19,6 +19,13 @@ ROOTS = ['src', 'lib/N64ModernRuntime/librecomp/src', 'lib/N64ModernRuntime/ultr
 W = re.compile(r'fopen\s*\(([^;]*?),\s*"([wa])b?\+?"\s*\)|std::ofstream\s+\w+\s*[({]|ofstream\s+\w+\s*\(|open_output_file_with_backup\(')
 # substring of the line -> (class, note). DEFAULT entries carry mode/bound; 'GROWTH' marks an unbounded append.
 REVIEWED = {
+    # s7651 drift triage (6 sites added after s7430 closed; each caller read by hand)
+    'fopen("rs64_s7535.log"': ('OPTIN', 'ROGUESQ_S7535_GA_CHK (dump only while g_open; snap/close gated by rs64_s7535_on in events.cpp)'),
+    'fopen("rs64_s7536.log"': ('OPTIN', 'ROGUESQ_S7536_CNT or ROGUESQ_SP_LATE=alt (c_dump only under s_cnt_on)'),
+    'g_tf = e ? fopen(e, "wb")': ('OPTIN', 'ROGUESQ_S7112_TRI (s7466 reworded the s7430-reviewed line)'),
+    'fopen("rs64_s7526.log"': ('OPTIN', 'ROGUESQ_S7524_V2P=a (task_begin only when rs64_s7526_alt, main.cpp)'),
+    'std::fopen(fp, "wb")) { std::fprintf(f, "P6': ('OPTIN', 'ROGUESQ_S7504_DIR (getenv on the line above)'),
+    'fopen(tmp.c_str(), "wb")) { ok = fwrite(text.data()': ('DEFAULT', 'controls.json via .tmp+rename, truncate, only on the F6 panel Save press; refused under ROGUESQ_NO_SAVE_WRITE (s7620)'),
     'fopen("rs64_s7095.log"': ('OPTIN', 'ROGUESQ_S7095_DPC'), 'fopen("rs64_s7097.log"': ('OPTIN', 'ROGUESQ_S7097_EDIT'),
     'fopen("rs64_s7096.log"': ('OPTIN', 'ROGUESQ_S7096_FWD'), 'fopen("rs64_s7094.log"': ('OPTIN', 'ROGUESQ_S7094_DMASHAPE'),
     'fopen("rs64_s7330.log"': ('OPTIN', 'ROGUESQ_S7324_RCPREF'), 'fopen("rs64_s7325.log"': ('OPTIN', 'ROGUESQ_S7324_RCPREF'),
@@ -70,11 +77,20 @@ def sites(files):
 
 CTXGATE = {'rs64_dump_ucode': ('OPTIN', 'ROGUESQ_DUMP_UCODE_BIN (s7430; was DEFAULT, 512 KB/run)'),
            'rs64_audio_source_objects': ('OPTIN', 'ROGUESQ_LOG_AUDIO_OBJECTS')}
-def enclosing(L, n):
+def enclosing_legacy(L, n):  # s7430 backward column-0 scan, no brace check (kept for --diff)
     for k in range(n - 1, -1, -1):
         m = re.match(r'(?:static\s+)?(?:void|bool|int|FILE\s*\*)\s+(\w+)\s*\(', L[k])
         if m: return m.group(1), '\n'.join(L[k:n])
     return '', ''
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from census_attr import fn_spans, enclosing_braced  # s7651: brace-aware attribution (s7650 algorithm)
+_SPANS, DIFF = {}, []
+def enclosing(L, n):
+    sp = _SPANS.setdefault(id(L), (L, fn_spans(L)))[1]
+    fn, j = enclosing_braced(sp, n - 1)
+    old = enclosing_legacy(L, n)[0]
+    if old != (fn if j is not None else ''): DIFF.append((n, old, fn))
+    return (fn, '\n'.join(L[j:n])) if j is not None else ('', '')
 def classify(p, l, L=None, n=0):
     if 'getenv' in l: return ('OPTIN', 'same-line getenv')
     if L is not None and 'fopen(name, "wb")' in l:
@@ -126,6 +142,8 @@ print('sites', len(real), dict(Counter(r[3] for r in real)))
 for r in real:
     if r[3] in ('DEFAULT', 'GROWTH', 'UNREVIEWED'):
         print(f'  {r[3]:10s} {r[0]}:{r[1]}  {r[4]}' + ('' if r[4] else '  ' + r[2][:90]))
+if '--diff' in sys.argv:
+    print('attribution diff (line, legacy, braced):', DIFF or 'none')
 g, u = verdict(real)
 if not cpass: sys.exit(3)
 print('VERDICT', 'H-bounded' if not g and not u else f'H-growth ({len(g)} growth, {len(u)} unreviewed)')

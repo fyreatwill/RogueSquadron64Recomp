@@ -176,6 +176,12 @@ RULES = [
     (UC, "rs64_s6883_tables", None, "H-guest-thread", GT,
      "spliced into a recompiled function (tools/apply_s6883_spancell.py); the memset needs ROGUESQ_G1D_SPANCELL bit 2, default 3",
      {"verify": r'm = e \? atoi\(e\) : 3;'}),
+    # s7651 drift: rs64_standins.cpp (s7626/s7627) guest-hook writes, each under its own opt-in env flag
+    ("src/main/rs64_standins.cpp", "rs64_sg_draw", r"\* k; uint32_t u", "H-instrument-only", GT,
+     "ROGUESQ_STANDINS_PULL depth-pull discriminator (s_pull > 0 only), stand-in submit hook on the guest thread",
+     {"envoff": "ROGUESQ_STANDINS_PULL"}),
+    ("src/main/rs64_standins.cpp", "rs64_sg_draw", r"MEM_W\(4 \* i, \(gpr\)\(int32_t\)m\) = 0", "H-instrument-only", GT,
+     "ROGUESQ_STANDINS_CTL=1 real-object pixel-scorer control (s7627), guest thread", {"envoff": "ROGUESQ_STANDINS_CTL"}),
     (UC, "rs64_s5042_poison", None, "H-instrument-only", GT, "free-path poison, ROGUESQ_FREE_POISON only (guest thread)",
      {"envoff": "ROGUESQ_FREE_POISON"}),
     (L + O, "rs64_s7520_swap", None, "H-instrument-only", GT, "s7520 code-watch control flip (ROGUESQ_S7520_CTL), osViSwapBuffer",

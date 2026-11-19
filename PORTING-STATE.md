@@ -203904,3 +203904,39 @@ to the nearest column-0 FN regex match above it, with no brace check, so a site 
   Single-source (static read), as before.
 - Found: the same backward-scan `enclosing` pattern is in 10 other census tools (s7365_invalidation, s7373_aq_gate_table,
   s7375_nolock_threads, s7430_file_growth, s7533_fz, s7535_ga, s7549_gi, s7591_mr, s7604_ra, s7615_dq) -> NEXT s7651.
+
+## Session 7651 (2026-11-19) — census attribution shared module; 4 "closed" census gates found drifted RED and fixed (0 behaviour sites); s7535 rules re-keyed to text anchors; gate-sweep tool finds 15 more red gates
+Work unit (NEXT s7651, HYPOTHESIS-ID census-attribution-sweep, offline).
+- Premise check: NEXT said 10 census tools share the s7648 backward column-0 scan. Read all 10: only s7430_file_growth
+  does. s7365/s7375 use FUNC-regex + block_end spans (innermost), s7373 llvm-cov function spans, s7533/s7535 brace-stack
+  func_spans, s7549 brace scan, s7591 outermost non-namespace brace, s7604 is call attribution (not function), s7615
+  brace depth. So H-hidden via attribution applies to s7430 only.
+- Change: fn_spans/_clean/enclosing_braced moved to tools/census_attr.py; s7648 imports it (`--controls` 3/3 PASS, live
+  H 227 = D 166 + D* 61, G 25, unclassified 0, unchanged). s7430 now attributes brace-aware, legacy kept: `--diff` 0
+  changes (only 2 site paths use the function).
+- Finding (bigger than the planned unit): running the 10 tools, 4 CLOSED gates exited nonzero on arrival, because later
+  sessions added code in their scope and nothing re-ran them:
+  s7430 6 UNREVIEWED: rs64_s7535.log (ROGUESQ_S7535_GA_CHK), rs64_s7536.log (S7536_CNT / SP_LATE=alt), s7106 g_tf line
+  reworded by s7466 (S7112_TRI), rs64_s7526.log (S7524_V2P=a), s7504 ppm (S7504_DIR), controls.json save (DEFAULT:
+  F6 Save press only, .tmp+rename truncate, refused under NO_SAVE_WRITE). -> H-bounded, control PASS.
+  s7533 2 UNCLASSIFIED: rs64_standins.cpp rs64_sg_draw MEM_W under ROGUESQ_STANDINS_PULL / STANDINS_CTL -> 2 rules
+  (envoff checks), 0 fails, controls 7/7.
+  s7535 16 UNCLASSIFIED: 12 were ABSOLUTE LINE RANGE drift (main.cpp +842 after G6b, rt64_render_context +4/+193..195,
+  dpc_bridge +131), 4 new functions (job_end + rs64_s7541_span: ROGUESQ_S7539_GB_CHK; s7545_rdw: S7545_THRWATCH; s7644 rb:
+  S7644_RSPDMA). Shift recovered per rule from the commit each range was written against (unique-line match; the only
+  in-range insertion was s7649's 2 comment lines). All 22 range rules converted to `A(anchor, dlo, dhi)`; an anchor
+  missing or duplicated is FAIL-check, never a silent re-scope. Lib ranges (rsp.hpp, events.cpp) were still aligned:
+  checked that events.cpp 1433/1444 (FPS60 CAS clamp) classify H-latent-FIXED by their own rule, not the G1E range.
+  New controls: +900-line shift keeps every main.cpp class; duplicated anchor -> 8 get_n64_input rows FAIL-check
+  (first version of that control was itself wrong: duplicated only a prefix, plus a path-keyed cache; fixed). 12/12.
+  s7375 1 OPEN: s7644 g_srcs -> CALLER-LOCKED (every access holds g_gmu). OPEN 0, selftest PASS.
+- ORIGIN: no mitigation added; all rule entries name the gate env read by hand.
+- New tool tools/s7651_gate_sweep.py: runs every tools/s7*_census.py (--controls when present, 6 jobs, 300 s cap),
+  classifies GREEN / NEEDS-ARGS / RED, planted red+green control. Partial pass this session (first 69 of 135 tools,
+  s7031-s7360, before I stopped the slow xargs version; the tool run was still going at commit): 42 green, 12 need
+  inputs (IndexError / argparse; s7384 rejects --controls), 15 RED: s7090 s7316 s7339 s7342 s7343 s7344 s7345 s7346
+  s7348 s7349 s7350 s7351 s7353 s7359 s7360. Their flagged sites are mostly new files (rs64_standins.cpp, s7523_slow_rdp,
+  s7644_rspdma, s7535_ga_chk, s7389_fbld). One read by hand: s7360 "default-on unbounded guest string read"
+  rs64_standins.cpp:155 is bounded (`leaf + 0x5C > leaf_end` returns) and runs only under the opt-in stand-ins mode.
+- Selects H-cosmetic-all for attribution (0 changed sites) and refutes "the closed censuses still hold": 4 + 15 gates were
+  red with no one looking. No behaviour defect found among the 25 sites read. Single-source (static reads).

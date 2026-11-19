@@ -159,9 +159,32 @@ def F(f, fn, flag, lines=None, why=DIAG, thr="any"):
     return (f, fn, lines, "H-instrument-only", thr, why + " [flag " + flag + "]", {"verify": r"\b" + re.escape(flag) + r"\b"})
 
 
+
+def A(anchor, dlo, dhi):
+    """s7651: a line range keyed to a text anchor, not to absolute line numbers (22 absolute ranges drifted by +4..+842 lines
+    as files grew, s7651). The range is [anchor_line + dlo, anchor_line + dhi]; the anchor must occur exactly once in the
+    file, else the rule reports FAIL-check (drift is loud, never a silent re-scope)."""
+    return ("@", anchor, dlo, dhi)
+
+
+_ANCH = {}
+
+
+def resolve(path, raw, g):
+    k = (path, hash(raw), g)
+    if k not in _ANCH:
+        hit = [i + 1 for i, l in enumerate(raw.split("\n")) if g[1] in l]
+        _ANCH[k] = (hit[0] + g[2], hit[0] + g[3]) if len(hit) == 1 else ("anchor %r found %d times" % (g[1][:40], len(hit)))
+    return _ANCH[k]
+
 RULES = [
+    # --- s7651 drift: functions added after s7535 closed, each gate read by hand ---
+    D(RC, "job_end", "ROGUESQ_S7539_GB_CHK", why="s7539 GB snapshot diff, called only under gb::on", thr=GFX),
+    D(RC, "rs64_s7541_span", "ROGUESQ_S7539_GB_CHK", why="s7541 span check, returns unless gb::on", thr=GFX),
+    D(UC, "s7545_rdw", "ROGUESQ_S7545_THRWATCH", why="s7545 GE thread-watch value read, watch path under s7545_on()"),
+    D("src/rsp/s7644_rspdma.cpp", "rb", "ROGUESQ_S7644_RSPDMA", why="s7644 TS-3 audio-task vs PI DMA instrument (g_mode)"),
     # --- the gfx/audio RSP DMA read: device semantics; gfx window measured by s7535 ROGUESQ_S7535_GA_CHK -----------------------
-    (RSPI, "dma_rdram_to_dmem", (380, 400), "H-latent-FIXED(opt-in)", "task/gfx",
+    (RSPI, "dma_rdram_to_dmem", A('dram_addr + rd_len <= g_rsp_dma_shadow2_addr + g_rsp_dma_shadow2_size)', 0, 20), "H-latent-FIXED(opt-in)", "task/gfx",
      "FIXED(opt-in) s7537: ROGUESQ_SP_LATE=1 (hardware-order sp_complete) is free at FPS60 wherever the game holds 60/s "
      "(s7537 L1/L4/L12 dd1/dd4: 60.0 vs 60.0) and within noise when CPU-bound (L12 dd4 on battery, 3v3 ABBA early 52.9-54.6 vs "
      "late 51.4-52.9); listed in docs/OWNER-OPT-INS.md, default early until the owner chooses. Was OPEN s7535: RSP SP_RD DMA. Audio tasks run before their sp_complete (canon). Gfx tasks get sp_complete EARLY (events.cpp, "
@@ -170,7 +193,7 @@ RULES = [
      "(0x100 vertex loads, shade bytes +-1). Fix candidate = hardware-order sp_complete (ROGUESQ_S7535_LATE=1); needs FPS60 "
      "frame-rate + spike/drop qualification before it can be default",
      {"verify": r"ROGUESQ_S7535_GA_CHK"}),
-    D(RSPI, "dma_rdram_to_dmem", "ROGUESQ_DUMP_IMEM_DMA", (300, 379)),
+    D(RSPI, "dma_rdram_to_dmem", "ROGUESQ_DUMP_IMEM_DMA", A('const char* e = getenv("ROGUESQ_DUMP_IMEM_DMA");', -2, 77)),
     # --- librecomp -------------------------------------------------------------------------------------------------------------
     (L + "mods.cpp", "init_mod_code", None, "H-pre-guest", PRE, "mod relocation at load_mods (startup)", {}),
     (L + O, "s7_ramw", None, "H-instrument-only", "any", "s7520 code-word watch helper (ROGUESQ_S7520_*), compare/log only",
@@ -189,10 +212,10 @@ RULES = [
     # --- ultramodern events.cpp: Gfx-thread VI levers --------------------------------------------------------------------------
     (EV, "apply", r"\blb\b", "H-latent-FIXED", GFX, "s7533 FPS60 clamp byte CAS (class FZ); the read is the CAS's own load",
      {"verify": r"__atomic_compare_exchange_n\(lb, &expect"}),
-    (EV, "apply", (1360, 1415), "H-instrument-only", GFX, "s6018 G1c DD_RADIUS/LOD/IMUL/DUMP levers: early return unless set",
+    (EV, "apply", A('// s6018 G1c draw-distance levers (default OFF = retail). ROGUESQ_DD_R', -1, 54), "H-instrument-only", GFX, "s6018 G1c DD_RADIUS/LOD/IMUL/DUMP levers: early return unless set",
      {"verify": r"if \(rm == 0\.0 && lm == 0\.0 && im0 == 0\.0 && !dump\) return;", "envoff": "ROGUESQ_DD_RADIUS"}),
-    D(EV, "apply", "ROGUESQ_G1E_LIMIT", (1440, 1495), thr=GFX),
-    D(EV, "apply", "ROGUESQ_G3C_LOG", (1496, 1520), thr=GFX),
+    D(EV, "apply", "ROGUESQ_G1E_LIMIT", A('static const char* le = std::getenv("ROGUESQ_G1E_LIMIT"); static const', -11, 44), thr=GFX),
+    D(EV, "apply", "ROGUESQ_G3C_LOG", A('static const bool on = [] { const char* e = std::getenv("ROGUESQ_G3C_L', -8, 16), thr=GFX),
     # --- src/main main.cpp -----------------------------------------------------------------------------------------------------
     (MN, "rs64_m5_audio_input_dma", None, "H-instrument-only", TASK, "M5 audio DMA census (s_pending_audio_generation, log)", {}),
     D(MN, "rs64_m5_exact_route_dma_write", "ROGUESQ_LOG_M5_EXACT_ROUTE", thr=TASK),
@@ -215,26 +238,26 @@ RULES = [
     D(MN, "start_fs_slot_poller", "ROGUESQ_FS_SLOT_ADDR", thr=POLL),
     D(MN, "start_fl_zero_poller", "ROGUESQ_FL_ZERO_ADDR", thr=POLL),
     D(MN, "s7504_fb", "ROGUESQ_S7504_FB"),
-    D(MN, "get_n64_input", "ROGUESQ_MISSION_WIN", (12630, 12705), why="harness mission-window poke (soak routing)", thr=INP),
-    D(MN, "get_n64_input", "ROGUESQ_LOG_FL", (12706, 12720), thr=INP),
+    D(MN, "get_n64_input", "ROGUESQ_MISSION_WIN", A('// s5604: ROGUESQ_MISSION_WIN=<n> is a TEST-ONLY lever for the mission', -1, 74), why="harness mission-window poke (soak routing)", thr=INP),
+    D(MN, "get_n64_input", "ROGUESQ_LOG_FL", A('// s6399: ROGUESQ_POSE_LOCK=1 is a TEST-ONLY no-input hover arm for G3', -13, 1), thr=INP),
     ("src/main/rs64_rdram_peek.h", "rs64_rdram_u8", None, "H-instrument-only", "any",
      "diagnostic peek helper ('Host-side diagnostic reads', header comment); callers are census/probe code", {"verify": r"Host-side diagnostic reads"}),
     ("src/main/rs64_rdram_peek.h", "rs64_rdram_u32", None, "H-instrument-only", "any", "see rs64_rdram_u8", {"verify": r"Host-side diagnostic reads"}),
     # --- src/main rt64_render_context.cpp (send_dl / update_screen lambdas, Gfx thread) -----------------------------------------
-    D(RC, "?", "ROGUESQ_DUMP_UCODE", (780, 830), thr=GFX),
-    D(RC, "?", "ROGUESQ_DUMP_VTXDATA", (831, 860), thr=GFX),
-    F(RC, "?", "s_op_hist", (861, 1000), thr=GFX),
-    F(RC, "?", "s_sd", (1160, 1180), thr=GFX),
-    D(RC, "?", "ROGUESQ_FORCE_BUFFER_PROGRESS", (1220, 1260), thr=GFX),
-    F(RC, "?", "s_log_gs", (1261, 1310), thr=GFX),
-    F(RC, "?", "s_bw", (1385, 1402), thr=GFX),
-    D(RC, "?", "ROGUESQ_EDGE_DUMP", (1403, 1420), thr=GFX),
-    (RC, "?", (1430, 1450), "H-instrument-only", GFX, "VI-origin nonzero probe for a periodic log line (s_n<=4 || every 64)", {}),
-    F(RC, "submit_rdp_range", "s_route_rows", (1840, 1890), thr=GFX),
-    F(RC, "submit_rdp_range", "s_cmd_rows", (1891, 1915), thr=GFX),
-    F(RC, "submit_rdp_range", "s_dumped", (1916, 1930), thr=GFX),
-    F(RC, "submit_rdp_range", "s_img", (2020, 2060), thr=GFX),
-    (RC, "submit_rdp_range", (2061, 2300), "H-instrument-only", GFX, "first-seen / s_ci / s_tc log and count rows (ring words)", {}),
+    D(RC, "?", "ROGUESQ_DUMP_UCODE", A('// ROGUESQ_DUMP_UCODE=path — dump task ucode (IMEM) + ucode_data', -3, 47), thr=GFX),
+    D(RC, "?", "ROGUESQ_DUMP_VTXDATA", A('const char* dump_path = std::getenv("ROGUESQ_DUMP_VTXDATA");', -3, 26), thr=GFX),
+    F(RC, "?", "s_op_hist", A('const char* v = std::getenv("ROGUESQ_LOG_OPCODE_HIST");', 0, 139), thr=GFX),
+    F(RC, "?", "s_sd", A('const char* e = std::getenv("ROGUESQ_STALL_DUMP"); s_sd = !(e && *e ==', 0, 20), thr=GFX),
+    D(RC, "?", "ROGUESQ_FORCE_BUFFER_PROGRESS", A('// update_screen pass. Gated by ROGUESQ_FORCE_BUFFER_PROGRESS=1.', -2, 38), thr=GFX),
+    F(RC, "?", "s_log_gs", A('if (s_log_gs && app->core.RDRAM && (s_n & 63) == 0) {', -1, 48), thr=GFX),
+    F(RC, "?", "s_bw", A('static const char* s_bw = std::getenv("ROGUESQ_BUF_WATCH");', -3, 14), thr=GFX),
+    D(RC, "?", "ROGUESQ_EDGE_DUMP", A('s_snap_n, (int)s_n, pvi->VI_ORIGIN_REG & 0x00FFFFFFu, nz[0], nz[1], nz', 0, 17), thr=GFX),
+    (RC, "?", A('(unsigned long long)(t1 - s_g1cf.rt0), (unsigned long long)(r1 - s_g1c', 0, 20), "H-instrument-only", GFX, "VI-origin nonzero probe for a periodic log line (s_n<=4 || every 64)", {}),
+    F(RC, "submit_rdp_range", "s_route_rows", A('const char *e = std::getenv("ROGUESQ_LOG_G1D_CMD");', -39, 11), thr=GFX),
+    F(RC, "submit_rdp_range", "s_cmd_rows", A('if (op == 0x35) { s_st_w0[(w1 >> 24) & 7] = w0; s_st_w1[(w1 >> 24) & 7', 0, 26), thr=GFX),
+    F(RC, "submit_rdp_range", "s_dumped", A('static uint32_t s_dumped = 0;', 0, 14), thr=GFX),
+    F(RC, "submit_rdp_range", "s_img", A("s_img = (e && *e && *e != '0') ? 1 : 0;", 0, 40), thr=GFX),
+    (RC, "submit_rdp_range", A('// ROGUESQ_LOG_RDP_SUBMIT=1.', -116, 123), "H-instrument-only", GFX, "first-seen / s_ci / s_tc log and count rows (ring words)", {}),
     # --- src/main upstream_compat.cpp ------------------------------------------------------------------------------------------
     (UC, "<file>", None, "not-guest", "-", "struct field declarations (alias false positive)", {}),
     D(UC, "rs64_g1d_copy_to_ram_trace", "ROGUESQ_LOG_G1D_COPY"),
@@ -248,7 +271,7 @@ RULES = [
     D(UC, "rs64_s4913_mark", "ROGUESQ_S4913"),
     # --- src/rsp dpc_bridge.cpp (Gfx thread, inside the F5 LLE DPC submits) ----------------------------------------------------
     (B, "rsp_dpc_submit_impl", r"MEM_B\(\d+, (?:mips|mips_first|mp|e9_mips)\)|submit_lo|rdram\[\(from \+ i\)", "H-canon", GFX, RING, {}),
-    F(B, "rsp_dpc_submit_impl", "uc_on", (6750, 6770), thr=GFX),
+    F(B, "rsp_dpc_submit_impl", "uc_on", A('std::chrono::steady_clock::time_point uc_t0;', 0, 20), thr=GFX),
     (B, "rsp_dpc_submit_impl", r"s_last_timg|0x4B7800|base \+ col|tlut|off \+ \d\) \^ 3", "H-instrument-only", GFX,
      "texture / TLUT / fixed-address byte dumps inside log_dpc / early-dump blocks (fprintf only)", {}),
     F(B, "rs64_count_submitted_e9", "log_e9_unified", thr=GFX),
@@ -351,6 +374,10 @@ def classify(path, fn, raw, rules, ln, mode, reach):
         if not (path.endswith(r[0]) and r[1] == fn):
             continue
         g = r[2]
+        if isinstance(g, tuple) and g[0] == "@":
+            g = resolve(path, raw, g)
+            if isinstance(g, str):
+                return "FAIL-check", r[4], g
         if g is None or (isinstance(g, tuple) and g[0] <= ln <= g[1]) or (isinstance(g, str) and re.search(g, line)):
             rule = r
             break
@@ -436,6 +463,21 @@ def controls():
         rows, fails = census([mut])
         bad = [r for r in rows if r[4] == "dma_rdram_to_dmem" and 380 <= r[1] <= 400]
         res.append(("mutation: GA instrument removed -> dma rows FAIL-check", bool(bad) and all(r[6] == "FAIL-check" for r in bad), bad[:2]))
+        # s7651 anchor-drift: duplicate the MISSION_WIN anchor line in a copy of main.cpp -> its rule must FAIL-check (loud),
+        # and shifting the file by 900 blank lines above must leave every row's class unchanged (anchors follow the code)
+        mn = os.path.join(d, "src", "main", "main.cpp"); os.makedirs(os.path.dirname(mn))
+        txt = open("src/main/main.cpp", errors="replace").read()
+        anc = "// s5604: ROGUESQ_MISSION_WIN=<n> is a TEST-ONLY lever"
+        base, _ = census(["src/main/main.cpp"])
+        open(mn, "w").write("\n" * 900 + txt)
+        sh, _ = census([mn])
+        same = [(r[1], r[6]) for r in base] == [(r[1] - 900, r[6]) for r in sh]
+        res.append(("anchor: +900-line shift leaves main.cpp classes unchanged", same, len(base)))
+        line = next(l for l in txt.split("\n") if anc in l)
+        open(mn, "w").write(txt.replace(line, line + "\n" + line, 1))
+        rows, _ = census([mn])
+        dup = [r for r in rows if r[4] == "get_n64_input" and r[6] == "FAIL-check" and "anchor" in r[8]]
+        res.append(("anchor: duplicated anchor -> get_n64_input rows FAIL-check", bool(dup), len(dup)))
     rows, fails = census(fw.files_under(ROOTS), rules=[])
     res.append(("coverage: rule-less census sees >=250 UNCLASSIFIED", fails >= 250, "fails=%d" % fails))
     rows, fails = census(fw.files_under(ROOTS))

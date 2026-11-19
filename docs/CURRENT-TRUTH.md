@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7650 (2026-11-19).
+Compact operational handoff, as of Session 7651 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7650: MK8 census attribution is brace-aware; H-cosmetic, 0 behaviour sites.** The s7648 backward scan
+- **NEW s7651: 4 "closed" census gates had drifted RED; fixed, 0 behaviour sites.** New code since closure (G6b
+  controls, G6c stand-ins, s7535-s7647 instruments) put s7375/s7430/s7533/s7535 at exit 1; all 25 sites opt-in/diag or
+  locked. s7535 rules re-keyed from absolute lines to text anchors. `tools/s7651_gate_sweep.py` shows more red gates
+  (UB/bounds classes s7339-s7360, mostly rs64_standins/s7523/s7644 sites): triage is NEXT (item 35).
+- **s7650: MK8 census attribution is brace-aware; H-cosmetic, 0 behaviour sites.** The s7648 backward scan
   mis-pinned 11 host sites (9 had inherited a D label from the previous function); all 9 re-read by hand: stall-dump,
   [g1d-tex]/[g1d-cmd] (s_cmd_log), fs_slot_addr (log/opt-in), [gbi-f5]/[cimg-odd] prints, shadeDl (diag). H 227 = D 166 +
   D* 61; `--controls` 3/3 (new attribution plant: legacy -> gated fn, braced -> UNATTRIBUTED). 10 other census tools use
@@ -446,8 +450,15 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     s7649 re-validation (table in the doc): only s6230/s6231 [g1d-tex] was an alias artefact (intermediate, superseded by
     s6243); instrument re-keyed. 34. **Census function attribution: MK8 CLOSED s7650 (H-cosmetic).** fn_spans
     (brace-aware, innermost definition; no span = UNATTRIBUTED, hand-listed in DIAG_SITE); `--diff` shows 11 changes vs
-    the s7648 scan, 9 relabelled D -> D* after reading, 0 behaviour. Open (s7651): the same backward-scan `enclosing`
-    is in 10 other census tools (s7365, s7373, s7375, s7430, s7533, s7535, s7549, s7591, s7604, s7615).
+    the s7648 scan, 9 relabelled D -> D* after reading, 0 behaviour. s7651: the "10 other tools share the scan" premise
+    was wrong: only s7430 used it (now tools/census_attr.py, `--diff` 0 changes); the other 9 already use brace / llvm-cov /
+    call spans. 35. **Closed-gate drift (s7651): census gates go RED silently after later edits.** s7375 (1 open), s7430
+    (6 unreviewed), s7533 (2), s7535 (16) were red on arrival; all re-read by hand: every site opt-in/diag or locked, 0
+    behaviour fixes; all 4 green with controls. s7535's 22 absolute line ranges (drift +4..+842) now anchor+offset `A()`,
+    controls 12/12 (+900-line shift keeps classes; a duplicated anchor -> FAIL-check). `python3 tools/s7651_gate_sweep.py`
+    runs every tools/s7*_census.py (control: planted red/green). Partial s7651 pass, 69/135 tools (s7031-s7360): 42 green,
+    12 need inputs, 15 RED: s7090 s7316 s7339 s7342 s7343 s7344 s7345 s7346 s7348 s7349 s7350 s7351 s7353 s7359 s7360
+    (new sites in rs64_standins / s7523 / s7644 / s7535_ga_chk; s7360 :155 read by hand = bounded by leaf_end + opt-in). NEXT.
 
 ## Evidence index
 
