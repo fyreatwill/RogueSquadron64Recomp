@@ -158,3 +158,18 @@ reached the mission). Flicker px per triplet, window 1 vs window 2: P (PULL=3) 1
 547 vs 108 (hot 36 px); C real-object control (ROGUESQ_STANDINS_CTL=1: real prebuilt-DL nodes get a zero 3x3 on off-arm calls in
 window 1, ours never added) 180891 vs 107.5. Synthetic control PASS in all arms; window-1 stand-in draws 1547-1558/s (P), 900/s (N).
 So the RSP/RDP path draws them, at true depth too; terrain occlusion makes the true-depth footprint smaller. Next: step 3 proof sheet.
+
+## Step 3 proof (s7628): stand-ins are visible early, by eye, on two levels
+Recipe scratch/s7628_standins_proof.sh (g1e harness, HOLD=150, STANDINS=frame, dumps 10/16 s): arms L1 dd2, L1 dd4, L4 dd2, L4 dd4,
+4/4 alive, 0 fatal, vi_stalls30s=0. Flicker px/triplet window 1 vs forced-off window 2: L1 dd2 650.8 vs 44.5, L1 dd4 557.8 vs 107.4,
+L4 dd2 143.1 vs 155.4, L4 dd4 1755.9 vs 161.3; synthetic control PASS in all four. Eye check with tools/s7628_standins_sheet.py
+(adjacent on/off swaps, motion-rejected diff, crop on the densest 32 px cell):
+- L1 dd2: a far bunker drawn in the haze at true depth (same model as the near bunker), absent in the paired frame.
+- L4 dd4: a row of far city towers (up to 1949 diff px) drawn where the paired frame shows bare hills: the pop-in G6c targets.
+- L1 dd4: the top pairs are cliff-texture shimmer and laser bolts, not stand-ins. s7626 N-arm (547) is the same shimmer.
+- L4 dd2: no stand-in shapes; at dd2 these objects are inside the game's own spawn radius.
+So the scorer's excess alone is not proof; scene shimmer that happens to alternate gives a false excess. Dumped swap n shows the
+state of call n-1: stand-ins appear in the frames labelled on=0. Spawn timing ([standins-spawn], early_s >= 0): L1 10-11 items
+shown 2-62 s before the game spawned them, L4 19 items 0.2-5 s. Owner sheet: docs/owner_sheet_s7628_standins_on_off.jpg.
+Next: 300 s holds, STANDINS=1 dd4, all 19 levels (queued one level per recipe).
+

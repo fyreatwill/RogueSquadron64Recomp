@@ -312,8 +312,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     for 2 s); they draw at 9-19 s. **Step 3d (s7627): stand-ins DRAW RDP pixels.** L1 dd4 STANDINS=frame, dumps 10/16 s,
     flicker px/triplet window1 vs forced-off window2: P (PULL=3) 1071 vs 107.5, N (true depth) 547 vs 108, real-object control
     C (ROGUESQ_STANDINS_CTL=1, real nodes collapsed on off calls, ours never added) 180891 vs 107.5; synthetic control PASS all
-    arms, 3/3 alive 0 stall. Single run, scorer-only: N hot mask is small (36 px), so confirm by eye on on/off frame pairs in the
-    step-3 proof sheet (L1+L4, dd2/dd4, early-vs-pop) before the 19-level 300 s holds.
+    arms, 3/3 alive 0 stall. **Step 3 proof by eye (s7628): stand-ins are visible early, true depth, on 2 levels.** Same-run
+    adjacent-frame pairs (tools/s7628_standins_sheet.py, docs/owner_sheet_s7628_standins_on_off.jpg): L1 dd2 a far bunker in the
+    haze; L4 dd4 a row of far city towers (1949 px) the game has not spawned yet. L4 dd2 shows none (flicker 143 vs 155 forced-off
+    = inside the game's own spawn radius, expected). Flicker scorer alone is NOT proof: the s7627 N excess (547) and the s7628
+    L1 dd4 top pairs are cliff-texture shimmer + laser bolts, not stand-ins (eye check); keep the eye check. Dumps show each call
+    one swap late (stand-ins appear in label-0 frames). Spawns preceded by a stand-in: L1 10-11 (2-62 s early), L4 19 (0.2-5 s).
+    4/4 arms alive, 0 fatal, 0 VI stall. Next: 19 x 300 s holds STANDINS=1 dd4 queued (soak_queue/s7628_standins_hold_L*.sh),
+    then the owner sheet decides.
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

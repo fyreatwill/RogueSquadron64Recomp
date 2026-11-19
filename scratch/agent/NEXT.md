@@ -1,19 +1,16 @@
-# NEXT (s7628)
+# NEXT (s7629)
 HYPOTHESIS-ID: g6-upstream-features
 
-G6c step 3 proof: stand-ins are visible early instead of popping. s7627 showed they draw RDP pixels (flicker/triplet P 1071, N 547
-vs ~108 forced-off; real-object control C 180891; docs/G6C-STANDINS-PLAN.md "Step 3d result").
-1. One recipe (scratch/agent/soak_queue/s7628_standins_proof.sh, SOAK_NEEDS_IDLE=300, HOLD=150 (60 never reaches the mission),
-   built on the s7626_standins_pixels script in soak_queue/done/): arms L1 dd2, L1 dd4, L4 dd2, L4 dd4 (the LEVEL selector of
-   tools/g1e_owner_quiet_arms.zsh), each ROGUESQ_STANDINS=frame+ROGUESQ_STANDINS_LOG=1+ROGUESQ_STANDINS_DUMP=10:16:90+FB_DUMP_DIR.
-   Same-run on/off pairs = adjacent window-1 frames (labels 0/1).
-2. Offline: per arm, the flicker score (tools/s7624_flicker_score.py, with --control) and a contact sheet of 4 on/off adjacent pairs
-   cropped around the hot mask (python + PIL; owner-viewable PNG in scratch/s7628_sheet/). Also fold [standins-spawn] early_s
-   (seconds a stand-in was visible before the real object spawned) per arm.
-3. Confirm by eye that the N-arm (true-depth) excess is stand-in shaped (s7627 hot mask only 36 px at L1 dd4).
-Outcomes:
-- excess > 0 and early_s > 0 on both levels at both dd -> step 3 proof done; next: 300 s holds on all 19 levels with STANDINS=1 at dd4
-  (queue as soaks, 2 levels per recipe to stay under the 600 s cap), then the owner sheet.
-- excess only at dd4, not dd2 -> stand-ins at dd2 lie inside the game's own spawn radius (expected little gain); report, still hold.
-- excess but sheet shows wrong shapes/positions -> placement bug (place_on_path / build_state in src/main/rs64_standins.cpp).
-Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; check idle first (owner active ~21:38).
+G6c step 4: crash-free 300 s holds with ROGUESQ_STANDINS=1 at dd4 on all 19 levels, then the owner sheet.
+s7628 proved by eye that stand-ins draw early (docs/owner_sheet_s7628_standins_on_off.jpg; docs/G6C-STANDINS-PLAN.md "Step 3 proof").
+1. 19 recipes are queued: scratch/agent/soak_queue/s7628_standins_hold_L{0..18}.sh (SOAK_NEEDS_IDLE=300). Fold the verdict lines in
+   SOAK-RESULTS.md (alive, fatal, stall_arms, level_ok via tag= line). If the host is idle now and they have not run, run 1-2 in-session
+   (`zsh scratch/agent/soak_queue/s7628_standins_hold_L5.sh`), moving each to done/ first so the loop does not repeat it.
+2. Any crash/stall with STANDINS=1: rerun that level with STANDINS unset (same recipe, same dd4) as the control. Crash only with
+   stand-ins -> root-cause in src/main/rs64_standins.cpp / apply_s7625_standins_far.py (name the writer). Crash in both -> not ours, G4 rule.
+3. When >=17/19 pass with no stand-in-only failure: owner note in docs/OWNER-OPT-INS.md (ROGUESQ_STANDINS=1, dd>1 only), point at the
+   s7628 sheet, and ask the owner to judge the look / default. Keep the default off.
+Outcomes: all clean -> G6c closes on the owner's look; stand-in-only crash -> fix that first.
+If nothing ran and the host is busy: offline, extend tools/s7628_standins_sheet.py with a shimmer filter (reject diff cells whose
+off-neighbour pair also flickers in window 2 at the same screen region) so the scorer stops counting texture shimmer.
+Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; check idle first.

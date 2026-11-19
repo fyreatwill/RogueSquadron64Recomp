@@ -203169,3 +203169,20 @@ with PULL=3 vs true depth plus a real-object toggle control; P>0 selects drawn, 
   confirmed by eye in the step-3 proof sheet.
 - Next discriminator: step 3 proof, L1+L4 at dd2/dd4, on/off pairs + spawn early_s (NEXT.md); early_s > 0 selects H-early-visible,
   excess only at dd4 selects H-inside-spawn-radius at dd2, wrong shapes select H-placement.
+
+## Session 7628 (2026-11-18) — G6c step 3 proof: stand-ins visible early by eye (L1 dd2 bunker, L4 dd4 city towers); scorer excess alone is shimmer-prone
+Ran (in-session, host idle 20 min, AC, screen unlocked): scratch/s7628_standins_proof.sh, g1e harness HOLD=150, STANDINS=frame +
+dumps 10/16 s, arms L1 dd2 / L1 dd4 / L4 dd2 / L4 dd4. 4/4 alive, 0 fatal, vi_stalls30s=0, level_ok=1 all.
+Flicker px/triplet window 1 (toggle) vs window 2 (forced off): L1 dd2 650.8/44.5, L1 dd4 557.8/107.4, L4 dd2 143.1/155.4,
+L4 dd4 1755.9/161.3; synthetic control PASS all arms (positive control, same run).
+New tool tools/s7628_standins_sheet.py: picks adjacent on/off swap pairs, diff with camera motion rejected (pixels that also
+differ between the two off neighbours), crops on the densest 32 px cell. Second line of evidence (eye, on the frames):
+- L1 dd2: a far bunker in the haze at true depth, absent in the paired frame. L4 dd4: a row of far city towers (1949 px).
+- L1 dd4 top pairs and the s7626 N arm (547): cliff-texture shimmer + laser bolts, NOT stand-ins. The scorer excess alone is
+  not proof; the s7627 "true-depth N excess" is withdrawn as evidence (P arm and the s7628 eye checks stand).
+- L4 dd2: none (inside the game's spawn radius; expected).
+Dumped swap n shows call n-1 (stand-ins in label-0 frames). [standins-spawn] early_s >= 0: L1 10-11 items 2-62 s early,
+L4 19 items 0.2-5 s early.
+Owner sheet docs/owner_sheet_s7628_standins_on_off.jpg. Queued 19 soaks scratch/agent/soak_queue/s7628_standins_hold_L0..18.sh
+(300 s, STANDINS=1, dd4, owner recipe; one level per recipe because two 300 s arms exceed the 600 s cap).
+Rules out: H-occluded-only (stand-ins are seen at true depth in open sightlines on both levels). Open: crash-freedom over 19 levels.
