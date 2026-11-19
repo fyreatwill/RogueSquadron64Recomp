@@ -203840,7 +203840,7 @@ vtxcolor_state + its RT64 consumer, e9prov_task_begin + root_dl consumers, inlin
 join/probe + s4211, filter-voice span checks, fs-slot/fl-zero pollers, the RT64 RDRAMSize constant, s4204-s4209/s6363/
 s6660 generated blocks, the m5 task-ptr guards).
 
-Result: H-mk8-diag-only selected. Host 229 sites: D 177 (env/enabled-gated function), D* 52 (always called, 8 MB value
+Result: this selects H-mk8-diag-only and refutes H-mk8-live (no default-on site aliases or rejects >= 8 MB data); it closes class MK8. Host 229 sites: D 177 (env/enabled-gated function), D* 52 (always called, 8 MB value
 feeds only diag state or prints). Generated 25: D 17 (opt-in/diag patch blocks; 13 are 0x807Fxxxx bounds the s7337
 census never saw), F 8 (float mantissa masks in the s7xxx NaN checks, not addresses). ucode 0. RT64 RDRAMSize=0x7FFFFF
 only sizes a debug RDRAM dump. Also confirmed class R still clean (s7337_bound_census exit 0, generated survivors 0).
@@ -203853,3 +203853,5 @@ CURRENT-TRUTH item 33; item 32's caveat resolved.
 Rules out: an 8 MB alias/reject in default-on code as a cause of dd>1-only defects (G5b drops, G5h cutscene loss).
 Does NOT rule out: closed DIAGNOSTIC conclusions measured at dd>1 through one of these D/D* keys being alias artefacts
 like TS-4 -> NEXT s7649 re-validates those. Evidence is static (single-source by construction); no game run this session.
+Next discriminator (s7649, HYPOTHESIS-ID mk8-conclusion-revalidation): for each CLOSED conclusion measured at dd>1 via a D/D*
+key, a same-run true-key (0x1FFFFFF) vs old-key arm (s7647 pattern); H-none (no conclusion moves) vs H-some (>=1 reopens).
