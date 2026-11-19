@@ -91,6 +91,8 @@ row("upstream_compat.cpp", "s_s7480_freed", "bt", "host", RA, "host backtrace")
 row("s7096_fwd_cover.cpp", "g_m", "ex", "host", r"g_m\.ex = &g_ex;", "points at the host vector g_ex / g_cex")
 row("s7324_rcp_spill.cpp", "g_dg", "o", "host", r"rs64_s7324_sym\(g\.o\.lopc\[j\]", "host return addresses (symbolised)")
 row("s7324_rcp_spill.cpp", "g_ex", "pc", "host", r"rs64_s7324_sym\(e\.pc\[j\]", "host return addresses (symbolised)")
+row("rs64_settings.cpp", "p", "vars", "host", r"static const std::vector<Preset> p = \{",
+    "s7663 preset table: function-local static const vector of string-literal (name, value) pairs; no rdram/TO_PTR in the TU")
 row("s7331_reset_writer.cpp", "g_act g_fin", "own rown", "host", r"b->own = own;", "host return address from upstream_compat (b.pc[1])")
 
 def src(rel):

@@ -204540,3 +204540,18 @@ src/main/rs64_settings.cpp `p.vars` (s7663 settings file, not touched here) -> n
 Rules out: H-clean / H-double at the handoff. Not covered: owner look; held stand-ins for objects killed before first acceptance
 (cannot be shot while culled; item+6 reverting returns to the old path); a 300 s 19-level hold with HOLD on (same draw path as the
 s7629-s7630 holds; 5 arms here clean).
+
+## Session 7673 (2026-11-19) — s7614_hm census OPEN row closed: rs64_settings.cpp `p.vars` is host-owned (static const string-literal preset table); census back to PASS 8/8
+
+- Crash gate first: `tools/crash_reports.py --since 2026-11-13` -> FOLDED=27 new=0.
+- Unit (CURRENT-TRUTH item 23, NEXT s7673). Hypotheses H-host vs H-guest for the s7663 `presets()` static `p` (member `vars`,
+  `std::vector<std::pair<const char*, const char*>>`). Discriminator: every store to `p.vars`. Read: `p` is a function-local
+  `static const std::vector<Preset>` whose only initialisation is the brace list of string literals at rs64_settings.cpp:33;
+  it is const, so no later store exists; the TU contains no `rdram`, `TO_PTR`, `MEM_` or `recomp_context` token (grep 0).
+  -> **H-host selected**, H-guest refuted (no guest-derived value can reach it).
+- Change: tools/s7614_hm_census.py gains row ("rs64_settings.cpp", "p", "vars", "host", proof
+  `static const std::vector<Preset> p = \{`). Result: 35 rows {host 27, base 3, dead 1, fresh 1, hpvar 1, retail 1,
+  retailq 1}, OPEN 0, controls 8/8 PASS, RESULT PASS, rc 0.
+- Positive control for the new row, same session: a copy of the census with the proof altered to `PresetXX` reports
+  `DRIFT src/main/rs64_settings.cpp p.vars | proof missing` and RESULT FAIL, so the row is proof-checked rather than a blanket pass.
+- Offline only; no game run, no soak queued.
