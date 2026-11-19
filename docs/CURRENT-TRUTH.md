@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7615 (2026-11-18).
+Compact operational handoff, as of Session 7616 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,17 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7615: class DQ (deferred guest reads through host queues / threads) CLOSED, H-clean, no fix.**
+- **NEW s7616: class RQ (deferred reads of guest RDRAM inside lib/rt64 + rt64_render_context.cpp) CLOSED, H-clean, no fix.**
+  `python3 tools/s7616_rq_census.py --controls --witness-sample scratch/s7616/sample.txt` (regex tools/s7616_rq_scan.py, clang
+  tools/s7616_rq_ast.py -> scratch/s7616/ast.json, 92 TUs): 129 base-reference rows (->RDRAM/.RDRAM/implicit this/fromRDRAM),
+  regex == clang (2 regex-only = #ifdef _WIN32, 1 clang-only = implicit Core copy-assign). sync 120 (reachable only from Gfx
+  entries send_dl/update_screen/submit_rdp_range; fullSync's renderAndSynchronize lambda is called inline), init 3, dead 3,
+  copy 2 (rdpq::submit memcpy), gated 1 (RDP_ASYNC worker, default 0, measured s7539-s7554). Worker-thread buffers carry copies
+  (TextureUpload.bytesTMEM, FramebufferStorage::store memcpy, BufferUploader srcData = host vectors). Witness: macOS `sample`
+  of a default title run (tools/s7616_rq_sample.sh): 95 reader frames all on Gfx Thread, 0 elsewhere, controls threadRenderFrame
+  on RT64 Workload + threadPresent on RT64 Present. Controls 10/10. **Hazard: never LAUNCH the game under lldb** (s7616: it could
+  not read build/rs64.n64.us.1.0.z64 and tried to delete it, EPERM saved it); attach to a normally started pid instead.
+- **s7615: class DQ (deferred guest reads through host queues / threads) CLOSED, H-clean, no fix.**
   `python3 tools/s7615_dq_census.py --controls --witness scratch/s7615/witness.log` (scan tools/s7615_dq_scan.py, clang =
   scratch/s7614/ast.json): 16 queues + 12 vectors-used-as-queues, regex == clang on both; 29 producers inside their rows'
   allowed-argument sets; 52 thread creations (sys 7, gated 24 env-proved, host 21 one-hop clean). Default-on guest addresses
@@ -34,11 +44,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   set/restored inside run_task, s_pending_audio_task OSTask* read only into logs/joins (helpers env-gated). Contracts B/B1/B2/
   F1/H1, controls 9/9. The AST pass found ~20 declarations the first regex missed (fixed in-session).
 - **s7612: class RG (guest REGISTER values parked in host statics across calls) CLOSED, H-clean, no fix.**
-  tools/s7612_rg_census.py --controls --witness (scanner tools/s7612_rg_scan.py, REG + one-hop PARM taint): 242 candidates /
-  126 names 0 open (gated 181, stash 26 reader-checked, fresh 10, edge 9, ...), contracts R1-R7, controls 8/8. Default-on units:
-  s7103 camfix entry/exit pair (per-camera calls; 4 entry-skipping gotos see s7103_in 0), s7108_s2 and s7482 reserve set+used in
-  one call, s7398 OSIoMesg set->do_dma->0, s6892 repair only when the live pointer is already junk. Witness s7103/s7108 chase
-  logs: 7448/7448 and 6156/6156 exit snapshots match their own call's entry, planted stale p0 fails.
+  tools/s7612_rg_census.py --controls --witness; 242 candidates 0 open, controls 8/8 (details: PORTING-STATE s7612).
 - **s7611: class SN (host snapshots of guest DATA in statics) CLOSED, H-clean** (tools/s7611_sn_census.py; PORTING-STATE s7611).
 - **s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
   --controls --witness <logs> (6/6, PASS). Overlays 4/5/6 share vram 0x800A5130. Host: 54 rows, 0 open (func_map refreshed by
@@ -496,8 +502,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 45. **Class HM CLOSED s7614** (headline). Rerun tools/s7614_hm_census.py --ast --controls after adding a static struct /
     container whose member is a pointer; a guest view kept across calls needs a contract (retail lifetime, same-call, gated)
     and, if default-on, a witness like W.
-46. **NEXT (s7615): class DQ, deferred guest reads through host queues** - every host queue / channel (moodycamel, deque,
-    action queues, RT64 queues) whose element carries a guest address or view read at CONSUME time, not at enqueue (NEXT.md).
+46. **Class DQ CLOSED s7615, class RQ CLOSED s7616** (headline). Rerun tools/s7616_rq_census.py --controls after any lib/rt64
+    edit that reads RDRAM or adds a thread; a new worker-thread reader of RDRAM needs a command-time copy or a gate.
+47. **NEXT (s7617): class RP, RDRAM-derived pointers kept in lib/rt64 members/statics across calls** - s7613 HP / s7614 HM
+    covered src/ + librecomp/ultramodern only; RQ counted base references, not aliases that outlive the call (NEXT.md).
 
 ## Evidence index
 

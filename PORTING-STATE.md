@@ -202811,3 +202811,53 @@ Work unit: NEXT.md s7615 (class DQ, the scope gap s7614 declared). Audit only, n
   the same, requester blocks); (2) lib/rt64 internal queues (workload / present / texture-upload threads that read
   RDRAM after the gfx thread hands work over) are out of this census -> class RQ next; (3) maps/sets keyed by guest
   addresses were covered by earlier classes (s7610 OV, s7611 SN, s7612 RG) and are not re-listed here.
+
+## Session 7616 (2026-11-18) — class RQ closed: deferred reads of guest RDRAM inside lib/rt64 (129 base-reference rows 0 open, regex == clang-AST, controls 10/10, runtime sample witness: 95 reader frames all on Gfx Thread, worker-thread controls fire), H-clean
+
+- Question (NEXT s7616, slug rt64-deferred-rdram-read): does any RT64 thread other than the one running the RDP command
+  (workload / present / texture-upload / buffer-upload / shader threads) read guest RDRAM later than the command that names
+  it, where the guest may already have rewritten the bytes? Hypotheses: H-clean (every read is on the Gfx thread before
+  send_dl returns, or the bytes are copied at command time), H-bad-live (a default-on worker reads core.RDRAM late),
+  H-bad-gated (only opt-in paths do, e.g. RDP_ASYNC, already measured s7539-s7554).
+- Census (tools/s7616_rq_census.py --controls --witness-sample scratch/s7616/sample.txt, rc 0, VERDICT CLOSED):
+  regex source tools/s7616_rq_scan.py (comments/strings blanked, ->RDRAM/.RDRAM/fromRDRAM/implicit this->RDRAM inside State
+  methods, enclosing function chain, short-name call graph); clang source tools/s7616_rq_ast.py (MemberExpr RDRAM/fromRDRAM,
+  92 TUs, 0 failed). 129 rows: regex-only 2 = render_context.cpp:1031/1948 inside #ifdef _WIN32; clang-only 1 = implicit
+  Core::operator= (rt64_application.h:61). Classes: sync 120, init 3 (State::State, Application::setup, RT64Context ctor),
+  dead 3 (2 WIN32 + State::dumpRDRAM, no caller), copy 2 (rdpq::submit memcpy into Job.w), gated 1 (rdpq worker
+  gb::job_end; ROGUESQ_RDP_ASYNC default 0 checked from the source literal), OPEN 0.
+- Thread attribution: Gfx roots send_dl / update_screen / submit_rdp_range / run_rdp_submission / rs64_rdpq_task_exit; worker
+  roots WorkloadQueue render+idle loops, PresentQueue/BufferUploader thread loops, TextureCache stream+upload loops, shader
+  compilation + pipeline threads. Short-name graph refinements, each with a control: (1) GBI/RDP handler tables: every
+  address-taken function is a callee of <dispatch>, called by Interpreter::process* (without it 38 GBI/RDP/RSP rows were
+  "unreachable"); (2) template calls name<...>( incl. sizeof(...) args (missed RSP::setVertexCommon -> readExtendedVertexSegment);
+  (3) internal linkage: render_context.cpp free functions only callable from that TU (renderThreadLoop's submit( is
+  BufferUploader::submit, not rdpq::submit); (4) sole caller: Application::setup only from RT64Context (app->setup( count == 1,
+  live). fullSync's 37 RDRAM rows sit in renderAndSynchronize (a [&] lambda called inline at lines 3133/3147).
+- Escape check (are RDRAM-derived bytes handed to a worker by pointer?): TextureCache::queueGPUUploadTMEM copies into
+  TextureUpload.bytesTMEM; FramebufferStorage::store memcpys; every BufferUploader::Upload.srcData is a host workload vector;
+  no row assigns the base or a derived pointer to a member/container (rt64_rdp.cpp:517 stores an offset).
+- Runtime witness (tools/s7616_rq_sample.sh: game started normally, 20 s warm, `sample` 30 s): per-thread call trees: 95 frames
+  of the 25 reader functions all under "Gfx Thread", 0 under any other thread; controls WorkloadQueue::threadRenderFrame under
+  "RT64 Workload" and PresentQueue::threadPresent under "RT64 Present" present. First parse wrongly put 5 reader frames on
+  "[Game] SCHED": that was the file's unattributed "Sort by top of stack" summary after the last thread; the parser now stops
+  there (C8 plants a frame before it).
+- Controls 10/10: C1 planted read in WorkloadQueue::threadRenderFrame -> OPEN; C2/C3 drop an AST / regex row -> disagreement;
+  C4 internal-linkage rule off -> OPEN; C5 sole-caller rule off -> OPEN; C6 RDP_ASYNC default flipped -> OPEN; C7 planted read
+  in an uncalled fn -> dead; C7b planted in a called-but-not-Gfx-reachable fn (Application::loadConfiguration) -> OPEN;
+  C8 planted reader frame on RT64 Workload -> BAD; C9 workload control frames stripped -> witness FAIL.
+- Discrimination: H-clean selected for default play (two lines: static census with two sources for the rows, single-source
+  call graph for threads + an independent runtime sample). H-bad-live refuted; H-bad-gated = the RDP_ASYNC worker, already
+  measured (s7540 NODRAIN=3: 0 late texture reads).
+- Dead ends this session: (a) lldb LAUNCH of the game: the debugged process could not read build/rs64.n64.us.1.0.z64
+  ("invalid stored ROM") and tried to delete it; remove_stored_rom got EPERM, file intact (16777216 bytes, Jul 9). Never launch
+  under lldb. (b) lldb ATTACH with Python breakpoint callbacks: the first run counted (all readers on Gfx Thread, controls on
+  RT64 Workload/Present) but later runs stalled DL processing (only updateScreen/threadPresent hit), so it was replaced by
+  `sample`; tools/s7616_rq_witness.py is kept, attach-only, marked NEVER launch.
+- Incident: a cleanup `pgrep -x RogueSquadron64Recomp && pkill -KILL` at 17:2x SIGKILLed a game (pid 4283) that this
+  session had NOT started (no lldb ran, `timeout` is absent on macOS). Origin unknown: possibly the owner or another session.
+  Future cleanups must kill only the PID they started.
+- ORIGIN: no mitigation added (audit only).
+- Scope limits: (1) witness = title/attract phase only, default recipe; (2) rows are base references: an RDRAM-derived
+  pointer stored in a long-lived RT64 member or static and read in a later call is not enumerated -> class RP next;
+  (3) RDP_ASYNC timing itself is s7538-s7554's ledger.
