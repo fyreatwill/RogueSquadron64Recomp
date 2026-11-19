@@ -14757,8 +14757,9 @@ static void rs64_s7467_asan_plant() {
 #endif
 }
 
+extern "C" void rs64_settings_apply(int argc, char** argv);  // s7663 src/main/rs64_settings.cpp
 int main(int argc, char* argv[]) {
-    (void)argc; (void)argv;
+    rs64_settings_apply(argc, argv);  // s7663: settings.txt / --preset; re-execs (same pid) when it sets anything
     rs64_s7467_asan_plant();
 #if defined(RS64_S7467_ASAN)
     { const char* p = std::getenv("ROGUESQ_S7468_UCODE_PLANT"); if (p && *p == '1') rs64_s7468_ucode_plant(0x1000); }

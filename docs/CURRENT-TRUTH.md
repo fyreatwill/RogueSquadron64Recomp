@@ -12,7 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7660: title-boot plume si_addr=0x58 SIGSEGV: 0/20 on the current build (14 default + 6 owner 16:9), same-run
+- **NEW s7663: owner launch settings (owner to try):** `./RogueSquadron64Recomp --preset tv|ultrawide|window` or lines in
+  build/settings.txt (src/main/rs64_settings.cpp; env > file > preset; self re-exec, same pid, so pre-main statics see them; loop
+  exports ROGUESQ_SETTINGS=0). 5-arm proof scratch/s7663, OWNER-OPT-INS row. No default changed.
+- **s7660: title-boot plume si_addr=0x58 SIGSEGV: 0/20 on the current build (14 default + 6 owner 16:9), same-run
   [CRASH]-handler control PASS; 76 clean boots since s5377 -> CLOSED as gone (H-gone). s7641 race ruled out by code: the
   null is a render-target texture, never a swap-chain drawable. lldb attach -w was a tooling null in that session only.**
 - **s7661: lldb attach WORKS in loop sessions (developer mode off): pid + -w + long name + s7660 control verbatim on the real game
@@ -351,6 +354,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     tools/s7639_st_census.py after any SDL call edit or new thread; tools/s7640_at_census.py / s7641_cf_census.py after AppKit or
     framework-callback edits; TSan builds tools/s7642_tsan_rt64_build.sh, s7643_tsan_host_build.sh (lightweightsemaphore tsan
     annotations are TSan-only); the gate sweep after any src/ or lib/ change. A new G above 0x80180000 reads unclassified (RED): re-dump.
+
+22. **s7663 launch settings/presets: owner to try.** After any edit to rs64_settings.cpp rerun tools/test_settings.cpp and
+    scratch/s7663/run.zsh (5 arms; C must print `[gfx-qos] mode=1` from the file). New owner recipes go in its presets() table.
 
 ## Evidence index
 

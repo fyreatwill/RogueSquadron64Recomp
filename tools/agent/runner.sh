@@ -37,6 +37,9 @@ export RS64_LOOP=1
 # game run may persist to it, and every session first snapshots it if it changed. A test
 # that really needs a writable save must use its own copy, never build/saves.
 export ROGUESQ_NO_SAVE_WRITE=1
+# s7663: loop game runs never pick up the owner's build/settings.txt or a ROGUESQ_PRESET.
+export ROGUESQ_SETTINGS=0
+unset ROGUESQ_PRESET
 save_bk="$HOME/Documents/RS64-save-backups/auto"
 if [ -f build/saves/rs64.n64.us.1.0.bin ]; then
   mkdir -p "$save_bk"

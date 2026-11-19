@@ -36,6 +36,9 @@
 # same-named env var already in the shell.
 set -u
 cd "$(dirname "$0")/../.."
+# s7663: queued soaks and iterations never pick up the owner's build/settings.txt or a ROGUESQ_PRESET.
+export ROGUESQ_SETTINGS=0
+unset ROGUESQ_PRESET
 AG=scratch/agent
 mkdir -p "$AG"
 

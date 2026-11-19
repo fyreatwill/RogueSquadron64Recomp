@@ -204258,3 +204258,23 @@ TS-3 TS-4 MK8, walker fusion, spike cost, closed-gate drift). Replaced them with
 and one item 21 (closed-class list, the default-on flags that stay with their =0 restores, and the rerun-after-change triggers).
 Backlog now numbers 1-21 in one monotonic sequence; the stale "item 29/30" cross-references point at item 21. Headline "as of" -> s7662.
 Rules out: nothing (no experiment). Next: owner items first; else the first open 3c rung per CURRENT-TRUTH.
+
+## Session 7663 (2026-11-19) — owner launch settings: build/settings.txt + --preset tv|ultrawide|window (self re-exec so pre-main readers see them), 5-arm same-build proof
+Context: every ladder rung and G5/G6 item waits on the owner (CURRENT-TRUTH Next steps); upstream origin/main re-read (new since
+the s7621 survey: rewind/record replay, MCP targets, co-op walkers, combo bindings = debug/HLE-side; path-unit stand-in placement
+a0bfe294f is already in our rs64_standins.cpp place_on_path). Took an owner-usability change instead of a census pass: the owner
+recipe is a 4-6 variable `env` line.
+Change: src/main/rs64_settings.cpp (first call in main). Sources: `--preset NAME` / ROGUESQ_PRESET, `--settings FILE` /
+ROGUESQ_SETTINGS=<path>, default `<exe dir>/settings.txt` (ROGUESQ_SETTINGS=0 = no file). Lines ROGUESQ_NAME=value (env/export
+prefixes and quotes tolerated), `preset=name`, `#`; anything else refused (no DYLD_*/PATH). Precedence env > file > preset
+(setenv overwrite=0). Presets: retail (empty), window (FPS60=1 DD=2), tv (FPS60=1 DD=4 ASPECT=16:9 FULLSCREEN=1 = ITERATION G5
+owner recipe), ultrawide (same, 21:9). Many options are file-scope statics read before main (e.g. events.cpp s6975_gfx_qos), so when
+anything is set the process execv()s itself (same pid) with ROGUESQ_SETTINGS_APPLIED=1. Loop isolation: runner.sh and loop.sh
+export ROGUESQ_SETTINGS=0 and unset ROGUESQ_PRESET, so an owner settings.txt never contaminates loop soaks. No default changed.
+Proof (scratch/s7663/run.zsh, one build, 5 arms x 25 s, SIGKILL): A SETTINGS=0 -> set=0, no [gfx-qos] line, dd multiplier 1;
+B real env GFX_QOS=1 (witness positive control) -> `[gfx-qos] mode=1`; C --settings file (GFX_QOS=1, DD=2, PATH=/evil) -> PATH line
+refused, set=2, re-exec, `[gfx-qos] mode=1` (a pre-main static saw the file value), multiplier 2; D --preset window -> FPS60+DD2
+applied, multiplier 2; E env DD=3 + --preset=window -> kept_from_env=1, multiplier 3. All 5 pids alive at 25 s and equal to the
+launched pid (re-exec keeps the pid, so tools/rs64_game_pid.zsh and watchdogs are unaffected). Parser unit test
+tools/test_settings.cpp 15/15 PASS (accept + reject cases).
+Rules out: nothing about game behaviour; this is a launcher convenience. Owner to try `--preset tv` / `--preset ultrawide`.

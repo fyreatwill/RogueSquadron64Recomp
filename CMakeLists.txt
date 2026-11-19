@@ -402,6 +402,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
     ${CMAKE_SOURCE_DIR}/src/main/rs64_selfbranch.cpp
     ${CMAKE_SOURCE_DIR}/src/main/rs64_standins.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/rs64_settings.cpp
     ${CMAKE_SOURCE_DIR}/src/main/upstream_compat.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/aspMain.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
