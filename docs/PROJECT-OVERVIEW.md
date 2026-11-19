@@ -14549,3 +14549,263 @@ Item-1 class sub-bullets (DG-EO, s7450-s7490), verbatim from CURRENT-TRUTH s7490
 - g3_aspect_crop scores s6879-s6881 scored pillarbox bars; "pinned pose" s6445-s6583 is attitude-only;
   "300 s hold" FPS60/dd>1 s6774-s6862 counted from boot (use inits= and flight_s=).
 
+
+
+## Migrated from CURRENT-TRUTH (s7622 maintenance): s7621 headline bullets s7579-s7616 and Next-steps items 19-46, verbatim
+
+### Headline bullets
+
+- **s7616: class RQ (deferred reads of guest RDRAM inside lib/rt64 + rt64_render_context.cpp) CLOSED, H-clean, no fix.**
+  `python3 tools/s7616_rq_census.py --controls --witness-sample scratch/s7616/sample.txt` (regex tools/s7616_rq_scan.py, clang
+  tools/s7616_rq_ast.py -> scratch/s7616/ast.json, 92 TUs): 129 base-reference rows (->RDRAM/.RDRAM/implicit this/fromRDRAM),
+  regex == clang (2 regex-only = #ifdef _WIN32, 1 clang-only = implicit Core copy-assign). sync 120 (reachable only from Gfx
+  entries send_dl/update_screen/submit_rdp_range; fullSync's renderAndSynchronize lambda is called inline), init 3, dead 3,
+  copy 2 (rdpq::submit memcpy), gated 1 (RDP_ASYNC worker, default 0, measured s7539-s7554). Worker-thread buffers carry copies
+  (TextureUpload.bytesTMEM, FramebufferStorage::store memcpy, BufferUploader srcData = host vectors). Witness: macOS `sample`
+  of a default title run (tools/s7616_rq_sample.sh): 95 reader frames all on Gfx Thread, 0 elsewhere, controls threadRenderFrame
+  on RT64 Workload + threadPresent on RT64 Present. Controls 10/10. **Hazard: never LAUNCH the game under lldb** (s7616: it could
+  not read build/rs64.n64.us.1.0.z64 and tried to delete it, EPERM saved it); attach to a normally started pid instead.
+- **s7615: class DQ (deferred guest reads through host queues / threads) CLOSED, H-clean, no fix.**
+  `python3 tools/s7615_dq_census.py --controls --witness scratch/s7615/witness.log` (scan tools/s7615_dq_scan.py, clang =
+  scratch/s7614/ast.json): 16 queues + 12 vectors-used-as-queues, regex == clang on both; 29 producers inside their rows'
+  allowed-argument sets; 52 thread creations (sys 7, gated 24 env-proved, host 21 one-hop clean). Default-on guest addresses
+  in queues are value copies (action_queue OSTask/VI regs), keys (audio-sp deliveries, menu FIFO) or protocol objects:
+  external_messages witnessed (tools/s7615_dq_witness.sh, RECV_TRACE) = 14 static queues, one per Sp/Si/Ai/Vi/Dp + a PI
+  OSMesgQueue[8]; timer T1 (osStopTimer unlinked); extensions pending_events dead (X1). Controls 10/10.
+- **s7614: class HM (pointer MEMBERS of static aggregates) CLOSED, H-clean, no fix.** tools/s7614_hm_census.py
+  --controls --witness <log> (regex tools/s7614_hm_scan.py; clang tools/s7614_hm_ast.py + tools/s7614_hm_join.py, 117 TUs):
+  24 statics with pointer members, both sources agree on vars and member sets; 34 rows 0 open: host 26, base 3 (B), retail 1
+  (ViState.mode = TO_PTR of the osViSetMode arg, like libultra modep, V1), fresh 1 (hook_contexts, HF), hpvar 1, dead 1, and
+  ONE default-on deferred guest view: events_context.sp_task_queue holds the audio OSTask* from submit to consume (Q1).
+  Witness (tools/s7614_hm_witness.sh, ROGUESQ_LOG_M5_TASK_LIFETIME, title): 236/236 pairs identical 16 OSTask words,
+  strict one-outstanding alternation, off-by-one control mismatches 226/235. Controls 8/8.
+- **s7613: class HP (HOST pointers held in static / thread_local / file-scope storage) CLOSED, H-clean, no fix.**
+  tools/s7613_hp_census.py --controls (scanner tools/s7613_hp_scan.py; second source tools/s7613_hp_ast.py = clang -ast-dump
+  over build/compile_commands.json, 117 TUs): 65 pointer-typed static-storage variables, regex and AST censuses agree exactly
+  (sole regex-only g_wp_addr is #ifdef _WIN32). base 21 (rdram base / base+const watch pages; rdram mmapped once, freed after
+  thread joins), host 39, fnptr 2, dead 1, and only 4 guest views: g_s4583_t3 + s4586 cur_thr env-gated, g_audio_dma_probe
+  set/restored inside run_task, s_pending_audio_task OSTask* read only into logs/joins (helpers env-gated). Contracts B/B1/B2/
+  F1/H1, controls 9/9. The AST pass found ~20 declarations the first regex missed (fixed in-session).
+- **s7612: class RG (guest REGISTER values parked in host statics across calls) CLOSED, H-clean, no fix.**
+  tools/s7612_rg_census.py --controls --witness; 242 candidates 0 open, controls 8/8 (details: PORTING-STATE s7612).
+- **s7611: class SN (host snapshots of guest DATA in statics) CLOSED, H-clean** (tools/s7611_sn_census.py; PORTING-STATE s7611).
+- **s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
+  --controls --witness <logs> (6/6, PASS). Overlays 4/5/6 share vram 0x800A5130. Host: 54 rows, 0 open (func_map refreshed by
+  load + s7528 evict, get_function uncached, ucode chosen by task type; RT64 HLE GBI cache keyed by text address is gated
+  off by ROGUESQ_LLE_FORCE default). Generated: 14240 direct calls, 3460 into an overlay all from the same overlay, 0
+  cross-overlay (agrees with s7520 runtime). Witness: 29 swaps stale 0; s7528 two-arm pair is the control.
+- **s7609: class MK (host state keyed by a guest struct address) CLOSED, H-clean** (full text: PORTING-STATE s7609).
+- **s7608: class TK (host state keyed by guest thread identity) CLOSED, one latent default-path fix.**
+  tools/s7608_tk_census.py --controls --witness (4/4, PASS): 119 lines, 0 open. OSIds are NOT unique (log witness: id 0 = 8
+  distinct threads, id 9 = 2), so the default-on s7394fix::holder ("holder == my OSId") could name another thread; now keyed by a
+  thread_local incarnation token (ROGUESQ_S7608_TK=0 = old). L4 dd4 A/B: both keys 7 windows, 5 skips, 0 crash (identical).
+- **s7607: class UW (exceptions unwinding through generated C frames) CLOSED, H-bad-gated, one fix.**
+  tools/s7607_uw_census.py --controls --witness (7/7, 2/2): 5 throws (1 thread_terminated, 4 fatal), 3 catch roots, TWO
+  throw paths (self-destroy via unregisterServiceWorker; and destroy-of-other waking the target inside any blocking stub ->
+  wait_for_resumed -> osDestroyThread(NULL)), 40 host blocking frames rowed, 729/729 text symbols carry compact unwind, no
+  -fno-exceptions/-fno-unwind-tables. Fix: ~Rs64Cf0Delay (ROGUESQ_CF0_DELAY_TEST arm) blocked inside its destructor ->
+  std::terminate on unwind; now bails when std::uncaught_exceptions() > 0.
+- **s7606: class HC (host calls into guest functions) CLOSED, H-clean.** tools/s7606_hc_census.py --controls (7/7): 8 sites
+  (fresh 3: run_thread_function x2 + boot entrypoint; reused 1; dead 2 GameEntry callbacks; gated 2 mod dispatch), 0 open.
+  OSThread.sp int32 -> sign-extended r29, t->sp = sp - 0x10 arg area, FR=0, get_function miss fatal, gp read only in data_gap/diag;
+  12 logged thread entries are function starts with 8-aligned sp. Witness tools/s7606_hc_witness.cpp 9/9. No game run.
+- **s7605: class FR (host access to guest FPRs) CLOSED, H-bad-gated, one dead-path fix.** tools/s7605_fr_census.py
+  --controls (6/6): 24 host FPR lines (src + librecomp + ultramodern), every view matches the retail prototype / consumer
+  (f12.fl float a0, f14.fl, f0.fl/f0.d returns, s6904 fog hook .fl = what trunc.w.s reads), 0 odd FPR in FR=0 host code,
+  helpers.hpp contract held; 6 float-prototype host stubs, 0 game call sites. One BAD: mod_hooks recomphook_get_return_double
+  cast f0.fl through (uint8_t) and wrote f1; fixed to f0.d (mod export, no game path). Witness tools/s7605_fr_witness.cpp 11/11.
+- **s7604: class RA (host reads of guest registers) CLOSED, H-bad-gated, one dead-path fix.** tools/s7604_ra_census.py
+  --controls (6/6): 528 ctx->rN reads = ok-cast 399, ok-hilo 46, ok-macro 24, ok-param 24 (signature map), ok-alias 3, ok-copy 2,
+  row 30 (64-bit range guards accepting both sext/zext forms), 0 open. One BAD: recomp_alloc (mod export, 0 game calls) sized
+  (size_t)ctx->r4 and returned a junk pointer on NULL; fixed (ROGUESQ_S7604_ALLOC=0 = old). Witness tools/s7604_ra_witness.cpp 12/12.
+- **s7603: class RX (host writes into guest registers) CLOSED, H-clean.** tools/s7603_rx_census.py --controls (5/5): 151
+  write sites (ok-sext 71, ok-small 64, ok-copy 2, fpr 11, consumer 1) + 81 no-r2 stubs (dead 31 incl. every non-void one such as
+  osSetIntMask/__osSpSetPc/osVoice*, void 30, hook 21); 0 open. _return sign-extends u32. osVirtualToPhysical's zero-extended u32
+  reaches only guest `sw` (7/7 calls). Second source tools/s7603_rx_witness.cpp 9/9 (real helper + real osVirtualToPhysical;
+  zero-extended form fails a lui compare as control). Static; no game run, no runtime change.
+- **s7602: class TP (guest RAM viewed as a host type) CLOSED, H-clean.** tools/s7602_tp_census.py --controls (5/5): 144
+  TO_PTR / _arg<N, T*> / GET_MEMBER sites = ok-word 67, ok-swizzled 48, host-private 24, generic 1, consumer 2, gated 1, addr 1;
+  0 open. `_arg<N, PTR(T)>` is NOT a view (PTR(T) = int32_t). OSContPad's host decl is unswizzled but never viewed (cont.cpp
+  writes the pad via MEM_H/MEM_B). OSPfs id/label (funky-endian TODO) never accessed (pak stubbed). Only risky members used:
+  OSThread.context (host pointer, host-private) and OSTimer.interval/timestamp (u64 halves word-swapped vs retail): two sources
+  that no guest reads them (timer.cpp code reading + /tmp/s7419_canon.dis: the one live timer 0x801128F0 has no access at +8..+23).
+  Static census; no game run, no code change.
+- **s7601: class BS (guest-RAM byte swizzle) CLOSED, H-gated; 5 diagnostic composers fixed.** tools/s7601_bs_census.py
+  --controls (4/4; rows tools/s7601_bs_rows.py): 522 raw-view sites (rdram/RDRAM/g_rdram_for_submit) = ok-byte 291, ok-word 77,
+  ok-half 7, symmetric 40, bound 1, consumer 36, gated 58, addr 12; 0 open, 0 BAD on default paths. 6 TO_PTR structs (OSThread,
+  OSIoMesgHdr, OSPiHandle, OSContStatus, OSViMode, OSPfs tail) have every sub-word member swizzled; 265 MEM_* macro sites ok by
+  construction. Wrong swizzle found only in gated logs (byte-reversed words / wrong byte, so those logs printed wrong values):
+  librecomp rsp.cpp audio_read_rdram_word, upstream_compat m5 route/voice word() x2, main.cpp m5 field post x2 -> fixed, known-value
+  witness tools/s7601_bs_witness.cpp 10/10 (old forms wrong = control). Use src/main/rs64_rdram_peek.h for new probe reads.
+  Static + synthetic witness; no game run (all changed code is env-gated).
+- **s7600: class GX (host arrays indexed by guest-derived values) CLOSED, H-masked/H-gated.** tools/s7600_gx_census.py
+  --controls (3/3; rows in tools/s7600_gx_rows.py): 249 (file, array) units, 0 open, 0 oob (gated 146, host 63, bounded 26,
+  masked 14) + 1605 auto sites (loop/checked/stacktop/mask/maskvar). Live LLE surface bounded: tile p1(24,3), opcode & 0x3F
+  into [256], TMEM MASK8/16 with 8-aligned addresses, TLUT <= 0x1000, s7343 TLUT clamp, RDP stacks push/pop guarded. The HLE
+  RSP side (rt64_rsp.cpp vertex/matrix tables) runs only with ROGUESQ_LLE_FORCE=0: gated, not audited. Control 1 exposed a
+  scanner blind spot (nested `a[b[i]]` invisible), fixed in-session. Single-source static census + 6/6 `checked` sample.
+- **s7599: class GR (long-lived host containers grown per guest event) CLOSED, H-bounded.** tools/s7599_gr_census.py
+  --controls (3/3): 639 growth ops (push_back/emplace/insert/try_emplace/push_front) = 406 (file, receiver) units, 105 static or
+  thread_local; 0 open, 0 grow: scoped 133, gated 102, host 82, bounded 75, local 14. Statics always need their own row (file rules
+  cover only non-static per-workload RT64 code); auto rule = static/thread_local scratch .clear()ed within 6 lines of its decl.
+  Default-on run-lifetime rows and their bound: s4272 deferred ranges/shadow (cleared every flush), s6963F cell index (<=65536 keys
+  via rev[], cleared on pool base change; the growing S6963U map is mode 2 only), s7333 carve keys (guest heap addresses),
+  loaded_sections (s7528 evict), active_timers / g_live_ctx (erased on stop/exit), rdp_tmem hashSet (removeHashes on evict),
+  menu FIFO (cap 64), stderr queue (drop past 256 MB). AZ-1 flight fold (same session): L1+L4 dd4 180 s 2/2 alive, 0 stall,
+  [s7598-mask] 0/0 -> SETTILE mask clamp never touches retail flight. Footprint plateaus ~1.02 GB by ~70 s (single run,
+  no same-run plant; s7586's 20 min 0.005 MB/s stays the tight bound).
+- **s7598: class AZ (host allocations sized by guest data) CLOSED, H-clamped.** tools/s7598_az_census.py --controls (3/3):
+  119 alloc + 18 createTexture sites in src/, librecomp, ultramodern, rt64/src, 73 rows + 16 file rules, 0 open (const 25,
+  host 30, bounded 25, gated 8). Named bounds: FramebufferManager::get width<=1280 + 16 MB range, MaxDimension 0x4000 on
+  targets/tile copies, present.storage 16 MB, decode uploads only when the sample fits 4 KB TMEM (else raw TMEM, >4096 shrunk
+  to maxTexcoord). Witness tools/s7598_az_witness.zsh (copied folders, NO_SAVE_WRITE): every SETTILE planted masks=maskt=15
+  wrap -> old arm alive, 358/400 uploads carried mask 15, max 65x65, 0 over 4096. AZ-1 fidelity fix: RDP::setTile clamps
+  masks/maskt >10 to 10 like hardware (angrylion tex.c masksclamped; RT64 wrapped at 32768), `[s7598-mask]`,
+  ROGUESQ_S7598_MASK=0 = old. Boot ctl 0 clamps; flight check queued (soak s7598_maskclamp_flight: if retail sends >10, compare frames).
+- **s7597: class XC (other uncaught C++ exceptions) CLOSED, one fix.** tools/s7597_xc_census.py --controls (2/2): 91 sites
+  (thread 61, jat 15, throw 7, parse 6, directory_entry queries 2) in src/, librecomp, ultramodern, rt64/src, 51 rows, 0 open:
+  every json parse read at boot is caught or non-throwing, thread ctors are boot singletons / once / env-gated / one per guest
+  thread, explicit throws are fatal-anyway, dead or caught. XC-1 (fixed): librecomp mods.cpp scan_mod_folder used the throwing
+  directory_entry::is_regular_file()/is_directory() and iterator ++, so ANY mods/ entry whose stat fails (symlink loop ELOOP, link
+  into an unreadable folder EACCES) aborted the game at boot (rc134, 0.3 s). Now ec forms, entry skipped with `[s7597-io]`
+  (ROGUESQ_S7597_MODSCAN=0 = old). Witness tools/s7597_xc_witness.zsh (copied folders, no owner save, NO_SAVE_WRITE): 13 malformed
+  inputs (mods.json garbage/array/wrong types/dir/binary, mods/ loop/dangling/garbage mod.json/wrong-type mod.json/empty dir/
+  garbage .nrm/.nrm dir/EACCES link): before the fix only loop + EACCES aborted; after, both alive 20 s with the skip line; old arm
+  on the same binary still rc134 (control pair). Left gated-dev: RT64 PresetLibrary::load has no try (F1 inspector only).
+- **NEW s7596: class FS (throwing std::filesystem calls) CLOSED, two fixes.** tools/s7596_fs_census.py --controls (2/2): every
+  std::filesystem call in src/, librecomp, ultramodern, rt64/src parsed (balanced parens): 22 ec-form, 20 throwing rows, 0 open,
+  0 stale. FS-1 (H-crash): check_stored_rom/load_stored_rom deleted an invalid stored ROM copy (rs64.n64.us.1.0.z64) with the
+  THROWING remove() on every boot -> an undeletable bad copy (immutable/read-only file, non-empty folder of that name) aborted
+  boot. Now remove_stored_rom() ec + `[s7596-io]` (ROGUESQ_S7596_RM=0 = old). FS-2: main.cpp current_path() throws when the launch
+  folder is gone -> ec form, falls back to ".". Witness scratch/s7596/run.zsh (copied folders, no owner save, NO_SAVE_WRITE):
+  ctl alive; uchg_old rc134 0.2 s ("remove: Operation not permitted"), dir_old rc134 0.1 s ("Directory not empty"); uchg_new,
+  dir_new, cwdgone alive at 30 s with the [s7596-io] line, then the normal "[ROM] Place your ROM" path (the copy cannot be
+  replaced, so no game; was an abort). The other 18 throwing rows are gated: mods exports (no mods shipped), RT64 user paths
+  (empty dataPath), F1-inspector texture-pack load/save (dev GUI only; an unreadable pack subfolder WOULD still terminate), or
+  the old-form env arms.
+- **s7595: class SV (save I/O failure) CLOSED, one defect fixed (two sites).** tools/s7595_sv_census.py --controls (2/2): 21 rows
+  (files.cpp, pi.cpp save functions, recomp.cpp initialize_mods), 0 open. Write path, offline harness (--harness, the REAL
+  update_save_file/read_save_file text compiled with stubs; scratch/s7595/harness.txt): read-only dir, rename failure, main-is-dir,
+  1 MB full disk all keep main intact + one message line (stderr only, <=0.3 ms, non-blocking: H-block refuted); planted pre-s7357
+  unchecked close on the full disk -> main 0 bytes silently (control). Defect (H-crash, not on the list): read_save_file and
+  initialize_mods used the THROWING create_directories, so an unusable saves/mods path (a file of that name, a read-only game
+  folder) aborted the game at boot (rc134 in 0.3-0.7 s, uncaught filesystem_error). Now error_code + `[s7595-io]` line and play
+  continues (ROGUESQ_S7595_DIRS=0 = old). Runtime boot witness in copied folders (scratch/s7595/run.zsh, owner save only copied,
+  NO_SAVE_WRITE kept): pre saves_file/mods_file rc134; post all 7 arms alive at 40 s incl. ro_cwd; same-binary old arm rc134;
+  zero-byte main loads the .bak, 100-byte main zero-fills; copies' sha256 unchanged. ~30 other throwing std::filesystem calls -> class FS.
+- **s7594: class SG (signal dispositions) CLOSED, one fix.** tools/s7594_sg_census.py --controls (3/3): 16 sites, 0 open, 6 binary
+  imports covered. SIGHUP (closing the launching Terminal), SIGQUIT and SIGPIPE (dead stdout/stderr reader) kept default dispositions:
+  old rc 129/131/141, no save flush. Now HUP/QUIT -> flag -> main-tick quit path (flush + quick_exit), PIPE ignored
+  (ROGUESQ_S7594_SIG=0 = old); taken only over inherited SIG_DFL, so nohup still works. 18 arms (scratch/s7594): new rc0 <=78 ms with
+  flush; plant TERM->DFL rc143. INT/TERM were already fine (SDL3). Harness note: zsh background jobs inherit INT/QUIT ignored.
+  ROGUESQ_S7594_DISP=1 dumps every disposition + owner image.
+- **s7593: class EX (exit routes) CLOSED, two fixes.** tools/s7593_ex_census.py --controls (8/8 + pre-fix re-check): 62 rows,
+  0 open. (1) SDL_QUIT (Cmd+Q / close / SIGTERM) was consumed only by poll_input on the guest thread, so quit waited on the guest's
+  next input poll; now also peeked on the main thread (ROGUESQ_S7593_MAINQUIT=0 = old). Plant nopoll: old 20012 ms, new 58 ms; natural
+  poll gaps <=104 ms. (2) ultramodern fatal quick_exit used _Exit on Apple, skipping the async-stderr drain: 2563/5000 queued lines +
+  the fatal line lost; now quick_exit (ROGUESQ_S7593_UQ_EXIT=0 = old) 5000/5000 = direct control. 15 quit arms (scratch/s7593).
+- **s7592: class TH (thread/timer creation sites) CLOSED, H-clean.** tools/s7592_th_census.py --controls (8/8): 64 rows, joined 18 /
+  once 37 / transient 9, 0 per-event, 0 unjoined, 0 open (raw-grep cross-check: only zstd pthread wrappers extra, joined in POOL_join).
+  Runtime witness, one L1 dd4 fullscreen run: 12 synthetic F11 + resize events thread count 68 -> 67; plant ROGUESQ_S7592_PLANT_FROM=12
+  (one parked thread per later event) 67 -> 72 over 6 events. RT64 MSAA re-create joins the old pipeline threads.
+- **s7591: class MR CLOSED** (12 Mach-right sites, 1 gated G1E_THREADS host-port uref leak fixed, ROGUESQ_S7591_HOSTPORT=0 = old).
+- **s7590: HR-2 CLOSED, FIXED:** guest-thread mach_thread_self() dead names (+8/+9 per mission cycle) released at thread exit
+  (ROGUESQ_S7590_THRPORT=0 = old); fixed 0/0/0/0 vs old 9/18/27/35; tools/s7590_portcensus.dylib. Full text: PORTING-STATE s7590/s7591.
+- **s7589: class HR CLOSED (H-flat):** fds/threads/IOSurface flat 1200 s / 4 loads (tools/s7589_hr*); port step -> s7590.
+- **s7588: class OW-2 (Apple ObjC TUs) CLOSED, H-clean:** all MRC, 0 unbalanced sites (tools/s7588_apple_tu_census.py --controls);
+  the main run loop drains the per-present dispatch_async blocks (plant 1648/1648), so ROGUESQ_APPLE_POOL stays opt-in (default 0).
+- **s7587: class OW (metal-cpp ownership, plume_metal.cpp) CLOSED.** tools/s7587_ownership_census.py: upstream had 6
+  over-releases (+0 command buffer in begin, blit + resolve encoders, MetalShader functionName/debugName), 7 leaks (2 CopyAllDevices
+  arrays = the s7586 NSArray leaks, clearColor depth state per call, 3 clear states) and 6 pool-less autoreleases; all fixed
+  (default; ROGUESQ_MTL_OWN=0 = upstream). Gauge ROGUESQ_S7587_POOLGAUGE=1 (same binary, L4 dd4, plant ROGUESQ_S7587_PLANT=1):
+  implicit-pool growth 0.46-12 entries/command list -> 0.004 (= plant). OBJC_DEBUG_MISSING_POOLS traps at boot: do not use.
+- **s7586: class LK CLOSED.** Fixed build: hangar re-entries add +1.9/+2.5 MB each (first mission load warms ~35 MB of RT64
+  caches once), 20 min L4 hold 0.005 MB/s, plant fired. Also fixed: plume MetalShader leaked one dispatch_data_t per shader
+  compile (dispatch_release added; 203-222 root leaks -> 0).
+- **s7585 (class LK, host memory growth: LEAK FOUND + FIXED):** plume_metal.cpp MetalCommandQueue::executeCommandLists made one
+  autoreleased "Wait Command Buffer" per call on an RT64 thread with no autorelease pool, so none were ever freed: 1.21-1.39 MB/s
+  (~731 AGX command buffers/s, ~4.5-5 GB per hour of play). Now drained per call (default on; ROGUESQ_MTL_WAITPOOL=0 = old). Same
+  binary, L4 dd4 16:9 FPS60, heap 120->330 s under MallocStackLogging=lite: fix 0.016 MB/s vs old 1.387 MB/s; both alive, 0 stall.
+  Tools: tools/s7585_memsample.zsh (outside sampler + leaks), tools/s7585_heapdiff.py, control tools/s7585_leakplant.dylib (fired).
+- **s7584 (class UI, uninitialized host stack/heap reads CLOSED, H-clean):** `env INIT=pattern B=build_autoinit zsh
+  tools/build_autoinit.sh` (-ftrivial-auto-var-init on 248 C / 214 C++ / 3 ObjC++ TUs) + MallocScribble=1: L1 dd4, L4 dd2, L12 dd4 150 s
+  and the s7469 hangar abort/re-entry route (3 re-entries, 4 loads, dd8 21:9) 0 crash/stall, same numbers as s7583. Control
+  ROGUESQ_S7578_PLANT=7 read 0xAAAAAAAA on stack and heap. A plain load of fresh malloc memory is folded to undef at -O2: read via volatile.
+- **s7583 (residual UBSan classes CLOSED, H-clean; UBSan campaign s7578-s7583 complete):** `env SAN=integer-divide-by-zero,
+  float-cast-overflow,bool,builtin,vla-bound,nonnull-attribute,unreachable SANREC=<same minus unreachable> B=build_ubsanr zsh
+  tools/build_ubsanc.sh`. L1 dd4, L4 dd2, L12 dd4 150 s: 0 reports, 0 crash/stall. Controls: PLANT=6 fired all six recoverable kinds,
+  PLANT=u aborted on unreachable (rc 134). Generated DIV/DIVU were already total (s7575 RS64_DIV32/DIVU32, s7085 DDIV). Apple clang 21
+  emits nothing for -fsanitize=function on arm64, so indirect-call type UB cannot be witnessed here.
+- **s7582 (pointer-overflow UB CLOSED, H-clean):** `env SAN=pointer-overflow,nonnull-attribute,signed-integer-overflow
+  B=build_ubsanp zsh tools/build_ubsanc.sh`: all 51 RecompiledFuncs objects carry ___ubsan_handle_pointer_overflow. L1 dd4, L4 dd2,
+  L12 dd4 150 s (owner recipe) + L1 dd1 60 s: 0 reports, 0 crash/stall; plant ROGUESQ_S7578_PLANT=5 (char* at UINTPTR_MAX-3 + 16)
+  fired (scorer kind ptrovf). So the MEM_* `rdram + (addr - 0xFFFFFFFF80000000)` add never wraps a host pointer in play (no guest
+  KUSEG/zero-extended address reaches a load/store). nonnull-attribute: controlled by the s7583 plant 6.
+- **s7580 (shift/alignment UB CLOSED; class LU fixed):** `env SAN=shift,alignment,signed-integer-overflow B=build_ubsans zsh
+  tools/build_ubsanc.sh`. Pre-fix: 7,136 executed sites, ALL the N64Recomp LUI emit `S32(0X8011 << 16)` (signed shift into the sign
+  bit, C17 6.5.7p4 UB; 24,698 literals) + 2 patch residuals (s7009 spannarrow `int64 neg << 7`, s4192 wait-spin `u16 << 16` in int)
+  + 1 static hand-LUI. tools/fixup_lui_unsigned.py (LAST pass of fixup_game_funcs_vendored.py) rewrites all 24,703 to unsigned /
+  multiply; tools/s7580_lui_identity.py: 51 TUs at real -O2, 0 object diffs (plant 34 diffs) = machine-code neutral. Post-fix L1 dd4,
+  L4 dd2, L12 dd4 150 s: 0 reports, 0 crash/stall; plants PLANT=3 (shift) and =4 (misaligned u32) fired. Alignment: 0 reports ever.
+- **s7579 (fixup-C host array-bounds class CLOSED, H-clean; gen-c-bounds-audit closed):** `env SAN=array-bounds,signed-integer-overflow
+  B=build_ubsanb zsh tools/build_ubsanc.sh` = 879 bounds checks in RecompiledFuncs (ucode TUs 0: no fixed-array indexing). L1 dd1/dd4,
+  L4 dd2, L12 dd4 150 s: 0 reports, 0 crash/stall; plant ROGUESQ_S7578_PLANT=2 (int[4] idx 4) fired. Scorer tools/s7579_bounds_report.py
+  (rc 0). Scope: only directly-indexed fixed arrays are checked, not pointer-indexed buffers. **s7578:** game-C null/wrapv UB CLOSED
+  (52 TUs, signed-overflow UBSan 0 reports, plant fired; new build dirs need a COPY of build/saves). **s7577:** ucode 759/759 bounded.
+
+### Next steps items 19-46 (s7621 numbering)
+
+19. **Class UI (uninit host reads) CLOSED s7584** (headline). The G5 renaming sweep is closed too (s6868: the 139 remaining
+    address names are shape-only), so it is not a rung to take.
+20. **Class LK host memory growth CLOSED s7586** (headline; wait-buffer leak s7585, dispatch_data leak s7586). Owner:
+    ROGUESQ_MTL_WAITPOOL is default on (=0 restores the leak).
+21. **Class OW CLOSED s7587** (headline) for plume_metal.cpp; one NEEDS-POOL row left (device-ctor name string, once).
+22. **Class OW-2 CLOSED s7588** (headline, H-clean). Smoke of the rebuilt default PASSED (soak 20261118-091041: alive, 0 stall,
+    pool=0, plantD == plantA 1296/1296).
+23. **Class HR CLOSED s7589** (headline). Sampler gotcha: lsof pipe fds carry no mode letter ("2 PIPE"); filter /^[0-9]+/.
+24. **HR-2 CLOSED s7590** (headline, H-dead fixed: guest-thread port refs; ROGUESQ_S7590_THRPORT=0 = old). H-cache/H-leak refuted
+    for the per-load step (live rights flat over 3 same-mission reloads).
+25. **Class MR CLOSED s7591** (headline). Tool exit 1 on any default-path leak or unknown row; rerun after lib/ edits.
+26. **Class TH CLOSED s7592; class EX CLOSED s7593** (headline). Rerun tools/s7593_ex_census.py --controls after adding any exit,
+    abort, atexit or SDL event-consumer site.
+27. **Classes SG s7594, SV s7595, FS s7596 CLOSED** (headline). Rerun tools/s7596_fs_census.py --controls after any lib/ or
+    src/ edit that adds a std::filesystem call.
+28. **Class XC CLOSED s7597** (headline). Rerun tools/s7597_xc_census.py --controls after adding a throw, json parse,
+    std::thread ctor or directory_entry query.
+29. **Class AZ CLOSED s7598** (headline). Rerun tools/s7598_az_census.py --controls after adding an allocation or createTexture.
+    AZ-1 flight folded s7599: 0 clamp lines on L1/L4 dd4 (inert on retail flight).
+30. **Class GR CLOSED s7599** (headline). Rerun tools/s7599_gr_census.py --controls after adding a long-lived container.
+31. **Class GX CLOSED s7600** (headline). Rerun tools/s7600_gx_census.py --controls after adding a fixed host array indexed
+    by guest data; `--list <kind>` prints the auto-verdict sites of one kind for auditing.
+32. **Class BS CLOSED s7601** (headline). Rerun tools/s7601_bs_census.py --controls after adding host code that reads or
+    writes guest RAM through rdram/RDRAM/g_rdram_for_submit, or a TO_PTR struct with sub-word members (add it to STRUCTS).
+33. **Class TP CLOSED s7602** (headline). Rerun tools/s7602_tp_census.py --controls after adding a TO_PTR / _arg<N, T*> view
+    or a guest-visible struct member; a sub-word or 64-bit member needs a swizzle proof or a TYPE_ROWS host-private row.
+34. **Class RX CLOSED s7603** (headline). Rerun tools/s7603_rx_census.py --controls after adding a host stub or any
+    `ctx->rN =` write; a new called stub that sets no r2 needs a void retail prototype (RETAIL_VOID) or it is OPEN.
+35. **Class RA CLOSED s7604** (headline). Rerun tools/s7604_ra_census.py --controls after adding host code that reads
+    ctx->rN; a 64-bit use (uint64_t/gpr/size_t, compare, index) needs a cast, a 32-bit parameter, or a SITE_ROWS reason.
+36. **Class FR CLOSED s7605** (headline). Rerun tools/s7605_fr_census.py --controls after adding host code touching
+    ctx->fN / f_odd or a host stub of a float-prototype function (add a SITE_ROWS / FLOATPROTO entry naming the prototype).
+37. **Class HC CLOSED s7606** (headline). Rerun tools/s7606_hc_census.py --controls after a threads.cpp/recomp.cpp
+    thread-entry edit.
+38. **Class UW CLOSED s7607** (headline). Rerun tools/s7607_uw_census.py --controls after adding a throw/catch, a blocking
+    host stub, an RAII local in one (a blocking destructor needs an uncaught_exceptions() bail-out), or a build-flag change.
+39. **Class TK CLOSED s7608** (headline). Rerun tools/s7608_tk_census.py --controls after adding host state keyed by a guest
+    thread id/OSThread*/host thread; never key a default-path decision by OSId (ids repeat), use a host-thread incarnation token.
+40. **Class MK CLOSED s7609** (headline). Rerun tools/s7609_mk_census.py --controls --witness after adding host state keyed
+    by an OSMesgQueue/OSTimer/OSIoMesg address; new host-side requeue/pending state needs a re-create witness.
+41. **Class OV CLOSED s7610** (headline). Rerun tools/s7610_ov_census.py --controls after a regen or overlays.cpp edit.
+42. **Class SN CLOSED s7611** (headline). Rerun tools/s7611_sn_census.py --controls --witness after adding a static that
+    holds guest bytes; a default-on one needs a re-read per use, a content hash, or a reset on a named guest event + witness.
+43. **Class RG CLOSED s7612** (headline). Rerun tools/s7612_rg_census.py --controls --witness after a regen or a fixup that
+    parks a ctx->rN / gpr[] value in a static; a default-on one needs a same-call contract (no escape between set and use),
+    a live re-validation, or a reset + witness.
+44. **Class HP CLOSED s7613** (headline). Rerun tools/s7613_hp_census.py --ast --controls after adding any static/
+    thread_local pointer; a guest view (TO_PTR / OSThread* / OSTask*) kept across calls needs an env gate, a same-call
+    set/restore, or a log-only reader contract.
+45. **Class HM CLOSED s7614** (headline). Rerun tools/s7614_hm_census.py --ast --controls after adding a static struct /
+    container whose member is a pointer; a guest view kept across calls needs a contract (retail lifetime, same-call, gated)
+    and, if default-on, a witness like W.
+46. **Class DQ CLOSED s7615, class RQ CLOSED s7616** (headline). Rerun tools/s7616_rq_census.py --controls after any lib/rt64
+    edit that reads RDRAM or adds a thread; a new worker-thread reader of RDRAM needs a command-time copy or a gate.

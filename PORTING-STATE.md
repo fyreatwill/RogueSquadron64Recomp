@@ -202996,3 +202996,14 @@ toml_hooks.c (:219, :598-:668), hook_helpers.cpp (:79-:120), util/host_ram_map.h
   0x80C00000, DL pool ..0x81000000, spill ..0x81800000 = ram_top). Plan: carve 1 MB from spill top unless the bucket->DL
   conversion makes the RSP read instance matrices (then carve below 0x81000000 from the DL pool bottom).
 Rules out nothing at runtime; next unit implements the hook (apply script in RS64_REPLAY) with an in-run positive control.
+
+## Session 7622 (2026-11-18) — maintenance: CURRENT-TRUTH compacted 60206 -> 32518 bytes (536 -> 302 lines)
+
+Step 0 triggered (wc -c = 60206 > 60000), so no experiment this session. I moved the 38 headline bullets s7579-s7616 (host-side
+idiom-class audits RQ, DQ, HM, HP, RG, SN, OV, MK, TK, UW, HC, FR, RA, RX, TP, BS, GX, GR, AZ, XC, FS, SV, SG, EX, TH, MR, HR/HR-2,
+OW/OW-2, LK, UI, UBSan s7579-s7583) and Next-steps items 19-46 (their rerun triggers) word for word into PROJECT-OVERVIEW
+"Migrated from CURRENT-TRUTH (s7622 maintenance)". In their place: one headline bullet sorting the classes into clean, bounded,
+and fixed (with each fix's =0 env lever) and keeping the lldb-launch hazard, plus one Next-steps item 19 listing each class's
+census and when to rerun it. G6 is now item 20 and class RP item 21; the backlog runs 1-21 in one sequence. The headline date and
+the evidence-index chronology pointer are refreshed. No conclusion changed and nothing was superseded. The G6c step 2 unit
+(stand-ins hook) carries over unchanged in NEXT.md.

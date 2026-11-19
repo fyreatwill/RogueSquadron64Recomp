@@ -1,4 +1,4 @@
-# NEXT (s7622)
+# NEXT (s7623)
 HYPOTHESIS-ID: g6-upstream-features
 
 G6c step 2 per docs/G6C-STANDINS-PLAN.md: implement the stand-in hook, opt-in ROGUESQ_STANDINS=1, only at dd>1.
