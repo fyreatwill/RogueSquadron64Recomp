@@ -12192,6 +12192,131 @@ static void rs64_s7593_main_tick() {
     }
 }
 
+// G6a (s7617) rumble. The game strobes the Rumble Pak motor (osMotorStart/Stop, ~30 Hz on/off, s7516), which reaches us
+// through ultramodern __osMotorAccess -> set_rumble. Mirroring each edge does nothing useful on DualShock 4 over macOS (short
+// SDL rumble calls are dropped), so edges are recorded with timestamps and poll_input (the thread that owns `controller`)
+// turns the motor's on-fraction over the last 100 ms into a strength and sends SDL_GameControllerRumble with a 150 ms
+// duration, refreshed while the duty stays > 0 and cancelled once it drops to 0. A guest that stops polling (load) lets
+// the last call expire on its own. Port 0 reports a Rumble Pak so the game sends pulses at all (saves use EEPROM: osPfs*
+// is only reached on save device 2, s7516). ROGUESQ_RUMBLE=0 restores the old shape (no pak, no rumble).
+// ROGUESQ_RUMBLE_SCALE 0..2 (default 1). ROGUESQ_LOG_RUMBLE=1 logs edges / SDL calls / a 5 s summary.
+// ROGUESQ_RUMBLE_TEST=1 attaches a virtual gamepad whose Rumble callback logs what SDL delivers to a device (positive control).
+#include <deque>
+static bool rs64_rumble_on() {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_RUMBLE"); return !(e && e[0] == '0'); }();
+    return on;
+}
+static float rs64_rumble_scale() {
+    static const float s = [] { const char* e = getenv("ROGUESQ_RUMBLE_SCALE"); float v = e && *e ? (float)atof(e) : 1.0f;
+        return v < 0.0f ? 0.0f : (v > 2.0f ? 2.0f : v); }();
+    return s;
+}
+static bool rs64_rumble_log() {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_LOG_RUMBLE"); return e && *e && *e != '0'; }();
+    return on;
+}
+static int64_t rs64_rumble_now_us() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+static std::mutex g_rumble_mtx;
+static std::deque<std::pair<int64_t, bool>> g_rumble_edges;
+static bool g_rumble_state = false, g_rumble_base = false;
+static std::atomic<long> g_rumble_calls{0}, g_rumble_on_edges{0}, g_rumble_vpad_calls{0}, g_rumble_vpad_nonzero{0};
+static void set_rumble(int channel, bool on) {
+    g_rumble_calls.fetch_add(1, std::memory_order_relaxed);
+    if (channel != 0) return;
+    std::lock_guard<std::mutex> lk(g_rumble_mtx);
+    if (on == g_rumble_state) return;
+    g_rumble_state = on;
+    if (on) g_rumble_on_edges.fetch_add(1, std::memory_order_relaxed);
+    g_rumble_edges.push_back({rs64_rumble_now_us(), on});
+    if (g_rumble_edges.size() > 512) { g_rumble_base = g_rumble_edges.front().second; g_rumble_edges.pop_front(); }
+}
+static float rs64_rumble_duty(int64_t now) {
+    constexpr int64_t W = 100000;
+    std::lock_guard<std::mutex> lk(g_rumble_mtx);
+    while (!g_rumble_edges.empty() && g_rumble_edges.front().first < now - 2 * W) {
+        g_rumble_base = g_rumble_edges.front().second; g_rumble_edges.pop_front();
+    }
+    const int64_t t0 = now - W; bool st = g_rumble_base; int64_t t = t0, on = 0;
+    for (const auto& e : g_rumble_edges) {
+        if (e.first <= t0) { st = e.second; continue; }
+        if (st) on += e.first - t;
+        t = e.first; st = e.second;
+    }
+    if (st) on += now - t;
+    const float d = (float)on / (float)W;
+    return d < 0.0f ? 0.0f : (d > 1.0f ? 1.0f : d);
+}
+static int SDLCALL rs64_rumble_vpad_cb(void*, Uint16 lo, Uint16 hi) {
+    const long n = g_rumble_vpad_calls.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (lo || hi) g_rumble_vpad_nonzero.fetch_add(1, std::memory_order_relaxed);
+    if (rs64_rumble_log() && (n <= 40 || n % 200 == 0))
+        fprintf(stderr, "[rumble-vpad] n=%ld lo=%u hi=%u\n", n, (unsigned)lo, (unsigned)hi);
+    return 0;
+}
+static void rs64_rumble_test_attach() {
+    static bool done = false;
+    if (done) return;
+    done = true;
+    const char* e = getenv("ROGUESQ_RUMBLE_TEST");
+    if (!(e && *e && *e != '0')) return;
+    SDL_VirtualJoystickDesc d; SDL_zero(d);
+    d.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION; d.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+    d.naxes = SDL_CONTROLLER_AXIS_MAX; d.nbuttons = SDL_CONTROLLER_BUTTON_MAX; d.name = "RS64 rumble test pad";
+    d.Rumble = rs64_rumble_vpad_cb;
+    const int idx = SDL_JoystickAttachVirtualEx(&d);
+    if (controller) { SDL_GameControllerClose(controller); controller = nullptr; }
+    if (idx >= 0) controller = SDL_GameControllerOpen(idx);
+    fprintf(stderr, "[rumble] test pad attach idx=%d open=%d err=%s\n", idx, controller ? 1 : 0, SDL_GetError());
+}
+static void rs64_rumble_tick() {
+    static int64_t s_sent_t = 0, s_sum_t = 0;
+    static float s_sent = 0.0f, s_max_duty = 0.0f;
+    static long s_sdl_on = 0, s_sdl_off = 0, s_sdl_fail = 0;
+    rs64_rumble_test_attach();
+    const int64_t now = rs64_rumble_now_us();
+    // ROGUESQ_RUMBLE_TEST=1 also injects a synthetic motor train 20-21 s after the first poll (on 13 ms / off 20 ms, like
+    // the game's ~30 Hz strobe) so the duty -> SDL -> device chain has a positive control that does not wait on a game event.
+    {
+        static const bool test = [] { const char* e = getenv("ROGUESQ_RUMBLE_TEST"); return e && *e && *e != '0'; }();
+        static int64_t s_t0 = 0; static int s_inj = 0;
+        if (test) {
+            if (!s_t0) s_t0 = now;
+            const int64_t dt = now - s_t0 - 20000000;
+            if (dt >= 0 && dt < 1000000) {
+                const bool want = (dt % 33000) < 13000;
+                set_rumble(0, want); if (s_inj == 0) fprintf(stderr, "[rumble] inject start\n"); s_inj = 1;
+            } else if (s_inj == 1 && dt >= 1000000) { set_rumble(0, false); s_inj = 2; fprintf(stderr, "[rumble] inject end\n"); }
+        }
+    }
+    const float duty = rs64_rumble_duty(now);
+    if (duty > s_max_duty) s_max_duty = duty;
+    float s = 0.0f;
+    // Floor 0.25: the game's PWM duty sits at 0.1-0.5, which is faint on modern motors.
+    if (rs64_rumble_on() && duty > 0.0f) s = (0.25f + 0.75f * duty) * rs64_rumble_scale();
+    if (s > 1.0f) s = 1.0f;
+    const bool due = s > 0.0f ? (std::fabs(s - s_sent) > 0.02f || now - s_sent_t > 50000) : (s_sent > 0.0f);
+    if (due) {
+        int rc = -1;
+        if (controller) {
+            const Uint16 lo = (Uint16)(s * 65535.0f), hi = (Uint16)(s * 0.6f * 65535.0f);
+            rc = SDL_GameControllerRumble(controller, lo, hi, s > 0.0f ? 150 : 0);
+        }
+        if (rc != 0) ++s_sdl_fail; else if (s > 0.0f) ++s_sdl_on; else ++s_sdl_off;
+        if (rs64_rumble_log() && (s_sdl_on + s_sdl_off + s_sdl_fail <= 40))
+            fprintf(stderr, "[rumble] sdl s=%.2f duty=%.2f rc=%d pad=%d has=%d err=%s\n", s, duty, rc, controller ? 1 : 0,
+                    controller ? (int)SDL_GameControllerHasRumble(controller) : -1, rc ? SDL_GetError() : "");
+        s_sent = s; s_sent_t = now;
+    }
+    if (rs64_rumble_log() && now - s_sum_t > 5000000) {
+        s_sum_t = now;
+        fprintf(stderr, "[rumble] sum on=%d scale=%.2f motor_calls=%ld on_edges=%ld max_duty=%.2f sdl_on=%ld sdl_off=%ld sdl_fail=%ld vpad=%ld vpad_nz=%ld pad=%d\n",
+                rs64_rumble_on() ? 1 : 0, rs64_rumble_scale(), g_rumble_calls.load(), g_rumble_on_edges.load(), s_max_duty,
+                s_sdl_on, s_sdl_off, s_sdl_fail, g_rumble_vpad_calls.load(), g_rumble_vpad_nonzero.load(), controller ? 1 : 0);
+        s_max_duty = 0.0f;
+    }
+}
 static void poll_input() {
     {
         static const bool gl = [] { const char* e = std::getenv("ROGUESQ_S7593_POLLGAP"); return e && *e == '1'; }();
@@ -12301,6 +12426,7 @@ static void poll_input() {
         }
     }
     rs64_pad_test_tick();
+    rs64_rumble_tick();
 }
 
 extern "C" long long rs64_s5773_ms(void) {
@@ -13216,14 +13342,14 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     return true;
 }
 
-static void set_rumble(int, bool) {}
 
 static ultramodern::input::connected_device_info_t get_connected_device_info(int controller_num) {
     if (controller_num == 0) {
         // s7516 class FM positive control: ROGUESQ_PAK_SHAPE_CTL=1 reports a Rumble Pak on port 0 (set_rumble stays a no-op),
-        // so the game's present-gated osMotorStart/Stop paths run and the [s7516-pak] log must show them. Default: no pak.
+        // so the game's present-gated osMotorStart/Stop paths run and the [s7516-pak] log must show them. Since G6a the pak is reported by default (ROGUESQ_RUMBLE=0 = no pak).
         static const int pak_ctl = [] { const char* e = getenv("ROGUESQ_PAK_SHAPE_CTL"); return (e && *e && *e != '0') ? 1 : 0; }();
-        if (pak_ctl) return { ultramodern::input::Device::Controller, ultramodern::input::Pak::RumblePak };
+        // G6a (s7617): a Rumble Pak by default so the game sends motor pulses; ROGUESQ_RUMBLE=0 = old no-pak shape.
+        if (pak_ctl || rs64_rumble_on()) return { ultramodern::input::Device::Controller, ultramodern::input::Pak::RumblePak };
         return { ultramodern::input::Device::Controller, ultramodern::input::Pak::None };
     }
     return { ultramodern::input::Device::None, ultramodern::input::Pak::None };

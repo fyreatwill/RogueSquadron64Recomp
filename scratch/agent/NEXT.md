@@ -1,18 +1,18 @@
-# NEXT (s7617)
-HYPOTHESIS-ID: rt64-rdram-alias-lifetime
+# NEXT (s7618)
+HYPOTHESIS-ID: g6-upstream-features
 
-Class RQ closed s7616 (tools/s7616_rq_census.py --controls --witness-sample scratch/s7616/sample.txt: 129 base-reference
-rows 0 open, regex == clang, controls 10/10, sample witness 95 reader frames all on Gfx Thread). Its declared scope gap is next.
+G6a rumble landed s7617 (default on, owner to feel it). Take G6b now (ITERATION.md item 3c G6b).
 
-Class RP: RDRAM-derived pointers that OUTLIVE the call in lib/rt64. s7613 HP / s7614 HM censused pointer statics/members in
-src/ + librecomp/ultramodern only. In lib/rt64 (minus contrib) enumerate every pointer-typed member, static, thread_local
-and container-of-pointer whose value can derive from the RDRAM base (taint: State::RDRAM, core.RDRAM, fromRDRAM(), the
-`memory` param of Application::processDisplayLists, DisplayList* from &memory[...], params named RDRAM). Examples to
-expect: Interpreter / RSP display-list stack pointers, RDP partial-command buffers, g_s4271_dl-style diagnostic statics.
-Rows: fresh (set and used within one send_dl/processDisplayLists), offset (stored as an address, re-based on use), copy,
-gated, OPEN. Second source: clang AST (reuse tools/s7613_hp_ast.py / s7614_hm_ast.py with scope = lib/rt64/src).
-Controls: planted static DisplayList* set in one call and read in the next -> OPEN; drop a row from each source ->
-disagreement; planted pointer member assigned &RDRAM[x] -> OPEN. Runtime witness only for a default-on cross-call row
-(e.g. compare the bytes behind a kept pointer at set time vs use time, s7523 model), else none needed.
-Witness hygiene: start the game normally and kill ONLY that pid (s7616 killed a foreign game via pgrep -x). Never launch it
-under lldb (ROM delete near-miss). Never touch build/saves; never clear ROGUESQ_NO_SAVE_WRITE. lib/ edits need export.sh + commit.
+G6b step 1 (this iteration): move the hard-coded pad + keyboard map in get_n64_input (src/main/main.cpp, grep
+"get_n64_input"; R2 -> C-Left, L3 -> C-Right, left trigger -> Z, Back/Guide alternates, WASD/ZXC/QE/IJKL/arrows/Enter)
+into a binding table whose built-in defaults equal today's mapping EXACTLY. Keep the old code path behind
+ROGUESQ_BIND_OLD=1 for one release.
+Proof (same run, no game needed): a unit harness that feeds every single pad button, each trigger at 0/threshold-1/
+threshold/max, stick extremes and every mapped key (plus a few combos) through BOTH the old function and the table, and
+asserts byte-identical N64 button word + stick bytes. Planted mutant (swap one table entry) must FAIL the harness.
+Hypotheses: H-equal (table reproduces old output for all inputs) vs H-drift (some edge: trigger threshold, stick
+deadzone/STICK_GATE, keyboard+pad OR, hotplug virtual pad) differs. Only H-equal may land.
+Step 2: controls.json in the data folder (missing = defaults), several bindings per N64 button, triggers/stick as sources.
+Step 3: F6 ImGui Controls panel (RT64 overlay is on F1). Upstream src/input/input_bindings.cpp is format/UI reference only
+(`git show origin/main:src/input/input_bindings.cpp`). Do not change any default binding. README Controls + OWNER-OPT-INS.
+Hygiene: one game at a time; never touch build/saves or clear ROGUESQ_NO_SAVE_WRITE; never launch under lldb.

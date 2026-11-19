@@ -202863,3 +202863,34 @@ Work unit: NEXT.md s7615 (class DQ, the scope gap s7614 declared). Audit only, n
   (3) RDP_ASYNC timing itself is s7538-s7554's ledger.
 - Next discriminator: class RP (NEXT.md) - an RDRAM-derived pointer kept in an RT64 member/static across calls; one
   census (regex + clang) splits H-clean (all fresh/offset/copy) from H-bad-alias (a default-on kept pointer read a call later).
+
+## Session 7617 (2026-11-18) — G6a rumble landed, default on: port 0 reports a Rumble Pak, motor edges are duty-averaged over 100 ms into 150 ms SDL_GameControllerRumble calls; same-build proof with a virtual test pad: the game's own 4 osMotorStart produce 14 pad rumble calls, the RUMBLE=0 arm with the same pulses produces 0
+HYPOTHESIS-ID: g6-upstream-features. Owner directive G6 (2026-11-18) takes precedence over NEXT.md (class RP, deferred to item 48).
+**Boring first.** Plumbing already existed: ultramodern __osMotorAccess -> input_callbacks.set_rumble, which was
+`static void set_rumble(int, bool) {}`; port 0 reported Pak::None, so osMotorInit returned NOPACK and the game never pulsed.
+s7516 (class FM) had already shown with ROGUESQ_PAK_SHAPE_CTL=1 that reporting a Rumble Pak makes the game pulse ~30 Hz and
+that osPfs* (Controller Pak saves) is only reached on save device 2, never on our EEPROM device 1 -> reporting a pak is save-safe.
+**Change (src/main/main.cpp, host side of upstream src/input/rumble.cpp, no damage/death-spiral/lightbar layers):**
+get_connected_device_info reports RumblePak unless ROGUESQ_RUMBLE=0. set_rumble(ch 0) records on/off edges (mutex, 512 cap).
+rs64_rumble_tick() runs at the end of poll_input (the thread that owns `controller`, so no open/close race and no extra thread;
+a guest that stops polling lets the last 150 ms call expire): duty = on-fraction of the last 100 ms, s = (0.25+0.75*duty)*
+ROGUESQ_RUMBLE_SCALE (0..2, clamp 1), SDL_GameControllerRumble(lo=s, hi=0.6 s, 150 ms) on a >2% change or every 50 ms, (0,0,0)
+when duty falls to 0. ROGUESQ_LOG_RUMBLE=1: first 40 SDL calls (rc, HasRumble, SDL_GetError) + a 5 s summary.
+ROGUESQ_RUMBLE_TEST=1: attaches an SDL virtual gamepad whose Rumble callback logs/counts what reaches a device, and injects a
+synthetic 13 ms on / 20 ms off train at 20-21 s (instrument control that does not wait on a game event).
+**Runs** (tools/s7617_rumble_proof.sh, g1e_owner_quiet_arms, ALLOW_SLOW=1: host on battery clk 1.55, functional not timing).
+Round 1 L12 dd4 HOLD 130, arms on / off(RUMBLE=0) / offctl(RUMBLE=0+PAK_SHAPE_CTL): all alive, 0 VI stalls. on: osMotorInit
+ret 0 (pak seen) + 2 Stop; off: Init only (no pak, old shape, 0 Start/Stop); offctl: Init + 2 Stop. 0 osMotorStart in 130 s on
+L12 -> no game rumble event there; the round-1 build had no injection, so its zero vpad count was not yet a result.
+Round 2 L4 dd1 HOLD 200, rebuilt with injection: on vs off(RUMBLE=0+PAK_SHAPE_CTL=1), both alive, 0 VI stalls.
+- Both arms: identical game pulses: 8 Init, 4 osMotorStart + 7 Stop (Starts t=84.59-84.76, a ~33 ms strobe), dev=1 throughout.
+- on: virtual pad callback 34 calls, all nonzero: 20 from the injected train (duty 0.17-0.50, s 0.37-0.63, then 0), 14 from
+  the game's own burst (duty 0.17-0.67, s up to 0.75, lo 24567-49157), then a stop. off: 0 pad calls, injection ran.
+- Discrimination: the same-run injection is the positive control (fires in on, gated in off); the game's pulses are present
+  in both arms and reach the device only in the on arm -> the chain game -> set_rumble -> duty -> SDL -> device works and
+  the =0 switch gates it. Caveat: SDL_GameControllerRumble returned -1 on the sdl2-compat virtual pad although its callback
+  ran each time; unverified on a real pad (owner's run with ROGUESQ_LOG_RUMBLE=1 now prints rc/has/err). Game rumble is
+  sparse at our autopilot routes (one burst per L4 run, none on L12 in 130 s).
+Not done: SDL_Haptic / SDL_JoystickRumble fallbacks (our input only opens SDL_GameController; DS4/DualSense are game
+controllers); effect-id / damage scaling (needs guest reads). Docs: OWNER-OPT-INS row, README Controls line.
+Closes on the owner feeling it on a PS4/PS5 pad. Next: G6b control rebinding (NEXT.md).

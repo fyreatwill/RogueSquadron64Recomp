@@ -93,6 +93,8 @@ Gamepad (Xbox / PlayStation layout via SDL):
 
 Keyboard: **WASD** stick, **Z** A, **X** B, **C** Z, **Q / E** L / R, **I J K L** C-Up / C-Left / C-Down / C-Right, **arrow keys** D-Pad, **Enter** Start.
 
+Rumble: the game's Rumble Pak effects play on the pad (on by default; `ROGUESQ_RUMBLE=0` turns them off, `ROGUESQ_RUMBLE_SCALE=0..2` sets strength).
+
 Hotkeys: **F9** cycles the audio output device (remembered in `audio_device.txt`), **F11** or **Cmd+Ctrl+F** toggles fullscreen, **F1** opens the RT64 developer overlay.
 
 ### Optional settings

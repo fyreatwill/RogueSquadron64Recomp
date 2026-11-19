@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7616 (2026-11-18).
+Compact operational handoff, as of Session 7617 (2026-11-18).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7616: class RQ (deferred reads of guest RDRAM inside lib/rt64 + rt64_render_context.cpp) CLOSED, H-clean, no fix.**
+- **NEW s7617: G6a rumble LANDED, default ON (`ROGUESQ_RUMBLE=0` = old no-pak shape, `ROGUESQ_RUMBLE_SCALE` 0..2); owner to feel it.**
+  src/main/main.cpp: port 0 reports a Rumble Pak; set_rumble records motor edges, poll_input (owner of `controller`) turns the
+  100 ms on-fraction into s = (0.25 + 0.75*duty)*scale and sends SDL_GameControllerRumble(lo=s, hi=0.6s, 150 ms), refreshed
+  every 50 ms, cancelled at duty 0. Proof (scratch/s7617, L4 dd1, same build): virtual test pad (ROGUESQ_RUMBLE_TEST=1, its
+  Rumble callback = witness) got 14 calls from the game's own 4 osMotorStart at t=84.6 plus 20 from the 1 s injected train;
+  RUMBLE=0+PAK_SHAPE_CTL=1 arm: same 4 Start/7 Stop, 0 pad calls. Saves: dev=1 (EEPROM) throughout. Open: SDL returns -1 for
+  the sdl2-compat virtual pad although its callback runs; the log now prints has/err for the owner's real pad. No SDL_Haptic
+  fallback (our input only opens SDL_GameController). Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
+- **s7616: class RQ (deferred reads of guest RDRAM inside lib/rt64 + rt64_render_context.cpp) CLOSED, H-clean, no fix.**
   `python3 tools/s7616_rq_census.py --controls --witness-sample scratch/s7616/sample.txt` (regex tools/s7616_rq_scan.py, clang
   tools/s7616_rq_ast.py -> scratch/s7616/ast.json, 92 TUs): 129 base-reference rows (->RDRAM/.RDRAM/implicit this/fromRDRAM),
   regex == clang (2 regex-only = #ifdef _WIN32, 1 clang-only = implicit Core copy-assign). sync 120 (reachable only from Gfx
@@ -504,8 +512,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     and, if default-on, a witness like W.
 46. **Class DQ CLOSED s7615, class RQ CLOSED s7616** (headline). Rerun tools/s7616_rq_census.py --controls after any lib/rt64
     edit that reads RDRAM or adds a thread; a new worker-thread reader of RDRAM needs a command-time copy or a gate.
-47. **NEXT (s7617): class RP, RDRAM-derived pointers kept in lib/rt64 members/statics across calls** - s7613 HP / s7614 HM
-    covered src/ + librecomp/ultramodern only; RQ counted base references, not aliases that outlive the call (NEXT.md).
+47. **G6 (owner 2026-11-18, ahead of everything else): G6a rumble LANDED s7617 (headline), closes on the owner feeling it.
+    NEXT: G6b rebinding (table == today's map byte-identical, controls.json, F6 panel), then G6c stand-ins (design doc first).**
+48. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index
 
