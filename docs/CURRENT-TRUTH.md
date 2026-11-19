@@ -287,8 +287,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
     hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit.
     G6c stand-ins: design docs/G6C-STANDINS-PLAN.md (s7621): H-portable (game-side visibility bucket only, no HLE state),
-    all 17 upstream code addresses identical in our syms; only host RAM differs (dd>1 map full to 0x81800000 -> carve 1 MB
-    from spill top, or DL-pool bottom if the RSP reads instance matrices). NEXT: step 2, hook after L_800FAC68 + region.**
+    all 17 upstream code addresses identical in our syms. Step 2 LANDED s7623: src/main/rs64_standins.cpp +
+    tools/apply_s7623_standins.py (RS64_REPLAY), ROGUESQ_STANDINS=1|tog (+_LOG=1), dd>1 only; region 0x81700000..0x81800000
+    (spill capped 7 MB; matrices reach the DL pool via a stack copy, so CPU-only). L1: 47 objects, submits > 0 at dd2/dd4,
+    0 at dd1, 3/3 arms alive 0 stall (single run, on battery). NEXT: step 3, same-run tog frames dd2/dd4 on 2 levels.**
 21. **Class RP (RDRAM-derived pointers kept in lib/rt64 across calls): deferred behind G6** (s7616 NEXT text in git history).
 
 ## Evidence index

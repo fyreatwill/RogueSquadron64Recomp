@@ -35,6 +35,7 @@ def layout(env, old=False):
     if mb < tm <= 24: ram_top = 0x80000000 + (tm << 20)
     ar = {"guest": (0x80000000, top)}
     sp = None
+    stand = not old and dd > 1.0 and e.get("ROGUESQ_STANDINS", "0") not in ("", "0")  # s7623 G6c (src/main/rs64_standins.cpp)
     if e.get("ROGUESQ_MALLOC_SPILL", "0") not in ("", "0"):
         b = 0x81000000 if e.get("ROGUESQ_SPILL_HI", "0") not in ("", "0") else 0x80800000
         if not old and b == 0x80800000 and top > b: b = 0x81000000  # s7336: legacy base under the guest top moves up
@@ -47,6 +48,7 @@ def layout(env, old=False):
             if b + cap > ram_top: cap = ram_top - b
         if b == 0x81000000 and ram_top > b and b + cap > ram_top: cap = ram_top - b
         if b != 0x81000000 and cap > 0x400000: cap = 0x400000
+        if b == 0x81000000 and stand and cap > 0x700000: cap = 0x700000  # s7623: rs64_s7326_spill_cap gives the top 1 MB to stand-ins
         if not old and b != 0x81000000: ram_top = max(ram_top, b + cap)  # s7336: legacy spill without RAMTOP_MB 16
         sp = (b, b + cap); ar["spill"] = sp
     if e.get("ROGUESQ_DLPOOLX", "0") not in ("", "0"):
@@ -61,6 +63,7 @@ def layout(env, old=False):
         ar["dlpool"] = (RSP_TOP - cap, RSP_TOP)
     if e.get("ROGUESQ_BIGARENA", "0") not in ("", "0"):
         n = int(e.get("ROGUESQ_DD_POOLX", "4096")); ar["bigarena"] = (ram_top, ram_top + ((n * 184 + 15) & ~15))
+    if stand and ram_top >= 0x81800000: ar["standins"] = (0x81700000, 0x81800000)  # else rs64_standins_submit disables itself
     return ar, ram_top, top
 
 
@@ -85,8 +88,9 @@ AXES = {
     "ROGUESQ_DLPOOLX_MB": [None, "1", "4", "8"],
     "ROGUESQ_MALLOC_SPILL": [None, "1"],
     "ROGUESQ_DLPOOLX": [None, "1"],
+    "ROGUESQ_STANDINS": [None, "1"],
 }
-DEFAULTS = [{"ROGUESQ_DRAW_DISTANCE": d} for d in ("1", "2", "4", "8")] + [{"ROGUESQ_DRAW_DISTANCE": "4", "ROGUESQ_OSMEM_MB": "8"}]
+DEFAULTS = [{"ROGUESQ_DRAW_DISTANCE": d} for d in ("1", "2", "4", "8")] + [{"ROGUESQ_DRAW_DISTANCE": d, "ROGUESQ_STANDINS": "1"} for d in ("2", "4", "8")] + [{"ROGUESQ_DRAW_DISTANCE": "4", "ROGUESQ_OSMEM_MB": "8"}]
 CONTROLS = [  # known pre-s7336 findings
     ({"ROGUESQ_DRAW_DISTANCE": "4", "ROGUESQ_OSMEM_MB": "8", "ROGUESQ_DLPOOLX_MB": "8"}, "OVERLAP spill/dlpool"),
     ({"ROGUESQ_DRAW_DISTANCE": "4", "ROGUESQ_OSMEM_MB": "8", "ROGUESQ_SPILL_HI": "1"}, "GUARD spill"),

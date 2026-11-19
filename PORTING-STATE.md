@@ -203007,3 +203007,36 @@ and fixed (with each fix's =0 env lever) and keeping the lldb-launch hazard, plu
 census and when to rerun it. G6 is now item 20 and class RP item 21; the backlog runs 1-21 in one sequence. The headline date and
 the evidence-index chronology pointer are refreshed. No conclusion changed and nothing was superseded. The G6c step 2 unit
 (stand-ins hook) carries over unchanged in NEXT.md.
+
+## Session 7623 (2026-11-18) — G6c step 2: stand-ins hook landed (opt-in ROGUESQ_STANDINS=1|tog, dd>1 only); L1 positive control 47 objects / ~22 submits per frame, dd1 0 calls, 3/3 arms alive
+
+What landed:
+- `src/main/rs64_standins.cpp` (new, in CMakeLists): port of upstream `src/game/static_standins.cpp` (read via `git show origin/main`,
+  not merged). Builds per DAT item a 0x50 prop-state block + model instance in a host region and submits still-unspawned, grid-linked,
+  alive, condition-met items via addNpcToVisibilityBucket 0x80057C8C. Dropped vs upstream: snapshot/replay marks, probe droids (0x0E).
+  Extra bounds: every guest pointer checked < 0x81700000, child index <= node count, leaf list vs leaf count.
+- `tools/apply_s7623_standins.py` (appended to RS64_REPLAY): `rs64_standins_submit(rdram, ctx)` right after `L_800FAC68:` in
+  runInMissionFrame (funcs_42.c), i.e. after the render broadcast and on its beq skip path, as upstream's before_vram hook. Idempotent.
+- Region decision (NEXT.md step 1): traverseSceneGraphRecursive is convertMat3x4ToN64Mtx's only caller; it converts a STACK copy
+  (a1 = sp+0x10) into `*0x8011DC5C` (DL pool), so the instance matrix is CPU-only -> option 1: top 1 MB of the spill arena,
+  0x81700000..0x81800000. `rs64_s7326_spill_cap` caps spill at 7 MB while stand-ins are on (dd8 peak 0x688B50, s7327);
+  logs `[s7623] spill arena capped`. `tools/s7336_host_arena_table.py` models the arena (+ROGUESQ_STANDINS axis): 18432 combos 0
+  findings, 4/4 controls PASS. Stand-ins disable themselves if rs64_ram_top < 0x81800000.
+
+Run (scratch/s7623, g1e_owner_quiet_arms, L1 forced, FPS60 16:9 fullscreen, HOLD 150, ALLOW_SLOW=1: on battery clk 1.55, functional
+run, not timing; first attempt refused by the clock gate):
+| arm | rebuild | per-second sum | result |
+|---|---|---|---|
+| d2on dd2 STANDINS=1 | `47 objects, 47 KB (items 80: no-name 25 no-model 0 probe-dropped 8 build-fail 0)` | frames 4783, submits 104648, skip spawned 92029 unlinked 28124 dead 0 cond 0 | alive, crash 0, vi_stalls30s 0 |
+| d1on dd1 STANDINS=1 | `off (retail)` | 0 lines | alive, crash 0, stalls 0 |
+| d4tog dd4 STANDINS=tog | 47 objects | submits 52865 (~half of d2on per frame); windows alternate ~600-1000 vs ~170-270 | alive, crash 0, stalls 0 |
+- Positive control passed: N=47 > 0 and submits > 0 at dd2 -> the 8 data addresses and the rodata name table are right for our build
+  (no-model 0 of 47 named items: every name resolved in the meshdef hash). Selects NEXT's outcome "submitted > 0 -> step 3".
+- dd1 gate: 0 calls in the same build (retail path is one cached test).
+- Frames (scratch/s7623/sheet_s7623.png, 10 screenshots/arm): no garbage or spike geometry in any arm, so nothing the RSP reads lands
+  in the region (second line of evidence for the code read above; single run). The arms fly different paths (autopilot), so they do
+  not show which pixels are stand-ins: that is step 3.
+- Instrument defect fixed after the run: the per-second windows were not aligned to whole seconds, so each tog window mixed on and
+  off frames (the ~200 "off" submits). Windows now start on floor(now) and tog=1 labels an on window. Rebuilt; not re-run.
+Rules out: data-address drift (N=0 outcome), grid/condition gate mismatch (submitted=0 outcome), region overlap (spill full lines 0).
+Open: bucket capacity (no fill counter yet), double draw at the spawn moment, objects actually visible earlier (step 3).

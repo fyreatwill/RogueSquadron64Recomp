@@ -4810,12 +4810,15 @@ static uint32_t rs64_s6587_spill_base() { static const uint32_t b = [] { const c
    (0x81000000-0x81800000; main.cpp sets ROGUESQ_RAMTOP_MB=24, librecomp's maximum, so the pointer guards accept it), clamped to
    rs64_ram_top. ROGUESQ_SPILL_MB=<n> overrides (4 = old). The 0x80800000 legacy layout keeps 4 MB (game heap starts at 0x80C00000 there). */
 extern "C" uint32_t rs64_ram_top;
+extern "C" int rs64_standins_on(void);  /* s7623 G6c, src/main/rs64_standins.cpp */
 static uint32_t rs64_s7326_spill_cap() {
     static const uint32_t c = [] { const uint32_t b = rs64_s6587_spill_base(); uint32_t mb = b == 0x81000000u ? 8u : 4u;
         if (const char* e = std::getenv("ROGUESQ_SPILL_MB")) { int v = std::atoi(e); if (v >= 1 && v <= 16) mb = (uint32_t)v; }
         uint32_t cap = mb << 20; if (b == 0x81000000u && rs64_ram_top <= b) rs64_s7336_widen(b + cap, "spill");  /* s7336: SPILL_HI without RAMTOP_MB */
         if (b == 0x81000000u && rs64_ram_top > b && b + cap > rs64_ram_top) cap = rs64_ram_top - b;
         if (b != 0x81000000u && cap > 0x400000u) cap = 0x400000u;
+        { if (b == 0x81000000u && rs64_standins_on() && cap > 0x700000u) { cap = 0x700000u;  /* s7623 G6c: top 1 MB = stand-in region 0x81700000 */
+            std::fprintf(stderr, "[s7623] spill arena capped at 7 MB for the stand-in region 81700000..81800000\n"); } }
         if (b != 0x81000000u) rs64_s7336_widen(b + cap, "spill");  /* s7336: legacy spill without RAMTOP_MB 16 */
         if (b < rs64_s7335_guest_top()) std::fprintf(stderr, "[s7335] WARNING spill arena %08X below guest top %08X: overlaps the guest heap / fb tail (set ROGUESQ_SPILL_HI=1)\n", b, rs64_s7335_guest_top());
         std::fprintf(stderr, "[s7326] spill arena %08X..%08X (%u KB, ram_top %08X)\n", b, b + cap, cap >> 10, rs64_ram_top); return cap; }();

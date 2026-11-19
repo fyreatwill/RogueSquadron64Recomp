@@ -97,3 +97,10 @@ any address in the region.
 3. Same-run on/off frames (`ROGUESQ_STANDINS=tog` alternating mach seconds, phase-gated) at dd2 and dd4 on 2+ levels: object
    pixels at distance before the real spawn, no doubling.
 4. 300 s holds on all 19 levels with it on (soak queue), then an owner sheet. Owner decides default at dd>1.
+
+## Step 2 result (s7623)
+
+Landed as designed with option 1 (top 1 MB of the spill arena): convertMat3x4ToN64Mtx's only caller, traverseSceneGraphRecursive,
+converts a stack copy into `*0x8011DC5C`, so the RSP never reads the instance. L1 dd2: `[standins] 47 objects, 47 KB` (80 items:
+25 without a model name, 8 probe droids dropped, 0 names unresolved), ~22 submits per frame; dd1 off; dd4 tog alternates. 3/3 arms
+alive, 0 stalls, clean frames. PORTING-STATE s7623.
