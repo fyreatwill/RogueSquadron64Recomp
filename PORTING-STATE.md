@@ -203585,3 +203585,37 @@ handlers. Not covered: TSan on the whole binary (only plume_metal.cpp instrument
 Discrimination line: the TSan arms (index pair 2 -> 0, the 16 blind-spot reports unchanged) plus the census selects H-defect
 (1 live race) and refutes H-clean for class CF; the atomic fix closes the one live site. Next discriminator: class TS, TSan over
 all of librt64 + plume (NEXT.md), H-clean (only the metal-cpp __block blind spot) vs H-defect (a new race pair).
+
+## Session 7642 (2026-11-19) — class TS: Thread Sanitizer over all of RT64 + plume, H-clean (0 new race pairs), controls PASS
+
+NEXT.md: no owner report, so the class s7641 left open: TSan over the whole renderer, not just plume_metal.cpp. Hypotheses:
+H-clean (only the known Metal-handoff blind-spot class) vs H-defect (>=1 new race pair in RT64 present/worker/texture-cache code).
+
+Instrument (new tools): tools/s7642_tsan_rt64_build.sh recompiles every rt64.a TU under CMakeFiles/rt64.dir/src (98) plus the 3
+libplume TUs with -fsanitize=thread into scratch/s7642/obj, replaces them in copies of rt64.a/libplume.a and relinks
+build/RogueSquadron64Recomp_tsan2 (26 s, 8 jobs; real binary untouched). Shader-blob .c files are data and stay plain. nm check:
+99/101 objects carry __tsan_func_entry; the 2 without are rt64_optimus.cpp / rt64_shader_compiler.cpp, which compile empty on macOS.
+tools/s7642_tsan_run.zsh = the s7641 runner with DUR and scratch/s7642. tools/s7642_tsan_bucket.py buckets reports by the two
+access stacks' first non-runtime frame + location kind (address/thread normalised).
+
+| arm (same tsan2 binary) | reports | sites | notes |
+|---|---|---|---|
+| boot 45 s default | 28 | 3 | __Block_byref copy x2 + present+0x21f30: the s7641 blind spots |
+| boot 45 s ROGUESQ_S7641_CF=0 (positive control) | 30 | 5 | +2: handler RMW vs acquireTexture read, handler vs handler -> instrument live |
+| L1 dd2 FPS60 16:9 flight, g1e_owner_quiet_arms HOLD=120 | 52 | 6 | level_ok=1, alive, vi_stalls30s=0, max_gap 150 ms |
+
+ORIGIN of the 3 flight-only sites (atos on tsan2): present+1212/+1228 (Rs64SStamp constructor fields sh/q) vs the scheduled
+handler's writes, and present+2208 (`rs64S->c = now()` after registering the handlers, before commit) vs the completed handler's
+read. Writer = our own s6986 PRESENT_RING stamp (the harness turns the ring on). Every write precedes commit() on the present thread;
+the handler runs after Metal's internal handoff (MTLDispatchListApply), which TSan does not intercept -> same blind-spot class as
+s7641's __block copies, not a race. Second line of evidence for the one pair that COULD be real (scheduled handler writes sh/sp,
+completed handler reads them then deletes the stamp, on different GCD threads): 3304/3304 S rows have sh and sp set and the
+completed row time after sp, though GPU end (pge ~0.018 ms) precedes sc - Metal runs completed after scheduled returns; and TSan
+reported no sh/sp pair. 601 RT64:: frames appear in the flight reports, all as allocation/registration stacks of those sites
+(RenderWorker::execute, PresentQueue::threadLoop, State::fullSync, Interpreter::processRDPLists...) - instrumented RT64 code ran on
+its worker threads with no race pair among them.
+
+Discrimination: the control (index pair returns, 28->30) shows the instrument sees a real plume race in this build; boot + flight
+show no new pair outside the Metal-handoff blind spot -> selects H-clean, refutes H-defect for RT64 + plume. Class TS CLOSED, no fix.
+Rules out: data races inside RT64's present queue, render workers, state/RDRAM sync and texture paths at boot and 120 s of flight.
+Not covered: librecomp/ultramodern/main.cpp host code (uninstrumented here); that is the next class (NEXT.md).
