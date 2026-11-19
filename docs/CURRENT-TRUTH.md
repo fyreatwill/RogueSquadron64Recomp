@@ -12,13 +12,19 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7612: class RG (guest REGISTER values parked in host statics across calls) CLOSED, H-clean, no fix.**
+- **NEW s7613: class HP (HOST pointers held in static / thread_local / file-scope storage) CLOSED, H-clean, no fix.**
+  tools/s7613_hp_census.py --controls (scanner tools/s7613_hp_scan.py; second source tools/s7613_hp_ast.py = clang -ast-dump
+  over build/compile_commands.json, 117 TUs): 65 pointer-typed static-storage variables, regex and AST censuses agree exactly
+  (sole regex-only g_wp_addr is #ifdef _WIN32). base 21 (rdram base / base+const watch pages; rdram mmapped once, freed after
+  thread joins), host 39, fnptr 2, dead 1, and only 4 guest views: g_s4583_t3 + s4586 cur_thr env-gated, g_audio_dma_probe
+  set/restored inside run_task, s_pending_audio_task OSTask* read only into logs/joins (helpers env-gated). Contracts B/B1/B2/
+  F1/H1, controls 9/9. The AST pass found ~20 declarations the first regex missed (fixed in-session).
+- **s7612: class RG (guest REGISTER values parked in host statics across calls) CLOSED, H-clean, no fix.**
   tools/s7612_rg_census.py --controls --witness (scanner tools/s7612_rg_scan.py, REG + one-hop PARM taint): 242 candidates /
   126 names 0 open (gated 181, stash 26 reader-checked, fresh 10, edge 9, ...), contracts R1-R7, controls 8/8. Default-on units:
   s7103 camfix entry/exit pair (per-camera calls; 4 entry-skipping gotos see s7103_in 0), s7108_s2 and s7482 reserve set+used in
   one call, s7398 OSIoMesg set->do_dma->0, s6892 repair only when the live pointer is already junk. Witness s7103/s7108 chase
-  logs: 7448/7448 and 6156/6156 exit snapshots match their own call's entry, planted stale p0 fails. Gap: TO_PTR host pointers
-  in statics (class HP next).
+  logs: 7448/7448 and 6156/6156 exit snapshots match their own call's entry, planted stale p0 fails.
 - **s7611: class SN (host snapshots of guest DATA in statics) CLOSED, H-clean.** tools/s7611_sn_census.py --controls --witness:
   169 candidates 0 open, contracts C1-C6, controls 8/8, witness s6995 aim logs 24/24 (full text: PORTING-STATE s7611).
 - **s7610: class OV (host state keyed by a guest code address) CLOSED, H-clean, no fix.** tools/s7610_ov_census.py
@@ -476,8 +482,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 43. **Class RG CLOSED s7612** (headline). Rerun tools/s7612_rg_census.py --controls --witness after a regen or a fixup that
     parks a ctx->rN / gpr[] value in a static; a default-on one needs a same-call contract (no escape between set and use),
     a live re-validation, or a reset + witness.
-44. **NEXT (s7613): class HP, host POINTERS into rdram (TO_PTR / rdram + off / guest-to-host conversions) held in static or
-    thread_local storage and dereferenced on a later call** (NEXT.md).
+44. **Class HP CLOSED s7613** (headline). Rerun tools/s7613_hp_census.py --ast --controls after adding any static/
+    thread_local pointer; a guest view (TO_PTR / OSThread* / OSTask*) kept across calls needs an env gate, a same-call
+    set/restore, or a log-only reader contract.
+45. **NEXT (s7614): class HM, pointer MEMBERS of static aggregates** (struct instances, arrays/containers of structs, lambda
+    state held in static std::function) - neither HP census lists them (both read declared variable types) (NEXT.md).
 
 ## Evidence index
 

@@ -202650,3 +202650,55 @@ HYPOTHESIS-ID: host-static-of-guest-register. Item 3 systematic idiom-class audi
 - Scope limits: host POINTERS into rdram (TO_PTR(...) / rdram + off) held in statics are matched by neither the SN token set
   (TO_PTR text has no rdram token) nor RG unless the argument is a register: ~17 static/thread_local `T*` in src + librecomp
   + ultramodern. Next: class HP.
+
+## Session 7613 (2026-11-18) — class HP closed: host pointers in static storage (65 pointer-typed statics, regex and clang-AST censuses agree, 4 guest views all gated/fresh/log-only, contracts B/B1/B2/F1/H1, controls 9/9), H-clean
+
+- Work unit (NEXT s7613, HYPOTHESIS-ID host-static-of-host-pointer): class HP = a HOST pointer (TO_PTR view, rdram + off,
+  OSThread*/OSTask* view, or any host pointer) held in static / thread_local / file-scope storage and dereferenced on a
+  later call, stale when the guest frees/reuses the object or rewrites the region. Hypotheses H-clean / H-bad-gated /
+  H-bad-live.
+- New tools: tools/s7613_hp_scan.py ((A) declaration census of every pointer-typed static-storage variable: T*, T* volatile,
+  T* arr[N], atomic<T*>, containers holding '*' or uintptr_t, pointer typedefs pthread_t/*_fn/*_hook_t, iterators,
+  multi-declarator and mid-line `; static`/`; thread_local` one-liners, namespace / extern "C" { file scope, one-line and
+  multi-line struct bodies skipped; (B) HP-token store scan over tools/s7611_sn_scan.scan_file, a pointer-shaped target
+  missing from (A) = OPEN), tools/s7613_hp_ast.py (SECOND SOURCE: clang -fsyntax-only -Xclang -ast-dump with the flags from
+  build/compile_commands.json, 117 TUs (src, librecomp, ultramodern, all RecompiledFuncs), every VarDecl with static storage
+  whose type holds '*' or uintptr_t, char-string types excluded, declaration-only `extern "C" T* x;` dropped; ~2.5 min at
+  J=8), tools/s7613_hp_census.py (rows, contracts, controls; `--ast` refreshes scratch/s7613/ast.json).
+- Result (scratch/s7613/census.txt): 65 regex decls vs 64 AST decls, disagreement none after the one allowed difference
+  (g_wp_addr sits in `#ifdef _WIN32`, absent from the macOS preprocessor's AST). Classes: base 21, host 39, fnptr 2, dead 1,
+  gated 2, fresh 1, logonly 1. HP store scan: 6 stores, all into rowed names, 0 missed.
+  - base (21): rdram itself or rdram + a fixed physical offset, page-masked (fault-watch pages): an ADDRESS, not an object
+    view. Contract B: recomp.cpp assigns rdram exactly twice (VirtualAlloc / mmap, #if branches) and frees it only after
+    game_thread.join() + join_event_threads(). B1: every store into a base name is `rdram`/`rd`/`RDRAM`/
+    `g_rdram_for_submit` or the page-mask form (0 bad). B2: the 6 call sites of rs64_s7097_begin / rs64_wbw_pre (RT64
+    rt64_state.cpp) / rs64_s7096_end / rs64_s7523_end pass RDRAM or g_rdram_for_submit.
+  - host (39): calloc/malloc/new/vector storage, SDL/Cocoa/RT64 handles, pthread handles, libc function pointers, host return
+    addresses, iterators into a host multimap, string tags, overlays.cpp func_map/section tables (class OV, s7610).
+  - the only 4 guest views: g_s4583_t3 (OSThread*, every store/read after `if (!en) return`, ROGUESQ_LOG_S4583); s4586
+    cur_thr (stored only when s4586::enabled(), sampler started in that branch); g_audio_dma_probe (F1: points at
+    run_task's local probe, previous value saved before, restored after ucode_func, no return in between);
+    s_pending_audio_task (OSTask* view, H1: one store `= task;` in get_rsp_microcode's M_AUDTASK case; every reader is the
+    `== nullptr ? 0u : static_cast<uint32_t>(->t.data_ptr|data_size)` read form or a hand-off to rs64_m5_task_handoff /
+    rs64_audio_source_objects, both of which return unless an env log flag is set and write nothing; the read locals reach
+    only fprintf, rs64_audio_join_image_stage/source (no guest store) and g_rs64_m5_last_input_task_data_ptr (itself only
+    logged)). Readers run inside run_task after get_rsp_microcode set it, so the view is that task's OSTask; even if read
+    during a later gfx task it only feeds logs.
+- Controls 9/9: planted static OSMesgQueue* from TO_PTR used in a later call -> OPEN; planted `static OSThread* s_t =
+  TO_PTR(...)` initializer -> OPEN via the declaration census; multi-declarator `*s_p2` and `; thread_local void* s_h` found
+  (non-pointers s_a/s_g not); dropped g_s4583_t3 row -> OPEN; removed the g_audio_dma_probe restore -> F1; planted a write
+  through s_pending_audio_task -> H1; planted a second rdram allocation -> B; planted a TO_PTR store into g_s6127_rd -> B1;
+  dropped g_rs64_window from the regex census -> AST disagreement OPEN.
+- Second source worked as a real check, not a rubber stamp: the first regex census found 47 decls and the AST pass listed
+  ~20 more (extern "C" { blocks, which sn.strip turns into `extern ""`; anonymous-namespace globals; `; static` after a
+  first statement; leading-whitespace in-function statics; atomic<fn typedef>; unsigned char*; uintptr_t map keys). Each
+  hole was fixed in the scanner and the two now agree. The H1 contract also failed on first pass and found two readers I
+  had not seen (the hand-offs to rs64_m5_task_handoff / rs64_audio_source_objects); both checked and folded into H1.
+  Single-source caveat: the classification of the 4 guest views rests on the static contracts only (no runtime witness);
+  the enumeration is two-source.
+- Discrimination: selects H-clean; refutes H-bad-live (no default-on guest view is dereferenced on a later call for
+  anything but logging) and H-bad-gated (the two gated views are read-only log units). Class HP CLOSED.
+- ORIGIN: no mitigation added (audit only).
+- Scope limits: (1) pointer MEMBERS of static aggregates (static struct instances, arrays/containers of structs with T*
+  fields, static std::function / lambda state) are not VarDecl types, so neither census lists them -> class HM next;
+  (2) PTR(T) statics (running_queue_impl, thread_self) are 32-bit guest addresses, not host pointers, outside HP.
