@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7671 (2026-11-19).
+Compact operational handoff, as of Session 7672 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,11 +12,16 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7670: F6 panel open across a live window resize (windowed, ASPECT=auto, 1226x796 -> 1512x648 21:9-class -> 1280x720):
+- **NEW s7672: G6c stand-ins no longer vanish at spawn.** The game spawns an object while its own view test still culls it, so
+  the stand-in disappeared for 9-443 frames (L1 8/8, L4 36/37 on-screen handoffs) before the real object popped back. Fix
+  ROGUESQ_S7672_HOLD=1 (default inside the STANDINS opt-in; =0 old, =odd same-run control): stand-in held until the real object's
+  first accepted addNpcToVisibilityBucket. L4 dd4: held 31 handoffs 0 blink 0 double, control 26/27 blink; 5 arms alive 0 stall.
+  Instrument tools/apply_s7672_bucket_handoff.py + tools/s7672_handoff_score.py, recipe scratch/s7672/run.zsh.
+- **s7670: F6 panel open across a live window resize (windowed, ASPECT=auto, 1226x796 -> 1512x648 21:9-class -> 1280x720):
   3 arms same build, all alive, 0 crash, 0 stall, level_ok=1. Fix arm P: stale path fired, 0 aspect-mismatched draws; old-path arm O
   (ROGUESQ_S7668_ASPECT=0, positive control): exactly 1 squashed draw per resize (~17 ms, vs ~33 draws after a fullscreen toggle);
   no-panel control C equal. A plain resize republishes the window size within one draw. scratch/s7670/run.zsh + score.py.**
-- **NEW s7671: rumble cannot stick when a mission is paused/aborted with an effect LIVE (closes the s7669 gap).** Test lever
+- **s7671: rumble cannot stick when a mission is paused/aborted with an effect LIVE (closes the s7669 gap).** Test lever
   ROGUESQ_S7671_FX_ON_KEY=1 arms the game's port-0 effect slot 0x80110520 (the fields startRumbleEffect writes) on every autopilot
   key, ROGUESQ_S7671_FX_TRAIN_MS=N re-arms every 200 ms for N ms after each START. s7326 hangar route, owner recipe, 2 arms:
   forced effects 24/24 and 198/198 reached the game's osMotorStart (positive control), the plant LONG run caught in both. At the
@@ -370,7 +375,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
     crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
-    closes on the owner's look; default stays off.** Scorer
+    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
@@ -383,7 +388,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 
 22. **s7663 launch settings/presets: owner to try.** After any edit to rs64_settings.cpp rerun tools/test_settings.cpp and
     scratch/s7663/run.zsh (5 arms; C must print `[gfx-qos] mode=1` from the file). New owner recipes go in its presets() table.
-23. **Crash-report gate (s7664):** `python3 tools/crash_reports.py` (rc 1 = NEW). Deliberate crash arms: quote the .ips basename
+23. **s7614_hm census OPEN row (found s7672, pre-existing):** src/main/rs64_settings.cpp `p.vars` has no member row since the
+    s7663 settings file; classify it (host-owned?) and add the row so `tools/s7614_hm_census.py --controls` exits 0 again.
+24. **Crash-report gate (s7664):** `python3 tools/crash_reports.py` (rc 1 = NEW). Deliberate crash arms: quote the .ips basename
     in the session entry. Test tools/agent/test_crash_reports_gate.sh. DIAG datum RogueSquadron64Recomp-2026-11-17-053804
     (s7523 SLOWRDP consume() SIGSEGV) CLOSED s7665 as H-devbuild: crash 05:38, file first committed 05:59; both committed versions
     pass an ASan/UBSan fuzz (tools/test_s7523_model.sh, 2 controls) and the post-commit arms ran alive. Rerun that test after any

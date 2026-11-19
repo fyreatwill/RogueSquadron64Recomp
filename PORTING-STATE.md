@@ -204507,3 +204507,36 @@ Conclusion: selects H-game-stops (two arms); refutes H-host-stuck (every run end
 stats screen and hangar load) and H-game-stuck. Rumble abort thread CLOSED. Not covered: a natural (non-lever) effect live at the
 pause press (game effects are sparse; the lever uses the game's own slot and service so the stop path is the same).
 New crash reports this session: RogueSquadron64Recomp-2026-11-19-130432 (SIGBUS si_addr 0x3bf000002 in processPolledControllerData / siServiceThread) = the lever boot SIGBUS above (first arm A run, effect armed at t=6 s before the table was resident), fixed in the same session; not a game crash.
+
+## Session 7672 (2026-11-19) — G6c stand-in -> real object handoff: stand-ins vanished at spawn for 9-443 frames (game culls the freshly spawned object); fixed by holding the stand-in until the real object's first accepted bucket add (0 blinks, 0 double frames, same-run control still blinks)
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0. No owner report. Every ladder item waits on the owner, so took
+the G6c item s7623 left open: "double draw at the spawn moment".
+Hypotheses: H-clean (real object accepted the frame after the stand-in's last), H-gap (frames with neither: a blink at spawn),
+H-double (frames with both), H-pose (real pose differs from the stand-in's at handoff).
+Instrument (one build): tools/apply_s7672_bucket_handoff.py (RS64_REPLAY after s7626) reports every addNpcToVisibilityBucket return
+(a2 state, v0) to rs64_bk_ret in src/main/rs64_standins.cpp; real calls are matched to a stand-in by state+0x34 (item) or row-0
+position within 2 units; frame ids = our submit count, real calls labelled with the NEXT submit because runInMissionFrame runs the
+draw-phase slotDispatcherIter passes before our hook (read from the generated code). Rows `[s7672-ho]` under ROGUESQ_STANDINS_LOG=1.
+Positive control ROGUESQ_S7672_PLANT=K (odd-index stand-ins keep drawing K frames past spawn).
+Run 1 (scratch/s7672, L1 + L4 dd4 16:9 FPS60, 200 s, PLANT=20): both alive, 0 crash, vi_stalls30s=0, max gap 148 ms. Control: planted
+rows show overlap 18-19 of 20 (PASS, 6 rows). Matching works both ways (item 141, pos 29). Result: on-screen handoffs (stand-in
+accepted <=2 frames before spawn) L1 8/8 and L4 36/37 blink, 9-443 frames (med ~180). In every one real_call - spawn = 0 (the real
+handler submits from the spawn frame) but real_add - spawn = 9-443: the game's own view test rejects the freshly spawned object
+(consistent with s7625's finding that stand-ins die at the retail object far 27.8-30.8 while the spawn happens further out: mechanism
+inferred, single-source). dpos at first accept <= 1.9 units. Selects H-gap; refutes H-clean; H-double 0 frames (stand-in stops at
+spawn); H-pose negligible.
+Fix (same file): ROGUESQ_S7672_HOLD=1 (default, only reachable under ROGUESQ_STANDINS at dd>1) keeps drawing a spawned item's
+stand-in until its real object's first accepted add (cap 900 frames), spawn frame included; =0 old, =odd odd-index only (same-run
+control). rs64_bk_on is now set by the submit hook whenever stand-ins are active (dd1/off never set it); position fallback only
+scans stand-ins waiting for their real object.
+Run 2 (scratch/s7672b, HOLD=odd, L4 + L1): held L4 33 handoffs 3 blinks (all a group spawned together on one frame and culled by
+the stand-ins' own view test, i.e. off-screen; also showed the spawn frame itself was not held -> fixed), L1 9/9 clean; control even
+L4 20/20 and L1 6/7 blink. Run 3 (scratch/s7672c, L4 after the spawn-frame fix): held 31 handoffs, blink>1 = 0, blink max 0,
+overlap max 0; control even 26/27 blink (med 145, max 307 frames). All 5 arms alive, 0 crash, 0 VI stall, max gap <=149 ms.
+Scorer tools/s7672_handoff_score.py (rc 1 if a held group blinks); recipe scratch/s7672/run.zsh <dir> <level> [1|0|odd].
+Censuses: s7549_gi --controls rc 0 (9/9), s7548_gh rc 0, s7613_hp PASS. s7614_hm FAIL on ONE pre-existing OPEN row,
+src/main/rs64_settings.cpp `p.vars` (s7663 settings file, not touched here) -> next unit.
+Rules out: H-clean / H-double at the handoff. Not covered: owner look; held stand-ins for objects killed before first acceptance
+(cannot be shot while culled; item+6 reverting returns to the old path); a 300 s 19-level hold with HOLD on (same draw path as the
+s7629-s7630 holds; 5 arms here clean).

@@ -21,6 +21,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
+#include <unordered_map>
 #include <vector>
 #include "rs64_apf.h"  // s7652: s7359 class AJ bounded append for the [standins-*] log rows
 
@@ -76,7 +77,12 @@ constexpr uint32_t kRegionEnd = 0x81800000u;
 constexpr uint32_t kStateSize = 0x50u;
 constexpr uint16_t kSubProbeDroid = 0x0Eu;
 
-struct Standin { uint32_t item, state, inst, scale; double first_add = -1.0, last_add = -1.0; bool spawn_logged = false; };
+struct Standin {
+    uint32_t item, state, inst, scale; double first_add = -1.0, last_add = -1.0; bool spawn_logged = false;
+    // s7672 handoff (ROGUESQ_STANDINS_LOG=1): frame ids are our submit-call count (one per mission frame)
+    int64_t last_si = -1, spawn_f = -1, real_call = -1, real_add = -1, real_last = -1; uint32_t overlap = 0, real_frames = 0, held = 0, held_ok = 0;
+    uint32_t idx = 0; uint16_t sub = 0; int end_reason = -1, prev_reason = -1; float dpos = -1.0f; bool ho_logged = false, by_pos = false;
+};
 
 uint32_t s_dat = 0;
 std::vector<Standin> s_standins;
@@ -235,6 +241,70 @@ void build_state(uint8_t* rdram, recomp_context* ctx, uint32_t item, uint32_t st
 struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond, added, onframes, faron; };
 Tally s_t{};
 
+// s7672: addNpcToVisibilityBucket returns (tools/apply_s7672_bucket_handoff.py). rs64_bk_on is set by the submit hook (stand-ins active, dd>1 only); our own
+// call is excluded by rs64_bk_self. A real call is matched to a stand-in by state+0x34 (the prop handler stores the item there) or,
+// failing that, by its state row-0 position within 2 units of the stand-in's. Reasons: 0 added, 1 culled, 2 spawned, 3 unlinked,
+// 4 dead, 5 cond.
+int64_t s_bk_frame = 0;
+int rs64_bk_self = 0;
+bool s_bk_log = false;
+std::unordered_map<uint32_t, size_t> s_bk_by_item;
+size_t s_bk_gen_size = ~size_t(0);
+uint32_t s_bk_calls = 0, s_bk_item_hits = 0, s_bk_pos_hits = 0;
+const char* const kReason[] = { "added", "culled", "spawned", "unlinked", "dead", "cond" };
+void ho_log(Standin& s, const char* why) {
+    if (s.ho_logged) return;
+    s.ho_logged = true;
+    const int64_t gap = (s.real_add >= 0 && s.last_si >= 0) ? s.real_add - s.last_si - 1 : -9999;
+    std::fprintf(stderr, "[s7672-ho] item %08X sub %04X why=%s spawn_f=%lld last_si=%lld real_call=%lld real_add=%lld gap=%lld overlap=%u "
+                 "real_frames30=%u end=%s dpos=%.2f match=%s si_before_spawn=%lld odd=%u held=%u held_ok=%u\n",
+                 s.item, (unsigned)s.sub, why, (long long)s.spawn_f, (long long)s.last_si, (long long)s.real_call, (long long)s.real_add, (long long)gap,
+                 s.overlap, s.real_frames, s.end_reason >= 0 ? kReason[s.end_reason] : "none", (double)s.dpos, s.by_pos ? "pos" : "item",
+                 (long long)(s.spawn_f >= 0 && s.last_si >= 0 ? s.spawn_f - s.last_si : -9999), s.idx & 1u, s.held, s.held_ok);
+}
+}  // namespace
+
+extern "C" int rs64_bk_on = 0;
+extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
+    if (rs64_bk_self || !guest(state)) return;
+    ++s_bk_calls;
+    if (s_bk_gen_size != s_standins.size()) {
+        s_bk_by_item.clear();
+        for (size_t i = 0; i < s_standins.size(); ++i) s_bk_by_item[s_standins[i].item] = i;
+        s_bk_gen_size = s_standins.size();
+    }
+    Standin* hit = nullptr;
+    const uint32_t it = rw(rdram, state + 0x34u);
+    auto f = s_bk_by_item.find(it);
+    if (f != s_bk_by_item.end()) { hit = &s_standins[f->second]; ++s_bk_item_hits; }
+    const float x = rf(rdram, state), y = rf(rdram, state + 4u), z = rf(rdram, state + 8u);
+    if (!hit) {
+        for (Standin& s : s_standins) {
+            if (s.state == state || s.spawn_f < 0 || s.real_add >= 0) continue;  // only stand-ins waiting for their real object
+            const float dx = rf(rdram, s.state) - x, dy = rf(rdram, s.state + 4u) - y, dz = rf(rdram, s.state + 8u) - z;
+            if (dx * dx + dy * dy + dz * dz < 4.0f) { hit = &s; hit->by_pos = true; ++s_bk_pos_hits; break; }
+        }
+    }
+    if (!hit) return;
+    Standin& s = *hit;
+    // runInMissionFrame runs the draw-phase slotDispatcherIter passes (where handlers add to the bucket) BEFORE our submit hook, so
+    // a real call belongs to the frame of the NEXT submit.
+    const int64_t cur = s_bk_frame + 1;
+    if (s.real_call < 0) s.real_call = cur;
+    if (v0 != 1) return;
+    if (s.real_add < 0) {
+        s.real_add = cur;
+        const float dx = rf(rdram, s.state) - x, dy = rf(rdram, s.state + 4u) - y, dz = rf(rdram, s.state + 8u) - z;
+        s.dpos = std::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    if (s.real_last != cur) {
+        s.real_last = cur;
+        if (cur - s.real_add < 30) ++s.real_frames;
+    }
+    if (s_bk_log && cur - s.real_add >= 30) ho_log(s, "real30");
+}
+
+namespace {
 void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
     s_standins.clear();
     s_dat = dat;
@@ -255,6 +325,8 @@ void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
         const uint32_t size = build_instance(rdram, model, inst);
         if (size == 0) { ++full; if (inst + 0x1000u > kRegionEnd) break; continue; }
         Standin s{ item, state, inst, 0 };
+        s.sub = sub;
+        s.idx = (uint32_t)s_standins.size();
         build_state(rdram, ctx, item, state, inst, model, &s.scale);
         s_standins.push_back(s);
         at = (inst + size + 15u) & ~15u;
@@ -521,6 +593,9 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     ++s_t.frames;
     static uint32_t s_calls = 0;
     ++s_calls;
+    s_bk_frame = s_calls;
+    s_bk_log = s_log;
+    rs64_bk_on = 1;  // s7672: the handoff hold needs the real object's first acceptance in every run, not only under LOG
     static double s_first = -1.0;
     if (s_first < 0) s_first = now;
     static int s_dwin = 0;  // 0 before window 1, 1 window 1 (toggling), 2 window 2 (forced off), 3 done
@@ -577,9 +652,31 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     }
     std::sort(s_linked.begin(), s_linked.end());
     const bool cutscene = rb(rdram, kCutsceneFlag) != 0;
+    // s7672 positive control: ROGUESQ_S7672_PLANT=K keeps every odd-index stand-in drawing K frames past its spawn (the instrument
+    // must then report overlap ~K on those items only).
+    static const int64_t s_plant = [] { const char* e = std::getenv("ROGUESQ_S7672_PLANT"); return e ? (int64_t)std::atoll(e) : (int64_t)0; }();
+    // s7672 fix: the game spawns an object at a range where its own view test (retail object far) still culls it, for 9-443 frames
+    // (L1/L4 dd4), so the stand-in vanished at spawn and the object popped back later. ROGUESQ_S7672_HOLD=1 (default) keeps the
+    // stand-in drawing after the spawn until the real object's first accepted addNpcToVisibilityBucket (cap 900 frames);
+    // =0 the s7623 behaviour, =odd only odd-index stand-ins (same-run control).
+    static const int s_hold = [] { const char* e = std::getenv("ROGUESQ_S7672_HOLD"); if (e && !std::strcmp(e, "odd")) return 2; return e && *e == '0' ? 0 : 1; }();
+    static bool s_hold_logged = false;
+    if (!s_hold_logged) { s_hold_logged = true; std::fprintf(stderr, "[s7672-hold] mode=%d plant=%lld\n", s_hold, (long long)s_plant); }
+    auto reason = [&](Standin& s, int r) {
+        if (r != 0 && s.prev_reason == 0) s.end_reason = r;  // the first non-add after the latest add
+        s.prev_reason = r;
+    };
+    size_t si_idx = 0;
     for (Standin& s : s_standins) {
         ++s_t.cand;
-        if (rh(rdram, s.item + 6u) != 0xFFFFu) {
+        const bool odd = (si_idx++ & 1u) != 0;
+        if (s.spawn_f < 0 && rh(rdram, s.item + 6u) != 0xFFFFu) s.spawn_f = s_calls;  // before the hold test, so the spawn frame is held too
+        const bool planted = (s_plant > 0 && odd && s.spawn_f >= 0 && s_calls - s.spawn_f < s_plant) ||
+                             (s_hold && (s_hold == 1 || odd) && s.spawn_f >= 0 && s.real_add < 0 && s_calls - s.spawn_f < 900);
+        if (s_log && s.spawn_f >= 0 && !s.ho_logged && (int64_t)s_calls - s.spawn_f > 600) ho_log(s, "timeout600");
+        if (rh(rdram, s.item + 6u) != 0xFFFFu && !planted) {
+            if (s.spawn_f < 0) s.spawn_f = s_calls;
+            reason(s, 2);
             ++s_t.spawned;
             if (!s.spawn_logged) {
                 s.spawn_logged = true;
@@ -589,9 +686,11 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
             }
             continue;
         }
-        if (!std::binary_search(s_linked.begin(), s_linked.end(), s.item)) { ++s_t.unlinked; continue; }
-        if ((int32_t)rw(rdram, s.item + 0x6Cu + diff * 4u) <= 0) { ++s_t.dead; continue; }
-        if (!cutscene && mips_call(rdram, ctx, kConditionMet, { s.item }).v0 == 0) { ++s_t.cond; continue; }
+        if (!planted && rh(rdram, s.item + 6u) == 0xFFFFu) {
+            if (!std::binary_search(s_linked.begin(), s_linked.end(), s.item)) { reason(s, 3); ++s_t.unlinked; continue; }
+            if ((int32_t)rw(rdram, s.item + 0x6Cu + diff * 4u) <= 0) { reason(s, 4); ++s_t.dead; continue; }
+            if (!cutscene && mips_call(rdram, ctx, kConditionMet, { s.item }).v0 == 0) { reason(s, 5); ++s_t.cond; continue; }
+        }
         // addNpcToVisibilityBucket returns 1 only when the view test (transformVec3ToNpcLocalWithScale 0x8001DC34) passed and the
         // node was linked into the view's list (a linked list: no fixed bucket capacity, code read s7624); 0 = culled.
         // s7625: ROGUESQ_STANDINS_FAR=<m> (default = the draw distance; 1 or 0 = retail far) widens the view test's far bound
@@ -609,10 +708,16 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         rs64_vt_farmul = (float)(s_far > 0 ? s_far : (far_on ? s_dd : 1.0));
         if (far_on && s_far < 0) ++s_t.faron;
         rs64_vt_on = s_log ? 1 : 0;
+        rs64_bk_self = 1;
         const uint32_t add_v0 = mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0;
+        rs64_bk_self = 0;
+        if (planted) { ++s.held; if (add_v0 == 1) ++s.held_ok; }
         rs64_vt_on = 0;
         rs64_vt_farmul = 1.0f;
+        reason(s, add_v0 == 1 ? 0 : 1);
         if (add_v0 == 1) {
+            s.last_si = s_calls;
+            if (s.real_last == (int64_t)s_calls) ++s.overlap;  // real call came first this frame
             ++s_t.added;
             if (s.first_add < 0) s.first_add = now;
             s.last_add = now;
