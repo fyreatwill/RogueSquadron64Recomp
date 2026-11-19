@@ -204506,4 +204506,4 @@ re-arms in the pause menu keep playing), but the game starts no effect there its
 Conclusion: selects H-game-stops (two arms); refutes H-host-stuck (every run ends <=368 ms after its last arm, through pause,
 stats screen and hangar load) and H-game-stuck. Rumble abort thread CLOSED. Not covered: a natural (non-lever) effect live at the
 pause press (game effects are sparse; the lever uses the game's own slot and service so the stop path is the same).
-New crash reports this session: none (the boot SIGBUS above was the lever's, fixed in the same session).
+New crash reports this session: RogueSquadron64Recomp-2026-11-19-130432 (SIGBUS si_addr 0x3bf000002 in processPolledControllerData / siServiceThread) = the lever boot SIGBUS above (first arm A run, effect armed at t=6 s before the table was resident), fixed in the same session; not a game crash.
