@@ -205955,3 +205955,28 @@ HOLLOW_OK rows for them, and an offline control showed a planted "open/undoc 2" 
 REPORT 5}, rc 0, controls (planted red/green, hol_open/hol_zero/hol_flag, cache) PASS.
 Known gap, queued as NEXT: HOLLOW_KEYS is a fixed vocabulary (e.g. `missing=3` does not flag).
 Verdict: this selects H-review and refutes H-race for the 46 s7384 rows, selects H-more for the s7720 sweep scan, and closes the allowed-red list. The next discriminator is the HOLLOW_KEYS coverage pass in NEXT.md (H-covered vs H-gap).
+
+## Session 7721 (2026-11-20) — HOLLOW_KEYS vocabulary audit: H-gap selected (19 open-class words added, 5 rc-0 gates reviewed already-classified); sweep 196 gates 0 RED 0 HOLLOW, new control hol_s7721 PASS
+
+What ran (offline, no game run): crash_reports --since 2026-11-13: FOLDED=27 new=0. The first sweep with RS64_SWEEP_OUTDIR hit the
+cache 183/196 and captured only 21 outputs (a cache hit returns the stored row and never reaches hollow_reason), so the capture
+was rerun with `--no-cache` (wall 1113 s, 199 outputs in scratch/s7721/out/). New scratch/s7721/enum_keys.py lists every
+`key=n`, `KEY n` and `n key` token outside control lines across all outputs: 649 distinct keys (scratch/s7721/keys.tsv).
+Classified by hand: open-class words outside HOLLOW_KEYS with a nonzero value: UNGUARDED (s7085 5, s7359 7), disagree (s7632 4,
+s7633 43), leaked-uref/gated_leaks (s7591, inside a classified table; the hyphen/underscore boundary keeps them unflagged),
+suspect_funcs (s7576 3, all MERGED = legal motion; FOLDED is that tool's open class and reads 0), blocking_dtors (s7607,
+classified b_root), multi_default (s7427, info). The NEXT examples missing/stale/race appeared only at 0.
+Change: tools/s7651_gate_sweep.py HOLLOW_KEYS += MISSING STALE RACES? NEED_FIX NEED_REVIEW UNMATCHED DEFECTS? UNGUARDED
+DISAGREE(S|MENTS) LEAK(S|ED) ORPHANS? VIOLATIONS? UNCOVERED FOLDED ERRORS? REGRESS(ED|IONS) BROKEN WRONG. UNCLAMPED was tried and
+dropped: its only hit was s7358 prose ("^2*2 unclamped while ...", a FIXED row). Offline rescore (scratch/s7721/rescore.py,
+imports the sweep's own hollow_reason over the captured outputs) flagged 5 gates, each read by hand and given a HOLLOW_OK row:
+s7085 (3 constant-divisor 32-bit divides + 2 ddivu fixed in recomp.h, docs/N64RECOMP-WARNING-CENSUS.md), s7359 (every
+ACC/UNGUARDED row carries a type-bound proof; gate is "unresolved 0 orphan 0"), s7632/s7633 (a disagreeing scan/AST pair with
+either side ALWAYS is classified through the union in always[]; the rest are off-default in both; gate is OPEN default-on = 0).
+Positive controls: offline plant "SUMMARY missing=3 / race=1" on s7591 and on HOLLOW_OK'd s7085 both read HOLLOW; new in-sweep
+control hol_s7721 (same plant) reads HOLLOW. Final sweep (scratch/s7721/sweep_final.txt): gates 196 {GREEN 191, REPORT 5}, rc 0,
+all controls PASS.
+Rules out: an rc-0 gate printing a nonzero open-class count outside the scanned vocabulary (H-covered refuted only for the 5
+false-alarm-free reviewed rows; no real open item was hiding).
+Not covered: the 5 REPORT tools are never output-scanned -> NEXT (sweep-report-tools).
+Verdict: selects H-gap (vocabulary was incomplete) with zero real open items behind it; sweep-scoring-audit CLOSED.

@@ -157,6 +157,8 @@ EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_bui
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
 # exceptions: tool -> (regex every flagged token must match, reason); an unreviewed new token reads HOLLOW again.
 HOLLOW_KEYS = r"OPEN|UNCLASSIFIED|UNRESOLVED|UNEXPLAINED|UNAUDITED|UNREVIEWED|MISMATCH(?:ES)?|FAIL(?:S|ED|URES?)?|RED|NEW|REVIEW|DRIFT(?:ED)?|BAD"
+# s7721: open-class words found by enumerating every count token in all 196 captured outputs (scratch/s7721/keys.tsv)
+HOLLOW_KEYS += r"|MISSING|STALE|RACES?|NEED_FIX|NEED_REVIEW|UNMATCHED|DEFECTS?|UNGUARDED|DISAGREE(?:S|MENTS?)?|LEAK(?:S|ED)?|ORPHANS?|VIOLATIONS?|UNCOVERED|FOLDED|ERRORS?|REGRESS(?:ED|IONS?)?|BROKEN|WRONG"
 # key-first "OPEN 19" / "open=3" / "UNREVIEWED: 2"; number-first "8 new mismatch" only when not itself a value (no "=12 open") and
 # the key carries no count of its own ("94060 bad 0" is bad=0). Lines naming a control / plant / mutant / selftest are skipped:
 # a control is meant to show nonzero counts.
@@ -175,6 +177,10 @@ HOLLOW_OK = {  # s7720, each read by hand in scratch/s7720/out/<tool>.out
     "s7542_gc_census.py": (r"^PASS ", "control result lines"),
     "s7556_gp_census.py": (r"PASS \(bad=\d+\)$", "planted-control table"),
     "s7594_sg_census.py": (r"^\[ctl\] .* PASS$", "control line"),
+    "s7085_int_census.py": (r"^\s*(ddivu|divu?)\s+UNGUARDED\s+\d+$", "s7721: 3 constant-divisor 32-bit divides + 2 ddivu fixed in recomp.h DDIVU (docs/N64RECOMP-WARNING-CENSUS.md s7085 rows); the gate is real_bad"),
+    "s7359_strcopy_census.py": (r"^\d+ sites: .*ACC/UNGUARDED \d+", "s7721: every ACC/UNGUARDED row carries its type-bound proof; 'unresolved 0 orphan 0' is the gate"),
+    "s7632_dd_census.py": (r"^== .*: scan=\d+ ast=\d+ joint=\d+ gate-agree=\d+ disagree=\d+ ", "s7721: a disagreeing pair with either side ALWAYS is classified via the union (always[]), the rest are off-default in both; OPEN default-on rows is the gate"),
+    "s7633_hb_census.py": (r"^== .*: scan=\d+ ast=\d+ joint=\d+ gate-agree=\d+ disagree=\d+ ", "s7721: same join as s7632; OPEN default-on rows is the gate"),
     "s7648_mk8_census.py": (r"^\[s7648\] unclassified=3$", "the 3 planted ctl sites (tmp paths); a real one exits 1"),
 }
 
@@ -474,7 +480,8 @@ def main():
         c["rep_noexit"], c["rep_exit"] = run(rp_ok)[1], run(rp_bad)[1]
         # s7720: the s7718 hollow row (OPEN 19, rc 0) must read HOLLOW, OPEN 0 GREEN, an unpassed --check HOLLOW
         for k, body in (("hol_open", "print('s7363 hostarr census')\nprint('OPEN 19')\n"), ("hol_zero", "print('OPEN 0 fail=0')\n"),
-                        ("hol_flag", "import sys\nif '--check' in sys.argv: sys.exit(1)\nprint('table')\n")):
+                        ("hol_flag", "import sys\nif '--check' in sys.argv: sys.exit(1)\nprint('table')\n"),
+                        ("hol_s7721", "print('SUMMARY missing=3')\nprint('race=1')\n")):
             f = os.path.join(d, k, "s9999_" + k + "_census.py")
             os.makedirs(os.path.dirname(f))
             open(f, "w").write(body)
@@ -485,7 +492,7 @@ def main():
         ccpass, cc = cache_control(d)
     cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED",
                  "rep_noexit": "REPORT", "rep_exit": "RED",
-                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW"}
+                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW", "hol_s7721": "HOLLOW"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
     print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit, import: green/green/hit/red-after-module-edit ->", cc, "PASS" if ccpass else "FAIL")
     if not (cpass and ccpass):

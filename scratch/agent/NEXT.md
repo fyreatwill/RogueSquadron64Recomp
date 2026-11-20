@@ -1,22 +1,20 @@
-# NEXT (s7721)
-HYPOTHESIS-ID: sweep-scoring-audit
+# NEXT (s7722)
+HYPOTHESIS-ID: sweep-report-tools
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
 If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green.
 
-s7720 closed the hollow-GREEN list: s7384 (114/114 MULTI reviewed, 0 RACE) and s7557 (every default-on lever has a
-PROJECT-OVERVIEW row) are GREEN, tools/gate_sweep_allowed_red.txt is empty, and the sweep's two new false-positive HOLLOWs
-(s7392 reviewer prose "10 fails", s7558 "tags 34 open/undoc 0") have HOLLOW_OK rows.
+s7721 closed sweep-scoring-audit (H-gap selected, small): enumerating every count token in all 196 captured gate outputs
+(scratch/s7721/keys.tsv, 649 keys) found open-class words outside HOLLOW_KEYS; 19 were added (MISSING STALE RACE NEED_FIX
+NEED_REVIEW UNMATCHED DEFECT UNGUARDED DISAGREE LEAK ORPHAN VIOLATION UNCOVERED FOLDED ERROR REGRESS BROKEN WRONG). Rescore
+flagged 5 rc-0 gates, all already-classified, now HOLLOW_OK. New in-sweep control hol_s7721 (missing=3/race=1 -> HOLLOW).
 
-Remaining hole, seen in s7720's own control: HOLLOW_KEYS is a fixed vocabulary. A gate printing `missing=3`, `stale=2`,
-`race=1`, `need_fix=4`, `unmatched 7`, `defects=1` with rc 0 still scores GREEN.
-Unit (ONE offline pass, no game run):
-1. `env RS64_SWEEP_OUTDIR=scratch/s7721/out python3 tools/s7651_gate_sweep.py --jobs 2` (capture every gate's full output once).
-2. Offline: enumerate every `<word>[=: ]<n>` / `<n> <word>` count token across all outputs; list each distinct key word with
-   the gates and max value. Classify each key: OPEN-CLASS (a nonzero means unfinished work), INFO (sizes/totals), CONTROL.
-3. Add every OPEN-CLASS key missing from HOLLOW_KEYS; rerun the scorer offline on the captured outputs; review each newly
-   flagged gate by hand (HOLLOW_OK with a reason, or fix the tool / its rows).
-Hypotheses: H-covered (no rc-0 gate prints a nonzero open-class key outside HOLLOW_KEYS), H-gap (>=1 does).
-Positive control: plant an output line `SUMMARY missing=3` and `race=1` for a swept tool in the offline rescore: both must read HOLLOW.
-Close: sweep ends 0 RED 0 HOLLOW. Then the slug is done; next take an owner item or G-rung per ITERATION 3c.
-Owner defaults: never flip.
+Remaining hole: the 5 REPORT tools (s7031, s7082, s7083, s7210, s7441) are never scored at all — no exit path, no output scan.
+Unit (offline, no game run):
+1. For each REPORT tool: find the input it was last run on (grep PORTING-STATE for its name), run it once, save output to
+   scratch/s7722/<tool>.out.
+2. Decide per tool: H-report (pure table, nothing open by construction: keep REPORT with the reason) vs H-gate (the table carries
+   an open-class row, e.g. unknown jal targets in s7082 or unexplained jump tables in s7083: give it a --check exit and an ARGS
+   row so the sweep runs it as a gate, with a planted control).
+3. Sweep ends 0 RED 0 HOLLOW, controls PASS.
+Then the slug is done; take an owner item or G-rung per ITERATION 3c. Owner defaults: never flip.

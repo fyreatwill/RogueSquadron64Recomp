@@ -12,6 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7721 HOLLOW_KEYS vocabulary audit CLOSED (H-gap, no real open item):** 649 count keys enumerated over all 196 captured
+  outputs; 19 open-class words added (MISSING/STALE/RACE/UNGUARDED/DISAGREE/LEAK/FOLDED/...), 5 flagged gates reviewed HOLLOW_OK
+  (s7085, s7359, s7632, s7633 already classified). Sweep 196 {GREEN 191, REPORT 5}, new control hol_s7721 PASS. Next: REPORT tools.
 - **s7720 sweep-scoring audit CLOSED (H-more): rc-0 gates now score HOLLOW on a nonzero open count or an unpassed
   --check/--strict/--gate (controls hol_open/hol_zero/hol_flag PASS).** 16 tools now run with their flag; 7 had failed their own
   --check while GREEN, all 7 reviewed GREEN: s7384 static-state 114/114 MULTI reviewed, 0 RACE (pi.cpp rom INITORDER,
