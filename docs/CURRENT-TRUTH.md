@@ -23,19 +23,9 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   sheet docs/owner_sheet_s7690_frame_parity.jpg shows the far bunker back (ON-only). Causal control: a first build read the
   wrong frame word (0x80137764) and so forced every stand-in INTO the skip group -> 0 adds in 82 windows. STANDINS=1 (owner mode)
   calls every frame and was never affected; only frame-mode proofs/sheets (s7628, s7688) under-reported stand-ins.
-- **s7689: L1 dd2 bunker loss is NOT a s7672-s7687 handover change and NOT a different flight path (same-run arms + log join).**
-  scratch/s7689_handoff_ab.sh, L1 dd2 STANDINS=frame HOLD 150, same binary: new vs all six knobs =0 -> flicker 465/456 px/triplet, med_fpx
-  0/0, controls PASS, 2/2 alive 0 stall. [standins-spawn] times match s7628 to 10 ms (same path); today's sheet scorer on the archived
-  s7628 frames still gives med_fpx 153 (scorer unchanged). Correction to s7688: the bunker is ABSENT from both frames now, not present
-  (docs/s7689_l1_bunker_s7628_vs_now.png). Which stand-ins pass the add test varies per run at item-pair granularity (sub 0x14 pairs
-  803CEB08/CEBC4, CEC80/CED3C, CEDF8/CEEB4 flipped s7628 -> now; old vs new arm differ on 10 of 34 items). H-phase (frame-mode parity
-  aliasing) refuted: STANDINS=1 adds split evenly by call parity (new par= field on [standins-spawn]). Open: why one partner of a pair is culled.
-- **s7688: G6c owner sheet refreshed on the current binary (after s7672-s7687), no wholesale regression.** Same-run STANDINS=frame
-  proof (scratch/s7688_standins_proof.sh, HOLD 150, 4/4 alive, 0 crash, vi_stalls30s=0): window-1 flicker px/triplet vs s7628 L1 dd2
-  465 (651), L1 dd4 638 (558), L4 dd2 856 (143), L4 dd4 2488 (1756); window-2 off controls unchanged 44/104/154/207; synthetic
-  control PASS 4/4. Early items (early_s>=0): L1 13 (2.6-62 s), L4 19-20 (to 12.8-16.8 s) vs s7628 10-11 / 19 (<=5 s). Cluster sheet
-  (L1 dd2 + L4 dd4) controls PASS; L4 dd4 med_fpx 1671 (1298, eye: far tower ON-only), but **L1 dd2 med_fpx 0 (153)**: crops land on
-  small near-ground objects, the far bunker is in both frames (s7689: wrong, absent from both; H-path/H-handoff refuted). Sheet docs/owner_sheet_s7688_standins_on_off.jpg; OWNER-OPT-INS row points at it. Default stays off.
+- **s7689/s7688 (explained by s7690):** s7688 refreshed the frame-mode owner sheet (4/4 alive, controls PASS; L1 dd2 med_fpx 0 vs
+  s7628 153); s7689 refuted H-handoff/H-path/H-phase for the lost L1 dd2 bunker and found the per-run pair-partner add flip that
+  s7690 traced to the view-test slice. Full numbers in PORTING-STATE s7688/s7689.
 - **s7687: G6c position-fallback thread CLOSED; sub 0x0C itemless callers rejected too (H-neighbour).** L10 dd4 STANDINS_LOG:
   110/110 0x0C position callers itemless (c30 == c34 = 0.25f/0.5f, 72 fresh caller states); ROGUESQ_S7687_POSSUB (default on in
   STANDINS; =0 = s7686). Same-binary L10 pair: old 121 accepted vs fix 203/203 rejected, 0x14 control rejects in both, both alive, 0
