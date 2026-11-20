@@ -14357,6 +14357,16 @@ static void rs64_s7358_sanitize_env() {
             std::fprintf(stderr, "[s7358-env] ROGUESQ_DRAW_DISTANCE=%s is above the 8.0 terrain ceiling: using 8\n", e);
             setenv("ROGUESQ_DRAW_DISTANCE", "8", 1);
         }
+        // s7712: the terrain multiplier (apply_s6036) caps at 4.0 unless ROGUESQ_DD_UNSAFE is a non-'0' value, but the dd bundle
+        // (rs64_g1c_apply_dd_policy: pools px, OSMEM 12, dd>=6 off-map cull, dd>=8 px8/WIDEWIN_R auto) and the tile pool read the raw
+        // string, so dd6/dd8 without UNSAFE drew at 4x while sizing for 6/8 (s7712 arm B: "[dd] multiplier 4" + "[ddbundle] dd=6.00").
+        // Apply the same cap here so every reader sees the drawn value. ROGUESQ_S7712_DDCAP=0 = old.
+        const char* u = std::getenv("ROGUESQ_DD_UNSAFE"); const char* dc = std::getenv("ROGUESQ_S7712_DDCAP");
+        const bool unsafe = u && *u && *u != '0';
+        if (!(dc && *dc == '0') && !unsafe && (e = std::getenv("ROGUESQ_DRAW_DISTANCE")) && *e && num(e, v) && v > 4.0) {
+            std::fprintf(stderr, "[s7712-dd] ROGUESQ_DRAW_DISTANCE=%s needs ROGUESQ_DD_UNSAFE=1 above 4: using 4 for every reader\n", e);
+            setenv("ROGUESQ_DRAW_DISTANCE", "4", 1);
+        }
     }
     if (const char* e = std::getenv("ROGUESQ_FB_WIDTH"); e && *e) {
         double v = 0;

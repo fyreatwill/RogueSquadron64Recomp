@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7711 (2026-11-20).
+Compact operational handoff, as of Session 7712 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7712 option-value runtime witness + DD cap fix.** One title boot per arm (scratch/s7712/run.zsh, 5 arms) confirms the s7711
+  static census at runtime for every reader that prints its parse: STICK_GATE=95,80 -> card=95 diag=80 (95 alone -> defaults 85/70),
+  DD_FOG_ALT=1,3,1 -> ks=1 ke=3 all=1, DRAW_DISTANCE=9+UNSAFE -> 8, =abc -> ignored. It also found a split: without DD_UNSAFE the
+  terrain multiplier caps at 4 but the dd bundle read the raw 6/8 (pools, dd>=6 cull, dd8 px8 auto). Fixed in rs64_s7358_sanitize_env
+  (`[s7712-dd]`, ROGUESQ_S7712_DDCAP=0 = old; DD_UNSAFE=0 also caps). Owner lines always carry UNSAFE, so the owner path is unchanged.
 - **s7702/s7704-s7706 21:9 fb read-back: HARMLESS (CLOSED).** s7705/s7706: L1 and L4 intro cutscene + flight read no skipped buffer (join tool). The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
   flyover (t 12-16.7 s), and RT64 skips that write-back (SKIP_WILD_W). RT64 never serves those loads from its GPU copy (LOG_FBOVL 0 at 21:9).
   But write-back on vs off gives pixel-identical presented frames, and filling the skipped buffers with magenta (opt-in lib/rt64

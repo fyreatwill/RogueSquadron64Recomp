@@ -205593,3 +205593,30 @@ DD_UNSAFE=1.
 Gate: auto-picked by s7651 (tools/s7*_census.py): 137 gates, 132 GREEN, 5 REPORT, 0 RED (was 131).
 Rules out: a documented value that the code silently misreads, by parse idiom. Not covered (single-source, static): semantic
 range clamps beyond the hand-checked ones, and values whose meaning depends on code paths after the parse.
+
+## Session 7712 (2026-11-20) — option-value runtime witness: the printing readers match the s7711 census; found and fixed a DRAW_DISTANCE split (bundle sized for 6/8 while terrain drew at 4 without DD_UNSAFE)
+
+Work unit: NEXT.md s7712 (runtime witness for the s7711 static value census). crash_reports --since 2026-11-13: FOLDED=27 new=0; no
+CONTRACT-CARRY.md; no new soak verdicts since s7707.
+Hypotheses: H-clean (the parse prints match the static verdicts), H-late (a reader runs before the settings are applied, so it misses the
+value), H-print-lies (the print shows the raw string, not the parsed value).
+Run: scratch/s7712/run.zsh, title boot per arm, 45 s, SIGKILL, NO_SAVE_WRITE=1, sequential (one game at a time).
+ A STICK_GATE=95,80 DD_FOG_ALT=1,3,1 DRAW_DISTANCE=9 DD_UNSAFE=1 G5G_LENS=34 OSMEM_MB=12 RUMBLE_SCALE=0.5 -> [stick-gate] card=95
+   diag=80, [s7302] ks=1 ke=3 all=1, [s7358-env] 9 -> 8, [dd] multiplier 8, [ddbundle] dd=8.00 px=8, osmem=12 layout 80C00000.
+ B (control: list rule) STICK_GATE=95 DRAW_DISTANCE=6 -> card=85 diag=70 (one number is rejected, as the census says); [dd] multiplier 4.
+ C (control: garbage) DRAW_DISTANCE=abc STICK_GATE=0 -> ignored, multiplier 1, on=0.
+-> selects H-clean for the printing readers. The parse prints come from the parsed struct/double, not the string (B prints 85, not
+95), which refutes H-print-lies. H-late is refuted for these readers: every lazy reader saw the value.
+Finding (pre-fix arm B): "[dd] multiplier 4" but "[ddbundle] dd=6.00 px=6". apply_s6036 caps the multiplier at 4 unless DD_UNSAFE
+has a non-'0' value, but rs64_g1c_apply_dd_policy (pool px, dd>=6 off-map cull, dd>=8 px8/WIDEWIN_R=128 auto, OSMEM 12) and other
+raw readers took the uncapped string. So dd6/dd8 without UNSAFE drew at 4 while switching on the dd6/dd8 machinery and its frame cost.
+ORIGIN: no writer corrupts anything. It is a two-readers-two-clamps defect: s6036 added the 4.0 cap inside its own lazy reader, and
+the s7019-s7293 bundle code that came later reads the env directly. Owner lines always carry UNSAFE (s7711), so the owner never hit it.
+Fix: rs64_s7358_sanitize_env (runs before the policy and every lazy reader) now rewrites DRAW_DISTANCE>4 to 4 when UNSAFE is
+not a non-'0' value, with a "[s7712-dd]" line. ROGUESQ_S7712_DDCAP=0 = old.
+Post-fix arms (same script): A unchanged (8/8/px8); B -> [s7712-dd] + [ddbundle] dd=4.00 px=4 + multiplier 4; D (DDCAP=0 control)
+-> old split dd=6.00 px=6 vs multiplier 4; E (DD_UNSAFE=0, value test) -> capped 4 like B; C unchanged. 5/5 as predicted.
+Not witnessed at runtime (no parse print): RUMBLE_SCALE, G5G_LENS, and OSMEM_MB as an explicit value (A's 12 is also what the bundle
+sets, so it does not discriminate). These stay single-source (static census).
+Doc: OWNER-OPT-INS said ">3 needs DD_UNSAFE"; the code cap is 4. Corrected, with a note on the new behaviour.
+Gate: s7651 sweep after the src change (result below).
