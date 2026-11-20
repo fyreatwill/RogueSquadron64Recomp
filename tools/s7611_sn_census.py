@@ -55,6 +55,10 @@ row("rs64_standins.cpp", "s_level s_frame", "refresh", r"const int m = mode\(\);
     "s7655: rebuild key (level number, frame counter); a new level or a frame-counter reset rebuilds the stand-in table; opt-in", scope="file")
 row("rs64_standins.cpp", "s_linked", "refresh", r"const int m = mode\(\);\s*if \(!m\) return;[\s\S]*s_linked\.clear\(\);",
     "s7655: spawned-object list rebuilt from the guest grid every submit call (clear then refill); opt-in", scope="file")
+row("rs64_standins.cpp", "s_cut_prev", "edge", r"if \(\(int\)cut_now != s_cut_prev\) \{[\s\S]*s_cut_prev = \(int\)cut_now;",
+    "s7707: cutscene-flag edge detector (-1 initial, then the last 0/1); feeds the [standins-cut] log + dump window only; opt-in STANDINS", scope="file")
+row("s7702_fbread.cpp", "s_carry", "gated", r"rs64_s7702_on",
+    "s7707: s7702 command-carry across DPC chunks, ROGUESQ_S7702_FBREAD (default off); reset after each use", scope="file")
 row("s7644_rspdma.cpp", "last_h", "gated", r"if \(!g_on\) return;", "s7655: s7644 audio image FNV, ROGUESQ_S7644_RSPDMA&1 (default off)")
 row("s7644_rspdma.cpp", "t_snap", "gated", r"const bool g_on = \(g_mode & 1\) != 0;[\s\S]*if \(!g_on \|\| g_tasks\.load\(\) == 0\) return;", "s7655: s7644 PI pre/post byte snapshot, ROGUESQ_S7644_RSPDMA&1", scope="file")
 row("s7644_rspdma.cpp", "t_g", "gated", r"t_g\.any = false;\s*if \(!g_gon\) return;", "s7655: s7645 gfx PI snapshot, ROGUESQ_S7644_RSPDMA&2", scope="file")

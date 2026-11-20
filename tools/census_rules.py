@@ -89,6 +89,11 @@ RULES = [
      "entries behind rs64_s7521_on (ROGUESQ_S7521_UCODEWATCH)"),
     ("src/rsp/s7535_ga_chk.cpp", "*", None, "G", [(None, r'getenv\("ROGUESQ_S7535_GA_CHK"\)'), ("ultramodern/src/events.cpp", r"if \(rs64_s7535_on\) rs64_s7535_snap")],
      "entries behind rs64_s7535_on (ROGUESQ_S7535_GA_CHK)"),
+    ("src/rsp/s7702_fbread.cpp", "*", None, "G", [(None, r'getenv\("ROGUESQ_S7702_FBREAD"\)'), ("src/rsp/dpc_bridge.cpp", r"if \(rs64_s7702_on\) rs64_s7702_rdp"),
+     ("src/rsp/s7094_dma_shape.cpp", r"if \(rs64_s7702_on && !\(mem & 0x1000\)\) rs64_s7702_dma")],
+     "s7707: both entries behind rs64_s7702_on (ROGUESQ_S7702_FBREAD, default off); history/hit tables index-bounded (16/256/32)"),
+    ("rt64_state.cpp", "rs64_lookup_image_word", "0xF83FF83Fu", "G", [(None, r'getenv\("ROGUESQ_S7704_POISON"\)'), (None, r"if \(b1 <= 0x1000000u\) \{")],
+     "s7707: s7704 magenta poison inside fullSync (census attributes it to rs64_lookup_image_word), ROGUESQ_S7704_POISON=<width> (default 0 = off); span b0..b1 < 16 MB RDRAM"),
     ("src/rsp/s7644_rspdma.cpp", "*", None, "G", [(None, r'getenv\("ROGUESQ_S7644_RSPDMA"\)')], "ROGUESQ_S7644_RSPDMA; gsum is a log row"),
     # --- G6c stand-ins (opt-in ROGUESQ_STANDINS)
     (SI, "bk_ret_impl", "dy + dz", "FLT", [(None, r"const float dx = rf\(rdram, s\.state\) - x, dy = rf\(rdram, s\.state \+ 4u\) - y, dz")],

@@ -110,6 +110,7 @@ ROWS = [
     ("rt64_state.cpp", "std::memcpy(pri_out, RDRAM + kOstWatchPhys + kOstPriOff", "ok-word int32 priority, aligned OSThread field"),
     ("rt64_state.cpp", "workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress]", UP + " (fb storage snapshot, restored byte-for-byte)"),
     ("rt64_state.cpp", "rs64FloorRdramLog(\"b\", &RDRAM[storageAddress]", "gated floor log"),
+    ("rt64_state.cpp", "*reinterpret_cast<uint32_t *>(&RDRAM[a]) = 0xF83FF83Fu", "ok-word s7707: ROGUESQ_S7704_POISON fill (default off), a = b0 & ~3, constant pattern is byte-order symmetric per halfword pair"),
     ("rt64_state.cpp", "rs64_wbw_pre(RDRAM,", "consumer copyNativeToRAM (upstream, ^2 per pixel) + s6938 page watch hashes (lane-agnostic)"),
     ("rt64_state.cpp", "const uint8_t *fbRAM = &RDRAM[screenFb->addressStart]", UP + " (VI fb hash)"),
     ("rt64_state.cpp", "memcpy(present.storage.data(), &RDRAM[screenFbAddress], screenFbBytes)", UP + " (VI present storage decoded with ^2 by the present shader path)"),

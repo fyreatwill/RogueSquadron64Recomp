@@ -142,6 +142,10 @@ for _k, _v in {
         "s_dl34": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd = s_psn_side, set only to 0/1 (rs64_psn_side), <0 returns", "s_psn": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd 0/1 and k < 112 checked on entry",
         "si_cls": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; si_cls[4] indexed by vt_class(), which returns only 0..3 (s7677 row)"},
     "src/rsp/dpc_bridge.cpp": {"kShift": "masked: kShift[16] indexed by shifts/shiftt & 15u"},
+    "src/rsp/s7702_fbread.cpp": {
+        "g_h": 'gated: ROGUESQ_S7702_FBREAD (default off; both entries behind rs64_s7702_on)' + "; idx from match() = a live history slot 0..g_nh-1, g_nh <= 16 (push caps it)",
+        "kAge": 'gated: ROGUESQ_S7702_FBREAD' + "; age stored only from agebucket(), which returns 0..3 (kAge[4])",
+        "kS": 'gated: ROGUESQ_S7702_FBREAD' + "; src stored only as 0/1/2 by hit() callers (kS[3])"},
     "src/rsp/s7644_rspdma.cpp": {"rdram": 'gated: ROGUESQ_S7644_RSPDMA (default off; every entry returns on !g_on / !g_gon)' + "; (a & pm()) <= 0x1FFFFFF inside the 512 MB mapping"},
 }.items():
     ROWS.setdefault(_k, {}).update(_v)

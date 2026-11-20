@@ -99,6 +99,7 @@ RULES = [
     ("rt64_framebuffer.h", "<file>", None, [("def", "H-def", "copyNativeToRAM declaration", [])]),
     ("hle/rt64_state.cpp", "fullSync", ("near", "ROGUESQ_RI_CLEAR", 600), [("diag", "H-diag", "ROGUESQ_RI_CLEAR read-in clear (s6249)", [("near", "ROGUESQ_RI_CLEAR", 600)])]),
     ("hle/rt64_state.cpp", "fullSync", ("near", "ROGUESQ_WB_CLEAR", 600), [("diag", "H-diag", "ROGUESQ_WB_CLEAR (s6246)", [("near", "ROGUESQ_WB_CLEAR", 600)])]),
+    ("hle/rt64_state.cpp", "fullSync", ("near", "ROGUESQ_S7704_POISON", 900), [("diag", "H-diag", "s7707: ROGUESQ_S7704_POISON magenta fill (s7704), default off", [("near", "ROGUESQ_S7704_POISON", 900)])]),
     ("hle/rt64_state.cpp", "fullSync", ("line", r"copyNativeToRAM\("), [WB_SYNC, WB_DRAIN, WB_NODRAIN]),
     ("gbi/rt64_gbi.cpp", "getGBIForUCode", None, [("alias", "read-alias", "ucode text scan (read)", [("noptrwrite",)])]),
     ("mupen64plus-core/src/device/rdram/rdram.c", "poweron_rdram", None, [("own", "not-guest",

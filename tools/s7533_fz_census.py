@@ -203,6 +203,8 @@ RULES = [
      {"envoff": "ROGUESQ_RI_CLEAR"}),
     (ST, "fullSync", r"colorFb->addressStart\], 0", "H-instrument-only", GFX, "s6246 ROGUESQ_WB_CLEAR discriminator",
      {"envoff": "ROGUESQ_WB_CLEAR"}),
+    (ST, "fullSync", r"0xF83FF83Fu", "H-instrument-only", GFX, "s7707: s7704 ROGUESQ_S7704_POISON=<width> magenta fill (default off)",
+     {"envoff": "ROGUESQ_S7704_POISON"}),
     (B, "rsp_dpc_submit_impl", r"g_s4272_shadow|wm_live", "H-canon", GFX, "s4286 wrap restore / undo. " + RING,
      {"verify": r"ROGUESQ_S7532_UNDO_CHK"}),
     (B, "rsp_dpc_submit_impl", r"MEM_B\(\d, sm\)", "H-instrument-only", GFX,

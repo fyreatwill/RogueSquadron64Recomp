@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7704 (2026-11-20).
+Compact operational handoff, as of Session 7707 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -328,8 +328,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     reaches the picture (s7704). L1 (s7705) and L4 (s7706) at 21:9: 0 post-boot reads inside any skipped extent, any age
     (tools/s7705_join.py `in_after_boot=0`; boot ctl IN 3/3 per run; only post-boot hit = RSP DMA past the end of the 340-row 0xB80800
     buffer). 16:9 skips nothing (skipw=0). Rerun tools/s7705_fbread_flight.zsh + tools/test_s7705_join.sh after any SKIP_WILD_W change.
-26. **s7706 queued: 21:9 post-G6c holds L15/L4/L1** (soak_queue/s7706_219_rehold_L*, dd2 STANDINS=1). Fold: alive, vi_stalls30s=0,
-    fatal=0 per tag line; a crash there is a G4 side-effect datum (fix that one).
+26. **21:9 post-G6c holds: CLEAN s7707 (3/3).** ROGUESQ_ASPECT=21:9 dd2 STANDINS=1 FPS60 fullscreen 300 s: L1/L15 (loop) + L4
+    (in-session): alive 3/3, vi_stalls30s=0, max_gap 148 ms, level_ok=1, aspect 21:9 line 1/1, stand-ins on 1/1, spawns 38/39/164.
+27. **Gate sweep was RED 13 for s7702-s7706, fixed s7707 (rules only, 0 behaviour defects).** New s7702 census
+    (src/rsp/s7702_fbread.cpp, ROGUESQ_S7702_FBREAD), s7704 poison (lib/rt64 rt64_state.cpp fullSync, ROGUESQ_S7704_POISON) and the
+    standins s_cut_prev edge static were unclassified in 13 gates. stop_gate --verify DID block s7702-s7706, but loop.sh moves on after
+    MAX_CONTRACT_RETRIES=2 and nobody re-ran the sweep. Rows: census_rules.py (2), s7533/s7542/s7550/s7600/s7601/s7611/s7613 tables.
+    Now 130 GREEN / 5 REPORT / 0 RED. Rule: ANY new src/ or lib/ instrument file -> run the sweep before committing.
 
 ## Evidence index
 

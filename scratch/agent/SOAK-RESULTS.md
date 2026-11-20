@@ -1686,3 +1686,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261120-023938 | s7696_cut_L4 | rc=0 | 218s | scratch/agent/soak_results/s7696_cut_L4_20261120-023938.log | arms=1 alive=0/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1
 20261120-053328 | s7705_fbread_L4_16x9 | rc=0 | 223s | scratch/agent/soak_results/s7705_fbread_L4_16x9_20261120-053328.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1 alive_na=0
 20261120-053711 | s7705_fbread_L4_21x9 | rc=0 | 222s | scratch/agent/soak_results/s7705_fbread_L4_21x9_20261120-053711.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1 alive_na=0
+20261120-054400 | s7706_219_rehold_L1 | rc=0 | 312s | scratch/agent/soak_results/s7706_219_rehold_L1_20261120-054400.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261120-054912 | s7706_219_rehold_L15 | rc=0 | 312s | scratch/agent/soak_results/s7706_219_rehold_L15_20261120-054912.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261120 | s7707 fold: s7706_219_rehold L1/L15 (loop) + L4 (in-session): 3/3 alive, 0 crash, vi_stalls30s=0, max_gap 148 ms, level_ok=1, 21:9 line 3/3, standins on 3/3, spawns 38/39/164 -> post-G6c 21:9 clean.

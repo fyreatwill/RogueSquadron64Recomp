@@ -205472,3 +205472,31 @@ Queued s7706_219_rehold_L15/L4/L1: 300 s 21:9 dd2 STANDINS=1 FPS60 fullscreen ho
 owner plays on a 21:9 screen, and L15 is the old 21:9 crash level.
 Verdict: H-none on two levels, H-flight/H-dma refuted on L4; the join's stale blind spot is closed with a tested field.
 ORIGIN: no mitigation added (analysis tool only; the 768-wide buffers are the game's own 21:9 cinematic colour images).
+
+## Session 7707 (2026-11-20) — 21:9 post-G6c holds 3/3 clean; census gate sweep had gone RED 13 on the s7702-s7706 instruments, fixed with rules (0 behaviour defects)
+
+What ran:
+- Folded s7706_219_rehold_L1/L15 (loop) and ran L4 in-session (host idle 14 h, the loop had left it queued). ROGUESQ_ASPECT=21:9 dd2
+  STANDINS=1 FPS60 fullscreen, 300 s: 3/3 alive, crashlines=0, vi_stalls30s=0, max_gap_ms=148, level_ok=1, aspect219_lines=1,
+  standins_on_line=1, spawns 38 (L1) / 39 (L15) / 164 (L4). Selects H-clean; refutes H-219-regress and H-void (the 21:9 line printed in
+  every arm). crash_reports.py: 0 NEW.
+- Standing check `python3 tools/s7651_gate_sweep.py --jobs 2`: **13 RED** (s7339/7343/7344/7345/7346/7351 via shared rules, s7533_fz,
+  s7542_gc, s7550_gj, s7600_gx, s7601_bs, s7611_sn, s7613_hp). Every flagged site is one of three new pieces:
+  (1) src/rsp/s7702_fbread.cpp (s7702 colour-buffer read census): both entries `if (rs64_s7702_on)` in dpc_bridge.cpp:6130 and
+  s7094_dma_shape.cpp:102, env ROGUESQ_S7702_FBREAD default off; table indices bounded (g_h idx from match() < g_nh <= 16, kAge from
+  agebucket() 0..3, kS src 0..2); g_pend_hk is a host pointer into g_hk[256]; s_carry is a per-chunk carry reset after use.
+  (2) lib/rt64 rt64_state.cpp fullSync s7704 magenta fill: `s_poisonW` from ROGUESQ_S7704_POISON (default 0 = off), span guarded
+  b1 <= 0x1000000, word-aligned (b0 & ~3).
+  (3) rs64_standins.cpp s_cut_prev: cutscene-flag edge detector for a log/dump window, inside opt-in STANDINS.
+  Read by hand: all diagnostic, 0 behaviour defects. Added text-anchored rows (census_rules.py 2 rows incl. env-gate + call-site
+  anchors; s7533 H-instrument-only envoff; s7542 H-diag near; s7550 H-gated-diag; s7600 gated x3; s7601 ok-word; s7611 edge+gated;
+  s7613 host). Note: the shared-rules engine attributes the fullSync poison line to `rs64_lookup_image_word` (its ln_fn mis-spans that
+  region), so the rule keys on that name; a STALE row would fire if it changes.
+- Re-sweep: 135 gates, 130 GREEN, 5 REPORT, 0 RED; planted red/green and cache controls PASS in the same run.
+
+Why it slipped: stop_gate --verify blocked s7702-s7706 (loop.log "census gates RED ... contract still unmet after 2 retries"), but loop.sh
+breaks out after MAX_CONTRACT_RETRIES and commits anyway, and the allowed-RED baseline is the only memory of state. Five sessions passed
+with the sweep RED.
+
+ORIGIN: no mitigation added; these are census classification rows for env-gated diagnostics written by s7702/s7704/s7672 (our own
+instruments), no runtime code changed.

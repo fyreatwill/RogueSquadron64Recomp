@@ -84,6 +84,7 @@ row("main.cpp", "by", "host", r"std::map<uintptr_t, uint64_t> by;", "key = host 
 row("main.cpp", "s_pad s_hap", "host", r"static SDL_GameController\* s_pad = nullptr;\s*static SDL_Haptic\* s_hap = nullptr;", "s7655: G6a rumble path cache, SDL handles compared with `controller`")
 row("main.cpp", "s_bind_vpad", "host", r"static SDL_Joystick\* s_bind_vpad = nullptr;", "s7655: G6b ROGUESQ_BIND_SELFTEST virtual SDL joystick handle")
 row("rs64_controls_panel.cpp", "g_ctx", "host", r"ImGuiContext\* g_ctx = nullptr;", "s7655: G6b F6 panel ImGui context (host heap)")
+row("s7702_fbread.cpp", "g_pend_hk", "host", r"Hk\* g_pend_hk = nullptr;", "s7707: host pointer into the s7702 g_hk[256] table (never a guest address); ROGUESQ_S7702_FBREAD only")
 row("s7644_rspdma.cpp", "g_gtid", "host", r"pthread_t g_gtid;", "s7655: pthread_t handle (opaque pointer on macOS), only pthread_equal-compared; ROGUESQ_S7644_RSPDMA&2 only")
 row("rs64_env_cache.cpp", "g_real_getenv f", "host", r"std::atomic<getenv_fn> g_real_getenv|static setenv_fn f", "libc function pointers")
 row("rt64_render_context.cpp", "g_rt64_app", "host", r"std::atomic<RT64::Application\*> g_rt64_app", "RT64 application object")
