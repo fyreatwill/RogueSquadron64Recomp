@@ -205660,3 +205660,53 @@ Not modelled: helper readers (rs64_env_int etc.) carry no clamp in their windows
 but the >1.0 readers turn on is by design (different features, float tolerance), not a clamp split.
 Gate: tools/s7713_multireader_census.py --controls joins the s7651 sweep automatically (s7*_census.py); sweep result below.
 Gate: s7651 sweep after the src change: 138 gates, 133 GREEN, 5 REPORT, 0 RED (s7713_multireader_census.py included, with --controls); planted sweep controls PASS.
+
+## Session 7714 (2026-11-20) — truth census: 289 multi-reader names, 0 owner-setting on/off splits; fixed the AUDIO_UCODE m5 label and the SPIKE_DMEM / STANDINS_LOG/CTL/PULL presence readers (selects H-label+diag, refutes H-owner)
+
+Work unit: NEXT.md s7714 (turn the s7713 hand-review of default polarity / truthiness into a gate). crash_reports --since
+2026-11-13: FOLDED=27 new=0; no CONTRACT-CARRY.md; no new soak verdicts since s7707.
+Hypotheses: H-label (only the AUDIO_UCODE diagnostic label splits), H-owner (an owner setting splits on a plausible value such as
+=2 / =yes / unset), H-none (heuristic noise only).
+Tool: tools/s7714_truth_census.py (auto-joins the gate sweep as s7*_census.py). Sites from the s7711 finder (incl. its helper readers
+rs64_env_int / s6919_mode / rs64_bind_flag / env_on / env_flag / rs64_s7355_env_is, modelled with their own bodies). The C around each
+site is tokenised and parsed by a small C expression parser (casts, ternary, short-circuit, calls, index, char/str literals; C embedded
+in Python strings unquoted). The deciding node = lowest AST node holding every use of the variable, climbed through ! && || compares
+casts derefs and atoi/atof/strto*/strcmp-family calls, never through an operand on another variable; foreign conjuncts/disjuncts take
+the neutral element (&& true, || false). A receiving variable is followed through its block, incl. `if (C) return X;` chains (a foreign
+early return after one on the variable makes the tail '?'), and into the body of a presence-only guard `if (e) {..}`. Evaluated for
+unset, "0", "1", "2", "t", "yes" with C semantics. Numeric readers (any parse of the value: `e ? atof(e) : 1.0`, `atof(e) > 1.0`)
+are s7713's half and excluded; a site testing the exact complement of another (`if (!e) save()`, census = trim off) is the same
+reading inverted. A value a foreign operand decides is '?', never a disagreement.
+Controls (same run, 6/6 PASS): planted `!(e && *e=='0')` vs `e && *e!='0'` -> SPLIT on unset; planted `*e=='1'` vs `*e!='0'` ->
+SPLIT on "2"; FPS60's real readers (4/6 modelled) -> AGREE; the pre-s7714 vendored AUDIO_UCODE label text planted back -> SPLIT on
+unset; `s_other && getenv(X) && *getenv(X) != '0'` -> judged on X alone (unset 0, "0" 0, "1" 1); a C++17 `if (const char* e = getenv(X); e && ..)` site is modelled.
+Result: 289 names with >=2 sites, 646 sites modelled, 164 unmodelled (93 "no call" window misses, 19 pointer passed on, 17 foreign
+if-blocks, 9 no decision, 6 string pass-ons). Owner-name sites: the first pass left 29 of 83 unmodelled, 12 of them C++17
+`if (init; cond)` forms; modelling those surfaced one more owner-name pair (DD_OFFMAPCULL, reviewed below) and 0 defects. First pass 41 SPLIT (presence guards, numeric values, ternary polarity: tool artefacts, each fixed in the model), then 22,
+then hand-read:
+ - DEFECT (label, the known positive): fixup_game_funcs_vendored.py [m5-postwait-control] / [m5-caller-edge] printed arm=audio_stub
+   for unset AUDIO_UCODE while main.cpp/rsp.cpp run the real ucode. Fixed in the vendored fixup (both sites) and mirrored into the
+   current ../N64Recomp/RecompiledFuncs/funcs_34.c (the fixup's marker guard would not re-patch it before a regen; the next regen
+   produces the same text).
+ - DEFECT (diag): ROGUESQ_SPIKE_DMEM: main.cpp g_spike_dmem_on and the legacy per-load arm tested presence, so =0 armed the RSP hook
+   master gate (rs64_rsp_hooks_on, ~10% gfx-thread cost per s6704) while dpc_bridge/rsp.cpp read =0 as off. Now non-'0' everywhere.
+ - DEFECT (diag): ROGUESQ_STANDINS_LOG (rs64_standins.cpp:438 presence) and STANDINS_PULL/CTL (rs64_sg_probe presence) armed the
+   probe/log at =0 while their own readers are non-'0' / pull > 0. Aligned.
+ - REVIEWED (14, reasons in the tool): DD_OFFMAPCULL (numeric radius with 'tog3' + presence guard of the s7037 auto-default), BIND_PANEL_TEST '2', DD_WIDEWIN 'tog3', S7524_V2P 'alt', G1D_SPRITE_DIAG / LOG_G1D_RECT level
+   digits, VI_EXTENT_PROBE '2' (guarded deref), DRAIN_INLOOP_TICK (presence guard before an auto-default write), PRESENT_EARLY_FORCE
+   (only the fb-upload gate defaults on, session 21; owner default), OVL2C_DROP (fixup_factor5_ucode.py:3712 default-drop reader is
+   dead: build/factor5_ucode holds only the s4805 mode reader, checked), HLE_TRI_AB (HLE op map, unreached under LLE), LOG_S4298,
+   LOG_MTM, PLAYER_DUMP (diag apply-script watches, no documented =0).
+ - Complement / inverted readings judged AGREE: G1E_TRIM census (main.cpp:2164 = trim off), NO_SAVE_WRITE (`!e` vs `e`: every reader
+   is presence, so =0 still blocks writes: the safe direction for the owner save), DIAG_GATE (=0 opens the per-site gates).
+ORIGIN: no corruption; three generations of reader idiom (presence `getenv() != nullptr` s4xxx, `*e != '0'` s5xxx+, default-on
+`!(e && *e=='0')` after M5 flipped AUDIO_UCODE on) coexist for one name; the label kept the pre-M5 polarity.
+Runtime witness (scratch/s7714/run.zsh, title boot 30 s/arm, SIGKILL, one game at a time):
+ A LOG_M5_CALLER_EDGE=1, AUDIO_UCODE unset -> 5x "[m5-caller-edge] arm=audio_on" (was audio_stub by the old text)
+ B + AUDIO_UCODE=0 (control) -> 5x arm=audio_stub
+ C SPIKE_DMEM=0 -> [s6704] rsp_hooks_on=0 (presence reader gave 1)
+ D SPIKE_DMEM=1 (control) -> rsp_hooks_on=1
+The stand-in log/probe fix needs a mission and has static evidence only (single-source).
+Gate sweep: 139 gates, 134 GREEN, 5 REPORT, 0 RED (incl. s7714).
+-> H-label holds for the owner-facing question (no owner setting splits: H-owner refuted), plus 2 diag-only presence splits (H-none
+refuted). Owner path unchanged: owner lines never set these to 0.

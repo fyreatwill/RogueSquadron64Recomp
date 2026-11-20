@@ -435,7 +435,7 @@ void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
     s_bk_calls = s_bk_item_hits = s_bk_rs_hits = s_bk_pos_hits = s_bk_pos_rej = s_bk_wrong = 0;
     // s7679 life table (ROGUESQ_STANDINS_LOG=1): one line per stand-in drawn this generation, so a drawn-but-never-spawned item
     // (spawned=0) can be told from a bridged one (spawned=1) by its nearest drawn distance.
-    if (std::getenv("ROGUESQ_STANDINS_LOG")) {
+    if (const char* e = std::getenv("ROGUESQ_STANDINS_LOG"); e && *e && *e != '0') {  // s7714: =0 is off, as at every other reader
         // s7679: a hold still open at the level change never reached the 899-frame never line, so the s7675 scorer missed it
         for (const Standin& s : s_standins)
             if (s.spawn_f >= 0 && s.real_call < 0 && s.fr_d != -4.0)
@@ -749,7 +749,10 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     s_frame = frame;
 
     static const bool s_log = [] { const char* e = std::getenv("ROGUESQ_STANDINS_LOG"); return e && *e && *e != '0'; }();
-    rs64_sg_probe = (s_log || std::getenv("ROGUESQ_STANDINS_PULL") || std::getenv("ROGUESQ_STANDINS_CTL")) ? 1 : 0;
+    // s7714 truth census: the probe follows the readers' own on/off (PULL > 0, CTL non-'0'); presence alone armed it for =0.
+    static const bool s_probe_pc = [] { const char* p = std::getenv("ROGUESQ_STANDINS_PULL"); const char* c = std::getenv("ROGUESQ_STANDINS_CTL");
+        return (p && std::atof(p) > 0.0) || (c && *c && *c != '0'); }();
+    rs64_sg_probe = (s_log || s_probe_pc) ? 1 : 0;
     const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
     static double s_t0 = std::floor(now);  // windows on whole seconds, so a tog window is all-on or all-off
     if (s_log && now - s_t0 >= 1.0) {

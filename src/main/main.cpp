@@ -4934,7 +4934,7 @@ static thread_local uint32_t g_vte_pend_reg; static thread_local uint16_t g_vte_
 // s6696 G3d: the s6372 version called getenv() on EVERY RSP vector load and the SDV hook copied 96 lanes on every SDV, armed or not;
 // lvl1 gfx task cost went ~10 -> ~50-80 ms (30 -> 11-17 game fps, bursty presents = the owner's turning shake). Flag is cached now.
 // ROGUESQ_G3D_LEGACY_TOGGLE=<sec>: same-run A/B, re-enables the old per-load getenv + SDV snapshot in alternate <sec> windows ([g3d] line per flip).
-static const bool g_spike_dmem_on = getenv("ROGUESQ_SPIKE_DMEM") != nullptr;
+static const bool g_spike_dmem_on = [] { const char* e = getenv("ROGUESQ_SPIKE_DMEM"); return e && *e && *e != '0'; }();  // s7714: =0 off, as in dpc_bridge/rsp.cpp
 // s6704 G1e: inline master gate for the per-RSP-load/store hooks (rs64_vld_note, rs64_m5_audio_dmem_store/_vector_store, the
 // VU ring, the SDV snapshot). On iff one of the env vars those hooks read is set, or ROGUESQ_RSP_HOOKS=1, so default output
 // is unchanged; off, the gfx LLE skips ~10% of its Gfx-thread time in out-of-line no-op calls (s6704 sample).
@@ -5312,7 +5312,7 @@ extern "C" void rs64_vld_note(uint32_t reg, uint32_t addr, const char* kind) {
                 fprintf(stderr, "[g3d] legacy=%d t=%.3f loads=%u\n", g_g3d_legacy ? 1 : 0, std::chrono::duration<double>(now - t0).count(), n);
             }
         }
-        if (g_g3d_legacy && getenv("ROGUESQ_SPIKE_DMEM")) { g_vld_addr[reg & 31] = addr; }
+        if (g_g3d_legacy && [] { const char* e = getenv("ROGUESQ_SPIKE_DMEM"); return e && *e && *e != '0'; }()) { g_vld_addr[reg & 31] = addr; }  // legacy arm keeps its per-load getenv
     }
     if (reg < 32 && g_spike_dmem_on) { g_vld_addr[reg] = addr; g_vld_kind[reg] = kind; }
 }

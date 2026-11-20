@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7712 (2026-11-20).
+Compact operational handoff, as of Session 7714 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7714 truth census (gate): 0 owner-setting on/off splits.** tools/s7714_truth_census.py (controls 6/6, in the gate sweep) parses
+  every multi-site reader's C, isolates the expression on that variable and evaluates unset/0/1/2/t/yes: 646 sites modelled, 14
+  REVIEWED mode letters / dead / diag. Fixed: the vendored m5 label (unset AUDIO_UCODE now prints audio_on, as the real ucode runs;
+  mirrored into funcs_34.c), SPIKE_DMEM and STANDINS_LOG/CTL/PULL presence readers (=0 armed them). Witness scratch/s7714/run.zsh 4/4.
+  164 sites unmodelled (93 window misses): coverage is NEXT.
 - **s7713 multi-reader clamp census + OSMEM_MB fix.** tools/s7713_multireader_census.py (controls 5/5, in the gate sweep): of 289
   ROGUESQ_* names read at >=2 sites, 3 pair a clamping reader with a raw-threshold reader. DRAW_DISTANCE MASKED (s7712), FB_WIDTH AGREE,
   OSMEM_MB was split: recomp.cpp maps values outside 4..16 to 8, but the dd bundle armed the 12 MB spill/ramtop layout for raw >8 (e.g.
@@ -48,7 +53,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 - **s7660/s7661:** title plume si_addr=0x58 CLOSED (0/76 boots); lldb attach works in loop sessions (preflight tools/lldb_attach_check.sh;
   never LAUNCH the game under lldb, s7616).
 - **s7647-s7659 (census-gate sweep + classes TS-4/MK8): ALL CLOSED, 0 behaviour defects** (archive "(s7662 maintenance)"). Standing
-  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 131 GREEN (s7710), 5 REPORT, 0 RED; stop_gate blocks RED.
+  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 134 GREEN (s7714), 5 REPORT, 0 RED; stop_gate blocks RED.
   Key reviews by text anchor, never line number. NEEDS-INPUT gates use retained inputs under scratch/s7215, s7316/ram, s7573/retained.
   All s7617-s7702 bullets verbatim in PROJECT-OVERVIEW "(s7703 maintenance)".
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in

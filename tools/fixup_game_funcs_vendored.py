@@ -36786,7 +36786,7 @@ void rs64_s2045_m5_postwait(uint8_t* rdram, uint32_t kind, const char* edge,
     unsigned long ordinal = n[kind]++;
     if (ordinal >= 32ul) return;
     const char* audio = getenv("ROGUESQ_AUDIO_UCODE");
-    const char* arm = (audio && audio[0] && audio[0] != '0') ?
+    const char* arm = !(audio && audio[0] == '0') ?  /* s7714: unset = real ucode, as main.cpp/rsp.cpp */
                       "audio_on" : "audio_stub";
     if (ordinal == 0) {
         fprintf(stderr,
@@ -37027,8 +37027,7 @@ void rs64_s2046_m5_caller_edge(uint8_t* rdram, const char* edge,
     if (ordinal >= 64ul) return;
     fprintf(stderr,
             "[m5-caller-edge] arm=%s phase=%u width=%u origin=0x%06X edge=%s site=%s caller=0x%08X return=0x%08X target=0x%08X branch=%u value=0x%08X ra=0x%08X ordinal=%lu thr=%d\n",
-            (getenv("ROGUESQ_AUDIO_UCODE") && getenv("ROGUESQ_AUDIO_UCODE")[0] &&
-             getenv("ROGUESQ_AUDIO_UCODE")[0] != '0') ? "audio_on" : "audio_stub",
+            !(getenv("ROGUESQ_AUDIO_UCODE") && getenv("ROGUESQ_AUDIO_UCODE")[0] == '0') ? "audio_on" : "audio_stub",
             phase, width, origin, edge, site, caller_pc, return_pc, target_pc,
             branch, value, ra, ordinal++, rogue_current_thread_id(rdram));
     fflush(stderr);
