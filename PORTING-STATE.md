@@ -205426,3 +205426,26 @@ positive control on the source: the copied buffer was demonstrably wrong (log: [
 Not covered: RSP DMA reads of those buffers at 21:9 (the s7702 census with the DMA hook live), and wild-width read-backs outside the boot/movies routes.
 ORIGIN: no mitigation landed. The words skip/allow come from existing knobs the arms toggled (ROGUESQ_ALLOW_WILD_W, ROGUESQ_FBOVL_SKIP). The only new code is the opt-in diagnostic ROGUESQ_S7704_POISON (default off). The value in question is legitimate: the 768-wide colour images at 0x9B6000/0xA35800/0xB80800 are the game's own boot-cinematic framebuffers (SETCIMG from the game's display list, s7702). The skip is RT64's s653/s659 SKIP_WILD_W allowlist (rt64_state.cpp rs64_writeback_sane), unchanged here.
 Raws deleted after scoring; per-arm log counts in scratch/s7704/summary.txt.
+
+## Session 7705 (2026-11-20) — G1d 21:9 item 25 CLOSED: no reader of a skipped wild-width buffer outside the boot cinematic; the L1 intro cutscene's only hit is RSP DMA past the buffer end
+
+No new crash report (`tools/crash_reports.py --since 2026-11-13`: FOLDED=27 new=0). Screen unlocked, HID idle 13.6 h.
+Hypotheses: H-none (boot cinematic is the only colour-buffer read-back) / H-flight (cutscene or flight texture-reads a skipped buffer) /
+H-dma (RSP DMA reads a skipped buffer).
+Run: new `tools/s7705_fbread_flight.zsh` (LV=1, owner 21:9 recipe FPS60 dd2 ASPECT=21:9, forced level via FORCE_SAVE_MISSION/UNLOCK +
+autopilot starts, ROGUESQ_S7702_FBREAD=1, 220 s, window screenshot every 5 s). Route reached boot cinematic -> crawl -> L1 intro cutscene
+(w_057.png: 21:9 canyon cutscene, three X-wings) -> flight. alive=1, crash=0, save unchanged, census self=1, ctl_live 220/220 (live control).
+SKIP_WILD_W fired 115 times on exactly three 768-wide colour images: 0x9B6000 and 0xA35800 (boot cinematic, known) and 0xB80800
+(rows 0..340, i.e. 340 rows, rowEnd exclusive per rt64_state.cpp writeEnd = addr + rowEnd*rowBytes; it is skipped both in the boot phase
+and in the intro cutscene; cimg 768 n=9360 over the run).
+Join: new `tools/s7705_join.py <dir>` classifies each census hit against the real skipped extent (same addr + width, rows < rowEnd = IN,
+all rows >= rowEnd = PAST; the census itself matches a conservative 480 rows). Result: in=7 past=3, positive control ctl_boot_in=3 (the
+s7702 boot-cinematic timg reads of 0x9B6000 come out IN), **fresh_in_after_boot=0**. The one post-boot hit on a skipped buffer is
+dma_gfx on 0xB80800 (then the Z image, w=768) rows 340..383, t=56.1..63.4 = the intro cutscene: addresses 0xC082F8/0xC0D050, i.e.
+>= 0xC00000 = the end of the 340-row buffer. That is RSP data stored after the framebuffer, not a framebuffer read. Flight (t ~70..220 s):
+no colour-image hits at all; the remaining keys are colour 1024-wide buffers (0xB56000, 0x961000: FB_WIDTH, write-back allowed, DMA only,
+not texture) and z@0x000000 (unset Z image matching low memory).
+Selects H-none for this route (single-source: one run, one level; the census has a same-run live control and the boot positive control).
+Rules out H-flight and H-dma on L1. Combined with s7704 (even the boot read never reaches the picture), item 25 is CLOSED: no allowlist
+change. Queued soaks s7705_fbread_L4_21x9 / _16x9 (Gerrard V, the owner's mission; the 16:9 arm checks the owner's main recipe) for a
+second level; the recipe now prints the join summary line.

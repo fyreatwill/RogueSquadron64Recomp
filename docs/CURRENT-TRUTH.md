@@ -12,7 +12,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **s7702/s7704 21:9 boot-cinematic fb read-back: HARMLESS (CLOSED).** The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
+- **s7702/s7704/s7705 21:9 fb read-back: HARMLESS (CLOSED).** s7705: L1 intro cutscene + flight read no skipped buffer (join tool). The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
   flyover (t 12-16.7 s), and RT64 skips that write-back (SKIP_WILD_W). RT64 never serves those loads from its GPU copy (LOG_FBOVL 0 at 21:9).
   But write-back on vs off gives pixel-identical presented frames, and filling the skipped buffers with magenta (opt-in lib/rt64
   ROGUESQ_S7704_POISON=768) puts 0 magenta pixels on screen. The copy never reaches the picture, so no allowlist change.
@@ -324,9 +324,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pass an ASan/UBSan fuzz (tools/test_s7523_model.sh, 2 controls) and the post-commit arms ran alive. Rerun that test after any
     s7523_slow_rdp.cpp edit.
 
-25. **G1d 21:9 boot-cinematic fb read-back: CLOSED s7704 (H-invisible, harmless).** Open remainder (NEXT.md wide-fb-readback-flight-s7705):
-    the s7702 census (ROGUESQ_S7702_FBREAD=1, DMA hook live) has covered only the boot cinematic and the movies playlist. Run it in 21:9 mission
-    flight and an intro cutscene to see whether any other reader of a skipped wild-width buffer exists. Rerun the s7704 poison arm on any hit.
+25. **G1d 21:9 fb read-back of skipped wild-width buffers: CLOSED s7704/s7705 (H-invisible + H-none).** Boot cinematic read never
+    reaches the picture (s7704). s7705 L1 21:9 (crawl, intro cutscene, flight): 0 fresh reads inside any skipped extent
+    (tools/s7705_join.py; boot ctl IN 3/3; only post-boot hit = RSP DMA past the end of the 340-row 0xB80800 buffer). Single-source on
+    one level; queued soaks s7705_fbread_L4_21x9/_16x9 add a second. Rerun tools/s7705_fbread_flight.zsh after any SKIP_WILD_W change.
 
 ## Evidence index
 
