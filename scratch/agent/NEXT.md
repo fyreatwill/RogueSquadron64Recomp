@@ -1,13 +1,14 @@
-# NEXT (s7706)
-HYPOTHESIS-ID: wide-fb-readback-fold-s7706
+# NEXT (s7707)
+HYPOTHESIS-ID: g1d-219-postg6c-rehold
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
 
-1. Fold the queued soaks s7705_fbread_L4_21x9 and s7705_fbread_L4_16x9 (SOAK-RESULTS + scratch/s7705/L4_*): each prints
-   `tag=fbread_L4_<aspect> alive= crash=` and the `summary ... ctl_boot_in= fresh_in_after_boot=` line of tools/s7705_join.py.
-   Expected (H-none): fresh_in_after_boot=0 at 21:9; at 16:9 skipped_bufs may be 0 (no wild widths) -> ctl_boot_in=0 and rc 1 is then
-   "no skip at 16:9", not a failed control (check skipw=0 in the tag line). If a fresh IN hit appears: run the s7704 poison arm
-   (tools/s7704_wide_fbcopy_arms.zsh, ARMS="pskip", POISON=<width>) on that scene and look for magenta.
-   If the soaks have not run yet, run one in-session: `env LV=4 AS=21:9 O=$PWD/scratch/s7705/L4_21x9 zsh tools/s7705_fbread_flight.zsh`.
-2. Then take the next open ladder rung (3c): G3 render fidelity, in-flight frame diffs vs a retail framebuffer (angrylion/oracle) at 4:3
-   L1 — check PORTING-STATE (grep angrylion, s6785) for the existing capture route before building anything.
+1. Fold the queued soaks s7706_219_rehold_L15 / _L4 / _L1 (SOAK-RESULTS + scratch/s7706_219_L*): 300 s, ROGUESQ_ASPECT=21:9 dd2
+   STANDINS=1 FPS60 fullscreen. Each prints a g1e_owner_quiet_arms tag line + `s7706 L<n> aspect219_lines= standins_on_line= spawns=`.
+   Hypotheses: H-clean (post-G6c 21:9 = 16:9 result, 3/3 alive, vi_stalls30s=0) / H-219-regress (stand-ins or the G6 changes break at
+   21:9: crash, stall, or standins_on_line=0) / H-void (aspect override did not apply: check the log for the 21:9 FB_WIDTH/aspect line;
+   if aspect219_lines=0 grep the log for `[aspect]`/`FB_WIDTH` by hand before scoring).
+   If the soaks have not run (idle gate), run L15 in-session: `zsh scratch/agent/soak_queue/s7706_219_rehold_L15.sh`.
+   A crash = G4 side-effect datum: capture the .ips / backtrace and name the writer.
+2. If all clean: every ladder rung is closed or with the owner. Run the standing health check `python3 tools/s7651_gate_sweep.py`
+   (--jobs 2) and fold it (expect 130 GREEN, 0 RED); a RED is the next work unit.

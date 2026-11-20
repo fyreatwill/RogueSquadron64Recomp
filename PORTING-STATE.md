@@ -205451,3 +205451,24 @@ change. Queued soaks s7705_fbread_L4_21x9 / _16x9 (Gerrard V, the owner's missio
 second level; the recipe now prints the join summary line.
 Verdict: the join selects H-none and refutes H-flight / H-dma on L1 at 21:9; next discriminator = the same join on L4 (queued soaks).
 ORIGIN: no mitigation added (the 'skip' lines are the analysis tool reading RT64's existing SKIP_WILD_W log); the 768-wide buffers are written by the game itself as its 21:9 cinematic/cutscene colour images, and the post-boot DMA reads are the game's own RSP data stored past the buffer end - legitimate.
+
+## Session 7706 (2026-11-20) — G1d 21:9 item 25 second level: Gerrard V (L4) reads no skipped wide buffer after boot at 21:9, nothing is skipped at 16:9; join tool now counts stale post-boot reads (test + mutation control)
+
+No new crash report (`tools/crash_reports.py --since 2026-11-13`: FOLDED=27 new=0).
+Fold of the loop-run soaks s7705_fbread_L4_21x9 / _16x9 (tools/s7705_fbread_flight.zsh, LV=4, 220 s, owner recipe FPS60 dd2):
+- 21:9: tag `alive=1 crash=0 skipw=100 ctl_live=220/220`; join `skipped_bufs=3 in=7 past=5 ctl_boot_in=3 fresh_in_after_boot=0`. All 7 IN
+  hits start at t <= 16.7 s (boot cinematic: 0x9B6000/0xA35800 timg + dma). After boot the only hits on a skipped buffer are PAST:
+  dma_gfx on 0xB80800 rows 340..383 (t 46.6-58.4, the L4 intro cutscene; same shape as L1 s7705: RSP data after the 340-row buffer).
+- 16:9: `skipw=0`, `skipped_bufs=0` -> no write-back is skipped at the owner's main recipe, so there is nothing to read (rc 0, alive).
+Selects H-none on a second level (L1 s7705 + L4 now; each run carries the boot IN positive control and the ctl_live census control).
+H-flight / H-dma refuted on L4 too. Item 25 is no longer single-source by level.
+Tool defect found and fixed while folding: s7705_join.py counted only NON-stale post-boot IN hits (`fresh_in_after_boot`). A stale read
+of a skipped buffer is just as wrong (RDRAM never got the write-back), so a post-boot read of an old wide frame would have scored 0.
+New field `in_after_boot` (any age), optional boot cutoff argv[2] (default 23 s). Re-scored L1, L4 21:9, L4 16:9: in_after_boot=0 on
+all three, so the verdict holds. New tools/test_s7705_join.sh: 6 fixtures (boot ctl, PAST, fresh post-boot, stale post-boot, no-ctl
+rc 1, other-width ignored) + mutation control (the s7705 version of the tool misses the stale fixture) -> RESULT PASS 6/6 + mutation.
+NEXT.md item 2 (G3 L1 4:3 flight vs angrylion) was already H-match (s6744, then s7122-s7217 at every aspect); not rerun.
+Queued s7706_219_rehold_L15/L4/L1: 300 s 21:9 dd2 STANDINS=1 FPS60 fullscreen holds. The post-G6c re-holds (s7692) were 16:9 only; the
+owner plays on a 21:9 screen, and L15 is the old 21:9 crash level.
+Verdict: H-none on two levels, H-flight/H-dma refuted on L4; the join's stale blind spot is closed with a tested field.
+ORIGIN: no mitigation added (analysis tool only; the 768-wide buffers are the game's own 21:9 cinematic colour images).

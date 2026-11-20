@@ -12,7 +12,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **s7702/s7704/s7705 21:9 fb read-back: HARMLESS (CLOSED).** s7705: L1 intro cutscene + flight read no skipped buffer (join tool). The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
+- **s7702/s7704-s7706 21:9 fb read-back: HARMLESS (CLOSED).** s7705/s7706: L1 and L4 intro cutscene + flight read no skipped buffer (join tool). The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
   flyover (t 12-16.7 s), and RT64 skips that write-back (SKIP_WILD_W). RT64 never serves those loads from its GPU copy (LOG_FBOVL 0 at 21:9).
   But write-back on vs off gives pixel-identical presented frames, and filling the skipped buffers with magenta (opt-in lib/rt64
   ROGUESQ_S7704_POISON=768) puts 0 magenta pixels on screen. The copy never reaches the picture, so no allowlist change.
@@ -324,10 +324,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pass an ASan/UBSan fuzz (tools/test_s7523_model.sh, 2 controls) and the post-commit arms ran alive. Rerun that test after any
     s7523_slow_rdp.cpp edit.
 
-25. **G1d 21:9 fb read-back of skipped wild-width buffers: CLOSED s7704/s7705 (H-invisible + H-none).** Boot cinematic read never
-    reaches the picture (s7704). s7705 L1 21:9 (crawl, intro cutscene, flight): 0 fresh reads inside any skipped extent
-    (tools/s7705_join.py; boot ctl IN 3/3; only post-boot hit = RSP DMA past the end of the 340-row 0xB80800 buffer). Single-source on
-    one level; queued soaks s7705_fbread_L4_21x9/_16x9 add a second. Rerun tools/s7705_fbread_flight.zsh after any SKIP_WILD_W change.
+25. **G1d 21:9 fb read-back of skipped wild-width buffers: CLOSED s7704-s7706 (H-invisible + H-none, 2 levels).** Boot cinematic read never
+    reaches the picture (s7704). L1 (s7705) and L4 (s7706) at 21:9: 0 post-boot reads inside any skipped extent, any age
+    (tools/s7705_join.py `in_after_boot=0`; boot ctl IN 3/3 per run; only post-boot hit = RSP DMA past the end of the 340-row 0xB80800
+    buffer). 16:9 skips nothing (skipw=0). Rerun tools/s7705_fbread_flight.zsh + tools/test_s7705_join.sh after any SKIP_WILD_W change.
+26. **s7706 queued: 21:9 post-G6c holds L15/L4/L1** (soak_queue/s7706_219_rehold_L*, dd2 STANDINS=1). Fold: alive, vi_stalls30s=0,
+    fatal=0 per tag line; a crash there is a G4 side-effect datum (fix that one).
 
 ## Evidence index
 

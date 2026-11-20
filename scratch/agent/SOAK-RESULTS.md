@@ -1684,3 +1684,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261120 | s7695 fold: tools/s7695_cine_audio_gate.zsh in-session (owner recipe + STANDINS=1 dd4): crawl 32 kHz qzero fix 2 vs AI_DRAIN_FIXED ctl 1037; logo left 0.092 on/off; 4/4 alive 0 crash; stand-ins 0 rebuilds in the cinematic.
 20261120-023600 | s7696_cut_L1 | rc=0 | 218s | scratch/agent/soak_results/s7696_cut_L1_20261120-023600.log | arms=1 alive=0/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1
 20261120-023938 | s7696_cut_L4 | rc=0 | 218s | scratch/agent/soak_results/s7696_cut_L4_20261120-023938.log | arms=1 alive=0/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1
+20261120-053328 | s7705_fbread_L4_16x9 | rc=0 | 223s | scratch/agent/soak_results/s7705_fbread_L4_16x9_20261120-053328.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1 alive_na=0
+20261120-053711 | s7705_fbread_L4_21x9 | rc=0 | 222s | scratch/agent/soak_results/s7705_fbread_L4_21x9_20261120-053711.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1 alive_na=0
