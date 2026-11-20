@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7703 (2026-11-20).
+Compact operational handoff, as of Session 7704 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,9 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7702: the game texture-reads its previous colour buffer in the boot cinematic (t 12.0-16.7 s, both aspects; 4 KB LOADBLOCK
-  full-frame copy, src/rsp/s7702_fbread.cpp ROGUESQ_S7702_FBREAD=1).** At 21:9 those are the 768-wide buffers RT64 skips writing back
-  (SKIP_WILD_W 0x9B6000/0xA35800). Visible effect unchecked (RT64 may serve its GPU copy); single run per arm. Next step item 25.
+- **s7702/s7704 21:9 boot-cinematic fb read-back: HARMLESS (CLOSED).** The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
+  flyover (t 12-16.7 s), and RT64 skips that write-back (SKIP_WILD_W). RT64 never serves those loads from its GPU copy (LOG_FBOVL 0 at 21:9).
+  But write-back on vs off gives pixel-identical presented frames, and filling the skipped buffers with magenta (opt-in lib/rt64
+  ROGUESQ_S7704_POISON=768) puts 0 magenta pixels on screen. The copy never reaches the picture, so no allowlist change.
+  Tools: tools/s7704_wide_fbcopy_arms.zsh + s7704_fbcopy_score.py.
 - **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
   proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
   cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
@@ -322,9 +324,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pass an ASan/UBSan fuzz (tools/test_s7523_model.sh, 2 controls) and the post-commit arms ran alive. Rerun that test after any
     s7523_slow_rdp.cpp edit.
 
-25. **G1d 21:9 boot-cinematic fb read-back (s7702 follow-up, NEXT.md wide-fb-readback-s7703):** presented frames t 12.0-16.7 s at 21:9,
-    default vs ROGUESQ_ALLOW_WILD_W=1, phase-gated on VI count, 4:3 reference as positive control. H-gpu (no change) / H-stale (copied
-    region stale -> allowlist 768 in lib/rt64 rt64_state.cpp rs64_writeback_sane behind the aspect setting, then export.sh) / H-partial.
+25. **G1d 21:9 boot-cinematic fb read-back: CLOSED s7704 (H-invisible, harmless).** Open remainder (NEXT.md wide-fb-readback-flight-s7705):
+    the s7702 census (ROGUESQ_S7702_FBREAD=1, DMA hook live) has covered only the boot cinematic and the movies playlist. Run it in 21:9 mission
+    flight and an intro cutscene to see whether any other reader of a skipped wild-width buffer exists. Rerun the s7704 poison arm on any hit.
 
 ## Evidence index
 
@@ -334,4 +336,4 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png/jpg.
 - Queued-soak verdicts `scratch/agent/SOAK-RESULTS.md`; loop.sh edits take effect before the next soak phase
   (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
-- Recent chronology: PORTING-STATE sessions 7617-7703; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 7617-7704; search bounded windows only.

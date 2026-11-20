@@ -205392,3 +205392,36 @@ Step 0 trigger: CURRENT-TRUTH was 60365 B (> 60000), so this was a MAINTENANCE i
 - Backlog renumbered into one monotonic sequence 1-24 (closed the gap before 22); new item 25 = the s7702 follow-up
   (21:9 boot-cinematic fb read-back, H-gpu/H-stale/H-partial). Headline now reads "as of Session 7703"; evidence index chronology 7617-7703.
 - Net: CURRENT-TRUTH -196/+37 lines, 60365 -> 37913 bytes (-22452). Nothing deleted outright: git history and the archive hold all of it.
+
+## Session 7704 (2026-11-20) — G1d 21:9: the skipped 768-wide write-back does NOT change the boot-cinematic picture; RT64 never serves those loads from its GPU copy, and a magenta fill of the skipped buffers never reaches the screen
+
+HYPOTHESIS-ID: wide-fb-readback-s7703. crash_reports --since 2026-11-13: FOLDED=27, new=0. CURRENT-TRUTH 37913 B (no maintenance).
+Question (item 25, from s7702): the game LOADBLOCKs its previous 768-wide colour buffer (0x9B6000/0xA35800) during the boot cinematic at 21:9,
+and RT64 skips writing those buffers back to RDRAM (SKIP_WILD_W). Does that change the picture? Hypotheses: H-gpu (RT64 serves the texture from
+its GPU framebuffer, so no change) / H-stale (RT64 reads RDRAM, so the copied part shows stale RAM) / H-partial.
+The scene is the Hoth canyon flyover between the N64 logo and the LucasArts logo (sheets scratch/s7704/sheet_{skip,wb,r43}.png). It is not the Factor 5 logo.
+Tools (new): tools/s7704_wide_fbcopy_arms.zsh (sequential plain boots, FPS60 dd2, ScreenCaptureKit presented frames via scratch/s6894/g5b_capture,
+24 s each, owner save read-only and cmp-checked) and tools/s7704_fbcopy_score.py (PIL only; aligns arms on content onset (N64 logo, luma>60), then
+for every frame finds the best match in the other arm within +-120 ms. That phase-gates on content, not a stopwatch.) New diagnostic in lib/rt64
+rt64_state.cpp (PATCH s7704, opt-in): `ROGUESQ_S7704_POISON=<width>` fills colour-fb rows of that write width with magenta RGBA16 just before the
+write-back decision. The write-back overwrites the fill; a skip leaves it in RDRAM for any later texture read. Patch exported (rt64.patch).
+Every arm also ran the existing ROGUESQ_LOG_FBOVL (any texture load RT64 resolves to a tracked GPU framebuffer, window 0x9B6000-0xAC0000).
+| arm | config | fbovl resolved loads | SKIP_WILD_W | best-match diff vs skip, cinematic window |
+|---|---|---|---|---|
+| skip | 21:9 default | 0 (also 0 unwindowed) | 77 | - |
+| wb | ALLOW_WILD_W=1 | 0 | 0 | p50 <=0.11, max 0.17 |
+| rdwb | FBOVL_SKIP=1 + ALLOW_WILD_W=1 | 0 | 0 | 0.00 every bin |
+| pskip | POISON=768 (fill stays, skip) | 0 | 76 | p50 <=0.11, max 0.17; 0 magenta pixels in 24 s |
+| pwb | POISON=768 + ALLOW_WILD_W=1 | 0 | 0 | 0.00 every bin, 0 magenta |
+| r43 | 4:3 default | 836 (all fb=0xA2B800 w640, 128-byte loads just below the fb) | 0 | (other size) |
+Motion scale (frame-to-frame diff) p50 7.2, p90 12.3-13.6, so the matcher would see a changed copy. The 0.1-0.17 residual is run noise: it
+appears identically between wb and rdwb, whose configs are the same at 21:9 (FBOVL_SKIP has nothing to skip there).
+Reading: (1) H-gpu REFUTED. At 21:9 not one texture load in the whole run resolves to an RT64 framebuffer (fbovl any=0), so the LOADBLOCKs read RDRAM.
+(2) H-stale (visible) REFUTED. With the write-back on (rdwb) the picture is pixel-identical to skip. With the source filled with magenta (pskip),
+no magenta reaches the screen and the picture matches skip at the noise floor. The previous-frame copy does not reach the presented image in this window.
+This selects H-invisible, a new arm: whatever the game does with the copy, it is not drawn on screen (or is drawn fully covered) during the boot cinematic.
+The SKIP_WILD_W skip of 768 is harmless here, so no allowlist change.
+Caveat: one run per arm. But two independent lines agree (write-back on vs off pixel-identical, and the magenta poison invisible), and the poison is a
+positive control on the source: the copied buffer was demonstrably wrong (log: [s7704-poison] fills at 0x9B6000/0xB80800), with no on-screen effect.
+Not covered: RSP DMA reads of those buffers at 21:9 (the s7702 census with the DMA hook live), and wild-width read-backs outside the boot/movies routes.
+Raws deleted after scoring; per-arm log counts in scratch/s7704/summary.txt.

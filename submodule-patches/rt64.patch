@@ -8295,7 +8295,7 @@ index 8858dac..6b31d86 100644
          std::condition_variable interpolatedCondition;
          std::mutex workloadMutex;
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..23d2dec 100644
+index 10f98af..8746d9a 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -8398,7 +8398,7 @@ index 10f98af..23d2dec 100644
 +static uint32_t rs64_s7364_fullsyncs, rs64_s7364_first, rs64_s7364_carried, rs64_s7364_oob;
 +static bool rs64_s7364_pending;
 +
- namespace RT64 {
++namespace RT64 {
 +    int rs64RtPairRel() {
 +        static const int ep = [] { const char *e = std::getenv("ROGUESQ_LOG_RTPAIR_EPOCH"); return e ? atoi(e) : -1; }();
 +        if (ep < 0 || __atomic_load_n(&rs64_g1d_vi_epoch, __ATOMIC_RELAXED) != ep) return -1;
@@ -8858,7 +8858,7 @@ index 10f98af..23d2dec 100644
 +    // different things — which is how s33 read batching as loss.
 +    }
 +
-+namespace RT64 {
+ namespace RT64 {
 +    struct Rs64RdramSnap;
 +    extern "C" void rs64_floor_ownership(const char*, uint32_t, uint32_t, uint32_t);
 +    void rs64FloorRdramLog(const char *site, const uint8_t *buf, uint32_t phys0, uint32_t nbytes, const Rs64RdramSnap *snap, int flRestore);
@@ -10085,7 +10085,7 @@ index 10f98af..23d2dec 100644
  
                  pairCursor = framebufferPairCursor;
                  while (pairCursor < maxFramebufferPair) {
-@@ -1461,12 +2897,164 @@ namespace RT64 {
+@@ -1461,12 +2897,178 @@ namespace RT64 {
                          // RT64 sees the real fb address; until then this
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
@@ -10118,6 +10118,20 @@ index 10f98af..23d2dec 100644
 +                                    rs64_floor_writer_begin(RDRAM, colorFb->addressStart, spanRows * colorWriteWidth * 2u, "wb-clear");
 +                                        memset(&RDRAM[colorFb->addressStart], 0, (size_t)spanRows * colorWriteWidth * 2u);
 +                                        rs64_floor_writer_after(RDRAM, colorFb->addressStart, spanRows * colorWriteWidth * 2u, "wb-clear");
++                                }
++                            }
++                            { // PATCH (s7704): ROGUESQ_S7704_POISON=<width> fills the colour fb rows about to be written back with magenta RGBA16
++                              // (0xF83F) when the write width equals <width>. If the write-back then runs it overwrites the fill; if SKIP_WILD_W
++                              // skips it the fill stays, so any later texture read of that buffer shows magenta (positive control for s7704).
++                                static const uint32_t s_poisonW = [] { const char *e = std::getenv("ROGUESQ_S7704_POISON"); return e && *e ? (uint32_t)atoi(e) : 0u; }();
++                                if (s_poisonW && colorWriteWidth == s_poisonW && colorFb->siz == 2 && cRowEnd > colorRowStart) {
++                                    const uint64_t b0 = (uint64_t)colorFb->addressStart + (uint64_t)colorRowStart * colorWriteWidth * 2u;
++                                    const uint64_t b1 = (uint64_t)colorFb->addressStart + (uint64_t)cRowEnd * colorWriteWidth * 2u;
++                                    if (b1 <= 0x1000000u) {
++                                        static uint32_t s_pn = 0;
++                                        if (++s_pn <= 5) fprintf(stderr, "[s7704-poison] #%u addr=0x%X w=%u rows=%u..%u\n", s_pn, colorFb->addressStart, colorWriteWidth, colorRowStart, cRowEnd);
++                                        for (uint64_t a = b0 & ~3ull; a + 4 <= b1; a += 4) *reinterpret_cast<uint32_t *>(&RDRAM[a]) = 0xF83FF83Fu;
++                                    }
 +                                }
 +                            }
 +                            if (rs64_writeback_sane("color", colorFb->addressStart, colorWriteWidth,
@@ -10254,7 +10268,7 @@ index 10f98af..23d2dec 100644
                          }
                      }
  
-@@ -1527,6 +3115,7 @@ namespace RT64 {
+@@ -1527,6 +3129,7 @@ namespace RT64 {
  
              // Perform any preliminar setup before processing the framebuffer pairs.
              renderSetup();
@@ -10262,7 +10276,7 @@ index 10f98af..23d2dec 100644
  
              // Start loading tiles, sampling tiles and drawing the framebuffer pairs as required.
              for (uint32_t f = 0; f < workload.fbPairCount; f++) {
-@@ -1540,21 +3129,29 @@ namespace RT64 {
+@@ -1540,21 +3143,29 @@ namespace RT64 {
                  }
  
                  if (fbPair.syncRequired) {
@@ -10294,7 +10308,7 @@ index 10f98af..23d2dec 100644
  
              // Do not render anything, just wait for the data to be uploaded.
              ext.framebufferGraphicsWorker->commandList->begin();
-@@ -1565,30 +3162,33 @@ namespace RT64 {
+@@ -1565,30 +3176,33 @@ namespace RT64 {
              ext.drawDataUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.transformsUploader->commandListAfterBarriers(ext.framebufferGraphicsWorker);
              ext.framebufferGraphicsWorker->commandList->end();
@@ -10331,7 +10345,7 @@ index 10f98af..23d2dec 100644
  
  #   if SCRIPT_ENABLED
          // Notify the current script the frame is about to end and should be processed.
-@@ -1597,6 +3197,7 @@ namespace RT64 {
+@@ -1597,6 +3211,7 @@ namespace RT64 {
              workload.pointLights = scriptLights;
          }
  #   endif
@@ -10339,7 +10353,7 @@ index 10f98af..23d2dec 100644
  
          // Store the presentation rate in the workload.
          if (extended.refreshRate != UINT16_MAX) {
-@@ -1622,6 +3223,7 @@ namespace RT64 {
+@@ -1622,6 +3237,7 @@ namespace RT64 {
              inspect();
          }
  
@@ -10347,7 +10361,7 @@ index 10f98af..23d2dec 100644
          // Add any lights to the workload from the presets that are activated.
          for (const auto &it : lightsLibrary.presetMap) {
              if (!it.second.enabled) {
-@@ -1761,9 +3363,11 @@ namespace RT64 {
+@@ -1761,9 +3377,11 @@ namespace RT64 {
              }
          }
          
@@ -10359,7 +10373,7 @@ index 10f98af..23d2dec 100644
  
          // Make sure the profiler starts after the workload is advanced to ignore any waiting time.
          dlCpuProfiler.reset();
-@@ -1822,8 +3426,28 @@ namespace RT64 {
+@@ -1822,8 +3440,28 @@ namespace RT64 {
                      continue;
                  }
  
@@ -10388,7 +10402,7 @@ index 10f98af..23d2dec 100644
                      const uint32_t fbAddress = entry.vi.fbAddress();
                      const hlslpp::uint2 fbSize = entry.vi.fbSize();
                      const uint8_t fbSiz = entry.vi.fbSiz();
-@@ -1837,7 +3461,7 @@ namespace RT64 {
+@@ -1837,7 +3475,7 @@ namespace RT64 {
                                  colorImg.address, colorImg.width, (unsigned)colorImg.siz, h);
                              std::fflush(stderr);
                          }
@@ -10397,7 +10411,7 @@ index 10f98af..23d2dec 100644
                          viPresented = true;
                      }
                      else if (s_rs64_log_pe) {
-@@ -1862,6 +3486,23 @@ namespace RT64 {
+@@ -1862,6 +3500,23 @@ namespace RT64 {
          Workload &nextWorkload = ext.workloadQueue->workloads[workloadCursor];
          nextWorkload.begin(workloadCounter++);
  
@@ -10421,7 +10435,7 @@ index 10f98af..23d2dec 100644
          // Indicate on the framebuffer manager that all tile copies are free to be used again.
          framebufferManager.clearUsedTileCopies();
  
-@@ -1873,7 +3514,29 @@ namespace RT64 {
+@@ -1873,7 +3528,29 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -10451,7 +10465,7 @@ index 10f98af..23d2dec 100644
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
              if (ext.userConfig->developerMode) {
-@@ -1899,6 +3562,132 @@ namespace RT64 {
+@@ -1899,6 +3576,132 @@ namespace RT64 {
              }
          }
          
@@ -10584,7 +10598,7 @@ index 10f98af..23d2dec 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1915,6 +3704,33 @@ namespace RT64 {
+@@ -1915,6 +3718,33 @@ namespace RT64 {
              viDifferent = (newVI != lastScreenVI);
              lastScreenVI = newVI;
  
@@ -10618,7 +10632,7 @@ index 10f98af..23d2dec 100644
              // Diagnostic (ROGUESQ_LOG_PRESENT_EARLY=1) — track why viHistory stays empty.
              // We reuse the same env flag the present-early matcher uses.
              static const bool s_us_log_pe = [](){
-@@ -1959,12 +3775,36 @@ namespace RT64 {
+@@ -1959,12 +3789,36 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -10657,7 +10671,7 @@ index 10f98af..23d2dec 100644
          screenCpuProfiler.start();
          bool fbChangesMade = false;
          bool screenChangesMade = false;
-@@ -1972,7 +3812,11 @@ namespace RT64 {
+@@ -1972,7 +3826,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -10670,7 +10684,7 @@ index 10f98af..23d2dec 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -1987,8 +3831,29 @@ namespace RT64 {
+@@ -1987,8 +3845,29 @@ namespace RT64 {
                  if ((screenFbSize.x == screenFb->width) && (screenFbSiz == screenFb->siz)) {
                      const uint8_t *fbRAM = &RDRAM[screenFb->addressStart];
                      uint64_t currentHash = XXH3_64bits(fbRAM, screenFb->RAMBytes);
@@ -10701,7 +10715,7 @@ index 10f98af..23d2dec 100644
                              RenderWorkerExecution workerExecution(worker);
                              thread_local std::vector<uint32_t> fbDiscards;
                              const std::scoped_lock lock(ext.presentQueue->screenFbChangePoolMutex);
-@@ -2018,9 +3883,133 @@ namespace RT64 {
+@@ -2018,9 +3897,133 @@ namespace RT64 {
              // Store the RAM required by the VI so the render thread can display it if necessary.
              if (screenFbSiz >= G_IM_SIZ_16b) {
                  uint32_t screenFbBytes = uint32_t(screenFbSize.x * screenFbSize.y) << (screenFbSiz - 1);
@@ -10838,7 +10852,7 @@ index 10f98af..23d2dec 100644
                  screenChangesMade = (newScreenHash != lastScreenHash);
                  lastScreenHash = newScreenHash;
              }
-@@ -2033,26 +4022,51 @@ namespace RT64 {
+@@ -2033,26 +4036,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -10908,7 +10922,7 @@ index 10f98af..23d2dec 100644
              }
          }
  
-@@ -2060,6 +4074,7 @@ namespace RT64 {
+@@ -2060,6 +4088,7 @@ namespace RT64 {
          if (fromEarlyPresent || viDifferent || fbChangesMade || screenChangesMade || forceAdvance) {
              // Push a new renderer event to the timeline for presenting this VI.
              present.screenVI = newVI;
@@ -10916,7 +10930,7 @@ index 10f98af..23d2dec 100644
              advancePresent(present, false);
              ext.presentQueue->advanceToNextPresent();
  
-@@ -2910,4 +4925,4 @@ namespace RT64 {
+@@ -2910,4 +4939,4 @@ namespace RT64 {
              break;
          }
      }

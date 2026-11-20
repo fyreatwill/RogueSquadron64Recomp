@@ -1,15 +1,15 @@
-# NEXT (s7704)
-HYPOTHESIS-ID: wide-fb-readback-s7703
+# NEXT (s7705)
+HYPOTHESIS-ID: wide-fb-readback-flight-s7705
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-Step 0 passes after s7703 maintenance (CURRENT-TRUTH 37913 B).
 
-Work unit (CURRENT-TRUTH Next steps item 25): does the 21:9 write-back skip CHANGE THE PICTURE in the boot cinematic window (t 12.0-16.7 s), where the
-game copies its previous 768-wide frame (4 KB LOADBLOCK chunks from 0x9B6000/0xA35800, both SKIP_WILD_W targets)?
-Hypotheses: H-gpu (RT64 resolves the texture from its own GPU framebuffer, so the picture is the same with or without the write-back) / H-stale (RT64
-reads RDRAM for it, so 21:9 shows stale or cleared RAM in the copied part of the image) / H-partial (only some frames or rows differ).
-Discriminator: presented frames (not FB_DUMP, which reads RDRAM) through the cinematic window at 21:9, default vs ROGUESQ_ALLOW_WILD_W=1, phase-gated
-on VI count from boot (no stopwatch), plus a 4:3 reference of the same window. Run them one after the other. Name the cinematic shown at t 12-16.7 (G5d
-Factor 5 logo is a candidate). Positive control: the 4:3 arm (640, write-back allowed) must show the copied content. If H-stale: add 768 (the 21:9 cinematic
-width) to RT64's rs64_writeback_sane allowlist (lib/rt64 rt64_state.cpp:282) behind the aspect setting, then export.sh + commit in the same session.
-Also rerun the s7702 census at 21:9 with the DMA hook now live (ROGUESQ_S7702_FBREAD arms it as of s7702) to cover RSP DMA reads in that window.
+s7704 closed the boot-cinematic case: at 21:9 the game's previous-frame copy (768 wide, write-back skipped by SKIP_WILD_W) never reaches the
+screen (write-back on/off pixel-identical, magenta ROGUESQ_S7704_POISON=768 fill invisible, RT64 serves 0 loads from its GPU fb at 21:9).
+Open remainder (CURRENT-TRUTH item 25): does any OTHER reader of a skipped wild-width buffer exist in 21:9 mission flight or an intro cutscene?
+Hypotheses: H-none (the boot cinematic is the only fb read-back, so the skip is harmless everywhere) / H-flight (flight or cutscene reads a skipped
+buffer, e.g. a 1024-wide FB_WIDTH image is allowed but some other width is skipped) / H-dma (the RSP reads a skipped buffer by DMA, not texture).
+Discriminator, ONE run at the owner 21:9 recipe (FPS60 dd2 ASPECT=21:9) on a forced level with an intro cutscene (L1, scratch/s6899/arm.zsh template
+or tools/s7696_cut_standins.zsh), with ROGUESQ_S7702_FBREAD=1 (texture + DMA hits, keyed by image/width/age) and LOG of SKIP_WILD_W. Join fresh-image
+(<5 s) hits against the SKIP_WILD_W address list. Positive control: the s7702 live control (ctl_live n/n) plus the boot-cinematic hits in the same run.
+If a fresh hit lands in a skipped buffer: run tools/s7704_wide_fbcopy_arms.zsh-style poison arms on that scene (POISON=<width>) and look for
+magenta in presented frames. If none: close item 25 entirely.
