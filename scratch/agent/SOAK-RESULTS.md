@@ -1689,3 +1689,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261120-054400 | s7706_219_rehold_L1 | rc=0 | 312s | scratch/agent/soak_results/s7706_219_rehold_L1_20261120-054400.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261120-054912 | s7706_219_rehold_L15 | rc=0 | 312s | scratch/agent/soak_results/s7706_219_rehold_L15_20261120-054912.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261120 | s7707 fold: s7706_219_rehold L1/L15 (loop) + L4 (in-session): 3/3 alive, 0 crash, vi_stalls30s=0, max_gap 148 ms, level_ok=1, 21:9 line 3/3, standins on 3/3, spawns 38/39/164 -> post-G6c 21:9 clean.
+20261120-152303 | s7725_texdesc_L4 | rc=0 | 311s | scratch/agent/soak_results/s7725_texdesc_L4_20261120-152303.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261120 | s7726 fold: s7725_texdesc_L4 (loop) alive 1/1, 0 fatal, vi_stalls30s=0, max_gap 143 ms, level_ok=1 -> plume fix clean in owner mode. In-session NSZombie L4 150 s: default 0 zombies boot+flight, MTL_OWN=0 control 163.

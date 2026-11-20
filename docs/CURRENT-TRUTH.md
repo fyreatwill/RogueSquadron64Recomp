@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7725 (2026-11-20).
+Compact operational handoff, as of Session 7726 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7726 NSZombie census past boot: H-clean.** L4 owner recipe 150 s, NSZombieEnabled + OBJC_DEBUG_MISSING_POOLS: default arm
+  0 zombies boot+flight (68k MISSING POOLS lines, all live objects); same-run ROGUESQ_MTL_OWN=0 control 163 TextureDescriptor zombies
+  (113 boot + 50 flight). Scorer tools/s7726_zombie_census.py (rc 3 on a blind control). s7725 soak folded: L4 300 s clean.
 - **s7725 RT64 Present SIGTRAP (.ips 2026-11-18-014353) root-caused and fixed:** plume MetalBufferFormattedView released a +0
   `textureBufferDescriptor` (NSZombie boot: 103 `_NSZombie_MTLTextureDescriptorInternal` -> 0 with the fix; ROGUESQ_MTL_OWN=0 control
   103 in the same binary). The pool push flushes the freed pending object (TLS slot 0x160); OBJC_DEBUG_MISSING_POOLS only made the

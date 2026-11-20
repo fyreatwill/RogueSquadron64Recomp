@@ -206130,3 +206130,24 @@ init] <- plume::MetalDescriptorSetLayout ctor <- FramebufferReadChangesDescripto
 Verdict line: selects H-overrelease (a new name for NEXT's H-nopool: a pool-less thread plus a freed pending object), refutes
 H-debug-artifact (env-only push exits 0), H-race (one class, one ctor, the zombie count matches across runs) and H-teardown
 (trap 1.1 s into boot, main thread in set_frequency, not exit). Next discriminator: the s7725 soak verdict; then owner work.
+
+## Session 7726 (2026-11-20) — NSZombie over-release census extended past boot into L4 flight: default 0 zombies (boot+flight), MTL_OWN=0 control 163; s7725 soak folded clean
+
+Work unit (NEXT s7726): no new crash report (`tools/crash_reports.py --since 2026-11-13`: FOLDED=27 new=0), no owner report.
+- Fold: s7725_texdesc_L4 soak (loop, owner recipe L4 16:9 dd4 FPS60 STANDINS=1, 300 s): alive 1/1, 0 fatal, vi_stalls30s=0,
+  max_gap 143 ms, level_ok=1 -> the s7725 plume MetalBufferFormattedView fix broke nothing in owner mode.
+- Experiment: one run, two arms back to back via tools/g1e_owner_quiet_arms.zsh (R=scratch/s7726, HOLD=150, L4 owner recipe +
+  STANDINS=1 + NSZombieEnabled=YES + OBJC_DEBUG_MISSING_POOLS=YES; host idle 6376 s, AC, clk 0.95). Arm zdef = default binary
+  settings, arm zown0 = + ROGUESQ_MTL_OWN=0 (positive control: the upstream +0 release). Hypotheses: H-clean (no other freed
+  object reaches a pool flush or a message in flight) vs H-more (a flight-only over-release elsewhere in plume/RT64/rt64_apple).
+- New scorer tools/s7726_zombie_census.py: counts `class _NSZombie_<Cls>` MISSING POOLS lines and `message sent to deallocated
+  instance` lines, split at the level-select `cursorMask)=0x` line into boot / flight; rc 3 if the control arm shows no zombie of
+  the control class. Checked on the s7725 logs: fixed vs own0 -> 0 vs 103 (rc 4: boot only); arms swapped -> CONTROL FAIL rc 3.
+- Result (both arms alive 150 s, level_ok=1, vi_stalls30s=0, max_gap 148/163 ms):
+  zdef boot missing_pools=11157 zombies=0, flight missing_pools=56801 zombies=0, dead_msgs 0;
+  zown0 boot 113 + flight 50 `_NSZombie_MTLTextureDescriptorInternal`, 0 other classes, dead_msgs 0 -> CONTROL PASS (163).
+  The control fires in the flight phase too, so the instrument sees flight-path over-releases; the default arm's zero is real.
+Verdict line: selects H-clean (the s7725 descriptor was the only over-released object that reaches a pool flush through boot and
+150 s of L4 flight), refutes H-more for every path that autoreleases or messages a freed object in this route. Not covered: an
+over-release whose freed object is never autoreleased or messaged again (invisible to NSZombie, and harmless by the same token),
+other levels, and the hangar route. Single route, two lines (zombie count + same-run control). Next: owner items.
