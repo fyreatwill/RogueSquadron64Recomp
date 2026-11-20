@@ -15,6 +15,7 @@ s7516 run 1 first used "<= 2 inits per run" and flagged exactly those); an osPfs
 Usage: s7516_pak_shape.py [--controls] [--ctl CTLLOG] LOG...
   rc 0 clean (+ ctl arm shows Init ok and >= 1 Start/Stop ok), 1 live divergence, 3 ctl arm missing/unproven, 4 no rows."""
 import re, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 from collections import Counter
 
 ROW = re.compile(r'\[s7516-pak\] (.*)')
@@ -105,7 +106,7 @@ def main(a):
         i = a.index('--ctl'); ctl = a[i + 1]; del a[i:i + 2]
     total = 0
     for p in a:
-        rows = parse(open(p, errors='replace'))
+        rows = parse(zopen(p, errors='replace'))
         total += len(rows)
         b, st = score(rows)
         print('%s rows=%d %s bad=%d' % (p, len(rows), dict(st), len(b)))
@@ -114,7 +115,7 @@ def main(a):
         if b:
             rc = 1
     if ctl:
-        rows = parse(open(ctl, errors='replace'))
+        rows = parse(zopen(ctl, errors='replace'))
         b, st = score(rows)
         print('%s (ctl) rows=%d %s bad=%d ctl_ok=%d' % (ctl, len(rows), dict(st), len(b), ctl_ok(rows)))
         for x in b[:10]:

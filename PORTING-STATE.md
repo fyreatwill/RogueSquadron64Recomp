@@ -206009,3 +206009,45 @@ submodule-patches/export.sh re-run: no diff (lib/ patches mirrored).
 Rules out: a REPORT tool hiding an open row (s7082/s7083 now scored, 0 open; the other three have no open class).
 Not covered: the 39 s7718 NEEDS-INPUT scorers are outside the sweep entirely -> NEXT (one bounded iteration, then stop sweep work).
 Verdict: H-gate for s7082/s7083, H-report for s7031/s7210/s7441; sweep-report-tools CLOSED.
+
+## Session 7723 (2026-11-20) — s7718 NEEDS-INPUT scorer audit: 11 one-capture scorers become sweep gates over their retained scratch/ captures (H-retainable, planted RED controls 11/11), rest classified H-gone / H-stale-coupled / H-no-control / H-dead / deferred
+
+What ran (offline, no build, no game run, <=2 jobs): crash_reports --since 2026-11-13 -> 27 FOLDED, 0 new. For each of the 39
+NEEDS-INPUT rows of scratch/s7718/classification.tsv: ledger mentions, scratch/<sNNNN>* contents, then each candidate re-run on
+its retained capture (scratch/s7723/find_inputs.py; all retained captures are under gitignored scratch/, so on a fresh clone the
+ARGS paths are absent and the sweep falls back to NEEDS-ARGS exactly as before).
+Engineering:
+- tools/rs64_zopen.py: zopen() reads *.zst (zstd -dc, a PURE spawn so gates stay cacheable) / *.gz / plain as text. The 11
+  scorers below now open their log through it (one-line change each, plain paths behave as before): the retained run logs are
+  5 MB .zst but 110-180 MB raw (11 decompressed = 2.7 GB, not kept).
+- tools/s7651_gate_sweep.py S7723_RETAINED (ARGS + EXTRA_GATES), each regex requiring the tool's own control AND clean verdict:
+  s7392 mq (scratch/s7392/run, --known), s7393 cq (s7393/own), s7394 bd (s7394/ownfix --fix), s7396 tq, s7397 timer,
+  s7399 evp (each s739x/own), s7516 pak / s7517 vi_feat / s7518 cache (--controls --ctl over the 4-level *_levels logs),
+  s7528 evict (--controls old/new), s7579 bounds (scratch/s7579 UBSan arm dir). Live verdicts reproduce the ledger: H-none x6,
+  pak/vi/cache bad=0 ctl_ok=1, evict old_must_fail/new_must_pass PASS, bounds control_fired=1 real_sites=0.
+- tools/s7723_retained_controls.py (itself a sweep gate, regex `CONTROLS PASS bad=0 skipped=0`): positive arm = the real ARGS row,
+  mutant arm = one input rewritten into a temp .zst with one row changed; the row must then read RED. 11/11 PASS:
+  drop [s7392-ctl] -> rc 3 drops=2; drop [s7393-ctl] -> rc 0 VERDICT H-none but regex unmatched; drop [s7394-sum] -> FIX-ARM
+  CONTROL FAIL rc 2; drop [s7396-tq-ctl] -> NO-CONTROL rc 2; drop [s7397-tm-ctl] -> rc 1; drop [s7399-ctl] -> rc 0 H-none, regex
+  unmatched; drop the ctl log's [s7516-pak] rows -> rc 3; drop [vi-feat-ctl] in all 4 arms -> rc 3; drop [cache-ctl] in all 4
+  -> rc 1; plant stale_window_entries=5 in the NEW evict arm -> rc 1; append one live UBSan row to arm p -> real_sites=1 rc 1.
+  Finding: s7393 and s7399 exit 0 with their control REMOVED ("not armed" counts as pass by design), so rc alone would be a
+  hollow gate for them; the regex requiring CONTROL PASS is load-bearing (the controls prove it).
+- s7392 scored HOLLOW on first sweep (5 nonzero fails= rows): read by hand, all are the planted control queue 801161F8 (guest S +
+  ext host-thread halves, = "CONTROL PASS (guest=1 ext=1)") or KNWN classified families -> HOLLOW_OK entry with that regex.
+Classification of the other 28 (no ARGS row):
+- H-stale-coupled: s7389_fbld_report (retained scratch/s7389/run1 log, but it maps rows to LIVE RecompiledFuncs file:line, which
+  drifted since s7389 -> READER-CANDIDATE 286720 / rc 3 on a frozen log; not a drift signal, a join on moved line numbers).
+- H-no-control: s7391_spwm_report (route log retained, VERDICT headroom-ok, but the capture has no planted control and only 1 of
+  27 threads has a known stack size -> would be a hollow gate).
+- H-gone (input not retained): s7406/s7408/s7410 run logs (only build logs kept), s7409 (retained l5 log has no [s7409-dump]:
+  NO DUMP), s7431, g1d_levelselect_tear, g1d_row_noise, regress_score, audit_elf_tails/audit_ptr_reach (no recorded input).
+- H-dead: s7421_regen_drift + s7423_live_stale -> superseded by s7719_regen_gate (fresh replay each sweep).
+- H-retainable, deferred (input on disk, needs per-tool format work): s7367/s7369 (tl_*.bin + v*/c* run.log.zst), s7433 and
+  s7435-s7438 (sample_*.txt.zst dirs + samples.idx/run.tlog; tools glob *.txt), s7467 (scratch/s7467r san_* + logs), s7247
+  (log_r48 raw fb dump .zst), s7624 (fb_L1/fb_L4 dirs + log_L1f.zst), s7589 (scratch/s7589/hrH/hr.tsv, needs --warm/--plant-at).
+- Leave NEEDS-INPUT: s7317_spill_holders (selftest already swept), s7580 (minutes-long compile, rerun only after fixup_lui).
+Sweep (--jobs 2, cold 1130 s): 207 gates {GREEN 203, REPORT 3, HOLLOW 1 = s7392, fixed above}; re-run after the HOLLOW_OK
+entry: see the result line below.
+Rules out: a retained one-capture scorer silently failing its own control / verdict at the current tool source (11 now scored).
+Verdict: H-retainable for 11, slug sweep-needs-input-retain CLOSED (one iteration, as NEXT required).

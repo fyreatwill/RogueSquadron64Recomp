@@ -3,9 +3,10 @@
 Usage: tools/s7396_tq_report.py <run.log> [...]. rc 0 = control PASS and no row the OLD walk would HANG/WILD on,
 rc 2 = control missing/FAIL, rc 3 = live HANG/WILD rows (old walk would have hung or wild-read: H-dangle reachable)."""
 import re, sys, collections
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 rc_all = 0
 for path in sys.argv[1:]:
-    txt = open(path, errors='replace').read()
+    txt = zopen(path, errors='replace').read()
     ctl = re.findall(r'^\[s7396-tq-ctl\].*$', txt, re.M)
     rows = re.findall(r'^\[s7396-tq\] (.*)$', txt, re.M)
     kinds = collections.Counter(); bad = []

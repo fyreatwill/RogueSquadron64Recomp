@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7722 (2026-11-20).
+Compact operational handoff, as of Session 7723 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7723 NEEDS-INPUT scorers: 11 become gates over their retained scratch/ captures** (S7723_RETAINED in the sweep; logs read
+  as .zst via tools/rs64_zopen.py; tools/s7723_retained_controls.py plants one RED row per gate, 11/11 PASS and is itself swept).
+  s7393/s7399 exit 0 with their control removed, so the CONTROL PASS regex is load-bearing. Rest: H-gone 10, H-dead 2 (s7421/s7423
+  -> s7719 gate), H-stale-coupled s7389, H-no-control s7391, deferred-retainable 9 (CURRENT-TRUTH item 32). Sweep 0 RED 0 HOLLOW.
 - **s7722 REPORT tools CLOSED: s7082 jal + s7083 lowering censuses are gates now** (`--check`, s7082 `--plant`; ARGS over the
   retained scratch/s7082 front-end pass; RED controls extra-jal-line / mutated case label rc 1). s7031/s7210/s7441 stay REPORT
   (H-report, pure tables). Sweep 196 {GREEN 193, REPORT 3} 0 RED 0 HOLLOW. Next: the 39 s7718 NEEDS-INPUT scorers (one iteration).
@@ -405,9 +409,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     modelled first). Runtime witness scratch/s7713/run.zsh. Open, label-only: fixup_game_funcs_vendored.py m5 log lines say
     arm=audio_stub when AUDIO_UCODE is unset, though the real ucode runs (default-on). Helper readers (rs64_env_int) not modelled.
 
-32. **Gate-sweep coverage s7718: offline gates all swept (195).** Remaining NEEDS-INPUT gates that could gate drift with one
-    retained input: s7421_regen_drift + s7423_live_stale (need a FRESH regen replay; last one s7558, 160 sessions old) - next unit.
+32. **Gate-sweep coverage s7718/s7723: offline gates all swept (208).** s7421/s7423 superseded by s7719_regen_gate. Of the 39
+    s7718 NEEDS-INPUT scorers 11 are gated over retained captures (s7723). Deferred, input on disk but format work needed
+    (take only when no owner/G item applies; one iteration): s7367/s7369 (tl .bin + run.log.zst), s7433/s7435-s7438
+    (sample_*.txt.zst dirs: tools glob *.txt), s7467 (s7467r san_*), s7247, s7624 (fb dirs), s7589 (hr.tsv + window args).
     Lesson (s7412/s7413): a harvest-based gate can exit 0 while a later fixup idiom hides its sites; pin the harvest size.
+    Lesson (s7723): a scorer whose "control absent" path exits 0 (s7393, s7399) is only a gate with a CONTROL PASS regex.
 
 ## Evidence index
 

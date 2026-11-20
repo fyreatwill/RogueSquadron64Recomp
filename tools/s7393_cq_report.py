@@ -7,6 +7,7 @@ exit 0 = control PASS (or not armed) and no orphan / lost row outside it; 2 = co
      3 = a guest re-create orphaned a live waiter or discarded a pending message (rows marked LIVE).
 """
 import re, sys, subprocess, os
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 
 ROW = re.compile(r'^\[s7393-cq\] mq=(\w+) key=(\S+) gra=(\w+) cnt=(-?\d+) creates=(\d+) recreates=(\d+) lost=(\d+) '
                  r'orphan_r=(\d+) orphan_s=(\d+) raw_r=(\d+) raw_s=(\d+) held=(\d+)')
@@ -23,7 +24,7 @@ def main():
         if len(p) >= 6 and re.match(r'^[0-9A-F]{8}$', p[0]):
             census.setdefault(p[1].strip(), set()).add(p[6].replace('post=', '') if len(p) > 6 else '-')
     blocks, cur, ctl, ev = [], None, False, []
-    for ln in open(log, errors='replace'):
+    for ln in zopen(log, errors='replace'):
         if ln.startswith('[s7393-cq-begin]'):
             if cur is not None:
                 blocks.append(cur)

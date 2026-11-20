@@ -10,17 +10,18 @@ exit 0 = control PASS (CTL armed: control window intr==1, foreground mode report
 or no windows; 3 = H-race.
 """
 import re, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 W = re.compile(r'^\[s7394-win\] n=(\d+) t=(\S+) owner=(-?\d+) open=(\S+) close=(\w) ctid=(-?\d+) cres=(-?\d+) ckey=(\S+) us=(\S+) '
                r'intr=(\d+) xcalls=(\d+) xtids=(\w+) ocalls=(\d+)')
 S = re.compile(r'^\[s7394-sum\] .*ctl=(\d+) ctlwin=(-?\d+) ctlmode=(\d+) open=\d+ shadow_x=(\d+) shadow_hitwin=(\d+)')
 rows, summ, tidl = [], None, ''
-for ln in open([a for a in sys.argv[1:] if not a.startswith('--')][0], errors='replace'):
+for ln in zopen([a for a in sys.argv[1:] if not a.startswith('--')][0], errors='replace'):
     m = W.match(ln)
     if m: rows.append(m.groups()); continue
     if ln.startswith('[s7394-tid]'): tidl = ln.strip()
     m = S.match(ln)
     if m: summ = tuple(int(x) for x in m.groups())
-armed = any(l.startswith('[s7394-sum]') for l in open([a for a in sys.argv[1:] if not a.startswith('--')][0], errors='replace'))
+armed = any(l.startswith('[s7394-sum]') for l in zopen([a for a in sys.argv[1:] if not a.startswith('--')][0], errors='replace'))
 ctl, ctlwin, mode, shx, shw = summ if summ else (0, -1, 0, 0, 0)
 print(f"windows={len(rows)} ctl={ctl} ctlwin={ctlwin} ctlmode={ {0:'off/none',1:'foreign-thread',2:'owner-ctx(CTLF)'}[mode] }")
 by = {}

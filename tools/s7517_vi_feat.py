@@ -18,6 +18,7 @@ Checks (hardware model re-derived from the ROM's osViSetSpecialFeatures 0x800353
 Exit: 0 clean, 1 live divergence, 3 ctl unproven, 4 no rows.  --controls runs synthetic + mutant logs first.
 """
 import re, sys, collections
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 
 FUNC_OK = {0x01, 0x02, 0x10, 0x20, 0x40, 0x80}
 KV = re.compile(r'(\w+)=([0-9A-Fa-fx.]+)')
@@ -146,7 +147,7 @@ def main(argv):
     files = [a for a in argv if not a.startswith('--')]
     rc = 0; any_rows = False; any_ctl = False
     for f in files:
-        n, bad, c, info = score(open(f, errors='ignore').read().splitlines(), want_ctl, f)
+        n, bad, c, info = score(zopen(f, errors='ignore').read().splitlines(), want_ctl, f)
         any_rows |= n > 0
         print(f'{f} rows={n} bad={len(bad)} ctl_ok={int(c)} {info}')
         for b in bad[:10]: print('   BAD', b)

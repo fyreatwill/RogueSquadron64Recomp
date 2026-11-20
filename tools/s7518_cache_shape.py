@@ -17,6 +17,7 @@ then loads the line before an invalidate, which the runtime watch (ROGUESQ_S7518
 Exit: 0 no runtime stale_load outside the planted ctl and no unflushed task; 1 rows; 3 ctl not proven (--ctl: some arm's STALE row
 must fall in its dropped-invalidate range); 4 no rows; 5 controls fail."""
 import re, sys, collections
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 L = 16
 RX = re.compile(r'\[cache\] op=(\w+) a=([0-9A-F]+) n=([0-9A-F]+)')
 STALE = re.compile(r'\[s7518-load\] STALE pc=([0-9A-F]+) fn=\S+ a=([0-9A-F]+)')
@@ -131,7 +132,7 @@ def main():
     if want_ctl: a.remove('--ctl')
     anyrows = False; ctl_seen = False
     for f in a:
-        o, ex, ctl, ch = score(open(f, errors='replace'))
+        o, ex, ctl, ch = score(zopen(f, errors='replace'))
         n = sum(v for k, v in o.items() if k.startswith('ev_'))
         anyrows |= n > 0
         print('%s events=%d %s' % (f, n, dict(sorted(o.items()))))

@@ -7,6 +7,7 @@ usage: tools/s7399_evp_report.py <run.log>
 exit 0 = control PASS (or not armed) and 0 mismatch; 2 = control armed but its planted row missing/unflagged;
      3 = a mismatch outside the control."""
 import re, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 SRC = {-1: 'host-thread', 0: 'Timer', 1: 'Sp', 2: 'Si', 3: 'Ai', 4: 'Vi', 5: 'Pi', 6: 'Dp'}
 BOUND = {'Vi': {0x80114388: 0}, 'Si': {0x80110770: 0}, 'Sp': {0x8011A420: 0x80128C70}, 'Dp': {0x8011A408: 0},
          'Ai': {0x80149670: 0x801496A0}}
@@ -17,7 +18,7 @@ RV = re.compile(r'^\[s7399-rv\] mq=(\w+) msg=(\w+) tb=(-?\d+) n=(\d+)')
 
 def main():
     blocks, cur, ctlq, ctlline = [], None, None, None
-    for ln in open(sys.argv[1], errors='replace'):
+    for ln in zopen(sys.argv[1], errors='replace'):
         if ln.startswith('[s7399-begin]'):
             m = re.search(r'ctl_q=(\w+)', ln)
             cur = {'ev': [], 'rv': [], 'ctl': int(m.group(1), 16)}

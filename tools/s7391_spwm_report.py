@@ -6,6 +6,7 @@ frame's function from the generated file:line, and compares depth with the stack
 Exit 0 = every thread with a known size keeps >= 128 B headroom; 3 = a thread is within 128 B of (or past) its bottom;
 2 = no records (instrument did not fire: not a result)."""
 import re, sys, os, bisect
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 
 # name, stack top (osCreateThread sp arg), size in bytes (None = bottom not known statically), how known
 STATIC = [
@@ -58,7 +59,7 @@ def main():
     log = sys.argv[1]
     fdir = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), '..', '..', 'N64Recomp', 'RecompiledFuncs')
     deep, firstfn, firstrec, nrec = {}, {}, {}, 0
-    for s in open(log, errors='replace'):
+    for s in zopen(log, errors='replace'):
         m = REC.search(s)
         if not m: continue
         nrec += 1
@@ -91,7 +92,7 @@ def main():
     SC = re.compile(r"\[s7391-scan\] tid=(\d+) bottom=0x([0-9A-F]+) top=0x([0-9A-F]+) lowdirty=0x([0-9A-F]+) "
                     r"spmin=0x([0-9A-F]+) gap=(-?\d+) canary=(\d) ctlseen=(\d)")
     last, nscan, ctl_all, neg, canbad = {}, 0, True, [], []
-    for t in open(log, errors='replace'):
+    for t in zopen(log, errors='replace'):
         m = SC.search(t)
         if not m: continue
         nscan += 1; tid = int(m.group(1)); last[tid] = m

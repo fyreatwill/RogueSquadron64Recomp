@@ -9,10 +9,11 @@ first overlay load's count, last [s7520-sum] gf_stale=0, no 'Failed to find func
 --controls: OLDLOG (ROGUESQ_S7528_EVICT=0) must FAIL with stale>0 and ctl_hit=1; NEWLOG must PASS.
 """
 import re, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 
 def score(path):
     pre = post = swaps = 0; stale = []; hits = 0; probes = 0; loaded = []; gf_stale = None; failed = 0
-    for ln in open(path, errors='replace'):
+    for ln in zopen(path, errors='replace'):
         if ln.startswith('[s7528] pre '):
             pre += 1
             m = re.search(r'evicted_secs=(\d+)', ln)

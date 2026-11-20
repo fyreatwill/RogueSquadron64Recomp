@@ -7,6 +7,7 @@ exit 0 = control PASS (or not armed) and no failing non-control row; 2 = control
      3 = a guest send failed / an external message was dropped outside the control (the rows marked DROP).
 """
 import re, sys, bisect, subprocess, os
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 
 # s7392 classified drop families (tools/s7392_mesg_reviewed.tsv + PORTING-STATE s7392): with --known these do not count.
 KNOWN = {('E', '80114388'), ('E', '80149670'), ('S', '8010FEE0'), ('S', '8011A800'), ('S', '80128CF0')}
@@ -38,7 +39,7 @@ def main():
     except Exception:
         pass
     blocks, cur, ctl = [], None, None
-    for ln in open(log, errors='replace'):
+    for ln in zopen(log, errors='replace'):
         if ln.startswith('[s7392-mq-begin]'):
             if cur is not None:
                 blocks.append(cur)

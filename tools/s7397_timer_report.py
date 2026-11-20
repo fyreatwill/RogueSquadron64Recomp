@@ -4,9 +4,10 @@ _CTL line. Exit 0 = control PASS (or absent with --no-ctl) and H-none (no live r
 it); 1 = control fail; 2 = H-rearm or H-stop-late seen. Fake control structs (0x9FFE1000-0x9FFE105F) are excluded.
 Usage: tools/s7397_timer_report.py <run.log> [--no-ctl]"""
 import re, sys, collections
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen  # s7723
 log = sys.argv[1]; noctl = '--no-ctl' in sys.argv
 sets = collections.Counter(); rearm = collections.Counter(); stops = collections.Counter(); fires = {}; info = {}; ctl = None
-for ln in open(log, errors='replace'):
+for ln in zopen(log, errors='replace'):
     if ln.startswith('[s7397-tm-ctl]'):
         ctl = ln.strip()
         continue

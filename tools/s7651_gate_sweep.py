@@ -150,11 +150,39 @@ S7720_CHECK = {t: (["--check"], None) for t in (
     "s7399_evpayload_census.py", "s7558_gr_census.py", "s7374_lazy_static_census.py", "s7380_condvar_census.py",
     "s7381_spin_census.py", "s7382_thread_qos_census.py", "s7383_atomic_order_census.py", "s7384_static_state_census.py")}
 S7720_CHECK["s7557_gq_census.py"] = (["--strict"], None)
+# s7723: one-capture scorers (s7718 NEEDS-INPUT) whose capture is still retained on disk under scratch/ (gitignored, so on a
+# fresh clone the paths are absent and the tool falls back to NEEDS-ARGS like before). Read compressed via tools/rs64_zopen.py.
+# Each regex needs the tool's own control AND its clean verdict; tools/s7723_retained_controls.py mutates one control/open row
+# per input and proves every row then reads RED (PORTING-STATE s7723).
+S7723_RETAINED = {
+    "s7392_mq_report.py": (["scratch/s7392/run/run.log.zst", "--known"],
+                           r"(?=[\s\S]*CONTROL PASS \(guest=1 ext=1\))(?=[\s\S]*VERDICT H-none-on-route drops=0)"),
+    "s7393_cq_report.py": (["scratch/s7393/own/run.log.zst"], r"(?=[\s\S]*\nCONTROL PASS)(?=[\s\S]*VERDICT H-none)"),
+    "s7394_bd_report.py": (["scratch/s7394/ownfix/run.log.zst", "--fix"],
+                           r"(?=[\s\S]*FIX-ARM CONTROL PASS)(?=[\s\S]*-> PASS)(?=[\s\S]*VERDICT H-none)"),
+    "s7396_tq_report.py": (["scratch/s7396/own/run.log.zst"], r"(?=[\s\S]*control=PASS rows=\d+)(?=[\s\S]*VERDICT H-none)"),
+    "s7397_timer_report.py": (["scratch/s7397/own/run.log.zst"], r"(?=[\s\S]*=> PASS)(?=[\s\S]*VERDICT H-none)"),
+    "s7399_evp_report.py": (["scratch/s7399/own/run.log.zst"],
+                            r"(?=[\s\S]*CONTROL PASS \(delivery flagged=1)(?=[\s\S]*VERDICT H-none mismatches=0)"),
+    "s7516_pak_shape.py": (["--controls", "--ctl", "scratch/s7516_fm_levels/log_l12.txt.zst"] +
+                           ["scratch/s7516_fm_levels/log_l%d.txt.zst" % l for l in (1, 7, 10)], r"\(ctl\) rows=\d+ .* bad=0 ctl_ok=1"),
+    "s7517_vi_feat.py": (["--controls", "--ctl", "scratch/s7517_fn_levels/log_l1.txt.zst"] +
+                         ["scratch/s7517_fn_levels/log_l%d.txt.zst" % l for l in (7, 10, 12)], r"bad=0 ctl_ok=1"),
+    "s7518_cache_shape.py": (["--controls", "--ctl", "scratch/s7518_fo_levels/log_l1.txt.zst"] +
+                             ["scratch/s7518_fo_levels/log_l%d.txt.zst" % l for l in (7, 10, 12)], r"ctl_flagged=1"),
+    "s7528_evict_score.py": (["--controls", "scratch/s7528_evict/log_old.txt.zst", "scratch/s7528_evict/log_new.txt.zst"],
+                             r"(?=[\s\S]*old_must_fail=PASS)(?=[\s\S]*new_must_pass=PASS)"),
+    # UBSan arms (scratch/s7579/san_<arm>.<pid>; p2 = the planted bounds arm)
+    "s7579_bounds_report.py": (["scratch/s7579"], r"control_fired=1 real_sites=0 arms_with_logs=2"),
+}
+S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
+ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
+ARGS.update(S7723_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7723_RETAINED_CTL)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
@@ -185,6 +213,9 @@ HOLLOW_OK = {  # s7720, each read by hand in scratch/s7720/out/<tool>.out
     "s7632_dd_census.py": (r"^== .*: scan=\d+ ast=\d+ joint=\d+ gate-agree=\d+ disagree=\d+ ", "s7721: a disagreeing pair with either side ALWAYS is classified via the union (always[]), the rest are off-default in both; OPEN default-on rows is the gate"),
     "s7633_hb_census.py": (r"^== .*: scan=\d+ ast=\d+ joint=\d+ gate-agree=\d+ disagree=\d+ ", "s7721: same join as s7632; OPEN default-on rows is the gate"),
     "s7648_mk8_census.py": (r"^\[s7648\] unclassified=3$", "the 3 planted ctl sites (tmp paths); a real one exits 1"),
+    # s7723: the retained s7392 capture's nonzero rows are the planted control queue 801161F8 (guest S + ext host-thread
+    # halves = "CONTROL PASS (guest=1 ext=1)") and the --known classified families (KNWN, tools/s7392_mesg_reviewed.tsv)
+    "s7392_mq_report.py": (r"^(KNWN |[ES] mq=801161F8 (CONTROL|ext:host-thread) )", "s7723: planted control queue + KNWN families"),
 }
 
 
