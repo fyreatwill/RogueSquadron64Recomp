@@ -1682,3 +1682,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261120-002043 | s7691_standins_rehold_L10 | rc=0 | 311s | scratch/agent/soak_results/s7691_standins_rehold_L10_20261120-002043.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261120 | s7692 fold: s7691_standins_rehold L1/L10 (loop) + L4/L5/L12/L15 (in-session, host idle 8.6 h, unlocked): 6/6 alive, 0 crash, vi_stalls30s=0, max_gap 147-164 ms, level_ok=1, standins on 6/6, spawns 38/217/25/56/92/39 -> parity-fixed G6c binary clean in owner mode.
 20261120 | s7695 fold: tools/s7695_cine_audio_gate.zsh in-session (owner recipe + STANDINS=1 dd4): crawl 32 kHz qzero fix 2 vs AI_DRAIN_FIXED ctl 1037; logo left 0.092 on/off; 4/4 alive 0 crash; stand-ins 0 rebuilds in the cinematic.
+20261120-023600 | s7696_cut_L1 | rc=0 | 218s | scratch/agent/soak_results/s7696_cut_L1_20261120-023600.log | arms=1 alive=0/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1
+20261120-023938 | s7696_cut_L4 | rc=0 | 218s | scratch/agent/soak_results/s7696_cut_L4_20261120-023938.log | arms=1 alive=0/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1

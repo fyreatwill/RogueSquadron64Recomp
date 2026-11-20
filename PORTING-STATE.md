@@ -205237,3 +205237,19 @@ neither help nor harm cutscene background loss; G5h stays the terrain-window que
 playtest territory, needs a win). Single level (L5); the mechanism is the shared cinematicLoopBody entry, so other levels' intros are
 expected to match (unmeasured).
 VERDICT: selects H-absent; refutes H-drawn-ok / H-drawn-wrong for mission intro cutscenes.
+
+## Session 7697 (2026-11-20) — fold s7696 cutscene replicates (H-absent holds on L1/L4); soak verdict misread alive=/crash= keys, fixed
+- crash_reports --since 2026-11-13: new=0 (27 folded). CURRENT-TRUTH 58847 B < 60000, no maintenance.
+- Fold s7696_cut_L1 / s7696_cut_L4 (loop): tag lines `alive=1 crash=0 fb=105 cine_line=19604/19582 rebuild_line=31397/28395
+  pre_in_cine=0 flight_secs_ge50=151/154`, save-unchanged. With s7696 L5: H-absent on 3/3 levels — the runInMissionFrame stand-ins
+  hook gets 0 calls while the intro plays through cinematicLoopBody, and the in-flight positive control (>=50 calls/s) fires in the same run.
+  So G5h intro-cutscene pop-in cannot be stand-ins' fault and stand-ins cannot help it there; nothing to fix in G6c for cutscenes.
+- Defect found: the loop's SOAK-RESULTS verdict for both soaks read `alive=0/1 stall_na=1` although each arm said alive=1.
+  Cause: tools/agent/soak_verdict_fields.sh read only `alive_at_end=` / `crashlines=`; the s7678, s7695 and s7696 recipes print
+  `alive=` / `crash=`. Class audit: 8 tools emit tag= lines without alive_at_end (s7453, s7483, s7504, s7505, s7545 carry no alive key
+  at all; s7678 crash= only; s7695, s7696 alive=/crash=). Only 2 of 1678 SOAK-RESULTS lines had ever read alive=0/N — these two.
+  Fix: alive= / crash= are aliases used only when the canonical key is absent (canonical wins), and the verdict ends with
+  `alive_na=<k>` = arms carrying neither alive key, so "alive=0/k" from a keyless recipe is visibly not a death.
+  New tools/agent/test_soak_verdict_fields.sh: 16/16 incl. the two real logs; mutation control (old parser via git stash) 9/16;
+  tools/agent/test_soak_idle_gate.sh still 0 FAIL (verdict prefix format unchanged; alive_na appended after stall_na).
+- Rules out: a death in the s7696 replicate soaks (the alive=0/1 was a parser artefact).

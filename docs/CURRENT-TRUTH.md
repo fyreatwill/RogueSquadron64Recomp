@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7694 (2026-11-20).
+Compact operational handoff, as of Session 7697 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7697: H-absent replicated on L1 and L4** (soaks s7696_cut_L1/L4): pre_in_cine=0 with cineBody line present, flight_secs_ge50 151/154, alive=1 crash=0, save unchanged -> stand-ins get 0 hook calls in intro cutscenes on 3/3 levels (L1/L4/L5). The loop verdict had read these arms as alive=0/1: tools/agent/soak_verdict_fields.sh only knew alive_at_end=/crashlines=, so recipes printing alive=/crash= (s7678/s7695/s7696) were scored dead. Fixed (class DN): aliases + `alive_na=` at line end; tools/agent/test_soak_verdict_fields.sh 16/16, old parser 9/16 (mutation ctl), test_soak_idle_gate 0 FAIL.
 - **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
   + STANDINS=frame dd4). The intro plays through cinematicLoopBody (a0=5), and the runInMissionFrame hook gets 0 calls until the
   flight rebuild ([standins-pre] census: 0 lines during the cutscene, 57-62 calls/s in flight; flight dump sheet med_fpx 79, control
