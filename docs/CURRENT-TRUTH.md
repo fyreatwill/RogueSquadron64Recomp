@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7713 multi-reader clamp census + OSMEM_MB fix.** tools/s7713_multireader_census.py (controls 5/5, in the gate sweep): of 289
+  ROGUESQ_* names read at >=2 sites, 3 pair a clamping reader with a raw-threshold reader. DRAW_DISTANCE MASKED (s7712), FB_WIDTH AGREE,
+  OSMEM_MB was split: recomp.cpp maps values outside 4..16 to 8, but the dd bundle armed the 12 MB spill/ramtop layout for raw >8 (e.g.
+  20). Fixed in rs64_s7358_sanitize_env (`[s7713-osmem]`, ROGUESQ_S7713_OSMEMCAP=0 = old); runtime arms 4/4 (old arm reproduces it).
+  Owner lines use 8 or 12, so the owner path is unchanged.
 - **s7712 option-value runtime witness + DD cap fix.** One title boot per arm (scratch/s7712/run.zsh, 5 arms) confirms the s7711
   static census at runtime for every reader that prints its parse: STICK_GATE=95,80 -> card=95 diag=80 (95 alone -> defaults 85/70),
   DD_FOG_ALT=1,3,1 -> ks=1 ke=3 all=1, DRAW_DISTANCE=9+UNSAFE -> 8, =abc -> ignored. It also found a split: without DD_UNSAFE the
@@ -357,7 +362,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 30. **Owner-setting VALUE census s7711: CLEAN (H-clean, controls 5/5).** All 127 documented `ROGUESQ_X=V` pairs (docs, README,
     presets) reach a parser that reads V: no fraction under atoi, no `16:9`/list under a numeric-only parse, no "=0" lever that only
     tests the pointer, every dd>4 doc command carries DD_UNSAFE=1. `tools/s7711_optval_census.py --controls` is in the gate sweep
-    (137 gates, 132 GREEN). Static and single-source: range clamps hand-checked only for RUMBLE_SCALE, OSMEM_MB, STICK_GATE, dd.
+    (137 gates, 132 GREEN; s7713: 138, 133 GREEN). Static and single-source: range clamps hand-checked only for RUMBLE_SCALE, OSMEM_MB, STICK_GATE, dd.
+31. **Multi-reader clamp census s7713: CLEAN after the OSMEM_MB fix (H-many: one more split than s7712's DD; controls 5/5).**
+    `tools/s7713_multireader_census.py --controls` gates clamp-vs-raw-threshold splits across all multi-reader names (sanitizer
+    modelled first). Runtime witness scratch/s7713/run.zsh. Open, label-only: fixup_game_funcs_vendored.py m5 log lines say
+    arm=audio_stub when AUDIO_UCODE is unset, though the real ucode runs (default-on). Helper readers (rs64_env_int) not modelled.
 
 ## Evidence index
 

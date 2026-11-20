@@ -205620,3 +205620,43 @@ Not witnessed at runtime (no parse print): RUMBLE_SCALE, G5G_LENS, and OSMEM_MB 
 sets, so it does not discriminate). These stay single-source (static census).
 Doc: OWNER-OPT-INS said ">3 needs DD_UNSAFE"; the code cap is 4. Corrected, with a note on the new behaviour.
 Gate: s7651 sweep after the src change (result below).
+
+## Session 7713 (2026-11-20) — multi-reader clamp census: 289 names read at >=2 sites, 3 with a clamp + raw-threshold pair; found and fixed an OSMEM_MB split (selects H-many, now masked)
+
+Work unit: NEXT.md s7713 (close the s7712 defect class statically). crash_reports --since 2026-11-13: FOLDED=27 new=0; no
+CONTRACT-CARRY.md; no new soak verdicts since s7707.
+Hypotheses: H-one (DRAW_DISTANCE was the only split), H-many (more splits exist), H-masked (splits exist but the sanitizer already
+normalises them).
+Tool: tools/s7713_multireader_census.py (reuses the s7711 site finder). Per site: clamp site (if v<A v=A / if v>B v=B / cap variable
+`capX = (opt-in) ? X : Y` -> Y / range reset `if (v<A || v>B) v=D` / std::min/max/clamp) or raw site (parse result followed to the
+end of its block, <=60 lines, cut where the getenv var is reassigned; thresholds `dd >= 8.0 - 1e-3` evaluated). The sanitizer
+(rs64_s7358_sanitize_env) is modelled as a clamp applied before every reader and its own lines are not readers. SPLIT = a probe value
+that a clamp site and a raw site see on opposite sides of a raw threshold, after the sanitizer.
+Controls (same run, 5/5 PASS): drop the s7712 DD cap line -> DRAW_DISTANCE SPLIT (s6036 cap 4 vs bundle dd>=6/dd>=8); drop the new
+OSMEM line -> OSMEM_MB SPLIT; recomp.cpp vs upstream_compat OSMEM readers alone -> AGREE; planted cap2 vs raw>3 -> SPLIT, cap2 vs
+raw>1 -> AGREE.
+Result: 289 names have >=2 reader sites; 3 have a clamp site and a raw-threshold site: DRAW_DISTANCE (MASKED by s7712), FB_WIDTH
+(AGREE: the 1024 cap is in the sanitizer and in apply_s6031_far), OSMEM_MB (SPLIT before the fix).
+Finding: recomp.cpp (osMemSize) and upstream_compat rs64_s7335_guest_top treat OSMEM_MB outside 4..16 (atoi) as 8; the dd bundle
+(rs64_g1c_apply_dd_policy) tested the raw atoi > 8 and armed SPILL_HI + RAMTOP_MB=24 (the 12 MB layout's spill arena) for e.g. 20.
+ORIGIN: no writer corrupts anything. Two readers, two range rules: recomp.cpp got the 4..16 range in s6130, the s6858/s7326 bundle
+code reads the env directly. The owner's lines use 12 or 8, so the owner never hit it.
+Fix: the sanitizer rewrites OSMEM_MB outside 4..16 (atoi, the same rule as recomp.cpp) to 8 with a "[s7713-osmem]" line.
+ROGUESQ_S7713_OSMEMCAP=0 = old.
+Runtime witness (scratch/s7713/run.zsh, dd2 title boot, 40 s/arm, SIGKILL, one game at a time):
+ A OSMEM_MB=20 -> [s7713-osmem] -> 8; no spill/ramtop line; [s7335] guest top 80800000 (agree).
+ B OSMEM_MB=20 S7713_OSMEMCAP=0 (old) -> "[ddbundle] osmem=20 MB > 8 -> spill arena 0x81000000, ramtop 24 MB" while guest top is
+   80800000: the split, reproduced.
+ C OSMEM_MB=12 (positive control) -> spill line + guest top 80C00000, unchanged.
+ D OSMEM_MB=3 -> [s7713-osmem] -> 8; it agreed before too (3 is not > 8).
+-> H-many selected (one more split beyond s7712's), and with the fix every clamp/raw pair is AGREE or MASKED (H-masked holds now).
+Second line of evidence for OSMEM: the static witness (V=17/33) and the runtime arm B agree.
+Also hand-reviewed (heuristic passes, not a gate): default polarity (unset = on vs off) and truth tests ('1' vs non-'0') across the
+289 names flagged 16; all are conjunct noise (other variables in the window) or deliberate mode letters (CULL_SPIKE 't', WIDEWIN 'tog3',
+LOG_G1D_RECT '2', G1D_SPRITE_DIAG '2', DIAG_GATE '=0 opens'), except one label-only defect: tools/fixup_game_funcs_vendored.py's
+[m5-postwait-control]/[m5-caller-edge] lines print arm=audio_stub when ROGUESQ_AUDIO_UCODE is unset, but main.cpp and rsp.cpp run the
+real audio ucode when it is unset (default-on since M5). Diagnostic text only; not fixed (needs a regen to show).
+Not modelled: helper readers (rs64_env_int etc.) carry no clamp in their windows; the DD band (1, 1.001] where the bundle stays off
+but the >1.0 readers turn on is by design (different features, float tolerance), not a clamp split.
+Gate: tools/s7713_multireader_census.py --controls joins the s7651 sweep automatically (s7*_census.py); sweep result below.
+Gate: s7651 sweep after the src change: 138 gates, 133 GREEN, 5 REPORT, 0 RED (s7713_multireader_census.py included, with --controls); planted sweep controls PASS.

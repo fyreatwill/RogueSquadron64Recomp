@@ -14368,6 +14368,18 @@ static void rs64_s7358_sanitize_env() {
             setenv("ROGUESQ_DRAW_DISTANCE", "4", 1);
         }
     }
+    // s7713 (multi-reader clamp census, tools/s7713_multireader_census.py): recomp.cpp and upstream_compat's guest top treat an
+    // OSMEM_MB outside 4..16 (atoi) as 8, but the dd bundle (rs64_g1c_apply_dd_policy) tested the raw atoi > 8 and armed SPILL_HI +
+    // RAMTOP 24 for e.g. 20 or 32 while the guest got 8 MB: an unqualified hybrid of the two layouts. Normalise to the 8 the
+    // memory readers already use, so every reader agrees. ROGUESQ_S7713_OSMEMCAP=0 = old.
+    if (const char* e = std::getenv("ROGUESQ_OSMEM_MB"); e && *e) {
+        const char* oc = std::getenv("ROGUESQ_S7713_OSMEMCAP");
+        const int v = std::atoi(e);
+        if (!(oc && *oc == '0') && (v < 4 || v > 16)) {
+            std::fprintf(stderr, "[s7713-osmem] ROGUESQ_OSMEM_MB=%s is outside 4..16: using 8 for every reader (recomp.cpp does)\n", e);
+            setenv("ROGUESQ_OSMEM_MB", "8", 1);
+        }
+    }
     if (const char* e = std::getenv("ROGUESQ_FB_WIDTH"); e && *e) {
         double v = 0;
         if (!num(e, v) || v < 0.0) {
