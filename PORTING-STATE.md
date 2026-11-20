@@ -205378,4 +205378,6 @@ texture from its own GPU copy of the framebuffer, in which case the skip is harm
 DMA half: dark in runs 2/3 (dma_rd=0) because the s7094 DMA hook runs only when ROGUESQ_S7094_DMASHAPE or S7324_RCPREF is set. Fixed:
 ROGUESQ_S7702_FBREAD now arms it too. Control boot (40 s, 4:3): dma_rd=888802. All 8 DMA hit keys sit past the real image height (rows >=224 of a 320 image,
 >=340 of a 640x340 one), so they are adjacent memory, not framebuffer reads. DMA reads during the cinematic window remain unmeasured at 21:9.
-Rules out H-unread. Logs: scratch/s7702/{a219,a43}/rs64_s7702.log, scratch/s7702/dmactl_4x3_boot40s.log.
+This selects H-read and refutes H-unread for the boot cinematic window (two arms, same window and pattern). Next discriminator (NEXT.md s7703):
+presented frames through t 12.0-16.7 s at 21:9, default vs ROGUESQ_ALLOW_WILD_W=1, VI-phase-gated, with a 4:3 reference: same picture selects H-gpu
+(RT64 serves its GPU copy, skip harmless), different picture selects H-stale (allowlist 768). Logs: scratch/s7702/{a219,a43}/rs64_s7702.log, scratch/s7702/dmactl_4x3_boot40s.log.
