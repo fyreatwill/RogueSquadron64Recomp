@@ -1674,3 +1674,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261118-224338 | s7628_standins_hold_L10 | rc=0 | 311s | scratch/agent/soak_results/s7628_standins_hold_L10_20261118-224338.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261118-224849 | s7628_standins_hold_L11 | rc=0 | 311s | scratch/agent/soak_results/s7628_standins_hold_L11_20261118-224849.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261118 | s7630 fold: s7628_standins_hold_L10/L11 (loop) + L6-L9, L12-L18 (in-session, host idle 77-130 min; STANDINS=1 dd4 16:9 FPS60 300 s): 13/13 alive, 0 crash, vi_stalls30s=0, max_gap 146-162 ms, level_ok=1, standins on line 13/13, spawns 13-360. With s7629 L0-L5: 19/19 levels clean -> G6c step 4 CLOSED.
+20261119-161705 | s7675_ghost_L1 | rc=0 | 210s | scratch/agent/soak_results/s7675_ghost_L1_20261119-161705.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261119-162035 | s7675_ghost_L4 | rc=0 | 210s | scratch/agent/soak_results/s7675_ghost_L4_20261119-162035.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0

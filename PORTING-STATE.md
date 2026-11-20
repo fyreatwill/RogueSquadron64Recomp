@@ -204628,3 +204628,25 @@ Rules out: H-dead, H-miss and H-other-path for the s7674 ghost. Not covered: gat
 Discrimination: refutes H-dead and H-miss, and refutes H-other-path (walkers draw through the bucket, only late). Selects
 H-late-walker. Next discriminator: s7675_ghost_score.py GATE vs GHOST on the queued L4/L1 depth soaks (held_dmin against the
 subtype's first-call depth).
+
+## Session 7676 (2026-11-19) — G6c "ghost" walker is distance-gated (H-gate): the never-drawn AT-PT was held no closer than 62.2 units vs a walker first-call depth max of 51.1; ghost thread closed with no code change
+
+What ran: folded the loop's s7675_ghost_L4 / s7675_ghost_L1 soaks (owner recipe dd4 16:9 FPS60, STANDINS=1, HOLD=odd, 200 s;
+both rc 0, alive 1/1, vi_stalls30s=0, max_gap 148 ms). crash_reports.py --since 2026-11-13: FOLDED=27 new=0.
+Scored with tools/s7675_ghost_score.py.
+
+Result:
+- L4 first-call depth per subtype: 0x0D 38.3-48.8, 0x14 31.6-49.5 (91 calls), 0x1E 15.1-49.2, 0x28 49.3, walker 0x47 41.1-51.1
+  (4 calls, delay med/max 821/1065 frames). Never-case item 80547410 sub 0x47 (held arm): held_dmin 62.2 > 51.1 -> GATE.
+- L1: walker 0x1F first-call depth 28.3-44.9 (delay 45-1099), others 19.5-108 (0x2B/0x2E are large far-drawn objects at 88-108).
+  The only two never-cases (0x1F) are in the off arm (no stand-in, held_dmin -1 -> UNHELD, uninformative); every held-arm walker
+  drew (delays 45/202/248/541).
+- Two lines of evidence for H-gate: (1) the never-drawn walker never came inside the depth at which every walker that did draw
+  first drew; (2) walker first-call DEPTH matches the ordinary subtypes' depth band while their DELAY is 10-100x longer, so the
+  delay is the time for the player to close the distance (walkers spawn far out), not a script hold.
+- Positive control (new): `tools/s7675_ghost_score.py --selftest` builds a synthetic GHOST (held 40 < first-call 51.1) and GATE
+  (62.25) case: ghost rc=1, gate rc=0 -> PASS; the real logs give rc 0. Control subtypes' depths present (31-50 units at dd4).
+Rules out: H-hide (scripted hide of a walker in draw range) on L4/L1. The s7675 proposed fix (release holds for walkers with no real
+call) is NOT needed and was not landed: the hold is doing its job.
+Queued widening soaks: scratch/agent/soak_queue/s7676_ghost_L2.sh, s7676_ghost_L5.sh (same recipe, score rc 1 on any GHOST row).
+G6c remains closed on the owner's look; default stays off.

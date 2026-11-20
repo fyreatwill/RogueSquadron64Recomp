@@ -1,17 +1,16 @@
-# NEXT (s7676)
-HYPOTHESIS-ID: g6c-standin-ghost
+# NEXT (s7677)
+HYPOTHESIS-ID: g6c-standin-ghost-widen
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then
-SOAK-RESULTS lines for s7675_ghost_L4 / s7675_ghost_L1.
-Unit: fold the walker depth probe. s7675 showed the L4 "ghost" (item 80547410, AT-PT sub 0x47) is a live walker (slot allocated,
-hp 80) that never drew. Walkers (0x47 L4, 0x1F L1) first call the bucket 122-541 frames after spawn, or never; all other subtypes 0-13.
-Score: `python3 tools/s7675_ghost_score.py scratch/s7675_L4/log_x4.txt scratch/s7675_L1/log_x1.txt`
-- H-gate (every never-case GATE: held_dmin > the subtype's max first-call depth): walker handlers draw only inside their own
-  distance, and the stand-in correctly bridges. Close the ghost thread with no code change.
-- H-hide (any GHOST: the held stand-in came within first-call depth and the walker still never drew): the walker is held hidden by
-  script. Fix: in rs64_standins.cpp, stop the hold for a stand-in with real_call < 0 once its held depth drops below the subtype's
-  first-call depth (or simpler: walkers 0x0F/0x1F/0x47 with no real call by spawn+30 release the hold). Re-run
-  scratch/s7672/run.zsh on L4 and L1: held blinks stay 0 for walkers that do draw, and no GHOST rows remain.
-If the soaks voided again and the host is idle (HID idle > 300 s, screen unlocked), run them in-session: `zsh scratch/agent/soak_queue/s7675_ghost_L4.sh`.
-Control: the ordinary subtypes' first-call depth (33-50 units at dd4) printed by the scorer must be present.
+SOAK-RESULTS lines for s7676_ghost_L2 / s7676_ghost_L5.
+Unit: fold the widening depth probe. s7676 closed the L4/L1 ghost as H-gate (walkers draw only inside ~51 units, same depth band as
+every subtype; the never-drawn walker stayed >= 62.2 units away).
+Score: `python3 tools/s7675_ghost_score.py --selftest && python3 tools/s7675_ghost_score.py scratch/s7676_L2/log_x2.txt scratch/s7676_L5/log_x5.txt`
+- rc 0 (only GATE/UNHELD/NOREF rows): H-gate holds on 4 levels; nothing to do, ghost thread stays closed.
+- rc 1 (a GHOST row: held stand-in came within the subtype's max first-call depth and the real object never drew): H-hide for that
+  subtype. Fix in rs64_standins.cpp: release the hold for a stand-in with real_call < 0 once its held depth is below the subtype's
+  first-call depth; re-run scratch/s7672/run.zsh on that level (held blinks stay 0 for objects that do draw, no GHOST rows).
+If the soaks voided and the host is idle (HID idle > 300 s, screen unlocked), run in-session: `zsh scratch/agent/soak_queue/s7676_ghost_L2.sh`.
+If both fold clean: every ladder rung is closed or owner-gated (CURRENT-TRUTH Next steps 2-9, 20, 22) — take the M6 endurance
+item 3b (title->mission keyed hold, log every CRASH/stall) as the next datum-producing unit rather than writing BLOCKED.
 One game at a time, SIGKILL only, never touch build/saves, <=2 CPU-heavy jobs, no repeat-hold soaks.

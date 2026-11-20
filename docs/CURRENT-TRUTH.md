@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7672 (2026-11-19).
+Compact operational handoff, as of Session 7676 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,13 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7675: the L4 "ghost" stand-in is a live walker whose own handler has not drawn yet; it is not dead and not a matching miss.**
-  Item 80547410 is an AT-PT (sub 0x47, `atpt_imp`). For its whole 900-frame hold its NPC slot was allocated (slot 0x2AB, slot-table
-  npc 80219BE8 non-zero, hp 80), and no real bucket call came within 34 units of it. In the same run the matched stand-ins read
-  0.00, which is the positive control. Walkers (0x1F AT-ST on L1, 0x47 on L4) are the only subtypes whose first real call comes
-  122-541 frames after spawn, or never inside the run. Every other subtype calls within 0-13 frames. When a walker does draw, it is
-  0.3-5 units from the held stand-in (s7672/s7674b/s7675). Held arm gap=0; control arm blinks 220 frames. Single-source
-  for "gate vs scripted hide": the depth probe (s7675_ghost_L4/L1 soaks, tools/s7675_ghost_score.py) is queued.
+- **NEW s7676: the G6c "ghost" thread is CLOSED as H-gate, no code change.** Walker handlers (AT-PT 0x47 L4, AT-ST 0x1F L1)
+  draw only inside the same ~30-51-unit camera depth as every other subtype (first-call depth L4 0x47 41.1-51.1, L1 0x1F 28.3-44.9;
+  ordinary subtypes 31.6-49.5 = control); their long first-call delay (med 248-821 frames) is approach time, not a hide. The s7675
+  never-drawn item 80547410 came no closer than 62.2 units while held (> 51.1) -> GATE: the stand-in correctly bridges a
+  distance-gated draw. 0 GHOST rows on L4/L1 (s7675_ghost soaks, both alive, 0 stall). Scorer positive control
+  `tools/s7675_ghost_score.py --selftest` (synthetic GHOST rc 1, GATE rc 0) PASS. Widening soaks s7676_ghost_L2/L5 queued.
 - **s7674: held stand-ins never leave an on-screen gap.** Every frame our own view test culls a held stand-in is an off-screen
   exit (box/behind/side) or the game's cached copy of one (it view-tests each object on alternate frames, result bit 0x200 in
   state+8): far 0 and pass-then-refused 0 of 10008 (L4) / 3674 (L1) culled frames; same-run control real objects far-rejected
@@ -386,7 +385,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
     crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
-    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw (headline); next: fold soaks s7675_ghost_L4/L1 (tools/s7675_ghost_score.py: GATE = the player never came within the walker first-call depth, GHOST = it did and still no draw -> stop holding walkers with real_call<0). Scorer
+    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; fold s7676_ghost_L2/L5 (rc 1 = a GHOST row -> stop holding walkers with real_call<0 once inside first-call depth). Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):

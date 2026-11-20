@@ -7,6 +7,16 @@ the stand-in bridges a distance-gated draw) or GHOST (held_dmin <= the subtype's
 draw range and still never drew). rc 1 = any GHOST. Usage: s7675_ghost_score.py log_x4.txt [...]"""
 import re, sys, collections
 rc = 0
+if sys.argv[1:] == ["--selftest"]:  # s7676 positive control: a synthetic GHOST must give rc 1, a GATE rc 0
+    import subprocess, tempfile, os
+    base = "[s7675-fr] item 1 sub 0047 odd=1 delay=800 fr_d=51.10 spawn_d=70 held_dmin=51.10\n"
+    out = {}
+    for name, hd in (("ghost", "40.00"), ("gate", "62.25")):
+        t = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False)
+        t.write(base + "[s7675-fr] item 2 sub 0047 odd=1 delay=never fr_d=-1 spawn_d=71 held_dmin=%s\n" % hd); t.close()
+        out[name] = subprocess.run([sys.executable, __file__, t.name], capture_output=True).returncode; os.unlink(t.name)
+    ok = out == {"ghost": 1, "gate": 0}
+    print("selftest ghost rc=%d gate rc=%d -> %s" % (out["ghost"], out["gate"], "PASS" if ok else "FAIL")); sys.exit(0 if ok else 1)
 for path in sys.argv[1:]:
     fr = collections.defaultdict(list); never = []
     for l in open(path, errors="replace"):
