@@ -205449,3 +205449,4 @@ Selects H-none for this route (single-source: one run, one level; the census has
 Rules out H-flight and H-dma on L1. Combined with s7704 (even the boot read never reaches the picture), item 25 is CLOSED: no allowlist
 change. Queued soaks s7705_fbread_L4_21x9 / _16x9 (Gerrard V, the owner's mission; the 16:9 arm checks the owner's main recipe) for a
 second level; the recipe now prints the join summary line.
+Verdict: the join selects H-none and refutes H-flight / H-dma on L1 at 21:9; next discriminator = the same join on L4 (queued soaks).
