@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7717 (2026-11-20).
+Compact operational handoff, as of Session 7718 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -34,11 +34,15 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   OSMEM_MB was split: recomp.cpp maps values outside 4..16 to 8, but the dd bundle armed the 12 MB spill/ramtop layout for raw >8 (e.g.
   20). Fixed in rs64_s7358_sanitize_env (`[s7713-osmem]`, ROGUESQ_S7713_OSMEMCAP=0 = old); runtime arms 4/4 (old arm reproduces it).
   Owner lines use 8 or 12, so the owner path is unchanged.
-- **s7712 option-value runtime witness + DD cap fix.** One title boot per arm (scratch/s7712/run.zsh, 5 arms) confirms the s7711
-  static census at runtime for every reader that prints its parse: STICK_GATE=95,80 -> card=95 diag=80 (95 alone -> defaults 85/70),
-  DD_FOG_ALT=1,3,1 -> ks=1 ke=3 all=1, DRAW_DISTANCE=9+UNSAFE -> 8, =abc -> ignored. It also found a split: without DD_UNSAFE the
-  terrain multiplier caps at 4 but the dd bundle read the raw 6/8 (pools, dd>=6 cull, dd8 px8 auto). Fixed in rs64_s7358_sanitize_env
-  (`[s7712-dd]`, ROGUESQ_S7712_DDCAP=0 = old; DD_UNSAFE=0 also caps). Owner lines always carry UNSAFE, so the owner path is unchanged.
+- **s7718 gate-sweep coverage: 52 more offline gates swept; 4 closed classes had gone RED or hollow unseen (H-drift).** The sweep
+  discovered only s7*_census.py; 100 other tools with a VERDICT or a planted control were classified (scratch/s7718/classification.tsv):
+  19 GATE-LIVE + 33 GATE-CONTROL-ONLY now in tools/s7651_gate_sweep.py (S7718_LIVE / S7718_CONTROL_ONLY), 39 NEEDS-INPUT (scorers of
+  one capture), 4 COVERED (s7631/s7632 sources), 2 DEAD (s7426 B-D, s7324 refuted by s7327), 1 RUNTIME, 1 TOOL, 1 REPORT. Found:
+  s7412 CONTROL FAIL (s7580's `0X803Fu` lui literals read impure: 24,262 lui sites silently unchecked), s7413 link error + 52k
+  loads hollowed by s7484's RS64_S7484_LD observer prefix (lb 9.8k forms -> 40), s7428 two FIXED rows (a comment false positive,
+  the s7430 rotate size probe), s7430 the s7702 log unreviewed (opt-in). All four tools fixed, harvests restored (s7413 101,169 pure
+  sites = its closure count), real code 0 MISM; s7412/s7413 rows now pin harvest size. Wiring control 4/4 RED reverted -> 4/4 GREEN.
+  Sweep 195 gates: 190 GREEN 5 REPORT 0 RED. No game code changed.
 - **s7702/s7704-s7706 21:9 fb read-back: HARMLESS (CLOSED).** s7705/s7706: L1 and L4 intro cutscene + flight read no skipped buffer (join tool). The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
   flyover (t 12-16.7 s), and RT64 skips that write-back (SKIP_WILD_W). RT64 never serves those loads from its GPU copy (LOG_FBOVL 0 at 21:9).
   But write-back on vs off gives pixel-identical presented frames, and filling the skipped buffers with magenta (opt-in lib/rt64
@@ -384,6 +388,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     `tools/s7713_multireader_census.py --controls` gates clamp-vs-raw-threshold splits across all multi-reader names (sanitizer
     modelled first). Runtime witness scratch/s7713/run.zsh. Open, label-only: fixup_game_funcs_vendored.py m5 log lines say
     arm=audio_stub when AUDIO_UCODE is unset, though the real ucode runs (default-on). Helper readers (rs64_env_int) not modelled.
+
+32. **Gate-sweep coverage s7718: offline gates all swept (195).** Remaining NEEDS-INPUT gates that could gate drift with one
+    retained input: s7421_regen_drift + s7423_live_stale (need a FRESH regen replay; last one s7558, 160 sessions old) - next unit.
+    Lesson (s7412/s7413): a harvest-based gate can exit 0 while a later fixup idiom hides its sites; pin the harvest size.
 
 ## Evidence index
 

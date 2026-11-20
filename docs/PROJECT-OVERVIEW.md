@@ -15182,3 +15182,12 @@ Item-1 class sub-bullets (DG-EO, s7450-s7490), verbatim from CURRENT-TRUTH s7490
     closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). s7684/s7685: ray-shield class keyed by item at +0x30; pos fallback rejects itemless/other-sub callers for 0x12/0x13 + ray-shield ; s7686 extends the itemless reject to 0x0D/0x14/0x1E/0x1F/0x47 (ROGUESQ_S7686_POSSUB, L4 pair old 7 pos handoffs vs fix 0). s7687: 0x0C (L10) added (ROGUESQ_S7687_POSSUB); pos-fallback thread CLOSED. Sheet refreshed s7691; the owner decides.
+
+
+## Migrated from CURRENT-TRUTH (s7718): s7712 headline bullet, verbatim
+
+- **s7712 option-value runtime witness + DD cap fix.** One title boot per arm (scratch/s7712/run.zsh, 5 arms) confirms the s7711
+  static census at runtime for every reader that prints its parse: STICK_GATE=95,80 -> card=95 diag=80 (95 alone -> defaults 85/70),
+  DD_FOG_ALT=1,3,1 -> ks=1 ke=3 all=1, DRAW_DISTANCE=9+UNSAFE -> 8, =abc -> ignored. It also found a split: without DD_UNSAFE the
+  terrain multiplier caps at 4 but the dd bundle read the raw 6/8 (pools, dd>=6 cull, dd8 px8 auto). Fixed in rs64_s7358_sanitize_env
+  (`[s7712-dd]`, ROGUESQ_S7712_DDCAP=0 = old; DD_UNSAFE=0 also caps). Owner lines always carry UNSAFE, so the owner path is unchanged.

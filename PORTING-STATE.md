@@ -205822,3 +205822,54 @@ Rules out: a stale auto-default read by a static constructor (both forms) at the
 s7713 read. No src/ or lib/ change, no game behaviour change.
 Standing check: full sweep 143 gates (was 134-140 + 3 EXTRA_GATES): 138 GREEN, 5 REPORT, 0 RED (wall 934 s, --jobs 2).
 Verdict: selects H-clean, refutes H-stale (static scan with 5/5 planted controls and runtime env trace with plant control agree). Next discriminator: gate-sweep coverage (NEXT s7718): H-green vs H-drift over every unswept verdict/control tool.
+
+## Session 7718 (2026-11-20) — gate-sweep coverage: 52 more offline gates swept (195 total, 0 RED); 4 closed classes had gone RED or hollow unseen (selects H-drift)
+
+NEXT (s7717): the s7651 sweep discovers only tools/s7*_census.py (+ the s7717 EXTRA_GATES), so a closed class gated by any other
+tool name can drift unseen (s7427 did). Classify every remaining tool with a VERDICT or a planted control and sweep the gates.
+Hypotheses: H-green (every unswept gate green or merely needs input) vs H-drift (>=1 more closed class RED unseen).
+
+Census: 100 candidates (tools/*.py matching VERDICT|--control|--plant|--selftest, minus swept/infra), static facts in
+scratch/s7718/cands_static.tsv; one probe run each with its control flag, 2 jobs, 300 s cap (scratch/s7718/probe.py,
+probe1.json; g1d_floor_inputs.py excluded: it launches the game). Classification (scratch/s7718/classification.tsv):
+19 GATE-LIVE, 33 GATE-CONTROL-ONLY, 39 NEEDS-INPUT, 4 COVERED, 2 DEAD, 1 RUNTIME, 1 TOOL, 1 REPORT.
+- GATE-LIVE (verdict over the live tree/build): s7336 s7375 s7377 s7408 s7411 s7412 s7413 s7414 s7415 s7416 s7418 s7419 s7428
+  s7430 s7485 s7520_elf_vs_rom s7527 s7565 audit_service_msg_stack. Swept with control AND verdict regexes (lookaheads).
+- GATE-CONTROL-ONLY: 11 audit_* / 3 g1d_* / s7675 --selftest, s7510-s7553 scorers --controls (synthetic + mutant controls of
+  runtime-log scorers: proves the tool, not a class).
+- NEEDS-INPUT: s7421/s7423 (fresh regen replay), s7431 (timestamped runlog), s7516/s7517/s7518 (controls PASS then rc 4 = no
+  rows), s7579, s7580, report/sample-dump analyzers (s7389-s7410 reports, s7433-s7438, s7367/s7369, regress_score ...).
+- DEAD: s7426 (B-D superseded by s7714/s7716, CURRENT-TRUTH s7717; check A = s7427, swept); s7324_rcp_report (class G
+  H-cpu-only REFUTED by s7327: after the 25-bit RSP DMA fix the gfx ucode reads spill blocks by design; the frozen
+  build/rs64_s7324.log FAILs on exactly those 80,545 direct_spill dma_rd_gfx reads). COVERED: s7631/s7632 *_scan/*_ast (the two
+  sources of the swept s7631/s7632 censuses).
+
+Result: 4 closed-class gates were RED or hollow (H-drift selected):
+1. s7412_int_emission (class BV) rc 3 CONTROL FAIL: the s32_zext mutant moved 0 lui. Cause: s7580's fixup_lui_unsigned rewrote
+   every LUI to `S32(0X803Fu << 16)`; the harvester's literal-strip regex `\b0[xX][0-9A-Fa-f]+\b` does not match `0X803Fu`, so the
+   leftover identifier made all 24,262 lui sites "impure" and they were silently dropped from the check. Fix: accept [uUlL]*
+   suffixes. After: impure 24,669 -> 407 (lui 202), mutant lui mism 0 -> 6,832, CONTROL PASS, real tree VERDICT H-equal.
+2. s7413_aligned_ldst (class BW) rc 1: harness link error `_rs64_diag_fprintf` (s7432 routes every generated fprintf through it,
+   include/rsp_dpc_macros.h). Stubbed as a silent sink. Then the harvest was still hollow: 41,983 forms vs 58,654 at closure, lb
+   40 cases vs 9.8k, 52,017 impure, because s7484 wraps every watched load as `{ RS64_S7484_LD(pc, base, off, w); <load> }`.
+   RS64_S7484_LD (apply_s7484_loadwatch.py) runs only under g_rs64_s7484_on and only reports, never writes ctx/rdram: stripped as
+   a pass-through observer. After: 101,169 pure sites (= the s7413 closure count exactly), 59,050 forms, impure 1,738, 0 MISM 0
+   stray every op, CONTROL PASS, VERDICT H-equal.
+3. s7428_config_precedence (class CK) rc 1 VERDICT drift: two FIXED (fixed-path read) rows. (a) s7106_rsptri.cpp:184 is a
+   "wb" write; the scanner matched `fopen(NULL)` inside its trailing comment -> code_part() now drops // comments outside string
+   literals. (b) upstream_compat.cpp:10031 is S7430Rotate sizing our own rs64_s6892.log before rotation: not a config file, no
+   setting read from it -> REVIEWED:logsize. After: VERDICT H-env-wins, CONTROL PASS 4/4.
+4. s7430_file_growth (class CM) rc 1: `fopen("rs64_s7702.log", "w")` (s7702 fb-read census) UNREVIEWED. Read: dump_locked <-
+   tick_locked <- rs64_s7702_rdp/_dma, and both callers (dpc_bridge.cpp:6130, s7094_dma_shape.cpp:102) test rs64_s7702_on
+   (ROGUESQ_S7702_FBREAD) first; "w" truncate -> OPTIN row. After: VERDICT H-bounded, CONTROL PASS.
+ORIGIN: all four are tool-side drift, not game defects: each class's real code still verifies (0 MISM / 0 open rows); the
+writers of the drift are s7580 (lui literal), s7432 + s7484 (fprintf route, load-watch prefix), s7466 comment + s7430 rotate, s7702.
+Hardening: s7412/s7413 ARGS rows also pin their harvest size (lui skipped <=3 digits; >=90k pure sites), so a future idiom that
+hollows a harvest reads RED even at exit 0. s7651 fix: an ARGS row with an EMPTY argv was ignored (`if fixed and`), now honoured.
+
+Positive control (wiring, same session): the four fixes reverted in place -> `s7651_gate_sweep.py --only 's74(12|13|28|30)_'`
+4/4 RED (s7413 via the harvest pin at rc 0), restored -> 4/4 GREEN. Sweep's own planted/cache controls PASS.
+Full sweep (--jobs 2, 940 s cold): 195 gates, 190 GREEN, 5 REPORT, 0 RED (was 143 at s7717).
+Second line for each fix: the tool's own planted control in the same run (s7412/s7413 mutant headers, s7428 4/4 planted checks,
+s7430 planted growth) PASS after the fix.
+Rules out: H-green. Open: s7421/s7423 need a fresh regen replay (last s7558) -> NEXT s7719. No game code, no default changed.

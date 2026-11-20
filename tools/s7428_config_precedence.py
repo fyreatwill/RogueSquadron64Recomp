@@ -33,7 +33,17 @@ REVIEWED = {  # (file, function-ish marker) -> name of the check that covers it
     'static bool read_json(std::ifstream': 'helper', 'recomp::open_input_backup_file(': 'helper',
     'recomp::open_input_file_with_backup(': 'helper', 'return std::ifstream{backup_path': 'helper',
     'std::ifstream ret{filepath': 'helper',
+    # s7718: S7430Rotate (upstream_compat.cpp) opens our own default-on diagnostic log only to size it for rotation: not a
+    # config file, no setting is read from it (ROGUESQ_S7430_NO_ROTATE / _CAP tested above it)
+    'fopen("rs64_s6892.log", "r")': 'logsize',
 }
+
+def code_part(ln):  # s7718: drop a trailing // comment outside string literals (s7106_rsptri.cpp:184 "keep fopen(NULL)")
+    q = False
+    for j, ch in enumerate(ln):
+        if ch == '"' and (j == 0 or ln[j - 1] != '\\'): q = not q
+        elif not q and ln.startswith('//', j): return ln[:j]
+    return ln
 
 def files():
     for r in ROOTS:
@@ -65,7 +75,7 @@ def scan(text_by_file):
             s = ln.strip()
             if s.startswith('//') or s.startswith('*') or re.match(r'(std::)?f?printf\(|fprintf\(', s):
                 continue
-            for m in OPEN.finditer(ln):
+            for m in OPEN.finditer(code_part(ln)):
                 call, arg = m.group(1), m.group(2)
                 if call in ('read_file', 'write_file') and ('std::vector' in ln and '(' in ln and 'const' in ln):
                     continue  # definitions

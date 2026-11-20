@@ -1,22 +1,23 @@
-# NEXT (s7718)
-HYPOTHESIS-ID: gate-sweep-coverage
+# NEXT (s7719)
+HYPOTHESIS-ID: regen-replay-drift
 
-First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then
-scratch/agent/CONTRACT-CARRY.md if it exists. If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay 8/8.
+First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
+If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green.
 
-setenv-after-static-init is CLOSED (s7717: static + runtime H-clean; s7427 in the sweep via EXTRA_GATES). Do not iterate it.
+gate-sweep-coverage is CLOSED (s7718: 195 gates, 190 GREEN 5 REPORT 0 RED; scratch/s7718/classification.tsv). Do not iterate it.
 
-s7717 found a closed-class gate (s7427) that had gone RED without anyone noticing, because the s7651 sweep only discovers
-tools/s7*_census.py. Finish that coverage in ONE pass:
-1. List every tools/*.py that prints a VERDICT or has a planted control (--control/--controls/--plant/--selftest) and is not in
-   the sweep (s7717 list: scratch/s7717/unswept_gates.txt; widen it beyond s7* names: g5b_*, apply_* checkers, s6*).
-2. Classify each: GATE (offline, deterministic: add to EXTRA_GATES + ARGS with a regex for control AND verdict), NEEDS-INPUT
-   (needs a capture: keep one retained input under scratch/<sNNNN>/ the way s7658 did, or a NEEDS_INPUT row), REPORT (no
-   verdict exit: REPORT row), DEAD (superseded: say by what, e.g. s7426 B-D by s7714/s7716).
-   Known: s7421_regen_drift, s7423_live_stale, s7628_standins_sheet (positional input), s7431_stderr_volume (--control <v>),
-   s7336_host_arena_table (no verdict exit).
-3. Any newly swept gate that comes up RED is a real finding: review it like s7717 did the s7713 OSMEM row (benign -> reviewed
-   accept row with the mechanism; real -> fix + two-arm witness).
-Hypotheses: H-green (every unswept gate is green or merely needs input), H-drift (>=1 more closed class went RED unseen).
-Positive control: the sweep's wiring control as in s7717 (remove one reviewed row -> RED, restore -> GREEN) for each new gate.
-Standing check: `python3 tools/s7651_gate_sweep.py --jobs 2` (iron rule 0: never more than --jobs 2). Owner defaults: never flip.
+The two offline drift gates the sweep still cannot run are s7421_regen_drift and s7423_live_stale: both need a FRESH regen
+replay tree. The last replay is s7558 (scratch/s7558/{replay,verify}); since then s7580 (lui rewrite), s7484 (load watch), s7487,
+G6b/G6c and ~140 sessions of fixups landed. Question: does a pristine regen + RS64_REPLAY still reproduce the live
+RecompiledFuncs (every live-only statement mirrored by a fixup/apply script)?
+1. Replay per docs/REGEN-VERIFY.md (tools/regen_replay.sh -> tools/regen_verify.sh) into scratch/s7719/{replay,verify}.
+   Never touch ../N64Recomp/RecompiledFuncs (live) or build/. CPU: one job (iron rule 0).
+2. `python3 tools/s7421_regen_drift.py ../N64Recomp/RecompiledFuncs scratch/s7719/replay scratch/s7719/verify/compare.json
+   --baseline scratch/s7558/verify/compare.json --control` and `python3 tools/s7423_live_stale.py ../N64Recomp/RecompiledFuncs
+   scratch/s7719/replay --control`.
+Hypotheses: H-mirrored (0 open LOST/REORDER, 0 open BEHAVIOUR: every live hand-edit dies-and-returns at regen), H-lost (>=1
+live-only non-diag statement: a fix that would vanish at the next regen -> move it into a fixup script + re-replay),
+H-layout (only SLOTPERM/CODEGEN rows, as s7559).
+Positive controls: both tools' --control (planted LOST / planted guest store) must PASS in the same run.
+Then: if the replay tree is kept (zstd tar, as s7658 did for inputs), add both to the sweep ARGS so the next drift reads RED.
+Standing check: `python3 tools/s7651_gate_sweep.py --jobs 2`. Owner defaults: never flip.

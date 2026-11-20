@@ -71,8 +71,70 @@ ARGS = {
     "s7424_stale_objects.py": (["--control"], r"CONTROL PASS[\s\S]*VERDICT H-fresh"),       # stale build objects
     "s7425_build_options.py": (["--control"], r"PASS[\s\S]*VERDICT H-intended"),           # CMake option cache drift
 }
+# s7718: the rest of the offline gates outside the s7*_census.py name pattern (scratch/s7718/classification.tsv lists all
+# 100 candidates). LIVE = verdict over the live tree / build (control AND verdict regexes, lookahead so print order is free;
+# s7412/s7413 also pin their harvest size, since both had silently lost coverage to later fixup idioms while still exiting 0).
+# CONTROL-ONLY = scorers of runtime logs run on their synthetic/mutant controls: proves the tool, not a class (no log input).
+S7718_LIVE = {
+    's7336_host_arena_table.py': (['--control'], '(?=[\\s\\S]*control .* PASS)'),
+    's7375_nolock_threads.py': ([], '(?=[\\s\\S]*\\nOPEN 0\\b)'),
+    's7377_present_lock_table.py': ([], '(?=[\\s\\S]*line\\tstate\\torigin)'),
+    's7408_cvt_contract.py': ([], '(?=[\\s\\S]*VERDICT in-range EQ.*control PASS)'),
+    's7411_unaligned_contract.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-equal)'),
+    's7412_int_emission.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-equal)(?=[\\s\\S]*skipped lui x\\d{1,3}\\b)'),
+    's7413_aligned_ldst.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-equal)(?=[\\s\\S]*harvest: (?:9\\d|1\\d\\d)\\d{3} pure sites)'),
+    's7414_fp_compare.py': ([], '(?=[\\s\\S]*VERDICT H-equal CONTROL PASS REACH CLEAN)'),
+    's7415_fp_arith.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-equal)'),
+    's7416_ctrl_flow.py': ([], '(?=[\\s\\S]*CONTROL structural=PASS mutants=PASS)'),
+    's7418_opcode_residue.py': ([], '(?=[\\s\\S]*VERDICT H-equal.*CONTROL PASS)'),
+    's7419_dis_agree.py': (['--controls'], '(?=[\\s\\S]*CONTROL plain objdump[^\\n]*PASS)(?=[\\s\\S]*VERDICT H-clean)'),
+    's7428_config_precedence.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-env-wins)'),
+    's7430_file_growth.py': (['--control'], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-bounded)'),
+    's7485_overread_bound.py': ([], '(?=[\\s\\S]*VERDICT EJ-bounded)'),
+    's7520_elf_vs_rom.py': (['--controls'], '(?=[\\s\\S]*ctl \\S+: PASS)(?=[\\s\\S]*diffs=0)'),
+    's7527_host_replace_audit.py': (['--controls'], '(?=[\\s\\S]*no REVIEW rows\\s+PASS)'),
+    's7565_comp_chain.py': (['--controls'], '(?=[\\s\\S]*controls 8/8)'),
+    'audit_service_msg_stack.py': ([], '(?=[\\s\\S]*unaudited stack-payload sends: 0)'),
+}
+S7718_CONTROL_ONLY = {
+    'audit_delay_slot_branch_in_slot.py': (['--selftest'], 'selftest ok'),
+    'audit_dma_event_wrappers.py': (['--selftest'], 'rows: 4 expected: 4'),
+    'audit_host_wrappers.py': (['--selftest'], 'rows: 3 expected: 3'),
+    'audit_lwl_lwr_split.py': (['--selftest'], 'selftest ok'),
+    'audit_mmio_lui.py': (['--selftest'], 'selftest ok'),
+    'audit_narrow_base.py': (['--selftest'], 'positive control hits: 2 negative: 0'),
+    'audit_overlay_alias_calls.py': (['--selftest'], 'selftest ok'),
+    'audit_thread_queue_wrappers.py': (['--selftest'], 'rows: 4 expected: 4'),
+    'audit_time_interrupt_wrappers.py': (['--selftest'], 'rows: 4 expected: 4'),
+    'audit_timer_virtual_cache_wrappers.py': (['--selftest'], 'rows: 4 expected: 4'),
+    'audit_uint32_s32_base.py': (['--selftest'], 'positive control hits: 1 negative: 0'),
+    'g1d_floor_attachment.py': (['--selftest'], 'selftest ok'),
+    'g1d_floor_depth.py': (['--selftest'], 'selftest ok'),
+    'g1d_floor_mesh.py': (['--selftest'], 'selftest ok'),
+    's7675_ghost_score.py': (['--selftest'], '-> PASS'),
+    's7510_pi_dma_shape.py': (['--controls'], 'controls PASS'),
+    's7511_ai_dma_shape.py': (['--controls'], 'controls PASS'),
+    's7512_vi_shape.py': (['--controls'], 'controls PASS'),
+    's7514_time_shape.py': (['--controls'], 'PASS'),
+    's7515_eep_shape.py': (['--controls'], 'PASS'),
+    's7519_store_side.py': (['--controls'], 'PASS'),
+    's7520_code_bytes.py': (['--controls'], 'PASS'),
+    's7521_ucode_bytes.py': (['--controls'], 'PASS'),
+    's7522_imem_residency.py': (['--controls'], 'PASS'),
+    's7532_undo_score.py': (['--controls'], 'controls: 4/4 PASS'),
+    's7533_fz_score.py': (['--controls'], 'controls: 5/5 PASS'),
+    's7535_ga_score.py': (['--controls'], 'controls: 6/6 PASS'),
+    's7536_splate_score.py': (['--controls'], 'PASS'),
+    's7539_gb_score.py': (['--controls'], 'controls 8/8'),
+    's7541_gb_score.py': (['--controls'], 'controls 9/9'),
+    's7551_gk_score.py': (['--controls'], 'controls 4/4'),
+    's7552_gl_score.py': (['--controls'], 'controls 5/5'),
+    's7553_gm_score.py': (['--controls'], 'controls 5/5'),
+}
+ARGS.update(S7718_LIVE)
+ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py")
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY)
 TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
 CACHE, CACHE_LOCK, STATS = {}, threading.Lock(), {"hit": 0, "miss": 0, "uncacheable": 0}
@@ -228,7 +290,7 @@ def run_uncached(path):
                                                                      "complete": True, "spawn_ok": True}
     a = ["--controls"] if "--controls" in src else []
     fixed, must = ARGS.get(os.path.basename(path), (None, None))
-    if fixed and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if not x.startswith("-")):
+    if fixed is not None and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if not x.startswith("-")):
         a = list(fixed)
     else:
         must = None

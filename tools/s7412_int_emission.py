@@ -79,7 +79,8 @@ def harvest():
                 if l.startswith('g_rs64_last_guest_pc') or not l: continue
                 if first is None: first = l
                 if l.startswith('//') or l.startswith('/*'): continue   # lowering commented out by a fixup patch
-                ids = set(re.findall(r'[A-Za-z_]\w*', re.sub(r'\b0[xX][0-9A-Fa-f]+\b|\b\d+\b', ' ', l)))
+                # s7718: literal suffixes (s7580 lui rewrite S32(0X803Fu << 16)) count as literals, else all 24k lui sites read impure
+                ids = set(re.findall(r'[A-Za-z_]\w*', re.sub(r'\b0[xX][0-9A-Fa-f]+[uUlL]*\b|\b\d+[uUlL]*\b', ' ', l)))
                 ids -= {'r%d' % k for k in range(32)}
                 if not (ids - OK_ID) and '{' not in l and 'goto' not in l and '=' in l or l.startswith(('DDIV', 'DMULT')):
                     stmt = l; break        # diagnostic prefixes (bcmp observers, traces) are skipped, the lowering follows

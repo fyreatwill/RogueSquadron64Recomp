@@ -68,6 +68,9 @@ def harvest():
                     continue     # pass-through prefixes (PC stamp; FR check, class BS s7409)
                 if MAC[op] not in l: break   # anything else before the lowering = guarded/gated site
                 code = re.sub(r'/\*.*?\*/', '', l).strip()
+                # s7718: s7484 load watch `{ RS64_S7484_LD(pc, base, off, w); <load> }` (apply_s7484_loadwatch.py) is a pass-through
+                # observer (runs only under g_rs64_s7484_on, reports, never writes ctx/rdram): strip it, else 52k loads read impure
+                code = re.sub(r'RS64_S7484_LD\(0x[0-9A-Fa-f]+u, ctx->r\d+, -?0[xX][0-9A-Fa-f]+, \d\);\s*', '', code)
                 ids = set(re.findall(r'[A-Za-z_]\w*', re.sub(r'\b0[xX][0-9A-Fa-f]+u?\b|\b\d+u?\b', ' ', code)))
                 ids -= {'r%d' % k for k in range(32)} | {'f%d' % k for k in range(32)}
                 if not (ids - OK_ID) and 'if' not in ids and code.startswith(('ctx->', 'MEM_', 'SD(', '{')) and code.endswith((';', '}')):
@@ -102,6 +105,9 @@ C_HEAD = r'''
 #define RS64_S5798_ST(pc, off, base, w) ((void)0)
 static void rs64_s4307_synth_read(uint8_t* r, uint32_t pc, uint32_t a, uint32_t v) { (void)r; (void)pc; (void)a; (void)v; }
 uint32_t rs64_ram_top = 0x80800000u;
+/* s7718: s7432 routes every generated fprintf through rs64_diag_fprintf (include/rsp_dpc_macros.h); the harness links no
+   main.cpp, so stub it (a silent sink: no harvested statement's value depends on a print) */
+int rs64_diag_fprintf(FILE* f, const char* fmt, ...) { (void)f; (void)fmt; return 0; }
 typedef void (*tfn)(recomp_context*, uint8_t*);
 typedef struct { tfn f; int op, rt, base, off, fodd; } T;
 '''
