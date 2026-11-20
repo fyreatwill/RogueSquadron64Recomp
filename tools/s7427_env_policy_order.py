@@ -42,6 +42,9 @@ ACCEPT_OW = {
 # Reviewed pre-policy / step reads: (function, var) -> why the early value is the intended one.
 ACCEPT_READ = {
     ('rs64_s7358_sanitize_env', 'ROGUESQ_FB_WIDTH'): 'the sanitiser must see the USER value; aspect then defaults it only if unset (overwrite=0)',
+    # s7717: added by s7713 ([s7713-osmem]); the sanitiser clamps only a USER-set value (e && *e) to 8; the later aspect / dd steps
+    # default OSMEM_MB to the in-range 12 with overwrite=0, i.e. only when the user left it unset, so no step undoes the other.
+    ('rs64_s7358_sanitize_env', 'ROGUESQ_OSMEM_MB'): 'the sanitiser must see the USER value; aspect/dd then default 12 only if unset (overwrite=0)',
 }
 # Pre-policy readers whose value main() re-arms after the policy: reader fn -> call that must follow the last policy step in main().
 REARM = {
@@ -174,6 +177,20 @@ def filescope_roots(fs, fnend, ctor_names=frozenset()):
     for f, (t, s, marks) in fs.items():
         for m in re.finditer(r'__attribute__\s*\(\(\s*constructor[^)]*\)\)\s*(?:static\s+)?(?:void|int)\s+(\w+)', t):
             roots.append((f'ctor {os.path.basename(f)}', {m.group(1)}))
+        # s7717: `struct T { T() {...} } name;` (definition + declarator) runs T's constructor before main() too; the statement
+        # split below sees only `} name` there, so match the class head, its closing brace and a trailing declarator here.
+        for m in re.finditer(r'\b(?:struct|class)\s+([A-Za-z_]\w*)\s*(?::[^{;()]*)?\{', s):
+            if m.group(1) not in ctor_names or E.depth_at(marks, m.start()) != 0: continue
+            d = 0; j = m.end() - 1
+            for j in range(m.end() - 1, len(s)):
+                if s[j] == '{': d += 1
+                elif s[j] == '}':
+                    d -= 1
+                    if d == 0: break
+            dm = re.match(r'\s*([A-Za-z_]\w*)\s*(?:\{\s*\})?\s*;', s[j + 1:j + 200])
+            if dm:
+                roots.append((f'global {os.path.basename(f)}:{t.count(chr(10), 0, m.start()) + 1} {m.group(1)} {dm.group(1)}',
+                              {m.group(1)}, f))
         # depth-0 statements: split on ';' where depth==0
         ends = sorted(fnend.get(f, []))
         bounds = sorted([m.end() for m in re.finditer(r';', s) if E.depth_at(marks, m.start()) == 0] + ends)
@@ -318,10 +335,15 @@ def control(files):
                     '    setenv("ROGUESQ_UCODE_CAP", "1", 1);\n', 1)
     t2 = t2.replace('static void rs64_s7358_sanitize_env() {\n', 'static void rs64_s7358_sanitize_env() {\n'
                     '    (void)std::getenv("ROGUESQ_VPW_SCALE");\n', 1)
+    # s7717: drop the dd policy's re-arm of the S7239Init / S7246Init file-scope latches: both must read as un-re-armed again
+    rc_ = re.compile(r'(?<!void )\brs64_s7258_merge_reinit\(\);')   # the call, not the extern declaration
+    assert len(rc_.findall(t2)) == 1, 'rearm call site moved: update the s7717 control'
+    t2 = rc_.sub('/* s7717 control: re-arm dropped */', t2, count=1)
     flags, _, _, _, _ = audit(files, extra_main=t2)
     got = {(k, ('OSMEM' in m) or ('VPW_SCALE' in m) or ('UCODE_CAP' in m)) for k, _, m in flags}
-    need = [('PRE-LATCH', 'ROGUESQ_OSMEM_MB'), ('STEP', 'ROGUESQ_VPW_SCALE'), ('OW', 'ROGUESQ_UCODE_CAP')]
-    hit = [(k, v) for k, v in need if any(fk == k and v in m for fk, _, m in flags)]
+    need = [('PRE-LATCH', 'ROGUESQ_OSMEM_MB'), ('STEP', 'ROGUESQ_VPW_SCALE'), ('OW', 'ROGUESQ_UCODE_CAP'),
+            ('PRE-', 'ROGUESQ_DD_WIDEWIN_MERGE '), ('PRE-', 'ROGUESQ_DD_WIDEWIN_MERGE_E ')]   # s7717: both dropped re-arms
+    hit = [(k, v.strip()) for k, v in need if any(fk.startswith(k) and v in m for fk, _, m in flags)]
     ok = len(hit) == len(need)
     print(f'[s7427] CONTROL {"PASS" if ok else "FAIL"}: planted pre-policy static latch / step order inversion / unguarded '
           f'overwrite -> {hit}')

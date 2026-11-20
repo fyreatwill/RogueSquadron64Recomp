@@ -205774,3 +205774,50 @@ label changed; docs only).
 Rules out: H-more for labels (no other flipped default carries a stale getenv label anywhere in src/lib/tools, incl. print
 args). The idiom class "flipped default, stale label" is CLOSED; the gate keeps it closed. Selects H-two (AUDIO_UCODE, C88).
 No src/ or lib/ change this session, so no full gate sweep needed (--only s7716: GREEN).
+
+## Session 7717 (2026-11-20) — setenv-after-static-init idiom CLOSED (H-clean, two lines); s7427 env-order gate had drifted RED unseen (not swept), scan gap for `struct T {T(){..}} x;` globals fixed, s7427/s7424/s7425 now in the gate sweep
+
+Work unit (NEXT s7717, HYPOTHESIS-ID setenv-after-static-init): does any reader latch a ROGUESQ_* var in a namespace-scope
+initializer before main()'s ~38 auto-default setenv calls, without re-reading it later (EAGER-STALE)? H-clean vs H-stale.
+Crash reports: 27 folded, 0 new. No owner report, no CONTRACT-CARRY.
+
+Boring thing first: this idiom is class CI check A (s7426) + class CJ PRE (s7427). Neither tool is named `*_census.py`, so the
+s7651 gate sweep never ran them after s7427. Re-run now:
+- s7427_env_policy_order.py: RED (H-race, 1 finding): STEP, rs64_s7358_sanitize_env reads OSMEM_MB and later steps set it. This
+  came in with s7713 ([s7713-osmem]). Reviewed: BENIGN. The sanitiser clamps only a user-set value (`e && *e`) to 8, and
+  aspect/dd default the in-range 12 with overwrite=0, i.e. only when the user left it unset, so neither step undoes the other
+  (same shape as the existing FB_WIDTH ACCEPT_READ row). ACCEPT_READ row added.
+- s7426_env_defaults.py: RED (7 drift, 10 unres), all false positives in checks B-D, which s7714 (truth census) and s7716 (label
+  census) now cover polarity-free: G1E_TRIM "SPLIT" = logging gates that are on iff TRIM=0 (inverse by design); DIAG_QUIET and
+  CONTROLS_DUMP "never read" = read through rs64_env_int / rs64_bind_flag helpers s7426 does not know. Check A (ORDER) printed no
+  rows. Left unswept and SUPERSEDED (A by s7427, B-D by s7714/s7716). Not fixed.
+
+Positive control asked for by NEXT (drop rs64_s7258_merge_reinit() -> S7239Init must read stale): FAILED at first, for two reasons.
+(1) My plant replaced the extern declaration (`void rs64_s7258_merge_reinit();`) instead of the call; fixed with a
+`(?<!void )` regex and an assert of exactly one call. (2) A real scan gap: filescope_roots saw `T x;` and `x = f()` globals but
+not `struct T { T() {...} } x;` (definition + declarator), because the `;` split leaves only `} x`. S7246Init (reads
+DD_WIDEWIN_MERGE_E / _C) is that form, so it was never a root: its re-arm was not checked statically (only the runtime trace
+covered it). Added a class-head -> matching brace -> declarator match: init_roots 311 -> 316. The 5 new roots: rs64_selfbranch
+Init (SELFBRANCH_FIX), S7246Init (MERGE_E/_C), S7318Init (S7317_ALLOCMAP, S7318_BCMP*), S7430Rotate (S7430_*), s7523 Init
+(S7523_SLOWRDP). Only MERGE_E is a policy var, and it is re-armed. pre_rearmed 2 -> 3. The control now plants 5 defects (old 3 + both
+dropped re-arms) -> CONTROL PASS 5/5. I also scanned for `T x(args);` / `T x{args};` / thread_local globals of ctor-bearing classes: only class
+members/locals and one thread_local (lazy per thread), so there are no other eager forms.
+
+Result, static: 9,828 host functions, 316 file-scope roots, 1,035 functions reached before the policy, 36 policy vars:
+0 findings, VERDICT H-ordered. Every pre-policy reader of a policy var is re-armed (g5b_tg_fix_init, S7239Init, S7246Init)
+or reviewed (g_rs64_s7030 set by the dd policy itself; s6975_gfx_qos reads QOS_ALL itself).
+Result, runtime (scratch/s7717/run.zsh: 2 title boots, dd4+UNSAFE FPS60 16:9 QOS_ALL, 14 s, SIGKILL, ENVTRACE=1):
+plant arm pre=142 / in=32 rows, TRACE CONTROL PASS (planted OSMEM latch seen); noplant arm pre=141 (plant absent). Pre-policy
+reads of policy vars are exactly the 5 known ones (DD_OFFMAPCULL, DD_WIDEWIN_MERGE, _MERGE_E, DRAW_DISTANCE, GFX_QOS), all
+TRACE_ACCEPTed with a mechanism. Same set as s7427. Static and runtime agree -> H-clean: no auto-default misses an eager reader.
+The idiom class is CLOSED.
+
+Engineering: tools/s7651_gate_sweep.py gains EXTRA_GATES (closed-class gates not named *_census.py, each with an ARGS row whose
+regex needs both the planted controls and the verdict): s7427_env_policy_order.py (--control, CONTROL PASS ... H-ordered),
+s7424_stale_objects.py (--control, H-fresh), s7425_build_options.py (--control, H-intended). Sweep wiring control: with the
+new ACCEPT_READ row removed the sweep reads s7427 RED (the STEP row); restored, GREEN. Other unswept tools with --control:
+s7421_regen_drift / s7423_live_stale / s7628_standins_sheet need positional input (IndexError bare), s7431 needs --control
+<value>, s7336 has no verdict exit. Left for the next unit.
+Rules out: a stale auto-default read by a static constructor (both forms) at the owner recipe; s7427 drift beyond the reviewed
+s7713 read. No src/ or lib/ change, no game behaviour change.
+Standing check: full sweep 143 gates (was 134-140 + 3 EXTRA_GATES): 138 GREEN, 5 REPORT, 0 RED (wall 934 s, --jobs 2).

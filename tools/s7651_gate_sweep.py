@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""s7651 gate sweep: run every closed-class census (tools/s7*_census.py) in one pass and say which have gone RED.
+"""s7651 gate sweep: run every closed-class census (tools/s7*_census.py + EXTRA_GATES) in one pass and say which have gone RED.
 
 s7651 found 4 "closed" rerun-after-change gates (s7375, s7430, s7533, s7535) exiting nonzero after later sessions added code
 in their scope (G6b controls, G6c stand-ins, s7535-s7647 instruments): nothing re-ran them, so CURRENT-TRUTH still called
@@ -65,7 +65,14 @@ ARGS = {
     "s7316_data_bound_census.py": (["--ram", "scratch/s7316/ram/rdram_0002000_fb80A62B80_1M5.bin.zst",
                                     "scratch/s7316/ram/rdram_0008000_fb8098AA00_1M5.bin.zst"], r"unclassified=0 .*ram_dumps=2"),
     "s7573_guard_census.py": (["--gate", "--retained", "scratch/s7573/retained"], r"GATE PASS"),
+    # s7717: closed-class gates whose names lack the _census suffix, so discovery never ran them (s7427 had drifted RED unseen).
+    # Planted controls first, then the class verdict; both must print.
+    "s7427_env_policy_order.py": (["--control"], r"CONTROL PASS[\s\S]*VERDICT H-ordered"),   # env-policy order (class CJ)
+    "s7424_stale_objects.py": (["--control"], r"CONTROL PASS[\s\S]*VERDICT H-fresh"),       # stale build objects
+    "s7425_build_options.py": (["--control"], r"PASS[\s\S]*VERDICT H-intended"),           # CMake option cache drift
 }
+# s7717: swept although not named s7*_census.py (each needs an ARGS row above).
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py")
 TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
 CACHE, CACHE_LOCK, STATS = {}, threading.Lock(), {"hit": 0, "miss": 0, "uncacheable": 0}
@@ -351,7 +358,7 @@ def main():
     for k in ("hit", "miss", "uncacheable"):
         STATS[k] = 0
     tools = sorted(os.path.join(ROOT, "tools", f) for f in os.listdir(os.path.join(ROOT, "tools"))
-                   if re.match(r"s7\d+_.*_census\.py$", f) and (not only or only.search(f)))
+                   if (re.match(r"s7\d+_.*_census\.py$", f) or f in EXTRA_GATES) and (not only or only.search(f)))
     with cf.ThreadPoolExecutor(jobs) as ex:
         rows = sorted(ex.map(run, tools))
     from collections import Counter

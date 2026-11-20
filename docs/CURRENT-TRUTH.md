@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7716 (2026-11-20).
+Compact operational handoff, as of Session 7717 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7717 setenv-after-static-init idiom CLOSED (H-clean, static + runtime).** Every reader that latches a ROGUESQ_* var in a
+  file-scope initializer before main()'s auto-default setenvs is re-armed after the policy or reviewed. s7427_env_policy_order.py
+  had drifted RED unseen (not named *_census.py; the s7713 OSMEM sanitiser read, reviewed benign). Its scan missed
+  `struct T {T(){..}} x;` globals (S7246Init); fixed, 316 roots, control 5/5 incl. dropped re-arms. Runtime trace (scratch/s7717/run.zsh)
+  = the same 5 handled pre-policy reads, plant control PASS. The sweep now also runs EXTRA_GATES s7427/s7424/s7425. s7426 checks B-D are
+  SUPERSEDED by s7714/s7716 (its RED rows are helper/polarity false positives). Sweep 143: 138 GREEN 5 REPORT 0 RED.
 - **s7716 default-on label census (gate): idiom "flipped default, stale label" CLOSED.** tools/s7716_default_label_census.py
   (controls 5/5, in the gate sweep) models every reader of 198 default-on names incl. getenvs inside printf args, polarity-free:
   0 LABEL-WRONG, 5 reviewed splits, 40 hand-read deferred/unmodelled. Its debug-doc check fixed 2 rows of
