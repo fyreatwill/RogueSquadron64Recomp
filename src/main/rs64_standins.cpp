@@ -359,8 +359,13 @@ static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t on
             // 10/14 pos over 31 logs). So for these two item-keyed subs an itemless caller is not the craft.
             // s7685 run2: the same holds for the s7684 ray-shield class (keyed at +0x30): two 0x36 pillars were handed off to itemless
             // callers (state words like E7FAFFF8 / 0.0) at d 1.15-1.99 in one arm.
+            // s7686 L1/L4/L5: subs 0x0D/0x14/0x1E/0x1F/0x47 show the same picture: 165/165 position callers itemless with c30 == c34 a
+            // small float (0.5f / 0.25f / 0.125f), 0.9-1.9 distinct caller states per line (fresh objects, not one real object), while
+            // their real objects match by item (0x14 125 item vs 5 pos handoffs). ROGUESQ_S7686_POSSUB=0 restores s7685 for these subs.
+            static const bool s_possub2 = [] { const char* e = std::getenv("ROGUESQ_S7686_POSSUB"); return !(e && *e == '0'); }();
             bool flyer = false;
-            switch (s.sub) { case 0x12: case 0x13: flyer = true; break; case 0x33: case 0x36: case 0x44: case 0x4B: case 0x4F: flyer = s_rskey; break; default: break; }
+            switch (s.sub) { case 0x12: case 0x13: flyer = true; break; case 0x33: case 0x36: case 0x44: case 0x4B: case 0x4F: flyer = s_rskey; break;
+                             case 0x0D: case 0x14: case 0x1E: case 0x1F: case 0x47: flyer = s_possub2; break; default: break; }
             const bool reject = s_possub && ((csub >= 0 && csub != (int)s.sub) || (csub < 0 && flyer));
             if (s_bk_log) {
                 static std::set<uint64_t> s_pseen;  // one line per (caller state, stand-in item) pair

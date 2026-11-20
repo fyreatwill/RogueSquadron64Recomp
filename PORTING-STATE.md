@@ -204941,3 +204941,29 @@ Discrimination: this selects H-neighbour (29/30 position callers of 0x12/0x13 st
 frames; the crafts themselves match by item) and refutes H-self (0 same-sub callers). The fix (ROGUESQ_S7685_POSSUB reject rule) is a code
 change, not only instrumentation: L12 run3 fix 0 pos handoffs vs old 5. Next discriminator: caller_sub / itemless share of [s7685-pos]
 lines for subs 0x0C/0x0D/0x14/0x1E/0x1F/0x46/0x47 on L1/L4/L5 (NEXT.md): itemless -> H-neighbour, extend the reject set; same-sub -> H-self, keep.
+
+## Session 7686 (2026-11-19) — G6c itemless position callers rejected for subs 0x0D/0x14/0x1E/0x1F/0x47 (H-neighbour); L4 pair old 7 pos handoffs vs fix 0
+
+crash_reports.py --since 2026-11-13: 27 folded, 0 new. Host idle 5.5 h.
+
+**Classification runs** (s7685 binary, no code change): L1, L4, L5 dd4 16:9 FPS60 STANDINS=1 STANDINS_LOG=1 HOLD=200 via
+tools/g1e_owner_quiet_arms.zsh (scratch/s7686/L{1,4,5}); all alive, 0 crash, vi_stalls30s=0, level_ok=1. New tool
+tools/s7686_pos_tally.py (per stand-in sub: [s7685-pos] verdicts, distinct caller states, caller_sub, c30/c34 words, distance; plus
+[s7672-ho] match kinds). Instrument control: on s7685/run3/log_fix it reproduces s7685's 0x12 15 / 0x13 12 REJECT; in these runs the
+other-sub reject fired (0x14 L1 caller 0x3D, 0x4B L1 5x caller 0x3D), so the classifier sees item-carrying callers when present.
+- 0x0D: L1 29, L4 92 pos lines, all itemless, c30=c34=0x3F000000 (0.5f), 23/57 distinct caller states. Handoffs L1 2 pos 0 item; L4 7 pos 4 item.
+- 0x14: L4 23 itemless (0.5f), 20 states; handoffs 114 item vs 5 pos. L1: 1 other-sub (0x3D) REJECT.
+- 0x1F: L1 8 itemless (0x3E000000 0.125f), 8 states; handoffs 6 item vs 1 pos.
+- 0x1E: L4 1 itemless (0.25f). 0x47: L5 3 itemless (0.5f), handoffs 4 item 0 pos.
+- 0x0C/0x24/0x2E/0x46: no pos lines on any of the three levels.
+Reading: identical to the s7685 TIE picture -> H-neighbour (callers are short-lived spawned objects carrying a small float in both
+words, not the real object); H-self refuted for these 5 subs (their real objects carry items and match by item).
+
+**Change**: src/main/rs64_standins.cpp adds 0x0D/0x14/0x1E/0x1F/0x47 to the itemless-reject set, gated by ROGUESQ_S7686_POSSUB
+(default on inside STANDINS; =0 = s7685 behaviour). Same-binary L4 pair (scratch/s7686/L4pair, sequential arms):
+old: 92 pos lines unknown, pos handoffs 0x0D 4 / 0x14 2 / 0x1E 1 = 7; item handoffs 0x0D 2, 0x14 75, 0x1E 2.
+fix: 82 pos lines REJECT, 0 pos handoffs; item handoffs 0x0D 7, 0x14 91, 0x1E 5, 0x47 4.
+Both alive, crashlines 0, vi_stalls30s 0 (max_gap 148/164 ms). Caveat: arms are sequential runs, flight diverges, so handoff counts are
+indicative; the discriminator is pos handoffs 7 -> 0 with the item path taking over (0x0D stand-ins handed to a projectile under old
+never got their real object).
+Rules out: H-self for 0x0D/0x14/0x1E/0x1F/0x47. Open: 0x0C/0x24/0x2E/0x46 unclassified (no pos callers seen). G6c next waits on the owner sheet.

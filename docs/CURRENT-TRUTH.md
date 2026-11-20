@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7685 (2026-11-19).
+Compact operational handoff, as of Session 7686 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7685: G6c position fallback handed TIE stand-ins to itemless neighbours (H-neighbour; H-self refuted, three two-arm L12 runs).**
+- **NEW s7686: G6c itemless position callers rejected for subs 0x0D/0x14/0x1E/0x1F/0x47 too (H-neighbour again; H-self refuted, single
+  build, per-level runs + one same-binary pair).** L1/L4/L5 dd4 200 s STANDINS_LOG: 156/156 [s7685-pos] callers of these subs were itemless
+  with c30 == c34 a small float (0.5f for 0x0D/0x14/0x47, 0.125f 0x1F, 0.25f 0x1E) and ~1.5 lines per distinct caller state (fresh objects),
+  while their real objects hand off by item (0x14 L4 114 item vs 5 pos). ROGUESQ_S7686_POSSUB (default on in STANDINS; =0 = s7685) adds them
+  to the itemless-reject set. L4 pair, same binary: old 7 pos handoffs (0x0D 4, 0x14 2, 0x1E 1) vs fix 0 / 82 rejected, item handoffs
+  0x0D 2->7, 0x14 75->91 (fix arm's stand-ins get their real object instead of a projectile); both alive, 0 crash, 0 stall.
+  tools/s7686_pos_tally.py tallies the logs. Subs 0x0C/0x24/0x2E/0x46 logged no position callers on these levels (plain fallback kept).
+- **s7685: G6c position fallback handed TIE stand-ins to itemless neighbours (H-neighbour; H-self refuted, three two-arm L12 runs).**
   [s7685-pos] (STANDINS_LOG) logs each 2-unit position match with the caller's table item (state+0x34, else +0x30). 29/30 callers of sub
   0x12 tie_inter / 0x13 tie_bomber stand-ins had none (+0x30 = +0x34 = 0.25f, a new state every ~3 frames: objects spawned at the craft),
   while those crafts match by item (31 logs: 118/49 item vs 10/14 pos). ROGUESQ_S7685_POSSUB (default on in STANDINS; =0 old) rejects a pos
@@ -440,7 +447,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
     closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
-    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). s7684/s7685: ray-shield class keyed by item at +0x30; pos fallback rejects itemless/other-sub callers for 0x12/0x13 + ray-shield (next: classify pos callers of 0x0C/0x0D/0x14/0x1E/0x1F/0x46/0x47 on L1/L4/L5). Then the owner sheet decides.
+    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). s7684/s7685: ray-shield class keyed by item at +0x30; pos fallback rejects itemless/other-sub callers for 0x12/0x13 + ray-shield ; s7686 extends the itemless reject to 0x0D/0x14/0x1E/0x1F/0x47 (ROGUESQ_S7686_POSSUB, L4 pair old 7 pos handoffs vs fix 0). Left: 0x0C/0x24/0x2E/0x46 showed no pos callers on L1/L4/L5. Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
     ALL CLOSED** (full text, numbers, controls, tools verbatim in PROJECT-OVERVIEW "(s7662 maintenance)"). Defaults that stay
     (=0 / old restores): ROGUESQ_S7634_FUSE=1 (walker fusion), S7639_ST, S7640_AT, S7641_CF, S7643_PI (release/acquire s4211 ring),
