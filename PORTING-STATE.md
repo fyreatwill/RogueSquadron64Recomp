@@ -204967,3 +204967,5 @@ Both alive, crashlines 0, vi_stalls30s 0 (max_gap 148/164 ms). Caveat: arms are 
 indicative; the discriminator is pos handoffs 7 -> 0 with the item path taking over (0x0D stand-ins handed to a projectile under old
 never got their real object).
 Rules out: H-self for 0x0D/0x14/0x1E/0x1F/0x47. Open: 0x0C/0x24/0x2E/0x46 unclassified (no pos callers seen). G6c next waits on the owner sheet.
+Discrimination: this selects H-neighbour and refutes H-self for subs 0x0D/0x14/0x1E/0x1F/0x47 (itemless small-float callers vs
+item-matched real objects; L4 pair pos handoffs 7 -> 0). Next discriminator: [s7685-pos] tally on levels carrying 0x0C/0x24/0x2E/0x46.
