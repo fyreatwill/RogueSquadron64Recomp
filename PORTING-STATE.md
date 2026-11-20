@@ -205821,3 +205821,4 @@ s7421_regen_drift / s7423_live_stale / s7628_standins_sheet need positional inpu
 Rules out: a stale auto-default read by a static constructor (both forms) at the owner recipe; s7427 drift beyond the reviewed
 s7713 read. No src/ or lib/ change, no game behaviour change.
 Standing check: full sweep 143 gates (was 134-140 + 3 EXTRA_GATES): 138 GREEN, 5 REPORT, 0 RED (wall 934 s, --jobs 2).
+Verdict: selects H-clean, refutes H-stale (static scan with 5/5 planted controls and runtime env trace with plant control agree). Next discriminator: gate-sweep coverage (NEXT s7718): H-green vs H-drift over every unswept verdict/control tool.
