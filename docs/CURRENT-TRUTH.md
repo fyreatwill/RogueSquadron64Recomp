@@ -13,7 +13,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
 - **NEW s7678: stand-ins survive REAL level changes (H-leak refuted, two arms, same frames).** No-input attract playlist route
-  (scratch/s7678/run.zsh, dd4 16:9 FPS60 STANDINS=1, 420 s, deterministic) loads L0->5->7->10: rebuild fires on each, new level's
+  (tools/s7678_attract_run.zsh, dd4 16:9 FPS60 STANDINS=1, 420 s, deterministic) loads L0->5->7->10: rebuild fires on each, new level's
   handoffs match by item (item_hits L5 16119, L7 11416, wrong 0); planted stale map (ROGUESQ_S7678_STALE=1, control only) on the
   same frames drops item_hits to 0/0. On a level change the H-leak signature is item_hits collapse, not wrong=. 0 crashes both arms.
   Gate cache now sees imports served from __pycache__ (tools/gate_trace.py; import control discriminates: FAIL without the fix).

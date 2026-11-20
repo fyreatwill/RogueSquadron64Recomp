@@ -204688,7 +204688,7 @@ a same-level hangar reload; does a real level change rebuild the stand-ins and r
 items/keys (H-leak)?
 
 Route found: no input at all. tools/g3_port_capture.sh with AP=99999:start (nothing pressed) lets the title fall into the attract
-demo playlist (s6911 saw 15 levels in 970 s), which loads real levels in one run. Recipe scratch/s7678/run.zsh <name> "<env>":
+demo playlist (s6911 saw 15 levels in 970 s), which loads real levels in one run. Recipe tools/s7678_attract_run.zsh <name> "<env>" (logs -> scratch/s7678/<name>/cap/run.log):
 owner recipe dd4 16:9 FPS60, STANDINS=1 STANDINS_LOG=1, NO_SAVE_WRITE, 420 s. Deterministic: both arms below logged identical
 bk_calls per generation (73587 / 117700), so the arms are the same frames.
 

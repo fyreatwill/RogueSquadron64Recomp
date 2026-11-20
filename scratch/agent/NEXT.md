@@ -7,7 +7,7 @@ identical bk_calls across runs) and proved the stand-in rebuild/re-key on it. Th
 attract flybys (107 [standins-spawn] lines). The flybys are scripted camera shots, and the owner sees them at the title screen.
 Question: do stand-ins put objects into attract/cinematic shots where retail shows nothing (H-cine-ghost), or only bridge objects
 the shot later spawns anyway (H-cine-ok)? And do any appear inside the retail dd1 radius (should be none)?
-Measure, ONE run: scratch/s7678/run.zsh with ROGUESQ_STANDINS=tog (whole-second on/off windows, same run) plus framebuffer
+Measure, ONE run: tools/s7678_attract_run.zsh with ROGUESQ_STANDINS=tog (whole-second on/off windows, same run) plus framebuffer
 captures (CAP0 ~20, the s7630 contact-sheet tooling / ROGUESQ_STANDINS_DUMP a:b:n windows); score per shot the clustered diff px
 between on and off seconds (tools/s7630-era scorer, `--cluster 16`), and list [standins-spawn] early_s per level: a stand-in with no
 matching spawn before the level changes (spawn line absent for its item) = an object the cinematic never shows = H-cine-ghost.
