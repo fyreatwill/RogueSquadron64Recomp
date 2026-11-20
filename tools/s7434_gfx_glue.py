@@ -9,6 +9,7 @@ Verdict (NEXT s7434): H-copy if memmove total >= 0.5 ms/frame with one owned cal
 ours share under defer_end+record_submit >= 0.5 ms/frame, else H-rt64.
 usage: s7434_gfx_glue.py sample_4.txt [sample_8.txt ...] [--threads 'Gfx Thread'] [--fps 60]"""
 import re, sys, argparse, collections
+import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained sample_*.txt.zst
 ap = argparse.ArgumentParser(); ap.add_argument('files', nargs='+'); ap.add_argument('--threads', default='Gfx Thread')
 ap.add_argument('--fps', type=float, default=60.0); ap.add_argument('--top', type=int, default=15); a = ap.parse_args()
 LINE = re.compile(r'^([\s+!:|]*)(\d+) (.*)$')
@@ -26,7 +27,7 @@ def cls(s):
     return 'ours'
 def parse(fn):
     threads = []; stack = []; cur = None
-    for raw in open(fn, errors='replace'):
+    for raw in zopen(fn, errors='replace'):
         if raw.startswith('Total number in stack') or raw.startswith('Sort by top'): break
         m = LINE.match(raw.rstrip('\n'))
         if not m: continue

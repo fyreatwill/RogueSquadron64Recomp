@@ -10,6 +10,7 @@ Groups reports by (kind, first frame in our code). The plant arm must show BOTH 
 1 = control PASS and >=1 non-plant group (H-asan-hit), 3 = control FAIL (instrument blind, result void).
 """
 import glob, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained log_<arm>.txt.zst
 
 ASAN_HDR = re.compile(r'ERROR: AddressSanitizer: ([\w-]+)')
 UBSAN_HDR = re.compile(r'^(\S+?):(\d+):(\d+): runtime error: (.*)$')
@@ -48,10 +49,10 @@ def parse(text):
 def arm_reports(R, arm):
     seen_text = set()
     out = []
-    for p in sorted(glob.glob(os.path.join(R, 'san_%s*' % arm))) + [os.path.join(R, 'log_%s.txt' % arm)]:
+    for p in sorted(glob.glob(os.path.join(R, 'san_%s*' % arm))) + [os.path.join(R, 'log_%s.txt' % arm), os.path.join(R, 'log_%s.txt.zst' % arm)]:
         if not os.path.isfile(p):
             continue
-        t = open(p, errors='replace').read()
+        t = zopen(p, errors='replace').read()
         for kind, site in parse(t):
             out.append((kind, site, os.path.basename(p)))
     # The same report can be in both the log_path file and stderr; dedupe by (kind, site) count per source kind.

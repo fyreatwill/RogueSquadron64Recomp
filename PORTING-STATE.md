@@ -206051,3 +206051,45 @@ Sweep (--jobs 2, cold 1130 s): 207 gates {GREEN 203, REPORT 3, HOLLOW 1 = s7392,
 entry: see the result line below.
 Rules out: a retained one-capture scorer silently failing its own control / verdict at the current tool source (11 now scored).
 Verdict: H-retainable for 11, slug sweep-needs-input-retain CLOSED (one iteration, as NEXT required).
+
+## Session 7724 (2026-11-20) — deferred retained scorers closed: 7 more sweep gates (s7433/s7435-s7438 profiler, s7467 ASan, s7624 flicker) with planted RED mutants 18/18; s7367/s7369/s7434/s7589 H-no-control, s7247 H-gone; churn-guard false positive on rs64_zopen imports fixed
+
+HYPOTHESIS-ID: owner-looks-or-deferred-scorers (CURRENT-TRUTH item 32, the one bounded offline unit NEXT.md allowed).
+Carried contract first: loop.sh's CONTRACT-CARRY said s7723 tripped the stop_gate churn guard ("diagnostic-only, 12
+instrumentation lines"). Root cause: the guard's `rs64_[A-Za-z0-9_]+` pattern counted the 11 `from rs64_zopen import zopen`
+lines (an offline .zst reader, not game instrumentation) + 1 docstring mention. Fix: tools/agent/stop_gate.sh drops lines
+matching `from rs64_zopen import zopen` before counting. Same-range control: s7723's diff (b7a368826..0669768be) counts 12
+without the filter, 1 with it (threshold 2). tools/agent/run_tests.sh 8/8 PASS.
+
+Work unit. Hypotheses per deferred scorer: H-retainable (its retained capture still reproduces the ledger verdict with its own
+control PASS -> make it a gate with a planted RED mutant), H-no-control (the tool has no control, or its control fails on the
+retained capture -> a gate would be hollow), H-gone (input deleted). Discriminating measurement: run each tool on its retained
+capture at the current source, compare CONTROL + VERDICT with its ledger entry, then plant one mutation that must flip it RED.
+- Reader changes: tools/s7433_probe_cost.py, s7434_gfx_glue.py, s7435_spin_cost.py, s7436_alloc_cost.py, s7437_tmem_hash.py,
+  s7438_rt64_terms.py read sample_*.txt.zst via tools/rs64_zopen.py (glob falls back to *.txt.zst); s7467_san_report.py also
+  reads log_<arm>.txt.zst; s7624_flicker_score.py reads fb_*.ppm.zst and a .zst log.
+- Results on scratch/s7435 (8 x 12 s windows, owner recipe): s7433 CONTROL +0.608 ms/frame vs 0.500 PASS, VERDICT H-free probe
+  0.1149 (s7435 ledger: 0.113 / +0.598 on the same capture, tool since edited; same verdict); s7435 CONTROL +0.0345 core vs 0.030
+  PASS, H-tail total 0.049 (= ledger); s7436 H-free 0.0122 core (= ledger); s7437 hash total 0.592 ms/frame -> tool token
+  H-candidate, TMEMHasher 0.487 (ledger H-known was the hand prior-closure check on these numbers); s7438 terms list headed
+  TMEMHasher 0.487 / decodeTriangles 0.373 (= ledger). Second capture scratch/s7433 --second-line: s7436 0.0127, s7437 0.631,
+  s7438 0.504/0.362 (= ledger). s7467 on scratch/s7467r arms p/l7/w15 --plant p --known: control=PASS new_groups=0 (= ledger).
+  s7624 L1 --control: per_triplet 3879.1 toggle / 4351.2 forced-off, control 1927 >= 1056 PASS (= ledger table).
+- Gates: S7724_RETAINED in tools/s7651_gate_sweep.py (7 rows; s7624 always exits 0 so its regex pins the frozen numbers).
+  Mutants in tools/s7723_retained_controls.py: profiler dirs get rs64_diag_spin_us/store_diag_tick/quiet_tick frames renamed in
+  every sample (8 renames) -> all 5 read CONTROL FAIL rc 3; s7467 gets one unreviewed UBSan group appended to arm l7 -> rc 1;
+  s7624 loses its window-1 [standins-fb] rows (90) -> regex unmatched. scratch/s7724/controls.txt: CONTROLS PASS bad=0
+  skipped=0 (18/18).
+- Found + fixed on the way: both the sweep and the controls script treated every non-dash ARGS item as a path, so s7467's arm
+  names ("p", "l7") made the sweep drop its ARGS and run it bare (NEEDS-ARGS rc 2 in scratch/s7724/sweep.tsv). Both now check
+  existence only for items containing "/" (only other affected row: s7083's rogue_squadron.z64, present at the root).
+- Classified, no gate: s7367_vi_deadlock + s7369_tsan_crawl (no control in the tool at all), s7434_gfx_glue (no control;
+  prints H-walk on the s7433 samples, ledger H-known by hand), s7589_hr_report (its own control prints CTL FAIL on BOTH retained
+  hr.tsv: hrL fds +0.000 = the s7589 lsof pipe-fd instrument bug, hrH ports -4.6 = slope over a load-spanning window, as s7589
+  already said; its verdict came from hand plateau steps) -> H-no-control; s7247_tog_pop -> H-gone (r48/e16r48 .raw.cs are
+  5-byte stubs, raws deleted per s7247).
+Verdict: selects H-retainable for 7 and H-no-control for 4, H-gone for 1; closes item 32 and the scorer-coverage thread (no
+further scorer work). Sweep (scratch/s7724/sweep.tsv, before the arm-name fix): 215 gates {GREEN 211, REPORT 3, NEEDS-ARGS 1 =
+s7467}; re-sweep after the fix: see the result line below.
+Re-sweep after the fix (scratch/s7724/sweep2.tsv, --jobs 2, 1121 s): 215 gates {GREEN 212, REPORT 3}, 0 RED 0 HOLLOW; s7467 GREEN
+(new_groups=0, control=PASS), s7083 GREEN. Next discriminator (NEXT.md): RT64 Present SIGTRAP .ips (H-nopool / H-race / H-teardown).

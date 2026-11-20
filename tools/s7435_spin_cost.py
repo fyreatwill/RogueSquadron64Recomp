@@ -13,6 +13,7 @@ VERDICT (NEXT s7435): H-tail if every live site < 0.05 core and total < 0.05; H-
 H-sem if sem_spin is the largest non-VI term and >= 0.02 core; else H-tail-vi (VI deadline spin is the only >= 0.02 term).
 usage: s7435_spin_cost.py DIR [--busy-us 500] [--fps 60]   exit 0 = verdict, 3 = control fail / unevaluable"""
 import re, sys, os, glob, argparse, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained sample_*.txt.zst
 ap = argparse.ArgumentParser(); ap.add_argument('d'); ap.add_argument('--busy-us', type=float, default=500.0)
 ap.add_argument('--fps', type=float, default=60.0); a = ap.parse_args()
 LINE = re.compile(r'^([\s+!:|]*)(\d+) (.*)$')
@@ -26,7 +27,7 @@ CTRL = re.compile(r'^_?(rs64_store_diag_tick|rs64_diag_spin_us|rs64_diag_quiet_t
 def sym(t): return t.split('  (in ')[0].strip()
 def parse(fn):
     threads = []; stack = []; cur = None
-    for raw in open(fn, errors='replace'):
+    for raw in zopen(fn, errors='replace'):
         if raw.startswith('Total number in stack') or raw.startswith('Sort by top'): break
         m = LINE.match(raw.rstrip('\n'))
         if not m: continue
@@ -67,7 +68,7 @@ SITES = ('vi_spin', 'sem_spin', 'yield', 'clk_other', 'ctrl')
 agg = {0: collections.Counter(), 1: collections.Counter()}; nwin = {0: 0, 1: 0}
 perthr = collections.Counter()
 print('win start_s busy straddle | ' + ' '.join('%9s' % s for s in SITES) + '  (share of one core)')
-for fn in sorted(glob.glob(os.path.join(a.d, 'sample_*.txt')), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
+for fn in sorted((glob.glob(os.path.join(a.d, 'sample_*.txt')) or glob.glob(os.path.join(a.d, 'sample_*.txt.zst'))), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
     i = int(re.search(r'_(\d+)\.txt', fn)[1]); st, w = idx.get(i, (0.0, 0.0))
     b0, b1 = busy_at(st + 0.5), busy_at(st + w + 1.5); strad = int(b0 != b1)
     c = collections.Counter(); nmax = 0

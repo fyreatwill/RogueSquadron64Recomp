@@ -175,14 +175,35 @@ S7723_RETAINED = {
     # UBSan arms (scratch/s7579/san_<arm>.<pid>; p2 = the planted bounds arm)
     "s7579_bounds_report.py": (["scratch/s7579"], r"control_fired=1 real_sites=0 arms_with_logs=2"),
 }
+# s7724: the /usr/bin/sample profiler scorers (classes CP/CR/CS/CT/CU) over the retained scratch/s7435 capture (8 x 12 s windows,
+# busy-on/off diag-quiet flips in run.tlog, sample_N.txt.zst read via rs64_zopen). Each prints CONTROL ... PASS from the planted
+# rs64_diag_spin_us 500 us/swap control; a control FAIL exits 3. s7437/s7438 verdict tokens are the tool's own (the ledger's
+# H-known / H-closed was the hand prior-closure check on these same numbers). s7434 has no control: REPORT-class (H-no-control).
+_CP = r"(?=[\s\S]*(?:^|\n)CONTROL ctrl delta [\d.]+ [a-z/]+ vs expected [\d.]+[^\n]*: PASS)"
+S7724_RETAINED = {
+    "s7433_probe_cost.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-free probe 0\.1\d* ms/frame)"),
+    "s7435_spin_cost.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-tail \(total 0\.04\d* core\))"),
+    "s7436_alloc_cost.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-free \(allocator total 0\.01\d* core)"),
+    "s7437_tmem_hash.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-candidate \(hash total 0\.5\d* ms/frame)"),
+    "s7438_rt64_terms.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT terms >= 0\.2 ms/f for prior-closure check: Gfx RT64::TMEMHasher::hash 0\.4)"),
+    # s7724: ASan+UBSan flight arms (p = plant arm, l7, w15), logs as .zst; control=PASS needs both plants in arm p, a NEW group exits 1
+    "s7467_san_report.py": (["scratch/s7467r", "p", "l7", "w15", "--plant", "p", "--known", "tools/s7467_san_reviewed.tsv"],
+                            r"(?=[\s\S]*\ns7467 new_groups=0\n)(?=[\s\S]*\ns7467 control=PASS)"),
+    # s7724: stand-in flicker scorer, L1 (toggle window 1 vs forced-off window 2 + synthetic painted-square control). The tool always
+    # exits 0, so the regex pins the frozen capture's numbers (ledger s7624 table: 3879.1 / 4351.2, control 1927 >= 1056).
+    "s7624_flicker_score.py": (["scratch/s7624/log_L1f.txt.zst", "scratch/s7624/fb_L1", "--control"],
+                               r"(?=[\s\S]*win=1 frames=90 .*per_triplet=3879\.1 .*label_alternations=89/89)"
+                               r"(?=[\s\S]*win=2 frames=90 .*per_triplet=4351\.2 )(?=[\s\S]*found in-square 1927 \(need >= 1056\) -> PASS)"),
+}
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
 ARGS.update(S7723_RETAINED)
+ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7723_RETAINED_CTL)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
@@ -393,7 +414,7 @@ def run_uncached(path):
                                                                      "complete": True, "spawn_ok": True}
     a = ["--controls"] if "--controls" in src else []
     fixed, must = ARGS.get(os.path.basename(path), (None, None))
-    if fixed is not None and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if not x.startswith("-")):
+    if fixed is not None and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if "/" in x):  # s7724: bare arm names (s7467 "p") are not paths
         a = list(fixed)
     else:
         must = None

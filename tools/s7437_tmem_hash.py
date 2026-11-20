@@ -12,6 +12,7 @@ CONTROL (unless --second-line): ctrl(busy=1) - ctrl(busy=0) >= 0.5 * busy_us * f
 VERDICT: H-small if hasher+xxh_other < 0.3 ms/frame; else H-candidate (step 2: repeat-fraction counter build).
 usage: s7437_tmem_hash.py DIR [--busy-us 500] [--fps 60] [--second-line]  exit 0 = verdict, 3 = control fail"""
 import re, sys, os, glob, argparse, collections, importlib.util
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained sample_*.txt.zst
 here = os.path.dirname(os.path.abspath(__file__))
 ap = argparse.ArgumentParser(); ap.add_argument('d'); ap.add_argument('--busy-us', type=float, default=500.0)
 ap.add_argument('--fps', type=float, default=60.0); ap.add_argument('--second-line', action='store_true')
@@ -26,7 +27,7 @@ def split(t):
     return (m[1].strip(), m[2]) if m else (t.strip(), '')
 def parse(fn):
     threads = []; stack = []; cur = None
-    for raw in open(fn, errors='replace'):
+    for raw in zopen(fn, errors='replace'):
         if raw.startswith('Total number in stack') or raw.startswith('Sort by top'): break
         m = LINE.match(raw.rstrip('\n'))
         if not m: continue
@@ -61,7 +62,7 @@ K = ('hasher', 'h_self', 'h_xxh', 'xxh_other', 'ctrl')
 agg = {0: collections.Counter(), 1: collections.Counter()}; nwin = {0: 0, 1: 0}; nw_all = 0
 thr = collections.Counter(); caller = collections.Counter(); oth = collections.Counter(); tot = collections.Counter()
 print('win start_s busy strad |   hasher   h_self    h_xxh xxh_other     ctrl  (share of one core)')
-for fn in sorted(glob.glob(os.path.join(a.d, 'sample_*.txt')), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
+for fn in sorted((glob.glob(os.path.join(a.d, 'sample_*.txt')) or glob.glob(os.path.join(a.d, 'sample_*.txt.zst'))), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
     i = int(re.search(r'_(\d+)\.txt', fn)[1]); st, w = idx.get(i, (0.0, 0.0))
     b0, b1 = busy_at(st + 0.5), busy_at(st + w + 1.5); strad = int(b0 != b1)
     c = collections.Counter(); th = collections.Counter(); ca = collections.Counter(); ot = collections.Counter(); nmax = 0

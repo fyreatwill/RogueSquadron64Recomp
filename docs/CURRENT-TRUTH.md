@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7724 deferred scorers CLOSED (item 32): 7 more gates over retained captures** (S7724_RETAINED: s7433/s7435-s7438 profiler
+  scorers on scratch/s7435 sample_*.txt.zst, s7467 ASan arms on scratch/s7467r, s7624 flicker L1); planted RED mutants 18/18 PASS
+  (control frames renamed -> CONTROL FAIL rc 3; unreviewed UBSan group -> rc 1; window-1 rows dropped -> regex unmatched).
+  H-no-control s7367/s7369/s7434/s7589 (s7589's own control FAILs on both retained hr.tsv), H-gone s7247. Scorer work ends here.
+  stop_gate churn guard no longer counts `from rs64_zopen import zopen` lines (s7723 tripped on 12; recount 1). Sweep 215: 212 GREEN 3 REPORT 0 RED 0 HOLLOW.
 - **s7723 NEEDS-INPUT scorers: 11 become gates over their retained scratch/ captures** (S7723_RETAINED in the sweep; logs read
   as .zst via tools/rs64_zopen.py; tools/s7723_retained_controls.py plants one RED row per gate, 11/11 PASS and is itself swept).
   s7393/s7399 exit 0 with their control removed, so the CONTROL PASS regex is load-bearing. Rest: H-gone 10, H-dead 2 (s7421/s7423
@@ -410,9 +415,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     arm=audio_stub when AUDIO_UCODE is unset, though the real ucode runs (default-on). Helper readers (rs64_env_int) not modelled.
 
 32. **Gate-sweep coverage s7718/s7723: offline gates all swept (208).** s7421/s7423 superseded by s7719_regen_gate. Of the 39
-    s7718 NEEDS-INPUT scorers 11 are gated over retained captures (s7723). Deferred, input on disk but format work needed
-    (take only when no owner/G item applies; one iteration): s7367/s7369 (tl .bin + run.log.zst), s7433/s7435-s7438
-    (sample_*.txt.zst dirs: tools glob *.txt), s7467 (s7467r san_*), s7247, s7624 (fb dirs), s7589 (hr.tsv + window args).
+    s7718 NEEDS-INPUT scorers 11 are gated over retained captures (s7723), 7 more in s7724 (s7433/s7435-s7438/s7467/s7624).
+    CLOSED: s7367/s7369/s7434/s7589 H-no-control, s7247 H-gone. No further scorer work.
     Lesson (s7412/s7413): a harvest-based gate can exit 0 while a later fixup idiom hides its sites; pin the harvest size.
     Lesson (s7723): a scorer whose "control absent" path exits 0 (s7393, s7399) is only a gate with a CONTROL PASS regex.
 

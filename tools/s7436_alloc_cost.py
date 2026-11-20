@@ -13,6 +13,7 @@ VERDICT: H-lock if lock-under-malloc >= 0.01 core; H-hot if one owned caller on 
 allocator total < 0.02 core; else H-diffuse (total >= 0.02, no single caller >= 0.01).
 usage: s7436_alloc_cost.py DIR [--busy-us 500] [--fps 60]   exit 0 = verdict, 3 = control fail / unevaluable"""
 import re, sys, os, glob, argparse, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained sample_*.txt.zst
 ap = argparse.ArgumentParser(); ap.add_argument('d'); ap.add_argument('--busy-us', type=float, default=500.0)
 ap.add_argument('--fps', type=float, default=60.0)
 ap.add_argument('--second-line', action='store_true', help='busy-off-only capture whose control passed in its own tool: report shares, skip CONTROL')
@@ -28,7 +29,7 @@ def split(t):
     return (m[1].strip(), m[2]) if m else (t.strip(), '')
 def parse(fn):
     threads = []; stack = []; cur = None
-    for raw in open(fn, errors='replace'):
+    for raw in zopen(fn, errors='replace'):
         if raw.startswith('Total number in stack') or raw.startswith('Sort by top'): break
         m = LINE.match(raw.rstrip('\n'))
         if not m: continue
@@ -69,7 +70,7 @@ for l in open(os.path.join(a.d, 'samples.idx')):
 agg = {0: collections.Counter(), 1: collections.Counter()}; nwin = {0: 0, 1: 0}
 thr_sh = collections.Counter(); own_sh = collections.Counter(); leaf_sh = collections.Counter(); nw_all = 0
 print('win start_s busy strad |    alloc     lock     ctrl  (share of one core)')
-for fn in sorted(glob.glob(os.path.join(a.d, 'sample_*.txt')), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
+for fn in sorted((glob.glob(os.path.join(a.d, 'sample_*.txt')) or glob.glob(os.path.join(a.d, 'sample_*.txt.zst'))), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
     i = int(re.search(r'_(\d+)\.txt', fn)[1]); st, w = idx.get(i, (0.0, 0.0))
     b0, b1 = busy_at(st + 0.5), busy_at(st + w + 1.5); strad = int(b0 != b1)
     c = collections.Counter(); th = collections.Counter(); ow = collections.Counter(); lf = collections.Counter(); nmax = 0

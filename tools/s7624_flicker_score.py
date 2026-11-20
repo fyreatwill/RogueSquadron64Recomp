@@ -12,14 +12,18 @@ usage: s7624_flicker_score.py LOG FBDIR [--mask out.png] [--control]
   --control  synthetic positive control: paint a 6x6 +90 square into alternate window-2 frames and require the scorer to find it.
 Prints one line per window: frames, triplets, flicker px (sum, per triplet), top/bottom-half split, label alternation.
 """
-import re, sys, glob, os, array
+import re, sys, glob, os, array, subprocess
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained .zst frames/log
 
 T = 40  # luma threshold for "differs"
 
 
 def read_ppm(path):
-    with open(path, 'rb') as f:
-        data = f.read()
+    if path.endswith('.zst'):
+        data = subprocess.run(['zstd', '-dcq', path], capture_output=True, check=True).stdout
+    else:
+        with open(path, 'rb') as f:
+            data = f.read()
     parts, i = [], 0
     while len(parts) < 4:
         while data[i:i + 1].isspace():
@@ -65,9 +69,9 @@ def main():
     mask_out = sys.argv[sys.argv.index('--mask') + 1] if '--mask' in sys.argv else None
     control = '--control' in sys.argv
     files = {int(re.search(r'fb_(\d+)_w', os.path.basename(p)).group(1)): p
-             for p in glob.glob(os.path.join(fbdir, 'fb_*_w*.ppm')) if 'tail' not in p}
+             for p in glob.glob(os.path.join(fbdir, 'fb_*_w*.ppm')) + glob.glob(os.path.join(fbdir, 'fb_*_w*.ppm.zst')) if 'tail' not in p}
     wins = {1: [], 2: []}
-    for line in open(log, errors='replace'):
+    for line in zopen(log, errors='replace'):
         m = re.search(r'\[standins-fb\] n=(\d+) win=(\d+) on=(-?\d+) call=(\d+)', line)
         if m and int(m.group(2)) in wins and int(m.group(1)) in files:
             wins[int(m.group(2))].append((int(m.group(1)), int(m.group(3)), int(m.group(4))))

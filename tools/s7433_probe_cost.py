@@ -8,6 +8,7 @@ rs64_diag_quiet_tick (inlined into rs64_store_diag_tick). CONTROL: busy-on minus
 Verdict: H-free if probe share < control_delta/4 (and < 0.25 ms/frame), else H-cost with the ranked helper list.
 usage: s7433_probe_cost.py DIR [--busy-us 500] [--fps 60]"""
 import re, sys, os, argparse, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained sample_*.txt.zst
 ap = argparse.ArgumentParser(); ap.add_argument('d'); ap.add_argument('--busy-us', type=float, default=500.0)
 ap.add_argument('--fps', type=float, default=60.0); ap.add_argument('--top', type=int, default=25); ap.add_argument('--threads', default='[Game]', help='substring selecting the threads to attribute (e.g. "SP Task Thread")'); a = ap.parse_args()
 LINE = re.compile(r'^([\s+!:|]*)(\d+) (.*)$')
@@ -22,7 +23,7 @@ def sym(t):
     return t
 def parse(fn):
     threads = []; stack = []; cur = None
-    for raw in open(fn, errors='replace'):
+    for raw in zopen(fn, errors='replace'):
         if raw.startswith('Total number in stack') or raw.startswith('Sort by top'): break
         m = LINE.match(raw.rstrip('\n'))
         if not m: continue
@@ -50,6 +51,7 @@ def busy_at(t):
 rows = []; agg = {0: collections.Counter(), 1: collections.Counter()}; probes = {0: collections.Counter(), 1: collections.Counter()}
 for ln in open(os.path.join(a.d, 'samples.idx')):
     i, st, w = ln.split(); st = float(st); w = float(w); fn = os.path.join(a.d, 'sample_%s.txt' % i)
+    if not os.path.exists(fn): fn += '.zst'
     if not os.path.exists(fn): continue
     b0, b1 = busy_at(st + 0.5), busy_at(st + w + 1.5)   # sample(1) symbolication tail ~1 s
     straddle = b0 != b1

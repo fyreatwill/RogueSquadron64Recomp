@@ -212,6 +212,7 @@ ARTIFACTS
   if [ -z "$substantive" ]; then
     block "OUTCOME says ADVANCED but this iteration only MODIFIED existing documentation (PORTING-STATE.md / docs/) and produced no cited run artifacts under scratch/. Editing the ledger is how you record progress, not how you make it. Either land a real change (code, instrument, tool, patch, a NEW document, or — in a triggered maintenance iteration — a >=200-net-line CURRENT-TRUTH compaction), or run the experiment now and cite its scratch/ artifact BY FILENAME in the PORTING-STATE.md session entry — or set OUTCOME=SUBSTITUTED and write SUBSTITUTION.md explaining why the work unit could not run."
   fi
+  # s7724: the offline .zst reader import (tools/rs64_zopen.py) is not instrumentation; s7723 tripped on 12 of them.
   # CHURN GUARD (2026-08-14): a diagnostic-only ADVANCED iteration - one whose
   # code change adds only instrumentation (fprintf/getenv/log-tag/rs64_* probe
   # lines, or extends an existing [shade-raw]/[f5-state-payload] format string
@@ -224,6 +225,7 @@ ARTIFACTS
   # H-..." across a line break.
   diag="$(git diff ${range:-HEAD~1..HEAD} -- . ':(exclude)docs' ':(exclude)PORTING-STATE.md' ':(exclude)CLAUDE.md' ':(exclude)tools/agent' ':(exclude)scratch' ':(exclude).claude' 2>/dev/null \
     | grep '^+' | grep -vE '^\+[[:space:]]*(#|//|\*)' \
+    | grep -v 'from rs64_zopen import zopen' \
     | grep -cE '(fprintf|getenv|ROGUESQ_LOG_|rs64_[A-Za-z0-9_]+|\[(shade-raw|f5-state|fix-zero-shade))' || true)"
   case "$diag" in ''|*[!0-9]*) diag=0 ;; esac
   if [ "$diag" -ge 2 ]; then

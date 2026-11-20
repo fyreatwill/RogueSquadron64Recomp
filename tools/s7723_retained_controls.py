@@ -37,6 +37,11 @@ MUT = {
     "s7528_evict_score.py": (2, sub_first(r"stale_window_entries=0\b", "stale_window_entries=5")),  # open row in NEW arm
     # directory input: copy its san_* files and append one live UBSan row to the un-planted arm p
     "s7579_bounds_report.py": (0, "DIR"),
+    # s7724: profiler dirs; every sample file gets the planted control frames renamed, so CONTROL must FAIL (exit 3)
+    **{t: (0, "SAMPLES") for t in SW.S7724_RETAINED if t not in ("s7467_san_report.py", "s7624_flicker_score.py")},
+    "s7467_san_report.py": (0, "SANDIR"),   # copy the arm files, plant one unreviewed UBSan group in arm l7 -> new_groups=1, exit 1
+    "s7624_flicker_score.py": (0, (lambda L: [l for l in L if not re.search(r"\[standins-fb\] n=\d+ win=1 ", l)],
+                                   "drop window-1 [standins-fb] rows")),
 }
 
 def dir_mutant(src, td):
@@ -49,6 +54,31 @@ def dir_mutant(src, td):
         fh.write("/tmp/s7723_plant.c:12:5: runtime error: index 9 out of bounds for type 'int[4]'\n")
     return d
 
+def samples_mutant(src, td):
+    import glob, shutil
+    d = os.path.join(td, "smp"); os.makedirs(d); n = 0
+    for f in glob.glob(os.path.join(ROOT, src, "*")):
+        if not os.path.isfile(f): continue
+        if f.endswith(".txt.zst"):
+            t = subprocess.run(["zstd", "-dcq", f], capture_output=True, check=True).stdout.decode("utf-8", "replace")
+            t, k = re.subn(r"rs64_(store_diag_tick|diag_spin_us|diag_quiet_tick)", r"mut_ctl_\1", t); n += k
+            subprocess.run(["zstd", "-1qf", "-o", os.path.join(d, os.path.basename(f))], input=t.encode(), check=True)
+        else:
+            shutil.copy(f, d)
+    assert n, "no control frames to rename"
+    return d, n
+
+def sandir_mutant(src, td):
+    import glob, shutil
+    d = os.path.join(td, "sanr"); os.makedirs(d)
+    for f in glob.glob(os.path.join(ROOT, src, "san_*")) + glob.glob(os.path.join(ROOT, src, "log_*")):
+        shutil.copy(f, d)
+    tgt = sorted(glob.glob(os.path.join(d, "san_l7.*")))[0]
+    with open(tgt, "a") as fh:
+        fh.write("src/main/s7724_plant.cpp:12:5: runtime error: shift exponent 40 is too large for 32-bit type 'int'\n"
+                 "    #0 0x100001234 in rs64_s7724_plant_fn s7724_plant.cpp:12\n")
+    return d
+
 def run(t, argv, rx):
     r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", t)] + argv, capture_output=True, text=True, cwd=ROOT)
     o = r.stdout + r.stderr
@@ -56,11 +86,27 @@ def run(t, argv, rx):
 
 def main(sel):
     bad = skip = 0
-    for t, (argv, rx) in SW.S7723_RETAINED.items():
+    for t, (argv, rx) in {**SW.S7723_RETAINED, **SW.S7724_RETAINED}.items():
         if sel and t not in sel: continue
-        if not all(os.path.exists(os.path.join(ROOT, a)) for a in argv if not a.startswith("-")):
+        if not all(os.path.exists(os.path.join(ROOT, a)) for a in argv if "/" in a):
             print(f"SKIP {t}: retained input absent"); skip += 1; continue
         ok, rc, tail = run(t, argv, rx)
+        if MUT[t][1] == "SAMPLES":
+            with tempfile.TemporaryDirectory() as td:
+                margv = list(argv); margv[MUT[t][0]], n = samples_mutant(argv[MUT[t][0]], td)
+                mok, mrc, mtail = run(t, margv, rx)
+            res = ok and not mok; bad += not res
+            print(f"{'PASS' if res else 'FAIL'} {t}: real rc={rc} pass={int(ok)} | mutant ({n} control frames renamed) "
+                  f"rc={mrc} pass={int(mok)} :: {mtail}")
+            continue
+        if MUT[t][1] == "SANDIR":
+            with tempfile.TemporaryDirectory() as td:
+                margv = list(argv); margv[MUT[t][0]] = sandir_mutant(argv[MUT[t][0]], td)
+                mok, mrc, mtail = run(t, margv, rx)
+            res = ok and not mok; bad += not res
+            print(f"{'PASS' if res else 'FAIL'} {t}: real rc={rc} pass={int(ok)} | mutant (1 unreviewed UBSan group planted in arm l7) "
+                  f"rc={mrc} pass={int(mok)} :: {mtail}")
+            continue
         if MUT[t][1] == "DIR":
             with tempfile.TemporaryDirectory() as td:
                 margv = list(argv); margv[MUT[t][0]] = dir_mutant(argv[MUT[t][0]], td)

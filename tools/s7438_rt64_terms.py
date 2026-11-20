@@ -9,6 +9,7 @@ CONTROL (unless --second-line): planted rs64_diag_spin_us ctrl(busy=1) - ctrl(bu
 VERDICT: H-diffuse if no RT64 self term >= 0.2 ms/f; else list terms >= 0.2 for prior-closure check (H-closed / H-new).
 usage: s7438_rt64_terms.py DIR [--busy-us 500] [--fps 60] [--second-line] [--top 20] [--under RT64::GBI_RDP::decodeTriangles]  exit 0 = verdict, 3 = control fail"""
 import re, sys, os, glob, argparse, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from rs64_zopen import zopen  # s7724: retained sample_*.txt.zst
 ap = argparse.ArgumentParser(); ap.add_argument('d'); ap.add_argument('--busy-us', type=float, default=500.0)
 ap.add_argument('--fps', type=float, default=60.0); ap.add_argument('--second-line', action='store_true')
 ap.add_argument('--top', type=int, default=20)
@@ -25,7 +26,7 @@ def split(t):
     return (m[1].strip(), m[2]) if m else (t.strip(), '')
 def parse(fn):
     threads = []; stack = []; cur = None
-    for raw in open(fn, errors='replace'):
+    for raw in zopen(fn, errors='replace'):
         if raw.startswith('Total number in stack') or raw.startswith('Sort by top'): break
         m = LINE.match(raw.rstrip('\n'))
         if not m: continue
@@ -59,7 +60,7 @@ for l in open(os.path.join(a.d, 'samples.idx')):
     i, st, w = l.split(); idx[int(i)] = (float(st), float(w))
 under = collections.Counter(); selfc = collections.Counter(); incl = collections.Counter(); thrtot = collections.Counter()
 ctrl = {0: 0.0, 1: 0.0}; nwin = {0: 0, 1: 0}; nw_all = 0
-for fn in sorted(glob.glob(os.path.join(a.d, 'sample_*.txt')), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
+for fn in sorted((glob.glob(os.path.join(a.d, 'sample_*.txt')) or glob.glob(os.path.join(a.d, 'sample_*.txt.zst'))), key=lambda f: int(re.search(r'_(\d+)\.txt', f)[1])):
     i = int(re.search(r'_(\d+)\.txt', fn)[1]); st, w = idx.get(i, (0.0, 0.0))
     b0, b1 = busy_at(st + 0.5), busy_at(st + w + 1.5); strad = int(b0 != b1)
     uc = collections.Counter(); sc = collections.Counter(); ic = collections.Counter(); tt = collections.Counter(); cc = 0; nmax = 0
