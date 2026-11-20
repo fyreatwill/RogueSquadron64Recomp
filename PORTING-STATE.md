@@ -205324,3 +205324,28 @@ scene, 4 train-canyon frames); the floor fills them. Row 2 is a false pick (no v
 no holes. 2/2 alive, 0 crash, save unchanged. Dumps deleted (1.6 GB); logs, traces, sheets in scratch/s7700.
 Selects H-holds for the playlist at dd2 (stream + picture) and H-invisible at dd4 (old 4x cap already covers the shots). Refutes H-inert.
 Single run per dd. Not covered: 21:9, dd3, STANDINS=1. G5h still closes on the owner's look; the movies dd2 sheet joins the owner set.
+
+## Session 7701 (2026-11-20) — G5h: the s6908 cutscene pool floor holds on the movies playlist at 21:9 dd2 (old cap leaves big ground holes); 21:9 FB dumps were noise because RT64 skips the 768-wide write-back
+
+HYPOTHESIS-ID: post-g6c-owner-wait-s7701. crash_reports --since 2026-11-13: new=0 (27 folded). CURRENT-TRUTH 59659 B < 60000, no maintenance.
+NEXT asked: the owner also plays 21:9 (wider view, more ground needed). Hypotheses: H-holds (old-cap frames show holes, the floor fills
+them), H-short (the 4096 floor itself is too low at 21:9: window p50 at the cap), H-invisible.
+Run 1 `env DD=2 AS=21:9 GW=2048 O=scratch/s7701/mov219d2 zsh tools/s7700_poolmin_movies.zsh`: alive, 0 crash, 18 poolx lines (17 `-> 4096`,
+old 1000-1400), save unchanged. Stream: kept p50 floor 1606 / old 856 (7669/7733 calls), window p50 2688 / 1184. But every pixel score was
+exactly 0.00: the playlist at 21:9 runs at VI width 768 (16:9 runs it at 640), and the 690 w768 dumps held only 14 distinct images, all noise
+(no row stride from 640 to 2400 makes them an image). The log explains it: `[ost-wb] SKIP_WILD_W tag=color addr=0xB80800 w=768`. RT64's
+rs64_writeback_sane allowlist (lib/rt64 rt64_state.cpp, s653: 320/512/640/1024 + ROGUESQ_FB_WIDTH) drops the 768-wide colour write-back,
+so RDRAM never gets the frame and FB_DUMP (which reads RDRAM) shows stale memory. On screen RT64 shows its own GPU copy, so this is an
+instrument blind spot. Whether the game ever reads that buffer back at 21:9 is unchecked.
+Run 2 (same + ROGUESQ_ALLOW_WILD_W=1, the existing A/B switch): alive but the time-keyed route missed (stuck on SHOWROOM with AT THE
+MOVIES highlighted, presses ~40 frames earlier than run 1; poolx 1). Run 3 (same env): reached, 18 poolx, alive, 0 crash, save unchanged.
+Positive control: 688/690 w768 dumps distinct (was 14), 1 SKIP_WILD_W line.
+| 21:9 dd2 run 3 | kept p50 floor / old | window p50 | ground diff straddle / within | --nocut sky gap old-floor |
+|---|---|---|---|---|
+| ALLOW_WILD_W=1 | 1605 / 858 (7706/7789) | 2688 / 1184 | 17.43 / 13.88 (n 124/124) | mean +0.065, 87/164 pos, 26 cut-dropped |
+Sheet docs/owner_sheet_s7701_movies_219_dd2.jpg (viewed): the old cap leaves large flat holes in all 6 pairs (desert flat beige, red dunes
+cut diagonally, night base ground black behind the AT-AT and shuttle, canyon wall missing); the floor fills each one. Holes are larger than at
+16:9 dd2 (s7700).
+Selects H-holds at 21:9 dd2 (stream + picture). Refutes H-short: window p50 2688 is under the 4096 floor, so the floor is not binding.
+Single run per arm. Tool change: tools/s7700_poolmin_movies.zsh exports ROGUESQ_ALLOW_WILD_W=1 when AS=21:9 (WILDW=0 opts out),
+diagnostic only. Dumps deleted (1 GB each). Not covered: 21:9 dd4, whether skipping the 768 write-back matters to the game.

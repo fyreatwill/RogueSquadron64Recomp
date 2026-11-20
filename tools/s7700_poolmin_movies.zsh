@@ -8,6 +8,9 @@ cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp || exit 1
 DD=${DD:-2}; EV=${EV:-30}; O=${O:-$PWD/scratch/s7700/movd$DD}; SV=build/saves/rs64.n64.us.1.0.bin; mkdir -p $O/fb
 cp -p $SV $O/save_before.bin || exit 3
 AS=${AS:-16:9}; GW=${GW:-1592}   # 21:9: AS=21:9 GW=2048 (s7039 gate)
+# s7701: at 21:9 the playlist renders 768 wide and RT64 skips that RDRAM write-back (SKIP_WILD_W), so FB_DUMP saw noise
+# (690 dumps, 14 distinct). ALLOW_WILD_W=1 restores the dumps (688/690 distinct); diagnostic only, not owner mode. WILDW=0 opts out.
+[[ $AS == 21:9 && ${WILDW:-1} == 1 ]] && export ROGUESQ_ALLOW_WILD_W=1
 AP=$(sed -n "s/^port AP: //p" scratch/s6792/mov/press.txt | sed "s/13:w1024/13:w$GW/")
 ( cd scratch/s6908/wd && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_AUTOPILOT=$AP \
     ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=$DD ROGUESQ_ASPECT=$AS ROGUESQ_STANDINS=0 ROGUESQ_DD_POOLMIN_TOG=${TOG:-1} \

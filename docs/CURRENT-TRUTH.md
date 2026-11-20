@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7699 (2026-11-20).
+Compact operational handoff, as of Session 7701 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7700: the s6908 cutscene pool floor holds on the AT THE MOVIES playlist (outro proxy, 18 scenes, post-G6c binary).** tools/s7700_poolmin_movies.zsh, same-run TOG. Kept nodes floor vs old cap: dd2 1350 vs 831, dd4 3061 vs 2024. dd2 visible: old cap leaves flat-colour ground holes (desert, train canyon), sheet docs/owner_sheet_s7700_movies_dd2.jpg; dd4 invisible (old cap 2400 already covers the shots). 2/2 alive 0 crash.
+- **NEW s7700/s7701: the s6908 cutscene pool floor holds on the AT THE MOVIES playlist (outro proxy, 18 scenes, post-G6c binary).** tools/s7700_poolmin_movies.zsh, same-run TOG. Kept nodes floor vs old cap: 16:9 dd2 1350/831, dd4 3061/2024; **21:9 dd2 1605/858** (window p50 2688, under the 4096 floor: floor not binding at 21:9). Visible at 16:9 dd2 and 21:9 dd2 (old cap leaves flat ground holes; sheets docs/owner_sheet_s7700_movies_dd2.jpg, docs/owner_sheet_s7701_movies_219_dd2.jpg), invisible at 16:9 dd4. 21:9 caveat: the 768-wide playlist buffer is skipped by RT64 RDRAM write-back (SKIP_WILD_W), so FB_DUMP needs ROGUESQ_ALLOW_WILD_W=1 there (the tool now arms it at 21:9). 4/4 alive 0 crash; one 21:9 route miss (SHOWROOM select not taken).
 - **s7698/s7699 intros:** floor holds on L1 dd4 (invisible), L4 dd2, L5 dd2/dd4 (visible; sheet scratch/s7699/L5d2_sheet.png). Analysers take LV=-1 for the movies route.
 - **s7697: H-absent replicated on L1/L4** (stand-ins 0 hook calls in intro cutscenes, 3/3 levels); soak verdicts now read alive=/crash= aliases (+alive_na=).
 - **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
