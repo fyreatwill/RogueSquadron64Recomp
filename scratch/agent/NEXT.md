@@ -1,19 +1,22 @@
-# NEXT (s7720)
+# NEXT (s7721)
 HYPOTHESIS-ID: sweep-scoring-audit
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
 If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green.
 
-regen-replay-drift is CLOSED (s7719): fresh front == s7558 pristine, replay H-mirrored in BOTH directions (s7423 forward + new
---reverse, controls PASS), and tools/s7719_regen_gate.py now runs it inside the gate sweep (2.6 min, one CPU). Do not iterate it.
+s7720 closed the hollow-GREEN list: s7384 (114/114 MULTI reviewed, 0 RACE) and s7557 (every default-on lever has a
+PROJECT-OVERVIEW row) are GREEN, tools/gate_sweep_allowed_red.txt is empty, and the sweep's two new false-positive HOLLOWs
+(s7392 reviewer prose "10 fails", s7558 "tags 34 open/undoc 0") have HOLLOW_OK rows.
 
-s7719 found a sweep SCORING hole: s7363/s7364/s7366 print "OPEN n" but exit 0 without --check, so the s7718 sweep scored
-OPEN 19/22/6 as GREEN (fixed: ARGS now pass --check with an "OPEN 0" pattern). The same hole may exist elsewhere.
-Unit: for EVERY gate the sweep runs, does rc 0 + its pattern actually imply "0 open"? One offline pass:
-1. Fold scratch/s7719/sweep.txt (s7719 full sweep, in flight at commit; else run a fresh `python3 tools/s7651_gate_sweep.py --jobs 2`), list each GREEN gate's last output line.
-2. Flag any GREEN whose output contains a nonzero open/unclassified/OPEN/RED/FAIL/MISMATCH count (regex over the captured tail,
-   e.g. `\b(OPEN|open|unclassified|UNRESOLVED|FAIL)\D{0,3}[1-9]`), and any tool with a --check/--strict flag the sweep does not pass.
-3. Each flagged gate: add ARGS (flag + pattern) so the count scores, then review its rows by hand (verdict TSVs) to GREEN.
-Hypotheses: H-clean (s7363/4/6 were the only hollow GREENs), H-more (>=1 other GREEN hides a nonzero count / unused --check).
-Positive control: the scanner must flag a planted copy of the s7718 sweep row `s7363_hostarr_census.py GREEN 0 ... OPEN 19`.
-Standing check: `python3 tools/s7651_gate_sweep.py --jobs 2`. Owner defaults: never flip.
+Remaining hole, seen in s7720's own control: HOLLOW_KEYS is a fixed vocabulary. A gate printing `missing=3`, `stale=2`,
+`race=1`, `need_fix=4`, `unmatched 7`, `defects=1` with rc 0 still scores GREEN.
+Unit (ONE offline pass, no game run):
+1. `env RS64_SWEEP_OUTDIR=scratch/s7721/out python3 tools/s7651_gate_sweep.py --jobs 2` (capture every gate's full output once).
+2. Offline: enumerate every `<word>[=: ]<n>` / `<n> <word>` count token across all outputs; list each distinct key word with
+   the gates and max value. Classify each key: OPEN-CLASS (a nonzero means unfinished work), INFO (sizes/totals), CONTROL.
+3. Add every OPEN-CLASS key missing from HOLLOW_KEYS; rerun the scorer offline on the captured outputs; review each newly
+   flagged gate by hand (HOLLOW_OK with a reason, or fix the tool / its rows).
+Hypotheses: H-covered (no rc-0 gate prints a nonzero open-class key outside HOLLOW_KEYS), H-gap (>=1 does).
+Positive control: plant an output line `SUMMARY missing=3` and `race=1` for a swept tool in the offline rescore: both must read HOLLOW.
+Close: sweep ends 0 RED 0 HOLLOW. Then the slug is done; next take an owner item or G-rung per ITERATION 3c.
+Owner defaults: never flip.

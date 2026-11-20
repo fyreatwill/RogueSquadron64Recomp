@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7720 sweep-scoring audit CLOSED (H-more): rc-0 gates now score HOLLOW on a nonzero open count or an unpassed
+  --check/--strict/--gate (controls hol_open/hol_zero/hol_flag PASS).** 16 tools now run with their flag; 7 had failed their own
+  --check while GREEN, all 7 reviewed GREEN: s7384 static-state 114/114 MULTI reviewed, 0 RACE (pi.cpp rom INITORDER,
+  g_rdram_for_submit BENIGN same-value, env_cache trace LOCKED by pthread mutex, rest DIAG/LOCKED/ARTEFACT); s7557 every
+  default-on lever has a docs row (PROJECT-OVERVIEW "Default-on internal guards and fixes"). allowed_red list empty again.
 - **s7719 regen-replay drift CLOSED H-mirrored, both directions; now a live sweep gate.** Fresh front == s7558 pristine; replay vs
   live 2620/141/18, s7421 new-vs-s7558 {} (control PASS), s7423 forward H-diag and new `--reverse` (live-only statements in every
   function) 29 rows all hand-accepted (tools/s7719_live_only_accept.tsv). tools/s7719_regen_gate.py (front + RS64_REPLAY_TREE_ONLY

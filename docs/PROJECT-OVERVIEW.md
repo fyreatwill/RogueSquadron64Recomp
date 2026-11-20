@@ -15191,3 +15191,30 @@ Item-1 class sub-bullets (DG-EO, s7450-s7490), verbatim from CURRENT-TRUTH s7490
   DD_FOG_ALT=1,3,1 -> ks=1 ke=3 all=1, DRAW_DISTANCE=9+UNSAFE -> 8, =abc -> ignored. It also found a split: without DD_UNSAFE the
   terrain multiplier caps at 4 but the dd bundle read the raw 6/8 (pools, dd>=6 cull, dd8 px8 auto). Fixed in rs64_s7358_sanitize_env
   (`[s7712-dd]`, ROGUESQ_S7712_DDCAP=0 = old; DD_UNSAFE=0 also caps). Owner lines always carry UNSAFE, so the owner path is unchanged.
+
+## Default-on internal guards and fixes (s7720 table; source of truth `tools/s7557_gq_census.py --strict`)
+These settings are ON when unset. `=0` turns each off (restores the old behaviour); they are not owner opt-ins and must
+not be flipped without the owner. Every row was read from the getenv site in s7720.
+| Setting | Session | Where | What it does when on (default) |
+|---|---|---|---|
+| `ROGUESQ_AUDIO_PRIVATE_DMEM` | s4250 | librecomp rsp.cpp | audio LLE tasks run on a private DMEM copy, so no shared-DMEM lock with gfx |
+| `ROGUESQ_AUDIO_WAIT_NOPUMP` | s327/s4192 | generated funcs (fixup_game_funcs_vendored.py) | unset = mode 2: the A12 countdown wait yields to the real producer; `0` = old musyxSynthFrame pump, `1` = blind spin (deadlocks) |
+| `ROGUESQ_COPY_GUARD` | s5037 | upstream_compat.cpp | skips a guest memcpy whose src/dst leaves guest RAM (M3 idiom guard) |
+| `ROGUESQ_DD_OFFMAPCULL_EYE` | s7032 | upstream_compat.cpp | dd>1 off-map cull keyed on the eye position (inert at dd1) |
+| `ROGUESQ_DPC_KEEP_PIPE` | s4272 | dpc_bridge.cpp | keeps pending pipe-sync state across deferred DPC submits |
+| `ROGUESQ_DPC_WRAP_FLUSH` | s4273/s4549 | dpc_bridge.cpp | on a DPC ring wrap, flushes pending ranges to RT64 before restarting the ring mark (lap-1 commands not lost) |
+| `ROGUESQ_FL_HDR_HARD_SKIP` | s4548/s659 | rt64 rt64_framebuffer.cpp / rt64_state.cpp | skips RT64 framebuffer writeback over a guest freelist header range |
+| `ROGUESQ_G1D_FPDEPTH` | s6879 | generated funcs (apply_s6879_fpdepth.py) | scales the 0x8004395C far-plane depth store by the draw-distance factor (identity at dd1) |
+| `ROGUESQ_G1D_OVL_WRAP` | s6848 | main.cpp (apply_s6848_ovlwrap.py) | wide-view overlay coordinate wrap fix (inert at 4:3) |
+| `ROGUESQ_HLE_PATCH_ALPHA` | upstream RT64 HLE | rt64 rt64_gbi_f3dfactor5.cpp | HLE-path all-7s alpha combiner rewrite to alpha=1 (HLE only; this port runs the gfx ucode LLE) |
+| `ROGUESQ_PIO_GUARD` | s5062 | librecomp pi.cpp | skips a 4-byte PIO read whose ROM span leaves the cart or whose RDRAM dest leaves RAM |
+| `ROGUESQ_PI_DMA_GUARD` | s5061 | librecomp pi.cpp | skips an out-of-range PI DMA but still posts its completion message |
+| `ROGUESQ_PI_UNK_COMPLETE` | s7196 | librecomp pi.cpp | a PI DMA to an unknown region still posts its completion message (no guest hang) |
+| `ROGUESQ_PREEMPT_POINT` | s6808 | ultramodern mesgqueue.cpp | guest preemption point when a host message is pending |
+| `ROGUESQ_S4272` | s4272/s4549 | dpc_bridge.cpp | deferred-submit shadow path of the DPC bridge |
+| `ROGUESQ_S6892` | s6892/s7571 | upstream_compat.cpp | G5a cinematic spline walker pointer repair (logs to build/rs64_s6892.log) |
+| `ROGUESQ_S7685_POSSUB` | s7685 | rs64_standins.cpp | stand-ins reject a position match whose caller is a different known subtype (only with STANDINS) |
+| `ROGUESQ_SPAI_GUARD` | s5063 | librecomp sp.cpp | skips an SP/AI DMA whose span leaves guest RAM |
+| `ROGUESQ_WRAP_RESTORE` | s4287 | dpc_bridge.cpp | restores the pre-wrap DPC range after a ring wrap |
+`ROGUESQ_S7593_QUIT_AFTER` / `ROGUESQ_S7593_QUIT_ON_GAP_MS` are soak-harness quit timers (gap quit is off by default, -1);
+they change no game state and are classified diag in the census.

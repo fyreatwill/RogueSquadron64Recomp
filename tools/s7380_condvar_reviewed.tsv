@@ -56,3 +56,10 @@ main.cpp|reader|cv|notify|1	LOCKED	predicate state written under the waiter mute
 rt64_buffer_uploader.cpp|BufferUploader::threadLoop|running|start|1	FIXED	s7380: running=true moved to the constructor before thread creation
 rt64_raster_shader_cache.cpp|CompilationThread::loop|threadRunning|start|1	FIXED	s7380: ctor stored false AFTER thread start (thread could exit at once or skip its activeCount-- so setup() spins); now true before start. CFG-DEAD on macOS (ENABLE_OPTIMIZED_SHADER_GENERATION undefined: no compilation threads)
 rt64_texture_cache.cpp|TextureCache::uploadThreadLoop|uploadThreadRunning|start|1	FIXED	s7380: uploadThreadRunning=true moved to the constructor before thread creation
+rt64_workload_queue.cpp|WorkloadQueue::advanceToNextWorkload|barrierCondition|wait|1	LOCKED	s7720: s7381 AW barrier wait, predicate under cursorMutex; barrierCursor written only in threadAdvanceBarrier under cursorMutex
+rt64_workload_queue.cpp|WorkloadQueue::threadAdvanceBarrier|barrierCondition|notify|1	LOCKED	s7720: barrierCursor store in a scoped_lock(cursorMutex) block, notify after (auto=LOCKED)
+rt64_present_queue.cpp|PresentQueue::advanceToNextPresent|barrierCondition|wait|1	LOCKED	s7720: s7381 AW barrier wait, predicate under cursorMutex; barrierCursor written only in threadAdvanceBarrier under cursorMutex
+rt64_present_queue.cpp|PresentQueue::threadAdvanceBarrier|barrierCondition|notify|1	LOCKED	s7720: barrierCursor store in a scoped_lock(cursorMutex) block, notify after (auto=LOCKED)
+rt64_render_context.cpp|reads_wait|cv_idle|wait|1	LOCKED	s7720: s7540 predicate q/busy/cur_rd under m; writers worker (LOCKED) and rs64_s7540_reads_done (cur_rd under lock_guard m)
+rt64_render_context.cpp|rs64_rdpq_task_exit|cv_idle|notify|1	LOCKED	s7720: actually rs64_s7540_reads_done: cur_rd = true and notify_all inside lock_guard(m) (auto=LOCKED)
+main.cpp|writer|cv|wait|2	LOCKED	s7720: cap_on wait_for(200 ms) twin of wait|1, predicate !q.empty() under m

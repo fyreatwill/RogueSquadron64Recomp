@@ -76,7 +76,9 @@ def classify(ops):
     pairs = set()
     for a in stores:
         for b in stores:
-            if a[3] != b[3] and a[0] == b[0] and a[2] == b[2] and abs(a[1] - b[1]) <= 4:
+            # s7720: was 4 lines; the s7569/s7384 witness blocks pushed the last-drawn width/siz stores 21 lines below the
+            # address exchange, so the real-site control read COUNTER. 24 adds only that pair (window 4..16 -> 26 tuples, 24 -> 27).
+            if a[3] != b[3] and a[0] == b[0] and a[2] == b[2] and abs(a[1] - b[1]) <= 24:
                 pairs.add(frozenset((a[3], b[3])))
     loaded_pairs = set()
     for a in loads:

@@ -57,3 +57,6 @@ lib/N64ModernRuntime/ultramodern/src/timer.cpp|= std::thread{ timer_thread, PASS
 lib/N64ModernRuntime/librecomp/src/mods.cpp|std::make_unique<std::thread>(&ModContext::dirty_mod_configu|1	COLD	mod config	mods unused
 lib/N64ModernRuntime/librecomp/src/pi.cpp|= std::thread{saving_thread_func, PASS_RDRAM};|1	WARM	saving	NO_SAVE_WRITE in recipe; save writes are rare
 lib/N64ModernRuntime/librecomp/src/recomp.cpp|std::thread game_thread{[](ultramodern::renderer::WindowHand|1	COLD	Recomp Boot	boot thread (named this session); not present by name at t>=20 s. A separate unnamed DEF thread at a steady 15.6% t=0-60 s appeared in all 3 control-armed runs and 0/1 unarmed: boot phase, gone before the mission, creator unattributed
+src/main/main.cpp|std::thread([] { pthread_setname_np("s7592-plant"); for (;;)|1	DIAG	s7592-plant	s7720: ROGUESQ_S7592_PLANT_FROM (default -1 returns before the spawn) planted control thread
+src/main/upstream_compat.cpp|std::thread([] {|2	DIAG	-	s7720: recv_trace dumper, spawned only after recv_trace_enabled() (ROGUESQ_RECV_TRACE, default off)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|std::thread([] { t_s7384Planted = true; std::this_thread::sl|1	DIAG	-	s7720: ROGUESQ_S7384_CTL=1 planted overlap control, default off

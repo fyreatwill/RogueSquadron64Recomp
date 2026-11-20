@@ -101,3 +101,12 @@ s_last_val|VOLATILE	DIAG env-gated probe/watch state or log tag; no data handed 
 s_rdp_disabled|VALUE-RELAXED	VALUE one-way SEH kill-switch bools / streak count; the flag itself is the datum, no state published with it
 s_seh_streak|VALUE-RELAXED	VALUE one-way SEH kill-switch bools / streak count; the flag itself is the datum, no state published with it
 width|TUPLE-RELAXED	DIAG g_m5_vi_commit row: env-gated M5 VI-commit probe (returns before the stores unless enabled), fields only printed/compared for a log key
+g_rs64_s7481_task_out|VOLATILE	DIAG s7720: stored at the [lle task] site, read only by the s7481/s7484 F-hit classifier prints (lk2 'S' label)
+g_rs64_s7482_base|VOLATILE	DIAG s7720: pool span published by the apply_s6031_far reserve (guest thread) to the s7482 rs_malloc collision detector (same guest thread)
+g_rs64_s7643_plant|VOLATILE	DIAG s7720: rs64_s7643_plant_on() TSan plant, deliberately racy game/main increment, default off
+g_s7384RtLast|VALUE-RELAXED	DIAG s7720: render-thread-only last-drawn address, read once in the s7384 present-side compare print
+g_s7480_inmalloc|VOLATILE	DIAG s7720: rs_malloc entry/exit flag (guest thread), read only by s7480_internal_fn in the s7475/s7480 watch classifier
+g_s7634_sink|VOLATILE	DIAG s7720: sink for the s7634 null-walk timing loop (anti-optimisation), never read
+g_win_id|VALUE-RELAXED	DIAG s7720: main-thread store before the release store of g_win_size; read only in the controls-panel self-test check arm (st_mode 2) after an acquire load of g_win_size
+rs64_s4211_pi_an|MIXED	VALUE s7720: single writer (PI DMA note, guest thread) relaxed self-load + release store; rsp.cpp reader acquires: ordered
+s_s7486_recent|VALUE-RELAXED	DIAG s7720: g_rs64_s7486_on host-read ring of recent addresses for the s7480 plant picker, default off

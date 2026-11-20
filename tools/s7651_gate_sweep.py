@@ -4,7 +4,8 @@
 s7651 found 4 "closed" rerun-after-change gates (s7375, s7430, s7533, s7535) exiting nonzero after later sessions added code
 in their scope (G6b controls, G6c stand-ins, s7535-s7647 instruments): nothing re-ran them, so CURRENT-TRUTH still called
 them closed. This runs them all (with --controls when the tool takes it), 6 at a time, 600 s cap each (RS64_GATE_CAP; s7659), and classifies:
-  GREEN      exit 0
+  GREEN      exit 0 and no HOLLOW signal (s7720)
+  HOLLOW     (s7720) exit 0 but a nonzero open-class count in the output, or an unpassed --check/--strict/--gate flag
   NEEDS-ARGS argparse usage / IndexError on sys.argv / missing input file: the tool needs an input (not a drift signal)
   RED        any other nonzero exit: drift or a real defect, triage by hand
   NEEDS-INPUT (s7655) a tool listed in NEEDS_INPUT printing its exact "input absent" text (other failures stay RED)
@@ -84,8 +85,8 @@ ARGS = {
 # CONTROL-ONLY = scorers of runtime logs run on their synthetic/mutant controls: proves the tool, not a class (no log input).
 S7718_LIVE = {
     's7336_host_arena_table.py': (['--control'], '(?=[\\s\\S]*control .* PASS)'),
-    's7375_nolock_threads.py': ([], '(?=[\\s\\S]*\\nOPEN 0\\b)'),
-    's7377_present_lock_table.py': ([], '(?=[\\s\\S]*line\\tstate\\torigin)'),
+    's7375_nolock_threads.py': (['--check'], '(?=[\\s\\S]*\\nOPEN 0\\b)'),
+    's7377_present_lock_table.py': (['--check'], '(?=[\\s\\S]*line\\tstate\\torigin)'),
     's7408_cvt_contract.py': ([], '(?=[\\s\\S]*VERDICT in-range EQ.*control PASS)'),
     's7411_unaligned_contract.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-equal)'),
     's7412_int_emission.py': ([], '(?=[\\s\\S]*CONTROL PASS)(?=[\\s\\S]*VERDICT H-equal)(?=[\\s\\S]*skipped lui x\\d{1,3}\\b)'),
@@ -100,7 +101,7 @@ S7718_LIVE = {
     's7485_overread_bound.py': ([], '(?=[\\s\\S]*VERDICT EJ-bounded)'),
     's7520_elf_vs_rom.py': (['--controls'], '(?=[\\s\\S]*ctl \\S+: PASS)(?=[\\s\\S]*diffs=0)'),
     's7527_host_replace_audit.py': (['--controls'], '(?=[\\s\\S]*no REVIEW rows\\s+PASS)'),
-    's7565_comp_chain.py': (['--controls'], '(?=[\\s\\S]*controls 8/8)'),
+    's7565_comp_chain.py': (['--controls', '--check'], '(?=[\\s\\S]*controls 8/8)'),
     'audit_service_msg_stack.py': ([], '(?=[\\s\\S]*unaudited stack-payload sends: 0)'),
 }
 S7718_CONTROL_ONLY = {
@@ -138,10 +139,65 @@ S7718_CONTROL_ONLY = {
     's7552_gl_score.py': (['--controls'], 'controls 5/5'),
     's7553_gm_score.py': (['--controls'], 'controls 5/5'),
 }
+# s7720 hollow-GREEN scan: these parse --check/--strict (exit 1 on unreviewed / stale / failed rows) but the sweep ran them bare,
+# so rc was 0 whatever they found. Passing with the flag (rc 0): s7362 s7365 s7375 s7377 s7378 s7392 s7399 s7558 s7565.
+# FAILING with it at s7720 (were GREEN): s7374 s7380 s7381 s7382 s7383 s7384 s7557 - see tools/gate_sweep_allowed_red.txt.
+S7720_CHECK = {t: (["--check"], None) for t in (
+    "s7362_rdramraw_census.py", "s7365_invalidation_census.py", "s7378_shared_res_census.py", "s7392_mesg_census.py",
+    "s7399_evpayload_census.py", "s7558_gr_census.py", "s7374_lazy_static_census.py", "s7380_condvar_census.py",
+    "s7381_spin_census.py", "s7382_thread_qos_census.py", "s7383_atomic_order_census.py", "s7384_static_state_census.py")}
+S7720_CHECK["s7557_gq_census.py"] = (["--strict"], None)
+ARGS.update(S7720_CHECK)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
 EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY)
+# s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
+# so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
+# open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
+# exceptions: tool -> (regex every flagged token must match, reason); an unreviewed new token reads HOLLOW again.
+HOLLOW_KEYS = r"OPEN|UNCLASSIFIED|UNRESOLVED|UNEXPLAINED|UNAUDITED|UNREVIEWED|MISMATCH(?:ES)?|FAIL(?:S|ED|URES?)?|RED|NEW|REVIEW|DRIFT(?:ED)?|BAD"
+# key-first "OPEN 19" / "open=3" / "UNREVIEWED: 2"; number-first "8 new mismatch" only when not itself a value (no "=12 open") and
+# the key carries no count of its own ("94060 bad 0" is bad=0). Lines naming a control / plant / mutant / selftest are skipped:
+# a control is meant to show nonzero counts.
+HOLLOW_RE = re.compile(r"(?<![\w-])(?:(?P<k1>" + HOLLOW_KEYS + r")(?:[ \t]*[=:]?[ \t]*)(?P<n1>[1-9]\d*)\b"
+                       r"|(?<![\w=:.+-])(?P<n2>[1-9]\d*)[ \t]+(?P<k2>" + HOLLOW_KEYS + r")\b(?![ \t]*[=:]?[ \t]*\d))", re.I)
+CONTROL_LINE = re.compile(r"control|plant|mutant|mutated|selftest|fixture|negative|positive", re.I)
+OUTDIR = os.environ.get("RS64_SWEEP_OUTDIR")  # s7720: keep every gate's full output (capture once, re-score offline)
+FLAG_RE = re.compile(r"""["'](--check|--strict|--gate)["']""")
+HOLLOW_OK = {  # s7720, each read by hand in scratch/s7720/out/<tool>.out
+    "s7086_mem_branch_census.py": (r"^== mismatches: \d+ \(0 outside data_gap_/fake_func_\)$", "all mismatches in data_gap_/fake_func_ (the tool's own bound)"),
+    "s7091_ucode_insn_census.py": (r"^region: resident [+-]\d+ [+-]\d+ splice-breaks \d+ unexplained \d+$", "per-control region lines under 'control dup/drop/splice-drop'"),
+    "s7093_su_census.py": (r"on the synthetic set: bad \d+ \(must be > 0\)$", "pre-fix template on synthetic cases, must be > 0"),
+    "s7392_mesg_census.py": (r"^SUMMARY .* missing=0$|\tREVIEW:[A-Z/-]+: ", "need_review counts risky sites; missing=0 = all reviewed (--check enforces); s7720b: counts inside a REVIEW:<verdict> row are the reviewer's prose ('10 fails in BOTH arms')"),
+    "s7558_gr_census.py": (r"^UNGATED by verdict \{.*\} tags \d+ open/undoc 0$", "s7720b: 'tags N open/undoc 0' = N tags, 0 open (--check rc 0)"),
+    "s7416_ctrl_flow.py": (r"^BAD \d+ by class \{'DATA_GAP\(callers=0\)': \d+, 'FIXUP_PATCH': \d+\}$", "BAD all classified; UNEXPLAINED is the gate"),
+    "s7542_gc_census.py": (r"^PASS ", "control result lines"),
+    "s7556_gp_census.py": (r"PASS \(bad=\d+\)$", "planted-control table"),
+    "s7594_sg_census.py": (r"^\[ctl\] .* PASS$", "control line"),
+    "s7648_mk8_census.py": (r"^\[s7648\] unclassified=3$", "the 3 planted ctl sites (tmp paths); a real one exits 1"),
+}
+
+
+def hollow_reason(name, src, argv, out):
+    toks = []
+    if OUTDIR:
+        os.makedirs(OUTDIR, exist_ok=True)
+        open(os.path.join(OUTDIR, name + ".out"), "w").write(out)
+    for line in out.split("\n"):
+        if not CONTROL_LINE.search(line) and HOLLOW_RE.search(line):
+            toks.append(line.strip()[:160])
+    unused = sorted({f for f in FLAG_RE.findall(src) if f not in argv})
+    ok = HOLLOW_OK.get(name)
+    if ok:
+        toks = [t for t in toks if not re.search(ok[0], t)]
+        unused = [f for f in unused if not re.search(ok[0], "flag " + f)]
+    if not toks and not unused:
+        return None
+    parts = ([f"unused {' '.join(unused)}"] if unused else []) + ([f"{len(toks)} nonzero: {toks[0]}"] if toks else [])
+    return "; ".join(parts)[:200]
+
+
 TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
 CACHE, CACHE_LOCK, STATS = {}, threading.Lock(), {"hit": 0, "miss": 0, "uncacheable": 0}
@@ -309,13 +365,15 @@ def run_uncached(path):
     if rc == 0 and must and not re.search(must, out):
         return (os.path.basename(path), "RED", rc, f"output lacks /{must}/: {tail}"), a, tr
     if rc == 0:
-        return (os.path.basename(path), "GREEN", rc, tail), a, tr
+        hr = hollow_reason(os.path.basename(path), src, a, out)
+        return (os.path.basename(path), "HOLLOW", rc, hr) if hr else (os.path.basename(path), "GREEN", rc, tail), a, tr
     if "--controls" in a and "unrecognized arguments: --controls" in out:  # mentions --controls in text only: retry bare
         a = []
         rc, out, tr = traced(path, a)
         tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
         if rc == 0:
-            return (os.path.basename(path), "GREEN", rc, tail), a, tr
+            hr = hollow_reason(os.path.basename(path), src, a, out)
+            return (os.path.basename(path), "HOLLOW", rc, hr) if hr else (os.path.basename(path), "GREEN", rc, tail), a, tr
     ni = NEEDS_INPUT.get(os.path.basename(path))
     if ni and ni[0].search(out.strip()[-400:]):
         return (os.path.basename(path), "NEEDS-INPUT", rc, ni[1]), a, tr
@@ -414,12 +472,20 @@ def main():
             os.makedirs(os.path.dirname(f))
             open(f, "w").write(body)
         c["rep_noexit"], c["rep_exit"] = run(rp_ok)[1], run(rp_bad)[1]
+        # s7720: the s7718 hollow row (OPEN 19, rc 0) must read HOLLOW, OPEN 0 GREEN, an unpassed --check HOLLOW
+        for k, body in (("hol_open", "print('s7363 hostarr census')\nprint('OPEN 19')\n"), ("hol_zero", "print('OPEN 0 fail=0')\n"),
+                        ("hol_flag", "import sys\nif '--check' in sys.argv: sys.exit(1)\nprint('table')\n")):
+            f = os.path.join(d, k, "s9999_" + k + "_census.py")
+            os.makedirs(os.path.dirname(f))
+            open(f, "w").write(body)
+            c[k] = run(f)[1]
         for k in list(CACHE):  # controls never persist
             if k.startswith(os.path.abspath(d)):
                 del CACHE[k]
         ccpass, cc = cache_control(d)
     cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED",
-                 "rep_noexit": "REPORT", "rep_exit": "RED"}
+                 "rep_noexit": "REPORT", "rep_exit": "RED",
+                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
     print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit, import: green/green/hit/red-after-module-edit ->", cc, "PASS" if ccpass else "FAIL")
     if not (cpass and ccpass):
@@ -449,7 +515,7 @@ def main():
     print("[s7651] gates", len(rows), dict(Counter(r[1] for r in rows)))
     print(f"[s7656] cache {'on' if USE_CACHE else 'off'} hit={STATS['hit']} miss={STATS['miss']} "
           f"uncacheable={STATS['uncacheable']} wall={time.time() - t0:.1f}s")
-    red = [r[0] for r in rows if r[1] == "RED"]
+    red = [r[0] for r in rows if r[1] in ("RED", "HOLLOW")]  # s7720: HOLLOW blocks like RED
     if newvs:
         allowed = {l.split()[0] for l in open(newvs) if l.strip() and not l.startswith("#")} if os.path.exists(newvs) else set()
         new = [n for n in red if n not in allowed]

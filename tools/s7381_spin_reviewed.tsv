@@ -22,7 +22,6 @@ main.cpp|start_memwp_watchdog|SLEEP|1	DIAG	env-gated ROGUESQ_LOG_* / watch polle
 main.cpp|start_memwp_watchdog|SLEEP|2	DIAG	env-gated ROGUESQ_LOG_* / watch poller thread (getenv at start), ms-scale sleep_for
 main.cpp|get_n64_input|SLEEP|1	DIAG	ROGUESQ_GODMODE3 health-revive thread, 20 us sleeps
 main.cpp|init|SLEEP|1	EXIT	rs64_stderr_async_restore drain at exit/crash, usleep 1 ms x <=300
-upstream_compat.cpp|floorWriterGuest|SLEEP|1	DIAG	cine watchdog thread, Sleep(500)
 upstream_compat.cpp|rs64_guest_range_valid|PURE-SPIN|1	BOUNDED	CAS-max retry on a diag high-water mark, lock-free
 upstream_compat.cpp|recv_trace_start_dumper|SLEEP|1	DIAG	env-gated recv trace dumper, 10 s sleeps
 upstream_compat.cpp|rec|SLEEP|1	DIAG	periodic dump thread, 40-60 s sleeps
@@ -74,3 +73,11 @@ guest|bufferArbiterAllocSlot|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no 
 guest|bufferArbiterAllocSlot|YIELD|2	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
 guest|acquireFreeBufferSlot|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
 guest|waitForPostSwapAck|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
+main.cpp|rs64_diag_spin_us|PURE-SPIN|1	DIAG	s7720: ROGUESQ_DIAG_BUSY_US/_GUEST_US default 0, returns when us<=0
+main.cpp|rs64_s7593_plant|SLEEP|1	EXIT	s7720: rs64_s7593_quit_now second consumer parks while the first exits
+main.cpp|rs64_s7592_plant_event|SLEEP|1	DIAG	s7720: ROGUESQ_S7592_PLANT_FROM default -1 returns before the planted thread
+main.cpp|s7382_qos_start|SLEEP|1	DIAG	s7720: ROGUESQ_S7382_QOS=1 sampler, sleep_until between dumps
+rt64_render_context.cpp|rs64_rdpq_task_exit|YIELD|1	BOUNDED	s7720: rs64_s7540_reads_done hold wait, only ROGUESQ_S7541_HOLD + wk_mode 4, 50 ms timeout, yields
+upstream_compat.cpp|s7545_access|SLEEP|1	DIAG	s7720: rs64_s7545_create returns unless ROGUESQ_S7545_THRWATCH; 5 s sleep loop
+upstream_compat.cpp|s7490_pre|SLEEP|1	BOUNDED	s7720: cine watchdog thread Sleep(500) (was keyed floorWriterGuest, stale after the function-attribution moved)
+plume_metal.cpp|MetalSwapChain::present|PURE-SPIN|1	BOUNDED	s7720: s7641 CAS increment of rs64AvailIdx, retries only on a concurrent update (one other writer), no wait

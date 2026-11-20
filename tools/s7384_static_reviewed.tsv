@@ -73,3 +73,45 @@ src/main/upstream_compat.cpp|s_cov@rs64_g1d_blk_dma	CONFINED GFX (rt64wb branch)
 src/main/upstream_compat.cpp|g_m5_selector_ai_call_latch	DIAG M5 selector latch: Gfx-side join returns unless ROGUESQ_LOG_M5_ROUTE_TRANSITION / LOG_ALL; fields only printed
 src/rsp/dpc_bridge.cpp|g_f5_last_writer	DIAG ROGUESQ_LOG_F5_STORE_SHADOW table: sized once by call_once (s7366), rows written by the guest store hook only when the gate is on, read by the Gfx dump for printing
 src/rsp/dpc_bridge.cpp|event	ARTEFACT function-local automatic (Rs64E9Provenance::FrameEvent event{...}) in a function head the parser missed, not a static
+lib/N64ModernRuntime/librecomp/src/pi.cpp|rom	INITORDER s7720: set_rom_contents runs in wait_for_game_started (load_stored_rom, then load_mods patch) on the game thread before init() enters guest code; GFX/TASK read it only via guest-issued PI DMA/tasks, which start after
+lib/N64ModernRuntime/ultramodern/src/events.cpp|rs64_vi_shape_ctl_left	DIAG s7720: ROGUESQ_VI_SHAPE_CTL positive control; armed by the guest swap hook only when that env is set, decremented on VI inside rs64_vi_shape_log()
+lib/N64ModernRuntime/ultramodern/src/events.cpp|rs64_vi_shape_n	DIAG s7720: [vi-mode] counter, incremented only inside rs64_vi_shape_log() (ROGUESQ_LOG_VI_SHAPE); value only printed
+lib/N64ModernRuntime/ultramodern/src/events.cpp|rs64_vi_feat_ctl_left	DIAG s7720: ROGUESQ_VI_FEAT_CTL positive control; armed only when that env is set, consumed on VI commit
+lib/N64ModernRuntime/ultramodern/src/events.cpp|rs64_vi_feat_commits	DIAG s7720: VI-thread commit counter; guest side only prints it ([vi-feat]/[vi-feat-ctl] under ROGUESQ_LOG_VI_FEAT / VI_FEAT_CTL); a torn read only skews a log number
+lib/N64ModernRuntime/ultramodern/src/events.cpp|t0	ARTEFACT s7720: s4265::t0 / g1b t0 are file-scope clk::now() initialisers never reassigned; the parser merged them with the function-local uint64_t t0 at events.cpp:1457 (t0 = tk)
+lib/rt64/src/render/rt64_framebuffer_renderer.cpp|s7465_n@FramebufferRenderer::submitRasterScene	DIAG s7720: log rate-limit (first 8 [s7465] lines) on a never-seen null-target FillRect skip; value only printed
+src/main/main.cpp|want	ARTEFACT s7720: function-local automatic std::string in audio_route_resolve, not a static
+src/main/main.cpp|g_s7503_v	LOCKED g_s7503_mu s7720: written only in s7503_finish_locked (callers hold g_s7503_mu); ROGUESQ_S7503_FA diag
+src/main/main.cpp|c	LOCKED s7551::mu s7720: Cnt c[2] written under lock_guard(mu) (main.cpp ~11325) and reset in report() under the same lock; ROGUESQ_S7551_GK diag
+src/main/main.cpp|t0	ARTEFACT s7720: s7551::t0 is a static steady_clock::now() initialiser never reassigned (tlast is the written one, under mu)
+src/main/main.cpp|g_rs64_s7643_plant	DIAG s7720: deliberate two-thread race PLANT (s7643 race-detector positive control), written only when rs64_s7643_plant_on(); volatile int, never read for behaviour
+src/main/rs64_env_cache.cpp|g_trace	LOCKED g_trace_mu s7720: rows appended in trace() and printed in rs64_s7427_policy_done() under pthread_mutex g_trace_mu (pthread lock not seen by the lock_guard heuristic); ROGUESQ_S7427_ENVTRACE diag
+src/main/rs64_env_cache.cpp|g_trace_n	LOCKED g_trace_mu s7720: same as g_trace
+src/main/rs64_env_cache.cpp|g_trace_mu	ARTEFACT s7720: pthread_mutex_t (PTHREAD_MUTEX_INITIALIZER) is the lock itself; the type filter only knows std:: mutexes
+src/main/upstream_compat.cpp|s_s7475_live	DIAG s7720: s7475 canary/slack watch state (ROGUESQ_S7475_CANARY, measurement only; map ops under s_s7475_mu)
+src/main/upstream_compat.cpp|g_s7480_inmalloc	DIAG s7720: s7480 UAF watch state, active only when s7480_on() (ROGUESQ_S7480_UAF + S7475_CANARY); measurement only, guest memory untouched
+src/main/upstream_compat.cpp|s_s7480_freed	DIAG s7720: s7480 UAF watch state, active only when s7480_on() (ROGUESQ_S7480_UAF + S7475_CANARY); measurement only, guest memory untouched
+src/main/upstream_compat.cpp|s_s7480_internal	DIAG s7720: s7480 UAF watch state, active only when s7480_on() (ROGUESQ_S7480_UAF + S7475_CANARY); measurement only, guest memory untouched
+src/main/upstream_compat.cpp|s_s7480_pcs	DIAG s7720: s7480 UAF watch state, active only when s7480_on() (ROGUESQ_S7480_UAF + S7475_CANARY); measurement only, guest memory untouched
+src/main/upstream_compat.cpp|s_s7480_loc	DIAG s7720: s7480 UAF watch state, active only when s7480_on() (ROGUESQ_S7480_UAF + S7475_CANARY); measurement only, guest memory untouched
+src/main/upstream_compat.cpp|s_s7480_plant	DIAG s7720: s7480 UAF watch state, active only when s7480_on() (ROGUESQ_S7480_UAF + S7475_CANARY); measurement only, guest memory untouched
+src/main/upstream_compat.cpp|s_s7484_plant	DIAG s7720: s7484 load watch, live only when g_rs64_s7484_on (ROGUESQ_S7484_UAFLOAD / s7518 / s7545 arms, all env-gated); measurement only
+src/main/upstream_compat.cpp|s_s7484_hits	DIAG s7720: s7484 load watch, live only when g_rs64_s7484_on (ROGUESQ_S7484_UAFLOAD / s7518 / s7545 arms, all env-gated); measurement only
+src/main/upstream_compat.cpp|s_s7484_loc	DIAG s7720: s7484 load watch, live only when g_rs64_s7484_on (ROGUESQ_S7484_UAFLOAD / s7518 / s7545 arms, all env-gated); measurement only
+src/main/upstream_compat.cpp|s_s7488_pcs	DIAG s7720: s7488 swl/swr watch, live only when g_rs64_s7488_on (ROGUESQ_S7488_USTOREWATCH); measurement only
+src/main/upstream_compat.cpp|s_s7488_ctl	DIAG s7720: s7488 positive-control state, ROGUESQ_S7488_USTOREWATCH only
+src/main/upstream_compat.cpp|s_s7487_ctl	DIAG s7720: s7487 lwl/lwr watch control state, live only when g_rs64_s7487_on (ROGUESQ_S7487_LWLWATCH)
+src/main/upstream_compat.cpp|s_s7519_dt	DIAG s7720: s7519 D-cache shape model (ROGUESQ_CACHE_SHAPE*), measurement only: counters/tables printed, guest state untouched
+src/main/upstream_compat.cpp|s_s7519_n	DIAG s7720: s7519 D-cache shape model (ROGUESQ_CACHE_SHAPE*), measurement only: counters/tables printed, guest state untouched
+src/main/upstream_compat.cpp|seen	DIAG s7720: s7393::seen table of the ROGUESQ_S7393_CQ queue census (on() gate, writers under s7393::mu); measurement only
+src/rsp/dpc_bridge.cpp|g_rdram_for_submit	BENIGN s7720: every writer (rsp_dpc_submit_impl, from GFX and GUEST submit paths) stores the same process-lifetime rdram base pointer; readers null-check it
+src/rsp/dpc_bridge.cpp|s_shw	DIAG s7720: spike-scan late-write shadow, used only in fused=2/3 (chk/inj) diagnostic mode, never default
+src/rsp/dpc_bridge.cpp|s_inj_seen	DIAG s7720: fused=3 injection positive-control counter, printed only
+src/rsp/s7521_ucode_watch.cpp|ctl	DIAG s7720: s7521 ucode/IMEM watch (ROGUESQ_S7521_UCODEWATCH), state mutated inside its std::mutex m sections; measurement only
+src/rsp/s7521_ucode_watch.cpp|rows	DIAG s7720: s7521 ucode/IMEM watch (ROGUESQ_S7521_UCODEWATCH), state mutated inside its std::mutex m sections; measurement only
+src/rsp/s7521_ucode_watch.cpp|seen_off	DIAG s7720: s7521 ucode/IMEM watch (ROGUESQ_S7521_UCODEWATCH), state mutated inside its std::mutex m sections; measurement only
+src/rsp/s7521_ucode_watch.cpp|isrc	DIAG s7720: s7521 ucode/IMEM watch (ROGUESQ_S7521_UCODEWATCH), state mutated inside its std::mutex m sections; measurement only
+src/rsp/s7644_rspdma.cpp|g_gstale	LOCKED g_gmu s7720: every writer (rs64_s7645_gfx_task, PI DMA hook, read hook, stale_tally) holds g_gmu; ROGUESQ_S7644_RSPDMA diag
+src/rsp/s7644_rspdma.cpp|g_srcs	LOCKED g_gmu s7720: written via src_idx (from gfx_pi_post under g_gmu) / stale_tally (task-end edge under g_gmu); ROGUESQ_S7644_RSPDMA diag
+src/rsp/s7644_rspdma.cpp|g_srcc	LOCKED g_gmu s7720: written via src_idx (from gfx_pi_post under g_gmu) / stale_tally (task-end edge under g_gmu); ROGUESQ_S7644_RSPDMA diag
+src/rsp/s7644_rspdma.cpp|g_stale_n	LOCKED g_gmu s7720: written via src_idx (from gfx_pi_post under g_gmu) / stale_tally (task-end edge under g_gmu); ROGUESQ_S7644_RSPDMA diag

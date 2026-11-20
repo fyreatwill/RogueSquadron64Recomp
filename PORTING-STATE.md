@@ -205905,3 +205905,52 @@ audits every other GREEN gate for the same hole (NEXT.md sweep-scoring-audit).
 Standing sweep: each changed gate was run on its own GREEN this session (s7719_regen_gate rc 0, s7363/s7364 --rt64/s7366 --check
 OPEN 0). The full `s7651_gate_sweep.py --jobs 2` started 10:04 was still running at commit; its output lands in
 scratch/s7719/sweep.txt and the next iteration folds the tally (NEXT.md step 1).
+
+## Session 7720 (2026-11-20) — gate-sweep HOLLOW scoring (H-more selected) + the two remaining hollow gates reviewed GREEN: s7384 43 MULTI statics (0 RACE), s7557 20 default-on settings documented
+
+Note: the s7720 iteration ran the sweep-scoring audit but ended without a ledger entry or commit; its working-tree changes
+(tools/s7651_gate_sweep.py, five reviewed TSVs, s7383 window fix, allowed_red rows, NEXT.md) are folded into this entry
+together with this session's review work, as one commit.
+
+**Part 1 (s7720 work, from the tree + scratch/s7720/).** Question: does rc 0 + pattern imply "0 open" for every swept gate?
+Selected H-more: tools/s7651_gate_sweep.py now re-scores an rc-0 gate HOLLOW (blocks like RED) on a nonzero open-class count
+in its full output, or a parsed `--check/--strict/--gate` flag the sweep did not pass. Controls hol_open (planted s7363
+"OPEN 19" row) -> HOLLOW, hol_zero ("OPEN 0") -> GREEN, hol_flag (exits 1 only under --check) -> HOLLOW, all PASS
+(scratch/s7720/final.txt). 16 tools now run with their flag (S7720_CHECK; s7557 with --strict); 7 FAILED their own --check
+while scored GREEN. 5 reviewed to GREEN in s7720 (s7374 s7380 s7381 s7382 s7383; s7383's real-site control had broken: tuple
+window 4 -> 24 lines). s7384 and s7557 were left on tools/gate_sweep_allowed_red.txt.
+
+**Part 2 (this session): s7384 `--check` 43 -> 0 unreviewed (46 rows written, 3 more surfaced once the first 43 were in).**
+Verdicts in tools/s7384_static_reviewed.tsv, each read at the source:
+- pi.cpp|rom: INITORDER. set_rom_contents runs only in wait_for_game_started (load_stored_rom, then the mod patch_rom path)
+  on the game thread before init() enters guest code; GFX/TASK touch it only via guest-issued DMA/tasks, which start later.
+- dpc_bridge.cpp|g_rdram_for_submit: BENIGN. Every writer stores the same process-lifetime rdram base; readers null-check.
+- rs64_env_cache.cpp|g_trace/g_trace_n: LOCKED by pthread_mutex g_trace_mu (the heuristic only knows std:: locks);
+  g_trace_mu itself: ARTEFACT (it is the mutex).
+- main.cpp g_s7503_v (g_s7503_mu), s7551 c (s7551::mu), s7644 g_gstale/g_srcs/g_srcc/g_stale_n (g_gmu): LOCKED.
+- ARTEFACT: main.cpp|want (automatic std::string), events.cpp|t0 and main.cpp|t0 (static clk::now() initialisers never
+  reassigned; name-merged with a function-local t0).
+- DIAG (env-gated, measurement only, value printed): events.cpp VI shape/feat controls and counters, rt64 s7465_n log cap,
+  g_rs64_s7643_plant (the s7643 race-detector's deliberate plant), the s7475/s7480/s7484/s7487/s7488/s7519/s7393 heap and
+  cache watches in upstream_compat.cpp, dpc_bridge spike-scan fused=2/3 shadow (s_shw, s_inj_seen), s7521 IMEM watch.
+Result: MULTI 114 reviewed 114 {INITORDER 12, LOCKED 31, DIAG 51, ARTEFACT 7, BENIGN 8, CONFINED 5}, RACE 0, controls
+PASS (planted two-root MULTI, locked LOCKED, init-only INIT-ONCE) in the same run. Selects H-review over H-race: no
+cross-thread race on a default-on path among these rows. Single-source (static reading), but each verdict names its
+lock/gate at a line that can be re-read.
+
+**s7557 `--strict` 20 H-unlisted -> 0.** Each default-on setting now has a row in docs/PROJECT-OVERVIEW.md "Default-on
+internal guards and fixes (s7720 table)", read from its getenv site: ROGUESQ_AUDIO_PRIVATE_DMEM, ROGUESQ_AUDIO_WAIT_NOPUMP,
+ROGUESQ_COPY_GUARD, ROGUESQ_DD_OFFMAPCULL_EYE, ROGUESQ_DPC_KEEP_PIPE, ROGUESQ_DPC_WRAP_FLUSH, ROGUESQ_FL_HDR_HARD_SKIP,
+ROGUESQ_G1D_FPDEPTH (s6879 far-plane depth scale, identity at dd1), ROGUESQ_G1D_OVL_WRAP, ROGUESQ_HLE_PATCH_ALPHA (RT64
+HLE-only alpha rewrite; this port runs the gfx ucode LLE), ROGUESQ_PIO_GUARD, ROGUESQ_PI_DMA_GUARD, ROGUESQ_PI_UNK_COMPLETE,
+ROGUESQ_PREEMPT_POINT, ROGUESQ_S4272, ROGUESQ_S6892, ROGUESQ_S7685_POSSUB, ROGUESQ_SPAI_GUARD, ROGUESQ_WRAP_RESTORE.
+ROGUESQ_S7593_QUIT_AFTER / ROGUESQ_S7593_QUIT_ON_GAP_MS are soak-harness quit timers (gap quit default -1 = off) -> added to
+the census DIAG_OVERRIDE. G1D_FPDEPTH and HLE_PATCH_ALPHA were H-no-session (no session named them); this entry names them.
+Controls 13/13 PASS. No default changed (owner rule).
+Rules out: the s7720 hollow GREENs hiding a real race or an undocumented default lever in these two tools.
+**Sweep after the review (scratch/s7720b/).** The first full sweep scored 189 GREEN, 5 REPORT, 2 HOLLOW. Both HOLLOWs were false
+positives of the new s7720 scanner, checked by hand: s7392 "10 fails" is the reviewer's prose inside a `REVIEW:COALESCE-LOAD`
+verdict row, and s7558 "tags 34 open/undoc 0" means 34 tags with 0 open. Both tools pass their own --check (rc 0). I added
+HOLLOW_OK rows for them, and an offline control showed a planted "open/undoc 2" still flags. Rerun: gates 196 {GREEN 191,
+REPORT 5}, rc 0, controls (planted red/green, hol_open/hol_zero/hol_flag, cache) PASS.
+Known gap, queued as NEXT: HOLLOW_KEYS is a fixed vocabulary (e.g. `missing=3` does not flag).

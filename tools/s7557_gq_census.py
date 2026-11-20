@@ -51,7 +51,9 @@ DIAG_RE = re.compile(r"(?:^|_)(LOG|LOGS|DUMP|TRACE|CTL|CHK|CHECK|WATCH|PLANT|CEN
                      r"QUIET|PRINT|TM|BREADCRUMB|SHEET|STAMP|PROF|PROFILE|AUDIT|TAG|WITNESS|HOLD)(?:_|$)|^ROGUESQ_DIAG_|^ROGUESQ_LOG")
 # Names whose tokens look diagnostic but that change guest-visible behaviour, or the reverse (checked by hand, s7557).
 DIAG_OVERRIDE = {"ROGUESQ_WAITTAB": True,   # s7191 wait-table instrument (timing only, no guest-visible change)
-                 "ROGUESQ_STALL_DUMP": True, "ROGUESQ_STALL_SAMPLE": True}
+                 "ROGUESQ_STALL_DUMP": True, "ROGUESQ_STALL_SAMPLE": True,
+                 # s7720: soak-harness quit timers (QUIT_ON_GAP_MS defaults -1 = off; QUIT_AFTER is its parameter)
+                 "ROGUESQ_S7593_QUIT_AFTER": True, "ROGUESQ_S7593_QUIT_ON_GAP_MS": True}
 SWITCH_RE = re.compile(r"(?:=\s*0\b|\b0\s*=|\b0\s*(?:->|restores|keeps|=)\s*(?:old|retail|off)|\bold\b|\bretail\b|disable)", re.I)
 
 
