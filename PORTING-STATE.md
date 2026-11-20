@@ -205954,3 +205954,4 @@ verdict row, and s7558 "tags 34 open/undoc 0" means 34 tags with 0 open. Both to
 HOLLOW_OK rows for them, and an offline control showed a planted "open/undoc 2" still flags. Rerun: gates 196 {GREEN 191,
 REPORT 5}, rc 0, controls (planted red/green, hol_open/hol_zero/hol_flag, cache) PASS.
 Known gap, queued as NEXT: HOLLOW_KEYS is a fixed vocabulary (e.g. `missing=3` does not flag).
+Verdict: this selects H-review and refutes H-race for the 46 s7384 rows, selects H-more for the s7720 sweep scan, and closes the allowed-red list. The next discriminator is the HOLLOW_KEYS coverage pass in NEXT.md (H-covered vs H-gap).
