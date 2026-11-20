@@ -205022,3 +205022,31 @@ HYPOTHESIS-ID: g6c-owner-sheet-refresh
 - Rules out: the s7672-s7687 handover changes wiping stand-ins out (early items and flicker held or rose on 3/4 arms). Open, single
   arm: L1 dd2 bunker no longer flickers. H-path (different flight path/timing this run) vs H-handoff (a handover change gives the
   bunker to its real object before the dump window). Next: one-run bisect at L1 dd2 (new vs all handover knobs =0).
+
+## Session 7689 (2026-11-19) — G6c L1 dd2 bunker: H-handoff and H-path refuted, s7688 eye claim corrected, per-run pair-partner add flip found
+HYPOTHESIS-ID: g6c-l1-bunker-handoff
+- crash_reports --since 2026-11-13: FOLDED=27 new=0. No new soak verdicts. CURRENT-TRUTH 58157 B (< 60000, no maintenance).
+- Ran scratch/s7689_handoff_ab.sh (g1e harness, L1 dd2, STANDINS=frame + dumps, HOLD 150, same binary): arm new (defaults) vs arm old
+  (ROGUESQ_S7672_HOLD/S7681_SHIELD/S7684_RSKEY/S7685_POSSUB/S7686_POSSUB/S7687_POSSUB all =0). 2/2 alive_at_end=1, crashlines=0,
+  vi_stalls30s=0, max_gap 149/151 ms. Window-1 flicker px/triplet 465.2 vs 456.1 (window-2 off 44.4/44.4), synthetic control PASS
+  both; cluster sheet med_fpx 0 / 0 (controls PASS 401 / ...), top crops = small objects at the screen bottom in both arms.
+  -> H-handoff REFUTED: the six handover knobs do not bring the bunker back.
+- H-path: [standins-spawn] t= sequence of s7628 a12 (log_a12.txt.zst) and s7689 new are identical to 10 ms over all 34 items (same
+  route and timing). Re-scored the archived s7628 frames with today's tools/s7628_standins_sheet.py: med_fpx 153, bunker bbox
+  (584,256)-(616,272), control PASS 395 -> scorer unchanged; the difference is in the game output. H-path REFUTED.
+- Eye check (docs/s7689_l1_bunker_s7628_vs_now.png, frames 4605-4608 crop): s7628 draws the dark bunker in the ON frames (crop mean luma
+  150/110/150/109), today it is absent from BOTH frames (153/150/152/149) and a small post flickers there. s7688's "bunker present in
+  both frames" was wrong.
+- Per-item added join (s7628 / new / old): items added differ run to run at pair granularity. sub 0x14 pairs 803CEB08/CEBC4,
+  CEC80/CED3C, CEDF8/CEEB4: s7628 added the second of each, s7689 both arms the first. Old vs new (same binary, same run) differ on 10
+  of 34 items (803CFFD8/D00DC, D06BC, D149C/D15A0, D22A8, D2344/D23D4, D2468/D24FC, D2590). The never-added partner is tried every on
+  frame and culled every time (end=none, held_ok=0).
+- H-phase (STANDINS=frame samples only even submit calls; per-item add success could alias with a period-2 game cadence): added a
+  par=try0/add0,try1/add1 field to [standins-spawn] (src/main/rs64_standins.cpp, log-only) and ran L1 dd2 STANDINS=1 HOLD 100
+  (scratch/s7689b_soak, 1/1 alive, 0 crash/stall): adds split evenly by parity (94/95, 224/223, 275/275, 399/398, 320/320, 169/169;
+  zero-add items 0/0 on both). H-phase REFUTED. This route diverged before the 62.9 s bunker group (last spawn 31 s), so the pair
+  partners themselves were not observed under STANDINS=1.
+- Rules out: handover knobs, flight-path variance, scorer drift and frame-mode parity aliasing as the cause of the lost bunker. Open:
+  what culls one partner of a co-located sub 0x14 pair, and why the choice flips between runs (candidates: stand-in state built from
+  a per-run guest value such as the item's difficulty/variant field, or the two partners sharing a position so depth/bucket order picks one).
+- Code: src/main/rs64_standins.cpp par_try/par_add (logging only, no behaviour change). Default STANDINS stays off.

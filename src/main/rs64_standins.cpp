@@ -80,6 +80,8 @@ constexpr uint16_t kSubProbeDroid = 0x0Eu;
 
 struct Standin {
     uint32_t item, state, inst, scale; double first_add = -1.0, last_add = -1.0; bool spawn_logged = false;
+    // s7689: submits / accepted adds split by submit-call parity (s_calls & 1), printed on the [standins-spawn] line (par=try0/add0,try1/add1)
+    uint32_t par_try[2] = {}, par_add[2] = {};
     // s7672 handoff (ROGUESQ_STANDINS_LOG=1): frame ids are our submit-call count (one per mission frame)
     int64_t last_si = -1, spawn_f = -1, real_call = -1, real_add = -1, real_last = -1; uint32_t overlap = 0, real_frames = 0, held = 0, held_ok = 0;
     // s7674: held culled frames by our own view-test exit class, and the real object's rejected calls while we wait for its first accept
@@ -778,9 +780,9 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         for (Standin& s : s_standins)
             if (!s.spawn_logged && rh(rdram, s.item + 6u) != 0xFFFFu) {
                 s.spawn_logged = true;
-                std::fprintf(stderr, "[standins-spawn] item %08X t=%.2f added_first=%.2f added_last=%.2f early_s=%.2f\n", s.item, now - s_first,
+                std::fprintf(stderr, "[standins-spawn] item %08X t=%.2f added_first=%.2f added_last=%.2f early_s=%.2f par=%u/%u,%u/%u\n", s.item, now - s_first,
                              s.first_add < 0 ? -1.0 : s.first_add - s_first, s.last_add < 0 ? -1.0 : s.last_add - s_first,
-                             s.first_add < 0 ? -1.0 : now - s.first_add);
+                             s.first_add < 0 ? -1.0 : now - s.first_add, s.par_try[0], s.par_add[0], s.par_try[1], s.par_add[1]);
             }
         return;
     }
@@ -875,9 +877,9 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
             ++s_t.spawned;
             if (!s.spawn_logged) {
                 s.spawn_logged = true;
-                std::fprintf(stderr, "[standins-spawn] item %08X t=%.2f added_first=%.2f added_last=%.2f early_s=%.2f\n", s.item, now - s_first,
+                std::fprintf(stderr, "[standins-spawn] item %08X t=%.2f added_first=%.2f added_last=%.2f early_s=%.2f par=%u/%u,%u/%u\n", s.item, now - s_first,
                              s.first_add < 0 ? -1.0 : s.first_add - s_first, s.last_add < 0 ? -1.0 : s.last_add - s_first,
-                             s.first_add < 0 ? -1.0 : now - s.first_add);
+                             s.first_add < 0 ? -1.0 : now - s.first_add, s.par_try[0], s.par_add[0], s.par_try[1], s.par_add[1]);
             }
             continue;
         }
@@ -920,6 +922,8 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         }
         rs64_vt_on = s_log ? 2 : 0;
         rs64_vt_farmul = 1.0f;
+        ++s.par_try[s_calls & 1u];
+        if (add_v0 == 1) ++s.par_add[s_calls & 1u];
         reason(s, add_v0 == 1 ? 0 : 1);
         if (add_v0 == 1) {
             s.last_si = s_calls;

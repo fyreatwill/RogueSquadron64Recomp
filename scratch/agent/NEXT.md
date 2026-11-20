@@ -1,14 +1,17 @@
-# NEXT (s7689)
-HYPOTHESIS-ID: g6c-l1-bunker-handoff
+# NEXT (s7690)
+HYPOTHESIS-ID: g6c-pair-partner-cull
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7688 refreshed the G6c sheet: no wholesale regression (flicker + early items held/rose on 3/4 arms, controls PASS), but L1 dd2's
-far bunker (s7630 med_fpx 153) no longer flickers (med 0; it is in both frames of each pair).
-Hypotheses: H-path (this run flew a different path or timing, so the bunker was real/absent in window 1) vs H-handoff (one of
-ROGUESQ_S7672_HOLD / S7681_SHIELD / S7684_RSKEY / S7685_POSSUB / S7686_POSSUB / S7687_POSSUB hands the bunker over early).
-Discriminator, ONE run, two arms at L1 dd2 (copy scratch/s7688_standins_proof.sh, ARMS a12 new vs a12old with all six knobs =0,
-output scratch/s7689_soak):
-  - old arm med_fpx >= ~100 with the bunker ON-only, new arm 0 -> H-handoff; then bisect knobs (3 + 3) in the next run.
-  - both ~0 -> H-path (scene variance); check [standins-spawn] for the bunker's item in both logs and close the thread.
-Score: tools/s7628_standins_sheet.py --cluster 16 --control --pairs 3 per arm (control must PASS in both).
+s7689: the L1 dd2 bunker loss is not the handover knobs, not the route, not the scorer, not frame-parity aliasing. Items that pass the
+add test flip between runs at pair granularity (sub 0x14 pairs 803CEB08/CEBC4, CEC80/CED3C, CEDF8/CEEB4; old vs new same-run arms
+differ on 10/34 items). The never-added partner is culled every frame.
+Hypotheses: H-variant (the pair is one object per difficulty/variant; build_state reads a per-run field so one partner gets a bad
+position/scale) vs H-coloc (partners share a position; the game's bucket/view test keeps only one per spot, order decides) vs
+H-viewexit (the culled partner fails a specific view-test exit, e.g. far or behind, because its state differs).
+Discriminator, ONE build, ONE run (L1 dd2 STANDINS=frame, copy scratch/s7689_handoff_ab.sh, one arm, HOLD 150): at stand-in build log
+per item: sub, state pos xyz, scale, model name, item +0x6C..+0x78 (hp per difficulty), item flags; and per item a view-test exit
+tally (vt_class of every culled submit, not just held). Join with par= adds:
+  - partners have different pos/scale and the culled one is off (zero / far) -> H-variant; fix build_state.
+  - same pos/scale, culled one fails at a bucket/link step not the view test -> H-coloc.
+  - same pos, culled one fails a view exit -> H-viewexit; read that exit.
 One game at a time, SIGKILL only, <=2 CPU-heavy jobs, screen unlocked. Default STANDINS stays off; owner judges the look.
