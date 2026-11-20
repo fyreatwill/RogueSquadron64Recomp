@@ -205001,3 +205001,5 @@ callers is now in the reject set (0x0C 0x0D 0x12 0x13 0x14 0x1E 0x1F 0x47 + ray-
 ORIGIN: the itemless callers are fresh game objects spawned at/near a stand-in's position (0.25f/0.5f words at +0x30/+0x34,
 legitimate guest state, not corruption); the defect was ours (the 2-unit position fallback accepting any nearby caller).
 Next: G6c owner sheet refresh (the s7630 sheet predates s7672-s7687 handoff changes).
+Discrimination: this selects H-neighbour and refutes H-self for sub 0x0C (110/110 itemless small-float callers; L10 pair 121 accepted
+-> 203/203 rejected), and closes the pos-fallback thread. Next discriminator: refreshed owner sheet med_fpx/control vs s7630.
