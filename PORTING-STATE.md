@@ -204937,3 +204937,7 @@ or when the caller has no table item and the stand-in is 0x12/0x13 or the ray-sh
 ORIGIN: the wrong handoffs are written by our own detector (bk_ret_impl's 2-unit position fallback accepting any bucket caller near a waiting
 stand-in); the game's values are legitimate - projectiles spawned at a TIE's position and the pillars' neighbours are real objects.
 Rules out: H-self for 0x12/0x13. Open: caller classes for the other pos-using subs (next unit).
+Discrimination: this selects H-neighbour (29/30 position callers of 0x12/0x13 stand-ins carry no table item and are a new state every ~3
+frames; the crafts themselves match by item) and refutes H-self (0 same-sub callers). The fix (ROGUESQ_S7685_POSSUB reject rule) is a code
+change, not only instrumentation: L12 run3 fix 0 pos handoffs vs old 5. Next discriminator: caller_sub / itemless share of [s7685-pos]
+lines for subs 0x0C/0x0D/0x14/0x1E/0x1F/0x46/0x47 on L1/L4/L5 (NEXT.md): itemless -> H-neighbour, extend the reject set; same-sub -> H-self, keep.
