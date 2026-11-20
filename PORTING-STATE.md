@@ -204846,3 +204846,7 @@ real_add=2605), so the detector sees 0x4B's real draws. 0x33/0x36/0x44/0x4F do n
 
 Rules out: a second inline-draw ghost among switch-installed stand-in subtypes (code read + tool, single code source for the
 reachability, bounded to 4 call levels). Open: the four default-path subtypes never observed at runtime.
+Discrimination: selects H-none (sub 0x37 has no stand-in, two sources: our table + upstream's); refutes H-blind and H-attached for
+heavyAttachedAudioEmitterNpcHandler; refutes "another switch-installed stand-in subtype draws off the bucket path" (32/32 reach it bar
+0x32). Next discriminator: H-bucket vs H-inline vs H-absent for default-path subs 0x33/0x36/0x44/0x4F = whether any level's DAT
+carries them and whether their [s7672-ho] real_add is >= 0 (scratch/agent/NEXT.md).
