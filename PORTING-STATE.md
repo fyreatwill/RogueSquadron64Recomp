@@ -205743,3 +205743,34 @@ decision / parse trailing: per the s7714 stop rule the census-coverage class is 
 ORIGIN: the C88 label was written with the generic non-'0' idiom when s2608 inverted the store's default (unset became
 pass-through) and the labels were never updated.
 Gate sweep after the upstream_compat.cpp edit: 139 gates, 134 GREEN, 5 REPORT, 0 RED (877 s, --jobs 2).
+
+## Session 7716 (2026-11-20) — default-on label idiom audit: 198 default-on names, 0 LABEL-WRONG readers left (selects H-two for labels); found and fixed 2 debug-doc default rows (LOG_M4_Y8000, SPIN_YIELD)
+
+HYPOTHESIS-ID: default-on-label-audit. crash_reports --since 2026-11-13: FOLDED=27 new=0; no owner report; no CONTRACT-CARRY.
+
+What ran. New tools/s7716_default_label_census.py (in the gate sweep; GREEN, 4 s). It differs from s7714 in three ways:
+(1) it models EVERY getenv/helper site incl. single-reader names AND getenvs inside printf arguments (the s7711 finder
+skips print args, which is exactly where labels live); (2) polarity-free reading: a site reads ON when unset behaves like
+=1 and =0 differs, OFF when unset behaves like =0 (so the inverted vendored `== '0' ? 0 : r2` store counts as default-on);
+(3) a doc check: every docs/debug-trace-env-vars.md row with an on/off default column vs the code's consensus reading
+(names with a setenv auto-default excluded). Default-on set = code ON readers + 46 doc-claimed (`X=0` in an on-by-default
+/ restores / turns-it-off row). Controls 5/5: pre-s7715 C88 label (git b7ea1c3eb) -> LABEL_WRONG; pre-s7714 AUDIO_UCODE
+label planted back -> flagged; current C88 -> no LABEL_WRONG; planted `| ROGUESQ_FPS60 | on |` -> DOC_WRONG; planted
+default-on behaviour + non-'0' printf label -> exactly one LABEL_WRONG.
+
+Result: 198 default-on names; readers AGREES 210, LABEL_WRONG 0, BEHAVIOUR_SPLIT 5 (all s7714 REVIEWED: B40 replay form,
+OVL2C dead reader, PRESENT_EARLY_FORCE three-gate fix), UNMODELLED 24 + DEFERRED 16, every one hand-read into REVIEWED
+(e.g. G1E_TRIM's 7 pass-on readers restore the old path only at `== '0'`; G5G_AIM `md = 1` default the model misses;
+G5B_TG_FIX / G1E_CELLIDX deferred on dd>1; G1E_FAST auto on unless hooks; VI_RT/RUMBLE_SCALE/S7679_NEAR numeric).
+Two DOC_WRONG, both real, both doc-only:
+- ROGUESQ_LOG_M4_Y8000: row said "on ... Default on; set 0 to silence", code (dpc_bridge.cpp:1132) is opt-in since s6712
+  (`if (!e) return 0`, comment says so). Row now off.
+- ROGUESQ_SPIN_YIELD: row said "off ... Do not default on", but tools/apply_s4199_m5_spin_yield_default.py (in the vendored
+  fixer's replay list) rewrites every reader to `(!ye || !*ye || *ye != '0')`; the generated funcs_28/30/31/36.c carry
+  that form (read this session). Row now on, =0 = old no-yield control.
+Two lines of evidence per doc fix: fixer/source text + generated/live code text. No runtime witness needed (no behaviour or
+label changed; docs only).
+
+Rules out: H-more for labels (no other flipped default carries a stale getenv label anywhere in src/lib/tools, incl. print
+args). The idiom class "flipped default, stale label" is CLOSED; the gate keeps it closed. Selects H-two (AUDIO_UCODE, C88).
+No src/ or lib/ change this session, so no full gate sweep needed (--only s7716: GREEN).

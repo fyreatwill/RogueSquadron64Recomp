@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7715 (2026-11-20).
+Compact operational handoff, as of Session 7716 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7716 default-on label census (gate): idiom "flipped default, stale label" CLOSED.** tools/s7716_default_label_census.py
+  (controls 5/5, in the gate sweep) models every reader of 198 default-on names incl. getenvs inside printf args, polarity-free:
+  0 LABEL-WRONG, 5 reviewed splits, 40 hand-read deferred/unmodelled. Its debug-doc check fixed 2 rows of
+  docs/debug-trace-env-vars.md (LOG_M4_Y8000 is opt-in since s6712; SPIN_YIELD is default on since s4199). Docs only.
 - **s7714/s7715 truth census (gate): 0 owner-setting on/off splits.** tools/s7714_truth_census.py (controls 6/6, in the gate sweep) parses
   every multi-site reader's C, isolates the expression on that variable and evaluates unset/0/1/2/t/yes: 646 sites modelled, 14
   REVIEWED mode letters / dead / diag. Fixed: the vendored m5 label (unset AUDIO_UCODE now prints audio_on, as the real ucode runs;
@@ -55,7 +59,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 - **s7660/s7661:** title plume si_addr=0x58 CLOSED (0/76 boots); lldb attach works in loop sessions (preflight tools/lldb_attach_check.sh;
   never LAUNCH the game under lldb, s7616).
 - **s7647-s7659 (census-gate sweep + classes TS-4/MK8): ALL CLOSED, 0 behaviour defects** (archive "(s7662 maintenance)"). Standing
-  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 134 GREEN (s7715), 5 REPORT, 0 RED; stop_gate blocks RED.
+  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 135 GREEN (s7716 adds its census), 5 REPORT, 0 RED; stop_gate blocks RED.
   Key reviews by text anchor, never line number. NEEDS-INPUT gates use retained inputs under scratch/s7215, s7316/ram, s7573/retained.
   All s7617-s7702 bullets verbatim in PROJECT-OVERVIEW "(s7703 maintenance)".
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
