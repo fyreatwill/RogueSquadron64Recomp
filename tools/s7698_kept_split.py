@@ -12,7 +12,7 @@ for f in sorted(os.listdir(D + "/fb")):
 sw = [p[0] for p in pts]
 L = open(D + "/run.log", errors="replace").read().splitlines(); LV = int(sys.argv[2])
 cine = next(i for i, l in enumerate(L) if "[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))
-mis = next(i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l)
+mis = next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))   # s7699: no flight line = intro ran to the kill (L5)
 ns = [int(m[1]) for l in L[cine:mis] for m in [re.match(r"\[fbdump\] n=(\d+) ", l)] if m]; S0, S1 = ns[0], ns[-1]
 def t(s):
     i = bisect.bisect_left(sw, s)

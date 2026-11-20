@@ -8,7 +8,7 @@ D, LV = sys.argv[1], int(sys.argv[2]); lib = ctypes.CDLL(None); lib.mach_absolut
 OFF = time.time() - lib.mach_absolute_time() / 24e6
 L = open(D + "/run.log", errors="replace").read().splitlines()
 cine = next(i for i, l in enumerate(L) if "[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))
-mis = next(i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l)
+mis = next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))   # s7699: no flight line = intro ran to the kill (L5)
 fs = []
 for i, l in enumerate(L[cine:mis]):
     m = re.match(r"\[fbdump\] n=(\d+) .*stride=(\d+)", l)

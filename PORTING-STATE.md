@@ -205278,3 +205278,25 @@ ground diff, intro stddev split 4.7 vs flight 0.2 in the same run). 3/3 runs ali
 traces kept in scratch/s7698.
 Selects H-holds for the stream on both levels and for the picture on L4 dd2; L1 dd4 is H-invisible (the extra ~1000 nodes are outside the
 shots). Refutes H-inert. Single-run per level; L5 and outros not run. G5h still closes on the owner's look.
+
+## Session 7699 (2026-11-20) — G5h: the s6908 intro pool floor holds on L5 at both dd4 and dd2, and the picture changes too (old cap leaves black holes in the intro ground)
+
+HYPOTHESIS-ID: post-g6c-owner-wait-s7699. crash_reports --since 2026-11-13: new=0 (27 folded). CURRENT-TRUTH 59539 B < 60000, no maintenance.
+Ran the NEXT candidate: `env LV=5 DD=4|2 zsh tools/s7698_poolmin_rehold.zsh` (s7696 route, owner recipe FPS60 16:9, STANDINS=0,
+ROGUESQ_DD_POOLMIN_TOG=1 = old per-level cap on odd mach seconds, same-run control). Screen unlocked, HID idle 11 h.
+Hypotheses: H-holds (floor widens the L5 intro stream and picture), H-inert, H-invisible (stream widens, pixels don't change, like L1 dd4).
+Tool fix: all three s7698 analysers took the mission `[poolx] cap 2048` line as the end of the intro and crashed with StopIteration on L5. L5's
+intro starts later (log line 45375 vs 20021 on L1) and was still running at the 170 s kill, so there is no flight line. They now fall back
+to end of log. New tools/s7699_arm_sheet.py: picks consecutive intro dumps in opposite arms (outside 0.12 s of a flip) and builds a sheet of
+the K pairs with the biggest sky gap, floor on the left and old cap on the right.
+| run | [poolx] intro cap | kept p50 floor / old (calls) | window p50 | ground diff straddle / within | skyfrac floor / old | sheet pairs old>floor |
+|---|---|---|---|---|---|---|
+| L5 dd4 | 600 -> 4096 (old 2400) | 2701 / 1783 (727/729) | 4096 / 2368 | 9.09 / 7.10 (n 31/95) | 0.138 / 0.183 | 19/31, mean +0.039 |
+| L5 dd2 | 600 -> 4096 (old 1200) | 787 / 607 (712/703) | 1512 / 1188 | 12.57 / 7.12 (n 31/94) | 0.139 / 0.271 | 27/31, mean +0.138 |
+Controls: the kept-node split is the stream-level positive control in both runs. In the same run, frames straddling a flip differ more than
+frames within one arm (dd2 +77%, dd4 +28%). There is no flight control (intro outlasts the run), so the pixel split's freedom from scene
+confounds rests on the straddle-vs-within comparison alone. The sheet (scratch/s7699/L5d2_sheet.png, checked by eye) shows the old cap
+leaving black holes in the ridge and ground behind the AT-AT and shuttle, all filled by the floor. 2/2 alive, 0 crash, save unchanged. Dumps
+deleted (0.8 GB); logs, traces and sheets kept in scratch/s7698/L5d*, scratch/s7699.
+Selects H-holds on L5 at both dd levels (stream and picture). Refutes H-inert/H-invisible for L5. With s7698: L1 (invisible), L4 dd2 and L5
+dd2/dd4 (visible). G5h still closes on the owner's look. L5 dd2 sheet is ready for the owner sheet set.

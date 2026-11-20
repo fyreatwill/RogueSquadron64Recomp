@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7698 (2026-11-20).
+Compact operational handoff, as of Session 7699 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,8 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7698: G5h s6908 intro pool floor re-holds on the post-G6c binary** (tools/s7698_poolmin_rehold.zsh, same-run ROGUESQ_DD_POOLMIN_TOG=1, owner recipe, STANDINS=0). Kept nodes in the intro, floor vs old cap: L1 dd4 3024 vs 2014, L4 dd2 1226 vs 897 (tools/s7698_kept_split.py). Pixels: L4 dd2 flip-straddling dump pairs ground diff p50 13.6 vs 9.8 within-arm, bottom stddev split 4.7 intro vs 0.2 flight (sensitive); L1 dd4 straddle = within (18.8 vs 19.0): its extra cells never reach the frame. 3/3 runs alive, save unchanged.
+- **NEW s7699: the s6908 floor also holds on L5 (dd4 + dd2), and it is visible there.** Same s7698 recipe. Kept nodes floor vs old cap: dd4 2701 vs 1783, dd2 787 vs 607. Old-cap frames show more sky (missing ground), floor minus old: dd2 0.139 vs 0.271, 27/31 straddle pairs; dd4 0.138 vs 0.183. Owner sheet scratch/s7699/L5d2_sheet.png (floor left: full ground; old cap right: black holes). Intro outlasts 170 s, so no flight control was run. Tool: tools/s7699_arm_sheet.py.
+- **s7698:** same floor on L1 dd4 (kept 3024/2014, no pixel change) and L4 dd2 (1226/897, visible). 3/3 alive.
 - **s7697: H-absent replicated on L1/L4** (stand-ins 0 hook calls in intro cutscenes, 3/3 levels); soak verdicts now read alive=/crash= aliases (+alive_na=).
 - **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
   + STANDINS=frame dd4). The intro plays through cinematicLoopBody (a0=5), and the runInMissionFrame hook gets 0 calls until the
