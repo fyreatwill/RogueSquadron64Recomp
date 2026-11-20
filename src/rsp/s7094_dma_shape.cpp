@@ -18,6 +18,7 @@ extern "C" int rs64_s7094_on = [] {
     int v = (e && *e && *e != '0') ? (strcmp(e, "ctl") == 0 ? 2 : 1) : 0;
     const char* g = getenv("ROGUESQ_S7324_RCPREF");  // s7324 class G rides this hook (src/rsp/s7324_rcp_spill.cpp)
     if (!v && g && *g && *g != '0') v = 1;
+    { const char* f = getenv("ROGUESQ_S7702_FBREAD"); if (!v && f && *f && *f != '0') v = 1; }  // s7702 fb-read census rides this hook (dma reads were dark in s7702 runs)
     const char* h = getenv("ROGUESQ_S7486_HOSTUAF");  // s7486 class EK host-read UAF watch rides this hook (upstream_compat.cpp rs64_s7486_hostread)
     if (!v && h && *h && *h != '0') v = 1;
     const char* z = getenv("ROGUESQ_S7501_EZ");  // s7501 class EZ: RSP DMEM->RDRAM writes into tracked framebuffers ride this hook
@@ -86,6 +87,7 @@ const bool g_selftest = [] {
     return bad == 0;
 }();
 }  // namespace
+extern "C" int rs64_s7702_on; extern "C" void rs64_s7702_dma(int dir, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" int rs64_s7324_on; extern "C" void rs64_s7324_dma(int dir, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" int rs64_s7331_on; extern "C" void rs64_s7331_dma(int dir, uint32_t mem, uint32_t dram, uint32_t raw_len, int aud);
 extern "C" void rs64_s7486_hostread(int kind, uint32_t addr, uint32_t len);
@@ -97,6 +99,7 @@ extern "C" void rs64_s7094_dma_shape(int dir, uint32_t mem, uint32_t dram, uint3
     if (!dir && !(mem & 0x1000)) rs64_s7486_hostread(aud_in ? 1 : 0, dram, raw >= 0xFFFu ? 0x1000u : raw + 1u);  // s7486 EK (no-op unless armed)
     if (dir && !(mem & 0x1000)) rs64_s7486_hostread(aud_in ? 7 : 6, dram, raw >= 0xFFFu ? 0x1000u : raw + 1u);  // s7489 EN host-write kinds (no-op unless ROGUESQ_S7489_HOSTWRITE)
     if (rs64_s7324_on && !(mem & 0x1000)) rs64_s7324_dma(dir, dram, raw, aud_in);
+    if (rs64_s7702_on && !(mem & 0x1000)) rs64_s7702_dma(dir, dram, raw, aud_in);  // s7702 colour-buffer read census
     if (rs64_s7331_on && !(mem & 0x1000)) rs64_s7331_dma(dir, mem, dram, raw, aud_in);  // s7331 reset dangling-writer attribution  // IMEM boot DMAs are skipped by the runtime
     const uint32_t aud = aud_in ? 1u : 0u;
     const uint32_t f = classify(mem, dram, raw, rs64_s7094_on);

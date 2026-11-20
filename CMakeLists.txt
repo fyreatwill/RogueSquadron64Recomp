@@ -408,6 +408,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/dpc_bridge.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7094_dma_shape.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7324_rcp_spill.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7702_fbread.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7331_reset_writer.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7095_dpc_model.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7096_fwd_cover.cpp

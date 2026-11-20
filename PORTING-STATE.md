@@ -205349,3 +205349,33 @@ cut diagonally, night base ground black behind the AT-AT and shuttle, canyon wal
 Selects H-holds at 21:9 dd2 (stream + picture). Refutes H-short: window p50 2688 is under the 4096 floor, so the floor is not binding.
 Single run per arm. Tool change: tools/s7700_poolmin_movies.zsh exports ROGUESQ_ALLOW_WILD_W=1 when AS=21:9 (WILDW=0 opts out),
 diagnostic only. Dumps deleted (1 GB each). Not covered: 21:9 dd4, whether skipping the 768 write-back matters to the game.
+
+## Session 7702 (2026-11-20) — G1d 21:9: the game DOES texture-read its previous colour buffer in the boot cinematic (t 12.0-16.7 s, both aspects), and at 21:9 those are the 768-wide buffers RT64 skips writing back
+
+HYPOTHESIS-ID: post-g6c-owner-wait-s7702. crash_reports --since 2026-11-13: new=0 (27 folded). CURRENT-TRUTH 59978 B < 60000, no maintenance.
+NEXT asked whether skipping the 768-wide RDRAM write-back at 21:9 (RT64 `SKIP_WILD_W`, s7701) matters to the game. Hypotheses: H-unread (the game never
+reads its colour buffer back) / H-read (it copies a framebuffer and would see stale RAM at 21:9). First check (no run): the 16:9 movies logs from s7700 carry
+0 SKIP_WILD_W lines (16:9 FB_WIDTH=796 and playlist 640 are allowed), so the skip is a 21:9-only matter (21:9 FB_WIDTH=1024, playlist and boot cinematic 768).
+Instrument (new, one build): src/rsp/s7702_fbread.cpp, `ROGUESQ_S7702_FBREAD=1`, hooked at rs64_dpc_record_submit and the s7094 RSP DMA hook. Keeps a 16-entry
+history of SETCIMG/SETZIMG images; every SETTIMG (and RSP DMA read) inside a history image (480 rows, conservative) is a hit keyed by image address, width,
+current-or-not, age since that image was last a render target (<50 ms / <500 ms / <5 s / stale), row range, and whether LOADBLOCK/LOADTILE/LOADTLUT follows.
+Dump build-cwd rs64_s7702.log. Controls: boot self-test of the matcher (pass, 0 bad) and a live control every second (current image + 5 rows must match).
+Run 1 (no age key): millions of hits, all reads of addresses that had been a colour image earlier (memory reused for textures), so I added the age and image
+keys and reran. Runs 2/3: `env ROGUESQ_S7702_FBREAD=1 DD=2 AS=<a> GW=<g> WILDW=0 EV=1000000 TOG=0 zsh tools/s7700_poolmin_movies.zsh` (movies playlist
+route, owner recipe, skip active), 21:9 then 4:3, run one after the other. Both: alive, 0 crash, poolx 18, save unchanged, self=1, ctl_live 555/555 and 557/557.
+| arm | fresh-image (<5 s) colour reads | window | rows | loads |
+|---|---|---|---|---|
+| 21:9 | 0x9B6000 w768: 1512+34020; 0xA35800 w768: 546+11340 | t 12.0-16.7 s | 25..339 / 0..339 | all LOADBLOCK |
+| 4:3 | 0xA2B800 w640: 1442+27810; 0xA95C00 w640: 975+17550; plus 0x9D4000 w640 rows 265..279 at t 5.0-9.7 | t 12.0-16.7 s | 13..339 / 2..457 | all LOADBLOCK |
+Pattern: cur=0 (the OTHER buffer of the double-buffered pair, i.e. the previous frame), sequential 4 KB LOADBLOCK chunks (0x1000 address stride, ~2.67 rows each)
+across a 340-row image. That is a full-frame copy of the previous frame, made by the game's own display list, the same window at both aspects. Outside the
+window the playlist shows only stale-image hits (memory reuse).
+At 21:9 the two buffers read are exactly the SKIP_WILD_W addresses in the same run (`SKIP_WILD_W #2 addr=0x9B6000 w=768`, `#4 addr=0xA35800`).
+Selects H-read for the boot cinematic window: the game reads a framebuffer whose RDRAM write-back RT64 skips at 21:9. Single run per arm (the two arms
+agree on window and pattern, which is replication of the read, not of any visible effect). NOT shown: whether the picture differs. RT64 may serve the
+texture from its own GPU copy of the framebuffer, in which case the skip is harmless on screen. Which cinematic plays at t 12.0-16.7 is not named here
+(the Factor 5 logo of G5d is a candidate, not checked).
+DMA half: dark in runs 2/3 (dma_rd=0) because the s7094 DMA hook runs only when ROGUESQ_S7094_DMASHAPE or S7324_RCPREF is set. Fixed:
+ROGUESQ_S7702_FBREAD now arms it too. Control boot (40 s, 4:3): dma_rd=888802. All 8 DMA hit keys sit past the real image height (rows >=224 of a 320 image,
+>=340 of a 640x340 one), so they are adjacent memory, not framebuffer reads. DMA reads during the cinematic window remain unmeasured at 21:9.
+Rules out H-unread. Logs: scratch/s7702/{a219,a43}/rs64_s7702.log, scratch/s7702/dmactl_4x3_boot40s.log.
