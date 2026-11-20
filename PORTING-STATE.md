@@ -204816,3 +204816,8 @@ Runs (deterministic no-input attract route tools/s7678_attract_run.zsh, dd4 16:9
 ORIGIN: the shield draw is written by the game itself (npcShieldUpdate inline bucket link, legitimate); the bad value was our detector missing it.
 Rules out: H-flag/H-parent/H-depth (none needed). The s7679 near release stays as a backstop (inert in flight, s7680).
 Next: check heavyAttachedAudioEmitterNpcHandler's subtype against the stand-in table (offline); then G6c waits on the owner's look.
+Discrimination: refutes H-flag, H-parent and H-depth; selects H-blind-detector (the game draws the shield through a path our
+addNpcToVisibilityBucket-only detector could not see) - two lines: the code read of 0x8007B8CC..0x8007B92C, and the same-route arms
+(old hold to 14.88 + release vs new handoff at 38.7 with every other handoff identical). This is a behaviour change, not
+instrumentation: with STANDINS on, the shield stand-in now stops drawing at the real shield's first draw. Next discriminator: does
+heavyAttachedAudioEmitterNpcHandler (the only other inline-draw-only handler) map to a subtype that gets a stand-in (H-none vs H-blind)?
