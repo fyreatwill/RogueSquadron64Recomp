@@ -31,7 +31,7 @@ Contracts (each failing one is OPEN):
  (3) remove the s7103 exit clear -> R1 OPEN; (4) plant a second reader of s7108_s2 in another function -> R2 OPEN;
  (5) plant a goto escape between the s7482 set and its use -> R3 OPEN; (6) remove `s7398_msg = 0;` after a do_dma -> R5 OPEN;
  (7) corrupt a stash reader gate -> OPEN; (8) planted one-hop PARM taint (hook called with ctx->r5 parks its arg) -> OPEN.
---witness: scratch/s7103/push_a.txt.zst, scratch/s7108/push_a.txt.zst (ROGUESQ_S7101_CHASE logs, L6 dd4 runs s7103/s7108):
+--witness: >=2 of scratch/s7103|s7108|s7110/push_a.txt.zst (ROGUESQ_S7101_CHASE logs, L6 dd4; s7102 pre-fix = negative ctl):
  per applyPlayerVehicleStateUpdate call (segment ending at its 'pe' line): an 'rx' (s7103 exit body) only in segments that
  also carry a 'pu'/'pc' (body after the entry); skip-entry segments must exist; 'cl' (s7101 clamp) only after a 'ch' (set)
  since the previous 'cl'; planted copies (an rx moved into a skip segment; a cl duplicated) must FAIL.
@@ -421,11 +421,21 @@ def seg_eval(L, plant=False):
                 clamps=clt, cl_orphan=orphan)
 
 def run_witness():
-    allok = True; ctl = True
-    for n in ("scratch/s7103/push_a.txt.zst", "scratch/s7108/push_a.txt.zst"):
+    # s7693: scratch/ is gitignored and the s7108 log was lost; any two post-s7103 S7101_CHASE L6 dd4 logs witness the same
+    # invariants (s7110 is one). s7102 predates the s7103 exit clear: its rx must be 0, a natural negative control.
+    allok = True; ctl = True; have = 0
+    neg = os.path.join(ROOT, "scratch/s7102/push_a.txt.zst")
+    if os.path.exists(neg):
+        L = [l for l in subprocess.run(["zstd", "-dc", neg], capture_output=True, text=True).stdout.split("\n") if l]
+        segs = [l for l in L if l.startswith("pe")]; rxn = sum(1 for l in L if l.startswith("rx"))
+        nc = len(segs) > 0 and rxn == 0
+        print("  witness negative control s7102 (pre-fix): pe %d rx %d -> %s" % (len(segs), rxn, "PASS" if nc else "FAIL"))
+        ctl = ctl and nc
+    for n in ("scratch/s7103/push_a.txt.zst", "scratch/s7108/push_a.txt.zst", "scratch/s7110/push_a.txt.zst"):
         p = os.path.join(ROOT, n)
         if not os.path.exists(p):
-            print("  witness %s missing" % n); allok = False; continue
+            print("  witness %s missing (skipped)" % n); continue
+        have += 1
         L = [l for l in subprocess.run(["zstd", "-dc", p], capture_output=True, text=True).stdout.split("\n") if l]
         r = seg_eval(L); q = seg_eval(L, plant=True)
         ok = (r["rx"] > 0 and r["p0_match"] == r["rx"] and r["noexit"] > 0 and r["noexit_with_body"] == 0
@@ -435,6 +445,8 @@ def run_witness():
         print("  witness %s: %s -> %s | planted stale p0 match %d/%d, cl orphan %d -> control %s"
               % (os.path.basename(os.path.dirname(n)), r, "PASS" if ok else "FAIL", q["p0_match"], q["rx"], q["cl_orphan"], "PASS" if cf else "FAIL"))
         allok = allok and ok
+    if have < 2:
+        print("  witness: %d post-fix logs present, need 2" % have); allok = False
     print("witness", "PASS" if allok and ctl else "FAIL")
     return allok and ctl
 

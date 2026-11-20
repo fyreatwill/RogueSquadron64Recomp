@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7690 (2026-11-19).
+Compact operational handoff, as of Session 7693 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -413,13 +413,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     PROJECT-OVERVIEW "(s7581 maintenance)"). SP_LATE AC repeat DONE s7637: L12 dd4 ABBA x2 on AC holds 60.0 gen/s in both settings
     (8/8 alive, scratch/s7637_splate_ac), so it costs nothing on AC; the battery-only CPU-bound case stays unresolved and does not matter to the owner. Regen trees: tools/regen_front.sh D/pristine; cp -R D/pristine D/replay;
     tools/regen_replay.sh D/replay; tools/regen_verify.sh D/replay D/verify.
-18. **After-regen UB gates (all CLOSED, rc 0 expected):** tools/s7575_ir_calls.sh + `tools/s7575_break_census.py --controls --ir D`
+18. **After-regen UB gates (all CLOSED, rc 0 expected; rerun s7693 on the post-G6c tree: all rc 0, BLIND=0, FOLDED=0):** tools/s7575_ir_calls.sh + `tools/s7575_break_census.py --controls --ir D`
     (BLIND=0); `python3 tools/s7576_trunc_census.py --controls` (FOLDED=0); after a ucode regen or rsp*.hpp edit
     `tools/s7577_ubsan_sites.py <tu> --check` per ucode TU (UNCLASSIFIED 0) + `tools/s7577_ucode_ub_census.py scratch/s7577`;
     tools/s7580_lui_identity.py (0 object diffs). UBSan builds: `env SAN=<checks> B=<dir> zsh tools/build_ubsanc.sh`, scorer
     tools/s7579_bounds_report.py, plants ROGUESQ_S7578_PLANT=1-6,u (SANREC for non-recoverable checks). s7578 null/wrapv, s7579 bounds, s7580 shift/align, s7582
     pointer-overflow, s7583 div0/fcast/bool/builtin/vla/nonnull/unreachable CLOSED: every C-applicable UBSan check has run.
-19. **Rerun-after-change censuses s7579-s7616 (all CLOSED; per-class trigger text verbatim in PROJECT-OVERVIEW
+19. **Rerun-after-change censuses s7579-s7616 (all CLOSED, 26/26 rc 0 s7693; RG --witness takes >=2 of s7103/s7108/s7110 logs; per-class trigger text verbatim in PROJECT-OVERVIEW
     "(s7622 maintenance)").** Each `python3 tools/s76NN_<cls>_census.py --controls` must exit 0 after an edit in its scope:
     RQ/DQ s7616/s7615 (lib/rt64 RDRAM reads, new threads; a worker-thread RDRAM reader needs a command-time copy or a gate),
     HM/HP s7614/s7613 (--ast; statics), RG/SN/MK s7612/s7611/s7609 (--witness; regen, statics), OV s7610 (regen, overlays.cpp),

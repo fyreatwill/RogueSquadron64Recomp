@@ -205133,3 +205133,26 @@ HYPOTHESIS-ID: g6c-owner-sheet-s7690
 - Shows: the s7672-s7690 handover + view-test parity code adds no crash/stall/gap regression in owner mode on 6 levels.
   Rules out H-regress (parity fix starving another slice into a stall) for these levels. G6c stays owner-judged; default off.
 - Next: no engineering rung open; NEXT.md takes the item-18 after-regen UB gate rerun since s7672-s7690 added fixups.
+
+## Session 7693 (2026-11-20) — after-regen UB gates + 26 rerun-after-change censuses on the post-G6c tree: all clean; RG witness repaired after a lost scratch log
+
+Ran (offline, no game, <=2 CPU jobs): crash_reports --since 2026-11-13 (new=0). tools/s7575_ir_calls.sh over the 51 current
+RecompiledFuncs TUs (fixups through apply_s7690, mtime Nov 19) at -P2 into scratch/s7693/ir, then
+`s7575_break_census.py --controls --ir scratch/s7693/ir`: controls 10/10, live-class kept=165, legit_deleted=3, BLIND=0, rc 0.
+`s7576_trunc_census.py --controls`: control PASS, trunc_sites=1199, FOLDED=0. Signed-LUI residue grep
+`S32\(0X[0-9A-F]+ << 16\)` over the tree: 0 files (the G6c apply scripts run after fixup_lui_unsigned and emit none).
+s7580_lui_identity on the fixed-up tree is vacuous (rewrites=0; the pass is already applied): not a new datum.
+Code read of the post-LUI G6c hook bodies (apply_s7672 bucket handoff, s7674 bucket vt, s7681 shield vt): unsigned casts only, no
+shifts/divides/pointer arithmetic; extern decls match the extern "C" definitions in src/main/rs64_standins.cpp (int rs64_bk_on;
+uint32_t rs64_bk_vt_n/pc/v0, rs64_vt_pc; void rs64_bk_ret/rs64_bk_shield(uint8_t*,uint32_t,uint32_t)).
+All item-19 censuses s7591-s7616 with --controls (+--ast HM/HP, --witness MK/SN/RG): 25/26 rc 0 first pass. s7612 RG failed ONLY
+its runtime witness: scratch/s7108/push_a.txt.zst no longer exists (scratch/ is gitignored); static part: 128 unique candidates all
+classified, contracts failing none, controls 8/8.
+Fix (tools/s7612_rg_census.py): the witness takes any >=2 of the post-s7103 S7101_CHASE L6 dd4 logs s7103/s7108/s7110 (s7110 is an
+equivalent post-fix log: calls 14797, rx 12900 = p0_match, noexit_with_body 0, cl_orphan 0; plant control 2115/12900 + orphan 1 ->
+FAIL as required), and adds a negative control: the s7102 log predates the s7103 exit clear and must show rx 0 (pe 8568 rx 0 ->
+PASS). Rerun: witness PASS, RESULT PASS, rc 0. So 26/26 rc 0.
+ORIGIN: not a mitigation — the failure was a missing gitignored input file, not a code defect; no guest/host code changed.
+Verdict: selects H-clean (every gate rc 0, no unclassified site from the G6c hooks); refutes H-new. Rules out a regression from the
+s7672-s7690 fixups in the do_break/trunc/shift/RG/HM/HP/RQ/DQ classes. Remaining witness logs live in scratch only (risk noted).
+Next: G6c stays owner-judged; NEXT.md.
