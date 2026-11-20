@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """s7699 owner sheet for the POOLMIN toggle run (tools/s7698_poolmin_rehold.zsh): consecutive intro fb dumps that sit in opposite
 mach-second arms (even = s6908 floor 4096, odd = old per-level cap), the K pairs with the largest sky-fraction gap, floor left / old right.
-Arm from dump mtime via the live wall-mach offset (host must not have slept since the run). Usage: s7699_arm_sheet.py <run dir> <level> <out.png> [K]"""
+Arm from dump mtime via the live wall-mach offset (host must not have slept since the run). Usage: s7699_arm_sheet.py <run dir> <level> <out.png> [K] [--nocut]"""
 import sys, os, re, ctypes, time, statistics as st
 from PIL import Image, ImageDraw
-D, LV, OUT = sys.argv[1], int(sys.argv[2]), sys.argv[3]; K = int(sys.argv[4]) if len(sys.argv) > 4 else 4
+D, LV, OUT = sys.argv[1], int(sys.argv[2]), sys.argv[3]; K = int(sys.argv[4]) if len(sys.argv) > 4 and sys.argv[4].isdigit() else 4
 lib = ctypes.CDLL(None); lib.mach_absolute_time.restype = ctypes.c_uint64
 OFF = time.time() - lib.mach_absolute_time() / 24e6
 L = open(D + "/run.log", errors="replace").read().splitlines()
-cine = next(i for i, l in enumerate(L) if "[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))
-mis = next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))
+cine = next(i for i, l in enumerate(L) if (("[poolx] cap" in l and "-> 4096" in l) if LV < 0 else ("[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))))   # s7700: LV<0 = AT THE MOVIES, range from the first cutscene-pool cap
+mis = len(L) if LV < 0 else next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))
 def img(p):
     b = open(p, "rb").read(); hd = []; o = 0
     while len(hd) < 4:
@@ -19,6 +19,11 @@ def img(p):
 def sky(im):
     g = im.convert("L"); w, h = g.size; px = g.load(); s = st.median(px[x, 0] for x in range(w))
     v = [px[x, y] for y in range(int(h * 0.55), h, 3) for x in range(0, w, 3)]; return sum(abs(q - s) <= 12 for q in v) / len(v)
+def lum(im): g = im.convert("L").resize((64, 36)); return list(g.getdata())
+def cut(ia, ib):   # s7700 --nocut: a scene cut or fade, not a pool loss: either frame near-black, or the top 30% (sky / far picture) differs
+    a, b = lum(ia), lum(ib); n = 64 * 11
+    return st.mean(a) < 14 or st.mean(b) < 14 or sum(abs(p - q) for p, q in zip(a[:n], b[:n])) / n > float(os.environ.get("CUT_TOP", "22"))
+NOCUT = "--nocut" in sys.argv
 rows = []
 for i in range(cine, mis):
     m = re.match(r"\[fbdump\] n=(\d+) .*stride=(\d+)", L[i])
@@ -27,14 +32,16 @@ for i in range(cine, mis):
     if os.path.exists(f):
         t = os.stat(f).st_mtime - OFF
         if abs(t - round(t)) > 0.12: rows.append((int(m[1]), int(t) & 1, f))
-pairs = []
+pairs = []; ncut = 0
 for a, b in zip(rows, rows[1:]):
     if a[1] != b[1] and b[0] - a[0] <= 30:
-        fl, old = (a, b) if a[1] == 0 else (b, a); ia, ib = img(fl[2]), img(old[2]); pairs.append((sky(ib) - sky(ia), fl, old, ia, ib))
+        fl, old = (a, b) if a[1] == 0 else (b, a); ia, ib = img(fl[2]), img(old[2])
+        if NOCUT and cut(ia, ib): ncut += 1; continue
+        pairs.append((sky(ib) - sky(ia), fl, old, ia, ib))
 pairs.sort(key=lambda p: -p[0]); sel = sorted(pairs[:K], key=lambda p: p[1][0])
 W, H = sel[0][3].size; sh = Image.new("RGB", (2 * W + 6, K * (H + 14)), (40, 40, 40)); d = ImageDraw.Draw(sh)
 for k, (g, fl, old, ia, ib) in enumerate(sel):
     y = k * (H + 14); sh.paste(ia.resize((W, H)), (0, y + 14)); sh.paste(ib.resize((W, H)), (W + 6, y + 14))
     d.text((2, y), "floor 4096 swap %d" % fl[0], fill="white"); d.text((W + 8, y), "old cap swap %d  sky +%.2f" % (old[0], g), fill="white")
 sh.save(OUT); print("pairs=%d shown=%d gaps=%s -> %s" % (len(pairs), K, " ".join("%.2f" % p[0] for p in sel), OUT))
-print("all-pair sky gap old-floor: mean=%.3f median=%.3f pos=%d/%d" % (st.mean(p[0] for p in pairs), st.median(p[0] for p in pairs), sum(p[0] > 0 for p in pairs), len(pairs)))
+print("all-pair sky gap old-floor: mean=%.3f median=%.3f pos=%d/%d cut-dropped=%d" % (st.mean(p[0] for p in pairs), st.median(p[0] for p in pairs), sum(p[0] > 0 for p in pairs), len(pairs), ncut))

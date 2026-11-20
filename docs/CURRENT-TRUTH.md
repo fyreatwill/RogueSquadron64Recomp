@@ -12,8 +12,8 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7699: the s6908 floor also holds on L5 (dd4 + dd2), and it is visible there.** Same s7698 recipe. Kept nodes floor vs old cap: dd4 2701 vs 1783, dd2 787 vs 607. Old-cap frames show more sky (missing ground), floor minus old: dd2 0.139 vs 0.271, 27/31 straddle pairs; dd4 0.138 vs 0.183. Owner sheet scratch/s7699/L5d2_sheet.png (floor left: full ground; old cap right: black holes). Intro outlasts 170 s, so no flight control was run. Tool: tools/s7699_arm_sheet.py.
-- **s7698:** same floor on L1 dd4 (kept 3024/2014, no pixel change) and L4 dd2 (1226/897, visible). 3/3 alive.
+- **NEW s7700: the s6908 cutscene pool floor holds on the AT THE MOVIES playlist (outro proxy, 18 scenes, post-G6c binary).** tools/s7700_poolmin_movies.zsh, same-run TOG. Kept nodes floor vs old cap: dd2 1350 vs 831, dd4 3061 vs 2024. dd2 visible: old cap leaves flat-colour ground holes (desert, train canyon), sheet docs/owner_sheet_s7700_movies_dd2.jpg; dd4 invisible (old cap 2400 already covers the shots). 2/2 alive 0 crash.
+- **s7698/s7699 intros:** floor holds on L1 dd4 (invisible), L4 dd2, L5 dd2/dd4 (visible; sheet scratch/s7699/L5d2_sheet.png). Analysers take LV=-1 for the movies route.
 - **s7697: H-absent replicated on L1/L4** (stand-ins 0 hook calls in intro cutscenes, 3/3 levels); soak verdicts now read alive=/crash= aliases (+alive_na=).
 - **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
   + STANDINS=frame dd4). The intro plays through cinematicLoopBody (a0=5), and the runInMissionFrame hook gets 0 calls until the
@@ -378,7 +378,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 5. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets
-   s7005/s7006), G5g hangar lens (s6907), G5h cutscene background (s6908-s6919): owner flight / look.**
+   s7005/s7006), G5g hangar lens (s6907), G5h cutscene background (s6908-s6919; re-held post-G6c s7698-s7700 incl. movies playlist): owner flight / look.**
 6. **L15 21:9: owner re-flight after s6992 PTRMASK.**
 7. **G1d close-out: owner judgement** (scratch/s6731/sheet_menus_owner.png); owner scope: why L7/L16/L17
    autopilot holds cycle the backdrop menu.

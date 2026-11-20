@@ -205300,3 +205300,27 @@ leaving black holes in the ridge and ground behind the AT-AT and shuttle, all fi
 deleted (0.8 GB); logs, traces and sheets kept in scratch/s7698/L5d*, scratch/s7699.
 Selects H-holds on L5 at both dd levels (stream and picture). Refutes H-inert/H-invisible for L5. With s7698: L1 (invisible), L4 dd2 and L5
 dd2/dd4 (visible). G5h still closes on the owner's look. L5 dd2 sheet is ready for the owner sheet set.
+
+## Session 7700 (2026-11-20) — G5h: the s6908 cutscene pool floor holds on the AT THE MOVIES playlist (outro proxy) post-G6c; dd2 old cap leaves flat ground holes, dd4 invisible
+
+HYPOTHESIS-ID: post-g6c-owner-wait-s7700. crash_reports --since 2026-11-13: new=0 (27 folded). CURRENT-TRUTH 59592 B < 60000, no maintenance.
+NEXT asked whether outros go through the cutscene pool cap. A forced mission end would mean poking wins (out of scope), but s6909 already
+uses the AT THE MOVIES playlist as the outro proxy (its scenes look like outros; that they ARE the outros is still inferred). So: re-hold the
+floor on that playlist on the post-G6c binary, same-run toggle, as s7698/s7699 did for intros.
+Hypotheses: H-holds (floor widens the playlist stream and fills ground), H-inert (a later clamp binds first), H-invisible (stream widens,
+pixels same).
+New tools/s7700_poolmin_movies.zsh: s6909 route (s6792 press list, gate w1592; AS/GW for 21:9), private folder scratch/s6908/wd (owner save
+cmp-checked unchanged), FPS60 16:9 dd$DD, STANDINS=0, ROGUESQ_DD_POOLMIN_TOG=1 (old cap on odd mach seconds), G3E trace, fb dump every 30
+swaps, 560 s. Analysers s7698_kept_split/flip_pairs/poolmin_phase and s7699_arm_sheet take LV=-1 (range = first `-> 4096` poolx line to end).
+s7699_arm_sheet gains --nocut: drops pairs where a frame is near-black or the top 30% differs (scene cut/fade), because the first dd2 sheet
+picked 4/6 cut pairs (black vs scene). kept_split now skips the SIGKILL-truncated last trace line (IndexError on dd4).
+| run | playlist poolx caps (18 lines) | kept p50 floor / old (calls) | window p50 | ground diff straddle / within | --nocut sky gap old-floor |
+|---|---|---|---|---|---|
+| dd2 | 500-700 -> 4096 (old 1000-1400) | 1350 / 831 (7837/7689) | 2378 / 1184 | 18.18 / 14.07 (n 156/151) | mean +0.068, 96/162 pos, 40 cut-dropped |
+| dd4 | 500-700 -> 4096 (old 2000-2800) | 3061 / 2024 (7831/7748) | 4096 / 2368 | 14.18 / 14.41 (n 188/148) | mean -0.004, 76/168 pos |
+Controls: the kept-node split is the stream positive control in both runs. dd2 pixels: straddle > within by 29% in the same run and the
+--nocut sheet (docs/owner_sheet_s7700_movies_dd2.jpg, viewed) shows the old cap leaving flat-colour holes where ground should be (desert
+scene, 4 train-canyon frames); the floor fills them. Row 2 is a false pick (no visible difference). dd4 sheet viewed: only motion differences,
+no holes. 2/2 alive, 0 crash, save unchanged. Dumps deleted (1.6 GB); logs, traces, sheets in scratch/s7700.
+Selects H-holds for the playlist at dd2 (stream + picture) and H-invisible at dd4 (old 4x cap already covers the shots). Refutes H-inert.
+Single run per dd. Not covered: 21:9, dd3, STANDINS=1. G5h still closes on the owner's look; the movies dd2 sheet joins the owner set.

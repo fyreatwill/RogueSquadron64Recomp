@@ -8,8 +8,8 @@ median (sky-like). Usage: s7698_poolmin_phase.py <run dir> <level>"""
 import sys, os, re, statistics as st
 D, LV = sys.argv[1], int(sys.argv[2])
 L = open(os.path.join(D, "run.log"), errors="replace").read().splitlines()
-cine = next(i for i, l in enumerate(L) if "[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))
-mis = next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))   # s7699: no flight line = intro ran to the kill (L5)
+cine = next(i for i, l in enumerate(L) if (("[poolx] cap" in l and "-> 4096" in l) if LV < 0 else ("[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))))   # s7700: LV<0 = AT THE MOVIES, range from the first cutscene-pool cap
+mis = len(L) if LV < 0 else next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))   # s7699: no flight line = intro ran to the kill (L5)
 def ppm(p):
     b = open(p, "rb").read(); hd = []; o = 0
     while len(hd) < 4:

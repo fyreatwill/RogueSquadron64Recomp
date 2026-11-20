@@ -11,8 +11,8 @@ for f in sorted(os.listdir(D + "/fb")):
     if m: pts.append((int(m[1]), os.stat(D + "/fb/" + f).st_mtime - OFF))
 sw = [p[0] for p in pts]
 L = open(D + "/run.log", errors="replace").read().splitlines(); LV = int(sys.argv[2])
-cine = next(i for i, l in enumerate(L) if "[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))
-mis = next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))   # s7699: no flight line = intro ran to the kill (L5)
+cine = next(i for i, l in enumerate(L) if (("[poolx] cap" in l and "-> 4096" in l) if LV < 0 else ("[cineBody] call#" in l and re.search(r"a0=0x0*%X " % LV, l))))   # s7700: LV<0 = AT THE MOVIES, range from the first cutscene-pool cap
+mis = len(L) if LV < 0 else next((i for i, l in enumerate(L) if i > cine and "[poolx] cap 2048" in l), len(L))   # s7699: no flight line = intro ran to the kill (L5)
 ns = [int(m[1]) for l in L[cine:mis] for m in [re.match(r"\[fbdump\] n=(\d+) ", l)] if m]; S0, S1 = ns[0], ns[-1]
 def t(s):
     i = bisect.bisect_left(sw, s)
@@ -21,7 +21,7 @@ def t(s):
 arm = {0: [], 1: []}; win = {0: [], 1: []}; edge = 0
 for l in open(D + "/g3e.txt"):
     v = l.split()
-    if v[2] != "4" or v[5] != "4096": continue
+    if len(v) < 6 or v[2] != "4" or v[5] != "4096": continue   # s7700: SIGKILL truncates the last trace line
     if not S0 <= int(v[1]) <= S1: continue
     tt = t(int(v[1]))
     if tt is None: continue
