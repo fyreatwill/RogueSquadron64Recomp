@@ -7,6 +7,9 @@
 DIR=${1:-$(cd "$(dirname "$0")" && pwd)}
 cd "$(cd "$(dirname "$0")/../.." && pwd)" || exit 2
 export RS64_AGENT_TESTS=0
+# The gate's skip/narrow knobs must not leak into tests that run stop_gate.sh themselves (s7709: RS64_GATE_SWEEP=0 on the
+# outer gate made test_gate_sweep's red arm ALLOW). Each test sets what it needs explicitly.
+unset RS64_GATE_SWEEP RS64_GATE_SWEEP_ONLY RS64_CRASH_REPORTS RS64_CRASH_DIR RS64_AGENT_TESTS_DIR RS64_SKIP_STOP_HOOK
 fail=0; n=0; failed=
 for t in "$DIR"/test_*.sh; do
   [ -f "$t" ] || continue

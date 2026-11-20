@@ -205541,3 +205541,7 @@ Work unit (NEXT s7709, HYPOTHESIS-ID loop-contract-carryover): the tools/agent/t
   working-copy runner and gate, and the gate prints raw output when no FAIL line parses.
 - Full suite now 8/8 PASS (63 s). Census sweep --jobs 2: 135 gates, 130 GREEN / 5 REPORT / 0 RED.
 Rules out: a currently-broken agent tool test (all green). Next: G-rung / owner items; loop tooling thread closed.
+- Post-commit --verify (run with RS64_GATE_SWEEP=0) BLOCKED on test_gate_sweep: the outer gate's RS64_GATE_SWEEP=0 leaked into
+  that test's inner stop_gate, so its red arm allowed. Fix: run_tests.sh unsets RS64_GATE_SWEEP/_ONLY, RS64_CRASH_REPORTS/_DIR,
+  RS64_AGENT_TESTS_DIR, RS64_SKIP_STOP_HOOK before the tests (env RS64_GATE_SWEEP=0 RS64_CRASH_REPORTS=0 run_tests -> 8/8).
+  Positive datum for the new gate: it caught a real defect in its first live run.
