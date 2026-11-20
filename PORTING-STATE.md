@@ -205093,3 +205093,8 @@ Rules out: H-variant, H-coloc, H-viewexit, and any s7672-s7687 handover cause fo
 Gate sweep (135 gates, controls PASS): one new RED, s7599_gr_census OPEN src/main/rs64_standins.cpp s_pseen (s7685's log-dedupe set,
 not this session's code). It is bounded (insert only while size() < 2000, STANDINS_LOG-gated); row added -> GR CLOSED, controls pass.
 Also committed the pending s7689 census_rules.py rename (rs64_bk_ret -> bk_ret_impl).
+Discrimination: the same-binary pair selects H-slice (the game's two-frame view-test slice starving alternate-frame stand-in
+calls) as the root cause, and refutes H-variant, H-coloc and H-viewexit (the lost partner never reached the view test, and once
+regrouped it draws: 208/220 adds vs 0/0). The change is a behaviour fix (ROGUESQ_S7690_PARITY regroups inst+8), not only logging.
+Next discriminator (NEXT.md g6c-owner-sheet-s7690): a refreshed 4-arm frame-mode proof with a PARITY=0 control arm on L4 dd4; a
+rise in window-1 flicker on every arm vs s7688 confirms the fix generalises, and no rise on an arm means its [s7690-par] fix count was 0.
