@@ -281,6 +281,22 @@ Each is a closed census class your change re-opened or a rule your change made s
   fi
 fi
 
+# AGENT TOOL TESTS (s7709) - an edit to the loop's own tooling must keep its tests green.
+# tools/agent/test_*.sh were run by hand only, so a loop.sh/stop_gate.sh edit could break the soak gate, crash gate or the
+# s7708 carry unnoticed. When this iteration's commits touch tools/agent/*.sh|*.py, run tools/agent/run_tests.sh (~30 s, so
+# --verify only, like the census sweep). RS64_AGENT_TESTS=0 skips it (run_tests.sh exports that to stop recursion);
+# RS64_AGENT_TESTS_DIR=<dir> points it at another test dir (the s7709 control only).
+if [ "$VERIFY" = 1 ] && [ "${RS64_AGENT_TESTS:-1}" != 0 ] \
+   && printf '%s\n' "$touched" | grep -qE '^tools/agent/[^/]+\.(sh|py)$'; then
+  at_out="$(sh tools/agent/run_tests.sh ${RS64_AGENT_TESTS_DIR:+"$RS64_AGENT_TESTS_DIR"} 2>&1)"
+  if [ $? != 0 ]; then
+    block "Exit contract unmet: agent tool tests FAIL: $(printf '%s\n' "$at_out" | sed -n 's/^FAIL \([^ ]*\).*/\1/p' | tr '\n' ' ')
+$(printf '%s\n' "$at_out" | grep '^FAIL' | head -8)
+$(printf '%s\n' "$at_out" | grep -q '^FAIL' || printf '%s\n' "$at_out" | head -4)
+This iteration edited tools/agent/. Run 'sh tools/agent/run_tests.sh', then fix the tool your edit broke (or the test, if the contract changed on purpose and the session entry says so), and commit."
+  fi
+fi
+
 # CRASH REPORTS (s7664) - no macOS crash report of the game goes unread.
 # Nothing read ~/Library/Logs/DiagnosticReports between s6534 and s7664 (22 game reports unexamined, 11-13..11-19); an owner
 # crash in normal play would have been missed the same way. tools/crash_reports.py classifies each .ips as PLANT (deliberate

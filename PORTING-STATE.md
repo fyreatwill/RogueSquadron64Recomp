@@ -205522,3 +205522,22 @@ What ran:
 - Gate sweep `python3 tools/s7651_gate_sweep.py --jobs 2`: 135 gates, 130 GREEN, 5 REPORT, 0 RED (17 s warm).
 Rules out: "the retries never saw the verdict" (they did). Not yet seen live: the first real carry fires only on the next unmet
 contract (grep loop.log for "unmet-contract carry preamble").
+
+## Session 7709 (2026-11-20) — agent tool tests now gated: tools/agent/run_tests.sh + stop_gate --verify block on a FAIL when tools/agent/ is touched
+
+Work unit (NEXT s7709, HYPOTHESIS-ID loop-contract-carryover): the tools/agent/test_*.sh suite was run by hand only.
+- Preflight: crash_reports --since 2026-11-13 -> FOLDED=27 new=0; no CONTRACT-CARRY.md.
+- H-green vs H-rot: all 7 existing tests ran green on the current tree (contract_carry, crash_reports_gate, gate_sweep 15 s,
+  quiet_arms_spec, soak_idle_gate 11 s, soak_verdict_fields, summary_field) -> H-green; no rotted test, no tool defect found.
+- Added tools/agent/run_tests.sh (each test under its shebang interpreter, PASS/FAIL line each, rc 1 on any FAIL or no tests;
+  exports RS64_AGENT_TESTS=0 against recursion; optional dir arg).
+- stop_gate.sh (contract rule in stop_gate, per CLAUDE.md): in --verify, if `touched` matches ^tools/agent/[^/]+\.(sh|py)$,
+  run run_tests.sh and block "agent tool tests FAIL: <names>" (raw output shown if no FAIL line parses). RS64_AGENT_TESTS=0
+  skips, RS64_AGENT_TESTS_DIR overrides the test dir (control only). --verify only: the suite is ~60 s, over the hook's 30 s.
+- Controls: tools/agent/test_agent_tests_gate.sh (worktree of HEAD + working-copy gate/runner, planted test in a temp dir):
+  red BLOCK naming test_zz_planted, green ALLOW, untouched ALLOW -> 3/3. Mutation 1 (trigger grep -> false): red FAILs.
+  Mutation 2 (runner's final `[ $fail = 0 ]` -> true): red FAILs. First draft defect caught by its own control: the worktree
+  lacked the uncommitted run_tests.sh, so "red" blocked for the wrong reason (empty name list) -> the test now copies the
+  working-copy runner and gate, and the gate prints raw output when no FAIL line parses.
+- Full suite now 8/8 PASS (63 s). Census sweep --jobs 2: 135 gates, 130 GREEN / 5 REPORT / 0 RED.
+Rules out: a currently-broken agent tool test (all green). Next: G-rung / owner items; loop tooling thread closed.

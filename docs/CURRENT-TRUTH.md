@@ -339,6 +339,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     and prepends it ("Unmet contract from the previous iteration (fix FIRST)") to the next prompt; deleted once --verify passes.
     Retry prompts for a census-RED verdict now say a checkpoint close-out does not clear it. Test tools/agent/test_contract_carry.sh
     (8/8; mutation controls: no prepend -> 2 FAIL, no write -> FAIL). If CONTRACT-CARRY.md heads your prompt, fix it before NEXT.md.
+28. **Agent tool tests gated s7709.** tools/agent/run_tests.sh runs every tools/agent/test_*.sh (8, ~60 s, PASS/FAIL line each,
+    rc 1 on any FAIL). stop_gate --verify runs it when the iteration's commits touch tools/agent/*.sh|*.py and blocks "agent tool
+    tests FAIL: <names>" (RS64_AGENT_TESTS=0 skips). Test tools/agent/test_agent_tests_gate.sh 3/3 (red/green/untouched) + 2 mutation
+    controls (trigger disabled, runner ignores rc -> red FAILs). All 7 pre-existing tests were already green (H-green).
 
 ## Evidence index
 
