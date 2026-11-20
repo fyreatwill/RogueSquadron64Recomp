@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7679 (2026-11-19).
+Compact operational handoff, as of Session 7683 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,10 +12,16 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7682: G6c inline-draw audit CLOSED for switch-installed subtypes.** heavyAttachedAudioEmitterNpcHandler is a child of sub 0x37
+- **NEW s7683: G6c default-path stand-in subs 0x33/0x36/0x44/0x4F reach the bucket (H-bucket; H-absent/H-inline refuted).** They are
+  in retail DATs (0x33 L8, 0x36 L12 x17 pillars, 0x44 L6/L9/L13, 0x4F L17) and share handleRayShieldedNpcDestroy (0x800E4070) with
+  0x4B; its render case 0x800E4310 calls addNpcToVisibilityBucket with no subtype test. L12 dd4 run: 0x36 9/9 real_add >= 0, 0 crash.
+  g6c_sub_handler_map.py had read them as "none" (delay-slot `addiu $a0` after `j` skipped): fixed, with controls (0x32, default).
+  Detector datum: this class's state+0x34 is not the DAT item, so its handoffs match only by the 2-unit position fallback (0x36
+  9/9, 0x4B 48/51 match=pos; others 1826/2051 match=item). Next: key it by item (NEXT.md).
+- **s7682: G6c inline-draw audit CLOSED for switch-installed subtypes.** heavyAttachedAudioEmitterNpcHandler is a child of sub 0x37
   (npcWordDevastatorUpdate), which has no stand-in (H-none). tools/g6c_sub_handler_map.py (71 subtypes, positive control npcShieldUpdate):
-  every stand-in subtype installed by setupNpcUpdateFunctions reaches addNpcToVisibilityBucket except 0x32 (s7681 hook), rc 0. Default-path
-  stand-in subs 0x33/0x36/0x44/0x4F unobserved at runtime (0x4B seen handing off). Rerun the tool after any stand-in table edit.
+  every stand-in subtype installed by setupNpcUpdateFunctions reaches addNpcToVisibilityBucket except 0x32 (s7681 hook), rc 0
+  (s7683: incl. 0x33/0x36/0x44/0x4B/0x4F). Rerun the tool after any stand-in table edit.
 - **NEW s7681: the s7679 "ghost" shield is drawn by the game; our detector was blind to its draw path (code read + two arms).**
   npcShieldUpdate (sub 0x32, 0x8007AEF8) never calls addNpcToVisibilityBucket: its render case 0x8007B8CC runs the same view test
   via 0x8005940C(view, inst, s3+8, radius) and links itself into the bucket inline. tools/apply_s7681_shield_vt.py (RS64_REPLAY) reports

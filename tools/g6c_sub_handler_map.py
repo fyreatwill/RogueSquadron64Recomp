@@ -29,7 +29,11 @@ if 'setupNpcUpdateFunctions' not in funcs:
     sys.exit(f'setupNpcUpdateFunctions not found under {src_dir}')
 
 body = funcs['setupNpcUpdateFunctions']
-cases = {int(c): l for c, l in re.findall(r'case (\d+): goto (L_[0-9A-F]+);', body)}
+# s7683: slice to the subtype dispatch (jr at 0x800653EC) so a body regex that ever spans the following functions
+# (0x800656B4.., three more switches) cannot overwrite the cases; measured not live today (the body ends at 0x800656B0).
+first_sw = body[:body.index('default: switch_error(__func__, 0x800653EC')]
+cases = {int(c): l for c, l in re.findall(r'case (\d+): goto (L_[0-9A-F]+);', first_sw)}
+assert len(cases) == 0x47, len(cases)
 # the instruction comments, in order, de-duplicated (delay slots are emitted twice)
 ins, seen = [], set()
 for a, t in re.findall(r'// 0x([0-9A-F]{8}): +(.*)', body):
@@ -46,7 +50,10 @@ def s16(v):
 def handler_at(label):
     i = idx.get(int(label[2:], 16))
     hi = None
+    stop = None
     for a, t in ins[i:i + 12] if i is not None else []:
+        if stop is not None and a > stop:
+            break
         m = re.match(r'lui \$a0, 0x([0-9A-F]+)$', t)
         if m:
             hi = int(m.group(1), 16) << 16
@@ -54,8 +61,8 @@ def handler_at(label):
         m = re.match(r'addiu \$a0, \$a0, (-?)0x([0-9A-F]+)$', t)
         if m and hi is not None:
             return (hi + (-1 if m.group(1) else 1) * int(m.group(2), 16)) & 0xFFFFFFFF
-        if t.startswith('j ') or t.startswith('jal '):
-            break
+        if (t.startswith('j ') or t.startswith('jal ')) and stop is None:
+            stop = a + 4      # s7683: the delay slot still executes (L_800655B8: lui; j; addiu $a0 in the slot)
     return None
 
 
@@ -89,6 +96,10 @@ def reaches(name, target, depth=4):
 # positive control (s7681): npcShieldUpdate calls the 0x8005940C view-test wrapper directly
 if not reaches('npcShieldUpdate', 0x8005940C, 1):
     sys.exit('positive control failed: npcShieldUpdate -> 0x8005940C not seen; jal parsing is broken')
+# s7683 positive controls for the dispatch parse: sub 0x32 must resolve to npcShieldUpdate (s7681), and the
+# out-of-range default (L_80065650, handler 0x800477A0) must resolve through the same lui/addiu reader.
+if entry.get(handler_at(cases[0x32 - 0xC])) != 'npcShieldUpdate' or handler_at('L_80065650') != 0x800477A0:
+    sys.exit('positive control failed: sub 0x32 / default handler mis-resolved; switch parsing is broken')
 
 blind = 0
 print('sub  handler                                    addr        bucket vt940C standin')

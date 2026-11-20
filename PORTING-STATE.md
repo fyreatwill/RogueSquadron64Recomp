@@ -204850,3 +204850,37 @@ Discrimination: selects H-none (sub 0x37 has no stand-in, two sources: our table
 heavyAttachedAudioEmitterNpcHandler; refutes "another switch-installed stand-in subtype draws off the bucket path" (32/32 reach it bar
 0x32). Next discriminator: H-bucket vs H-inline vs H-absent for default-path subs 0x33/0x36/0x44/0x4F = whether any level's DAT
 carries them and whether their [s7672-ho] real_add is >= 0 (scratch/agent/NEXT.md).
+
+## Session 7683 (2026-11-19) — G6c default-path stand-in subtypes 0x33/0x36/0x44/0x4F share handleRayShieldedNpcDestroy with 0x4B and reach the bucket (H-bucket: code + L12 run 9/9); map tool delay-slot bug fixed
+
+Crash reports first: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0.
+
+**Where they are (offline, retail DAT, tools/g1_dat_inventory.py L0-L20):** 0x33 L8 x9 (support1-9), 0x36 L12 x17
+(Rebel_Train_Pillar_01..), 0x44 L6 x2 / L9 x4 / L13 x1 (Landing_Platform, Pad_Prison/Power), 0x4F L17 x1 (Exhaust_Port);
+0x4B on L0/1/3/9/10/17 (499 on L17). **H-absent refuted.** Decodes in scratch/s7683/dat_L*.json.
+
+**Tool bug (fixed):** tools/g6c_sub_handler_map.py printed these five subs (and 0x4B) as "(default/none)". They are not the
+out-of-range default (L_80065650 -> parseDatItemSubtypes1To5 0x800477A0): their jump-table label L_800655B8 is
+`lui $a0,0x800E; j L_80065658; addiu $a0,$a0,0x4070` and handler_at stopped at the `j` before the delay slot. Now it reads the
+delay slot -> 0x800E4070 handleRayShieldedNpcDestroy, bucket=y for all five. New positive controls in the tool: sub 0x32 must
+resolve to npcShieldUpdate and L_80065650 to 0x800477A0 (exit on failure). Old vs new on the same tree: only those 5 rows differ,
+rc 0 both. Also slices the body to the first switch (a guard; measured not live, the body regex already ends at 0x800656B0).
+
+**Code read (line 1):** handleRayShieldedNpcDestroy tests the subtype twice: 0x800E41E8 `== 0x4F` in the init case (picks sound
+ids / sets state+0x14 bit 0x100 / byte +0x3E) and 0x800E43FC `== 0x33` after the draw. The render case 0x800E4310 calls
+addNpcToVisibilityBucket (0x80057C8C) with no subtype test -> one draw path for 0x33/0x36/0x44/0x4B/0x4F.
+
+**Run (line 2):** forced L12, dd4 16:9 FPS60 STANDINS=1 LOG=1 (default HOLD/NEAR), 200 s, tools/g1e_owner_quiet_arms.zsh, host idle 4 h:
+tag=g1eq_x12 alive 1, crashlines 0, vi_stalls30s 0, max_gap 148 ms, level_ok 1. 40 [s7672-ho]: sub 0x36 9/9 real_add >= 0 (the real
+pillar calls the bucket; held_ok up to 1, ends spawned 5 / culled 2 / none 2). Same-run controls: 0x12 15, 0x13 10, 0x34 1, 0x35 4,
+0x1F 1 handoffs on the same detector. **H-bucket selected; H-inline refuted** for this class.
+
+Detector datum (not a hold defect): every 0x36 line is match=pos, why=timeout600, real_frames30=1, and the old logs show the same
+for 0x4B (48/51 pos, 46 timeout600) while 1826/2051 other handoffs match by item. The ray-shielded class's state+0x34 is not the
+DAT item, so only the 2-unit position fallback matches, and only once (it skips stand-ins whose real_add is set), so the 30-frame line
+never fires. The hold still ends on the first real add. Risk: s7681 showed the position fallback can hand off a neighbour early.
+Also seen: 7 [s7679-rel] on L12 (subs 0x34/0x35 train cars, depth 9.56, age 0, held_ok 0); their real objects were view-test
+rejected off-screen (re_off 259/519) until frame ~521, so no on-screen gap. Single run.
+
+Rules out: H-absent, H-inline for 0x33/0x36/0x44/0x4F. 0x33/0x44/0x4F are covered by the code read plus the 0x36/0x4B runtime
+evidence on the same handler, not by their own runs. G6c engineering waits on the owner's look.
