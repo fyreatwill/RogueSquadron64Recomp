@@ -12,7 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7690: G6c "pair partner" loss ROOT-CAUSED and FIXED: STANDINS=frame starved the game's two-frame view-test slice.**
+- **NEW s7691: G6c owner proof + sheet refreshed on the s7690-parity binary; every arm rose vs s7688.** scratch/s7691_standins_proof.sh
+  (STANDINS=frame HOLD 150, 5/5 alive, 0 crash, 0 VI stall, gap <=148 ms, synthetic + sheet controls PASS 5/5). Window-1 flicker
+  px/triplet (s7688): L1 dd2 677 (465), L1 dd4 936 (638), L4 dd2 879 (856), L4 dd4 3155 (2488); off windows 45/107/157/160.
+  Same-binary control L4 dd4 PARITY=0: 2309, cluster med_fpx 1627 vs 2153, fix=0 vs 72 (second level for the s7690 gain).
+  L1 dd2 med_fpx 169 (s7688 0): bunker back. Owner sheet docs/owner_sheet_s7691_standins_on_off.jpg (L1 dd2 bunker, L4 dd4 city row).
+  G6c closes on the owner's look; default stays off. Queued s7691_standins_rehold_L1/4/5/10/12/15 (STANDINS=1 dd4 300 s on this binary).
+- **s7690: G6c "pair partner" loss ROOT-CAUSED and FIXED: STANDINS=frame starved the game's two-frame view-test slice.**
   addNpcToVisibilityBucket (0x80057C8C) tests each instance on alternate frames: on odd *0x8013889C an instance with inst+8 flag
   0x80 reuses its cached 0x200 bit, on even frames one with 0x100 does; the group is set at the first call by balancing
   0x801394E2/E4, so neighbouring stand-ins alternate groups and which gets which varies per run. STANDINS=frame calls only on
@@ -23,9 +29,6 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   sheet docs/owner_sheet_s7690_frame_parity.jpg shows the far bunker back (ON-only). Causal control: a first build read the
   wrong frame word (0x80137764) and so forced every stand-in INTO the skip group -> 0 adds in 82 windows. STANDINS=1 (owner mode)
   calls every frame and was never affected; only frame-mode proofs/sheets (s7628, s7688) under-reported stand-ins.
-- **s7689/s7688 (explained by s7690):** s7688 refreshed the frame-mode owner sheet (4/4 alive, controls PASS; L1 dd2 med_fpx 0 vs
-  s7628 153); s7689 refuted H-handoff/H-path/H-phase for the lost L1 dd2 bunker and found the per-run pair-partner add flip that
-  s7690 traced to the view-test slice. Full numbers in PORTING-STATE s7688/s7689.
 - **s7687: G6c position-fallback thread CLOSED; sub 0x0C itemless callers rejected too (H-neighbour).** L10 dd4 STANDINS_LOG:
   110/110 0x0C position callers itemless (c30 == c34 = 0.25f/0.5f, 72 fresh caller states); ROGUESQ_S7687_POSSUB (default on in
   STANDINS; =0 = s7686). Same-binary L10 pair: old 121 accepted vs fix 203/203 rejected, 0x14 control rejects in both, both alive, 0
@@ -462,10 +465,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     one swap late (stand-ins appear in label-0 frames). Spawns preceded by a stand-in: L1 10-11 (2-62 s early), L4 19 (0.2-5 s).
     4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
     crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
-    spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7688_standins_on_off.jpg (cluster crops, s7688 refresh; s7630 original). **G6c now
+    spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7691_standins_on_off.jpg (cluster crops, s7691 refresh on the parity-fixed binary; s7630 original). **G6c now
     closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
-    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). s7684/s7685: ray-shield class keyed by item at +0x30; pos fallback rejects itemless/other-sub callers for 0x12/0x13 + ray-shield ; s7686 extends the itemless reject to 0x0D/0x14/0x1E/0x1F/0x47 (ROGUESQ_S7686_POSSUB, L4 pair old 7 pos handoffs vs fix 0). s7687: 0x0C (L10) added (ROGUESQ_S7687_POSSUB); pos-fallback thread CLOSED. Next: refresh the owner sheet (s7630 sheet predates s7672-s7687), then the owner decides.
+    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). s7684/s7685: ray-shield class keyed by item at +0x30; pos fallback rejects itemless/other-sub callers for 0x12/0x13 + ray-shield ; s7686 extends the itemless reject to 0x0D/0x14/0x1E/0x1F/0x47 (ROGUESQ_S7686_POSSUB, L4 pair old 7 pos handoffs vs fix 0). s7687: 0x0C (L10) added (ROGUESQ_S7687_POSSUB); pos-fallback thread CLOSED. Sheet refreshed s7691; the owner decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
     ALL CLOSED** (full text, numbers, controls, tools verbatim in PROJECT-OVERVIEW "(s7662 maintenance)"). Defaults that stay
     (=0 / old restores): ROGUESQ_S7634_FUSE=1 (walker fusion), S7639_ST, S7640_AT, S7641_CF, S7643_PI (release/acquire s4211 ring),

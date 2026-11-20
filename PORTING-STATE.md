@@ -205098,3 +205098,25 @@ calls) as the root cause, and refutes H-variant, H-coloc and H-viewexit (the los
 regrouped it draws: 208/220 adds vs 0/0). The change is a behaviour fix (ROGUESQ_S7690_PARITY regroups inst+8), not only logging.
 Next discriminator (NEXT.md g6c-owner-sheet-s7690): a refreshed 4-arm frame-mode proof with a PARITY=0 control arm on L4 dd4; a
 rise in window-1 flicker on every arm vs s7688 confirms the fix generalises, and no rise on an arm means its [s7690-par] fix count was 0.
+
+## Session 7691 (2026-11-20) — G6c owner proof + sheet refreshed on the s7690-parity binary: every arm rose vs s7688, same-binary PARITY=0 control on L4 dd4
+HYPOTHESIS-ID: g6c-owner-sheet-s7690
+- crash_reports --since 2026-11-13: FOLDED=27 new=0. Binary 23:32 newer than every src/tools/RecompiledFuncs file. Host idle 8 h.
+- Ran scratch/s7691_standins_proof.sh (s7688 recipe + control arm; output scratch/s7691_soak, scorer lines scratch/s7691_proof.out):
+  g1e harness HOLD 150, STANDINS=frame + dumps 10:16:90, arms L1 dd2 / L1 dd4 / L4 dd2 / L4 dd4 / L4 dd4 ROGUESQ_S7690_PARITY=0.
+  5/5 alive_at_end=1, crashlines=0, vi_stalls30s=0, level_ok=1, max_gap 147-148 ms.
+- Window-1 flicker px/triplet (s7688 in brackets) / window-2 off control: L1 dd2 677.1 (464.6) / 44.6; L1 dd4 936.1 (638.1) / 107.2;
+  L4 dd2 879.3 (856.3) / 156.9; L4 dd4 3154.5 (2487.5) / 160.1; L4 dd4 PARITY=0 2309.1 / 348.2. Synthetic control PASS 5/5.
+- [s7690-pt] run totals: fix=21/21/73/72 in the new arms, fix=0 (mism=104824) in the PARITY=0 arm -> the control arm ran the old
+  code. (The tally's never_added=all is a snapshot artefact of the 120-try log line: same on the s7690 new arm log.)
+- Cluster sheet (--cluster 16 --control --pairs 3): L1 dd2 med_fpx 169 (s7688 0), top crops = the far bunker drawn only on stand-in
+  frames, control PASS (394). L4 dd4 med 2153 vs PARITY=0 1627 same binary, both control PASS; crops: far city tower row ON-only.
+  L4 dd2 med 113, control PASS. [standins-spawn] early items 34/34/74/74, max 48.8/62.0/16.7/16.8 s early.
+- Two lines for the s7690 gain on a second level: pixels (flicker 3155 vs 2309, med_fpx 2153 vs 1627) + per-item fix counters.
+  L4 dd2 rose only slightly (879 vs 856): its stand-ins there were mostly in the tested group already, consistent with the per-run
+  group assignment (s7690).
+- docs/owner_sheet_s7691_standins_on_off.jpg (L1 dd2 bunker rows + L4 dd4 city rows; control rows left in scratch sheet_L4dd4.png);
+  OWNER-OPT-INS row now points at it. Default STANDINS stays off; G6c closes on the owner's look.
+- Queued scratch/agent/soak_queue/s7691_standins_rehold_L{1,4,5,10,12,15}.sh: STANDINS=1 dd4 300 s holds on this binary (the
+  s7629/s7630 19-level holds predate the s7672-s7690 handover/parity code).
+- Rules out: the s7690 fix being an L1-only effect (L4 dd4 gains same-binary); frame-mode under-reporting in the owner sheet.
