@@ -205178,3 +205178,29 @@ Next: G6c stays owner-judged; NEXT.md.
 - Selects H-clean: the G6c stand-in code (spawns, handover, parity regroup) adds no freeze >= 250 ms in 2 x 13.5 min of flight.
   Two lines: two levels, plus ring_stalls agreeing on the same rings. Refutes H-stall for STANDINS=1 at dd4.
 - CURRENT-TRUTH: headline line added, G5c closed line notes the re-hold, s7685-s7687 bullets collapsed to one (58.0 KB).
+
+## Session 7695 (2026-11-20) — G2b crawl audio and G5d logo fixes re-hold on the post-G6c binary; stand-ins do not run in the boot cinematic
+
+No new crash report (crash_reports FOLDED=27 new=0). Every ladder rung is closed or waiting on the owner, so this unit re-gates the two
+pre-mission fixes nothing had re-measured since G6c, and asks one new question: rs64_standins_submit (runInMissionFrame hook) does NOT
+check g_rs64_dd_scene, the s6903 cinematic gate, so at dd>1 stand-ins could have built and drawn inside the boot cinematic (level 0x13).
+Hypotheses: H-holds (both fixes intact), H-regress-audio (later lib/ audio, QoS or pool edits undid the s6790 rate-scaled AI drain
+threshold), H-standins-cine (stand-ins rebuild in level 0x13 and change the logo picture).
+Tool (new): tools/s7695_cine_audio_gate.zsh [crawl|boot|all]; owner recipe FPS60 dd4 16:9 + STANDINS=1 STANDINS_LOG=1, owner save
+read-only (NO_SAVE_WRITE, cmp-checked unchanged, never copied back). First run: the crawl watchdog never killed its games because
+zsh here stored `A[k]=$!` as the literal string "$!" (alive=0 printed, games ran on to ~434 s, SIGKILLed by hand); fixed with scalar
+PIDs, boot arms rerun. The crawl data from the first run stands (both arms traced past the crawl into the mission, 0 crash lines).
+Results:
+| arm | measure | value | reference |
+|---|---|---|---|
+| crawl fix | empty-queue events, 32006 Hz w=640 span t 42-172 s | 2 | s6790 fix 0 |
+| crawl ctl (AI_DRAIN_FIXED=1, positive control) | same | 1037 | s6790 1023 |
+| boot sion (STANDINS=1) | logo left/right share 38-44 s | 0.0920 / 0.0871 | s6903 fixed 0.098-0.125, cut 0.0008-0.044 |
+| boot sioff (no stand-ins, same dd4 recipe) | same | 0.0919 / 0.0760 | |
+| both boots | distinct frames t 30-43 | 689 / 692 (53/s), logo hold 24-38/s | s6903 FPS60 705, owner 645 |
+Stand-ins: [standins] on at boot, but 0 rebuild ("N objects") lines before the attract demo ([ddscene] level=19 on=0, then level=0);
+the same flag printed "65 objects ... level 5" in both crawl arms, which is the positive control for the log line.
+Rules out: H-regress-audio (control fires 1037 vs fix 2, same run), H-standins-cine (no rebuild in the cinematic; logo picture identical
+on/off). Selects H-holds. No code change to stand-ins: the measured state needs no extra scene gate. 2/2 crawl arms and 2/2 boot arms
+alive, 0 crash.
+VERDICT: selects H-holds; refutes H-regress-audio and H-standins-cine.

@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7694: G5c freeze gate re-holds on the post-G6c binary.** 900 s STANDINS=1 dd4 owner recipe L4 + L12 (tools/s7694_freeze_scan.py):
+- **NEW s7695: G2b crawl audio + G5d logo re-hold on the post-G6c binary (owner recipe + STANDINS=1 dd4, tools/s7695_cine_audio_gate.zsh).**
+  Chapter II crawl 32006 Hz span (~130 s): empty-queue events fix 2 vs same-run ROGUESQ_AI_DRAIN_FIXED=1 control 1037 (s6790: 0 vs 1023).
+  Boot logo left share 0.092 with and without stand-ins (s6903 fixed ~0.098, cut 0.0008); 53/s distinct t=30-43 both. Stand-ins never
+  rebuild in the cinematic (0 object lines before attract; same flag rebuilds at level 5 in the crawl arms), so no scene gate is needed.
+- **s7694: G5c freeze gate re-holds on the post-G6c binary.** 900 s STANDINS=1 dd4 owner recipe L4 + L12 (tools/s7694_freeze_scan.py):
   2/2 alive, 0 crash, vi_stalls30s=0, 0 present gaps / VI holds >= 250 ms after t=95 s; same-run SIGSTOP 400 ms control at t~695 s caught
   in both (426/442 ms); only events are boot/route holds before t=95 s. Stand-ins add no freeze (spawns 304/107).
 - **s7691: G6c owner proof + sheet refreshed on the s7690-parity binary; every arm rose vs s7688.** scratch/s7691_standins_proof.sh
