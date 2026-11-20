@@ -205450,3 +205450,4 @@ Rules out H-flight and H-dma on L1. Combined with s7704 (even the boot read neve
 change. Queued soaks s7705_fbread_L4_21x9 / _16x9 (Gerrard V, the owner's mission; the 16:9 arm checks the owner's main recipe) for a
 second level; the recipe now prints the join summary line.
 Verdict: the join selects H-none and refutes H-flight / H-dma on L1 at 21:9; next discriminator = the same join on L4 (queued soaks).
+ORIGIN: no mitigation added (the 'skip' lines are the analysis tool reading RT64's existing SKIP_WILD_W log); the 768-wide buffers are written by the game itself as its 21:9 cinematic/cutscene colour images, and the post-boot DMA reads are the game's own RSP data stored past the buffer end - legitimate.
