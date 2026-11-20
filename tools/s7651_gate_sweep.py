@@ -42,12 +42,10 @@ NEEDS_INPUT = {
 # s7657: offline summarisers of ONE captured run / regen output. They have no failing exit (always 0), so a GREEN would be
 # vacuous and their frozen inputs cannot drift with the code. Verified per run: if the source gains any exit path the tool is
 # run like any other gate again.
-REPORT = {
-    "s7031_offmap_census.py": "summary of a [s7030]/[s7031] run.log (band/ring table), no verdict exit",
-    "s7082_jal_census.py": "table of N64Recomp 'No function found for jal' lines, no verdict exit",
-    "s7083_lowering_census.py": "jr/jump-table lowering table over a regen dir + ROM, no verdict exit",
-    "s7210_field_census.py": "per-swap field-bit table of a G5B_FRAME .cap stream, no verdict exit",
-    "s7441_rs64_census.py": "self-time table of rs64_* frames in sample_*.txt dumps, documented exit 0",
+REPORT = {  # s7722: each re-run and read by hand (scratch/s7722/*.out); all H-report (no open-class row by construction)
+    "s7031_offmap_census.py": "s7722 H-report: band/ring share table of one [s7030]/[s7031] run.log (input not retained), no open class",
+    "s7210_field_census.py": "s7722 H-report: per-swap scissor field-bit table of one G5B_FRAME .cap (input not retained), no open class",
+    "s7441_rs64_census.py": "s7722 H-report: rs64_* ms/frame ranking of sample_*.txt (re-run on scratch/s7442: 8 windows), no open class",
 }
 EXIT_PATH = re.compile(r"\bsys\.exit\(|\bexit\(|\breturn [1-9]\b|raise SystemExit")
 
@@ -55,6 +53,11 @@ EXIT_PATH = re.compile(r"\bsys\.exit\(|\bexit\(|\breturn [1-9]\b|raise SystemExi
 # s7656: NEEDS-ARGS gates whose input lives on disk: run with that input so they count. Used only when every path exists.
 # (argv, regex the output must contain, else RED): s7409/s7410 exit 0 even on CONTROL FAIL, so the text is the gate.
 ARGS = {
+    # s7722: ex-REPORT censuses that carry open-class rows (unexplained jal targets / missed jump tables), now gates over the
+    # retained pristine front-end pass; RED controls in PORTING-STATE s7722 (extra jal line, one mutated case label).
+    "s7082_jal_census.py": (["scratch/s7082/regen.work/n64recomp.log.gz", "scratch/s7082/regen", "--check", "--plant"],
+                            r"CONTROL PASS\nVERDICT PASS"),
+    "s7083_lowering_census.py": (["scratch/s7082/regen", "rogue_squadron.z64", "--check"], r"VERDICT PASS"),
     # s7719: fresh regen_front + RS64_REPLAY_TREE_ONLY replay into a temp dir, then s7423 forward + --reverse with controls (~2.6 min,
     # one CPU). Replaces the hand-run s7421/s7423 drift check that needed a retained replay tree (last one s7558).
     "s7719_regen_gate.py": ([], r"VERDICT H-mirrored"),

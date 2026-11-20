@@ -205980,3 +205980,32 @@ Rules out: an rc-0 gate printing a nonzero open-class count outside the scanned 
 false-alarm-free reviewed rows; no real open item was hiding).
 Not covered: the 5 REPORT tools are never output-scanned -> NEXT (sweep-report-tools).
 Verdict: selects H-gap (vocabulary was incomplete) with zero real open items behind it; sweep-scoring-audit CLOSED.
+
+## Session 7722 (2026-11-20) — REPORT-tool audit: s7082 jal + s7083 lowering censuses become gates (H-gate, --check + RED controls); s7031/s7210/s7441 stay REPORT (H-report); sweep 196 gates 193 GREEN 3 REPORT 0 RED 0 HOLLOW
+
+What ran (offline, no build, no game run): crash_reports --since 2026-11-13 -> 27 FOLDED, 0 new. Each of the 5 REPORT tools
+re-run on its last input (outputs scratch/s7722/*.out):
+- s7082_jal_census over scratch/s7082/regen.work/n64recomp.log.gz (247 lines) + scratch/s7082/regen: {OTHER-SECTION-START 188,
+  MID-FUNCTION 1, NO-FUNCTION 2}, 126 pairs / 191 lines = exactly the docs/N64RECOMP-WARNING-CENSUS.md class-2 table.
+- s7083_lowering_census over the same regen + ROM: 80 jalr CALL + 1 `jr $t9` (convertMat3x4ToN64Mtx 0x80018E58, the s2605
+  host-return site), tables {OK 176, OK-SRIDX 1}, negative control base+4 177/177 MISMATCH, (d) CONTROL-READ 177, 0 D rows.
+- s7441_rs64_census over scratch/s7442 (sample_*.txt.zst decompressed to scratch/s7722/s7442): 8 windows, ms/frame ranking.
+- s7031 ([s7030]/[s7031] run.log) and s7210 (G5B_FRAME .cap): inputs no longer on disk (only derived tables kept).
+Verdict per tool: s7082 and s7083 are H-gate (their tables carry open classes: SAME-SECTION/MID/NO-FUNCTION jal rows, `?`/PTR
+lookup rows, MISMATCH/BOUND tables, case-target index reuse). New `--check`:
+- s7082: OPEN = any row not OTHER-SECTION-START and not one of 3 ACCEPTED (H-data cinematic gap + applyVoiceDelayFilter table
+  word x2); needs >= 1 pair; `--plant` appends a synthetic same-section jal line and re-runs the real classifier (+1 OPEN =
+  CONTROL PASS). Log may be .gz. Live: OPEN 0, accepted 3, CONTROL PASS, VERDICT PASS.
+- s7083: 9 checks (lookup sites seen, open lookup rows 0, accept list still live, tables seen + all OK, base+4 control hits every
+  table, jr read control on every table, injected-store control READ only, case-target reuse 0). Live: all ok, VERDICT PASS.
+RED controls (same session, temp copies): extra `jal 0x80001234 in mainGameLoop` line -> OPENROW MID-FUNCTION, OPEN 1, rc 1;
+funcs_*.c first jump table `case 0: goto L_80046904` -> L_80046908 -> "tables all OK FAIL", rc 1. Bare output unchanged (diff
+identical to the pre-edit run for both tools).
+s7031/s7210/s7441 stay REPORT as H-report (per-band / per-swap / per-symbol tables, no open class by construction); REPORT reasons
+in tools/s7651_gate_sweep.py now say so. ARGS rows added for s7082/s7083 (regex `CONTROL PASS\nVERDICT PASS` / `VERDICT PASS`).
+Sweep (--jobs 2, cold, 1118 s): 196 gates {GREEN 193, REPORT 3}, 0 RED, 0 HOLLOW, 0 NEEDS-INPUT; all planted sweep controls PASS
+(ctl red/green, ni, rep_noexit/rep_exit, hol_open/zero/flag/s7721) and the s7656 cache control PASS.
+submodule-patches/export.sh re-run: no diff (lib/ patches mirrored).
+Rules out: a REPORT tool hiding an open row (s7082/s7083 now scored, 0 open; the other three have no open class).
+Not covered: the 39 s7718 NEEDS-INPUT scorers are outside the sweep entirely -> NEXT (one bounded iteration, then stop sweep work).
+Verdict: H-gate for s7082/s7083, H-report for s7031/s7210/s7441; sweep-report-tools CLOSED.

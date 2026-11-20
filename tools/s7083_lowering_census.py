@@ -13,11 +13,15 @@
    from the ROM through the owning section's rom/ram mapping, and check
    (a) case count == bound, (b) word[i] == case i label, (c) every word lies inside the function.
    A self-test re-runs the checker with the base shifted by +4: it must report mismatches.
-Usage: s7083_lowering_census.py <regen dir> <rom.z64>
+Usage: s7083_lowering_census.py <regen dir> <rom.z64> [--check]
+--check (s7722): exit 1 unless every LOOKUP_FUNC site is a jalr CALL or the ACCEPTED jr row (which must still be seen: a
+stale accept list fails), every jump table is OK/OK-SRIDX, the base+4 negative control mismatches EVERY table, the jr
+read control fires on every table, the injected-store control only ever reads READ, and no case target reuses the index reg.
 """
 import re, sys, glob, struct, collections
 
-D, ROMP = sys.argv[1], sys.argv[2]
+_pos = [x for x in sys.argv[1:] if not x.startswith('-')]
+D, ROMP = _pos[0], _pos[1]
 rom = open(ROMP, 'rb').read()
 ov = open(D + '/recomp_overlays.inl').read()
 secs = {}
@@ -276,3 +280,24 @@ for name, ins, lines in funcs:
             if r.startswith('READ') or r in ('nolabel', 'scanlimit'): dbad.append((name, '0x%08X' % jra, reg, '0x%08X' % t, r))
 print('# (d) jump-register use at case targets:', dict(dz))
 for r in dbad: print('D\t' + '\t'.join(r))
+
+if '--check' in sys.argv:
+    # s7722: the one non-CALL site, explained in docs/N64RECOMP-WARNING-CENSUS.md s7083 (hand-asm return, host-return
+    # patch in fixup_game_funcs_vendored.py s2605, tools/check_jr_t9_host_return.py)
+    ACCEPTED = {('convertMat3x4ToN64Mtx', '0x80018E58', 'jr')}
+    seen = {(r[1], r[2], r[3]) for r in rows}
+    opj = [r for r in rows if r[0] != 'CALL' and (r[1], r[2], r[3]) not in ACCEPTED]
+    stale = sorted(ACCEPTED - seen)
+    ntab = sum(tot.values()); badt = [r for r in out if not r[0].startswith('OK')]
+    inj_other = {k: v for k, v in dz.items() if k.startswith('INJ-') and k != 'INJ-READ'}
+    checks = [('lookup sites seen', sum(cls.values()) > 0), ('open lookup rows 0', not opj), ('accept list live', not stale),
+              ('tables seen', ntab > 0), ('tables all OK', not badt),
+              ('negative control base+4 hits every table', tneg.get('MISMATCH', 0) == ntab),
+              ('jr read control on every table', dz.get('CONTROL-READ', 0) == ntab),
+              ('injected-store control READ only', not inj_other and dz.get('INJ-READ', 0) > 0), ('case-target reuse 0', not dbad)]
+    for r in opj: print('OPENROW\t' + '\t'.join(r))
+    for a in stale: print('STALE-ACCEPT\t%s' % (a,))
+    for n, ok in checks: print('check %-42s %s' % (n, 'ok' if ok else 'FAIL'))
+    print('OPEN %d tables %d lookup %d' % (len(opj) + len(badt) + len(dbad) + len(stale), ntab, sum(cls.values())))
+    print('VERDICT', 'PASS' if all(ok for _, ok in checks) else 'FAIL')
+    sys.exit(0 if all(ok for _, ok in checks) else 1)

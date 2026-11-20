@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7719 (2026-11-20).
+Compact operational handoff, as of Session 7722 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7722 REPORT tools CLOSED: s7082 jal + s7083 lowering censuses are gates now** (`--check`, s7082 `--plant`; ARGS over the
+  retained scratch/s7082 front-end pass; RED controls extra-jal-line / mutated case label rc 1). s7031/s7210/s7441 stay REPORT
+  (H-report, pure tables). Sweep 196 {GREEN 193, REPORT 3} 0 RED 0 HOLLOW. Next: the 39 s7718 NEEDS-INPUT scorers (one iteration).
 - **s7721 HOLLOW_KEYS vocabulary audit CLOSED (H-gap, no real open item):** 649 count keys enumerated over all 196 captured
   outputs; 19 open-class words added (MISSING/STALE/RACE/UNGUARDED/DISAGREE/LEAK/FOLDED/...), 5 flagged gates reviewed HOLLOW_OK
   (s7085, s7359, s7632, s7633 already classified). Sweep 196 {GREEN 191, REPORT 5}, new control hol_s7721 PASS. Next: REPORT tools.
