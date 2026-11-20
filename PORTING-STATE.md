@@ -204907,3 +204907,6 @@ first attempt voided: R dir did not exist): both arms alive, 0 crash, vi_stalls3
   (80549354/8054945C/80549564) handed off by pos at frames 5713-5715 with dpos 1.97-1.99, at the 2-unit edge: a neighbour-handoff
   candidate (old arm: never handed off). Single run; unattributed (the pos match does not log the caller's subtype).
 Rules out: state+0x34 as a universal item key. Next: log caller item/sub on pos matches and require sub equality (NEXT.md).
+Discrimination: this selects H-key (the item is at state+0x30, not state+0x34, for handleRayShieldedNpcDestroy) and refutes H-ok (the
+position fallback was not safe for this class: it never completed a handoff, 0/9 real30 old vs 11/11 fixed). Next discriminator:
+the caller's subtype on each position match (H-neighbour vs H-self for the 0x12 matches at 1.97-1.99 units, NEXT.md).
