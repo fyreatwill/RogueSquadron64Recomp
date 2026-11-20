@@ -54,6 +54,11 @@ REVIEWED = {
     "ROGUESQ_LOG_MTM": "diag watches injected by s577x apply scripts (presence `e && e[0]`) vs non-'0'; no documented =0",
     "ROGUESQ_DD_OFFMAPCULL": "numeric radius R (upstream_compat.cpp:241: 't' = tog3 mode, else atoi(o); =-1 off) and main.cpp "
                              "14418 is the presence guard of the s7037 auto-default (`!getenv` -> setenv 2): not an on/off pair",
+    "ROGUESQ_M5_B40_VALUE": "fixup_game_funcs_vendored.py:8411 writes the s4701 `== '0' ? 0 : r2` form, but fixup_live_replay.py "
+                            "b40_polarity_23 rewrites it to `!= '0' ? r2 : 0` (s7558 hidden default), which reads 001111 like "
+                            "the upstream_compat.cpp labels. Owner decision item, never flip (s7715)",
+    "ROGUESQ_S4562_PAUSE": "level digits of one diag pause (apply_s4562_synth_pause.py): =1..4 arm, =2..4 hold, =3/=4 extra "
+                           "release sites; =0 off everywhere (s7715)",
     "ROGUESQ_PLAYER_DUMP": "diag: main.cpp levels '1'/'2'; s5866/s5867 apply-script watches arm on any value",
 }
 
@@ -81,18 +86,45 @@ def tokenize(s):
     return out
 
 
+PYESC = {"n": "\n", "t": "\t", "r": "", "0": ""}
+TQ2, TQ1 = '"' * 3, "'" * 3
+PYTOK = re.compile(r"#|([rRbBuUfF]{0,2})(" + TQ2 + "|" + TQ1 + r"""|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')""")
+
+
+def py_unescape(body, raw):
+    if raw:
+        return body
+    return re.sub(r"\\(.)", lambda m: PYESC.get(m.group(1), m.group(1)), body)
+
+
 def py_c_text(lines):
-    """C embedded in Python string literals: strip one level of quoting per line and unescape quotes."""
-    out = []
+    """C embedded in Python source (s7715): per line, the concatenated bodies of EVERY Python string literal on it
+    (assignment prefixes, mid-line `text.replace(OLD, ("..."` calls, `'..' + MARK + '..'` all count), unescaped once
+    (\\" -> ", \\' -> ', \\n -> newline, \\\\ -> \\). Inside a triple-quoted block the block text is the C.
+    s7714 only stripped a quote that STARTED the line, so 93 multi-reader sites read as "no call".
+    Call it on the WHOLE file: triple-quote state carries across lines, and one line may toggle it several times
+    (`rep(<TQ>a<TQ>, <TQ>b` with TQ a triple quote). Python code and `#` comments outside strings are dropped; one output line per input line."""
+    out, tri, raw = [], None, False
     for l in lines:
-        t = l.strip()
-        m = re.match(r'^[rbf]?(["\'])(.*)\1\s*[,+)]*\s*(?:#.*)?$', t)
-        if m and not t.startswith(('"""', "'''")):
-            t = m.group(2)
-            t = re.sub(r"\\n$", "", t)
-        else:
-            t = l
-        out.append(t.replace("\\'", "'").replace('\\"', '"'))
+        pos, pieces = 0, []
+        while pos < len(l):
+            if tri:
+                k = l.find(tri, pos)
+                pieces.append(py_unescape(l[pos:] if k < 0 else l[pos:k], raw))
+                if k < 0:
+                    break
+                pos, tri = k + 3, None
+                continue
+            m = PYTOK.search(l, pos)
+            if not m or m.group(0) == "#":
+                break
+            pre, q = (m.group(1) or "").lower(), m.group(2)
+            if q in (TQ2, TQ1):
+                tri, raw, pos = q, "r" in pre, m.end()
+            else:
+                pieces.append(py_unescape(q[1:-1], "r" in pre))
+                pos = m.end()
+        out.append(" ".join(pieces))
     return out
 
 
@@ -728,12 +760,18 @@ def finish(chain, node, foreign_after):
     return signature(node), node
 
 
+PYC_CACHE = {}
+
+
 def model_site(lines, lineno, name, is_py):
     """-> (signature, node) or (None, reason)."""
     lo = lineno - 1
+    if is_py:  # s7715: triple-quote state is file-wide, so convert the whole file once and window into it
+        key = id(lines)
+        if PYC_CACHE.get(key, (None,))[0] is not lines:
+            PYC_CACHE[key] = (lines, py_c_text(lines))
+        lines = PYC_CACHE[key][1]
     window = lines[max(0, lo - 3):lo + 16]
-    if is_py:
-        window = py_c_text(window)
     toks = tokenize("\n".join(window))
     pos = None
     for i, (k, v) in enumerate(toks):
@@ -918,6 +956,16 @@ def main():
                        "ROGUESQ_PLANT", False)
         g = bool(r[0]) and r[0][0] == 0 and r[0][2] == 1 and r[0][1] == 0
         print(f"control foreign conjunct isolated sig={r[0]} want unset0 '0'->0 '1'->1 {'PASS' if g else 'FAIL'}")
+        ok &= g
+        pyl = ["X = ('    { const char* e = getenv(\\\"ROGUESQ_PLANT\\\"); if (e && *e != \\'0\\') go(); }\\n')"]
+        r7 = model_site(pyl, 1, "ROGUESQ_PLANT", True)
+        g = bool(r7[0]) and r7[0][:3] == (0, 0, 1)
+        print(f"control Python-embedded escaped-quote site sig={r7[0]} want unset0 '0'->0 '1'->1 {'PASS' if g else 'FAIL'}")
+        ok &= g
+        r8 = model_site(["H = r\'\'\'", "int x;", 'const char* e = getenv("ROGUESQ_PLANT");', "if (e && *e == '1') go();",
+                         "\'\'\'"], 3, "ROGUESQ_PLANT", True)
+        g = bool(r8[0]) and r8[0][:4] == (0, 0, 1, 0)
+        print(f"control Python triple-quoted block site sig={r8[0]} want unset0 '0'->0 '1'->1 '2'->0 {'PASS' if g else 'FAIL'}")
         ok &= g
         if not ok:
             return 2

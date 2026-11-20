@@ -205710,3 +205710,36 @@ The stand-in log/probe fix needs a mission and has static evidence only (single-
 Gate sweep: 139 gates, 134 GREEN, 5 REPORT, 0 RED (incl. s7714).
 -> H-label holds for the owner-facing question (no owner setting splits: H-owner refuted), plus 2 diag-only presence splits (H-none
 refuted). Owner path unchanged: owner lines never set these to 0.
+
+## Session 7715 (2026-11-20) — truth-census coverage: Python-embedded C now tokenised (no-call 93 -> 1, 708 sites modelled); found and fixed the M5_C88_VALUE label split (selects H-hidden, label-only)
+
+HYPOTHESIS-ID: truth-census-coverage. crash_reports --since 2026-11-13: FOLDED=27 new=0; no owner report; no CONTRACT-CARRY.
+
+What ran. tools/s7714_truth_census.py `py_c_text` only unquoted a Python line that STARTED with a quote, so
+`_new_cap = ('... getenv(\"X\") ...'`, `text.replace(OLD, ("..."`, `needle = "..."` and every site inside a `'''` helper
+block whose opening quote sat above the 19-line window read as "no call" (93/164 unmodelled, all .py). Rewrote it as a
+per-line Python string scanner run once over the WHOLE file (cached; triple-quote state carries across lines and can
+toggle several times per line, `#` comments and Python code dropped, one level of escapes removed, raw strings kept).
+Two new controls: a Python-embedded escaped-quote site (s7714 tokenizer: `(None, 'no call')`, now (0,0,1,1,1,1)) and a
+triple-quoted block site. Controls 8/8 PASS.
+
+Result: 289 names, 708 sites modelled (was 646), 81 unmodelled (was 164): 31 passed on, 19 foreign if-block, 8 no
+decision, 6 string pass-ons, ~16 parse trailing, 1 no call. Three NEW splits, hand-read:
+- ROGUESQ_M5_C88_VALUE (owner-adjacent M5 gate): REAL label defect. The generated store (funcs_23.c 0x8008EC88, from
+  fixup_game_funcs_vendored.py:8435, no replay flip) is `== '0' ? 0 : ctx->r2`, so unset passes the guest value
+  through, but upstream_compat.cpp printed c88=0 / arm=c88_0 for unset (4 label sites, non-'0' test). Same class as the
+  s7714 AUDIO_UCODE label. Fixed [s7715-c88]: rs64_s7715_c88_label() = 0 only at =0; S7715_C88LBL=0 restores the old
+  label. Witness (3 sequential 25 s boots, ROGUESQ_LOG_M5_B40_ROUTE=1): unset -> 6/6 lines c88=1; C88_VALUE=0 -> 6/6 c88=0
+  (positive control); unset + S7715_C88LBL=0 -> 6/6 c88=0 (old label reproduced). Behaviour unchanged (label only).
+- ROGUESQ_M5_B40_VALUE: REVIEWED, not a defect of ours to flip. The vendored fixer writes the s4701 `== '0' ? 0 : r2`
+  form but fixup_live_replay.py b40_polarity_23 rewrites it to `!= '0' ? r2 : 0` (the s7558 hidden default); the
+  generated funcs_23.c carries the replay form (read this session), which matches the upstream_compat labels (001111).
+  Still an owner decision item (CURRENT-TRUTH Next 4); never flip.
+- ROGUESQ_S4562_PAUSE: REVIEWED, level digits of one diag pause (=1..4 arm, =2..4 hold, =3/=4 extra release sites).
+0 unreviewed SPLIT after review. Two lines of evidence for C88: fixer + generated text, and the runtime label witness.
+
+Rules out: H-clean (newly modelled sites did hide a split). The remaining residue is pass-ons / foreign if-blocks / no
+decision / parse trailing: per the s7714 stop rule the census-coverage class is CLOSED; no further parser iterations.
+ORIGIN: the C88 label was written with the generic non-'0' idiom when s2608 inverted the store's default (unset became
+pass-through) and the labels were never updated.
+Gate sweep after the upstream_compat.cpp edit: 139 gates, 134 GREEN, 5 REPORT, 0 RED (877 s, --jobs 2).

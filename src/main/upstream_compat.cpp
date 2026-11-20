@@ -2009,9 +2009,17 @@ static void rs64_m5_route_fingerprint_reset_locked(uint32_t phase,
     g_rs64_m5_route_fingerprint_snapshots = 0;
 }
 
+// s7715 [s7715-c88]: ROGUESQ_M5_C88_VALUE label = the real 0x8008EC88 store (pass-through unless =0, s2608), so unset
+// reads c88=1; the old label (non-'0') said 0 for unset. S7715_C88LBL=0 restores it.
+static unsigned rs64_s7715_c88_label(const char* c88) {
+    static const int old_label = [] { const char* o = std::getenv("S7715_C88LBL"); return o && o[0] == '0'; }();
+    if (old_label) return (c88 && c88[0] && c88[0] != '0') ? 1u : 0u;
+    return (c88 && c88[0] == '0') ? 0u : 1u;
+}
+
 static void rs64_m5_route_fingerprint_emit_locked(const char* edge) {
     const char* c88 = std::getenv("ROGUESQ_M5_C88_VALUE");
-    const unsigned c88_value = (c88 && c88[0] && c88[0] != '0') ? 1u : 0u;
+    const unsigned c88_value = rs64_s7715_c88_label(c88);
     std::fprintf(stderr,
         "[m5-route-fingerprint] edge=%s arm=c88_%u c88=%u phase=%u width=%u "
         "origin=0x%06X route_state_count=%u b40_count=%u key_on_count=%u "
@@ -2137,7 +2145,7 @@ extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
         "origin=0x%06X edge=%s pc=0x%08X b40_stored=0x%02X value=0x%08X "
         "b40_return=0x%08X\n",
         arm, (b40 && b40[0] && b40[0] != '0') ? 1u : 0u,
-        (c88 && c88[0] && c88[0] != '0') ? 1u : 0u, ordinal, phase,
+        rs64_s7715_c88_label(c88), ordinal, phase,
         rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
         edge ? edge : "?", pc, stored & 0xFFu, value, returned);
     std::fflush(stderr);
@@ -2179,7 +2187,7 @@ static void rs64_m5_route_state_log(uint8_t* rdram, const char* edge,
         "audio_nonzero=%u function_nonzero=%u\n",
         (b40 && b40[0] && b40[0] != '0') ? "treatment" : "control",
         (b40 && b40[0] && b40[0] != '0') ? 1u : 0u,
-        (c88 && c88[0] && c88[0] != '0') ? 1u : 0u,
+        rs64_s7715_c88_label(c88),
         edge ? edge : "?", phase, phase == 7u ? 1u : 0u, call_ordinal,
         g_rs64_m5_b40_route_ordinal.load(std::memory_order_relaxed),
         rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
@@ -6395,7 +6403,7 @@ extern "C" void rs64_m5_b40_read(uint8_t* /*rdram*/, uint32_t read_pc,
         "branch_dir=%u route_ordinal=%u\n",
         (b40 && b40[0] && b40[0] != '0') ? "treatment" : "control",
         (b40 && b40[0] && b40[0] != '0') ? 1u : 0u,
-        (c88 && c88[0] && c88[0] != '0') ? 1u : 0u, row,
+        rs64_s7715_c88_label(c88), row,
         rs64_phase_ord(), width, origin & 0x00FFFFFFu, read_pc,
         value & 0xFFu, branch_pc, branch_taken,
         g_rs64_m5_b40_route_ordinal.load(std::memory_order_relaxed));
