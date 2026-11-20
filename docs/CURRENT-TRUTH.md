@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7707 (2026-11-20).
+Compact operational handoff, as of Session 7711 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -349,6 +349,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     for SRC_OPT/FUNCS_OPT); ROGUESQ_NAME is the allow-listed syntax placeholder. build/settings.txt is checked too when present.
     `python3 tools/s7710_optins_census.py --controls` is in the gate sweep (now 136 gates, 131 GREEN): a doc row for a setting the
     code no longer reads goes RED. Limit: "read" = quoted string, so a name kept only in a log format would pass.
+30. **Owner-setting VALUE census s7711: CLEAN (H-clean, controls 5/5).** All 127 documented `ROGUESQ_X=V` pairs (docs, README,
+    presets) reach a parser that reads V: no fraction under atoi, no `16:9`/list under a numeric-only parse, no "=0" lever that only
+    tests the pointer, every dd>4 doc command carries DD_UNSAFE=1. `tools/s7711_optval_census.py --controls` is in the gate sweep
+    (137 gates, 132 GREEN). Static and single-source: range clamps hand-checked only for RUMBLE_SCALE, OSMEM_MB, STICK_GATE, dd.
 
 ## Evidence index
 

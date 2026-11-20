@@ -205566,3 +205566,30 @@ ROGUESQ_SRC_OPT / FUNCS_OPT read via CMakeLists.txt option(). -> this selects H-
 Gate: the sweep picks up tools/s7*_census.py with --controls automatically: 136 gates, 131 GREEN, 5 REPORT, 0 RED (was 130).
 Rules out: a documented opt-in that silently does nothing (by name). Not covered: whether the value syntax in the docs (e.g. 16:9,
 0.5) parses as documented; a name kept only inside a log format string would also pass.
+
+## Session 7711 (2026-11-20) — owner-setting VALUE census: all 127 documented ROGUESQ_X=V pairs reach a parser that reads V (controls 6/6); census in the gate sweep
+
+Work unit: NEXT.md s7711 (value side of the s7710 name census). crash_reports --since 2026-11-13: FOLDED=27 new=0; no
+CONTRACT-CARRY.md; no new soak verdicts since s7707.
+Hypotheses: H-clean (every documented value parses with its documented meaning), H-syntax (a documented value is truncated or
+rejected: fractional value under atoi, `16:9`/list under a numeric-only parser, dd>4 silently capped), H-default (an "=0 old"
+lever only tests the pointer, so =0 switches it ON).
+Discriminator: tools/s7711_optval_census.py (static, launch-free). Pairs: every `ROGUESQ_X=V` in OWNER-OPT-INS.md + README
+(ranges a..b give both ends, `<s>` placeholders skipped) + the presets() table. Sites: every getenv("ROGUESQ_X") (also the
+escaped form inside fixup/apply strings) and the six hand-read helpers (rs64_env_int, s6919_mode, rs64_bind_flag, env_on,
+env_flag, rs64_s7355_env_is); printf arguments are not sites. Window = the call wrapping the getenv, or the receiving variable
+followed through the next 3 lines. SYNTAX = fraction under integer-only parse, or non-numeric/list under numeric-only parse
+(sscanf/strcmp/char tests count as structured); PRESENCE = 0/OFF value at a pointer-only test; CAPPED = a doc line with
+DRAW_DISTANCE>4 lacking DD_UNSAFE=1 (apply_s6036_dd caps at 4.0 otherwise).
+Controls (same run): planted atoi site for 0.5 -> SYNTAX; pointer-only site for =0 -> PRESENCE; atof site for 1.6 -> OK; atoi
+site for 16:9 -> SYNTAX; doc line dd6 without DD_UNSAFE -> CAPPED. 5/5 PASS (+ the REVIEWED-drop control is inert: 0 entries).
+Result: 127 pairs, 276 sites, 127/127 clean, bad=0 (FUNCS_OPT/SRC_OPT are CMake options). -> selects H-clean, refutes H-syntax and
+H-default for today's docs. Census bugs found and fixed on the way (not code defects): first-pass windows leaked a neighbour's
+atoi(fw) into DD_OFFMAPCULL_K, dropped a statement holding a printf (CONTROLS_PANEL false PRESENCE), missed helper readers
+(CONTROLS_DUMP/CUT_LIVE/DIAG_QUIET NOSITE) and escaped-quote fixup readers (HANGAR_FOV, HORIZON_XFIX), cut `STICK_GATE=95,80` at the
+comma, and counted sscanf "%lf,%lf" as numeric-only (DD_FOG_ALT). Hand checks for clamps: RUMBLE_SCALE clamps to [0,2] as
+documented, OSMEM_MB 4..16, STICK_GATE "c,d" each 1..127, dd>8 -> 8 with a [s7358-env] line, every dd6/dd8 doc command carries
+DD_UNSAFE=1.
+Gate: auto-picked by s7651 (tools/s7*_census.py): 137 gates, 132 GREEN, 5 REPORT, 0 RED (was 131).
+Rules out: a documented value that the code silently misreads, by parse idiom. Not covered (single-source, static): semantic
+range clamps beyond the hand-checked ones, and values whose meaning depends on code paths after the parse.
