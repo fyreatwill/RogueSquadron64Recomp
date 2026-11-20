@@ -1,165 +1,44 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7701 (2026-11-20).
+Compact operational handoff, as of Session 7703 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
 s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "(s7307 maintenance)"; older text in
-"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)"; s7535-s7576 headline + items 17-21 + pre-s7300 superseded in "(s7581 maintenance)"; s7579-s7616 headline + items 19-46 in "(s7622 maintenance)"; s7647-s7659 headline + items 21-35 in "(s7662 maintenance)". Grep there for any sNNNN.
+"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)"; s7535-s7576 headline + items 17-21 + pre-s7300 superseded in "(s7581 maintenance)"; s7579-s7616 headline + items 19-46 in "(s7622 maintenance)"; s7647-s7659 headline + items 21-35 in "(s7662 maintenance)"; s7617-s7702 headline + item 20 (G6) in "(s7703 maintenance)". Grep there for any sNNNN.
 
 ## Headline
 
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7702: the game texture-reads its previous colour buffer in the boot cinematic (t 12.0-16.7 s, both aspects; 4 KB LOADBLOCK full-frame copy, src/rsp/s7702_fbread.cpp ROGUESQ_S7702_FBREAD=1).** At 21:9 those are the 768-wide buffers RT64 skips writing back (SKIP_WILD_W 0x9B6000/0xA35800). Visible effect unchecked (RT64 may serve its GPU copy). H-unread refuted; single run per arm.
-- **s7700/s7701: the s6908 cutscene pool floor holds on the AT THE MOVIES playlist (outro proxy, 18 scenes, post-G6c binary).** tools/s7700_poolmin_movies.zsh, same-run TOG. Kept nodes floor vs old cap: 16:9 dd2 1350/831, dd4 3061/2024; **21:9 dd2 1605/858** (window p50 2688, under the 4096 floor: floor not binding at 21:9). Visible at 16:9 dd2 and 21:9 dd2 (old cap leaves flat ground holes; sheets docs/owner_sheet_s7700_movies_dd2.jpg, docs/owner_sheet_s7701_movies_219_dd2.jpg), invisible at 16:9 dd4. 21:9 caveat: the 768-wide playlist buffer is skipped by RT64 RDRAM write-back (SKIP_WILD_W), so FB_DUMP needs ROGUESQ_ALLOW_WILD_W=1 there (the tool now arms it at 21:9). 4/4 alive 0 crash; one 21:9 route miss (SHOWROOM select not taken).
-- **s7698/s7699 intros:** floor holds on L1 dd4 (invisible), L4 dd2, L5 dd2/dd4 (visible; sheet scratch/s7699/L5d2_sheet.png). Analysers take LV=-1 for the movies route.
-- **s7697: H-absent replicated on L1/L4** (stand-ins 0 hook calls in intro cutscenes, 3/3 levels); soak verdicts now read alive=/crash= aliases (+alive_na=).
-- **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
-  + STANDINS=frame dd4). The intro plays through cinematicLoopBody (a0=5), and the runInMissionFrame hook gets 0 calls until the
-  flight rebuild ([standins-pre] census: 0 lines during the cutscene, 57-62 calls/s in flight; flight dump sheet med_fpx 79, control
-  PASS). So G6c has no cutscene effect, good or bad; G5h stays a terrain question. Cutscene byte 0x80130B39 is 0 at the hook.
-- **s7695: G2b crawl audio + G5d logo re-hold on the post-G6c binary** (tools/s7695_cine_audio_gate.zsh): crawl empty-queue fix 2 vs
-  ctl 1037; logo left share 0.092 with/without stand-ins; stand-ins never rebuild in the boot cinematic.
-- **s7694: G5c freeze gate re-holds on the post-G6c binary.** 900 s STANDINS=1 dd4 owner recipe L4 + L12 (tools/s7694_freeze_scan.py):
-  2/2 alive, 0 crash, vi_stalls30s=0, 0 present gaps / VI holds >= 250 ms after t=95 s; same-run SIGSTOP 400 ms control at t~695 s caught
-  in both (426/442 ms); only events are boot/route holds before t=95 s. Stand-ins add no freeze (spawns 304/107).
-- **s7691: G6c owner proof + sheet refreshed on the s7690-parity binary; every arm rose vs s7688.** scratch/s7691_standins_proof.sh
-  (STANDINS=frame HOLD 150, 5/5 alive, 0 crash, 0 VI stall, gap <=148 ms, synthetic + sheet controls PASS 5/5). Window-1 flicker
-  px/triplet (s7688): L1 dd2 677 (465), L1 dd4 936 (638), L4 dd2 879 (856), L4 dd4 3155 (2488); off windows 45/107/157/160.
-  Same-binary control L4 dd4 PARITY=0: 2309, cluster med_fpx 1627 vs 2153, fix=0 vs 72 (second level for the s7690 gain).
-  L1 dd2 med_fpx 169 (s7688 0): bunker back. Owner sheet docs/owner_sheet_s7691_standins_on_off.jpg (L1 dd2 bunker, L4 dd4 city row).
-  G6c closes on the owner's look; default stays off. s7692: re-holds L1/L4/L5/L10/L12/L15 (STANDINS=1 dd4 owner recipe 300 s, this binary) 6/6 alive, 0 crash, vi_stalls30s=0,
-  max_gap 147-164 ms (s7629/s7630 142-162), standins on 6/6, spawns 38/217/25/56/92/39 -> the s7672-s7690 handover/parity code adds no crash/stall risk.
-- **s7690: G6c "pair partner" loss ROOT-CAUSED and FIXED: STANDINS=frame starved the game's two-frame view-test slice.**
-  addNpcToVisibilityBucket (0x80057C8C) tests each instance on alternate frames: on odd *0x8013889C an instance with inst+8 flag
-  0x80 reuses its cached 0x200 bit, on even frames one with 0x100 does; the group is set at the first call by balancing
-  0x801394E2/E4, so neighbouring stand-ins alternate groups and which gets which varies per run. STANDINS=frame calls only on
-  alternate frames, so half the stand-ins were tested once and kept that (culled) result for good: the odd-index partner, si_novt,
-  the s7689 per-run flip. ROGUESQ_S7690_PARITY (default on, frame mode only; =0 old) regroups the instance to the group tested this
-  frame. Same binary L1 dd2 HOLD 150 (scratch/s7690_parity_ab.sh, 2/2 alive, 0 stall, controls PASS): adds 6816 vs 3425, never
-  added before spawn 13/34 vs 21/34, CEBC4/CED3C 208/220 vs 0/0 adds, flicker 681 vs 454 px/triplet, cluster med_fpx 175 vs 0;
-  sheet docs/owner_sheet_s7690_frame_parity.jpg shows the far bunker back (ON-only). Causal control: a first build read the
-  wrong frame word (0x80137764) and so forced every stand-in INTO the skip group -> 0 adds in 82 windows. STANDINS=1 (owner mode)
-  calls every frame and was never affected; only frame-mode proofs/sheets (s7628, s7688) under-reported stand-ins.
-- **s7687/s7686/s7685: G6c position fallback rejects itemless neighbour callers** (subs 0x0C, 0x0D/0x14/0x1E/0x1F/0x47, 0x12/0x13 + ray-shield;
-  ROGUESQ_S7687/S7686/S7685_POSSUB default on in STANDINS, =0 old; same-binary pairs L10/L4/L12, 0 crash/stall; detail PORTING-STATE s7685-s7687).
-- **s7684: G6c ray-shield class (subs 0x33/0x36/0x44/0x4B/0x4F) now hands off by item, not by position (code read + two arms).**
-  handleRayShieldedNpcDestroy init stores the DAT item at blk+0x34 (0x800E40F8) but passes state=blk+4 to addNpcToVisibilityBucket
-  (0x800E4320), so the detector's state+0x34 read the radius (0x800E41D8); the item is at state+0x30. Fix in rs64_standins.cpp
-  (ROGUESQ_S7684_RSKEY, default on inside STANDINS; =0 old), keyed only for those 5 subs. L12 dd4 200 s, same binary: old 0x36 9/9
-  match=pos then why=timeout600 (the pos fallback matches only the first call, so real_frames never reached 30); fix 11/11
-  match=rsitem why=real30, dpos 0.00 for the 8 pillars in both arms, real_add equal on the first 4 (497-1188). Both alive, 0 crash,
-  0 stall. Controls (other subs) real_add identical 26/31; the 5 differences are all after frame 5000 (runs diverge in flight).
-  Single-run caveat: fix arm had three 0x12 pos matches at dpos 1.97-1.99 (frames 5713-5715), right at the 2-unit edge (next step).
-- **s7683: G6c default-path stand-in subs 0x33/0x36/0x44/0x4F reach the bucket (H-bucket; H-absent/H-inline refuted).** They are
-  in retail DATs (0x33 L8, 0x36 L12 x17 pillars, 0x44 L6/L9/L13, 0x4F L17) and share handleRayShieldedNpcDestroy (0x800E4070) with
-  0x4B; its render case 0x800E4310 calls addNpcToVisibilityBucket with no subtype test. L12 dd4 run: 0x36 9/9 real_add >= 0, 0 crash.
-  g6c_sub_handler_map.py had read them as "none" (delay-slot `addiu $a0` after `j` skipped): fixed, with controls (0x32, default).
-  Detector datum: this class's state+0x34 is not the DAT item, so its handoffs match only by the 2-unit position fallback (0x36
-  9/9, 0x4B 48/51 match=pos; others 1826/2051 match=item). Next: key it by item (NEXT.md).
-- **s7682: G6c inline-draw audit CLOSED for switch-installed subtypes.** heavyAttachedAudioEmitterNpcHandler is a child of sub 0x37
-  (npcWordDevastatorUpdate), which has no stand-in (H-none). tools/g6c_sub_handler_map.py (71 subtypes, positive control npcShieldUpdate):
-  every stand-in subtype installed by setupNpcUpdateFunctions reaches addNpcToVisibilityBucket except 0x32 (s7681 hook), rc 0
-  (s7683: incl. 0x33/0x36/0x44/0x4B/0x4F). Rerun the tool after any stand-in table edit.
-- **NEW s7681: the s7679 "ghost" shield is drawn by the game; our detector was blind to its draw path (code read + two arms).**
-  npcShieldUpdate (sub 0x32, 0x8007AEF8) never calls addNpcToVisibilityBucket: its render case 0x8007B8CC runs the same view test
-  via 0x8005940C(view, inst, s3+8, radius) and links itself into the bucket inline. tools/apply_s7681_shield_vt.py (RS64_REPLAY) reports
-  that test to the handoff detector, matched to sub 0x32 stand-ins only (ROGUESQ_S7681_SHIELD=0 = old). Attract route s7678: old arm
-  held the shield to 14.88 and the near release fired; new arm hands off at depth 38.7 on the shield's first visible draw, 0 releases,
-  all 233 other [s7679-life] lines identical, 0 crash. First cut (no sub filter) handed off three sub 0x14 neighbours early via the
-  2-unit position fallback (37.4 vs 31.0): caught and fixed in-session. heavyAttachedAudioEmitterNpcHandler uses the same inline path.
-- **NEW s7680: the s7679 near release does not fire in flight (same-run control).** Forced L5 dd4 16:9 FPS60 STANDINS HOLD=odd 200 s:
-  default NEAR=15 0 [s7679-rel], ghost score 0 GHOST (= s7676); control NEAR=99 4 releases, held frames 2491 -> 92; both alive, 0 stall.
-  H-attract-only: the cut only touches the attract shield. Recipe tools/s7680_flight_release.zsh <out> <level>.
-- **NEW s7679: a held stand-in drew an object the game never draws; released now (two arms, same deterministic attract route).**
-  Per-item life table ([s7679-life], STANDINS_LOG): never-spawned stand-ins sit at depth >= 42.9 on L0/L7 (bridging far objects), and real objects'
-  first accepted draws are at depth >= 18.0 (137 first calls). One outlier: L5 attract item 8053EDE0 sub 0x32 (handler-picked model "shield") is
-  spawned at depth 38 and then never calls addNpcToVisibilityBucket, so the s7672 hold drew it for 706 frames down to 4.6 units, 1.3 units from a
-  real object. Fix ROGUESQ_S7679_NEAR=15 (default inside STANDINS; =0 old, =odd control): a hold whose real object has not drawn is dropped
-  below depth 15 (depth-only view-test capture, works without logging). Old arm: scorer NOREF-GHOST rc 1 (held_dmin 4.6); fix arm: 1 release
-  (depth 14.88, age 95), RELEASED rc 0, item_hits 13269/16119/11416 and drawn 84/49/97 identical to old, 0 crash both. tools/s7675_ghost_score.py
-  now scores open holds at level change (they never reached the 899-frame line) and NOREF subtypes against the all-subtype first-draw minimum
-  (--selftest 5 cases PASS). Residual: the shield still shows from depth 38 to 15 (the game gives no earlier signal it hides it).
-- **NEW s7678: stand-ins survive REAL level changes (H-leak refuted, two arms, same frames).** No-input attract playlist route
-  (tools/s7678_attract_run.zsh, dd4 16:9 FPS60 STANDINS=1, 420 s, deterministic) loads L0->5->7->10: rebuild fires on each, new level's
-  handoffs match by item (item_hits L5 16119, L7 11416, wrong 0); planted stale map (ROGUESQ_S7678_STALE=1, control only) on the
-  same frames drops item_hits to 0/0. On a level change the H-leak signature is item_hits collapse, not wrong=. 0 crashes both arms.
-  Gate cache now sees imports served from __pycache__ (tools/gate_trace.py; import control discriminates: FAIL without the fix).
-- **s7677: ghost widening clean (L2/L5 scorer rc 0: L5 AT-PT 2 GATE + 2 UNHELD, 0 GHOST) -> H-gate on L1/L2/L4/L5.** Stand-in
-  item map (rs64_bk_ret) is now keyed on the rebuild generation, not the object count (ROGUESQ_S7677_GEN=0 = old). Hangar abort
-  route (3 loads L15): dat reloads at the same address so the old key was right (wrong 0); planted same-count reorder
-  (ROGUESQ_S7677_PLANT=1) old 84350/84350 wrong matches, fix 0; 3/3 arms alive. Recipe scratch/s7677_run.zsh old|fix (PLANT=p). Gate sweep 133/135 then GR/GX rows for s7675 sites -> all green.
-- **s7676: the G6c "ghost" thread is CLOSED as H-gate, no code change.** Walker handlers (AT-PT 0x47 L4, AT-ST 0x1F L1)
-  draw only inside the same ~30-51-unit camera depth as every other subtype (first-call depth L4 0x47 41.1-51.1, L1 0x1F 28.3-44.9;
-  ordinary subtypes 31.6-49.5 = control); their long first-call delay (med 248-821 frames) is approach time, not a hide. The s7675
-  never-drawn item 80547410 came no closer than 62.2 units while held (> 51.1) -> GATE: the stand-in correctly bridges a
-  distance-gated draw. 0 GHOST rows on L4/L1 (s7675_ghost soaks, both alive, 0 stall). Scorer positive control
-  `tools/s7675_ghost_score.py --selftest` (synthetic GHOST rc 1, GATE rc 0) PASS. Widening soaks s7676_ghost_L2/L5 queued.
-- **s7674: held stand-ins never leave an on-screen gap.** Every frame our own view test culls a held stand-in is an off-screen
-  exit (box/behind/side) or the game's cached copy of one (it view-tests each object on alternate frames, result bit 0x200 in
-  state+8): far 0 and pass-then-refused 0 of 10008 (L4) / 3674 (L1) culled frames; same-run control real objects far-rejected
-  1548/528. tools/apply_s7674_bucket_vt.py + tools/s7672_handoff_score.py class line (rc 1 on held far/vtpass). Handoff polish closed.
-- **s7672: G6c stand-ins no longer vanish at spawn.** The game spawns an object while its own view test still culls it, so
-  the stand-in disappeared for 9-443 frames (L1 8/8, L4 36/37 on-screen handoffs) before the real object popped back. Fix
-  ROGUESQ_S7672_HOLD=1 (default inside the STANDINS opt-in; =0 old, =odd same-run control): stand-in held until the real object's
-  first accepted addNpcToVisibilityBucket. L4 dd4: held 31 handoffs 0 blink 0 double, control 26/27 blink; 5 arms alive 0 stall.
-  Instrument tools/apply_s7672_bucket_handoff.py + tools/s7672_handoff_score.py, recipe scratch/s7672/run.zsh.
-- **s7670: F6 panel open across a live window resize (windowed, ASPECT=auto, 1226x796 -> 1512x648 21:9-class -> 1280x720):
-  3 arms same build, all alive, 0 crash, 0 stall, level_ok=1. Fix arm P: stale path fired, 0 aspect-mismatched draws; old-path arm O
-  (ROGUESQ_S7668_ASPECT=0, positive control): exactly 1 squashed draw per resize (~17 ms, vs ~33 draws after a fullscreen toggle);
-  no-panel control C equal. A plain resize republishes the window size within one draw. scratch/s7670/run.zsh + score.py.**
-- **s7671: rumble cannot stick when a mission is paused/aborted with an effect LIVE (closes the s7669 gap).** Test lever
-  ROGUESQ_S7671_FX_ON_KEY=1 arms the game's port-0 effect slot 0x80110520 (the fields startRumbleEffect writes) on every autopilot
-  key, ROGUESQ_S7671_FX_TRAIN_MS=N re-arms every 200 ms for N ms after each START. s7326 hangar route, owner recipe, 2 arms:
-  forced effects 24/24 and 198/198 reached the game's osMotorStart (positive control), the plant LONG run caught in both. At the
-  PAUSE press the game's own osMotorInit+Stop lands 25-26 ms after the forced effect starts, motor ON (run cut at 116 ms), in both
-  arms; with effects held live through the stats screen and hangar load every run ended <=368 ms after its last arm (0 tail >800 ms).
-  Correction to s7669: the game's mission-side stop is at PAUSE entry (t=180.03, 34 ms after the press), not at the hangar entry.
-  Selects H-game-stops; refutes H-host-stuck and H-game-stuck. Pause does not suspend the SI effect service (lever effects play in
-  the pause menu; the game itself starts none there). scratch/s7671/score.py. Rumble abort thread CLOSED.
-- **s7668: F6 panel held open across level-select -> mission load -> flight and a fullscreen leave/re-enter (owner recipe dd4
-  16:9 FPS60, test lever ROGUESQ_PANEL_TEST_WINDOW=open,close): 0 crash, 0 stall, ~60 draws/s throughout, input gate released on
-  close; same-run control without the panel equal. Fixed: ~0.5 s squashed panel after each toggle (stale main-thread window size;
-  now draws at fb size when aspects differ, ROGUESQ_S7668_ASPECT=0 = old; control arm still shows the mismatch). scratch/s7668.**
-- **NEW s7667: settings file + controls.json combination fixed.** A relative `ROGUESQ_CONTROLS=c.json` line in a settings file
-  resolved against the cwd and silently gave default controls (arm B pre-fix mismatches=0 vs absolute-path arm A 395); it now
-  resolves beside the settings file (rs64_settings_resolve_value, `~/` = HOME; only ROGUESQ_CONTROLS is path-valued). Post-fix same
-  build A/B both 395, control C (no settings) 0; tools/test_settings.cpp 23/23. scratch/s7667/run.zsh.
-- **NEW s7664: crash reports are now read.** tools/crash_reports.py classifies every game .ips in ~/Library/Logs/DiagnosticReports
-  (PLANT / DIAG / FOLDED / NEW); stop_gate.sh blocks on NEW (RS64_CRASH_REPORTS=0 skips). 22 unread reports 11-13..11-19 all attributed
-  to planted controls, pre-fix arms (s7326/s7336/s7355/s7356) or env-gated instruments: **0 crashes from normal play.** An owner crash
-  now surfaces at the next stop gate: quote its basename in the session entry, and a real one outranks the work unit (G4 reopens).
-- **NEW s7663: owner launch settings (owner to try):** `./RogueSquadron64Recomp --preset tv|ultrawide|window` or lines in
-  build/settings.txt (src/main/rs64_settings.cpp; env > file > preset; self re-exec, same pid, so pre-main statics see them; loop
-  exports ROGUESQ_SETTINGS=0). 5-arm proof + NOEXEC control (H-setenv-enough refuted: a pre-main static misses setenv-from-main) scratch/s7663, OWNER-OPT-INS row. No default changed.
-- **s7660: title-boot plume si_addr=0x58 SIGSEGV: 0/20 on the current build (14 default + 6 owner 16:9), same-run
-  [CRASH]-handler control PASS; 76 clean boots since s5377 -> CLOSED as gone (H-gone). s7641 race ruled out by code: the
-  null is a render-target texture, never a swap-chain drawable. lldb attach -w was a tooling null in that session only.**
-- **s7661: lldb attach WORKS in loop sessions (developer mode off): pid + -w + long name + s7660 control verbatim on the real game
-  PASS 3/3; H-tcc/H-wait refuted, s7660 transient. New preflight tools/lldb_attach_check.sh (exit 1 = lldb nulls void; /bin/sleep
-  is a platform binary and never a valid control); mk_lldb_hold.py soak wrappers run it and VOID on failure.**
-- **s7647-s7659 (census-gate sweep + classes TS-4/MK8): ALL CLOSED, 0 behaviour defects** (verbatim in PROJECT-OVERVIEW
-  "(s7662 maintenance)"). Standing check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; traced-read cache, cold ~455-530 s,
-  warm ~15 s; per-gate cap RS64_GATE_CAP=600) -> 130 GREEN, 5 REPORT, 0 RED; stop_gate.sh --verify blocks any new RED. Key reviews
-  by text anchor, never line number (tools/census_rules.py, tools/census_attr.py, tools/ast_cache.py). NEEDS-INPUT gates s7215/
-  s7316/s7573 use retained inputs under scratch/s7215, scratch/s7316/ram, scratch/s7573/retained.
-- **NEW s7620: G6b F6 Controls panel LANDED (owner to try).** RT64's F1 inspector has no Metal backend, so the panel has
-  its own ImGui context drawn through RT64's public post-VI hook (RT64::SetRenderHooks) with imgui_impl_metal; closed = hook
-  returns, nothing encoded. Same run (PANEL_TEST): defaults 0 mismatches, scripted bind A=pad:b 112 (control), capture took
-  key:E, Reset 0, panel open 0 (600 polls); json roundtrip ok; Save skipped under NO_SAVE_WRITE. Screenshot scratch/s7620/panel.png.
-- **NEW s7617: G6a rumble LANDED, default ON (`ROGUESQ_RUMBLE=0` = old no-pak shape, `ROGUESQ_RUMBLE_SCALE` 0..2); owner to feel it.**
-  src/main/main.cpp: port 0 reports a Rumble Pak; set_rumble records motor edges, poll_input (owner of `controller`) turns the
-  100 ms on-fraction into s = (0.25 + 0.75*duty)*scale and sends SDL_GameControllerRumble(lo=s, hi=0.6s, 150 ms), refreshed
-  every 50 ms, cancelled at duty 0. Proof (scratch/s7617, L4 dd1, same build): virtual test pad (ROGUESQ_RUMBLE_TEST=1, its
-  Rumble callback = witness) got 14 calls from the game's own 4 osMotorStart at t=84.6 plus 20 from the 1 s injected train;
-  RUMBLE=0+PAK_SHAPE_CTL=1 arm: same 4 Start/7 Stop, 0 pad calls. Saves: dev=1 (EEPROM) throughout. **s7638 closed both open
-  items:** the virtual pad's rc=-1 was a test artefact (sdl2-compat reads the SDL2 Rumble callback's int 0 as SDL3 bool
-  false; scratch/s7638/vpad_rc.c: cb 0 -> rc -1, cb 1 -> rc 0; cb now returns 1, gc arm sdl_fail 0/19); and a fallback chain
-  SDL_GameControllerRumble -> SDL_JoystickRumble -> SDL_Haptic landed (advance on failure, 5 s re-probe after all fail,
-  `ROGUESQ_RUMBLE_FORCE_PATH=joy|haptic` = control: joy 18/18 delivered, haptic on the non-haptic vpad -> path=none, 0 delivered).
-  Game rumble is sparse (L12 130 s: none; L4: one burst at mission start).
+- **NEW s7702: the game texture-reads its previous colour buffer in the boot cinematic (t 12.0-16.7 s, both aspects; 4 KB LOADBLOCK
+  full-frame copy, src/rsp/s7702_fbread.cpp ROGUESQ_S7702_FBREAD=1).** At 21:9 those are the 768-wide buffers RT64 skips writing back
+  (SKIP_WILD_W 0x9B6000/0xA35800). Visible effect unchecked (RT64 may serve its GPU copy); single run per arm. Next step item 25.
+- **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
+  proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
+  cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
+  Stand-ins never run inside intro cutscenes (H-absent, 3/3 levels). At 21:9 FB_DUMP needs ROGUESQ_ALLOW_WILD_W=1 (tools arm it).
+- **Post-G6c re-holds (s7692-s7695): clean.** 300 s STANDINS=1 dd4 owner recipe L1/L4/L5/L10/L12/L15 6/6; G5c 900 s freeze gate L4/L12
+  (0 gaps >= 250 ms after t=95 s, SIGSTOP control caught); G2b crawl audio fix 2 vs ctl 1037; G5d logo share unchanged.
+- **G6c stand-ins (ROGUESQ_STANDINS=1, opt-in, dd>1 only): DONE, owner's look.** Design docs/G6C-STANDINS-PLAN.md; code
+  src/main/rs64_standins.cpp + tools/apply_s7623_standins.py and follow-ups (RS64_REPLAY). Visible early at true depth on 2 levels,
+  19/19 levels 300 s clean (s7629/s7630), sheet docs/owner_sheet_s7691_standins_on_off.jpg. Default-on sub-fixes inside STANDINS (=0 old):
+  S7625 far (STANDINS_FAR=dd), S7672_HOLD (no blink at spawn), S7677_GEN, S7679_NEAR=15, S7681_SHIELD, S7684_RSKEY, S7685-S7687_POSSUB,
+  S7690_PARITY (frame mode). Ghost thread closed as H-gate (s7676); level changes safe (s7678). Rerun tools/g6c_sub_handler_map.py after
+  a stand-in table edit and scratch/s7672/run.zsh after a stand-in code edit.
+- **G6a rumble (s7617/s7638/s7671, default ON, ROGUESQ_RUMBLE=0 old, _SCALE 0..2) and G6b controls (s7618-s7620, s7666-s7670; table
+  src/main/rs64_bindings.h == old map, controls.json, F6 panel): LANDED, owner's hands.** Rumble abort cannot stick (the game stops the
+  motor at PAUSE entry). F6 panel survives mission load, fullscreen toggle and live resize (S7668_ASPECT). After an input-path edit
+  rerun `ROGUESQ_BIND_PANEL_TEST=1` scratch/s7620/run.zsh + tools/test_bindings.cpp.
+- **Owner launch settings s7663 (`--preset tv|ultrawide|window`, build/settings.txt; env > file > preset; s7667 relative
+  ROGUESQ_CONTROLS resolves beside the file): owner to try.** Crash reports gate s7664 (tools/crash_reports.py; NEW outranks all work).
+- **s7660/s7661:** title plume si_addr=0x58 CLOSED (0/76 boots); lldb attach works in loop sessions (preflight tools/lldb_attach_check.sh;
+  never LAUNCH the game under lldb, s7616).
+- **s7647-s7659 (census-gate sweep + classes TS-4/MK8): ALL CLOSED, 0 behaviour defects** (archive "(s7662 maintenance)"). Standing
+  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 130 GREEN, 5 REPORT, 0 RED; stop_gate blocks RED.
+  Key reviews by text anchor, never line number. NEEDS-INPUT gates use retained inputs under scratch/s7215, s7316/ram, s7573/retained.
+  All s7617-s7702 bullets verbatim in PROJECT-OVERVIEW "(s7703 maintenance)".
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
   PROJECT-OVERVIEW "(s7622 maintenance)"). TS-2 s7643 (TSan over host runtime, item 21; archived s7662): 1 hardening (s4211 PI ring), SEM blind spot now annotated. TS s7642 (TSan over all RT64+plume, item 21; archived s7662): H-clean, 0 fixes. CF s7641 (framework-callback threads, item 28): 1 fix (plume Metal drawable index race, TSan). AT s7640 (AppKit thread affinity, item 27): 1 fix (RT64 NFD_Init on Gfx Thread). ST s7639 (SDL thread affinity, item 26): 1 fix (F6 panel draw hook). H-clean, no fix: HB s7633 (bridge default-on diag, item 23; 1 getenv latched), HD s7632 (rt64 default-on diag work, item 22; 2 getenv latched), RP s7631 (lib/rt64 kept RDRAM pointers, item 21), RQ s7616, DQ s7615, HM s7614, HP s7613, RG s7612, SN s7611,
   OV s7610, MK s7609, HC s7606, RX s7603, TP s7602, TH s7592, OW-2 s7588, HR s7589, UI s7584, UBSan s7579-s7583 (every
@@ -365,7 +244,6 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 
 Spec: ITERATION.md item 3c. No backlog-exhausted block. Renumbered s7534 into one sequence 1-18, s7622 folded 19-46 into 19 (1-21 now) (the s7533 numbering 1-22 is archived
 verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
-
 1. **Audit classes CC-FZ s7420-s7533: ALL CLOSED** (full text, numbers, controls, tool flags: PROJECT-OVERVIEW
    "(s7452 maintenance)" for CC-DH, "(s7488)/(s7491 migration)" for DG-EO, "(s7534 maintenance)" for the rest incl.
    FD-FZ). Last fold: s7533_fz_levels score 0 (L1 dd8 21:9, L7/L10/L12 dd4, 4/4 alive) -> FZ CLOSED 6 levels.
@@ -424,49 +302,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     touching guest regs/FPRs), TP s7602 (TO_PTR views), BS s7601, GX s7600, GR s7599, AZ s7598 (allocations, createTexture),
     XC s7597 (throw/json parse), FS/SV/SG s7596/s7595/s7594, EX/TH s7593/s7592, MR s7591 (lib/ edits). OW/OW-2/LK/HR
     s7585-s7589 tools as named in the archive. Renaming sweep closed (s6868). ROGUESQ_MTL_WAITPOOL default on.
-20. **G6 (owner 2026-11-18, ahead of everything else): G6a rumble LANDED s7617; G6b controls LANDED s7618-s7620 (table
-    src/main/rs64_bindings.h == old map, ROGUESQ_BIND_OLD=1; controls.json beside the exe, rs64_bindings_json.h; F6 panel
-    src/main/rs64_controls_panel.cpp + rs64_imgui_metal.mm, ROGUESQ_CONTROLS_PANEL=0 removes it). Both close on the owner's
-    hands. Rerun `ROGUESQ_BIND_PANEL_TEST=1` (scratch/s7620/run.zsh) + tools/test_bindings.cpp after any input-path edit. s7666: Save -> controls.json -> reload
-    round trip PASS (scratch/s7666/run.zsh: save, load mismatches on N64 A only, default-path guard and corrupt-file controls). s7669/s7671 rumble abort route clean (live effect at pause/abort stopped by the game in 25 ms): rerun scratch/s7669/run.zsh <name> "ROGUESQ_S7671_FX_ON_KEY=1 ROGUESQ_S7671_FX_TRAIN_MS=3000" + scratch/s7671/score.py after a rumble/input edit.
-    G6c stand-ins: design docs/G6C-STANDINS-PLAN.md (s7621): H-portable (game-side visibility bucket only, no HLE state),
-    all 17 upstream code addresses identical in our syms. Step 2 LANDED s7623: src/main/rs64_standins.cpp +
-    tools/apply_s7623_standins.py (RS64_REPLAY), ROGUESQ_STANDINS=1|tog (+_LOG=1), dd>1 only; region 0x81700000..0x81800000
-    (spill capped 7 MB; matrices reach the DL pool via a stack copy, so CPU-only). L1: 47 objects, submits > 0 at dd2/dd4,
-    0 at dd1, 3/3 arms alive 0 stall (single run, on battery). **Step 3 (s7624): H-culled.** The game's own view test
-    (transformVec3ToNpcLocalWithScale 0x8001DC34, inside addNpcToVisibilityBucket, which returns 1 only when linked; the bucket is
-    a linked list with no cap, so H-budget-at-bucket is refuted by code read) accepts 0.2% of stand-in submits (L1 93/40018,
-    L4 361/151825); only 2/9 (L1) and 10/59 (L4) later spawns were ever accepted before spawning (0.5-4.2 s early). Per-frame
-    toggle fb dumps: flicker per triplet toggling <= forced-off control (L1 3879 vs 4351, L4 1807 vs 2207), synthetic control
-    PASS. The s7621 "no far_check port needed" was wrong: upstream widens that test's far ($f0 *= dd, 0x8001E078) and its
-    +-125 camera box (0x8001DCEC/0x8001DD38, constants 0x8000093C/940) and relies on RT64 HLE far matrices for translations past
-    convertMat3x4ToN64Mtx's reach; we have neither. **Step 3b (s7625): H-far selected, fixed at the bucket; the draw path culls next.**
-    Exit tally (tools/apply_s7625_viewtest_reason.py; exits sum to calls): in-front stand-ins die at the far exit 0x8001DDA8
-    (view+0x28 = 30.8 L1 / 27.8 L4 at dd4 = the retail object far; stand-ins sit at d 40-110), then side; box +-125 rejects
-    ~3%. Fix tools/apply_s7625_standins_far.py: far *= ROGUESQ_STANDINS_FAR (default dd; =1 retail, =tog) for OUR call only;
-    the box test runs first so no matrix overflow is possible. Same-run tog: pass rate L1 0.41% -> 29.6%, L4 0.47% -> 24.2%,
-    far rejects 9021 -> 0 / 27996 -> 27, 4/4 arms alive 0 stall. But fb flicker with far on still shows nothing (L1 4068 vs
-    4206 off, L4 1813 vs 2129, control PASS, 294/255 accepted in window 1). **Step 3c (s7626) supersedes "accepted stand-ins
-    are not drawn": that window had no stimulus.** Stand-ins never use selectMeshLodAndSubmitForRender (probe droids only), so
-    upstream's 0x80058264/0x80058304 hooks do not apply. tools/apply_s7626_sg_probe.py (ROGUESQ_STANDINS_LOG=1, other nodes as
-    control): traverseSceneGraphRecursive visits/converts them (L1 81591 in 130 s, cam z 42-121, packed t < 2^31); their meshes
-    are prebuilt-DL (flags 0x00100018, same as most real objects) and queue mesh+0x34 at 0x80116400; beginFrameDLChunk reads
-    100% of those entries (65390/65390). The dump windows (40-46 s after first submit) held ~0 stand-in draws (L1 0, L4 ~60/s
-    for 2 s); they draw at 9-19 s. **Step 3d (s7627): stand-ins DRAW RDP pixels.** L1 dd4 STANDINS=frame, dumps 10/16 s,
-    flicker px/triplet window1 vs forced-off window2: P (PULL=3) 1071 vs 107.5, N (true depth) 547 vs 108, real-object control
-    C (ROGUESQ_STANDINS_CTL=1, real nodes collapsed on off calls, ours never added) 180891 vs 107.5; synthetic control PASS all
-    arms, 3/3 alive 0 stall. **Step 3 proof by eye (s7628): stand-ins are visible early, true depth, on 2 levels.** Same-run
-    adjacent-frame pairs (tools/s7628_standins_sheet.py, docs/owner_sheet_s7628_standins_on_off.jpg): L1 dd2 a far bunker in the
-    haze; L4 dd4 a row of far city towers (1949 px) the game has not spawned yet. L4 dd2 shows none (flicker 143 vs 155 forced-off
-    = inside the game's own spawn radius, expected). Flicker scorer alone is NOT proof: the s7627 N excess (547) and the s7628
-    L1 dd4 top pairs are cliff-texture shimmer + laser bolts, not stand-ins (eye check); keep the eye check. Dumps show each call
-    one swap late (stand-ins appear in label-0 frames). Spawns preceded by a stand-in: L1 10-11 (2-62 s early), L4 19 (0.2-5 s).
-    4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
-    crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
-    spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7691_standins_on_off.jpg (cluster crops, s7691 refresh on the parity-fixed binary; s7630 original). **G6c now
-    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
-    now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
-    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). s7684/s7685: ray-shield class keyed by item at +0x30; pos fallback rejects itemless/other-sub callers for 0x12/0x13 + ray-shield ; s7686 extends the itemless reject to 0x0D/0x14/0x1E/0x1F/0x47 (ROGUESQ_S7686_POSSUB, L4 pair old 7 pos handoffs vs fix 0). s7687: 0x0C (L10) added (ROGUESQ_S7687_POSSUB); pos-fallback thread CLOSED. Sheet refreshed s7691; the owner decides.
+20. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
+    Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
+    "(s7703 maintenance)".
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
     ALL CLOSED** (full text, numbers, controls, tools verbatim in PROJECT-OVERVIEW "(s7662 maintenance)"). Defaults that stay
     (=0 / old restores): ROGUESQ_S7634_FUSE=1 (walker fusion), S7639_ST, S7640_AT, S7641_CF, S7643_PI (release/acquire s4211 ring),
@@ -474,7 +312,6 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     tools/s7639_st_census.py after any SDL call edit or new thread; tools/s7640_at_census.py / s7641_cf_census.py after AppKit or
     framework-callback edits; TSan builds tools/s7642_tsan_rt64_build.sh, s7643_tsan_host_build.sh (lightweightsemaphore tsan
     annotations are TSan-only); the gate sweep after any src/ or lib/ change. A new G above 0x80180000 reads unclassified (RED): re-dump.
-
 22. **s7663 launch settings/presets: owner to try.** After any edit to rs64_settings.cpp rerun tools/test_settings.cpp and
     scratch/s7663/run.zsh (5 arms; C must print `[gfx-qos] mode=1` from the file). New owner recipes go in its presets() table.
 23. **s7614_hm census: CLOSED s7673.** rs64_settings.cpp `p.vars` = host (static const preset table of string literals; row
@@ -485,6 +322,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     pass an ASan/UBSan fuzz (tools/test_s7523_model.sh, 2 controls) and the post-commit arms ran alive. Rerun that test after any
     s7523_slow_rdp.cpp edit.
 
+25. **G1d 21:9 boot-cinematic fb read-back (s7702 follow-up, NEXT.md wide-fb-readback-s7703):** presented frames t 12.0-16.7 s at 21:9,
+    default vs ROGUESQ_ALLOW_WILD_W=1, phase-gated on VI count, 4:3 reference as positive control. H-gpu (no change) / H-stale (copied
+    region stale -> allowlist 768 in lib/rt64 rt64_state.cpp rs64_writeback_sane behind the aspect setting, then export.sh) / H-partial.
+
 ## Evidence index
 
 - Maintenance archives (whole CURRENT-TRUTH verbatim): PROJECT-OVERVIEW s7417, s7370, s7307, s7187, s6994; trims s7262,
@@ -493,4 +334,4 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png/jpg.
 - Queued-soak verdicts `scratch/agent/SOAK-RESULTS.md`; loop.sh edits take effect before the next soak phase
   (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
-- Recent chronology: PORTING-STATE sessions 7579-7622; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 7617-7703; search bounded windows only.

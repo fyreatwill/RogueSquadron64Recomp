@@ -205381,3 +205381,14 @@ ROGUESQ_S7702_FBREAD now arms it too. Control boot (40 s, 4:3): dma_rd=888802. A
 This selects H-read and refutes H-unread for the boot cinematic window (two arms, same window and pattern). Next discriminator (NEXT.md s7703):
 presented frames through t 12.0-16.7 s at 21:9, default vs ROGUESQ_ALLOW_WILD_W=1, VI-phase-gated, with a 4:3 reference: same picture selects H-gpu
 (RT64 serves its GPU copy, skip harmless), different picture selects H-stale (allowlist 768). Logs: scratch/s7702/{a219,a43}/rs64_s7702.log, scratch/s7702/dmactl_4x3_boot40s.log.
+
+## Session 7703 (2026-11-20) — maintenance: CURRENT-TRUTH compacted 60365 -> 37913 B (s7617-s7702 headline + G6 item migrated verbatim)
+
+Step 0 trigger: CURRENT-TRUTH was 60365 B (> 60000), so this was a MAINTENANCE iteration with no experiments.
+- `python3 tools/crash_reports.py --since 2026-11-13`: FOLDED=27, new=0. No owner report outranks the work.
+- Headline bullets s7617-s7702 (G6a rumble, G6b controls/F6 panel, G6c stand-ins steps s7672-s7691, the post-G6c re-holds s7692-s7701,
+  s7660-s7667 tooling) and Next-steps item 20 (the full G6c step 2-4 history) moved word for word to PROJECT-OVERVIEW
+  "Migrated from CURRENT-TRUTH (s7703 maintenance)". In their place: 8 short summary bullets and a 3-line item 20.
+- Backlog renumbered into one monotonic sequence 1-24 (closed the gap before 22); new item 25 = the s7702 follow-up
+  (21:9 boot-cinematic fb read-back, H-gpu/H-stale/H-partial). Headline now reads "as of Session 7703"; evidence index chronology 7617-7703.
+- Net: CURRENT-TRUTH -196/+37 lines, 60365 -> 37913 bytes (-22452). Nothing deleted outright: git history and the archive hold all of it.
