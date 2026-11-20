@@ -290,7 +290,10 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
     if (rs64_bk_self || !guest(state)) return;
     ++s_bk_calls;
     static const bool s_genfix = [] { const char* e = std::getenv("ROGUESQ_S7677_GEN"); return !(e && *e == '0'); }();
-    if (s_bk_gen_size != s_standins.size() || (s_genfix && s_bk_gen != s_gen)) {
+    // s7678 positive control: ROGUESQ_S7678_STALE=1 keeps the first build's map for the whole run (a planted stale key), so after a
+    // real level change item_hits must collapse to ~0 (the new level's items are not in the old map); default off = unchanged.
+    static const bool s_stale7678 = [] { const char* e = std::getenv("ROGUESQ_S7678_STALE"); return e && *e == '1'; }();
+    if ((!s_stale7678 || s_bk_gen == ~0u) && (s_bk_gen_size != s_standins.size() || (s_genfix && s_bk_gen != s_gen))) {
         s_bk_by_item.clear();
         for (size_t i = 0; i < s_standins.size(); ++i) s_bk_by_item[s_standins[i].item] = i;
         s_bk_gen_size = s_standins.size();

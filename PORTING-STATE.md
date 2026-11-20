@@ -204680,3 +204680,40 @@ mismatches every item hit (84350/84350) and the generation key fixes it (0). The
 level change with an equal object count (not reproduced on a real route: the hangar route always reloads level 15).
 ORIGIN: not a mitigation; the writer is our own rebuild() replacing s_standins while rs64_bk_ret's cache key ignored it.
 Gate sweep tools/s7651_gate_sweep.py --jobs 2: 135 gates, 128 GREEN, 5 REPORT, 2 RED (both control PASS): GR s_gh_idx and GX si_cls[vt_class()], s7675 ghost-probe sites never given rows (not this edit). Rows added (s_gh_idx cleared each submit, <= stand-in count; vt_class() returns 0..3 into si_cls[4]); both censuses --controls now rc 0 CLOSED.
+
+## Session 7678 (2026-11-19) — G6c stand-ins across REAL level changes: attract playlist route (L0->5->7->10, no input), rebuild fires on every change, item key re-keys (item_hits 16119/11416 vs planted-stale 0/0), H-leak refuted; gate cache import-staleness fixed with a discriminating control
+
+Unit (NEXT.md s7678, HYPOTHESIS-ID g6c-standin-level-change): the s7677 generation key was only proven on a planted reorder and
+a same-level hangar reload; does a real level change rebuild the stand-ins and re-key the item map (H-ok), or does B inherit A's
+items/keys (H-leak)?
+
+Route found: no input at all. tools/g3_port_capture.sh with AP=99999:start (nothing pressed) lets the title fall into the attract
+demo playlist (s6911 saw 15 levels in 970 s), which loads real levels in one run. Recipe scratch/s7678/run.zsh <name> "<env>":
+owner recipe dd4 16:9 FPS60, STANDINS=1 STANDINS_LOG=1, NO_SAVE_WRITE, 420 s. Deterministic: both arms below logged identical
+bk_calls per generation (73587 / 117700), so the arms are the same frames.
+
+| arm | env | levels (rebuilds) | gen1 L0 item/pos/wrong | gen2 L5 item/pos/wrong | gen3 L7 item/pos/wrong | crash |
+|---|---|---|---|---|---|---|
+| fix | PLANT=1 (gen key on) | 0,5,7,10 (4) | 13269/753/0 | 16119/6/0 | 11416/18/0 | 0 |
+| control | PLANT=1 + NEW ROGUESQ_S7678_STALE=1 (map frozen at first build) | 0,5,7,10 (4) | 13269/753/0 | 0/805/0 | 0/1649/0 | 0 |
+
+Handoffs: fix 88 match=item / 14 match=pos; control 19 item / 26 pos (item only on L0). Stand-in counts 95/65/129/280 per level,
+dat 805392D0/8053C250/80546420/80263F70, level field 0x80130B70 changes on each build.
+Reading: the rebuild trigger (dat or level change) fires on every real change, and the new level's handoffs match by item, not by
+the 2-unit position fallback. The planted stale map, run on the same frames, drops item_hits to 0 and pushes everything onto
+position matching, so the detector sees the failure H-leak would cause. Note: on a level change `wrong=` cannot fire (A's item
+addresses are not B's), so item_hits collapse, not wrong, is the H-leak signature; the s7677 PLANT/GEN=0 control only covers
+same-count rebuilds, and every real change here changed the count.
+The NEXT.md s_first / s_dwin worry is answered by reading: early_s = now - first_add per stand-in, and stand-ins are rebuilt per
+generation, so B's early_s does not depend on A. Only the cosmetic t= / added_first / added_last fields of [standins-spawn] and the
+once-per-run ROGUESQ_STANDINS_DUMP windows are measured from the first submit of the run (diagnostic only, render unaffected).
+Rules out H-leak on real level changes (two arms, same frames). No behaviour change: S7678_STALE is control-only, default off.
+
+Gate tool fix (left uncommitted by an interrupted iteration, finished here): tools/gate_trace.py now records every loaded
+non-stdlib module's .py at dump. An import served from a valid __pycache__ opens only the .pyc, so editing a rows module (e.g.
+s7600_gx_rows.py) left the gate sweep's cached verdict in place. The import control left behind did NOT discriminate: its first run
+compiled the module, which opens the .py anyway. Added py_compile before the first traced run. Two arms, same tool: with the fix
+PASS (green/green/hit/red-after-module-edit); with HEAD's gate_trace.py the control reads GREEN after the edit -> FAIL. So the
+control now fails without the fix.
+Full gate sweep vs tools/gate_sweep_allowed_red.txt after the stand-in edit: see the result line below.
+Gate sweep result: 135 gates, 130 GREEN + 5 REPORT, 0 new RED vs the allowed baseline, both controls PASS (incl. the new import control).

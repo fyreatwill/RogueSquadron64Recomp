@@ -12,7 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7677: ghost widening clean (L2/L5 scorer rc 0: L5 AT-PT 2 GATE + 2 UNHELD, 0 GHOST) -> H-gate on L1/L2/L4/L5.** Stand-in
+- **NEW s7678: stand-ins survive REAL level changes (H-leak refuted, two arms, same frames).** No-input attract playlist route
+  (scratch/s7678/run.zsh, dd4 16:9 FPS60 STANDINS=1, 420 s, deterministic) loads L0->5->7->10: rebuild fires on each, new level's
+  handoffs match by item (item_hits L5 16119, L7 11416, wrong 0); planted stale map (ROGUESQ_S7678_STALE=1, control only) on the
+  same frames drops item_hits to 0/0. On a level change the H-leak signature is item_hits collapse, not wrong=. 0 crashes both arms.
+  Gate cache now sees imports served from __pycache__ (tools/gate_trace.py; import control discriminates: FAIL without the fix).
+- **s7677: ghost widening clean (L2/L5 scorer rc 0: L5 AT-PT 2 GATE + 2 UNHELD, 0 GHOST) -> H-gate on L1/L2/L4/L5.** Stand-in
   item map (rs64_bk_ret) is now keyed on the rebuild generation, not the object count (ROGUESQ_S7677_GEN=0 = old). Hangar abort
   route (3 loads L15): dat reloads at the same address so the old key was right (wrong 0); planted same-count reorder
   (ROGUESQ_S7677_PLANT=1) old 84350/84350 wrong matches, fix 0; 3/3 arms alive. Recipe scratch/s7677_run.zsh old|fix (PLANT=p). Gate sweep 133/135 then GR/GX rows for s7675 sites -> all green.

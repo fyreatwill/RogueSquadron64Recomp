@@ -282,8 +282,23 @@ def cache_control(d):
         time.sleep(0.01)
         open(os.path.join(hd, "cc_h.h"), "w").write("#define CC_OK 0\n")
         c3 = run(ct)[1]
-        got = (r1, r2, hit, r3, spawn_uncached, c1, c2, chit, c3)
-        return got == ("GREEN", "GREEN", True, "RED", True, "GREEN", "GREEN", True, "RED"), got
+        # s7678 import control: the verdict lives in an imported rows module; editing it must invalidate the entry even
+        # when the import is served from __pycache__ (the s7677 stale-RED defect)
+        md, mt = os.path.join(d, "cc_mod_rows.py"), os.path.join(d, "cc_import_census.py")
+        open(md, "w").write("OK = True\n")
+        open(mt, "w").write("import sys\nfrom cc_mod_rows import OK\nsys.exit(0 if OK else 1)\n")
+        import py_compile  # pre-compile: the traced first run must load from __pycache__ only, never open the .py
+        py_compile.compile(md, doraise=True)
+        i1 = run(mt)[1]
+        hi = STATS["hit"]
+        i2 = run(mt)[1]
+        ihit = STATS["hit"] == hi + 1
+        time.sleep(0.01)
+        open(md, "w").write("OK = False\n")
+        i3 = run(mt)[1]
+        got = (r1, r2, hit, r3, spawn_uncached, c1, c2, chit, c3, i1, i2, ihit, i3)
+        return got == ("GREEN", "GREEN", True, "RED", True, "GREEN", "GREEN", True, "RED",
+                       "GREEN", "GREEN", True, "RED"), got
     finally:
         CACHE = saved
         USE_CACHE = su
@@ -330,7 +345,7 @@ def main():
     cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED",
                  "rep_noexit": "REPORT", "rep_exit": "RED"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
-    print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit ->", cc, "PASS" if ccpass else "FAIL")
+    print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit, import: green/green/hit/red-after-module-edit ->", cc, "PASS" if ccpass else "FAIL")
     if not (cpass and ccpass):
         sys.exit(3)
     for k in ("hit", "miss", "uncacheable"):

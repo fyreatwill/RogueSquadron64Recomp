@@ -1,18 +1,17 @@
-# NEXT (s7678)
-HYPOTHESIS-ID: g6c-standin-level-change
+# NEXT (s7679)
+HYPOTHESIS-ID: g6c-standin-attract-cine
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7677 fixed the stand-in item map key (generation, not count) and proved it with a planted reorder; the real hangar route only
-ever reloads level 15 at the same dat address. Unit: the real LEVEL-CHANGE case, stand-ins on.
-Route: forced level select (ROGUESQ_FORCE_UNLOCK + ROGUESQ_FORCE_SAVE_MISSION + ROGUESQ_NO_SAVE_WRITE, s5705-s5720 recipes; copy
-the game to its own folder, never touch build/saves), fly level A, PAUSE/ABORT, pick level B, fly; STANDINS=1 LOG=1 dd4 16:9 FPS60.
-Measure from `[standins] N objects ... dat X level L` and `[s7677-gen]` lines:
-- rebuild fires on the level change (level field changes), gen tally of A has wrong=0, B's handoffs match=item (pos only as fallback).
-- H-leak: B's first build still shows A's items (dat unchanged + level unchanged at first submit) -> rebuild trigger needs the
-  mission-init edge, not the dat/level pair. Fix there.
-- Also check s_first / s_dwin / s_calls (function statics, never reset) do not skew B's spawn early_s numbers (early_s must be
-  measured from B's first submit; compare B's early_s against a B-only run of the same level).
-Positive control: ROGUESQ_S7677_PLANT=1 with GEN=0 must still show wrong>0 on the second build.
-If the forced route cannot change level inside one run, write that down with the evidence and take M6 item 3b (keyed
-title->mission hold, log every CRASH/stall) as the datum-producing unit.
+s7678 found a deterministic, no-input route that loads real levels (attract demo playlist: L0 -> L5 -> L7 -> L10 in 420 s,
+identical bk_calls across runs) and proved the stand-in rebuild/re-key on it. The same run shows stand-ins ACTIVE during the
+attract flybys (107 [standins-spawn] lines). The flybys are scripted camera shots, and the owner sees them at the title screen.
+Question: do stand-ins put objects into attract/cinematic shots where retail shows nothing (H-cine-ghost), or only bridge objects
+the shot later spawns anyway (H-cine-ok)? And do any appear inside the retail dd1 radius (should be none)?
+Measure, ONE run: scratch/s7678/run.zsh with ROGUESQ_STANDINS=tog (whole-second on/off windows, same run) plus framebuffer
+captures (CAP0 ~20, the s7630 contact-sheet tooling / ROGUESQ_STANDINS_DUMP a:b:n windows); score per shot the clustered diff px
+between on and off seconds (tools/s7630-era scorer, `--cluster 16`), and list [standins-spawn] early_s per level: a stand-in with no
+matching spawn before the level changes (spawn line absent for its item) = an object the cinematic never shows = H-cine-ghost.
+Positive control: the same scorer must show the known L0 bridged spawns (fix arm: 88 item handoffs) as on/off diffs.
+If H-cine-ghost: gate stand-ins off in attract/cutscene views (find the attract/demo flag; s6911 [ddscene] attribution names the
+scene), default stays STANDINS off anyway. If H-cine-ok: note it for the owner sheet and take the next G-rung.
 One game at a time, SIGKILL only, <=2 CPU-heavy jobs, no repeat-hold soaks.

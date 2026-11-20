@@ -48,9 +48,21 @@ def _hook(ev, args):
         pass
 
 
+def _module_sources():
+    """s7678: an import served from a valid __pycache__ opens only the .pyc (skipped above), never the .py, so a rows
+    module edit (s7600_gx_rows.py) left the census's cached RED in place. Record every loaded non-stdlib module's source."""
+    for m in list(sys.modules.values()):
+        f = getattr(m, "__file__", None)
+        if f and f.endswith(".py"):
+            p = os.path.abspath(f)
+            if not p.startswith(SKIP):
+                reads.add(p)
+
+
 def _dump(complete):
     if not OUT:
         return
+    _module_sources()
     tmp = OUT + ".tmp"
     with open(tmp, "w") as f:
         json.dump({"reads": sorted(reads), "dirs": sorted(dirs), "globs": sorted(globs), "spawn": spawn,
