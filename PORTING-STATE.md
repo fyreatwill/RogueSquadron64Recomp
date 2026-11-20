@@ -204884,3 +204884,26 @@ rejected off-screen (re_off 259/519) until frame ~521, so no on-screen gap. Sing
 
 Rules out: H-absent, H-inline for 0x33/0x36/0x44/0x4F. 0x33/0x44/0x4F are covered by the code read plus the 0x36/0x4B runtime
 evidence on the same handler, not by their own runs. G6c engineering waits on the owner's look.
+
+## Session 7684 (2026-11-19) — G6c ray-shield stand-ins (0x33/0x36/0x44/0x4B/0x4F) hand off by item key at state+0x30 (H-key); L12 two arms old 9/9 pos+timeout600 vs fix 11/11 rsitem+real30
+
+Code read (RecompiledFuncs funcs_39.c handleRayShieldedNpcDestroy 0x800E4070): s1 = *(npc+4) is the state block; init case
+0x800E40F8 `sw $s2,0x34($s1)` stores the DAT item (s2 = a2, whose lhu +0 is the subtype at 0x800E41E8); 0x800E41D8 stores the
+radius at s1+0x38; render case 0x800E4310 calls addNpcToVisibilityBucket(a0=*item, a1=*s1, a2=s1+4, a3=radius). So the detector's
+`state+0x34` is s1+0x38 (radius), and the item is at state+0x30. H-key selected, H-ok moot (the fallback also broke handoff, below).
+
+Change: src/main/rs64_standins.cpp bk_ret_impl: when the state+0x34 item key misses, look up rw(state+0x30) and accept only a stand-in
+of sub 0x33/0x36/0x44/0x4B/0x4F (match label `rsitem`, counter rs_hits in [s7677-gen]). ROGUESQ_S7684_RSKEY=0 = old. Not applied on the
+s7681 shield path (only_sub).
+
+Run (one binary, sequential arms, tools/g1e_owner_quiet_arms.zsh, L12 FORCE_SAVE_MISSION=12 dd4 STANDINS+LOG HOLD=200, out scratch/s7684/run;
+first attempt voided: R dir did not exist): both arms alive, 0 crash, vi_stalls30s=0, max_gap 147/146 ms.
+- old: 0x36 9/9 match=pos why=timeout600. Mechanism: the pos fallback skips stand-ins with real_add>=0, so only the first real call
+  matched; real_frames never reached 30 and the hold ran to its 600-frame timeout. So the old path did not just risk neighbours, it
+  never confirmed the handoff for this class.
+- fix: 0x36 11/11 match=rsitem why=real30, dpos 0.00 (same object as the pos match) on the 8 common items; real_add identical for the
+  first four (497/524/525/1188), later ones differ by run divergence.
+- controls (other subs): real_add identical 26/31; the 5 differences all after frame 5000. In the fix arm three sub 0x12 stand-ins
+  (80549354/8054945C/80549564) handed off by pos at frames 5713-5715 with dpos 1.97-1.99, at the 2-unit edge: a neighbour-handoff
+  candidate (old arm: never handed off). Single run; unattributed (the pos match does not log the caller's subtype).
+Rules out: state+0x34 as a universal item key. Next: log caller item/sub on pos matches and require sub equality (NEXT.md).

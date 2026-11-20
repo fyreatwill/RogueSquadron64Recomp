@@ -1,20 +1,16 @@
-# NEXT (s7684)
-HYPOTHESIS-ID: g6c-rayshield-item-key
+# NEXT (s7685)
+HYPOTHESIS-ID: g6c-pos-fallback-neighbour
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7683: subs 0x33/0x36/0x44/0x4B/0x4F all use handleRayShieldedNpcDestroy (0x800E4070) and reach addNpcToVisibilityBucket (H-bucket).
-But the stand-in handoff detector (src/main/rs64_standins.cpp ~line 309, `it = rw(rdram, state + 0x34u)`) never matches this class
-by item: 0x36 L12 9/9 and 0x4B 48/51 are match=pos (2-unit position fallback, first call only). s7681 showed the position fallback
-can hand off a NEIGHBOUR early (0x14 neighbours at 37.4 vs 31.0) -> a stand-in could vanish while its own real object is still hidden.
-Work unit (offline first, then ONE run on L12 scratch/s7683 recipe below):
-(1) Read handleRayShieldedNpcDestroy's render case 0x800E4310: a0=*(s2+0) a1=*(s1+0) a2=s1+4 a3=*(s1+0x38). Find which register/
-    field holds the DAT item for this class (s2 is the item? init case reads lhu 0x0($s2) as the subtype -> s2 IS the DAT item;
-    then state passed is s1+4, and state+0x34 = s1+0x38 = the radius, not the item). Confirm in the init case where s1 is built.
-(2) Hypotheses: H-key (state+0x34 is not the item for this class; key by the item the hook sees in another arg, e.g. caller's a0 if
-    it is the item, or record state->item at spawn) vs H-ok (pos fallback is safe here: pillars/pads are > 2 units apart, measure
-    nearest-neighbour distance per class from the DAT positions; if min > 4 units, no fix needed, document it).
-(3) If H-key: fix behind ROGUESQ_S7684_RSKEY (default on inside STANDINS, =0 old), one L12 run two arms (old/fix) same binary:
-    expect fix match=item for 0x36, why=real30, identical real_add frames; controls 0x12/0x13/0x35 unchanged.
-Recipe: env R=<abs dir> HOLD=200 ALLOW_SLOW=1 ARMS="4:x12:ROGUESQ_STANDINS=1+ROGUESQ_STANDINS_LOG=1+ROGUESQ_FORCE_SAVE_MISSION=12" zsh tools/g1e_owner_quiet_arms.zsh
-If H-ok: G6c engineering done, waits on the owner's look; take the next rung (owner items 2-9, 20, 22).
+s7684: ray-shield class now keyed by item at state+0x30 (11/11 real30 on L12). Remaining datum: in the s7684 fix arm three sub 0x12
+stand-ins (80549354/8054945C/80549564) handed off by the 2-unit POSITION fallback at frames 5713-5715 with dpos 1.97-1.99 - right at
+the threshold, i.e. probably a neighbour's real object, so those stand-ins may vanish while their own object is still hidden.
+Hypotheses: H-neighbour (caller is a different object/subtype: its item at state+0x34 or +0x30 is a guest pointer whose lhu +0 != 0x12)
+vs H-self (caller is the 0x12 object itself whose state has no item key - same sub, dpos ~2 because it moved).
+Work unit, one build: in bk_ret_impl's pos branch, read the caller's candidate item (state+0x34, else +0x30 if guest) and its lhu +0 sub;
+log it on every pos match ([s7685-pos] caller_sub, stand-in sub, d). Fix behind ROGUESQ_S7685_POSSUB (default on in STANDINS, =0 old):
+reject a pos match when the caller's sub is known and differs. Two arms same binary on L12 (scratch/s7684 recipe, mkdir R first!):
+env R=<abs dir> HOLD=200 ALLOW_SLOW=1 ARMS="4:old:...+ROGUESQ_S7685_POSSUB=0 4:fix:..." zsh tools/g1e_owner_quiet_arms.zsh
+(base env: ROGUESQ_STANDINS=1+ROGUESQ_STANDINS_LOG=1+ROGUESQ_FORCE_SAVE_MISSION=12). Positive control: [s7685-pos] must log the s7684
+pos matches with caller_sub. If every pos match is same-sub (H-self), no fix; document and G6c waits on the owner's look.
 One game at a time, SIGKILL only, <=2 CPU-heavy jobs, no repeat-hold soaks.

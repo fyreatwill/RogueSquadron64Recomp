@@ -83,7 +83,7 @@ struct Standin {
     int64_t last_si = -1, spawn_f = -1, real_call = -1, real_add = -1, real_last = -1; uint32_t overlap = 0, real_frames = 0, held = 0, held_ok = 0;
     // s7674: held culled frames by our own view-test exit class, and the real object's rejected calls while we wait for its first accept
     uint32_t si_cls[4] = {}, re_cls[4] = {}, re_rej = 0;
-    uint32_t idx = 0; uint16_t sub = 0; int end_reason = -1, prev_reason = -1; float dpos = -1.0f; bool ho_logged = false, by_pos = false;
+    uint32_t idx = 0; uint16_t sub = 0; int end_reason = -1, prev_reason = -1; float dpos = -1.0f; bool ho_logged = false, by_pos = false, by_rs = false;
     // s7675 ghost probe: nearest real (non-self) bucket call to this held stand-in since the last [s7675-gh] line
     float nd2 = -1.0f; uint32_t n_state = 0, n_item = 0, n_calls = 0;
     // s7675b: camera-space distance (view test) of our held call (min over the window / the whole hold) and of the real object's first call
@@ -264,7 +264,7 @@ size_t s_bk_gen_size = ~size_t(0);
 // a mission abort, items at new addresses) kept the previous mission's item keys. s_gen counts rebuilds; ROGUESQ_S7677_GEN=0 restores
 // the size-only key (same-build control).
 uint32_t s_gen = 0, s_bk_gen = ~0u, s_bk_wrong = 0;
-uint32_t s_bk_calls = 0, s_bk_item_hits = 0, s_bk_pos_hits = 0;
+uint32_t s_bk_calls = 0, s_bk_item_hits = 0, s_bk_pos_hits = 0, s_bk_rs_hits = 0;
 const char* const kReason[] = { "added", "culled", "spawned", "unlinked", "dead", "cond" };
 void ho_log(Standin& s, const char* why) {
     if (s.ho_logged) return;
@@ -273,7 +273,7 @@ void ho_log(Standin& s, const char* why) {
     std::fprintf(stderr, "[s7672-ho] item %08X sub %04X why=%s spawn_f=%lld last_si=%lld real_call=%lld real_add=%lld gap=%lld overlap=%u "
                  "real_frames30=%u end=%s dpos=%.2f match=%s si_before_spawn=%lld odd=%u held=%u held_ok=%u si_off=%u si_far=%u si_novt=%u si_vtpass=%u re_rej=%u re_off=%u re_far=%u re_novt=%u re_vtpass=%u\n",
                  s.item, (unsigned)s.sub, why, (long long)s.spawn_f, (long long)s.last_si, (long long)s.real_call, (long long)s.real_add, (long long)gap,
-                 s.overlap, s.real_frames, s.end_reason >= 0 ? kReason[s.end_reason] : "none", (double)s.dpos, s.by_pos ? "pos" : "item",
+                 s.overlap, s.real_frames, s.end_reason >= 0 ? kReason[s.end_reason] : "none", (double)s.dpos, s.by_pos ? "pos" : (s.by_rs ? "rsitem" : "item"),
                  (long long)(s.spawn_f >= 0 && s.last_si >= 0 ? s.spawn_f - s.last_si : -9999), s.idx & 1u, s.held, s.held_ok,
                  s.si_cls[0], s.si_cls[1], s.si_cls[2], s.si_cls[3], s.re_rej, s.re_cls[0], s.re_cls[1], s.re_cls[2], s.re_cls[3]);
 }
@@ -320,6 +320,21 @@ static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t on
     }
     auto f = s_bk_by_item.find(it);
     if (f != s_bk_by_item.end() && (!only_sub || s_standins[f->second].sub == only_sub)) { hit = &s_standins[f->second]; ++s_bk_item_hits; if (hit->item != it) ++s_bk_wrong; }  // s7677: wrong = stale key
+    // s7684: handleRayShieldedNpcDestroy (0x800E4070; subs 0x33/0x36/0x44/0x4B/0x4F) keeps the DAT item at blk+0x34 (init 0x800E40F8)
+    // but passes state = blk+4 to addNpcToVisibilityBucket (render 0x800E4320), so state+0x34 is its radius (0x800E41D8) and the item
+    // is at state+0x30. Key this class there instead of the 2-unit position fallback (which can hand off a neighbour, s7681).
+    // ROGUESQ_S7684_RSKEY=0 = old (position fallback only).
+    static const bool s_rskey = [] { const char* e = std::getenv("ROGUESQ_S7684_RSKEY"); return !(e && *e == '0'); }();
+    if (!hit && s_rskey && !only_sub) {
+        auto g = s_bk_by_item.find(rw(rdram, state + 0x30u));
+        if (g != s_bk_by_item.end()) {
+            Standin& c = s_standins[g->second];
+            switch (c.sub) {
+                case 0x33: case 0x36: case 0x44: case 0x4B: case 0x4F: hit = &c; hit->by_rs = true; ++s_bk_rs_hits; break;
+                default: break;
+            }
+        }
+    }
     const float x = rf(rdram, state), y = rf(rdram, state + 4u), z = rf(rdram, state + 8u);
     if (!hit) {
         for (Standin& s : s_standins) {
@@ -369,9 +384,9 @@ extern "C" void rs64_bk_shield(uint8_t* rdram, uint32_t state, uint32_t v0) {
 namespace {
 void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
     // s7677 per-generation tally of how real bucket calls matched their stand-in (item key vs 2-unit position fallback)
-    std::fprintf(stderr, "[s7677-gen] gen=%u end dat=%08X n=%zu bk_calls=%u item_hits=%u pos_hits=%u wrong=%u\n", s_gen, s_dat, s_standins.size(),
-                 s_bk_calls, s_bk_item_hits, s_bk_pos_hits, s_bk_wrong);
-    s_bk_calls = s_bk_item_hits = s_bk_pos_hits = s_bk_wrong = 0;
+    std::fprintf(stderr, "[s7677-gen] gen=%u end dat=%08X n=%zu bk_calls=%u item_hits=%u rs_hits=%u pos_hits=%u wrong=%u\n", s_gen, s_dat, s_standins.size(),
+                 s_bk_calls, s_bk_item_hits, s_bk_rs_hits, s_bk_pos_hits, s_bk_wrong);
+    s_bk_calls = s_bk_item_hits = s_bk_rs_hits = s_bk_pos_hits = s_bk_wrong = 0;
     // s7679 life table (ROGUESQ_STANDINS_LOG=1): one line per stand-in drawn this generation, so a drawn-but-never-spawned item
     // (spawned=0) can be told from a bridged one (spawned=1) by its nearest drawn distance.
     if (std::getenv("ROGUESQ_STANDINS_LOG")) {

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7683 (2026-11-19).
+Compact operational handoff, as of Session 7684 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7683: G6c default-path stand-in subs 0x33/0x36/0x44/0x4F reach the bucket (H-bucket; H-absent/H-inline refuted).** They are
+- **NEW s7684: G6c ray-shield class (subs 0x33/0x36/0x44/0x4B/0x4F) now hands off by item, not by position (code read + two arms).**
+  handleRayShieldedNpcDestroy init stores the DAT item at blk+0x34 (0x800E40F8) but passes state=blk+4 to addNpcToVisibilityBucket
+  (0x800E4320), so the detector's state+0x34 read the radius (0x800E41D8); the item is at state+0x30. Fix in rs64_standins.cpp
+  (ROGUESQ_S7684_RSKEY, default on inside STANDINS; =0 old), keyed only for those 5 subs. L12 dd4 200 s, same binary: old 0x36 9/9
+  match=pos then why=timeout600 (the pos fallback matches only the first call, so real_frames never reached 30); fix 11/11
+  match=rsitem why=real30, dpos 0.00 for the 8 pillars in both arms, real_add equal on the first 4 (497-1188). Both alive, 0 crash,
+  0 stall. Controls (other subs) real_add identical 26/31; the 5 differences are all after frame 5000 (runs diverge in flight).
+  Single-run caveat: fix arm had three 0x12 pos matches at dpos 1.97-1.99 (frames 5713-5715), right at the 2-unit edge (next step).
+- **s7683: G6c default-path stand-in subs 0x33/0x36/0x44/0x4F reach the bucket (H-bucket; H-absent/H-inline refuted).** They are
   in retail DATs (0x33 L8, 0x36 L12 x17 pillars, 0x44 L6/L9/L13, 0x4F L17) and share handleRayShieldedNpcDestroy (0x800E4070) with
   0x4B; its render case 0x800E4310 calls addNpcToVisibilityBucket with no subtype test. L12 dd4 run: 0x36 9/9 real_add >= 0, 0 crash.
   g6c_sub_handler_map.py had read them as "none" (delay-slot `addiu $a0` after `j` skipped): fixed, with controls (0x32, default).
