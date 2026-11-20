@@ -204756,3 +204756,7 @@ is legitimate game state.
 Rules out: stand-ins inventing objects in attract shots generally (H-cine-ghost) -- 1 of 230 drawn stand-ins in 3 levels.
 Residual: the shield is still drawn from depth 38 to 15 (no earlier signal that the game hides it); in-flight levels not re-checked with
 the release yet (s7674/s7676 held_dmin data there never went below 28, so 0 releases expected).
+Discrimination: selects H-cine-ok for 229 of 230 drawn stand-ins and refutes H-cine-ghost as a general attract defect; the single
+exception selects H-hold-ghost (a spawned object whose handler never draws, kept on screen by the s7672 hold), now fixed by the near
+release (code change, two arms). Next discriminator: [s7679-rel] count in forced-level L5 flight (H-flight-ghost vs H-attract-only),
+with ROGUESQ_S7679_NEAR=99 as the positive control.
