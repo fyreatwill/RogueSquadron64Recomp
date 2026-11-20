@@ -204786,3 +204786,33 @@ Control-arm note: in c5 the scorer marks 8053F990 (sub 0x47, held_dmin 68.6) GHO
 Selects H-attract-only, refutes H-flight-ghost (on L5; L1/L2/L4 flight held_dmin >= 28 in s7674-s7677 makes it inert there too).
 NEXT Q2 (look for the 0x32 handler's hide condition) has no flight case to fix; what is left is the attract shield showing from
 depth 38 to 15 (cosmetic, attract only). G6c waits on the owner's look (sheet docs/owner_sheet_s7630_standins_on_off.jpg).
+
+## Session 7681 (2026-11-19) — G6c: the L5 attract "shield" is not a ghost; npcShieldUpdate draws via its own view test + inline bucket link, detector now sees it (old held to 14.88 + release, new hands off at 38.7, all other handoffs identical)
+
+HYPOTHESIS-ID: g6c-shield-hide-condition. No new crash reports (crash_reports FOLDED=27 new=0).
+
+Code read (RecompiledFuncs, single build): the sub 0x32 handler is npcShieldUpdate 0x8007AEF8 (funcs_19.c); 0x8003D518 in the
+stand-in table is only its "shield" model-name string. Message jump table at 0x8003D520. Its render case L_8007B8CC calls
+checkAndReturnByteFlagAsU8 0x8005940C(a0=*view, a1=*s3 inst, a2=s3+8 state, a3=*(s3+0x138) radius), which is a 5-instruction wrapper
+around the view test 0x8001DC34 (the same test addNpcToVisibilityBucket uses), then on pass transformMeshVerticesForNpc and links the
+mesh into the view's list inline (0x8007B8F0..0x8007B92C). It never calls 0x80057C8C. So NONE of H-flag / H-parent / H-depth: s7679's
+"spawned, never draws" was a blind spot of our handoff detector (hooked on addNpcToVisibilityBucket's return only). Other 0x8005940C
+callers: AT-AT / AT-ST / AT-PT also call 0x80057C8C (covered); heavyAttachedAudioEmitterNpcHandler uses only the inline path (same blind
+spot class, subtype not checked).
+
+Change: tools/apply_s7681_shield_vt.py (RS64_REPLAY after s7674, idempotent) reports the shield's view test (state s3+8, v0) to
+rs64_bk_shield in src/main/rs64_standins.cpp, which feeds the existing handoff matcher (bk_ret_impl) restricted to sub 0x32 stand-ins.
+Default on inside STANDINS; ROGUESQ_S7681_SHIELD=0 = old. The shield's state+0x34 is not a DAT item (8054A698), so it matches by the
+2-unit position fallback.
+
+Runs (deterministic no-input attract route tools/s7678_attract_run.zsh, dd4 16:9 FPS60 STANDINS LOG, 420 s, L0->5->7->10, one game at a time):
+- old (ROGUESQ_S7681_SHIELD=0): shield 8053EDE0 held, [s7679-rel] depth 14.88 age 95, life add_dmin 14.88, scorer RELEASED rc 0 (= s7679).
+  [s7681-sh] shows the shield path still runs (on=0 line): positive control that the hook site executes.
+- first new cut (no sub filter): shield handed off (add_dmin 37.61), but calls 3-6 matched three sub 0x14 neighbours (8053C6F4 1.3 u away,
+  8053C864, 8053D398) by position, ending their holds at 37.4 vs 31.0 in the control = a pop gap. Rejected; sub filter added.
+- final new (s7681on2): shield matched once (pos_hits gen2 7 vs 6), handed off at its first visible draw, add_dmin 38.73, 0 releases,
+  scorer rc 0; all 233 non-shield [s7679-life] lines identical to the control (timestamps stripped); item_hits 13269/16119/11416 equal;
+  only sub-table diff is one L10 item at the very end of the old log (old log 2088506 lines vs 2074477: truncation). 0 crash all arms.
+ORIGIN: the shield draw is written by the game itself (npcShieldUpdate inline bucket link, legitimate); the bad value was our detector missing it.
+Rules out: H-flag/H-parent/H-depth (none needed). The s7679 near release stays as a backstop (inert in flight, s7680).
+Next: check heavyAttachedAudioEmitterNpcHandler's subtype against the stand-in table (offline); then G6c waits on the owner's look.

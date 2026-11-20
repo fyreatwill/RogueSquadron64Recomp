@@ -289,7 +289,10 @@ static int vt_class() {
     if (rs64_bk_vt_v0 == 1u) return 3;
     switch (rs64_bk_vt_pc) { case 0x8001DDA8u: case 0x8001E080u: return 1; default: return 0; }
 }
-extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
+// only_sub != 0 (s7681 shield): match only stand-ins of that subtype, so a report from a non-prop path cannot hand off a neighbour.
+static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t only_sub);
+extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) { bk_ret_impl(rdram, state, v0, 0); }
+static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t only_sub) {
     if (rs64_bk_self || !guest(state)) return;
     ++s_bk_calls;
     static const bool s_genfix = [] { const char* e = std::getenv("ROGUESQ_S7677_GEN"); return !(e && *e == '0'); }();
@@ -316,11 +319,11 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
         }
     }
     auto f = s_bk_by_item.find(it);
-    if (f != s_bk_by_item.end()) { hit = &s_standins[f->second]; ++s_bk_item_hits; if (hit->item != it) ++s_bk_wrong; }  // s7677: wrong = stale key
+    if (f != s_bk_by_item.end() && (!only_sub || s_standins[f->second].sub == only_sub)) { hit = &s_standins[f->second]; ++s_bk_item_hits; if (hit->item != it) ++s_bk_wrong; }  // s7677: wrong = stale key
     const float x = rf(rdram, state), y = rf(rdram, state + 4u), z = rf(rdram, state + 8u);
     if (!hit) {
         for (Standin& s : s_standins) {
-            if (s.state == state || s.spawn_f < 0 || s.real_add >= 0) continue;  // only stand-ins waiting for their real object
+            if (s.state == state || s.spawn_f < 0 || s.real_add >= 0 || (only_sub && s.sub != only_sub)) continue;  // only stand-ins waiting for their real object
             const float dx = rf(rdram, s.state) - x, dy = rf(rdram, s.state + 4u) - y, dz = rf(rdram, s.state + 8u) - z;
             if (dx * dx + dy * dy + dz * dz < 4.0f) { hit = &s; hit->by_pos = true; ++s_bk_pos_hits; break; }
         }
@@ -343,6 +346,24 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
         if (cur - s.real_add < 30) ++s.real_frames;
     }
     if (s_bk_log && cur - s.real_add >= 30) ho_log(s, "real30");
+}
+
+// s7681 (tools/apply_s7681_shield_vt.py): npcShieldUpdate (sub 0x32) never calls addNpcToVisibilityBucket; it runs the same view test
+// through 0x8005940C(view, inst, state, radius) and links itself into the bucket inline when it passes. Report that test like a bucket
+// return, so its stand-in hands off (or is never held) instead of being read as "spawned, never drawn". ROGUESQ_S7681_SHIELD=0 = old.
+extern "C" void rs64_bk_shield(uint8_t* rdram, uint32_t state, uint32_t v0) {
+    static const bool s_on = [] { const char* e = std::getenv("ROGUESQ_S7681_SHIELD"); return !(e && *e == '0'); }();
+    static uint32_t n = 0, pass = 0, lines = 0;
+    ++n; if ((v0 & 0xFFu) == 1u) ++pass;
+    const uint32_t hits0 = s_bk_item_hits + s_bk_pos_hits;
+    if (s_on) bk_ret_impl(rdram, state, v0 & 0xFFu, 0x32);
+    const bool matched = s_bk_item_hits + s_bk_pos_hits != hits0;
+    if (s_bk_log && lines < 64 && (n == 1 || matched || (pass == 1 && (v0 & 0xFFu) == 1u))) {
+        ++lines;
+        std::fprintf(stderr, "[s7681-sh] on=%d state=%08X item=%08X v0=%u calls=%u pass=%u matched=%d pos=%.1f,%.1f,%.1f\n", s_on ? 1 : 0, state,
+                     guest(state) ? rw(rdram, state + 0x34u) : 0u, v0 & 0xFFu, n, pass, matched ? 1 : 0,
+                     guest(state) ? rf(rdram, state) : 0.f, guest(state) ? rf(rdram, state + 4u) : 0.f, guest(state) ? rf(rdram, state + 8u) : 0.f);
+    }
 }
 
 namespace {

@@ -12,6 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7681: the s7679 "ghost" shield is drawn by the game; our detector was blind to its draw path (code read + two arms).**
+  npcShieldUpdate (sub 0x32, 0x8007AEF8) never calls addNpcToVisibilityBucket: its render case 0x8007B8CC runs the same view test
+  via 0x8005940C(view, inst, s3+8, radius) and links itself into the bucket inline. tools/apply_s7681_shield_vt.py (RS64_REPLAY) reports
+  that test to the handoff detector, matched to sub 0x32 stand-ins only (ROGUESQ_S7681_SHIELD=0 = old). Attract route s7678: old arm
+  held the shield to 14.88 and the near release fired; new arm hands off at depth 38.7 on the shield's first visible draw, 0 releases,
+  all 233 other [s7679-life] lines identical, 0 crash. First cut (no sub filter) handed off three sub 0x14 neighbours early via the
+  2-unit position fallback (37.4 vs 31.0): caught and fixed in-session. heavyAttachedAudioEmitterNpcHandler uses the same inline path.
 - **NEW s7680: the s7679 near release does not fire in flight (same-run control).** Forced L5 dd4 16:9 FPS60 STANDINS HOLD=odd 200 s:
   default NEAR=15 0 [s7679-rel], ghost score 0 GHOST (= s7676); control NEAR=99 4 releases, held frames 2491 -> 92; both alive, 0 stall.
   H-attract-only: the cut only touches the attract shield. Recipe tools/s7680_flight_release.zsh <out> <level>.
@@ -408,7 +415,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
     closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
-    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). Then the owner sheet decides.
+    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). s7681: the shield was not a ghost (own inline draw path, detector now sees it; near release kept as backstop). Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
     ALL CLOSED** (full text, numbers, controls, tools verbatim in PROJECT-OVERVIEW "(s7662 maintenance)"). Defaults that stay
     (=0 / old restores): ROGUESQ_S7634_FUSE=1 (walker fusion), S7639_ST, S7640_AT, S7641_CF, S7643_PI (release/acquire s4211 ring),
