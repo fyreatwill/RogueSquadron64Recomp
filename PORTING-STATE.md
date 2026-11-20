@@ -205873,3 +205873,35 @@ Full sweep (--jobs 2, 940 s cold): 195 gates, 190 GREEN, 5 REPORT, 0 RED (was 14
 Second line for each fix: the tool's own planted control in the same run (s7412/s7413 mutant headers, s7428 4/4 planted checks,
 s7430 planted growth) PASS after the fix.
 Rules out: H-green. Open: s7421/s7423 need a fresh regen replay (last s7558) -> NEXT s7719. No game code, no default changed.
+
+## Session 7719 (2026-11-20) — regen-replay drift CLOSED H-mirrored in both directions (fresh replay 2620/141/18, 0 new rows vs s7558); drift check is now a live sweep gate; sweep scored s7363/s7364/s7366 "OPEN 19/22/6" GREEN (fixed, 35 rows hand-reviewed bounded/locked)
+
+What ran (offline, no game run, one or two CPU jobs): `tools/regen_front.sh scratch/s7719/pristine` (byte-identical to
+scratch/s7558/pristine, `diff -rq` empty), `tools/regen_replay.sh` on a copy (tree complete; its trailing s7363 gate stopped on 19
+unreviewed host rows), `tools/regen_verify.sh` (now RV_JOBS, default 2, was a hard-coded `xargs -P 6` against iron rule 0):
+2620 same / 141 differ / 18 live-only / 4 regen-only + funcs_50.c (s7558: 2607 / 141 / 18).
+1. **H-mirrored selected, two lines.** (a) `s7421_regen_drift.py ... --baseline scratch/s7558/verify/compare.json --control`: rc 0,
+   new vs baseline {}, 0 open LOST/REORDER, control 4/4 PASS. (b) `s7423_live_stale.py --control` (regen-only statements in every
+   function): H-diag, control PASS. (c) NEW `s7423_live_stale.py --reverse`: live-only statements in EVERY function (s7421 only saw
+   object-differing ones). 29 rows, every one read by hand into tools/s7719_live_only_accept.tsv: setRngSeed dead tail after
+   `return` (0x80003474-7C, cut by real sizes), 16 data_gap functions (s6870), funcs_50.c (0 RECOMP_FUNC, prelude + weak
+   g_s6481_pool that every funcs_N.c also weak-defines), the funcs_9 s6496-s6526 count-only chain, 5 ORDER rows (s6864, s7421).
+   Control: known s6499 live-only loop listed, plant store -> BEHAVIOUR, plant print -> DIAG: PASS. Refutes H-lost and H-layout-only
+   as stated (the layout residue is the same accepted set).
+2. **The drift check is now a live gate.** `tools/s7719_regen_gate.py`: regen_front + `RS64_REPLAY_TREE_ONLY=1` regen_replay (new
+   env, skips the host census tail the sweep runs itself) into a temp dir, then s7423 forward + --reverse with controls; 2.6 min,
+   H-mirrored, rc 0. Wiring controls on a copy of live: planted live-only `MEM_W` store in submitDmaSlot -> reverse RED rc 1; one
+   fixup-emitted line deleted from live -> forward RED rc 1. Added to EXTRA_GATES/ARGS in tools/s7651_gate_sweep.py.
+3. **Sweep scoring hole (H-hollow-green).** s7363_hostarr / s7364_heapbuf / s7366_lockset print `OPEN n` but exit 0 without
+   --check; scratch/s7718/sweep.tsv scored OPEN 19 / 22 / 6 as GREEN. ARGS now pass --check (s7364 --rt64, superset) with an
+   `OPEN 0` pattern. The 35 rows (19 + 10 keys + 6) were all hand-read: BOUNDED (g_nh capped 16, agebucket 0..3, src literals 0..2,
+   op 8..15 guard, vt_class 0..3, s_sg_cur -1 guarded, `i < 64 ?` guards, size checks before memcpy, trim() bounds, vectors grown
+   together; s7644 buf rows are the census conflating Snap::buf[3] with the vector t_g.buf) and H-safe-caller (gsum/stale_tally/
+   src_idx only under lock_guard g_gmu at 214/285; draw_ui only from hook_draw holding g_mu from 143). No defect found; verdicts in
+   the three reviewed TSVs, all three --check OPEN 0, s7366 --selftest PASS. s7361/s7362/s7365/s7375/s7420 checked: rc 0 / open 0.
+ORIGIN: no mitigation landed (diff is gates, verdicts and docs).
+Verdict: selects H-mirrored for regen drift (both directions, 0 new rows) and H-hollow-green for the sweep (3 gates); next unit
+audits every other GREEN gate for the same hole (NEXT.md sweep-scoring-audit).
+Standing sweep: each changed gate was run on its own GREEN this session (s7719_regen_gate rc 0, s7363/s7364 --rt64/s7366 --check
+OPEN 0). The full `s7651_gate_sweep.py --jobs 2` started 10:04 was still running at commit; its output lands in
+scratch/s7719/sweep.txt and the next iteration folds the tally (NEXT.md step 1).

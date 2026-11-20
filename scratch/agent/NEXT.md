@@ -1,23 +1,19 @@
-# NEXT (s7719)
-HYPOTHESIS-ID: regen-replay-drift
+# NEXT (s7720)
+HYPOTHESIS-ID: sweep-scoring-audit
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
 If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green.
 
-gate-sweep-coverage is CLOSED (s7718: 195 gates, 190 GREEN 5 REPORT 0 RED; scratch/s7718/classification.tsv). Do not iterate it.
+regen-replay-drift is CLOSED (s7719): fresh front == s7558 pristine, replay H-mirrored in BOTH directions (s7423 forward + new
+--reverse, controls PASS), and tools/s7719_regen_gate.py now runs it inside the gate sweep (2.6 min, one CPU). Do not iterate it.
 
-The two offline drift gates the sweep still cannot run are s7421_regen_drift and s7423_live_stale: both need a FRESH regen
-replay tree. The last replay is s7558 (scratch/s7558/{replay,verify}); since then s7580 (lui rewrite), s7484 (load watch), s7487,
-G6b/G6c and ~140 sessions of fixups landed. Question: does a pristine regen + RS64_REPLAY still reproduce the live
-RecompiledFuncs (every live-only statement mirrored by a fixup/apply script)?
-1. Replay per docs/REGEN-VERIFY.md (tools/regen_replay.sh -> tools/regen_verify.sh) into scratch/s7719/{replay,verify}.
-   Never touch ../N64Recomp/RecompiledFuncs (live) or build/. CPU: one job (iron rule 0).
-2. `python3 tools/s7421_regen_drift.py ../N64Recomp/RecompiledFuncs scratch/s7719/replay scratch/s7719/verify/compare.json
-   --baseline scratch/s7558/verify/compare.json --control` and `python3 tools/s7423_live_stale.py ../N64Recomp/RecompiledFuncs
-   scratch/s7719/replay --control`.
-Hypotheses: H-mirrored (0 open LOST/REORDER, 0 open BEHAVIOUR: every live hand-edit dies-and-returns at regen), H-lost (>=1
-live-only non-diag statement: a fix that would vanish at the next regen -> move it into a fixup script + re-replay),
-H-layout (only SLOTPERM/CODEGEN rows, as s7559).
-Positive controls: both tools' --control (planted LOST / planted guest store) must PASS in the same run.
-Then: if the replay tree is kept (zstd tar, as s7658 did for inputs), add both to the sweep ARGS so the next drift reads RED.
+s7719 found a sweep SCORING hole: s7363/s7364/s7366 print "OPEN n" but exit 0 without --check, so the s7718 sweep scored
+OPEN 19/22/6 as GREEN (fixed: ARGS now pass --check with an "OPEN 0" pattern). The same hole may exist elsewhere.
+Unit: for EVERY gate the sweep runs, does rc 0 + its pattern actually imply "0 open"? One offline pass:
+1. Fold scratch/s7719/sweep.txt (s7719 full sweep, in flight at commit; else run a fresh `python3 tools/s7651_gate_sweep.py --jobs 2`), list each GREEN gate's last output line.
+2. Flag any GREEN whose output contains a nonzero open/unclassified/OPEN/RED/FAIL/MISMATCH count (regex over the captured tail,
+   e.g. `\b(OPEN|open|unclassified|UNRESOLVED|FAIL)\D{0,3}[1-9]`), and any tool with a --check/--strict flag the sweep does not pass.
+3. Each flagged gate: add ARGS (flag + pattern) so the count scores, then review its rows by hand (verdict TSVs) to GREEN.
+Hypotheses: H-clean (s7363/4/6 were the only hollow GREENs), H-more (>=1 other GREEN hides a nonzero count / unused --check).
+Positive control: the scanner must flag a planted copy of the s7718 sweep row `s7363_hostarr_census.py GREEN 0 ... OPEN 19`.
 Standing check: `python3 tools/s7651_gate_sweep.py --jobs 2`. Owner defaults: never flip.

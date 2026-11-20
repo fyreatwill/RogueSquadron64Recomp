@@ -107,3 +107,9 @@ src/rsp/s7523_slow_rdp.cpp	tch	consume	H-safe-caller	s7560: consume() callers: f
 src/rsp/s7523_slow_rdp.cpp	tch	push	H-safe-caller	s7560: push() only caller rs64_s7523_end 151, which holds lock_guard(g_mu) from 143
 src/rsp/s7523_slow_rdp.cpp	tch	scan_bad	H-safe-caller	s7560: scan_bad() callers rs64_s7523_end 145 and rs64_s7523_pre_submit 190, both hold lock_guard(g_mu)
 src/main/main.cpp	g_audio_route_pref	audio_route_resolve	H-safe-thread	s7561: surfaced by the scope fix (the old in-function container skip matched `std::string want = g_audio_route_pref` and hid it). Callers: open_audio_output (holds audio_device_mutex), audio_route_apply_cycle and audio_hotplug_apply (8329), both from queue_samples on the guest thread (8397-8398); same thread set as the audio_route_load_pref / apply_cycle verdicts
+src/main/rs64_controls_panel.cpp	g_msg	draw_ui	H-safe-caller	s7719: draw_ui is called only from hook_draw (rs64_controls_panel.cpp:201), which holds lock_guard g_mu from line 143; the other writer (284, test hook) also takes g_mu
+src/rsp/s7644_rspdma.cpp	g_ghist	gsum	H-safe-caller	s7719: gsum is called only at 218 (under lock_guard g_gmu at 214) and 307 (under lock_guard g_gmu at 285)
+src/rsp/s7644_rspdma.cpp	g_srcc	gsum	H-safe-caller	s7719: gsum is called only at 218 (under lock_guard g_gmu at 214) and 307 (under lock_guard g_gmu at 285)
+src/rsp/s7644_rspdma.cpp	g_gstale	stale_tally	H-safe-caller	s7719: stale_tally is called only at 220, under lock_guard g_gmu at 214
+src/rsp/s7644_rspdma.cpp	g_srcc	stale_tally	H-safe-caller	s7719: stale_tally is called only at 220, under lock_guard g_gmu at 214
+src/rsp/s7644_rspdma.cpp	g_srcc	src_idx	H-safe-caller	s7719: src_idx is called only at 289, under lock_guard g_gmu at 285

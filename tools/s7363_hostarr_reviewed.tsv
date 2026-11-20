@@ -369,3 +369,17 @@ src/main/upstream_compat.cpp	s_s7486_rng	k	BOUNDED s7560 hand: loop k < (g_rs64_
 src/main/upstream_compat.cpp	s_s7519_n	k	BOUNDED s7560 hand: s7519_row callers (upstream_compat.cpp:4269-4312) pass literal 1,3,5,6,7,8 -> < 12
 src/main/upstream_compat.cpp	seen	j	BOUNDED s7560 hand: j < narena; narena only increments inside for i < 3 at most once per i (10279-10282) -> narena <= 3, j <= 2 (same at 3638-3640)
 src/main/upstream_compat.cpp	seen	narena++	BOUNDED s7560 hand: one increment per i of for (i = 0; i < 3) (upstream_compat.cpp:10276-10282 and 3636-3640) -> index <= 2 < 3
+src/main/rs64_standins.cpp	s	s_sg_cur	BOUNDED s7719 hand: s_sg_cur in {-1,0,1} (rs64_standins.cpp:586/603/626), -1 returns first (710) -> 0..1 < 2
+src/main/rs64_standins.cpp	si_cls	vt_class()	BOUNDED s7719 hand: vt_class returns only 0,1,2,3 (rs64_standins.cpp:294-298) < 4
+src/main/upstream_compat.cpp	cnt	i	BOUNDED s7719 hand: uses are "if (i < 64) ++cnt[i]" and "i < 64 ? cnt[i] : 0" (s7576-trunc, ~10382-10385)
+src/rsp/s7644_rspdma.cpp	buf	i	BOUNDED s7719 hand: census conflates Snap::buf[3] with t_g.buf (std::vector resized to m, loop i < m, s7644_rspdma.cpp:276-278)
+src/rsp/s7644_rspdma.cpp	buf	a - d	BOUNDED s7719 hand: t_g.buf is the std::vector of size m; read guarded by "a - d < m" (s7644_rspdma.cpp:298)
+src/rsp/s7702_fbread.cpp	g_h	i	BOUNDED s7719 hand: g_nh <= 16 (push() caps at 16 before g_nh++, s7702_fbread.cpp:54); loops 0 <= i < g_nh; i+1 < g_nh in memmove; g_nh-1 after push >= 1
+src/rsp/s7702_fbread.cpp	g_h	i + 1	BOUNDED s7719 hand: g_nh <= 16 (push() caps at 16 before g_nh++, s7702_fbread.cpp:54); loops 0 <= i < g_nh; i+1 < g_nh in memmove; g_nh-1 after push >= 1
+src/rsp/s7702_fbread.cpp	g_h	g_nh - 1	BOUNDED s7719 hand: g_nh <= 16 (push() caps at 16 before g_nh++, s7702_fbread.cpp:54); loops 0 <= i < g_nh; i+1 < g_nh in memmove; g_nh-1 after push >= 1
+src/rsp/s7702_fbread.cpp	g_h	idx	BOUNDED s7719 hand: hit() idx comes only from match() >= 0, a g_h index < g_nh (s7702_fbread.cpp:42-48, callers 129/145 check i >= 0)
+src/rsp/s7702_fbread.cpp	kS	g_hk[i].src	BOUNDED s7719 hand: src set only by hit() callers to literal 0,1,2 (s7702_fbread.cpp:129/145) < 3
+src/rsp/s7702_fbread.cpp	kAge	g_hk[i].age	BOUNDED s7719 hand: age = agebucket() which returns 0..3 (s7702_fbread.cpp:35) < 4
+src/rsp/s7702_fbread.cpp	kS	g_ex[i].src	BOUNDED s7719 hand: src set only by hit() callers to literal 0,1,2 (s7702_fbread.cpp:129/145) < 3
+src/rsp/s7702_fbread.cpp	kAge	g_ex[i].age	BOUNDED s7719 hand: age = agebucket() which returns 0..3 (s7702_fbread.cpp:35) < 4
+src/rsp/s7702_fbread.cpp	tri_len	op - 8	BOUNDED s7719 hand: guarded op >= 0x08 && op <= 0x0F (s7702_fbread.cpp:116) -> 0..7 < 8

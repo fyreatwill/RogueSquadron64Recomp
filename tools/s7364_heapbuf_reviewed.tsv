@@ -679,3 +679,13 @@ src/rsp/s7523_slow_rdp.cpp	tch	(h.off - snap_base)	FIXED s7560: same as snap (h.
 src/rsp/s7523_slow_rdp.cpp	dmabit	a >> 3	BOUNDED s7560 hand: push(from, v) gets 24-bit values (m_start = v & 0xFFFFFF :142, v &= 0xFFFFFF and m_end = v :147-153), so a < hi <= 0xFFFFFF and a >> 3 < 1 << 21 = dmabit.size() (:38)
 src/rsp/s7523_slow_rdp.cpp	snap	r.off - snap_base	BOUNDED s7560 hand: under hi > lo the loop just pushed hi - lo bytes at r.off - snap_base = old snap.size() (s7523_slow_rdp.cpp:91-94), so index < snap.size() (:97)
 src/rsp/s7535_ga_chk.cpp	g_sh	i	BOUNDED s7560 hand: count(lo, hi) callers: dma/wr pass in_range (s7535_ga_chk.cpp:62, :116) -> hi <= g_top <= kSpLo or hi <= kSpHi; close passes (0, g_top) and (kSpLo, kSpHi) (:165); g_sh.size() = kSpHi + 8 (:96, s7560 pad for w(g_sh, first + 4) at :141, which could read 4 bytes past kSpHi -- FIXED)
+src/main/main.cpp	buttons	0	BOUNDED s7719 hand: s_mut copies rs64_bind_defaults(), which push_backs >= 20 rows unconditionally (rs64_bindings.h:51-) -> [0] and [1] valid
+src/main/main.cpp	buttons	1	BOUNDED s7719 hand: same table as [0]: rs64_bind_defaults() always has >= 2 buttons (rs64_bindings.h:56-57 A, B first)
+src/main/rs64_settings.cpp	s	a	BOUNDED s7719 hand: trim(): reads s[a] only while a < b and b <= s.size() (rs64_settings.cpp:46-47)
+src/main/rs64_settings.cpp	s	b - 1	BOUNDED s7719 hand: trim(): reads s[b - 1] only while b > a >= 0, so 1 <= b <= s.size() (rs64_settings.cpp:48)
+src/main/rs64_settings.cpp	l	0	BOUNDED s7719 hand: l[0] read only after l.empty() returned false (rs64_settings.cpp:73)
+src/main/rs64_settings.cpp	name	memcpy len=n.size() + 1	BOUNDED s7719 hand: preceded by n.size() + 1 > name_sz -> return -1 (rs64_settings.cpp:81)
+src/rsp/dpc_bridge.cpp	s_shw	i	BOUNDED s7719 hand: s_shw.resize(nw) and s_sop.assign(nw) (5549); loops i < nw, lambda guards i < s_shw.size() (equal sizes), inj needs nw > 1 for [1]
+src/rsp/dpc_bridge.cpp	s_sop	i	BOUNDED s7719 hand: s_sop.assign(nw) same length as s_shw (dpc_bridge.cpp:5549); every index < nw or < s_shw.size()
+src/rsp/s7644_rspdma.cpp	g_srcc	i	BOUNDED s7719 hand: g_srcs and g_srcc only grow together in src_idx (s7644_rspdma.cpp:146); loop i < g_srcs.size()
+src/main/rs64_settings.cpp	value	memcpy len=v.size() + 1	BOUNDED s7719 hand: preceded by v.size() + 1 > value_sz -> return -1 (rs64_settings.cpp:81)

@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""s7719 regen-replay drift gate (class GR/CF/H-lost as one live gate).
+
+Does a pristine regen + the whole fixup chain (tools/regen_replay.sh) still reproduce the LIVE RecompiledFuncs tree?
+Before s7719 this was only answerable by hand (s7421/s7423 need a fresh replay tree; the last one was s7558, ~160 sessions
+old), so the sweep could not see drift. This gate builds the replay itself, text level only (no compile, one CPU):
+  1. tools/regen_front.sh  -> pristine N64Recomp output (make_elf -> N64Recomp, real sizes)   (~1 s)
+  2. RS64_REPLAY_TREE_ONLY=1 tools/regen_replay.sh on a copy  (fixer chain + rename, no host-code census gates)  (~3.5 min)
+  3. tools/s7423_live_stale.py <live> <replay> --control            regen-only statements = patches the live build lacks
+  4. tools/s7423_live_stale.py <live> <replay> --reverse --control  live-only statements = hand edits that die at regen
+Both scans walk every function and carry planted controls (guest store -> BEHAVIOUR, env-gated print -> DIAG, known lines).
+VERDICT H-mirrored: both directions have 0 open BEHAVIOUR rows and both controls PASS. rc 0 ok, 1 drift, 3 control/chain fail.
+usage: s7719_regen_gate.py [--live ../N64Recomp/RecompiledFuncs] [--tree <existing replay dir>] [--keep <dir>]
+"""
+import os, shutil, subprocess, sys, tempfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def sh(cmd, env=None):
+    p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=dict(os.environ, **(env or {})))
+    return p.returncode, p.stdout + p.stderr
+
+
+def main(a):
+    live = a[a.index('--live') + 1] if '--live' in a else os.path.join(ROOT, '..', 'N64Recomp', 'RecompiledFuncs')
+    tmp = None
+    if '--tree' in a:
+        tree = a[a.index('--tree') + 1]
+    else:
+        tmp = a[a.index('--keep') + 1] if '--keep' in a else tempfile.mkdtemp(prefix='s7719gate')
+        pr, tree = os.path.join(tmp, 'pristine'), os.path.join(tmp, 'replay')
+        for d in (pr, pr + '.work', tree):
+            shutil.rmtree(d, ignore_errors=True)
+        rc, out = sh(['zsh', 'tools/regen_front.sh', pr])
+        print(out.strip().splitlines()[-1] if out.strip() else 'regen_front: no output')
+        if rc:
+            print('VERDICT CHAIN-FAIL (regen_front rc %d)' % rc); return 3
+        shutil.copytree(pr, tree)
+        rc, out = sh(['zsh', 'tools/regen_replay.sh', tree, os.path.join(tmp, 'replay.log')], {'RS64_REPLAY_TREE_ONLY': '1'})
+        print(out.strip())
+        if rc:
+            print('VERDICT CHAIN-FAIL (regen_replay rc %d, log %s)' % (rc, os.path.join(tmp, 'replay.log'))); return 3
+    res = {}
+    for name, extra in (('forward', []), ('reverse', ['--reverse'])):
+        rc, out = sh([sys.executable, 'tools/s7423_live_stale.py', live, tree, '--control'] + extra)
+        keep = [l for l in out.splitlines() if l.startswith(('CONTROL', 'OPEN', 'VERDICT', 'class counts'))]
+        for l in keep:
+            print('%s: %s' % (name, l[:240]))
+        res[name] = rc
+    if tmp and '--keep' not in a:
+        shutil.rmtree(tmp, ignore_errors=True)
+    if 3 in res.values():
+        print('VERDICT CONTROL-FAIL', res); return 3
+    if any(res.values()):
+        print('VERDICT H-drift', res, '(forward = live build lacks a fixup line; reverse = live hand edit no fixup reproduces)')
+        return 1
+    print('VERDICT H-mirrored (forward and reverse: 0 open BEHAVIOUR, controls PASS)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

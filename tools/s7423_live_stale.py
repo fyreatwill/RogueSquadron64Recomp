@@ -11,7 +11,11 @@ Functions only in regen are listed as REGEN-FUNC (BEHAVIOUR unless every stateme
 usage: s7423_live_stale.py <live> <regen> [--json out] [--control]
 --control: (1) the two known funcs_9 lines (s6789b g3e kind 8, s6497 bounds) must be listed; (2) a planted guest store
 in a copy of a regen function must come back BEHAVIOUR; (3) a planted env-gated print must come back DIAG.
-Reviewed rows: tools/s7423_live_stale_accept.tsv. Exit 0 = no open BEHAVIOUR row, 1 = open BEHAVIOUR rows, 3 = control failed."""
+Reviewed rows: tools/s7423_live_stale_accept.tsv. Exit 0 = no open BEHAVIOUR row, 1 = open BEHAVIOUR rows, 3 = control failed.
+--reverse (s7719): same walk with the trees swapped, i.e. statements/functions/files only in LIVE (class H-lost: a hand edit no
+fixup reproduces, which dies at the next regen). s7421 only saw functions whose object differed; this sees every function.
+Usage keeps the argument order <live> <regen>. Control (1) becomes: the known live-only s6499 funcs_9 store-census loop is
+listed; (2)/(3) plant into a copy of the live file. Reviewed rows: tools/s7719_live_only_accept.tsv."""
 import json, os, re, shutil, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from s7421_regen_drift import split, untaint, HDR, SIZED, DIAG, EFFECT
@@ -57,10 +61,10 @@ def run(live, regen):
         for r in cmpf(split(lp), split(os.path.join(regen, f))): r['file'] = f; out.append(r)
     return out
 
-def control(live, regen, rows):
+def control(live, regen, rows, rev=False):
     k9 = [r for r in rows if r['file'] == 'funcs_9.c' and r['cls'] in ('DIAG', 'BEHAVIOUR')]
-    s = ' '.join(' '.join(r['stmts']) for r in k9)
-    c1 = 'rs64_g3e_trace(8' in s and 's6497_x0' in s
+    s = ' '.join(' '.join(r['stmts'] + r['decided']) for r in k9)
+    c1 = ('for (int i = 0; i < 24; i++) {' in s) if rev else ('rs64_g3e_trace(8' in s and 's6497_x0' in s)
     f = 'funcs_20.c'; L = split(os.path.join(live, f)); R = split(os.path.join(regen, f))
     tgt = next(n for n in R if n != '<file>' and L.get(n) == R[n] and len(R[n]) > 5)
     tmp = tempfile.mkdtemp(prefix='s7423ctl'); res = []
@@ -79,6 +83,8 @@ def control(live, regen, rows):
 
 def main(a):
     live, regen = a[0], a[1]
+    rev = '--reverse' in a
+    if rev: live, regen = regen, live
     rows = run(live, regen)
     from collections import Counter
     print('class counts:', dict(Counter(r['cls'] for r in rows)))
@@ -86,8 +92,8 @@ def main(a):
         print('%-15s %-11s %s' % (r['cls'], r['file'], r['func']))
         for s in (r['decided'] or r['stmts'])[:5]: print('    %s %s' % ('!' if r['decided'] else '-', s[:230]))
     if '--json' in a: json.dump(rows, open(a[a.index('--json') + 1], 'w'), indent=1)
-    if '--control' in a and not control(live, regen, rows): return 3
-    ap = os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7423_live_stale_accept.tsv'); acc = {}
+    if '--control' in a and not control(live, regen, rows, rev): return 3
+    ap = os.path.join(os.path.dirname(os.path.abspath(__file__)), 's7719_live_only_accept.tsv' if rev else 's7423_live_stale_accept.tsv'); acc = {}
     for l in open(ap) if os.path.exists(ap) else []:
         if l.strip() and not l.startswith('#'): f, n, why = l.rstrip('\n').split('\t'); acc[(f, n)] = why
     beh = [r for r in rows if r['cls'] in ('BEHAVIOUR', 'ORDER-BEHAVIOUR', 'REGEN-FUNC', 'FILE-BEHAVIOUR', 'REGEN-FILE')]

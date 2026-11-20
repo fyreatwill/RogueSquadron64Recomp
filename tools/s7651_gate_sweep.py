@@ -54,6 +54,13 @@ EXIT_PATH = re.compile(r"\bsys\.exit\(|\bexit\(|\breturn [1-9]\b|raise SystemExi
 # s7656: NEEDS-ARGS gates whose input lives on disk: run with that input so they count. Used only when every path exists.
 # (argv, regex the output must contain, else RED): s7409/s7410 exit 0 even on CONTROL FAIL, so the text is the gate.
 ARGS = {
+    # s7719: fresh regen_front + RS64_REPLAY_TREE_ONLY replay into a temp dir, then s7423 forward + --reverse with controls (~2.6 min,
+    # one CPU). Replaces the hand-run s7421/s7423 drift check that needed a retained replay tree (last one s7558).
+    "s7719_regen_gate.py": ([], r"VERDICT H-mirrored"),
+    # s7719: these three print "OPEN n" yet exit 0 without --check, so the s7718 sweep scored OPEN 19/22/6 as GREEN.
+    "s7363_hostarr_census.py": (["--check"], r"\nOPEN 0\b"),
+    "s7364_heapbuf_census.py": (["--rt64", "--check", "-q"], r"OPEN 0 keys 0"),
+    "s7366_lockset_census.py": (["--check"], r"\nOPEN 0\b"),
     "s7409_fodd_census.py": (["../N64Recomp/RecompiledFuncs", "--plant"], r"CONTROL PASS"),   # planted FR0 MIXED row
     "s7410_csave_census.py": (["../N64Recomp/RecompiledFuncs", "--plant"], r"CONTROL PASS"),  # dropped ldc1 restore
     "s7091_ucode_insn_census.py": (["scratch/s7091/pristine", "build/factor5_ucode", "--controls"], None),  # rc 1 = unexplained
@@ -134,7 +141,7 @@ S7718_CONTROL_ONLY = {
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY)
 TRACER = os.path.join(ROOT, "tools", "gate_trace.py")
 CACHE_PATH = os.path.join(ROOT, "build", "gate_sweep_cache.json")
 CACHE, CACHE_LOCK, STATS = {}, threading.Lock(), {"hit": 0, "miss": 0, "uncacheable": 0}

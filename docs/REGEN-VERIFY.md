@@ -150,3 +150,20 @@ regen-only none. Count deltas equal the s7421 census except that s5787/s5790/s57
 
 Controls (`--control`, all in one run): planted `ctx->r2 ^=` -> LOST, planted getenv/fprintf -> ENVDIAG, one s7487 slot renumbered
 -> SLOTPERM, one wrap's pc changed -> ENVDIAG (not SLOTPERM). Outputs: scratch/s7559/drift2.{out,json}.
+
+## s7719: fresh replay 2620 / 141 / 18, H-mirrored both directions; the drift check is now a live sweep gate
+
+Front: `tools/regen_front.sh scratch/s7719/pristine` is byte-identical to scratch/s7558/pristine (`diff -rq` empty), so every
+change since s7558 is in the fixup chain. Replay (`tools/regen_replay.sh`, 3.5 min, one CPU) completes the tree; its trailing
+s7363 host-array gate then failed on 19 unreviewed rows of host code added since (s7702_fbread, s7644_rspdma, rs64_standins,
+s7576-trunc), all hand-read BOUNDED in s7719. regen_verify (now `RV_JOBS`, default 2, was a hard-coded 6): 2620 same, 141 differ,
+18 live-only, 4 regen-only, funcs_50.c live-only (s7558: 2607 / 141 / 18).
+- `s7421_regen_drift.py ... --baseline scratch/s7558/verify/compare.json --control`: rc 0, VERDICT H-mirrored, **new vs baseline {}**,
+  control PASS. `s7423_live_stale.py --control` (regen-only statements, every function): VERDICT H-diag, control PASS.
+- New `s7423_live_stale.py --reverse` (live-only statements in EVERY function, not only object-differing ones): 29 rows, all read by
+  hand into tools/s7719_live_only_accept.tsv: setRngSeed dead tail after `return` (0x80003474-7C, regen cuts it by real size), 16
+  data_gap functions (s6870), funcs_50.c (prelude only, 0 RECOMP_FUNC), the funcs_9 s6496-s6526 census chain, 5 ORDER rows already
+  reviewed (s6864, s7421). Control: known s6499 live-only loop listed, planted store -> BEHAVIOUR, planted print -> DIAG.
+- `tools/s7719_regen_gate.py` does front + `RS64_REPLAY_TREE_ONLY=1` replay in a temp dir + both directions with controls
+  (2.6 min, one CPU), and is in the gate sweep. Wiring controls on a live copy: a planted live-only store -> reverse RED; one fixup
+  line deleted from live -> forward RED.

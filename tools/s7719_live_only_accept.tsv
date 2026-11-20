@@ -1,0 +1,31 @@
+# s7719 reviewed live-only rows for s7423_live_stale.py --reverse (file<TAB>func<TAB>why). A live-only row is a statement/function/file
+# the regen chain does not reproduce (dies at the next regen). Every row below was read by hand on the s7719 replay (scratch/s7719).
+funcs_1.c	setRngSeed	dead tail: 0x80003474-0x8000347C decoded after jr ra/return (next function submitDmaSlot 0x80003480); regen cuts it via func_sizes (s6870), unreachable
+funcs_10.c	transformWorldPosToGridSpace	s6314 ROGUESQ_EDGE_FADE_TEST2 vs s6328 ROGUESQ_EDGE_FADE_R2 block order, both opt-in (s7421_regen_accept.tsv)
+funcs_13.c	audioCueDispatcherNpcHandler	rs5854_spawn (LOG_HITS) vs s5798_init (LOG_HUDBIT) order, two env-gated diag helpers (s7423 accept)
+funcs_26.c	stopVoiceSlotSynced	0x4620 store unchanged; only the store-diag post note moves before it (REGEN-VERIFY s6864), wrong only under ROGUESQ_STORE_DIAG
+funcs_26.c	serviceVoicePoolFrame	0x4620 store unchanged; only the store-diag post note moves before it (REGEN-VERIFY s6864), wrong only under ROGUESQ_STORE_DIAG
+funcs_26.c	initMusyXVoiceTable	0x4620 store unchanged; only the store-diag post note moves before it (REGEN-VERIFY s6864), wrong only under ROGUESQ_STORE_DIAG
+funcs_49.c	data_gap_80029270	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_80045024	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2114	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2218	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A23BC	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2558	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2790	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2924	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A29BC	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2B50	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2BE4	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2E98	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2F28	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A2FE4	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_800A50AC	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_49.c	data_gap_80106C50	data_gap decode of non-code bytes dropped by real function sizes (s6870, docs/DECODED-TAIL-CENSUS.md); never called
+funcs_50.c	*	prelude-only file: 0 RECOMP_FUNC, only externs/static helpers + weak g_s6481_pool (also weak-defined in every other funcs_N.c)
+funcs_9.c	s6505_table_diff	s6496-s6526 funcs_9 store-census chain (count-only, closed thread; s7421_regen_accept.tsv LOST rows)
+funcs_9.c	s6500_writer_index	s6496-s6526 funcs_9 store-census chain (count-only, closed thread; s7421_regen_accept.tsv LOST rows)
+funcs_9.c	s6500_note_writer	s6496-s6526 funcs_9 store-census chain (count-only, closed thread; s7421_regen_accept.tsv LOST rows)
+funcs_9.c	s6512_note_writer	s6496-s6526 funcs_9 store-census chain (count-only, closed thread; s7421_regen_accept.tsv LOST rows)
+funcs_9.c	binPolygonIntoTerrainGrid	s6496-s6526 funcs_9 store-census chain (count-only, closed thread; s7421_regen_accept.tsv LOST rows)
+funcs_9.c	streamTerrainGridCellsByDistance	s6496-s6526 funcs_9 store-census chain (count-only, closed thread; s7421_regen_accept.tsv LOST rows)

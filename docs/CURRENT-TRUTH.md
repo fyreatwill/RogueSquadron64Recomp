@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7718 (2026-11-20).
+Compact operational handoff, as of Session 7719 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7719 regen-replay drift CLOSED H-mirrored, both directions; now a live sweep gate.** Fresh front == s7558 pristine; replay vs
+  live 2620/141/18, s7421 new-vs-s7558 {} (control PASS), s7423 forward H-diag and new `--reverse` (live-only statements in every
+  function) 29 rows all hand-accepted (tools/s7719_live_only_accept.tsv). tools/s7719_regen_gate.py (front + RS64_REPLAY_TREE_ONLY
+  replay + both scans, 2.6 min, wiring controls 2/2 RED) is in the sweep. Also: s7363/s7364/s7366 printed OPEN 19/22/6 yet scored
+  GREEN (no --check); ARGS fixed, 35 rows hand-reviewed bounded/locked, 0 defects. regen_verify.sh now RV_JOBS (default 2).
 - **s7717 setenv-after-static-init idiom CLOSED (H-clean, static + runtime).** Every reader that latches a ROGUESQ_* var in a
   file-scope initializer before main()'s auto-default setenvs is re-armed after the policy or reviewed. s7427_env_policy_order.py
   had drifted RED unseen (not named *_census.py; the s7713 OSMEM sanitiser read, reviewed benign). Its scan missed
