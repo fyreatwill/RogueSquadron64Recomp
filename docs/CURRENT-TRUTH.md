@@ -15,7 +15,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 - **NEW s7677: ghost widening clean (L2/L5 scorer rc 0: L5 AT-PT 2 GATE + 2 UNHELD, 0 GHOST) -> H-gate on L1/L2/L4/L5.** Stand-in
   item map (rs64_bk_ret) is now keyed on the rebuild generation, not the object count (ROGUESQ_S7677_GEN=0 = old). Hangar abort
   route (3 loads L15): dat reloads at the same address so the old key was right (wrong 0); planted same-count reorder
-  (ROGUESQ_S7677_PLANT=1) old 84350/84350 wrong matches, fix 0; 3/3 arms alive. Recipe scratch/s7677_run.zsh old|fix (PLANT=p).
+  (ROGUESQ_S7677_PLANT=1) old 84350/84350 wrong matches, fix 0; 3/3 arms alive. Recipe scratch/s7677_run.zsh old|fix (PLANT=p). Gate sweep 133/135 then GR/GX rows for s7675 sites -> all green.
 - **s7676: the G6c "ghost" thread is CLOSED as H-gate, no code change.** Walker handlers (AT-PT 0x47 L4, AT-ST 0x1F L1)
   draw only inside the same ~30-51-unit camera depth as every other subtype (first-call depth L4 0x47 41.1-51.1, L1 0x1F 28.3-44.9;
   ordinary subtypes 31.6-49.5 = control); their long first-call delay (med 248-821 frames) is approach time, not a hide. The s7675

@@ -204679,4 +204679,4 @@ the same address, so the old key happened to be right: wrong 0 unplanted); the p
 mismatches every item hit (84350/84350) and the generation key fixes it (0). The fix closes the case by construction for a
 level change with an equal object count (not reproduced on a real route: the hangar route always reloads level 15).
 ORIGIN: not a mitigation; the writer is our own rebuild() replacing s_standins while rs64_bk_ret's cache key ignored it.
-Gate sweep tools/s7651_gate_sweep.py --jobs 2 started after the src edit; result in a follow-up commit this session.
+Gate sweep tools/s7651_gate_sweep.py --jobs 2: 135 gates, 128 GREEN, 5 REPORT, 2 RED (both control PASS): GR s_gh_idx and GX si_cls[vt_class()], s7675 ghost-probe sites never given rows (not this edit). Rows added (s_gh_idx cleared each submit, <= stand-in count; vt_class() returns 0..3 into si_cls[4]); both censuses --controls now rc 0 CLOSED.

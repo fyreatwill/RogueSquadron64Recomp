@@ -177,7 +177,8 @@ for _k, _v in {
     "src/main/rs64_bindings_json.h": {"keep": "local: per-button list in rs64_bind_parse_json", "l": "local: rs64_bind_to_json list",
         "v": "local: per-direction key list in rs64_bind_parse_json"},
     "src/main/rs64_standins.cpp": {"s_q_ours_mtx": G("ROGUESQ_STANDINS + STANDINS_LOG/PULL/CTL (rs64_sg_probe)") + "; < 4096, cleared at each queue reset",
-        "s_standins": "bounded: ROGUESQ_STANDINS (opt-in); cleared at every rebuild, i < 4096 items"},
+        "s_standins": "bounded: ROGUESQ_STANDINS (opt-in); cleared at every rebuild, i < 4096 items",
+        "s_gh_idx": "bounded: ROGUESQ_STANDINS (opt-in); cleared at the top of every submit pass, at most one push per stand-in (<= s_standins.size() < 4096) (s7677 row)"},
     "src/rsp/s7644_rspdma.cpp": {r: G("ROGUESQ_S7644_RSPDMA&2") for r in ("g_gpi", "g_gstale", "g_srcc", "g_srcs", "v")},
 }.items():
     ROWS.setdefault(_k, {}).update(_v)

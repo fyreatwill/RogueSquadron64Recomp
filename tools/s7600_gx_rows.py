@@ -139,7 +139,8 @@ for _k, _v in {
     "src/main/rs64_standins.cpp": {"r": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; rw/ww/rh/rb offset a-0x80000000 is a 32-bit value inside the 4 GB rdram reservation "
         "(addresses.hpp allocation_size), guest-word bases pass guest() [0x80000000, 0x81700000) first",
         "s": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; s_sg_cur is set to in_region()?1:0 on the line above (SgTally s[2])",
-        "s_dl34": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd = s_psn_side, set only to 0/1 (rs64_psn_side), <0 returns", "s_psn": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd 0/1 and k < 112 checked on entry"},
+        "s_dl34": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd = s_psn_side, set only to 0/1 (rs64_psn_side), <0 returns", "s_psn": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd 0/1 and k < 112 checked on entry",
+        "si_cls": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; si_cls[4] indexed by vt_class(), which returns only 0..3 (s7677 row)"},
     "src/rsp/dpc_bridge.cpp": {"kShift": "masked: kShift[16] indexed by shifts/shiftt & 15u"},
     "src/rsp/s7644_rspdma.cpp": {"rdram": 'gated: ROGUESQ_S7644_RSPDMA (default off; every entry returns on !g_on / !g_gon)' + "; (a & pm()) <= 0x1FFFFFF inside the 512 MB mapping"},
 }.items():
