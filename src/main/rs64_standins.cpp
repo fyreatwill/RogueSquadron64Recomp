@@ -363,9 +363,15 @@ static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t on
             // small float (0.5f / 0.25f / 0.125f), 0.9-1.9 distinct caller states per line (fresh objects, not one real object), while
             // their real objects match by item (0x14 125 item vs 5 pos handoffs). ROGUESQ_S7686_POSSUB=0 restores s7685 for these subs.
             static const bool s_possub2 = [] { const char* e = std::getenv("ROGUESQ_S7686_POSSUB"); return !(e && *e == '0'); }();
+            // s7687 L10: sub 0x0C the same again: 110/110 position callers itemless, c30 == c34 = 0.25f/0.5f, 72 distinct caller states
+            // (fresh objects) over 3 stand-ins, while its real objects match by item. 0x24/0x2E (L5) logged no position callers and 0x46's
+            // one L0 caller carried a different known subtype (already rejected), so those keep the plain fallback.
+            // ROGUESQ_S7687_POSSUB=0 restores s7686 for 0x0C.
+            static const bool s_possub3 = [] { const char* e = std::getenv("ROGUESQ_S7687_POSSUB"); return !(e && *e == '0'); }();
             bool flyer = false;
             switch (s.sub) { case 0x12: case 0x13: flyer = true; break; case 0x33: case 0x36: case 0x44: case 0x4B: case 0x4F: flyer = s_rskey; break;
-                             case 0x0D: case 0x14: case 0x1E: case 0x1F: case 0x47: flyer = s_possub2; break; default: break; }
+                             case 0x0D: case 0x14: case 0x1E: case 0x1F: case 0x47: flyer = s_possub2; break;
+                             case 0x0C: flyer = s_possub3; break; default: break; }
             const bool reject = s_possub && ((csub >= 0 && csub != (int)s.sub) || (csub < 0 && flyer));
             if (s_bk_log) {
                 static std::set<uint64_t> s_pseen;  // one line per (caller state, stand-in item) pair

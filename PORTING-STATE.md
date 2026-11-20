@@ -204969,3 +204969,35 @@ never got their real object).
 Rules out: H-self for 0x0D/0x14/0x1E/0x1F/0x47. Open: 0x0C/0x24/0x2E/0x46 unclassified (no pos callers seen). G6c next waits on the owner sheet.
 Discrimination: this selects H-neighbour and refutes H-self for subs 0x0D/0x14/0x1E/0x1F/0x47 (itemless small-float callers vs
 item-matched real objects; L4 pair pos handoffs 7 -> 0). Next discriminator: [s7685-pos] tally on levels carrying 0x0C/0x24/0x2E/0x46.
+
+## Session 7687 (2026-11-19) — G6c pos-fallback thread CLOSED: sub 0x0C itemless callers rejected (H-neighbour, L10 pair old 121 accepted vs fix 203/203 rejected); 0x24/0x2E/0x46 keep the fallback
+
+Pivot-mandated closing probe for HYPOTHESIS-ID g6c-pos-fallback-neighbour (rule 8). crash_reports.py --since 2026-11-13: 27 folded, 0 new.
+
+**Census (offline, existing logs).** Which levels carry the four plain-fallback subs: attributing each [s7672-ho] line in the s7678
+attract-playlist logs (scratch/s7678/{s7679,fix}/cap/run.log, levels 0/5/7/10 in one run) to the last `[standins] N objects ... level X`
+line: 0x0C = level 10 (old attract run: 3 match=pos + 1 item), 0x24/0x2E = level 5 (item only; s7686 L5 run logged no pos callers),
+0x46 = level 0 (1 match=pos, 2 item). The earlier "level 0" reading of those logs was only the first rebuild line.
+
+**Runs** (dd4 16:9 FPS60, STANDINS=1 STANDINS_LOG=1, HOLD=200, tools/g1e_owner_quiet_arms.zsh, host idle >6 h):
+- L0 (s7686 binary, scratch/s7687/L0): 0x46 one pos caller carried known sub 0x3D -> already REJECTed by the s7685 other-sub rule;
+  0x14 1 itemless REJECT (positive control: the s7686 reject fires in the same run). No 0x0C/0x24/0x2E on L0.
+- L10 (s7686 binary, scratch/s7687/L10): 0x0C 110/110 pos callers itemless (caller_sub FFFF), c30 == c34 = 0x3E800000 (0.25f, 108) /
+  0x3F000000 (0.5f, 2), 72 distinct caller states over 3 stand-ins, d 0.15-2.0: the same fresh-object (projectile) signature as s7686's
+  subs. Its real objects hand off by item (7 item).
+- Change: src/main/rs64_standins.cpp adds 0x0C to the itemless-reject set under ROGUESQ_S7687_POSSUB (default on inside STANDINS;
+  =0 = s7686). cmake --build build OK.
+- Same-binary L10 pair (scratch/s7687/L10pair, sequential arms): old (S7687_POSSUB=0) 121 0x0C pos matches accepted ("unknown", 86
+  caller states) vs fix 203/203 REJECT (89 states); positive control 0x14 REJECT 22 old / 27 fix in both arms. Handoffs unchanged in
+  200 s (0x0C 7 item / 7 timeout600 both arms: in this window the neighbours failed the view test, so the accepted matches only
+  set real_call/re_rej; the old attract run shows they can hand off: 3 match=pos on L10). Both alive, crashlines 0, vi_stalls30s 0,
+  max_gap 149/148 ms, max_vihold 17.3 s both (load hold, equal across arms). tools/s7672_handoff_score.py rc 0 on old, fix and L0.
+
+Discrimination: H-neighbour selected for 0x0C (itemless small-float callers, many fresh states; two lines: caller-word census + pair
+reject count; handoff-effect line is the earlier attract run, single-source for L10). H-self (the stand-in's own object arrives
+itemless) refuted for 0x0C. 0x24/0x2E: no pos callers on L5 (s7686) -> no handoff risk measured; 0x46: only an item-carrying
+neighbour, already rejected -> no change. The pos-fallback thread is CLOSED; every stand-in sub that showed itemless position
+callers is now in the reject set (0x0C 0x0D 0x12 0x13 0x14 0x1E 0x1F 0x47 + ray-shield class).
+ORIGIN: the itemless callers are fresh game objects spawned at/near a stand-in's position (0.25f/0.5f words at +0x30/+0x34,
+legitimate guest state, not corruption); the defect was ours (the 2-unit position fallback accepting any nearby caller).
+Next: G6c owner sheet refresh (the s7630 sheet predates s7672-s7687 handoff changes).

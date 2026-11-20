@@ -1,14 +1,14 @@
-# NEXT (s7687)
-HYPOTHESIS-ID: g6c-pos-fallback-neighbour
+# NEXT (s7688)
+HYPOTHESIS-ID: g6c-owner-sheet-refresh
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7686: itemless pos callers now rejected for 0x0D/0x14/0x1E/0x1F/0x47 (ROGUESQ_S7686_POSSUB; L4 pair old 7 pos handoffs vs fix 0).
-Remaining plain-fallback subs: 0x0C/0x24/0x2E/0x46, no pos callers on L1/L4/L5.
-Work unit (close the thread): find levels carrying 0x0C/0x24/0x2E/0x46 (grep the stand-in table / DAT sub census, e.g.
-tools/g6c_sub_handler_map.py output or rs64_standins.cpp table), run ONE level per sub that has the most of them:
-  mkdir -p scratch/s7687/L<n>; env R=$PWD/scratch/s7687/L<n> HOLD=200 ALLOW_SLOW=1 ARMS="4:fix:ROGUESQ_STANDINS=1+ROGUESQ_STANDINS_LOG=1+ROGUESQ_FORCE_SAVE_MISSION=<n>" zsh tools/g1e_owner_quiet_arms.zsh
-  python3 tools/s7686_pos_tally.py scratch/s7687/L<n>/log_fix.txt
-Outcomes: itemless small-float callers -> add the sub to the reject set (H-neighbour) + same-binary pair; same-sub/real
-itemless objects -> keep fallback (H-self); no pos lines anywhere -> close the pos-fallback thread as "no handoff risk".
-Then build the G6c owner sheet (same-run on/off frames dd2/dd4, 2+ levels) if not already sent, and wait on the owner.
-One game at a time, SIGKILL only, <=2 CPU-heavy jobs.
+s7687 CLOSED the g6c-pos-fallback-neighbour thread (0x0C added, ROGUESQ_S7687_POSSUB; 0x24/0x2E/0x46 no itemless callers).
+The owner sheet docs/owner_sheet_s7630_standins_on_off.jpg predates every handoff change since (s7672 hold, s7681 shield,
+s7684 ray-shield key, s7685/s7686/s7687 pos rejects). Work unit: regenerate it on the current binary.
+  zsh scratch/s7628_standins_proof.sh   # same-run STANDINS=frame toggle + dumps, arms L1 dd2 / L1 dd4 / L4 dd2 / L4 dd4 (read it first;
+                                        # point its output dir at scratch/s7688 rather than overwriting s7628)
+  python3 tools/s7628_standins_sheet.py --cluster 16 --control --pairs 3 <arm dirs>  -> docs/owner_sheet_s7688_standins_on_off.jpg
+Expected: control PASS (>=288 of 576 synthetic px) in every arm, med_fpx of the same order as s7630 (bunker ~153, towers ~1298).
+A big drop -> the handoff changes made stand-ins vanish earlier (regression; bisect with S7672_HOLD/S7685/S7686/S7687 =0 arms in
+one run). Then update OWNER-OPT-INS row to point at the new sheet and wait on the owner's look (default stays off).
+One game at a time, SIGKILL only, <=2 CPU-heavy jobs. Screen must be unlocked for the key-driven harness.
