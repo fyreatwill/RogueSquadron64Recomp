@@ -205050,3 +205050,6 @@ HYPOTHESIS-ID: g6c-l1-bunker-handoff
   what culls one partner of a co-located sub 0x14 pair, and why the choice flips between runs (candidates: stand-in state built from
   a per-run guest value such as the item's difficulty/variant field, or the two partners sharing a position so depth/bucket order picks one).
 - Code: src/main/rs64_standins.cpp par_try/par_add (logging only, no behaviour change). Default STANDINS stays off.
+- Discrimination: the same-run new/old pair refutes H-handoff, the s7628 spawn-time join refutes H-path, and the par= split refutes
+  H-phase. Next discriminator (NEXT.md, slug g6c-pair-partner-cull): log each stand-in's built state and the view-test exit class of
+  every culled submit, then compare the two partners of a pair. H-variant, H-coloc and H-viewexit each predict a different result.
