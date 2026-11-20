@@ -23,6 +23,7 @@
 #include <initializer_list>
 #include <unordered_map>
 #include <vector>
+#include <set>
 #include "rs64_apf.h"  // s7652: s7359 class AJ bounded append for the [standins-*] log rows
 
 extern "C" recomp_func_t* get_function(int32_t vram);
@@ -265,6 +266,7 @@ size_t s_bk_gen_size = ~size_t(0);
 // the size-only key (same-build control).
 uint32_t s_gen = 0, s_bk_gen = ~0u, s_bk_wrong = 0;
 uint32_t s_bk_calls = 0, s_bk_item_hits = 0, s_bk_pos_hits = 0, s_bk_rs_hits = 0;
+uint32_t s_bk_item_lo = ~0u, s_bk_item_hi = 0, s_bk_pos_rej = 0;  // s7685
 const char* const kReason[] = { "added", "culled", "spawned", "unlinked", "dead", "cond" };
 void ho_log(Standin& s, const char* why) {
     if (s.ho_logged) return;
@@ -304,6 +306,8 @@ static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t on
         for (size_t i = 0; i < s_standins.size(); ++i) s_bk_by_item[s_standins[i].item] = i;
         s_bk_gen_size = s_standins.size();
         s_bk_gen = s_gen;
+        s_bk_item_lo = ~0u; s_bk_item_hi = 0;
+        for (const Standin& q : s_standins) { if (q.item < s_bk_item_lo) s_bk_item_lo = q.item; if (q.item > s_bk_item_hi) s_bk_item_hi = q.item; }
     }
     Standin* hit = nullptr;
     const uint32_t it = rw(rdram, state + 0x34u);
@@ -340,7 +344,33 @@ static void bk_ret_impl(uint8_t* rdram, uint32_t state, uint32_t v0, uint16_t on
         for (Standin& s : s_standins) {
             if (s.state == state || s.spawn_f < 0 || s.real_add >= 0 || (only_sub && s.sub != only_sub)) continue;  // only stand-ins waiting for their real object
             const float dx = rf(rdram, s.state) - x, dy = rf(rdram, s.state + 4u) - y, dz = rf(rdram, s.state + 8u) - z;
-            if (dx * dx + dy * dy + dz * dz < 4.0f) { hit = &s; hit->by_pos = true; ++s_bk_pos_hits; break; }
+            const float d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 >= 4.0f) continue;
+            // s7685: the caller's own DAT item (state+0x34, else +0x30), when it points into this level's item table, names its subtype.
+            // A position match whose caller is a DIFFERENT known subtype is a neighbour, not this stand-in's object: reject it
+            // (ROGUESQ_S7685_POSSUB=0 = old). Logged on every position match with STANDINS_LOG ([s7685-pos]).
+            static const bool s_possub = [] { const char* e = std::getenv("ROGUESQ_S7685_POSSUB"); return !(e && *e == '0'); }();
+            const uint32_t c34 = rw(rdram, state + 0x34u), c30 = rw(rdram, state + 0x30u);
+            auto in_tab = [](uint32_t a) { return a >= s_bk_item_lo && a <= s_bk_item_hi + 0x200u && guest(a) && (a & 1u) == 0; };
+            const uint32_t ci = in_tab(c34) ? c34 : (in_tab(c30) ? c30 : 0u);
+            const int csub = ci ? (int)rh(rdram, ci) : -1;
+            // s7685 L12: every position caller of a sub 0x12 (tie_inter) / 0x13 (tie_bomber) stand-in had no table item (+0x30 = +0x34 =
+            // 0.25f, a new state every ~3 frames: objects spawned at the craft), while those subs' real objects match by item (118/49 vs
+            // 10/14 pos over 31 logs). So for these two item-keyed subs an itemless caller is not the craft.
+            // s7685 run2: the same holds for the s7684 ray-shield class (keyed at +0x30): two 0x36 pillars were handed off to itemless
+            // callers (state words like E7FAFFF8 / 0.0) at d 1.15-1.99 in one arm.
+            bool flyer = false;
+            switch (s.sub) { case 0x12: case 0x13: flyer = true; break; case 0x33: case 0x36: case 0x44: case 0x4B: case 0x4F: flyer = s_rskey; break; default: break; }
+            const bool reject = s_possub && ((csub >= 0 && csub != (int)s.sub) || (csub < 0 && flyer));
+            if (s_bk_log) {
+                static std::set<uint64_t> s_pseen;  // one line per (caller state, stand-in item) pair
+                if (s_pseen.size() < 2000 && s_pseen.insert(((uint64_t)state << 32) | s.item).second)
+                    std::fprintf(stderr, "[s7685-pos] f=%lld state=%08X c34=%08X c30=%08X caller_item=%08X caller_sub=%04X standin=%08X sub=%04X d=%.2f %s\n",
+                                 (long long)(s_bk_frame + 1), state, c34, c30, ci, csub < 0 ? 0xFFFFu : (unsigned)csub, s.item, s.sub,
+                                 (double)std::sqrt(d2), reject ? "REJECT" : (csub < 0 ? "unknown" : "same"));
+            }
+            if (reject) { ++s_bk_pos_rej; continue; }
+            hit = &s; hit->by_pos = true; ++s_bk_pos_hits; break;
         }
     }
     if (!hit) return;
@@ -384,9 +414,9 @@ extern "C" void rs64_bk_shield(uint8_t* rdram, uint32_t state, uint32_t v0) {
 namespace {
 void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
     // s7677 per-generation tally of how real bucket calls matched their stand-in (item key vs 2-unit position fallback)
-    std::fprintf(stderr, "[s7677-gen] gen=%u end dat=%08X n=%zu bk_calls=%u item_hits=%u rs_hits=%u pos_hits=%u wrong=%u\n", s_gen, s_dat, s_standins.size(),
-                 s_bk_calls, s_bk_item_hits, s_bk_rs_hits, s_bk_pos_hits, s_bk_wrong);
-    s_bk_calls = s_bk_item_hits = s_bk_rs_hits = s_bk_pos_hits = s_bk_wrong = 0;
+    std::fprintf(stderr, "[s7677-gen] gen=%u end dat=%08X n=%zu bk_calls=%u item_hits=%u rs_hits=%u pos_hits=%u pos_rej=%u wrong=%u\n", s_gen, s_dat, s_standins.size(),
+                 s_bk_calls, s_bk_item_hits, s_bk_rs_hits, s_bk_pos_hits, s_bk_pos_rej, s_bk_wrong);
+    s_bk_calls = s_bk_item_hits = s_bk_rs_hits = s_bk_pos_hits = s_bk_pos_rej = s_bk_wrong = 0;
     // s7679 life table (ROGUESQ_STANDINS_LOG=1): one line per stand-in drawn this generation, so a drawn-but-never-spawned item
     // (spawned=0) can be told from a bridged one (spawned=1) by its nearest drawn distance.
     if (std::getenv("ROGUESQ_STANDINS_LOG")) {

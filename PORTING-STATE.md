@@ -204910,3 +204910,30 @@ Rules out: state+0x34 as a universal item key. Next: log caller item/sub on pos 
 Discrimination: this selects H-key (the item is at state+0x30, not state+0x34, for handleRayShieldedNpcDestroy) and refutes H-ok (the
 position fallback was not safe for this class: it never completed a handoff, 0/9 real30 old vs 11/11 fixed). Next discriminator:
 the caller's subtype on each position match (H-neighbour vs H-self for the 0x12 matches at 1.97-1.99 units, NEXT.md).
+
+## Session 7685 (2026-11-19) — G6c position fallback hands TIE stand-ins to itemless neighbours (H-neighbour); ROGUESQ_S7685_POSSUB rejects them, L12 fix arm 0 pos matches vs old 5
+HYPOTHESIS-ID: g6c-pos-fallback-neighbour. Question (NEXT s7685): the s7684 fix arm's three sub 0x12 stand-ins handed off by the 2-unit
+position fallback at dpos 1.97-1.99 - H-neighbour (caller is another object) vs H-self (the 0x12 object itself without an item key).
+Instrument (src/main/rs64_standins.cpp bk_ret_impl pos branch): read the caller's state+0x34, else +0x30, as its item when it points into
+this level's item table [min item, max item+0x200]; log [s7685-pos] (one line per caller-state/stand-in pair, STANDINS_LOG) with caller_sub
+(lhu +0), stand-in sub and distance. [s7677-gen] now also carries pos_rej.
+Runs (one binary per run, sequential arms, tools/g1e_owner_quiet_arms.zsh, L12 FORCE_SAVE_MISSION=12 dd4 STANDINS+LOG HOLD=200; arms
+old = +ROGUESQ_S7685_POSSUB=0, fix = default; all 6 arms alive, 0 crash, vi_stalls30s=0, max_gap 146-148 ms):
+- run1 (reject only a KNOWN different caller sub): 30 [s7685-pos] lines over both arms (positive control: instrument fires on every pos
+  match). 29/30 callers have NO table item: +0x30 = +0x34 = 0x3E800000 (0.25f; one 0.5f), a DIFFERENT state address every ~3 frames
+  (pairs like 8059EA24/8059EC84 at f 3722/3725), d 0.75-2.00, and the stand-ins are sub 0x12 tie_inter / 0x13 tie_bomber. One known caller:
+  sub 0x27 (item 8054D1B0) next to 0x12 stand-in 80546CD4 -> REJECT. Meanwhile the real 0x12/0x13 objects match by item (this run 13/15 and
+  8-9 handoffs; over 31 logged runs 118/49 item vs 10/14 pos). -> H-neighbour: the callers are short-lived objects spawned at the craft
+  (bolts/bombs most likely - not named), not the craft. H-self refuted (same sub never once; the craft's own state carries its item).
+- run2 (+ reject itemless callers for 0x12/0x13): fix 26 REJECT, 0x12/0x13 0 pos (old 3 pos, timeout600), 0x13 real30 6 vs 4. New datum in
+  the same fix arm: two 0x36 pillar stand-ins (8054AEEC, 8054AF84) handed off by pos to itemless callers at d 1.15-1.99 whose state words
+  look like non-object data (c30 E7FAFFF8/8021EBA8, c34 0/1/3) - the ray-shield class is item-keyed since s7684, so those are neighbours too.
+- run3 (final: itemless callers also rejected for 0x33/0x36/0x44/0x4B/0x4F while S7684_RSKEY is on): old 5 pos handoffs (2x 0x12, 3x 0x13),
+  item 26, rsitem 9; fix 0 pos, 27 REJECT (15 for 0x12, 12 for 0x13), item 31, rsitem 10. Runs are not frame-aligned (s7685 run2 shows a
+  constant ~2-frame offset from frame 523), so per-item real_add is not compared across arms; the arm totals are the result.
+Fix: ROGUESQ_S7685_POSSUB (default on inside STANDINS; =0 old) rejects a position match when the caller's table item names a different sub,
+or when the caller has no table item and the stand-in is 0x12/0x13 or the ray-shield class. Other subs keep the plain fallback: 0x0C/0x0D/
+0x14/0x1E/0x1F/0x24/0x2E/0x46/0x47 have historical pos handoffs (31 logs: 13/61/104/22/4/1/4/8/4) whose callers were never classified.
+ORIGIN: the wrong handoffs are written by our own detector (bk_ret_impl's 2-unit position fallback accepting any bucket caller near a waiting
+stand-in); the game's values are legitimate - projectiles spawned at a TIE's position and the pillars' neighbours are real objects.
+Rules out: H-self for 0x12/0x13. Open: caller classes for the other pos-using subs (next unit).

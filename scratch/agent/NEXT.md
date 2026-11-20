@@ -1,16 +1,16 @@
-# NEXT (s7685)
+# NEXT (s7686)
 HYPOTHESIS-ID: g6c-pos-fallback-neighbour
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7684: ray-shield class now keyed by item at state+0x30 (11/11 real30 on L12). Remaining datum: in the s7684 fix arm three sub 0x12
-stand-ins (80549354/8054945C/80549564) handed off by the 2-unit POSITION fallback at frames 5713-5715 with dpos 1.97-1.99 - right at
-the threshold, i.e. probably a neighbour's real object, so those stand-ins may vanish while their own object is still hidden.
-Hypotheses: H-neighbour (caller is a different object/subtype: its item at state+0x34 or +0x30 is a guest pointer whose lhu +0 != 0x12)
-vs H-self (caller is the 0x12 object itself whose state has no item key - same sub, dpos ~2 because it moved).
-Work unit, one build: in bk_ret_impl's pos branch, read the caller's candidate item (state+0x34, else +0x30 if guest) and its lhu +0 sub;
-log it on every pos match ([s7685-pos] caller_sub, stand-in sub, d). Fix behind ROGUESQ_S7685_POSSUB (default on in STANDINS, =0 old):
-reject a pos match when the caller's sub is known and differs. Two arms same binary on L12 (scratch/s7684 recipe, mkdir R first!):
-env R=<abs dir> HOLD=200 ALLOW_SLOW=1 ARMS="4:old:...+ROGUESQ_S7685_POSSUB=0 4:fix:..." zsh tools/g1e_owner_quiet_arms.zsh
-(base env: ROGUESQ_STANDINS=1+ROGUESQ_STANDINS_LOG=1+ROGUESQ_FORCE_SAVE_MISSION=12). Positive control: [s7685-pos] must log the s7684
-pos matches with caller_sub. If every pos match is same-sub (H-self), no fix; document and G6c waits on the owner's look.
-One game at a time, SIGKILL only, <=2 CPU-heavy jobs, no repeat-hold soaks.
+s7685: [s7685-pos] showed the 2-unit position fallback hands sub 0x12/0x13 (TIE) stand-ins to itemless short-lived objects spawned at
+the craft (+0x30=+0x34=0.25f); ROGUESQ_S7685_POSSUB now rejects itemless callers for 0x12/0x13 and the ray-shield class (L12 fix 0 pos).
+Still on the plain fallback, callers never classified: subs 0x0C/0x0D/0x14/0x1E/0x1F/0x24/0x2E/0x46/0x47 (31-log pos counts 13/61/104/22/4/1/4/8/4).
+Hypotheses per sub: H-neighbour (callers itemless/other-sub like the TIEs -> add to the reject set) vs H-self (caller_sub == stand-in sub
+or the real object genuinely has no table item, e.g. runtime-spawned copies -> keep the fallback).
+Work unit: ONE run per level, fix binary only (no code change needed; the instrument is in), levels that carry these subs:
+L1 (AT-ST 0x1F, 0x14), L4 (AT-PT 0x47), L5 (0x14/0x0D). For each: mkdir -p scratch/s7686/L<n>; then
+env R=$PWD/scratch/s7686/L<n> HOLD=200 ALLOW_SLOW=1 ARMS="4:fix:ROGUESQ_STANDINS=1+ROGUESQ_STANDINS_LOG=1+ROGUESQ_FORCE_SAVE_MISSION=<n>" zsh tools/g1e_owner_quiet_arms.zsh
+Tally offline: grep '[s7685-pos]' -> (stand-in sub, caller_sub, c30==c34, verdict). Positive control: lines must appear for at least one sub
+(L12 gave 30). Extend the reject set only for subs whose callers are itemless/other-sub AND whose real objects match by item; then a
+same-binary old/fix pair on that level. If a sub's callers are same-sub, document H-self and keep the fallback. Then G6c waits on the
+owner sheet. One game at a time, SIGKILL only, <=2 CPU-heavy jobs, no repeat-hold soaks.
