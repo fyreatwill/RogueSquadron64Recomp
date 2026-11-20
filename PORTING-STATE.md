@@ -204650,3 +204650,33 @@ Rules out: H-hide (scripted hide of a walker in draw range) on L4/L1. The s7675 
 call) is NOT needed and was not landed: the hold is doing its job.
 Queued widening soaks: scratch/agent/soak_queue/s7676_ghost_L2.sh, s7676_ghost_L5.sh (same recipe, score rc 1 on any GHOST row).
 G6c remains closed on the owner's look; default stays off.
+
+## Session 7677 (2026-11-19) — G6c ghost widening folds clean (L2/L5 rc 0, H-gate on 4 levels); stand-in item map now keyed on rebuild generation (planted same-count reorder: old key 84350/84350 wrong matches, fix 0)
+
+Fold: crash_reports --since 2026-11-13 new=0. s7676_ghost_L2/L5 soaks (both alive, 0 stall) scored with
+`tools/s7675_ghost_score.py` (selftest PASS: ghost rc 1, gate rc 0): rc 0. L2 0 never-drawn rows; L5 sub 0047 (AT-PT) 4
+never-drawn items, 2 GATE (held_dmin 86.3 / 68.6 > first-call max 50.2), 2 UNHELD (never held, no depth). 0 GHOST rows ->
+H-gate holds on L1/L2/L4/L5; ghost thread stays closed.
+
+Unit (offline read -> fix -> 3 arms): rs64_bk_ret rebuilt its item->stand-in-index map only when `s_standins.size()` changed, so a
+rebuild with the same object count (mission abort -> re-entry, or another level with equal count) would keep the previous build's
+keys. Hypotheses: H-stale (re-entry reloads items at new addresses, real calls miss / match the wrong stand-in, hold released for
+the wrong object or held 900 frames) vs H-same (dat reloads at the same address, keys coincide, harmless). Fix: `s_gen` counts
+rebuild(); the map also rebuilds when the generation changes (ROGUESQ_S7677_GEN=0 = old size-only key). Instrument: `[s7677-gen]`
+per-generation tally at each rebuild (bk_calls, item_hits, pos_hits, wrong = map hit whose stand-in item != the call's item).
+Positive control ROGUESQ_S7677_PLANT=1 reverses the stand-in order from the second build on (same count, new indexes).
+Route: scratch/s7669/run.zsh hangar schedule (owner recipe dd4 16:9 FPS60, 3 mission loads level 15, 2 abort re-entries),
+STANDINS=1 LOG=1, recipe scratch/s7677_run.zsh.
+
+| arm | gen1 item/pos/wrong | gen2 item/pos/wrong | dat each build | handoffs match= |
+|---|---|---|---|---|
+| old (GEN=0) | 80038/67/0 | 85018/40/0 | 80541570 x3 | 100 item |
+| old + PLANT | 84184/84/0 | 84350/76/**84350** | 80541570 x3 | 116 item |
+| fix + PLANT | 82124/95/0 | 83717/92/**0** | 80541570 x3 | 100 item |
+
+All 3 arms alive, 0 crash lines, 3 hangar entries / 3 initMission each. Result: H-same on this route (the level dat reloads at
+the same address, so the old key happened to be right: wrong 0 unplanted); the planted same-count reorder shows the old key
+mismatches every item hit (84350/84350) and the generation key fixes it (0). The fix closes the case by construction for a
+level change with an equal object count (not reproduced on a real route: the hangar route always reloads level 15).
+ORIGIN: not a mitigation; the writer is our own rebuild() replacing s_standins while rs64_bk_ret's cache key ignored it.
+Gate sweep tools/s7651_gate_sweep.py --jobs 2 started after the src edit; result in a follow-up commit this session.

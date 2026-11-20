@@ -12,7 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7676: the G6c "ghost" thread is CLOSED as H-gate, no code change.** Walker handlers (AT-PT 0x47 L4, AT-ST 0x1F L1)
+- **NEW s7677: ghost widening clean (L2/L5 scorer rc 0: L5 AT-PT 2 GATE + 2 UNHELD, 0 GHOST) -> H-gate on L1/L2/L4/L5.** Stand-in
+  item map (rs64_bk_ret) is now keyed on the rebuild generation, not the object count (ROGUESQ_S7677_GEN=0 = old). Hangar abort
+  route (3 loads L15): dat reloads at the same address so the old key was right (wrong 0); planted same-count reorder
+  (ROGUESQ_S7677_PLANT=1) old 84350/84350 wrong matches, fix 0; 3/3 arms alive. Recipe scratch/s7677_run.zsh old|fix (PLANT=p).
+- **s7676: the G6c "ghost" thread is CLOSED as H-gate, no code change.** Walker handlers (AT-PT 0x47 L4, AT-ST 0x1F L1)
   draw only inside the same ~30-51-unit camera depth as every other subtype (first-call depth L4 0x47 41.1-51.1, L1 0x1F 28.3-44.9;
   ordinary subtypes 31.6-49.5 = control); their long first-call delay (med 248-821 frames) is approach time, not a hide. The s7675
   never-drawn item 80547410 came no closer than 62.2 units while held (> 51.1) -> GATE: the stand-in correctly bridges a
@@ -385,7 +389,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     4/4 arms alive, 0 fatal, 0 VI stall. **Step 4 (s7629): 300 s holds STANDINS=1 dd4 owner recipe, L0-L5 6/6 clean** (alive, 0
     crash, 0 VI stall, gap <=148 ms, stand-ins active per spawn lines); **s7630: L6-L18 also clean -> 19/19** (gap <=162 ms,
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
-    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; fold s7676_ghost_L2/L5 (rc 1 = a GHOST row -> stop holding walkers with real_call<0 once inside first-call depth). Scorer
+    closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
     a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):

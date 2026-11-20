@@ -1,16 +1,18 @@
-# NEXT (s7677)
-HYPOTHESIS-ID: g6c-standin-ghost-widen
+# NEXT (s7678)
+HYPOTHESIS-ID: g6c-standin-level-change
 
-First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then
-SOAK-RESULTS lines for s7676_ghost_L2 / s7676_ghost_L5.
-Unit: fold the widening depth probe. s7676 closed the L4/L1 ghost as H-gate (walkers draw only inside ~51 units, same depth band as
-every subtype; the never-drawn walker stayed >= 62.2 units away).
-Score: `python3 tools/s7675_ghost_score.py --selftest && python3 tools/s7675_ghost_score.py scratch/s7676_L2/log_x2.txt scratch/s7676_L5/log_x5.txt`
-- rc 0 (only GATE/UNHELD/NOREF rows): H-gate holds on 4 levels; nothing to do, ghost thread stays closed.
-- rc 1 (a GHOST row: held stand-in came within the subtype's max first-call depth and the real object never drew): H-hide for that
-  subtype. Fix in rs64_standins.cpp: release the hold for a stand-in with real_call < 0 once its held depth is below the subtype's
-  first-call depth; re-run scratch/s7672/run.zsh on that level (held blinks stay 0 for objects that do draw, no GHOST rows).
-If the soaks voided and the host is idle (HID idle > 300 s, screen unlocked), run in-session: `zsh scratch/agent/soak_queue/s7676_ghost_L2.sh`.
-If both fold clean: every ladder rung is closed or owner-gated (CURRENT-TRUTH Next steps 2-9, 20, 22) — take the M6 endurance
-item 3b (title->mission keyed hold, log every CRASH/stall) as the next datum-producing unit rather than writing BLOCKED.
-One game at a time, SIGKILL only, never touch build/saves, <=2 CPU-heavy jobs, no repeat-hold soaks.
+First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
+s7677 fixed the stand-in item map key (generation, not count) and proved it with a planted reorder; the real hangar route only
+ever reloads level 15 at the same dat address. Unit: the real LEVEL-CHANGE case, stand-ins on.
+Route: forced level select (ROGUESQ_FORCE_UNLOCK + ROGUESQ_FORCE_SAVE_MISSION + ROGUESQ_NO_SAVE_WRITE, s5705-s5720 recipes; copy
+the game to its own folder, never touch build/saves), fly level A, PAUSE/ABORT, pick level B, fly; STANDINS=1 LOG=1 dd4 16:9 FPS60.
+Measure from `[standins] N objects ... dat X level L` and `[s7677-gen]` lines:
+- rebuild fires on the level change (level field changes), gen tally of A has wrong=0, B's handoffs match=item (pos only as fallback).
+- H-leak: B's first build still shows A's items (dat unchanged + level unchanged at first submit) -> rebuild trigger needs the
+  mission-init edge, not the dat/level pair. Fix there.
+- Also check s_first / s_dwin / s_calls (function statics, never reset) do not skew B's spawn early_s numbers (early_s must be
+  measured from B's first submit; compare B's early_s against a B-only run of the same level).
+Positive control: ROGUESQ_S7677_PLANT=1 with GEN=0 must still show wrong>0 on the second build.
+If the forced route cannot change level inside one run, write that down with the evidence and take M6 item 3b (keyed
+title->mission hold, log every CRASH/stall) as the datum-producing unit.
+One game at a time, SIGKILL only, <=2 CPU-heavy jobs, no repeat-hold soaks.

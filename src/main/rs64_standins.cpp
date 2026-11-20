@@ -257,6 +257,10 @@ bool s_bk_log = false;
 std::unordered_map<uint32_t, size_t> s_bk_by_item;
 std::vector<size_t> s_gh_idx;  // s7675: held stand-ins >= 30 frames past spawn, probed against every real bucket call
 size_t s_bk_gen_size = ~size_t(0);
+// s7677: the item->index map was keyed on s_standins.size(), so a rebuild with the same object count (same level re-entered after
+// a mission abort, items at new addresses) kept the previous mission's item keys. s_gen counts rebuilds; ROGUESQ_S7677_GEN=0 restores
+// the size-only key (same-build control).
+uint32_t s_gen = 0, s_bk_gen = ~0u, s_bk_wrong = 0;
 uint32_t s_bk_calls = 0, s_bk_item_hits = 0, s_bk_pos_hits = 0;
 const char* const kReason[] = { "added", "culled", "spawned", "unlinked", "dead", "cond" };
 void ho_log(Standin& s, const char* why) {
@@ -285,10 +289,12 @@ static int vt_class() {
 extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
     if (rs64_bk_self || !guest(state)) return;
     ++s_bk_calls;
-    if (s_bk_gen_size != s_standins.size()) {
+    static const bool s_genfix = [] { const char* e = std::getenv("ROGUESQ_S7677_GEN"); return !(e && *e == '0'); }();
+    if (s_bk_gen_size != s_standins.size() || (s_genfix && s_bk_gen != s_gen)) {
         s_bk_by_item.clear();
         for (size_t i = 0; i < s_standins.size(); ++i) s_bk_by_item[s_standins[i].item] = i;
         s_bk_gen_size = s_standins.size();
+        s_bk_gen = s_gen;
     }
     Standin* hit = nullptr;
     const uint32_t it = rw(rdram, state + 0x34u);
@@ -304,7 +310,7 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
         }
     }
     auto f = s_bk_by_item.find(it);
-    if (f != s_bk_by_item.end()) { hit = &s_standins[f->second]; ++s_bk_item_hits; }
+    if (f != s_bk_by_item.end()) { hit = &s_standins[f->second]; ++s_bk_item_hits; if (hit->item != it) ++s_bk_wrong; }  // s7677: wrong = stale key
     const float x = rf(rdram, state), y = rf(rdram, state + 4u), z = rf(rdram, state + 8u);
     if (!hit) {
         for (Standin& s : s_standins) {
@@ -335,6 +341,11 @@ extern "C" void rs64_bk_ret(uint8_t* rdram, uint32_t state, uint32_t v0) {
 
 namespace {
 void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
+    // s7677 per-generation tally of how real bucket calls matched their stand-in (item key vs 2-unit position fallback)
+    std::fprintf(stderr, "[s7677-gen] gen=%u end dat=%08X n=%zu bk_calls=%u item_hits=%u pos_hits=%u wrong=%u\n", s_gen, s_dat, s_standins.size(),
+                 s_bk_calls, s_bk_item_hits, s_bk_pos_hits, s_bk_wrong);
+    s_bk_calls = s_bk_item_hits = s_bk_pos_hits = s_bk_wrong = 0;
+    ++s_gen;
     s_standins.clear();
     s_dat = dat;
     const uint32_t count = rw(rdram, dat);
@@ -359,6 +370,13 @@ void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
         build_state(rdram, ctx, item, state, inst, model, &s.scale);
         s_standins.push_back(s);
         at = (inst + size + 15u) & ~15u;
+    }
+    // s7677 positive control: ROGUESQ_S7677_PLANT=1 reverses the stand-in order from the second build on (same count, new indexes),
+    // which is exactly the case the size-only map key cannot see: wrong= must be > 0 with ROGUESQ_S7677_GEN=0 and 0 with the fix.
+    static const bool s_plant7677 = [] { const char* e = std::getenv("ROGUESQ_S7677_PLANT"); return e && *e == '1'; }();
+    if (s_plant7677 && s_gen >= 2) {
+        std::reverse(s_standins.begin(), s_standins.end());
+        for (size_t i = 0; i < s_standins.size(); ++i) s_standins[i].idx = (uint32_t)i;
     }
     std::fprintf(stderr, "[standins] %zu objects, %u KB (dat %08X items %u: no-name %u no-model %u probe-dropped %u build-fail %u) level %u\n",
                  s_standins.size(), (at - kRegion) / 1024u, dat, count, noname, nomodel, probe, full, rw(rdram, 0x80130B70u));
