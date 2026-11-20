@@ -1678,3 +1678,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261119-162035 | s7675_ghost_L4 | rc=0 | 210s | scratch/agent/soak_results/s7675_ghost_L4_20261119-162035.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261119-162644 | s7676_ghost_L2 | rc=0 | 210s | scratch/agent/soak_results/s7676_ghost_L2_20261119-162644.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
 20261119-163014 | s7676_ghost_L5 | rc=0 | 210s | scratch/agent/soak_results/s7676_ghost_L5_20261119-163014.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261120-001531 | s7691_standins_rehold_L1 | rc=0 | 312s | scratch/agent/soak_results/s7691_standins_rehold_L1_20261120-001531.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261120-002043 | s7691_standins_rehold_L10 | rc=0 | 311s | scratch/agent/soak_results/s7691_standins_rehold_L10_20261120-002043.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0
+20261120 | s7692 fold: s7691_standins_rehold L1/L10 (loop) + L4/L5/L12/L15 (in-session, host idle 8.6 h, unlocked): 6/6 alive, 0 crash, vi_stalls30s=0, max_gap 147-164 ms, level_ok=1, standins on 6/6, spawns 38/217/25/56/92/39 -> parity-fixed G6c binary clean in owner mode.

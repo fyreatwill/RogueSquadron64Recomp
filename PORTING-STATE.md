@@ -205120,3 +205120,16 @@ HYPOTHESIS-ID: g6c-owner-sheet-s7690
 - Queued scratch/agent/soak_queue/s7691_standins_rehold_L{1,4,5,10,12,15}.sh: STANDINS=1 dd4 300 s holds on this binary (the
   s7629/s7630 19-level holds predate the s7672-s7690 handover/parity code).
 - Rules out: the s7690 fix being an L1-only effect (L4 dd4 gains same-binary); frame-mode under-reporting in the owner sheet.
+
+## Session 7692 (2026-11-20) — G6c re-holds on the s7690-parity binary: 6/6 levels clean at STANDINS=1 dd4 owner recipe
+- Crash gate: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0.
+- Folded s7691_standins_rehold_L1/L10 (loop, 2026-11-20 00:15/00:20) and ran L4/L5/L12/L15 in-session one at a time
+  (host HID idle 8.6 h, screen unlocked via ioreg CGSSessionScreenIsLocked absent). Recipe: tools/g1e_owner_quiet_arms.zsh,
+  HOLD=300, ROGUESQ_STANDINS=1 + STANDINS_LOG=1, dd4 16:9 FPS60 owner recipe, forced save mission per level.
+- Per level (L1/L4/L5/L10/L12/L15): alive_at_end=1, crashlines=0, vi_stalls30s=0, level_ok=1, max_gap_ms 148/148/147/164/147/149
+  (s7629/s7630 pre-fix holds 142-162), `[standins] on mode=on` 1/1 each, standins-spawn 38/217/25/56/92/39.
+  Arm-active control: the on-line + spawn counts show the stand-in path ran in every arm; the stall scorer is the
+  ring_stalls.py measure qualified s7458 (max_vihold ~17.3 s is the load hold, identical across levels, outside 30 s).
+- Shows: the s7672-s7690 handover + view-test parity code adds no crash/stall/gap regression in owner mode on 6 levels.
+  Rules out H-regress (parity fix starving another slice into a stall) for these levels. G6c stays owner-judged; default off.
+- Next: no engineering rung open; NEXT.md takes the item-18 after-regen UB gate rerun since s7672-s7690 added fixups.

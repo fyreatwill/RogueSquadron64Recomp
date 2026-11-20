@@ -17,7 +17,8 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   px/triplet (s7688): L1 dd2 677 (465), L1 dd4 936 (638), L4 dd2 879 (856), L4 dd4 3155 (2488); off windows 45/107/157/160.
   Same-binary control L4 dd4 PARITY=0: 2309, cluster med_fpx 1627 vs 2153, fix=0 vs 72 (second level for the s7690 gain).
   L1 dd2 med_fpx 169 (s7688 0): bunker back. Owner sheet docs/owner_sheet_s7691_standins_on_off.jpg (L1 dd2 bunker, L4 dd4 city row).
-  G6c closes on the owner's look; default stays off. Queued s7691_standins_rehold_L1/4/5/10/12/15 (STANDINS=1 dd4 300 s on this binary).
+  G6c closes on the owner's look; default stays off. s7692: re-holds L1/L4/L5/L10/L12/L15 (STANDINS=1 dd4 owner recipe 300 s, this binary) 6/6 alive, 0 crash, vi_stalls30s=0,
+  max_gap 147-164 ms (s7629/s7630 142-162), standins on 6/6, spawns 38/217/25/56/92/39 -> the s7672-s7690 handover/parity code adds no crash/stall risk.
 - **s7690: G6c "pair partner" loss ROOT-CAUSED and FIXED: STANDINS=frame starved the game's two-frame view-test slice.**
   addNpcToVisibilityBucket (0x80057C8C) tests each instance on alternate frames: on odd *0x8013889C an instance with inst+8 flag
   0x80 reuses its cached 0x200 bit, on even frames one with 0x100 does; the group is set at the first call by balancing
