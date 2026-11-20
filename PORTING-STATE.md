@@ -205562,7 +205562,7 @@ Controls (same run, --controls): C1 planted doc name -> MISSING; C2 planted pres
 witness); C3 every reader of ROGUESQ_RUMBLE_SCALE renamed -> MISSING; C4 same name READ on the real tree + all 4 presets READ;
 C5 owner-file parser: planted line MISSING, ROGUESQ_FPS60 READ. 5/5 PASS.
 Result: doc 112/112, preset 4/4, bad=0. Only non-READ row: ROGUESQ_NAME (ALLOW, the `ROGUESQ_NAME=value` syntax placeholder).
-ROGUESQ_SRC_OPT / FUNCS_OPT read via CMakeLists.txt option(). -> H-clean; H-drift and H-runtime-built refuted for today's docs.
+ROGUESQ_SRC_OPT / FUNCS_OPT read via CMakeLists.txt option(). -> this selects H-clean and refutes H-drift and H-runtime-built for today's docs and presets.
 Gate: the sweep picks up tools/s7*_census.py with --controls automatically: 136 gates, 131 GREEN, 5 REPORT, 0 RED (was 130).
 Rules out: a documented opt-in that silently does nothing (by name). Not covered: whether the value syntax in the docs (e.g. 16:9,
 0.5) parses as documented; a name kept only inside a log format string would also pass.
