@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7693 (2026-11-20).
+Compact operational handoff, as of Session 7694 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7691: G6c owner proof + sheet refreshed on the s7690-parity binary; every arm rose vs s7688.** scratch/s7691_standins_proof.sh
+- **NEW s7694: G5c freeze gate re-holds on the post-G6c binary.** 900 s STANDINS=1 dd4 owner recipe L4 + L12 (tools/s7694_freeze_scan.py):
+  2/2 alive, 0 crash, vi_stalls30s=0, 0 present gaps / VI holds >= 250 ms after t=95 s; same-run SIGSTOP 400 ms control at t~695 s caught
+  in both (426/442 ms); only events are boot/route holds before t=95 s. Stand-ins add no freeze (spawns 304/107).
+- **s7691: G6c owner proof + sheet refreshed on the s7690-parity binary; every arm rose vs s7688.** scratch/s7691_standins_proof.sh
   (STANDINS=frame HOLD 150, 5/5 alive, 0 crash, 0 VI stall, gap <=148 ms, synthetic + sheet controls PASS 5/5). Window-1 flicker
   px/triplet (s7688): L1 dd2 677 (465), L1 dd4 936 (638), L4 dd2 879 (856), L4 dd4 3155 (2488); off windows 45/107/157/160.
   Same-binary control L4 dd4 PARITY=0: 2309, cluster med_fpx 1627 vs 2153, fix=0 vs 72 (second level for the s7690 gain).
@@ -30,24 +33,8 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   sheet docs/owner_sheet_s7690_frame_parity.jpg shows the far bunker back (ON-only). Causal control: a first build read the
   wrong frame word (0x80137764) and so forced every stand-in INTO the skip group -> 0 adds in 82 windows. STANDINS=1 (owner mode)
   calls every frame and was never affected; only frame-mode proofs/sheets (s7628, s7688) under-reported stand-ins.
-- **s7687: G6c position-fallback thread CLOSED; sub 0x0C itemless callers rejected too (H-neighbour).** L10 dd4 STANDINS_LOG:
-  110/110 0x0C position callers itemless (c30 == c34 = 0.25f/0.5f, 72 fresh caller states); ROGUESQ_S7687_POSSUB (default on in
-  STANDINS; =0 = s7686). Same-binary L10 pair: old 121 accepted vs fix 203/203 rejected, 0x14 control rejects in both, both alive, 0
-  crash/stall, handoff scorer rc 0. 0x24/0x2E (L5) have no pos callers and 0x46's one L0 caller is another sub (already rejected): kept.
-- **s7686: G6c itemless position callers rejected for subs 0x0D/0x14/0x1E/0x1F/0x47 too (H-neighbour again; H-self refuted, single
-  build, per-level runs + one same-binary pair).** L1/L4/L5 dd4 200 s STANDINS_LOG: 156/156 [s7685-pos] callers of these subs were itemless
-  with c30 == c34 a small float (0.5f for 0x0D/0x14/0x47, 0.125f 0x1F, 0.25f 0x1E) and ~1.5 lines per distinct caller state (fresh objects),
-  while their real objects hand off by item (0x14 L4 114 item vs 5 pos). ROGUESQ_S7686_POSSUB (default on in STANDINS; =0 = s7685) adds them
-  to the itemless-reject set. L4 pair, same binary: old 7 pos handoffs (0x0D 4, 0x14 2, 0x1E 1) vs fix 0 / 82 rejected, item handoffs
-  0x0D 2->7, 0x14 75->91 (fix arm's stand-ins get their real object instead of a projectile); both alive, 0 crash, 0 stall.
-  tools/s7686_pos_tally.py tallies the logs. Subs 0x0C/0x24/0x2E/0x46 logged no position callers on these levels (plain fallback kept).
-- **s7685: G6c position fallback handed TIE stand-ins to itemless neighbours (H-neighbour; H-self refuted, three two-arm L12 runs).**
-  [s7685-pos] (STANDINS_LOG) logs each 2-unit position match with the caller's table item (state+0x34, else +0x30). 29/30 callers of sub
-  0x12 tie_inter / 0x13 tie_bomber stand-ins had none (+0x30 = +0x34 = 0.25f, a new state every ~3 frames: objects spawned at the craft),
-  while those crafts match by item (31 logs: 118/49 item vs 10/14 pos). ROGUESQ_S7685_POSSUB (default on in STANDINS; =0 old) rejects a pos
-  match whose caller names a different sub, or is itemless for 0x12/0x13 and the ray-shield class. L12 dd4 200 s run3: old 5 pos handoffs,
-  fix 0 pos / 27 rejected / item 31 rsitem 10; all arms alive, 0 stall. Subs 0x0C/0x0D/0x14/0x1E/0x1F/0x24/0x2E/0x46/0x47 still use the
-  plain fallback, callers unclassified (next step).
+- **s7687/s7686/s7685: G6c position fallback rejects itemless neighbour callers** (subs 0x0C, 0x0D/0x14/0x1E/0x1F/0x47, 0x12/0x13 + ray-shield;
+  ROGUESQ_S7687/S7686/S7685_POSSUB default on in STANDINS, =0 old; same-binary pairs L10/L4/L12, 0 crash/stall; detail PORTING-STATE s7685-s7687).
 - **s7684: G6c ray-shield class (subs 0x33/0x36/0x44/0x4B/0x4F) now hands off by item, not by position (code read + two arms).**
   handleRayShieldedNpcDestroy init stores the DAT item at blk+0x34 (0x800E40F8) but passes state=blk+4 to addNpcToVisibilityBucket
   (0x800E4320), so the detector's state+0x34 read the radius (0x800E41D8); the item is at state+0x30. Fix in rs64_standins.cpp
@@ -196,7 +183,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   L10 (cloud). Holds: 16:9 L1/L5/L10 300 s (s7304) and **21:9 L1/L5 300 s (s7307 fold: 0 crash, 60/s, beyond-route
   3/1 s, ctl flat-30 176 s PASS)**. Cheaper per frame in both: same-soak L1 heaviest20 12.57 -> 9.69 ms (16:9),
   13.53 -> 9.40 ms (21:9). Default unchanged; owner judges the look (docs/OWNER-OPT-INS.md, sheets s7303/s7305/s7306, same-pose dd6/dd8/fog s7308).
-- **G5c freezes CLOSED (s7272-s7285):** 0 flight image holds >= 250 ms on quiet host, windowed, fullscreen, 900 s
+- **G5c freezes CLOSED (s7272-s7285; re-held s7694 on the post-G6c binary, STANDINS=1 L4/L12 900 s):** 0 flight image holds >= 250 ms on quiet host, windowed, fullscreen, 900 s
   L4/L12; every hold is a black death/restart or cutscene transition; off-window gaps are fb-relocation scene
   changes (s7284). Background CPU load IS a real freeze source and ROGUESQ_QOS_ALL=1 removes it (s7277-s7281;
   minimal set GUEST_QOS+PRESENT_QOS); GPU contention slows evenly, no freezes, CPU QoS cannot help (s7282-s7283).

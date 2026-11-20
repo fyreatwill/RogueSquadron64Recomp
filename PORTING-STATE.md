@@ -205156,3 +205156,25 @@ ORIGIN: not a mitigation — the failure was a missing gitignored input file, no
 Verdict: selects H-clean (every gate rc 0, no unclassified site from the G6c hooks); refutes H-new. Rules out a regression from the
 s7672-s7690 fixups in the do_break/trunc/shift/RG/HM/HP/RQ/DQ classes. Remaining witness logs live in scratch only (risk noted).
 Next: G6c stays owner-judged; NEXT.md.
+
+## Session 7694 (2026-11-20) — G5c freeze gate re-held on the post-G6c binary: STANDINS=1 dd4 900 s L4 + L12, 0 freezes after the route, same-run SIGSTOP control caught
+
+- Crash reports since 2026-11-13: 27 folded, 0 new. CURRENT-TRUTH 59698 B (< 60000, no maintenance).
+- Work unit (NEXT s7694): G5c gate on the binary carrying s7672-s7690 stand-in code. Hypotheses: H-clean (no present gap /
+  VI-origin hold >= 250 ms outside loads, as s7285) vs H-stall (a G6c spawn burst or handover adds a >250 ms frame).
+- Recipe: scratch/s7694/run.zsh -> tools/g1e_owner_quiet_arms.zsh HOLD=900, owner recipe (FPS60, dd4, 16:9, fullscreen, godmode,
+  NO_SAVE_WRITE) + ROGUESQ_STANDINS=1 STANDINS_LOG=1, FORCE_SAVE_MISSION=4 then 12. Host idle 9.4 h, AC, clk 0.95-0.97.
+  Positive control in the same run: SIGSTOP of the game for 400 ms at ~700 s after launch (epoch logged to ctl_wall).
+- New tool tools/s7694_freeze_scan.py: lists every present gap and VI-origin hold >= thr from a PRESENT_RING, relative t,
+  labels the event at the control time (epoch mapped to the ring's monotonic clock via ring mtime). Cross-checked against
+  tools/agent/ring_stalls.py on s7691 L4 (max_gap 148 both; boot vihold 17.25 vs 17.32 s).
+- Results (thr 250 ms):
+  - L4: alive_at_end=1, crashlines=0, vi_stalls30s=0, level_ok=1, standins on, 304 spawns. Events: boot vihold t=11 s 17.2 s,
+    route vihold t=66.8 s 309 ms, CTL gap t=695.2 s 426 ms. After t=95 s, non-control: 0.
+  - L12: same flags, 107 spawns. Events: boot 17.3 s, t=43.4 s 284 ms, t=66.7 s 340 ms (route/load), CTL gap t=695.2 s 442 ms.
+    After t=95 s, non-control: 0.
+  - ring_stalls max_gap_ms 426/442 = the control itself; without it the in-flight max is < 250 ms (thr 200 scan on L4: 5 events
+    after 95 s, all < 250 ms).
+- Selects H-clean: the G6c stand-in code (spawns, handover, parity regroup) adds no freeze >= 250 ms in 2 x 13.5 min of flight.
+  Two lines: two levels, plus ring_stalls agreeing on the same rings. Refutes H-stall for STANDINS=1 at dd4.
+- CURRENT-TRUTH: headline line added, G5c closed line notes the re-hold, s7685-s7687 bullets collapsed to one (58.0 KB).
