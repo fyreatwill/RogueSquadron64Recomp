@@ -205500,3 +205500,25 @@ with the sweep RED.
 
 ORIGIN: no mitigation added; these are census classification rows for env-gated diagnostics written by s7702/s7704/s7672 (our own
 instruments), no runtime code changed.
+
+## Session 7708 (2026-11-20) — loop.sh carries an unmet exit contract into the next iteration's prompt (CONTRACT-CARRY.md) + census-RED retry wording; test with mutation controls
+
+What ran:
+- crash_reports.py --since 2026-11-13: FOLDED=27, 0 NEW.
+- H-carry vs H-noise (NEXT s7708): loop.log 940903-942534 shows every s7702-s7706 retry got the census-RED verdict text, but the
+  retry prompt also says "Checkpoint close-out is ACCEPTABLE ... do not finish a large work unit", so the retries checkpointed, the
+  loop logged "contract still unmet after 2 retries" and the next full iteration started with no signal. Both hypotheses hold in
+  part: the verdict reached the retries (H-noise), but the retries were told not to fix it, and the next iteration never saw it
+  (H-carry). Fixed both:
+  (1) tools/agent/loop.sh: new functions contract_carry_write / contract_carry_clear / build_prompt_file. After the final
+      --verify, an unmet contract (retry cap OR a provider-limit break) writes scratch/agent/CONTRACT-CARRY.md with the fresh
+      verdict; build_prompt_file prepends it (before any rule-8 PIVOT.md) to ITERATION.md; a passing gate deletes it.
+  (2) Retry prompt: when the verdict contains "census gates RED" it adds an EXCEPTION section: a close-out does not clear it,
+      classify the flagged sites and re-run the sweep to 0 RED.
+- New tools/agent/test_contract_carry.sh: runs loop.sh's own functions against a fake stop_gate (fails twice, then passes):
+  8/8 PASS (no carry on iter 1, carry written with the verdict, carry heads iter 2's prompt, carry before pivot, removed after a
+  pass, plain prompt again, wiring order in loop.sh). Mutation controls in the same session: prepend dropped -> 2 FAIL, write
+  dropped -> FAIL. Neighbour tests test_soak_idle_gate / test_crash_reports_gate still PASS; bash -n loop.sh OK.
+- Gate sweep `python3 tools/s7651_gate_sweep.py --jobs 2`: 135 gates, 130 GREEN, 5 REPORT, 0 RED (17 s warm).
+Rules out: "the retries never saw the verdict" (they did). Not yet seen live: the first real carry fires only on the next unmet
+contract (grep loop.log for "unmet-contract carry preamble").

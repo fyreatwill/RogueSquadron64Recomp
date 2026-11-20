@@ -242,6 +242,36 @@ try_unblock() {
   return 0
 }
 
+# s7708: an exit contract still unmet after MAX_CONTRACT_RETRIES used to
+# vanish - the retries are told to checkpoint, not to fix, and the next
+# iteration started with no signal (census sweep stayed RED s7702-s7706).
+# contract_carry_write saves the verdict; build_prompt_file prepends it (and a
+# rule-8 PIVOT.md) to ITERATION.md; contract_carry_clear drops it once the gate
+# passes. Kept as functions so tools/agent/test_contract_carry.sh can run them.
+contract_carry_write() {
+  { echo "## Unmet contract from the previous iteration (fix FIRST)"
+    echo "Written by loop.sh $(date): stop_gate.sh --verify still failed after"
+    echo "the contract retries. Fixing this outranks NEXT.md; it is deleted"
+    echo "automatically once stop_gate.sh --verify passes."
+    echo
+    printf '%s\n' "$1"
+    echo; } > "$AG/CONTRACT-CARRY.md"
+}
+contract_carry_clear() { rm -f "$AG/CONTRACT-CARRY.md"; }
+build_prompt_file() {
+  # A rule-8 forced pivot (written after 3 consecutive non-ADVANCED iterations
+  # on one HYPOTHESIS-ID) rides in as a preamble on the standard prompt.
+  prompt_file=tools/agent/ITERATION.md
+  local pre=""
+  [ -s "$AG/CONTRACT-CARRY.md" ] && { pre="$pre $AG/CONTRACT-CARRY.md"; log "unmet-contract carry preamble active this iteration"; }
+  [ -s "$AG/PIVOT.md" ] && { pre="$pre $AG/PIVOT.md"; log "rule-8 pivot preamble active this iteration"; }
+  if [ -n "$pre" ]; then
+    # shellcheck disable=SC2086
+    cat $pre tools/agent/ITERATION.md > "$AG/ITERATION_WITH_PIVOT.md"
+    prompt_file="$AG/ITERATION_WITH_PIVOT.md"
+  fi
+}
+
 notify_blocked() {
   osascript -e 'display notification "RS64 agent blocked - see scratch/agent/BLOCKED.md" with title "RS64 loop"' 2>/dev/null
   log "BLOCKED - fix it, delete $AG/BLOCKED.md, rerun."
@@ -478,14 +508,7 @@ while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
   iter_start_head="$(git rev-parse HEAD 2>/dev/null)"
   printf '%s\n' "$iter_start_head" > "$AG/ITER_START_HEAD"
 
-  # A rule-8 forced pivot (written after 3 consecutive non-ADVANCED iterations
-  # on one HYPOTHESIS-ID) rides in as a preamble on the standard prompt.
-  prompt_file=tools/agent/ITERATION.md
-  if [ -s "$AG/PIVOT.md" ]; then
-    cat "$AG/PIVOT.md" tools/agent/ITERATION.md > "$AG/ITERATION_WITH_PIVOT.md"
-    prompt_file="$AG/ITERATION_WITH_PIVOT.md"
-    log "rule-8 pivot preamble active this iteration"
-  fi
+  build_prompt_file
   if [ "$RUNNER_ROTATE" = 1 ]; then
     pick_runner
     export RUNNER="$CUR_RUNNER"
@@ -710,6 +733,15 @@ else:
       echo "RESUME instruction (what ran, what artifacts exist, exact next"
       echo "command), commit, and write DONE to scratch/agent/STATUS with"
       echo "OUTCOME=ADVANCED if any artifact/knowledge landed, else SUBSTITUTED."
+      if printf '%s' "$verdict" | grep -q 'census gates RED'; then
+        # s7708: s7702-s7706 retries checkpointed and left the sweep RED;
+        # a close-out can never satisfy this condition.
+        echo
+        echo "## EXCEPTION: this verdict is a census-gate RED"
+        echo "A checkpoint close-out does NOT clear it. Read the RED gates' flagged"
+        echo "sites, classify each (add a census rule/table row, or fix the code),"
+        echo "re-run python3 tools/s7651_gate_sweep.py --jobs 2 until 0 RED, commit."
+      fi
     } > "$AG/RETRY_PROMPT.md"
     # Retries fall back to the claude runner: grok runs the Stop hook and aborts
     # the whole turn on a block (observed as stopReason=Cancelled after ~3
@@ -755,6 +787,10 @@ else:
   if [ "$contract_ok" != "1" ] && tools/agent/stop_gate.sh --verify >/dev/null 2>&1; then
     contract_ok=1
   fi
+  # s7708: carry the verdict into the next prompt on EVERY unmet exit (retry
+  # cap or a limit break), and drop the carry once the gate passes.
+  if [ "$contract_ok" = "1" ]; then contract_carry_clear
+  else contract_carry_write "$(tools/agent/stop_gate.sh --verify 2>&1)"; fi
 
   status="$(tr -d '[:space:]' < "$AG/STATUS" 2>/dev/null)"
   # Ground truth, not narrative: whatever "## Session NNN" headings this

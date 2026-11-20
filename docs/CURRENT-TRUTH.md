@@ -335,6 +335,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     standins s_cut_prev edge static were unclassified in 13 gates. stop_gate --verify DID block s7702-s7706, but loop.sh moves on after
     MAX_CONTRACT_RETRIES=2 and nobody re-ran the sweep. Rows: census_rules.py (2), s7533/s7542/s7550/s7600/s7601/s7611/s7613 tables.
     Now 130 GREEN / 5 REPORT / 0 RED. Rule: ANY new src/ or lib/ instrument file -> run the sweep before committing.
+    FIXED s7708: loop.sh now writes scratch/agent/CONTRACT-CARRY.md whenever the contract is still unmet after the retries
+    and prepends it ("Unmet contract from the previous iteration (fix FIRST)") to the next prompt; deleted once --verify passes.
+    Retry prompts for a census-RED verdict now say a checkpoint close-out does not clear it. Test tools/agent/test_contract_carry.sh
+    (8/8; mutation controls: no prepend -> 2 FAIL, no write -> FAIL). If CONTRACT-CARRY.md heads your prompt, fix it before NEXT.md.
 
 ## Evidence index
 
