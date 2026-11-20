@@ -205253,3 +205253,28 @@ VERDICT: selects H-absent; refutes H-drawn-ok / H-drawn-wrong for mission intro 
   New tools/agent/test_soak_verdict_fields.sh: 16/16 incl. the two real logs; mutation control (old parser via git stash) 9/16;
   tools/agent/test_soak_idle_gate.sh still 0 FAIL (verdict prefix format unchanged; alive_na appended after stall_na).
 - Rules out: a death in the s7696 replicate soaks (the alive=0/1 was a parser artefact).
+
+## Session 7698 (2026-11-20) — G5h: the s6908 intro pool floor still acts on the post-G6c binary, same-run toggle: kept nodes 3024 vs 2014 (L1 dd4) and 1226 vs 897 (L4 dd2); visible on L4 dd2, invisible on L1 dd4
+
+HYPOTHESIS-ID: post-g6c-owner-wait-s7698. crash_reports --since 2026-11-13: new=0 (27 folded). CURRENT-TRUTH 59452 B < 60000, no maintenance.
+NEXT proposed counting intro background loss dd2/dd4 vs dd1 on L1/L4, but s6908 already did that and landed the fix (ROGUESQ_DD_POOLMIN floor
+4096 at dd>1). Done instead: re-hold that fix on the current binary (every default-on lever since s6908, incl. G6c, is in it) with its own
+same-run control, so no cross-run A/B is needed.
+Hypotheses: H-holds (floor still widens the intro terrain stream and the picture), H-inert (later changes made the floor a no-op, e.g. another
+clamp now binds first), H-invisible (stream widens but no pixel changes).
+New tools: tools/s7698_poolmin_rehold.zsh (s7696 route, FPS60 16:9 dd$DD, STANDINS=0, ROGUESQ_DD_POOLMIN_TOG=1 = old cap on odd mach seconds,
+G3E trace, fb dump every EV swaps, owner save cmp-checked); tools/s7698_kept_split.py (trace site-4 kept nodes in the intro swap range,
+split by mach-second parity; swap -> wall from dump mtimes, wall -> mach via the live offset, calls within 0.12 s of a flip dropped);
+tools/s7698_flip_pairs.py (consecutive intro dumps, band luminance diff, pairs straddling a flip vs within one arm);
+tools/s7698_poolmin_phase.py (bottom-45% stddev / sky fraction split by arm, intro vs flight where the toggle cannot act).
+| run | [poolx] intro cap | kept p50 floor / old (calls) | window p50 | ground diff straddle / within | bottom std arms intro (flight) |
+|---|---|---|---|---|---|
+| L1 dd4 r2 | 600 -> 4096 (old 2400) | 3024 / 2014 (470/492) | 4096 / 2368 | 18.8 / 19.0 (n 21/64) | 38.5 vs 39.2 (33.1 vs 33.1) |
+| L1 dd4 r1 (no trace) | same | - | - | 18.5 / 18.4 | 37.8 vs 39.8 (33.2 vs 33.2) |
+| L4 dd2 | 600 -> 4096 (old 1200) | 1226 / 897 (384/371) | 2304 / 1188 | 13.6 / 9.8 (n 17/149) | 25.4 vs 30.1 (31.8 vs 32.0) |
+First try fitted the toggle phase from the pixels (max |arm diff|, 2.08 vs median-phase 0.57): too weak, replaced by the mach-clock phase.
+Controls: the kept-node split is the stream-level positive control (both levels); L4 dd2 is the pixel-level positive control (flip pairs +39%
+ground diff, intro stddev split 4.7 vs flight 0.2 in the same run). 3/3 runs alive, 0 crash, save unchanged. Dumps deleted (2.7 GB), logs +
+traces kept in scratch/s7698.
+Selects H-holds for the stream on both levels and for the picture on L4 dd2; L1 dd4 is H-invisible (the extra ~1000 nodes are outside the
+shots). Refutes H-inert. Single-run per level; L5 and outros not run. G5h still closes on the owner's look.

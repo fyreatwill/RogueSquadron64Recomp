@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7697 (2026-11-20).
+Compact operational handoff, as of Session 7698 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,8 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7697: H-absent replicated on L1 and L4** (soaks s7696_cut_L1/L4): pre_in_cine=0 with cineBody line present, flight_secs_ge50 151/154, alive=1 crash=0, save unchanged -> stand-ins get 0 hook calls in intro cutscenes on 3/3 levels (L1/L4/L5). The loop verdict had read these arms as alive=0/1: tools/agent/soak_verdict_fields.sh only knew alive_at_end=/crashlines=, so recipes printing alive=/crash= (s7678/s7695/s7696) were scored dead. Fixed (class DN): aliases + `alive_na=` at line end; tools/agent/test_soak_verdict_fields.sh 16/16, old parser 9/16 (mutation ctl), test_soak_idle_gate 0 FAIL.
+- **NEW s7698: G5h s6908 intro pool floor re-holds on the post-G6c binary** (tools/s7698_poolmin_rehold.zsh, same-run ROGUESQ_DD_POOLMIN_TOG=1, owner recipe, STANDINS=0). Kept nodes in the intro, floor vs old cap: L1 dd4 3024 vs 2014, L4 dd2 1226 vs 897 (tools/s7698_kept_split.py). Pixels: L4 dd2 flip-straddling dump pairs ground diff p50 13.6 vs 9.8 within-arm, bottom stddev split 4.7 intro vs 0.2 flight (sensitive); L1 dd4 straddle = within (18.8 vs 19.0): its extra cells never reach the frame. 3/3 runs alive, save unchanged.
+- **s7697: H-absent replicated on L1/L4** (stand-ins 0 hook calls in intro cutscenes, 3/3 levels); soak verdicts now read alive=/crash= aliases (+alive_na=).
 - **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
   + STANDINS=frame dd4). The intro plays through cinematicLoopBody (a0=5), and the runInMissionFrame hook gets 0 calls until the
   flight rebuild ([standins-pre] census: 0 lines during the cutscene, 57-62 calls/s in flight; flight dump sheet med_fpx 79, control
