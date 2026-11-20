@@ -1,17 +1,14 @@
-# NEXT (s7690)
-HYPOTHESIS-ID: g6c-pair-partner-cull
+# NEXT (s7691)
+HYPOTHESIS-ID: g6c-owner-sheet-s7690
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7689: the L1 dd2 bunker loss is not the handover knobs, not the route, not the scorer, not frame-parity aliasing. Items that pass the
-add test flip between runs at pair granularity (sub 0x14 pairs 803CEB08/CEBC4, CEC80/CED3C, CEDF8/CEEB4; old vs new same-run arms
-differ on 10/34 items). The never-added partner is culled every frame.
-Hypotheses: H-variant (the pair is one object per difficulty/variant; build_state reads a per-run field so one partner gets a bad
-position/scale) vs H-coloc (partners share a position; the game's bucket/view test keeps only one per spot, order decides) vs
-H-viewexit (the culled partner fails a specific view-test exit, e.g. far or behind, because its state differs).
-Discriminator, ONE build, ONE run (L1 dd2 STANDINS=frame, copy scratch/s7689_handoff_ab.sh, one arm, HOLD 150): at stand-in build log
-per item: sub, state pos xyz, scale, model name, item +0x6C..+0x78 (hp per difficulty), item flags; and per item a view-test exit
-tally (vt_class of every culled submit, not just held). Join with par= adds:
-  - partners have different pos/scale and the culled one is off (zero / far) -> H-variant; fix build_state.
-  - same pos/scale, culled one fails at a bucket/link step not the view test -> H-coloc.
-  - same pos, culled one fails a view exit -> H-viewexit; read that exit.
-One game at a time, SIGKILL only, <=2 CPU-heavy jobs, screen unlocked. Default STANDINS stays off; owner judges the look.
+s7690 fixed STANDINS=frame mode (ROGUESQ_S7690_PARITY, default on): half the stand-ins were never re-tested by the game's
+two-frame view-test slice, so every frame-mode proof/sheet before s7690 (s7628, s7688) under-reported stand-ins.
+Work unit: refresh the G6c owner proof + sheet on the fixed binary, same recipe as s7688 (scratch/s7688_standins_proof.sh:
+L1 dd2, L1 dd4, L4 dd2, L4 dd4, STANDINS=frame HOLD 150), plus ROGUESQ_S7690_PARITY=0 as an in-run control arm on ONE of
+them (L4 dd4) so the gain is shown same-binary on a second level.
+Expected: window-1 flicker px/triplet and early items rise vs s7688 (465/638/856/2488) on every arm; window-2 off controls
+unchanged (~44/104/154/207); synthetic control PASS. If an arm does NOT rise, its stand-ins were all in the tested group by
+luck: check [s7690-par] fix counts (tools/s7690_par_tally.py) before calling it.
+Then: replace the OWNER-OPT-INS sheet pointer with the refreshed cluster sheet. Default STANDINS stays off; owner judges.
+One game at a time, SIGKILL only, <=2 CPU-heavy jobs, screen unlocked.

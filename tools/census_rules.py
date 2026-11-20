@@ -91,7 +91,7 @@ RULES = [
      "entries behind rs64_s7535_on (ROGUESQ_S7535_GA_CHK)"),
     ("src/rsp/s7644_rspdma.cpp", "*", None, "G", [(None, r'getenv\("ROGUESQ_S7644_RSPDMA"\)')], "ROGUESQ_S7644_RSPDMA; gsum is a log row"),
     # --- G6c stand-ins (opt-in ROGUESQ_STANDINS)
-    (SI, "rs64_bk_ret", "dy + dz", "FLT", [(None, r"const float dx = rf\(rdram, s\.state\) - x, dy = rf\(rdram, s\.state \+ 4u\) - y, dz")],
+    (SI, "bk_ret_impl", "dy + dz", "FLT", [(None, r"const float dx = rf\(rdram, s\.state\) - x, dy = rf\(rdram, s\.state \+ 4u\) - y, dz")],
      "s7672 handoff: float squared distance between stand-in and real object (dx/dy/dz are const float)"),
     (SI, "find_model", "(sum % 25u) * 2u", "K", [(None, r'getenv\("ROGUESQ_STANDINS"\)')], "hash index < 25 halfwords into the game's 25-entry model hash"),
     (SI, "build_state", "rf(rdram, item + 0x28u) / rf(rdram, model + 0x34u)", "FLT", [(None, r'getenv\("ROGUESQ_STANDINS"\)')],

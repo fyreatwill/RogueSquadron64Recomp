@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7689 (2026-11-19).
+Compact operational handoff, as of Session 7690 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,7 +12,18 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7689: L1 dd2 bunker loss is NOT a s7672-s7687 handover change and NOT a different flight path (same-run arms + log join).**
+- **NEW s7690: G6c "pair partner" loss ROOT-CAUSED and FIXED: STANDINS=frame starved the game's two-frame view-test slice.**
+  addNpcToVisibilityBucket (0x80057C8C) tests each instance on alternate frames: on odd *0x8013889C an instance with inst+8 flag
+  0x80 reuses its cached 0x200 bit, on even frames one with 0x100 does; the group is set at the first call by balancing
+  0x801394E2/E4, so neighbouring stand-ins alternate groups and which gets which varies per run. STANDINS=frame calls only on
+  alternate frames, so half the stand-ins were tested once and kept that (culled) result for good: the odd-index partner, si_novt,
+  the s7689 per-run flip. ROGUESQ_S7690_PARITY (default on, frame mode only; =0 old) regroups the instance to the group tested this
+  frame. Same binary L1 dd2 HOLD 150 (scratch/s7690_parity_ab.sh, 2/2 alive, 0 stall, controls PASS): adds 6816 vs 3425, never
+  added before spawn 13/34 vs 21/34, CEBC4/CED3C 208/220 vs 0/0 adds, flicker 681 vs 454 px/triplet, cluster med_fpx 175 vs 0;
+  sheet docs/owner_sheet_s7690_frame_parity.jpg shows the far bunker back (ON-only). Causal control: a first build read the
+  wrong frame word (0x80137764) and so forced every stand-in INTO the skip group -> 0 adds in 82 windows. STANDINS=1 (owner mode)
+  calls every frame and was never affected; only frame-mode proofs/sheets (s7628, s7688) under-reported stand-ins.
+- **s7689: L1 dd2 bunker loss is NOT a s7672-s7687 handover change and NOT a different flight path (same-run arms + log join).**
   scratch/s7689_handoff_ab.sh, L1 dd2 STANDINS=frame HOLD 150, same binary: new vs all six knobs =0 -> flicker 465/456 px/triplet, med_fpx
   0/0, controls PASS, 2/2 alive 0 stall. [standins-spawn] times match s7628 to 10 ms (same path); today's sheet scorer on the archived
   s7628 frames still gives med_fpx 153 (scorer unchanged). Correction to s7688: the bunker is ABSENT from both frames now, not present

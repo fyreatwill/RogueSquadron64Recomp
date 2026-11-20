@@ -205053,3 +205053,43 @@ HYPOTHESIS-ID: g6c-l1-bunker-handoff
 - Discrimination: the same-run new/old pair refutes H-handoff, the s7628 spawn-time join refutes H-path, and the par= split refutes
   H-phase. Next discriminator (NEXT.md, slug g6c-pair-partner-cull): log each stand-in's built state and the view-test exit class of
   every culled submit, then compare the two partners of a pair. H-variant, H-coloc and H-viewexit each predict a different result.
+
+## Session 7690 (2026-11-19) — G6c pair-partner loss root-caused: STANDINS=frame starved the game's two-frame view-test slice; fixed (ROGUESQ_S7690_PARITY)
+
+No new crash reports (crash_reports FOLDED=27 new=0). Work unit: NEXT g6c-pair-partner-cull (H-variant / H-coloc / H-viewexit).
+
+Offline first: the s7689 logs already showed the never-added partner is always odd=1 (index parity) with every held call
+si_novt (no view test ran), so addNpcToVisibilityBucket rejects it before the view test. Code read of 0x80057C8C (funcs_12.c):
+the view test is sliced over two frames. lui 0x8014 / lw -0x7764 = *0x8013889C (game frame counter) & 1: odd -> an instance whose
+inst+8 has 0x80 jumps to L_80057E74 and reuses the cached 0x200 visible bit; even -> one with 0x100 does. An unassigned instance
+(0x180 == 0) is put in the smaller group by comparing counters 0x801394E2 / 0x801394E4 and tested at once. Consecutive stand-ins
+therefore alternate groups, and the starting balance (which depends on the real objects already assigned) decides which partner
+gets which -> the per-run flip. STANDINS=frame calls only on alternate submit calls (one game-frame parity), so one group was
+tested once at its first call and then always read its stale cached bit. All three NEXT hypotheses were wrong: not the item data,
+not co-location, not a view exit, but a view test that never ran (H-slice). It matches s7689's "H-phase refuted": STANDINS=1 calls
+every frame, so both groups are tested.
+
+Fix (src/main/rs64_standins.cpp): in frame mode, before our bucket call, if inst+8 & 0x180 is the group that skips this frame,
+regroup it to the one that is tested (odd -> 0x100, even -> 0x80); counters untouched. ROGUESQ_S7690_PARITY=0 = old (mismatches
+still counted). New log: [s7690-par] per stand-in at 120 tries (grp, mism, fix, adds) and [s7690-pt] run totals per second, under
+STANDINS_LOG; tools/s7690_par_tally.py tallies them.
+
+Run 1 (wrong address, kept in scratch/s7690_wrongaddr/): my first build read 0x80137764 (bad arithmetic for -0x7764), so the
+"fix" moved every stand-in INTO the skip group: new arm 0 adds in 82 windows vs old 3435. Not a result for the fix, but a causal
+positive control for the mechanism: forcing the skip group alone removes every stand-in draw.
+
+Run 2 (0x8013889C, scratch/s7690_parity_ab.sh, L1 dd2 STANDINS=frame HOLD 150, same binary, new vs PARITY=0): 2/2 alive, 0 crash,
+vi_stalls30s=0, flicker synthetic control PASS both, sheet control PASS both.
+  - adds total 6816 vs 3425; never added before spawn 13/34 vs 21/34; old arm skip-group items mism=119/120 (tested once).
+  - sub 0x14 pairs: CEB08/CEBC4 207/208 vs 197/0 adds, CEC80/CED3C 228/220 vs 216/0.
+  - flicker window 1 680.6 vs 454.0 px/triplet (window-2 off controls 44.6/44.4).
+  - cluster sheet med_fpx 175 vs 0; top crops show the far bunker on stand-in frames only (magenta), old arm crops land on
+    near-ground specks. docs/owner_sheet_s7690_frame_parity.jpg.
+Two lines (per-item add log + pixels). ORIGIN: the cached-cull state is written by the game's own slice assignment
+(0x80057D54/0x80057DD8 sh flags | 0x80 / 0x100 into inst+8) on our stand-in instance; legitimate for an object drawn every
+frame, wrong for our alternate-frame calls. Owner impact: STANDINS=1 never affected; frame-mode proofs/sheets (s7628, s7688,
+s7689) under-reported stand-ins by about half. The s7688 "L1 dd2 med_fpx 0" regression is explained, not a regression.
+Rules out: H-variant, H-coloc, H-viewexit, and any s7672-s7687 handover cause for the bunker.
+Gate sweep (135 gates, controls PASS): one new RED, s7599_gr_census OPEN src/main/rs64_standins.cpp s_pseen (s7685's log-dedupe set,
+not this session's code). It is bounded (insert only while size() < 2000, STANDINS_LOG-gated); row added -> GR CLOSED, controls pass.
+Also committed the pending s7689 census_rules.py rename (rs64_bk_ret -> bk_ret_impl).

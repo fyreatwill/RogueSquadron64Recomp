@@ -94,9 +94,12 @@ struct Standin {
     // s7679: min camera-space distance over ACCEPTED stand-in draws (any phase), and the add count, for the per-generation life table
     double add_dmin = -1.0; uint32_t adds = 0;
     bool released = false;  // s7679 near release: hold dropped because the stand-in came nearer than any real object's first draw
+    // s7690: calls whose instance slice group (inst+8 & 0x180) would reuse the cached cull bit this game frame; fixed = regrouped
+    uint32_t par_mism = 0, par_fix = 0; bool par_logged = false;
 };
 
 uint32_t s_dat = 0;
+uint32_t s_par_mism = 0, s_par_fix = 0;  // s7690 run totals
 std::vector<Standin> s_standins;
 
 bool names_in_item(uint16_t sub) {
@@ -744,6 +747,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu farmul=%g faron=%u tog=%d\n",
                      s_t.frames, s_t.onframes, s_t.submits, s_t.added, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(), (double)rs64_vt_farmul, s_t.faron,
                      m == 2 ? (int)(((long long)s_t0) & 1) ^ 1 : -1);  // tog=1: the window just logged was an on second
+        std::fprintf(stderr, "[s7690-pt] mism=%u fix=%u\n", s_par_mism, s_par_fix);
         s_t = Tally{};
         s_t0 = std::floor(now);
     }
@@ -906,6 +910,20 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         if (far_on && s_far < 0) ++s_t.faron;
         rs64_vt_on = s_log ? 3 : (s_near != 0 ? 2 : 0);  // s7679: bit 2 = depth only (no tally), so the near release works without logging
         rs64_vt_lastd = -1.0;
+        // s7690: addNpcToVisibilityBucket slices its view test over two frames. On odd game frames (*0x8013889C & 1, lui 0x8014 / lw -0x7764) an instance with
+        // flag 0x80 skips the test and reuses its cached 0x200 bit, on even frames one with 0x100 does; the group is assigned at the
+        // first call by balancing 0x801394E2/E4, so neighbouring stand-ins alternate groups and which one gets which varies per run.
+        // STANDINS=frame calls only on alternate frames, so half the stand-ins were never re-tested and kept their first (culled)
+        // result for good (s7689 "pair partner" loss: odd index, si_novt). In frame mode put the instance in the group that is
+        // tested this frame. ROGUESQ_S7690_PARITY=0 = old behaviour (same-run control: mismatches still counted).
+        static const bool s_par7690 = [] { const char* e = std::getenv("ROGUESQ_S7690_PARITY"); return !(e && *e == '0'); }();
+        {
+            const uint16_t f8 = rh(rdram, s.inst + 8u);
+            const uint16_t want = (rw(rdram, 0x8013889Cu) & 1u) ? 0x100u : 0x80u;
+            const bool mism = (f8 & 0x180u) != 0 && (f8 & 0x180u) != want;
+            if (mism) { ++s.par_mism; ++s_par_mism; }
+            if (m == 3 && s_par7690 && mism) { wh(rdram, s.inst + 8u, (uint16_t)((f8 & ~0x180u) | want)); ++s.par_fix; ++s_par_fix; }
+        }
         rs64_bk_self = 1;
         const uint32_t add_v0 = mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0;
         rs64_bk_self = 0;
@@ -923,6 +941,11 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         rs64_vt_on = s_log ? 2 : 0;
         rs64_vt_farmul = 1.0f;
         ++s.par_try[s_calls & 1u];
+        if (s_log && !s.par_logged && s.par_try[0] + s.par_try[1] >= 120) {
+            s.par_logged = true;
+            std::fprintf(stderr, "[s7690-par] item %08X sub %04X idx=%u grp=%03X mism=%u fix=%u tries=%u adds=%u\n", s.item, (unsigned)s.sub, s.idx,
+                         (unsigned)(rh(rdram, s.inst + 8u) & 0x180u), s.par_mism, s.par_fix, s.par_try[0] + s.par_try[1], s.par_add[0] + s.par_add[1] + (add_v0 == 1 ? 1u : 0u));
+        }
         if (add_v0 == 1) ++s.par_add[s_calls & 1u];
         reason(s, add_v0 == 1 ? 0 : 1);
         if (add_v0 == 1) {
