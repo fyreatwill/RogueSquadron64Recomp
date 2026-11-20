@@ -38,7 +38,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
 - **s7660/s7661:** title plume si_addr=0x58 CLOSED (0/76 boots); lldb attach works in loop sessions (preflight tools/lldb_attach_check.sh;
   never LAUNCH the game under lldb, s7616).
 - **s7647-s7659 (census-gate sweep + classes TS-4/MK8): ALL CLOSED, 0 behaviour defects** (archive "(s7662 maintenance)"). Standing
-  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 130 GREEN, 5 REPORT, 0 RED; stop_gate blocks RED.
+  check: `python3 tools/s7651_gate_sweep.py` (--jobs 2; cold ~455-530 s, warm ~15 s) -> 131 GREEN (s7710), 5 REPORT, 0 RED; stop_gate blocks RED.
   Key reviews by text anchor, never line number. NEEDS-INPUT gates use retained inputs under scratch/s7215, s7316/ram, s7573/retained.
   All s7617-s7702 bullets verbatim in PROJECT-OVERVIEW "(s7703 maintenance)".
 - **s7579-s7616 host-side idiom-class audits: ALL CLOSED** (full text, numbers, controls, tool flags verbatim in
@@ -343,6 +343,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     rc 1 on any FAIL). stop_gate --verify runs it when the iteration's commits touch tools/agent/*.sh|*.py and blocks "agent tool
     tests FAIL: <names>" (RS64_AGENT_TESTS=0 skips). Test tools/agent/test_agent_tests_gate.sh 3/3 (red/green/untouched) + 2 mutation
     controls (trigger disabled, runner ignores rc -> red FAILs). All 7 pre-existing tests were already green (H-green).
+
+29. **Owner-setting census s7710: CLEAN (H-clean, controls 5/5).** Every ROGUESQ_* name in OWNER-OPT-INS.md + README (112) and the
+    --preset table (4) is read by code (quoted in src/, lib/rt64/src, lib/N64ModernRuntime or a fixup/apply script; CMake option()
+    for SRC_OPT/FUNCS_OPT); ROGUESQ_NAME is the allow-listed syntax placeholder. build/settings.txt is checked too when present.
+    `python3 tools/s7710_optins_census.py --controls` is in the gate sweep (now 136 gates, 131 GREEN): a doc row for a setting the
+    code no longer reads goes RED. Limit: "read" = quoted string, so a name kept only in a log format would pass.
 
 ## Evidence index
 

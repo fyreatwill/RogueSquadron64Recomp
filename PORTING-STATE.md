@@ -205545,3 +205545,24 @@ Rules out: a currently-broken agent tool test (all green). Next: G-rung / owner 
   that test's inner stop_gate, so its red arm allowed. Fix: run_tests.sh unsets RS64_GATE_SWEEP/_ONLY, RS64_CRASH_REPORTS/_DIR,
   RS64_AGENT_TESTS_DIR, RS64_SKIP_STOP_HOOK before the tests (env RS64_GATE_SWEEP=0 RS64_CRASH_REPORTS=0 run_tests -> 8/8).
   Positive datum for the new gate: it caught a real defect in its first live run.
+
+## Session 7710 (2026-11-20) — owner-setting census: all 112 documented ROGUESQ_* names and the 4 preset names are read by code (controls 5/5); census added to the gate sweep
+
+Work unit chosen: every ladder rung is closed or waits on the owner's look/hands (CURRENT-TRUTH Next steps 2-9, 20, 22), crash
+reports gate: FOLDED=27 new=0, no CONTRACT-CARRY.md, submodule-patches byte-identical to the live lib/ diffs (all 5 SAME). So a
+bounded owner-facing check: a setting the owner types that no code reads silently does nothing, and nothing guarded that.
+
+Hypotheses: H-clean (every documented name is read), H-drift (some doc/preset name was renamed or removed in code, e.g. by an
+audit's =0 lever rename), H-runtime-built (names assembled at run time from a prefix, unprovable by grep).
+Discriminator: tools/s7710_optins_census.py. Names from docs/OWNER-OPT-INS.md + README.md (every token), the presets() table in
+src/main/rs64_settings.cpp, and build/settings.txt if present (absent today). READ = quoted "ROGUESQ_X" in src/, lib/rt64/src,
+lib/N64ModernRuntime or tools/fixup_*/apply_*.py (they inject C), excluding rs64_settings.cpp for preset names (no self-witness),
+or a CMake option(). PREFIX (only a shorter read prefix matches) counts as bad.
+Controls (same run, --controls): C1 planted doc name -> MISSING; C2 planted preset pair -> MISSING (the table is not its own
+witness); C3 every reader of ROGUESQ_RUMBLE_SCALE renamed -> MISSING; C4 same name READ on the real tree + all 4 presets READ;
+C5 owner-file parser: planted line MISSING, ROGUESQ_FPS60 READ. 5/5 PASS.
+Result: doc 112/112, preset 4/4, bad=0. Only non-READ row: ROGUESQ_NAME (ALLOW, the `ROGUESQ_NAME=value` syntax placeholder).
+ROGUESQ_SRC_OPT / FUNCS_OPT read via CMakeLists.txt option(). -> H-clean; H-drift and H-runtime-built refuted for today's docs.
+Gate: the sweep picks up tools/s7*_census.py with --controls automatically: 136 gates, 131 GREEN, 5 REPORT, 0 RED (was 130).
+Rules out: a documented opt-in that silently does nothing (by name). Not covered: whether the value syntax in the docs (e.g. 16:9,
+0.5) parses as documented; a name kept only inside a log format string would also pass.
