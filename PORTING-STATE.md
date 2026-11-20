@@ -205204,3 +205204,36 @@ Rules out: H-regress-audio (control fires 1037 vs fix 2, same run), H-standins-c
 on/off). Selects H-holds. No code change to stand-ins: the measured state needs no extra scene gate. 2/2 crawl arms and 2/2 boot arms
 alive, 0 crash.
 VERDICT: selects H-holds; refutes H-regress-audio and H-standins-cine.
+
+## Session 7696 (2026-11-20) — G5h x G6c: stand-ins never run in a mission intro cutscene; the intro plays through cinematicLoopBody, not runInMissionFrame
+
+No new crash report (crash_reports FOLDED=27 new=0); CURRENT-TRUTH 58.6 KB (< 60000, no maintenance). Unit from NEXT s7696: do the
+G6c far-object stand-ins appear in mission intro/outro cutscenes, and do they look right there?
+Hypotheses: H-absent (the cutscene path never reaches the runInMissionFrame 0x800FAC68 hook), H-drawn-ok, H-drawn-wrong (stand-ins at
+the wrong place for the cutscene camera).
+Instrument (one build, src/main/rs64_standins.cpp, all behind ROGUESQ_STANDINS_LOG / opt-in): `[standins-s]` gains cut=/cutadded=
+(frames / adds with the cutscene byte 0x80130B39 set); `[standins-cut]` edge lines; `[standins-pre]` pre-gate census, one line per
+second with any hook call (calls, nodat, cut, level, frame), placed before the DAT/rebuild gates so a scene the hook never reaches
+shows as a gap; ROGUESQ_STANDINS_DUMP=c<a>:<b>:<n> anchors the dump windows on the first cutscene edge. New tool
+tools/s7696_cut_standins.zsh (FORCE_SAVE_MISSION=5 Jade Moon route: hangar, Chapter II crawl, intro cutscene, flight; owner recipe
+FPS60 dd4 16:9 + STANDINS=frame; window screenshots every 5 s; owner save read-only, cmp-checked unchanged both runs).
+Run 1 (DUMP=c4:12:60): cut=0 in every second and no window ever opened, and [standins-s] only began after the rebuild. Screenshots
+and the 500-swap fb dumps put the intro cutscene (shuttle on the pad, AT-PT, flyover; w=640) at swaps ~8500-10000, all BEFORE the
+`[standins] 65 objects ... level 5` rebuild (log line 58661, after swap 10000); flight HUD frames (w=796) come after it.
+Run 2 (pre-gate census + DUMP=3:10:40 anchored on the first frame, i.e. a flight window as positive control):
+| measure | value |
+|---|---|
+| `[cineBody] call#2 a0=0x05` (the level 5 intro, same entry as the boot cinematic a0=0x13) | log line 43360 |
+| fb dumps n=8500/9000/9500/10000 (cutscene frames, w=640) | lines 45717-57559 |
+| first `[standins-pre]` line (calls=62, frame=61) | line 59185, i.e. first hook call ~1 s earlier, after the rebuild at 58647 |
+| [standins-pre] in flight | calls 57-62/s for every flight second (positive control for the census), nodat=0, cut=0 throughout |
+| flight dump window, s7628 sheet scorer | med_fpx 79 stand-in diff px over 19 pairs; --control PASS (min 385 >= 288) |
+So the hook is not called at all while the intro cutscene plays; the cutscene byte 0x80130B39 is also never set at the hook in
+flight. Two lines of evidence: pre-gate census gap with a 60/s flight control, and the fb dump / rebuild ordering (replicated run 1).
+2/2 runs alive, 0 crash.
+Rules out H-drawn-ok and H-drawn-wrong for the intro (nothing to draw: stand-ins are DAT objects drawn from the mission frame, and
+cutscene actors come from spawnCutsceneObjectsFromList on the cinematic path). Selects H-absent. Consequence for G5h: stand-ins
+neither help nor harm cutscene background loss; G5h stays the terrain-window question (owner look). Outros not reached (owner
+playtest territory, needs a win). Single level (L5); the mechanism is the shared cinematicLoopBody entry, so other levels' intros are
+expected to match (unmeasured).
+VERDICT: selects H-absent; refutes H-drawn-ok / H-drawn-wrong for mission intro cutscenes.

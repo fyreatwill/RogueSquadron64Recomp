@@ -12,10 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **NEW s7695: G2b crawl audio + G5d logo re-hold on the post-G6c binary (owner recipe + STANDINS=1 dd4, tools/s7695_cine_audio_gate.zsh).**
-  Chapter II crawl 32006 Hz span (~130 s): empty-queue events fix 2 vs same-run ROGUESQ_AI_DRAIN_FIXED=1 control 1037 (s6790: 0 vs 1023).
-  Boot logo left share 0.092 with and without stand-ins (s6903 fixed ~0.098, cut 0.0008); 53/s distinct t=30-43 both. Stand-ins never
-  rebuild in the cinematic (0 object lines before attract; same flag rebuilds at level 5 in the crawl arms), so no scene gate is needed.
+- **NEW s7696: stand-ins never run inside a mission intro cutscene** (tools/s7696_cut_standins.zsh, L5 Jade Moon route, owner recipe
+  + STANDINS=frame dd4). The intro plays through cinematicLoopBody (a0=5), and the runInMissionFrame hook gets 0 calls until the
+  flight rebuild ([standins-pre] census: 0 lines during the cutscene, 57-62 calls/s in flight; flight dump sheet med_fpx 79, control
+  PASS). So G6c has no cutscene effect, good or bad; G5h stays a terrain question. Cutscene byte 0x80130B39 is 0 at the hook.
+- **s7695: G2b crawl audio + G5d logo re-hold on the post-G6c binary** (tools/s7695_cine_audio_gate.zsh): crawl empty-queue fix 2 vs
+  ctl 1037; logo left share 0.092 with/without stand-ins; stand-ins never rebuild in the boot cinematic.
 - **s7694: G5c freeze gate re-holds on the post-G6c binary.** 900 s STANDINS=1 dd4 owner recipe L4 + L12 (tools/s7694_freeze_scan.py):
   2/2 alive, 0 crash, vi_stalls30s=0, 0 present gaps / VI holds >= 250 ms after t=95 s; same-run SIGSTOP 400 ms control at t~695 s caught
   in both (426/442 ms); only events are boot/route holds before t=95 s. Stand-ins add no freeze (spawns 304/107).

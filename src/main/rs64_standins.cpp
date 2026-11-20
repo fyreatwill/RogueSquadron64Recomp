@@ -253,7 +253,7 @@ void build_state(uint8_t* rdram, recomp_context* ctx, uint32_t item, uint32_t st
     mips_call(rdram, ctx, kRootMatrix, { inst + 0x28u, state, item + 0x28u });
 }
 
-struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond, added, onframes, faron; };
+struct Tally { uint32_t frames, submits, cand, spawned, unlinked, dead, cond, added, onframes, faron, cutframes, cutadded; };  // s7696: cut* = frames / adds with the cutscene byte 0x80130B39 set
 Tally s_t{};
 
 // s7672: addNpcToVisibilityBucket returns (tools/apply_s7672_bucket_handoff.py). rs64_bk_on is set by the submit hook (stand-ins active, dd>1 only); our own
@@ -728,6 +728,19 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     }
     if (!s_region_ok) return;
     const uint32_t dat = rw(rdram, kDatFile);
+    {   // s7696: pre-gate census, one line per second with any hook call, so a scene where the hook never runs (H-absent) shows as a
+        // gap in [standins-pre] while one where it runs without a DAT shows nodat>0. Positive control: flight seconds print calls~60.
+        static const bool s_plog = [] { const char* e = std::getenv("ROGUESQ_STANDINS_LOG"); return e && *e && *e != '0'; }();
+        static uint32_t s_pc = 0, s_pn = 0, s_pcut = 0;
+        static double s_pt = -1.0;
+        ++s_pc; if (!guest(dat)) ++s_pn; if (rb(rdram, kCutsceneFlag)) ++s_pcut;
+        const double pnow = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        if (s_pt < 0) s_pt = pnow;
+        if (s_plog && pnow - s_pt >= 1.0) {
+            std::fprintf(stderr, "[standins-pre] calls=%u nodat=%u cut=%u level=%u frame=%u\n", s_pc, s_pn, s_pcut, rw(rdram, 0x80130B70u), rw(rdram, 0x8013889Cu));
+            s_pc = s_pn = s_pcut = 0; s_pt = pnow;
+        }
+    }
     if (!guest(dat)) return;
     static uint32_t s_level = ~0u, s_frame = 0;
     const uint32_t level = rw(rdram, 0x80130B70u);
@@ -744,14 +757,26 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         sg_flush();
         psn_flush();
         q_flush();
-        std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu farmul=%g faron=%u tog=%d\n",
+        std::fprintf(stderr, "[standins-s] frames=%u on=%u submits=%u added=%u cand=%u skip spawned=%u unlinked=%u dead=%u cond=%u objects=%zu farmul=%g faron=%u tog=%d cut=%u cutadded=%u\n",
                      s_t.frames, s_t.onframes, s_t.submits, s_t.added, s_t.cand, s_t.spawned, s_t.unlinked, s_t.dead, s_t.cond, s_standins.size(), (double)rs64_vt_farmul, s_t.faron,
-                     m == 2 ? (int)(((long long)s_t0) & 1) ^ 1 : -1);  // tog=1: the window just logged was an on second
+                     m == 2 ? (int)(((long long)s_t0) & 1) ^ 1 : -1, s_t.cutframes, s_t.cutadded);  // tog=1: the window just logged was an on second
         std::fprintf(stderr, "[s7690-pt] mism=%u fix=%u\n", s_par_mism, s_par_fix);
         s_t = Tally{};
         s_t0 = std::floor(now);
     }
     ++s_t.frames;
+    // s7696 G5h x G6c: do stand-ins run inside mission cutscenes? cut= counts hook frames with the cutscene byte set; edges are logged
+    // with seconds since the first hook frame, and ROGUESQ_STANDINS_DUMP=c<a>:<b>:<n> anchors the two dump windows on the first
+    // cutscene rising edge instead of the first frame.
+    const bool cut_now = rb(rdram, kCutsceneFlag) != 0;
+    static int s_cut_prev = -1;
+    static double s_cut_t0 = -1.0;
+    if (cut_now) ++s_t.cutframes;
+    if ((int)cut_now != s_cut_prev) {
+        if (s_log) std::fprintf(stderr, "[standins-cut] edge=%d level=%u frame=%u t=%.2f\n", (int)cut_now, level, frame, s_cut_prev < 0 ? 0.0 : now - s_t0);
+        if (cut_now && s_cut_t0 < 0) s_cut_t0 = now;
+        s_cut_prev = (int)cut_now;
+    }
     static uint32_t s_calls = 0;
     ++s_calls;
     s_bk_frame = s_calls;
@@ -760,14 +785,15 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     static double s_first = -1.0;
     if (s_first < 0) s_first = now;
     static int s_dwin = 0;  // 0 before window 1, 1 window 1 (toggling), 2 window 2 (forced off), 3 done
-    static const struct DumpCfg { double a, b; int n; } s_dc = [] {
-        DumpCfg c{ -1, -1, 0 };
-        if (const char* e = std::getenv("ROGUESQ_STANDINS_DUMP")) std::sscanf(e, "%lf:%lf:%d", &c.a, &c.b, &c.n);
+    static const struct DumpCfg { double a, b; int n; bool cut; } s_dc = [] {
+        DumpCfg c{ -1, -1, 0, false };
+        if (const char* e = std::getenv("ROGUESQ_STANDINS_DUMP")) { if (*e == 'c') { c.cut = true; ++e; } std::sscanf(e, "%lf:%lf:%d", &c.a, &c.b, &c.n); }
         return c;
     }();
-    if (s_dc.n > 0) {
-        if (s_dwin == 0 && now - s_first >= s_dc.a) { s_dwin = 1; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 1 (toggle) at %.1f s, %d swaps\n", now - s_first, s_dc.n); }
-        else if (s_dwin == 1 && rs64_standins_dump_left <= 0 && now - s_first >= s_dc.b) { s_dwin = 2; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 2 (forced off) at %.1f s, %d swaps\n", now - s_first, s_dc.n); }
+    const double d_base = s_dc.cut ? s_cut_t0 : s_first;  // s7696: < 0 until the first cutscene edge when anchored on it
+    if (s_dc.n > 0 && d_base >= 0) {
+        if (s_dwin == 0 && now - d_base >= s_dc.a) { s_dwin = 1; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 1 (toggle) at %.1f s, %d swaps\n", now - d_base, s_dc.n); }
+        else if (s_dwin == 1 && rs64_standins_dump_left <= 0 && now - d_base >= s_dc.b) { s_dwin = 2; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 2 (forced off) at %.1f s, %d swaps\n", now - d_base, s_dc.n); }
         else if (s_dwin == 2 && rs64_standins_dump_left <= 0) s_dwin = 3;
     }
     rs64_standins_fb_win = (s_dwin == 1 || s_dwin == 2) ? s_dwin : 0;
@@ -952,6 +978,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
             s.last_si = s_calls;
             if (s.real_last == (int64_t)s_calls) ++s.overlap;  // real call came first this frame
             ++s_t.added;
+            if (cutscene) ++s_t.cutadded;
             if (s.first_add < 0) s.first_add = now;
             s.last_add = now;
             ++s.adds;
