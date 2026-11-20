@@ -204760,3 +204760,29 @@ Discrimination: selects H-cine-ok for 229 of 230 drawn stand-ins and refutes H-c
 exception selects H-hold-ghost (a spawned object whose handler never draws, kept on screen by the s7672 hold), now fixed by the near
 release (code change, two arms). Next discriminator: [s7679-rel] count in forced-level L5 flight (H-flight-ghost vs H-attract-only),
 with ROGUESQ_S7679_NEAR=99 as the positive control.
+
+## Session 7680 (2026-11-19) — G6c near release does not fire in flight: L5 forced-level, default NEAR=15 0 releases vs control NEAR=99 4 releases (held 2491 -> 92), H-attract-only selected
+
+Crash gate first: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0. No owner report.
+
+Ran (one invocation, two sequential arms, one game at a time; host HID idle ~3 h): forced level 5 (0-based, the shield level of the
+s7679 attract ghost), owner recipe dd4 16:9 FPS60, ROGUESQ_STANDINS=1 STANDINS_LOG=1 S7672_HOLD=odd, 200 s each, via
+tools/g1e_owner_quiet_arms.zsh (the s7672/s7676 recipe). Arm x5 = default near (15), arm c5 = positive control ROGUESQ_S7679_NEAR=99.
+Logs scratch/s7680_L5/ (gitignored). The same commands are now tools/s7680_flight_release.zsh (rc 0 = default 0 releases and control
+>0); the script itself was written after the run, from the run's exact command line, and has only had a syntax check.
+
+| arm | alive | crash | vi_stalls30s | max_gap ms | [s7679-rel] | odd held / held_ok | ghost scorer |
+|---|---|---|---|---|---|---|---|
+| x5 NEAR=15 | 1 | 0 | 0 | 148 | **0** | 2491 / 87 | 2 GATE + 2 UNHELD, 0 GHOST (rc 0); identical to s7676_ghost_L5 (pre-s7679 build) |
+| c5 NEAR=99 | 1 | 0 | 0 | 148 | **4** (2x sub 0x2E depth 26.6, 0x47 86.3, 0x47 68.6, all age 0) | 92 / 88 | - |
+
+The control releases every odd hold on its first frame (age 0) and collapses held frames 2491 -> 92, so the instrument can see a
+release in flight; the default arm sees none. In flight the nearest held stand-in whose real object has not drawn stays far above
+15 (sub 0x47 held_dmin 68.6/86.3; first real draws all >= 26.1), so the s7679 cut is inert in flight and only acts on the attract
+spawned-never-drawn shield. Odd=0 (unheld) blink>1=2 in x5 is the no-hold half of the same-run control, as in s7676.
+Control-arm note: in c5 the scorer marks 8053F990 (sub 0x47, held_dmin 68.6) GHOST only because releasing the holds shifted one sub
+0x47 first draw to depth 71.8; that is a perturbed arm, not a defect of the default.
+
+Selects H-attract-only, refutes H-flight-ghost (on L5; L1/L2/L4 flight held_dmin >= 28 in s7674-s7677 makes it inert there too).
+NEXT Q2 (look for the 0x32 handler's hide condition) has no flight case to fix; what is left is the attract shield showing from
+depth 38 to 15 (cosmetic, attract only). G6c waits on the owner's look (sheet docs/owner_sheet_s7630_standins_on_off.jpg).

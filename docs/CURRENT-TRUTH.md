@@ -12,6 +12,9 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7680: the s7679 near release does not fire in flight (same-run control).** Forced L5 dd4 16:9 FPS60 STANDINS HOLD=odd 200 s:
+  default NEAR=15 0 [s7679-rel], ghost score 0 GHOST (= s7676); control NEAR=99 4 releases, held frames 2491 -> 92; both alive, 0 stall.
+  H-attract-only: the cut only touches the attract shield. Recipe tools/s7680_flight_release.zsh <out> <level>.
 - **NEW s7679: a held stand-in drew an object the game never draws; released now (two arms, same deterministic attract route).**
   Per-item life table ([s7679-life], STANDINS_LOG): never-spawned stand-ins sit at depth >= 42.9 on L0/L7 (bridging far objects), and real objects'
   first accepted draws are at depth >= 18.0 (137 first calls). One outlier: L5 attract item 8053EDE0 sub 0x32 (handler-picked model "shield") is
@@ -405,7 +408,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     spawns 13-360 per level). Owner row in OWNER-OPT-INS + sheet docs/owner_sheet_s7630_standins_on_off.jpg (cluster crops). **G6c now
     closes on the owner's look; default stays off.** s7672: handoff blink at spawn fixed (ROGUESQ_S7672_HOLD, headline); rerun scratch/s7672/run.zsh after a stand-in edit. s7674: held culls all off-screen (H-offscreen); s7675: that "ghost" is a live AT-PT walker with a delayed first draw; s7676: GATE (distance-gated draw, stand-in bridges it), ghost thread CLOSED; s7677: L2/L5 folded rc 0 (H-gate 4 levels); item map keyed on rebuild generation. Scorer
     now ranks by clustered diff px (`--cluster 16`, 8x8 blocks): bunker 153 / towers 1298 / shimmer 0 / none 0 median, control PASS;
-    a window-2 shimmer map was tried and rejected (does not predict window 1). Then the owner sheet decides.
+    a window-2 shimmer map was tried and rejected (does not predict window 1). s7680: near release inert in flight (L5 0 vs control 4). Then the owner sheet decides.
 21. **Classes RP, HD, HB, ST, AT, CF, TS, TS-2, TS-3, TS-4, MK8 + walker fusion + spike cost + closed-gate drift (s7631-s7659):
     ALL CLOSED** (full text, numbers, controls, tools verbatim in PROJECT-OVERVIEW "(s7662 maintenance)"). Defaults that stay
     (=0 / old restores): ROGUESQ_S7634_FUSE=1 (walker fusion), S7639_ST, S7640_AT, S7641_CF, S7643_PI (release/acquire s4211 ring),
