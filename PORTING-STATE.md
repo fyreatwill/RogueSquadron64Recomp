@@ -205424,4 +205424,5 @@ The SKIP_WILD_W skip of 768 is harmless here, so no allowlist change.
 Caveat: one run per arm. But two independent lines agree (write-back on vs off pixel-identical, and the magenta poison invisible), and the poison is a
 positive control on the source: the copied buffer was demonstrably wrong (log: [s7704-poison] fills at 0x9B6000/0xB80800), with no on-screen effect.
 Not covered: RSP DMA reads of those buffers at 21:9 (the s7702 census with the DMA hook live), and wild-width read-backs outside the boot/movies routes.
+ORIGIN: no mitigation landed. The words skip/allow come from existing knobs the arms toggled (ROGUESQ_ALLOW_WILD_W, ROGUESQ_FBOVL_SKIP). The only new code is the opt-in diagnostic ROGUESQ_S7704_POISON (default off). The value in question is legitimate: the 768-wide colour images at 0x9B6000/0xA35800/0xB80800 are the game's own boot-cinematic framebuffers (SETCIMG from the game's display list, s7702). The skip is RT64's s653/s659 SKIP_WILD_W allowlist (rt64_state.cpp rs64_writeback_sane), unchanged here.
 Raws deleted after scoring; per-arm log counts in scratch/s7704/summary.txt.
