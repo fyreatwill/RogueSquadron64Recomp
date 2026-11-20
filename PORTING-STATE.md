@@ -205003,3 +205003,22 @@ legitimate guest state, not corruption); the defect was ours (the 2-unit positio
 Next: G6c owner sheet refresh (the s7630 sheet predates s7672-s7687 handoff changes).
 Discrimination: this selects H-neighbour and refutes H-self for sub 0x0C (110/110 itemless small-float callers; L10 pair 121 accepted
 -> 203/203 rejected), and closes the pos-fallback thread. Next discriminator: refreshed owner sheet med_fpx/control vs s7630.
+
+## Session 7688 (2026-11-19) — G6c owner sheet refreshed on the current binary: no wholesale stand-in regression; L1 dd2 bunker crop gone (open)
+HYPOTHESIS-ID: g6c-owner-sheet-refresh
+- crash_reports --since 2026-11-13: FOLDED=27 new=0. Binary 22:06 newer than every src/tools/RecompiledFuncs file (s7687 code in).
+- Ran scratch/s7688_standins_proof.sh (= s7628 proof, output dir scratch/s7688_soak): g1e harness HOLD 150, STANDINS=frame + dumps,
+  arms L1 dd2 / L1 dd4 / L4 dd2 / L4 dd4. 4/4 alive_at_end=1, crashlines=0, vi_stalls30s=0, level_ok=1, max_gap 148-164 ms.
+- Window-1 (per-frame toggle) vs window-2 (forced off) flicker px/triplet, s7628 in brackets: L1 dd2 464.6/44.5 (650.8/44.5),
+  L1 dd4 638.1/103.6 (557.8/107.4), L4 dd2 856.3/154.4 (143.1/155.4), L4 dd4 2487.5/207.2 (1755.9/161.3). Off controls unchanged;
+  synthetic control PASS 4/4 (3168 >= 1056). Stand-ins still toggle pixels in every arm.
+- [standins-spawn] early_s>=0 items (t=0 level-start spawns log -1 and made the proof's early_s_med print -1, a scorer artefact):
+  L1 dd2/dd4 13 items, 2.6-48.8 / 2.6-62 s early (s7628 10-11, 2-62 s); L4 dd2/dd4 20/19 items, to 12.8/16.8 s (s7628 19, <=5 s).
+- Cluster sheet (tools/s7628_standins_sheet.py --cluster 16 --control --pairs 3): L4 dd4 med_fpx 1671 (s7630 1298), control PASS,
+  eye: a far city tower drawn only in the stand-ins-ON frame. L1 dd2 med_fpx 0 (s7630 153), control PASS (394): top crops are small
+  near-ground objects at the screen bottom (bottom half 37769 of 40884 flicker px); the dark bunker is present in both frames of every
+  pair. L1 dd4 control FAIL (min 80 < 288; shimmer arm in s7628 too, not on the sheet). L4 dd2 med 119 (s7628: none).
+- docs/owner_sheet_s7688_standins_on_off.jpg (L1 dd2 + L4 dd4, same layout as s7630); OWNER-OPT-INS row now points at it.
+- Rules out: the s7672-s7687 handover changes wiping stand-ins out (early items and flicker held or rose on 3/4 arms). Open, single
+  arm: L1 dd2 bunker no longer flickers. H-path (different flight path/timing this run) vs H-handoff (a handover change gives the
+  bunker to its real object before the dump window). Next: one-run bisect at L1 dd2 (new vs all handover knobs =0).

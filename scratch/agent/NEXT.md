@@ -1,14 +1,14 @@
-# NEXT (s7688)
-HYPOTHESIS-ID: g6c-owner-sheet-refresh
+# NEXT (s7689)
+HYPOTHESIS-ID: g6c-l1-bunker-handoff
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
-s7687 CLOSED the g6c-pos-fallback-neighbour thread (0x0C added, ROGUESQ_S7687_POSSUB; 0x24/0x2E/0x46 no itemless callers).
-The owner sheet docs/owner_sheet_s7630_standins_on_off.jpg predates every handoff change since (s7672 hold, s7681 shield,
-s7684 ray-shield key, s7685/s7686/s7687 pos rejects). Work unit: regenerate it on the current binary.
-  zsh scratch/s7628_standins_proof.sh   # same-run STANDINS=frame toggle + dumps, arms L1 dd2 / L1 dd4 / L4 dd2 / L4 dd4 (read it first;
-                                        # point its output dir at scratch/s7688 rather than overwriting s7628)
-  python3 tools/s7628_standins_sheet.py --cluster 16 --control --pairs 3 <arm dirs>  -> docs/owner_sheet_s7688_standins_on_off.jpg
-Expected: control PASS (>=288 of 576 synthetic px) in every arm, med_fpx of the same order as s7630 (bunker ~153, towers ~1298).
-A big drop -> the handoff changes made stand-ins vanish earlier (regression; bisect with S7672_HOLD/S7685/S7686/S7687 =0 arms in
-one run). Then update OWNER-OPT-INS row to point at the new sheet and wait on the owner's look (default stays off).
-One game at a time, SIGKILL only, <=2 CPU-heavy jobs. Screen must be unlocked for the key-driven harness.
+s7688 refreshed the G6c sheet: no wholesale regression (flicker + early items held/rose on 3/4 arms, controls PASS), but L1 dd2's
+far bunker (s7630 med_fpx 153) no longer flickers (med 0; it is in both frames of each pair).
+Hypotheses: H-path (this run flew a different path or timing, so the bunker was real/absent in window 1) vs H-handoff (one of
+ROGUESQ_S7672_HOLD / S7681_SHIELD / S7684_RSKEY / S7685_POSSUB / S7686_POSSUB / S7687_POSSUB hands the bunker over early).
+Discriminator, ONE run, two arms at L1 dd2 (copy scratch/s7688_standins_proof.sh, ARMS a12 new vs a12old with all six knobs =0,
+output scratch/s7689_soak):
+  - old arm med_fpx >= ~100 with the bunker ON-only, new arm 0 -> H-handoff; then bisect knobs (3 + 3) in the next run.
+  - both ~0 -> H-path (scene variance); check [standins-spawn] for the bunker's item in both logs and close the thread.
+Score: tools/s7628_standins_sheet.py --cluster 16 --control --pairs 3 per arm (control must PASS in both).
+One game at a time, SIGKILL only, <=2 CPU-heavy jobs, screen unlocked. Default STANDINS stays off; owner judges the look.
