@@ -1,24 +1,19 @@
-# NEXT (s7725)
+# NEXT (s7726)
 HYPOTHESIS-ID: owner-looks-or-new-report
 
-First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report.
+First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then fold
+the s7725_texdesc_L4 soak line from SOAK-RESULTS.md (pass = alive, 0 fatal, vi_stalls30s=0; a fail = the s7725 plume fix broke
+something: rerun with ROGUESQ_MTL_OWN=0 in the same session as the control).
 If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green.
 
-s7724 closed the scorer-coverage thread for good (CURRENT-TRUTH item 32): of the 9 deferred-retainable scorers, 7 are now sweep
-gates over retained captures (s7433/s7435/s7436/s7437/s7438 on scratch/s7435, s7467 on scratch/s7467r, s7624 on scratch/s7624 L1),
-each with a planted RED mutant in tools/s7723_retained_controls.py (18/18 PASS). s7367/s7369/s7434 = H-no-control (no control in the
-tool), s7589 = H-no-control (its own control FAILs on both retained captures; the ledger verdict came from hand plateau steps),
-s7247 = H-gone (raw fb dumps deleted). Do NOT take more scorer/gate work.
+s7725 closed the RT64 Present SIGTRAP: plume MetalBufferFormattedView over-released a +0 textureBufferDescriptor (fixed under
+ROGUESQ_MTL_OWN; NSZombie boot 103 -> 0, same-binary MTL_OWN=0 control 103). The widened census (tools/s7587_ownership_census.py)
+reports NEW {OK 82, NEEDS-POOL 4}.
 
-Ladder: every engineering rung is closed or awaiting the owner's look (CURRENT-TRUTH Next steps 2-9, 20, 22). With no new crash
-report and no owner report, take the M6 secondary from the strategic priority (item 3b), which has a real discriminator:
-- Unit: the rare RT64 Present SIGTRAP family (FOLDED 2026-11-18-014353: objc_autoreleasePoolPush inside
-  plume::MetalDescriptorSetLayout ctor on thread "RT64 Present"). Hypotheses: H-nopool (the Present thread creates Metal objects
-  with no enclosing @autoreleasepool, so autoreleaseNoPage traps when OBJC_DEBUG_MISSING_POOLS / a debug env is set or the pool
-  page is exhausted), H-race (descriptor-set layout created concurrently from two threads), H-teardown (trap at exit while the
-  runtime is unwinding). Discriminator, offline first: read the .ips (all thread stacks + exit context) and grep lib/rt64 for
-  where the Present thread is spawned and whether its loop body is wrapped in an autorelease pool (NS::AutoreleasePool /
-  @autoreleasepool). Outcome: no pool on that thread's loop -> H-nopool selected, fix = wrap the loop in a pool (lib/rt64 edit
-  -> ./submodule-patches/export.sh + commit); pool present -> check the .ips for a second thread inside the same ctor (H-race)
-  or exit frames on thread 0 (H-teardown).
+Optional next unit (bounded, offline-first), if nothing above applies: the NSZombie boot recipe is a cheap whole-process
+over-release detector that s7587 never had. Extend it past boot: one 150 s L4 owner-recipe arm with NSZombieEnabled=YES +
+OBJC_DEBUG_MISSING_POOLS=YES (one game; zombies make the reporter print instead of trap), count `_NSZombie_` classes in flight.
+Hypotheses: H-clean (0 zombies after the s7725 fix) vs H-more (another +0 factory released somewhere in a flight-only path, e.g.
+rt64_apple.mm / plume_apple.mm or RT64 itself). Positive control in the same session: an ROGUESQ_MTL_OWN=0 arm must show the
+103 TextureDescriptor zombies. A nonzero default-arm class names the next writer; grep for its factory and fix it the same way.
 Owner defaults: never flip.

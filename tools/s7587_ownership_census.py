@@ -18,7 +18,9 @@ L = open(path).read().split('\n')
 
 FN = re.compile(r'^    (?:[A-Za-z][\w:<>,\s*&]*?[\s*&])?(\w+::~?\w+)\(.*\)\s*(const\s*)?(:.*)?\{\s*$')
 PLUS1 = re.compile(r'(::alloc\(\)->init\(|->new[A-Z]\w*\(|\bMTL::Copy\w+\(|\bMTL::Create\w+\(|\bdispatch_\w+_create\(|\bCF\w+Create\()')
-PLUS0 = re.compile(r'(NS::String::string\(|->commandBuffer\w*\(|->(blit|compute|render)CommandEncoder\(|::renderPassDescriptor\(\)|->nextDrawable\(\))')
+# s7725: any class convenience constructor / shared getter `MTL|NS|CA::Class::lowerName(` (not alloc) is +0 too; the s7587 list
+# named only a few and missed MTL::TextureDescriptor::textureBufferDescriptor (released by plume -> over-release, s7725 zombies).
+PLUS0 = re.compile(r'(NS::String::string\(|->commandBuffer\w*\(|->(blit|compute|render)CommandEncoder\(|::renderPassDescriptor\(\)|->nextDrawable\(\)|\b(?:MTL|NS|CA)::[A-Z]\w+::(?!alloc\b)[a-z]\w*\()')
 LHS = re.compile(r'(?:^|[\s(*&])([A-Za-z_][\w.\[\]>-]*?)\s*=\s*[^=]')
 DECL = re.compile(r'^\s*(const\s+)?[\w:]+\s*\*\s*\w+\s*=')
 
@@ -98,10 +100,12 @@ for i, l in enumerate(L):
     rel = [] if inline else [j for j in refs(var, r'->release\(\)', scope) + refs(var, 'dr', scope) if j != i]
     ret = [] if inline else [j for j in refs(var, r'->retain\(\)', scope)]
     if '->retain()' in code: ret.append(i)
-    rel_old = [j for j in rel if not gated(j)]
-    rel_new = rel
-    ret_old = [j for j in ret if not gated(j)]
-    ret_new = ret
+    # s7725: `if (!rs64MtlOwn()) x->release()` runs only under OLD (upstream); gated() alone read it as NEW-only.
+    old_only = lambda j: '!rs64MtlOwn()' in L[j]
+    rel_old = [j for j in rel if old_only(j) or not gated(j)]
+    rel_new = [j for j in rel if not old_only(j)]
+    ret_old = [j for j in ret if old_only(j) or not gated(j)]
+    ret_new = [j for j in ret if not old_only(j)]
     def verdict(rels, rets, newp):
         if k == '+1':
             if '->retain()' in code: return 'OK'

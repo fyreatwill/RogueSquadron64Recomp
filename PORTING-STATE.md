@@ -206093,3 +206093,40 @@ further scorer work). Sweep (scratch/s7724/sweep.tsv, before the arm-name fix): 
 s7467}; re-sweep after the fix: see the result line below.
 Re-sweep after the fix (scratch/s7724/sweep2.tsv, --jobs 2, 1121 s): 215 gates {GREEN 212, REPORT 3}, 0 RED 0 HOLLOW; s7467 GREEN
 (new_groups=0, control=PASS), s7083 GREEN. Next discriminator (NEXT.md): RT64 Present SIGTRAP .ips (H-nopool / H-race / H-teardown).
+
+## Session 7725 (2026-11-20) — RT64 Present SIGTRAP root-caused: plume MetalBufferFormattedView over-released a +0 textureBufferDescriptor (103 NSZombies at boot -> 0); s7587's "debug-env artifact" reading refuted
+
+Work unit (NEXT s7725, M6 secondary): the FOLDED .ips RogueSquadron64Recomp-2026-11-18-014353 (EXC_BREAKPOINT SIGTRAP, thread
+"RT64 Present", object_getClassName <- AutoreleasePoolPage::autoreleaseNoPage <- objc_autoreleasePoolPush <- -[NSAutoreleasePool
+init] <- plume::MetalDescriptorSetLayout ctor <- FramebufferReadChangesDescriptorBufferSet <- NativeTarget::copyFromRAM).
+`tools/crash_reports.py --since 2026-11-13`: FOLDED=27 new=0.
+- Attribution: the process ran 01:43:48.95-01:43:50.08, inside the s7587 run-A `own1` arm window (scratch/s7587/A/arms.log 01:43:45-
+  01:46:20; env ROGUESQ_MTL_OWN=1 + OBJC_DEBUG_MISSING_POOLS=YES + ROGUESQ_S7587_PLANT=1). s7587 called it an instrument artifact.
+- Disassembly (lldb, this macOS libobjc): object_getClassName+48 is `brk #0xc472`, the isa pointer-auth failure (autda on the
+  object's isa). objc_autoreleasePoolPush+72 calls autoreleaseNoPage(x1) where x1 = the TLS deferred-autorelease slot
+  (TPIDRRO_EL0+0x160, bit1 set): the push first flushes a pending +0 return value. So the trapping object was a pending
+  autoreleased object whose memory was already freed and reused (bad isa), not POOL_BOUNDARY.
+- Offline witness tools/s7725_pool_trap_repro.sh (rc 0, CONTROL PASS): a pool-less pthread's first push exits 0 with and without
+  OBJC_DEBUG_MISSING_POOLS (the env alone does NOT trap -> refutes the artifact reading); an MRC caller releasing an
+  objc_autoreleaseReturnValue object and then pushing segfaults even with no env (rc 139, positive control). Two lines of evidence
+  that the defect is a freed pending object; the debug env only selects the reporter branch that reads its isa.
+- Game run 1 (pre-fix binary, boot 30 s, OBJC_DEBUG_MISSING_POOLS=YES + NSZombieEnabled=YES, ROGUESQ_NO_SAVE_WRITE=1): alive (zombie
+  isa is valid, so the reporter prints instead of trapping), 7784 MISSING POOLS lines of which 103 name
+  `_NSZombie_MTLTextureDescriptorInternal` (3 threads: 89/12/2), 0 other zombie classes -> the freed object is a texture descriptor.
+- Writer: plume_metal.cpp MetalBufferFormattedView ctor: `MTL::TextureDescriptor::textureBufferDescriptor(...)` is a +0 class
+  factory, then upstream `descriptor->release()`. The s7587 census missed it because its +0 regex listed only a few getters.
+  ORIGIN: plume upstream ownership bug (MRC TU, +0 factory released by the caller); the value is legitimately created by Metal and
+  wrongly freed by us. In normal play it stays latent: without the debug env the flush stores the dangling pointer in the
+  never-drained implicit pool (s7588), so it would only be messaged on thread exit or an outer pool pop.
+- Fix (lib/rt64, rt64-plume.patch exported): under ROGUESQ_MTL_OWN (default on) the descriptor is built inside Rs64OwnPool and not
+  released by us; ROGUESQ_MTL_OWN=0 restores the upstream release. Census widened: PLUS0 now matches any
+  `MTL|NS|CA::Class::lowerFactory(` (not alloc), and `if (!rs64MtlOwn()) x->release()` counts as OLD-only (gated() read it
+  backwards). Census: OLD {OK 63, NEEDS-POOL 9, OVERRELEASE 7, LEAK 7}, NEW {OK 82, NEEDS-POOL 4 (3 boot-once singletons
+  sharedCaptureManager/processInfo + s7587's preferredDeviceNameNS)}, rc 0; before the fix the widened census rc 1 on line 1318.
+- Game run 2, same rebuilt binary, both boot 30 s with OBJC_DEBUG_MISSING_POOLS=YES + NSZombieEnabled=YES: default arm 0 zombies
+  (7619 MISSING POOLS, all live objects), ROGUESQ_MTL_OWN=0 control arm 103 `_NSZombie_MTLTextureDescriptorInternal`, 0 others;
+  both alive 30 s. The control fired with the same count as the pre-fix run.
+- Queued scratch/agent/soak_queue/s7725_texdesc_L4.sh (owner recipe L4 16:9 dd4 FPS60 STANDINS=1, 300 s, SOAK_NEEDS_IDLE=300).
+Verdict line: selects H-overrelease (a new name for NEXT's H-nopool: a pool-less thread plus a freed pending object), refutes
+H-debug-artifact (env-only push exits 0), H-race (one class, one ctor, the zombie count matches across runs) and H-teardown
+(trap 1.1 s into boot, main thread in set_frequency, not exit). Next discriminator: the s7725 soak verdict; then owner work.

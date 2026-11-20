@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7723 (2026-11-20).
+Compact operational handoff, as of Session 7725 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7725 RT64 Present SIGTRAP (.ips 2026-11-18-014353) root-caused and fixed:** plume MetalBufferFormattedView released a +0
+  `textureBufferDescriptor` (NSZombie boot: 103 `_NSZombie_MTLTextureDescriptorInternal` -> 0 with the fix; ROGUESQ_MTL_OWN=0 control
+  103 in the same binary). The pool push flushes the freed pending object (TLS slot 0x160); OBJC_DEBUG_MISSING_POOLS only made the
+  reporter read its isa (PAC brk 0xc472). Latent in normal play (dangling pointer in a never-drained pool). Census widened to all
+  class factories (OLD 7 OVERRELEASE, NEW 0). Witness tools/s7725_pool_trap_repro.sh. Soak s7725_texdesc_L4 queued.
 - **s7724 deferred scorers CLOSED (item 32): 7 more gates over retained captures** (S7724_RETAINED: s7433/s7435-s7438 profiler
   scorers on scratch/s7435 sample_*.txt.zst, s7467 ASan arms on scratch/s7467r, s7624 flicker L1); planted RED mutants 18/18 PASS
   (control frames renamed -> CONTROL FAIL rc 3; unreviewed UBSan group -> rc 1; window-1 rows dropped -> regex unmatched).
@@ -195,6 +200,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7587 "the 2026-11-18-014353 RT64 Present SIGTRAP is an OBJC_DEBUG_MISSING_POOLS instrument artifact": believable because only
+  the debug arm crashed; superseded by s7725 (the env alone never traps; the push flushes a freed +0 texture descriptor that plume
+  over-released; fixed).
 - **s7645/s7646 "gfx tasks read display-list bytes that PI DMAs refill mid-task at dd>1 (L4 4912/120 s); H-slot-recycle" (superseded
   s7647).** Believable: controls fired, dd1 arm read 0, and the issuer/ROM offsets were coherent. But both sides were keyed `& 0x7FFFFF`
   while the RSP addresses 32 MB and dd>1 data lives above 8 MB: true-key overlap 0, alias-only overlap 4881 in the same run.
