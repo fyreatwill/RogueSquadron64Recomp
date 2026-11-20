@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7676 (2026-11-19).
+Compact operational handoff, as of Session 7679 (2026-11-19).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7679: a held stand-in drew an object the game never draws; released now (two arms, same deterministic attract route).**
+  Per-item life table ([s7679-life], STANDINS_LOG): never-spawned stand-ins sit at depth >= 42.9 on L0/L7 (bridging far objects), and real objects'
+  first accepted draws are at depth >= 18.0 (137 first calls). One outlier: L5 attract item 8053EDE0 sub 0x32 (handler-picked model "shield") is
+  spawned at depth 38 and then never calls addNpcToVisibilityBucket, so the s7672 hold drew it for 706 frames down to 4.6 units, 1.3 units from a
+  real object. Fix ROGUESQ_S7679_NEAR=15 (default inside STANDINS; =0 old, =odd control): a hold whose real object has not drawn is dropped
+  below depth 15 (depth-only view-test capture, works without logging). Old arm: scorer NOREF-GHOST rc 1 (held_dmin 4.6); fix arm: 1 release
+  (depth 14.88, age 95), RELEASED rc 0, item_hits 13269/16119/11416 and drawn 84/49/97 identical to old, 0 crash both. tools/s7675_ghost_score.py
+  now scores open holds at level change (they never reached the 899-frame line) and NOREF subtypes against the all-subtype first-draw minimum
+  (--selftest 5 cases PASS). Residual: the shield still shows from depth 38 to 15 (the game gives no earlier signal it hides it).
 - **NEW s7678: stand-ins survive REAL level changes (H-leak refuted, two arms, same frames).** No-input attract playlist route
   (tools/s7678_attract_run.zsh, dd4 16:9 FPS60 STANDINS=1, 420 s, deterministic) loads L0->5->7->10: rebuild fires on each, new level's
   handoffs match by item (item_hits L5 16119, L7 11416, wrong 0); planted stale map (ROGUESQ_S7678_STALE=1, control only) on the

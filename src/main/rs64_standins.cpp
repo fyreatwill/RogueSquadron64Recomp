@@ -88,6 +88,9 @@ struct Standin {
     float nd2 = -1.0f; uint32_t n_state = 0, n_item = 0, n_calls = 0;
     // s7675b: camera-space distance (view test) of our held call (min over the window / the whole hold) and of the real object's first call
     double si_dmin = -1.0, si_dall = -1.0, fr_d = -1.0, spawn_d = -1.0;
+    // s7679: min camera-space distance over ACCEPTED stand-in draws (any phase), and the add count, for the per-generation life table
+    double add_dmin = -1.0; uint32_t adds = 0;
+    bool released = false;  // s7679 near release: hold dropped because the stand-in came nearer than any real object's first draw
 };
 
 uint32_t s_dat = 0;
@@ -348,6 +351,23 @@ void rebuild(uint8_t* rdram, recomp_context* ctx, uint32_t dat) {
     std::fprintf(stderr, "[s7677-gen] gen=%u end dat=%08X n=%zu bk_calls=%u item_hits=%u pos_hits=%u wrong=%u\n", s_gen, s_dat, s_standins.size(),
                  s_bk_calls, s_bk_item_hits, s_bk_pos_hits, s_bk_wrong);
     s_bk_calls = s_bk_item_hits = s_bk_pos_hits = s_bk_wrong = 0;
+    // s7679 life table (ROGUESQ_STANDINS_LOG=1): one line per stand-in drawn this generation, so a drawn-but-never-spawned item
+    // (spawned=0) can be told from a bridged one (spawned=1) by its nearest drawn distance.
+    if (std::getenv("ROGUESQ_STANDINS_LOG")) {
+        // s7679: a hold still open at the level change never reached the 899-frame never line, so the s7675 scorer missed it
+        for (const Standin& s : s_standins)
+            if (s.spawn_f >= 0 && s.real_call < 0 && s.fr_d != -4.0)
+                std::fprintf(stderr, "[s7675-fr] item %08X sub %04X odd=0 delay=never fr_d=-1 spawn_d=%.2f held_dmin=%.2f open=1 released=%d\n", s.item,
+                             (unsigned)s.sub, s.spawn_d, s.si_dall, s.released ? 1 : 0);
+        uint32_t drawn = 0, sp = 0;
+        for (const Standin& s : s_standins) {
+            if (s.adds == 0) continue;
+            ++drawn; if (s.spawn_logged) ++sp;
+            std::fprintf(stderr, "[s7679-life] gen=%u item %08X sub %04X spawned=%d adds=%u first=%.2f last=%.2f add_dmin=%.2f spawn_d=%.2f\n", s_gen, s.item,
+                         (unsigned)s.sub, s.spawn_logged ? 1 : 0, s.adds, s.first_add, s.last_add, s.add_dmin, s.spawn_d);
+        }
+        std::fprintf(stderr, "[s7679-life] gen=%u end n=%zu drawn=%u spawned=%u\n", s_gen, s_standins.size(), drawn, sp);
+    }
     ++s_gen;
     s_standins.clear();
     s_dat = dat;
@@ -718,8 +738,14 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     // stand-in drawing after the spawn until the real object's first accepted addNpcToVisibilityBucket (cap 900 frames);
     // =0 the s7623 behaviour, =odd only odd-index stand-ins (same-run control).
     static const int s_hold = [] { const char* e = std::getenv("ROGUESQ_S7672_HOLD"); if (e && !std::strcmp(e, "odd")) return 2; return e && *e == '0' ? 0 : 1; }();
+    // s7679: a held stand-in whose real object is spawned but never asks to be drawn (attract L5 sub 0x32 "shield": spawned at depth 38,
+    // held 706 frames down to 4.6 units, real_call never) is drawing something the game hides. Every real object's first accepted draw
+    // was at depth >= 18.0 (137 first calls, 4 levels, s7679; s7676 walkers 28.3+), so a hold that comes nearer than that without its
+    // real object ever drawing is released for good. ROGUESQ_S7679_NEAR=<depth> (default 15; 0 = old s7672 hold; =odd only odd-index
+    // stand-ins, same-run control).
+    static const double s_near = [] { const char* e = std::getenv("ROGUESQ_S7679_NEAR"); if (!e) return 15.0; if (!std::strcmp(e, "odd")) return -15.0; return std::atof(e); }();
     static bool s_hold_logged = false;
-    if (!s_hold_logged) { s_hold_logged = true; std::fprintf(stderr, "[s7672-hold] mode=%d plant=%lld\n", s_hold, (long long)s_plant); }
+    if (!s_hold_logged) { s_hold_logged = true; std::fprintf(stderr, "[s7672-hold] mode=%d plant=%lld near=%g\n", s_hold, (long long)s_plant, s_near); }
     auto reason = [&](Standin& s, int r) {
         if (r != 0 && s.prev_reason == 0) s.end_reason = r;  // the first non-add after the latest add
         s.prev_reason = r;
@@ -731,7 +757,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         const bool odd = (si_idx++ & 1u) != 0;
         if (s.spawn_f < 0 && rh(rdram, s.item + 6u) != 0xFFFFu) s.spawn_f = s_calls;  // before the hold test, so the spawn frame is held too
         const bool planted = (s_plant > 0 && odd && s.spawn_f >= 0 && s_calls - s.spawn_f < s_plant) ||
-                             (s_hold && (s_hold == 1 || odd) && s.spawn_f >= 0 && s.real_add < 0 && s_calls - s.spawn_f < 900);
+                             (s_hold && (s_hold == 1 || odd) && s.spawn_f >= 0 && s.real_add < 0 && s_calls - s.spawn_f < 900 && !s.released);
         if (s_log && s.spawn_f >= 0 && !s.ho_logged && (int64_t)s_calls - s.spawn_f > 600) ho_log(s, "timeout600");
         if (s_log && s.spawn_f >= 0 && s.real_call >= 0 && s.fr_d != -3.0 && s.fr_d != -2.0) {
             std::fprintf(stderr, "[s7675-fr] item %08X sub %04X odd=%u delay=%lld fr_d=%.2f spawn_d=%.2f held_dmin=%.2f\n", s.item, (unsigned)s.sub, odd ? 1u : 0u,
@@ -799,12 +825,17 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
         const bool far_on = s_far > 0 || !(((long long)now) & 1);
         rs64_vt_farmul = (float)(s_far > 0 ? s_far : (far_on ? s_dd : 1.0));
         if (far_on && s_far < 0) ++s_t.faron;
-        rs64_vt_on = s_log ? 3 : 0;
+        rs64_vt_on = s_log ? 3 : (s_near != 0 ? 2 : 0);  // s7679: bit 2 = depth only (no tally), so the near release works without logging
         rs64_vt_lastd = -1.0;
         rs64_bk_self = 1;
         const uint32_t add_v0 = mips_call(rdram, ctx, kAddToBucket, { view, s.inst, s.state, s.scale }).v0;
         rs64_bk_self = 0;
         if (planted) { ++s.held; if (add_v0 == 1) ++s.held_ok; else ++s.si_cls[vt_class()]; }
+        if (planted && s_near != 0 && (s_near > 0 || odd) && s.real_call < 0 && rs64_vt_lastd >= 0 && rs64_vt_lastd < std::fabs(s_near)) {
+            s.released = true;
+            std::fprintf(stderr, "[s7679-rel] item %08X sub %04X depth=%.2f age=%lld held_ok=%u\n", s.item, (unsigned)s.sub, rs64_vt_lastd,
+                         (long long)((int64_t)s_calls - s.spawn_f), s.held_ok);
+        }
         if (rs64_bk_vt_n && rs64_vt_lastd >= 0) {
             if (planted && (s.si_dmin < 0 || rs64_vt_lastd < s.si_dmin)) s.si_dmin = rs64_vt_lastd;
             if (planted && (s.si_dall < 0 || rs64_vt_lastd < s.si_dall)) s.si_dall = rs64_vt_lastd;
@@ -819,6 +850,8 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
             ++s_t.added;
             if (s.first_add < 0) s.first_add = now;
             s.last_add = now;
+            ++s.adds;
+            if (rs64_bk_vt_n && rs64_vt_lastd >= 0 && (s.add_dmin < 0 || rs64_vt_lastd < s.add_dmin)) s.add_dmin = rs64_vt_lastd;
         }
         ++s_t.submits;
     }

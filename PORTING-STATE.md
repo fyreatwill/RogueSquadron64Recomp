@@ -204717,3 +204717,42 @@ PASS (green/green/hit/red-after-module-edit); with HEAD's gate_trace.py the cont
 control now fails without the fix.
 Full gate sweep vs tools/gate_sweep_allowed_red.txt after the stand-in edit: see the result line below.
 Gate sweep result: 135 gates, 130 GREEN + 5 REPORT, 0 new RED vs the allowed baseline, both controls PASS (incl. the new import control).
+
+## Session 7679 (2026-11-19) — G6c attract/cinematic stand-ins: one ghost found (L5 sub 0x32 "shield" spawned-but-never-drawn, held to 4.6 units), near release ROGUESQ_S7679_NEAR=15 cuts it (old NOREF-GHOST rc 1, fix RELEASED rc 0, all other handoffs identical)
+
+Question (NEXT s7679): do stand-ins put objects into the attract flyby shots that retail never shows (H-cine-ghost) or only bridge objects
+the shot later spawns (H-cine-ok)? crash_reports --since 2026-11-13: 27 folded, 0 new.
+
+Instrument (src/main/rs64_standins.cpp, STANDINS_LOG only): per-stand-in `adds` and `add_dmin` (camera-space view-test depth over accepted
+stand-in draws) and a `[s7679-life]` table flushed at each rebuild (one line per stand-in drawn that generation: spawned?, adds, add_dmin,
+spawn_d). Route: tools/s7678_attract_run.zsh (no input, dd4 16:9 FPS60 STANDINS=1, 440 s, L0->5->7->10; bk_calls/item_hits identical to s7678
+again, deterministic).
+
+Result run 1 (scratch/s7678/s7679): control = real objects' first accepted draw depth ([s7675-fr] fr_d): n=137, min 18.0, p10 24.3, med 40.2.
+- L0: drawn 84, spawned 22 (add_dmin med 42.2), never-spawned 62 at add_dmin >= 42.9 (sub 0x14 60, 0x46 2).
+- L7: drawn 97, spawned 23, never-spawned 74 at >= 43.2.
+- L5: drawn 49, spawned 26, never-spawned 23 at >= 42.0 EXCEPT item 8053EDE0 sub 0x32 at add_dmin 4.63, 706 adds.
+So H-cine-ok for everything except one item. 8053EDE0 ([s7675-gh]): slot 0207 npc 80219D8C (the game spawned it, spawn_d 38.13), hp 1,
+real_call=-1 for its whole life (its handler never asks to be drawn), model "shield" (handler 0x8003D518 picks it), held by the s7672 hold
+(cap 900 frames) at si_d 30 -> 4.6 units, nearest real object 1.30 units away (item 8053C6F4, drawn). That is a ghost: an object the game
+hides, drawn by our hold right in front of the camera. The s7675 scorer had missed it twice over: the hold was still open at the level change
+(the never line only fires at 899 frames) and sub 0x32 has no first call of its own (NOREF).
+Why this is not a walker-style gate (s7676): walkers waited at depth > 51 before their first draw; every real first draw in 4 levels is at
+depth >= 18. A hold nearer than that with no real draw cannot be a distance gate.
+
+Fix ROGUESQ_S7679_NEAR=<depth> (default 15 inside the STANDINS opt-in; 0 = old hold; =odd odd-index only): after our own bucket call, a
+held stand-in whose real object has never called is released for good when its view-test depth < 15. Depth comes from a depth-only view-test
+hook mode (rs64_vt_on=2 around our call when not logging) so it works in the owner's no-log recipe. At rebuild, open holds now emit
+`[s7675-fr] ... delay=never ... open=1 released=0|1`. tools/s7675_ghost_score.py: NOREF subtypes judged against the all-subtype minimum
+first-call depth (NOREF-GHOST rc 1 / NOREF-GATE), released=1 -> RELEASED rc 0; --selftest now 5 synthetic cases, PASS.
+
+Two arms, same deterministic route, new build:
+- old (ROGUESQ_S7679_NEAR=0): scorer `never item 8053EDE0 sub 0032 held_dmin=4.6 -> NOREF-GHOST`, rc 1 (positive control for the scorer).
+- fix (default): `[s7679-rel] item 8053EDE0 sub 0032 depth=14.88 age=95 held_ok=96` (the only release in 3 levels), scorer RELEASED rc 0,
+  item adds 706 -> 359; item_hits 13269/16119/11416, pos_hits 753/6/18, wrong 0 and drawn 84/49/97 identical to the old arm. 0 crash both.
+ORIGIN: the hold (s7672) assumes every spawned object eventually draws; sub 0x32 "shield" is spawned and never drawn by its own handler
+(real_call -1 for 706 frames while within 4.6 units), so the writer of the wrong pixels is our hold, and the value it acts on (spawned slot)
+is legitimate game state.
+Rules out: stand-ins inventing objects in attract shots generally (H-cine-ghost) -- 1 of 230 drawn stand-ins in 3 levels.
+Residual: the shield is still drawn from depth 38 to 15 (no earlier signal that the game hides it); in-flight levels not re-checked with
+the release yet (s7674/s7676 held_dmin data there never went below 28, so 0 releases expected).
