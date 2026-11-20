@@ -204821,3 +204821,28 @@ addNpcToVisibilityBucket-only detector could not see) - two lines: the code read
 (old hold to 14.88 + release vs new handoff at 38.7 with every other handoff identical). This is a behaviour change, not
 instrumentation: with STANDINS on, the shield stand-in now stops drawing at the real shield's first draw. Next discriminator: does
 heavyAttachedAudioEmitterNpcHandler (the only other inline-draw-only handler) map to a subtype that gets a stand-in (H-none vs H-blind)?
+
+## Session 7682 (2026-11-19) — G6c inline draw paths: heavyAttachedAudioEmitterNpcHandler has no stand-in (H-none); full subtype->handler map shows sub 0x32 is the only stand-in subtype off the bucket path
+
+Crash gate first: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0. Offline unit, no game run.
+
+What ran: (1) caller trace for heavyAttachedAudioEmitterNpcHandler (0x8007BC18). Its only installer is spawnNamedTexturedEmitterNpc
+(0x8007D470, s4485 audit: lui/addiu at 0x8007D798, no data word, no jal), called from npcWordDevastatorUpdate (0x8007EF1C, jal at
+0x8007F204) and spawnCutsceneObjectsFromList (0x800A83C4, cutscene path, not a DAT stand-in). setupNpcUpdateFunctions (0x800653B4,
+jump table on item+0 - 0xC, 0x47 cases) installs npcWordDevastatorUpdate for sub 0x37 only (case 0x2B, block 0x800655F4).
+src/main/rs64_standins.cpp gives 0x37 no model (neither names_in_item nor handler_model_name; the builder counts it as noname and
+skips), and upstream's static_standins.cpp table has no 0x37 either. -> H-none: the emitter is a child effect of a subtype that never
+gets a stand-in; H-blind and H-attached need no work.
+(2) New tool tools/g6c_sub_handler_map.py (whole table, one pass, rule 14): for all 71 subtypes it reads the handler from
+setupNpcUpdateFunctions in ../N64Recomp/RecompiledFuncs, tests whether that handler reaches addNpcToVisibilityBucket (0x80057C8C,
+what the handoff detector watches) or the 0x8005940C view-test wrapper within 4 jal levels, and joins the stand-in model source
+parsed from rs64_standins.cpp. Positive control built in: npcShieldUpdate -> 0x8005940C must be seen (it is; a first version with
+an unnormalised jal match showed every column '-', which the control now catches). Result (scratch/agent/s7682_sub_handler_map.txt):
+37 stand-in subtypes; 32 have a handler in the switch, and all 32 reach the bucket except 0x32 npcShieldUpdate (vt only = the
+s7681 hook) -> flagged=0, rc 0. The other 5 stand-in subtypes (0x33 0x36 0x44 0x4B 0x4F, all item+0x5C named) fall to the switch
+default, i.e. spawn through another path. Second line for that class, runtime, existing logs (capture once, analyse many):
+scratch/s7678/*/cap/run.log [s7672-ho] for sub 004B show real_call/real_add >= 0 (e.g. 8053D770 real_add=527-529, 8026EA44
+real_add=2605), so the detector sees 0x4B's real draws. 0x33/0x36/0x44/0x4F do not occur in the s7678 attract logs: unobserved.
+
+Rules out: a second inline-draw ghost among switch-installed stand-in subtypes (code read + tool, single code source for the
+reachability, bounded to 4 call levels). Open: the four default-path subtypes never observed at runtime.

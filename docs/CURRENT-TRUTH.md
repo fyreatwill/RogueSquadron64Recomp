@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **NEW s7682: G6c inline-draw audit CLOSED for switch-installed subtypes.** heavyAttachedAudioEmitterNpcHandler is a child of sub 0x37
+  (npcWordDevastatorUpdate), which has no stand-in (H-none). tools/g6c_sub_handler_map.py (71 subtypes, positive control npcShieldUpdate):
+  every stand-in subtype installed by setupNpcUpdateFunctions reaches addNpcToVisibilityBucket except 0x32 (s7681 hook), rc 0. Default-path
+  stand-in subs 0x33/0x36/0x44/0x4F unobserved at runtime (0x4B seen handing off). Rerun the tool after any stand-in table edit.
 - **NEW s7681: the s7679 "ghost" shield is drawn by the game; our detector was blind to its draw path (code read + two arms).**
   npcShieldUpdate (sub 0x32, 0x8007AEF8) never calls addNpcToVisibilityBucket: its render case 0x8007B8CC runs the same view test
   via 0x8005940C(view, inst, s3+8, radius) and links itself into the bucket inline. tools/apply_s7681_shield_vt.py (RS64_REPLAY) reports
