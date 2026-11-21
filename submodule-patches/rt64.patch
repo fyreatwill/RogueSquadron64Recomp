@@ -3095,10 +3095,10 @@ index 60b0fa4..91e819c 100644
  
          void reset();
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..d1c80ed 100644
+index dccaa87..b684015 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,559 @@
+@@ -5,12 +5,560 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -3254,8 +3254,9 @@ index dccaa87..d1c80ed 100644
 +
 +    static bool rs64LogRdpAdvance() {
 +        static const bool enabled = [] {
++            const char * rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as rt64_render_context/dpc_bridge
 +            const char *e = std::getenv("ROGUESQ_LOG_RDP_ADVANCE");
-+            return e && *e && *e != '0';
++            return (rs64_la && *rs64_la && *rs64_la != '0') || (e && *e && *e != '0');
 +        }();
 +        return enabled;
 +    }
@@ -3658,7 +3659,7 @@ index dccaa87..d1c80ed 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -49,7 +596,34 @@ namespace RT64 {
+@@ -49,7 +597,34 @@ namespace RT64 {
          }
      }
  
@@ -3693,7 +3694,7 @@ index dccaa87..d1c80ed 100644
          state->dlCpuProfiler.start();
  
          // Update the state with the current display list address.
-@@ -69,6 +643,33 @@ namespace RT64 {
+@@ -69,6 +644,33 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -3727,7 +3728,7 @@ index dccaa87..d1c80ed 100644
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +690,47 @@ namespace RT64 {
+@@ -89,8 +691,47 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -3775,7 +3776,7 @@ index dccaa87..d1c80ed 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +739,11 @@ namespace RT64 {
+@@ -99,6 +740,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -3787,7 +3788,7 @@ index dccaa87..d1c80ed 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,9 +757,61 @@ namespace RT64 {
+@@ -112,9 +758,61 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -3850,7 +3851,7 @@ index dccaa87..d1c80ed 100644
                  dummy = dl;
                  extendedFunction(state, &dl);
                  cmdLength = 1;
-@@ -122,6 +819,45 @@ namespace RT64 {
+@@ -122,6 +820,45 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -3896,7 +3897,7 @@ index dccaa87..d1c80ed 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +865,14 @@ namespace RT64 {
+@@ -129,6 +866,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -3911,7 +3912,7 @@ index dccaa87..d1c80ed 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +880,219 @@ namespace RT64 {
+@@ -136,13 +881,219 @@ namespace RT64 {
                      break;
                  }
  
@@ -4133,7 +4134,7 @@ index dccaa87..d1c80ed 100644
              }
  
              if (dl != nullptr) {
-@@ -153,6 +1103,79 @@ namespace RT64 {
+@@ -153,6 +1104,79 @@ namespace RT64 {
          state->dlCpuProfiler.end();
      }
  
@@ -4213,7 +4214,7 @@ index dccaa87..d1c80ed 100644
      void Interpreter::processDisplayLists(uint32_t dlStartAdddress, DisplayList *dlStart) {
          assert(hleGBI != nullptr);
  
-@@ -169,8 +1192,11 @@ namespace RT64 {
+@@ -169,8 +1193,11 @@ namespace RT64 {
          DisplayList *dl = dlStart;
          uint8_t opCode;
          GBIFunction func;
@@ -4225,7 +4226,7 @@ index dccaa87..d1c80ed 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  extendedFunction(state, &dl);
-@@ -190,6 +1216,7 @@ namespace RT64 {
+@@ -190,6 +1217,7 @@ namespace RT64 {
                  }
              }
  
@@ -8123,7 +8124,7 @@ index 6051f4e..99b121b 100644
          uint32_t rdramCount = 0;
          uint32_t commonBytesOffset = (loadOp.tile.uls >> 2) << loadOp.texture.siz >> 1;
 diff --git a/src/hle/rt64_rsp.cpp b/src/hle/rt64_rsp.cpp
-index d4d9883..1c3d1a1 100644
+index d4d9883..c270ecf 100644
 --- a/src/hle/rt64_rsp.cpp
 +++ b/src/hle/rt64_rsp.cpp
 @@ -5,6 +5,8 @@
@@ -8162,13 +8163,14 @@ index d4d9883..1c3d1a1 100644
          auto &rawLight = lights[index].raw;
          rawLight.words[0] = value;
          rawLight.words[1] = value;
-@@ -1043,8 +1051,46 @@ namespace RT64 {
+@@ -1043,8 +1051,47 @@ namespace RT64 {
      }
  
      void RSP::drawIndexedTri(uint32_t a, uint32_t b, uint32_t c, bool rawGlobalIndices) {
 +        static const bool probeEnabled = []() {
++            const char * rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as debug_logs.h
 +            const char *v = std::getenv("ROGUESQ_LOG_TRI_COPY");
-+            return v && *v && *v != '0';
++            return (rs64_la && *rs64_la && *rs64_la != '0') || (v && *v && *v != '0');
 +        }();
 +        if (probeEnabled) {
 +            static uint32_t lastWidth = 0xFFFFFFFFu;
@@ -8209,7 +8211,7 @@ index d4d9883..1c3d1a1 100644
          assert(cycleType != G_CYC_COPY);
  
          // Don't draw anything if both tris are being culled.
-@@ -1143,6 +1189,7 @@ namespace RT64 {
+@@ -1143,6 +1190,7 @@ namespace RT64 {
                  drawRect.lry = std::max(drawRect.lry, int32_t(hlslpp::ceil(v.y).x * 4.0f));
              }
  
@@ -8217,7 +8219,7 @@ index d4d9883..1c3d1a1 100644
              drawRect = scissorRect.intersection(drawRect);
              if (!drawRect.isNull()) {
                  fbPair.drawColorRect.merge(drawRect);
-@@ -1295,6 +1342,14 @@ namespace RT64 {
+@@ -1295,6 +1343,14 @@ namespace RT64 {
          shadingSmoothMask = gbi->constants[F3DENUM::G_SHADING_SMOOTH];
      }
  

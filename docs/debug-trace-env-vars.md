@@ -22,9 +22,13 @@ build\Debug\RogueSquadron64Recomp.exe
 ROGUESQ_LOG_DPC=1 ./build/Debug/RogueSquadron64Recomp.exe
 ```
 
-**Catch-all**: `ROGUESQ_LOG_ALL=1` enables every category at once.
+**Catch-all**: `ROGUESQ_LOG_ALL=1` enables every category at once on the HOST side (src/, lib/): since s7728 every
+host reader of a name that honours it does, gated by `tools/s7714_truth_census.py` (LOG_ALL pass). Probes emitted
+into generated code by fixup/apply scripts read only their own flag unless their row says "Also enabled by
+`ROGUESQ_LOG_ALL`" (e.g. the AUDIOTICK_TRACE / INIT_VOICE_SAMPLE / S4700_CB generated halves).
 
-To disable: unset, set to `0`, or leave undefined.
+To disable: unset, set to `0`, or leave undefined. Any value not starting with `0` is ON, including `false` and `no`
+(s7728: the `env_flag` helper used to read those two as off, unlike every other reader).
 
 ## Categories
 

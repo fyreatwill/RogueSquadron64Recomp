@@ -206174,3 +206174,40 @@ fires in every hangar entry and every mission load, so each segment's zero is a 
 same-run per-segment control), single route. Not covered: over-releases never touched again (invisible and harmless), other
 levels. The Objective-C over-release thread is closed on both owner routes; do not repeat it. Logs zstd'd in scratch/s7727.
 Next: owner items / new reports.
+
+## Session 7728 (2026-11-20) — truth census gains false/no values + a host LOG_ALL pass: 4 VALUE + 6 LOG_ALL reader splits found and fixed (diagnostic flags only)
+
+Work unit (NEXT.md: no new crash report (crash_reports FOLDED=27 new=0), no owner report, no new soak lines -> bounded
+engineering item). CURRENT-TRUTH item 31's two open notes: (1) the m5 `arm=audio_stub` label was already fixed in s7714
+(vendored lines 36789/37030 read `!(audio && audio[0] == '0')`), stale note; (2) "helper readers (rs64_env_int) not
+modelled": all 6 rs64_env_int names are single-reader (DIAG_*), so the s7713 numeric census has nothing to model there.
+The s7714 truth census DID model helpers, but dropped two env_flag (src/main/debug_logs.h) rules: `=false`/`=no` read as
+off, and the ROGUESQ_LOG_ALL catch-all (a foreign operand, evaluated as neutral). Hypotheses: H-none (no name's readers
+split on those) vs H-split (some do: LOG_ALL=1 or =false lights half a probe).
+
+Result H-split, diagnostic flags only (no owner setting, no game behaviour):
+- VALUE (VALUES += "false","no"): LOG_DPC, LOG_FILTER_VOICE_AUDIT, LOG_M5_WRITER_PARITY, LOG_TRI_COPY: env_flag off vs
+  `*e != '0'` on (dpc_bridge, main.cpp, the m5 fixups, rt64_rsp). Fix: env_flag drops the false/no special case, so it
+  follows the rule every other reader uses (~700 sites). Note log_tri_copy() has no callers.
+- LOG_ALL pass (new, host readers src/ + lib/ only; honours = env_flag, or `getenv("ROGUESQ_LOG_ALL")` from 5 lines before
+  to 3 after the site): E9_UNIFIED (main.cpp:7435 own vs render_context/dpc_bridge all), M5_DOWNSTREAM (main.cpp:4421,
+  upstream_compat:9682 own vs :7613 all), M5_SOURCE_TRANSITION (3 transition_enabled sub-gates own vs the :2716 outer gate
+  all), RDP_ADVANCE (lib/rt64 rt64_interpreter.cpp:160 own), SPBOOT (main.cpp:6932 own vs librecomp rsp.cpp all),
+  TRI_COPY (lib/rt64 rt64_rsp.cpp:1055 own). Fixed by adding the LOG_ALL term at each own site (+ VI_SELECTOR
+  upstream_compat:1574, whose generated s802 twin already honours it). Prototype false flag removed: DIAG_GATE main.cpp:5899
+  has `on("ROGUESQ_LOG_ALL")` in an unrelated list (not a getenv of it), excluded by the getenv-only rule.
+  Generated-code probes (fixup/apply strings: AUDIOTICK_TRACE, INIT_VOICE_SAMPLE, S4700_CB, s802:68) read only their own flag;
+  out of scope by design (a regen-only change), now stated in docs/debug-trace-env-vars.md.
+Two lines of evidence:
+1. Static: census on the reverted (pre-fix) tree, same tool: 4 VALUE + 6 LOG_ALL SPLIT (exactly the fixed set); on the fixed
+   tree 0 + 0, rc 0. --controls 10/10 PASS incl. two new: planted pre-s7728 env_flag vs `*e != '0'` SPLITs on false,no;
+   planted LOG_ALL all-vs-own host pair SPLITs, all-vs-all and host-vs-generated do not.
+2. Runtime (boot 30 s each, build at 16:27): no-env arm 0 `[spboot]`, 0 `vi-selector-positive`; ROGUESQ_LOG_ALL=1 arm 4
+   `[spboot]` rows (only emitter main.cpp:6945, a fixed site) and 1 `[vi-selector-positive]` (only emitter
+   upstream_compat.cpp, fixed site). `[tri-copy]` 0 in both: drawIndexedTri is an HLE path the LLE port does not take.
+   Logs scratch/s7728/{base,all}.log.zst. No pre-fix binary was run (the pre-fix code at those sites reads only its own flag).
+Dead end on the way: a zsh `$F` loop did not word-split, so the backup step failed and the reverted tree stayed on disk;
+restored from git HEAD (src) and by hand (two lib/rt64 lines, verified against submodule-patches/rt64.patch), edits re-applied.
+lib/rt64 edited -> submodule-patches/export.sh run, rt64.patch refreshed in this commit. Gate sweep after the edits: 216 gates, 212 GREEN, 3 REPORT, 1 NEEDS-ARGS (s7726_zombie_census.py needs --arm/--control captures; pre-existing), 0 RED, 0 HOLLOW.
+No mitigation added (consistency fix of reader predicates); ORIGIN: the split sites were written one probe at a time
+(s3xxx-s5xxx) with own-flag predicates while sibling readers used the LOG_ALL idiom.

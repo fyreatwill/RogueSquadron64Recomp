@@ -15,6 +15,10 @@ block, including `if (C) return X;` early-return chains. The isolated expression
 and set to "0", "1", "2", "t", "yes" with C semantics (short-circuit, atoi/strtol/atof prefix parse, strcmp family).
 A value the site cannot decide (a foreign operand decides it, an opaque call) is '?', never a disagreement.
 SPLIT = two modelled sites of one name give different on/off for some value. REVIEWED = hand-read, deliberate.
+s7728 LOG_ALL pass: the catch-all ROGUESQ_LOG_ALL is a foreign operand above (neutral), so a name whose host readers
+disagree on it (env_flag / a `getenv("ROGUESQ_LOG_ALL")` within 5 lines before .. 3 after the site honours it; the rest
+do not) was invisible: LOG_ALL=1 lit half a probe. Host readers only (src/, lib/): generated-code probes come from
+fixup/apply strings and read only their own flag unless stated (docs/debug-trace-env-vars.md).
 
 Exit 0 = no unreviewed SPLIT; 1 = splits; 2 = control failure.
 --controls: (1) planted default-on vs default-off pair must SPLIT on unset; (2) planted `*e == '1'` vs `*e != '0'`
@@ -28,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7711_optval_census as c7711
 
 ROOT = c7711.ROOT
-VALUES = (None, "0", "1", "2", "t", "yes")
+VALUES = (None, "0", "1", "2", "t", "yes", "false", "no")  # s7728: + false/no (env_flag read them as off)
 VNAME = {None: "unset"}
 
 # name -> reason. Each entry read by hand at s7714.
@@ -356,7 +360,7 @@ def ev(n, s):
         if f in ("rs64_bind_flag", "env_on"):
             return int(bool(s) and s[0] != "0")
         if f == "env_flag":  # ROGUESQ_LOG_ALL ignored (foreign)
-            return int(bool(s) and s[0] != "0" and s != "false")
+            return int(bool(s) and s[0] != "0")  # s7728: debug_logs.h dropped its false/no special case
         if f == "rs64_s7355_env_is":
             v = ev(args[0], s) if args else OPAQUE
             return OPAQUE if not isinstance(v, str) else int(s is not None and s == v)
@@ -908,6 +912,34 @@ def census(models, owner, quiet=False):
     return bad, n_mod, n_un
 
 
+def honours_all(site, node, texts=None):
+    """s7728: does this reader site also switch on under ROGUESQ_LOG_ALL?"""
+    if any(x[0] == "helper" and x[1] == "env_flag" for x in walk(node)):
+        return True
+    rel, ln = site.rsplit(":", 1)
+    ln = int(ln)
+    t = (texts or {}).get(rel)
+    if t is None:
+        t = open(os.path.join(ROOT, rel), errors="replace").read().split("\n")
+    return any('getenv("ROGUESQ_LOG_ALL")' in l for l in t[max(0, ln - 6):ln + 3])
+
+
+def all_census(models, quiet=False, texts=None):
+    """-> names whose host reader sites disagree on honouring ROGUESQ_LOG_ALL."""
+    bad = []
+    for name in sorted(models):
+        ss = [x for x in models[name] if x[1] and not is_num(x[2]) and x[0].startswith(("src/", "lib/"))]
+        if len(ss) < 2 or name == "ROGUESQ_LOG_ALL":
+            continue
+        h = [(x[0], honours_all(x[0], x[2], texts)) for x in ss]
+        if len(set(b for _, b in h)) < 2:
+            continue
+        bad.append(name)
+        if not quiet:
+            print(f"SPLIT    LOGALL {name}: " + ", ".join(f"{s}={'all' if b else 'own'}" for s, b in h))
+    return bad
+
+
 def plant(lines_a, lines_b, name="ROGUESQ_PLANT"):
     a = model_site(lines_a, 1, name, False)
     b = model_site(lines_b, 1, name, False)
@@ -967,13 +999,34 @@ def main():
         g = bool(r8[0]) and r8[0][:4] == (0, 0, 1, 0)
         print(f"control Python triple-quoted block site sig={r8[0]} want unset0 '0'->0 '1'->1 '2'->0 {'PASS' if g else 'FAIL'}")
         ok &= g
+        # s7728 controls: the old env_flag (false/no read as off) vs a `*e != '0'` reader must SPLIT on "false";
+        # a planted LOG_ALL-honouring host site vs an own-only host site must LOGALL-SPLIT; both honouring must agree.
+        a, b, w = plant(['const char* e = getenv("ROGUESQ_PLANT"); if (e && *e && *e != \'0\' && strcmp(e, "false") && strcmp(e, "no")) go();'],
+                        ['const char* e = getenv("ROGUESQ_PLANT"); if (e && *e && *e != \'0\') go();'])
+        g = any(x[0] == "false" for x in w) and any(x[0] == "no" for x in w)
+        print(f"control pre-s7728 env_flag false/no vs non-'0' sigs={a[0]},{b[0]} want SPLIT on false,no {'PASS' if g else 'FAIL'}")
+        ok &= g
+        la = ['static const bool v = [] {', '    const char* all = getenv("ROGUESQ_LOG_ALL");',
+              '    const char* e = getenv("ROGUESQ_PLANT");', "    return (all && *all != '0') || (e && *e != '0');", '}();']
+        lo = ['static const bool v = [] {', '    const char* e = getenv("ROGUESQ_PLANT");', "    return e && *e != '0';", '}();']
+        ra, rb = model_site(la, 3, "ROGUESQ_PLANT", False), model_site(lo, 2, "ROGUESQ_PLANT", False)
+        tx = {"src/plant_a.cpp": la, "src/plant_b.cpp": lo, "src/plant_c.cpp": la}
+        g1 = all_census({"ROGUESQ_PLANT": [("src/plant_a.cpp:3", ra[0], ra[1]), ("src/plant_b.cpp:2", rb[0], rb[1])]}, True, tx)
+        g2 = all_census({"ROGUESQ_PLANT": [("src/plant_a.cpp:3", ra[0], ra[1]), ("src/plant_c.cpp:3", ra[0], ra[1])]}, True, tx)
+        g3 = all_census({"ROGUESQ_PLANT": [("src/plant_a.cpp:3", ra[0], ra[1]), ("tools/plant_b.py:2", rb[0], rb[1])]}, True, tx)
+        g = g1 == ["ROGUESQ_PLANT"] and not g2 and not g3
+        print(f"control LOG_ALL all-vs-own host SPLIT={bool(g1)} all-vs-all={bool(g2)} host-vs-generated={bool(g3)} "
+              f"want True/False/False {'PASS' if g else 'FAIL'}")
+        ok &= g
         if not ok:
             return 2
     else:
         models, owner = load_sites()
     bad, n_mod, n_un = census(models, owner)
+    bad_all = all_census(models)
     print(f"s7714: {len(models)} names with >=2 reader sites, {n_mod} sites modelled, {n_un} unmodelled, "
-          f"{len(bad)} unreviewed SPLIT")
+          f"{len(bad)} unreviewed SPLIT, {len(bad_all)} LOG_ALL SPLIT (host readers)")
+    bad = bad + bad_all
     if "--unmodelled" in sys.argv:
         for name in sorted(models):
             for site, sig, why in models[name]:

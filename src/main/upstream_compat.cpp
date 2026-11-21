@@ -1571,8 +1571,9 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     int n = ++s_count;
     static int selector_control = -1;
     if (selector_control < 0) {
+        const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as the s802 probe
         const char* e = std::getenv("ROGUESQ_LOG_VI_SELECTOR");
-        selector_control = (e && *e && *e != '0') ? 1 : 0;
+        selector_control = ((rs64_la && *rs64_la && *rs64_la != '0') || (e && *e && *e != '0')) ? 1 : 0;
     }
     if (selector_control && n == 1) {
         fprintf(stderr, "[vi-selector-positive] osViSetMode_recomp is live\n");
@@ -9679,8 +9680,9 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     if ((uint32_t)ctx->r4 == 0x8010FEE0u && (int32_t)ctx->r2 == 0) s7394fix::holder.store(-1); // s7394 fix: released
     if (s4580_q) s4580::rec(rdram, ctx, 'S', s4580_vcb, s4580::vc(rdram, (uint32_t)ctx->r4), (int)(s32)ctx->r6); /* PATCH: s4580 */
     static const bool enabled = [] {
+        const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as line ~7613
         const char* all = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
-        return all && all[0] && all[0] != '0';
+        return (rs64_la && *rs64_la && *rs64_la != '0') || (all && all[0] && all[0] != '0');
     }();
     if (enabled) {
         const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;

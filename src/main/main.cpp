@@ -2720,8 +2720,9 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
     }();
     if (!enabled || len == 0u) return;
     static const bool transition_enabled = [] {
+        const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as the line-2716 gate
         const char* value = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
-        return value && value[0] && value[0] != '0';
+        return (rs64_la && *rs64_la && *rs64_la != '0') || (value && value[0] && value[0] != '0');
     }();
     uint32_t phase = 0, width = 0, origin = 0, route_ordinal = 0xFFFFFFFFu,
              route_row = 0xFFFFFFFFu;
@@ -4418,8 +4419,9 @@ extern "C" void rs64_m5_host_task_boundary(const char* edge,
                                              uint32_t task_ptr,
                                              const OSTask* task) {
     static const bool enabled = [] {
+        const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as upstream_compat.cpp
         const char* e = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
-        return e && e[0] && e[0] != '0';
+        return (rs64_la && *rs64_la && *rs64_la != '0') || (e && e[0] && e[0] != '0');
     }();
     if (!enabled || !task || task->t.type != M_AUDTASK) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
@@ -5639,8 +5641,9 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
         (phys < spans[0] + 0x180u && phys + len > spans[0]) ||
         (phys < spans[1] + 0x180u && phys + len > spans[1]);
     static const bool transition_enabled = [] {
+        const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as the line-2716 gate
         const char* value = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
-        return value && value[0] && value[0] != '0';
+        return (rs64_la && *rs64_la && *rs64_la != '0') || (value && value[0] && value[0] != '0');
     }();
     if (transition_enabled && overlaps_field348) {
         static uint32_t transition_rows = 0;
@@ -6302,8 +6305,9 @@ extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
     const uint32_t row = phase_rows[slot]++;
     const uint32_t callsite = ra >= 8u ? ra - 8u : 0u;
     static const bool transition_enabled = [] {
+        const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as the line-2716 gate
         const char* value = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
-        return value && value[0] && value[0] != '0';
+        return (rs64_la && *rs64_la && *rs64_la != '0') || (value && value[0] && value[0] != '0');
     }();
     if (transition_enabled && span != 0u) {
         static uint32_t transition_rows = 0;
@@ -6929,8 +6933,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     {
         static int s_log = -1;
         if (s_log < 0) {
+            const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as rsp.cpp
             const char* e = std::getenv("ROGUESQ_LOG_SPBOOT");
-            s_log = (e && *e && *e != '0') ? 1 : 0;
+            s_log = ((rs64_la && *rs64_la && *rs64_la != '0') || (e && *e && *e != '0')) ? 1 : 0;
         }
         if (s_log) {
             static int s_n = 0;
@@ -7432,8 +7437,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         }
         static int s_e9_unified = -1;
         if (s_e9_unified < 0) {
+            const char* rs64_la = std::getenv("ROGUESQ_LOG_ALL"); // s7728: LOG_ALL, as the other E9 readers
             const char* e = std::getenv("ROGUESQ_LOG_E9_UNIFIED");
-            s_e9_unified = (e && *e && *e != '0') ? 1 : 0;
+            s_e9_unified = ((rs64_la && *rs64_la && *rs64_la != '0') || (e && *e && *e != '0')) ? 1 : 0;
         }
         // ROGUESQ_LOG_FS_SLOT densifies late dual-task dumps (every task
         // after s_n>=5200) so the stop edge is not lost to rate limits.

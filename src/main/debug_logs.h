@@ -28,17 +28,15 @@
 
 namespace recomp::dbg {
 
-// Cached env-var read. Returns true iff the variable is set to a non-zero
-// non-"false"/"no" value, OR the catch-all ROGUESQ_LOG_ALL is enabled.
+// Cached env-var read. Returns true iff the variable is set and does not start with '0', OR the catch-all ROGUESQ_LOG_ALL is enabled.
 inline bool env_flag(const char *name) {
     const char *all = std::getenv("ROGUESQ_LOG_ALL");
     if (all && *all && *all != '0') return true;
     const char *e = std::getenv(name);
     if (!e || !*e) return false;
-    if (*e == '0') return false;
-    if (std::strcmp(e, "false") == 0) return false;
-    if (std::strcmp(e, "no") == 0) return false;
-    return true;
+    // s7728: no "false"/"no" special case: every other reader of these names (dpc_bridge, rt64_rsp, main.cpp,
+    // the m5 fixups) uses the project-wide `*e != '0'` rule, so =false lit one half of a probe and not the other.
+    return *e != '0';
 }
 
 // Thread name registration on Win32/Linux (`[NAME] ...`,
