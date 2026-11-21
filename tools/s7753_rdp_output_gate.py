@@ -54,6 +54,7 @@ SNAPS = {
     "scratch/s7754/retained/w219ov_s11040.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # PAUSE menu, cursor on ABORT LEVEL
     "scratch/s7754/retained/w219ov_s11400.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # ABORT LEVEL / ARE YOU SURE? confirm
     "scratch/s7754/retained/w219ov_s12060.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # MISSION FAILED medal screen
+    "scratch/s7754/retained/w219sel_s1620.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # SELECT LEVEL holo, the one begin-exact task (s7761)
 }
 
 

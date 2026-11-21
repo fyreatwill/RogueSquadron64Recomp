@@ -71,10 +71,10 @@ ARGS = {
     "s7743_ovl_consumers.py": ([], r"verdict=H-tool-input a_not_fired=0 b_not_seen=0"),
     # s7753: end-to-end ucode OUTPUT gate: retained s7751 snaps replayed through the live factor5_ucode_lean.cpp.o must equal the
     # live RDP tail byte-for-byte; ctls TG_FIX=0 (differs, cxd4 length), CAP=65536 (strict prefix, cap_fires=1), 1-byte flip.
-    "s7753_rdp_output_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS snaps=20)(?=[\s\S]*VERDICT GREEN: 20/20 tasks replay == live)"),
+    "s7753_rdp_output_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS snaps=21)(?=[\s\S]*VERDICT GREEN: 21/21 tasks replay == live)"),
     # s7756: the hangar tasks s7753 excludes (H-state): live tail vs our ucode on END-of-task RAM must render within 1 LSB (s7755);
     # ctl CAP=2048 truncates the end replay and must read >=2 LSB px, plus s7755's flip + shade+16 ctls per pair.
-    "s7756_hstate_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS pairs=4)(?=[\s\S]*VERDICT GREEN: 4/4 hangar H-state pairs)"),
+    "s7756_hstate_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS pairs=6)(?=[\s\S]*VERDICT GREEN: 6/6 hangar H-state pairs)"),
     "s7719_regen_gate.py": (["--strict"], r"VERDICT H-mirrored \(.*live == replay byte-for-byte"),
     # s7719: these three print "OPEN n" yet exit 0 without --check, so the s7718 sweep scored OPEN 19/22/6 as GREEN.
     "s7363_hostarr_census.py": (["--check"], r"\nOPEN 0\b"),

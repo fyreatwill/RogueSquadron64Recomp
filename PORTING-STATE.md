@@ -207136,3 +207136,32 @@ Rules out: an overlay-specific mid-task DL/RAM race and any ucode output diverge
 stand-ins, pause, abort, medal) is covered end-to-end; only the hangar AVAILABLE CRAFT screen is H-state (invisible, s7756 gate).
 SELECT LEVEL is not on this route (4:3 dd1 RDP match vs angrylion s6785) -> NEXT.md takes it at 21:9 with LEVEL DESCRIPTION.
 Verdict: selects H-exact.
+
+## Session 7761 (2026-11-21) — SELECT LEVEL and LEVEL DESCRIPTION at the owner 21:9 recipe: both H-state like AVAILABLE CRAFT and invisible live-vs-end (13/13 checked ge2LSB 0); s7756 gate 6/6, s7753 gate 21/21; owner-route RDP-output coverage complete
+Start checks: crash_reports new=0; no new SOAK-RESULTS lines since the s7750 fold; no owner report. Screen unlocked, HID idle 16.3 h.
+Question (NEXT s7761, rdp-output-gate-select-level): H-exact / H-state / H-race on SELECT LEVEL and LEVEL DESCRIPTION.
+Boring thing first: the forced level-select route (s7757 w219 sheet) goes SELECT GAME -> AVAILABLE CRAFT and NEVER shows SELECT LEVEL;
+that screen (the hangar holo titled SELECT LEVEL) appears after a left/right level change (s7385 sheet t=25). So both runs used a
+normal boot on the owner save (empty FORCE_* stripped, read-only, save-unchanged both runs), ASPECT=21:9 dd4 FPS60 STANDINS=1:
+ (1) `env EVERY=60:24:1460 SECS=60 zsh tools/s7754_capture_route.zsh w219_select ... ROGUESQ_AUTOPILOT=6:start,11:start,16:start,
+     21:start,25:left,33:a` -> alive=1 crash=0, 24 pairs serial 1500-2880. Sheet scratch/s7754/w219_select/sheet.jpg: w_030 SELECT
+     LEVEL (Battle of Calamari, holo ship), w_041+ AVAILABLE CRAFT. Log: left@25 s fs 1446, A@33 s fs 1922 -> serials 1500-1920 =
+     SELECT LEVEL, 1980+ = AVAILABLE CRAFT. A on SELECT LEVEL confirms the level; it does not open the description.
+ (2) `env EVERY=60:24:1800 SECS=55 ... w219_ldesc ... AUTOPILOT=...,25:left,27:start,31:cup,43:cup` (the s7386 LDESC route) -> alive=1
+     crash=0; w_040 shows the description text over AVAILABLE CRAFT; cup@31 s fs 1807, cup@43 s fs 2525 -> serials 1860-2520 = LDESC.
+Replay (tools/s7757_route_replay.py): SELECT LEVEL 6/7 begin != end (s1620 the only begin-exact task); LDESC 14/14 begin != end ->
+H-state on both, the s7754 AVAILABLE CRAFT signature (the description is that screen plus a text overlay).
+Visibility (tools/s7755_hstate_visibility.py --cap 1048576 --tg 1): SELECT LEVEL s1500-s1920 7/7 live-end ge2LSB 0 (0-10153 px <=1 LSB),
+begin-live ge2LSB 0, verdict INVISIBLE; LDESC s1920/2040/2160/2280/2400/2460 6/6 live-end ge2LSB 0 (618-17930 px <=1 LSB), begin-live
+27-183 px >=2 LSB on 5 (the tool's VISIBLE verdict is begin-driven, as in s7757/s7759; live never shows the begin image). Controls on
+all 13: flip PASS, shade+16 PASS (22-596 tris). Begin/end RAM differ in ~320k words incl. framebuffers, so the influential region was
+NOT bisected (single-source on which DL is rewritten; the s7754 hangar finding was the craft DL 0x720000-0x753000).
+Gates: s7756 PAIRS + hangar_hstate_219sel/k900_s1800 (SELECT LEVEL) + hangar_hstate_219ld/k900_s2400 (LDESC) -> --controls GREEN 6/6
+(CAP=2048 ctls 37540 / 21288 px PASS); s7753 SNAPS + w219sel_s1620 -> CONTROL PASS snaps=21, GREEN 21/21. Sweep regexes 20->21, 4->6.
+Full sweep --jobs 2 (at 5 pairs): 222 gates, 218 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (1148 s cold); after the 6th pair both gate
+outputs re-checked against the sweep regexes directly (match True/True).
+Harness pitfall found: `while pgrep -f s7651_gate_sweep.py` waiters match their OWN zsh command line and never exit; use the sweep's pid.
+ORIGIN: no mitigation; gate coverage only.
+Rules out: a menu-specific mid-task DL race on SELECT LEVEL / LEVEL DESCRIPTION at the owner 21:9 recipe. With s7757-s7760 every
+owner-route screen is now in an RDP-output gate (exact in s7753, or H-state-invisible in s7756).
+Verdict: selects H-state (invisible) for both screens; refutes H-race; H-exact only for the one SELECT LEVEL task s1620.

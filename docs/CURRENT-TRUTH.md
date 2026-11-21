@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7760 (2026-11-21).
+Compact operational handoff, as of Session 7761 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -20,7 +20,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   (keep byte-true, s7743). Env readers: launch strips empty ROGUESQ_* (s7730), maps on/off words to 1/0 (s7731), unsets invalid
   ROGUESQ_ASPECT (s7732); after a regen `python3 tools/s7734_compiled_reader_census.py` (rc 0). s7725 plume +0 texture-descriptor
   over-release (RT64 Present SIGTRAP) fixed, NSZombie 0 on boot/flight/hangar route (s7726/s7727). 21:9 fb read-back harmless (s7702-s7706).
-  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26; 20 snaps since s7760 incl. L10 21:9 stand-ins flight, hangar re-entry after abort, and PAUSE/ABORT/MISSION FAILED overlays, hangar H-state item 27, 4 pairs).
+  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26; 21 snaps since s7761 incl. L10 21:9 stand-ins flight, hangar re-entry after abort, PAUSE/ABORT/MISSION FAILED overlays SELECT LEVEL and LEVEL DESCRIPTION, hangar H-state item 27, 6 pairs).
 - **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
   proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
   cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
@@ -333,7 +333,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     exact from begin AND end image; the forced route never reaches this screen. GREEN 17/17.
     **s7760: 20 snaps** - + 3 in-mission overlays on the same owner route (w219ov_s11040 PAUSE menu, s11400 ABORT confirm, s12060
     MISSION FAILED medal; screens attributed by window sheet AND autopilot-fire/dump log order): 24/24 overlay tasks exact from begin
-    AND end image (pause/abort re-render the full flight scene, 1.22 MB). GREEN 20/20. Owner route covered end-to-end except SELECT LEVEL.
+    AND end image (pause/abort re-render the full flight scene, 1.22 MB). GREEN 20/20.
+    **s7761: 21 snaps** - + w219sel_s1620, the one begin-exact SELECT LEVEL holo task (normal boot, owner save, left@25 s). Owner
+    route now covered end-to-end incl. SELECT LEVEL and LEVEL DESCRIPTION (C-up on AVAILABLE CRAFT; H-state, item 27). GREEN 21/21.
+    RDP-output coverage is COMPLETE: do not schedule more coverage units.
     Pitfall: on L10 the crawl runs to ~VI 8500, so EVERY=250:24 without a <from> captures no flight (check snap vi vs the sheet).
     A RED after a ucode fixup edit = emitted stream changed: intended -> re-capture
     (`tools/s7753_capture_snaps.zsh`, `tools/s7754_capture_route.zsh` with ROGUESQ_S7751_EVERY=<N>:<max>:<from>) and say so.
@@ -353,6 +356,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     >=2 LSB (info only; same shape as 16:9's 313). GREEN 3/3, CAP=2048 ctl 44768 px. RDP-output coverage of the owner recipes is done.
     **s7759: 4 pairs** (+ hangar_hstate_219re/k900_s12750 = RE-ENTRY AVAILABLE CRAFT after abort, 21:9): the 3 re-entry H-state tasks
     (VI 12750-13250) render live-end ge2LSB 0 (1137/711/340 px <=1 LSB), same H-state shape as first entry. GREEN 4/4, CAP=2048 ctl 37385 px.
+    **s7761: 5 pairs** (+ hangar_hstate_219sel/k900_s1800 = SELECT LEVEL holo, 21:9 normal boot): SELECT LEVEL is H-state too (6/7
+    tasks begin != end; influential RAM region not bisected - begin/end images differ in ~320k words incl. fbs), and all 7 render live-end ge2LSB 0 (0-10153 px <=1 LSB),
+    s7755 flip + shade+16 ctls PASS on each. **+ hangar_hstate_219ld/k900_s2400 = LEVEL DESCRIPTION** (C-up at 31 s): 14/14 tasks H-state,
+    6/6 checked live-end ge2LSB 0 (618-17930 px <=1 LSB); begin-live up to 183 px >=2 LSB (info only, s7755 says VISIBLE on begin,
+    same shape as the s7757 first-entry 336 px). GREEN 6/6, CAP=2048 ctl 21288 px.
 
 ## Evidence index
 
