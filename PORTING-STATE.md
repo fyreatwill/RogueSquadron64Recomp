@@ -206284,3 +206284,37 @@ rc 0, test_settings 27/27, live `OSMEM_MB= ASPECT= dd2` -> 2 stripped, osmem=12 
 run (the only edit after sweep #2 is that one line, re-checked by the 4 censuses that cover it).
 Owner defaults untouched (unset and every non-empty value behave exactly as before).
 Next discriminator (NEXT.md): other owner-typable values the census does not probe ("off", "on", whitespace).
+
+## Session 7731 (2026-11-20) — on/off words (`=off`, `=on`, `=yes`, `=true`...) now read as 0/1 at launch: before, `=off` turned 216 switches ON and `=on` read OFF at 39; letter-mode readers kept
+
+Inputs: crash_reports --since 2026-11-13: 27 FOLDED, 0 new. No new SOAK-RESULTS lines. NEXT.md candidate taken (values the
+truth census did not probe: "off", "on", "true", " 1", "1 ").
+Hypotheses: H-split (readers of one name disagree on a word) vs H-agree (they agree, possibly all against intent).
+Census (VALUES += off/on/true/" 1"/"1 "): 0 unreviewed SPLIT, 0 LOG_ALL SPLIT (the 15 REVIEWED names only extend their
+mode-word lists). So H-agree on reader pairs; H-split refuted. But all readers test digits, so the word reads against
+intent: new intent count (sig[word] != sig[digit]) off=216 false=216 no=216 names read ON, on=39 yes=39 true=40 read OFF
+(`*e == '1'` readers, the QOS family); `=true` additionally selected the 't' tog mode at the s6919-style readers.
+Boring-first check of the fix: a letter scan over all reader sites found 2 readers giving a word letter its own meaning:
+ROGUESQ_DD_OFFMAPCULL_H (upstream_compat.cpp:227 `h[0]=='o'` = gate off, a number = margin, so "0" = gate ON: mapping off->0
+would have INVERTED it; the s7037 dd6 bundle and OWNER-OPT-INS use `=off`) and ROGUESQ_HUD_MARKCLS ('y', diag). The first
+scan version over-attributed HUD_MARKPC/HUD_WATCH (same line); it now counts only tests of the getenv'd variable.
+ORIGIN: the word is typed by the owner (shell or settings file); every reader is a digit test. Not a mitigation: a launch-time
+normalisation of input, like s7730.
+Fix (src/main/rs64_settings.cpp): rs64_settings_bool_word() maps the whole value (any case) off/false/no -> "0",
+on/true/yes -> "1"; rs64_s7731_norm_words() rewrites environ at the top of rs64_settings_apply (`[s7731] NAME=on read as 1`,
+forces the existing re-exec), and settings-file values get the same map; kKeepWords {DD_OFFMAPCULL_H, HUD_MARKCLS} are
+left untouched. ROGUESQ_S7731_KEEP_WORDS=1 = old behaviour (control arm).
+Census gates (tools/s7714_truth_census.py, exit 1): intent_check (words read against their digit that the normaliser does
+not map: 0; control with no normaliser source: all 6, PASS) and letter_scan (word-letter readers not in kKeepWords: 0; stale
+keep entries: 0; control with empty keep: both names, PASS). All 14 controls PASS. tools/test_settings.cpp 46/46 (19 new
+bool_word cases incl. tog3/auto/16:9/" off"/"onx" untouched).
+Live, same binary (9 s boots, SETTINGS=0, NO_SAVE_WRITE=1, SIGKILL), rebuilt after the keep list:
+- QOS_ALL=on -> `[s7731] ... read as 1`, re-exec, `[s6989] QOS_ALL gfx=1 ...`; same-binary KEEP_WORDS=1 -> no s6989 line
+  (old loss reproduced: the instrument discriminates); QOS_ALL=1 positive control -> s6989; unset -> none.
+- settings file `ROGUESQ_QOS_ALL=yes` -> applied as `=1(file)`, s6989 line; KEEP_WORDS=1 -> `=yes(file)`, no s6989 line.
+- DD6 bundle + `DD_OFFMAPCULL_H=off` -> no s7731 line, `[s7037] ... h=off` (kept). FPS60=TRUE QOS_ALL=yes -> both mapped.
+Gate sweep (216, before the keep-list edit): 211 GREEN 3 REPORT 1 NEEDS-ARGS (s7726, as before) 1 RED: s7424_stale_objects
+H-stale on rs64_settings.cpp.o (edited after the build). After rebuild: s7424 H-fresh, s7599/s7600 CLOSED, s7613 PASS,
+s7714 rc 0. A second full sweep was not run; the only edit after the sweep is the keep list, re-checked by those 5 gates.
+Owner defaults untouched (unset, empty and every digit value behave as before). OWNER-OPT-INS gains a row.
+Next (NEXT.md): "=0 reads ON" presence readers (e.g. ASPECT=0 opens the opt-in window) crossed with docs that say `=0`.

@@ -5,6 +5,7 @@
 #include <cstdlib>
 extern "C" int rs64_settings_parse_line(const char*, char*, size_t, char*, size_t);
 extern "C" int rs64_settings_resolve_value(const char*, const char*, const char*, char*, size_t);
+extern "C" const char* rs64_settings_bool_word(const char*);
 int main() {
     struct T { const char* in; int kind; const char* n; const char* v; } t[] = {
         {"", 0, "", ""}, {"   # comment", 0, "", ""}, {"ROGUESQ_FPS60=1", 1, "ROGUESQ_FPS60", "1"},
@@ -40,6 +41,16 @@ int main() {
         char o[1300] = "";
         if (rs64_settings_resolve_value(c.f, c.n, c.v, o, sizeof o) != 0 || std::strcmp(o, c.want)) { fail++; std::printf("FAIL resolve %s %s=%s -> '%s'\n", c.f, c.n, c.v, o); }
     }
-    std::printf("%s %d cases, %d fail\n", fail ? "FAIL" : "PASS", (int)(sizeof t / sizeof t[0] + sizeof r / sizeof r[0]), fail);
+    // s7731: whole-value on/off words map to digits; anything else (modes, numbers, partial words) is untouched.
+    struct W { const char* v; const char* want; } w[] = {
+        {"off", "0"}, {"OFF", "0"}, {"false", "0"}, {"No", "0"}, {"on", "1"}, {"TRUE", "1"}, {"yes", "1"},
+        {"0", nullptr}, {"1", nullptr}, {"2", nullptr}, {"t", nullptr}, {"tog3", nullptr}, {"auto", nullptr}, {"16:9", nullptr},
+        {"alt", nullptr}, {"", nullptr}, {"onx", nullptr}, {" off", nullptr}, {"n", nullptr},
+    };
+    for (const auto& c : w) {
+        const char* g = rs64_settings_bool_word(c.v);
+        if ((g == nullptr) != (c.want == nullptr) || (g && std::strcmp(g, c.want))) { fail++; std::printf("FAIL bool_word '%s' -> %s\n", c.v, g ? g : "null"); }
+    }
+    std::printf("%s %d cases, %d fail\n", fail ? "FAIL" : "PASS", (int)(sizeof t / sizeof t[0] + sizeof r / sizeof r[0] + sizeof w / sizeof w[0]), fail);
     return fail != 0;
 }

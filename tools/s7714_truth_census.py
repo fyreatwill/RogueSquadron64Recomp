@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7711_optval_census as c7711
 
 ROOT = c7711.ROOT
-VALUES = (None, "0", "1", "2", "t", "yes", "false", "no", "")  # s7728: + false/no; s7730: + "" (empty shell value)
+VALUES = (None, "0", "1", "2", "t", "yes", "false", "no", "", "off", "on", "true", " 1", "1 ")  # s7731: + off/on/true/whitespace; s7728: + false/no; s7730: + "" (empty shell value)
 VNAME = {None: "unset", "": "empty"}
 
 # name -> reason. Each entry read by hand at s7714.
@@ -1127,6 +1127,18 @@ def main():
         print(f"control planted undecidable site modelled={rp[0] is not None} class={cp} real S7064 class={cr} "
               f"want False/None/STRING {'PASS' if g else 'FAIL'}")
         ok &= g
+        # s7731: the intent gate must fire when the normaliser is missing, and pass on the real source
+        models, owner = load_sites()
+        m0 = intent_check(models, quiet=True, src="")
+        m1 = intent_check(models, quiet=True)
+        g = set(m0) >= {"off", "false", "no"} and not m1
+        print(f"control s7731 intent gate no-normaliser unmapped={m0} real={m1} want off/false/no vs [] {'PASS' if g else 'FAIL'}")
+        ok &= g
+        l0 = letter_scan(quiet=True, keep=set())
+        l1 = letter_scan(quiet=True)
+        g = "ROGUESQ_DD_OFFMAPCULL_H" in l0 and not l1
+        print(f"control s7731 letter scan empty-keep unkept={l0} real={l1} want OFFMAPCULL_H in first, [] {'PASS' if g else 'FAIL'}")
+        ok &= g
         if not ok:
             return 2
     else:
@@ -1155,7 +1167,86 @@ def main():
         print(f"  UNCLASSIFIED {name} {site}: {why} (read it; model it or add it to UNMODELLED_T)")
     for st in stale:
         print(f"  stale UNMODELLED_T entry {st} (site gone or line changed)")
-    return 1 if bad or uncls else 0
+    miss = intent_check(models)
+    lbad = letter_scan()
+    return 1 if bad or uncls or miss or lbad else 0
+
+
+def keep_words(src=None):
+    if src is None:
+        src = open(os.path.join(ROOT, "src/main/rs64_settings.cpp"), errors="replace").read()
+    m = re.search(r"kKeepWords\[\] = \{(.*?)\};", src, re.S)
+    return set(re.findall(r'"(ROGUESQ_\w+)"', m.group(1))) if m else set()
+
+
+LETTER_RE = re.compile(r"""(?:([A-Za-z_]\w*)\s*\[0\]|\*\s*([A-Za-z_]\w*)|\(\s*\*\s*([A-Za-z_]\w*)\s*\))\s*[!=]=\s*'([ofnyOFNY])'""")
+
+
+def letter_scan(quiet=False, keep=None, extra=None):
+    """s7731: a reader testing the first letter of an on/off word ('o' off/on, 'f' false, 'n' no, 'y' yes) gives the
+    word a meaning the launch normaliser would erase. Every such name must be in kKeepWords. Scans each reader site's
+    line and the 2 after it. -> names testing a word letter that are not kept (gate: must be empty)."""
+    _p, site_map, _c, _d = c7711.load()
+    keep = keep_words() if keep is None else keep
+    texts, hits = {}, {}
+    for name, sl in list(site_map.items()) + list((extra or {}).items()):
+        for site, _w in sl:
+            rel, ln = site.rsplit(":", 1)
+            if rel not in texts:
+                texts[rel] = (extra or {}).get("@" + rel) or open(os.path.join(ROOT, rel), errors="replace").read().split("\n")
+            win = " ".join(texts[rel][int(ln) - 1:int(ln) + 2])
+            # only the variable this name's getenv was stored in (`cl[0]=='y'` beside getenv("ROGUESQ_HUD_MARKPC") is not it)
+            vs = set(re.findall(r'(\w+)\s*=\s*(?:std::)?getenv\(\s*"%s"\s*\)' % re.escape(name), win))
+            for m in LETTER_RE.finditer(win):
+                v = m.group(1) or m.group(2) or m.group(3)
+                if not vs or v in vs:
+                    hits.setdefault(name, set()).add((site, m.group(4)))
+    bad = sorted(n for n in hits if n not in keep)
+    if not quiet:
+        print(f"s7731: readers testing an on/off word letter: {len(hits)} names "
+              + " ".join(f"{n}({','.join(sorted(set(l for _, l in hits[n])))})" for n in sorted(hits))
+              + f"; kept at launch {len(keep)}; unkept {len(bad)} {bad if bad else ''}")
+        for n in bad:
+            for site, l in sorted(hits[n]):
+                print(f"  UNKEPT {n} {site} tests '{l}': add it to kKeepWords or stop testing the letter")
+    stale = sorted(keep - set(hits)) if extra is None else []
+    for n in stale:
+        if not quiet:
+            print(f"  stale kKeepWords entry {n} (no reader tests a word letter any more)")
+    return bad + stale
+
+
+WORDS = {"off": "0", "false": "0", "no": "0", "on": "1", "true": "1", "yes": "1"}
+
+
+def intent_check(models, quiet=False, src=None):
+    """s7731: a reader that reads an on/off word unlike its digit ("off" != "0") reads against intent, unless the launch
+    normaliser (rs64_settings_bool_word, src/main/rs64_settings.cpp) maps that word first. -> words left unmapped that
+    some reader reads against intent (gate: must be empty)."""
+    if src is None:
+        src = open(os.path.join(ROOT, "src/main/rs64_settings.cpp"), errors="replace").read()
+    m = re.search(r'rs64_settings_bool_word\(const char\* v\) \{(.*?)\n\}', src, re.S)
+    body = m.group(1) if m else ""
+    mapped = {}
+    for arr, d in (("off", "0"), ("on", "1")):
+        a = re.search(r"\b%s\[\] = \{([^}]*)\}" % arr, body)
+        for w in re.findall(r'"(\w+)"', a.group(1) if a else ""):
+            mapped[w] = d if f'return "{d}"' in body else None
+    idx = {v: i for i, v in enumerate(VALUES)}
+    against = {}
+    for name in models:
+        for site, sig, node in models[name]:
+            if not sig:
+                continue
+            for w, d in WORDS.items():
+                if w in idx and d in idx and sig[idx[w]] in (0, 1) and sig[idx[d]] in (0, 1) and sig[idx[w]] != sig[idx[d]]:
+                    against.setdefault(w, set()).add(name)
+    miss = sorted(w for w in against if mapped.get(w) != WORDS[w])
+    if not quiet:
+        print("s7731: on/off words read against their digit (pre-normalisation): "
+              + " ".join(f"{w}={len(against.get(w, ()))}" for w in WORDS)
+              + f"; mapped at launch {len(mapped)}/{len(WORDS)}; unmapped-against {len(miss)} {miss if miss else ''}")
+    return miss
 
 
 if __name__ == "__main__":

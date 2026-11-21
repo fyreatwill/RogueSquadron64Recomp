@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <strings.h>
 #include <fstream>
 #include <string>
 #include <utility>
@@ -132,8 +133,57 @@ static int rs64_s7730_strip_empty() {
     return n;
 }
 
+// s7731: on/off words. Every reader of a ROGUESQ_* switch tests digits (`*e != '0'`, `*e == '1'`, atoi), so a typed word read
+// against intent: `=off`/`=false`/`=no` turned non-'0' opt-ins ON (FPS60, ASPECT, CULL_SPIKE stayed on) and `=on`/`=yes`/`=true`
+// read OFF at `*e == '1'` readers (the QOS family) and `=true` picked s6919 mode 't' (tog3). Truth census s7731: no reader
+// compares against these words, so mapping them (whole value, any case) to "0"/"1" changes nothing that reads digits.
+// Returns "0", "1" or nullptr (not a word: value untouched).
+extern "C" const char* rs64_settings_bool_word(const char* v) {
+    if (!v) return nullptr;
+    static const char* const off[] = {"off", "false", "no"};
+    static const char* const on[] = {"on", "true", "yes"};
+    for (const char* w : off) if (strcasecmp(v, w) == 0) return "0";
+    for (const char* w : on) if (strcasecmp(v, w) == 0) return "1";
+    return nullptr;
+}
+
+static bool rs64_s7731_keep_words() {
+    const char* kw = std::getenv("ROGUESQ_S7731_KEEP_WORDS");
+    return kw && *kw == '1';
+}
+
+// Names whose own reader gives a word's first letter a meaning of its own: left untouched. The truth census (s7731 letter
+// scan) fails on any reader testing 'o'/'f'/'n'/'y' that is not listed here. (The 't' tog-mode letter is NOT kept: "true"
+// selecting tog mode was the against-intent reading.)
+static const char* const kKeepWords[] = {
+    "ROGUESQ_DD_OFFMAPCULL_H",  // upstream_compat.cpp: h[0]=='o' = gate off, a number = margin ("0" = margin 0 = gate ON)
+    "ROGUESQ_HUD_MARKCLS",      // apply_s6146b_hudpc.py: cl[0]=='x' / 'y' select a mark class (diag)
+};
+
+// Rewrite every ROGUESQ_*=<word> in environ to its digit. setenv(.., 1) edits environ in place; rescan after each, no container.
+static int rs64_s7731_norm_words() {
+    if (rs64_s7731_keep_words()) return 0;
+    int n = 0;
+    for (char buf[256]; n < 4096; n++) {
+        buf[0] = 0;
+        const char* d = nullptr;
+        for (char** e = environ; e && *e; e++) {
+            const char* eq = std::strchr(*e, '=');
+            if (!eq || std::strncmp(*e, "ROGUESQ_", 8) != 0 || (size_t)(eq - *e) >= sizeof buf) continue;
+            bool keep = false;
+            for (const char* k : kKeepWords) keep |= std::strlen(k) == (size_t)(eq - *e) && std::strncmp(*e, k, eq - *e) == 0;
+            if (keep) continue;
+            d = rs64_settings_bool_word(eq + 1);
+            if (d) { std::snprintf(buf, sizeof buf, "%.*s", (int)(eq - *e), *e); std::fprintf(stderr, "[s7731] %s=%s read as %s\n", buf, eq + 1, d); break; }
+        }
+        if (!buf[0] || !d) break;
+        setenv(buf, d, 1);
+    }
+    return n;
+}
+
 extern "C" void rs64_settings_apply(int argc, char** argv) {
-    const int stripped = rs64_s7730_strip_empty();
+    const int stripped = rs64_s7730_strip_empty() + rs64_s7731_norm_words();
     const char* done = std::getenv("ROGUESQ_SETTINGS_APPLIED");
     if (done && *done == '1') {
         const char* sum = std::getenv("ROGUESQ_SETTINGS_SUMMARY");
@@ -180,7 +230,7 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
                 ln++;
                 char n[256], v[1024];
                 const int k = rs64_settings_parse_line(line.c_str(), n, sizeof n, v, sizeof v);
-                if (k == 1) { char r[1300]; from_file.emplace_back(n, rs64_settings_resolve_value(file.c_str(), n, v, r, sizeof r) == 0 ? r : v); }
+                if (k == 1) { char r[1300]; bool kw = rs64_s7731_keep_words(); for (const char* k : kKeepWords) kw |= std::strcmp(k, n) == 0; const char* bw = kw ? nullptr : rs64_settings_bool_word(v); from_file.emplace_back(n, bw ? bw : rs64_settings_resolve_value(file.c_str(), n, v, r, sizeof r) == 0 ? r : v); }
                 else if (k == 2) { if (preset.empty()) preset = v; }
                 else if (k == 3) std::fprintf(stderr, "[s7729] %s:%d %s= has no value: left unset (empty reads differ between readers)\n", file.c_str(), ln, n);
                 else if (k < 0) { rejected++; std::fprintf(stderr, "[s7663] %s:%d ignored (only ROGUESQ_NAME=value or preset=name): %s\n", file.c_str(), ln, line.c_str()); }
@@ -219,7 +269,7 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
     // ROGUESQ_S7663_NOEXEC=1: control arm only (s7663): keep the setenv values but skip the re-exec, so pre-main statics miss them.
     { const char* ne = std::getenv("ROGUESQ_S7663_NOEXEC"); if (ne && *ne == '1') { std::fprintf(stderr, "[s7663] NOEXEC control: no re-exec\n"); return; } }
 
-    if (summary.empty()) summary = "(none; " + std::to_string(stripped) + " empty value(s) unset, s7730)";
+    if (summary.empty()) summary = "(none; " + std::to_string(stripped) + " empty value(s) unset (s7730) / on-off word(s) read as 0/1 (s7731))";
     setenv("ROGUESQ_SETTINGS_APPLIED", "1", 1);
     setenv("ROGUESQ_SETTINGS_SUMMARY", summary.c_str(), 1);
     std::fflush(stderr);

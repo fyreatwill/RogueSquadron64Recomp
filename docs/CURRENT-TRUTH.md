@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7727 (2026-11-20).
+Compact operational handoff, as of Session 7731 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,14 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7731 on/off words now read as their digit (H-agree on readers, H-against-intent selected).** Truth census VALUES +=
+  off/on/true/" 1"/"1 ": 0 unreviewed SPLIT, but every switch reads digits only, so `=off`/`=false`/`=no` read ON at 216
+  names (FPS60, ASPECT, CULL_SPIKE...) and `=on`/`=yes` OFF at 39 (`*e == '1'` QOS family); `=true` picked the 't' tog mode.
+  rs64_settings_apply now maps whole-value words (any case) to "0"/"1" in the shell env and settings-file values
+  (`[s7731] NAME=on read as 1`, re-exec), except kKeepWords names whose reader gives the letter its own meaning
+  (DD_OFFMAPCULL_H 'o' = gate off; HUD_MARKCLS 'y'). `ROGUESQ_S7731_KEEP_WORDS=1` = old. Live same binary: QOS_ALL=on arms
+  QoS (KEEP control: not), settings-file `yes` arms it (KEEP: not), `=1` control arms, unset does not. Census gates: words
+  unmapped-against 0 (control: no normaliser -> all 6), letter scan unkept 0 (control: empty keep -> both names).
 - **s7730 empty env values are unset for every reader (H-split selected).** Pre-fix live, same binary: `ROGUESQ_ASPECT=`
   opened the high-DPI opt-in window (drawable 1280x960 vs unset 640x480) and `ROGUESQ_OSMEM_MB=` at dd2 blocked the bundle's
   12 MB / 0x81000000 spill layout (no `[ddbundle] osmem=12` line; the owner LEVEL=15 fix layout). rs64_settings_apply now
