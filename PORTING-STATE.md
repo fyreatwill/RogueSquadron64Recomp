@@ -206317,4 +206317,5 @@ Gate sweep (216, before the keep-list edit): 211 GREEN 3 REPORT 1 NEEDS-ARGS (s7
 H-stale on rs64_settings.cpp.o (edited after the build). After rebuild: s7424 H-fresh, s7599/s7600 CLOSED, s7613 PASS,
 s7714 rc 0. A second full sweep was not run; the only edit after the sweep is the keep list, re-checked by those 5 gates.
 Owner defaults untouched (unset, empty and every digit value behave as before). OWNER-OPT-INS gains a row.
-Next (NEXT.md): "=0 reads ON" presence readers (e.g. ASPECT=0 opens the opt-in window) crossed with docs that say `=0`.
+Result: this selects H-agree-against-intent and refutes H-split (0 reader pairs disagree; the words read against their digit at 216/39 names, and the live QOS_ALL=on vs KEEP_WORDS arms confirm it in the binary).
+Next discriminator (NEXT.md): "=0 reads ON" presence readers (e.g. ASPECT=0 opens the opt-in window) crossed with docs that say `=0`: H-mode (value, no off meaning) vs H-trap (documented =0 off, some reader reads it on), one census pass + same-binary live arms per H-trap name.
