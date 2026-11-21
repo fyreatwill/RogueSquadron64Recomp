@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7763 (2026-11-21).
+Compact operational handoff, as of Session 7770 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -169,6 +169,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s6268/s6868 "no syms-toml placeholder is a real function / the leftovers are shape-only": believable because s6868 audited the
+  generated tree and s6268 read objdump, but N64Recomp never emits the libultra exception block and objdump prints it as data.
+  Overturned s7770 (ELF byte census, tools/s7770_placeholder_census.py): func_8002BB34 had 14 jal sites and is send_mesg (named).
 - s7748/s7690 "L12: 85/92 stand-in items are never added": believable because [s7690-par] reads tries=120 adds=0 per item; it prints once at the first 120 tries, so it is a window, not lifetime (s7749: 79 of 85 added later).
 - s7746 "L12 stand-ins are added but NOT visible (H-gain refuted on L12, H-not-visible)": believable because the ground-only
   scorer and its paint control both passed. Overturned s7748: the same on-window flicker (131 vs 146 per triplet) against a quiet
@@ -387,6 +390,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     6/6 checked live-end ge2LSB 0 (618-17930 px <=1 LSB); begin-live up to 183 px >=2 LSB (info only, s7755 says VISIBLE on begin,
     same shape as the s7757 first-entry 336 px). GREEN 6/6, CAP=2048 ctl 21288 px.
 
+30. **Placeholder census (s7770): rename sweep CLOSED on evidence.** `python3 tools/s7770_placeholder_census.py --controls` (ELF bytes,
+    not objdump/generated tree): placeholders=2 called=0 (func_80018ED4 UNREF cache loop, func_80092F10 TAIL); func_8002BB34 was
+    libultra send_mesg (14 jal sites), named s7770. stop_gate.sh blocks a NEXT.md naming the rename sweep while called=0
+    (tools/agent/test_rename_census_gate.sh). Open follow-on: classify the 5 jal targets that are not an ELF symbol start (NEXT.md).
 29. **FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported).** s7749 L12 ring 60->30-43
     gen/s from t=75 s did not recur in 4/4 L12 arms (s7768 la/lb + soak s7768_fps60_rate_L12 r1/r2: 60 tasks/s, lim=1, send_dl
     ~10.5 ms, 0 slow windows). Two instruments agree: tools/s7768_fps60_rate.py (G3C_LOG+G1B; BUSY ctl 16/16 H-cost) and

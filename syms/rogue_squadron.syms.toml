@@ -444,7 +444,7 @@ functions = [
     { name = "osDpSetStatus", vram = 0x8002B5E0, size = 0xC },
     { name = "__osExceptionPreamble", vram = 0x8002B5F0, size = 0x10 },
     { name = "__osException", vram = 0x8002B600, size = 0x238 },
-    { name = "func_8002BB34", vram = 0x8002BB34, size = 0xE8 },
+    { name = "send_mesg", vram = 0x8002BB34, size = 0xE8 },
     { name = "__osEnqueueAndYield", vram = 0x8002BC1C, size = 0x100 },
     { name = "__osEnqueueThread", vram = 0x8002BD1C, size = 0x48 },
     { name = "__osPopThread", vram = 0x8002BD64, size = 0x10 },

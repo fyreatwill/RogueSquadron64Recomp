@@ -207376,3 +207376,31 @@ s7748 u124's reported 60->44 at ~145 s is not in its ring (ring ends at ~145 s, 
 Rules out: a common FPS60 rate collapse at the owner recipe (1/31 natural flight rings). Reading: unreproduced transient; H-cost
 (task hovering at the 16.7 ms budget) stays the best-fitting but single-source inference. Item 29 CLOSED.
 Not done: no H-limit writer hunt and no RSP/RDP split, because nothing recurred to attribute.
+
+## Session 7770 (2026-11-21) — s6268/s6868 "no real placeholder left" overturned: func_8002BB34 is libultra send_mesg (14 jal sites); named, new ELF census tools/s7770_placeholder_census.py + stop-gate rule against stale rename-sweep plans
+Start: CURRENT-TRUTH 48.2 KB (no maintenance), crash_reports FOLDED=27 new=0, no new SOAK-RESULTS lines, no owner answers in
+OWNER-REVIEW-QUEUE. The s7769 NEXT.md scheduled the renaming sweep (ITERATION item 4) although CURRENT-TRUTH says it closed at
+s6868. Census of syms/rogue_squadron.syms.toml first: 2643 names, 3 placeholders (func_80018ED4, func_8002BB34, func_80092F10).
+s6268 called all of them non-functions and s6868 called the leftovers "shape-only", but s6868's tools/audit_addr_named_funcs.py
+scans only the GENERATED tree, and N64Recomp never emits the libultra exception block (0x8002B5F0.., host-handled), while s6268
+read 0x8002BB34 from an objdump view that prints that whole block as data bytes (objdump also hides its jal sites).
+New tools/s7770_placeholder_census.py reads the ELF bytes directly (jal/j words, lui+addiu/ori pairs, raw pointer words,
+predecessor `jr ra`, branches back into the predecessor):
+- func_8002BB34: jal=14 (first 0x8002B858 in the `counter` handler) -> CALLED. Second line: its body is libultra exceptasm
+  send_mesg instruction for instruction (la __osEventStateTab 0x8013F7D0; addu; lw; move s2,ra; MQ validCount/msgCount slt;
+  jal __osPopThread 0x8002BD64; la __osRunQueue; jal __osEnqueueThread 0x8002BD1C; jr s2), then handle_CpU (lui 0x3000 CpU
+  field, li 1, branch back to the panic / enqueueAndYield path = back=2). The ELF folds it into `redispatch` (0x8002BAB8..BC1C).
+  Renamed func_8002BB34 -> send_mesg in the syms toml (tools/apply_symbol_renames.py, 1 site, 0 mismatches). Not in the
+  generated tree, so no regen and no runtime effect (the port never runs __osException).
+- func_80018ED4: after_ret=1, 0 jal/j/hilo/ptr refs -> UNREF: a standalone `cache 0x0D` (D-cache Create Dirty Exclusive) loop
+  over a0 for a1 bytes, unreachable by any reference this scan sees. Left as is (shape-only for naming, no evidence of use).
+- func_80092F10: back=1 (j 0x80092EE4 into resampleVoiceLutSamplesPacked), the s7081 selfbranch jump-table targets -> TAIL.
+Controls (same run, --controls): __osEnqueueThread -> CALLED (jal=9, positive), resampleVoiceLutSamplesPacked+0x20 -> UNREF
+(negative, not CALLED), 0x80092F10 -> TAIL. PASS. After the rename: SUMMARY placeholders=2 called=0 unref=1 tail=1.
+Stop gate: new rule in tools/agent/stop_gate.sh blocks a NEXT.md whose HYPOTHESIS-ID is generated-symbol-renaming-sweep when the
+census reports called=0 (skipped when the ELF/tool is absent or the census prints no SUMMARY). Test tools/agent/test_rename_census_gate.sh
+runs the gate's own snippet text: 7/7 (fake called=0/1 x sweep/other slug, broken census never blocks, real census blocks, mutation
+control with send_mesg reverted -> called=1 -> pass). run_tests.sh 9/9 PASS; gate sweep --only s7770 GREEN 1/1.
+Side datum (objdump-based, so incomplete): 1787 distinct jal targets, 5 not an ELF symbol start (0x80007064, 0x800AF6AC,
+0x800E9B10, 0x800EA01C, 0x8334B334 = data decoded as code). Not yet classified; that is the next unit.
+Rules out: "the rename sweep has a real target left" (after send_mesg, 0 CALLED placeholders). Overturns s6268/s6868 for 0x8002BB34.

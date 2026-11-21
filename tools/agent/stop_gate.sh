@@ -150,6 +150,19 @@ fi
 grep -qE '^HYPOTHESIS-ID:[[:space:]]*[A-Za-z0-9._-]+' "$AG/NEXT.md" 2>/dev/null \
   || block "Exit contract unmet: scratch/agent/NEXT.md has no 'HYPOTHESIS-ID: <slug>' line. Add one naming the active investigation thread — keep the slug while pursuing the same hypothesis (a systematic sweep keeps ONE slug for its whole campaign; ADVANCED iterations reset the strike count), change it when you pivot or close it. The loop enforces iron rule 8 (3 strikes on stalled iterations) with it."
 
+# s7770: a NEXT.md that schedules the generated-symbol renaming sweep when the ELF census finds no CALLED placeholder
+# left is a stale plan (s7769 wrote one; the sweep closed at s6868 and the last real one, send_mesg, was named s7770).
+# Skipped when the ELF or census tool is absent. RS64_RENAME_CENSUS_CMD overrides the census (tools/agent/test_rename_census_gate.sh).
+if grep -qE '^HYPOTHESIS-ID:[[:space:]]*generated-symbol-renaming-sweep' "$AG/NEXT.md" 2>/dev/null; then
+  rc_cmd="${RS64_RENAME_CENSUS_CMD:-python3 tools/s7770_placeholder_census.py --quiet}"
+  if [ -n "${RS64_RENAME_CENSUS_CMD:-}" ] || { [ -f tools/s7770_placeholder_census.py ] && [ -f ../rogue_squadron64/build/roguesquadron.elf ]; }; then
+    rc_called="$($rc_cmd 2>/dev/null | sed -n 's/^SUMMARY .*called=\([0-9][0-9]*\).*/\1/p')"
+    if [ "${rc_called:-x}" = "0" ]; then
+      block "Exit contract unmet: scratch/agent/NEXT.md schedules the generated-symbol renaming sweep, but tools/s7770_placeholder_census.py finds 0 CALLED placeholders left in syms/rogue_squadron.syms.toml (the rest are TAIL/UNREF, shape-only). The sweep is closed: take an owner item or the next open ladder rung instead, and give NEXT.md a different HYPOTHESIS-ID."
+    fi
+  fi
+fi
+
 # --- OUTCOME: distinguish progress from ledger churn -------------------------
 # Sessions 51-59 satisfied every other condition here while advancing nothing:
 # the work unit was skipped and documentation was edited instead, which the
