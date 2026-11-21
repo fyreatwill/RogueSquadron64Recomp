@@ -207616,3 +207616,39 @@ RED after s7777 added the ROGUESQ_S7777_DANGLE watch to src/main/upstream_compat
   literal plus `struct S7777Arm { S7777Arm() { if (!s7777_on()) return; ... std::thread(... s7777_sweep()`.
 Each gate run plain (rc=0, open/unclassified 0) and with --controls (W shared rules 58 re-proved; GR 3/3; DQ 10/10). Full sweep
 result is in the commit message. Rules out nothing about the FRAME member; NEXT.md (s7777's FRAME-member discriminator) is unchanged.
+
+## Session 7779 (2026-11-21) — dangling-global FRAME member CLOSED H-retail: the "heap inside a displayed FB" is retail's frame-scoped scratch arena on a FREE FB slot; 0 non-owner host writes into it over 10 live epochs x 2 runs (planted control counted); class item 31 CLOSED 7/7; new ROGUESQ_S7779_ARENA + tools/s7779_arena_score.py
+Pre-checks: crash_reports --since 2026-11-13 FOLDED=20 new=0; no new SOAK-RESULTS lines; CURRENT-TRUTH 55004 B (no maintenance).
+Unit = NEXT.md s7779 (FRAME member: H-retail vs H-ours vs H-stomp).
+Ground truth first (retail ELF, rogue_squadron64/build/roguesquadron.elf, static read):
+- rs_malloc (0x80001ACC) with flag a1&4 calls ensureHeapInitialized (0x80001890). If the head 0x8010FEFC is 0 it calls
+  acquireFreeBufferSlot (0x8001C07C: waits until a slot state byte 0x80128EAA+i (count 0x80128EAD) is 0 = FREE and returns slot word
+  0x80128E98+4i; it does NOT mark the slot busy) and buildHeapFreeList(&0x8010FEFC, ...) over [fb, fb + computeFramebufferByteSize())
+  (w*h*2 from 0x8011A838/3C). clearFrameReadyFlag (0x80001880, sw zero -> 0x8010FEFC) drops the arena; beginSceneRenderFrame calls it
+  each frame. So retail deliberately runs a frame-scoped scratch arena (inflate workspace, model loaders) over a free framebuffer.
+  The s7777 "dangling" swap-slot word is that FB's address, which is a framebuffer pointer and never a heap pointer, so it is an
+  instrument false positive like ALLOC-META. s7777's "arena live t=35.5-71.3" was the swap-slot word's unchanged value. The arena
+  itself lives about 20-70 ms per load (below).
+Instrument (src/main/main.cpp s7779, in the s6843 note path; ROGUESQ_S7779_ARENA=1 arms the s6843 range over phys 0x400000-0x800000):
+every host write through rs64_m5_host_write_census (rt64_writeback, rsp_dmem_to_rdram, pi DMA, zmemcpy) is classified against the
+live arena [*0x8010FEFC, +w*h*2) read at the moment of the write: hit = into a live arena; ctl = into the same span while no arena
+is live. It also reports arena transitions with t, guest stores into a live arena (lock-free), and busy_slot_live (the arena's slot
+state != 0 while live). ROGUESQ_S7779_PLANT=<n>: on the n-th live guest store, a fake 4-byte "s7779_plant" host write goes through the
+census path (no memory written) and must be counted as a hit.
+Runs: `zsh tools/s7774_slot_run.zsh s7779a|s7779b ROGUESQ_S7779_ARENA=1 ROGUESQ_S7779_PLANT=1|300` (owner route_long, 300 s, both alive=1
+crash=0 save-unchanged; scan_rc=4 is the s7774 scanner's own "no mission-departing swap", unrelated).
+Score `python3 tools/s7779_arena_score.py <log>` (rc 0 H-clean / 1 H-stomp / 3 control fail). Negative control: b's sum line with
+rt64_writeback hit=3 -> H-stomp. Run a = rc 3: its plant threshold was a hard-coded 2000th live guest store, and a run makes only 1780,
+so the plant never fired. Fixed to PLANT=<n>; run b = rc 0.
+Results (a and b identical counts): 10 arena epochs (5D4000 t=1.5, 62B800 t=5.7, 656000 t=23.4/34.9/212.5/225.8, 644800 t=71.2,
+62B800 t=77.4, 620000 t=83.3, 720000 t=196.7), each 10-70 ms. busy_slot_live=0. Host writes into a live arena: zmemcpy 646
+(2.4 MB) + pi_rom_to_rdram 4, both the arena's own loaders. rt64_writeback hit=0 vs ctl=15789 (5.8 GB) into the same span while
+not live, so the hook sees writebacks to these addresses but none lands during an epoch. rsp_dmem_to_rdram 0. Plant hit=1.
+Verdict: SELECTS H-retail (two sources: the retail code's own design + the runtime epochs only on free slots). REFUTES H-stomp (0
+non-owner host writes in a live arena, 2 runs, plant + writeback-ctl in the same run). H-ours has nothing left to explain: the arena
+base is whatever FB slot is free, and in-epoch use matches the retail design. Arm B (RENDER_TO_RAM=0) was not run: with 0 writeback
+hits there is nothing for it to remove.
+Class item 31 CLOSED: 7/7 members (ALLOC-META, NOT-PTR, COMPARE-ONLY, READ-NO-DEREF, plus FRAME = FB-POINTER/H-retail).
+ORIGIN: no mitigation. The overlap is retail's design (ensureHeapInitialized + acquireFreeBufferSlot); the value is legitimate.
+Rules out: a port-side heap/FB overlap, and an RT64 writeback stomping loader data in the hangar.
+Logs: scratch/s7774/s7779a, s7779b (gitignored).

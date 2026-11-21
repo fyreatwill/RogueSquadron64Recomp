@@ -2193,7 +2193,62 @@ static const bool s_s7334_init = [] {
         if (q == c) break; s_s7334_pt[s_s7334_n++] = v; if (v < lo) lo = v; if (v + 16 > hi) hi = v + 16; c = (*q == ',') ? q + 1 : q; if (!*q) break; }
     if (s_s7334_n) { rs64_s6843_lo = lo; rs64_s6843_len = hi - lo; std::fprintf(stderr, "[swatch-pt] armed %d points %06X-%06X\n", s_s7334_n, lo, hi); }
     return true; }();
+// s7779: FB-arena host-stomp census. Retail rs_malloc(flag 4) -> ensureHeapInitialized builds a scratch arena (head 0x8010FEFC)
+// over a FREE framebuffer slot from acquireFreeBufferSlot (which does not mark it busy); beginSceneRenderFrame -> clearFrameReadyFlag
+// drops it each frame. ROGUESQ_S7779_ARENA=1 arms the s6843 range over phys [0x400000,0x800000) and classifies every host write
+// (rs64_m5_host_write_census: rt64_writeback, rsp_dmem_to_rdram, pi DMA) against the live arena [h, h + w*h*2) (w,h = 0x8011A838/3C):
+// hit = host write into a live arena (H-stomp); ctl = host write into the same 0x60000 span while no arena is live. Guest stores into a
+// live arena are counted lock-free (arena in use). Slot state bytes 0x80128EAA+i (count 0x80128EAD), slot words 0x80128E98+4i.
+// ROGUESQ_S7779_PLANT=<n>: on the n-th guest store into a live arena a fake 4-byte host write "s7779_plant" is sent through
+// rs64_m5_host_write_census (no memory is written) and MUST be counted as a hit. Summary every 10 s ([s7779] sum). Measurement only.
+extern "C" void rs64_m5_host_write_census(uint8_t* rdram, uint32_t phys, uint32_t len, const char* api);
+static const bool s_s7779_on = [] { const char* e = std::getenv("ROGUESQ_S7779_ARENA"); if (!(e && *e == '1')) return false;
+    rs64_s6843_lo = 0x400000u; rs64_s6843_len = 0x400000u; std::fprintf(stderr, "[s7779] armed host-write vs FB-arena census 400000-800000\n"); return true; }();
+static std::atomic<uint64_t> s_s7779_gst{0}, s_s7779_gst_live{0};
+static uint32_t s7779_w(const volatile uint8_t* rd, uint32_t a) { return *(const volatile uint32_t*)(rd + (a & 0x7FFFFCu)); }
+static uint32_t s7779_b(const volatile uint8_t* rd, uint32_t a) { return rd[(a & 0x7FFFFFu) ^ 3u]; }
+static void rs64_s7779_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
+    const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw; if (!rd) return;
+    const uint32_t h = s7779_w(rd, 0x10FEFCu) & 0x1FFFFFFFu;
+    const uint32_t ext = (s7779_w(rd, 0x11A838u) * s7779_w(rd, 0x11A83Cu) * 2u) & 0x7FFFFFu;
+    const bool live = h >= 0x400000u && h < 0x800000u;
+    if (!api) {
+        const uint64_t n = s_s7779_gst.fetch_add(1, std::memory_order_relaxed);
+        (void)n;
+        if (live && phys >= h && phys < h + ext) {
+            const uint64_t k = s_s7779_gst_live.fetch_add(1, std::memory_order_relaxed) + 1;
+            static const uint64_t plant = [] { const char* e = std::getenv("ROGUESQ_S7779_PLANT"); return (e && *e) ? (uint64_t)std::atoll(e) : 0ull; }();
+            if (plant && k == plant) { std::fprintf(stderr, "[s7779] plant fire h=%06X pc=%08X\n", h, key);
+                rs64_m5_host_write_census((uint8_t*)rd, h + 0x100u, 4u, "s7779_plant"); }
+        }
+        return;
+    }
+    struct A { uint64_t hit = 0, hitb = 0, ctl = 0, ctlb = 0, other = 0; };
+    static std::mutex mu; static std::map<std::string, A> by; static int lines = 0; static double t0 = 0, tl = 0;
+    static uint32_t last_h = 0; static int ntrans = 0; static uint64_t epochs = 0, busy_slot_live = 0;
+    const double t = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    std::lock_guard<std::mutex> lk(mu);
+    if (t0 == 0) t0 = tl = t;
+    if (h != last_h) { if (live) ++epochs; if (ntrans++ < 60) std::fprintf(stderr, "[s7779] arena %06X -> %06X ext=%X t=%.2f\n", last_h, h, ext, t - t0); last_h = h; }
+    const uint32_t nsl = s7779_b(rd, 0x128EADu); int si = -1; uint32_t st = 0xFF;
+    if (live) for (uint32_t i = 0; i < nsl && i < 4; ++i) if ((s7779_w(rd, 0x128E98u + 4u * i) & 0x1FFFFFFFu) == h) { si = (int)i; st = s7779_b(rd, 0x128EAAu + i); }
+    if (live && si >= 0 && st != 0) ++busy_slot_live;
+    A& a = by[api];
+    const bool in_live = live && phys < h + ext && phys + len > h;
+    const uint32_t span_lo = live ? h : 0x656000u;  /* ctl span: hangar FB A when no arena is live */
+    if (in_live) { ++a.hit; a.hitb += len;
+        if (lines++ < 80) std::fprintf(stderr, "[s7779] HIT api=%s phys=%06X len=%X arena=%06X ext=%X slot=%d st=%u nsl=%u t=%.2f\n", api, phys, len, h, ext, si, st, nsl, t - t0); }
+    else if (!live && phys < span_lo + 0x60000u && phys + len > span_lo) { ++a.ctl; a.ctlb += len; }
+    else ++a.other;
+    if (t - tl >= 10.0) { tl = t;
+        std::fprintf(stderr, "[s7779] sum t=%.1f epochs=%llu busy_slot_live=%llu gst=%llu gst_live=%llu", t - t0, (unsigned long long)epochs, (unsigned long long)busy_slot_live,
+                     (unsigned long long)s_s7779_gst.load(), (unsigned long long)s_s7779_gst_live.load());
+        for (auto& kv : by) std::fprintf(stderr, " %s:hit=%llu/%lluB,ctl=%llu/%lluB,oth=%llu", kv.first.c_str(), (unsigned long long)kv.second.hit, (unsigned long long)kv.second.hitb,
+                                         (unsigned long long)kv.second.ctl, (unsigned long long)kv.second.ctlb, (unsigned long long)kv.second.other);
+        std::fprintf(stderr, "\n"); }
+}
 static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
+    if (s_s7779_on) { rs64_s7779_note(key, phys, len, api); return; }
     struct Agg { uint64_t n = 0, bytes = 0; uint32_t lo = 0xFFFFFFFFu, hi = 0; const char* api = nullptr; };
     static std::mutex mu; static std::map<uint32_t, Agg> by; static int cur = -1; static int lines = 0;
     static const int cap = [] { const char* e = std::getenv("ROGUESQ_STORE_WATCH_LINES"); return (e && *e) ? std::atoi(e) : 4000; }();

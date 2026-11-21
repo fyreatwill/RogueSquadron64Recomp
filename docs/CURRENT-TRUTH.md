@@ -9,7 +9,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 
 ## Headline
 
-**Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
+**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7779: dangling-global class item 31 closed 7/7). Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 **Owner: docs/OWNER-REVIEW-QUEUE.md (s7762) is the one-sitting list** (20 items, command + sheets each); every path and setting
 name in it and in OWNER-OPT-INS is gated by `python3 tools/s7762_owner_doc_check.py --controls` (in the sweep; rc 0 s7762).
@@ -420,25 +420,15 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     watch ctl +8131 reads in the same window and 14.8M clean reads elsewhere. The next read of any kind is initNpcSlotList's
     re-init (t=77.9 cinematic table, t=83.8 mission table). Score: `python3 tools/s7776_tblwatch_score.py <log>` (--selftest
     3/3). Retail-shaped (pointer never cleared, never used): no guard needed. Single run.
-31. **Dangling resident-global class (s7777): enumerated, 6 of 7 read members closed, 1 OPEN (hangar framebuffer overlaps heap).**
-    `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` (exclusive watch mode; sweep every 250 ms of every word in 0x80000400..0x80154690
-    against the 3 rs_malloc arena chains; a word pointing into a USED block is tracked + bitmap-marked; dangling = value unchanged and
-    no guest store since its block was rs_free'd (f), went free (F), left every chain (N) or was re-carved (R); every guest load of a
-    dangling word logged per (word, pc); on the first such read of an f/F/N word its stale block is also watched, so accesses by the
-    reader's own fn = stale derefs). Score: `python3 tools/s7777_dangle_score.py <log>` (--selftest 3/3). Census rows for the watch (s7778): W HAND, GR bl/s_s7777_sr, DQ sweep thread ordinal 2, all gated. Two owner route_long runs
-    (s7777a/b, 300 s, alive, save unchanged): ~2.3k words dangled at some point, 7 were loaded while dangling. Controls: watch load +
-    store PASS; 0x80130BB0 dangled in the menu phase (t=12.5/14.3) with 0 reads (s7776 replicated); deref watch live (new-owner
-    accesses landed: inflate/rs_malloc into the reused heap block, NPC fns into the reused song block). Members:
-    0x8010FEFC heap head = ALLOC-META (allocator's own list, instrument false positive); 0x80148514 = NOT-PTR (lhu of a halfword
-    pair, qsort comparator); 0x8014A894 = COMPARE-ONLY (stepActiveSongTracks `lw; beq t3,s3`, 0 derefs, re-init by startSongSequence
-    41 s later); 0x80136FCC gDoublyLinkedNodePool12 = READ-NO-DEREF (46 reads by scaleObjectPosToGridUnits 65 s after the menu
-    freed it, 0 accesses into the stale block before allocAndInitDoublyLinkedNodePool12 re-inits it in the same tick: the free-list
-    pop path is not taken). **OPEN: FRAME class** 0x80128E98/9C (VI swap slots, viRetraceHandlerThread -> osViSwapBuffer) and
-    0x8011A8C0/C4 (frameStartReset): in the SELECT YOUR CRAFT hangar (t=35.5-71.3) slot 1 = FB 0x80656000 (512 wide, RT64
-    presented `drawn=0x656000` 534 times in the window) while rs_malloc hands 0x80656010..0x80674AC0 (inside that FB) to the
-    craft-model loaders (inflateInit2_/inflate_blocks/parseHmtMaterials/load_hmt_and_hob/parseImageFile, adler32 86k loads).
-    No visible defect, no inflate error, g1d retarget skipped (aspect unset): the FB is the game's own partition. Single-source.
-    Next = NEXT.md (H-retail vs H-ours vs H-stomp).
+31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
+    `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
+    0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member
+    (VI swap slots 0x80128E98/9C, frameStartReset 0x8011A8C0/C4) = FB pointer, H-retail (s7779, two sources): rs_malloc flag 4 ->
+    ensureHeapInitialized builds a frame-scoped scratch arena (head 0x8010FEFC) over the FB that acquireFreeBufferSlot returns as
+    FREE, and clearFrameReadyFlag drops it each frame. `ROGUESQ_S7779_ARENA=1 ROGUESQ_S7779_PLANT=300` ->
+    `python3 tools/s7779_arena_score.py <log>` (rc 0 H-clean): 10 epochs of 10-70 ms per route_long run, never on a busy slot. Host
+    writes into a live arena come only from its own loaders (zmemcpy 646, PI 4). rt64_writeback has 0 hits there and 15.8k ctl
+    writes into the same span outside epochs. The plant is counted, 2/2 runs identical.
 29. **FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported).** s7749 L12 ring 60->30-43
     gen/s from t=75 s did not recur in 4/4 L12 arms (s7768 la/lb + soak s7768_fps60_rate_L12 r1/r2: 60 tasks/s, lim=1, send_dl
     ~10.5 ms, 0 slow windows). Two instruments agree: tools/s7768_fps60_rate.py (G3C_LOG+G1B; BUSY ctl 16/16 H-cost) and
