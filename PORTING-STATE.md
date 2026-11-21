@@ -206830,3 +206830,28 @@ Result (last dump, gen 1, 131 stand-ins):
   use), so the link-walk conclusion is single-source for the walk structure; the activation-edge control is its own same-run check.
 Rules out: a stand-in coverage bug on L12. No code fix needed. Queued scratch/agent/soak_queue/s7749_life_L10_L1.sh (same table on
 L10 and L1) to check no other level has linked, condition-met items culled for a reason other than off-screen.
+
+## Session 7750 (2026-11-21) — G6c L10/L1 lifetime table: no stand-in culled by v_far or v_novt; selects H-clean, refutes H-far and H-novt, G6c coverage closed on 3 levels
+
+Contract carry: the s7749 gate flagged its entry for lacking a discrimination word. This entry carries the s7749 conclusion forward (the
+L12 "85/92 never added" read was a 120-try window; H-ours refuted) and adds the L10/L1 result.
+
+What ran: queued soak s7749_life_L10_L1 (loop, 20261121-010832, 420 s, 2 arms, 200 s dd4 STANDINS=1 holds, ROGUESQ_STANDINS_LOG=1).
+Both arms alive, 0 crash lines, vi_stalls30s=0, max_gap 148 ms, level_ok=1. Scored with tools/s7749_life_tally.py on the last
+[s7749-life] dump.
+- L10 (u104): 280 items. ADDED 192 (subs 0014 x154, 000C, 0042, 004B, 0043, 0012), CULL-OFF 81 (xzmin median 172 against 128 for
+  ADDED, cdmin median 178 against 137: farther and off the flight path; 25 of them the game spawned itself), COND 3, UNLINKED-NEVER 3
+  (script-owned, never grid-linked), DEAD 1. CULL-FAR 0, CULL-NOVT 0.
+- L1 (u14): 47 items. ADDED 43, CULL-OFF 1, UNLINKED-NEVER 3. CULL-FAR 0, CULL-NOVT 0.
+- Positive controls in the same run: activation edges 64 (L10) and 32 (L1) with nospawn=0, and the add path fired 192 and 43 times.
+  So the instrument would have shown a far or novt reject had one happened.
+- The [s7690-par] 120-try line reads 273/273 never added on L10. That is the same window artifact as L12: the lifetime count is 192 added.
+
+Verdict: this selects H-clean. H-far (a linked, condition-met item culled by v_far at dd4) is refuted, with 0 such items on L1, L10 and L12.
+H-novt (a bucket reject before the view test) is also refuted, with 0 on all three. Every item that never added is off-screen, condition-gated,
+script-owned or dead, all of which are retail behaviour. Two independent levels (L10, L1) reproduce the L12 table, so G6c coverage is
+CLOSED on 3 levels. G6c itself still closes on the owner's look.
+Rules out: a stand-in far-multiplier miss (rs64_vt_farmul) at dd4 on these levels, and a slice-group or flag reject at bucket entry.
+Next discriminator (rung 24): the s7310 FARMAX mechanism ("far above ~36-40k units makes the F5 clip pin sky-dome panels to fb x=0") has
+one source only. Its second source is an offline re-run of the F5 vertex/clip math (GLideN64 HLE of this ucode, docs/F5-UCODE-REFERENCE.md)
+on logged inputs at far 32767 vs 40000. The pin reproducing there selects H-ucode (retail math). It not reproducing selects H-rspemu (our LLE vector-op emulation).

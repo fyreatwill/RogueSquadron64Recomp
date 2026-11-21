@@ -1,15 +1,14 @@
-# NEXT (s7750)
-HYPOTHESIS-ID: g6c-coverage-other-levels
+# NEXT (s7751)
+HYPOTHESIS-ID: farmax-second-source
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-s7749 closed L12 coverage: "85/92 never added" was a 120-try window; lifetime 93/131 added, 24 script-owned (never grid-linked),
-7 cond, 7 off-screen culled, v_far=0, activation control 27/0.
-Unit: fold the queued soak s7749_life_L10_L1 (scratch/s7749b_soak, `s7749 arm=` lines in its soak log). If it has not run yet
-(it needs 300 s HID idle), run it in-session: `zsh scratch/agent/soak_queue/s7749_life_L10_L1.sh` (then move it to done/).
+G6c coverage is CLOSED on L1/L10/L12 (s7750). Next rung: CURRENT-TRUTH Next-steps item 3 (s7310 21:9 left-edge sliver, ROGUESQ_DD_FARMAX
+default 32767) rests on a single-source mechanism: "far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0".
+Unit (offline first, one game run max): grep PORTING-STATE s7308-s7312 for the logged vertex/matrix inputs and the RDP W decode tool.
+Re-run the F5 vertex transform + clip for those inputs in a small python model, written from docs/F5-UCODE-REFERENCE.md and GLideN64's F5 HLE
+(the reference math, not our RSP), at far 32767 and 40000.
 Hypotheses / outcomes:
-- H-clean: every never-added item is UNLINKED-NEVER, COND or CULL-OFF (as L12) -> G6c coverage closed on 3 levels; take the next
-  ladder rung (nothing open: G6 awaits the owner's look; pick the oldest owner item whose closing evidence is single-source).
-- H-far: some linked, condition-met item culls by v_far at dd4 -> the stand-in far multiplier misses that level's view (check
-  rs64_vt_farmul path for that subtype) - real defect.
-- H-novt: culls by v_novt (no view test ran) -> the bucket rejects before the view test (slice group / flags) - read the
-  addNpcToVisibilityBucket entry for that instance.
-Note L10 u104 read 273/273 never-added at 120 tries in s7748; expect the lifetime table to reverse that as on L12.
+- H-ucode: the reference math also pins x=0 above the threshold (fixed-point W / clip-ratio overflow) -> the mechanism is the game's own,
+  FARMAX stays the right fix, item 3 is two-source.
+- H-rspemu: the reference math does NOT pin -> our LLE vector-op emulation (VRCP/VMACF clamp) diverges; bisect the op on those inputs.
+- H-input: the logged inputs are not enough to reproduce (missing matrix) -> one capture run at L5 21:9 dd4 with FARMAX=0 that dumps
+  the vertex+matrix for the pinned panel, then rerun the model.

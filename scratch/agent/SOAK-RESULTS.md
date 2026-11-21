@@ -1691,3 +1691,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261120 | s7707 fold: s7706_219_rehold L1/L15 (loop) + L4 (in-session): 3/3 alive, 0 crash, vi_stalls30s=0, max_gap 148 ms, level_ok=1, 21:9 line 3/3, standins on 3/3, spawns 38/39/164 -> post-G6c 21:9 clean.
 20261120-152303 | s7725_texdesc_L4 | rc=0 | 311s | scratch/agent/soak_results/s7725_texdesc_L4_20261120-152303.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261120 | s7726 fold: s7725_texdesc_L4 (loop) alive 1/1, 0 fatal, vi_stalls30s=0, max_gap 143 ms, level_ok=1 -> plume fix clean in owner mode. In-session NSZombie L4 150 s: default 0 zombies boot+flight, MTL_OWN=0 control 163.
+20261121-010832 | s7749_life_L10_L1 | rc=0 | 420s | scratch/agent/soak_results/s7749_life_L10_L1_20261121-010832.log | arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261121 | s7750 fold: s7749_life_L10_L1 (loop) 2/2 alive, 0 crash, vi_stalls30s=0, level_ok=1. Lifetime: L10 ADDED 192/280, CULL-OFF 81, CULL-FAR 0, CULL-NOVT 0; L1 ADDED 43/47, CULL-FAR 0 -> H-clean selected, G6c coverage closed L1/L10/L12.

@@ -302,8 +302,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7663/run.zsh; any new src/ or lib/ instrument file -> the gate sweep before committing; `python3 tools/crash_reports.py`
     (rc 1 = NEW outranks all work); tools/agent/run_tests.sh after tools/agent edits (stop_gate runs it); SKIP_WILD_W change ->
     tools/s7705_fbread_flight.zsh + tools/test_s7705_join.sh. If CONTRACT-CARRY.md heads your prompt, fix it before NEXT.md.
-23. **G6c L12 visibility CLOSED s7748: visible; L12 coverage CLOSED s7749: no gap** (headline). Next: fold the queued soak
-    s7749_life_L10_L1 (same lifetime table on L10/L1). Only a linked, condition-met item culled by v_far/v_novt is a defect.
+23. **G6c coverage CLOSED on L1/L10/L12 (s7749 L12, s7750 L10+L1): no gap.** Lifetime table (tools/s7749_life_tally.py,
+    200 s dd4 holds): L10 280 items ADDED 192 / CULL-OFF 81 / COND 3 / UNLINKED-NEVER 3 / DEAD 1; L1 47 items ADDED 43 /
+    CULL-OFF 1 / UNLINKED-NEVER 3. CULL-FAR=0 and CULL-NOVT=0 on all three levels (activation control edges 64/32, nospawn 0).
+    The s7748 L10 "273/273 never added" read was the same 120-try window artifact as L12. Reopen only on an owner report.
+24. **Next rung (s7750): second source for the s7310 FARMAX mechanism** (item 3 is single-source). See NEXT.md.
 
 ## Evidence index
 
