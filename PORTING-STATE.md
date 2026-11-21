@@ -207106,7 +207106,7 @@ Visibility (tools/s7755_hstate_visibility.py --cap 1048576 --tg 1): live-end ge2
 0/0/2 (info only, the tool's VISIBLE on s13250 is begin-driven, as in s7757). Controls: flip PASS, shade+16 PASS on 165/120/149 tris.
 Gates: s7756 PAIRS + hangar_hstate_219re/k900_s12750 -> --controls GREEN 4/4 (CAP=2048 ctl 37385 px PASS); s7753 SNAPS +
 w219re_s15500 (largest, mid-scroll) + w219re_s17000 (settled) -> CONTROL PASS snaps=17, GREEN 17/17 (capc 2048 fires, strict prefix
-44712/29976, flip PASS). Sweep regexes -> 17/17, 4/4.
+44712/29976, flip PASS). Sweep regexes -> 17/17, 4/4. Full sweep --jobs 2: 222 gates, 218 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (1149 s cold).
 ORIGIN: no mitigation; gate coverage only.
 Rules out: a re-entry-only mid-task DL race (the G5i path) and any ucode output divergence on the craft-select screen under the aim
 camera at the owner 21:9 recipe. Not covered: the PAUSE / ABORT / MISSION FAILED / SELECT LEVEL overlays (VI ~11000-12500) -> NEXT.md.
