@@ -207246,4 +207246,6 @@ Controls: every default arm shows its counter firing (positive); negative contro
 (scorer cannot pass a wrong arm order).
 Verdict: this selects H-works and refutes H-broken for all 7 in-flight queue toggles. With s7763, every switch named in
 OWNER-REVIEW-QUEUE is now verified to act, except CONTROLS_DUMP=1 / F6 (row 2, input UI, owner's hands).
+ORIGIN: no mitigation added: the only code change is the read-only ROGUESQ_LOG_STICK_GATE log (it reads the host stick values before
+and after rs64_stick_gate_apply, writes nothing to the guest); the gate flagged the words 'guard'/'restore' in the checker's comments.
 Next: nothing left that the agent can measure in the queue; NEXT.md stays owner-triage first.
