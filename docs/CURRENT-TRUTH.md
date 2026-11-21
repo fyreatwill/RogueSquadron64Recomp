@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7732 (2026-11-20).
+Compact operational handoff, as of Session 7736 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,13 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7736 live-only reader split: 1 needed probe restored to the regen, the rest dead/accepted.** Of the 18 live-only getenv
+  occurrences (live vs replay), ROGUESQ_LOG_G1D_TASK's s6201 [g1d-alloc] block (beginFrameDLChunk, funcs_3) was silently lost by a
+  regen: its inline fixer call ran before the S5798 store form, and its 0x8000A934 anchor broke once s6285/s6287 text landed. Fixed:
+  apply_s6201_alloc anchors on 0x8000A938 + keeps s6336 order, and tools/apply_s7736_g1d_alloc.py runs it from RS64_REPLAY after
+  s6287. New replay: beginFrameDLChunk byte-identical to live, reverse DIAG 67->66, gate H-mirrored, controls PASS. The other 13 are
+  accepted dead text: funcs_50.c (5, orphan prelude-only chunk from a 51-chunk regen, 0 RECOMP_FUNC), funcs_9 CLAMPP + FORFACE_LOG x4
+  (closed s6496-s6526 chain; the 4 DRAW_DISTANCE reads sit inside FORFACE_LOG-gated fprintf, not owner behaviour), funcs_10 EDGE_FADE_TEST2.
 - **s7735 regen replay reproduces the s7734 readings (H-replays selected, H-drift refuted).** tools/s7719_regen_gate.py (in the
   gate sweep) now also runs `s7734_compiled_reader_census.py --tree <fresh replay>`: replay 378 readings, 0 unreviewed HIDDEN/NOREF,
   B40 new form present (2 sites); planted control (replay funcs_23 B40 put back to the pre-s7734 text) -> HIDDEN rc 1 PASS. The

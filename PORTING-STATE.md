@@ -206460,3 +206460,33 @@ Rules out: a regen silently undoing s7734. Not covered: build/factor5_ucode is n
 Discrimination: selects H-replays, refutes H-drift (replay census 0 HIDDEN; the planted old-B40 replay reads HIDDEN, so the
 instrument can see drift). Next discriminator: grep the 18 live-only reader names across tools/, soak_queue and OWNER-OPT-INS
 to split H-dead-probe from H-needed (scratch/agent/NEXT.md).
+
+## Session 7736 (2026-11-20) — live-only reader split: the s6201 [g1d-alloc] probe was lost by every regen (H-needed for 1), the other 13 are dead/accepted text
+
+HYPOTHESIS-ID: owner-looks-or-new-report. crash_reports --since 2026-11-13: FOLDED=27 new=0; no new SOAK-RESULTS lines; soak queue empty;
+CURRENT-TRUTH 55.9 KB (no maintenance).
+Question (s7735 NEXT): the 18 live-only getenv occurrences (live tree vs s7735 replay) - H-dead-probe (diagnostic, safe to lose) vs
+H-needed (something still relies on one, so the regen silently drops an instrument).
+Method: per-(file,name) getenv count diff live vs replay, then grep each name across tools/, soak_queue, OWNER-OPT-INS, src, and the
+s7719 accept tsv. Result: funcs_50.c 5 (LOG_ALL x2, M5_FIELD348_WRITER, M5_WRITER_PARITY, SUBMIT_GATE_STORES, POOLWATCH) = the orphan
+prelude-only chunk (0 RECOMP_FUNC, Nov 16, a 51-chunk regen; only non-static symbol is weak g_s6481_pool, weak-defined in every chunk;
+already a s7719_live_only_accept row); funcs_9 CLAMPP + FORFACE_LOG x4 + DRAW_DISTANCE x4 = closed s6496-s6526 store-census chain
+(accepted LOST rows; the 4 DD reads are inside `if (getenv("ROGUESQ_FORFACE_LOG") && ...)` fprintf lines, so not owner behaviour);
+funcs_10 EDGE_FADE_TEST2 = accepted s6314 opt-in. The one with NO accept row: funcs_3 LOG_G1D_TASK, the s6201 alloc block in
+beginFrameDLChunk (ROGUESQ_LOG_G1D_TASK is still set by tools/s7386_route_ab.zsh and read in src/). The replay had none of its 4 lines.
+Cause: apply_s6201_alloc is called inline in the fixer, before the S5798 store form exists, and its head anchor (the 0x8000A934 load
+with the last_guest_pc line directly before the load) no longer matches once s6287 ppcount inserts between them - so the function
+returned 0 and nothing reported it.
+ORIGIN: tools/apply_s6031_far.py apply_s6201_alloc anchors (s6201); not a mitigation, a regen-reproducibility fix for a diagnostic.
+Change: apply_s6201_alloc head line now inserts before the `// 0x8000A938:` comment (the live position, after the s6285 block), and the
+log block follows the s6336 post-store line when present (live order). New tools/apply_s7736_g1d_alloc.py (dir arg, idempotent, exits
+nonzero if beginFrameDLChunk is not in exactly one file or anchors miss) registered in RS64_REPLAY right after apply_s6287_ppcount and
+in RS64_REPLAY_DIRARG. Live tree untouched (script reports "already present").
+Run: on a copy of the s7735 replay funcs_3: beginFrameDLChunk body byte-identical to live. Full `s7719_regen_gate.py --keep
+scratch/s7736/gate` (2:49): replay log `apply_s7736_g1d_alloc.py: ok funcs_3.c s6201 alloc x1`; forward/reverse VERDICT H-diag, controls
+PASS; reverse DIAG 67 -> 66 (s7735 gate_post 67), other classes unchanged; reader census 378, 0 unreviewed, controls PASS; VERDICT
+H-mirrored. Getenv diff on the new replay: LOG_G1D_TASK row gone, the 13 accepted rows remain (same instrument showed the row on the
+s7735 tree = the positive control).
+Discrimination: H-needed selected for LOG_G1D_TASK (restored to the regen), H-dead-probe for the other 13 (all accepted, no recipe/opt-in
+reads them except via the FORFACE-gated lines). Rules out: an owner knob (DRAW_DISTANCE) carrying live-only behaviour.
+Not done: deleting the orphan funcs_50.c from the live tree (harmless, accepted; a regen into a clean dir drops it).

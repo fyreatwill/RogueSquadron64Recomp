@@ -383,10 +383,13 @@ def apply_s6201_alloc(text):
         "    int c1cs = 0;\n",
         "    int c1cs = 0;\n    uint32_t g1d_head = 0, g1d_next = 0; /* PATCH: s6201 alloc */\n",
         1)
-    head = "    // 0x8000A934: lw          $v0, 0x63B0($v0)\n    g_rs64_last_guest_pc = 0x8000A934u;\n    ctx->r2 = MEM_W(ctx->r2, 0X63B0);\n"
+    # s7736: anchor on the NEXT instruction's comment. The old anchor (the 0x8000A934 load line) stopped matching once
+    # s5798/s6287/s6285 text landed around it, so a regen dropped this whole probe silently. Before 0x8000A938 = after
+    # the load and anything appended to it (the s6285 block), the position the live tree has.
+    head = "    // 0x8000A938: lw          $v0, 0x0($v0)\n"
     if body.count(head) != 1:
         return text, 0
-    body = body.replace(head, head + "    g1d_head = U32(ctx->r2); /* PATCH: s6201 alloc head */\n", 1)
+    body = body.replace(head, "    g1d_head = U32(ctx->r2); /* PATCH: s6201 alloc head */\n" + head, 1)
     nxt = "    // 0x8000A93C: lui         $at, 0x8011\n"
     if body.count(nxt) != 1:
         return text, 0
@@ -394,6 +397,11 @@ def apply_s6201_alloc(text):
     st = "{ MEM_W(-0X5B40, ctx->r1) = ctx->r2; RS64_S5798_ST(0x8000A9CCu, -0X5B40, ctx->r1, 4); }\n"
     if body.count(st) != 1:
         return text, 0
+    post = "rs64_f5_store_shadow_post('W', 0x8000A9CCu, U32(ADD32(ctx->r1, -0X5B40))); } /* PATCH: s6336 F5 post-store shadow */\n"
+    i = body.find(st) + len(st)  # s7736: keep the live order (after s6336's post-store line when it is already there)
+    j = body.find("\n", i)
+    if j > 0 and body[i:j + 1].endswith(post):
+        st = body[body.rfind("\n", 0, body.find(st)) + 1:j + 1]
     log = (
         st +
         "    { /* PATCH: s6201 alloc */ static int en = -1, n, seen; static uint32_t last = 0xffffffffu; if (en < 0) { const char* e = getenv(\"ROGUESQ_LOG_G1D_TASK\"); en = (e && *e && *e != '0') ? 1 : 0; }\n"

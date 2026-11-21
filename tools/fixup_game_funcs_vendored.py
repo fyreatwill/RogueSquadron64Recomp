@@ -41993,6 +41993,7 @@ RS64_REPLAY = [
     # s6863: before their dependents (s6146/s6564/s6591/s6593 anchor on s5798 and s6336 text).
     "apply_s5798_recwatch.py",
     "apply_s6287_ppcount.py",  # s6863: anchors on the S5798 store form
+    "apply_s7736_g1d_alloc.py",  # s7736: s6201 [g1d-alloc] probe (ROGUESQ_LOG_G1D_TASK); its inline call predates the S5798 store form, so a regen lost it
     "apply_s5866_plwatch.py",
     "apply_s5867_callers.py",
     "apply_s5867b_msg.py",
@@ -42177,7 +42178,7 @@ RS64_REPLAY = [
 # RecompiledFuncs edit runs (and completes) before the failing src/ step.
 RS64_REPLAY_DIRARG = {"apply_s4913_marks.py", "apply_s5368_align100_counter.py", "apply_s5370_path_census.py",
                       "apply_s5379_census_ctl.py", "apply_s4982_reader_acquire.py", "apply_s5771_guest_pc_census.py",
-                      "apply_s6331_f5_store_shadow.py", "apply_s6334_vtx_writer_value.py", "apply_s6336_f5_poststore.py"}  # s5533: scripts taking <RecompiledFuncs dir>
+                      "apply_s6331_f5_store_shadow.py", "apply_s6334_vtx_writer_value.py", "apply_s6336_f5_poststore.py", "apply_s7736_g1d_alloc.py"}  # s5533: scripts taking <RecompiledFuncs dir>
 
 RS64_REPLAY_TOLERATE = {
     "apply_s4230_listwatch.py": "retargets RecompiledFuncs first; its later src/main/upstream_compat.cpp row-cap assert targets the throwaway copy",
