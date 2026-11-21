@@ -309,9 +309,16 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     CULL-OFF 1 / UNLINKED-NEVER 3. CULL-FAR=0 and CULL-NOVT=0 on all three levels (activation control edges 64/32, nospawn 0).
     The s7748 L10 "273/273 never added" read was the same 120-try window artifact as L12. Reopen only on an owner report.
 24. **s7310 FARMAX mechanism: CLOSED two-source (s7751)** — cxd4 replay of the captured task reproduces the pinned dome
-    tris exactly; H-ucode selected, H-rspemu refuted. Side datum: cxd4 vs our LLE match 98.8% of commands per task, residual
-    = 5 tris with small slope words, ~18 port-only 0F tris, one reordered state block; open in NEXT.md (item 25).
-25. **Next rung (s7751): name the residual cxd4-vs-port RDP differences** (tools/s7751_rdp_compare.py on scratch/s7751 snaps).
+    tris exactly; H-ucode selected, H-rspemu refuted.
+25. **cxd4-vs-port RDP residual: CLOSED (s7752).** Offline replay of OUR ucode on the snap (tools/s7752_port_task/harness,
+    needs ROGUESQ_UCODE_CAP=1048576 = live dd>1 cap, else a truncated prefix) == live stream byte-for-byte 3/3 (H-snapshot
+    refuted); with ROGUESQ_G5B_TG_FIX=0 it is length-exact with cxd4 and the ~18 port-only tris + reordered 846-cmd block are
+    gone (H-fixup: s6896 TriGen clamp). Last 31-33 cmds/task: degenerate-edge slopes (0xFE33 high half, yh==ym) and
+    near-saturated tex/Z coefficients, rendered <=1 LSB on ~2.7% of px (tools/s7752_render_diff.py, --ctl passes): sub-visible.
+    **G5b TriGen fix now two-source:** the retail ucode output (cxd4 == TG_FIX=0) draws giant terrain wedges over ~3/4 of the
+    L1 21:9 dd8 frame (340k px >=8 LSB, scratch/s7752/img_f0_4054_tg0.png). Rerun after a ucode fixup edit: build.sh + harness.
+26. **Next rung (s7752): RDP-output regression gate** — retain 2 snaps + expected streams and add a sweep gate that replays the
+    port ucode offline and requires byte-identical output (NEXT.md).
 
 ## Evidence index
 

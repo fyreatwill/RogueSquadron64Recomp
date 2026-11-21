@@ -206890,3 +206890,42 @@ rc=0. The 2 remaining REDs (s7363 OPEN 4, s7600 OPEN 1) are at src/main/rs64_sta
 last touched in s7749, not by this session). stop_gate --verify also flagged s7364 (the snapshot memcpy) and s7363 px[]/lr[]: all
 classified this session (s7364/s7363 reviewed.tsv rows, s7600_gx_rows lr row: lr[6] indexed by reason() whose callers pass only
 literals 0..5; px[4096] writes guarded by s_px.n < kPxN, flush reads clamped n). Each gate re-run with --controls rc=0.
+
+## Session 7752 (2026-11-21) — cxd4-vs-port RDP residual named: the ~18 port-only tris + reordered 846-cmd block are the s6896 G5B TriGen fix (offline port replay TG_FIX=0 == cxd4 length-exact), the snapshot is exact (offline port replay == live 3/3), and the last 31 commands are <=1 LSB sub-visible precision; retail ucode at dd8 draws giant terrain wedges, so the G5b fix is now two-source
+
+Start: crash_reports --since 2026-11-13 new=0; no owner report; SOAK-RESULTS has nothing new since the s7750 fold.
+Work unit (NEXT s7752, HYPOTHESIS-ID cxd4-port-rdp-residual): explain the s7751 side datum (cxd4 vs our LLE 98.8% equal per task).
+Hypotheses: H-snapshot (CPU rewrites inputs during the live task), H-fixup (a deliberate ucode fixup changes output), H-rspemu.
+Discriminator, all offline on the retained s7751 snaps (no game run): replay OUR ucode on the same snapshot and compare three ways.
+
+New tools (engineering):
+- tools/s7752_port_task/harness.cpp: links the live build's factor5_ucode_lean.cpp.o (the TU the game runs), stubs every
+  diagnostic hook, models the default dpc_bridge paths (rs64_dpc_current_read 64-repeat escape, DPC status 0), copies
+  rs64_g5b_tg_edge (modes 0/1), captures the RDP bytes with the exact s7751 windowing. Env ROGUESQ_G5B_TG_FIX, ROGUESQ_UCODE_CAP.
+- tools/s7752_rdp_residual.py: difflib over whole commands -> replaced (which words) / port-only / ref-only runs.
+- tools/s7752_port_task/rdp_render.c + tools/s7752_render_diff.py: render one task's stream through angrylion-plus (16 MB core)
+  on that task's snapshot RDRAM and pixel-diff two renders per colour/Z image, with a 5-bit channel-delta histogram.
+Gotcha found: at the 65536 default UCODE_CAP the offline replay hits the cap and emits a strict PREFIX of the live stream
+(717,576 of 1,719,776 bytes, byte-identical); the live run uses the dd>1 policy cap 1048576 (main.cpp setenv). With it, cap_fires=0.
+
+Results (tasks f0 s4054, f0 s4053 = FARMAX=0 arm; d s4056 = default arm):
+| task | offline TG_FIX=1 vs live | offline TG_FIX=0 vs cxd4 | tg_hits | residual tg0 vs cxd4 (cmds) |
+| f0 s4054 | byte-identical (1,719,776) | same length 1,716,608, 75,671 cmds aligned | 100 | 31 differ |
+| f0 s4053 | byte-identical (1,768,976) | same length 1,765,456, 83,440 aligned | 101 | 31 |
+| d s4056 | byte-identical (1,721,520) | same length 1,718,528, 75,682 aligned | 100 | 33 |
+- H-snapshot REFUTED: our ucode on the captured begin-image reproduces the live stream exactly (3/3); the image is what the live RSP read.
+- H-fixup SELECTED for residual (b) port-only 0F tris and (c) the 846-command texture-load block order: both vanish with
+  ROGUESQ_G5B_TG_FIX=0 (s6896 TriGen s16 edge clamp, default on at dd>1). Two lines: the TG_FIX=0 stream is length-exact with
+  cxd4 and every insert/delete run is gone; the TG_FIX=1 stream is byte-identical to live with tg_hits=100 per task.
+- Residual (a) = 31-33 replaced commands, two shapes: edge slope words whose port high half is 0xFE33 (DxMDy @28 on tris with
+  yh==ym, i.e. an edge spanning zero scanlines, plus 2 @12/@24 cases) and texture/Z coefficient words on W~16384 near-saturated
+  tris (@96-@172, values 0x8000/0x7FFF-adjacent). Rendered impact (angrylion, same snapshot): colour image 12,659 px (s4054) /
+  11,961 px (s4056) differ, all but 10/9 by <=1 LSB of a 5-bit channel, none >3; Z 4,706/7,990 px. Positive control: --ctl
+  flips one pixel and the scorer reports it (2 = the same B20000 region counted as colour-clear target and Z image).
+  Reading: a sub-visible precision difference between our LLE (ares VU) and cxd4 on degenerate/saturated inputs; which side
+  matches hardware is not decided (no third RSP), and it does not matter to the picture. Closed as not worth a VU-op bisect.
+- Side result (new second source for G5b): render TG_FIX=1 vs TG_FIX=0 on s4054/s4056: 340,734 / 339,736 colour px differ,
+  310k/328k by >=8 LSB. TG_FIX=0 (== the retail ucode, == cxd4 to <=1 LSB) draws giant terrain wedges over ~3/4 of the frame
+  at this L1 21:9 dd8 pose (scratch/s7752/img_f0_4054_tg0.png vs _tg1.png). So the s6896 clamp's need at dd>1 is now shown by
+  an independent RSP fed the real task, not only by our runtime.
+ORIGIN: no mitigation added; instruments only. Snaps/renders stay in scratch/s7751, scratch/s7752 (gitignored).
