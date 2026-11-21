@@ -34,6 +34,13 @@ SNAPS = {
     "scratch/s7754/retained/dd1_s3000.bin": dict(cap=65536, tg=0, tg0=None, capc=2048),       # L4 flight, dd1 retail
     "scratch/s7754/retained/dd2w_s2250.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),    # L4 intro cutscene, 16:9 dd2 FPS60
     "scratch/s7754/retained/dd2w_s4000.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),    # L4 flight, 16:9 dd2 FPS60
+    # s7757: owner 21:9 recipe (ASPECT=21:9 dd4 FPS60 STANDINS=1), 22/24 route tasks exact (the 2 misses = hangar H-state);
+    # tg0 here = our TG_FIX=0 replay length (the retail-ucode TriGen path; not cxd4-run for these two).
+    "scratch/s7754/retained/w219_s250.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),     # attract, 21:9 dd4
+    "scratch/s7754/retained/w219_s1000.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),    # SELECT GAME, 21:9 dd4
+    "scratch/s7754/retained/w219_s2250.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),    # L4 intro cutscene, 21:9 dd4
+    "scratch/s7754/retained/w219_s2750.bin": dict(cap=1048576, tg=1, tg0=1401816, capc=2048) ,  # L4 flight, 21:9 dd4 (64 TG hits)
+    "scratch/s7754/retained/w219_s4000.bin": dict(cap=1048576, tg=1, tg0=1547472, capc=65536),  # L4 flight, 21:9 dd4 (14 TG hits)
 }
 
 

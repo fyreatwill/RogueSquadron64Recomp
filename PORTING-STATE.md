@@ -207038,3 +207038,28 @@ Rules out H-drift (tree has not changed the hangar render since s7755). Selects 
 Full sweep (--jobs 2, 19 min): 222 gates {GREEN 218, REPORT 3, NEEDS-ARGS 1 (s7726_zombie_census, needs --arm/--control,
 pre-existing)}, 0 RED / 0 HOLLOW; s7756_hstate_gate GREEN.
 Next: NEXT.md rdp-output-gate-219-coverage (21:9 owner-recipe snaps for s7753 + a 21:9 hangar pair for s7756).
+
+## Session 7757 (2026-11-21) — owner 21:9 recipe in both RDP-output gates: 22/24 route tasks at ASPECT=21:9 dd4 FPS60 STANDINS=1 replay byte-exact from begin and end image, the 2 misses are hangar H-state and render live==end within 1 LSB; s7753 GREEN 13/13, s7756 GREEN 3/3
+Start checks: crash_reports new=0; no new SOAK-RESULTS lines since the s7750 fold; no owner report.
+Question (NEXT s7757, rdp-output-gate-219-coverage): do the s7753 byte-exact and s7756 hangar-visibility properties hold at the
+owner's 21:9 recipe? H-exact (same as 16:9) vs H-wide-drift (a 21:9-only path - FARMAX, wide scissor, stand-ins DL - is not
+snapshot-replayable or renders visibly live-vs-end).
+Run (one game, screen unlocked, host idle 14.3 h): `env EVERY=250:24 SECS=230 zsh tools/s7754_capture_route.zsh w219
+ROGUESQ_ASPECT=21:9 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_FPS60=1 ROGUESQ_STANDINS=1` -> alive=1 crash=0, 24 snap pairs, save-unchanged.
+Log: [g1d] FB_WIDTH=1024, [ddbundle] dd=4, [standins] on, 155 objects L4, spawns added in flight. Phases from the 10 s window sheet
+(scratch/s7757/sheet.jpg) + task size: s250 attract, s1000 SELECT GAME, s1500/s1750 AVAILABLE CRAFT, s2000/s2250 L4 intro
+cutscene, s2500-s6000 flight (TriGen hits 1-64 per task).
+Replay (new tools/s7757_route_replay.py: every snap from begin AND end image at CAP 1048576 TG 1): 22/24 EQ from both images,
+b==e. The 2 DIFFs are s1500/s1750 (hangar), begin != end != live: the s7754 H-state signature again.
+Visibility (tools/s7755_hstate_visibility.py --cap 1048576 --tg 1): s1500 live-end 631 px ge2LSB 0, s1750 live-end 5026 px ge2LSB 0
+(the gated property holds); begin-live 336 / 105 px at >=2 LSB (the tool's VISIBLE verdict is driven by begin-vs-live, info only,
+same shape as 16:9 dd2's 313 px). Controls: flip PASS, shade+16 on 681/603 tris PASS.
+Gate change: s7753 SNAPS + 5 (scratch/s7754/retained/w219_s{250,1000,2250,2750,4000}); the two flight snaps carry TriGen hits, so
+their tg0 control pins our TG_FIX=0 replay length (1401816 / 1547472, differs from live; not a cxd4 run). s2750's capc 65536 did not
+fire (cap_fires=0: it is an iteration cap, the task needs fewer) -> capc 2048 (fires, strict prefix). --controls: CONTROL PASS
+snaps=13, GREEN 13/13. s7756 PAIRS + hangar_hstate_219/k900_s1500: GREEN 3/3, CAP=2048 ctl 44768 px PASS. Sweep regexes -> 13/13
+and 3/3. Full sweep --jobs 2: 222 gates, 218 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED.
+ORIGIN: no mitigation; gate coverage only.
+Rules out: a 21:9/dd4/stand-ins-only ucode output divergence on the L4 route (attract, front end, cutscene, flight); a visible
+21:9 hangar mid-task race. Not covered: stand-ins-heavy flight (L4 adds few) -> NEXT.md (L10).
+Verdict: selects H-exact at 21:9 (22/24 byte-exact, hangar H-state invisible live-vs-end), refutes H-wide-drift on this route.

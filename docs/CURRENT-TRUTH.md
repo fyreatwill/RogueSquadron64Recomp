@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7755 (2026-11-21).
+Compact operational handoff, as of Session 7757 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -321,7 +321,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     8 retained snaps through the live factor5_ucode_lean.cpp.o (harness auto-rebuilt when older) at each snap's live policy (dd1
     CAP=65536 TG_FIX=0, dd>1 CAP=1048576 TG_FIX=1) and requires == live RDP tail byte-for-byte: 2 L1 21:9 dd8 flight (scratch/s7751)
     + 6 from s7754 (scratch/s7754/retained: attract, SELECT GAME, L4 intro cutscene and flight at dd1 4:3, L4 cutscene and flight at
-    16:9 dd2 FPS60). GREEN 8/8. Ctls: tg0 (only the dd8 snaps have TriGen hits; 0 hits in every s7754 frame), CAP=<capc> strict
+    16:9 dd2 FPS60). GREEN 8/8. **s7757: 13 snaps** - + 5 at the owner's 21:9 recipe (ASPECT=21:9 dd4 FPS60 STANDINS=1, stand-ins
+    active: scratch/s7754/retained/w219_s{250,1000,2250,2750,4000}: attract, SELECT GAME, L4 cutscene, 2x L4 flight with TriGen hits,
+    tg0 = our TG_FIX=0 length). 22/24 route tasks of that run exact from begin AND end image; the 2 misses are the hangar (H-state). GREEN 13/13. Ctls: tg0 (only the dd8 snaps have TriGen hits; 0 hits in every s7754 frame), CAP=<capc> strict
     prefix cap_fires=1, 1-byte flip. A RED after a ucode fixup edit = emitted stream changed: intended -> re-capture
     (`tools/s7753_capture_snaps.zsh`, `tools/s7754_capture_route.zsh` with ROGUESQ_S7751_EVERY=<N>:<max>:<from>) and say so.
 27. **Hangar gfx tasks are NOT snapshot-replayable (s7754 H-state, measured):** in all 10 AVAILABLE CRAFT tasks (dd1 + 16:9 dd2)
@@ -336,6 +338,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Gated s7756:** `tools/s7756_hstate_gate.py --controls` (in the sweep, NEEDS-INPUT when the pairs are absent) requires
     live-vs-end ge2LSB == 0 on both retained pairs + s7755 flip/shade ctls; ctl CAP=2048 must read >=2 LSB (22589 / 44539 px).
     GREEN 2/2; planted cap=2048 policy -> RED 2/2, planted missing pair -> NEEDS-INPUT rc 4.
+    **s7757: 3 pairs** (+ 21:9 dd4 FPS60 STANDINS hangar_hstate_219/k900_s1500): live-end ge2LSB 0 (631 px <=1 LSB), begin-live 336 px
+    >=2 LSB (info only; same shape as 16:9's 313). GREEN 3/3, CAP=2048 ctl 44768 px. RDP-output coverage of the owner recipes is done.
 
 ## Evidence index
 
