@@ -206257,7 +206257,7 @@ Live pre-fix (build/ binary of 17:03, same readers as HEAD; 9 s boots, SETTINGS=
 - `ROGUESQ_OSMEM_MB= ROGUESQ_DRAW_DISTANCE=2`: only `[ddbundle] dd=2.00 px=2`, NO `osmem=12 MB > 8 -> spill arena
   0x81000000, ramtop 24 MB` line; unset + dd2 prints it. The bundle's setenv(OSMEM_MB,"12",0) does not overwrite "", atoi("")
   = 0, so dd>1 ran the pre-owner-crash layout (spill 0x80800000, 8 MB guest) that crashed LEVEL=15 at mission load
-  (2026-11-05). A latent owner-route hazard, not a census artefact. -> H-split SELECTED, H-harmless refuted.
+  (2026-11-05). A latent owner-route hazard, not a census artefact. Result: this selects H-split and refutes H-harmless.
 ORIGIN: the writer of the "" is the user's shell (`NAME= ./game`); setenv-default (overwrite=0) logic and presence readers
 then treat "" as set. The value is not legitimate as an opt-in: it means "no value", so it is normalised to unset.
 Fix:
