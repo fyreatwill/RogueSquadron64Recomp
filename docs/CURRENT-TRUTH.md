@@ -27,6 +27,12 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   exactly that file. RED arm (live farm + one comment line in funcs_12.c): strict rc 1 while s7423 both ways still read {} (the
   statement scans ignore comments), so strict covers what they cannot. Sweep --only s7719: GREEN (174 s).
   Consequence: ANY hand edit to ../N64Recomp/RecompiledFuncs now turns the sweep RED; put it in a fixup/apply script instead.
+- **s7741 ucode regen gate STRICT (H-drift selected).** `tools/ucode_regen.sh verify` read DIFF factor5_ucode_recompiled.c (4
+  lines: the s7522 imem-residency hooks fixup_factor5_ucode.py added 11-17, after the 11-16 patch snapshot), so a rebuild of
+  build/factor5_ucode from the patches would have lost them. Snapshot refreshed (patch +4/-2, census 0 unexplained). New
+  `tools/s7741_ucode_regen_gate.py --controls` (in the sweep): fresh RSPRecomp + patches in a private temp dir, file sets equal,
+  12/12 byte-identical, census clean; controls planted line / extra file / missing file each RED, clean GREEN; RED arm = the
+  pre-s7741 patches (rc 1, DIFF that one file). After any fixup_factor5_ucode.py edit: `zsh tools/ucode_regen.sh snapshot`.
 - **s7738 replay tree swap-safe** (link + symbol + L4 hold; tools/s7738_link_replay.sh) -> adopted s7739.
 - **s7737 DIAG consumer census** (tools/s7737_diag_consumers.py, in the s7719 gate: a live-only probe that a live tool reads)
   and **s7736** s6201 [g1d-alloc] restored to the regen (apply_s7736_g1d_alloc). Both moot for drift since s7739 (live == replay).
@@ -395,7 +401,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     fb-cpu-reader census CLOSED s7391 (0 guest loads from a live colour image on 6 levels; build_fbld, ROGUESQ_S7389_FBLD=1).
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
 12. **Rerun-after-change censuses (all CLOSED, 0 defects; tool list verbatim in PROJECT-OVERVIEW "(s7534 maintenance)"):**
-    after a regen run tools/s7610_ov_census.py --controls + tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/ucode_regen.sh verify
+    after a regen run tools/s7610_ov_census.py --controls + tools/scan_selfbranch.py + the s7407-s7419 emission tools with --controls (rc 0); after a ucode regen tools/s7741_ucode_regen_gate.py --controls (strict, s7741)
     + tools/s7507_rsp_ctrl_flow.py + s7508_rsp_scalar_gaps.py + s7509_rsp_vec_operands.py; after a save/files.cpp edit tools/s7595_sv_census.py --controls + --harness; after a librecomp/ultramodern
     replacement change tools/s7527_host_replace_audit.py --controls; after any new host writer into guest RAM tools/s7542_gc_census.py; after a src/main static/hook change tools/s7548_gh_census.py; after a threads.cpp/recomp.cpp thread-entry edit tools/s7606_hc_census.py --controls; after a new host queue / std::thread / pending-list tools/s7615_dq_census.py --controls; after a fixup/apply script edit tools/s7549_gi_census.py --controls; after an RT64 fullSync/framebuffer-manager edit tools/s7550_gj_census.py --controls; after a librecomp/ultramodern getter or a new os*_recomp import tools/s7555_go_census.py --controls; after a scheduler/replacement or injected-yield change tools/s7543_gd_census.py --controls and tools/s7546_gf_census.py --controls; after a new host-retained guest pointer (osSetEventMesg-style registration) tools/s7547_gg_census.py --controls; after a class-touched function change, its class scorer.
 13. **Closed, reopen only on an owner report:** transition stalls (s7065/s7285), host self-time (s7066-s7070),

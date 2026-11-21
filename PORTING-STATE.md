@@ -206612,3 +206612,29 @@ Results:
 Rules out: replay nondeterminism as a reason to keep the gate lenient. Consequence: any hand edit to the live RecompiledFuncs
 tree now turns the sweep RED; hand edits must go into fixup/apply scripts (CLAUDE.md regen rule, now machine-enforced).
 No game run this session (text-only gate change).
+
+## Session 7741 (2026-11-20) — ucode regen gate made STRICT: build/factor5_ucode == fresh RSPRecomp + patches (H-drift selected, snapshot refreshed)
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0; no new owner report; no new SOAK-RESULTS lines. CURRENT-TRUTH
+58184 B (< 60000, no maintenance). Took NEXT's bounded candidate: s7740's strictness for the ucode regen.
+
+Hypotheses: H-zero (`tools/ucode_regen.sh verify` == live build/factor5_ucode byte-for-byte) vs H-drift (a file differs: either a
+fixup_factor5_ucode.py step missing from the tools/ucode_fixed snapshot, or a hand edit to fold into the fixup).
+Result: **H-drift**. verify: 11 SAME, `DIFF factor5_ucode_recompiled.c`, 4 differing lines, all `/* fixup: s7522 imem residency */`
+(extern decl, rs64_s7522_disp at do_indirect_jump, rs64_s7522_ovl28 in the ovl24route line). Those are written by
+tools/fixup_factor5_ucode.py:3778-3796 (s7522, live file mtime 2026-11-17); the patch snapshot is from 2026-11-16. So class: fixup
+step not snapshotted, not a hand edit. Consequence had it gone unnoticed: build/ is gitignored and fixup_factor5_ucode.py cannot
+rebuild from a fresh pass (s7091), so `ucode_regen.sh restore` on a clean checkout would have lost the s7522 hooks (passive
+diagnostics, gated on ROGUESQ_S7521_UCODEWATCH, so no gameplay change, but s7522_imem_residency.py would read nothing).
+Fix: `zsh tools/ucode_regen.sh snapshot` (patch diff +4/-2 lines; its census --controls dup/drop/splice-drop each caught) ->
+verify 12/12 SAME, census `4 modified-retail-kept, 0 unexplained, 0 splice breaks`.
+Gate: new `tools/s7741_ucode_regen_gate.py [--controls]`: runs RSPRecomp on every factor5*_rsp toml into a private temp dir
+(absolute rom/output paths; does not touch scratch/ucode_regen, which s7093/s7507 read), applies tools/ucode_fixed/*.patch,
+requires live file set == regenerated set, every file byte-identical, and the s7091 census clean. Controls on a farm copy of the
+live tree: clean GREEN (rows 0), planted comment line RED, extra file RED, missing file RED -> CONTROL PASS. Live: VERDICT GREEN
+(12 files, 4 patches, 0.16 s). RED arm, same session: the pre-s7741 (HEAD) patches -> `DIFF factor5_ucode_recompiled.c`, rc 1.
+Wired into tools/s7651_gate_sweep.py (EXTRA_GATES + ARGS row with --controls; the regex needs CONTROL PASS and VERDICT GREEN).
+Sweep `--only "s7741|s7719"`: GREEN 2 (s7741 0 s, s7719 169 s).
+CURRENT-TRUTH next-step 12 now names the strict gate in place of the bare verify.
+Rules out: other drifted ucode files (11 SAME before the refresh); a fixup-vs-live hand edit (all 4 lines carry the fixup marker
+and match the fixup source text).
