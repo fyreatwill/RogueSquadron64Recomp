@@ -207021,3 +207021,20 @@ by <=3 LSB. The rewrite is not a visible defect, whichever side retail lands on.
 scratch/s7754/retained/hangar_hstate_dd2/k900_s1500{,_end}.bin; the other 46 snaps deleted (800 MB).
 Rules out: visible hangar shimmer/garbage from the mid-task DL rewrite at dd1 4:3 and 16:9 dd2 FPS60 (two configs, 20 H-state pairs).
 Verdict: selects H-invisible (live == end <=1 LSB on 20/20 H-state pairs; begin-vs-end <=3 LSB on <=313 px; flip + shade+16 controls PASS); H-port-timing vs H-retail-race moot (no visible outcome on either side), thread CLOSED.
+
+## Session 7756 (2026-11-21) — hangar H-state visibility property is now a sweep gate: tools/s7756_hstate_gate.py --controls GREEN 2/2 (live-vs-end ge2LSB 0/0), CAP=2048 ctl and planted-policy RED, missing-pair NEEDS-INPUT
+
+What ran (offline, no game run): new `tools/s7756_hstate_gate.py` wraps `tools/s7755_hstate_visibility.py` over the two retained
+hangar pairs (scratch/s7754/retained/hangar_hstate/k900_s1250 at dd1 CAP=65536 TG_FIX=0; hangar_hstate_dd2/k900_s1500 at 16:9 dd2
+CAP=1048576 TG_FIX=1), rebuilding the s7752 harness when older than factor5_ucode_lean.cpp.o like s7753. Gated property:
+live-vs-end ge2LSB == 0 and both s7755 controls (flip, shade+16) PASS; live-vs-begin is printed as info only (stale-vertex image,
+legitimately 2-3 LSB). Registered in tools/s7651_gate_sweep.py: NEEDS_INPUT row (`^NEEDS-INPUT `), ARGS row (`--controls`,
+expected `CONTROL PASS pairs=2` + `VERDICT GREEN: 2/2 hangar H-state pairs`), EXTRA_GATES.
+Results: dd1 live-end px=4997 ge2LSB=0 (live-begin px=11614 ge2 0); dd2 live-end px=4502 ge2LSB=0 (live-begin 19661 / ge2 313,
+same as s7755). Controls in the same run: CAP=2048 truncation reads ge2LSB 22589 / 44539 px -> PASS; planted policy cap=2048 on
+both pairs -> VERDICT RED 2/2 rc 1; planted absent pair -> NEEDS-INPUT rc 4. `--only 's775[36]'` sweep: 2 GREEN, sweep's own
+planted red/green/hollow/cache controls PASS. Runtime 2 s. Full sweep (--jobs 2): see scratch/s7756_sweep.out (result line below).
+Rules out H-drift (tree has not changed the hangar render since s7755). Selects H-green.
+Full sweep (--jobs 2, 19 min): 222 gates {GREEN 218, REPORT 3, NEEDS-ARGS 1 (s7726_zombie_census, needs --arm/--control,
+pre-existing)}, 0 RED / 0 HOLLOW; s7756_hstate_gate GREEN.
+Next: NEXT.md rdp-output-gate-219-coverage (21:9 owner-recipe snaps for s7753 + a 21:9 hangar pair for s7756).

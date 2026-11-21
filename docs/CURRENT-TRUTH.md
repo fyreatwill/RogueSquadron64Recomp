@@ -333,6 +333,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     20 H-state pairs at 16:9 dd2 FPS60: live == end-image render to <=1 LSB (5-bit) on all of them (no torn/half-patched picture);
     begin-vs-live <=3 LSB on <=313 px (craft shading) on alternate tasks. Retail-race vs port-timing is moot. Retained dd2 pair
     scratch/s7754/retained/hangar_hstate_dd2/k900_s1500{,_end}.bin.
+    **Gated s7756:** `tools/s7756_hstate_gate.py --controls` (in the sweep, NEEDS-INPUT when the pairs are absent) requires
+    live-vs-end ge2LSB == 0 on both retained pairs + s7755 flip/shade ctls; ctl CAP=2048 must read >=2 LSB (22589 / 44539 px).
+    GREEN 2/2; planted cap=2048 policy -> RED 2/2, planted missing pair -> NEEDS-INPUT rc 4.
 
 ## Evidence index
 
