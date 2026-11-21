@@ -49,6 +49,11 @@ SNAPS = {
     # under the s6907/s6995 aim camera replay byte-exact (20/20); the forced route never visits this screen.
     "scratch/s7754/retained/w219re_s15500.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # re-entry craft scroll (Y-wing), largest
     "scratch/s7754/retained/w219re_s17000.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # re-entry craft settled (A-wing)
+    # s7760: in-mission overlays on the same owner route (PAUSE menu and ABORT LEVEL confirm drawn over the re-rendered flight frame,
+    # MISSION FAILED medal): 24/24 snaps VI 10920-12300 replay byte-exact from begin AND end (b==e), so overlays are begin-replayable.
+    "scratch/s7754/retained/w219ov_s11040.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # PAUSE menu, cursor on ABORT LEVEL
+    "scratch/s7754/retained/w219ov_s11400.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # ABORT LEVEL / ARE YOU SURE? confirm
+    "scratch/s7754/retained/w219ov_s12060.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # MISSION FAILED medal screen
 }
 
 

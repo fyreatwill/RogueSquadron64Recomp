@@ -207111,3 +207111,28 @@ ORIGIN: no mitigation; gate coverage only.
 Rules out: a re-entry-only mid-task DL race (the G5i path) and any ucode output divergence on the craft-select screen under the aim
 camera at the owner 21:9 recipe. Not covered: the PAUSE / ABORT / MISSION FAILED / SELECT LEVEL overlays (VI ~11000-12500) -> NEXT.md.
 Verdict: selects H-same for AVAILABLE CRAFT and H-exact for SELECT YOUR CRAFT; refutes H-reentry-race.
+
+## Session 7760 (2026-11-21) — in-mission overlays at the owner 21:9 recipe (PAUSE menu, ABORT LEVEL confirm, MISSION FAILED medal) replay byte-exact 24/24 from begin AND end image; s7753 gate widened to 20 snaps, GREEN 20/20
+Start checks: crash_reports new=0; no new SOAK-RESULTS lines since the s7750 fold; no owner report. Screen unlocked, HID idle 15.7 h.
+Question (NEXT s7760, rdp-output-gate-menu-overlays): do the overlay screens drawn over a held flight frame read RAM the CPU rewrites
+mid-task? H-exact (begin-replayable) / H-state (begin != end, live == end <=1 LSB) / H-overlay-race (live-vs-end >=2 LSB).
+Run (one game): `env EVERY=60:24:10900 SECS=230 zsh tools/s7754_capture_route.zsh w219_overlay ROGUESQ_FORCE_SAVE_MISSION=
+ROGUESQ_FORCE_UNLOCK= ROGUESQ_AUTOPILOT=$(cat scratch/s6995/route_long.txt) ROGUESQ_AUTOPILOT_HOLD_MS=250 ROGUESQ_ASPECT=21:9
+ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_FPS60=1 ROGUESQ_STANDINS=1 ROGUESQ_G5G_CAM=$PWD/scratch/s7760/w219_overlay.g5g.txt` (G5G_CAM is a
+log path, apply_s6907_aim.py) -> alive=1 crash=0, 24 snap pairs serial 10920-12300, save-unchanged.
+Screen attribution, two clocks: (1) window sheet scratch/s7760/sheet.jpg: w_182 PAUSED (MISSION GOALS, cursor menu), w_193 ABORT LEVEL /
+ARE YOU SURE?, w_203 MISSION FAILED medal, w_213 hangar room; (2) run.log interleaving of autopilot fires (fs=) with s7751 dumps:
+down@184 s fs 10901 -> snaps 10920-11100 = PAUSE menu with cursor on ABORT LEVEL; A@188 fs 11141 -> 11160-11520 = ABORT confirm (left@192
+inside it); A(YES)@195 fs 11561 -> 11580 last overlay frame (1214320 B), 11640 black transition (12800 B), 11700-12300 = medal (73-103 KB),
+next A@210 fs 12438. Pause/abort tasks are full 1.22 MB streams: the game re-renders the flight scene under the overlay, not a held fb.
+Replay (tools/s7757_route_replay.py scratch/s7754/w219_overlay/snap): 24/24 EQ from begin AND end image, b==e True, tg/cap 0/0.
+-> H-exact on all three overlay screens; H-state and H-overlay-race refuted (no DIFF to run s7755 visibility on).
+Gate: retained scratch/s7754/retained/w219ov_s{11040 pause,11400 abort,12060 medal}.bin added to s7753 SNAPS; sweep regex 17 -> 20.
+`tools/s7753_rdp_output_gate.py --controls` -> CONTROL PASS snaps=20 (per new snap: CAP=2048 strict prefix cap_fires=1, 1-byte flip
+read DIFF), VERDICT GREEN 20/20. Full sweep --jobs 2: 222 gates, 218 GREEN (s7753 20/20, s7756 4/4), 3 REPORT, 1 NEEDS-ARGS, 0 RED (1146 s cold).
+ORIGIN: no mitigation; gate coverage only.
+Rules out: an overlay-specific mid-task DL/RAM race and any ucode output divergence on PAUSE / ABORT / MISSION FAILED at the owner
+21:9 recipe. With s7757-s7759 the owner route (attract, SELECT GAME, hangar first entry + re-entry, crawl, intro cutscene, flight with
+stand-ins, pause, abort, medal) is covered end-to-end; only the hangar AVAILABLE CRAFT screen is H-state (invisible, s7756 gate).
+SELECT LEVEL is not on this route (4:3 dd1 RDP match vs angrylion s6785) -> NEXT.md takes it at 21:9 with LEVEL DESCRIPTION.
+Verdict: selects H-exact.
