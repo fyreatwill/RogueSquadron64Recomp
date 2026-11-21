@@ -206220,7 +206220,7 @@ Work unit (NEXT.md: crash_reports FOLDED=27 new=0, no owner report, no new SOAK-
 discriminator): do any of the 81 sites `s7714_truth_census.py --unmodelled` cannot model split from their modelled siblings
 (H-split-hidden) or are they all opaque by design (H-opaque)?
 
-Result: H-opaque selected, H-split-hidden refuted for the census values (unset,0,1,2,t,yes,false,no). Every site read by hand
+Result: selects H-opaque and refutes H-split-hidden for the census values (unset,0,1,2,t,yes,false,no). Every site read by hand
 with 3 lines of context (one dump pass): STRING 35 (paths/numbers/mode words handed to fopen/atof/strcmp: ASPECT, DD,
 FLOOR_*_DIR, QOS, ALLOCMAP...), REWRITER 15 (anchor/replacement text inside apply/fixup scripts; the code they produce is
 modelled where it lands, e.g. fixup_live_replay b40_polarity_23 -> funcs_23.c `!= NULL && [0] != '0'`), MULTI 26 (one gate
@@ -206242,3 +206242,5 @@ s7106_fetch strcmp(e) only behind rs64_s7106_on, S7064 fopen(getenv()) only behi
   (FPS60 = same-run positive control that the file was applied). Not fixed: shell `ROGUESQ_ASPECT= ./game` still hands ""
   to the readers (rare; "" not added to the census VALUES, it would need the 3 names reviewed or fixed first).
 Owner defaults untouched. Build rc 0; tools/agent run_tests 8/8; gate sweep 216 gates: 212 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (controls PASS).
+Next discriminator (NEXT.md): shell-route empty values: H-harmless vs H-split at the 3 "" readers, decided by `e && *e` at
+those readers + "" in the census VALUES (0 unreviewed SPLIT) and a live `env ROGUESQ_ASPECT=` vs unset vs 16:9 run.
