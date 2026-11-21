@@ -1,20 +1,19 @@
-# NEXT (s7773)
-HYPOTHESIS-ID: ovl-fnptr-alias-audit
+# NEXT (s7774)
+HYPOTHESIS-ID: ovl-stale-npc-slot
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
 
-Unit (offline, one bounded idiom-class audit; sibling of s7772): function-pointer WORDS (and lui+addiu/ori pairs) whose value is
-a function start in an overlay (.ovl.mission/menu/cinematic, shared VMA from 0x800A5130), consumed by jalr.
-Risk: a pointer stored in an always-resident table (.data/.bss of .text, or the heap) survives an overlay swap; after the swap
-get_function either aborts (address not a start in the new overlay: loud) or, if the address IS a start in the new overlay,
-silently runs the new overlay's function (hardware would do the same, so only a retail bug - but a port-only path if our swap
-order differs from hardware).
-Hypotheses: H-local (every such pointer lives in the overlay's own data and dies with it), H-resident-safe (resident pointers
-exist but are re-written on each overlay load before use), H-stale (a resident pointer can outlive its overlay).
-Discriminator: extend tools/s7772_ovl_lookup_audit.py (or a new s7773 tool) to enumerate (a) raw 32-bit words in every non-code
-and code section equal to an overlay function start, (b) lui/addiu|ori pairs forming one, each tagged by the section holding it
-(own overlay vs resident) and, for resident ones, whether the target address is a start in more than one overlay (silent case).
-Controls: a planted resident word equal to 0x800C58A0 must be listed resident/unique; a known overlay-local table entry listed
-local. Runtime side: [s7520] kind= rows already flag get_function into the overlay window against the last-registered section;
-grep retained logs for any mismatch (positive control: ROGUESQ_S7528_CTL=1 run prints ctl_hit).
-Outcome: H-local/H-resident-safe -> class CLOSED + gate in s7651 sweep; H-stale -> name the writer, fix at the writer.
+Unit (one instrument, one build, one run): s7773 closed the overlay fn-pointer class for SILENT divergence, but whether mission NPC
+slots (handler set by .text setupNpcUpdateFunctions -> spawnNpcOfType 0x8003FFEC) are cleared before the mission overlay is
+swapped out was witnessed only by 2 mission>menu swaps with 0 aborts.
+Hypotheses: H-cleared (slot table freed/zeroed on mission exit: 0 live slots with an overlay-window handler at the swap),
+H-dormant (live slots keep stale handlers but are never dispatched outside a mission), H-stale (dispatched after swap -> abort;
+would show as "Failed to find function" on the abort->hangar route).
+Step 1 offline: read spawnNpcOfType (0x8003FFEC) disassembly (`mips64-elf-objdump -d --start-address=0x8003FFEC
+--stop-address=0x80040100 -j .text ../rogue_squadron64/build/roguesquadron.elf`) to get the slot array base/stride/handler offset.
+Step 2: in load_overlay (overlays.cpp, s7528 pre hook; lib/ edit -> export.sh + commit), when ROGUESQ_S7774_SLOTS=1, before the
+eviction count slots whose handler is in [0x800A5130,0x8010B6D0) and whether each is a start in the departing/arriving section;
+print `[s7774] swap from=.. to=.. live=.. ovl_handlers=.. start_in_arriving=..`. Positive control: the same scan at mission
+start (after setup) must show ovl_handlers>0.
+Run: forced level L1 (s5705 recipe) -> fly 60 s -> abort to hangar (G5i route) -> re-enter, once.
+Outcome: ovl_handlers=0 at the mission>menu swap -> H-cleared, class fully closed; >0 -> H-dormant/H-stale, then check dispatch.

@@ -68,6 +68,8 @@ ARGS = {
     "s7771_jal_target_census.py": (["--gate", "--controls"], r"GATE GREEN code_site_nonstart=\d+ known=\d+ new=0\nCONTROLS PASS"),
     # s7772: every .text->overlay start_ovl jal site must be generated as LOOKUP_FUNC (a direct call binds one overlay silently).
     "s7772_ovl_lookup_audit.py": (["--controls", "--gate"], r"in_function_nonlookup=0 .*\nCONTROLS PASS .*\nGATE GREEN in_function_nonlookup=0"),
+    # s7773: overlay fn-pointer words/lui-pairs held in resident .text must be the classified NPC spawners; no target a start in >1 overlay.
+    "s7773_ovl_fnptr_audit.py": (["--controls", "--gate"], r"multi_start=0 resident=\d+ resident_known=\d+ new_candidates=0\nCONTROLS PASS .*\nGATE GREEN new_candidates=0"),
     "s7741_ucode_regen_gate.py": (["--controls"], r"CONTROL PASS\n(.*\n)*VERDICT GREEN: \d+ files, live == regen byte-for-byte"),
     # s7742: fixup_factor5_ucode.py idempotent on main/ucode_b/boot, fresh-regen ucode_b+boot == live, overlays refused; strip+red ctls.
     "s7742_fixup_idem_gate.py": (["--controls"], r"CONTROL PASS\n(.*\n)*VERDICT GREEN: fixup idempotent on 3 CMake files"),
@@ -224,7 +226,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed

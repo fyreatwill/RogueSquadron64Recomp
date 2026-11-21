@@ -207457,3 +207457,32 @@ classifies DIRECT: CONTROLS PASS. Gate --gate rc 1 on any in-function non-LOOKUP
 Rules out: H-first (static binding of an aliased overlay call) anywhere in the image. Class CLOSED, two lines (generated code +
 runtime map semantics; log witness). Not covered: function-pointer words (jalr through a data table) holding an overlay start
 across a swap; that is the next unit.
+
+## Session 7773 (2026-11-21) — overlay function-pointer alias class CLOSED: 393 overlay-start words/lui-pairs classified, 26 resident = .text NPC spawners (known), 0 targets a start in >1 overlay; 154 logged overlay swaps, 0 lookup aborts; gate tools/s7773_ovl_fnptr_audit.py in sweep
+Pre-checks: crash_reports --since 2026-11-13 FOLDED=20 new=0; no new SOAK-RESULTS lines since s7769; CURRENT-TRUTH 50270 B (<60000,
+no maintenance). Unit = NEXT.md s7773 (offline idiom-class audit, sibling of s7772).
+Static (new tools/s7773_ovl_fnptr_audit.py, raw ELF words of .entry/.text/.ovl.*; data lives inside these sections in this ELF):
+(a) every 4-aligned word and (b) every lui rX + addiu/ori rY,rX pair (32-insn window, stops on rX overwrite) whose value is an
+overlay function start, tagged by holding section. 393 hits: WORD local data 102, PAIR local 257, WORD cross data 6, PAIR cross 2,
+PAIR resident 26, WORD resident 0. multi_start=0: no target is a function start in more than one overlay.
+- cross 8: own=data (mission 0x8010A304/0x8010A364 -> 0x800A6904; mission npcTickEffectChannelA+0x58 -> 0x800A73E4; menu
+  createMenuTextLabels+0x20 -> 0x800A6FC0: addresses in the holding overlay's own pre-code data region) or own=interior (menu
+  0x800A55F8/0x800A6734, cinematic 0x800A536C/0x800A5CC0: rodata words pointing inside the holding overlay's own functions =
+  jump-table targets). All coincide numerically with another overlay's start; none is a cross-overlay fn pointer.
+- resident 26: all in .text setupNpcUpdateFunctions (21, a 71-way switch on the DAT object type, each case lui/addiu a mission
+  handler into a0 then jal spawnNpcOfType 0x8003FFEC + slotDispatcherIter) and spawnDatStructureNpcByType (5). Callers:
+  loadDatFile+0xAE4, updateActiveGridCellState x2 (.text, mission streaming), mission 0x800ED0CC. The handler goes to a resident
+  NPC slot and is dispatched via jalr = LOOKUP_FUNC -> get_function, which holds only loaded sections (s7528 evicts). Since every
+  target is a start in exactly one overlay, a slot that outlived the mission overlay would ABORT ("Failed to find function"),
+  never run another overlay's body silently. Hardware would run garbage there: so no port-only silent path exists in this class.
+Controls (same run): planted .text data-gap word 0x800C58A0 -> resident/data/unique(.ovl.menu); planted lui 0x800C + addiu 0x58A0
+-> resident PAIR; 102 local data words present: CONTROLS PASS. Gate RED on resident rows outside KNOWN_FUNCS or any multi_start;
+mutation (KNOWN_FUNCS minus spawnDatStructureNpcByType) -> GATE RED new_candidates=5; real -> GREEN. Added to s7651 sweep (ARGS +
+EXTRA_GATES); `--only 's777[23]'` GREEN 2/2.
+Runtime (second line, new tools/s7773_ovl_swap_witness.py over scratch/**/log_*.txt + build/*.log, 14 days): 99 logs, 43 with
+[s7528] overlay loads (280), 37 with overlay->overlay swaps: menu>cinematic 76, cinematic>mission 39, cinematic>menu 37,
+mission>menu 2; 0 "Failed to find function", 0 [missing-func]. --plant control (synthetic abort line appended) counts 1.
+Single-source caveat: mission>menu (the transition where a stale NPC slot would bite) is only 2 swaps in retained logs.
+Rules out: H-stale as a SILENT port defect (static: 0 aliased targets; all dispatch through lookup). H-resident-safe vs a loud
+retail-shaped stale use is not separated dynamically (2 swaps, 0 aborts). Class CLOSED for silent divergence.
+Next: runtime stale-slot scan at mission->menu swap (NEXT.md), cheap and it turns the 2-swap witness into a measured count.

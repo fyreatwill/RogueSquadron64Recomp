@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7770 (2026-11-21).
+Compact operational handoff, as of Session 7773 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -402,7 +402,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     **Overlay-aliased jal lookup class CLOSED s7772** (`python3 tools/s7772_ovl_lookup_audit.py --controls --gate`, in the sweep):
     188/188 .text->overlay start_ovl sites generated as LOOKUP_FUNC, 64 targets each a start in exactly ONE overlay, librecomp
     func_map = loaded sections only (s7528 evicts), so a wrong-overlay call aborts loudly; 0 lookup failures in 43 logged runs
-    (280 overlay loads). Open sibling: jalr through function-pointer words holding an overlay start across a swap (NEXT.md).
+    (280 overlay loads). **Sibling fn-pointer class CLOSED s7773** (`python3 tools/s7773_ovl_fnptr_audit.py --controls --gate`,
+    in the sweep): 393 raw words / lui+addiu|ori pairs equal to an overlay function start; 359 overlay-local; 8 cross-overlay
+    are own-overlay data addresses or jump-table targets coinciding with another overlay's start (own=data/interior); 26 resident
+    = .text NPC spawners setupNpcUpdateFunctions/spawnDatStructureNpcByType (called by loadDatFile/updateActiveGridCellState and
+    mission code) passing mission handlers to spawnNpcOfType; 0 targets a start in >1 overlay, so a stale slot handler can only
+    abort loudly (jalr = LOOKUP_FUNC). Runtime: `python3 tools/s7773_ovl_swap_witness.py` 99 logs, 154 overlay swaps (incl.
+    mission>menu 2), 0 "Failed to find function" (--plant ctl counts 1). Heap-held pointers: same loud-only argument.
 29. **FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported).** s7749 L12 ring 60->30-43
     gen/s from t=75 s did not recur in 4/4 L12 arms (s7768 la/lb + soak s7768_fps60_rate_L12 r1/r2: 60 tasks/s, lim=1, send_dl
     ~10.5 ms, 0 slow windows). Two instruments agree: tools/s7768_fps60_rate.py (G3C_LOG+G1B; BUSY ctl 16/16 H-cost) and
