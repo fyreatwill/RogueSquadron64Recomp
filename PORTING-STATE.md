@@ -207361,3 +207361,18 @@ arm held 60, so H-log is not selected either. In-flight L12 headroom is ~6 ms pe
 Queued scratch/agent/soak_queue/s7768_fps60_rate_L12.sh (2 L12 arms with the s7749 recipe + G3C_LOG + G1B) so a recurrence is
 attributed by the tool's SUMMARY line.
 New: tools/s7768_fps60_rate.py `<log> [win_s]` (needs ROGUESQ_G3C_LOG=1 + ROGUESQ_G1B=1).
+
+## Session 7769 (2026-11-21) — folded s7768_fps60_rate_L12: L12 half-rate did not recur (4/4 arms, two instruments with positive controls); item 29 closed; new tools/s7769_ring_genrate.py
+
+Triage: crash_reports new=0; no owner answers in docs/OWNER-REVIEW-QUEUE.md; one new SOAK-RESULTS line (s7768_fps60_rate_L12, 2/2 alive).
+Fold: both soak arms `SUMMARY windows=40 slow_windows=0 H-limit=0 H-cost=0 H-other=0` (60.0 tasks/s, lim=1 on every VI, send_dl
+~10.7 ms). The soak itself carried no BUSY arm, so a second, independent instrument was added with its own positive controls:
+tools/s7769_ring_genrate.py counts gen= changes in the present ring per 5 s window (no G3C_LOG needed, so it also reads old rings).
+Controls: scratch/s7749_soak/ring_u124.txt (the original drop) 24/25 windows slow from t=75 s, min 30.0; s7768 lc (BUSY_TOGGLE)
+15/39 slow. Soak r1/r2 0/25 slow, min 59.8. Agreement of the two tools on the soak arms -> non-recurrence is a measured zero.
+Offline scan (capture once, analyze many): all 37 rings >100 KB from the last 12 days, 32 of them FPS60 flight (max window >=55):
+sustained half-rate only in s7749 u124 (+ the BUSY ctl); s7744_soak t124 and s7745_soak u124 have one isolated 42 gen/s window.
+s7748 u124's reported 60->44 at ~145 s is not in its ring (ring ends at ~145 s, all windows >=56.8) - so that one is single-source.
+Rules out: a common FPS60 rate collapse at the owner recipe (1/31 natural flight rings). Reading: unreproduced transient; H-cost
+(task hovering at the 16.7 ms budget) stays the best-fitting but single-source inference. Item 29 CLOSED.
+Not done: no H-limit writer hunt and no RSP/RDP split, because nothing recurred to attribute.

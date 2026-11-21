@@ -387,11 +387,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     6/6 checked live-end ge2LSB 0 (618-17930 px <=1 LSB); begin-live up to 183 px >=2 LSB (info only, s7755 says VISIBLE on begin,
     same shape as the s7757 first-entry 336 px). GREEN 6/6, CAP=2048 ctl 21288 px.
 
-29. **FPS60 L12 half-rate phases (s7768, open, not owner-reported):** s7749 L12 ring 60->30-43 gen/s from t=75 s, s7748 L12 60->44;
-    s7768 2/2 L12 arms (with and without STANDINS_LOG) held 60, lim byte 1 throughout, send_dl ~10.5 ms in flight (~6 ms headroom).
-    `tools/s7768_fps60_rate.py <log>` (ROGUESQ_G3C_LOG=1 + ROGUESQ_G1B=1) labels slow windows H-limit/H-cost/H-other; control
-    BUSY_TOGGLE=20 BUSY_US=9000 -> H-cost 16/16. Soak s7768_fps60_rate_L12 queued; fold its SUMMARY. An H-cost recurrence -> profile
-    the L12 gfx task (dd4 ucode cost); H-limit -> widen the clamp.
+29. **FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported).** s7749 L12 ring 60->30-43
+    gen/s from t=75 s did not recur in 4/4 L12 arms (s7768 la/lb + soak s7768_fps60_rate_L12 r1/r2: 60 tasks/s, lim=1, send_dl
+    ~10.5 ms, 0 slow windows). Two instruments agree: tools/s7768_fps60_rate.py (G3C_LOG+G1B; BUSY ctl 16/16 H-cost) and
+    `python3 tools/s7769_ring_genrate.py <ring> [win] [from] [slow]` (present ring gen changes only; ctls s7749 u124 24/25 slow,
+    s7768 lc BUSY 15 slow). Scan of all 32 FPS60 flight rings on disk (s7744-s7768): sustained slow only s7749 u124 (+ BUSY ctl);
+    s7744/s7745 one isolated 42 gen/s window each. Reopen only on a recurrence or owner report; first run both tools on its log.
 28. **Input latency (s7766): measured, H-1frame.** Tool tools/s7766_inlat.py (needs ROGUESQ_S7766_INLAT=1, ROGUESQ_G3C_LOG=1,
     ROGUESQ_PRESENT_RING; heading detector + --ctl fake steps). s7767: borderless, windowed and exclusive fullscreen all give
     queue->photon 23 ms at VI_LOCK=1, so the compositor lever is closed. Rerun after any present-path or input-path change.
