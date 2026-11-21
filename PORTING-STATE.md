@@ -206676,3 +206676,23 @@ proving the fixup writes); for ucode_b/boot it refutes H-same as stated before t
 running at all, class = unscoped anchor, not double insertion), and after the fix selects H-same (rc 0, 0 diff, pristine -> live).
 Next discriminator (NEXT.md): overlay ucode files H-dead (no consumer) vs H-tool-input (an offline census reads them), by moving
 them to a temp dir and diffing each census output, with a census that lists them as the positive control.
+
+## Session 7743 (2026-11-20) — overlay ucode translations are fixup splice inputs + census oracle (H-tool-input selected, H-dead refuted)
+
+Start: crash_reports new=0, no new SOAK-RESULTS lines, no owner report -> NEXT.md candidate item (the 9 overlay ucode files
+s7742 found uncompiled).
+Hypotheses: H-dead (nothing consumes build/factor5_ucode/factor5_ucode_ovl{4,10,12,14,18,1c,20,24,2c}_recompiled.c) vs
+H-tool-input (a tool reads them as input/oracle).
+New tool tools/s7743_ovl_consumers.py (temp dirs only; build/ and scratch/ucode_regen read-only), one run:
+- Arm A (what CMake runs): fixup_factor5_ucode.py on a copy of live main with NO overlay beside it -> rc 0, byte-identical
+  (markers present, so no splice re-runs; overlays are not read at configure).
+- Arm A controls, one per overlay: strip that overlay's splice marker (clipsplice x9, ovl10splice x2, ovl12splice x8,
+  ovl14splice x4, ovl18splice x3, ovl1csplice x2, ovl20route x18, ovl24route x15, ovl2csplice x2) -> 9/9 rc 1 "INPUT MISSING"
+  naming that overlay file (ovl2c names factor5_rsp_ovl2c.toml instead; the tool accepts either).
+- Arm B: s7091_ucode_insn_census.py pristine vs live = "4 modified-retail-kept, 0 unexplained, 0 splice breaks" rc 0; with 8
+  overlays removed from the pristine copy (ovl20 kept: it is itself a compared file) -> rc 1 FileNotFoundError ovl4. So the
+  census, which the s7741 sweep gate runs, uses them as its splice-source oracle.
+- Arm C static: 7-8 tools name each overlay (fixup, s7091 census/regen, s7095, s7507, s7508, s7509, s7542, make_clip_composite).
+Verdict: H-tool-input; H-dead refuted by two lines (fixup input + census oracle). Not deletable; keep byte-true (s7741 already
+checks that). Added to the gate sweep (s7651 "s7743_ovl_consumers.py", 1 s): GREEN.
+Rules out: removing the overlays as cleanup. No game run (offline item).

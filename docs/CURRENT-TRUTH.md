@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7740 (2026-11-20).
+Compact operational handoff, as of Session 7743 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -33,7 +33,11 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   `tools/s7741_ucode_regen_gate.py --controls` (in the sweep): fresh RSPRecomp + patches in a private temp dir, file sets equal,
   12/12 byte-identical, census clean; controls planted line / extra file / missing file each RED, clean GREEN; RED arm = the
   pre-s7741 patches (rc 1, DIFF that one file). After any fixup_factor5_ucode.py edit: `zsh tools/ucode_regen.sh snapshot`.
-- **s7738 replay tree swap-safe** (link + symbol + L4 hold; tools/s7738_link_replay.sh) -> adopted s7739.
+- **s7743 overlay ucode files are build inputs, NOT dead (H-tool-input; H-dead refuted).** The 9 factor5_ucode_ovl*_recompiled.c
+  are not compiled, but fixup_factor5_ucode.py re-splices each one into main whenever its marker is absent (9/9 strip controls
+  exit 1 INPUT MISSING naming that overlay), and s7091 census (run by the s7741 gate) uses them as its splice oracle (removing
+  them: rc 0 -> 1). At configure they are not read (no overlays present: rc 0, byte-identical). Keep them byte-true; gate
+  tools/s7743_ovl_consumers.py in the sweep.
 - **s7737 DIAG consumer census** (tools/s7737_diag_consumers.py, in the s7719 gate: a live-only probe that a live tool reads)
   and **s7736** s6201 [g1d-alloc] restored to the regen (apply_s7736_g1d_alloc). Both moot for drift since s7739 (live == replay).
 - **s7735 regen replay reproduces the s7734 readings (H-replays selected, H-drift refuted).** tools/s7719_regen_gate.py (in the
