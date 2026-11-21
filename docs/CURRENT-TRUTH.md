@@ -16,7 +16,12 @@ name in it and in OWNER-OPT-INS is gated by `python3 tools/s7762_owner_doc_check
 **s7763: every queue command does what its row says** (`python3 tools/s7763_owner_cmd_check.py --control`, launches each of the
 11 distinct commands for 12 s, one at a time): 11/11 MATCH on echoed dd/aspect/FPS60/fullscreen/stand-ins plus the row's own switch
 echo (NEARLIFT, RETINA swapchain=drawable, QOS_ALL, RENDER_TO_RAM=0, V2P, SP_LATE); env-over-preset control DRAW_DISTANCE=3 echoes 3;
-negative controls: the plain tv log scored as tv-with-dd3 flags dd, and scores 0/6 feature echoes. M5_B40_VALUE has no startup echo (unchecked).
+negative controls: the plain tv log scored as tv-with-dd3 flags dd, and scores 0/6 feature echoes.
+**s7764: the queue's in-flight toggles work too** (`zsh tools/s7764_inflight_toggles.zsh` -> `tools/s7764_inflight_toggle_check.py`, L1 dd4 21:9
+FPS60 autopilot, arms def/off/tog 150 s + B40 pair 70 s, 5/5 alive 0 crash vi_stalls30s=0): 7/7 H-works, each with its own counter as
+positive control: RUMBLE=0 vpad_nz 19->0; RUMBLE_SCALE=0.5 vpad hi 24616->12687; W_CLAMP clamped tris 5948 / =0 0 / =tog 0 even 3271 odd;
+SKYFILL 5252 / =0 0 / =tog 0 even 2610 odd; DD_FARMAX far cap 32767 / =0 65504; STICK_GATE full-stick counts 85 / =0 127 (new
+ROGUESQ_LOG_STICK_GATE=1); M5_B40_VALUE b40-write stores 0x00 / =1 0x01. Swapped-arm negative control fails 6/6 controls.
 
 - **s7702-s7743 regen / census / env-reader engineering: ALL CLOSED, 0 open defects** (every bullet verbatim in PROJECT-OVERVIEW
   "(s7747 maintenance)"). Standing facts from it: the live RecompiledFuncs tree IS the s7739 regen replay, and

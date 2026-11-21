@@ -13711,7 +13711,20 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
             fprintf(stderr, "[stick-gate] on=%d card=%.0f diag=%.0f\n", (int)g.on, (double)g.card, (double)g.diag);
             return g;
         }();
+        // s7764: ROGUESQ_LOG_STICK_GATE=1 prints host -> guest stick counts (in, out) once per wall second while the stick is
+        // deflected, so STICK_GATE on vs =0 can be told apart in flight (on: |out| <= 85 counts, =0: 127 * in).
+        static const bool s_glog = [] { const char* e = std::getenv("ROGUESQ_LOG_STICK_GATE"); return e && *e && *e != '0'; }();
+        const float in_x = stick_x, in_y = stick_y;
         rs64_stick_gate_apply(s_gate, &stick_x, &stick_y);
+        if (s_glog && (in_x != 0.0f || in_y != 0.0f)) {
+            static long long s_gl_last = 0; static unsigned s_gl_n = 0;
+            const long long ms = rs64_s5773_ms();
+            if (ms - s_gl_last >= 1000 && s_gl_n < 600) {
+                s_gl_last = ms; s_gl_n++;
+                fprintf(stderr, "[stick-gate] sample on=%d in=%.3f,%.3f out_counts=%d,%d\n", (int)s_gate.on, (double)in_x, (double)in_y,
+                        (int)(127.0f * stick_x), (int)(127.0f * stick_y));
+            }
+        }
     }
     *x = stick_x;
     *y = stick_y;

@@ -207219,3 +207219,31 @@ in flight/at input; their names are already gated by s7762_owner_doc_check. Side
 Verdict: this selects H-works and refutes H-broken for all 11 startup-visible queue commands (env-over-preset, dd8 unclamp,
 stand-ins opt-in, six per-row switches). Next discriminator: the in-flight toggles (RUMBLE=0/SCALE, W_CLAMP=0, DD_FARMAX=0,
 HORIZON_SKYFILL=0, STICK_GATE=0, M5_B40_VALUE) on vs off on a forced level, each scored by its own counter (scratch/agent/NEXT.md).
+
+## Session 7764 (2026-11-21) — OWNER-REVIEW-QUEUE in-flight toggles verified 7/7 H-works on a forced level (RUMBLE=0, RUMBLE_SCALE, W_CLAMP=0, HORIZON_SKYFILL=0, DD_FARMAX=0, STICK_GATE=0, M5_B40_VALUE=1), each by its own counter; new tools/s7764_inflight_toggles.zsh + tools/s7764_inflight_toggle_check.py, new ROGUESQ_LOG_STICK_GATE=1
+
+Triage first: `crash_reports.py --since 2026-11-13` new=0, no owner answer in docs/OWNER-REVIEW-QUEUE.md, no SOAK-RESULTS lines after
+the s7750 fold, so the NEXT fallback unit ran (the toggles s7763 could not see at startup).
+Hypotheses per toggle: H-works (the switch changes what its queue row says, in flight) vs H-broken (the var is read but the effect
+never reaches flight, or the default arm's fix never fires). Discriminator: the fix's own counter on vs off in one forced-level flight.
+Instrument: only one toggle lacked a counter, so main.cpp gained `ROGUESQ_LOG_STICK_GATE=1` ([stick-gate] sample on= in= out_counts=,
+1/s while deflected, after rs64_stick_gate_apply). Recipe tools/s7764_inflight_toggles.zsh via g1e_owner_quiet_arms (host idle 17 h,
+unlocked, AC, clk 0.95): L1 dd4 21:9 FPS60 autopilot (fire + stick left/right), 150 s each, sequential, SIGKILL;
+arm def (defaults), off (RUMBLE=0 W_CLAMP=0 DD_FARMAX=0 HORIZON_SKYFILL=0 STICK_GATE=0 M5_B40_VALUE=1, disjoint subsystems), tog
+(W_CLAMP=tog HORIZON_SKYFILL=tog same-run, RUMBLE_SCALE=0.5); all arms carry LOG_RUMBLE+RUMBLE_TEST (virtual pad), W_SHEET_STATS,
+LOG_STICK_GATE. 3/3 alive, 0 crash, vi_stalls30s=0, max_gap 146-217 ms, level_ok=1.
+Result (scratch/s7764/check.txt, rc 0):
+- RUMBLE=0: def on=1 sdl_on=20 vpad_nz=19; off on=0 sdl_on=0 vpad_nz=0 (motor pulses 63/61 still arrive, nothing reaches SDL).
+- RUMBLE_SCALE=0.5: virtual-pad hi max 24616 -> 12687 (0.515x).
+- W_CLAMP: mixed-sign tris clamped def 5948, =0 0, =tog 0 in even / 3271 in odd seconds (same run).
+- HORIZON_SKYFILL: def 5252 fills in 90 s-lines, =0 0 lines, =tog 0 even / 2610 odd (same run).
+- DD_FARMAX: def [s7310] max 32767 and [pnormcap] caps at 32767; =0 caps at 65504 (the old s6701-only far).
+- STICK_GATE: def full-deflection counts max 85 (OEM gate), =0 127 (26/27 samples).
+- M5_B40_VALUE: no in-flight trace (the [m5-b40-read] census is title-phase-gated and printed 0 rows: an instrument miss, not a
+  verdict). Second pair b0/b1 (70 s, ROGUESQ_LOG_M5_B40_ROUTE=1): the b40-write event fires in both, stores 0x00 by default and 0x01
+  with =1 (reapply-entry/success rows identical 7/7 each).
+Controls: every default arm shows its counter firing (positive); negative control: def and off logs swapped -> 6/6 controls FAIL
+(scorer cannot pass a wrong arm order).
+Verdict: this selects H-works and refutes H-broken for all 7 in-flight queue toggles. With s7763, every switch named in
+OWNER-REVIEW-QUEUE is now verified to act, except CONTROLS_DUMP=1 / F6 (row 2, input UI, owner's hands).
+Next: nothing left that the agent can measure in the queue; NEXT.md stays owner-triage first.
