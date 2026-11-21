@@ -106,7 +106,34 @@ extern "C" int rs64_settings_resolve_value(const char* settings_file, const char
     return 0;
 }
 
+extern char** environ;
+// s7730: an empty shell value (`ROGUESQ_X= ./game`) is unset for every reader. Left as "", presence readers took the opt-in
+// branch and `e && *e` readers did not: ROGUESQ_ASPECT= gave the high-DPI opt-in window at 4:3, and ROGUESQ_OSMEM_MB= at
+// dd>1 blocked the bundle's setenv(.., "12", 0) so the 12 MB / 0x81000000 spill layout (owner LEVEL=15 fix) was lost.
+// Returns how many were removed; the caller re-execs so file-scope statics read before main() see them unset too.
+// ROGUESQ_S7730_KEEP_EMPTY=1 = old behaviour (control arm).
+static int rs64_s7730_strip_empty() {
+    const char* ke = std::getenv("ROGUESQ_S7730_KEEP_EMPTY");
+    if (ke && *ke == '1') return 0;
+    // Rescan after each unsetenv (it edits environ in place); no container grows.
+    int n = 0;
+    for (char buf[256]; n < 4096; n++) {
+        buf[0] = 0;
+        for (char** e = environ; e && *e; e++) {
+            const char* eq = std::strchr(*e, '=');
+            if (eq && eq[1] == '\0' && std::strncmp(*e, "ROGUESQ_", 8) == 0 && (size_t)(eq - *e) < sizeof buf) {
+                std::snprintf(buf, sizeof buf, "%.*s", (int)(eq - *e), *e); break;
+            }
+        }
+        if (!buf[0]) break;
+        unsetenv(buf);
+        std::fprintf(stderr, "[s7730] %s= is empty: treated as unset\n", buf);
+    }
+    return n;
+}
+
 extern "C" void rs64_settings_apply(int argc, char** argv) {
+    const int stripped = rs64_s7730_strip_empty();
     const char* done = std::getenv("ROGUESQ_SETTINGS_APPLIED");
     if (done && *done == '1') {
         const char* sum = std::getenv("ROGUESQ_SETTINGS_SUMMARY");
@@ -188,10 +215,11 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
     std::fprintf(stderr, "[s7663] settings file=%s%s preset=%s set=%d kept_from_env=%d rejected=%d\n",
         file.empty() ? "(off)" : file.c_str(), file.empty() ? "" : (file_read ? "" : "(absent)"),
         pp ? pp->name : "(none)", set, kept, rejected);
-    if (set == 0) return;  // nothing new in the environment: no re-exec needed
+    if (set == 0 && stripped == 0) return;  // nothing new in the environment: no re-exec needed
     // ROGUESQ_S7663_NOEXEC=1: control arm only (s7663): keep the setenv values but skip the re-exec, so pre-main statics miss them.
     { const char* ne = std::getenv("ROGUESQ_S7663_NOEXEC"); if (ne && *ne == '1') { std::fprintf(stderr, "[s7663] NOEXEC control: no re-exec\n"); return; } }
 
+    if (summary.empty()) summary = "(none; " + std::to_string(stripped) + " empty value(s) unset, s7730)";
     setenv("ROGUESQ_SETTINGS_APPLIED", "1", 1);
     setenv("ROGUESQ_SETTINGS_SUMMARY", summary.c_str(), 1);
     std::fflush(stderr);

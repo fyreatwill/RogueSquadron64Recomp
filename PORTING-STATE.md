@@ -206244,3 +206244,43 @@ s7106_fetch strcmp(e) only behind rs64_s7106_on, S7064 fopen(getenv()) only behi
 Owner defaults untouched. Build rc 0; tools/agent run_tests 8/8; gate sweep 216 gates: 212 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (controls PASS).
 Next discriminator (NEXT.md): shell-route empty values: H-harmless vs H-split at the 3 "" readers, decided by `e && *e` at
 those readers + "" in the census VALUES (0 unreviewed SPLIT) and a live `env ROGUESQ_ASPECT=` vs unset vs 16:9 run.
+
+## Session 7730 (2026-11-20) — empty shell env values (`ROGUESQ_X=`) are now unset for every reader: ASPECT/OSMEM_MB splits were real (high-DPI window at 4:3; dd>1 lost the 12 MB spill layout)
+
+Inputs: crash_reports --since 2026-11-13: 27 FOLDED, 0 new. No new SOAK-RESULTS lines. NEXT.md candidate taken (s7729 side
+probe: 3 empty-value splits, ROGUESQ_ASPECT / ROGUESQ_OSMEM_MB / ROGUESQ_HWBP_ADDR, shell route).
+Hypotheses: H-harmless (an empty value takes the unset path at every reader) vs H-split (some reader takes the opt-in branch).
+Census (VALUES += ""): pre-fix 3 unreviewed SPLIT, reproducing s7729.
+Live pre-fix (build/ binary of 17:03, same readers as HEAD; 9 s boots, SETTINGS=0, NO_SAVE_WRITE=1, SIGKILL):
+- unset: `[g1f] drawable 640x480`. `ROGUESQ_ASPECT=`: `drawable 1280x960`, `[g1d] ROGUESQ_ASPECT= applied`: the high-DPI
+  opt-in window at 4:3 (main.cpp:14498 `as || fullscreen` read "" as opt-in). ASPECT=16:9 control: FB_WIDTH=796 as usual.
+- `ROGUESQ_OSMEM_MB= ROGUESQ_DRAW_DISTANCE=2`: only `[ddbundle] dd=2.00 px=2`, NO `osmem=12 MB > 8 -> spill arena
+  0x81000000, ramtop 24 MB` line; unset + dd2 prints it. The bundle's setenv(OSMEM_MB,"12",0) does not overwrite "", atoi("")
+  = 0, so dd>1 ran the pre-owner-crash layout (spill 0x80800000, 8 MB guest) that crashed LEVEL=15 at mission load
+  (2026-11-05). A latent owner-route hazard, not a census artefact. -> H-split SELECTED, H-harmless refuted.
+ORIGIN: the writer of the "" is the user's shell (`NAME= ./game`); setenv-default (overwrite=0) logic and presence readers
+then treat "" as set. The value is not legitimate as an opt-in: it means "no value", so it is normalised to unset.
+Fix:
+- src/main/rs64_settings.cpp: rs64_s7730_strip_empty() at the top of rs64_settings_apply unsets every empty ROGUESQ_* in
+  environ (`[s7730] NAME= is empty: treated as unset`) and forces the existing re-exec, so file-scope statics read before
+  main() see unset too. Re-exec summary reads `(none; N empty value(s) unset, s7730)` when nothing else was applied.
+  ROGUESQ_S7730_KEEP_EMPTY=1 = old behaviour (control arm).
+- main.cpp: belt-and-braces `e && *e` at the 3 readers (14498 ASPECT optin, 12003 HWBP_ADDR (Win32-only), 14860 s7427 plant).
+- tools/s7714_truth_census.py: VALUES += "" (VNAME "empty"); new control "pre-s7730 presence vs e&&*e" must SPLIT on empty
+  only: PASS. Census: 0 unreviewed SPLIT, 0 LOG_ALL SPLIT, UNCLASSIFIED 0; all controls PASS (rc 0).
+Live post-fix (rebuilt binary): `ROGUESQ_ASPECT=` -> `[s7730] ROGUESQ_ASPECT= is empty`, re-exec, `drawable 640x480` (= unset);
+`OSMEM_MB= dd2` -> `[ddbundle] osmem=12 MB > 8 -> spill arena 0x81000000` (= unset); same-binary control
+`S7730_KEEP_EMPTY=1` -> no osmem=12 line (old loss reproduced: the instrument discriminates); ASPECT=16:9 positive control
+FB_WIDTH=796. `ASPECT= FPS60=` -> 2 stripped, summary line as designed. tools/test_settings.cpp 27/27 PASS.
+Gate sweep #1 (216 gates): 210 GREEN, 3 REPORT, 1 NEEDS-ARGS, 2 RED, both mine: s7613_hp_census OPEN main.cpp:14860 (the
+first version latched a `static const char* e`) and s7599_gr_census OPEN rs64_settings.cpp `names` (a growing std::vector
+of names). Rewritten: the latch is a lambda-initialised static int, the strip rescans environ after each unsetenv into a fixed
+256-byte buffer (no container). Both gates then PASS/CLOSED, truth census rc 0, test_settings 27/27; rebuilt binary re-run:
+ASPECT=+FPS60= stripped 2 -> 640x480, OSMEM_MB= dd2 -> osmem=12 line, KEEP_EMPTY control -> no line, S7427_PLANT latch=1.
+Gate sweep #2 (216): 211 GREEN, 3 REPORT, 1 NEEDS-ARGS (s7726 zombie census, needs --arm, as before), 1 RED: s7600_gx_census
+OPEN rs64_settings.cpp `buf[eq - *e] = 0` (bounded by the length check, but not by a shape the census reads). Replaced the
+memcpy + index store with `snprintf(buf, sizeof buf, "%.*s", len, *e)`; s7600/s7599/s7613/s7714 all rc 0 afterwards, rebuild
+rc 0, test_settings 27/27, live `OSMEM_MB= ASPECT= dd2` -> 2 stripped, osmem=12 line, 640x480. A third full sweep was not
+run (the only edit after sweep #2 is that one line, re-checked by the 4 censuses that cover it).
+Owner defaults untouched (unset and every non-empty value behave exactly as before).
+Next discriminator (NEXT.md): other owner-typable values the census does not probe ("off", "on", whitespace).

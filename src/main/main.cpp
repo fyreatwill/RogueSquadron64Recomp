@@ -12000,7 +12000,7 @@ static void start_memwp_watchdog() {
         // Default watch is rdram+0x3CBC4 (N64-logo low-mem fb writeback hunt).
         // Override via ROGUESQ_HWBP_ADDR=<hex offset> for new investigations.
         uint32_t watch_off = 0x3CBC4u;
-        if (const char* e = std::getenv("ROGUESQ_HWBP_ADDR")) {
+        if (const char* e = std::getenv("ROGUESQ_HWBP_ADDR"); e && *e) {  // s7730
             unsigned long v = strtoul(e, nullptr, 0);
             if (v > 0 && v < 0x800000u) watch_off = (uint32_t)v;
         }
@@ -14496,7 +14496,7 @@ static void rs64_g1d_apply_aspect_policy() {
     const char* fs = std::getenv("ROGUESQ_FULLSCREEN");
     rs64_g1f_fullscreen = fs && std::atoi(fs) != 0;
     const char* as = std::getenv("ROGUESQ_ASPECT");
-    rs64_g1f_optin = as || rs64_g1f_fullscreen;
+    rs64_g1f_optin = (as && *as) || rs64_g1f_fullscreen;  // s7730: "" = unset
     if (!rs64_g1f_optin) return;
     SDL_InitSubSystem(SDL_INIT_VIDEO);  // refcounted; create_gfx's SDL_Init keeps it
     // s6929 G1d: under ROGUESQ_VI_SHAPE a 1024-column picture is 1280x458, so the widest window is 2.795, not 1024/448.
@@ -14857,7 +14857,7 @@ extern "C" void rs64_s7427_policy_done();
 extern "C" void rs64_s7427_policy_begin();
 extern "C" int rs64_s7427_tg_fix_reinit();
 extern "C" int rs64_g5b_tg_fix;
-static __attribute__((noinline)) int s7427_plant_latch() { static const int v = std::getenv("ROGUESQ_OSMEM_MB") ? 1 : 0; return v; }
+static __attribute__((noinline)) int s7427_plant_latch() { static const int v = [] { const char* e = std::getenv("ROGUESQ_OSMEM_MB"); return (e && *e) ? 1 : 0; }(); return v; }  // s7730
 // s7467 class DW: planted positive control for the ASan+UBSan arm (tools/build_asan.sh). ROGUESQ_S7467_ASAN_PLANT=1 does
 // one 1-byte heap over-read (ASan heap-buffer-overflow) and one signed-int overflow (UBSan) at boot. Compiled only into a
 // sanitizer build (the over-read would be plain UB elsewhere); a recoverable build (-fsanitize-recover) keeps running after.

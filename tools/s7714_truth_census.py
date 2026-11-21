@@ -32,8 +32,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7711_optval_census as c7711
 
 ROOT = c7711.ROOT
-VALUES = (None, "0", "1", "2", "t", "yes", "false", "no")  # s7728: + false/no (env_flag read them as off)
-VNAME = {None: "unset"}
+VALUES = (None, "0", "1", "2", "t", "yes", "false", "no", "")  # s7728: + false/no; s7730: + "" (empty shell value)
+VNAME = {None: "unset", "": "empty"}
 
 # name -> reason. Each entry read by hand at s7714.
 REVIEWED = {
@@ -1099,6 +1099,11 @@ def main():
                         ['const char* e = getenv("ROGUESQ_PLANT"); if (e && *e && *e != \'0\') go();'])
         g = any(x[0] == "false" for x in w) and any(x[0] == "no" for x in w)
         print(f"control pre-s7728 env_flag false/no vs non-'0' sigs={a[0]},{b[0]} want SPLIT on false,no {'PASS' if g else 'FAIL'}")
+        ok &= g
+        a, b, w = plant(['const char* e = getenv("ROGUESQ_PLANT"); if (e) go();'],
+                        ['const char* e = getenv("ROGUESQ_PLANT"); if (e && *e) go();'])
+        g = [x[0] for x in w] == [""]
+        print(f"control pre-s7730 presence vs e&&*e sigs={a[0]},{b[0]} want SPLIT on empty only {'PASS' if g else 'FAIL'}")
         ok &= g
         la = ['static const bool v = [] {', '    const char* all = getenv("ROGUESQ_LOG_ALL");',
               '    const char* e = getenv("ROGUESQ_PLANT");', "    return (all && *all != '0') || (e && *e != '0');", '}();']
