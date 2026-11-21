@@ -206671,5 +206671,8 @@ B pristine ucode_b + boot -> == live, C 9/9 overlays refused unchanged; controls
 restored == live) and red (fixup copy with the fixup-24 scope removed -> live boot rc 1 FIXUP 24) both caught -> CONTROL PASS,
 VERDICT GREEN. Wired into tools/s7651_gate_sweep.py; sweep `--only s774[12]` GREEN 2; the fixup-reading gates
 (s7714|s7338|s7535|s7093|s7465|s7425|s7424) GREEN 8. Live build/factor5_ucode unchanged, so no ucode_regen snapshot needed.
-Discrimination: H-same selected for the main file (and refuted H-nonidempotent there by a writing control); for the other two
-CMake targets the question was moot before the fix (they never ran past fixup 24) and H-same holds after it.
+Discrimination: this selects H-same and refutes H-nonidempotent for the main file (live rc 0 / 0 diff, with the strip control
+proving the fixup writes); for ucode_b/boot it refutes H-same as stated before the fix (rc 1, nothing written: the fixup was not
+running at all, class = unscoped anchor, not double insertion), and after the fix selects H-same (rc 0, 0 diff, pristine -> live).
+Next discriminator (NEXT.md): overlay ucode files H-dead (no consumer) vs H-tool-input (an offline census reads them), by moving
+them to a temp dir and diffing each census output, with a census that lists them as the positive control.
