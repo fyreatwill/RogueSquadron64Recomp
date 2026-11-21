@@ -207600,3 +207600,7 @@ or RDP write over live loader blocks). See NEXT.md.
 ORIGIN: no mitigation added. The dangling words are the game's own globals, and the open overlap is not yet attributed.
 Gates: s7344 wrap +3 HAND rows (s7777_sweep, s7777_access x2) unclassified 0. s7381 spin +1 DIAG row, unreviewed 0. s7382 QoS +1
 DIAG row, unreviewed 0. Full sweep (--jobs 2) result is in the commit message.
+Verdict line: s7777 refutes H-latent for the 4 pointer-shaped data members (0x8014A894, 0x80136FCC, plus the ALLOC-META and
+NOT-PTR rows close as non-pointers) and closes them; it selects nothing for the FRAME member. Next discriminator (NEXT.md): one
+run logging partitionFramebufferMemory outputs + every rs_malloc/rs_free overlapping [0x80656000,0x80700000) with ra, plus a
+host-write watch on the live loader blocks (arm B RENDER_TO_RAM=0) to discriminate H-retail / H-ours / H-stomp.
