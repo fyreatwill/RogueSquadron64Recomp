@@ -207063,3 +207063,25 @@ ORIGIN: no mitigation; gate coverage only.
 Rules out: a 21:9/dd4/stand-ins-only ucode output divergence on the L4 route (attract, front end, cutscene, flight); a visible
 21:9 hangar mid-task race. Not covered: stand-ins-heavy flight (L4 adds few) -> NEXT.md (L10).
 Verdict: selects H-exact at 21:9 (22/24 byte-exact, hangar H-state invisible live-vs-end), refutes H-wide-drift on this route.
+
+## Session 7758 (2026-11-21) — stand-ins-heavy L10 flight at the owner 21:9 recipe is byte-exact replayable: 24/24 flight tasks (16 in seconds adding 2365-5705 stand-ins) EQ from begin and end image; s7753 gate widened to 15 snaps, GREEN 15/15
+Start checks: crash_reports new=0; no new SOAK-RESULTS lines since the s7750 fold; no owner report. Screen unlocked, HID idle 14.8 h.
+Question (NEXT s7757, rdp-output-gate-standins-coverage): H-exact (L10 flight tasks with many stand-ins replay byte-exact from begin
+and end image) vs H-standins-state (host stand-in writes make tasks begin != end, possibly visible).
+Run 1: `env LV=10 EVERY=250:24 SECS=230 zsh tools/s7754_capture_route.zsh w219_L10 ROGUESQ_ASPECT=21:9 ROGUESQ_DRAW_DISTANCE=4
+ROGUESQ_FPS60=1 ROGUESQ_STANDINS=1` -> alive=1 crash=0, 24 pairs, save-unchanged; [standins] 280 objects level 10. Replay
+(tools/s7757_route_replay.py): 22/24 EQ from both images, misses s1500/s1750 = hangar H-state (same as L4). BUT the window sheet
+(scratch/s7754/w219_L10/sheet.jpg) shows L10's Chapter III crawl runs ~50-125 s wall and flight starts ~140 s, while the snaps end at
+VI 6132 (~100 s): s2500-s6000 were the CRAWL, not flight. That run's "flight" coverage was hollow (it still adds 16 crawl tasks, all EQ).
+Run 2 (fix): same + EVERY=200:24:8400 SECS=250 ROGUESQ_STANDINS_LOG=1 (w219_L10f) -> alive=1 crash=0, save-unchanged. [standins-s]
+per-second lines mapped to VI via the nearest [vi] update_screen: stand-ins on from VI ~9984, adding 2365-5705 per second
+(~40-95 per frame) in the seconds holding snaps s10000-s13000 (16 snaps); s8400-s9800 = intro cutscene/mission start.
+Replay: 24/24 EQ from begin AND end image, b==e on all -> no H-state task in stand-in flight.
+Structural second line: rs64_standins.cpp writes only 0x81700000..0x81800000, which only CPU code reads (node matrices are copied
+into the DL pool by convertMat3x4ToN64Mtx); that range is outside the 16 MB the snapshot holds and the RSP can DMA, so a host
+rewrite there cannot reach a gfx task. Two lines agree.
+Gate: tools/s7753_rdp_output_gate.py SNAPS + scratch/s7754/retained/w219L10_s{10200,10800} (0 TriGen hits, tg0=None; capc 2048
+fires, strict prefix 22272/21920); sweep regex -> 15/15. --controls: CONTROL PASS snaps=15, GREEN 15/15. Full sweep --jobs 2: 222 gates, 218 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (1151 s cold).
+ORIGIN: no mitigation; gate coverage only.
+Rules out: a stand-ins-driven mid-task RAM race or ucode output divergence in heavy stand-in flight at 21:9 dd4 FPS60.
+Verdict: selects H-exact, refutes H-standins-state.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7757 (2026-11-21).
+Compact operational handoff, as of Session 7758 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -20,7 +20,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   (keep byte-true, s7743). Env readers: launch strips empty ROGUESQ_* (s7730), maps on/off words to 1/0 (s7731), unsets invalid
   ROGUESQ_ASPECT (s7732); after a regen `python3 tools/s7734_compiled_reader_census.py` (rc 0). s7725 plume +0 texture-descriptor
   over-release (RT64 Present SIGTRAP) fixed, NSZombie 0 on boot/flight/hangar route (s7726/s7727). 21:9 fb read-back harmless (s7702-s7706).
-  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26; 8 snaps since s7754, hangar H-state item 27).
+  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26; 15 snaps since s7758 incl. L10 21:9 stand-ins flight, hangar H-state item 27).
 - **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
   proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
   cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
@@ -324,7 +324,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     16:9 dd2 FPS60). GREEN 8/8. **s7757: 13 snaps** - + 5 at the owner's 21:9 recipe (ASPECT=21:9 dd4 FPS60 STANDINS=1, stand-ins
     active: scratch/s7754/retained/w219_s{250,1000,2250,2750,4000}: attract, SELECT GAME, L4 cutscene, 2x L4 flight with TriGen hits,
     tg0 = our TG_FIX=0 length). 22/24 route tasks of that run exact from begin AND end image; the 2 misses are the hangar (H-state). GREEN 13/13. Ctls: tg0 (only the dd8 snaps have TriGen hits; 0 hits in every s7754 frame), CAP=<capc> strict
-    prefix cap_fires=1, 1-byte flip. A RED after a ucode fixup edit = emitted stream changed: intended -> re-capture
+    prefix cap_fires=1, 1-byte flip. **s7758: 15 snaps** - + 2 L10 flight at the same 21:9 recipe in seconds adding 3085/5705
+    stand-ins (w219L10_s10200 largest tail 348824 B, w219L10_s10800 add peak; 0 TriGen hits). L10 route: 24/24 flight tasks
+    (s8400-s13000, 16 in stand-in-adding seconds) and 22/24 earlier tasks (16 of them the long Chapter III crawl) exact from begin AND
+    end image; misses = hangar only. Stand-in region 0x81700000+ is CPU-only, so stand-ins never make a task H-state. GREEN 15/15.
+    Pitfall: on L10 the crawl runs to ~VI 8500, so EVERY=250:24 without a <from> captures no flight (check snap vi vs the sheet).
+    A RED after a ucode fixup edit = emitted stream changed: intended -> re-capture
     (`tools/s7753_capture_snaps.zsh`, `tools/s7754_capture_route.zsh` with ROGUESQ_S7751_EVERY=<N>:<max>:<from>) and say so.
 27. **Hangar gfx tasks are NOT snapshot-replayable (s7754 H-state, measured):** in all 10 AVAILABLE CRAFT tasks (dd1 + 16:9 dd2)
     the begin-image replay and the end-image replay (`_end.bin`) give different streams and live sits between them; 14/14 other
