@@ -206801,3 +206801,32 @@ Net: -24,734 bytes, -200 lines. Rules out nothing; the next unit is still the s7
 - Verdict: this selects H-visible on L12 and refutes H-drop, H-clip and H-size (and the s7746 H-not-visible). It closes G6c
   coverage on L10/L12. Next discriminator (NEXT.md, g6c-l12-never-added): per never-added item, final skip reason + distance to
   the player. Unlinked items all beyond the dd4 radius selects H-zone; near unlinked items the game later spawns selects H-ours.
+
+## Session 7749 (2026-11-21) — G6c L12 "85/92 never added" was a 120-try window artifact: 93/131 stand-ins add over 200 s; the rest are script-owned, condition-gated or off-screen (H-ours refuted)
+
+HYPOTHESIS-ID: g6c-l12-never-added (closed). Read first: the "85/92 never added" figure (tools/s7690_par_tally.py) counts
+[s7690-par] lines, which print once per stand-in at its FIRST 120 bucket tries. It never measured lifetime coverage, and it only
+counts items that already passed the link/dead/cond gates (so "unlinked dominates" in NEXT.md mixed two populations).
+The offline log (scratch/s7748_soak/log_u124.txt) had no per-item lifetime data, so one instrument was built.
+
+Instrument (src/main/rs64_standins.cpp, ROGUESQ_STANDINS_LOG=1): `[s7749-life]` one line per stand-in every 30 s: on-frames per
+reason (add/cull/spawned/unlinked/dead/cond), culled frames split by view-test exit class (off/far/novt/pass, the s7674 vt_class),
+first-frame reason, ever-linked / linked now, linked->unlinked edges and edges NOT followed by a spawn within 2 frames, min culled
+depth, craft XZ distance now/min (craft record per s6686). Tally: tools/s7749_life_tally.py LOG (classifies the last dump).
+Run: L12 dd4 STANDINS=frame, HOLD=200, owner-quiet arms (scratch/s7749_soak, alive 1/1, 0 crash, vi_stalls30s=0, max_gap 159 ms).
+
+Result (last dump, gen 1, 131 stand-ins):
+- ADDED (>=1 accepted add) 93. Same-run reconciliation: [s7690-par] still says 85/97 never added at 120 tries, and 79 of those 85
+  were added later in the same run. So the old figure was the window, not coverage.
+- UNLINKED-NEVER 24: never in the DAT grid on any frame (48 of 131 items are never grid-linked at all; the rest of those add only
+  while held after a non-grid spawn). These are spawned by another route (script/trigger); 1 of 24 spawned in the hold. Drawing them
+  would draw objects the game may never create -> correct to skip (H-zone/H-script by design).
+- COND 7: linked, isDatItemConditionMet never true, xzmin >= 100 (by design, H-cond).
+- CULL-OFF 7: reached the bucket, never accepted, every cull v_off (off-screen); all 7 also spawned for real.
+- v_far = 0 on every item, so the far bound never binds at dd4 on L12 (agrees with s7748 depth vs far).
+- Positive control for the link walk: 27 linked->unlinked edges, 0 without a spawn within 2 frames (activation unlinks and spawns in
+  the same pass, s6686). H-ours (s_linked walk misses entries) refuted by this plus 93 linked-then-added items.
+- Second line: the independent ROGUESQ_LOG_GRIDSPAWN walk printed nothing (it gates on VI origin 0x690400, which this dd4 run does not
+  use), so the link-walk conclusion is single-source for the walk structure; the activation-edge control is its own same-run check.
+Rules out: a stand-in coverage bug on L12. No code fix needed. Queued scratch/agent/soak_queue/s7749_life_L10_L1.sh (same table on
+L10 and L1) to check no other level has linked, condition-met items culled for a reason other than off-screen.

@@ -96,6 +96,11 @@ struct Standin {
     bool released = false;  // s7679 near release: hold dropped because the stand-in came nearer than any real object's first draw
     // s7690: calls whose instance slice group (inst+8 & 0x180) would reuse the cached cull bit this game frame; fixed = regrouped
     uint32_t par_mism = 0, par_fix = 0; bool par_logged = false;
+    // s7749 lifetime table ([s7749-life], ROGUESQ_STANDINS_LOG=1): frames per reason (kReason order), culled frames per view-test class,
+    // first-frame reason, grid link state, linked->unlinked edges and how many of them did NOT spawn within 2 frames (activation
+    // unlinks a record and spawns it in the same updateActiveGridCellState pass, s6686), min culled depth, craft XZ distance (now / min).
+    uint32_t lr[6] = {}, lv[4] = {}, l_edges = 0, l_nospawn = 0; int l_first = -1, l_prev_lk = -1; int64_t l_edge_f = -1;
+    double l_cdmin = -1.0; float l_xz = -1.0f, l_xzmin = -1.0f; bool l_ever_lk = false;
 };
 
 uint32_t s_dat = 0;
@@ -908,13 +913,49 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     auto reason = [&](Standin& s, int r) {
         if (r != 0 && s.prev_reason == 0) s.end_reason = r;  // the first non-add after the latest add
         s.prev_reason = r;
+        if (s_log) {
+            ++s.lr[r]; if (s.l_first < 0) s.l_first = r;
+            if (r == 1) { ++s.lv[vt_class()]; if (rs64_vt_lastd >= 0 && (s.l_cdmin < 0 || rs64_vt_lastd < s.l_cdmin)) s.l_cdmin = rs64_vt_lastd; }
+        }
     };
+    // s7749: craft record (getCraftRecordByIdx(0); 801375F8 when 8010CA1C & 8, s6686) for the lifetime table's XZ distance
+    const uint32_t l_rec = (rw(rdram, 0x8010CA1Cu) & 8u) ? 0x801375F8u : 0x80137DC0u;
+    const float l_px = rf(rdram, l_rec), l_pz = rf(rdram, l_rec + 8u);
+    {
+        static double s_life_t = -1.0;
+        if (s_life_t < 0) s_life_t = now;
+        if (s_log && now - s_life_t >= 30.0) {
+            s_life_t = now;
+            uint32_t n = 0;
+            for (const Standin& s : s_standins) {
+                std::fprintf(stderr, "[s7749-life] gen=%u i=%u item %08X sub %04X type=%04X first=%s add=%u cull=%u spawned=%u unlinked=%u dead=%u cond=%u "
+                             "v_off=%u v_far=%u v_novt=%u v_pass=%u ever_lk=%d lk=%d edges=%u nospawn=%u slot=%04X cdmin=%.1f xz=%.1f xzmin=%.1f craft=%.1f,%.1f\n",
+                             s_gen, n++, s.item, (unsigned)s.sub, rh(rdram, s.item), s.l_first >= 0 ? kReason[s.l_first] : "none", s.lr[0], s.lr[1], s.lr[2], s.lr[3],
+                             s.lr[4], s.lr[5], s.lv[0], s.lv[1], s.lv[2], s.lv[3], s.l_ever_lk ? 1 : 0, s.l_prev_lk, s.l_edges, s.l_nospawn,
+                             rh(rdram, s.item + 6u), s.l_cdmin, (double)s.l_xz, (double)s.l_xzmin, (double)l_px, (double)l_pz);
+            }
+        }
+    }
     size_t si_idx = 0;
     s_gh_idx.clear();
     for (Standin& s : s_standins) {
         ++s_t.cand;
         const bool odd = (si_idx++ & 1u) != 0;
         if (s.spawn_f < 0 && rh(rdram, s.item + 6u) != 0xFFFFu) s.spawn_f = s_calls;  // before the hold test, so the spawn frame is held too
+        if (s_log) {  // s7749 lifetime: link edges + craft distance, every on-frame, before any gate
+            const bool lk = std::binary_search(s_linked.begin(), s_linked.end(), s.item);
+            const bool sp = rh(rdram, s.item + 6u) != 0xFFFFu;
+            if (lk) s.l_ever_lk = true;
+            if (s.l_prev_lk == 1 && !lk) { ++s.l_edges; s.l_edge_f = s_calls; if (!sp) s.l_edge_f = -(int64_t)s_calls - 1; }
+            if (s.l_edge_f < 0 && s.l_edge_f != -1) {  // pending edge without a spawn: resolve within 2 frames
+                const int64_t ef = -s.l_edge_f - 1;
+                if (sp) s.l_edge_f = ef; else if ((int64_t)s_calls - ef >= 2) { ++s.l_nospawn; s.l_edge_f = ef; }
+            }
+            s.l_prev_lk = lk ? 1 : 0;
+            const float dx = rf(rdram, s.item + 0x10u) - l_px, dz = rf(rdram, s.item + 0x18u) - l_pz;
+            s.l_xz = std::sqrt(dx * dx + dz * dz);
+            if (s.l_xzmin < 0 || s.l_xz < s.l_xzmin) s.l_xzmin = s.l_xz;
+        }
         const bool planted = (s_plant > 0 && odd && s.spawn_f >= 0 && s_calls - s.spawn_f < s_plant) ||
                              (s_hold && (s_hold == 1 || odd) && s.spawn_f >= 0 && s.real_add < 0 && s_calls - s.spawn_f < 900 && !s.released);
         if (s_log && s.spawn_f >= 0 && !s.ho_logged && (int64_t)s_calls - s.spawn_f > 600) ho_log(s, "timeout600");
