@@ -1,4 +1,4 @@
-# NEXT (s7732)
+# NEXT (s7733)
 HYPOTHESIS-ID: owner-looks-or-new-report
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then any
@@ -7,14 +7,15 @@ If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green. After a
 (`python3 tools/s7651_gate_sweep.py --jobs 2`, ~10+ min: run it in the background, and do not build while it runs: CPU cap 2).
 
 Closed, do not repeat: s7726/s7727 Objective-C over-release; s7728 false/no + LOG_ALL splits; s7729 unmodelled-site
-classification; s7730 empty values; s7731 on/off words (normalised at launch to 0/1, kKeepWords for letter-mode readers,
-census intent + letter-scan gates).
+classification; s7730 empty values; s7731 on/off words; s7732 "=0 reads ON" (ASPECT fixed at launch, 17 others reviewed in
+ZERO_ON_REVIEWED, gate zero_on_check).
 
-Candidate bounded item if nothing above applies: "=0 reads ON". s7731 maps `off` to "0", which only helps where "0" reads
-off. The census signature shows presence readers where "0" reads ON (e.g. ROGUESQ_ASPECT sig unset=0 "0"=1: main.cpp
-`as || fullscreen` opt-in window opens on ASPECT=0; OSMEM_MB tf reader "0"=1). Hypotheses: H-mode (the name is a value, not
-a switch, so =0 has no off meaning: doc nothing) vs H-trap (OWNER-OPT-INS or README tells the owner `NAME=0` turns it off,
-or the name is an owner switch, and some reader reads "0" as on). Discriminator: one pass over the census models listing
-names whose some tf reader has sig["0"]==1 and sig[None]==0, crossed with OWNER-OPT-INS/README text containing `NAME=0`;
-for each H-trap name, a same-binary live arm (`NAME=0` vs unset vs `NAME=1`) and a fix of the minority reader. Gate it in
-tools/s7714_truth_census.py with a planted control as s7731 did.
+Candidate bounded item if nothing above applies: dead reader text in the truth census. s7732 found that
+tools/fixup_factor5_ucode.py:228 (`_new_cap`, ASPECT `wide`) is modelled as a live ASPECT reader, but its replace anchor
+`_old_cap` matches nothing since s6762 (src/rsp/dpc_bridge.cpp:213 cap = 65536 always). Hypotheses: H-dead (more apply/fixup
+REPLACEMENT texts whose anchor matches nothing in the current generated tree are counted as readers, so census SPLIT/agree
+verdicts include dead code) vs H-live (that one is alone). Discriminator: one pass over every tools/apply_*.py / fixup_*.py
+site the census models, test whether the replacement text (or its anchor) occurs in the generated output it targets
+(build/factor5_ucode/*.c, RecompiledFuncs/, src/rsp/*.cpp); planted control: a fake site with an anchor that cannot match must
+be flagged. For each H-dead site: drop the dead replace from the script (regen-safe: it is a no-op today) or class it DEAD in
+the census so it stops voting. Gate it in tools/s7714_truth_census.py.

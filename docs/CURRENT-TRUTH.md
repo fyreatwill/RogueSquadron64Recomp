@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7731 (2026-11-20).
+Compact operational handoff, as of Session 7732 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,6 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7732 "=0 reads ON": ROGUESQ_ASPECT was the one owner-facing trap (H-trap for it, H-mode for 17 others).** main.cpp took any
+  ASPECT value as opt-in, so `=0`/`=off`/`=orig`/a typo opened the high-DPI fitted window with a retail 4:3 picture (same-binary
+  KEEP control: drawable 1280x960 vs 640x480). Launch now unsets any value that is not auto/expand/W:H (`[s7732] ...`, re-exec;
+  shell and settings file); `ROGUESQ_S7732_KEEP_ASPECT=1` = old. Census gate zero_on_check: 18 owner-documented presence names,
+  all reviewed (values, model over-reads, NO_SAVE_WRITE save-safe), planted control PASS. fixup_factor5_ucode.py:228 is dead
+  anchor text (cap 65536 since s6762) that the census still models as a reader.
 - **s7731 on/off words now read as their digit (H-agree on readers, H-against-intent selected).** Truth census VALUES +=
   off/on/true/" 1"/"1 ": 0 unreviewed SPLIT, but every switch reads digits only, so `=off`/`=false`/`=no` read ON at 216
   names (FPS60, ASPECT, CULL_SPIKE...) and `=on`/`=yes` OFF at 39 (`*e == '1'` QOS family); `=true` picked the 't' tog mode.

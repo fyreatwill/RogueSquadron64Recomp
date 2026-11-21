@@ -182,8 +182,35 @@ static int rs64_s7731_norm_words() {
     return n;
 }
 
+// s7732: ROGUESQ_ASPECT is a value, not a switch. Its readers take presence as "opt in": main.cpp `(as && *as) || fullscreen`
+// opens the high-DPI fitted window, and the ucode iteration cap (fixup_factor5_ucode.py) counts any value other than "4:3" as
+// wide and lifts the cap 16384 -> 65536 at dd1. So ASPECT=0 / =off (s7731 maps off to "0") / =orig / any typo read as a
+// partial opt-in while RT64 kept the retail aspect. Only auto, expand and W:H (both > 0) mean anything: any other value is
+// unset (retail 4:3) with a log line. ROGUESQ_S7732_KEEP_ASPECT=1 = old behaviour (control arm).
+extern "C" int rs64_settings_aspect_ok(const char* v) {
+    if (!v) return 0;
+    if (!strcasecmp(v, "auto") || !strcasecmp(v, "expand")) return 1;
+    const char* c = std::strchr(v, ':');
+    if (!c || c == v) return 0;
+    char* end = nullptr;
+    const double w = std::strtod(v, &end);
+    if (end != c || !(w > 0.0)) return 0;
+    const double h = std::strtod(c + 1, &end);
+    return *end == '\0' && h > 0.0 && end != c + 1;
+}
+
+static int rs64_s7732_aspect() {
+    const char* k = std::getenv("ROGUESQ_S7732_KEEP_ASPECT");
+    if (k && *k == '1') return 0;
+    const char* a = std::getenv("ROGUESQ_ASPECT");
+    if (!a || rs64_settings_aspect_ok(a)) return 0;
+    std::fprintf(stderr, "[s7732] ROGUESQ_ASPECT=%s is not an aspect (auto, expand or W:H): treated as unset (retail 4:3)\n", a);
+    unsetenv("ROGUESQ_ASPECT");
+    return 1;
+}
+
 extern "C" void rs64_settings_apply(int argc, char** argv) {
-    const int stripped = rs64_s7730_strip_empty() + rs64_s7731_norm_words();
+    int stripped = rs64_s7730_strip_empty() + rs64_s7731_norm_words();
     const char* done = std::getenv("ROGUESQ_SETTINGS_APPLIED");
     if (done && *done == '1') {
         const char* sum = std::getenv("ROGUESQ_SETTINGS_SUMMARY");
@@ -261,6 +288,10 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
     };
     for (const auto& kv : from_file) put(kv.first, kv.second, "file");
     if (pp) for (const auto& v : pp->vars) put(v.first, v.second, "preset");
+    if (rs64_s7732_aspect()) {  // after the file/preset: a settings-file ASPECT=0 is caught too
+        stripped++;
+        if (!summary.empty()) summary += " ROGUESQ_ASPECT(unset: not an aspect, s7732)";
+    }
 
     std::fprintf(stderr, "[s7663] settings file=%s%s preset=%s set=%d kept_from_env=%d rejected=%d\n",
         file.empty() ? "(off)" : file.c_str(), file.empty() ? "" : (file_read ? "" : "(absent)"),
@@ -269,7 +300,7 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
     // ROGUESQ_S7663_NOEXEC=1: control arm only (s7663): keep the setenv values but skip the re-exec, so pre-main statics miss them.
     { const char* ne = std::getenv("ROGUESQ_S7663_NOEXEC"); if (ne && *ne == '1') { std::fprintf(stderr, "[s7663] NOEXEC control: no re-exec\n"); return; } }
 
-    if (summary.empty()) summary = "(none; " + std::to_string(stripped) + " empty value(s) unset (s7730) / on-off word(s) read as 0/1 (s7731))";
+    if (summary.empty()) summary = "(none; " + std::to_string(stripped) + " empty value(s) unset (s7730) / on-off word(s) read as 0/1 (s7731) / non-aspect ASPECT unset (s7732))";
     setenv("ROGUESQ_SETTINGS_APPLIED", "1", 1);
     setenv("ROGUESQ_SETTINGS_SUMMARY", summary.c_str(), 1);
     std::fflush(stderr);

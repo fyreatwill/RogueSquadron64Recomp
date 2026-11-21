@@ -86,6 +86,7 @@ UNMODELLED_T = [
 ("ROGUESQ_A14_YIELD","tools/apply_s4694_a14_boundary.py","g_a14_act",R),
 ("ROGUESQ_ASPECT","src/main/main.cpp","as = std::getenv(\"ROGUESQ_ASPECT\");",S),
 ("ROGUESQ_ASPECT","src/main/rt64_render_context.cpp","vi_shape ? nullptr",S),
+("ROGUESQ_ASPECT","src/main/rs64_settings.cpp","const char* a = std::getenv(\"ROGUESQ_ASPECT\");",S),  # s7732 launch validator
 ("ROGUESQ_ASPECT","tools/apply_s6031_far.py","const char* as = getenv",S),
 ("ROGUESQ_ASPECT_SCALE","src/rsp/dpc_bridge.cpp","ROGUESQ_G1D_PAUSE_DIM",S),
 ("ROGUESQ_ASPECT_SCALE","tools/apply_s6144_fpx.py","kx6144",S),
@@ -1139,6 +1140,13 @@ def main():
         g = "ROGUESQ_DD_OFFMAPCULL_H" in l0 and not l1
         print(f"control s7731 letter scan empty-keep unkept={l0} real={l1} want OFFMAPCULL_H in first, [] {'PASS' if g else 'FAIL'}")
         ok &= g
+        # s7732: a planted owner-documented presence reader must be flagged; the real tree must pass
+        pz = ("ROGUESQ_PLANTZ", [("src/plant_z.cpp:1", None)], ['if (const char* e = getenv("ROGUESQ_PLANTZ"); e && *e) go();'])
+        z0 = zero_on_check(quiet=True, docs="ROGUESQ_PLANTZ=16:9", extra=[pz], reviewed={})
+        z1 = zero_on_check(quiet=True)
+        g = "ROGUESQ_PLANTZ" in z0 and not z1
+        print(f"control s7732 zero-on planted={'ROGUESQ_PLANTZ' in z0} real={z1} want True, [] {'PASS' if g else 'FAIL'}")
+        ok &= g
         if not ok:
             return 2
     else:
@@ -1169,7 +1177,8 @@ def main():
         print(f"  stale UNMODELLED_T entry {st} (site gone or line changed)")
     miss = intent_check(models)
     lbad = letter_scan()
-    return 1 if bad or uncls or miss or lbad else 0
+    zbad = zero_on_check()
+    return 1 if bad or uncls or miss or lbad or zbad else 0
 
 
 def keep_words(src=None):
@@ -1247,6 +1256,62 @@ def intent_check(models, quiet=False, src=None):
               + " ".join(f"{w}={len(against.get(w, ()))}" for w in WORDS)
               + f"; mapped at launch {len(mapped)}/{len(WORDS)}; unmapped-against {len(miss)} {miss if miss else ''}")
     return miss
+
+
+# s7732: owner-documented names with a reader where "0" and "1" both read ON and unset reads OFF (a presence reader): `NAME=0`
+# (or =off, which s7731 maps to "0") turns it on there. Each must be reviewed: a value name where 0 means nothing, a reader the
+# isolation over-reads (outer `if (e)`, inner digit test), or fixed. A new one fails the gate.
+ZERO_ON_REVIEWED = {
+    "ROGUESQ_ASPECT": "FIXED s7732: launch unsets any value that is not auto/expand/W:H (KEEP control reopened the window)",
+    "ROGUESQ_AUDIO_DEVICE": "value: device name substring",
+    "ROGUESQ_DD_OFFMAPCULL": "value: mode/margin (t, -1, n)",
+    "ROGUESQ_DD_OFFMAPCULL_K": "value: number",
+    "ROGUESQ_DD_OFFMAPCULL_KEDGE": "value: number",
+    "ROGUESQ_DD_OFFMAPCULL_KLEVEL": "value: level list",
+    "ROGUESQ_DD_WIDEWIN_CAPLEVEL": "value: level list",
+    "ROGUESQ_DD_WIDEWIN_MERGE_E": "value: number",
+    "ROGUESQ_DD_WIDEWIN_RLEVEL": "value: level list",
+    "ROGUESQ_DRAW_DISTANCE": "value: number (s7358 validator; 0 -> retail)",
+    "ROGUESQ_G1E_FAST": "over-read: outer presence, returns *e != '0'",
+    "ROGUESQ_G5G_AIM": "over-read: outer presence, atoi(e) != 0",
+    "ROGUESQ_HANGAR_FOV_CAM": "value: hex address",
+    "ROGUESQ_NO_SAVE_WRITE": "presence safety switch: =0 still blocks writes (errs toward the owner save; runner exports =1)",
+    "ROGUESQ_OSMEM_MB": "value: MB (s7713 normaliser)",
+    "ROGUESQ_RENDER_TO_RAM": "over-read: outer presence, inner v[0] == '0' turns it off",
+    "ROGUESQ_SP_LATE": "value: mode (0 = early/upstream, distinct from unset = auto)",
+    "ROGUESQ_WIN_DISPLAY": "value: display index or mouse",
+}
+
+
+def zero_on_check(quiet=False, docs=None, extra=None, reviewed=None):
+    """-> owner-documented names with an unreviewed presence reader (unset off, "0" and "1" on), plus stale table entries."""
+    reviewed = ZERO_ON_REVIEWED if reviewed is None else reviewed
+    if docs is None:
+        docs = "".join(open(os.path.join(ROOT, d), errors="replace").read() for d in ("docs/OWNER-OPT-INS.md", "README.md"))
+    _p, site_map, _c, _d = c7711.load()
+    iu, i0, i1 = VALUES.index(None), VALUES.index("0"), VALUES.index("1")
+    texts, hits = {}, {}
+    items = [(n, sl, None) for n, sl in site_map.items()] + list(extra or [])
+    for name, sl, lines in items:
+        if not re.search(re.escape(name) + r"\b", docs):
+            continue
+        for site, _w in sl:
+            rel, ln = site.rsplit(":", 1)
+            t = lines if lines is not None else texts.setdefault(
+                rel, open(os.path.join(ROOT, rel), errors="replace").read().split("\n"))
+            sig, node = model_site(t, int(ln), name, rel.endswith(".py"))
+            if sig and not is_num(node) and sig[iu] == 0 and sig[i0] == 1 and sig[i1] == 1:
+                hits.setdefault(name, []).append(site)
+    bad = sorted(n for n in hits if n not in reviewed)
+    stale = sorted(n for n in reviewed if n not in hits)
+    if not quiet:
+        print(f"s7732: owner-documented names whose reader takes =0 as ON (presence): {len(hits)}, "
+              f"reviewed {len(hits) - len(bad)}, UNREVIEWED {len(bad)}, stale table entries {len(stale)}")
+        for n in bad:
+            print(f"  UNREVIEWED {n} {hits[n][:2]}: =0 reads ON here; fix the reader or the launch value, or review it")
+        for n in stale:
+            print(f"  stale ZERO_ON_REVIEWED entry {n} (no such reader any more)")
+    return bad + stale
 
 
 if __name__ == "__main__":

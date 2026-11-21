@@ -6,6 +6,7 @@
 extern "C" int rs64_settings_parse_line(const char*, char*, size_t, char*, size_t);
 extern "C" int rs64_settings_resolve_value(const char*, const char*, const char*, char*, size_t);
 extern "C" const char* rs64_settings_bool_word(const char*);
+extern "C" int rs64_settings_aspect_ok(const char*);
 int main() {
     struct T { const char* in; int kind; const char* n; const char* v; } t[] = {
         {"", 0, "", ""}, {"   # comment", 0, "", ""}, {"ROGUESQ_FPS60=1", 1, "ROGUESQ_FPS60", "1"},
@@ -51,6 +52,16 @@ int main() {
         const char* g = rs64_settings_bool_word(c.v);
         if ((g == nullptr) != (c.want == nullptr) || (g && std::strcmp(g, c.want))) { fail++; std::printf("FAIL bool_word '%s' -> %s\n", c.v, g ? g : "null"); }
     }
-    std::printf("%s %d cases, %d fail\n", fail ? "FAIL" : "PASS", (int)(sizeof t / sizeof t[0] + sizeof r / sizeof r[0] + sizeof w / sizeof w[0]), fail);
+    // s7732: only auto, expand and W:H (both > 0) are aspects; anything else is unset at launch (retail 4:3).
+    struct A { const char* v; int ok; } a[] = {
+        {"auto", 1}, {"AUTO", 1}, {"expand", 1}, {"16:9", 1}, {"21:9", 1}, {"4:3", 1}, {"2.3333:1", 1}, {"1024:448", 1},
+        {"0", 0}, {"1", 0}, {"orig", 0}, {"off", 0}, {"16x9", 0}, {"16:", 0}, {":9", 0}, {"0:9", 0}, {"16:0", 0},
+        {"16:9x", 0}, {"-16:9", 0}, {"16:-9", 0}, {"", 0},
+    };
+    for (const auto& c : a) {
+        const int g = rs64_settings_aspect_ok(c.v);
+        if (g != c.ok) { fail++; std::printf("FAIL aspect_ok '%s' -> %d\n", c.v, g); }
+    }
+    std::printf("%s %d cases, %d fail\n", fail ? "FAIL" : "PASS", (int)(sizeof t / sizeof t[0] + sizeof r / sizeof r[0] + sizeof w / sizeof w[0] + sizeof a / sizeof a[0]), fail);
     return fail != 0;
 }

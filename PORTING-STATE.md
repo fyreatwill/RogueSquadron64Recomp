@@ -206319,3 +206319,43 @@ s7714 rc 0. A second full sweep was not run; the only edit after the sweep is th
 Owner defaults untouched (unset, empty and every digit value behave as before). OWNER-OPT-INS gains a row.
 Result: this selects H-agree-against-intent and refutes H-split (0 reader pairs disagree; the words read against their digit at 216/39 names, and the live QOS_ALL=on vs KEEP_WORDS arms confirm it in the binary).
 Next discriminator (NEXT.md): "=0 reads ON" presence readers (e.g. ASPECT=0 opens the opt-in window) crossed with docs that say `=0`: H-mode (value, no off meaning) vs H-trap (documented =0 off, some reader reads it on), one census pass + same-binary live arms per H-trap name.
+
+## Session 7732 (2026-11-20) — "=0 reads ON" census: ROGUESQ_ASPECT was the one owner-facing trap (=0/=off/=orig opened the opt-in window); launch now unsets any non-aspect value
+Start: crash_reports --since 2026-11-13 FOLDED=27 new=0; no new SOAK-RESULTS lines; no owner report. Took NEXT.md's item.
+Hypotheses: H-mode (a name whose `=0` reads ON is a value, not a switch: nothing to fix) vs H-trap (an owner-facing name where
+`=0`/`=off` reads ON at some reader, against intent).
+Census (offline, every reader site incl. single-site names, the s7714 model): 2186 modelled on/off sites; 174 names have a
+reader with sig unset=0 and "0"=1. Most are `*e == '0'` kill-switch readers (the "=0 = old" convention, intended). Restricted to
+owner-documented names (OWNER-OPT-INS + README) with a presence reader ("0" and "1" both ON, unset OFF): 18 names.
+Read each site: values where 0 means nothing (AUDIO_DEVICE, DD_OFFMAPCULL*, DD_WIDEWIN_*, DRAW_DISTANCE s7358 validator,
+HANGAR_FOV_CAM, OSMEM_MB s7713, SP_LATE mode 0=early distinct from unset=auto, WIN_DISPLAY); model over-reads, where the
+census isolates the outer `if (e)` but the inner test reads 0 off (RENDER_TO_RAM v[0]=='0', G1E_FAST *e!='0', G5G_AIM atoi);
+NO_SAVE_WRITE presence safety switch (=0 still blocks writes, toward protecting the owner save; runner exports =1, left as is);
+and ROGUESQ_ASPECT: H-trap. main.cpp:14498 `(as && *as) || fullscreen` takes any value as opt-in, while RT64 applies only
+auto/expand/W:H, so ASPECT=0, =off (s7731 maps off to "0"), =orig (named in an rt64_render_context comment) or a typo gave the
+high-DPI fitted window with a retail 4:3 picture. Its second census reader (fixup_factor5_ucode.py:228, ucode cap `wide`) is
+dead text: its replace anchor no longer matches since s6762 made the cap 65536 everywhere (checked in src/rsp dpc_bridge.cpp:213).
+ORIGIN: the value is typed by the user; the writer is main.cpp's presence test treating "set" as "opt in". Not a mitigation:
+launch-time validation of input, like s7358 DRAW_DISTANCE / s7730 / s7731.
+Fix (src/main/rs64_settings.cpp): rs64_settings_aspect_ok() accepts auto, expand (any case) and W:H with both numbers > 0 and
+fully parsed; rs64_s7732_aspect() runs in rs64_settings_apply after the file/preset puts, unsets any other ASPECT with
+`[s7732] ROGUESQ_ASPECT=<v> is not an aspect (auto, expand or W:H): treated as unset (retail 4:3)` and forces the existing
+re-exec; the summary gets `ROGUESQ_ASPECT(unset: not an aspect, s7732)`. ROGUESQ_S7732_KEEP_ASPECT=1 = old (control arm).
+tools/test_settings.cpp 67/67 PASS (21 new aspect_ok cases: auto/AUTO/expand/16:9/21:9/4:3/2.3333:1/1024:448 ok;
+0/1/orig/off/16x9/16:/:9/0:9/16:0/16:9x/-16:9/16:-9/"" rejected).
+Live, same rebuilt binary (12 s boots, NO_SAVE_WRITE=1, SIGKILL; scratch/s7732/*.log):
+- unset: `[g1f] drawable 640x480`.  ASPECT=0: s7732 line, drawable 640x480.  ASPECT=off: `[s7731] read as 0`, s7732 line,
+  640x480.  ASPECT=orig: s7732 line, 640x480.  settings-file ASPECT=0: s7732 line, re-exec summary marks it unset, 640x480.
+- control ASPECT=0 + KEEP_ASPECT=1: `drawable 1280x960`, `[g1d] ROGUESQ_ASPECT=0 applied` (old trap reproduced in the same
+  binary: the instrument discriminates). Positive control ASPECT=16:9: drawable 2720x1528, `[g1d] ... 16:9 applied`.
+Gate (tools/s7714_truth_census.py, exit 1): zero_on_check, owner-documented names with a presence reader must be in
+ZERO_ON_REVIEWED (18 reviewed, 0 unreviewed, 0 stale); planted control (a documented ROGUESQ_PLANTZ with an `e && *e` reader,
+empty table) is flagged: PASS. The new rs64_settings.cpp ASPECT read is classed STRING in UNMODELLED_T. All 15 controls PASS,
+census rc 0. tools/agent/run_tests.sh 8/8 PASS. OWNER-OPT-INS: the ASPECT line says only auto/expand/W:H count.
+Gate sweep: see the result line below (run in the background after the rebuild).
+Owner defaults untouched (unset and every valid aspect behave as before).
+Result: this selects H-trap for ROGUESQ_ASPECT alone and H-mode for the other 17 owner-documented presence names (values,
+model over-reads, or the save-protecting NO_SAVE_WRITE); the KEEP control vs fixed arms in one binary confirm it.
+Next discriminator (NEXT.md): owner looks / new reports first; bounded candidate: the s7714 census itself models
+fixup_factor5_ucode.py:228 as a live reader though its anchor is dead. Count apply/fixup replacement anchors that match
+nothing in the generated tree (H-dead: census reads dead text as readers) vs H-live, with a planted dead anchor as control.
