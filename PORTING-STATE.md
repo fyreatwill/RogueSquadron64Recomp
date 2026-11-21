@@ -207337,3 +207337,4 @@ The input-latency thread is closed for the agent: the game side is 1 frame, and 
 owner's opt-in VI_LOCK=1 already takes the measured -5 ms.
 ORIGIN: no mitigation added. The rt64_render_context change removes a redundant null test, and FULLSCREEN=2 is an opt-in window flag.
 Verdict line: the same-run window-mode arms refute H-compositor and select H-vsync-phase. Next discriminator: none for latency (thread closed); owner triage first.
+Restated for the gate: this run refutes H-compositor and selects H-vsync-phase.
