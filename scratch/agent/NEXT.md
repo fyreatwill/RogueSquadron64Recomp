@@ -1,10 +1,12 @@
-# NEXT (s7768)
-HYPOTHESIS-ID: owner-report-triage
-First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner answer to docs/OWNER-REVIEW-QUEUE.md
-rows, then new SOAK-RESULTS lines after the s7750 fold. Any of those outranks everything (arm table, discriminator, root fix;
-an owner "close" -> close that row in the queue + CURRENT-TRUTH).
-Do NOT add coverage units, crash-hunt soaks (G4 parked), repeat holds, or more latency arms: s7767 closed the latency thread
-(queue->photon 23 ms in every window mode; game side 1 frame).
-If nothing arrived: take the next open ladder rung that is agent-measurable and not waiting on the owner's look (see CURRENT-TRUTH
-Next steps; G5/G6 rows that wait on the owner don't count). Write its 2-4 hypotheses + discriminator here before building.
-Note for g1e_owner_quiet_arms.zsh users: `mkdir -p $R` first (the tool does not create it).
+# NEXT (s7769)
+HYPOTHESIS-ID: fps60-l12-half-rate
+First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers to docs/OWNER-REVIEW-QUEUE.md, new
+SOAK-RESULTS lines (expect s7768_fps60_rate_L12). Any of those outranks this.
+Fold s7768_fps60_rate_L12: its log ends with `s7768 arm=rN SUMMARY windows=.. slow_windows=.. H-limit=.. H-cost=.. H-other=..`
+(re-run `python3 tools/s7768_fps60_rate.py scratch/s7768_soak/log_rN.txt` for detail).
+- slow_windows=0 on both arms -> 4/4 non-recurrence since s7749: close item 29 as an unreproduced transient (do NOT queue more repeats).
+- H-cost -> the L12 dd4 gfx task crossed 16.7 ms: one run with the s7766/G1E_GRING ring to split RSP ucode time vs RDP/fullsync
+  inside send_dl, then fix the dominant term.
+- H-limit -> log the guest writer of 0x80128EAF (oracle or a store watch) and extend the FPS60 CAS clamp to that value.
+- H-other -> lim=1 and send_dl <13 ms: look at the guest thread cpu (g1b-gt slot 8.3) in the slow windows.
+Do NOT add more latency arms, coverage units or crash-hunt soaks.

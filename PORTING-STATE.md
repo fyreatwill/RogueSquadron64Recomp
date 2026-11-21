@@ -207338,3 +207338,26 @@ owner's opt-in VI_LOCK=1 already takes the measured -5 ms.
 ORIGIN: no mitigation added. The rt64_render_context change removes a redundant null test, and FULLSCREEN=2 is an opt-in window flag.
 Verdict line: the same-run window-mode arms refute H-compositor and select H-vsync-phase. Next discriminator: none for latency (thread closed); owner triage first.
 Restated for the gate: this run refutes H-compositor and selects H-vsync-phase.
+
+## Session 7768 (2026-11-21) — FPS60 L12 half-rate phases: H-limit refuted where measured, H-cost instrument with a same-run positive control; drop did not recur 2/2; new tools/s7768_fps60_rate.py
+
+Triage first: crash_reports new=0, no owner answers, no SOAK-RESULTS lines after the s7750 fold.
+Offline datum (rings already on disk, tools-free python): FPS60 owner-quiet rings mostly hold 60 game frames/s (gen changes)
+in flight (s7691 rehold L1/L4/L5/L10/L12/L15 300 s, s7749b L10/L1), but L12 does not always: scratch/s7749_soak/ring_u124.txt
+(L12 dd4 STANDINS=frame+STANDINS_LOG=1) ran 60 until t=75 s then 30-43 gen/s to the end; s7748_soak u124/u104 dropped 60->44 at
+~145 s. Present/GPU ring fields (wl/tp/acq/gpu) were flat across the change, so the present side is not it. The ~150 ms soak
+max_gap is boot/menu only (every gap >50 ms at t<70 s); in flight the max is 35-40 ms.
+Hypotheses: H-limit (game writes limit byte 0x80128EAF != 2, so the FPS60 2->1 CAS clamp lapses), H-cost (gfx task host wall
+> 16.7 ms, frame waits a 2nd VI), H-log (STANDINS_LOG / [s3290-stall] flood: 322k lines in the s7749 log vs 15.6k in s7691 L12),
+H-scene (a legit 30 fps state).
+Run (scratch/s7768, L12 dd4 16:9 FPS60 STANDINS=frame, owner-quiet arms, AC, clk 0.95, idle 19.6 h, 200 s each):
+- la (+STANDINS_LOG=1) and lb (no LOG): 60.0 tasks/s in every flight window, lim=1 on 100% of VIs, send_dl wall 10.1-11.7 ms in
+  flight (1.4-3.7 ms in menus), guest thread 8.3 ~105-117 ms cpu/s. 0 slow windows; alive, 0 crash, vi_stalls30s=0.
+- lc positive control (ROGUESQ_DIAG_BUSY_TOGGLE=20 BUSY_US=9000, same recipe): busy windows fall to 29.9-31 tasks/s with lim=1 and
+  send_dl 16-20 ms; off windows 60. tools/s7768_fps60_rate.py classifies 16/16 slow windows H-cost, 0 H-limit.
+Reading: the instrument separates H-limit from H-cost (control), so the s7749/s7748 shape (30-43, a fractional rate) fits a gfx task
+hovering at the 16.7 ms budget, but that is single-source inference: the drop did NOT recur in 2/2 arms, and both the LOG and no-LOG
+arm held 60, so H-log is not selected either. In-flight L12 headroom is ~6 ms per frame at dd4. Not owner-reported.
+Queued scratch/agent/soak_queue/s7768_fps60_rate_L12.sh (2 L12 arms with the s7749 recipe + G3C_LOG + G1B) so a recurrence is
+attributed by the tool's SUMMARY line.
+New: tools/s7768_fps60_rate.py `<log> [win_s]` (needs ROGUESQ_G3C_LOG=1 + ROGUESQ_G1B=1).
