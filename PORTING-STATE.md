@@ -206487,6 +206487,7 @@ scratch/s7736/gate` (2:49): replay log `apply_s7736_g1d_alloc.py: ok funcs_3.c s
 PASS; reverse DIAG 67 -> 66 (s7735 gate_post 67), other classes unchanged; reader census 378, 0 unreviewed, controls PASS; VERDICT
 H-mirrored. Getenv diff on the new replay: LOG_G1D_TASK row gone, the 13 accepted rows remain (same instrument showed the row on the
 s7735 tree = the positive control).
-Discrimination: H-needed selected for LOG_G1D_TASK (restored to the regen), H-dead-probe for the other 13 (all accepted, no recipe/opt-in
-reads them except via the FORFACE-gated lines). Rules out: an owner knob (DRAW_DISTANCE) carrying live-only behaviour.
+Discrimination: selects H-needed for LOG_G1D_TASK (restored to the regen) and refutes it for the other 13, which are H-dead-probe (all
+accepted, no recipe/opt-in reads them except via the FORFACE-gated lines). Next discriminator: list every inline fixer apply_* call whose
+PATCH tag is in the live tree but whose report line is absent from scratch/s7736/gate/replay.log (H-none vs H-more; scratch/agent/NEXT.md). Rules out: an owner knob (DRAW_DISTANCE) carrying live-only behaviour.
 Not done: deleting the orphan funcs_50.c from the live tree (harmless, accepted; a regen into a clean dir drops it).
