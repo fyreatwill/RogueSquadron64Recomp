@@ -22,6 +22,12 @@ FPS60 autopilot, arms def/off/tog 150 s + B40 pair 70 s, 5/5 alive 0 crash vi_st
 positive control: RUMBLE=0 vpad_nz 19->0; RUMBLE_SCALE=0.5 vpad hi 24616->12687; W_CLAMP clamped tris 5948 / =0 0 / =tog 0 even 3271 odd;
 SKYFILL 5252 / =0 0 / =tog 0 even 2610 odd; DD_FARMAX far cap 32767 / =0 65504; STICK_GATE full-stick counts 85 / =0 127 (new
 ROGUESQ_LOG_STICK_GATE=1); M5_B40_VALUE b40-write stores 0x00 / =1 0x01. Swapped-arm negative control fails 6/6 controls.
+**s7765: row 2's ROGUESQ_CONTROLS_DUMP=1 / controls.json work at launch** (`python3 tools/s7765_controls_dump_check.py`, 4 launches,
+temp files in scratch/s7765, build/controls.json absent and untouched): 12/12 PASS. No file -> `[controls] no ...` and the dump equals
+the table parsed independently from the verbatim old code rs64_bind_old_sdl (30 button sources + WASD stick); the dump fed back as a
+file loads and re-dumps identically (it IS a ready-made starting file); A->key:Space file changes only A (positive control); a
+malformed file is rejected `(not valid JSON)` and dumps the defaults (negative control). Every switch in the queue is now verified;
+only the F6 panel's interactive use remains the owner's.
 
 - **s7702-s7743 regen / census / env-reader engineering: ALL CLOSED, 0 open defects** (every bullet verbatim in PROJECT-OVERVIEW
   "(s7747 maintenance)"). Standing facts from it: the live RecompiledFuncs tree IS the s7739 regen replay, and

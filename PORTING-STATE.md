@@ -207249,3 +207249,24 @@ OWNER-REVIEW-QUEUE is now verified to act, except CONTROLS_DUMP=1 / F6 (row 2, i
 ORIGIN: no mitigation added: the only code change is the read-only ROGUESQ_LOG_STICK_GATE log (it reads the host stick values before
 and after rs64_stick_gate_apply, writes nothing to the guest); the gate flagged the words 'guard'/'restore' in the checker's comments.
 Next: nothing left that the agent can measure in the queue; NEXT.md stays owner-triage first.
+
+## Session 7765 (2026-11-21) — OWNER-REVIEW-QUEUE row 2 verified at launch: ROGUESQ_CONTROLS_DUMP=1 and controls.json 12/12 PASS (default dump == verbatim old map, round-trip, override, broken-file fallback); new tools/s7765_controls_dump_check.py
+
+Triage first: `crash_reports.py --since 2026-11-13` FOLDED=27 new=0; OWNER-REVIEW-QUEUE.md unchanged since s7762 (no owner answer);
+no SOAK-RESULTS lines after the s7750 fold. So the NEXT fallback unit ran: row 2, the last queue switch s7763/s7764 had not covered.
+Hypotheses: H-works (CONTROLS_DUMP=1 prints the live map; a controls.json override shows in the dump; the dump is a loadable starting
+file as OWNER-OPT-INS claims) vs H-broken (dump absent, ignores the file, or prints text the loader refuses).
+Instrument: tools/s7765_controls_dump_check.py, 4 launches from build/, one at a time, SIGKILL 1 s after the dump completes
+(all alive at kill). ROGUESQ_CONTROLS points at temp files in scratch/s7765; build/controls.json does not exist and was not created;
+NO_SAVE_WRITE set. Arms: def (no file), rt (def's dump written back as the file), ovr ({"A":["key:Space"]}), bad (trailing comma).
+The expected default table is parsed from the VERBATIM pre-table function rs64_bind_old_sdl in main.cpp, not from
+rs64_bind_defaults (which produces the dump), so the def comparison is a second, independent line next to s7618's offline 4.2M-case test.
+Result: def `[controls] no ...: built-in defaults`, dump buttons == old code (30 sources incl. axis+:lefttrigger:16000 -> Z,
+axis+:righttrigger:16000 -> CL, pad:leftstick -> CR), stick WASD, pad leftx/lefty invert_y; rt `loaded`, dump == def dump byte-for-byte
+as JSON; ovr `loaded`, A == [key:Space], all other entries == def; bad `rejected (not valid JSON): built-in defaults`, dump == def.
+Controls: ovr differs from def (positive: the checker sees a file change); bad (negative: a broken file must not change anything);
+the first checker run itself FAILED 2 checks on checker bugs (old-code axis name TRIGGERLEFT vs SDL "lefttrigger", status regex
+capturing the path), which shows the old-code comparison does flag a mismatch; fixed in the tool, rerun 12/12 PASS.
+Verdict: selects H-works, refutes H-broken for row 2's command-line half. With s7763 + s7764 every switch in OWNER-REVIEW-QUEUE is now
+verified to act; only the F6 panel's interactive bind/save (owner's hands; s7620 already scripted bind + Reset) waits on the owner.
+Next: owner-triage stays first; no agent-measurable queue item remains.

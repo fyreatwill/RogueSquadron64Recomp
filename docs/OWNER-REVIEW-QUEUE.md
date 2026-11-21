@@ -10,7 +10,7 @@ every setting is read by the game).
 | # | What to judge | Command (from `build/`) | Before / after sheet | Your answer decides |
 |---|---|---|---|---|
 | 1 | **Rumble** on a PS4/PS5 pad: fire, take hits, crash | `./RogueSquadron64Recomp --preset tv` (on by default; `ROGUESQ_RUMBLE=0` off, `ROGUESQ_RUMBLE_SCALE=0.5` softer) | none (feel only) | close G6a, or report too weak / too strong |
-| 2 | **F6 Controls panel** and `controls.json` | same, press **F6**; `ROGUESQ_CONTROLS_DUMP=1` prints the current map | none | close G6b |
+| 2 | **F6 Controls panel** and `controls.json` | same, press **F6**; `ROGUESQ_CONTROLS_DUMP=1` prints the current map (s7765: dump, file load, round-trip and broken-file fallback verified at launch) | none | close G6b |
 | 3 | **Far stand-ins** (buildings/turrets drawn early instead of popping) | `env ROGUESQ_STANDINS=1 ./RogueSquadron64Recomp --preset tv` | docs/owner_sheet_s7691_standins_on_off.jpg, docs/owner_sheet_s7748_l12_standins.jpg | close G6c; default-on at dd>1 or not |
 | 4 | **Hangar lens after abort** (G5i): first entry vs re-entry after aborting a mission, scroll ships | `./RogueSquadron64Recomp --preset tv` | docs/owner_sheet_s6995_g5i_reentry.png, docs/owner_sheet_s6999_g5i_219.png, docs/owner_sheet_s6907_hangar_aim.png | close G5i / G5g |
 | 5 | **Liberation of Gerrard V past half way** (G5a crash, twice before) | `./RogueSquadron64Recomp --preset tv` | none (fly it) | close G5a, or a crash report (tools/crash_reports.py picks it up) |
