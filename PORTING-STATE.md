@@ -207165,3 +207165,28 @@ ORIGIN: no mitigation; gate coverage only.
 Rules out: a menu-specific mid-task DL race on SELECT LEVEL / LEVEL DESCRIPTION at the owner 21:9 recipe. With s7757-s7760 every
 owner-route screen is now in an RDP-output gate (exact in s7753, or H-state-invisible in s7756).
 Verdict: selects H-state (invisible) for both screens; refutes H-race; H-exact only for the one SELECT LEVEL task s1620.
+
+## Session 7762 (2026-11-21) — owner review queue: docs/OWNER-REVIEW-QUEUE.md (20 owner-judgement items, one command + sheets each) and tools/s7762_owner_doc_check.py gate; H-current selected (0 stale names, 0 missing paths in both owner docs)
+
+Triage first: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0; no SOAK-RESULTS lines after the s7750 fold; no owner
+report. So the NEXT.md unit ran: every ladder item is owner-look, so the owner gets one page to clear them in one sitting.
+
+- NEW docs/OWNER-REVIEW-QUEUE.md: 20 rows (rumble, F6 controls, stand-ins, G5i hangar re-entry, G5a Gerrard V, G5b terrain, G5e
+  fog, G5f knife lines, G5h cutscenes, G5d logo, 21:9 FARMAX sliver, L15 21:9, G1d menus, NEARLIFT, 21:9 skyfill/holes, RETINA,
+  QOS_ALL, RENDER_TO_RAM=0, accuracy switches V2P/SP_LATE/M5_B40_VALUE, FPS60/stick feel). Each: what to judge, a command based on
+  `--preset tv|ultrawide` (env beats preset, so `env X=.. ./RogueSquadron64Recomp --preset tv` works), before/after sheet paths,
+  what the answer decides. The L15 row adds ROGUESQ_NO_SAVE_WRITE=1 next to FORCE_UNLOCK so a plain owner launch cannot write
+  the unlock into the real save.
+- NEW tools/s7762_owner_doc_check.py: per owner doc, every repo path named must exist and every ROGUESQ_* name must be READ by
+  code that runs (quoted literal in src/, include/, lib/rt64/src, lib/N64ModernRuntime, ../N64Recomp/RecompiledFuncs,
+  build/factor5_ucode, RecompiledPatches, patches; 1571 names). Reasoned exceptions: OPT_OK (ROGUESQ_SRC_OPT/FUNCS_OPT cmake
+  options, ROGUESQ_NAME format placeholder), PATH_OK (build/settings.txt, build/controls.json: owner-created).
+  Controls, same run: planted ROGUESQ_S7762_NOSUCH_PLANT + docs/owner_sheet_s7762_nosuch.jpg both flagged, FPS60 / OPT-INS
+  path pass -> CONTROL PASS. Red control by hand: a doc copy with a planted stale name + path -> rc 1, both listed.
+- Result: OWNER-REVIEW-QUEUE names=20 paths_missing=0 names_stale=0; OWNER-OPT-INS names=112 paths_missing=0 names_stale=0
+  (before the exceptions the only hits were build/settings.txt and ROGUESQ_NAME, both legitimate) -> H-current, no rename drift.
+  CURRENT-TRUTH (not an owner doc) has only fragment/template paths (docs/owner_sheet_s7, tools/s76NN_) plus
+  scratch/agent/PUBLISH-BLOCKED.md (absent, a historical reference) and ROGUESQ_LOG / S7578_PLANT (UBSan-build plant): no action.
+- Registered in tools/s7651_gate_sweep.py (EXTRA_GATES + ARGS regex requiring CONTROL PASS and 0/0 for both docs): `--only
+  's7762|s7714'` -> GREEN 2/2, sweep controls PASS. Rerun trigger: any owner-doc edit or any env rename.
+Rules out: the owner queue pointing at renamed settings or deleted sheets. Does not judge anything the owner judges.
