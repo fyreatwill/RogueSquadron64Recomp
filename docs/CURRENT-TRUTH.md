@@ -393,7 +393,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 30. **Placeholder census (s7770): rename sweep CLOSED on evidence.** `python3 tools/s7770_placeholder_census.py --controls` (ELF bytes,
     not objdump/generated tree): placeholders=2 called=0 (func_80018ED4 UNREF cache loop, func_80092F10 TAIL); func_8002BB34 was
     libultra send_mesg (14 jal sites), named s7770. stop_gate.sh blocks a NEXT.md naming the rename sweep while called=0
-    (tools/agent/test_rename_census_gate.sh). Open follow-on: classify the 5 jal targets that are not an ELF symbol start (NEXT.md).
+    (tools/agent/test_rename_census_gate.sh). **jal/j-to-interior class CLOSED s7771** (`python3 tools/s7771_jal_target_census.py
+    --gate --controls`, raw ELF words per section, in the gate sweep): 15295 jal words, 14632 start, 188 .text->overlay start
+    (lookup by loaded overlay), 474 from data sites (OUTSIDE/data_gap_/__OSGlobalIntMask). Code-site mid-function rows: 3, all
+    dead or known: 0x800B58B8 playerAwingInitPreamble jal +0x30 into initNpcHealthMotionAndDetail and 0x8005EE64
+    steerOrientationTowardTargetPreamble j steer+4 (3-word stubs after a `jr ra`, 0 jal/j/word/lui-pair refs, entry skips the
+    target's prologue = H-data), 0x80092F8C = s7081 jump-table tail. 0 live H-interior. Gate RED on any new row (mutation ctl).
 29. **FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported).** s7749 L12 ring 60->30-43
     gen/s from t=75 s did not recur in 4/4 L12 arms (s7768 la/lb + soak s7768_fps60_rate_L12 r1/r2: 60 tasks/s, lim=1, send_dl
     ~10.5 ms, 0 slow windows). Two instruments agree: tools/s7768_fps60_rate.py (G3C_LOG+G1B; BUSY ctl 16/16 H-cost) and

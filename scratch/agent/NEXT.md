@@ -1,22 +1,17 @@
-# NEXT (s7771)
-HYPOTHESIS-ID: jal-interior-target-census
+# NEXT (s7772)
+HYPOTHESIS-ID: ovl-aliased-lookup-audit
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
-in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines. The rename sweep is CLOSED (s7770 census called=0; the stop gate blocks
-a NEXT.md naming it).
+in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
 
-Unit (offline, no game run, one bounded idiom-class audit, ITERATION item 3 model): every jal whose target is NOT a function
-start in the ELF (and so not a generated function entry), classified. s7770's objdump pass found 5 of 1787 targets (0x80007064,
-0x800AF6AC, 0x800E9B10, 0x800EA01C, 0x8334B334), but objdump prints the exception block as data, so redo it from raw words:
-1. Extend tools/s7770_placeholder_census.py (or a sibling tools/s7771_jal_target_census.py) to scan every 4-aligned word of
-   each code section (.text + each .ovl.* separately, since overlays share VMA 0x800A5130), and for each jal target report:
-   section of the call site, whether the target is an ELF symbol start, in which section, and the enclosing symbol + offset.
-2. Classify each non-start target, hypotheses: H-data (the call-site word is data decoded as code: past the enclosing
-   function's real end, or no valid neighbours), H-ovl (target is a start in a DIFFERENT overlay than the one mapped when the
-   call site runs: harmless, the call site's own overlay is what counts), H-interior (a real call into the middle of a
-   function: N64Recomp must emit a lookup/stub for it; check the generated tree for what it does - a wrong body would be a
-   live defect), H-split (the ELF merges two functions, like redispatch+send_mesg).
-3. For every H-interior row, find the generated call (grep the caller's funcs_*.c for the target address) and say whether the
-   runtime reaches a correct body. Controls: a planted jal to a mid-body address must classify H-interior; a known clean call
-   (jal __osEnqueueThread) must classify start.
-Outcome: 0 H-interior -> class CLOSED; any H-interior with a wrong generated body -> fix via a fixup script (regen order
-make_elf -> N64Recomp -> fixup_game_funcs -> cmake) and same-run control.
+Unit (offline first, one bounded audit): s7771 found 82 .text jal sites whose target address is a function START in one overlay
+and MID-FUNCTION (or start of a different function) in another (list: `python3 tools/s7771_jal_target_census.py` start_ovl rows;
+e.g. mainGameLoop+0xEC -> 0x800C58A0 = menu start / mission interior; loadDatFile+0x864 -> 0x800AE98C cinematic-only start).
+N64Recomp emits LOOKUP_FUNC for them. Question: does the runtime lookup resolve by the overlay currently loaded at that VMA
+(hardware semantics), or by a first-registered / last-registered table entry?
+Hypotheses: H-loaded (librecomp section_addresses + loaded-section table, correct), H-first (a static vram->func map: one overlay
+wins regardless of what is loaded = wrong body when another overlay is mapped), H-abort (lookup of an address not a start in the
+loaded overlay aborts; matches hardware only if the call never happens with that overlay mapped).
+Discriminator: read lib/N64ModernRuntime librecomp overlays.cpp get_function / LOOKUP_FUNC path (read only; no lib edits without
+export.sh), then one positive control offline if possible (unit test calling the lookup for 0x800C58A0 with menu vs mission
+marked loaded). Each mainGameLoop site: confirm the mode branch guarding it matches the overlay where the target is a start.
+Outcome: H-loaded + guards consistent -> class CLOSED; otherwise fix in librecomp (export.sh + commit).

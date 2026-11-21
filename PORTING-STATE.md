@@ -207404,3 +207404,30 @@ control with send_mesg reverted -> called=1 -> pass). run_tests.sh 9/9 PASS; gat
 Side datum (objdump-based, so incomplete): 1787 distinct jal targets, 5 not an ELF symbol start (0x80007064, 0x800AF6AC,
 0x800E9B10, 0x800EA01C, 0x8334B334 = data decoded as code). Not yet classified; that is the next unit.
 Rules out: "the rename sweep has a real target left" (after send_mesg, 0 CALLED placeholders). Overturns s6268/s6868 for 0x8002BB34.
+
+## Session 7771 (2026-11-21) — jal/j-to-interior class CLOSED: 0 live mid-function calls in 15295 jal words; new raw-ELF census + sweep gate tools/s7771_jal_target_census.py
+Start: CURRENT-TRUTH 49.1 KB (no maintenance), crash_reports FOLDED=27 new=0, no new SOAK-RESULTS lines, no owner answers.
+Unit (s7770 NEXT.md, ITERATION item 3 idiom-class audit, offline): every jal whose target is not a function start.
+New tools/s7771_jal_target_census.py scans every 4-aligned word of each code section (.entry, .text, .ovl.mission/menu/cinematic
+separately, since overlays share VMA 0x800A5130) and resolves targets against syms/rogue_squadron.syms.toml in N64Recomp's order
+(own section, then always-mapped .text, then other overlays). Result: jal=15295: start 14632, start_ovl 188 (all .text call sites
+into an overlay; 82 of those addresses are a start in one overlay and mid-function in another, e.g. mainGameLoop -> 0x800C58A0,
+which is correct: N64Recomp emits a runtime lookup and the loaded overlay decides, as on hardware), nofunc 462 + interior 12 from
+data sites (OUTSIDE any function, data_gap_*, or the 0x4E10-byte __OSGlobalIntMask "function" that is rodata), and exactly ONE
+jal from a real function body to a mid-function target: 0x800B58B8 in playerAwingInitPreamble (ex fake_func_800B58B4) ->
+0x800E9B10 = initNpcHealthMotionAndDetail+0x30. N64Recomp emitted it as a call to data_gap_800E9B10 (funcs_49.c, a faithful
+recompile from 0x800E9B10). Classification H-data: the stub is 3 words (addiu a3,0x7F; jal; nop) right after the previous
+function's `jr ra`, has 0 references (no jal/j, no raw pointer word, no lui+addiu/ori pair, scanned over every section), and the
+target skips initNpcHealth's prologue (uses s1/v0 the caller never sets, epilogue pops a frame never pushed), so it cannot be a
+real call. Same check over j tail jumps (--tail): 2 code-site rows, 0x8005EE64 steerOrientationTowardTargetPreamble j steer+4
+(same 3-word stub shape, 0 refs, port body is a do_break trap if it ever ran) and 0x80092F8C (func_80092F10 = the s7081 jump-table
+tail of resampleVoiceLutSamplesPacked, already handled). The s7770 objdump side-list's 5 targets are all in the table: 0x8334B334
+(data_gap_8009D978, nofunc), 0x800AF6AC/0x800EA01C (cinematic data_gap -> mission interior), 0x800E9B10 (above), 0x80007064 (data).
+Controls same run: planted jal to resampleVoiceLutSamplesPacked+0x20 -> interior, planted jal __osEnqueueThread -> start: PASS.
+Gate: --gate rc 1 on any code-site non-start row outside KNOWN {0x800B58B8, 0x8005EE64, 0x80092F8C}; mutation control (KNOWN minus
+0x800B58B8) -> GATE RED new=1 rc 1; real -> GREEN 3/3 known rc 0. Added to tools/s7651_gate_sweep.py ARGS (--gate --controls,
+regex GATE GREEN ... new=0 + CONTROLS PASS); `--only s7771` GREEN 1/1, controls of the sweep PASS.
+Rules out: a live jal/j into the middle of a recompiled function (H-interior / H-split) anywhere in the image. Class CLOSED.
+Two lines for each dead stub: zero-reference scan + prologue-skip semantics. Single-source: the 82 overlay-aliased .text call
+targets are judged correct from N64Recomp's lookup path (recompilation.cpp resolve_jal NoMatch/Ambiguous -> LOOKUP_FUNC), not
+from a runtime check that the lookup picks the loaded overlay's body; that is the next unit.

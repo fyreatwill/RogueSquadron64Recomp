@@ -64,6 +64,8 @@ ARGS = {
     # one CPU). Replaces the hand-run s7421/s7423 drift check that needed a retained replay tree (last one s7558).
     # s7740: --strict adds byte identity live vs replay (any differing/one-sided source file = RED; planted edit/extra controls).
     # s7741: strict ucode regen: build/factor5_ucode == fresh RSPRecomp + tools/ucode_fixed patches byte-for-byte, 4 planted ctls.
+    # s7771: jal/j-to-interior census over raw ELF words; GATE RED on any new code-site mid-function target (mutation ctl s7771).
+    "s7771_jal_target_census.py": (["--gate", "--controls"], r"GATE GREEN code_site_nonstart=\d+ known=\d+ new=0\nCONTROLS PASS"),
     "s7741_ucode_regen_gate.py": (["--controls"], r"CONTROL PASS\n(.*\n)*VERDICT GREEN: \d+ files, live == regen byte-for-byte"),
     # s7742: fixup_factor5_ucode.py idempotent on main/ucode_b/boot, fresh-regen ucode_b+boot == live, overlays refused; strip+red ctls.
     "s7742_fixup_idem_gate.py": (["--controls"], r"CONTROL PASS\n(.*\n)*VERDICT GREEN: fixup idempotent on 3 CMake files"),
