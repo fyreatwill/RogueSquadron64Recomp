@@ -206638,3 +206638,7 @@ Sweep `--only "s7741|s7719"`: GREEN 2 (s7741 0 s, s7719 169 s).
 CURRENT-TRUTH next-step 12 now names the strict gate in place of the bare verify.
 Rules out: other drifted ucode files (11 SAME before the refresh); a fixup-vs-live hand edit (all 4 lines carry the fixup marker
 and match the fixup source text).
+Discrimination: this selects H-drift and refutes H-zero for the pre-s7741 snapshot (1 of 12 files differed, class = fixup step not
+snapshotted; refutes the hand-edit class: all 4 rows carry the fixup marker). After the refresh H-zero holds (12/12, gate GREEN).
+Next discriminator (NEXT.md): fixup_factor5_ucode.py idempotence on the regenerated tree, H-same (0 diff) vs H-nonidempotent
+(double-inserted blocks), with a pre-fixup planted file as the positive control.
