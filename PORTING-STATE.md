@@ -207675,3 +207675,9 @@ dpc_bridge.cpp:1617), touches no s7779/s7780 code and the sweep counts it as pre
 Verdict: this selects H-census-blind (the 5 RED gates were the censuses not seeing a caller-side gate) and refutes H-default-on (a live
 8 MB mask/latch in default play): the only call site was `if (s_s7779_on)`, and moving the gate into the body changes no armed or unarmed
 behaviour. Next discriminator: NEXT.md fb-arena-escape-class (guest stores into a closed flag-4 arena extent, per pc, with planted control).
+CORRECTION (same session): the s7600 GX RED above was NOT pre-existing. stop_gate --verify (which compares against the iteration's
+start) reported it as new: splitting `s7779_b` onto two lines made its `rd[...]` a subscript site, and the GX census groups sites by
+(file, array name), and `rd` is a declared array in s7096_fwd_cover.cpp. So the (main.cpp, rd) unit went OPEN (the other 4 listed
+units have the same cause). Fixed by putting `s7779_b` back on one line (its s7648 DIAG_FN row still classifies it). s7600 open=0 CLOSED;
+the 5 earlier gates still rc=0. So the first sweep's "no new RED" line was missing because it compares to a different baseline, not
+because the tree was clean.

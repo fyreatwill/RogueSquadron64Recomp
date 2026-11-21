@@ -2206,9 +2206,7 @@ static const bool s_s7779_on = [] { const char* e = std::getenv("ROGUESQ_S7779_A
     rs64_s6843_lo = 0x400000u; rs64_s6843_len = 0x400000u; std::fprintf(stderr, "[s7779] armed host-write vs FB-arena census 400000-800000\n"); return true; }();
 static std::atomic<uint64_t> s_s7779_gst{0}, s_s7779_gst_live{0};
 static uint32_t s7779_w(const volatile uint8_t* rd, uint32_t a) { return *(const volatile uint32_t*)(rd + (a & 0x7FFFFCu)); }
-static uint32_t s7779_b(const volatile uint8_t* rd, uint32_t a) {
-    if (!s_s7779_on) return 0;  /* diag-only reader */
-    return rd[(a & 0x7FFFFFu) ^ 3u]; }
+static uint32_t s7779_b(const volatile uint8_t* rd, uint32_t a) { return rd[(a & 0x7FFFFFu) ^ 3u]; }  /* diag-only: sole caller rs64_s7779_note */
 static void rs64_s7779_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
     if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only (s7780: census gate) */
     const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw; if (!rd) return;
