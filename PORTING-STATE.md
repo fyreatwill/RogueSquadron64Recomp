@@ -207190,3 +207190,6 @@ report. So the NEXT.md unit ran: every ladder item is owner-look, so the owner g
 - Registered in tools/s7651_gate_sweep.py (EXTRA_GATES + ARGS regex requiring CONTROL PASS and 0/0 for both docs): `--only
   's7762|s7714'` -> GREEN 2/2, sweep controls PASS. Rerun trigger: any owner-doc edit or any env rename.
 Rules out: the owner queue pointing at renamed settings or deleted sheets. Does not judge anything the owner judges.
+Verdict: selects H-current, refutes H-stale (0/132 documented names unread by live code, 0 missing sheet paths, with a same-run
+planted control flagged). Next discriminator (NEXT.md s7763): per-row launch echo of effective dd/aspect/FPS60/standins vs the
+row's claim (H-works vs H-broken), positive control a deliberately different DRAW_DISTANCE.
