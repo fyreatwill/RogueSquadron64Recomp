@@ -132,7 +132,8 @@ row("RF", "rs5813_fra", "gated", r"if \(!rs5813_en\(\)\) return;", "s5813")
 row("RF", "spmin tab firstrev nmin nmax", "gated", r"if \(!en\) return", "s6555 traversal log")
 row("RF", "s7134_cam", "keyed", r'getenv\("ROGUESQ_CULL_XFIX"\)',
     "camera key list, k re-stored on every post; consumers gated by s7134_on (CULL_XFIX default off)", "file")
-row("RF", "s6500_wfirst s6500_wlast s6511_wfirst s6511_wlast s6500_wmask s6512_first s6512_last s6499_first_addr "
+# s7739: s6500/s6511/s6512 names dropped - not in RS64_REPLAY, absent from the adopted regen tree
+row("RF", "s6499_first_addr "
     "s6499_first_val s6499_last_addr s6499_last_val", "stash", r'getenv\("ROGUESQ_FORFACE_LOG"\)',
     "table writer notes, read only by the FORFACE_LOG dumps", "file")
 row("RF", "s6496_a0 s6497_first s6497_last", "stash", r'getenv\("ROGUESQ_FORFACE_LOG"\)', "[binin]/[streamdump] inputs", "file")

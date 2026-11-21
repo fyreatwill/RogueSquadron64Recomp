@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7736 (2026-11-20).
+Compact operational handoff, as of Session 7739 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -12,27 +12,18 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **s7738 replay tree is swap-safe (H-swap-safe, H-hidden-dep refuted).** build_replay (-DRECOMP_FUNCS_DIR=scratch/s7736/gate/replay,
-  RecompiledFuncs only) + tools/s7738_link_replay.sh (relinks build/'s objects against any lib, never writes build/): links rc 0
-  (controls: live lib rc 0, lib minus funcs_3 rc 1). Symbol diff: live-only = 17 data_gap_* + 5 rs5904/5907 diag refs, replay-only =
-  static_5_800CC4E4 (s6871, unreachable). L4 owner recipe 240 s each: both alive, 0 crash, 0 stalls, max_gap 146/147 ms; every log
-  tag difference is inside live run spread except [desc-st] (live-only always-on s6517 print). Adopting the replay as live is open.
-- **s7737 DIAG consumer census (H-none after review; now in the s7719 gate).** tools/s7737_diag_consumers.py takes every reverse
-  DIAG/ORDER-DIAG/REGEN-FUNC-DIAG row (live-only lines no fixup reproduces), pulls the env names those lines read (direct getenv +
-  brace-matched bodies of the helpers they call, src/ and live preludes) and their `[tag]` log prefixes, and greps live consumers
-  (tools/ scripts, pending soak recipes, OWNER-OPT-INS; census/audit/gate/fixup/apply files excluded). Current tree: 73 rows, 0
-  CONSUMED, 2 ACCEPTED (s6826 TICK_TRACE hooks at 6 menu PCs in funcs_32: stale in live, g3_float_quanta_audit.scan marks them
-  unreachable on BOTH trees, the fixup only adds; tools/s7737_diag_consumer_accept.tsv), 71 ORPHAN. Controls: synthetic
-  LOG_G1D_TASK -> CONSUMED / nobody -> ORPHAN, and the real one: the pre-fix s7735 replay -> beginFrameDLChunk [g1d-alloc] CONSUMED,
-  gate VERDICT H-drift (diag-consumers 1). s7736 replay: gate H-mirrored. Also seen: live funcs_10 transformWorldPosToGridSpace has
-  the s6314 EDGE_FADE_TEST2 block TWICE (opt-in scale applied twice; the replay has it once = correct; accepted ORDER-BEHAVIOUR).
-- **s7736 live-only reader split: 1 needed probe restored to the regen, the rest dead/accepted.** Of the 18 live-only getenv
-  occurrences (live vs replay), ROGUESQ_LOG_G1D_TASK's s6201 [g1d-alloc] block (beginFrameDLChunk, funcs_3) was silently lost by a
-  regen: its inline fixer call ran before the S5798 store form, and its 0x8000A934 anchor broke once s6285/s6287 text landed. Fixed:
-  apply_s6201_alloc anchors on 0x8000A938 + keeps s6336 order, and tools/apply_s7736_g1d_alloc.py runs it from RS64_REPLAY after
-  s6287. New replay: beginFrameDLChunk byte-identical to live, reverse DIAG 67->66, gate H-mirrored, controls PASS. The other 13 are
-  accepted dead text: funcs_50.c (5, orphan prelude-only chunk from a 51-chunk regen, 0 RECOMP_FUNC), funcs_9 CLAMPP + FORFACE_LOG x4
-  (closed s6496-s6526 chain; the 4 DRAW_DISTANCE reads sit inside FORFACE_LOG-gated fprintf, not owner behaviour), funcs_10 EDGE_FADE_TEST2.
+- **s7739 regen replay ADOPTED as the live RecompiledFuncs tree (H-clean).** Fresh regen (tools/s7719_regen_gate.py --keep
+  scratch/s7739/gate: H-mirrored) is byte-identical to the s7736 replay (0 diff lines), copied over ../N64Recomp/RecompiledFuncs
+  (funcs_50.c removed), build/ rebuilt (17 data_gap_* globals gone, static_5_800CC4E4 present). Gone with it: stale s6826 menu hooks,
+  the double s6314 EDGE_FADE_TEST2 block, a double s6496 stash, the always-on [desc-st] print (3 -> 0 in L4, = swap took effect).
+  L4 + L1 owner recipe (STANDINS=1 dd2 FPS60 16:9) 240 s: alive, 0 crash, vi_stalls30s=0, max_gap 148/147 ms, level_ok=1.
+  s7423 live-vs-replay: class counts {} both directions. 7 gates whose controls/rows named old-tree drift re-anchored (s7416 latch
+  control -> tools/fixtures/s7416_data_gap_80024A0C.c; s7423 known-lines control n/a when funcs_9 identical; s7549/s7611/s7612/s7613
+  rows; stale funcs_50.c.o deleted). Redo with tools/s7739_adopt_replay.sh <work> (REF=<old replay>). Old tree:
+  scratch/s7739/live_backup (local, gitignored) + build binary scratch/s7739/live_binary_backup.
+- **s7738 replay tree swap-safe** (link + symbol + L4 hold; tools/s7738_link_replay.sh) -> adopted s7739.
+- **s7737 DIAG consumer census** (tools/s7737_diag_consumers.py, in the s7719 gate: a live-only probe that a live tool reads)
+  and **s7736** s6201 [g1d-alloc] restored to the regen (apply_s7736_g1d_alloc). Both moot for drift since s7739 (live == replay).
 - **s7735 regen replay reproduces the s7734 readings (H-replays selected, H-drift refuted).** tools/s7719_regen_gate.py (in the
   gate sweep) now also runs `s7734_compiled_reader_census.py --tree <fresh replay>`: replay 378 readings, 0 unreviewed HIDDEN/NOREF,
   B40 new form present (2 sites); planted control (replay funcs_23 B40 put back to the pre-s7734 text) -> HIDDEN rc 1 PASS. The

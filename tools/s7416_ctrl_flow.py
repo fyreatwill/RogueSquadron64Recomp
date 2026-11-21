@@ -420,6 +420,9 @@ def main():
     # pre-s7506 slot-first emission it must give 2 hazards; a latch of the wrong register must be BAD.
     f7 = os.path.join(FUNCS, 'funcs_7.c'); src7 = open(f7, errors='replace').read()
     m7 = re.search(r'RECOMP_FUNC void data_gap_80024A0C\(.*?\n;?}', src7, re.S)
+    if not m7 or 'jr_target_80024A54' not in m7.group(0):  # s7739: the adopted sized regen sizes data_gap_80024A0C to 4 bytes (s6871), so its jr
+        # sites are no longer decoded; the control runs on the frozen pre-s7739 emission instead
+        m7 = re.search(r'RECOMP_FUNC void data_gap_80024A0C\(.*?\n;?}', open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures', 's7416_data_gap_80024A0C.c')).read(), re.S)
     lctl = False
     if m7 and 'jr_target_80024A54' in m7.group(0):
         fn = m7.group(0)

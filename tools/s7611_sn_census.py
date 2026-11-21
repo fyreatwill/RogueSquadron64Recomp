@@ -148,7 +148,10 @@ row("RF", "ps ds lo", "event", r"if \(st == 2 && ps != 2\) \{", "s6907 hangar ai
 row("RF", "avf_prev_byte", "edge", r"if \(avf_gate_en", "advanceVideoFrame swap-gate print-on-change (ROGUESQ_LOG_VI_CALLERS)")
 row("RF", "vi_call_prev_width", "edge", r"if \(vi_call_en && \(vi_call_n < 8 \|\| vi_call_width != vi_call_prev_width\)\)",
     "VI caller print-on-change (vi_call_en = ROGUESQ_LOG_VI_CALLERS)", "file")
-row("RF", "s6501_post_tid", "gated", r"ROGUESQ_FORFACE_LOG", "forface store census")
+# s7739: s6501_post_tid row dropped - s6501 is not in RS64_REPLAY, so the adopted regen tree has no such static
+row("RF", "s6497_x0 s6497_x1 s6497_z0 s6497_z1", "stash", r'getenv\("ROGUESQ_FORFACE_LOG"\)',
+    "s7739: s6497 rasterizer bounds (adopted regen tree), read only by the FORFACE_LOG [streamdump] fprintf", "file")
+row("RF", "s6499_post_tbl", "gated", r'if \(getenv\("ROGUESQ_FORFACE_LOG"\)\) \{\s*s6499_post_seq', "s7739: s6499 [raspost] table, written inside if (getenv(FORFACE_LOG))", "file")
 row("RF", "s7104_b s7104_r3 s7104_r4", "gated", r"s7104_cur", "s7104 cell visit log: s7104_cur = -1 unless ROGUESQ_S7104_CELL", "file")
 row("RF", "s7105_lod", "gated", r'getenv\("ROGUESQ_S7105_EMIT"\)', "s7105 emit census")
 

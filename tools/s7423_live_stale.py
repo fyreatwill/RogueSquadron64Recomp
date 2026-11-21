@@ -65,6 +65,10 @@ def control(live, regen, rows, rev=False):
     k9 = [r for r in rows if r['file'] == 'funcs_9.c' and r['cls'] in ('DIAG', 'BEHAVIOUR')]
     s = ' '.join(' '.join(r['stmts'] + r['decided']) for r in k9)
     c1 = ('for (int i = 0; i < 24; i++) {' in s) if rev else ('rs64_g3e_trace(8' in s and 's6497_x0' in s)
+    # s7739: once the regen replay is adopted as live, funcs_9 is byte-identical on both sides and the known drift lines no
+    # longer exist; (1) is then vacuous ('n/a') and the planted store/diag controls below carry the same-run positive.
+    if not c1 and not k9 and open(os.path.join(live, 'funcs_9.c'), 'rb').read() == open(os.path.join(regen, 'funcs_9.c'), 'rb').read():
+        c1 = 'n/a'
     f = 'funcs_20.c'; L = split(os.path.join(live, f)); R = split(os.path.join(regen, f))
     tgt = next(n for n in R if n != '<file>' and L.get(n) == R[n] and len(R[n]) > 5)
     tmp = tempfile.mkdtemp(prefix='s7423ctl'); res = []
@@ -76,7 +80,7 @@ def control(live, regen, rows, rev=False):
         rr = [r for r in cmpf(L, split(os.path.join(tmp, f))) if r['func'] == tgt]
         res.append(rr[0]['cls'] if rr else 'NONE')
     shutil.rmtree(tmp)
-    ok = c1 and res == ['BEHAVIOUR', 'DIAG']
+    ok = bool(c1) and res == ['BEHAVIOUR', 'DIAG']
     print('CONTROL funcs_9 known lines listed=%s (%s) ; plant-store -> %s ; plant-diag -> %s : %s' %
           (c1, ','.join(r['cls'] for r in k9), res[0], res[1], 'PASS' if ok else 'FAIL'))
     return ok

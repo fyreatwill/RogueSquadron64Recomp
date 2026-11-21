@@ -261,7 +261,8 @@ RULES = [
      'assigned from a0 at intersectSegmentWithObjectSphere entry, read by rs5835_probe called right after in the same call, and only under ROGUESQ_LOG_HITS/TELE_BOLT/G1E_TRIM=0 (default off)'),
     ('og6112', 's6112', 'H-value', 'tools/apply_s6031_far.py', r'getenv\("ROGUESQ_VPW_SCALE"\); kv = \(e && \*e\) \? atof\(e\) : 0\.0;',
      'holds the camera viewport w/h ints (scalars); stores go to live ctx->r17, the cam key sp6112 is compare-only; whole block gated by ROGUESQ_VPW_SCALE (kv 0 = off)'),
-    ('s6496_a0', 's6496', 'H-refresh', 'tools/apply_s6496_bin_inputs.py', r's6496_a0 = \(uint32_t\)ctx->r4; for \(int i = 0; i < 15; i\+\+\) \{ uint32_t w = \(uint32_t\)MEM_W\(0, \(int64_t\)\(int32_t\)\(s6496_a0',
+    ('s6496_a0', 's6497', 'H-refresh', 'tools/apply_s6496_bin_inputs.py',  # s7739: adopted replay keeps one copy, in the s6497 block
+     r's6496_a0 = \(uint32_t\)ctx->r4; for \(int i = 0; i < 15; i\+\+\) \{ uint32_t w = \(uint32_t\)MEM_W\(0, \(int64_t\)\(int32_t\)\(s6496_a0',
      're-assigned from live a0 in the same statement before every deref; later uses are fprintf only'),
     ('org6418', 's6418', 'H-value', 'tools/apply_s6418_farclip.py', r'org6418 = \(uint32_t\)MEM_W\(0, \(int64_t\)\(int32_t\)0x8009DEB4\)',
      'float bits of the far-cutoff constant read from the static image 0x8009DEB4 (< heap base) and written back to the same constant address'),

@@ -206544,3 +206544,42 @@ are the deterministic evidence.
 Discrimination: selects H-swap-safe, refutes H-hidden-dep (no link dependency, no owner-visible change in one L4 hold).
 Rules out: a live-only symbol that the host or PatchesLib needs; the replay tree breaking the L4 owner route.
 Next: adopting the replay as the live tree is now a bounded change (regen per the hard order) whose proof is the gate sweep + holds.
+
+## Session 7739 (2026-11-20) — regen replay adopted as the live RecompiledFuncs tree (H-clean selected, H-new-drift refuted)
+
+HYPOTHESIS-ID: owner-looks-or-new-report. crash_reports --since 2026-11-13: FOLDED=27 new=0; no new SOAK-RESULTS lines; soak queue
+empty; CURRENT-TRUTH 58.7 KB at start (no maintenance; 57.4 KB at end after folding s7736-s7738 bullets).
+Question (s7738 NEXT): adopt the regen replay as the live tree. H-clean = a fresh regen in the hard order reproduces the s7736 replay
+byte-for-byte and the gate sweep stays GREEN once it is live; H-new-drift = the fresh regen differs from the replay.
+What ran: live ../N64Recomp/RecompiledFuncs backed up to scratch/s7739/live_backup (60 MB, local) and build/RogueSquadron64Recomp to
+scratch/s7739/live_binary_backup. `tools/s7719_regen_gate.py --keep scratch/s7739/gate` (regen_front 53 files -> regen_replay tree
+ok): VERDICT H-mirrored, controls PASS. `diff -r scratch/s7736/gate/replay scratch/s7739/gate/replay` = 0 lines -> H-clean.
+Swap: funcs_50.c removed, every replay file copied in; diff -rq live vs replay = only the non-source dirs (build/, scratch/,
+PORTING-STATE.md, left as they were). `cmake --build build -j2` rc 0, 0 errors. Binary: data_gap_* globals 127 -> 110 (the 17 of
+s6870), static_5_800CC4E4 now defined (s6871), as s7738 predicted.
+Runtime (g1e_owner_quiet_arms, STANDINS=1 dd2 FPS60 16:9 fullscreen, godmode, NO_SAVE_WRITE, host idle 7.9 h, 240 s each):
+L4 alive 0 crash vi_stalls30s=0 max_gap 148 ms vihold 17300 level_ok=1, standins 155 objects; L1 alive 0 crash vi_stalls30s=0
+max_gap 147 ms level_ok=1, standins 47 objects. Swap control: [desc-st] lines 0 in the new L4 log vs 3 in the s7738 live log and 0
+in the s7738 replay log (the always-on s6517 print exists only in the old tree), so the binary that ran is the replay build.
+Gate sweep, first pass: 206 GREEN, 7 RED. All 7 were gates whose control or registry rows were tied to the old tree's drift. Fixes:
+- s7424_stale_objects: orphan build/.../funcs_50.c.o (left after the source vanished) deleted -> H-fresh.
+- s7416_ctrl_flow S4 latch control: data_gap_80024A0C is now sized 4 bytes (s6871 real sizes), so its two s7506-latched jr sites
+  (0x80024A54/64) are no longer decoded and no jr_target latch exists anywhere in the tree. N64Recomp binary checked current
+  (build/N64Recomp and cgenerator.cpp both Nov 16 21:57, b684176 s7506) - not a lost generator patch. Control now falls back to
+  tools/fixtures/s7416_data_gap_80024A0C.c (the head of the old emission, 3.9 KB, both latched sites): live (0,0) reverted 2 hazards
+  wrong-reg BAD -> PASS.
+- s7423_live_stale control (1): the known funcs_9 lines were the drift; with funcs_9 byte-identical it is 'n/a' and the planted
+  store/diag controls carry the same-run positive. Old tree still gives listed=True (not blinded). Live vs replay: class counts {}
+  in both directions. This also cleared s7719's CONTROL-FAIL.
+- s7549_gi_census: old tree carried the s6496 stash twice in binPolygonIntoTerrainGrid (once inside the s6497 block, once tagged
+  s6496, so s6496_n counted double); replay keeps one, under s6497 -> rule tag s6496 -> s6497.
+- s7611/s7612/s7613: rows for statics of un-replayed s6500/s6501/s6505/s6511/s6512 probes dropped (absent from the tree); s7611
+  gains rows for the replay's s6497_x0..z1 stash and s6499_post_tbl (both read only by FORFACE_LOG fprintf: [streamdump]/[raspost]).
+Second sweep: 217 gates {GREEN 213, REPORT 3, NEEDS-ARGS 1}, rc 0. tools/agent/run_tests.sh green.
+New tool: tools/s7739_adopt_replay.sh <work> (backup, gate, optional REF byte-identity, swap, verify, build); not re-run this session
+(it would redo the same regen; the steps above are its manual form).
+ORIGIN: not a mitigation; the live tree's hand-drift (stale s6826 hooks, double s6314 EDGE_FADE_TEST2, double s6496, orphan funcs_50,
+17 data_gap funcs, unconditional s6517 print) came from apply scripts run on the live tree but never added to RS64_REPLAY.
+Discrimination: selects H-clean (0-line replay diff, GREEN sweep after re-anchoring, both holds clean) and refutes H-new-drift.
+Rules out: a live-only line the owner path needs (the old tree's extra lines were all DIAG/accepted); a lost N64Recomp patch.
+Note: ../N64Recomp is its own git repo whose RecompiledFuncs is tracked there (HEAD from s5484, long uncommitted); not committed.

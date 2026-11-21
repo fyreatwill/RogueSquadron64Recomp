@@ -72,7 +72,7 @@ row("events.cpp", "rs64_vi_feat_rdram", "base", r"rs64_vi_feat_rdram = rdram;", 
 row("RF", "rs5901_rdram", "base", r"rs5901_rdram = rdram;", "base")
 row("RF", "s4279_rd", "base", r"s4279_rd = rdram;", "base")
 row("RF", "s5781_ram", "base", r"s5781_ram = rdram;", "base")
-row("RF", "s6505_rdram", "base", r"s6505_rdram = rdram;", "base")
+# s7739: s6505_rdram row dropped - s6505 is not in RS64_REPLAY, absent from the adopted regen tree
 # ---- host-owned
 row("main.cpp", "g_s4457_tab", "host", r"g_s4457_tab = \(S4457W\*\)std::calloc\(", "calloc table")
 row("main.cpp", "g_s5229_pc g_s5229_val g_s5229_w", "host", r"g_s5229_pc = \(uint32_t\*\)std::calloc\(", "calloc tables")
