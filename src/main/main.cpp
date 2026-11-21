@@ -13813,6 +13813,9 @@ static SDL_Window* g_rs64_window = nullptr;
 static std::atomic<bool> g_rs64_fs_toggle{false};
 static int rs64_g1f_win_w = 640, rs64_g1f_win_h = 480;
 static bool rs64_g1f_fullscreen = false;
+// s7767: ROGUESQ_FULLSCREEN=2 opens in SDL exclusive fullscreen (SDL_WINDOW_FULLSCREEN: no macOS Space, window above the
+// shield) instead of desktop/borderless (=1), to test whether the compositor leg of present->photon latency drops.
+static bool rs64_g1f_fs_exclusive = false;
 #ifdef __APPLE__
 extern "C" double rs64_display_top_inset_frac(void);
 extern "C" double rs64_display_top_inset_frac_at(int x, int w, int h);
@@ -14116,7 +14119,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
         rs64_win_x, rs64_win_y,
         rs64_g1f_win_w, rs64_g1f_win_h,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN | (rs64_g1f_optin ? SDL_WINDOW_ALLOW_HIGHDPI : 0) |
-            (rs64_g1f_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)
+            (rs64_g1f_fullscreen ? (rs64_g1f_fs_exclusive ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_FULLSCREEN_DESKTOP) : 0)
     );
     if (!sdl_window) {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -14124,7 +14127,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     }
     g_rs64_window = sdl_window;
     { int px = 0, py = 0; SDL_GetWindowPosition(sdl_window, &px, &py);
-      fprintf(stderr, "[g1f] window %dx%d fullscreen=%d at %d,%d\n", rs64_g1f_win_w, rs64_g1f_win_h, (int)rs64_g1f_fullscreen, px, py); }
+      fprintf(stderr, "[g1f] window %dx%d fullscreen=%d at %d,%d\n", rs64_g1f_win_w, rs64_g1f_win_h, (int)rs64_g1f_fullscreen + (int)rs64_g1f_fs_exclusive, px, py); }
 #if defined(_WIN32)
     SDL_SysWMinfo wm{};
     SDL_VERSION(&wm.version);
@@ -14519,6 +14522,7 @@ static void rs64_g1c_apply_dd_policy() {
 static void rs64_g1d_apply_aspect_policy() {
     const char* fs = std::getenv("ROGUESQ_FULLSCREEN");
     rs64_g1f_fullscreen = fs && std::atoi(fs) != 0;
+    rs64_g1f_fs_exclusive = fs && std::atoi(fs) == 2;
     const char* as = std::getenv("ROGUESQ_ASPECT");
     rs64_g1f_optin = (as && *as) || rs64_g1f_fullscreen;  // s7730: "" = unset
     if (!rs64_g1f_optin) return;

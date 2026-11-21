@@ -679,7 +679,9 @@ public:
             static uint64_t n = 0;
             if (on && app) {
                 const uint8_t* rd = app->core.RDRAM; float c0 = 0.0f, c2 = 0.0f;
-                if (rd) { memcpy(&c0, rd + 0x138D20 + 0x2C, 4); memcpy(&c2, rd + 0x138D20 + 0x2C + 8, 4); }
+                // RDRAM is non-null whenever app is (set at init; the dump path below derefs it unconditionally). No
+                // null test here: s7465 census read one as "RDRAM may be null" and flagged the dump path's rdram[] at :823.
+                memcpy(&c0, rd + 0x138D20 + 0x2C, 4); memcpy(&c2, rd + 0x138D20 + 0x2C + 8, 4);
                 fprintf(stderr, "[inlat-dl] m=%llu n=%llu dl=%08X c0=%.9g c2=%.9g\n", (unsigned long long)mach_absolute_time(),
                         (unsigned long long)n, (unsigned)task->t.data_ptr, (double)c0, (double)c2);
             }

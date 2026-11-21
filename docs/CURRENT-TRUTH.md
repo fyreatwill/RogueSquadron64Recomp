@@ -33,6 +33,9 @@ only the F6 panel's interactive use remains the owner's.
 `python3 tools/s7766_inlat.py <log> <ring> --ctl`): FPS60 58.3 ms (poll->submit 16.6 + submit->queue 13.6 + queue->photon 28.0),
 retail 75-86 ms, FPS60+VI_LOCK=1 53.7 ms; the stick step always shows in the very next gfx task (0 port-added frames, two paths
 agree, fake-step ctl 0-1/19). DRAWABLES=2 is not a latency lever (wait moves upstream, p90 75 ms). Largest port-only leg = present->photon.
+**s7767: the window mode does not change it.** FPS60+VI_LOCK=1, same run: borderless fullscreen 53.8 ms (queue->photon 23.1), windowed
+53.3 (23.1), SDL exclusive fullscreen (new `ROGUESQ_FULLSCREEN=2`) 53.8 (23.0). H-compositor refuted: the ~23 ms leg is vsync phase +
+swap, not a CoreAnimation composite pass. This also replicates s7766's VI_LOCK=1 53.7 ms (second run, so two sources).
 
 - **s7702-s7743 regen / census / env-reader engineering: ALL CLOSED, 0 open defects** (every bullet verbatim in PROJECT-OVERVIEW
   "(s7747 maintenance)"). Standing facts from it: the live RecompiledFuncs tree IS the s7739 regen replay, and
@@ -385,8 +388,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     same shape as the s7757 first-entry 336 px). GREEN 6/6, CAP=2048 ctl 21288 px.
 
 28. **Input latency (s7766): measured, H-1frame.** Tool tools/s7766_inlat.py (needs ROGUESQ_S7766_INLAT=1, ROGUESQ_G3C_LOG=1,
-    ROGUESQ_PRESENT_RING; heading detector + --ctl fake steps). Open lever, optional: the queue->photon compositor leg (26-28 ms) in
-    true fullscreen / direct scan-out. Rerun after any present-path or input-path change.
+    ROGUESQ_PRESENT_RING; heading detector + --ctl fake steps). s7767: borderless, windowed and exclusive fullscreen all give
+    queue->photon 23 ms at VI_LOCK=1, so the compositor lever is closed. Rerun after any present-path or input-path change.
 
 ## Evidence index
 

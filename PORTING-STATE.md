@@ -207306,3 +207306,33 @@ FPS60 alone saves the owner 17-28 ms per input against 30 Hz retail.
 ORIGIN: no mitigation added; two read-only, default-off log rows and an offline analyser.
 Next: owner triage stays first. Possible unit: whether the macOS compositor leg (queue->photon) can go to direct scan-out in true
 fullscreen (CAMetalLayer opaque, no overlay); compare ROGUESQ_FULLSCREEN modes with the same tool.
+
+## Session 7767 (2026-11-21) — fixed the s7465 null-deref census RED from s7766; same-run window-mode arms: queue->photon 23 ms in borderless, windowed and exclusive fullscreen, so H-compositor is refuted; new ROGUESQ_FULLSCREEN=2 (SDL exclusive)
+
+Contract fix first. stop_gate's sweep found s7465_nullderef_census RED: SURVIVOR B src/main/rt64_render_context.cpp:823 (rdram[] in
+the ROGUESQ_DUMP_UCODE path). The cause was s7766's `[inlat-dl]` block, which tested `if (rd)` on app->core.RDRAM. That told the analyzer
+RDRAM can be null, so it flagged the existing unconditional dump-path deref further down. RDRAM is set at init and dereferenced
+unconditionally throughout send_dl, so I removed the redundant test (a comment says why) instead of allowlisting the site.
+Re-run `s7465_nullderef_census.py --controls`: control PASS (lines 3,4,5). The first pass showed 2 "survivors" at main.cpp:14733/14875.
+Those were the reviewed INTENTIONAL crash-test rows: main.cpp was edited mid-analysis (+4 lines), so the reported lines no longer pointed
+at the anchored text. On the stable tree: findings 10, survivors=0.
+s7726_zombie_census NEEDS-ARGS is allowed by the sweep (not a RED).
+
+Work unit (NEXT s7767, G1e latency follow-up). Triage first: crash_reports new=0; no owner answer; no new SOAK-RESULTS since the s7750 fold.
+Hypotheses for the 23-28 ms present-queue -> photon leg: H-compositor (CoreAnimation composites the borderless-fullscreen window, +1
+frame; another window mode would drop it) vs H-vsync-phase (the wait is the vsync edge plus swap, the same in any mode).
+New knob: ROGUESQ_FULLSCREEN=2 opens with SDL_WINDOW_FULLSCREEN (exclusive: no macOS Space) instead of FULLSCREEN_DESKTOP (=1); the
+[g1f] window line prints 2. It took effect: the window is at 0,0 versus 0,33 for borderless (under the notch, own mode).
+Run: tools/g1e_owner_quiet_arms.zsh, L1 dd4 16:9 FPS60, VI_LOCK=1, G3C_LOG, S7766_INLAT, HOLD=170. Arms fs / win (FULLSCREEN=0) / ex
+(FULLSCREEN=2), host idle 18 h, AC. All 3 alive, 0 crash, vi_stalls30s=0, max present gap 148-161 ms.
+(The first launch void-failed because the tool does not mkdir $R; reran after mkdir.)
+  arm   POLL->PHOTON p50 (p10-p90)  poll->submit  submit->queue  queue->photon  tasks-until-response   ctl false (EXACT)
+  fs    53.8 (52.5-54.4)            16.6          14.1           23.1           1 (17/18)              0/18
+  win   53.3 (52.3-54.9)            16.6          13.6           23.1           1 (18/19)              0/19
+  ex    53.8 (52.2-55.7)            16.7          14.4           23.0           1 (18/19)              1/19
+Two paths (VI-state and task-tag) agree in every arm. The detector control passes in every arm (real 18-19/19 vs fake 0-1).
+Verdict: H-compositor refuted. The leg is identical (+-0.1 ms) in all three window modes, so no composite pass is there to remove; it is
+vsync phase + swap (H-vsync-phase). fs replicates s7766's FPS60+VI_LOCK=1 53.7 ms (now 53.8), which makes that number two-source.
+The input-latency thread is closed for the agent: the game side is 1 frame, and the present leg does not depend on the window mode. The
+owner's opt-in VI_LOCK=1 already takes the measured -5 ms.
+ORIGIN: no mitigation added. The rt64_render_context change removes a redundant null test, and FULLSCREEN=2 is an opt-in window flag.
