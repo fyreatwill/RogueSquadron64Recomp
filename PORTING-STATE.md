@@ -206929,3 +206929,6 @@ Results (tasks f0 s4054, f0 s4053 = FARMAX=0 arm; d s4056 = default arm):
   at this L1 21:9 dd8 pose (scratch/s7752/img_f0_4054_tg0.png vs _tg1.png). So the s6896 clamp's need at dd>1 is now shown by
   an independent RSP fed the real task, not only by our runtime.
 ORIGIN: no mitigation added; instruments only. Snaps/renders stay in scratch/s7751, scratch/s7752 (gitignored).
+Verdict: this refutes H-snapshot, selects H-fixup (s6896 TriGen clamp) for the port-only tris and the reordered block, and
+closes the residual as sub-visible precision (H-rspemu left undecided by design: no third RSP, no visible effect). Next
+discriminator/rung: the RDP-output regression gate in NEXT.md (HYPOTHESIS-ID rdp-output-regression-gate).
