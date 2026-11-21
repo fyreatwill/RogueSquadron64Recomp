@@ -207672,3 +207672,6 @@ body, not only at the call site, or the class censuses read them as default-on.
 Full sweep (same tree, after build): 227 gates {GREEN 221, REPORT 3, RED 1, NEEDS-ARGS 1, NEEDS-INPUT 1}; no "new RED vs allowed" line.
 The one RED, s7600_gx_census (open=5: main.cpp:11604, rs64_standins.cpp:687, rt64_render_context.cpp:1419, upstream_compat.cpp:553,
 dpc_bridge.cpp:1617), touches no s7779/s7780 code and the sweep counts it as pre-existing, not new. It is the open GX item for a later census session.
+Verdict: this selects H-census-blind (the 5 RED gates were the censuses not seeing a caller-side gate) and refutes H-default-on (a live
+8 MB mask/latch in default play): the only call site was `if (s_s7779_on)`, and moving the gate into the body changes no armed or unarmed
+behaviour. Next discriminator: NEXT.md fb-arena-escape-class (guest stores into a closed flag-4 arena extent, per pc, with planted control).
