@@ -46,6 +46,7 @@ HAND = [  # (file suffix, function or '?', needle in line, class, reason)
     ("src/main/upstream_compat.cpp", "rs64_fill_add_run", "hi + 4u", "H", "run bounds are KSEG0 guest addresses < 0xA0000000 (+4 cannot wrap)"),
     ("src/main/upstream_compat.cpp", "?", "k.h + 0x10u", "H", "g5a_walk caps h < 0x81000000 and sz <= 0x1000000: sum < 0x82000010"),
     ("src/main/upstream_compat.cpp", "?", "k->h + 0x10u", "H", "g5a_walk caps h < 0x81000000 and sz <= 0x1000000: sum < 0x82000010"),
+    ("src/main/upstream_compat.cpp", "s7776_load", "a + (uint32_t)w", "H", "s7776 load-watch overlap test, log-only; a is a marked KSEG0 address < 0x81800000 (bitmap range), w <= 8: no wrap"),
     ("src/main/upstream_compat.cpp", "floorWriterHit", "+ 4u", "H", "ROGUESQ_FLOOR_DEPTH_DIR probe; t constant target, other side uint64_t(p) + len"),
     ("overlays.cpp", "?", "entry.size + entry.rom_addr", "H", "generated section table (host constants)"),
     ("overlays.cpp", "?", "rom + size", "H", "PI DMA size/rom offset bounded by the s5061 64-bit guard (pi.cpp) before load_overlays_by_start"),

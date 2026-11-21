@@ -207527,3 +207527,36 @@ Cause, all in the s7774 diagnostic (lib/N64ModernRuntime/librecomp/src/overlays.
 Each gate's --controls passed in the same run (lockset selftest, BS 4/4, OV 6/6). Build (cmake --build build) clean.
 Semantics of the s7774 scan are unchanged (s7_ramw is the identical expression); not re-run in game this session.
 submodule-patches/export.sh refreshed N64ModernRuntime.patch. Nothing added to gate_sweep_allowed_red.txt.
+
+## Session 7776 (2026-11-21) — dangling NPC-slot table CLOSED as H-unused: 0 guest reads of *0x80130BB0 while it dangles (menu phase t=15-75 s), frame-counter watch ctl live in the same window; new ROGUESQ_S7776_TBLWATCH + tools/s7776_tblwatch_score.py
+Pre-checks: crash_reports --since 2026-11-13 FOLDED=20 new=0; no new SOAK-RESULTS lines; CURRENT-TRUTH 51919 B (no maintenance).
+Unit = NEXT.md s7776 (H-unused / H-own-table / H-latent for the s7774 side finding: 1578 non-RAM slot entries for ~60 s).
+Boring-first: no codegen needed. The s7484 load watch already wraps every generated load in RS64_S7484_LD (bitmap
+g_rs64_s7475_bm). All 59 generated `lw ..., 0xBB0(...)` sites (funcs_8.c/funcs_9.c) are wrapped (0 unwrapped).
+Instrument (src/main/upstream_compat.cpp, exclusive mode ahead of s7545 in rs64_s7484_load): ROGUESQ_S7776_TBLWATCH=1 marks
+the word 0x80130BB0 and the frame counter 0x8011A890 (watch positive control). Each table-pointer read is counted per pc/fn as
+clean or dangling; dangling means the table, rescanned at most every 20 ms on a read, holds a non-zero obj that is not a
+4-aligned KSEG0 pointer below 16 MB. Every pointer change is logged, with a 5 s sum line and a 30 s row dump. Note: the sum
+line's live/bad are from the last read-time rescan, so they are stale while no reads happen.
+Run (one game, 300 s, `zsh tools/s7774_slot_run.zsh s7776a ROGUESQ_S7776_TBLWATCH=1`, owner save read-only, route_long):
+alive=1 crash=0, save-unchanged, 0 "Failed to find function".
+Timeline: initNpcSlotList t=6.3 -> tbl 0x80202120 (menu, 653 live). After the idx3 post, s7774 ticks show live=1578 bad=1578
+from t=15 to 75 (pointer unchanged, so its block was freed and reused). [s7776] hits stayed at 119015 for the whole window
+while ctl grew 4524->~11000. Then idx4 cinematic, initNpcSlotList t=77.9 -> 0x801FB4F0 (72 live), idx2 mission, t=83.8 ->
+0x80214D50; 14.8M clean reads after that; dangling_hits=0 for the whole run. 43 of the 59 sites fired: slotDispatcherIter
+2.1M, revalidateNpcSlotIterator 2.4M, getNpcContextByIndex 2.5M, destroyNpcSlotByIndex 12.6k, allocate/spawn/destroy family.
+Scorer: `python3 tools/s7776_tblwatch_score.py <log>`. It joins s7774 bad windows with s7776 sums, and a window closes on a
+clean tick or a tbl-change. Result: window t=15.0..75.0 bad_ticks=17 reads=0 ctl_reads=8131 -> VERDICT H-unused rc 0.
+--selftest unused/latent/dead-watch = 0/1/3 PASS.
+Verdict: selects H-unused. Refutes H-own-table: the pointer did not change during the window, and the re-init happens after it.
+Refutes H-latent on this route: 0 dispatch/destroy/any reads. Two lines in this run: read counter 0 with a live watch ctl,
+and the read-time rescan dangling_hits=0. It is single-run on one route.
+Retail-shaped: the game never clears the pointer and never uses it before re-init, so no guard is needed.
+ORIGIN: the dangling table is the game's own NPC heap: the menu frees its slot block and later initNpcSlotList calls
+overwrite the pointer. This session adds no mitigation, only a measurement.
+Gate sweep (--jobs 2, 227 gates): 3 new RED, all caused by this diff. s7344 wrap: s7776_load overlap test -> HAND row H.
+s7381 spin: summary-thread sleep loop -> reviewed DIAG. s7382 QoS: the same thread -> reviewed DIAG. All 3 re-run GREEN
+(s7344 --controls, s7381/s7382 --check, controls PASS). The other 224 were already GREEN/REPORT/NEEDS-ARGS, and the code has
+not changed since.
+Next: NEXT.md dangling-global-heap-ptr-class (enumerate every resident global holding an rs_malloc pointer, check each for
+dangling across overlay swaps / frees, and watch reads while it dangles; 0x80130BB0 is the positive control).

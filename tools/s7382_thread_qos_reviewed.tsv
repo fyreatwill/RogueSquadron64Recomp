@@ -60,3 +60,4 @@ lib/N64ModernRuntime/librecomp/src/recomp.cpp|std::thread game_thread{[](ultramo
 src/main/main.cpp|std::thread([] { pthread_setname_np("s7592-plant"); for (;;)|1	DIAG	s7592-plant	s7720: ROGUESQ_S7592_PLANT_FROM (default -1 returns before the spawn) planted control thread
 src/main/upstream_compat.cpp|std::thread([] {|2	DIAG	-	s7720: recv_trace dumper, spawned only after recv_trace_enabled() (ROGUESQ_RECV_TRACE, default off)
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp|std::thread([] { t_s7384Planted = true; std::this_thread::sl|1	DIAG	-	s7720: ROGUESQ_S7384_CTL=1 planted overlap control, default off
+src/main/upstream_compat.cpp|std::thread([] { for (int k = 1;; ++k) { std::this_thread::s|1	DIAG	-	s7776: table-pointer watch summary thread, spawned only by S7776Arm when ROGUESQ_S7776_TBLWATCH=1 (default off)

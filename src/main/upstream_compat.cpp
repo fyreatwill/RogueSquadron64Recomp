@@ -4433,7 +4433,53 @@ static void rs64_s7545_destroy(uint32_t t) {  /* osDestroyThread (self or other;
 static void s7545_host(uint32_t a, uint32_t w, const char* kind) {
     std::lock_guard<std::mutex> lk(s_s7545_mu);
     for (uint32_t t : s_s7545_thr) if (a < t + 0x1B0u && t < a + w) { ++s_s7545_hostk[kind ? kind : "?"]; return; } }
+/* s7776 dangling NPC-slot table watch (ROGUESQ_S7776_TBLWATCH=1, exclusive load-watch mode, measurement only). s7774 saw
+   *(u32*)0x80130BB0 (NPC slot table: 2048 x {u32 obj; u16 prev; u16 next}) point at entries that are not RAM pointers for ~60 s
+   between the menu overlay and initMission. Every generated read of the table pointer (59 static lw 0xBB0(0x8013) sites, all
+   RS64_S7484_LD-wrapped) lands here: per (pc, fn) we count reads while the table is clean vs dangling (any non-zero obj that is
+   not a 4-aligned KSEG0 pointer below 16 MB), and log every change of the pointer value. Positive controls: the frame counter
+   0x8011A890 is marked too (watch mechanism), and in-flight reads with state=clean must be > 0 (the readers do fire). */
+static bool s7776_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7776_TBLWATCH"); return e && e[0] && e[0] != '0'; }(); return on; }
+struct S7776Row { const char* fn = nullptr; uint64_t clean = 0, dangling = 0, badptr = 0; double t_first_dangling = -1; };
+static std::mutex s_s7776_mu;
+static std::map<uint32_t, S7776Row> s_s7776_rows;
+static uint64_t s_s7776_ctl = 0, s_s7776_hits = 0, s_s7776_dang = 0;
+static uint32_t s_s7776_tbl = 0xFFFFFFFFu, s_s7776_bad = 0, s_s7776_live = 0; static double s_s7776_scan_t = -1, s_s7776_t0 = 0;
+static bool s7776_okva(uint32_t va) { return va >= 0x80000000u && va < 0x81000000u && (va & 3u) == 0; }
+static void s7776_rescan(uint32_t tbl, double now) {
+    s_s7776_bad = 0; s_s7776_live = 0;
+    if (!s7776_okva(tbl)) { s_s7776_bad = 1; }
+    else for (uint32_t i = 0; i < 2048; i++) { const uint32_t o = s7545_rdw(tbl + i * 8u); if (!o) continue; ++s_s7776_live; if (!s7776_okva(o)) ++s_s7776_bad; }
+    s_s7776_scan_t = now; }
+static void s7776_sum(bool rows) {
+    std::lock_guard<std::mutex> lk(s_s7776_mu); const double now = s7325_now() - s_s7776_t0;
+    std::fprintf(stderr, "[s7776] sum t=%.1f ctl=%llu hits=%llu dangling_hits=%llu tbl=%08X live=%u bad=%u pcs=%zu\n", now, (unsigned long long)s_s7776_ctl,
+                 (unsigned long long)s_s7776_hits, (unsigned long long)s_s7776_dang, s_s7776_tbl, s_s7776_live, s_s7776_bad, s_s7776_rows.size());
+    if (rows) for (const auto& kv : s_s7776_rows) std::fprintf(stderr, "[s7776] row pc=%08X fn=%s clean=%llu dangling=%llu badptr=%llu t_first_dangling=%.1f\n", kv.first,
+                 kv.second.fn ? kv.second.fn : "?", (unsigned long long)kv.second.clean, (unsigned long long)kv.second.dangling, (unsigned long long)kv.second.badptr, kv.second.t_first_dangling);
+    std::fflush(stderr); }
+static int s7776_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    std::lock_guard<std::mutex> lk(s_s7776_mu); const double now = s7325_now() - s_s7776_t0;
+    if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7776_ctl++ == 0) std::fprintf(stderr, "[s7776] watch-ctl PASS pc=%08X fn=%s t=%.1f\n", pc, fn ? fn : "?", now); return 1; }
+    if (!(a <= 0x80130BB0u && 0x80130BB0u < a + (uint32_t)w)) return 1;
+    ++s_s7776_hits; const uint32_t tbl = s7545_rdw(0x80130BB0u);
+    if (tbl != s_s7776_tbl) { std::fprintf(stderr, "[s7776] tbl-change old=%08X new=%08X pc=%08X fn=%s t=%.1f\n", s_s7776_tbl, tbl, pc, fn ? fn : "?", now); s_s7776_tbl = tbl; s7776_rescan(tbl, now); }
+    else if (now - s_s7776_scan_t >= 0.02) s7776_rescan(tbl, now);
+    S7776Row& r = s_s7776_rows[pc]; if (!r.fn) r.fn = fn;
+    if (!s7776_okva(tbl)) ++r.badptr;
+    if (s_s7776_bad) { ++s_s7776_dang; if (r.dangling++ == 0) { r.t_first_dangling = now; std::fprintf(stderr, "[s7776] dangling-reader pc=%08X fn=%s tbl=%08X live=%u bad=%u t=%.1f\n", pc, fn ? fn : "?", tbl, s_s7776_live, s_s7776_bad, now); } }
+    else ++r.clean;
+    return 1; }
+namespace { struct S7776Arm { S7776Arm() {
+    if (!s7776_on()) return;
+    s_s7776_t0 = s7325_now();
+    if (!g_rs64_s7475_bm) g_rs64_s7475_bm = (unsigned char*)std::calloc(0x1800000u >> 3, 1);
+    if (!g_rs64_s7475_bm) return;
+    s7545_mark(0x80130BB0u, 4); s7545_mark(0x8011A890u, 4); g_rs64_s7484_on = 1;
+    std::fprintf(stderr, "[s7776] table-pointer watch armed\n");
+    std::thread([] { for (int k = 1;; ++k) { std::this_thread::sleep_for(std::chrono::seconds(5)); s7776_sum(k % 6 == 0); } }).detach(); } } s_s7776_arm; }
 extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7776_on()) return s7776_load(pc, a, w, fn);  /* s7776 dangling slot-table watch (exclusive) */
     if (s7545_on()) return s7545_access(pc, a, w, fn, 'L');  /* s7545 class GE thread watch (exclusive) */
     if (s7518_watch()) { s7519_load(pc, a, w, fn); return s7518_load(pc, a, w, fn); }
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }

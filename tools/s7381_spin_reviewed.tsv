@@ -81,3 +81,4 @@ rt64_render_context.cpp|rs64_rdpq_task_exit|YIELD|1	BOUNDED	s7720: rs64_s7540_re
 upstream_compat.cpp|s7545_access|SLEEP|1	DIAG	s7720: rs64_s7545_create returns unless ROGUESQ_S7545_THRWATCH; 5 s sleep loop
 upstream_compat.cpp|s7490_pre|SLEEP|1	BOUNDED	s7720: cine watchdog thread Sleep(500) (was keyed floorWriterGuest, stale after the function-attribution moved)
 plume_metal.cpp|MetalSwapChain::present|PURE-SPIN|1	BOUNDED	s7720: s7641 CAS increment of rs64AvailIdx, retries only on a concurrent update (one other writer), no wait
+upstream_compat.cpp|s7776_load|SLEEP|1	DIAG	s7776: S7776Arm summary thread (attributed to s7776_load), spawned only under ROGUESQ_S7776_TBLWATCH=1; 5 s sleep loop

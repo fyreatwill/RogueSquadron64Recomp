@@ -1,16 +1,18 @@
-# NEXT (s7776; s7775 was spent on the gate-sweep contract fix)
-HYPOTHESIS-ID: npc-slot-dangling-table
+# NEXT (s7777; s7776 closed the dangling NPC-slot table as H-unused)
+HYPOTHESIS-ID: dangling-global-heap-ptr-class
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
 
-Unit (one instrument, one build, one run): s7774 found that between the menu overlay (idx3) and initMission, *0x80130BB0 (NPC slot
-table) points at memory whose entries are not RAM pointers (1578 bad entries for ~60 s during the chapter crawl / cinematic idx4).
-Hypotheses: H-unused (no code reads the table in that phase), H-own-table (the cinematic re-inits a table via its own
-initNpcSlotList caller 0x800A9B80/0x800C40F8 and the pointer we read is the old one: check whether *0x80130BB0 changes value),
-H-latent (a dispatch/destroy does read it; retail-shaped, guarded only by luck: a garbage obj+0 jalr would abort/crash).
-Instrument: extend rs64_s7774_slots ticks to print the table pointer value; add a counter on slotDispatcherIter (0x8003E8DC) and
-destroyNpcSlotByIndex (0x8003ED74) entries while the scan says bad>0 (fixup/apply script hook, or a recomp_context hook if one
-exists for these; check tools/apply_* for an entry-hook pattern first). Positive control: the same counters in flight must be >0.
-Run: `zsh tools/s7774_slot_run.zsh dangling1` (300 s owner route).
-Outcome: 0 reads while bad>0 -> H-unused, class closed; pointer changes -> H-own-table; >0 reads -> H-latent, name the caller.
-Also uncovered by s7774: the mission win/outro swap (mission->cinematic) - only if a forced route reaches it cheaply.
+Generalise s7776 into a class audit (ITERATION item 3 model: enumerate the whole idiom class, classify every member, close it).
+Class: resident .data/.bss words that hold an rs_malloc pointer and outlive the block (the slot table *0x80130BB0 was one:
+freed with the menu heap, never cleared, never read until re-init). Enumerate, one instrument, one run:
+1. Static: every resident global word written from an rs_malloc return (sw of v0 after jal rs_malloc / wrappers) -> list of
+   (global, writer fn, readers). Use objdump of the elf + the 59-site pattern from s7776 (tools/s7776_tblwatch_score.py header).
+2. Runtime: at each overlay swap (s7528 pre/post lines) and each rs_free, check every listed global: does it point into a
+   freed / reused block (s7480 freed map in src/main/upstream_compat.cpp)? For each dangling one, mark the word in the s7484
+   bitmap (as s7776 does for 0x80130BB0) and count reads while dangling.
+Hypotheses: H-all-unused (every dangling global is re-inited before its next read -> class CLOSED), H-latent (some global is read
+while dangling -> name the reader, decide retail bug vs ours with the oracle), H-ours (a dangling global exists only because
+our heap/overlay timing differs from retail).
+Positive control: 0x80130BB0 must appear in the dangling list during the menu phase (s7776 window t=15-75 s on route_long).
+Run: `zsh tools/s7774_slot_run.zsh <name> ROGUESQ_S7776_TBLWATCH=1 <new flag>` (300 s owner route, save read-only).
