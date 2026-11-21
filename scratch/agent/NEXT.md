@@ -1,4 +1,4 @@
-# NEXT (s7780; s7779 closed dangling-global class item 31 7/7: the FRAME member is retail's frame-scoped FB scratch arena)
+# NEXT (s7781; s7780 repaired the s7779 census contract, unit below still unrun; s7779 closed dangling-global class item 31 7/7: the FRAME member is retail's frame-scoped FB scratch arena)
 HYPOTHESIS-ID: fb-arena-escape-class
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.

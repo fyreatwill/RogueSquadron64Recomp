@@ -9,7 +9,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 
 ## Headline
 
-**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7779: dangling-global class item 31 closed 7/7). Nothing is broken at the
+**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7779: dangling-global class item 31 closed 7/7; s7780: diag helpers must gate inside their own body, or the class censuses read them as default-on). Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 **Owner: docs/OWNER-REVIEW-QUEUE.md (s7762) is the one-sitting list** (20 items, command + sheets each); every path and setting
 name in it and in OWNER-OPT-INS is gated by `python3 tools/s7762_owner_doc_check.py --controls` (in the sweep; rc 0 s7762).

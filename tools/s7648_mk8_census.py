@@ -41,6 +41,7 @@ DIAG_FN = {
     "rs64_s7645_gfx_read": "s7644 RSP-DMA instrument; the 8 MB key is the deliberate s7647 alias CONTROL",
     "start_fl_zero_poller": "ROGUESQ_FL_ZERO_ADDR poller thread",
     "rs64_s6843_store": "rs64_vsrc_* census, active only when rs64_vsrc_hi is set by a log env",
+    "s7779_b": "s7779 FB-arena census byte reader (returns 0 unless ROGUESQ_S7779_ARENA=1; caller rs64_s7779_note is gated)",
     "rs64_m5_audio_input_dma": "M5 audio input census (prints)",
     "rs64_m5_host_write_census": "rs64_vsrc_* census, active only when rs64_vsrc_hi is set by a log env",
     "rs64_m5_pcm_writer_snapshot": "M5 PCM writer table lookup for [audio-join] rows",

@@ -102,6 +102,9 @@ RULES = [
      {"verify": r"s4459: loadCharTextureSet"}),
     ("src/main/upstream_compat.cpp", "last_b40_stored", "H-instrument-only", "ROGUESQ_LOG_M5_B40_ROUTE change log (early return when off)",
      {"verify": r"ROGUESQ_LOG_M5_B40_ROUTE"}),
+    ("src/main/main.cpp", "last_h", "H-instrument-only",
+     "s7779 FB-arena census epoch detector in rs64_s7779_note (early return unless ROGUESQ_S7779_ARENA=1; feeds log rows/counters only)",
+     {"verify": r"if \(!s_s7779_on\) return;"}),
     ("src/main/upstream_compat.cpp", "last_b40_return", "H-instrument-only", "see last_b40_stored", {"verify": r"ROGUESQ_LOG_M5_B40_ROUTE"}),
     # --- widened-name sites (first/start/prev/origin/src/zimg/cimg) ---
     ("src/rsp/dpc_bridge.cpp", "s_zimg", "H-canon",

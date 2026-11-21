@@ -207655,3 +207655,20 @@ Logs: scratch/s7774/s7779a, s7779b (gitignored).
 Verdict line: s7779 selects H-retail and refutes H-stomp for the FRAME member, which closes dangling-global class item 31 (7/7).
 Next discriminator (NEXT.md, fb-arena-escape-class): a static list of the flag-4 rs_malloc call sites, plus a count of guest stores
 by pc into each closed arena extent until the next epoch. Any loader pc there = H-escape; none (with a planted store counted) = H-clean.
+
+## Session 7780 (2026-11-21) — gate-sweep contract fix: s7779's FB-arena census re-opened 5 census gates (M, MUL, FW, FX, MK8); gated + classified, all GREEN
+
+What ran: loop.sh reported the s7779 exit contract unmet: tools/s7651_gate_sweep.py had 5 new RED gates (s7338_mask, s7345_mul,
+s7530_fw, s7531_fx, s7648_mk8), all on the new `rs64_s7779_note` / `s7779_b` code in src/main/main.cpp (8 MB masks `& 0x7FFFFFu`,
+an `< 0x800000u` end check, a w*h multiply, and the function-static latch `last_h`). The function was only reached behind
+`if (s_s7779_on)` at its single caller, which the censuses do not see (they classify by the enclosing function's own gate).
+Change: `rs64_s7779_note` now opens with `if (!s_s7779_on) return;` and `s7779_b` returns 0 unless armed (behaviour identical:
+the only caller was already gated). That closed s7338/s7345/s7531 and 2 of 3 s7648 sites. The rest got rule rows: s7530 RULES row
+`last_h` H-instrument-only (verify= the new early-return line), s7648 DIAG_FN `s7779_b`.
+Result: each of the 5 gates rc=0 standalone; s7530 --controls 6/6 PASS, s7648 --controls planted 3/3 flagged PASS. Build links.
+Full sweep result below. No experiment ran; next unit (fb-arena-escape-class, NEXT.md) unchanged.
+Rules out: nothing about the game; it is a census-contract repair. Lesson: diag functions must carry their own env gate inside the
+body, not only at the call site, or the class censuses read them as default-on.
+Full sweep (same tree, after build): 227 gates {GREEN 221, REPORT 3, RED 1, NEEDS-ARGS 1, NEEDS-INPUT 1}; no "new RED vs allowed" line.
+The one RED, s7600_gx_census (open=5: main.cpp:11604, rs64_standins.cpp:687, rt64_render_context.cpp:1419, upstream_compat.cpp:553,
+dpc_bridge.cpp:1617), touches no s7779/s7780 code and the sweep counts it as pre-existing, not new. It is the open GX item for a later census session.
