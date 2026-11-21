@@ -12,5 +12,4 @@ Hypotheses:
 - H-fixup: a deliberate ucode fixup (UCODE_CAP, s6418 far clip, spill/segment patches) changes output; the port-only tris
   appear only with the fixup on. Check the fixup list in tools/fixup_*.py touching the F5 gfx ucode against op 0F emitters.
 - H-rspemu: a real LLE divergence (slope words = VMACF/VRCP path); bisect with the s6388 cxd4_vu_replay ring at the cmd#83 tri.
-Also: gate sweep REDs s7363/s7600 at src/main/rs64_standins.cpp:917 lr[r] predate s7751 (s7749 edit); classify or bound them first.
 One capture run (L1 21:9 dd8 pose as s7751, scratch/s7751/run.zsh), everything else offline. Max 2 CPU-heavy jobs.

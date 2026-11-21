@@ -206887,4 +206887,6 @@ Gate sweep (tools/s7651_gate_sweep.py --jobs 2, 220 gates, 1369 s): GREEN 206 / 
 s7751 file (unclassified sites): classified as an env-gated instrument in census_rules.py (one shared row, anchors on the
 getenv, the !dir() returns, the dpc_bridge call and the kRam bound) + s7532/s7535/s7598/s7599/s7430 rows; each of the 8 re-run
 rc=0. The 2 remaining REDs (s7363 OPEN 4, s7600 OPEN 1) are at src/main/rs64_standins.cpp:917 lr[r]: pre-existing (that file was
-last touched in s7749, not by this session) and left for NEXT.md.
+last touched in s7749, not by this session). stop_gate --verify also flagged s7364 (the snapshot memcpy) and s7363 px[]/lr[]: all
+classified this session (s7364/s7363 reviewed.tsv rows, s7600_gx_rows lr row: lr[6] indexed by reason() whose callers pass only
+literals 0..5; px[4096] writes guarded by s_px.n < kPxN, flush reads clamped n). Each gate re-run with --controls rc=0.

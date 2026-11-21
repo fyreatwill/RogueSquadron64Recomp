@@ -383,3 +383,7 @@ src/rsp/s7702_fbread.cpp	kAge	g_hk[i].age	BOUNDED s7719 hand: age = agebucket() 
 src/rsp/s7702_fbread.cpp	kS	g_ex[i].src	BOUNDED s7719 hand: src set only by hit() callers to literal 0,1,2 (s7702_fbread.cpp:129/145) < 3
 src/rsp/s7702_fbread.cpp	kAge	g_ex[i].age	BOUNDED s7719 hand: age = agebucket() which returns 0..3 (s7702_fbread.cpp:35) < 4
 src/rsp/s7702_fbread.cpp	tri_len	op - 8	BOUNDED s7719 hand: guarded op >= 0x08 && op <= 0x0F (s7702_fbread.cpp:116) -> 0..7 < 8
+src/main/rs64_standins.cpp	lr	r	BOUNDED s7751 hand: reason(s, r) callers pass only 0..5 (literals 2/3/4/5, add_v0 == 1 ? 0 : 1) < 6; s_log gated (s7749 code)
+src/main/rs64_standins.cpp	px	s_px.n	BOUNDED s7751 hand: write guarded by s_px.n < kPxN (4096 == array size) on the same line (s7749 code)
+src/main/rs64_standins.cpp	px	n >> 1	BOUNDED s7751 hand: n = min(s_px.n, kPxN) and n > 0 in px_flush, so n >> 1 < 4096
+src/main/rs64_standins.cpp	px	n - 1	BOUNDED s7751 hand: n = min(s_px.n, kPxN) and n == 0 returns above, so n - 1 < 4096

@@ -140,7 +140,8 @@ for _k, _v in {
         "(addresses.hpp allocation_size), guest-word bases pass guest() [0x80000000, 0x81700000) first",
         "s": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; s_sg_cur is set to in_region()?1:0 on the line above (SgTally s[2])",
         "s_dl34": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd = s_psn_side, set only to 0/1 (rs64_psn_side), <0 returns", "s_psn": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; sd 0/1 and k < 112 checked on entry",
-        "si_cls": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; si_cls[4] indexed by vt_class(), which returns only 0..3 (s7677 row)"},
+        "si_cls": 'gated: ROGUESQ_STANDINS=1 with dd>1 (mode() returns 0 otherwise, default off)' + "; si_cls[4] indexed by vt_class(), which returns only 0..3 (s7677 row)",
+        "lr": 'gated: ROGUESQ_STANDINS=1 + STANDINS_LOG (s_log)' + "; lr[6] indexed by reason(s, r) whose callers pass only 0..5 (literals 2/3/4/5 and add_v0 == 1 ? 0 : 1) (s7751 row, s7749 code)"},
     "src/rsp/dpc_bridge.cpp": {"kShift": "masked: kShift[16] indexed by shifts/shiftt & 15u"},
     "src/rsp/s7702_fbread.cpp": {
         "g_h": 'gated: ROGUESQ_S7702_FBREAD (default off; both entries behind rs64_s7702_on)' + "; idx from match() = a live history slot 0..g_nh-1, g_nh <= 16 (push caps it)",

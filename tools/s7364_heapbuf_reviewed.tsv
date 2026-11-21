@@ -689,3 +689,4 @@ src/rsp/dpc_bridge.cpp	s_shw	i	BOUNDED s7719 hand: s_shw.resize(nw) and s_sop.as
 src/rsp/dpc_bridge.cpp	s_sop	i	BOUNDED s7719 hand: s_sop.assign(nw) same length as s_shw (dpc_bridge.cpp:5549); every index < nw or < s_shw.size()
 src/rsp/s7644_rspdma.cpp	g_srcc	i	BOUNDED s7719 hand: g_srcs and g_srcc only grow together in src_idx (s7644_rspdma.cpp:146); loop i < g_srcs.size()
 src/main/rs64_settings.cpp	value	memcpy len=v.size() + 1	BOUNDED s7719 hand: preceded by v.size() + 1 > value_sz -> return -1 (rs64_settings.cpp:81)
+src/rsp/s7751_task_snap.cpp	ram	memcpy len=kRam	BOUNDED s7751 hand: s.ram.resize(kRam) on the line above; src rdram is the 512 MB mapping; ROGUESQ_S7751_SNAP gated
