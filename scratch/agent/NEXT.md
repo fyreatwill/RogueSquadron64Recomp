@@ -1,4 +1,4 @@
-# NEXT (s7775)
+# NEXT (s7776; s7775 was spent on the gate-sweep contract fix)
 HYPOTHESIS-ID: npc-slot-dangling-table
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.

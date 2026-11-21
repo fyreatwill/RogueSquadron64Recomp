@@ -207510,3 +207510,20 @@ Side finding (open): menu->cinematic phase (~60 s, idx3->idx4) the table holds 1
 (bad=1578/439, objs 0-1), i.e. *0x80130BB0 points at freed/reused heap until initMission re-inits it; 0 crashes, so nothing
 dispatched through it there. Next: confirm no slotDispatcherIter/destroy reads the table in that window (dangling-table class).
 Verdict: the scan selects H-cleared and refutes H-dormant/H-stale on the abort exit; next discriminator = table-pointer value + dispatch/destroy entry counts while bad>0 (NEXT.md).
+
+## Session 7775 (2026-11-21) — gate-sweep contract fix: s7774's slot scan re-opened 3 census gates (lockset, BS, OV); rewritten to fit the closed classes, all 3 GREEN
+
+Unmet contract from s7774: tools/s7651_gate_sweep.py reported s7366_lockset_census, s7601_bs_census, s7610_ov_census newly RED.
+Cause, all in the s7774 diagnostic (lib/N64ModernRuntime/librecomp/src/overlays.cpp rs64_s7774_slots / s7774_scan):
+- Lockset: s7774 walked `loaded_sections` under `std::lock_guard(s7m)`. Every other access (load_overlay, unload_overlays,
+  s7528 pre/post load, ...) is unlocked, so the container flipped NOLOCK -> MIXED and all 7 accessing functions went OPEN.
+  Verdict: loaded_sections is confined to the PI DMA thread (load_overlays/unload_overlays in pi.cpp, which is also
+  rs64_s7774_slots' only caller, pi.cpp:670/674). Fix: take the resident-set signature before the lock; s7m now guards only
+  the s7774 statics. Lockset back to OPEN 0 (not an allow-list entry).
+- BS: three raw `*reinterpret_cast<uint32_t*>(rdram + (va - 0x80000000u))` word reads with no row. Rewritten through the
+  existing `s7_ramw` helper (already an ok-word row; addresses are 4-aligned by s7774_okva). open=0, sites 531->528.
+- OV: two new func_map / loaded_sections lines with no SITE_ROWS entry. Added both as `diag:ROGUESQ_S7774_SLOTS`
+  (env-gated, read-only). rows 54->56, open 0, controls 6/6.
+Each gate's --controls passed in the same run (lockset selftest, BS 4/4, OV 6/6). Build (cmake --build build) clean.
+Semantics of the s7774 scan are unchanged (s7_ramw is the identical expression); not re-run in game this session.
+submodule-patches/export.sh refreshed N64ModernRuntime.patch. Nothing added to gate_sweep_allowed_red.txt.

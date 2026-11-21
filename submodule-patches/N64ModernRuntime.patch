@@ -1911,7 +1911,7 @@ index ff40212..5b0d25a 100644
          GenericFunction func = mod.code_handle->get_function_handle(callback.function_index);
          size_t event_index = 0;
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..a33abf5 100644
+index 8c8e5d1..3d80a48 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -1,9 +1,17 @@
@@ -2619,7 +2619,7 @@ index 8c8e5d1..a33abf5 100644
      return func_find->second;
  }
  
-@@ -465,3 +1087,56 @@ std::span<const RelocEntry> recomp::overlays::get_patch_section_relocs(uint16_t
+@@ -465,3 +1087,58 @@ std::span<const RelocEntry> recomp::overlays::get_patch_section_relocs(uint16_t
  std::span<const uint8_t> recomp::overlays::get_patch_binary() {
      return std::span{ reinterpret_cast<const uint8_t*>(patch_data.data()), patch_data.size() };
  }
@@ -2637,17 +2637,17 @@ index 8c8e5d1..a33abf5 100644
 +bool s7774_okva(uint32_t va) { return va >= 0x80000000u && va < 0x81000000u && (va & 3) == 0; }
 +S7774Count s7774_scan(uint8_t* rdram) {
 +    S7774Count c;
-+    uint32_t tbl = *reinterpret_cast<uint32_t*>(rdram + (0x80130BB0u - 0x80000000u));
++    uint32_t tbl = s7_ramw(rdram, 0x80130BB0u);
 +    if (!s7774_okva(tbl)) { c.bad = 1; return c; }
 +    std::unordered_set<uint32_t> seen;
 +    for (uint32_t i = 0; i < 2048; i++) {
-+        uint32_t obj = *reinterpret_cast<uint32_t*>(rdram + (tbl + i * 8 - 0x80000000u));
++        uint32_t obj = s7_ramw(rdram, tbl + i * 8);
 +        if (!obj) continue;
 +        ++c.live;
 +        if (!s7774_okva(obj)) { ++c.bad; continue; }
 +        if (!seen.insert(obj).second) continue;
 +        ++c.objs;
-+        uint32_t h = *reinterpret_cast<uint32_t*>(rdram + (obj - 0x80000000u));
++        uint32_t h = s7_ramw(rdram, obj);
 +        if (!h) { ++c.nullh; continue; }
 +        if (h >= 0x800A5130u && h < 0x8010B6D0u) {
 +            ++c.ovl;
@@ -2666,10 +2666,12 @@ index 8c8e5d1..a33abf5 100644
 +}
 +extern "C" void rs64_s7774_slots(uint8_t* rdram, uint32_t ram, uint32_t size, int post) {
 +    if (!s7774_on() || !rdram) return;
-+    std::lock_guard<std::mutex> lk(s7m);
++    // loaded_sections is confined to the PI DMA thread (load_overlays / unload_overlays, pi.cpp), which is also this
++    // function's only caller, so the resident-set signature is taken before s7m (s7m guards only the s7774 statics).
 +    bool win = size && ram < 0x8010B6D0u && ram + size > 0x800A5130u;
 +    size_t sig = 0;
 +    for (const auto& ls : loaded_sections) sig = sig * 131 + ls.section_table_index + 1;
++    std::lock_guard<std::mutex> lk(s7m);
 +    if (win && !post) { s7774_pre_sig = sig; s7774_print("pre", ram, size, s7774_scan(rdram)); return; }
 +    if (win && post) { if (sig != s7774_pre_sig) s7774_print("post", ram, size, s7774_scan(rdram)); return; }
 +    static std::atomic<long long> last{0};

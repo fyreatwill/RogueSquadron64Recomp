@@ -409,7 +409,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     mission code) passing mission handlers to spawnNpcOfType; 0 targets a start in >1 overlay, so a stale slot handler can only
     abort loudly (jalr = LOOKUP_FUNC). Runtime: `python3 tools/s7773_ovl_swap_witness.py` 99 logs, 154 overlay swaps (incl.
     mission>menu 2), 0 "Failed to find function" (--plant ctl counts 1). Heap-held pointers: same loud-only argument.
-    **Stale NPC-slot question CLOSED s7774 = H-cleared** (`zsh tools/s7774_slot_run.zsh <name>` = ROGUESQ_S7774_SLOTS=1 on the
+    (s7775: the s7774 scan was rewritten to keep lockset/BS/OV census gates green: loaded_sections read before s7m, words via s7_ramw.) **Stale NPC-slot question CLOSED s7774 = H-cleared** (`zsh tools/s7774_slot_run.zsh <name>` = ROGUESQ_S7774_SLOTS=1 on the
     owner route_long abort->hangar, + tools/s7774_slot_scan.py): slot table *0x80130BB0 (2048x8 B, obj+0 = handler) scanned before
     and after every overlay-window DMA + every >=5 s tick. Ctl: in flight 29-36 live overlay handlers, all in func_map. At the
     mission(idx2)->menu(idx3) swap live=0 (last tick <=5 s before: 752 live/34 ovl): the game empties the table before the swap;
