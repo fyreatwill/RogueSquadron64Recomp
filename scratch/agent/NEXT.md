@@ -1,11 +1,14 @@
-# NEXT (s7748)
-HYPOTHESIS-ID: g6c-coverage-l10-l12
+# NEXT (s7749)
+HYPOTHESIS-ID: g6c-l12-never-added
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-Maintenance done s7747 (CURRENT-TRUTH 35.4 KB). Unit: why L12 stand-ins are added but invisible (s7746: ground-flicker null at 10 s and at the 62 s add peak,
-passing ground paint controls; L10 visible 6.2x). Hypotheses:
-- H-clip: L12 items sit beyond the game's far plane (why-k far=30.03 vs PASS dmed~132) and the ucode clips them.
-- H-size: on screen but sub-pixel / under the LOD threshold.
-- H-drop: on screen and sized, but the submit/DL path drops them (check [standins-dl]/[standins-psn] counts per add).
-Discriminator: ONE instrument in src/main/rs64_standins.cpp logging, per added item, eye-space z vs far and the projected screen
-bbox (w,h px); run L10 (a500) and L12 (a600) arms in one recipe (scratch/s7745_standins_cov.sh as template) and score with
-tools/s7746_ground_flicker.py. Outcome table: z>far only on L12 -> H-clip; bbox <2 px -> H-size; neither -> H-drop.
+s7748 closed L12 visibility: the stand-ins are visible (4.1x ground flicker vs a quiet control, pylons by eye). H-drop, H-clip and H-size are refuted.
+Unit: on L12, 85 of 92 stand-in items are never added (s7690_par_tally). [standins-s] skip reasons per second: unlinked ~1200, cond 210, spawned 390.
+Hypotheses:
+- H-zone: the game links an item (type-3 entry in the list scanned at rs64_standins.cpp s_linked) only for its current zone/trigger
+  region, so unlinked items are far-zone by design. Adding them would need a different gate.
+- H-cond: kConditionMet rejects items whose mission-script condition is not yet true (by design).
+- H-ours: the s_linked scan misses entries (wrong list head or type on L12, or list rebuilt mid-frame).
+Discriminator (offline first, using scratch/s7748_soak/log_u124.txt and the existing [s7672-ho]/[standins-spawn] lines): per item,
+the final reason + distance to the player at end. If unlinked items are all far (beyond dd4 radius) -> H-zone. If they are near and
+the real game spawns them later -> H-ours (check the list walk). Only build if the log cannot split them; then one per-item reason
+histogram line plus the item's distance, same L12 a600 recipe (scratch/s7748_standins_px.sh).

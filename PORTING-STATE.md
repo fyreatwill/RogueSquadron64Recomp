@@ -206775,3 +206775,26 @@ Step 0 triggered (60125 bytes > 60000). No experiments run. Crash-report gate: F
   sweep command), one folded item 22 (rerun triggers) and a new item 23 for the open G6c L12 visibility unit.
 - Backlog stays one monotonic sequence 1-23; headline "as of" refreshed to s7747.
 Net: -24,734 bytes, -200 lines. Rules out nothing; the next unit is still the s7746 NEXT.md (L12 H-clip/H-size/H-drop).
+
+## Session 7748 (2026-11-21) — G6c L12 stand-ins ARE visible: H-drop/H-clip/H-size refuted, s7746 null was a noisy control
+- Offline first (capture once): the s7745/s7746 logs already settle H-drop. L12 "ours" reach the submit path (psn L528 ret=90-120,
+  dl34 set) and the scene-graph walk (sg ours visit/draw 68-685/s), so they are not dropped at the queue.
+- H-clip: L12 ours camera-space z 37.8-124 view units. The `[far]` line prints the pre-multiply far (ff 7687-9145) and the s6031 patch
+  multiplies by mf=4, giving ~31000-36000 world. 1 view unit = 256 world (near 30 / 0.117), so the far plane sits at ~121-143 view units
+  and the stand-ins fall inside it. The why-k `far=30.03` is the game's retail view-test bound, which STANDINS_FAR=dd widens to 120. Refuted.
+- New instrument `[standins-px]` (src/main/rs64_standins.cpp px_note/px_flush, STANDINS_LOG=1 only): per added stand-in, cull radius
+  (model +0x44 x scale) / view-test depth x 290 = projected radius px (240 lines, 45 deg). Recipe scratch/s7748_standins_px.sh (L10 a500 + L12 a600,
+  dd4 frame mode, host idle 10 h). L10: 21025 adds, median 4.6 px (0014 5.5, 004B 33). L12: 12823 adds, median 19 px (0036 25 px,
+  0014 11.8, 0012 0.8). The L12 stand-ins project LARGER than L10's visible ones, so H-size is refuted.
+- Ground flicker (tools/s7746_ground_flicker.py) this run: L10 2334 vs forced-off 375 (6.2x, reproduces s7745). L12 146 vs 36 (4.1x),
+  paint control PASS on both. By eye (frames 7670-7673, crop docs/owner_sheet_s7748_l12_standins.jpg): 3-4 extra pylons in the haze on the
+  on-frames 7671/7673 only. Two lines of evidence -> L12 stand-ins VISIBLE.
+- Re-scored s7746: on-window 131/triplet (equal to s7748's 146), forced-off 126. Its frames show a real tower plus camera motion in the
+  control window. The null came from a noisy control, not absence. s7746 "H-not-visible" moved to superseded.
+- Rules out: H-drop, H-clip, H-size on L12. G6c coverage on L10/L12 is CLOSED (visible on both). Still open: L12 par tally never_added
+  85/92 items (s_t unlinked 1200/s dominates), the next unit.
+- Gates: the first px version (std::vector/std::map, divide by count) turned 5 sweep gates RED (s7348 div, s7364 heapbuf,
+  s7599 gr, s7600 gx, s7615 dq). Rewrote it to VtTally's shape (fixed 4096 arrays, a 16-sub table, no runtime-count divisor; subs now
+  print cnt/sum_px). All 5 are GREEN on rerun, tools/s7548_gh_census.py rc 0. Full sweep before the fix: 220 gates, 211 GREEN, 5 RED (all
+  this edit), 3 REPORT, 1 NEEDS-ARGS. Smoke with the fixed build (scratch/s7748_smoke, L12 90 s): alive, 0 crash, vi_stalls30s=0,
+  13 px lines, 0036 ~26 px (matches the run). Cold sweep wall time 1346 s: it outlives a 600 s background cap.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7747 (2026-11-20).
+Compact operational handoff, as of Session 7748 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -27,7 +27,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   Stand-ins never run inside intro cutscenes (H-absent, 3/3 levels). At 21:9 FB_DUMP needs ROGUESQ_ALLOW_WILD_W=1 (tools arm it).
 - **Post-G6c re-holds (s7692-s7695): clean.** 300 s STANDINS=1 dd4 owner recipe L1/L4/L5/L10/L12/L15 6/6; G5c 900 s freeze gate L4/L12
   (0 gaps >= 250 ms after t=95 s, SIGSTOP control caught); G2b crawl audio fix 2 vs ctl 1037; G5d logo share unchanged.
-- **s7744-s7746 G6c coverage L10/L12:** stand-ins add on both. `STANDINS_DUMP=a<adds>:<gap>:<n>` add-anchored windows; score with tools/s7746_ground_flicker.py (sky masked: whole-frame flicker under a banking camera is cloud noise). L10: ground 2354 vs forced-off ctl 383 (6.2x), n5752 object by eye = H-gain, placement for the owner. L12: null at t=10 s (118 vs 481) AND at the 62 s add peak (131 vs 126; whole-frame 1628 vs 172 was sky), ground paint ctl PASS both = added but NOT visible (H-gain refuted on L12). Next: per-item depth/screen size on L12 vs L10 (why-k far=30 vs dmed~132).
+- **s7744-s7748 G6c coverage L10/L12: stand-ins add AND are visible on both (s7748).** `STANDINS_DUMP=a<adds>:<gap>:<n>` add-anchored windows; score with tools/s7746_ground_flicker.py (sky masked). L10 ground 2334 vs forced-off ctl 375 (6.2x, reproduced s7745/s7748). L12 at the 62 s add peak: 146 vs ctl 36 (4.1x, ctl PASS) + by eye 3-4 extra pylons in the haze on the on-frames only (docs/owner_sheet_s7748_l12_standins.jpg). The s7746 L12 null (131 vs 126) was a noisy forced-off window (camera-motion flicker), not absence: its on-window equals s7748's. H-drop/H-clip/H-size all refuted: L12 adds reach psn ret + dl34; depth 37-124 view units vs effective far ff*4 ~31000 world (~121 view, 1 view unit = 256 world); `[standins-px]` (STANDINS_LOG=1) projected radius median 19 px on L12 (sub 0036 25 px) vs 4.6 px on L10. Open coverage question: L12 never_added 85/92 items (unlinked dominates).
 - **G6c stand-ins (ROGUESQ_STANDINS=1, opt-in, dd>1 only): DONE, owner's look.** Design docs/G6C-STANDINS-PLAN.md; code
   src/main/rs64_standins.cpp + tools/apply_s7623_standins.py and follow-ups (RS64_REPLAY). Visible early at true depth on 2 levels,
   19/19 levels 300 s clean (s7629/s7630), sheet docs/owner_sheet_s7691_standins_on_off.jpg. Default-on sub-fixes inside STANDINS (=0 old):
@@ -144,6 +144,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7746 "L12 stand-ins are added but NOT visible (H-gain refuted on L12, H-not-visible)": believable because the ground-only
+  scorer and its paint control both passed. Overturned s7748: the same on-window flicker (131 vs 146 per triplet) against a quiet
+  control (36, not 126) gives 4.1x, and the on-frames show extra pylons by eye; s7746's forced-off window carried camera-motion flicker.
 - s7587 "the 2026-11-18-014353 RT64 Present SIGTRAP is an OBJC_DEBUG_MISSING_POOLS instrument artifact": believable because only
   the debug arm crashed; superseded by s7725 (the env alone never traps; the push flushes a freed +0 texture descriptor that plume
   over-released; fixed).
@@ -298,8 +301,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     scratch/s7663/run.zsh; any new src/ or lib/ instrument file -> the gate sweep before committing; `python3 tools/crash_reports.py`
     (rc 1 = NEW outranks all work); tools/agent/run_tests.sh after tools/agent edits (stop_gate runs it); SKIP_WILD_W change ->
     tools/s7705_fbread_flight.zsh + tools/test_s7705_join.sh. If CONTRACT-CARRY.md heads your prompt, fix it before NEXT.md.
-23. **G6c L12 stand-ins added but not visible (s7744-s7746): OPEN, next unit** (scratch/agent/NEXT.md, HYPOTHESIS-ID
-    g6c-coverage-l10-l12): H-clip / H-size / H-drop, one per-item eye-z + screen-bbox instrument, L10 vs L12 arms.
+23. **G6c L12 visibility CLOSED s7748: visible** (headline). Next unit (NEXT.md, HYPOTHESIS-ID g6c-l12-never-added): why 85/92
+    L12 stand-in items are never added (reason tally unlinked/cond/dead per item, H-zone-by-design vs H-ours).
 
 ## Evidence index
 

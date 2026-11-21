@@ -559,6 +559,40 @@ extern "C" void rs64_vt_why(uint8_t* rdram, recomp_context* ctx, uint32_t pc) {
     }
 }
 namespace {
+// s7748 G6c H-size: per added stand-in, cull radius r (model +0x44 x scale) over view-test depth d. The projected radius in fb
+// pixels is ~ (r/d) * (fb_h/2)/tan(fov/2); at 240 lines and a 45 deg vertical fov that factor is 290. Logged per second with the
+// sub-type mix so L12 (added, invisible) can be compared with L10 (added, visible = positive control).
+// Fixed-size tallies (same shape as VtTally): at most kPxN samples per second, kPxSubs distinct sub types (rest folded into "other").
+constexpr uint32_t kPxN = 4096, kPxSubs = 16;  // kPxN == the literal array size in PxTally
+struct PxTally { double px[4096], r[4096], d[4096]; uint32_t n, lt1, lt2, lt4, nsub; uint16_t sub[kPxSubs]; uint32_t scnt[kPxSubs + 1]; double ssum[kPxSubs + 1]; };
+PxTally s_px{};
+void px_note(uint16_t sub, float r, double d) {
+    if (!(d > 0.0)) return;
+    const double px = (double)r * 290.0 / d;
+    if (s_px.n < kPxN) { s_px.px[s_px.n] = px; s_px.r[s_px.n] = r; s_px.d[s_px.n] = d; ++s_px.n; }
+    s_px.lt1 += px < 1.0; s_px.lt2 += px < 2.0; s_px.lt4 += px < 4.0;
+    uint32_t k = 0;
+    while (k < s_px.nsub && s_px.sub[k] != sub) ++k;
+    if (k == s_px.nsub && s_px.nsub < kPxSubs) s_px.sub[s_px.nsub++] = sub;
+    if (k > kPxSubs) k = kPxSubs;
+    ++s_px.scnt[k]; s_px.ssum[k] += px;
+}
+void px_flush() {
+    const uint32_t n = s_px.n < kPxN ? s_px.n : kPxN;
+    if (n == 0) { s_px = PxTally{}; return; }
+    std::sort(s_px.px, s_px.px + n); std::sort(s_px.r, s_px.r + n); std::sort(s_px.d, s_px.d + n);
+    char buf[1024]; int o = 0;
+    o = rs64_apf(buf, sizeof buf, o, "[standins-px] n=%u r_med=%.3g d_med=%.3g px_min=%.2f px_med=%.2f px_max=%.2f lt1=%u lt2=%u lt4=%u subs(cnt/sum_px)", n,
+                 s_px.r[n >> 1], s_px.d[n >> 1], s_px.px[0], s_px.px[n >> 1], s_px.px[n - 1], s_px.lt1, s_px.lt2, s_px.lt4);
+    for (uint32_t k = 0; k <= kPxSubs; ++k) {
+        if (!s_px.scnt[k]) continue;
+        if (k < s_px.nsub) o = rs64_apf(buf, sizeof buf, o, " %04X:%u/%.0f", (unsigned)s_px.sub[k], s_px.scnt[k], s_px.ssum[k]);
+        else o = rs64_apf(buf, sizeof buf, o, " other:%u/%.0f", s_px.scnt[k], s_px.ssum[k]);
+    }
+    o = rs64_apf(buf, sizeof buf, o, "\n");
+    std::fputs(buf, stderr);
+    s_px = PxTally{};
+}
 void vt_flush(uint32_t added) {
     if (s_vt.calls == 0) return;
     char buf[1024]; int o = 0;
@@ -757,6 +791,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     static double s_t0 = std::floor(now);  // windows on whole seconds, so a tog window is all-on or all-off
     if (s_log && now - s_t0 >= 1.0) {
         vt_flush(s_t.added);
+        px_flush();
         sg_flush();
         psn_flush();
         q_flush();
@@ -998,6 +1033,7 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
             s.last_add = now;
             ++s.adds;
             if (rs64_bk_vt_n && rs64_vt_lastd >= 0 && (s.add_dmin < 0 || rs64_vt_lastd < s.add_dmin)) s.add_dmin = rs64_vt_lastd;
+            if (s_log && rs64_vt_lastd > 0) { float r; std::memcpy(&r, &s.scale, 4); px_note(s.sub, r, rs64_vt_lastd); }
         }
         ++s_t.submits;
     }
