@@ -207216,3 +207216,6 @@ exactly RETINA. Selects H-works. Not covered: M5_B40_VALUE (row 19) has no start
 (RUMBLE=0, W_CLAMP=0, STICK_GATE=0, DD_FARMAX=0, HORIZON_SKYFILL=0, CONTROLS_DUMP=1) are not full commands and only take effect
 in flight/at input; their names are already gated by s7762_owner_doc_check. Side observation: NEARLIFT=1 forces
 [g1e-fast] on=0 (the fast path is off in row 14's arm), which is by design per its reason string.
+Verdict: this selects H-works and refutes H-broken for all 11 startup-visible queue commands (env-over-preset, dd8 unclamp,
+stand-ins opt-in, six per-row switches). Next discriminator: the in-flight toggles (RUMBLE=0/SCALE, W_CLAMP=0, DD_FARMAX=0,
+HORIZON_SKYFILL=0, STICK_GATE=0, M5_B40_VALUE) on vs off on a forced level, each scored by its own counter (scratch/agent/NEXT.md).
