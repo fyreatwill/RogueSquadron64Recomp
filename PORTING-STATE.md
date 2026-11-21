@@ -207509,3 +207509,4 @@ Not covered: the win/complete exit and the mission->cinematic (outro) swap.
 Side finding (open): menu->cinematic phase (~60 s, idx3->idx4) the table holds 1578 then 445 entries that are not RAM pointers
 (bad=1578/439, objs 0-1), i.e. *0x80130BB0 points at freed/reused heap until initMission re-inits it; 0 crashes, so nothing
 dispatched through it there. Next: confirm no slotDispatcherIter/destroy reads the table in that window (dangling-table class).
+Verdict: the scan selects H-cleared and refutes H-dormant/H-stale on the abort exit; next discriminator = table-pointer value + dispatch/destroy entry counts while bad>0 (NEXT.md).
