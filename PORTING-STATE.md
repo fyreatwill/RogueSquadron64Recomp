@@ -207652,3 +207652,6 @@ Class item 31 CLOSED: 7/7 members (ALLOC-META, NOT-PTR, COMPARE-ONLY, READ-NO-DE
 ORIGIN: no mitigation. The overlap is retail's design (ensureHeapInitialized + acquireFreeBufferSlot); the value is legitimate.
 Rules out: a port-side heap/FB overlap, and an RT64 writeback stomping loader data in the hangar.
 Logs: scratch/s7774/s7779a, s7779b (gitignored).
+Verdict line: s7779 selects H-retail and refutes H-stomp for the FRAME member, which closes dangling-global class item 31 (7/7).
+Next discriminator (NEXT.md, fb-arena-escape-class): a static list of the flag-4 rs_malloc call sites, plus a count of guest stores
+by pc into each closed arena extent until the next epoch. Any loader pc there = H-escape; none (with a planted store counted) = H-clean.
