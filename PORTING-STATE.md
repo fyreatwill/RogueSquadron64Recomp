@@ -206519,3 +206519,28 @@ Discrimination: selects H-none (no further regen-lost probe that a live tool rea
 Side datum: live funcs_10 transformWorldPosToGridSpace carries the s6314 EDGE_FADE_TEST2 block twice (opt-in scale would apply twice);
 the replay has it once (correct); already accepted ORDER-BEHAVIOUR, opt-in, owner never sets it. A regen fixes it.
 Rules out: other order-dependent silent anchor losses of in-use instruments in the current tree.
+
+## Session 7738 (2026-11-20) — the s7736 regen-replay tree links and plays like the live tree (H-swap-safe selected, H-hidden-dep refuted)
+Question (s7737 NEXT): does building from the regen replay (scratch/s7736/gate/replay) instead of the drifted live tree
+(stale s6826 menu hooks, double s6314 block, orphan funcs_50.c, 16 data_gap funcs) change anything the owner gets?
+H-swap-safe = same link, same owner behaviour; H-hidden-dep = something outside RecompiledFuncs needs a live-only symbol, or
+behaviour changes.
+What ran: build_replay configured with -DRECOMP_FUNCS_DIR=scratch/s7736/gate/replay, `--target RecompiledFuncs -j2` (84 s wall,
+0 errors). New tool tools/s7738_link_replay.sh relinks build/'s own objects (link.txt) against any libRecompiledFuncs.a into a
+separate output; it never writes into build/.
+Link line: replay lib -> links rc 0 (build_replay/RogueSquadron64Recomp). Controls: live lib relinked rc 0 (16 bytes from build/'s
+binary: path/UUID); replay lib with funcs_3.c.o removed -> rc 1, undefined _allocDLBlockTo* (PASS).
+Symbol line (nm -gU/-gu): live defines 2686 globals, replay 2670. Live-only = the 17 data_gap_* funcs (16 + data_gap_80029270 group);
+replay-only = static_5_800CC4E4 (s6871: decoded branch in data_gap_800CC3D4, nothing enters it). Live-only undefined refs =
+rs5904_dump/tally, rs5907_agree/dis/nohit (funcs_50/diag, all defined in main objects). Nothing outside the lib needs a live-only symbol.
+Runtime line: g1e_owner_quiet_arms L4 owner recipe (dd2 spec as s7725, STANDINS=1, FPS60 16:9 fullscreen, godmode, NO_SAVE_WRITE),
+240 s each, back to back, host idle 7.6 h, AC, clk 0.95: live alive=1 crash 0 vi_stalls30s=0 max_gap 146 ms vihold 17304 level_ok=1;
+replay alive=1 crash 0 vi_stalls30s=0 max_gap 147 ms vihold 17336 level_ok=1; standins on in both (155 objects level 4).
+Log tag census (236 vs 237 tags): every differing count is inside the live binary's own spread over s7725/s7726/s7738 L4 logs
+([godmode] refills 7/0 vs live 5/3/0, g1d-hudwipe 0/8 vs live 8/0/0, mfst, g1d-wipeeps, lbspan), except [desc-st] 3 vs 0: that is the
+unconditional s6517 fprintf in live funcs_9 load_level_hmp (apply_s6517_desc_owner, closed s6496-s6526 chain, not in RS64_REPLAY),
+diagnostic text only. Cross-run on an animating scene, so the runtime line only bounds gross differences; the link + symbol lines
+are the deterministic evidence.
+Discrimination: selects H-swap-safe, refutes H-hidden-dep (no link dependency, no owner-visible change in one L4 hold).
+Rules out: a live-only symbol that the host or PatchesLib needs; the replay tree breaking the L4 owner route.
+Next: adopting the replay as the live tree is now a bounded change (regen per the hard order) whose proof is the gate sweep + holds.

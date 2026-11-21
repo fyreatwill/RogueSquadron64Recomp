@@ -12,6 +12,11 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7738 replay tree is swap-safe (H-swap-safe, H-hidden-dep refuted).** build_replay (-DRECOMP_FUNCS_DIR=scratch/s7736/gate/replay,
+  RecompiledFuncs only) + tools/s7738_link_replay.sh (relinks build/'s objects against any lib, never writes build/): links rc 0
+  (controls: live lib rc 0, lib minus funcs_3 rc 1). Symbol diff: live-only = 17 data_gap_* + 5 rs5904/5907 diag refs, replay-only =
+  static_5_800CC4E4 (s6871, unreachable). L4 owner recipe 240 s each: both alive, 0 crash, 0 stalls, max_gap 146/147 ms; every log
+  tag difference is inside live run spread except [desc-st] (live-only always-on s6517 print). Adopting the replay as live is open.
 - **s7737 DIAG consumer census (H-none after review; now in the s7719 gate).** tools/s7737_diag_consumers.py takes every reverse
   DIAG/ORDER-DIAG/REGEN-FUNC-DIAG row (live-only lines no fixup reproduces), pulls the env names those lines read (direct getenv +
   brace-matched bodies of the helpers they call, src/ and live preludes) and their `[tag]` log prefixes, and greps live consumers
