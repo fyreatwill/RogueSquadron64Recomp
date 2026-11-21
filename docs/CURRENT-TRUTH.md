@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7739 (2026-11-20).
+Compact operational handoff, as of Session 7740 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -21,6 +21,12 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   control -> tools/fixtures/s7416_data_gap_80024A0C.c; s7423 known-lines control n/a when funcs_9 identical; s7549/s7611/s7612/s7613
   rows; stale funcs_50.c.o deleted). Redo with tools/s7739_adopt_replay.sh <work> (REF=<old replay>). Old tree:
   scratch/s7739/live_backup (local, gitignored) + build binary scratch/s7739/live_binary_backup.
+- **s7740 regen gate STRICT (H-zero selected, H-nondeterministic refuted).** `tools/s7719_regen_gate.py --strict` (the sweep runs it)
+  also byte-compares every *.c/*.h/*.cpp/*.inl of live vs the fresh replay; any differing or one-sided file = H-drift rc 1. Fresh
+  replay == s7739 replay == live (0 diff lines; regen deterministic). Controls in-gate: planted edit + planted extra file each read
+  exactly that file. RED arm (live farm + one comment line in funcs_12.c): strict rc 1 while s7423 both ways still read {} (the
+  statement scans ignore comments), so strict covers what they cannot. Sweep --only s7719: GREEN (174 s).
+  Consequence: ANY hand edit to ../N64Recomp/RecompiledFuncs now turns the sweep RED; put it in a fixup/apply script instead.
 - **s7738 replay tree swap-safe** (link + symbol + L4 hold; tools/s7738_link_replay.sh) -> adopted s7739.
 - **s7737 DIAG consumer census** (tools/s7737_diag_consumers.py, in the s7719 gate: a live-only probe that a live tool reads)
   and **s7736** s6201 [g1d-alloc] restored to the regen (apply_s7736_g1d_alloc). Both moot for drift since s7739 (live == replay).

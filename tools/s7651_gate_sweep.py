@@ -60,7 +60,8 @@ ARGS = {
     "s7083_lowering_census.py": (["scratch/s7082/regen", "rogue_squadron.z64", "--check"], r"VERDICT PASS"),
     # s7719: fresh regen_front + RS64_REPLAY_TREE_ONLY replay into a temp dir, then s7423 forward + --reverse with controls (~2.6 min,
     # one CPU). Replaces the hand-run s7421/s7423 drift check that needed a retained replay tree (last one s7558).
-    "s7719_regen_gate.py": ([], r"VERDICT H-mirrored"),
+    # s7740: --strict adds byte identity live vs replay (any differing/one-sided source file = RED; planted edit/extra controls).
+    "s7719_regen_gate.py": (["--strict"], r"VERDICT H-mirrored \(.*live == replay byte-for-byte"),
     # s7719: these three print "OPEN n" yet exit 0 without --check, so the s7718 sweep scored OPEN 19/22/6 as GREEN.
     "s7363_hostarr_census.py": (["--check"], r"\nOPEN 0\b"),
     "s7364_heapbuf_census.py": (["--rt64", "--check", "-q"], r"OPEN 0 keys 0"),

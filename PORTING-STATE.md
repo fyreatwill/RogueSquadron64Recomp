@@ -206583,3 +206583,32 @@ ORIGIN: not a mitigation; the live tree's hand-drift (stale s6826 hooks, double 
 Discrimination: selects H-clean (0-line replay diff, GREEN sweep after re-anchoring, both holds clean) and refutes H-new-drift.
 Rules out: a live-only line the owner path needs (the old tree's extra lines were all DIAG/accepted); a lost N64Recomp patch.
 Note: ../N64Recomp is its own git repo whose RecompiledFuncs is tracked there (HEAD from s5484, long uncommitted); not committed.
+
+## Session 7740 (2026-11-20) — s7719 regen gate made STRICT: live == fresh replay byte-for-byte (H-zero selected, H-nondeterministic refuted)
+
+Work unit (NEXT s7740 candidate; no new crash report: crash_reports FOLDED=27 new=0; no new SOAK-RESULTS lines; no owner report).
+Hypotheses: H-zero (a fresh regen replay still equals the live tree, so a strict any-difference gate is GREEN) vs
+H-nondeterministic (two replays differ, e.g. ordering/timestamps, so strict would be flaky).
+
+Ran:
+- Fresh `tools/s7719_regen_gate.py --keep scratch/s7740/gate` (170 s, one CPU): rc 0, H-mirrored, s7423 class counts {} forward
+  and reverse, diag-consumers 0 rows, reader 378 readings 0 HIDDEN, all controls PASS.
+- `diff -rq scratch/s7740/gate/replay scratch/s7739/gate/replay`: 0 lines (two replays hours apart are identical -> deterministic,
+  H-nondeterministic refuted). Per-file cmp fresh replay vs ../N64Recomp/RecompiledFuncs: 0 differ (H-zero selected).
+
+Change: `tools/s7719_regen_gate.py --strict` (step 6): byte compare of every source file (*.c *.h *.cpp *.inl; the live dir's
+build/, scratch/, PORTING-STATE.md stubs are not sources) live vs replay; any `differs:` / `only-live:` / `only-replay:` row ->
+res['strict']=1 -> VERDICT H-drift rc 1. In-gate controls each run: a symlink farm of live with one planted line appended to the
+middle .c (funcs_31.c) and one with an extra planted file must each add exactly that row on top of the real result (else rc 3).
+tools/s7651_gate_sweep.py runs it with --strict and now requires "live == replay byte-for-byte" in the verdict.
+
+Results:
+- GREEN arm (`--tree scratch/s7740/gate/replay --strict`): 53 files, 0 differ, both controls PASS, rc 0. Same on the s7739 replay.
+- RED arm (`--live` = symlink farm of live with `/* s7740 red-arm plant */` appended to funcs_12.c): strict `differs:funcs_12.c`,
+  rc 1 VERDICT H-drift {'strict': 1}; s7423 forward and reverse BOTH still read class counts {} — the statement-level scans do
+  not see a comment line, so the strict check covers drift the old gate could not. Plant was in a scratch farm; live untouched.
+- `python3 tools/s7651_gate_sweep.py --jobs 1 --only s7719`: GREEN (174 s).
+
+Rules out: replay nondeterminism as a reason to keep the gate lenient. Consequence: any hand edit to the live RecompiledFuncs
+tree now turns the sweep RED; hand edits must go into fixup/apply scripts (CLAUDE.md regen rule, now machine-enforced).
+No game run this session (text-only gate change).
