@@ -207560,3 +207560,43 @@ s7381 spin: summary-thread sleep loop -> reviewed DIAG. s7382 QoS: the same thre
 not changed since.
 Next: NEXT.md dangling-global-heap-ptr-class (enumerate every resident global holding an rs_malloc pointer, check each for
 dangling across overlay swaps / frees, and watch reads while it dangles; 0x80130BB0 is the positive control).
+
+## Session 7777 (2026-11-21) — dangling resident-global class enumerated: 7 words read while dangling, 6 closed (no stale deref), 1 OPEN: the hangar's VI swap slot shows FB 0x80656000 while rs_malloc hands memory inside it to the craft-model loaders; new ROGUESQ_S7777_DANGLE + tools/s7777_dangle_score.py
+Pre-checks: crash_reports --since 2026-11-13 FOLDED=20 new=0; no new SOAK-RESULTS lines; CURRENT-TRUTH 52533 B (no maintenance).
+Unit = NEXT.md s7777 (generalise s7776 to the whole class: resident words that hold an rs_malloc pointer and outlive the block).
+Instrument (src/main/upstream_compat.cpp s7777_*, ROGUESQ_S7777_DANGLE=1 + ROGUESQ_STORE_DIAG=1, exclusive load/store-watch
+mode, measurement only). Runtime enumeration, not static: a sweep thread every 250 ms reads every word of 0x80000400..0x80154690
+(main code/data, overlay window, main bss) and walks the 3 arena chains (heads 0x8010FEFC/0x8010FF00/0x8010FF18). A word inside a
+USED block is tracked (value, block, alloc serial from the rs_malloc hook) and marked in the s7475 bitmap. Dangling = same value,
+no guest store since, and its block was rs_free'd (f), went free (F), left every chain (N) or was re-carved (R). Guest stores end
+the dangling state; every guest load of a dangling word is logged per (word, pc). Run 2 adds a deref watch: on the first dangling
+read of an f/F/N word its stale block (<=256 KB) is marked too, and loads/stores into it are attributed per pc, with
+same_fn_as_reader flagged.
+Runs: `zsh tools/s7774_slot_run.zsh s7777a|s7777b ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` (owner route_long, 300 s). Both
+alive=1 crash=0 save-unchanged.
+Score: `python3 tools/s7777_dangle_score.py <log>` (--selftest unused/latent/dead-ctl 0/1/3 PASS). It classifies each reader by
+instruction (objdump of the elf) and by region/symbol. s7777b: 2351 words dangled at some point, 2199 of them data. 7 words were
+loaded while dangling, in 11 (word, pc) rows (run a: the same set plus 0x80148514).
+Controls: watch-ctl load + store PASS (frame counter). 0x80130BB0 dangled why=F at t=12.5 (menu) with 0 reads, which replicates
+s7776. Deref watch live: rs_malloc_s5041_inner, inflateInit2_ and NPC fns hit the reused blocks (new owners).
+Members:
+- 0x8010FEFC arena head (ensureHeapInitialized): ALLOC-META, the allocator's own list. Instrument false positive.
+- 0x80148514 (compareHalfwordAtOffset4_v3, `lhu`): NOT-PTR, a halfword pair.
+- 0x8014A894 (stepActiveSongTracks `lw t3; beq t3,s3`): COMPARE-ONLY. 10 reads, 0 accesses by the reader into the stale block
+  80381370..803814C0. startSongSequence re-inits it 41 s later.
+- 0x80136FCC gDoublyLinkedNodePool12: READ-NO-DEREF. scaleObjectPosToGridUnits read it 46 times at t=77.7, 65 s after the menu
+  freed it. 0 accesses into 80247FF0..8024F070 before allocAndInitDoublyLinkedNodePool12 re-init it in the same tick. Its free-list
+  pop (lhu 0x80136FC0, sh into pool+idx*12) is not reached, so no stale write happens.
+- OPEN, FRAME class: 0x80128E98/9C are the VI swap slots (viRetraceHandlerThread lw -> osViSwapBuffer, bufferArbiterAllocSlot,
+  ProducerMark), and 0x8011A8C0/C4 is frameStartReset. In the SELECT YOUR CRAFT hangar (t=35.5-71.3, screenshot w_040) slot 1 =
+  FB 0x80656000, 512 wide. RT64 logs `[present-1024] drawn=0x656000` 534 times in that window and 0x6AB000 535 times. Meanwhile
+  rs_malloc gives 0x80656010..0x80674AC0, which lies inside that FB, to inflateInit2_/inflate_blocks/inflate_codes/adler32 (86k
+  loads), parseHmtMaterials, load_hmt_and_hob and parseImageFile. initVideoSubsystem re-inits the slot at t=71.3. No visible defect
+  and 0 inflate errors. The g1d retarget is skipped (aspect unset), so this is the game's own FB partition. Single-source.
+Verdict: neither H-all-unused nor H-latent holds outright. H-latent is refuted for the 4 pointer-shaped data members: their
+readers make 0 stale derefs, checked two ways (deref watch, and the reader's code path). The FRAME member is H-latent-shaped and
+stays open. Next it needs a split between H-retail (the game's partition and frees), H-ours (our heap layout) and H-stomp (a host
+or RDP write over live loader blocks). See NEXT.md.
+ORIGIN: no mitigation added. The dangling words are the game's own globals, and the open overlap is not yet attributed.
+Gates: s7344 wrap +3 HAND rows (s7777_sweep, s7777_access x2) unclassified 0. s7381 spin +1 DIAG row, unreviewed 0. s7382 QoS +1
+DIAG row, unreviewed 0. Full sweep (--jobs 2) result is in the commit message.

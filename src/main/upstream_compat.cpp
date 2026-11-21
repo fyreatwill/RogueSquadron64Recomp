@@ -4138,6 +4138,7 @@ static void s7480_sum(double now) {
    control: the first malloc seen while a span is live is reported as a CONTROL line (not counted). Always on; cost = 2 loads. */
 extern "C" { volatile uint32_t g_rs64_s7482_base = 0, g_rs64_s7482_ec = 0; }
 static uint64_t s_s7482_live_mallocs = 0, s_s7482_collide = 0;
+static void s7777_malloc(uint32_t ptr); static void s7777_free(uint32_t ptr);  /* s7777, defined below */
 static void s7482_check(uint32_t req, uint32_t ptr, uint32_t ra) {
     const uint32_t b = g_rs64_s7482_base, e = g_rs64_s7482_ec; if (!b || !ptr || !req) return;
     static const bool ctl = [] { const char* v = std::getenv("ROGUESQ_S7482_CTL"); return v && v[0] && v[0] != '0'; }();
@@ -4149,6 +4150,7 @@ static void s7482_check(uint32_t req, uint32_t ptr, uint32_t ra) {
                      r ? s7472_rd(r, 0x801163E8u) : 0u, ra, (unsigned long long)k + 1, (unsigned long long)s_s7482_collide); std::fflush(stderr); }
     if ((k & 0xFFFu) == 0xFFFu) { std::fprintf(stderr, "[s7482] sum live_mallocs=%llu collide=%llu span=%08X..%08X\n", (unsigned long long)k + 1, (unsigned long long)s_s7482_collide, b, e); std::fflush(stderr); } }
 static void s7475_malloc(uint32_t req, uint32_t ptr, uint32_t ra, void* hpc) {
+    s7777_malloc(ptr);  /* s7777 dangling-global class */
     s7482_check(req, ptr, ra);
     if (!s7475_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
@@ -4478,13 +4480,128 @@ namespace { struct S7776Arm { S7776Arm() {
     s7545_mark(0x80130BB0u, 4); s7545_mark(0x8011A890u, 4); g_rs64_s7484_on = 1;
     std::fprintf(stderr, "[s7776] table-pointer watch armed\n");
     std::thread([] { for (int k = 1;; ++k) { std::this_thread::sleep_for(std::chrono::seconds(5)); s7776_sum(k % 6 == 0); } }).detach(); } } s_s7776_arm; }
+/* s7777 class: resident global words holding a heap pointer that outlive their block (ROGUESQ_S7777_DANGLE=1, exclusive
+   load/store watch mode, measurement only; stores need ROGUESQ_STORE_DIAG=1). Generalises s7776 (*0x80130BB0). A sweep thread
+   (every 250 ms) reads every word of resident main code/data/overlay/main-bss [0x80000400, 0x80154690) and walks the three
+   rs_malloc arena chains (heads 0x8010FEFC/0x8010FF00/0x8010FF18). A word whose value lies inside a USED block is tracked
+   (value, block, block alloc serial) and marked in the s7475 bitmap so its guest loads and stores land here. It turns DANGLING
+   when, value unchanged and not stored since: rs_free of its block ('f'), the block is free in the chain ('F'), no chain block
+   holds it any more ('N': arena torn down), or the block was re-carved / re-allocated ('R'). A guest store to the word ends the
+   dangling state (re-init). Every guest load of a dangling word is a dangling read, logged per (word, pc).
+   Positive controls: the frame counter 0x8011A890 load+store (watch mechanism) and 0x80130BB0 must dangle in the menu phase.
+   Offline: tools/s7777_dangle_score.py classifies words against the symbol table (code words that look like pointers are
+   never data-loaded, so they cannot produce reads). */
+static bool s7777_on() { static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7777_DANGLE"); return e && e[0] && e[0] != '0'; }(); return on; }
+struct S7777W { uint32_t v = 0, bs = 0, bsz = 0, ser = 0; int st = 0; char why = 0; bool rewr = false; double t_seen = 0, t_dang = 0; uint64_t rd_clean = 0, rd_dang = 0, nd = 0; };
+struct S7777R { const char* fn = nullptr; uint64_t n = 0; double t = 0; uint32_t v = 0; char why = 0; };
+struct S7777B { uint32_t b, e, fl; };
+static std::mutex s_s7777_mu;
+static std::map<uint32_t, S7777W> s_s7777_w;
+static std::map<uint32_t, uint32_t> s_s7777_ser;
+static std::map<std::pair<uint32_t, uint32_t>, S7777R> s_s7777_rd;
+static uint32_t s_s7777_serc = 0; static double s_s7777_t0 = 0;
+static uint64_t s_s7777_ctl_ld = 0, s_s7777_ctl_st = 0, s_s7777_sweeps = 0, s_s7777_dev = 0, s_s7777_drd = 0, s_s7777_crd = 0, s_s7777_st = 0, s_s7777_reinit = 0, s_s7777_nlog = 0;
+static const uint32_t S7777_LO = 0x80000400u, S7777_HI = 0x80154690u;
+/* deref watch (run 2): on the first dangling read of a word whose block was freed (f/F/N, block <= 256 KB) the stale block
+   [bs, bs+bsz) is marked too, so guest loads/stores into it land in s7777_access and are attributed per (word, pc, kind).
+   Accesses by the dangling reader's own function = stale derefs; other functions = the block's new owner. Ends at word re-init. */
+struct S7777S { uint32_t word, lo, hi; const char* rfn; bool open; double t; };
+struct S7777D { const char* fn = nullptr; uint64_t n = 0; double t = 0; uint32_t a0 = 0; bool same = false; bool open = true; };
+static std::vector<S7777S> s_s7777_sr;
+static std::map<std::tuple<uint32_t, uint32_t, char>, S7777D> s_s7777_dr;
+static void s7777_bm(uint32_t a, bool on) { if (!g_rs64_s7475_bm) return; for (uint32_t b = a; b < a + 4u; ++b) { const uint32_t o = b - 0x80000000u; if (o >= 0x1800000u) continue;
+    if (on) g_rs64_s7475_bm[o >> 3] |= (unsigned char)(1u << (o & 7u)); else g_rs64_s7475_bm[o >> 3] &= (unsigned char)~(1u << (o & 7u)); } }
+static void s7777_dangle(uint32_t a, S7777W& w, char why, double now) {
+    w.st = 1; w.why = why; w.t_dang = now; ++w.nd; ++s_s7777_dev;
+    if (s_s7777_nlog++ < 400 || a == 0x80130BB0u || w.rd_clean || w.rd_dang)
+        std::fprintf(stderr, "[s7777] dangle a=%08X v=%08X why=%c blk=%08X bsz=%X ser=%u age=%.2f t=%.1f\n", a, w.v, why, w.bs, w.bsz, w.ser, now - w.t_seen, now); }
+static void s7777_sweep() {
+    volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
+    std::vector<S7777B> bl; const uint32_t top = rs64_ram_top;
+    static const uint32_t heads[3] = {0x8010FEFCu, 0x8010FF00u, 0x8010FF18u}; uint32_t seen[3] = {0, 0, 0}; int na = 0;
+    for (int i = 0; i < 3; ++i) { const uint32_t h0 = s7472_rd(r, heads[i]); if (h0 < S7777_HI || h0 >= top) continue;
+        bool dup = false; for (int j = 0; j < na; ++j) dup |= seen[j] == h0; if (dup) continue; seen[na++] = h0;
+        uint32_t b = h0; for (int g = 0; g < 400000; ++g) { const uint32_t w0 = s7472_rd(r, b), sz = s7472_rd(r, b + 4u), fl = w0 >> 16;
+            if ((fl & 8u) || (fl != 1u && fl != 2u && fl != 6u) || (sz & 0xFu) || b + 0x10u + sz <= b || b + 0x10u + sz >= top) break;
+            bl.push_back({b, b + 0x10u + sz, fl}); b += 0x10u + sz; } }
+    std::sort(bl.begin(), bl.end(), [](const S7777B& x, const S7777B& y) { return x.b < y.b || (x.b == y.b && x.e > y.e); });
+    const uint32_t hlo = bl.empty() ? 0xFFFFFFFFu : bl.front().b; uint32_t hhi = 0; for (auto& x : bl) hhi = std::max(hhi, x.e);
+    std::lock_guard<std::mutex> lk(s_s7777_mu); const double now = s7325_now() - s_s7777_t0; ++s_s7777_sweeps;
+    auto find = [&](uint32_t v) -> const S7777B* { const S7777B* best = nullptr;  /* innermost block holding v */
+        auto it = std::upper_bound(bl.begin(), bl.end(), v, [](uint32_t x, const S7777B& y) { return x < y.b; });
+        for (int k = 0; it != bl.begin() && k < 8; ++k) { --it; if (v >= it->b && v < it->e && (!best || it->e - it->b < best->e - best->b)) best = &*it; } return best; };
+    uint64_t ntr = 0, ndg = 0;
+    for (uint32_t a = S7777_LO; a < S7777_HI; a += 4u) {
+        const uint32_t v = s7472_rd(r, a); auto wit = s_s7777_w.find(a);
+        if (v < hlo || v >= hhi) { if (wit != s_s7777_w.end()) { s7777_bm(a, false); s_s7777_w.erase(wit); } continue; }
+        const S7777B* b = find(v); const bool used = b && b->fl != 1u; const uint32_t bs = b ? b->b + 0x10u : 0;
+        if (wit == s_s7777_w.end() || wit->second.v != v || wit->second.rewr) {
+            if (!used) { if (wit != s_s7777_w.end()) { s7777_bm(a, false); s_s7777_w.erase(wit); } continue; }  /* born pointing at free/no block: not an owning pointer we saw live */
+            S7777W& w = s_s7777_w[a]; const uint64_t rc = w.rd_clean, rdg = w.rd_dang, nd = w.nd;
+            w = S7777W{}; w.v = v; w.bs = bs; w.bsz = b->e - b->b - 0x10u; w.ser = s_s7777_ser.count(bs) ? s_s7777_ser[bs] : 0; w.t_seen = now; w.rd_clean = rc; w.rd_dang = rdg; w.nd = nd;
+            s7777_bm(a, true); ++ntr; continue; }
+        S7777W& w = wit->second; ++ntr;
+        if (w.st == 1) { ++ndg; continue; }
+        if (!b) s7777_dangle(a, w, 'N', now);
+        else if (!used) s7777_dangle(a, w, 'F', now);
+        else if (bs != w.bs || (s_s7777_ser.count(bs) ? s_s7777_ser[bs] : 0) != w.ser) s7777_dangle(a, w, 'R', now);
+        if (w.st == 1) ++ndg; }
+    if (s_s7777_sweeps % 20 == 1)
+        std::fprintf(stderr, "[s7777] sum t=%.1f sweeps=%llu blocks=%zu heap=%08X..%08X tracked=%llu dangling=%llu dangle_events=%llu clean_reads=%llu dangling_reads=%llu stores=%llu reinit=%llu ctl_ld=%llu ctl_st=%llu\n",
+                     now, (unsigned long long)s_s7777_sweeps, bl.size(), hlo, hhi, (unsigned long long)ntr, (unsigned long long)ndg, (unsigned long long)s_s7777_dev, (unsigned long long)s_s7777_crd,
+                     (unsigned long long)s_s7777_drd, (unsigned long long)s_s7777_st, (unsigned long long)s_s7777_reinit, (unsigned long long)s_s7777_ctl_ld, (unsigned long long)s_s7777_ctl_st);
+    if (s_s7777_sweeps % 240 == 0) {  /* every 60 s: per-word rows that ever dangled, and every dangling-read row */
+        for (auto& kv : s_s7777_w) if (kv.second.nd) std::fprintf(stderr, "[s7777] word a=%08X v=%08X st=%d why=%c nd=%llu rd_clean=%llu rd_dang=%llu\n", kv.first, kv.second.v, kv.second.st, kv.second.why ? kv.second.why : '-',
+                                                                (unsigned long long)kv.second.nd, (unsigned long long)kv.second.rd_clean, (unsigned long long)kv.second.rd_dang);
+        for (auto& kv : s_s7777_dr) std::fprintf(stderr, "[s7777] drow word=%08X pc=%08X kind=%c fn=%s n=%llu same_fn=%d open=%d a0=%08X t_first=%.1f\n", std::get<0>(kv.first), std::get<1>(kv.first), std::get<2>(kv.first),
+                                                 kv.second.fn ? kv.second.fn : "?", (unsigned long long)kv.second.n, (int)kv.second.same, (int)kv.second.open, kv.second.a0, kv.second.t);
+        for (auto& kv : s_s7777_rd) std::fprintf(stderr, "[s7777] rdrow a=%08X pc=%08X fn=%s n=%llu v=%08X why=%c t_first=%.1f\n", kv.first.first, kv.first.second, kv.second.fn ? kv.second.fn : "?", (unsigned long long)kv.second.n, kv.second.v, kv.second.why, kv.second.t); } }
+static void s7777_malloc(uint32_t ptr) { if (!s7777_on() || !ptr) return; std::lock_guard<std::mutex> lk(s_s7777_mu); s_s7777_ser[ptr] = ++s_s7777_serc; }
+static void s7777_free(uint32_t ptr) {
+    if (!s7777_on() || !ptr) return; std::lock_guard<std::mutex> lk(s_s7777_mu); const double now = s7325_now() - s_s7777_t0;
+    for (auto& kv : s_s7777_w) if (kv.second.st == 0 && kv.second.bs == ptr) s7777_dangle(kv.first, kv.second, 'f', now); }
+static int s7777_access(uint32_t pc, uint32_t a, int w, const char* fn, bool st) {
+    if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { std::lock_guard<std::mutex> lk(s_s7777_mu); uint64_t& c = st ? s_s7777_ctl_st : s_s7777_ctl_ld;
+        if (c++ == 0) std::fprintf(stderr, "[s7777] watch-ctl-%s PASS pc=%08X fn=%s\n", st ? "store" : "load", pc, fn ? fn : "?"); return 1; }
+    std::lock_guard<std::mutex> lk(s_s7777_mu); const double now = s7325_now() - s_s7777_t0;
+    for (uint32_t wa = a & ~3u; wa < a + (uint32_t)w; wa += 4u) {
+        auto it = s_s7777_w.find(wa);
+        if (it == s_s7777_w.end()) {
+            if (wa < S7777_HI) continue;
+            for (auto& s : s_s7777_sr) if (wa >= s.lo && wa < s.hi) {
+                S7777D& d = s_s7777_dr[{s.word, pc, st ? 'S' : 'L'}]; const bool same = fn && s.rfn && !std::strcmp(fn, s.rfn);
+                if (d.n++ == 0) { d.fn = fn; d.t = now; d.a0 = wa; d.same = same; d.open = s.open;
+                    if (s_s7777_dr.size() <= 400) std::fprintf(stderr, "[s7777] stale-%s word=%08X a=%08X off=%X pc=%08X fn=%s same_fn_as_reader=%d open=%d t=%.1f\n", st ? "store" : "load", s.word, wa, wa - s.lo, pc, fn ? fn : "?", (int)same, (int)s.open, now); }
+                break; }
+            continue; }
+        S7777W& x = it->second;
+        if (st) { ++s_s7777_st; if (x.st == 1) { ++s_s7777_reinit; x.st = 2; for (auto& s : s_s7777_sr) if (s.word == wa && s.open) { s.open = false; std::fprintf(stderr, "[s7777] deref-watch OFF word=%08X (store re-init pc=%08X fn=%s) t=%.1f\n", wa, pc, fn ? fn : "?", now); } } x.rewr = true; continue; }
+        if (x.st == 1 && s7545_rdw(wa) == x.v && !x.rewr) {
+            ++s_s7777_drd; ++x.rd_dang; S7777R& rr = s_s7777_rd[{wa, pc}];
+            if (rr.n == 0 && x.why != 'R' && x.bsz <= 0x40000u && x.bs >= S7777_HI) { bool have = false; for (auto& s : s_s7777_sr) have |= s.word == wa && s.lo == x.bs && s.open;
+                if (!have) { s_s7777_sr.push_back({wa, x.bs, x.bs + x.bsz, fn, true, now}); for (uint32_t b = x.bs; b < x.bs + x.bsz; b += 4u) s7777_bm(b, true);
+                    std::fprintf(stderr, "[s7777] deref-watch ON word=%08X blk=%08X..%08X reader=%s t=%.1f\n", wa, x.bs, x.bs + x.bsz, fn ? fn : "?", now); } }
+            if (rr.n++ == 0) { rr.fn = fn; rr.t = now; rr.v = x.v; rr.why = x.why;
+                if (s_s7777_rd.size() <= 300) std::fprintf(stderr, "[s7777] dangling-read a=%08X v=%08X why=%c pc=%08X fn=%s since=%.2f t=%.1f\n", wa, x.v, x.why, pc, fn ? fn : "?", now - x.t_dang, now); } }
+        else { ++s_s7777_crd; ++x.rd_clean; } }
+    return 1; }
+namespace { struct S7777Arm { S7777Arm() {
+    if (!s7777_on()) return;
+    s_s7777_t0 = s7325_now();
+    if (!g_rs64_s7475_bm) g_rs64_s7475_bm = (unsigned char*)std::calloc(0x1800000u >> 3, 1);
+    if (!g_rs64_s7475_bm) return;
+    s7777_bm(0x8011A890u, true); g_rs64_s7484_on = 1;
+    std::fprintf(stderr, "[s7777] dangling-global watch armed range=%08X..%08X\n", S7777_LO, S7777_HI);
+    std::thread([] { for (;;) { std::this_thread::sleep_for(std::chrono::milliseconds(250)); s7777_sweep(); } }).detach(); } } s_s7777_arm; }
 extern "C" int rs64_s7484_load(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7777_on()) return s7777_access(pc, a, w, fn, false);  /* s7777 dangling-global class watch (exclusive) */
     if (s7776_on()) return s7776_load(pc, a, w, fn);  /* s7776 dangling slot-table watch (exclusive) */
     if (s7545_on()) return s7545_access(pc, a, w, fn, 'L');  /* s7545 class GE thread watch (exclusive) */
     if (s7518_watch()) { s7519_load(pc, a, w, fn); return s7518_load(pc, a, w, fn); }
     if (a <= 0x8011A890u && 0x8011A890u < a + (uint32_t)w) { if (s_s7484_ctl++ == 0) std::fprintf(stderr, "[s7484] watch-ctl PASS pc=%08X fn=%s w=%d\n", pc, fn ? fn : "?", w); return 1; }
     std::lock_guard<std::mutex> lk(s_s7475_mu); return s7484_load(pc, a, w, fn); }
 extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) {
+    if (s7777_on()) return s7777_access(pc, a, w, fn, true);  /* s7777 (exclusive) */
     if (s7545_on()) return s7545_access(pc, a, w, fn, pc >= 0xE0000000u ? 'H' : 'S');  /* s7545 class GE */
     if (s7518_watch()) return s7519_store(pc, a, w, fn);  /* s7519 class FP (exclusive mode, as the s7518 load watch) */
     if (rs64_s7501_on && rs64_s7501_cpu(pc, a, w, fn)) return 1;  /* s7501 EZ: guest store into a seen framebuffer (bits marked by main.cpp) */
@@ -4520,6 +4637,7 @@ extern "C" int rs64_s7475_store(uint32_t pc, uint32_t a, int w, const char* fn) 
                              (int)s7475_hdr_ok(rr, blk, b), nz, (b.req + 3) / 4, s7325_now() - b.t); } } }
     return 1; }
 static void s7475_free(uint32_t ptr, uint32_t ra) {
+    s7777_free(ptr);  /* s7777 dangling-global class */
     if (!s7475_on()) return;
     volatile uint8_t* r = g_recomp_rdram_for_wp_raw; if (!r) return;
     const double now = s7325_now();

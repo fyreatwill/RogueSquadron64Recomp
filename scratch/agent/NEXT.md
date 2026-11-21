@@ -1,18 +1,31 @@
-# NEXT (s7777; s7776 closed the dangling NPC-slot table as H-unused)
+# NEXT (s7778; s7777 enumerated the dangling resident-global class, 1 member open)
 HYPOTHESIS-ID: dangling-global-heap-ptr-class
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
 
-Generalise s7776 into a class audit (ITERATION item 3 model: enumerate the whole idiom class, classify every member, close it).
-Class: resident .data/.bss words that hold an rs_malloc pointer and outlive the block (the slot table *0x80130BB0 was one:
-freed with the menu heap, never cleared, never read until re-init). Enumerate, one instrument, one run:
-1. Static: every resident global word written from an rs_malloc return (sw of v0 after jal rs_malloc / wrappers) -> list of
-   (global, writer fn, readers). Use objdump of the elf + the 59-site pattern from s7776 (tools/s7776_tblwatch_score.py header).
-2. Runtime: at each overlay swap (s7528 pre/post lines) and each rs_free, check every listed global: does it point into a
-   freed / reused block (s7480 freed map in src/main/upstream_compat.cpp)? For each dangling one, mark the word in the s7484
-   bitmap (as s7776 does for 0x80130BB0) and count reads while dangling.
-Hypotheses: H-all-unused (every dangling global is re-inited before its next read -> class CLOSED), H-latent (some global is read
-while dangling -> name the reader, decide retail bug vs ours with the oracle), H-ours (a dangling global exists only because
-our heap/overlay timing differs from retail).
-Positive control: 0x80130BB0 must appear in the dangling list during the menu phase (s7776 window t=15-75 s on route_long).
-Run: `zsh tools/s7774_slot_run.zsh <name> ROGUESQ_S7776_TBLWATCH=1 <new flag>` (300 s owner route, save read-only).
+Open member (CURRENT-TRUTH item 31, FRAME class): in the SELECT YOUR CRAFT hangar (owner route_long t=35.5-71.3) the VI swap slot
+0x80128E9C = FB 0x80656000 (512 wide, RT64 presents drawn=0x656000 ~15/s), while rs_malloc hands 0x80656010..0x80674AC0 (inside
+that FB) to the craft-model loaders (inflate*, parseHmtMaterials, load_hmt_and_hob, parseImageFile). s7777b log:
+scratch/s7774/s7777b/run.log (deref-watch ON word=80128E9C t=35.5, OFF by initVideoSubsystem t=71.3).
+
+Hypotheses:
+- H-retail: the game's own sequence. partitionFramebufferMemory carves the hi-res FBs from heap memory that is later rs_free'd
+  (or never reserved), so retail also runs loaders inside a displayed FB (tolerated: RDP overwrites only pixels, loaders finish
+  between frames, or the slot is in rotation but not drawn).
+- H-ours: our heap differs from retail (allocation order/sizes from M5 audio de-stubs, s7482 reservation, spill arenas, osMemSize
+  path), so the loader blocks land inside FB A only in the port.
+- H-stomp: in the port something writes RDRAM over the loader blocks during the window (RT64 render-to-RAM writeback of FB A,
+  RDP fill/copy) -> corrupt craft assets that are just not visible.
+
+Discriminating measurement, ONE build, ONE run (owner route_long, 300 s, save read-only):
+1. The FB addresses the game itself computes: log partitionFramebufferMemory's outputs (and the swap-slot stores, s7777 already
+   names initVideoSubsystem as the writer) plus every rs_malloc/rs_free whose block overlaps [0x80656000, 0x80700000) with t and
+   ra (ROGUESQ_HEAPLOG prints only req>=0x4000; add a range filter). Who owned FB A's memory first: if the FB was carved from a
+   block the game then rs_free'd itself -> H-retail shape; if the overlapping blocks come from allocations retail would not make
+   (audio de-stub / port arenas) -> H-ours.
+2. Host writes into the loader block while it is live: arm the s7489 host-write watch idea on the range (or checksum the live
+   loader blocks before/after each RT64 present). Any host write = H-stomp. Same run, arm B: ROGUESQ_RENDER_TO_RAM=0.
+Positive controls: the s7777 deref watch must still see inflate's own stores into 0x80656010+; a planted host write
+(memset 4 bytes of a live loader block from the present hook once) must be counted.
+Ground truth for H-retail: tools/oracle (mupen64plus retail) cannot reach the hangar; instead compare the partition/allocation
+sequence with the decomp (rogue_squadron64 partitionFramebufferMemory + its caller) to see whether the FB block is freed by game code.
