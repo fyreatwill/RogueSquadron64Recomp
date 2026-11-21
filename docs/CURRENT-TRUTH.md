@@ -153,6 +153,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   Stand-ins never run inside intro cutscenes (H-absent, 3/3 levels). At 21:9 FB_DUMP needs ROGUESQ_ALLOW_WILD_W=1 (tools arm it).
 - **Post-G6c re-holds (s7692-s7695): clean.** 300 s STANDINS=1 dd4 owner recipe L1/L4/L5/L10/L12/L15 6/6; G5c 900 s freeze gate L4/L12
   (0 gaps >= 250 ms after t=95 s, SIGSTOP control caught); G2b crawl audio fix 2 vs ctl 1037; G5d logo share unchanged.
+- **s7744 G6c coverage L10/L12:** stand-ins add on both (counters; L12 6 truly early, max 57.9 s). No frame proof yet: fixed dump windows miss L10 add bursts, and L12 crops are scene motion. s7691 early_items was spawn_lines (bug); true 21/34, 38/74, PARITY=0 20/74 (tools/s7744_early_count.py).
 - **G6c stand-ins (ROGUESQ_STANDINS=1, opt-in, dd>1 only): DONE, owner's look.** Design docs/G6C-STANDINS-PLAN.md; code
   src/main/rs64_standins.cpp + tools/apply_s7623_standins.py and follow-ups (RS64_REPLAY). Visible early at true depth on 2 levels,
   19/19 levels 300 s clean (s7629/s7630), sheet docs/owner_sheet_s7691_standins_on_off.jpg. Default-on sub-fixes inside STANDINS (=0 old):

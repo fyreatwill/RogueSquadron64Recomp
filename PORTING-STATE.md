@@ -206696,3 +206696,33 @@ New tool tools/s7743_ovl_consumers.py (temp dirs only; build/ and scratch/ucode_
 Verdict: H-tool-input; H-dead refuted by two lines (fixup input + census oracle). Not deletable; keep byte-true (s7741 already
 checks that). Added to the gate sweep (s7651 "s7743_ovl_consumers.py", 1 s): GREEN.
 Rules out: removing the overlays as cleanup. No game run (offline item).
+
+## Session 7744 (2026-11-20) — G6c coverage on L10/L12 (never sheeted): stand-ins add on both (H-null refuted by counters), no frame proof yet; s7691 early_items counter was wrong (counted early_s=-1), corrected 21/34 + 38/74
+HYPOTHESIS-ID: g6c-coverage-l10-l12
+- Start: crash_reports new=0, no new SOAK-RESULTS lines, no owner report. CURRENT-TRUTH 59534 B (< 60000, not maintenance).
+  Every ladder rung is waiting on the owner, so this took NEXT's candidate: G6c coverage on levels the s7691 sheet does not cover.
+- Hypotheses: H-gain (far objects drawn early, visible ON-only in the alternation window), H-null (no stand-in ever added),
+  H-defect (misplaced/wrong models, or a crash).
+- Run 1 scratch/s7744_standins_cov.sh (s7691 recipe, STANDINS=frame HOLD 150, dumps 10:16:90): L10 dd4 / L12 dd2 / L12 dd4.
+  3/3 alive, crashlines 0, vi_stalls30s 0, level_ok 1, max_gap 148/163/148. Paint controls PASS 3/3. Win-1 flicker 0.4 / 111.5 /
+  186.4 px/triplet vs win-2 off control 0.6 / 504.4 / 470.4, sheet med_fpx 0/0/0.
+- Instrument defect found: the recipe's early_items = `grep -o 'early_s=[0-9.]*'` also matches `early_s=-1.00` (never added
+  early), so it always equalled spawn_lines. New tools/s7744_early_count.py (--self-test: new 1 vs old grep 2 on a planted pair,
+  PASS) counts early_s>0 and first_add. Corrected s7691: L1 dd2/dd4 21/34 (not 34), L4 dd2/dd4 38/74 (not 74), PARITY=0 control
+  20/74. That last figure is a second, independent line for the s7690 gain (38 vs 20 items, beside s7691's pixel line). Run 1 true early:
+  L10 1 (first add 21.4 s, after both windows), L12 dd2 2, L12 dd4 4 (first add 8.7 s, max 57.9 s early).
+- Run 2 scratch/s7744b_standins_cov.sh (windows 25:31): L10 dd4 + L12 dd4, 2/2 alive, 0 crash/stall, gaps 148/147.
+  L10: [standins-s] added=0 for 21 s, then bursts (22-24 s 181/1633/168, 29-32 s 516-1642, later ~3100/s), 0 at 25-28 s.
+  So window 1 fell into a gap where the autopilot had turned away. [standins-why] shows the culls are the game's own view test
+  (boxlo_x/boxlo_z/behind, d 50-250) while the far group is off-frustum. None of the added L10 items spawned within the hold, so the
+  spawn-based early count reads 0 and is blind to them. Sheet control FAIL (164 < need), so u104 crops are void.
+  L12 dd4: early 6, max 57.9 s, med_fpx 38, control PASS. BUT the top 3 crops (scratch/s7744/sheet_u124.png, looked at) are a real
+  TIE fighter and a wall edge moving between the two frames, not ON-only objects: the pixel score is scene motion here, and the
+  stand-ins (ours queued 14/s in [standins-q]) are too small at this window to separate from it.
+- Verdict: H-null refuted on L10 and L12 by two counters (adds per second + bucket queue "ours"). H-gain has no frame-level proof
+  on these levels: L10's fixed windows missed the add bursts, and L12's crops are motion. H-defect: no crash/stall in 5 arms, and no
+  misplaced object seen in any crop (single-source: crops only).
+- Rules out: "stand-ins only work on L1/L4". Also rules out reading the old recipe's early_items as an early-draw count.
+- Next: anchor the dump window on an add burst (e.g. STANDINS_DUMP=a<min_adds>:<n>, the first second whose added >= min), so
+  L10/L12 get a real ON/OFF pair. Then the scorer needs a motion-robust measure (the ON-only test must use crops where the label-0
+  neighbours on both sides agree).
