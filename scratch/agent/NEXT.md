@@ -1,15 +1,18 @@
-# NEXT (s7754)
-HYPOTHESIS-ID: rdp-output-gate-coverage
+# NEXT (s7755)
+HYPOTHESIS-ID: hangar-dl-midtask-rewrite
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-s7753 landed tools/s7753_rdp_output_gate.py (sweep GREEN 2/2, controls tg0/cap/flip PASS) but it covers only 2 L1 21:9 dd8
-in-flight tasks. Unit: widen coverage in ONE capture run, ONE build (no rebuild needed: ROGUESQ_S7751_SNAP already exists).
-- Capture with ROGUESQ_S7751_SNAP armed (see tools/s7753_capture_snaps.zsh for the pose harness): (a) L1 dd1 retail settings
-  in flight, (b) a hangar SELECT YOUR CRAFT frame, (c) a mission-intro cutscene frame (L4), (d) a 16:9 dd2 owner-recipe frame.
-- Per snap record the live policy (CAP: 65536 at dd1 vs 1048576 at dd>1; TG_FIX default per dd) in a SNAPS table
-  {path: (cap, tg_fix, tg0_len_or_None)}; the tg0 control applies only where TG_FIX=1 is live (dd>1); at dd1 use the cap and
-  flip controls plus "TG_FIX=1 must differ or the task has no TriGen hits" (report tg_hits from the harness stderr).
-- Hypotheses: H-exact (every new snap replays == live, gate extends cleanly) vs H-state (some path depends on state the snap
-  does not carry, e.g. multi-task segment/overlay residency, so replay != live: name the missing state before excluding it)
-  vs H-ucode-b (hangar/cutscene run a different ucode the lean harness does not link: then the gate must say so per snap).
-Expected: H-exact for in-flight dd1/dd2; hangar is the likely H-ucode-b. Update the sweep regex snaps=N. Max 2 CPU-heavy jobs;
-check the screen is unlocked (CGSSessionScreenIsLocked) before a key-driven pose run.
+s7754 (CURRENT-TRUTH item 27): in the hangar the game CPU rewrites the craft display list's 0x04/0x02 vertex pointers
+(0x8072xxxx -> 0x80739xxx, DL in 0x720000-0x753000) while the gfx thread's task reads it. Is it visible, and is it ours?
+Hypotheses: H-invisible (live output differs from begin/end only sub-visibly) / H-port-timing (retail CPU patches only after the
+task-done message, our gfx thread runs late or overlapped, so tasks read a half-patched DL -> holo shimmer/garbage; fix: order
+the port's task vs the CPU) / H-retail-race (retail overlaps the same way; leave it).
+Unit, mostly offline, ONE build if a run is needed:
+1. Offline: tools/s7752_port_task/rdp_render on scratch/s7754/retained/hangar_hstate/k900_s1250.bin with (a) its live tail, (b) the
+   begin-image replay, (c) the end-image replay (hybrid file as scratch/s7754/hstate.py builds); tools/s7752_render_diff.py a-vs-b,
+   a-vs-c (--ctl). Count px >=8 LSB in the holo region. Sub-visible -> H-invisible, close (gate exclusion stands).
+2. If visible: name the writer PC. One run of tools/s7754_capture_route.zsh (dd1, SECS=40) with a write watch on one of the
+   rewritten words (e.g. ROGUESQ_DEBUG_WRITE on 0x80720144, see g3_optin_pose_arms.sh for the syntax) plus the task begin/end
+   serials in the same log, so each write is placed before/inside/after a gfx task. Retail ordering: read the writer's caller for
+   an osRecvMesg on the gfx-done queue before the patch (static, rogue_squadron64 disasm). Writes inside tasks with a retail wait
+   before them -> H-port-timing.
+Max 2 CPU-heavy jobs; screen must be unlocked.

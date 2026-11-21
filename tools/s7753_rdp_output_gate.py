@@ -3,14 +3,14 @@
 
 The s7741/s7742 ucode gates compare generated C text. This one compares what the ucode EMITS: each retained s7751 gfx-task
 snapshot (ROGUESQ_S7751_SNAP .bin: header + DMEM + RDRAM + the live RDP stream tail) is replayed offline through the live
-build's factor5_ucode_lean.cpp.o (tools/s7752_port_task/harness, rebuilt when older than that object) at the live dd>1
-policy (ROGUESQ_UCODE_CAP=1048576, ROGUESQ_G5B_TG_FIX=1), and the output must equal the snap's live tail byte for byte.
+build's factor5_ucode_lean.cpp.o (tools/s7752_port_task/harness, rebuilt when older than that object) at that snap's live
+policy (SNAPS: dd1 CAP=65536 TG_FIX=0, dd>1 CAP=1048576 TG_FIX=1), and the output must equal the snap's live tail byte for byte.
 s7752 measured 3/3 tasks exact, so any difference means the emitted RDP stream changed: either intended (re-capture with
 tools/s7753_capture_snaps.zsh and say so in the ledger) or a regression.
 
 --controls (iron rule 1; a gate that cannot see these is HOLLOW):
-  tg0   ROGUESQ_G5B_TG_FIX=0 must DIFFER from the live tail and have the cxd4 (retail-ucode) length pinned in s7752
-  cap   ROGUESQ_UCODE_CAP=65536 must give a strict prefix of the tail with cap_fires=1
+  tg0   (snaps with TriGen hits) ROGUESQ_G5B_TG_FIX=0 must DIFFER from the live tail at the cxd4 length pinned in s7752
+  cap   ROGUESQ_UCODE_CAP=<capc> must give a strict prefix of the tail with cap_fires=1
   flip  the comparator must call a one-byte-mutated copy of the replay output a mismatch
 Inputs absent (fresh clone: scratch/ is gitignored) -> prints "NEEDS-INPUT ..." and exits 4.
 usage: s7753_rdp_output_gate.py [--controls]   exit 0 GREEN, 1 RED, 3 control FAIL, 4 NEEDS-INPUT"""
@@ -19,8 +19,22 @@ import os, re, struct, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 H = os.path.join(ROOT, "tools/s7752_port_task/harness")
 OBJ = os.path.join(ROOT, "build/CMakeFiles/RogueSquadron64Recomp.dir/src/rsp/factor5_ucode_lean.cpp.o")
-# snap -> cxd4 / retail-ucode (TG_FIX=0) stream length, PORTING-STATE s7752
-SNAPS = {"scratch/s7751/snap_f0/k0_s4054.bin": 1716608, "scratch/s7751/snap_d/k0_s4056.bin": 1718528}
+# snap -> live policy: cap/tg = the ROGUESQ_UCODE_CAP / ROGUESQ_G5B_TG_FIX the live run used (dd1: 65536/0, dd>1: 1048576/1);
+# tg0 = cxd4 / retail-ucode (TG_FIX=0) stream length (PORTING-STATE s7752), only where that task has TriGen hits, else None;
+# capc = a cap that must truncate the task (cap control). s7754 widened coverage beyond dd8 flight (tools/s7754_capture_route.zsh,
+# ROGUESQ_S7751_EVERY): attract, SELECT GAME, the L4 intro cutscene and flight at dd1 4:3 retail and 16:9 dd2 FPS60. The hangar
+# (AVAILABLE CRAFT) is EXCLUDED by measurement, not by choice: the game CPU rewrites the craft display list's vertex pointers
+# (0x8072xxxx -> 0x80739xxx) while the gfx task reads it, so no begin-of-task snapshot can replay it (s7754 H-state, 10/10 tasks).
+SNAPS = {
+    "scratch/s7751/snap_f0/k0_s4054.bin": dict(cap=1048576, tg=1, tg0=1716608, capc=65536),   # L1 21:9 dd8 flight FARMAX=0
+    "scratch/s7751/snap_d/k0_s4056.bin": dict(cap=1048576, tg=1, tg0=1718528, capc=65536),    # L1 21:9 dd8 flight
+    "scratch/s7754/retained/dd1_s250.bin": dict(cap=65536, tg=0, tg0=None, capc=2048),        # attract, dd1 4:3
+    "scratch/s7754/retained/dd1_s1000.bin": dict(cap=65536, tg=0, tg0=None, capc=2048),       # SELECT GAME, dd1
+    "scratch/s7754/retained/dd1_s1500.bin": dict(cap=65536, tg=0, tg0=None, capc=2048),       # L4 intro cutscene, dd1
+    "scratch/s7754/retained/dd1_s3000.bin": dict(cap=65536, tg=0, tg0=None, capc=2048),       # L4 flight, dd1 retail
+    "scratch/s7754/retained/dd2w_s2250.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),    # L4 intro cutscene, 16:9 dd2 FPS60
+    "scratch/s7754/retained/dd2w_s4000.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),    # L4 flight, 16:9 dd2 FPS60
+}
 
 
 def tail(path):
@@ -55,7 +69,7 @@ def main():
     ctl = "--controls" in sys.argv[1:]
     snaps = [s for s in SNAPS if os.path.exists(os.path.join(ROOT, s))]
     if len(snaps) != len(SNAPS):
-        print("NEEDS-INPUT s7751 snaps absent (capture with tools/s7753_capture_snaps.zsh, ROGUESQ_S7751_SNAP)")
+        print(f"NEEDS-INPUT {len(SNAPS) - len(snaps)}/{len(SNAPS)} retained snaps absent (re-capture: tools/s7753_capture_snaps.zsh, tools/s7754_capture_route.zsh)")
         return 4
     if not os.path.exists(OBJ):
         print("NEEDS-INPUT live build object factor5_ucode_lean.cpp.o absent (build the game first)")
@@ -69,19 +83,22 @@ def main():
     red = 0; cfail = 0
     for s in snaps:
         sp = os.path.join(ROOT, s); live = tail(sp)
-        got, fires = replay(sp, 1, 1048576)
+        P = SNAPS[s]
+        got, fires = replay(sp, P["tg"], P["cap"])
         eq = got == live
         print(f"{os.path.basename(s)} live={len(live)} replay={len(got)} cap_fires={fires} "
               f"{'EQUAL' if eq else 'DIFF@%d' % first_diff(got, live)}")
         red += not eq
         if not ctl:
             continue
-        g0, _ = replay(sp, 0, 1048576)
-        ok0 = g0 != live and len(g0) == SNAPS[s]
-        print(f"  ctl tg0: len={len(g0)} want={SNAPS[s]} differs={g0 != live} -> {'PASS' if ok0 else 'FAIL'}")
-        gc, fc = replay(sp, 1, 65536)
+        ok0 = True
+        if P["tg0"] is not None:
+            g0, _ = replay(sp, 0, P["cap"])
+            ok0 = g0 != live and len(g0) == P["tg0"]
+            print(f"  ctl tg0: len={len(g0)} want={P['tg0']} differs={g0 != live} -> {'PASS' if ok0 else 'FAIL'}")
+        gc, fc = replay(sp, P["tg"], P["capc"])
         okc = 0 < len(gc) < len(live) and live.startswith(gc) and fc == 1
-        print(f"  ctl cap: len={len(gc)} prefix={live.startswith(gc)} cap_fires={fc} -> {'PASS' if okc else 'FAIL'}")
+        print(f"  ctl cap={P['capc']}: len={len(gc)} prefix={live.startswith(gc)} cap_fires={fc} -> {'PASS' if okc else 'FAIL'}")
         mut = bytearray(got); mut[len(mut) // 2] ^= 0x01
         okf = bytes(mut) != live
         print(f"  ctl flip: mutated replay read as {'DIFF' if okf else 'EQUAL'} -> {'PASS' if okf else 'FAIL'}")

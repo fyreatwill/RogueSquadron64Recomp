@@ -206950,3 +206950,38 @@ gate/sweep text points there.
 Rules out: nothing new about the game; the gate means a future ucode fixup edit that changes emitted RDP bytes on these tasks can
 no longer pass the sweep silently. Limits: coverage is 2 in-flight dd>1 tasks of one level; dd1/hangar/cutscene paths are not covered
 (next unit). The snaps are gitignored (18 MB each), so a fresh clone reads NEEDS-INPUT.
+
+## Session 7754 (2026-11-21) — s7753 RDP-output gate widened to 8 snaps (attract, SELECT GAME, L4 intro cutscene, flight at dd1 4:3 and 16:9 dd2 FPS60): 45/48 route tasks replay == live; the 3 misses are all hangar tasks, and the hangar is H-state by measurement (the CPU rewrites the craft DL's vertex pointers while the gfx task reads it)
+Start checks: crash_reports new=0; no new SOAK-RESULTS lines since the s7750 fold.
+Question (NEXT s7754, rdp-output-gate-coverage): does the s7753 end-to-end gate extend beyond L1 dd8 flight? Hypotheses H-exact
+(every new scene replays == live), H-state (some scene depends on state a begin-of-task snapshot does not carry), H-ucode-b (a
+scene runs a ucode the lean harness does not link).
+Engineering: src/rsp/s7751_task_snap.cpp gained ROGUESQ_S7751_EVERY=<N>[:<max>[:<from serial>]] (default off; inside the existing
+ROGUESQ_S7751_SNAP gate): at task end, every Nth task's slot is dumped as k900_s<serial>.bin plus k900_s<serial>_end.bin (same
+header, RDRAM as at task end, empty tail), so scenes with no POSE_FREEZE can be captured and H-state tested. New launcher
+tools/s7754_capture_route.zsh (forced-mission route LV=4: attract -> SELECT GAME -> hangar -> intro cutscene -> flight, owner save
+read-only, cmp-checked: save-unchanged in all 3 runs).
+Runs (one game at a time, host idle 12.8 h, unlocked): dd1 4:3 retail EVERY=250 (24 snaps, alive, 0 crash); 16:9 dd2 FPS60
+EVERY=250 (24 snaps, alive, 0 crash); hg dd1 EVERY=25:24:1050 with end images (24 pairs). Offline replay (scratch/s7754/replay_all.py,
+hstate.py, pages.py):
+- 45/48 route tasks EQUAL at the live policy (dd1 CAP 65536 TG 0, dd2 CAP 1048576 TG 1); every task ucode=0x80024A10 (H-ucode-b
+  refuted: one gfx ucode on the whole route). The 3 DIFFs (dd1 s1250, dd2w s1500/s1750) are all AVAILABLE CRAFT hangar frames
+  (screenshots), equal length, ~1600-1700 differing 8-byte words in shade/texture coefficient words; replay is deterministic.
+- H-state SELECTED for the hangar, two lines: (1) hg run, 10/10 hangar tasks s1125-s1350: begin-image replay != live AND end-image
+  replay != live AND begin != end replay (live sits between: e.g. s1250 begin 1648 vs end 332 differing words); 14/14 non-hangar
+  tasks are EQUAL from BOTH images although 50-300 RDRAM pages changed during them (same-run control: changed-but-unread RAM does
+  not move the output). (2) page bisection on s1250: 27 influential 4 KB pages, all in 0x720000-0x753000, sparse words that are
+  display-list commands 040080FF/020000FF + pointer; the CPU rewrote the pointers 0x8072xxxx -> 0x80739xxx (a fresh vertex buffer)
+  while the task ran. Influential-pages-only replay != full-end replay (other pages also matter: the new vertex data itself).
+- H-exact holds for every non-hangar scene. TriGen hits are 0 in every s7754 task (dd2 16:9 frames included), so the tg0 control
+  only applies to the two dd8 snaps.
+Gate change: tools/s7753_rdp_output_gate.py now carries per-snap policy {cap, tg, tg0|None, capc} and 8 snaps (2 s7751 + 6 in
+scratch/s7754/retained); --controls: GREEN 8/8, CONTROL PASS (tg0 on 2, cap 2048/65536 prefix+fires on 8, flip on 8). Sweep regex
+-> snaps=8 / 8/8. Hangar exclusion is written in the gate's SNAPS comment with the measurement.
+ORIGIN: no mitigation; instrument + gate coverage. The hangar DL pointer rewrite is a named writer class (game CPU, craft model DL,
+0x720000-0x753000) but its PC is not yet named and whether retail races the same way is open.
+Rules out: H-ucode-b on this route; a port divergence in the attract/front-end/cutscene/dd1 flight ucode paths (byte-exact).
+Next: is the hangar mid-task rewrite visible and is it ours (render begin/end/live offline; name the writer PC) -> NEXT.md.
+Sweep: first pass RED 1 = s7613_hp_census (the new static g_rdram in s7751_task_snap.cpp had no row; a census doing its job);
+added a `base` row (store `g_rdram = rdram;`, sole caller main.cpp factor5_gfx_runner, gated ROGUESQ_S7751_SNAP) -> RESULT PASS;
+re-sweep 221 gates: 217 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (s7753 gate GREEN 8/8).

@@ -68,6 +68,7 @@ row("dpc_bridge.cpp", "g_rdram_for_submit", "base", r"g_rdram_for_submit = rdram
 row("s7096_fwd_cover.cpp", "g_rd", "base", r"if \(rdram\) g_rd = rdram;", "base (B2)")
 row("s7097_edit_census.cpp", "g_rd", "base", r"g_rd = rd; g_lo = lo;", "base (B2: sole caller passes g_rdram_for_submit)")
 row("s7523_slow_rdp.cpp", "g_rd", "base", r"if \(rdram\) g_rd = rdram;", "base (B2)")
+row("s7751_task_snap.cpp", "g_rdram", "base", r"g_rdram = rdram;", "s7754 base (sole caller main.cpp factor5_gfx_runner passes rdram; gated ROGUESQ_S7751_SNAP)")
 row("events.cpp", "rs64_vi_feat_rdram", "base", r"rs64_vi_feat_rdram = rdram;", "base")
 row("RF", "rs5901_rdram", "base", r"rs5901_rdram = rdram;", "base")
 row("RF", "s4279_rd", "base", r"s4279_rd = rdram;", "base")

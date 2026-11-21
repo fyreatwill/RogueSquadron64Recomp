@@ -3,7 +3,9 @@
 // physical RDRAM window (the RSP's DMA reach) and DMEM are copied into a ring of 3 in-memory slots, and every
 // RDP byte the ucode hands the DPC bridge (rsp_dpc_submit, before any cull/merge) is appended to that slot.
 // rs64_s7751_dump(k) (called by POSE_FREEZE after its sleep, when no task is running) writes the completed slots to
-// <dir>/k<k>_s<serial>.bin. Format (little-endian u32 words; RDRAM/DMEM in the runtime's native word layout,
+// <dir>/k<k>_s<serial>.bin. s7754: ROGUESQ_S7751_EVERY=<N>[:<max>] (default max 24) also dumps every Nth task's slot at its
+// task end as <dir>/k900_s<serial>.bin (plus k900_s<serial>_end.bin: same header, RDRAM as it is at task end, rdp tail
+// empty, so a H-state check can see what the CPU rewrote while the task ran), ROGUESQ_S7751_EVERY=<N>:<max>:<from serial>. So scenes without a POSE_FREEZE (hangar, crawl, cutscenes) can be captured. Format (little-endian u32 words; RDRAM/DMEM in the runtime's native word layout,
 // i.e. byte a at [a^3], the same layout cxd4 expects):
 //   "S751" ver=1 serial vi rdram_size dmem[4096] rdram[rdram_size] nbytes rdp[nbytes] (rdp = plain big-endian RDP command bytes)
 #include <cstdint>
@@ -21,6 +23,7 @@ struct Slot { std::vector<uint8_t> ram, rdp; uint8_t dmem[4096]; uint32_t serial
 Slot g_slot[3];
 int g_cur = -1;
 uint32_t g_serial = 0, g_base = 0xFFFFFFFFu, g_last = 0;
+const uint8_t* g_rdram = nullptr;
 std::mutex g_mu;
 const char* dir() { static const char* d = [] { const char* e = std::getenv("ROGUESQ_S7751_SNAP"); return (e && *e && *e != '0') ? e : nullptr; }(); return d; }
 }
@@ -34,6 +37,7 @@ extern "C" void rs64_s7751_task_begin(const uint8_t* rdram, const uint8_t* dmem)
     Slot& s = g_slot[g_cur];
     s.ram.resize(kRam);
     std::memcpy(s.ram.data(), rdram, kRam);
+    g_rdram = rdram;
     std::memcpy(s.dmem, dmem, 4096);
     s.rdp.clear(); s.serial = g_serial; s.vi = rs64_vi_n_g; s.done = false; s.used = true;
     g_base = 0xFFFFFFFFu; g_last = 0;
@@ -52,10 +56,40 @@ extern "C" void rs64_s7751_rdp(const uint8_t* rdram, uint32_t start, uint32_t en
     g_last = ep;
 }
 
+namespace {
+void dump_slot(const Slot& s, unsigned k, const uint8_t* end_ram = nullptr) {
+        char p[1024];
+        std::snprintf(p, sizeof p, end_ram ? "%s/k%u_s%u_end.bin" : "%s/k%u_s%u.bin", dir(), k, s.serial);
+        FILE* f = std::fopen(p, "wb");
+        if (!f) { std::fprintf(stderr, "[s7751] open failed %s\n", p); return; }
+        const uint32_t hdr[5] = {0x31353753u /* "S751" */, 1u, s.serial, s.vi, kRam};
+        std::fwrite(hdr, 4, 5, f);
+        std::fwrite(s.dmem, 1, 4096, f);
+        std::fwrite(end_ram ? end_ram : s.ram.data(), 1, kRam, f);
+        const uint32_t n = end_ram ? 0u : (uint32_t)s.rdp.size();
+        std::fwrite(&n, 4, 1, f);
+        std::fwrite(s.rdp.data(), 1, n, f);
+        std::fclose(f);
+        std::fprintf(stderr, "[s7751] dumped k=%u serial=%u vi=%u rdp_bytes=%u -> %s\n", k, s.serial, s.vi, n, p);
+        std::fflush(stderr);
+}
+// s7754: periodic trigger, parsed once. every=0 -> off.
+struct Every { unsigned n = 0, max = 24, from = 0, done = 0; };
+Every& every() {
+    static Every e = [] { Every v; const char* x = std::getenv("ROGUESQ_S7751_EVERY");
+        if (x && *x) { char* q = nullptr; v.n = (unsigned)std::strtoul(x, &q, 10); if (q && *q == ':') { v.max = (unsigned)std::strtoul(q + 1, &q, 10); if (q && *q == ':') v.from = (unsigned)std::strtoul(q + 1, nullptr, 10); } }
+        return v; }();
+    return e;
+}
+}
+
 extern "C" void rs64_s7751_task_end(void) {
     if (!dir() || g_cur < 0) return;
     std::lock_guard<std::mutex> lk(g_mu);
-    g_slot[g_cur].done = true;
+    Slot& s = g_slot[g_cur];
+    s.done = true;
+    Every& e = every();
+    if (e.n && e.done < e.max && s.serial >= e.from && s.serial % e.n == 0) { e.done++; if (g_rdram) dump_slot(s, 900u, g_rdram); dump_slot(s, 900u); }  // end image first: closest to task end
 }
 
 extern "C" void rs64_s7751_dump(unsigned k) {
@@ -63,19 +97,6 @@ extern "C" void rs64_s7751_dump(unsigned k) {
     std::lock_guard<std::mutex> lk(g_mu);
     for (Slot& s : g_slot) {
         if (!s.used || !s.done) continue;
-        char p[1024];
-        std::snprintf(p, sizeof p, "%s/k%u_s%u.bin", dir(), k, s.serial);
-        FILE* f = std::fopen(p, "wb");
-        if (!f) { std::fprintf(stderr, "[s7751] open failed %s\n", p); continue; }
-        const uint32_t hdr[5] = {0x31353753u /* "S751" */, 1u, s.serial, s.vi, kRam};
-        std::fwrite(hdr, 4, 5, f);
-        std::fwrite(s.dmem, 1, 4096, f);
-        std::fwrite(s.ram.data(), 1, kRam, f);
-        const uint32_t n = (uint32_t)s.rdp.size();
-        std::fwrite(&n, 4, 1, f);
-        std::fwrite(s.rdp.data(), 1, n, f);
-        std::fclose(f);
-        std::fprintf(stderr, "[s7751] dumped k=%u serial=%u vi=%u rdp_bytes=%u -> %s\n", k, s.serial, s.vi, n, p);
+        dump_slot(s, k);
     }
-    std::fflush(stderr);
 }

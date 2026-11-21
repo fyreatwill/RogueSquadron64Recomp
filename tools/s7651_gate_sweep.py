@@ -70,7 +70,7 @@ ARGS = {
     "s7743_ovl_consumers.py": ([], r"verdict=H-tool-input a_not_fired=0 b_not_seen=0"),
     # s7753: end-to-end ucode OUTPUT gate: retained s7751 snaps replayed through the live factor5_ucode_lean.cpp.o must equal the
     # live RDP tail byte-for-byte; ctls TG_FIX=0 (differs, cxd4 length), CAP=65536 (strict prefix, cap_fires=1), 1-byte flip.
-    "s7753_rdp_output_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS snaps=2)(?=[\s\S]*VERDICT GREEN: 2/2 tasks replay == live)"),
+    "s7753_rdp_output_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS snaps=8)(?=[\s\S]*VERDICT GREEN: 8/8 tasks replay == live)"),
     "s7719_regen_gate.py": (["--strict"], r"VERDICT H-mirrored \(.*live == replay byte-for-byte"),
     # s7719: these three print "OPEN n" yet exit 0 without --check, so the s7718 sweep scored OPEN 19/22/6 as GREEN.
     "s7363_hostarr_census.py": (["--check"], r"\nOPEN 0\b"),
