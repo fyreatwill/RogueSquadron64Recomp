@@ -206403,3 +206403,38 @@ Discrimination: the pass **selects H-dead and refutes H-live** (76 dead texts ov
 with the filter, unchanged without it). Next discriminator: model every `getenv("ROGUESQ_*")` in the compiled tree itself and
 compare its signature with the modelled script/host signatures of the same name: H-covered (all match) vs H-hidden (a later
 rewrite changed a reading no modelled site shows, as S4562_PAUSE's s4786 default does). Planted control in scratch/agent/NEXT.md.
+
+## Session 7734 (2026-11-20) — compiled-tree reader census: H-hidden selected (3 names whose compiled reading no live script site shows), all three fixed
+
+Ran: no new crash report (crash_reports FOLDED=27 new=0), no new soak lines. Took the s7733 NEXT unit. New tool
+tools/s7734_compiled_reader_census.py: models every `getenv("ROGUESQ_*")` line in ../N64Recomp/RecompiledFuncs/*.c and
+build/factor5_ucode/*.c with s7714 `model_site` (C mode) and compares each signature (VALUES order of s7714) with the set of
+signatures of every LIVE (s7733 DEAD filter) script/host site of the same name, single-reader names included; inverted readings count
+as equal. Classes COVERED / HIDDEN / ORPHAN (no live site models) / UNMOD. rc 0 = controls PASS and 0 unreviewed HIDDEN.
+
+Controls (same run, PASS): (1) the funcs_24.c S4562_PAUSE hold line models unset=1; the same line with the s4786 `if (!e) e = "4"`
+stripped models unset=0, so the instrument sees a compiled-only default; (2) a planted presence-only DD_CAPX_TOG line classifies
+HIDDEN against the live readers (positive control for the HIDDEN class itself; it is also the pre-fix form of finding 2).
+
+Result, before fix: 381 distinct (name, signature) readings: COVERED 345, HIDDEN 3, ORPHAN 14, UNMOD 19. **H-hidden selected**
+(H-covered refuted: three readings differ from every live site):
+1. ROGUESQ_LOG_ALL, funcs_2.c:184 (apply_s4159 preclear span census): `getenv(SPAN) || getenv("ROGUESQ_LOG_ALL")`, so
+   LOG_ALL=0 and LOG_ALL="" switched the census ON; every other live LOG_ALL reader reads =0 off. The script site never modelled
+   (the `||` form), which is why s7714 missed it.
+2. ROGUESQ_DD_CAPX_TOG, funcs_9.c:13135 (apply_s6037 s6548 log cadence): `getenv(..) != 0` presence, while the same script's ctg
+   reads `atoi`. Log-only (also needs ROGUESQ_DD_LOG).
+3. ROGUESQ_M5_B40_VALUE, funcs_23.c:12127/12128 (fixup_live_replay b40 polarity form): `!= NULL && [0] != '0' ? r2 : 0`, so "" stored
+   r2 (the retail value) while upstream_compat.cpp labels "" as control. Unset (the owner default) was and is 0.
+Fix: script texts apply_s4159 (`LOG_ALL && [0] && [0] != '0'`), apply_s6037 (`getenv && atoi(..) != 0`), fixup_live_replay
+(adds `[0] &&`), and the same text hand-synced into the compiled tree (funcs_2/9/23.c, counts asserted 1/1/2) so it equals the
+regen output. After: 379 readings, COVERED 346, HIDDEN 0, ORPHAN 14, UNMOD 19; controls PASS. s7714 census still clean.
+Rebuilt (cmake --build, OK). Gate sweep (--jobs 2, 905 s, 217 gates; its planted red/green and cache controls PASS):
+GREEN 212, REPORT 3, NEEDS-ARGS 1 (s7726_zombie_census needs --arm/--control: a measurement tool, not a gate), HOLLOW 1 = the new
+s7734 tool itself (its `ORPHAN=14` matched the sweep's open-class keys). Fix: the class is renamed NOREF and the 14 hand-read names
+are listed in NOREF_OK. Any new NOREF name counts as unreviewed (rc 1), so the line is no longer an open count. Re-scanned the
+new output with the sweep's HOLLOW_RE/CONTROL_LINE: 0 matches, rc 0. Every other gate is GREEN after the build.
+NOREF (first called ORPHAN) rows read: FORCE_UNLOCK / FORCE_PLANET_UNLOCK / FORCE_CINE_A0 are -1-sentinel numbers, DD_POOLX / DD_FARCLIP_MUL /
+SPANFORCE_PERIOD numbers, *_GUARD3/4 and LOG_*_GUARD4 unset-off, SPANFORCE presence ("0" forces spans; diagnostic, and dd>1
+forces them by default anyway). None is an owner setting read against its docs. Not covered: whether the regen chain replays the
+three hand-synced lines exactly (NEXT unit, with a planted old-script control).
+Discrimination: selects H-hidden, refutes H-covered. ORIGIN: not a mitigation; the writers are the three named scripts.

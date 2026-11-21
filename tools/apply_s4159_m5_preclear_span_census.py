@@ -23,7 +23,7 @@ def main() -> None:
         raise SystemExit("s4159: scalar-store anchor is not unique")
     insert = (
         "    /* " + MARKER + " */\n"
-        "    if (getenv(\"ROGUESQ_LOG_M5_PRECLEAR_SPAN\") || getenv(\"ROGUESQ_LOG_ALL\")) {\n"
+        "    if (getenv(\"ROGUESQ_LOG_M5_PRECLEAR_SPAN\") || (getenv(\"ROGUESQ_LOG_ALL\") && getenv(\"ROGUESQ_LOG_ALL\")[0] && getenv(\"ROGUESQ_LOG_ALL\")[0] != 48)) { /* s7734: LOG_ALL=0 is off */\n"
         "        static unsigned census_control = 0;\n"
         "        static unsigned census_rows[2] = {};\n"
         "        unsigned census_width = rs64_vi_committed_width();\n"

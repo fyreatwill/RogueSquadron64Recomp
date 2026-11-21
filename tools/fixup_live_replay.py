@@ -267,7 +267,7 @@ if t23.count(_ext4) == 1 and t23.count(_anc4) == 1 and t23.index(_ext4) < t23.in
     print("ext4_move_23: ok")
 _b = 'getenv("ROGUESQ_M5_B40_VALUE")[0] == \'0\') ? 0 : ctx->r2)'
 if _b in t23:
-    t23 = t23.replace(_b, 'getenv("ROGUESQ_M5_B40_VALUE")[0] != \'0\') ? ctx->r2 : 0)')
+    t23 = t23.replace(_b, 'getenv("ROGUESQ_M5_B40_VALUE")[0] && getenv("ROGUESQ_M5_B40_VALUE")[0] != \'0\') ? ctx->r2 : 0)')  # s7734: "" is off, as upstream_compat labels it
     print("b40_polarity_23: ok")
 t23 = re.sub(r"^        rs64_m5_selector_store_entry\(0x8008EB5Cu, .*s4712 reapplyDisplayMode census \*/\n", "", t23, flags=re.M)
 p23.write_text(t23)

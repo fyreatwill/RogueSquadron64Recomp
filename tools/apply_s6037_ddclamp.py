@@ -24,7 +24,7 @@ NEW = r'''    { /* s6590 desc log */ static int dl = -1, dn = 0; if (dl < 0) dl 
             if (cx < 0) { const char* e = getenv("ROGUESQ_DD_CAPX"); cx = (e && *e) ? atof(e) : 1.0; const char* t2 = getenv("ROGUESQ_DD_CAPX_TOG"); ctg = t2 ? atoi(t2) : 0; }
             double use = cx; if (ctg > 0) { int b = (int)((cn++ / (unsigned)ctg) & 1u); use = b ? cx : 1.0; if (b != clast) { clast = b; fprintf(stderr, "[capxtog] blk=%d capx=%g\n", b, use); } }
             if (use != 1.0 && cap > 0) cap = (int32_t)(cap * use); }
-          /* s6548 log */ static int n6548 = 0; int cx_log6586 = getenv("ROGUESQ_DD_CAPX_TOG") != 0; int32_t px0 = x0, px1 = x1, pz0 = z0, pz1 = z1;
+          /* s6548 log */ static int n6548 = 0; int cx_log6586 = getenv("ROGUESQ_DD_CAPX_TOG") && atoi(getenv("ROGUESQ_DD_CAPX_TOG")) != 0; /* s7734: same reading as ctg */ int32_t px0 = x0, px1 = x1, pz0 = z0, pz1 = z1;
           /* s6874 edge: retail's window legally runs past the map; getGridCellValueAt sends those cells to clampGridCellLookup (0x80048948), which repeats the edge cell, so the plain continues to the horizon.
              Clamping to tw/th deleted that border at any dd != 1 (lvl1 k2: map edge against the sky, tris 1026 -> 509). Keep it; spend the cap and slot64 limits on off-map cells first. ROGUESQ_DD_EDGE=0 = old. */
           static int edge6874 = -1; if (edge6874 < 0) { const char* e = getenv("ROGUESQ_DD_EDGE"); edge6874 = (e && *e == '0') ? 0 : 1; }

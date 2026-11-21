@@ -1,4 +1,4 @@
-# NEXT (s7734)
+# NEXT (s7735)
 HYPOTHESIS-ID: owner-looks-or-new-report
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then any
@@ -6,18 +6,14 @@ new SOAK-RESULTS.md lines.
 If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green. After any src/ or lib/ edit run the gate sweep
 (`python3 tools/s7651_gate_sweep.py --jobs 2`, ~10+ min, background, no build while it runs: CPU cap 2).
 
-Closed, do not repeat: s7726-s7732 census passes; s7733 DEAD filter (76 dead Python reader texts, s7714+s7716 filter,
-`--dead`, controls PASS; fixup_factor5_ucode `_old_cap` removed as a proven no-op).
+Closed, do not repeat: s7726-s7733 census passes; s7734 compiled-tree reader census (0 HIDDEN after fixing LOG_ALL s4159,
+DD_CAPX_TOG s6548, M5_B40_VALUE ""; controls PASS).
 
-Candidate bounded item if nothing above applies: the census models SCRIPT text, never the compiled tree.
-s7733 example: ROGUESQ_S4562_PAUSE's apply_s4562 texts are dead; the live reader at ../N64Recomp/RecompiledFuncs/funcs_24.c:10823
-carries a later `if (!e) e = "4"; /* s4786 default */`, so unset ARMS the hold. Hypotheses: H-covered (every getenv in the
-compiled tree models to the same signature as some live script/host reader of that name, so script-text modelling is enough)
-vs H-hidden (some compiled readers differ, like S4562: a later rewrite changed the reading and no modelled site shows it).
-Discriminator: one pass, `t.model_site` over every `getenv("ROGUESQ_*")` line in RecompiledFuncs/*.c + build/factor5_ucode/*.c
-(C, not .py), compare each signature to the set of modelled signatures of the same name (s7714 load_sites). Planted control:
-a copy of funcs_24.c text with the s4786 default line stripped must model differently from the real one (unset 0 vs 1).
-For each H-hidden name: read it (grep PORTING-STATE for the session that added the rewrite, e.g. `s4786`) and either class it
-(deliberate default, reviewed) or fix the script text that still claims the old reading. If generated readers vote, gate it
-in tools/s7714_truth_census.py (generated sites as voters; skip if ../N64Recomp absent, as the DEAD filter does).
-Note: PORTING-STATE ~155700 shows s4786 made the S4562 default deliberate (env-unset default check, RELEASED at reinit), so it is likely "reviewed: deliberate default"; the pass is about finding any OTHER hidden name.
+Candidate bounded item if nothing above applies: wire tools/s7734_compiled_reader_census.py into tools/s7651_gate_sweep.py
+(offline step, rc must be 0; skip when ../N64Recomp absent), then prove the regen chain reproduces the s7734 compiled text:
+`tools/regen_replay.sh <copy of pristine>` then `tools/regen_verify.sh` (docs/REGEN-VERIFY.md) and rerun the s7734 census on the
+replayed tree. Hypotheses: H-replays (the three edited scripts emit exactly the hand-synced compiled lines: census 0 HIDDEN on the
+replayed tree) vs H-drift (a step re-writes one of them, e.g. fixup_live_replay's `_b` anchor not matching the vendored text, so
+the replayed tree carries the old B40 form). Planted control: replay with the old fixup_live_replay.py must give B40 HIDDEN again.
+The 14 NOREF (was ORPHAN) rows (FORCE_UNLOCK/-1 sentinels, POOLX/FARCLIP numbers, SPANFORCE presence "0" -> on) are numeric or diagnostic
+readings with no modelled script site; SPANFORCE=0 forcing spans on is the only on/off-looking one (diagnostic, dd>1 forces it anyway).

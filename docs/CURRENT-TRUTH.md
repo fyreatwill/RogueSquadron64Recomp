@@ -12,6 +12,12 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7734 compiled-tree reader census (H-hidden selected, 3 names, fixed).** tools/s7734_compiled_reader_census.py models every
+  `getenv("ROGUESQ_*")` in RecompiledFuncs + factor5_ucode (379 distinct readings: COVERED 346, NOREF 14 numeric/sentinel (hand-read, NOREF_OK), UNMOD 19)
+  against the live script/host signatures. HIDDEN were: LOG_ALL in the s4159 preclear census (presence: =0 and "" turned it ON),
+  DD_CAPX_TOG s6548 log cadence (presence vs `atoi`), M5_B40_VALUE guest store ("" passed r2 while the host labels "" control).
+  All three script texts + compiled tree fixed; 0 HIDDEN. Controls: planted presence line -> HIDDEN, S4562 default strip 1 -> 0.
+  Rerun after any regen: `python3 tools/s7734_compiled_reader_census.py` (rc 0).
 - **s7733 truth census DEAD filter (H-dead selected).** 76 apply/fixup reader texts over 34 names are not in the compiled
   tree (replace anchors, steps whose anchor matches nothing); s7714 and s7716 now drop them before modelling (`--dead` lists them,
   planted/live/B40/unfiltered controls PASS). 3 REVIEWED splits were dead-text votes only (OVL2C_DROP, M5_B40_VALUE, S4562_PAUSE).
