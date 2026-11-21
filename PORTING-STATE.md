@@ -207431,3 +207431,29 @@ Rules out: a live jal/j into the middle of a recompiled function (H-interior / H
 Two lines for each dead stub: zero-reference scan + prologue-skip semantics. Single-source: the 82 overlay-aliased .text call
 targets are judged correct from N64Recomp's lookup path (recompilation.cpp resolve_jal NoMatch/Ambiguous -> LOOKUP_FUNC), not
 from a runtime check that the lookup picks the loaded overlay's body; that is the next unit.
+
+## Session 7772 (2026-11-21) — overlay-aliased jal lookup class CLOSED: 188/188 .text->overlay sites are LOOKUP_FUNC, 64 targets each a start in exactly one overlay, runtime func_map = loaded overlays only; new gate tools/s7772_ovl_lookup_audit.py in the sweep
+Start: CURRENT-TRUTH 49.8 KB (no maintenance), crash_reports FOLDED=20 new=0, no new SOAK-RESULTS lines, no owner answers.
+Unit (s7771 NEXT.md, ovl-aliased-lookup-audit, offline). Question: does a lookup of a .text->overlay jal target resolve by the
+overlay currently loaded (H-loaded), by a static first/last-registered map (H-first), or abort (H-abort)?
+Runtime read (lib/N64ModernRuntime/librecomp/src/overlays.cpp, read only): get_function = func_map.find(addr); func_map holds
+only sections registered by load_overlay (adds ram+offset per function) minus those evicted by the s7528 overlap eviction and
+unload_overlays; a miss prints "Failed to find function" and exits (or [missing-func] under ROGUESQ_STUB_MISSING_FUNCS). So
+H-loaded, with H-abort as the loud fallback when the mapped overlay has no function start there. That is hardware semantics
+except one case (hardware would run mid-function bytes; we abort), which is loud, never a silent wrong body.
+The only silent path is the generated call form: a DIRECT call would bind one overlay regardless of what is mapped. New
+tools/s7772_ovl_lookup_audit.py takes the s7771 census start_ovl rows and reads the generated tree (../N64Recomp/RecompiledFuncs,
+the `// 0x<site>: jal 0x<t>` comment then the first call): 188 start_ovl sites, LOOKUP=188, DIRECT=0, NOTFOUND=0. Per target
+across .text + 3 overlays (syms): 64 distinct in-function targets, multi_start_targets=0 (each is a start in exactly one
+overlay; e.g. 0x800C58A0 start menu / interior mission, 0x800AE98C start cinematic / interior menu+mission), so with any other
+overlay mapped the lookup misses and aborts loudly. Tail jumps: census --tail has 0 `j` rows with start_ovl (416 j rows: 405
+nofunc/7 interior/4 interior_ovl, all s7771-classified).
+Runtime witness (second line): 62 game logs under scratch/*/log_*.txt (last 10 days), 43 carry [s7528] post lines (positive
+control: overlay loads are logged in that stderr, 280 loads total), 0 "Failed to find function" / 0 [missing-func]. So no
+mainGameLoop/loadDatFile mode branch ever calls an overlay target with the wrong overlay mapped in those runs.
+Controls same run: known site mainGameLoop+0xEC classifies LOOKUP; mutation (its LOOKUP_FUNC text rewritten to a named call)
+classifies DIRECT: CONTROLS PASS. Gate --gate rc 1 on any in-function non-LOOKUP site. Added to tools/s7651_gate_sweep.py
+(ARGS row + EXTRA_GATES); `--only s7772` GREEN 1/1; mutation (LOOKUP branch disabled in the tool) -> RED 1/1; restored GREEN.
+Rules out: H-first (static binding of an aliased overlay call) anywhere in the image. Class CLOSED, two lines (generated code +
+runtime map semantics; log witness). Not covered: function-pointer words (jalr through a data table) holding an overlay start
+across a swap; that is the next unit.
