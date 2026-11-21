@@ -9,6 +9,9 @@ old), so the sweep could not see drift. This gate builds the replay itself, text
   3. tools/s7423_live_stale.py <live> <replay> --control            regen-only statements = patches the live build lacks
   4. tools/s7423_live_stale.py <live> <replay> --reverse --control  live-only statements = hand edits that die at regen
 Both scans walk every function and carry planted controls (guest store -> BEHAVIOUR, env-gated print -> DIAG, known lines).
+  5. (s7735) tools/s7734_compiled_reader_census.py --tree <replay>: every compiled ROGUESQ_* reading of the REPLAYED tree models
+     to a live script/host signature (0 unreviewed HIDDEN/NOREF), plus a planted control: the replay's funcs_23 B40 line put
+     back to its pre-s7734 form must read HIDDEN. Catches a fixup that stops reproducing a hand-synced compiled reading.
 VERDICT H-mirrored: both directions have 0 open BEHAVIOUR rows and both controls PASS. rc 0 ok, 1 drift, 3 control/chain fail.
 usage: s7719_regen_gate.py [--live ../N64Recomp/RecompiledFuncs] [--tree <existing replay dir>] [--keep <dir>]
 """
@@ -20,6 +23,38 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def sh(cmd, env=None):
     p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=dict(os.environ, **(env or {})))
     return p.returncode, p.stdout + p.stderr
+
+
+B40_NEW = 'getenv("ROGUESQ_M5_B40_VALUE")[0] && getenv("ROGUESQ_M5_B40_VALUE")[0] != \'0\') ? ctx->r2 : 0)'
+B40_OLD = 'getenv("ROGUESQ_M5_B40_VALUE")[0] == \'0\') ? 0 : ctx->r2)'
+
+
+def reader_census(tree, tmp):
+    """s7735: s7734 census on the replay tree (rc 0 wanted) + planted pre-s7734 B40 reading (must read HIDDEN, rc 1)."""
+    rc, out = sh([sys.executable, 'tools/s7734_compiled_reader_census.py', '--tree', tree])
+    tail = [l for l in out.splitlines() if l.startswith(('distinct', 'unreviewed', 'HIDDEN', 'NOREF', 'control', 'skip'))]
+    for l in tail:
+        print('reader: %s' % l[:240])
+    ctl = os.path.join(tmp, 'reader_ctl')
+    shutil.rmtree(ctl, ignore_errors=True); os.makedirs(ctl)
+    hit = 0
+    for f in sorted(os.listdir(tree)):
+        src = os.path.join(tree, f)
+        if not f.endswith('.c'):
+            continue
+        txt = open(src, errors='replace').read()
+        if B40_NEW in txt:
+            hit += txt.count(B40_NEW)
+            open(os.path.join(ctl, f), 'w').write(txt.replace(B40_NEW, B40_OLD))
+        else:
+            os.symlink(os.path.abspath(src), os.path.join(ctl, f))
+    crc, cout = sh([sys.executable, 'tools/s7734_compiled_reader_census.py', '--tree', ctl])
+    ok = hit > 0 and crc == 1 and 'HIDDEN ROGUESQ_M5_B40_VALUE' in cout
+    print('reader: CONTROL planted pre-s7734 B40 line (%d site) -> rc %d %s' % (hit, crc, 'PASS' if ok else 'FAIL'))
+    shutil.rmtree(ctl, ignore_errors=True)
+    if not ok:
+        return 3
+    return 0 if rc == 0 and 'skip' not in out else 1
 
 
 def main(a):
@@ -48,14 +83,15 @@ def main(a):
         for l in keep:
             print('%s: %s' % (name, l[:240]))
         res[name] = rc
+    res['reader'] = reader_census(tree, tmp or tempfile.mkdtemp(prefix='s7735ctl'))
     if tmp and '--keep' not in a:
         shutil.rmtree(tmp, ignore_errors=True)
     if 3 in res.values():
         print('VERDICT CONTROL-FAIL', res); return 3
     if any(res.values()):
-        print('VERDICT H-drift', res, '(forward = live build lacks a fixup line; reverse = live hand edit no fixup reproduces)')
+        print('VERDICT H-drift', res, '(forward = live build lacks a fixup line; reverse = live hand edit no fixup reproduces; reader = replay tree reads an env differently)')
         return 1
-    print('VERDICT H-mirrored (forward and reverse: 0 open BEHAVIOUR, controls PASS)')
+    print('VERDICT H-mirrored (forward and reverse: 0 open BEHAVIOUR, replay readers 0 HIDDEN, controls PASS)')
     return 0
 
 

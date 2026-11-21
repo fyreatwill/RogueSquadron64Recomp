@@ -12,6 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7735 regen replay reproduces the s7734 readings (H-replays selected, H-drift refuted).** tools/s7719_regen_gate.py (in the
+  gate sweep) now also runs `s7734_compiled_reader_census.py --tree <fresh replay>`: replay 378 readings, 0 unreviewed HIDDEN/NOREF,
+  B40 new form present (2 sites); planted control (replay funcs_23 B40 put back to the pre-s7734 text) -> HIDDEN rc 1 PASS. The
+  one live-only reading is ROGUESQ_CLAMPP (s6522 funcs_9 probe, not in RS64_REPLAY, a known DIAG line). Sweep --only s7719|s7734: 2 GREEN.
 - **s7734 compiled-tree reader census (H-hidden selected, 3 names, fixed).** tools/s7734_compiled_reader_census.py models every
   `getenv("ROGUESQ_*")` in RecompiledFuncs + factor5_ucode (379 distinct readings: COVERED 346, NOREF 14 numeric/sentinel (hand-read, NOREF_OK), UNMOD 19)
   against the live script/host signatures. HIDDEN were: LOG_ALL in the s4159 preclear census (presence: =0 and "" turned it ON),

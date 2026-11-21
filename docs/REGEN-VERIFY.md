@@ -167,3 +167,9 @@ s7576-trunc), all hand-read BOUNDED in s7719. regen_verify (now `RV_JOBS`, defau
 - `tools/s7719_regen_gate.py` does front + `RS64_REPLAY_TREE_ONLY=1` replay in a temp dir + both directions with controls
   (2.6 min, one CPU), and is in the gate sweep. Wiring controls on a live copy: a planted live-only store -> reverse RED; one fixup
   line deleted from live -> forward RED.
+
+## s7735: the replay also reproduces every compiled env reading
+
+`tools/s7719_regen_gate.py` runs `tools/s7734_compiled_reader_census.py --tree <replay>` on its fresh replay: 0 unreviewed HIDDEN/NOREF
+(378 distinct readings vs 379 live; the live-only one is the s6522 ROGUESQ_CLAMPP probe in funcs_9). Planted control: the replay's
+funcs_23 B40 line put back to its pre-s7734 form reads HIDDEN (rc 1). The census `--tree DIR` flag works on any RecompiledFuncs tree.

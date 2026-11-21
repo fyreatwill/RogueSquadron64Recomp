@@ -7,7 +7,9 @@ model its on/off signature and compare it with the signatures of the live script
   ORPHAN  : no live script/host site of that name models at all
   UNMOD   : the compiled line does not model (passed on / parse)
 --controls: planted funcs_24 S4562 line with its s4786 default stripped must model differently (unset 1 -> 0).
-rc 0 = controls PASS and every HIDDEN name is in REVIEWED; 1 otherwise. Skips (rc 0) when ../N64Recomp is absent."""
+rc 0 = controls PASS and every HIDDEN name is in REVIEWED; 1 otherwise. Skips (rc 0) when ../N64Recomp is absent.
+--tree DIR (s7735): census a regen-replay RecompiledFuncs tree instead of the live one (tools/s7719_regen_gate.py runs it on
+its fresh replay, so a fixup that stops reproducing a hand-synced compiled reading reads HIDDEN at the next sweep)."""
 import glob, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7714_truth_census as t
@@ -21,6 +23,10 @@ NOREF_OK = {"ROGUESQ_S7103_CAMFIX", "ROGUESQ_LOG_M5_PRECLEAR_SPAN", "ROGUESQ_FOR
             "ROGUESQ_FORCE_ALLOC_TAIL_GUARD4", "ROGUESQ_LOG_EMIT_DL_GUARD4", "ROGUESQ_LOG_HEAPLISTDEQ_GUARD4", "ROGUESQ_FORCE_UNLOCK",
             "ROGUESQ_FORCE_PLANET_UNLOCK", "ROGUESQ_LOG_SCENE_NODE_LIST_GUARD4", "ROGUESQ_SPANFORCE", "ROGUESQ_SPANFORCE_PERIOD",
             "ROGUESQ_DD_FARCLIP_MUL", "ROGUESQ_DD_POOLX"}
+
+
+if "--tree" in sys.argv:
+    GLOBS = (os.path.join(os.path.abspath(sys.argv[sys.argv.index("--tree") + 1]), "*.c"),) + GLOBS[1:]
 
 
 def compiled_sites():
@@ -77,7 +83,7 @@ def controls(sigs):
     print(f"control planted presence DD_CAPX_TOG -> {pk} {'PASS' if pk == 'HIDDEN' else 'FAIL'}")
     if pk != "HIDDEN":
         return False
-    f = os.path.join(ROOT, "../N64Recomp/RecompiledFuncs/funcs_24.c")
+    f = os.path.join(os.path.dirname(os.path.join(ROOT, GLOBS[0])), "funcs_24.c")
     lines = open(f, errors="replace").read().split("\n")
     idx = next((i for i, l in enumerate(lines) if 's_hold = (e && (e[0] == 50' in l and "ROGUESQ_S4562_PAUSE" in l), None)
     if idx is None:
