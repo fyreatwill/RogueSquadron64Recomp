@@ -206743,3 +206743,24 @@ dd4 16:9 FPS60 HOLD 150, in-session, host idle 9.5 h): L10 a500:6:90, L12 a150:6
 - Counters: L10 spawn=33 early=6 early_max 50.1 s; L12 spawn=29 early=4 early_max 57.8 s. Both alive, 0 crash.
 Rules out: "L10 stand-ins never reach the frame" (s7744's open question). Open: L12 visibility (later window, a larger min_adds
 anchor ~600 at its 50+ s peak).
+
+## Session 7746 (2026-11-20) — G6c L12 visibility at the add peak: null on ground pixels (H-gain refuted on L12, H-not-visible selected); L10 gain survives a sky mask
+Contract carry: s7745 was flagged diagnostic-only (instrument landed, no discrimination named); this session supplies the discrimination.
+Run: scratch/s7746_standins_l12.sh (s7745 recipe, u124 arm only: L12 dd4 16:9 FPS60 STANDINS=frame LOG=1, DUMP=a600:6:90, HOLD 150,
+host idle 10 h). Anchor fired at t=62.41 s (added=611). Alive, 0 crash, vi_stalls30s=0, max_gap 147 ms.
+- s7624 whole-frame scorer: win1 1627.7 px/triplet vs forced-off win2 171.8 (9.5x), paint ctl PASS. Looked at triplet n7679-7682
+  myself: the top flicker triplets span the whole frame (bbox x0-794 y0-443) with the median in the SKY; the camera is banking and the
+  cloud layer flickers. Stand-ins are ground objects, so the whole-frame score is confounded by camera roll.
+- New tools/s7746_ground_flicker.py: same flicker test restricted to pixels non-sky in all 3 frames, with a same-run positive control
+  (6x6 +-90 square painted on an all-ground pixel in alternate win2 frames must be found).
+  - L12 s7746 (62 s peak): win1 131.4 vs ctl 126.3 (1.04x); ground ctl PASS (+2044 >= 1584). NULL.
+  - L12 s7745 (t=10 s): win1 118.1 vs ctl 481.0; ground ctl PASS (+3168). NULL.
+  - L10 s7745: win1 2353.6 vs ctl 382.5 (6.2x); ground ctl PASS (+2579). The L10 gain is on ground pixels, not sky.
+DISCRIMINATION: on L12 two windows (early, and at the 600+/s add peak) with passing ground controls show no stand-in pixels. This
+refutes H-gain for L12 and selects H-not-visible: L12 stand-ins are added to the bucket but do not reach the frame. L10's H-gain
+stands (ground-locus, 6.2x). s7745's "L12 single window" caveat is closed.
+Lead: L12 [standins-why] PASS lines report dmed~132 against why-k far=30.03; L10 passes at dmed~164 and is visible, so raw distance alone
+does not explain it (units/scaling unknown).
+Next discriminator: per added item on L12 vs L10, log eye-space depth vs the game's far plane and projected screen bbox/size (one
+instrument, both arms, one run). Depth beyond far on L12 only -> far-clip (H-clip); on screen but sub-pixel -> H-size; on screen and
+sized but absent -> the submit/DL path drops them (H-drop).
