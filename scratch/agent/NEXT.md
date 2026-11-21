@@ -1,15 +1,14 @@
-# NEXT (s7759)
-HYPOTHESIS-ID: rdp-output-gate-hangar-reentry
+# NEXT (s7760)
+HYPOTHESIS-ID: rdp-output-gate-menu-overlays
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-s7758 closed stand-in flight coverage (L10 21:9: 24/24 flight tasks exact, gate GREEN 15/15). Remaining unscored route: the hangar
-AFTER a mission abort (the G5i re-entry path, s6995), where the owner once saw a different camera. The s7756 H-state visibility
-property (live == end render within 1 LSB) is gated only on FIRST-entry hangar tasks.
-Unit (one game run, screen unlocked, host idle): find the s6995 abort/re-entry recipe (`grep -n 'Session 6995' PORTING-STATE.md`,
-its autopilot key string), add ROGUESQ_S7751_EVERY=<N>:<max>:<from serial past the abort> so snaps land in the re-entry hangar
-(verify from the window sheet + snap vi, s7758 pitfall), at the owner 21:9 recipe (ASPECT=21:9 DD=4 FPS60 STANDINS=1).
-Then `python3 tools/s7757_route_replay.py <snapdir>` and `python3 tools/s7755_hstate_visibility.py <snap> --cap 1048576 --tg 1` per
-re-entry hangar pair.
-Hypotheses: H-same (re-entry hangar tasks are H-state like first entry and live-vs-end ge2LSB 0: add a pair to s7756 PAIRS) /
-H-reentry-race (live-vs-end ge2LSB > 0 on re-entry only: a visible mid-task DL rewrite; name the writer) / H-exact (re-entry tasks
-replay byte-exact from begin: the craft DL is no longer rewritten mid-task; note why).
-Max 2 CPU-heavy jobs.
+s7759 closed the hangar re-entry path (AVAILABLE CRAFT H-state invisible 3/3, SELECT YOUR CRAFT 20/20 exact). Remaining unscored
+screens on the owner route: the in-mission PAUSE menu (drawn over the frozen flight frame), ABORT LEVEL confirm, MISSION FAILED medal
+and SELECT LEVEL. Overlays over a held frame are the likeliest place for a task to read RAM the CPU rewrites (fb-as-texture, menu DL).
+Unit (one game run, screen unlocked, host idle): same command as s7759 (see its PORTING-STATE entry; scratch/s6995/route_long.txt,
+owner save read-only via empty FORCE_*), with EVERY=60:24:10900 SECS=230 so snaps land VI 10900-12280 (~179-202 s: pause 182 s,
+abort 188-193 s, medal 203 s; 60.8 VI/s, check against the 10 s window sheet). Then `python3 tools/s7757_route_replay.py <snapdir>`
+and, per DIFF, `python3 tools/s7755_hstate_visibility.py <snap> --cap 1048576 --tg 1`.
+Hypotheses: H-exact (overlay tasks replay byte-exact: add 1-2 to s7753 SNAPS) / H-state (begin != end but live==end <=1 LSB: add a
+pair to s7756 PAIRS, name the RAM region) / H-overlay-race (live-vs-end ge2LSB > 0: a visible mid-task rewrite; name the writer).
+Max 2 CPU-heavy jobs. If this also comes back exact/invisible, RDP-output route coverage is complete: take the next owner item or
+G-rung per ITERATION 3c instead of more coverage.

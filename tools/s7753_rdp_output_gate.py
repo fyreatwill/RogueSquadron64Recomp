@@ -45,6 +45,10 @@ SNAPS = {
     # the stand-in region 0x81700000+ is CPU-only (node matrices go through the DL pool), so these tasks stay begin-replayable.
     "scratch/s7754/retained/w219L10_s10200.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # L10 flight, stand-ins, largest tail
     "scratch/s7754/retained/w219L10_s10800.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # L10 flight, stand-ins add peak
+    # s7759: hangar RE-ENTRY after a mission abort (s6995 route, owner save, 21:9 dd4 FPS60 STANDINS=1): SELECT YOUR CRAFT scrolls
+    # under the s6907/s6995 aim camera replay byte-exact (20/20); the forced route never visits this screen.
+    "scratch/s7754/retained/w219re_s15500.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # re-entry craft scroll (Y-wing), largest
+    "scratch/s7754/retained/w219re_s17000.bin": dict(cap=1048576, tg=1, tg0=None, capc=2048),  # re-entry craft settled (A-wing)
 }
 
 

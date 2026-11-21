@@ -22,6 +22,7 @@ PAIRS = {
     "scratch/s7754/retained/hangar_hstate/k900_s1250.bin": dict(cap=65536, tg=0, capc=2048),        # hangar, dd1 4:3
     "scratch/s7754/retained/hangar_hstate_dd2/k900_s1500.bin": dict(cap=1048576, tg=1, capc=2048),  # hangar, 16:9 dd2 FPS60
     "scratch/s7754/retained/hangar_hstate_219/k900_s1500.bin": dict(cap=1048576, tg=1, capc=2048),  # hangar, 21:9 dd4 FPS60 STANDINS (s7757)
+    "scratch/s7754/retained/hangar_hstate_219re/k900_s12750.bin": dict(cap=1048576, tg=1, capc=2048),  # hangar RE-ENTRY after abort, 21:9 (s7759)
 }
 ROW = re.compile(r"^(live-begin|live-end|begin-end): px=(\d+) ge2LSB=(\d+)$", re.M)
 

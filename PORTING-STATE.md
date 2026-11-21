@@ -207085,3 +207085,29 @@ fires, strict prefix 22272/21920); sweep regex -> 15/15. --controls: CONTROL PAS
 ORIGIN: no mitigation; gate coverage only.
 Rules out: a stand-ins-driven mid-task RAM race or ucode output divergence in heavy stand-in flight at 21:9 dd4 FPS60.
 Verdict: selects H-exact, refutes H-standins-state.
+
+## Session 7759 (2026-11-21) — hangar re-entry after a mission abort at the owner 21:9 recipe: AVAILABLE CRAFT is H-state like first entry and invisible live-vs-end (3/3 ge2LSB 0), all 20 SELECT YOUR CRAFT re-entry tasks replay byte-exact; s7753 gate 17/17, s7756 gate 4/4
+Start checks: crash_reports new=0; no new SOAK-RESULTS lines since the s7750 fold; no owner report. Screen unlocked, HID idle 15.3 h.
+Question (NEXT s7759, rdp-output-gate-hangar-reentry): do the s7753/s7756 properties hold in the hangar reached AFTER a mission abort
+(the G5i path)? H-same (re-entry tasks H-state, live-vs-end ge2LSB 0) / H-reentry-race (ge2LSB > 0 on re-entry only) / H-exact
+(re-entry tasks byte-exact from begin).
+Run (one game): `env EVERY=250:24:12500 SECS=300 zsh tools/s7754_capture_route.zsh w219_reentry ROGUESQ_FORCE_SAVE_MISSION=
+ROGUESQ_FORCE_UNLOCK= ROGUESQ_AUTOPILOT=$(cat scratch/s6995/route_long.txt) ROGUESQ_AUTOPILOT_HOLD_MS=250 ROGUESQ_ASPECT=21:9
+ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_FPS60=1 ROGUESQ_STANDINS=1 ROGUESQ_G5G_CAM=...` (empty FORCE_* are stripped at launch -> normal boot on
+the owner save, read-only) -> alive=1 crash=0, 23 snap pairs (VI 12500-18000), save-unchanged. Window sheet
+(scratch/s7754/w219_reentry/sheet.jpg): first SELECT YOUR CRAFT 30-60 s, Calamari flight 81-172 s, PAUSE/ABORT/YES 182-193 s, MISSION
+FAILED 203 s, hangar room 213 s, AVAILABLE CRAFT 223 s, re-entry SELECT YOUR CRAFT 233-304 s with scrolls V-wing/Y-wing/Speeder/A-wing.
+VI->time: 18240 update_screens in ~300 s (60.8/s); the G5G aim log resumes at 234.6 s (VI ~14260) -> two independent clocks agree that
+VI 12750-13250 is the re-entry AVAILABLE CRAFT screen and 14500-18000 the re-entry craft scrolls.
+Replay (tools/s7757_route_replay.py): 20/23 EQ from begin AND end image, b==e. The 3 DIFFs are s12750/s13000/s13250 (220-229 KB, begin !=
+end != live) = the s7754 H-state signature, on the AVAILABLE CRAFT screen only, exactly as on first entry. Every SELECT YOUR CRAFT task
+(incl. mid-scroll under the s6907/s6995 aim camera) is exact.
+Visibility (tools/s7755_hstate_visibility.py --cap 1048576 --tg 1): live-end ge2LSB 0/0/0 (1137/711/340 px <=1 LSB); begin-live ge2LSB
+0/0/2 (info only, the tool's VISIBLE on s13250 is begin-driven, as in s7757). Controls: flip PASS, shade+16 PASS on 165/120/149 tris.
+Gates: s7756 PAIRS + hangar_hstate_219re/k900_s12750 -> --controls GREEN 4/4 (CAP=2048 ctl 37385 px PASS); s7753 SNAPS +
+w219re_s15500 (largest, mid-scroll) + w219re_s17000 (settled) -> CONTROL PASS snaps=17, GREEN 17/17 (capc 2048 fires, strict prefix
+44712/29976, flip PASS). Sweep regexes -> 17/17, 4/4.
+ORIGIN: no mitigation; gate coverage only.
+Rules out: a re-entry-only mid-task DL race (the G5i path) and any ucode output divergence on the craft-select screen under the aim
+camera at the owner 21:9 recipe. Not covered: the PAUSE / ABORT / MISSION FAILED / SELECT LEVEL overlays (VI ~11000-12500) -> NEXT.md.
+Verdict: selects H-same for AVAILABLE CRAFT and H-exact for SELECT YOUR CRAFT; refutes H-reentry-race.

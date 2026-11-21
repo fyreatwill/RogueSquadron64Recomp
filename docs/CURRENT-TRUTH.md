@@ -20,7 +20,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   (keep byte-true, s7743). Env readers: launch strips empty ROGUESQ_* (s7730), maps on/off words to 1/0 (s7731), unsets invalid
   ROGUESQ_ASPECT (s7732); after a regen `python3 tools/s7734_compiled_reader_census.py` (rc 0). s7725 plume +0 texture-descriptor
   over-release (RT64 Present SIGTRAP) fixed, NSZombie 0 on boot/flight/hangar route (s7726/s7727). 21:9 fb read-back harmless (s7702-s7706).
-  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26; 15 snaps since s7758 incl. L10 21:9 stand-ins flight, hangar H-state item 27).
+  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26; 17 snaps since s7759 incl. L10 21:9 stand-ins flight and hangar re-entry after abort, hangar H-state item 27, 4 pairs).
 - **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
   proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
   cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
@@ -328,6 +328,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     stand-ins (w219L10_s10200 largest tail 348824 B, w219L10_s10800 add peak; 0 TriGen hits). L10 route: 24/24 flight tasks
     (s8400-s13000, 16 in stand-in-adding seconds) and 22/24 earlier tasks (16 of them the long Chapter III crawl) exact from begin AND
     end image; misses = hangar only. Stand-in region 0x81700000+ is CPU-only, so stand-ins never make a task H-state. GREEN 15/15.
+    **s7759: 17 snaps** - + 2 SELECT YOUR CRAFT scrolls in the hangar RE-ENTRY after a mission abort (s6995 route on the owner save,
+    21:9 dd4 FPS60 STANDINS=1; w219re_s15500 mid-scroll, w219re_s17000 settled): 20/20 re-entry craft-select tasks (aim camera on)
+    exact from begin AND end image; the forced route never reaches this screen. GREEN 17/17.
     Pitfall: on L10 the crawl runs to ~VI 8500, so EVERY=250:24 without a <from> captures no flight (check snap vi vs the sheet).
     A RED after a ucode fixup edit = emitted stream changed: intended -> re-capture
     (`tools/s7753_capture_snaps.zsh`, `tools/s7754_capture_route.zsh` with ROGUESQ_S7751_EVERY=<N>:<max>:<from>) and say so.
@@ -345,6 +348,8 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     GREEN 2/2; planted cap=2048 policy -> RED 2/2, planted missing pair -> NEEDS-INPUT rc 4.
     **s7757: 3 pairs** (+ 21:9 dd4 FPS60 STANDINS hangar_hstate_219/k900_s1500): live-end ge2LSB 0 (631 px <=1 LSB), begin-live 336 px
     >=2 LSB (info only; same shape as 16:9's 313). GREEN 3/3, CAP=2048 ctl 44768 px. RDP-output coverage of the owner recipes is done.
+    **s7759: 4 pairs** (+ hangar_hstate_219re/k900_s12750 = RE-ENTRY AVAILABLE CRAFT after abort, 21:9): the 3 re-entry H-state tasks
+    (VI 12750-13250) render live-end ge2LSB 0 (1137/711/340 px <=1 LSB), same H-state shape as first entry. GREEN 4/4, CAP=2048 ctl 37385 px.
 
 ## Evidence index
 
