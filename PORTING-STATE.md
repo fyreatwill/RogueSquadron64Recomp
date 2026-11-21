@@ -206185,7 +206185,9 @@ The s7714 truth census DID model helpers, but dropped two env_flag (src/main/deb
 off, and the ROGUESQ_LOG_ALL catch-all (a foreign operand, evaluated as neutral). Hypotheses: H-none (no name's readers
 split on those) vs H-split (some do: LOG_ALL=1 or =false lights half a probe).
 
-Result H-split, diagnostic flags only (no owner setting, no game behaviour):
+Result: selects H-split and refutes H-none (pre-fix tree 4 VALUE + 6 LOG_ALL SPLIT, same tool, controls PASS); diagnostic
+flags only (no owner setting, no game behaviour). Next discriminator: the 81 unmodelled sites (`--unmodelled`) -> does any
+of them split from its modelled siblings (H-split-hidden) or are all opaque by design (H-opaque)?
 - VALUE (VALUES += "false","no"): LOG_DPC, LOG_FILTER_VOICE_AUDIT, LOG_M5_WRITER_PARITY, LOG_TRI_COPY: env_flag off vs
   `*e != '0'` on (dpc_bridge, main.cpp, the m5 fixups, rt64_rsp). Fix: env_flag drops the false/no special case, so it
   follows the rule every other reader uses (~700 sites). Note log_tri_copy() has no callers.
