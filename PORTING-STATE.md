@@ -206798,3 +206798,6 @@ Net: -24,734 bytes, -200 lines. Rules out nothing; the next unit is still the s7
   print cnt/sum_px). All 5 are GREEN on rerun, tools/s7548_gh_census.py rc 0. Full sweep before the fix: 220 gates, 211 GREEN, 5 RED (all
   this edit), 3 REPORT, 1 NEEDS-ARGS. Smoke with the fixed build (scratch/s7748_smoke, L12 90 s): alive, 0 crash, vi_stalls30s=0,
   13 px lines, 0036 ~26 px (matches the run). Cold sweep wall time 1346 s: it outlives a 600 s background cap.
+- Verdict: this selects H-visible on L12 and refutes H-drop, H-clip and H-size (and the s7746 H-not-visible). It closes G6c
+  coverage on L10/L12. Next discriminator (NEXT.md, g6c-l12-never-added): per never-added item, final skip reason + distance to
+  the player. Unlinked items all beyond the dd4 radius selects H-zone; near unlinked items the game later spawns selects H-ours.
