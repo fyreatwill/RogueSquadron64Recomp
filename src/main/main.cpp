@@ -6808,6 +6808,7 @@ extern "C" void rs64_dmem_lock()   { g_lle_task_mutex.lock(); s4249::acquired(0)
 extern "C" void rs64_dmem_unlock() { s4249::released(); g_lle_task_mutex.unlock(); }
 
 extern "C" void rs64_s7645_gfx_task(int edge, uint32_t dl);  // s7645 TS-4 (src/rsp/s7644_rspdma.cpp; no-op unless ROGUESQ_S7644_RSPDMA&2)
+extern "C" void rs64_s7751_task_begin(const uint8_t* rdram, const uint8_t* dmem); extern "C" void rs64_s7751_task_end(void);
 static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
     struct S7645Edge { S7645Edge() { rs64_s7645_gfx_task(0, s_pending_task_data_ptr); } ~S7645Edge() { rs64_s7645_gfx_task(1, 0); } } s7645_edge;
@@ -7150,6 +7151,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     const uint32_t task_serial = g_rs64_lle_task_n.fetch_add(1, std::memory_order_relaxed) + 1;
     rs64_e9prov_force_update();  // s7021
     rs64_e9prov_task_begin(task_serial, dl_ptr, rdram, ucode_addr);
+    rs64_s7751_task_begin(rdram, g_dmem_cur);  // s7751: ROGUESQ_S7751_SNAP gfx task snapshot (src/rsp/s7751_task_snap.cpp)
     rs64_dpc_defer_begin();
     // ROGUESQ_LOG_TASKMS=1 (session 37) — wall time of the ucode call per task,
     // phase-scoped. s36 put 82% of Gfx Thread samples inside factor5_ucode but
@@ -7338,6 +7340,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // Drop the task's RDP output if the ucode wandered into garbage (trig
     // data executed as DL) — RT64 must never see those streams.
     rs64_dpc_defer_end(r != RspExitReason::UnhandledJumpTarget);
+    rs64_s7751_task_end();
     if (g_rs64_aq_on > 0) {
         struct AqAcc { uint64_t n = 0, ucode = 0, sub = 0, calls = 0, com = 0, slow_n = 0, slow_ucode = 0, slow_sub = 0, max = 0; };
         static AqAcc acc;

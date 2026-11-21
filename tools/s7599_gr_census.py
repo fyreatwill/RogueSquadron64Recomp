@@ -181,6 +181,7 @@ for _k, _v in {
         "s_gh_idx": "bounded: ROGUESQ_STANDINS (opt-in); cleared at the top of every submit pass, at most one push per stand-in (<= s_standins.size() < 4096) (s7677 row)",
         "s_pseen": "bounded: ROGUESQ_STANDINS + STANDINS_LOG (s_bk_log); insert only while size() < 2000 (s7685 log dedupe, row s7690)"},
     "src/rsp/s7644_rspdma.cpp": {r: G("ROGUESQ_S7644_RSPDMA&2") for r in ("g_gpi", "g_gstale", "g_srcc", "g_srcs", "v")},
+    "src/rsp/s7751_task_snap.cpp": {"rdp": G("ROGUESQ_S7751_SNAP") + "; cleared at every task begin, < 16 MB per task"},
 }.items():
     ROWS.setdefault(_k, {}).update(_v)
 

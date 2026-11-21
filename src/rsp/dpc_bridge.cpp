@@ -8683,7 +8683,9 @@ extern "C" uint32_t rs64_task_rdp_bytes_total() { rs64_bf2_flush(); return g_tas
 extern "C" { uint64_t g_rs64_aq_null_ns = 0; }
 static const bool g_aq_null = [] { const char *e = std::getenv("ROGUESQ_G1E_AQ_NULL"); return e && *e && *e != '0'; }();
 extern "C" __attribute__((noinline)) void rs64_g1e_aq_null_fn(uint8_t *, uint32_t, uint32_t) { __asm__ volatile("" ::: "memory"); }
+extern "C" void rs64_s7751_rdp(const uint8_t* rdram, uint32_t start, uint32_t end); extern "C" int rs64_s7751_on(void);
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
+    { static const int s7751 = rs64_s7751_on(); if (s7751) rs64_s7751_rdp(rdram, start, end); }  // s7751 snapshot (raw ucode output)
     if (g_rs64_aq_on == 3) {
         const uint64_t c = ++g_rs64_aq_submit_calls;
         if ((c & 15u) == 0 || g_rs64_aq_spin_ns) {

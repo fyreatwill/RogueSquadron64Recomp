@@ -236,7 +236,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 3. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
    Far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0 (two lines: RDP W decode + presented
-   left-column count, 12 same-pose arms; mechanism single-source). Sheets docs/owner_sheet_s7310_farmax.jpg,
+   left-column count, 12 same-pose arms). **Mechanism now two-source (s7751):** the independent cxd4 RSP, fed the same
+   captured gfx task (ROGUESQ_S7751_SNAP + tools/s7751_cxd4_task/replay), emits the same 3 pinned tris bit-identically
+   (2/2 FARMAX=0 tasks), and 0 at the default (control arm): the pin is the F5 ucode's own result, not our LLE. Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
 4. **Owner decisions on defaults:** M5_B40_VALUE (s7558/s7564: default 0 is alive only via the s4889+s7476 compensations; =1 is retail and equally clean 6/6), RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
@@ -306,7 +308,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     200 s dd4 holds): L10 280 items ADDED 192 / CULL-OFF 81 / COND 3 / UNLINKED-NEVER 3 / DEAD 1; L1 47 items ADDED 43 /
     CULL-OFF 1 / UNLINKED-NEVER 3. CULL-FAR=0 and CULL-NOVT=0 on all three levels (activation control edges 64/32, nospawn 0).
     The s7748 L10 "273/273 never added" read was the same 120-try window artifact as L12. Reopen only on an owner report.
-24. **Next rung (s7750): second source for the s7310 FARMAX mechanism** (item 3 is single-source). See NEXT.md.
+24. **s7310 FARMAX mechanism: CLOSED two-source (s7751)** — cxd4 replay of the captured task reproduces the pinned dome
+    tris exactly; H-ucode selected, H-rspemu refuted. Side datum: cxd4 vs our LLE match 98.8% of commands per task, residual
+    = 5 tris with small slope words, ~18 port-only 0F tris, one reordered state block; open in NEXT.md (item 25).
+25. **Next rung (s7751): name the residual cxd4-vs-port RDP differences** (tools/s7751_rdp_compare.py on scratch/s7751 snaps).
 
 ## Evidence index
 

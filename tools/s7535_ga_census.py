@@ -183,6 +183,7 @@ RULES = [
     D(RC, "rs64_s7541_span", "ROGUESQ_S7539_GB_CHK", why="s7541 span check, returns unless gb::on", thr=GFX),
     D(UC, "s7545_rdw", "ROGUESQ_S7545_THRWATCH", why="s7545 GE thread-watch value read, watch path under s7545_on()"),
     D("src/rsp/s7644_rspdma.cpp", "rb", "ROGUESQ_S7644_RSPDMA", why="s7644 TS-3 audio-task vs PI DMA instrument (g_mode)"),
+    D("src/rsp/s7751_task_snap.cpp", "rs64_s7751_rdp", "ROGUESQ_S7751_SNAP", why="s7751 raw RDP byte capture for the cxd4 replay, returns on !dir()", thr=GFX),
     # --- the gfx/audio RSP DMA read: device semantics; gfx window measured by s7535 ROGUESQ_S7535_GA_CHK -----------------------
     (RSPI, "dma_rdram_to_dmem", A('dram_addr + rd_len <= g_rsp_dma_shadow2_addr + g_rsp_dma_shadow2_size)', 0, 20), "H-latent-FIXED(opt-in)", "task/gfx",
      "FIXED(opt-in) s7537: ROGUESQ_SP_LATE=1 (hardware-order sp_complete) is free at FPS60 wherever the game holds 60/s "

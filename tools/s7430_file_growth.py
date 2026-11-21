@@ -23,6 +23,8 @@ REVIEWED = {
     # s7718: swept for the first time; s7702 census dump (dump_locked <- tick_locked <- rs64_s7702_rdp/_dma, both callers
     # dpc_bridge.cpp:6130 / s7094_dma_shape.cpp:102 test rs64_s7702_on first; "w" truncate every 2 s, one file)
     'fopen("rs64_s7702.log"': ('OPTIN', 'ROGUESQ_S7702_FBREAD (callers gated by rs64_s7702_on; w truncate)'),
+    # s7751: rs64_s7751_dump returns on !dir(); one ~18 MB file per completed ring slot (3) per POSE_FREEZE entry, "wb"
+    'std::fopen(p, "wb")': ('OPTIN', 'ROGUESQ_S7751_SNAP (dump returns on !dir(); <= 3 files per POSE_FREEZE, wb)'),
     'fopen("rs64_s7535.log"': ('OPTIN', 'ROGUESQ_S7535_GA_CHK (dump only while g_open; snap/close gated by rs64_s7535_on in events.cpp)'),
     'fopen("rs64_s7536.log"': ('OPTIN', 'ROGUESQ_S7536_CNT or ROGUESQ_SP_LATE=alt (c_dump only under s_cnt_on)'),
     'g_tf = e ? fopen(e, "wb")': ('OPTIN', 'ROGUESQ_S7112_TRI (s7466 reworded the s7430-reviewed line)'),

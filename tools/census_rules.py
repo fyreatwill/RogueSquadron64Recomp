@@ -95,6 +95,10 @@ RULES = [
     ("rt64_state.cpp", "rs64_lookup_image_word", "0xF83FF83Fu", "G", [(None, r'getenv\("ROGUESQ_S7704_POISON"\)'), (None, r"if \(b1 <= 0x1000000u\) \{")],
      "s7707: s7704 magenta poison inside fullSync (census attributes it to rs64_lookup_image_word), ROGUESQ_S7704_POISON=<width> (default 0 = off); span b0..b1 < 16 MB RDRAM"),
     ("src/rsp/s7644_rspdma.cpp", "*", None, "G", [(None, r'getenv\("ROGUESQ_S7644_RSPDMA"\)')], "ROGUESQ_S7644_RSPDMA; gsum is a log row"),
+    ("src/rsp/s7751_task_snap.cpp", "*", None, "G", [(None, r'getenv\("ROGUESQ_S7751_SNAP"\)'), (None, r"if \(!dir\(\) \|\| g_cur < 0\) return;"),
+     ("src/rsp/dpc_bridge.cpp", r"if \(s7751\) rs64_s7751_rdp"), (None, r"if \(ep <= sp \|\| ep > kRam\) return;")],
+     "s7751 gfx task snapshot for the cxd4 replay, every entry returns on !dir() (ROGUESQ_S7751_SNAP, default off); RDRAM copy is the "
+     "fixed 16 MB RSP DMA window kRam, inside the 512 MB mapping; rdp index a < ep <= kRam"),
     # --- G6c stand-ins (opt-in ROGUESQ_STANDINS)
     (SI, "bk_ret_impl", "dy + dz", "FLT", [(None, r"const float dx = rf\(rdram, s\.state\) - x, dy = rf\(rdram, s\.state \+ 4u\) - y, dz")],
      "s7672 handoff: float squared distance between stand-in and real object (dx/dy/dz are const float)"),

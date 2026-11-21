@@ -223,6 +223,8 @@ RULES = [
      {"verify": r"if \(!g_on \|\| g_tasks\.load\(\) == 0\) return;", "envoff": "ROGUESQ_S7644_RSPDMA"}),
     ("src/rsp/s7644_rspdma.cpp", "t_g", "H-instrument-only", "s7644 gfx PI span snapshot, after `if (!g_gon) return;`",
      {"verify": r"if \(!g_gon\) return;", "envoff": "ROGUESQ_S7644_RSPDMA"}),
+    ("src/rsp/s7751_task_snap.cpp", "s", "H-instrument-only", "s7751 gfx task snapshot (16 MB RSP window), after `if (!dir() ...) return;`",
+     {"verify": r"if \(!dir\(\) \|\| !rdram \|\| !dmem\) return;", "envoff": "ROGUESQ_S7751_SNAP"}),
     ("librecomp/src/sp.cpp", "ram_unswapped", "H-dead", "ramdump under dump_frame, which nothing sets true",
      {"verify": r"bool dump_frame = false;"}),
 ]

@@ -1,14 +1,16 @@
-# NEXT (s7751)
-HYPOTHESIS-ID: farmax-second-source
+# NEXT (s7752)
+HYPOTHESIS-ID: cxd4-port-rdp-residual
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-G6c coverage is CLOSED on L1/L10/L12 (s7750). Next rung: CURRENT-TRUTH Next-steps item 3 (s7310 21:9 left-edge sliver, ROGUESQ_DD_FARMAX
-default 32767) rests on a single-source mechanism: "far above ~36-40k units makes the F5 clip pin sky-dome edge panels to fb x=0".
-Unit (offline first, one game run max): grep PORTING-STATE s7308-s7312 for the logged vertex/matrix inputs and the RDP W decode tool.
-Re-run the F5 vertex transform + clip for those inputs in a small python model, written from docs/F5-UCODE-REFERENCE.md and GLideN64's F5 HLE
-(the reference math, not our RSP), at far 32767 and 40000.
-Hypotheses / outcomes:
-- H-ucode: the reference math also pins x=0 above the threshold (fixed-point W / clip-ratio overflow) -> the mechanism is the game's own,
-  FARMAX stays the right fix, item 3 is two-source.
-- H-rspemu: the reference math does NOT pin -> our LLE vector-op emulation (VRCP/VMACF clamp) diverges; bisect the op on those inputs.
-- H-input: the logged inputs are not enough to reproduce (missing matrix) -> one capture run at L5 21:9 dd4 with FARMAX=0 that dumps
-  the vertex+matrix for the pinned panel, then rerun the model.
+s7751 closed the FARMAX mechanism two-source (cxd4 replay reproduces the 3 pinned dome tris exactly). Side datum to explain:
+per task cxd4 and our LLE agree on 98.8% of RDP commands (difflib, scratch/s7751/snap_f0/k0_s4054.bin vs cxd4_f0_s4054.rdp).
+Residual: (a) 5 tris with one differing slope word (first: cmd#83 op 0E, DxHDy fe33.. vs fc1b..), (b) ~18 port-only 0F tris,
+(c) one ~850-command state+tri block emitted in a different order (insert/replace pair of equal content).
+Hypotheses:
+- H-snapshot: the CPU rewrites vertex/matrix/DL RDRAM while the live task runs, so the begin-snapshot is not what our RSP read.
+  Discriminator: add a task-END RDRAM copy to the slot (same file, ver 2), diff begin vs end over the DL/vertex segments the
+  differing commands came from; replay cxd4 on the END image too. Differences that vanish/flip with the image = H-snapshot.
+- H-fixup: a deliberate ucode fixup (UCODE_CAP, s6418 far clip, spill/segment patches) changes output; the port-only tris
+  appear only with the fixup on. Check the fixup list in tools/fixup_*.py touching the F5 gfx ucode against op 0F emitters.
+- H-rspemu: a real LLE divergence (slope words = VMACF/VRCP path); bisect with the s6388 cxd4_vu_replay ring at the cmd#83 tri.
+Also: gate sweep REDs s7363/s7600 at src/main/rs64_standins.cpp:917 lr[r] predate s7751 (s7749 edit); classify or bound them first.
+One capture run (L1 21:9 dd8 pose as s7751, scratch/s7751/run.zsh), everything else offline. Max 2 CPU-heavy jobs.

@@ -430,6 +430,7 @@ add_executable(RogueSquadron64Recomp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7526_v2p_twin.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7535_ga_chk.cpp
     ${CMAKE_SOURCE_DIR}/src/rsp/s7106_rsptri.cpp
+    ${CMAKE_SOURCE_DIR}/src/rsp/s7751_task_snap.cpp
     ${FACTOR5_UCODE_TLS_CPP}
     ${FACTOR5_UCODE_LEAN_CPP}
     ${FACTOR5_UCODE_NMAC_CPP}

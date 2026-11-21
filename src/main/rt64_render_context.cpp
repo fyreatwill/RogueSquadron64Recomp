@@ -41,6 +41,7 @@ extern "C" uint32_t rs64_rand_site;
 uint32_t rs64_rand_site = 0; // jal address of the current rand call site (s6751 fixup)
 volatile int g_rs64_rand_trace = 0;
 extern "C" uint32_t rs64_ram_top; // s6132
+extern "C" void rs64_s7751_dump(unsigned); // s7751 src/rsp/s7751_task_snap.cpp
 extern "C" void rs64_s6883_freeze(unsigned); // s6883: span tables at each POSE_FREEZE
 static FILE* s_rand_trace_f = nullptr;
 extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
@@ -80,6 +81,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
                 fflush(stderr);
                 fz_k++;
                 std::this_thread::sleep_for(std::chrono::milliseconds(fz_ms));
+                rs64_s7751_dump((unsigned)(fz_k - 1));  // s7751: no task runs during the freeze
             }
         }
     }

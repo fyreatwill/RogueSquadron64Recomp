@@ -206855,3 +206855,36 @@ Rules out: a stand-in far-multiplier miss (rs64_vt_farmul) at dd4 on these level
 Next discriminator (rung 24): the s7310 FARMAX mechanism ("far above ~36-40k units makes the F5 clip pin sky-dome panels to fb x=0") has
 one source only. Its second source is an offline re-run of the F5 vertex/clip math (GLideN64 HLE of this ucode, docs/F5-UCODE-REFERENCE.md)
 on logged inputs at far 32767 vs 40000. The pin reproducing there selects H-ucode (retail math). It not reproducing selects H-rspemu (our LLE vector-op emulation).
+
+## Session 7751 (2026-11-21) — G5f FARMAX second source: the independent cxd4 RSP, fed our captured gfx task, emits the same 3 pinned sky-dome tris bit-identically; selects H-ucode, refutes H-rspemu; s7310 mechanism now two-source
+HYPOTHESIS-ID: farmax-second-source.
+Offline first: the s7309/s7310/s7312 logs hold only RDP-level triangles (G5B_FRAME decode), no RSP vertex/matrix inputs, and
+GLideN64's F5 HLE clips in float (reference/gliden64/F5Rogue.cpp isClipped/drawer), so it cannot judge fixed-point clip
+behaviour -> H-input selected offline, the python-model route was dropped in favour of a whole-task independent-RSP replay.
+New instrument (engineering): src/rsp/s7751_task_snap.cpp, env ROGUESQ_S7751_SNAP=<abs dir>, off/no-cost when unset. At each
+gfx task begin (factor5_gfx_runner, before rs64_dpc_defer_begin) it copies the 16 MB RDRAM window + DMEM into a 3-slot ring;
+rsp_dpc_submit appends every raw ucode RDP byte (before cull/merge/RT64); POSE_FREEZE writes the completed slots after its sleep.
+New tool: tools/s7751_cxd4_task/ (replay.c compiles the rs64-oracle cxd4 sources in, scalar C VU; hardware boot =
+_VirtualToPhysicalTask + rspboot to IMEM 0; RDP instant; re-kicks on cxd4's SP_STATUS poll-timeout halts until BREAK). Two
+harness bugs fixed on the way: macOS SIGBUS on the PROT_NONE guard (cxd4's size probe traps SIGSEGV only) and stopping at 64
+re-kicks (a task needs ~3,900-4,500). New tools/s7751_rdp_compare.py: splits both streams, lists |W|<=0.01 textured tris.
+Run (scratch/s7751/run.zsh, tools/g3_optin_pose_arms.sh L1 PIN=1 FZ=106.28, 21:9 dd8 as s7312, one game at a time): both arms
+froze at pos 106.294,-6.799,69.769 (vi 6986/6985, = s7310 pose), alive, vi_stalls30s=0.
+| task | arm | port stream: pinned tris (cmd#, W, x) | cxd4 stream: pinned tris | cmds matched (difflib) |
+| s4054 (last before freeze) | FARMAX=0 | #128 W 0 x 0/0/99.25; #141 W -0.00151 xh -0.21; #142 W -0.00002 xm -0.19 | identical 3 (same cmd#, W, x, y) | 74,753 / 75,689 vs 75,671 |
+| s4053 | FARMAX=0 | #128/#141/#142, W 0 / +0.00351 / -0.00002 | identical 3 | (aligned) |
+| s4056 | default 32767 (control) | 0 | 0 | (aligned) |
+Positive control: the port stream carries exactly the s7309 3 pinned tris (W 0.0000/-0.0015/-0.0000) at the frozen swap, and the
+default arm carries none, in both RSPs: the instrument separates the arms. Harness validity: cxd4 reproduces 98.8% of 75k commands.
+Reading (two-source: our LLE + independent cxd4 interpreter on the same inputs): the x=0/W~0 pin is what the Factor 5 ucode
+itself computes when the far plane is > ~36-40k; ROGUESQ_DD_FARMAX=32767 is the right fix at the writer (our dd far scale).
+SELECTS H-ucode. REFUTES H-rspemu (for this defect). H-input resolved by capturing the whole task instead of hand-logged inputs.
+Side datum (new, unexplained, does not touch the pin): residual cxd4-vs-port differences per task: 5 tris with one differing
+slope word (first cmd#83 op 0E DxHDy 0xfe33.. vs 0xfc1b..), ~18 port-only 0F tris, one ~850-command block in a different order.
+Candidates H-snapshot (CPU rewrites inputs during the live task) / H-fixup / H-rspemu -> NEXT.md (cxd4-port-rdp-residual).
+ORIGIN: no mitigation; instrument + reference harness only. Snapshots (~18 MB each) stay in scratch/s7751 (gitignored).
+Gate sweep (tools/s7651_gate_sweep.py --jobs 2, 220 gates, 1369 s): GREEN 206 / RED 10 / REPORT 3 / NEEDS-ARGS 1. 8 REDs were the new
+s7751 file (unclassified sites): classified as an env-gated instrument in census_rules.py (one shared row, anchors on the
+getenv, the !dir() returns, the dpc_bridge call and the kRam bound) + s7532/s7535/s7598/s7599/s7430 rows; each of the 8 re-run
+rc=0. The 2 remaining REDs (s7363 OPEN 4, s7600 OPEN 1) are at src/main/rs64_standins.cpp:917 lr[r]: pre-existing (that file was
+last touched in s7749, not by this session) and left for NEXT.md.

@@ -48,6 +48,7 @@ ROWS = {
     ("src/rsp/s7097_edit_census.cpp", "alloc", "g_s0.assign(rd + g_glo"): G,
     ("src/rsp/dpc_bridge.cpp", "alloc", "s_shw.resize(nw); s_sop.assign(nw, 0xFF)"): "gated: s7635 fused=2/3 (ROGUESQ_S7634_FUSE=chk|inj) only; default 1 and 0 return above; nw = words of one bridge walk range [lo, hi)",
     ("src/rsp/s7644_rspdma.cpp", "alloc", "t_g.buf.resize(m)"): "gated: ROGUESQ_S7644_RSPDMA&2 (gfx_pi_pre returns on !g_gon); m clamped to 0x200000 one line above",
+    ("src/rsp/s7751_task_snap.cpp", "alloc", "s.ram.resize(kRam)"): "gated: ROGUESQ_S7751_SNAP (task_begin returns on !dir()); const kRam = 16 MB, 3 slots",
     ("src/rsp/s7535_ga_chk.cpp", "alloc", "g_sh.resize(kSpHi + 8u)"): "const: SP range constant",
     ("src/main/s7391_spwm.cpp", "alloc", "t_snap.resize((top - bot) / 4)"): "bounded: top-bot <= 0x4000 checked just above; gated stack watermark",
     ("src/rsp/dpc_bridge.cpp", "alloc", "k.reserve(g_bc_sh.size())"): "host: size of a host map",
