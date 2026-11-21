@@ -64,6 +64,10 @@ TRACE_ACCEPT = {
     ('ROGUESQ_GFX_QOS', 'events.cpp'): 's6975_gfx_qos reads QOS_ALL itself',
     ('ROGUESQ_DRAW_DISTANCE', 'dpc_bridge'): 'rs64_g5b_tg_fix, re-armed by rs64_s7427_tg_fix_reinit() after the policy (s7427 fix)',
 }
+# s7732: the launch validator (rs64_settings_apply, before the policy; it re-execs) must see the USER value; it only unsets a
+# value that is not auto/expand/W:H, so the aspect policy then reads a valid value or unset, as before s7732.
+ACCEPT_READ[('rs64_s7732_aspect', 'ROGUESQ_ASPECT')] = 'launch validator of the USER value (s7732): unsets only non-aspect values; policy reads after'
+TRACE_ACCEPT[('ROGUESQ_ASPECT', 'rs64_s7732_aspect')] = 'launch validator (s7732), before the re-exec; the policy reads the validated value'
 ACCEPT_READ[('s7427_plant_latch', 'ROGUESQ_OSMEM_MB')] = 'runtime positive-control plant, runs only under ROGUESQ_S7427_PLANT=1'
 # Reviewed file-scope latches of policy vars: (file basename, var) -> how the post-policy value reaches them.
 ACCEPT_FILE = {

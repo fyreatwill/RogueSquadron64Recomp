@@ -206352,7 +206352,11 @@ Gate (tools/s7714_truth_census.py, exit 1): zero_on_check, owner-documented name
 ZERO_ON_REVIEWED (18 reviewed, 0 unreviewed, 0 stale); planted control (a documented ROGUESQ_PLANTZ with an `e && *e` reader,
 empty table) is flagged: PASS. The new rs64_settings.cpp ASPECT read is classed STRING in UNMODELLED_T. All 15 controls PASS,
 census rc 0. tools/agent/run_tests.sh 8/8 PASS. OWNER-OPT-INS: the ASPECT line says only auto/expand/W:H count.
-Gate sweep: see the result line below (run in the background after the rebuild).
+Gate sweep (216, after the rebuild, scratch/s7732/gate_sweep.log): 211 GREEN 3 REPORT 1 NEEDS-ARGS (s7726, as before) 1 RED:
+s7427_env_policy_order PRE-READ of ROGUESQ_ASPECT in rs64_s7732_aspect (before the policy). Reviewed, not drift: the validator
+must see the USER value and only unsets non-aspect values, so the aspect policy reads a valid value or unset as before;
+added to ACCEPT_READ/TRACE_ACCEPT, s7427 re-run: VERDICT H-ordered (0 findings), rc 0. (A first sweep run was lost to the 600 s
+background cap with buffered output; rerun with python3 -u.)
 Owner defaults untouched (unset and every valid aspect behave as before).
 Result: this selects H-trap for ROGUESQ_ASPECT alone and H-mode for the other 17 owner-documented presence names (values,
 model over-reads, or the save-protecting NO_SAVE_WRITE); the KEEP control vs fixed arms in one binary confirm it.
