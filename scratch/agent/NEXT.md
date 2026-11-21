@@ -1,17 +1,12 @@
-# NEXT (s7727)
+# NEXT (s7728)
 HYPOTHESIS-ID: owner-looks-or-new-report
 
 First: `python3 tools/crash_reports.py --since 2026-11-13` (a NEW report outranks everything), then any owner report, then any
 new SOAK-RESULTS.md lines.
 If you edit tools/agent/, `sh tools/agent/run_tests.sh` must stay green.
 
-s7726 closed the Objective-C over-release thread for the L4 owner route: NSZombie census (tools/s7726_zombie_census.py) default
-0 zombies boot+flight, MTL_OWN=0 control 163. Do not repeat it on the same route.
+s7726 (L4 forced route) + s7727 (hangar abort/re-entry route, per-segment control 364) closed the Objective-C over-release
+thread: default 0 zombies on both owner routes. Do not repeat it.
 
-Optional bounded unit if nothing above applies: the same zombie census on the hangar route (owner normal boot into SELECT YOUR
-CRAFT, scroll ships, start a mission) — the one Metal path s7726 did not cover (hangar 3D view, G5g camera). One game, two arms
-(default vs ROGUESQ_MTL_OWN=0 control), then
-`python3 tools/s7726_zombie_census.py --arm <default log> --control <own0 log>` (note: its boot/flight split keys on the
-level-select cursorMask line; on the hangar route treat the whole log as one phase). Hypotheses H-clean vs H-hangar (a freed
-object only on the hangar draw path). A nonzero default-arm class names the next writer; grep its factory and fix like s7725.
-Owner defaults: never flip.
+If nothing above applies, take the first open rung of the item-3c ladder per CURRENT-TRUTH Next steps (owner-look items are not
+work units for the agent; pick a bounded engineering item instead, e.g. one G6 follow-up listed as open). Owner defaults: never flip.

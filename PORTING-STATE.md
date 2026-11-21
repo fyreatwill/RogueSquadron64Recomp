@@ -206151,3 +206151,26 @@ Verdict line: selects H-clean (the s7725 descriptor was the only over-released o
 150 s of L4 flight), refutes H-more for every path that autoreleases or messages a freed object in this route. Not covered: an
 over-release whose freed object is never autoreleased or messaged again (invisible to NSZombie, and harmless by the same token),
 other levels, and the hangar route. Single route, two lines (zombie count + same-run control). Next: owner items.
+
+## Session 7727 (2026-11-20) — NSZombie over-release census on the owner hangar abort/re-entry route: default 0 zombies in all 8 segments, MTL_OWN=0 control 364 (every segment fires)
+
+Work unit (NEXT s7727 optional bounded unit): no new crash report (`tools/crash_reports.py --since 2026-11-13`: FOLDED=27 new=0),
+no owner report, no new SOAK-RESULTS lines since the s7726 fold. CURRENT-TRUTH 50889 B (< 60000, no maintenance). Host idle 7426 s, AC, unlocked.
+- Hypotheses: H-clean (the s7725 descriptor is the only over-released object on the hangar draw path too) vs H-hangar (a freed
+  Objective-C object only on the hangar 3D view / G5g camera / mission re-load path).
+- Run: scratch/s7727/run.zsh, one game at a time, two arms back to back through tools/g3_port_capture.sh (no SAVE_FROM; owner save
+  read-only via NO_SAVE_WRITE) with the s7469 hangar schedule (normal boot -> SELECT YOUR CRAFT, left/right scrolls, 4 mission
+  loads, 3 PAUSE/ABORT re-entries), owner recipe 16:9 dd4 FPS60 STANDINS=1 FULLSCREEN + NSZombieEnabled=YES +
+  OBJC_DEBUG_MISSING_POOLS=YES, SECS=570. Arm zdef = default; arm zown0 = + ROGUESQ_MTL_OWN=0 (positive control).
+- Both arms: hangar_entries=3 initMission=4, 0 crash lines, fatal_scan fatal=0.
+- Scorer change: tools/s7726_zombie_census.py gained `--mark REGEX` (boot/flight split regex; hangar route uses the first
+  `hangarmenu-a0-entry`) and `--segments REGEX` (per-segment zombie counts, new segment at every hangar entry / initMission call).
+  Re-scoring the s7726 logs gives the same numbers (rc 0); arms swapped -> CONTROL FAIL rc 3.
+- Result (`--mark hangarmenu-a0-entry --segments 'hangarmenu-a0-entry|initMission\] call'`, scratch/s7727/census.txt):
+  zdef boot missing_pools=14182 zombies=0, rest missing_pools=256306 zombies=0, dead_msgs 0, zombies_per_segment 0 x8;
+  zown0 125 boot + 239 later, all `MTLTextureDescriptorInternal`, per segment 125,37,32,35,30,35,58,12 -> CONTROL PASS (364).
+Verdict: selects H-clean, refutes H-hangar for every freed object that is autoreleased or messaged on this route; the control
+fires in every hangar entry and every mission load, so each segment's zero is a measured zero. Two lines (zombie census +
+same-run per-segment control), single route. Not covered: over-releases never touched again (invisible and harmless), other
+levels. The Objective-C over-release thread is closed on both owner routes; do not repeat it. Logs zstd'd in scratch/s7727.
+Next: owner items / new reports.
