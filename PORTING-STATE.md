@@ -206986,3 +206986,38 @@ Sweep: first pass RED 1 = s7613_hp_census (the new static g_rdram in s7751_task_
 added a `base` row (store `g_rdram = rdram;`, sole caller main.cpp factor5_gfx_runner, gated ROGUESQ_S7751_SNAP) -> RESULT PASS;
 re-sweep 221 gates: 217 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (s7753 gate GREEN 8/8).
 Verdict: selects H-exact for attract/front end/cutscene/dd1 and 16:9 dd2 flight, selects H-state for the hangar (begin vs end image replay, page bisection), refutes H-ucode-b (one ucode 0x80024A10 on 48/48 tasks). Next discriminator: rendered px impact of the mid-task rewrite + writer PC placed vs task begin/end (NEXT.md).
+
+## Session 7755 (2026-11-21) — hangar mid-task DL rewrite (s7754 H-state) is INVISIBLE: live/begin/end renders differ by <=1 LSB only, shade+16 control on the same 557 tris PASS
+Unit (NEXT s7755, step 1, all offline, no game run): render the retained hangar H-state pair
+scratch/s7754/retained/hangar_hstate/k900_s1250{,_end}.bin (dd1 AVAILABLE CRAFT, policy CAP 65536 TG 0) three ways with angrylion
+(tools/s7752_port_task/rdp_render): (a) the live tail, (b) OUR ucode replayed on the begin image, (c) replayed on a hybrid
+(end RAM + begin DMEM/header/tail). All three streams are 208368 B / 4365 cmds, equal length; differing cmds live-vs-begin 557
+(547 x 0x0F, 10 x 0x0D), live-vs-end 132; edge (geometry) coefficients identical in every differing tri (0 geom diffs), only
+shade words differ.
+Pixel result (tools/s7752_render_diff.py, cimg 0x656000 512x340): live-begin 11614 px, live-end 4997 px, begin-end 16611 px, ALL
+with max 5-bit channel delta <=1 (0 px at >=2 LSB); Z image and the second cimg 0 px. Rendering the end stream on the hybrid RAM
+vs the begin RAM: 0 px (texture RAM not involved).
+Controls, same run: (1) one-pixel flip reported (1 px); (2) shade sensitivity: +16 (8-bit) on the base red of exactly the 557
+differing tris -> 56684 px differ, 22551 at 2-3 LSB, so the renderer does see those triangles' shade, and a >=2 LSB change would
+have shown.
+Two lines: render magnitude (<=1 LSB, dither level) + command-level structure (same length, same geometry, shade-only words).
+Verdict: selects H-invisible for this pair. H-port-timing vs H-retail-race (who wins the race) is moot for the picture at dd1:
+any ordering gives the same image to <=1 LSB. The s7753 gate's hangar exclusion stands.
+Engineering: new tools/s7755_hstate_visibility.py <snap.bin> [--cap --tg --out]: does hybrid build, both replays, 4 renders, 3 diffs,
+flip + shade+16 controls; exit 0 INVISIBLE, 1 VISIBLE (any >=2 LSB px), 2 CONTROL-FAIL. On s1250: INVISIBLE, both CTL PASS, rc 0.
+Not in the sweep (input snaps live in gitignored scratch).
+ORIGIN: no mitigation; the writer is the game CPU rewriting craft-DL vertex pointers (0x8072xxxx -> 0x80739xxx, s7754); its PC is
+not named because the effect is sub-visible.
+Second source, same session: one game run `env EVERY=25:24:1350 SECS=100 zsh tools/s7754_capture_route.zsh s7755_dd2w
+ROGUESQ_ASPECT=16:9 ROGUESQ_DRAW_DISTANCE=2 ROGUESQ_FPS60=1` (host idle 13.9 h, unlocked, alive, 0 crash, save-unchanged), 24 pairs
+s1350-s1925, tool at the dd2 policy (--cap 1048576 --tg 1), both controls PASS on all 19 H-state pairs:
+- s1350-s1800 (19 pairs, hangar) are all H-state. LIVE vs END: 0 px at >=2 LSB on 19/19 (live == end image to <=1 LSB).
+- live vs BEGIN: 0 px >=2 LSB on the 9 odd-step pairs (s1375, s1425 ... s1775); 8-313 px at 2-3 LSB on the 10 even-step pairs
+  (s1350, s1400 ... s1800), max delta 3 LSB, never >=4; s1500: 313 of 270640 px, rows 129-254 cols 267-531 (the craft).
+- s1825-s1925 (5 pairs, after the hangar): begin == end == live (0 diff tris; CONTROL-FAIL rc 2 = no H-state to test, expected).
+Reading: the task always lands on the post-rewrite (end) state to <=1 LSB, so there is no half-patched or torn picture. Had the
+task read the pre-rewrite DL instead (the other possible race outcome), at most ~0.1% of the frame (craft shading) would move
+by <=3 LSB. The rewrite is not a visible defect, whichever side retail lands on. Retained pair:
+scratch/s7754/retained/hangar_hstate_dd2/k900_s1500{,_end}.bin; the other 46 snaps deleted (800 MB).
+Rules out: visible hangar shimmer/garbage from the mid-task DL rewrite at dd1 4:3 and 16:9 dd2 FPS60 (two configs, 20 H-state pairs).
+Verdict: selects H-invisible (live == end <=1 LSB on 20/20 H-state pairs; begin-vs-end <=3 LSB on <=313 px; flip + shade+16 controls PASS); H-port-timing vs H-retail-race moot (no visible outcome on either side), thread CLOSED.

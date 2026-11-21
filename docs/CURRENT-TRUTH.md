@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7754 (2026-11-21).
+Compact operational handoff, as of Session 7755 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -328,8 +328,11 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     the begin-image replay and the end-image replay (`_end.bin`) give different streams and live sits between them; 14/14 other
     tasks are exact from both images. The influential RAM is the craft model's display list (0x720000-0x753000): the game CPU
     rewrites its 0x04/0x02 vertex-pointer words (0x8072xxxx -> 0x80739xxx) while the gfx thread's task reads that DL. Only
-    shade/texture coefficients differ, never stream length. Open: is this a retail race or a port-timing artifact, and is it
-    visible (NEXT.md). Evidence pair: scratch/s7754/retained/hangar_hstate/k900_s1250{,_end}.bin.
+    shade/texture coefficients differ, never stream length. Evidence pair: scratch/s7754/retained/hangar_hstate/k900_s1250{,_end}.bin.
+    **CLOSED s7755: not visible** (`tools/s7755_hstate_visibility.py <snap> [--cap --tg]`, flip + shade+16 controls). dd1 s1250 and
+    20 H-state pairs at 16:9 dd2 FPS60: live == end-image render to <=1 LSB (5-bit) on all of them (no torn/half-patched picture);
+    begin-vs-live <=3 LSB on <=313 px (craft shading) on alternate tasks. Retail-race vs port-timing is moot. Retained dd2 pair
+    scratch/s7754/retained/hangar_hstate_dd2/k900_s1500{,_end}.bin.
 
 ## Evidence index
 
