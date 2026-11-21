@@ -28,7 +28,7 @@ every setting is read by the game).
 | 17 | **Smoother under load** (all five QoS settings) | `env ROGUESQ_QOS_ALL=1 ./RogueSquadron64Recomp --preset tv` | none (feel) | QOS_ALL default or not |
 | 18 | **Skip RT64's copy-back render** (~2.5 ms/frame) | `env ROGUESQ_RENDER_TO_RAM=0 ./RogueSquadron64Recomp --preset tv` | none (nothing should look different) | RENDER_TO_RAM=0 default or not |
 | 19 | **Accuracy-only switches** (nothing visible): retail task addresses, late SP done, audio byte | `env ROGUESQ_S7524_V2P=1 ROGUESQ_SP_LATE=1 ROGUESQ_M5_B40_VALUE=1 ./RogueSquadron64Recomp --preset tv` | none | default or not, each |
-| 20 | **FPS60 feel, turning shake, stick feel** | `--preset tv` (`ROGUESQ_STICK_GATE=0` old stick) | none (feel) | close FPS60 / G3c / stick gate |
+| 20 | **FPS60 feel, turning shake, stick feel** | `--preset tv` (`ROGUESQ_STICK_GATE=0` old stick) | none (feel). Measured s7766: stick to screen 58 ms with FPS60, 75-86 ms without, 54 ms with `ROGUESQ_VI_LOCK=1` | close FPS60 / G3c / stick gate |
 
 Not on this list on purpose: objective/win progression (your playtest, PARKED G1(d)), and anything the agent can still
 measure. A crash or stall in any row: the game writes a report that `python3 tools/crash_reports.py` lists, and it

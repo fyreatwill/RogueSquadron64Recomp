@@ -29,6 +29,11 @@ file loads and re-dumps identically (it IS a ready-made starting file); A->key:S
 malformed file is rejected `(not valid JSON)` and dumps the defaults (negative control). Every switch in the queue is now verified;
 only the F6 panel's interactive use remains the owner's.
 
+**s7766: input-to-photon latency measured end to end** (`ROGUESQ_S7766_INLAT=1 ROGUESQ_G3C_LOG=1` + present ring ->
+`python3 tools/s7766_inlat.py <log> <ring> --ctl`): FPS60 58.3 ms (poll->submit 16.6 + submit->queue 13.6 + queue->photon 28.0),
+retail 75-86 ms, FPS60+VI_LOCK=1 53.7 ms; the stick step always shows in the very next gfx task (0 port-added frames, two paths
+agree, fake-step ctl 0-1/19). DRAWABLES=2 is not a latency lever (wait moves upstream, p90 75 ms). Largest port-only leg = present->photon.
+
 - **s7702-s7743 regen / census / env-reader engineering: ALL CLOSED, 0 open defects** (every bullet verbatim in PROJECT-OVERVIEW
   "(s7747 maintenance)"). Standing facts from it: the live RecompiledFuncs tree IS the s7739 regen replay, and
   `tools/s7719_regen_gate.py --strict` (in the sweep) byte-compares live vs a fresh replay, so ANY hand edit to
@@ -378,6 +383,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     s7755 flip + shade+16 ctls PASS on each. **+ hangar_hstate_219ld/k900_s2400 = LEVEL DESCRIPTION** (C-up at 31 s): 14/14 tasks H-state,
     6/6 checked live-end ge2LSB 0 (618-17930 px <=1 LSB); begin-live up to 183 px >=2 LSB (info only, s7755 says VISIBLE on begin,
     same shape as the s7757 first-entry 336 px). GREEN 6/6, CAP=2048 ctl 21288 px.
+
+28. **Input latency (s7766): measured, H-1frame.** Tool tools/s7766_inlat.py (needs ROGUESQ_S7766_INLAT=1, ROGUESQ_G3C_LOG=1,
+    ROGUESQ_PRESENT_RING; heading detector + --ctl fake steps). Open lever, optional: the queue->photon compositor leg (26-28 ms) in
+    true fullscreen / direct scan-out. Rerun after any present-path or input-path change.
 
 ## Evidence index
 

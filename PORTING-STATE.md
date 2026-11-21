@@ -207270,3 +207270,39 @@ capturing the path), which shows the old-code comparison does flag a mismatch; f
 Verdict: selects H-works, refutes H-broken for row 2's command-line half. With s7763 + s7764 every switch in OWNER-REVIEW-QUEUE is now
 verified to act; only the F6 panel's interactive bind/save (owner's hands; s7620 already scripted bind + Reset) waits on the owner.
 Next: owner-triage stays first; no agent-measurable queue item remains.
+
+## Session 7766 (2026-11-21) — input-to-photon latency measured end to end: FPS60 58.3 ms, retail 75-86 ms, VI_LOCK=1 53.7 ms; the stick response always lands in the very next gfx task (no port-added frame); new tools/s7766_inlat.py + ROGUESQ_S7766_INLAT
+
+Triage first: crash_reports FOLDED=27 new=0; OWNER-REVIEW-QUEUE unchanged since s7762; no SOAK-RESULTS lines after the s7750 fold.
+So the NEXT fallback ran: the next ladder rung with agent-measurable work, G1e (present/latency eligible while G5/G6 wait on the owner).
+The segments from guest pad read to photon had never been joined. s6886-s6973 measured only present-queue -> screen.
+Hypotheses: H-1frame (the game consumes a poll in the next game frame and the next gfx task renders it) vs H-extra-frame (the port adds
+a frame: a stale SI read, or FPS60 discarding the sim result of the frame that read the pad) vs H-halfrate-poll (FPS60 polls at 30 Hz).
+Discriminator: tasks-until-response per stick step, plus the per-segment split.
+Instrument (one build, read-only, default off): ROGUESQ_S7766_INLAT=1 -> `[inlat]` row at every get_n64_input return (mach clock, exact
+btn/stick the guest gets; src/main/main.cpp) and `[inlat-dl]` row at every gfx task hand-off (send_dl, src/main/rt64_render_context.cpp)
+with the camera heading floats the game left in RAM at submit. Joined with [g3c] per-VI state (ROGUESQ_G3C_LOG=1) and the present ring.
+Present ring wl = task ordinal + 1 (7493/7543 FPS60 and 4274/4274 retail presents), so every present maps to the exact task it shows.
+Heading = atan2(cam[2], cam[0]): it drifts ~0.01 deg/frame in straight flight and moves 0.2-1.5 deg/frame after a full stick step.
+Runs: tools/g1e_owner_quiet_arms.zsh (L1 dd4 16:9 fullscreen, autopilot a/sl/a/sr every 2 s, hold 1.8 s, 170 s), host idle 17 h,
+unlocked, AC, clk 0.95. r1 fps60/retail, r2 the same with the [inlat-dl] tag, r3 FPS60+VI_LOCK=1 and +DRAWABLES=2. All 6 arms alive,
+0 crash, vi_stalls30s=0.
+Result (EXACT path, p50 over 17-19 steps per arm, p10-p90 within +-0.5 ms unless noted):
+  arm               poll->submit  submit->queue  queue->photon  POLL->PHOTON   tasks-until-response
+  FPS60 (r2)        16.6          13.6           28.0           58.3           1 (17/17)
+  retail (r2)       33.3          15.2           26.6           75.0           1 (19/19)   r1 retail 86.0 (poll phase vs 30 Hz frame)
+  FPS60 VI_LOCK=1   16.6          14.1           22.9           53.7           1 (19/19)
+  +DRAWABLES=2      16.6          26.0           16.0           58.6 (p90 75)  1 (18/19)
+Polls run at 60.0/s in BOTH modes (the game reads the pad every VI even at 30 Hz sim).
+Two lines: the VI-sampled-state path (first [g3c] VI whose heading departs) and the task-tag path give the same poll->photon in r2
+(58.3/58.3, 75.0/75.0). Controls: the same detector at fake step times inside >=1.2 s zero-stick stretches fires 0/18, 0/19, 0/19,
+1/19, against 17/18-19/19 real steps. The first-draft detector (every rotation/player float) FAILED this control (72%/89% false hits)
+and was replaced; that failure shows the control can fail.
+Verdict: selects H-1frame and refutes H-extra-frame and H-halfrate-poll. The game side is exactly one game frame (16.6 ms at FPS60,
+33.3 at 30 Hz). The largest port-only term is present queue -> photon (26-28 ms, ~1.6 VIs: vsync wait + CoreAnimation compositor).
+VI_LOCK=1 cuts it to 22.9 ms (single run per arm; FPS60 r1 vs r2 differ by 3.3 ms, so treat the -4.6 ms as approximate).
+DRAWABLES=2 refuted as a latency lever: it shortens the present leg but the wait moves upstream (submit->queue 26 ms) and p90 gets worse.
+FPS60 alone saves the owner 17-28 ms per input against 30 Hz retail.
+ORIGIN: no mitigation added; two read-only, default-off log rows and an offline analyser.
+Next: owner triage stays first. Possible unit: whether the macOS compositor leg (queue->photon) can go to direct scan-out in true
+fullscreen (CAMetalLayer opaque, no overlay); compare ROGUESQ_FULLSCREEN modes with the same tool.

@@ -1,3 +1,4 @@
+#include <mach/mach_time.h> // s7766 [inlat] (also included again later; header is guarded)
 #include <algorithm>
 #include <string>
 #include <cmath>
@@ -13729,6 +13730,13 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;
+    {   // s7766 input latency: ROGUESQ_S7766_INLAT=1 -> one [inlat] row per guest pad read (osContGetReadData) with the
+        // mach_absolute_time clock of [g3c] m= and the present ring, and the exact value the guest gets. Offline:
+        // tools/s7766_inlat.py joins a stick step's first poll to the first [g3c] VI whose camera responds and to the present.
+        static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7766_INLAT"); return e && *e == '1'; }();
+        if (on) fprintf(stderr, "[inlat] m=%llu btn=%04x sx=%d sy=%d\n", (unsigned long long)mach_absolute_time(), (unsigned)btn,
+                        (int)(127.0f * stick_x), (int)(127.0f * stick_y));
+    }
     if (rs64_pad_test_s() > 0) {  // s7201 [pad-hp] word: what the guest gets, once per wall second
         static long long s_last = 0;
         const long long ms = rs64_s5773_ms();

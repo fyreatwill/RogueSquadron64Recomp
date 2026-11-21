@@ -672,6 +672,19 @@ public:
         struct RdpqScope { RdpqScope() { ultramodern::rs64_rdpq_task_enter(); } ~RdpqScope() { ultramodern::rs64_rdpq_task_exit(); } } rdpq_scope; // s6705
         const uint32_t m5_task_seq = rs64_m5_host_send_begin(
             static_cast<uint32_t>(task->t.data_ptr));
+        {   // s7766 input latency: ROGUESQ_S7766_INLAT=1 -> one [inlat-dl] row per gfx task hand-off with the camera heading
+            // floats the game thread left in RAM when it submitted this display list (0x80138D20+0x2C elements 0 and 2, the
+            // [g3c] cam= matrix), so tools/s7766_inlat.py can tag each task with the state it renders. n = task ordinal here.
+            static const bool on = [] { const char* e = std::getenv("ROGUESQ_S7766_INLAT"); return e && *e == '1'; }();
+            static uint64_t n = 0;
+            if (on && app) {
+                const uint8_t* rd = app->core.RDRAM; float c0 = 0.0f, c2 = 0.0f;
+                if (rd) { memcpy(&c0, rd + 0x138D20 + 0x2C, 4); memcpy(&c2, rd + 0x138D20 + 0x2C + 8, 4); }
+                fprintf(stderr, "[inlat-dl] m=%llu n=%llu dl=%08X c0=%.9g c2=%.9g\n", (unsigned long long)mach_absolute_time(),
+                        (unsigned long long)n, (unsigned)task->t.data_ptr, (double)c0, (double)c2);
+            }
+            n++;
+        }
         // ROGUESQ_LLE_FORCE=1: route this GFX task through the LLE RSP
         // recompile path INSTEAD of HLE. factor5_gfx_runner reproduces what
         // real-hardware RSP would do — runs boot+main ucode against DMEM,
