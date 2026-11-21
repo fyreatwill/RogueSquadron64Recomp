@@ -103,13 +103,19 @@ def model_all(overrides=None):
     """Every getenv/helper call of a ROGUESQ_ name, INCLUDING getenvs inside printf arguments (the s7711 finder skips
     those, and they are exactly where a label lives). Overrides are {rel: lines}; sites are found in the override text."""
     out = {}
+    corpus = t.gen_corpus()  # s7733: Python reader text not in the compiled tree is DEAD here too (same filter as s7714)
+    model_all.dead = []
     for path in c7711.source_files():
         rel = os.path.relpath(path, ROOT)
         lines = (overrides or {}).get(rel) or open(path, errors="replace").read().split("\n")
         if not any("ROGUESQ_" in l for l in lines):
             continue
+        pyc = t.py_c_text(lines) if rel.endswith(".py") and corpus is not None else None
         for i, l in enumerate(lines):
             for name in dict.fromkeys(m.group(2) for m in c7711.CALL.finditer(l)):
+                if pyc is not None and not t.py_text_live(pyc[i], corpus):
+                    model_all.dead.append((name, f"{rel}:{i + 1}"))
+                    continue
                 sig, node = t.model_site(lines, i + 1, name, rel.endswith(".py"))
                 win = "\n".join(lines[i:i + 3])
                 pos = l.find(f'"{name}') if f'"{name}' in l else l.find(name)

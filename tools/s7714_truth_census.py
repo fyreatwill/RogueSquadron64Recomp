@@ -20,6 +20,10 @@ disagree on it (env_flag / a `getenv("ROGUESQ_LOG_ALL")` within 5 lines before .
 do not) was invisible: LOG_ALL=1 lit half a probe. Host readers only (src/, lib/): generated-code probes come from
 fixup/apply strings and read only their own flag unless stated (docs/debug-trace-env-vars.md).
 
+s7733: a reader site inside an apply/fixup script whose C text is not in the compiled tree (../N64Recomp/RecompiledFuncs,
+build/factor5_ucode, RecompiledPatches, src, include) is DEAD: a replace anchor, or a step whose anchor matches nothing
+now. It is dropped before modelling; --dead lists them. 3 REVIEWED splits (OVL2C_DROP, M5_B40_VALUE, S4562_PAUSE) were
+dead text only.
 Exit 0 = no unreviewed SPLIT; 1 = splits; 2 = control failure.
 --controls: (1) planted default-on vs default-off pair must SPLIT on unset; (2) planted `*e == '1'` vs `*e != '0'`
 pair must SPLIT on "2"; (3) FPS60's real readers must AGREE with >= 4 modelled sites; (4) the pre-s7714 vendored
@@ -50,19 +54,12 @@ REVIEWED = {
                                    "=1 arms all three, =0 the default one off. Owner default, never flip",
     "ROGUESQ_VI_EXTENT_PROBE": "rt64_state.cpp:3729 `e[0] == '2'` (dedupe mode) runs only inside `if (s_viext ...)`, the "
                                "presence gate on the line above: guarded deref, =2 is a mode",
-    "ROGUESQ_OVL2C_DROP": "fixup_factor5_ucode.py:3712 (default-drop) is dead: it is applied only when OVL2C_MARKER is absent "
-                          "and build/factor5_ucode holds only the s4805 mode reader (drop iff '1'), checked s7714",
     "ROGUESQ_HLE_TRI_AB": "RT64 HLE F3DFactor5 op map (rt64_gbi_f3dfactor5.cpp:1195 presence) is never reached: the port runs "
                           "the gfx ucode LLE; diag, no documented =0",
     "ROGUESQ_LOG_S4298": "diag log only (pi.cpp presence vs rt64 non-'0'); no documented =0",
     "ROGUESQ_LOG_MTM": "diag watches injected by s577x apply scripts (presence `e && e[0]`) vs non-'0'; no documented =0",
     "ROGUESQ_DD_OFFMAPCULL": "numeric radius R (upstream_compat.cpp:241: 't' = tog3 mode, else atoi(o); =-1 off) and main.cpp "
                              "14418 is the presence guard of the s7037 auto-default (`!getenv` -> setenv 2): not an on/off pair",
-    "ROGUESQ_M5_B40_VALUE": "fixup_game_funcs_vendored.py:8411 writes the s4701 `== '0' ? 0 : r2` form, but fixup_live_replay.py "
-                            "b40_polarity_23 rewrites it to `!= '0' ? r2 : 0` (s7558 hidden default), which reads 001111 like "
-                            "the upstream_compat.cpp labels. Owner decision item, never flip (s7715)",
-    "ROGUESQ_S4562_PAUSE": "level digits of one diag pause (apply_s4562_synth_pause.py): =1..4 arm, =2..4 hold, =3/=4 extra "
-                           "release sites; =0 off everywhere (s7715)",
     "ROGUESQ_PLAYER_DUMP": "diag: main.cpp levels '1'/'2'; s5866/s5867 apply-script watches arm on any value",
 }
 
@@ -83,7 +80,6 @@ UNMODELLED_CLASS = {
 }
 S, R, M, G = "STRING", "REWRITER", "MULTI", "GUARD"
 UNMODELLED_T = [
-("ROGUESQ_A14_YIELD","tools/apply_s4694_a14_boundary.py","g_a14_act",R),
 ("ROGUESQ_ASPECT","src/main/main.cpp","as = std::getenv(\"ROGUESQ_ASPECT\");",S),
 ("ROGUESQ_ASPECT","src/main/rt64_render_context.cpp","vi_shape ? nullptr",S),
 ("ROGUESQ_ASPECT","src/main/rs64_settings.cpp","const char* a = std::getenv(\"ROGUESQ_ASPECT\");",S),  # s7732 launch validator
@@ -143,7 +139,6 @@ UNMODELLED_T = [
 ("ROGUESQ_S7324_RCPREF","src/rsp/s7331_reset_writer.cpp","getenv(\"ROGUESQ_S7324_RCPREF\") ?",S),
 ("ROGUESQ_S7523_SLOWRDP","src/rsp/s7523_slow_rdp.cpp","const char* e = getenv",S),
 ("ROGUESQ_SLOT_DISPATCH_PHASE_MIN","tools/apply_s6942_envcache.py","ROGUESQ_SLOT_DISPATCH_PHASE_MIN",R),
-("ROGUESQ_SPIN_YIELD","tools/apply_s4199_m5_spin_yield_default.py","ROGUESQ_SPIN_YIELD",R),
 ("ROGUESQ_TBLNULL_LOG","tools/apply_s6037_ddclamp.py","dl = getenv(\"ROGUESQ_TBLNULL_LOG\") ? 1 : 0",G),
 ("ROGUESQ_TELE_BOLT","tools/apply_s5835_sphere_probe.py","rs7441_on",M),
 ("ROGUESQ_UPLOAD_QOS","src/main/main.cpp","ROGUESQ_UPLOAD_QOS",S),
@@ -917,8 +912,41 @@ def fmt(node):
     return str(t)
 
 
+# ---------------------------------------------------------------- s7733 dead reader texts
+GEN_GLOBS = ("../N64Recomp/RecompiledFuncs/*.c", "build/factor5_ucode/*.c", "RecompiledPatches/*", "src/**/*", "include/**/*")
+_GEN = {}
+DEAD = []  # (name, site, C text) of the last load_sites() call
+
+
+def gen_corpus():
+    """Whitespace- and backslash-stripped text of every tree a fixup/apply script writes into (the compiled code).
+    Backslashes go because a re.sub template's `\\\\n` lands as `\\n`. None when the generated tree is absent."""
+    if "c" not in _GEN:
+        import glob
+        if not glob.glob(os.path.join(ROOT, GEN_GLOBS[0])):
+            _GEN["c"] = None
+        else:
+            fs = [f for g in GEN_GLOBS for f in glob.glob(os.path.join(ROOT, g), recursive=True) if os.path.isfile(f)]
+            _GEN["c"] = "".join(re.sub(r"[\s\\]+", "", open(f, errors="replace").read()) for f in fs)
+    return _GEN["c"]
+
+
+def py_text_live(cline, corpus):
+    """s7733: is this Python-embedded reader text present in the compiled tree? Comments, f-string/format holes
+    ({x}, %s), braces and regex backrefs split the text; every remaining piece of >= 8 chars must occur. A replace
+    ANCHOR (the old side) or a fixup step (// and /* */ comments are holes too) whose anchor no longer matches carries text the tree does not hold: DEAD."""
+    nd = re.sub(r"/\*.*?\*/|//.*", "\x00", re.sub(r"\s+", "", re.sub(r"//[^\n]*", "\x00", cline)))
+    nd = re.sub(r"\\[0-9]", "\x00", nd).replace("\\", "")
+    pieces = [x for x in re.split(r"[{}\x00]|%[0-9.l]*[sdxXfiu]", nd) if len(x) >= 8]
+    return bool(pieces) and all(x in corpus for x in pieces)
+
+
 # ---------------------------------------------------------------- census
-def load_sites(overrides=None):
+def load_sites(overrides=None, corpus=False):
+    """corpus: False = the real generated tree (s7733 DEAD filter), None = no filter, str = a planted tree."""
+    corpus = gen_corpus() if corpus is False else corpus
+    DEAD.clear()
+    pyc = {}
     pairs, site_map, _co, _dt = c7711.load()
     texts = {}
     out = {}
@@ -930,6 +958,13 @@ def load_sites(overrides=None):
             rel, ln = site.rsplit(":", 1)
             if rel not in texts:
                 texts[rel] = (overrides or {}).get(rel) or open(os.path.join(ROOT, rel), errors="replace").read().split("\n")
+            if rel.endswith(".py") and corpus is not None:
+                if rel not in pyc:
+                    pyc[rel] = py_c_text(texts[rel])
+                cl = pyc[rel][int(ln) - 1] if 0 < int(ln) <= len(pyc[rel]) else ""
+                if not py_text_live(cl, corpus):
+                    DEAD.append((name, site, cl.strip()))
+                    continue
             sig, node = model_site(texts[rel], int(ln), name, rel.endswith(".py"))
             key = (rel, fmt(node) if sig else site)
             if key in seen:
@@ -1004,7 +1039,12 @@ def census(models, owner, quiet=False):
                 print(f"         reviewed: {REVIEWED[name]}")
         if verdict == "SPLIT":
             bad.append(name)
+        else:
+            census.reviewed_hit.add(name)
     return bad, n_mod, n_un
+
+
+census.reviewed_hit = set()
 
 
 def honours_all(site, node, texts=None):
@@ -1147,11 +1187,43 @@ def main():
         g = "ROGUESQ_PLANTZ" in z0 and not z1
         print(f"control s7732 zero-on planted={'ROGUESQ_PLANTZ' in z0} real={z1} want True, [] {'PASS' if g else 'FAIL'}")
         ok &= g
+        # s7733: Python reader text absent from the compiled tree is DEAD (does not vote). A planted anchor that cannot
+        # be in the tree must be DEAD; the re.sub-template UCODE_CAP fixup text (backslash escapes) must be LIVE; the
+        # vendored s4701 B40 form that fixup_live_replay rewrites must be DEAD; with the filter off, the pre-s7733
+        # OVL2C_DROP split (dead default-drop fixup text) must come back.
+        corp = gen_corpus()
+        if corp is None:
+            print("control s7733 generated tree absent: FAIL"); ok = False
+        else:
+            pd = py_text_live('{ const char* e = getenv("ROGUESQ_PLANT"); s7733_never_in_any_tree_q9(e); }', corp)
+            fx = open(os.path.join(ROOT, "tools/fixup_factor5_ucode.py"), errors="replace").read().split("\n")
+            uc = [l for l in py_c_text(fx) if 'getenv("ROGUESQ_UCODE_CAP")' in l]
+            ul = bool(uc) and all(py_text_live(l, corp) for l in uc)
+            models, owner = load_sites()
+            b40 = any(n == "ROGUESQ_M5_B40_VALUE" and "vendored" in st for n, st, _ in DEAD)
+            m0, _ = load_sites(corpus=None)
+            ovl = bool(judge(m0.get("ROGUESQ_OVL2C_DROP", []))) and not judge(models.get("ROGUESQ_OVL2C_DROP", []))
+            load_sites()
+            g = not pd and ul and b40 and ovl
+            print(f"control s7733 dead text planted_live={pd} ucode_cap_live={ul} b40_vendored_dead={b40} "
+                  f"ovl2c_split_only_unfiltered={ovl} want False/True/True/True {'PASS' if g else 'FAIL'}")
+            ok &= g
         if not ok:
             return 2
     else:
         models, owner = load_sites()
+    if gen_corpus() is None:
+        print("s7733: generated tree ../N64Recomp/RecompiledFuncs absent: DEAD filter OFF (every Python text votes)")
+    else:
+        print(f"s7733: {len(DEAD)} Python reader texts absent from the compiled tree (DEAD: anchors / no-op steps, not voting)"
+              f" over {len(set(n for n, _, _ in DEAD))} names")
+    if "--dead" in sys.argv:
+        for n, st, cl in DEAD:
+            print(f"  DEAD {n} {st}: {cl[:100]}")
+    census.reviewed_hit = set()
     bad, n_mod, n_un = census(models, owner)
+    for n in sorted(set(REVIEWED) - census.reviewed_hit):
+        print(f"  stale REVIEWED entry {n} (its readers no longer split)")
     bad_all = all_census(models)
     print(f"s7714: {len(models)} names with >=2 reader sites, {n_mod} sites modelled, {n_un} unmodelled, "
           f"{len(bad)} unreviewed SPLIT, {len(bad_all)} LOG_ALL SPLIT (host readers)")

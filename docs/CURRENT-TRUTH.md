@@ -12,12 +12,16 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7733 truth census DEAD filter (H-dead selected).** 76 apply/fixup reader texts over 34 names are not in the compiled
+  tree (replace anchors, steps whose anchor matches nothing); s7714 and s7716 now drop them before modelling (`--dead` lists them,
+  planted/live/B40/unfiltered controls PASS). 3 REVIEWED splits were dead-text votes only (OVL2C_DROP, M5_B40_VALUE, S4562_PAUSE).
+  fixup_factor5_ucode.py `_old_cap` replace removed (byte-identical on all 12 ucode files, planted control). Open: the census
+  never models the compiled tree itself; S4562_PAUSE's live reader (funcs_24.c, s4786 `if (!e) e = "4"`) arms when unset.
 - **s7732 "=0 reads ON": ROGUESQ_ASPECT was the one owner-facing trap (H-trap for it, H-mode for 17 others).** main.cpp took any
   ASPECT value as opt-in, so `=0`/`=off`/`=orig`/a typo opened the high-DPI fitted window with a retail 4:3 picture (same-binary
   KEEP control: drawable 1280x960 vs 640x480). Launch now unsets any value that is not auto/expand/W:H (`[s7732] ...`, re-exec;
   shell and settings file); `ROGUESQ_S7732_KEEP_ASPECT=1` = old. Census gate zero_on_check: 18 owner-documented presence names,
-  all reviewed (values, model over-reads, NO_SAVE_WRITE save-safe), planted control PASS. fixup_factor5_ucode.py:228 is dead
-  anchor text (cap 65536 since s6762) that the census still models as a reader.
+  all reviewed (values, model over-reads, NO_SAVE_WRITE save-safe), planted control PASS.
 - **s7731 on/off words now read as their digit (H-agree on readers, H-against-intent selected).** Truth census VALUES +=
   off/on/true/" 1"/"1 ": 0 unreviewed SPLIT, but every switch reads digits only, so `=off`/`=false`/`=no` read ON at 216
   names (FPS60, ASPECT, CULL_SPIKE...) and `=on`/`=yes` OFF at 39 (`*e == '1'` QOS family); `=true` picked the 't' tog mode.

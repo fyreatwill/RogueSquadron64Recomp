@@ -222,12 +222,9 @@ if "factor5_boot(" in text and SILENCE_MARKER not in text:
 # ---------------------------------------------------------------------------
 # Fixup 2: inject iter cap at L_1090 (main ucode only)
 # ---------------------------------------------------------------------------
-if is_main_ucode:
-    # s6435: upgrade already-patched files so ROGUESQ_ASPECT!=4:3 also lifts the cap.
-    _old_cap = 'rs64_cap_v = (e && *e) ? atoi(e) : ((dd && atof(dd) > 1.0) ? 65536 : 16384); }'
-    _new_cap = ('const char *as = getenv("ROGUESQ_ASPECT"); int wide = (as && *as && !(as[0]==\'4\' && as[1]==\':\' && as[2]==\'3\' && !as[3])); '
-                'rs64_cap_v = (e && *e) ? atoi(e) : (((dd && atof(dd) > 1.0) || wide) ? 65536 : 16384); }')
-    text = text.replace(_old_cap, _new_cap)
+# s6435's _old_cap -> _new_cap (ASPECT lifts the cap) upgrade was removed at s7733: its anchor matches nothing since
+# s6762 made 65536 the default at every setting (entry_pattern below), so it was a no-op the s7714 census counted as
+# a live ROGUESQ_ASPECT reader.
 ITER_MARKER = "/* fixup: iter cap */"
 R18_MARKER  = "/* fixup: r18 = 0x100 (ucode-state base in DMEM) */"
 if is_main_ucode and ITER_MARKER not in text:

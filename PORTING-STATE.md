@@ -206363,3 +206363,38 @@ model over-reads, or the save-protecting NO_SAVE_WRITE); the KEEP control vs fix
 Next discriminator (NEXT.md): owner looks / new reports first; bounded candidate: the s7714 census itself models
 fixup_factor5_ucode.py:228 as a live reader though its anchor is dead. Count apply/fixup replacement anchors that match
 nothing in the generated tree (H-dead: census reads dead text as readers) vs H-live, with a planted dead anchor as control.
+
+## Session 7733 (2026-11-20) — truth census DEAD filter: 76 Python reader texts are not in the compiled tree (H-dead selected); 3 REVIEWED splits were dead text only
+
+HYPOTHESIS-ID: owner-looks-or-new-report. No new crash report (crash_reports FOLDED=27 new=0), no new SOAK-RESULTS lines, so
+the NEXT.md bounded item ran: are apply/fixup REPLACEMENT texts whose C never lands in the compiled tree counted as readers?
+H-dead (many) vs H-live (fixup_factor5_ucode.py:228 alone).
+
+Instrument (one pass, offline): for every Python site the s7711 finder yields (976 sites), the s7715 py_c_text C line is cut at
+comment / f-string / %-format / brace / regex-backref holes, and every piece >= 8 chars must occur in the whitespace- and
+backslash-stripped compiled tree (../N64Recomp/RecompiledFuncs/*.c, build/factor5_ucode/*.c, RecompiledPatches, src, include).
+Two matcher defects found and fixed during the pass, both by hand-check: (1) re.sub templates carry `\\\\n` that land as `\n`,
+so the UCODE_CAP fixup (live) read dead -> backslashes stripped both sides; (2) the vendored C88 line ends in a `// PATCH:`
+comment the tree does not keep -> `//` comments are holes. Controls (in `--controls`, all PASS): planted
+`s7733_never_in_any_tree_q9` anchor DEAD; fixup_factor5_ucode UCODE_CAP text LIVE; vendored s4701 B40 form (rewritten by
+fixup_live_replay, as the s7715 review said) DEAD; with the filter off the pre-s7733 OVL2C_DROP split comes back.
+
+Result: **H-dead selected.** 76 census-visible Python texts over 34 names are DEAD (replace anchors such as apply_s6031_far.py
+`old2`, s639/s641/s650 FL_ZERO_WATCH watches, M5-era probes the strip/replay steps drop, the ASPECT `_new_cap`). Census:
+713 -> 672 modelled, 82 -> 78 unmodelled, 0 unreviewed SPLIT before and after. Three REVIEWED splits dissolve (they were
+dead-text votes only): ROGUESQ_OVL2C_DROP and ROGUESQ_M5_B40_VALUE (both hand-reviews had already called the voting text dead /
+rewritten: second line of evidence), ROGUESQ_S4562_PAUSE. Entries removed; stale UNMODELLED_T A14_YIELD / SPIN_YIELD removed.
+New stale-REVIEWED report: ROGUESQ_DD_OFFMAPCULL was already stale before this session (not a split in the pre-change run;
+left in place, it is also s7716's review key). s7716 imports s7714's REVIEWED, so it re-flagged OVL2C/B40 until it got the same
+filter (model_all): 0 unreviewed findings, BEHAVIOUR_SPLIT 5 -> 2, all 5 s7716 controls PASS.
+
+Code: tools/s7714_truth_census.py (gen_corpus, py_text_live, DEAD filter in load_sites, `--dead` listing, s7733 control,
+stale-REVIEWED print); tools/s7716_default_label_census.py (same filter); tools/fixup_factor5_ucode.py: the s6435
+`_old_cap -> _new_cap` replace removed (anchor matches nothing since s6762). Proof it is a no-op: old vs new script on copies
+of all 12 build/factor5_ucode/*.c are byte-identical; planted control (old-form cap line put back) is rewritten by the old
+script (`int wide` 1) and not by the new (0), so the cmp is not vacuous. No src/ or lib/ edit, no build.
+
+Limitation found (next unit): the census models SCRIPT text, never the compiled tree. ROGUESQ_S4562_PAUSE shows the cost: its
+apply_s4562 texts are dead because a later step rewrote the live reader in funcs_24.c:10823 to `if (!e) e = "4"; /* s4786
+default */ s_hold = (e && (e[0]=='2'||'3'||'4'))`, so unset ARMS the hold, the opposite of the removed review's "=0 off
+everywhere" claim for unset. Names whose only votes were dead text now have no modelled generated-code reader at all.
