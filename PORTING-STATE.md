@@ -207604,3 +207604,15 @@ Verdict line: s7777 refutes H-latent for the 4 pointer-shaped data members (0x80
 NOT-PTR rows close as non-pointers) and closes them; it selects nothing for the FRAME member. Next discriminator (NEXT.md): one
 run logging partitionFramebufferMemory outputs + every rs_malloc/rs_free overlapping [0x80656000,0x80700000) with ra, plus a
 host-write watch on the live loader blocks (arm B RENDER_TO_RAM=0) to discriminate H-retail / H-ours / H-stomp.
+
+## Session 7778 (2026-11-21) — gate-sweep contract fix: s7777's dangling-global watch re-opened 3 census gates (W, GR, DQ); classified, all 3 GREEN
+What ran: loop.sh's unmet contract — tools/s7651_gate_sweep.py found s7346 (class W), s7599 (class GR) and s7615 (class DQ) newly
+RED after s7777 added the ROGUESQ_S7777_DANGLE watch to src/main/upstream_compat.cpp. No runtime code changed this session.
+- s7346 W: `for (uint32_t wa ...; wa < a + (uint32_t)w; ...)` in s7777_access. HAND row: w is the guest access width 1..8 passed by
+  the recompiled load/store hooks (rs64_s7484_load / rs64_s7475_store), never negative, and the whole function is env-gated.
+- s7599 GR: `bl` (per-sweep local block list) -> local; `s_s7777_sr` (deref-watch stale-block list) -> gated ROGUESQ_S7777_DANGLE.
+- s7615 DQ: the s7777 sweep thread (hop s7777_sweep, reads guest RAM every 250 ms) -> gated row, ordinal 2 among
+  upstream_compat.cpp `[]` threads (lines 4420/4482/4595/...; first attempt used ordinal 1 and stayed OPEN). Proofs: the getenv
+  literal plus `struct S7777Arm { S7777Arm() { if (!s7777_on()) return; ... std::thread(... s7777_sweep()`.
+Each gate run plain (rc=0, open/unclassified 0) and with --controls (W shared rules 58 re-proved; GR 3/3; DQ 10/10). Full sweep
+result is in the commit message. Rules out nothing about the FRAME member; NEXT.md (s7777's FRAME-member discriminator) is unchanged.

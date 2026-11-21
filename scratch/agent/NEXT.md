@@ -1,4 +1,4 @@
-# NEXT (s7778; s7777 enumerated the dangling resident-global class, 1 member open)
+# NEXT (s7779; s7778 fixed the gate-sweep contract only, s7777 FRAME-member unit still pending)
 HYPOTHESIS-ID: dangling-global-heap-ptr-class
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.

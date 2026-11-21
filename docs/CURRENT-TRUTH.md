@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7777 (2026-11-21).
+Compact operational handoff, as of Session 7778 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -425,7 +425,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     against the 3 rs_malloc arena chains; a word pointing into a USED block is tracked + bitmap-marked; dangling = value unchanged and
     no guest store since its block was rs_free'd (f), went free (F), left every chain (N) or was re-carved (R); every guest load of a
     dangling word logged per (word, pc); on the first such read of an f/F/N word its stale block is also watched, so accesses by the
-    reader's own fn = stale derefs). Score: `python3 tools/s7777_dangle_score.py <log>` (--selftest 3/3). Two owner route_long runs
+    reader's own fn = stale derefs). Score: `python3 tools/s7777_dangle_score.py <log>` (--selftest 3/3). Census rows for the watch (s7778): W HAND, GR bl/s_s7777_sr, DQ sweep thread ordinal 2, all gated. Two owner route_long runs
     (s7777a/b, 300 s, alive, save unchanged): ~2.3k words dangled at some point, 7 were loaded while dangling. Controls: watch load +
     store PASS; 0x80130BB0 dangled in the menu phase (t=12.5/14.3) with 0 reads (s7776 replicated); deref watch live (new-owner
     accesses landed: inflate/rs_malloc into the reused heap block, NPC fns into the reused song block). Members:

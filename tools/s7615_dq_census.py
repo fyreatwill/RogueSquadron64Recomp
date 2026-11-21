@@ -145,6 +145,7 @@ trow("events.cpp", "[]", "[]", "gated", [(U + "events.cpp", r"\} else if \(s4440
 trow("threads.cpp", "_thread_func", "(PASS_RDRAMt_,entrypoint,arg,t->context)", "sys", [], "guest thread itself (osCreateThread; s7606 HC)")
 trow("timer.cpp", "timer_thread", "(PASS_RDRAM1)", "sys", [], "consumes timer action_queue (row)")
 trow("upstream_compat.cpp", "[]", "[]", "gated", [env(UC, "ROGUESQ_S7545_THRWATCH")], "s7545 thread watch summary (hop rs64_s7475_store)", 0)
+trow("upstream_compat.cpp", "[]", "[]", "gated", [env(UC, "ROGUESQ_S7777_DANGLE"), (UC, r"struct S7777Arm \{ S7777Arm\(\) \{\s*if \(!s7777_on\(\)\) return;[\s\S]{0,600}?std::thread\(\[\] \{ for \(;;\) \{ std::this_thread::sleep_for\(std::chrono::milliseconds\(250\)\); s7777_sweep\(\);")], "s7777 dangling-global sweep thread (ctor returns before it unless ROGUESQ_S7777_DANGLE)", 2)
 
 def raw(f, over):
     return over.get(f) if f in over else open(os.path.join(ROOT, f), errors="replace").read()

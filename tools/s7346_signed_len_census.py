@@ -36,6 +36,7 @@ NARROWU = re.compile(r"^(?:const\s+)?(?:uint8_t|uint16_t|u8|u16|unsigned\s+char|
 KW = {"sizeof", "static_cast", "reinterpret_cast", "const", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int", "size_t", "int32_t",
       "int64_t", "unsigned", "char", "float", "double", "std", "min", "max", "u32", "s32", "void", "true", "false", "nullptr", "auto"}
 HAND = [   # (file suffix, needle in line, class, reason) -- s7346 review
+    ("upstream_compat.cpp", "wa < a + (uint32_t)w; wa += 4u", "H", "s7777_access: w = guest access width 1..8 from the recompiled load/store hook (rs64_s7484_load/rs64_s7475_store), never negative; ROGUESQ_S7777_DANGLE-gated"),
     ("dpc_bridge.cpp", "u.hi - u.lo", "H", "unsigned WmUndo{lo,hi}: pushed from g_deferred_ranges r.first<r.second (submit_hi <= submit_lo dropped at :6793), hi only grows"),
     ("dpc_bridge.cpp", "r.second - r.first", "H", "unsigned pair; submit_hi <= submit_lo dropped at :6793 before the push; shadow entry needs hi-lo <= cap"),
     ("dpc_bridge.cpp", "x < r.second", "H", "unsigned pair, r.first < r.second (:6793); rstat-gated stats loop"),

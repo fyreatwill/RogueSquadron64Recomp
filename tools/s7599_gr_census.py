@@ -104,7 +104,7 @@ ROWS = {
         "s_s7325_freed": G("rs64_s7324_on"), "s_s7472_seen": G("ROGUESQ_S7472_HEAPCHK"), "s_s7475_seen": G("ROGUESQ_S7475_CANARY"),
         "keep": G("s7478/s7480 UAF watch"), "v": "local: range scratch", "s_s7519_dmaA": "gated: s7518/s7519 cache-shape witness, capped 65536",
         "s_s7519_ctlln": G("ROGUESQ_CACHE_SHAPE_CTL_WB"), "s_s7519_set": G("s7518/s7519 cache-shape witness"),
-        "s_s7545_thr": G("ROGUESQ_S7545_THRWATCH"), "s_s7545_tc": G("ROGUESQ_S7545_THRWATCH"), "big": G("s6063_on"),
+        "s_s7545_thr": G("ROGUESQ_S7545_THRWATCH"), "s_s7545_tc": G("ROGUESQ_S7545_THRWATCH"), "bl": "local: s7777_sweep per-sweep heap block list", "s_s7777_sr": G("ROGUESQ_S7777_DANGLE"), "big": G("s6063_on"),
         "cur": "local: capped 4096 chain walk", "s_s6558_blocks": "bounded: spill-arena bump blocks, total bytes <= the arena cap",
         "lst": "host: ROGUESQ_SPILL_FORCE parse", "s_s6702_free": G("s6702 free-list `on`"), "s7331_q": G("rs64_s7331_on"),
         "by": "gated: fill aggregator, tls->live only under its diagnostic; keyed by (pc,value)", "out": G("rs64_g1d_blk_enabled"),
