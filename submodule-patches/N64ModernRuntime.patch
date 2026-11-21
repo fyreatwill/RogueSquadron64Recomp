@@ -1911,11 +1911,12 @@ index ff40212..5b0d25a 100644
          GenericFunction func = mod.code_handle->get_function_handle(callback.function_index);
          size_t event_index = 0;
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..4c8cc08 100644
+index 8c8e5d1..a33abf5 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
-@@ -1,9 +1,16 @@
+@@ -1,9 +1,17 @@
  #include <algorithm>
++#include <chrono>
 +#include <atomic>
  #include <cassert>
  #include <cstdio>
@@ -1931,7 +1932,7 @@ index 8c8e5d1..4c8cc08 100644
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,9 +19,46 @@
+@@ -12,9 +20,46 @@
  #include "overlays.hpp"
  #include "sections.h"
  
@@ -1978,7 +1979,7 @@ index 8c8e5d1..4c8cc08 100644
  static SectionTableEntry* patch_code_sections = nullptr;
  size_t num_patch_code_sections = 0;
  static std::vector<char> patch_data;
-@@ -150,8 +194,62 @@ void recomp::overlays::add_loaded_function(int32_t ram, recomp_func_t* func) {
+@@ -150,8 +195,62 @@ void recomp::overlays::add_loaded_function(int32_t ram, recomp_func_t* func) {
      func_map[ram] = func;
  }
  
@@ -2041,7 +2042,7 @@ index 8c8e5d1..4c8cc08 100644
  
      for (size_t function_index = 0; function_index < section.num_funcs; function_index++) {
          const FuncEntry& func = section.funcs[function_index];
-@@ -159,7 +257,9 @@ void load_overlay(size_t section_table_index, int32_t ram) {
+@@ -159,7 +258,9 @@ void load_overlay(size_t section_table_index, int32_t ram) {
      }
  
      loaded_sections.emplace_back(ram, section_table_index);
@@ -2051,7 +2052,7 @@ index 8c8e5d1..4c8cc08 100644
  }
  
  static void load_special_overlay(const SectionTableEntry& section, int32_t ram) {
-@@ -186,6 +286,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
+@@ -186,6 +287,7 @@ void recomp::overlays::read_patch_data(uint8_t* rdram, gpr patch_data_address) {
  }
  
  extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
@@ -2059,7 +2060,7 @@ index 8c8e5d1..4c8cc08 100644
      // Search for the first section that's included in the loaded rom range
      // Sections were sorted by `init_overlays` so we can use the bounds functions
      auto lower = std::lower_bound(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections], rom,
-@@ -198,8 +299,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +300,15 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -2077,7 +2078,7 @@ index 8c8e5d1..4c8cc08 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +346,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +347,27 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -2105,7 +2106,7 @@ index 8c8e5d1..4c8cc08 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -274,6 +403,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
+@@ -274,6 +404,12 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
  void recomp::overlays::init_overlays() {
      func_map.clear();
      section_addresses = (int32_t *)calloc(sections_info.total_num_sections, sizeof(int32_t));
@@ -2118,7 +2119,7 @@ index 8c8e5d1..4c8cc08 100644
  
      // Sort the executable sections by rom address
      std::sort(&sections_info.code_sections[0], &sections_info.code_sections[sections_info.num_code_sections],
-@@ -361,13 +496,499 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +497,499 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -2618,6 +2619,63 @@ index 8c8e5d1..4c8cc08 100644
      return func_find->second;
  }
  
+@@ -465,3 +1087,56 @@ std::span<const RelocEntry> recomp::overlays::get_patch_section_relocs(uint16_t
+ std::span<const uint8_t> recomp::overlays::get_patch_binary() {
+     return std::span{ reinterpret_cast<const uint8_t*>(patch_data.data()), patch_data.size() };
+ }
++
++// s7774 (ROGUESQ_S7774_SLOTS=1): stale NPC-slot scan around overlay swaps. The game's NPC slot table is
++// *(u32*)0x80130BB0: 2048 entries of 8 bytes {u32 obj; u16 prev; u16 next} (initNpcSlotList 0x8003E560, called
++// from initMission); a live entry's obj+0 is its handler, called through jalr (= LOOKUP_FUNC) by slotDispatcherIter
++// and by destroyNpcSlotByIndex (a1=2). At each overlay DMA into the overlay window the scan runs before and after
++// the func_map update: ovl = handlers inside [0x800A5130,0x8010B6D0), mapped = handler present in func_map,
++// ovl_unmapped_post = live handlers that a dispatch after this swap would fail to find. tag=tick lines (every
++// >=5 s of DMA traffic) are the in-mission positive control (must show ovl>0 during flight).
++namespace {
++struct S7774Count { unsigned live = 0, objs = 0, res = 0, ovl = 0, ovl_mapped = 0, ovl_unmapped = 0, nullh = 0, bad = 0; uint32_t first_unmapped = 0; };
++bool s7774_on() { static const int on = [] { const char* e = std::getenv("ROGUESQ_S7774_SLOTS"); return e && *e == '1' ? 1 : 0; }(); return on; }
++bool s7774_okva(uint32_t va) { return va >= 0x80000000u && va < 0x81000000u && (va & 3) == 0; }
++S7774Count s7774_scan(uint8_t* rdram) {
++    S7774Count c;
++    uint32_t tbl = *reinterpret_cast<uint32_t*>(rdram + (0x80130BB0u - 0x80000000u));
++    if (!s7774_okva(tbl)) { c.bad = 1; return c; }
++    std::unordered_set<uint32_t> seen;
++    for (uint32_t i = 0; i < 2048; i++) {
++        uint32_t obj = *reinterpret_cast<uint32_t*>(rdram + (tbl + i * 8 - 0x80000000u));
++        if (!obj) continue;
++        ++c.live;
++        if (!s7774_okva(obj)) { ++c.bad; continue; }
++        if (!seen.insert(obj).second) continue;
++        ++c.objs;
++        uint32_t h = *reinterpret_cast<uint32_t*>(rdram + (obj - 0x80000000u));
++        if (!h) { ++c.nullh; continue; }
++        if (h >= 0x800A5130u && h < 0x8010B6D0u) {
++            ++c.ovl;
++            if (func_map.count((int32_t)h)) ++c.ovl_mapped;
++            else { ++c.ovl_unmapped; if (!c.first_unmapped) c.first_unmapped = h; }
++        } else ++c.res;
++    }
++    return c;
++}
++void s7774_print(const char* tag, uint32_t ram, uint32_t size, const S7774Count& c) {
++    std::fprintf(stderr, "[s7774] tag=%s ram=%08X size=%X live=%u objs=%u res=%u ovl=%u ovl_mapped=%u ovl_unmapped=%u nullh=%u bad=%u first_unmapped=%08X loaded=%zu\n",
++                 tag, ram, size, c.live, c.objs, c.res, c.ovl, c.ovl_mapped, c.ovl_unmapped, c.nullh, c.bad, c.first_unmapped, loaded_sections.size());
++    std::fflush(stderr);
++}
++size_t s7774_pre_sig = 0;
++}
++extern "C" void rs64_s7774_slots(uint8_t* rdram, uint32_t ram, uint32_t size, int post) {
++    if (!s7774_on() || !rdram) return;
++    std::lock_guard<std::mutex> lk(s7m);
++    bool win = size && ram < 0x8010B6D0u && ram + size > 0x800A5130u;
++    size_t sig = 0;
++    for (const auto& ls : loaded_sections) sig = sig * 131 + ls.section_table_index + 1;
++    if (win && !post) { s7774_pre_sig = sig; s7774_print("pre", ram, size, s7774_scan(rdram)); return; }
++    if (win && post) { if (sig != s7774_pre_sig) s7774_print("post", ram, size, s7774_scan(rdram)); return; }
++    static std::atomic<long long> last{0};
++    long long now = (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
++    if (post && now - last.load() >= 5000) { last = now; s7774_print("tick", ram, size, s7774_scan(rdram)); }
++}
 diff --git a/librecomp/src/pak.cpp b/librecomp/src/pak.cpp
 index 0be1513..47922ad 100644
 --- a/librecomp/src/pak.cpp
@@ -2685,7 +2743,7 @@ index 0be1513..47922ad 100644
 +    RS64_PAK("osPfsRepairId", ctx->r4, -1);
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..f4df245 100644
+index 43509ba..1c694aa 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
 @@ -1,3 +1,5 @@
@@ -2694,7 +2752,7 @@ index 43509ba..f4df245 100644
  #include <memory>
  #include <fstream>
  #include <array>
-@@ -8,9 +10,23 @@
+@@ -8,9 +10,24 @@
  #include "librecomp/addresses.hpp"
  #include "librecomp/game.hpp"
  #include "librecomp/files.hpp"
@@ -2702,6 +2760,7 @@ index 43509ba..f4df245 100644
  #include <ultramodern/ultra64.h>
  #include <ultramodern/ultramodern.hpp>
  
++extern "C" void rs64_s7774_slots(uint8_t* rdram, uint32_t ram, uint32_t size, int post);
 +extern "C" void rs64_m5_host_write_census(uint8_t* rdram,
 +                                             uint32_t phys,
 +                                             uint32_t len,
@@ -2718,7 +2777,7 @@ index 43509ba..f4df245 100644
  static std::vector<uint8_t> rom;
  
  bool recomp::is_rom_loaded() {
-@@ -61,22 +77,131 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -61,22 +78,131 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
      ;
  }
  
@@ -2850,7 +2909,7 @@ index 43509ba..f4df245 100644
      uint8_t* rom_addr = rom.data() + physical_addr - recomp::rom_base;
      MEM_B(0, ram_address) = *rom_addr++;
      MEM_B(1, ram_address) = *rom_addr++;
-@@ -94,6 +219,11 @@ struct {
+@@ -94,6 +220,11 @@ struct {
      // Used to tell the consumer thread that the saving thread is ready for a file swap.
      moodycamel::LightweightSemaphore swap_file_ready_sempahore;
      std::mutex save_buffer_mutex;
@@ -2862,7 +2921,7 @@ index 43509ba..f4df245 100644
  } save_context;
  
  const std::u8string save_folder = u8"saves";
-@@ -113,13 +243,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
+@@ -113,13 +244,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
  }
  
  void update_save_file() {
@@ -2889,7 +2948,7 @@ index 43509ba..f4df245 100644
          }
          else {
              saving_failed = true;
-@@ -128,6 +271,9 @@ void update_save_file() {
+@@ -128,6 +272,9 @@ void update_save_file() {
      if (!saving_failed) {
          saving_failed = !recomp::finalize_output_file_with_backup(ultramodern::get_save_file_path());
      }
@@ -2899,7 +2958,7 @@ index 43509ba..f4df245 100644
      if (saving_failed) {
          ultramodern::error_handling::message_box("Failed to write to the save file. Check your file permissions and whether the save folder has been moved to Dropbox or similar, as this can cause issues.");
      }
-@@ -163,17 +309,30 @@ void saving_thread_func(RDRAM_ARG1) {
+@@ -163,17 +310,30 @@ void saving_thread_func(RDRAM_ARG1) {
  }
  
  void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
@@ -2930,7 +2989,7 @@ index 43509ba..f4df245 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -181,22 +340,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+@@ -181,22 +341,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
          for (gpr i = 0; i < count; i++) {
              save_context.save_buffer[offset + i] = MEM_B(i, rdram_address);
          }
@@ -2985,7 +3044,7 @@ index 43509ba..f4df245 100644
  
      {
          std::lock_guard lock { save_context.save_buffer_mutex };
-@@ -227,12 +417,46 @@ void read_save_file() {
+@@ -227,12 +418,46 @@ void read_save_file() {
      std::filesystem::path save_file_path = ultramodern::get_save_file_path();
  
      // Ensure the save file directory exists.
@@ -3033,7 +3092,7 @@ index 43509ba..f4df245 100644
      }
      else {
          // Otherwise clear the save file to all zeroes.
-@@ -260,22 +484,195 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
+@@ -260,22 +485,197 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
      read_save_file();
  }
  
@@ -3219,9 +3278,11 @@ index 43509ba..f4df245 100644
 +            // loads. The canonical matcher is required for a DMA that fully
 +            // contains a section; the start matcher handles fixed-size chunks
 +            // whose first transfer only contains the section's ROM start.
++            rs64_s7774_slots(rdram, (uint32_t)rdram_address, size, 0);  // s7774 stale NPC-slot scan (overlays.cpp)
 +            load_overlays(rom_offset, (int32_t)rdram_address, size);
 +            load_overlays_by_start(rom_offset, (int32_t)rdram_address, size);
 +            rs64_s7520_dma(rdram, (uint32_t)rdram_address, size, rom_offset);  // s7520 class FQ (overlays.cpp)
++            rs64_s7774_slots(rdram, (uint32_t)rdram_address, size, 1);
  
              // Send a message to the mq to indicate that the transfer completed
 -            ultramodern::enqueue_external_message_src(mq, 0, false, ultramodern::EventMessageSource::Pi);
@@ -3230,7 +3291,7 @@ index 43509ba..f4df245 100644
          } else if (physical_addr >= recomp::sram_base) {
              if (!recomp::sram_allowed()) {
                  ultramodern::error_handling::message_box("Attempted to use SRAM saving with other save type");
-@@ -285,9 +682,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -285,9 +685,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_read(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -3242,7 +3303,7 @@ index 43509ba..f4df245 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,26 +700,86 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,26 +703,86 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -3330,7 +3391,7 @@ index 43509ba..f4df245 100644
  
      ctx->r2 = 0;
  }
-@@ -336,9 +794,17 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +797,17 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  

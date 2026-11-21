@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7773 (2026-11-21).
+Compact operational handoff, as of Session 7774 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -409,6 +409,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     mission code) passing mission handlers to spawnNpcOfType; 0 targets a start in >1 overlay, so a stale slot handler can only
     abort loudly (jalr = LOOKUP_FUNC). Runtime: `python3 tools/s7773_ovl_swap_witness.py` 99 logs, 154 overlay swaps (incl.
     mission>menu 2), 0 "Failed to find function" (--plant ctl counts 1). Heap-held pointers: same loud-only argument.
+    **Stale NPC-slot question CLOSED s7774 = H-cleared** (`zsh tools/s7774_slot_run.zsh <name>` = ROGUESQ_S7774_SLOTS=1 on the
+    owner route_long abort->hangar, + tools/s7774_slot_scan.py): slot table *0x80130BB0 (2048x8 B, obj+0 = handler) scanned before
+    and after every overlay-window DMA + every >=5 s tick. Ctl: in flight 29-36 live overlay handlers, all in func_map. At the
+    mission(idx2)->menu(idx3) swap live=0 (last tick <=5 s before: 752 live/34 ovl): the game empties the table before the swap;
+    0 post-swap unmapped, 0 "Failed to find function". Single run. Open side finding: in the menu->cinematic phase
+    (idx3->idx4, ~60 s) the table holds 1578 entries that are not RAM pointers (dangling/reused heap) until initMission re-inits.
 29. **FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported).** s7749 L12 ring 60->30-43
     gen/s from t=75 s did not recur in 4/4 L12 arms (s7768 la/lb + soak s7768_fps60_rate_L12 r1/r2: 60 tasks/s, lim=1, send_dl
     ~10.5 ms, 0 slow windows). Two instruments agree: tools/s7768_fps60_rate.py (G3C_LOG+G1B; BUSY ctl 16/16 H-cost) and

@@ -207486,3 +207486,26 @@ Single-source caveat: mission>menu (the transition where a stale NPC slot would 
 Rules out: H-stale as a SILENT port defect (static: 0 aliased targets; all dispatch through lookup). H-resident-safe vs a loud
 retail-shaped stale use is not separated dynamically (2 swaps, 0 aborts). Class CLOSED for silent divergence.
 Next: runtime stale-slot scan at mission->menu swap (NEXT.md), cheap and it turns the 2-swap witness into a measured count.
+
+## Session 7774 (2026-11-21) — stale NPC-slot question CLOSED as H-cleared: the game empties the NPC slot table before the mission->menu overlay swap (live=0), in-flight control 29-36 live overlay handlers all mapped; new ROGUESQ_S7774_SLOTS scan + tools/s7774_slot_run.zsh / s7774_slot_scan.py
+Pre-checks: crash_reports --since 2026-11-13 FOLDED=20 new=0; no new SOAK-RESULTS lines; CURRENT-TRUTH 51028 B (no maintenance).
+Unit = NEXT.md s7774 (H-cleared / H-dormant / H-stale for mission NPC slots across the mission->menu overlay swap).
+Static (objdump .text): initNpcSlotList 0x8003E560 (callers: initMission + two overlay fns) rs_mallocs 0x4000 B into *0x80130BB0 =
+2048 entries {u32 obj; u16 prev; u16 next}, free head u16 0x80130BB4; spawnNpcOfType pops an obj from the stack *0x80130BBC (count
+0x80130BC8), stores handler at obj+0, type obj+0x14, slot obj+0x16; slotDispatcherIter jalrs obj+0; destroyNpcSlotByIndex jalrs it
+with a1=2 (destroy callback), so a stale slot would bite on dispatch OR destroy.
+Instrument (lib/N64ModernRuntime librecomp overlays.cpp rs64_s7774_slots + 2 calls in pi.cpp around load_overlays; patches exported):
+ROGUESQ_S7774_SLOTS=1 scans all 2048 entries, per distinct obj classifies the handler res (.text) / ovl ([0x800A5130,0x8010B6D0))
+and ovl mapped (in func_map) / unmapped; tag=pre before and tag=post after func_map update for each overlay-window DMA (post only if
+loaded_sections changed), tag=tick every >=5 s of DMA traffic.
+Run (one game, 300 s, normal boot on the owner save read-only, s6995 route_long autopilot: craft select -> flight -> PAUSE/ABORT ->
+MISSION FAILED -> hangar -> re-entry): alive=1 crash=0, save-unchanged, 0 "Failed to find function"/[missing-func], 30 window shots.
+Timeline ([s7528] idx): menu idx3 (192 objs, all .text handlers) -> cinematic idx4 -> mission idx2: ticks in flight live 468-781,
+ovl 29-36, ovl_mapped = ovl every tick (POSITIVE CONTROL PASS, tick_ovl_max=36). mission->menu idx3 post: live=0 objs=0 (last tick
+before it 752 live / 34 ovl, so emptied within the exit). departing_swaps_with_ovl_handlers=0, post_unmapped_total=0.
+Selects H-cleared: no live mission handler survives the mission overlay, so the s7773 loud-abort path is not even reachable on this
+route. Rules out H-dormant/H-stale on the abort exit. Single run (the s7773 2-swap 0-abort log witness is the second line).
+Not covered: the win/complete exit and the mission->cinematic (outro) swap.
+Side finding (open): menu->cinematic phase (~60 s, idx3->idx4) the table holds 1578 then 445 entries that are not RAM pointers
+(bad=1578/439, objs 0-1), i.e. *0x80130BB0 points at freed/reused heap until initMission re-inits it; 0 crashes, so nothing
+dispatched through it there. Next: confirm no slotDispatcherIter/destroy reads the table in that window (dangling-table class).
