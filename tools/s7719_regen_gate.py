@@ -83,13 +83,19 @@ def main(a):
         for l in keep:
             print('%s: %s' % (name, l[:240]))
         res[name] = rc
+        if name == 'reverse':  # s7737: a DIAG row whose live-only probe a live tool/recipe still reads = the next regen loses it
+            rp = os.path.join(tmp or tempfile.gettempdir(), 's7737_rev.txt'); open(rp, 'w').write(out)
+            rc2, out2 = sh([sys.executable, 'tools/s7737_diag_consumers.py', rp, live, tree, '--control'])
+            for l in out2.splitlines():
+                if l.startswith(('CONTROL', 'rows', 'VERDICT', 'CONSUMED')): print('diag-consumers: %s' % l[:240])
+            res['diag-consumers'] = rc2
     res['reader'] = reader_census(tree, tmp or tempfile.mkdtemp(prefix='s7735ctl'))
     if tmp and '--keep' not in a:
         shutil.rmtree(tmp, ignore_errors=True)
     if 3 in res.values():
         print('VERDICT CONTROL-FAIL', res); return 3
     if any(res.values()):
-        print('VERDICT H-drift', res, '(forward = live build lacks a fixup line; reverse = live hand edit no fixup reproduces; reader = replay tree reads an env differently)')
+        print('VERDICT H-drift', res, '(forward = live build lacks a fixup line; diag-consumers = a live-only probe a live tool reads; reverse = live hand edit no fixup reproduces; reader = replay tree reads an env differently)')
         return 1
     print('VERDICT H-mirrored (forward and reverse: 0 open BEHAVIOUR, replay readers 0 HIDDEN, controls PASS)')
     return 0

@@ -206491,3 +206491,31 @@ Discrimination: selects H-needed for LOG_G1D_TASK (restored to the regen) and re
 accepted, no recipe/opt-in reads them except via the FORFACE-gated lines). Next discriminator: list every inline fixer apply_* call whose
 PATCH tag is in the live tree but whose report line is absent from scratch/s7736/gate/replay.log (H-none vs H-more; scratch/agent/NEXT.md). Rules out: an owner knob (DRAW_DISTANCE) carrying live-only behaviour.
 Not done: deleting the orphan funcs_50.c from the live tree (harmless, accepted; a regen into a clean dir drops it).
+
+## Session 7737 (2026-11-20) — DIAG consumer census: no other live-only probe a live tool reads (H-none), census wired into the s7719 gate
+
+HYPOTHESIS-ID: owner-looks-or-new-report. crash_reports --since 2026-11-13: FOLDED=27 new=0; no new SOAK-RESULTS lines; soak queue
+empty; CURRENT-TRUTH 56.9 KB (no maintenance).
+Question (s7736 NEXT): does the s6201-style loss (an inline fixer call silently returning 0, so a probe exists only in the live tree)
+hit other probes something still uses? H-none vs H-more.
+Method 1 (PATCH-tag diff, per function, live ../N64Recomp/RecompiledFuncs vs scratch/s7736/gate/replay): 59 per-file tag deltas,
+reduced per function (excluding the accepted 16 data_gap_* functions of s6870, orphan funcs_50.c, s6496-s6526 funcs_9 chain) to 10
+functions: s6826 float-trace (buildMenuImageTileWipeMesh 4/0, updatePilotSlotLogoModels 2/0), s5856/s5904/s5906 aim-thread tally
+(funcs_13/16), s6095 counter cnt(3) (tickTextureMaterialExpiry), s6595 extern decl, s6314 edgefade2 (live 2 / replay 1), and a
+craft-select last-function artifact (file-end helpers counted into a different last function). Every one is already a DIAG/ACCEPTED
+row of the s7423 reverse pass. So the reverse DIAG set IS the population; the gap is that DIAG says nothing about consumers.
+Method 2 (new tools/s7737_diag_consumers.py): per DIAG-class row, the live-only lines' env names (direct + brace-matched helper bodies
+in src/ and live preludes) and [tag] prefixes, grepped for live consumers (tools/ scripts, pending soak recipes, OWNER-OPT-INS;
+census/audit/gate/fixup/apply, __pycache__, soak running/running_manual/done/cancelled excluded - first passes counted stale s5688/s6088
+recipes and pycache). Result: 73 rows, 2 CONSUMED -> both s6826 ROGUESQ_TICK_TRACE hooks at menu PCs 0x800BA014/48, 0x800BCBA4/B4,
+0x800BCD04/14; g3_float_quanta_audit.scan marks all 6 unreachable from the per-tick root on live AND replay (r[6]=False), and the fixup
+only adds hooks, so these are stale live hooks and the replay is right (trace-only, no value change) -> accepted
+(tools/s7737_diag_consumer_accept.tsv). 0 CONSUMED unreviewed, 71 ORPHAN.
+Controls: synthetic LOG_G1D_TASK line -> CONSUMED, ROGUESQ_S7737_NOBODY -> ORPHAN (PASS); real: the pre-fix s7735 replay ->
+funcs_3 beginFrameDLChunk env=LOG_G1D_TASK tags=g1d-alloc consumer tools/s7386_route_ab.zsh = exactly the s7736 hand finding.
+Gate: tools/s7719_regen_gate.py now runs the census on the reverse output (res['diag-consumers']). --tree s7736 replay: H-mirrored
+(40 s); --tree s7735 replay: VERDICT H-drift {'diag-consumers': 1} (gate-level positive control).
+Discrimination: selects H-none (no further regen-lost probe that a live tool reads) and refutes H-more; the s6201 case was the only one.
+Side datum: live funcs_10 transformWorldPosToGridSpace carries the s6314 EDGE_FADE_TEST2 block twice (opt-in scale would apply twice);
+the replay has it once (correct); already accepted ORDER-BEHAVIOUR, opt-in, owner never sets it. A regen fixes it.
+Rules out: other order-dependent silent anchor losses of in-use instruments in the current tree.

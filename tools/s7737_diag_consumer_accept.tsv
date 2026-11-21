@@ -1,0 +1,3 @@
+# s7737 reviewed CONSUMED rows of tools/s7737_diag_consumers.py: file<TAB>func<TAB>reason
+funcs_32.c	updatePilotSlotLogoModels	s6826 ROGUESQ_TICK_TRACE float-trace hooks at 0x800BA014/48 are stale in the live tree: g3_float_quanta_audit.scan marks both sites unreachable from the per-tick root on live AND replay (r[6]=False), the fixup only adds hooks, so the replay (no hook) is correct; trace-only, no value change
+funcs_32.c	buildMenuImageTileWipeMesh	same s6826 stale-hook case at 0x800BCBA4/B4 and 0x800BCD04/14 (scan r[6]=False on both trees)

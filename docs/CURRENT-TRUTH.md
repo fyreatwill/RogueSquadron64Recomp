@@ -12,6 +12,15 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
+- **s7737 DIAG consumer census (H-none after review; now in the s7719 gate).** tools/s7737_diag_consumers.py takes every reverse
+  DIAG/ORDER-DIAG/REGEN-FUNC-DIAG row (live-only lines no fixup reproduces), pulls the env names those lines read (direct getenv +
+  brace-matched bodies of the helpers they call, src/ and live preludes) and their `[tag]` log prefixes, and greps live consumers
+  (tools/ scripts, pending soak recipes, OWNER-OPT-INS; census/audit/gate/fixup/apply files excluded). Current tree: 73 rows, 0
+  CONSUMED, 2 ACCEPTED (s6826 TICK_TRACE hooks at 6 menu PCs in funcs_32: stale in live, g3_float_quanta_audit.scan marks them
+  unreachable on BOTH trees, the fixup only adds; tools/s7737_diag_consumer_accept.tsv), 71 ORPHAN. Controls: synthetic
+  LOG_G1D_TASK -> CONSUMED / nobody -> ORPHAN, and the real one: the pre-fix s7735 replay -> beginFrameDLChunk [g1d-alloc] CONSUMED,
+  gate VERDICT H-drift (diag-consumers 1). s7736 replay: gate H-mirrored. Also seen: live funcs_10 transformWorldPosToGridSpace has
+  the s6314 EDGE_FADE_TEST2 block TWICE (opt-in scale applied twice; the replay has it once = correct; accepted ORDER-BEHAVIOUR).
 - **s7736 live-only reader split: 1 needed probe restored to the regen, the rest dead/accepted.** Of the 18 live-only getenv
   occurrences (live vs replay), ROGUESQ_LOG_G1D_TASK's s6201 [g1d-alloc] block (beginFrameDLChunk, funcs_3) was silently lost by a
   regen: its inline fixer call ran before the S5798 store form, and its 0x8000A934 anchor broke once s6285/s6287 text landed. Fixed:
