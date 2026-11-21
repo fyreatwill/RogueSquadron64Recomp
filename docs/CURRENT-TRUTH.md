@@ -1,152 +1,26 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7745 (2026-11-20).
+Compact operational handoff, as of Session 7747 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
 s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "(s7307 maintenance)"; older text in
-"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)"; s7535-s7576 headline + items 17-21 + pre-s7300 superseded in "(s7581 maintenance)"; s7579-s7616 headline + items 19-46 in "(s7622 maintenance)"; s7647-s7659 headline + items 21-35 in "(s7662 maintenance)"; s7617-s7702 headline + item 20 (G6) in "(s7703 maintenance)". Grep there for any sNNNN.
+"(s7187 maintenance)" and "(s6994 maintenance)"; s7533 Next-steps items 1,12,15-21 (classes FD-FZ) in "(s7534 maintenance)"; s7535-s7576 headline + items 17-21 + pre-s7300 superseded in "(s7581 maintenance)"; s7579-s7616 headline + items 19-46 in "(s7622 maintenance)"; s7647-s7659 headline + items 21-35 in "(s7662 maintenance)"; s7617-s7702 headline + item 20 (G6) in "(s7703 maintenance)"; s7702-s7743 headline + items 22-32 + s7312-s7418 superseded in "(s7747 maintenance)". Grep there for any sNNNN.
 
 ## Headline
 
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **s7739 regen replay ADOPTED as the live RecompiledFuncs tree (H-clean).** Fresh regen (tools/s7719_regen_gate.py --keep
-  scratch/s7739/gate: H-mirrored) is byte-identical to the s7736 replay (0 diff lines), copied over ../N64Recomp/RecompiledFuncs
-  (funcs_50.c removed), build/ rebuilt (17 data_gap_* globals gone, static_5_800CC4E4 present). Gone with it: stale s6826 menu hooks,
-  the double s6314 EDGE_FADE_TEST2 block, a double s6496 stash, the always-on [desc-st] print (3 -> 0 in L4, = swap took effect).
-  L4 + L1 owner recipe (STANDINS=1 dd2 FPS60 16:9) 240 s: alive, 0 crash, vi_stalls30s=0, max_gap 148/147 ms, level_ok=1.
-  s7423 live-vs-replay: class counts {} both directions. 7 gates whose controls/rows named old-tree drift re-anchored (s7416 latch
-  control -> tools/fixtures/s7416_data_gap_80024A0C.c; s7423 known-lines control n/a when funcs_9 identical; s7549/s7611/s7612/s7613
-  rows; stale funcs_50.c.o deleted). Redo with tools/s7739_adopt_replay.sh <work> (REF=<old replay>). Old tree:
-  scratch/s7739/live_backup (local, gitignored) + build binary scratch/s7739/live_binary_backup.
-- **s7740 regen gate STRICT (H-zero selected, H-nondeterministic refuted).** `tools/s7719_regen_gate.py --strict` (the sweep runs it)
-  also byte-compares every *.c/*.h/*.cpp/*.inl of live vs the fresh replay; any differing or one-sided file = H-drift rc 1. Fresh
-  replay == s7739 replay == live (0 diff lines; regen deterministic). Controls in-gate: planted edit + planted extra file each read
-  exactly that file. RED arm (live farm + one comment line in funcs_12.c): strict rc 1 while s7423 both ways still read {} (the
-  statement scans ignore comments), so strict covers what they cannot. Sweep --only s7719: GREEN (174 s).
-  Consequence: ANY hand edit to ../N64Recomp/RecompiledFuncs now turns the sweep RED; put it in a fixup/apply script instead.
-- **s7741 ucode regen gate STRICT (H-drift selected).** `tools/ucode_regen.sh verify` read DIFF factor5_ucode_recompiled.c (4
-  lines: the s7522 imem-residency hooks fixup_factor5_ucode.py added 11-17, after the 11-16 patch snapshot), so a rebuild of
-  build/factor5_ucode from the patches would have lost them. Snapshot refreshed (patch +4/-2, census 0 unexplained). New
-  `tools/s7741_ucode_regen_gate.py --controls` (in the sweep): fresh RSPRecomp + patches in a private temp dir, file sets equal,
-  12/12 byte-identical, census clean; controls planted line / extra file / missing file each RED, clean GREEN; RED arm = the
-  pre-s7741 patches (rc 1, DIFF that one file). After any fixup_factor5_ucode.py edit: `zsh tools/ucode_regen.sh snapshot`.
-- **s7743 overlay ucode files are build inputs, NOT dead (H-tool-input; H-dead refuted).** The 9 factor5_ucode_ovl*_recompiled.c
-  are not compiled, but fixup_factor5_ucode.py re-splices each one into main whenever its marker is absent (9/9 strip controls
-  exit 1 INPUT MISSING naming that overlay), and s7091 census (run by the s7741 gate) uses them as its splice oracle (removing
-  them: rc 0 -> 1). At configure they are not read (no overlays present: rc 0, byte-identical). Keep them byte-true; gate
-  tools/s7743_ovl_consumers.py in the sweep.
-- **s7737 DIAG consumer census** (tools/s7737_diag_consumers.py, in the s7719 gate: a live-only probe that a live tool reads)
-  and **s7736** s6201 [g1d-alloc] restored to the regen (apply_s7736_g1d_alloc). Both moot for drift since s7739 (live == replay).
-- **s7735 regen replay reproduces the s7734 readings (H-replays selected, H-drift refuted).** tools/s7719_regen_gate.py (in the
-  gate sweep) now also runs `s7734_compiled_reader_census.py --tree <fresh replay>`: replay 378 readings, 0 unreviewed HIDDEN/NOREF,
-  B40 new form present (2 sites); planted control (replay funcs_23 B40 put back to the pre-s7734 text) -> HIDDEN rc 1 PASS. The
-  one live-only reading is ROGUESQ_CLAMPP (s6522 funcs_9 probe, not in RS64_REPLAY, a known DIAG line). Sweep --only s7719|s7734: 2 GREEN.
-- **s7734 compiled-tree reader census (H-hidden selected, 3 names, fixed).** tools/s7734_compiled_reader_census.py models every
-  `getenv("ROGUESQ_*")` in RecompiledFuncs + factor5_ucode (379 distinct readings: COVERED 346, NOREF 14 numeric/sentinel (hand-read, NOREF_OK), UNMOD 19)
-  against the live script/host signatures. HIDDEN were: LOG_ALL in the s4159 preclear census (presence: =0 and "" turned it ON),
-  DD_CAPX_TOG s6548 log cadence (presence vs `atoi`), M5_B40_VALUE guest store ("" passed r2 while the host labels "" control).
-  All three script texts + compiled tree fixed; 0 HIDDEN. Controls: planted presence line -> HIDDEN, S4562 default strip 1 -> 0.
-  Rerun after any regen: `python3 tools/s7734_compiled_reader_census.py` (rc 0).
-- **s7733 truth census DEAD filter (H-dead selected).** 76 apply/fixup reader texts over 34 names are not in the compiled
-  tree (replace anchors, steps whose anchor matches nothing); s7714 and s7716 now drop them before modelling (`--dead` lists them,
-  planted/live/B40/unfiltered controls PASS). 3 REVIEWED splits were dead-text votes only (OVL2C_DROP, M5_B40_VALUE, S4562_PAUSE).
-  fixup_factor5_ucode.py `_old_cap` replace removed (byte-identical on all 12 ucode files, planted control). Open: the census
-  never models the compiled tree itself; S4562_PAUSE's live reader (funcs_24.c, s4786 `if (!e) e = "4"`) arms when unset.
-- **s7732 "=0 reads ON": ROGUESQ_ASPECT was the one owner-facing trap (H-trap for it, H-mode for 17 others).** main.cpp took any
-  ASPECT value as opt-in, so `=0`/`=off`/`=orig`/a typo opened the high-DPI fitted window with a retail 4:3 picture (same-binary
-  KEEP control: drawable 1280x960 vs 640x480). Launch now unsets any value that is not auto/expand/W:H (`[s7732] ...`, re-exec;
-  shell and settings file); `ROGUESQ_S7732_KEEP_ASPECT=1` = old. Census gate zero_on_check: 18 owner-documented presence names,
-  all reviewed (values, model over-reads, NO_SAVE_WRITE save-safe), planted control PASS.
-- **s7731 on/off words now read as their digit (H-agree on readers, H-against-intent selected).** Truth census VALUES +=
-  off/on/true/" 1"/"1 ": 0 unreviewed SPLIT, but every switch reads digits only, so `=off`/`=false`/`=no` read ON at 216
-  names (FPS60, ASPECT, CULL_SPIKE...) and `=on`/`=yes` OFF at 39 (`*e == '1'` QOS family); `=true` picked the 't' tog mode.
-  rs64_settings_apply now maps whole-value words (any case) to "0"/"1" in the shell env and settings-file values
-  (`[s7731] NAME=on read as 1`, re-exec), except kKeepWords names whose reader gives the letter its own meaning
-  (DD_OFFMAPCULL_H 'o' = gate off; HUD_MARKCLS 'y'). `ROGUESQ_S7731_KEEP_WORDS=1` = old. Live same binary: QOS_ALL=on arms
-  QoS (KEEP control: not), settings-file `yes` arms it (KEEP: not), `=1` control arms, unset does not. Census gates: words
-  unmapped-against 0 (control: no normaliser -> all 6), letter scan unkept 0 (control: empty keep -> both names).
-- **s7730 empty env values are unset for every reader (H-split selected).** Pre-fix live, same binary: `ROGUESQ_ASPECT=`
-  opened the high-DPI opt-in window (drawable 1280x960 vs unset 640x480) and `ROGUESQ_OSMEM_MB=` at dd2 blocked the bundle's
-  12 MB / 0x81000000 spill layout (no `[ddbundle] osmem=12` line; the owner LEVEL=15 fix layout). rs64_settings_apply now
-  unsets every empty `ROGUESQ_*` at launch (`[s7730] NAME= is empty: treated as unset`) and re-execs so pre-main statics agree;
-  `ROGUESQ_S7730_KEEP_EMPTY=1` = old (control reproduces the loss). The truth census VALUES include "" (0 unreviewed SPLIT,
-  planted control PASS). s7729 (81 unmodelled sites classed; settings-file `NAME=` left unset) and s7728 stand.
-- **s7727 NSZombie census on the owner hangar route: H-clean.** s7469 abort/re-entry schedule (4 mission loads, 3 SELECT YOUR
-  CRAFT re-entries, ship scrolls) at 16:9 dd4 FPS60 STANDINS=1 FULLSCREEN, 570 s/arm: default 0 zombies in all 8 segments (270k
-  MISSING POOLS lines); same-run MTL_OWN=0 control 364 TextureDescriptor zombies, >=12 in every segment. Both arms 0 fatal.
-  Scorer gained `--mark`/`--segments` (tools/s7726_zombie_census.py). Over-release thread closed on both owner routes.
-- **s7726 NSZombie census past boot: H-clean.** L4 owner recipe 150 s, NSZombieEnabled + OBJC_DEBUG_MISSING_POOLS: default arm
-  0 zombies boot+flight (68k MISSING POOLS lines, all live objects); same-run ROGUESQ_MTL_OWN=0 control 163 TextureDescriptor zombies
-  (113 boot + 50 flight). Scorer tools/s7726_zombie_census.py (rc 3 on a blind control). s7725 soak folded: L4 300 s clean.
-- **s7725 RT64 Present SIGTRAP (.ips 2026-11-18-014353) root-caused and fixed:** plume MetalBufferFormattedView released a +0
-  `textureBufferDescriptor` (NSZombie boot: 103 `_NSZombie_MTLTextureDescriptorInternal` -> 0 with the fix; ROGUESQ_MTL_OWN=0 control
-  103 in the same binary). The pool push flushes the freed pending object (TLS slot 0x160); OBJC_DEBUG_MISSING_POOLS only made the
-  reporter read its isa (PAC brk 0xc472). Latent in normal play (dangling pointer in a never-drained pool). Census widened to all
-  class factories (OLD 7 OVERRELEASE, NEW 0). Witness tools/s7725_pool_trap_repro.sh. Soak s7725_texdesc_L4 queued.
-- **s7724 deferred scorers CLOSED (item 32): 7 more gates over retained captures** (S7724_RETAINED: s7433/s7435-s7438 profiler
-  scorers on scratch/s7435 sample_*.txt.zst, s7467 ASan arms on scratch/s7467r, s7624 flicker L1); planted RED mutants 18/18 PASS
-  (control frames renamed -> CONTROL FAIL rc 3; unreviewed UBSan group -> rc 1; window-1 rows dropped -> regex unmatched).
-  H-no-control s7367/s7369/s7434/s7589 (s7589's own control FAILs on both retained hr.tsv), H-gone s7247. Scorer work ends here.
-  stop_gate churn guard no longer counts `from rs64_zopen import zopen` lines (s7723 tripped on 12; recount 1). Sweep 215: 212 GREEN 3 REPORT 0 RED 0 HOLLOW.
-- **s7723 NEEDS-INPUT scorers: 11 become gates over their retained scratch/ captures** (S7723_RETAINED in the sweep; logs read
-  as .zst via tools/rs64_zopen.py; tools/s7723_retained_controls.py plants one RED row per gate, 11/11 PASS and is itself swept).
-  s7393/s7399 exit 0 with their control removed, so the CONTROL PASS regex is load-bearing. Rest: H-gone 10, H-dead 2 (s7421/s7423
-  -> s7719 gate), H-stale-coupled s7389, H-no-control s7391, deferred-retainable 9 (CURRENT-TRUTH item 32). Sweep 0 RED 0 HOLLOW.
-- **s7722 REPORT tools CLOSED: s7082 jal + s7083 lowering censuses are gates now** (`--check`, s7082 `--plant`; ARGS over the
-  retained scratch/s7082 front-end pass; RED controls extra-jal-line / mutated case label rc 1). s7031/s7210/s7441 stay REPORT
-  (H-report, pure tables). Sweep 196 {GREEN 193, REPORT 3} 0 RED 0 HOLLOW. Next: the 39 s7718 NEEDS-INPUT scorers (one iteration).
-- **s7721 HOLLOW_KEYS vocabulary audit CLOSED (H-gap, no real open item):** 649 count keys enumerated over all 196 captured
-  outputs; 19 open-class words added (MISSING/STALE/RACE/UNGUARDED/DISAGREE/LEAK/FOLDED/...), 5 flagged gates reviewed HOLLOW_OK
-  (s7085, s7359, s7632, s7633 already classified). Sweep 196 {GREEN 191, REPORT 5}, new control hol_s7721 PASS. Next: REPORT tools.
-- **s7720 sweep-scoring audit CLOSED (H-more): rc-0 gates now score HOLLOW on a nonzero open count or an unpassed
-  --check/--strict/--gate (controls hol_open/hol_zero/hol_flag PASS).** 16 tools now run with their flag; 7 had failed their own
-  --check while GREEN, all 7 reviewed GREEN: s7384 static-state 114/114 MULTI reviewed, 0 RACE (pi.cpp rom INITORDER,
-  g_rdram_for_submit BENIGN same-value, env_cache trace LOCKED by pthread mutex, rest DIAG/LOCKED/ARTEFACT); s7557 every
-  default-on lever has a docs row (PROJECT-OVERVIEW "Default-on internal guards and fixes"). allowed_red list empty again.
-- **s7719 regen-replay drift CLOSED H-mirrored, both directions; now a live sweep gate.** Fresh front == s7558 pristine; replay vs
-  live 2620/141/18, s7421 new-vs-s7558 {} (control PASS), s7423 forward H-diag and new `--reverse` (live-only statements in every
-  function) 29 rows all hand-accepted (tools/s7719_live_only_accept.tsv). tools/s7719_regen_gate.py (front + RS64_REPLAY_TREE_ONLY
-  replay + both scans, 2.6 min, wiring controls 2/2 RED) is in the sweep. Also: s7363/s7364/s7366 printed OPEN 19/22/6 yet scored
-  GREEN (no --check); ARGS fixed, 35 rows hand-reviewed bounded/locked, 0 defects. regen_verify.sh now RV_JOBS (default 2).
-- **s7717 setenv-after-static-init idiom CLOSED (H-clean, static + runtime).** Every reader that latches a ROGUESQ_* var in a
-  file-scope initializer before main()'s auto-default setenvs is re-armed after the policy or reviewed. s7427_env_policy_order.py
-  had drifted RED unseen (not named *_census.py; the s7713 OSMEM sanitiser read, reviewed benign). Its scan missed
-  `struct T {T(){..}} x;` globals (S7246Init); fixed, 316 roots, control 5/5 incl. dropped re-arms. Runtime trace (scratch/s7717/run.zsh)
-  = the same 5 handled pre-policy reads, plant control PASS. The sweep now also runs EXTRA_GATES s7427/s7424/s7425. s7426 checks B-D are
-  SUPERSEDED by s7714/s7716 (its RED rows are helper/polarity false positives). Sweep 143: 138 GREEN 5 REPORT 0 RED.
-- **s7716 default-on label census (gate): idiom "flipped default, stale label" CLOSED.** tools/s7716_default_label_census.py
-  (controls 5/5, in the gate sweep) models every reader of 198 default-on names incl. getenvs inside printf args, polarity-free:
-  0 LABEL-WRONG, 5 reviewed splits, 40 hand-read deferred/unmodelled. Its debug-doc check fixed 2 rows of
-  docs/debug-trace-env-vars.md (LOG_M4_Y8000 is opt-in since s6712; SPIN_YIELD is default on since s4199). Docs only.
-- **s7714/s7715 truth census (gate): 0 owner-setting on/off splits.** tools/s7714_truth_census.py (controls 6/6, in the gate sweep) parses
-  every multi-site reader's C, isolates the expression on that variable and evaluates unset/0/1/2/t/yes: 646 sites modelled, 14
-  REVIEWED mode letters / dead / diag. Fixed: the vendored m5 label (unset AUDIO_UCODE now prints audio_on, as the real ucode runs;
-  mirrored into funcs_34.c), SPIKE_DMEM and STANDINS_LOG/CTL/PULL presence readers (=0 armed them). Witness scratch/s7714/run.zsh 4/4.
-  s7715: Python-embedded C now tokenised file-wide (controls 8/8): 708 modelled, 81 unmodelled (pass-ons/foreign/no-decision
-  residue, class CLOSED). New split fixed: ROGUESQ_M5_C88_VALUE labels said c88=0 for unset while the store passes the guest
-  value ([s7715-c88], S7715_C88LBL=0 old; witness 3/3). B40 (replay-flipped, owner item) and S4562_PAUSE REVIEWED.
-- **s7713 multi-reader clamp census + OSMEM_MB fix.** tools/s7713_multireader_census.py (controls 5/5, in the gate sweep): of 289
-  ROGUESQ_* names read at >=2 sites, 3 pair a clamping reader with a raw-threshold reader. DRAW_DISTANCE MASKED (s7712), FB_WIDTH AGREE,
-  OSMEM_MB was split: recomp.cpp maps values outside 4..16 to 8, but the dd bundle armed the 12 MB spill/ramtop layout for raw >8 (e.g.
-  20). Fixed in rs64_s7358_sanitize_env (`[s7713-osmem]`, ROGUESQ_S7713_OSMEMCAP=0 = old); runtime arms 4/4 (old arm reproduces it).
-  Owner lines use 8 or 12, so the owner path is unchanged.
-- **s7718 gate-sweep coverage: 52 more offline gates swept; 4 closed classes had gone RED or hollow unseen (H-drift).** The sweep
-  discovered only s7*_census.py; 100 other tools with a VERDICT or a planted control were classified (scratch/s7718/classification.tsv):
-  19 GATE-LIVE + 33 GATE-CONTROL-ONLY now in tools/s7651_gate_sweep.py (S7718_LIVE / S7718_CONTROL_ONLY), 39 NEEDS-INPUT (scorers of
-  one capture), 4 COVERED (s7631/s7632 sources), 2 DEAD (s7426 B-D, s7324 refuted by s7327), 1 RUNTIME, 1 TOOL, 1 REPORT. Found:
-  s7412 CONTROL FAIL (s7580's `0X803Fu` lui literals read impure: 24,262 lui sites silently unchecked), s7413 link error + 52k
-  loads hollowed by s7484's RS64_S7484_LD observer prefix (lb 9.8k forms -> 40), s7428 two FIXED rows (a comment false positive,
-  the s7430 rotate size probe), s7430 the s7702 log unreviewed (opt-in). All four tools fixed, harvests restored (s7413 101,169 pure
-  sites = its closure count), real code 0 MISM; s7412/s7413 rows now pin harvest size. Wiring control 4/4 RED reverted -> 4/4 GREEN.
-  Sweep 195 gates: 190 GREEN 5 REPORT 0 RED. No game code changed.
-- **s7702/s7704-s7706 21:9 fb read-back: HARMLESS (CLOSED).** s7705/s7706: L1 and L4 intro cutscene + flight read no skipped buffer (join tool). The game LOADBLOCKs its previous 768-wide frame in the Hoth canyon
-  flyover (t 12-16.7 s), and RT64 skips that write-back (SKIP_WILD_W). RT64 never serves those loads from its GPU copy (LOG_FBOVL 0 at 21:9).
-  But write-back on vs off gives pixel-identical presented frames, and filling the skipped buffers with magenta (opt-in lib/rt64
-  ROGUESQ_S7704_POISON=768) puts 0 magenta pixels on screen. The copy never reaches the picture, so no allowlist change.
-  Tools: tools/s7704_wide_fbcopy_arms.zsh + s7704_fbcopy_score.py.
+- **s7702-s7743 regen / census / env-reader engineering: ALL CLOSED, 0 open defects** (every bullet verbatim in PROJECT-OVERVIEW
+  "(s7747 maintenance)"). Standing facts from it: the live RecompiledFuncs tree IS the s7739 regen replay, and
+  `tools/s7719_regen_gate.py --strict` (in the sweep) byte-compares live vs a fresh replay, so ANY hand edit to
+  ../N64Recomp/RecompiledFuncs turns the sweep RED (put it in a fixup/apply script). Ucode: `tools/s7741_ucode_regen_gate.py --controls`;
+  after any fixup_factor5_ucode.py edit `zsh tools/ucode_regen.sh snapshot`; the 9 factor5_ucode_ovl*_recompiled.c are splice inputs
+  (keep byte-true, s7743). Env readers: launch strips empty ROGUESQ_* (s7730), maps on/off words to 1/0 (s7731), unsets invalid
+  ROGUESQ_ASPECT (s7732); after a regen `python3 tools/s7734_compiled_reader_census.py` (rc 0). s7725 plume +0 texture-descriptor
+  over-release (RT64 Present SIGTRAP) fixed, NSZombie 0 on boot/flight/hangar route (s7726/s7727). 21:9 fb read-back harmless (s7702-s7706).
+  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~215 gates, 0 RED, 0 HOLLOW.
 - **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
   proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
   cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
@@ -283,35 +157,6 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
   ran 120 s with 0 hits; but it ran with dummy video, which never leaves the 320 boot phase. With Rice + Start presses retail calls
   reapplyDisplayMode on every scene (t=2.1/6.7/17.3/38.4 s). The count=1 re-init was the port's s4889 patch clobbering $a1.
 Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
-- s7418 "32 live cache ops". Believable: RecompiledFuncs census with a passing liveness control. s7419: its liveness keyed on objdump
-  names, so 147 renamed functions were `nofn`; one live CDE (clearMemory16ByteBlocks 0x8000041C, boot) was skipped -> 33, still safe.
-- "0 live cache ops" (s7405 class BO). Believable because the census ran with a control that passed (Status/Count/Compare rows),
-  but that control never exercised `cache`: mips64-elf-objdump prints cache as .word, so the row could not fire. s7418 on
-  RecompiledFuncs: 32 live (CDE 0x0D + HWB-D 0x19 only), no-op-safe. Class BO's FR/RM/FS conclusions stand.
-- "FCSR.FS vs host FZ: known and left, ROGUESQ_FTZ stays opt-in" (s6013/s7087). Believable because the s6012 lvl1 holds
-  were clean in both arms; but no instrument ever asked whether denormals occur. s7405 FPSR witness: they do (game thread, in
-  flight), so FTZ is now default on (=0 old).
-- s7376 "the present thread already takes workloadMutex at line ~676 in the same frame" (used in its deadlock/coverage reasoning).
-  Believable: upstream locks it there. s7377 counter: that lock sits on the `!interpolationEnabled` branch, taken on 27/10800 presents;
-  the other 99.7% ran lock-free (fixed by ROGUESQ_S7377_EARLYLOCK).
-- s7372 "17 AQ rows exercised in mission incl. dpc defer_begin and rs64_s6094_tick; 73 never executed". Believable: coverage
-  counts are exact. s7373: the s7366 rows' line numbers predated s7368/s7371 edits (20/97 lines no longer named the container);
-  re-cut rows give 19 mission rows (defer_begin and s6094_tick out, both env-gated; get, s6702_release_locked, heapsync in), 71 unexecuted.
-- s7193 "boot-freeze second wait unknown, not reproducible by forcing" -> s7367: it is MAIN IN 0x8011A818 (scheduler chain), reached when MAIN (not retrace) is starved; s7193 forced retrace holds, which let MAIN return to CF0.
-- s7325 "46 audio reads land in song-channel arrays freed by waitForMusyXAudioTaskDone (via musyxNoopStub) or the scene sync". Believable:
-  allocator frames said allocateSongChannelArray. s7330: the blocks are the synth's command-list buffers, and the boot hits come from
-  tasks built AFTER the scene bulk free (no wait involved); only 1 in-flight case belongs to the wait path.
-- s7324 "class G CLOSED, H-cpu-only: the RCP is never handed a spill address". Believable: 462M DMAs at dd8 21:9 L4, 0 direct, ctl
-  198/198. It ran the forced-level route, where loadLevelAssets' 0x2DFF00 sits in the main heap; on the hangar route (s7327, dd8 16:9)
-  the reset/reload puts it in spill and the gfx ucode DMAs its grid-layer data at 0x81xxxxxx (fixed: 25-bit DMA mask).
-- s7324 "40k audio RSP reads hit heap GAPS / freed blocks (no live rs_malloc block)". Believable: the s7317 map recorded every hooked
-  malloc/free. s7325: the retail scene reset frees in bulk without rs_free, the map kept 531 stale entries shadowing live blocks;
-  the guest heap walk puts every address inside an allocated block, dd1 identical. Re-synced map: 46 residual reads.
-- s7316 "spill live in the dd2 16:9 L1 run; 80-87 heap words held spill pointers". Believable: the words were aligned 0x81xxxxxx in
-  heap. s7317 allocation map: all 833 spill blocks are freed in the load window; those words are halfword data and dead stack slots.
-- s7312 "the presented window can lag the RDP stream for seconds (first run after a rebuild)". Believable: same pose, same stream,
-  two captures 0.7 s apart both wrong. s7313: a voided batch-1 L5 game was still alive and the pose script captured the oldest game
-  (`pgrep|head -1`); the repro arm with a one-game guard matched 6/6 (diff 0.01 vs 92.8 control).
 - Pre-s7300 superseded entries (s6445-s7288, 27 lines) moved verbatim to PROJECT-OVERVIEW "(s7581 maintenance)"; grep there.
 ## Run recipes and hard config
 
@@ -448,58 +293,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     tools/s7639_st_census.py after any SDL call edit or new thread; tools/s7640_at_census.py / s7641_cf_census.py after AppKit or
     framework-callback edits; TSan builds tools/s7642_tsan_rt64_build.sh, s7643_tsan_host_build.sh (lightweightsemaphore tsan
     annotations are TSan-only); the gate sweep after any src/ or lib/ change. A new G above 0x80180000 reads unclassified (RED): re-dump.
-22. **s7663 launch settings/presets: owner to try.** After any edit to rs64_settings.cpp rerun tools/test_settings.cpp and
-    scratch/s7663/run.zsh (5 arms; C must print `[gfx-qos] mode=1` from the file). New owner recipes go in its presets() table.
-23. **s7614_hm census: CLOSED s7673.** rs64_settings.cpp `p.vars` = host (static const preset table of string literals; row
-    proof-checked, broken-proof control -> DRIFT). Census exits 0, controls 8/8. Add a row for any new static with pointer members. s7673 also re-greened s7611/s7599/s7352/s7535 (rows for s7663/s7671/s7672 code): run the gate sweep after every src/ commit.
-24. **Crash-report gate (s7664):** `python3 tools/crash_reports.py` (rc 1 = NEW). Deliberate crash arms: quote the .ips basename
-    in the session entry. Test tools/agent/test_crash_reports_gate.sh. DIAG datum RogueSquadron64Recomp-2026-11-17-053804
-    (s7523 SLOWRDP consume() SIGSEGV) CLOSED s7665 as H-devbuild: crash 05:38, file first committed 05:59; both committed versions
-    pass an ASan/UBSan fuzz (tools/test_s7523_model.sh, 2 controls) and the post-commit arms ran alive. Rerun that test after any
-    s7523_slow_rdp.cpp edit.
-
-25. **G1d 21:9 fb read-back of skipped wild-width buffers: CLOSED s7704-s7706 (H-invisible + H-none, 2 levels).** Boot cinematic read never
-    reaches the picture (s7704). L1 (s7705) and L4 (s7706) at 21:9: 0 post-boot reads inside any skipped extent, any age
-    (tools/s7705_join.py `in_after_boot=0`; boot ctl IN 3/3 per run; only post-boot hit = RSP DMA past the end of the 340-row 0xB80800
-    buffer). 16:9 skips nothing (skipw=0). Rerun tools/s7705_fbread_flight.zsh + tools/test_s7705_join.sh after any SKIP_WILD_W change.
-26. **21:9 post-G6c holds: CLEAN s7707 (3/3).** ROGUESQ_ASPECT=21:9 dd2 STANDINS=1 FPS60 fullscreen 300 s: L1/L15 (loop) + L4
-    (in-session): alive 3/3, vi_stalls30s=0, max_gap 148 ms, level_ok=1, aspect 21:9 line 1/1, stand-ins on 1/1, spawns 38/39/164.
-27. **Gate sweep was RED 13 for s7702-s7706, fixed s7707 (rules only, 0 behaviour defects).** New s7702 census
-    (src/rsp/s7702_fbread.cpp, ROGUESQ_S7702_FBREAD), s7704 poison (lib/rt64 rt64_state.cpp fullSync, ROGUESQ_S7704_POISON) and the
-    standins s_cut_prev edge static were unclassified in 13 gates. stop_gate --verify DID block s7702-s7706, but loop.sh moves on after
-    MAX_CONTRACT_RETRIES=2 and nobody re-ran the sweep. Rows: census_rules.py (2), s7533/s7542/s7550/s7600/s7601/s7611/s7613 tables.
-    Now 130 GREEN / 5 REPORT / 0 RED. Rule: ANY new src/ or lib/ instrument file -> run the sweep before committing.
-    FIXED s7708: loop.sh now writes scratch/agent/CONTRACT-CARRY.md whenever the contract is still unmet after the retries
-    and prepends it ("Unmet contract from the previous iteration (fix FIRST)") to the next prompt; deleted once --verify passes.
-    Retry prompts for a census-RED verdict now say a checkpoint close-out does not clear it. Test tools/agent/test_contract_carry.sh
-    (8/8; mutation controls: no prepend -> 2 FAIL, no write -> FAIL). If CONTRACT-CARRY.md heads your prompt, fix it before NEXT.md.
-28. **Agent tool tests gated s7709.** tools/agent/run_tests.sh runs every tools/agent/test_*.sh (8, ~60 s, PASS/FAIL line each,
-    rc 1 on any FAIL). stop_gate --verify runs it when the iteration's commits touch tools/agent/*.sh|*.py and blocks "agent tool
-    tests FAIL: <names>" (RS64_AGENT_TESTS=0 skips). Test tools/agent/test_agent_tests_gate.sh 3/3 (red/green/untouched) + 2 mutation
-    controls (trigger disabled, runner ignores rc -> red FAILs). All 7 pre-existing tests were already green (H-green).
-
-29. **Owner-setting census s7710: CLEAN (H-clean, controls 5/5).** Every ROGUESQ_* name in OWNER-OPT-INS.md + README (112) and the
-    --preset table (4) is read by code (quoted in src/, lib/rt64/src, lib/N64ModernRuntime or a fixup/apply script; CMake option()
-    for SRC_OPT/FUNCS_OPT); ROGUESQ_NAME is the allow-listed syntax placeholder. build/settings.txt is checked too when present.
-    `python3 tools/s7710_optins_census.py --controls` is in the gate sweep (now 136 gates, 131 GREEN): a doc row for a setting the
-    code no longer reads goes RED. Limit: "read" = quoted string, so a name kept only in a log format would pass.
-30. **Owner-setting VALUE census s7711: CLEAN (H-clean, controls 5/5).** All 127 documented `ROGUESQ_X=V` pairs (docs, README,
-    presets) reach a parser that reads V: no fraction under atoi, no `16:9`/list under a numeric-only parse, no "=0" lever that only
-    tests the pointer, every dd>4 doc command carries DD_UNSAFE=1. `tools/s7711_optval_census.py --controls` is in the gate sweep
-    (137 gates, 132 GREEN; s7713: 138, 133 GREEN). Static and single-source: range clamps hand-checked only for RUMBLE_SCALE, OSMEM_MB, STICK_GATE, dd.
-31. **Multi-reader clamp census s7713: CLEAN after the OSMEM_MB fix (H-many: one more split than s7712's DD; controls 5/5).**
-    `tools/s7713_multireader_census.py --controls` gates clamp-vs-raw-threshold splits across all multi-reader names (sanitizer
-    modelled first). Runtime witness scratch/s7713/run.zsh. s7728: the m5 audio_stub label was fixed in s7714; rs64_env_int
-    names are all single-reader (nothing to model). s7714 truth census now probes =false/=no and runs a host LOG_ALL pass
-    (`python3 tools/s7714_truth_census.py --controls`, rc 0): rerun after adding any ROGUESQ_LOG_* reader in src/ or lib/.
-    s7729: every unmodelled site is in UNMODELLED_T (class + line fragment); a new reader it cannot model exits 1 until classed.
-    s7730: VALUES include ""; empty ROGUESQ_* values are stripped at launch (rs64_settings.cpp), so "" never reaches a reader.
-
-32. **Gate-sweep coverage s7718/s7723: offline gates all swept (208).** s7421/s7423 superseded by s7719_regen_gate. Of the 39
-    s7718 NEEDS-INPUT scorers 11 are gated over retained captures (s7723), 7 more in s7724 (s7433/s7435-s7438/s7467/s7624).
-    CLOSED: s7367/s7369/s7434/s7589 H-no-control, s7247 H-gone. No further scorer work.
-    Lesson (s7412/s7413): a harvest-based gate can exit 0 while a later fixup idiom hides its sites; pin the harvest size.
-    Lesson (s7723): a scorer whose "control absent" path exits 0 (s7393, s7399) is only a gate with a CONTROL PASS regex.
+22. **s7663-s7718 owner-setting, crash-report, sweep and agent-gate items: ALL CLOSED** (old items 22-32 verbatim in
+    PROJECT-OVERVIEW "(s7747 maintenance)"). Rerun triggers kept: rs64_settings.cpp edit -> tools/test_settings.cpp +
+    scratch/s7663/run.zsh; any new src/ or lib/ instrument file -> the gate sweep before committing; `python3 tools/crash_reports.py`
+    (rc 1 = NEW outranks all work); tools/agent/run_tests.sh after tools/agent edits (stop_gate runs it); SKIP_WILD_W change ->
+    tools/s7705_fbread_flight.zsh + tools/test_s7705_join.sh. If CONTRACT-CARRY.md heads your prompt, fix it before NEXT.md.
+23. **G6c L12 stand-ins added but not visible (s7744-s7746): OPEN, next unit** (scratch/agent/NEXT.md, HYPOTHESIS-ID
+    g6c-coverage-l10-l12): H-clip / H-size / H-drop, one per-item eye-z + screen-bbox instrument, L10 vs L12 arms.
 
 ## Evidence index
 
@@ -509,4 +309,4 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png/jpg.
 - Queued-soak verdicts `scratch/agent/SOAK-RESULTS.md`; loop.sh edits take effect before the next soak phase
   (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
-- Recent chronology: PORTING-STATE sessions 7617-7704; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 7617-7747; search bounded windows only.

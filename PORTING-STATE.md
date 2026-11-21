@@ -206764,3 +206764,14 @@ does not explain it (units/scaling unknown).
 Next discriminator: per added item on L12 vs L10, log eye-space depth vs the game's far plane and projected screen bbox/size (one
 instrument, both arms, one run). Depth beyond far on L12 only -> far-clip (H-clip); on screen but sub-pixel -> H-size; on screen and
 sized but absent -> the submit/DL path drops them (H-drop).
+
+## Session 7747 (2026-11-20) — maintenance: CURRENT-TRUTH 60.1 KB -> 35.4 KB (512 -> 312 lines)
+Step 0 triggered (60125 bytes > 60000). No experiments run. Crash-report gate: FOLDED=27 new=0. No new SOAK-RESULTS lines since s7726's fold.
+- Moved verbatim to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7747 maintenance)": 23 headline bullets s7702-s7743
+  (regen replay adoption, strict regen/ucode gates, overlay inputs, env-reader censuses s7713-s7737, NSZombie/plume SIGTRAP fix,
+  sweep-scoring audits s7718-s7724, 21:9 fb read-back), superseded entries s7312-s7418, and Next-steps items 22-32.
+- Replaced them with one summary bullet that keeps the standing rules (live tree == s7739 replay, so hand edits to RecompiledFuncs
+  turn the strict gate RED; ucode snapshot after a fixup edit; overlay files stay byte-true; launch-time env normalisation;
+  sweep command), one folded item 22 (rerun triggers) and a new item 23 for the open G6c L12 visibility unit.
+- Backlog stays one monotonic sequence 1-23; headline "as of" refreshed to s7747.
+Net: -24,734 bytes, -200 lines. Rules out nothing; the next unit is still the s7746 NEXT.md (L12 H-clip/H-size/H-drop).

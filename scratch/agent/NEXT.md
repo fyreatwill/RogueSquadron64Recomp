@@ -1,9 +1,7 @@
-# NEXT (s7747)
+# NEXT (s7748)
 HYPOTHESIS-ID: g6c-coverage-l10-l12
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-CURRENT-TRUTH is 60.1 KB (> 60000): THIS iteration is MAINTENANCE (ITERATION Step 0). Compact toward 35 KB, no experiments.
-
-Unit after maintenance: why L12 stand-ins are added but invisible (s7746: ground-flicker null at 10 s and at the 62 s add peak,
+Maintenance done s7747 (CURRENT-TRUTH 35.4 KB). Unit: why L12 stand-ins are added but invisible (s7746: ground-flicker null at 10 s and at the 62 s add peak,
 passing ground paint controls; L10 visible 6.2x). Hypotheses:
 - H-clip: L12 items sit beyond the game's far plane (why-k far=30.03 vs PASS dmed~132) and the ucode clips them.
 - H-size: on screen but sub-pixel / under the LOD threshold.
