@@ -206985,3 +206985,4 @@ Next: is the hangar mid-task rewrite visible and is it ours (render begin/end/li
 Sweep: first pass RED 1 = s7613_hp_census (the new static g_rdram in s7751_task_snap.cpp had no row; a census doing its job);
 added a `base` row (store `g_rdram = rdram;`, sole caller main.cpp factor5_gfx_runner, gated ROGUESQ_S7751_SNAP) -> RESULT PASS;
 re-sweep 221 gates: 217 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (s7753 gate GREEN 8/8).
+Verdict: selects H-exact for attract/front end/cutscene/dd1 and 16:9 dd2 flight, selects H-state for the hangar (begin vs end image replay, page bisection), refutes H-ucode-b (one ucode 0x80024A10 on 48/48 tasks). Next discriminator: rendered px impact of the mid-task rewrite + writer PC placed vs task begin/end (NEXT.md).
