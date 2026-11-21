@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7762 (2026-11-21).
+Compact operational handoff, as of Session 7763 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -13,6 +13,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 **Owner: docs/OWNER-REVIEW-QUEUE.md (s7762) is the one-sitting list** (20 items, command + sheets each); every path and setting
 name in it and in OWNER-OPT-INS is gated by `python3 tools/s7762_owner_doc_check.py --controls` (in the sweep; rc 0 s7762).
+**s7763: every queue command does what its row says** (`python3 tools/s7763_owner_cmd_check.py --control`, launches each of the
+11 distinct commands for 12 s, one at a time): 11/11 MATCH on echoed dd/aspect/FPS60/fullscreen/stand-ins plus the row's own switch
+echo (NEARLIFT, RETINA swapchain=drawable, QOS_ALL, RENDER_TO_RAM=0, V2P, SP_LATE); env-over-preset control DRAW_DISTANCE=3 echoes 3;
+negative controls: the plain tv log scored as tv-with-dd3 flags dd, and scores 0/6 feature echoes. M5_B40_VALUE has no startup echo (unchecked).
 
 - **s7702-s7743 regen / census / env-reader engineering: ALL CLOSED, 0 open defects** (every bullet verbatim in PROJECT-OVERVIEW
   "(s7747 maintenance)"). Standing facts from it: the live RecompiledFuncs tree IS the s7739 regen replay, and

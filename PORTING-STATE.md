@@ -207193,3 +207193,26 @@ Rules out: the owner queue pointing at renamed settings or deleted sheets. Does 
 Verdict: selects H-current, refutes H-stale (0/132 documented names unread by live code, 0 missing sheet paths, with a same-run
 planted control flagged). Next discriminator (NEXT.md s7763): per-row launch echo of effective dd/aspect/FPS60/standins vs the
 row's claim (H-works vs H-broken), positive control a deliberately different DRAW_DISTANCE.
+
+## Session 7763 (2026-11-21) — every OWNER-REVIEW-QUEUE command verified by launch echo: 11/11 MATCH (dd/aspect/FPS60/fullscreen/stand-ins + per-row switch), controls PASS; new tools/s7763_owner_cmd_check.py
+
+No owner answer, `crash_reports.py --since 2026-11-13` new=0, no SOAK-RESULTS lines after the s7750 fold, so the NEXT fallback unit ran.
+Hypotheses: H-works (each queue command yields the settings its row claims; env beats preset as rs64_settings.cpp says) vs
+H-broken (a row lies: preset overrides env, dd>4 clamped despite DD_UNSAFE, a switch never read at startup).
+Instrument: new `tools/s7763_owner_cmd_check.py` parses every backticked command in docs/OWNER-REVIEW-QUEUE.md, computes the
+expected dd/aspect/fps60/fullscreen/stand-ins (preset table mirrored from the source and checked against it each run; env wins;
+dd>4 needs DD_UNSAFE), launches each from build/ one at a time (NO_SAVE_WRITE=1, SIGKILL of the process group after the
+[g1f] window + first [g1d-heapcap] echoes, ~12 s), and scores the game's own echoes ([s7663] re-exec summary, [ddbundle] dd=,
+[g1d] ASPECT -> FB_WIDTH, [g1f] window fullscreen=, [standins] on) plus a per-switch echo that must fire iff the command sets
+the var. `--offline` re-scores the saved logs. Host idle 16.8 h at launch.
+Result (scratch/s7763/check.txt): 11 distinct commands covering rows 1-20, 11/11 MATCH, 0 noecho, rc 0. Row 7 dd8+DD_UNSAFE
+echoes dd=8.00 (no s7712 clamp line); row 6 DRAW_DISTANCE=2 over --preset tv echoes 2; row 3 is the only arm with stand-ins on
+(default tv has them off, as the row says); the per-switch echoes fire only in their own arm (NEARLIFT arm06, QOS arm08,
+RENDER_TO_RAM=0 arm09, V2P+SP_LATE arm10). RETINA: the [retina] line prints in every run, but the swap chain is 1512x949
+(point size) by default and 3024x1898 = drawable only with RETINA=1, so the checker keys it on swapchain==drawable.
+Controls: positive, `env ROGUESQ_DRAW_DISTANCE=3 ... --preset tv` echoes dd=3 (env override visible); negative, the dd3 log
+scored against the plain tv claim flags dd, and the plain tv log trips 0/6 feature predicates while the RETINA log trips
+exactly RETINA. Selects H-works. Not covered: M5_B40_VALUE (row 19) has no startup echo; in-parenthesis toggles
+(RUMBLE=0, W_CLAMP=0, STICK_GATE=0, DD_FARMAX=0, HORIZON_SKYFILL=0, CONTROLS_DUMP=1) are not full commands and only take effect
+in flight/at input; their names are already gated by s7762_owner_doc_check. Side observation: NEARLIFT=1 forces
+[g1e-fast] on=0 (the fast path is off in row 14's arm), which is by design per its reason string.
