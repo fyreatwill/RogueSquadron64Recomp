@@ -12,11 +12,10 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 **Every engineering goal on the ladder is closed or awaiting the owner's look.** Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 
-- **s7728 truth census: false/no values + host LOG_ALL pass: 4 VALUE + 6 LOG_ALL splits fixed (diagnostic flags only).**
-  env_flag (debug_logs.h) no longer reads =false/=no as off (all other readers: `*e != '0'`); 8 host sites (main.cpp,
-  upstream_compat.cpp, lib/rt64 rt64_rsp/rt64_interpreter) now honour ROGUESQ_LOG_ALL like their sibling readers. Pre-fix
-  tree 4+6 SPLIT, fixed 0+0, controls 10/10; runtime LOG_ALL=1 boot lights the fixed `[spboot]` (4) and vi-selector (1)
-  sites, no-env arm 0. Generated-code probes stay own-flag-only (documented, docs/debug-trace-env-vars.md).
+- **s7729 truth census covers every reader: the 81 unmodelled sites are hand-classed (STRING 35, REWRITER 15, MULTI 26,
+  GUARD 5; 0 disagree with siblings) and the census now fails on any UNCLASSIFIED one. Settings files: `NAME=` (empty) is now
+  left unset** (`[s7729]` line); with "" as a probe value, ASPECT and OSMEM_MB readers split (presence vs `e && *e`).
+  Shell `ROGUESQ_ASPECT= ./game` still reaches them as "" (not fixed; rare). s7728 (false/no + LOG_ALL, 4+6 fixed) stands.
 - **s7727 NSZombie census on the owner hangar route: H-clean.** s7469 abort/re-entry schedule (4 mission loads, 3 SELECT YOUR
   CRAFT re-entries, ship scrolls) at 16:9 dd4 FPS60 STANDINS=1 FULLSCREEN, 570 s/arm: default 0 zombies in all 8 segments (270k
   MISSING POOLS lines); same-run MTL_OWN=0 control 364 TextureDescriptor zombies, >=12 in every segment. Both arms 0 fatal.
@@ -434,6 +433,7 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     modelled first). Runtime witness scratch/s7713/run.zsh. s7728: the m5 audio_stub label was fixed in s7714; rs64_env_int
     names are all single-reader (nothing to model). s7714 truth census now probes =false/=no and runs a host LOG_ALL pass
     (`python3 tools/s7714_truth_census.py --controls`, rc 0): rerun after adding any ROGUESQ_LOG_* reader in src/ or lib/.
+    s7729: every unmodelled site is in UNMODELLED_T (class + line fragment); a new reader it cannot model exits 1 until classed.
 
 32. **Gate-sweep coverage s7718/s7723: offline gates all swept (208).** s7421/s7423 superseded by s7719_regen_gate. Of the 39
     s7718 NEEDS-INPUT scorers 11 are gated over retained captures (s7723), 7 more in s7724 (s7433/s7435-s7438/s7467/s7624).

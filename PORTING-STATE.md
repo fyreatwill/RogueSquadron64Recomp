@@ -206213,3 +206213,32 @@ restored from git HEAD (src) and by hand (two lib/rt64 lines, verified against s
 lib/rt64 edited -> submodule-patches/export.sh run, rt64.patch refreshed in this commit. Gate sweep after the edits: 216 gates, 212 GREEN, 3 REPORT, 1 NEEDS-ARGS (s7726_zombie_census.py needs --arm/--control captures; pre-existing), 0 RED, 0 HOLLOW.
 No mitigation added (consistency fix of reader predicates); ORIGIN: the split sites were written one probe at a time
 (s3xxx-s5xxx) with own-flag predicates while sibling readers used the LOG_ALL idiom.
+
+## Session 7729 (2026-11-20) — truth census covers every reader: 81 unmodelled sites hand-classed (0 disagree) + census fails on unclassified; settings-file `NAME=` now left unset (empty value split ASPECT/OSMEM_MB readers)
+
+Work unit (NEXT.md: crash_reports FOLDED=27 new=0, no owner report, no new SOAK-RESULTS lines since s7726 -> the s7728
+discriminator): do any of the 81 sites `s7714_truth_census.py --unmodelled` cannot model split from their modelled siblings
+(H-split-hidden) or are they all opaque by design (H-opaque)?
+
+Result: H-opaque selected, H-split-hidden refuted for the census values (unset,0,1,2,t,yes,false,no). Every site read by hand
+with 3 lines of context (one dump pass): STRING 35 (paths/numbers/mode words handed to fopen/atof/strcmp: ASPECT, DD,
+FLOOR_*_DIR, QOS, ALLOCMAP...), REWRITER 15 (anchor/replacement text inside apply/fixup scripts; the code they produce is
+modelled where it lands, e.g. fixup_live_replay b40_polarity_23 -> funcs_23.c `!= NULL && [0] != '0'`), MULTI 26 (one gate
+over several names: LOG_ALL||own, G1E_TRIM=='0'||own, DD_FOGCULL 't'||atof>0 vs :237 tog3/atof, both agree), GUARD 5
+(early-return gates: RUMBLE_TEST, PANEL_TEST_WINDOW, HUDPTRWATCH, LOG_HITS 5834, TBLNULL_LOG; each reads like its siblings).
+Deref checks done while reading: FLOOR_PIPE_DIR `std::string(getenv())` runs only when floorSerial is set (needs the dir),
+s7106_fetch strcmp(e) only behind rs64_s7106_on, S7064 fopen(getenv()) only behind g_rs64_s7064: no unset-null crash.
+- tools/s7714_truth_census.py: UNMODELLED_T table (name, rel, line fragment, class), 64 entries covering all 81 sites;
+  summary line `s7729: unmodelled 81 = STRING=35 REWRITER=15 MULTI=26 GUARD=5 UNCLASSIFIED=0; stale 0`; exit 1 on any
+  UNCLASSIFIED site, stale entries listed. New control: a planted undecidable reader is unmodelled AND UNCLASSIFIED, a real
+  S7064 line classes STRING (PASS); all 11 controls PASS.
+- Side probe (same tool, VALUES += ""): 3 SPLITs on the empty value: ROGUESQ_ASPECT (main.cpp:14498 `e || fullscreen` on vs
+  fixup_factor5_ucode.py:228 `e && *e` off), ROGUESQ_OSMEM_MB (main.cpp:14381 `e && *e` vs :14860 `e ? 1 : 0`), HWBP_ADDR
+  (diag). The owner route that can produce "" is a settings file line `ROGUESQ_ASPECT=` (rs64_settings_parse_line passed it
+  through and setenv'd ""). Fix: parse_line returns 3 for an empty value, the loader logs `[s7729] file:N NAME= has no
+  value: left unset` and does not setenv it. tools/test_settings.cpp + 4 cases: new tree 27/27 PASS, HEAD rs64_settings.cpp
+  3 FAIL (positive control: the test discriminates). Live run (build/, --settings with `ROGUESQ_ASPECT=` + `ROGUESQ_FPS60=1`):
+  `[s7729] ... ROGUESQ_ASPECT= has no value: left unset` and `settings applied (re-exec): ROGUESQ_FPS60=1(file)` in one run
+  (FPS60 = same-run positive control that the file was applied). Not fixed: shell `ROGUESQ_ASPECT= ./game` still hands ""
+  to the readers (rare; "" not added to the census VALUES, it would need the 3 names reviewed or fixed first).
+Owner defaults untouched. Build rc 0; tools/agent run_tests 8/8; gate sweep 216 gates: 212 GREEN, 3 REPORT, 1 NEEDS-ARGS, 0 RED (controls PASS).

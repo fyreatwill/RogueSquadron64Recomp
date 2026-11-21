@@ -66,6 +66,100 @@ REVIEWED = {
     "ROGUESQ_PLAYER_DUMP": "diag: main.cpp levels '1'/'2'; s5866/s5867 apply-script watches arm on any value",
 }
 
+# s7729: every unmodelled reader site, read by hand and classed (none disagrees with its name's other readers):
+#   STRING   value is a path / number / mode string handed on (fopen, atof, strcmp table), not a truth test
+#   REWRITER Python text that is a search anchor or replacement inside an apply/fixup script, not a live reader;
+#            the reader it produces is modelled where it lands
+#   MULTI    one gate over several env names (LOG_ALL || own, TRIM=0 || own, K override, dd>1 && own);
+#            each name's own term was read and matches that name's other readers
+#   GUARD    an early-return presence/non-'0' gate (`if (!e || !*e) return;`) the parser does not take as a decision;
+#            it reads the same as the name's other readers on every census value
+# key: (name, rel, fragment that must occur on the site's line). A site matching none is UNCLASSIFIED and fails.
+UNMODELLED_CLASS = {
+    "STRING": "path / number / mode string handed on, not a truth test",
+    "REWRITER": "apply/fixup script anchor text, not a live reader",
+    "MULTI": "multi-name gate; own term read by hand, agrees",
+    "GUARD": "early-return gate the parser misses; agrees by hand",
+}
+S, R, M, G = "STRING", "REWRITER", "MULTI", "GUARD"
+UNMODELLED_T = [
+("ROGUESQ_A14_YIELD","tools/apply_s4694_a14_boundary.py","g_a14_act",R),
+("ROGUESQ_ASPECT","src/main/main.cpp","as = std::getenv(\"ROGUESQ_ASPECT\");",S),
+("ROGUESQ_ASPECT","src/main/rt64_render_context.cpp","vi_shape ? nullptr",S),
+("ROGUESQ_ASPECT","tools/apply_s6031_far.py","const char* as = getenv",S),
+("ROGUESQ_ASPECT_SCALE","src/rsp/dpc_bridge.cpp","ROGUESQ_G1D_PAUSE_DIM",S),
+("ROGUESQ_ASPECT_SCALE","tools/apply_s6144_fpx.py","kx6144",S),
+("ROGUESQ_ASPECT_SCALE","tools/apply_s6294_edgewriter.py","const char* a = getenv",S),
+("ROGUESQ_CONTROLS","src/main/main.cpp","e && *e) return e;",S),
+("ROGUESQ_DD_FOGCULL","src/main/upstream_compat.cpp","g_rs64_s7030 = [",M),
+("ROGUESQ_DD_OFFMAPCULL","src/main/upstream_compat.cpp","g_rs64_s7030 = [",M),
+("ROGUESQ_DD_WIDEWIN_CAP","src/main/upstream_compat.cpp","static const Cfg cfg",S),
+("ROGUESQ_DRAW_DISTANCE","src/main/main.cpp","num(e, v) && v > 4.0",S),
+("ROGUESQ_DRAW_DISTANCE","src/main/upstream_compat.cpp","ROGUESQ_G5E_FOGP",S),
+("ROGUESQ_DRAW_DISTANCE","src/rsp/dpc_bridge.cpp","ROGUESQ_DD_SKYZ",M),
+("ROGUESQ_FB_WIDTH","src/main/main.cpp","ROGUESQ_DD_PX8_AUTO",S),
+("ROGUESQ_FLOOR_DEPTH_DIR","lib/rt64/src/render/rt64_framebuffer_renderer.cpp","const char *d = std::getenv",S),
+("ROGUESQ_FLOOR_PIPE_DIR","lib/rt64/src/render/rt64_native_target.cpp","floorDir = std::getenv",S),
+("ROGUESQ_FLOOR_PIPE_DIR","lib/rt64/src/render/rt64_native_target.cpp","std::string(std::getenv(\"ROGUESQ_FLOOR_PIPE_DIR\"))",S),
+("ROGUESQ_FLOOR_SHADER_DIR","lib/rt64/src/render/rt64_framebuffer_renderer.cpp","floorDir = std::getenv",S),
+("ROGUESQ_FL_ZERO_ADDR","src/main/main.cpp","getenv(\"ROGUESQ_FL_ZERO_ADDR\") ?",S),
+("ROGUESQ_FS_SLOT_ADDR","src/main/main.cpp","getenv(\"ROGUESQ_FS_SLOT_ADDR\") ?",S),
+("ROGUESQ_FORFACE_LOG","tools/apply_s6518_ret_summary.py","ROGUESQ_FORFACE_LOG",R),
+("ROGUESQ_G1D_PAUSE_DIM","src/rsp/dpc_bridge.cpp","ROGUESQ_G1D_PAUSE_DIM",M),
+("ROGUESQ_G1D_RECT_WRAP","src/rsp/dpc_bridge.cpp","ROGUESQ_G1D_RECT_WRAP",M),
+("ROGUESQ_G1E_CDIAG","src/rsp/dpc_bridge.cpp","s_cdiag_tally",M),
+("ROGUESQ_G1E_TRIM","src/main/upstream_compat.cpp","s7446_log",M),
+("ROGUESQ_G1E_TRIM","src/rsp/dpc_bridge.cpp","s_cdiag_tally",M),
+("ROGUESQ_G1E_TRIM","tools/apply_s5835_sphere_probe.py","rs7441_on",M),
+("ROGUESQ_G1E_TRIM","tools/apply_s5908_callers.py","static int on = -1",M),
+("ROGUESQ_G1E_TRIM","tools/apply_s7445_burst_latch.py","on_ = -1",M),
+("ROGUESQ_G5H_BAND","src/rsp/dpc_bridge.cpp","s_bd = [",S),
+("ROGUESQ_HUDPTRWATCH","tools/apply_s6595_hudptrread.py","const char* e = getenv",G),
+("ROGUESQ_LOG_ALL","src/main/main.cpp","const char* all = std::getenv",M),
+("ROGUESQ_LOG_ALL","src/main/upstream_compat.cpp","const char* all = std::getenv",M),
+("ROGUESQ_LOG_ALL","src/rsp/dpc_bridge.cpp","const char* all = std::getenv",M),
+("ROGUESQ_LOG_ALL","tools/apply_s4159_m5_preclear_span_census.py","ROGUESQ_LOG_M5_PRECLEAR_SPAN",M),
+("ROGUESQ_LOG_F5_STORE_SHADOW","src/rsp/dpc_bridge.cpp","const char* e = std::getenv",M),
+("ROGUESQ_LOG_HITS","tools/apply_s5834_seg_dump.py","e[0] == '1')) return;",G),
+("ROGUESQ_LOG_HITS","tools/apply_s5835_sphere_probe.py","rs7441_on",M),
+("ROGUESQ_LOG_HITS","tools/apply_s5908_callers.py","static int on = -1",M),
+("ROGUESQ_LOG_M5_EXACT_ROUTE","src/main/main.cpp","const char* own = std::getenv",M),
+("ROGUESQ_LOG_M5_ROUTE_STATE","src/main/upstream_compat.cpp","const char* own = std::getenv",M),
+("ROGUESQ_LOG_S4299","tools/apply_s4569_nodecopy_watch.py","rs64_s4299_store_watch",R),
+("ROGUESQ_LOG_S4526","tools/apply_s4527_holder_poll.py","ROGUESQ_LOG_S4526",R),
+("ROGUESQ_LOG_SLOT_DISPATCH","tools/apply_s6942_envcache.py","ROGUESQ_LOG_SLOT_DISPATCH",R),
+("ROGUESQ_M5_B40_VALUE","src/main/upstream_compat.cpp","const char* b40 = std::getenv",S),
+("ROGUESQ_M5_B40_VALUE","tools/fixup_live_replay.py","getenv(\"ROGUESQ_M5_B40_VALUE\")[0]",R),
+("ROGUESQ_M5_C88_VALUE","src/main/upstream_compat.cpp","const char* c88 = std::getenv",S),
+("ROGUESQ_PANEL_TEST_WINDOW","src/main/main.cpp","static const char* e = std::getenv",G),
+("ROGUESQ_PRESENT_QOS","src/main/main.cpp","ROGUESQ_UPLOAD_QOS",S),
+("ROGUESQ_RUMBLE_TEST","src/main/main.cpp","const char* e = getenv",G),
+("ROGUESQ_S7064","src/main/upstream_compat.cpp","fopen(getenv(\"ROGUESQ_S7064\")",S),
+("ROGUESQ_S7103_CAMFIX","tools/apply_s7111_camfixk.py","ROGUESQ_S7103_CAMFIX",R),
+("ROGUESQ_S7106_RSPTRI","src/rsp/s7106_rsptri.cpp","const char* e = getenv",S),
+("ROGUESQ_S7317_ALLOCMAP","src/rsp/s7324_rcp_spill.cpp","getenv(\"ROGUESQ_S7317_ALLOCMAP\") ?",S),
+("ROGUESQ_S7317_ALLOCMAP","src/rsp/s7331_reset_writer.cpp","getenv(\"ROGUESQ_S7317_ALLOCMAP\") ?",S),
+("ROGUESQ_S7324_RCPREF","src/rsp/s7331_reset_writer.cpp","getenv(\"ROGUESQ_S7324_RCPREF\") ?",S),
+("ROGUESQ_S7523_SLOWRDP","src/rsp/s7523_slow_rdp.cpp","const char* e = getenv",S),
+("ROGUESQ_SLOT_DISPATCH_PHASE_MIN","tools/apply_s6942_envcache.py","ROGUESQ_SLOT_DISPATCH_PHASE_MIN",R),
+("ROGUESQ_SPIN_YIELD","tools/apply_s4199_m5_spin_yield_default.py","ROGUESQ_SPIN_YIELD",R),
+("ROGUESQ_TBLNULL_LOG","tools/apply_s6037_ddclamp.py","dl = getenv(\"ROGUESQ_TBLNULL_LOG\") ? 1 : 0",G),
+("ROGUESQ_TELE_BOLT","tools/apply_s5835_sphere_probe.py","rs7441_on",M),
+("ROGUESQ_UPLOAD_QOS","src/main/main.cpp","ROGUESQ_UPLOAD_QOS",S),
+("ROGUESQ_WL_QOS","src/main/main.cpp","ROGUESQ_UPLOAD_QOS",S),
+]
+
+
+def classify_unmodelled(name, site, texts=None):
+    rel, ln = site.rsplit(":", 1)
+    lines = (texts or {}).get(rel) or open(os.path.join(ROOT, rel), errors="replace").read().split("\n")
+    line = lines[int(ln) - 1] if 0 < int(ln) <= len(lines) else ""
+    for i, (n, r, frag, cls) in enumerate(UNMODELLED_T):
+        if n == name and r == rel and frag in line:
+            return i, cls
+    return None, None
+
+
 # ---------------------------------------------------------------- tokenizer
 TOK = re.compile(r"""
  (?P<ws>\s+|//[^\n]*|/\*.*?\*/)
@@ -1018,6 +1112,16 @@ def main():
         print(f"control LOG_ALL all-vs-own host SPLIT={bool(g1)} all-vs-all={bool(g2)} host-vs-generated={bool(g3)} "
               f"want True/False/False {'PASS' if g else 'FAIL'}")
         ok &= g
+        # s7729: a planted reader the parser cannot decide must come back UNCLASSIFIED; a classed real site must not.
+        pl = ['const char* e = getenv("ROGUESQ_PLANT");', 'use(e);']
+        rp = model_site(pl, 1, "ROGUESQ_PLANT", False)
+        _, cp = classify_unmodelled("ROGUESQ_PLANT", "src/plant_u.cpp:1", {"src/plant_u.cpp": pl})
+        _, cr = classify_unmodelled("ROGUESQ_S7064", "src/main/upstream_compat.cpp:1",
+                                    {"src/main/upstream_compat.cpp": ['x->fo = fopen(getenv("ROGUESQ_S7064"), "w");']})
+        g = rp[0] is None and cp is None and cr == "STRING"
+        print(f"control planted undecidable site modelled={rp[0] is not None} class={cp} real S7064 class={cr} "
+              f"want False/None/STRING {'PASS' if g else 'FAIL'}")
+        ok &= g
         if not ok:
             return 2
     else:
@@ -1027,12 +1131,26 @@ def main():
     print(f"s7714: {len(models)} names with >=2 reader sites, {n_mod} sites modelled, {n_un} unmodelled, "
           f"{len(bad)} unreviewed SPLIT, {len(bad_all)} LOG_ALL SPLIT (host readers)")
     bad = bad + bad_all
-    if "--unmodelled" in sys.argv:
-        for name in sorted(models):
-            for site, sig, why in models[name]:
-                if not sig:
-                    print(f"  unmodelled {name} {site}: {why}")
-    return 1 if bad else 0
+    uncls, used, by = [], set(), {}
+    for name in sorted(models):
+        for site, sig, why in models[name]:
+            if sig:
+                continue
+            i, cls = classify_unmodelled(name, site)
+            if cls is None:
+                uncls.append((name, site, why))
+            else:
+                used.add(i); by[cls] = by.get(cls, 0) + 1
+            if "--unmodelled" in sys.argv:
+                print(f"  unmodelled {name} {site}: {why} -> {cls or 'UNCLASSIFIED'}")
+    stale = [UNMODELLED_T[i][:3] for i in range(len(UNMODELLED_T)) if i not in used]
+    print(f"s7729: unmodelled {n_un} = " + " ".join(f"{k}={by.get(k, 0)}" for k in UNMODELLED_CLASS)
+          + f" UNCLASSIFIED={len(uncls)}; stale table entries {len(stale)}")
+    for name, site, why in uncls:
+        print(f"  UNCLASSIFIED {name} {site}: {why} (read it; model it or add it to UNMODELLED_T)")
+    for st in stale:
+        print(f"  stale UNMODELLED_T entry {st} (site gone or line changed)")
+    return 1 if bad or uncls else 0
 
 
 if __name__ == "__main__":

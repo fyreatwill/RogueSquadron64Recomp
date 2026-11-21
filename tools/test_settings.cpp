@@ -14,6 +14,8 @@ int main() {
         {"DYLD_INSERT_LIBRARIES=/x.dylib", -1, "", ""}, {"PATH=/tmp", -1, "", ""}, {"ROGUESQ_=1", -1, "", ""},
         {"ROGUESQ_fps60=1", -1, "", ""}, {"ROGUESQ_SETTINGS=/x", -1, "", ""}, {"ROGUESQ_SETTINGS_APPLIED=1", -1, "", ""},
         {"ROGUESQ_FPS60", -1, "", ""},
+        {"ROGUESQ_ASPECT=", 3, "ROGUESQ_ASPECT", ""}, {"ROGUESQ_OSMEM_MB = \"\"", 3, "ROGUESQ_OSMEM_MB", ""}, {"preset=", 3, "preset", ""},  // s7729: empty = unset
+        {"DYLD_INSERT_LIBRARIES=", -1, "", ""},
     };
     int fail = 0;
     for (const auto& c : t) {

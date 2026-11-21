@@ -68,7 +68,7 @@ std::string exe_path(const char* argv0) {
 // Returns normally when nothing needs applying (or on any failure); otherwise does not return (execv).
 // Exposed for tools/test_settings.cpp: rs64_settings_plan() fills `out` without touching the environment.
 extern "C" int rs64_settings_parse_line(const char* line, char* name, size_t name_sz, char* value, size_t value_sz) {
-    // 0 = skip (blank/comment), 1 = ROGUESQ var, 2 = preset, -1 = rejected
+    // 0 = skip (blank/comment), 1 = ROGUESQ var, 2 = preset, 3 = empty value (left unset, s7729), -1 = rejected
     const std::string l = trim(line ? line : "");
     if (l.empty() || l[0] == '#') return 0;
     const size_t eq = l.find('=');
@@ -80,6 +80,10 @@ extern "C" int rs64_settings_parse_line(const char* line, char* name, size_t nam
     const int kind = (n == "preset" || n == "ROGUESQ_PRESET") ? 2 : valid_name(n) ? 1 : -1;
     if (kind < 0 || n.size() + 1 > name_sz || v.size() + 1 > value_sz) return -1;
     std::memcpy(name, n.c_str(), n.size() + 1); std::memcpy(value, v.c_str(), v.size() + 1);
+    // s7729: `NAME=` with no value is 3 = left unset. Applied as "", it read as ON at presence readers and OFF at `e && *e`
+    // readers of the same name (truth census with "" as a value: ROGUESQ_ASPECT main.cpp:14498 vs fixup_factor5_ucode.py:228,
+    // ROGUESQ_OSMEM_MB main.cpp:14381 vs 14860). Unset is the one reading every reader agrees on.
+    if (v.empty()) return 3;
     return kind;
 }
 
@@ -151,6 +155,7 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
                 const int k = rs64_settings_parse_line(line.c_str(), n, sizeof n, v, sizeof v);
                 if (k == 1) { char r[1300]; from_file.emplace_back(n, rs64_settings_resolve_value(file.c_str(), n, v, r, sizeof r) == 0 ? r : v); }
                 else if (k == 2) { if (preset.empty()) preset = v; }
+                else if (k == 3) std::fprintf(stderr, "[s7729] %s:%d %s= has no value: left unset (empty reads differ between readers)\n", file.c_str(), ln, n);
                 else if (k < 0) { rejected++; std::fprintf(stderr, "[s7663] %s:%d ignored (only ROGUESQ_NAME=value or preset=name): %s\n", file.c_str(), ln, line.c_str()); }
             }
         } else if (!file_arg.empty() || (se && *se && !files_off)) {
