@@ -206726,3 +206726,20 @@ HYPOTHESIS-ID: g6c-coverage-l10-l12
 - Next: anchor the dump window on an add burst (e.g. STANDINS_DUMP=a<min_adds>:<n>, the first second whose added >= min), so
   L10/L12 get a real ON/OFF pair. Then the scorer needs a motion-robust measure (the ON-only test must use crops where the label-0
   neighbours on both sides agree).
+
+## Session 7745 (2026-11-20) — G6c coverage: add-anchored dump window lands; L10 shows an ON-only object (flicker 6.2x control), L12 stand-ins added but not visible (below control)
+Change: src/main/rs64_standins.cpp `ROGUESQ_STANDINS_DUMP=a<min_adds>:<gap>:<n>` (new 'a' prefix): window 1 opens the moment the
+running per-second add count reaches min_adds (`[standins-dump] add anchor: added=N >= M at t=`), window 2 (forced off) <gap> s
+later. Old `a:b:n` and `c` (cut-anchored) forms unchanged. Run: scratch/s7745_standins_cov.sh (s7744 recipe, STANDINS=frame LOG=1,
+dd4 16:9 FPS60 HOLD 150, in-session, host idle 9.5 h): L10 a500:6:90, L12 a150:6:90.
+- Anchor fired on both: L10 at t=21.61 s (added=521, inside the 22-24 s burst s7744's fixed windows missed), L12 at t=9.96 s.
+- L10 (u104): win1 flicker 2353.9 px/triplet, labels alternate 89/89; win2 forced-off control 382.7 (6.2x). Paint control PASS
+  (2433 >= 1056). By eye (n5751/5752/5753): a dark angular object top-left over the canyon wall is present only in the ON frame
+  n5752 and absent from both OFF neighbours -> stand-in drawn on screen on a 3rd level (H-gain). Whether it is placed right (a far
+  building vs. a misplaced slab) is the owner's look. Sheet rows 2-3 are camera motion (sheet control FAIL 122 under fast motion).
+- L12 (u124): win1 161.9 vs win2 control 497.0 (below control), paint control PASS (3168); sheet crops are wingman motion only.
+  Stand-ins add at ~150-200/s but nothing visible in that window -> H-not-visible for L12 at t~10 s (null with a same-run passing
+  control; one window only).
+- Counters: L10 spawn=33 early=6 early_max 50.1 s; L12 spawn=29 early=4 early_max 57.8 s. Both alive, 0 crash.
+Rules out: "L10 stand-ins never reach the frame" (s7744's open question). Open: L12 visibility (later window, a larger min_adds
+anchor ~600 at its 50+ s peak).

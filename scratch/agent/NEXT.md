@@ -1,14 +1,12 @@
-# NEXT (s7745)
+# NEXT (s7746)
 HYPOTHESIS-ID: g6c-coverage-l10-l12
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, then any owner report, then new SOAK-RESULTS lines.
-CURRENT-TRUTH is ~60 KB: if `wc -c` > 60000 this iteration is MAINTENANCE (ITERATION Step 0), so do that instead of the below.
+CURRENT-TRUTH is 59.9 KB. If `wc -c` > 60000 this iteration is MAINTENANCE (ITERATION Step 0); it needs to shrink toward 35 KB anyway.
 
-Unit (if not maintenance): add-anchored stand-in dump window so L10/L12 get a real ON/OFF frame pair (s7744: fixed 10/16/25/31 s
-windows missed L10's add bursts at 22-24 s and 29-32 s; L12 crops were scene motion).
-- src/main/rs64_standins.cpp ~line 793 parses ROGUESQ_STANDINS_DUMP (a:b:n, 'c' prefix = cut-anchored). Add an 'a' prefix:
-  `a<min_adds>:<gap>:<n>` opens window 1 at the first second whose [standins-s] added >= min_adds, and window 2 (forced off) <gap> s later.
-  The fbdump side reads the window via upstream_compat.cpp (grep STANDINS_DUMP). Rebuild, then run the gate sweep (--jobs 2).
-- Rerun scratch/s7744b_standins_cov.sh with DUMP=a500:6:90 on L10 dd4 + L12 dd4. Score with s7624_flicker_score + s7628 sheet.
-  Also look at the crops yourself: an ON-only object, not motion.
-Outcomes: L10 crops show far objects ON-only -> H-gain proven on a 3rd level (add the rows to the owner sheet); flicker ~ control
-even inside an add burst -> stand-ins added but not visible (investigate size/depth: why-k far=35 units?); misplaced object -> H-defect.
+Unit (if not maintenance): L12 visibility in a later window. s7745: L10 has an ON-only object on screen (H-gain); L12 anchored at
+t=9.96 s (a150) read 162 vs forced-off ctl 497, so the stand-ins were added but not visible.
+- Rerun scratch/s7745_standins_cov.sh with only the u124 arm, DUMP=a600:6:90 (L12 adds peak ~585-677/s near 50+ s, see
+  scratch/s7744b_soak/log_u124.txt), HOLD 150. Same scoring (s7624 flicker + paint control, s7628 sheet). Look at the triplets yourself.
+Outcomes: win1 well above ctl with an ON-only object -> H-gain on L12 too (add the L10 n5752 + L12 rows to the owner sheet, ask
+the owner); win1 <= ctl again -> L12 stand-ins are not visible: dump why-k/vt reasons (ROGUESQ_STANDINS_LOG [standins-why]) for the
+added items and check depth/size (far=35-unit question from s7744).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7743 (2026-11-20).
+Compact operational handoff, as of Session 7745 (2026-11-20).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -153,7 +153,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   Stand-ins never run inside intro cutscenes (H-absent, 3/3 levels). At 21:9 FB_DUMP needs ROGUESQ_ALLOW_WILD_W=1 (tools arm it).
 - **Post-G6c re-holds (s7692-s7695): clean.** 300 s STANDINS=1 dd4 owner recipe L1/L4/L5/L10/L12/L15 6/6; G5c 900 s freeze gate L4/L12
   (0 gaps >= 250 ms after t=95 s, SIGSTOP control caught); G2b crawl audio fix 2 vs ctl 1037; G5d logo share unchanged.
-- **s7744 G6c coverage L10/L12:** stand-ins add on both (counters; L12 6 truly early, max 57.9 s). No frame proof yet: fixed dump windows miss L10 add bursts, and L12 crops are scene motion. s7691 early_items was spawn_lines (bug); true 21/34, 38/74, PARITY=0 20/74 (tools/s7744_early_count.py).
+- **s7744/s7745 G6c coverage L10/L12:** stand-ins add on both. s7745 `STANDINS_DUMP=a<adds>:<gap>:<n>` (add-anchored windows): L10 ON-only object on screen (flicker 2354 vs forced-off ctl 383, paint ctl PASS; n5752 by eye) = H-gain on a 3rd level, placement for the owner; L12 at t~10 s 162 vs ctl 497 = added but not visible (single window). s7691 early_items fix stands (tools/s7744_early_count.py).
 - **G6c stand-ins (ROGUESQ_STANDINS=1, opt-in, dd>1 only): DONE, owner's look.** Design docs/G6C-STANDINS-PLAN.md; code
   src/main/rs64_standins.cpp + tools/apply_s7623_standins.py and follow-ups (RS64_REPLAY). Visible early at true depth on 2 levels,
   19/19 levels 300 s clean (s7629/s7630), sheet docs/owner_sheet_s7691_standins_on_off.jpg. Default-on sub-fixes inside STANDINS (=0 old):

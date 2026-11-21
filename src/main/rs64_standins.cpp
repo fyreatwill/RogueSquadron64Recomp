@@ -788,12 +788,24 @@ extern "C" void rs64_standins_submit(uint8_t* rdram, recomp_context* ctx) {
     static double s_first = -1.0;
     if (s_first < 0) s_first = now;
     static int s_dwin = 0;  // 0 before window 1, 1 window 1 (toggling), 2 window 2 (forced off), 3 done
-    static const struct DumpCfg { double a, b; int n; bool cut; } s_dc = [] {
-        DumpCfg c{ -1, -1, 0, false };
-        if (const char* e = std::getenv("ROGUESQ_STANDINS_DUMP")) { if (*e == 'c') { c.cut = true; ++e; } std::sscanf(e, "%lf:%lf:%d", &c.a, &c.b, &c.n); }
+    // s7745: ROGUESQ_STANDINS_DUMP=a<min_adds>:<gap>:<n> anchors on the first moment the running per-second add count (s_t.added,
+    // LOG-flushed each second) reaches min_adds: window 1 opens there (a=0), window 2 (forced off) <gap> s later. Fixed windows missed
+    // L10's 2-3 s add bursts (s7744).
+    static const struct DumpCfg { double a, b; int n; bool cut; int adds; } s_dc = [] {
+        DumpCfg c{ -1, -1, 0, false, -1 };
+        if (const char* e = std::getenv("ROGUESQ_STANDINS_DUMP")) {
+            if (*e == 'c') { c.cut = true; ++e; }
+            if (*e == 'a') { std::sscanf(e + 1, "%d:%lf:%d", &c.adds, &c.b, &c.n); c.a = 0; }
+            else std::sscanf(e, "%lf:%lf:%d", &c.a, &c.b, &c.n);
+        }
         return c;
     }();
-    const double d_base = s_dc.cut ? s_cut_t0 : s_first;  // s7696: < 0 until the first cutscene edge when anchored on it
+    static double s_add_t0 = -1.0;
+    if (s_dc.adds > 0 && s_add_t0 < 0 && s_t.added >= (uint32_t)s_dc.adds) {
+        s_add_t0 = now;
+        std::fprintf(stderr, "[standins-dump] add anchor: added=%u >= %d at t=%.2f\n", s_t.added, s_dc.adds, now - s_first);
+    }
+    const double d_base = s_dc.adds > 0 ? s_add_t0 : s_dc.cut ? s_cut_t0 : s_first;  // < 0 until the anchor event when anchored on one
     if (s_dc.n > 0 && d_base >= 0) {
         if (s_dwin == 0 && now - d_base >= s_dc.a) { s_dwin = 1; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 1 (toggle) at %.1f s, %d swaps\n", now - d_base, s_dc.n); }
         else if (s_dwin == 1 && rs64_standins_dump_left <= 0 && now - d_base >= s_dc.b) { s_dwin = 2; rs64_standins_dump_left = s_dc.n; std::fprintf(stderr, "[standins-dump] window 2 (forced off) at %.1f s, %d swaps\n", now - d_base, s_dc.n); }
