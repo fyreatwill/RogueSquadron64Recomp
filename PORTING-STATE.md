@@ -206398,3 +206398,8 @@ Limitation found (next unit): the census models SCRIPT text, never the compiled 
 apply_s4562 texts are dead because a later step rewrote the live reader in funcs_24.c:10823 to `if (!e) e = "4"; /* s4786
 default */ s_hold = (e && (e[0]=='2'||'3'||'4'))`, so unset ARMS the hold, the opposite of the removed review's "=0 off
 everywhere" claim for unset. Names whose only votes were dead text now have no modelled generated-code reader at all.
+
+Discrimination: the pass **selects H-dead and refutes H-live** (76 dead texts over 34 names, not one; 3 REVIEWED verdicts change
+with the filter, unchanged without it). Next discriminator: model every `getenv("ROGUESQ_*")` in the compiled tree itself and
+compare its signature with the modelled script/host signatures of the same name: H-covered (all match) vs H-hidden (a later
+rewrite changed a reading no modelled site shows, as S4562_PAUSE's s4786 default does). Planted control in scratch/agent/NEXT.md.
