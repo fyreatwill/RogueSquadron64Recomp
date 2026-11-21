@@ -1,7 +1,9 @@
 """Post-process RSPRecomp output for the Factor 5 graphics ucode.
 
-Fixups are idempotent. Pass either the main ucode file or the boot file —
-fixups self-gate by detecting which file is being processed.
+Fixups are idempotent. Pass the main ucode, factor5_ucode_b or the boot file (anything else exits 2, s7742) —
+fixups self-gate by detecting which file is being processed. s7742: idempotent on all three live files and a
+fresh-regen tool for ucode_b and boot (pristine -> live byte-for-byte); the main file still needs
+tools/ucode_regen.sh (s7091). Gate: tools/s7742_fixup_idem_gate.py --controls.
 
 1. Replace `goto L_XXXX;` referring to undefined labels with a clean exit.
    RSPRecomp emits these for relative branches whose targets fall outside
@@ -55,6 +57,13 @@ original = text
 
 is_main_ucode = "factor5_ucode(" in text and "factor5_boot(" not in text
 is_shade_ucode = is_main_ucode or "factor5_ucode_ovl20(" in text
+
+# s7742: CMake runs this on exactly three files (main, ucode_b, boot). Overlay files are not compiled into anything and some
+# blocks below are not gated on file kind (fixup 1's goto rewrite, the M4 probe migration), so running it on an overlay
+# rewrites retail control flow there (ovl24: goto L_0000 -> ImemOverrun). Refuse anything else, without writing.
+if not any(("RspExitReason %s(" % fn) in text for fn in ("factor5_ucode", "factor5_ucode_b", "factor5_boot")):
+    print(f"fixup_factor5_ucode: {path} is not factor5_ucode/factor5_ucode_b/factor5_boot; refusing (s7742).", file=sys.stderr)
+    sys.exit(2)
 
 # ---------------------------------------------------------------------------
 # Fixup 1a: L_0000 → self-restart (main ucode only). Must run before the
@@ -3697,7 +3706,7 @@ if is_image_ucode and IMAGE_BREAK_MARKER not in text:
 # DL walk continues. Stopgap until the RSPRecomp splice (UNBLOCK.md) lands;
 # ROGUESQ_OVL2C_DROP=0 disables it.
 OVL2C_DROP_MARKER = "/* fixup: ovl2cdrop */"
-if OVL2C_DROP_MARKER not in text and OVL2C_MARKER not in text:  # s4805: drop is folded into the 6r mode switch
+if is_main_ucode and OVL2C_DROP_MARKER not in text and OVL2C_MARKER not in text:  # s7742: main-only (boot/ovl files have no 0x1DB0 switch); s4805: drop is folded into the 6r mode switch
     _a = ("            goto L_1DB0;\n        case 0x1504: goto L_1504;")
     _n = text.count(_a)
     if _n != 1:

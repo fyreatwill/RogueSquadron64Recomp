@@ -206642,3 +206642,34 @@ Discrimination: this selects H-drift and refutes H-zero for the pre-s7741 snapsh
 snapshotted; refutes the hand-edit class: all 4 rows carry the fixup marker). After the refresh H-zero holds (12/12, gate GREEN).
 Next discriminator (NEXT.md): fixup_factor5_ucode.py idempotence on the regenerated tree, H-same (0 diff) vs H-nonidempotent
 (double-inserted blocks), with a pre-fixup planted file as the positive control.
+
+## Session 7742 (2026-11-20) — fixup_factor5_ucode.py idempotence: main H-same, but ucode_b/boot exited 1 unseen at every configure (fixup 24 unscoped); scoped, gated
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=27 new=0; no new owner report; no new SOAK-RESULTS lines. CURRENT-TRUTH
+58965 B (< 60000, no maintenance). Took NEXT's bounded candidate.
+
+Hypotheses: H-same (fixup on the live tree is idempotent, 0 diff) vs H-nonidempotent (it re-applies a block). Measured on scratch
+copies (scratch/s7742) of all 12 live files and all 12 fresh RSPRecomp files:
+- main factor5_ucode_recompiled.c: live -> rc 0, 0 diff (**H-same** for main). Positive control: pristine + the pre-s7741 patch
+  (= live without the s7522 hooks) -> fixup -> byte-identical to live (the fixup writes and re-applies exactly). Pristine main ->
+  rc 1 "FIXUP 6d ANCHOR FAILED", nothing written (the known s7091 limit, ucode_regen.sh owns it).
+- **every other file -> rc 1 "FIXUP 24 ANCHOR FAILED (0)", nothing written**, incl. factor5_ucode_b and factor5_boot, which
+  CMakeLists.txt feeds to the fixup at every configure with RESULT_VARIABLE never checked. ORIGIN: fixup 24 (f0c1112a0, s4751,
+  2026-10-13) anchors on the main file's 0x1DB0 dispatch switch and was not gated on is_main_ucode, so since then no fixup block
+  for ucode_b/boot could land through CMake, silently. No live damage: the live ucode_b/boot already carry their fixups.
+Fix: fixup 24 gated on is_main_ucode. Re-measured: ucode_b and boot live -> rc 0, 0 diff; pristine ucode_b and pristine boot ->
+fixup -> byte-identical to live (so the fixup IS a fresh-regen tool for 2 of the 4 patched files; docstring corrected). With the
+scope fixed, overlay files got real edits (ovl24 `goto L_0000` -> `return ImemOverrun`, ovl20 M4 probe signature migration,
+`#include <cstdio>` on the rest) because fixup 1 and fixup 19 are not file-scoped; overlays are not compiled into anything (no
+reference in CMakeLists.txt or src/), so the fixup now refuses any file that is not factor5_ucode/_b/_boot (exit 2, no write).
+CMakeLists.txt: message(WARNING) when any of the three fixup calls exits nonzero. Reconfigure: no fixup warning, live boot md5
+unchanged (the warning branch itself was not exercised in a configure: single-source, by reading).
+Side note (dead code): live ovl20 declares rs64_m4_accum_probe with 4 args, src/rsp/dpc_bridge.cpp:550 defines 5; harmless only
+because ovl20 is not linked.
+Gate: new `tools/s7742_fixup_idem_gate.py [--controls]` on temp copies: A live idempotence in CMake order (3/3 rc 0, tree 0 diff),
+B pristine ucode_b + boot -> == live, C 9/9 overlays refused unchanged; controls: strip (s7522 hooks removed from live main ->
+restored == live) and red (fixup copy with the fixup-24 scope removed -> live boot rc 1 FIXUP 24) both caught -> CONTROL PASS,
+VERDICT GREEN. Wired into tools/s7651_gate_sweep.py; sweep `--only s774[12]` GREEN 2; the fixup-reading gates
+(s7714|s7338|s7535|s7093|s7465|s7425|s7424) GREEN 8. Live build/factor5_ucode unchanged, so no ucode_regen snapshot needed.
+Discrimination: H-same selected for the main file (and refuted H-nonidempotent there by a writing control); for the other two
+CMake targets the question was moot before the fix (they never ran past fixup 24) and H-same holds after it.

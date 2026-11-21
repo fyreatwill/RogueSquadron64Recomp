@@ -294,6 +294,9 @@ if (Python3_Interpreter_FOUND AND EXISTS ${FACTOR5_UCODE_C})
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fixup_factor5_ucode.py ${FACTOR5_UCODE_C}
         RESULT_VARIABLE FACTOR5_FIXUP_RESULT
     )
+    if (NOT FACTOR5_FIXUP_RESULT EQUAL 0)  # s7742: these exited 1 unseen since s4751 (fixup 24 was not scoped to the main file)
+        message(WARNING "tools/fixup_factor5_ucode.py exited ${FACTOR5_FIXUP_RESULT} (FACTOR5_FIXUP_RESULT)")
+    endif()
 endif()
 # Same fixup, applied to factor5_boot_recompiled.c. The boot ucode hands off
 # to the main ucode via `jr $7=0x1080`, which RSPRecomp can't model — without
@@ -305,12 +308,18 @@ if (Python3_Interpreter_FOUND AND EXISTS ${FACTOR5_UCODE_B_C})
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fixup_factor5_ucode.py ${FACTOR5_UCODE_B_C}
         RESULT_VARIABLE FACTOR5_B_FIXUP_RESULT
     )
+    if (NOT FACTOR5_B_FIXUP_RESULT EQUAL 0)  # s7742: these exited 1 unseen since s4751 (fixup 24 was not scoped to the main file)
+        message(WARNING "tools/fixup_factor5_ucode.py exited ${FACTOR5_B_FIXUP_RESULT} (FACTOR5_B_FIXUP_RESULT)")
+    endif()
 endif()
 if (Python3_Interpreter_FOUND AND EXISTS ${FACTOR5_BOOT_C})
     execute_process(
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/fixup_factor5_ucode.py ${FACTOR5_BOOT_C}
         RESULT_VARIABLE FACTOR5_BOOT_FIXUP_RESULT
     )
+    if (NOT FACTOR5_BOOT_FIXUP_RESULT EQUAL 0)  # s7742: these exited 1 unseen since s4751 (fixup 24 was not scoped to the main file)
+        message(WARNING "tools/fixup_factor5_ucode.py exited ${FACTOR5_BOOT_FIXUP_RESULT} (FACTOR5_BOOT_FIXUP_RESULT)")
+    endif()
 endif()
 if (MSVC)
     set(RS64_UCODE_FLAGS "-msse4.1;/FI${CMAKE_SOURCE_DIR}/include/rsp_dpc_macros.h")
