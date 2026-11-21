@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""s7753 end-to-end ucode OUTPUT regression gate.
+
+The s7741/s7742 ucode gates compare generated C text. This one compares what the ucode EMITS: each retained s7751 gfx-task
+snapshot (ROGUESQ_S7751_SNAP .bin: header + DMEM + RDRAM + the live RDP stream tail) is replayed offline through the live
+build's factor5_ucode_lean.cpp.o (tools/s7752_port_task/harness, rebuilt when older than that object) at the live dd>1
+policy (ROGUESQ_UCODE_CAP=1048576, ROGUESQ_G5B_TG_FIX=1), and the output must equal the snap's live tail byte for byte.
+s7752 measured 3/3 tasks exact, so any difference means the emitted RDP stream changed: either intended (re-capture with
+tools/s7753_capture_snaps.zsh and say so in the ledger) or a regression.
+
+--controls (iron rule 1; a gate that cannot see these is HOLLOW):
+  tg0   ROGUESQ_G5B_TG_FIX=0 must DIFFER from the live tail and have the cxd4 (retail-ucode) length pinned in s7752
+  cap   ROGUESQ_UCODE_CAP=65536 must give a strict prefix of the tail with cap_fires=1
+  flip  the comparator must call a one-byte-mutated copy of the replay output a mismatch
+Inputs absent (fresh clone: scratch/ is gitignored) -> prints "NEEDS-INPUT ..." and exits 4.
+usage: s7753_rdp_output_gate.py [--controls]   exit 0 GREEN, 1 RED, 3 control FAIL, 4 NEEDS-INPUT"""
+import os, re, struct, subprocess, sys, tempfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+H = os.path.join(ROOT, "tools/s7752_port_task/harness")
+OBJ = os.path.join(ROOT, "build/CMakeFiles/RogueSquadron64Recomp.dir/src/rsp/factor5_ucode_lean.cpp.o")
+# snap -> cxd4 / retail-ucode (TG_FIX=0) stream length, PORTING-STATE s7752
+SNAPS = {"scratch/s7751/snap_f0/k0_s4054.bin": 1716608, "scratch/s7751/snap_d/k0_s4056.bin": 1718528}
+
+
+def tail(path):
+    b = open(path, "rb").read()
+    if struct.unpack_from("<I", b, 0)[0] != 0x31353753:
+        raise SystemExit(f"RED bad snap header {path}")
+    off = 20 + 4096 + struct.unpack_from("<I", b, 16)[0]
+    n = struct.unpack_from("<I", b, off)[0]
+    return b[off + 4: off + 4 + n]
+
+
+def replay(snap, tg, cap):
+    with tempfile.NamedTemporaryFile(suffix=".rdp", delete=False) as t:
+        out = t.name
+    env = dict(os.environ, ROGUESQ_UCODE_CAP=str(cap), ROGUESQ_G5B_TG_FIX=str(tg))
+    env.pop("S7752_G1E_FAST", None)
+    p = subprocess.run([H, snap, out], env=env, capture_output=True, text=True, timeout=300)
+    data = open(out, "rb").read() if p.returncode == 0 else b""
+    os.unlink(out)
+    if p.returncode != 0:
+        raise SystemExit(f"RED harness rc={p.returncode}: {p.stderr.strip()[-300:]}")
+    m = re.search(r"cap_fires=(\d+)", p.stderr)
+    return data, int(m.group(1)) if m else -1
+
+
+def first_diff(a, b):
+    n = min(len(a), len(b))
+    return next((i for i in range(n) if a[i] != b[i]), n)
+
+
+def main():
+    ctl = "--controls" in sys.argv[1:]
+    snaps = [s for s in SNAPS if os.path.exists(os.path.join(ROOT, s))]
+    if len(snaps) != len(SNAPS):
+        print("NEEDS-INPUT s7751 snaps absent (capture with tools/s7753_capture_snaps.zsh, ROGUESQ_S7751_SNAP)")
+        return 4
+    if not os.path.exists(OBJ):
+        print("NEEDS-INPUT live build object factor5_ucode_lean.cpp.o absent (build the game first)")
+        return 4
+    if not os.path.exists(H) or os.path.getmtime(H) < os.path.getmtime(OBJ):
+        r = subprocess.run(["zsh", os.path.join(ROOT, "tools/s7752_port_task/build.sh")], capture_output=True, text=True)
+        if r.returncode != 0:
+            print(f"RED harness build failed: {r.stderr.strip()[-300:]}")
+            return 1
+        print("harness rebuilt against the live factor5_ucode_lean.cpp.o")
+    red = 0; cfail = 0
+    for s in snaps:
+        sp = os.path.join(ROOT, s); live = tail(sp)
+        got, fires = replay(sp, 1, 1048576)
+        eq = got == live
+        print(f"{os.path.basename(s)} live={len(live)} replay={len(got)} cap_fires={fires} "
+              f"{'EQUAL' if eq else 'DIFF@%d' % first_diff(got, live)}")
+        red += not eq
+        if not ctl:
+            continue
+        g0, _ = replay(sp, 0, 1048576)
+        ok0 = g0 != live and len(g0) == SNAPS[s]
+        print(f"  ctl tg0: len={len(g0)} want={SNAPS[s]} differs={g0 != live} -> {'PASS' if ok0 else 'FAIL'}")
+        gc, fc = replay(sp, 1, 65536)
+        okc = 0 < len(gc) < len(live) and live.startswith(gc) and fc == 1
+        print(f"  ctl cap: len={len(gc)} prefix={live.startswith(gc)} cap_fires={fc} -> {'PASS' if okc else 'FAIL'}")
+        mut = bytearray(got); mut[len(mut) // 2] ^= 0x01
+        okf = bytes(mut) != live
+        print(f"  ctl flip: mutated replay read as {'DIFF' if okf else 'EQUAL'} -> {'PASS' if okf else 'FAIL'}")
+        cfail += not (ok0 and okc and okf)
+    if ctl:
+        print(f"CONTROL {'PASS' if cfail == 0 else 'FAIL'} snaps={len(snaps)}")
+        if cfail:
+            return 3
+    if red:
+        print(f"VERDICT RED: {red}/{len(snaps)} tasks' emitted RDP stream differs from the live capture")
+        return 1
+    print(f"VERDICT GREEN: {len(snaps)}/{len(snaps)} tasks replay == live RDP stream byte-for-byte")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

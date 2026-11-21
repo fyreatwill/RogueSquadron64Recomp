@@ -35,6 +35,7 @@ NEEDS_INPUT = {
     "s7316_data_bound_census.py": (re.compile(r"ram_dumps=0\s*$"), "needs --ram rdram dumps (ROGUESQ_RDRAM_DUMP_DIR): G values unread"),
     "s7573_guard_census.py": (re.compile(r"^no game logs\s*$", re.M), "needs game stderr logs (LOG... or --retained DIR)"),
     # s7657: the s7215 run.log (ROGUESQ_VI_SHAPE_LOG=1, 21:9 long route) was never retained: scratch/s7215 holds 0 shape lines
+    "s7753_rdp_output_gate.py": (re.compile(r"^NEEDS-INPUT ", re.M), "needs the retained s7751 snaps (tools/s7753_capture_snaps.zsh) + a built game"),
     "s7215_shape_census.py": (re.compile(r"L = open\(sys\.argv\[1\].*\n(.*\n)?IndexError: list index out of range"),
                               "needs a ROGUESQ_VI_SHAPE_LOG=1 run.log (scratch/s7215/r.zsh); the s7215 log was not kept"),
 }
@@ -67,6 +68,9 @@ ARGS = {
     "s7742_fixup_idem_gate.py": (["--controls"], r"CONTROL PASS\n(.*\n)*VERDICT GREEN: fixup idempotent on 3 CMake files"),
     # s7743: the 9 overlay ucode files are fixup splice inputs + s7091 oracle (per-overlay marker-strip ctls must fire).
     "s7743_ovl_consumers.py": ([], r"verdict=H-tool-input a_not_fired=0 b_not_seen=0"),
+    # s7753: end-to-end ucode OUTPUT gate: retained s7751 snaps replayed through the live factor5_ucode_lean.cpp.o must equal the
+    # live RDP tail byte-for-byte; ctls TG_FIX=0 (differs, cxd4 length), CAP=65536 (strict prefix, cap_fires=1), 1-byte flip.
+    "s7753_rdp_output_gate.py": (["--controls"], r"(?=[\s\S]*CONTROL PASS snaps=2)(?=[\s\S]*VERDICT GREEN: 2/2 tasks replay == live)"),
     "s7719_regen_gate.py": (["--strict"], r"VERDICT H-mirrored \(.*live == replay byte-for-byte"),
     # s7719: these three print "OPEN n" yet exit 0 without --check, so the s7718 sweep scored OPEN 19/22/6 as GREEN.
     "s7363_hostarr_census.py": (["--check"], r"\nOPEN 0\b"),
@@ -210,7 +214,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed

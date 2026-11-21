@@ -206932,3 +206932,21 @@ ORIGIN: no mitigation added; instruments only. Snaps/renders stay in scratch/s77
 Verdict: this refutes H-snapshot, selects H-fixup (s6896 TriGen clamp) for the port-only tris and the reordered block, and
 closes the residual as sub-visible precision (H-rspemu left undecided by design: no third RSP, no visible effect). Next
 discriminator/rung: the RDP-output regression gate in NEXT.md (HYPOTHESIS-ID rdp-output-regression-gate).
+
+## Session 7753 (2026-11-21) — end-to-end ucode RDP-output regression gate landed in the sweep: offline replay of 2 retained snaps == live stream 2/2 with 3 controls each
+What ran: new `tools/s7753_rdp_output_gate.py` (registered in tools/s7651_gate_sweep.py ARGS + EXTRA_GATES + NEEDS_INPUT). It
+replays each retained s7751 gfx-task snap (scratch/s7751/snap_f0/k0_s4054.bin, snap_d/k0_s4056.bin; L1 21:9 dd8) through
+tools/s7752_port_task/harness, which links the LIVE build's factor5_ucode_lean.cpp.o (rebuilt via build.sh when older than the .o),
+at the live dd>1 policy CAP=1048576 TG_FIX=1, and requires the output == the snap's live RDP tail byte-for-byte. The s7741/s7742
+ucode gates compare generated C text; this is the first gate on what the ucode EMITS.
+Result (0.4 s): k0_s4054 live=replay=1,719,776 EQUAL; k0_s4056 live=replay=1,721,520 EQUAL -> VERDICT GREEN 2/2.
+Controls, per snap, all PASS: tg0 (TG_FIX=0) differs from the tail at exactly the s7752 cxd4 length 1,716,608 / 1,718,528;
+cap (CAP=65536) is a strict prefix 717,576 / 717,560 B with cap_fires=1; flip (1-byte mutation of the replay) reads DIFF.
+Sweep-level controls (run_uncached on copies): tool in a tree without snaps -> NEEDS-INPUT rc 4; tree with snap_f0's tail
+mutated by 1 bit (harness + .o symlinked) -> RED rc 1 "1/2 tasks ... differs"; live tree -> GREEN. `--only 's7753|s7741'` sweep:
+planted red/green + cache controls PASS, 2 GREEN.
+Also: the re-capture recipe lived only in gitignored scratch/s7751/run.zsh; committed as tools/s7753_capture_snaps.zsh and the
+gate/sweep text points there.
+Rules out: nothing new about the game; the gate means a future ucode fixup edit that changes emitted RDP bytes on these tasks can
+no longer pass the sweep silently. Limits: coverage is 2 in-flight dd>1 tasks of one level; dd1/hangar/cutscene paths are not covered
+(next unit). The snaps are gitignored (18 MB each), so a fresh clone reads NEEDS-INPUT.

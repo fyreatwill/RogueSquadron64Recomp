@@ -20,7 +20,7 @@ owner's recipe as far as any instrument can see; remaining items are owner judge
   (keep byte-true, s7743). Env readers: launch strips empty ROGUESQ_* (s7730), maps on/off words to 1/0 (s7731), unsets invalid
   ROGUESQ_ASPECT (s7732); after a regen `python3 tools/s7734_compiled_reader_census.py` (rc 0). s7725 plume +0 texture-descriptor
   over-release (RT64 Present SIGTRAP) fixed, NSZombie 0 on boot/flight/hangar route (s7726/s7727). 21:9 fb read-back harmless (s7702-s7706).
-  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~215 gates, 0 RED, 0 HOLLOW.
+  Sweep: `python3 tools/s7651_gate_sweep.py` (--jobs 2) ~216 gates, 0 RED, 0 HOLLOW; s7753 adds an end-to-end ucode RDP-OUTPUT gate (item 26).
 - **G5h cutscene pool floor (s6908) re-held post-G6c (s7696-s7701):** mission intros L1/L4/L5 and the AT THE MOVIES playlist (outro
   proxy) at 16:9 dd2/dd4 and 21:9 dd2 (kept nodes floor vs old cap e.g. 16:9 dd2 1350/831, 21:9 dd2 1605/858); visible where the old
   cap leaves flat ground holes (sheets docs/owner_sheet_s7700_movies_dd2.jpg, s7701_movies_219_dd2.jpg, scratch/s7699/L5d2_sheet.png).
@@ -317,8 +317,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     near-saturated tex/Z coefficients, rendered <=1 LSB on ~2.7% of px (tools/s7752_render_diff.py, --ctl passes): sub-visible.
     **G5b TriGen fix now two-source:** the retail ucode output (cxd4 == TG_FIX=0) draws giant terrain wedges over ~3/4 of the
     L1 21:9 dd8 frame (340k px >=8 LSB, scratch/s7752/img_f0_4054_tg0.png). Rerun after a ucode fixup edit: build.sh + harness.
-26. **Next rung (s7752): RDP-output regression gate** — retain 2 snaps + expected streams and add a sweep gate that replays the
-    port ucode offline and requires byte-identical output (NEXT.md).
+26. **RDP-output regression gate: LANDED (s7753), in the sweep.** `tools/s7753_rdp_output_gate.py --controls` replays the 2 retained
+    s7751 snaps (scratch/s7751/snap_f0/k0_s4054, snap_d/k0_s4056; L1 21:9 dd8) through the live factor5_ucode_lean.cpp.o (harness
+    auto-rebuilt when older) at CAP=1048576 TG_FIX=1 and requires == live RDP tail byte-for-byte (GREEN 2/2, 0.4 s). Ctls per snap:
+    TG_FIX=0 differs at the cxd4 length, CAP=65536 strict prefix cap_fires=1, 1-byte flip. Sweep scoring proven: snaps absent ->
+    NEEDS-INPUT, mutated tail -> RED. A RED after a ucode fixup edit = emitted stream changed: intended -> re-capture with
+    `tools/s7753_capture_snaps.zsh` and say so; else regression. Coverage is dd>1 in-flight only.
+27. **Next rung (s7753): widen the s7753 gate's coverage** (dd1 retail flight, hangar, a cutscene snap) in ONE capture run (NEXT.md).
 
 ## Evidence index
 
