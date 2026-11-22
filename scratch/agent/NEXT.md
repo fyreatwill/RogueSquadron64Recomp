@@ -1,18 +1,12 @@
-# NEXT (s7792; s7791 closed the vendored-dead-block-prune campaign)
-HYPOTHESIS-ID: ct-maintenance-s7792
+# NEXT (s7793; s7792 compacted CURRENT-TRUTH to 23.4 KB)
+HYPOTHESIS-ID: g3-frame-diff-unsheeted
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines (any of these outranks the rest).
 
-Unit: CURRENT-TRUTH is 60,328 B (> 60,000), so Step 0 makes this a MAINTENANCE iteration. Compact it toward ~35 KB:
-- Migrate the long CLOSED census items (backlog 18, 29-36: s7575 UB gates, s7766-s7790 audits) and the s7702-s7767 headline
-  paragraphs verbatim into PROJECT-OVERVIEW under "(s7792 maintenance)". Leave a one-line pointer plus each item's gate
-  command, because the gates stay in the sweep.
-- Renumber Next steps into ONE monotonic sequence again (it is now 1-5, 18, 20, 23, 28-36 out of order).
-- Refresh the Headline: every ladder rung is closed or waiting on the owner's look; list the owner items.
-Proof: `wc -c` net shrink >= 15000 B; `python3 tools/s7762_owner_doc_check.py --controls` rc 0 (owner-doc paths still resolve).
-No experiments this iteration.
-
-After maintenance (s7793+): every rung is closed or waiting on the owner. Take ITERATION 3b secondary (title-boot plume SIGSEGV
-si_addr=0x58: check whether the s7725 plume fix stopped it. Loop title boots under lldb, about 20 boots, and record the
-recurrence count), then G3 render-fidelity frame diffs against the angrylion oracle on a level not yet sheeted.
-Hypotheses (plume): H-fixed (0/20 recurs: the s7725 fix covers it), H-other (a recurrence: the lldb backtrace names the writer).
+Unit (CURRENT-TRUTH item 13): every ladder rung is closed or waiting on the owner. G3 render fidelity: find a level/scene with no
+presented-frame angrylion diff since the s7122-s7217 matrix and the post-G6c tree (grep PORTING-STATE for "angrylion" + level), and
+diff it at the owner recipe (16:9 dd1 control vs dd4 STANDINS=1) on the post-s7790 binary.
+Hypotheses: H-equal (residual at the retail floor, as s7122-s7217), H-regress (a post-G6c/s7781-s7791 change moved the residual:
+bisect by the =0 switch of each default-on fix touched since s7217).
+Discriminator: per-frame residual vs the s7217 floor on the same phase-gated frames; positive control = a planted 1-tile diff must score.
+The plume si_addr=0x58 is CLOSED (0/76 s7660, s7725 fix, NSZombie 0); queue a 20-boot non-recurrence soak only as a side job.

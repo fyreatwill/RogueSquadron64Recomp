@@ -208078,3 +208078,16 @@ they stay. Campaign CLOSED: further pruning needs per-branch execution evidence 
 the remaining shadowed sites are include fallbacks.
 Rules out: NOTCALLED .replace sites as block-level deadness evidence when the block holds untracked mutations (subn, slicing).
 ORIGIN: no mitigation added; deletes one diagnostic block shadowed by its earlier emitter.
+
+## Session 7792 (2026-11-21) — CURRENT-TRUTH maintenance: 60,328 -> 23,419 B, backlog renumbered 1-13
+MAINTENANCE iteration (Step 0: CURRENT-TRUTH 60,328 B > 60,000). No experiments.
+- Pre-checks: `tools/crash_reports.py --since 2026-11-13` FOLDED=10 new=0; no new SOAK-RESULTS lines since the s7787 fold; no owner answers in OWNER-REVIEW-QUEUE.
+- The whole s7790 Headline (s7702-s7790 bullets) and Next-steps items 1-36 were moved word for word into PROJECT-OVERVIEW
+  "## Migrated from CURRENT-TRUTH (s7792 maintenance)" (+381 lines). CURRENT-TRUTH now has a short Headline (standing facts:
+  owner queue + its 4 check tools, the owner's pending default decisions, sweep/regen-gate rules, latency, crash-report rule,
+  lldb/save hazards) and ONE monotonic backlog 1-13: owner/parked items kept verbatim as 1-11, closed classes folded into
+  item 12 (one line per old item: title + its rerun tools), next agent work as item 13.
+- Size 60,328 -> 23,419 B (-36,909 B; numstat +67/-354, net -287 lines). Checks: `tools/s7762_owner_doc_check.py --controls` rc 0
+  (paths_missing=0 names_stale=0, plant control PASS); doc-scanning censuses `s7557_gq_census --controls` 13/13 and
+  `s7558_gr_census --controls` 16/16 rc 0 (they also search PROJECT-OVERVIEW, so the moved text still counts).
+- Rules out nothing; the next unit is the G3 frame diff on an unsheeted level (the plume is already CLOSED 0/76 s7660 + s7725 fix).
