@@ -208772,3 +208772,52 @@ H-unscanned at header level; at helper level it found and closed one unevidenced
 fresh -M for resolution; ares vs cxd4 for VMOV/VSAR.
 Remaining weak spot (next unit): the 31 elementwise VU ops have only ares-internal SIMD/SISD agreement plus cxd4 whole-task replays
 of a few tasks, no op-level independent reference (NEXT slug rsp-vu-elementwise-vs-cxd4).
+
+## Session 7815 (2026-11-22) — elementwise VU class CLOSED: all 31 VU ops vs cxd4 + CEN64; stock cxd4 has 5 VU defects, CEN64 == ours; patched cxd4 is byte-identical to our ucode on whole real tasks, so the s7752 "sub-LSB residual" was cxd4's VCH+VCR
+
+Start: crash_reports --since 2026-11-13 new=0; no owner answer; SOAK-RESULTS has nothing new since the s7809 fold.
+Work unit (NEXT s7815, HYPOTHESIS-ID rsp-vu-elementwise-vs-cxd4): give the 31 elementwise VU ops the LLE gfx ucode compiles an
+op-level independent reference (they rested on ares SIMD-vs-SISD + a few cxd4 whole-task replays).
+Hypotheses: H-equal / H-differ-dead / H-differ-live (then a third source decides which emulator matches hardware).
+
+New tools (engineering):
+- tools/s7815_vu_ops/run.sh + harness.cpp: live librecomp rsp_vu*.hpp copied each run; cxd4 vu/*.c compiled UNMODIFIED as a
+  separate C unit (scalar path, or CX_SSE=1 = its ARCH_MIN_SSE2 path through sse2neon); element broadcast from the RSP manual; the
+  WHOLE vpu struct compared after every op (32 regs, ACCH/M/L, VCOH/VCOL/VCCH/VCCL/VCE); every e 0..15; distinct, vd==vs, vd==vt,
+  vs==vt aliasing; edge-biased inputs; NEON_MAC=0/1 (both shipped flavours). Third arm: CEN64 header-only SSE kernels (vendored
+  unmodified in tools/s7815_vu_ops/cen64/, BSD, commit e0641c84) for VABS/VCH/VCR/VMRG/VMADN/VMADL, flag write-back transcribed
+  from cen64 rsp/vfunctions.c. 7 mutants (madh_carry, mulf_round, addc_vco, lt_cmp, cl_vce, mrg_sel, madn_clamp).
+- tools/s7815_vu_ops/patch_cxd4.sh: copies cxd4 to a scratch dir and fixes its 5 VU defects (FIXES= subset for ablation; the
+  rs64-oracle tree is never modified). VCH is replaced by a scalar transcription of CEN64 rsp_vch.
+- tools/s7815_vu_gate.py (sweep row S7815_VU, ~31 s): ours vs patched cxd4 (all ops) + CEN64, both flavours; controls = stock cxd4
+  must show exactly the known six-op signature, madn_clamp mutant must fire both references. Run: GREEN, CONTROLS PASS.
+
+Results:
+| comparison (595,200 compares per flavour) | live ops differing |
+| ours vs stock cxd4 (scalar, and CX_SSE=1 identical) | VMADL 6297, VMADN 2022, VABS 2726, VCH 2758, VCR 14620, VMRG 19200 (+ dead VMACU 1228) |
+| ours vs CEN64 on those six | 0 / 19,200 each, NEON_MAC 0 and 1 |
+| ours vs patched cxd4 | 0 live (dead VMACU only) |
+Aliasing is not a factor (bad counts equal across the 4 alias classes). The cxd4 defects, each read in its source:
+1. VCR (select.c do_cr): merge() computes fail + cmp*diff and needs cmp in {0,1}; do_cr passes sn in {0,-1} (do_ch converts with
+   >>15). Example vs=0x8000 vt=0x79A2: cxd4 0x79A3 = 2*vs - ~vt, hardware ~vt = 0x865D. Wrong whenever signs differ and ge != le.
+2. VCH (do_ch "cch" hack): keeps -(-32768) at 0x7FFF and threads that into eq/le; CEN64 and ours wrap to 0x8000.
+3. VABS: subtracts the corner-case 1 from ACCL as well as vd and also when vs>0; CEN64 comment: "acc_lo will be 0x8000 but vd 0x7FFF".
+4. VMRG: leaves VCO; CEN64 RSP_VMRG writes zero to VCO hi/lo.
+5. VMADN/VMADL SIGNED_CLAMP_AL: "clamped ACCM != raw ACCM" misses out-of-range lanes whose raw ACCM is already 0x7FFF/0x8000;
+   CEN64 rsp_uclamp_acc clamps on ACCH != sign(ACCM). cxd4's SSE path shares defects 1-4 (it calls the same scalar helpers) and gave
+   identical counts for 5.
+Reachability: live. `vcr $v0,$v0,$v31[6]` (factor5_ucode_recompiled.c:1857, one per ucode TU, 10 sites) feeds $v0 into VMADM and two
+SSV stores; $v31 = LQV DMEM 0x40, lane 6 = 0x0002 in both retained snaps, so it clamps to [-3,2] and cxd4 returns 2*vs+3 for lanes <= -3.
+End to end (2 retained s7751 snaps, offline, our ucode at ROGUESQ_G5B_TG_FIX=0 UCODE_CAP=1048576 via tools/s7752_port_task/harness):
+| task | stock cxd4 vs ours | patched cxd4 vs ours | fix1 | fix2 VCR | fix3 | fix4 | fix5 VCH | fix2+5 |
+| s4054 (1,716,608 B) | 561 B, 31 cmds | BYTE-IDENTICAL | 31 | 25 | 31 | 31 | 7 | 0 B |
+| s4056 (1,718,528 B) | 627 B, 33 cmds | BYTE-IDENTICAL | 33 | 25 | 33 | 33 | 9 | 0 B |
+So s7752 residual (a) (edge-slope words 0xFE33 on yh==ym tris + coefficient words near 0x8000/0x7FFF, called "<=1 LSB precision")
+is cxd4's VCH + VCR defects, and our LLE is byte-exact vs an independent RSP on whole real gfx tasks. Superseded entry added.
+Discrimination: selects H-differ-live with OURS correct (two lines: CEN64 executed equality on all six ops; patched cxd4 equality on
+every op and on 3.4 MB of real RDP output), refutes H-equal and H-differ-dead. No change to our code.
+Side finding (affects past evidence, not the port): every angrylion "retail oracle" run loads the stock cxd4 dylib (g3_ai_gap_pair,
+g3_menu_pair, g3_showroom_pair, g3f_retail_pan, oracle/run_m4_retail_pcs), so those frames carry these defects (s7752 measured
+<=1 LSB on ~12k px per task). NEXT s7816 builds a patched oracle plugin and re-scores one retail pair.
+Gotchas: n64brew has no per-op VU detail; GitHub blob pages 503'd, so cen64 + n64-systemtest were shallow-cloned to /tmp and only
+read (n64-systemtest not used). cxd4's bundled SSE2NEON.h is too old to build its SSE path: run.sh shims it to the maintained sse2neon.

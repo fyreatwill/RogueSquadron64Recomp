@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7814 (2026-11-22).
+Compact operational handoff, as of Session 7815 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -93,6 +93,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7752 "residual (a), 31-33 replaced commands per task, is <=1 LSB sub-visible precision": believable because the render diff was
+  tiny and both RSPs looked healthy, but s7815 showed it is cxd4's VCH (vt=0x8000) and VCR (signs differ) defects: with those two
+  fixed, cxd4 is byte-identical to our stream on both retained tasks.
 - s7783/s7781 "the port places DL chunks inside the framebuffer pair (H-overlap / H-shared-slot, port-only)" and s5661 "unaligned
   stores are not the rail writer": believable because the hook fired with a passing plant control and the oracle disagreed, but
   the s5660 hook used the stored value as the address at every swl/swr/sdl/sdr site (s7784). Any [swatch]/s6843 hit from an
@@ -228,7 +231,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    - old 22: s7663-s7718 owner-setting, crash-report, sweep and agent-gate items: ALL CLOSED [tools/agent tools/agent/run_tests.sh tools/crash_reports.py tools/s7705_fbread_flight.zsh tools/test_s7705_join.sh tools/test_settings.cpp]
    - old 23: G6c coverage CLOSED on L1/L10/L12 (s7749 L12, s7750 L10+L1): no gap. [tools/s7749_life_tally.py]
    - old 24: s7310 FARMAX mechanism: CLOSED two-source (s7751)
-   - old 25: cxd4-vs-port RDP residual: CLOSED (s7752). [tools/s7752_port_task/harness tools/s7752_render_diff.py]
+   - old 25: cxd4-vs-port RDP residual: CLOSED (s7752); residual (a) = cxd4 VU defects, not precision (s7815). [tools/s7752_port_task/harness tools/s7752_render_diff.py]
    - old 26: RDP-output regression gate: LANDED (s7753), widened s7754, in the sweep. [tools/s7753_capture_snaps.zsh tools/s7753_rdp_output_gate.py tools/s7754_capture_route.zsh]
    - old 27: Hangar gfx tasks are NOT snapshot-replayable (s7754 H-state, measured): [tools/s7755_hstate_visibility.py tools/s7756_hstate_gate.py]
    - old 28: Input latency (s7766): measured, H-1frame. [tools/s7766_inlat.py]
@@ -256,8 +259,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      include/spwm recomp.h (diagnostic builds only) pass through bit-exactly vs upstream (2 M inputs, all wrapped MEM_*/LD/lwl/lwr/ADD32),
      so s7389/s7391 findings transfer to build/. Per-helper map of the LLE ucode C: 70 helpers all evidenced; the gap found was
      VMOV (152 sites) + VSAR (74), never checked against an independent RSP -> new tools/s7814_vmov_vsar: 2,048,000 compares vs cxd4,
-     0 diffs, whole vpu state, 3 mutants fire. 6 controls PASS; sweep row S7814_INCLUDE. Remaining weak spot: the 31 elementwise VU ops
-     rest on ares SIMD-vs-SISD self-consistency (s6301) + cxd4 whole-task (s7751) only. [tools/s7814_include_census.py tools/s7814_vmov_vsar/]
+     0 diffs, whole vpu state, 3 mutants fire. 6 controls PASS; sweep row S7814_INCLUDE. [tools/s7814_include_census.py tools/s7814_vmov_vsar/]
+   - s7815 elementwise VU class CLOSED (ours correct): all 25 live ops + 6 dead, every e, both flavours, vs cxd4 AND CEN64. Stock
+     cxd4 has 5 VU defects (VCR merge() fed sn=-1; VCH -(-32768) kept 0x7FFF; VABS ACCL; VMRG keeps VCO; VMADN/VMADL clamp misses
+     ACCM==0x7FFF/0x8000); CEN64 == ours on those ops. Patched cxd4 == ours bit-exactly on all ops AND on whole real tasks: the s7752
+     "31-33 sub-LSB residual commands" were cxd4's VCH+VCR (ablation), so our LLE is byte-exact vs an independent RSP. CAVEAT: every
+     angrylion "retail oracle" run uses the STOCK cxd4 dylib (g3_*_pair, g3f_retail_pan): <=1 LSB on those tris. Sweep row S7815_VU.
+     [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are

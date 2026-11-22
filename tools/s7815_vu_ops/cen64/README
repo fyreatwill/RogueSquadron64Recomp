@@ -1,0 +1,1 @@
+Unmodified copies of n64dev/cen64 arch/x86_64/rsp/{clamp,vabs,vch,vcr,vmrg,vmuln,vmull}.h at commit e0641c8452a3ae8edcd2bf4e46794bb4eaafc076 (BSD, see LICENSE). Used only as the s7815 third-arm VU reference; compiled through sse2neon by run.sh.
