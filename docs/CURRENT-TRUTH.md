@@ -327,6 +327,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      visible (1/4 px), single-source. Launch fly-out (512, 3D): 0/111 retail frames in port (port 145 frames vs retail 111 over the
      cinematic: frame-rate/timing split as the s7821 hangar, not a geometry verdict). [scratch/s7824/score_trigeom.txt, logo_cls.py]
      [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
+     **s7825 logo residual CLOSED as input timing, not FPU:** port float math audited IEEE-identical to MIPS (0 fused mul-add in
+     generated game code, all 201 fused ops are on our PATCH lines; only FCSR switch = guPerspectiveF RZ idiom; 0 round.w sites).
+     `python3 tools/s7825_tri_shift_bias.py R P --win 2720:2986 --off 795:804 --controls`: shifts are 0.707 inward (port logo
+     slightly smaller; planted controls 1.000 / 0.493 PASS) and the flip rate falls with logo size (0.33 -> 0.02): a ~1e-3 relative
+     input difference (time-driven zoom sampled at another sub-frame phase), not ULP noise. Animation clock read not named.
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are

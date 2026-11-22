@@ -209122,3 +209122,33 @@ HID idle 10.5 h. One VI-clocked rdplog pair, s7823 route + START at 79.5/91.5 (c
 - Rules out: a port render defect on the fly-out/logo/crawl at the element level; the s7821-s7823 PRIM-only "exact" claims for tri
   geometry hold for texrect screens only (texrects were always keyed by geometry).
 - Captures zstd'd: scratch/s7824/{retail,port}.bin.zst.
+
+## Session 7825 (2026-11-22) — logo quarter-pixel residual is a systematic size-scaled input difference (port logo slightly smaller, 0.707 inward, controls PASS), not FPU rounding: 0 fused multiply-adds in generated game float math, FCSR only switched in guPerspectiveF; thread closed single-source-plus-audit
+Work unit (NEXT s7825, HYPOTHESIS-ID g3-logo-quarter-pixel). Pre-checks: crash_reports new=0, no new SOAK-RESULTS lines, no owner answers.
+Instead of the two-sided RDRAM alignment (expensive, the fallback clause allowed closing), two independent offline lines:
+- Line 1, CPU-semantics audit of the port (boring thing first). RecompiledFuncs is built -O2 with Apple clang (default
+  -ffp-contract=on), so FMA fusion was the obvious host/MIPS divergence (VR4300 has no fused madd). Census of every fused
+  op (fmadd/fmsub/fnmadd/fnmsub) in the 3 build objects dirs: RecompiledFuncs 201 (11 objects), PatchesLib 0, main 131. Mapped
+  to source lines via llvm-objdump -l: 201/201 are on our injected PATCH host-C lines (s6907 lens, G5g hangar vectors, s7103,
+  s5897 dist, drawSubtitleText aspect patch, ...), 0 on generated MUL_S/ADD_S statements (one op per C statement, so on-mode
+  contraction cannot fuse them). FCSR: the only cfc1/ctc1 in the whole game is libultra guPerspectiveF's RZ cvt.w.d idiom
+  (perspNorm), emitted correctly (set_cop1_cs -> fesetround); round.w.* (lroundf, half-away vs MIPS half-even) has 0 sites;
+  cvt.w 15 sites (lrint, mode-aware), trunc.w 1199 ((int) casts). So the port's float math is IEEE-identical to MIPS for these
+  ops, except FS flush-to-zero of denormals (irrelevant at logo magnitudes).
+- Line 2, shape of the residual (new tools/s7825_tri_shift_bias.py, same-run planted controls): per missed retail tri vs the
+  nearest port tri, each pure-X edge-word shift classed inward/outward against the frame centroid. Retail 2720:2986 vs port
+  (offset 795:804): inward 4004, outward 1658, inward fraction 0.707 (sign-random noise would be ~0.5; p astronomically small).
+  Controls on the same frames: A planted one-LSB inward shifts on 10% of tris -> 1.000; B random sign -> 0.493; PASS.
+  Flip rate per 30-frame bin falls as the logo shrinks: 0.33, 0.26, 0.21, 0.13, 0.06, 0.06, 0.02, 0.03, 0.02, and the
+  inward bias vanishes in the last bins (0/0, 24/24, 22/12 = noise floor once the error drops below the LSB). An error that
+  scales with the object's on-screen size and has one sign is a relative input difference (the port's logo transform is
+  slightly smaller/further along), with rough size ~1e-3 relative (flip rate x 0.25 px / typical 60 px offset; inference,
+  the per-frame spread metric was too noisy to measure it directly). A 1-ULP float difference (6e-8) would flip ~1e-4 of
+  words with random sign.
+- Reading: H-cpu (recompiled FPU semantics) and H-oracle-cpu (mupen FPU rounding) are both disfavoured: neither predicts a
+  one-signed, size-scaled ~1e-3 error. H-input-time is favoured: the logo zoom is time-driven (like the s7821 hangar bob) and
+  the port samples its animation clock at a slightly different sub-frame phase than the VI-clocked det oracle. Not a port
+  defect; 1/4 px, invisible. Not proven: the animation-clock read was not named (no logo-zoom function identified; the obvious
+  symbol names do not contain it).
+- Rules out: FMA contraction in game code (0 sites), a mishandled rounding mode, round-half-even divergence (0 sites) as the
+  cause of this or any other port/retail float residual.
