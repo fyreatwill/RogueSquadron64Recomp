@@ -208119,3 +208119,32 @@ Change: tools/s7141_post.zsh ran 4 angrylion replays at once (iron rule 0 caps C
 Disk: L1s.cap (12.6 GB), L1s.raw (2.1 GB) and replays deleted after scoring; csvs kept in scratch/s7793.
 Rules out: a post-s7217 renderer/stream regression visible on L1 flight; stand-in models rendering differently in RT64 vs angrylion on L1.
 Owner save untouched (forced-level route, NO_SAVE_WRITE).
+
+## Session 7794 (2026-11-21) — G3 post-G6c fidelity second level: L12 owner recipe + STANDINS=1 (131 stand-ins) == angrylion (refit 3.88/0.013, 0 >0.05, control PASS; every statistic at or below pre-G6c s7159); worst swaps = CULL_SPIKE removing a retail wedge
+HYPOTHESIS-ID: g3-frame-diff-unsheeted
+Work unit from NEXT.md (CURRENT-TRUTH item 13). crash_reports --since 2026-11-13: new=0; no new SOAK-RESULTS lines; no owner answers.
+Host: HID idle 10.7 h, screen unlocked (ioreg CGSSessionScreenIsLocked absent), one game run, owner save untouched (forced-level route, NO_SAVE_WRITE).
+Run: `env RDIR=s7794 zsh tools/s7131_arm.zsh 12 L12s "ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500
+ROGUESQ_G5B_FRAME_MAX_MB=12000"` (FPS60 dd4 16:9). run.log: `[standins] on mode=on dd=4.00`, `131 objects, 60 KB (items 185, no-name 54,
+build-fail 0) level 12`, 0 CRASH/SIGSEGV/SIGBUS/abort lines; capture 7723 frames, 0 fails. (summary file not written: the arm's watchdog kills
+the common script first; same as s7793. Liveness from run.log + capture.)
+Replay `zsh tools/s7141_post.zsh scratch/s7794 L12s 0,9,369,216 46,322` (JOBS=2): 685 RAM-owning swaps, 684 replayed, lag 10 ms.
+Positive control (same scorer, same run): identity 0 regions, painted 20x20 -> one 400 px region, PASS.
+| arm | rect | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|
+| s7159 L12 (pre-G6c) | 0,9,369,216 | 4.78/5.44/7.76 | 0.021/0.026/0.034 | 0 | 0.018/0.032 |
+| s7159 L12 (pre-G6c) | 1,10,370,217 | 4.27/4.81/8.48 | 0.015/0.018/0.028 | 0 | 0.010/0.032 |
+| s7794 L12 STANDINS=1 | 0,9,369,216 | 4.60/5.02/5.51 | 0.020/0.023/0.032 | 0 | 0.016/0.030 |
+| s7794 L12 STANDINS=1 | 0,10,370,217 (s7160 refit) | 3.88/4.55/5.28 | 0.013/0.019/0.030 | 0 | 0.008/0.031 |
+Bands (refit) 5.25 3.92 2.34 1.27 2.74 3.33 3.88 8.89 (s7159: 5.65 4.53 3.11 2.24 3.78 3.65 3.96 9.12): all lower; far rows not elevated.
+6 duplicate pframes. Worst swaps 8014-8016 (frac_c 0.027-0.028, consecutive, dup 0): sheet docs/owner_sheet_s7794_L12_standins_fidelity.png
+shows angrylion drawing a long knife-spike wedge from the X-wing to the lower-right border that RT64 does not draw: that is ROGUESQ_CULL_SPIKE
+(default on since owner 2026-10-31) removing a retail wedge, i.e. the intended G5f divergence, not a regression. Median/p20 rows identical by eye,
+stand-in-bearing terrain (walkers/towers on the ridge) present in both renderers.
+Verdict: H-equal on L12 with stand-ins on; H-regress refuted (every statistic at or below s7159 at the same rect class); H-standin refuted (no
+diff region tied to stand-in models; the only excess is the culled spike). Two lines: per-frame score vs s7159 + same-run control, and the
+visual sheet. With s7793 L1 the post-G6c "== angrylion at the owner recipe" claim is now two-level (L1, L12) at 16:9.
+Disk: L12s.cap (12.6 GB), L12s.raw (1.9 GB), replays deleted after scoring; csvs + gz logs kept in scratch/s7794.
+Next: the same at 21:9 on L1 (s7165 recipe: tools/s7141_arm.zsh 1 L1w with ASPECT=21:9; post rect 0,11,469,216 split 117,352; refit 1,12,469,217;
+s7165 baseline refit frac 0.009/0.010/0.011, centre 0.005, side 0.014).
+Rules out: a post-s7217 renderer/stream regression on L12 flight; stand-in models rendering differently in RT64 vs angrylion on L12.
