@@ -209220,3 +209220,6 @@ fold, no owner answers. Offline only (no game run): captures scratch/s7826/{reta
   `python3 tools/s7827_tri_yshift_census.py R P --win 3521:3825,4378:4702 --controls --pose 3623:3825,4516:4702`
   (`--p-retail` for two retail captures).
 - No code change in the game; ORIGIN: n/a (no mitigation).
+- Discrimination: selects H-pitch (camera pose delta) and refutes H-anchor, H-vp and H-scale for the s7826 reticle/flight offset.
+  Next discriminator: retail-vs-retail with only mupen CountPerOp changed (NEXT s7828). A pitch delta there selects H-input-time;
+  an exact sky there refutes it and selects H-cpu-pose.
