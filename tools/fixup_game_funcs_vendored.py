@@ -32339,6 +32339,9 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
 
     # s563, HEAPLISTDEQ_ATTR_WRITE_GUARD residual gap (item -345): after item -322
     # guarded only site=0x8000D92C (MEM_W(0X0, r2) via stack slot 0x3C($sp)).
+    # s7788 RETIRED (not removed): this block and s566 below have matched 0 sites since the s2190 parity line and the braced
+    # stores changed their `    MEM_W(...) = ...;` anchors (their WARNINGs are REVIEWED in tools/s7788_dead_emitter_census.py).
+    # No crash at these pcs since; rule 11: do not restore a skip-guard without a named live writer.
     # s562 same-run: that guard fired bad_ptr=0x8 then crash last-guest-pc=0x8000D944
     # — r3 reloaded from the SAME stack slot (0x8000D93C) with no range check,
     # then unguarded MEM_W(0X4/0X8/0XC, r3). Sibling alt-path L_8000D968 reloads

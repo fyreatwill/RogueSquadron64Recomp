@@ -448,6 +448,14 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     events on diagnostic `if`s (3 at 0x8008EC48) + startSongSequence labelled 0x800940A4 (real 0x80094350); s3525 entry label
     0x8008F000 (real 0x8008F0A0); spin2 bne comments now carry pcs. 11 KNOWN site ids (s2122/s7574 trap pcs, s6826 tctr ids).
     s2586 "store" events are dead (0 emitted). Live == replay byte-for-byte after.
+35. **Dead/partial emitter class (s7788): CLOSED, 0 open.** Census `tools/s7788_dead_emitter_census.py <trace.jsonl> <replay.log>
+    --controls`, now step 5b of `s7719_regen_gate.py` (sets RS64_REPLAY_TRACE itself). Replay trace: 360 steps, 258 LIVE, 90
+    REDUNDANT (marker already emitted by the vendored inline copy), 10 NOOP + 2 DEAD-PART all reviewed (text present in tree or
+    stripped on purpose), 0 DEAD. Vendored fixer: 52 default-path `WARNING ... count=0` lines in 5 reviewed families; only
+    behaviour rows are the s563/s566 freelist skip-guards (8 sites at 0x8000D6D0/D944-D994), never applied since s2190's parity
+    line broke their anchors, 0 crashes there since -> RETIRED, not restored (rule 11). alloc-tail GUARD3/4 "not found" = shadowed
+    by s251/s350 guards at the same pcs. 52 vendored 0-hit markers: 26 RS64_* opt-in modes, rest M5-era diagnostics + s2586 store
+    (s7787). A NEW anchor drift (unreviewed WARNING) or a step that changes nothing now fails s7719.
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member

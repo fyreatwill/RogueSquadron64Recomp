@@ -207954,3 +207954,34 @@ never reset; two hand-typed entry pcs).
 No game run (offline census + controls; all affected hooks are diagnostic, store_diag/env gated).
 Verdict: selects H-shift (4 emitters, 7 literals + 1 lost hook) and H-pcless (2 more spin2 comments), all fixed; refutes it for
 the per-instruction families (257,4xx EQ). Next: dead-emitter census (NEXT.md).
+
+## Session 7788 (2026-11-21) — dead-emitter census: 0 replay steps dead, but s563/s566 freelist guards (8 sites) have matched nothing since s2190; reviewed + retired, census now a step of the s7719 gate
+- Question (s7787 NEXT, HYPOTHESIS-ID dead-emitter-census): which fixup emitters silently emit nothing or fewer sites than meant?
+  H-clean / H-dead / H-partial.
+- Instrument: fresh replay from pristine with `RS64_REPLAY_TRACE` (per-step lines added/removed, existing s6863 hook) +
+  replay.log, scored by new `tools/s7788_dead_emitter_census.py`. Classes LIVE / REDUNDANT (no change, but its markers are in the
+  tree) / DEAD (no change, markers nowhere) / NOOP (no marker, judged by stdout) / PARTIAL? (changed, but stdout reports a miss).
+  Plus every vendored-fixer `WARNING` report line and every vendored `/* PATCH:` literal with 0 live hits (enclosing def called
+  only under `os.environ.get("RS64_...")` = OPTIN). Controls (same run, 6/6 PASS): planted no-change + absent marker -> DEAD,
+  live marker -> REDUNDANT, one added line -> LIVE, "anchor not found" stdout -> PARTIAL?, planted WARNING -> open, known s563
+  WARNING -> reviewed.
+- Result, trace: 360 steps: 258 LIVE, 90 REDUNDANT, 10 NOOP, 2 DEAD-PART, 0 DEAD. Every NOOP checked in the tree: s4192b/s4199/
+  s4913/s5792-s5797/s5806/s5849 patch text present (vendored inline copy runs first). DEAD-PART: s4598's census line calls
+  rs64_s4597_target_store, which strip_diag_layers drops on purpose (TAGS s4597); s5835's "s5904" is harvest noise (rs5904_tally x3).
+- Result, vendored fixer (not traced per block): 52 default-path WARNING lines. H-partial SELECTED for one behaviour family:
+  s563 HEAPLISTDEQ_ATTR_WRITE (6 sites 0x8000D944..D994) + s566 HEAP_FREE_LIST_DEQUEUE_R6 (2 at 0x8000D6D0) skip-guards anchor on
+  `    MEM_W(0X4, ctx->r3) = ctx->r2;\n` directly after the pc line; since s2190 the parity line sits between them and stores are
+  braced with RS64_S5798_ST, so the guards have matched 0 sites. Not restored: 0 PORTING-STATE crash citations at those pcs after
+  s2190 (line 103929 on), all 19 levels soak clean, and rule 11 (skip-guard without a named live writer). Retirement comment in the
+  vendored block. alloc-tail GUARD3/GUARD4 "not found" (8 sites) = shadowed: tree shows s251 DLENTRY_TAIL prewalk guards at
+  0x8000CBE8/CCE4/CDF0 and s350 drain-mesh tail guards at 0x800081AC..82F8 at the same pcs. The rest are diagnostics: s639-s652
+  FL_ZERO_WATCH guest blocks (s6571 used the live host [fl-zero-poll] side, with a control), s574-s811 probes, s1920-s2031 avf-gate /
+  menu-spin / seed probes (s1927 already noted dead, line 154991). 0 post-death conclusions read their zeros (grep after s2190).
+- Vendored 0-hit markers: 52 = 26 OPTIN (RS64_* one-shot modes) + 26 M5-era diagnostic blocks (stripped or anchor-drifted) + the
+  s2586 store branch (s7787). apply_* literal rows dropped from the census: their literals include anchor text (s4985 read 0 by
+  literal but is in the tree x4), so the trace verdict is the precise one there.
+- Gate: s7719_regen_gate.py now sets RS64_REPLAY_TRACE on its replay and runs the census as step 5b (rc 1 on an unreviewed DEAD/
+  NOOP step or WARNING). Full s7719 --strict re-run after the edit: rc 0 H-mirrored (live == replay byte-for-byte, census open=0,
+  6/6 controls). Sweep --only s778: 6/6 GREEN (the census runs controls-only there; the full pass is inside s7719).
+- Rules out: H-dead for the replay chain (0 steps change nothing without a reason). Selects H-partial for the vendored s563/s566
+  guards only, harmless today.

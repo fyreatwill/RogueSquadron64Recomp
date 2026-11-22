@@ -12,6 +12,8 @@ Both scans walk every function and carry planted controls (guest store -> BEHAVI
   5. (s7735) tools/s7734_compiled_reader_census.py --tree <replay>: every compiled ROGUESQ_* reading of the REPLAYED tree models
      to a live script/host signature (0 unreviewed HIDDEN/NOREF), plus a planted control: the replay's funcs_23 B40 line put
      back to its pre-s7734 form must read HIDDEN. Catches a fixup that stops reproducing a hand-synced compiled reading.
+  5b. (s7788) tools/s7788_dead_emitter_census.py on the replay's RS64_REPLAY_TRACE + log: a replayed step that changes nothing
+     (DEAD/NOOP) or a vendored-fixer WARNING (anchor count=0) without a hand verdict reads open (rc 1); its 6 controls must pass.
   6. (s7740, --strict) byte identity: every source file (*.c *.h *.cpp *.inl) of live and replay must be identical and present on
      both sides. Since s7739 live == replay byte-for-byte, so ANY difference is a hand edit or a fixup that stopped reproducing.
      Controls: a symlink farm of live with one planted line in one file, and one with an extra file, must each read exactly that
@@ -124,7 +126,10 @@ def main(a):
         if rc:
             print('VERDICT CHAIN-FAIL (regen_front rc %d)' % rc); return 3
         shutil.copytree(pr, tree)
-        rc, out = sh(['zsh', 'tools/regen_replay.sh', tree, os.path.join(tmp, 'replay.log')], {'RS64_REPLAY_TREE_ONLY': '1'})
+        trace = os.path.join(tmp, 'trace.jsonl')  # s7788: per-step add/del lines for the dead-emitter census
+        if os.path.exists(trace): os.remove(trace)
+        rc, out = sh(['zsh', 'tools/regen_replay.sh', tree, os.path.join(tmp, 'replay.log')],
+                     {'RS64_REPLAY_TREE_ONLY': '1', 'RS64_REPLAY_TRACE': trace})
         print(out.strip())
         if rc:
             print('VERDICT CHAIN-FAIL (regen_replay rc %d, log %s)' % (rc, os.path.join(tmp, 'replay.log'))); return 3
@@ -142,6 +147,12 @@ def main(a):
                 if l.startswith(('CONTROL', 'rows', 'VERDICT', 'CONSUMED')): print('diag-consumers: %s' % l[:240])
             res['diag-consumers'] = rc2
     res['reader'] = reader_census(tree, tmp or tempfile.mkdtemp(prefix='s7735ctl'))
+    if tmp:  # s7788: every replayed step that changed nothing, and every vendored WARNING, must have a hand verdict
+        rc, out = sh([sys.executable, 'tools/s7788_dead_emitter_census.py', os.path.join(tmp, 'trace.jsonl'),
+                      os.path.join(tmp, 'replay.log'), live, '--controls'])
+        for l in out.splitlines():
+            if l.startswith(('control', 'steps=', 'DEAD', 'NOOP', 'PARTIAL', 'MARKER0', 'WARN', 'empty')): print('dead-emitter: %s' % l[:240])
+        res['dead-emitter'] = rc
     if '--strict' in a:
         res['strict'] = strict_gate(live, tree, tmp or tempfile.mkdtemp(prefix='s7740ctl'))
     if tmp and '--keep' not in a:
