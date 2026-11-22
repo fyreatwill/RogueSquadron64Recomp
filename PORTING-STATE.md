@@ -208929,3 +208929,25 @@ Verdict: refutes H-cpu-read and H-zbuf; selects H-dead (RSP-written RDP edge-slo
 render-invisible). Thread oracle-det-default-and-vu-word CLOSED.
 Next: make g3_port_capture.sh SAVE_FROM run from a private game folder (no owner-save swap), then give the pair scripts $ODET
 with a same-run control (NEXT.md).
+
+## Session 7819 (2026-11-22) — g3_port_capture.sh SAVE_FROM runs from a private game dir (owner save never touched); retail-vs-port pair tools now --det: two g3_menu_pair runs retail 31/31 dumps byte-identical
+
+- Start checks: crash_reports new=0; no new SOAK-RESULTS lines since s7809; owner queue unchanged.
+- Why: s7818 could not put `--det` into tools/g3_{menu,showroom,ai_gap}_pair.sh because their port arm (g3_port_capture.sh
+  SAVE_FROM) copied an .eep over build/saves/rs64.n64.us.1.0.bin and restored it on exit, banned by the owner save rule.
+- Hypotheses: H-cwd (save path cwd-relative) / H-abs (fixed data path) / H-assets (more cwd files needed). Code read: main.cpp
+  ~15503 register_config_path(current_path()) -> pi.cpp set_save_file_path config_path/"saves"; ROM via config_path/<id>.z64
+  or rs_cwd/rogue_squadron.z64. H-cwd selected; H-assets refuted by the run below (boots to SELECT LEVEL with only binary + 2 ROMs
+  + audio_device.txt symlinked, empty mods/ mod_config/).
+- Change: g3_port_capture.sh SAVE_FROM builds OUTDIR/game (symlinks to the GAMEDIR binary, ROMs, audio_device.txt,
+  controls.json if present; own saves/ with the SAVE_FROM copy), runs there, still forces ROGUESQ_NO_SAVE_WRITE=1. Backup/trap
+  swap removed. `$ODET` spliced into the rs64_oracle argv of the three pair scripts. ITERATION.md owner-save-rule line updated.
+- Controls (same session): (a) shasum build/saves/* identical before, between and after 4 port runs (687d9f77...). (b) SAVE_FROM
+  =scratch/s6779/r1/lvl1.eep: SELECT GAME shows AAA/TRAINEE, SELECT LEVEL = AMBUSH AT MOS EISLEY (private saves/ file sha ==
+  lvl1.eep). (c) control without SAVE_FROM: ASS/COMMANDER, BEGGAR'S CANYON (owner save has moved on from s6741's JADE MOON).
+  Sheet scratch/s7819/sheet.png.
+- Pair: `env PP=21:start,27:right ND=30 RSECS=50 PSECS=40 zsh tools/g3_menu_pair.sh scratch/s7819/menu_r{1,2}`; oracle log
+  shows det-core RandomizeInterrupt 1 -> 0; tools/s7817_oracle_det.py r1 r2: SUMMARY n=31 raw_eq=31 vi_eq=31 (positive control:
+  4/4 sampled dumps t005/15/25/30 distinct, so the equality is not a frozen frame). Port arms caps=359/338.
+- Rules out: nothing left blocks deterministic retail-vs-port pairs. visible= reads n/a in s7817_oracle_det.py on menu_pair
+  logs (no origin metadata parsed); raw equality covers it.

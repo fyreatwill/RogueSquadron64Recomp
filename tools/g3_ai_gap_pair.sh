@@ -16,7 +16,7 @@ source /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/
 V=/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-angrylion-plus.dylib
 D=$S/retail; mkdir -p $D/savedir; SD=$(cd $D && pwd)/savedir
 cp $EEP "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
-tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs ${RSECS:-220} --vi-poll --vi-trace --rsp $RSP --video $V \
+tools/oracle/build/rs64_oracle $ODET --save-dir $SD --core $C --rom $R --secs ${RSECS:-220} --vi-poll --vi-trace --rsp $RSP --video $V \
   --press ${PRESS:-6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,61:start} \
   --hit-cap 2000 --watch-write 0x3FFFF0:0x3FFFF4 --exec-trace 0x8008EE08:400000 --exec-trace-also 0x8008EE84 \
   --exec-trace-also 0x800FA730 --debug-write 80003470:1:320:0 > $D/oracle.log 2>&1 &

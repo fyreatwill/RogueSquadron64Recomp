@@ -511,7 +511,7 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
 **Owner save rule (2026-11-04).** build/saves holds the owner's real save (profile "ASS"). Never
 delete, swap or overwrite it, and never clear ROGUESQ_NO_SAVE_WRITE, which runner.sh exports.
 A test needing another save copies the game to its own working folder. tools/g3_port_capture.sh
-SAVE_FROM swaps the file in place: do not use it until it stops doing that.
+SAVE_FROM does exactly that since s7819 (private OUTDIR/game dir, build/saves untouched).
 
 ## Ground truth that is not our runtime
 - `tools/oracle/README.md` - runs the RETAIL ROM under mupen64plus with memory

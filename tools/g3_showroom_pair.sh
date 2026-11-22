@@ -33,7 +33,7 @@ mkdir -p $D; SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp scratch/s6779/r1/lvl1.
 echo "retail press: 6:start,11:start,16:start,$RP" > $S/press.txt; echo "port AP: 6:start,11:start,13:w1024,$PP" >> $S/press.txt
 RBWE=(RS64_RDP_BIN_WIDTH=${RBW:-1024}); [ "${RBW:-}" = all ] && RBWE=()
 env RS64_XTRACE_MEM=$SPEC RS64_RDP_BIN=$PWD/$S/retail.bin $RBWE RS64_RDP_LOG=/dev/null RS64_RDP_BIN_MAX_MB=${RMAX_MB:-2048} \
-  tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs $RSECS --vi-poll --vi-trace --rsp $RSP --video $V \
+  tools/oracle/build/rs64_oracle $ODET --save-dir $SD --core $C --rom $R --secs $RSECS --vi-poll --vi-trace --rsp $RSP --video $V \
   ${=RANDX:---exec-trace 0x800C3B38} --exec-trace-also 0x800C3B38 --exec-trace-also 0x800C5880 --exec-trace-also 0x800C3B4C --exec-trace-also 0x800C3B54 \
   --exec-trace-also 0x800B380C --exec-trace-also 0x800B3FA0 --exec-trace-also 0x800B4004 \
   --press 6:start,11:start,16:start,$RP > $D/oracle.log 2>&1 &

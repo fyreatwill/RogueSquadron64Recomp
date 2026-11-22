@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7818 (2026-11-22).
+Compact operational handoff, as of Session 7819 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -282,7 +282,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      111 halfwords differ off-screen (one word/dump ~0x7887xx). So the s7815 VU fix has NO visible effect on this route (two-line:
      s7815 ucode compare + s7817 deterministic A/B). Use `XARGS=--det-core CLOCK=vi` in tools/s7816_oracle_rsp_ab.sh; compare with
      tools/s7817_oracle_det.py. **s7818: `--det` is the DEFAULT** in s7816_oracle_rsp_ab.sh and g3f_retail_pan.sh (rsp_plugin.sh
-     ODET; ORACLE_DET=0 = old); controls 82/82 vs d1 and g3f g1==g2. g3_*_pair.sh still wall clock (port arm swaps the owner save).
+     ODET; ORACLE_DET=0 = old); controls 82/82 vs d1 and g3f g1==g2. **s7819: g3_{menu,showroom,ai_gap}_pair.sh now --det too**: tools/g3_port_capture.sh SAVE_FROM runs from a private game dir OUTDIR/game (symlinked binary+ROM, own saves/; the save path is cwd-relative, main.cpp register_config_path) and never touches build/saves (sha identical before/after 4 runs; lvl1.eep run shows AAA -> AMBUSH AT MOS EISLEY, owner control ASS -> BEGGAR'S CANYON); two g3_menu_pair runs: retail 31/31 dumps raw-identical, same VIs, 4/4 sampled dumps distinct.
      The off-screen word is NAMED (H-dead): an F5-emitted RDP tri edge (X,DxDy) on an edge spanning 0-0.75 scanlines (58/58 groups),
      RSP-written, 0 CPU loads/stores across its lifetime (VI-windowed watch, same-run control 99k CPU reads). New oracle
      `--hit-vi-window A:B`; oracle self-read trap fixed (fb-dump reads used to fire read watches, see tools/oracle/README.md).

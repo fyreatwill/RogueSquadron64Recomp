@@ -19,7 +19,7 @@ A=(); for i in $(seq 0 ${ND:-50}); do A+=(--fb-dump 1024:$i:600000:200000:$D/t$(
 # s6800: private Core SaveSRAMPath (--save-dir); the user-wide mupen save is never touched
 mkdir -p $D; SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp ${EEP:-scratch/s6779/r1/lvl1.eep} "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
 echo "retail press: 6:start,11:start,16:start,$RP" > $S/press.txt; echo "port AP: 6:start,11:start,13:w1024,$PP" >> $S/press.txt
-env ${=RENV:-} tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs ${RSECS:-66} --vi-poll --vi-trace --rsp $RSP --video $V \
+env ${=RENV:-} tools/oracle/build/rs64_oracle $ODET --save-dir $SD --core $C --rom $R --secs ${RSECS:-66} --vi-poll --vi-trace --rsp $RSP --video $V \
   --press 6:start,11:start,16:start,$RP $A > $D/oracle.log 2>&1 &
 RPID=$!
 env SAVE_FROM=${EEP:-scratch/s6779/r1/lvl1.eep} SECS=${PSECS:-60} CAP0=12 AP=6:start,11:start,13:w1024,$PP XE="${XE:-}" \
