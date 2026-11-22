@@ -208887,3 +208887,45 @@ Verdict: refutes H-det (VI clock alone; p1/p2 still diverge), refutes H-thread (
 (keyboard-only i1/i2 diverge, pad words on identical VIs); selects H-core-rand (RandomizeInterrupt off -> d1/d2 82/82 byte-identical).
 Next discriminator: watch on physical 0x788000-0x78B000 in --det stock vs patched to name the off-screen word's writer/reader
 (H-dead / H-cpu-read / H-zbuf).
+
+## Session 7818 (2026-11-22) — stock-vs-patched cxd4 off-screen word named: an RSP-emitted RDP triangle edge slope on a 0-0.75-scanline edge, never touched by the CPU (H-dead); oracle --det now default in retail-only launchers; oracle self-read watch trap fixed
+
+Pre-checks: crash_reports new=0; no owner answers in OWNER-REVIEW-QUEUE; no new SOAK-RESULTS lines since the s7809 fold.
+
+What ran (one emulator at a time, title->hangar s6791 schedule via tools/s7816_oracle_rsp_ab.sh, patched cxd4):
+1. Offline decode of the s7817 d1 (patched) vs ds (stock) dumps: all 58 differing 8-byte groups (78 words) sit inside F5-emitted
+   RDP shade+z triangle commands (0xCD/0xCF, preceded by E7 sync / 2F other-modes / FC combine). Every one is an edge
+   (X, DxDy) pair: 51 XM (43 with YM==YH, i.e. a zero-height middle edge; 8 with YM-YH = 0.25-0.75 lines) and 7 XL (YL-YM =
+   0.25-0.75 lines). Patched always gives DxDy int 0xFE33 (the clamped reciprocal of a tiny dy); stock gives varied values
+   (0xFB07, 0xF97D, ...). The record moves around 0x75C000-0x78A800 frame to frame (RDP output in a shared arena).
+2. w1: `--det` + read and write watches on 0x75C000-0x78B000 + control rw on 0x100000-0x110000: 4.36 M reads / 3.35 M writes,
+   so the arena is CPU-used at other times and a range answer cannot decide. Dumps 82/82 byte-identical to s7817 d1 (watches do
+   not perturb a --det run).
+3. New oracle option `--hit-vi-window A:B` (memory-watch hits outside emulated VI A..B ignored; hit lines gain vi= val=).
+   First build hung (bare return in dbg_update left the core stopped); fixed with goto resume.
+4. w2 (launcher default, no --det in XARGS): rw watches on the exact triangle records of the h003/h004/h005 frames, VI 2100-2300:
+   308 "reads" each, 0 writes. All 308 fell on the 7 fb-dump VIs (7 x 44 words), and the hit PCs were nop/move/mov.s: they were
+   the ORACLE'S OWN pDebugMemRead32 (DebugMemRead32 -> read_memory_32 -> r4300_read_aligned_word -> the core's bp-checked read
+   handler). Fixed: g_self_read guard around fb-dump and val= reads, `[oracle] self-read hits suppressed=N` at exit.
+5. w3 (same as w2 + control `--watch-read 0x080000:0x0C0000`): triangle records 0 reads / 0 writes; control 99,341 CPU reads in
+   the same window (PCs 0x800912AC/0x80091460 disassemble to lbu); suppressed self-reads 10,824 = 82 dumps x 132 words exactly;
+   dumps 82/82 byte-identical to s7817 d1. The record at 0x789198 holds other data at VI 2175 (0xF5700000...), the triangle at
+   VI 2198 (0x01DF7FF4 FE330036 = the differing words) and zeros at 2235, with no CPU store in between: written and overwritten
+   by RSP DMA only.
+6. Bounded change: tools/oracle/rsp_plugin.sh sets `ODET=(--det)` (ORACLE_DET=0 = old wall clock + randomized interrupts);
+   spliced into tools/s7816_oracle_rsp_ab.sh (CLOCK= still overrides) and tools/g3f_retail_pan.sh. Positive controls: s7816 launcher
+   default run w2 and w3 each 82/82 byte-identical to s7817 d1; g3f_retail_pan two default runs g1/g2: 209 scored hit/store-field
+   lines identical (md5), ai-vi lines identical when sorted, only host pointers and the wall-clock --vi-poll poller differ.
+   NOT converted: tools/g3_{menu,showroom,ai_gap}_pair.sh (their port arm uses g3_port_capture.sh SAVE_FROM, which swaps the owner
+   save in place: banned, so no control can be run); tools/oracle/run_m4_retail_pcs.sh (single-run watch, compares nothing).
+   No existing launcher combines a read watch with --fb-dump, so no past verdict is inflated by the self-read trap.
+
+What it shows: the s7815 cxd4 VU defects reach the retail oracle only as the slope of RDP triangle edges spanning <1 scanline,
+which the CPU never reads and which change 0 visible px (s7817: 66 comparable frames). Two lines: structural decode of all 58
+groups + CPU watch with a same-run positive control (and the s7817 pixel compare as a third).
+Rules out: H-cpu-read (0 CPU loads on the records across their whole lifetime, control 99k reads fired), H-zbuf (it is an RDP
+triangle command, not a depth word).
+Verdict: refutes H-cpu-read and H-zbuf; selects H-dead (RSP-written RDP edge-slope words of sub-scanline edges, never CPU-read,
+render-invisible). Thread oracle-det-default-and-vu-word CLOSED.
+Next: make g3_port_capture.sh SAVE_FROM run from a private game folder (no owner-save swap), then give the pair scripts $ODET
+with a same-run control (NEXT.md).

@@ -302,3 +302,18 @@ By default two oracle runs of the same ROM and press schedule are NOT comparable
 `--det` is both. Measured: two `--det` runs gave 82/82 byte-identical 2 MB framebuffer dumps over title -> hangar; VI clock alone
 still diverged from VI ~2115. `--det-video` (angrylion Parallel=False) and `--det-input` (keyboard-only Control1) also exist and
 were shown NOT to be needed. Compare series with `tools/s7817_oracle_det.py A B --ctl`.
+
+**Default since s7818:** `tools/oracle/rsp_plugin.sh` sets `ODET=(--det)` (`ORACLE_DET=0` restores wall clock + randomized
+interrupts), and the retail-only launchers `tools/s7816_oracle_rsp_ab.sh` and `tools/g3f_retail_pan.sh` splice it in. The
+`tools/g3_*_pair.sh` scripts do not: their port arm swaps the owner save (g3_port_capture.sh SAVE_FROM), so they cannot be run.
+
+## Narrow watches in one frame: `--hit-vi-window A:B` (s7818)
+
+Under `--det` the same VI is the same machine state, so a watch on a few bytes, gated to emulated VIs A..B, names the reader and
+writer of one word in one frame. Hit lines then carry `vi=` and `val=` (the word at that moment).
+
+**Self-read trap (fixed s7818):** the oracle's own `pDebugMemRead32` (every `--fb-dump` word, the `val=` sample) goes through
+the core's bp-checked read handler, so before s7818 a read watch inside a dumped range fired on every dump word, attributed to
+whatever guest PC was current (often a `nop`). Those hits are now counted in `[oracle] self-read hits suppressed=N` and not
+attributed. Any pre-s7818 read-watch count over 0x600000-0x800000 taken with `--fb-dump` is inflated by 1 per word per dump.
+Check that a hit PC disassembles to a load/store before trusting it.

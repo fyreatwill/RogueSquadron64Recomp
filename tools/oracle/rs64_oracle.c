@@ -98,6 +98,14 @@ static int g_det_video, g_det_input;
 /* s7817: --det-core sets Core RandomizeInterrupt=False. The core jitters PI/SI interrupt timing with rand() seeded by
  * srand(time(NULL)) (r4300_core.c:67, interrupt.c:122), which made two VI-clocked runs diverge from VI ~2100 on. */
 static int g_det_core, g_user_randint = -1;
+/* s7818: --hit-vi-window A:B ignores memory-watch hits outside emulated VI [A,B] and prints vi= on hit lines; with --det the
+ * same VI is the same machine state, so a narrow watch can name the reader/writer of one word in one frame. */
+static long g_hit_vi_lo = -1, g_hit_vi_hi = -1;
+/* s7818: the oracle's own pDebugMemRead32 (fb-dump, val= sampling) goes through r4300_read_aligned_word -> the core's
+ * bp-checked read handler, so it raised read-watch hits charged to whatever guest PC was current (w2: all 308 "reads" of
+ * the watched triangle records were the 7 fb-dumps). Hits raised while g_self_read is set are counted, not attributed. */
+static int g_self_read;
+static long g_self_read_hits;
 static m64p_handle g_vid_section, g_inp_section;
 static int g_user_parallel = -1, g_user_inmode = -1, g_user_indev = -9;
 
@@ -3082,6 +3090,9 @@ static void dbg_update(unsigned int pc)
         fflush(stdout);
     }
 
+    if (g_self_read && !(flags & M64P_BKP_FLAG_EXEC)) { g_self_read_hits++; goto resume; }
+    if (g_hit_vi_lo >= 0 && !(flags & M64P_BKP_FLAG_EXEC) && (g_vis < g_hit_vi_lo || g_vis > g_hit_vi_hi))
+        goto resume;  /* must still resume the core: a bare return leaves it stopped (s7818 hang) */
     g_hits++;
     for (i = 0; i < g_nwatch; i++) {
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
@@ -3227,6 +3238,9 @@ static void dbg_update(unsigned int pc)
                (flags & M64P_BKP_FLAG_READ)  ? "r" : "",
                (flags & M64P_BKP_FLAG_EXEC)  ? "x" : "",
                accessed, pc, prev, now_s() - g_t0, g_hits);
+        if (g_hit_vi_lo >= 0)
+        { g_self_read++; unsigned v = pDebugMemRead32(debug_rdram_addr(accessed & ~3u)); g_self_read--;
+            printf(" vi=%ld val=0x%08x", g_vis, v); }
         if (flags & M64P_BKP_FLAG_EXEC) {
             unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
             unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
@@ -3309,6 +3323,7 @@ static void dbg_update(unsigned int pc)
         fflush(stdout);
     }
 
+resume:
     if (g_voice_base_post_step_pending) {
         pDebugSetRunState(M64P_DBG_RUNSTATE_STEPPING);
         pDebugStep();
@@ -3393,12 +3408,14 @@ static void fb_dump_write(int k, const char *tag, const char *suffix)
     FILE *f = fopen(path, "wb");
     if (!f) { printf("[fb-dump] cannot open %s\n", path); return; }
     unsigned nz = 0;
+    g_self_read++;
     for (unsigned o = 0; o < g_fbd[k].len; o += 4) {
         unsigned w = pDebugMemRead32(debug_rdram_addr(g_fbd[k].start + o));
         unsigned char b[4] = { w >> 24, w >> 16, w >> 8, w };
         if (w) nz++;
         fwrite(b, 1, 4, f);
     }
+    g_self_read--;
     fclose(f);
     printf("[fb-dump%s] t=%6.1fs vi=%ld width=%u origin=0x%08x start=0x%x len=0x%x nonzero_words=%u %s vi0=%ld origin0=0x%08x -> %s\n",
            suffix, t, g_vis, width, (unsigned)pDebugMemRead32(VI_ORIGIN_ADDR), g_fbd[k].start, g_fbd[k].len, nz, tag, vi0, origin0, path);
@@ -3951,6 +3968,7 @@ static void usage(void)
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
         "  --press SEC:KEY[,...] press KEY at SEC seconds, e.g. --press 6:return,12:return\n"
+        "  --hit-vi-window A:B   count/print memory-watch hits only in emulated VI A..B (+vi= val= on [hit] lines; s7818)\n"
         "  --det-core            RandomizeInterrupt=False for the run (s7817); --det = --clock vi --det-core\n"
         "  --clock wall|vi       wall (default): SEC values are host seconds; vi: SEC*60 emulated VIs (s7817, deterministic)\n"
         "                        KEY is an N64 button name (start a b z dup ddown dleft\n"
@@ -4220,6 +4238,9 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--status-poll"))                g_status_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--det-video"))                  g_det_video = 1;
+        else if (!strcmp(argv[i], "--hit-vi-window") && i + 1 < argc) {
+            if (sscanf(argv[++i], "%ld:%ld", &g_hit_vi_lo, &g_hit_vi_hi) != 2) { g_hit_vi_lo = g_hit_vi_hi = -1; }
+        }
         else if (!strcmp(argv[i], "--det-core"))                   g_det_core = 1;
         else if (!strcmp(argv[i], "--det"))                        g_clock_vi = g_det_core = 1;
         else if (!strcmp(argv[i], "--det-input"))                  g_det_input = 1;
@@ -4520,6 +4541,7 @@ int main(int argc, char **argv)
             printf("[oracle] post-value-pc-detail-overflow n=%ld\n",
                    g_post_value_pc_detail_overflow);
     }
+    printf("[oracle] self-read hits suppressed=%ld (oracle's own fb-dump/val reads, s7818)\n", g_self_read_hits);
     for (int i = 0; i < g_nwatch; i++)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
