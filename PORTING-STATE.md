@@ -208017,7 +208017,9 @@ Result: 1,341 sites = 326 HIT, 150 OPTIN, 650 NOTCALLED but PRESENT (an earlier/
   dead s605 body (s7788 WARN family). Diagnostics: s1993 / s2190 M5 tables, s1923-s1942 avf/menu probes, s811, s2031, s3556,
   s4079/s4204 voice-modulation, s4648 field probe, s5533/s5228 store census, s1151/s1152 module-level RS64 modes, s3277 probe-window
   branch (the skip-goto branch is the live one).
-Rules out H-quiet-dead for any default-path behaviour block (0 open); H-shadowed holds for s147 only.
+Verdict: selects H-clean for the default path (every quiet-skip block is in the tree, opt-in, diagnostic, or a retired
+guard); refutes H-quiet-dead for behaviour (0 open rows); H-shadowed selected for s147 only. Next discriminator: the s7719
+byte-identity gate on a prune of the dead blocks (H-inert vs H-coupled, NEXT.md).
 
 Change: census wired into `tools/s7719_regen_gate.py` as step 5c (`--pristine` reuses the gate's tree). `s7719_regen_gate.py
 --strict` rc 0 (VERDICT H-mirrored, dead-emitter open=0, quiet-skip open=0, 6+2 controls PASS); `s7651_gate_sweep.py --only
