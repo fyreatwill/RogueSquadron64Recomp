@@ -208656,3 +208656,40 @@ s7808 `--controls` VERDICT H-equal, mutant differ 13538/20000, plant 207/207, PL
 s7810 CLASS VERDICT GREEN, PLANTED-MUTANT + PRE-FIX controls PASS. Full s7651 gate sweep re-run: rc=0, no new RED.
 Rules out: nothing about the game; this was gate hygiene. The planned s7811 unit (fixup-behaviour-delta class) was not started; NEXT.md
 keeps it unchanged.
+
+## Session 7812 (2026-11-22) — recomp.h helper-semantics class CLOSED: 60 helpers, 54 covered + 6 pass-through, 0 open; new memory-layer differential (MEM_*/LD/SD/lwl..sdr/cop1 RM) 0/200,000 mismatches, 3 mutants + 4 census controls PASS; sweep gate S7812_RECOMP_H
+
+Planned unit (s7811 NEXT, fixup-behaviour-delta class): BORING-FIRST check found it already CLOSED as class GR by s7558
+(109,738 fixup hunks classified vs a pristine regen, 1 hidden default = B40, owner decision) and still live in the sweep
+(`s7558_gr_census.py`, pattern "UNGATED by verdict ... open/undoc 0"). Not re-run as a new unit.
+crash_reports --since 2026-11-13: FOLDED=10 new=0; no new SOAK-RESULTS lines; owner queue unchanged.
+Taken instead, the next sibling of s7808-s7810/s7558 (non-retail behaviour by default): the helpers in OUR patched recomp.h
+that the generated C calls in place of MIPS instructions.
+- **Census** (new tools/s7812_recomp_h_census.py): 60 static-inline helpers / function-like macros in
+  lib/N64ModernRuntime/N64Recomp/include/recomp.h, live calls counted over 51 generated files (RecompiledFuncs + RecompiledPatches).
+  Evidence per helper = a differential test source that names it, or a closed session census whose header exists.
+  Integer/unaligned-word -> s7085 int_test; FPU lowering -> s7084 + s7415 (+ s7576 TRUNC, s7405 CHECK_FR); LOOKUP_FUNC -> s7771;
+  cfc1/ctc1 -> s4816 + s7405. **Uncovered live before this session:** MEM_B 5,734 / MEM_BU 5,601 / MEM_H 5,363 / MEM_HU 5,065 /
+  MEM_W 82,765 (only one row in s7085) / LD 1,391 / SD 1,302 sites, plus get/set_cop1_cs (3+3, census only, no test). Dead (0 calls):
+  do_ldl/ldr/sdl/sdr, CVT_*_L, CVT_L_*, TRUNC_*, HI16/LO16/RELOC_*.
+- **New differential** (tools/s7812_mem_test/mem_test.c, -O2 + live recomp.h, the RecompiledFuncs flags): an independent
+  big-endian byte model gb[] with per-byte R4300 rules vs the helpers on host rdram; after every store the whole guest view is
+  compared AND the layout identity rdram[a^3] == gb[a] (the RT64/PI DMA convention), so a self-consistent wrong swizzle still fails.
+  200,000 random ops over 19 op kinds (lb lbu lh lhu lw ld sb sh sw sd lwl lwr swl swr ldl ldr sdl sdr, negative-offset lw from a
+  raised base), ~10.5k each: **0 mismatches, memview_bad 0, layout_bad 0**. cop1 RM round trip (FS bit set -> only RM returns) +
+  do_cvt_w_d/w_s of +-2.5/+-1.5 under all 4 modes: 20/20.
+  Test artifact found and fixed on the way: with literal inputs clang -O2 constant-folds lrint under RNE and ignores the
+  fesetround (6/20 rows wrong); volatile inputs -> 20/20. Generated code is not exposed: the only RM-switching site
+  (guPerspectiveF 0x8002EAE4-EB5C) converts a runtime value (s4816/s7405), and s7084 ran the generated forms on runtime data.
+- **Controls (all PASS, same run):** planted live helper with no row -> OPEN; planted dead -> DEAD; row citing a missing session ->
+  OPEN; TEST row whose source never names the helper -> OPEN; mutants -DMUT_H (halfword swizzle ^0) 11,956 bad (lh 996, lhu 957),
+  -DMUT_SD (SD word order swapped) 12,186 bad, -DMUT_LDR (ldr shift off by a byte) 926 bad (ldr 926).
+- Sweep row S7812_RECOMP_H in tools/s7651_gate_sweep.py (MEM TEST PASS + CONTROLS PASS + CLASS VERDICT GREEN open=0). A helper the
+  generator newly emits, or a recomp.h edit that breaks the memory layer, turns the sweep RED.
+No game run: this is a host-code semantic class; the memory layer is exercised by every frame of play, the test is the
+independent second line (retail rules written per byte, not derived from the helpers).
+Discrimination: selects H-equal for every live recomp.h helper (H-all-covered: 0 OPEN), refutes H-differ for the memory layer
+(0/200,000 vs the byte model, mutants detected) and H-hollow (every op kind n>10,000, every control fires).
+Rules out: a byte/halfword swizzle or doubleword word-order defect in the guest memory layer; uncovered live recomp.h helpers.
+Next discriminator: none left inside the recomp.h class; owner-queue items wait on the owner. NEXT.md names the next sibling
+(ultramodern/librecomp host helpers called from generated code by name other than RECOMP_FUNC overrides, if any remain unrowed).
