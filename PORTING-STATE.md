@@ -207791,3 +207791,40 @@ After the fixes all four are rc 0. The binary was rebuilt after the mask edit, w
 Verdict: this selects H-overlap (port-only) and refutes H-design for item 32 (two sources: port runtime census + retail oracle).
 Next discriminator: the page of $v0 after each jal 0x8002221C, port vs oracle. Port pages in the FB pair while retail's are not
 selects H-steal; matching pages refute it and point to H-guard/H-reg (NEXT.md).
+
+## Session 7784 (2026-11-21) — fb-shared-slot CLOSED as an instrument bug: the s5660 unaligned-store hook reported the stored VALUE as the address (all 404 sites); fixed, item 32 now H-design / H-clean
+Work unit NEXT.md fb-shared-slot (where does the port get DL chunks at 0x806F0000-class addresses?). Static read first (objdump of
+roguesquadron.elf): every DL write goes into a 264-byte chunk (8-byte link header + 256 data) popped from the cache *0x801163B0;
+when it is empty, findAndUnlinkSmallestEntry 0x8002221C evicts the material node with the smallest nonzero age (+8) and returns its
+chunk list (+20). The pool itself is ONE fixed block linked by buildAndRegisterDefaultMaterial at 0x80018034..0x8001808C (base s2,
+size s7). The s7783 "DL-emitter stores" at D5A8..D650 are the swl/swr vertex-word copies into chunk slots (dst = sp+0x20..0x2C).
+- RETAIL ORACLE (angrylion + cxd4, 30 s, `RS64_EXEC_REG_HIST=5 --watch-pc 0x80018034`, gpr-ctl fired, scratch/s7784/oracle_a1.log):
+  the pool is built 3 times, base ALWAYS 0x80720000: 0x57768 B (t=0.2 s, w320), 0x18F18 B (t=3.8 s), 0x72780 B = 1757 chunks
+  (t=8.4 s, w640) -> 720000-792780. Consistent with s7783's retail swl pages 720000..75DFFF.
+- PORT s7784a (route_long 150 s, ROGUESQ_S7779_ARENA=1 + PLANT, new [s7784] pool/in-out tables in main.cpp): pools=0, ctl 0/0 and
+  only swl/swr pcs reported -> the store hook only sees UNALIGNED stores (aligned sw never reaches rs64_s6843_note), so the pool and
+  control parts of the new instrument are void. Reading the generated code for 0x8000D5A8 showed why the swl addresses looked wild:
+  `{ s5660_a = U32(ADD32(ctx->r4, 0X0)) & ~3u; rs64_s5660_ustore(...) }  do_swl(rdram, 0X0, ctx->r3, ctx->r4);` -- the hook adds the
+  offset to $a0 (the VALUE), the store uses $v1 (the base). tools/apply_s5660_unaligned_store_census.py used regex group(5) (value)
+  where do_sxx(rdram, offset, base, value) needs group(4). All 404 hooks in the tree were wrong.
+- FIX: the script now emits group(4) and has a repair pass for already-patched trees (404 rewritten, rerun 0 = idempotent).
+  New gate tools/s7784_ustore_base_census.py (in the sweep glob): hooks=404 ok=404 bad=0; --controls PASS; a real-file mutant
+  (funcs_3.c 0x8000D5A8 back to r4) reads bad=1 rc 1.
+- PORT s7784b (same route, fixed hook, alive, 0 crash, save unchanged): [s7783] dl_in_cimg 5828 (s7783a) -> 0, plant_in=1 (control);
+  per-epoch DL stores in_slot=0 for all 5 epochs; ep2 (640x340 intro) 720218-7285C4 = inside retail's 720000-75DFFF; later epochs
+  55FA18-5CFEC4 / 5A2A18-5F1F04 (pool rebuilt below the FB pair). `tools/s7783_shared_slot_score.py s7784b oracle_h` rc 0 H-design
+  (was rc 4 H-overlap). `tools/s7781_escape_score.py s7784b` H-clean: the only closed-extent store is the plant (s7783b rc 4
+  H-shared-slot). The scorer now skips [s7784] and blank lines inside the [s7781] dump (otherwise it reads pcs=0, CONTROL FAIL).
+Two sources: port runtime with the fixed hook + retail oracle (pool base 720000 this session, swl pages s7783). Item 32 CLOSED:
+H-overlap and s7781's H-shared-slot member were the hook bug; no port-only placement of DL chunks exists.
+ORIGIN: the writer of the "in-FB DL chunk" addresses was our own diagnostic hook (value register used as address); the game's stores
+were always correct (do_swl uses the base). Not a mitigation.
+Fallout (to audit): every result that read addresses from rs64_s5660_ustore -> rs64_s6843_note (STORE_WATCH [swatch] hits, s7779/
+s7781/s7783 FB-arena censuses, s5660/s5661 "unaligned stores are not the rail writer", the s5654 vstore census) saw value+offset
+for unaligned stores. s7488's swl/swr watch (RS64_S7488_UST) passes the base register and is unaffected.
+Gate sweep (`tools/s7651_gate_sweep.py --jobs 2`, after the hook repair): 228 gates, GREEN 218, RED 5 (s7364, s7374, s7375, s7384,
+s7599), all naming the new s7784_* statics in main.cpp. That instrument's pool/control half was void (aligned sw never reaches the
+hook: pools=0, ctl 0/0) and the verdict came from the existing s7783 instrument, so the s7784 main.cpp block was REMOVED (main.cpp
+identical to HEAD; s7784a/b logs retained in scratch/s7774/). Re-run `--only 's7364|s7374|s7375|s7384|s7599|s7784'`: 6/6 GREEN.
+Verdict: selects H-design for item 32 and H-clean for s7781's escape class; refutes H-overlap/H-shared-slot (instrument bug). Next:
+NEXT.md s5660-hook-fallout (which older swl/swr-address results flip).

@@ -15,7 +15,7 @@ sums = [i for i, l in enumerate(L) if l.startswith("[s7781] sum")]
 if not sums: print("no [s7781] sum"); sys.exit(3)
 rows = []
 for l in L[sums[-1] + 1:]:
-    if l.startswith("[s7783]"): continue  # s7783 summary lines sit inside the [s7781] dump
+    if not l.strip() or l.startswith(("[s7783]", "[s7784]")): continue  # s7783/s7784 summary lines (and a blank one) sit inside the [s7781] dump
     if not l.startswith("[s7781] pc="): break
     rows.append({k: v for k, v in (kv.split("=") for kv in l[8:].split())})
 def fam(pc):
