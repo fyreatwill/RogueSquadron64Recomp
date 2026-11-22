@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7831 (2026-11-22).
+Compact operational handoff, as of Session 7832 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -402,7 +402,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    The s7826 reticle +0.5 px was a schedule-dependent camera pitch (s7827-s7830, sub-pixel). With the pose-matched schedule (s7829 arm 1,
    w1024 gate 11.5) s7831 finds world-tri dy mode 0, reticle 0.14/0.11 px, absent texrects at the retail-vs-retail baseline, against two
    retail refs (control: pitched s7826 pair shows +3 tri mode and one-signed +0.5 reticle). Tools: s7827_tri_yshift_census.py,
-   s7826_rect_path_offset.py (--p-retail, --none-detail). Next G3 unit: the same pair on a second level's flight (NEXT.md).
+   s7826_rect_path_offset.py (--p-retail, --none-detail).
+   **s7832 lvl2 (Barkhesh) flight pair:** world-tri dy mode 0, static HUD exact, every sprite class present (5B522F burst in all 4
+   captures), absent classes at the retail-vs-retail baseline -> no render defect. BUT the port flies a constant ~0.1 deg camera pitch
+   delta under BOTH port schedules (w1024 gate 11.5 and 13.0, identical numbers: +0.0023/+0.0018/+0.00175 rad, reticle one-signed
+   +0.5/-0.25 px on ~540/850 frames) while two retail schedules agree at ~0 (reticle 0.00 px). Not schedule-dependent on lvl2,
+   sub-pixel, not owner-visible. Open: H-rate (port runs ~20% more game frames than emulated retail over the same motion, s7821;
+   frame-count-dependent camera integration) vs H-cpu-state. Next unit NEXT.md (retail CountPerOp arms to move retail's frame rate).
+   s7828_retail_cpo.sh now takes EEP= and PP=.
 
 ## Evidence index
 

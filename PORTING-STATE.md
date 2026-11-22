@@ -209342,3 +209342,44 @@ SOAK-RESULTS lines since s7809, no owner answers in OWNER-REVIEW-QUEUE.
 - Tool: tools/s7826_rect_path_offset.py gains `--p-retail` (second capture in retail format, for the retail-vs-retail baseline) and
   `--none-detail N` (absent elements by (w,h,PRIM) with instance/position counts and presence elsewhere in P). Default output unchanged.
 - Next: same det pair method on a second level's flight (EEP selected mission patched with tools/g3_eep_patch.py), see NEXT.md.
+
+## Session 7832 (2026-11-22) — det pair on mission 2 (Barkhesh) flight: world-tri dy mode 0, static HUD and all sprite classes present, but the port flies a constant ~0.10-0.13 deg camera pitch delta under BOTH press schedules (reticle one-signed +0.5/-0.25 px on 540/850 frames) while two retail schedules agree at ~0 (reticle 0.00 px): lvl2 pitch is NOT schedule-dependent; thread g3-det-pair-level2 -> g3-flight-pitch-rate
+Work unit (NEXT s7832, HYPOTHESIS-ID g3-det-pair-level2). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS lines since
+the s7809 fold, no owner answers. HID idle 12.5 h, screen unlocked, load 1.5. Binary = s7826-s7831 build (no src change). Four game
+runs, one at a time (2 port, 2 retail oracle).
+- Save: scratch/s6748/lvl2.eep (signed, selected mission byte 0x31 = 1, the s6748 save) -> scratch/s7832/lvl.eep. Route = the s7829
+  arm-1 schedule MINUS press 10 (103.5 start skipped lvl1's crawl; mission 2 has no crawl, and a START in flight would pause):
+  port `env SAVE_FROM=scratch/s7832/lvl.eep SECS=150 CAP0=12 AP=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,
+  79.5:start,91.5:start XE="ROGUESQ_AUTOPILOT_CLOCK=vi RS64_RDP_BIN_PORT=... RS64_RDP_BIN_PORT_MAX_MB=6000" zsh tools/g3_port_capture.sh`;
+  retail `env CPO=2 RSECS=175 EEP=scratch/s7832/lvl.eep PP=19.5:start,...,91.5:start zsh tools/s7828_retail_cpo.sh` (R1 OFF 5.75, R2
+  OFF 4.25 = presses 4-9 1.5 s earlier). tools/s7828_retail_cpo.sh gains EEP= and PP= (defaults = the old lvl1 route, unchanged).
+- All four reach flight (port window sheet: green hills + pyramid, then HUD flight; 0 crash lines). Flight bands (scratch/s7829/tl.py):
+  R1 3277-4400, R2 3186-4358, port(11.5) 4139-5162, port13 4104-5130. Port renders ~20% more frames over the same motion (rate split,
+  s7821). Fire fs, port 11.5: 941/1661/2075/2795/3147/3507 (= lvl1 arm 1); port13: 906/1626/2039/2759/3112/3472 (= lvl1 arm 3).
+- World tris (tools/s7827_tri_yshift_census.py --controls, planted A/B PASS in every run), XH-consistent dy mode 0 in all pairings.
+  R1 vs R2 (--p-retail): 0 x6.36M, tails -4/-3/-5 ~1e4 each, no + shoulder. Port vs R1 / R2 / both schedules: 0 x~3e5 plus +3/+4
+  (~6.9e4/6.6e4 vs R1) and -4/-5/-6 shoulders = the s7831 pitched-control signature (lvl1 control had a +3 mode).
+- Pose fit on two steady static-sky bands (paired 43-57 tris, pose controls PASS each run): R1 vs R2 H-vp dy -0.07 / pitch -0.00005 rad
+  (rms 1.49 = this terrain's pairing floor). Port vs R1: pitch +0.00230 (band a), +0.00180 (band b); vs R2: +0.00175. port13 gives the
+  SAME numbers to every printed digit (+0.00230 / +0.00180 / +0.00175). Fits are only modestly better than the floor (rms 1.99-2.16
+  vs 1.49), so the pitch size is approximate; its sign and presence are carried by line 2.
+- Line 2, reticle (tools/s7826_rect_path_offset.py, plant +3 px PASS every run): R1 vs R2 median 0.00 / 0.00 px, big reticle exact on
+  811/850. Port vs R1, R2 and port13 vs R1: median 0.25 / 0.25, big reticle '+0,+0.5' on 539-545 frames, small '-0.25,+0' on 534-539
+  = one-signed, the lvl1 pitched pair's signature (s7826: +0.5 on 264/291).
+- Absent texrects ('none'): R1 vs port 374 (+106 reticle), R1 vs R2 786; top absent classes in every pairing incl. retail-vs-retail are
+  the colour-cycling 52x64 xxxx00B9 icon (one position, PRIM varies) and the 58.5x72 icon colour states. Large 5B522F** sprites
+  (scratch/s7832/sprite_count.py): present in all four captures (R1 39 frames 3870-3908, R2 39, port 55, port13 56; one burst event,
+  port's higher frame rate) -> not a missing class. Static flight HUD exact (9024/10497 texrect instances exact vs R1).
+- Reading: on lvl2 the port's flight camera is pitched ~0.1 deg vs retail under two port schedules that on lvl1 split 0 / pitched,
+  while retail is pose-invariant across its two schedules on both levels. So "schedule-dependent" (s7829) does not explain lvl2:
+  the port lands the pitched pose for both, retail never does. Sub-pixel (0.5 px reticle), not owner-visible. Leading candidate
+  H-rate: the camera/craft integrate per game frame and the port runs ~20% more game frames than the emulated retail over the same
+  motion (s7821 rate split), so a frame-count-dependent integration lands a slightly different pose; the lvl1 0/pitched split would
+  then be which frames the presses landed on. Against a port CPU defect: s7825 FMA/FCSR audit (IEEE-identical ops) and s7829 lvl1
+  arm 1 matching retail exactly.
+- Discrimination: refutes H-exact and H-pose(schedule) for lvl2 flight; H-residual(render) refuted (no tri/texrect class missing,
+  world projection exact). Selects a port-only constant camera pitch delta on lvl2 (two lines: static-sky pitch fit vs two retail
+  refs + one-signed reticle path offset; retail-vs-retail baseline ~0 on both). Cause open (H-rate vs H-cpu-state), next unit.
+- Captures (zstd, gitignored): scratch/s7832/{port,port13}.bin.zst, ret{,2}/retail.bin.zst; scores scratch/s7832/{tri,rect,pose}_*.txt;
+  window PNGs and private game dirs deleted.
+- ORIGIN: n/a (no mitigation, no game code change).
