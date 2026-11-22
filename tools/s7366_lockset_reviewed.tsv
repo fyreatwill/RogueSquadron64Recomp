@@ -113,3 +113,5 @@ src/rsp/s7644_rspdma.cpp	g_srcc	gsum	H-safe-caller	s7719: gsum is called only at
 src/rsp/s7644_rspdma.cpp	g_gstale	stale_tally	H-safe-caller	s7719: stale_tally is called only at 220, under lock_guard g_gmu at 214
 src/rsp/s7644_rspdma.cpp	g_srcc	stale_tally	H-safe-caller	s7719: stale_tally is called only at 220, under lock_guard g_gmu at 214
 src/rsp/s7644_rspdma.cpp	g_srcc	src_idx	H-safe-caller	s7719: src_idx is called only at 289, under lock_guard g_gmu at 285
+src/main/main.cpp	s_s7783_pc	s7783_store	H-safe-caller	s7783_store is called only from s7781_escape (holds s_s7781_mu, both call sites); s7781_dump reads it under s_s7781_mu (s7783 diag, ROGUESQ_S7779_ARENA)
+src/main/main.cpp	s_s7783_ep	s7783_store	H-safe-caller	as s_s7783_pc: written only in s7783_store under the caller-held s_s7781_mu, read in s7781_dump under s_s7781_mu

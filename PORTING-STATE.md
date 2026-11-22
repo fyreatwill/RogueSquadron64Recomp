@@ -207748,3 +207748,43 @@ must give open=13 (>0), and a planted fake KNOWN entry must read STALE. Both PAS
 NEEDS-ARGS 1, NEEDS-INPUT 1}, rc 0, own controls PASS.
 Rules out: a hidden flag-4 caller behind the collision bug (the 62 newly visible sites add no flag-4 site). Next stays NEXT.md
 fb-shared-slot (s7781 item 32, not yet run).
+
+## Session 7783 (2026-11-21) — fb-shared-slot: retail never places display-list chunks in the framebuffer pair, the port does (H-overlap, port-only; H-design refuted by the oracle)
+Work unit NEXT.md fb-shared-slot (s7781 item 32). One instrument (src/main/main.cpp s7783_*, all under ROGUESQ_S7779_ARENA=1, every
+helper self-gated): (1) the RDP's last SET_COLOR_IMAGE (rt64_rdp.cpp -> rs64_s7493_img, kind 0) kept in s_s7783_cimg; every guest store
+in [0x400000,0x800000) tested against [cimg, cimg+w*h*2); (2) the DL free-chunk list *0x801163B0 (linked via +0) walked at every [s7781]
+open/close and classified into the FB slot table; (3) per-epoch 16-byte granules of the live arena, DL-emitter vs other writers;
+(4) per-epoch DL-emitter (0x8000CFD4-D6FF) store pages. Controls: fake store pc DEAD7783 at cimg+0x100 must count in-cimg
+(plant_in=1 both runs); the walk classifies arena+0x100 into the arena's slot (ctl_slot=1, 14/14 walks).
+Runs (owner route_long, tools/s7774_slot_run.zsh, save unchanged, alive, 0 crash): s7783a 300 s, s7783b 150 s.
+- s7783a: DL-emitter stores inside the CURRENT colour image 5828 (5728 while that slot is busy); logged ones at swap 359-360
+  (t~5.7 s, 640x340 intro, FB pair 62B800/695C00): phys 6F0004..6FFF24 = rows 288-339 of cimg 695C00. coll=0 coll_rev=0 (arena
+  granules never shared by DL and loader pcs; no collide plant, so this zero is UNCONTROLLED). Free-list walks: the cache itself
+  sits outside the FB slots in 14/14 walks (720000-792678 boot/hangar, 5611C8-62B660 later; ep1-close's 183 "in slot0" is the stale
+  0x96000 boot extent overlapping 720000+, an artefact). So the in-FB chunks are NOT free-list nodes: they arrive another way
+  (0x8002221C texture-entry steal is the lead).
+- s7783b: per-epoch DL page table. ep2 (the 640x340 intro): 5004 DL stores, lo 400004 hi 7DFED4, 2836 inside the FB pair
+  [62B800,700000), pages 6F0000=2112 6FF000=704. Later epochs: ep3 hangar 1574/37896 in slots (68F000=1476), ep6 490/38118
+  spread over every 0x10000 boundary 620000..6FF000 (the X0000/XF000 page pairs).
+- RETAIL ORACLE (new: tools/oracle/rs64_oracle.c RS64_EXEC_REG_HIST=<gpr>, page histogram of a register per exec hit keyed by VI
+  width, [s7783-reg] rows). angrylion + cxd4 required: with the dummy video plugin retail stays on the 320 logo forever (45 s
+  measured, as the README says). Retail reaches the SAME FB pair (VI origins 0x696100/0x62BD00 = 695C00/62B800 + 1 row) from t~9 s.
+  --watch-pc 0x8000D5A8 (swl a0,0($v1)) + 0x8000D5E0 (swl a1,4($v1)), RS64_EXEC_REG_HIST=3, 18 s: [gpr-ctl] fired, 8670 hits, ALL
+  width 640, 62 pages 720000..75DFFF, 0 inside [62B800,700000). Independent write watch 0x6F0000-0x700000, 18 s, no table overflow:
+  the only writer is the boot memclear 0x800078EC (195393 stores), 0 DL-emitter pcs. (Two earlier write-watch runs overflowed the
+  128-pc writer table and are void; a whole-RDRAM watch 0 is the oracle's control slot and is auto-removed at 10000 hits.)
+- Verdict tool: tools/s7783_shared_slot_score.py <port run.log> <oracle log> -> s7783b rc 4 H-overlap (port-only). Controls: s7783a
+  (no dlep rows) rc 3; synthetic port log with chunks at 720000 rc 0 (H-design); oracle log with gpr-ctl removed rc 3.
+- tools/s7781_escape_score.py now skips [s7783] lines inside the [s7781] dump (they read as end-of-table: pcs=0, CONTROL FAIL).
+Two sources: port runtime (2 runs) + retail oracle (2 instruments: exec reg histogram, write watch). Rules out H-design (retail does
+not host DL chunks in FB memory in the same phase) and, uncontrolled, H-arena-collide. Not yet known: how the port obtains a DL chunk
+at 0x806F0000-class addresses (64 KB-aligned, X0000/XF000 page pairs suggest a chunk carved at the end of each 64 KB block) and
+whether host writes (rt64_writeback, 15.8k into this span s7779) then corrupt live DL chunks (a candidate root for the old
+beginFrameDLChunk / findAndUnlinkSmallestEntry crash families, hypothesis only). No owner-visible defect is attributed to it.
+ORIGIN: not a mitigation; the writer of the in-FB chunk addresses is the open item (next: the 0x8002221C return / chunk pop values,
+port vs oracle with RS64_EXEC_REG_HIST=2).
+Gate sweep (`tools/s7651_gate_sweep.py --jobs 2`): 228 gates, GREEN 219, RED 4, all four caused by this session's instrument and fixed
+in this session: s7339 mask16 (a redundant `& 0xFFFFFF` on an RT64 address that maskAddress() had already masked, now removed),
+s7366 lockset (s_s7783_pc/s_s7783_ep: two H-safe-caller rows, because s7783_store only runs under s_s7781_mu), s7548 GH (s_s7781_lo/hi/
+last/lastext H-gated rules with the `if (!s_s7779_on) return;` proof; its --controls pass 10/10), s7598 AZ (s_s7783_g.assign gated row).
+After the fixes all four are rc 0. The binary was rebuilt after the mask edit, which changes no behaviour (cimg is the same value).

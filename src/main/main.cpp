@@ -2207,6 +2207,53 @@ static const bool s_s7779_on = [] { const char* e = std::getenv("ROGUESQ_S7779_A
 static std::atomic<uint64_t> s_s7779_gst{0}, s_s7779_gst_live{0};
 static uint32_t s7779_w(const volatile uint8_t* rd, uint32_t a) { return *(const volatile uint32_t*)(rd + (a & 0x7FFFFCu)); }
 static uint32_t s7779_b(const volatile uint8_t* rd, uint32_t a) { return rd[(a & 0x7FFFFFu) ^ 3u]; }  /* diag-only: sole caller rs64_s7779_note */
+// s7783: fb-shared-slot discriminator (ROGUESQ_S7779_ARENA=1). (1) s_s7783_cimg = the last SET_COLOR_IMAGE the RDP applied (rt64_rdp.cpp ->
+// rs64_s7493_img); every guest store in [0x400000,0x800000) is tested against [cimg, cimg + w*h*2): a DL-emitter store inside the current
+// colour image = H-overlap. (2) At each [s7781] open/close the DL free-chunk list *0x801163B0 (linked via +0) is walked and every node is
+// classified into the FB slot table (0x80128E98+4i, state 0x80128EAA+i). (3) Per epoch, 16-byte granules of the live arena written by
+// DL-emitter vs other pcs: a granule written by both = H-arena-collide. Controls: a fake store at cimg+0x100 (pc DEAD7783) must count as
+// in-cimg; the walk classifies arena+0x100 and must name the arena's slot. Measurement only.
+static std::atomic<uint32_t> s_s7783_cimg{0}; static std::atomic<uint64_t> s_s7783_cimg_sets{0};
+static std::mutex s_s7783_mu; static std::map<uint32_t, uint64_t> s_s7783_cimg_hist;
+struct S7783C { uint64_t n = 0, in_cimg = 0, in_cimg_busy = 0; };
+static std::map<uint32_t, S7783C> s_s7783_pc; static uint64_t s_s7783_plants = 0, s_s7783_coll = 0, s_s7783_coll_rev = 0; static int s_s7783_lines = 0;
+struct S7783E { uint64_t n = 0, in_slot = 0, in_cimg = 0; uint32_t lo = 0xFFFFFFFFu, hi = 0; std::map<uint32_t, uint64_t> slot_pages; };
+static std::map<int, S7783E> s_s7783_ep; static int s_s7783_cur_ep = 0;  /* per [s7781] epoch: DL-emitter (0x8000CFD4-D6FF) stores, as the oracle's RS64_EXEC_REG_HIST=3 rows */
+static std::vector<uint8_t> s_s7783_g;  /* per granule: bit0 = non-DL pc wrote, bit1 = DL pc wrote (this epoch) */
+static bool s7783_dl(uint32_t pc) { if (!s_s7779_on) return false; /* diag only */ return pc >= 0x8000CFD4u && pc <= 0x8000D6FFu; }
+static int s7783_slot(const volatile uint8_t* rd, uint32_t ph, uint32_t ext) {
+    if (!s_s7779_on) return -1;  /* ROGUESQ_S7779_ARENA diag only */
+    const uint32_t nsl = rd[(0x128EADu) ^ 3u];
+    for (uint32_t i = 0; i < nsl && i < 4; ++i) { const uint32_t b = *(const volatile uint32_t*)(rd + 0x128E98u + 4u * i) & 0x1FFFFFFFu; if (ph >= b && ph < b + ext) return (int)i; }
+    return -1;
+}
+static void s7783_walk(const volatile uint8_t* rd, const char* tag, int ep, uint32_t h, uint32_t ext) {
+    if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only */
+    uint32_t n = 0, sl[4] = {0, 0, 0, 0}, oth = 0, lo = 0xFFFFFFFFu, hi = 0; bool cyc = false;
+    uint32_t a = *(const volatile uint32_t*)(rd + 0x1163B0u);
+    while (a) { if ((a & 0xFF800003u) != 0x80000000u) { cyc = true; break; } if (++n > 16384) { cyc = true; break; }
+        const uint32_t ph = a & 0x7FFFFFu; if (ph < lo) lo = ph; if (ph > hi) hi = ph;
+        const int s = s7783_slot(rd, ph, ext); if (s >= 0) ++sl[s]; else ++oth;
+        a = *(const volatile uint32_t*)(rd + ph); }
+    const uint32_t nsl = rd[(0x128EADu) ^ 3u];
+    std::fprintf(stderr, "[s7783] walk %s ep=%d n=%u slot0=%u slot1=%u slot2=%u slot3=%u other=%u lo=%06X hi=%06X bad=%d ext=%X h=%06X ctl_slot=%d cimg=%06X cimg_slot=%d st=%u,%u,%u,%u nsl=%u sl=%06X,%06X,%06X,%06X\n",
+                 tag, ep, n, sl[0], sl[1], sl[2], sl[3], oth, lo == 0xFFFFFFFFu ? 0u : lo, hi, cyc ? 1 : 0, ext, h, h ? s7783_slot(rd, h + 0x100u, ext) : -9,
+                 s_s7783_cimg.load(), s7783_slot(rd, s_s7783_cimg.load(), ext), rd[0x128EAAu ^ 3u], rd[0x128EABu ^ 3u], rd[0x128EACu ^ 3u], rd[0x128EADu ^ 3u] & 0u, nsl,
+                 *(const volatile uint32_t*)(rd + 0x128E98u) & 0xFFFFFFu, *(const volatile uint32_t*)(rd + 0x128E9Cu) & 0xFFFFFFu,
+                 *(const volatile uint32_t*)(rd + 0x128EA0u) & 0xFFFFFFu, *(const volatile uint32_t*)(rd + 0x128EA4u) & 0xFFFFFFu);
+}
+/* guest store test vs the current colour image; caller holds s_s7781_mu */
+static void s7783_store(const volatile uint8_t* rd, uint32_t pc, uint32_t ph, uint32_t ext) {
+    if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only */
+    const uint32_t c = s_s7783_cimg.load(std::memory_order_relaxed);
+    const bool in = c && ph >= c && ph < c + ext;
+    S7783C& e = s_s7783_pc[pc]; ++e.n;
+    if (s7783_dl(pc)) { S7783E& q = s_s7783_ep[s_s7783_cur_ep]; ++q.n; if (ph < q.lo) q.lo = ph; if (ph > q.hi) q.hi = ph; if (in) ++q.in_cimg;
+        if (s7783_slot(rd, ph, ext) >= 0) { ++q.in_slot; if (q.slot_pages.size() < 64 || q.slot_pages.count(ph >> 12)) ++q.slot_pages[ph >> 12]; } }
+    if (in) { ++e.in_cimg; const int s = s7783_slot(rd, ph, ext); if (s >= 0 && rd[(0x128EAAu + (uint32_t)s) ^ 3u]) ++e.in_cimg_busy;
+        if ((s7783_dl(pc) || pc == 0xDEAD7783u) && s_s7783_lines++ < 200)
+            std::fprintf(stderr, "[s7783] dl-in-cimg pc=%08X phys=%06X cimg=%06X slot=%d sw=%d\n", pc, ph, c, s, g_rs64_swap_n.load(std::memory_order_relaxed)); }
+}
 // s7781: FB-arena escape census (ROGUESQ_S7779_ARENA=1). When the arena closes (head 0x8010FEFC leaves a live value), the closed extent
 // [h, h+ext) is remembered until the next epoch opens. Every GUEST store into it is counted per pc with its slot state (st != 0 = the slot
 // is now a busy framebuffer) and the ms since the close. A pc that also stored inside a live arena (a loader/inflate pc) storing into the
@@ -2226,7 +2273,8 @@ static void s7781_escape(const volatile uint8_t* rd, uint32_t pc, uint32_t phys,
     if (cur != s_s7781_last) {
         if (s_s7781_last) { s_s7781_lo = s_s7781_last; s_s7781_hi = s_s7781_last + s_s7781_lastext; s_s7781_tc = t; ++s_s7781_closes;
             s_s7781_clo = s_s7781_llo; s_s7781_chi = s_s7781_lhi; s_s7781_cext = s_s7781_lastext; s_s7781_eplines = 0;
-            std::fprintf(stderr, "[s7781] close %06X-%06X ep=%d live_used=%06X-%06X\n", s_s7781_lo, s_s7781_hi, s_s7781_ep, s_s7781_clo, s_s7781_chi); }
+            std::fprintf(stderr, "[s7781] close %06X-%06X ep=%d live_used=%06X-%06X\n", s_s7781_lo, s_s7781_hi, s_s7781_ep, s_s7781_clo, s_s7781_chi);
+            s7783_walk(rd, "close", s_s7781_ep, s_s7781_lo, s_s7781_hi - s_s7781_lo); }
         if (cur) { ++s_s7781_ep; s_s7781_lo = s_s7781_hi = 0; s_s7781_llo = 0xFFFFFFFFu; s_s7781_lhi = 0;  /* a new epoch ends the previous closed window */
             const uint32_t nsl = s7779_b(rd, 0x128EADu);
             std::fprintf(stderr, "[s7781] open ep=%d h=%06X ext=%X wh=%u,%u depth=%u bound=%08X desc=%08X %08X %08X %08X %08X %08X %08X nsl=%u slots=%08X/%u %08X/%u %08X/%u %08X/%u\n",
@@ -2234,9 +2282,12 @@ static void s7781_escape(const volatile uint8_t* rd, uint32_t pc, uint32_t phys,
                          s7779_w(rd, 0x10FEFCu), s7779_w(rd, 0x10FF00u), s7779_w(rd, 0x10FF04u), s7779_w(rd, 0x10FF08u), s7779_w(rd, 0x10FF0Cu), s7779_w(rd, 0x10FF10u), s7779_w(rd, 0x10FF14u), nsl,
                          s7779_w(rd, 0x128E98u), s7779_b(rd, 0x128EAAu), s7779_w(rd, 0x128E9Cu), s7779_b(rd, 0x128EABu), s7779_w(rd, 0x128EA0u), s7779_b(rd, 0x128EACu),
                          s7779_w(rd, 0x128EA4u), s7779_b(rd, 0x128EADu - 0u + 0u) & 0u); }
+        if (cur) { s7783_walk(rd, "open", s_s7781_ep, cur, ext); s_s7783_g.assign(ext / 16u + 1u, 0); }
         s_s7781_last = cur; s_s7781_lastext = ext;
     }
     auto rec = [&](uint32_t k, uint32_t ph) {
+        if (live && ph >= h && ph < h + ext && k != 0xDEAD7781u) { const uint32_t gi = (ph - h) >> 4;
+            if (gi < s_s7783_g.size()) { uint8_t& g = s_s7783_g[gi]; if (s7783_dl(k)) { if (g & 1u) ++s_s7783_coll; g |= 2u; } else { if (g & 2u) ++s_s7783_coll_rev; g |= 1u; } } }
         if (live && ph >= h && ph < h + ext) { S7781Pc& e = s_s7781_pc[k]; ++e.live; if (ph < s_s7781_llo) s_s7781_llo = ph; if (ph + 4 > s_s7781_lhi) s_s7781_lhi = ph + 4; return; }
         if (!s_s7781_hi || ph < s_s7781_lo || ph >= s_s7781_hi) return;
         const uint32_t nsl = s7779_b(rd, 0x128EADu); uint32_t st = 0;
@@ -2247,6 +2298,9 @@ static void s7781_escape(const volatile uint8_t* rd, uint32_t pc, uint32_t phys,
             std::fprintf(stderr, "[s7781] cst ep=%d pc=%08X phys=%06X dt_ms=%.2f st=%u ext_now=%X ext_close=%X in_used=%d\n", s_s7781_ep, k, ph, dt, st, ext, s_s7781_cext,
                          (ph >= s_s7781_clo && ph < s_s7781_chi) ? 1 : 0);
     };
+    s_s7783_cur_ep = s_s7781_ep; s7783_store(rd, pc, phys, ext);
+    if (plant && !s_s7783_plants && s_s7783_cimg.load() >= 0x400000u) { ++s_s7783_plants; const uint32_t c = s_s7783_cimg.load();
+        std::fprintf(stderr, "[s7783] plant fire cimg=%06X\n", c); s7783_store(rd, 0xDEAD7783u, c + 0x100u, ext); }
     if (plant && s_s7781_hi && !s_s7781_plants) { ++s_s7781_plants; std::fprintf(stderr, "[s7781] plant fire %06X\n", s_s7781_lo + 0x100u); rec(0xDEAD7781u, s_s7781_lo + 0x100u); }
     rec(pc, phys);
 }
@@ -2254,6 +2308,18 @@ static void s7781_dump() {
     if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only */
     std::lock_guard<std::mutex> lk(s_s7781_mu);
     std::fprintf(stderr, "[s7781] sum closes=%llu plants=%llu pcs=%zu\n", (unsigned long long)s_s7781_closes, (unsigned long long)s_s7781_plants, s_s7781_pc.size());
+    { uint64_t dn = 0, di = 0, dib = 0, on = 0, oi = 0; for (auto& kv : s_s7783_pc) { if (kv.first == 0xDEAD7783u) continue;
+        if (s7783_dl(kv.first)) { dn += kv.second.n; di += kv.second.in_cimg; dib += kv.second.in_cimg_busy; } else { on += kv.second.n; oi += kv.second.in_cimg; } }
+      const auto pl = s_s7783_pc.find(0xDEAD7783u);
+      std::fprintf(stderr, "[s7783] sum dl_st=%llu dl_in_cimg=%llu dl_in_cimg_busy=%llu oth_st=%llu oth_in_cimg=%llu plant=%llu plant_in=%llu coll=%llu coll_rev=%llu cimg_sets=%llu cur_cimg=%06X\n",
+                   (unsigned long long)dn, (unsigned long long)di, (unsigned long long)dib, (unsigned long long)on, (unsigned long long)oi, (unsigned long long)s_s7783_plants,
+                   (unsigned long long)(pl != s_s7783_pc.end() ? pl->second.in_cimg : 0), (unsigned long long)s_s7783_coll, (unsigned long long)s_s7783_coll_rev,
+                   (unsigned long long)s_s7783_cimg_sets.load(), s_s7783_cimg.load());
+      for (auto& q : s_s7783_ep) { std::fprintf(stderr, "[s7783] dlep ep=%d n=%llu in_slot=%llu in_cimg=%llu lo=%06X hi=%06X pages:", q.first, (unsigned long long)q.second.n,
+          (unsigned long long)q.second.in_slot, (unsigned long long)q.second.in_cimg, q.second.lo == 0xFFFFFFFFu ? 0u : q.second.lo, q.second.hi);
+        for (auto& pg : q.second.slot_pages) std::fprintf(stderr, " %06X=%llu", pg.first << 12, (unsigned long long)pg.second); std::fprintf(stderr, "\n"); }
+      std::lock_guard<std::mutex> lk2(s_s7783_mu); int k = 0; std::fprintf(stderr, "[s7783] cimg_hist");
+      for (auto& kv : s_s7783_cimg_hist) if (k++ < 24) std::fprintf(stderr, " %06X=%llu", kv.first, (unsigned long long)kv.second); std::fprintf(stderr, "\n"); }
     int n = 0; for (auto& kv : s_s7781_pc) if (kv.second.closed || kv.second.live) if (n++ < 200)
         std::fprintf(stderr, "[s7781] pc=%08X live=%llu closed=%llu closed_busy=%llu dt_min_ms=%.1f ep=%d\n", kv.first, (unsigned long long)kv.second.live,
                      (unsigned long long)kv.second.closed, (unsigned long long)kv.second.closed_busy, kv.second.closed ? kv.second.dt_min : -1.0, kv.second.ep);
@@ -10702,6 +10768,8 @@ static void s7503_set(uint32_t, uint32_t); static void s7503_fill(uint32_t); sta
 extern "C" void rs64_s7503_arm(uint32_t, uint32_t, uint32_t, const char*, int);
 extern "C" void rs64_s7493_img(uint32_t kind, uint32_t addr, uint32_t width, uint32_t siz) {
     s7497_img(kind, addr); s7500_set(kind, addr); s7503_set(kind, addr);
+    if (s_s7779_on && kind == 0) { s_s7783_cimg.store(addr); s_s7783_cimg_sets.fetch_add(1, std::memory_order_relaxed);  /* s7783; addr is maskAddress()ed by RT64 */
+        std::lock_guard<std::mutex> lk(s_s7783_mu); ++s_s7783_cimg_hist[addr]; }
     if (s7495_on() && kind <= 1) rs64_s7495_img(kind, addr, width, siz);
     if (!s7493_on() || kind > 1) return;
     std::lock_guard<std::mutex> lk(g_s7493_mu); const double now = s7493_now(); if (g_s7493_t0 == 0) g_s7493_t0 = now;

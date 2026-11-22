@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7778 (2026-11-21).
+Compact operational handoff, as of Session 7783 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -9,7 +9,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 
 ## Headline
 
-**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7781: FB-arena loaders clean, new DL-chunk/FB shared-slot member item 32 open; s7779: dangling-global class item 31 closed 7/7; s7780: diag helpers must gate inside their own body, or the class censuses read them as default-on). Nothing is broken at the
+**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7783: port places DL chunks inside the FB pair, retail never does - item 32 H-overlap port-only, two-source; s7781: FB-arena loaders clean; s7779: dangling-global class item 31 closed 7/7; s7780: diag helpers must gate inside their own body, or the class censuses read them as default-on). Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 **Owner: docs/OWNER-REVIEW-QUEUE.md (s7762) is the one-sitting list** (20 items, command + sheets each); every path and setting
 name in it and in OWNER-OPT-INS is gated by `python3 tools/s7762_owner_doc_check.py --controls` (in the sweep; rc 0 s7762).
@@ -420,19 +420,19 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     watch ctl +8131 reads in the same window and 14.8M clean reads elsewhere. The next read of any kind is initNpcSlotList's
     re-init (t=77.9 cinematic table, t=83.8 mission table). Score: `python3 tools/s7776_tblwatch_score.py <log>` (--selftest
     3/3). Retail-shaped (pointer never cleared, never used): no guard needed. Single run.
-32. **FB-arena escape class (s7781): loaders CLEAN, new member H-shared-slot OPEN.** Static (`python3 tools/s7781_flag4_census.py --controls`,
-    s7782: per-function insn maps (overlay addresses collide), 229 sites, 216 resolved + 13 hand-KNOWN [loadTxtFile a1=0, the
-    load_asset_with_malloc_flags forwarder, 11 JPEG-decoder sites a1 = state+0xE = 0 with a store-side proof], unresolved 0): flag-4 callers = loader temps loadAssetAndIterateSubchunks 0x80054F48, load_hmt_and_hob
-    0x80056580/66F0/67EC (arena first, plain fallback, rs_free in the same function), zlib zcalloc->rs_zcalloc, and
-    mallocWithFallbackStrategy (no direct caller). Runtime (`ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1` ->
-    `python3 tools/s7781_escape_score.py <log>`, 3 route_long runs, identical counts, plant counted): 0 loader-pc stores into a
-    closed extent (H-escape refuted). The arena extent is exact: the [s7781] open line shows the slot table, with the arena on the
-    FREE slot (st 0) and the busy FB (st 5) directly after it. NEW: the display-list emitter 0x8000CFD4-D6FF (misnamed
-    heapFreeListDequeue: writes F5 gfx words via *0x8011DC58, 0x100-byte DL chunks from 0x8002221C, which steals the smallest
-    texture-pool entry from 0x80128F00 lists) stores into the arena's FB slot: 34 stores inside LIVE arenas, 3836 into the FREE slot
-    from 0.08 ms after the drop (chunk nodes 0x670004/0x680004, 0x69FF9C..), 5216 while the slot is a busy FB. So DL-chunk memory
-    and the arena/FB share the slot. Open: H-design (the free FB doubles as DL-chunk store, retail) vs H-overlap (texture-pool
-    memory from an earlier FB partition overlaps the current one). Next: NEXT.md fb-shared-slot. Single-source (runtime + code read).
+32. **FB-arena escape class (s7781): loaders CLEAN; member H-shared-slot = H-overlap, PORT-ONLY (s7783, two-source).** Static
+    census (`python3 tools/s7781_flag4_census.py --controls`, s7782: 229 sites, 0 unresolved): flag-4 callers are loader temps only.
+    Runtime (`ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1`, `tools/s7781_escape_score.py`): 0 loader stores into a closed extent.
+    s7783: the display-list emitter 0x8000CFD4-D6FF (writes F5 words via *0x8011DC58) puts DL chunks INSIDE the framebuffer pair in
+    the port (640x340 intro, ep2: 2836/5004 stores in [62B800,700000), pages 6F0000/6FF000, 1554 inside the RDP's CURRENT colour
+    image 695C00 at rows 288-339; hangar 68F000; later every 0x10000 boundary 620000..6FF000). Retail (oracle, angrylion+cxd4,
+    `RS64_EXEC_REG_HIST=3 --watch-pc 0x8000D5A8 --watch-pc 0x8000D5E0`, same FB pair reached t~9 s): 8670 stores, all in
+    720000..75DFFF, 0 in the pair; a write watch on 6F0000-700000 sees only the boot memclear 0x800078EC. Verdict
+    `python3 tools/s7783_shared_slot_score.py scratch/s7774/s7783b/run.log scratch/s7783/oracle_h.log` rc 4 (controls: rc 3 / rc 0
+    on planted inputs). The DL free-chunk cache *0x801163B0 itself is outside the slots (14/14 walks), so the in-FB chunks come
+    another way (lead: 0x8002221C findAndUnlinkSmallestEntry steals a texture entry). Open: name where the port gets a chunk at
+    0x806F0000-class addresses, and whether host writes (rt64_writeback) corrupt such chunks (hypothesis: root of the old
+    beginFrameDLChunk crash family). No owner-visible defect attributed. Next: NEXT.md fb-shared-slot.
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member

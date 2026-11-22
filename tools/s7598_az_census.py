@@ -73,6 +73,7 @@ ROWS = {
     ("src/main/upstream_compat.cpp", "alloc", "m.reserve(1 << 16)"): "const",
     ("src/main/upstream_compat.cpp", "alloc", "rev.assign(1 << 16, 0)"): "const",
     ("src/main/main.cpp", "alloc", "g_s5229_pc = (uint32_t*)std::calloc(0x800000"): "const",
+    ("src/main/main.cpp", "alloc", "s_s7783_g.assign(ext / 16u + 1u, 0)"): G + " (s7783 fb-shared-slot granules, ROGUESQ_S7779_ARENA; ext masked to 0x7FFFFF -> <=512 KB)",
     ("src/main/main.cpp", "alloc", "g_s5229_val = (uint8_t*)std::calloc(0x800000"): "const",
     ("src/main/main.cpp", "alloc", "g_s5229_w = (uint8_t*)std::calloc(0x800000"): "const",
     ("src/main/main.cpp", "alloc", "g_s4457_tab = (S4457W*)std::calloc(0x100000"): "const",

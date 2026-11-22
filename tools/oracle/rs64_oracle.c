@@ -814,6 +814,29 @@ static uint32_t gpr32(int idx)
     return (uint32_t)gpr[idx];
 }
 
+/* s7783: RS64_EXEC_REG_HIST=<gpr> (0..31): every exec hit adds (gpr & 0x1FFFFFFF) >> 12 (4 KB page) to a histogram keyed by
+ * (VI width, page); printed at shutdown as [s7783-reg] rows. Used to ask where retail's display-list emitter (0x8000D5A8 swl a0,0($v1))
+ * writes its chunks. Counts are exact; rows bounded to 4096. */
+static struct { unsigned width, page; long n; } g_s7783_rh[4096];
+static int g_s7783_nrh = 0, g_s7783_reg = -2; static long g_s7783_rh_over = 0, g_s7783_rh_total = 0;
+static uint32_t gpr32(int r);
+static void s7783_reg_hist(uint32_t pc)
+{
+    (void)pc;
+    if (g_s7783_reg == -2) { const char *e = getenv("RS64_EXEC_REG_HIST"); g_s7783_reg = (e && *e) ? atoi(e) : -1; }
+    if (g_s7783_reg < 0 || g_s7783_reg > 31) return;
+    unsigned width = pDebugMemRead32(VI_WIDTH_ADDR), page = (gpr32(g_s7783_reg) & 0x1FFFFFFFu) >> 12;
+    g_s7783_rh_total++;
+    for (int i = 0; i < g_s7783_nrh; i++) if (g_s7783_rh[i].width == width && g_s7783_rh[i].page == page) { g_s7783_rh[i].n++; return; }
+    if (g_s7783_nrh < 4096) { g_s7783_rh[g_s7783_nrh].width = width; g_s7783_rh[g_s7783_nrh].page = page; g_s7783_rh[g_s7783_nrh++].n = 1; }
+    else g_s7783_rh_over++;
+}
+static void s7783_reg_dump(void)
+{
+    if (g_s7783_reg < 0) return;
+    printf("[s7783-reg] gpr=%d total=%ld rows=%d overflow=%ld\n", g_s7783_reg, g_s7783_rh_total, g_s7783_nrh, g_s7783_rh_over);
+    for (int i = 0; i < g_s7783_nrh; i++) printf("[s7783-reg] width=%u page=0x%06x n=%ld\n", g_s7783_rh[i].width, g_s7783_rh[i].page << 12, g_s7783_rh[i].n);
+}
 static void print_gpr_fields(void)
 {
     printf(" v0=0x%08x s1=0x%08x a0=0x%08x a1=0x%08x a2=0x%08x a3=0x%08x s0=0x%08x v1=0x%08x s2=0x%08x s3=0x%08x s4=0x%08x s5=0x%08x s6=0x%08x fp=0x%08x ra=0x%08x",
@@ -3012,6 +3035,8 @@ static void dbg_update(unsigned int pc)
         dump_ai_output();
 
     if (flags & M64P_BKP_FLAG_EXEC)
+        s7783_reg_hist(pc);
+    if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_field(pc);
     if (flags & M64P_BKP_FLAG_EXEC)
         { slot_peek(pc); seq_record(pc); }
@@ -4295,6 +4320,7 @@ int main(int argc, char **argv)
     if (g_vi_poll || g_status_poll)
         pthread_join(poll_th, NULL);
 
+    s7783_reg_dump();
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
     for (int i = 0; i < 3; i++)

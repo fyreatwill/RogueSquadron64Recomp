@@ -1,31 +1,26 @@
-# NEXT (s7783; s7782 only fixed the gate contract, so this unit is still unrun; s7781 closed the flag-4 loader side H-clean and found DL-chunk stores in the arena's FB slot)
+# NEXT (s7784; s7783 selected H-overlap port-only for item 32: the port puts DL chunks inside the FB pair, retail never does)
 HYPOTHESIS-ID: fb-shared-slot
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
 
-Datum (s7781, CURRENT-TRUTH item 32, 3 runs identical): the display-list emitter 0x8000CFD4-0x8000D6FF stores DL chunk-list
-nodes (chunk+0/+4, e.g. 0x670004, 0x680004, 0x69FF9C) into the FB slot that hosts the flag-4 arena. That is 34 stores inside a live
-arena, 3836 into the free slot from 0.08 ms after the drop, and 5216 while that slot is a busy FB (st 5). DL chunks come from
-0x8002221C (it steals the smallest texture-pool entry from the lists at 0x80128F00 [count 0x80128EF0], 0x100 B each, free chunk
-list 0x801163B0, limit 0x801163D4).
+Datum (s7783, CURRENT-TRUTH item 32, port 2 runs + retail oracle 2 instruments): retail DL-emitter store bases ($v1 at 0x8000D5A8 /
+0x8000D5E0) are all in 720000..75DFFF during the 640x340 intro; the port's are 400004..7DFED4 with 2836/5004 inside [62B800,700000)
+(pages 6F0000/6FF000). The free-chunk cache *0x801163B0 is outside the slots in every walk, so the in-FB chunks enter another way.
 
-Hypotheses:
-- H-design: retail deliberately hosts DL chunks in texture-pool entries whose memory is the FREE FB (same idea as the arena), and a
-  chunk is never live while its slot is rendered. Then busy-slot stores are DL writes to a slot the RDP is not drawing into at that
-  moment (state 5 = queued for display, not render target?).
-- H-overlap: texture-pool entries were carved under an earlier FB partition (boot 640x480 at 5D4000) and now overlap the current
-  FB slots (hangar 512x340 at 656000/6AB000). Then the RDP (or our rt64_writeback, 15.8k writes into this span in s7779) can
-  overwrite live DL chunks. Retail-latent or port-only.
-- H-arena-collide: an arena allocation and a live DL chunk occupy the same bytes in one epoch (the 34 live-arena DL stores).
+Question: WHERE does the port get a chunk at 0x806F0000-class addresses? Hypotheses:
+- H-steal: findAndUnlinkSmallestEntry 0x8002221C (returns 0x80022304 / 0x80022364 / 0x800225F0 jr ra) hands the DL emitter a
+  texture-LUT entry whose data pointer lies in FB memory, because the port's texture pool / heap layout differs from retail (heap
+  start, osMemSize, dd spill arena, LUTSCALE, a fixup guard that substitutes memory).
+- H-guard: one of our DL-pool guards/fixups (s434-437 0x801163B0 family, DL_BUFFER_POOL_GUARD 0x801163FC, s6098 DLPOOLX) supplies
+  or repairs a chunk pointer with a non-retail value.
+- H-reg: the port's DL emitter reads a different chunk base (*0x8011DC58 chain) for a recompilation reason (e.g. swl/swr address).
 
-Unit, ONE build, ONE run (owner route_long, `zsh tools/s7774_slot_run.zsh s7782a ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1 <new>`):
-1. At each [s7781] open/close, walk the texture-pool lists (0x80128F00 + 4i, i < *0x80128EF0 halfword) and the DL free-chunk
-   list 0x801163B0. Print each entry's address/data pointer that falls inside [slot0, bound 0x801163E4), with the FB slot table.
-2. Per DL-emitter store into a slot: slot state + whether the RDP's current colour image (setColorImage, dpc_bridge) is that slot
-   at that moment. That column, not st, decides whether a DL chunk was live in the render target.
-3. Per live-arena DL store: was that address also handed out by the arena this epoch (log the arena's block list: walk the
-   free-list descriptor at 0x8010FEFC)?
-Outcomes: chunks inside the slot only while it is not the colour image = H-design (close as retail). A DL chunk inside the current
-colour image = H-overlap (then repeat it in the oracle: mupen retail at boot, phys 0x62B800-0x695C00 at t~5-6 s, where ep2 already
-shows busy-slot stores by 0x80014488). Arena block == DL chunk bytes = H-arena-collide.
-Positive control: the s7781 plant (DEAD7781) plus a planted chunk address (fake list entry printed with the walk).
+Unit, ONE port build + ONE oracle run:
+1. Oracle: RS64_EXEC_REG_HIST=2 with --watch-pc on the instruction AFTER each jal 0x8002221C (callers 0x80007CF0, 0x80007D88,
+   0x80007E70, 0x80007F30, 0x80007FF0, 0x800080B0, 0x8000844C, 0x80008F3C: watch jal+8, where $v0 is the return), 18 s, angrylion +
+   cxd4 (recipe in PORTING-STATE s7783). Also RS64_EXEC_REG_HIST=2 at the pop sites of *0x801163B0 if they can be found by grep.
+2. Port: same pcs, same register: add a ROGUESQ_S7779_ARENA-gated page histogram of v0 after each 0x8002221C call (fixup script,
+   so it survives regen) + of *0x8011DC58 at each DL-emitter entry. Compare with tools/s7783_shared_slot_score.py style scoring.
+Outcomes: port steal returns in-FB pages, retail never = H-steal (then name the allocator of that texture entry: the rs_malloc call
+whose block holds it; port vs retail heap map). Steal returns match retail but emitter base differs = H-guard/H-reg (then grep the
+fixups touching 0x801163B0/0x8011DC58 and disable each in an arm). Positive controls: the oracle [gpr-ctl] line; the port plant.
