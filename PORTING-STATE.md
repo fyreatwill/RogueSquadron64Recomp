@@ -207788,3 +207788,6 @@ in this session: s7339 mask16 (a redundant `& 0xFFFFFF` on an RT64 address that 
 s7366 lockset (s_s7783_pc/s_s7783_ep: two H-safe-caller rows, because s7783_store only runs under s_s7781_mu), s7548 GH (s_s7781_lo/hi/
 last/lastext H-gated rules with the `if (!s_s7779_on) return;` proof; its --controls pass 10/10), s7598 AZ (s_s7783_g.assign gated row).
 After the fixes all four are rc 0. The binary was rebuilt after the mask edit, which changes no behaviour (cimg is the same value).
+Verdict: this selects H-overlap (port-only) and refutes H-design for item 32 (two sources: port runtime census + retail oracle).
+Next discriminator: the page of $v0 after each jal 0x8002221C, port vs oracle. Port pages in the FB pair while retail's are not
+selects H-steal; matching pages refute it and point to H-guard/H-reg (NEXT.md).
