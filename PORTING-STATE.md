@@ -209288,3 +209288,29 @@ commits since). Four game runs, one at a time (3 port, 1 oracle).
 - ORIGIN: n/a (no mitigation, no game code change).
 - Discrimination: refutes H-stick and H-cpu-math (constant port bias) for the s7826-s7828 flight pose delta; selects a
   schedule-dependent pose (H-state/route). Supersedes s7828's "port-side H-cpu-pose" reading.
+
+## Session 7830 (2026-11-22) — delaying only presses 4-6 or only presses 7-10 by 0.6 s both keep the port's lvl1 flight pitched (+0.00200 rad, 42/42, every statistic = s7826), so no single press block picks the pose: the pose tracks the game-frame landing of presses 7-10 jointly with 4-6; thread g3-pose-port-input CLOSED single-source (sub-pixel, not owner-visible)
+Work unit (NEXT s7830, HYPOTHESIS-ID g3-pose-port-input, 2nd and last bounded step). Pre-checks: crash_reports FOLDED=10 new=0, no new
+SOAK-RESULTS lines since the s7809 fold, no owner answers in OWNER-REVIEW-QUEUE. Binary = s7826/s7829 build (no src change). Two port
+runs, one at a time, the NEXT commands verbatim (SAVE_FROM s6779 lvl1.eep, SECS=135, ROGUESQ_AUTOPILOT_CLOCK=vi, w1024 gate at 13.0).
+- Arm A (presses 4-6 +0.6 s): census vs scratch/s7826/retail.bin.zst `--win 3521:3825,4376:4695 --controls --pose 3623:3825,4516:4695
+  --pairs`: 42/42 paired, H-pitch f=340 d=+0.00200 rad rms 0.107 (H-vp 0.232, H-scale 0.543); world-tri dy mode 0; controls PASS
+  (ctlA mode 0, ctlB mode +2, planted pitch -> d=+0.00155, const -> +0.50).
+- Arm B (presses 7-10 +0.6 s): identical pose numbers (+0.00200, rms 0.107), controls PASS.
+- Autopilot fs (game frame at each press), the datum that matters:
+    s7829 arm1 (retail-like, 0/42):  4-6 = 942/1662/2076   7-10 = 2796/3148/3508/3857
+    s7829 arm3 (pitched):            4-6 = 906/1626/2039   7-10 = 2759/3112/3472/3821
+    s7830 A (pitched):               4-6 = 942/1662/2076   7-10 = 2777/3130/3490/3839
+    s7830 B (pitched):               4-6 = 907/1627/2040   7-10 = 2777/3130/3490/3839
+  Delaying 4-6 alone (A) reproduces arm1's 4-6 frames exactly yet stays pitched. Its 7-10 land +18 frames vs arm3 because the
+  later 4-6 presses speed up the game-frame count in between (same VI time). B's +0.6 s on 7-10 also lands them at +18 (2777...).
+  So both arms shift 7-10 by +18 game frames, and arm1's +37 shift is the only one that flips the pose. Readings: the press that selects is in
+  7-10 and needs more than 18 frames of shift (a frame-window/parity gate, e.g. the intro-skip press 10 landing on another cinematic step), or 4-6 and 7-10
+  interact. Neither arm separates them, and the iteration budget for the thread is spent.
+- Conclusion (single-source, one route): the port's steady-flight pose is a deterministic function of the press schedule's game-frame
+  landings. It is not a port math or input bias (s7829), and the selecting press is not identifiable within two bounded steps. Sub-pixel (0.115 deg),
+  not owner-visible. Thread CLOSED.
+- Captures: bins deleted (pose identical to s7829 port_r3); run logs kept in scratch/s7830/{A,B}/run.log.
+- ORIGIN: n/a (no mitigation, no code change).
+- Discrimination: refutes "a single block of presses (4-6 or 7-10) at +0.6 s selects the pose"; the pose split needs >18 game frames of shift on 7-10
+  (or the joint shift).

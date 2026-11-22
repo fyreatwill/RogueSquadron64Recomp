@@ -1,21 +1,19 @@
-# NEXT (s7830)
-HYPOTHESIS-ID: g3-pose-port-input
+# NEXT (s7831)
+HYPOTHESIS-ID: g3-flight-residual-census
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
 SOAK-RESULTS lines. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
-Why: s7829 showed the port's lvl1 steady flight pitch (+0.00200 rad) belongs to ONE autopilot schedule (w1024 gate at 13.0 = s7826);
-the same binary with the gate at 11.5 (presses 4-10 0.6 s / ~36 game frames later) matches retail 0/42. Retail did not move for a
-1.5 s press shift. This is the LAST bounded iteration of this thread (2nd of 2); close it single-source if it does not split cleanly.
-Hypotheses (which press picks the pose):
- - H-crawl/intro: press 10 (103.5, skips the intro cinematic into flight) or 7-9 decides the craft's hand-off attitude.
- - H-menu: an early press (4-6) lands in a different menu state (option/camera/craft selection differs) -> different flight setup.
- - H-port-transient: the press lands during a port-only transient (e.g. the 1024 phase) and that changes state retail never sees.
-Discriminator: ONE port run per arm, the s7829 13.0 schedule with only one block delayed 0.6 s (all `env SAVE_FROM=scratch/s6779/r1/lvl1.eep
-SECS=135 CAP0=12 XE="ROGUESQ_AUTOPILOT_CLOCK=vi RS64_RDP_BIN_PORT=$PWD/scratch/s7830/<arm>.bin RS64_RDP_BIN_PORT_MAX_MB=6000" zsh tools/g3_port_capture.sh scratch/s7830/<arm>`):
-  A: AP=6:start,11:start,13:w1024,20.1:start,32.1:start,44.1:start,67.5:start,79.5:start,91.5:start,103.5:start  (presses 4-6 late)
-  B: AP=6:start,11:start,13:w1024,19.5:start,31.5:start,43.5:start,68.1:start,80.1:start,92.1:start,104.1:start  (presses 7-10 late)
-Score each: find the mission band with `python3 scratch/s7829/tl.py <bin>` (port bins: name without "ret"), then
-`python3 tools/s7827_tri_yshift_census.py scratch/s7826/retail.bin.zst <bin> --win 3521:3825,<m0>:<end> --pose 3623:3825,<m0+140>:<end> --pairs`.
-Controls in the same run: arm A or B reproducing +0.00200 vs -0.00035 (both are known endpoints from s7829; the census planted controls must PASS).
-Outcomes: A pitched and B retail-like -> a press in 7-10 selects (H-crawl/intro); the reverse -> 4-6 (H-menu/H-port-transient: then diff the
-two arms' [autopilot] fs and the menu state at that press). Both or neither -> interaction; close the thread single-source (sub-pixel,
-not owner-visible) and take the next ladder item (CURRENT-TRUTH Next steps item 13 / owner-pending list).
+Why: g3-pose-port-input is CLOSED (s7830). The s7829 arm-1 schedule (w1024 gate 11.5) gives a port capture whose steady lvl1 flight
+pose matches retail (0/42 sky vertices >=0.5 px). With the pose matched, any remaining retail-vs-port difference in that flight band is a
+real render/HUD/game residual, not camera pose. This is G3 render fidelity, OFFLINE (no game run needed): scratch/s7829/port.bin.zst vs
+scratch/s7826/retail.bin.zst (and ret_off425/retail.bin.zst as a second retail reference).
+Hypotheses:
+ - H-exact: with the pose matched, world tris, HUD rects and moving sprites agree within 1 quantum (nothing left in this band).
+ - H-residual-world: some world-tri class (terrain, objects, particles) still differs (texture/combiner/LOD or game-state difference).
+ - H-residual-hud: HUD/sprite elements differ beyond the s7826 rate split (radar blips, reticle, counters).
+Discriminator (one offline pass, all keys at once): `python3 tools/s7827_tri_yshift_census.py scratch/s7826/retail.bin.zst
+scratch/s7829/port.bin.zst --win 3521:3825,4376:4695 --controls --pairs` plus `python3 tools/s7826_rect_path_offset.py
+scratch/s7826/retail.bin.zst scratch/s7829/port.bin.zst --win 3521:3825,4378:4702`. Then repeat with ret_off425 as R (second line of evidence).
+Break unmatched tris down by PRIM/texture class. Controls: the census planted controls must PASS. The s7826 pair (pitched) is the
+positive control: it must show the 0.5 px reticle offset that the arm-1 pair should lose.
+Outcomes: H-exact -> close lvl1 flight fidelity (two retail refs), take the next ladder rung. Residual class -> name it, write the
+discriminator for its cause in the next NEXT.md.

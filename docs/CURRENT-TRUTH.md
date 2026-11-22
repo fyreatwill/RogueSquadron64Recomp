@@ -367,8 +367,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      11.5 runs are not byte-identical, diverging at byte 272 M, yet the pose is the same). Retail (oracle) with presses 4-10 moved 1.5 s earlier
      (`env CPO=2 OFF=4.25 zsh tools/s7828_retail_cpo.sh OUT`): 0/42 vs the s7826 retail, so retail's steady pose did not move for this
      shift; port 11.5 vs that retail 0/42, port 13.0 vs it 42/42. Census tool now takes `--r-port` (port-vs-port). Captures
-     scratch/s7829/{port,port_r3}.bin.zst, ret_off425/retail.bin.zst. Not owner-visible. Open (last bounded step, NEXT s7830): which
-     press in the 13.0 schedule picks the pitched pose.
+     scratch/s7829/{port,port_r3}.bin.zst, ret_off425/retail.bin.zst. Not owner-visible. **s7830 CLOSED (single-source):** delaying presses 4-6 alone or 7-10 alone by 0.6 s both stay
+     pitched (+0.00200, 42/42). Both shift 7-10 by +18 game frames (fs 2777.. vs arm3 2759.., arm1 2796..), and only arm1's +37 flips the pose.
+     The pose is a deterministic function of the schedule's game-frame landings. Selecting press not identified. Thread closed.
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are
