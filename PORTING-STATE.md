@@ -208600,3 +208600,6 @@ Census for the next unit: host C/C++ definitions that replace recompiled game fu
 Sweep: `s7651_gate_sweep.py --only 's7809|s7808'` 2/2 GREEN (sweep controls PASS). A full uncached sweep was started but was killed
 at the agent shell's 600 s background cap before printing (not a sweep failure; no verdict from it); the last full sweep (s7807)
 was 235 GREEN 0 RED, and this session changed only the new tool + one sweep row.
+Verdict: the 20,000-trial differential selects H-equal-all and refutes H-differ (0 mismatch) and H-hollow (all coverage >0,
+mutants caught); this closes the gcc C-patch class. Next discriminator (NEXT host-override-diff-class): host zmemcpy vs recompiled
+retail zmemcpy on len-0 / unaligned / overlapping / KSEG1 inputs, which will discriminate H-equal vs H-differ for host overrides.
