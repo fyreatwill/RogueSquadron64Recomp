@@ -208693,3 +208693,37 @@ Discrimination: selects H-equal for every live recomp.h helper (H-all-covered: 0
 Rules out: a byte/halfword swizzle or doubleword word-order defect in the guest memory layer; uncovered live recomp.h helpers.
 Next discriminator: none left inside the recomp.h class; owner-queue items wait on the owner. NEXT.md names the next sibling
 (ultramodern/librecomp host helpers called from generated code by name other than RECOMP_FUNC overrides, if any remain unrowed).
+
+## Session 7813 (2026-11-22) — generated-C host-callee class CLOSED: 364 distinct callees 0 OPEN (s7812 missed the force-included rsp_dpc_macros.h helpers, all evidenced); latent dead ceil.w.d UB site gated
+HYPOTHESIS-ID: generated-host-callee-class (closed).
+Boring first: crash_reports --since 2026-11-13 new=0; no new SOAK-RESULTS lines since the s7809 fold; owner queue unchanged.
+Work unit (NEXT s7813): every identifier the generated game C calls that is not a RECOMP_FUNC of the tree. New
+`tools/s7813_callee_census.py [--controls]` (sweep row S7813_CALLEE, ~46 s): comment/string-stripped scan of the PRISTINE
+emission (tools/regen_front.sh into scratch/s7813/pristine: 53 files, 823,108 lines) and the LIVE tree, recomp.h helpers removed
+(s7812 class), identifiers defined inside the tree by fixups removed (class GR body).
+Result (364 distinct callees, all COVERED):
+- EMIT 71: 62 `os*_recomp`/`__os*`/`__ll*`/`__ull*` replacements, each a live row (live_sites>=1) of tools/s7400_replaced_contract.py
+  (64 live; the 2 not emitted, osEPiRawStartDma/osGetCount, are reached otherwise) + sessions 7400/7401/7402/7407; fabsf/fabs/sqrtf
+  s7415; do_break/switch_error/pause_self s7416 (+s7575); cop0_status_read/write s7405/s7409; ceil -> see latent.
+- FHDR 6: CMake `-include include/rsp_dpc_macros.h` on RecompiledFuncs defines MEM_WU (2 live lwu sites, emitted by N64Recomp),
+  RS64_DIV32/DIVU32 (90/45), RS64_TRUNC_W_S/D (1171/28), fprintf -> rs64_diag_fprintf (2650). **s7812 scanned recomp.h only, so these
+  were outside its census (H-hollow on s7812's scope, not its verdict)**; every one has evidence: s7086 mem_test names MEM_WU, s7575
+  total div, s7576 total trunc, s7432 class CO.
+- FIXUP (live-only): HOOK 230 rs64_/rsN_/sN_ hooks (class GR s7558; s7719 --strict keeps live == replay), DIAG 32 (getenv, fflush,
+  time, backtrace*, ato*, strto*, str*, snprintf, sscanf, fput*, fopen, clock/time, pthread ids, dladdr, raise, usleep...), MATH 14
+  (floorf powf sqrt fmin/fmaxf sinf ceilf tan acosf isnan/isinf...: our opt-in feature code; s7407 = retail never calls host libm),
+  RT 7 (yield_self_1ms 30, __builtin_trap 29, __atomic_*), MEM 4 names / 110 host sites: every site's arguments checked, 0 name
+  rdram/MEM_/ctx-> (all type-punning or host-array copies; 2-arg `(rdram, ctx)` guest-call shapes excluded) -> 0 raw-RDRAM byte copies.
+- **Latent (single-source, static):** N64Recomp lowers ceil.w.d as `S32(ceil(ctx->f12.d))` = bare (int32_t) cast of a double, the
+  same NaN/out-of-range UB shape s7576 made total for TRUNC_W. s7576 reported "ROUND/FLOOR/CEIL: 0 sites" because it counted helper
+  names (CEIL_W_*), not this inline form. The only site is guest `ceilDouble` 0x80093E60 (funcs_25.c), with 0 direct calls in the
+  live tree and 0 lo16 address refs (`ADD32(.., 0X3E60)`) -> dead, not fixed. The census keeps it visible and turns `ceil` OPEN
+  (RED) if ceilDouble ever gains a caller (control).
+H-hollow: classified set == an independent token-walk enumeration (364 == 364). Controls 9/9 PASS: planted emitted callee without
+row, unknown fixup libc callee, raw memcpy(rdram+..), diag callee -> DIAG, row citing a missing session, ceilDouble given a caller,
+emitted replacement absent from the s7400 live table, FHDR helper whose session is missing, classifier dropping a callee -> hollow.
+Sweep: `s7651_gate_sweep.py --only 's781[23]_' --no-cache` 2 GREEN.
+Selects H-all-rowed; refutes H-orphan (no guest-visible callee without evidence); H-hollow refuted for this tool, CONFIRMED for the
+s7812 scope (force header), closed by FHDR rows here.
+Rules out: a guest-visible host callee hidden outside every census; raw-RDRAM libc copies in fixup code (byte-order hazard).
+Next: the s7812 miss is a class (which headers does the generated C actually compile against?): NEXT.md s7814.
