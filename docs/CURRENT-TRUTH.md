@@ -467,6 +467,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     ran and that hold >=1 reviewed-dead site deleted; fixer 42,565 -> 37,475 lines, sites 1,341 -> 954, HIT 326 unchanged, s7719
     --strict H-mirrored (53 files 0 differ, controls PASS), sweep s77 23 GREEN. 16 dead sites kept: 12 in blocks binding a table a
     survivor reads (H-coupled, 1 measured NameError on the first pass), 3 MISS (call ran), 1 mixed with 8 live sites.
+    **s7791 `--shadowed`: campaign CLOSED.** 367/392 never-run PRESENT sites are bare `#include` adds (no evidence: they skip
+    whenever the include exists, so 31 naive-plan blocks were live `text = new` bodies). With the shadow_ok rule only 1 block
+    qualified (s1937 synth-entry/exit stride), deleted, --strict H-mirrored 0 differ. Further pruning needs branch coverage.
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member

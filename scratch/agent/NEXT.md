@@ -1,16 +1,18 @@
-# NEXT (s7791; s7790 pruned 257 dead vendored blocks, -5,090 lines, replay byte-identical)
-HYPOTHESIS-ID: vendored-dead-block-prune
-First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
-in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines. CURRENT-TRUTH is ~60 KB: if Step 0 trips, do maintenance instead.
+# NEXT (s7792; s7791 closed the vendored-dead-block-prune campaign)
+HYPOTHESIS-ID: ct-maintenance-s7792
+First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
+new SOAK-RESULTS lines (any of these outranks the rest).
 
-Unit (offline, engineering, last step of this campaign): the NOTCALLED:PRESENT rows (392 sites after s7790) are blocks that
-never ran in the pristine replay while their text exists in the live tree via another route (shadowed duplicates). Extend
-tools/s7790_prune_dead_blocks.py with `--shadowed`: a loop-level block qualifies when ALL its sites are NOTCALLED (none ran),
->=1 is PRESENT, none OPTIN, no os.environ, and the census shows the distinctive text PRESENT in the replay's own output
-(so an earlier step emits it). Dry-run first and spot-read 10 blocks: if any is a guard whose `if marker in text: continue`
-idempotence check is the ONLY reason it skips (it re-applies after an earlier step is removed), keep that family.
-Also split the 12 H-coupled blocks: keep the table binder, drop the dead loop.
-Hypotheses: H-inert (s7719 --strict H-mirrored, live == replay), H-order (a shadowed block is the fallback for an earlier
-route that could stop emitting: deleting it is still inert today; record which ones are fallbacks in the ledger).
-Proof: `python3 tools/s7719_regen_gate.py --strict` rc 0, census HIT 326, `python3 tools/s7651_gate_sweep.py --only s77`.
-Then close the campaign and take the next ladder rung (CURRENT-TRUTH Next steps / item 3c).
+Unit: CURRENT-TRUTH is 60,328 B (> 60,000), so Step 0 makes this a MAINTENANCE iteration. Compact it toward ~35 KB:
+- Migrate the long CLOSED census items (backlog 18, 29-36: s7575 UB gates, s7766-s7790 audits) and the s7702-s7767 headline
+  paragraphs verbatim into PROJECT-OVERVIEW under "(s7792 maintenance)". Leave a one-line pointer plus each item's gate
+  command, because the gates stay in the sweep.
+- Renumber Next steps into ONE monotonic sequence again (it is now 1-5, 18, 20, 23, 28-36 out of order).
+- Refresh the Headline: every ladder rung is closed or waiting on the owner's look; list the owner items.
+Proof: `wc -c` net shrink >= 15000 B; `python3 tools/s7762_owner_doc_check.py --controls` rc 0 (owner-doc paths still resolve).
+No experiments this iteration.
+
+After maintenance (s7793+): every rung is closed or waiting on the owner. Take ITERATION 3b secondary (title-boot plume SIGSEGV
+si_addr=0x58: check whether the s7725 plume fix stopped it. Loop title boots under lldb, about 20 boots, and record the
+recurrence count), then G3 render-fidelity frame diffs against the angrylion oracle on a level not yet sheeted.
+Hypotheses (plume): H-fixed (0/20 recurs: the s7725 fix covers it), H-other (a recurrence: the lldb backtrace names the writer).

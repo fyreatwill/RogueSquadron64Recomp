@@ -31143,37 +31143,6 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
         elif _after_always in text:
             report.append(f"{p.name}: [vi-cb-after] already always-on")
 
-    if p.name == "funcs_24.c":
-        _entry_stride = (
-            "            if (s_synthentry_n < 40 || (s_synthentry_n % 128) == 0) {\n"
-            "                fprintf(stderr, \"[synth-entry] n=%u\\n\", s_synthentry_n);\n"
-            "            }\n"
-        )
-        _entry_always = (
-            "            fprintf(stderr, \"[synth-entry] n=%u\\n\", s_synthentry_n);\n"
-        )
-        if _entry_stride in text:
-            text = text.replace(_entry_stride, _entry_always, 1)
-            changed = True
-            report.append(f"{p.name}: [synth-entry] s1937 always-on (dropped 40/128 stride)")
-        elif _entry_always in text:
-            report.append(f"{p.name}: [synth-entry] already always-on")
-
-        _exit_stride = (
-            "            if (s_synthexit_n < 40 || (s_synthexit_n % 128) == 0) {\n"
-            "                fprintf(stderr, \"[synth-exit] n=%u\\n\", s_synthexit_n);\n"
-            "            }\n"
-        )
-        _exit_always = (
-            "            fprintf(stderr, \"[synth-exit] n=%u\\n\", s_synthexit_n);\n"
-        )
-        if _exit_stride in text:
-            text = text.replace(_exit_stride, _exit_always, 1)
-            changed = True
-            report.append(f"{p.name}: [synth-exit] s1937 always-on (dropped 40/128 stride)")
-        elif _exit_always in text:
-            report.append(f"{p.name}: [synth-exit] already always-on")
-
     # s857: behavior-neutral dispatcher input trace. Keep this in the fixup
     # so the diagnostic survives the next generated-code refresh.
     if p.name == "funcs_8.c" and "PATCH: s857 slot dispatcher trace" not in text:

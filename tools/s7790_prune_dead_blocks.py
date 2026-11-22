@@ -8,7 +8,11 @@ review is RETIRED (s109 + s390-s568 item -317 lineage) or the matching DYNTEXT l
 assignments / defs whose names are read only by deleted statements are deleted too (iterated to a fixpoint).
 The leading comment lines between the previous surviving statement and a deleted block go with it.
 The s517 HEAPLISTDEQ_ATTR_WRITE site is kept: it is the s7789 census's NOTCALLED+ABSENT control.
-Usage: s7790_prune_dead_blocks.py <rows.json> [--write]   (dry run prints the plan)
+Usage: s7790_prune_dead_blocks.py <rows.json> [--shadowed] [--write] [--list]   (dry run prints the plan)
+--shadowed (s7791): also count NOTCALLED+PRESENT rows (the block never ran; its distinctive added text is already in the
+replay's output from an earlier route, so it only ever skipped on its own idempotence marker) as dead. OPTIN rows are
+'NOTCALLED/OPTIN' and never qualify; blocks reading os.environ are kept as before. --list prints each deleted block's span
+and first guard line for spot review.
 Proof is external: tools/s7719_regen_gate.py --strict (replay byte-identical) + the s7789 census.
 """
 import ast, importlib.util, json, pathlib, re, sys
@@ -37,6 +41,10 @@ def main(a):
         rv = next((v for k, v in cen.REVIEWED if re.search(k, key)), "")
         if rv.startswith("RETIRED") or rv.startswith("DYNTEXT"):
             dead.add(r["line"])
+    if "--shadowed" in a:  # s7791: never-run sites whose added text the replay emits via another (earlier) route
+        for r in rows:
+            if r["st"] == "NOTCALLED" and r["pres"] == "PRESENT":
+                dead.add(r["line"])
     src = VEND.read_text()
     lines = src.split("\n")
     tree = ast.parse(src)
@@ -59,6 +67,33 @@ def main(a):
     def loads(s):
         return {n.id for n in ast.walk(s) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
 
+    srcs = {r["line"]: r["src"] for r in rows}
+
+    def shadow_ok(s, st):
+        """s7791: a never-run .replace inside a block is evidence only for its own branch. The block may be dropped only if
+        (1) >=1 dead site is not a bare `#include` add (those skip whenever the include exists, whatever the block did),
+        (2) every mutation of a non-local in it is a dead .replace site: no `text = new`, slicing, subn/sub, write, etc.,
+        (3) it is not the s7789 census-control block (s517 HEAPLISTDEQ_ATTR_WRITE)."""
+        if not any("#include" not in srcs.get(l, "") for l in st & dead):
+            return False
+        for n in ast.walk(s):
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute):
+                if n.func.attr in ("sub", "subn", "write_text", "write", "insert", "extend", "update", "pop", "remove"):
+                    return False
+                if n.func.attr == "replace" and isinstance(n.func.value, ast.Name) and "_heaplistdeq_attr_write_old" in ast.unparse(n):
+                    return False
+            if isinstance(n, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
+                tg = n.targets if isinstance(n, ast.Assign) else [n.target]
+                names = {t.id for t in tg if isinstance(t, ast.Name)}
+                if any(not isinstance(t, ast.Name) for t in tg):
+                    return False  # subscript / attribute / tuple store
+                if "text" in names or "body" in names or "src" in names:
+                    v = n.value
+                    if not (isinstance(v, ast.Call) and isinstance(v.func, ast.Attribute) and v.func.attr == "replace"
+                            and v.lineno in dead):
+                        return False
+        return True
+
     # candidate statements: loop-body children + module-level statements (defs / assigns only)
     cand = [(s, "loop") for s in body] + [(s, "mod") for s in tree.body if s is not loop]
     deleted = set()
@@ -67,6 +102,8 @@ def main(a):
             st = sites_in(s)
             seg = "\n".join(lines[s.lineno - 1:s.end_lineno])
             if st & dead and not (st - dead) & ran and "environ" not in seg:
+                if "--shadowed" in a and not shadow_ok(s, st):
+                    continue
                 deleted.add(id(s))
     mixed = [s for s, w in cand if w == "loop" and sites_in(s) & dead and id(s) not in deleted]
     # fixpoint: drop (a) deleted blocks that bind a name a survivor reads (restore them), (b) pure binders read only by deleted
@@ -123,6 +160,10 @@ def main(a):
     print(f"dead sites kept (mixed/coupled blocks): {len(kept_dead)} {kept_dead[:20]}")
     for s in mixed:
         print(f"  mixed block L{s.lineno}-{s.end_lineno}: dead {sorted(sites_in(s) & dead)[:5]} live {sorted(sites_in(s) - dead)[:5]}")
+    if "--list" in a:
+        for a0, b0, where, ln, ns in spans:
+            g = next((l.strip() for l in lines[ln - 1:b0] if l.strip().startswith(("if ", "for ", "elif "))), lines[ln - 1].strip())
+            print(f"  DEL {where} L{a0}-{b0} sites={ns} | {lines[ln - 1].strip()[:70]} | {g[:90]}")
     if "--write" in a:
         out = [l for i, l in enumerate(lines, 1) if i not in covered]
         VEND.write_text("\n".join(out))

@@ -208050,3 +208050,31 @@ Kept (16 dead sites): 12 in blocks that bind tables later survivors read (L14647
 L31742 block with 8 live sites.
 Rules out: that any of the deleted s109/s390-s568 blocks feeds a later block's text (replay byte-identical against live).
 ORIGIN: no mitigation added; this deletes retired mitigations whose anchors have matched nothing since s2190 (s7789 review).
+
+## Session 7791 (2026-11-21) — shadowed-block prune: 367 of 392 never-run PRESENT sites are bare #include adds (no evidence), 1 block qualifies and is deleted; vendored-dead-block-prune campaign CLOSED
+
+Unit (NEXT s7791, HYPOTHESIS-ID vendored-dead-block-prune). Session-start checks: crash_reports --since 2026-11-13 new=0, no
+SOAK-RESULTS lines after the s7787 fold, no owner answers. CURRENT-TRUTH 59,951 B (< 60,000: not maintenance).
+
+What ran: fresh census `tools/s7789_replace_site_census.py --all --json` (954 sites, NOTCALLED:PRESENT 392, rc 0), then
+`tools/s7790_prune_dead_blocks.py` extended with `--shadowed` (NOTCALLED+PRESENT rows count as dead) and `--list` (span + guard
+per deleted block, for spot review).
+Failed first pass, kept as a datum: the naive rule planned 52 blocks / 695 lines, and spot-reading showed it was WRONG. 31 of them
+were `if n:` / `if _x_hit:` bodies whose only .replace sites are the nested `if "#include <stdio.h>" not in text:` adds. Those
+never run because the include is already there, whatever the block did, so dropping them would have deleted live
+`text = new` (subn) applications (e.g. the s4765 waitmusyx spin2 patch at L8609). The census control block (s517
+HEAPLISTDEQ_ATTR_WRITE) was also in the plan. Fix (`shadow_ok`): >=1 dead site must be a non-#include site; every store to
+text/body/src must be a dead .replace (no subn/sub/slicing/write/subscript stores); the s517 control block is never dropped.
+Result: of the 392 shadowed sites, 367 are bare #include adds, and of the other 25 all but 4 sit in blocks that also hold live
+sites. Exactly 1 block qualifies: the funcs_24 s1937 [synth-entry]/[synth-exit] stride->always-on block (an earlier route already
+emits the always-on form). Deleted: fixer 37,475 -> 37,444 lines, sites 954 -> 952.
+Proof: `tools/s7719_regen_gate.py --strict` rc 0, VERDICT H-mirrored, 53 files 0 differ, planted edit/extra controls PASS;
+dead-emitter steps=360 open=0; quiet-skip HIT 326 unchanged (304/311 PASS), s517 control PASS. `s7651_gate_sweep.py --only s77`:
+23 GREEN, 1 NEEDS-ARGS, 2 NEEDS-INPUT (as s7790).
+H-inert holds for the one block. H-order (fallback): the block is a fallback for the earlier always-on emitter. It is inert
+today and only a diagnostic stride, so it is dropped.
+Not done: splitting the 12 H-coupled blocks (12 sites, table binders read by survivors). That is too little value for the risk;
+they stay. Campaign CLOSED: further pruning needs per-branch execution evidence (branch coverage, not .replace coverage), and
+the remaining shadowed sites are include fallbacks.
+Rules out: NOTCALLED .replace sites as block-level deadness evidence when the block holds untracked mutations (subn, slicing).
+ORIGIN: no mitigation added; deletes one diagnostic block shadowed by its earlier emitter.
