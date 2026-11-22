@@ -407,9 +407,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    captures), absent classes at the retail-vs-retail baseline -> no render defect. BUT the port flies a constant ~0.1 deg camera pitch
    delta under BOTH port schedules (w1024 gate 11.5 and 13.0, identical numbers: +0.0023/+0.0018/+0.00175 rad, reticle one-signed
    +0.5/-0.25 px on ~540/850 frames) while two retail schedules agree at ~0 (reticle 0.00 px). Not schedule-dependent on lvl2,
-   sub-pixel, not owner-visible. Open: H-rate (port runs ~20% more game frames than emulated retail over the same motion, s7821;
-   frame-count-dependent camera integration) vs H-cpu-state. Next unit NEXT.md (retail CountPerOp arms to move retail's frame rate).
-   s7828_retail_cpo.sh now takes EEP= and PP=.
+   sub-pixel, not owner-visible. s7828_retail_cpo.sh takes EEP= and PP=.
+   **s7833: H-rate REFUTED for the pitch.** Retail CountPerOp 1/3 arms move retail's flight frame count 794 -> 969 / 471 (port 957),
+   yet retail's pose stays ~0 vs R1 at both rates and the port is pitched +0.0016-0.0026 rad vs every retail arm (incl. CPO1 at the
+   port's frame count). H-cpu-state selected. The reticle sub-pixel offset IS rate-dependent within retail (CPO1 vs port exact,
+   CPO1/CPO3 vs R1 one-signed), so reticle classes are not a pose witness; s7832's reticle line is withdrawn and the pitch rests on
+   the pose fit alone (single-method). Scorer: tools/s7833_rate_arm_score.sh. Last unit on this thread: guest camera dump (NEXT.md).
 
 ## Evidence index
 

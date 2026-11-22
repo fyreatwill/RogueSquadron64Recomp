@@ -209383,3 +209383,34 @@ runs, one at a time (2 port, 2 retail oracle).
 - Captures (zstd, gitignored): scratch/s7832/{port,port13}.bin.zst, ret{,2}/retail.bin.zst; scores scratch/s7832/{tri,rect,pose}_*.txt;
   window PNGs and private game dirs deleted.
 - ORIGIN: n/a (no mitigation, no game code change).
+
+## Session 7833 (2026-11-22) — retail CountPerOp 1/3 arms move retail's lvl2 game frame rate from 794 to 969/471 frames (port 957) yet retail's flight camera pose stays ~0 vs R1 at both rates while the port is pitched +0.0016-0.0026 rad vs every retail arm: H-rate refuted for the camera pitch, H-cpu-state selected; the reticle sub-pixel offset IS rate-dependent inside retail, so it is not a pose witness
+Work unit (NEXT s7833, HYPOTHESIS-ID g3-flight-pitch-rate). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS lines since
+the s7809 fold, no owner answers. Load ~4. Two retail oracle runs, one at a time (no port run: s7832 port captures reused).
+- Runs: `env CPO={1,3} RSECS=175 EEP=scratch/s7832/lvl.eep PP=19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start zsh
+  tools/s7828_retail_cpo.sh scratch/s7833/cpo{1,3}` (det-core RandomizeInterrupt 0, CountPerOp 0->1 / 0->3, 10500 VI each).
+- Frame rate (scratch/s7829/tl.py; flight onset = tri~334-344 tx~11 band, end = first tri~1224-1239 band): CPO1 3517->4486 = 969
+  frames, CPO2 (R1, s7832) 3277->4071 = 794, CPO3 2514->2985 = 471, port 4139->(s7832) = 957. So CPO moves retail's game frame
+  count over the same motion by -40%/+22%, and CPO1 lands within 1.3% of the port. The lever works.
+- Bands (same tri-count sequence 99x -> 88x -> ... -> 79x as R1/port): CPO1 a 3681:3761, b 3829:3893; CPO3 a 2592:2632, b 2670:2702.
+- Line 1, world-tri pose fit (s7827 --controls --pose, planted dy and pitch/vp controls PASS in all 8 scorings):
+  CPO1 vs R1: pitch -0.00030 / -0.00025 rad, dy census 0/-1 only (no +3/+4 shoulder). CPO1 vs port: +0.00260 / +0.00220 rad, dy
+  +4 / -3 shoulders (the pitched signature). CPO3 vs R1: +0.00015 / +0.00015 (rms ~1.1, a looser band match at the low rate).
+  CPO3 vs port: +0.00205 / +0.00155, dy +3 / -4 shoulders. s7832 for reference: port vs R1 +0.00230 / +0.00180, R1 vs R2 -0.00005.
+  -> retail's camera pose is the same at 471, 794 and 969 frames; the port is pitched against all three, including CPO1 at the
+  port's own frame count.
+- Line 2, reticle (s7826 plant +3 PASS every scoring): CPO1 vs port: big reticle exact 926/1010, small exact 917 (!). CPO1 vs R1:
+  big exact 624 / '+0,-0.5' 172, small '+0,+0.25' 535 (one-signed). CPO3 vs R1: big exact 774/850, small '-0.5,+0' 534. CPO3 vs
+  port: big '+0,+0.5' 310/538 (= R1 vs port's signature). So the reticle's sub-pixel position shifts one-signed BETWEEN RETAIL RUNS
+  of different frame rate, and matches the port when the frame rate matches. It is a rate artifact (reticle lag/smoothing per
+  game frame), not a camera-pose witness. s7832's "line 2" for the pitch is withdrawn; the pitch rests on line 1 (pose fit +
+  dy shoulders), which agrees across four retail references (R1, R2, CPO1, CPO3) — still one method, so the pitch stays
+  single-method until the guest camera dump.
+- Discrimination: refutes H-rate for the lvl2 flight camera pitch (a retail arm at the port's frame count keeps retail's pose and
+  is pitched vs the port by the same ~0.13 deg). Selects H-cpu-state (port-side state difference independent of frame rate).
+  Selects H-rate for the reticle sub-pixel offset (s7826/s7832 reticle classes partly reflect frame rate, not pose).
+- Tool: tools/s7833_rate_arm_score.sh scores one retail arm vs the s7832 references (pose a/b + reticle, vs R1 and vs port, two
+  streams at once) and prints a 6-line summary.
+- Captures (zstd, gitignored): scratch/s7833/cpo{1,3}/retail.bin.zst; scores scratch/s7833/pose_*_{r1c1,c1p}.txt, rect_*c1*.txt,
+  scratch/s7833/s3/*.txt.
+- ORIGIN: n/a (no mitigation, no game code change).
