@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7802 (2026-11-22).
+Compact operational handoff, as of Session 7803 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -26,6 +26,11 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
 - **s7788-s7791 vendored fixer pruning CLOSED:** dead-emitter census 0 dead; 257 never-run blocks deleted (s7790), shadowed-block prune
   1 block (s7791); `--strict` 0 differ, census HIT 326. **s7781-s7787 hook classes CLOSED** (s5660 unaligned-store hook value/address fix,
   load-hook hole, 4 pc-literal emitters).
+- **Retained captures are zstd'd (*.zst):** any tool reading scratch/ must go through tools/rs64_zopen.py (zopen/resolve/materialize).
+  s7802/s7803 found 5 tools silently blind to .zst inputs (s7753/s7756 gates, s7441 + s7442 sample censuses read windows=0, s7773
+  overlay-swap witness saw 99 of 956 logs). s7441 is now a sweep gate (S7803_RETAINED, pre-fix s7439 capture = planted RED);
+  s7773 witness over all retained logs: mission>menu swaps 63 (was 2), 0 "Failed to find function". REPORT rows left: s7031, s7210
+  (inputs verified gone).
 - **Latency (s7766/s7767):** FPS60 58.3 ms, retail 75-86, FPS60+VI_LOCK=1 53.7 ms; window mode does not change it (FULLSCREEN=2 exists).
 - **Crash reports:** `python3 tools/crash_reports.py --since <date>`; a NEW report outranks all other work (s7664).
 - **Hazards:** never LAUNCH the game under lldb (s7616: it tried to delete the ROM); attach to a normally started pid
@@ -192,7 +197,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    - old 27: Hangar gfx tasks are NOT snapshot-replayable (s7754 H-state, measured): [tools/s7755_hstate_visibility.py tools/s7756_hstate_gate.py]
    - old 28: Input latency (s7766): measured, H-1frame. [tools/s7766_inlat.py]
    - old 29: FPS60 L12 half-rate phases: CLOSED s7769 as an unreproduced transient (not owner-reported). [tools/s7768_fps60_rate.py tools/s7769_ring_genrate.py]
-   - old 30: Placeholder census (s7770): rename sweep CLOSED on evidence. [tools/agent/test_rename_census_gate.sh tools/s7770_placeholder_census.py tools/s7771_jal_target_census.py tools/s7772_ovl_lookup_audit.py tools/s7773_ovl_fnptr_audit.py tools/s7773_ovl_swap_witness.py tools/s7774_slot_run.zsh tools/s7774_slot_scan.py tools/s7776_tblwatch_score.py]
+   - old 30: Placeholder census (s7770): rename sweep CLOSED on evidence. s7773 witness re-run s7803 over .zst logs: 63 mission>menu swaps, 0 aborts. [tools/agent/test_rename_census_gate.sh tools/s7770_placeholder_census.py tools/s7771_jal_target_census.py tools/s7772_ovl_lookup_audit.py tools/s7773_ovl_fnptr_audit.py tools/s7773_ovl_swap_witness.py tools/s7774_slot_run.zsh tools/s7774_slot_scan.py tools/s7776_tblwatch_score.py]
    - old 31: Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects. [tools/s7777_dangle_score.py tools/s7779_arena_score.py]
    - old 32: FB-arena escape class (s7781): CLOSED s7784, H-clean, 0 defects. [tools/apply_s5660_unaligned_store_census.py tools/s7781_escape_score.py tools/s7781_flag4_census.py tools/s7783_shared_slot_score.py tools/s7784_ustore_base_census.py tools/s7785_store_hook_reg_census.py tools/s7785_ustore_fallout.py]
    - old 33: Load-hook register/coverage class (s7786): CLOSED, 0 mixups, 1 hole fixed. [tools/s7786_load_hook_reg_census.py]

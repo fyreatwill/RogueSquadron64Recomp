@@ -1,15 +1,20 @@
-# NEXT (s7803)
-HYPOTHESIS-ID: retained-input-gate-coverage
+# NEXT (s7804)
+HYPOTHESIS-ID: retained-format-lint-gate
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
-SOAK-RESULTS lines. Any crash/stall or owner report outranks the unit. G6c holds are 19/19 (s7802); G6c waits on the owner only.
+SOAK-RESULTS lines. Any crash/stall or owner report outranks the unit. G6c and all G5 items wait on the owner only.
 
-Unit: the sweep's 3 REPORT rows (s7031_offmap_census, s7210_field_census, s7441_rs64_census; tools/s7651_gate_sweep.py REPORT dict)
-say "input not retained" / "no open class". s7802 found two gates whose "absent" inputs were really *.zst. For each REPORT row:
-(1) find its source capture (grep PORTING-STATE for the session, then `ls scratch/s7030 scratch/s7210* scratch/s7442`, incl. *.zst);
-(2) if retained, decide if the summary has a checkable claim (a number the ledger pinned) and a plantable control: then make it a
-gate (S7723_RETAINED-style row + a planted RED in tools/s7723_retained_controls.py or a --controls flag) and read it through
-tools/rs64_zopen.py; (3) if not retained or no claim, leave REPORT but correct the note with what was checked.
-Hypotheses: H-retained (>=1 input exists, maybe as .zst -> new gate), H-gone (all absent -> notes corrected, class closed),
-H-claimless (inputs exist but the tool only prints tables: REPORT is right).
-Then the 6 one-off analysis scripts s7802 listed (g1_flight_class, g1d_levelselect_tear, g3_cine_tri, g3_rdp_top_envelope,
-g5h_band_pose, pd2_corr) open now-.zst inputs raw: switch them to rs64_zopen only if one is cited as evidence in CURRENT-TRUTH.
+Unit: make the s7802/s7803 defect class (a tool reading a retained scratch/ capture by raw path/glob after the capture was zstd'd,
+silently reading 0 windows / fewer logs) un-reintroducible. Build ONE static gate tools/s7804_zst_blind_lint.py, add it to the
+s7651 sweep (ARGS + EXTRA_GATES):
+- enumerate every tool the sweep runs (s7651 ARGS keys + EXTRA_GATES + *_census.py) and every tool cited in CURRENT-TRUTH
+  (grep `tools/[a-z0-9_]+\.py`);
+- flag a tool whose source globs/opens a raw capture extension (sample_*.txt, log_*.txt, run.log, *.cap, *.bin under scratch/)
+  without importing rs64_zopen (or an explicit `# zst-ok:` waiver with a reason);
+- for each flagged tool, test reality: does the default/ARGS input dir hold the .zst form? (RED only if it does = live blindness;
+  WARN if no retained input).
+- planted control in the same run: a temp tool with `glob('sample_*.txt')` over a temp dir holding sample_1.txt.zst -> RED; the
+  same with zopen -> GREEN. Exit 0 iff 0 RED and both control arms right.
+Hypotheses: H-clean (s7802/s7803 fixed every live member -> lint GREEN, class closed with a guard), H-more (a cited/swept tool still
+reads raw -> fix it via rs64_zopen in the same iteration), H-noisy (the static pattern flags many non-capture globs, e.g. .o / .c
+-> restrict to scratch/ capture paths and say so).
+Expected: H-clean or 1-2 H-more members; RESULT pinned in the sweep regex.

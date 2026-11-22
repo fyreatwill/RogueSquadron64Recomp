@@ -208373,3 +208373,42 @@ g1d_levelselect_tear, g3_cine_tri, g3_rdp_top_envelope, g5h_band_pose, pd2_corr)
 ORIGIN: not a mitigation; tool input-format defect (raw path test of a compressed retained file), no guest/host code changed.
 Rules out: "the RDP-output gate needs a re-capture game run" (s7780-s7801 claim) — it needed a path resolver.
 Next: NEXT.md (REPORT-row review: are any of the 3 REPORT inputs retained so they can carry a control + pinned verdict).
+
+## Session 7803 (2026-11-22) — REPORT-row review: s7441 rs64 census and s7442 probe census read 0 sample windows since their samples were zstd'd (blind) -> zopen, s7441 is now a sweep gate with the pre-fix s7439 capture as planted RED; s7031/s7210 inputs truly gone (notes corrected); s7773 overlay-swap witness also blind to 777 .zst logs -> mission>menu swaps 2 -> 63, 0 aborts
+
+HYPOTHESIS-ID: retained-input-gate-coverage.
+Checked first: crash_reports --since 2026-11-13 new=0; OWNER-REVIEW-QUEUE no answers; no new SOAK-RESULTS lines (s7802 folded the last).
+Unit (NEXT.md): the three REPORT rows of tools/s7651_gate_sweep.py.
+- s7441_rs64_census.py: H-retained. scratch/s7439, s7440, s7441, s7442 all hold sample_1..8.txt.zst; the tool globbed sample_*.txt
+  only, so the HEAD version prints windows=0 on scratch/s7442 (measured this session; the s7722 note "re-run on s7442: 8 windows"
+  predates the compression). Fixed: samples() takes plain or .zst per window, read via tools/rs64_zopen.py -> windows=8 on all four.
+  Numbers reproduce the ledger: s7439 (pre-fix) rs64SkipDraw 0.0075 ms/f, e9prov_frame_event 0.010, rs64_diag_fprintf incl 0.065;
+  s7441/s7442 (post-fix) rs64SkipDraw absent, fprintf incl 0.021/0.028. New --gate mode pins the s7441 claims: windows == 8,
+  rs64SkipDraw incl < 0.003, no rs64 frame >= 0.003 in the s7441 named file set (rt64_framebuffer*, rt64_state, rt64_present_queue,
+  rt64_rdp_tmem, rt64_workload_queue); --control runs the same check on a pre-fix capture that must FAIL. Arms (same tool run each):
+  gate s7441/s7442 + control s7439 -> PASS / CONTROL PASS / GREEN rc 0; swapped (gate s7439, control s7442) -> RED rc 1; empty dir
+  -> windows=0 FAIL, RED rc 1. Moved from REPORT to new S7803_RETAINED sweep row (regex pins "GATE dir=scratch/s7442 windows=8
+  rs64SkipDraw_incl=0.0000 named_ge_0.003=0 -> PASS" + CONTROL PASS + VERDICT GREEN). `--only` run: s7441 GREEN, 2 REPORT, the
+  sweep's own planted red/green and cache controls PASS. Caveat: the named-file claim has no planted RED (it reads 0 in pre-fix
+  s7439 too); the rs64SkipDraw arm is the control.
+- s7031_offmap_census.py: H-gone. scratch/s7030 and scratch/s7031 hold arm/run/sum/anchor/cap txt + tl_*.bin only; the per-run
+  dirs scratch/agent/m6/g1_lvl*s703[01]* hold summary, keys.log.gz, fl_ctl/mc_ctl only; no [s7031] t= line anywhere in scratch.
+  REPORT note now says what was checked.
+- s7210_field_census.py: H-gone. scratch/s7210 holds the tool's outputs (census_ER169.txt, census_FC1.txt.zst) and parity tables;
+  the G5B_FRAME .cap inputs (MAX_MB 22000/30000) were not retained. Note corrected.
+Same-idiom class sweep (glob of raw *.txt/*.log/*.bin/*.cap in tools/*.py with no zst/zopen reference: 23 tools). Two more real
+members whose evidence inputs are now .zst:
+- s7442_probe_gate_census.py --samples (same raw sample_*.txt glob): HEAD windows=0 on scratch/s7442, now 8. Not a sweep gate.
+- s7773_ovl_swap_witness.py (CURRENT-TRUTH old-30 evidence, the s7773 "second line"): globbed raw log_*.txt only. Now reads
+  log_*.txt.zst too (--raw-only = old set; --days 0 = no age limit; prints the raw/zst split). 14 days: --raw-only 72 logs,
+  mission>menu 21; with .zst 849 logs (777 zst), 422 with overlay loads (2998), 414 with swaps: mission>menu 63, menu>cinematic
+  845, cinematic>mission 426, cinematic>menu 401; fail=0 missing_func=0, RESULT PASS. --plant (same file set) fail=1 PASS.
+  --days 0: 956 logs, same swap counts. This lifts the s7773 single-source caveat "mission>menu is only 2 swaps in retained logs"
+  to 63 swaps, 0 "Failed to find function" (s7774 already cleared it statically/dynamically; this is the larger second line).
+  Not members (no retained .zst evidence input or not cited): s7065-s7075 sample/objdump one-offs, s7268/s7284/s7285 ring/edge,
+  s7317, s7415/s7424/s7067 (.o globs), s7777 (symbol_files), s7283 (its m6 s7009 *.log were never retained: keys.log.gz only).
+ORIGIN: not a mitigation; tool input-format defect (raw-only glob over compressed retained captures), no guest/host code changed.
+Rules out: "s7441 census is a REPORT with no checkable claim" (it pins two ledger claims and has a pre-fix capture as control);
+"mission>menu overlay swaps are too rare in retained logs to witness" (63).
+Sweep: full `python3 tools/s7651_gate_sweep.py` run this session (result in the CURRENT-TRUTH headline line).
+Next: NEXT.md (owner items only; otherwise ladder 3c: re-check the remaining raw-only glob tools only if a new citation appears).

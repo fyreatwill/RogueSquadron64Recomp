@@ -45,9 +45,8 @@ NEEDS_INPUT = {
 # vacuous and their frozen inputs cannot drift with the code. Verified per run: if the source gains any exit path the tool is
 # run like any other gate again.
 REPORT = {  # s7722: each re-run and read by hand (scratch/s7722/*.out); all H-report (no open-class row by construction)
-    "s7031_offmap_census.py": "s7722 H-report: band/ring share table of one [s7030]/[s7031] run.log (input not retained), no open class",
-    "s7210_field_census.py": "s7722 H-report: per-swap scissor field-bit table of one G5B_FRAME .cap (input not retained), no open class",
-    "s7441_rs64_census.py": "s7722 H-report: rs64_* ms/frame ranking of sample_*.txt (re-run on scratch/s7442: 8 windows), no open class",
+    "s7031_offmap_census.py": "s7722 H-report: band/ring share table of one [s7030]/[s7031] run.log; s7803 checked: no run.log/.zst in scratch/s7030, scratch/s7031 or scratch/agent/m6/g1_lvl*s703[01]* (summary + keys.log.gz only), no open class",
+    "s7210_field_census.py": "s7722 H-report: per-swap scissor field-bit table of one G5B_FRAME .cap; s7803 checked: the ER169/FC1 .cap (22-30 GB caps) are not in scratch/s7210, only the tool's outputs, no open class",
 }
 EXIT_PATH = re.compile(r"\bsys\.exit\(|\bexit\(|\breturn [1-9]\b|raise SystemExit")
 
@@ -236,6 +235,14 @@ S7802_RETAINED = {
     "s7802_retained_input_controls.py": ([], r"CONTROLS PASS 6/6"),
 }
 ARGS.update(S7802_RETAINED)
+# s7803: ex-REPORT s7441 rs64 census. Its raw-only sample_*.txt glob read windows=0 on every retained capture once the samples
+# were zstd'd; it reads .zst since s7803 and has a --gate mode pinning the s7441 claims on the post-fix s7442 capture, with the
+# pre-fix s7439 capture as the same-run planted RED (rs64SkipDraw 0.0075 ms/f before the latch).
+S7803_RETAINED = {
+    "s7441_rs64_census.py": (["scratch/s7442", "--gate", "--control", "scratch/s7439"],
+                             r"(?=[\s\S]*\nCONTROL PASS \(pre-fix)(?=[\s\S]*GATE dir=scratch/s7442 windows=8 rs64SkipDraw_incl=0\.0000 named_ge_0\.003=0 -> PASS)(?=[\s\S]*\nVERDICT GREEN)"),
+}
+ARGS.update(S7803_RETAINED)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
@@ -244,7 +251,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed

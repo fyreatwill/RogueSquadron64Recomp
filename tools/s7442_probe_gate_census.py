@@ -9,6 +9,8 @@ frame so the ranking is by real cost. UNGATED rows still need a human read: a he
 the renamed body of a hooked guest function) is UNGATED-NEEDED, not a defect.
 usage: s7442_probe_gate_census.py [--funcs DIR] [--samples DIR] [--fps 60] [--all]   (exit 0)"""
 import re, os, sys, glob, argparse, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from rs64_zopen import zopen  # s7803: retained sample_N.txt are .zst
 ap = argparse.ArgumentParser()
 ap.add_argument('--funcs', default='/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs')
 ap.add_argument('--samples', default=''); ap.add_argument('--fps', type=float, default=60.0)
@@ -42,9 +44,12 @@ cost = {}
 if a.samples:
     LINE = re.compile(r'^([\s+!:|]*)(\d+) (.*)$'); RS = re.compile(r'^_?(' + NAME + r')\b')
     nwin = 0; sc = collections.Counter(); ic = collections.Counter()
-    for fn in glob.glob(os.path.join(a.samples, 'sample_*.txt')):
+    _g = {}  # s7803: plain or .zst per window (the raw-only glob read windows=0 on every retained capture)
+    for f in glob.glob(os.path.join(a.samples, 'sample_*.txt')) + glob.glob(os.path.join(a.samples, 'sample_*.txt.zst')):
+        _g.setdefault(re.sub(r'\.zst$', '', os.path.basename(f)), f)
+    for fn in [_g[k] for k in sorted(_g)]:
         stack = []; nodes = []; nmax = 0; s1 = collections.Counter(); i1 = collections.Counter()
-        for raw in open(fn, errors='replace'):
+        for raw in zopen(fn):
             if raw.startswith('Total number in stack'): break
             m = LINE.match(raw.rstrip('\n'))
             if not m: continue
