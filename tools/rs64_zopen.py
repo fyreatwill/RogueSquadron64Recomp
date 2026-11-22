@@ -6,6 +6,7 @@ import gzip, io, subprocess
 
 def zopen(path, errors='replace'):
     p = str(path)
+    p = resolve(p) or p  # s7805: a raw path whose capture survives only as .zst (retention) reads the .zst
     if p.endswith('.zst'):
         return io.StringIO(subprocess.run(['zstd', '-dcq', p], capture_output=True, check=True).stdout.decode('utf-8', errors))
     if p.endswith('.gz'):
@@ -37,3 +38,13 @@ def materialize(path, tmpdir):
     with open(out, 'wb') as f:
         subprocess.run(['zstd', '-dcq', src], stdout=f, check=True)
     return out
+
+
+def zbytes(path):
+    """s7805: whole file as bytes, transparently from <path>.zst when only the compressed copy is retained."""
+    p = resolve(str(path)) or str(path)
+    if p.endswith('.zst'):
+        return subprocess.run(['zstd', '-dcq', p], capture_output=True, check=True).stdout
+    if p.endswith('.gz'):
+        return gzip.open(p, 'rb').read()
+    return open(p, 'rb').read()

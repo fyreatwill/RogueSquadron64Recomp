@@ -35,6 +35,11 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   (planted controls RED/ZOPEN/GREEN, real pre-fix s7763 RED). Its first run found 3 more: s7415 skipped 5 soak logs (205 now, verdict
   unchanged), s7616 `--witness-sample scratch/s7616/sample.txt` and s7763 `--offline` crashed FileNotFoundError (now CLOSED 10/10
   and 12 cmds 0 mismatch). Waiver for a non-input literal: `# zst-ok: <reason>`.
+  **Argv-borne paths (s7805):** zopen()/new zbytes() now self-resolve `<path>` -> `<path>.zst`, and
+  tools/s7805_cited_cmd_zst_check.py (sweep row S7805_CITED, ~47 s) runs every doc/ledger-cited `tools/X.py ... scratch/...`
+  whose arg is zst-only: first run 11 RED (FileNotFoundError), all fixed via zopen/zbytes -> 10 GREEN; leftovers are not format
+  defects: sample_callers / g1e_drain_blocks ledger lines omit argv, s7427 `--trace` replay symbolizes with atos against the
+  CURRENT binary (now prints STALE-BINARY rc 4 instead of a false TRACE CONTROL FAIL), apply_* not run (mutator).
 - **Latency (s7766/s7767):** FPS60 58.3 ms, retail 75-86, FPS60+VI_LOCK=1 53.7 ms; window mode does not change it (FULLSCREEN=2 exists).
 - **Crash reports:** `python3 tools/crash_reports.py --since <date>`; a NEW report outranks all other work (s7664).
 - **Hazards:** never LAUNCH the game under lldb (s7616: it tried to delete the ROM); attach to a normally started pid

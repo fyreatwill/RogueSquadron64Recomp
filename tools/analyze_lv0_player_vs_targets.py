@@ -2,8 +2,9 @@
 """s5851: min player->target distance (x,z plane and 3D) for each lv0 class-1 descriptor, killed vs survivor.
 Inputs: run log with [plpos] lines (ROGUESQ_LOG_PLPOS=1), [spawn1] and [ctr1] lines. usage: analyze_lv0_player_vs_targets.py RUN.LOG"""
 import re, struct, sys, math
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 seen, killed, pl = {}, set(), []
-for l in open(sys.argv[1], errors="replace"):
+for l in zopen(sys.argv[1], errors="replace"):
     m = re.match(r"\[spawn1\] #\d+ desc=0x(\w+) npc=0x\w+ id=0x(\w+) w=(.*)", l)
     if m: seen.setdefault(m.group(1), (int(m.group(2), 16), [int(x, 16) for x in m.group(3).split()]))
     m = re.match(r"\[ctr1\] set #\d+ id=0x(\w+) val=1 a2=1", l)
@@ -26,7 +27,7 @@ for name, sel in (("killed", True), ("survivor", False)):
     print(name, len(v), "min_xz median %.1f max %.1f min %.1f" % (sorted(v)[len(v)//2], max(v), min(v)))
 # s5851: button state while within R of each target (fire exposure)
 R = float(sys.argv[2]) if len(sys.argv) > 2 else 15.0
-btn = [int(re.search(r"btn=0x(\w+)", l).group(1), 16) for l in open(sys.argv[1], errors="replace") if l.startswith("[plpos]")]
+btn = [int(re.search(r"btn=0x(\w+)", l).group(1), 16) for l in zopen(sys.argv[1], errors="replace") if l.startswith("[plpos]")]
 print("in-range(<%g xz) samples and samples with each button bit; B=0x4000 A=0x8000" % R)
 for d, (i, w) in sorted(seen.items(), key=lambda x: x[1][0]):
     tx, tz = fl(w[4]), fl(w[6])

@@ -12,6 +12,7 @@ and those bytes must equal what some compiled image holds at that IMEM address (
 Exit 0 clean, 1 live row, 3 ctl unproven, 4 no [s7521-sum]. --controls runs synthetic logs first.
 """
 import glob, os, re, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROM = os.path.join(ROOT, 'rogue_squadron.z64')
@@ -94,7 +95,7 @@ def score(paths, want_ctl, imgs, rom, quiet=False):
     live, rc = [], 0
     tot = {}
     for p in paths:
-        L = open(p, errors='replace').read().splitlines()
+        L = zopen(p, errors='replace').read().splitlines()
         sums = [l for l in L if l.startswith('[s7521-sum]')]
         if not sums:
             if not quiet: print(f'{p}: no [s7521-sum]')

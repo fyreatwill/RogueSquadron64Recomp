@@ -22,6 +22,7 @@ It over-approximates (name collisions), so every reached reader is printed with 
 Exit: 0 = H-ordered, 1 = drift, 3 = control failed.
 """
 import collections, os, re, subprocess, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7426_env_defaults as E  # noqa: E402  (chdirs to the repo root)
@@ -355,10 +356,10 @@ def control(files):
 
 
 def fold_trace(path, pv):
-    allrows = [l for l in open(path, errors='replace') if l.startswith(('[s7427] pre ', '[s7427] in '))]
+    allrows = [l for l in zopen(path, errors='replace') if l.startswith(('[s7427] pre ', '[s7427] in '))]
     rows = [l for l in allrows if l.startswith('[s7427] pre ')]
     print(f'[s7427] trace phase rows: pre={len(rows)} in-policy={len(allrows) - len(rows)}')
-    done = [l for l in open(path, errors='replace') if l.startswith('[s7427] policy-done')]
+    done = [l for l in zopen(path, errors='replace') if l.startswith('[s7427] policy-done')]
     hits = []
     for l in rows:
         m = re.search(r'name=(\S+) n=(\d+) ra=(0x[0-9a-f]+)', l)
@@ -397,7 +398,16 @@ def main():
         plant = [p for p in pol if p[0][0] == 'ROGUESQ_OSMEM_MB' and 's7427_plant' in p[1]]
         if '--trace-control' in sys.argv:
             print(f'[s7427] TRACE CONTROL {"PASS" if plant and nd else "FAIL"}: planted pre-policy OSMEM latch seen={bool(plant)} policy-done={nd}')
-            if not (plant and nd): return 3
+            if not (plant and nd):
+                tp = __import__('rs64_zopen').resolve(sys.argv[sys.argv.index('--trace') + 1])
+                exe = os.path.join(E.ROOT, 'build', 'RogueSquadron64Recomp')
+                if nd and tp and os.path.exists(exe) and os.path.getmtime(exe) > os.path.getmtime(tp):
+                    # s7805: ra values are symbolized with atos against the CURRENT binary; a trace captured on an older
+                    # build (the plant arm compiled in) resolves to unrelated symbols, so this is not a control verdict.
+                    print('[s7427] TRACE CONTROL STALE-BINARY: build/RogueSquadron64Recomp is newer than the trace; '
+                          'replay needs the binary the trace was captured with')
+                    return 4
+                return 3
         real = [p for p in pol if 's7427_plant' not in p[1]]
         for (n, k, ra), s in real:
             if not any(n == v and sub in s for (v, sub) in TRACE_ACCEPT):

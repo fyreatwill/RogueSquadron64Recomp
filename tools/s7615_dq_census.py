@@ -26,6 +26,7 @@ now passes a pointer, is OPEN). Per gated/protocol row: proof regexes over the r
  registered event queue, static lifetime: events_context.X.mq set by osSetEventMesg / osViSetEvent); every mq lies in KSEG0 RAM.
 Exit 0 only if 0 open, 0 stale rows, sources agree, controls pass."""
 import importlib.util, json, os, re, sys, tempfile, copy
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import importlib.util as _ilu
@@ -262,7 +263,7 @@ def census(scan, ast, qrows=None, trows=None, over=None, ast_drop=(), vrows=None
     return opn, rep, cls_n, tcls, len(rq), len(aq), len(rv), len(av)
 
 def witness(path_or_lines):
-    lines = path_or_lines if isinstance(path_or_lines, list) else open(path_or_lines, errors="replace").read().split("\n")
+    lines = path_or_lines if isinstance(path_or_lines, list) else zopen(path_or_lines, errors="replace").read().split("\n")
     rows = [(int(m.group(1), 16), int(m.group(2))) for m in (re.match(r"^\[hostpost\] mq=0x([0-9A-F]+) extra=(-?\d+)", l) for l in lines) if m]
     names = ["Timer", "Sp", "Si", "Ai", "Vi", "Pi", "Dp"]
     by = {}

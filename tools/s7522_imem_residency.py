@@ -16,6 +16,7 @@ ctl rows (fs_ctl perturb, model shifted 8 bytes for one real 0x1DB0 overlay) mus
 Exit 0 clean + ctl caught, 1 live row, 3 ctl unproven, 4 no [s7522-sum]. --controls runs synthetic logs first.
 """
 import glob, os, re, sys
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROM = os.path.join(ROOT, 'rogue_squadron.z64')
@@ -117,7 +118,7 @@ def classify(sw, imgs, rom, ex, t, b, src):
 def score(paths, want_ctl, sw, imgs, rom, quiet=False):
     rc = 0
     for p in paths:
-        L = open(p, errors='replace').read().splitlines()
+        L = zopen(p, errors='replace').read().splitlines()
         sums = [i for i, l in enumerate(L) if l.startswith('[s7522-sum]')]
         if not sums:
             if not quiet: print(f'{p}: no [s7522-sum]')

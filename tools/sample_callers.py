@@ -2,8 +2,9 @@
 """s6934: self samples of leaf symbols by nearest named caller chain, one thread of a `sample` file. usage: sample_callers.py file "Gfx Thread" depth sym [sym...]
 With no sym: inclusive samples per symbol, top 40 (recursion counted once per path)."""
 import re,sys,collections
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 f,th,depth=sys.argv[1],sys.argv[2],int(sys.argv[3]); syms=sys.argv[4:]
-L=open(f,errors='replace').read().split('\n')
+L=zopen(f,errors='replace').read().split('\n')
 s=[i for i,l in enumerate(L) if th in l][0]
 rx=re.compile(r'^([\s+!:|]*)(\d+) (.*?)(\s+\(in .*|\s+\[0x.*)?$')
 N=[]

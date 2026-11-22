@@ -208443,3 +208443,36 @@ Rules out: further live members among swept/CT-cited tools for literal-named cap
 only from argv with no literal (e.g. s7616 before this fix had a literal only in the ledger), and tools neither swept nor cited.
 Closes the s7801-s7803 retained-format class with a standing guard. Next discriminator: none needed for this class; NEXT returns
 to the owner-wait default (crash reports / owner answers / soak lines first).
+
+## Session 7805 (2026-11-22) — argv-borne retained-format check: 11 doc/ledger-cited commands crashed FileNotFoundError on zst-only inputs -> zopen/zbytes self-resolve + fixes, new sweep gate S7805_CITED with planted and real RED controls
+
+HYPOTHESIS-ID: retained-format-lint-gate-followup.
+Checked first: crash_reports --since 2026-11-13 new=0; OWNER-REVIEW-QUEUE no answers; no new SOAK-RESULTS lines; CT 28 KB (no maintenance).
+Unit (NEXT.md): s7804 lints only literal capture paths. New tools/s7805_cited_cmd_zst_check.py scans CURRENT-TRUTH, OWNER-OPT-INS,
+OWNER-REVIEW-QUEUE, PROJECT-OVERVIEW, PORTING-STATE and NEXT for `[python3] tools/X.py ... scratch/...`; argv = flags, flag values and
+scratch paths (prose dropped). Arg census: raw=77 zst-only=18 gone=16 glob=14 -> 14 distinct commands with a zst-only arg, each run
+once (60 s timeout; apply_/fixup_/make_/rename* skipped as mutators). RED = FileNotFoundError / "No such file"; other tracebacks
+ERR-OTHER, argparse usage ERR-ARGV, s7427 STALE-BINARY ERR-STALE: none of these are format verdicts.
+Control, same run: planted doc citing a raw-opener over a zst-only arg -> RED, zopen-opener -> GREEN. The first control run FAILED
+('RED','RED'): rs64_zopen.zopen() did not fall back to .zst itself (callers had to pass resolve(p)). Dead end of the instrument, and
+the fix belongs in the library: zopen now does `resolve(p) or p`, and new zbytes() does the same for binary readers. Then PASS.
+First real run selects H-more over H-clean: 11 RED, all FileNotFoundError on the retained .zst input:
+rdpbin_tri_colors (PROJECT-OVERVIEW s5989 lvl1_rdp.bin), s7615_dq_census --witness, analyze_lv0_player_vs_targets (s5858),
+g1_track_vs_spheres x2 (s5912/s5915), s7210_field_census, s7427 --trace, s7434_gfx_glue (already imported zopen but passed the raw
+name: fixed by the library change alone), s7521 --ctl, s7522 --ctl. sample_callers was IndexError (argv), not format.
+Fixes: zopen/zbytes in 9 tools (one-line each) + the library. After: TALLY GREEN=10 ERR-ARGV=1 ERR-OTHER=1 ERR-STALE=1
+SKIP-MUTATOR=1, VERDICT GREEN rc 0. Outputs vs ledger numbers: s5858 plpos samples=281 (ledger 281), s5912 plpos 413 (ledger 413),
+s7210 replays 625-1648 field run (ledger "625-1648") when given the census input.
+Real-member RED control: HEAD's g1_track_vs_spheres restored in place -> RED 2/2 rows, VERDICT RED; fixed copy back -> GREEN.
+Honest caveats: (1) s7210's cited scratch/s7215/field21.txt is the census OUTPUT, not its binary input; the scan cannot tell input from
+output, so that row's GREEN only means "no crash" (zbytes kept anyway: harmless). (2) s7427 trace replay is binary-bound: the ra
+values are symbolized with atos against build/RogueSquadron64Recomp; on the retained phase.log (Nov 15) vs the Nov 21 binary the
+planted latch resolves to rs64_s7503_arm, so TRACE CONTROL read FAIL even from a raw decompressed copy (not a zst issue). It now
+prints TRACE CONTROL STALE-BINARY and returns 4 when the binary is newer than the trace. (3) sample_callers / g1e_drain_blocks ledger
+lines omit required argv; with "Gfx Thread" 3 supplied sample_callers runs on the .zst.
+Sweep: new row S7805_CITED (ARGS + EXTRA_GATES), regex pins control PASS + "VERDICT GREEN: 0 cited". `--only` over s7805/s7804/s7427/
+s7434/s7615/s7616/s7521/s7522/s7441/s7753/s7756/s7723/s7724: 11 GREEN, planted red/green + cache controls PASS. Full sweep (zopen is
+imported by ~28 tools): gates 237 {GREEN 235, REPORT 2 (s7031/s7210, inputs gone, unchanged)}, 0 RED/HOLLOW, planted
+red/green + cache controls PASS, wall 1226 s (cache miss 208 after the zopen edit).
+Rules out: further crash-on-zst among doc/ledger-cited offline commands. Not covered: commands cited only in scratch/ notes, globbed or
+brace-expanded args (14), and inputs gone entirely (16, nothing to resolve).

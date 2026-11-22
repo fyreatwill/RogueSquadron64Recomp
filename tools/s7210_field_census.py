@@ -6,7 +6,8 @@ Prints runs of consecutive field-mode swaps grouped by (cimg, width, field/odd p
 Times: mach_absolute_time ticks (24 MHz on Apple silicon) from the first swap.
 Positive control: all scissor ops are counted too (must be > 0 on every drawing swap), and field swaps are reported per run."""
 import struct, sys, collections
-f = open(sys.argv[1], 'rb'); rd = f.read
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
+import io; f = io.BytesIO(zbytes(sys.argv[1])); rd = f.read
 sw = -1; t0 = None; per = {}
 def cur():
     return per.setdefault(sw, {'sc': 0, 'fld': 0, 'odd': 0, 'cimg': {}, 'rect': collections.Counter(), 't': 0})

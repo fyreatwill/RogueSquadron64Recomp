@@ -3,8 +3,9 @@
 Usage: rdpbin_tri_colors.py rdp.bin [ord_filter]
 Tracks combine/prim/env/fill/timg/tlut state and reports, per (ord, state), tri counts and mean shade RGB."""
 import struct, sys, collections
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__))); from rs64_zopen import zopen, zbytes  # s7805: zst-only retained inputs
 def main():
-    d = open(sys.argv[1], 'rb').read()
+    d = zbytes(sys.argv[1])
     want = int(sys.argv[2]) if len(sys.argv) > 2 else None
     p = 0
     st = dict(comb=(0, 0), prim=0, env=0, timg=0, tfmt=0, tlut=0, tlutaddr=0, othermode=(0, 0))
