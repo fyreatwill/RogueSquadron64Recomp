@@ -208848,6 +208848,10 @@ rebuilt-vs-patched). Control: planted 1 px reported exactly 1, all 3 pairs PASS.
 Reading: static frames are byte-identical whatever the plugin; every animated frame differs by up to full scale in the noise arm
 (presses and dumps are wall-clock, so each run samples different game frames), so this instrument cannot see a sub-LSB effect.
 The plugin effect itself stays measured offline only (s7815: whole-task replays, <=1 LSB on ~12k px of flight tasks).
+Verdict: refutes H-worse (patched plugin boots, reaches the hangar, static frames identical); selects H-negligible for static
+frames (9/9 byte-identical across all 3 arms); H-shift on animated frames is undecidable with a wall-clock oracle.
+Next discriminator: two VI-clocked oracle runs with the same plugin must be byte-identical (H-det vs H-thread vs H-input), then
+stock vs patched under VI clocking.
 ORIGIN: n/a (no mitigation). Rules out H-worse; H-negligible holds for static frames; H-shift unresolvable cross-run (single-source
 for flight: s7815 offline only). Gap named: oracle presses/dumps are wall-clock, not VI-clocked, so no two oracle runs are
 comparable on animated frames. NEXT: VI-clocked --press/--fb-dump so the oracle becomes run-to-run deterministic.
