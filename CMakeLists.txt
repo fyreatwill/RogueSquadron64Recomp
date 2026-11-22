@@ -201,7 +201,9 @@ if (EXISTS "${MIPS_GCC}" AND EXISTS "${N64RECOMP_EXE}" AND PATCHES_MAKE_EXE AND 
     add_custom_command(OUTPUT "${PATCHES_DIR}/patches.elf"
         COMMAND ${PATCHES_MAKE_EXE} CC=${MIPS_GCC} LD=${MIPS_LD}
         WORKING_DIRECTORY "${PATCHES_DIR}"
-        DEPENDS ${PATCH_C_SOURCES}
+        # s7806: the compiler is an input too. A clang-built heap_guards.o (Oct 17, before mips64-elf-gcc replaced the
+        # clang wrapper at the same path) survived 5 weeks because nothing re-ran make; patches/Makefile also stamps it.
+        DEPENDS ${PATCH_C_SOURCES} "${MIPS_GCC}"
                 "${PATCHES_DIR}/Makefile"
                 "${PATCHES_DIR}/patches.ld"
                 "${PATCHES_DIR}/syms.ld"

@@ -208476,3 +208476,52 @@ imported by ~28 tools): gates 237 {GREEN 235, REPORT 2 (s7031/s7210, inputs gone
 red/green + cache controls PASS, wall 1226 s (cache miss 208 after the zopen edit).
 Rules out: further crash-on-zst among doc/ledger-cited offline commands. Not covered: commands cited only in scratch/ notes, globbed or
 brace-expanded args (14), and inputs gone entirely (16, nothing to resolve).
+
+## Session 7806 (2026-11-22) — public build re-verified from clean fork clones: game tree + ucode identical, but the owner's binary carried a stale clang-built patches/heap_guards.o (behaviour-neutral, dead code); toolchain stamp + CMake compiler dependency close it; s7420 census no longer cries OPEN in a clean build
+
+Unit (HYPOTHESIS-ID public-build-drift): every ladder item waits on the owner, and `tools/build-from-scratch.sh` (CURRENT-TRUTH
+durable constraint "keep it working") was last verified 2026-11-18 (217ebbafb), ~300 commits ago (s7788-s7791 vendored pruning,
+zst tooling). Hypotheses: H-ok / H-missing (needs a local-only file) / H-abs (hard-coded paths into our tree) / H-diverge (builds
+but differs from the live tree).
+
+Run: fresh dir ../rs64-cleanbuild-s7806, `env CMAKE_BUILD_PARALLEL_LEVEL=4 bash bfs.sh <ROM>`, clones of fyreatwill/* (autonomy @
+c40620d37, rs64, rs64). rc 0 in 632 s (clone 71, submodules 101, regen_front 1, regen_replay 348, ucode 1, game build 98).
+- H-missing / H-abs refuted: every tools/*.py regen_replay calls is tracked; no /Users/ path in the build scripts; it built.
+- RecompiledFuncs: `diff -rq` vs ../N64Recomp/RecompiledFuncs = 0 source differences (only the live tree's stray PORTING-STATE.md,
+  build/, scratch/ dirs). build/factor5_ucode: identical.
+- **H-diverge selected for patches/:** RecompiledPatches/patches.c differed (6424 diff lines; 9 vs 14 RECOMP_FUNCs). ORIGIN: the live
+  patches/heap_guards.o .comment = "Homebrew clang version 22.1.8", mtime 2026-10-17 18:06:12; the other three .o are GCC 14.2.0.
+  /opt/homebrew/bin/mips64-elf-clang (wrapper) was created 18:03 and mips64-elf-gcc was relinked to the real gcc at 18:33, so for
+  half an hour the gcc path ran clang; heap_guards.c was saved 18:05 and never changed since, and neither patches/Makefile (no
+  compiler dependency) nor CMake (DEPENDS = .c, Makefile, ld scripts) ever re-ran the compile. .o files are gitignored, so the
+  owner's binary carried code no clean build reproduces. Impact: none at runtime. All heap_guards.c functions are dead (the
+  allocateDisplayListBuffer override is renamed unused_patch_ by fixup_patches_host.py since s6269; helpers carry the _XXXXXXXX
+  suffix). The live ones (findAndUnlinkSmallestEntry, isCinematicActive, setRngSeed) are identical after normalising 0x8080xxxx
+  addresses (317/17/26 lines; only the s7490 hook pc literals shift). Patch .data/.bss/.rodata are empty, so nothing live sits in the
+  0x80801000+ RDRAM span the patch data loads into. Single-source (static) for findAndUnlinkSmallestEntry: 0 calls in the L4 hold below.
+- s7420 census in the clean build: "PATCHES-TREE ... -> OPEN", control (4) FAIL, so build-from-scratch printed "WARNING: regen_replay
+  trailing census check failed". Cause: regen_replay runs before CMake generates RecompiledPatches/patches.c, so patches_tree_weak()
+  = -1 (absent), which audit() read as OPEN, and control (4) planted into empty text. Not a parser defect: the same census is H-clean
+  on the live tree, and in the clean clone after its build (`--require-tree` rc 0).
+
+Changes:
+- patches/Makefile: objects depend on `.toolchain_id` (compiler --version + CFLAGS/CPPFLAGS, rewritten only on change, FORCE+cmp).
+  Controls with real make: same toolchain -> 0 compiles, heap_guards.o mtime unchanged; stamp set to "old identity" -> 4 compiles, and the
+  rebuilt patches.elf is still byte-identical to the clean build's (deterministic). (`make -n` cannot show this: it assumes the
+  FORCE recipe touched the stamp.) .gitignore: patches/.toolchain_id.
+- CMakeLists.txt: the patches.elf custom command DEPENDS on "${MIPS_GCC}" too.
+- Live rebuild: patches.c, patches.elf, patches.bin, patches.map now byte-identical to the clean public build (tracked patches.bin/
+  .map updated, so a clean build no longer dirties them).
+- tools/s7420_parser_census.py: absent patches tree -> DEFER (not OPEN, not IMMUNE-TREE); control (4) uses a synthetic one-function
+  patches text when the tree is absent; new control (5) absent tree -> DEFER; `--require-tree` makes DEFER fail. Arms: present
+  rc 0 / --require-tree rc 0; patches.c moved away: rc 0 with "DEFER 1", --require-tree rc 1; restored (mtime kept).
+- tools/build-from-scratch.sh: after the game build runs `s7420 --controls --require-tree` (warns on failure, read-only lint).
+
+Boot (scratch/s7806/boot2.zsh, one game at a time, 75 s no keys, SIGKILL): clean public binary and rebuilt live binary both
+alive=1, [cineBody] call#1 =1, crash 0, identical [patch-live] sequence (isCinematicActive 4/8/16 x5 lines + setRngSeed 1).
+Mission (in-session soak s7806_gccpatch_L4, owner recipe dd4 + STANDINS=1, 300 s, host idle 2.7 h, unlocked): alive_at_end=1,
+crashlines 0, vi_stalls30s=0, max_gap 148 ms, level_ok=1. findAndUnlinkSmallestEntry 0 calls (s6280 saw calls only at dd3 under
+texture-pool pressure), so its runtime path was not exercised. L1 twin queued (s7806_gccpatch_L1.sh).
+
+Rules out: public-build rot (H-missing/H-abs) as of c40620d37; game-tree or ucode divergence between public and owner binaries.
+Open: none from this unit. ../rs64-cleanbuild-s7806 is kept (~15 GB) so a re-check reuses the clones.

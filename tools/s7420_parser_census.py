@@ -19,9 +19,10 @@ Verdict: OPEN if a blind EDITOR targets an affected function outside CHAIN-PRE, 
 Also prints how many `// 0x` rows a blind whole-tree reader mis-attributes.
 
 --controls: (1) a planted blind editor (anchored regex on setRngSeed) must be OPEN; (2) a planted weak-aware one must
-not be blind; (4) a planted weak header in the patches tree must reopen fixup_patches_host.py; (3) a blind split over a temp copy of funcs_1.c with a planted weak header must move rows.
+not be blind; (4) a planted weak header in the patches tree must reopen fixup_patches_host.py; (3) a blind split over a temp copy of funcs_1.c with a planted weak header must move rows; (5) s7806: an absent patches tree must read DEFER, never IMMUNE-TREE.
+--require-tree: s7806, DEFER (RecompiledPatches/patches.c not generated yet) fails; build-from-scratch.sh uses it after the build.
 --dynamic: run every blind standalone audit against a live copy and a de-weakened copy in sandboxes and diff the output.
-usage: tools/s7420_parser_census.py [--verbose] [--controls] [--dynamic]   exit 1 = OPEN row or failed control
+usage: tools/s7420_parser_census.py [--verbose] [--controls] [--require-tree] [--dynamic]   exit 1 = OPEN row, failed control, or DEFER under --require-tree
 """
 import ast, glob, os, re, sys, tempfile, shutil
 
@@ -174,7 +175,9 @@ def audit(paths, split, aff, pre, verbose=False, ptree=None, pweak=None):
             verdict = "SELF"  # matches the un-weakened header on purpose; idempotent (re-run finds nothing to rewrite)
         elif blind:
             if phase == "CHAIN-POST": verdict = "OPEN"
-            elif phase == "PATCHES-TREE": verdict = "IMMUNE-TREE" if pweak == 0 else "OPEN"
+            # s7806: -1 = tree not generated yet (regen_replay runs before CMake makes patches.c, e.g. a clean public build):
+            # it cannot vouch either way -> DEFER (not OPEN, not IMMUNE). --require-tree turns DEFER into a failure.
+            elif phase == "PATCHES-TREE": verdict = "IMMUNE-TREE" if pweak == 0 else "DEFER" if pweak == -1 else "OPEN"
             elif editor and hits and phase != "CHAIN-PRE": verdict = "OPEN"
             elif hits: verdict = "IMMUNE-PRE" if phase == "CHAIN-PRE" else "READ-HIT"
             else: verdict = "BLIND-NOHIT"
@@ -322,17 +325,27 @@ def main():
                      r1.get(victim.group(1), 0), "PASS" if c3 else "FAIL"))
             # (4) s7563: the IMMUNE-TREE verdict must reopen when the patches tree carries a weak header
             pt = open(PATCHES_C, errors="replace").read() if os.path.exists(PATCHES_C) else ""
+            if not pt:  # s7806: tree absent -> plant into a synthetic one-function patches text so the control still fires
+                pt = "RECOMP_FUNC void setRngSeed(uint8_t* rdram, recomp_context* ctx) {\n}\n"
+                print("patches tree absent: control (4) uses a synthetic patches text")
             pw = patches_tree_weak(re.sub(r'^RECOMP_FUNC void ', '__attribute__((weak)) RECOMP_FUNC void ', pt, count=1, flags=re.M))
             fp = os.path.join(ROOT, "tools", "fixup_patches_host.py")
             cl = audit([fp], split, aff, pre, ptree=ptree, pweak=pw)
             cc = audit([fp], split, aff, pre, ptree=ptree, pweak=0)
             c4 = bool(pt) and pw == 1 and cl[0][7] == "OPEN" and cc[0][7] == "IMMUNE-TREE"
             print("CONTROL planted weak header in patches tree -> %s, clean -> %s (%s)" % (cl[0][7], cc[0][7], "PASS" if c4 else "FAIL"))
-            ok = c1 and c2 and c3 and c4
+            # (5) s7806: an absent tree must never read as clean
+            ca5 = audit([fp], split, aff, pre, ptree=ptree, pweak=-1)
+            c5 = ca5[0][7] == "DEFER"
+            print("CONTROL absent patches tree -> %s (%s)" % (ca5[0][7], "PASS" if c5 else "FAIL"))
+            ok = c1 and c2 and c3 and c4 and c5
         finally:
             shutil.rmtree(td, ignore_errors=True)
-    print("VERDICT", "H-split" if nopen else "H-clean", "OPEN", nopen)
-    sys.exit(1 if nopen or not ok else 0)
+    ndefer = sum(1 for r in rows if r[7] == "DEFER")
+    req = "--require-tree" in sys.argv
+    print("VERDICT", "H-split" if nopen else "H-clean", "OPEN", nopen,
+          ("DEFER %d (patches tree absent; rerun with --require-tree after the CMake build)%s" % (ndefer, " -> FAIL" if req else "")) if ndefer else "")
+    sys.exit(1 if nopen or not ok or (req and ndefer) else 0)
 
 
 if __name__ == "__main__":

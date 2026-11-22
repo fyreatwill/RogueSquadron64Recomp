@@ -119,6 +119,15 @@ step "building game (long)"
 cmake --build build > "$LOGS/game-build.log" 2>&1 || { tail -30 "$LOGS/game-build.log"; die "game build failed ($LOGS/game-build.log)"; }
 cp "$ROM_IN" build/rogue_squadron.z64
 
+# s7806: regen_replay ran the s7420 census before CMake made RecompiledPatches/patches.c, so its patches-tree row could only
+# DEFER. Now the tree exists: the census must vouch for it (read-only lint, so a failure warns rather than stops).
+step "s7420 census on the generated patches tree"
+if [ -f RecompiledPatches/patches.c ]; then
+  python3 tools/s7420_parser_census.py --controls --require-tree > "$LOGS/s7420_post.log" 2>&1 \
+    && echo "s7420: $(grep '^VERDICT' "$LOGS/s7420_post.log")" \
+    || echo "WARNING: s7420 post-build census failed: $(grep '^VERDICT' "$LOGS/s7420_post.log") (see $LOGS/s7420_post.log)"
+else echo "s7420: no RecompiledPatches/patches.c (patches/ build skipped), nothing to check"; fi
+
 step "done in $(( $(date +%s) - T0 ))s"
 ls -la build/RogueSquadron64Recomp build/rogue_squadron.z64
 echo "run: cd $TOP/RogueSquadron64Recomp/build && ./RogueSquadron64Recomp"

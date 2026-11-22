@@ -17,15 +17,14 @@ Discarded input sections
  .comment       0x00000000       0x13 dl_finder.o
  .gnu.attributes
                 0x00000000       0x10 dl_finder.o
- .mdebug.abi32  0x00000000        0x0 heap_guards.o
- .pdr           0x00000000      0x160 heap_guards.o
- .comment       0x00000000       0x1f heap_guards.o
- .note.GNU-stack
-                0x00000000        0x0 heap_guards.o
  .reginfo       0x00000000       0x18 heap_guards.o
  .MIPS.abiflags
                 0x00000000       0x18 heap_guards.o
- .llvm_addrsig  0x00000000        0x0 heap_guards.o
+ .pdr           0x00000000       0x80 heap_guards.o
+ .mdebug.abi32  0x00000000        0x0 heap_guards.o
+ .comment       0x00000000       0x13 heap_guards.o
+ .gnu.attributes
+                0x00000000       0x10 heap_guards.o
  .reginfo       0x00000000       0x18 rng_patch.o
  .MIPS.abiflags
                 0x00000000       0x18 rng_patch.o
@@ -58,23 +57,23 @@ LOAD rng_patch.o
 .dtors
  *(.dtors*)
 
-.text           0x80801000      0x668 load address 0x00000000
+.text           0x80801000      0x164 load address 0x00000000
  *(.text*)
  .text          0x80801000        0x0 cinematic_probe.o
  .text          0x80801000        0x0 dl_finder.o
- .text          0x80801000      0x668 heap_guards.o
- .text          0x80801668        0x0 rng_patch.o
+ .text          0x80801000      0x164 heap_guards.o
+ .text          0x80801164        0x0 rng_patch.o
 
-.recomp_patch   0x80801668      0xbb8 load address 0x00000668
+.recomp_patch   0x80801164      0x964 load address 0x00000164
  *(.recomp_patch*)
- .recomp_patch  0x80801668       0x10 cinematic_probe.o
-                0x80801668                isCinematicActive
- .recomp_patch  0x80801678      0x110 dl_finder.o
-                0x80801678                findAndUnlinkSmallestEntry
- .recomp_patch  0x80801788      0xa88 heap_guards.o
-                0x80801788                allocateDisplayListBuffer
- .recomp_patch  0x80802210       0x10 rng_patch.o
-                0x80802210                setRngSeed
+ .recomp_patch  0x80801164       0x10 cinematic_probe.o
+                0x80801164                isCinematicActive
+ .recomp_patch  0x80801174      0x110 dl_finder.o
+                0x80801174                findAndUnlinkSmallestEntry
+ .recomp_patch  0x80801284      0x834 heap_guards.o
+                0x80801284                allocateDisplayListBuffer
+ .recomp_patch  0x80801ab8       0x10 rng_patch.o
+                0x80801ab8                setRngSeed
  *(.recomp_force_patch*)
 
 .recomp_export
@@ -86,19 +85,19 @@ LOAD rng_patch.o
 .rodata
  *(.rodata*)
 
-.data           0x80802220        0x0 load address 0x00001220
+.data           0x80801ac8        0x0 load address 0x00000ac8
  *(.data*)
- .data          0x80802220        0x0 cinematic_probe.o
- .data          0x80802220        0x0 dl_finder.o
- .data          0x80802220        0x0 heap_guards.o
- .data          0x80802220        0x0 rng_patch.o
+ .data          0x80801ac8        0x0 cinematic_probe.o
+ .data          0x80801ac8        0x0 dl_finder.o
+ .data          0x80801ac8        0x0 heap_guards.o
+ .data          0x80801ac8        0x0 rng_patch.o
 
-.bss            0x80802220        0x0 load address 0x00001220
+.bss            0x80801ac8        0x0 load address 0x00000ac8
  *(.bss*)
- .bss           0x80802220        0x0 cinematic_probe.o
- .bss           0x80802220        0x0 dl_finder.o
- .bss           0x80802220        0x0 heap_guards.o
- .bss           0x80802220        0x0 rng_patch.o
+ .bss           0x80801ac8        0x0 cinematic_probe.o
+ .bss           0x80801ac8        0x0 dl_finder.o
+ .bss           0x80801ac8        0x0 heap_guards.o
+ .bss           0x80801ac8        0x0 rng_patch.o
  *(COMMON)
                 0x00000001                        ASSERT ((. <= PATCH_RAM_END), Maxed out recomp extra ram)
 

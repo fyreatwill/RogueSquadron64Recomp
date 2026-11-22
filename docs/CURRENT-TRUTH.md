@@ -42,6 +42,12 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   CURRENT binary (now prints STALE-BINARY rc 4 instead of a false TRACE CONTROL FAIL), apply_* not run (mutator).
 - **Latency (s7766/s7767):** FPS60 58.3 ms, retail 75-86, FPS60+VI_LOCK=1 53.7 ms; window mode does not change it (FULLSCREEN=2 exists).
 - **Crash reports:** `python3 tools/crash_reports.py --since <date>`; a NEW report outranks all other work (s7664).
+- **s7806 public-build check:** the owner's binary carried a clang-built patches/heap_guards.o (built 2026-10-17 18:06, before
+  /opt/homebrew/bin/mips64-elf-gcc was relinked from the clang wrapper to gcc 14.2 at 18:33); make never rebuilt it, so the public
+  build (all gcc) differed (9 vs 14 patch funcs). Behaviour-neutral (heap_guards code is dead: override renamed unused_patch_ s6269; live
+  bodies identical after address normalisation; patch .data/.bss/.rodata empty). Fixed: patches/Makefile toolchain stamp
+  (.toolchain_id; same cc 0 rebuilds, changed identity 4) + CMake DEPENDS on MIPS_GCC. s7420 census: absent patches tree now DEFER
+  (was OPEN, a spurious WARNING in every clean build), control (5), `--require-tree` run by build-from-scratch.sh after the build.
 - **Hazards:** never LAUNCH the game under lldb (s7616: it tried to delete the ROM); attach to a normally started pid
   (preflight tools/lldb_attach_check.sh). New build dirs need a COPY of build/saves. Title plume si_addr=0x58 CLOSED (0/76 boots s7660;
   s7725 RT64 texture-descriptor over-release fixed, NSZombie 0).
@@ -150,6 +156,9 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
   fyreatwill/RogueSquadron64Recomp (fast-forward only) and mirrors N64Recomp tool source + decomp tracked files to their `rs64`
   forks. Never commit ROM-derived data (*.z64, ucode/RDRAM dumps, RecompiledFuncs) or files > 50 MB, and never rewrite history,
   or publishing stops (`scratch/agent/PUBLISH-BLOCKED.md`). `tools/build-from-scratch.sh` is the public build; keep it working.
+  **Re-verified s7806** from clean clones of the 3 public forks (632 s, CMAKE_BUILD_PARALLEL_LEVEL=4): RecompiledFuncs, build/factor5_ucode,
+  patches.elf/.bin/.map and RecompiledPatches/patches.c byte-identical to the live tree; both binaries boot past attract (s7806 boot2.zsh).
+  Re-run it in ../rs64-cleanbuild-s7806 (reuses the clones; `git -C <repo> pull` first) after any build-system, regen or patches/ change.
 - Read `docs/F5-UCODE-REFERENCE.md` before interpreting Factor 5 streams. Positive control for every null; two
   independent lines before a conclusion enters this file.
 

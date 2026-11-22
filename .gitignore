@@ -131,3 +131,4 @@ ucode_024A10.bin
 # Public build scripts (the build-* rule above would hide them)
 !tools/build-from-scratch.sh
 !tools/build-mips64-toolchain.sh
+patches/.toolchain_id

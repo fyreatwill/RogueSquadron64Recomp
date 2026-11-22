@@ -62,15 +62,23 @@ endif
 $(TARGET): $(C_OBJS) $(ASM_OBJS) patches.ld syms.ld
 	$(LD) $(C_OBJS) $(ASM_OBJS) $(LDFLAGS) -o $@
 
-$(C_OBJS): %.o : %.c
+# s7806: objects depend on the toolchain identity (compiler --version + flags). Before this, a heap_guards.o built by the
+# clang wrapper that briefly answered to mips64-elf-gcc (2026-10-17) stayed in every build, so the owner's binary carried
+# patch code no clean build reproduces. .toolchain_id is rewritten only when the identity changes.
+TOOLCHAIN_ID := $(shell $(CC) --version 2>/dev/null | head -1) | $(CFLAGS) $(CPPFLAGS)
+.toolchain_id: FORCE
+	@echo '$(TOOLCHAIN_ID)' | cmp -s - $@ || echo '$(TOOLCHAIN_ID)' > $@
+
+$(C_OBJS): %.o : %.c .toolchain_id
 	$(CC) $(CFLAGS) $(CPPFLAGS) $< -MMD -MF $(@:.o=.d) -c -o $@
 
 $(ASM_OBJS): %.o : %.S
 	$(AS) -mips2 -mabi=32 -EB -o $@ $<
 
 clean:
-	rm -rf $(C_OBJS) $(ASM_OBJS) $(TARGET) $(C_DEPS) patches.map __empty_patches.c
+	rm -rf $(C_OBJS) $(ASM_OBJS) $(TARGET) $(C_DEPS) patches.map __empty_patches.c .toolchain_id
 
 -include $(C_DEPS)
 
-.PHONY: clean
+.PHONY: clean FORCE
+FORCE:
