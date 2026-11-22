@@ -208569,3 +208569,34 @@ Gate: sweep row S7808_FIND (tools/s7651_gate_sweep.py), so any patches/ toolchai
 behaviour reads RED. This closes the s7807 "static-verified only" caveat. Next discriminator (NEXT.md
 patch-body-diff-class): the same harness over every live patches.c override with a retail twin; a mismatch names the function.
 No ORIGIN needed: no mitigation added.
+
+## Session 7809 (2026-11-22) — gcc C-patch body class CLOSED: every RECOMP_FUNC in RecompiledPatches/patches.c classified; isCinematicActive + setRngSeed shipped bodies == recompiled retail (20,000 trials each, controls PASS); 6 dead; sweep gate S7809_PATCH_CLASS
+
+Fold: s7806_gccpatch_L1 (loop) alive 1/1, crashlines 0, vi_stalls30s=0, max_gap 148 ms, level_ok=1 on the all-gcc patches binary
+(L4 twin s7806 also clean). crash_reports: 0 new.
+
+Unit (NEXT patch-body-diff-class): enumerate EVERY RECOMP_FUNC in RecompiledPatches/patches.c and close the class.
+New tool `tools/s7809_patch_class_diff.py --controls` (~2 s, iron-rule-0 cheap):
+- Classifier: 9 RECOMP_FUNCs. Live roots (not unused_patch_*, no _XXXXXXXX helper suffix) = findAndUnlinkSmallestEntry,
+  isCinematicActive, setRngSeed. Call-graph reachability from those roots: the 5 heap_guards helpers
+  (bump_cursor_disjoint_from_{active_queue,free_chain}, active_queue_{sentinel_,}disjoint, free_chain_disjoint_from_active_queue)
+  are called only from unused_patch_allocateDisplayListBuffer (or nothing), which itself has no reference anywhere in
+  src/ RecompiledPatches/ patches/ outside its definition -> class DEAD. No (b) behaviour-changing patch exists.
+  (s7806 "9 live gcc patch funcs" counted all 9 emitted functions; only 3 are live.)
+- (a) differential: the SHIPPED RECOMP_FUNC (fixup_patches_host wrapper + gcc body) vs the recompiled retail twin
+  (isCinematicActive 0x800AF540 funcs_29.c; setRngSeed 0x80003460 funcs_1.c) on identical random state, comparing r2 (when
+  returned), s0-s7/gp/sp/fp/ra, watched windows every call and the whole 8 MB every 64 trials (a stray write persists, so the
+  periodic full compare cannot miss it). isCinematicActive: 20,000 trials, flag 0/1/0x80000000/other = 5078/5024/4861/9898,
+  0 mismatch. setRngSeed: 20,000 trials, seed 0 2461, nonzero 17539, garbage upper 32 bits of a0 9997, sign-extended negative
+  4358, 0 mismatch. findAndUnlinkSmallestEntry delegated to S7808_FIND (s7808).
+- Controls (same run): planted body mutants (sltu 0<v0 -> 1<v0; store 0x3470 -> 0x3474) both H-differ; RAM one-byte plant
+  detected 207/207 per function; classifier plants (an unrowed new RECOMP_FUNC, a dead helper called from setRngSeed, an
+  unused_patch_ reference) RED 3/3. A coverage-predicate bug (unsigned vs signed upper-word compare counting sign-extended
+  negatives as garbage) was found and fixed before the verdict.
+Result: H-equal-all selected for the (a) set; H-differ refuted (0 mismatch on every branch); H-hollow refuted (every coverage
+counter >0, mutants caught). Sweep row S7809_PATCH_CLASS added to tools/s7651_gate_sweep.py; a future C patch reads RED until
+it gets a ROWS/DELEGATED row. Rules out: the gcc toolchain switch (s7806) changing behaviour of any live patch body.
+Census for the next unit: host C/C++ definitions that replace recompiled game functions = 2 (zmemcpy, recomp_entrypoint).
+Sweep: `s7651_gate_sweep.py --only 's7809|s7808'` 2/2 GREEN (sweep controls PASS). A full uncached sweep was started but was killed
+at the agent shell's 600 s background cap before printing (not a sweep failure; no verdict from it); the last full sweep (s7807)
+was 235 GREEN 0 RED, and this session changed only the new tool + one sweep row.
