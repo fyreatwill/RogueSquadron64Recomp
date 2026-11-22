@@ -208883,3 +208883,7 @@ s7815 whole-task ucode compare), so earlier stock-cxd4 oracle verdicts stand. Th
 control for the determinism claim (same session, same binary, only the flag differs).
 Rules out: angrylion threading and host input as divergence sources. Not yet known: what the off-screen word at ~0x7887xx is.
 Next: --det default in the comparing oracle launchers; name the writer/reader of the off-screen word (NEXT.md).
+Verdict: refutes H-det (VI clock alone; p1/p2 still diverge), refutes H-thread (angrylion Parallel=False v1/v2 diverge) and H-input
+(keyboard-only i1/i2 diverge, pad words on identical VIs); selects H-core-rand (RandomizeInterrupt off -> d1/d2 82/82 byte-identical).
+Next discriminator: watch on physical 0x788000-0x78B000 in --det stock vs patched to name the off-screen word's writer/reader
+(H-dead / H-cpu-read / H-zbuf).
