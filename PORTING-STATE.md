@@ -208951,3 +208951,5 @@ with a same-run control (NEXT.md).
   4/4 sampled dumps t005/15/25/30 distinct, so the equality is not a frozen frame). Port arms caps=359/338.
 - Rules out: nothing left blocks deterministic retail-vs-port pairs. visible= reads n/a in s7817_oracle_det.py on menu_pair
   logs (no origin metadata parsed); raw equality covers it.
+- Verdict: selects H-cwd, refutes H-abs and H-assets (private dir boots and loads its own save, owner save sha unchanged).
+  Next discriminator: det menu pair port-vs-retail residual against the r1-r2 port spread (H-noise vs H-port vs H-timing, NEXT.md).
