@@ -93,6 +93,33 @@ if __name__ == '__main__':
             print(f"  {'non-breathing' if excl else 'all'}: R-in-P {fr_(Rh, UP, excl)} P-in-R {fr_(Ph, U(Rh), excl)} "
                   f"ctl R-in-ctlphase {fr_(Rh, UC, excl)} plant+0.25 {fr_(Rs, UP, excl)}")
         sys.exit(0)
+    if '--windows' in a:   # s7822: explicit frame windows for animated sub-screens the jaccard segmenter fragments
+        # --windows r0:r1,p0:p1,c0:c1  (retail window, port window, port control window); scores the last K of each
+        (r0, r1), (p0, p1), (c0, c1) = [tuple(map(int, w.split(':'))) for w in opt('--windows', '').split(',')]
+        Rk = [c for c, _ in R[max(r0, r1 - K):r1]]; Pk = [c for c, _ in P[p0:p1]]; Ck = [c for c, _ in P[c0:c1]]
+        plant = [collections.Counter({((k[0] + 0.25,) + k[1:]) if k[0] != 'tri' else k: v for k, v in c.items()}) for c in Rk]
+        for nm, f in (('full', sig_full), ('geom', sig_geom), ('noprim', sig_noprim)):
+            print(f'  {nm}: R[{max(r0, r1 - K)}:{r1}] vs P[{p0}:{p1}] {score(Rk, Pk, f)} || ctl P[{c0}:{c1}] {score(Rk, Ck, f)} '
+                  f'|| plant+0.25 {score(plant, Pk, f)}')
+        UR = set(k[:4] for c in Rk for k in c if k[0] != 'tri'); UP = set(k[:4] for c in Pk for k in c if k[0] != 'tri')
+        print(f'  geom only-retail {sorted(UR - UP)[:12]} n={len(UR - UP)} | only-port {sorted(UP - UR)[:12]} n={len(UP - UR)}')
+        # element test over the windows; scale-animated strips (54-66 x 16.5-22 px) excluded in the second row
+        br = lambda k: 54 <= k[2] - k[0] <= 66 and 16.5 <= k[3] - k[1] <= 22
+        UC = set(k[:4] for c in Ck for k in c if k[0] != 'tri')
+        def ef(F, Us, excl):
+            n = h = 0
+            for c in F:
+                for k, v in c.items():
+                    if k[0] == 'tri' or (excl and br(k)): continue
+                    n += v; h += v * (k[:4] in Us)
+            return round(h / max(n, 1), 4), n
+        for excl in (False, True):
+            print(f"  elements {'non-strip' if excl else 'all'}: R-in-P {ef(Rk, UP, excl)} P-in-R {ef(Pk, UR, excl)} "
+                  f"ctl R-in-C {ef(Rk, UC, excl)} plant R+0.25-in-P {ef(plant, UP, excl)}")
+        if excl:
+            miss = collections.Counter(k[:4] for c in Rk for k in c if k[0] != 'tri' and not br(k) and k[:4] not in UP)
+            print('  non-strip retail misses (w,h):', collections.Counter((round(k[2]-k[0],2), round(k[3]-k[1],2)) for k in miss).most_common(8))
+        sys.exit(0)
     RS = segments(R, J, MIN); PS = segments(P, J, MIN)
     def desc(fr, s, lab):
         u = frozenset().union(*(geom(fr[i][0]) for i in range(*s))); mids = fr[(s[0] + s[1]) // 2]

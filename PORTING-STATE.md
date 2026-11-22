@@ -209037,3 +209037,30 @@ HYPOTHESIS-ID: g3-det-menu-pair
   the decisive line for menus).
 - Side finding (single-source, emulator timing): the port renders the hangar ~2x the emulated-retail frame rate. Benign: G1e
   wants higher rates and the animation is time-based; not a defect.
+
+## Session 7822 (2026-11-22) — det menu pair through SELECT LEVEL's sub-screens (level description, right press): no port render defect; description screen element match 1.000 with control 0 and plant 0
+
+HYPOTHESIS-ID: g3-det-menu-pair
+- Start checks: crash_reports new=0; no new SOAK-RESULTS lines since s7809; OWNER-REVIEW-QUEUE unchanged.
+- Hypotheses (NEXT): H-match (element sets equal, residual = animation phase) / H-port (an element in one arm only beyond
+  scale-animated strips) / H-route (arms on different sub-screens).
+- Run (scratch/s7822, NEXT command verbatim, PCLOCK=vi, presses 19.5 start, 31.5 start, 43.5 cup, 55.5 cup, 63.5 right; retail
+  +5.75 s): all 8 port autopilot events fired (cup btn 0x0008 at vi_width 512, right 0x0100); retail 8 presses logged. Frames
+  retail 2473 (640:427, 1024:1124, 512:922), port 3247. Captures zstd'd (*.bin.zst, 255 MB).
+- Route fact (correction of s7821): the 512-wide screen is SELECT LEVEL (port window w_0050.04.png shows "SELECT LEVEL" + the Mos
+  Eisley description + "PRESS C FOR LEVEL DESCRIPTION"), not AVAILABLE CRAFT.
+- Timeline (texrect/tri bands per run of >= 8 frames): both arms SELECT GAME (texrects 100-220, 400 tris) -> fade -> 512 screen
+  140 texrects / ~1100 tris -> C-up -> 240 texrects (description) -> C-up -> 140 -> right. Same order, same bands (H-route refuted).
+- Segment scorer fragments the animated 512 screen, so tools/s7821_rdp_screen_segments.py gained `--windows r0:r1,p0:p1,c0:c1`
+  (explicit retail/port/control windows; full/geom/noprim whole-frame score + plant; element test with 54-66 x 16.5-22 px scale
+  strips excluded; lists the non-strip misses by size).
+- Results (last 120 retail frames of each window):
+  description R[1740:1860] vs P[2100:2380], ctl P[1600:1660]: whole-frame geom exact 24/120 median 100 (= the 50-strip breathing
+  block x2), ctl 0/120 median 421; elements non-strip R-in-P 1.000 (n 18000), P-in-R 0.9988, ctl 0.000, plant +0.25 px 0.000.
+  base R[1600:1670] vs P[1790:2030]: non-strip 0.9867 / 0.9845, plant 0.000, misses 50x (66.75 x 18.75) scale strips; ctl 0.9867
+  (control = description screen shares the static set here, so not discriminating for this window; the plant is).
+  post-right R[2150:2270] vs P[2648:2954]: non-strip 0.9845 / 0.9878, plant 0.000, misses 66.5-66.75 px strips only.
+  Tri medians per window retail/port 1130/1128, 1098/1097, 1118/1119; last window 1114/1100 (still settling after the right press).
+- Verdict: H-match for SELECT LEVEL and its level-description sub-screen; refutes H-port and H-route. Not covered: the craft
+  select / briefing / mission load after START on SELECT LEVEL (next unit), and the 3D hologram tris (vertex sets never pair across
+  the rate difference; only counts compared).

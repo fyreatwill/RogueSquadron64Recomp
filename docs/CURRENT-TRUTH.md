@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7821 (2026-11-22).
+Compact operational handoff, as of Session 7822 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -304,6 +304,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      44.7 vs 81.6 frames, both ~2.8 s; retail VI flips ~16/s); element test non-breathing 0.944 both ways, ctl 0.000, 0.25 px plant
      0.000; all misses are scale-animated strips. Tool: `python3 tools/s7821_rdp_screen_segments.py R.bin P.bin [--elements 512:5
      --ctl-phase 4]`; capture scratch/s7821/c/*.bin.zst. Don't use RS64_RDP_BIN_WIDTH when a route crosses widths.
+     **s7822 det pair through the 512-wide screen's sub-screens: no port render defect.** The 512 screen is SELECT LEVEL (port window
+     w_0050.04.png: "SELECT LEVEL", Mos Eisley description), not AVAILABLE CRAFT as s7821 wrote. Presses C-up / C-up / right
+     (scratch/s7822/*.bin.zst). Both arms walk the same states (texrect bands 140 -> 240 -> 140, tri bands 1130/1098/1118 retail vs
+     1128/1097/1119 port per window). New `--windows r0:r1,p0:p1,c0:c1` in tools/s7821_rdp_screen_segments.py (explicit windows +
+     element test excluding 54-66 x 16.5-22 px scale strips). Description screen: non-strip R-in-P 1.000 (18000), P-in-R 0.9988,
+     ctl (other sub-screen) 0.000, +0.25 px plant 0.000. Base and post-right windows: non-strip 0.987 / 0.985, plant 0.000, every
+     miss a 66.5-66.75 px scale strip (ctl not discriminating there: same static set). Whole frames still never pair (strip breathing).
      [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
