@@ -133,7 +133,7 @@ def split_funcs(path):
 
 def classify(path=PATCHES, scan_refs=True):
     lines, fns, _ = split_funcs(path)
-    recomp = [n for n, (s, _) in fns.items() if lines[s].startswith("RECOMP_FUNC")]
+    recomp = [n for n, (s, _) in fns.items() if re.match(r"^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC", lines[s])]
     calls = {n: set(re.findall(r"\b(\w+)\(rdram, ctx\);", "\n".join(lines[s + 1:e + 1]))) for n, (s, e) in fns.items()}
     roots = [n for n in recomp if not n.startswith("unused_patch_") and not HELPER_RE.search(n)]
     live, stack = set(), list(roots)
@@ -183,7 +183,7 @@ def build_and_run(name, row, trials, plant, d):
     if row["retail_addr"].upper() not in rbody.upper():
         return 2, f"EXTRACT FAIL {name}: retail address moved"
     fwd = "".join(f"static void {b}(uint8_t* rdram, recomp_context* ctx);\n" for b in row["body"][1:])
-    pbody = re.sub(rf"^RECOMP_FUNC void {name}\(", "void patch_fn(", pbody, count=1, flags=re.M)
+    pbody = re.sub(rf"^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC void {name}\(", "void patch_fn(", pbody, count=1, flags=re.M)
     if plant:
         a, b = row["plant"]
         if a not in pbody:

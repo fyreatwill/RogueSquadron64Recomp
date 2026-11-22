@@ -208641,3 +208641,18 @@ selects H-equal after the fix; it refutes H-hollow (all 9 coverage counters > 0,
 in-RAM class (len 0, short, 16-byte block, mixed alignment, overlap both directions, s7490 diag path).
 Next discriminator: the fixup-behaviour-delta class (NEXT.md): raw N64Recomp output vs the fixup'd RecompiledFuncs, every
 default-on hunk classified; H-all-rowed vs H-orphan is decided by whether any default-on hunk lacks an ORIGIN row / off switch.
+
+## Session 7811 (2026-11-22) — s7420 parser census re-closed: the s7808/s7809/s7810 harness tools carried weak-blind RECOMP_FUNC parsers (OPEN 2) -> made weak-aware, census OPEN 0, all three tools' verdicts unchanged
+Contract fix first (loop.sh unmet contract from s7810): `tools/s7651_gate_sweep.py` reported s7420_parser_census.py RED (new vs allowed list).
+`python3 tools/s7420_parser_census.py --controls --verbose` named the rows: s7808_find_body_diff.py L33 (`l.startswith("RECOMP_FUNC")`,
+preamble cut) and s7809_patch_class_diff.py L136 (`lines[s].startswith("RECOMP_FUNC")`, the recomp-root list) + L186 (`^RECOMP_FUNC void
+{name}\(` sub on the patch body) — STANDALONE, editor-shaped (they write temp harness files) and naming affected weak functions
+(findAndUnlinkSmallestEntry, isCinematicActive, setRngSeed), so OPEN by the census rule. s7810_host_override_diff.py L75 was blind too
+(BLIND-NOHIT, not a gate failure). These tools were written s7808-s7810 and not routed through the census before commit.
+Change: all four sites now use the weak-aware form `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC` (re.match), as the census docstring asks.
+Results: census `VERDICT H-clean OPEN 0`, its 5 controls PASS (planted blind editor -> OPEN, weak-aware reader blind=0, planted weak
+header moves 55 rows, planted weak patches-tree header -> OPEN, absent tree -> DEFER). Behaviour check of the edited tools, same run:
+s7808 `--controls` VERDICT H-equal, mutant differ 13538/20000, plant 207/207, PLANTED-PATCH PASS; s7809 CLASS VERDICT GREEN, controls PASS;
+s7810 CLASS VERDICT GREEN, PLANTED-MUTANT + PRE-FIX controls PASS. Full s7651 gate sweep re-run: rc=0, no new RED.
+Rules out: nothing about the game; this was gate hygiene. The planned s7811 unit (fixup-behaviour-delta class) was not started; NEXT.md
+keeps it unchanged.

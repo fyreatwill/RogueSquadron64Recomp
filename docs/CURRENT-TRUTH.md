@@ -59,6 +59,8 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   (r2, callee-saved regs, watched windows + full 8 MB every 64 trials), 0 mismatch, all branch-coverage counters >0; planted body
   mutants H-differ 2/2, RAM plant 207/207, classifier plants (unrowed patch / dead helper made reachable / unused_ referenced) RED 3/3.
   A NEW C patch turns the sweep RED until it gets a ROWS/DELEGATED entry.
+- **s7811:** s7420 parser census re-closed (OPEN 0): new census-scoped tools must use the weak-aware header form
+  `^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC`, never `startswith("RECOMP_FUNC")` — run `tools/s7420_parser_census.py` before committing one.
 - **s7810 host-override class CLOSED:** `python3 tools/s7810_host_override_diff.py --controls` (sweep row S7810_HOST_OVR, ~2 s): host
   definitions shadowing a RECOMP_FUNC = 1 (zmemcpy; recomp_entrypoint is only declared). Pre-fix H-differ: host faulted on a
   zero-extended KSEG0 pointer (rdram + 4 GB) that retail copies; FIXED (sign-extend canonicalisation, upstream_compat.cpp). Post-fix

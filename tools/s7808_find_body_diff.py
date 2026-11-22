@@ -30,7 +30,7 @@ def extract(path, head):
     lines = open(path).read().split("\n")
     s = next(i for i, l in enumerate(lines) if l.startswith(head))
     e = next(i for i in range(s + 1, len(lines)) if lines[i] in ("}", ";}"))
-    first_fn = next(i for i, l in enumerate(lines) if l.startswith("RECOMP_FUNC") or l.startswith("static void"))
+    first_fn = next(i for i, l in enumerate(lines) if re.match(r"^(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC", l) or l.startswith("static void"))
     return "\n".join(lines[:first_fn]), "\n".join(lines[s:e + 1])
 
 

@@ -1,4 +1,5 @@
-# NEXT (s7811)
+# NEXT (s7812)
+(s7811 spent on the s7420 census contract fix; this unit is still untouched and still next.)
 HYPOTHESIS-ID: fixup-behaviour-delta-class
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
 SOAK-RESULTS lines. Any crash/stall or owner report outranks the unit. G6c and all G5 items wait on the owner only.

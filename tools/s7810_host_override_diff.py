@@ -72,7 +72,7 @@ def r2_readers(rec_files):
     for f in rec_files:
         L = open(f).read().split("\n")
         for i, l in enumerate(L):
-            if "zmemcpy(rdram, ctx);" not in l or l.lstrip().startswith("RECOMP_FUNC"):
+            if "zmemcpy(rdram, ctx);" not in l or re.match(r"^\s*(?:__attribute__\(\(weak\)\) )?RECOMP_FUNC", l):
                 continue
             sites += 1
             for j in range(i + 1, min(i + 400, len(L))):
