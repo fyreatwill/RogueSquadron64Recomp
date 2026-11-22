@@ -412,7 +412,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    yet retail's pose stays ~0 vs R1 at both rates and the port is pitched +0.0016-0.0026 rad vs every retail arm (incl. CPO1 at the
    port's frame count). H-cpu-state selected. The reticle sub-pixel offset IS rate-dependent within retail (CPO1 vs port exact,
    CPO1/CPO3 vs R1 one-signed), so reticle classes are not a pose witness; s7832's reticle line is withdrawn and the pitch rests on
-   the pose fit alone (single-method). Scorer: tools/s7833_rate_arm_score.sh. Last unit on this thread: guest camera dump (NEXT.md).
+   the pose fit alone (single-method). Scorer: tools/s7833_rate_arm_score.sh.
+   **s7834: thread CLOSED, H-cam by dt path.** Guest RAM dump at the same PC on both sides (port tools/apply_s7834_ramdump.py
+   ROGUESQ_S7834_RAMDUMP=1; retail rs64_oracle --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0; scorer tools/s7834_ramdump_cmp.py,
+   planted controls PASS). Port vs retail CPO1 bit-identical in all 460 words (player + camera) for 2 flight frames; at frame 2 the port
+   takes a 0.5-tick step, and the camera swing-in settles at a different rest pitch (w5 0.06034 vs 0.06316; R1 0.06266). Pitch now
+   two-source (RAM +0.00232 = image fit). Craft attitude equal, camera math bit-exact. Sub-pixel. Optional: why the port makes a half-tick frame.
 
 ## Evidence index
 

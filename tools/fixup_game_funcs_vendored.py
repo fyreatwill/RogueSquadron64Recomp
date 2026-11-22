@@ -32986,6 +32986,11 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
         if _n6321:
             changed = True
             report.append(f"{p.name}: s6321 camlog x{_n6321}")
+        import apply_s7834_ramdump as _a7834
+        text, _n7834 = _a7834.apply(text)
+        if _n7834:
+            changed = True
+            report.append(f"{p.name}: s7834 ramdump x{_n7834}")
 
     if p.name == "funcs_10.c":
         import apply_s6311_edgefade as _a6311

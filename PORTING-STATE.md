@@ -209414,3 +209414,39 @@ the s7809 fold, no owner answers. Load ~4. Two retail oracle runs, one at a time
 - Captures (zstd, gitignored): scratch/s7833/cpo{1,3}/retail.bin.zst; scores scratch/s7833/pose_*_{r1c1,c1p}.txt, rect_*c1*.txt,
   scratch/s7833/s3/*.txt.
 - ORIGIN: n/a (no mitigation, no game code change).
+
+## Session 7834 (2026-11-22) — guest RAM dump at the same guest PC on both sides: port and retail (CountPerOp 1) are bit-identical across all 460 words (player object + camera block) for the first two lvl2 flight frames, then the port takes one 0.5-tick frame where retail takes 1 tick; the camera swing-in integrates a different dt path and settles at a different rest pitch (w5 0.06034 vs 0.06316/0.06266). Craft attitude equal, camera math bit-exact: H-cam by dt path, H-craft and H-proj refuted; thread g3-flight-pitch-cpu-state CLOSED
+Work unit (NEXT s7834, HYPOTHESIS-ID g3-flight-pitch-cpu-state). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS lines
+since the s7809 fold, no owner answers. Load ~3. Three runs, one at a time (2 retail oracle, 1 port).
+- Instrument, one build per side, same sampling point: guest PC 0x80043918 inside buildVisibleTerrainGridAroundCamera (the s6321 camlog
+  site), dump of 0x80137DB0..0x801384E0 (460 words: player object 0x80137DBC.., camera block 0x80138458.., cam+0x28 rotation/position
+  = idx 436..447), one row per call only when the bytes change. Port: tools/apply_s7834_ramdump.py (ROGUESQ_S7834_RAMDUMP=1, registered
+  in fixup_game_funcs_vendored.py after the camlog block; s7719 --strict H-mirrored, live == replay). Retail: new rs64_oracle option
+  `--pc-ram-dump PC:START:END` (with --watch-pc PC), and s7828_retail_cpo.sh gained XO= (extra oracle args) and RDPBIN=.
+- Runs: retail R1 `env CPO=2 RSECS=175 RDPBIN=/dev/null EEP=scratch/s7832/lvl.eep PP=19.5:start,...,91.5:start XO="--watch-pc 0x80043918
+  --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0" zsh tools/s7828_retail_cpo.sh scratch/s7834/r1` (1132 rows, 1912 calls); retail C1 the
+  same with CPO=1 (scratch/s7834/c1); port = s7832 recipe (`SAVE_FROM=scratch/s7832/lvl.eep SECS=150 AP=6:start,11:start,11.5:w1024,...`)
+  + XE ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 (scratch/s7834/p1, 1013 rows, 0 crash lines).
+- Scorer tools/s7834_ramdump_cmp.py: rows matched by camera xz in the first level straight (z 112..86). Controls in every scoring:
+  retail-vs-itself 0 differing words, planted +0.002 on idx 441 / +0.01 on idx 434 -> exactly that word (PLANT PASS x2).
+- Line 1 (state at matched position, R1 vs port): 20 differing words, ALL either player/camera position copies (idx 4,6,160,162,430,432,
+  445,447: the xz-match residual, 0.03 units) or the camera block cam+0x1C..+0x4C: cam+0x1C -124.9712 vs -124.9590, cam+0x20 3.5928
+  vs 3.4596, cam+0x24, and the rotation; pitch word w5 (idx 441) 0.06266 vs 0.06034 = +0.00232 rad, which equals s7832's image pose
+  fit (+0.0023): the pitch is now two-source (image fit + guest RAM). Player object words: only x/z position vary in the window and no
+  attitude word differs.
+- Line 2 (time course from flight onset, port vs C1, which runs the port's 1-tick cadence): rows 0 and 1 bit-identical in ALL 460 words
+  (incl. two steps of the camera swing-in: cam+0x1C 13.2059 -> -6.4510 on both). Row 2: the port's player advances 0.5 tick (12.1508 ->
+  12.1866, 0.0358) where C1 advances 1 tick (-> 12.2225); only player position and the camera block differ. The player then stays half a
+  step behind for good, the swing-in follows another path, and it settles (w5 constant for >=20 rows) at flight row 76 on both: C1 w5
+  0.06316 c1C -124.9949 c20 3.62135, port 0.06034 / -124.9590 / 3.45959. R1 (steps 1,1,1,2.5,2,2,1.. then 2/1 alternating) settles at
+  row 81, 0.06266 / -124.9712 / 3.59280. So the camera rest pose is path-dependent on the dt sequence even inside retail (R1 vs C1
+  0.0005 rad); the port's 0.0028 rad offset from C1 comes from its one half-tick frame at swing-in onset.
+- DISCRIMINATION: H-craft REFUTED (player attitude equal; player position differs only by the half step). H-proj / camera math REFUTED
+  (identical inputs gave bit-identical camera blocks for 2 frames, and the rotation follows cam+0x1C/0x20). H-cam SELECTED with a named
+  first divergence: the frame dt at flight-onset row 2 (port n=840: 0.5 tick). This also explains s7829 (lvl1 pose followed the press
+  landing frames = a different dt path) and s7833 (retail's pose barely moves with CPO because its own dt paths settle close together).
+  Sub-pixel, not owner-visible. Thread g3-flight-pitch-cpu-state CLOSED.
+- Open, low value: why the port produces a 0.5-tick frame (dt source: the guest's elapsed-time read via osGetCount / VI count vs the
+  port's count emulation). Parked into NEXT.md as an optional unit.
+- Captures (gitignored): scratch/s7834/{r1,c1}/oracle.log, p1/run.log; scores scratch/s7834/cmp_{r1,c1}_p1.txt.
+- ORIGIN: n/a (measurement only; no mitigation, retail path untouched with the env off).

@@ -1173,6 +1173,31 @@ static void s5224_report(void)
     fflush(stdout);
 }
 
+/* s7834: --pc-ram-dump PC:START:END prints the guest words [START,END) (KSEG0 or physical) at each execution of PC, only
+ * when they changed since the last row ("[ramdump] vi= n= w=<hex>"). Arm --watch-pc PC too. Twin of the port's
+ * tools/apply_s7834_ramdump.py (ROGUESQ_S7834_RAMDUMP=1) so both sides sample the same guest instruction. */
+#define PC_RAM_DUMP_MAXW 1024
+static uint32_t g_prd_pc, g_prd_start, g_prd_words, g_prd_last[PC_RAM_DUMP_MAXW];
+static unsigned g_prd_n, g_prd_rows;
+static void pc_ram_dump(void)
+{
+    uint32_t cur[PC_RAM_DUMP_MAXW];
+    int ch = 0;
+    g_self_read = 1;
+    for (uint32_t q = 0; q < g_prd_words; q++) {
+        cur[q] = pDebugMemRead32(debug_rdram_addr(g_prd_start + q * 4u));
+        ch |= cur[q] != g_prd_last[q];
+    }
+    g_self_read = 0;
+    if (ch && g_prd_rows < 60000u) {
+        printf("[ramdump] vi=%ld n=%u w=", g_vis, g_prd_n);
+        for (uint32_t q = 0; q < g_prd_words; q++) { printf("%08X", cur[q]); g_prd_last[q] = cur[q]; }
+        printf("\n");
+        g_prd_rows++;
+    }
+    g_prd_n++;
+}
+
 static void dump_pc_field(uint32_t pc)
 {
     struct pc_field_dump_bucket *bucket;
@@ -3057,6 +3082,8 @@ static void dbg_update(unsigned int pc)
 
     if (flags & M64P_BKP_FLAG_EXEC)
         s7783_reg_hist(pc);
+    if ((flags & M64P_BKP_FLAG_EXEC) && g_prd_words && pc == g_prd_pc)
+        pc_ram_dump();
     if (flags & M64P_BKP_FLAG_EXEC)
         dump_pc_field(pc);
     if (flags & M64P_BKP_FLAG_EXEC)
@@ -4148,6 +4175,14 @@ int main(int argc, char **argv)
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
                 watch_mask_set(&g_post_value_watch_mask, watch);
+        }
+        else if (!strcmp(argv[i], "--pc-ram-dump") && i + 1 < argc) {
+            unsigned long a = 0, b = 0, c = 0;
+            if (sscanf(argv[++i], "%lx:%lx:%lx", &a, &b, &c) != 3 || c <= b || (c - b) / 4 > PC_RAM_DUMP_MAXW) {
+                fprintf(stderr, "[oracle] bad --pc-ram-dump (want PC:START:END, <=%d words)\n", PC_RAM_DUMP_MAXW);
+                return 2;
+            }
+            g_prd_pc = (uint32_t)a; g_prd_start = (uint32_t)b & 0x1FFFFFFFu; g_prd_words = (uint32_t)((c - b) / 4);
         }
         else if (!strcmp(argv[i], "--phase-snapshot-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
