@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7794 (2026-11-21).
+Compact operational handoff, as of Session 7796 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -205,8 +205,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    CULL_SPIKE removing a retail wedge (intended). Sheets docs/owner_sheet_s7793_L1_standins_fidelity.png, docs/owner_sheet_s7794_L12_standins_fidelity.png.
    L1 21:9 s7795 (47 stand-ins; refit 1,12,469,217 frac 0.009/0.010/0.011, 0 >0.05, centre 0.005 side 0.013 = s7165 floor; control
    PASS, shift-2 359 >0.05). Sheet docs/owner_sheet_s7795_L1_219_standins_fidelity.png. Three-arm check CLOSED.
-   Next: L4 21:9 + STANDINS=1 (s7165 L4w recipe; crosses the s7166 SKYFILL_BOT cutscene). Use `env RDIR=sNNNN CW=504 CH=216 zsh
-   tools/s7131_arm.zsh` (tools/s7141_arm.zsh hard-codes scratch/s7141). tools/s7141_post.zsh replays with JOBS=2.
+   L4 21:9 s7796 (155 stand-ins): flight refit 1,11,469,216 frac 0.006/0.007/0.010, 0 >0.05; letterboxed water cutscene (s7166 trigger
+   TRIG_LB=1) 247 lb swaps unpainted max 0, 0 >0.05; same-run SKYFILL_BOT=tog control 20 hole swaps (max 20542 px). Sheets
+   docs/owner_sheet_s7796_L4_219_{standins_fidelity,cutscene_standins}.png. s7166 fix holds post-G6c.
+   Next: L10 16:9 + STANDINS=1 (most stand-ins, s7749 192/280). Use `env RDIR=sNNNN CW=... zsh tools/s7131_arm.zsh` (tools/s7141_arm.zsh
+   hard-codes scratch/s7141). tools/s7141_post.zsh replays with JOBS=2. A cutscene past the 12 GB cap needs a TRIG_LB=1 arm (s7796).
 
 ## Evidence index
 

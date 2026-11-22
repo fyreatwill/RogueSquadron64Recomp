@@ -208176,3 +208176,31 @@ Disk: L1w.cap 12.6 GB, L1w.raw 2.8 GB, replays + chunks deleted after scoring; c
 Next: L4 21:9 + STANDINS=1 (the s7165 L4w recipe), which also crosses the mid-mission letterboxed cutscene fixed by s7166 SKYFILL_BOT:
 re-checks that fix on the post-s7790 binary with stand-ins on.
 Rules out: a post-G6c renderer/stream regression on L1 at 21:9; stand-in models or the widened frustum diverging RT64 from angrylion on L1.
+
+## Session 7796 (2026-11-22) — G3 post-G6c fidelity L4 21:9 + STANDINS=1 == angrylion in flight (refit 0.006/0.007/0.010, 0 >0.05) AND across the letterboxed water cutscene (247 lb swaps, unpainted max 0, 0 >0.05); same-run SKYFILL_BOT=tog control brings the s7166 hole back (20 swaps, max 20542 px)
+HYPOTHESIS-ID: g3-frame-diff-unsheeted
+Work unit from NEXT.md (CURRENT-TRUTH item 13). crash_reports --since 2026-11-13: new=0; no new SOAK-RESULTS lines; no owner answers.
+Host: HID idle 11 h, screen unlocked (CGSSessionScreenIsLocked absent), load ~2, one game at a time, owner save untouched (forced-level route, NO_SAVE_WRITE).
+Three game runs (tools/s7131_arm.zsh 4, RDIR=s7796 CW=504 CH=216, owner recipe FPS60 dd4 + ASPECT=21:9 + STANDINS=1), 0 CRASH/SIGSEGV/SIGBUS/abort
+in all three run.logs; `[g1d] ROGUESQ_ASPECT=21:9 -> FB_WIDTH=1024`, `[standins] 155 objects, 70 KB ... level 4` in each.
+- L4w (flight, FROM=7500 EVERY=1 MAX_MB 12000): capture 8960 frames 0 fails; the 12 GB stream cap ended at swap 8186 and the cutscene came
+  later this run (`[lbspan] start sw=9817`; tools/s7165_rawlb.py finds the letterboxed span at raw frames 3296-3648, after the cap). So L4w
+  scores flight only (as NEXT said: not counted as a cutscene pass). s7141_post: 688 swaps replayed 687, lag 20 ms, CONTROL identity 0 /
+  painted 400 px region PASS; shift-2 control 224/686 >0.05. Rect 0,11,469,216: frac 0.008/0.010/0.012, 0 >0.05, centre 0.005 side 0.010.
+  Refit 1,11,469,216 (the s7165 L4 fit): meand 3.06/3.37/3.82, frac 0.006/0.007/0.010, 0 >0.05, centre 0.005 side 0.006 (s7165 flight:
+  frac med 0.006, centre 0.006 side 0.006). Bands 1.78 1.93 1.79 2.15 4.09 3.72 4.01 5.20. Worst 8085-8087 frac_c 0.013-0.014 (city canyon, no outlier).
+  Sheet docs/owner_sheet_s7796_L4_219_standins_fidelity.png identical by eye.
+- L4lb (cutscene, s7166 trigger: FROM=7000 TRIG=4,260 TRIG_LB=1, delay 100 dur 320): `[lbspan] TRIGGER sw=18606`; 265 swaps replayed, CONTROL
+  PASS, shift-2 52 >0.05. tools/s7165_letterbox.py: 247 letterboxed swaps run 18610-18856, unpainted max 0, swaps>200 0 (s7166 L4fx after-fix:
+  227 lb, max 0; s7165 before-fix: max 27136). Refit frac 0.002/0.013/0.018, 0 >0.05, centre 0.002 side 0.002; worst 18736 = X-wing close-up
+  (laser-bolt streak pixels). Sheet docs/owner_sheet_s7796_L4_219_cutscene_standins.png: water band right of centre filled, identical by eye.
+- L4tg (same-run positive control for the unpainted counter: ROGUESQ_HORIZON_SKYFILL_BOT=tog = s7136 behaviour in odd mach seconds):
+  TRIGGER sw=16142, CONTROL PASS; 249 lb swaps, 20 with unpainted >200 in two bursts 16248-16257 (max 20542) and 16284-16293 (max 14446) =
+  the s7165 hole profile; the only 4 swaps >0.05 (16248/16249/16288/16289, 0.052-0.059) sit inside those bursts. The counter and the frac
+  scorer both see the hole when the fix is off, so L4lb's zeros are real.
+Verdict: H-equal on L4 at 21:9 with stand-ins on, flight AND cutscene; H-regress, H-cutscene (s7166 fix lost post-G6c) and H-standin refuted.
+Two lines: angrylion per-frame score (flight + cutscene) with painted/shift controls, and the letterbox unpainted count with the tog control; plus sheets.
+Disk: caps/raws/replays deleted after scoring (~30 GB); csvs + gz logs kept in scratch/s7796 (1.1 MB).
+Post-G6c "STANDINS=1 == angrylion at the owner recipe" now: L1/L12 16:9, L1/L4 21:9 (incl. the s7166 cutscene).
+Next: L10 16:9 + STANDINS=1 (most stand-ins added, s7749 192/280), the last untested stand-in-heavy level.
+Rules out: a post-G6c regression of the s7166 SKYFILL_BOT fix; stand-in models diverging RT64 from angrylion on L4 at 21:9.
