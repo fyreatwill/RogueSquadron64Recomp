@@ -210,7 +210,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    docs/owner_sheet_s7796_L4_219_{standins_fidelity,cutscene_standins}.png. s7166 fix holds post-G6c.
    L10 16:9 s7797 (280 stand-ins, the most): frac 0.006/0.008/0.013 (s7158 pre-G6c 0.007/0.011/0.013), 0 >0.05, centre/side 0.003/0.017,
    control PASS, shift-2 329 >0.05; sheet docs/owner_sheet_s7797_L10_standins_fidelity.png. Post-G6c fidelity thread CLOSED (L1/L10/L12 16:9,
-   L1/L4 21:9). Next: fold the 13 queued s7797_standins_rehold_L* soaks (300 s dd4 STANDINS=1 on the post-s7790 binary, the levels s7692
+   L1/L4 21:9). dd2 (owner's other dd) s7798 L4 16:9 155 stand-ins: frac 0.010/0.013/0.017 (refit 0.011/0.012/0.013), 0 >0.05, control PASS,
+   shift-2 44; sheet docs/owner_sheet_s7798_L4_dd2_standins_fidelity.png -> H-equal at dd2. Frame diff cannot see a handoff gap (angrylion
+   replays our stream): NEXT measures the s7672 handoff at dd2. Re-holds: L0/L11 pass (s7798). Next: fold the 11 remaining s7797_standins_rehold_L* soaks (300 s dd4 STANDINS=1 on the post-s7790 binary, the levels s7692
    did not re-hold). Each verdict line should read alive=1/1 crash_arms=0 stall_arms=0. Then take the next item-3c ladder rung.
 
 ## Evidence index

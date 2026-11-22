@@ -208231,3 +208231,33 @@ Also queued (G6c proof on the current binary): scratch/agent/soak_queue/s7797_st
 recipe (300 s, dd4 owner-quiet, STANDINS=1) for the 13 levels s7692 did not re-hold after the s7672-s7690 handover/parity fixes and s7790 prune.
 The s7630 19-level holds predate those fixes. SOAK_NEEDS_IDLE=300 each; the loop runs 2 per gap.
 Rules out: a post-G6c renderer/stream regression on L10 flight; stand-in models rendering differently in RT64 vs angrylion on the most stand-in-dense level.
+
+## Session 7798 (2026-11-22) — G3 post-G6c fidelity at the owner's other draw distance, dd2: L4 16:9 + STANDINS=1 (155 stand-ins) == angrylion (frac 0.010/0.013/0.017, refit 0.011/0.012/0.013, 0 >0.05; control PASS, shift-2 44 >0.05); 2 of 13 s7797 re-holds folded (L0, L11 pass)
+HYPOTHESIS-ID: g6c-standins-dd2-fidelity
+Start: crash_reports --since 2026-11-13 FOLDED=10 new=0; no owner answers. Host: HID idle 11.9 h, IOConsoleLocked=No, load ~3.4, one game,
+owner save untouched (forced-level route, NO_SAVE_WRITE).
+Soak fold: s7797_standins_rehold_L0 alive 1/1, vi_stalls30s=0, max_gap 162 ms, level_ok=1, standins_on_line=1, spawns=40; L11 alive 1/1,
+vi_stalls30s=0, max_gap 148 ms, level_ok=1, standins on, spawns=46. 11 re-holds still queued (L2,3,6,7,8,9,13,14,16,17,18).
+Run: `env RDIR=s7798 zsh tools/s7131_arm.zsh 4 L4d2 "ROGUESQ_DRAW_DISTANCE=2 ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"`
+(s7131_arm hard-codes DRAW_DISTANCE=4 but appends the extra env after it, and the later assignment wins: run.log shows
+`[ddbundle] dd=2.00 px=2` and `[standins] on mode=on dd=2.00`, so no tool change was needed). `[standins] 155 objects ... build-fail 0 level 4`.
+0 CRASH/SIG lines; capture 10819 frames, 0 fails.
+Replay `env JOBS=2 zsh tools/s7141_post.zsh scratch/s7798 L4d2 0,9,369,216 46,322`: 715 RAM-owning swaps, 714 replayed, lag 15 ms.
+Positive control (same scorer, same run): identity 0 regions, painted -> one 400 px region, PASS. Shift-2 control: 44/714 >0.05 (fires;
+fewer than L10's 329 because L4's city/canyon flight is lower-contrast than L10's, med 0.023).
+| arm | rect | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|
+| s7797 L10 dd4 STANDINS=1 | 0,10,370,217 | 3.55/3.93/4.11 | 0.008/0.009/0.010 | 0 | 0.005/0.019 |
+| s7798 L4 dd2 STANDINS=1 | 0,9,369,216 | 3.80/4.34/4.49 | 0.010/0.013/0.017 | 0 | 0.009/0.013 |
+| s7798 L4 dd2 STANDINS=1 | 0,10,370,217 (s7160 refit) | 3.13/3.53/3.71 | 0.011/0.012/0.013 | 0 | 0.006/0.023 |
+Bands (refit) 3.03 2.76 1.76 1.19 2.33 2.69 3.68 7.88: far rows lowest, as at dd4 (bottom band = HUD/craft edge, all levels). 22 dup pframes.
+Worst swaps 7755/7759/7756 (frac 0.012, frac_c 0.009) cluster in one fast banking turn (same window where shift-2 peaks, i.e. motion
+registration, not content). Sheet docs/owner_sheet_s7798_L4_dd2_standins_fidelity.png: worst, median, p20 rows identical by eye
+(canyon walker on the left of the worst frame drawn the same in both).
+Verdict: H-equal at dd2. H-dd2 refuted (no far-band rise; far bands below the near floor). H-handoff NOT tested by this instrument:
+angrylion replays our RDP stream, so a stand-in<->real handoff gap is in both images; it needs the s7672 handoff scorer (measured at
+dd4 only, s7672) -> next unit. No pre-G6c L4 16:9 dd4 frame-diff baseline exists in the ledger (L4 16:9 was scored ~s7156 without a
+quoted frac); compared against the post-G6c 16:9 floor (L1/L10/L12 0.006-0.015) instead: within it.
+Two lines: per-frame scores + same-run controls, and the visual sheet.
+Disk: L4d2.cap (12.6 GB), .raw, L4d2r and chunks deleted by name after scoring; csvs + gz logs kept in scratch/s7798.
+Rules out: a dd2-specific renderer/stream regression with stand-ins on L4 flight.
