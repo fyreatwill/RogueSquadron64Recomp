@@ -209445,7 +209445,7 @@ since the s7809 fold, no owner answers. Load ~3. Three runs, one at a time (2 re
   (identical inputs gave bit-identical camera blocks for 2 frames, and the rotation follows cam+0x1C/0x20). H-cam SELECTED with a named
   first divergence: the frame dt at flight-onset row 2 (port n=840: 0.5 tick). This also explains s7829 (lvl1 pose followed the press
   landing frames = a different dt path) and s7833 (retail's pose barely moves with CPO because its own dt paths settle close together).
-  Sub-pixel, not owner-visible. Thread g3-flight-pitch-cpu-state CLOSED.
+  Sub-pixel, not owner-visible. This selects H-cam (dt path) and refutes H-craft and H-proj; it closes thread g3-flight-pitch-cpu-state.
 - Open, low value: why the port produces a 0.5-tick frame (dt source: the guest's elapsed-time read via osGetCount / VI count vs the
   port's count emulation). Parked into NEXT.md as an optional unit.
 - Captures (gitignored): scratch/s7834/{r1,c1}/oracle.log, p1/run.log; scores scratch/s7834/cmp_{r1,c1}_p1.txt.
