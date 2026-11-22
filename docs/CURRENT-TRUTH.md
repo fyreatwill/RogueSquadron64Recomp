@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7809 (2026-11-22).
+Compact operational handoff, as of Session 7810 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -59,6 +59,11 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   (r2, callee-saved regs, watched windows + full 8 MB every 64 trials), 0 mismatch, all branch-coverage counters >0; planted body
   mutants H-differ 2/2, RAM plant 207/207, classifier plants (unrowed patch / dead helper made reachable / unused_ referenced) RED 3/3.
   A NEW C patch turns the sweep RED until it gets a ROWS/DELEGATED entry.
+- **s7810 host-override class CLOSED:** `python3 tools/s7810_host_override_diff.py --controls` (sweep row S7810_HOST_OVR, ~2 s): host
+  definitions shadowing a RECOMP_FUNC = 1 (zmemcpy; recomp_entrypoint is only declared). Pre-fix H-differ: host faulted on a
+  zero-extended KSEG0 pointer (rdram + 4 GB) that retail copies; FIXED (sign-extend canonicalisation, upstream_compat.cpp). Post-fix
+  == retail over 20,000 trials, all 9 coverage classes > 0, 0 r2 readers at the 72 call sites; mutant / fix-revert / RAM / census /
+  scanner controls PASS. L1 150 s live hold clean. A new host override turns the sweep RED until it gets a row.
 - **Hazards:** never LAUNCH the game under lldb (s7616: it tried to delete the ROM); attach to a normally started pid
   (preflight tools/lldb_attach_check.sh). New build dirs need a COPY of build/saves. Title plume si_addr=0x58 CLOSED (0/76 boots s7660;
   s7725 RT64 texture-descriptor over-release fixed, NSZombie 0).

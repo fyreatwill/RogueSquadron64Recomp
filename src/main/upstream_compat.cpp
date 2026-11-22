@@ -6753,8 +6753,11 @@ extern "C" void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
     // breaks the macro's `- 0xFFFFFFFF80000000` arithmetic under C integer
     // promotion (uint32 + int64 = the uint32 gets zero-extended, so subtracting
     // a sign-extended int64 produces a 4GB-offset host pointer → AV).
-    gpr dest_reg = ctx->r4;
-    gpr src_reg  = ctx->r5;
+    /* s7810: canonicalise to the sign-extended KSEG0 form, as retail's `addu t5, a0, zero` (ADD32) does. in_range() accepts a
+       zero-extended 0x00000000_80xxxxxx pointer, and MEM_BU/MEM_B on that form index rdram + 4 GB (outside even the 4 GB
+       reservation) -> host fault where the recompiled retail body copies correctly (tools/s7810_host_override_diff.py). */
+    gpr dest_reg = (gpr)(int64_t)(int32_t)(uint32_t)ctx->r4;
+    gpr src_reg  = (gpr)(int64_t)(int32_t)(uint32_t)ctx->r5;
     uint32_t len = (uint32_t)len_full;
     rs64_f5_host_write_begin(rdram, (uint32_t)dest_reg & 0x1FFFFFFFu, len, "zmemcpy");
     if (g_rs64_s7475_bm && s7490_zhook()) {  /* s7490 class EO: route marked bytes through the guest store/load watches */

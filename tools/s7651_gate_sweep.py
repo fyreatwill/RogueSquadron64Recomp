@@ -259,6 +259,8 @@ S7808_FIND = {"s7808_find_body_diff.py": (["--controls"], r"(?=[\s\S]*\nCONTROLS
 ARGS.update(S7808_FIND)
 S7809_PATCH_CLASS = {"s7809_patch_class_diff.py": (["--controls"], r"(?=[\s\S]*\nCLASSIFIER CONTROLS PASS )(?=[\s\S]*\[setRngSeed\] PLANTED-PATCH CONTROL PASS )(?=[\s\S]*\[isCinematicActive\] PLANTED-PATCH CONTROL PASS )(?=[\s\S]*\nCLASS VERDICT GREEN )")}
 ARGS.update(S7809_PATCH_CLASS)
+S7810_HOST_OVR = {"s7810_host_override_diff.py": (["--controls"], r"(?=[\s\S]*\nCENSUS CONTROL PASS )(?=[\s\S]*R2-SCANNER CONTROL PASS )(?=[\s\S]*PLANTED-MUTANT CONTROL PASS )(?=[\s\S]*PRE-FIX \(s7810 revert\) CONTROL PASS )(?=[\s\S]*\nCLASS VERDICT GREEN )")}
+ARGS.update(S7810_HOST_OVR)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
@@ -267,7 +269,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed

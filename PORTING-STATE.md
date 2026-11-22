@@ -208603,3 +208603,36 @@ was 235 GREEN 0 RED, and this session changed only the new tool + one sweep row.
 Verdict: the 20,000-trial differential selects H-equal-all and refutes H-differ (0 mismatch) and H-hollow (all coverage >0,
 mutants caught); this closes the gcc C-patch class. Next discriminator (NEXT host-override-diff-class): host zmemcpy vs recompiled
 retail zmemcpy on len-0 / unaligned / overlapping / KSEG1 inputs, which will discriminate H-equal vs H-differ for host overrides.
+
+## Session 7810 (2026-11-22) — host-override class CLOSED: host zmemcpy faulted on zero-extended KSEG0 pointers that recompiled retail copies (fixed); after the fix host == retail over 20,000 trials, controls PASS; sweep gate S7810_HOST_OVR
+
+Unit (s7809 NEXT): the sibling class of s7809 = HOST C/C++ definitions that replace a recompiled game function (RECOMP_FUNC is
+weak on clang, so a strong host definition of the same name silently wins).
+- **Census** (tools/s7810_host_override_diff.py): 74 non-static `void X(uint8_t* rdram, recomp_context* ctx) {` definitions under
+  src/ + librecomp/ultramodern src, against 2,488 RECOMP_FUNC names -> **1 member: zmemcpy**. Correction to s7809: recomp_entrypoint
+  is only DECLARED in src (main.cpp:90), its body is the generated one, so it is not in the class. An unrowed member reads RED
+  (planted `extern "C" void evalCubicSplineAtTime(...)` -> RED, control PASS).
+- **r2 contract:** zmemcpy is void; retail never writes v0 but the host leaves v0 = dest. All 72 generated call sites scanned for a
+  read of r2 after the call before a write: 0 readers. (First scanner pass reported 8: all were the generator's
+  `zmemcpy(); goto after_N;` pattern, where the following line belongs to the other path; scanner now stops at goto. Scanner
+  control: a synthetic real reader counts 1, a goto-guarded one 0, PASS.)
+- **Differential** (host body extracted verbatim, diag hooks stubbed, C++ vs retail funcs_4.c 0x80018EF4 as C; callee-saved regs
+  + dst/src windows every call + full 8 MB every 64 trials; host faults trapped as mismatches):
+  - PRE-FIX: **H-differ**. A zero-extended pointer (0x00000000_80xxxxxx) passes the host's in_range() (which accepts it explicitly),
+    then MEM_BU/MEM_B index rdram + 4 GB: SIGSEGV, outside even librecomp's 4 GB reservation (addresses.hpp allocation_size).
+    Retail's `addu t5, a0, zero` (ADD32) sign-extends first and copies correctly.
+    ORIGIN: the writer is the host body itself (src/main/upstream_compat.cpp zmemcpy, `gpr dest_reg = ctx->r4`), not a guest value;
+    the zero-extended form is legal input to retail. Reachability: latent in play (every generated caller builds a0/a1 via
+    ADD32/LW/LUI, all sign-extended), so this was a host-side defect, not a live crash.
+  - FIX: dest_reg/src_reg canonicalised to `(int64_t)(int32_t)` after the range check (the same thing retail does).
+  - POST-FIX: **H-equal**: 20,000 trials, 0 mismatch, 313 full compares; coverage len0 1972, len1-15 4220, 16-byte block path 2767,
+    mixed alignment 11041, overlap fwd 1958 / bwd 1940 / overlap on the block path 2076, zero-extended ptr 4029, s7490 diag path with
+    marked bytes 3949. r2 differs 20,000/20,000 (void, 0 readers). Out-of-RAM inputs (KSEG1 dst/src, past 8 MB, len past end, junk
+    upper half) are a documented delta: host skips and logs (5/5 verified RAM untouched), retail would write outside guest RAM.
+  - Controls: len+1 mutant H-differ PASS; s7810 fix reverted -> host FAULT PASS (the real pre-fix defect is the control); RAM plant
+    207/207; census plant RED; r2 scanner plant PASS.
+- **Live:** game rebuilt; in-session L1 hold 150 s (scratch/s7810_zfix_L1, owner recipe dd4 + STANDINS=1): alive, crashlines 0,
+  vi_stalls30s 0, max_gap 147 ms, level_ok=1 (assets decompressed through the fixed zmemcpy), 0 `[zmemcpy] OOB` lines.
+- Sweep row **S7810_HOST_OVR** added to tools/s7651_gate_sweep.py (needs CENSUS/R2-SCANNER/PLANTED-MUTANT/PRE-FIX PASS + GREEN).
+Verdict: H-differ selected for the pre-fix tree (zero-extended pointer path), H-equal for every in-RAM class after the fix,
+H-hollow refuted (every coverage counter > 0). A new host override of a game function turns the sweep RED until it gets a row.
