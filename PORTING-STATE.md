@@ -209180,3 +209180,43 @@ HID idle 10.7 h. One VI-clocked rdplog pair, s7824 route + START at 103.5 (retai
   (exempted at 4:3 by the r19 bound, unverified at the pixel level). Not owner-visible (0.5 px). Single-source.
 - Rules out: a port defect in the static flight HUD at mission start; a different reticle trajectory (would read >> 0.5 px).
 - Captures zstd'd: scratch/s7826/{retail,port}.bin.zst; scores scratch/s7826/score_reticle.txt.
+
+## Session 7827 (2026-11-22) — s7826 reticle +0.5 px is a camera-POSE difference, not a HUD/viewport defect: the 42-tri sky mesh fits a 0.115 deg camera pitch delta (rms 0.107 px vs constant-offset 0.232, scale 0.543; planted controls PASS); thread g3-reticle-half-pixel CLOSED; tools/s7827_tri_yshift_census.py
+Work unit (NEXT s7827, HYPOTHESIS-ID g3-reticle-half-pixel). Pre-checks: crash_reports new=0, no new SOAK-RESULTS lines since s7809's
+fold, no owner answers. Offline only (no game run): captures scratch/s7826/{retail,port}.bin.zst.
+- (1) H-anchor, code read: the HUD emitter 0x800159B4 (funcs_4.c, ~line 26400) computes y = trunc((elem+0x1C + vp+0x1C) *
+  [0x800006F8]) with NO port patch on the y path. The s6155/s6156/s6721/s6725/s6845/s6860 block only writes f4 (x), and only when
+  ROGUESQ_HUD_ANCHOR or ROGUESQ_HUD_CPOS is set (set by main.cpp only at ASPECT > 4:3). The det-pair port arm sets neither. H-anchor
+  refuted. Also env-gated off in flight at default: every projection patch in setupCameraMatrices (s6836 HANGAR_FOV, s6907 G5G_LENS,
+  s6031 far only when g_rs64_dd_scene, s6104/s6927/s6719 only under ASPECT_SCALE, s6112 VPW_SCALE). RDP scissor (0,0,512,448 and
+  511,447) and the colour/Z images are identical in both arms' flight windows. The RSP side is ruled out by s7815 (patched cxd4 ==
+  our ucode byte for byte on whole tasks). So the difference is in CPU-side DL inputs.
+- (2) New tools/s7827_tri_yshift_census.py. Part 1, shape-matched Y census of all tris (shape = PRIM + exact slopes + edge heights,
+  dy = YH difference): mission window R[3521:3825] vs P[4378:4702] has mode dy 0 (66529, mostly small FFFFFFFF tris), plus a
+  dy +3 quanta class (32012) that is almost all one PRIM, 4FD926B9. Controls: identity mode 0, +2 plant mode 2 (PASS).
+- (3) 4FD926B9 holds 42 tris that are present in >=90% of flight frames in BOTH arms at fixed screen positions (R 3623-3824, P
+  4516-4701). They span y -160..240 and x -125..683, which is off-screen, so they are a projected mesh. They stay static while
+  terrain moves, so the view depends on camera rotation only: the sky in level flight. Paired port-vs-retail: dy is +1.5 at the
+  top (y -160), +1.0 around y -50..-5, and +0.75 near y 105..240. Points above the centre move INWARD in x (x -125: +0.74,
+  34: +0.25, 390: -0.25, 683: -1.33).
+- (4) Part 2, `--pose`, model selection on the static set (scissor centre 256,224): H-pitch rms 0.107 px (f=340,
+  d=+0.00200 rad = 0.115 deg), H-vp (constant dy) 0.232 (dy +0.77), H-scale 0.543. Same-run planted controls on the retail set,
+  quantised to 0.25: a pitch plant (f500 d0.0015) recovers H-pitch with d 0.00155; a +0.5 constant plant recovers H-vp with
+  dy +0.50: PASS. The 0.107 rms is close to the 0.25-px quantisation floor. One parameter predicts BOTH the y growth toward the top
+  and the x inward pull of points above the centre, which are two independent coordinates.
+- Reading: the port's flight camera is pitched about 0.1 deg differently from the cxd4/mupen retail arm in this window. The
+  reticle's +0.5 px is the same pose difference seen on a craft-attached sprite. The pitch model predicts ~0.68 px at the centre;
+  the reticle reads 0.5. The reticle depends on the camera-vs-craft pose, not on absolute rotation, so the two need not be equal.
+  Static-authored scenes (menus, SYC 115/120, static flight HUD 8/8) are exact. Everything that is the product of time
+  integration (logo zoom s7825, hangar bob s7821, fly-out, now flight pose) differs sub-pixel, and the port renders about 7% more
+  frames over the same flight path (311 vs 291 reticle samples). That fits H-input-time (the sim's state depends on the frame/dt
+  history, and mupen's CPU timing is not hardware either), not a port render defect. Not owner-visible.
+- Rules out: H-anchor (code + 8/8 exact static HUD), H-vp (a constant viewport/centre offset: rms 2x worse than pitch), H-scale
+  (FOV/vscale: 5x worse), and an RSP difference (s7815). Does NOT prove the cause of the pose delta. Two lines: model fit on x and y,
+  plus the code/scissor audit. The cause stays H-input-time by inference (single-source for the cause). Next: a retail-vs-retail
+  arm with only mupen CountPerOp changed. If retail-vs-retail also shows a pitch delta of this size, H-input-time is confirmed by
+  ground truth that is not our runtime.
+- Score: scratch/s7826/score_pose_s7827.txt.
+  `python3 tools/s7827_tri_yshift_census.py R P --win 3521:3825,4378:4702 --controls --pose 3623:3825,4516:4702`
+  (`--p-retail` for two retail captures).
+- No code change in the game; ORIGIN: n/a (no mitigation).

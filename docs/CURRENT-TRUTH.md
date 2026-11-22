@@ -93,6 +93,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7826 "reticle +0.5 px = a screen-space constant on the reticle only (HUD anchor chain suspect)": believable because the texrect
+  path matched to <0.5 px and only that PRIM missed. s7827 found the projected sky mesh shifted too, with a pitch-shaped x/y
+  pattern: a camera pose delta of ~0.1 deg, not a reticle/HUD transform.
 - s7816 "animated oracle frames differ cross-run because of wall-clock press/dump timing" was only half the cause: with presses
   and dumps VI-locked, runs still diverged from VI ~2115 because mupen64plus-core randomizes PI/SI interrupt timing with a
   time-seeded rand() (s7817). Believable because wall-clock jitter was a real, visible source and the first fix to try.
@@ -334,8 +337,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      input difference (time-driven zoom sampled at another sub-frame phase), not ULP noise. Animation clock read not named.
      **s7826 det pair reaches lvl1 flight:** static flight HUD 8/8 exact; moving small sprites = rate split; the green reticle
      (00FF0064 51x59.5 + 25.5x29.75) rides retail's exact screen path but +0.5 px lower in Y on ~90% of frames (one-signed, pure Y,
-     planted +3 px control PASS): a screen-space constant on the reticle only (single-source, not owner-visible).
-     `python3 tools/s7826_rect_path_offset.py R P --win 3521:3825,4378:4702` on scratch/s7826/{retail,port}.bin.zst.
+     planted +3 px control PASS). `python3 tools/s7826_rect_path_offset.py R P --win 3521:3825,4378:4702`.
+     **s7827 CLOSED: the reticle offset is a camera-POSE difference, not a HUD/viewport defect.** The HUD y path has no port patch,
+     and the flight projection patches are all env-gated off at default. Scissor/cimg are identical, and the RSP is exact (s7815).
+     The 42-tri sky mesh (PRIM 4FD926B9, static in level flight in both arms) fits a camera pitch delta of 0.115 deg: rms 0.107 px,
+     vs constant offset 0.232 and scale 0.543. Planted pitch/const controls PASS. One parameter explains the y growth toward the
+     top and the x inward pull. Cause = H-input-time by inference (time-integrated state differs, static scenes exact).
+     `python3 tools/s7827_tri_yshift_census.py R P --win 3521:3825,4378:4702 --controls --pose 3623:3825,4516:4702 [--p-retail]`.
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are

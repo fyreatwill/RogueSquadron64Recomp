@@ -1,19 +1,19 @@
-# NEXT (s7827)
-HYPOTHESIS-ID: g3-reticle-half-pixel
+# NEXT (s7828)
+HYPOTHESIS-ID: g3-pose-input-time
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
-SOAK-RESULTS lines. Any crash/stall or owner report outranks the unit. G6c and all G5 items wait on the owner only.
-Why: s7826 found the only port/retail element difference in lvl1 flight: the green reticle (00FF0064) is +0.5 px lower in Y, on
-retail's exact path (tools/s7826_rect_path_offset.py, captures scratch/s7826/{retail,port}.bin.zst, R 3521:3825 / P 4378:4702).
-Pure-Y constant, so screen space, not timing. Bounded: at most 2 iterations, then close single-source.
-Hypotheses:
- H-anchor: our HUD anchor chain (apply_s6155_hudcpos / s6156 / apply_s6860_hudelem in funcs_4.c, vp 0x80138D20) touches the
-   reticle elements at 4:3 (e.g. a y rounding or a +0.5 from a centre computation) even though r19 < bound should exempt them.
- H-vp: the port's flight viewport/projection centre y differs by 0.5 px (our vpw/far patches, apply_s6031_far.py apply4, or
-   FP_XSCALE leaking a y term) -> but then world tris would shift too; check s7826 tris' Y edge words via s7825_tri_shift_bias.
- H-cpu: the reticle's own screen-y math (float->int trunc of a .5 value) rounds differently: would show as a 0.25/0.5 flip
-   depending on position, not constant -> s7826 says constant, so lowest prior.
-Discriminator (offline first, then ONE run if needed): (1) read the anchor chain code in N64Recomp/RecompiledFuncs/funcs_4.c around
-`rs64_s6860_hud_elem_top` + main.cpp:2525 and list every path that edits a texrect/element y at ASPECT unset; (2) run
-s7825_tri_shift_bias.py on the mission window for Y-only shifts of world tris (H-vp predicts one-signed Y); (3) if (1) names a
-candidate env switch (e.g. ROGUESQ_G1D_HUD_ELEMTOP=1 or the anchor off), one det pair with the port arm XE carrying it, same
-command as s7826 (scratch/agent NEXT s7826 in PORTING-STATE), scored with tools/s7826_rect_path_offset.py: offset -> 0 selects H-anchor.
+SOAK-RESULTS lines. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
+Why: s7827 closed the s7826 reticle offset as a camera-pose delta. The lvl1 flight sky mesh (PRIM 4FD926B9) fits a 0.115 deg pitch
+difference, port vs cxd4/mupen retail (tools/s7827_tri_yshift_census.py --pose, controls PASS). The cause is inferred, not measured:
+H-input-time (time-integrated sim state depends on frame/dt history; mupen's CPU timing is not hardware either) vs H-cpu-pose (a port
+CPU defect in the camera/attitude math that changes the steady pose). Bounded: at most 2 iterations, then close single-source.
+Discriminator (ground truth that is not our runtime): retail vs retail with ONLY the emulated CPU timing changed.
+ 1. Add `--count-per-op N` to tools/oracle/rs64_oracle.c (pConfigSetParameter(core_section, "CountPerOp", M64TYPE_INT, &n), next to
+    RandomizeInterrupt ~line 4352). Rebuild with tools/oracle/build.sh. Positive control: the oracle log prints the value, and a CPO=1
+    run reaches a given VI in less host time than CPO=2 / renders a different number of game frames per VI.
+ 2. Two retail-only rdplog captures on the s7826 route (retail half of tools/g3_menu_pair.sh, RENV as s7826, RSECS=150), CPO default (2)
+    vs CPO=3 (or 1). One emulator at a time (CPU rule). Check both reach flight (tl.py bands: logo -> crawl -> 512 mission).
+ 3. `python3 tools/s7827_tri_yshift_census.py A.bin B.bin --win <flightA>,<flightB> --controls --pose <staticA>,<staticB> --p-retail`.
+Outcomes: retail-vs-retail pitch |d| of the same order (>=0.0005 rad) -> H-input-time CONFIRMED (the pose depends on emulated timing;
+the port delta is not a defect; close). Retail-vs-retail exact (d=0, sky identical) while the frame counts differ -> the pose is timing-
+independent, so the port's delta is H-cpu-pose: next, dump the camera matrix (guest RAM) in both arms at the first flight frame.
+If the route does not reach flight under the changed CPO, report that as the datum and close g3 det-pair work single-source.
