@@ -207907,3 +207907,50 @@ ORIGIN: no mitigation; defects were our diagnostic fixups' line matchers (adjace
 No game run this session (offline census + controls; the s7484 macro is a predicted-false branch unless ROGUESQ_S7484_UAFLOAD=1).
 Verdict: selects H-hole (4,447 unwatched loads + 2 mislabelled s4307 pcs, all closed) and refutes H-mixup (0 bad of 55,939 load
 hooks). Next: fold soak s7786_uafload_full; then G-ladder per CURRENT-TRUTH.
+
+## Session 7787 (2026-11-21) — hook pc-literal census: 257,643 diagnostic hook literals, 4 emitters named the wrong instruction (s6336 post-store shadow, s2586 branch/entry, s3525 entry) + 2 pc-less spin2 comments; all fixed, gate s7787_hook_pc_census lands
+
+Fold first: soak s7786_uafload_full (loop, rc 0, 636 s): 3/3 arms alive (L4/L15/L1), 0 crash, vi_stalls30s=0, level_ok=1;
+s7480 plant_detected=1 every arm; s7484 load watch at full coverage: load_ctl=1 load_plant=1, load_F=0 load_Urec=0 fhits=0 every
+arm -> class EI (0 loads of freed blocks) CLOSED at full load coverage (item 33 no longer single-coverage). crash_reports: new=0.
+
+Work unit (NEXT s7787, HYPOTHESIS-ID hook-pc-literal-census): does every pc literal passed to a diagnostic hook name the
+instruction it sits beside? New gate tools/s7787_hook_pc_census.py: per generated function, every rs64_*/RS64_* call with a
+top-level 0x8XXXXXXXu argument (first one = the hook's pc; balanced-paren arg parse, so `cond ? 0x83000000u : ..` inside an
+expression is not taken) and every `g_rs64_last_guest_pc = 0x..u;`, classified vs the surrounding `// 0x<pc>: op` comments:
+EQ / PRE (next pc: hook just before its instruction) / DS (most recent branch comment, skipping N64Recomp's duplicated delay
+slot after `after_N:`) / TARGET (operand of the jal just made: callee-entry events) / FUNC (enclosing function entry) / ENTRY
+(before the first comment) / KNOWN (explicit (family, literal) table) / BAD. Also lists pc-less instruction comments.
+Controls: planted EQ, off-by-4, off-by-16, PRE, DS and a pc-less comment score EQ/BAD/BAD/PRE/DS/1: PASS.
+- First run: 257,645 literals, 90 families, BAD 42 before the DS/TARGET/FUNC rules, 18 after. The per-instruction families are
+  clean: RS64_S7484_LD 54,801, RS64_S5798_ST / m5_writer_parity 47,373, probe_submit_gate_store 44,726, g_rs64_last_guest_pc
+  9,550, TRUNC, s4307, s6287, S7487, S7488, s5660, s7318 all EQ. Defects (H-shift selected, 4 emitters):
+  * apply_s6336_f5_poststore.py: its store test was `MEM_`/`SD(`; s4984 rewrites the voice base/count stores 0x8008F0EC (sw) and
+    0x8008F0CC (sh) to __atomic_store_n, so F0EC's pending readback was overwritten by F0CC's (F0EC had NO post-store shadow) and
+    F0CC's latched onto the next MEM_ line, the lhu at 0x8008F0DC (fired after a load, labelled with the store). Fixed: atomic
+    stores count, pending drops at the next pc comment, plus an idempotent repair pass for already-patched trees.
+  * fixup_game_funcs_vendored.py s2586 "branch" events: current_pc tracked only branch comments and every later `if (...) {`
+    got an event, so 3 `if`s inside the s333 reapplyDisplayMode exit diagnostic emitted "branch" rows labelled 0x8008EC48 with
+    a diagnostic condition (s_rdm_exit_en etc.). Fixed: one event per guest branch (branch_open flag). Also startSongSequence
+    entry/return were labelled 0x800940A4 (a pc inside another function; real entry 0x80094350): fixed. Note: the s2586 "store"
+    branch is DEAD (it keys store pcs off current_pc, which only branch comments set: 0 emitted) - left, M5 closed.
+  * s3525 rs64_m5_selector_store_entry labelled allocateSongChannelArray's entry 0x8008F000; the function starts 0x8008F0A0
+    (hook placement was right: s3525's "entry fired once" stands, only the label was wrong). Fixed.
+  * s4765 spin2 rewrite also dropped the bne pc (s7786 fixed only the lbu): now `// 0x{addr+8}: bne` (0x80091DCC/0x80091F3C).
+  * 11 KNOWN by design: s2122/s7574 key-on divide witnesses name the break-7 trap pc of the divide they guard (0x80090CEC/D30/
+    D74/DB8) and the normal-tail event 0x80090DE8; s6826 rs64_tctr gives each traced field its own id at 0x800C6D40.
+- Live tree: emitter edits applied in place, s6336 repair run (idempotent: 2nd run +0). s7719 --strict first read H-drift on
+  funcs_23 only: the replay puts the two restored shadows after the s7489 RS64_S5798_ST line and wrapped in g_rs64_store_diag
+  (s6698 runs later in the chain); live synced to the replay file -> all 53 replay sources byte-identical to live. Rebuilt
+  (cmake --build build -j 2 ok). Final: s7787 hooks=257,643 bad=0 pcless=0 rc 0; s7784/s7785/s7786/s7787 sweep 4 GREEN.
+- Side note (s7786 scope): data_gap_800FA248 (data decoded as code) has 2 `lb $s1, X($zero)` loads with base literal 0 that the
+  s7786 regexes do not parse (hook and load both skipped): dead code, not a coverage hole. RS64_S7484_LD raw literal count is
+  54,801 before and after this session (no hook lost).
+- Fallout (PORTING-STATE grep 8008EC48 / 800940A4 / 8008F000 / s6336 voice): no conclusion read the bogus s2586 branch rows or
+  the startSongSequence label; s3525 (allocateSongChannelArray entry fired once in hangar) stands with the label corrected; no
+  conclusion read f5_store_shadow_post at F0CC/F0EC.
+ORIGIN: no mitigation; defects were diagnostic emitters' line matchers (store test missing atomic rewrites; branch tracker
+never reset; two hand-typed entry pcs).
+No game run (offline census + controls; all affected hooks are diagnostic, store_diag/env gated).
+Verdict: selects H-shift (4 emitters, 7 literals + 1 lost hook) and H-pcless (2 more spin2 comments), all fixed; refutes it for
+the per-instruction families (257,4xx EQ). Next: dead-emitter census (NEXT.md).

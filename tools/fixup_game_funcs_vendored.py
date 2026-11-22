@@ -8601,7 +8601,7 @@ static void rs64_s2107_b40_writer(uint32_t writer_pc, uint32_t old_value,
             f"        }}\n"
             f"        if (s_wspin2_{tag}_log && ctx->r2 == 0) {{ fprintf(stderr, \"[waitmusyx-spin2-loop] site=0x{tag} event=return n=%d yields=%d\\n\", s_wspin2_{tag}_n, s_wspin2_{tag}_yields); fflush(stderr); }}\n"
             f"    }}\n"
-            f"    // bne         $v0, $zero, {label}\n"
+            f"    // 0x{int(addr, 16) + 8:08X}: bne         $v0, $zero, {label}\n"  # s7787: keep the pc
             f"    if (ctx->r2 != 0) {{\n"
             f"        goto {label};\n"
             f"    }}\n"
@@ -35066,7 +35066,7 @@ static void rs64_s2122_m5_keyon_event(uint8_t* rdram, uint32_t kind,
             raise RuntimeError(f"s3525 {p.name}: funcs.h anchor count={text.count(anchor)}")
         text = text.replace(anchor, anchor + decl, 1)
         entry = "RECOMP_FUNC void allocateSongChannelArray(uint8_t* rdram, recomp_context* ctx) {\n"
-        insert = ('    rs64_m5_selector_store_entry(0x8008F000u, U32(ctx->r31), '
+        insert = ('    rs64_m5_selector_store_entry(0x8008F0A0u, U32(ctx->r31), '
                   'U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r7)); '
                   '/* PATCH: s3525 selector store entry */\n')
         if text.count(entry) != 1:
@@ -41182,7 +41182,7 @@ void rs64_s2609_m5_channel_store(uint8_t* rdram, uint32_t pc,
             "musyxNoopStub": 0x8008ED00,
         }
         if p.name == "funcs_25.c":
-            targets["startSongSequence"] = 0x800940A4
+            targets["startSongSequence"] = 0x80094350  # s7787: was 0x800940A4, a pc inside another function
         for function_name, entry_pc in targets.items():
             header = f"RECOMP_FUNC void {function_name}(uint8_t* rdram, recomp_context* ctx) {{\n"
             start = text.find(header)
@@ -41201,14 +41201,19 @@ void rs64_s2609_m5_channel_store(uint8_t* rdram, uint32_t pc,
             lines = body.splitlines(True)
             out = []
             current_pc = None
+            branch_open = False
             branch_re = re.compile(r"^\s*// 0x([0-9A-Fa-f]{8}): (b\w+)")
             if_re = re.compile(r"^(\s*)if \((.*)\) \{")
             for line in lines:
                 m = branch_re.match(line)
                 if m:
                     current_pc = int(m.group(1), 16)
+                    branch_open = True   # s7787: one event per guest branch; later diagnostic `if`s are not the branch
+                elif re.match(r"^\s*// 0x[0-9A-Fa-f]{8}:", line):
+                    branch_open = False
                 im = if_re.match(line)
-                if im and current_pc is not None:
+                if im and current_pc is not None and branch_open:
+                    branch_open = False
                     condition = im.group(2)
                     out.append(
                         f"    rs64_s2586_m5_writer_event(rdram, \"{function_name}\", \"branch\", "
