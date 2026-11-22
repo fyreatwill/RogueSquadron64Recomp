@@ -208855,3 +208855,31 @@ stock vs patched under VI clocking.
 ORIGIN: n/a (no mitigation). Rules out H-worse; H-negligible holds for static frames; H-shift unresolvable cross-run (single-source
 for flight: s7815 offline only). Gap named: oracle presses/dumps are wall-clock, not VI-clocked, so no two oracle runs are
 comparable on animated frames. NEXT: VI-clocked --press/--fb-dump so the oracle becomes run-to-run deterministic.
+
+## Session 7817 (2026-11-22) — retail oracle made deterministic: VI clock + RandomizeInterrupt off; two runs byte-identical (82/82 2 MB dumps); stock vs patched cxd4 = 0 visible px on title->hangar
+
+Pre-checks: crash_reports new=0; no owner answers; SOAK-RESULTS has no new lines since the s7809 fold.
+
+What ran (one emulator at a time, title->hangar s6791 press schedule via tools/s7816_oracle_rsp_ab.sh, 82 fb dumps each):
+- `tools/oracle/rs64_oracle.c`: `--clock vi` (presses, hold, fb-dump delays, fb-arm-after and --secs counted in emulated VIs, fired
+  from dbg_vi on the emulator thread; poller no longer schedules dumps in that mode), `--det-core` (Core RandomizeInterrupt=False for
+  the run), `--det-video` (angrylion Parallel=False), `--det-input` (Control1 mode=0 keyboard), `--det` = `--clock vi --det-core`.
+  All config overrides are restored before the exit ConfigSaveFile; user mupen64plus.cfg verified byte-identical to a pre-run copy.
+- `tools/s7817_oracle_det.py`: index-for-index dump comparison (raw 2 MB equality, VI of copy, visible px, max 5-bit delta), planted
+  1-px control. tools/s7816_oracle_rsp_ab.sh gained CLOCK= and XARGS= passthroughs (defaults unchanged).
+
+Results (scratch/s7817/, control PASS in every pair):
+| arms | raw_eq/82 | vis px total | reading |
+| p1 vs p2 (patched, clock vi) | 19 | 2,805,390 | all dumps on identical VIs; diverge from VI 2115 (buffer phase flips) |
+| v1 vs v2 (+ angrylion Parallel=False) | 19 | 2,538,071 | H-thread refuted |
+| i1 vs i2 (+ keyboard-only input) | 19 | 2,445,027 | H-input refuted; pad words change on identical VIs in all runs |
+| d1 vs d2 (+ RandomizeInterrupt=False) | **82** | **0** | deterministic |
+| d1 vs ds (patched vs STOCK cxd4, det) | 41 | 0 (66 comparable frames) | 111 halfwords differ, all off-screen, ~1 word/dump at 0x7887xx |
+Cause found in core source: r4300_core.c:67 `srand(time(NULL))`, interrupt.c:122 `value = rand()` under RandomizeInterrupt (default True).
+
+What it shows: the s7816 "wall-clock timing" explanation was half the story (superseded entry added). The retail oracle can now give
+same-input byte-exact A/Bs. The s7815 cxd4 VU fix has no visible effect on the title->hangar route (second line of evidence after the
+s7815 whole-task ucode compare), so earlier stock-cxd4 oracle verdicts stand. The randomized p/v/i arms are this run's positive
+control for the determinism claim (same session, same binary, only the flag differs).
+Rules out: angrylion threading and host input as divergence sources. Not yet known: what the off-screen word at ~0x7887xx is.
+Next: --det default in the comparing oracle launchers; name the writer/reader of the off-screen word (NEXT.md).

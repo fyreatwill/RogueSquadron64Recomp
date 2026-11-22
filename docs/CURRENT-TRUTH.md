@@ -93,6 +93,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7816 "animated oracle frames differ cross-run because of wall-clock press/dump timing" was only half the cause: with presses
+  and dumps VI-locked, runs still diverged from VI ~2115 because mupen64plus-core randomizes PI/SI interrupt timing with a
+  time-seeded rand() (s7817). Believable because wall-clock jitter was a real, visible source and the first fix to try.
 - s7752 "residual (a), 31-33 replaced commands per task, is <=1 LSB sub-visible precision": believable because the render diff was
   tiny and both RSPs looked healthy, but s7815 showed it is cxd4's VCH (vt=0x8000) and VCR (signs differ) defects: with those two
   fixed, cxd4 is byte-identical to our stream on both retained tasks.
@@ -270,6 +273,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      patched, title->hangar, 66 frames): all 9 static frames byte-identical in all 3 arms; animated frames differ as much
      between stock and its own rebuild as vs patched (wall-clock press/dump timing): the oracle cannot resolve a sub-LSB plugin
      effect cross-run. Earlier oracle-based fidelity verdicts stand (H-negligible on static frames; flight effect <=1 LSB, s7815).
+     **s7817: the oracle is now deterministic with `--det` (= `--clock vi --det-core`).** Two causes of run-to-run divergence:
+     wall-clock presses/dumps (fixed by `--clock vi`: presses + dumps on exact emulated VIs) AND mupen64plus-core
+     RandomizeInterrupt=True (PI/SI interrupt jitter from rand() seeded by srand(time(NULL)); `--det-core` turns it off for the run
+     and restores the user cfg). VI clock alone: dumps on identical VIs, still diverge from VI ~2115 (p1/p2). Angrylion
+     Parallel=False and keyboard-only input each refuted (still diverge; pad words change on identical VIs). With `--det-core`:
+     two patched runs 82/82 2 MB dumps byte-identical; stock vs patched cxd4 = 0 visible px on all 66 comparable title->hangar frames,
+     111 halfwords differ off-screen (one word/dump ~0x7887xx). So the s7815 VU fix has NO visible effect on this route (two-line:
+     s7815 ucode compare + s7817 deterministic A/B). Use `XARGS=--det-core CLOCK=vi` in tools/s7816_oracle_rsp_ab.sh; compare with
+     tools/s7817_oracle_det.py. Other oracle scripts still default to wall clock + randomized interrupts (animated frames = noise).
      [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,

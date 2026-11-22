@@ -90,6 +90,16 @@ static m64p_error (*pConfigOpenSection)(const char *, m64p_handle *);
 static m64p_error (*pConfigSetParameter)(m64p_handle, const char *, m64p_type, const void *);
 static m64p_error (*pConfigSaveFile)(void);
 static const char *(*pConfigGetParamString)(m64p_handle, const char *);
+static int (*pConfigGetParamInt)(m64p_handle, const char *);
+static int (*pConfigGetParamBool)(m64p_handle, const char *);
+/* s7817: --det-video sets [Video-AngrylionPlus] Parallel=False, --det-input sets [Input-SDL-Control1] mode=0 (manual,
+ * keyboard device -1) for the run; the user's values are restored before the exit ConfigSaveFile (s6839 lesson). */
+static int g_det_video, g_det_input;
+/* s7817: --det-core sets Core RandomizeInterrupt=False. The core jitters PI/SI interrupt timing with rand() seeded by
+ * srand(time(NULL)) (r4300_core.c:67, interrupt.c:122), which made two VI-clocked runs diverge from VI ~2100 on. */
+static int g_det_core, g_user_randint = -1;
+static m64p_handle g_vid_section, g_inp_section;
+static int g_user_parallel = -1, g_user_inmode = -1, g_user_indev = -9;
 
 /* debugger entry points */
 static m64p_error (*pDebugSetCallbacks)(void (*)(void), void (*)(unsigned int), void (*)(void));
@@ -3349,6 +3359,10 @@ static volatile int g_poll_running;
  * outliers of s6744-s6777. */
 static struct { unsigned width; double delay; unsigned start, len; char path[512]; double armed_at; int done; volatile int pending; } g_fbd[MAX_FB_DUMPS];
 static int g_nfbd;
+/* s7817: --clock vi. Press times, --hold-ms, --fb-dump delays, --fb-arm-after and --secs count emulated VIs (60/s,
+ * g_vis on the emulator thread in dbg_vi) instead of wall clock. Wall clock made every animated retail frame differ
+ * between two runs of the same binary (s7816), because presses and dumps landed on a different emulated VI each run. */
+static int g_clock_vi;
 static double g_fbd_arm_after;  /* s6742: --fb-arm-after SECS, no dump arms before t (the 640 intro precedes the 640 briefing) */
 static void fb_dump_write(int k, const char *tag, const char *suffix);
 static void fb_dump_poll(double t, unsigned width)
@@ -3397,6 +3411,7 @@ static void fb_dump_flush(void)
         if (g_fbd[k].pending) { g_fbd[k].pending = 0; fb_dump_write(k, "emu-thread", ""); }
 }
 
+static void vi_clock_tick(void);
 static void dbg_vi(void)
 {
     unsigned width, origin;
@@ -3408,6 +3423,7 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+    if (g_clock_vi) vi_clock_tick();
     if (g_nfbd) fb_dump_flush();
 
     {   /* s4439: AI_LEN/AI_STATUS sampled at every true VI = known-mid-buffer control for the submit-time AI_LEN=0 reading */
@@ -3663,7 +3679,7 @@ static void *vi_poller(void *arg)
                 fflush(stdout);
             }
         }
-        if (g_nfbd) fb_dump_poll(t, width);
+        if (g_nfbd && !g_clock_vi) fb_dump_poll(t, width);
         if ((t - last_raw_log) >= 1.0) {
             printf("[vi-poll-raw] t=%6.1fs width=%u origin=0x%08x\n", t, width, origin);
             fflush(stdout);
@@ -3712,6 +3728,31 @@ static void *shooter(void *arg)
     return NULL;
 }
 
+/* s7817: --clock vi scheduler, called from dbg_vi on the emulator thread every VI. Presses go down on VI round(at*60)
+ * and up hold_ms later (rounded to VIs, >=1); fb-dumps arm on the first VI whose width matches and are copied on the VI
+ * the delay expires, in the same callback, so neither depends on host speed or thread scheduling. */
+static void vi_clock_tick(void)
+{
+    static int next_press, held = -1;
+    static long up_vi;
+    long hold_vi = (long)(g_hold_ms * 60 / 1000.0 + 0.5);
+    if (hold_vi < 1) hold_vi = 1;
+    if (held >= 0 && g_vis >= up_vi) {
+        pCoreDoCommand(M64CMD_SEND_SDL_KEYUP, g_press[held].sym, NULL);
+        printf("[press] vi=%ld up sym=%d\n", g_vis, g_press[held].sym);
+        held = -1;
+    }
+    if (held < 0 && next_press < g_npress && g_vis >= (long)(g_press[next_press].at * 60.0 + 0.5)) {
+        held = next_press++;
+        up_vi = g_vis + hold_vi;
+        pCoreDoCommand(M64CMD_SEND_SDL_KEYDOWN, g_press[held].sym, NULL);
+        printf("[press] vi=%ld down sym=%d at=%.2fs%s\n", g_vis, g_press[held].sym, g_press[held].at,
+               g_have_input ? "" : "  (NO INPUT PLUGIN - press went nowhere)");
+        fflush(stdout);
+    }
+    if (g_nfbd) fb_dump_poll(g_vis / 60.0, pDebugMemRead32(VI_WIDTH_ADDR));
+}
+
 /* Drives the run: fires the press schedule, then stops the emulator. */
 static void *director(void *arg)
 {
@@ -3750,6 +3791,14 @@ static void *director(void *arg)
         fflush(stdout);
     }
 
+    if (g_clock_vi) {
+        /* s7817: presses fire from dbg_vi (vi_clock_tick); the run ends on emulated VI count, not wall time. */
+        while (g_vis < (long)(secs * 60.0 + 0.5)) sleep_s(0.01);
+        printf("[oracle] clock=vi %ld VI reached (%.0fs emulated), stopping\n", g_vis, secs);
+        fflush(stdout);
+        pCoreDoCommand(M64CMD_STOP, 0, NULL);
+        return NULL;
+    }
     for (i = 0; i < g_npress; i++) {
         if (g_press[i].at >= secs) break;
         sleep_s(g_press[i].at - t);
@@ -3902,6 +3951,8 @@ static void usage(void)
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
         "  --press SEC:KEY[,...] press KEY at SEC seconds, e.g. --press 6:return,12:return\n"
+        "  --det-core            RandomizeInterrupt=False for the run (s7817); --det = --clock vi --det-core\n"
+        "  --clock wall|vi       wall (default): SEC values are host seconds; vi: SEC*60 emulated VIs (s7817, deterministic)\n"
         "                        KEY is an N64 button name (start a b z dup ddown dleft\n"
         "                        dright cup cdown cleft cright l r) or a raw SDL2 SCANCODE.\n"
         "                        Attaches input-sdl automatically.\n"
@@ -4156,6 +4207,7 @@ int main(int argc, char **argv)
                 g_shot[g_nshot++] = atof(tok);
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
+        else if (!strcmp(argv[i], "--clock") && i + 1 < argc)      g_clock_vi = !strcmp(argv[++i], "vi");
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
         else if (!strcmp(argv[i], "--vi-regs"))                    g_vi_poll = g_vi_regs = 1;
         else if (!strcmp(argv[i], "--fb-dump") && i + 1 < argc && g_nfbd < MAX_FB_DUMPS) {
@@ -4167,6 +4219,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--fb-arm-after") && i + 1 < argc) g_fbd_arm_after = atof(argv[++i]);
         else if (!strcmp(argv[i], "--status-poll"))                g_status_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
+        else if (!strcmp(argv[i], "--det-video"))                  g_det_video = 1;
+        else if (!strcmp(argv[i], "--det-core"))                   g_det_core = 1;
+        else if (!strcmp(argv[i], "--det"))                        g_clock_vi = g_det_core = 1;
+        else if (!strcmp(argv[i], "--det-input"))                  g_det_input = 1;
         else if (!strcmp(argv[i], "--exec-trace") && i + 1 < argc) {
             char pcs[16];
             if (sscanf(argv[++i], "%x:%ld:%x", &g_xtrace_pc, &g_xtrace_max, &g_xtrace_peek) < 1) {
@@ -4224,6 +4280,8 @@ int main(int argc, char **argv)
     SYM(pConfigSetParameter, "ConfigSetParameter");
     SYM(pConfigSaveFile, "ConfigSaveFile");
     SYM(pConfigGetParamString, "ConfigGetParamString");
+    SYM(pConfigGetParamInt, "ConfigGetParamInt");
+    SYM(pConfigGetParamBool, "ConfigGetParamBool");
     SYM(pDebugSetCallbacks, "DebugSetCallbacks");
     SYM(pDebugSetRunState, "DebugSetRunState");
     SYM(pDebugStep, "DebugStep");
@@ -4267,11 +4325,33 @@ int main(int argc, char **argv)
                 pConfigSetParameter(core_section, "ScreenshotPath", M64TYPE_STRING, g_shot_dir);
             if (g_save_dir)
                 pConfigSetParameter(core_section, "SaveSRAMPath", M64TYPE_STRING, g_save_dir);
+            if (g_det_core) {
+                int off = 0;
+                g_user_randint = pConfigGetParamBool(core_section, "RandomizeInterrupt");
+                pConfigSetParameter(core_section, "RandomizeInterrupt", M64TYPE_BOOL, &off);
+                printf("[oracle] det-core: RandomizeInterrupt %d -> 0\n", g_user_randint);
+            }
         } else {
             fprintf(stderr, "[oracle] WARNING: cannot open Core config section; "
                             "debugger will not activate\n");
         }
     }
+
+    if (g_det_video && pConfigOpenSection("Video-AngrylionPlus", &g_vid_section) == M64ERR_SUCCESS) {
+        int off = 0;
+        g_user_parallel = pConfigGetParamBool(g_vid_section, "Parallel");
+        pConfigSetParameter(g_vid_section, "Parallel", M64TYPE_BOOL, &off);
+        printf("[oracle] det-video: angrylion Parallel %d -> 0\n", g_user_parallel);
+    }
+    if (g_det_input && pConfigOpenSection("Input-SDL-Control1", &g_inp_section) == M64ERR_SUCCESS) {
+        int manual = 0, kbd = -1;
+        g_user_inmode = pConfigGetParamInt(g_inp_section, "mode");
+        g_user_indev = pConfigGetParamInt(g_inp_section, "device");
+        pConfigSetParameter(g_inp_section, "mode", M64TYPE_INT, &manual);
+        pConfigSetParameter(g_inp_section, "device", M64TYPE_INT, &kbd);
+        printf("[oracle] det-input: Control1 mode %d -> 0, device %d -> -1\n", g_user_inmode, g_user_indev);
+    }
+    fflush(stdout);
 
     f = fopen(rom, "rb");
     if (!f) { fprintf(stderr, "[oracle] cannot open %s\n", rom); return 1; }
@@ -5013,6 +5093,14 @@ int main(int argc, char **argv)
     if (g_core_section && g_user_save_path) {
         pConfigSetParameter(g_core_section, "SaveSRAMPath", M64TYPE_STRING, g_user_save_path);
         pConfigSetParameter(g_core_section, "ScreenshotPath", M64TYPE_STRING, g_user_shot_path);
+    }
+    if (g_core_section && g_user_randint >= 0)
+        pConfigSetParameter(g_core_section, "RandomizeInterrupt", M64TYPE_BOOL, &g_user_randint);
+    if (g_vid_section && g_user_parallel >= 0)
+        pConfigSetParameter(g_vid_section, "Parallel", M64TYPE_BOOL, &g_user_parallel);
+    if (g_inp_section && g_user_inmode >= 0) {
+        pConfigSetParameter(g_inp_section, "mode", M64TYPE_INT, &g_user_inmode);
+        pConfigSetParameter(g_inp_section, "device", M64TYPE_INT, &g_user_indev);
     }
     if (pConfigSaveFile() != M64ERR_SUCCESS)
         fprintf(stderr, "[oracle] ConfigSaveFile failed (pass --configdir to a writable dir "

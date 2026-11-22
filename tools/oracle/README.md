@@ -288,3 +288,17 @@ at startup and restores them before saving, and prints `[oracle] save dir: ...`
 for every run. Check that line before trusting any save-dependent result.
 Scripts that copy a save over the user-wide `.eep` (the pre-s6800 route, e.g.
 scratch/s6748/retail.sh) are unsafe: use `--save-dir`.
+
+## Deterministic runs: `--det` (s7817)
+
+By default two oracle runs of the same ROM and press schedule are NOT comparable on animated frames, for two reasons:
+
+1. `--press`, `--hold-ms`, `--fb-dump` delays and `--secs` are wall-clock seconds, fired from host threads.
+2. mupen64plus-core's `RandomizeInterrupt = True` (the default) jitters PI/SI interrupt timing with `rand()`, which the core
+   seeds with `srand(time(NULL))`.
+
+`--clock vi` makes every SEC value mean SEC*60 emulated VIs; presses and dumps fire from the VI callback on the emulator thread.
+`--det-core` sets `RandomizeInterrupt = False` for the run only (the user's value is restored before the exit ConfigSaveFile).
+`--det` is both. Measured: two `--det` runs gave 82/82 byte-identical 2 MB framebuffer dumps over title -> hangar; VI clock alone
+still diverged from VI ~2115. `--det-video` (angrylion Parallel=False) and `--det-input` (keyboard-only Control1) also exist and
+were shown NOT to be needed. Compare series with `tools/s7817_oracle_det.py A B --ctl`.

@@ -12,7 +12,7 @@ V=/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-ang
 SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp ${EEP:-scratch/s6779/r1/lvl1.eep} "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
 A=(); for i in $(seq 0 ${ND:-40}); do A+=(--fb-dump 1024:$i:600000:200000:$D/t$(printf %03d $i).bin); done
 for i in $(seq 0 ${NH:-40}); do A+=(--fb-dump 512:$i:600000:200000:$D/h$(printf %03d $i).bin); done
-echo "rsp=$RSP" > $D/rsp.txt
-tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs ${RSECS:-104} --vi-poll --rsp $RSP --video $V \
+echo "rsp=$RSP clock=${CLOCK:-wall} xargs=${XARGS}" > $D/rsp.txt
+tools/oracle/build/rs64_oracle --save-dir $SD --core $C --rom $R --secs ${RSECS:-104} --clock ${CLOCK:-wall} ${=XARGS} --vi-poll --rsp $RSP --video $V \
   --press ${RP:-6:start,11:start,16:start,24.3:start,30.3:start,44:start,54:start,66:dright,78:dright,90:dleft} $A > $D/oracle.log 2>&1
 echo "rc=$? dumps=$(grep -c '^\[fb-dump\]' $D/oracle.log)"
