@@ -417,7 +417,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    ROGUESQ_S7834_RAMDUMP=1; retail rs64_oracle --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0; scorer tools/s7834_ramdump_cmp.py,
    planted controls PASS). Port vs retail CPO1 bit-identical in all 460 words (player + camera) for 2 flight frames; at frame 2 the port
    takes a 0.5-tick step, and the camera swing-in settles at a different rest pitch (w5 0.06034 vs 0.06316; R1 0.06266). Pitch now
-   two-source (RAM +0.00232 = image fit). Craft attitude equal, camera math bit-exact. Sub-pixel. Optional: why the port makes a half-tick frame.
+   two-source (RAM +0.00232 = image fit). Craft attitude equal, camera math bit-exact. Sub-pixel.
+   **s7835: half-tick CLOSED, H-guest.** dt 0x8011A904 = VI-wake osGetTime stamp diff (computeFrameDeltaTime + a submitGfxFrame
+   twin). Port clock VI-exact (dt == wake count 5182/5196 frames, flight frames all 2 VI); the onset frame gets 1 VI because the
+   twin sampled one VI before the first sim frame (host CPU faster than N64; retail onset steps vary with CPO too). Not a defect.
+   tools/apply_s7835_dtlog.py (ROGUESQ_S7835_DT=1).
 
 ## Evidence index
 

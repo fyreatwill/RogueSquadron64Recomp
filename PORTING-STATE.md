@@ -209450,3 +209450,36 @@ since the s7809 fold, no owner answers. Load ~3. Three runs, one at a time (2 re
   port's count emulation). Parked into NEXT.md as an optional unit.
 - Captures (gitignored): scratch/s7834/{r1,c1}/oracle.log, p1/run.log; scores scratch/s7834/cmp_{r1,c1}_p1.txt.
 - ORIGIN: n/a (measurement only; no mitigation, retail path untouched with the env off).
+
+## Session 7835 (2026-11-22) — the port's flight-onset half-tick frame is a legitimate 1-VI dt from guest logic: the port's clock is VI-exact (8944/8954 stamps exactly 1 VI apart, frame dt == VI wakes in 5182/5196 frames, every lvl2 flight frame 2 VI except the onset frame); the onset dt = VIs since the submitGfxFrame twin's last dt sample, 1 in the port vs 2 in retail CPO1. H-count and H-vi (uneven delivery) REFUTED, H-guest SELECTED; thread g3-port-halftick-dt CLOSED
+Work unit (NEXT s7835, HYPOTHESIS-ID g3-port-halftick-dt). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS lines since
+the s7809 fold, no owner answers. One port run. Boring-first: read the dt code before building any wide dump (NEXT's 0x80110000..0x80140000
+BSS diff plan was not needed).
+- Code read (recompiled, both copies): the sim dt word 0x8011A904 = stamp 0x80128ED8 - prev 0x8011A900 (prev = -1 -> dt 0), computed by
+  computeFrameDeltaTime 0x8000BBB0 AND an inline twin in submitGfxFrame 0x8000C448..0x8000C48C (both update prev). The only other prev
+  writer is a reset at 0x80018148 (prev = -1). The stamp's only writer is 0x8001993C in awaitFrameSyncMesgBlock: the low word of osGetTime
+  taken right after each VI message (port: ultramodern host clock 46875 ticks/ms; retail: Count), same block bumps the retraces-since-flip
+  byte that the arbiter compares with its limit (s6254). So dt is a VI-wake timestamp difference in both builds.
+- Instrument: tools/apply_s7835_dtlog.py (ROGUESQ_S7835_DT=1; registered in fixup_game_funcs_vendored.py for funcs_3/funcs_4; off =
+  untouched): `[dt7835] vi` per VI wake (stamp, ctr, lim) and `[dt7835] fr` per computeFrameDeltaTime (dt word), interleaved with the s7834
+  `[ramdump]` rows. Regen gate `s7719_regen_gate.py --strict`: first pass RED (the funcs_4 anchor string only exists after a later fixup
+  wraps the store; replay missed it) -> anchor made shape-independent, live funcs_4.c taken from the replay (line order vs the store-diag
+  shadow line), rebuild, gate H-mirrored, 53 files 0 differ, planted controls PASS.
+- Run: s7832/s7834 port recipe + ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 (scratch/s7835/p1, 150 s, 0 crash lines;
+  8954 VI wakes, 5196 fr, 1025 ramdump rows).
+- Results: VI stamp spacing 8944/8953 exactly 1.0 VI (4 at 0.75, 4 at 1.25, 1 at 8.25 = a load), so VI delivery is even and the host clock
+  agrees with it. Frame dt vs VI wakes since the previous fr: (2 wakes, 2.0 VI) 3628, (1, 1.0) 1554, 14 outliers, all at loads. After the
+  s7834 onset row (ramdump n=840) every one of 1021 flight frames has dt = 2 VI. The onset frame itself (fr n=4174, printed just before
+  ramdump n=840): dt = 781360 = 1.00 VI, although the previous computeFrameDeltaTime call (fr n=4173) was 22 VI wakes earlier (ctr ran
+  to 13, reset at the flip, 0..7). The prev stamp was therefore refreshed in between by the unlogged submitGfxFrame twin (the reset at
+  0x80018148 would have given dt 0), one VI before the first sim frame. Retail CPO1 took 2 VI at the same point (s7834 line 2), and retail
+  R1 itself steps 1,1,1,2.5,2,2,1 at onset (s7834) and its frame count moves 794->969/471 with CPO (s7833): retail's onset dt also
+  depends on how long the guest's load work takes against the VI grid.
+- DISCRIMINATION: H-count REFUTED (port dt equals the VI wake count in 5182/5196 frames; no short host interval). H-vi as uneven delivery
+  REFUTED (VI spacing exact). H-guest SELECTED: the half tick is the game's own dt rule (VIs since the last dt sample by the submitGfxFrame
+  twin) giving 1 VI because the port's guest work between that sample and the first sim frame finishes within one VI (host CPU much faster
+  than the N64; retail varies with CPO the same way). Two lines: port dt log + code read, and retail's own CPO-dependent onset steps
+  (s7833/s7834). Not a port defect; matching it would need N64 CPU-time emulation. Thread g3-port-halftick-dt CLOSED; the lvl2 ~0.1 deg
+  rest-pitch difference stands as a retail-legal dt path difference (sub-pixel, not owner-visible).
+- Captures (gitignored): scratch/s7835/p1/run.log, gate*.txt.
+- ORIGIN: n/a (measurement only; env-gated print, retail path untouched with the env off).

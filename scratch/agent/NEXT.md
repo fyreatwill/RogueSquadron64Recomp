@@ -1,27 +1,18 @@
-# NEXT (s7835)
-HYPOTHESIS-ID: g3-port-halftick-dt
+# NEXT (s7836)
+HYPOTHESIS-ID: g3-retail-flight-det-sweep
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
 SOAK-RESULTS lines. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
-Why: s7834 closed the flight-pitch thread. Port and retail CPO1 are bit-identical (460 words, player + camera) for the first two lvl2
-flight frames; at frame 2 (port ramdump n=840) the port's player advances 0.5 tick where retail advances 1, and the camera swing-in
-settles at another pitch. Sub-pixel and not owner-visible, so this is LOW value: ONE unit only, then close single-source either way.
-Question: where does the port's half-tick dt come from?
-Hypotheses:
- - H-count: the game's elapsed time comes from osGetCount, and the port's Count emulation (host-time or instruction-count based)
-   returned a short interval for that frame.
- - H-vi: the game derives dt from a VI retrace counter, and the port delivered VIs unevenly (two retraces close together) around
-   the flight-onset transition.
- - H-guest: a guest code path (e.g. a load/transition frame handler) legitimately halves dt, reached in the port only because of a
-   timing difference upstream.
-Discriminator: widen the s7834 dump to the game's timing globals. Both sides, same PC 0x80043918, a window of flight-onset rows only:
-dump a wide BSS range (start 0x80110000..0x80140000 in pieces <=1024 words, the oracle cap is PC_RAM_DUMP_MAXW; or raise it) and find
-the word that differs at row 2 while every other word matches (scorer: extend tools/s7834_ramdump_cmp.py with a --onset row-by-row mode,
-s7834 line 2 did this by hand). Then on retail name its writer with --watch-write on that word (positive control: whole-RDRAM watch)
-and read that writer's input (osGetCount vs a VI counter) in the port.
-Outcomes: the dt word's source is osGetCount -> H-count (compare the port's Count model, librecomp); a VI counter -> H-vi; equal
-inputs but a different guest path -> H-guest. Close the thread with that answer; no further iterations.
-Recipes: retail `env CPO=1 RSECS=175 RDPBIN=/dev/null EEP=scratch/s7832/lvl.eep PP=19.5:start,31.5:start,43.5:start,67.5:start,
-79.5:start,91.5:start XO="--watch-pc 0x80043918 --pc-ram-dump 0x80043918:<A>:<B>" zsh tools/s7828_retail_cpo.sh OUT`; port
-`env SAVE_FROM=scratch/s7832/lvl.eep SECS=150 CAP0=200 AP=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,
-79.5:start,91.5:start XE="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1" zsh tools/g3_port_capture.sh OUT` (the port range is
-fixed in tools/apply_s7834_ramdump.py; parametrise it by env first, then regen-gate with s7719 --strict).
+Why: G3 flight fidelity vs RETAIL (not angrylion-of-our-stream) is closed on lvl1 (s7831 exact) and lvl2 (s7832-s7835: render exact,
+~0.1 deg rest pitch = retail-legal dt path, s7835 H-guest). Two levels is thin; take a third level with a different terrain/sky class.
+Unit: det pair on mission 3 (0-based selected-mission byte 2) flight, same method as s7832.
+- Save: derive from scratch/s6748/lvl2.eep (selected mission byte 0x31) with byte = 2, re-sign the EEPROM the way s6748/s7832 did
+  (grep PORTING-STATE "Session 6748" for the signer), -> scratch/s7836/lvl.eep. Check the route reaches flight on retail first.
+- Runs, one at a time: retail `env CPO=2 RSECS=175 EEP=scratch/s7836/lvl.eep PP=<s7832 PP> zsh tools/s7828_retail_cpo.sh scratch/s7836/r1`
+  and a second retail schedule (R2, as s7832) as the retail-vs-retail baseline; port `env SAVE_FROM=scratch/s7836/lvl.eep SECS=150 CAP0=12
+  AP=<s7832 AP> zsh tools/g3_port_capture.sh scratch/s7836/p1`.
+- Score with the s7832 tools (tri dy mode, rect classes s7826_rect_path_offset.py --p-retail/--none-detail, pose fit) and its planted control.
+Hypotheses / outcomes:
+ - H-exact: tri dy mode 0, all sprite classes present, pose within the retail-vs-retail spread -> lvl3 CLOSED.
+ - H-dtpath: render exact but a constant sub-pixel pose offset like lvl2 -> confirm with ROGUESQ_S7835_DT=1 that the onset dt differs
+   (one extra port run), close as retail-legal.
+ - H-defect: a missing/extra draw class or a >1 px geometry offset outside the retail spread -> name it and root-cause next.
