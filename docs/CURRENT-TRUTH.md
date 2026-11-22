@@ -48,6 +48,9 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   bodies identical after address normalisation; patch .data/.bss/.rodata empty). Fixed: patches/Makefile toolchain stamp
   (.toolchain_id; same cc 0 rebuilds, changed identity 4) + CMake DEPENDS on MIPS_GCC. s7420 census: absent patches tree now DEFER
   (was OPEN, a spurious WARNING in every clean build), control (5), `--require-tree` run by build-from-scratch.sh after the build.
+- **s7807:** findAndUnlinkSmallestEntry (gcc patch body) is NOT exercised at lvl1 dd3 today: 0 calls in 240 s (2 arms, alive, 0 stall),
+  unlike s6280 (calls at dd3 before the s6285-s6288 pool/cache work). UNCONTROLLED null: FIND_CTL only fires on a call, so the gcc
+  body stays static-verified only. After any build that relinks patches.elf, rebuild PatchesLib (s7807 H-stale: patches.c older).
 - **Hazards:** never LAUNCH the game under lldb (s7616: it tried to delete the ROM); attach to a normally started pid
   (preflight tools/lldb_attach_check.sh). New build dirs need a COPY of build/saves. Title plume si_addr=0x58 CLOSED (0/76 boots s7660;
   s7725 RT64 texture-descriptor over-release fixed, NSZombie 0).

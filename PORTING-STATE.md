@@ -208525,3 +208525,19 @@ texture-pool pressure), so its runtime path was not exercised. L1 twin queued (s
 
 Rules out: public-build rot (H-missing/H-abs) as of c40620d37; game-tree or ucode divergence between public and owner binaries.
 Open: none from this unit. ../rs64-cleanbuild-s7806 is kept (~15 GB) so a re-check reuses the clones.
+
+## Session 7807 (2026-11-22) — s7424 H-stale (patches.elf newer than RecompiledPatches/patches.c after s7806) closed by a PatchesLib rebuild, content identical; gcc findAndUnlinkSmallestEntry never called at lvl1 dd3 (uncontrolled null)
+Contract fix first: loop.sh reported `s7424_stale_objects.py` RED (F newer-than-patches.c patches/patches.elf). s7806 regenerated
+patches.c at 04:59:34 and then make relinked patches.elf at 04:59:55 (Makefile toolchain stamp), so by the build graph patches.c was
+stale. `cmake --build build --target PatchesLib` re-ran N64Recomp + fixup_patches_host.py: patches.c md5 28cdfdfa... before and after
+(cmp IDENTICAL), so the binary's behaviour was never affected; full rebuild, s7424 H-fresh (findings 0, --controls H-fresh).
+Gate sweep (`tools/s7651_gate_sweep.py`, jobs 2): 237 gates, GREEN 235, REPORT 2, RED 0, rc 0.
+Work unit (NEXT.md candidate): does the gcc-built findAndUnlinkSmallestEntry body run in play? scratch/s7807/find_live.sh, lvl1
+(FORCE_SAVE_MISSION=1) dd3, 240 s each, host idle 3.9 h: arm fn (normal) and arm fc (ROGUESQ_FIND_CTL=1). Both alive_at_end=1,
+crashlines=0, vi_stalls30s=0, max_gap 163/149 ms, level_ok=1; `[dd] multiplier 3` confirmed (the 4.0 clamp no longer needs DD_UNSAFE).
+`[patch-live]` for setRngSeed/isCinematicActive printed (PatchesLib live), findAndUnlinkSmallestEntry lines 0 in BOTH arms, so the
+FIND_CTL control could not fire: UNCONTROLLED null. Reading: H-dead at this recipe (consistent with s6282 "finder never called at
+dd1" and with the s6285-s6288 cache work removing dd3 exhaustion), single-source. The gcc body therefore stays static-verified only
+(s7806 address-normalised identity); s7806's "0 calls" at dd4 L4/L1 is now 0 at dd3 L1 too.
+No ORIGIN needed: no mitigation added. Next: a forcing control (shrink the DL chunk cache so the evictor must run) if the gcc
+body is ever to be qualified at runtime; otherwise this thread is closed as not reached.
