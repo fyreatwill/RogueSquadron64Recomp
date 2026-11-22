@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7803 (2026-11-22).
+Compact operational handoff, as of Session 7804 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -30,7 +30,11 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   s7802/s7803 found 5 tools silently blind to .zst inputs (s7753/s7756 gates, s7441 + s7442 sample censuses read windows=0, s7773
   overlay-swap witness saw 99 of 956 logs). s7441 is now a sweep gate (S7803_RETAINED, pre-fix s7439 capture = planted RED);
   s7773 witness over all retained logs: mission>menu swaps 63 (was 2), 0 "Failed to find function". REPORT rows left: s7031, s7210
-  (inputs verified gone).
+  (inputs verified gone). **Class closed with a guard (s7804):** tools/s7804_zst_blind_lint.py (sweep row S7804_LINT) reads RED
+  when any swept or CURRENT-TRUTH-cited tool without rs64_zopen names a capture literal matching a zst-only retained file
+  (planted controls RED/ZOPEN/GREEN, real pre-fix s7763 RED). Its first run found 3 more: s7415 skipped 5 soak logs (205 now, verdict
+  unchanged), s7616 `--witness-sample scratch/s7616/sample.txt` and s7763 `--offline` crashed FileNotFoundError (now CLOSED 10/10
+  and 12 cmds 0 mismatch). Waiver for a non-input literal: `# zst-ok: <reason>`.
 - **Latency (s7766/s7767):** FPS60 58.3 ms, retail 75-86, FPS60+VI_LOCK=1 53.7 ms; window mode does not change it (FULLSCREEN=2 exists).
 - **Crash reports:** `python3 tools/crash_reports.py --since <date>`; a NEW report outranks all other work (s7664).
 - **Hazards:** never LAUNCH the game under lldb (s7616: it tried to delete the ROM); attach to a normally started pid

@@ -208412,3 +208412,34 @@ Rules out: "s7441 census is a REPORT with no checkable claim" (it pins two ledge
 "mission>menu overlay swaps are too rare in retained logs to witness" (63).
 Sweep: full `python3 tools/s7651_gate_sweep.py` run this session (result in the CURRENT-TRUTH headline line).
 Next: NEXT.md (owner items only; otherwise ladder 3c: re-check the remaining raw-only glob tools only if a new citation appears).
+
+## Session 7804 (2026-11-22) — zst-blind lint gate closes the retained-format class (s7801-s7803): 3 more members found and fixed (s7415 skipped 5 soak logs, s7616 --witness-sample and s7763 --offline crashed on zst-only inputs)
+
+HYPOTHESIS-ID: retained-format-lint-gate.
+Checked first: crash_reports --since 2026-11-13 new=0; OWNER-REVIEW-QUEUE no answers; no new SOAK-RESULTS lines.
+Carry-over contract: the s7803 iteration failed stop_gate's churn guard (its rs64_zopen edits counted as 5 instrumentation lines
+and the entry used no discrimination word). It was tool repair, not instrumentation; this iteration closes that class with a gate.
+Unit (NEXT.md): new tools/s7804_zst_blind_lint.py. Static rule alone was H-noisy: 66 of 271 swept/CT-cited tools carry a
+capture-like literal (reviewed .tsv tables, compile_commands.json, temp files). So the verdict is decided by the filesystem:
+for a tool not importing rs64_zopen (no `# zst-ok:` waiver), each capture literal (format holes -> *) is globbed in its input
+dirs (scratch/ paths in its sweep ARGS row, scratch/ literals in its source, repo root, + direct subdirs); a .zst match without a
+raw sibling = RED. Controls, same run: planted glob('sample_*.txt') over a dir holding only sample_1.txt.zst -> RED; same source
+importing rs64_zopen -> ZOPEN; raw-only dir -> GREEN (PASS). (The first control run FAILED: a '/sample_*.txt' suffix literal was
+joined as an absolute path; fixed by treating leading-'/' literals as dir-relative. Recorded as a dead end of the instrument.)
+First real run: tools=271 zopen=25 green=217 noinput=26 blind=3. This selects H-more over H-clean:
+- s7415_fp_arith.py soakcensus globbed soak_results/*.log only; 5 retained logs are *.log.zst. Now zopen + zst-only siblings:
+  old vs new same run: "200 logs" -> "205 logs", assert fires unchanged {'tileCopy.texture != nullptr': 2}, CONTROL PASS,
+  VERDICT H-equal (sweep regex unaffected).
+- s7616_rq_census.py: the ledger command `--controls --witness-sample scratch/s7616/sample.txt` (PORTING-STATE s7616) crashed at HEAD
+  with FileNotFoundError (only sample.txt.zst retained). witness() and the C8/C9 control now read via zopen/resolve: controls 10/10,
+  VERDICT CLOSED. (The lint's ctl_sample.txt hit is a file the control writes; reading through zopen covers it anyway.)
+- s7763_owner_cmd_check.py `--offline` (re-score retained armNN.log): HEAD crashed FileNotFoundError on arm00.log (all 12 .zst).
+  observe() now zopen(resolve()): `--offline --control` commands=12 mismatch=0 noecho=0.
+After fixes: tools=272 zopen=28 blind=0, VERDICT GREEN rc 0. Real-member RED control: restoring HEAD's s7763 -> blind=1
+"scratch/s7763/arm*.log: zst-only=12 raw=0", VERDICT RED; fixed copy back -> GREEN.
+Sweep: new S7804_LINT row (ARGS + EXTRA_GATES), regex pins the control tuple PASS + "VERDICT GREEN: 0 tools". `--only
+'s7804|s7415|s7763|s7616|s7441'`: 4 GREEN (s7763 is not a sweep gate), sweep red/green + cache controls PASS.
+Rules out: further live members among swept/CT-cited tools for literal-named captures. Not covered (limit, stated): paths built
+only from argv with no literal (e.g. s7616 before this fix had a literal only in the ledger), and tools neither swept nor cited.
+Closes the s7801-s7803 retained-format class with a standing guard. Next discriminator: none needed for this class; NEXT returns
+to the owner-wait default (crash reports / owner answers / soak lines first).

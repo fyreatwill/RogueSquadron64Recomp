@@ -14,6 +14,7 @@ render_context.cpp is only callable from that TU) and EXCL edges proved by readi
 import json, os, re, sys, copy
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import s7616_rq_scan as S
+from rs64_zopen import zopen, resolve  # s7804: retained samples are zstd'd
 
 ROOT = S.ROOT
 import importlib.util as _ilu
@@ -132,7 +133,8 @@ def classify(rx, ast, g, where, internal=True, excl=EXCL, gate=None, sole=None):
 def witness(path, readers):
     th, bad, seen_gfx, ctl = None, [], 0, set()
     pat = re.compile("|".join(re.escape(x) + r"\(" for x in readers))
-    for l in open(path, errors="replace"):
+    # s7804: the retained witness sample is zstd'd (scratch/s7616/sample.txt.zst)
+    for l in zopen(resolve(path) or path):
         if l.startswith("Total number in stack") or l.startswith("Sort by top of stack") or l.startswith("Binary Images"):
             break  # summary sections carry no thread attribution
         m = re.match(r"^\s+\d+ Thread_\d+(?::\s*(.*))?$", l.rstrip("\n"))
@@ -204,7 +206,7 @@ def main():
         pl3 = dict(file="lib/rt64/src/hle/rt64_state.cpp", line=99997, member="RDRAM", fn=orphan)
         o, n = run("C7b", rx2=rx + [pl3], ast2=ast + [pl3]); res.append(("C7b planted read in a called-but-not-Gfx-reachable fn (%s) -> OPEN" % orphan[:30], o >= 1))
         if "--witness-sample" in a:
-            src = open(a[a.index("--witness-sample") + 1], errors="replace").read()
+            src = zopen(resolve(a[a.index("--witness-sample") + 1]) or a[a.index("--witness-sample") + 1]).read()
             tmp = os.path.join(ROOT, "scratch/s7616/ctl_sample.txt")
             cut = src.find("Total number in stack"); cut = len(src) if cut < 0 else cut
             open(tmp, "w").write(src[:cut] + "    1 Thread_9: RT64 Workload\n    + 1 RT64::State::fullSync()  (in RogueSquadron64Recomp)\n" + src[cut:])

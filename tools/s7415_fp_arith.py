@@ -284,9 +284,13 @@ def scanner_control():
 
 def soakcensus():
     hit = collections.Counter(); nlog = 0
-    for p in glob.glob(os.path.join(ROOT, 'scratch/agent/soak_results/*.log')) + glob.glob(os.path.join(ROOT, 'build/*.log')):
+    # s7804: retained soak logs are zstd'd over time (*.log.zst); the raw-only glob silently skipped them
+    from rs64_zopen import zopen
+    logs = glob.glob(os.path.join(ROOT, 'scratch/agent/soak_results/*.log')) + glob.glob(os.path.join(ROOT, 'build/*.log'))
+    logs += [z for z in glob.glob(os.path.join(ROOT, 'scratch/agent/soak_results/*.log.zst')) if not os.path.exists(z[:-4])]
+    for p in logs:
         nlog += 1
-        try: s = open(p, errors='replace').read()
+        try: s = zopen(p).read()
         except Exception: continue
         for m in re.finditer(r'Assertion failed: \((.*?)\)', s): hit[m.group(1)] += 1
     return nlog, hit

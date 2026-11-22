@@ -81,7 +81,8 @@ FEATURES = {
 
 
 def observe(log):
-    t = open(log, errors="replace").read()
+    from rs64_zopen import zopen, resolve  # s7804: --offline re-scores retained armNN.log, zstd'd since
+    t = zopen(resolve(log) or log).read()
     o = {}
     m = re.search(r"\[ddbundle\] dd=([\d.]+)", t); o["dd"] = float(m.group(1)) if m else 1.0
     m = re.search(r"\[g1d\] ROGUESQ_ASPECT=(\S+) -> FB_WIDTH", t); o["aspect"] = m.group(1) if m else "4:3"
