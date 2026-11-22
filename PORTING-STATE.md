@@ -209481,5 +209481,7 @@ BSS diff plan was not needed).
   than the N64; retail varies with CPO the same way). Two lines: port dt log + code read, and retail's own CPO-dependent onset steps
   (s7833/s7834). Not a port defect; matching it would need N64 CPU-time emulation. Thread g3-port-halftick-dt CLOSED; the lvl2 ~0.1 deg
   rest-pitch difference stands as a retail-legal dt path difference (sub-pixel, not owner-visible).
+- This selects H-guest and refutes H-count and H-vi; it closes thread g3-port-halftick-dt. NEXT DISCRIMINATOR (new thread
+  g3-retail-flight-det-sweep): a mission-3 retail-vs-port det pair, tri dy mode + sprite classes + pose vs the retail-vs-retail spread.
 - Captures (gitignored): scratch/s7835/p1/run.log, gate*.txt.
 - ORIGIN: n/a (measurement only; env-gated print, retail path untouched with the env off).
