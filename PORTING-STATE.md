@@ -209152,3 +209152,8 @@ Instead of the two-sided RDRAM alignment (expensive, the fallback clause allowed
   symbol names do not contain it).
 - Rules out: FMA contraction in game code (0 sites), a mishandled rounding mode, round-half-even divergence (0 sites) as the
   cause of this or any other port/retail float residual.
+- Verdict: selects H-input-time (single-source on the residual shape, plus the independent FPU audit); refutes H-cpu as an
+  FPU-semantics cause (fusion/rounding-mode/round-half audited clean) and disfavours H-oracle-cpu (ULP noise cannot be one-signed
+  and size-scaled). Next discriminator if ever reopened: a guest-RAM read of the logo zoom parameter per VI in both arms
+  (oracle --det watch vs port dump) shows a constant sub-frame phase offset under H-input-time. Thread closed; NEXT resumes
+  g3-det-menu-pair at the first mission frames.
