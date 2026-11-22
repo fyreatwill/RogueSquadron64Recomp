@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7813 (2026-11-22).
+Compact operational handoff, as of Session 7814 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -250,6 +250,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      include/rsp_dpc_macros.h (MEM_WU, RS64_DIV32/DIVU32, RS64_TRUNC_W_*, fprintf->rs64_diag_fprintf): all already evidenced (s7086/
      s7575/s7576/s7432). Latent: N64Recomp lowers ceil.w.d as bare S32(ceil()) (the s7576 UB shape; s7576 counted 0 CEIL sites by helper
      name); its only site, ceilDouble 0x80093E60, has 0 calls and 0 address refs (gated: a caller turns ceil OPEN). [tools/s7813_callee_census.py]
+   - s7814 include-resolution class CLOSED: the resolved header set of every generated TU (game C, RecompiledPatches, 3 LLE ucode TUs)
+     in build/ + build_fbld/spwm/asan, taken from the compiler (.o.d of all TUs == a fresh `-M` of the real make command, 10/10 pairs),
+     0 OPEN: every project header is scanned by a census/harness, DECL, or dead-in-TU (ultra64.h). Shadows: include/fbld and
+     include/spwm recomp.h (diagnostic builds only) pass through bit-exactly vs upstream (2 M inputs, all wrapped MEM_*/LD/lwl/lwr/ADD32),
+     so s7389/s7391 findings transfer to build/. Per-helper map of the LLE ucode C: 70 helpers all evidenced; the gap found was
+     VMOV (152 sites) + VSAR (74), never checked against an independent RSP -> new tools/s7814_vmov_vsar: 2,048,000 compares vs cxd4,
+     0 diffs, whole vpu state, 3 mutants fire. 6 controls PASS; sweep row S7814_INCLUDE. Remaining weak spot: the 31 elementwise VU ops
+     rest on ares SIMD-vs-SISD self-consistency (s6301) + cxd4 whole-task (s7751) only. [tools/s7814_include_census.py tools/s7814_vmov_vsar/]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are

@@ -1,19 +1,19 @@
-# NEXT (s7814)
-HYPOTHESIS-ID: generated-c-include-resolution
+# NEXT (s7815)
+HYPOTHESIS-ID: rsp-vu-elementwise-vs-cxd4
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
 SOAK-RESULTS lines. Any crash/stall or owner report outranks the unit. G6c and all G5 items wait on the owner only.
-Why: s7813 found s7812's helper census scanned recomp.h only, while CMake force-includes include/rsp_dpc_macros.h into
-RecompiledFuncs (MEM_WU, RS64_DIV32, RS64_TRUNC_W_*, fprintf macro). The class: a header the generated C really compiles against
-that no census scans, or a census reading a different copy than the compiler (include/fbld/recomp.h also defines MEM_WU; the
-fbld/spwm dirs are BEFORE-include in separate build dirs only).
-Unit: ask the compiler, not the CMake text. For the main build (build/) and each optional build dir that exists (fbld, spwm,
-asan), take the real compile command of one RecompiledFuncs file + RecompiledPatches + one factor5_ucode file from
-compile_commands.json (or `make VERBOSE=1 -n`), run it with `-M` (or -H) to list every resolved header, and table each header:
-SCANNED (named by a census tool: s7812 recomp.h, s7813 rsp_dpc_macros.h, ...), SYSTEM (SDK), or UNSCANNED -> list its
-function-like macros / static inlines with live call counts in the generated C; live + no evidence = OPEN.
-Hypotheses: H-covered (every resolved project header with live helpers is scanned), H-shadow (a census reads a header the main build
-does not resolve, or two same-named headers resolve differently between builds), H-unscanned (>=1 live helper in a header no census
-reads -> write its row/differential).
-Controls: planted -include of a scratch header with a live-named macro -> UNSCANNED/OPEN; a census path pointed at a non-resolved copy
--> SHADOW; drop rsp_dpc_macros.h from the scanned list -> its 6 live helpers read OPEN.
-Tools to reuse: tools/s7813_callee_census.py (helpers(), strip(), FHDR rows), tools/s7812_recomp_h_census.py.
+Why: s7814's per-helper map of the LLE ucode C (tools/s7814_include_census.py) shows every helper evidenced, but the 31 elementwise
+VU ops the ucode compiles (VMADN 554, VMADH 504, VMADM 318, VMUDL 283, VMUDN 204, VSUB/VSUBC 162, VADD 115, VMUDM 118, VGE 84, VMRG 88,
+VMUDH 68, VADDC 62, VABS 50, VLT 44, VXOR 36, VCH/VCL 20, VCR 10, VAND 18, VMULF 15, VMADL 24, VEQ 4, VNE 2, VNXOR 2) rest on
+ares SIMD-vs-SISD (s6301: two code paths of ONE emulator) plus cxd4 whole-task replays (s7751, a few captured tasks). No op-level
+independent reference. G3c(b) asked for exactly this (VMULF/VMACF rounding, VCH/VCL/VCR flags vs cxd4/parallel-rsp).
+Unit: extend the s7814_vmov_vsar pattern (tools/s7814_vmov_vsar/run.sh + harness.cpp: live headers copied each run, cxd4 bodies
+extracted verbatim from ../rs64-oracle/src/mupen64plus-rsp-cxd4/vu/{multiply,add,select,logical}.c, element broadcast written from
+the RSP manual, WHOLE vpu struct compared incl. VCO/VCC/VCE and all 3 acc slices) to every op above, every e 0..15, random + edge
+inputs (0, 1, 0x7FFF, 0x8000, 0xFFFF, acc near clamp boundaries), vd==vs/vt aliasing. cxd4 keeps flags in cf_* arrays and acc in
+VACC[3][8]: map both ways (see to_ref/from_ref). Run the gfx-TU flavour too (-DRS64_RSP_NEON_MAC=1, as the shipped gfx TU builds).
+Hypotheses: H-equal (0 diffs: ares == cxd4 on every live op) / H-differ-dead (diffs only on ops/e/flag states the ucode never
+reaches: prove with the s7509 operand table + a reachability argument) / H-differ-live (a live op differs -> decide which emulator
+matches hardware with a third source (parallel-rsp or n64brew/RSP docs), fix ours, re-run s7751 whole-task replay as the end-to-end).
+Controls: one mutant per op family (multiply clamp, add carry VCO, compare VCC, clip VCE, merge select) must fire.
+CPU rule: harness only, no game run; keep reps so the whole run is < 2 min.

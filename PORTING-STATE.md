@@ -208727,3 +208727,48 @@ Selects H-all-rowed; refutes H-orphan (no guest-visible callee without evidence)
 s7812 scope (force header), closed by FHDR rows here.
 Rules out: a guest-visible host callee hidden outside every census; raw-RDRAM libc copies in fixup code (byte-order hazard).
 Next: the s7812 miss is a class (which headers does the generated C actually compile against?): NEXT.md s7814.
+
+## Session 7814 (2026-11-22) — generated-C include-resolution class CLOSED: compiler-resolved headers of every generated TU in 4 build dirs, 0 OPEN; diagnostic recomp.h shadows pass through bit-exactly; VMOV/VSAR gap closed vs cxd4 (2,048,000 compares, 0 diffs)
+
+HYPOTHESIS-ID: generated-c-include-resolution. Work unit from s7813 NEXT: s7813 found s7812 scanned recomp.h only while CMake
+force-includes include/rsp_dpc_macros.h. Class: a header the generated C really compiles against that no census reads, or a census
+reading a different copy than the compiler. Asked the compiler, not the CMake text.
+Boring first: no crash reports (FOLDED=10 new=0), no new SOAK-RESULTS since the s7809 fold.
+
+New tools/s7814_include_census.py (--controls). Two independent sources of the resolved header set per (build dir, target):
+A = the compiler's own dependency files (CMakeFiles/<target>.dir/**/*.o.d, every TU); B = a fresh `-M` of the real compile command
+(`make -n -B` on one object per target, today's sources). Targets: RecompiledFuncs (52 TUs), PatchesLib (1), factor5_ucode (3), in
+build/, build_fbld, build_spwm, build_asan. A == B on all 10 (dir, target) pairs that exist.
+Resolved project headers and rows:
+- recomp.h (lib/N64ModernRuntime/N64Recomp/include) SCANNED s7812/s7813; include/rsp_dpc_macros.h SCANNED s7813 (6 live helpers in
+  game C, 7 in ucode C); both funcs.h DECL (prototypes only; the RecompiledFuncs and RecompiledPatches copies differ by design).
+- ucode TUs also resolve librecomp rsp.hpp / rsp_vu.hpp / rsp_vu_impl.hpp (SCANNED s6301/s7092/s7093), sse2neon.h (compiled by the
+  s7092 harness), ultramodern ultra64.h (DEAD-IN-TU: 4 helpers, 0 calls).
+- SHADOW: include/fbld/recomp.h (s7389) and include/spwm/recomp.h (s7391) resolve BEFORE upstream only in their diagnostic build dirs;
+  build/ never resolves them. The first tool version called them SCANNED because "recomp.h" is in the s7812 text: the scanner match
+  is now path-aware (dir/base required when a basename resolves to >1 path). Pass-through differential (new
+  tools/s7814_shadow_passthru.c, built three ways with the shipped force-include): MEM_W/WU/H/HU/B/BU address + value, LD, do_lwl,
+  do_lwr, ADD32 on ctx->r29 (the spwm stringize fold) and on other operands, 2 M random in-RDRAM inputs, half the pages fb-marked so
+  the fbld hit path runs: up == fbld == spwm (hash 687c551b696ff119). So conclusions drawn in build_fbld/build_spwm transfer to build/.
+  (A first run showed fbld DIFFER: my harness drew 4096 extra rnd() for the page marks in the fbld arm only; fixed with an
+  independent page pattern. Not a wrapper defect.)
+- Per-helper map of the LLE ucode C (every rsp.<op> and RSP_*/DMA macro): 70 helpers, each mapped to an evidence session (7092 vector
+  mem + divide, 7093 scalar + cop2 moves, 7094 DMA, 7095 DPC registers, 6301 + 7751 elementwise). Gap found: VMOV (152 sites,
+  e 8/9/10/12/13) and VSAR (74 sites, e 8/9/10). s7092 noted they have no SIMD/SISD split and re-scoped to an independent reference,
+  but then covered the divide ops only.
+New tools/s7814_vmov_vsar (run.sh + harness.cpp, builds from the LIVE librecomp headers each run): ares VMOV<e>/VSAR<e> vs cxd4
+(mupen64plus-rsp-cxd4 vu/divide.c VMOV and vu/add.c VSAW, non-SSE path extracted verbatim), element broadcast for the reference
+written from the RSP manual, the WHOLE ares vpu struct compared after every op (registers, 3 acc slices, VCO/VCC/VCE), every e
+0..15, every de 0..7, vd != vt and vd == vt aliasing, edge-biased inputs: 2,048,000 compares, 0 diffs. Mutants: vmov_acc (ACCL = vt
+unbroadcast) 112,000 diffs, exactly e 2..15 (e 0/1 broadcast is identity, correctly silent); vmov_lane (lane de^1) fires on all e;
+vsar_swap (e 8 reads ACCM) 8000/8000 on VSAR<8> only.
+Census controls (same run): planted -include of a scratch header with a live-named macro -> OPEN; s7812 scanner path redirected to
+include/fbld/recomp.h -> SHADOW-MISS; rsp_dpc_macros.h dropped from SCANNERS -> OPEN; fbld MEM_H ^2->^0 mutant -> pass-through
+differs; spwm rs64_spwm_add returning r+1 -> differs; VMOV evidence dropped -> OPEN. 6/6 PASS. Sweep row S7814_INCLUDE added to
+tools/s7651_gate_sweep.py.
+Discrimination: selects H-covered (every resolved project header with live helpers is scanned, shadows pass through), refutes
+H-shadow (no census reads a header the shipped build does not resolve; the two same-named shadows compute identically) and
+H-unscanned at header level; at helper level it found and closed one unevidenced pair (VMOV/VSAR, no defect). Two lines: .o.d vs
+fresh -M for resolution; ares vs cxd4 for VMOV/VSAR.
+Remaining weak spot (next unit): the 31 elementwise VU ops have only ares-internal SIMD/SISD agreement plus cxd4 whole-task replays
+of a few tasks, no op-level independent reference (NEXT slug rsp-vu-elementwise-vs-cxd4).
