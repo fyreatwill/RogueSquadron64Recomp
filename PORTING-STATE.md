@@ -208148,3 +208148,31 @@ Disk: L12s.cap (12.6 GB), L12s.raw (1.9 GB), replays deleted after scoring; csvs
 Next: the same at 21:9 on L1 (s7165 recipe: tools/s7141_arm.zsh 1 L1w with ASPECT=21:9; post rect 0,11,469,216 split 117,352; refit 1,12,469,217;
 s7165 baseline refit frac 0.009/0.010/0.011, centre 0.005, side 0.014).
 Rules out: a post-s7217 renderer/stream regression on L12 flight; stand-in models rendering differently in RT64 vs angrylion on L12.
+
+## Session 7795 (2026-11-21) — G3 post-G6c fidelity at 21:9: L1 owner recipe + STANDINS=1 == angrylion (refit frac 0.009/0.010/0.011, 0 >0.05, centre 0.005 side 0.013, control PASS) = the s7165 floor; three-arm post-G6c check (L1/L12 16:9, L1 21:9) closed
+HYPOTHESIS-ID: g3-frame-diff-unsheeted
+Work unit from NEXT.md (CURRENT-TRUTH item 13). crash_reports --since 2026-11-13: new=0; no new SOAK-RESULTS lines; no owner answers.
+Host: HID idle 10.9 h, screen unlocked (CGSSessionScreenIsLocked absent), load ~2.5, one game run, owner save untouched (forced-level route, NO_SAVE_WRITE).
+Run: `env RDIR=s7795 CW=504 CH=216 zsh tools/s7131_arm.zsh 1 L1w "ROGUESQ_ASPECT=21:9 ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1
+ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"` (s7131_arm instead of NEXT's s7141_arm: s7141_arm hard-codes scratch/s7141 and would
+have overwritten the s7165 L1w files; s7131_arm takes RDIR, CW=504 gives s7141's 21:9 capture size). Later ASPECT=21:9 in XENV_EXTRA wins:
+run.log `[g1d] ROGUESQ_ASPECT=21:9 -> FB_WIDTH=1024`, `[standins] on mode=on dd=4.00`, `47 objects, 47 KB ... level 1`, 0 CRASH/SIGSEGV/SIGBUS/abort;
+capture 8497 frames, 0 fails. (No summary file: arm watchdog kills the common script first, as s7793/s7794.)
+Replay `zsh tools/s7141_post.zsh scratch/s7795 L1w 0,11,469,216 117,352` (JOBS=2): 690 RAM-owning swaps, 689 replayed, lag 10 ms.
+Positive controls, same run: identity 0 regions / painted 20x20 -> one 400 px region PASS; shift-2 of the same capture 359/689 swaps >0.05
+(s7165: 357), aligned 0/689.
+| arm | rect | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|
+| s7165 L1 21:9 (pre-G6c) | 1,12,469,217 | - | 0.009/0.010/0.011 | 0 | 0.005/0.014 |
+| s7795 L1 21:9 STANDINS=1 | 0,11,469,216 | med 5.44 | 0.016 med | 0 | - |
+| s7795 L1 21:9 STANDINS=1 | 1,12,469,217 (refit) | 4.02/4.49/4.78 | 0.009/0.010/0.011 | 0 | 0.005/0.013 |
+Bands (refit) 3.36 3.44 2.81 2.63 2.99 3.11 3.88 9.34 (s7165: 3.47 3.23 2.55 2.47 3.10 3.33 3.93 9.28; bottom = lives ring): within +-0.3,
+no far-row or side-band rise. Dup pframes 0. Worst swaps 7667-7669 frac_c 0.005 (no outlier). Sheet docs/owner_sheet_s7795_L1_219_standins_fidelity.png:
+worst / median / p20 rows identical by eye, including the widened 21:9 sides.
+Verdict: H-equal (at the s7165 floor); H-regress and H-standin (side-band excess at the widened view) refuted. Two lines: per-frame score vs
+s7165 at the same refit rect with same-run controls, and the visual sheet. Post-G6c "STANDINS=1 == angrylion at the owner recipe" now holds
+on L1+L12 16:9 and L1 21:9; that check is closed.
+Disk: L1w.cap 12.6 GB, L1w.raw 2.8 GB, replays + chunks deleted after scoring; csvs + gz logs kept in scratch/s7795 (988 KB).
+Next: L4 21:9 + STANDINS=1 (the s7165 L4w recipe), which also crosses the mid-mission letterboxed cutscene fixed by s7166 SKYFILL_BOT:
+re-checks that fix on the post-s7790 binary with stand-ins on.
+Rules out: a post-G6c renderer/stream regression on L1 at 21:9; stand-in models or the widened frustum diverging RT64 from angrylion on L1.

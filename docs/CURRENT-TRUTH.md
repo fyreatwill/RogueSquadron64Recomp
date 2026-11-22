@@ -203,7 +203,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are
    CULL_SPIKE removing a retail wedge (intended). Sheets docs/owner_sheet_s7793_L1_standins_fidelity.png, docs/owner_sheet_s7794_L12_standins_fidelity.png.
-   Next: L1 at 21:9 (s7165 recipe, tools/s7141_arm.zsh, rect 0,11,469,216 split 117,352). tools/s7141_post.zsh replays with JOBS=2.
+   L1 21:9 s7795 (47 stand-ins; refit 1,12,469,217 frac 0.009/0.010/0.011, 0 >0.05, centre 0.005 side 0.013 = s7165 floor; control
+   PASS, shift-2 359 >0.05). Sheet docs/owner_sheet_s7795_L1_219_standins_fidelity.png. Three-arm check CLOSED.
+   Next: L4 21:9 + STANDINS=1 (s7165 L4w recipe; crosses the s7166 SKYFILL_BOT cutscene). Use `env RDIR=sNNNN CW=504 CH=216 zsh
+   tools/s7131_arm.zsh` (tools/s7141_arm.zsh hard-codes scratch/s7141). tools/s7141_post.zsh replays with JOBS=2.
 
 ## Evidence index
 
