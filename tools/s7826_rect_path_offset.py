@@ -11,6 +11,10 @@ Also prints, for every retail texrect element absent from the port window, which
 makes it present (a one-signed class = systematic offset, scattered/none = animation).
 
 usage: s7826_rect_path_offset.py RETAIL.bin[.zst] PORT.bin[.zst] --win r0:r1,p0:p1 [--elem W:H:PRIM ...] [--plant PX]
+       [--p-retail] [--none-detail N]
+--p-retail (s7831): second capture is a RETAIL rdplog too (retail-vs-retail baseline for the 'none' class).
+--none-detail N (s7831): list the N commonest absent elements by (w, h, PRIM) with instance count and distinct positions,
+       so an absent class can be compared against the retail-vs-retail baseline (animation/state vs a real port residual).
        default elements: the lvl1 flight reticle pair 51:59.5:00FF0064 and 25.5:29.75:00FF0064 (s7826).
 """
 import sys, math, collections, importlib.util, os
@@ -44,7 +48,7 @@ def main():
     (r0, r1), (p0, p1) = [tuple(map(int, w.split(':'))) for w in opt('--win', '').split(',')]
     plant = float(opt('--plant', '3'))
     els = [a[i + 1] for i, x in enumerate(a) if x == '--elem'] or ['51:59.5:00FF0064', '25.5:29.75:00FF0064']
-    R = rects(seg.frames(a[1], True), r0, r1); P = rects(seg.frames(a[2], False), p0, p1); pu = set().union(*P) if P else set()
+    R = rects(seg.frames(a[1], True), r0, r1); P = rects(seg.frames(a[2], '--p-retail' in a), p0, p1); pu = set().union(*P) if P else set()
     ok = True
     for e in els:
         w, h, pr = e.split(':'); w, h = float(w), float(h)
@@ -67,6 +71,17 @@ def main():
                       if (k[0] + dx, k[1] + dy, k[2] + dx, k[3] + dy, k[4]) in pu), 'none')
             cls[c] += 1; byp[(c, k[4])] += 1
     print(f'all retail texrect elements {tot}: shift classes vs port window {dict(cls)}')
+    nd = int(opt('--none-detail', '0'))
+    if nd:
+        ne = collections.defaultdict(lambda: [0, set()])
+        for fs in R:
+            for k in fs:
+                if k in pu: continue
+                if any((k[0] + dx, k[1] + dy, k[2] + dx, k[3] + dy, k[4]) in pu for dx, dy in ((0, .5), (0, -.5), (.5, 0), (-.5, 0), (0, .25), (0, -.25), (.25, 0), (-.25, 0))): continue
+                e = ne[(round(k[2] - k[0], 2), round(k[3] - k[1], 2), k[4])]; e[0] += 1; e[1].add((k[0], k[1]))
+        pe = collections.Counter((round(k[2] - k[0], 2), round(k[3] - k[1], 2), k[4]) for k in pu)
+        for key, (n, ps) in sorted(ne.items(), key=lambda x: -x[1][0])[:nd]:
+            print(f'  none-elem w={key[0]:g} h={key[1]:g} prim={key[2]}: inst {n} pos {len(ps)} | same (w,h,PRIM) in P at {pe.get(key, 0)} positions')
     print('  top (class, PRIM):', [x for x in byp.most_common(6) if x[0][0] != 'none'][:4], '| none:', [x for x in byp.most_common(12) if x[0][0] == 'none'][:4])
     return 0 if ok else 1
 

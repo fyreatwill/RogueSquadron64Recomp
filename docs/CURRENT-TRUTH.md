@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7829 (2026-11-22).
+Compact operational handoff, as of Session 7831 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -398,6 +398,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    now 21/21 + 6/6 GREEN with controls PASS, pinned in the sweep (S7802_RETAINED; partial loss = RED, total absence = NEEDS-INPUT,
    planted in tools/s7802_retained_input_controls.py 6/6). Same class: s7769 control ring, s7454/s7462 real-log cases (silently skipped).
    Rule: any gate reading a retained scratch input must go through rs64_zopen (resolve/zopen/materialize).
+   **G3 det retail-vs-port pair, lvl1 (s7820-s7831): CLOSED, no port render defect** title -> menus -> hangar -> launch -> lvl1 flight.
+   The s7826 reticle +0.5 px was a schedule-dependent camera pitch (s7827-s7830, sub-pixel). With the pose-matched schedule (s7829 arm 1,
+   w1024 gate 11.5) s7831 finds world-tri dy mode 0, reticle 0.14/0.11 px, absent texrects at the retail-vs-retail baseline, against two
+   retail refs (control: pitched s7826 pair shows +3 tri mode and one-signed +0.5 reticle). Tools: s7827_tri_yshift_census.py,
+   s7826_rect_path_offset.py (--p-retail, --none-detail). Next G3 unit: the same pair on a second level's flight (NEXT.md).
 
 ## Evidence index
 

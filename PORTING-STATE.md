@@ -209314,3 +209314,31 @@ runs, one at a time, the NEXT commands verbatim (SAVE_FROM s6779 lvl1.eep, SECS=
 - ORIGIN: n/a (no mitigation, no code change).
 - Discrimination: refutes "a single block of presses (4-6 or 7-10) at +0.6 s selects the pose"; the pose split needs >18 game frames of shift on 7-10
   (or the joint shift).
+
+## Session 7831 (2026-11-22) — pose-matched lvl1 flight pair agrees with retail on every key against two retail references: reticle path offset 0.14/0.11 px (control pair 0.45/0.50, one-signed +0.5 on 522), world-tri dy mode 0, absent-texrect class at the retail-vs-retail baseline (1760 vs 1726, same element classes); H-exact selected, lvl1 flight fidelity CLOSED; thread g3-flight-residual-census
+Work unit (NEXT s7831, HYPOTHESIS-ID g3-flight-residual-census), OFFLINE, no game run. Pre-checks: crash_reports FOLDED=10 new=0, no new
+SOAK-RESULTS lines since s7809, no owner answers in OWNER-REVIEW-QUEUE.
+- Inputs: port arm 1 scratch/s7829/port.bin.zst (pose-matched schedule), positive-control port scratch/s7826/port.bin.zst (pitched,
+  +0.00200 rad), retail R1 scratch/s7826/retail.bin.zst (window 3521:3825), retail R2 scratch/s7829/ret_off425/retail.bin.zst (3432:3776).
+  Port window 4376:4695 (tris) / 4378:4702 (rects). Outputs scratch/s7831/*.txt.
+- World tris (tools/s7827_tri_yshift_census.py --controls, planted A/B PASS in every run), XH-consistent dy mode counts:
+  R1 vs arm1: 0:118083, -1:83061, +1:2147. R2 vs arm1: 0:133298, -1:8378, +1:3138. R1 vs R2 (retail-vs-retail, --p-retail):
+  0:294157, -1:47723, +1:4407. Control R1 vs s7826 port: 0:66519, **+3:31855**, -4:5485 (the pitched pose shows as a +3 mode).
+  Arm 1 has no +2/+3 mode; its -1 shoulder is within the spread between the two retails (vs R2 the port is closer than R1 is).
+- Reticle (tools/s7826_rect_path_offset.py, plant +3 px PASS every run): R1 vs arm1 median 0.14 / 0.11 px with shift classes split
+  +0.25 (big) / -0.25 (small) = opposite signs, not an offset; R2 vs arm1 0.14 / 0.00. R1 vs R2 (retail-vs-retail) 0.00 / 0.25.
+  Control R1 vs s7826 port: 0.45 / 0.50, one-signed +0,+0.5 on 264+258 (522 elements). So the arm-1 reticle residual is at the
+  retail-vs-retail level.
+- Texrects absent from the port window ('none'): R1 vs arm1 1760 of 5458, R1 vs R2 1726, R1 vs s7826 port 1763. Top absent elements
+  (new --none-detail) are the same classes in port and retail baselines: small particle/sprite texrects (w 0.5-5 px, PRIM FFFFFFFF,
+  870F001F, AB270043, EB6F0087, FFC37FCB ...) each at ~30-60 one-off positions while the same (w,h,PRIM) is present in P at tens of other
+  positions = animation sampled at other positions. R2's window carries extra grey particle classes (3B3B3B93, 4B4B4BAF, 00000017,
+  0F0F0F33, 979797DF) absent from R1 entirely (0 positions) and present in port arm 1 for 3 of the 5: schedule-dependent events,
+  not port residuals. No element class is absent from the port that both retails have.
+- Discrimination: H-exact selected (two retail references + a retail-vs-retail baseline + a pitched positive control that shows every
+  key the arm-1 pair loses). H-residual-world and H-residual-hud refuted for the lvl1 steady flight band. lvl1 flight fidelity CLOSED.
+- Caveat: the shape-key match covers 15-25% of retail tris in every pairing including retail-vs-retail (exact slopes are sub-quantum
+  pose-sensitive), so the world-tri key is a mode test, not a per-tri census.
+- Tool: tools/s7826_rect_path_offset.py gains `--p-retail` (second capture in retail format, for the retail-vs-retail baseline) and
+  `--none-detail N` (absent elements by (w,h,PRIM) with instance/position counts and presence elsewhere in P). Default output unchanged.
+- Next: same det pair method on a second level's flight (EEP selected mission patched with tools/g3_eep_patch.py), see NEXT.md.
