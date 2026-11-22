@@ -23,10 +23,11 @@ run(){ # $1=log list (space sep) $2=M6_VOID_BLIND -> prints "void_holds|last key
 mk(){ local i; : > $1; for i in $(seq 0 40); do echo "[vi] update_screen #$((i*64)) origin=0x0098B038 fs=$(( $2 ? 100+i : 273 ))" >> $1; done; }
 mk $T/held.log 0; mk $T/adv.log 1
 R=scratch/s61_death_repro/run4/vilines.txt; RN=scratch/agent/m6/g1_lvl1s7450fxP/fail_att1.log
+[ ! -f $RN ] && [ -f $RN.zst ] && { zstd -dcq $RN.zst > $T/real_rn.log; RN=$T/real_rn.log; }  # s7802: retained as *.zst
 r=$(run $T/held.log 0); chk "planted held void -> void_holds=1" "${r%%|*}" 1; chk "keys line carries fs_holds=1" "$([[ ${r#*|} == *fs_holds=1* ]] && echo y)" y
 [ -f $R ] && { r=$(run $R 0); chk "REAL held log (s61 run4) -> 1" "${r%%|*}" 1; } || { echo "FAIL missing $R"; fail=$((fail+1)); }
 r=$(run $T/adv.log 0); chk "advancing void -> 0 (neg ctl)" "${r%%|*}" 0
-[ -f $RN ] && { r=$(run $RN 0); chk "REAL void log s7450 fxP att1 -> 0" "${r%%|*}" 0; }
+[ -f $RN ] && { r=$(run $RN 0); chk "REAL void log s7450 fxP att1 -> 0" "${r%%|*}" 0; } || echo "WARN real void log $RN absent"
 r=$(run "$T/held.log $T/adv.log $T/held.log" 0); chk "held+adv+held voids sum -> 2" "${r%%|*}" 2
 r=$(run $T/held.log 1); chk "mutation M6_VOID_BLIND=1 -> 0" "${r%%|*}" 0; chk "mutation keys line has no fs_holds" "$([[ ${r#*|} == *fs_holds* ]] && echo y || echo n)" n
 V(){ printf '%s\n' "$1" > $T/v.log; zsh tools/agent/soak_verdict_fields.sh $T/v.log | grep -oE 'stall_arms=[0-9]+' ; }

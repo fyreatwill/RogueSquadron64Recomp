@@ -12,6 +12,8 @@ that cannot see a truncated hangar stream is HOLLOW.
 Inputs absent (fresh clone: scratch/ is gitignored) -> prints "NEEDS-INPUT ..." and exits 4.
 usage: s7756_hstate_gate.py [--controls]   exit 0 GREEN, 1 RED, 3 control FAIL, 4 NEEDS-INPUT"""
 import os, re, subprocess, sys, tempfile, shutil
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from rs64_zopen import resolve, materialize  # s7802: retained pairs are stored *.bin.zst
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(ROOT, "tools/s7755_hstate_visibility.py")
@@ -44,7 +46,10 @@ def run(snap, cap, tg):
 
 def main():
     ctl = "--controls" in sys.argv[1:]
-    miss = [s for s in PAIRS if not (os.path.exists(os.path.join(ROOT, s)) and os.path.exists(os.path.join(ROOT, s[:-4] + "_end.bin")))]
+    miss = [s for s in PAIRS if not (resolve(os.path.join(ROOT, s)) and resolve(os.path.join(ROOT, s[:-4] + "_end.bin")))]
+    if 0 < len(miss) < len(PAIRS):  # s7802: a partly retained set is lost coverage, not a fresh clone
+        print(f"RED partial retained input: {len(miss)}/{len(PAIRS)} pairs absent: {miss[:3]}")
+        return 1
     if miss:
         print(f"NEEDS-INPUT {len(miss)}/{len(PAIRS)} retained hangar snap pairs absent (re-capture: tools/s7754_capture_route.zsh)")
         return 4
@@ -57,9 +62,20 @@ def main():
             print(f"RED harness build failed: {r.stderr.strip()[-300:]}")
             return 1
         print("harness rebuilt against the live factor5_ucode_lean.cpp.o")
+    tmp = tempfile.mkdtemp(prefix="s7756_in_")
+    try:
+        return _score(ctl, tmp)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _score(ctl, tmp):
     red = 0; cfail = 0
     for s, P in PAIRS.items():
-        rc, rows, out = run(os.path.join(ROOT, s), P["cap"], P["tg"])
+        # s7802: both halves land in one temp dir under their raw names, so s7755's <snap>_end.bin sibling lookup holds
+        d = os.path.join(tmp, str(abs(hash(s)))); os.makedirs(d)
+        sp = materialize(os.path.join(ROOT, s), d); materialize(os.path.join(ROOT, s[:-4] + "_end.bin"), d)
+        rc, rows, out = run(sp, P["cap"], P["tg"])
         ctl_ok = rc != 2 and "CTL flip PASS" in out and re.search(r"CTL shade\+16 .* PASS", out) is not None
         le = rows["live-end"]; lb = rows.get("live-begin", (-1, -1))
         ok = le[1] == 0 and ctl_ok
@@ -67,7 +83,7 @@ def main():
               f"live-begin(info) px={lb[0]} ge2LSB={lb[1]} s7755-ctls={'PASS' if ctl_ok else 'FAIL'} -> {'EQUAL' if ok else 'DIFF'}")
         red += not ok
         if ctl:
-            rc2 = run(os.path.join(ROOT, s), P["capc"], P["tg"])[1]
+            rc2 = run(sp, P["capc"], P["tg"])[1]
             okc = rc2["live-end"][1] >= 1
             print(f"  ctl cap={P['capc']}: truncated live-end ge2LSB px={rc2['live-end'][1]} -> {'PASS' if okc else 'FAIL'}")
             cfail += not okc

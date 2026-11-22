@@ -14,7 +14,9 @@ tools/s7753_capture_snaps.zsh and say so in the ledger) or a regression.
   flip  the comparator must call a one-byte-mutated copy of the replay output a mismatch
 Inputs absent (fresh clone: scratch/ is gitignored) -> prints "NEEDS-INPUT ..." and exits 4.
 usage: s7753_rdp_output_gate.py [--controls]   exit 0 GREEN, 1 RED, 3 control FAIL, 4 NEEDS-INPUT"""
-import os, re, struct, subprocess, sys, tempfile
+import os, re, shutil, struct, subprocess, sys, tempfile
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from rs64_zopen import resolve, materialize  # s7802: retained snaps are stored *.bin.zst
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 H = os.path.join(ROOT, "tools/s7752_port_task/harness")
@@ -88,7 +90,11 @@ def first_diff(a, b):
 
 def main():
     ctl = "--controls" in sys.argv[1:]
-    snaps = [s for s in SNAPS if os.path.exists(os.path.join(ROOT, s))]
+    snaps = [s for s in SNAPS if resolve(os.path.join(ROOT, s))]
+    if 0 < len(snaps) < len(SNAPS):  # s7802: a partly retained set is lost coverage, not a fresh clone
+        print(f"RED partial retained input: {len(SNAPS) - len(snaps)}/{len(SNAPS)} snaps absent: "
+              f"{[s for s in SNAPS if s not in snaps][:3]}")
+        return 1
     if len(snaps) != len(SNAPS):
         print(f"NEEDS-INPUT {len(SNAPS) - len(snaps)}/{len(SNAPS)} retained snaps absent (re-capture: tools/s7753_capture_snaps.zsh, tools/s7754_capture_route.zsh)")
         return 4
@@ -102,8 +108,18 @@ def main():
             return 1
         print("harness rebuilt against the live factor5_ucode_lean.cpp.o")
     red = 0; cfail = 0
+    global TMP
+    TMP = tempfile.mkdtemp(prefix="s7753_")
+    try:
+        return _score(snaps, ctl)
+    finally:
+        shutil.rmtree(TMP, ignore_errors=True)
+
+
+def _score(snaps, ctl):
+    red = 0; cfail = 0
     for s in snaps:
-        sp = os.path.join(ROOT, s); live = tail(sp)
+        sp = materialize(os.path.join(ROOT, s), TMP); live = tail(sp)
         P = SNAPS[s]
         got, fires = replay(sp, P["tg"], P["cap"])
         eq = got == live

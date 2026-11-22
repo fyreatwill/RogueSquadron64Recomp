@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7801 (2026-11-22).
+Compact operational handoff, as of Session 7802 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -217,11 +217,16 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    now fails only on far_viol (si_far > re_far). s7800 dd2: L12 held 5 handoffs 0 blinks (control 1/3 blink, 110 frames); L10 held 0
    counted handoffs (autopilot flew past only 3 spawning objects; the 1 held spawned row has its 462-frame gap fully covered by view
    culls of both stand-in and real object = off-screen, not a blink). Scorer now reports uncounted/uncounted_vis (control fires on L12
-   odd=0). dd2 handoff CLOSED H-clean on L4/L1/L12, L10 unmeasurable under the autopilot. Re-holds pass: L0/L11/L13/L14/L16/L17. Next:
-   L2/L18 also pass (s7801); fold the 5 still queued s7797_standins_rehold_L* (L3,6,7,8,9; pass = alive=1/1 crash_arms=0 stall_arms=0 +
-   spawns>0) -> then G6c holds cover 19/19 levels. s7801: whole gate sweep on the post-s7790 tree, uncached (hit=0): 234 gates, 229 GREEN,
+   odd=0). dd2 handoff CLOSED H-clean on L4/L1/L12, L10 unmeasurable under the autopilot. **G6c STANDINS=1 300 s holds: 19/19 levels
+   pass (s7797-s7802 re-holds on the post-s7790 binary; last five L3/6/7/8/9 s7802, spawns 34-112, 0 crash, vi_stalls30s 0).** G6c now
+   waits only on the owner's look (OWNER-REVIEW-QUEUE item 3). s7801: whole gate sweep on the post-s7790 tree, uncached (hit=0): 234 gates, 229 GREEN,
    3 REPORT, 2 NEEDS-INPUT, 0 RED/HOLLOW/NEEDS-ARGS; `s7719_regen_gate.py --strict` H-mirrored, 53 files 0 differ, HIT 326 (= s7791).
    s7726_zombie_census.py now reads *.zst and is a retained gate (s7727 hangar capture, control 364, mutant control rc 3).
+   **s7802: the s7753 RDP-output and s7756 hangar H-state gates were BLIND s7780-s7801** (NEEDS-INPUT): their 21 snaps / 6 pairs were
+   zstd-compressed 2026-11-21 14:24 and the gates tested only the raw .bin. Fixed via tools/rs64_zopen.py resolve()/materialize();
+   now 21/21 + 6/6 GREEN with controls PASS, pinned in the sweep (S7802_RETAINED; partial loss = RED, total absence = NEEDS-INPUT,
+   planted in tools/s7802_retained_input_controls.py 6/6). Same class: s7769 control ring, s7454/s7462 real-log cases (silently skipped).
+   Rule: any gate reading a retained scratch input must go through rs64_zopen (resolve/zopen/materialize).
 
 ## Evidence index
 

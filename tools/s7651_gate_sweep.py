@@ -225,6 +225,17 @@ S7724_RETAINED = {
                                r"(?=[\s\S]*win=1 frames=90 .*per_triplet=3879\.1 .*label_alternations=89/89)"
                                r"(?=[\s\S]*win=2 frames=90 .*per_triplet=4351\.2 )(?=[\s\S]*found in-square 1927 \(need >= 1056\) -> PASS)"),
 }
+# s7802: the RDP-output and hangar H-state gates read NEEDS-INPUT from s7780 to s7801 although every input was retained: the
+# snaps were zstd-compressed (2026-11-21 14:24) and both gates tested only the raw *.bin path. They resolve *.zst via
+# tools/rs64_zopen.py since s7802; run with their planted controls and pinned to the full input count, so losing one reads RED.
+# A fresh clone (no scratch/) still falls back to NEEDS_INPUT above.
+S7802_RETAINED = {
+    "s7753_rdp_output_gate.py": (["--controls"], r"(?=[\s\S]*\nCONTROL PASS snaps=21\n)(?=[\s\S]*\nVERDICT GREEN: 21/21 )"),
+    "s7756_hstate_gate.py": (["--controls"], r"(?=[\s\S]*\nCONTROL PASS pairs=6\n)(?=[\s\S]*\nVERDICT GREEN: 6/6 )"),
+    # planted: one absent among the real set -> RED, all absent -> NEEDS-INPUT, a .zst-only input resolves (both gates)
+    "s7802_retained_input_controls.py": ([], r"CONTROLS PASS 6/6"),
+}
+ARGS.update(S7802_RETAINED)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
@@ -233,7 +244,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed

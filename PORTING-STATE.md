@@ -208339,3 +208339,37 @@ ORIGIN: not a mitigation; a tool input-format defect (raw read of a compressed f
 Result: selects H-clean for every gate on the post-s7790 tree (and every row re-proved without the cache), plus one H-blind row
 found and closed. Rules out H-drift from the s7790/s7791 prune. NEEDS-INPUT s7753/s7756 still need fresh snaps + a game run.
 Next: fold the 5 remaining stand-in re-holds (NEXT.md).
+
+## Session 7802 (2026-11-22) — G6c STANDINS=1 300 s holds complete 19/19 (L3/6 loop, L7/8/9 in-session); the s7753 RDP-output and s7756 hangar H-state gates were blind since s7780 (retained snaps zstd-compressed, gates tested raw .bin): fixed, 21/21 + 6/6 GREEN with controls, pinned in the sweep with planted partial-loss RED
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=10 new=0. No owner answer in OWNER-REVIEW-QUEUE. CURRENT-TRUTH 26197 B (no maintenance).
+Soak folds: s7797_standins_rehold_L3 and L6 (loop): alive 1/1, crashlines 0, vi_stalls30s 0, max_gap 148/149 ms, level_ok=1,
+standins_on_line=1, spawns 104/112. L7/L8/L9 were still queued; host HID idle 1144 s, screen unlocked (ioreg), no game running, so ran
+them in-session one at a time (recipes moved via running_manual to done/): all three alive 1/1, crashlines 0, vi_stalls30s 0, max_gap
+149 ms, level_ok=1, standins on, spawns 55/34/61. Result: H-clean 5/5 -> G6c "crash-free 300 s holds on all 19 levels with it on" is
+complete on the post-s7790 binary (s7797-s7802 re-holds). G6c waits only on the owner's look (OWNER-REVIEW-QUEUE item 3 updated).
+Unit 2 (NEXT.md fallback: a NEEDS-INPUT sweep row whose capture is retained): s7753_rdp_output_gate.py and s7756_hstate_gate.py read
+NEEDS-INPUT in every sweep s7780-s7801 ("21/21 retained snaps absent", "6/6 pairs absent"), recorded each time as "need fresh snaps + a
+game run". Boring thing first: every input IS on disk, as *.bin.zst (scratch/s7754/retained/*, scratch/s7751/snap_{d,f0}/), compressed
+2026-11-21 14:24 (mtimes of the snap dirs); both gates tested os.path.exists(raw .bin). Same defect class as s7801's zombie census
+(blind to .zst), but here it failed into NEEDS-INPUT, so the RSP/RDP regression gate covered nothing for ~20 sessions.
+Fix: tools/rs64_zopen.py gains resolve(path) (raw, else .zst) and materialize(path, tmpdir) (raw copy for tools that open the file
+themselves: the native s7752 harness, and s7755's <snap>_end.bin sibling lookup, so both halves land in one temp dir). Both gates use
+them; a PARTLY present set now prints "RED partial retained input" rc 1 (lost coverage), only a total absence (fresh clone) stays
+NEEDS-INPUT rc 4.
+Results: s7753 --controls: 21/21 EQUAL, CONTROL PASS (tg0 lengths = the s7752 pins 1716608/1718528/1401816/1547472; cap prefix+fires
+and flip on all 21) -> VERDICT GREEN. s7756 --controls: 6/6 live-end ge2LSB=0, s7755 ctls PASS, truncated-cap control ge2LSB >= 21288
+on all 6 -> GREEN. So the post-s7790 tree's LLE F5 ucode still replays every retained task byte-exact (rules out RSP drift from the
+s7790/s7791 prunes, which these gates had not seen).
+Sweep: S7802_RETAINED rows pin "CONTROL PASS snaps=21 / VERDICT GREEN: 21/21" and "pairs=6 / 6/6"; new gate
+tools/s7802_retained_input_controls.py plants per gate: one absent input among the real set -> RED rc 1 (PASS), all absent -> NEEDS-INPUT
+rc 4 (PASS), a .zst-only input resolves and materializes with the S751 header (PASS): CONTROLS PASS 6/6.
+`--only 's775[36]|s7802|s7723_retained'`: 3-4 gates all GREEN.
+Class sweep (every scratch/ literal in tools/*.{py,zsh,sh} whose raw path is gone but .zst exists): 14 tools. Real members fixed:
+s7769_ring_genrate.py (its documented control ring_u124.txt is .zst-only; now zopen: SUMMARY windows=25 slow_windows=24 = the s7769
+fold), s7454_restart_test.zsh (both real logs silently dropped by `[ -f ] &&`: 4 -> 6 cases, 6/6 pass, mutation 5/6) and
+s7462_m6_void_holds_test.zsh (real void log case silently skipped; now runs: ok). Both now WARN when a real input is absent. Not
+members: s7610 (already reads .zst), s7616 (ctl_sample.txt is a temp it writes), and 6 one-off analysis scripts (g1_flight_class,
+g1d_levelselect_tear, g3_cine_tri, g3_rdp_top_envelope, g5h_band_pose, pd2_corr) that are not gates.
+ORIGIN: not a mitigation; tool input-format defect (raw path test of a compressed retained file), no guest/host code changed.
+Rules out: "the RDP-output gate needs a re-capture game run" (s7780-s7801 claim) — it needed a path resolver.
+Next: NEXT.md (REPORT-row review: are any of the 3 REPORT inputs retained so they can carry a control + pinned verdict).

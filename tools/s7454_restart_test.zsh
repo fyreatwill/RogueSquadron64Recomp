@@ -9,7 +9,9 @@ printf '[initMission] call#1 a\n[initMission] call#2 b\n' > $T/one; printf '[ini
 printf 'x [initMission] call#2 not-at-bol\n[initMission] call#1 a\n[initMission] call#10 c\n' > $T/edge; : > $T/empty
 cases=($T/one:1 $T/zero:0 $T/edge:1 $T/empty:0)
 L4=$ROOT/scratch/agent/m6/g1_lvl4s7449argck/run.log; L10=$ROOT/scratch/agent/m6/g1_lvl10s7449argck/run.log
-[ -f $L4 ] && cases+=($L4:1); [ -f $L10 ] && cases+=($L10:0)
+# s7802: the real logs are retained as *.zst; a missing raw file used to drop these cases silently
+for v in L4 L10; do f=${(P)v}; [ ! -f $f ] && [ -f $f.zst ] && { zstd -dcq $f.zst > $T/real_$v.log; typeset $v=$T/real_$v.log; }; done
+[ -f $L4 ] && cases+=($L4:1) || echo "WARN real L4 log absent"; [ -f $L10 ] && cases+=($L10:0) || echo "WARN real L10 log absent"
 mutfail=0
 for c in $cases; do f=${c%:*}; want=${c##*:}; got=$(restarts $f)
   if [ "$got" = "$want" ]; then pass=$((pass+1)); else failn=$((failn+1)); echo "FAIL ${f:t} want=$want got=$got"; fi
