@@ -13,7 +13,10 @@ Control: each retail segment against the WORST-overlapping port segment (must no
 whose geometry occurs ANYWHERE in the port screen, all and excluding breathing glyph strips (w 54-61, h 16.5-21.5),
 with controls: same test against port phase --ctl-phase (must be ~0) and a +0.25 px planted shift (must drop to ~0).
 usage: s7821_rdp_screen_segments.py RETAIL.bin PORT.bin [--k 120] [--jac 0.5] [--min 20] [--elements 512:5 --ctl-phase 4]
-       [--windows r0:r1,p0:p1,c0:c1 [--strip-w 54:66] [--screen p0:p1]]
+       [--windows r0:r1,p0:p1,c0:c1 [--strip-w 54:66] [--screen p0:p1]] [--tri-geom]
+--tri-geom (s7824): key every triangle by its exact RDP edge coefficients (YL,YM,YH,XL,DxLDy,XH,DxHDy,XM,DxMDy) as well
+as PRIM, so 'full' becomes a geometry match on triangle-only screens (cinematics, logo, crawl) instead of a PRIM-colour
+count; the --windows plant then also moves every triangle's YH by one sub-scanline (must drop to ~0).
 """
 import struct, sys, collections
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
@@ -23,6 +26,7 @@ try:
 except Exception:
     def readall(p): return open(p, 'rb').read()
 
+TRIGEOM = '--tri-geom' in sys.argv
 def frames(path, retail):
     f = readall(path); H = 20 if retail else 16; o = 0; out = []; cur = []; prim = None; meta = None
     buf = bytearray(); bmeta = []
@@ -36,7 +40,8 @@ def frames(path, retail):
         while mi < len(bmeta) - 1 and bmeta[mi][0] <= a: mi += 1
         w0, w1 = g(a), g(a + 4); op = (w0 >> 24) & 0x3F; n = 8
         if 0x08 <= op <= 0x0F:
-            n = 32 + (64 if op & 4 else 0) + (64 if op & 2 else 0) + (16 if op & 1 else 0); cur.append(('tri', prim))
+            if a + 32 > len(cat): break   # truncated final triangle at the capture cap
+            n = 32 + (64 if op & 4 else 0) + (64 if op & 2 else 0) + (16 if op & 1 else 0); cur.append(('tri', prim) + ((tuple(g(a + i) for i in range(0, 32, 4)) + (w0 & 0x3FFF,)) if TRIGEOM else ()))
         elif op in (0x24, 0x25):
             n = 16; cur.append((((w1 >> 12) & 0xFFF) / 4, (w1 & 0xFFF) / 4, ((w0 >> 12) & 0xFFF) / 4, (w0 & 0xFFF) / 4, prim))
         elif op == 0x3A: prim = '%08X' % w1
@@ -98,7 +103,14 @@ if __name__ == '__main__':
         # --windows r0:r1,p0:p1,c0:c1  (retail window, port window, port control window); scores the last K of each
         (r0, r1), (p0, p1), (c0, c1) = [tuple(map(int, w.split(':'))) for w in opt('--windows', '').split(',')]
         Rk = [c for c, _ in R[max(r0, r1 - K):r1]]; Pk = [c for c, _ in P[p0:p1]]; Ck = [c for c, _ in P[c0:c1]]
-        plant = [collections.Counter({((k[0] + 0.25,) + k[1:]) if k[0] != 'tri' else k: v for k, v in c.items()}) for c in Rk]
+        tplant = lambda k: (k[:3] + (k[3] + 1,) + k[4:]) if TRIGEOM else k   # k[3] = w1 = YM<<16|YH: YH += 1 sub-scanline
+        plant = [collections.Counter({((k[0] + 0.25,) + k[1:]) if k[0] != 'tri' else tplant(k): v for k, v in c.items()}) for c in Rk]
+        if TRIGEOM:
+            nt = sum(v for c in Rk for k, v in c.items() if k[0] == 'tri')
+            UT = lambda F: set(k for c in F for k in c if k[0] == 'tri')
+            ut_p, ut_c = UT(Pk), UT(Ck)
+            hit = lambda F, U: round(sum(v for c in F for k, v in c.items() if k[0] == 'tri' and k in U) / max(nt, 1), 4)
+            print(f'  tri-geom elements: retail tris {nt} R-in-P {hit(Rk, ut_p)} || ctl R-in-C {hit(Rk, ut_c)} || plant {hit(plant, ut_p)}')
         for nm, f in (('full', sig_full), ('geom', sig_geom), ('noprim', sig_noprim)):
             print(f'  {nm}: R[{max(r0, r1 - K)}:{r1}] vs P[{p0}:{p1}] {score(Rk, Pk, f)} || ctl P[{c0}:{c1}] {score(Rk, Ck, f)} '
                   f'|| plant+0.25 {score(plant, Pk, f)}')

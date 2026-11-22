@@ -209092,3 +209092,33 @@ HYPOTHESIS-ID: g3-det-menu-pair
 - Verdict: H-match for AVAILABLE CRAFT and SELECT YOUR CRAFT; H-port and H-route refuted. Front end now covered title -> SELECT
   GAME -> SELECT LEVEL (+description) -> AVAILABLE CRAFT -> SELECT YOUR CRAFT. Not covered: START on SELECT YOUR CRAFT ->
   briefing / mission load (next unit).
+
+## Session 7824 (2026-11-22) — det menu pair past SELECT YOUR CRAFT (launch fly-out, STAR WARS logo, Chapter I crawl); scorer gains --tri-geom; logo zoom tris differ from retail by one quarter-pixel LSB
+Work unit (NEXT s7824, HYPOTHESIS-ID g3-det-menu-pair). Pre-checks: crash_reports new=0, no new soak lines, no owner answers;
+HID idle 10.5 h. One VI-clocked rdplog pair, s7823 route + START at 79.5/91.5 (command as in NEXT s7824), RSECS=125 PSECS=115.
+- Route (port windows w_0070-w_0115): SELECT YOUR CRAFT -> hangar launch fly-out (512 wide, ~1200 tris) -> STAR WARS logo zoom
+  out (640, 164 tris) -> Chapter I "THE REBEL OPPOSITION" crawl. Same band order in both arms; retail logo/crawl = port at a fixed
+  offset of 799-800 frames (per-frame tri counts identical, e.g. retail 3310:287 = port 4110:287). No mission briefing screen on
+  this route: the next press goes from the crawl into the mission.
+- Instrument defect found: tools/s7821_rdp_screen_segments.py keyed every triangle as ('tri', PRIM), so a "full" match on a
+  tri-only screen only proved tri count + colour. First scores looked perfect (fly-out 99/110, crawl 120/120 with the PRIM key).
+  New `--tri-geom`: key = PRIM + the 8 edge words + YL, and the --windows plant also moves each tri's YH by one sub-scanline;
+  prints a `tri-geom elements` row (R-in-P, ctl, plant). Truncated last tri at the capture cap now stops the parser (crashed with
+  --tri-geom). Default output unchanged: s7823 SYC re-score still (115,120,0,1) / ctl 0 / plant 0.
+- Results with --tri-geom (scratch/s7824/score_trigeom.txt):
+  crawl overlap R[3203:3323] vs P: full 120/120 exact, tri elements 1.0, ctl (fly-out window) 0.0, plant 0.0; over the whole crawl
+  310/338 distinct retail frames occur verbatim in port.
+  logo zoom (retail 2720:2986): tri elements 0.957, full 77/120; 79/255 distinct retail frames verbatim in port. Misses: 6924 tris,
+  176/266 frames, median 16 of ~164 per frame. Nearest-port-tri field diffs: XL/XH/XM only (pure X shift) 1892, the rest Y+X;
+  deltas are exactly one quantum: X +-0x4000 (0.25 px), w1 +-1/+-0x10001 (YM/YH 1/4 line), YL -1, slopes +-0x10000. So one vertex
+  lands one s13.2 LSB away from retail, not a timing/scale difference.
+  launch fly-out (512, 3D): 0/111 retail frames verbatim, tri elements 0.036 (ctl 0, plant 0); port renders 145 frames to retail's
+  111 over the same cinematic = the s7821 rate split (emulated retail hangar ~16 fps), so no geometry verdict; one port-only
+  512x340 texrect (a single full-screen copy) at the hangar->fly-out cut.
+- Reading: our LLE RSP equals patched cxd4 byte-exactly on whole real tasks (s7815), so the quarter-pixel vertex differences come
+  from the RSP INPUT (CPU-built matrices/vertices). N64Recomp honours FCSR rounding (ctc1 -> emit_cop1_cs_write), so that boring
+  cause is out. Open: H-cpu (our recompiled float/fixed math differs from MIPS) vs H-oracle-cpu (mupen64plus core's FPU is wrong).
+  1/4 px is not visible; single-source, not a render defect for the owner.
+- Rules out: a port render defect on the fly-out/logo/crawl at the element level; the s7821-s7823 PRIM-only "exact" claims for tri
+  geometry hold for texrect screens only (texrects were always keyed by geometry).
+- Captures zstd'd: scratch/s7824/{retail,port}.bin.zst.

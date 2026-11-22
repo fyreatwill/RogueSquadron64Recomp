@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7822 (2026-11-22).
+Compact operational handoff, as of Session 7824 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -317,6 +317,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      CRAFT: whole frames exact 115/120 incl. tri PRIM multiset, geometry 120/120, ctl 0/120, plant 0/120, elements 1.000/1.000.
      AVAILABLE CRAFT: non-strip 0.9868 / 0.9958 (`--strip-w 54:69`: its strips breathe 55.5-68.5 px in both arms), ctl 0.44, plant
      0.0045; misses 128/128 scale-explained (same-centre port element at another zoom size, new `--screen p0:p1`), ctl +4 px 46/128.
+     **s7824 det pair SELECT YOUR CRAFT -> launch fly-out -> STAR WARS logo -> Chapter I crawl: one real port/retail datum.**
+     The scorer keyed triangles by PRIM colour only, so earlier "whole frames exact" on tri screens was a count+colour match; new
+     `--tri-geom` keys them by exact RDP edge words (plant = YH+1). Crawl (640, tri-only): 310/338 distinct retail frames found
+     verbatim in port, last 120 exact 120/120, ctl 0, plant 0. Logo zoom: only 79/255 retail frames verbatim; the misses are ~16 of
+     ~164 tris on 176/266 frames, each one vertex off by exactly one quarter-pixel LSB (XL/XH/XM +-0x4000, Y +-1, slopes +-0x10000).
+     Our LLE RSP == patched cxd4 byte-exact on whole tasks (s7815), so the input differs: H-cpu (recompiled float/fixed vertex math
+     vs mupen's MIPS FPU; ctc1 rounding IS honoured by N64Recomp) vs H-oracle-cpu (mupen's FPU is the one that rounds wrong). Not
+     visible (1/4 px), single-source. Launch fly-out (512, 3D): 0/111 retail frames in port (port 145 frames vs retail 111 over the
+     cinematic: frame-rate/timing split as the s7821 hangar, not a geometry verdict). [scratch/s7824/score_trigeom.txt, logo_cls.py]
      [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
