@@ -209257,3 +209257,34 @@ fold, owner queue unchanged since s7802. HID idle 11 h. Offline + oracle only (n
   scores scratch/s7828/score_cpo.txt, score_cpo3L.txt; timelines tl_cpo3*.txt.
 - ORIGIN: n/a (no mitigation).
 - Discrimination: refutes H-input-time and selects H-cpu-pose for the s7826/s7827 flight pose delta.
+
+## Session 7829 (2026-11-22) — the port's lvl1 flight pitch is schedule-dependent, not a port bias: idle stick 0 on all 8043 guest pad reads (H-stick refuted), and the same binary matches retail's steady sky (0/42 vertices >=0.5 px) when the autopilot presses land ~36 game frames later, while the s7826 schedule reproduces +0.00200 rad exactly; retail with presses shifted 1.5 s keeps its pose; thread g3-pose-port-input
+Work unit (NEXT s7829, HYPOTHESIS-ID g3-pose-port-input). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS lines since the
+s7809 fold, no owner answers. HID idle 11.8 h, screen unlocked. Binary build/RogueSquadron64Recomp 11:43 = the s7826 binary (no src
+commits since). Four game runs, one at a time (3 port, 1 oracle).
+- Port arm 1 (NEXT command, w1024 gate at 11.5, ROGUESQ_S7766_INLAT=1): 8043 [inlat] rows, (btn 0, sx 0, sy 0) x7961 and (START, 0, 0)
+  x82. Positive control: the START bit appears on exactly the autopilot-press rows (9-row runs at rows 360, 660, 1207, ...). Zero
+  nonzero stick values all run long. [stick-gate] on=1. H-stick refuted.
+- Census vs the s7826 retail (`tools/s7827_tri_yshift_census.py scratch/s7826/retail.bin.zst scratch/s7829/port.bin.zst --win
+  3521:3825,4376:4695 --controls --pose 3623:3825,4516:4695 --pairs`): 42/42 paired, 0/42 vertices >=0.5 px except three at exactly
+  -0.50, mean dyh -0.21, max 0.50, pitch -0.00035 rad (rms 0.149; vp 0.152). Controls PASS. s7826's port was +0.00200, 42/42.
+- Port arm 2 = arm 1 repeated: streams not byte-identical (cmp diverges at byte 272,043,437), yet the steady pose is identical to arm 1
+  (-0.00035, same mean/max). Port arm 3 = w1024 gate at 13.0, the s7826 g3_menu_pair AP0: 42/42 >=0.5, mean +0.857, max 1.50,
+  pitch +0.00200 rms 0.107 = s7826 to every printed digit. Autopilot logs: with the gate at 11.5 the clock rebases (gate reached at
+  12.1 -> 11.5), so presses 4-10 fire 0.6 s later (fs 942/1662/2076/... vs arm 3's 906/1626/2039/...).
+- Retail ground truth: tools/s7828_retail_cpo.sh now takes OFF (default 5.75 = unchanged). `env CPO=2 OFF=4.25 RSECS=150` moves retail
+  presses 4-10 1.5 s earlier; mission band 3432-3776 (vs 3521-3825). Retail 5.75 vs 4.25 (--p-retail): 0/42, mean -0.07, max 0.25,
+  controls PASS. Retail 4.25 vs port arm 1: 0/42, mean -0.14 (the rms 7.6 is one mis-paired tri, as in s7828). vs port arm 3: 42/42,
+  mean +0.93, pitch +0.00215.
+- Reading: the port reproduces retail's steady level-flight pose to within 1-2 RDP quanta under one press schedule and is pitched
+  ~0.115 deg under another. The port is deterministic per schedule. H-cpu-math (a constant port float difference) would pitch both
+  schedules: refuted. H-stick refuted. The s7826/s7827/s7828 "port pitched" numbers were all one schedule. Retail did not move for a
+  1.5 s shift. Whether some retail schedule picks the pitched pose too, and which press does it in the port, is open (sub-pixel, not
+  owner-visible). Two lines: two port schedules x two retail references give the same split, plus the stick log.
+- Tool: tools/s7827_tri_yshift_census.py `--r-port` (first capture in port format, for port-vs-port). Port-vs-port s7826 vs arm 1 is
+  not usable for pose: the static sets pair across different steady frames (rms 10.7).
+- Captures (zstd): scratch/s7829/port.bin.zst (arm 1), port_r3.bin.zst (arm 3), ret_off425/retail.bin.zst; arm 2 bin deleted (pose
+  identical to arm 1), window PNGs deleted; run logs kept (scratch/s7829/port*/run.log).
+- ORIGIN: n/a (no mitigation, no game code change).
+- Discrimination: refutes H-stick and H-cpu-math (constant port bias) for the s7826-s7828 flight pose delta; selects a
+  schedule-dependent pose (H-state/route). Supersedes s7828's "port-side H-cpu-pose" reading.

@@ -1,20 +1,21 @@
-# NEXT (s7829)
+# NEXT (s7830)
 HYPOTHESIS-ID: g3-pose-port-input
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
 SOAK-RESULTS lines. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
-Why: s7828 showed retail's steady lvl1 flight pose is timing-independent (CPO 2 vs 3: 0/42 sky vertices >=0.5 px) while the port
-is pitched 0.0018-0.0020 rad (42/42). So a port-side input or computation differs. Bounded: at most 2 iterations, then close single-source.
-Hypotheses:
- - H-stick: the guest reads a nonzero idle stick (main.cpp ~12755 get_n64_input has no host deadzone; a connected pad's drift reaches
-   the game). Game dead zone is 0.015 after its x75/y80 scale (rs64_stick_gate.h comment), so drift of ~1 count could pass.
- - H-cpu-math: port float math in camera/attitude differs (s7825 audit found 0 fused mul-adds in game code, so less likely).
- - H-state: other initial state differs at mission start (save/RNG/controller-pak state).
-Discriminator (ONE port run, the s7826 port half): add ROGUESQ_S7766_INLAT=1 (logs every guest pad read: btn, sx, sy) to the
-s7826 port capture: `env SAVE_FROM=scratch/s6779/r1/lvl1.eep SECS=135 CAP0=12 AP=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start,103.5:start
-XE="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7766_INLAT=1 RS64_RDP_BIN_PORT=$PWD/scratch/s7829/port.bin RS64_RDP_BIN_PORT_MAX_MB=6000" zsh tools/g3_port_capture.sh scratch/s7829/port`
-Also note in the log whether SDL reports a game controller (stick-gate line / any controller open line).
-Positive control: the [inlat] rows show btn bit START on the autopilot presses (proves the logger sees what the guest gets).
-Outcomes: any sx/sy != 0 at rest in flight -> H-stick: rerun with ROGUESQ_STICK_GATE or a host deadzone / SDL controller disabled and
-check the pose census vs retail (tools/s7827_tri_yshift_census.py scratch/s7828/cpo3L/retail.bin.zst P --win 2703:3300,<pf> --pose
-2790:2990,<psteady> --pairs) -> pitch delta should vanish. sx=sy=0 throughout -> H-stick refuted: dump the camera matrix at the first
-steady flight frame in port and oracle (oracle --debug-read on the camera struct) to name the diverging field (H-cpu-math vs H-state).
+Why: s7829 showed the port's lvl1 steady flight pitch (+0.00200 rad) belongs to ONE autopilot schedule (w1024 gate at 13.0 = s7826);
+the same binary with the gate at 11.5 (presses 4-10 0.6 s / ~36 game frames later) matches retail 0/42. Retail did not move for a
+1.5 s press shift. This is the LAST bounded iteration of this thread (2nd of 2); close it single-source if it does not split cleanly.
+Hypotheses (which press picks the pose):
+ - H-crawl/intro: press 10 (103.5, skips the intro cinematic into flight) or 7-9 decides the craft's hand-off attitude.
+ - H-menu: an early press (4-6) lands in a different menu state (option/camera/craft selection differs) -> different flight setup.
+ - H-port-transient: the press lands during a port-only transient (e.g. the 1024 phase) and that changes state retail never sees.
+Discriminator: ONE port run per arm, the s7829 13.0 schedule with only one block delayed 0.6 s (all `env SAVE_FROM=scratch/s6779/r1/lvl1.eep
+SECS=135 CAP0=12 XE="ROGUESQ_AUTOPILOT_CLOCK=vi RS64_RDP_BIN_PORT=$PWD/scratch/s7830/<arm>.bin RS64_RDP_BIN_PORT_MAX_MB=6000" zsh tools/g3_port_capture.sh scratch/s7830/<arm>`):
+  A: AP=6:start,11:start,13:w1024,20.1:start,32.1:start,44.1:start,67.5:start,79.5:start,91.5:start,103.5:start  (presses 4-6 late)
+  B: AP=6:start,11:start,13:w1024,19.5:start,31.5:start,43.5:start,68.1:start,80.1:start,92.1:start,104.1:start  (presses 7-10 late)
+Score each: find the mission band with `python3 scratch/s7829/tl.py <bin>` (port bins: name without "ret"), then
+`python3 tools/s7827_tri_yshift_census.py scratch/s7826/retail.bin.zst <bin> --win 3521:3825,<m0>:<end> --pose 3623:3825,<m0+140>:<end> --pairs`.
+Controls in the same run: arm A or B reproducing +0.00200 vs -0.00035 (both are known endpoints from s7829; the census planted controls must PASS).
+Outcomes: A pitched and B retail-like -> a press in 7-10 selects (H-crawl/intro); the reverse -> 4-6 (H-menu/H-port-transient: then diff the
+two arms' [autopilot] fs and the menu state at that press). Both or neither -> interaction; close the thread single-source (sub-pixel,
+not owner-visible) and take the next ladder item (CURRENT-TRUTH Next steps item 13 / owner-pending list).

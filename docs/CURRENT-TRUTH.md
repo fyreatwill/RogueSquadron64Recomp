@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7828 (2026-11-22).
+Compact operational handoff, as of Session 7829 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -93,6 +93,10 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7828 "the port's flight pitch delta is port-side (H-cpu-pose): the port feeds or computes something differently": believable
+  because retail's pose was timing-invariant while the port was 42/42 pitched in its one schedule. s7829 showed the same port binary
+  matches retail (0/42) when the autopilot presses land ~36 game frames later: the pitch belongs to one press schedule, not to
+  port math or a port input (idle stick 0 on all 8043 reads).
 - s7827/s7825 "sub-pixel flight-pose/logo residuals are H-input-time (time-integrated state depends on frame/dt history)": believable
   because static-authored scenes were exact and only time-integrated scenes differed. s7828 changed ONLY retail's emulated CPU timing
   (26% fewer frames) and the steady flight pose stayed within one quantum, while the port differs by 3-6 quanta: the pose is
@@ -354,7 +358,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      42 steady sky tris agree with CPO2 to <=0.25 px (0/42 vertices >=0.5, mean dyh +0.07) in two CPO3 windows. Port vs CPO2: 42/42
      >=0.5, mean +0.86, pitch d=+0.00200; port vs CPO3: 42/42, mean +0.79, pitch d=+0.00180. Controls: CPO2 run byte-identical to the
      s7826 retail capture (sha1 116954d3a8a8), CPO3 150 s run a byte-exact prefix of the 200 s run, planted pitch/const PASS.
-     Not owner-visible (<1 px). Scores scratch/s7828/score_cpo*.txt. Open: WHICH port input moves the pose. NEXT s7829.
+     Not owner-visible (<1 px). Scores scratch/s7828/score_cpo*.txt.
+     **s7829: the port's pitch is SCHEDULE-dependent, not a constant port bias (H-cpu-math and H-stick refuted).** Same binary
+     (build 11:43, = s7826), same save/route, ROGUESQ_S7766_INLAT=1: 8043 guest pad reads, sx=sy=0 on all of them (control: START bit on
+     the 82 autopilot-press rows). Port arms differ only in the autopilot w1024 gate time: 11.5 (gate rebases the clock, presses 4-10
+     land ~36 game frames later, fs 942 vs 906) two runs -> sky vs retail 0/42 vertices >=0.5 px, mean dyh -0.21, pitch -0.00035 rad;
+     13.0 (= s7826's g3_menu_pair AP0) -> 42/42, +0.00200 rad, every statistic identical to s7826 (deterministic per schedule; the two
+     11.5 runs are not byte-identical, diverging at byte 272 M, yet the pose is the same). Retail (oracle) with presses 4-10 moved 1.5 s earlier
+     (`env CPO=2 OFF=4.25 zsh tools/s7828_retail_cpo.sh OUT`): 0/42 vs the s7826 retail, so retail's steady pose did not move for this
+     shift; port 11.5 vs that retail 0/42, port 13.0 vs it 42/42. Census tool now takes `--r-port` (port-vs-port). Captures
+     scratch/s7829/{port,port_r3}.bin.zst, ret_off425/retail.bin.zst. Not owner-visible. Open (last bounded step, NEXT s7830): which
+     press in the 13.0 schedule picks the pitched pose.
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are

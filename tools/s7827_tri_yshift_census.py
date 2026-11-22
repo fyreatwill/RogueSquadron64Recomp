@@ -14,7 +14,7 @@ by three one/two-parameter models and the lowest RMS wins: H-vp (constant dy, dx
 scale about the screen centre: FOV/vscale), H-pitch (camera pitch delta: dy = f*d*(1+v^2), dx = f*u*v*d, u,v = offset/f).
 Same-run planted controls on the retail static set (quantised to 0.25 px like the RDP): a pitch plant must select H-pitch and
 recover d, a +0.5 px constant plant must select H-vp. rc 3 on FAIL.
-usage: s7827_tri_yshift_census.py RETAIL.bin[.zst] PORT.bin[.zst] --win r0:r1,p0:p1 [--controls] [--pose r0:r1,p0:p1] [--p-retail] [--pairs]
+usage: s7827_tri_yshift_census.py RETAIL.bin[.zst] PORT.bin[.zst] --win r0:r1,p0:p1 [--controls] [--pose r0:r1,p0:p1] [--p-retail] [--r-port] [--pairs]
 """
 import sys, os, collections, importlib.util, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
@@ -26,7 +26,7 @@ sp = importlib.util.spec_from_file_location('seg', os.path.join(HERE, 's7821_rdp
 m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
 tmp = tempfile.mkdtemp(prefix='s7827_')
 (r0, r1), (p0, p1) = [tuple(int(v) for v in s.split(':')) for s in a[a.index('--win') + 1].split(',')]
-R = m.frames(rs64_zopen.materialize(a[0], tmp), True)
+R = m.frames(rs64_zopen.materialize(a[0], tmp), '--r-port' not in a)   # s7829 --r-port: first capture is a port-format rdplog (port-vs-port)
 P = m.frames(rs64_zopen.materialize(a[1], tmp), '--p-retail' in a)   # --p-retail: second capture is a retail-format rdplog too
 s14 = lambda v: (v & 0x3FFF) - (0x4000 if v & 0x2000 else 0)
 s32 = lambda v: v - (1 << 32) if v & 0x80000000 else v
