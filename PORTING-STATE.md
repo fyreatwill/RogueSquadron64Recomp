@@ -208558,12 +208558,14 @@ with recomp.h on a 16 MB synthetic RDRAM (diagnostic hooks stubbed and gated off
 bucket pools (0-12 buckets, 0-5 entries, 20% zero-size, 30% tied sizes, random used list) until they return 0, comparing r2 and
 the whole pool region (count/used/bucket ptr, bucket array, 32 KB of entries) against a native C model after every call.
 Result (20000 trials): calls=262876 nonnull=242876 empty_returns=20000 tie_picks=77757 prev_nonnull_picks=122820;
-patch_mismatch=0 retail_mismatch=0 -> H-equal, two references (native model + recompiled retail body) agree with the gcc body.
+patch_mismatch=0 retail_mismatch=0 -> this selects H-equal and refutes H-differ: two references (native model + recompiled
+retail body) agree with the gcc body; the planted-patch control below refutes H-hollow (the harness does see a 1-op change).
 Controls same run: mutant reference (ties -> earlier node) differs in 13538/20000 trials; planted single pool byte flip detected
 207/207; planted patch-body mutation (sltu -> <=, 3 sites) reads VERDICT H-differ rc 1 (PLANTED-PATCH CONTROL PASS). Coverage
 guards in the verdict: ties>0, prev_nonnull>0, empty>0 or HOLLOW rc 3.
 Scope: qualifies the body's logic as translated (gcc codegen -> N64Recomp -> host C); not the in-game wrapper (fixup_patches_host
 s6278 diagnostics, unchanged since s6278) and not reachability, which stays 0 calls in play (s7806/s7807).
 Gate: sweep row S7808_FIND (tools/s7651_gate_sweep.py), so any patches/ toolchain or N64Recomp change that alters this body's
-behaviour reads RED. The s7807 "static-verified only" caveat is CLOSED.
+behaviour reads RED. This closes the s7807 "static-verified only" caveat. Next discriminator (NEXT.md
+patch-body-diff-class): the same harness over every live patches.c override with a retail twin; a mismatch names the function.
 No ORIGIN needed: no mitigation added.
