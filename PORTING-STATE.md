@@ -208285,3 +208285,28 @@ This is an ordinary distance cull, not a handoff gap. Scorer fix (tools/s7672_ha
 item with si_far > re_far (widened far broken) or si_vtpass > 0. Checks: s7799 L4/L1 rc 0; s7674 dd4 L4 log (zst) rc 0, unchanged;
 synthetic control (an L1 row with re_far 48 -> 3) far_viol=1 rc 1.
 Rules out: H-gap-dd2, H-none. Not covered: dd2 handoff on L10/L12 (many stand-ins); owner look.
+
+## Session 7800 (2026-11-22) — G6c stand-in -> real handoff at dd2: L12 held 5 handoffs 0 blinks (H-clean, third level); L10 held 0 counted handoffs (the one spawned held row is an off-screen gap, not a blink); scorer now reports uncounted spawned rows (uncounted_vis, control fires); re-holds L16/L17 pass
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=10 new=0. No owner report. Soak folds (loop): s7797_standins_rehold_L16
+and L17: alive 1/1, crashlines 0, vi_stalls30s 0, max_gap 148/163 ms, level_ok=1, `standins_on_line=1` spawns 149 / 326 -> pass.
+7 re-holds still queued (L2,3,6,7,8,9,18).
+Unit (NEXT.md, g6c-standins-dd2-handoff): dd2 handoff on the heaviest stand-in levels L12 (131) and L10 (280). Hypotheses H-clean /
+H-gap-dense / H-none. Runs: `zsh scratch/s7672/run.zsh scratch/s7800 12 odd 2`, `... scratch/s7800b 10 odd 2` (owner recipe FPS60
+16:9, STANDINS=1 LOG=1 HOLD=odd, 200 s). Both logs carry `[standins] on mode=on dd=2.00` and `multiplier 2`; L10 `[lvsel] B2F=10
+forced=10 cursor=10` (no PLANET_UNLOCK needed: that var only sets planet-viewer bits). Both alive, 0 crash, vi_stalls30s 0, max_gap
+146/147 ms, level_ok=1. Logs zstd'd.
+| level | held handoffs / blink>1 | control handoffs / blink>1 (max) | held si_far / far_viol / si_vtpass | uncounted held / vis | ctl uncounted / vis |
+| L12 | 5 / 0 | 3 / 1 (110) | 344 / 0 / 0 | 1 / 0 | 1 / 1 |
+| L10 | 0 / - | 1 / 1 (215) | 0 / 0 / 0 | 1 / 0 | 0 / 0 |
+Row census (why/end/drawn/real): L10 has only 3 first-life rows with a real object (autopilot route passes few spawn points in 200 s);
+36 of 50 rows timeout600 with no real object. L10 held row 80262AD0 sub 004B: si_before_spawn=3 (outside the scorer's <=2 window),
+held 460 frames all view-culled (si_off 230 + si_novt 230, held_ok 0), real rejected 218 (off/novt) then added: the 462-frame gap is
+the object being off-screen for both. L12 held 803DEE04: sb 107, same shape.
+Tool change: tools/s7672_handoff_score.py now counts such first-life rows (sb>2, real_add>=0) per group as `uncounted`, and as
+`uncounted_vis` when the gap is not covered by held view culls (held - held_ok < gap - sb) = a possibly visible blink; rc 1 on a
+held uncounted_vis. Positive control: L12 odd=0 (unheld) row uncounted_vis=1; held rows 0 on L12/L10. Regression: s7799 L4/L1 zst logs
+rc 0 unchanged.
+Result: H-clean on L12 (third level at dd2 after L4/L1). L10 = H-none for counted handoffs (route-limited, not a stand-in defect).
+Rules out H-gap-dense on L12 (131 stand-ins, 0 held blinks). Weakness: L12 control blinked 1/3 only (fewer handoffs than L4).
+Not covered: L10 handoff with a route that passes spawn points; owner look.
