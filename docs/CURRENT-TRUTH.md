@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7792 (2026-11-21).
+Compact operational handoff, as of Session 7793 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -199,8 +199,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    - old 34: Hook pc-literal class (s7787): CLOSED, 4 emitters fixed. [tools/s7787_hook_pc_census.py]
    - old 35: Dead/partial emitter class (s7788): CLOSED, 0 open. [tools/s7788_dead_emitter_census.py]
    - old 36: Quiet-skip vendored blocks (s7789): CLOSED, 0 open. [tools/s7789_replace_site_census.py tools/s7790_prune_dead_blocks.py]
-13. **Next agent work (owner items above wait on the owner):** ITERATION 3b secondary - confirm the title plume si_addr=0x58 stays
-   gone after s7725 (loop ~20 title boots, lldb ATTACH only, never launch under lldb); then G3 frame diffs vs angrylion on a level not yet sheeted.
+13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. s7793: L1 owner recipe + STANDINS=1 on the
+   post-s7790 binary == angrylion (refit 5.27/0.015, 0 >0.05; s7131 baseline 8.42/0.028 old rect, control PASS; sheet
+   docs/owner_sheet_s7793_L1_standins_fidelity.png), single level. Next: L12 (s7159 baseline, heavy stand-in spawns) same recipe for the
+   second line; then 21:9. tools/s7141_post.zsh now replays with JOBS=2 (iron rule 0). Plume si_addr=0x58 stays CLOSED.
 
 ## Evidence index
 

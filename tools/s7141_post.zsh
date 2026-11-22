@@ -1,5 +1,5 @@
 #!/bin/zsh
-# s7141: replay every RAM-owning swap of an EVERY=1 G5B capture with angrylion (4 parallel chunks of 60) and score RT64 vs angrylion
+# s7141: replay every RAM-owning swap of an EVERY=1 G5B capture with angrylion (JOBS=2 parallel chunks of 60, iron rule 0) and score RT64 vs angrylion
 # with the central-band split. usage: s7141_post.zsh <dir> <name> <rect x0,y0,x1,y1> <split cx0,cx1>
 setopt nonomatch
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
@@ -9,7 +9,7 @@ awk '$5==1 {print $1}' $D/$N.idx > $D/$N.swaps
 mkdir -p $D/${N}r; rm -f $D/chunk${N}_*
 split -l 60 $D/$N.swaps $D/chunk${N}_
 for c in $D/chunk${N}_??; do
-  while [ $(jobs -r | wc -l) -ge 4 ]; do /bin/sleep 2; done
+  while [ $(jobs -r | wc -l) -ge ${JOBS:-2} ]; do /bin/sleep 2; done
   $AL $D/$N.cap $D/${N}r $(cat $c) > $c.log 2>&1 &
 done
 wait

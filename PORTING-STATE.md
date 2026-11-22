@@ -208091,3 +208091,31 @@ MAINTENANCE iteration (Step 0: CURRENT-TRUTH 60,328 B > 60,000). No experiments.
   (paths_missing=0 names_stale=0, plant control PASS); doc-scanning censuses `s7557_gq_census --controls` 13/13 and
   `s7558_gr_census --controls` 16/16 rc 0 (they also search PROJECT-OVERVIEW, so the moved text still counts).
 - Rules out nothing; the next unit is the G3 frame diff on an unsheeted level (the plume is already CLOSED 0/76 s7660 + s7725 fix).
+
+## Session 7793 (2026-11-21) — G3 post-G6c fidelity: L1 owner recipe + STANDINS=1 on the post-s7790 binary == angrylion (H-equal, H-regress refuted on L1); s7141_post capped at 2 replay jobs
+HYPOTHESIS-ID: g3-frame-diff-unsheeted
+Work unit from NEXT.md (CURRENT-TRUTH item 13). No new crash reports (crash_reports --since 2026-11-13: new=0), no new SOAK-RESULTS lines,
+no owner answers. The s7122-s7217 matrix covered L0-L18 at 4:3/16:9/21:9, but nothing had been diffed against angrylion since G6c
+(stand-ins) or the s7781-s7791 hook/fixer changes. Binary build/RogueSquadron64Recomp 2026-11-21 21:24 (post-s7790).
+Run: `env RDIR=s7793 zsh tools/s7131_arm.zsh 1 L1s "ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500
+ROGUESQ_G5B_FRAME_MAX_MB=12000"` (owner recipe FPS60 dd4 16:9), host idle 10.5 h, screen unlocked, NO_SAVE_WRITE on. run.log:
+`[dd] multiplier 4`, `[standins] on mode=on dd=4.00`, `47 objects ... build-fail 0 level 1`, 0 CRASH/SIGSEGV/SIGBUS/abort lines.
+Replay `zsh tools/s7141_post.zsh scratch/s7793 L1s 0,9,369,216 46,322`: 691 RAM-owning swaps, 690 replayed, lag 10 ms.
+Positive control (same scorer, same run): identity 0 regions, painted 20x20 -> one 400 px region, PASS.
+| arm | rect | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac |
+|---|---|---|---|---|---|---|
+| s7131 L1 (pre-G6c, pframe>0) | 0,9,369,216 | 8.42/8.98/15.1 | 0.028/0.036/0.080 | 1 | - |
+| s7793 L1 STANDINS=1 | 0,9,369,216 | 6.74/7.38/8.24 | 0.024/0.031/0.034 | 0 | 0.021/0.032 |
+| s7793 L1 STANDINS=1 | 0,10,370,217 (s7160 refit) | 5.27/5.98/6.78 | 0.015/0.017/0.021 | 0 | 0.010/0.029 |
+(L1 retail floor s7122: 7.79/0.024.) Row bands (refit) 4.37 3.53 2.54 2.10 4.20 5.69 7.41 12.76: far (top) rows at or below the near
+rows, last band = border row as on every level. 6 duplicate pframes. Worst swaps 7956-7958 (frac_c 0.016) are a consecutive run
+with dup 0; the sheet (docs/owner_sheet_s7793_L1_standins_fidelity.png) shows identical content in both renderers, buildings
+included; the diff is silhouette edges and grass speckle (the s7122 class).
+Verdict: selects H-equal for L1 at the owner recipe with stand-ins on; H-regress refuted on L1 (every statistic is at or below the
+pre-G6c s7131 numbers at the same rect, and the refit rect lands at the retail-floor class). Two lines: per-frame score vs the s7131
+baseline + the same-run control, and the visual sheet. Single level, so the "post-G6c tree == angrylion" claim is single-level until a
+second stand-in level (L12, s7159 baseline) is scored.
+Change: tools/s7141_post.zsh ran 4 angrylion replays at once (iron rule 0 caps CPU-heavy jobs at 2): now `${JOBS:-2}`.
+Disk: L1s.cap (12.6 GB), L1s.raw (2.1 GB) and replays deleted after scoring; csvs kept in scratch/s7793.
+Rules out: a post-s7217 renderer/stream regression visible on L1 flight; stand-in models rendering differently in RT64 vs angrylion on L1.
+Owner save untouched (forced-level route, NO_SAVE_WRITE).
