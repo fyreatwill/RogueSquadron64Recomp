@@ -1,4 +1,4 @@
-# NEXT (s7782; s7781 closed the flag-4 loader side H-clean and found DL-chunk stores in the arena's FB slot)
+# NEXT (s7783; s7782 only fixed the gate contract, so this unit is still unrun; s7781 closed the flag-4 loader side H-clean and found DL-chunk stores in the arena's FB slot)
 HYPOTHESIS-ID: fb-shared-slot
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.

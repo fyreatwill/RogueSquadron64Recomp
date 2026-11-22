@@ -207724,3 +207724,27 @@ Verdict line: s7781 selects H-clean and refutes H-escape for the flag-4 loaders;
 Gates: the full s7651 sweep (--jobs 2) hit the 600 s background cap and was killed, so it did not finish. The census gates that cover
 new main.cpp diag code (s7338 mask, s7345 mul, s7530 fw, s7531 fx, s7648 mk8, s7600 gx) were run with --only: 6/6 GREEN, controls
 PASS, 0 new RED vs tools/gate_sweep_allowed_red.txt. Build links.
+
+## Session 7782 (2026-11-21) — contract fix: s7781_flag4_census.py read HOLLOW (unresolved=4); fixed an overlay address-collision bug (167 -> 229 sites) and classified all 13 unresolved sites, sweep 228 gates 223 GREEN 0 RED
+Unmet contract from s7781: tools/s7651_gate_sweep.py flagged the new tools/s7781_flag4_census.py as a new RED. Cause: rc 0, but its
+summary line printed `unresolved=4`, which the s7720 HOLLOW rule scores as an open class.
+Tool defect found while classifying the 4: instructions were keyed by address, first seen wins, across ALL functions. Overlay
+functions share addresses, so e.g. initCinematicSceneAssets 0x800AE5C8 (`addiu $a1,$zero,0x10` two insns back) walked back into
+another overlay function's prologue at 0x800AE5C4 and read UNRESOLVED. Some sites were also dropped outright. Fix: per-function maps
+(FINS[func][addr]). Result: 229 rs_malloc sites (was 167), 216 resolved, flag4 still exactly the same 6 sites, so s7781's static
+conclusion stands.
+The 13 sites that are not a local constant were read by hand and put in a KNOWN table (value + proof):
+- loadTxtFile 0x80055804: its block L_800557F4 is reached only by bne 0x80055744, whose delay slot 0x80055748 sets a1=0 -> plain.
+- load_asset_with_malloc_flags 0x80064818: forwards the caller's flags & 0xFFFF; every caller is listed as a wrapper row (0 / 0x10,
+  none flag 4; zlib zcalloc -> rs_zcalloc is flag 4 by construction).
+- 11 JPEG-decoder sites (loadJfifAsset, paserJfifSOSMarker, buildJpegHuffmanSize/CodeTable, buildJpegYccRgbTables x4,
+  buildJpegRangeLimitTables x2, allocJpegDecoderState): all `lhu $a1, 0xE(state)`. resetJfifDecodeState zmemcpy's the 0x30-byte
+  parameter struct into the state. The only caller of loadJfifAsset is openBackdropJpegAssets (two calls), which passes sp+0x40 and
+  zeroes sp+0x4C at 0x800B267C -> flags = 0, plain. Store-side proof built into the tool: no JPEG function stores at 0xC-0xF of a
+  non-stack base except 5 reviewed stores (SOF0 0x800C73C4 has base state+0x6F8+comp*44, the component table; 4 stores in
+  openBackdropJpegAssets are to the caller's own object).
+New exits: rc 1 on any open (unclassified unresolved) site, any STALE KNOWN entry, or a failed JPEG proof. --controls: an empty KNOWN
+must give open=13 (>0), and a planted fake KNOWN entry must read STALE. Both PASS. Gate sweep: 228 gates {GREEN 223, REPORT 3,
+NEEDS-ARGS 1, NEEDS-INPUT 1}, rc 0, own controls PASS.
+Rules out: a hidden flag-4 caller behind the collision bug (the 62 newly visible sites add no flag-4 site). Next stays NEXT.md
+fb-shared-slot (s7781 item 32, not yet run).

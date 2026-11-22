@@ -420,8 +420,9 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     watch ctl +8131 reads in the same window and 14.8M clean reads elsewhere. The next read of any kind is initNpcSlotList's
     re-init (t=77.9 cinematic table, t=83.8 mission table). Score: `python3 tools/s7776_tblwatch_score.py <log>` (--selftest
     3/3). Retail-shaped (pointer never cleared, never used): no guard needed. Single run.
-32. **FB-arena escape class (s7781): loaders CLEAN, new member H-shared-slot OPEN.** Static (`python3 tools/s7781_flag4_census.py`,
-    163/167 rs_malloc a1 resolved): flag-4 callers = loader temps loadAssetAndIterateSubchunks 0x80054F48, load_hmt_and_hob
+32. **FB-arena escape class (s7781): loaders CLEAN, new member H-shared-slot OPEN.** Static (`python3 tools/s7781_flag4_census.py --controls`,
+    s7782: per-function insn maps (overlay addresses collide), 229 sites, 216 resolved + 13 hand-KNOWN [loadTxtFile a1=0, the
+    load_asset_with_malloc_flags forwarder, 11 JPEG-decoder sites a1 = state+0xE = 0 with a store-side proof], unresolved 0): flag-4 callers = loader temps loadAssetAndIterateSubchunks 0x80054F48, load_hmt_and_hob
     0x80056580/66F0/67EC (arena first, plain fallback, rs_free in the same function), zlib zcalloc->rs_zcalloc, and
     mallocWithFallbackStrategy (no direct caller). Runtime (`ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1` ->
     `python3 tools/s7781_escape_score.py <log>`, 3 route_long runs, identical counts, plant counted): 0 loader-pc stores into a
