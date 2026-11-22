@@ -2207,6 +2207,57 @@ static const bool s_s7779_on = [] { const char* e = std::getenv("ROGUESQ_S7779_A
 static std::atomic<uint64_t> s_s7779_gst{0}, s_s7779_gst_live{0};
 static uint32_t s7779_w(const volatile uint8_t* rd, uint32_t a) { return *(const volatile uint32_t*)(rd + (a & 0x7FFFFCu)); }
 static uint32_t s7779_b(const volatile uint8_t* rd, uint32_t a) { return rd[(a & 0x7FFFFFu) ^ 3u]; }  /* diag-only: sole caller rs64_s7779_note */
+// s7781: FB-arena escape census (ROGUESQ_S7779_ARENA=1). When the arena closes (head 0x8010FEFC leaves a live value), the closed extent
+// [h, h+ext) is remembered until the next epoch opens. Every GUEST store into it is counted per pc with its slot state (st != 0 = the slot
+// is now a busy framebuffer) and the ms since the close. A pc that also stored inside a live arena (a loader/inflate pc) storing into the
+// closed extent = H-escape; only non-loader pcs = H-clean. ROGUESQ_S7781_PLANT=1: on the first guest store after the first close a fake
+// store (pc 0xDEAD7781, phys closed+0x100) goes through the same path and MUST appear in the table. Table printed in the [s7779] sum.
+struct S7781Pc { uint64_t live = 0, closed = 0, closed_busy = 0; double dt_min = 1e9; int ep = -1; };
+static std::mutex s_s7781_mu; static std::map<uint32_t, S7781Pc> s_s7781_pc;
+static uint32_t s_s7781_lo = 0, s_s7781_hi = 0, s_s7781_last = 0, s_s7781_lastext = 0; static int s_s7781_ep = 0; static double s_s7781_tc = 0;
+static uint64_t s_s7781_closes = 0, s_s7781_plants = 0;
+static uint32_t s_s7781_llo = 0xFFFFFFFFu, s_s7781_lhi = 0, s_s7781_clo = 0, s_s7781_chi = 0, s_s7781_cext = 0; static int s_s7781_eplines = 0, s_s7781_lines = 0;
+static void s7781_escape(const volatile uint8_t* rd, uint32_t pc, uint32_t phys, uint32_t h, uint32_t ext, bool live) {
+    if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only */
+    static const bool plant = [] { const char* e = std::getenv("ROGUESQ_S7781_PLANT"); return e && *e == '1'; }();
+    std::lock_guard<std::mutex> lk(s_s7781_mu);
+    const double t = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    const uint32_t cur = live ? h : 0u;
+    if (cur != s_s7781_last) {
+        if (s_s7781_last) { s_s7781_lo = s_s7781_last; s_s7781_hi = s_s7781_last + s_s7781_lastext; s_s7781_tc = t; ++s_s7781_closes;
+            s_s7781_clo = s_s7781_llo; s_s7781_chi = s_s7781_lhi; s_s7781_cext = s_s7781_lastext; s_s7781_eplines = 0;
+            std::fprintf(stderr, "[s7781] close %06X-%06X ep=%d live_used=%06X-%06X\n", s_s7781_lo, s_s7781_hi, s_s7781_ep, s_s7781_clo, s_s7781_chi); }
+        if (cur) { ++s_s7781_ep; s_s7781_lo = s_s7781_hi = 0; s_s7781_llo = 0xFFFFFFFFu; s_s7781_lhi = 0;  /* a new epoch ends the previous closed window */
+            const uint32_t nsl = s7779_b(rd, 0x128EADu);
+            std::fprintf(stderr, "[s7781] open ep=%d h=%06X ext=%X wh=%u,%u depth=%u bound=%08X desc=%08X %08X %08X %08X %08X %08X %08X nsl=%u slots=%08X/%u %08X/%u %08X/%u %08X/%u\n",
+                         s_s7781_ep, cur, ext, s7779_w(rd, 0x11A838u), s7779_w(rd, 0x11A83Cu), s7779_w(rd, 0x11A848u) >> 16, s7779_w(rd, 0x1163E4u),
+                         s7779_w(rd, 0x10FEFCu), s7779_w(rd, 0x10FF00u), s7779_w(rd, 0x10FF04u), s7779_w(rd, 0x10FF08u), s7779_w(rd, 0x10FF0Cu), s7779_w(rd, 0x10FF10u), s7779_w(rd, 0x10FF14u), nsl,
+                         s7779_w(rd, 0x128E98u), s7779_b(rd, 0x128EAAu), s7779_w(rd, 0x128E9Cu), s7779_b(rd, 0x128EABu), s7779_w(rd, 0x128EA0u), s7779_b(rd, 0x128EACu),
+                         s7779_w(rd, 0x128EA4u), s7779_b(rd, 0x128EADu - 0u + 0u) & 0u); }
+        s_s7781_last = cur; s_s7781_lastext = ext;
+    }
+    auto rec = [&](uint32_t k, uint32_t ph) {
+        if (live && ph >= h && ph < h + ext) { S7781Pc& e = s_s7781_pc[k]; ++e.live; if (ph < s_s7781_llo) s_s7781_llo = ph; if (ph + 4 > s_s7781_lhi) s_s7781_lhi = ph + 4; return; }
+        if (!s_s7781_hi || ph < s_s7781_lo || ph >= s_s7781_hi) return;
+        const uint32_t nsl = s7779_b(rd, 0x128EADu); uint32_t st = 0;
+        for (uint32_t i = 0; i < nsl && i < 4; ++i) if ((s7779_w(rd, 0x128E98u + 4u * i) & 0x1FFFFFFFu) == s_s7781_lo) st = s7779_b(rd, 0x128EAAu + i);
+        S7781Pc& e = s_s7781_pc[k]; ++e.closed; if (st) ++e.closed_busy; e.ep = s_s7781_ep;
+        const double dt = (t - s_s7781_tc) * 1000.0; if (dt < e.dt_min) e.dt_min = dt;
+        if (s_s7781_eplines++ < 40 && s_s7781_lines++ < 600)
+            std::fprintf(stderr, "[s7781] cst ep=%d pc=%08X phys=%06X dt_ms=%.2f st=%u ext_now=%X ext_close=%X in_used=%d\n", s_s7781_ep, k, ph, dt, st, ext, s_s7781_cext,
+                         (ph >= s_s7781_clo && ph < s_s7781_chi) ? 1 : 0);
+    };
+    if (plant && s_s7781_hi && !s_s7781_plants) { ++s_s7781_plants; std::fprintf(stderr, "[s7781] plant fire %06X\n", s_s7781_lo + 0x100u); rec(0xDEAD7781u, s_s7781_lo + 0x100u); }
+    rec(pc, phys);
+}
+static void s7781_dump() {
+    if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only */
+    std::lock_guard<std::mutex> lk(s_s7781_mu);
+    std::fprintf(stderr, "[s7781] sum closes=%llu plants=%llu pcs=%zu\n", (unsigned long long)s_s7781_closes, (unsigned long long)s_s7781_plants, s_s7781_pc.size());
+    int n = 0; for (auto& kv : s_s7781_pc) if (kv.second.closed || kv.second.live) if (n++ < 200)
+        std::fprintf(stderr, "[s7781] pc=%08X live=%llu closed=%llu closed_busy=%llu dt_min_ms=%.1f ep=%d\n", kv.first, (unsigned long long)kv.second.live,
+                     (unsigned long long)kv.second.closed, (unsigned long long)kv.second.closed_busy, kv.second.closed ? kv.second.dt_min : -1.0, kv.second.ep);
+}
 static void rs64_s7779_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
     if (!s_s7779_on) return;  /* ROGUESQ_S7779_ARENA diag only (s7780: census gate) */
     const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw; if (!rd) return;
@@ -2216,6 +2267,7 @@ static void rs64_s7779_note(uint32_t key, uint32_t phys, uint32_t len, const cha
     if (!api) {
         const uint64_t n = s_s7779_gst.fetch_add(1, std::memory_order_relaxed);
         (void)n;
+        s7781_escape(rd, key, phys, h, ext, live);
         if (live && phys >= h && phys < h + ext) {
             const uint64_t k = s_s7779_gst_live.fetch_add(1, std::memory_order_relaxed) + 1;
             static const uint64_t plant = [] { const char* e = std::getenv("ROGUESQ_S7779_PLANT"); return (e && *e) ? (uint64_t)std::atoll(e) : 0ull; }();
@@ -2246,7 +2298,7 @@ static void rs64_s7779_note(uint32_t key, uint32_t phys, uint32_t len, const cha
                      (unsigned long long)s_s7779_gst.load(), (unsigned long long)s_s7779_gst_live.load());
         for (auto& kv : by) std::fprintf(stderr, " %s:hit=%llu/%lluB,ctl=%llu/%lluB,oth=%llu", kv.first.c_str(), (unsigned long long)kv.second.hit, (unsigned long long)kv.second.hitb,
                                          (unsigned long long)kv.second.ctl, (unsigned long long)kv.second.ctlb, (unsigned long long)kv.second.other);
-        std::fprintf(stderr, "\n"); }
+        std::fprintf(stderr, "\n"); s7781_dump(); }
 }
 static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const char* api) {
     if (s_s7779_on) { rs64_s7779_note(key, phys, len, api); return; }

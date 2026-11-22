@@ -1,31 +1,31 @@
-# NEXT (s7781; s7780 repaired the s7779 census contract, unit below still unrun; s7779 closed dangling-global class item 31 7/7: the FRAME member is retail's frame-scoped FB scratch arena)
-HYPOTHESIS-ID: fb-arena-escape-class
+# NEXT (s7782; s7781 closed the flag-4 loader side H-clean and found DL-chunk stores in the arena's FB slot)
+HYPOTHESIS-ID: fb-shared-slot
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
 in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
 
-Class (idiom audit, item 3 of ITERATION.md): retail rs_malloc(size, flags&4) allocates from a scratch arena (head 0x8010FEFC) built by
-ensureHeapInitialized over a FREE framebuffer (acquireFreeBufferSlot 0x8001C07C, which does not mark the slot busy). clearFrameReadyFlag
-(0x80001880, from beginSceneRenderFrame) drops the arena WITHOUT freeing its blocks. Any pointer into an arena block that is used after
-its epoch ends points into a framebuffer that the RDP will draw over: a retail-latent use-after-free (or a port-only one if our epoch
-timing differs). s7779 measured epochs of 10-70 ms on owner route_long (10 per run) and 0 foreign host writes inside them.
+Datum (s7781, CURRENT-TRUTH item 32, 3 runs identical): the display-list emitter 0x8000CFD4-0x8000D6FF stores DL chunk-list
+nodes (chunk+0/+4, e.g. 0x670004, 0x680004, 0x69FF9C) into the FB slot that hosts the flag-4 arena. That is 34 stores inside a live
+arena, 3836 into the free slot from 0.08 ms after the drop, and 5216 while that slot is a busy FB (st 5). DL chunks come from
+0x8002221C (it steals the smallest texture-pool entry from the lists at 0x80128F00 [count 0x80128EF0], 0x100 B each, free chunk
+list 0x801163B0, limit 0x801163D4).
 
 Hypotheses:
-- H-clean: every flag-4 caller is done with its block before the epoch ends (inflate workspace, loader temp buffers).
-- H-escape: some flag-4 block pointer is stored in a resident/heap global and used after the epoch (guest stores/loads into the
-  closed extent by non-FB code).
-- H-port-timing: escapes only in the port, because a beginSceneRenderFrame happens mid-load (our thread scheduling), so the epoch
-  closes before the loader finishes.
+- H-design: retail deliberately hosts DL chunks in texture-pool entries whose memory is the FREE FB (same idea as the arena), and a
+  chunk is never live while its slot is rendered. Then busy-slot stores are DL writes to a slot the RDP is not drawing into at that
+  moment (state 5 = queued for display, not render target?).
+- H-overlap: texture-pool entries were carved under an earlier FB partition (boot 640x480 at 5D4000) and now overlap the current
+  FB slots (hangar 512x340 at 656000/6AB000). Then the RDP (or our rt64_writeback, 15.8k writes into this span in s7779) can
+  overwrite live DL chunks. Retail-latent or port-only.
+- H-arena-collide: an arena allocation and a live DL chunk occupy the same bytes in one epoch (the 34 live-arena DL stores).
 
-Unit, ONE build, ONE run:
-1. Static: enumerate every rs_malloc call site in the retail ELF whose a1 has bit 4 set (constant a1 at the jal delay/before it;
-   mips64-elf-objdump of rogue_squadron64/build/roguesquadron.elf, the same live-reg walk as tools/s7335_fb_bound_census.py). Classify
-   each caller: where the result goes (stack/local, resident global, heap struct), and whether it frees it before returning.
-2. Runtime: extend the s7779 path (src/main/main.cpp rs64_s7779_note). On each live->0 transition, remember the closed extent. Count
-   GUEST stores into it until the next epoch per pc (s6843 sees only stores). Optionally use the s7777 load watch (ROGUESQ_STORE_DIAG) on
-   the extent for loads. Split the pcs into FB writers (CPU framebuffer draws, if any) and everything else. Any loader/inflate pc
-   storing into a closed extent = H-escape. Then check whether a beginSceneRenderFrame fell inside that load: if it did and retail
-   would not (H-port-timing), the epoch-close order is the question.
-   Positive control: a planted store (ROGUESQ_S7780_PLANT, host-side call of the guest-store note with a fake pc into the last closed
-   extent) must be counted; the in-epoch guest store count (1780/run in s7779) is the live control.
-Run: `zsh tools/s7774_slot_run.zsh s7780a ROGUESQ_S7779_ARENA=1 ROGUESQ_S7779_PLANT=300 <new flags>` (owner route_long, 300 s).
-Score with tools/s7779_arena_score.py extended with the escape table (rc 0 H-clean, 1 H-escape, 3 control fail).
+Unit, ONE build, ONE run (owner route_long, `zsh tools/s7774_slot_run.zsh s7782a ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1 <new>`):
+1. At each [s7781] open/close, walk the texture-pool lists (0x80128F00 + 4i, i < *0x80128EF0 halfword) and the DL free-chunk
+   list 0x801163B0. Print each entry's address/data pointer that falls inside [slot0, bound 0x801163E4), with the FB slot table.
+2. Per DL-emitter store into a slot: slot state + whether the RDP's current colour image (setColorImage, dpc_bridge) is that slot
+   at that moment. That column, not st, decides whether a DL chunk was live in the render target.
+3. Per live-arena DL store: was that address also handed out by the arena this epoch (log the arena's block list: walk the
+   free-list descriptor at 0x8010FEFC)?
+Outcomes: chunks inside the slot only while it is not the colour image = H-design (close as retail). A DL chunk inside the current
+colour image = H-overlap (then repeat it in the oracle: mupen retail at boot, phys 0x62B800-0x695C00 at t~5-6 s, where ep2 already
+shows busy-slot stores by 0x80014488). Arena block == DL chunk bytes = H-arena-collide.
+Positive control: the s7781 plant (DEAD7781) plus a planted chunk address (fake list entry printed with the walk).

@@ -207681,3 +207681,46 @@ start) reported it as new: splitting `s7779_b` onto two lines made its `rd[...]`
 units have the same cause). Fixed by putting `s7779_b` back on one line (its s7648 DIAG_FN row still classifies it). s7600 open=0 CLOSED;
 the 5 earlier gates still rc=0. So the first sweep's "no new RED" line was missing because it compares to a different baseline, not
 because the tree was clean.
+
+## Session 7781 (2026-11-21) — FB-arena escape class: flag-4 loaders CLEAN (0 stores into a closed extent, 3 runs, plant counted); new member: the display-list emitter writes DL chunks into the arena's FB slot (H-shared-slot, open)
+Pre-checks: crash_reports --since 2026-11-13 FOLDED=20 new=0; no new SOAK-RESULTS lines; CURRENT-TRUTH 53781 B (no maintenance).
+Unit = NEXT.md s7781 (fb-arena-escape-class: H-clean vs H-escape vs H-port-timing).
+Static (new tools/s7781_flag4_census.py, asm comments of RecompiledFuncs): 167 rs_malloc call sites, a1 resolved 163. flag 4 at 6:
+mallocWithFallbackStrategy 0x80005234 (no direct jal caller, no fn-pointer ref found), rs_zcalloc 0x80005298 (only caller zlib
+zcalloc 0x80029CDC = inflate workspace), loadAssetAndIterateSubchunks 0x80054F48, load_hmt_and_hob 0x80056580/0x800566F0/0x800567EC.
+Each loader tries the arena first with a plain-malloc fallback (bnel v0 -> second rs_malloc), keeps the block in a register or a stack
+local, and calls rs_free in the same function. load_asset_with_malloc_flags callers pass 0 / 0x10 (not flag 4). Unresolved 4: loadTxtFile,
+load_asset_with_malloc_flags' inner (caller flag), initCinematicSceneAssets (a1 = 0x10 by reading), paserJfifSOSMarker (data-driven).
+Also read: ensureHeapInitialized sizes the arena with computeFramebufferByteSize (it branches on depth 0x8011A848 < 0x18) and has a
+second path to the partition bound 0x801163E4. rs_free walks the heap descriptors and finds nothing once 0x8010FEFC is 0, so freeing a
+dropped arena block is a no-op.
+Runtime (src/main/main.cpp s7781_escape/s7781_dump inside the ROGUESQ_S7779_ARENA path, self-gated): the closed extent is kept
+until the next epoch opens. Guest stores are counted per pc (live / closed / closed_busy = slot state != 0, dt since the drop). There
+are first-40-per-epoch [s7781] cst lines and an [s7781] open line with the slot table + arena descriptor 0x8010FEFC..FF14.
+ROGUESQ_S7781_PLANT=1 sends a fake pc DEAD7781 store into the first closed extent. Score: new tools/s7781_escape_score.py
+(rc 0 clean / 1 H-escape / 3 ctl fail / 4 H-shared-slot).
+Runs: `zsh tools/s7774_slot_run.zsh s7781a|b|c ROGUESQ_S7779_ARENA=1 ROGUESQ_S7779_PLANT=300 ROGUESQ_S7781_PLANT=1` (owner route_long,
+300 s, all alive=1 crash=0 save-unchanged; b adds cst lines, c adds the open line). Counts identical in all 3: 7 closes, 45 pcs,
+plant counted, s7779 score H-clean (zmemcpy 646 hits OWNER).
+- Loader pcs (0x80085660/4, the only guest pcs storing in live arenas: 1746 stores): closed=0. H-escape REFUTED, H-port-timing has
+  nothing to explain.
+- Extent check (run c open lines): ext = w*h*2 matches the game's own layout. The slot table has 2 slots, the arena on the FREE one
+  (st 0) and the busy FB (st 5) directly above it (656000 + 55000 = 6AB000), with the partition bound at the busy slot's end.
+- NEW: the "heapFreeListDequeue" pcs 0x8000D5A8..D650 are a display-list emitter (function 0x8000CFD4 writes 0xB5000000 words
+  through *0x8011DC58; its 0x100 B chunks come from 0x8002221C = findAndUnlinkSmallestEntry over the texture-pool lists 0x80128F00;
+  free chunk list 0x801163B0). It wrote 34 stores inside live arenas and 3836 into the FREE slot from 0.08 ms after the drop. Those
+  are chunk-list nodes at 0x670004 and 0x680004 plus 0x69FF9C..E4, in the hangar epochs 3/7 that had no guest arena stores at all.
+  It also wrote 5216 while the slot was a busy FB. Other pcs (renderLitMeshFaceGroup 0x80014480-8C, buildOrientedFaceGeometry
+  0x800127xx-0x80012AE8, 0x800709xx) stored only while the slot was busy (closed_free 0), hundreds of ms to 36 s after the drop.
+Verdict: SELECTS H-clean for the flag-4 class (no loader block outlives its epoch: static rs_free in every loader, plus 0 closed
+stores by loader pcs over 3 runs with the plant counted). REFUTES H-escape. Opens H-shared-slot: DL-chunk memory (texture-pool
+entries) lives in the same FB slot as the arena and is written while that slot is free and while it is busy. Which reading holds
+(H-design / H-overlap / H-arena-collide) is NEXT.md fb-shared-slot. Single-source for the new member (runtime + code read; the
+oracle reaches boot only, and ep2 at t~5.8 s is a boot-phase candidate for the retail check).
+ORIGIN: no mitigation.
+Rules out: a use-after-epoch of any flag-4 loader/inflate block; an over-wide arena extent as the source of the closed stores.
+Logs: scratch/s7774/s7781a, s7781b, s7781c (gitignored).
+Verdict line: s7781 selects H-clean and refutes H-escape for the flag-4 loaders; next = fb-shared-slot (DL chunks in the arena's FB slot).
+Gates: the full s7651 sweep (--jobs 2) hit the 600 s background cap and was killed, so it did not finish. The census gates that cover
+new main.cpp diag code (s7338 mask, s7345 mul, s7530 fw, s7531 fx, s7648 mk8, s7600 gx) were run with --only: 6/6 GREEN, controls
+PASS, 0 new RED vs tools/gate_sweep_allowed_red.txt. Build links.

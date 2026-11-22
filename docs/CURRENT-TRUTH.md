@@ -9,7 +9,7 @@ s7315-s7369 classes in "(s7370 maintenance)"; the s7306 headline chronology in "
 
 ## Headline
 
-**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7779: dangling-global class item 31 closed 7/7; s7780: diag helpers must gate inside their own body, or the class censuses read them as default-on). Nothing is broken at the
+**Every engineering goal on the ladder is closed or awaiting the owner's look** (s7781: FB-arena loaders clean, new DL-chunk/FB shared-slot member item 32 open; s7779: dangling-global class item 31 closed 7/7; s7780: diag helpers must gate inside their own body, or the class censuses read them as default-on). Nothing is broken at the
 owner's recipe as far as any instrument can see; remaining items are owner judgements (list in Next steps).
 **Owner: docs/OWNER-REVIEW-QUEUE.md (s7762) is the one-sitting list** (20 items, command + sheets each); every path and setting
 name in it and in OWNER-OPT-INS is gated by `python3 tools/s7762_owner_doc_check.py --controls` (in the sweep; rc 0 s7762).
@@ -420,6 +420,18 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     watch ctl +8131 reads in the same window and 14.8M clean reads elsewhere. The next read of any kind is initNpcSlotList's
     re-init (t=77.9 cinematic table, t=83.8 mission table). Score: `python3 tools/s7776_tblwatch_score.py <log>` (--selftest
     3/3). Retail-shaped (pointer never cleared, never used): no guard needed. Single run.
+32. **FB-arena escape class (s7781): loaders CLEAN, new member H-shared-slot OPEN.** Static (`python3 tools/s7781_flag4_census.py`,
+    163/167 rs_malloc a1 resolved): flag-4 callers = loader temps loadAssetAndIterateSubchunks 0x80054F48, load_hmt_and_hob
+    0x80056580/66F0/67EC (arena first, plain fallback, rs_free in the same function), zlib zcalloc->rs_zcalloc, and
+    mallocWithFallbackStrategy (no direct caller). Runtime (`ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1` ->
+    `python3 tools/s7781_escape_score.py <log>`, 3 route_long runs, identical counts, plant counted): 0 loader-pc stores into a
+    closed extent (H-escape refuted). The arena extent is exact: the [s7781] open line shows the slot table, with the arena on the
+    FREE slot (st 0) and the busy FB (st 5) directly after it. NEW: the display-list emitter 0x8000CFD4-D6FF (misnamed
+    heapFreeListDequeue: writes F5 gfx words via *0x8011DC58, 0x100-byte DL chunks from 0x8002221C, which steals the smallest
+    texture-pool entry from 0x80128F00 lists) stores into the arena's FB slot: 34 stores inside LIVE arenas, 3836 into the FREE slot
+    from 0.08 ms after the drop (chunk nodes 0x670004/0x680004, 0x69FF9C..), 5216 while the slot is a busy FB. So DL-chunk memory
+    and the arena/FB share the slot. Open: H-design (the free FB doubles as DL-chunk store, retail) vs H-overlap (texture-pool
+    memory from an earlier FB partition overlaps the current one). Next: NEXT.md fb-shared-slot. Single-source (runtime + code read).
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member
