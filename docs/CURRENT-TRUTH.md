@@ -208,8 +208,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    L4 21:9 s7796 (155 stand-ins): flight refit 1,11,469,216 frac 0.006/0.007/0.010, 0 >0.05; letterboxed water cutscene (s7166 trigger
    TRIG_LB=1) 247 lb swaps unpainted max 0, 0 >0.05; same-run SKYFILL_BOT=tog control 20 hole swaps (max 20542 px). Sheets
    docs/owner_sheet_s7796_L4_219_{standins_fidelity,cutscene_standins}.png. s7166 fix holds post-G6c.
-   Next: L10 16:9 + STANDINS=1 (most stand-ins, s7749 192/280). Use `env RDIR=sNNNN CW=... zsh tools/s7131_arm.zsh` (tools/s7141_arm.zsh
-   hard-codes scratch/s7141). tools/s7141_post.zsh replays with JOBS=2. A cutscene past the 12 GB cap needs a TRIG_LB=1 arm (s7796).
+   L10 16:9 s7797 (280 stand-ins, the most): frac 0.006/0.008/0.013 (s7158 pre-G6c 0.007/0.011/0.013), 0 >0.05, centre/side 0.003/0.017,
+   control PASS, shift-2 329 >0.05; sheet docs/owner_sheet_s7797_L10_standins_fidelity.png. Post-G6c fidelity thread CLOSED (L1/L10/L12 16:9,
+   L1/L4 21:9). Next: fold the 13 queued s7797_standins_rehold_L* soaks (300 s dd4 STANDINS=1 on the post-s7790 binary, the levels s7692
+   did not re-hold). Each verdict line should read alive=1/1 crash_arms=0 stall_arms=0. Then take the next item-3c ladder rung.
 
 ## Evidence index
 

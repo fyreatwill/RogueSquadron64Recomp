@@ -1,22 +1,23 @@
-# NEXT (s7797)
-HYPOTHESIS-ID: g3-frame-diff-unsheeted
+# NEXT (s7798)
+HYPOTHESIS-ID: g6c-standins-dd2-fidelity
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
-new SOAK-RESULTS lines (any of these outranks the rest).
+new SOAK-RESULTS lines. s7797 queued 13 stand-in re-holds (scratch/agent/soak_queue/s7797_standins_rehold_L{0,2,3,6,7,8,9,11,13,14,16,17,18}.sh,
+300 s dd4 STANDINS=1, post-s7790 binary). Fold every verdict that has landed (pass = alive=1/1 crash_arms=0 stall_arms=0, standins_on_line>=1,
+spawns>0 on levels with stand-ins). Any crash/stall outranks the unit below: backtrace it and root-cause it (G6c defect).
 
-Unit (CURRENT-TRUTH item 13): post-G6c fidelity on L10 at 16:9 (owner recipe FPS60 dd4) + STANDINS=1. L10 has the most stand-ins
-added (s7749: 192/280 lifetime), so it is the strongest remaining test of H-standin. Done so far == angrylion: L1/L12 16:9, L1/L4 21:9 (s7793-s7796).
-Screen unlocked (`/usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes'` must fail), one game:
-  env RDIR=s7797 zsh tools/s7131_arm.zsh 10 L10 "ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
-  (do NOT use tools/s7141_arm.zsh: it hard-codes scratch/s7141)
-  zsh tools/s7141_post.zsh scratch/s7797 L10 0,10,370,217 46,322      (16:9 defaults; check how s7158 L10 / s7794 L12 called it first:
-                                                                        grep -n 's7141_post\|s7160_fit_post' PORTING-STATE.md | tail)
-  zsh tools/s7160_fit_post.zsh scratch/s7797 L10 <refit rect> docs/owner_sheet_s7797_L10_standins_fidelity.png
-Liveness: run.log under scratch/agent/m6/g1_lvl10s7131L10/: `[standins] N objects`, 0 CRASH lines.
-Baseline pre-G6c s7158 L10 16:9: 745 swaps, meand 4.66/5.12/5.48, frac 0.007/0.011/0.013, 0 >0.05, centre/side 0.003/0.017.
-Hypotheses: H-equal (at the s7158 floor, 0 >0.05), H-standin (outlier regions at stand-in positions: check worst swaps by eye on the
-sheet; stand-ins exist only in our build, angrylion replays the same RDP stream so stand-ins are IN both -> a gap would mean an RT64
-render difference on stand-in geometry), H-regress (all bands up: bisect with ROGUESQ_STANDINS=0 in a second arm).
-Same-run controls: CONTROL painted PASS line and shift-2 >0.05 count (must fire).
-Delete .cap/.raw/replays after scoring unless outliers need the stream.
-If H-equal: the post-G6c fidelity thread closes on four levels; take the next ladder item from CURRENT-TRUTH (item 3c) — e.g. a stand-in
-coverage check on a level not yet run with STANDINS=1 holds (s7692 covered L1/L4/L5/L10/L12/L15).
+Unit: post-G6c fidelity at the owner's OTHER draw distance, dd2 (G5 recipe "dd4 (or 2)"). Every post-G6c fidelity arm so far (s7793-s7797) ran at dd4.
+Stand-ins fire at dd>1, but at dd2 the far window is smaller, so stand-ins sit nearer the real-object spawn ring, where handoff matters (s7672/s7690).
+Level L4 16:9 (155 stand-ins, city towers, the s7628 visual proof level). Screen unlocked, one game:
+  check how s7131_arm.zsh sets dd (grep -n 'DRAW_DISTANCE' tools/s7131_arm.zsh); pass ROGUESQ_DRAW_DISTANCE=2 in the env string if it is overridable,
+  else add DD=${DD:-4} to the script (a tool change, keep the default 4).
+  env RDIR=s7798 zsh tools/s7131_arm.zsh 4 L4d2 "ROGUESQ_DRAW_DISTANCE=2 ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"
+  env JOBS=2 zsh tools/s7141_post.zsh scratch/s7798 L4d2 0,9,369,216 46,322
+  python3 tools/s7157_fsum.py scratch/s7798/L4d2.frames.csv scratch/s7798/L4d2_sh2.frames.csv
+  zsh tools/s7160_fit_post.zsh scratch/s7798 L4d2 0,10,370,217 docs/owner_sheet_s7798_L4_dd2_standins_fidelity.png
+Confirm `[g1c] ... dd=2` / `[standins] on mode=on dd=2.00` in run.log, else the arm is void.
+Baseline: s7157/s7158-era L4 16:9 dd4 (grep 'L4 ' near s7157 in PORTING-STATE); expect frac med <=0.010, 0 >0.05.
+Hypotheses: H-equal (0 >0.05, at floor), H-handoff (outliers at stand-in<->real swap frames: a stand-in drawn where angrylion... note angrylion
+replays our stream, so a handoff gap is in BOTH and the diff can't see it: a handoff defect would show only on the sheet / spawns log, not as
+a frac rise), H-dd2 (dd2-specific terrain window difference raises far bands).
+Controls: CONTROL painted PASS and shift-2 >0.05 count must fire. Delete .cap/.raw/L4d2r/chunk* after scoring (the s7797 rm glob aborted on zsh nomatch: delete by name).
+If H-equal: next ladder rung (item 3c) after folding the re-holds.

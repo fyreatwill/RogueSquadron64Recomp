@@ -208204,3 +208204,30 @@ Disk: caps/raws/replays deleted after scoring (~30 GB); csvs + gz logs kept in s
 Post-G6c "STANDINS=1 == angrylion at the owner recipe" now: L1/L12 16:9, L1/L4 21:9 (incl. the s7166 cutscene).
 Next: L10 16:9 + STANDINS=1 (most stand-ins added, s7749 192/280), the last untested stand-in-heavy level.
 Rules out: a post-G6c regression of the s7166 SKYFILL_BOT fix; stand-in models diverging RT64 from angrylion on L4 at 21:9.
+
+## Session 7797 (2026-11-22) — G3 post-G6c fidelity L10 16:9 + STANDINS=1 (280 stand-ins, the most of any level) == angrylion (frac 0.006/0.008/0.013, 0 >0.05, at or below pre-G6c s7158; control PASS, shift-2 329 >0.05); post-G6c fidelity thread CLOSED on four levels; 13 post-s7790 stand-in re-holds queued
+HYPOTHESIS-ID: g3-frame-diff-unsheeted
+Work unit from NEXT.md (CURRENT-TRUTH item 13). crash_reports --since 2026-11-13: new=0; no new SOAK-RESULTS lines; no owner answers.
+Host: screen unlocked (CGSSessionScreenIsLocked absent), REAPER/Chrome busy (load ~4.7), one game, owner save untouched (forced-level route, NO_SAVE_WRITE).
+Run: `env RDIR=s7797 zsh tools/s7131_arm.zsh 10 L10 "ROGUESQ_STANDINS=1 ROGUESQ_G5B_FRAME_EVERY=1 ROGUESQ_G5B_FRAME_FROM=7500 ROGUESQ_G5B_FRAME_MAX_MB=12000"`
+(owner recipe FPS60 dd4 16:9). run.log: `[standins] on mode=on dd=4.00`, `[standins] 280 objects, 81 KB (items 302, no-name 22, build-fail 0) level 10`,
+0 CRASH/SIGSEGV/SIGBUS/abort lines; capture 10847 frames, 0 fails.
+Replay `env JOBS=2 zsh tools/s7141_post.zsh scratch/s7797 L10 0,9,369,216 46,322`: 746 RAM-owning swaps, 745 replayed, lag 5 ms.
+Positive control (same scorer, same run): identity 0 regions, painted 20x20 -> one 400 px region, PASS. Shift-2 control: 329/745 >0.05 (fires).
+| arm | rect | mean|d| med/p90/max | frac>40 med/p90/max | >0.05 | centre/side frac med |
+|---|---|---|---|---|---|---|
+| s7158 L10 (pre-G6c) | 0,9,369,216 | 4.66/5.12/5.48 | 0.007/0.011/0.013 | 0 | 0.003/0.017 |
+| s7797 L10 STANDINS=1 | 0,9,369,216 | 4.27/4.80/5.40 | 0.006/0.008/0.013 | 0 | 0.003/0.017 |
+| s7797 L10 STANDINS=1 | 0,10,370,217 (s7160 refit) | 3.55/3.93/4.11 | 0.008/0.009/0.010 | 0 | 0.005/0.019 |
+Bands (refit) 4.35 4.00 2.75 1.78 1.97 2.28 3.36 7.79: the far rows (extended dd4 cells, where stand-ins sit) score lowest. 15 duplicate pframes.
+Worst swaps 7697/7698 (frac 0.010, frac_c 0.006) and 8193: sheet docs/owner_sheet_s7797_L10_standins_fidelity.png shows a canyon
+walker/structure on the left of the worst frame drawn identically in RT64 and angrylion; median and p20 rows identical by eye.
+Verdict: H-equal on L10. H-standin refuted (L10 has the most stand-ins, 280, and no diff region ties to them; angrylion replays the same RDP
+stream, so stand-ins are in both and RT64 draws them the same). H-regress refuted (every statistic at or below s7158 at the same rect).
+Two lines: per-frame scores vs s7158 + same-run controls, and the visual sheet.
+Post-G6c "== angrylion at the owner recipe with stand-ins on" now covers L1/L12/L10 at 16:9 and L1/L4 at 21:9 (s7793-s7797): thread CLOSED.
+Disk: L10.cap (12.6 GB), L10.raw (2.7 GB), L10r and replay chunks deleted after scoring; csvs + gz logs kept in scratch/s7797.
+Also queued (G6c proof on the current binary): scratch/agent/soak_queue/s7797_standins_rehold_L{0,2,3,6,7,8,9,11,13,14,16,17,18}.sh, the s7691
+recipe (300 s, dd4 owner-quiet, STANDINS=1) for the 13 levels s7692 did not re-hold after the s7672-s7690 handover/parity fixes and s7790 prune.
+The s7630 19-level holds predate those fixes. SOAK_NEEDS_IDLE=300 each; the loop runs 2 per gap.
+Rules out: a post-G6c renderer/stream regression on L10 flight; stand-in models rendering differently in RT64 vs angrylion on the most stand-in-dense level.
