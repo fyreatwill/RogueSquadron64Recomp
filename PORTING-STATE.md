@@ -209000,3 +209000,40 @@ HYPOTHESIS-ID: g3-det-menu-pair
   the main term). Rules out: a SELECT GAME render defect on today's build.
 - Gate sweep after the changes: 244 gates, 242 GREEN, 2 REPORT (s7031/s7210, known), 0 RED.
 - Next: the rest of the route (SELECT LEVEL -> hangar) with the RDP signature + fitted pixel geometry, VI-clocked port.
+
+## Session 7821 (2026-11-22) — det menu pair through SELECT GAME (panel loaded) and the hangar: no port render defect; SELECT GAME geometry exact 120/120; hangar = same elements and animation curves, but the emulated-retail hangar renders ~16 fps vs port 30 so whole frames never pair
+
+HYPOTHESIS-ID: g3-det-menu-pair
+- Start checks: crash_reports new=0; no new SOAK-RESULTS lines since s7809; OWNER-REVIEW-QUEUE unchanged; screen unlocked.
+- Hypotheses (NEXT): H-match (texrect layout exact, residual = PRIM/animation phase) / H-port (a draw in one arm only on the same
+  screen) / H-route (presses diverge, arms on different screens).
+- Route fact: with lvl1.eep the route is title -> SELECT GAME -> (texrect-only fade) -> hangar AVAILABLE CRAFT (512 wide,
+  "AMBUSH AT MOS EISLEY / PRESS C FOR LEVEL DESCRIPTION"), i.e. no separate SELECT LEVEL screen on this save.
+- New tool tools/s7821_rdp_screen_segments.py: splits both RDP streams into screens (texrect-geometry jaccard + VI width / phase
+  ordinal change), pairs each retail screen with its best port screen and scores full / geometry / geometry-without-PRIM with a
+  worst-pair control; `--elements RW:PW --ctl-phase N` = element-level test for screens whose arms render at different rates.
+  Reads .zst via rs64_zopen.zbytes.
+- Run a (scratch/s7821, NEXT command): RS64_RDP_BIN_WIDTH=1024 filtered the retail hangar out (boring thing: the filter, not a
+  route failure). Run b (no width filter, presses 19.5/25.5/31.5): retail SELECT GAME drew 118->193 texrects and 0 tris; every
+  retail frame there is an exact SUBSET of the port SELECT GAME frame (port +44 texrects at y 320-415 + ~400 emblem tris = the
+  save panel). s7820's retail stream shows the panel appears ~180 frames after the transition: retail's exit press (6 s after
+  entry) came before its slower panel load -> H-route (press timing), not H-port. Fade segment after SELECT GAME: geometry 97/97
+  exact, noprim 97/97 (ctl 0/97, median 409).
+- Run c (scratch/s7821/c, PP=19.5:start,31.5:start, 12 s SELECT GAME dwell, no hangar press, RSECS 80 / PSECS 72; retail/port
+  .bin.zst kept): SELECT GAME with panel geometry exact 120/120, noprim 89/120 (max 8), full 14/120 median 13 (emblem PRIM
+  phase); control vs port hangar 0/120 median 340. -> H-match for SELECT GAME incl. the panel.
+- Hangar: whole-frame pairing fails in every window (geom exact 14-32/120 vs ALL 1113 port hangar frames, median 50-100) because
+  the screen is continuously animated (title bob, glyph-strip "breathing" 55.5->59.5 px wide, hologram pulse, light PRIM) and
+  the arms sample it at different rates. Two lines on the rate: bob period 44.7 retail frames vs 81.6 port frames (both ~2.8 s,
+  so the animation is time-based); retail VI buffer flips 80-85 per 5 s (polls ~57/s) = ~16 fps; port ~30 fps. "Retail" here is
+  mupen64plus emulated timing (single-source for real hardware). Breathing width sequences are the same curve in both arms, port
+  stepping half as far per frame.
+- Element-level test (`--elements 512:5 --ctl-phase 4`): retail texrect instances whose geometry occurs anywhere in the port
+  hangar: all 0.708, non-breathing 0.944 (port-in-retail 0.651 / 0.945); controls: vs port SELECT GAME 0.000 / 0.000, +0.25 px
+  plant 0.110 / 0.000. Every miss is a scale-animated piece (56-59x18 glyph strips in blocks of 50, 62-65x20 strips, 10-12 px
+  scaled bits). An L-inf nearness test was NOT discriminating (a +1 px plant also lands within 0.25 px of the dense port set).
+- Verdict: refutes H-port for SELECT GAME (panel) and the hangar on today's build; H-route explained run b's missing panel;
+  H-match with an animation-sampling residual on the hangar. Not done: a pixel pass (rdplog renders nothing; s7820 showed RDP is
+  the decisive line for menus).
+- Side finding (single-source, emulator timing): the port renders the hangar ~2x the emulated-retail frame rate. Benign: G1e
+  wants higher rates and the animation is time-based; not a defect.
