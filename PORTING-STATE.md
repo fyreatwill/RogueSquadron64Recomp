@@ -207828,3 +207828,43 @@ hook: pools=0, ctl 0/0) and the verdict came from the existing s7783 instrument,
 identical to HEAD; s7784a/b logs retained in scratch/s7774/). Re-run `--only 's7364|s7374|s7375|s7384|s7599|s7784'`: 6/6 GREEN.
 Verdict: selects H-design for item 32 and H-clean for s7781's escape class; refutes H-overlap/H-shared-slot (instrument bug). Next:
 NEXT.md s5660-hook-fallout (which older swl/swr-address results flip).
+
+## Session 7785 (2026-11-21) — s5660-hook fallout audited: only s5661 flips (already superseded); class-wide store-hook register gate lands (188,965 hooks, 0 bad); bzero's swl $zero head (0x8002A098) was the one store the watch never saw, now hooked
+HYPOTHESIS-ID: s5660-hook-fallout (CLOSED). Offline, plus one 45 s boot run for the fix.
+- **Fallout tool** tools/s7785_ustore_fallout.py (--controls: planted unaligned-pc row counts 1, aligned 0: PASS). Retained logs
+  with store-watch rows: 11 (scratch/s7774/s7779a..s7784b, scratch/s7332/r2_lines.txt, scratch/agent/loop.log); all other runs'
+  logs are gone. Rows with an unaligned pc: s7781a/b/c, s7783a/b, s7784a (pre-fix arms) 587-1295 each over 44 pcs (the DL
+  emitter 8000D5A8.. / 80014480..); s7784b (fixed hook) 0 of 16 = control. Those sessions were already re-scored by s7784.
+- **Ledger classification** (every PORTING-STATE entry naming STORE_WATCH/swatch/VSRC_STORES/vstore/s7779/s7781):
+  s5654/s5655/s5656 aligned-only, pre-s5660 (their "only 28 rail stores" lower bound was already refuted by s5660) - unaffected;
+  s5661 "unaligned stores are not the rail writer" FLIPPED to void (narrow=6 counted values) - already in CURRENT-TRUTH
+  superseded, and moot: the rail/voice thread was closed by s5665 (static read: decodeAndFillVoiceBlock sole writer), s5668
+  compander fix and the s5669 PCM + owner listen (G2 closed); s5690 (MEM_B byte watch), s6698/s6713/s7425/s7443 (cost/gating;
+  the hook's cost is unchanged by which register it reads) - unaffected; s6843 abort wipe "rt64_writeback only writer" - a real
+  unaligned fb writer would have been missed, but s6842's retail oracle (no CPU writer) and s6844's same-build A/B fix (texrect
+  lr.x wrap, 4 vs 0 wipe frames) close it independently - unaffected; s7133 (writer 0x8005B51C, aligned, code read + fix),
+  s7334 (coalesceFreeHeapBlocks 800024A4, aligned), s7476 (retail oracle + fix), s7539 (gbd events second line), s7331
+  (primary line is the s7330 block census; store watch was the second line) - unaffected. -> **H-none** for everything except
+  s5661 (H-missed, already superseded); no H-false-hit writer was ever named from an unaligned pc outside s7781/s7783.
+- **Class audit, new gate** tools/s7785_store_hook_reg_census.py (auto-discovered by tools/s7651_gate_sweep.py): for EVERY store
+  hook family in the generated tree (rs64_m5_writer_parity, probe_submit_gate_store, f5_store_shadow_post, m5_lowfield_store,
+  s5660_ustore, RS64_S5798_ST, RS64_S7488_UST) the reported ADD32(reg, off) must equal the (base, offset) of the store at the
+  same pc in the same function (first version keyed by file: 3430 false bads from overlay pc collisions - per-function keying
+  fixed it). Result: 188,964 hooks, bad=0; the s4984 voice-lock atomic stores (8008F0CC/8008F0EC, constant address) listed as
+  abs:<family>. Controls: good snippet ok=2, value-register mutant bad=1, offset mutant bad=1: PASS. Reverse coverage: 40,712
+  guest stores, 1 with no writer_parity/s5660 hook: **0x8002A098 swl $zero, 0($a0) in bzero_recomp** (the unaligned head of
+  every bzero to an unaligned destination). apply_s5660 only matched `do_swl(..., ctx->rN)` as the value; the generator prints
+  `0` for $zero, so STORE_WATCH was blind to bzero head bytes since s5660 (s7488's own watch did see it).
+- **Fix** tools/apply_s5660_unaligned_store_census.py: line-based, idempotent per SITE (it was per file: a file already carrying
+  any s5660 hook never got a new one), value may be `0`, the do_s* call may sit inside the s7488 brace line; repair regex and
+  tools/s7784_ustore_base_census.py accept `0` too. Copy-tree test: +1 site, second run +0, only funcs_7.c differs. Live tree
+  patched, rebuilt (cmake --build build -j 2). Gates: s7784 405/405 ok, s7785 unwatched=0 bad=0 (rc 0); sweep --only
+  's5660|s7784|s7785|s7364|s7374|s7375|s7384|s7599|s7488' 7/7 GREEN.
+- **Run** scratch/s7785/boot.log (45 s boot, ROGUESQ_STORE_WATCH=0:800000, SIGKILL): 199,514 [swatch] rows over 242 swaps, 56
+  rows from 46 unaligned pcs with sane destinations (8001FB10 -> 15A5B4.., 80091ADC -> 14090C) = the fixed path live. 0x8002A098
+  itself did not fire in those 242 swaps (needs bzero with an unaligned dst and len>=12; line cap 200k reached at swap 242), so
+  its runtime hit is unproven - static gate only.
+ORIGIN: no mitigation; the defect was our diagnostic fixup's regex (value literal `0` not matched), observation only.
+Verdict: selects H-none for the s5660 fallout (only s5661 flips, already superseded and moot) and refutes a wider register-mixup
+class (0 bad of 188,964 store hooks); one coverage hole (bzero head) closed. Next: NEXT.md load-hook register census (same rule
+for RS64_S7484_LD / synth_read load hooks).

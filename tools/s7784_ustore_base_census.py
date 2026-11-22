@@ -11,7 +11,7 @@ Prints hooks=<n> ok=<n> bad=<n> orphan=<n> (hook not followed by a do_s* call). 
 import pathlib, re, sys
 
 HOOK = re.compile(r"\{ uint32_t s5660_a = U32\(ADD32\((ctx->r\d+), [^)]+\)\) & ~3u; rs64_s5660_ustore\((0x[0-9A-Fa-f]+)u[^\n]*PATCH: s5660 \*/\n([^\n]*)")
-CALL = re.compile(r"do_(?:swl|swr|sdl|sdr)\(rdram, [^,]+, (ctx->r\d+), (ctx->r\d+)\);")
+CALL = re.compile(r"do_(?:swl|swr|sdl|sdr)\(rdram, [^,]+, (ctx->r\d+), (ctx->r\d+|0)\);")
 
 
 def scan(text):

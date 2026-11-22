@@ -432,7 +432,10 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     (ROGUESQ_S7779_ARENA=1 ROGUESQ_S7781_PLANT=1, route_long, scratch/s7774/s7784b): DL stores in_slot=0 in all epochs, dl_in_cimg 0
     (plant_in=1), 640x340-intro stores 720218-7285C4; `tools/s7783_shared_slot_score.py` rc 0 H-design, `tools/s7781_escape_score.py`
     H-clean (only the plant). Retail oracle: the DL chunk pool (buildAndRegisterDefaultMaterial 0x80018034, 264-byte chunks) is
-    built at 0x80720000 every time (sizes 0x57768/0x18F18/0x72780). Fallout audit of older swl/swr-address results: NEXT.md.
+    built at 0x80720000 every time (sizes 0x57768/0x18F18/0x72780). Fallout CLOSED s7785 (tools/s7785_ustore_fallout.py +
+    ledger read): only s5661 flips (superseded, moot); every other store-watch conclusion had an aligned writer or a second line.
+    Class gate `python3 tools/s7785_store_hook_reg_census.py --controls`: all 7 store-hook families, 188,965 hooks, 0 bad, 0 unwatched
+    (fixed: bzero's `swl $zero` head 0x8002A098 was never hooked - apply_s5660 did not match a literal-0 value).
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member

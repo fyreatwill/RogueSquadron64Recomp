@@ -16,7 +16,7 @@ W = {"swl": "L", "swr": "R", "sdl": "l", "sdr": "r"}
 # (s5654/s6843 store watch, s7779/s7781/s7783 FB-arena) saw value+offset, not the destination. Rewrites each existing hook so
 # its register equals the base register of the do_s* call on the next line. Idempotent (a repaired hook is left alone).
 rep = re.compile(r"(\{ uint32_t s5660_a = U32\(ADD32\()(ctx->r\d+)(, [^)]+\)\) & ~3u; rs64_s5660_ustore\([^\n]*PATCH: s5660 \*/\n)"
-                 r"([^\n]*do_(?:swl|swr|sdl|sdr)\(rdram, [^,]+, (ctx->r\d+), ctx->r\d+\);)")
+                 r"([^\n]*do_(?:swl|swr|sdl|sdr)\(rdram, [^,]+, (ctx->r\d+), (?:ctx->r\d+|0)\);)")
 nrep = 0
 for p in sorted(D.glob("funcs_*.c")):
     s = p.read_text()
@@ -32,21 +32,31 @@ for p in sorted(D.glob("funcs_*.c")):
     if k[0]:
         p.write_text(s2); nrep += k[0]
 print("s5660 base-register repair: %d hooks rewritten" % nrep)
+# s7785: line-based and idempotent per SITE (was per file: a file already carrying "PATCH: s5660" never got new sites), and the
+# stored value may be the literal 0 (swl $zero: the generator prints "0", not ctx->r0; 0x8002A098 was the one unhooked site, so
+# the store watch was blind to it). The do_s* call may sit inside a later s7488 "{ RS64_S7488_UST(...); do_swl(...); }" line.
+call = re.compile(r"do_(swl|swr|sdl|sdr)\(rdram, ([^,]+), (ctx->r\d+), (?:ctx->r\d+|0)\);")
 n = 0
 for p in sorted(D.glob("funcs_*.c")):
     s = p.read_text()
-    if "PATCH: s5660" in s or "do_s" not in s:
+    if "do_s" not in s:
         continue
-    out, last, cnt = [], 0, 0
-    for m in pat.finditer(s):
-        pcs = pc_re.findall(s[max(0, m.start() - 160):m.start()])
-        pc = pcs[-1] if pcs else "0x0"
-        hook = ("%s{ uint32_t s5660_a = U32(ADD32(%s, %s)) & ~3u; rs64_s5660_ustore(%su, s5660_a, 0u, '%s'); } /* PATCH: s5660 */\n"
-                % (m.group(1), m.group(4), m.group(3), pc, W[m.group(2)]))  # s7784: group(4) = base reg (was group(5) = stored value)
-        out.append(s[last:m.start()]); out.append(hook); out.append(m.group(0)); last = m.end(); cnt += 1
+    lines = s.split("\n"); out = []; cnt = 0; pc = "0x0"
+    for i, ln in enumerate(lines):
+        m = pc_re.search(ln)
+        if m and ln.lstrip().startswith("//"):
+            pc = m.group(1)
+        c = call.search(ln)
+        if c and not (out and "PATCH: s5660" in out[-1]):
+            ind = ln[:len(ln) - len(ln.lstrip())]
+            out.append("%s{ uint32_t s5660_a = U32(ADD32(%s, %s)) & ~3u; rs64_s5660_ustore(%su, s5660_a, 0u, '%s'); } /* PATCH: s5660 */"
+                       % (ind, c.group(3), c.group(2), pc, W[c.group(1)]))  # s7784: base reg (was the stored value)
+            cnt += 1
+        out.append(ln)
     if not cnt:
         continue
-    out.append(s[last:])
-    s = "".join(out).replace('#include "funcs.h"\n', '#include "funcs.h"\nextern void rs64_s5660_ustore(uint32_t, uint32_t, uint32_t, char);\n', 1)
+    s = "\n".join(out)
+    if "extern void rs64_s5660_ustore(" not in s:
+        s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\nextern void rs64_s5660_ustore(uint32_t, uint32_t, uint32_t, char);\n', 1)
     p.write_text(s); n += cnt
 print("s5660 unaligned store census: %d sites" % n)
