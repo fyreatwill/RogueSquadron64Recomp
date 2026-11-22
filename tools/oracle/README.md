@@ -262,7 +262,7 @@ questions. For what the microcode is supposed to emit, read
 
 `--debug-write VADDR:VALUE[:WIDTH[:ARM_S]]` writes one guest word on the first VI at WIDTH (default 320) at or after
 ARM_S wall seconds. The port mirrors it with `ROGUESQ_DEBUG_WRITE=VADDR:VALUE:WIDTH:ARM_S` (fires on the VI width
-change), so both arms can be put into the same state, e.g. rngSeed `80003470:1:512:85` at the mission flight switch (s6750).
+change; s7820: append `:in` to fire on the first frame at WIDTH at or after ARM_S with no switch), so both arms can be put into the same state, e.g. rngSeed `80003470:1:512:85` at the mission flight switch (s6750).
 
 `--exec-trace PC[:MAX[:PEEK]]` prints one compact `[xtrace] n vi ra peek pc= v0= a3=` row per execution of PC from
 the `--debug-write` poke on (from boot without one), past `--hit-cap`; `--exec-trace-also PC` (repeatable, max 8) adds

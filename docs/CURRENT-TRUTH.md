@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7819 (2026-11-22).
+Compact operational handoff, as of Session 7820 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -153,6 +153,7 @@ Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, 
 - Oracle missions: tools/g3_eep_patch.py sets +0x31; use --save-dir, never swap a save over the user .eep.
 - Slow builds (TSan/ASan): `ROGUESQ_AUTOPILOT_CLOCK=frames ROGUESQ_AUTOPILOT_FPS=58` (FPS60) keys autopilot to fullsyncs,
   but front-end screens are VI-timed, so the route still diverges at TSan speed; gate with `<s>:w<width>` events (s7371).
+- Frame-exact presses: `ROGUESQ_AUTOPILOT_CLOCK=vi` keys autopilot to ultramodern's VI count (port twin of oracle `--clock vi`, s7820).
 - Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc (since s7456 the loop's line carries `arms= alive=a/k crash_arms= stall_arms= fatal=`; arms=0 = recipe printed no summary). Recipes that
   drive the window carry `# SOAK_NEEDS_IDLE=<secs>`; zsh recipes run under their shebang shell (s7287).
 - Knob tables: PROJECT-OVERVIEW "G1c draw-distance knob and recipe reference"; docs/DRAW-DISTANCE.md;
@@ -283,6 +284,16 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      s7815 ucode compare + s7817 deterministic A/B). Use `XARGS=--det-core CLOCK=vi` in tools/s7816_oracle_rsp_ab.sh; compare with
      tools/s7817_oracle_det.py. **s7818: `--det` is the DEFAULT** in s7816_oracle_rsp_ab.sh and g3f_retail_pan.sh (rsp_plugin.sh
      ODET; ORACLE_DET=0 = old); controls 82/82 vs d1 and g3f g1==g2. **s7819: g3_{menu,showroom,ai_gap}_pair.sh now --det too**: tools/g3_port_capture.sh SAVE_FROM runs from a private game dir OUTDIR/game (symlinked binary+ROM, own saves/; the save path is cwd-relative, main.cpp register_config_path) and never touches build/saves (sha identical before/after 4 runs; lvl1.eep run shows AAA -> AMBUSH AT MOS EISLEY, owner control ASS -> BEGGAR'S CANYON); two g3_menu_pair runs: retail 31/31 dumps raw-identical, same VIs, 4/4 sampled dumps distinct.
+     **s7820 det menu pair, title -> SELECT GAME: no port render defect (H-port refuted).** Menu geometry for g3_oracle_match.py:
+     `--w 512 --h 448 --bases 790000 --win 66,1024 --winx 86,1194 --dec shift` (the s6741 h336 crop read d~20 on matched content;
+     fitted d 3.8). Title/attract d 3.8-7.5 in all 4 pairs, port r1/r2 equal; painted-block control 2 -> 25 tiles>40. SELECT GAME
+     d 18-27 = the backdrop photo only (rand%7 at the press, s6780): retail det picks the same photo every run, port picks a
+     different one per run (wall clock, and with the new VI clock too: boot-to-title VI 757 vs 762); a title-onset seed poke makes
+     port r1 == r2 to 2 dp but != retail, because retail's title rand loop starts 196 VIs after its width switch (slower image
+     loads) and its idx-init runs after the switch, while the port's runs before it (rand traces: 286 vs 479 title calls). RDP
+     stream (decisive): texrect layout exact 102/103 frames, geometry-without-PRIM exact 68/103, residual = spinning-emblem tri
+     PRIM/count phase (ctl median 586). New: `ROGUESQ_AUTOPILOT_CLOCK=vi` (port presses on VI count), g3_menu_pair `PCLOCK=vi
+     AP0= ORX=`, `ROGUESQ_DEBUG_WRITE=...:ARM_S:in` (fire inside a phase; default stays switch-only, legacy 1024:5 control unchanged).
      The off-screen word is NAMED (H-dead): an F5-emitted RDP tri edge (X,DxDy) on an edge spanning 0-0.75 scanlines (58/58 groups),
      RSP-written, 0 CPU loads/stores across its lifetime (VI-windowed watch, same-run control 99k CPU reads). New oracle
      `--hit-vi-window A:B`; oracle self-read trap fixed (fb-dump reads used to fire read watches, see tools/oracle/README.md).

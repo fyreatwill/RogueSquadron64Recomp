@@ -1358,6 +1358,7 @@ public:
                 static uint32_t s_last_width = 0xFFFFFFFF;
                 ultramodern::renderer::ViRegs* pvi = ultramodern::renderer::get_vi_regs();
                 const uint32_t w = pvi->VI_WIDTH_REG;
+                const bool s_dw_switch = (w != s_last_width);  // s7820: ROGUESQ_DEBUG_WRITE default = fire on a switch only
                 if (w != s_last_width) {
                     const double el = rs64_elapsed_seconds();
                     fprintf(stderr,
@@ -1378,24 +1379,29 @@ public:
                     if (w == 1024u && (pvi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x00790400u) {
                         rs64_m5_b40_route_title_transition();
                     }
-                    // s6750: ROGUESQ_DEBUG_WRITE=VADDR:VALUE:WIDTH:ARM_S writes one aligned guest word on the
-                    // first switch to WIDTH at or after ARM_S seconds; mirrors rs64_oracle --debug-write so
-                    // both arms can be put in the same state (e.g. rngSeed 0x80003470 at the mission intro).
-                    static const char* s_dw = std::getenv("ROGUESQ_DEBUG_WRITE");
-                    static bool s_dw_done = false;
-                    if (s_dw && !s_dw_done && app->core.RDRAM) {
-                        unsigned a = 0, v = 0, dw_w = 320; double arm = 0.0;
-                        if (sscanf(s_dw, "%x:%x:%u:%lf", &a, &v, &dw_w, &arm) >= 2 && w == dw_w && el >= arm &&
-                            a >= 0x80000000u && a + 4 <= rs64_ram_top && (a & 3) == 0) {
-                            *reinterpret_cast<uint32_t*>(app->core.RDRAM + (a - 0x80000000u)) = v;
-                            s_dw_done = true;
-                            if (const char* rt = std::getenv("ROGUESQ_RAND_TRACE")) {
-                                s_rand_trace_f = fopen(rt, "w");
-                                g_rs64_rand_trace = s_rand_trace_f != nullptr;
-                            }
-                            fprintf(stderr, "[debug-write] update_screen #%d t=%.1f width=%u addr=0x%08X value=0x%08X\n",
-                                    s_n, el, w, a, v);
+                }
+                // s6750: ROGUESQ_DEBUG_WRITE=VADDR:VALUE:WIDTH:ARM_S writes one aligned guest word on the
+                // first switch to WIDTH at or after ARM_S seconds; mirrors rs64_oracle --debug-write so both arms can be put
+                // in the same state (e.g. rngSeed 0x80003470 at the mission intro). s7820: a 5th field ":in"
+                // (VADDR:VALUE:WIDTH:ARM_S:in) fires on the first update_screen showing WIDTH at or after ARM_S even with no
+                // switch, so ARM_S can sit inside a phase (without it an ARM_S past the switch never fires).
+                static const char* s_dw = std::getenv("ROGUESQ_DEBUG_WRITE");
+                static bool s_dw_done = false;
+                if (s_dw && !s_dw_done && app->core.RDRAM) {
+                    const double el = rs64_elapsed_seconds();
+                    unsigned a = 0, v = 0, dw_w = 320; double arm = 0.0; char mode[4] = {0};
+                    const int nf = sscanf(s_dw, "%x:%x:%u:%lf:%3s", &a, &v, &dw_w, &arm, mode);
+                    const bool in_phase = nf >= 5 && !strcmp(mode, "in");
+                    if (nf >= 2 && (s_dw_switch || in_phase) && w == dw_w && el >= arm &&
+                        a >= 0x80000000u && a + 4 <= rs64_ram_top && (a & 3) == 0) {
+                        *reinterpret_cast<uint32_t*>(app->core.RDRAM + (a - 0x80000000u)) = v;
+                        s_dw_done = true;
+                        if (const char* rt = std::getenv("ROGUESQ_RAND_TRACE")) {
+                            s_rand_trace_f = fopen(rt, "w");
+                            g_rs64_rand_trace = s_rand_trace_f != nullptr;
                         }
+                        fprintf(stderr, "[debug-write] update_screen #%d t=%.1f width=%u addr=0x%08X value=0x%08X\n",
+                                s_n, el, w, a, v);
                     }
                 }
                 rs64_m5_route_fingerprint_snapshot(w, pvi->VI_ORIGIN_REG);

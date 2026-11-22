@@ -208953,3 +208953,50 @@ with a same-run control (NEXT.md).
   logs (no origin metadata parsed); raw equality covers it.
 - Verdict: selects H-cwd, refutes H-abs and H-assets (private dir boots and loads its own save, owner save sha unchanged).
   Next discriminator: det menu pair port-vs-retail residual against the r1-r2 port spread (H-noise vs H-port vs H-timing, NEXT.md).
+
+## Session 7820 (2026-11-22) — det menu pair title -> SELECT GAME: no port render defect; SELECT GAME residual = rand-picked backdrop photo (press-timing), RDP texrect layout exact 102/103; new VI-clock autopilot + in-phase debug-write
+
+HYPOTHESIS-ID: g3-det-menu-pair
+- Start checks: crash_reports new=0; no new SOAK-RESULTS lines since s7809; owner queue unchanged. s7819's menu_r1/r2 captures
+  were deleted before its commit (only run.log + oracle.log left), so the pair was re-run: scratch/s7820/menu_r{1,2}
+  (`env PP=21:start,27:right ND=30 RSECS=50 PSECS=40 zsh tools/g3_menu_pair.sh`), retail 31/31 raw-identical again (s7817_oracle_det).
+- Hypotheses (NEXT): H-noise (old residuals = oracle jitter) / H-port (stable per-screen residual = port defect) / H-timing
+  (residual tracks press timing). Discriminator: per-screen residual r1 and r2 vs the r1-r2 port spread.
+- Boring thing first: the NEXT/s6741 geometry (--h 336 --win 124,964) is wrong for the front end: menus are a 512x448
+  interlaced fb at 0x790000 (VI width 1024, origin +0x400 = odd field), picture in the window at x 86..1194, y 66..1024.
+  With the old crop matched content read d=20.6; fitted crop d=4.4 (best 3.82). Geometry now:
+  `--w 512 --h 448 --bases 790000 --win 66,1024 --winx 86,1194 --dec shift`.
+- Title/attract (retail vi 1275-1935): d 3.8-7.5 in all four pairs, r1 == r2 to 0.05. Positive control: a 64x64 white block
+  painted into the best port frame moves tiles>40 2 -> 25 (d 4.15 -> 7.20).
+- SELECT GAME (vi >= 1995): d 23-27 wall-clock, d 18 seeded. Sheets scratch/s7820/{sg_sheet,port_r1r2_sg,vi_sg,seed_sg}.png: the
+  foreground (title text, emblem panel, medals, TRAINEE/AAA, thumbnail, ERASE GAME) is the same; the backdrop PHOTO differs.
+  Retail det: the same photo in all 7 retail runs. Port: a different photo in r1 vs r2 (wall clock, fs 1000 vs 998 at the press).
+- Change 1: `ROGUESQ_AUTOPILOT_CLOCK=vi` (main.cpp autopilot, ultramodern `total_vis`/60; fire lines now print vi=). g3_menu_pair.sh
+  gains `PCLOCK=vi`, `AP0=<port lead-in>` and `ORX=<extra oracle args>`. VI pair (AP0=6:start,11:start,11.5:w1024 OFF=5.75, press
+  480 VIs after title onset in both arms): port photos still differ r1 vs r2 (boot-to-title VI 762 vs 757, so the rand state at
+  onset differs).
+- Seeded pair (oracle --debug-write 80003470:1:1024:0 + --exec-trace 0x80003430, port ROGUESQ_DEBUG_WRITE + RAND_TRACE): port
+  r1 == r2 per-frame scores to 2 dp (photo now deterministic) but != retail. Rand traces explain it: retail's title rand loop
+  (ra 800b4cc8) starts at vi 1231, 196 VIs after its width switch (image loads slower in retail), and its idx-init (0x800B48F8)
+  runs at vi 1076, after the switch. The port's init runs BEFORE its switch (us#740 vs switch #741) and its title loop starts at
+  onset: 286 retail vs 479/480 port title calls before the press. Real port rand sites match retail's (jal = ra-8); the extra
+  port rows (8008ee84, 800c6674, 800b3fa0/380c/4004, 8006c010...) are s6752/s6755/s6781 xtrace MARKERS, not rand calls.
+- Change 2: ROGUESQ_DEBUG_WRITE only fired on a width SWITCH, so an ARM_S inside a phase never fired (the 640:11.3 aligned arm
+  wrote nothing). Added a 5th field `:in` (first frame at WIDTH at/after ARM_S). Default unchanged because fireball_pair/death_pair
+  (512:55) and g3_showroom_pair (1024:5) rely on switch-only. Controls same session: 640:11.3 -> 0 fires; 640:11.3:in -> 1 fire at
+  t=11.3; legacy 1024:5 -> fires at the title switch t=12.7 as before. The in-phase aligned pair (port seed at 11.3 s) showed ~2500
+  port intro rand calls (0x800405A0 x1921, ...) between seed and init, so the two arms' boot paths would also need aligning. Not pursued.
+- Foreground pixel check (yellow-text mask IoU, P3->sRGB): port-vs-retail 0.50-0.55, port-vs-port 0.90, mismatch ctl 0.00. Not
+  discriminating: retail self-resample through 1108x954 costs 0.84-0.90 and a 1-row shift alone 0.66, so sub-pixel registration
+  explains it.
+- Decisive RDP-stream check (rdplog retail vs RS64_RDP_BIN_PORT, VI-clock pair, scratch/s7820/rdp): g3_rdp_frame_match exact
+  3/103, median 17 vs title-only port control exact 0, median 586. Decomposed: texrect geometry exact 102/103 (max 26),
+  geometry-without-PRIM exact 68/103. The residual is the spinning emblem's tri PRIM (retail-only ('tri','EBE1D7FE') x17 at the
+  median frame) and tri count, i.e. animation phase, the s6783 ELITE ROGUES class.
+- Verdict: refutes H-port for title -> SELECT GAME (texrect layout exact, title d 3.8 with planted control, foreground same by
+  eye); selects H-timing for the SELECT GAME pixel residual (backdrop photo = rand count at the press; port photo changes run to
+  run with wall/VI timing and becomes fixed when seeded; retail and port differ in rand-call count because retail loads slower);
+  H-noise partly (retail det removes oracle jitter, but the title d range 3.8-7.5 is close to s6779's 5.4-8.4, so jitter was not
+  the main term). Rules out: a SELECT GAME render defect on today's build.
+- Gate sweep after the changes: 244 gates, 242 GREEN, 2 REPORT (s7031/s7210, known), 0 RED.
+- Next: the rest of the route (SELECT LEVEL -> hangar) with the RDP signature + fitted pixel geometry, VI-clocked port.

@@ -91,6 +91,7 @@ extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" void do_break(uint32_t vram); // librecomp; s7575 control
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_dpc_get_cumulative_fullsyncs();
+extern uint64_t total_vis;  // s7820: ultramodern events.cpp VI count, ROGUESQ_AUTOPILOT_CLOCK=vi
 extern "C" uint32_t rs64_vi_committed_origin();
 extern "C" int rs64_g1d_pause_live(void);
 extern "C" uint32_t rs64_phase_ord();
@@ -13126,10 +13127,15 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         // s7371: ROGUESQ_AUTOPILOT_CLOCK=frames keys every event time (and the hold, and the w<width> rebase) to game
         // frames = cumulative RDP fullsyncs / ROGUESQ_AUTOPILOT_FPS (default 30) instead of wall time, so a slow build
         // (TSan, ~13 gfx tasks/s) walks the same route as full speed. Default (unset / "wall") = old wall clock.
+        // s7820: ROGUESQ_AUTOPILOT_CLOCK=vi keys every event to ultramodern's VI count (total_vis / 60), the port twin of
+        // the retail oracle's --clock vi, so a press lands on the same title VI run to run (the SELECT GAME backdrop is
+        // rand%7 with one rand per title VI, s6780: a 2-fullsync wall-clock jitter changed the photo between two runs).
         static bool     s_frames = false;
+        static bool     s_vi = false;
         static double   s_fps = 30.0;
         static double   s_base = 0.0;   // clock value at schedule start / last gate rebase (seconds in the chosen domain)
         auto ap_now = [&]() -> double {
+            if (s_vi) return (double)total_vis / 60.0;
             return s_frames ? (double)rs64_dpc_get_cumulative_fullsyncs() / s_fps : SDL_GetTicks() / 1000.0;
         };
         if (!s_init) {
@@ -13188,11 +13194,11 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                     else s_ev[s_nev].btn = keybtn(kbuf);
                     s_nev++;
                 }
-                if (const char* ck = std::getenv("ROGUESQ_AUTOPILOT_CLOCK")) s_frames = !strcmp(ck, "frames");
+                if (const char* ck = std::getenv("ROGUESQ_AUTOPILOT_CLOCK")) { s_frames = !strcmp(ck, "frames"); s_vi = !strcmp(ck, "vi"); }
                 if (const char* fp = std::getenv("ROGUESQ_AUTOPILOT_FPS")) { const double f = atof(fp); if (f > 0.0 && f < 1000.0) s_fps = f; }
                 if (s_nev > 0) { s_on = true; s_t0 = SDL_GetTicks(); s_base = ap_now(); }
                 fprintf(stderr, "[autopilot] armed: %d events hold=%.0fms stop_width=%u clock=%s fps=%.1f\n",
-                        s_nev, s_hold * 1000.0, s_stop_w, s_frames ? "frames" : "wall", s_fps);
+                        s_nev, s_hold * 1000.0, s_stop_w, s_vi ? "vi" : s_frames ? "frames" : "wall", s_fps);
                 fflush(stderr);
             }
         }
@@ -13204,17 +13210,17 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 rs64_vi_committed_width() == s_ev[s_idx].waitw) {
                 s_base = ap_now() - s_ev[s_idx].t;
                 fprintf(stderr, "[autopilot] gate %d/%d width=%u reached at %s %.1f s -> clock rebased to %.1f\n",
-                        s_idx + 1, s_nev, s_ev[s_idx].waitw, s_frames ? "frames" : "wall", el, s_ev[s_idx].t);
+                        s_idx + 1, s_nev, s_ev[s_idx].waitw, s_vi ? "vi" : s_frames ? "frames" : "wall", el, s_ev[s_idx].t);
                 fflush(stderr);
                 s_idx++;
             } else if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && !s_ev[s_idx].waitw && el >= s_ev[s_idx].t) {
                 s_held = s_ev[s_idx].btn;
                 s_held_sx = s_ev[s_idx].sx; s_held_sy = s_ev[s_idx].sy;
                 s_release_at = el + s_hold;
-                (fprintf)(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u wall=%.1f fs=%u\n",
+                (fprintf)(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u wall=%.1f fs=%u vi=%llu\n",
                         s_idx + 1, s_nev, el, (unsigned)s_held,
                         (unsigned)rs64_vi_committed_width(), (SDL_GetTicks() - s_t0) / 1000.0,
-                        (unsigned)rs64_dpc_get_cumulative_fullsyncs());
+                        (unsigned)rs64_dpc_get_cumulative_fullsyncs(), (unsigned long long)total_vis);
                 fflush(stderr);
                 s7671_key = s_idx + 1; s7671_btn = (unsigned)s_held;
                 s_idx++;
