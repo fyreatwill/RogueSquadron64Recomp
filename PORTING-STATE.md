@@ -208025,3 +208025,28 @@ Change: census wired into `tools/s7719_regen_gate.py` as step 5c (`--pristine` r
 --strict` rc 0 (VERDICT H-mirrored, dead-emitter open=0, quiet-skip open=0, 6+2 controls PASS); `s7651_gate_sweep.py --only
 s778` 6 GREEN, then s7789 GREEN after renaming the reviewed UNRESOLVED label DYNTEXT (the sweep's HOLLOW keys read it as open).
 Next: delete the ~165 confirmed-dead vendored blocks; the s7719 gate (live == replay byte-for-byte) proves the deletion inert.
+
+## Session 7790 (2026-11-21) — vendored fixer dead-block prune: 257 never-run blocks (5,090 lines, 387 .replace sites) deleted, regen replay byte-identical
+
+Unit (NEXT s7790, HYPOTHESIS-ID vendored-dead-block-prune). Session-start checks: crash_reports --since 2026-11-13 new=0, no
+new SOAK-RESULTS lines after the s7787 fold, no owner answers. CURRENT-TRUTH 59,440 B (< 60,000: not maintenance).
+
+What ran: s7789 census `--all --json` on a fresh pristine tree (same counts as s7789: 1,341 sites, 326 HIT, open=0), then a new
+tool `tools/s7790_prune_dead_blocks.py`. It re-scores rows with the census's own REVIEWED table and deletes a direct child of
+the fixer's big `for p in ...` loop when: >=1 site in it is a reviewed RETIRED/DYNTEXT-lineage row, no OTHER site in it executed
+in the pristine replay (the nested `#include <stdio.h>/<stdlib.h>` adds under each guard's `if n == 1` never ran either), and it
+reads no os.environ (opt-in arms stay). Binders (Assign/def) read only by deleted statements go too; a fixpoint restores any
+deleted statement binding a name a survivor reads. The s517 census control site is excluded. Leading comment lines go with
+their block.
+
+Result: H-inert SELECTED, H-coupled measured once and handled. First pass raised NameError `_DL_LIST_RESET_EXTRA_RNODE_SITES`
+(a site table deleted as a binder before its deleted reader was restored because a survivor also reads the table); fix =
+restore applies to binders too. Second pass: 257 statements deleted, fixer 42,565 -> 37,475 lines (-5,090), sites 1,341 -> 954.
+`tools/s7719_regen_gate.py --strict`: rc 0, VERDICT H-mirrored, 53 source files 0 differ, planted edit/extra controls PASS;
+dead-emitter steps=360 open=0; quiet-skip HIT 326 unchanged (304/311 control PASS), s517 control PASS, open=0.
+`tools/s7651_gate_sweep.py --only s77`: 23 GREEN, 1 NEEDS-ARGS (s7726), 2 NEEDS-INPUT (s7753/s7756 retained snaps), as before.
+Kept (16 dead sites): 12 in blocks that bind tables later survivors read (L14647, 14954, 15120, 15210, 24532, 24613, 24725,
+24989, 26825, 27028, 32402, 32480 in the old file), 3 MISS rows (18816/18908/18972: the call ran, anchor absent), 1 in the
+L31742 block with 8 live sites.
+Rules out: that any of the deleted s109/s390-s568 blocks feeds a later block's text (replay byte-identical against live).
+ORIGIN: no mitigation added; this deletes retired mitigations whose anchors have matched nothing since s2190 (s7789 review).
