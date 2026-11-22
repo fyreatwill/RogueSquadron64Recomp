@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7824 (2026-11-22).
+Compact operational handoff, as of Session 7828 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -93,6 +93,10 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- s7827/s7825 "sub-pixel flight-pose/logo residuals are H-input-time (time-integrated state depends on frame/dt history)": believable
+  because static-authored scenes were exact and only time-integrated scenes differed. s7828 changed ONLY retail's emulated CPU timing
+  (26% fewer frames) and the steady flight pose stayed within one quantum, while the port differs by 3-6 quanta: the pose is
+  timing-independent in retail, so the port delta is port-side. (The s7825 logo verdict was not re-tested.)
 - s7826 "reticle +0.5 px = a screen-space constant on the reticle only (HUD anchor chain suspect)": believable because the texrect
   path matched to <0.5 px and only that PRIM missed. s7827 found the projected sky mesh shifted too, with a pitch-shaped x/y
   pattern: a camera pose delta of ~0.1 deg, not a reticle/HUD transform.
@@ -342,8 +346,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      and the flight projection patches are all env-gated off at default. Scissor/cimg are identical, and the RSP is exact (s7815).
      The 42-tri sky mesh (PRIM 4FD926B9, static in level flight in both arms) fits a camera pitch delta of 0.115 deg: rms 0.107 px,
      vs constant offset 0.232 and scale 0.543. Planted pitch/const controls PASS. One parameter explains the y growth toward the
-     top and the x inward pull. Cause = H-input-time by inference (time-integrated state differs, static scenes exact).
-     `python3 tools/s7827_tri_yshift_census.py R P --win 3521:3825,4378:4702 --controls --pose 3623:3825,4516:4702 [--p-retail]`.
+     top and the x inward pull. (s7827's cause guess H-input-time is REFUTED by s7828, see below.)
+     `python3 tools/s7827_tri_yshift_census.py R P --win 3521:3825,4378:4702 --controls --pose 3623:3825,4516:4702 [--p-retail] [--pairs]`.
+     **s7828: the steady flight pose does NOT depend on emulated timing, so the port's pitch delta is port-side (H-cpu-pose).**
+     Retail vs retail with only mupen CountPerOp changed (2 -> 3, `tools/oracle/rs64_oracle --count-per-op N`, launcher
+     `env CPO=3 RSECS=200 zsh tools/s7828_retail_cpo.sh OUT`): CPO3 renders 26% fewer game frames (2837 vs 3832 in 9000 VI), yet the
+     42 steady sky tris agree with CPO2 to <=0.25 px (0/42 vertices >=0.5, mean dyh +0.07) in two CPO3 windows. Port vs CPO2: 42/42
+     >=0.5, mean +0.86, pitch d=+0.00200; port vs CPO3: 42/42, mean +0.79, pitch d=+0.00180. Controls: CPO2 run byte-identical to the
+     s7826 retail capture (sha1 116954d3a8a8), CPO3 150 s run a byte-exact prefix of the 200 s run, planted pitch/const PASS.
+     Not owner-visible (<1 px). Scores scratch/s7828/score_cpo*.txt. Open: WHICH port input moves the pose. NEXT s7829.
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are

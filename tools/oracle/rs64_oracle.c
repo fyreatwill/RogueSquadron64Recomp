@@ -98,6 +98,9 @@ static int g_det_video, g_det_input;
 /* s7817: --det-core sets Core RandomizeInterrupt=False. The core jitters PI/SI interrupt timing with rand() seeded by
  * srand(time(NULL)) (r4300_core.c:67, interrupt.c:122), which made two VI-clocked runs diverge from VI ~2100 on. */
 static int g_det_core, g_user_randint = -1;
+/* s7828: --count-per-op N sets Core CountPerOp (cycles per emulated instruction; 0 = ROM ini default, 2 for RS64 U).
+ * Changes ONLY the emulated CPU timing, so retail-vs-retail at two values measures how much sim state depends on it. */
+static int g_cpo = -1, g_user_cpo = -1;
 /* s7818: --hit-vi-window A:B ignores memory-watch hits outside emulated VI [A,B] and prints vi= on hit lines; with --det the
  * same VI is the same machine state, so a narrow watch can name the reader/writer of one word in one frame. */
 static long g_hit_vi_lo = -1, g_hit_vi_hi = -1;
@@ -3970,6 +3973,7 @@ static void usage(void)
         "  --press SEC:KEY[,...] press KEY at SEC seconds, e.g. --press 6:return,12:return\n"
         "  --hit-vi-window A:B   count/print memory-watch hits only in emulated VI A..B (+vi= val= on [hit] lines; s7818)\n"
         "  --det-core            RandomizeInterrupt=False for the run (s7817); --det = --clock vi --det-core\n"
+        "  --count-per-op N      Core CountPerOp=N for the run (s7828; 0 = ROM default, RS64 U = 2)\n"
         "  --clock wall|vi       wall (default): SEC values are host seconds; vi: SEC*60 emulated VIs (s7817, deterministic)\n"
         "                        KEY is an N64 button name (start a b z dup ddown dleft\n"
         "                        dright cup cdown cleft cright l r) or a raw SDL2 SCANCODE.\n"
@@ -4242,6 +4246,7 @@ int main(int argc, char **argv)
             if (sscanf(argv[++i], "%ld:%ld", &g_hit_vi_lo, &g_hit_vi_hi) != 2) { g_hit_vi_lo = g_hit_vi_hi = -1; }
         }
         else if (!strcmp(argv[i], "--det-core"))                   g_det_core = 1;
+        else if (!strcmp(argv[i], "--count-per-op") && i + 1 < argc) g_cpo = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--det"))                        g_clock_vi = g_det_core = 1;
         else if (!strcmp(argv[i], "--det-input"))                  g_det_input = 1;
         else if (!strcmp(argv[i], "--exec-trace") && i + 1 < argc) {
@@ -4351,6 +4356,11 @@ int main(int argc, char **argv)
                 g_user_randint = pConfigGetParamBool(core_section, "RandomizeInterrupt");
                 pConfigSetParameter(core_section, "RandomizeInterrupt", M64TYPE_BOOL, &off);
                 printf("[oracle] det-core: RandomizeInterrupt %d -> 0\n", g_user_randint);
+            }
+            if (g_cpo >= 0) {
+                g_user_cpo = pConfigGetParamInt(core_section, "CountPerOp");
+                pConfigSetParameter(core_section, "CountPerOp", M64TYPE_INT, &g_cpo);
+                printf("[oracle] count-per-op: CountPerOp %d -> %d\n", g_user_cpo, g_cpo);
             }
         } else {
             fprintf(stderr, "[oracle] WARNING: cannot open Core config section; "
@@ -5118,6 +5128,8 @@ int main(int argc, char **argv)
     }
     if (g_core_section && g_user_randint >= 0)
         pConfigSetParameter(g_core_section, "RandomizeInterrupt", M64TYPE_BOOL, &g_user_randint);
+    if (g_core_section && g_user_cpo >= 0)
+        pConfigSetParameter(g_core_section, "CountPerOp", M64TYPE_INT, &g_user_cpo);
     if (g_vid_section && g_user_parallel >= 0)
         pConfigSetParameter(g_vid_section, "Parallel", M64TYPE_BOOL, &g_user_parallel);
     if (g_inp_section && g_user_inmode >= 0) {

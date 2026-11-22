@@ -14,7 +14,7 @@ by three one/two-parameter models and the lowest RMS wins: H-vp (constant dy, dx
 scale about the screen centre: FOV/vscale), H-pitch (camera pitch delta: dy = f*d*(1+v^2), dx = f*u*v*d, u,v = offset/f).
 Same-run planted controls on the retail static set (quantised to 0.25 px like the RDP): a pitch plant must select H-pitch and
 recover d, a +0.5 px constant plant must select H-vp. rc 3 on FAIL.
-usage: s7827_tri_yshift_census.py RETAIL.bin[.zst] PORT.bin[.zst] --win r0:r1,p0:p1 [--controls] [--pose r0:r1,p0:p1] [--p-retail]
+usage: s7827_tri_yshift_census.py RETAIL.bin[.zst] PORT.bin[.zst] --win r0:r1,p0:p1 [--controls] [--pose r0:r1,p0:p1] [--p-retail] [--pairs]
 """
 import sys, os, collections, importlib.util, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
@@ -133,6 +133,11 @@ if '--pose' in a:
         return out
     rows = pair(SR, SP)
     print('pose: static tris R[%d:%d] %d, P[%d:%d] %d, paired %d' % (q0, q1, len(SR), o0, o1, len(SP), len(rows)))
+    if not rows:   # s7828: a window whose camera still moves has no static set; say so instead of ZeroDivisionError
+        print('pose: NO paired static tris (camera not steady in one of the windows); pick later windows'); sys.exit(2)
+    if '--pairs' in a:   # s7828: raw paired static-vertex offsets (top vertex x,y -> dx,dy; ym/yl dy)
+        for r, p in sorted(rows, key=lambda rp: rp[0][2]):
+            print('  pair x %8.2f y %8.2f  dx %+6.2f dyh %+6.2f dym %+6.2f dyl %+6.2f' % (r[1], r[2], p[1]-r[1], p[2]-r[2], p[3]-r[3], p[4]-r[4]))
     win, res = fit(obs(rows))
     for k, v in sorted(res.items(), key=lambda kv: kv[1][0]): print('  port  %-8s rms %.3f px  %s' % (k, v[0], v[1]))
     POSE = win

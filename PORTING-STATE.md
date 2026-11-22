@@ -209223,3 +209223,37 @@ fold, no owner answers. Offline only (no game run): captures scratch/s7826/{reta
 - Discrimination: selects H-pitch (camera pose delta) and refutes H-anchor, H-vp and H-scale for the s7826 reticle/flight offset.
   Next discriminator: retail-vs-retail with only mupen CountPerOp changed (NEXT s7828). A pitch delta there selects H-input-time;
   an exact sky there refutes it and selects H-cpu-pose.
+
+## Session 7828 (2026-11-22) — retail-vs-retail with only emulated CPU timing changed (CountPerOp 2 -> 3, 26% fewer game frames) keeps the steady lvl1 flight sky within one quantum (0/42 vertices >=0.5 px), while port vs either retail is 42/42 at a 0.10-0.115 deg pitch: H-input-time REFUTED, H-cpu-pose selected; rs64_oracle --count-per-op
+Work unit (NEXT s7828, HYPOTHESIS-ID g3-pose-input-time). Pre-checks: crash_reports new=0, no new SOAK-RESULTS lines since the s7809
+fold, owner queue unchanged since s7802. HID idle 11 h. Offline + oracle only (no port run).
+- Change: tools/oracle/rs64_oracle.c `--count-per-op N` sets Core CountPerOp for the run and restores the user's value before the
+  exit ConfigSaveFile (same pattern as --det-core). The oracle log prints `[oracle] count-per-op: CountPerOp 0 -> N` (positive control
+  that the setting is applied; 0 = ROM ini default, which is 2 for RS64 U). New launcher tools/s7828_retail_cpo.sh: retail-only
+  rdplog capture on the s7826 route (same VI-clocked --det presses as g3_menu_pair: 6,11,16 + PP+5.75).
+- Runs (one emulator at a time): CPO=2 150 s, CPO=3 150 s, CPO=3 200 s. Presses land on the same VIs in every arm (1515, 2235, ...).
+- Determinism controls: CPO=2 capture is BYTE-IDENTICAL to the s7826 retail capture (812,183,344 bytes, sha1 116954d3a8a8), so an
+  explicit CPO=2 == default and the route is reproducible; the CPO=3 150 s capture is a byte-exact prefix of the CPO=3 200 s one.
+- Timing really changed: CPO=3 renders 2837 game frames in 9000 VI vs 3832 at CPO=2 (26% fewer), the band timeline shifts (CPO3
+  mission 512 band from frame 2703 vs 3521), and the sky reaches its steady pose at a different flight-frame offset (static at
+  offset ~77 in CPO3, not yet static at offsets 70-135 in CPO2): so game-frame phases are not comparable, steady pose is.
+- Steady-pose table (42-tri sky PRIM 4FD926B9, `tools/s7827_tri_yshift_census.py ... --pose ... --pairs`):
+  | pair | vertices >=0.5 px | mean dyh | max dyh | best model |
+  | retail CPO2 [3623:3825] vs CPO3 [2790:2990] | 0/42 | +0.07 | 0.25 | none (1 quantum; rms 1.17 is one mis-paired tri, dym +-10.5) |
+  | retail CPO2 vs CPO3 [2990:3190] | 0/42 | +0.07 | 0.25 | same |
+  | port [4516:4702] vs CPO2 | 42/42 | +0.86 | 1.50 | H-pitch d=+0.00200 rms 0.107 (vp 0.232, scale 0.543) |
+  | port vs CPO3 [2790:2990] | 42/42 | +0.79 | 1.50 | H-pitch d=+0.00180 rms 0.128 (vp 0.237, scale 0.498) |
+  Planted pitch / +0.5 const controls PASS in every row. World-tri census mode 0 retail-vs-retail (controls PASS).
+- Reading: retail's steady level-flight camera pose does not depend on emulated CPU timing even at a 26% frame-rate change, so
+  "time-integrated state differs" cannot explain a 3-6 quantum port delta (the port's frame count differs by only ~7%). The pose
+  difference is something the port feeds or computes differently: H-cpu-pose. Two lines: two independent CPO3 windows + two retail
+  references giving the same port pitch (0.0018-0.0020 rad). Not owner-visible (<1 px).
+- Candidate port-side sources (for NEXT): H-stick (the port hands the guest a nonzero idle stick: get_n64_input passes SDL axis
+  values with no host deadzone, main.cpp ~12755, so a connected pad's drift reaches the game; mupen's input plugin rests at 0),
+  H-cpu-math (camera/attitude float math), H-state (some other input/RNG/save state that differs at mission start).
+- Rules out: H-input-time for the flight pose. Does not re-test the s7825 logo residual (still labelled input timing, single-source).
+- Tool fixes: s7827 census no longer ZeroDivisionErrors on an empty static set (rc 2 + message); `--pairs` prints raw paired offsets.
+- Captures: scratch/s7828/cpo3L/retail.bin.zst (CPO2 and CPO3-150 deleted: identical to s7826 retail / prefix of cpo3L);
+  scores scratch/s7828/score_cpo.txt, score_cpo3L.txt; timelines tl_cpo3*.txt.
+- ORIGIN: n/a (no mitigation).
+- Discrimination: refutes H-input-time and selects H-cpu-pose for the s7826/s7827 flight pose delta.
