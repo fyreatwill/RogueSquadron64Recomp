@@ -15,11 +15,19 @@ rc 0: control arm shows >=1 zombie of the control class (positive control: the s
 rc 1: default arm has a zombie (names the class -> the next writer).
 rc 3: CONTROL FAIL (the control arm shows none: the instrument is blind, a default-arm zero means nothing).
 """
-import argparse, collections, re, sys
+import argparse, collections, io, re, subprocess, sys
 
 ZRE = re.compile(rb'class _NSZombie_([A-Za-z0-9_]+)')
 DEAD = re.compile(rb'message sent to deallocated instance')
 MARK = re.compile(rb'cursorMask\)=0x')
+
+
+def bopen(path):
+    # s7801: retained captures are *.zst; reading them raw gave 0 lines and a false CONTROL FAIL (rc 3), so the gate sweep
+    # could never re-score them. zstd is a pure spawn for s7651's cache.
+    if str(path).endswith('.zst'):
+        return io.BytesIO(subprocess.run(['zstd', '-dcq', str(path)], capture_output=True, check=True).stdout)
+    return open(path, 'rb')
 
 
 def scan(path, mark=None, segre=None):
@@ -30,7 +38,7 @@ def scan(path, mark=None, segre=None):
     c = {'boot': collections.Counter(), 'flight': collections.Counter()}
     dead = {'boot': 0, 'flight': 0}
     missing = {'boot': 0, 'flight': 0}
-    with open(path, 'rb') as f:
+    with bopen(path) as f:
         for ln in f:
             if phase == 'boot' and mk.search(ln):
                 phase = 'flight'

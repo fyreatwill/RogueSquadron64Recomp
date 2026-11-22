@@ -208310,3 +208310,32 @@ rc 0 unchanged.
 Result: H-clean on L12 (third level at dd2 after L4/L1). L10 = H-none for counted handoffs (route-limited, not a stand-in defect).
 Rules out H-gap-dense on L12 (131 stand-ins, 0 held blinks). Weakness: L12 control blinked 1/3 only (fewer handoffs than L4).
 Not covered: L10 handoff with a route that passes spawn points; owner look.
+
+## Session 7801 (2026-11-22) — post-s7790 gate sweep, uncached: 234 gates 0 RED/HOLLOW, regen --strict H-mirrored; NSZombie census was blind to retained .zst captures (fixed) and is now a sweep gate; re-holds L2/L18 pass
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=10 new=0. No owner report. CURRENT-TRUTH 25929 B (no maintenance).
+Soak folds (loop): s7797_standins_rehold_L18 and L2: alive 1/1, crashlines 0, vi_stalls30s 0, max_gap 149/147 ms, level_ok=1,
+`standins_on_line=1` spawns 13/13 -> pass. 5 re-holds still queued (L3,6,7,8,9).
+Unit (NEXT.md, post-s7790-gate-sweep): rerun every closed gate on the current tree (last full run s7693, before the s7790 vendored
+block prune). Hypotheses H-clean / H-drift / H-blind.
+- `python3 tools/s7651_gate_sweep.py --jobs 2` (cached, 336 s): 234 gates {GREEN 228, REPORT 3, NEEDS-ARGS 1, NEEDS-INPUT 2}, rc 0;
+  planted red/green, NEEDS-INPUT/REPORT/HOLLOW and cache controls PASS.
+- `python3 tools/s7719_regen_gate.py --strict` (248 s): rc 0, VERDICT H-mirrored; strict 53 source files 0 differ, planted edit/extra
+  controls PASS; dead-emitter open=0 (6 controls PASS); quiet-skip sites=952 open=0, HIT 5+13+2+304+2 = 326 (= s7791), control 304/311.
+- H-blind check on the one non-gate row: s7726_zombie_census.py read NEEDS-ARGS since s7726 (s7727/s7728 sweeps listed it as
+  "a measurement tool, not a gate"), although both its captures are retained (scratch/s7726/log_z{def,own0}.txt.zst,
+  scratch/s7727/z{def,own0}/run.log.zst). Run on them it printed 0 lines of anything and CONTROL FAIL rc 3: it opened the .zst raw.
+  So the census was blind to every retained capture (it failed closed, so no false clean was ever recorded; s7726/s7727 scored
+  the uncompressed logs before zstd).
+Fix: tools/s7726_zombie_census.py decompresses *.zst (zstd -dcq, a pure spawn for the sweep cache). Rescored: s7726 default 0
+zombies boot+flight, control MTLTextureDescriptorInternal 163 (= the s7726 fold line); s7727 default 0 in all 8 segments, control
+364 (125,37,32,35,30,35,58,12 = scratch/s7727/census.txt). Swap test (control log as --arm): VERDICT H-more 163, rc 1.
+Gate: S7723_RETAINED row in tools/s7651_gate_sweep.py over the s7727 hangar abort/re-entry capture, pinning control 364, segments
+all 0 and H-clean; planted RED in tools/s7723_retained_controls.py (control arm's 364 _NSZombie_ rows dropped -> CONTROL FAIL rc 3
+-> RED): `s7723_retained_controls.py s7726_zombie_census.py` PASS.
+Rerun of the whole sweep after the change, fully uncached (cache key changed: hit=0 miss=214 uncacheable=20, 1248 s): 234 gates
+{GREEN 229, REPORT 3, NEEDS-INPUT 2}, 0 RED, 0 HOLLOW, 0 NEEDS-ARGS, rc 0, all controls PASS.
+ORIGIN: not a mitigation; a tool input-format defect (raw read of a compressed file), no guest/host code changed.
+Result: selects H-clean for every gate on the post-s7790 tree (and every row re-proved without the cache), plus one H-blind row
+found and closed. Rules out H-drift from the s7790/s7791 prune. NEEDS-INPUT s7753/s7756 still need fresh snaps + a game run.
+Next: fold the 5 remaining stand-in re-holds (NEXT.md).

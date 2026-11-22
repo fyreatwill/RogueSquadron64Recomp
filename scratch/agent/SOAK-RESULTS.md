@@ -1703,3 +1703,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261122-003840 | s7797_standins_rehold_L14 | rc=0 | 311s | scratch/agent/soak_results/s7797_standins_rehold_L14_20261122-003840.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261122-005330 | s7797_standins_rehold_L16 | rc=0 | 310s | scratch/agent/soak_results/s7797_standins_rehold_L16_20261122-005330.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261122-005841 | s7797_standins_rehold_L17 | rc=0 | 310s | scratch/agent/soak_results/s7797_standins_rehold_L17_20261122-005841.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261122-011316 | s7797_standins_rehold_L18 | rc=0 | 311s | scratch/agent/soak_results/s7797_standins_rehold_L18_20261122-011316.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261122-011827 | s7797_standins_rehold_L2 | rc=0 | 312s | scratch/agent/soak_results/s7797_standins_rehold_L2_20261122-011827.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0

@@ -197,6 +197,13 @@ S7723_RETAINED = {
                              r"(?=[\s\S]*old_must_fail=PASS)(?=[\s\S]*new_must_pass=PASS)"),
     # UBSan arms (scratch/s7579/san_<arm>.<pid>; p2 = the planted bounds arm)
     "s7579_bounds_report.py": (["scratch/s7579"], r"control_fired=1 real_sites=0 arms_with_logs=2"),
+    # s7801: NSZombie census (was NEEDS-ARGS since s7726) over the retained s7727 hangar abort/re-entry route (zdef = default,
+    # zown0 = ROGUESQ_MTL_OWN=0 over-release control); the tool reads *.zst since s7801. Pins control 364 + 0 zombies per segment.
+    "s7726_zombie_census.py": (["--arm", "scratch/s7727/zdef/run.log.zst", "--control", "scratch/s7727/zown0/run.log.zst",
+                                "--mark", "hangarmenu-a0-entry", "--segments", r"hangarmenu-a0-entry|initMission\] call"],
+                               r"(?=[\s\S]*s7726 CONTROL PASS: control MTLTextureDescriptorInternal zombies=364\n)"
+                               r"(?=[\s\S]*default segments=7 zombies_per_segment=0,0,0,0,0,0,0,0\n)"
+                               r"(?=[\s\S]*s7726 VERDICT H-clean: default arm 0 zombies \(boot\+flight\))"),
 }
 # s7724: the /usr/bin/sample profiler scorers (classes CP/CR/CS/CT/CU) over the retained scratch/s7435 capture (8 x 12 s windows,
 # busy-on/off diag-quiet flips in run.tlog, sample_N.txt.zst read via rs64_zopen). Each prints CONTROL ... PASS from the planted

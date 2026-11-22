@@ -37,6 +37,8 @@ MUT = {
     "s7528_evict_score.py": (2, sub_first(r"stale_window_entries=0\b", "stale_window_entries=5")),  # open row in NEW arm
     # directory input: copy its san_* files and append one live UBSan row to the un-planted arm p
     "s7579_bounds_report.py": (0, "DIR"),
+    # s7801: the MTL_OWN=0 control arm loses every _NSZombie_ row -> CONTROL FAIL, exit 3
+    "s7726_zombie_census.py": (3, (lambda L: [l for l in L if "class _NSZombie_" not in l], "drop control _NSZombie_ rows")),
     # s7724: profiler dirs; every sample file gets the planted control frames renamed, so CONTROL must FAIL (exit 3)
     **{t: (0, "SAMPLES") for t in SW.S7724_RETAINED if t not in ("s7467_san_report.py", "s7624_flicker_score.py")},
     "s7467_san_report.py": (0, "SANDIR"),   # copy the arm files, plant one unreviewed UBSan group in arm l7 -> new_groups=1, exit 1
