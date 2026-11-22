@@ -209064,3 +209064,31 @@ HYPOTHESIS-ID: g3-det-menu-pair
 - Verdict: H-match for SELECT LEVEL and its level-description sub-screen; refutes H-port and H-route. Not covered: the craft
   select / briefing / mission load after START on SELECT LEVEL (next unit), and the 3D hologram tris (vertex sets never pair across
   the rate difference; only counts compared).
+
+## Session 7823 (2026-11-22) — det menu pair SELECT LEVEL -> AVAILABLE CRAFT -> SELECT YOUR CRAFT: no port render defect; SELECT YOUR CRAFT whole frames exact 115/120 (geometry 120/120); AVAILABLE CRAFT misses all zoom-phase (128/128 same-centre)
+
+HYPOTHESIS-ID: g3-det-menu-pair
+- Start checks: crash_reports new=0 (FOLDED 10); no SOAK-RESULTS lines since s7809; OWNER-REVIEW-QUEUE unchanged. HID idle 10 h.
+- Hypotheses (NEXT): H-match / H-port (a non-strip draw in one arm only) / H-route (arms on different screens).
+- Run: NEXT command verbatim (PCLOCK=vi, presses 19.5 start, 31.5 start, 43.5 start, 55.5 right, 67.5 start; retail +5.75 s).
+  Port autopilot fired 8/8 (fire 6 start at vi_width 512, 7 right 0x0100, 8 start); retail 8 presses. Frames retail 2603, port 3389.
+  Captures zstd'd (scratch/s7823/*.bin.zst, 228 MB); port route contact sheet scratch/s7823/port_route_sheet.png.
+- Route (port windows): START on SELECT LEVEL -> AVAILABLE CRAFT (same 512 screen, hangar ring, "PRIMARY WEAPON: BLASTERS");
+  right -> no change (only the X-wing is unlocked on lvl1.eep); START -> SELECT YOUR CRAFT (3D X-wing on the deck, 77 texrects,
+  tris settle 1100 -> ~490). Texrect/tri bands: retail 153 -> 195 -> 56 -> 77 (tri 1196/1110/1118/491), port 153 -> 195 -> 56
+  -> 77 (1188/1108/1121/496). Same order: H-route refuted.
+- SELECT YOUR CRAFT, R[2483:2603] vs P[3268:3388], ctl AVAILABLE CRAFT P[2658:2778]: full signature (texrects+PRIM + tri PRIM
+  multiset) exact 115/120, median 0, max 1; geometry exact 120/120; ctl 0/120 (median 1824); +0.25 px plant 0/120; elements
+  1.000 both ways. The 3D view is static here, so whole frames pair despite the 16 vs 30 fps rate difference.
+- AVAILABLE CRAFT, R[1784:1904] vs P[2272:2392], ctl SELECT LEVEL P[1918:2038]: whole frames never pair (geom exact 8/120, the
+  breathing strips). Default strip filter (54-66 px) leaves non-strip 0.9783: misses were 68.0/67.5 px strips (50 each) plus
+  tall icons. Strip widths per frame: both arms breathe 55.5..68.5 px (retail steps ~0.25/frame, port ~0.125: rate difference),
+  so this screen's strips run wider than SELECT LEVEL's. With `--strip-w 54:69`: non-strip R-in-P 0.9868 (11400) P-in-R 0.9958,
+  ctl 0.4421, plant 0.0045. Remaining 128 misses (53-65 x 63-77 px: the green craft icon and the two red side panels): 128/128
+  have a port element with the same centre (+-1 px) at another size anywhere on the port screen = the entry zoom sampled at a
+  different rate; control (misses shifted +4 px) 46/128, so the centre test discriminates.
+- Tool: tools/s7821_rdp_screen_segments.py `--windows` gains `--strip-w W0:W1` (strip width range, default 54:66 unchanged) and
+  `--screen p0:p1` (scale-animation classifier over the whole port screen, +4 px control).
+- Verdict: H-match for AVAILABLE CRAFT and SELECT YOUR CRAFT; H-port and H-route refuted. Front end now covered title -> SELECT
+  GAME -> SELECT LEVEL (+description) -> AVAILABLE CRAFT -> SELECT YOUR CRAFT. Not covered: START on SELECT YOUR CRAFT ->
+  briefing / mission load (next unit).

@@ -311,6 +311,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      element test excluding 54-66 x 16.5-22 px scale strips). Description screen: non-strip R-in-P 1.000 (18000), P-in-R 0.9988,
      ctl (other sub-screen) 0.000, +0.25 px plant 0.000. Base and post-right windows: non-strip 0.987 / 0.985, plant 0.000, every
      miss a 66.5-66.75 px scale strip (ctl not discriminating there: same static set). Whole frames still never pair (strip breathing).
+     **s7823 det pair SELECT LEVEL -> AVAILABLE CRAFT -> SELECT YOUR CRAFT: no port render defect.** Route (port windows,
+     scratch/s7823/port_route_sheet.png): START on SELECT LEVEL = AVAILABLE CRAFT (512 wide, same hangar ring), right = no change
+     (only the X-wing unlocked on this save), START = SELECT YOUR CRAFT (3D X-wing view). Same band order both arms. SELECT YOUR
+     CRAFT: whole frames exact 115/120 incl. tri PRIM multiset, geometry 120/120, ctl 0/120, plant 0/120, elements 1.000/1.000.
+     AVAILABLE CRAFT: non-strip 0.9868 / 0.9958 (`--strip-w 54:69`: its strips breathe 55.5-68.5 px in both arms), ctl 0.44, plant
+     0.0045; misses 128/128 scale-explained (same-centre port element at another zoom size, new `--screen p0:p1`), ctl +4 px 46/128.
      [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,

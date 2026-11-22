@@ -13,6 +13,7 @@ Control: each retail segment against the WORST-overlapping port segment (must no
 whose geometry occurs ANYWHERE in the port screen, all and excluding breathing glyph strips (w 54-61, h 16.5-21.5),
 with controls: same test against port phase --ctl-phase (must be ~0) and a +0.25 px planted shift (must drop to ~0).
 usage: s7821_rdp_screen_segments.py RETAIL.bin PORT.bin [--k 120] [--jac 0.5] [--min 20] [--elements 512:5 --ctl-phase 4]
+       [--windows r0:r1,p0:p1,c0:c1 [--strip-w 54:66] [--screen p0:p1]]
 """
 import struct, sys, collections
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
@@ -104,7 +105,8 @@ if __name__ == '__main__':
         UR = set(k[:4] for c in Rk for k in c if k[0] != 'tri'); UP = set(k[:4] for c in Pk for k in c if k[0] != 'tri')
         print(f'  geom only-retail {sorted(UR - UP)[:12]} n={len(UR - UP)} | only-port {sorted(UP - UR)[:12]} n={len(UP - UR)}')
         # element test over the windows; scale-animated strips (54-66 x 16.5-22 px) excluded in the second row
-        br = lambda k: 54 <= k[2] - k[0] <= 66 and 16.5 <= k[3] - k[1] <= 22
+        sw0, sw1 = map(float, opt('--strip-w', '54:66').split(':'))   # s7823: AVAILABLE CRAFT strips breathe to 68.5 px
+        br = lambda k: sw0 <= k[2] - k[0] <= sw1 and 16.5 <= k[3] - k[1] <= 22
         UC = set(k[:4] for c in Ck for k in c if k[0] != 'tri')
         def ef(F, Us, excl):
             n = h = 0
@@ -119,6 +121,19 @@ if __name__ == '__main__':
         if excl:
             miss = collections.Counter(k[:4] for c in Rk for k in c if k[0] != 'tri' and not br(k) and k[:4] not in UP)
             print('  non-strip retail misses (w,h):', collections.Counter((round(k[2]-k[0],2), round(k[3]-k[1],2)) for k in miss).most_common(8))
+            if '--screen' in a:   # s7823: scale-animation classifier over the WHOLE port screen
+                # a miss is scale-explained when the port screen has an element with the same centre (+-1 px) at another
+                # size (zoom sampled at a different rate: emulated retail ~16 fps vs port 30). Control: the misses moved
+                # +4 px in x must come back unexplained (centre test discriminates).
+                s0, s1 = map(int, opt('--screen', '').split(':'))
+                cen = lambda k: ((k[0] + k[2]) / 2, (k[1] + k[3]) / 2)
+                PC = {(round(x * 2), round(y * 2)) for c, _ in P[s0:s1] for k in c if k[0] != 'tri' for x, y in [cen(k)]}
+                def expl(k, dx):
+                    x, y = cen(k); X, Y = round((x + dx) * 2), round(y * 2)
+                    return any((X + i, Y + j) in PC for i in (-2, -1, 0, 1, 2) for j in (-2, -1, 0, 1, 2))
+                M = list(miss); e0 = sum(expl(k, 0) for k in M); e4 = sum(expl(k, 4) for k in M)
+                print(f'  scale-explained misses: {e0}/{len(M)} (unexplained {len(M) - e0}) || ctl +4px {e4}/{len(M)}'
+                      f'  {[k for k in M if not expl(k, 0)][:6]}')
         sys.exit(0)
     RS = segments(R, J, MIN); PS = segments(P, J, MIN)
     def desc(fr, s, lab):
