@@ -208541,3 +208541,29 @@ dd1" and with the s6285-s6288 cache work removing dd3 exhaustion), single-source
 (s7806 address-normalised identity); s7806's "0 calls" at dd4 L4/L1 is now 0 at dd3 L1 too.
 No ORIGIN needed: no mitigation added. Next: a forcing control (shrink the DL chunk cache so the evictor must run) if the gcc
 body is ever to be qualified at runtime; otherwise this thread is closed as not reached.
+
+## Session 7808 (2026-11-22) — gcc findAndUnlinkSmallestEntry patch body runtime-qualified offline: recompiled body == native model == recompiled retail body over 262,876 calls (controls PASS); new sweep gate S7808_FIND
+Start checks: crash_reports --since 2026-11-13 new=0; OWNER-REVIEW-QUEUE no new answers; SOAK-RESULTS fold: s7806_gccpatch_L1
+(loop) alive 1/1, crashlines 0, vi_stalls30s=0, max_gap 148 ms, level_ok=1 on the all-gcc patches/ binary (L4 twin was folded s7806)
+-> the public/gcc build holds 300 s on L1 and L4.
+Work unit (NEXT.md optional item, chosen because every other backlog item is owner-gated): s7807 left the gcc-built
+findAndUnlinkSmallestEntry (patches/dl_finder.c, 0x80801174 in patches.elf) static-verified only, because no play recipe calls
+it (uncontrolled null at dd3/dd4). Instead of an in-game forcing knob (would need the cache-empty path made reachable, changing
+guest behaviour), executed the exact shipped recompiled body offline.
+Hypotheses: H-equal (gcc body behaves like retail on every pool shape), H-differ (gcc codegen/recomp differs on some branch:
+ties, prev!=0 unlink, empty buckets, zero-size skip, used-list push), H-hollow (harness cannot see a difference).
+Instrument: tools/s7808_find_body_diff.py extracts rs64_find_body from RecompiledPatches/patches.c and
+findAndUnlinkSmallestEntry_s6088_inner (recompiled retail 0x8002221C) from ../N64Recomp/RecompiledFuncs/funcs_6.c, compiles both
+with recomp.h on a 16 MB synthetic RDRAM (diagnostic hooks stubbed and gated off: g_* zero), and calls each repeatedly on random
+bucket pools (0-12 buckets, 0-5 entries, 20% zero-size, 30% tied sizes, random used list) until they return 0, comparing r2 and
+the whole pool region (count/used/bucket ptr, bucket array, 32 KB of entries) against a native C model after every call.
+Result (20000 trials): calls=262876 nonnull=242876 empty_returns=20000 tie_picks=77757 prev_nonnull_picks=122820;
+patch_mismatch=0 retail_mismatch=0 -> H-equal, two references (native model + recompiled retail body) agree with the gcc body.
+Controls same run: mutant reference (ties -> earlier node) differs in 13538/20000 trials; planted single pool byte flip detected
+207/207; planted patch-body mutation (sltu -> <=, 3 sites) reads VERDICT H-differ rc 1 (PLANTED-PATCH CONTROL PASS). Coverage
+guards in the verdict: ties>0, prev_nonnull>0, empty>0 or HOLLOW rc 3.
+Scope: qualifies the body's logic as translated (gcc codegen -> N64Recomp -> host C); not the in-game wrapper (fixup_patches_host
+s6278 diagnostics, unchanged since s6278) and not reachability, which stays 0 calls in play (s7806/s7807).
+Gate: sweep row S7808_FIND (tools/s7651_gate_sweep.py), so any patches/ toolchain or N64Recomp change that alters this body's
+behaviour reads RED. The s7807 "static-verified only" caveat is CLOSED.
+No ORIGIN needed: no mitigation added.
