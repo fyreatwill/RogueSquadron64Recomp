@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7783 (2026-11-21).
+Compact operational handoff, as of Session 7786 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -436,6 +436,12 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     ledger read): only s5661 flips (superseded, moot); every other store-watch conclusion had an aligned writer or a second line.
     Class gate `python3 tools/s7785_store_hook_reg_census.py --controls`: all 7 store-hook families, 188,965 hooks, 0 bad, 0 unwatched
     (fixed: bzero's `swl $zero` head 0x8002A098 was never hooked - apply_s5660 did not match a literal-0 value).
+33. **Load-hook register/coverage class (s7786): CLOSED, 0 mixups, 1 hole fixed.** Gate `python3 tools/s7786_load_hook_reg_census.py
+    --controls` (loads 55,079, unwatched 0, hooks 55,939 bad 0; dst/offset/width/after-load mutant controls). s7484's per-file,
+    comment-directly-above matcher had skipped 4,447 loads (all ldc1, pc-traced fns, s4307 synth reads, loads behind patch lines);
+    apply_s7484_loadwatch.py now has a per-site pass. The s4765 spin2 rewrite dropped the lbu pc so s4307 tagged 0x80091DC8/F38 as
+    DC4/F34 (fixed in fixup_game_funcs_vendored.py). **s7484/s7485 class EI (0 UAF loads, 6 levels) is single-coverage: it watched
+    ~92% of loads.** Re-run queued: soak s7786_uafload_full (fold it; any load_F row reopens EI and names the reader).
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member

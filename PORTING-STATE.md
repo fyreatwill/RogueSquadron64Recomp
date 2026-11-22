@@ -207868,3 +207868,42 @@ ORIGIN: no mitigation; the defect was our diagnostic fixup's regex (value litera
 Verdict: selects H-none for the s5660 fallout (only s5661 flips, already superseded and moot) and refutes a wider register-mixup
 class (0 bad of 188,964 store hooks); one coverage hole (bzero head) closed. Next: NEXT.md load-hook register census (same rule
 for RS64_S7484_LD / synth_read load hooks).
+
+## Session 7786 (2026-11-21) — load-hook register census: 0 bad address/width, but the s7484 load watch skipped 4,447 of 55,079 guest loads (now 0); s4765 spin rewrite dropped a pc so s4307 tagged 2 loads with the lui's pc (fixed); s7719 drift (funcs_7 extern order) re-greened
+
+Contract first: the s7785 iteration left tools/s7719_regen_gate.py --strict RED (1 file differs, funcs_7.c). Diff vs the replay
+tree: only the position of `extern void rs64_s5660_ustore(...)` (s7785 ran apply_s5660 on the live tree, which inserts after
+`#include "funcs.h"` at the top; in chain order later headers precede it). Behaviour-identical; live synced to the replay output,
+gate H-mirrored.
+
+Work unit (NEXT s7786, HYPOTHESIS-ID load-hook-reg-census): do LOAD-side diagnostic hooks report the address/width of the load
+they instrument, and does every load carry one? New gate tools/s7786_load_hook_reg_census.py (per-function pc keying as s7785):
+loads = `ctx->X = MEM_W/WU/H/HU/B/BU/LD(ctx->rN, OFF)` (incl. odd-FPR `ctx->f_odd[..]` lwc1), `do_lwl/lwr`, and the s4984
+atomic voice-count load; hooks = RS64_S7484_LD (addr+width, must precede the load when dst==base), RS64_S7487_LWX (addr+isl),
+s4307 `s4575_a = U32(ADD32(..))` + rs64_s4307_synth_read(pc). Controls: good=2 ok, destination-register mutant, offset mutant,
+width mutant, hook-after-load-overwrites-base mutant each bad=1: PASS.
+- First result: 0 register/offset/width mixups in any family (H-mixup refuted). But H-hole selected:
+  * 4,534 guest loads had no s7484 watch: 1,386 ldc1 (a `CHECK_FR(ctx, N);` line sits between comment and load, and the s7484
+    matcher required the comment on the line directly above, though its docstring claims ldc1), ~2,000 loads in pc-traced
+    functions (`g_rs64_last_guest_pc = ..;` between), 729 s4307 synth-read sites (already a `{ ... }` block), ~1,030 loads behind
+    hand-written PATCH lines (guards, s3451 output fields, s7064 poll), 4 loads sharing their line with patch trailers
+    (s7024, s6493, s6883 x2), 2 lwu (MEM_WU not modelled).
+  * 2 s4307 hooks "with no load at that pc": fixup_game_funcs_vendored.py's s4765 [waitmusyx-spin2] rewrite emitted the lbu
+    0x80091DC8/0x80091F38 comment WITHOUT its pc, so s4307's join tagged those loads with the preceding lui's pc
+    (0x80091DC4/0x80091F34). Any [s4307] synth-read row for those two pcs named the wrong instruction (same word, off by 4).
+- Fixes: apply_s7484_loadwatch.py gains a per-SITE pass (the old pass is per file and skips any file with the marker, so it could
+  never add sites to a live tree): walks back over trace/CHECK_FR/patch lines to the load's own pc comment (stops at another load,
+  hook or function start, <=60 lines), prefixes s4307/s4984 blocks, whole-line wraps a brace-balanced line with exactly one load,
+  but defers to a following bare load under the same pc (first version wrapped the s7064 poll's MEM_W read in a single-pass replay
+  while the live tree had the real load wrapped: strict gate caught it). lwu added. Spin2 emitter now prints
+  `// 0x{addr+4}: lbu`. Live tree: +4,614 wraps total, idempotent (second run +0), rebuilt (cmake --build build -j 2, ok).
+- Final: loads=55,079 unwatched=0; RS64_S7484_LD 54,800 ok, RS64_S7487_LWX 410 ok, s4307 729 ok, bad=0 (rc 0). Replay tree:
+  same, and s7719 --strict H-mirrored (live == pristine regen + chain byte-for-byte).
+- Fallout read (PORTING-STATE grep ROGUESQ_S7484 / s7484): s7484/s7485 "class EI closed on 6 levels" (0 loads of freed blocks)
+  was measured with ~8% of loads unwatched (incl. all ldc1 and the audio synth reads) -> downgraded to "closed for the 92% then
+  watched"; re-run queued as soak s7786_uafload_full (L4 dd4, L15 dd8, L1 dd4, same recipe + plant ctl). s7776 TBLWATCH
+  ("all 59 lw sites of 0x80130BB0 report"): no newly wrapped site has offset 0xBB0/0xBB4 -> unaffected. s7487 (lwl/lwr) unaffected.
+ORIGIN: no mitigation; defects were our diagnostic fixups' line matchers (adjacency assumption; a rewrite dropping a pc comment).
+No game run this session (offline census + controls; the s7484 macro is a predicted-false branch unless ROGUESQ_S7484_UAFLOAD=1).
+Verdict: selects H-hole (4,447 unwatched loads + 2 mislabelled s4307 pcs, all closed) and refutes H-mixup (0 bad of 55,939 load
+hooks). Next: fold soak s7786_uafload_full; then G-ladder per CURRENT-TRUTH.

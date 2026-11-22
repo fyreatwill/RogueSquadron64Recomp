@@ -1,14 +1,17 @@
-# NEXT (s7786; s7785 closed the s5660-hook fallout: H-none except s5661, store-hook register gate 0/188,965 bad)
-HYPOTHESIS-ID: load-hook-reg-census
+# NEXT (s7787; s7786 closed the load-hook class: 0 mixups, 4,447 unwatched loads + 2 mislabelled s4307 pcs fixed)
+HYPOTHESIS-ID: hook-pc-literal-census
 First (any of these outranks the rest): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers
-in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines.
+in docs/OWNER-REVIEW-QUEUE.md, new SOAK-RESULTS lines. **Fold soak s7786_uafload_full** (class EI re-run with full load coverage):
+rc 0 + plant DETECTED every arm -> EI closed at full coverage (update CURRENT-TRUTH item 33); any load_F/Urec row reopens EI and
+names the reader pc (check whether that pc is one of the 4,447 newly watched loads: then s7484's old null was a coverage hole).
 
-Question: do the LOAD-side diagnostic hooks report the address of the load they instrument? (Same class as s7784/s7785 for stores.)
-Families: RS64_S7484_LD(pc, base, off, w) before MEM_W/H/B/D loads, rs64_s4307_synth_read, any rs64_* hook taking
-U32(ADD32(ctx->rN, OFF)) before an lw/lh/lb/lbu/lhu/ld/lwc1/ldc1/lwl/lwr.
-Hypotheses: H-clean (0 bad), H-mixup (some family reads the destination register, like s5660 read the value), H-hole (load forms,
-e.g. lwl/lwr or $zero-based, that a family never hooks, like bzero's swl $zero).
-Unit (offline): extend or clone tools/s7785_store_hook_reg_census.py as tools/s7786_load_hook_reg_census.py (per-function pc keying,
---controls with a destination-register mutant and an offset mutant), run on ../N64Recomp/RecompiledFuncs, fix any bad family in its
-apply_* fixup (idempotent per site), rebuild, sweep --only the touched gates. Outcomes: bad=0 & no hole -> H-clean, close; bad>0 ->
-name the fixup, list every recorded conclusion that read that hook (grep PORTING-STATE for its env var) as in s7785.
+Question: does every pc LITERAL passed to a diagnostic hook equal the pc of the instruction it sits under? s7786 found the s4765
+spin2 rewrite dropping a pc comment, so the s4307 join tagged two loads with the previous instruction's pc. Generalise:
+Families: every `rs64_*(..., 0x8XXXXXXXu, ...)` / `RS64_*(0x8XXXXXXXu, ...)` call and every `g_rs64_last_guest_pc = 0x...u;`
+in the generated tree, keyed per function to the nearest preceding `// 0x<pc>:` comment.
+Hypotheses: H-clean (every literal == its comment pc, or a documented site constant), H-shift (some fixup emits a neighbouring pc,
+like s4307 at DC4/F34), H-pcless (other rewrites emit pc-less comments: count `// <op>` comments without 0x; s7786 found 2, both spin2).
+Unit (offline): tools/s7787_hook_pc_census.py (--controls: planted literal off by 4 must read bad, a pc-less comment must be listed);
+classify every mismatch (site-constant hook that names a function entry/branch target on purpose = KNOWN row, else fix the emitter
+in its apply_*/fixup script, idempotent), rebuild, s7719 --strict, sweep. Outcomes: 0 unexplained -> H-clean, close; else name the
+emitter and list conclusions that read that hook's pc (grep PORTING-STATE for its env var).

@@ -8582,7 +8582,7 @@ static void rs64_s2107_b40_writer(uint32_t writer_pc, uint32_t old_value,
             f"{label}:\n"
             f"    // {addr}: lui         $v0, 0x8015\n"
             f"    ctx->r2 = S32(0X8015 << 16);\n"
-            f"    // lbu         $v0, -0x68B4($v0)\n"
+            f"    // 0x{int(addr, 16) + 4:08X}: lbu         $v0, -0x68B4($v0)\n"  # s7786: keep the pc (s4307/s7484 key on it)
             f"    ctx->r2 = MEM_BU(ctx->r2, -0X68B4);\n"
             f"    {{ // PATCH: [waitmusyx-spin2] default-yield de-stub (s4765) -- see fixup_game_funcs.py\n"
             f"      // comment above (M5 step 4 / s330-332) and CURRENT-TRUTH item -188/-189.\n"
