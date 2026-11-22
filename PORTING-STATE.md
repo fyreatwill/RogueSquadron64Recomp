@@ -209157,3 +209157,26 @@ Instead of the two-sided RDRAM alignment (expensive, the fallback clause allowed
   and size-scaled). Next discriminator if ever reopened: a guest-RAM read of the logo zoom parameter per VI in both arms
   (oracle --det watch vs port dump) shows a constant sub-frame phase offset under H-input-time. Thread closed; NEXT resumes
   g3-det-menu-pair at the first mission frames.
+
+## Session 7826 (2026-11-22) — det pair reaches lvl1 flight: static flight HUD exact 8/8, mission-start texrects 0.57 (rest animated sprites), and the green targeting reticle rides retail's exact path but +0.5 px lower in Y on 264/291 frames (one-signed, controls PASS); tools/s7826_rect_path_offset.py
+Work unit (NEXT s7826, HYPOTHESIS-ID g3-det-menu-pair). Pre-checks: crash_reports new=0, no new SOAK-RESULTS lines, no owner answers;
+HID idle 10.7 h. One VI-clocked rdplog pair, s7824 route + START at 103.5 (retail 109.25), RSECS=150 PSECS=135 (command as NEXT s7826).
+- Route reached past the crawl in BOTH arms: crawl -> letterboxed lvl1 intro cinematic (512) -> flight with HUD (port windows
+  w_0104-w_0134, sheet scratch/s7826/sheet_port_tail.png). Band timeline (scratch/s7826/tl.txt): retail logo 2686, crawl 2993-3513,
+  mission 3521-3825 (capture ends 3832); port logo 3487, crawl 3843-4370, mission 4378-4701. Offset grows 801 -> 850 -> 857 frames.
+- s7821 scorer --tri-geom on mission R[3521:3825] vs P[4378:4702], ctl = port crawl: texrect elements R-in-P 0.709 (ctl 0, plant 0),
+  tri elements 0.007 (3D, rate split as in the s7824 fly-out). Frame-instance count: 5458 retail texrects, 3126 exact.
+- Static flight HUD (prims 4FD9265C/1FA50CFF/23BA1FFF/3CDE1FFF/BE0500FF, in every frame): 8/8 distinct elements exact in port.
+- New tools/s7826_rect_path_offset.py (path-aligned, not frame-aligned): retail positions of a moving element vs the port polyline of
+  the same (w,h,PRIM), with a planted shift of the retail track as the same-run positive control, plus a shift-class census of every
+  missed retail texrect. Reticle pair (00FF0064, 51x59.5 and 25.5x29.75): path distance median 0.45 / 0.50 px, p90 the same;
+  planted +3 px reads 2.98 / 3.04 (PASS). Shift class: port position = retail (x, y+0.5) on 264/291 and 258/289 frames, exact 3/1,
+  rest between samples. Census: 522 of the 523 "+0,+0.5" misses are this PRIM; all other misses (1763) have no small-shift partner:
+  small sprites (prims FFFFFFFF, FFC37FCB, EB6F0087 ...) whose (w,h,prim) mostly also occurs in port = animated, rate split.
+- Reading: the reticle follows the same screen path in both arms (so craft/camera motion matches to <0.5 px over 300 frames), but
+  is drawn 2 sub-pixel quanta lower, constant, pure Y. A timing/phase difference would slide along the path (absorbed by the path
+  match), so this is a screen-space constant on the reticle alone, not s7825's size-scaled input difference. The reticle is
+  world-projected static data 0x8010CA58/88 that passes through our s6155/s6156/s6860 HUD anchor chain in funcs_4.c
+  (exempted at 4:3 by the r19 bound, unverified at the pixel level). Not owner-visible (0.5 px). Single-source.
+- Rules out: a port defect in the static flight HUD at mission start; a different reticle trajectory (would read >> 0.5 px).
+- Captures zstd'd: scratch/s7826/{retail,port}.bin.zst; scores scratch/s7826/score_reticle.txt.

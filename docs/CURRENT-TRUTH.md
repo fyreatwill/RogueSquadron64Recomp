@@ -332,6 +332,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      `python3 tools/s7825_tri_shift_bias.py R P --win 2720:2986 --off 795:804 --controls`: shifts are 0.707 inward (port logo
      slightly smaller; planted controls 1.000 / 0.493 PASS) and the flip rate falls with logo size (0.33 -> 0.02): a ~1e-3 relative
      input difference (time-driven zoom sampled at another sub-frame phase), not ULP noise. Animation clock read not named.
+     **s7826 det pair reaches lvl1 flight:** static flight HUD 8/8 exact; moving small sprites = rate split; the green reticle
+     (00FF0064 51x59.5 + 25.5x29.75) rides retail's exact screen path but +0.5 px lower in Y on ~90% of frames (one-signed, pure Y,
+     planted +3 px control PASS): a screen-space constant on the reticle only (single-source, not owner-visible).
+     `python3 tools/s7826_rect_path_offset.py R P --win 3521:3825,4378:4702` on scratch/s7826/{retail,port}.bin.zst.
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,
    0 >0.05, centre 0.008; at or below pre-G6c s7159 on every statistic); same-run painted control PASS both. L12 worst swaps are
