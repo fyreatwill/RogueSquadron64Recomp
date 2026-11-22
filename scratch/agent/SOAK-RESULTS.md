@@ -1699,3 +1699,5 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261121 | s7787 fold: s7786_uafload_full (loop) 3/3 alive, 0 crash, vi_stalls30s=0, level_ok=1; s7480 plant detected 3/3; s7484 full-coverage load_F=0 load_Urec=0 3/3 -> class EI CLOSED at full load coverage (item 33).
 20261122-001427 | s7797_standins_rehold_L0 | rc=0 | 311s | scratch/agent/soak_results/s7797_standins_rehold_L0_20261122-001427.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261122-001938 | s7797_standins_rehold_L11 | rc=0 | 311s | scratch/agent/soak_results/s7797_standins_rehold_L11_20261122-001938.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261122-003328 | s7797_standins_rehold_L13 | rc=0 | 312s | scratch/agent/soak_results/s7797_standins_rehold_L13_20261122-003328.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261122-003840 | s7797_standins_rehold_L14 | rc=0 | 311s | scratch/agent/soak_results/s7797_standins_rehold_L14_20261122-003840.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0

@@ -208261,3 +208261,27 @@ quoted frac); compared against the post-G6c 16:9 floor (L1/L10/L12 0.006-0.015) 
 Two lines: per-frame scores + same-run controls, and the visual sheet.
 Disk: L4d2.cap (12.6 GB), .raw, L4d2r and chunks deleted by name after scoring; csvs + gz logs kept in scratch/s7798.
 Rules out: a dd2-specific renderer/stream regression with stand-ins on L4 flight.
+
+## Session 7799 (2026-11-22) — G6c stand-in -> real handoff at dd2 is clean on L4 and L1 (held 23+9 handoffs 0 blinks; same-run control 16/16 + 7/7 blink); dd2 held far-culls (L1 179) all sit beyond far*dd with the real object far-rejected too; scorer far rule corrected (far_viol); re-holds L13/L14 pass
+
+Start: `tools/crash_reports.py --since 2026-11-13` FOLDED=10 new=0. No owner report. Soak folds (loop): s7797_standins_rehold_L13
+and L14: alive 1/1, crashlines 0, vi_stalls30s 0, max_gap 148 ms, level_ok=1, `standins_on_line=1` spawns 37 / 54 -> pass.
+9 re-holds still queued (L2,3,6,7,8,9,16,17,18).
+Unit (NEXT.md, g6c-standins-dd2-handoff): s7672 measured the handoff at dd4 only. Hypotheses H-clean / H-gap-dd2 / H-none.
+Tool change: scratch/s7672/run.zsh takes an optional 4th arg DD (default 4, unchanged), passed as the arm's dd field.
+Runs (owner recipe FPS60 16:9, STANDINS=1 LOG=1 HOLD=odd, 200 s, dd2; both logs echo `[standins] on mode=on dd=2.00` and
+`multiplier 2`): L4 scratch/s7799, L1 scratch/s7799b. Both alive, 0 crash, vi_stalls30s=0, max_gap 148/149 ms.
+| level | held (odd) handoffs / blink>1 / overlap | control (even) handoffs / blink>1 (max) | held si_far / si_vtpass |
+| L4 | 23 / 0 / 0 | 16 / 16 (307) | 0 / 0 |
+| L1 | 9 / 0 / 0 | 7 / 7 (292) | 179 / 0 |
+Positive control: the even (unheld) group blinks on every handoff in the same run, so the 0 for the held group is a measurement.
+Result: selects H-clean at dd2 on two levels; refutes H-gap-dd2 (no blink, so neither a cap overrun nor a premature far death)
+and H-none (handoffs 23/9 > 0).
+New at dd2: L1 held si_far=179 (s7674 dd4: 0), which the old scorer flags as rc 1. Row read: 174 of them are 4 items spawned at
+frame 1 (sub 002B x3, 002E) held 600 frames through the mission intro with held_ok=0 (never drawn) and real re_far 48 >= si_far 43-44;
+5 on item 803D118C (drawn 150 frames, real never accepted, re_far 108). In every row re_far >= si_far: the item is beyond far*dd
+(the stand-in's widened far, >= retail far), so the real object is out of range too. At dd2 far*2 is reachable; at dd4 it was not.
+This is an ordinary distance cull, not a handoff gap. Scorer fix (tools/s7672_handoff_score.py): rc 1 now only on far_viol = a held
+item with si_far > re_far (widened far broken) or si_vtpass > 0. Checks: s7799 L4/L1 rc 0; s7674 dd4 L4 log (zst) rc 0, unchanged;
+synthetic control (an L1 row with re_far 48 -> 3) far_viol=1 rc 1.
+Rules out: H-gap-dd2, H-none. Not covered: dd2 handoff on L10/L12 (many stand-ins); owner look.

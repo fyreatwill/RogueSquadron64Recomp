@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7796 (2026-11-22).
+Compact operational handoff, as of Session 7799 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -212,7 +212,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    control PASS, shift-2 329 >0.05; sheet docs/owner_sheet_s7797_L10_standins_fidelity.png. Post-G6c fidelity thread CLOSED (L1/L10/L12 16:9,
    L1/L4 21:9). dd2 (owner's other dd) s7798 L4 16:9 155 stand-ins: frac 0.010/0.013/0.017 (refit 0.011/0.012/0.013), 0 >0.05, control PASS,
    shift-2 44; sheet docs/owner_sheet_s7798_L4_dd2_standins_fidelity.png -> H-equal at dd2. Frame diff cannot see a handoff gap (angrylion
-   replays our stream): NEXT measures the s7672 handoff at dd2. Re-holds: L0/L11 pass (s7798). Next: fold the 11 remaining s7797_standins_rehold_L* soaks (300 s dd4 STANDINS=1 on the post-s7790 binary, the levels s7692
+   replays our stream). s7799 handoff at dd2 (scratch/s7672/run.zsh <out> <lvl> odd 2): L4 held 23 / L1 9 handoffs 0 blinks, same-run
+   control 16/16, 7/7 blink -> H-clean at dd2; L1 held si_far 179 all with re_far >= si_far (beyond far*dd, real out of range too), scorer
+   now fails only on far_viol (si_far > re_far). Re-holds: L0/L11/L13/L14 pass (s7798/s7799). Next: fold the 9 remaining s7797_standins_rehold_L* soaks (300 s dd4 STANDINS=1 on the post-s7790 binary, the levels s7692
    did not re-hold). Each verdict line should read alive=1/1 crash_arms=0 stall_arms=0. Then take the next item-3c ladder rung.
 
 ## Evidence index
