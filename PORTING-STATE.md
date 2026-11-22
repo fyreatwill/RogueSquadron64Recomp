@@ -208636,3 +208636,8 @@ weak on clang, so a strong host definition of the same name silently wins).
 - Sweep row **S7810_HOST_OVR** added to tools/s7651_gate_sweep.py (needs CENSUS/R2-SCANNER/PLANTED-MUTANT/PRE-FIX PASS + GREEN).
 Verdict: H-differ selected for the pre-fix tree (zero-extended pointer path), H-equal for every in-RAM class after the fix,
 H-hollow refuted (every coverage counter > 0). A new host override of a game function turns the sweep RED until it gets a row.
+Discrimination: this run selects H-differ for the pre-fix host zmemcpy (zero-extended pointer -> host fault, retail copies) and
+selects H-equal after the fix; it refutes H-hollow (all 9 coverage counters > 0, every control PASS) and refutes H-differ for every
+in-RAM class (len 0, short, 16-byte block, mixed alignment, overlap both directions, s7490 diag path).
+Next discriminator: the fixup-behaviour-delta class (NEXT.md): raw N64Recomp output vs the fixup'd RecompiledFuncs, every
+default-on hunk classified; H-all-rowed vs H-orphan is decided by whether any default-on hunk lacks an ORIGIN row / off switch.
