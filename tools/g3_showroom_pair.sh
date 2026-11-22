@@ -25,7 +25,7 @@ PSECS=$(python3 -c "print(int($TE+$GAP+5+${DWELL:-19}))"); RSECS=$(python3 -c "p
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
+source /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/rsp_plugin.sh  # s7816: VU-fixed cxd4 by default
 V=tools/oracle/rdplog/rdplog.dylib
 D=$S/retail
 # s6800: private Core SaveSRAMPath (--save-dir); the user-wide mupen save is never touched

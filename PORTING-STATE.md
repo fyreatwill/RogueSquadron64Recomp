@@ -208821,3 +208821,33 @@ g3_menu_pair, g3_showroom_pair, g3f_retail_pan, oracle/run_m4_retail_pcs), so th
 <=1 LSB on ~12k px per task). NEXT s7816 builds a patched oracle plugin and re-scores one retail pair.
 Gotchas: n64brew has no per-op VU detail; GitHub blob pages 503'd, so cen64 + n64-systemtest were shallow-cloned to /tmp and only
 read (n64-systemtest not used). cxd4's bundled SSE2NEON.h is too old to build its SSE path: run.sh shims it to the maintained sse2neon.
+
+## Session 7816 (2026-11-22) — retail oracle now loads the VU-fixed cxd4 by default; 3-arm same-session oracle run: static frames byte-identical across stock/rebuilt/patched, animated frames noise-bound (wall-clock presses), so past oracle verdicts stand
+
+Start: crash_reports --since 2026-11-13 new=0; no owner answer; SOAK-RESULTS nothing new since the s7809 fold.
+Work unit (NEXT s7816, HYPOTHESIS-ID oracle-cxd4-vu-fix): stop the retail oracle carrying stock cxd4's 5 VU defects (s7815).
+Hypotheses: H-negligible (oracle frames unchanged within noise) / H-shift (some retail frames change) / H-worse (patch breaks oracle).
+
+Engineering:
+- tools/oracle/build_cxd4_patched.sh: patch_cxd4.sh into ../rs64-oracle-cxd4p + make (APIDIR = rs64-oracle core api; the stock
+  build's make needs it too). Checks the dylib is the scalar path (_V_result present; arm64 has no SSE path, so the patch covers it).
+  FIXES=0 builds an unpatched copy (build-equivalence control, built at ../rs64-oracle-cxd4s). rs64-oracle tree untouched.
+- tools/oracle/rsp_plugin.sh, sourced by g3_menu_pair, g3_ai_gap_pair, g3_showroom_pair, g3f_retail_pan, oracle/run_m4_retail_pcs:
+  default = patched; RS64_ORACLE_RSP=stock = old dylib; any other value = path; missing plugin exits 3. README section added.
+- tools/s7816_oracle_rsp_ab.sh (retail-only run, s6791 title->hangar press schedule, fb dumps every 1 s in the 1024 and 512
+  phases; no port arm, so no SAVE_FROM save swap) + tools/s7816_fb_ab.py (visible-fb best-match within +-3 dumps, --ctl plants 1 px).
+
+Run (one emulator at a time, same session): stock, rebuilt-unpatched, patched; each 104 s, 82 dumps, ~2200 hangar-origin VIs (all
+three reached the hangar: patched plugin boots and renders, H-worse not seen).
+| pair | 1024 phase exact/25 | 512 phase exact/41 | diff px total |
+| stock vs rebuilt (noise floor) | 4 | 4 | 1.49M + 2.61M |
+| stock vs patched | 4 | 4 | 1.54M + 2.63M |
+| rebuilt vs patched | 4 | 5 | 1.63M + 2.15M |
+The same frames are exact in every pair (t016/t017/t039/t040/h000/h001/h024/h025; h023 differs 207 px stock-vs-both, identical
+rebuilt-vs-patched). Control: planted 1 px reported exactly 1, all 3 pairs PASS.
+Reading: static frames are byte-identical whatever the plugin; every animated frame differs by up to full scale in the noise arm
+(presses and dumps are wall-clock, so each run samples different game frames), so this instrument cannot see a sub-LSB effect.
+The plugin effect itself stays measured offline only (s7815: whole-task replays, <=1 LSB on ~12k px of flight tasks).
+ORIGIN: n/a (no mitigation). Rules out H-worse; H-negligible holds for static frames; H-shift unresolvable cross-run (single-source
+for flight: s7815 offline only). Gap named: oracle presses/dumps are wall-clock, not VI-clocked, so no two oracle runs are
+comparable on animated frames. NEXT: VI-clocked --press/--fb-dump so the oracle becomes run-to-run deterministic.

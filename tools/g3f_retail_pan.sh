@@ -5,7 +5,7 @@ D=${1:-scratch/s6791/retail}; mkdir -p $D
 pgrep -x rs64_oracle >/dev/null && { echo busy; exit 4; }
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
+source /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/rsp_plugin.sh  # s7816: VU-fixed cxd4 by default
 V=/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-angrylion-plus.dylib
 # s6800: private Core SaveSRAMPath (--save-dir); the user-wide mupen save is never touched
 mkdir -p $D; SD=$(cd $D && pwd)/savedir; mkdir -p $SD; cp ${EEP:-build/saves/rs64.n64.us.1.0.bin} "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3

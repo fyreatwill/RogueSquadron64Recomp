@@ -12,7 +12,7 @@ RP=$(python3 -c "import sys;print(','.join('%g:%s'%(float(t)+$OFF,{'down':'ddown
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
+source /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/rsp_plugin.sh  # s7816: VU-fixed cxd4 by default
 V=${VIDEO:-/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-angrylion-plus.dylib}
 D=$S/retail; mkdir -p $D
 A=(); for i in $(seq 0 ${ND:-50}); do A+=(--fb-dump 1024:$i:600000:200000:$D/t$(printf %03d $i).bin); done

@@ -235,6 +235,14 @@ Do not read a null as evidence about a phase the run never reached: the whole
 64 KB around the heap freelist takes **zero** writes undriven and **3,514,738**
 with this schedule.
 
+### RSP plugin for retail-frame runs: VU-fixed cxd4 (s7816)
+
+The retail-frame scripts (g3_menu_pair, g3_ai_gap_pair, g3_showroom_pair, g3f_retail_pan, oracle/run_m4_retail_pcs,
+s7816_oracle_rsp_ab) `source tools/oracle/rsp_plugin.sh`, which loads a cxd4 with its 5 VU defects fixed (s7815: VCR,
+VCH, VABS, VMRG, VMADN/VMADL clamp; CEN64 and our LLE agree on all five). Build it once with
+`zsh tools/oracle/build_cxd4_patched.sh` (copies cxd4 to ../rs64-oracle-cxd4p; the rs64-oracle tree is never edited).
+`RS64_ORACLE_RSP=stock` restores the old plugin, any other value is taken as a dylib path. A missing plugin exits 3.
+
 The RSP plugin is Homebrew's `mupen64plus-rsp-hle`, which handles MusyX audio
 tasks. Audio is left unattached (core dummy). Video must be Rice for any
 phase past boot 320; dummy video does not complete DLs, so the cinematic

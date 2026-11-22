@@ -264,7 +264,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
      cxd4 has 5 VU defects (VCR merge() fed sn=-1; VCH -(-32768) kept 0x7FFF; VABS ACCL; VMRG keeps VCO; VMADN/VMADL clamp misses
      ACCM==0x7FFF/0x8000); CEN64 == ours on those ops. Patched cxd4 == ours bit-exactly on all ops AND on whole real tasks: the s7752
      "31-33 sub-LSB residual commands" were cxd4's VCH+VCR (ablation), so our LLE is byte-exact vs an independent RSP. CAVEAT: every
-     angrylion "retail oracle" run uses the STOCK cxd4 dylib (g3_*_pair, g3f_retail_pan): <=1 LSB on those tris. Sweep row S7815_VU.
+     angrylion "retail oracle" run used the STOCK cxd4 dylib (<=1 LSB on those tris). Sweep row S7815_VU. **s7816: the 5 oracle
+     scripts now load the VU-fixed cxd4 by default** (tools/oracle/rsp_plugin.sh; `RS64_ORACLE_RSP=stock` = old; build
+     tools/oracle/build_cxd4_patched.sh -> ../rs64-oracle-cxd4p). Same-session 3-arm oracle run (stock / rebuilt-unpatched /
+     patched, title->hangar, 66 frames): all 9 static frames byte-identical in all 3 arms; animated frames differ as much
+     between stock and its own rebuild as vs patched (wall-clock press/dump timing): the oracle cannot resolve a sub-LSB plugin
+     effect cross-run. Earlier oracle-based fidelity verdicts stand (H-negligible on static frames; flight effect <=1 LSB, s7815).
      [tools/s7815_vu_gate.py tools/s7815_vu_ops/{run.sh,harness.cpp,patch_cxd4.sh,cen64/}]
 13. **Next agent work (owner items above wait on the owner):** G3 post-G6c fidelity. Owner recipe (FPS60 dd4 16:9) + STANDINS=1 on the
    post-s7790 binary == angrylion on TWO levels: L1 s7793 (refit 5.27/0.015, 0 >0.05) and L12 s7794 (131 stand-ins; refit 3.88/0.013,

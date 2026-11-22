@@ -3,7 +3,7 @@ set -u
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
+source /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/rsp_plugin.sh  # s7816: VU-fixed cxd4 by default
 D=scratch/agent/s5354_retail_m4_pcs
 mkdir -p "$D"
 export RS64_RSP_MID_STRIDE=1

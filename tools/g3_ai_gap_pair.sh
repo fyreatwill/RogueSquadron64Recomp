@@ -12,7 +12,7 @@ python3 tools/g3_eep_patch.py ${BASE_EEP:-scratch/s6769/lvl16.eep} $EEP --set 0x
 pgrep -x rs64_oracle >/dev/null && { echo "rs64_oracle already running" >&2; exit 4; }
 C=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 R=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-RSP=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/mupen64plus-rsp-cxd4.dylib
+source /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/rsp_plugin.sh  # s7816: VU-fixed cxd4 by default
 V=/Users/williambuckley/Documents/Tools/g3_angrylion/build/mupen64plus-video-angrylion-plus.dylib
 D=$S/retail; mkdir -p $D/savedir; SD=$(cd $D && pwd)/savedir
 cp $EEP "$SD/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" || exit 3
