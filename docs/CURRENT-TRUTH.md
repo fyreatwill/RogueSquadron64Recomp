@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7787 (2026-11-21).
+Compact operational handoff, as of Session 7789 (2026-11-21).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -456,6 +456,13 @@ verbatim in PROJECT-OVERVIEW "(s7534 maintenance)").
     line broke their anchors, 0 crashes there since -> RETIRED, not restored (rule 11). alloc-tail GUARD3/4 "not found" = shadowed
     by s251/s350 guards at the same pcs. 52 vendored 0-hit markers: 26 RS64_* opt-in modes, rest M5-era diagnostics + s2586 store
     (s7787). A NEW anchor drift (unreviewed WARNING) or a step that changes nothing now fails s7719.
+36. **Quiet-skip vendored blocks (s7789): CLOSED, 0 open.** `tools/s7789_replace_site_census.py` (s7719 step 5c, ~70 s) re-runs
+    the vendored fixer AST-hooked (every str .replace/.count recorded by line; output byte-identical to a plain run) on the
+    pristine tree. 1,341 sites: 326 HIT, 150 OPTIN, 650 not called but text PRESENT (emitted by another route), 165 never applied
+    with text ABSENT/DYNTEXT, all reviewed: the whole s109 + s390-s568 item -317 skip-guard lineage (~100 blocks, 130 site pcs) is
+    dead since the s2190 anchor drift, 0 crash lines for those pcs after s2190 (scan finds 97 for known crash pcs) -> RETIRED
+    (rule 11); s147 song count-write reorder dead but SHADOWED by s4984 atomic + s4986/s4987 voice lock at 0x8008F0CC; rest M5 /
+    s1924-s1942 / s574-s637 diagnostics. Controls: 304/311 HIT sites found in the run's own output, s517 reads NOTCALLED+ABSENT.
 31. **Dangling resident-global class (s7777-s7779): CLOSED 7/7, 0 defects.** `ROGUESQ_S7777_DANGLE=1 ROGUESQ_STORE_DIAG=1` ->
     `python3 tools/s7777_dangle_score.py <log>` (detail PORTING-STATE s7777). Members: heap head ALLOC-META, 0x80148514 NOT-PTR,
     0x8014A894 COMPARE-ONLY, 0x80136FCC READ-NO-DEREF (0 stale derefs, two ways), 0x80130BB0 unused (s7776), and the FRAME member

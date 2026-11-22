@@ -207985,3 +207985,41 @@ the per-instruction families (257,4xx EQ). Next: dead-emitter census (NEXT.md).
   6/6 controls). Sweep --only s778: 6/6 GREEN (the census runs controls-only there; the full pass is inside s7719).
 - Rules out: H-dead for the replay chain (0 steps change nothing without a reason). Selects H-partial for the vendored s563/s566
   guards only, harmless today.
+
+## Session 7789 (2026-11-21) — quiet-skip census of the vendored fixer: 165 of 1,341 .replace sites never apply and leave no text; all reviewed (s109 + s390-s568 item -317 guard lineage dead since s2190, retired; s147 shadowed by s4984-s4987); gate step 5c
+
+HYPOTHESIS-ID: vendored-anchor-shadow-census. Question (from s7788): which vendored blocks fail like s563/s566 but quietly
+(`if text.count(old) == 1:` / `if marker in text: continue`), so no WARNING ever reports them?
+
+Instrument: new `tools/s7789_replace_site_census.py`. It parses `fixup_game_funcs_vendored.py`, rewrites every
+`<x>.replace(...)` / `<x>.count(...)` call (AST) into a recorder keyed by source line, and execs the hooked fixer on a fresh
+`regen_front.sh` pristine tree. Validity check, same run: the hooked fixer's output tree is byte-identical to a plain vendored run
+on the same pristine copy (`diff -rq` empty). Per site: HIT (old text found at least once), MISS (called, never found), NOTCALLED
+(guard false). For non-HIT sites the new text (runtime value, or the nearest literal assignment in the same def) has its 3 longest
+added lines counted in the live tree OR this run's vendored output, after undoing the s7580 `u << 16` LUI rewrite: PRESENT / PART
+/ ABSENT / DYNTEXT (built at runtime). Defs called only under `os.environ.get("RS64_...")` read OPTIN.
+Controls (same run): 304/311 HIT sites read PRESENT in the run's own output (the 7 misses: text rewritten by later vendored code;
+the measure sees what the replay emitted); s517 HEAPLISTDEQ_ATTR_WRITE (known dead, s7788 family) reads NOTCALLED+ABSENT. A first
+draft used the s2190 zero/unzero sites as positive control; they use re.sub, not .replace, so 0 sites: replaced by the HIT-rate
+control. A second draft read 25 HIT sites ABSENT: the LUI rewrite plus later stripping; fixed by the normalisation + work tree.
+
+Result: 1,341 sites = 326 HIT, 150 OPTIN, 650 NOTCALLED but PRESENT (an earlier/alternate route emitted the same text), 4 NOADD,
+165 never applied with text absent (154 NOTCALLED ABSENT, 7 PART, 4 MISS) or DYNTEXT (46). Reviewed by tag:
+- s109 video-frame-tick guards + s390-s568 item -317 skip-guard lineage (~100 blocks incl. the s4xx sibling-ptr table,
+  s551-s566 free-list-node guards): none applies in a pristine replay. Their 130 site pcs appear in 0 crash/fault/last-guest
+  lines of PORTING-STATE after s2190 (line 103929 on); the same scan finds 97 lines for the known crash pcs 0x80022160 /
+  0x8000834C (positive control); soak logs' last-guest pcs: 0 overlap. With all 19 levels held 660 s clean (G4), these are
+  mitigations with no live writer -> RETIRED, not restored (rule 11). ORIGIN: none needed, no mitigation added.
+- s147 allocateSongChannelArray count-write reorder (behaviour, MISS on funcs_23.c): dead, but the same 0x8008F0CC count
+  publication in the live tree is an s4984 atomic release store + s4986 voice-lock exit + s4987 alloc-pair hook, which close the
+  s146 race window -> SHADOWED.
+- s2472 scene-node depth declaration: conditional build repair, condition false. s590-s637 hangar probes, s616 base fix inside the
+  dead s605 body (s7788 WARN family). Diagnostics: s1993 / s2190 M5 tables, s1923-s1942 avf/menu probes, s811, s2031, s3556,
+  s4079/s4204 voice-modulation, s4648 field probe, s5533/s5228 store census, s1151/s1152 module-level RS64 modes, s3277 probe-window
+  branch (the skip-goto branch is the live one).
+Rules out H-quiet-dead for any default-path behaviour block (0 open); H-shadowed holds for s147 only.
+
+Change: census wired into `tools/s7719_regen_gate.py` as step 5c (`--pristine` reuses the gate's tree). `s7719_regen_gate.py
+--strict` rc 0 (VERDICT H-mirrored, dead-emitter open=0, quiet-skip open=0, 6+2 controls PASS); `s7651_gate_sweep.py --only
+s778` 6 GREEN, then s7789 GREEN after renaming the reviewed UNRESOLVED label DYNTEXT (the sweep's HOLLOW keys read it as open).
+Next: delete the ~165 confirmed-dead vendored blocks; the s7719 gate (live == replay byte-for-byte) proves the deletion inert.

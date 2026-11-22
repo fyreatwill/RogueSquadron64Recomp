@@ -14,6 +14,8 @@ Both scans walk every function and carry planted controls (guest store -> BEHAVI
      back to its pre-s7734 form must read HIDDEN. Catches a fixup that stops reproducing a hand-synced compiled reading.
   5b. (s7788) tools/s7788_dead_emitter_census.py on the replay's RS64_REPLAY_TRACE + log: a replayed step that changes nothing
      (DEAD/NOOP) or a vendored-fixer WARNING (anchor count=0) without a hand verdict reads open (rc 1); its 6 controls must pass.
+  5c. (s7789) tools/s7789_replace_site_census.py: the vendored fixer re-run AST-hooked on the same pristine tree; every .replace
+     site that never applied (quiet count!=1 / marker skips) and whose text is absent from live+replay needs a verdict (rc 1).
   6. (s7740, --strict) byte identity: every source file (*.c *.h *.cpp *.inl) of live and replay must be identical and present on
      both sides. Since s7739 live == replay byte-for-byte, so ANY difference is a hand edit or a fixup that stopped reproducing.
      Controls: a symlink farm of live with one planted line in one file, and one with an extra file, must each read exactly that
@@ -153,6 +155,12 @@ def main(a):
         for l in out.splitlines():
             if l.startswith(('control', 'steps=', 'DEAD', 'NOOP', 'PARTIAL', 'MARKER0', 'WARN', 'empty')): print('dead-emitter: %s' % l[:240])
         res['dead-emitter'] = rc
+        # s7789 step 5c: every vendored .replace site that never applied in this replay and whose text is absent needs a verdict
+        rc, out = sh([sys.executable, 'tools/s7789_replace_site_census.py', '--live', live, '--pristine', pr,
+                      '--keep', os.path.join(tmp, 's7789')])
+        for l in out.splitlines():
+            if l.startswith(('control', 'sites=', 'NOTCALLED', 'MISS', 'CHAIN')): print('quiet-skip: %s' % l[:240])
+        res['quiet-skip'] = rc
     if '--strict' in a:
         res['strict'] = strict_gate(live, tree, tmp or tempfile.mkdtemp(prefix='s7740ctl'))
     if tmp and '--keep' not in a:
