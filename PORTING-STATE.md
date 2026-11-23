@@ -209871,3 +209871,31 @@ Step 0 tripped (`wc -c` = 60272 > 60000), so no experiment ran; the NEXT unit (0
 - Gates after the edit: s7805 cited-cmd GREEN (tally unchanged, GREEN=10), s7762 owner docs 0 missing/stale, gq census clean.
 - Rule for future maintenance: any gate whose scope is "tools cited in CURRENT-TRUTH" must also read PROJECT-OVERVIEW, because
   migration moves citations there verbatim.
+
+## Session 7849 (2026-11-23) — 0x31=7 det pair via new one-shot driver: seed, rand, hp and pose exact under pins, but the port starts 2 extra player rumble effects (49 vs 47); carrier = rumble lifetime counted in SI-thread passes (retail 1/VI), H-pak refuted
+Work unit (NEXT s7849, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers, no new
+SOAK-RESULTS lines since s7839, CURRENT-TRUTH 25.9 KB. Runs one at a time (oracle, then port), 0 crash lines in p1/p2/p3.
+- Engineering: tools/s7849_det_pair.sh <0x31 value> OUTDIR folds the s7844-s7847 recipe into one driver (eep patch, retail r1 with
+  RS64_ORACLE_FPR=0,4,6,14,20, pin extraction, port p1 pinned + p2 unpinned control, score.txt). tools/s7849_det_pins.py (SEED = first
+  pc=800fa730 xtrace row's m=80003470; DT_AT = non-3D088888 ticks except raw-dt-0 clamp ticks; exit 2 on >32 pins, the apply_s7844
+  cap). tools/s7849_rec_align.py = scratch/s7847/al2.py generalised (both paths as args) + a rumble-event sequence check (w115/w116).
+  Offline validation on s7847 captures: SEED abd7a44b, DT_AT 2:3C888888 (= s7847), p1 0 words / p2 35229 words + row-4 fork (= s7847).
+- 0x31=7 retail r1: 1961 mission ticks, seed e7e151a1, dt pins 863:3D088887,1430:3D088887,1432:3D088887 (no half-dt tick this level).
+- p1 (seed poke + 3 DT_AT, all fired): seed + rand call sites equal on all 1961 ticks; hp equal on every tick; pose words 0 diffs.
+  Record: 361-365 differing words, all w115/w116 (+ 6 rows w149/w135 near row 1505). Control p2: seed differs tick 0, call sequence
+  forks tick 45, hp differs from tick 1281 -> instrument sees a fork when there is one.
+- w115/w116 = player obj (0x80137DBC) +0x1C0/+0x1C4. Retail oracle --watch-write 0x137F7C:0x137F84 (r2, 150 s, 34 writes): writers
+  initPlayerCraftTrailBuffers+0x94 (reset) and updatePlayerCraftPhysics 0x800B2CE0. Code 0x800B2C64-0x800B2CE4: if new prio (s1) <
+  current +0x1C4, skip while isRumbleSlotActive(0x80003150, slot 0x80110520+port*0x88 byte +0x6B); else stopRumbleEffect(old) +
+  startRumbleEffect(0x80002ADC) -> handle to +0x1C0, prio to +0x1C4. So it is the craft's RUMBLE handle/priority, not audio.
+  Event sequence: retail first life ...b:5, c:6, d:b, e:c; port ...b:5, c:5, d:6, e:b, f:c (one extra prio-5 start); totals 47 vs 49.
+- p3 = p1 + ROGUESQ_RUMBLE=0 (port 0 Pak::None, the pre-s7617 shape; oracle uses mupen64plus-input-sdl, no Rumble Pak): rand exact,
+  rumble events 49, first differing event 13, identical to p1 -> H-pak (our G6a pak report) REFUTED.
+- Mechanism (static read): processPolledControllerData 0x800027C0 adds getViModePeriod() to slot +0x80 each call and clears +0x6B at
+  0x80002934 once it passes the effect duration (+0x70 header); siServiceThread calls it at 0x80002F24, once per SI pass. Retail r3
+  (--watch-pc 0x800027C0 + 0x800FA730, 150 s): 8943 passes, 59.78/s overall; in mission 2375 passes / 1187 ticks = 2.001 per tick,
+  60.13/s -> retail rumble lifetimes are VI-locked. Port SI pass cadence NOT measured (no instrument yet) -> H-si-clock is the lead,
+  single-source until the port count exists.
+- Verdict: 0x31=7 selects H-new-fork with the carrier named (rumble effect expiry), refutes H-exact for the record and H-pak; game
+  state that matters (rand, hp, pose) is exact under the existing pins. 0x31=6 rerun through the new check: rumble events 19 = 19.
+- Captures (gitignored): scratch/s7849/{r1,r2,r3}/oracle.log, {p1,p2,p3}/run.log, p*_rand.txt, pins.txt, score.txt.

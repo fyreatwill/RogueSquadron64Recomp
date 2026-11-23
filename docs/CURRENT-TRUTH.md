@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7848 (2026-11-22).
+Compact operational handoff, as of Session 7849 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -218,7 +218,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    only non-default dt = tick 2 3C888888 (needs RS64_ORACLE_FPR=0,4,6,14,20 or snap.py sees 0 ticks). Port p1 (seed poke +
    DT_AT=2:3C888888): seed + rand callers equal all 1876 ticks, hp events identical (496..death 537, respawn 724, 1129..), 460-w
    record 0 diffs on all 1493 port rows. Control p2 (no pins, same run set): seed 167b1663 at tick 0, calls fork tick 3, record
-   row 4, hits 1 tick early. Recipe: scratch/s7847/run_port.sh. NEXT: 0x31=7 (lvl7 had the s5712 copyToRAM fix).
+   row 4, hits 1 tick early. Recipe: scratch/s7847/run_port.sh.
+   **0x31=7 (s7849): H-new-fork, carrier = rumble-effect lifetime (single-source port side).** Driver tools/s7849_det_pair.sh
+   (<0x31 val> OUTDIR: eep patch, retail r1, pins via tools/s7849_det_pins.py, p1 pinned + p2 control, score via
+   s7845_rng_tick_cmp + tools/s7849_rec_align.py incl. a rumble-event check). 1961 ticks, seed e7e151a1, dt pins 863/1430/1432
+   = 3D088887. p1: seed+rand callers equal all 1961 ticks, hp equal every tick, pose 0 diffs; ONLY record w115/w116 (player obj
+   0x80137DBC +0x1C0/+0x1C4 = rumble handle/priority, writer updatePlayerCraftPhysics 0x800B2CE0 <- startRumbleEffect, gated by
+   isRumbleSlotActive) differ: port 49 rumble events vs retail 47, first at event 13 (port an extra prio-5 start). p3 (p1 +
+   RUMBLE=0, Pak::None) identical to p1 -> H-pak refuted. Slot active byte +0x6B is cleared in processPolledControllerData
+   0x80002934 when elapsed (+0x80, += getViModePeriod per call) passes the effect duration; it runs once per siServiceThread
+   pass. Retail (oracle watch 0x800027C0): 60.13 passes/s = 1 per VI, 2.001 per mission tick. Port cadence unmeasured -> NEXT.
+   0x31=6 rumble events 19 = 19 (check controls both ways).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
