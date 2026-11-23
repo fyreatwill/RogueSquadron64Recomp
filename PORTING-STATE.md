@@ -210400,3 +210400,31 @@ Next: the same RBIN pair on the longest exact mission (0x31=12, 5765 ticks, deat
 Commit note (s7869 start): s7868 ended before its commit; its final sweep rerun by s7869: 252 gates, GREEN 242, REPORT 2,
 NEEDS-ARGS 7, RED 1 (s7723_retained_controls, allow-listed), new RED vs tools/gate_sweep_allowed_red.txt 0, rc 0
 (scratch/s7868/sweep.txt). Committed as found.
+
+## Session 7869 (2026-11-23) — det render oracle on 0x31=12: all 5662 flight frames (incl. death + respawn) = retail; the one 143-frame non-exact island is pre-flight, before tick 0, and state-driven (p1/p2 differ by different values)
+
+Start: s7868's work was on disk uncommitted (STATUS WORKING, sweep.txt cut after the controls). Reran its sweep
+(`python3 tools/s7651_gate_sweep.py --jobs 2 --new-red-vs tools/gate_sweep_allowed_red.txt`): 252 gates, GREEN 242, REPORT 2,
+NEEDS-ARGS 7, RED 1 (s7723, allow-listed), 0 new RED, rc 0; committed as 9f5edb483. crash_reports: nothing new; no owner
+answers; no new SOAK-RESULTS lines.
+Work unit (NEXT g3-det-prefix-render): `env RBIN=1 zsh tools/s7849_det_pair.sh 12 scratch/s7869/v12` (default PP/AP = the
+s7856 recipe, checked). Retail r1 reproduced s7856 exactly (seed 90ef4fcb, NTICKS 5765, NDT 42); retail.bin 2.83 GB (under
+the 6000 MB cap), p1.bin 1.86 GB, p2.bin 1.87 GB. crashlines 0/0. s7856_det_verdict: H-exact ticks=5765 full_rec=5673,
+p2 forked (seed t0, nonpose t600), control caught at t100, residual=none.
+Render (`python3 tools/s7868_det_frame_cmp.py r1/retail.bin p1.bin --plant --neg p2.bin`, scratch/s7869/v12_render.txt, rc 1):
+retail 9272 / port 9704 frames, offset -524 (6173 votes), exact 6173; exact span port[3388:9704] = E431 N143@3819 E5742.
+Plant at port 6833 caught; neg p2 longest run 431 (the same pre-flight stretch) then N4302 in flight -> PASS.
+Phase join (port header phase ordinal vs retail VI width, /tmp script): port phases 2,3,4(359),5(1618),6(3388),7(4042);
+retail widths 640, 1024(363), 512(1176), 640(2864), 512(3518). Phase 6 = 640-wide pre-flight segment (retail 2864-3517),
+phase 7 = flight (port 4042-9703, 5662 frames ~ the 5674 compared ticks). The exact span starts exactly at phase 6.
+Island classifier (NEW tools/s7869_island_probe.py, scratch/s7869/island.txt): island port[3819:3962] = retail[3295:3438],
+all in phase 6 / width 640, ending 80 frames before flight. p1 port-only tris 4066, p2 4047 (paired at p2's own offset -528,
+same retail frames); frames where p1's wrong tris == p2's wrong tris: 0/143; per-frame diff counts nearly equal (7/7, 8/8,
+16/16 ... 30/25) but values differ; PRIMs 0x54-0x64. Control: self-compare 0 + planted YH+1 = 1 tri, PASS.
+Reading (two lines: det state record + independent RDP stream with arm comparison): in flight, on det-exact ticks, the port's
+RSP+DL path emits retail's exact RDP stream for the whole mission including the player's death, explosion and respawn draws
+(H-clean, second mission after b17). The pre-flight island is an element animated by unpinned state before tick 0 (seed is
+poked and dt pinned only from mission tick 0): both arms run identical RSP/DL code and identical earlier frames, yet emit
+different coordinates, so the input differs, not the emitter. Rules out H-render for m12 flight; H-align not needed (one
+offset carries the whole span). Not claimed: what the island element is, or whether retail's pre-flight state is matchable.
+Bins deleted after scoring (scratch/s7869/v12/*.bin, r1/retail.bin; s7868/v17 bins too); txt scores kept.

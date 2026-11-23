@@ -299,6 +299,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    exact run; its non-exact frames sit before (unpinned pre-flight, tri-geom) and after (state fork, tri-count) - NOT attributed
    to ticks yet (no tick stamp in the RDP stream). s7868 also fixed a torn (vi_n, vi_t_ns) read in the =3 DMA model (now under
    s7867::mtx) and classified the AI DMA thread in s7382/s7383/s7538/s7599.
+   **s7869: 0x31=12 (longest exact mission, death t5304 + respawn t5490) render = retail for ALL 5662 flight frames.**
+   `RBIN=1 zsh tools/s7849_det_pair.sh 12` (det H-exact 5765 ticks, residual none). s7868 cmp: retail 9272 / port 9704 frames,
+   offset -524 (6173 votes), exact span port[3388:9704] = E431 N143 E5742; flight phase (port phase 7 = retail 512-wide,
+   port 4042+) is 100% exact; plant caught, p2 neg PASS. The 143-frame island (port 3819-3961) is in the pre-flight 640-wide
+   phase 6, BEFORE mission tick 0 (no seed/dt pin there), and `tools/s7869_island_probe.py` shows it state-driven: p1 and p2
+   both diverge on the same retail frames 3295-3437 with DIFFERENT tri values (0/143 frames identical), both re-converge after
+   (p2 E80 to the end of phase 6). A port render defect on equal input would give identical wrong tris in both arms. Two
+   missions now render-exact on det-exact ticks (b17 1120, m12 5662). Pre-flight islands = unpinned window, not render.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
