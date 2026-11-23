@@ -5,7 +5,7 @@ the 52x64 icon instances by (x, y, PRIM) and every >=40x40 element by (w, h, x, 
 reports an element 'absent' or a constant path distance: a near-static element (the reticle at rest) makes the path scorer's
 plant control weak (it FAILed retail-vs-retail on lvl3), while a direct position census answers 'same place or not' exactly.
 An element present at the same (x, y) with a different PRIM is a colour STATE (e.g. the top-left shield icon), not a missing draw.
-Usage: s7836_hud_elem_census.py CAPTURE[.zst]:retail|port:F0:F1 [...]"""
+usage: s7836_hud_elem_census.py CAPTURE[.zst]:retail|port:F0:F1 [...]"""
 import sys, os, collections, importlib.util
 HERE = os.path.dirname(os.path.abspath(__file__))
 sp = importlib.util.spec_from_file_location('seg', os.path.join(HERE, 's7821_rdp_screen_segments.py'))
@@ -25,7 +25,8 @@ def census(path, isret, a, b):
     return len(fr), ret, icon, big
 
 def main():
-    if len(sys.argv) < 2: print(__doc__); return 2
+    if len(sys.argv) < 2 or any(x.startswith('-') or x.count(':') < 3 for x in sys.argv[1:]):
+        print(__doc__); return 2  # input-needing report tool: 'usage: ' line -> gate sweep NEEDS-ARGS (s7836 fix)
     for spec in sys.argv[1:]:
         path, kind, a, b = spec.rsplit(':', 3)
         n, ret, icon, big = census(path, kind == 'retail', int(a), int(b))
