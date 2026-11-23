@@ -111,3 +111,5 @@ g_win_id|VALUE-RELAXED	DIAG s7720: main-thread store before the release store of
 rs64_s4211_pi_an|MIXED	VALUE s7720: single writer (PI DMA note, guest thread) relaxed self-load + release store; rsp.cpp reader acquires: ordered
 s_s7486_recent|VALUE-RELAXED	DIAG s7720: g_rs64_s7486_on host-read ring of recent addresses for the s7480 plant picker, default off
 rs64_s7858_tick|VOLATILE	DIAG s7858 mission-tick ordinal: ++ only in rs64_xtrace_mark (called under g_rs64_rand_trace = ROGUESQ_RAND_TRACE), read only to stamp [swatch-pt] log lines; a stale value mislabels a log row, nothing gates on it
+vi_n|TUPLE-RELAXED	LOCKED s7867 AI DMA model (ROGUESQ_AI_VI_CLOCK=3, default off): VI thread writes (vi_t_ns, vi_n) under s7867::mtx and both readers (s7867_ai_dma_queue, AI DMA thread) hold it (s7868 fixed a torn-pair read)
+vi_t_ns|TUPLE-RELAXED	LOCKED s7867 AI DMA model: pair with vi_n, written and read under s7867::mtx (s7868)

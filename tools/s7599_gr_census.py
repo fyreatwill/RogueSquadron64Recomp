@@ -125,6 +125,7 @@ ROWS = {
         "buf": G("ROGUESQ_G1E_THREADS sampler"), "known": G("ROGUESQ_G1E_THREADS sampler; capped 65535"), "nb": G("ROGUESQ_G1E_THREADS"),
         "symd": G("ROGUESQ_G1E_THREADS"), "v": "host: ROGUESQ_DD_ADDRS parse", "orig_r": "bounded: one per parsed address, once",
         "io": "bounded: one per parsed address, once",
+        "ends": G("ROGUESQ_AI_VI_CLOCK=3") + "; s7867 AI DMA queue, one entry per queued buffer, popped by the AI DMA thread at each DMA end",
     },
     "ultramodern/src/extensions.cpp": {"pending_events": "scoped: DL event list drained each dispatch"},
     "ultramodern/src/mesgqueue.cpp": {

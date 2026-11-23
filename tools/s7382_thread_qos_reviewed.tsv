@@ -46,8 +46,9 @@ lib/N64ModernRuntime/ultramodern/src/events.cpp|std::thread(run, f, us).detach()
 lib/N64ModernRuntime/ultramodern/src/events.cpp|= std::thread{ gfx_thread_func, rdram, &gfx_thread_ready, wi|1	OWNER	Gfx Thread	LLE RSP gfx in send_dl; 42% mean / 66.6% max at DEF pri 31; UI pri 46 under QOS_ALL=1; ROGUESQ_GFX_QOS
 lib/N64ModernRuntime/ultramodern/src/events.cpp|= std::thread{ task_thread_func, rdram, &task_thread_ready }|1	WARM	SP Task Thread	<=2.4% at DEF
 lib/N64ModernRuntime/ultramodern/src/events.cpp|= std::thread{ vi_thread_func };|1	HOT-COVERED	VI Thread	time-constraint RT by default since s6967 (pri 97), 3.0% = s7381 VI deadline spin
-lib/N64ModernRuntime/ultramodern/src/events.cpp|std::thread{ [] {|1	WARM	AI Drain	default-on AI event drain (ROGUESQ_AI_EVENT_DRAIN 2048): 0.3-0.4% at DEF (s7382_qos3, named this session)
-lib/N64ModernRuntime/ultramodern/src/events.cpp|std::thread{ [] {|2	DIAG	AI Hz	ROGUESQ_AI_EVENT_HZ alternative to the drain, else-branch, off by default
+lib/N64ModernRuntime/ultramodern/src/events.cpp|std::thread{ [] {|1	DIAG	AI DMA	s7867 ROGUESQ_AI_VI_CLOCK=3 det-harness AI DMA-end poster, off by default (s7868: ordinals renumbered, Drain/Hz moved to 2/3)
+lib/N64ModernRuntime/ultramodern/src/events.cpp|std::thread{ [] {|2	WARM	AI Drain	default-on AI event drain (ROGUESQ_AI_EVENT_DRAIN 2048): 0.3-0.4% at DEF (s7382_qos3, named this session)
+lib/N64ModernRuntime/ultramodern/src/events.cpp|std::thread{ [] {|3	DIAG	AI Hz	ROGUESQ_AI_EVENT_HZ alternative to the drain, else-branch, off by default
 lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp|std::thread([] {|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
 lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp|std::thread([] {|2	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
 lib/N64ModernRuntime/ultramodern/src/threads.cpp|std::thread(sampler_loop).detach(); }); }|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)

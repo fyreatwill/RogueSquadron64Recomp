@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7864 (2026-11-23).
+Compact operational handoff, as of Session 7867 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -282,8 +282,23 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    DMA time is D = 0x300*floor(cps/(4*fs)) = 768*551 = 423168 cycles (fs 22047, AI_DACRATE 2207, VI delay 811092), so its
    GAP-FREE rate is 1.916714 buf/VI; retail measures 1.914459 -> the FIFO sits empty 0.118% of the time. A constant clock
    cannot be retail at any rate (the port's =1 rate 1.913802 is exactly the no-floor value). Single-source (one oracle run
-   family; s7861/s7864 logs are the same deterministic run). Next: ROGUESQ_AI_VI_CLOCK=3 = per-buffer model
-   e_k = max(q_k, e_{k-1}) + D/delay VI with q_k stamped at osAiSetNextBuffer (VI + intra-VI host fraction).
+   family; s7861/s7864 logs are the same deterministic run).
+   **s7867: det sweep CLOSED as timing class (H-unmodelable selected).** ROGUESQ_AI_VI_CLOCK=3 (events.cpp "AI DMA" thread,
+   stamp in audio.cpp queue_audio_buffer) = mupen ai_controller.c verbatim: 2-entry FIFO, AI_INT at DMA end, e = max(q, e_prev)
+   + bytes*551/811092 VI. The game's AI loop (0x8008EE10) primes 1 buffer and queues 1 per type-1 message, so the FIFO is 1 deep
+   in retail too: each buffer's gap = guest IRQ->osAiSetNextBuffer latency, retail 0.000615 VI (~10 us, from 1.914459 vs
+   gap-free 1.916714), port 0.0197 VI (~330 us, host thread wake). b17 v17c: 1.8425 buf/VI, FORK t436 (worse than =1/=2 t1124).
+   Retail's AI phase is set by guest instruction timing; a host-timed recomp cannot reproduce it, and a constant latency is the
+   constant clock already refuted (s7864 v17c). Det sweep verdict stands as s7863: 17 exact, 3 audio-clock timing forks.
+   **s7868: per-frame RENDER oracle on det-exact ticks: b17 render = retail, 1120/1120 frames.** `RBIN=1 zsh
+   tools/s7849_det_pair.sh` keeps retail + p1 + p2 RDP streams; `python3 tools/s7868_det_frame_cmp.py RETAIL.bin P1.bin --plant
+   --neg P2.bin` pairs frames by unique-signature offset vote and compares every frame's full multiset (tri edge coefficients +
+   PRIM, texrect geometry + PRIM = HUD). b17 (scratch/s7868/v17, same det verdict: p1 = retail t0-t1123, fork t1124): 1120
+   consecutive exact frames, 0 non-exact inside the exact span, ending at the fork; plant (1 tri YH+1) caught; unpinned p2 matches
+   only the 101-frame boot logo. Two lines: det state record + independent RDP stream. Retained s7844 (0x31=5) pair: 2286-frame
+   exact run; its non-exact frames sit before (unpinned pre-flight, tri-geom) and after (state fork, tri-count) - NOT attributed
+   to ticks yet (no tick stamp in the RDP stream). s7868 also fixed a torn (vi_n, vi_t_ns) read in the =3 DMA model (now under
+   s7867::mtx) and classified the AI DMA thread in s7382/s7383/s7538/s7599.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

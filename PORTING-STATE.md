@@ -210331,3 +210331,72 @@ fixes were picked up (s7865 also fixed the sweep cache missing importlib-loaded 
 allow-listed (6 retained run.log.zst inputs deleted from scratch, see s7865). Full sweep rerun with python -u (the first,
 buffered run passed the 20 min tool cap with no output); result: 252 gates, GREEN 242, REPORT 2, NEEDS-ARGS 7, RED 1 (s7723, allow-listed), sweep rc 0, wall 1285 s. No new work unit: g3-ai-dma-model
 (ROGUESQ_AI_VI_CLOCK=3) remains NEXT.
+
+## Session 7867 (2026-11-23) — ROGUESQ_AI_VI_CLOCK=3 (mupen AI DMA model) lands; the game runs a 1-deep AI FIFO, so retail's AI phase is guest IRQ latency (~10 us/buffer vs port ~330 us): det sweep CLOSED as timing class (H-unmodelable)
+
+No new crash reports (FOLDED=6 new=0); no new SOAK-RESULTS lines; no owner answers.
+Change (lib/N64ModernRuntime, exported to submodule-patches/N64ModernRuntime.patch): ROGUESQ_AI_VI_CLOCK=3 = mupen
+ai_controller.c (rs64-oracle iter974-armA fifo_push/fifo_pop/do_dma: 2-entry FIFO, AI_INT scheduled at DMA END). audio.cpp
+queue_audio_buffer calls ultramodern::s7867_ai_dma_queue(bytes): q = VI index + host fraction of the current VI, s = max(q, e_prev),
+e = s + bytes*DCYC/VIDELAY (551/811092, s7865; env _DCYC/_VIDELAY). An "AI DMA" thread posts OS_EVENT_AI at the wall time of e
+(last VI tick + (e-vi)/60 s); the VI thread only stamps vi_n/vi_t and logs [s7867-ai-dma] (nq, gaps, idle_vi, q/s/e) every 3600 VIs.
+Default off; =1/=2 unchanged.
+Runs (bonus 17, s7864 recipe, retail r1 reused from scratch/s7864/v17, p2 = unflagged control, one game at a time; 0 crashlines all):
+- v17 (v1: posts on the VI tick >= e): guest locked to exactly 1 buf/VI (hist {1:4292}), audio-paced game slows (song 01 241 ticks
+  vs retail 167), FORK t436. Model bug: mupen's AI_INT lands mid-VI.
+- v17b (intra-VI thread post): hist {1:299,2:3292} but the guest queued 3.83 buf/VI, pend grew without bound (FORK t375). Bug was
+  mine: the VI branch's shared enqueue loop re-posted the thread's k posts (fixed: `mode != 3 &&`).
+- v17c (fixed): 1.8425 buf/VI, hist {1:656,2:3508}, gaps on 33250/33251 buffers, idle 0.0197 VI per buffer; FORK t436 (song 01 172
+  ticks vs 167). Same-run control p2 1.9141, forks t0 seed / t23 calls (unpinned, as expected).
+Reading (two lines: mupen source + the game's own loop): the AI thread at 0x8008EDB8..0x8008EE84 primes ONE buffer (EE08), then per
+type-1 message queues ONE (EE84), so the FIFO never holds a second entry, in retail too. Each buffer's gap is the guest's
+interrupt -> osAiSetNextBuffer latency: retail (1/1.914459 - 1/1.916714) VI = 0.000615 VI ~ 10 us; port 0.0197 VI ~ 330 us (host
+thread wake). Retail's AI phase is therefore set by guest instruction timing; a constant modelled latency is the constant clock
+s7864 v17c already refuted (retail rate wanders 1.914588 -> 1.914722).
+Rules out: H-dma as a fixable det lever (the DMA model is exact but its input, guest latency, is not reproducible host-side).
+Selects H-unmodelable: det sweep CLOSED as timing class; s7863 verdict stands (17 exact, 3 audio-clock forks b17/m9/m15).
+Gate: s7651 sweep run after the change (scratch/s7867/sweep.txt).
+Next: g3-det-prefix-render (NEXT.md).
+
+## Session 7868 (2026-11-23) — det-exact ticks as a render oracle: bonus 17 port RDP stream = retail frame for frame (1120/1120 exact, plant caught, unpinned control fails); s7867 left uncommitted, its 5 gate REDs fixed incl. a torn (vi_n, vi_t_ns) read
+
+Start state: s7867's work was on disk but never committed (STATUS WORKING, scratch/s7867/sweep.txt empty: the iteration ended
+mid-sweep). Pre-checks: crash_reports FOLDED=6 new=0; no owner answers; no new SOAK-RESULTS lines; CURRENT-TRUTH 34.8 KB.
+- s7867 sweep, rerun: 252 gates, GREEN 238, REPORT 2, NEEDS-ARGS 7, RED 5. All five trace to s7867's opt-in "AI DMA" thread or
+  the known scratch wipe:
+  s7382_thread_qos_census: the reviewed table keys threads by occurrence ordinal in events.cpp, so the new thread shifted
+  "AI Drain"/"AI Hz" one slot (the Hz row was being applied to the Drain thread). Renumbered: 1 = AI DMA (DIAG), 2 = Drain, 3 = Hz.
+  s7383_atomic_order_census: vi_n MIXED. REAL DEFECT: the VI thread stored vi_t_ns then vi_n (release) and
+  s7867_ai_dma_queue loaded vi_n then vi_t_ns (acquire), so a reader between the two stores saw a new timestamp with the
+  old VI count (q one VI low). Fix (lib/N64ModernRuntime events.cpp): the VI thread writes the pair under s7867::mtx and both
+  readers read it under mtx; all ops relaxed. Rows vi_n/vi_t_ns TUPLE-RELAXED -> LOCKED in s7383_atomic_reviewed.tsv.
+  s7538_gb_census: the AI DMA thread's enqueue_external_message_src was UNCLASSIFIED -> new row ai-dma H-copy (PCM copied at
+  osAiSetNextBuffer, as the s7864 ai-vi-clock row). s7599_gr_census: s7867::ends OPEN -> gated (ROGUESQ_AI_VI_CLOCK=3).
+  s7723_retained_controls: skipped=6 (the s7865 scratch wipe), already allow-listed. All four rerun standalone rc 0. Rebuilt,
+  export.sh refreshed N64ModernRuntime.patch. Final sweep with --new-red-vs: scratch/s7868/sweep.txt.
+Work unit (NEXT g3-det-prefix-render). Boring thing first: no retained det-pair capture for b17/m9/m15 has render data;
+s7849_det_pair.sh has run the oracle with RDPBIN=/dev/null since s7849. So one new pair:
+- Change: tools/s7849_det_pair.sh RBIN=1 keeps retail r1/retail.bin and port p1.bin/p2.bin (unset = byte-identical).
+- New tools/s7868_det_frame_cmp.py: frames = FULL_SYNC spans (s7821 parser, --tri-geom), signature = full multiset of tris
+  (9 edge words + PRIM) and texrects (geometry + PRIM). Frames unique on both sides vote the retail-port offset; reports the
+  longest exact run, the exact span, a run-length E/N map with diff kind, and interior non-exact frames. Controls: --plant moves
+  one tri's YH 1 quantum in the middle of the run (must flip exactly that frame), --neg PORT2 (unpinned arm must not match
+  half as long). Exit 0 clean / 1 interior diffs / 2 no alignment / 3 control FAIL.
+- Run: `env RBIN=1 SECS=200 BASE_EEP=scratch/s7859/base_bonus.eep PP_OVR=19.5:start,27.5:dright,31.5:start,43.5:start,55.5:start
+  AP_OVR=6:start,11:start,11.5:w1024,19.5:start,31.5:start,39.5:right,43.5:start,67.5:start,79.5:start zsh tools/s7849_det_pair.sh 16
+  scratch/s7868/v17` (bonus 17). 0 crashlines both arms. Det verdict reproduced: p1 seed/calls = retail through t1123, fork t1124,
+  pose diff from t1124; p2 forks t0 (seed) / t22 (calls); --control 100 caught.
+- Render (scratch/s7868/v17_render.txt): retail 6144 frames, port 6482; offset -888 (1120 votes); **1120 consecutive exact
+  frames, exact span = the run, 0 interior non-exact**; plant at frame 4119 caught; p2 only matches 101 frames at offset 118
+  (the boot logo, deterministic), PASS. 1120 frames ~ 1124 exact ticks (bonus 17: 1 gfx frame per 2-VI tick).
+- Retained s7844 pair (0x31=5, p4 vs r3; scratch/s7868/s7844_cmp.txt): 2286-frame exact run; before it 159+ alternating
+  tri-geom diffs (64 of 164 tris: the unpinned pre-flight stretch), after it N212 tri-count at port 6074 (the s7844 enemy-hit
+  state fork), then E410/E528 re-merges. Not attributed to ticks: the RDP stream carries no tick stamp. Not a render claim.
+Reading (two lines: det state record + independent RDP command stream): on every frame where the guest state is bit-identical
+to retail, the port's RSP (LLE F5 ucode) + DL path emits the exact RDP stream retail emits, HUD included.
+Selects H-clean for bonus 17's matched prefix; rules out H-render (port render defect on equal state) there. Single mission.
+Rules out: "render fidelity can only be judged by eyeball/census distributions" - a det pair is now a per-frame exact oracle.
+Next: the same RBIN pair on the longest exact mission (0x31=12, 5765 ticks, death + respawn) plus a tick stamp join (NEXT.md).
+Commit note (s7869 start): s7868 ended before its commit; its final sweep rerun by s7869: 252 gates, GREEN 242, REPORT 2,
+NEEDS-ARGS 7, RED 1 (s7723_retained_controls, allow-listed), new RED vs tools/gate_sweep_allowed_red.txt 0, rc 0
+(scratch/s7868/sweep.txt). Committed as found.

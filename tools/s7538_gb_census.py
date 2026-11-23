@@ -124,6 +124,9 @@ RULES = [
     (EV, "vi_thread_func", r"!ai_event_external\(\)\) \{\s*(?:ultramodern::)?$", [("ai-vi", "H-copy", AI_COPY, AI_CHECKS)]),
     (EV, "init_events", r"\[s7197-ai-stall\]", [("ai-drain", "H-copy", AI_COPY, AI_CHECKS)]),
     (EV, "init_events", r"set_native_thread_name\(\"AI Hz\"\)", [("ai-hz", "H-copy", AI_COPY, AI_CHECKS)]),
+    # s7868: ROGUESQ_AI_VI_CLOCK=3 (s7867 det harness, default off) posts each AI completion from an "AI DMA" thread at the
+    # modelled DMA end; the PCM was copied at osAiSetNextBuffer (AI_COPY), so the post order is the same H-copy.
+    (EV, "init_events", r"set_native_thread_name\(\"AI DMA\"\)", [("ai-dma", "H-copy", AI_COPY + " (s7867 opt-in DMA-model post)", AI_CHECKS)]),
     # --- SI ------------------------------------------------------------------------------------------------------------------
     (EV, "send_si_message", None, [("def", "H-ordered", "send_si_message body: ordering at its callers", [])]),
     (INP, "osContStartQuery", None, [("si", "H-ordered",
