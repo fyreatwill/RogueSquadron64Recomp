@@ -144,8 +144,12 @@ def census(scan_p, ast_p, drop=False, quiet=False):
     A, ea = propagate(load(ast_p), ef)
     S = [r for r in S if r["kind"] != "call"]; A = [r for r in A if r["kind"] != "call"]
     if drop:  # control: delete one default-on row from each source; the join must report both as one-source-only
-        ks = [i for i, r in enumerate(S) if r["eff"] == "ALWAYS" and r["kind"] == "store"]
-        ka = [i for i, r in enumerate(A) if r["eff"] == "ALWAYS" and r["kind"] == "store"]
+        # s7865: only rows both sources call ALWAYS (a scan-ALWAYS / ast-SIG row such as rs64_s7858_tick re-pairs the
+        # dropped row's partner as a non-ALWAYS one-source row and the control reads a false FAIL)
+        agree = [(a, b) for a, b in join(S, A)[0] if a["eff"] == "ALWAYS" and b["eff"] == "ALWAYS" and a["kind"] == "store"]
+        sid, aid = {id(a) for a, _ in agree}, {id(b) for _, b in agree}
+        ks = [i for i, r in enumerate(S) if id(r) in sid]
+        ka = [i for i, r in enumerate(A) if id(r) in aid]
         S.pop(ks[0]); A.pop(ka[-1])  # different rows: the first from the regex source, the last from the AST source
     both, so, ao = join(S, A)
     agree = sum(1 for a, b in both if a["eff"] == b["eff"])

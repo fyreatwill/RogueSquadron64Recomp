@@ -110,3 +110,4 @@ g_s7634_sink|VOLATILE	DIAG s7720: sink for the s7634 null-walk timing loop (anti
 g_win_id|VALUE-RELAXED	DIAG s7720: main-thread store before the release store of g_win_size; read only in the controls-panel self-test check arm (st_mode 2) after an acquire load of g_win_size
 rs64_s4211_pi_an|MIXED	VALUE s7720: single writer (PI DMA note, guest thread) relaxed self-load + release store; rsp.cpp reader acquires: ordered
 s_s7486_recent|VALUE-RELAXED	DIAG s7720: g_rs64_s7486_on host-read ring of recent addresses for the s7480 plant picker, default off
+rs64_s7858_tick|VOLATILE	DIAG s7858 mission-tick ordinal: ++ only in rs64_xtrace_mark (called under g_rs64_rand_trace = ROGUESQ_RAND_TRACE), read only to stamp [swatch-pt] log lines; a stale value mislabels a log row, nothing gates on it

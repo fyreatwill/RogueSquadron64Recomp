@@ -27,7 +27,15 @@ def _hook(ev, args):
             elif isinstance(args[2], int) and args[2] & (os.O_WRONLY | os.O_RDWR | os.O_CREAT):
                 return
             p = os.path.abspath(os.fsdecode(path))
-            if not p.startswith(SKIP) and not p.endswith(".pyc"):
+            if p.endswith(".pyc"):
+                # s7865: a module loaded by importlib.util.spec_from_file_location (s7633 -> s7632_dd_census.py) is not in
+                # sys.modules, so _module_sources misses it and only its .pyc is opened: record the .py the .pyc caches.
+                d, b = os.path.split(p)
+                if os.path.basename(d) == "__pycache__":
+                    p = os.path.join(os.path.dirname(d), b.split(".")[0] + ".py")
+                else:
+                    return
+            if not p.startswith(SKIP):
                 reads.add(p)
         elif ev in ("os.listdir", "os.scandir"):
             p = args[0] if args and args[0] is not None else "."

@@ -6448,7 +6448,7 @@ index 8ca779e..985f5e5 100644
  #else
      std::quick_exit(exit_status);
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..3a2ab35 100644
+index 149e770..765b79e 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -1,25 +1,472 @@
@@ -7470,7 +7470,7 @@ index 149e770..3a2ab35 100644
 +                acc -= k;
 +                for (int i = 0; i < k; i++)
 +                    ultramodern::enqueue_external_message_src(events_context.ai.mq, events_context.ai.msg, false, ultramodern::EventMessageSource::Ai);
-+                hist[k > 3 ? 3 : k]++; nposts += (uint64_t)k;
++                { const unsigned hk = (unsigned)k; hist[hk > 3 ? 3 : hk]++; } nposts += (uint64_t)k;
 +                if ((++nvi % 3600) == 0)
 +                    std::fprintf(stderr, "[s7864-ai-vi-clock] vis=%llu posts=%llu h0=%llu h1=%llu h2=%llu h3+=%llu rate=%u\n",
 +                        (unsigned long long)nvi, (unsigned long long)nposts, (unsigned long long)hist[0], (unsigned long long)hist[1],

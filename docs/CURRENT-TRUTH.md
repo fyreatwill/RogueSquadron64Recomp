@@ -278,6 +278,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    LEN*floor(cpu_counts_per_sec/(4*fs)) cycles after its DMA STARTS, and a DMA starts only when queued (gap when the FIFO ran
    empty), so the oracle's AI phase depends on guest queue latency. Remaining det lever: model DMA start/end events
    (NEXT.md g3-ai-dma-model). Single-source for the mupen reading (code only, not yet measured).
+   **s7865: H-dma selected, H-const refuted (offline, `python3 tools/s7865_ai_dma_rate.py`, sweep row S7865_AIDMA).** mupen's
+   DMA time is D = 0x300*floor(cps/(4*fs)) = 768*551 = 423168 cycles (fs 22047, AI_DACRATE 2207, VI delay 811092), so its
+   GAP-FREE rate is 1.916714 buf/VI; retail measures 1.914459 -> the FIFO sits empty 0.118% of the time. A constant clock
+   cannot be retail at any rate (the port's =1 rate 1.913802 is exactly the no-floor value). Single-source (one oracle run
+   family; s7861/s7864 logs are the same deterministic run). Next: ROGUESQ_AI_VI_CLOCK=3 = per-buffer model
+   e_k = max(q_k, e_{k-1}) + D/delay VI with q_k stamped at osAiSetNextBuffer (VI + intra-VI host fraction).
+   s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
+   08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

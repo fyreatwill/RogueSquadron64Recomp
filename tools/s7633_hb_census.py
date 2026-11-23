@@ -19,6 +19,7 @@ c.CLASS.update({
     "rs64_scr_t1": (FN, "update_screen drain timestamp (one clock read per VI)"),
     "rs64_vi_n_g": (FN, "VI counter read by phase gates everywhere"),
     "g_rs64_g1cf_tasks": (ENVG, "inside `if (s_f)` = ROGUESQ_G1CF latch"), "g_rs64_g1cf_dsize": (ENVG, "inside `if (s_f)` (ROGUESQ_G1CF)"),
+    "rs64_s7858_tick": (ENVG, "s7858 mission-tick ordinal: rs64_xtrace_mark is only called under `if (g_rs64_rand_trace)` (ROGUESQ_RAND_TRACE, fixup_rand_trace.py hooks)"),
     "g_rs64_g1d_ci_frame": (ENVG, "push_back <=64 inside `if (s_route || s_words)` (ROGUESQ_LOG_RDP_ROUTE / _WORDS latches)"),
     # dpc_bridge.cpp
     "rs64_s6843_lo": (ENVG, "rs64_wipe_scan returns unless ROGUESQ_WIPE_SCAN=<lo:hi> (static `on`)"),

@@ -117,6 +117,10 @@ RULES = [
      "hardware also performs after the interrupt); origin/registers are host copies made in osViSwapBuffer",
      [("file", RT64ST, r"memcpy\(present\.storage\.data\(\), &RDRAM\[screenFbAddress\], screenFbBytes\)"),
       ("nm_present", "osViSwapBuffer_recomp")])]),
+    # s7864: ROGUESQ_AI_VI_CLOCK=1/2 (det harness, default off) posts AI completions from the VI thread on a fixed clock;
+    # the PCM bytes were already copied at osAiSetNextBuffer (AI_COPY), so the post order vs guest memory is the same H-copy.
+    (EV, "vi_thread_func", r"s7864_ai_vi_clock\(\)\) \{", [("ai-vi-clock", "H-copy", AI_COPY + " (s7864 opt-in VI-clocked post)",
+     AI_CHECKS + [("file", "lib/N64ModernRuntime/ultramodern/src/events.cpp", r"getenv\(\"ROGUESQ_AI_VI_CLOCK\"\); bool v = e && \*e && \*e != '0'")])]),
     (EV, "vi_thread_func", r"!ai_event_external\(\)\) \{\s*(?:ultramodern::)?$", [("ai-vi", "H-copy", AI_COPY, AI_CHECKS)]),
     (EV, "init_events", r"\[s7197-ai-stall\]", [("ai-drain", "H-copy", AI_COPY, AI_CHECKS)]),
     (EV, "init_events", r"set_native_thread_name\(\"AI Hz\"\)", [("ai-hz", "H-copy", AI_COPY, AI_CHECKS)]),

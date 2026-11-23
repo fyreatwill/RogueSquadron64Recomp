@@ -210291,3 +210291,43 @@ Rules out: H-phase (a constant VI-locked AI clock fixes b17); H-other is not sel
 so the s7863 buffer-count model still fits). Selects H-pattern, refined: the AI-done schedule must model DMA start/end like mupen.
 Next: g3-ai-dma-model (NEXT.md): in AI_VI_CLOCK=3 mode, compute AI-done events from osAiSetNextBuffer queue VIs/cycles:
 end = max(queue, prev_end) + LEN*floor(cps/(4*fs)) in VI fractions; first measure the oracle's gap structure offline.
+
+## Session 7865 (2026-11-23) — s7864 gate REDs fixed (4 census rows + 1 transient), and offline H-dma selected: mupen's gap-free AI rate 1.916714 buf/VI vs retail 1.914459 (FIFO idle 0.118%), constant AI clock refuted
+Contract carry-over: s7864's events.cpp edit left 5 gates RED in s7651_gate_sweep. Classified each (no allow-list entries):
+- s7363_hostarr_census: `hist[k > 3 ? 3 : k]` (int k) read as B-GUEST; k is >=0 by construction, rewritten as an unsigned
+  clamp `hist[hk > 3 ? 3 : hk]` -> CLAMP, OPEN 0.
+- s7538_gb_census: the new VI-clocked AI enqueue (events.cpp:1087) had no rule -> added `ai-vi-clock` H-copy (AI_COPY: PCM
+  bytes already copied at osAiSetNextBuffer) with a check that ROGUESQ_AI_VI_CLOCK stays env opt-in. controls 9/9.
+- s7383_atomic_order_census + s7633_hb_census: rs64_s7858_tick (s7858, rt64_render_context.cpp:63) volatile ordinal.
+  ORIGIN: ++ only in rs64_xtrace_mark, which fixup_rand_trace.py calls under `if (g_rs64_rand_trace)` (ROGUESQ_RAND_TRACE);
+  read only to stamp [swatch-pt] log lines. Verdict DIAG (s7383 tsv) / gated (s7633 CLASS). unreviewed 0, OPEN 0.
+- s7633 also failed its drop-one control: s7632_dd_census.census(drop=True) popped the FIRST scan-ALWAYS store, which is now
+  rs64_s7858_tick (scan ALWAYS, ast SIG), so the dropped row's partner re-surfaced as a non-ALWAYS one-source row (ast-only
+  +0). Control now drops only rows BOTH sources call ALWAYS (s7632 + s7633 drop-one PASS +1/+1).
+- Cache defect found while verifying: the sweep kept serving s7633's old RED after the s7632 edit. gate_trace.py recorded
+  only modules in sys.modules, and s7633 loads s7632 via importlib.util.spec_from_file_location (never registered) from its
+  __pycache__ .pyc, which the hook dropped. Fix: an opened __pycache__/*.pyc now records its source .py. Control: unchanged
+  -> hit, one-line edit of s7632_dd_census.py -> miss (was a stale hit).
+- s7723_retained_controls: NOT transient. It reads `skipped=6`; the sweep needs skipped=0. The six retained inputs
+  (scratch/s7392/run, s7393/own, s7394/ownfix, s7396/own, s7397/own, s7399/own run.log.zst) are gone: about 40 scratch
+  dirs were emptied 2026-11-23 08:25 by an unidentified event (not prune-scratch.sh, which never touches .zst). They were never
+  in git and I found no other copy. Allow-listed in tools/gate_sweep_allowed_red.txt with that reason. The s7392-s7399 report
+  gates fall back to NEEDS-ARGS. Re-capturing those runs is a later work unit.
+Rebuilt (cmake, links), export.sh refreshed N64ModernRuntime.patch, full s7651 sweep rerun before commit.
+Work unit (NEXT g3-ai-dma-model, offline): new tools/s7865_ai_dma_rate.py (sweep row S7865_AIDMA) evaluates mupen's
+get_dma_duration: fs = 48681812/(1+2207) = 22047, VI delay = 526*floor(811363/526) = 811092, D = 0x300*floor(delay*60/(4*fs))
+= 768*551 = 423168 cycles -> gap-free 1.916714 buf/VI (vsync 524: 1.916792). Retail (s7864/s7861 b17 r1 oracle, same
+deterministic run) queues 1.914459 buf/VI over the mission span -> the AI FIFO is empty 0.118% of the time. Controls: fs
+reproduces 22047; planted gap-free rate reports gap 2e-6; removing the floor shifts the rate 0.152% (> the gap), and that
+no-floor value 1.913802 is exactly the port's AI_VI_CLOCK=1 rate. Selects H-dma (empty-FIFO gaps phase the AI), refutes
+H-const (no constant rate, including s7864's =2 1.914746, can follow retail's phase). Single-source (one oracle run family).
+Rules out: closing the det sweep before a DMA model is tried. Next: ROGUESQ_AI_VI_CLOCK=3 per-buffer FIFO model (NEXT.md).
+
+## Session 7866 (2026-11-23) — contract retry: s7865's 4 census fixes verified GREEN standalone and in a full s7651 sweep; commit of the s7865 work
+loop.sh re-invoked with the unmet contract (5 new RED). Re-ran each gate standalone on the s7865 working tree:
+s7363_hostarr_census OPEN 0 (rc 0); s7383_atomic_order_census unreviewed=0 controls=PASS; s7538_gb_census unclassified=0
+fail=0 (controls pass); s7633_hb_census OPEN 0, CONTROLS PASS. The REDs the loop reported came from before the s7865 row
+fixes were picked up (s7865 also fixed the sweep cache missing importlib-loaded modules, tools/gate_trace.py). s7723 stays
+allow-listed (6 retained run.log.zst inputs deleted from scratch, see s7865). Full sweep rerun with python -u (the first,
+buffered run passed the 20 min tool cap with no output); result: 252 gates, GREEN 242, REPORT 2, NEEDS-ARGS 7, RED 1 (s7723, allow-listed), sweep rc 0, wall 1285 s. No new work unit: g3-ai-dma-model
+(ROGUESQ_AI_VI_CLOCK=3) remains NEXT.
