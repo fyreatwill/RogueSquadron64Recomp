@@ -13,6 +13,10 @@ Rules (the s7847-s7855 hand scoring, made mechanical):
               (s7849_rec_align TIMING = 3D-sound node flags w115/116/135/149) or rumble pulse-order difference.
               Those are sub-VI audio/dump phase (s7851/s7852), so they do NOT demote H-exact; listed so the
               ledger records them instead of reading the line as bit-identical.
+  fork=       (s7861) on FORK lines: 'audio-clock(song H retail tR port tP)' when p1's first seed/call fork tick lies
+              within [-1, +LAG=32] ticks of the first song-handle change (g3_song_windows 'handle changes') that retail and port
+              make on different ticks with the same handle (0x31=14 rand forks 17 ticks after its t1395/t1396 switch): the s6806 audio-clocked split (0x31=8, 14, bonus 17).
+              Otherwise 'unclassified' (pick H-pin-gap / H-new-fork by hand).
 Exit 0 = H-exact, 1 = FORK, 2 = NO-VERDICT.
 """
 import re, sys
@@ -48,6 +52,27 @@ def facts(s):
     }
 
 
+def song_changes(s, side):
+    m = re.search(r'^== ' + side + r': ticks \d+\s+handle changes (.*)$', s, re.M)
+    return [(int(t), h) for t, h in re.findall(r't(\d+):([0-9a-fA-F]+)', m.group(1))] if m else None
+
+
+LAG = 32
+
+
+def fork_class(s, fork):
+    r, p = song_changes(s, 'retail'), song_changes(s, 'port')
+    if fork is None or not r or not p:
+        return 'unclassified'
+    for (tr, hr), (tp, hp) in zip(r, p):
+        if hr != hp:
+            return 'unclassified'
+        if tr != tp:
+            return (f'audio-clock(song {hr} retail t{tr} port t{tp})'
+                    if min(tr, tp) - 1 <= fork <= max(tr, tp) + LAG else 'unclassified')
+    return 'unclassified'
+
+
 def main():
     a = sys.argv[1:]
     if not a:
@@ -79,6 +104,9 @@ def main():
     res = [k for k in ('timing', 'rumble') if p1[k] not in (None, 'None')]
     detail += f" | residual={'timing-class(' + ','.join(res) + ')' if res else 'none'}"
     exact = p1['seed'] == 'None' and p1['call'] == 'None' and p1['windows'] == '0' and p1['nonpose'] == 'None'
+    if not exact:
+        ft = [int(x) for x in (p1['seed'], p1['call']) if x not in (None, 'None')]
+        detail += f" | fork={fork_class(sec['p1'], min(ft) if ft else None)}"
     print(f"{tag} {'H-exact' if exact else 'FORK'} {detail}")
     return 0 if exact else 1
 

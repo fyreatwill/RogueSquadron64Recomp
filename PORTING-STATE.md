@@ -210164,3 +210164,35 @@ p1 word-50 flip caught at t100; 0 crashlines in both arms.
 Rules out: H-new (a port divergence in the race) for bonus 16. The s7859 FORK t395 was the press schedule (H-input). Two
 lines: s7859's press audit plus this equal-press exact run, which agrees with s6771.
 Next: bonus 17/18 (0x31 clamps to 16, so they need d-pad RIGHT on SELECT LEVEL: retail `dright`, port `right`, per s6772).
+
+## Session 7861 (2026-11-23) — bonus 17 (Death Star trench) det pair: port = retail exactly t0-t1123, FORK t1124 = song-3 end audio-clock split (H-audio-clock); retail level-select RIGHT window found by cursor trace; det verdict gains fork= classifier
+
+No new crash reports (FOLDED=7 new=0); no new SOAK-RESULTS lines; no owner answers.
+Run 1 (scratch/s7861/v17_wrongpick, NEXT.md's schedule: PP ...,41.5:dright,43.5,55.5,67.5:start): retail r1 picked the race
+again (first tick vi 3157 and seed ebdad279, the same as s7860; 849 ticks because the 55.5/67.5 Starts paused the race). Port
+arms were killed before they ran: by s7860's count the port's commit is its 5th Start, so an AP RIGHT at 41.5 would also miss.
+Probe (scratch/s7861/probe, retail only, 58 s, xtrace cursor word 0x800CDAC0 at the hologram tick 0x800C6674): byte C1 goes
+0x10 -> 0x11 at vi 1997, right after the dright at PP 27.5 (vi 1995). The dright at PP 41.5 (vi 2835) does nothing. Retail's
+SELECT LEVEL window sits between its 4th Start (PP 19.5 = 25.25 s) and its 5th (PP 31.5 = 37.25 s, the commit). NEXT.md's
+"commit = 43.5 Start" was wrong for retail.
+Run 2 (scratch/s7861/v17): PP_OVR=19.5:start,27.5:dright,31.5:start,43.5:start,55.5:start;
+AP_OVR=6,11,11.5:w1024,19.5,31.5,39.5:right,43.5,67.5,79.5:start. Retail: a new mission (seed 8b1200fb, 1738 ticks, first tick
+vi 4888, last press vi 3675). Port p1: seed 8b1200fb at t0, first tick vi ~5925, last AP press vi 4839. Both sides press
+pre-flight only.
+- **p1 = retail through t1123**: rand seed + call sequence, hp changes (t203 150->130 and the regen ramp), 460-w record (first
+  nonpose diff t1124), TIMING words w115/116 (rumble) equal per tick to t1123. Songs 1/2/3 start t268/t467/t956 on both sides.
+  Song 3 ends at **t1124 retail (168 ticks, 643 AI buffers) vs t1123 port (167 ticks, 640 buffers)**, both 2.000 VI/tick, and
+  the seed forks at t1124. That is the s6806 audio-clock split, the same class as 0x31=8 and 14. Independent agreement:
+  s6772 (a different recipe/oracle) found the same mission identical up to its song-3 end split (t1098 retail).
+- Controls: p2 (unpinned) seed differs at t0; p1 word-50 flip caught at t100; 0 crashlines in both arms.
+- Verdict (tools/s7856_det_verdict.py): `bonus17 FORK ... residual=timing-class(timing,rumble) | fork=audio-clock(song 00000002
+  retail t1124 port t1123)`.
+Change: tools/s7856_det_verdict.py prints `fork=` on FORK lines. It reads `audio-clock(song H retail tR port tP)` when p1's
+first seed/call fork tick falls in [-1, +32] ticks of the first song-handle change that retail and port make on different
+ticks with the same handle, and `unclassified` otherwise. On the retained scores: s7857/v14 -> audio-clock (t1396/t1395, rand
+fork 17 ticks later at t1413), s7861/v17 -> audio-clock, and s7859/v16b (the harness press fork) -> unclassified, which is the
+negative control. New test tools/test_s7856_det_verdict.py (6 synthetic cases incl. beyond-LAG and no-split negatives),
+registered as sweep row S7861_VERDICT.
+Rules out: H-new (a port sim divergence) in bonus 17 before the song-3 split. It also rules out "the level-select RIGHT
+goes 2 s before the 43.5 Start" for retail.
+Next: bonus 18 (Hoth), two RIGHTs: PP 27.5 + 29:dright, AP 39.5 + 41:right (s6773: craft select SPEEDER, same Start count).

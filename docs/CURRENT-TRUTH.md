@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7858 (2026-11-23).
+Compact operational handoff, as of Session 7861 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -294,6 +294,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    t395-403, 460-w record, rumble 5/5); every press is pre-race on both sides. Controls: p2 forks t0, flip caught t100.
    Data: scratch/s7860/v16s/score.txt. **The main-mission sweep 0x31=0..15 is COMPLETE**
    (8 and 14 = H-audio-clock FORK; 7 residual closed s7851; the rest H-exact or timing-class).
+   **s7861: bonus 17 (Death Star trench) = H-audio-clock FORK:** p1 = retail t0-t1123 (rand, hp, 460-w record, rumble), seed fork
+   t1124 = song-3 end (retail t1124 / port t1123, 643 vs 640 AI buffers); agrees with s6772. Recipe: PP_OVR=19.5:start,
+   27.5:dright,31.5:start,43.5:start,55.5:start, AP_OVR=6,11,11.5:w1024,19.5,31.5,39.5:right,43.5,67.5,79.5:start, BASE_EEP=
+   scratch/s7859/base_bonus.eep, 0x31=16. **Retail's SELECT LEVEL window is between its 4th and 5th Starts (PP 19.5-31.5; the
+   5th = commit), the port's between AP 31.5 and 43.5** (cursor 0x800CDAC1 traced at 0x800C6674, s7861/probe). s7856_det_verdict.py
+   now prints fork=audio-clock|unclassified (test_s7856_det_verdict.py, sweep row S7861_VERDICT). Next: bonus 18 (Hoth, 2 RIGHTs).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

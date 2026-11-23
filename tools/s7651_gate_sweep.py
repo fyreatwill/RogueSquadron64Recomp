@@ -273,6 +273,9 @@ ARGS.update(S7815_VU)
 # s7858: det-pair dt pins must survive a [vi-poll] splice into a 0x800FA738 hit line (s7857/v14 shifted 118 pins one tick).
 S7858_PINS = {"test_s7858_det_pins_splice.py": ([], r"(?=[\s\S]*splice  : PASS)(?=[\s\S]*control : PASS)")}
 ARGS.update(S7858_PINS)
+# s7861: det verdict fork= classifier (audio-clock vs unclassified), synthetic score cases incl. negatives.
+S7861_VERDICT = {"test_s7856_det_verdict.py": ([], r"FAILURES 0")}
+ARGS.update(S7861_VERDICT)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
@@ -281,7 +284,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR) + tuple(S7812_RECOMP_H) + tuple(S7813_CALLEE) + tuple(S7814_INCLUDE) + tuple(S7815_VU) + tuple(S7858_PINS)
+EXTRA_GATES = ("s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR) + tuple(S7812_RECOMP_H) + tuple(S7813_CALLEE) + tuple(S7814_INCLUDE) + tuple(S7815_VU) + tuple(S7858_PINS) + tuple(S7861_VERDICT)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
