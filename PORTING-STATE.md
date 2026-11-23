@@ -209485,3 +209485,36 @@ BSS diff plan was not needed).
   g3-retail-flight-det-sweep): a mission-3 retail-vs-port det pair, tri dy mode + sprite classes + pose vs the retail-vs-retail spread.
 - Captures (gitignored): scratch/s7835/p1/run.log, gate*.txt.
 - ORIGIN: n/a (measurement only; env-gated print, retail path untouched with the env off).
+
+## Session 7836 (2026-11-22) — det pair on mission 3 (The Search for the Nonnah) flight: world-tri dy mode 0 vs both retail schedules (controls PASS), static HUD exact, no draw class missing; the port's reticle rests ~1 px lower than retail (retail R1 == R2 exactly) and guest RAM is bit-identical for the first 3 flight rows, then diverges at a short onset dt (616172 ticks = 0.79 VI): H-dtpath selected, H-exact and H-defect refuted; lvl3 CLOSED as retail-legal dt path
+Work unit (NEXT s7836, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS lines
+since the s7809 fold, no owner answers. HID idle 13.7 h, load 1.5. Binary = the s7835 build (no src change). Four game runs, one at a time.
+- Save: tools/g3_eep_patch.py scratch/s6748/lvl2.eep -> scratch/s7836/lvl.eep --set 0x31=2 (both copies re-signed, input checksums ok).
+  The port reaches SELECT LEVEL "THE SEARCH FOR THE NONNAH", A-wing craft select, intro cutscene, then HUD flight over a hazy canyon
+  (window sheet), 0 crash lines. Same press schedule as s7832 (port AP ...11.5:w1024...91.5; retail PP 19.5..91.5, R1 OFF 5.75, R2 OFF 4.25).
+- Flight bands (scratch/s7829/tl.py): R1 3293-4584, R2 3202-4566, port 4056-5160. Scored windows R1[3300:4300], R2[3210:4210], P[4060:5160].
+- World tris (s7827_tri_yshift_census.py --controls, planted A/B PASS in all 3 pairings): XH-consistent dy mode 0 everywhere. Port vs R1
+  0 x217k, +4/+3 shoulders 2.6k/2.1k (1.2 %; lvl2's pitched signature was +3/+4 at ~23 % of mode 0); port vs R2 the same; R1 vs R2 0 x11.4M.
+- HUD (new tools/s7836_hud_elem_census.py, direct position census; s7826's path plant FAILED retail-vs-retail for the big reticle because
+  the reticle sits almost still, so the census, not the path scorer, is the witness here): reticle rest position R1 = R2 exactly
+  (big 230.25,183.25 on 973/1000, small 243.0,190.75 on 970/1000). Port: big 230.0,184.25 (725/1087) + 183.75/184.0, small 242.75,192.0
+  (719) + 191.75 -> ~1 px lower, 0.25 px left, and it toggles between 2-3 positions where retail is steady. All other >=40x40 elements
+  at identical positions. The only 'none' class beyond the reticle, 52x64 at (32,24) PRIM ACED11B9 (retail 824/821), IS present in the
+  port at the same place with PRIM FFB200B9 (854): the top-left shield icon in another colour = damage state, game state downstream of
+  the flight path, not a missing draw. Static HUD exact (9242/9265 texrect elements exact).
+- Pose path (port p1: s7832 recipe + ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1, 1132 rows, 0 crash lines; retail
+  r1d: CPO 2 + --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0, 1320 rows): rows 0-2 (pre-flight + first two flight frames, camera
+  95.145,-4.045,8.886 -> 95.212,-3.946,8.558) are bit-identical in all 460 words; row 3 differs in 22 words (player 4,6,160,162 + camera
+  430-445). Camera step lengths R 0.348, 0.186, 0.085 ... vs P 0.348, 0.101, 0.148 ...: the port's third step is short. Port dt log at
+  that frame: fr n=4069 dt=616172 (0.79 VI) after a load (ctr 13), every following flight frame 1562391-1562625 (2 VI). VI stamps just
+  before it are 1.21 VI then 0.79 VI apart: host VI-wake jitter enters the guest's osGetTime-based stamp, on top of the s7835 "1 VI
+  since the twin sample" rule. End-of-run camera differs (R z 155.1 vs P 118.1: the flights have diverged by then).
+- Reading: identical to lvl2 (s7834/s7835): render pipeline exact, the flight path forks at the onset dt. Two lines: image (tri mode 0 +
+  reticle census 1 px with retail-vs-retail exact) and RAM (bit-identical until the short-dt row). The 1 px reticle is larger than
+  lvl2's 0.5 px but still at the sub-pixel/1-pixel level at 320x240; not owner-visible.
+- DISCRIMINATION: selects H-dtpath, refutes H-exact (reticle rests 1 px off) and H-defect (no draw class missing, world geometry exact).
+  lvl3 CLOSED. New datum: the port's onset dt is fractional (0.79 VI), so the port's flight pose may also depend on host VI timing,
+  which would make two identical port runs fly different paths. NEXT DISCRIMINATOR: port-vs-port onset dt and rest pose on this recipe.
+- Captures (gitignored): scratch/s7836/{port.bin,ret/retail.bin,ret2/retail.bin} (zstd), p1/run.log, r1d/oracle.log, scores
+  scratch/s7836/{tri,rect}_*.txt, hud_census.txt, rd.py.
+- ORIGIN: n/a (measurement only, no game code change).

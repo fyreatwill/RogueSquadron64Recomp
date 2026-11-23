@@ -422,6 +422,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    twin). Port clock VI-exact (dt == wake count 5182/5196 frames, flight frames all 2 VI); the onset frame gets 1 VI because the
    twin sampled one VI before the first sim frame (host CPU faster than N64; retail onset steps vary with CPO too). Not a defect.
    tools/apply_s7835_dtlog.py (ROGUESQ_S7835_DT=1).
+   **s7836 lvl3 (Nonnah) flight pair: CLOSED, H-dtpath.** World-tri dy mode 0 vs both retail schedules, static HUD exact, no class missing
+   (the 52x64 top-left icon differs only in PRIM = shield damage colour, game state). Reticle rests ~1 px lower in the port, retail R1 == R2
+   exactly (tools/s7836_hud_elem_census.py; s7826's path plant FAILs on a near-static reticle, use the census). RAM bit-identical for 3
+   flight rows, then the port's onset dt = 616172 (0.79 VI: host VI-wake jitter after a load, on top of the s7835 1-VI rule). Not
+   owner-visible. Open: does host VI jitter make two identical PORT runs fly different paths (port-vs-port determinism)?
 
 ## Evidence index
 
