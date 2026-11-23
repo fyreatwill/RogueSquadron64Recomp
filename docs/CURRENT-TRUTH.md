@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7851 (2026-11-23).
+Compact operational handoff, as of Session 7852 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -202,7 +202,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
-12. **G3 retail flight det sweep (s7832-s7851).** Pair = port (VI_STAMP=1 + RETAIL_SNAP=1) vs retail CPO1 oracle (FTZ per
+12. **G3 retail flight det sweep (s7832-s7852).** Pair = port (VI_STAMP=1 + RETAIL_SNAP=1) vs retail CPO1 oracle (FTZ per
    FCR31.FS, s7841): render tris, HUD census, 460-w ramdump. lvl2/3/4 pinned = retail (s7840); lvl5 render exact (s7841); lvl5
    1-ulp camera fork CLOSED s7843 as oracle timing (chase dt = running min of the 1/60-snapped dt; 0x3D088887 only for raw dt
    low nibble 0, mupen CPO jitter; tools/s7843_dt_snap_replay.py, apply_s7842_chasehex.py, scratch/s7842/chase_cmp.py).
@@ -247,7 +247,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    skew 0; (2) retail r6 vs retail r1 differ by exactly one transient dump row (VI 9318) then realign 0 diffs -> dump-instant
    sub-tick phase is noise even retail-vs-retail. s7849_rec_align.py TIMING = {115,116,135,149}. Note [ramdump] n= is NOT a shared
    key (dump PC runs 2764x port vs 2644x retail); only rec_align greedy rows or tick-keyed tools compare validly.
-   => 0x31=7 = retail for 305 s (rand, hp, pose, record). Next: 0x31=8 (NEXT).
+   => 0x31=7 = retail for 305 s (rand, hp, pose, record).
+   **0x31=8 (s7852): H-audio-clock.** 5580 retail ticks, 75 dt pins (apply_s7844_dt_at.py cap raised 32 -> 512). Pinned p1/p3:
+   seed, callers, hp equal ticks 0-3526; split = song 03 (handle 0x8010C0E0) ends t3527 retail / t3526 port at VI/buffer parity
+   (336/643 vs 334/637, s6806 band); first window a pure phase shift. Retail r1 == r2 whole run; p2 unpinned forks at tick 0.
+   s7845 PORT_MARKS now lists the s7851 sound marks (they read as rand calls: false tick-1 fork). Driver traces the song handle
+   + AI buffers and prints tools/s7852_fork_windows.py (all windows, --control) + g3_song_windows.py. Next: 0x31=9 (NEXT).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

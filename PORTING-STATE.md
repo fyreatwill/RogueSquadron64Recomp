@@ -209964,3 +209964,31 @@ SOAK-RESULTS lines since s7839, CURRENT-TRUTH 28.3 KB. One game run, two oracle 
 - Captures (gitignored): scratch/s7851/{r5,r6}/oracle.log, r6_writes.txt, p6/run.log, p6_rand.txt, run_p6.sh, sweep.txt.
 - Verdict line (gate wording): this selects H-timing-sibling and refutes H-logic for w135/w149; it closes 0x31=7. Next discriminator:
   the 0x31=8 det pair (tools/s7849_det_pair.sh 8), whose p1 rand/record first-diff selects H-exact, H-pin-gap or H-new-fork.
+
+## Session 7852 (2026-11-23) — 0x31=8 det pair: port = retail for 3526 ticks; the split is song 03's audio-clocked end (one tick earlier in the port), TIMING-class
+Work unit (NEXT s7852, HYPOTHESIS-ID g3-retail-flight-det-sweep). First: s7851's stop-gate failure (entry said "SELECTED"/"refuted",
+gate matches selects|refutes|closes) fixed by a verdict line in commit 899ab0f02. Pre-checks: crash_reports FOLDED=7 new=0, no
+owner answers, no new SOAK-RESULTS lines. Runs sequential, one game/oracle at a time: retail r1, port p1 (pinned) + p2 (unpinned),
+retail r2 + port p3 (pinned) with the song handle traced.
+- Driver blocker found and fixed: retail 0x31=8 has 5580 ticks and 75 non-default dt ticks (74x 3D088887, tick 1957 3D4CCCCC);
+  tools/s7849_det_pins.py exited 4 because tools/apply_s7844_dt_at.py held 32 overrides. Cap raised to 512 (the apply script
+  upgrades an applied 32-cap tree in place, idempotent); rebuilt; `[dt7844] armed 75 override(s)`, 75 tick lines in p1.
+  tools/s7719_regen_gate.py --strict: 53 files 0 differ, controls PASS, H-mirrored.
+- Scorer bug found and fixed: tools/s7845_rng_tick_cmp.py PORT_MARKS lacked the 4 s7851 sound-node marker sites (0x800989D8,
+  0x80098DE0, 0x80099720, 0x800998E8), so they read as port rand calls and reported a false call fork at tick 1. With them
+  listed, p1 first seed and call diff = tick 3527.
+- New tool tools/s7852_fork_windows.py: every fork window (not only the first), VI at window start, caller-multiset delta,
+  realign flag; --control drops one port call at tick 1 and must add a window there (PASS: 30 windows vs 29, tick 1-1 FORK).
+- Results. Retail r1 vs r2: 5580 ticks each, seed + callers identical over the whole run (oracle repeatable). p1 and p3 (seed
+  e4ae925b + 75 dt pins): seed, rand callers and hp equal on every tick 0-3526 (541 hp changes each side); elapsed VI at tick
+  3527 equal (7052 both). p2 control (no pins): seed 4d581c69 at tick 0, forks from tick 0, record row 1707, rumble 30 vs 20.
+- Split (two lines): (1) song-handle 0x8010C0E0 transitions are the same ticks up to song 03, which ends t3527 in retail
+  (168 ticks, 336 VI, 643 AI buffers) and t3526 in the port (167, 334, 637): VI ratio 0.994, buffers 0.991, the s6806 H-parity
+  band; songs 01 and 02 are tick, VI and buffer-equal (167/334/639-640, 1052/2104/4027-4028). (2) The first fork window
+  (ticks 3527-3529) is a pure phase shift: the same callers (dispatchDatSubtypeByRandomIndex 0x8007132C burst after the handle
+  switch) one tick earlier, seed realigned at 3530; later windows from 3542 follow the shifted mission event.
+- Verdict: this selects H-audio-clock (the s6760/s6806 audio-clocked song-end class) and refutes H-pin-gap and H-new-fork for
+  0x31=8. It closes 0x31=8: port = retail for 3526 ticks (rand, hp), record first nonpose diff only after the split (row 4368).
+  Next discriminator: the 0x31=9 pair; the driver now traces the song handle + AI buffers on both sides and prints
+  s7852_fork_windows + g3_song_windows, so a split at a song switch is classified in the same run.
+- Captures (gitignored): scratch/s7852/{r1,r2}/oracle.log, p1/p2/p3 run.log + *_rand.txt, score.txt, song.txt, run_song.sh.
