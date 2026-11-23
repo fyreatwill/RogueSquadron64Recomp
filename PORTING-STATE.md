@@ -209928,4 +209928,7 @@ SOAK-RESULTS lines since s7839, CURRENT-TRUTH 27.0 KB, host idle 22 h. One game 
 - tools/s7849_rec_align.py: w115/w116 now TIMING-class (excluded from the nonpose verdict, reported by the event check). p4 re-scored:
   first nonpose diff row 1505 = w149 (obj 0x80137DBC+0x248) retail 3f99999a (1.2) vs port 3e99999a (0.3) rows 1505-1510 and w135
   (obj+0x1F8) halfword 0x0003 vs 0x0011/0x0013 rows 1505-1507; record equal again from row 1511. -> NEXT names the writer.
+- Verdict: the port pass cadence (1/VI, 2/tick) refutes H-si-clock; port slot arithmetic + oracle r4 call order selects H-timing
+  (oracle CPU-timing race) and closes the 0x31=7 rumble fork as timing-class. Next discriminator: oracle --watch-write on obj+0x248 /
+  +0x1F8 names the writer of the rows 1505-1510 residual (H-timing-sibling vs H-logic, scratch/agent/NEXT.md).
 - Captures (gitignored): scratch/s7850/{p4,p5}/run.log, p4_rand.txt, p5_rand.txt, r4/oracle.log, sweep.txt (s7651 sweep: 246 gates, 242 GREEN, 2 REPORT, 2 NEEDS-ARGS, 0 RED).
