@@ -209550,4 +209550,7 @@ input-free on every run.
   duration itself VI-deterministic.
 - Default stays OFF (owner-invisible, but it changes guest dt). Queued scratch/agent/soak_queue/s7837_vistamp_L1.sh: owner recipe
   dd4 mission 1, 240 s, rV VI_STAMP=1 vs rC VI_STAMP=0 same run (alive, vi_stalls30s, max_gap).
+- DISCRIMINATION: selects H-jitter, refutes H-det and H-other. The fix closes the sub-VI part of thread g3-port-onset-determinism.
+  NEXT DISCRIMINATOR: fold the s7837_vistamp_L1 soak (rV vs rC pacing), then resume g3-retail-flight-det-sweep on mission 4 with
+  VI_STAMP=1 in the port arm.
 - Captures (gitignored): scratch/s7837/{pA,pB,qA,qB}/run.log + window PNGs; scorers scratch/s7837/{cmp,fork,off,q,w}.py.
