@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7862 (2026-11-23).
+Compact operational handoff, as of Session 7863 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -259,7 +259,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    `python3 tools/s7862_det_sweep_table.py`** (sweep row S7862_TABLE; re-scores the 10 retained score.txt rows, 10 hand rows cite
    their session; --control plants a mismatch): 17 H-exact, 3 FORK all audio-clock (0x31=8, 14, bonus 17). In every FORK the
    PORT song ends 1 tick early (3/3 same sign): b17 song 01 640/640 buffers equal, song 02 1869 vs 1872, song 03 640 vs 643.
-   s6806 called this parity within 1%; the consistent sign is unexplained -> NEXT.md g3-audio-clock-sign.
+   **s7863: the 3 FORKs are timing class, not a port audio-rate defect (g3-audio-clock-sign CLOSED).** (a) every AI buffer is
+   a1=0x300 (immediate in the delay slot of both osAiSetNextBuffer jals 0x8008EE08/0x8008EE84), so H-buflen is dead by code;
+   (b) `python3 tools/s7863_song_end_threshold.py --control` (sweep row S7863_SONGN): in all 10 song windows (3 forks + retail
+   r1/r2) one song-end buffer count N fits both arms (b17 song 03 N=639..641, m9 N=640, m15 N=640..641), planted -1% rate
+   caught in every window. Whole-run buffers/VI retail 1.9146 vs port 1.9139, per-VI cum drift -4..+2 with no trend (H-rate
+   refuted). The port delivers 0-3 AI buffers per VI (host SDL-drain paced, events.cpp s4450 DRAIN=2048) vs retail's steady
+   1-2, so the port crosses N one VI early (b17: +2 local lead at dVI 334). The 3/3 sign is one cue (~640 buffers, 167-168
+   ticks) whose N sits on retail's tick edge in all three missions, not three independent samples. Optional determinism
+   follow-up: a VI-locked AI-done schedule opt-in (NEXT.md g3-ai-vi-clock).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

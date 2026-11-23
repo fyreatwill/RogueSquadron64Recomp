@@ -210228,3 +210228,37 @@ CURRENT-TRUTH: 0x31=5..9 detail migrated verbatim to PROJECT-OVERVIEW "(s7862 mi
 Rules out: a port sim divergence in bonus 18 (Hoth) for the whole retail trace.
 Next: g3-audio-clock-sign: find osAiSetNextBuffer's length source and sum buffer lengths per song window on b17, both sides.
 Not a mitigation (measurement + table tool; no ORIGIN needed).
+
+## Session 7863 (2026-11-23) — g3-audio-clock-sign CLOSED: AI buffers are a fixed 0x300 and one song-end buffer count fits retail and port in all 10 song windows (3 det forks = AI-delivery phase, timing class); new scorer s7863_song_end_threshold.py + sweep row S7863_SONGN
+
+HYPOTHESIS-ID: g3-audio-clock-sign (closed) -> g3-ai-vi-clock.
+No new crash reports (FOLDED=7 new=0); no new SOAK-RESULTS lines; no owner answers. Offline only (no game run): every input is a
+retained det-pair trace.
+Step 1 (NEXT.md's offline discriminator): read runAiAudioStreamPlaybackLoop (0x8008ED70, funcs_23.c). Both osAiSetNextBuffer jals
+(0x8008EE08 first buffer, 0x8008EE84 per value-1 message on queue 0x80149670) take a1 = 0x300 from an immediate in the delay slot
+(addiu $a1,$zero,0x300 at 0x8008EDFC / 0x8008EE88); a0 = ring slot base[byte 0x801496F0], 16 slots of 0x300 carved from one 0x3000
+alloc. Buffer length cannot differ between arms -> **H-buflen REFUTED by code**, and no run was needed to add a length field.
+Step 2: with length fixed, the question is whether a song ends after the same NUMBER of buffers on both sides. New
+tools/s7863_song_end_threshold.py: per song window (handle 0x8010C0E0 change at tick s, next change at tick e) it takes
+c(v) = AI buffers queued since VI tv[s]; "first seen ended at tick e" bounds the threshold N to (c(tv[e-1]), c(tv[e])] (+-1 slack
+for row order inside a VI), intersects the two arms' intervals. Non-empty = one N fits both (timing class); empty = H-rate.
+--control thins arm B's buffers by 1% inside each window (a planted H-rate) and must turn every SAME into DIFFERENT.
+Result (default pairs = the 3 sweep forks + a retail-vs-retail pair):
+- b17 (s7861/v17 r1 vs p1): song 01 N=636..641 SAME, song 02 N=1869..1873 SAME, song 03 (tick split t1124/t1123) N=639..641 SAME.
+- 0x31=8 (s7852 r2 vs p3): song 01 SAME, song 02 SAME, song 03 (split t3527/t3526) N=640 SAME.
+- 0x31=14 (s7857/v14 r1 vs s7858 p4): song 01 (split t1396/t1395) N=640..641 SAME; songs 02/03 misaligned after the fork (expected).
+- retail r1 vs r2 (s7857/v14): 3/3 SAME, same end ticks (oracle repeatable).
+- CONTROL PASS: planted -1% caught in all 10 windows. VERDICT SAME in 10/10 -> **H-rate REFUTED.**
+Second line: whole-run buffers/VI b17 retail 1.9146 vs port 1.9139; per-VI cumulative diff (port-retail, aligned on t268) over
+2800 VIs: -4:5 -3:147 -2:652 -1:1052 0:742 +1:194 +2:8, wandering, no trend. Per-VI delivery: retail {1:142, 2:1522}, port
+{0:180, 1:329, 2:609, 3:546} - the port's AI-done is host-paced (events.cpp AI Drain thread, ROGUESQ_AI_EVENT_DRAIN 2048 B), so
+it arrives in bursts. At b17's crossing the port is +2 locally (dVI 334 since t956: port 643, retail 641) and passes N one VI early.
+Why 3/3 port-early: all three splits are the same ~640-buffer, 167-168-tick cue, whose N sits on retail's tick edge (retail
+intervals start at 639/640/640); not three independent samples. H-retail-jitter is not needed (retail r1 = r2).
+Change: tools/s7863_song_end_threshold.py (DEFAULT_PAIRS when no NAME:A:B is given; zopen for .zst), sweep row S7863_SONGN in
+tools/s7651_gate_sweep.py (`--control`, must print CONTROL PASS + VERDICT SAME). `--only 's786[123]'` GREEN 2/2; a full sweep was still running at commit time (result goes in the next entry).
+CURRENT-TRUTH item 12 updated.
+Rules out: H-buflen (code constant), H-rate (same N in 10/10 windows, control caught), H-retail-jitter as the needed cause.
+Not a mitigation (measurement + scorer; no ORIGIN needed).
+Next: g3-ai-vi-clock - an opt-in VI-locked AI-done schedule (fractional accumulator in vi_thread_func) to test whether the 3 forks
+become H-exact; default unchanged.
