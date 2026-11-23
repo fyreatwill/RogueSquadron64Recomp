@@ -209763,3 +209763,23 @@ a time; 0 crash lines.
 - Discrimination line (gate wording): this run selects H-cpo-model (the flip follows the first per-tick el whose raw dt has a zero
   low nibble, reproduced 2024/2026 by a float32 replay and by the port lever) and refutes H-state (the snapped dt is a stateless
   function of the tick's el; the only state is the running min, which latches the first 87).
+
+## Session 7844 (2026-11-22) — 0x31=5 det pair: render exact, and with retail's whole snapped-dt sequence replayed in the port the player record is bit-identical for 1321 ticks; the next fork is an enemy hit the port takes 143 ticks after the first vs retail 265 (H-new-fork SELECTED: carrier outside the player dump)
+- Recovered from a crashed iteration (its runs in scratch/s7844 were complete but never logged; this session folded them).
+- Pair: save `g3_eep_patch.py scratch/s7832/lvl.eep scratch/s7844/lvl.eep --set 0x31=5`; port p1-p5 per the s7841 port recipe,
+  retail r1-r3 per the s7841 oracle recipe (r3: 305 s, --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0 + watches
+  0x800FA738,0x800FA7D0 + RS64_ORACLE_FPR, 2338 rows / 2507 dt ticks).
+- Render: tools/s7827_tri_yshift_census.py on two windows (R[3400:4400] vs P[3936:4936], R[6760:7760] vs P[7296:8296]):
+  world-tri dy mode 0, controls PASS (A mode 0, B +2) both. HUD census window was pre-HUD (empty both sides; not re-run).
+- dt: scratch/s7844/snap.py (s7843 model) on r3: model == retail snapped 2505/2507; non-88 ticks = 0,1 (89, dt 0 clamp),
+  4 (0x3D4CCCCC, a 0.05 lag tick), 18 x 0x3D088887 (155..234, 1467, 2432..).
+- New tool tools/apply_s7844_dt_at.py (RS64_REPLAY, ROGUESQ_S7844_DT_AT=<tick>:<hex>,..; unset = untouched): overrides the
+  snapped dt f20 at L_800FA7D0 on chosen passes. Positive control: `[dt7844] tick=4 f20 3D088888 -> 3D4CCCCC` etc. fired.
+  p2 (no lever): 20 pose words off from row ~150 (the missing tick-4 lag). p4 (tick 4 + all retail 87 ticks): 0 diffs in all
+  460 words through row 1321 (retail 1323) — two lines: lever on removes the early fork, lever off keeps it, same recipe.
+- Fork at p4 row 1322: hp w51 (+0xCC) port 104.0001-50 = 54.0001, retail 104.0001 (no hit); w55 5->10, hit pulses w58/82/86,
+  w115=1, rotation matrix jolt. tools/s7844_hp_events.py (new): 1st hit shared (retail 1181 / port 1179, offset 2 = alignment);
+  2nd hit gap port 141/143/143/142 (p2/p3/p4/p5, dt replay on or off), retail 265. Both later die and respawn.
+- Rules out: dt/oracle-timing class for this fork (dt replay complete through it), player-state defect (record exact until the
+  hit). Selects H-new-fork: shooter AI / RNG / bolt geometry, not in the dump. Next: hp write watch + RNG state dump (NEXT.md).
+- Deleted p2.bin/p3.bin (3 GB scratch RDP bins); kept p4.bin + r3/retail.bin for the next pair's render-side check.

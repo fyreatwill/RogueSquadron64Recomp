@@ -230,17 +230,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
-11b. **G3 retail flight det sweep (s7832-s7843): next mission 0x31=5 with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1 oracle
-   run (oracle core flushes denormals per FCR31.FS, s7841): render tris, HUD census, ramdump. lvl2/3/4 pinned = retail CPO1 (s7840);
-   lvl5 (Gerrard V) render exact (s7841). **lvl5 residual 1-ulp camera fork CLOSED s7843 as oracle timing, not a port defect:**
-   the chase dt (cam+0xA4, s7842 carrier) is the RUNNING MIN (0x8004D5A4-D5B4) of runInMissionFrame's dt, which snaps the
-   timeSnapshotFiller dt to a multiple of q=1/60 (0x800FA730-A7AC, fmodf 0x8001E20C); the float residue of that snap gives
-   0x3D088887 exactly when the raw dt's low mantissa nibble is 0 (stateless per tick: el 811144/811155/811158/811169 -> 87,
-   pin 811160 -> 88). Retail's first such el (811155, mupen CountPerOp instruction-count jitter) lands at tick 276.
-   Two lines: tools/s7843_dt_snap_replay.py float32 model == retail snapped dt 2024/2026 (2 misses = dt 0 clamp ticks) and
-   running min == chase dt 2026/2026; port lever ROGUESQ_S7839_SNAP_EL=811155 -> 87 from tick 2, fork moves line 552 -> 4.
-   Tools: apply_s7842_chasehex.py (ROGUESQ_S7842_CHASEHEX=<path>), oracle RS64_ORACLE_FPR/SPW, scratch/s7842/chase_cmp.py.
-   Owner decision still open: RETAIL_SNAP default.
+11b. **G3 retail flight det sweep (s7832-s7844).** Pair = port (VI_STAMP=1 + RETAIL_SNAP=1) vs retail CPO1 oracle (FTZ per
+   FCR31.FS, s7841): render tris, HUD census, 460-w ramdump. lvl2/3/4 pinned = retail (s7840); lvl5 render exact (s7841); lvl5
+   1-ulp camera fork CLOSED s7843 as oracle timing (chase dt = running min of the 1/60-snapped dt; 0x3D088887 only for raw dt
+   low nibble 0, mupen CPO jitter; tools/s7843_dt_snap_replay.py, apply_s7842_chasehex.py, scratch/s7842/chase_cmp.py).
+   **0x31=5 (s7844): render exact (world-tri dy mode 0 on 2 windows, controls PASS) + NEW fork = enemy fire.** With retail's
+   whole dt sequence replayed in the port (tools/apply_s7844_dt_at.py, ROGUESQ_S7844_DT_AT=tick:hex,..), the player record is
+   bit-identical for 1321 ticks; then the port player takes its 2nd 50-hp hit 143 ticks after the 1st, retail 265 after
+   (tools/s7844_hp_events.py; 4 port arms 141-143, dt replay on/off) -> the carrier is outside the dump (shooter AI/RNG/bolt).
+   NEXT: name the shooter (hp write watch 0x80137E7C both sides) and the first forked enemy word. Owner: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):
