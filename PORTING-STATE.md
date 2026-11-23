@@ -209554,3 +209554,44 @@ input-free on every run.
   NEXT DISCRIMINATOR: fold the s7837_vistamp_L1 soak (rV vs rC pacing), then resume g3-retail-flight-det-sweep on mission 4 with
   VI_STAMP=1 in the port arm.
 - Captures (gitignored): scratch/s7837/{pA,pB,qA,qB}/run.log + window PNGs; scorers scratch/s7837/{cmp,fork,off,q,w}.py.
+
+## Session 7838 (2026-11-22) — s7837_vistamp_L1 soak folded (PASS); mission-4 (Defection at Corellia) det pair: render exact, the port's camera settles at a different rest pitch (reticle 5.75 px low, retail CPO1 == CPO2), and a new onset-dt lever proves the sim dt word 0x8011A904 does NOT carry the fork (lead: timeSnapshotFiller mid-frame elapsed time)
+Work unit (NEXT s7838, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=10 new=0, no owner answers,
+CURRENT-TRUTH 53.4 KB (no maintenance). HID idle 15 h, load ~3. Seven game/oracle runs, one at a time.
+- Soak fold s7837_vistamp_L1 (loop, 501 s): rV (VI_STAMP=1) and rC (=0) alive 2/2, crashlines 0, vi_stalls30s 0, max_gap 145 vs 148 ms,
+  tools/s7769_ring_genrate.py slow_windows 0/33 both (min rate 59.8 / 60.0), positive control banner rV=1 rC=0. PASS -> VI_STAMP=1 added
+  to CURRENT-TRUTH owner decisions as a determinism-only candidate default.
+- Name correction: save byte 0x31 is 0-based (lvl2 = 1, lvl3 = 2), so 0x31=3 = mission 4 = Defection at Corellia (snowspeeder, night
+  hills; window sheet). Gerrard V is 0x31=4 (G5a's LEVEL=4). NEXT's label was wrong; the unit ran on mission 4 as planned.
+- Runs: save tools/g3_eep_patch.py lvl2.eep -> scratch/s7838/lvl.eep --set 0x31=3. Port p1 (s7836 AP schedule, SECS 170, RAMDUMP +
+  CAMLOG + S7835_DT + VI_STAMP=1 + RS64_RDP_BIN_PORT), retail R1 (CPO 2, OFF 5.75, RDP bin + --pc-ram-dump, RSECS 195), retail R2 (OFF
+  4.25), retail C1 (CPO 1, ramdump only), port p2 (= p1 without RDP bin). 0 crash lines in every port run.
+- Flight bands (scratch/s7829/tl.py): port 4189+, R1 3387+, R2 3298+. Windows R1[3390:4390], R2[3300:4300], P[4190:5190].
+- World tris (s7827 --controls, A/B PASS in all 3): XH-consistent dy mode 0 port-vs-R1 (135k), port-vs-R2 (136k), R1-vs-R2 (4.6M).
+- HUD (s7836 census): static elements identical, 52x64 shield PRIM 4FD926B9 in all three (no damage-state difference this time).
+  Reticle: retail R1 == R2 (big 230.0,149.5 on 517/1000, small 242.75,159.5); port big 230.25,155.25 (521), small 243.0,165.25 ->
+  5.75 px LOWER (lvl3 was 1 px).
+- RAM (scratch/s7838/rd.py, steady.py, cmp3.py; 460-word rows, short rows skipped): rows 0-2 bit-identical port vs retail, fork at
+  row 3 (= n 856 in p1, right after the port's 1-VI onset dt `fr n=4191 dt=781250`). Camera matrix w441 settles by row ~60 and stays
+  constant: R1 0.2084, C1 0.2085, p1 0.1917, p2 0.1917 (about 1.1 deg rest pitch, which is the 5.75 px). R1 vs C1 fork at row 5 but
+  settle together; p1 vs p2 (same binary, same 1-VI onset) fork at row 36 and also settle together. Cross-level: lvl2 retail
+  0.0627/0.0632, port 0.0603; lvl3 retail 0.0656, ports 0.0631/0.0631/0.0664 (qB, 2-VI onset). So the rest pitch is a path-dependent
+  settle point and the lvl4 port lands on a different one from retail.
+- New lever tools/apply_s7838_onset2.py (registered in fixup_game_funcs_vendored.py after s7837): env ROGUESQ_VI_STAMP_ONSET2=<vi>
+  raises any 1-VI dt written to 0x8011A904 to 2 VI once total_vis >= <vi>, at computeFrameDeltaTime (L_8000BBE8) and its twin
+  (L_8000C480), and logs each raise. p3 (first writer only) and p4 (both writers), FROM=6000:
+  fired once, `bbe8 dt 781250->1562500 vi=6977`, immediately before the forking row (n 858 in p4); the twin never saw a 1-VI dt.
+  The forking row stays bit-identical to p1 (w441 0.4435, cam x 83.353), and the rest pitch stays 0.1917. The lever is live:
+  p1-vs-p3 fork moves to row 70 and p1-vs-p4 to row 256 (p1-vs-p2 baseline 36), so the sim does read the raised dt, later.
+- Reading (two lines: the RAM row at the fork, and the unchanged settle value): the row-3 camera fork is NOT carried by the sim dt word.
+  s7834/s7836 attributed it to the onset dt by coincidence of position. The remaining stamp reader is timeSnapshotFiller (0x8000BE1C:
+  (stamp 0x80128ED8 - prev 0x8011A900) as a float over a divisor, callers 0x800AF36C, 0x800C666C, 0x800FA728). It is called mid-frame,
+  so it returns the VIs elapsed DURING guest work: ~0 on the fast host, >0 on N64 CPU timing. That would also explain p1-vs-p2 forking
+  at row 36 with identical dts (host timing decides whether a VI ticks mid-frame). Single-source until measured.
+- DISCRIMINATION: refutes "the onset dt word forks the camera" (H-dtpath as stated for lvl2/lvl3); selects nothing yet among
+  H-snapshot (timeSnapshotFiller elapsed) vs H-other. Render pipeline still exact (H-defect refuted for rendering).
+- Gate repair: s7719_regen_gate --strict was RED on funcs_4.c (s7837 left the s6336 shadow-post line ordered differently from the
+  replay; diagnostic, default off). Live funcs_4.c synced to the replay, rebuilt; verdict H-mirrored, live == replay byte-for-byte.
+- Captures (gitignored): scratch/s7838/{port.bin,ret/retail.bin,ret2/retail.bin}, {p1..p4}/run.log, {ret,c1}/oracle.log, tl.txt,
+  tri_*.txt, hud_census.txt; scorers scratch/s7838/{rd,steady,cmp3}.py.
+- ORIGIN: n/a (onset2 is an opt-in measurement lever, not a mitigation; the funcs_4.c sync is a line-order fix with no behaviour change).

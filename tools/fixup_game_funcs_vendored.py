@@ -32992,6 +32992,12 @@ void rs64_s3305_postviewer_edge(uint8_t* rdram, uint32_t edge_id,
             if _n7837:
                 changed = True
                 report.append(f"{p.name}: s7837 vistamp x{_n7837}")
+        if p.name == "funcs_3.c":
+            import apply_s7838_onset2 as _a7838
+            text, _n7838 = _a7838.apply3(text)
+            if _n7838:
+                changed = True
+                report.append(f"{p.name}: s7838 onset2 x{_n7838}")
 
     if p.name == "funcs_9.c":
         import apply_s6321_camlog as _a6321

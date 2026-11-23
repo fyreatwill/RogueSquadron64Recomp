@@ -1711,3 +1711,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261122 | s7806 in-session: s7806_gccpatch_L4 (host idle 2.7 h, unlocked) alive 1/1, crashlines 0, vi_stalls30s=0, max_gap 148 ms, level_ok=1 on the all-gcc patches/ binary; [patch-live] isCinematicActive x2 + setRngSeed x1, findAndUnlinkSmallestEntry 0 calls (not exercised at dd4, s6280 saw it at dd3). L1 twin still queued.
 20261122-055331 | s7806_gccpatch_L1 | rc=0 | 311s | scratch/agent/soak_results/s7806_gccpatch_L1_20261122-055331.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261122 | s7809 fold: s7806_gccpatch_L1 (loop) alive 1/1, crashlines 0, vi_stalls30s=0, max_gap 148 ms, level_ok=1 on the all-gcc patches binary -> L4+L1 twin both clean.
+20261122-170829 | s7837_vistamp_L1 | rc=0 | 501s | scratch/agent/soak_results/s7837_vistamp_L1_20261122-170829.log | arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0

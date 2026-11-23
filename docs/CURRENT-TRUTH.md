@@ -18,7 +18,7 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   `python3 tools/s7763_owner_cmd_check.py --control` (11/11 MATCH), in-flight toggles by `zsh tools/s7764_inflight_toggles.zsh`
   (7/7), controls dump/controls.json by `python3 tools/s7765_controls_dump_check.py` (12/12). Only the F6 panel's interactive use is untested by us.
 - **Owner decisions pending (defaults unchanged until the owner says):** QOS_ALL=1, RETINA=1, M5_B40_VALUE, S7524_V2P=1, SP_LATE,
-  RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`.
+  RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`, VI_STAMP=1 (determinism only, s7838 soak clean).
 - **Sweep:** `python3 tools/s7651_gate_sweep.py` (--jobs 2, iron rule 0) ~216 gates, 0 RED, 0 HOLLOW; stop_gate blocks RED. The live
   RecompiledFuncs tree IS the regen replay: `tools/s7719_regen_gate.py --strict` byte-compares it, so ANY hand edit under
   ../N64Recomp/RecompiledFuncs turns the sweep RED (put it in a fixup/apply script). Ucode: `tools/s7741_ucode_regen_gate.py --controls`;
@@ -433,6 +433,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    whole-VI onset count set by load time (qA 1 VI, qB 2 VI), the s7835 H-guest rule, and it is inherent. Two lines: dt log + RAM rows.
    Default OFF; soak s7837_vistamp_L1 queued (rV vs rC same run). Ramdump rows can be truncated in the log; score with
    scratch/s7837/q.py-style alignment (first flight row + n offset, skip short rows), not s7836 rd.py index pairing.
+   **s7837_vistamp_L1 soak PASSED (s7838 fold):** rV (VI_STAMP=1) and rC both alive, vi_stalls30s 0, max_gap 145 vs 148 ms, slow_windows
+   0/33 both (s7769 ring scorer), banner rV=1 rC=0. Determinism-only candidate default (owner decisions list).
+   **s7838 lvl4 (Defection at Corellia, save 0x31=3; NEXT called it Gerrard V, that is 0x31=4) flight pair: render exact, pose forks.**
+   World-tri dy mode 0 in all 3 pairings (controls PASS); static HUD exact; shield PRIM identical. Reticle rests 5.75 px LOWER (230.25,155.25
+   vs retail 230.0,149.5; R1 == R2). Cause = camera rest pitch: w441 retail 0.2084 (CPO2) / 0.2085 (CPO1), port 0.1917 in both VI_STAMP runs.
+   RAM bit-identical 3 rows, fork at the onset row. **The sim dt word 0x8011A904 does NOT carry this fork** (single run pair, positive
+   control live): ROGUESQ_VI_STAMP_ONSET2=<vi> (tools/apply_s7838_onset2.py) raises the 1-VI onset dt to 2 VI at both writers; it fired
+   once, just before the forking row, which stayed bit-identical to p1 (0.4435); the lever is live (p1-vs-p4 fork moves from row 36 to 256).
+   Also two identical VI_STAMP lvl4 runs fork at row 36 (same onset), so VI_STAMP does not make lvl4 runs path-identical. Lead:
+   timeSnapshotFiller 0x8000BE1C returns (stamp - prev)/k mid-frame (callers 0x800AF36C, 0x800C666C, 0x800FA728); it counts VIs elapsed
+   DURING guest work, which is host-speed dependent (port ~0, retail >0). Size: 1.1 deg rest pitch / 5.75 px reticle; no owner report.
 
 ## Evidence index
 

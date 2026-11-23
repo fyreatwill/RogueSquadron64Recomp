@@ -1,20 +1,21 @@
-# NEXT (s7838)
-HYPOTHESIS-ID: g3-retail-flight-det-sweep
+# NEXT (s7839)
+HYPOTHESIS-ID: g3-flight-fork-carrier
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
-SOAK-RESULTS lines. Fold s7837_vistamp_L1 if it ran: rV (VI_STAMP=1) and rC must both be alive, with vi_stalls30s=0, and rV max_gap /
-slow windows no worse than rC. The vistamp_on echo must read rV=1 rC=0 (this is the positive control). If it passes, add
-VI_STAMP=1 to CURRENT-TRUTH "Owner decisions pending" as a determinism-only candidate default. If it fails, root-cause it before
-anything else. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
-Why: s7837 closed port determinism. The sub-VI host jitter forks identical runs (H-jitter), and ROGUESQ_VI_STAMP=1 removes it.
-The whole-VI onset count still varies with load time (inherent, H-guest). The G3 flight det sweep resumes: lvl2 and lvl3 are closed
-as H-dtpath. Next is mission 4 (Liberation of Gerrard V, save byte 0x31=3), with VI_STAMP=1 in the port arm so the port path is
-VI-exact like retail's.
-Unit (s7836 recipe on level 4):
-  save: `python3 tools/g3_eep_patch.py scratch/s6748/lvl2.eep scratch/s7838/lvl.eep --set 0x31=3`
-  port: `env SAVE_FROM=scratch/s7838/lvl.eep SECS=150 CAP0=140 AP=<s7836 AP> XE="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1
-        ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1" zsh tools/g3_port_capture.sh scratch/s7838/p1`
-  retail R1/R2: the s7836 retail recipe (tools/s7828_retail_cpo.sh, CPO 2, R1 OFF 5.75, R2 OFF 4.25, plus r1d --pc-ram-dump) with
-  the new save. Score: s7827 tri census --controls, tools/s7836_hud_elem_census.py, ramdump via scratch/s7837/q.py alignment
-  (skip truncated rows).
-Outcomes: H-exact (tri mode 0, HUD exact, RAM equal past onset) / H-dtpath (forks at an onset whole-VI dt, render exact) /
-H-defect (missing class, or world-tri shift beyond retail-vs-retail). Note that Gerrard V is the G5a mission; log any actor anomaly.
+SOAK-RESULTS lines. Any crash/stall or owner report outranks this unit. G6c and the G5 items wait on the owner only.
+Why: s7838 showed the lvl4 camera fork (rest pitch 0.1917 port vs 0.2084 retail, reticle 5.75 px low) is NOT carried by the sim dt
+word 0x8011A904: ROGUESQ_VI_STAMP_ONSET2 raised the onset dt to 2 VI right before the forking row and that row stayed bit-identical.
+Hypotheses:
+  H-snapshot: timeSnapshotFiller 0x8000BE1C ((stamp - prev) / k, called mid-frame from 0x800AF36C / 0x800C666C / 0x800FA728) returns
+    VIs elapsed during guest work: ~0 in the port, >0 in retail. Predicts: port v0 at 0x8000BE28 = 0 at the fork frame, retail > 0.
+  H-other: some other host-timed input (osGetCount / osGetTime direct callers, audio/RSP completion order) differs at that frame.
+    Predicts: timeSnapshotFiller values equal in both at the fork frame.
+Unit (one port build, one retail run, ONE table):
+  1. Port: add an opt-in log (new tools/apply_s7839_snaplog.py, registered in fixup_game_funcs_vendored.py like s7838) at 0x8000BE28 in
+     timeSnapshotFiller: `[snap7839] ra=<ctx->r31> el=<v0>` plus the [dt7835] fr lines already there. Run the s7838 p1 recipe
+     (SAVE_FROM scratch/s7838/lvl.eep, VI_STAMP=1, RAMDUMP, S7835_DT) + ROGUESQ_S7839_SNAP=1.
+  2. Retail: the s7838 R1 recipe with XO="--watch-pc 0x80043918,0x8000BE28 --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0"
+     (--watch-pc prints $v0 = elapsed ticks). Positive control: retail must print watch rows at 0x8000BE28 (non-empty) during flight.
+  3. Table per flight frame rows 0..10: caller, elapsed ticks port vs retail. If H-snapshot holds, a lever ROGUESQ_SNAP_VI=<n> that
+     pins el to retail's value at the fork frame must make row 3 match retail (same-run comparison against s7838 p1).
+Do NOT spend more than this unit on it if the table is flat (H-other): then write the hypothesis table and move to mission 5 (0x31=4,
+Liberation of Gerrard V) in the det sweep.
