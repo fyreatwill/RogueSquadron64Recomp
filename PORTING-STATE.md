@@ -209780,6 +209780,7 @@ a time; 0 crash lines.
 - Fork at p4 row 1322: hp w51 (+0xCC) port 104.0001-50 = 54.0001, retail 104.0001 (no hit); w55 5->10, hit pulses w58/82/86,
   w115=1, rotation matrix jolt. tools/s7844_hp_events.py (new): 1st hit shared (retail 1181 / port 1179, offset 2 = alignment);
   2nd hit gap port 141/143/143/142 (p2/p3/p4/p5, dt replay on or off), retail 265. Both later die and respawn.
+- Verdict: this pair selects H-new-fork and refutes H-exact for 0x31=5; it closes the dt-replay question.
 - Rules out: dt/oracle-timing class for this fork (dt replay complete through it), player-state defect (record exact until the
   hit). Selects H-new-fork: shooter AI / RNG / bolt geometry, not in the dump. Next: hp write watch + RNG state dump (NEXT.md).
 - Deleted p2.bin/p3.bin (3 GB scratch RDP bins); kept p4.bin + r3/retail.bin for the next pair's render-side check.
