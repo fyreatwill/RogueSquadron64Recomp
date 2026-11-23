@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7832 (2026-11-22).
+Compact operational handoff, as of Session 7839 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -18,7 +18,7 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   `python3 tools/s7763_owner_cmd_check.py --control` (11/11 MATCH), in-flight toggles by `zsh tools/s7764_inflight_toggles.zsh`
   (7/7), controls dump/controls.json by `python3 tools/s7765_controls_dump_check.py` (12/12). Only the F6 panel's interactive use is untested by us.
 - **Owner decisions pending (defaults unchanged until the owner says):** QOS_ALL=1, RETINA=1, M5_B40_VALUE, S7524_V2P=1, SP_LATE,
-  RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`, VI_STAMP=1 (determinism only, s7838 soak clean).
+  RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`, VI_STAMP=1 (determinism only, s7838 soak clean), S7839 snapshot pin (retail camera rest pitch, s7839; soak queued).
 - **Sweep:** `python3 tools/s7651_gate_sweep.py` (--jobs 2, iron rule 0) ~216 gates, 0 RED, 0 HOLLOW; stop_gate blocks RED. The live
   RecompiledFuncs tree IS the regen replay: `tools/s7719_regen_gate.py --strict` byte-compares it, so ANY hand edit under
   ../N64Recomp/RecompiledFuncs turns the sweep RED (put it in a fixup/apply script). Ucode: `tools/s7741_ucode_regen_gate.py --controls`;
@@ -444,6 +444,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    Also two identical VI_STAMP lvl4 runs fork at row 36 (same onset), so VI_STAMP does not make lvl4 runs path-identical. Lead:
    timeSnapshotFiller 0x8000BE1C returns (stamp - prev)/k mid-frame (callers 0x800AF36C, 0x800C666C, 0x800FA728); it counts VIs elapsed
    DURING guest work, which is host-speed dependent (port ~0, retail >0). Size: 1.1 deg rest pitch / 5.75 px reticle; no owner report.
+   **s7839: H-snapshot SELECTED (two lines).** timeSnapshotFiller (0x8000BC00; path at 0x8000BE1C, gated by 0x8011A8C8/C9) returns
+   el/rate + g()*k(vd), el = stamp 0x80128ED8 - prev 0x8011A900, vd = VI bytes 0x80128EAF-0x80128EAE. Line 1 (direct, both sides, same
+   flight rows): port el=0 897/897 calls, vd=2 896/897; retail el ~811160 (1.04 VI) or 1622300, vd=1 773 / 0 111 of 898 (watch rows at
+   0x8000BE28 = positive control, 5103 hits). Line 2 (lever, same build): ROGUESQ_S7839_SNAP_EL=811160 ROGUESQ_S7839_SNAP_VD=1
+   (tools/apply_s7839_snaplog.py, opt-in; ROGUESQ_S7839_SNAP=1 logs el/gt/vd/ret) moves the lvl4 rest pitch 0.1917 -> 0.2085 (retail
+   0.2084 CPO2 / 0.2085 CPO1) and the first row differing from retail from 2 to 4 (= retail CPO1 vs CPO2); el=1622300 vd=0 gives 0.2088.
+   Cause: the fast host finishes guest work inside the same VI, so the mid-frame elapsed time is 0 where N64 CPU timing gives ~1 VI.
+   Retail-legal timing difference, not a recompiler defect. Lever soak s7839_snappin_L1 queued (rP vs rC, dd4 mission 1).
 
 ## Evidence index
 

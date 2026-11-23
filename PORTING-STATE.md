@@ -209595,3 +209595,31 @@ CURRENT-TRUTH 53.4 KB (no maintenance). HID idle 15 h, load ~3. Seven game/oracl
 - Captures (gitignored): scratch/s7838/{port.bin,ret/retail.bin,ret2/retail.bin}, {p1..p4}/run.log, {ret,c1}/oracle.log, tl.txt,
   tri_*.txt, hud_census.txt; scorers scratch/s7838/{rd,steady,cmp3}.py.
 - ORIGIN: n/a (onset2 is an opt-in measurement lever, not a mitigation; the funcs_4.c sync is a line-order fix with no behaviour change).
+
+## Session 7839 (2026-11-22) — timeSnapshotFiller carries the lvl4 camera fork: the port sees mid-frame elapsed el=0 / VI-diff 2 on every flight call where retail sees ~1 VI / 1, and pinning el=811160 vd=1 moves the port's rest pitch 0.1917 -> 0.2085 (retail 0.2084/0.2085): H-snapshot SELECTED, H-other refuted
+Work unit (NEXT s7839, HYPOTHESIS-ID g3-flight-fork-carrier). Pre-checks: crash_reports FOLDED=10 new=0, no owner answers, CURRENT-TRUTH
+54.9 KB (no maintenance), no new SOAK-RESULTS lines since the s7838 fold. Four port runs + one retail oracle run, one at a time.
+- Code read: timeSnapshotFiller is 0x8000BC00 (NEXT's 0x8000BE1C is the el path inside it). It calls awaitFrameSyncMesgBlock, osGetTime,
+  fills a struct at a0 (+0x24 = raw osGetTime delta / rate, 0x8000BC70), and when 0x8011A8C8/C9 are set returns into a0+0x20:
+  el/rate + g()*k, el = stamp 0x80128ED8 - prev 0x8011A900 (0x8000BE28), k picked by vd = byte 0x80128EAF - 0x80128EAE (0x8000BE80:
+  vd>=2 -> g*k1*vd, else g*k2). Port return values: 0x3D088889 (1/30) 4187x, 0x3C888889 (1/60) 1562x.
+- Instrument: new tools/apply_s7839_snaplog.py (registered in fixup_game_funcs_vendored.py after s7838; s7719 --strict H-mirrored, live
+  == replay): ROGUESQ_S7839_SNAP=1 logs `[snap7839] gt=/el=/vd=/ret` with s0 (N64Recomp does not set $ra on direct calls, so a first
+  build's ra= field read 0; replaced by s0). Levers ROGUESQ_S7839_SNAP_EL=<n> (v0 at 0x8000BE28) and ROGUESQ_S7839_SNAP_VD=<n> (v0 before
+  slti at 0x8000BE80). Retail: s7838 R1 recipe (CPO 2, OFF 5.75, RSECS 195) + --watch-pc 0x80043918,0x8000BC70,0x8000BE28,0x8000BE80,
+  0x8000BF38 + the s7834 ramdump. Positive control: retail BE28 5103 hits, BC70 5113, BF38 5120.
+- Line 1 (scratch/s7839/tab.py, events binned between ramdump rows; flight rows 0-1 bit-identical, fork at row 2 as in s7838): flight rows
+  2..900, port el=0 in 897/897, vd=2 896 (+1 x -6); retail el 811160..811170 (~1.04 VI) dominant, 1622300 and 2433384 also, vd=1 773 /
+  vd=0 111. Raw osGetTime delta gt p10/50/90: port 1545281/1562297/1580063 (2 VI, host jitter), retail 1561588/1646612/2099795. The
+  last call before the forking row: retail el=1622300 vd=0, port el=0 vd=2.
+- Line 2 (lever, same binary, w441 rest pitch at rows 60..300): p1 unpinned 0.1917 (= s7838 p1); L1 EL=811160 VD=1 0.2085; L2 EL=1622300
+  VD=0 0.2088; retail R1 (this run) 0.2084 (= s7838 R1), C1 0.2085. First row differing from R1: p1 2, L1 4 (retail C1 vs R1 also 4),
+  L2 2 (camera k2 83.26 vs 83.306, overshoots). 0 crash lines in all four port runs (L1 5650 pins, L2 5422).
+- Reading: the mid-frame snapshot reports how many VIs elapsed during guest work; the host finishes inside the same VI (el 0, vd 2 =
+  whole frame period), N64 CPU timing gives ~1 VI. That feeds the camera swing-in and picks a different settle point. Retail-legal timing
+  difference, not a recompiler bug. A constant retail-typical pin restores retail's rest pitch on lvl4.
+- DISCRIMINATION: selects H-snapshot (direct measurement on both sides + same-build lever moves the settle point onto retail's); refutes
+  H-other for this fork (pinning only this function's two inputs is sufficient).
+- Soak queued: scratch/agent/soak_queue/s7839_snappin_L1.sh (rP pinned vs rC control, dd4 mission 1, 240 s hold).
+- Captures (gitignored): scratch/s7839/{p1,L1,L2}/run.log, r1/oracle.log; scorers scratch/s7839/{tab,rd}.py.
+- ORIGIN: n/a (opt-in measurement lever, default off; writer of the differing value named: timeSnapshotFiller el/vd from host VI timing).
