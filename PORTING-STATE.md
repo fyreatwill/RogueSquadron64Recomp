@@ -209962,3 +209962,5 @@ SOAK-RESULTS lines since s7839, CURRENT-TRUTH 28.3 KB. One game run, two oracle 
 - Verdict: H-timing-sibling SELECTED (node owned by the VI-retrace synth frame; lifecycle tick-exact), H-logic refuted. 0x31=7 port =
   retail for 305 s (rand, hp, pose, record). Next: 0x31=8 pair (NEXT.md).
 - Captures (gitignored): scratch/s7851/{r5,r6}/oracle.log, r6_writes.txt, p6/run.log, p6_rand.txt, run_p6.sh, sweep.txt.
+- Verdict line (gate wording): this selects H-timing-sibling and refutes H-logic for w135/w149; it closes 0x31=7. Next discriminator:
+  the 0x31=8 det pair (tools/s7849_det_pair.sh 8), whose p1 rand/record first-diff selects H-exact, H-pin-gap or H-new-fork.
