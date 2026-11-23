@@ -426,7 +426,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (the 52x64 top-left icon differs only in PRIM = shield damage colour, game state). Reticle rests ~1 px lower in the port, retail R1 == R2
    exactly (tools/s7836_hud_elem_census.py; s7826's path plant FAILs on a near-static reticle, use the census). RAM bit-identical for 3
    flight rows, then the port's onset dt = 616172 (0.79 VI: host VI-wake jitter after a load, on top of the s7835 1-VI rule). Not
-   owner-visible. Open: does host VI jitter make two identical PORT runs fly different paths (port-vs-port determinism)?
+   owner-visible.
+   **s7837 port-vs-port determinism: H-jitter SELECTED.** Three identical lvl3 runs had onsets of 0.79/0.996/0.98 VI and tick jitter on every dt.
+   Their flights fork ~217 rows in (no input in flight). Opt-in fix ROGUESQ_VI_STAMP=1 (tools/apply_s7837_vistamp.py): stamp at 0x8001993C =
+   total_vis*781250. Result: 0 non-VI dts, and qA == unfixed pA over 1103 rows (same 1-VI onset, so no regression). What remains is a
+   whole-VI onset count set by load time (qA 1 VI, qB 2 VI), the s7835 H-guest rule, and it is inherent. Two lines: dt log + RAM rows.
+   Default OFF; soak s7837_vistamp_L1 queued (rV vs rC same run). Ramdump rows can be truncated in the log; score with
+   scratch/s7837/q.py-style alignment (first flight row + n offset, skip short rows), not s7836 rd.py index pairing.
 
 ## Evidence index
 

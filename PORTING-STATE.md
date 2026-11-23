@@ -209518,3 +209518,36 @@ since the s7809 fold, no owner answers. HID idle 13.7 h, load 1.5. Binary = the 
 - Captures (gitignored): scratch/s7836/{port.bin,ret/retail.bin,ret2/retail.bin} (zstd), p1/run.log, r1d/oracle.log, scores
   scratch/s7836/{tri,rect}_*.txt, hud_census.txt, rd.py.
 - ORIGIN: n/a (measurement only, no game code change).
+
+## Session 7837 (2026-11-22) — port-vs-port determinism: three identical lvl3 runs take onset dts of 0.79/0.996/0.98 VI and tick-jittered dts every frame, and fork guest state ~217 flight rows in (H-jitter selected, H-det refuted); new opt-in ROGUESQ_VI_STAMP=1 (tools/apply_s7837_vistamp.py) makes every dt an exact VI multiple, and the remaining fork is a whole-VI onset difference (1 vs 2 VI) from load time
+Work unit (NEXT s7837, HYPOTHESIS-ID g3-port-onset-determinism). Pre-checks: crash_reports FOLDED=10 new=0, no new SOAK-RESULTS since
+the s7809 fold, no owner answers. CURRENT-TRUTH 52.7 KB (no maintenance). Four game runs, one at a time, on the s7836 p1 recipe
+(SAVE_FROM scratch/s7836/lvl.eep, same AP schedule, RAMDUMP + CAMLOG + S7835_DT). All fires land before flight, so flight is
+input-free on every run.
+- Arms: pA, pB (s7836 build, no src change) + s7836 p1 as a third sample; qA, qB = the new ROGUESQ_VI_STAMP=1 build. 0 crash lines.
+- Instrument caveat found: some [ramdump] rows are truncated in the log (stderr interleave, 1017 of 3680 hex chars; ~10 per run), and
+  the change-only row counter n is offset by 1-2 between runs. The s7836 rd.py index pairing therefore reported false forks at the
+  truncated rows. Scorer scratch/s7837/q.py aligns on the first flight row, skips truncated rows, and compares by n+offset.
+- Raw dts (unfixed): onset p1 616172 (0.789 VI), pA 778032 (0.996), pB 765656 (0.980). Every later dt carries host tick jitter
+  (1562203..1562766 vs 1562500); 100 % of flight dts are non-multiples of 781250. Raw per-VI stamp deltas 781078..781406 (pA, 8966 wakes).
+- RAM (unfixed): p1/pA equal for 210 flight rows, then all later rows differ (first diff row 217). pA/pB the same (215 eq, row 218).
+  Diverging words include craft attitude 5-15. Control: pA vs itself equal 1071/1071.
+- Fix: tools/apply_s7837_vistamp.py (registered in tools/fixup_game_funcs_vendored.py after s7835, funcs_4.c; idempotent x1/x0).
+  With ROGUESQ_VI_STAMP=1 it overwrites the stored stamp at 0x8001993C with (uint32)(total_vis * 781250). total_vis is the
+  ultramodern VI counter (events.cpp global, nm _total_vis). r16 stays raw, so the [dt7835] vi st= log still shows host jitter.
+  Every reader of 0x80128ED8 (0x8000BBD8/BBEC computeFrameDeltaTime, 0x8000BE20 submitGfxFrame, 0x8000C470/C484
+  timeSnapshotFiller) subtracts an earlier copy of the same stamp (0x8011A900), so a stamp-only time base stays consistent.
+  Caveat: the 781250 constant assumes the default ROGUESQ_VI_HZ=60.
+- Fixed runs: banner present 1/1 in both runs. Non-multiple dts 0/1121 (qA) and 0/1137 (qB). qA vs itself equal 1118/1118.
+  **qA vs unfixed pA: equal in all 1103 compared flight rows** (both onsets about 1 VI). So the per-frame tick jitter by itself never
+  forked the sim: VI quantisation changes nothing when the onset VI count matches (no-regression line). qA vs qB: the only
+  dt difference is the onset (781250 = 1 VI vs 1562500 = 2 VI); state forks at flight row 2.
+- Reading: two lines (dt logs + RAM rows). Sub-VI onset jitter (0.79/0.98/0.996 VI) puts identical port runs on different flight
+  paths, ~217 rows later: H-jitter SELECTED, H-det REFUTED, H-other refuted (equal-onset pA/qA never fork despite per-frame tick
+  jitter, and the flight has no input). With VI_STAMP the reachable paths shrink to one per whole-VI onset count, and those match
+  retail's VI-exact Count stamps. The whole-VI onset count still varies with host load time (qA 1, qB 2). That is the s7835
+  H-guest rule: legal dt and retail-shaped, but inherent to a faster-than-N64 host. It is not removable without making load
+  duration itself VI-deterministic.
+- Default stays OFF (owner-invisible, but it changes guest dt). Queued scratch/agent/soak_queue/s7837_vistamp_L1.sh: owner recipe
+  dd4 mission 1, 240 s, rV VI_STAMP=1 vs rC VI_STAMP=0 same run (alive, vi_stalls30s, max_gap).
+- Captures (gitignored): scratch/s7837/{pA,pB,qA,qB}/run.log + window PNGs; scorers scratch/s7837/{cmp,fork,off,q,w}.py.

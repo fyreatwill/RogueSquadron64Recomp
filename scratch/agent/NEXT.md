@@ -1,22 +1,20 @@
-# NEXT (s7837)
-HYPOTHESIS-ID: g3-port-onset-determinism
+# NEXT (s7838)
+HYPOTHESIS-ID: g3-retail-flight-det-sweep
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED'`, owner answers in docs/OWNER-REVIEW-QUEUE.md, new
-SOAK-RESULTS lines. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
-Why: s7836 closed lvl3 flight as H-dtpath (render exact; the path forks at the onset dt). But the port's lvl3 onset dt was 616172 ticks =
-0.79 VI: host VI-wake jitter (stamps 1.21 then 0.79 VI apart after a load) reaches the guest through the osGetTime stamp written at
-0x8001993C (awaitFrameSyncMesgBlock). On retail, stamps come from Count and are VI-exact. If the jitter varies run to run, two identical
-port runs fly different paths: a port determinism defect (owner-invisible today, but it makes every det pair a lottery and could matter
-for replays/inputs).
-Unit: two identical port runs, one at a time, of the s7836 p1 recipe:
-  `env SAVE_FROM=scratch/s7836/lvl.eep SECS=150 CAP0=140 AP=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,
-   79.5:start,91.5:start XE="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1"
-   zsh tools/g3_port_capture.sh scratch/s7837/pA` (and pB). scratch/s7836/p1/run.log is a third sample already.
-Score: onset dt (the `[dt7835] fr` line printed just before the first diverging `[ramdump]` row, ~n=735) and the full-run ramdump rows
-(scratch/s7836/rd.py pattern: exact-equal row count between runs, first differing row, last camera words 436-447). Control: the same
-run vs itself must give all rows equal; the s7836 retail r1d log vs p1 must show the known fork at row 3.
-Hypotheses / outcomes:
- - H-det: onset dt and all ramdump rows identical across pA/pB/p1 -> the jitter is reproducible (load-shaped), port deterministic. Close.
- - H-jitter: onset dt differs (e.g. 0.79 vs 1.00 VI) and the rows fork after it -> port flight depends on host timing. Fix candidate:
-   quantise the guest stamp to VI multiples (stamp = VI count * VI period in ultramodern's osGetTime at VI wake, or a fixup at
-   0x8001993C writing a VI-counter-derived time); qualify with pA/pB identical after the fix, and an fps/VI-rate check (G1b).
- - H-other: rows fork before the onset dt with equal dt -> another host-timing input (RNG seeded from time, input sampling); name it.
+SOAK-RESULTS lines. Fold s7837_vistamp_L1 if it ran: rV (VI_STAMP=1) and rC must both be alive, with vi_stalls30s=0, and rV max_gap /
+slow windows no worse than rC. The vistamp_on echo must read rV=1 rC=0 (this is the positive control). If it passes, add
+VI_STAMP=1 to CURRENT-TRUTH "Owner decisions pending" as a determinism-only candidate default. If it fails, root-cause it before
+anything else. Any crash/stall or owner report outranks this unit. G6c and all G5 items wait on the owner only.
+Why: s7837 closed port determinism. The sub-VI host jitter forks identical runs (H-jitter), and ROGUESQ_VI_STAMP=1 removes it.
+The whole-VI onset count still varies with load time (inherent, H-guest). The G3 flight det sweep resumes: lvl2 and lvl3 are closed
+as H-dtpath. Next is mission 4 (Liberation of Gerrard V, save byte 0x31=3), with VI_STAMP=1 in the port arm so the port path is
+VI-exact like retail's.
+Unit (s7836 recipe on level 4):
+  save: `python3 tools/g3_eep_patch.py scratch/s6748/lvl2.eep scratch/s7838/lvl.eep --set 0x31=3`
+  port: `env SAVE_FROM=scratch/s7838/lvl.eep SECS=150 CAP0=140 AP=<s7836 AP> XE="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1
+        ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1" zsh tools/g3_port_capture.sh scratch/s7838/p1`
+  retail R1/R2: the s7836 retail recipe (tools/s7828_retail_cpo.sh, CPO 2, R1 OFF 5.75, R2 OFF 4.25, plus r1d --pc-ram-dump) with
+  the new save. Score: s7827 tri census --controls, tools/s7836_hud_elem_census.py, ramdump via scratch/s7837/q.py alignment
+  (skip truncated rows).
+Outcomes: H-exact (tri mode 0, HUD exact, RAM equal past onset) / H-dtpath (forks at an onset whole-VI dt, render exact) /
+H-defect (missing class, or world-tri shift beyond retail-vs-retail). Note that Gerrard V is the G5a mission; log any actor anomaly.
