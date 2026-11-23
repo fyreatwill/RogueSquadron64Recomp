@@ -210011,3 +210011,28 @@ no new SOAK-RESULTS lines. Ran `zsh tools/s7849_det_pair.sh 9 scratch/s7853` (se
 - Verdict: this selects H-exact and refutes H-audio-clock, H-pin-gap and H-new-fork for 0x31=9. It closes 0x31=9: port = retail
   for 305 s. Next discriminator: the 0x31=10 pair.
 - Captures (gitignored): scratch/s7853/{r1/oracle.log, p1, p2, *_rand.txt, pins.txt, score.txt}.
+
+## Session 7854 (2026-11-23) — 0x31=10 det pair: port = retail for all 2580 ticks, rand AND a new tick-keyed 460-word record (H-exact)
+Work unit (NEXT s7854, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers,
+no new SOAK-RESULTS lines. Host HID idle 24 h, no game running.
+- Run 1 `zsh tools/s7849_det_pair.sh 10 scratch/s7854`: retail 0x31=10 (Bespin, in flight at the end, frame w_0304.92) 2672
+  ticks, seed 36b554eb, ONE dt pin (2:3C888888). p1 pinned: seed + rand callers equal on all 2587 compared ticks (0 fork
+  windows); hp never changes either side; song handle 0x8010C0E0 stays 0 the whole mission (no song switch, so H-audio-clock
+  cannot apply); rumble 1 = 1; crashlines 0. p2 unpinned control forks at tick 0 (seed e72ec973), calls at tick 6.
+- BUT the record leg was vacuous: 1 [ramdump] row on each side (s7853: 4556). The s7834 dump PC 0x80043918 is inside
+  buildVisibleTerrainGridAroundCamera, and Bespin has no terrain grid, so it runs once. "first persistent nonpose diff row
+  None" there means "nothing compared", not "identical".
+- Tool change: the per-tick marker 0x800FA730 (runInMissionFrame) already dumps words through XTRACE_MEM on both sides (oracle
+  RS64_XTRACE_MEM / port ROGUESQ_XTRACE_MEM, both max 16 specs x 64 words). s7849_det_pair.sh REC=1 (now the default) adds 8 specs
+  covering 0x80137DB0..0x801384E0 (7x64 + 12 words). New tools/s7854_tick_rec_cmp.py compares the 460 words tick by tick with
+  the s7849_rec_align POSE/ALLOC/TIMING classes, and has a --control TICK that flips word 50 in the port record. This works on
+  any level, terrain or not, and needs no greedy alignment.
+- Run 2 `env REC=1 zsh tools/s7849_det_pair.sh 10 scratch/s7854b` (fresh retail r1: same seed, 2671-2672 ticks, same pin):
+  p1: rand/callers equal on all 2580 ticks; record: 2580/2580 ticks have a full record on both sides, 0 nonpose diff ticks,
+  0 pose diffs (max |dpos| 0.000000), 0 TIMING-word diffs, so it is bit-identical every tick. Controls in the same run: p2
+  record forks at tick 3 (2586/2589 nonpose ticks, words 10-12/56/151-165); --control 100 is reported as first diff tick 100,
+  word 50 only.
+- Verdict: two independent lines (rand/caller sequence over two pinned port runs, plus a per-tick bit-exact 460-word record vs
+  a fresh retail run) select H-exact and refute H-pin-gap and H-new-fork for 0x31=10. H-audio-clock does not apply (no song
+  switch). This closes 0x31=10: port = retail for 305 s. Next: 0x31=11 (REC on by default now).
+- Captures (gitignored): scratch/s7854/ and scratch/s7854b/ {r1/oracle.log, p1, p2, *_rand.txt, pins.txt, score.txt}.

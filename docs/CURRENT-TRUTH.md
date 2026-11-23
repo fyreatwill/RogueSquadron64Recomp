@@ -255,7 +255,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    + AI buffers and prints tools/s7852_fork_windows.py (all windows, --control) + g3_song_windows.py.
    **0x31=9 (s7853): H-exact.** 5076 ticks, seed 69f4f739, 58 dt pins. p1: seed/callers/hp equal all ticks, 0 fork windows, all
    11 song-handle switches same tick, rumble 35=35; record only 1 transient row (dump mid-update between two retail rows).
-   s7849_rec_align.py now reports transient vs `first persistent nonpose diff row` (p2 control persistent at 1203). Next: 0x31=10.
+   s7849_rec_align.py now reports transient vs `first persistent nonpose diff row` (p2 control persistent at 1203).
+   **0x31=10 (s7854): H-exact.** Bespin, 2672 ticks, seed 36b554eb, 1 dt pin, no song switch, hp static. p1 rand/callers equal all
+   2580 ticks (2 pinned runs). The 0x80043918 [ramdump] PC is in buildVisibleTerrainGridAroundCamera, so it runs 1x on no-terrain
+   levels (vacuous record). s7849_det_pair.sh REC=1 (default) now dumps the 460-w record at tick marker 0x800FA730 on both sides,
+   scored by tools/s7854_tick_rec_cmp.py: 0 diffs in 2580/2580 ticks; p2 forks tick 3; --control 100 is caught. Next: 0x31=11.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
