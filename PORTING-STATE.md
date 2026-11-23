@@ -209784,3 +209784,26 @@ a time; 0 crash lines.
 - Rules out: dt/oracle-timing class for this fork (dt replay complete through it), player-state defect (record exact until the
   hit). Selects H-new-fork: shooter AI / RNG / bolt geometry, not in the dump. Next: hp write watch + RNG state dump (NEXT.md).
 - Deleted p2.bin/p3.bin (3 GB scratch RDP bins); kept p4.bin + r3/retail.bin for the next pair's render-side check.
+
+## Session 7845 (2026-11-22) — 0x31=5 enemy-fire fork carrier = rngSeed entering the mission: with retail's seed poked at tick 0 (plus the s7844 dt replay) the port's rand stream, hit timing and 460-word player record equal retail for the whole 305 s run (H-rng SELECTED; H-ai-clock, H-bolt-geom refuted)
+- Change: src/main/rt64_render_context.cpp `ROGUESQ_RAND_TRACE_BOOT=1` (with ROGUESQ_RAND_TRACE, no DEBUG_WRITE) opens the
+  rand trace at update_screen #1 with no poke (mirrors rs64_oracle --exec-trace "from boot if none"); `ROGUESQ_RAND_TRACE_MAX`
+  overrides the 400000-row cap. Banner `[rand-trace] boot open=1 update_screen #1 max=8000000` fired. New
+  tools/s7845_rng_tick_cmp.py: per runInMissionFrame tick (0x800FA730 marker) seed, hp, rand-caller sequence, both arms.
+- Retail r4: s7844 r3 recipe (CPO=1 RSECS=305 EEP=scratch/s7844/lvl.eep, s7841 PP, --watch-pc 0x80043918 --pc-ram-dump) +
+  `--exec-trace 0x80003430:8000000:0x80003470 --exec-trace-also 0x800FA730 --watch-write 0x137E7C:0x137E80`,
+  RS64_XTRACE_MEM=800FA730:0:80137E7C:1,800FA730:0:80003470:1, RDPBIN=/dev/null. 2507 ticks, 2338 ramdump rows.
+- Port p6: s7844 p4 recipe (s7841 AP, VI clock, S7834_RAMDUMP, RETAIL_SNAP, all 19 S7844_DT_AT overrides) + RAND_TRACE_BOOT
+  + same XTRACE_MEM. p7 = p6 + ROGUESQ_XTRACE_POKE=800FA730:0:80003470:b0463bab:1 (row `pin=d60dd3b9` -> b0463bab fired).
+- p6 vs r4: seed at mission tick 0 retail b0463bab, port 0dc8aa7b (rand calls before tick 0: 46695 vs 49727); rand caller
+  sequences equal ticks 1-4, port adds a seed-dependent call (updateNpcEventTimer 0x800F0388) at tick 5. Hits: port
+  1181/1324/1345/death 1445 vs retail 1181/1446/1518/death 1566 (reproduces s7844's 143-tick gap).
+- p7 vs r4: rand seed AND caller sequence equal on all 2451 compared ticks; hp drops identical (1181, 1446, 1518, death 1566,
+  respawn hits 2011/2012/2015/2019); scratch/s7845/al2.py (s7844 aligner): 0 differing words on all 2262 port rows.
+  Same-run control: the identical instrument shows p6 forking at tick 0 (seed) / tick 5 (calls) / row 1314 (record).
+- Boot streams (offline, unpoked p6 vs r4): identical for 3798 rand calls (same seeds), then port calls from
+  updateAnimatedTextureStreaming (0x800541FC) where retail calls playWeaponFireSound/menuControllerInput (0x800B48F8/0x800B4CC0):
+  a scene/press-timing split in boot/attract (harness press schedule vs oracle CPO timing), single-source as "not a defect".
+- Verdict: selects H-rng (seed carried into the mission), refutes H-ai-clock and H-bolt-geom: with dt + seed pinned,
+  0x31=5 port == retail for 305 s (render exact s7844). Det-pair recipe now pins both. Next: 0x31=6 with both pins.
+- Captures (gitignored): scratch/s7845/{p6,p7}/run.log, p6_rand.txt, p7_rand.txt, r4/oracle.log.

@@ -44,9 +44,15 @@ extern "C" uint32_t rs64_ram_top; // s6132
 extern "C" void rs64_s7751_dump(unsigned); // s7751 src/rsp/s7751_task_snap.cpp
 extern "C" void rs64_s6883_freeze(unsigned); // s6883: span tables at each POSE_FREEZE
 static FILE* s_rand_trace_f = nullptr;
+// s7845: ROGUESQ_RAND_TRACE_MAX=<rows> overrides the 400000-row cap (shared by rand rows and marker rows).
+static long rs64_rand_trace_max() {
+    static long m = -1;
+    if (m < 0) { const char* e = std::getenv("ROGUESQ_RAND_TRACE_MAX"); m = (e && atol(e) > 0) ? atol(e) : 400000; }
+    return m;
+}
 extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
     static long n = 0;
-    if (!s_rand_trace_f || n >= 400000) return;
+    if (!s_rand_trace_f || n >= rs64_rand_trace_max()) return;
     fprintf(s_rand_trace_f, "%ld %u %08x %08x\n", n++, rs64_vi_n_g, ra, seed);
     fflush(s_rand_trace_f); // runs end in SIGKILL
 }
@@ -113,7 +119,7 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
         }
     }
     static long n = 0;
-    if (!s_rand_trace_f || n >= 400000) return;
+    if (!s_rand_trace_f || n >= rs64_rand_trace_max()) return;
     fprintf(s_rand_trace_f, "%ld %u %08x %08x", n++, rs64_vi_n_g, pc, (uint32_t)gpr[2]);
     for (int i = 0; i < npoke; i++) {
         if (poke[i].pc != pc || poke[i].done) continue;
@@ -1387,6 +1393,21 @@ public:
                 // switch, so ARM_S can sit inside a phase (without it an ARM_S past the switch never fires).
                 static const char* s_dw = std::getenv("ROGUESQ_DEBUG_WRITE");
                 static bool s_dw_done = false;
+                // s7845: ROGUESQ_RAND_TRACE_BOOT=1 (with ROGUESQ_RAND_TRACE, no DEBUG_WRITE) opens the rand trace at the
+                // first update_screen with no poke, mirroring rs64_oracle --exec-trace "from boot if none", so the two
+                // arms' unpoked rand streams (seed carried in from boot/menus) can be compared.
+                static bool s_rt_boot_done = false;
+                if (!s_rt_boot_done) {
+                    s_rt_boot_done = true;
+                    const char* rt = std::getenv("ROGUESQ_RAND_TRACE");
+                    const char* rb = std::getenv("ROGUESQ_RAND_TRACE_BOOT");
+                    if (rt && rb && *rb == '1' && !s_dw && !s_rand_trace_f) {
+                        s_rand_trace_f = fopen(rt, "w");
+                        g_rs64_rand_trace = s_rand_trace_f != nullptr;
+                        fprintf(stderr, "[rand-trace] boot open=%d update_screen #%d max=%ld\n", (int)g_rs64_rand_trace, s_n,
+                                rs64_rand_trace_max());
+                    }
+                }
                 if (s_dw && !s_dw_done && app->core.RDRAM) {
                     const double el = rs64_elapsed_seconds();
                     unsigned a = 0, v = 0, dw_w = 320; double arm = 0.0; char mode[4] = {0};

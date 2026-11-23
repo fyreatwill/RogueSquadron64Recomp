@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7843 (2026-11-22).
+Compact operational handoff, as of Session 7845 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -234,11 +234,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    FCR31.FS, s7841): render tris, HUD census, 460-w ramdump. lvl2/3/4 pinned = retail (s7840); lvl5 render exact (s7841); lvl5
    1-ulp camera fork CLOSED s7843 as oracle timing (chase dt = running min of the 1/60-snapped dt; 0x3D088887 only for raw dt
    low nibble 0, mupen CPO jitter; tools/s7843_dt_snap_replay.py, apply_s7842_chasehex.py, scratch/s7842/chase_cmp.py).
-   **0x31=5 (s7844): render exact (world-tri dy mode 0 on 2 windows, controls PASS) + NEW fork = enemy fire.** With retail's
-   whole dt sequence replayed in the port (tools/apply_s7844_dt_at.py, ROGUESQ_S7844_DT_AT=tick:hex,..), the player record is
-   bit-identical for 1321 ticks; then the port player takes its 2nd 50-hp hit 143 ticks after the 1st, retail 265 after
-   (tools/s7844_hp_events.py; 4 port arms 141-143, dt replay on/off) -> the carrier is outside the dump (shooter AI/RNG/bolt).
-   NEXT: name the shooter (hp write watch 0x80137E7C both sides) and the first forked enemy word. Owner: RETAIL_SNAP default.
+   **0x31=5 (s7844): render exact; with retail's dt replayed (tools/apply_s7844_dt_at.py, ROGUESQ_S7844_DT_AT=tick:hex,..)
+   the record is exact 1321 ticks, then the port's 2nd hit comes 143 ticks after the 1st, retail 265 (s7844_hp_events.py).**
+   **s7845: carrier = rngSeed 0x80003470 entering the mission (H-rng SELECTED).** Unpoked, retail b0463bab vs port 0dc8aa7b at
+   tick 0 (boot streams equal 3798 calls, then scene/press timing splits them). Port poked to retail's seed at tick 0 (ROGUESQ_XTRACE_POKE=
+   800FA730:0:80003470:<seed>:1) + dt replay: rand seed+call sites equal on all 2451 ticks, hp hits on the same ticks
+   (1181/1446/1518/death 1566/2011..), 460-w record bit-identical all 2262 rows; unpoked same-run control forks at tick 5.
+   => 0x31=5 port = retail for 305 s. Det pair recipe now = dt replay + seed pin (tools/s7845_rng_tick_cmp.py,
+   ROGUESQ_RAND_TRACE_BOOT=1). NEXT: 0x31=6 with both pins. Owner: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):
