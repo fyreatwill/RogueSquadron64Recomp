@@ -6,11 +6,16 @@ At 0x8000BE28 the function holds v0 = stamp 0x80128ED8 - prev 0x8011A900 (v1). E
 value stored to a0+0x20), `gt=` raw osGetTime delta at 0x8000BC70 and `vd=` VI-byte diff 0x80128EAF-0x80128EAE at 0x8000BE80.
 (N64Recomp does not set $ra on direct calls, so the caller key is s0 = a0.) Env ROGUESQ_S7839_SNAP_EL=<n> (lever) overrides v0 with n at 0x8000BE28 (n = raw stamp units; logs
 `[snap7839] pin`); ROGUESQ_S7839_SNAP_VD=<n> overrides the VI-byte diff at 0x8000BE80 (before slti).
+s7840: ROGUESQ_RETAIL_SNAP=1 is shorthand for EL=811160 VD=1 (explicit levers win); pinned port = retail CPO1 rest pitch on lvl2/3/4.
 Unset = untouched. Retail twin: rs64_oracle --watch-pc 0x8000BE28 prints v0/v1."""
 import pathlib, sys
 BASE = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
+OLD_H = "pin7839 = (p && *p) ? atoll(p) : -1; "
+NEW_H = "const char* rs = getenv(\"ROGUESQ_RETAIL_SNAP\"); pin7839 = (p && *p) ? atoll(p) : ((rs && *rs && *rs != '0') ? 811160 : -1); "
+OLD_V = "pv7839 = (p && *p) ? atoll(p) : -1; "
+NEW_V = "const char* rs = getenv(\"ROGUESQ_RETAIL_SNAP\"); pv7839 = (p && *p) ? atoll(p) : ((rs && *rs && *rs != '0') ? 1 : -1); "
 HDR = ('static int en7839 = -1; static long long pin7839 = -1; if (en7839 < 0) { const char* e = getenv("ROGUESQ_S7839_SNAP"); '
-       'en7839 = (e && *e && *e != \'0\') ? 1 : 0; const char* p = getenv("ROGUESQ_S7839_SNAP_EL"); pin7839 = (p && *p) ? atoll(p) : -1; '
+       'en7839 = (e && *e && *e != \'0\') ? 1 : 0; const char* p = getenv("ROGUESQ_S7839_SNAP_EL"); const char* rs = getenv("ROGUESQ_RETAIL_SNAP"); pin7839 = (p && *p) ? atoll(p) : ((rs && *rs && *rs != \'0\') ? 811160 : -1); '
        'if (en7839 || pin7839 >= 0) fprintf(stderr, "[snap7839] armed log=%d pin=%lld\\n", en7839, pin7839); }\n')
 SITE1 = ('    { /* PATCH: s7839 snaplog el */ ' + HDR +
          '      extern uint64_t total_vis; if (pin7839 >= 0) { if (en7839) fprintf(stderr, "[snap7839] pin el %d->%lld\\n", (int32_t)ctx->r2, pin7839); ctx->r2 = (int32_t)pin7839; }\n'
@@ -29,11 +34,17 @@ def site(tag, fmt):
             '(unsigned long long)total_vis); } }\n')
 
 PINVD = ('    { /* PATCH: s7839 snaplog pinvd */ static long long pv7839 = -2; if (pv7839 == -2) { const char* p = getenv("ROGUESQ_S7839_SNAP_VD"); '
-         'pv7839 = (p && *p) ? atoll(p) : -1; if (pv7839 >= 0) fprintf(stderr, "[snap7839] pin vd=%lld\\n", pv7839); }\n'
+         'const char* rs = getenv("ROGUESQ_RETAIL_SNAP"); pv7839 = (p && *p) ? atoll(p) : ((rs && *rs && *rs != \'0\') ? 1 : -1); if (pv7839 >= 0) fprintf(stderr, "[snap7839] pin vd=%lld\\n", pv7839); }\n'
          '      if (pv7839 >= 0) ctx->r2 = (int32_t)pv7839; }\n')
+
+# s7840: ROGUESQ_RETAIL_SNAP=1 = the retail-typical pin (el 811160, vd 1) without spelling both levers; upgrade older patched trees.
+OLD_HDR = HDR.replace(NEW_H, OLD_H); OLD_PINVD = PINVD.replace(NEW_V, OLD_V)
 
 def apply3(text):
     n = 0
+    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD)):
+        if o in text:
+            text = text.replace(o, nw); n += 1
     if "s7839 snaplog el" not in text and text.count(A1) == 1:
         text = text.replace(A1, SITE1 + A1); n += 1
     if "s7839 snaplog ret" not in text and text.count(A2) == 1:

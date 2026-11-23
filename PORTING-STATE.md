@@ -209623,3 +209623,29 @@ Work unit (NEXT s7839, HYPOTHESIS-ID g3-flight-fork-carrier). Pre-checks: crash_
 - Soak queued: scratch/agent/soak_queue/s7839_snappin_L1.sh (rP pinned vs rC control, dd4 mission 1, 240 s hold).
 - Captures (gitignored): scratch/s7839/{p1,L1,L2}/run.log, r1/oracle.log; scorers scratch/s7839/{tab,rd}.py.
 - ORIGIN: n/a (opt-in measurement lever, default off; writer of the differing value named: timeSnapshotFiller el/vd from host VI timing).
+
+## Session 7840 (2026-11-22) — timeSnapshotFiller pin generalises: pinned port = retail CPO1 camera rest pitch on lvl2, lvl3 and lvl4 to 4 digits and the lvl4 reticle lands on retail's pixel; new single opt-in knob ROGUESQ_RETAIL_SNAP=1 (H-general SELECTED, H-lvl4-only refuted)
+Work unit (NEXT s7840, HYPOTHESIS-ID g3-flight-fork-carrier). Pre-checks: crash_reports FOLDED=10 new=0, no owner answers, CURRENT-TRUTH
+56.1 KB (no maintenance). Five port runs + one retail oracle run, one at a time; 0 crash lines in every port run.
+- Soak fold s7839_snappin_L1 (loop, 500 s): rP (pinned) and rC alive 2/2, crashlines 0, vi_stalls30s 0, max_gap 148/149 ms, level_ok 1,
+  positive control pin banner rP=1 rC=0 -> PASS.
+- Runs (all = s7838 p1 recipe: AP s7832 schedule, SECS 170, AUTOPILOT_CLOCK=vi, S7834_RAMDUMP, G3C_CAMLOG, S7835_DT, VI_STAMP=1, plus
+  ROGUESQ_S7839_SNAP_EL=811160 ROGUESQ_S7839_SNAP_VD=1): l4 (scratch/s7838/lvl.eep, + RS64_RDP_BIN_PORT), l2 (scratch/s7832/lvl.eep),
+  l3 (scratch/s7836/lvl.eep). New retail run r3c1: `env CPO=1 RSECS=175 RDPBIN=/dev/null EEP=scratch/s7836/lvl.eep PP=19.5:start,...,91.5:start
+  XO="--watch-pc 0x80043918 --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0" zsh tools/s7828_retail_cpo.sh scratch/s7840/r3c1` (1815 rows).
+- Line 1 (rest pose, scratch/s7840/steady.py, w437/w441 at flight rows +100..+300): lvl2 pinned -0.0504/0.0632 = retail C1 (CPO1)
+  -0.0504/0.0632 exactly (R1 CPO2 -0.0500/0.0627, unpinned port -0.0481/0.0603); lvl3 pinned -0.0138/0.0664 = retail r3c1 CPO1
+  -0.0138/0.0664 exactly (R1d CPO2 -0.0137/0.0656, unpinned p1/pA/qA 0.0631; unpinned qB also 0.0664, so lvl3 settles bistably and
+  the pin picks the CPO1 state); lvl4 pinned -0.2073/0.2085 = retail C1 0.2085 (R1 0.2084, unpinned 0.1917).
+- Line 2 (render, lvl4): tools/s7836_hud_elem_census.py on l4.bin flight window [4100:5100] (flight band from scratch/s7829/tl.py starts
+  4099): reticle b 230.0,149.5 (523) / s 242.75,159.5 (524) = retail R1/R2 dominant positions exactly; s7838 unpinned port was
+  230.25,155.25 / 243.0,165.25 (5.75 px low). 52x64 shield PRIM 4FD926B9 1000/1000 as retail.
+- Change: tools/apply_s7839_snaplog.py now reads ROGUESQ_RETAIL_SNAP=1 as shorthand for EL=811160 VD=1 (explicit levers win), and
+  upgrades trees patched before s7840 in place (OLD_HDR/OLD_PINVD -> new, idempotent: second apply x0). Rebuilt; run k4 (lvl4,
+  RETAIL_SNAP=1 only) banner `[snap7839] armed log=0 pin=811160` + `pin vd=1`, rest pitch -0.2073/0.2085 = the explicit pin.
+  tools/s7719_regen_gate.py --strict: VERDICT H-mirrored, 53 files live == replay byte-for-byte, controls PASS.
+- DISCRIMINATION: selects H-general (the pin reproduces retail CPO1's settle point on 3/3 levels, both pose words, plus exact reticle
+  pixels); refutes H-lvl4-only. Caveat: the match is to the oracle's CPO1 timing (CPO2 differs by 0.0005-0.0008 rad); one port run per
+  level. Owner decision added: ROGUESQ_RETAIL_SNAP=1 as retail-accuracy candidate default (with VI_STAMP=1). Defaults unchanged.
+- Captures (gitignored): scratch/s7840/{l2,l3,l4,k4}/run.log, l4.bin, r3c1/oracle.log, hud_census_l4.txt, steady.py.
+- ORIGIN: n/a (opt-in accuracy knob, default off; writer named in s7839: timeSnapshotFiller el/vd from host VI timing).

@@ -18,7 +18,7 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   `python3 tools/s7763_owner_cmd_check.py --control` (11/11 MATCH), in-flight toggles by `zsh tools/s7764_inflight_toggles.zsh`
   (7/7), controls dump/controls.json by `python3 tools/s7765_controls_dump_check.py` (12/12). Only the F6 panel's interactive use is untested by us.
 - **Owner decisions pending (defaults unchanged until the owner says):** QOS_ALL=1, RETINA=1, M5_B40_VALUE, S7524_V2P=1, SP_LATE,
-  RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`, VI_STAMP=1 (determinism only, s7838 soak clean), S7839 snapshot pin (retail camera rest pitch, s7839; soak queued).
+  RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`, VI_STAMP=1 (determinism only, s7838 soak clean), ROGUESQ_RETAIL_SNAP=1 (s7840: timeSnapshotFiller pin el 811160 / vd 1; pinned port = retail CPO1 camera rest pitch on lvl2/3/4 and the lvl4 reticle to the pixel; soak s7839_snappin_L1 PASS; retail-accuracy candidate default, pairs with VI_STAMP=1).
 - **Sweep:** `python3 tools/s7651_gate_sweep.py` (--jobs 2, iron rule 0) ~216 gates, 0 RED, 0 HOLLOW; stop_gate blocks RED. The live
   RecompiledFuncs tree IS the regen replay: `tools/s7719_regen_gate.py --strict` byte-compares it, so ANY hand edit under
   ../N64Recomp/RecompiledFuncs turns the sweep RED (put it in a fixup/apply script). Ucode: `tools/s7741_ucode_regen_gate.py --controls`;
@@ -230,6 +230,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
+11b. **G3 retail flight det sweep (s7832-s7840): next mission 0x31=4 (Gerrard V) with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1
+   oracle run: render tris, HUD census, rest pitch. lvl2/3/4 pinned already = retail CPO1 (s7840). Owner decision: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):
@@ -451,7 +453,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (tools/apply_s7839_snaplog.py, opt-in; ROGUESQ_S7839_SNAP=1 logs el/gt/vd/ret) moves the lvl4 rest pitch 0.1917 -> 0.2085 (retail
    0.2084 CPO2 / 0.2085 CPO1) and the first row differing from retail from 2 to 4 (= retail CPO1 vs CPO2); el=1622300 vd=0 gives 0.2088.
    Cause: the fast host finishes guest work inside the same VI, so the mid-frame elapsed time is 0 where N64 CPU timing gives ~1 VI.
-   Retail-legal timing difference, not a recompiler defect. Lever soak s7839_snappin_L1 queued (rP vs rC, dd4 mission 1).
+   Retail-legal timing difference, not a recompiler defect. Lever soak s7839_snappin_L1 PASSED (s7840 fold: rP/rC alive, 0 stalls).
+   **s7840: H-general SELECTED (two lines).** Same pin + VI_STAMP=1, one port run per level, w437/w441 rest values vs retail ramdumps:
+   lvl2 -0.0504/0.0632 = retail C1 (CPO1) exactly (R1 CPO2 0.0627, unpinned port 0.0603); lvl3 -0.0138/0.0664 = new retail CPO1 run
+   (scratch/s7840/r3c1) exactly (R1d CPO2 0.0656, unpinned 0.0631, one unpinned VI_STAMP run qB also landed 0.0664: lvl3 is bistable);
+   lvl4 0.2085 = C1. Line 2: lvl4 reticle census (tools/s7836_hud_elem_census.py) b 230.0,149.5 / s 242.75,159.5 = retail exactly
+   (unpinned 155.25/165.25). Single knob ROGUESQ_RETAIL_SNAP=1 (=EL 811160 VD 1; explicit levers win) verified same: lvl4 0.2085,
+   banner fires; regen gate --strict H-mirrored. Single run per level/arm (pin removes the run-to-run settle variance seen unpinned).
 
 ## Evidence index
 
