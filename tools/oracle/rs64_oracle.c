@@ -885,6 +885,27 @@ static void print_gpr_fields(void)
         }
     }
     {
+        /* s7842: RS64_ORACLE_FPR=n,n,.. prints those COP1 single registers (FR-mode aware, via the core's regs_simple pointers)
+         * and RS64_ORACLE_SPW=off,off,.. (hex) the guest words at $sp+off, on every exec hit. Used to replay one guest FP
+         * expression offline in IEEE float32 against the core's own operands. */
+        static int nf = -1, ns = 0; static int fr[16]; static uint32_t so[16];
+        if (nf < 0) {
+            const char *e = getenv("RS64_ORACLE_FPR"); char *end; nf = 0;
+            while (e && *e && nf < 16) { fr[nf++] = (int)strtol(e, &end, 10) & 31; if (*end != ',') break; e = end + 1; }
+            e = getenv("RS64_ORACLE_SPW");
+            while (e && *e && ns < 16) { so[ns++] = (uint32_t)strtoul(e, &end, 16); if (*end != ',') break; e = end + 1; }
+        }
+        if (nf > 0 && pDebugGetCPUDataPtr) {
+            float **sp = (float **)pDebugGetCPUDataPtr(M64P_CPU_REG_COP1_SIMPLE_PTR);
+            printf(" fpr:");
+            for (int k = 0; k < nf; k++) { uint32_t u = 0; if (sp && sp[fr[k]]) memcpy(&u, sp[fr[k]], 4); printf(" f%d=%08x", fr[k], u); }
+        }
+        if (ns > 0) {
+            printf(" spw:");
+            for (int k = 0; k < ns; k++) printf(" %x=%08x", so[k], debug_mem_u32(((gpr32(29) + so[k]) & 0x1FFFFFFFu)));
+        }
+    }
+    {
         /* s4525: RS64_ORACLE_A0WORDS=N dumps N guest words at $a0 on every exec hit */
         static int n = -1;
         if (n < 0) {

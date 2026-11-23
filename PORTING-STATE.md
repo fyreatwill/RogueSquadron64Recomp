@@ -209690,3 +209690,42 @@ SOAK-RESULTS lines since the s7840 fold, CURRENT-TRUTH 57.3 KB (no maintenance).
 - Discrimination line (gate wording): this run selects H-exact for lvl5 render, selects H-oracle-fs as the root cause of the w55/164
   denormal fork (the 2x2 resolves it: port FTZ parity with the oracle decides agreement), and refutes FTZ as the carrier of the
   row-341 camera fork; next discriminator H-alloc vs H-fpu vs H-sampling (NEXT s7842).
+
+## Session 7842 (2026-11-22) — Gerrard V row-341 camera-y fork carrier named: the chase step's dt operand (f20 / cam+0xA4) is 0x3D088888 in the port for every tick while retail flips to 0x3D088887 from tick 276; every other operand bit-identical and retail's arithmetic is plain IEEE RN (H-dt selected; H-alloc, H-fpu, H-sampling, FMA contraction refuted)
+Work unit (NEXT s7842, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=10 new=0, no owner answers, no new
+SOAK-RESULTS lines, CURRENT-TRUTH 58.7 KB (no maintenance). Three game runs (p3, p4 port; r3, r4 retail oracle), one at a time; 0 crash lines.
+- Offline first (scratch/s7842/fork.py over the s7841 captures + p3): the port forks at the SAME ramdump sample n=1091 in p1, p2 and p3
+  with three different heap pointers in word 133 (0x8035e718, 0x8035e618 = retail's own value, 0x8036da48) -> H-alloc REFUTED.
+  At the fork row the craft position words 4-6/160-162 and every other non-alloc word are bit-identical; only cam y (431 = +0x14,
+  446 = +0x50 copy) differs -> a dt/sampling difference would move the craft too: H-sampling REFUTED.
+- FMA census (scratch/s7842/fma_sites.py, objdump -l over libRecompiledFuncs.a): 201 fmadd/fmsub in 26 functions, 74 source sites.
+  NONE is a translated guest instruction (clang -ffp-contract=on fuses only within one C expression; N64Recomp emits one op per
+  statement). The guest-path ones are the s6826 FPS60 `a + b*rs64_fq_k()` lines: k = 1.0f exactly when FPS60 is off, and
+  fma(b,1,a) == a+b bit for bit; the rest are injected opt-in/diagnostic code. Not the carrier. The guPerspectiveF FCR31=1 window is
+  libultra's cvt.w.d truncation idiom around perspNorm only (the only translated CTC1s), not the camera.
+- Writer (p3, ROGUESQ_STORE_WATCH_PTS=1384A0): cam y is an integrator in updatePlayerVehicleByControlMode (0x8004D2B0):
+  0x8004D7B4 add.s y(+0x14) += RN(RN(s98*dt) * dir.y), dir = clampVec3ToUnitIfLongerThan(target sp+0x20.. - pos +0x10..), stored
+  0x8004D7C0 and copied to +0x50 at 0x8004D7E0. Fork reproduced in p3 (n=1091, port 0xbf9e38c5 vs retail 0xbf9e38c4).
+- Oracle change: rs64_oracle.c prints COP1 singles and $sp words on every exec hit: RS64_ORACLE_FPR=n,n,.. (FR-aware via
+  M64P_CPU_REG_COP1_SIMPLE_PTR) and RS64_ORACLE_SPW=off,.. (hex). r3 (watch 0x8004D7AC/0x8004D7B4): scratch/s7842/replay.py replays
+  all 2026 retail ticks in IEEE float32: mul 0/2026 mismatches; add mismatches 26 = exactly the 26 ticks of the second writer
+  0x8004D048. Fork tick: RN(bf9be370 + bc95551f) = bf9e38c4 = retail; the port's c5 needs the product >= +2 ulp (s98*dt or dir.y off).
+- Port change: tools/apply_s7842_chasehex.py (registered LAST in RS64_REPLAY; handle anchored on the function, not the include block,
+  because later replay steps also insert after #include and made the first placement order-dependent: strict gate showed it):
+  env ROGUESQ_S7842_CHASEHEX=<path> logs hex words at 0x8004D6C8 (A: dist, dt f20, pos, +0x94/98/9C/A4, target) and 0x8004D7B4
+  (B: y, product, dir, +0x98). Retail twin r4: --watch-pc 0x8004D6C8,0x8004D7B4 + FPR 0,2,20, SPW 20..78, PEEK cam words.
+- RESULT (scratch/s7842/chase_cmp.py p4_chase.txt r4/oracle.log): first A tuple bit-identical both sides (positive control);
+  lines 0-551 identical; first unmatched port line 552: dist, pos, target, s94, s98, s9C all identical, dt (f20 and cam+0xA4)
+  port 0x3D088888 retail 0x3D088887 (+1 ulp). dt distribution: port 88 x1584 (+89 x2 at start), retail 88 x274 then 87 x1750 from
+  tick 276. So the fork carrier is the frame dt handed down to the chase step (caller destroyEffectObjectTypeNpcSlots passes its f12;
+  root = the timeSnapshotFiller chain s7839), which RETAIL_SNAP pins to a constant (el 811160, vd 1) while retail's el wanders
+  811160..811170 (s7840). The s7838 "sim dt word does not carry the fork" was lvl4; on lvl5 the dt operand does.
+- Open question for next: is retail's 88->87 flip at tick 276 a function of mupen's CPO1 instruction-count timing (then it is the
+  oracle's timing model, not hardware ground truth, and the residual fork is not a port defect) or of deterministic game state
+  (then a better pin/model can match it)? Needs retail el/vd + dt per tick (watch 0x8000BE28 + 0x8000BF3C) beside 0x8004D6C8.
+- Gates: tools/s7719_regen_gate.py --strict after the anchor fix: 53 files 0 differ, VERDICT H-mirrored, controls PASS (first placement read 1 differ). Captures gitignored: scratch/s7842/{p3,p4}/run.log,
+  p4_chase.txt, r3/r4 oracle.log.
+- ORIGIN: n/a (measurement only; no mitigation).
+- Discrimination line (gate wording): this run selects H-dt (the chase step's dt operand is the only differing input at the first
+  forked tick) and refutes H-alloc (3 pointers, one fork sample), H-fpu (retail = IEEE RN replay 2026/2026; port inputs identical
+  except dt), H-sampling (craft position identical at the fork row) and FMA contraction (no fused translated guest op).

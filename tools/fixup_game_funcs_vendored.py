@@ -37087,6 +37087,7 @@ RS64_REPLAY = [
     "apply_s7672_bucket_handoff.py",  # s7672: G6c stand-in -> real object handoff at spawn, addNpcToVisibilityBucket returns to the host (measurement only, ROGUESQ_STANDINS_LOG=1)
     "apply_s7674_bucket_vt.py",  # s7674: G6c held stand-in culls, last view-test exit + v0 per addNpcToVisibilityBucket call to the host (measurement only)
     "apply_s7681_shield_vt.py",  # s7681: G6c shield (sub 0x32) draws via its own view test + inline bucket link; report it to the stand-in handoff detector (ROGUESQ_S7681_SHIELD=0 = old)
+    "apply_s7842_chasehex.py",  # s7842: bit-exact chase-camera operand log (sites 0x8004D6C8/0x8004D7B4), ROGUESQ_S7842_CHASEHEX=<path> (measurement only)
 ]
 
 

@@ -323,3 +323,11 @@ the core's bp-checked read handler, so before s7818 a read watch inside a dumped
 whatever guest PC was current (often a `nop`). Those hits are now counted in `[oracle] self-read hits suppressed=N` and not
 attributed. Any pre-s7818 read-watch count over 0x600000-0x800000 taken with `--fb-dump` is inflated by 1 per word per dump.
 Check that a hit PC disassembles to a load/store before trusting it.
+
+## FPU registers and stack words on exec hits (s7842)
+
+`RS64_ORACLE_FPR=0,2,20` appends ` fpr: f0=.. f2=.. f20=..` (COP1 single words, FR-mode aware via the core's regs_simple
+pointers) and `RS64_ORACLE_SPW=20,74` appends ` spw: 20=.. 74=..` (guest words at $sp+off, hex) to every `--watch-pc` hit line.
+Values are the state BEFORE the watched instruction executes. Used to replay a guest FP expression offline in IEEE float32
+(scratch/s7842/replay.py, chase_cmp.py) and diff its operands against the port's tools/apply_s7842_chasehex.py log.
+

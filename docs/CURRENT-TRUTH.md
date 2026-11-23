@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7841 (2026-11-22).
+Compact operational handoff, as of Session 7842 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -232,8 +232,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
     "(s7703 maintenance)".
 11b. **G3 retail flight det sweep (s7832-s7841): next mission 0x31=5 with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1 oracle
    run (oracle core now flushes denormals per FCR31.FS, s7841): render tris, HUD census, ramdump. lvl2/3/4 pinned = retail CPO1 (s7840);
-   lvl5 (Gerrard V) render exact (s7841). Open on lvl5: alloc words 0x80137FC4/0x80137FF8 (heap ptr + index, run-to-run variable)
-   and a 1-ulp camera-y fork at port row 341 that grows into a camera fork after row ~1450. Owner decision: RETAIL_SNAP default.
+   lvl5 (Gerrard V) render exact (s7841). **s7842: the lvl5 1-ulp camera-y fork's carrier is the chase step's dt operand**
+   (updatePlayerVehicleByControlMode f20 / cam+0xA4): port 0x3D088888 every tick, retail 88 then 0x3D088887 from tick 276; all other
+   operands bit-identical, retail arithmetic = IEEE RN replay 2026/2026 (H-alloc/H-fpu/H-sampling/FMA refuted). Tools:
+   tools/apply_s7842_chasehex.py (ROGUESQ_S7842_CHASEHEX=<path>), oracle RS64_ORACLE_FPR/SPW, scratch/s7842/chase_cmp.py.
+   Open: is retail's flip mupen CPO1 timing (not ground truth) or game state? Owner decision: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):
