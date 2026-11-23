@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7863 (2026-11-23).
+Compact operational handoff, as of Session 7864 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -266,8 +266,18 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    caught in every window. Whole-run buffers/VI retail 1.9146 vs port 1.9139, per-VI cum drift -4..+2 with no trend (H-rate
    refuted). The port delivers 0-3 AI buffers per VI (host SDL-drain paced, events.cpp s4450 DRAIN=2048) vs retail's steady
    1-2, so the port crosses N one VI early (b17: +2 local lead at dVI 334). The 3/3 sign is one cue (~640 buffers, 167-168
-   ticks) whose N sits on retail's tick edge in all three missions, not three independent samples. Optional determinism
-   follow-up: a VI-locked AI-done schedule opt-in (NEXT.md g3-ai-vi-clock).
+   ticks) whose N sits on retail's tick edge in all three missions, not three independent samples.
+   **s7864: ROGUESQ_AI_VI_CLOCK opt-in (determinism harness only, default off; events.cpp s7864).** =1 posts AI-done from the VI
+   thread at rate/(192*60) per VI with a fractional accumulator (drain/HZ threads off); =2 uses the oracle's measured rate
+   (48681812/2207/192/60 = 1.914746/VI, s7854 r1); _BPV / _SEED override rate and phase. Positive control
+   (`python3 tools/s7864_ai_per_vi_hist.py --control`, sweep row S7864_AIHIST): port buffers/VI histogram {0:382,1:656,2:1252,3:1122}
+   -> {1:299,2:3102} (retail {1:297,2:3175}); same-run drain arm keeps 0..3. **b17 still forks at t1124 in all 3 arms (=1, =2,
+   =2+BPV 1.914588+SEED 0.28)**: song-3 song-relative count diff r-p stays -1 on 96-136 of 168 ticks; the seed moved the
+   port's residual 0.294 -> 0.055 but retail's own rate wanders (1.914588 to t1123, 1.914722 whole run), so no constant clock
+   holds retail's phase. Cause (mupen source, rs64-oracle ai_controller.c get_dma_duration/do_dma): each AI-done fires
+   LEN*floor(cpu_counts_per_sec/(4*fs)) cycles after its DMA STARTS, and a DMA starts only when queued (gap when the FIFO ran
+   empty), so the oracle's AI phase depends on guest queue latency. Remaining det lever: model DMA start/end events
+   (NEXT.md g3-ai-dma-model). Single-source for the mupen reading (code only, not yet measured).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

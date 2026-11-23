@@ -139,4 +139,5 @@ def main():
     sys.exit(1 if anydiff else 0)
 
 
-main()
+if __name__ == "__main__":  # s7864: importable (s7864_ai_per_vi_hist.py reuses load)
+    main()

@@ -210262,3 +210262,32 @@ Rules out: H-buflen (code constant), H-rate (same N in 10/10 windows, control ca
 Not a mitigation (measurement + scorer; no ORIGIN needed).
 Next: g3-ai-vi-clock - an opt-in VI-locked AI-done schedule (fractional accumulator in vi_thread_func) to test whether the 3 forks
 become H-exact; default unchanged.
+
+## Session 7864 (2026-11-23) — ROGUESQ_AI_VI_CLOCK opt-in lands (port AI buffers/VI histogram 0..3 -> {1,2} like retail) but bonus 17 still forks at t1124 in 3 arms: mupen's AI phase is DMA-start driven, not a constant clock (H-pattern; next g3-ai-dma-model)
+
+No new crash reports (FOLDED=7 new=0); no new SOAK-RESULTS lines; no owner answers.
+Change (lib/N64ModernRuntime events.cpp, exported to submodule-patches/N64ModernRuntime.patch): ROGUESQ_AI_VI_CLOCK=1 posts
+OS_EVENT_AI from vi_thread_func with a fractional accumulator, acc += rate/(192*60) per VI, posts floor(acc); the AI Drain / AI Hz
+threads are not started and ai_event_external() is false while it is set. =2 uses the oracle's measured rate (VI clock / (dacRate-1)
+= 48681812/2207 -> 1.914746/VI, from retained s7854 r1 over 5337 VIs). ROGUESQ_AI_VI_CLOCK_BPV / _SEED override rate and phase.
+stderr [s7864-ai-vi-clock] histogram every 3600 VIs. Default off, so the default build is unchanged. tools/s7849_det_pair.sh gains
+P1E/P2E (extra env for one port arm; unset = byte-identical). New tools/s7864_ai_per_vi_hist.py (AI buffers per VI inside the
+mission tick span, --control plants +1 buffer/100 VI), sweep row S7864_AIHIST. s7863_song_end_threshold.py made importable
+(__main__ guard).
+Runs (all bonus 17 = BASE_EEP scratch/s7859/base_bonus.eep, 0x31=16 + level-select RIGHT, s7861 PP/AP schedule; retail r1 reused
+from scratch/s7861/v17; one game at a time):
+- v17: p1 pinned + AI_VI_CLOCK=1, p2 unpinned unflagged. **Positive control:** histogram p1 {0:2,1:299,2:3102,3:7,4:1} (s7861 p1
+  was {0:382,1:656,2:1252,3:1122}), retail {1:297,2:3175}, same-run p2 {0:248,1:442,2:791,3:746}. Rate p1 1.9138 vs retail 1.9145.
+  p1 = retail t0-t1123, FORK t1124 again (song 03 ends t1123 port / t1124 retail, 0 crashlines).
+- v17b: p1 AI_VI_CLOCK=2 -> 1.9147/VI, histogram {1:291,2:3120}; still FORK t1124. Retail residual c(v)-1.914746*v drifts
+  -0.47 -> -0.76 across the mission (retail slope 1.914588 to t1123, 1.914722 whole); p1 flat ~-0.04.
+- v17c: p1 =2 + BPV=1.914588 + SEED=0.28 (fitted on v17b): still FORK t1124. Seed moved the song-3 residual 0.294 -> 0.055 but the
+  song-relative count diff r-p is still -1 on 96 of 168 song-3 ticks (v17b 136). s7863 song-end N SAME in all windows (timing class).
+Reading (single-source, code only): mupen ai_controller.c schedules each AI interrupt LEN*floor(cpu_counts_per_sec/(4*fs)) cycles
+after do_dma STARTS that buffer, and starts a buffer only when the guest has queued it (fifo_push / fifo_pop), so whenever the
+FIFO runs empty the guest's queueing latency is added to the AI phase. That explains a wandering retail rate below the nominal
+ceiling and why no constant-rate clock can track it.
+Rules out: H-phase (a constant VI-locked AI clock fixes b17); H-other is not selected (the count diff is nonzero at the crossing,
+so the s7863 buffer-count model still fits). Selects H-pattern, refined: the AI-done schedule must model DMA start/end like mupen.
+Next: g3-ai-dma-model (NEXT.md): in AI_VI_CLOCK=3 mode, compute AI-done events from osAiSetNextBuffer queue VIs/cycles:
+end = max(queue, prev_end) + LEN*floor(cps/(4*fs)) in VI fractions; first measure the oracle's gap structure offline.
