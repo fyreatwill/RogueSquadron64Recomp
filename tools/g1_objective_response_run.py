@@ -9,6 +9,9 @@ import json
 import os
 from pathlib import Path
 import re
+import sys as _s7848_sys, os as _s7848_os
+_s7848_sys.path.insert(0, _s7848_os.path.dirname(_s7848_os.path.abspath(__file__)))
+from rs64_zopen import zopen, resolve  # s7848: retained logs may survive only as .zst
 import signal
 import subprocess
 import time
@@ -133,8 +136,8 @@ def summarize(out, tag, elapsed_s=None, done=None, level=0):
     crash = 0
     in_epoch = False
     log = out / 'run.log'
-    if log.exists():
-        with log.open(errors='replace') as stream:
+    if resolve(log):
+        with zopen(log) as stream:
             for n, line in enumerate(stream, 1):
                 if '[objresp-epoch]' in line:
                     in_epoch = True
@@ -760,7 +763,7 @@ def main():
     root = Path(__file__).resolve().parents[1]
     out = root / 'scratch/agent/m6' / (f'g1_lvl{args.level}' + args.tag)
     if args.analyze:
-        if not (out / 'run.log').exists():
+        if not resolve(out / 'run.log'):
             parser.error(f'missing log: {out}')
         previous = json.loads((out / 'response.json').read_text()) if (out / 'response.json').exists() else {}
         return summarize(out, args.tag, previous.get('elapsed_s'), level=args.level)

@@ -209852,3 +209852,22 @@ SOAK-RESULTS lines since s7839, CURRENT-TRUTH 59.7 KB (<60000, no maintenance). 
 - Verdict: selects H-exact (dt + seed pins suffice for 0x31=6), refutes H-new-fork. Three levels (4, 5, 6) now port == retail under the
   pins. Next: 0x31=7.
 - Captures (gitignored): scratch/s7847/{r0,r1}/oracle.log, {p1,p2}/run.log, p1_rand.txt, p2_rand.txt.
+
+## Session 7848 (2026-11-22) — MAINTENANCE: CURRENT-TRUTH 60272 -> 25.6 KB; s7804 zst lint scope fixed (4 blind readers routed through rs64_zopen)
+
+Step 0 tripped (`wc -c` = 60272 > 60000), so no experiment ran; the NEXT unit (0x31=7 det pair) carries to s7849 unchanged.
+- **Compaction:** migrated verbatim to PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7848 maintenance)": headline bullets
+  zst class (s7802-s7805) and s7806-s7811, Next-steps item 12 (closed classes old 1-36 + s7808-s7815 siblings, ~140 lines) and item 13
+  (post-G6c fidelity s7793-s7800, oracle --det s7817-s7819, lvl1-lvl5 det threads s7820-s7841). Replaced by two compact bullets and
+  two compact items. Backlog renumbered into one sequence (11b -> 12, closed classes 13, closed G3 threads 14). Headline now
+  "as of Session 7848". CURRENT-TRUTH 496 -> 239 lines, 60272 -> 25580 bytes (net -257 lines / -34.7 KB).
+- **Gate regression caught and fixed (engineering):** tools/s7804_zst_blind_lint.py scoped its tool set on tools cited in
+  CURRENT-TRUTH only, so this compaction silently dropped 76 cited tools out of the lint. Scope is now CURRENT-TRUTH + PROJECT-OVERVIEW
+  (tools 264 -> 660). The wider scope read RED on 4 real blind readers: g1_objective_evidence.py, g1_objective_response_run.py
+  (--analyze), g3_cam_pitch_cmp.py, s7764_inflight_toggle_check.py. All four now read through rs64_zopen (zopen/resolve); lint
+  GREEN 0 blind, planted control ('RED','ZOPEN','GREEN') PASS. Same-run fix-vs-old: s7764 checker on scratch/s7764/runs old =
+  "missing arm log(s): ['def','off','tog']", new = STICK_GATE / M5_B40_VALUE control=PASS H-works, controls_fail=none;
+  g1_objective_evidence report byte-identical old vs new (its inputs are raw/.gz, no regression).
+- Gates after the edit: s7805 cited-cmd GREEN (tally unchanged, GREEN=10), s7762 owner docs 0 missing/stale, gq census clean.
+- Rule for future maintenance: any gate whose scope is "tools cited in CURRENT-TRUTH" must also read PROJECT-OVERVIEW, because
+  migration moves citations there verbatim.

@@ -10,13 +10,16 @@ way the row says. rc 0 = every toggle H-works, 1 = a toggle is H-broken, 2 = a p
 usage: s7764_inflight_toggle_check.py <runs dir>
 """
 import re, sys, os
+import sys as _s7848_sys, os as _s7848_os
+_s7848_sys.path.insert(0, _s7848_os.path.dirname(_s7848_os.path.abspath(__file__)))
+from rs64_zopen import zopen, resolve  # s7848: retained logs may survive only as .zst
 
 D = sys.argv[1] if len(sys.argv) > 1 else "scratch/s7764/runs"
 
 
 def log(arm):
     p = os.path.join(D, "log_%s.txt" % arm)
-    return open(p, errors="replace").read() if os.path.exists(p) else ""
+    return zopen(p).read() if resolve(p) else ""
 
 
 def rumble(t):
@@ -96,7 +99,7 @@ row("STICK_GATE=0", k["def"]["on"] == 1 and k["def"]["full_max"] is not None and
 # ROGUESQ_LOG_M5_B40_ROUTE=1): the b40-write event must fire in both arms (control) and store 0x00 default vs 0x01 with =1.
 def b40w(arm):
     p = os.path.join(os.path.dirname(D.rstrip("/")), "b40", "log_%s.txt" % arm)
-    t = open(p, errors="replace").read() if os.path.exists(p) else ""
+    t = zopen(p).read() if resolve(p) else ""
     return sorted(set(re.findall(r"\[m5-b40-route\] arm=\w+ .*?edge=b40-write .*?b40_stored=0x([0-9A-F]{2})", t)))
 b0, b1 = b40w("b0"), b40w("b1")
 row("M5_B40_VALUE=1", bool(b0) and bool(b1), b0 == ["00"] and b1 == ["01"], "b40-write stored default %s, =1 %s" % (b0, b1))

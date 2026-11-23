@@ -30,8 +30,11 @@ def sweep_tables():
 def tool_set(args, extra):
     tools = {f for f in os.listdir(os.path.join(ROOT, "tools")) if re.match(r"s7\d+_.*_census\.py$", f) or f in extra}
     tools |= set(args)
-    ct = open(os.path.join(ROOT, "docs", "CURRENT-TRUTH.md"), errors="replace").read()
-    tools |= set(re.findall(r"tools/([a-z0-9_]+\.py)", ct))
+    # s7848: CURRENT-TRUTH maintenance migrates citations verbatim into PROJECT-OVERVIEW; scope both, or every
+    # compaction silently shrinks this lint (s7848 moved 76 cited tools out of CURRENT-TRUTH).
+    for doc in ("CURRENT-TRUTH.md", "PROJECT-OVERVIEW.md"):
+        ct = open(os.path.join(ROOT, "docs", doc), errors="replace").read()
+        tools |= set(re.findall(r"tools/([a-z0-9_]+\.py)", ct))
     return sorted(f for f in tools if os.path.exists(os.path.join(ROOT, "tools", f)))
 
 

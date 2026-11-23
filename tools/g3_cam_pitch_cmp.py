@@ -3,10 +3,13 @@
 of BASE, takes the ARM row nearest in x,z and prints position gap, y gap, and the signed pitch gap (word 5, rotation row 1 col 2).
 Usage: g3_cam_pitch_cmp.py BASETAG ARMTAG [ARMTAG ...]   (TAG = scratch/agent/m6/g1_lvl<LEVEL><TAG>/run.log, env LEVEL default 1)"""
 import math, os, re, sys
+import sys as _s7848_sys, os as _s7848_os
+_s7848_sys.path.insert(0, _s7848_os.path.dirname(_s7848_os.path.abspath(__file__)))
+from rs64_zopen import zopen, resolve  # s7848: retained logs may survive only as .zst
 
 def rows(t):
     r = []
-    for ln in open('scratch/agent/m6/g1_lvl%s%s/run.log' % (os.environ.get('LEVEL', '1'), t), 'rb'):
+    for ln in (l.encode('utf-8', 'surrogateescape') for l in zopen('scratch/agent/m6/g1_lvl%s%s/run.log' % (os.environ.get('LEVEL', '1'), t))):
         if ln.startswith(b'[camlog]'):
             m = re.search(rb'ptr=80138458 cam=([^ ]*) tt', ln)
             if m:

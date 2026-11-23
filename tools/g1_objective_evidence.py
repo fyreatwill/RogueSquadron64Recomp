@@ -5,6 +5,9 @@ from collections import Counter, defaultdict
 import gzip
 from pathlib import Path
 import re
+import sys as _s7848_sys, os as _s7848_os
+_s7848_sys.path.insert(0, _s7848_os.path.dirname(_s7848_os.path.abspath(__file__)))
+from rs64_zopen import zopen, resolve  # s7848: retained logs may survive only as .zst
 
 
 PHASE = re.compile(r"^\[phase\] vi_width=(\d+).*origin=0x([\dA-Fa-f]+).*update_screen #(\d+)")
@@ -67,9 +70,8 @@ def load(root, level, arm):
     base = root / f'g1_lvl{level}{arm}'
     for name in ('run.log', 'run.log.gz'):
         path = base / name
-        if path.exists():
-            opener = gzip.open if path.suffix == '.gz' else open
-            with opener(path, 'rt', errors='replace') as stream:
+        if resolve(path):
+            with zopen(path) as stream:
                 return path, scan(stream)
     return base, None
 
