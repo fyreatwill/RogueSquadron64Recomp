@@ -210196,3 +210196,35 @@ registered as sweep row S7861_VERDICT.
 Rules out: H-new (a port sim divergence) in bonus 17 before the song-3 split. It also rules out "the level-select RIGHT
 goes 2 s before the 43.5 Start" for retail.
 Next: bonus 18 (Hoth), two RIGHTs: PP 27.5 + 29:dright, AP 39.5 + 41:right (s6773: craft select SPEEDER, same Start count).
+
+## Session 7862 (2026-11-23) — bonus 18 (Battle of Hoth) det pair H-exact over all 6444 retail ticks; G3 det sweep 0..18 COMPLETE (17 H-exact, 3 audio-clock FORK, all port-early); verdict table tool + sweep gate
+
+HYPOTHESIS-ID: g3-retail-flight-det-sweep (closed) -> g3-audio-clock-sign.
+No new crash reports (FOLDED=7 new=0); no new SOAK-RESULTS lines; no owner answers.
+Run 1 (scratch/s7862/v18_short, NEXT.md's schedule PP ...,27.5:dright,29:dright,31.5,43.5,55.5:start): retail ran 305 s with
+0 mission ticks (pins: SEED=None), so the port arms never ran. Probe (scratch/s7862/probe, retail only, 80 s, `--exec-trace
+0x80003430 --exec-trace-also 0x800C6674` + RS64_XTRACE_MEM 800C6674:0:800CDAC0:1): cursor byte C1 0x10 -> 0x11 at vi 1997 and
+-> 0x12 at vi 2087, so both RIGHTs register 1.5 s apart and Hoth is picked; retail is one Start short after the commit (s6773's
+retail used 3 post-commit Starts, trench needs 2). Note: RS64_XTRACE_MEM rows only print m= on --exec-trace-also PCs here; with
+0x800C6674 as the primary trace PC no m= field appeared (first probe attempt). Not chased.
+Run 2 (scratch/s7862/v18): PP_OVR=19.5:start,27.5:dright,29:dright,31.5:start,43.5:start,55.5:start,67.5:start; AP_OVR=6,11,
+11.5:w1024,19.5,31.5,39.5:right,41:right,43.5,67.5,79.5:start; BASE_EEP=scratch/s7859/base_bonus.eep; 0x31=16. Retail: seed
+43308409 (not race ebdad279 / trench 8b1200fb), 6444 ticks, 17 dt pins, first tick vi 5415, last press vi 4395 (pre-flight).
+The first port p1 was killed by a harness background time limit at 5941 ticks (already seed/calls/hp exact; kept as
+scratch/s7862/p1_killed*); the pair reran p1+p2 on the same r1.
+- **p1 = retail on all 6444 ticks**: seed + rand caller sequence, hp (t586 150->130), rumble events 2=2, 460-w record 0 nonpose
+  and 0 pose diffs on 6291 full-record ticks, 0 TIMING-word diffs, 0 fork windows, no song-handle switch (as s6773, an
+  independent recipe that also found Hoth identical).
+- Controls: p2 (unpinned) seed differs t0, calls t1, record t362; word-50 flip caught at t100; 0 crashlines in both arms.
+- Verdict: `bonus18 H-exact ticks=6444 full_rec=6291 ... residual=none`.
+Change: new tools/s7862_det_sweep_table.py: the whole sweep (0x31=0..15, locked 16, bonus 16/17/18) as one table. The 10 rows with
+a retained control-era score.txt are re-scored by s7856_det_verdict.py and must match the recorded verdict + fork class (else
+MISMATCH, exit 1); 10 earlier rows are hand-scored and cite their session. `--control` plants a wrong verdict: CONTROL PASS
+MISMATCH 1. Registered as sweep row S7862_TABLE (GREEN). Result: TABLE OK rescored=10 hand=10 mismatch=0.
+Reading: 17 H-exact, 3 FORK all fork=audio-clock (0x31=8, 14, bonus 17), and in all three the PORT's song ends one tick early.
+bonus 17's windows: song 01 640/640 buffers equal, song 02 retail 1872 / port 1869, song 03 retail 643 / port 640; 0x31=8 643/637.
+s6806 closed the natural-end cues as parity within 1%, but 3/3 same sign is not explained by a symmetric jitter -> next unit.
+CURRENT-TRUTH: 0x31=5..9 detail migrated verbatim to PROJECT-OVERVIEW "(s7862 migration)" (36.7 -> 30.9 KB).
+Rules out: a port sim divergence in bonus 18 (Hoth) for the whole retail trace.
+Next: g3-audio-clock-sign: find osAiSetNextBuffer's length source and sum buffer lengths per song window on b17, both sides.
+Not a mitigation (measurement + table tool; no ORIGIN needed).

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7861 (2026-11-23).
+Compact operational handoff, as of Session 7862 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -209,56 +209,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    FCR31.FS, s7841): render tris, HUD census, 460-w ramdump. lvl2/3/4 pinned = retail (s7840); lvl5 render exact (s7841); lvl5
    1-ulp camera fork CLOSED s7843 as oracle timing (chase dt = running min of the 1/60-snapped dt; 0x3D088887 only for raw dt
    low nibble 0, mupen CPO jitter; tools/s7843_dt_snap_replay.py, apply_s7842_chasehex.py, scratch/s7842/chase_cmp.py).
-   **0x31=5 (s7844): render exact; with retail's dt replayed (tools/apply_s7844_dt_at.py, ROGUESQ_S7844_DT_AT=tick:hex,..)
-   the record is exact 1321 ticks, then the port's 2nd hit comes 143 ticks after the 1st, retail 265 (s7844_hp_events.py).**
-   **s7845: carrier = rngSeed 0x80003470 entering the mission (H-rng SELECTED).** Unpoked, retail b0463bab vs port 0dc8aa7b at
-   tick 0 (boot streams equal 3798 calls, then scene/press timing splits them). Port poked to retail's seed at tick 0 (ROGUESQ_XTRACE_POKE=
-   800FA730:0:80003470:<seed>:1) + dt replay: rand seed+call sites equal on all 2451 ticks, hp hits on the same ticks
-   (1181/1446/1518/death 1566/2011..), 460-w record bit-identical all 2262 rows; unpoked same-run control forks at tick 5.
-   => 0x31=5 port = retail for 305 s. Det pair recipe now = dt replay + seed pin (tools/s7845_rng_tick_cmp.py,
-   ROGUESQ_RAND_TRACE_BOOT=1). Owner: RETAIL_SNAP default.
-   **0x31=6 (s7847): H-exact.** Retail r0/r1 rand+tick traces byte-identical (oracle repeatable); 1876 mission ticks, seed abd7a44b,
-   only non-default dt = tick 2 3C888888 (needs RS64_ORACLE_FPR=0,4,6,14,20 or snap.py sees 0 ticks). Port p1 (seed poke +
-   DT_AT=2:3C888888): seed + rand callers equal all 1876 ticks, hp events identical (496..death 537, respawn 724, 1129..), 460-w
-   record 0 diffs on all 1493 port rows. Control p2 (no pins, same run set): seed 167b1663 at tick 0, calls fork tick 3, record
-   row 4, hits 1 tick early. Recipe: scratch/s7847/run_port.sh.
-   **0x31=7 (s7849): H-new-fork, carrier = rumble-effect lifetime (single-source port side).** Driver tools/s7849_det_pair.sh
-   (<0x31 val> OUTDIR: eep patch, retail r1, pins via tools/s7849_det_pins.py, p1 pinned + p2 control, score via
-   s7845_rng_tick_cmp + tools/s7849_rec_align.py incl. a rumble-event check). 1961 ticks, seed e7e151a1, dt pins 863/1430/1432
-   = 3D088887. p1: seed+rand callers equal all 1961 ticks, hp equal every tick, pose 0 diffs; ONLY record w115/w116 (player obj
-   0x80137DBC +0x1C0/+0x1C4 = rumble handle/priority, writer updatePlayerCraftPhysics 0x800B2CE0 <- startRumbleEffect, gated by
-   isRumbleSlotActive) differ: port 49 rumble events vs retail 47, first at event 13 (port an extra prio-5 start). p3 (p1 +
-   RUMBLE=0, Pak::None) identical to p1 -> H-pak refuted. Slot active byte +0x6B is cleared in processPolledControllerData
-   0x80002934 when elapsed (+0x80, += getViModePeriod per call) passes the effect duration; it runs once per siServiceThread
-   pass. Retail (oracle watch 0x800027C0): 60.13 passes/s = 1 per VI, 2.001 per mission tick.
-   0x31=6 rumble events 19 = 19 (check controls both ways).
-   **s7850: rumble fork CLOSED as oracle CPU-timing race (H-si-clock REFUTED, H-timing SELECTED, two lines).** (1) Port SI-pass marker
-   (fixup_rand_trace.py s7850, row per 0x800027C0 entry; tools/s7850_si_cadence.py): exactly 1 pass/VI over all 3917 mission VIs,
-   2 per tick 1957/1960 gaps (retail 1177/1186). Port slot log: extra start at tick 653 because the tick-645 effect (250 ms, f32
-   +0x80 = 0x437A0002 after 15 adds, = exact float32) cleared on the pass just before tick 653. (2) Retail oracle r4 (watch P/tick/
-   physics/isRumbleSlotActive/startRumbleEffect/clear): 3 of 23 rumble calls (ticks 640, 641, 644) run AFTER the VI v+1 SI pass
-   preempts updatePlayerCraftPhysics mid-frame, so retail's tick-644 effect starts one pass later and is still active when tick
-   652's prio-5 request checks it ("T phys isAct P CLR P"); the port finishes a frame before the next VI. Not reproducible without
-   cycle timing; rand/hp/pose stay exact. ROGUESQ_SI_ORDER (hold SI-done until physics) was tried and REVERTED: the tick waits on
-   the SI pass (12 ms timeouts every tick VI, run forked at 863). s7849_rec_align.py now treats w115/w116 as TIMING-class.
-   **s7851: 0x31=7 residual CLOSED, record identical vs r1 (p4 and p6).** w135/w149 are NOT craft fields: 0x80137FCC/0x80138004 =
-   3D-sound node 0x80137FC4 +0x08 flags / +0x40 fade timer. Oracle r6 writers (--hit-cap 100000 --hit-vi-window; val= on a write hit
-   = value BEFORE the store): play3DSoundEvent 0x80098A7C/0x80098B90 + factor5RemoveListNode 0x80098E44 (game thread);
-   dispatchPrioritizedSoundQueue 0x8009983C.. + update3DAudioFrame 0x80099BA8 (musyxSynthFrame, viRetraceHandlerThread, 1/VI,
-   +0.3 per VI to 1.2). Two lines: (1) port s7851 entry marks (fixup_rand_trace.py) show 1 update/VI on 11439/11445 mission VIs and
-   tools/s7851_snd_node_cmp.py (tick-keyed lifecycle, --control drops a transition -> MISMATCH) = EXACT 30/30 persistent states,
-   skew 0; (2) retail r6 vs retail r1 differ by exactly one transient dump row (VI 9318) then realign 0 diffs -> dump-instant
-   sub-tick phase is noise even retail-vs-retail. s7849_rec_align.py TIMING = {115,116,135,149}. Note [ramdump] n= is NOT a shared
-   key (dump PC runs 2764x port vs 2644x retail); only rec_align greedy rows or tick-keyed tools compare validly.
-   => 0x31=7 = retail for 305 s (rand, hp, pose, record).
-   **0x31=8 (s7852): H-audio-clock.** 5580 retail ticks, 75 dt pins (apply_s7844_dt_at.py cap raised 32 -> 512). Pinned p1/p3:
-   seed, callers, hp equal ticks 0-3526; split = song 03 (handle 0x8010C0E0) ends t3527 retail / t3526 port at VI/buffer parity
-   (336/643 vs 334/637, s6806 band); first window a pure phase shift. Retail r1 == r2 whole run; p2 unpinned forks at tick 0.
-   s7845 PORT_MARKS now lists the s7851 sound marks (they read as rand calls: false tick-1 fork). Driver traces the song handle
-   + AI buffers and prints tools/s7852_fork_windows.py (all windows, --control) + g3_song_windows.py.
-   **0x31=9 (s7853): H-exact.** 5076 ticks, seed 69f4f739, 58 dt pins. p1: seed/callers/hp equal all ticks, 0 fork windows, all
-   11 song-handle switches same tick, rumble 35=35; record only 1 transient row (dump mid-update between two retail rows).
-   s7849_rec_align.py now reports transient vs `first persistent nonpose diff row` (p2 control persistent at 1203).
+   **0x31=5..9 (s7844-s7853)** detail (seed pin + dt replay recipe, rumble/3D-sound timing class, 0x31=8 audio-clock) migrated
+   verbatim to PROJECT-OVERVIEW "(s7862 migration)"; one-line verdicts in `tools/s7862_det_sweep_table.py`.
    **0x31=10 (s7854): H-exact.** Bespin, 2672 ticks, seed 36b554eb, 1 dt pin, no song switch, hp static. p1 rand/callers equal all
    2580 ticks (2 pinned runs). The 0x80043918 [ramdump] PC is in buildVisibleTerrainGridAroundCamera, so it runs 1x on no-terrain
    levels (vacuous record). s7849_det_pair.sh REC=1 (default) now dumps the 460-w record at tick marker 0x800FA730 on both sides,
@@ -299,7 +251,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    27.5:dright,31.5:start,43.5:start,55.5:start, AP_OVR=6,11,11.5:w1024,19.5,31.5,39.5:right,43.5,67.5,79.5:start, BASE_EEP=
    scratch/s7859/base_bonus.eep, 0x31=16. **Retail's SELECT LEVEL window is between its 4th and 5th Starts (PP 19.5-31.5; the
    5th = commit), the port's between AP 31.5 and 43.5** (cursor 0x800CDAC1 traced at 0x800C6674, s7861/probe). s7856_det_verdict.py
-   now prints fork=audio-clock|unclassified (test_s7856_det_verdict.py, sweep row S7861_VERDICT). Next: bonus 18 (Hoth, 2 RIGHTs).
+   now prints fork=audio-clock|unclassified (test_s7856_det_verdict.py, sweep row S7861_VERDICT).
+   **s7862: bonus 18 (Hoth) H-exact, the det SWEEP 0..18 IS COMPLETE.** 6444 retail ticks, seed 43308409, 17 dt pins: rand/callers,
+   hp (t586 150->130), rumble 2=2, 460-w record 0 diffs on 6291 ticks, no song switch (agrees with s6773); p2 forks t0, flip t100.
+   Recipe = bonus 17's + PP 29:dright + 67.5:start (Hoth needs a 3rd retail Start after the commit; without it retail sat 305 s
+   pre-flight, 0 ticks, scratch/s7862/v18_short) + AP 41:right; cursor probe C1 0x10->0x11->0x12 (s7862/probe). **Verdict table:
+   `python3 tools/s7862_det_sweep_table.py`** (sweep row S7862_TABLE; re-scores the 10 retained score.txt rows, 10 hand rows cite
+   their session; --control plants a mismatch): 17 H-exact, 3 FORK all audio-clock (0x31=8, 14, bonus 17). In every FORK the
+   PORT song ends 1 tick early (3/3 same sign): b17 song 01 640/640 buffers equal, song 02 1869 vs 1872, song 03 640 vs 643.
+   s6806 called this parity within 1%; the consistent sign is unexplained -> NEXT.md g3-audio-clock-sign.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

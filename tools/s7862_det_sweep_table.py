@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""s7862: the G3 retail-flight det sweep (save byte 0x31 = 0..15 + bonus 16/17/18) as one checked table.
+
+usage: python3 tools/s7862_det_sweep_table.py [--control]
+
+Every row records the ledger verdict for one mission. Rows with a retained score.txt (the s7849_det_pair.sh output, scored
+since s7854 with a p2 unpinned arm + a word-50 flip control) are RE-SCORED here by tools/s7856_det_verdict.py and must give
+the recorded verdict (and fork class on FORK rows); a disagreement prints MISMATCH and exits 1. Rows from before the driver
+carried the control section (s7831-s7853) are hand-scored in the cited session and printed as `hand`.
+--control plants a wrong expected verdict on the first re-scored row and must report MISMATCH 1 (exit 0 if it does).
+Prints `TABLE OK rescored=N hand=M mismatch=0` on success.
+"""
+import os, subprocess, sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+# (0x31 / label, mission, session, verdict, fork class or '', score.txt path or None, note)
+ROWS = [
+    ("0", "mission 1", "s7831", "H-exact", "", None, "render/pose pair vs two retail refs (pre seed-pin recipe)"),
+    ("1", "mission 2", "s7840", "H-exact", "", None, "pinned port = retail"),
+    ("2", "mission 3", "s7840", "H-exact", "", None, "pinned port = retail"),
+    ("3", "mission 4", "s7840", "H-exact", "", None, "pinned port = retail"),
+    ("4", "mission 5 Gerrard V", "s7841-3", "H-exact", "", None, "1-ulp camera fork = oracle dt timing"),
+    ("5", "mission 6", "s7845", "H-exact", "", None, "seed pin + dt replay, 2262 rows bit-identical"),
+    ("6", "mission 7", "s7847", "H-exact", "", None, "1876 ticks"),
+    ("7", "mission 8", "s7851", "H-exact", "", None, "rumble/3D-sound residual = timing class (s7850/s7851)"),
+    ("8", "mission 9", "s7852", "FORK", "audio-clock", None, "song 03 end t3527/t3526"),
+    ("9", "mission 10", "s7853", "H-exact", "", None, "5076 ticks"),
+    ("10", "mission 11 Bespin", "s7854", "H-exact", "", "scratch/s7854b/score.txt", ""),
+    ("11", "mission 12", "s7855", "H-exact", "", "scratch/s7855/score.txt", ""),
+    ("12", "mission 13", "s7856", "H-exact", "", "scratch/s7856/score.txt", ""),
+    ("13", "mission 14", "s7857", "H-exact", "", "scratch/s7857/v13/score.txt", "residual timing-class"),
+    ("14", "mission 15", "s7858", "FORK", "audio-clock", "scratch/s7857/v14/score.txt", "pins corrected s7858 (p4); fork class stands"),
+    ("15", "mission 16", "s7859", "H-exact", "", "scratch/s7859/v15/score.txt", "residual timing-class"),
+    ("16 locked", "= mission 16 dup", "s7859", "H-exact", "", "scratch/s7859/v16/score.txt", "locked-bonus fallback to 15"),
+    ("b16", "bonus race", "s7860", "H-exact", "", "scratch/s7860/v16s/score.txt", "race-safe press schedule"),
+    ("b17", "bonus Death Star trench", "s7861", "FORK", "audio-clock", "scratch/s7861/v17/score.txt", "song 3 end t1124/t1123"),
+    ("b18", "bonus Battle of Hoth", "s7862", "H-exact", "", "scratch/s7862/v18/score.txt", "6444 ticks, no song switch"),
+]
+
+
+def rescore(path):
+    sys.path.insert(0, HERE)
+    from rs64_zopen import resolve
+    p = resolve(os.path.join(ROOT, path))
+    out = subprocess.run([sys.executable, os.path.join(HERE, "s7856_det_verdict.py"), p],
+                         capture_output=True, text=True).stdout.strip()
+    toks = out.split()
+    verdict = toks[1] if len(toks) > 1 else "MISSING"
+    fork = ""
+    if "fork=" in out:
+        fork = out.split("fork=", 1)[1].split("(")[0].strip()
+    return verdict, fork, out
+
+
+def main():
+    control = "--control" in sys.argv
+    resc = hand = bad = 0
+    planted = False
+    for key, name, sess, verdict, fork, path, note in ROWS:
+        exp_v, exp_f = verdict, fork
+        if path is None:
+            hand += 1
+            print(f"{key:>9}  {name:<24} {sess}  {verdict:<8} {fork or '-':<12} hand  {note}")
+            continue
+        if control and not planted:
+            exp_v = "FORK" if verdict == "H-exact" else "H-exact"
+            planted = True
+        got_v, got_f, raw = rescore(path)
+        ok = got_v == exp_v and (exp_v != "FORK" or got_f == exp_f)
+        resc += 1
+        if not ok:
+            bad += 1
+        tag = "rescored" if ok else f"MISMATCH (got {got_v} {got_f})"
+        print(f"{key:>9}  {name:<24} {sess}  {exp_v:<8} {exp_f or '-':<12} {tag}  {note}")
+    if control:
+        print(f"CONTROL {'PASS' if bad == 1 else 'FAIL'} MISMATCH {bad}")
+        return 0 if bad == 1 else 1
+    print(f"TABLE {'OK' if bad == 0 else 'BAD'} rescored={resc} hand={hand} mismatch={bad}")
+    return 0 if bad == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
