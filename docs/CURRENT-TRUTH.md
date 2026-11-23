@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7842 (2026-11-22).
+Compact operational handoff, as of Session 7843 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -230,13 +230,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
-11b. **G3 retail flight det sweep (s7832-s7841): next mission 0x31=5 with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1 oracle
-   run (oracle core now flushes denormals per FCR31.FS, s7841): render tris, HUD census, ramdump. lvl2/3/4 pinned = retail CPO1 (s7840);
-   lvl5 (Gerrard V) render exact (s7841). **s7842: the lvl5 1-ulp camera-y fork's carrier is the chase step's dt operand**
-   (updatePlayerVehicleByControlMode f20 / cam+0xA4): port 0x3D088888 every tick, retail 88 then 0x3D088887 from tick 276; all other
-   operands bit-identical, retail arithmetic = IEEE RN replay 2026/2026 (H-alloc/H-fpu/H-sampling/FMA refuted). Tools:
-   tools/apply_s7842_chasehex.py (ROGUESQ_S7842_CHASEHEX=<path>), oracle RS64_ORACLE_FPR/SPW, scratch/s7842/chase_cmp.py.
-   Open: is retail's flip mupen CPO1 timing (not ground truth) or game state? Owner decision: RETAIL_SNAP default.
+11b. **G3 retail flight det sweep (s7832-s7843): next mission 0x31=5 with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1 oracle
+   run (oracle core flushes denormals per FCR31.FS, s7841): render tris, HUD census, ramdump. lvl2/3/4 pinned = retail CPO1 (s7840);
+   lvl5 (Gerrard V) render exact (s7841). **lvl5 residual 1-ulp camera fork CLOSED s7843 as oracle timing, not a port defect:**
+   the chase dt (cam+0xA4, s7842 carrier) is the RUNNING MIN (0x8004D5A4-D5B4) of runInMissionFrame's dt, which snaps the
+   timeSnapshotFiller dt to a multiple of q=1/60 (0x800FA730-A7AC, fmodf 0x8001E20C); the float residue of that snap gives
+   0x3D088887 exactly when the raw dt's low mantissa nibble is 0 (stateless per tick: el 811144/811155/811158/811169 -> 87,
+   pin 811160 -> 88). Retail's first such el (811155, mupen CountPerOp instruction-count jitter) lands at tick 276.
+   Two lines: tools/s7843_dt_snap_replay.py float32 model == retail snapped dt 2024/2026 (2 misses = dt 0 clamp ticks) and
+   running min == chase dt 2026/2026; port lever ROGUESQ_S7839_SNAP_EL=811155 -> 87 from tick 2, fork moves line 552 -> 4.
+   Tools: apply_s7842_chasehex.py (ROGUESQ_S7842_CHASEHEX=<path>), oracle RS64_ORACLE_FPR/SPW, scratch/s7842/chase_cmp.py.
+   Owner decision still open: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):

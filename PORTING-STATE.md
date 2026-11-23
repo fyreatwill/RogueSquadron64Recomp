@@ -209729,3 +209729,37 @@ SOAK-RESULTS lines, CURRENT-TRUTH 58.7 KB (no maintenance). Three game runs (p3,
 - Discrimination line (gate wording): this run selects H-dt (the chase step's dt operand is the only differing input at the first
   forked tick) and refutes H-alloc (3 pointers, one fork sample), H-fpu (retail = IEEE RN replay 2026/2026; port inputs identical
   except dt), H-sampling (craft position identical at the fork row) and FMA contraction (no fused translated guest op).
+
+## Session 7843 (2026-11-22) — lvl5 camera-y fork closed as oracle timing: the chase dt is the running min of runInMissionFrame's 1/60-snapped dt, and the snap's float residue gives 0x3D088887 exactly for raw dts with low mantissa nibble 0; retail first draws such an el (811155, mupen CPO jitter) at tick 276 (H-cpo-model SELECTED, H-state REFUTED)
+Work unit (NEXT s7843, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=10 new=0, no owner answers, no new
+SOAK-RESULTS lines (s7837/s7839 already folded), CURRENT-TRUTH 59.1 KB (no maintenance). Four retail oracle runs + one port run, one at
+a time; 0 crash lines.
+- r5 (s7841 r1 recipe, CPO 1, RDPBIN=/dev/null, FPR 0,2,20, SPW, PEEK cam words, --watch-pc 0x80043918,0x8004D6C8,0x8004D7B4,0x8000BE28,
+  0x8000BE80,0x8000BF3C): retail deterministic vs s7842 r4 (same 2026 chase ticks, same 88 x274 / 87 x1750 split from tick 276 =
+  reproducibility control). Per-tick el at the flip is not special: active snapshot struct s0=0x80165ed0 shows el 811142/811147 both
+  before and after tick 276 (scratch/s7843/eltab.py). 0x8000BF3C (delay slot of jal) never fires as an exec watch; use 0x8000BF38.
+- r6 (+ --watch-write 0x1384FC:0x138500 --detail-watch 3; write hits are hidden past --hit-cap without --detail-watch): cam+0xA4 has
+  ONE in-mission writer, 0x8004D5B4 (+ init 0x80050C58). Code 0x8004D5A4-0x8004D68C: if new dt <= A4 (or A4 == 0) A4 = new; else the
+  extra time (new-A4) is applied as a position catch-up (0x98 * (new-A4) * dir) and A4 is kept -> cam+0xA4 = running MIN of the
+  passed dt. timeSnapshotFiller returns (BF38 f0) are 0x3D0B25xx / 0x3D088889, never 88/87 -> the chase input is not that dt directly.
+- Static trace (N64Recomp funcs_10/11, runInMissionFrame 0x800FA6D0+): chase a1 = f20 of 0x8004F8DC <- 0x80053700 <- runInMissionFrame
+  f20, built at 0x800FA728-0x800FA7AC: dt = snapshot+0x20, q = snapshot+0x1C, r = 0x8001E20C(dt,q) = fmodf (div, trunc.w, sub, mul);
+  r>0: r/q < C1 ? dt-r : (dt+q)-r; then clamp (<=0 -> const, > max -> max).
+- r7 (--watch-pc 0x8004D6C8,0x8000BE28,0x8000BE80,0x800FA738,0x800FA7D0, FPR 0,4,6,14,20): q = 0x3C888888 (1/60). NEW
+  tools/s7843_dt_snap_replay.py replays the snap in IEEE float32: model == retail snapped dt 2024/2026 (the 2 misses are ticks 0-1 with
+  dt 0 taking the clamp path), running min == chase cam+0xA4 on 2026/2026. The snapped dt is 0x3D088887 exactly when the raw dt's
+  low mantissa nibble is 0 (3d0b2500, ..2510, .., ..25f0): observed el 811144, 811155, 811158, 811169, 811253 -> 87 (29 ticks); every
+  other el, the RETAIL_SNAP pin 811160 (raw 3d0b259c) and the 1848 el=0/vd=2 ticks (raw 3d088889) -> 88. Retail's first nibble-0 el
+  (811155) lands at tick 276, so the flip tick is wherever mupen's CountPerOp=1 instruction-count timing first produces one of those el
+  values: a property of the oracle's timing model (real hardware has its own cycle jitter), not deterministic game state.
+- Port p5 (s7841 p1 recipe minus RDP bin + ROGUESQ_RETAIL_SNAP=1 ROGUESQ_S7839_SNAP_EL=811155 ROGUESQ_S7842_CHASEHEX): banner
+  `[snap7839] armed log=0 pin=811155`; chase dt 87 x1584 from tick 2 (p4 with pin 811160: 88 x1584) exactly as the model predicts;
+  scratch/s7842/chase_cmp.py p5 vs r4: first unmatched line moves from 552 (p4) to 4, only dt/sA4 differ (-1 ulp) = positive
+  control that the lever and the model own the fork. 0 crash lines.
+- Conclusion: the lvl5 residual 1-ulp camera fork is CLOSED as not a port defect. A constant pin cannot match retail's flip without
+  replaying the oracle's el sequence, which would be tuning to the oracle's timing model; the pin stays as is. Next: 0x31=5 det pair.
+- Captures (gitignored): scratch/s7843/{r5,r6,r7}/oracle.log, p5/run.log, p5_chase.txt; scripts scratch/s7843/{eltab,wtab,mintab}.py.
+- ORIGIN: n/a (measurement + offline tool; no mitigation).
+- Discrimination line (gate wording): this run selects H-cpo-model (the flip follows the first per-tick el whose raw dt has a zero
+  low nibble, reproduced 2024/2026 by a float32 replay and by the port lever) and refutes H-state (the snapped dt is a stateless
+  function of the tick's el; the only state is the running min, which latches the first 87).
