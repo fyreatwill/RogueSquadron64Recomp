@@ -210428,3 +210428,38 @@ poked and dt pinned only from mission tick 0): both arms run identical RSP/DL co
 different coordinates, so the input differs, not the emitter. Rules out H-render for m12 flight; H-align not needed (one
 offset carries the whole span). Not claimed: what the island element is, or whether retail's pre-flight state is matchable.
 Bins deleted after scoring (scratch/s7869/v12/*.bin, r1/retail.bin; s7868/v17 bins too); txt scores kept.
+
+## Session 7870 (2026-11-23) — det render oracle on 0x31=5 (mission 6): all 2383 flight frames = retail; both pre-flight islands are timing/state class (one is a half-frame animation-time phase, offset = 0.51 x speed); s7868 cmp gains phase placement + a flight-scoped neg control
+
+Start: crash_reports new=0; no owner answers; no new SOAK-RESULTS lines. NEXT g3-det-prefix-render.
+Change (tools/s7868_det_frame_cmp.py): (1) prints the run-length of port phase ordinals and retail VI widths over the whole
+stream, HUD/text-texrect frames per port phase, and places every exact-span segment and its first/last N islands in phase
+terms (no side script); (2) the --neg control is now scoped to the FINAL port phase (flight): the old whole-run bar
+(neg longest run < half the pair's) FAILED a correct unpinned arm on 0x31=5, because the pre-flight cinematic is
+deterministic in both arms (pins act from tick 0) and p2 matched it for 2286 frames vs p1's 2911-frame run.
+Retained s7844 pair re-scored (scratch/s7868/s7870_s7844_phase.txt): port phases 2,3,4,5,6@3399(3865),7@7264(2280); the WHOLE
+exact span port[3399:7264] is phase 6 / retail width 640, which is pre-flight: port 3399-5991 has 0 texrects in 2592 frames
+(intro cinematic), 5991-6286 a 40-texrect text screen, 6286-7242 no HUD; flight = phase 7 (HUD 12-13 texrects, the
+115-frame no-HUD stretch at 8848 = death/respawn, consistent with s7845's death t1445 + respawn t2011). So the s7868 note
+"N212 at port 6074 = the s7844 enemy-hit state fork" was WRONG: 6074 is ~1190 frames before tick 0 (superseded). p4 has no
+seed pin, so its flight is 0% exact, as expected (s7845 H-rng).
+Run: `env RBIN=1 zsh tools/s7849_det_pair.sh 5 scratch/s7870/v5` (default PP/AP), rc 0, crashlines 0/0. Retail reproduced
+s7845: seed b0463bab, NTICKS 2507, NDT 19. p1: first seed/call diff None, nonpose None, pose None, timing None (H-exact
+whole run); p2: seed forks t0, calls t8, pose t5 (control). --control at t100 caught.
+Render (scratch/s7870/v5_render.txt): retail 9232 / port 9639 frames, offset -527 (5593 votes), exact 5743; exact span
+port[3391:9639]; phase 7 (flight, retail 512-wide) exact 2383 / non-exact 0 = every flight frame incl. death + respawn;
+phase 6 (640 pre-flight) exact 3360 / non-exact 505. Plant (port 8183, one tri YH+1) caught. Neg (phase-scoped): pinned
+2383/2383, unpinned 0 in phase 7 -> PASS. rc 1 = interior non-exact frames, all in phase 6.
+Pre-flight islands (tools/s7869_island_probe.py): B port[6066:6278] (text screen, tri-count, PRIM FFFFFFFF): p1 and p2 wrong
+by different values on 0/212 frames identical -> state-driven (same class as m12's island). A port[3393:3552] (opening of the
+intro cinematic, 64 of 164 PRIM 000000FF tris): p1 == p2 wrong tris on 159/159 frames, so the arm test cannot split it;
+scratch/s7870/phase_a.py: all 6244 rank-paired moving tris have port YL strictly between retail frame j and j+1, and the
+offset regresses as 0.510 x per-frame speed - 0.016 over speeds -19..10 (sign flips with direction, speed 0 -> offset 0 in
+1972 tris). A fixed render bias would be a constant, not proportional to motion: the port draws that element half a frame
+later in animation time than retail (timing class, pre-tick-0, unpinned). Control: island probe self 0 / plant 1 PASS.
+Reading (two lines each: det state record + independent RDP stream; for island A, arm comparison + motion regression):
+three missions (b17 1120, m12 5662, m6 2383 flight frames) render bit-exact vs retail on det-exact ticks; every non-exact
+frame seen is pre-flight and is state or timing class. G3 det render line CLOSED. Rules out H-render (port RSP/DL defect on
+equal state) in flight on 3 missions, and H-render for island A (offset proportional to speed). Not claimed: what drives
+the cinematic's half-frame phase (VI-clock phase at cinematic start is the obvious candidate; not measured).
+Bins deleted after scoring (6.0 GB); txt scores + phase_a.py kept.

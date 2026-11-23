@@ -11,6 +11,8 @@ Alignment: each frame whose signature is unique on BOTH sides votes an offset (r
 winning offset defines the pairing, and the longest exactly-matching run under it is reported, with every
 non-exact frame inside [first exact, last exact] listed (those are the H-render candidates: diffs where both
 neighbours match).
+s7870: every exact-span segment is also placed in phase terms (port phase ordinal from the port bin header, retail VI
+width from the retail bin header), so pre-flight islands vs in-flight diffs are separated without a side script.
 Controls (iron rule 1, same run): --plant moves one triangle's YH by one sub-scanline in a port frame in the middle
 of the exact run; it must turn exactly that frame non-exact (rc 3 otherwise). A second pair (e.g. the unpinned p2
 arm) given with --neg PORT2.bin must NOT reach the same exact run (its state forks at t0).
@@ -30,7 +32,7 @@ MINTRI = int(a[a.index('--min-tri') + 1]) if '--min-tri' in a else 1
 
 def load(p, retail):
     fr = m.frames(rs64_zopen.materialize(p, tmp), retail)
-    return [c for c, _ in fr]
+    return [c for c, _ in fr], [x for _, x in fr]   # (frame counters, port phase ordinal / retail VI width)
 
 def sig(c): return hash(frozenset(c.items()))
 def ntri(c): return sum(v for k, v in c.items() if k[0] == 'tri')
@@ -72,6 +74,15 @@ def report(tag, R, P, r):
         dt = sum(((c - q) + (q - c)).values()); dx = sum(1 for k in (c - q) if k[0] != 'tri') + sum(1 for k in (q - c) if k[0] != 'tri')
         return 'texrect/HUD' if dx and dx == dt else ('tri-geom' if not dx else 'tri+texrect')
     print('  map: ' + ' '.join(f"{'E' if e else 'N'}{b - a + 1}" + ('' if e else f'@{a}({kind(a)})') for e, a, b in segs)[:1500])
+    if PM is not None and RM is not None:   # s7870: place every segment in phase terms (port phase ordinal / retail VI width)
+        ph = collections.OrderedDict()
+        for j in range(j0, j1 + 1):
+            key = (PM[j], RM[j + r['off']]); d = ph.setdefault(key, [0, 0, j, j]); d[0 if r['eq'].get(j, False) else 1] += 1; d[3] = j
+        print('  phases in exact span (port phase / retail width: exact, non-exact, port range):')
+        for (pp, rw), (ne, nn, a0, a1) in ph.items(): print(f'    phase {pp} / width {rw}: exact {ne} non-exact {nn} port[{a0}:{a1 + 1}]')
+        firstN = [(e, a, b) for e, a, b in segs if not e]
+        for e, a, b in firstN[:6] + firstN[-6:]:
+            print(f'    N{b - a + 1}@{a}: port phase {PM[a]}..{PM[b]} retail width {RM[a + r["off"]]}..{RM[b + r["off"]]} ({kind(a)})')
     for j in inner[:12]:
         c, q = P[j], R[j + r['off']]
         d1 = c - q; d2 = q - c
@@ -79,8 +90,19 @@ def report(tag, R, P, r):
               f'retail-only {sum(d2.values())}; e.g. port {list(d1)[:1]} retail {list(d2)[:1]}'[:400])
     return inner
 
-R = load(a[0], True); P = load(a[1], False)
+R, RM = load(a[0], True); P, PM = load(a[1], False); PM0 = PM
 print(f'retail frames {len(R)}, port frames {len(P)}')
+def rl(M): # run-length (value@start(len)) of a whole-stream meta list
+    o = []
+    for i, x in enumerate(M):
+        if o and o[-1][0] == x: o[-1][2] += 1
+        else: o.append([x, i, 1])
+    return ' '.join(f'{x}@{i}({n})' for x, i, n in o)[:600]
+print('port phases (ordinal@start(frames)):', rl(PM)); print('retail widths (width@start(frames)):', rl(RM))
+ntx = lambda c: sum(v for k, v in c.items() if k[0] != 'tri')
+for ph in dict.fromkeys(PM):   # HUD presence per port phase: flight frames carry HUD texrects, intro cinematics none (s7870)
+    js = [j for j, x in enumerate(PM) if x == ph]
+    print(f'  port phase {ph}: {len(js)} frames, {sum(1 for j in js if ntx(P[j]))} with texrects (HUD/text)')
 r = align(R, P); inner = report('pair', R, P, r)
 if r is None: sys.exit(2)
 rc = 0 if not inner else 1
@@ -93,8 +115,12 @@ if '--plant' in a:
     print(f'control plant (port frame {j}, one tri YH+1): {"PASS caught" if ok else "FAIL"}')
     if not ok: rc = 3
 if '--neg' in a:
-    N = load(a[a.index('--neg') + 1], False); rn = align(R, N); report('neg', R, N, rn)
-    ok = rn is None or rn['run'][0] < r['run'][0] // 2
-    print(f'control neg (unpinned arm must not match as long): {"PASS" if ok else "FAIL"}')
+    N, NM = load(a[a.index('--neg') + 1], False); PM = NM; rn = align(R, N); report('neg', R, N, rn)
+    # s7870: scope the neg control to the LAST port phase (flight): a pre-flight cinematic is deterministic in both arms
+    # (pins act from mission tick 0), so a whole-run longest-run bar fails a correct unpinned arm (0x31=5: 2286 vs 2911).
+    last = PM0[-1]; ex = lambda rr, M: 0 if rr is None else sum(1 for j, e in rr['eq'].items() if e and M[j] == last)
+    ep, en = ex(r, PM0), ex(rn, NM); nl = sum(1 for x in PM0 if x == last)
+    ok = ep > 0 and en < ep // 2
+    print(f'control neg (unpinned arm exact frames in final port phase {last}: pinned {ep}/{nl}, unpinned {en}): {"PASS" if ok else "FAIL"}')
     if not ok: rc = 3
 sys.exit(rc)

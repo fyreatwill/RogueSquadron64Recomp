@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7867 (2026-11-23).
+Compact operational handoff, as of Session 7870 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -295,9 +295,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    --neg P2.bin` pairs frames by unique-signature offset vote and compares every frame's full multiset (tri edge coefficients +
    PRIM, texrect geometry + PRIM = HUD). b17 (scratch/s7868/v17, same det verdict: p1 = retail t0-t1123, fork t1124): 1120
    consecutive exact frames, 0 non-exact inside the exact span, ending at the fork; plant (1 tri YH+1) caught; unpinned p2 matches
-   only the 101-frame boot logo. Two lines: det state record + independent RDP stream. Retained s7844 (0x31=5) pair: 2286-frame
-   exact run; its non-exact frames sit before (unpinned pre-flight, tri-geom) and after (state fork, tri-count) - NOT attributed
-   to ticks yet (no tick stamp in the RDP stream). s7868 also fixed a torn (vi_n, vi_t_ns) read in the =3 DMA model (now under
+   only the 101-frame boot logo. Two lines: det state record + independent RDP stream. Retained s7844 (0x31=5) pair: its whole exact span is
+   PRE-flight (phase 6, intro cinematic + text screen; s7870 superseded the "tri-count = enemy-hit fork" reading: that diff is
+   ~1190 frames before tick 0); p4 had no seed pin, so its flight is 0% exact. s7868 also fixed a torn (vi_n, vi_t_ns) read in the =3 DMA model (now under
    s7867::mtx) and classified the AI DMA thread in s7382/s7383/s7538/s7599.
    **s7869: 0x31=12 (longest exact mission, death t5304 + respawn t5490) render = retail for ALL 5662 flight frames.**
    `RBIN=1 zsh tools/s7849_det_pair.sh 12` (det H-exact 5765 ticks, residual none). s7868 cmp: retail 9272 / port 9704 frames,
@@ -307,6 +307,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    both diverge on the same retail frames 3295-3437 with DIFFERENT tri values (0/143 frames identical), both re-converge after
    (p2 E80 to the end of phase 6). A port render defect on equal input would give identical wrong tris in both arms. Two
    missions now render-exact on det-exact ticks (b17 1120, m12 5662). Pre-flight islands = unpinned window, not render.
+   **s7870: 0x31=5 (mission 6) flight render = retail, 2383/2383 frames (death + respawn incl.). G3 det render line CLOSED: 3
+   missions.** `RBIN=1 zsh tools/s7849_det_pair.sh 5` (H-exact whole run, p2 forks t0). s7868 cmp now prints phase tables, HUD
+   frames per phase, places islands by phase, and scopes --neg to the final (flight) phase (old whole-run bar failed a correct
+   p2 that matched the deterministic pre-flight cinematic). Islands: text screen p1/p2 differ (state); cinematic opening p1 ==
+   p2 but offset = 0.51 x per-frame speed (scratch/s7870/phase_a.py): half-frame animation-time phase, timing class.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
