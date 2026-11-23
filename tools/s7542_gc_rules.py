@@ -187,7 +187,7 @@ RULES = [
     D(MNP, "start_state_poller", "ROGUESQ_FORCE_EMPTY_POOL_SENTINEL", n=800),
     A(RCP, "?", ("line", r"uint8_t\* rdram = app->core\.RDRAM;")),
     D(RCP, "?", "ROGUESQ_FORCE_BUFFER_PROGRESS", rng=True, n=1600),
-    D(RCP, "?", "ROGUESQ_DEBUG_WRITE", rng=True, n=700),
+    D(RCP, "?", "ROGUESQ_DEBUG_WRITE", rng=True, n=2000),  # s7846: s7845 RAND_TRACE_BOOT block put the store 1778 chars after the getenv
     A(RCP, "submit_rdp_range"),
     D("src/main/upstream_compat.cpp", "rs64_s6883_tables", r"s6883_mode\(\) & 4", n=200,
       why="ROGUESQ_G1D_SPANCELL bit 4 only (default 3)"),

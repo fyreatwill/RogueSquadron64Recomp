@@ -49,7 +49,7 @@ EMIT_EVID = {
     'cop0_status_write': [('CENSUS', 'Session 7405'), ('CENSUS', 'Session 7409')],
 }
 REPL_SESS = ('Session 7400', 'Session 7401', 'Session 7402', 'Session 7407')  # BJ/BK/BL contracts + BQ IDO math
-DIAG = set('''getenv fflush time mach_absolute_time backtrace backtrace_symbols backtrace_symbols_fd atof atoi atol strtol
+DIAG = set('''getenv fflush time mach_absolute_time backtrace backtrace_symbols backtrace_symbols_fd atof atoi atol atoll strtol strtoll
 strtoul strcmp strncmp strchr strncpy snprintf sscanf fputc fputs fwrite fopen setvbuf clock_gettime gettimeofday
 pthread_self pthread_threadid_np dladdr raise usleep fprintf pthread_create pthread_detach'''.split())
 MATH = set('floorf ceilf powf sinf acosf tan __builtin_tan sqrt __builtin_sqrt fminf fmaxf isnan isinf __builtin_nanf'.split())
@@ -105,7 +105,7 @@ def deadfn(fn, live):
 def addr_refs(addr, live):
     hi, lo = (addr + 0x8000) >> 16, addr & 0xFFFF
     lo_s = lo - 0x10000 if lo >= 0x8000 else lo
-    pat = r'ADD32\(ctx->r\d+, ' + ('-' if lo_s < 0 else '') + '0X%X\)' % abs(lo_s)
+    pat = r'ADD32\(ctx->r\d+, ' + ('-' if lo_s < 0 else '') + r'0X%X\)' % abs(lo_s)
     return len(re.findall(pat, live)), hi
 
 

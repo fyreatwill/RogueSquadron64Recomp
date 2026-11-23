@@ -30,3 +30,4 @@ src/rsp/dpc_bridge.cpp	rs64_floor_cover	s_cov_origin_set	NOT-LAZY	floor-cover ac
 src/main/main.cpp	rs64_rumble_send	s_hap	SINGLE	s7720: rs64_rumble_send <- rs64_rumble_tick <- poll_input (guest osContStartReadData path, one thread)
 src/main/main.cpp	rs64_bind_selftest_step	s_bind_vpad	SINGLE	s7720: ROGUESQ_BIND_SELFTEST only; <- rs64_bind_poll <- get_n64_input (guest input thread)
 src/main/main.cpp	rs64_bind_selftest_step	attached	SINGLE	s7720: same caller chain as s_bind_vpad, ROGUESQ_BIND_SELFTEST only
+src/main/rt64_render_context.cpp	update_screen	s_rt_boot_done	SINGLE	ScreenUpdateAction on gfx_thread (events.cpp:1617); s7845 boot open of s_rand_trace_f (its guest reader is the s7384 DIAG row)

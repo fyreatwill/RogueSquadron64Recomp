@@ -46,8 +46,8 @@ extern "C" void rs64_s6883_freeze(unsigned); // s6883: span tables at each POSE_
 static FILE* s_rand_trace_f = nullptr;
 // s7845: ROGUESQ_RAND_TRACE_MAX=<rows> overrides the 400000-row cap (shared by rand rows and marker rows).
 static long rs64_rand_trace_max() {
-    static long m = -1;
-    if (m < 0) { const char* e = std::getenv("ROGUESQ_RAND_TRACE_MAX"); m = (e && atol(e) > 0) ? atol(e) : 400000; }
+    // magic static: thread-safe one-time init (read from the gfx thread and guest hooks)
+    static const long m = [] { const char* e = std::getenv("ROGUESQ_RAND_TRACE_MAX"); return (e && atol(e) > 0) ? atol(e) : 400000L; }();
     return m;
 }
 extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {

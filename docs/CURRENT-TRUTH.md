@@ -241,7 +241,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    800FA730:0:80003470:<seed>:1) + dt replay: rand seed+call sites equal on all 2451 ticks, hp hits on the same ticks
    (1181/1446/1518/death 1566/2011..), 460-w record bit-identical all 2262 rows; unpoked same-run control forks at tick 5.
    => 0x31=5 port = retail for 305 s. Det pair recipe now = dt replay + seed pin (tools/s7845_rng_tick_cmp.py,
-   ROGUESQ_RAND_TRACE_BOOT=1). NEXT: 0x31=6 with both pins. Owner: RETAIL_SNAP default.
+   ROGUESQ_RAND_TRACE_BOOT=1). NEXT: 0x31=6 with both pins (s7846 only closed the 4 census gates s7845 re-opened). Owner: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):

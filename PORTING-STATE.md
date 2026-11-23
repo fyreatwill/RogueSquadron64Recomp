@@ -209807,3 +209807,18 @@ a time; 0 crash lines.
 - Verdict: selects H-rng (seed carried into the mission), refutes H-ai-clock and H-bolt-geom: with dt + seed pinned,
   0x31=5 port == retail for 305 s (render exact s7844). Det-pair recipe now pins both. Next: 0x31=6 with both pins.
 - Captures (gitignored): scratch/s7845/{p6,p7}/run.log, p6_rand.txt, p7_rand.txt, r4/oracle.log.
+
+## Session 7846 (2026-11-22) — closed the 4 census gates s7845 re-opened (unmet-contract fix; no experiment)
+What ran: the loop's unmet contract named 4 new RED gates after s7845. Each classified and closed:
+- s7384 static-state: `m@rs64_rand_trace_max` (lazy `static long m=-1` env cap) became MULTI (GFX via the new boot
+  `[rand-trace]` print + GUEST hooks). FIXED, not reviewed: converted to a magic static (`static const long m = []{...}()`,
+  thread-safe one-time init) -> drops out of MULTI (114/114 reviewed, unreviewed 0).
+- s7374 lazy-static: `update_screen s_rt_boot_done` COMPANION (block opens s_rand_trace_f). Row SINGLE (ScreenUpdateAction on
+  gfx_thread, same as s_sd); the guest-side reader of s_rand_trace_f is the existing s7384 DIAG row.
+- s7542 gc census: live control FAILED on a STALE anchor `D(RCP, ROGUESQ_DEBUG_WRITE, n=700)`: the s7845 RAND_TRACE_BOOT block
+  put the DEBUG_WRITE RDRAM store 1778 chars after its getenv. Window widened to 2000 (env text anchor, not a line range);
+  controls 8/8.
+- s7813 callee census: OPEN atoll/strtoll = env parsing added by the s7838/s7839/s7844 fixups (VI_STAMP_ONSET2, S7839_SNAP,
+  S7844_DT_AT) -> DIAG class beside atol/strtol. Also fixed its `"\)"` SyntaxWarning (raw string).
+Rebuilt build/ (rc 0). Full tools/s7651_gate_sweep.py rerun rc=0: gates 246 = GREEN 242, REPORT 2, NEEDS-ARGS 2 (s7827, s7836; both take capture args), 0 RED, controls PASS. Rules out nothing about the game; the
+0x31=6 det pair (NEXT.md) is carried to the next iteration unchanged.
