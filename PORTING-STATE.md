@@ -210145,3 +210145,22 @@ complete (8 and 14 = H-audio-clock FORK, 7 residual closed s7851, the rest H-exa
 Next discriminator: bonus 16 rerun with a race-safe press schedule on both sides (no Start after the level pick, as in s6771,
 plus the tick-0 rngSeed poke). H-exact through t395 and retail's crash at t395 in the port closes H-input. A fork before t395
 reopens H-new (name the writer with s7858_store_seq_cmp.py).
+
+## Session 7860 (2026-11-23) — bonus 16 (self-starting race) det pair H-exact with a race-safe press schedule; H-input closed; s7849_det_pair.sh gains PP_OVR/AP_OVR
+
+No new crash reports (FOLDED=7 new=0); no new SOAK-RESULTS lines; no owner answers.
+Change: tools/s7849_det_pair.sh takes PP_OVR (retail s7828 PP, port time) and AP_OVR (port autopilot). When unset, the
+defaults are the old literal strings, so the 0x31=0..15 recipes are unchanged.
+Run 1 (scratch/s7860/v16r): PP_OVR=19.5,31.5,43.5:start, AP_OVR=6,11,11.5:w1024,19.5,31.5,43.5:start. Retail r1: 458 ticks,
+seed ebdad279, crash t395-403 (hp 80->0), then it sits on the retry screen (no further press), so 0 dt pins. The port gave 0
+ticks in both arms, so the null is void (the control could not fire). Its screenshot at 302 s shows AVAILABLE CRAFT / BEGGAR'S
+CANYON. The port needs one more Start than retail before the race: s7828 hard-codes retail 6/11/16, so retail gets 6 Starts
+and the port got 5. In s7859/v16b the port's first race tick (vi 4204) came right after AP fire 7 (67.5 s, vi 4128).
+Run 2 (scratch/s7860/v16s; r1 reused, AP_OVR adds 67.5:start): **H-exact.** p1 = retail on all 458 ticks: rand seed and
+call sequence, hp changes (395, 396, 397, 403) identical, song handle t1, 460-w record 0 non-pose / 0 pose diffs, rumble
+events 5/5. Press audit: the last retail press is vi 2955 < first tick vi 3157, and the last port press is vi ~4128 < first
+tick vi 4206, so neither side presses during the race. Positive controls: p2 (unpinned) seed differs at t0 / call seq t28;
+p1 word-50 flip caught at t100; 0 crashlines in both arms.
+Rules out: H-new (a port divergence in the race) for bonus 16. The s7859 FORK t395 was the press schedule (H-input). Two
+lines: s7859's press audit plus this equal-press exact run, which agrees with s6771.
+Next: bonus 17/18 (0x31 clamps to 16, so they need d-pad RIGHT on SELECT LEVEL: retail `dright`, port `right`, per s6772).

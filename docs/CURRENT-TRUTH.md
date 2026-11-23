@@ -287,8 +287,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    apply_s7844_dt_at.py + s7849_det_pins.py). Verdict FORK t395: retail crashes into the ground at t395 (hp 80->0, retry t458),
    port only at t786, and the port stops ticking after t849. The cause is the harness, not the port (H-input, single-source):
    retail's PP Start presses land at tick 0 and t458/t698 (the MISSION FAILED screen), but the port's AP fires 7-9 land
-   pre-race and mid-run. det_pair's hangar-mission press schedule is invalid for the race. s6771 already showed the race
-   sim-identical with a no-press-after-pick recipe. **The main-mission sweep 0x31=0..15 is COMPLETE**
+   pre-race and mid-run. det_pair's hangar-mission press schedule is invalid for the race.
+   **s7860: bonus 16 (race) H-exact, H-input CLOSED.** s7849_det_pair.sh now takes PP_OVR/AP_OVR (unset = old schedules).
+   Race recipe: PP_OVR=19.5,31.5,43.5:start; AP_OVR=6,11,11.5:w1024,19.5,31.5,43.5,67.5:start (the port needs that 67.5 s
+   Start: without it the port waits on AVAILABLE CRAFT with 0 ticks). Port = retail on all 458 ticks (rand, hp 80->0 crash
+   t395-403, 460-w record, rumble 5/5); every press is pre-race on both sides. Controls: p2 forks t0, flip caught t100.
+   Data: scratch/s7860/v16s/score.txt. **The main-mission sweep 0x31=0..15 is COMPLETE**
    (8 and 14 = H-audio-clock FORK; 7 residual closed s7851; the rest H-exact or timing-class).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
