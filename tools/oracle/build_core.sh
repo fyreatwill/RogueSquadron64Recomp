@@ -20,6 +20,11 @@ brew list mupen64plus >/dev/null 2>&1 || brew install mupen64plus
 mkdir -p "$ROOT/src"
 [ -d "$SRC" ] || git clone --depth 1 https://github.com/mupen64plus/mupen64plus-core "$SRC"
 
+# s7841: arm64 FCR31.FS -> FPCR.FZ (mupen's flush emulation is x86/SSE-only; RS64 runs FS=1). Idempotent.
+P="$(cd "$(dirname "$0")" && pwd)/patches/arm64-fcr31-fs-ftz.patch"
+if git -C "$SRC" apply --reverse --check "$P" 2>/dev/null; then echo "fcr31-fs patch already applied"
+else git -C "$SRC" apply "$P"; fi
+
 cd "$SRC/projects/unix"
 export LDFLAGS="-L$(brew --prefix binutils)/lib"
 export CFLAGS="-I$(brew --prefix binutils)/include"

@@ -1,0 +1,36 @@
+diff --git a/src/device/r4300/cp1.c b/src/device/r4300/cp1.c
+index 4426728..dc57e55 100644
+--- a/src/device/r4300/cp1.c
++++ b/src/device/r4300/cp1.c
+@@ -21,6 +21,8 @@
+ 
+ #include <stdint.h>
+ #include <string.h>
++#include <stdio.h>
++#include <stdlib.h>
+ 
+ #include "cp0.h"
+ #include "cp1.h"
+@@ -144,6 +146,22 @@ void update_x86_rounding_mode(struct cp1* cp1)
+         cp1->flush_mode = flush_mode;
+     }
+ #endif
++#if defined(__aarch64__) && !defined(OSAL_SSE)
++    /* rs64 s7841: arm64 had no flush emulation at all (the OSAL_SSE path above is x86-only), so the oracle
++     * produced denormal results that the R4300 with FCR31.FS=1 flushes to zero (RS64 runs FCSR 0x01000800).
++     * Here host FPCR.FZ (bit 24) follows FCR31.FS. RS64_ORACLE_FTZ=0 restores the old no-flush behaviour. */
++    {
++        static int en = -1, logged;
++        if (en < 0) { const char* e = getenv("RS64_ORACLE_FTZ"); en = !(e && e[0] == '0');
++                      fprintf(stderr, "[core] s7841 arm64 FPCR.FZ follows FCR31.FS: %s\n", en ? "on" : "off (RS64_ORACLE_FTZ=0)"); }
++        uint64_t cr; __asm__ volatile("mrs %0, fpcr" : "=r"(cr));
++        uint64_t want = (en && (fcr31 & FCR31_FS_BIT)) ? (cr | (UINT64_C(1) << 24)) : (cr & ~(UINT64_C(1) << 24));
++        if (want != cr) {
++            __asm__ volatile("msr fpcr, %0" :: "r"(want));
++            if (logged < 4) { logged++; fprintf(stderr, "[core] s7841 FPCR.FZ=%d fcr31=%08x\n", (int)((want >> 24) & 1), fcr31); }
++        }
++    }
++#endif
+ 
+     switch (fcr31 & 3)
+     {

@@ -14,6 +14,12 @@ that iron rule 4 asks for.
 The core must be built from source: Homebrew's bottle has no `Debug*` symbols
 and the oracle refuses to run against it.
 
+**FCR31.FS (s7841):** upstream mupen emulates the FS (flush-denormals) bit only on x86/SSE. On arm64 the core
+produced denormal results that real hardware (RS64 runs FCSR 0x01000800, FS=1) flushes to zero.
+`patches/arm64-fcr31-fs-ftz.patch` (applied by build_core.sh) makes host FPCR.FZ follow FCR31.FS; the core
+prints `[core] s7841 arm64 FPCR.FZ follows FCR31.FS: on`. `RS64_ORACLE_FTZ=0` restores the old no-flush core.
+Captures taken before s7841 carry those denormals.
+
 ## Use
 
     tools/oracle/build/rs64_oracle \

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7839 (2026-11-22).
+Compact operational handoff, as of Session 7841 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -230,8 +230,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
-11b. **G3 retail flight det sweep (s7832-s7840): next mission 0x31=4 (Gerrard V) with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1
-   oracle run: render tris, HUD census, rest pitch. lvl2/3/4 pinned already = retail CPO1 (s7840). Owner decision: RETAIL_SNAP default.
+11b. **G3 retail flight det sweep (s7832-s7841): next mission 0x31=5 with VI_STAMP=1 + RETAIL_SNAP=1** vs a retail CPO1 oracle
+   run (oracle core now flushes denormals per FCR31.FS, s7841): render tris, HUD census, ramdump. lvl2/3/4 pinned = retail CPO1 (s7840);
+   lvl5 (Gerrard V) render exact (s7841). Open on lvl5: alloc words 0x80137FC4/0x80137FF8 (heap ptr + index, run-to-run variable)
+   and a 1-ulp camera-y fork at port row 341 that grows into a camera fork after row ~1450. Owner decision: RETAIL_SNAP default.
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):
@@ -460,6 +462,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    lvl4 0.2085 = C1. Line 2: lvl4 reticle census (tools/s7836_hud_elem_census.py) b 230.0,149.5 / s 242.75,159.5 = retail exactly
    (unpinned 155.25/165.25). Single knob ROGUESQ_RETAIL_SNAP=1 (=EL 811160 VD 1; explicit levers win) verified same: lvl4 0.2085,
    banner fires; regen gate --strict H-mirrored. Single run per level/arm (pin removes the run-to-run settle variance seen unpinned).
+   **s7841 lvl5 (Gerrard V, 0x31=4) pair + ORACLE FIX.** Render exact over the first 1000 flight frames: world-tri dy mode 0
+   (controls PASS), HUD census distributions identical (reticle 838/643/198 per position on both sides). Ramdump: port rows 0-254 all
+   occur verbatim in retail (retail samples a few extra in-between rows). First state fork = word 55/164 (0x80137E8C/0x80138040),
+   a float decaying x0.77 per frame: below FLT_MIN the port (FPCR.FZ, s7405 default) writes 0.0, while retail mupen wrote denormals.
+   **The arm64 mupen core never emulated FCR31.FS** (its flush code is OSAL_SSE/x86-only; RS64 runs FCSR 0x01000800 = FS=1, so real
+   hardware flushes). Fixed: tools/oracle/patches/arm64-fcr31-fs-ftz.patch (FPCR.FZ follows FS; RS64_ORACLE_FTZ=0 = old; banner
+   `[core] s7841 ...`), applied by build_core.sh. 2x2 proof (port FTZ on/off x oracle FTZ on/off): w55/164 rows differ 0 when FTZ
+   parity matches, ~175 when not; patched oracle has 0 denormals in w55 (old 596) and departs from the old oracle exactly at row 1429.
+   Retail captures before s7841 carry no-flush denormals: any port-vs-oracle diff in a decaying float is suspect there.
 
 ## Evidence index
 

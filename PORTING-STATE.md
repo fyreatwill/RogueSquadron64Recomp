@@ -209649,3 +209649,41 @@ Work unit (NEXT s7840, HYPOTHESIS-ID g3-flight-fork-carrier). Pre-checks: crash_
   level. Owner decision added: ROGUESQ_RETAIL_SNAP=1 as retail-accuracy candidate default (with VI_STAMP=1). Defaults unchanged.
 - Captures (gitignored): scratch/s7840/{l2,l3,l4,k4}/run.log, l4.bin, r3c1/oracle.log, hud_census_l4.txt, steady.py.
 - ORIGIN: n/a (opt-in accuracy knob, default off; writer named in s7839: timeSnapshotFiller el/vd from host VI timing).
+
+## Session 7841 (2026-11-22) — Gerrard V (0x31=4) det pair: render exact (world-tri dy mode 0, HUD census identical) and the first guest-state fork is a denormal the retail oracle failed to flush: the arm64 mupen core never emulated FCR31.FS; patched (FPCR.FZ follows FS), 2x2 FTZ proof; a separate 1-ulp camera fork remains
+Work unit (NEXT s7841, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=10 new=0, no owner answers, no new
+SOAK-RESULTS lines since the s7840 fold, CURRENT-TRUTH 57.3 KB (no maintenance). Four runs, one at a time; 0 crash lines in both port runs.
+- Save: `python3 tools/g3_eep_patch.py scratch/s7832/lvl.eep scratch/s7841/lvl.eep --set 0x31=4` (checksums ok).
+- Port p1: `env SAVE_FROM=scratch/s7841/lvl.eep SECS=170 CAP0=150 AP=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,
+  79.5:start,91.5:start XE="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1
+  ROGUESQ_RETAIL_SNAP=1 RS64_RDP_BIN_PORT=$PWD/scratch/s7841/p1.bin RS64_RDP_BIN_PORT_MAX_MB=6000" zsh tools/g3_port_capture.sh scratch/s7841/p1`
+  (banner `[snap7839] armed log=0 pin=811160`, 1767 ramdump rows). p2 = p1 + ROGUESQ_FTZ=0, no RDP bin (1758 rows).
+- Retail r1: `env CPO=1 RSECS=175 EEP=scratch/s7841/lvl.eep PP=19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start XO="--watch-pc
+  0x80043918 --pc-ram-dump 0x80043918:0x80137DB0:0x801384E0" zsh tools/s7828_retail_cpo.sh scratch/s7841/r1` (2025 rows, RDP bin kept).
+  r2 = same with RDPBIN=/dev/null on the patched core (below).
+- Render (p1.bin vs r1 retail.bin; flight starts port 3900, retail 3366 by scratch/s7829/tl.py; windows R[3400:4400] P[3934:4934]):
+  tools/s7827_tri_yshift_census.py --controls: dy mode 0 (4.60M at 0), controls PASS (A mode 0, B mode 2). tools/s7836_hud_elem_census.py:
+  every distribution identical, reticle b 230.25,185.0 x838 / s 243.0,192.25 x643 / 192.0 x198 on both sides, 52x64 shield 4FD926B9 x279 both.
+- Ramdump (scratch/s7841/{steady,align,den,ftz,win,score2,pose1}.py over tools/s7834_ramdump_cmp.py rows):
+  rest pitch w437/w441 at rows +60..+200 identical (-0.0186/0.0633 both). Port rows 0-254 all occur verbatim in retail at offset 0..3
+  (retail samples extra in-between rows: same states, different sampling). From row 255: (a) words 133/146 (0x80137FC4 heap ptr,
+  0x80137FF8 index) differ, port 0x8035e718/0x46 (p1), 0x8035e618/0x44 (p2), retail 0x8035e618/0x47: run-to-run variable, host-timing
+  allocation identity, not pose state; (b) words 55/164 (0x80137E8C/0x80138040) are a float decaying x0.77 per frame: at port row 1416 /
+  retail 1429 the port writes 0.0 where retail writes 0x80679f94, 0x804f9bbd, ... (denormals); (c) a 1-ulp camera-y fork (words 431/446,
+  0xbfa08e24 vs 0xbfa08e23) at port row 341, which settles back to 0 pose diff for rows ~600-1350 and grows into a full camera-matrix fork
+  after ~1450.
+- (b) explained: the port flushes (s7405 FPCR.FZ default on, matching retail FCSR 0x01000800 FS=1). mupen's flush emulation is
+  `#ifdef OSAL_SSE` (x86) only (src/device/r4300/cp1.c update_x86_rounding_mode), so the arm64 oracle never flushed. p2 (port FTZ=0)
+  reproduces r1's denormal sequence bit-for-bit (positive control).
+- Change: tools/oracle/patches/arm64-fcr31-fs-ftz.patch: on arm64 host FPCR.FZ follows FCR31.FS at every CTC1 (RS64_ORACLE_FTZ=0 =
+  old), banner `[core] s7841 arm64 FPCR.FZ follows FCR31.FS: on` + first transitions logged (r2: FZ=1 at fcr31=01000800, FZ=0 at
+  00000001 twice). tools/oracle/build_core.sh applies it idempotently (reverse --check detects it applied); README note. Core rebuilt.
+- 2x2 (score2.py, every 2nd port row from 150, best-aligned retail row): w55/164 rows differing r1(noFTZ)-p1(FTZ) 176, r1-p2(noFTZ) 0,
+  r2(FTZ)-p1 0, r2-p2 173. w55 denormal rows r1 596, r2 0, p1 0, p2 346. r2 rows exact in r1: 1429 (departs exactly at the first
+  denormal). Pose fork row unchanged by FTZ on either side (first pose>3-word row 1594 vs p1 in both oracles; the p2 transient at 360 is
+  the same row-341 1-ulp event, sampled).
+- DISCRIMINATION: H-exact selected for render (two scorers); H-new-fork selected for state with TWO causes separated: the denormal
+  fork is an ORACLE defect (now fixed; port = hardware), the 1-ulp camera-y fork at port row 341 is not FTZ and stays open. Every
+  pre-s7841 retail capture carries no-flush denormals; earlier levels never showed w55/164 diffs, so s7832-s7840 verdicts stand.
+- Captures (gitignored): scratch/s7841/{p1,p2}/run.log, p1.bin, r1/{oracle.log,retail.bin}, r2/oracle.log, tl.txt, tri.txt, hud.txt.
+- ORIGIN: n/a (a ground-truth tool fidelity fix, not a mitigation; the writer of w55 is the game's own decay with FS=1 flushing).
