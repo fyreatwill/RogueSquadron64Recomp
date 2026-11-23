@@ -209822,3 +209822,8 @@ What ran: the loop's unmet contract named 4 new RED gates after s7845. Each clas
   S7844_DT_AT) -> DIAG class beside atol/strtol. Also fixed its `"\)"` SyntaxWarning (raw string).
 Rebuilt build/ (rc 0). Full tools/s7651_gate_sweep.py rerun rc=0: gates 246 = GREEN 242, REPORT 2, NEEDS-ARGS 2 (s7827, s7836; both take capture args), 0 RED, controls PASS. Rules out nothing about the game; the
 0x31=6 det pair (NEXT.md) is carried to the next iteration unchanged.
+Verdict: H-classification-gap SELECTED for all 4 REDs (each was a stale rule or an unrowed site from the s7838-s7845 diagnostics,
+proven by the same gate turning GREEN with its controls PASS after the row/rule edit); H-real-defect REFUTED for 3 of 4 (s_rt_boot_done
+single-thread, the DEBUG_WRITE store is still env-gated, atoll/strtoll are env parsing only); the 4th (rand_trace_max lazy init read
+from 2 threads) was a real benign race, FIXED with a magic static. Next discriminator: the 0x31=6 det pair (NEXT.md), H-exact (seed
+pin + dt replay give port == retail) vs H-new-fork (first differing rand tick + caller), positive control p2 unpinned must fork.
