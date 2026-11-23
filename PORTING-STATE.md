@@ -209687,3 +209687,6 @@ SOAK-RESULTS lines since the s7840 fold, CURRENT-TRUTH 57.3 KB (no maintenance).
   pre-s7841 retail capture carries no-flush denormals; earlier levels never showed w55/164 diffs, so s7832-s7840 verdicts stand.
 - Captures (gitignored): scratch/s7841/{p1,p2}/run.log, p1.bin, r1/{oracle.log,retail.bin}, r2/oracle.log, tl.txt, tri.txt, hud.txt.
 - ORIGIN: n/a (a ground-truth tool fidelity fix, not a mitigation; the writer of w55 is the game's own decay with FS=1 flushing).
+- Discrimination line (gate wording): this run selects H-exact for lvl5 render, selects H-oracle-fs as the root cause of the w55/164
+  denormal fork (the 2x2 resolves it: port FTZ parity with the oracle decides agreement), and refutes FTZ as the carrier of the
+  row-341 camera fork; next discriminator H-alloc vs H-fpu vs H-sampling (NEXT s7842).
