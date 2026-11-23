@@ -261,7 +261,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    levels (vacuous record). s7849_det_pair.sh REC=1 (default) now dumps the 460-w record at tick marker 0x800FA730 on both sides,
    scored by tools/s7854_tick_rec_cmp.py: 0 diffs in 2580/2580 ticks; p2 forks tick 3; --control 100 is caught.
    **0x31=11 (s7855): H-exact.** 1539 ticks, seed 05e6d779, 2 dt pins, 12 hp hits, 9 song switches. p1: rand/callers, hp, all
-   song switch ticks, rumble 16=16 and the 460-w record (1539/1539 ticks) all equal; p2 forks t0/t16, record t599; control ok. Next: 0x31=12.
+   song switch ticks, rumble 16=16 and the 460-w record (1539/1539 ticks) all equal; p2 forks t0/t16, record t599; control ok.
+   **0x31=12 (s7856): H-exact.** 5765 retail ticks (5674 compared), seed 90ef4fcb, 42 dt pins, death t5304 + respawn t5490, 11 song
+   switches, rumble 5=5, record 0 diffs / 5673 ticks; p2 forks t0, control ok. Scorer tools/s7856_det_verdict.py (exit 0 exact /
+   1 fork / 2 no-verdict); serial driver tools/s7856_det_sweep.sh OUTROOT v... (stops at first FORK). Next: sweep 0x31=13 14.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

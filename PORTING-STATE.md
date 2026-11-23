@@ -210052,3 +210052,18 @@ no new SOAK-RESULTS lines since the s7839 fold. Host load ~2.5 (rclone backup), 
 - Verdict: two independent lines (rand/caller+hp+song sequence, and the per-tick bit-exact 460-word record) select H-exact and
   refute H-pin-gap, H-new-fork and H-audio-clock for 0x31=11. Closes 0x31=11: port = retail for the whole mission. Next 0x31=12.
 - No code change this session (the instrument from s7854 was enough). Captures (gitignored): scratch/s7855/.
+
+## Session 7856 (2026-11-23) — 0x31=12 det pair: port = retail for all 5674 compared ticks incl. a death/respawn (H-exact); verdict scorer + serial sweep driver
+
+Ran `zsh tools/s7849_det_pair.sh 12 scratch/s7856` (REC=1). Retail r1: 5765 mission ticks, seed 90ef4fcb, 42 dt pins (NDT=42).
+p1 (pinned): rand seed/caller sequence equal on all 5674 compared ticks (port's 305 s window ends 91 ticks earlier), 0 fork
+windows; hp trace equal incl. the player death (hp 0 at tick 5304) and respawn (150 at 5490); all 11 song-handle switches on the
+same tick (t4..t5522, 8 songs); rumble 5=5; 460-w tick-keyed record 0 nonpose / 0 pose / 0 TIMING diffs over 5673 full-record
+ticks. p2 (unpinned control) forks at tick 0 (seed) / tick 1 (calls), record t602, rumble event 1 -> positive control OK;
+`--control 100` catches the flipped word at tick 100. crashlines 0/0. => 0x31=12 = retail for 305 s.
+Engineering: tools/s7856_det_verdict.py turns a score.txt into one verdict line (H-exact / FORK / NO-VERDICT, exit 0/1/2;
+NO-VERDICT when a section or the control block is missing, crashlines>0, 0 full-record ticks, or p2 did not fork). Checked on
+s7855 (H-exact), a synthetic fork (p2 body as p1 -> FORK, seed 0 / call 16 / nonpose 599) and a synthetic non-forking p2
+(-> NO-VERDICT "p2 control did not fork"); pre-REC scores (s7849-s7854) correctly read NO-VERDICT (no control block).
+tools/s7856_det_sweep.sh OUTROOT v...: runs det_pair serially per value (one game at a time), appends verdicts.txt, stops at
+the first FORK. Rules out for 0x31=12: H-pin-gap, H-audio-clock, H-new-fork.
