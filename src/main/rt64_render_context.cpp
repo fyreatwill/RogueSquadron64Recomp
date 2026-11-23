@@ -59,7 +59,10 @@ extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
 // s6752: marker row with guest-memory dumps, same spec as rs64_oracle RS64_XTRACE_MEM: ROGUESQ_XTRACE_MEM=
 // "PC:REG:OFF:N,..." appends " m=ADDR:w0,w1,..." (N words at gpr[REG]+OFF; REG 0 = absolute) for every spec whose PC
 // matches. Row: index, update_screen #, pc, $v0, dumps. Called from tools/fixup_rand_trace.py hooks.
+// s7858: ordinal of 0x800FA730 mission-tick marks (= the tick index the s7854 record tools use); stamped on [swatch-pt] lines.
+extern "C" volatile uint32_t rs64_s7858_tick = 0;
 extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
+    if (pc == 0x800FA730u) ++rs64_s7858_tick;
     // s6872: ROGUESQ_POSE_FREEZE=<x1,x2,...>:<ms> (needs RAND_TRACE) stops the mission tick for ms when the player's x first crosses
     // each rising x. +0x4C is a per-tick copy, so POSE_PIN_POSITION cannot hold the ship, but no-input flight is deterministic:
     // this gives the same pose in every arm at any frame rate, held still for a window capture. The pad thread cannot do it.

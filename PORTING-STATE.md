@@ -210085,3 +210085,29 @@ FPS60 float-quanta lines `a + b*rs64_fq_k()` and rs64_fq_k() returns 1.0 unless 
 PatchesLib 0 fmadd. Apple clang 21 default contract=on does not fuse across the generated per-statement ctx ops (tested).
 Engineering: tools/s7856_det_verdict.py now ends every judged line with `residual=none|timing-class(timing,rumble)` (checked:
 s7855 none, s7856 none, s7857/v13 timing-class). Rules out for 0x31=14(b): oracle nondeterminism, H-fma. Open: the t892 writer.
+
+## Session 7858 (2026-11-23) — 0x31=14 t892 "port-side ULP transient" was a dt-pin indexing bug in s7849_det_pins.py (spliced oracle line); fixed + test, corrected-pin port exact through t1395
+
+No new crash reports (crash_reports FOLDED=7 new=0). Unit (NEXT s7858): name the writer of 0x80137DD4 at t892 on both sides.
+Instrument: port ROGUESQ_STORE_WATCH_PTS (s7334) lines now carry `tick=` (new rs64_s7858_tick, count of 0x800FA730 marks in
+rs64_xtrace_mark = the s7854 record ordinal); oracle r4 = s7857 r1 recipe + `--watch-write` 137DD4/137E94/137FEC +
+`--hit-vi-window 8100:8215 --hit-cap 100000000` (150 s). Port p3 = s7857 p1 recipe (same pins) + STORE_DIAG=1 + watch, 200 s.
+Positive controls: p3 reproduced the transient (record first diff t892 words 9,15,57,151,159); watches fired on every tick
+860-906 (retail 83/109 stores, port 87/117). New tools/s7858_store_seq_cmp.py: SAME store PCs and order both sides
+(0x80137DD4 by 8001cf94/8001d538/800b35c4; 0x80137E94 = player craft +0xD8 by 800b2454/800ae7f4), only values differ. At t892
+0x800B2454 stores `D8 * [sp+0x1DC]` with identical D8 input (c03b8b96); solving the float32 multiply gives f10 = 0x3D088888
+retail vs 0x3D088887 port, i.e. the dt argument of updatePlayerCraftPhysics, which the port takes from DT_AT pins.
+Cause: r4's dt series has 87 at ticks 882/892/898, the s7857 pins at 882/891/897. Retail r1 and r4 records are bit-identical
+(so retail did not change); r1's dt hits keyed by row ordinal are misaligned from tick 886: line 85542 of r1/oracle.log is
+`[hit] x ... pc=0x800fa738 ... n=3817[vi-poll] t= 136.4s WIDTH 512 ...` with the gpr/fpr tail on the next line (another
+thread's printf spliced in). s7849_det_pins.py dropped that hit and indexed T by list position -> every pin after t886 one tick
+early (118 of 160 changed). ORIGIN: harness parser, not the port or the oracle core.
+Fix: tools/s7849_det_pins.py rejoins spliced `[vi-poll]` hit lines, keys each dt by record-row ordinal, exits 2 on any missing or
+duplicate tick (det_pair already aborts on that, exit 4). Two lines of evidence: (1) fixed pins from r1 == pins from the
+independent r4 for all ticks < 1299; (2) port p4 with corrected pins (305 s) = retail record nonpose on every tick through
+t1395 (t892-899 transient gone), control flip caught at t100, 0 crashlines; the remaining split is exactly s7857(a):
+song 01 ends t1396 retail/t1395 port, rand fork t1413 (one extra 800f28f4 call) -> 0x31=14 verdict = H-audio-clock FORK only.
+Test tools/test_s7858_det_pins_splice.py (synthetic splice: pin must stay at tick 4; control: dropped hit must exit 2) PASS on
+the fix, FAILS on the old parser (pin at 3); sweep row S7858_PINS. Retro-audit of every det-pair r1 log s7849-s7857: only
+s7857/v14 changes (s7854b gains one trailing tick, same pins) -> all earlier H-exact verdicts and 0x31=8 audio-clock stand.
+Rules out: port FPU/FMA mismatch at t892 (no such mismatch exists), oracle nondeterminism. Next: continue the sweep 15 16.

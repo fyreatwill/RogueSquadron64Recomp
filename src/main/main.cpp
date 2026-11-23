@@ -2176,6 +2176,7 @@ extern "C" void rs64_s5660_ustore(uint32_t pc, uint32_t addr, uint32_t value, ch
 // ROGUESQ_STORE_WATCH_FROM_SWAP=<n>).
 extern std::atomic<int> g_rs64_swap_n;
 extern "C" volatile uint32_t rs64_s6843_lo = 0, rs64_s6843_len = 0;
+extern "C" volatile uint32_t rs64_s7858_tick;  // s7858: mission-tick ordinal (rt64_render_context.cpp), on [swatch-pt] lines
 static const bool s_s6843_init = [] {
     const char* e = std::getenv("ROGUESQ_STORE_WATCH");
     if (e && *e) { char* c = nullptr; const uint32_t lo = (uint32_t)strtoul(e, &c, 16);
@@ -2382,8 +2383,8 @@ static void rs64_s6843_note(uint32_t key, uint32_t phys, uint32_t len, const cha
         if (lines++ >= cap) return;
         uint32_t w[4] = {}; const volatile uint8_t* rd = g_recomp_rdram_for_wp_raw;
         if (rd) for (int i = 0; i < 4; ++i) { const uint32_t a = s_s7334_pt[k] + 4u * i; w[i] = *(const volatile uint32_t*)(rd + a); }
-        std::fprintf(stderr, "[swatch-pt] swap=%d %s=%08X%s%s phys=%06X len=%u pt=%06X pre=%08X %08X %08X %08X\n", sw, api ? "api" : "pc", key,
-                     api ? ":" : "", api ? api : "", phys, len, s_s7334_pt[k], w[0], w[1], w[2], w[3]);
+        std::fprintf(stderr, "[swatch-pt] swap=%d %s=%08X%s%s phys=%06X len=%u pt=%06X pre=%08X %08X %08X %08X tick=%u\n", sw, api ? "api" : "pc", key,
+                     api ? ":" : "", api ? api : "", phys, len, s_s7334_pt[k], w[0], w[1], w[2], w[3], rs64_s7858_tick);
         return;
     }
     std::lock_guard<std::mutex> lk(mu);

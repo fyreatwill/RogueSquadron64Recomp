@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7857 (2026-11-23).
+Compact operational handoff, as of Session 7858 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -65,6 +65,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7857 "0x31=14 port-side 1-2 ULP transient t892-899"** (superseded s7858). Believable because retail r2 == r1 and r2 differed
+  from the port in the same words, so it looked port-side. Both retail runs were scored against the SAME misindexed pin file: the
+  port was fed dt 0x3D088887 at tick 891 where retail ran it at 892 (store watch: same PCs, f10 = [sp+0x1DC] dt arg 87 vs 88).
 - s7828 "the port's flight pitch delta is port-side (H-cpu-pose): the port feeds or computes something differently": believable
   because retail's pose was timing-invariant while the port was 42/42 pitched in its one schedule. s7829 showed the same port binary
   matches retail (0/42) when the autopilot presses land ~36 game frames later: the pitch belongs to one press schedule, not to
@@ -268,11 +271,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    **0x31=13 (s7857): H-exact, residual timing-class.** 3903 ticks, seed 8d3c57d9, 73 pins: rand/hp/9 song switches/record nonpose
    all equal; only TIMING words 135/149 (3D-sound flags) from t1898 and one rumble pulse-length swap (6/5 vs 5/6). Verdict lines
    now end `residual=none|timing-class(...)` (s7855/s7856 none).
-   **0x31=14 (s7857): FORK, two parts.** (a) main split = H-audio-clock: song 01 ends t1396 retail / t1395 port (336/643 vs 334/640
-   VI/buffers), rand forks t1413. (b) NEW port-side ULP transient t892-899: words 9,15,57,151,159,154 (0x80137DD4/DEC/E94/FEC/
-   800C/FF8) differ by 1-2 ULP, exact again from t900. Retail r2 == r1 on all 5482 ticks and r2 == r1 at t892 (not port) ->
-   port-side. H-fma refuted by census: all 201 fmadd in RecompiledFuncs objects are host-inserted C; the 13 guest-register ones
-   are s6826 FPS60 quanta `a+b*k` with k=1.0 off FPS60. Next: name the t892 writer (oracle --watch-write + port write log).
+   **0x31=14 (s7857, corrected s7858): FORK = H-audio-clock only.** Song 01 ends t1396 retail / t1395 port (336/643 vs 334/640
+   VI/buffers), rand forks t1413; record nonpose exact through t1395 with corrected pins (s7858 p4, control flip caught t100).
+   The s7857 "port-side 1-2 ULP transient t892-899" was a HARNESS artifact (superseded below): one r1 `[hit]` line at tick 886 had a
+   `[vi-poll]` printf spliced in, tools/s7849_det_pins.py dropped it and indexed dt by list position, so 118/160 pins after t886
+   landed one tick early. Fixed (rejoin splices, key by record-row ordinal, exit 2 on a missing/duplicate tick); test
+   tools/test_s7858_det_pins_splice.py (sweep row S7858_PINS; old parser fails it). Audit of every det-pair r1 log s7849-s7857:
+   only s7857/v14 affected, all other verdicts stand. Port store watch now stamps `tick=` (ROGUESQ_STORE_WATCH_PTS) and
+   tools/s7858_store_seq_cmp.py diffs per-tick store sequences vs an oracle `--watch-write --hit-vi-window --hit-cap` log.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
