@@ -209827,3 +209827,4 @@ proven by the same gate turning GREEN with its controls PASS after the row/rule 
 single-thread, the DEBUG_WRITE store is still env-gated, atoll/strtoll are env parsing only); the 4th (rand_trace_max lazy init read
 from 2 threads) was a real benign race, FIXED with a magic static. Next discriminator: the 0x31=6 det pair (NEXT.md), H-exact (seed
 pin + dt replay give port == retail) vs H-new-fork (first differing rand tick + caller), positive control p2 unpinned must fork.
+In short: this session selects H-classification-gap, refutes H-real-defect for 3 of 4 REDs, and closes the unmet contract (sweep 0 RED).
