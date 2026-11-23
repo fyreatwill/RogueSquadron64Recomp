@@ -210067,3 +210067,21 @@ s7855 (H-exact), a synthetic fork (p2 body as p1 -> FORK, seed 0 / call 16 / non
 (-> NO-VERDICT "p2 control did not fork"); pre-REC scores (s7849-s7854) correctly read NO-VERDICT (no control block).
 tools/s7856_det_sweep.sh OUTROOT v...: runs det_pair serially per value (one game at a time), appends verdicts.txt, stops at
 the first FORK. Rules out for 0x31=12: H-pin-gap, H-audio-clock, H-new-fork.
+
+## Session 7857 (2026-11-23) — det sweep 0x31=13 H-exact (timing-class residual), 0x31=14 FORK = audio-clock split + a new port-side 1-2 ULP transient at t892 (retail r1==r2)
+
+Ran `zsh tools/s7856_det_sweep.sh scratch/s7857 13 14` (serial, ~40 min). No new crash reports (crash_reports FOLDED=7 new=0).
+0x31=13: H-exact. 3903 ticks, seed 8d3c57d9, 73 dt pins; rand seed/callers, hp, all 9 song-handle switch ticks and the 460-w
+record nonpose words equal on 3902/3902 full-record ticks; p2 forks t0, control flip caught at t100. Residuals are timing-class
+only: TIMING words 135/149 (3D-sound node flags, s7851) from t1898, rumble event 38 pulse lengths 6/5 vs 5/6, song 01 333 vs 334 VI.
+0x31=14: FORK. (a) main split H-audio-clock (same class as 0x31=8): song 01 ends t1396 retail / t1395 port (336 VI/643 buf vs
+334/640), rand fork t1413 (one extra 800f28f4 call), 2 windows, first a 2-tick PHASE-SHIFT. (b) NEW: tick-keyed record shows a
+transient 1-2 ULP difference at t892-899 in words 9,15,57,151,159 (+154 at 899) = 0x80137DD4/DEC/E94/FEC/800C/FF8, e.g. w9
+0x3dea0736 retail vs 0x3dea0734 port; exact again t900-t1395. Second line of evidence: retail r2 (same EEP/recipe, oracle rerun)
+== r1 on all 5482 ticks, and r2 differs from port at t892 in the same words -> port-side, not oracle noise.
+H-fma (clang contraction of guest float math) checked offline and REFUTED for this run: llvm-objdump -l over all RecompiledFuncs
+objects finds 201 fmadd/fmsub, every one in host-inserted C (diag/opt-in fixups); the only 13 that write guest FPRs are the s6826
+FPS60 float-quanta lines `a + b*rs64_fq_k()` and rs64_fq_k() returns 1.0 unless FPS60 (b*1.0 exact -> fused == unfused).
+PatchesLib 0 fmadd. Apple clang 21 default contract=on does not fuse across the generated per-statement ctx ops (tested).
+Engineering: tools/s7856_det_verdict.py now ends every judged line with `residual=none|timing-class(timing,rumble)` (checked:
+s7855 none, s7856 none, s7857/v13 timing-class). Rules out for 0x31=14(b): oracle nondeterminism, H-fma. Open: the t892 writer.

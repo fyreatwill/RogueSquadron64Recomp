@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7852 (2026-11-23).
+Compact operational handoff, as of Session 7857 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -264,7 +264,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    song switch ticks, rumble 16=16 and the 460-w record (1539/1539 ticks) all equal; p2 forks t0/t16, record t599; control ok.
    **0x31=12 (s7856): H-exact.** 5765 retail ticks (5674 compared), seed 90ef4fcb, 42 dt pins, death t5304 + respawn t5490, 11 song
    switches, rumble 5=5, record 0 diffs / 5673 ticks; p2 forks t0, control ok. Scorer tools/s7856_det_verdict.py (exit 0 exact /
-   1 fork / 2 no-verdict); serial driver tools/s7856_det_sweep.sh OUTROOT v... (stops at first FORK). Next: sweep 0x31=13 14.
+   1 fork / 2 no-verdict); serial driver tools/s7856_det_sweep.sh OUTROOT v... (stops at first FORK).
+   **0x31=13 (s7857): H-exact, residual timing-class.** 3903 ticks, seed 8d3c57d9, 73 pins: rand/hp/9 song switches/record nonpose
+   all equal; only TIMING words 135/149 (3D-sound flags) from t1898 and one rumble pulse-length swap (6/5 vs 5/6). Verdict lines
+   now end `residual=none|timing-class(...)` (s7855/s7856 none).
+   **0x31=14 (s7857): FORK, two parts.** (a) main split = H-audio-clock: song 01 ends t1396 retail / t1395 port (336/643 vs 334/640
+   VI/buffers), rand forks t1413. (b) NEW port-side ULP transient t892-899: words 9,15,57,151,159,154 (0x80137DD4/DEC/E94/FEC/
+   800C/FF8) differ by 1-2 ULP, exact again from t900. Retail r2 == r1 on all 5482 ticks and r2 == r1 at t892 (not port) ->
+   port-side. H-fma refuted by census: all 201 fmadd in RecompiledFuncs objects are host-inserted C; the 13 guest-register ones
+   are s6826 FPS60 quanta `a+b*k` with k=1.0 off FPS60. Next: name the t892 writer (oracle --watch-write + port write log).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

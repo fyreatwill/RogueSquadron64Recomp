@@ -9,6 +9,10 @@ Rules (the s7847-s7855 hand scoring, made mechanical):
   H-exact     p1: seed tick None, call tick None, 0 fork windows, tick-rec first nonpose diff tick None.
   FORK        anything else; prints the first seed/call/nonpose/timing tick so the next step can pick
               H-audio-clock / H-pin-gap / H-new-fork by hand.
+  residual=   (s7857) on every judged line: 'none', or 'timing-class' when p1 still shows a TIMING-word
+              (s7849_rec_align TIMING = 3D-sound node flags w115/116/135/149) or rumble pulse-order difference.
+              Those are sub-VI audio/dump phase (s7851/s7852), so they do NOT demote H-exact; listed so the
+              ledger records them instead of reading the line as bit-identical.
 Exit 0 = H-exact, 1 = FORK, 2 = NO-VERDICT.
 """
 import re, sys
@@ -72,6 +76,8 @@ def main():
     detail = (f"ticks={p1['ticks']} full_rec={p1['full']} p1 seed={p1['seed']} call={p1['call']} "
               f"windows={p1['windows']} nonpose={p1['nonpose']} timing={p1['timing']} rumble={p1['rumble']} "
               f"| p2 forked (seed={p2['seed']} nonpose={p2['nonpose']}) | control {c['nonpose']}")
+    res = [k for k in ('timing', 'rumble') if p1[k] not in (None, 'None')]
+    detail += f" | residual={'timing-class(' + ','.join(res) + ')' if res else 'none'}"
     exact = p1['seed'] == 'None' and p1['call'] == 'None' and p1['windows'] == '0' and p1['nonpose'] == 'None'
     print(f"{tag} {'H-exact' if exact else 'FORK'} {detail}")
     return 0 if exact else 1
