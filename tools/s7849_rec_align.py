@@ -33,6 +33,13 @@ print('--- every 150 rows (port,retail,ndiff,nonpose,dpos)')
 for o in out[::150]: print(o[:4], '%.4f' % o[4])
 print('total differing words', sum(o[2] for o in out))
 print('first nonpose diff row', next((o for o in out if o[3] > 0), None))
+# s7853: a nonpose row whose neighbours (port i-1 and i+1) both align with 0 nonpose diffs is a TRANSIENT: the port's dump PC
+# (which runs more often than retail's, s7851) sampled the record mid-update, between two retail rows (0x31=9 row 4488: w13/w15/w100
+# lie between retail rows 4546 and 4547). Only PERSISTENT nonpose rows count as a record fork.
+tr = [o for k, o in enumerate(out) if o[3] > 0 and (k == 0 or out[k-1][3] == 0) and (k + 1 < len(out) and out[k+1][3] == 0)]
+pers = [o for o in out if o[3] > 0 and o not in tr]
+print('transient nonpose rows', len(tr), [o[:2] for o in tr[:8]])
+print('first persistent nonpose diff row', pers[0] if pers else None)
 # s7849: record words 115/116 (= player obj 0x80137DBC +0x1C0/+0x1C4) are the craft's rumble handle and priority, written by
 # updatePlayerCraftPhysics 0x800B2CE0 from startRumbleEffect 0x80002ADC (gated by isRumbleSlotActive 0x80003150). Compare the
 # event sequence (handle increments with their priority), which row sampling cannot add to or drop from.

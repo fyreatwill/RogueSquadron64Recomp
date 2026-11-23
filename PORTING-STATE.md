@@ -209992,3 +209992,22 @@ retail r2 + port p3 (pinned) with the song handle traced.
   Next discriminator: the 0x31=9 pair; the driver now traces the song handle + AI buffers on both sides and prints
   s7852_fork_windows + g3_song_windows, so a split at a song switch is classified in the same run.
 - Captures (gitignored): scratch/s7852/{r1,r2}/oracle.log, p1/p2/p3 run.log + *_rand.txt, score.txt, song.txt, run_song.sh.
+
+## Session 7853 (2026-11-23) — 0x31=9 det pair: port = retail for all 5076 ticks (rand, hp, songs, rumble, record); H-exact
+Work unit (NEXT s7853, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers,
+no new SOAK-RESULTS lines. Ran `zsh tools/s7849_det_pair.sh 9 scratch/s7853` (sequential: retail r1, port p1 pinned, p2 control).
+- Retail 0x31=9: 5076 ticks, seed 69f4f739, 58 dt pins (all 3D088887, ticks 839..3381), song handle 0x8010C0E0 goes
+  01/00/ff/02/03/04/03/ff/05/06/05 at t1282..t4781.
+- p1 (seed poke + 58 DT_AT): seed + rand callers equal on all 5076 ticks (0 fork windows); hp changes identical; every song-handle
+  transition on the same tick as retail (incl. song 04 end t3519 and 06 -> 05 t4781), VI/AI-buffer counts within 0.2%;
+  rumble events 35 = 35; crashlines 0.
+- Record: 7 differing words in ONE row only (port 4488 vs retail 4547: w4/6/160/162 pose, w13/15/100 nonpose, w146 alloc).
+  Port rows 4487 and 4489 equal retail 4546 and 4547 exactly; row 4488's values lie between them (w100 0.2333 between 0.2667
+  and 0.2), so the port's dump PC (which runs more often than retail's, s7851) sampled the record mid-update. That is the
+  dump-instant sub-tick class (s7851), not a fork.
+- Tool change: tools/s7849_rec_align.py now prints `transient nonpose rows` (a nonpose row whose neighbours both align with 0
+  nonpose diffs) and `first persistent nonpose diff row`. Checks: s7853 p1 -> 1 transient, persistent None; p2 control ->
+  persistent row 1203 (positive control: unpinned forks at tick 0); s7852 p1 -> post-split row 4368 still persistent.
+- Verdict: this selects H-exact and refutes H-audio-clock, H-pin-gap and H-new-fork for 0x31=9. It closes 0x31=9: port = retail
+  for 305 s. Next discriminator: the 0x31=10 pair.
+- Captures (gitignored): scratch/s7853/{r1/oracle.log, p1, p2, *_rand.txt, pins.txt, score.txt}.
