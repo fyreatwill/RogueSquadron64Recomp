@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7850 (2026-11-23).
+Compact operational handoff, as of Session 7851 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -202,7 +202,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
-12. **G3 retail flight det sweep (s7832-s7850).** Pair = port (VI_STAMP=1 + RETAIL_SNAP=1) vs retail CPO1 oracle (FTZ per
+12. **G3 retail flight det sweep (s7832-s7851).** Pair = port (VI_STAMP=1 + RETAIL_SNAP=1) vs retail CPO1 oracle (FTZ per
    FCR31.FS, s7841): render tris, HUD census, 460-w ramdump. lvl2/3/4 pinned = retail (s7840); lvl5 render exact (s7841); lvl5
    1-ulp camera fork CLOSED s7843 as oracle timing (chase dt = running min of the 1/60-snapped dt; 0x3D088887 only for raw dt
    low nibble 0, mupen CPO jitter; tools/s7843_dt_snap_replay.py, apply_s7842_chasehex.py, scratch/s7842/chase_cmp.py).
@@ -238,7 +238,16 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    652's prio-5 request checks it ("T phys isAct P CLR P"); the port finishes a frame before the next VI. Not reproducible without
    cycle timing; rand/hp/pose stay exact. ROGUESQ_SI_ORDER (hold SI-done until physics) was tried and REVERTED: the tick waits on
    the SI pass (12 ms timeouts every tick VI, run forked at 863). s7849_rec_align.py now treats w115/w116 as TIMING-class.
-   Residual: w149 (obj+0x248) retail 1.2 vs port 0.3 and w135 (obj+0x1F8) on rows 1505-1510 only -> NEXT.
+   **s7851: 0x31=7 residual CLOSED, record identical vs r1 (p4 and p6).** w135/w149 are NOT craft fields: 0x80137FCC/0x80138004 =
+   3D-sound node 0x80137FC4 +0x08 flags / +0x40 fade timer. Oracle r6 writers (--hit-cap 100000 --hit-vi-window; val= on a write hit
+   = value BEFORE the store): play3DSoundEvent 0x80098A7C/0x80098B90 + factor5RemoveListNode 0x80098E44 (game thread);
+   dispatchPrioritizedSoundQueue 0x8009983C.. + update3DAudioFrame 0x80099BA8 (musyxSynthFrame, viRetraceHandlerThread, 1/VI,
+   +0.3 per VI to 1.2). Two lines: (1) port s7851 entry marks (fixup_rand_trace.py) show 1 update/VI on 11439/11445 mission VIs and
+   tools/s7851_snd_node_cmp.py (tick-keyed lifecycle, --control drops a transition -> MISMATCH) = EXACT 30/30 persistent states,
+   skew 0; (2) retail r6 vs retail r1 differ by exactly one transient dump row (VI 9318) then realign 0 diffs -> dump-instant
+   sub-tick phase is noise even retail-vs-retail. s7849_rec_align.py TIMING = {115,116,135,149}. Note [ramdump] n= is NOT a shared
+   key (dump PC runs 2764x port vs 2644x retail); only rec_align greedy rows or tick-keyed tools compare validly.
+   => 0x31=7 = retail for 305 s (rand, hp, pose, record). Next: 0x31=8 (NEXT).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

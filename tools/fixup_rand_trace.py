@@ -269,3 +269,27 @@ if SI_TAG not in s:
     sih[0].write_text(s)
     print(f"[s7850] si pass mark in {sih[0].name}")
 
+
+# s7851: one marker row at entry of each 3D-sound node writer, so a port run gives the same call order as the oracle's
+# --watch-write on sound node 0x80137FC4 (+0x08 flags, +0x40 fade timer). Retail s7851 r6: play3DSoundEvent (game thread)
+# queues (flags |=2), dispatchPrioritizedSoundQueue + update3DAudioFrame (musyxSynthFrame, viRetraceHandlerThread, one per
+# VI) dispatch and ramp +0x40 by 0.3 per VI to 1.2, factor5RemoveListNode unlinks. Rows carry the update_screen # (VI).
+# ROGUESQ_XTRACE_MEM=<pc>:0:80137FCC:1,<pc>:0:80138004:1 adds the node words at each mark.
+SND_TAG = "/* PATCH: s7851 snd node mark */"
+SND = {"play3DSoundEvent": 0x800989D8, "factor5RemoveListNode": 0x80098DE0,
+       "dispatchPrioritizedSoundQueue": 0x80099720, "update3DAudioFrame": 0x800998E8}
+for name, pc in SND.items():
+    hdr = f"RECOMP_FUNC void {name}(uint8_t* rdram, recomp_context* ctx) {{\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n"
+    fs = [p for p in sorted(base.glob("funcs_*.c")) if hdr in p.read_text()]
+    if len(fs) != 1:
+        sys.exit(f"s7851 snd node mark: {name} entry in {len(fs)} files")
+    s = fs[0].read_text()
+    if f"rs64_xtrace_mark(0x{pc:08X}u, rdram, (const uint64_t*)&ctx->r0); {SND_TAG}" in s:
+        continue
+    s = s.replace(hdr, hdr + f"    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_xtrace_mark(0x{pc:08X}u, rdram, (const uint64_t*)&ctx->r0); "
+                  + SND_TAG + "\n", 1)
+    for d in (decl, mdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    fs[0].write_text(s)
+    print(f"[s7851] snd node mark {name} in {fs[0].name}")

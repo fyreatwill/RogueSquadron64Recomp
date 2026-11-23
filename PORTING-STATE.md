@@ -209932,3 +209932,33 @@ SOAK-RESULTS lines since s7839, CURRENT-TRUTH 27.0 KB, host idle 22 h. One game 
   (oracle CPU-timing race) and closes the 0x31=7 rumble fork as timing-class. Next discriminator: oracle --watch-write on obj+0x248 /
   +0x1F8 names the writer of the rows 1505-1510 residual (H-timing-sibling vs H-logic, scratch/agent/NEXT.md).
 - Captures (gitignored): scratch/s7850/{p4,p5}/run.log, p4_rand.txt, p5_rand.txt, r4/oracle.log, sweep.txt (s7651 sweep: 246 gates, 242 GREEN, 2 REPORT, 2 NEEDS-ARGS, 0 RED).
+
+## Session 7851 (2026-11-23) — 0x31=7 record residual (w135/w149) = 3D-sound node driven by the VI-retrace synth frame; tick lifecycle EXACT vs retail, record identical vs r1
+Work unit (NEXT s7851, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers, no new
+SOAK-RESULTS lines since s7839, CURRENT-TRUTH 28.3 KB. One game run, two oracle runs, sequential.
+- Address fix: NEXT's watch 0x137FF8 was w146 (ALLOC). Record base 0x80137DB0 (pc-ram-dump), so w135 = 0x80137FCC, w149 = 0x80138004.
+- Oracle r5 (CPO1 305 s, watch-write both words + ramdump + tick PC): positive control 60 + 46 write hits, but the default
+  --hit-cap 200 was spent on exec hits, so no rows printed. r6 = same + --hit-cap 100000 --hit-vi-window 0:20000: 106 write rows.
+  Writers: play3DSoundEvent 0x80098A7C/0x80098B90 and factor5RemoveListNode 0x80098E44 (game thread), dispatchPrioritizedSoundQueue
+  0x8009983C/0x80099844/0x80099874 and update3DAudioFrame 0x80099BA8/0x80099BE4/0x80099AE8 (musyxSynthFrame on viRetraceHandlerThread).
+  val= on a write hit is the value BEFORE the store (0x8009983C stores 0 and reports 1.2). So the words are sound node 0x80137FC4
+  +0x08 flags (f idle, |2 queued, 0x13/0x11 dispatching/playing, 0x1 done) and +0x40 fade timer (0 then +0.3 per VI, capped at 1.2),
+  not player-craft fields. Retail tick 1850: T, PLAY (VI 10324), DISP (10325), ramp 10326-10329.
+- Instrument (kept): tools/fixup_rand_trace.py s7851 entry marks at play3DSoundEvent 0x800989D8, factor5RemoveListNode 0x80098DE0,
+  dispatchPrioritizedSoundQueue 0x80099720, update3DAudioFrame 0x800998E8 (RAND_TRACE only). The live funcs_26.c was synced to the
+  replay output (decl line order only); s7719 --strict 0 differ. tools/s7851_snd_node_cmp.py: tick-keyed lifecycle compare (states
+  that persist >=1 tick boundary, end tick within 1), --control drops one retail transition.
+- Port p6 = s7850 p4 recipe + marks + XTRACE_MEM node words: rand exact all 1961 ticks, 0 crash lines. Marks fired (18131 UPD,
+  662 PLAY). UPD per mission VI {1: 11439, 0: 5, 2: 1}; DISP == UPD count -> port synth frame is VI-locked like retail (the audio
+  twin of s7850's H-si-clock is refuted too). snd_node_cmp: EXACT, 30/30 persistent states, max end-tick skew 0; control MISMATCH.
+- Second line: retail r6 vs retail r1 ramdump rows are identical except that r6 lacks r1's transient row at VI 9318 (n=2063); after
+  that all rows match 0 diffs. So a single dump sample catches a different sub-tick phase even retail vs retail (debugger config
+  changes oracle timing). The rows 1505-1510 diff is that dump-instant phase on a node the VI-retrace thread updates every VI.
+- Dead end noted: keying the ramdump on n= is invalid (dump PC 0x80043918 runs 2764x port vs 2644x retail, pose w4 "differs"
+  from n=718). A first per-tick attempt read port vi= that port [ramdump] lines do not carry and gave a hollow 0/1961, caught by
+  checking row counts.
+- tools/s7849_rec_align.py TIMING = {115,116,135,149}. Re-score: r1 vs p4 first nonpose diff None, r1 vs p6 None (record identical
+  modulo pose/alloc/timing); r6 vs p6 shows one row (retail 1176), which is the r6 transient above.
+- Verdict: H-timing-sibling SELECTED (node owned by the VI-retrace synth frame; lifecycle tick-exact), H-logic refuted. 0x31=7 port =
+  retail for 305 s (rand, hp, pose, record). Next: 0x31=8 pair (NEXT.md).
+- Captures (gitignored): scratch/s7851/{r5,r6}/oracle.log, r6_writes.txt, p6/run.log, p6_rand.txt, run_p6.sh, sweep.txt.

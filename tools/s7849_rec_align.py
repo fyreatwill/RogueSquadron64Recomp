@@ -11,7 +11,11 @@ POSE = set(range(430, 448)) | {4, 5, 6, 160, 161, 162}; ALLOC = {133, 146}
 # s7850: w115/w116 (craft rumble handle/prio) are TIMING-class: the oracle's SI pass can preempt updatePlayerCraftPhysics mid-frame
 # (r4: 3/23 rumble calls after a mid-frame pass), shifting effect expiry by one pass; the port finishes a frame before the next
 # VI. They are excluded from the nonpose verdict and reported by the event check below instead.
-TIMING = {115, 116}
+# s7851: w135/w149 (= 0x80137FCC / 0x80138004) are NOT player-craft fields: they are 3D-sound node 0x80137FC4 +0x08 flags and
+# +0x40 fade timer (oracle r6 writers: play3DSoundEvent/factor5RemoveListNode on the game thread, dispatchPrioritizedSoundQueue/
+# update3DAudioFrame = musyxSynthFrame on viRetraceHandlerThread, +0.3 per VI to 1.2). Its per-tick lifecycle is EXACT vs retail
+# (tools/s7851_snd_node_cmp.py, 30/30 states, skew 0); row diffs are the sub-tick VI-retrace phase at the dump instant.
+TIMING = {115, 116, 135, 149}
 nd = lambda a, b: [q for q in range(460) if a[q] != b[q]]
 dist = lambda a, b: sum(abs(F(a[q]) - F(b[q])) for q in (4, 5, 6))
 j = 0; prev = None; out = []
