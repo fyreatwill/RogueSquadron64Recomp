@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7845 (2026-11-22).
+Compact operational handoff, as of Session 7847 (2026-11-22).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -241,7 +241,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    800FA730:0:80003470:<seed>:1) + dt replay: rand seed+call sites equal on all 2451 ticks, hp hits on the same ticks
    (1181/1446/1518/death 1566/2011..), 460-w record bit-identical all 2262 rows; unpoked same-run control forks at tick 5.
    => 0x31=5 port = retail for 305 s. Det pair recipe now = dt replay + seed pin (tools/s7845_rng_tick_cmp.py,
-   ROGUESQ_RAND_TRACE_BOOT=1). NEXT: 0x31=6 with both pins (s7846 only closed the 4 census gates s7845 re-opened). Owner: RETAIL_SNAP default.
+   ROGUESQ_RAND_TRACE_BOOT=1). Owner: RETAIL_SNAP default.
+   **0x31=6 (s7847): H-exact.** Retail r0/r1 rand+tick traces byte-identical (oracle repeatable); 1876 mission ticks, seed abd7a44b,
+   only non-default dt = tick 2 3C888888 (needs RS64_ORACLE_FPR=0,4,6,14,20 or snap.py sees 0 ticks). Port p1 (seed poke +
+   DT_AT=2:3C888888): seed + rand callers equal all 1876 ticks, hp events identical (496..death 537, respawn 724, 1129..), 460-w
+   record 0 diffs on all 1493 port rows. Control p2 (no pins, same run set): seed 167b1663 at tick 0, calls fork tick 3, record
+   row 4, hits 1 tick early. Recipe: scratch/s7847/run_port.sh. NEXT: 0x31=7 (lvl7 had the s5712 copyToRAM fix).
 12. **Closed audit classes / censuses / gates (old items 1,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36): ALL CLOSED, 0 open.** Full text verbatim in
    PROJECT-OVERVIEW "(s7792 maintenance)". They stay live through `python3 tools/s7651_gate_sweep.py` (--jobs 2) and
    `python3 tools/s7719_regen_gate.py --strict`. Per old item: title -> its tools (rerun after the matching kind of change):

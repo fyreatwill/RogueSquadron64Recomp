@@ -209828,3 +209828,27 @@ single-thread, the DEBUG_WRITE store is still env-gated, atoll/strtoll are env p
 from 2 threads) was a real benign race, FIXED with a magic static. Next discriminator: the 0x31=6 det pair (NEXT.md), H-exact (seed
 pin + dt replay give port == retail) vs H-new-fork (first differing rand tick + caller), positive control p2 unpinned must fork.
 In short: this session selects H-classification-gap, refutes H-real-defect for 3 of 4 REDs, and closes the unmet contract (sweep 0 RED).
+
+## Session 7847 (2026-11-22) — 0x31=6 det pair: with retail's tick-0 seed and dt pinned, port == retail for the whole mission window (H-exact SELECTED, H-new-fork refuted); unpinned same-recipe control forks at tick 0/3, record row 4
+Work unit (NEXT s7847, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers, no new
+SOAK-RESULTS lines since s7839, CURRENT-TRUTH 59.7 KB (<60000, no maintenance). Runs one at a time; 0 crash lines both port runs.
+- Save: `python3 tools/g3_eep_patch.py scratch/s7832/lvl.eep scratch/s7847/lvl.eep --set 0x31=6` (checksums ok).
+- Retail r0: s7845 r4 recipe + `--watch-pc 0x800FA738 --watch-pc 0x800FA7D0`, RS64_ORACLE_FPR=1 -> dead end: FPR=1 prints only f1, so
+  scratch/s7844/snap.py found 0 ticks. Retail r1 = same with `RS64_ORACLE_FPR=0,4,6,14,20` (the list snap.py's regex needs):
+  `env CPO=1 RSECS=305 EEP=scratch/s7847/lvl.eep PP=19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start RDPBIN=/dev/null
+  RS64_ORACLE_FPR=0,4,6,14,20 RS64_XTRACE_MEM=800FA730:0:80137E7C:1,800FA730:0:80003470:1 XO="--watch-pc 0x80043918 --pc-ram-dump
+  0x80043918:0x80137DB0:0x801384E0 --exec-trace 0x80003430:8000000:0x80003470 --exec-trace-also 0x800FA730 --watch-write 0x137E7C:0x137E80
+  --watch-pc 0x800FA738 --watch-pc 0x800FA7D0" zsh tools/s7828_retail_cpo.sh scratch/s7847/r1`. r0 vs r1 [xtrace] streams md5-identical
+  (oracle repeatable, free control). 1876 mission ticks (first rand marker tick at 39423 calls), seed at tick 0 abd7a44b; snap.py model ==
+  retail 1874/1876; non-88 ticks: 0,1 (89, dt-0 clamp, port does this natively) and tick 2 = 3C888888 (half dt); no 87 ticks this level.
+- Port p1 (scratch/s7847/run_port.sh: s7845 p7 recipe, SECS=305): XTRACE_POKE=800FA730:0:80003470:abd7a44b:1 (row pin=1e059e83 ->
+  abd7a44b fired) + ROGUESQ_S7844_DT_AT=2:3C888888 (`[dt7844] tick=2 f20 3D088888 -> 3C888888` fired). p2 = no poke, no DT_AT.
+- Score: `tools/s7845_rng_tick_cmp.py r1/oracle.log p1_rand.txt`: seed and caller sequence equal on all 1876 ticks, first differing
+  tick None; hp changes identical (496, 499, 529..537 death, 724 respawn, 1129/1130/1132). scratch/s7847/al2.py (s7845 aligner on r1):
+  0 differing words on all 1493 port 460-w rows (retail 1505; offset growth 0..12 = sampling, as s7841).
+- Control p2 (same instrument): tick-0 seed 167b1663 vs abd7a44b, caller sequence forks at tick 3 (port 0x8006C0FC extra call), record
+  differs from row 4 (25 words), first two hits 1 tick early (495/498). The instrument sees a fork when one exists.
+- Render: no RDP bin kept this pair (s7841/s7844 already render-exact by tri census; not re-run, single-source for 0x31=6 render).
+- Verdict: selects H-exact (dt + seed pins suffice for 0x31=6), refutes H-new-fork. Three levels (4, 5, 6) now port == retail under the
+  pins. Next: 0x31=7.
+- Captures (gitignored): scratch/s7847/{r0,r1}/oracle.log, {p1,p2}/run.log, p1_rand.txt, p2_rand.txt.
