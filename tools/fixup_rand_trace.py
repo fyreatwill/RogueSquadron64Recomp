@@ -248,3 +248,24 @@ for name, pc in (("npcInitFromTemplate", 0x800D2B5C), ("createAndInitObject", 0x
                 s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
         p.write_text(s)
         print(f"[s6820] spawn bt mark {name} in {p.name}")
+
+# s7850: one marker row per SI-thread pass at processPolledControllerData entry (0x800027C0; siServiceThread calls it
+# at 0x80002F24, once per pass). Rumble effect lifetimes count these passes (slot +0x80 += getViModePeriod, +0x6B
+# cleared at 0x80002934), and retail runs exactly 1 pass per VI (s7849 r3: 2.001 per mission tick). Rows carry the
+# update_screen # so passes/VI and passes/tick fall out offline (tools/s7850_si_cadence.py).
+# ROGUESQ_XTRACE_MEM=800027C0:0:80110588:2 adds port-0 slot +0x68..+0x6F; ...:801105A0:1 adds +0x80.
+SI_TAG = "/* PATCH: s7850 si pass mark */"
+sife = "RECOMP_FUNC void processPolledControllerData(uint8_t* rdram, recomp_context* ctx) {\n    uint64_t hi = 0, lo = 0, result = 0;\n    int c1cs = 0;\n"
+sih = [p for p in sorted(base.glob("funcs_*.c")) if sife in p.read_text()]
+if len(sih) != 1:
+    sys.exit(f"s7850 si pass mark: processPolledControllerData entry in {len(sih)} files")
+s = sih[0].read_text()
+if SI_TAG not in s:
+    s = s.replace(sife, sife + "    if (__builtin_expect(g_rs64_rand_trace, 0)) rs64_xtrace_mark(0x800027C0u, rdram, (const uint64_t*)&ctx->r0); "
+                  + SI_TAG + "\n", 1)
+    for d in (decl, mdecl):
+        if d not in s:
+            s = s.replace('#include "funcs.h"\n', '#include "funcs.h"\n' + d, 1)
+    sih[0].write_text(s)
+    print(f"[s7850] si pass mark in {sih[0].name}")
+

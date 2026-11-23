@@ -7,7 +7,7 @@ caller sequence differs, and hp-change ticks on each side.
 usage: s7845_rng_tick_cmp.py RETAIL_ORACLE_LOG PORT_RAND_TXT [shift]   (shift: port tick index = retail + shift)"""
 import re, sys
 RAND, TICK = 0x80003430, 0x800FA730
-PORT_MARKS = {0x8006BEC8, 0x8006C018, 0x8006C010, 0x800AF374, 0x800C6674, 0x8008EE08, 0x8008EE84}  # fixup_rand_trace probes
+PORT_MARKS = {0x800027C0, 0x8006BEC8, 0x8006C018, 0x8006C010, 0x800AF374, 0x800C6674, 0x8008EE08, 0x8008EE84}  # fixup_rand_trace probes
 mre = re.compile(r'm=([0-9a-f]{8}):([0-9a-f]{8})')
 def load(path, retail):
     ticks, cur = [], []  # cur = rand callers since the last tick

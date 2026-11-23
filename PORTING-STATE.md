@@ -209899,3 +209899,33 @@ SOAK-RESULTS lines since s7839, CURRENT-TRUTH 25.9 KB. Runs one at a time (oracl
 - Verdict: 0x31=7 selects H-new-fork with the carrier named (rumble effect expiry), refutes H-exact for the record and H-pak; game
   state that matters (rand, hp, pose) is exact under the existing pins. 0x31=6 rerun through the new check: rumble events 19 = 19.
 - Captures (gitignored): scratch/s7849/{r1,r2,r3}/oracle.log, {p1,p2,p3}/run.log, p*_rand.txt, pins.txt, score.txt.
+
+## Session 7850 (2026-11-23) — port SI-pass cadence = exactly 1/VI (H-si-clock refuted); 0x31=7 rumble fork = oracle CPU-timing race (SI pass preempts physics mid-frame in 3/23 retail rumble calls), closed as timing-class
+Work unit (NEXT s7850, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers, no new
+SOAK-RESULTS lines since s7839, CURRENT-TRUTH 27.0 KB, host idle 22 h. One game run at a time; oracle run after the port runs.
+- Instrument (kept): tools/fixup_rand_trace.py s7850 si pass mark = rs64_xtrace_mark row at processPolledControllerData entry
+  0x800027C0 (RAND_TRACE only); ROGUESQ_XTRACE_MEM=800027C0:0:80110588:2,800027C0:0:801105A0:1 dumps port-0 slot +0x68..+0x6F and
+  +0x80. tools/s7850_si_cadence.py (port rand trace and/or oracle --watch-pc log -> passes per tick / per VI). 0x800027C0 added to
+  s7845_rng_tick_cmp PORT_MARKS. Positive control: 18236 rows, first at boot.
+- p4 = s7849 p1 recipe (seed + 3 DT_AT pins) + marker: rand exact all 1961 ticks, 0 crash lines. Port passes per VI over mission
+  VIs 6805..10721: {1: 3917}; per tick gap {2: 1957, 1: 2, 0: 1} (retail r3: {2: 1177, 1: 6, 3: 3}; retail's 3/1 pairs at ticks
+  3-4, 15-16, 862-863 are slow frames, none near the fork). -> H-si-clock REFUTED.
+- Slot log: port starts at ticks 441,442,455,480,488,491,641,645,653,658,... vs retail 441,...,641,645,658 -> the extra start is the
+  prio-5 one at tick 653 (rec_align's "event 13" is the same insertion, hidden by consecutive prio-5 events). +0x80 is a float ms
+  timer (+= 16.666666 = 0x41855555 per pass; 15 adds = 0x437A0002 = exact float32 replay); the 0x80002800 compare (+0x80 < dur)
+  fails on the 16th pass after the start and clears +0x6B. Port pass at VI 8105 cleared it, then tick 8105 physics found the slot
+  inactive and started prio 5 (0x800B2C10 path: skip only if current prio 6 > 5 AND active).
+- Oracle r4 (CPO1, 150 s, watch 0x800027C0/0x80002934/0x800FA730/0x800B1BE8/0x80003150/0x80002ADC): every tick is "T phys P P", but
+  3 of 23 rumble calls (START at 640 and 644, isAct at 641) come after the first P of their tick, i.e. the VI v+1 SI pass preempts
+  updatePlayerCraftPhysics before its rumble block. Retail's tick-644 effect therefore starts 1 pass later and is still active at
+  tick 652's isAct ("652: T phys isAct P CLR P"). Port frames finish before the next VI, so its effects start 1 pass earlier.
+  Two lines (port slot arithmetic + retail call order) -> H-timing SELECTED: an oracle CPU-timing race (mupen CPO1 approximation of
+  hardware), not reproducible without cycle timing; game state (rand/hp/pose) unaffected.
+- Failed fix, REVERTED: ROGUESQ_SI_ORDER=1 (poll_input holds SI-done on a tick VI until a post-updatePlayerCraftPhysics hook fires,
+  12 ms cap). p5: waited=0 timeout=1200+ -> the tick's physics itself waits on the SI pass; cadence broke (0/2 passes per VI on 404
+  VIs), run forked at tick 863, 48 events. Code and the 9 call-site hooks removed from fixup_rand_trace.py, main.cpp and the live
+  RecompiledFuncs (s7719 --strict: live == replay, controls PASS).
+- tools/s7849_rec_align.py: w115/w116 now TIMING-class (excluded from the nonpose verdict, reported by the event check). p4 re-scored:
+  first nonpose diff row 1505 = w149 (obj 0x80137DBC+0x248) retail 3f99999a (1.2) vs port 3e99999a (0.3) rows 1505-1510 and w135
+  (obj+0x1F8) halfword 0x0003 vs 0x0011/0x0013 rows 1505-1507; record equal again from row 1511. -> NEXT names the writer.
+- Captures (gitignored): scratch/s7850/{p4,p5}/run.log, p4_rand.txt, p5_rand.txt, r4/oracle.log, sweep.txt (s7651 sweep: 246 gates, 242 GREEN, 2 REPORT, 2 NEEDS-ARGS, 0 RED).
