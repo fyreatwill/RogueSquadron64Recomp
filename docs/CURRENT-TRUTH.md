@@ -312,6 +312,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    frames per phase, places islands by phase, and scopes --neg to the final (flight) phase (old whole-run bar failed a correct
    p2 that matched the deterministic pre-flight cinematic). Islands: text screen p1/p2 differ (state); cinematic opening p1 ==
    p2 but offset = 0.51 x per-frame speed (scratch/s7870/phase_a.py): half-frame animation-time phase, timing class.
+   **s7871: 0x31=10 (Bespin, mission 11) flight render = retail, 2519/2519 frames: 4 missions render-exact on det-exact
+   ticks (b17 1120, m12 5662, m6 2383, m11 2519).** Det p1 H-exact 2525 ticks (seed/calls/rec/pose/timing None), p2 forks t0;
+   plant caught, phase-7 neg PASS. Pre-flight phase 6 islands: A port[3395:3554] = the SAME 64 PRIM-FF opening-cinematic
+   tris as m6 island A (identical values, p1 == p2), i.e. the s7870 half-frame timing phase recurs per mission; B
+   port[6067:7121] (1054 frames, up to 869/873 tris) p1/p2 wrong by different values on 813/1054 -> state (unpinned window).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

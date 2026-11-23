@@ -1,16 +1,16 @@
-# NEXT (s7871)
-HYPOTHESIS-ID: g3-det-render-coverage
+# NEXT (s7872)
+HYPOTHESIS-ID: g3-cinematic-half-frame-phase
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7870): the det render oracle line is CLOSED: flight frames of b17 (1120), m12 (5662), m6 (0x31=5, 2383) are bit-exact
-vs retail on det-exact ticks; every non-exact frame seen so far is pre-flight (phase before tick 0) and state or timing class.
-Unit (one det pair, ~25 min, one game run at a time): extend coverage to a mission with different render content - Bespin
-0x31=10 (mission 11, cloud layers/transparency) - `env RBIN=1 zsh tools/s7849_det_pair.sh 10 scratch/s7871/v10`, then
-`python3 tools/s7868_det_frame_cmp.py scratch/s7871/v10/r1/retail.bin scratch/s7871/v10/p1.bin --plant --neg scratch/s7871/v10/p2.bin`.
-Read the "phases in exact span" table: flight = the final port phase (HUD texrects present).
-Outcomes: H-clean = final phase 100% exact (4th mission, coverage); H-render = non-exact flight frames while det p1 is still
-exact for that tick range -> print the differing tris (s7869_island_probe.py with p1 vs p2: identical wrong tris in both arms
-inside flight = a real port render defect; find the DL op). If det p1 forks (audio-clock), score only up to the fork.
-Delete the bins after scoring (6 GB per pair).
-Fallback if the pair cannot run (host busy / screen locked): offline - measure what drives the s7870 cinematic half-frame
-phase (port VI-clock phase at cinematic start vs retail; oracle.log + p1 run.log VI stamps), report-only.
+State (s7871): flight render = retail on 4 missions (b17, m12, m6, m11 Bespin 2519/2519). The only non-exact frames are pre-flight.
+Island A (opening cinematic, 64 PRIM-FF tris, p1 == p2) is value-identical in m6 (s7870) and m11 (s7871): the port draws that
+element ~half a frame later in animation time (offset 0.51 x speed).
+Unit (offline, no game run; retained data scratch/s7871/v10: r1/oracle.log, p1/run.log, p1_rand.txt; s7870 v5 the same):
+decide what sets the half-frame phase. Hypotheses: H-vi-phase (the cinematic's animation clock samples a VI/frame counter and the
+port starts the cinematic at a different VI parity relative to retail's gfx task), H-dt (the cinematic advances by a per-frame dt
+that differs by half a step on the first frame: s7835 DT / s7839 snapshot rows in p1 run.log vs the oracle dt watch), H-count
+(retail double-counts or skips one VI before the cinematic: compare VI count between boot and port frame 3393 / retail 2864).
+Discriminator: for both missions, the VI index at the cinematic's first frame (port 3393 / retail 2864) mod 2 and the dt row of
+that frame on both sides. Same parity offset in both missions + equal dt -> H-vi-phase; dt differs -> H-dt; VI counts differ by
+an odd number -> H-count. Re-capture only if the retained logs lack VI stamps (then one det pair with RBIN unset is enough).
+Fallback: extend coverage with one more mission (env RBIN=1 zsh tools/s7849_det_pair.sh <v> scratch/s7872/v<v>), delete bins after.

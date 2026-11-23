@@ -210463,3 +210463,24 @@ frame seen is pre-flight and is state or timing class. G3 det render line CLOSED
 equal state) in flight on 3 missions, and H-render for island A (offset proportional to speed). Not claimed: what drives
 the cinematic's half-frame phase (VI-clock phase at cinematic start is the obvious candidate; not measured).
 Bins deleted after scoring (6.0 GB); txt scores + phase_a.py kept.
+
+## Session 7871 (2026-11-23) — det render oracle on 0x31=10 (Bespin, mission 11): all 2519 flight frames = retail; 4 missions now render-exact on det-exact ticks; pre-flight islands are the recurring cinematic half-frame phase (A) and the unpinned state window (B)
+
+Start: crash_reports new=0; no owner answers; no new SOAK-RESULTS lines. NEXT g3-det-render-coverage. Host idle 6142 s.
+Run: `env RBIN=1 zsh tools/s7849_det_pair.sh 10 scratch/s7871/v10`, rc 0, crashlines 0/0. Pins SEED=36b554eb DT_AT=2:3C888888,
+retail NTICKS 2672, NDT 1. p1: first seed/call diff None, 2525 ticks compared, 0 differing; rec nonpose/pose/timing None
+(H-exact whole run). p2 (unpinned control): seed forks t0, calls t9, nonpose 2572/2575 ticks -> control forks as required;
+rec plant at t100 caught.
+Render (scratch/s7871/v10_render.txt, tools/s7868_det_frame_cmp.py --plant --neg): retail 9259 / port 9640 frames, offset
+-529 (4887 votes), exact 4925, exact span port[3393:9640]; port phase 7 (flight, retail 512-wide, 2519/2519 frames with
+HUD texrects) exact 2519 / non-exact 0; phase 6 (640 pre-flight) exact 2406 / non-exact 1322. Plant (port 8380, 1 tri YH+1)
+caught; neg phase-scoped: pinned 2519/2519, unpinned 0 -> PASS. rc 1 = interior non-exact frames, all in phase 6.
+Islands (tools/s7869_island_probe.py, self/plant control PASS both): A port[3395:3554] 64 of 164 PRIM 000000FF tris, p1 == p2
+on every frame, and the example tris are value-identical to s7870 m6 island A -> the opening cinematic is shared and its
+half-frame animation-time phase (s7870 phase_a.py, offset 0.51 x speed) recurs per mission (timing class). B port[6067:7121]
+(1054 frames, the stretch up to flight; up to 869 of 873 tris differ, PRIM FFFFFFFF 624k / 000000FF 140k): p1 and p2 port-only
+778544 vs 778495 tris and identical on only 241/1054 frames -> state-driven, the unpinned pre-tick-0 window (m6 B / m12 class).
+Reading: two lines (det state record exact over 2525 ticks + independent RDP stream exact over all 2519 flight frames).
+Bespin's cloud-layer/transparency flight content renders bit-exact vs retail on equal state. Rules out H-render for mission 11
+flight. Not claimed: the cause of the cinematic half-frame phase (still unmeasured; now seen in 2 missions with the same tris).
+Bins deleted after scoring (4.8 GB); scores, island txts, rand traces, run logs kept in scratch/s7871.
