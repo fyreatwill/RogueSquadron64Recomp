@@ -210036,3 +210036,19 @@ no new SOAK-RESULTS lines. Host HID idle 24 h, no game running.
   a fresh retail run) select H-exact and refute H-pin-gap and H-new-fork for 0x31=10. H-audio-clock does not apply (no song
   switch). This closes 0x31=10: port = retail for 305 s. Next: 0x31=11 (REC on by default now).
 - Captures (gitignored): scratch/s7854/ and scratch/s7854b/ {r1/oracle.log, p1, p2, *_rand.txt, pins.txt, score.txt}.
+
+## Session 7855 (2026-11-23) — 0x31=11 det pair: port = retail for all 1539 ticks, rand, hp, songs, rumble and per-tick 460-word record (H-exact)
+Work unit (NEXT s7855, HYPOTHESIS-ID g3-retail-flight-det-sweep). Pre-checks: crash_reports FOLDED=7 new=0, no owner answers,
+no new SOAK-RESULTS lines since the s7839 fold. Host load ~2.5 (rclone backup), no game running.
+- Run `zsh tools/s7849_det_pair.sh 11 scratch/s7855` (REC=1 default): retail r1 0x31=11 1539 ticks, seed 05e6d779, 2 dt pins
+  (832, 837 = 3D088887). This mission takes 12 hp hits t632..t829 (150 -> 4) and has 9 song-handle switches (t849..t1377).
+- p1 pinned: seed + rand callers equal all 1539 ticks (0 fork windows); hp change list identical (same 12 ticks, same values);
+  all 9 song-handle switches on the same tick both sides (song 01 AI buffers 639 vs 640, song 02 497 vs 496: the s6806 band,
+  no tick shift); rumble 16 = 16, first differing event None; tick-keyed record: 1539/1539 ticks full on both sides, 0 nonpose
+  diff ticks, 0 pose diffs (max |dpos| 0), 0 TIMING-word diffs; terrain [ramdump] rows 0 diff words. crashlines 0.
+- Controls in the same run: p2 unpinned forks seed at tick 0 (4cd1dc73), calls at tick 16, hits shift (first at t599 vs t632),
+  songs 2 ticks early, record first nonpose diff tick 599 (738/1537 ticks), rumble event 10 differs; --control 100 is reported
+  as first diff tick 100, word 50 only. So every instrument can see a fork in this run.
+- Verdict: two independent lines (rand/caller+hp+song sequence, and the per-tick bit-exact 460-word record) select H-exact and
+  refute H-pin-gap, H-new-fork and H-audio-clock for 0x31=11. Closes 0x31=11: port = retail for the whole mission. Next 0x31=12.
+- No code change this session (the instrument from s7854 was enough). Captures (gitignored): scratch/s7855/.
