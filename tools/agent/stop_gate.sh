@@ -243,7 +243,11 @@ ARTIFACTS
   case "$diag" in ''|*[!0-9]*) diag=0 ;; esac
   if [ "$diag" -ge 2 ]; then
     ps_added="$(git diff ${range:-HEAD~1..HEAD} -- PORTING-STATE.md 2>/dev/null | grep '^+' || true)"
-    if ! printf '%s\n' "$ps_added" | grep -qE '\b(selects|refutes|closes|resolves|root cause|discriminate)\b'; then
+    # s7859: "Rules out ..." / "refuted" are discrimination verbs too; s7858 (a real close: pin bug fixed, verdict
+    # H-audio-clock FORK only, "Rules out: port FPU/FMA mismatch") tripped this guard only on the verb form.
+    # test_churn_discrim_words.sh greps this exact line for DISCRIM_RE.
+    DISCRIM_RE='\b(selects|refutes|refuted|closes|resolves|root cause|discriminate|[Rr]ules out|[Rr]uled out)\b'
+    if ! printf '%s\n' "$ps_added" | grep -qE "$DISCRIM_RE"; then
       block "OUTCOME says ADVANCED but this iteration's change is diagnostic-only ($diag instrumentation lines) and its session entry names no discrimination or next discriminator. Landing an instrument is not narrowing a hypothesis. Reach a discriminating conclusion (selects/refutes H-...), name the next discriminator, or set OUTCOME accordingly."
     fi
   fi

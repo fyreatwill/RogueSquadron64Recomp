@@ -210111,3 +210111,37 @@ Test tools/test_s7858_det_pins_splice.py (synthetic splice: pin must stay at tic
 the fix, FAILS on the old parser (pin at 3); sweep row S7858_PINS. Retro-audit of every det-pair r1 log s7849-s7857: only
 s7857/v14 changes (s7854b gains one trailing tick, same pins) -> all earlier H-exact verdicts and 0x31=8 audio-clock stand.
 Rules out: port FPU/FMA mismatch at t892 (no such mismatch exists), oracle nondeterminism. Next: continue the sweep 15 16.
+
+## Session 7859 (2026-11-23) — det sweep 0x31=15 H-exact; 0x31=16 is a locked-bonus duplicate of 15; bonus-unlocked 16 (race) FORK t395 = harness press schedule (H-input); main-mission sweep 0..15 complete; dt-pin cap 512 -> 8192; churn-guard regex accepts "rules out"
+
+Carried contract: loop.sh flagged s7858's ADVANCED as diagnostic-only. The flag was a gate defect. s7858 was a real close
+(pin-parser bug fixed, verdict H-audio-clock FORK only), but its entry wrote "Rules out:" and the churn guard's word list
+lacked that verb. Fix: stop_gate.sh now uses a named DISCRIM_RE that also accepts refuted / rules out / ruled out. New test
+tools/agent/test_churn_discrim_words.sh 8/8 includes the real s7858 line and three negative controls ("selector" must not
+match). Mutation control: the old regex returns 1 on the s7858 line. run_tests 11/11.
+No new crash reports (FOLDED=7 new=0); no new SOAK-RESULTS lines.
+Unit: `zsh tools/s7856_det_sweep.sh scratch/s7859 15 16` (exit 0; scratch/s7859/verdicts.txt).
+- 0x31=15: H-exact, residual timing-class (w149 from t943). 1892 retail ticks, seed f58510db, 4 pins, rand/callers equal on
+  all 1833 compared ticks, hp hits t694-701 equal, song 01 t823-t1410 2247 AI buffers both sides. Control: p2 forked t0,
+  flip caught t100, 0 crashlines.
+- 0x31=16: also "H-exact", but the retail r1 is the SAME mission as 15 (seed f58510db, 1892 ticks, identical hp and song
+  timeline; only the eep byte differs). Disassembly from the ROM: 0x8006EE7C/0x8006EEB4 `sltiu v0,v0,17; ... li v0,16` caps only
+  values >16, so 16 is legal there. The fallback comes from the locked bonus bit: index 16 = first bonus mission (s6770
+  +0x39=0x60). This selects H-locked-fallback. Cross-check of all sweep seeds s7849-s7859: 15/16 is the only duplicate pair.
+- Discriminating rerun: base_bonus.eep (+0x39=0x60) with 0x31=16. Retail changes completely (6626 ticks, seed ebdad279, hp
+  80, handle -1 at t458 = retry), so the locked-fallback reading is confirmed. Pins: 787 dt pins > 512 cap, so
+  s7849_det_pins.py exited 2 by design. Raised the cap 512 -> 8192 in tools/apply_s7844_dt_at.py (in-place upgrade from 32
+  or 512, idempotent, rerun says "already applied") and in s7849_det_pins.py. Reapplied to funcs_42.c and rebuilt.
+  Port `[dt7844] armed 787 override(s)`, overrides fire (tick=460 ...).
+  Verdict FORK t395 (scratch/s7859/v16b/score.txt). Retail calls the damage path at t395 (80076cf8/800405a0; hp 80->0 at
+  t395-403 = the race ground crash), the port does the same hits only at t786-794 and stops ticking after t849 while VI runs
+  to 305 s. Press audit: retail [press] downs fall at tick 0 (pre-race) and at t458/t458/t698 (failed/retry screen), so the
+  retail race flew untouched. The port AP fires 7-9 (67.5/79.5/91.5 s) fall pre-race (ramdump row 1) and mid-run (rows
+  310/312). det_pair's hangar-mission Start schedule is therefore invalid for the self-starting race. This selects H-input
+  (harness) over H-new (port divergence), single-source. Second line: s6771 found the same race sim-identical with a
+  no-press-after-pick recipe.
+Rules out: 0x31=16 as a 17th main mission; the det pair as a valid race recipe. The main-mission det sweep 0x31=0..15 is
+complete (8 and 14 = H-audio-clock FORK, 7 residual closed s7851, the rest H-exact or timing-class).
+Next discriminator: bonus 16 rerun with a race-safe press schedule on both sides (no Start after the level pick, as in s6771,
+plus the tick-0 rngSeed poke). H-exact through t395 and retail's crash at t395 in the port closes H-input. A fork before t395
+reopens H-new (name the writer with s7858_store_seq_cmp.py).

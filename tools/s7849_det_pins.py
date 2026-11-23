@@ -3,8 +3,8 @@
 0x800FA738/0x800FA7D0 + RS64_XTRACE_MEM ...800FA730:0:80003470:1).
 Prints shell lines: SEED=<tick-0 rngSeed> DT_AT=<tick:HEX,...> NTICKS=<n> NDT=<n>.
 SEED = m=80003470 value on the first pc=800fa730 [xtrace] row. DT_AT = every tick whose retail snapped dt != 3D088888,
-except raw-dt-0 ticks (the dt-0 clamp, which the port reproduces natively). Exit 2 if no seed / no ticks / >512 dt pins
-(apply_s7844_dt_at.py cap)."""
+except raw-dt-0 ticks (the dt-0 clamp, which the port reproduces natively). Exit 2 if no seed / no ticks / >8192 dt pins
+(apply_s7844_dt_at.py cap, s7859)."""
 import re, sys
 # s7858: the oracle's [vi-poll] printf (another thread) can splice into a [hit] line and push its tail (gprs + fpr:) onto the next
 # line (r1 of s7857/v14: one 0x800FA738 hit at tick 886).  The old parser dropped that hit and indexed dt by LIST POSITION, so every
@@ -43,4 +43,4 @@ pins = [(i, fin) for i, (raw, fin) in enumerate(T) if fin != '3d088888' and raw 
 print('SEED=%s' % seed); print('DT_AT=%s' % ','.join('%d:%s' % (i, f.upper()) for i, f in pins))
 print('NTICKS=%d' % n); print('NDT=%d' % len(pins))
 if miss or dup: print('# s7858: ticks missing a dt %s, duplicated %s' % (miss[:8], dup[:8]), file=sys.stderr)
-sys.exit(2 if (not seed or not T or len(pins) > 512 or miss or dup) else 0)
+sys.exit(2 if (not seed or not T or len(pins) > 8192 or miss or dup) else 0)

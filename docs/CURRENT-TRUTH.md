@@ -279,6 +279,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    tools/test_s7858_det_pins_splice.py (sweep row S7858_PINS; old parser fails it). Audit of every det-pair r1 log s7849-s7857:
    only s7857/v14 affected, all other verdicts stand. Port store watch now stamps `tick=` (ROGUESQ_STORE_WATCH_PTS) and
    tools/s7858_store_seq_cmp.py diffs per-tick store sequences vs an oracle `--watch-write --hit-vi-window --hit-cap` log.
+   **0x31=15 (s7859): H-exact**, residual timing-class (w149 from t943). 1892 retail ticks, seed f58510db, 4 pins, hp hits
+   t694-701 equal, songs t823/t1410 equal; port ends t1833 (305 s), so retail's t1848 death is past the compared window.
+   **0x31=16 without the bonus unlock = DUPLICATE of 15** (retail seed, ticks, hp, songs identical; the game clamp at
+   0x8006EE7C only caps >16, so the fallback comes from the locked bonus bit). With +0x39=0x60 (scratch/s7859/base_bonus.eep):
+   retail = the self-starting race (6626-6930 ticks, seed ebdad279, 787 dt pins; dt-pin cap raised 512 -> 8192 in
+   apply_s7844_dt_at.py + s7849_det_pins.py). Verdict FORK t395: retail crashes into the ground at t395 (hp 80->0, retry t458),
+   port only at t786, and the port stops ticking after t849. The cause is the harness, not the port (H-input, single-source):
+   retail's PP Start presses land at tick 0 and t458/t698 (the MISSION FAILED screen), but the port's AP fires 7-9 land
+   pre-race and mid-run. det_pair's hangar-mission press schedule is invalid for the race. s6771 already showed the race
+   sim-identical with a no-press-after-pick recipe. **The main-mission sweep 0x31=0..15 is COMPLETE**
+   (8 and 14 = H-audio-clock FORK; 7 residual closed s7851; the rest H-exact or timing-class).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
