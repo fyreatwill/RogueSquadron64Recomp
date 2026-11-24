@@ -20,7 +20,7 @@ ROWS = [
     ("0", "mission 1", "s7831", "H-exact", "", None, "render/pose pair vs two retail refs (pre seed-pin recipe)"),
     ("1", "mission 2", "s7840", "H-exact", "", None, "pinned port = retail"),
     ("2", "mission 3", "s7840", "H-exact", "", None, "pinned port = retail"),
-    ("3", "mission 4", "s7840", "H-exact", "", None, "pinned port = retail"),
+    ("3", "mission 4 Corellia", "s7877", "FORK", "audio-clock", "scratch/s7877/v3/score.txt", "s7840 170 s run was pre-death; 305 s: death song 01 ends t2313/t2312, render exact 2308 pre-fork"),
     ("4", "mission 5 Gerrard V", "s7841-3", "H-exact", "", None, "1-ulp camera fork = oracle dt timing"),
     ("5", "mission 6", "s7845", "H-exact", "", None, "seed pin + dt replay, 2262 rows bit-identical"),
     ("6", "mission 7", "s7847", "H-exact", "", None, "1876 ticks"),

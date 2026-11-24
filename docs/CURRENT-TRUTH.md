@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7873 (2026-11-23).
+Compact operational handoff, as of Session 7877 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -65,6 +65,8 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7840 "0x31=3 (mission 4) pinned port = retail, H-exact"** (superseded s7877). Believable because every tick of that run matched;
+  it was a 170 s run that ended before the t2111 death. At 305 s the respawn forks on the death-song end (audio-clock class).
 - **s7872 "el=0 hits a special 0-divisor path in timeSnapshotFiller; the cinematic needs el in (0, 811160)"** (superseded s7873).
   Believable because el=0 moved island A far off instead of onto retail. Reading 0x8000BE28-BF38 shows no el branch: the value is
   el/rate + VIperiod*max(vd,1) and RETAIL_SNAP pins vd=1, so el=0 stored 1 VI vs retail's 2 VI. Retail-valued arms leave island A unchanged.
@@ -350,6 +352,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    3636-3982 (346 frames) has p1/p2/retail all different (state, single-sample). Island A
    (cinematic half-frame) did NOT appear in m3 (phase 6 exact port 3391-3752); pre-tick-0 island 3752-3935 = state (p1/p2
    differ on 183/183).
+   **s7877: 0x31=3 (mission 4, Defection at Corellia, NOT Gerrard V; Gerrard V = 0x31=4) = H-audio-clock FORK, 4th of the
+   class; render exact on all 2308 pre-fork flight frames: 7 missions render-exact on det ticks.** 305 s pair (s7840's 170 s
+   run ended before the death): p1 = retail t0-t2312 (seed, calls, hp 150->0 t2111-2123), fork t2313 = respawn 1 tick early,
+   death song 01 334 VI/639 bufs port vs 336/643 retail (port ends 1 tick early, same sign as 8/14/b17). Scorer `--port-end N`
+   (new) scores the prefix: N=6368 -> offset -529, flight port[4055:6363] exact 2308 non-exact 0, plant caught. The whole-bin
+   run splits offset -529 (pre-fork) vs -528 (post-respawn, unpinned p2 also matches there, so post-respawn is non-
+   discriminating). Neg FAILs the s7870 en<ep/2 bar (p2 1662 exact) but shows 448 non-exact frames where p1 has 0: weak
+   control on this mission, single-source neg. Sweep table row updated (17 H-exact -> 16, FORK 3 -> 4).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

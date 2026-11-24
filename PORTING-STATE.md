@@ -210627,3 +210627,31 @@ unpinned pre-tick-0 window is a state difference, but it is single-sample here.
 Reading: 6 missions are render-exact on every det-tick flight frame (b17 1120, m12 5662, m6 2383, m11 2519, m3 3804, m8 1958).
 This rules out a render defect in m8 flight. The scorer's rc is now a flight verdict, so the next missions need no hand
 localisation of the post-mission tail. Bins deleted after scoring.
+
+## Session 7877 (2026-11-23) — det render oracle 0x31=3 (mission 4, Defection at Corellia): H-audio-clock FORK at the respawn (t2313 port / t2314 retail), render exact on all 2308 pre-fork flight frames (7 missions); scorer --port-end; s7840 H-exact row superseded
+
+Start: crash_reports new=0; no owner answers; no new SOAK-RESULTS lines. Host idle 67 min, screen unlocked.
+Name fix: 0x31=3 is mission 4 = Defection at Corellia (s7838 name correction), not Gerrard V as s7876's NEXT said; the G5a
+Gerrard V mission is 0x31=4.
+Run: `env RBIN=1 zsh tools/s7849_det_pair.sh 3 scratch/s7877/v3` (rc 0). Pins SEED 15feea93, 34 DT_AT, NTICKS 5754.
+p1: crashlines 0; seed/calls/hp identical t0-t2312 (death hp 150->0 t2111-2123 identical); first seed + call diff t2313:
+port respawns (hp 0->150) at t2313, retail at t2314. Song handle 01 (death song) t2145-t2312 port 167 ticks/334 VI/639 AI
+buffers vs retail t2145-t2313 168/336/643 -> s7856_det_verdict: `FORK ... fork=audio-clock(song 00000000 retail t2313 port
+t2312)`. Same sign as the other three (port song ends 1 tick early: 8, 14, b17), so it is the s7863 timing class.
+p2: seed forks t0 (control).
+Render, whole bin (`s7868_det_frame_cmp.py ... --plant --neg p2.bin`, rc 3): votes split -528 (2485) vs -529 (2308); the
+scorer took -528 = the post-respawn pairing, where unpinned p2 also matches (2313 exact), so neg FAIL and the window is
+non-discriminating.
+Change: tools/s7868_det_frame_cmp.py `--port-end N` truncates both port bins (pinned and --neg) to frames [0:N) so a
+mid-flight fork scores only the det-exact prefix (unset = unchanged). `--port-end 6368`: offset -529, flight
+port[4055:6363] **exact 2308 non-exact 0** (2308 frames for 2313 ticks; the -3..-5 tail is the same per-mission shortfall
+as m3/m8). `--port-end 6360`/`6300`: exact 2305 / 2245, non-exact 0, plant caught (port 5207 / 5177, in flight).
+Neg at 6360: unpinned offset -531, exact 1662, non-exact 448 -> FAIL by the s7870 bar en < ep/2 (1662 >= 1152). The arm
+still differs on 448 frames where pinned differs on 0 (tri-count/tri-geom/HUD diffs from t~26 on), so it discriminates, but
+less than in other missions: much of this mission's flight does not depend on the rng stream. Labelled single-source neg.
+Table: tools/s7862_det_sweep_table.py row 3 -> FORK audio-clock with the retained scratch/s7877/v3/score.txt
+(TABLE OK rescored=11 hand=9 mismatch=0; --control PASS). Sweep now 16 H-exact, 4 FORK (all audio-clock).
+Superseded: s7840 "0x31=3 H-exact": its 170 s run ended before the death, so it never reached the song-gated respawn.
+Gate sweep: 253 gates, RED 1 = s7723_retained_controls (pre-existing, allow-listed; s7865 wipe SKIPs), 0 new.
+Reading: 7 missions render-exact on every det-tick flight frame (b17, m12, m6, m11, m3, m8, m4 pre-fork 2308). Rules out a
+render defect in m4 flight up to the respawn. Bins deleted; score.txt + cmp_*.txt kept.

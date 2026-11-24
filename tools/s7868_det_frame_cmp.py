@@ -22,7 +22,7 @@ there). Interior diffs are reported as "flight" (before the cut) and "post-fligh
 outside the det tick window, animation-phase class); rc 1 only for flight diffs. --no-cut restores the s7868 whole-span
 rule. Flight starts at the first frame of the last port phase inside the exact span (earlier non-exact frames are
 reported as pre-flight: the unpinned pre-tick-0 window, s7875/s7876). The plant control must land inside flight and must be counted as a flight diff.
-usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut]
+usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut] [--port-end N]
 exit 0 = no flight interior diff, 1 = flight interior diffs (H-render), 2 = no alignment, 3 = control FAIL.
 """
 import sys, os, collections, importlib.util, tempfile
@@ -36,9 +36,13 @@ m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
 tmp = tempfile.mkdtemp(prefix='s7868_')
 NOCUT = '--no-cut' in a
 MINTRI = int(a[a.index('--min-tri') + 1]) if '--min-tri' in a else 1
+# s7877: --port-end N scores only port frames [0:N) of BOTH port bins (pinned and --neg): the det-exact prefix when the
+# pinned arm forks mid-flight (0x31=3: respawn tick 2313 vs retail 2314 moves the pairing offset -529 -> -528). Unset = whole bin.
+PEND = int(a[a.index('--port-end') + 1]) if '--port-end' in a else None
 
 def load(p, retail):
     fr = m.frames(rs64_zopen.materialize(p, tmp), retail)
+    if not retail and PEND is not None: fr = fr[:PEND]
     return [c for c, _ in fr], [x for _, x in fr]   # (frame counters, port phase ordinal / retail VI width)
 
 def sig(c): return hash(frozenset(c.items()))
