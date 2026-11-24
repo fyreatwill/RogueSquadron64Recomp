@@ -16,8 +16,14 @@ width from the retail bin header), so pre-flight islands vs in-flight diffs are 
 Controls (iron rule 1, same run): --plant moves one triangle's YH by one sub-scanline in a port frame in the middle
 of the exact run; it must turn exactly that frame non-exact (rc 3 otherwise). A second pair (e.g. the unpinned p2
 arm) given with --neg PORT2.bin must NOT reach the same exact run (its state forks at t0).
-usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1]
-exit 0 = no interior diff, 1 = interior diffs (H-render), 2 = no alignment, 3 = control FAIL.
+s7876: flight is cut at the first >=3-frame tri-less run in the port stream at or after the longest exact run's start
+(the post-flight blank, s7875: retail and port both show exactly one after flight, 10 frames, and the mission ticks end
+there). Interior diffs are reported as "flight" (before the cut) and "post-flight" (after it: end-of-mission screen,
+outside the det tick window, animation-phase class); rc 1 only for flight diffs. --no-cut restores the s7868 whole-span
+rule. Flight starts at the first frame of the last port phase inside the exact span (earlier non-exact frames are
+reported as pre-flight: the unpinned pre-tick-0 window, s7875/s7876). The plant control must land inside flight and must be counted as a flight diff.
+usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut]
+exit 0 = no flight interior diff, 1 = flight interior diffs (H-render), 2 = no alignment, 3 = control FAIL.
 """
 import sys, os, collections, importlib.util, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
@@ -28,6 +34,7 @@ sys.argv.append('--tri-geom')
 sp = importlib.util.spec_from_file_location('seg', os.path.join(HERE, 's7821_rdp_screen_segments.py'))
 m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
 tmp = tempfile.mkdtemp(prefix='s7868_')
+NOCUT = '--no-cut' in a
 MINTRI = int(a[a.index('--min-tri') + 1]) if '--min-tri' in a else 1
 
 def load(p, retail):
@@ -56,10 +63,32 @@ def align(R, P):
     return dict(off=off, votes=votes.most_common(4), eq=dict(eq), run=best, first=ex[0] if ex else None,
                 last=ex[-1] if ex else None, nexact=len(ex), npair=len(eq))
 
+def blank_cut(P, start, n=3):   # s7876: first index of a >=n-frame tri-less run at/after start (the post-flight blank)
+    s = None
+    for j in range(start, len(P)):
+        if ntri(P[j]) == 0:
+            if s is None: s = j
+            if j - s + 1 >= n: return s
+        else: s = None
+    return None
+
 def report(tag, R, P, r):
     if r is None: print(f'{tag}: NO ALIGNMENT (no unique shared frame)'); return None
     j0, j1 = r['first'], r['last']
     inner = [j for j in range(j0, j1 + 1) if not r['eq'].get(j, False)]
+    cut = None if NOCUT else blank_cut(P, r['run'][1]); r['cut'] = cut
+    fs = j0   # s7876: flight starts at the last port phase (mission ticks); earlier diffs = pre-flight (unpinned pre-tick-0 window)
+    if not NOCUT and PM is not None:
+        fs = next((j for j in range(j0, j1 + 1) if PM[j] == PM[-1]), j0)
+    r['fstart'] = fs
+    pre = [j for j in inner if j < fs]
+    fl = [j for j in inner if j >= fs and (cut is None or j < cut)]; po = [j for j in inner if cut is not None and j >= cut]
+    rcut = cut + r['off'] if cut is not None else None
+    rb = blank_cut(R, r['run'][1] + r['off']) if cut is not None else None
+    fx = sum(1 for j in range(fs, (cut if cut is not None else j1 + 1)) if r['eq'].get(j, False))
+    print(f"{tag}: post-flight cut port {cut} (paired retail {rcut}; retail's own first blank there {rb}"
+          f"{' = paired' if rb == rcut else ' MISMATCH' if cut is not None else ''}); flight port[{fs}:{cut if cut is not None else j1 + 1}] "
+          f"exact {fx} non-exact {len(fl)}; pre-flight port[{j0}:{fs}] non-exact {len(pre)}; post-flight non-exact {len(po)}")
     print(f"{tag}: offset retail-port {r['off']} votes {r['votes']}; paired {r['npair']} frames, exact {r['nexact']}; "
           f"longest exact run port[{r['run'][1]}:{r['run'][2]}] ({r['run'][0]} frames); exact span port[{j0}:{j1 + 1}]; "
           f"interior non-exact {len(inner)}")
@@ -83,12 +112,12 @@ def report(tag, R, P, r):
         firstN = [(e, a, b) for e, a, b in segs if not e]
         for e, a, b in firstN[:6] + firstN[-6:]:
             print(f'    N{b - a + 1}@{a}: port phase {PM[a]}..{PM[b]} retail width {RM[a + r["off"]]}..{RM[b + r["off"]]} ({kind(a)})')
-    for j in inner[:12]:
+    for j in (fl + po)[:12]:
         c, q = P[j], R[j + r['off']]
         d1 = c - q; d2 = q - c
         print(f'  port {j} / retail {j + r["off"]}: tris p={ntri(c)} r={ntri(q)}; port-only {sum(d1.values())} '
               f'retail-only {sum(d2.values())}; e.g. port {list(d1)[:1]} retail {list(d2)[:1]}'[:400])
-    return inner
+    return fl
 
 R, RM = load(a[0], True); P, PM = load(a[1], False); PM0 = PM
 print(f'retail frames {len(R)}, port frames {len(P)}')
@@ -112,7 +141,9 @@ if '--plant' in a:
     g = list(k); g[3] = ((g[3] & ~0x3FFF) | ((g[3] + 1) & 0x3FFF))   # YH = low 14 bits of the 2nd word (k = tri, prim, w0, w1, ...) + 1 quantum
     c[k] -= 1; c[tuple(g)] += 1; c += collections.Counter(); P2 = P[:j] + [c] + P[j + 1:]
     r2 = align(R, P2); ok = r2 is not None and r2['eq'].get(j) is False and all(r2['eq'].get(i) == r['eq'].get(i) for i in r['eq'] if i != j)
-    print(f'control plant (port frame {j}, one tri YH+1): {"PASS caught" if ok else "FAIL"}')
+    inflight = j >= r['fstart'] and (r['cut'] is None or j < r['cut'])
+    ok = ok and inflight   # s7876: the plant must sit inside flight, where a diff sets rc 1
+    print(f'control plant (port frame {j}, one tri YH+1, in flight {inflight}): {"PASS caught" if ok else "FAIL"}')
     if not ok: rc = 3
 if '--neg' in a:
     N, NM = load(a[a.index('--neg') + 1], False); PM = NM; rn = align(R, N); report('neg', R, N, rn)

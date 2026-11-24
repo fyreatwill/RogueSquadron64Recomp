@@ -210601,3 +210601,29 @@ Reading: every flight frame on a det-exact tick (port 3935-7739) is retail-exact
 m3 3804). The s7868 "phase 7" bound includes the post-mission screen; read flight up to the post-flight blank. Rules out a render
 defect in m3 flight. Failed side step: the s7874 regression script needs N-adapting (tuple key mix) and was not needed here.
 Bins deleted after scoring.
+
+## Session 7876 (2026-11-23) — det render oracle 0x31=7 (mission 8): all 1958 det-tick flight frames = retail (6 missions); s7868 scorer now cuts flight at the post-flight blank and the last port phase (rc 0)
+
+Start: crash_reports new=0; no owner answers; no new SOAK-RESULTS lines. Host idle 47 min, screen unlocked.
+Change: tools/s7868_det_frame_cmp.py now splits the exact span three ways. Flight starts at the first frame of the last port
+phase; it ends at the first >=3-frame tri-less run at or after the longest exact run's start (the post-flight blank), which
+is also cross-checked against retail's own first blank at the paired index ("= paired" / MISMATCH). Diffs before flight are
+reported as pre-flight, diffs after the blank as post-flight, and rc 1 is set only by flight diffs. The plant control must
+land inside flight. --no-cut restores the s7868 whole-span rule. First draft cut only the end: flight then began at the
+exact-span start (phase 6) and counted a 346-frame pre-tick-0 island as flight. Fixed in the same session by starting flight
+at the last port phase.
+Run: `env RBIN=1 zsh tools/s7849_det_pair.sh 7 scratch/s7876/v7` (rc 0). Pins SEED e7e151a1, 3 DT_AT, NTICKS 1961.
+p1: crashlines 0, seed/call/record/pose diffs None over 1961 ticks, hp history identical, 0 differing ticks; TIMING word
+115/116 differs from t653 and rumble events 47 vs 49 from event 13 (timing class, as before). p2: seed differs t0, calls t51
+(control forks).
+Render (`python3 tools/s7868_det_frame_cmp.py r1/retail.bin p1.bin --plant --neg p2.bin`, **rc 0**): offset -532. Cut at port
+5940, which pairs with retail 5408, exactly retail's own blank. **Flight port[3982:5940]: exact 1958, non-exact 0** (1958
+frames for 1961 ticks, the same -3 as m3's 3804/3807). Pre-flight port[3396:3982] non-exact 346, post-flight non-exact 3598
+(end-of-mission screen, outside the det window). Plant (port 4966, in flight) caught. Neg: unpinned p2 flight exact 1 of 1958,
+phase-7 exact 11 vs pinned 1991, PASS.
+Pre-flight island 3636-3982 (346 frames, phase 6, tri-count class, PRIM FFFFFFB9 terrain): p1, p2 and retail carry three
+different values on the sampled tri (e.g. word 15597753 / 15597788 / 15597747). That fits the s7875 reading that the
+unpinned pre-tick-0 window is a state difference, but it is single-sample here.
+Reading: 6 missions are render-exact on every det-tick flight frame (b17 1120, m12 5662, m6 2383, m11 2519, m3 3804, m8 1958).
+This rules out a render defect in m8 flight. The scorer's rc is now a flight verdict, so the next missions need no hand
+localisation of the post-mission tail. Bins deleted after scoring.

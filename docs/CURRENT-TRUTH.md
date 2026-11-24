@@ -343,7 +343,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (1 frame/tick), then a 10-frame tri-less blank on both sides (retail 7212, port 7739) ends the mission ticks; the 1953
    post-blank phase-7 frames are an end-of-mission screen (212 tris PRIM 0A0000FF, texrects 128->470) with identical
    counts/texrects and ~2-5% of tris off by 1/4-1 px (animation phase, outside the det window; scratch/s7875/*.py).
-   **s7868 scorer caveat: "phase 7" runs past the last mission tick; bound flight by the post-flight blank.** Island A
+   **s7876: 0x31=7 (mission 8) flight render = retail, 1958/1958 det-tick frames: 6 missions render-exact** (scorer rc 0,
+   plant caught, neg PASS; p1 H-exact 1961 ticks). The s7868 scorer now bounds flight itself: last port phase start to the
+   first >=3-frame tri-less run (cross-checked against retail's own blank: m8 port 5940 = retail 5408), and reports
+   pre-flight / post-flight diffs separately. rc 1 = flight diff only (`--no-cut` = old rule). m8 pre-tick-0 island
+   3636-3982 (346 frames) has p1/p2/retail all different (state, single-sample). Island A
    (cinematic half-frame) did NOT appear in m3 (phase 6 exact port 3391-3752); pre-tick-0 island 3752-3935 = state (p1/p2
    differ on 183/183).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
