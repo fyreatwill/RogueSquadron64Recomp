@@ -211458,4 +211458,6 @@ class is the number of frames the port renders over a fixed VI window (frame/VI 
 exact in both classes. Per the s7906 budget rule island B is CLOSED as "harness-alignment-dependent, flight exact".
 Open (next unit): the port renders +28 frames vs retail over segment->crawl in the 512-wide pre-flight scene; island A is also
 pre-flight timing class. Single-source on which frames are extra.
+Rules out: H-press (the f712/f713 arms refute a press-frame-boundary selector; this closes island B). Next discriminator: per-frame
+VI spacing in the segment->crawl window, port vs retail (H-cost spread 3-VI frames vs H-scene contiguous extra frames).
 ORIGIN: no mitigation; opt-in harness clock form + analysis flag.
