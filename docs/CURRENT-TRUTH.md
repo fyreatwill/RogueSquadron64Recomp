@@ -65,6 +65,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7904 "island B = flame-block arena placement/timing (H-sched vs H-alloc-seq)"** (superseded s7905). Believable: port RAM held
+  retail's correct blocks at other addresses. But the residual vanishes 3/3 on today's rebuilt binary (same recipe/pins),
+  and the addresses are shared bump-arena slots, so "other address" was never a per-object fact.
 - **s7903 "island B residual = rand-replay ordinal keying, one burst frame per instance with opposite signs"** (superseded s7904).
   Believable because the port's flame bytes hash-matched retail's adjacent-frame blocks. But both two-site skews fail (one is a
   no-op on the residual) and retail's correct current blocks exist in the port's RAM at other arena addresses: placement/timing.
@@ -239,6 +242,16 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    block at 0x74D710 (retail draws 0x724F70) and already holds retail's NEXT drawn frame's blocks (scratch/s7904/blk_search.py):
    the values are right, their arena placement/timing vs the re-render task load is not. Next: write watches on the flame blocks
    (0x724F70/0x727BC8/0x749930, vi 10560-10580) in the oracle and the port, writer PC + VI vs task-load n on both sides.
+   **s7905: island B does NOT reproduce on a fresh build, 3/3 m11 runs.** The s7905 contract fix rebuilt build/ (s7424 had found
+   rt64_render_context.o older than its source, i.e. missing only s7904's FROM edit, inert when unset). Same recipe, pins, save, retail
+   bin as s7904 m11A: arm C (no SKEW) twice and arm D (counter poke) -> map E1 N2396 (island A HUD) then E6395 contiguous, crawl
+   3728/3728 exact (s7904 A: 106 non-exact). Retail write watch (scratch/s7905/run_retail.sh, sum.py): the "flame block" addresses
+   are slots in a per-frame bump arena, each rewritten every 4 VI by a DIFFERENT writer PC (8000a9e0, 800226fc, 8000d5a8, 80015948,
+   80016fd4, 8000de7c, 8000d92c); 0x74D710 takes one frame parity, the other three the other. Port frame counter 0x8013889C =
+   retail+0x1D at every matched task (s5680-s5685), but shifting it -29 changes nothing (C and D both exact): parity is not it.
+   Open: host-timing race (H-sched, leading: the code diff is inert) vs something stale that s7424 cannot see. Three recurrence soaks
+   queued (s7905_island_b_rep1-3, exit 1 = residual back).
+   If they are 0/3, island B is CLOSED (crawl + flight det-exact on m11); if any fires, it is a race: name it from that run.
    p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.

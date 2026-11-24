@@ -223,12 +223,13 @@ extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64
     fprintf(s_rand_trace_f, "%ld %u %08x %08x", n++, rs64_vi_n_g, pc, (uint32_t)gpr[2]);
     for (int i = 0; i < npoke; i++) {
         if (poke[i].pc != pc || poke[i].done) continue;
-        poke[i].done = poke[i].once;
+        poke[i].done = poke[i].once & 1;
         uint32_t a = (uint32_t)gpr[poke[i].reg] + poke[i].off;
         if (a < 0x80000000u || a + 4 > rs64_ram_top || (a & 3)) continue;
         uint32_t* w = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(rdram) + (a - 0x80000000u));
         fprintf(s_rand_trace_f, " pin=%08x", *w);
-        *w = poke[i].val;
+        // s7905: 5th-field bit 2 = add VALUE (mod 2^32) instead of storing it (3 = one-shot add); 0/1 byte-identical to s6771.
+        *w = (poke[i].once & 2) ? *w + poke[i].val : poke[i].val;
     }
     for (int i = 0; i < nspec; i++) {
         if (spec[i].pc != pc) continue;

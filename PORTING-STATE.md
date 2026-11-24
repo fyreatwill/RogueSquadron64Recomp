@@ -211386,3 +211386,34 @@ Kept: scratch/s7904/{run_arms.sh, fdiff_sum.py, blk_search.py, m11A, m11B (p1.bi
   ("need busy-on and busy-off windows (0/0)"), s7441_rs64_census and s7723_retained_controls ("no control frames"). Cause pre-dates
   this session: the retained sample_*.txt(.zst) files under scratch/s7435, s7439, s7442 are gone (dirs last modified 2026-11-23
   20:25, only run.tlog + samples.idx left). Not touched by this session's one-field knob change; NEXT.md carries it as a first check.
+
+## Session 7905 (2026-11-24) — contract fix (stale rt64_render_context.o rebuilt); island B does not reproduce on the rebuilt binary 3/3; retail watch shows the "flame blocks" are shared bump-arena slots; counter parity offset refuted as a cause
+Unmet contract first: s7651 sweep RED s7424_stale_objects (H-stale, 2 findings: src/main/rt64_render_context.cpp newer than its
+.o; s7904 edited the SKEW FROM field and never rebuilt build/). The other REDs listed (s7433/35/36/37/38/41, s7723) are the s7893
+allow-listed sample-capture losses. Fix: `make RogueSquadron64Recomp` in build/ -> s7424 H-fresh (findings 0). The NEXT.md "find
+what deleted the sample captures" item was already answered by s7893 (owner's 7-day launchd prune); stale line dropped.
+Work unit (NEXT s7905, HYPOTHESIS-ID g3-island-b):
+- Retail (scratch/s7905/run_retail.sh: s7903 m11 recipe, --hit-vi-window 10540:10620, --hit-cap 400000, task PC 0x80033E3C, write
+  watches on 0x724F70/0x727BC8/0x749930/0x74D710 +64 B, control = whole arena 0x720000:0x758000). Control fired: 45124 arena
+  writes outside the four blocks in the window. scratch/s7905/sum.py -> retail_seq.txt: each block is rewritten every 4 VI, each
+  time by a DIFFERENT first writer PC (8000a9e0, 800226fc, 8000d92c, 8000d5a8, 80015948, 80016fd4, 8000de7c; e.g. 724F70: vi 10558
+  800226fc, 10562 8000a9e0, 10566 8000de7c, 10570 8000d5a8, 10574 80015948). 0x74D710 is written on one frame parity (vi
+  10556/60/64...), the other three on the other (10558/62/66...). So these are slots of a per-frame bump arena, not per-object
+  blocks; "retail's block sits at another address in the port" is an allocation-order fact, not a defect location.
+- Port task snapshots s5680-s5685 (s7902 m11snap) vs retail state at the matched n: frame counter 0x8013889C = retail + 0x1D (29, odd)
+  at all six, so the *(0x8013889C)&1 double buffer of the flame writer (s7896) runs on the opposite parity.
+- New knob: ROGUESQ_XTRACE_POKE 5th field bit 2 = add VALUE instead of storing it (3 = one-shot add); 0/1 byte-identical to s6771.
+- Arms (m11 0x31=10, APM=1 SNAP=3 ONLY=c,7, replay b600, s7895 retail r1 + pins SEED=36b554eb DT_AT=2:3C888888, same as s7904):
+  D poke 800C6674:0:8013889C:-29 one-shot (fired at the FIRST 800C6674 mark, row 245 vi 98, counter 0 -> 0xFFFFFFE3: from boot)
+    -> map E1 N2396@569(texrect/HUD) E6395; crawl 3728/3728 exact, flight 2667/2667.
+  C control, no poke (scratch/s7905/run_ctl.sh) -> E1 N2396@567 E6395, crawl 3728/3728 exact. C2 repeat -> identical.
+  s7904 m11A on the same recipe/pins/save: crawl 3622/3728 (106 non-exact, odd frames N1 from 5639).
+  -> counter parity is NOT the cause (C and D identical). Island B is absent 3/3 on this binary. The binary diff vs s7904's runs is
+  only rt64_render_context.cpp (s7904 FROM field, inert with SKEW unset, + this session's poke bit, inert for once=1), so the
+  leading reading is a host-timing race in the crawl tail (H-sched: re-render task load vs CPU arena rebuild), not the code.
+  Single-source on the mechanism: no run here reproduces the residual, so nothing names the race yet.
+- Queued 3 recurrence soaks scratch/agent/soak_queue/s7905_island_b_rep{1,2,3}.sh (exit 1 = crawl non-exact > 0; tag line carries
+  load and crawl_nonexact). 0/3 -> close island B (m11 crawl + flight det-exact). Any hit -> that run's p1.bin is the race sample.
+ORIGIN: no mitigation; one opt-in harness bit (delta poke) + a rebuild.
+Kept: scratch/s7905/{run_retail.sh, sum.py, retail_seq.txt, r1/oracle.log.zst, run_poke.sh, run_ctl.sh, run_ctl2.sh, m11C (p1.bin.zst,
+p1_rand.txt.zst), m11C*/m11D cmp texts}. Not in tools/retained_captures.txt: subject to the 7-day prune.
