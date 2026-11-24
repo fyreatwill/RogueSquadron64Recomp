@@ -27,6 +27,9 @@ def model(vsync=525, dac=DAC, floor=True):
     return fs, delay, LEN * q, delay / (LEN * q)
 
 
+from rs64_zopen import resolve  # noqa: E402
+
+
 def rate(path):
     tv, bv, _ = load(path)
     lo, hi = tv[0], tv[-1]
@@ -43,6 +46,7 @@ def main(a):
     nofloor = model(floor=False)[3]
     gaps = []
     for p in logs:
+        p = resolve(p) or p  # s7893: the retained oracle.log survives only as .zst (scratch retention)
         if not os.path.exists(p):
             print("[s7865] missing", p); continue
         r = rate(p); g = 1 - r / bpv; gaps.append(g)

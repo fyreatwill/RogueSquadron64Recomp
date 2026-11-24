@@ -211004,3 +211004,35 @@ CURRENT-TRUTH 50 KB (no maintenance). The s7891 work was complete but uncommitte
   seg 2 from -1 to -2 VI against retail (retail's post-load frame there is 3 VI).
 - Rules out: SNAP=3 as the det-pair default (not general, and it grows island B on m6). SNAP=3 stays opt-in (with the pre-flight gate).
 - Bins kept: scratch/s7892/m6/r1/retail.bin (m6 retail, 2.4 GB) + scratch/s7892/m6s3c/p1.bin; others deleted. Slug g3-snap3-default CLOSED.
+
+## Session 7893 (2026-11-24) — the scratch "wipe" is the owner's 7-day launchd prune; gate inputs now cited by exact path (tools/retained_captures.txt); unmet gate-sweep contract cleared
+
+Unmet contract from s7892: tools/s7651_gate_sweep.py reported 9 non-allow-listed REDs. Classified every one:
+- **Cause of the lost inputs (named the writer).** `~/Library/LaunchAgents/com.williambuckley.rs64-scratch-compress.plist`
+  runs `~/.local/bin/rs64-scratch-compress.sh` every 6 h (zstd --rm of >12 h logs/txt/bin), which calls
+  `rs64-scratch-prune.sh` (owner-approved 2026-11-12): deletes >7 d, >64 KB scratch files unless the exact path (minus .zst)
+  appears in a tracked non-scratch file. Its log shows the 2026-11-23 08:25 run (3247 files) and 20:25 run (167 files) — the
+  s7865 "unidentified mass cleanup" and this one. The sweep cites `scratch/s7435` etc. by directory, and s7723 cited
+  `run.log.zst` (the prune's awk strips .zst from the candidate, not the reference), so neither protected anything.
+- **s7433/s7435/s7436/s7437/s7438 + s7441 (RED rc 3/1, "0/0 windows"):** scratch/s7435, s7439, s7442 keep only run.tlog +
+  samples.idx; all sample_N.txt[.zst] deleted 20:25. Unrecoverable -> allow-listed in tools/gate_sweep_allowed_red.txt with
+  the reason (remove once a fresh /usr/bin/sample capture is retained). s7723 row's reason corrected to the named writer.
+- **s7804_zst_blind_lint RED (2 tools):** s7864_ai_per_vi_hist / s7865_ai_dma_rate default to raw names whose files are now
+  .zst-only. s7864 read fine via load()->zopen; **s7865 was really blind**: its os.path.exists check printed "missing" and
+  scored no capture (controls still PASS, so the gate stayed GREEN). Both now `resolve()` via rs64_zopen; s7865 again measures
+  the retained oracle: 1.914459 buf/VI, FIFO idle 0.118% (H-dma), controls PASS; lint GREEN.
+- **s7714_truth_census RED:** unreviewed SPLIT for ROGUESQ_RETAIL_SNAP (s7891/s7892 added =2/=3 level digits in
+  apply_s7839_snaplog.py:28 vs non-0 at :14). Deliberate mode digits -> reviewed row added; census rc 0, 0 SPLIT.
+- **s7862_det_sweep_table HOLLOW:** the s7889 b16 row text "455/455 race frames" matched the `<n> RACES?` open-class token.
+  Reworded ("all 455/455 frames of the race"); TABLE OK, --control PASS.
+- **Prevention:** new tools/s7893_retained_manifest.py writes tools/retained_captures.txt — every existing >64 KB file under
+  each scratch/ literal in the gate sweep and tools/s7*.py (recursive globs, bare scratch, scratch/agent excluded): 766 paths,
+  2.7 GB (citing every scratch path in tracked files would have pinned 128 GB and defeated the owner's retention). Verified
+  offline with the prune's own grep+awk over the tracked tree: 766/766 protected. --control (planted dir: >64 KB .zst kept
+  with .zst stripped, small file dropped) PASS; --check exits 1 on an uncited retained file. loop.sh refreshes it after
+  prune-scratch.sh every iteration (the prune greps the working tree, so the refresh protects before the commit).
+- Full sweep (--jobs 2): 253 gates, GREEN 236 REPORT 2 NEEDS-ARGS 7 RED 7 (all allow-listed), new RED 0 after the s7862 fix
+  (narrow re-run: GREEN 237, new RED 0).
+ORIGIN: the gate REDs are input loss by the owner's scratch prune (writer named above), plus two stale rules from s7889/s7891
+(table wording, RETAIL_SNAP review row); no runtime code changed. The s7893 NEXT unit (m6 island A crawl discriminator) was not
+run; it carries over unchanged.

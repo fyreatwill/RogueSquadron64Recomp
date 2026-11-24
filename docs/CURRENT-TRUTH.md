@@ -421,8 +421,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    6444 ticks, residual none; render exact on all 6439 flight frames (global offset 317, longest exact run = whole phase 5, no
    --port-start). Plant caught, neg PASS (unpinned p2 1516/5558). -> 19/19 missions render-exact on det ticks (m1-m16, b16, b17
    pre-fork, b18): G3 det render coverage CLOSED (slug g3-det-render-coverage).** Row b18 rescored (TABLE OK, --control PASS).
-   s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
-   08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
+   s7865/s7893 gate note: the "unidentified scratch wipe" is the OWNER's launchd job ~/.local/bin/rs64-scratch-compress.sh
+   (6 h: zstd >12 h) -> rs64-scratch-prune.sh (deletes >7 d, >64 KB files not cited by EXACT path, .zst stripped, in a
+   tracked file; log ~/Library/Logs/rs64-scratch-prune.log). Dir-only or '.zst' citations do not protect, so it ate the
+   s7392-s7399 logs (s7723 RED) and the s7435/s7439/s7442 sample_N.txt (s7433/5/6/7/8 + s7441 RED, all allow-listed,
+   unrecoverable). Since s7893 tools/retained_captures.txt (tools/s7893_retained_manifest.py, refreshed by loop.sh every
+   iteration, --check / --control) cites all 766 surviving gate inputs by exact path. A new retained capture is safe only
+   once it is cited in a gate ARGS row or a tools/s7*.py literal. gate_trace.py records importlib-loaded modules.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

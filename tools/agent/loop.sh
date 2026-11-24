@@ -488,6 +488,9 @@ while [ "$ITER_CAP" -eq 0 ] || [ "$n" -lt "$ITER_CAP" ]; do
   # the disk at 97% on 2026-08-20. Runs between iterations, so a capture in
   # flight never has its log compressed out from under it.
   tools/agent/prune-scratch.sh 2>&1 | tee -a "$AG/loop.log"
+  # s7893: the owner's launchd prune (~/.local/bin/rs64-scratch-prune.sh) keeps only scratch files cited by exact path
+  # in a tracked file; refresh the gates' retained-capture manifest so new captures are cited before they age out.
+  python3 tools/s7893_retained_manifest.py 2>&1 | tee -a "$AG/loop.log"
 
   # Re-publish the three public GitHub forks (main repo fast-forward + the
   # N64Recomp / decomp source mirrors). Backgrounded so a slow network never

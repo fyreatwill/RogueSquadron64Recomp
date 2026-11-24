@@ -10,6 +10,7 @@ often (or a new bucket), proving the counter sees per-VI structure. Exit 2 if th
 import collections, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from s7863_song_end_threshold import load  # noqa: E402
+from rs64_zopen import resolve  # noqa: E402
 
 
 def hist(tv, bv, plant=False):
@@ -33,6 +34,7 @@ def main(a):
     a = [x for x in a if x != "--control"]
     if not a:  # s7864 retained: retail {1,2}; p1 AI_VI_CLOCK=1 {1,2} (+<=1% stragglers); p2 drain-paced keeps 0 and 3
         a = [os.path.join(ROOT, x) for x in DEFAULT]
+    a = [resolve(x) or x for x in a]  # s7893: retained inputs survive only as .zst (scratch retention); load() reads via zopen
     bad = 0
     for p in a:
         tv, bv, _ = load(p)

@@ -1,6 +1,6 @@
-# NEXT (s7893)
+# NEXT (s7894)
 HYPOTHESIS-ID: g3-island-a-m6-source
-First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
+First (s7893 left this unit unrun: it cleared the gate-sweep contract): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
 State (s7892): on m6 (0x31=5) ROGUESQ_RETAIL_SNAP=3 makes the crawl dt equal retail (cum delta 0, plant PASS) but island A N159@3398
 stays in the RDP stream; on m11 SNAP=3 removed it. So m6 island A has another time/state source. SNAP=3 is pre-flight gated now.

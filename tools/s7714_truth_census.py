@@ -48,6 +48,7 @@ REVIEWED = {
                                  "unset (auto-default guard, s7711 PRESENCE class); the one reader is `*e == '1'`",
     "ROGUESQ_G1D_SPRITE_DIAG": "level digits: dpc_bridge.cpp:5821 logs the extra detail only at =1/=2; =t/=yes arm the base diag",
     "ROGUESQ_LOG_G1D_RECT": "level digits: =1 rect log, =2 rect + pointer dump (dpc_bridge.cpp:5614/5705); base gate is non-'0'",
+    "ROGUESQ_RETAIL_SNAP": "level digits (s7891/s7892): any non-0 arms the =1 EL/VD pin (apply_s7839_snaplog.py:14); =2/=3 alone select the sub-VI variants at :28, t/yes/on read as =1",
     "ROGUESQ_S7524_V2P": "mode word: =alt (s7526) is on at main.cpp (non-'0') and selects the twin digest in s7526_v2p_twin.cpp",
     "ROGUESQ_PRESENT_EARLY_FORCE": "three gates of one fix: only the fb-upload gate (rt64_state.cpp:3828) defaults ON (session 21 "
                                    "comment: the 1024-wide phase must present); history-push and consumer gates stay opt-in; "
