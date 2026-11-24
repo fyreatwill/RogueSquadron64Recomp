@@ -5,10 +5,11 @@
 # 0x8013889C. Dumps per call: struct (12 w), counter, caller's saved ra (sp+0x38; retail only, N64Recomp leaves $ra unset),
 # cinematic accumulators 0x800B0B2C / 0x80130BA4 (cinematicLoopBody += dt). Retail: rs64_oracle exec-trace rows; port:
 # ROGUESQ_RAND_TRACE marker rows (tools/fixup_rand_trace.py s6752). Scorer: tools/s7891_crawl_clock_cmp.py.
-# usage: zsh tools/s7891_crawl_clock.sh OUTDIR [EEP=scratch/s7872/v10/lvl.eep SECS=130 SNAP=1]  (s7892: SNAP= sets the port RETAIL_SNAP, unset = 1)
+# usage: zsh tools/s7891_crawl_clock.sh OUTDIR [EEP=scratch/s7872/v10/lvl.eep SECS=130 SNAP=1]  (s7892: SNAP= sets the port RETAIL_SNAP, unset = 1; s7894: MX= extra M words)
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 O=${1:?OUTDIR}; mkdir -p $O; A=$PWD/$O; SECS=${SECS:-130}; EEP=${EEP:-scratch/s7872/v10/lvl.eep}; cp $EEP $O/lvl.eep || exit 3
 M="800C6674:29:10:12,800C6674:0:8013889C:1,800C6674:29:38:1,800AF374:29:10:12,800AF374:0:8013889C:1,800AF374:0:800B0B2C:1,800AF374:0:80130BA4:1,800AF374:29:38:1"
+M="$M${MX:+,$MX}"  # s7894: MX= appends extra xtrace words (e.g. caller locals) to both sides
 if [[ ! -s $O/r1/oracle.log ]]; then
 env CPO=1 RSECS=$SECS EEP=$O/lvl.eep PP=19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start RDPBIN=/dev/null \
   RS64_XTRACE_MEM=$M XO="--exec-trace 0x800AF408:8000000 --exec-trace-also 0x800C6674 --exec-trace-also 0x800AF374" \

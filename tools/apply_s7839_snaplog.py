@@ -32,6 +32,17 @@ PIN1 = ('      extern uint64_t total_vis; extern int rs64_s7891_reset, rs64_s789
         '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839); ctx->r2 = 0; } '
         'else if (sub7839 == 2 && rs64_s7891_reset) { rs64_s7891_reset = 0; rs64_s7891_free = 1; if (z7839++ < 256) fprintf(stderr, "[snap7891] post-reset el %d real vi=%llu n=%llu\\n", '
         '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839); } else ctx->r2 = (int32_t)pin7839; }\n')
+# s7894: ROGUESQ_SNAP3_ONLY=<n> (with RETAIL_SNAP=3) unpins ONLY post-reset fire n and forces its el to 0 (stores max(vd,1) VI,
+# retail's 1 VI on the crawl), every other post-reset frame keeps the =1 pin. s7894 measured plain =3 host-timing dependent: the
+# unpinned frame stores the real el (0 or 781250 = 1 VI) and the m6 crawl got 781250 in 3 of 4 runs. Unset = the s7891 =3 behaviour.
+PIN1_S7891 = PIN1
+PIN1 = PIN1_S7891.replace('else if (sub7839 == 2 && rs64_s7891_reset) { rs64_s7891_reset = 0; rs64_s7891_free = 1; if (z7839++ < 256) fprintf(stderr, "[snap7891] post-reset el %d real vi=%llu n=%llu\\n", '
+    '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839); }',
+    'else if (sub7839 == 2 && rs64_s7891_reset) { static int only7894 = -1; if (only7894 < 0) { const char* o4 = getenv("ROGUESQ_SNAP3_ONLY"); only7894 = (o4 && *o4) ? atoi(o4) : 0; } '
+    'rs64_s7891_reset = 0; ++z7839; if (only7894 && (int)z7839 != only7894) { if (z7839 < 256) fprintf(stderr, "[snap7894] post-reset el %d pinned vi=%llu n=%llu\\n", '
+    '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839); ctx->r2 = (int32_t)pin7839; } else { rs64_s7891_free = 1; if (z7839 < 256) fprintf(stderr, "[snap7891] post-reset el %d %s vi=%llu n=%llu\\n", '
+    '(int32_t)ctx->r2, only7894 ? "forced 0" : "real", (unsigned long long)total_vis, z7839); if (only7894) ctx->r2 = 0; } }')
+assert PIN1 != PIN1_S7891
 
 HDR = ('static int en7839 = -1; static long long pin7839 = -1; if (en7839 < 0) { const char* e = getenv("ROGUESQ_S7839_SNAP"); '
        'en7839 = (e && *e && *e != \'0\') ? 1 : 0; const char* p = getenv("ROGUESQ_S7839_SNAP_EL"); const char* rs = getenv("ROGUESQ_RETAIL_SNAP"); pin7839 = (p && *p) ? atoll(p) : ((rs && *rs && *rs != \'0\') ? 811160 : -1); '
@@ -72,7 +83,7 @@ RESET = "    { /* PATCH: s7891 snap reset */ extern int rs64_s7891_reset; extern
 
 def apply3(text):
     n = 0
-    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (OLD_RESET, RESET),
+    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (PIN1_S7891, PIN1), (OLD_RESET, RESET),
                   (OLD_RESET.replace("snap reset", "snap reset2"), RESET.replace("snap reset", "snap reset2"))):
         if o in text:
             text = text.replace(o, nw); n += 1

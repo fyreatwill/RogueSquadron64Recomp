@@ -1,17 +1,17 @@
-# NEXT (s7894)
-HYPOTHESIS-ID: g3-island-a-m6-source
-First (s7893 left this unit unrun: it cleared the gate-sweep contract): `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
+# NEXT (s7895)
+HYPOTHESIS-ID: g3-island-a-lever
+First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7892): on m6 (0x31=5) ROGUESQ_RETAIL_SNAP=3 makes the crawl dt equal retail (cum delta 0, plant PASS) but island A N159@3398
-stays in the RDP stream; on m11 SNAP=3 removed it. So m6 island A has another time/state source. SNAP=3 is pre-flight gated now.
-Unit (ONE bounded discriminator, then park island A as pre-flight timing class):
-  Which guest value differs on the crawl's first frames (port 3397-3610) on m6 under SNAP=3? Re-run the crawl dump with the
-  cinematic/crawl accumulators plus the crawl object's scroll/spline time words added to M in tools/s7891_crawl_clock.sh (one build-
-  free run, retail oracle log reusable from scratch/s7892/crawl6/r1 only if M is unchanged, else one fresh retail run):
-  env EEP=scratch/s7892/m6/lvl.eep SNAP=3 zsh tools/s7891_crawl_clock.sh scratch/s7893/c6
-Hypotheses: H-carry (state carried in from the hangar segment, which SNAP=3 moves to -2 VI vs retail: the crawl's start position
-  is set from an accumulated hangar/cinematic time) -> a crawl-start word differs by a hangar-derived amount;
-  H-text (the island is the text content/scroll origin, not time) -> time words equal and an object position word differs;
-  H-retail-rdp (capture lag on this mission) -> all guest words equal on both sides.
-Retail bin: scratch/s7892/m6/r1/retail.bin; port SNAP=3 bin scratch/s7892/m6s3c/p1.bin.
-Budget: 1 iteration. Then park island A in CURRENT-TRUTH and take the next ladder item (everything else is owner-gated).
+State (s7894): island A is H-index on m6 and m11. `ROGUESQ_RETAIL_SNAP=3 ROGUESQ_SNAP3_ONLY=6` (only post-reset fire 6 = crawl
+post-load frame unpinned, el forced 0) removes it deterministically on m6 (scratch/s7894/m6o vs control m6c). Plain =3 is host-timing
+dependent (real el 0 or 781250), so it can never be a det default.
+Unit (ONE bounded check, then decide the det-pair default):
+  Is fire 6 the crawl on other missions, and does ONLY=6 keep flight exact there? Run on m11 and m3 (one at a time):
+  env RBIN=1 SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=6 zsh tools/s7849_det_pair.sh 10 scratch/s7895/m11   (retail: reuse scratch/s7872/v10/r1 if
+  still present, hard-link oracle.log + retail.bin into OUTDIR/r1 first; else fresh)
+  then python3 tools/s7868_det_frame_cmp.py r1/retail.bin p1.bin --plant in OUTDIR. Check `[snap7891] ... forced 0` VI is the crawl
+  (~5600) in p1/run.log. The det_pair p2 arm can exceed the 10-min task cap: run it in the foreground with a long timeout or skip p2.
+Outcomes: island A gone + flight exact on both -> make SNAP3_ONLY=6 (with SNAP=3) the s7849_det_pair default (SNAP= unset keeps =1
+  for byte-identical old runs: add a new SNAP=6 shorthand), close island A; fire 6 not the crawl on some mission -> key the unpin on the
+  crawl dt site (ra 0x800C9D94 path: mark 0x800C6674 sets a flag) instead of the fire index; flight forks -> lever not general, document.
+Then island B (N212@6071 on m6, unchanged by the lever) is the next pre-flight item.

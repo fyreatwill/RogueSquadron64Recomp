@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7892 (2026-11-24).
+Compact operational handoff, as of Session 7894 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -65,6 +65,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7892 "RETAIL_SNAP=3 is m11-only: on m6 the crawl clock lead is 0 but island A stays"** (superseded s7894). Believable because
+  two instruments agreed. They were two runs: the crawl dump (el 0 at fire 6, delta 0) and the render arm m6s3c (el 781250 at fire 6,
+  so =3 never took effect there). =3 stores real el; with the crawl frame forced to retail's 1 VI, m6 island A disappears.
 - **s7873 "the post-load dt (1 vs 2 VI) does not carry island A's half frame"** (superseded s7891). Believable because a
   retail-valued post-load window left island A unchanged. That window (VI 5584:5587) was placed from computeFrameDeltaTime's
   post-load frame and never checked the crawl dt site. The s7891 crawl-site dump shows the crawl's post-load frame IS the half frame (SNAP=3 removes it).
@@ -188,9 +191,9 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12); the s7790 numbering (1-36) is
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
-0. **m6 island A second source (s7892):** on m6 (0x31=5) SNAP=3 zeroes the crawl clock lead (+1 -> 0 VI, plant PASS) but island A
-   (N159@3398) stays, so the crawl post-load frame is NOT island A's only source there (m11 only). SNAP=3 stays opt-in; det-pair default =1.
-   One bounded discriminator left (NEXT.md, slug g3-island-a-m6-source), then island A parks as pre-flight timing class.
+0. **Island A det lever generalisation (s7894):** island A is H-index on m6 too (s7892 "m11-only" was cross-run, superseded).
+   `ROGUESQ_RETAIL_SNAP=3 ROGUESQ_SNAP3_ONLY=6` (unpin only post-reset fire 6 = crawl post-load frame, el forced 0) removes it
+   deterministically. Next: same arm on m11 + m3 (fire index stable?), then decide the det-pair default (NEXT.md, slug g3-island-a-lever).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -354,6 +357,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    `tools/s7891_fix_arm.sh`; s7849_det_pair.sh takes SNAP=. Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
    **s7892: SNAP=3 is m11-only.** m6: crawl delta 0 under SNAP=3 yet island A N159 stays (and island B grows N212 -> N1182). SNAP=3
    also had to be gated pre-flight: the mission-load reset was consumed at mission tick ~8 and forked m6 (now cleared per mission tick).
+   **s7894: m6 is H-index too; plain =3 is host-timing dependent.** The unpinned frame stores the REAL el (0 or 781250 = 1 VI): the m6
+   crawl fire n=6 got 781250 in s7892 m6s3c p1 (the render arm that "kept" island A) and in both s7894 crawl runs (delta +1 VI), el 0
+   only in s7892 crawl6. New `ROGUESQ_SNAP3_ONLY=<n>` (apply_s7839_snaplog.py): only fire n unpinned, el forced 0. Same build, same
+   retail bin (scratch/s7894/m6o vs m6c): ONLY=6 island A GONE (map starts N212@6071, pre-flight non-exact 245), SNAP=1 control
+   N159@3399 present (504); both H-exact (2434/2440 ticks), flight exact, plant PASS. Crawl locals (runModelViewerLoop sp+0xC0..DC,
+   tools/s7894_crawl_words.py, plant PASS) equal retail from call 0 except the time word D4 and the scroll word C4 = 10*D4: no other state.
    **s7875: 0x31=2 (mission 3) flight render = retail, 3804/3804 det-tick frames: 5 missions render-exact** (b17, m12, m6, m11,
    m3). `env RBIN=1 zsh tools/s7849_det_pair.sh 2`: p1 H-exact 3807 ticks (seed/calls/rec/pose None; timing word 149 from t3102),
    p2 forks t0; plant caught, phase-7 neg PASS. rc 1 is NOT a flight defect: retail flight frames 3408-7212 = 3804 for 3807 ticks

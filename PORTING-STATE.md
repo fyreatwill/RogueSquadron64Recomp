@@ -211042,3 +211042,32 @@ H-owner-prune, refutes H-agent and H-repo-prune. Next discriminator for the clas
 ORIGIN: the gate REDs are input loss by the owner's scratch prune (writer named above), plus two stale rules from s7889/s7891
 (table wording, RETAIL_SNAP review row); no runtime code changed. The s7893 NEXT unit (m6 island A crawl discriminator) was not
 run; it carries over unchanged.
+
+## Session 7894 (2026-11-24) — m6 island A is H-index too: s7892's "SNAP=3 is m11-only" was cross-run (plain =3 stores real host el; the render arm never got the retail value). New ROGUESQ_SNAP3_ONLY=<n> pins it deterministically: m6 island A gone, same-build SNAP=1 control keeps it
+
+Work unit (NEXT s7894, HYPOTHESIS-ID g3-island-a-m6-source). Pre-checks: crash_reports FOLDED=6 new=0, no new SOAK-RESULTS lines, no
+owner answers, CURRENT-TRUTH 51 KB (no maintenance).
+- Read the crawl scene loop: the crawl dt call (ra 0x800C9D94) sits in runModelViewerLoop 0x800C9BF0 (frame 0x108; it calls
+  selectPostCrawlCraft, so it is the crawl/post-crawl scene). Locals sp+0xC0..0xDC = position floats C0/C4/C8/CC, rate D0, time D4
+  (+= dt at 0x800C9DC0), start D8. At mark 0x800C6674 (callee frame 0x48) they sit at sp+0x108. tools/s7891_crawl_clock.sh takes MX=
+  (extra M words); new scorer tools/s7894_crawl_words.py (call-aligned per-word diff, --plant on D4).
+- Run c6 (`env EEP=scratch/s7892/m6/lvl.eep SNAP=3 MX=800C6674:29:108:8 zsh tools/s7891_crawl_clock.sh scratch/s7894/c6`, fresh retail)
+  and c6b (port re-run, same retail log): both show crawl cum delta **+1 VI under SNAP=3** (1086/1088, 1091/1093), not s7892's 0.
+  Words: C0/C8/CC/D0/D8/DC equal retail on every call; only D4 (+1/60) and C4 (+0.1667 = 10*D4) differ, from call 3. Plant PASS.
+  So the crawl state carried in is retail's (H-carry refuted at the crawl locals); the only difference is the clock.
+- Why +1 under =3: `[snap7891] post-reset el` at fire n=6 (crawl, VI ~5620) was 781250 (1 VI of real el) in c6, c6b AND s7892's
+  m6s3c p1 (the render arm), but 0 in s7892's crawl6. Plain =3 stores the host's real el, so it is host-timing dependent. **s7892's
+  "island A stays under SNAP=3 on m6" came from a run where =3 never gave the crawl retail's value** (cross-run: crawl dt from crawl6,
+  RDP from m6s3c).
+- Change: tools/apply_s7839_snaplog.py `ROGUESQ_SNAP3_ONLY=<n>` (with RETAIL_SNAP=3): only post-reset fire n is unpinned, el
+  forced 0 (stores max(vd,1) = 1 VI = retail's crawl value), all other fires keep the =1 pin (`[snap7894] ... pinned` lines).
+  Upgrades already-patched funcs_3.c in place (idempotent, x1 then x0); unset = the s7891 behaviour. Rebuilt.
+- Discriminator, same build, same retail recording (scratch/s7892/m6/r1/retail.bin hard-linked):
+  arm m6o (`env RBIN=1 SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=6 zsh tools/s7849_det_pair.sh 5 scratch/s7894/m6o`): fires 1-5,7 pinned,
+  n=6 "forced 0" at VI 5618; p1 H-exact 2434 ticks (seed/calls None), 0 crashlines; render (s7868 cmp) flight 2428/2428 exact,
+  **island A absent** (map starts E2675 N212@6071 = island B), pre-flight non-exact 245; plant PASS.
+  control m6c (same recipe p1 only, SNAP=1; scratch/s7894/p1only.sh = det_pair lines 1-44): H-exact, flight 2440/2440 exact,
+  **N159@3399 present**, pre-flight non-exact 504; plant PASS. (det_pair's p2 unpinned arm was cut by the 10-min task cap; not needed.)
+- Selects H-index on m6 (two lines: crawl locals differ only in the clock; forcing that one frame removes the RDP island, control keeps it).
+  Refutes s7892's H-m11-only (moved to superseded). Island B (N212@6071) unchanged by the lever: separate source.
+- Kept: scratch/s7894/m6o/p1.bin (ONLY=6 port RDP stream, 1.5 GB), scratch/s7894/m6o/r1/retail.bin (link), scratch/s7894/c6/r1/oracle.log.
