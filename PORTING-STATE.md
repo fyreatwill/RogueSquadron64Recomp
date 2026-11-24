@@ -210551,3 +210551,26 @@ run). Next lead (H-phase): the element reads a raw COUNT/VI stamp at render time
 (port samples on the VI boundary) would give a constant half-frame lead. Census mfc0 Count / osGetCount / 0x80128ED8
 readers on the cinematic path.
 Bins deleted (p1/p2, 5 GB); scratch/s7872/v10/r1 kept.
+
+## Session 7874 (2026-11-23) — island A's half-frame lead is not a raw-clock read (census: no inline Count, 0 osGetCount callers, only timeSnapshotFiller consumes osGetTime on the render path) nor audio-clocked (mupen AI-DMA clock arm leaves it identical); slug g3-cinematic-half-frame-phase PARKED; new tools/s7874_clock_census.py
+
+Start: crash_reports new=0 (FOLDED 6); no owner answers; no new SOAK-RESULTS lines. NEXT g3-cinematic-half-frame-phase (iter 4,
+rule 8: one more probe then park).
+Offline census (NEW `python3 tools/s7874_clock_census.py`, lui-resolved word refs; control = timeSnapshotFiller osGetTime
+0x8000BC1C + VI stamp store 0x8001993C, PASS): 0x8002BF00 is osGetTime (not osGetCount). 14 osGetTime sites: computeElapsedMillis,
+musyxSynthFrame x2, serviceVoicePoolFrame x2, timeSnapshotFiller, viRetraceHandlerThread x3, spTaskSchedulerThread,
+dpInterruptHandlerThread, recordFrameTimestamp, getTimeLow32, getTimeSinceLastFrame. 0 game callers of osGetCount_recomp.
+Inline cop0: only 2 mfc0 Compare (data_gap_80099FDC); N64Recomp traps any other cop0 read, so no hidden Count reads exist.
+Derived words: since_last_frame 0x8011A914 (submitGfxFrame C0A0 store) read only by drawFrameProfilerBars; frame_ts 0x80128F10
+only by getTimeSinceLastFrame; earlier grep hits in updatePlayerVehicleByControlMode/executeActorType4Effect were other segments
+(lui 0x8004/0x800B). So the only raw-time input on the render path is timeSnapshotFiller el (H-snap refuted s7873); the remaining
+raw-time consumer that could pace a cinematic is audio (MusyX / voice pool).
+Run (`env RBIN=1 P1E=ROGUESQ_AI_VI_CLOCK=3 zsh tools/s7849_det_pair.sh 10 scratch/s7874/w10`, retail r1 hard-linked from s7873,
+rc 0; host idle 77 min, screen unlocked): p1 [s7867-ai-dma] fired (vi=18000 nq=32919). s7868 cmp: p1 off -532 (boot timeline moved
+3 frames vs p2 -535 = the lever's same-run positive control), island N159@3398 (p1) / N159@3401 (p2), p1 flight phase 7
+2571/2571 exact, plant caught both. (My --neg invocation lacked its argument, rc 1 after the main report; not needed here.)
+Regression (scratch/s7874/phase_a_p{1,2}.py, now OFF/S0 env-parametrised): p1 = p2 = 0.510 x speed - 0.016, 6244/6244 bracketed.
+Reading: island A is not carried by raw time (census, all paths) nor by the AI completion clock (arm). Rules out H-phase (raw
+clock) and H-audio. Open, unmeasured: H-index (element animates off a frame/VI counter offset by one VI) and H-retail-rdp
+(retail capture lags half a frame). Slug PARKED per rule 8: island A is pre-flight, 159 frames, timing class; flight is
+retail-exact on 4 missions. Bins deleted (2.8 GB).

@@ -1,22 +1,18 @@
-# NEXT (s7874)
-HYPOTHESIS-ID: g3-cinematic-half-frame-phase
+# NEXT (s7875)
+HYPOTHESIS-ID: g3-det-render-coverage
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7873): island A (port[3401:3560], 64 PRIM-FF tris, port ahead by 0.510 x speed) is NOT carried by dt (s7872), stall
-parity (s7872), the timeSnapshotFiller stored value at retail values, or the post-load dt (s7873 arms A/B identical to pin).
-This is iteration 3 on this slug with the lead moving each time. Budget rule 8: ONE more discriminating probe, then park it.
-Hypotheses:
-- H-phase: the element's animation reads a raw clock (mfc0 Count / osGetCount 0x8002BF00-class / VI stamp 0x80128ED8) at render
-  time; the port samples at a different sub-frame phase -> constant half-frame lead.
-- H-index: the element animates off a frame or VI counter that the port starts one VI earlier (the load-stall end), so a
-  counter offset, not a time.
-- H-retail-rdp: the retail RDP stream lags by half a frame (rdplog capture timing), i.e. a measurement artifact.
-Unit (offline first, no build): census the readers of COUNT (mfc0 $9), of osGetCount callers and of 0x80128ED8 / VI counters
-on the cinematic path (grep RecompiledFuncs for `mfc0`/`osGetCount`/`-0x7128(`). Then ONE retail oracle run (no game
-instance, ~2 min) exec-tracing those PCs over the cinematic (RSECS 110, recipe as s7873: `env CPO=1 RSECS=110
-EEP=scratch/s7872/w10/lvl.eep PP=19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start RDPBIN=/dev/null
-XO="--exec-trace <pc>:8000000 ..." zsh tools/s7828_retail_cpo.sh scratch/s7874/r`), compared with the port's ROGUESQ_XTRACE
-of the same PCs in a single det run. A value lead of ~1 VI on the port's clock read selects H-phase; equal clock reads with
-an index offset select H-index; neither -> write the evidence table and park the slug (island A is timing-class and
-pre-flight only; flight is retail-exact).
-Tools: tools/s7873_snap_value.py (stored-value classes), tools/s7872_frame_clock.py, scratch/s7873/phase_a_p1.py pattern.
+Parked (s7874): g3-cinematic-half-frame-phase. Evidence table:
+| hypothesis | test | result |
+| H-dt | retail vs port dt trace (s7872) | refuted, identical from first frame |
+| H-count (stall parity) | odd/even stalls (s7872) | refuted |
+| H-snap | retail-valued snapshot arms (s7873) | refuted, island unchanged |
+| H-phase raw clock | tools/s7874_clock_census.py | refuted, only timeSnapshotFiller reads raw time on render path |
+| H-audio | AI_VI_CLOCK=3 arm (s7874) | refuted, island identical |
+| H-index / H-retail-rdp | not measured | open; needs the element's DL source first (which function emits the 64 PRIM-FF tris) |
+Reopen only with a way to name the element's animation driver (e.g. RDP-stream tri -> DL address -> emitting function).
+Unit: extend the det render oracle to a 5th mission: `env RBIN=1 zsh tools/s7849_det_pair.sh 2 scratch/s7875/v2` (needs a new
+retail r1, ~2 min oracle + 2 x 305 s port; screen unlocked). Score: `python3 tools/s7868_det_frame_cmp.py <r1/retail.bin> <p1.bin>
+--plant --neg <p2.bin>`. Expect flight phase 100% exact (as m6/m11/m12/b17); a non-exact flight frame on a det-exact tick
+would be a real render defect -> localise with tools/s7869_island_probe.py. Pre-flight island A should recur (check regression
+with scratch/s7874/phase_a_p1.py, OFF/S0 env). Delete bins after.

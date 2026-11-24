@@ -331,7 +331,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    s7873_snap_value.py`, oracle scratch/s7873/rvd): cinematic = 0.03333 (el 0, vd 2), post-load frame 0.01667; port pin 0.03397.
    Arms A (0.03333 from VI 5584) and B (A + 0.01667 on the post-load frame) both give island A unchanged (regression 0.510 x
    speed - 0.016, = pin reference), with post-load dt 1 VI (A) vs 2 VI (B): neither the stored value nor the post-load dt
-   carries the half frame. Next lead: a raw COUNT/stamp sample at render time (sub-frame phase). Retail bin: scratch/s7872/v10/r1.
+   carries the half frame. **s7874: H-phase (raw clock) and H-audio REFUTED; slug PARKED (budget rule 8).** `python3 tools/s7874_clock_census.py`
+   (control PASS): game code has 0 inline Count reads (only 2 mfc0 Compare in a data gap), 0 osGetCount callers, 14 osGetTime
+   sites; on the render path only timeSnapshotFiller consumes raw time (0x8011A914 since-last-frame -> profiler only). Det pair
+   p1 ROGUESQ_AI_VI_CLOCK=3 (mupen AI-DMA clock; boot timeline moved, off -532 vs -535 = lever control) vs p2 default: island A
+   identical in both (0.510 x speed - 0.016, 6244/6244). Island A is pre-flight timing class, open: H-index (frame-counter offset)
+   / H-retail-rdp (capture lag). Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
