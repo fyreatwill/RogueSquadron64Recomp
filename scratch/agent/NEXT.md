@@ -2,7 +2,7 @@
 HYPOTHESIS-ID: g3-det-render-coverage
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State: 13 missions render-exact on det-tick flight frames (b17, m1-m12 except none missing; s7884 added m10).
+State: 13 missions render-exact on det-tick flight frames (m1-m12 and b17; s7884 added m10).
 Not yet render-scored: m13 (0x31=12), m14 (13), m15 (14, audio-clock fork), m16 (15), bonus b16, b18.
 Unit: row 12 (mission 13, s7856 H-exact) with the matched schedule + render oracle, screen unlocked, ~40 min:
   `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 12 scratch/s7885/v12`
