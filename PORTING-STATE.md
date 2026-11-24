@@ -210743,3 +210743,23 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 44.9 KB (no maintenance), HID idle 161 
 - Verdict: mission 2's flight is render-identical to retail on det ticks (two lines: tick record H-exact + RDP stream exact,
   each with its own plant and negative control). Rules out a port render defect in mission 2's first ~96 s of flight.
 - Next: 0x31=6 (mission 7, hand row s7847, no render yet) with APM=1 RBIN=1.
+
+## Session 7882 (2026-11-23) — det render oracle 0x31=6 (mission 7): APM=1 pair H-exact on all 1876 ticks, render exact on all 1873 det-tick flight frames (11 missions); sweep row 6 rescored
+Work unit (NEXT s7882, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 45.1 KB (no maintenance), HID idle 180 min, ioreg CGSSessionScreenIsLocked not Yes.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 6 scratch/s7882/v6` (rc 0). Pins SEED=abd7a44b, DT_AT=2:3C888888 (= s7847), 1876 ticks.
+- Schedule check (`tools/s7880_press_scene.py`): all 7 post-anchor port presses within 0/-1 VI of retail's, lag 0, none unmatched.
+  Scenes 1024 850 VI (retail 924), 512 3572 (3518), 640 pre-flight 1657 (1807), then flight.
+- Det score (`s7856_det_verdict.py --tag 0x31=6`): H-exact ticks=1876 full_rec=1876, 0 fork windows, residual none; hp changes
+  identical (death t537, respawn t724), song handle switches identical both sides (t556..t1586), rumble 19/19. Word-50 plant at
+  t100 caught; unpinned p2 forks at seed t0.
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): offset -100 (1735 votes), flight port[3774:5647] exact 1873
+  non-exact 0; pre-flight 3208 non-exact (phases 4-6 texrect/HUD = unpinned pre-tick-0 window); post-flight non-exact 3598 after
+  the paired blank (retail's own blank 5547 = paired), the same 3598 count as s7876 mission 8 (end-of-mission screen, outside
+  the tick window). Plant (frame 4715 tri YH+1) caught; neg PASS (p2 542 exact vs pinned 1906 in phase 7, its flight non-exact 1151).
+- 0 crash lines in p1 / p2. RDP bins (4.1 GB) deleted after scoring.
+- Landed: sweep row 6 now rescores scratch/s7882/v6 (`TABLE OK rescored=15 hand=5 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 7's flight is render-identical to retail on det ticks (two lines: tick record H-exact + RDP stream exact, each
+  with its own plant and negative control). Rules out a port render defect in mission 7's ~31 s det flight window. Mission 7's
+  window is short because the mission ends at t1876 under the scripted input; a longer window needs a different schedule.
+- Next: 0x31=8 (mission 9, FORK audio-clock at t3527: score the pre-fork prefix with --port-end), then 9, 12+.

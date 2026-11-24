@@ -23,7 +23,7 @@ ROWS = [
     ("3", "mission 4 Corellia", "s7877", "FORK", "audio-clock", "scratch/s7877/v3/score.txt", "s7840 170 s run was pre-death; 305 s: death song 01 ends t2313/t2312, render exact 2308 pre-fork"),
     ("4", "mission 5 Gerrard V", "s7878", "H-exact", "", "scratch/s7878/v4/score.txt", "305 s pinned pair: 5926 ticks H-exact, render 5779/5779 flight frames exact (s7841-3 170 s hand row superseded)"),
     ("5", "mission 6", "s7845", "H-exact", "", None, "seed pin + dt replay, 2262 rows bit-identical"),
-    ("6", "mission 7", "s7847", "H-exact", "", None, "1876 ticks"),
+    ("6", "mission 7", "s7882", "H-exact", "", "scratch/s7882/v6/score.txt", "305 s pinned pair, APM=1: all 1876 retail ticks H-exact, full record 1876; render 1873/1873 flight frames exact (s7847 hand row superseded)"),
     ("7", "mission 8", "s7851", "H-exact", "", None, "rumble/3D-sound residual = timing class (s7850/s7851)"),
     ("8", "mission 9", "s7852", "FORK", "audio-clock", None, "song 03 end t3527/t3526"),
     ("9", "mission 10", "s7853", "H-exact", "", None, "5076 ticks"),

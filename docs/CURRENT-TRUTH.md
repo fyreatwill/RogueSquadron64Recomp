@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7877 (2026-11-23).
+Compact operational handoff, as of Session 7882 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -374,7 +374,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    `tools/s7880_press_scene.py` shows it; **`APM=1 tools/s7849_det_pair.sh` = retail-matched schedule (use it for new rows)**.
    With it mission 1 is H-exact on all 5556 ticks (full record 5555). Sweep row 0 now rescores s7880/v1.
    **s7881: 0x31=1 (mission 2), APM=1: H-exact 5776 ticks, render exact 5771/5771 flight frames: 10 missions render-exact**
-   (plant caught, neg PASS strong). Sweep row 1 rescores s7881/v1 (rescored=14 hand=6). Next unrendered rows: 0x31=6, 8, 9, 12+.
+   (plant caught, neg PASS strong). Sweep row 1 rescores s7881/v1 (rescored=14 hand=6). 
+   **s7882: 0x31=6 (mission 7), APM=1: H-exact 1876 ticks, render exact 1873/1873 flight frames: 11 missions render-exact**
+   (plant caught, neg PASS; post-flight 3598 = the s7876 end-screen class). Row 6 rescores s7882/v6 (rescored=15 hand=5). Next: 0x31=8 (pre-fork), 9, 12+.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
