@@ -22,7 +22,7 @@ there). Interior diffs are reported as "flight" (before the cut) and "post-fligh
 outside the det tick window, animation-phase class); rc 1 only for flight diffs. --no-cut restores the s7868 whole-span
 rule. Flight starts at the first frame of the last port phase inside the exact span (earlier non-exact frames are
 reported as pre-flight: the unpinned pre-tick-0 window, s7875/s7876). The plant control must land inside flight and must be counted as a flight diff.
-usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut] [--port-end N] [--port-start N]
+usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut] [--port-end N] [--port-start N] [--vote-ranges]
 exit 0 = no flight interior diff, 1 = flight interior diffs (H-render), 2 = no alignment, 3 = control FAIL.
 """
 import sys, os, collections, importlib.util, tempfile
@@ -43,6 +43,8 @@ PEND = int(a[a.index('--port-end') + 1]) if '--port-end' in a else None
 # flight phase at its own pairing offset when a pre-flight cinematic shifts it by a frame (0x31=15: intro -98, flight -99,
 # votes 2372 / 1887). Unset = whole bin, byte-identical. With --port-end both are absolute indices.
 PSTART = int(a[a.index('--port-start') + 1]) if '--port-start' in a else 0
+# s7907: --vote-ranges prints the port index clusters (and port phase / retail index range) of each top offset vote.
+VR = '--vote-ranges' in a
 
 def load(p, retail):
     fr = m.frames(rs64_zopen.materialize(p, tmp), retail)
@@ -69,6 +71,16 @@ def align(R, P):
             s = None
     if s is not None and eq[-1][0] + 1 - s > best[0]: best = (eq[-1][0] + 1 - s, s, eq[-1][0] + 1)
     ex = [j for j, e in eq if e]
+    if VR:   # s7907: port index clusters of each top offset vote (run-length over voting frames, gaps <= 8 merged)
+        vj = collections.defaultdict(list)
+        for j, h in enumerate(ps):
+            if rc[h] == 1 and pc[h] == 1 and h in rpos and ntri(P[j]) >= MINTRI: vj[rpos[h] - j].append(j)
+        for o, n in votes.most_common(4):
+            cl = []
+            for j in vj[o]:
+                if cl and j - cl[-1][1] <= 8: cl[-1][1] = j; cl[-1][2] += 1
+                else: cl.append([j, j, 1])
+            print(f'  votes {o} ({n}): ' + ' '.join(f'port[{x}:{y + 1}]={k}(ph{PM[x] if PM else "?"}..{PM[y] if PM else "?"}, r[{x + o}:{y + o + 1}])' for x, y, k in cl[:12])[:900])
     return dict(off=off, votes=votes.most_common(4), eq=dict(eq), run=best, first=ex[0] if ex else None,
                 last=ex[-1] if ex else None, nexact=len(ex), npair=len(eq))
 

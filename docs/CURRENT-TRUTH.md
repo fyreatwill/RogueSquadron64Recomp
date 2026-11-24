@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7904 (2026-11-24).
+Compact operational handoff, as of Session 7907 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -160,7 +160,7 @@ Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, 
 - Oracle missions: tools/g3_eep_patch.py sets +0x31; use --save-dir, never swap a save over the user .eep.
 - Slow builds (TSan/ASan): `ROGUESQ_AUTOPILOT_CLOCK=frames ROGUESQ_AUTOPILOT_FPS=58` (FPS60) keys autopilot to fullsyncs,
   but front-end screens are VI-timed, so the route still diverges at TSan speed; gate with `<s>:w<width>` events (s7371).
-- Frame-exact presses: `ROGUESQ_AUTOPILOT_CLOCK=vi` keys autopilot to ultramodern's VI count (port twin of oracle `--clock vi`, s7820).
+- Frame-exact presses: `ROGUESQ_AUTOPILOT_CLOCK=vi` keys autopilot to ultramodern's VI count (port twin of oracle `--clock vi`, s7820). `f<N>:key` = N fullsyncs after the previous fire (s7907).
 - Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc (since s7456 the loop's line carries `arms= alive=a/k crash_arms= stall_arms= fatal=`; arms=0 = recipe printed no summary). Recipes that
   drive the window carry `# SOAK_NEEDS_IDLE=<secs>`; zsh recipes run under their shebang shell (s7287).
 - Knob tables: PROJECT-OVERVIEW "G1c draw-distance knob and recipe reference"; docs/DRAW-DISTANCE.md;
@@ -244,15 +244,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    block at 0x74D710 (retail draws 0x724F70) and already holds retail's NEXT drawn frame's blocks (scratch/s7904/blk_search.py):
    the values are right, their arena placement/timing vs the re-render task load is not. Next: write watches on the flame blocks
    (0x724F70/0x727BC8/0x749930, vi 10560-10580) in the oracle and the port, writer PC + VI vs task-load n on both sides.
-   **s7906: island B is a deterministic two-class outcome, not a host race and not a stale build.** Same binary (12:57 build) and
-   recipe: s7905 in-session C/C2/D crawl 0 non-exact; loop soaks rep1/rep2 (load 3.35/5.74) 708 each. Class tracks the det_frame_cmp
-   offset GAP between the main vote and the 643-frame pre-flight vote: gap 28 -> 0 (C, C2, D), gap 29 -> residual (s7900 burst,
-   s7902 snap, s7904 m11A/B, rep1, rep2; 6/6). Mission-tick state (800FA730 rows) identical over all ticks; per-frame dt identical;
-   task/frame interleave identical (and C vs C2 differ in interleave yet both exact: not causal). tools/s7906_task_ptr_cmp.py: the
-   gap-29 runs resubmit the previous odd-stream DL at crawl task 2665 (0x8074D918 again, C has 0x80729168) and stay one task late
-   on that stream to ~2885. Load does not matter (two loads, identical outcome); the s7905 "absent 3/3 on a fresh build" was class luck.
-   Open: which scene boundary shifts by one frame (the 643-vote segment) and why; rep3 (queued) keeps p1.bin.zst to locate it.
-   p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
+   **s7906: deterministic two-class outcome, not host race / stale build** (same binary + recipe; gap 28 -> crawl exact, gap 29 ->
+   708 residual, 9/9 runs; tick state, dt and task interleave identical; tools/s7906_task_ptr_cmp.py: gap-29 runs resubmit the
+   previous odd-stream DL at crawl task 2665 and stay one task late to ~2885). s7905's "absent 3/3" was class luck.
+   **s7907: CLOSED as harness-alignment class; flight exact in both classes.** det_frame_cmp `--vote-ranges`: the 643 votes are
+   port phase 5 (retail r[1845:2488]) starting at press-7 fs+3 in all 7 runs; the crawl (phase 6) starts 1047 frames later
+   (gap 28, exact) or 1048 (gap 29, residual); retail 1019. Two-arm test with new autopilot `f<N>:key` (press 8 = N fullsyncs after
+   press 7): f712 -> crawl start press8+339, gap 29, 708 residual; f713 -> +337, gap 28, exact. So the press frame delta is
+   absorbed (crawl is VI/dt-timed): H-press REFUTED; the class is the frame count the port renders over that VI window (frame/VI
+   phase). Port renders +28 frames vs retail there (open, next unit). Use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ..." (s7898).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

@@ -211439,3 +211439,23 @@ Analysis (offline, no new game run; one game run at a time respected):
 Change: soak_queue/s7905_island_b_rep3.sh now keeps p1.bin as p1.bin.zst (was unlinked) so the 643-vote segment can be located
 in a gap-29 run against C's kept p1.bin.zst.
 ORIGIN: no mitigation; analysis tool + recipe retention change only.
+
+## Session 7907 (2026-11-24) — island B closed as a harness frame/VI-alignment class: the crawl starts 1047 or 1048 port frames after the press-7 segment whatever the press-8 frame delta; frame-locked presses (new autopilot f<N>) refute H-press
+Fold: s7905_island_b_rep3 (loop): crawl_nonexact=0, offsets -99/-71 = gap 28 -> class rule 10/10. crash_reports: 0 new.
+Instrument: tools/s7868_det_frame_cmp.py `--vote-ranges` (opt-in; default output unchanged) prints, per top offset vote, the
+port index clusters with port phase and retail index range.
+- rep3 (gap 28): -99 votes port[2963:5620]+[5634:9358] (crawl+flight); -71 votes port[1916:2559] = 643 frames, all phase 5,
+  retail r[1845:2488]. s7902 m11snap (gap 29): -101 port[2965:...], -72 port[1917:2560], same retail range.
+- Second line (autopilot fire lines, fs = cumulative fullsyncs = bin frame index): in rep1/rep2/rep3/C/m11snap the 643 segment
+  starts at press-7 fs+3 and the crawl at press-8 fs+338; press 7->8 = 712 frames in the gap-28 runs, 713 in the gap-29 runs (5/5).
+Change: src/main/main.cpp autopilot accepts `f<N>:<key>` = fire N RDP fullsyncs after the previous fire (clock ignored for that
+event; unused = old schedule, byte-identical). Built 14:24.
+Two-arm test (same binary, same m11 SNAP=3 recipe, sequential, scratch/s7907/s7907_f71{2,3}.sh):
+- f712: press 7->8 = 712 exactly, but crawl at press8+339 -> segment->crawl 1048, gap 29, crawl_nonexact=708.
+- f713: press 7->8 = 713, crawl at press8+337 -> 1047, gap 28, crawl_nonexact=0 (map E1 N2396 E6395, flight exact).
+So the crawl start is VI/dt-timed and absorbs the press frame delta: H-press (press lands across a frame boundary) REFUTED; the
+class is the number of frames the port renders over a fixed VI window (frame/VI phase, 1047 vs 1048; retail 1019). Flight is
+exact in both classes. Per the s7906 budget rule island B is CLOSED as "harness-alignment-dependent, flight exact".
+Open (next unit): the port renders +28 frames vs retail over segment->crawl in the 512-wide pre-flight scene; island A is also
+pre-flight timing class. Single-source on which frames are extra.
+ORIGIN: no mitigation; opt-in harness clock form + analysis flag.

@@ -13112,8 +13112,11 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     //     there until the committed VI width equals <width>, then rebases its
     //     clock so that instant reads <sec>. Later events keep their absolute
     //     times, now relative to the gate (hangar->crawl drifts by seconds per run).
+    //   s7907: "f<N>:<key>" fires N RDP fullsyncs (game frames, the fs= in the fire line) after the previous fire,
+    //     ignoring the clock: a VI-clocked press lands 712 or 713 frames after the one before it depending on boot
+    //     frame/VI phase, and that one frame selects the crawl class (island B). Unused = old schedule, byte-identical.
     {
-        struct ApEv { double t; uint16_t btn; float sx, sy; uint32_t waitw; };
+        struct ApEv { double t; uint16_t btn; float sx, sy; uint32_t waitw; uint32_t dfs; };
         static bool     s_init = false;
         static bool     s_on = false;
         static ApEv     s_ev[512];
@@ -13125,6 +13128,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         static uint16_t s_held = 0;
         static float    s_held_sx = 0.0f, s_held_sy = 0.0f;
         static double   s_release_at = 0.0;
+        static uint32_t s_last_fs = 0;   // s7907: fullsync count at the previous fire (f<N> events)
         // s7371: ROGUESQ_AUTOPILOT_CLOCK=frames keys every event time (and the hold, and the w<width> rebase) to game
         // frames = cumulative RDP fullsyncs / ROGUESQ_AUTOPILOT_FPS (default 30) instead of wall time, so a slow build
         // (TSan, ~13 gfx tasks/s) walks the same route as full speed. Default (unset / "wall") = old wall clock.
@@ -13174,13 +13178,17 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                 for (char* tok = strtok_r(buf, ",", &save);
                      tok && s_nev < 512; tok = strtok_r(nullptr, ",", &save)) {
                     double t = 0.0; char kbuf[16]; kbuf[0] = '\0';
-                    unsigned ww = 0;
+                    unsigned ww = 0, dfs = 0;
+                    if (sscanf(tok, " f%u:%15[a-z]", &dfs, kbuf) == 2 && dfs) {   // s7907: frame-relative press
+                        s_ev[s_nev].t = 0.0; s_ev[s_nev].waitw = 0; s_ev[s_nev].dfs = dfs; s_ev[s_nev].sx = s_ev[s_nev].sy = 0.0f;
+                        s_ev[s_nev].btn = keybtn(kbuf); s_nev++; continue;
+                    }
                     if (sscanf(tok, " %lf:w%u", &t, &ww) == 2 && ww) {
                         s_ev[s_nev].t = t; s_ev[s_nev].btn = 0; s_ev[s_nev].sx = s_ev[s_nev].sy = 0.0f;
-                        s_ev[s_nev].waitw = ww; s_nev++; continue;
+                        s_ev[s_nev].waitw = ww; s_ev[s_nev].dfs = 0; s_nev++; continue;
                     }
                     if (sscanf(tok, " %lf:%15[a-z]", &t, kbuf) < 1) continue;
-                    s_ev[s_nev].t = t; s_ev[s_nev].waitw = 0;
+                    s_ev[s_nev].t = t; s_ev[s_nev].waitw = 0; s_ev[s_nev].dfs = 0;
                     // s5418: stick pseudo-keys (sl/sr/su/sd) for in-mission flight.
                     s_ev[s_nev].sx = s_ev[s_nev].sy = 0.0f;
                     if (!strcmp(kbuf, "sl")) { s_ev[s_nev].btn = 0; s_ev[s_nev].sx = -1.0f; }
@@ -13214,7 +13222,8 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                         s_idx + 1, s_nev, s_ev[s_idx].waitw, s_vi ? "vi" : s_frames ? "frames" : "wall", el, s_ev[s_idx].t);
                 fflush(stderr);
                 s_idx++;
-            } else if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && !s_ev[s_idx].waitw && el >= s_ev[s_idx].t) {
+            } else if (!stop && !s_held && s_held_sx == 0.0f && s_held_sy == 0.0f && s_idx < s_nev && !s_ev[s_idx].waitw &&
+                       (s_ev[s_idx].dfs ? rs64_dpc_get_cumulative_fullsyncs() - s_last_fs >= s_ev[s_idx].dfs : el >= s_ev[s_idx].t)) {
                 s_held = s_ev[s_idx].btn;
                 s_held_sx = s_ev[s_idx].sx; s_held_sy = s_ev[s_idx].sy;
                 s_release_at = el + s_hold;
@@ -13223,6 +13232,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
                         (unsigned)rs64_vi_committed_width(), (SDL_GetTicks() - s_t0) / 1000.0,
                         (unsigned)rs64_dpc_get_cumulative_fullsyncs(), (unsigned long long)total_vis);
                 fflush(stderr);
+                s_last_fs = (uint32_t)rs64_dpc_get_cumulative_fullsyncs();
                 s7671_key = s_idx + 1; s7671_btn = (unsigned)s_held;
                 s_idx++;
             }

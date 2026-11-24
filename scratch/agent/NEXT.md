@@ -1,21 +1,18 @@
-# NEXT (s7907)
-HYPOTHESIS-ID: g3-island-b
-First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
+# NEXT (s7908)
+HYPOTHESIS-ID: g3-preflight-frame-count
+First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, docs/OWNER-REVIEW-QUEUE.md answers,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7906): island B = deterministic two-class outcome. det_frame_cmp offset gap (main vote vs the 643-frame pre-flight vote)
-28 -> crawl exact, 29 -> crawl-tail residual (soaks resubmit the previous odd-stream DL at crawl task 2665, one task late to ~2885).
-Sim ticks, dt and task/frame interleave are identical between classes; host load is not the selector.
-Work unit: locate the 643-frame segment and the one-frame boundary shift.
-  1. Fold rep3 (if it ran: its p1.bin.zst is kept). If it is gap 29, use it; else C2/D are gap 28 refs (C has p1.bin.zst).
-  2. Extend tools/s7868_det_frame_cmp.py (opt-in flag, default byte-identical) to print the port index range of each offset vote
-     cluster; run on a gap-28 and a gap-29 run -> which port phase holds the 643 votes and which boundary between it and the crawl
-     gains/loses a frame (compare phase start indices and [phase] at-VI / press VIs from p1.out / run.log).
+State (s7907): island B CLOSED (harness frame/VI-alignment class, flight exact both classes). In the m11 SNAP=3 pair the port
+renders 1047/1048 frames between the press-7 segment start (port ~1916, retail 1845) and the crawl start (port ~2963, retail
+2864); retail renders 1019. The same VI window, so the port makes ~28 more frames (fewer 3-VI frames?).
+Work unit (offline first, kept bins: scratch/s7905/s7905_island_b_rep3/p1.bin.zst, scratch/s7895/m11k/r1/retail.bin.zst):
+  per-frame VI spacing in that window on both sides (port: VI_STAMP / [dt7835] fr in p1/run.log; retail: oracle.log VI per
+  fullsync), histogram of 2-VI vs 3-VI frames, and where in the window the extra frames cluster (which sub-scene).
 Hypotheses:
-  H-press: an APM press lands on the other side of a game-frame boundary (VI-clocked presses vs boot-dependent frame phase);
-    fix = phase-gated/frame-clocked press for that one press (harness), then the crawl is exact in every run.
-  H-game: the shift is a real port-vs-retail timing difference in a scene transition (e.g. a load or fade one frame longer);
-    then it is a port defect to name (writer of the scene timer) not a harness fix.
-Discriminator: if the shifted boundary coincides with a press VI (within 1 frame) in gap-29 runs only -> H-press; if it sits at
-  a non-press scene transition -> H-game.
-Budget: if this does not name the boundary in one iteration, close island B as "harness-alignment-dependent, flight exact" and
-take the next CURRENT-TRUTH Next-steps / G-ladder item.
+  H-cost: retail drops to 3 VI/frame where the RSP/RDP load is heavy (hardware cost), the port does not -> retail-faithful
+    only by modelling cost; not a defect, close.
+  H-scene: the port renders frames retail does not (e.g. a fade or load held longer, extra blank frames) -> port defect, name it.
+  H-dt: the game's dt per frame differs in the window (would contradict s7906 dt-equal crawl; check pre-crawl only).
+Discriminator: extra frames spread evenly with retail showing 3-VI frames at the same scene content -> H-cost; extra frames
+  contiguous at one scene transition / blank or duplicate content -> H-scene.
+Budget: one iteration; if H-cost, close and take the next CURRENT-TRUTH item (island A H-index, or owner-queue work).
