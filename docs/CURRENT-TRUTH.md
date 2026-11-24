@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7870 (2026-11-23).
+Compact operational handoff, as of Session 7872 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -317,6 +317,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    plant caught, phase-7 neg PASS. Pre-flight phase 6 islands: A port[3395:3554] = the SAME 64 PRIM-FF opening-cinematic
    tris as m6 island A (identical values, p1 == p2), i.e. the s7870 half-frame timing phase recurs per mission; B
    port[6067:7121] (1054 frames, up to 869/873 tris) p1/p2 wrong by different values on 813/1054 -> state (unpinned window).
+   **s7872: island A (cinematic half-frame) is NOT dt:** retail dt row 2899 = port fr 3428 - 529 (same offset as the RDP
+   alignment) and both get dt 1,2,2.. from the cinematic's first frame (`tools/s7872_frame_clock.py`, retail CPO1 trace of
+   0x8000BBE8 + 0x8000BE28). H-count (stall parity) refuted. Retail timeSnapshotFiller el is phase-dependent (0 on most pre-flight
+   frames incl. the cinematic, 1 VI in a hangar stretch / post-load frames / flight); RETAIL_SNAP pins 811160 everywhere.
+   Lever `ROGUESQ_S7872_SNAP_WIN=lo:hi:el` (VI window, after the pin): el=0 at VI 5560-6300 MOVES island A (p1 values differ
+   from the p2 control on 164/168 frames) but far off (offsets -489..244), not onto retail; whole-run el=0 forks boot/menus.
+   Leading H-snap: the cinematic needs some el in (0, 811160). Retail bin kept: scratch/s7872/v10/r1.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

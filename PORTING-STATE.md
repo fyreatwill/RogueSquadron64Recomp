@@ -210484,3 +210484,40 @@ Reading: two lines (det state record exact over 2525 ticks + independent RDP str
 Bespin's cloud-layer/transparency flight content renders bit-exact vs retail on equal state. Rules out H-render for mission 11
 flight. Not claimed: the cause of the cinematic half-frame phase (still unmeasured; now seen in 2 missions with the same tris).
 Bins deleted after scoring (4.8 GB); scores, island txts, rand traces, run logs kept in scratch/s7871.
+
+## Session 7872 (2026-11-23) — island A's half-frame phase is NOT dt (retail and port get identical dt from the cinematic's first frame); timeSnapshotFiller el is the lever that moves the element (retail el is phase-dependent, not the constant 811160 pin); new VI-windowed el lever ROGUESQ_S7872_SNAP_WIN + tools/s7872_frame_clock.py
+
+Start: crash_reports new=0; no owner answers; no new SOAK-RESULTS lines. NEXT g3-cinematic-half-frame-phase.
+Offline (retained s7871 v10 / s7870 v5 port run.logs, `[dt7835]` rows): every pre-flight load stall (20-31 VIs) is followed by
+one frame whose dt is 1 or 2 VIs (reset-based, varies per run: m11 fr 2742 got 2, m6 fr 2741 got 1). Island A begins at the
+post-load frame (m11 fr 3428, m6 fr 3426; render index = fr - ~33). H-count (stall parity) refuted: port m11 stall 21 VI (odd),
+m6 22 (even), same island.
+Retail (new CPO1 oracle runs, no game instance): scratch/s7872/rdt (RSECS 125, exec-trace 0x8000BBE8 dt/stamp + write watch on
+prev 0x8011A900) and scratch/s7872/rsnap (RSECS 110, + 0x8000BE28 v0 = timeSnapshotFiller el). `python3 tools/s7872_frame_clock.py
+scratch/s7872/rsnap/oracle.log scratch/s7871/v10/p1/run.log --off 529` (NEW tool; control: retail 2-VI dt + both el classes,
+port 2-VI dt -> PASS). Retail dt row 2899 is the post-load 1-VI frame (70-VI stall), and retail 2899 = port 3428 - 529, the SAME
+offset as the independent render alignment (retail render 2864 = port 3393 + -529). From that frame on both sides get dt
+1, 2, 2, ... -> H-dt REFUTED for island A (two lines: retail dt trace + port dt trace, aligned by the RDP-stream offset).
+Readers of the stamp 0x80128ED8 (census): computeFrameDeltaTime, submitGfxFrame (0x8000C470/C484; 0x8000C48C is a retail
+writer of prev), timeSnapshotFiller (0x8000BE20). Retail el (rsnap): 0 on most pre-flight frames (rows 39-1212, 1838-2521,
+2610-3588 incl. the whole opening cinematic), 1 VI (~811143) on rows 1213-1838 (625 frames) and on single frames after loads;
+s7840 measured 1 VI in flight. The port's ROGUESQ_RETAIL_SNAP pin is 811160 on EVERY frame, so pre-flight it differs from
+retail by exactly 1 VI = half a 2-VI frame, matching island A's offset (0.510 x speed: port ahead by half a frame) and p1 == p2
+(both arms carry the pin).
+Run 1 (`env RBIN=1 P1E=ROGUESQ_S7839_SNAP_EL=0 zsh tools/s7849_det_pair.sh 10 scratch/s7872/v10`, rc 0, crashlines 0/0):
+whole-run el=0 on p1 forks the boot/menu timeline (9823 frames, phases moved; per-window votes: retail[400:3600] 0-13% exact)
+while det mission ticks stay H-exact; p2 (pin 811160) = s7871 (off -536, retail[3600:5200] 400/400). Reading: a constant 0 is
+wrong on retail's 1-VI frames (menus, post-load), so whole-run pins cannot test the cinematic.
+Change: tools/apply_s7872_snapwin.py (hooked after s7839 in tools/fixup_game_funcs_vendored.py), env
+ROGUESQ_S7872_SNAP_WIN=<lo>:<hi>:<el> overrides el while lo <= total_vis < hi, after the s7839/s7840 pin; unset = untouched.
+Regen gate `tools/s7719_regen_gate.py --strict`: 53 files 0 differ, controls PASS (H-mirrored).
+Run 2 (`env RBIN=1 P1E=ROGUESQ_S7872_SNAP_WIN=5560:6300:0 ... scratch/s7872/w10`, retail reused via hard links, rc 0,
+crashlines 0/0, window fired at VI 5561, ~1 hit/frame): p1 det H-exact; s7868 cmp off -709, flight phase 7 2385/2385 exact,
+plant caught, neg PASS. Island probe port[3573:3741] = retail[2864:3032] (control self 0 / plant 1 PASS): p1 still 64 PRIM-FF
+tris wrong but by DIFFERENT values from p2 (same on 4/168 frames). Regression (scratch/s7872/phase_a_p{1,2}.py): p2 = 0.510 x
+speed - 0.016 (6244/6244 bracketed; s7870 reproduced, the same-run control), p1 offsets -489..244 (1968/7744 bracketed), i.e.
+el=0 throws the element far off rather than onto retail. el is therefore the input that moves island A (lever confirmed in
+the same run), but el=0 hits a different path (likely a 0-divisor/special case in timeSnapshotFiller's fraction math), so
+the retail value as the guest consumes it is not simply "0". Rules out: H-dt, H-count (parity). Leading: H-snap (el in
+the cinematic should be some value v in (0, 811160), not the flight pin). Not claimed: what v is.
+Bins deleted (p1/p2 x2, 5.4 GB); scratch/s7872/v10/r1 (retail.bin 2.1 GB + oracle.log) KEPT for reuse by s7873.
