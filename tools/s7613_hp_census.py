@@ -64,6 +64,8 @@ row("main.cpp", "g_wbw_rd", "base", r"g_wbw_rd\.store\(rd\);", "s6938/wbw page w
 row("upstream_compat.cpp", "s7033_rd", "base", r"s7033_rd = rdram;", "base")
 row("upstream_compat.cpp", "g_rs64_g1d_rdram", "base", r"g_rs64_g1d_rdram\.store\(rdram, std::memory_order_relaxed\);", "base")
 row("upstream_compat.cpp", "g_s6127_rd", "base", r"g_s6127_rd = rdram;", "base")
+row("rt64_render_context.cpp", "s_s7896_rdram", "base", r"s_s7896_rdram = rdram;", "base (s7896 rand reseed/replay writes rngSeed 0x3470)")
+row("rt64_render_context.cpp", "rp", "host", r"rp = new std::unordered_map<uint64_t, uint32_t>\(\);", "host map of retail rand rows (s7896 RAND_REPLAY)")
 row("dpc_bridge.cpp", "g_rdram_for_submit", "base", r"g_rdram_for_submit = rdram;", "base")
 row("s7096_fwd_cover.cpp", "g_rd", "base", r"if \(rdram\) g_rd = rdram;", "base (B2)")
 row("s7097_edit_census.cpp", "g_rd", "base", r"g_rd = rd; g_lo = lo;", "base (B2: sole caller passes g_rdram_for_submit)")

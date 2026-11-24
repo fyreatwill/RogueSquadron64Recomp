@@ -211137,3 +211137,15 @@ answers, CURRENT-TRUTH 52 KB (no maintenance).
   from an unpinned pre-tick seed (the port reaches the pre-flight scene with a different rngSeed because its pre-scene call history
   differs: 44520 vs 41341 calls), a legitimate value, not corruption.
 - Kept: scratch/s7896/{m3r,m6q,m11q}/p1.bin + rand traces, replay tables scratch/s7896/replay_*.txt, probe/cmp outputs. m6p bin deleted.
+
+## Session 7897 (2026-11-24) — contract fix: s7613 HP census rows for s7896's two new statics (s_s7896_rdram base, rp host); gate sweep 0 new RED
+
+Unmet contract from s7896: `tools/s7651_gate_sweep.py --new-red-vs` was RED on `s7613_hp_census.py` (RESULT FAIL, 2 OPEN):
+`src/main/rt64_render_context.cpp:56 s_s7896_rdram` and `:81 rp` had no class row. Classified, not allowed-listed:
+- `s_s7896_rdram` = **base**: its only store is `s_s7896_rdram = rdram;` (line 125, first rs64_xtrace_mark), base-shaped (B1);
+  used only to write rngSeed at rdram+0x3470 under ROGUESQ_RAND_RESEED / ROGUESQ_RAND_REPLAY.
+- `rp` = **host**: `new std::unordered_map<uint64_t,uint32_t>()` of retail rand rows, never a guest view.
+Result: `s7613_hp_census.py --controls` controls 9/9, RESULT PASS; full sweep 253 gates {GREEN 237, REPORT 2, NEEDS-ARGS 7,
+RED 7}, all 7 RED already in tools/gate_sweep_allowed_red.txt (s7865/s7893 pruned captures) -> "new RED: 0", rc=0. The other
+REDs in the s7896 block message were pre-existing allowed rows; s7827/s7836 NEEDS-ARGS are not RED. No runtime change; the
+g3-island-b work unit in NEXT.md (m6/m11 island B, H-dt at retail frame ~5538) is untouched and remains next.

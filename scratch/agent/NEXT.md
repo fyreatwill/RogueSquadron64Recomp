@@ -1,4 +1,4 @@
-# NEXT (s7897)
+# NEXT (s7898; s7897 was the s7613 contract fix only)
 HYPOTHESIS-ID: g3-island-b
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.

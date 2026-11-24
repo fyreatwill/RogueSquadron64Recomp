@@ -191,6 +191,7 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12); the s7790 numbering (1-36) is
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
+(s7897: any new static pointer in src/ needs an s7613 HP census row, class base/host/gated/..., or the exit gate goes RED.)
 0. **Island B split (s7896, slug g3-island-b).** m3's B (PRIM FFFF3C29, updateAnimatedTextureStreaming) is pure pre-tick RNG:
    `ROGUESQ_RAND_RESEED=8007132C:17:916407E1` (or det_pair `RREP=1` = per-site retail replay, tools/s7896_rand_replay.py) makes the
    whole m3 pre-flight scene exact (544/544, two lines: rand values equal retail + RDP frames). m6 (N212@6071) and m11 (N1054@6069)
