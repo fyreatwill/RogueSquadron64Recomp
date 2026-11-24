@@ -210676,3 +210676,25 @@ unlocked (ioreg), HID idle 98 min.
   cover G5a's crash point "about half way through": the autopilot does not fly the objectives, and the crash came at dd2/FPS60,
   which is outside the det recipe. G5a still closes only on the owner's flight (OWNER-REVIEW-QUEUE row 5).
 - Bins deleted (1.8+1.8+2.9 GB); score.txt, pins.txt, oracle.log and run logs kept in scratch/s7878/v4.
+
+## Session 7879 (2026-11-23) — det render oracle 0x31=0 (mission 1): H-exact on all 2901 port ticks, all 2895 det-tick flight frames = retail (9 missions); port pre-flight is 2551 frames longer than retail's; sweep row 0 rescored from s7879
+Work unit (NEXT s7879, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 43.7 KB (no maintenance), HID idle 117 min, ioreg shows no screen lock.
+- Ran `env RBIN=1 zsh tools/s7849_det_pair.sh 0 scratch/s7879/v0` (305 s, ~40 min wall). Pins: SEED=4d581c69, NDT=60,
+  NTICKS=5556. 0 crash lines in p1 and p2.
+- State (score.txt): p1 has no seed or call-sequence diffs, 0 fork windows, 0 nonpose/pose/timing diffs on 2901 ticks, rumble
+  1=1. Song handles 01/02/03 switch at the same ticks on both sides. p2 (unpinned) forks at seed t0, calls t5 (positive
+  control). Record plant (word 50 at t100) caught. `s7856_det_verdict.py --tag 0x31=0`: H-exact ticks=5556 full_rec=2901.
+- Render: `tools/s7868_det_frame_cmp.py ... --plant --neg` rc 0 (output kept in scratch/s7879/v0/frame_cmp.txt). Flight
+  port[6812:9707] (phase 7) exact 2895 non-exact 0 at offset -3082. Plant (frame 8259) caught. Neg PASS: unpinned p2 has 0/2895
+  exact in phase 7, and its paired pre-flight span has 244 non-exact frames (tri-geom).
+- New datum, not explained yet: port phases 4/5/6 = 1261/1771/3417 frames. Retail widths 1024/512/640 = 813/1688/866. Pre-flight
+  frames pair at offset -531 (the s7878 m5 offset was -529), but flight starts 3082 frames later in the port, so the port
+  stays ~2551 frames (~42 s of 60 Hz) longer in the 640-wide pre-flight scene. The 305 s window therefore covers only 2901 of
+  the 5556 retail ticks. The same Start schedule (19.5..91.5) runs on both sides. Candidates: a Start press that skips the
+  scene in retail is not latched in the port (input-latch timing), or the scene's length is set by something the port does
+  not replay. This is pre-flight, so outside the det pins; it does not touch the flight verdict.
+- Sweep table: row 0 (s7831 hand row, "pre seed-pin recipe") now rescores scratch/s7879/v0/score.txt.
+  `python3 tools/s7862_det_sweep_table.py`: TABLE OK rescored=13 hand=7 mismatch=0; `--control`: PASS MISMATCH 1.
+- Rules out: a port render or state defect over the first 2901 ticks of mission 1 flight under the det recipe.
+- Bins deleted (1.65+1.65+3.0 GB); score.txt, pins.txt, oracle.log, frame_cmp.txt and run logs kept in scratch/s7879/v0.

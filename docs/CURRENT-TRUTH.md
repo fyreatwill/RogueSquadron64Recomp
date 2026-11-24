@@ -363,6 +363,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    **s7878: 0x31=4 (mission 5, Gerrard V) H-exact 5926 ticks, render exact 5779/5779 flight frames: 8 missions render-exact**
    (plant caught, neg PASS strong: unpinned p2 0/5779). The 305 s window ends in flight. It does not reach G5a's half-way crash
    point (owner row 5 still open). Sweep row 4 now rescores s7878 (TABLE OK rescored=12 hand=8). Next: 0x31=0 (mission 1).
+   **s7879: 0x31=0 (mission 1) H-exact, render exact 2895/2895 flight frames: 9 missions render-exact** (plant caught, neg
+   PASS strong: unpinned p2 0/2895). Port flight starts 3082 frames after retail's paired frame (pre-flight offset -531): the
+   port stays ~2551 frames longer in the 640-wide pre-flight scene, so only 2901 of 5556 retail ticks are covered. Unexplained
+   (Start-press skip timing?); see NEXT. Sweep row 0 now rescores s7879 (TABLE OK rescored=13 hand=7).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

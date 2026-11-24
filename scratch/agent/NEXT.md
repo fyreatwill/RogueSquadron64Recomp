@@ -1,14 +1,16 @@
-# NEXT (s7879)
+# NEXT (s7880)
 HYPOTHESIS-ID: g3-det-render-coverage
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State: 8 missions render-exact on det-tick flight frames (b17, m12, m6, m11, m3, m8, m4 pre-fork, m5; s7878).
-Unit: 0x31=0 (mission 1; sweep row is the s7831 hand row "pre seed-pin recipe"):
-`env RBIN=1 zsh tools/s7849_det_pair.sh 0 scratch/s7879/v0` (screen unlocked; ~40 min wall), then
-`python3 -I tools/s7856_det_verdict.py scratch/s7879/v0/score.txt --tag 0x31=0` and
-`python3 tools/s7868_det_frame_cmp.py scratch/s7879/v0/r1/retail.bin scratch/s7879/v0/p1.bin --plant --neg scratch/s7879/v0/p2.bin`.
-Outcomes: rc 0 + plant + neg PASS -> 9 missions; move sweep row 0 to the rescored score.txt (tools/s7862_det_sweep_table.py ROWS)
-and go on to the next hand row (1 or 2, s7840). FORK -> find the fork tick and rerun the scorer with --port-end <phase-7 start + fork
-tick> (s7877 recipe). rc 1 inside a det-exact window -> real render defect: localise with tools/s7869_island_probe.py.
-Neg with 0 p2 diffs = no control, so the result does not count. Delete the bins after.
+State: 9 missions render-exact on det-tick flight frames (b17, m12, m6, m11, m3, m8, m4 pre-fork, m5, m1; s7879).
+Unit (offline, no game run): explain s7879's longer mission-1 pre-flight. In the port the 640-wide pre-flight scene runs ~2551
+frames longer than in retail (port phase 6 = 3417 frames, retail 640@2864 = 866 frames; flight offset -3082 vs pre-flight -531).
+Data in scratch/s7879/v0: r1/oracle.log (retail, press schedule PP 19.5..91.5), p1/run.log (port, AP schedule), frame_cmp.txt.
+Hypotheses: H-latch (a retail Start press that skips the scene is dropped/not latched by the port: find which press time ends
+retail's scene and whether the port's phase change lines up with a later press), H-sched (the AP and PP schedules differ in
+offset for this mission, i.e. recipe not port: compare the press times against each side's phase starts), H-scene (scene
+length not input-driven: then both sides end without a press near the transition).
+Discriminator: press times vs scene-end times on both sides. H-latch -> look at the port's input latch at that scene
+(real defect, owner-relevant). H-sched -> fix the schedule (AP_OVR) and rerun the pair to cover all 5556 ticks.
+Then the next hand row: 1 or 2 (s7840) with `env RBIN=1 zsh tools/s7849_det_pair.sh <v> scratch/s7880/v<v>` (~40 min, screen unlocked).
 Parked: g3-cinematic-half-frame-phase (s7874 table).
