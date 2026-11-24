@@ -211033,6 +211033,12 @@ Unmet contract from s7892: tools/s7651_gate_sweep.py reported 9 non-allow-listed
   prune-scratch.sh every iteration (the prune greps the working tree, so the refresh protects before the commit).
 - Full sweep (--jobs 2): 253 gates, GREEN 236 REPORT 2 NEEDS-ARGS 7 RED 7 (all allow-listed), new RED 0 after the s7862 fix
   (narrow re-run: GREEN 237, new RED 0).
+Discrimination (who deletes retained gate inputs): H-agent (an iteration's cleanup; s7880 was running at 20:25) vs
+H-repo-prune (tools/agent/prune-scratch.sh) vs H-owner-prune (launchd rs64-scratch-prune.sh). The dirs' mtimes (20:25) match
+the owner-prune log line `2026-11-23 20:25:51 deleted keep=7d: 167 files` and the 08:25 one (s7865) to the minute, the repo
+prune runs only between iterations and never touches .zst, and the files were >7 d old and cited by directory only: SELECTS
+H-owner-prune, REFUTES H-agent and H-repo-prune. Next discriminator for the class: `tools/s7893_retained_manifest.py --check`
+(rc 1 = an uncited retained input) after the next prune run; a gate input lost while cited would refute the exact-path model.
 ORIGIN: the gate REDs are input loss by the owner's scratch prune (writer named above), plus two stale rules from s7889/s7891
 (table wording, RETAIL_SNAP review row); no runtime code changed. The s7893 NEXT unit (m6 island A crawl discriminator) was not
 run; it carries over unchanged.
