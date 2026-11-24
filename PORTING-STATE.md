@@ -210841,3 +210841,24 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 46.6 KB (no maintenance), HID idle 1302
   there and shows the s7857 timing-class word does not reach the render. Two lines of evidence: tick record H-exact (CPU
   state) and RDP stream exact (render), each with its own positive control.
 - Next: 0x31=14 (mission 15, audio-clock fork: render the pre-fork prefix), then 15, bonus 16, 18.
+
+## Session 7887 (2026-11-23) — det render oracle 0x31=14 (mission 15): APM=1 pair FORK audio-clock at song 01 end t1396/t1395 (= s7857/s7858), render exact on all 1392 pre-fork flight frames (16 missions); sweep row 14 rescored
+Work unit (NEXT s7887, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 46.9 KB (no maintenance), HID idle 2404 s, screen unlocked, no game running.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 14 scratch/s7887/v14` (rc 0, ~20 min). Pins NDT=160, NTICKS=5482.
+- Schedule check (`tools/s7880_press_scene.py`): all 7 post-anchor presses matched, lag 0, offsets all -1 VI.
+- Det score (`s7856_det_verdict.py --tag 0x31=14`): FORK, fork=audio-clock (song 01 ends retail t1396 / port t1395), seed/call
+  fork t1413 (the extra rand call s7858 saw), nonpose + timing words first differ t1396; full record 4984. Word-50 plant at
+  t100 caught; unpinned p2 forks at seed t0 (nonpose t91). Same tick as s7857/s7858 under the old schedule: two schedules,
+  same fork, so it is not schedule-borne.
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): offset -100 (1747 votes); flight phase 7 port[3446:4838]
+  exact 1392 non-exact 0 = ticks 0..1395, the exact run ending at the fork (no --port-end needed, as s7883). Pre-flight 2515
+  non-exact (phase 4-5 texrect/HUD fades + phase-6 117 tri-count = the unpinned pre-tick-0 window, same class as m7/m9/m10/
+  m13/m14). Post-fork frames unpaired (retail runs on after a different song timing). Plant (port frame 4142, in flight)
+  caught; neg PASS (unpinned 0/6048 exact in phase 7).
+- 0 crash lines in p1 / p2. RDP bins (5.6 GB) deleted after scoring.
+- Landed: sweep row 14 rescores scratch/s7887/v14 (`TABLE OK rescored=17 hand=3 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 15 renders the same as retail on every pinned flight frame before the audio-clock fork (~23 s). Two
+  lines of evidence: tick record exact to the fork (CPU state) and RDP stream exact (render), each with its own control.
+  Rules out a port render defect in that prefix; the fork itself is the known audio-clock class (s7852/s7858), not render.
+- Next: 0x31=15 (mission 16), then bonus 16, 18.
