@@ -210726,3 +210726,20 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 44.1 KB (no maintenance), HID idle 139 
   H-latch refuted: every port press had the same per-scene effect as retail's; none was dropped. H-scene holds for missions
   3/8/4/5 (their scene ends without input) but not for mission 1 (a press skips its 115 s intro).
 - Rules out: a port input-latch defect in the pre-flight scenes; any state divergence over the whole 5556-tick mission-1 window.
+
+## Session 7881 (2026-11-23) — det render oracle 0x31=1 (mission 2): APM=1 pair H-exact on all 5776 ticks, render exact on all 5771 det-tick flight frames (10 missions); sweep row 1 rescored
+Work unit (NEXT s7881, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 44.9 KB (no maintenance), HID idle 161 min, ioreg IOConsoleLocked=false.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 1 scratch/s7881/v1` (rc 0). Pins SEED=f53b1f3b, no DT_AT, 5776 ticks.
+- Schedule check (`tools/s7880_press_scene.py`): all 7 post-anchor port presses within 2-3 VI of retail's, lag 0, none
+  unmatched. Scenes 1024 852 VI (retail 924), 512 3570 (3519), 640 pre-flight 1328 (1454), then flight.
+- Det score (`s7856_det_verdict.py --tag 0x31=1`): H-exact ticks=5776 full_rec=5776, 0 fork windows, song handle switch at
+  t1276 both sides, residual none. Word-50 plant at t100 caught; unpinned p2 forks at seed t0 (497 nonpose ticks).
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): offset -99 (5774 votes), flight port[3611:9382] exact
+  5771 non-exact 0, longest exact run 5779 frames; pre-flight 3073 non-exact (phases 4-6, HUD/texrect = the unpinned
+  pre-flight window, as on every earlier row). Plant (frame 6492 tri YH+1) caught; neg PASS strong (p2 0/5892 in phase 7).
+- 0 crash lines in p1 / p2. RDP bins (6.1 GB) deleted after scoring, as earlier rows.
+- Landed: sweep row 1 now rescores scratch/s7881/v1 (`TABLE OK rescored=14 hand=6 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 2's flight is render-identical to retail on det ticks (two lines: tick record H-exact + RDP stream exact,
+  each with its own plant and negative control). Rules out a port render defect in mission 2's first ~96 s of flight.
+- Next: 0x31=6 (mission 7, hand row s7847, no render yet) with APM=1 RBIN=1.
