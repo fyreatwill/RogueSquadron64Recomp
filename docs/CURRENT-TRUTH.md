@@ -360,6 +360,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    run splits offset -529 (pre-fork) vs -528 (post-respawn, unpinned p2 also matches there, so post-respawn is non-
    discriminating). Neg FAILs the s7870 en<ep/2 bar (p2 1662 exact) but shows 448 non-exact frames where p1 has 0: weak
    control on this mission, single-source neg. Sweep table row updated (17 H-exact -> 16, FORK 3 -> 4).
+   **s7878: 0x31=4 (mission 5, Gerrard V) H-exact 5926 ticks, render exact 5779/5779 flight frames: 8 missions render-exact**
+   (plant caught, neg PASS strong: unpinned p2 0/5779). The 305 s window ends in flight. It does not reach G5a's half-way crash
+   point (owner row 5 still open). Sweep row 4 now rescores s7878 (TABLE OK rescored=12 hand=8). Next: 0x31=0 (mission 1).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

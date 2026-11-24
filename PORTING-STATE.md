@@ -210655,3 +210655,24 @@ Superseded: s7840 "0x31=3 H-exact": its 170 s run ended before the death, so it 
 Gate sweep: 253 gates, RED 1 = s7723_retained_controls (pre-existing, allow-listed; s7865 wipe SKIPs), 0 new.
 Reading: 7 missions render-exact on every det-tick flight frame (b17, m12, m6, m11, m3, m8, m4 pre-fork 2308). Rules out a
 render defect in m4 flight up to the respawn. Bins deleted; score.txt + cmp_*.txt kept.
+
+## Session 7878 (2026-11-23) — det render oracle 0x31=4 (mission 5, Liberation of Gerrard V = G5a mission): 5926 ticks H-exact, all 5779 det-tick flight frames = retail (8 missions); sweep row 4 now rescored from s7878
+Work unit (NEXT s7878, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers in
+OWNER-REVIEW-QUEUE, no new SOAK-RESULTS lines since the s7839 snappin fold, CURRENT-TRUTH 43.3 KB (no maintenance), screen
+unlocked (ioreg), HID idle 98 min.
+- Ran `env RBIN=1 zsh tools/s7849_det_pair.sh 4 scratch/s7878/v4` (305 s, ~40 min wall). Pins: SEED=36387d21, NDT=110 dt pins,
+  NTICKS=5926. 0 crash lines in p1 and p2.
+- State (score.txt): p1 seed/call-sequence diffs none, fork windows 0, 460-w record nonpose none, pose none, rumble 2=2;
+  residual is only the known timing word 149 at t258 (timing class). p2 (unpinned) forks at seed t0 / calls t27 / pose t344
+  (positive control). The record-control plant (word 50 at t100) was caught. `s7856_det_verdict.py --tag 0x31=4`: H-exact
+  ticks=5926 full_rec=5785.
+- Render: `tools/s7868_det_frame_cmp.py r1/retail.bin p1.bin --plant --neg p2.bin` rc 0. Offset -529 (5779 votes), flight
+  port[3892:9671] exact 5779 non-exact 0, interior non-exact 0. The 305 s window ends inside flight, so there is no
+  post-flight cut. Plant (frame 6781 YH+1) caught; neg PASS (unpinned p2 exact 0/5779 in phase 7, offset 118; its only exact
+  run is 101 title frames), so this mission has a strong negative control, unlike m4's weak one in s7877.
+- Sweep table: row 4 was the s7841-3 170 s hand row. It now rescores scratch/s7878/v4/score.txt.
+  `python3 tools/s7862_det_sweep_table.py`: TABLE OK rescored=12 hand=8 mismatch=0; `--control`: PASS MISMATCH 1.
+- Rules out: a port render or state defect in the first ~5900 ticks of Gerrard V flight under the det recipe. It does NOT
+  cover G5a's crash point "about half way through": the autopilot does not fly the objectives, and the crash came at dd2/FPS60,
+  which is outside the det recipe. G5a still closes only on the owner's flight (OWNER-REVIEW-QUEUE row 5).
+- Bins deleted (1.8+1.8+2.9 GB); score.txt, pins.txt, oracle.log and run logs kept in scratch/s7878/v4.
