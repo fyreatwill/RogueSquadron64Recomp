@@ -210763,3 +210763,24 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 45.1 KB (no maintenance), HID idle 180 
   with its own plant and negative control). Rules out a port render defect in mission 7's ~31 s det flight window. Mission 7's
   window is short because the mission ends at t1876 under the scripted input; a longer window needs a different schedule.
 - Next: 0x31=8 (mission 9, FORK audio-clock at t3527: score the pre-fork prefix with --port-end), then 9, 12+.
+
+## Session 7883 (2026-11-23) — det render oracle 0x31=8 (mission 9): APM=1 pair FORK audio-clock at song 03 end t3527/t3526 (= s7852), render exact on all 3523 pre-fork flight frames (12 missions); sweep row 8 rescored
+Work unit (NEXT s7883, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 45.4 KB (no maintenance), screen not locked, no game running.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 8 scratch/s7883/v8` (rc 0). Pins SEED=e4ae925b NDT=75, 5580 ticks.
+- Schedule check (`tools/s7880_press_scene.py`): all 7 post-anchor presses matched, lag 0, but at a constant +10 VI (port late)
+  where s7880-s7882 saw 0/-1. Pre-flight only; the pinned tick record is exact up to the fork, so it did not matter here.
+- Det score (`s7856_det_verdict.py --tag 0x31=8 --fork-class audio-clock`): FORK at seed/call t3527, 29 windows, residual
+  timing-class (timing, rumble 18), fork=audio-clock: song 03 ends retail t3527 (168 ticks, 643 AI buffers) vs port t3526
+  (167 ticks, 640 buffers); songs 01/02 identical both sides. Word-50 plant at t100 caught; unpinned p2 forks at seed t0.
+- Two lines on the fork class: s7852 (old default AP schedule) and s7883 (APM=1 retail-matched schedule) fork at the SAME tick on
+  the same song end, so the fork is not schedule-borne; it is the known s6806 audio-clocked split (AI buffer count at song end).
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): offset -95 (3823 votes), flight port[3801:7324] exact 3523
+  non-exact 0 (the exact run ends at the fork itself, so no --port-end was needed); pre-flight 2733 non-exact (phases 4-6
+  texrect/HUD + tri-count = unpinned pre-tick-0 window, same class as m7). Plant (port frame 5562, in flight) caught; neg PASS
+  (unpinned 0 exact in phase 7 vs pinned 3523).
+- 0 crash lines in p1 / p2. RDP bins (6.4 GB) deleted after scoring.
+- Landed: sweep row 8 rescores scratch/s7883/v8 (`TABLE OK rescored=16 hand=4 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 9's flight is render-identical to retail on det ticks up to the audio-clock fork (~59 s of flight). Rules out a
+  port render defect in that window. Post-fork divergence is the timing class, not a render defect.
+- Next: 0x31=9 (mission 10, s7853 hand row H-exact 5076 ticks), then 12+ / bonus 16, 18.

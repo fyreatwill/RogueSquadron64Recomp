@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7882 (2026-11-23).
+Compact operational handoff, as of Session 7883 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -376,7 +376,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    **s7881: 0x31=1 (mission 2), APM=1: H-exact 5776 ticks, render exact 5771/5771 flight frames: 10 missions render-exact**
    (plant caught, neg PASS strong). Sweep row 1 rescores s7881/v1 (rescored=14 hand=6). 
    **s7882: 0x31=6 (mission 7), APM=1: H-exact 1876 ticks, render exact 1873/1873 flight frames: 11 missions render-exact**
-   (plant caught, neg PASS; post-flight 3598 = the s7876 end-screen class). Row 6 rescores s7882/v6 (rescored=15 hand=5). Next: 0x31=8 (pre-fork), 9, 12+.
+   (plant caught, neg PASS; post-flight 3598 = the s7876 end-screen class). Row 6 rescores s7882/v6 (rescored=15 hand=5).
+   **s7883: 0x31=8 (mission 9), APM=1: FORK audio-clock again at song 03 end (retail t3527, 643 AI buffers / port t3526, 640),
+   the same tick as s7852 under the old schedule (two schedules, same fork = not schedule-borne); render exact on all 3523
+   pre-fork flight frames, no --port-end needed (the exact run stops at the fork): 12 missions render-exact.** Plant caught, neg
+   PASS (unpinned 0/5690 exact in flight). Port presses sat +10 VI vs retail here (s7880-s7882: 0/-1); harmless pre-flight.
+   Row 8 rescores s7883/v8 (rescored=16 hand=4). Next: 0x31=9, then 12+ / bonus 16, 18.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
