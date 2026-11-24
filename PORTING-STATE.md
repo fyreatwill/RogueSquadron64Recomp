@@ -210698,3 +210698,31 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 43.7 KB (no maintenance), HID idle 117 
   `python3 tools/s7862_det_sweep_table.py`: TABLE OK rescored=13 hand=7 mismatch=0; `--control`: PASS MISMATCH 1.
 - Rules out: a port render or state defect over the first 2901 ticks of mission 1 flight under the det recipe.
 - Bins deleted (1.65+1.65+3.0 GB); score.txt, pins.txt, oracle.log, frame_cmp.txt and run logs kept in scratch/s7879/v0.
+
+## Session 7880 (2026-11-23) — mission 1's long port pre-flight is the recipe (H-sched): the default AP schedule is one Start press short; APM=1 (retail-matched) covers all 5556 retail ticks H-exact
+Work unit (NEXT s7880, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 44.1 KB (no maintenance), HID idle 139 min, ioreg shows no screen lock.
+- New tool `tools/s7880_press_scene.py ORACLE.log RUN.log`: per side, Start presses and VI-width scenes keyed to the first
+  640->1024 change (retail `[press] vi=`/`[vi] WIDTH`, port `[autopilot] fire vi=`/`[phase] ... update_screen #`), presses
+  per scene, and the best-lag press offset between the sides.
+- s7879 data (offline): the schedules are NOT the same on both sides (s7879 said they were). Retail has the oracle's fixed
+  16 s boot press at VI +232 on level select, and its PP presses land at +787..+5107. Port presses land at +500..+4820, i.e.
+  a constant -287 VI with retail's +232 press missing. Per-scene press counts: 1024 scene 2/2, 512 scene 4/4, 640 pre-flight
+  scene retail 1 (at +664) / port 0. Mission 1's 640 scene without a press runs 6888 VI (port) vs 1904 with one (retail).
+  The same table on s7875/s7876/s7877/s7878 (missions 3/8/4/5): identical -290 offset and missing in-scene press, but those
+  scenes end by themselves (port 1029-1357 VI vs retail 1160-1481), which is why only mission 1 showed it.
+- Run 1 (`scratch/s7880/v0_shift_only`, retail oracle.log reused): AP shifted +4.8 s only. Port presses land within 1 VI of
+  retail's, but with no press at +232 the port's level select times out after 782 VI and falls back to the 640 attract
+  scene. So the +232 press is needed (it was doing the work the old AP's +500 press did). p2 killed (SIGKILL), unscored.
+- Run 2 (`scratch/s7880/v1`): AP = 6,11,11.5:w1024,15.05,24.3,36.3,48.3,72.3,84.3,96.3. All 7 post-anchor port presses
+  within 3-4 VI of retail's. Scenes: 1024 851 VI (retail 924), 512 3570 (3519), 640 1826 (1904), flight at +6247 (retail
+  +6347; s7879 port +11741). Score: p1 0 seed/call diffs over all 5556 retail ticks, 0 fork windows, song handles switch at
+  the same 8 ticks, nonpose 0 of 5555 full-record ticks, pose 0, rumble 1=1; record plant (word 50 at t100) caught; p2
+  (unpinned) forks at seed t0. `s7856_det_verdict.py --tag 0x31=0`: H-exact ticks=5556 full_rec=5555 residual=none.
+  0 crash lines in p1 and p2. No RBIN on this run, so the render oracle still covers only s7879's first 2895 flight frames.
+- Landed: `tools/s7849_det_pair.sh` APM=1 = that retail-matched AP schedule (unset = old default, byte-identical; AP_OVR still
+  wins). Sweep row 0 rescores scratch/s7880/v1 (TABLE OK rescored=13 hand=7 mismatch=0; --control PASS MISMATCH 1).
+- Verdict: H-sched (recipe), two lines: the offline press/scene table on 5 missions and the run-2 rerun that removes the gap.
+  H-latch refuted: every port press had the same per-scene effect as retail's; none was dropped. H-scene holds for missions
+  3/8/4/5 (their scene ends without input) but not for mission 1 (a press skips its 115 s intro).
+- Rules out: a port input-latch defect in the pre-flight scenes; any state divergence over the whole 5556-tick mission-1 window.

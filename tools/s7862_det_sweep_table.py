@@ -17,7 +17,7 @@ ROOT = os.path.dirname(HERE)
 
 # (0x31 / label, mission, session, verdict, fork class or '', score.txt path or None, note)
 ROWS = [
-    ("0", "mission 1", "s7879", "H-exact", "", "scratch/s7879/v0/score.txt", "305 s pinned pair: 5556 retail ticks, 2901 port ticks H-exact (port pre-flight 3082 frames longer), render 2895/2895 flight frames exact (s7831 hand row superseded)"),
+    ("0", "mission 1", "s7880", "H-exact", "", "scratch/s7880/v1/score.txt", "305 s pinned pair, retail-matched AP schedule (APM=1): all 5556 retail ticks H-exact, full record 5555; render 2895/2895 flight frames exact on s7879's first 2901 ticks (s7879 short schedule / s7831 hand row superseded)"),
     ("1", "mission 2", "s7840", "H-exact", "", None, "pinned port = retail"),
     ("2", "mission 3", "s7840", "H-exact", "", None, "pinned port = retail"),
     ("3", "mission 4 Corellia", "s7877", "FORK", "audio-clock", "scratch/s7877/v3/score.txt", "s7840 170 s run was pre-death; 305 s: death song 01 ends t2313/t2312, render exact 2308 pre-fork"),

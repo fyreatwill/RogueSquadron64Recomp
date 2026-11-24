@@ -1,16 +1,16 @@
-# NEXT (s7880)
+# NEXT (s7881)
 HYPOTHESIS-ID: g3-det-render-coverage
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State: 9 missions render-exact on det-tick flight frames (b17, m12, m6, m11, m3, m8, m4 pre-fork, m5, m1; s7879).
-Unit (offline, no game run): explain s7879's longer mission-1 pre-flight. In the port the 640-wide pre-flight scene runs ~2551
-frames longer than in retail (port phase 6 = 3417 frames, retail 640@2864 = 866 frames; flight offset -3082 vs pre-flight -531).
-Data in scratch/s7879/v0: r1/oracle.log (retail, press schedule PP 19.5..91.5), p1/run.log (port, AP schedule), frame_cmp.txt.
-Hypotheses: H-latch (a retail Start press that skips the scene is dropped/not latched by the port: find which press time ends
-retail's scene and whether the port's phase change lines up with a later press), H-sched (the AP and PP schedules differ in
-offset for this mission, i.e. recipe not port: compare the press times against each side's phase starts), H-scene (scene
-length not input-driven: then both sides end without a press near the transition).
-Discriminator: press times vs scene-end times on both sides. H-latch -> look at the port's input latch at that scene
-(real defect, owner-relevant). H-sched -> fix the schedule (AP_OVR) and rerun the pair to cover all 5556 ticks.
-Then the next hand row: 1 or 2 (s7840) with `env RBIN=1 zsh tools/s7849_det_pair.sh <v> scratch/s7880/v<v>` (~40 min, screen unlocked).
+State: 9 missions render-exact on det-tick flight frames (b17, m12, m6, m11, m3, m8, m4 pre-fork, m5, m1 first 2895 frames).
+s7880: the default port AP schedule is 1 Start press short vs retail (H-sched); `APM=1` gives the retail-matched schedule.
+Mission 1 is now H-exact on all 5556 ticks (scratch/s7880/v1, no RBIN).
+Unit: next hand row 1 (mission 2) with the matched schedule and the render oracle, screen unlocked, ~40 min:
+  `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 1 scratch/s7881/v1`
+  then `python3 tools/s7880_press_scene.py scratch/s7881/v1/r1/oracle.log scratch/s7881/v1/p1/run.log` (offsets must be within
+  ~5 VI, lag 0), `python3 tools/s7856_det_verdict.py scratch/s7881/v1/score.txt --tag 0x31=1`, and
+  `python3 tools/s7868_det_frame_cmp.py scratch/s7881/v1/r1/retail.bin scratch/s7881/v1/p1.bin --neg scratch/s7881/v1/p2.bin --plant`.
+Outcomes: H-exact + render rc 0 -> 10 missions render-exact, rescore sweep row 1; FORK -> name the class (audio-clock?) with
+s7852_fork_windows; render rc 1 -> list the flight diffs (H-render: port defect), owner-relevant.
+Then row 2. Optional: mission 1 render over ticks 2901-5556 (`APM=1 RBIN=1 ... 0 scratch/s788x/v0`).
 Parked: g3-cinematic-half-frame-phase (s7874 table).

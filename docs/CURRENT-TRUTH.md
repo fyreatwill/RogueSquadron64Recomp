@@ -65,6 +65,8 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7879 "the same Start schedule (19.5..91.5) runs on both sides"** (superseded s7880). Believable because PP and AP carry the
+  same times; but PP is placed from a different anchor and the oracle adds a fixed 16 s press, so the port is 1 press short.
 - **s7840 "0x31=3 (mission 4) pinned port = retail, H-exact"** (superseded s7877). Believable because every tick of that run matched;
   it was a 170 s run that ended before the t2111 death. At 305 s the respawn forks on the death-song end (audio-clock class).
 - **s7872 "el=0 hits a special 0-divisor path in timeSnapshotFiller; the cinematic needs el in (0, 811160)"** (superseded s7873).
@@ -365,8 +367,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    point (owner row 5 still open). Sweep row 4 now rescores s7878 (TABLE OK rescored=12 hand=8). Next: 0x31=0 (mission 1).
    **s7879: 0x31=0 (mission 1) H-exact, render exact 2895/2895 flight frames: 9 missions render-exact** (plant caught, neg
    PASS strong: unpinned p2 0/2895). Port flight starts 3082 frames after retail's paired frame (pre-flight offset -531): the
-   port stays ~2551 frames longer in the 640-wide pre-flight scene, so only 2901 of 5556 retail ticks are covered. Unexplained
-   (Start-press skip timing?); see NEXT. Sweep row 0 now rescores s7879 (TABLE OK rescored=13 hand=7).
+   port stays ~2551 frames longer in the 640-wide pre-flight scene, so only 2901 of 5556 retail ticks were covered.
+   **s7880: that gap is the recipe (H-sched), not input latching.** The default port AP schedule is one press short: retail's
+   fixed 16 s oracle press lands on level select (VI +232) and the PP presses sit +287 VI later than the AP's, so the port
+   gets no press in the 640 scene (every mission; only mission 1's intro is long without one: 6888 vs 1904 VI).
+   `tools/s7880_press_scene.py` shows it; **`APM=1 tools/s7849_det_pair.sh` = retail-matched schedule (use it for new rows)**.
+   With it mission 1 is H-exact on all 5556 ticks (full record 5555). Sweep row 0 now rescores s7880/v1.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

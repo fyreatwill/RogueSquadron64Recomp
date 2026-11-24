@@ -26,7 +26,13 @@ env CPO=1 RSECS=$SECS EEP=$O/lvl.eep PP=${PP_OVR:-19.5:start,31.5:start,43.5:sta
 fi
 python3 tools/s7849_det_pins.py $O/r1/oracle.log > $O/pins.txt || { cat $O/pins.txt; echo "pins failed" >&2; exit 4; }
 source $O/pins.txt; cat $O/pins.txt
-AP=${AP_OVR:-6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start}
+# s7880: APM=1 = the retail-matched port schedule for the default PP: the oracle's fixed 16 s boot press lands on level
+# select (VI +232 after 640->1024) and the PP presses land +287 VI later than the default AP, so the default AP is one press
+# short in the 640 pre-flight scene (mission 1 then sits its 115 s intro out). APM=1 puts every port press within 4 VI of
+# retail's (tools/s7880_press_scene.py). Unset = the old default, byte-identical. AP_OVR still wins over both.
+APD=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start
+[[ -n $APM ]] && APD=6:start,11:start,11.5:w1024,15.05:start,24.3:start,36.3:start,48.3:start,72.3:start,84.3:start,96.3:start
+AP=${AP_OVR:-$APD}
 B="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1 ROGUESQ_RETAIL_SNAP=1 ROGUESQ_RAND_TRACE_BOOT=1 ROGUESQ_RAND_TRACE_MAX=8000000 ROGUESQ_XTRACE_MEM=800FA730:0:80137E7C:1,800FA730:0:80003470:1,800FA730:0:8010C0E0:1$RM"
 P1X="ROGUESQ_XTRACE_POKE=800FA730:0:80003470:$SEED:1"; [[ -n $DT_AT ]] && P1X="$P1X ROGUESQ_S7844_DT_AT=$DT_AT"
 A=$PWD/$O
