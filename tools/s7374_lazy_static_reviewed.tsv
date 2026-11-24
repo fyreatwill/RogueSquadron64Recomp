@@ -31,3 +31,4 @@ src/main/main.cpp	rs64_rumble_send	s_hap	SINGLE	s7720: rs64_rumble_send <- rs64_
 src/main/main.cpp	rs64_bind_selftest_step	s_bind_vpad	SINGLE	s7720: ROGUESQ_BIND_SELFTEST only; <- rs64_bind_poll <- get_n64_input (guest input thread)
 src/main/main.cpp	rs64_bind_selftest_step	attached	SINGLE	s7720: same caller chain as s_bind_vpad, ROGUESQ_BIND_SELFTEST only
 src/main/rt64_render_context.cpp	update_screen	s_rt_boot_done	SINGLE	ScreenUpdateAction on gfx_thread (events.cpp:1617); s7845 boot open of s_rand_trace_f (its guest reader is the s7384 DIAG row)
+src/main/rt64_render_context.cpp	rs64_rand_trace	rp_init	GUEST-SERIAL	called only from the recompiled rngNext hook (tools/fixup_rand_trace.py); s7896/s7900 ROGUESQ_RAND_REPLAY[_BURST] diag, rp/rp_gap built before rp_init read by the same guest thread
