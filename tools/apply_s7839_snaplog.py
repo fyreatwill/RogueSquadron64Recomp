@@ -42,6 +42,30 @@ PIN1 = PIN1_S7891.replace('else if (sub7839 == 2 && rs64_s7891_reset) { rs64_s78
     'rs64_s7891_reset = 0; ++z7839; if (only7894 && (int)z7839 != only7894) { if (z7839 < 256) fprintf(stderr, "[snap7894] post-reset el %d pinned vi=%llu n=%llu\\n", '
     '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839); ctx->r2 = (int32_t)pin7839; } else { rs64_s7891_free = 1; if (z7839 < 256) fprintf(stderr, "[snap7891] post-reset el %d %s vi=%llu n=%llu\\n", '
     '(int32_t)ctx->r2, only7894 ? "forced 0" : "real", (unsigned long long)total_vis, z7839); if (only7894) ctx->r2 = 0; } }')
+# s7895: ROGUESQ_SNAP3_ONLY=c keys the unpin on the crawl dt site instead of the fire index: a post-reset frame is unpinned (el
+# forced 0) only when the most recent timeSnapshotFiller return mark (rs64_xtrace_mark, needs RAND_TRACE like every det recipe) was
+# 0x800C6674 (the crawl's advanceWrappingPhaseAccumulator path, runModelViewerLoop ra 0x800C9D94). s7895: fire 6 is the crawl on m6/m11
+# but on m3 (0x31=2, no chapter crawl) fire 6 is a cinematic post-load frame, and ONLY=6 lost every phase-6 match there. Numeric
+# ONLY=<n> unchanged; the log lines now carry dtpc=.
+PIN1_S7894 = PIN1
+PIN1 = PIN1_S7894.replace('static int only7894 = -1; if (only7894 < 0) { const char* o4 = getenv("ROGUESQ_SNAP3_ONLY"); only7894 = (o4 && *o4) ? atoi(o4) : 0; } '
+    'rs64_s7891_reset = 0; ++z7839; if (only7894 && (int)z7839 != only7894) { if (z7839 < 256) fprintf(stderr, "[snap7894] post-reset el %d pinned vi=%llu n=%llu\\n", '
+    '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839);',
+    'static int only7894 = -1; extern uint32_t rs64_s7895_dtpc; if (only7894 == -1) { const char* o4 = getenv("ROGUESQ_SNAP3_ONLY"); only7894 = (o4 && *o4) ? (*o4 == \'c\' ? -2 : atoi(o4)) : 0; } '
+    'rs64_s7891_reset = 0; ++z7839; int hit7895 = only7894 == -2 ? (rs64_s7895_dtpc == 0x800C6674u) : ((int)z7839 == only7894); '
+    'if (only7894 && !hit7895) { if (z7839 < 256) fprintf(stderr, "[snap7894] post-reset el %d pinned vi=%llu n=%llu dtpc=%08X\\n", '
+    '(int32_t)ctx->r2, (unsigned long long)total_vis, z7839, rs64_s7895_dtpc);').replace(
+    'fprintf(stderr, "[snap7891] post-reset el %d %s vi=%llu n=%llu\\n", \'\n    \'(int32_t)ctx->r2, only7894 ? "forced 0" : "real", (unsigned long long)total_vis, z7839);', 'X')
+PIN1 = PIN1.replace('if (z7839 < 256) fprintf(stderr, "[snap7891] post-reset el %d %s vi=%llu n=%llu\\n", (int32_t)ctx->r2, only7894 ? "forced 0" : "real", (unsigned long long)total_vis, z7839);',
+    'if (z7839 < 256) fprintf(stderr, "[snap7891] post-reset el %d %s vi=%llu n=%llu dtpc=%08X\\n", (int32_t)ctx->r2, only7894 ? "forced 0" : "real", (unsigned long long)total_vis, z7839, rs64_s7895_dtpc);')
+assert PIN1 != PIN1_S7894 and PIN1.count('dtpc=%08X') == 2, PIN1.count('dtpc=%08X')
+# s7895 (same session, second arm): dtpc alone is not the crawl. scratch/s7895/m3k showed boot/hangar fires 1,3,4,5 also follow a
+# 0x800C6674 mark (advanceWrappingPhaseAccumulator is the whole front end's dt path) and =c forced them all. The crawl is keyed by its
+# timeSnapshotFiller struct a0 = s0 = 0x80165DE0 (runModelViewerLoop's callee sp+0x10); s7894/c6 rand rows give each 0x800C6674 scene
+# its own struct (80165EA8 boot, 80165D80, 80165ED8, 80165EC0 hangar, 80165DE0 = the 1088 crawl calls from VI 5602).
+PIN1_S7895A = PIN1
+PIN1 = PIN1_S7895A.replace('(rs64_s7895_dtpc == 0x800C6674u)', '((uint32_t)ctx->r16 == 0x80165DE0u && rs64_s7895_dtpc == 0x800C6674u)')
+assert PIN1 != PIN1_S7895A
 assert PIN1 != PIN1_S7891
 
 HDR = ('static int en7839 = -1; static long long pin7839 = -1; if (en7839 < 0) { const char* e = getenv("ROGUESQ_S7839_SNAP"); '
@@ -83,7 +107,7 @@ RESET = "    { /* PATCH: s7891 snap reset */ extern int rs64_s7891_reset; extern
 
 def apply3(text):
     n = 0
-    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (PIN1_S7891, PIN1), (OLD_RESET, RESET),
+    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (PIN1_S7891, PIN1), (PIN1_S7894, PIN1), (PIN1_S7895A, PIN1), (OLD_RESET, RESET),
                   (OLD_RESET.replace("snap reset", "snap reset2"), RESET.replace("snap reset", "snap reset2"))):
         if o in text:
             text = text.replace(o, nw); n += 1

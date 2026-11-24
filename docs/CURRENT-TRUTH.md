@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7894 (2026-11-24).
+Compact operational handoff, as of Session 7895 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -191,9 +191,12 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12); the s7790 numbering (1-36) is
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
-0. **Island A det lever generalisation (s7894):** island A is H-index on m6 too (s7892 "m11-only" was cross-run, superseded).
-   `ROGUESQ_RETAIL_SNAP=3 ROGUESQ_SNAP3_ONLY=6` (unpin only post-reset fire 6 = crawl post-load frame, el forced 0) removes it
-   deterministically. Next: same arm on m11 + m3 (fire index stable?), then decide the det-pair default (NEXT.md, slug g3-island-a-lever).
+0. **Island A CLOSED (s7895), island B next (slug g3-island-b).** Det-pair lever `SNAP=c` (= ROGUESQ_RETAIL_SNAP=3 +
+   ROGUESQ_SNAP3_ONLY=c: unpin only the crawl's post-load frame, keyed by timeSnapshotFiller struct s0 0x80165DE0 after a 0x800C6674
+   mark, el forced 0) removes island A on m6 + m11 (exact from the first phase-6 frame, flight exact, ticks seed/call-exact) and is a
+   no-op on m3 (no chapter crawl; frame map identical to the same-retail SNAP=1 control). ONLY=6 (fire index) is NOT general: on m3
+   fire 6 is a cinematic post-load frame and ONLY=6 lost every phase-6 match. Plain unset det_pair stays =1. Island B (state class):
+   m6 N212@6070, m11 N1054@6062, m3 N183@3760 = the tail of the 640 pre-flight scene before flight on all three.
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

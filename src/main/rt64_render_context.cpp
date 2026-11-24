@@ -64,10 +64,14 @@ extern "C" volatile uint32_t rs64_s7858_tick = 0;
 // s7891: ROGUESQ_RETAIL_SNAP=3 hand-off (tools/apply_s7839_snaplog.py): timeSnapshotFiller's prev==-1 path sets _reset, the next el-path
 // frame consumes it and sets _free so the vd pin skips that one call. Game thread only.
 extern "C" { int rs64_s7891_reset = 0; int rs64_s7891_free = 0; }
+// s7895: pc of the most recent timeSnapshotFiller return mark (0x800AF374 cinematic, 0x800C6674 crawl/phase accumulator, 0x800FA730
+// mission tick); ROGUESQ_SNAP3_ONLY=c unpins a post-reset frame only after the crawl mark. Game thread only, host-side store.
+extern "C" { uint32_t rs64_s7895_dtpc = 0; }
 extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
     // s7892: a SNAP=3 reset armed by the mission load is consumed by the next el-path frame, which on m6 falls ~11 ticks INTO the
     // mission (VI 13415, forked det tick 8). Dropping a pending reset at every mission tick keeps the unpin pre-flight only.
     if (pc == 0x800FA730u) { ++rs64_s7858_tick; rs64_s7891_reset = 0; }
+    if (pc == 0x800AF374u || pc == 0x800C6674u || pc == 0x800FA730u) rs64_s7895_dtpc = pc;
     // s6872: ROGUESQ_POSE_FREEZE=<x1,x2,...>:<ms> (needs RAND_TRACE) stops the mission tick for ms when the player's x first crosses
     // each rising x. +0x4C is a per-tick copy, so POSE_PIN_POSITION cannot hold the ship, but no-input flight is deterministic:
     // this gives the same pose in every arm at any frame rate, held still for a window capture. The pad thread cannot do it.

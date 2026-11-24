@@ -10,6 +10,9 @@
 # s7868: RBIN=1 keeps the RDP streams: retail OUTDIR/r1/retail.bin, port OUTDIR/p1.bin + p2.bin (6000 MB caps) for the
 # matched-prefix render oracle tools/s7868_det_frame_cmp.py; unset = RDPBIN=/dev/null and no port bin, byte-identical.
 # s7891: SNAP=3 runs both port arms with ROGUESQ_RETAIL_SNAP=3 (post-load frame unpinned: closes pre-flight island A); unset = =1, byte-identical.
+# s7895: SNAP=c = RETAIL_SNAP=3 + ROGUESQ_SNAP3_ONLY=c on both port arms: only the crawl's post-load frame (timeSnapshotFiller struct
+# 0x80165DE0 after a 0x800C6674 mark) is unpinned with el forced 0 = retail's 1 VI. Closes island A on m6/m11, no-op on m3 (no crawl;
+# frame map identical to SNAP=1). Not ONLY=6: fire 6 is a cinematic frame on m3. Unset = =1, byte-identical.
 # s7864: P1E / P2E append extra env to the p1 / p2 port arm only (e.g. P1E=ROGUESQ_AI_VI_CLOCK=1); unset = byte-identical.
 # Steps: patch save 0x31=<v>; retail r1 (oracle, seed+dt watches); derive pins (tools/s7849_det_pins.py); port p1 pinned
 # (tick-0 seed poke + DT_AT) and p2 unpinned control, sequentially (one game run at a time); score both with
@@ -37,7 +40,8 @@ source $O/pins.txt; cat $O/pins.txt
 APD=6:start,11:start,11.5:w1024,19.5:start,31.5:start,43.5:start,67.5:start,79.5:start,91.5:start
 [[ -n $APM ]] && APD=6:start,11:start,11.5:w1024,15.05:start,24.3:start,36.3:start,48.3:start,72.3:start,84.3:start,96.3:start
 AP=${AP_OVR:-$APD}
-B="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1 ROGUESQ_RETAIL_SNAP=${SNAP:-1} ROGUESQ_RAND_TRACE_BOOT=1 ROGUESQ_RAND_TRACE_MAX=8000000 ROGUESQ_XTRACE_MEM=800FA730:0:80137E7C:1,800FA730:0:80003470:1,800FA730:0:8010C0E0:1$RM"
+SN=${SNAP:-1}; SX=; [[ $SN == c ]] && { SN=3; SX=" ROGUESQ_SNAP3_ONLY=c"; }
+B="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1 ROGUESQ_RETAIL_SNAP=$SN$SX ROGUESQ_RAND_TRACE_BOOT=1 ROGUESQ_RAND_TRACE_MAX=8000000 ROGUESQ_XTRACE_MEM=800FA730:0:80137E7C:1,800FA730:0:80003470:1,800FA730:0:8010C0E0:1$RM"
 P1X="ROGUESQ_XTRACE_POKE=800FA730:0:80003470:$SEED:1"; [[ -n $DT_AT ]] && P1X="$P1X ROGUESQ_S7844_DT_AT=$DT_AT"
 A=$PWD/$O
 B1=; B2=; [[ -n $RBIN ]] && { B1="RS64_RDP_BIN_PORT=$A/p1.bin RS64_RDP_BIN_PORT_MAX_MB=6000"; B2="RS64_RDP_BIN_PORT=$A/p2.bin RS64_RDP_BIN_PORT_MAX_MB=6000"; }

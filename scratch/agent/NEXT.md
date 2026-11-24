@@ -1,17 +1,16 @@
-# NEXT (s7895)
-HYPOTHESIS-ID: g3-island-a-lever
+# NEXT (s7896)
+HYPOTHESIS-ID: g3-island-b
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7894): island A is H-index on m6 and m11. `ROGUESQ_RETAIL_SNAP=3 ROGUESQ_SNAP3_ONLY=6` (only post-reset fire 6 = crawl
-post-load frame unpinned, el forced 0) removes it deterministically on m6 (scratch/s7894/m6o vs control m6c). Plain =3 is host-timing
-dependent (real el 0 or 781250), so it can never be a det default.
-Unit (ONE bounded check, then decide the det-pair default):
-  Is fire 6 the crawl on other missions, and does ONLY=6 keep flight exact there? Run on m11 and m3 (one at a time):
-  env RBIN=1 SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=6 zsh tools/s7849_det_pair.sh 10 scratch/s7895/m11   (retail: reuse scratch/s7872/v10/r1 if
-  still present, hard-link oracle.log + retail.bin into OUTDIR/r1 first; else fresh)
-  then python3 tools/s7868_det_frame_cmp.py r1/retail.bin p1.bin --plant in OUTDIR. Check `[snap7891] ... forced 0` VI is the crawl
-  (~5600) in p1/run.log. The det_pair p2 arm can exceed the 10-min task cap: run it in the foreground with a long timeout or skip p2.
-Outcomes: island A gone + flight exact on both -> make SNAP3_ONLY=6 (with SNAP=3) the s7849_det_pair default (SNAP= unset keeps =1
-  for byte-identical old runs: add a new SNAP=6 shorthand), close island A; fire 6 not the crawl on some mission -> key the unpin on the
-  crawl dt site (ra 0x800C9D94 path: mark 0x800C6674 sets a flag) instead of the fire index; flight forks -> lever not general, document.
-Then island B (N212@6071 on m6, unchanged by the lever) is the next pre-flight item.
+State (s7895): island A closed by det_pair SNAP=c (crawl-keyed). Island B remains on all three scored missions, at the tail of the
+640 pre-flight scene: m6 N212@6070 (scratch/s7895/m6k), m11 N1054@6062 (m11k), m3 N183@3760 (m3k2/m3c; flight starts 3943).
+s7891 labelled B "state class" (tri-count / tri-geom diffs). Port bins + retail bins retained in those dirs.
+Unit (offline first, no game run unless the read needs one):
+  1. For each mission, list the first 5 non-exact frames of island B with s7868_det_frame_cmp.py --port-start <B-10> --port-end <B+30>
+     on the kept bins: what differs (tri count, which colours/combiner, a whole object present/absent, positions)?
+  2. Hypotheses: H-object (one object/actor appears/disappears a frame apart: spawn/despawn timing), H-dt (a scene clock offset again,
+     e.g. another post-load frame in the 640 scene: check the [snap] fires and dt rows near B's VI), H-rng (a pre-flight rand call
+     sequence: s7845 says ticks are exact from tick 0, but pre-tick rand calls differ: port 44520 vs retail 41341 calls before 1st tick).
+  Discriminator: if the first B frame differs by a whole object -> find its spawn; if positions only -> clock (H-dt: dump the scene's
+  dt struct like s7891_crawl_clock.sh with the right mark/struct); rand call count before tick 0 differing is a known pre-existing
+  difference, only a lead if B's first frame is a random-placed object.

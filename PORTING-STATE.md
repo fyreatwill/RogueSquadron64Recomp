@@ -211071,3 +211071,29 @@ owner answers, CURRENT-TRUTH 51 KB (no maintenance).
 - Selects H-index on m6 (two lines: crawl locals differ only in the clock; forcing that one frame removes the RDP island, control keeps it).
   Refutes s7892's H-m11-only (moved to superseded). Island B (N212@6071) unchanged by the lever: separate source.
 - Kept: scratch/s7894/m6o/p1.bin (ONLY=6 port RDP stream, 1.5 GB), scratch/s7894/m6o/r1/retail.bin (link), scratch/s7894/c6/r1/oracle.log.
+
+## Session 7895 (2026-11-24) — island A lever generalised: fire index (ONLY=6) is not general (m3 fire 6 is a cinematic frame), the crawl key ROGUESQ_SNAP3_ONLY=c (struct 0x80165DE0) closes island A on m6/m11 and is a no-op on m3; det_pair SNAP=c
+
+Work unit (NEXT s7895, HYPOTHESIS-ID g3-island-a-lever). Pre-checks: crash_reports FOLDED=6 new=0, no new SOAK-RESULTS lines, no
+owner answers, CURRENT-TRUTH 52 KB (no maintenance). All arms = scratch/s7894/p1only.sh (det_pair lines 1-44, p1 only), RBIN=1.
+- m11 ONLY=6 (scratch/s7895/m11o, s7872/v10 retail hard-linked): fire 6 forced at VI 5631 (crawl); ticks seed/call None, rec 0/2578;
+  render flight 2572/2572 exact, map E2674 N1054@6070 E2572 = island A gone (exact from the first phase-6 frame), only island B. Plant PASS.
+- m3 (0x31=2, fresh retail scratch/s7895/m3o/r1) ONLY=6: fire 6 at VI 5612; ticks exact, flight 3804/3804 exact, but the pre-flight 640
+  phase (544 frames) has NO frame matching retail (--port-start/--port-end: NO ALIGNMENT). Same-retail SNAP=1 control m3c: phase 6
+  exact 361 frames, then N183@3760; no island A (m3 has no chapter crawl). **ONLY=6 breaks m3: the fire index is not the crawl.**
+- Change (tools/apply_s7839_snaplog.py, upgrades the live funcs_3.c in place; src/main/rt64_render_context.cpp): `ROGUESQ_SNAP3_ONLY=c`
+  keys the unpin on the crawl instead of the index; log lines carry dtpc= (the last timeSnapshotFiller return mark, new host global
+  rs64_s7895_dtpc set in rs64_xtrace_mark). First build keyed on dtpc==0x800C6674 only: m3k forced fires 1,3,4,5 too (boot/hangar
+  also return via 0x800C6674, the front end's advanceWrappingPhaseAccumulator) -> refuted, bin deleted. Final key: s0 (timeSnapshotFiller
+  struct a0) == 0x80165DE0 AND dtpc 0x800C6674. Source: s7894/c6 rand rows give each 0x800C6674 scene its own struct (80165EA8,
+  80165D80, 80165ED8, 80165EC0, and 80165DE0 = the 1088 crawl calls from VI 5602). Regen gate --strict 0 differ, H-mirrored.
+- Final =c arms, same build: m11k fire 6 only forced (VI 5629, dtpc 800C6674), ticks exact, flight 2555/2555, map E2674 N1054@6062 E2555
+  (island A gone). m6k (s7894 m6 retail): fire 6 only forced (VI 5621), ticks exact, flight 2439/2439, map E2675 N212@6070 ... (island A
+  gone; s7894 SNAP=1 control m6c had N159@3399). m3k2: NO fire forced (fire 6 dtpc 800AF374, pinned), map E361 N183@3760 E3814 N671...
+  exact 4184 = identical to the m3c SNAP=1 control. Plants PASS on all. Two lines per mission: [snap] fire log (which frame was unpinned)
+  and the RDP frame map vs retail, each against a same-retail control.
+- tools/s7849_det_pair.sh: SNAP=c shorthand (RETAIL_SNAP=3 + SNAP3_ONLY=c on both arms); unset = =1, byte-identical.
+- Rules out: ONLY=<fire index> as a general det lever; dtpc alone as a crawl key. Island A CLOSED (slug g3-island-a-lever closed).
+- Island B on all three missions sits at the tail of the 640 pre-flight scene: m6 N212@6070, m11 N1054@6062, m3 N183@3760 (183 frames
+  before flight at 3943). Next slug g3-island-b.
+- Kept: retail bins m3 (scratch/s7895/m3o/r1, hard-linked into m3c/m3k/m3k2), port bins m3c, m3k2, m11k, m6k. Deleted m3o/m3k/m11o p1.bin.
