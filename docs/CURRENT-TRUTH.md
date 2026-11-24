@@ -160,7 +160,7 @@ Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, 
 - Oracle missions: tools/g3_eep_patch.py sets +0x31; use --save-dir, never swap a save over the user .eep.
 - Slow builds (TSan/ASan): `ROGUESQ_AUTOPILOT_CLOCK=frames ROGUESQ_AUTOPILOT_FPS=58` (FPS60) keys autopilot to fullsyncs,
   but front-end screens are VI-timed, so the route still diverges at TSan speed; gate with `<s>:w<width>` events (s7371).
-- Frame-exact presses: `ROGUESQ_AUTOPILOT_CLOCK=vi` keys autopilot to ultramodern's VI count (port twin of oracle `--clock vi`, s7820). `f<N>:key` = N fullsyncs after the previous fire (s7907).
+- Frame-exact presses: `ROGUESQ_AUTOPILOT_CLOCK=vi` keys autopilot to ultramodern's VI count (port twin of oracle `--clock vi`, s7820). `f<N>:key` = N fullsyncs after the previous fire (s7907). Its latch s_last_fs has a FW-census row (s7908); any new host scalar latch needs one too, or s7530 reads RED.
 - Soak verdicts: `scratch/agent/SOAK-RESULTS.md`; read `alive_at_end` / `crashlines`, never rc (since s7456 the loop's line carries `arms= alive=a/k crash_arms= stall_arms= fatal=`; arms=0 = recipe printed no summary). Recipes that
   drive the window carry `# SOAK_NEEDS_IDLE=<secs>`; zsh recipes run under their shebang shell (s7287).
 - Knob tables: PROJECT-OVERVIEW "G1c draw-distance knob and recipe reference"; docs/DRAW-DISTANCE.md;

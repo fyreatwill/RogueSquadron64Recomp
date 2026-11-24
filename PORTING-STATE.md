@@ -211461,3 +211461,17 @@ pre-flight timing class. Single-source on which frames are extra.
 Rules out: H-press (the f712/f713 arms refute a press-frame-boundary selector; this closes island B). Next discriminator: per-frame
 VI spacing in the segment->crawl window, port vs retail (H-cost spread 3-VI frames vs H-scene contiguous extra frames).
 ORIGIN: no mitigation; opt-in harness clock form + analysis flag.
+
+## Session 7908 (2026-11-24) — closed the unmet gate contract: s7907's autopilot latch s_last_fs classified in the FW census (s7530/s7531 back to GREEN)
+What ran: loop.sh reported the s7651 gate sweep RED after s7907. Of the 10 RED/NEEDS-ARGS rows, 8 were already in
+tools/gate_sweep_allowed_red.txt (s7433-s7441 and s7723: retained scratch inputs pruned, s7865/s7893) or NEEDS-ARGS (s7827).
+The two NEW REDs were s7530_fw_census.py (UNCLASSIFIED `s_last_fs`, main.cpp:13131, functional read at :13226) and
+s7531_fx_census.py, which fails only because its "FW live census still 0 fails" control reads s7530.
+`s_last_fs` is the s7907 autopilot f<N> anchor: a host RDP fullsync count, not a guest address, re-set at every press fire.
+Fix: RULES row in tools/s7530_fw_census.py, class H-canon, with a verify= regex on the re-set site
+(`s_last_fs = (uint32_t)rs64_dpc_get_cumulative_fullsyncs()`), so deleting that re-set turns the gate RED again.
+Result: s7530 --controls 6/6 PASS (live census 0 fails), s7531 --controls 5/5 PASS; full sweep
+`s7651_gate_sweep.py --new-red-vs tools/gate_sweep_allowed_red.txt` rc=0, gates 253 {GREEN 237, REPORT 2, NEEDS-ARGS 7,
+RED 7 (all allowed)}, new RED 0. Its own planted red/green and cache controls PASS in the same run.
+Rules out: none on the game side. This was a census bookkeeping gap: s7907 added a scalar latch without a census row.
+The NEXT.md unit (g3-preflight-frame-count, per-frame VI spacing in the m11 pre-crawl window) was not started and carries over.

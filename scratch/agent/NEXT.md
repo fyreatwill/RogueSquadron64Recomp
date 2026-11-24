@@ -1,4 +1,4 @@
-# NEXT (s7908)
+# NEXT (s7909; carried over from s7908, which only closed the gate contract)
 HYPOTHESIS-ID: g3-preflight-frame-count
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, docs/OWNER-REVIEW-QUEUE.md answers,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
