@@ -210862,3 +210862,26 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 46.9 KB (no maintenance), HID idle 2404
   lines of evidence: tick record exact to the fork (CPU state) and RDP stream exact (render), each with its own control.
   Rules out a port render defect in that prefix; the fork itself is the known audio-clock class (s7852/s7858), not render.
 - Next: 0x31=15 (mission 16), then bonus 16, 18.
+
+## Session 7888 (2026-11-23) — det render oracle 0x31=15 (mission 16): APM=1 pair H-exact all 1892 ticks, render exact on all 1887 flight frames after a per-phase offset fix (17 missions); sweep row 15 rescored
+Work unit (NEXT s7888, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 47.3 KB (no maintenance), HID idle 3524 s, screen unlocked, no game running.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 15 scratch/s7888/v15` (rc 0, ~45 min). Pins NDT=20, NTICKS=1892.
+- Schedule check (`s7880_press_scene.py`): all 7 post-anchor presses matched, lag 0, offsets 0,0,-1,-1,-1,-1,-1 VI.
+- Det score (`s7856_det_verdict.py --tag 0x31=15`): H-exact ticks=1892 full_rec=1891, no seed/call/nonpose fork, timing-class
+  residual word 149 at t943 (= s7857/s7859 class). Plant (100,[50]) caught; unpinned p2 forks at seed t0 (nonpose t1606).
+- Render, first pass (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`): rc 3, neg FAIL "pinned 0/2041 in phase 7". Not a
+  render defect: mission 16 has a ~150 s intro cinematic (port phase 6, 4477 frames, 560 with texrects) before flight (phase 7,
+  2041 frames, 1935 with HUD; retail 1887 frames = the 1892 ticks). The single global offset -98 (2372 votes, cinematic) does
+  not pair flight; the second vote bucket was -99 with 1887 votes = exactly retail's flight length. Phase 6 matched in BOTH
+  arms equally (exact 2406/2407) to port 5636, then diverged in both: the unpinned pre-tick-0 window, same class as m7-m15.
+- Landed: `tools/s7868_det_frame_cmp.py --port-start N` (drop port frames [0:N) of both port bins, report indices relative;
+  unset = byte-identical). With `--port-start 7439`: offset 7340 (abs -99), flight port[0:1887] exact 1887 non-exact 0, plant
+  (frame 943) caught, neg PASS (unpinned: no unique shared frame, 0 exact).
+- 0 crash lines in p1 / p2. RDP bins deleted after scoring.
+- Sweep row 15 rescores scratch/s7888/v15 (`TABLE OK rescored=17 hand=3 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 16 flight renders the same as retail on every retail flight frame. Two lines of evidence: tick record
+  exact (CPU state) and RDP stream exact (render), each with its own control. Rules out a port render defect in m16 flight.
+  Lesson: a long intro cinematic can move the frame pairing by one; when neg FAILs with pinned 0 in the last phase, check the
+  vote list for a second offset before calling H-render.
+- Next: bonus 16 (race, s7860 race-safe schedule), bonus 18.

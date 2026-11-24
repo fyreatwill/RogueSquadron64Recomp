@@ -22,7 +22,7 @@ there). Interior diffs are reported as "flight" (before the cut) and "post-fligh
 outside the det tick window, animation-phase class); rc 1 only for flight diffs. --no-cut restores the s7868 whole-span
 rule. Flight starts at the first frame of the last port phase inside the exact span (earlier non-exact frames are
 reported as pre-flight: the unpinned pre-tick-0 window, s7875/s7876). The plant control must land inside flight and must be counted as a flight diff.
-usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut] [--port-end N]
+usage: s7868_det_frame_cmp.py RETAIL.bin[.zst] PORT.bin[.zst] [--neg PORT2.bin] [--plant] [--min-tri 1] [--no-cut] [--port-end N] [--port-start N]
 exit 0 = no flight interior diff, 1 = flight interior diffs (H-render), 2 = no alignment, 3 = control FAIL.
 """
 import sys, os, collections, importlib.util, tempfile
@@ -39,10 +39,15 @@ MINTRI = int(a[a.index('--min-tri') + 1]) if '--min-tri' in a else 1
 # s7877: --port-end N scores only port frames [0:N) of BOTH port bins (pinned and --neg): the det-exact prefix when the
 # pinned arm forks mid-flight (0x31=3: respawn tick 2313 vs retail 2314 moves the pairing offset -529 -> -528). Unset = whole bin.
 PEND = int(a[a.index('--port-end') + 1]) if '--port-end' in a else None
+# s7888: --port-start N drops port frames [0:N) of BOTH port bins (indices in the report are then relative to N): scores the
+# flight phase at its own pairing offset when a pre-flight cinematic shifts it by a frame (0x31=15: intro -98, flight -99,
+# votes 2372 / 1887). Unset = whole bin, byte-identical. With --port-end both are absolute indices.
+PSTART = int(a[a.index('--port-start') + 1]) if '--port-start' in a else 0
 
 def load(p, retail):
     fr = m.frames(rs64_zopen.materialize(p, tmp), retail)
     if not retail and PEND is not None: fr = fr[:PEND]
+    if not retail and PSTART: fr = fr[PSTART:]
     return [c for c, _ in fr], [x for _, x in fr]   # (frame counters, port phase ordinal / retail VI width)
 
 def sig(c): return hash(frozenset(c.items()))
@@ -124,7 +129,7 @@ def report(tag, R, P, r):
     return fl
 
 R, RM = load(a[0], True); P, PM = load(a[1], False); PM0 = PM
-print(f'retail frames {len(R)}, port frames {len(P)}')
+print(f'retail frames {len(R)}, port frames {len(P)}' + (f' (port frames from {PSTART}; indices relative)' if PSTART else ''))
 def rl(M): # run-length (value@start(len)) of a whole-stream meta list
     o = []
     for i, x in enumerate(M):
