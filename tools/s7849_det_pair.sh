@@ -16,6 +16,9 @@
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 REC=${REC-1}; RM=; if [[ -n $REC ]]; then for k in 0 1 2 3 4 5 6; do RM="$RM,800FA730:0:$(printf %X $((0x80137DB0+256*k))):64"; done; RM="$RM,800FA730:0:801384B0:12"; fi
 V=${1:?usage: s7849_det_pair.sh <0x31 value> OUTDIR}; O=${2:?OUTDIR}; mkdir -p $O; SECS=${SECS:-305}
+# s7889: bonus levels (0x31>=16) need the bonus-unlocked save; with the default save retail never enters a level (0 ticks,
+# pins fail after a full retail run). Unset BASE_EEP now picks scratch/s7859/base_bonus.eep for them; 0x31<16 unchanged.
+(( V >= 16 )) && BASE_EEP=${BASE_EEP:-scratch/s7859/base_bonus.eep}
 python3 tools/g3_eep_patch.py ${BASE_EEP:-scratch/s7832/lvl.eep} $O/lvl.eep --set 0x31=$V || exit 3
 RB=/dev/null; [[ -n $RBIN ]] && RB=$PWD/$O/r1/retail.bin
 if [[ ! -s $O/r1/oracle.log ]]; then

@@ -34,7 +34,7 @@ ROWS = [
     ("14", "mission 15", "s7887", "FORK", "audio-clock", "scratch/s7887/v14/score.txt", "305 s pinned pair, APM=1: song 01 end t1396/t1395 again (= s7857/s7858), render exact 1392/1392 pre-fork flight frames (s7858 row superseded)"),
     ("15", "mission 16", "s7888", "H-exact", "", "scratch/s7888/v15/score.txt", "305 s pinned pair, APM=1: all 1892 retail ticks H-exact, full record 1891, residual timing-class (word 149 t943); render 1887/1887 flight frames exact at the flight offset (--port-start 7439; the ~150 s intro shifts pairing -98 -> -99) (s7859 row superseded)"),
     ("16 locked", "= mission 16 dup", "s7859", "H-exact", "", "scratch/s7859/v16/score.txt", "locked-bonus fallback to 15"),
-    ("b16", "bonus race", "s7860", "H-exact", "", "scratch/s7860/v16s/score.txt", "race-safe press schedule"),
+    ("b16", "bonus race", "s7889", "H-exact", "", "scratch/s7889/v16b/score.txt", "race-safe press schedule, APM-scaled AP + bonus save: all 458 retail ticks H-exact, residual none; render 455/455 race frames exact (--port-start 1916; the 723 pre-tick-0 lead-in is unpinned) (s7860 row superseded)"),
     ("b17", "bonus Death Star trench", "s7861", "FORK", "audio-clock", "scratch/s7861/v17/score.txt", "song 3 end t1124/t1123"),
     ("b18", "bonus Battle of Hoth", "s7862", "H-exact", "", "scratch/s7862/v18/score.txt", "6444 ticks, no song switch"),
 ]

@@ -210885,3 +210885,32 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 47.3 KB (no maintenance), HID idle 3524
   Lesson: a long intro cinematic can move the frame pairing by one; when neg FAILs with pinned 0 in the last phase, check the
   vote list for a second offset before calling H-render.
 - Next: bonus 16 (race, s7860 race-safe schedule), bonus 18.
+
+## Session 7889 (2026-11-23) — det render oracle bonus 16 (race): APM-scaled pair H-exact all 458 retail ticks (residual none), render exact on all 455 race frames (18 missions render-exact); s7849_det_pair.sh defaults BASE_EEP to the bonus save for 0x31>=16
+
+Work unit (NEXT s7889, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 47.9 KB (no maintenance), HID idle 4792 s, IOConsoleLocked false, no game running.
+- Run 1 (scratch/s7889/v16, VOID): `env RBIN=1 PP_OVR=19.5:start,31.5:start,43.5:start AP_OVR=6:start,11:start,11.5:w1024,
+  15.05:start,24.3:start,36.3:start,48.3:start zsh tools/s7849_det_pair.sh 16 ...` without BASE_EEP. Retail ran 305 s, 0 ticks,
+  pins SEED=None (exit 4), port never ran. Cause (boring): the default base save has no bonus unlocked; s7859-s7862 all used
+  BASE_EEP=scratch/s7859/base_bonus.eep (lvl.eep differs from s7860's at byte 0x20; the press logs are identical).
+- Run 2 (scratch/s7889/v16b): same schedule + BASE_EEP=scratch/s7859/base_bonus.eep. Retail seed ebdad279 (= s7860 race), 458
+  ticks, NDT 0. The AP is s7860's PP mapped onto the APM=1 port times (15.05 = the boot press, then PP+4.8), so it has the same
+  number of presses as retail (s7860 needed an extra 67.5 Start under the old port times). `s7880_press_scene.py`: all 4
+  post-anchor presses matched, lag 0, offsets +9,+9,+8,+8 VI. All presses come before the race on both sides.
+- Det score (`s7856_det_verdict.py --tag b16`): **H-exact ticks=458 full_rec=458, no seed/call/nonpose/timing/rumble fork,
+  residual none** (rumble 5/5). Plant (100,[50]) caught; unpinned p2 forks at seed t0 / calls t27 / nonpose t403. 0 crashlines.
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`): rc 1 on the global offset -71. Its "flight" window port[1193:2371]
+  = 723 non-exact + 455 exact. The 723 are exactly port[1193:1916], the pre-tick-0 lead-in that the tick-0 seed poke does not pin
+  (m7-m16 class); the longest exact run, port[1916:2381], is the race. With `--port-start 1916`: offset 1845, **race port[0:455]
+  exact 455 non-exact 0**, plant (frame 232) caught, neg PASS, rc 0. 455 frames for 458 ticks matches the m16 ratio (1887/1892).
+  After the race (hp 0 at t403, retail sits on the retry screen) 6763 frames differ in BOTH arms equally (pinned 504 exact vs
+  unpinned 49 is the race itself): this is after the last det tick, so the oracle does not cover it. Not scored as a defect.
+- Landed: `tools/s7849_det_pair.sh` sets BASE_EEP to scratch/s7859/base_bonus.eep when it is unset and 0x31>=16 (0x31<16
+  unchanged). This stops run 1's void (a full 5 min retail run before pins fail). Sweep row b16 rescores scratch/s7889/v16b
+  (`TABLE OK rescored=17 hand=3 mismatch=0`; `--control` PASS MISMATCH 1). RDP bins deleted, logs zstd'd.
+- Harness note: I edited s7849_det_pair.sh while run 2's zsh was executing it and reverted within seconds. zsh still hit a
+  parse error at line 51 AFTER score.txt was written (score.txt complete, verdict ran). Do not edit a driver script mid-run.
+- Verdict: the bonus-16 race renders the same as retail on every race frame. Two lines of evidence: the tick record is exact
+  (CPU state) and the RDP stream is exact (render), each with its own control. Rules out a port render defect in the bonus race.
+- Next: bonus 18 (Hoth, s7862 recipe: 6444 ticks, BASE_EEP now automatic) with RBIN=1.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7888 (2026-11-23).
+Compact operational handoff, as of Session 7889 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -399,7 +399,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    exact on all 1887 retail flight frames (port phase 7) -> 17 missions render-exact.** The ~150 s intro cinematic (phase 6,
    deterministic in both arms to port 5636, then diverges in both: pre-tick-0 class) shifts the pairing offset -98 -> -99, so
    the global offset scores 0 flight frames; new `s7868_det_frame_cmp.py --port-start N` scores flight at its own offset
-   (votes -99 1887 = retail flight length). Plant caught, neg PASS (unpinned 0). Row 15 rescored. Next: bonus 16, 18.
+   (votes -99 1887 = retail flight length). Plant caught, neg PASS (unpinned 0). Row 15 rescored.
+   **s7889: bonus 16 (race), s7860 PP + APM-scaled AP (15.05,24.3,36.3,48.3) + BASE_EEP bonus save: H-exact all 458 ticks,
+   residual none; render exact on all 455 race frames (`--port-start 1916`; the 723-frame pre-tick-0 lead-in is unpinned)
+   -> 18 missions render-exact.** s7849_det_pair.sh now defaults BASE_EEP to scratch/s7859/base_bonus.eep for 0x31>=16 (run
+   without it = 0 retail ticks). Row b16 rescored. Next: bonus 18 (Hoth, s7862 schedule).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
