@@ -210784,3 +210784,21 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 45.4 KB (no maintenance), screen not lo
 - Verdict: mission 9's flight is render-identical to retail on det ticks up to the audio-clock fork (~59 s of flight). Rules out a
   port render defect in that window. Post-fork divergence is the timing class, not a render defect.
 - Next: 0x31=9 (mission 10, s7853 hand row H-exact 5076 ticks), then 12+ / bonus 16, 18.
+
+## Session 7884 (2026-11-23) — det render oracle 0x31=9 (mission 10): APM=1 pair H-exact all 5076 ticks, render exact on all 5067 flight frames (13 missions); sweep row 9 rescored
+Work unit (NEXT s7884, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 45.9 KB (no maintenance), screen not locked, no game running.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 9 scratch/s7884/v9` (rc 0). Pins NDT=58, NTICKS=5076.
+- Schedule check (`tools/s7880_press_scene.py`): all 7 post-anchor presses matched, lag 0, constant +18 VI (port late;
+  s7883 +10, s7880-2 0/-1). Pre-flight only; the pinned tick record is exact, so it did not matter.
+- Det score (`s7856_det_verdict.py --tag 0x31=9`): H-exact ticks=5076, full 460-w record on both sides 5074, 0 fork
+  windows, residual none. Word-50 plant at t100 caught; unpinned p2 forks at seed t0.
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): offset -95 (5123 votes), flight port[3387:8454] exact
+  5067 non-exact 0; post-flight cut at 8454 = retail's own first blank (798 post-flight non-exact, past the tick window);
+  pre-flight 2797 non-exact (phases 4-6 texrect/HUD + tri-count = unpinned pre-tick-0 window, same class as m7/m9).
+  Plant (port frame 5915, in flight) caught; neg PASS (unpinned 1 exact / 1250 non-exact in flight vs pinned 5067).
+- 0 crash lines in p1 / p2. RDP bins (4.5 GB) deleted after scoring.
+- Landed: sweep row 9 rescores scratch/s7884/v9 (`TABLE OK rescored=17 hand=3 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 10's whole scored flight (~85 s) is render-identical to retail on det ticks. Rules out a port render
+  defect there. Two lines: tick record H-exact (CPU state) and RDP stream exact (render), each with its own positive control.
+- Next: 0x31=12 (mission 13, s7856 H-exact) render pair, then 13, 14 (fork), 15, bonus 16, 18.

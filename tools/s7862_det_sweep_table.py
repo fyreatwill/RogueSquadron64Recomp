@@ -26,7 +26,7 @@ ROWS = [
     ("6", "mission 7", "s7882", "H-exact", "", "scratch/s7882/v6/score.txt", "305 s pinned pair, APM=1: all 1876 retail ticks H-exact, full record 1876; render 1873/1873 flight frames exact (s7847 hand row superseded)"),
     ("7", "mission 8", "s7851", "H-exact", "", None, "rumble/3D-sound residual = timing class (s7850/s7851)"),
     ("8", "mission 9", "s7883", "FORK", "audio-clock", "scratch/s7883/v8/score.txt", "305 s pinned pair, APM=1: song 03 end t3527/t3526 again (= s7852 under the old schedule), render exact 3523/3523 pre-fork flight frames"),
-    ("9", "mission 10", "s7853", "H-exact", "", None, "5076 ticks"),
+    ("9", "mission 10", "s7884", "H-exact", "", "scratch/s7884/v9/score.txt", "305 s pinned pair, APM=1: all 5076 retail ticks H-exact, full record 5074; render 5067/5067 flight frames exact (s7853 hand row superseded)"),
     ("10", "mission 11 Bespin", "s7854", "H-exact", "", "scratch/s7854b/score.txt", ""),
     ("11", "mission 12", "s7855", "H-exact", "", "scratch/s7855/score.txt", ""),
     ("12", "mission 13", "s7856", "H-exact", "", "scratch/s7856/score.txt", ""),

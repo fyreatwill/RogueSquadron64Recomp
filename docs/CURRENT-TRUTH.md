@@ -381,7 +381,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    the same tick as s7852 under the old schedule (two schedules, same fork = not schedule-borne); render exact on all 3523
    pre-fork flight frames, no --port-end needed (the exact run stops at the fork): 12 missions render-exact.** Plant caught, neg
    PASS (unpinned 0/5690 exact in flight). Port presses sat +10 VI vs retail here (s7880-s7882: 0/-1); harmless pre-flight.
-   Row 8 rescores s7883/v8 (rescored=16 hand=4). Next: 0x31=9, then 12+ / bonus 16, 18.
+   Row 8 rescores s7883/v8 (rescored=16 hand=4). 
+   **s7884: 0x31=9 (mission 10), APM=1: H-exact all 5076 ticks (full record 5074), render exact 5067/5067 flight frames:
+   13 missions render-exact.** Plant caught, neg PASS (unpinned 1/1251 exact in flight). Port presses +18 VI vs retail
+   (constant, pre-flight only, harmless). Row 9 rescores s7884/v9 (rescored=17 hand=3: rows 2, 5, 7). Next: 0x31=12, 13,
+   14, 15 render, then bonus 16, 18.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
