@@ -22,7 +22,9 @@ REVIEWED = {}  # name -> why a HIDDEN compiled reading is deliberate (filled fro
 NOREF_OK = {"ROGUESQ_S7103_CAMFIX", "ROGUESQ_LOG_M5_PRECLEAR_SPAN", "ROGUESQ_FORCE_CINE_A0", "ROGUESQ_FORCE_ALLOC_TAIL_GUARD3",
             "ROGUESQ_FORCE_ALLOC_TAIL_GUARD4", "ROGUESQ_LOG_EMIT_DL_GUARD4", "ROGUESQ_LOG_HEAPLISTDEQ_GUARD4", "ROGUESQ_FORCE_UNLOCK",
             "ROGUESQ_FORCE_PLANET_UNLOCK", "ROGUESQ_LOG_SCENE_NODE_LIST_GUARD4", "ROGUESQ_SPANFORCE", "ROGUESQ_SPANFORCE_PERIOD",
-            "ROGUESQ_DD_FARCLIP_MUL", "ROGUESQ_DD_POOLX"}
+            "ROGUESQ_DD_FARCLIP_MUL", "ROGUESQ_DD_POOLX",
+            # s7898: det-pair diagnostic list (c / fire numbers), unset = 0 = off; became modelable when the list parse landed
+            "ROGUESQ_SNAP3_ONLY"}
 
 
 if "--tree" in sys.argv:

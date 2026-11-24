@@ -67,6 +67,18 @@ PIN1_S7895A = PIN1
 PIN1 = PIN1_S7895A.replace('(rs64_s7895_dtpc == 0x800C6674u)', '((uint32_t)ctx->r16 == 0x80165DE0u && rs64_s7895_dtpc == 0x800C6674u)')
 assert PIN1 != PIN1_S7895A
 assert PIN1 != PIN1_S7891
+# s7898: ROGUESQ_SNAP3_ONLY takes a comma list: 'c' (the crawl struct key) plus fire numbers n (1..63), any hit forces el 0.
+# s7898 measured m11's post-crawl cinematic (struct 0x80165E78, shared with the boot cinematic, so no struct key) post-load frame:
+# retail stores 1.0 VI, the =1-pinned port 2.038 VI (+1 VI cumulative over all 849 later calls). A single token is unchanged.
+PIN1_S7895B = PIN1
+PIN1 = PIN1_S7895B.replace('only7894 = (o4 && *o4) ? (*o4 == \'c\' ? -2 : atoi(o4)) : 0; }',
+    'only7894 = (o4 && *o4) ? (*o4 == \'c\' ? -2 : atoi(o4)) : 0; if (o4) for (const char* q7898 = o4; *q7898; ) { '
+    'if (*q7898 == \'c\') only7894 = -2; else if (*q7898 >= \'0\' && *q7898 <= \'9\') { int v7898 = atoi(q7898); if (v7898 > 0 && v7898 < 64) fm7898 |= 1ull << v7898; '
+    'while (*q7898 >= \'0\' && *q7898 <= \'9\') ++q7898; continue; } ++q7898; } }').replace(
+    'static int only7894 = -1; extern uint32_t rs64_s7895_dtpc;', 'static int only7894 = -1; static unsigned long long fm7898 = 0; extern uint32_t rs64_s7895_dtpc;').replace(
+    '((uint32_t)ctx->r16 == 0x80165DE0u && rs64_s7895_dtpc == 0x800C6674u) :',
+    '(((uint32_t)ctx->r16 == 0x80165DE0u && rs64_s7895_dtpc == 0x800C6674u) || (z7839 < 64 && ((fm7898 >> z7839) & 1))) :')
+assert PIN1.count('7898') >= 8, PIN1.count('7898')
 
 HDR = ('static int en7839 = -1; static long long pin7839 = -1; if (en7839 < 0) { const char* e = getenv("ROGUESQ_S7839_SNAP"); '
        'en7839 = (e && *e && *e != \'0\') ? 1 : 0; const char* p = getenv("ROGUESQ_S7839_SNAP_EL"); const char* rs = getenv("ROGUESQ_RETAIL_SNAP"); pin7839 = (p && *p) ? atoll(p) : ((rs && *rs && *rs != \'0\') ? 811160 : -1); '
@@ -107,7 +119,7 @@ RESET = "    { /* PATCH: s7891 snap reset */ extern int rs64_s7891_reset; extern
 
 def apply3(text):
     n = 0
-    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (PIN1_S7891, PIN1), (PIN1_S7894, PIN1), (PIN1_S7895A, PIN1), (OLD_RESET, RESET),
+    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (PIN1_S7891, PIN1), (PIN1_S7894, PIN1), (PIN1_S7895A, PIN1), (PIN1_S7895B, PIN1), (OLD_RESET, RESET),
                   (OLD_RESET.replace("snap reset", "snap reset2"), RESET.replace("snap reset", "snap reset2"))):
         if o in text:
             text = text.replace(o, nw); n += 1

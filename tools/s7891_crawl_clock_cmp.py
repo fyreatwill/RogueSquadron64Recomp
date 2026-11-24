@@ -10,7 +10,7 @@ covers island A, see --seg) is aligned call-by-call on its first call, and the c
 is compared: delta 0 everywhere -> guest time state equal; a constant +-1 VI -> half a 2-VI frame (H-index).
 Control (iron rule 1): --plant K adds +1 VI to port call K of the segment and the comparator must report a 1-VI cumulative
 delta from K on (rc 3 if not).
-usage: s7891_crawl_clock_cmp.py RETAIL.log PORT_RAND.txt [--plant K]
+usage: s7891_crawl_clock_cmp.py RETAIL.log PORT_RAND.txt [--plant K[:SEG]]  (s7898: SEG = menu segment pair index, default 0)
 """
 import re, struct, sys
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
@@ -88,7 +88,8 @@ def segments(rows):
 def main():
     a = sys.argv[1:]
     if len(a) < 2: print(__doc__); return 2
-    plant = int(a[a.index('--plant') + 1]) if '--plant' in a else None
+    pa = a[a.index('--plant') + 1].split(':') if '--plant' in a else None
+    plant = int(pa[0]) if pa else None; pseg = int(pa[1]) if pa and len(pa) > 1 else 0
     R, P = parse(a[0], True), parse(a[1], False)
     if not R or not P: print(f'no rows (retail {len(R)} port {len(P)})'); return 3
     table('retail', R); table('port', P)
@@ -114,7 +115,7 @@ def main():
             n = min(r1 - r0, p1 - p0)
             rd = [round(R[r0 + i]['dt'] * 60) for i in range(n)]
             pd = [round(P[p0 + i]['dt'] * 60) for i in range(n)]
-            if plant is not None and k == 0 and site == 'menu' and plant < n: pd[plant] += 1
+            if plant is not None and k == pseg and site == 'menu' and plant < n: pd[plant] += 1
             cr = cp = 0; first = None; deltas = {}
             for i in range(n):
                 cr += rd[i]; cp += pd[i]
@@ -127,7 +128,7 @@ def main():
                 acc = f' acc0x800B0B2C delta(port-retail) first {ad[0]:+.5f} last {ad[-1]:+.5f} min {min(ad):+.5f} max {max(ad):+.5f}'
             print(f'{site} seg {k}: retail [{r0}:{r1}] vi {R[r0]["vi"]} n {r1 - r0} | port [{p0}:{p1}] vi {P[p0]["vi"]} n {p1 - p0} | '
                   f'per-call dt equal {same}/{n}, first cum delta at call {first}, cum delta VI histogram {dict(sorted(deltas.items()))}{acc}')
-            if plant is not None and k == 0 and site == 'menu':
+            if plant is not None and k == pseg and site == 'menu':
                 ok = first is not None and first <= plant and deltas.get(1, 0) >= n - plant - 1
                 print(f'control plant +1 VI at call {plant}: {"PASS" if ok else "FAIL"}')
                 rc = 0 if ok else 3

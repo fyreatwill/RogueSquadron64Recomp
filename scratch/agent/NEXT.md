@@ -1,20 +1,21 @@
-# NEXT (s7898; s7897 was the s7613 contract fix only)
+# NEXT (s7899)
 HYPOTHESIS-ID: g3-island-b
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7896): m3 island B CLOSED as H-rng (RAND_RESEED / det_pair RREP=1 -> m3 pre-flight exact 544/544). m6 B N212@6071 and m11 B
-N1054@6069 survive a full per-site retail rand replay (scratch/s7896/m6q, m11q: SNAP=3 + SNAP3_ONLY=c + REPLAY; bins + rand kept).
-Both start at retail frame ~5538 (port 6069/6070) with the same signature: a few PRIM FFFFFFFF tris move, count grows (m11 to
-~600/frame). Same retail frame on two missions = shared content after the chapter crawl.
-Unit:
-  1. Offline: map retail frame 5538 to a VI and to a scene: which 0x800C6674 / 0x800AF374 marks bracket port frame 6069 in
-     scratch/s7896/m11q/p1_rand.txt (port rows carry VI; RDP bin frame -> VI via the [vistamp]/phase in p1/run.log), and which
-     timeSnapshotFiller struct (s0) those frames use (s7895 list: 80165DE0 = crawl). Is B inside the crawl or the next scene?
-  2. Hypotheses: H-dt (one more frame in that scene stores a different dt than retail: the s7891 crawl-clock family), H-object
-     (advanceNpcOnCurvedPath / walker progress differs by call count, m6 0x8006C0FC runs 81 vs 80), H-cam (camera spline phase).
-  Discriminator (ONE run, both missions share it so use m11 = largest island): `zsh tools/s7891_crawl_clock.sh scratch/s7897/cc
-  EEP=scratch/s7895/m11k/lvl.eep SECS=130 SNAP=3` with P1-equivalent ROGUESQ_SNAP3_ONLY=c (check the script passes it; add an XE/P1E
-  hook if not) and score with tools/s7891_crawl_clock_cmp.py: the first per-call dt/struct row that differs from retail after the
-  =c frame names the frame. If it falls at the B start -> H-dt, pin it like =c (key by struct). If every dt row is retail-equal
-  through B -> H-object/H-cam: dump the FFFFFFFF object's state (find it from the differing tris' screen position) instead.
-Notes: scratch/s7894/p1only.sh does NOT expand SNAP=c (use SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=c), det_pair.sh does.
+State (s7898): crawl-tail island B (m11 N213@6073, m6 N212@6071) has guest crawl dt EXACTLY retail (2887/2887, cum 0 VI, plant PASS),
+so H-dt is refuted. 5-10 white PRIM FFFFFFFF tris drift per frame out of 225-345 (tri count equal or +-2, no frame shift). m11's
+cinematic part is mostly the fire-7 post-load half-frame (lever ROGUESQ_SNAP3_ONLY=c,7: N1054 -> N213 + 604 cinematic remnants).
+Unit (offline first, kept bins: retail scratch/s7895/m11k/r1/retail.bin, port scratch/s7898/m11c7/p1.bin.zst):
+  1. Name the object. Dump the differing tris (port-only vs retail-only) of port frames 6073..6100 with screen x/y/size: stars (tiny,
+     scattered, many frames) vs one model (clustered) vs crawl text (in the text band). Extend tools/s7896_island_b_probe.py with
+     --dump (control: a planted YH+1 tri must appear in the dump at its coordinates).
+  2. Hypotheses: H-object-rng (star/particle positions from a guest RNG that is NOT rand 0x80003430, e.g. an inline LCG, so the
+     s7896 replay could not reach it; check whether the drifting tris' positions are a permutation of retail's = same set, other order),
+     H-cam (crawl-tail camera tilt: all drifting tris shift by one common delta), H-anim (an object stepped by call count, not dt:
+     per-tri delta grows linearly with frames).
+  Discriminator: per frame, the dx/dy between each port-only tri and its nearest retail-only tri. Common delta -> H-cam; set
+  permutation / random pairs -> H-object-rng; delta growing with frame -> H-anim. Then ONE run with a write watch on the object's
+  position source (oracle --watch-write on retail + XTRACE on port) named by the result.
+  3. The m11 cinematic remnants N79/N15/N22/N92/N396 (scratch/s7898/m11c7_cmp.txt): run the same dump on 6297 and 6731 to see if the
+     same object carries over (then one fix closes both).
+Lever recipe: scratch/s7898/run_m11c7.sh (p1only, SNAP=3 + P1E SNAP3_ONLY=c,7 + RAND_REPLAY).

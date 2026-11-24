@@ -211149,3 +211149,44 @@ Result: `s7613_hp_census.py --controls` controls 9/9, RESULT PASS; full sweep 25
 RED 7}, all 7 RED already in tools/gate_sweep_allowed_red.txt (s7865/s7893 pruned captures) -> "new RED: 0", rc=0. The other
 REDs in the s7896 block message were pre-existing allowed rows; s7827/s7836 NEEDS-ARGS are not RED. No runtime change; the
 g3-island-b work unit in NEXT.md (m6/m11 island B, H-dt at retail frame ~5538) is untouched and remains next.
+
+## Session 7898 (2026-11-24) — m11 island B is two parts: crawl tail N213 is dt-exact (H-dt refuted, 2887/2887 crawl calls equal retail, plant PASS) and the post-crawl cinematic's post-load frame stores 2.038 VI vs retail 1.0 (new ROGUESQ_SNAP3_ONLY=c,7 list: N1054 -> N213 + 604 cinematic remnants)
+
+Work unit (NEXT s7898, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=6 new=0, no new SOAK-RESULTS lines, no owner
+answers, CURRENT-TRUTH 52.9 KB (no maintenance).
+- Offline map (kept s7896 m6q/m11q rand traces, dt-site rows segmented by site + VI gap): both missions have the same front-end
+  segment shape and a 2887-call crawl (struct 0x80165DE0). Port render phase 6 starts at the crawl's first call, so island B's start
+  (m11 port frame 6069, m6 6071) = crawl call ~2675 of 2887, i.e. the last ~212 crawl frames. m6 B (N212) ends exactly at the crawl
+  end; m11 B (N1054) runs on through the whole post-crawl cinematic (site 0x800AF374, 851 calls, struct 0x80165E78 = the SAME struct
+  as the boot cinematic, so no struct key can single it out).
+- Run 1 (tools/s7891_crawl_clock.sh, now takes SNAP=c and P1E=; unset = byte-identical): `env EEP=scratch/s7895/m11k/lvl.eep
+  SECS=240 SNAP=c zsh tools/s7891_crawl_clock.sh scratch/s7898/cc`. Retail oracle 14401 VI, 6843 dt-site rows; port 7137, crashlines 0.
+  Crawl segment: **per-call dt equal 2887/2887, cumulative delta 0 VI on every call** (covers B's start at call 2675 and the 212 calls
+  after it). Control (new `--plant K:SEG` in tools/s7891_crawl_clock_cmp.py, SEG = menu segment pair; the old default plants seg 0,
+  which pairs retail's 242-call boot with the port's 124-call one and is not aligned): +1 VI at crawl call 2675 -> "first cum delta
+  at call 2675, {0: 2675, 1: 212}" PASS. So **H-dt is refuted for the crawl-tail part of island B**: guest crawl time state equals
+  retail call for call while the white tris drift.
+- Same run, post-crawl cinematic: per-call dt equal 850/851 but cumulative +1 VI from call 2 on (acc 0x800B0B2C delta +0.01667 at the
+  end). Call 2 (the post-load frame, RETAIL_SNAP=3 fire n=7, pinned el 811160): retail raw 1.0 VI, port 2.038 VI. The island-A
+  mechanism (H-index), on the cinematic instead of the crawl.
+- Change: tools/apply_s7839_snaplog.py layer s7898 (PIN1_S7895B -> PIN1): ROGUESQ_SNAP3_ONLY takes a comma list, 'c' (crawl struct
+  key) plus fire numbers 1..63; any hit forces el 0. A single token behaves as before. Applied to the live tree (funcs_3.c x1),
+  rebuilt. The s7719 regen gate then read `reader: 1` (NOREF ROGUESQ_SNAP3_ONLY: the list parse made the reading modelable, was UNMOD);
+  added to s7734 NOREF_OK with the reason (diagnostic, unset = off) -> census unreviewed 0, controls PASS.
+- Run 2 (det pair, retail recording hard-linked from s7895/m11k, same recipe as s7896 m11q except the list):
+  `env RBIN=1 SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=$PWD/scratch/s7896/replay_m11k.txt" zsh scratch/s7894/p1only.sh 10
+  scratch/s7898/m11c7` (scratch/s7898/run_m11c7.sh). Fires: n=6 crawl forced 0, n=7 cinematic forced 0 (real el 0, so the =1 pin had
+  been adding 1.038 VI). Render (tools/s7868_det_frame_cmp.py --plant, PASS): **map E2674 N213@6073 E11 N79 E2 N15 E1 N22 E1 N92 E222
+  N396@6731 E2562**, interior non-exact 1054 -> 817, flight 2562/2562. Compared with m11q (s7896, ONLY=c, same retail, N1054@6069 one
+  block), 237 cinematic frames become exact, and the crawl-tail island is now N213, the same size as m6's N212.
+  Probe on the tail (tools/s7896_island_b_probe.py 6073 6286, controls PASS): 173 mixed + 40 geo-only, no retail shift k matches,
+  tri counts equal or +-2, 5-10 FFFFFFFF tris differ per frame of 225-345, while the frame's tri count grows.
+- Selects: island B on m6/m11 = (i) a crawl-tail object drift with guest dt exactly retail (H-object / H-cam, both missions), plus on
+  m11 (ii) the cinematic post-load H-index (fire 7, lever =c,7). Two lines for (ii): the dt row (2.038 vs 1.0 VI, cumulative +1 VI)
+  and the render (237 frames exact under the lever, same retail). The 604 remaining cinematic frames (N79/N15/N22/N92/N396) are
+  open: likely the crawl-tail drift carried into the cinematic (same objects) or another post-load key.
+- ORIGIN: no mitigation; diagnostic det-pair lever only (defaults untouched). The 2.038 VI is written by timeSnapshotFiller under the
+  RETAIL_SNAP pin (el 811160 + vd 1) on a frame where the real el was 0. That is a legitimate value from our pin, not corruption.
+- Kept: scratch/s7898/cc (retail+port dt traces, score.txt), scratch/s7898/m11c7/p1.bin.zst + p1_rand.txt, cmp/probe outputs.
+- Gates: s7719 regen gate --strict strict 0 (reader row fixed as above); full sweep 253 gates {GREEN 237, REPORT 2, NEEDS-ARGS 7,
+  RED 7}, all 7 RED in tools/gate_sweep_allowed_red.txt (same set as s7897) -> 0 new RED.

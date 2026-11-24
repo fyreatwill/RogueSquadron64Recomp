@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7895 (2026-11-24).
+Compact operational handoff, as of Session 7898 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -192,13 +192,13 @@ Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into o
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 (s7897: any new static pointer in src/ needs an s7613 HP census row, class base/host/gated/..., or the exit gate goes RED.)
-0. **Island B split (s7896, slug g3-island-b).** m3's B (PRIM FFFF3C29, updateAnimatedTextureStreaming) is pure pre-tick RNG:
-   `ROGUESQ_RAND_RESEED=8007132C:17:916407E1` (or det_pair `RREP=1` = per-site retail replay, tools/s7896_rand_replay.py) makes the
-   whole m3 pre-flight scene exact (544/544, two lines: rand values equal retail + RDP frames). m6 (N212@6071) and m11 (N1054@6069)
-   B are NOT RNG (full replay: unchanged) and both start at retail frame ~5538 with the same white-tri drift = crawl-tail content,
-   island A's family. Next: H-dt (dump the crawl struct 0x80165DE0 dt per frame near retail frame 5538, s7891_crawl_clock style) vs
-   H-object (advanceNpcOnCurvedPath progress on m6). Island A lever: det_pair `SNAP=c` (s7895). scratch/s7894/p1only.sh does NOT
-   expand SNAP=c (use SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=c there).
+0. **Island B (s7896-s7898, slug g3-island-b).** m3's B is pure pre-tick RNG, closed by det_pair `RREP=1` (s7896, 544/544).
+   m6/m11 B start at crawl call ~2675 of 2887 (the crawl tail). **s7898: H-dt refuted there**: crawl dt equals retail 2887/2887, with
+   cumulative 0 VI (s7891_crawl_clock `--plant 2675:4` PASS), yet 5-10 white FFFFFFFF tris per frame drift (m11 N213, m6 N212).
+   On m11 B continued through the post-crawl cinematic because of the island-A mechanism on its post-load frame (fire 7; retail 1.0 VI,
+   pinned port 2.038). `ROGUESQ_SNAP3_ONLY=c,7` (new list form) turns 237 of those frames exact: map N213@6073 + N79/N15/N22/N92/N396
+   (817 vs 1054). Next: identify the drifting crawl-tail object from the differing tris (screen positions, H-object vs H-cam).
+   p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
