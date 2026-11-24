@@ -1,21 +1,20 @@
-# NEXT (s7890)
-HYPOTHESIS-ID: g3-det-render-coverage
+# NEXT (s7891)
+HYPOTHESIS-ID: g3-cinematic-half-frame-phase
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State: 18 missions render-exact on det-tick frames (m1-m16, b16 race s7889, b17). Last one not render-scored: bonus 18 (Hoth, s7862,
-6444 ticks H-exact, no render). The BASE_EEP bonus save is now automatic for 0x31>=16 (s7889); do NOT edit s7849_det_pair.sh mid-run.
-Unit: bonus 18 + render oracle, screen unlocked (`ioreg -n Root -d1 -a | grep -A1 IOConsoleLocked`), ~45 min. Retail PP = s7862's;
-the AP is the s7862 PP mapped onto the APM=1 port times (boot 15.05, then PP+4.8), the s7889 rule that worked for b16:
-  `env RBIN=1 PP_OVR=19.5:start,27.5:dright,29:dright,31.5:start,43.5:start,55.5:start,67.5:start AP_OVR=6:start,11:start,11.5:w1024,15.05:start,24.3:start,32.3:right,33.8:right,36.3:start,48.3:start,60.3:start,72.3:start zsh tools/s7849_det_pair.sh 16 scratch/s7890/v18`
-  Retail must give seed 43308409 / 6444 ticks (else the pick is wrong: see s7861/s7862 cursor probes). If the port picks the
-  wrong level (p1 seed != 43308409 at t0), fall back to s7862's AP_OVR=6,11,11.5:w1024,19.5,31.5,39.5:right,41:right,43.5,67.5,79.5:start
-  (pass ":start" on each entry) on the same r1 (the driver reuses r1/oracle.log; delete p1/p2 dirs first).
-  `python3 tools/s7880_press_scene.py scratch/s7890/v18/r1/oracle.log scratch/s7890/v18/p1/run.log`
-  `python3 tools/s7856_det_verdict.py scratch/s7890/v18/score.txt --tag b18`
-  `python3 tools/s7868_det_frame_cmp.py scratch/s7890/v18/r1/retail.bin scratch/s7890/v18/p1.bin --neg scratch/s7890/v18/p2.bin --plant > .../render.txt`
-  If the flight window has non-exact frames, check the longest exact run vs the tick count. A lead-in before tick 0 is unpinned
-  (s7888/s7889), so rerun with `--port-start <start of the longest exact run>`.
-  Rescore row b18 in tools/s7862_det_sweep_table.py (run it + --control), delete the bins, zstd the big logs.
-Outcomes: render exact on det-tick frames -> 19/19 (G3 det render coverage complete, close the slug); non-exact frames on exact
-ticks at the right offset -> H-render port defect (bisect the first differing RDP command).
-Parked: g3-cinematic-half-frame-phase (s7874 table).
+State: G3 det render coverage CLOSED s7890 (19/19 missions render-exact on det ticks). The one render-level difference left
+in every pair is pre-flight island A: the opening cinematic's 64 PRIM-FF tris are offset by 0.51 x per-frame speed - 0.016,
+identical in p1 and p2 (m6 s7870, m11 s7871). Refuted: dt (s7872), snapshot value (s7873), raw clock + audio clock (s7874).
+Parked s7874 by rule 8 with two hypotheses open. This unit is the ONE new discriminator between them, not another lever:
+  H-index      the game's own cinematic state is half a frame off (frame-counter / spline-time origin differs): guest RAM differs.
+  H-retail-rdp the guest state is equal and the oracle's RDP capture is taken half a frame late/early (harness): RAM equal, RDP differs.
+Measurement (ONE port run + reuse the retained retail pair scratch/s7872/v10/r1, or one fresh oracle run if RAM words were not kept):
+  per frame in the cinematic window, dump the cinematic camera/spline time word(s) from guest RAM on BOTH sides at the same
+  point in the frame (the VI the gfx task is submitted). Find the word: the spline walker used by the opening cinematic
+  (cinematicSplineWalkerNpcHandler / camera spline param; grep symbols) - confirm it moves monotonically through island A.
+  Pair frames with the s7868 offset (-529 for v10). Outcomes: spline-time delta == 0.5 frame step on paired frames -> H-index
+  (game state; then find the init-order of that counter); delta == 0 while RDP differs -> H-retail-rdp (oracle capture lag;
+  fix the oracle's capture point, re-score island A). Positive control: plant a +1-frame shift in the port dump and require the
+  comparator to report a 1.0-step delta. If neither (delta not 0 or 0.5): stop, write the table, close the slug as timing class.
+Budget: this is iteration 4 on this slug overall but the first since parking; 1 iteration, then close either way.
+Tools: tools/s7872_frame_clock.py (retail CPO1 trace pattern), scratch/s7870/phase_a.py (0.51 regression), tools/oracle/README.md.

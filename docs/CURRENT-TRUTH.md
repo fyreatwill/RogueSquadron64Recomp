@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7889 (2026-11-23).
+Compact operational handoff, as of Session 7890 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -340,7 +340,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    sites; on the render path only timeSnapshotFiller consumes raw time (0x8011A914 since-last-frame -> profiler only). Det pair
    p1 ROGUESQ_AI_VI_CLOCK=3 (mupen AI-DMA clock; boot timeline moved, off -532 vs -535 = lever control) vs p2 default: island A
    identical in both (0.510 x speed - 0.016, 6244/6244). Island A is pre-flight timing class, open: H-index (frame-counter offset)
-   / H-retail-rdp (capture lag). Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
+   / H-retail-rdp (capture lag). **s7890: resumed next (det coverage closed): one guest-RAM spline-time compare splits the two, then close.** Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
    **s7875: 0x31=2 (mission 3) flight render = retail, 3804/3804 det-tick frames: 5 missions render-exact** (b17, m12, m6, m11,
    m3). `env RBIN=1 zsh tools/s7849_det_pair.sh 2`: p1 H-exact 3807 ticks (seed/calls/rec/pose None; timing word 149 from t3102),
    p2 forks t0; plant caught, phase-7 neg PASS. rc 1 is NOT a flight defect: retail flight frames 3408-7212 = 3804 for 3807 ticks
@@ -403,7 +403,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    **s7889: bonus 16 (race), s7860 PP + APM-scaled AP (15.05,24.3,36.3,48.3) + BASE_EEP bonus save: H-exact all 458 ticks,
    residual none; render exact on all 455 race frames (`--port-start 1916`; the 723-frame pre-tick-0 lead-in is unpinned)
    -> 18 missions render-exact.** s7849_det_pair.sh now defaults BASE_EEP to scratch/s7859/base_bonus.eep for 0x31>=16 (run
-   without it = 0 retail ticks). Row b16 rescored. Next: bonus 18 (Hoth, s7862 schedule).
+   without it = 0 retail ticks). Row b16 rescored.
+   **s7890: bonus 18 (Hoth), s7862 PP + APM-scaled AP (s7889 rule): retail seed 43308409 / 6444 ticks (= s7862), H-exact all
+   6444 ticks, residual none; render exact on all 6439 flight frames (global offset 317, longest exact run = whole phase 5, no
+   --port-start). Plant caught, neg PASS (unpinned p2 1516/5558). -> 19/19 missions render-exact on det ticks (m1-m16, b16, b17
+   pre-fork, b18): G3 det render coverage CLOSED (slug g3-det-render-coverage).** Row b18 rescored (TABLE OK, --control PASS).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

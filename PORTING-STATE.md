@@ -210914,3 +210914,27 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 47.9 KB (no maintenance), HID idle 4792
 - Verdict: the bonus-16 race renders the same as retail on every race frame. Two lines of evidence: the tick record is exact
   (CPU state) and the RDP stream is exact (render), each with its own control. Rules out a port render defect in the bonus race.
 - Next: bonus 18 (Hoth, s7862 recipe: 6444 ticks, BASE_EEP now automatic) with RBIN=1.
+
+## Session 7890 (2026-11-24) — det render oracle bonus 18 (Hoth): H-exact all 6444 ticks, render exact on all 6439 flight frames; 19/19 missions render-exact, G3 det render coverage CLOSED
+
+Work unit (NEXT s7890, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers, no new
+SOAK-RESULTS lines, CURRENT-TRUTH 48.3 KB (no maintenance), HID idle 6651 s, IOConsoleLocked false, no game running.
+- Run (scratch/s7890/v18): `env RBIN=1 PP_OVR=19.5:start,27.5:dright,29:dright,31.5:start,43.5:start,55.5:start,67.5:start
+  AP_OVR=6:start,11:start,11.5:w1024,15.05:start,24.3:start,32.3:right,33.8:right,36.3:start,48.3:start,60.3:start,72.3:start
+  zsh tools/s7849_det_pair.sh 16 scratch/s7890/v18` (BASE_EEP bonus save automatic since s7889). The AP is s7862's PP mapped onto
+  the APM=1 port times (boot 15.05, then PP+4.8), the s7889 rule. Retail SEED=43308409, NTICKS=6444, NDT=17 (= s7862), so the
+  pick is right and the fallback AP was not needed.
+- `s7880_press_scene.py`: all 8 post-anchor presses matched, lag 0, offsets +1,+1,0,0,0,0,0,0 VI (constant +0).
+- Det score (`s7856_det_verdict.py --tag b18`): **H-exact ticks=6444 full_rec=6444, no seed/call/nonpose/timing/rumble fork,
+  residual none.** Unpinned p2 forks seed t0 / nonpose t362; plant (100,[50]) caught. 0 crashlines.
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): retail 9360 / port 9519 frames, offset 317 (6439 votes),
+  flight port[2604:9043] **exact 6439 non-exact 0** (whole port phase 5 = retail 512-wide), 6439 frames for 6444 ticks (same
+  ratio as m16/b16). No pre-tick-0 lead-in island, so no --port-start was needed. Plant (frame 5823) caught; neg: unpinned p2
+  only 1516/5558 exact in flight (first non-exact tri-geom at 3279), PASS.
+- Verdict: bonus 18 renders the same as retail on every flight frame. Two lines of evidence (tick record + RDP stream, each
+  with its own control). **19/19 missions render-exact on det ticks** (m1-m16, b16, b17 up to its audio-clock fork, b18):
+  G3 det render coverage CLOSED, slug g3-det-render-coverage closed.
+- Landed: sweep row b18 in tools/s7862_det_sweep_table.py rescores scratch/s7890/v18 (`TABLE OK rescored=17 hand=3 mismatch=0`,
+  `--control` PASS MISMATCH 1). RDP bins deleted, big logs zstd'd (73 MB retained).
+- Next: the parked pre-flight cinematic island A (g3-cinematic-half-frame-phase), ONE discriminator between H-index (guest
+  cinematic time half a frame off) and H-retail-rdp (oracle capture point), then close the slug either way.
