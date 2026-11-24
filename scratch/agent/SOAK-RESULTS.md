@@ -1713,3 +1713,6 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20261122 | s7809 fold: s7806_gccpatch_L1 (loop) alive 1/1, crashlines 0, vi_stalls30s=0, max_gap 148 ms, level_ok=1 on the all-gcc patches binary -> L4+L1 twin both clean.
 20261122-170829 | s7837_vistamp_L1 | rc=0 | 501s | scratch/agent/soak_results/s7837_vistamp_L1_20261122-170829.log | arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
 20261122-183257 | s7839_snappin_L1 | rc=0 | 500s | scratch/agent/soak_results/s7839_snappin_L1_20261122-183257.log | arms=2 alive=2/2 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=0 alive_na=0
+20261124-135633 | s7905_island_b_rep1 | rc=1 | 364s | scratch/agent/soak_results/s7905_island_b_rep1_20261124-135633.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1 alive_na=0
+20261124-140237 | s7905_island_b_rep2 | rc=1 | 360s | scratch/agent/soak_results/s7905_island_b_rep2_20261124-140237.log | arms=1 alive=1/1 crash_arms=0 stall_arms=0 fatal=0 first=none stall_na=1 alive_na=0
+20261124 | s7906 fold: s7905_island_b_rep1/rep2 (loop) crawl_nonexact=708 both, same binary as s7905's exact C/C2/D -> island B deterministic by det_cmp offset gap 28 (exact) vs 29 (residual), 9/9 unperturbed runs; not load/race (tools/s7906_task_ptr_cmp.py: resubmit at crawl task 2665).

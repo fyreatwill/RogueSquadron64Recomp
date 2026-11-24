@@ -211417,3 +211417,25 @@ Work unit (NEXT s7905, HYPOTHESIS-ID g3-island-b):
 ORIGIN: no mitigation; one opt-in harness bit (delta poke) + a rebuild.
 Kept: scratch/s7905/{run_retail.sh, sum.py, retail_seq.txt, r1/oracle.log.zst, run_poke.sh, run_ctl.sh, run_ctl2.sh, m11C (p1.bin.zst,
 p1_rand.txt.zst), m11C*/m11D cmp texts}. Not in tools/retained_captures.txt: subject to the 7-day prune.
+
+## Session 7906 (2026-11-24) — island B is a deterministic two-class outcome keyed by a one-frame pre-flight alignment gap (28 exact / 29 residual), not a host race or stale build
+Fold: s7905_island_b_rep1/rep2 (loop, load 3.35 / 5.74): alive, crawl_nonexact=708 both (rc=1 = island B back). rep3 still queued.
+Analysis (offline, no new game run; one game run at a time respected):
+- Same binary: build/RogueSquadron64Recomp mtime 12:57, before s7905's C (13:04), C2 (13:10) and both soaks (13:56/14:02). Same
+  recipe text as scratch/s7905/run_ctl.sh, same env (RS64_LOOP/NO_SAVE_WRITE/SETTINGS=0 in both). -> H-stale REFUTED.
+- Mission tick rows (800fa730 m= state) from the pin on: identical C vs R1 vs R2 over every compared tick (2788). Per-frame dt
+  ([dt7835] fr) per phase: identical in the crawl (phase 6) apart from frame 0 and ~2885. -> the sim is not what differs.
+- New tools/s7906_task_ptr_cmp.py (per-phase [lle task] data= stream + task/frame interleave): C vs C2 data-ptr diffs 0 (interleave
+  differs at 1457 tasks, both exact -> interleave is not causal); C vs R1 and C vs R2 interleave diffs 0 but data-ptr diffs 160
+  (identical indices): from crawl task 2665 the soaks resubmit the previous odd-stream DL (0x8074D918, C 0x80729168) and that
+  stream stays one task late until ~2885. -> H-race (host load) REFUTED as the class selector: two loads, identical outcome.
+- Class selector (det_frame_cmp offset votes, all 13 cmp texts s7900-s7905): gap between the main offset and the 643-frame
+  pre-flight vote. Gap 28: s7905 C/C2/D -> crawl 0 non-exact. Gap 29: s7900 burst 708, s7902 snap 708, s7904 B 816, s7904 A 106
+  (stale-.o binary), rep1 708, rep2 708. (s7901 skew arms gap 28 but SKEW perturbs the stream: excluded.) 9 unperturbed runs, 9/9.
+  So a one-frame shift of some pre-flight scene boundary vs the retail alignment decides whether the crawl tail resubmits.
+  Two lines of evidence for "deterministic, not race": identical 160-index diff in two soaks at different loads, and the gap rule
+  across 9 runs. The mechanism linking the gap to the task-2665 resubmit is single-source / unnamed.
+- s7905's "absent 3/3 on the rebuilt binary" was class luck (all three drew gap 28); its "host-timing race" reading is superseded.
+Change: soak_queue/s7905_island_b_rep3.sh now keeps p1.bin as p1.bin.zst (was unlinked) so the 643-vote segment can be located
+in a gap-29 run against C's kept p1.bin.zst.
+ORIGIN: no mitigation; analysis tool + recipe retention change only.
