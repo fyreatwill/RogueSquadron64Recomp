@@ -211097,3 +211097,43 @@ owner answers, CURRENT-TRUTH 52 KB (no maintenance). All arms = scratch/s7894/p1
 - Island B on all three missions sits at the tail of the 640 pre-flight scene: m6 N212@6070, m11 N1054@6062, m3 N183@3760 (183 frames
   before flight at 3943). Next slug g3-island-b.
 - Kept: retail bins m3 (scratch/s7895/m3o/r1, hard-linked into m3c/m3k/m3k2), port bins m3c, m3k2, m11k, m6k. Deleted m3o/m3k/m11o p1.bin.
+
+## Session 7896 (2026-11-24) — island B split: m3's is pure RNG (retail rand replay -> pre-flight exact 544/544), m6/m11's is not (full replay leaves N212/N1054 unchanged; both start at retail frame ~5538 = shared crawl-tail, H-dt next)
+
+Work unit (NEXT s7896, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=6 new=0, no new SOAK-RESULTS lines, no owner
+answers, CURRENT-TRUTH 52 KB (no maintenance).
+- Offline first (tools/s7896_island_b_probe.py, new: per-frame class exact / geo-only / P<R / P>R / mixed, retail shift k in
+  [-4,4], PRIM of differing tris; controls same run: an exact-run frame classifies exact k=0, planted YH+1 -> geo-only 1/1, retail
+  neighbour -> k=+1; PASS on every run below). On the kept s7895 bins: island B is NOT a frame shift (0 frames match any retail
+  k != 0) and NOT a whole object (no P<R / P>R frames): a small set of same-PRIM tris move, growing frame by frame. m3: 127 geo-only
+  + 56 mixed, all PRIM FFFF3C29 (4 -> 20 tris). m6: 197 mixed + 15 geo-only, PRIM FFFFFFFF (6 -> 78 tris).
+- rand traces (det_pair p1_rand.txt vs retail oracle exec-trace 0x80003430, seed-before rows): pre-tick values differ everywhere
+  (seed is pinned only at tick 0). m3: the last 2149 pre-tick calls have the SAME site sequence (updateAnimatedTextureStreaming
+  0x80054174/0x800541FC + dispatchDatSubtypeByRandomIndex 0x8007132C) with different values. m6: only 69 trailing calls agree,
+  advanceNpcOnCurvedPath 0x8006C0FC run lengths differ (81 vs 80, 71 vs 69). m11: 736 trailing, updateWalkerParticlePositions
+  0x8005A93C interleaving differs. rand = seed' = seed * 0xA8351D63, returned (checked on all 41k-53k retail pre-tick rows, 0 breaks).
+  0x8007132C call ordinals agree on all three (m3 17/21, m6 38/38, m11 147/147), so retail-derived ordinals key the port.
+- Change (src/main/rt64_render_context.cpp, host-side rand-trace hook, unset = byte-identical): ROGUESQ_RAND_RESEED=SITE:K:SEED
+  (set rngSeed at rand entry of the K-th call from SITE; row " reseed=OLD>NEW") and ROGUESQ_RAND_REPLAY=<file> (every pre-tick call:
+  the ORD-th call from SITE gets retail's seed-before; row " replay=OLD>NEW"; table from new tools/s7896_rand_replay.py ORACLE_LOG
+  OUT, which checks the LCG chain, rc 3 on a break). tools/s7849_det_pair.sh RREP=1 builds the table and adds it to p1 (unset =
+  byte-identical). rdram base for the hook = the last rs64_xtrace_mark pointer.
+- Arms (scratch/s7894/p1only.sh, same retail recordings hard-linked from s7895):
+  m3r (0x31=2, RESEED=8007132C:17:916407E1): reseed fired at VI 5594; the 2148 later pre-tick calls equal retail by site AND value;
+  ticks exact (seed/call None); render **pre-flight port[3396:3940] non-exact 0, phase 6 exact 544/544**, flight 3804/3804, longest
+  exact run 4358 (control m3c, SNAP=1 same retail, s7895: E361 N183@3760). Plant PASS. **m3 island B = H-rng, closed by the lever.**
+  m6q (0x31=5, SNAP=3 + SNAP3_ONLY=c + full REPLAY): 2138 replay corrections, ticks exact, island A gone (=c fired VI 5622) but
+  **island B N212@6071 unchanged** (189 mixed / 23 geo-only, same tally as without replay), plus N25@6693 N11@6722; flight 2442/2442.
+  m11q (0x31=10, same): 2722 corrections, ticks exact, **island B N1054@6069 unchanged** (972 mixed; ~600 FFFFFFFF tris/frame per side
+  by the end), flight 2529/2529. Plants PASS.
+- Footgun found: p1only.sh (det_pair lines 1-44 copy) passes SNAP straight to ROGUESQ_RETAIL_SNAP, so SNAP=c there = =1 (no
+  "[snap7891] RETAIL_SNAP=3" line). An m6p arm ran that way (island A back, N159@3397) and was discarded; m3r is unaffected (=c is a
+  no-op on m3 and its control m3c is =1). Use SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=c with p1only, or det_pair.sh SNAP=c.
+- Selects: H-rng for m3's island B (two lines: rand values equal retail after the reseed + render exact, vs same-retail control).
+  Refutes H-rng for m6/m11 island B (full per-site replay changes nothing). Lead for m6/m11: island B starts at the SAME retail frame
+  (5538/5539) on both missions with the same signature (a few FFFFFFFF tris moved, growing) = shared crawl-tail content, the island A
+  family: H-dt (another crawl frame's dt differs) vs H-object (advanceNpcOnCurvedPath progress, m6).
+- ORIGIN: diagnostic det-pair lever only (no mitigation, defaults untouched): the writer of island B's m3 values is rand_recomp fed
+  from an unpinned pre-tick seed (the port reaches the pre-flight scene with a different rngSeed because its pre-scene call history
+  differs: 44520 vs 41341 calls), a legitimate value, not corruption.
+- Kept: scratch/s7896/{m3r,m6q,m11q}/p1.bin + rand traces, replay tables scratch/s7896/replay_*.txt, probe/cmp outputs. m6p bin deleted.

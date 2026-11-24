@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include "rs64_controls_panel.h"
 #include <mach/mach_time.h>  // s6922: dump window clock
 #include <execinfo.h>
@@ -50,10 +51,63 @@ static long rs64_rand_trace_max() {
     static const long m = [] { const char* e = std::getenv("ROGUESQ_RAND_TRACE_MAX"); return (e && atol(e) > 0) ? atol(e) : 400000L; }();
     return m;
 }
+// s7896: rdram base for host-side guest writes from rs64_rand_trace (set by the first rs64_xtrace_mark, VI ~14, long before any
+// reseed point). Game thread only.
+static const uint8_t* s_s7896_rdram = nullptr;
+extern "C" volatile uint32_t rs64_s7858_tick;
 extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
     static long n = 0;
     if (!s_rand_trace_f || n >= rs64_rand_trace_max()) return;
-    fprintf(s_rand_trace_f, "%ld %u %08x %08x\n", n++, rs64_vi_n_g, ra, seed);
+    // s7896 G3 island B: ROGUESQ_RAND_RESEED="SITE:K:SEED,..." (hex SITE = the jal address logged in column 3, K = 1-based ordinal
+    // of calls from that site, hex SEED) overwrites rngSeed 0x80003470 at rand entry of that call, so the call and every later one
+    // return retail's values (rand: seed' = seed * 0xA8351D63, returned). SEED = retail's column-4 value (seed before the call)
+    // for the same call. Row gets " reseed=OLD". Unset = byte-identical.
+    static struct { uint32_t site, k, val, cnt; } rs[4];
+    static int nrs = -1;
+    if (nrs < 0) {
+        nrs = 0;
+        const char* e = std::getenv("ROGUESQ_RAND_RESEED");
+        while (e && *e && nrs < 4) {
+            unsigned a, k, v;
+            if (sscanf(e, "%x:%u:%x", &a, &k, &v) == 3 && k > 0) rs[nrs++] = {a, k, v, 0};
+            e = strchr(e, ',');
+            if (e) e++;
+        }
+    }
+    fprintf(s_rand_trace_f, "%ld %u %08x %08x", n++, rs64_vi_n_g, ra, seed);
+    // s7896: ROGUESQ_RAND_REPLAY=<file> (tools/s7896_rand_replay.py: "SITE ORD SEED" hex/dec/hex per retail pre-tick rand call)
+    // sets rngSeed to retail's seed-before for the ORD-th call from SITE, pre-mission-tick only (tick 0 has its own pin).
+    // Calls the table lacks (port calls a site more often) keep the port seed. Row gets " replay=OLD>NEW". Unset = byte-identical.
+    static std::unordered_map<uint64_t, uint32_t>* rp = nullptr;
+    static std::unordered_map<uint32_t, uint32_t> rpn;
+    static int rp_init = 0;
+    if (!rp_init) {
+        rp_init = 1;
+        if (const char* e = std::getenv("ROGUESQ_RAND_REPLAY")) {
+            if (FILE* f = fopen(e, "r")) {
+                rp = new std::unordered_map<uint64_t, uint32_t>();
+                unsigned a, k, v;
+                while (fscanf(f, "%x %u %x", &a, &k, &v) == 3) (*rp)[((uint64_t)a << 32) | k] = v;
+                fclose(f);
+                fprintf(stderr, "[s7896 replay] %zu retail rand rows from %s\n", rp->size(), e);
+            }
+        }
+    }
+    if (rp && rs64_s7858_tick == 0 && s_s7896_rdram) {
+        auto it = rp->find(((uint64_t)ra << 32) | ++rpn[ra]);
+        if (it != rp->end()) {
+            uint32_t* w = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(s_s7896_rdram) + 0x3470);
+            if (*w != it->second) fprintf(s_rand_trace_f, " replay=%08x>%08x", *w, it->second);
+            *w = it->second;
+        }
+    }
+    for (int i = 0; i < nrs; i++) {
+        if (rs[i].site != ra || ++rs[i].cnt != rs[i].k || !s_s7896_rdram) continue;
+        uint32_t* w = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(s_s7896_rdram) + 0x3470);
+        fprintf(s_rand_trace_f, " reseed=%08x>%08x", *w, rs[i].val);
+        *w = rs[i].val;
+    }
+    fputc('\n', s_rand_trace_f);
     fflush(s_rand_trace_f); // runs end in SIGKILL
 }
 // s6752: marker row with guest-memory dumps, same spec as rs64_oracle RS64_XTRACE_MEM: ROGUESQ_XTRACE_MEM=
@@ -68,6 +122,7 @@ extern "C" { int rs64_s7891_reset = 0; int rs64_s7891_free = 0; }
 // mission tick); ROGUESQ_SNAP3_ONLY=c unpins a post-reset frame only after the crawl mark. Game thread only, host-side store.
 extern "C" { uint32_t rs64_s7895_dtpc = 0; }
 extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
+    s_s7896_rdram = rdram;
     // s7892: a SNAP=3 reset armed by the mission load is consumed by the next el-path frame, which on m6 falls ~11 ticks INTO the
     // mission (VI 13415, forked det tick 8). Dropping a pending reset at every mission tick keeps the unpin pre-flight only.
     if (pc == 0x800FA730u) { ++rs64_s7858_tick; rs64_s7891_reset = 0; }

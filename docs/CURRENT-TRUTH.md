@@ -191,12 +191,13 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12); the s7790 numbering (1-36) is
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
-0. **Island A CLOSED (s7895), island B next (slug g3-island-b).** Det-pair lever `SNAP=c` (= ROGUESQ_RETAIL_SNAP=3 +
-   ROGUESQ_SNAP3_ONLY=c: unpin only the crawl's post-load frame, keyed by timeSnapshotFiller struct s0 0x80165DE0 after a 0x800C6674
-   mark, el forced 0) removes island A on m6 + m11 (exact from the first phase-6 frame, flight exact, ticks seed/call-exact) and is a
-   no-op on m3 (no chapter crawl; frame map identical to the same-retail SNAP=1 control). ONLY=6 (fire index) is NOT general: on m3
-   fire 6 is a cinematic post-load frame and ONLY=6 lost every phase-6 match. Plain unset det_pair stays =1. Island B (state class):
-   m6 N212@6070, m11 N1054@6062, m3 N183@3760 = the tail of the 640 pre-flight scene before flight on all three.
+0. **Island B split (s7896, slug g3-island-b).** m3's B (PRIM FFFF3C29, updateAnimatedTextureStreaming) is pure pre-tick RNG:
+   `ROGUESQ_RAND_RESEED=8007132C:17:916407E1` (or det_pair `RREP=1` = per-site retail replay, tools/s7896_rand_replay.py) makes the
+   whole m3 pre-flight scene exact (544/544, two lines: rand values equal retail + RDP frames). m6 (N212@6071) and m11 (N1054@6069)
+   B are NOT RNG (full replay: unchanged) and both start at retail frame ~5538 with the same white-tri drift = crawl-tail content,
+   island A's family. Next: H-dt (dump the crawl struct 0x80165DE0 dt per frame near retail frame 5538, s7891_crawl_clock style) vs
+   H-object (advanceNpcOnCurvedPath progress on m6). Island A lever: det_pair `SNAP=c` (s7895). scratch/s7894/p1only.sh does NOT
+   expand SNAP=c (use SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=c there).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

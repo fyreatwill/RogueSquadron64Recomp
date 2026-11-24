@@ -43,6 +43,9 @@ AP=${AP_OVR:-$APD}
 SN=${SNAP:-1}; SX=; [[ $SN == c ]] && { SN=3; SX=" ROGUESQ_SNAP3_ONLY=c"; }
 B="ROGUESQ_AUTOPILOT_CLOCK=vi ROGUESQ_S7834_RAMDUMP=1 ROGUESQ_G3C_CAMLOG=1 ROGUESQ_S7835_DT=1 ROGUESQ_VI_STAMP=1 ROGUESQ_RETAIL_SNAP=$SN$SX ROGUESQ_RAND_TRACE_BOOT=1 ROGUESQ_RAND_TRACE_MAX=8000000 ROGUESQ_XTRACE_MEM=800FA730:0:80137E7C:1,800FA730:0:80003470:1,800FA730:0:8010C0E0:1$RM"
 P1X="ROGUESQ_XTRACE_POKE=800FA730:0:80003470:$SEED:1"; [[ -n $DT_AT ]] && P1X="$P1X ROGUESQ_S7844_DT_AT=$DT_AT"
+# s7896: RREP=1 replays retail's pre-tick rand stream into the pinned arm p1 (per site and call ordinal, tools/s7896_rand_replay.py ->
+# ROGUESQ_RAND_REPLAY): closes m3's pre-flight island B (updateAnimatedTextureStreaming values); no effect on m6/m11 island B. Unset = byte-identical.
+[[ -n $RREP ]] && { python3 tools/s7896_rand_replay.py $O/r1/oracle.log $O/rand_replay.txt || exit 5; P1X="$P1X ROGUESQ_RAND_REPLAY=$PWD/$O/rand_replay.txt"; }
 A=$PWD/$O
 B1=; B2=; [[ -n $RBIN ]] && { B1="RS64_RDP_BIN_PORT=$A/p1.bin RS64_RDP_BIN_PORT_MAX_MB=6000"; B2="RS64_RDP_BIN_PORT=$A/p2.bin RS64_RDP_BIN_PORT_MAX_MB=6000"; }
 env SAVE_FROM=$O/lvl.eep SECS=$SECS CAP0=$((SECS-3)) AP=$AP XE="$B ROGUESQ_RAND_TRACE=$A/p1_rand.txt $P1X $P1E $B1" zsh tools/g3_port_capture.sh $O/p1 > $O/p1.out 2>&1
