@@ -1,17 +1,18 @@
-# NEXT (s7901)
+# NEXT (s7902)
 HYPOTHESIS-ID: g3-island-b
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7900): island B = flame-jitter rand values misaligned by the s7896 per-site ordinal replay key. Burst-keyed replay
-(tools/s7896_rand_replay.py --burst 600 + ROGUESQ_RAND_REPLAY_BURST=600, APM=1) on m11: crawl tail 298 -> 68 non-exact frames
-(alternate frames, 1 tri each), post-crawl cinematic 473 -> 0, flight exact 2667/2667. Arms kept: scratch/s7900/m11apm (burst off),
-scratch/s7900/m11burst (burst on), retail s7895/m11k/r1 (oracle.log was decompressed to s7900/m11apm/r1 and removed; re-decompress).
-Unit (one build, offline first):
-  1. Residual: in scratch/s7900/m11burst/p1_rand.txt vs scratch/s7900/replay_m11k_b600.txt, find calls whose (site,burst,bord) has
-     no table row or a different seed (post-replay) in the crawl-tail VI window, per site. Candidates: H-b0 (0x800541FC burst 0 is
-     16 retail vs 416 port calls -> burst index shift for that site), H-res (retail burst boundary at 1 s [vi] resolution), H-other
-     (a third site). Run tools/s7900_tri_source.py on one residual frame (needs a s7751 snapshot: ROGUESQ_S7751_SNAP +
-     ROGUESQ_S7751_EVERY around port frame 5640..5780) only if the rand census does not name it.
-  2. Fix in the replay table/key, rerun the m11burst recipe (scratch/s7900 command in the s7900 ledger entry), expect crawl tail 0.
-  3. Then m6 (0x31=5) with APM=1 + burst replay (its island B N212 should go the same way), and look at the APM-only pre-flight
-     N2398@567 texrect/HUD block (present in both APM arms, absent in the old-schedule map).
+State (s7901): m11 burst-replay crawl tail = 68 ODD frames from port 5639, each 4-40 differing white tris (not 1 tri); even frames
+exact. Per-site ordinal skew refuted on both parities (ROGUESQ_RAND_REPLAY_SKEW arms scratch/s7901/m11skew{,a}: contiguous
+N212/N213). Post-replay flame seeds equal retail's table in the crawl window on both sites.
+Hypotheses for the odd-frame diff:
+  H-draw: the odd frame draws a buffer whose values were written by a call the port and retail map to different frames (retail
+          starts burst 2 on the 1FC parity; port on 174), i.e. the drawn buffer index (*(0x8013889C)&1) vs the written one differs.
+  H-other: the differing tris are not the flame meshes (another object on odd frames), e.g. the first large white object.
+  H-clip: same vertices, different clip output (tri counts differ 0-4) -> RSP side (unlikely, s7899 cxd4 bit-identical).
+Discriminator (one port run + one retail run): dump the vertex arena 0x749000-0x74D000 and 0x8013889C at osSpTaskLoad for port
+frames 5639..5650 (ROGUESQ_S7751_SNAP / S7751_EVERY) and retail (rs64_oracle --pc-ram-dump-also, scratch/s7900/run_retail.sh with the
+VI window moved to the crawl tail, ~VI 10480-10700). For each odd frame: which mesh addresses differ (tools/s7900_tri_source.py), and
+whether the differing port z values equal retail's z from the adjacent frame (H-draw) or match no retail frame (H-other/H-clip).
+Recipe base: scratch/s7901/run_m11skew.sh without the SKEW env (needs scratch/s7901/<dir>/r1/oracle.log decompressed from
+scratch/s7895/m11k/r1/oracle.log.zst, else p1only re-runs retail). Then m6 (0x31=5) with the burst arm.

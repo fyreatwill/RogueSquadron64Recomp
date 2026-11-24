@@ -105,7 +105,24 @@ extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
             auto lv = rp_last.find(ra);
             if (lv != rp_last.end() && rs64_vi_n_g - lv->second > rp_gap) { rp_bno[ra]++; rpn[ra] = 0; }
             rp_last[ra] = rs64_vi_n_g;
-            key = ((uint64_t)ra << 32) | (rp_bno[ra] << 24) | ++rpn[ra];
+            // s7901: ROGUESQ_RAND_REPLAY_SKEW="SITE:BURST:DELTA,..." (hex SITE, signed DELTA) reads the table at in-burst ordinal
+            // n+DELTA for that site's burst: retail's 0x800541FC burst 2 starts one 16-call frame before the port's (its first flame
+            // frame uses the other parity buffer), so per-site ordinals of one parity are a frame apart. Unset = s7900 keys.
+            static struct { uint32_t site, burst; int delta; } sk[4];
+            static int nsk = -1;
+            if (nsk < 0) {
+                nsk = 0;
+                const char* e = std::getenv("ROGUESQ_RAND_REPLAY_SKEW");
+                while (e && *e && nsk < 4) {
+                    unsigned a, b; int d;
+                    if (sscanf(e, "%x:%u:%d", &a, &b, &d) == 3) sk[nsk++] = {a, b, d};
+                    e = strchr(e, ',');
+                    if (e) e++;
+                }
+            }
+            int64_t ord = ++rpn[ra];
+            for (int i = 0; i < nsk; i++) if (sk[i].site == ra && sk[i].burst == rp_bno[ra]) ord += sk[i].delta;
+            key = ord > 0 ? (((uint64_t)ra << 32) | (rp_bno[ra] << 24) | (uint32_t)ord) : 0;
         } else key = ((uint64_t)ra << 32) | ++rpn[ra];
         auto it = rp->find(key);
         if (it != rp->end()) {

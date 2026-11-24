@@ -211259,3 +211259,29 @@ block that the old-schedule map did not (pre-crawl menus, not island B).
 ORIGIN: no mitigation; ROGUESQ_RAND_REPLAY_BURST is a det-pair harness key (unset = byte-identical s7896 behaviour).
 Kept: scratch/s7900/{r1 (retail dump log; retail.bin to be deleted), s6150..s6290 .rdp/.dma, src_s*.txt, m11apm, m11burst, *_cmp.txt,
 replay_m11k_b600.txt}.
+
+## Session 7901 (2026-11-24) — island B crawl-tail residual is not per-site ordinal skew: both parity-skew arms (new ROGUESQ_RAND_REPLAY_SKEW) turn the alternate-frame residual contiguous; the residual is 4-40 tris per odd frame, not 1
+Work unit (NEXT s7901, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers, no new SOAK-RESULTS
+lines, CURRENT-TRUTH 54.7 KB (no maintenance). First fixed the previous iteration's unmet contract: committed the s7374 lazy-static
+row for rs64_rand_trace rp_init (3fc1dbeeb).
+- Offline rand census (scratch/s7901/s7901_bursts.py, s7900 m11burst p1_rand vs replay_m11k_b600 with the port's own burst keying):
+  inside the tick-0 window both flame sites have 0 post-replay seed mismatches against retail's table; the only mismatches (16 at
+  0x800541FC, vi 12694-12703) and all "missing" rows lie after retail's burst ends (mission load), outside the crawl.
+- Retail sequence (s7895 m11k oracle, 42499 flame rand rows): calls come in 16-call frames alternating 0x80054204 (site 1FC) /
+  0x8005417C (site 174). Retail burst 2 STARTS with 1FC (vi 10477), the port's with 174 (vi 10486); bursts: retail 174 6688 / 1FC 6736,
+  irregular runs b24/a8/b8/a8 at ~vi 11000 and b32 at ~11500 (port has b8/a8/b8/a8 and b32 at the same spot).
+- Hypothesis H-skew: one parity's per-site ordinals are one frame (16 calls) apart. Two arms, one game run each (m11 0x31=10, APM=1,
+  SNAP=3 ONLY=c,7, burst replay 600, scored by tools/s7868_det_frame_cmp.py vs s7895 retail.bin):
+  base s7900 m11burst: E2674 then 68 alternate non-exact frames from 5639 (N1 E1 N1 ...), flight exact 2667/2667;
+  SKEW=800541fc:2:16 (scratch/s7901/m11skew): N213@5639 contiguous, flight exact 2667, 0 crash lines;
+  SKEW=80054174:2:-16 (scratch/s7901/m11skewa): N212@5639 contiguous, flight exact 2667, 0 crash lines.
+  Both arms break the even (previously exact) frames, which is the positive control that the knob is live; so H-skew is refuted for
+  BOTH parities: the burst keys already pair each site's values correctly.
+- Correction of s7900's wording: "1 tri" was a misreading of the map's N1 (= one non-exact frame). Direct frame diff
+  (scratch/s7901/s7901_fdiff.py, port frame j vs retail j-101): odd frames 5639..5771 carry port-only 4-37 / retail-only 7-40 white
+  FFFFFFFF tris (tri counts differ by 0-4, i.e. clip-generated tris), even frames exact with 0 non-tri diff.
+Rules out: per-site ordinal skew (both parities), unreplayed pre-tick flame calls, seed mismatch in the crawl window. Open: which
+vertex values the odd frames draw. Next: RDRAM vertex arena dump at one odd residual frame on both sides.
+New: ROGUESQ_RAND_REPLAY_SKEW=SITE:BURST:DELTA (src/main/rt64_render_context.cpp; unset = s7900 keys, byte-identical).
+ORIGIN: no mitigation; a det-pair harness key only.
+Kept: scratch/s7901/{m11skew, m11skewa (rand .zst, run logs; bins deleted), *_cmp.txt, s7901_bursts.py, s7901_fdiff.py, run_*.sh}.
