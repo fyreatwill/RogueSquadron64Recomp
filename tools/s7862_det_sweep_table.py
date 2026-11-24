@@ -30,7 +30,7 @@ ROWS = [
     ("10", "mission 11 Bespin", "s7854", "H-exact", "", "scratch/s7854b/score.txt", ""),
     ("11", "mission 12", "s7855", "H-exact", "", "scratch/s7855/score.txt", ""),
     ("12", "mission 13", "s7885", "H-exact", "", "scratch/s7885/v12/score.txt", "305 s pinned pair, APM=1: all 5765 retail ticks H-exact, full record 5763; render 5754/5754 flight frames exact (s7856 row superseded)"),
-    ("13", "mission 14", "s7857", "H-exact", "", "scratch/s7857/v13/score.txt", "residual timing-class"),
+    ("13", "mission 14", "s7886", "H-exact", "", "scratch/s7886/v13/score.txt", "305 s pinned pair, APM=1: all 3903 retail ticks H-exact, full record 3902, residual timing-class (word 149 t1979, = s7857); render 3900/3900 flight frames exact (s7857 row superseded)"),
     ("14", "mission 15", "s7858", "FORK", "audio-clock", "scratch/s7857/v14/score.txt", "pins corrected s7858 (p4); fork class stands"),
     ("15", "mission 16", "s7859", "H-exact", "", "scratch/s7859/v15/score.txt", "residual timing-class"),
     ("16 locked", "= mission 16 dup", "s7859", "H-exact", "", "scratch/s7859/v16/score.txt", "locked-bonus fallback to 15"),

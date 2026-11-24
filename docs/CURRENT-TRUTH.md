@@ -387,7 +387,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (constant, pre-flight only, harmless). Row 9 rescores s7884/v9 (rescored=17 hand=3: rows 2, 5, 7). 
    **s7885: 0x31=12 (mission 13), APM=1: H-exact all 5765 ticks (full record 5763), render exact 5754/5754 flight frames:
    14 missions render-exact.** Plant caught, neg PASS (unpinned 214/4520 exact in flight). Port presses +8 VI (constant,
-   pre-flight). Row 12 rescores s7885/v12 (rescored=17 hand=3). Next: 0x31=13, 14 (fork), 15 render, then bonus 16, 18.
+   pre-flight). Row 12 rescores s7885/v12 (rescored=17 hand=3).
+   **s7886: 0x31=13 (mission 14), APM=1: H-exact all 3903 ticks (full record 3902, timing-class residual word 149 t1979 =
+   s7857), render exact 3900/3900 flight frames: 15 missions render-exact; the timing word does not reach the render.**
+   Plant caught, neg PASS. Presses 0/-1 VI. Row 13 rescores s7886/v13. Next: 0x31=14 (fork, pre-fork prefix), 15, bonus 16, 18.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
