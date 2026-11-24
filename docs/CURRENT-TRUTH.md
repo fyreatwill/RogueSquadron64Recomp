@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7901 (2026-11-24).
+Compact operational handoff, as of Session 7902 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -218,6 +218,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    break the even frames too, so the knob is live and the current per-site keys are right for BOTH parities). Next: RDRAM vertex
    arena at one odd residual frame vs retail (s7900 oracle --pc-ram-dump-also + ROGUESQ_S7751_SNAP), match each differing z
    against retail's rand table to name the ordinal the port used; then m6 with the burst arm.
+   **s7902: odd-frame residual = flame meshes again, values are retail's but misplaced.** Snapshots s5680-5685 (serial = frame+42):
+   every odd-frame port-only tri comes from a flame mesh under instance mtx 700100/700140 (H-other refuted); those matrices equal
+   retail; each port flame mesh is found VERBATIM in retail RDRAM at another VI/address (scratch/s7902/mesh_search.py; H-value
+   refuted); the tris match no retail frame +-6 (shift control PASS). The crawl sim runs at half render rate (retail pool changes
+   every 4 VI), so the odd frame is a re-render with fresh jitter. Next: widen the retail dump to the DL (0x720000-0x751000) and
+   name the (instance, mesh) retail draws per odd frame. Tool: tools/s7902_arena_cmp.py.
    p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.

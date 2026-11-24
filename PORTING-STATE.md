@@ -211285,3 +211285,38 @@ vertex values the odd frames draw. Next: RDRAM vertex arena dump at one odd resi
 New: ROGUESQ_RAND_REPLAY_SKEW=SITE:BURST:DELTA (src/main/rt64_render_context.cpp; unset = s7900 keys, byte-identical).
 ORIGIN: no mitigation; a det-pair harness key only.
 Kept: scratch/s7901/{m11skew, m11skewa (rand .zst, run logs; bins deleted), *_cmp.txt, s7901_bursts.py, s7901_fdiff.py, run_*.sh}.
+
+## Session 7902 (2026-11-24) — island B odd-frame residual traced to the flame meshes again: port flame vertex values exist verbatim in retail RDRAM but at other VIs/addresses (H-value refuted, H-other refuted); retail's DL is outside the dumped window, so the instance->mesh mapping is the next unit
+Work unit (NEXT s7902, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=3 new=0, no owner answers, no new SOAK-RESULTS
+lines, CURRENT-TRUTH 55.5 KB (no maintenance).
+- Port run (scratch/s7902/run_snap.sh): s7900 m11burst recipe (APM=1, SNAP=3 ONLY=c,7, burst replay 600) + ROGUESQ_S7751_SNAP +
+  ROGUESQ_S7751_EVERY=1:40:5662. First attempt lost: the s7751 snapper does not mkdir its dir (every fopen failed, logged
+  "[s7751] open failed"); the script now mkdirs. Second run: render map identical to s7900 m11burst (E2674 then N1@5639 E1 N1 ...,
+  offset -101), so snapshots do not perturb island B. 80 files (40 tasks).
+- Pairing: serial = port frame + 42 holds on this schedule (cxd4 replay of s5680..s5685 via tools/s7900_dma_trace: task tris =
+  port frame tris on all 5; even frames 5638/5640 port-only 0, odd 5639/5641/5643 port-only 4/7/9, plus the known constant 100-tri
+  capture-layer block).
+- H-other REFUTED: every odd-frame port-only tri (tools/s7900_tri_source.py) is drawn from a 64-byte 8-vertex flame mesh under
+  instance matrix 700100 or 700140 (mtxB 700080): s5681 74DE48 4/4, s5683 727BC8 4/4 + 724F70 3/3, s5685 74BA30 5/5 + 74ACC8 4/4.
+  Flame-mesh addresses wander per frame (heap), some outside the s7900 retail dump window 0x749000-0x74D000.
+- Matrices: 700100/700140 bit-equal to the paired retail pool row on all 5 tasks (tools/s7900_retail_mtx_cmp.py, plant control PASS).
+  Only 11/32 pool matrices pair in the crawl tail (31/32 in s7900's window): retail pool rows change only every 4 VI (n +6), i.e.
+  the crawl sim runs at half the render rate, each even/odd frame pair shares matrices, and the odd frame re-renders with fresh flame
+  jitter.
+- H-value REFUTED (4 of 5 meshes; 727BC8 is outside retail's dump): scratch/s7902/mesh_search.py finds each port odd-frame flame
+  mesh VERBATIM (all 64 bytes) in retail's arena rows, but at another VI and/or address: s5681 74DE48 = retail 0x74C060 at vi
+  10563-10566 (pair row vi 10567: earlier); s5683 724F70 = retail 0x74B930/0x74A... at vi 10573-10578 (pair 10571: later); s5685
+  74ACC8 = retail 74ACC8 at vi 10573-10575 (same address, pair 10575) and 74BA30 = retail at vi 10577-10580 (later).
+- Render level (scratch/s7902/shift_search.py, 67 odd frames 5639..5771): port-only tris appear in NO retail frame P-101+d,
+  d=-6..6 (66/67 none, one 1-tri hit); plant control (retail P-99 tris injected) scores 200 at d=+2, 0 at d=-2: PASS. So it is not
+  a whole-frame shift: retail's flame values are drawn under the other frame pair's matrices or a different instance.
+- Whole arena (new tools/s7902_arena_cmp.py, plant control PASS): even serials differ from the paired retail row by ~100-180 words
+  (noise floor of exact frames: DL pointers/stale buffers), odd serials from s5671 on by ~480-590, and on every odd serial 7-9 of the
+  differing 64-byte blocks are EXACT in retail's row one VI earlier (k-1). Single-source for timing (the arena is mostly DL commands).
+Selects (leaning, single-source at the mapping level): H-draw-family. The port's odd-frame flame data are retail values, placed on a
+different instance/frame than retail draws them. Rules out H-other (another object) and H-value (values retail never wrote).
+Open: which (instance, mesh) retail draws on the odd frame. Retail's display list sits at 0x72xxxx-0x74Dxxx, mostly outside the
+dumped window; next unit widens the retail dump.
+ORIGIN: no mitigation; analysis tools only.
+Kept: scratch/s7902/{run_snap.sh, m11snap (p1.bin/rand/oracle zst, tasks s5680-s5685 zst), m11snap_cmp.txt, arena_cmp.txt,
+s568x.rdp/.dma, tri_source.txt, mesh_search.py, shift_search.py}.
