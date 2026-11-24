@@ -1200,10 +1200,37 @@ static void s5224_report(void)
 #define PC_RAM_DUMP_MAXW 1024
 static uint32_t g_prd_pc, g_prd_start, g_prd_words, g_prd_last[PC_RAM_DUMP_MAXW];
 static unsigned g_prd_n, g_prd_rows;
+/* s7900: --pc-ram-dump-also START:END (up to 4, same PC, <=8192 words each) prints "[ramdumpK] vi= n= a=<start> w=" rows on
+ * change; --pc-ram-dump-vi V0:V1 gates every pc-ram-dump row (base and also) to that VI window (default: all VIs). */
+#define PRD_ALSO_MAX 4
+#define PRD_ALSO_MAXW 8192
+static uint32_t g_prda_start[PRD_ALSO_MAX], g_prda_words[PRD_ALSO_MAX], *g_prda_last[PRD_ALSO_MAX];
+static unsigned g_prda_n; static long g_prd_vi0 = 0, g_prd_vi1 = -1;
+static void pc_ram_dump_also(void)
+{
+    static uint32_t cur[PRD_ALSO_MAXW];
+    for (unsigned r = 0; r < g_prda_n; r++) {
+        int ch = 0;
+        g_self_read = 1;
+        for (uint32_t q = 0; q < g_prda_words[r]; q++) {
+            cur[q] = pDebugMemRead32(debug_rdram_addr(g_prda_start[r] + q * 4u));
+            ch |= cur[q] != g_prda_last[r][q];
+        }
+        g_self_read = 0;
+        if (ch && g_prd_rows < 60000u) {
+            printf("[ramdump%u] vi=%ld n=%u a=%08X w=", r + 1, g_vis, g_prd_n, g_prda_start[r]);
+            for (uint32_t q = 0; q < g_prda_words[r]; q++) { printf("%08X", cur[q]); g_prda_last[r][q] = cur[q]; }
+            printf("\n");
+            g_prd_rows++;
+        }
+    }
+}
 static void pc_ram_dump(void)
 {
     uint32_t cur[PC_RAM_DUMP_MAXW];
     int ch = 0;
+    if (g_vis < g_prd_vi0 || (g_prd_vi1 >= 0 && g_vis > g_prd_vi1)) { g_prd_n++; return; }
+    pc_ram_dump_also();
     g_self_read = 1;
     for (uint32_t q = 0; q < g_prd_words; q++) {
         cur[q] = pDebugMemRead32(debug_rdram_addr(g_prd_start + q * 4u));
@@ -4204,6 +4231,18 @@ int main(int argc, char **argv)
                 return 2;
             }
             g_prd_pc = (uint32_t)a; g_prd_start = (uint32_t)b & 0x1FFFFFFFu; g_prd_words = (uint32_t)((c - b) / 4);
+        }
+        else if (!strcmp(argv[i], "--pc-ram-dump-also") && i + 1 < argc) {
+            unsigned long b = 0, c = 0;
+            if (g_prda_n >= PRD_ALSO_MAX || sscanf(argv[++i], "%lx:%lx", &b, &c) != 2 || c <= b || (c - b) / 4 > PRD_ALSO_MAXW) {
+                fprintf(stderr, "[oracle] bad --pc-ram-dump-also (want START:END, <=%d words, <=%d ranges)\n", PRD_ALSO_MAXW, PRD_ALSO_MAX);
+                return 2;
+            }
+            g_prda_start[g_prda_n] = (uint32_t)b & 0x1FFFFFFFu; g_prda_words[g_prda_n] = (uint32_t)((c - b) / 4);
+            g_prda_last[g_prda_n] = calloc(g_prda_words[g_prda_n], 4); g_prda_n++;
+        }
+        else if (!strcmp(argv[i], "--pc-ram-dump-vi") && i + 1 < argc) {
+            if (sscanf(argv[++i], "%ld:%ld", &g_prd_vi0, &g_prd_vi1) != 2) { fprintf(stderr, "[oracle] bad --pc-ram-dump-vi V0:V1\n"); return 2; }
         }
         else if (!strcmp(argv[i], "--phase-snapshot-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);

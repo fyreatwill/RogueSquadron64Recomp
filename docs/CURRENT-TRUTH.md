@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7898 (2026-11-24).
+Compact operational handoff, as of Session 7900 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -204,7 +204,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    the port's own task snapshots (tools/s7899_snap_cmp.py, ROGUESQ_S7751_EVERY=10:40:5900, 40 tasks) is bit-identical to our LLE
    on all 40 (20 in the drift window) and carries exactly the same retail diff (8-38 tris/frame); host FMA cannot fuse guest ops
    (one op per C statement; cc test fuses a*b+c only within a statement), FMA sites exist only in PATCH code.
-   Next: name the guest data (matrix / vertex buffer) of the drifting tris and diff it against retail RDRAM at the same task.
+   (s7899 next) name the guest data (matrix / vertex buffer) of the drifting tris and diff it against retail RDRAM at the same task.
+   **s7900: named and mostly closed.** The drifting tris are engine-flame meshes whose tip z = template - (s16)rand()%range
+   (updateAnimatedTextureStreaming 0x80054174/0x800541FC); matrices bit-equal to retail (tools/s7900_retail_mtx_cmp.py, oracle
+   --pc-ram-dump-also), only flame z differ. Cause = the s7896 replay key: per-site ordinals drift by the attract-scene flame burst
+   length (retail 19334 vs port 13608 calls). `tools/s7896_rand_replay.py --burst 600` + `ROGUESQ_RAND_REPLAY_BURST=600` (APM=1):
+   crawl tail 298 -> 68 frames (alternate frames, 1 tri), post-crawl cinematic 473 -> 0. Tools: tools/s7900_dma_trace (cxd4 DMA log
+   + poke), tools/s7900_tri_source.py. Next: the alternate-frame 1-tri residual, then m6 with the same burst arm.
    p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.

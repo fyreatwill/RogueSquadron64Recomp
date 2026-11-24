@@ -81,20 +81,33 @@ extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
     static std::unordered_map<uint64_t, uint32_t>* rp = nullptr;
     static std::unordered_map<uint32_t, uint32_t> rpn;
     static int rp_init = 0;
+    static uint32_t rp_gap = 0;
+    static std::unordered_map<uint32_t, uint32_t> rp_last, rp_bno;
     if (!rp_init) {
         rp_init = 1;
         if (const char* e = std::getenv("ROGUESQ_RAND_REPLAY")) {
             if (FILE* f = fopen(e, "r")) {
                 rp = new std::unordered_map<uint64_t, uint32_t>();
-                unsigned a, k, v;
-                while (fscanf(f, "%x %u %x", &a, &k, &v) == 3) (*rp)[((uint64_t)a << 32) | k] = v;
+                unsigned a, k, v, bo;
+                // s7900: ROGUESQ_RAND_REPLAY_BURST=<gap VI> reads "SITE BURST BORD SEED" (s7896_rand_replay.py --burst GAP) and
+                // keys by (site, burst, ordinal in burst): a site's calls split into bursts at silences > gap VI. Unset = s7896 keys.
+                if (const char* g = std::getenv("ROGUESQ_RAND_REPLAY_BURST")) rp_gap = (uint32_t)atoi(g);
+                if (rp_gap) { while (fscanf(f, "%x %u %u %x", &a, &k, &bo, &v) == 4) (*rp)[((uint64_t)a << 32) | (k << 24) | bo] = v; }
+                else while (fscanf(f, "%x %u %x", &a, &k, &v) == 3) (*rp)[((uint64_t)a << 32) | k] = v;
                 fclose(f);
                 fprintf(stderr, "[s7896 replay] %zu retail rand rows from %s\n", rp->size(), e);
             }
         }
     }
     if (rp && rs64_s7858_tick == 0 && s_s7896_rdram) {
-        auto it = rp->find(((uint64_t)ra << 32) | ++rpn[ra]);
+        uint64_t key;
+        if (rp_gap) {
+            auto lv = rp_last.find(ra);
+            if (lv != rp_last.end() && rs64_vi_n_g - lv->second > rp_gap) { rp_bno[ra]++; rpn[ra] = 0; }
+            rp_last[ra] = rs64_vi_n_g;
+            key = ((uint64_t)ra << 32) | (rp_bno[ra] << 24) | ++rpn[ra];
+        } else key = ((uint64_t)ra << 32) | ++rpn[ra];
+        auto it = rp->find(key);
         if (it != rp->end()) {
             uint32_t* w = reinterpret_cast<uint32_t*>(const_cast<uint8_t*>(s_s7896_rdram) + 0x3470);
             if (*w != it->second) fprintf(s_rand_trace_f, " replay=%08x>%08x", *w, it->second);

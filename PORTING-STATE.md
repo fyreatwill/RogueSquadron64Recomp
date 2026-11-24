@@ -211219,3 +211219,43 @@ ops are not on this path. Refutes: H-rsp (for island B), H-cam, H-anim, H-object
 Open: which guest data differs (NEXT: walk the s6150 DL for the matrix/vertex source, then a retail --pc-ram-dump of it).
 ORIGIN: no mitigation; diagnostics only (two offline tools, no runtime change).
 Kept: scratch/s7899/snap/tasks (40 snapshots + cxd4 rdp), snap/p1.bin.zst, snapcmp.txt, snapcmp_near.txt, scratch/s7898/dump_6073.txt.
+
+## Session 7900 (2026-11-24) — island B crawl-tail drift is the flame-jitter rand stream misaligned by the replay's per-site ordinal: burst-keyed replay (new ROGUESQ_RAND_REPLAY_BURST) takes m11 crawl tail 298 -> 68 non-exact frames and the post-crawl cinematic 473 -> 0
+Work unit (NEXT s7900, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers, no new SOAK-RESULTS
+lines, CURRENT-TRUTH 53.9 KB (no maintenance).
+- New tool tools/s7900_dma_trace/ (run.sh builds replay_dma: the s7751 cxd4 replay plus a hook line patched into a COPY of cxd4
+  su.c SP_DMA_READ; logs every RDRAM->SP DMA with the RDP output offset; S7900_POKE=addr:word nudges RDRAM). Replay output stays
+  byte-identical to s7899's cxd4 stream (cmp, 5 tasks). New tools/s7900_tri_source.py ties every port-only tri to the DMAs before it.
+  s6150: the 34 drifting tris all come from two 64-byte 8-vertex meshes (0x74BE50 19/19 tris drift, 0x749930 15/18) drawn under 8
+  per-instance matrices 0x700100..0x700680 (pool, 0x700080 = projection). Controls same task: poke matrix 0x700498 -> exactly the 6
+  tris of that instance move (6/6 port-only); poke mesh 0x74BE50 vertex 0 -> 12 tris move, all port-only. PASS.
+- Oracle: rs64_oracle gains --pc-ram-dump-also START:END (<=4 ranges, 8192 words) and --pc-ram-dump-vi V0:V1. Retail r1 (s7895 m11
+  recipe, scratch/s7900/run_retail.sh) dumping the pool + 0x749000-0x74D000 at osSpTaskLoad 0x80033E3C, VI 10500-11600. Same-run
+  determinism control: new retail.bin frames 5400-5799 equal s7895's 400/400. New tools/s7900_retail_mtx_cmp.py (plant control
+  +1 fixed unit -> exactly that matrix LSB: PASS). s6150/s6170/s6200/s6250/s6290 pair at 31/32 matrices bit-equal, ALL 8 drift
+  matrices equal (H-matrix refuted). The meshes differ: 4 of 8 vertices' z (verts 1,2,5,6), by hundreds of units (s6150 74BE50
+  port -4781/-4059/-3862/-3829 vs retail -4938/-4577/-3672/-4192; s6170 74C378/74C9A8 same pattern). Shape: mirrored x (+-914),
+  rear plane z -2376/-2379 fixed, tip z random = engine flames. Region 0x749xxx-0x74Cxxx is a per-frame dynamic vertex arena.
+- Writer (static + retail exec trace): updateAnimatedTextureStreaming (misnamed; flame jitter) 0x80054174 / 0x800541FC:
+  out.z = template.z - (s16)rand() % range, double-buffered on *(0x8013889C)&1. Retail's only rand sites in the window are these
+  two (RA 0x8005417C / 0x80054204, 400 calls each per ~100 VI). A watch-write retail run (r2) counted 2351/1360 writes but printed
+  none (the exec-PC hits use the print budget): not needed, not used.
+- Mechanism: the s7896 replay keys (site, ordinal). At the paired task retail has called 0x80054174 19334 times, the port 13608
+  (old 9-press schedule); the port's post-replay seeds equal retail's table at the same ordinal (0 mismatches before vi 13128), so
+  the port draws retail's flame values from ~5700 calls earlier. The offset comes from the attract-scene flame burst (retail VI
+  ~3200-5350) running a different length per side. Bursts at 80054174: retail 16 / 18870 / 6688.
+- Three arms, one game run each (m11 0x31=10, SNAP=3 ROGUESQ_SNAP3_ONLY=c,7, s7895 retail r1, tools/s7868_det_frame_cmp.py):
+  old schedule (s7898 map, offset -530): E2674 N213@6073 then N79/N15/N22/N92/N396 post-crawl; APM=1 (scratch/s7900/m11apm): offset -100, flight
+  exact 2667/2667, crawl tail still N213@5638 (298 frames non-exact in crawl tail, 473 post-crawl); port burst 2 starts at ord
+  19804 vs retail 18886 (918 ahead, still misaligned). APM=1 + burst replay (scratch/s7900/m11burst, ROGUESQ_RAND_REPLAY_BURST=600,
+  table tools/s7896_rand_replay.py --burst 600): crawl tail 68 non-exact frames, alternate frames, 1 tri each; post-crawl 0;
+  flight exact 2667/2667. 0 crash lines in all arms.
+Selects H-replay-key (the replay's per-site ordinal, not the port): two lines, (1) RDRAM at the same task: matrices bit-equal,
+only the rand-jittered flame z differ; (2) aligning the flame stream by burst removes 230 of 298 crawl-tail frames and all 473
+post-crawl frames, against the APM=1 burst-off arm as same-recipe control. Refutes H-matrix, H-state (object fields), H-sched as the
+sole cause (APM=1 alone does not move island B). Open: the alternate-frame 1-tri residual (one parity buffer; 0x800541FC burst 0 is
+16 retail vs 416 port calls, or burst boundary at 1 s retail VI resolution); and APM=1 arms show a pre-flight N2398@567 texrect/HUD
+block that the old-schedule map did not (pre-crawl menus, not island B).
+ORIGIN: no mitigation; ROGUESQ_RAND_REPLAY_BURST is a det-pair harness key (unset = byte-identical s7896 behaviour).
+Kept: scratch/s7900/{r1 (retail dump log; retail.bin to be deleted), s6150..s6290 .rdp/.dma, src_s*.txt, m11apm, m11burst, *_cmp.txt,
+replay_m11k_b600.txt}.
