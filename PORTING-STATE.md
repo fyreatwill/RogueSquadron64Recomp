@@ -211350,3 +211350,39 @@ tail, one burst-frame offset per instance with OPPOSITE signs. That explains s79
 and broke the frames before the tail. Not a game or RSP defect: a determinism-harness keying artifact.
 ORIGIN: no mitigation; analysis tools + oracle cap only.
 Kept: scratch/s7903/{run_retail.sh, r1 (oracle.log.zst, retail.bin.zst), bind.txt, rep/*.rdp,*.dma}.
+
+## Session 7904 (2026-11-24) — island B: two-site opposite-sign rand skew refuted both ways; the port's RDRAM already holds retail's correct flame blocks at other arena addresses, so the residual is arena placement/timing, not rand keying (s7903 conclusion superseded)
+Work unit (NEXT s7904, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=3 new=0, no owner answers, no new SOAK-RESULTS
+lines, CURRENT-TRUTH 57.0 KB (no maintenance).
+- Code: ROGUESQ_RAND_REPLAY_SKEW takes an optional 4th field FROM (SITE:BURST:DELTA:FROM, delta applied from in-burst ordinal FROM;
+  missing = 0 = s7901 byte-identical), src/main/rt64_render_context.cpp. Offline (s7900 m11burst p1_rand): port burst 2 starts vi 10486
+  ordinal 1 on both sites; port frame 5639 (~vi 10568) is ordinal ~336. FROM was not needed: s7901's whole-burst arms kept every frame
+  before 5639 exact (map prefix E2674 unchanged), so arms ran whole-burst.
+- Arms (m11 0x31=10, APM=1 SNAP=3 ONLY=c,7, burst replay 600, s7895 retail r1, scratch/s7904/run_arms.sh, one game run at a time):
+  A SKEW=800541fc:2:16,80054174:2:-16: map E2675 then the SAME alternate N1 E1 pattern from 5639; flight exact 2667. Crawl-tail tri diff
+    (new scratch/s7904/fdiff_sum.py, port 5639..5851): odd frames 3051 port-only / 3038 retail-only over 106 frames, even 0, vs base
+    s7900 m11burst 3033/3033 over 106. The knob was live (flame rand rows vi 10480-10800 md5 differs from base) yet the residual is unchanged.
+  B swapped signs: N213@5637 contiguous + N78@5861 + post-crawl cinematic N396@6295 (worse than base); flight exact 2667.
+  Control: base map reproduced twice before on this binary path (s7900 m11burst, s7902 m11snap; the change is byte-identical when unset).
+  -> per-site +-16 ordinal shift refuted for both sign pairings (with s7901: all four single/combined skews fail).
+- Offline (scratch/s7904/blk_search.py): search the port's full RDRAM at task snapshots s5681/s5683/s5685 (s7902 m11snap) for
+  retail's flame vertex blocks at the reproducing retail task n (and n+-6 = neighbouring drawn frames):
+    s5683: retail's CORRECT 700140 block h269d96e6 (retail draws it @724F70) IS in port RAM @74D710; port @724F70 holds h1ce7ed51,
+      which retail writes for frame 5542 @749930. Retail's n+6 blocks are already in port RAM (700100 h21476ed2 @74C060/74DE48,
+      700140 he8c2279c @74BE50/74DC38).
+    s5681: retail n+6 700100 block in port RAM @749720/74B400; retail n+0 block absent.  s5685: retail n+0 700140 h1ce7ed51 @74C588
+      in port RAM (retail draws it @749930; port's DL draws 74BA30).
+  So the port computes retail's jitter values (including the next drawn frame's) but they sit at other arena addresses than the ones the
+  re-render DL reads: H-rand-keying (s7903) is not the mechanism. Two lines: the skew arms (keying changes do not move the residual)
+  and the RAM search (the right values exist in the port).
+Selects: H-arena (the per-frame flame vertex blocks are allocated/written in a different order or at a different time relative to
+the odd re-render task load: the port's CPU has already built the next frame into the arena when the re-render task loads).
+Next: one oracle write watch + one port write log on the 64-byte blocks 0x724F70/0x727BC8/0x749930 over vi 10560-10580, PC and VI
+per write vs the task-load n on both sides: same writer PCs in a different order vs task load = scheduling (CPU/RSP interleave in
+the crawl tail); a different allocation sequence = arena pointer state.
+ORIGIN: no mitigation; one opt-in harness field (FROM) + analysis.
+Kept: scratch/s7904/{run_arms.sh, fdiff_sum.py, blk_search.py, m11A, m11B (p1.bin.zst, p1_rand.txt.zst), m11?_cmp.txt}.
+- Gate sweep (tools/s7651_gate_sweep.py, scratch/s7904/sweep.txt): 253 gates, GREEN 237, RED 7: s7433/s7435/s7436/s7437/s7438
+  ("need busy-on and busy-off windows (0/0)"), s7441_rs64_census and s7723_retained_controls ("no control frames"). Cause pre-dates
+  this session: the retained sample_*.txt(.zst) files under scratch/s7435, s7439, s7442 are gone (dirs last modified 2026-11-23
+  20:25, only run.tlog + samples.idx left). Not touched by this session's one-field knob change; NEXT.md carries it as a first check.

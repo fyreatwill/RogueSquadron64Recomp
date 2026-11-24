@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7903 (2026-11-24).
+Compact operational handoff, as of Session 7904 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -65,6 +65,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7903 "island B residual = rand-replay ordinal keying, one burst frame per instance with opposite signs"** (superseded s7904).
+  Believable because the port's flame bytes hash-matched retail's adjacent-frame blocks. But both two-site skews fail (one is a
+  no-op on the residual) and retail's correct current blocks exist in the port's RAM at other arena addresses: placement/timing.
 - **s7892 "RETAIL_SNAP=3 is m11-only: on m6 the crawl clock lead is 0 but island A stays"** (superseded s7894). Believable because
   two instruments agreed. They were two runs: the crawl dump (el 0 at fire 6, delta 0) and the render arm m6s3c (el 781250 at fire 6,
   so =3 never took effect there). =3 stores real el; with the crawl frame forced to retail's 1 VI, m6 island A disappears.
@@ -230,6 +233,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    same flame instance at the same vertex address as the port (H-bind, H-alloc refuted); the port's bytes are retail's from the
    neighbouring drawn frame: 700100 one frame LATE, 700140 one frame EARLY. Residual = rand-replay ordinal keying in the crawl tail
    (harness, not game/RSP). Next: a tail-scoped two-site skew (opposite signs) in the replay knob.
+   **s7904: rand keying REFUTED as the residual (supersedes s7903's "Next").** Two-site opposite-sign SKEW arms (new optional FROM
+   field SITE:BURST:DELTA:FROM): A (1FC +16, 174 -16) leaves the residual unchanged (odd frames 3051 vs base 3033 tris / 106, even 0;
+   knob live, rand rows differ), B (swapped) breaks the tail contiguously. The port's RDRAM at s5683 holds retail's correct 700140
+   block at 0x74D710 (retail draws 0x724F70) and already holds retail's NEXT drawn frame's blocks (scratch/s7904/blk_search.py):
+   the values are right, their arena placement/timing vs the re-render task load is not. Next: write watches on the flame blocks
+   (0x724F70/0x727BC8/0x749930, vi 10560-10580) in the oracle and the port, writer PC + VI vs task-load n on both sides.
    p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.

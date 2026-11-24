@@ -1,22 +1,25 @@
-# NEXT (s7904)
+# NEXT (s7905)
 HYPOTHESIS-ID: g3-island-b
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7903, scratch/s7903/bind.txt): on the m11 crawl-tail odd serials the port draws the SAME flame instance (mtx 700100/700140)
-at the SAME vertex address as retail, but with retail's values from the neighbouring drawn frame: 700100 one drawn frame LATE,
-700140 one EARLY (block hashes, retail task overlay replay control 6/6 exact). So the residual is the rand-replay ordinal keying of
-the two flame sites (0x80054174 / 0x800541FC) in the crawl tail, offset by one 16-call frame with opposite signs per site.
-s7901's single-site whole-burst SKEW fixed one instance and broke the earlier (already exact) frames.
-Work unit: make ROGUESQ_RAND_REPLAY_SKEW tail-scoped and run the sign arms in ONE iteration (iron rule 13, max 2 runs at a time).
-  1. src/main/rt64_render_context.cpp ~line 111: accept SITE:BURST:DELTA[:FROM] (apply delta only when in-burst ordinal >= FROM;
-     missing FROM = 0, byte-identical to s7901). Find FROM per site = the in-burst ordinal of each site's first call in the
-     crawl tail (crawl call ~2675; the burst-2 ordinal at port frame 5639 - read it from the p1 rand trace
-     scratch/s7902/m11snap/p1_rand.txt.zst, rp_bno/ordinal per site at the frame of serial 5681).
-  2. Arms (base = scratch/s7900 m11burst recipe, APM=1 burst replay 600, SNAP=3 ONLY=c,7, see scratch/s7902/run_snap.sh):
-       A: 800541fc:2:+16:F1 , 80054174:2:-16:F2      B: signs swapped      C: control = no SKEW (must reproduce E2674 N1@5639 ...)
-  3. Score with tools/s7868_det_frame_cmp.py map (and tools/s7903_retail_bind.py on new snapshots if an arm is partial).
-Expected: one of A/B makes the crawl tail contiguous-exact (map E through ~5771) without touching frames before 5639 -> island B
-on m11 closed; then m6 (0x31=5) with the same arm. If neither: the per-instance offset is not per-site (instances share a site
-and alternate) -> key the skew on (site, parity of the call within its 16-call frame) instead.
-Tools: tools/s7903_retail_bind.py (ORACLE.log RETAIL.bin PORT.bin -101 VI0:VI1 SNAPS...), tools/s7903_retail_overlay.py,
-retail m11 dump scratch/s7903/r1 (VI 10540:10620 only).
+Also first: gate sweep is RED 7 since the scratch/s7435, s7439, s7442 sample_*.txt(.zst) captures vanished (dir mtime 2026-11-23
+20:25; see s7904 entry). Find what deleted them (zst/prune tooling? grep tools for rm of sample_) and restore from git-ignored backup or
+re-capture / re-point the S7433-S7441 + S7723 gate rows; a RED sweep must not stay RED.
+State (s7904): rand-replay keying is NOT the island-B residual. Two-site skew arms: A (800541fc:2:16,80054174:2:-16) residual
+unchanged (odd 3051 tris vs base 3033 over 106 frames), B (swapped) worse. scratch/s7904/blk_search.py: at port task s5683 the
+port's RDRAM holds retail's correct 700140 block h269d96e6 at 0x74D710 (retail draws it at 0x724F70); port 0x724F70 holds
+h1ce7ed51 = retail's frame-5542 value; retail's next-frame blocks are already in port RAM. Values right, arena placement/timing wrong.
+Hypotheses:
+  H-sched: same writer PCs and same allocation order, but the port's CPU writes the next frame's blocks into the arena before the odd
+           re-render task loads (CPU/RSP interleave differs in the crawl tail).
+  H-alloc-seq: the arena allocation pointer sequence differs (the port allocates the flame block for frame k at the address retail
+           uses for frame k+1, e.g. one extra/missing allocation per frame pair).
+Discriminator (ONE retail run + ONE port run, m11 recipe scratch/s7904/run_arms.sh arm C = no SKEW):
+  retail: scratch/s7903/run_retail.sh + `--watch-write` on 0x724F70:0x724FB0, 0x727BC8:0x727C08, 0x749930:0x749970, 0x74D710:0x74D750
+          (oracle prints PC + VI; positive control: a whole-arena 0x720000:0x758000 watch must fire within vi 10560-10580).
+  port: an equivalent guest write log on the same ranges (check src/main for an existing write-watch env first; else add one gated
+          env in the store path used by ROGUESQ_XTRACE_MEM) with writer PC + rs64_vi_n_g + the gfx task-load serial.
+  Outcome: identical (PC, address) sequences but different position vs task loads -> H-sched; different address per writer call ->
+           H-alloc-seq (then dump the arena alloc pointer per frame on both sides).
+Budget: this slug has run s7899-s7904; every iteration discriminated, but if s7905 cannot split H-sched/H-alloc-seq, park island B
+with the table in CURRENT-TRUTH (flight is already exact 2667/2667; this is a pre-flight crawl-tail cosmetic det residual).
