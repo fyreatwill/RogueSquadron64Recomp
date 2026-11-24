@@ -65,11 +65,15 @@ OLD_HDR = HDR.replace(NEW_H, OLD_H); OLD_PINVD = PINVD_S7840.replace(NEW_V, OLD_
 # Guest-neutral host stores.
 A5 = "    // 0x8000BE10: mtc1        $zero, $f0\n"
 A6 = "L_8000BEE8:\n"
-RESET = "    { /* PATCH: s7891 snap reset */ extern int rs64_s7891_reset; rs64_s7891_reset = 1; }\n"
+# s7892: arm only before the first mission tick (rs64_s7858_tick, counted at the 0x800FA730 XTRACE mark the det recipes always
+# arm). Ungated, m6 (0x31=5) fired an 8th reset at port VI 13415 = mission tick ~8 and forked the det pair there (s7892).
+OLD_RESET = "    { /* PATCH: s7891 snap reset */ extern int rs64_s7891_reset; rs64_s7891_reset = 1; }\n"
+RESET = "    { /* PATCH: s7891 snap reset */ extern int rs64_s7891_reset; extern volatile uint32_t rs64_s7858_tick; /* s7892 pre-flight only */ if (!rs64_s7858_tick) rs64_s7891_reset = 1; }\n"
 
 def apply3(text):
     n = 0
-    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1)):
+    for o, nw in ((OLD_HDR, HDR), (OLD_PINVD, PINVD), (PINVD_S7840, PINVD), (OLD_PIN1, PIN1), (OLD_RESET, RESET),
+                  (OLD_RESET.replace("snap reset", "snap reset2"), RESET.replace("snap reset", "snap reset2"))):
         if o in text:
             text = text.replace(o, nw); n += 1
     if "s7839 snaplog el" not in text and text.count(A1) == 1:

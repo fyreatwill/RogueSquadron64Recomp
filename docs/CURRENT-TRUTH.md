@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7891 (2026-11-24).
+Compact operational handoff, as of Session 7892 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -188,8 +188,9 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12); the s7790 numbering (1-36) is
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
-0. **s7891 SNAP=3 second mission:** `env RBIN=1 SNAP=3 zsh tools/s7849_det_pair.sh 5 scratch/s7892/m6` (island A recurred on m6/m11). If
-   island A is gone and flight stays exact, make SNAP=3 the det-pair default. Island B (pre-flight text screen, state class) stays open.
+0. **m6 island A second source (s7892):** on m6 (0x31=5) SNAP=3 zeroes the crawl clock lead (+1 -> 0 VI, plant PASS) but island A
+   (N159@3398) stays, so the crawl post-load frame is NOT island A's only source there (m11 only). SNAP=3 stays opt-in; det-pair default =1.
+   One bounded discriminator left (NEXT.md, slug g3-island-a-m6-source), then island A parks as pre-flight timing class.
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
@@ -351,6 +352,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    on 1292/1292 calls and island A disappears (fix3b vs v10 retail.bin: exact from port 3397, only island B left). Flight stays exact
    2554/2554 and det ticks are identical. `=2` (every sub-half-VI el kept 0) is refuted: it moves the boot and misses the mission.
    `tools/s7891_fix_arm.sh`; s7849_det_pair.sh takes SNAP=. Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
+   **s7892: SNAP=3 is m11-only.** m6: crawl delta 0 under SNAP=3 yet island A N159 stays (and island B grows N212 -> N1182). SNAP=3
+   also had to be gated pre-flight: the mission-load reset was consumed at mission tick ~8 and forked m6 (now cleared per mission tick).
    **s7875: 0x31=2 (mission 3) flight render = retail, 3804/3804 det-tick frames: 5 missions render-exact** (b17, m12, m6, m11,
    m3). `env RBIN=1 zsh tools/s7849_det_pair.sh 2`: p1 H-exact 3807 ticks (seed/calls/rec/pose None; timing word 149 from t3102),
    p2 forks t0; plant caught, phase-7 neg PASS. rc 1 is NOT a flight defect: retail flight frames 3408-7212 = 3804 for 3807 ticks

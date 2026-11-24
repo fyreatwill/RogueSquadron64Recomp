@@ -65,7 +65,9 @@ extern "C" volatile uint32_t rs64_s7858_tick = 0;
 // frame consumes it and sets _free so the vd pin skips that one call. Game thread only.
 extern "C" { int rs64_s7891_reset = 0; int rs64_s7891_free = 0; }
 extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
-    if (pc == 0x800FA730u) ++rs64_s7858_tick;
+    // s7892: a SNAP=3 reset armed by the mission load is consumed by the next el-path frame, which on m6 falls ~11 ticks INTO the
+    // mission (VI 13415, forked det tick 8). Dropping a pending reset at every mission tick keeps the unpin pre-flight only.
+    if (pc == 0x800FA730u) { ++rs64_s7858_tick; rs64_s7891_reset = 0; }
     // s6872: ROGUESQ_POSE_FREEZE=<x1,x2,...>:<ms> (needs RAND_TRACE) stops the mission tick for ms when the player's x first crosses
     // each rising x. +0x4C is a per-tick copy, so POSE_PIN_POSITION cannot hold the ship, but no-input flight is deterministic:
     // this gives the same pose in every arm at any frame rate, held still for a window capture. The pad thread cannot do it.

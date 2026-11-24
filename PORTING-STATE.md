@@ -210981,3 +210981,26 @@ FOLDED=6 new=0, no owner answers, no new SOAK-RESULTS lines, CURRENT-TRUTH 48.9 
 - Bins deleted (fix2/fix3/fix3b p1.bin, 4 GB); scores kept in scratch/s7891/*/score.txt. Slug g3-cinematic-half-frame-phase CLOSED.
 - Next: confirm SNAP=3 on a second mission where island A recurs (m6 0x31=5 or m12 0x31=11; their retail bins are deleted, so it
   needs a fresh `env RBIN=1 SNAP=3 zsh tools/s7849_det_pair.sh 5`), then decide whether SNAP=3 becomes the det-pair default.
+
+## Session 7892 (2026-11-24) — RETAIL_SNAP=3 is m11-only: on m6 it zeroes the crawl clock lead but island A stays; SNAP=3 also had to be gated pre-flight (the mission-load reset forked m6 at tick 8); det-pair default stays =1
+
+Work unit (NEXT s7892, HYPOTHESIS-ID g3-snap3-default). Pre-checks: crash_reports FOLDED=6 new=0, no new SOAK-RESULTS lines,
+CURRENT-TRUTH 50 KB (no maintenance). The s7891 work was complete but uncommitted (STATUS WORKING); committed first as 05f5b012f.
+- Run 1 (`env RBIN=1 SNAP=3 zsh tools/s7849_det_pair.sh 5 scratch/s7892/m6`): retail pins identical to s7870's v5 (retail
+  deterministic). p1 **FORKED at tick 8** (seed + call sequence; 2423/2447 ticks differ), whereas s7870's SNAP=1 m6 p1 was H-exact.
+- Same-day SNAP=1 control on the same retail recording (scratch/s7892/m6s1, r1 hard-linked): p1 H-exact 2447/2447 ticks (seed, calls,
+  rec, pose None), p2 forks. So the fork is SNAP=3's. Cause: [snap7891] fired an 8th time at port VI 13415. The mission's ticks start
+  at VI 13393, so the reset armed by the mission load was consumed ~11 ticks into the mission and unpinned a mission frame.
+- Change 1 (tools/apply_s7839_snaplog.py, upgrades already-patched funcs_3.c in place): the reset arms only while rs64_s7858_tick == 0.
+  It was not enough (scratch/s7892/m6s3b: still forked at t8, fire n=8 at 13415): the reset is armed BEFORE the first tick and consumed after.
+  Change 2 (src/main/rt64_render_context.cpp rs64_xtrace_mark): every mission tick also drops a pending rs64_s7891_reset.
+  scratch/s7892/m6s3c: fire n=8 gone, **p1 H-exact 2432/2432 ticks** (rec/pose None), p2 forks t8 (control).
+- Render (s7868 cmp vs m6 retail.bin): SNAP=1 (m6s1) flight 2441/2441 exact, plant PASS, island A **N159@3398** present, island B
+  N212@6071. SNAP=3 (m6s3c) flight 2426/2426 exact, plant PASS, island A **N159@3399 still present**, island B **N1182@6072** (grew).
+- Crawl clock dump on m6 (`tools/s7891_crawl_clock.sh`, NEW SNAP= param, EEP=scratch/s7892/m6/lvl.eep, one retail run shared):
+  SNAP=1 crawl segment (retail ra 800c9d94) cumulative delta +1 VI on 1091/1093 calls (same as m11). SNAP=3: delta 0 on 1081/1081
+  (plant +1 @500 PASS). So under SNAP=3 the m6 crawl dt equals retail, yet island A stays. Two lines (guest-RAM crawl dt and RDP stream).
+  **Selects H-m11-only**: on m6 the crawl post-load half frame is not island A's (only) source. Side effect: SNAP=3 moves hangar
+  seg 2 from -1 to -2 VI against retail (retail's post-load frame there is 3 VI).
+- Rules out: SNAP=3 as the det-pair default (not general, and it grows island B on m6). SNAP=3 stays opt-in (with the pre-flight gate).
+- Bins kept: scratch/s7892/m6/r1/retail.bin (m6 retail, 2.4 GB) + scratch/s7892/m6s3c/p1.bin; others deleted. Slug g3-snap3-default CLOSED.
