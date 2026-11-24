@@ -210802,3 +210802,21 @@ no new SOAK-RESULTS lines, CURRENT-TRUTH 45.9 KB (no maintenance), screen not lo
 - Verdict: mission 10's whole scored flight (~85 s) is render-identical to retail on det ticks. Rules out a port render
   defect there. Two lines: tick record H-exact (CPU state) and RDP stream exact (render), each with its own positive control.
 - Next: 0x31=12 (mission 13, s7856 H-exact) render pair, then 13, 14 (fork), 15, bonus 16, 18.
+
+## Session 7885 (2026-11-23) — det render oracle 0x31=12 (mission 13): APM=1 pair H-exact all 5765 ticks, render exact on all 5754 flight frames (14 missions); sweep row 12 rescored
+Work unit (NEXT s7885, HYPOTHESIS-ID g3-det-render-coverage). Pre-checks: crash_reports FOLDED=6 new=0, no owner answers,
+no new SOAK-RESULTS lines, CURRENT-TRUTH 46.3 KB (no maintenance), HID idle 345 s, no game running.
+- Run: `env APM=1 RBIN=1 zsh tools/s7849_det_pair.sh 12 scratch/s7885/v12` (rc 0). Pins NDT=42, NTICKS=5765.
+- Schedule check (`tools/s7880_press_scene.py`): all 7 post-anchor presses matched, lag 0, constant +8 VI (port late;
+  s7884 +18, s7883 +10). Pre-flight only.
+- Det score (`s7856_det_verdict.py --tag 0x31=12`): H-exact ticks=5765, full 460-w record 5763, 0 fork windows, residual
+  none. Word-50 plant at t100 caught; unpinned p2 forks at seed t0.
+- Render (`s7868_det_frame_cmp.py ... --neg p2.bin --plant`, rc 0): offset -100 (6265 votes), flight port[3618:9372] exact
+  5754 non-exact 0, post-flight cut none (flight runs to the capture end). Pre-flight 2539 non-exact (phase 4-5 texrect/HUD
+  + 143 phase-6 tri-count = unpinned pre-tick-0 window, same class as m7/m9/m10). Plant (port frame 6455, in flight)
+  caught; neg PASS (unpinned 214 exact / 4306 non-exact in flight vs pinned 5754).
+- 0 crash lines in p1 / p2. RDP bins (6.4 GB) deleted after scoring.
+- Landed: sweep row 12 rescores scratch/s7885/v12 (`TABLE OK rescored=17 hand=3 mismatch=0`; `--control` PASS MISMATCH 1).
+- Verdict: mission 13's scored flight (~96 s) is render-identical to retail on det ticks; rules out a port render defect
+  there. Two lines: tick record H-exact (CPU state) and RDP stream exact (render), each with its own positive control.
+- Next: 0x31=13 (mission 14) render pair, then 14 (fork), 15, bonus 16, 18.
