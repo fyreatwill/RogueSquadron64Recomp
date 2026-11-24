@@ -50,7 +50,7 @@ EMIT_EVID = {
 }
 REPL_SESS = ('Session 7400', 'Session 7401', 'Session 7402', 'Session 7407')  # BJ/BK/BL contracts + BQ IDO math
 DIAG = set('''getenv fflush time mach_absolute_time backtrace backtrace_symbols backtrace_symbols_fd atof atoi atol atoll strtol strtoll
-strtoul strcmp strncmp strchr strncpy snprintf sscanf fputc fputs fwrite fopen setvbuf clock_gettime gettimeofday
+strtoul strcmp strncmp strchr __builtin_strchr strncpy snprintf sscanf fputc fputs fwrite fopen setvbuf clock_gettime gettimeofday
 pthread_self pthread_threadid_np dladdr raise usleep fprintf pthread_create pthread_detach'''.split())
 MATH = set('floorf ceilf powf sinf acosf tan __builtin_tan sqrt __builtin_sqrt fminf fmaxf isnan isinf __builtin_nanf'.split())
 RT = set('''yield_self_1ms __builtin_trap __atomic_add_fetch __atomic_sub_fetch __atomic_load_n __atomic_store_n

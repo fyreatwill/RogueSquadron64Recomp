@@ -210574,3 +210574,30 @@ Reading: island A is not carried by raw time (census, all paths) nor by the AI c
 clock) and H-audio. Open, unmeasured: H-index (element animates off a frame/VI counter offset by one VI) and H-retail-rdp
 (retail capture lags half a frame). Slug PARKED per rule 8: island A is pre-flight, 159 frames, timing class; flight is
 retail-exact on 4 missions. Bins deleted (2.8 GB).
+
+## Session 7875 (2026-11-23) — det render oracle 0x31=2 (mission 3): all 3804 det-tick flight frames = retail (5 missions); scorer's phase-7 non-exact tail is the post-mission screen; s7873 gate REDs reclassified
+
+Start: unmet contract from s7874's exit: s7651 sweep had 2 new RED gates, both re-opened by s7873's multi-window SNAP_WIN patch
+(tools/apply_s7872_snapwin.py): s7813_callee_census OPEN `__builtin_strchr` (added to its DIAG string-plumbing set beside strchr;
+--controls PASS, verdict GREEN) and s7714_truth_census UNCLASSIFIED ROGUESQ_S7872_SNAP_WIN reader (added an UNMODELLED_T STRING row:
+the value is a lo:hi:el window list handed to sscanf, not a truth test; rc 0). crash_reports new=0; no owner answers; no new soaks.
+Run: `env RBIN=1 zsh tools/s7849_det_pair.sh 2 scratch/s7875/v2` (host idle, screen unlocked, rc 0). Pins SEED d05c2df3, 5 DT_AT,
+NTICKS 3807. p1: crashlines 0, seed/call/record/pose diffs None over 3807 ticks, hp history identical (3 deaths), rumble 13/13;
+TIMING word 149 differs from t3102 (timing class). p2: seed differs t0, calls t5 (control forks).
+Render (`tools/s7868_det_frame_cmp.py ... --plant --neg p2.bin`, rc 1): offset -527, exact 4184, longest run port[3935:7749];
+phase 7 exact 3823 / non-exact 1516; plant caught; neg phase-7 pinned 3823 vs unpinned 0 PASS.
+Localisation of the phase-7 non-exact frames (scratch/s7875/offscan.py, blanks.py, global.py, shift.py):
+- From port 7749 on, no frame matches at any offset -527+-6, nor anywhere in retail (1933/1953 unmatched): not an alignment slip.
+- Both sides have exactly one >=3-frame tri-less run after frame 3000: retail 7212, port 7739 (10 frames each, = offset -527).
+  Retail flight 3408-7212 = 3804 frames for 3807 retail ticks (1 frame/tick), so the blank ends the mission ticks: everything after
+  it is outside the det window (no tick, no state guarantee).
+- Post-blank frames: same tri count (211-212, all PRIM 0A0000FF) and texrect count (128 -> 149 -> 470, text appearing) as the
+  paired retail frame; from 7800 texrects 100% identical and 200-212/212 tris exact, rest off by 1/4 px YH or 1 px XL: an
+  end-of-mission screen whose slow background is at a slightly different animation phase (same class as island A).
+- Pre-flight: phase 6 exact port 3391-3752; island 3752-3935 (183 frames, PRIM FFFF3C29 terrain-like) ends at tick 0, p1 and p2
+  wrong by different values on 183/183 -> state (unpinned window). Island A (64 PRIM-FF opening-cinematic tris, m6/m11) did NOT
+  appear in m3 (single-source).
+Reading: every flight frame on a det-exact tick (port 3935-7739) is retail-exact: 5 missions (b17 1120, m12 5662, m6 2383, m11 2519,
+m3 3804). The s7868 "phase 7" bound includes the post-mission screen; read flight up to the post-flight blank. Rules out a render
+defect in m3 flight. Failed side step: the s7874 regression script needs N-adapting (tuple key mix) and was not needed here.
+Bins deleted after scoring.

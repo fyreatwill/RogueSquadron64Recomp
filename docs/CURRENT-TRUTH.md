@@ -337,6 +337,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    p1 ROGUESQ_AI_VI_CLOCK=3 (mupen AI-DMA clock; boot timeline moved, off -532 vs -535 = lever control) vs p2 default: island A
    identical in both (0.510 x speed - 0.016, 6244/6244). Island A is pre-flight timing class, open: H-index (frame-counter offset)
    / H-retail-rdp (capture lag). Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
+   **s7875: 0x31=2 (mission 3) flight render = retail, 3804/3804 det-tick frames: 5 missions render-exact** (b17, m12, m6, m11,
+   m3). `env RBIN=1 zsh tools/s7849_det_pair.sh 2`: p1 H-exact 3807 ticks (seed/calls/rec/pose None; timing word 149 from t3102),
+   p2 forks t0; plant caught, phase-7 neg PASS. rc 1 is NOT a flight defect: retail flight frames 3408-7212 = 3804 for 3807 ticks
+   (1 frame/tick), then a 10-frame tri-less blank on both sides (retail 7212, port 7739) ends the mission ticks; the 1953
+   post-blank phase-7 frames are an end-of-mission screen (212 tris PRIM 0A0000FF, texrects 128->470) with identical
+   counts/texrects and ~2-5% of tris off by 1/4-1 px (animation phase, outside the det window; scratch/s7875/*.py).
+   **s7868 scorer caveat: "phase 7" runs past the last mission tick; bound flight by the post-flight blank.** Island A
+   (cinematic half-frame) did NOT appear in m3 (phase 6 exact port 3391-3752); pre-tick-0 island 3752-3935 = state (p1/p2
+   differ on 183/183).
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item

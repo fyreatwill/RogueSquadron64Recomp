@@ -136,6 +136,7 @@ UNMODELLED_T = [
 ("ROGUESQ_S7106_RSPTRI","src/rsp/s7106_rsptri.cpp","const char* e = getenv",S),
 ("ROGUESQ_S7317_ALLOCMAP","src/rsp/s7324_rcp_spill.cpp","getenv(\"ROGUESQ_S7317_ALLOCMAP\") ?",S),
 ("ROGUESQ_S7317_ALLOCMAP","src/rsp/s7331_reset_writer.cpp","getenv(\"ROGUESQ_S7317_ALLOCMAP\") ?",S),
+("ROGUESQ_S7872_SNAP_WIN","tools/apply_s7872_snapwin.py","w7872 = 0;",S),  # s7875: lo:hi:el window list for sscanf, not a truth test
 ("ROGUESQ_S7324_RCPREF","src/rsp/s7331_reset_writer.cpp","getenv(\"ROGUESQ_S7324_RCPREF\") ?",S),
 ("ROGUESQ_S7523_SLOWRDP","src/rsp/s7523_slow_rdp.cpp","const char* e = getenv",S),
 ("ROGUESQ_SLOT_DISPATCH_PHASE_MIN","tools/apply_s6942_envcache.py","ROGUESQ_SLOT_DISPATCH_PHASE_MIN",R),
