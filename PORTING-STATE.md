@@ -211129,8 +211129,8 @@ answers, CURRENT-TRUTH 52 KB (no maintenance).
 - Footgun found: p1only.sh (det_pair lines 1-44 copy) passes SNAP straight to ROGUESQ_RETAIL_SNAP, so SNAP=c there = =1 (no
   "[snap7891] RETAIL_SNAP=3" line). An m6p arm ran that way (island A back, N159@3397) and was discarded; m3r is unaffected (=c is a
   no-op on m3 and its control m3c is =1). Use SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=c with p1only, or det_pair.sh SNAP=c.
-- Selects: H-rng for m3's island B (two lines: rand values equal retail after the reseed + render exact, vs same-retail control).
-  Refutes H-rng for m6/m11 island B (full per-site replay changes nothing). Lead for m6/m11: island B starts at the SAME retail frame
+- This selects H-rng for m3's island B (two lines: rand values equal retail after the reseed + render exact, vs same-retail control).
+  It refutes H-rng for m6/m11 island B (full per-site replay changes nothing). Lead for m6/m11: island B starts at the SAME retail frame
   (5538/5539) on both missions with the same signature (a few FFFFFFFF tris moved, growing) = shared crawl-tail content, the island A
   family: H-dt (another crawl frame's dt differs) vs H-object (advanceNpcOnCurvedPath progress, m6).
 - ORIGIN: diagnostic det-pair lever only (no mitigation, defaults untouched): the writer of island B's m3 values is rand_recomp fed
