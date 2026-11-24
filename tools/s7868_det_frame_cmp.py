@@ -145,14 +145,25 @@ r = align(R, P); inner = report('pair', R, P, r)
 if r is None: sys.exit(2)
 rc = 0 if not inner else 1
 if '--plant' in a:
-    j = (r['run'][1] + r['run'][2]) // 2; c = collections.Counter(P[j])
-    k = next(k for k in c if k[0] == 'tri' and len(k) > 3)
-    g = list(k); g[3] = ((g[3] & ~0x3FFF) | ((g[3] + 1) & 0x3FFF))   # YH = low 14 bits of the 2nd word (k = tri, prim, w0, w1, ...) + 1 quantum
-    c[k] -= 1; c[tuple(g)] += 1; c += collections.Counter(); P2 = P[:j] + [c] + P[j + 1:]
-    r2 = align(R, P2); ok = r2 is not None and r2['eq'].get(j) is False and all(r2['eq'].get(i) == r['eq'].get(i) for i in r['eq'] if i != j)
-    inflight = j >= r['fstart'] and (r['cut'] is None or j < r['cut'])
-    ok = ok and inflight   # s7876: the plant must sit inside flight, where a diff sets rc 1
+    def plant(j):
+        c = collections.Counter(P[j])
+        k = next((k for k in c if k[0] == 'tri' and len(k) > 3), None)
+        if k is None: return False
+        g = list(k); g[3] = ((g[3] & ~0x3FFF) | ((g[3] + 1) & 0x3FFF))   # YH = low 14 bits of the 2nd word (k = tri, prim, w0, w1, ...) + 1 quantum
+        c[k] -= 1; c[tuple(g)] += 1; c += collections.Counter(); P2 = P[:j] + [c] + P[j + 1:]
+        r2 = align(R, P2); return r2 is not None and r2['eq'].get(j) is False and all(r2['eq'].get(i) == r['eq'].get(i) for i in r['eq'] if i != j)
+    # s7891: plant in the middle of the exact FLIGHT span (was: the longest exact run, which is pre-flight once a pre-flight island
+    # closes, and then failed the s7876 in-flight bar without saying whether the diff was caught); the first flight frame with a
+    # tri at or after the middle. A second, informational plant sits in the longest run when that run is pre-flight.
+    fe = r['cut'] if r['cut'] is not None else len(P)
+    j = next((i for i in range((r['fstart'] + fe) // 2, fe) if any(k[0] == 'tri' for k in P[i])), (r['run'][1] + r['run'][2]) // 2)
+    inflight = j >= r['fstart'] and j < fe
+    ok = plant(j) and inflight   # s7876: the plant must sit inside flight, where a diff sets rc 1
     print(f'control plant (port frame {j}, one tri YH+1, in flight {inflight}): {"PASS caught" if ok else "FAIL"}')
+    jr = (r['run'][1] + r['run'][2]) // 2
+    if jr < r['fstart']:
+        jr = next((i for i in range(jr, r['run'][2]) if any(k[0] == 'tri' for k in P[i])), jr)
+        print(f'control plant pre-flight (port frame {jr}, longest exact run, informational): {"caught" if plant(jr) else "MISSED"}')
     if not ok: rc = 3
 if '--neg' in a:
     N, NM = load(a[a.index('--neg') + 1], False); PM = NM; rn = align(R, N); report('neg', R, N, rn)

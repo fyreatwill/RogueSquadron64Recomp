@@ -1,20 +1,17 @@
-# NEXT (s7891)
-HYPOTHESIS-ID: g3-cinematic-half-frame-phase
+# NEXT (s7892)
+HYPOTHESIS-ID: g3-snap3-default
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State: G3 det render coverage CLOSED s7890 (19/19 missions render-exact on det ticks). The one render-level difference left
-in every pair is pre-flight island A: the opening cinematic's 64 PRIM-FF tris are offset by 0.51 x per-frame speed - 0.016,
-identical in p1 and p2 (m6 s7870, m11 s7871). Refuted: dt (s7872), snapshot value (s7873), raw clock + audio clock (s7874).
-Parked s7874 by rule 8 with two hypotheses open. This unit is the ONE new discriminator between them, not another lever:
-  H-index      the game's own cinematic state is half a frame off (frame-counter / spline-time origin differs): guest RAM differs.
-  H-retail-rdp the guest state is equal and the oracle's RDP capture is taken half a frame late/early (harness): RAM equal, RDP differs.
-Measurement (ONE port run + reuse the retained retail pair scratch/s7872/v10/r1, or one fresh oracle run if RAM words were not kept):
-  per frame in the cinematic window, dump the cinematic camera/spline time word(s) from guest RAM on BOTH sides at the same
-  point in the frame (the VI the gfx task is submitted). Find the word: the spline walker used by the opening cinematic
-  (cinematicSplineWalkerNpcHandler / camera spline param; grep symbols) - confirm it moves monotonically through island A.
-  Pair frames with the s7868 offset (-529 for v10). Outcomes: spline-time delta == 0.5 frame step on paired frames -> H-index
-  (game state; then find the init-order of that counter); delta == 0 while RDP differs -> H-retail-rdp (oracle capture lag;
-  fix the oracle's capture point, re-score island A). Positive control: plant a +1-frame shift in the port dump and require the
-  comparator to report a 1.0-step delta. If neither (delta not 0 or 0.5): stop, write the table, close the slug as timing class.
-Budget: this is iteration 4 on this slug overall but the first since parking; 1 iteration, then close either way.
-Tools: tools/s7872_frame_clock.py (retail CPO1 trace pattern), scratch/s7870/phase_a.py (0.51 regression), tools/oracle/README.md.
+State: s7891 closed island A (g3-cinematic-half-frame-phase) as H-index. The crawl's post-load frame stores 1/60 on retail but
+2 VI under the ROGUESQ_RETAIL_SNAP=1 pin. ROGUESQ_RETAIL_SNAP=3 (unpins only the first frame after a flags-clear / prev==-1 reset)
+removes island A on m11 (scratch/s7891/fix3b: exact from port 3397, flight 2554/2554, det ticks identical). Single mission so far.
+Unit: confirm on a second mission where island A recurred (m6 = 0x31=5; s7870 island A N159 identical to m11):
+  env RBIN=1 SNAP=3 zsh tools/s7849_det_pair.sh 5 scratch/s7892/m6
+  python3 tools/s7868_det_frame_cmp.py scratch/s7892/m6/r1/retail.bin scratch/s7892/m6/p1.bin --plant --neg scratch/s7892/m6/p2.bin
+Hypotheses: H-general (SNAP=3 removes island A on m6 too, flight stays exact) -> make SNAP=3 the s7849_det_pair default (one-line
+  change, keep SNAP=1 reachable), rescore nothing else. H-m11-only (island A persists on m6) -> the post-load value there differs
+  (retail's post-load frame can be 1, 2 or 3 VI, per load); dump the crawl site with tools/s7891_crawl_clock.sh EEP=<m6 eep> and read it.
+  Flight non-exact under SNAP=3 -> SNAP=3 changes the pinned flight path; keep =1 as the default and record it.
+Controls: the plant (now mid-flight, s7891 tool fix) and the unpinned p2 neg; also report whether port pre-flight phase 6 exact span
+starts at the first phase-6 frame.
+Budget: 1 iteration. Then pick the next ladder item (Next steps 1+: owner looks are waiting; G6/G5 items are owner-gated).

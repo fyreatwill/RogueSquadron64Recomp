@@ -61,6 +61,9 @@ extern "C" void rs64_rand_trace(uint32_t ra, uint32_t seed) {
 // matches. Row: index, update_screen #, pc, $v0, dumps. Called from tools/fixup_rand_trace.py hooks.
 // s7858: ordinal of 0x800FA730 mission-tick marks (= the tick index the s7854 record tools use); stamped on [swatch-pt] lines.
 extern "C" volatile uint32_t rs64_s7858_tick = 0;
+// s7891: ROGUESQ_RETAIL_SNAP=3 hand-off (tools/apply_s7839_snaplog.py): timeSnapshotFiller's prev==-1 path sets _reset, the next el-path
+// frame consumes it and sets _free so the vd pin skips that one call. Game thread only.
+extern "C" { int rs64_s7891_reset = 0; int rs64_s7891_free = 0; }
 extern "C" void rs64_xtrace_mark(uint32_t pc, const uint8_t* rdram, const uint64_t* gpr) {
     if (pc == 0x800FA730u) ++rs64_s7858_tick;
     // s6872: ROGUESQ_POSE_FREEZE=<x1,x2,...>:<ms> (needs RAND_TRACE) stops the mission tick for ms when the player's x first crosses

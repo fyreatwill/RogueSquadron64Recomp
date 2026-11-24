@@ -210938,3 +210938,46 @@ SOAK-RESULTS lines, CURRENT-TRUTH 48.3 KB (no maintenance), HID idle 6651 s, IOC
   `--control` PASS MISMATCH 1). RDP bins deleted, big logs zstd'd (73 MB retained).
 - Next: the parked pre-flight cinematic island A (g3-cinematic-half-frame-phase), ONE discriminator between H-index (guest
   cinematic time half a frame off) and H-retail-rdp (oracle capture point), then close the slug either way.
+
+## Session 7891 (2026-11-24) — island A (pre-flight half-frame) is H-index: the crawl's post-load frame. The RETAIL_SNAP=1 pin stores 2 VI where retail stores 1 VI, so the port's crawl clock runs +1 VI ahead; new ROGUESQ_RETAIL_SNAP=3 unpins that one frame and island A disappears (RAM + RDP, flight still exact)
+
+Work unit (NEXT s7891, HYPOTHESIS-ID g3-cinematic-half-frame-phase, the one discriminator after parking). Pre-checks: crash_reports
+FOLDED=6 new=0, no owner answers, no new SOAK-RESULTS lines, CURRENT-TRUTH 48.9 KB (no maintenance).
+- Reading (ELF disasm, ../rogue_squadron64/build/roguesquadron.elf): two pre-flight dt sites call timeSnapshotFiller. Menu overlay
+  advanceWrappingPhaseAccumulator 0x800C6660 (mark 0x800C6674) and cinematic overlay cinematicComputeDt 0x800AF360 (mark
+  0x800AF374). Both quantize the stored value v (struct +0x20) to whole VIs with period p (+0x1C): r = frac(v/p)*p; r/p < 0.5 -> v-r
+  else v+p-r; v <= 0 -> 1/60 (0x800A76A8 / 0x800A5D58); menu clamps at 1/6. Both bump call counter 0x8013889C. cinematicLoopBody
+  accumulates dt into 0x800B0B2C and 0x80130BA4. The crawl's caller is ra 0x800C9D94 (retail saved ra).
+- NEW tools/s7891_crawl_clock.sh: one retail oracle run (CPO1, 130 s, v10 save, `RS64_XTRACE_MEM` at both marks, exec-trace-also)
+  and one port run (same marks through the s6752 RAND_TRACE rows). NEW tools/s7891_crawl_clock_cmp.py: per-call quantized dt,
+  segments, cumulative-dt delta per paired segment. `--plant K` control PASS (+1 VI at call 500 reported from 500 on).
+- Result (scratch/s7891/a, RETAIL_SNAP=1 as in every det pair): crawl segment (retail VI 5219 = the 86.3 s 512->640 switch; port
+  VI 5602) per-call dt equal 1087/1088. Retail opens 0,0,**1/60**,2,2 VI; the port opens 0,0,**0.03397**(=2 VI),2,2. **Cumulative
+  crawl time is port +1 VI from call 2 on = half a 2-VI frame = island A's 0.51 x speed lead.** Both third calls land in the same
+  VI as the second (retail 5221/5221, port 5603/5603). The two zeros come from the flags-clear path (BEE8: dt word / rate, 0 after
+  a load), not from prev==-1. Hangar segments: one is equal, one is -1 VI (retail post-load 3 VI), and the cinematic is 124/124
+  equal. Selects **H-index** (the guest time state differs), refutes H-retail-rdp.
+- Change (tools/apply_s7839_snaplog.py, regen gate --strict 0 differ, H-mirrored): two variants of the =1 pin.
+  ROGUESQ_RETAIL_SNAP=2 keeps el 0 on every frame whose real el is under half a VI. **Refuted as a det pin** (scratch/s7891/fix2):
+  the port boot then runs retail's 1 VI/frame (boot segment 242/242 equal to retail, i.e. =1 also gives the boot 2-VI dt on 1-VI
+  frames), the timeline moves, and the press schedule never enters the mission (port ticks 0). ROGUESQ_RETAIL_SNAP=3 runs only the
+  first el-path frame after a flags-clear / prev==-1 reset unpinned (real el AND real vd; host flags rs64_s7891_reset/_free in
+  src/main/rt64_render_context.cpp). First build hooked only BE10 and never fired (fix3 = a second =1 control: island A N159@3398
+  present, crawl +1 VI, flight 2560/2560 exact). Second build also hooks L_8000BEE8 and fires 8x (real el 0 or 781250).
+- Fix arm (NEW tools/s7891_fix_arm.sh = the s7849 v10 p1 recipe with SNAP=, RDP kept; scratch/s7891/fix3b, SNAP=3): crawl
+  **cumulative delta 0 on all 1292 calls**. s7868 cmp vs retained scratch/s7872/v10/r1/retail.bin: offset -533, **island A gone**.
+  The exact span runs from port 3397, the first phase-6 frame. Longest run port[3397:6071] 2674 frames, and the only island left
+  is B N1054@6071 (state class). Flight port[7125:9679] exact 2554/2554, det ticks seed/call-identical (s7845 first fork None).
+  Two lines of evidence: guest RAM dt (+1 -> 0) and the RDP stream (N159 -> 0), each with a control.
+  Cost: other post-load frames now take the port's real load timing (hangar segment -2 / -1 VI, cinematic -1 VI against retail).
+  Load timing is emulated-time class, outside the scored span.
+- Tool fix: s7868_det_frame_cmp.py --plant planted in the middle of the longest exact run and failed the s7876 in-flight bar when
+  that run was pre-flight, which is exactly what happens once island A closes. It now plants mid-flight (first frame with a tri),
+  plus an informational pre-flight plant. fix3b: flight plant 8402 PASS caught, pre-flight plant 4734 caught.
+- s7849_det_pair.sh takes SNAP= (unset = =1, unchanged). Retail-side note: retail boot screens run 1 VI/frame with 1-VI dt; the =1
+  port runs them 1 VI/frame with 2-VI dt (the pin). Pre-existing, outside every det span.
+- Superseded: s7873 "post-load dt (1 vs 2 VI) does not carry the half frame". Its VI window (5584:5587) targeted
+  computeFrameDeltaTime's post-load frame without measuring the crawl site, so it never showed it hit the crawl's 3rd call.
+- Bins deleted (fix2/fix3/fix3b p1.bin, 4 GB); scores kept in scratch/s7891/*/score.txt. Slug g3-cinematic-half-frame-phase CLOSED.
+- Next: confirm SNAP=3 on a second mission where island A recurs (m6 0x31=5 or m12 0x31=11; their retail bins are deleted, so it
+  needs a fresh `env RBIN=1 SNAP=3 zsh tools/s7849_det_pair.sh 5`), then decide whether SNAP=3 becomes the det-pair default.
