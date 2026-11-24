@@ -197,7 +197,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    cumulative 0 VI (s7891_crawl_clock `--plant 2675:4` PASS), yet 5-10 white FFFFFFFF tris per frame drift (m11 N213, m6 N212).
    On m11 B continued through the post-crawl cinematic because of the island-A mechanism on its post-load frame (fire 7; retail 1.0 VI,
    pinned port 2.038). `ROGUESQ_SNAP3_ONLY=c,7` (new list form) turns 237 of those frames exact: map N213@6073 + N79/N15/N22/N92/N396
-   (817 vs 1054). Next: identify the drifting crawl-tail object from the differing tris (screen positions, H-object vs H-cam).
+   (817 vs 1054). **s7899: the drift is guest INPUT, not our RSP.** Dump (tools/s7899_island_b_dump.py, plant PASS): drifting tris are
+   vertex-level sub-pixel moves (per-frame median 0.69 px, within-frame spread 0.67 = no common delta: H-cam refuted; corr(frame,|d|)
+   -0.39: H-anim refuted; 90/6002 found verbatim in retail +-4 frames: permutation/H-object-rng refuted), first a large white object
+   entering top-right (6073-6080), then tiny 2-5 px tris clustered x375-530 y204-238, ~28/frame. Two sources for H-input: cxd4 replay of
+   the port's own task snapshots (tools/s7899_snap_cmp.py, ROGUESQ_S7751_EVERY=10:40:5900, 40 tasks) is bit-identical to our LLE
+   on all 40 (20 in the drift window) and carries exactly the same retail diff (8-38 tris/frame); host FMA cannot fuse guest ops
+   (one op per C statement; cc test fuses a*b+c only within a statement), FMA sites exist only in PATCH code.
+   Next: name the guest data (matrix / vertex buffer) of the drifting tris and diff it against retail RDRAM at the same task.
    p1only.sh does not expand SNAP=c: use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ROGUESQ_RAND_REPLAY=..." (scratch/s7898/run_m11c7.sh).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.

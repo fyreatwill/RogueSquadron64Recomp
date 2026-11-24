@@ -211190,3 +211190,32 @@ answers, CURRENT-TRUTH 52.9 KB (no maintenance).
 - Kept: scratch/s7898/cc (retail+port dt traces, score.txt), scratch/s7898/m11c7/p1.bin.zst + p1_rand.txt, cmp/probe outputs.
 - Gates: s7719 regen gate --strict strict 0 (reader row fixed as above); full sweep 253 gates {GREEN 237, REPORT 2, NEEDS-ARGS 7,
   RED 7}, all 7 RED in tools/gate_sweep_allowed_red.txt (same set as s7897) -> 0 new RED.
+
+## Session 7899 (2026-11-24) — island B crawl-tail drift is guest input, not our RSP: cxd4 replay of the port's own tasks is bit-identical (40/40), drift is vertex-level sub-pixel (H-cam, H-anim, H-object-rng permutation refuted)
+What ran:
+- New tool tools/s7899_island_b_dump.py (port-only vs retail-only tri dump with screen bbox, nearest same-PRIM pairing, per-frame
+  delta stats, permutation test, edge-crossing and size census). Control (same run): a planted +8 px x / +4 px y tri on exact frame
+  p5673 dumps as 1/1 with delta (8.00, 4.00) -> PASS.
+  On scratch/s7898/m11c7 (port 6073-6290, offset -535): 213 frames with diffs, 6002 port-only tris. Per-frame median |d| 0.69 px,
+  within-frame spread 0.67 (no common delta -> H-cam refuted); corr(frame,|d|) -0.39 slope -0.014 px/frame (H-anim refuted);
+  90/6002 port-only tris occur verbatim in retail +-4 frames (H-object-rng permutation refuted). Edge-crossing: diff 8.9% vs common
+  17.2% (clip path not enriched). Object: 6073-6080 a large white object (tris 20x60..55x158 px) entering from above top-right and
+  moving down; later ~28/frame tiny white tris (2-5 px) clustered x375-530 y204-238 inside ~960-tri frames; per-tri a single
+  vertex moves (e.g. width 5.2 vs 2.8 px with the same min x) = vertex-level, not object translation.
+- Boring check (H-fma): Apple cc -O2 arm64 fuses a*b+c within one statement (control) but not across statements; generated guest
+  float code is one op per statement (MUL_S / + / - / DIV_S census of all funcs_*.c), so guest ops cannot be FMA-fused. otool finds
+  ~200 fmadd/fmsub sites in RecompiledFuncs, all in functions carrying PATCH code (applyPlayerVehicleStateUpdate 35,
+  updateHangarBayScene 33, ...); a patch that writes guest float state is still a lead (setupCameraMatrices has 1).
+- Run (one game run, scratch/s7899/run_snap.sh): the s7898 m11c7 recipe + ROGUESQ_S7751_SNAP + ROGUESQ_S7751_EVERY=10:40:5900.
+  Render map reproduces island B: E2674 N213@6068 ... (offset -530; snapshots did not move it). tools/s7899_snap_cmp.py replays each
+  snapshot on cxd4 (plant XH+1 control 1/1 PASS): port LLE vs cxd4 (0,0) on all 40 tasks. Pairing tasks to frames (serial = port
+  frame + 42): cxd4-vs-retail equals snap-vs-retail on all 20 drift-window tasks (s6110..s6290); each snap differs from its p1.bin
+  frame by a constant 100/100 tri block (capture-layer: the bin frame spans two tasks), and the remainder equals the port frame's
+  retail diff (8..38 tris).
+Selects: H-input. Two lines: (1) an independent RSP fed the port's RDRAM/DMEM produces the port's drifting tris bit-for-bit;
+(2) the drift has vertex-level shape (no common delta, no growth), the signature of differing guest data (matrix LSBs or CPU-written
+vertices), not a timing shift. Caveat: the replay is stock cxd4 (5 VU defects, s7815); it matched our LLE on every task, so those
+ops are not on this path. Refutes: H-rsp (for island B), H-cam, H-anim, H-object-rng (permutation form), H-fma in guest ops.
+Open: which guest data differs (NEXT: walk the s6150 DL for the matrix/vertex source, then a retail --pc-ram-dump of it).
+ORIGIN: no mitigation; diagnostics only (two offline tools, no runtime change).
+Kept: scratch/s7899/snap/tasks (40 snapshots + cxd4 rdp), snap/p1.bin.zst, snapcmp.txt, snapcmp_near.txt, scratch/s7898/dump_6073.txt.

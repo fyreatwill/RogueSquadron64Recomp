@@ -1,21 +1,20 @@
-# NEXT (s7899)
+# NEXT (s7900)
 HYPOTHESIS-ID: g3-island-b
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, owner answers in docs/OWNER-REVIEW-QUEUE.md,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7898): crawl-tail island B (m11 N213@6073, m6 N212@6071) has guest crawl dt EXACTLY retail (2887/2887, cum 0 VI, plant PASS),
-so H-dt is refuted. 5-10 white PRIM FFFFFFFF tris drift per frame out of 225-345 (tri count equal or +-2, no frame shift). m11's
-cinematic part is mostly the fire-7 post-load half-frame (lever ROGUESQ_SNAP3_ONLY=c,7: N1054 -> N213 + 604 cinematic remnants).
-Unit (offline first, kept bins: retail scratch/s7895/m11k/r1/retail.bin, port scratch/s7898/m11c7/p1.bin.zst):
-  1. Name the object. Dump the differing tris (port-only vs retail-only) of port frames 6073..6100 with screen x/y/size: stars (tiny,
-     scattered, many frames) vs one model (clustered) vs crawl text (in the text band). Extend tools/s7896_island_b_probe.py with
-     --dump (control: a planted YH+1 tri must appear in the dump at its coordinates).
-  2. Hypotheses: H-object-rng (star/particle positions from a guest RNG that is NOT rand 0x80003430, e.g. an inline LCG, so the
-     s7896 replay could not reach it; check whether the drifting tris' positions are a permutation of retail's = same set, other order),
-     H-cam (crawl-tail camera tilt: all drifting tris shift by one common delta), H-anim (an object stepped by call count, not dt:
-     per-tri delta grows linearly with frames).
-  Discriminator: per frame, the dx/dy between each port-only tri and its nearest retail-only tri. Common delta -> H-cam; set
-  permutation / random pairs -> H-object-rng; delta growing with frame -> H-anim. Then ONE run with a write watch on the object's
-  position source (oracle --watch-write on retail + XTRACE on port) named by the result.
-  3. The m11 cinematic remnants N79/N15/N22/N92/N396 (scratch/s7898/m11c7_cmp.txt): run the same dump on 6297 and 6731 to see if the
-     same object carries over (then one fix closes both).
-Lever recipe: scratch/s7898/run_m11c7.sh (p1only, SNAP=3 + P1E SNAP3_ONLY=c,7 + RAND_REPLAY).
+State (s7899): crawl-tail island B (m11 N213) is guest INPUT drift. cxd4 replay of the port's own gfx-task snapshots is bit-identical
+to our LLE on 40/40 tasks (20 in the drift window) and carries the identical retail diff, so the RSP is not the cause. The drift is
+vertex-level sub-pixel (median 0.69 px, no common delta, no growth, not a permutation of retail's tris): first a large white object
+entering top-right (port 6068-6080), then ~28 tiny 2-5 px white tris clustered x375-530 y204-238.
+Kept: port task snapshots scratch/s7899/snap/tasks/k900_s6110..s6290.bin (RDRAM+DMEM at task begin, serial = port frame + 42),
+port RDP scratch/s7899/snap/p1.bin.zst (offset retail-port -530), retail scratch/s7895/m11k/r1/retail.bin + oracle.log.
+Unit:
+  1. Offline: walk the F5 display list in snapshot s6150 (docs/F5-UCODE-REFERENCE.md: segment table, G_MTX/G_VTX equivalents) and find
+     the matrix + vertex buffer addresses feeding the drifting tris (screen box x375-530 y204-238). Control: a vertex in the identified
+     buffer, nudged in a copy of the snapshot and replayed on cxd4 (tools/s7751_cxd4_task/replay), must move exactly those tris.
+  2. One retail oracle run (recipe in tools/s7849_det_pair.sh r1 step + `--pc-ram-dump <osSpTaskLoad/gfx submit PC>:<matrix/vtx range>`)
+     dumping the same addresses at the same frame; diff float bits port vs retail.
+  Hypotheses: H-matrix (object/camera matrix differs by LSBs: guest float path; check which PATCH code with fmadd touches it, e.g.
+  s7103 camfix / s7108 camwide in setupCameraMatrices), H-vtx (vertex positions written by a CPU particle/stars routine differ: name
+  the writer with XTRACE on port + --watch-write on retail), H-state (an object state field (rotation angle, scale) differs, not dt).
+  Discriminator: which of matrix vs vertex bytes differ between port and retail at the same task.
