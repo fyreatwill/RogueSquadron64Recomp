@@ -1200,9 +1200,9 @@ static void s5224_report(void)
 #define PC_RAM_DUMP_MAXW 1024
 static uint32_t g_prd_pc, g_prd_start, g_prd_words, g_prd_last[PC_RAM_DUMP_MAXW];
 static unsigned g_prd_n, g_prd_rows;
-/* s7900: --pc-ram-dump-also START:END (up to 4, same PC, <=8192 words each) prints "[ramdumpK] vi= n= a=<start> w=" rows on
+/* s7900: --pc-ram-dump-also START:END (up to 10 since s7903, same PC, <=8192 words each) prints "[ramdumpK] vi= n= a=<start> w=" rows on
  * change; --pc-ram-dump-vi V0:V1 gates every pc-ram-dump row (base and also) to that VI window (default: all VIs). */
-#define PRD_ALSO_MAX 4
+#define PRD_ALSO_MAX 10
 #define PRD_ALSO_MAXW 8192
 static uint32_t g_prda_start[PRD_ALSO_MAX], g_prda_words[PRD_ALSO_MAX], *g_prda_last[PRD_ALSO_MAX];
 static unsigned g_prda_n; static long g_prd_vi0 = 0, g_prd_vi1 = -1;

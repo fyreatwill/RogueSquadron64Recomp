@@ -211320,3 +211320,33 @@ dumped window; next unit widens the retail dump.
 ORIGIN: no mitigation; analysis tools only.
 Kept: scratch/s7902/{run_snap.sh, m11snap (p1.bin/rand/oracle zst, tasks s5680-s5685 zst), m11snap_cmp.txt, arena_cmp.txt,
 s568x.rdp/.dma, tri_source.txt, mesh_search.py, shift_search.py}.
+
+## Session 7903 (2026-11-24) — island B odd-frame residual: retail draws the SAME flame instance at the SAME address; the port's flame vertex values are retail's from the adjacent frame pair (700100 one pair late, 700140 one pair early), so H-bind and H-alloc are refuted and the residual is rand-replay keying
+Work unit (NEXT s7903, HYPOTHESIS-ID g3-island-b). Pre-checks: crash_reports FOLDED=3 new=0, no owner answers, no new SOAK-RESULTS
+lines, CURRENT-TRUTH 56.2 KB (no maintenance).
+- Oracle: `--pc-ram-dump-also` cap raised 4 -> 10 ranges (tools/oracle/rs64_oracle.c PRD_ALSO_MAX, rebuilt). Retail m11 run
+  scratch/s7903/run_retail.sh (s7900 recipe, RSECS 180, VI 10540:10620): pool 0x700000-0x700800 + the whole DL/mesh span
+  0x718000-0x758000 (8 ranges) + OSTask 0x800377C8 + parity word 0x8013889C, at osSpTaskLoad.
+- New tools/s7903_retail_overlay.py: overlays retail's dumped ranges at task n (latest row <= n per range; OSTask also into DMEM
+  0xFC0) onto a port s7751 task snapshot. New tools/s7903_retail_bind.py: replays every overlaid retail task in a VI window through
+  cxd4 + DMA log (tools/s7900_dma_trace/replay_dma), pairs the one reproducing retail frame P-101 EXACTLY, and compares per flame
+  instance (MTXS 0x05D0 matrix, 0x0280 vertex block) the address and the 64-byte block hash, port vs retail.
+- First pass failed its own control (0/6 exact; even the port replay vs its own frame differed by 100 tris): a replayed task starts
+  without SETPRIMCOLOR while the captured frame inherits FFFFFFFF from the previous task. Keys now exclude PRIM.
+- Control PASS 6/6: for every port snapshot s5680..s5685 a retail task reproduces retail frame P-101 exactly (s5681 -> n16100
+  vi 10568, s5683 -> n16106, s5685 -> n16112; even serials reproduce from the stale-DL tasks between), and the port replay equals
+  the port frame on 6/6. Retail frames advance once per 6 task loads (~4 VI), matching s7902's half-rate sim.
+- Result (scratch/s7903/bind.txt): flame tris appear on the port's odd serials only (= retail even frames). Same instance matrix
+  and SAME vertex-block address as retail (s5681 700100 @74DE48; s5683 700140 @724F70, 700100 @727BC8): H-bind REFUTED, H-alloc
+  REFUTED. Only the bytes differ, and they are retail's values from the neighbouring drawn frame:
+    s5683 (R5540): port 700100 bytes = retail R5538's 700100 block (h81023470), port 700140 bytes = retail R5542's 700140 (h1ce7ed51)
+    s5685 (R5542): port 700100 bytes = retail R5540's 700100 block (hc45b3772); port 700140 bytes appear in retail only at later VIs
+    s5681 (R5538): port 700100 bytes sit stale in retail's task at 0x74D920 (an earlier frame's block).
+  So instance 700100's flame jitter runs one drawn frame (one 16-call site burst) LATE and 700140's one EARLY. Tri count follows
+  the values (s5681 port 4 flame tris, retail 8).
+- H-time (retail CPU writes after task load) is not the mechanism: the values retail draws at n are in RDRAM at its own task load.
+Selects: two-source (block hashes + exact replay control): the residual is the per-site rand-replay ordinal mapping in the crawl
+tail, one burst-frame offset per instance with OPPOSITE signs. That explains s7901: a single-site whole-burst SKEW fixed one instance
+and broke the frames before the tail. Not a game or RSP defect: a determinism-harness keying artifact.
+ORIGIN: no mitigation; analysis tools + oracle cap only.
+Kept: scratch/s7903/{run_retail.sh, r1 (oracle.log.zst, retail.bin.zst), bind.txt, rep/*.rdp,*.dma}.
