@@ -210521,3 +210521,33 @@ the same run), but el=0 hits a different path (likely a 0-divisor/special case i
 the retail value as the guest consumes it is not simply "0". Rules out: H-dt, H-count (parity). Leading: H-snap (el in
 the cinematic should be some value v in (0, 811160), not the flight pin). Not claimed: what v is.
 Bins deleted (p1/p2 x2, 5.4 GB); scratch/s7872/v10/r1 (retail.bin 2.1 GB + oracle.log) KEPT for reuse by s7873.
+
+## Session 7873 (2026-11-23) — timeSnapshotFiller has no el=0 special case (value = el/rate + VI period x max(vd,1)); retail stores 0.03333 in the opening cinematic; retail-valued snap arms leave island A's half-frame lead unchanged -> H-snap refuted; multi-window SNAP_WIN + tools/s7873_snap_value.py
+
+Start: crash_reports new=0; no owner answers; no new SOAK-RESULTS lines. NEXT g3-cinematic-half-frame-phase.
+Reading (funcs_3.c timeSnapshotFiller 0x8000BC00): at BF3C it stores a0+0x20 = 0 if prev==-1 (BE08); 0x8011A904/rate if flag
+bytes 0x8011A8C8/C9 clear (BEE8); else el/rate + getViModePeriod()*0.001*(vd<2 ? 1 : vd), el = v0 at BE28, vd = byte
+0x80128EAF - 0x80128EAE (BE7C; recomputed unpinned at BEB0). 0x80002710 = getViModePeriod (constant, no RNG). There is NO el=0
+branch, so s7872's "special path" guess is wrong: RETAIL_SNAP pins vd=1 too, so the s7872 el=0 arm stored 1 VI everywhere.
+Retail (new oracle run scratch/s7873/rvd, CPO1, RSECS 110, `RS64_ORACLE_FPR=0,2,4,20 --watch-pc 0x8000BF38`, ~2 min, no game
+instance): `python3 tools/s7873_snap_value.py scratch/s7873/rvd/oracle.log` (NEW; control = >=2 non-zero classes, PASS here,
+FAIL on the s7872 rsnap log which has no BF38 watch). Stored value classes: 2VI 0.03333 (el 0, vd 2) x1863, 1VI 0.01667 x1051,
+el1VI+1VI 0.03397 x633. Opening cinematic: after the load (two prev==-1 zeros) one 0.01667 frame, then 689 x 0.03333. The port
+pin stores 0.03397 on every frame (+1.9%).
+Change: tools/apply_s7872_snapwin.py now takes up to 8 comma-separated `lo:hi:el` windows (first match wins, each logs
+`[snap7872] winK first vi=`), upgrading an s7872-patched tree in place. Regen gate --strict 53 files 0 differ, controls PASS.
+Pair (`env RBIN=1 P1E=ROGUESQ_S7872_SNAP_WIN=5584:6300:781250 P2E=ROGUESQ_S7872_SNAP_WIN=5584:5587:0,5587:6300:781250 zsh
+tools/s7849_det_pair.sh 10 scratch/s7873/w10`, retail reused via hard links, rc 0): el 781250 = 1 VI at rate 46.875M, so
+A stores retail's 0.03333 from VI 5584, B adds retail's 0.01667 on the post-load frame. Windows fired (A win0 first vi=5585;
+B win0 first vi=5584 = its post-load frame fr 3434, win1 vi=5588). The load stall moved between arms: A post-load fr 3434 at
+VI 5582 with dt 1 VI (outside its window, so pin value there), B at VI 5584 with dt 2 VI.
+s7868 cmp: both off -535, island A N159@3401 present in both, plant caught both, A flight phase 7 2564/2564 exact (p2 is the
+unpinned-mission control by design). Regression (scratch/s7873/phase_a_p{1,2}.py, port[3401:3560] vs retail off -535): A =
+B = 0.510 x speed - 0.016, 6244/6244 bracketed, identical to the s7872 pin reference.
+Reading: the stored snapshot value at retail values (whole cinematic, plus the post-load frame) and the post-load dt (1 vs 2 VI)
+do NOT move island A. The s7872 lever effect was the 1-VI (half-retail) value, a gross change. Rules out: H-snap at retail
+values, H-postload-dt. Caveat: no same-run arm moved island A (the s7872 el=0 run is the lever's positive control, different
+run). Next lead (H-phase): the element reads a raw COUNT/VI stamp at render time, so a sub-frame sampling phase difference
+(port samples on the VI boundary) would give a constant half-frame lead. Census mfc0 Count / osGetCount / 0x80128ED8
+readers on the cinematic path.
+Bins deleted (p1/p2, 5 GB); scratch/s7872/v10/r1 kept.

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7872 (2026-11-23).
+Compact operational handoff, as of Session 7873 (2026-11-23).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -65,6 +65,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7872 "el=0 hits a special 0-divisor path in timeSnapshotFiller; the cinematic needs el in (0, 811160)"** (superseded s7873).
+  Believable because el=0 moved island A far off instead of onto retail. Reading 0x8000BE28-BF38 shows no el branch: the value is
+  el/rate + VIperiod*max(vd,1) and RETAIL_SNAP pins vd=1, so el=0 stored 1 VI vs retail's 2 VI. Retail-valued arms leave island A unchanged.
 - **s7857 "0x31=14 port-side 1-2 ULP transient t892-899"** (superseded s7858). Believable because retail r2 == r1 and r2 differed
   from the port in the same words, so it looked port-side. Both retail runs were scored against the SAME misindexed pin file: the
   port was fed dt 0x3D088887 at tick 891 where retail ran it at 892 (store watch: same PCs, f10 = [sp+0x1DC] dt arg 87 vs 88).
@@ -323,7 +326,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    frames incl. the cinematic, 1 VI in a hangar stretch / post-load frames / flight); RETAIL_SNAP pins 811160 everywhere.
    Lever `ROGUESQ_S7872_SNAP_WIN=lo:hi:el` (VI window, after the pin): el=0 at VI 5560-6300 MOVES island A (p1 values differ
    from the p2 control on 164/168 frames) but far off (offsets -489..244), not onto retail; whole-run el=0 forks boot/menus.
-   Leading H-snap: the cinematic needs some el in (0, 811160). Retail bin kept: scratch/s7872/v10/r1.
+   **s7873: H-snap REFUTED at retail values.** timeSnapshotFiller stores el/rate + VIperiod*(vd<2?1:vd) (no el=0 special
+   case; RETAIL_SNAP also pins vd=1, so s7872's el=0 arm stored 1 VI = half retail). Retail store at 0x8000BF38 (`tools/
+   s7873_snap_value.py`, oracle scratch/s7873/rvd): cinematic = 0.03333 (el 0, vd 2), post-load frame 0.01667; port pin 0.03397.
+   Arms A (0.03333 from VI 5584) and B (A + 0.01667 on the post-load frame) both give island A unchanged (regression 0.510 x
+   speed - 0.016, = pin reference), with post-load dt 1 VI (A) vs 2 VI (B): neither the stored value nor the post-load dt
+   carries the half frame. Next lead: a raw COUNT/stamp sample at render time (sub-frame phase). Retail bin: scratch/s7872/v10/r1.
    s7865 gate note: s7723_retained_controls is allow-listed RED (6 retained s7392-s7399 run.log.zst deleted 2026-11-23
    08:25 by an unidentified scratch wipe); gate_trace.py now records importlib-loaded modules via their .pyc source.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
