@@ -1,15 +1,16 @@
-# NEXT (s7916)
+# NEXT (s7917)
 HYPOTHESIS-ID: g3-m6-island-b-nondet
-First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, docs/OWNER-REVIEW-QUEUE.md answers,
-new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7915): H-clock REFUTED (D1 DET_CLOCK=2 == C1 DET_CLOCK=1 element 212/212; 14 other pairs 0/212). Clock thread closed.
-ONE offline unit, no game run (6 arms already captured, p1_rand.txt.zst in scratch/s7912/m6{a,b}, s7913/m6c{1,2}, s7915/m6c{1,2}):
-Hypotheses: H-rng (particle element draws from the shared rand stream; outcome = rand-stream state at the element's first frame),
-H-race (host thread writes the element's vertex buffer), H-uninit (stale RAM read).
-Discriminator: for each arm, take the rand-trace records (cols: idx, thread?, caller PC, value) in the VI/frame window of the element
-(frames 6068..6282; map frame -> rand idx via the trace's frame/VI column, see tools/s7845_rng_tick_cmp.py) and compare the
-value sequence and the caller-PC multiset pairwise. Plant control: flip one value in a copy, the compare must find it.
-Outcomes: D1/C1 equal in the window AND every 0/212 pair differs -> H-rng (then find the seed/stream position that differs, at
-its first divergence before the element); D1/C1 differ in the window or a 0/212 pair is equal -> H-rng refuted, H-race/H-uninit
-(XTRACE_MEM write watch on the element vertex source, one run).
-Budget: this thread gets at most this 1 more iteration, then the next ladder rung (owner queue / G1e).
+First: CURRENT-TRUTH is 59.9 KB: if `wc -c < docs/CURRENT-TRUTH.md` > 60000 this is a MAINTENANCE iteration (migrate items 0/12
+G3 det-sweep detail s7909-s7916 to PROJECT-OVERVIEW, renumber), no experiments. Then: `python3 tools/crash_reports.py --since 2026-11-13`,
+docs/OWNER-REVIEW-QUEUE.md answers, new SOAK-RESULTS lines. A crash or owner report outranks this.
+State (s7916): H-rng SELECTED by correlation (15/15 pairs: element exact <=> rand (site,value) stream equal through element start;
+tools/s7916_rand_site_cmp.py). Missing: the causal line (iron rule 4).
+ONE unit, cap 1 iteration, then CLOSE the thread as timing class and take the next ladder rung (owner queue items / G1e):
+Causal confirm: build a per-site ordinal table from D1's own trace (scratch/s7915/m6c1/p1_rand.txt.zst; seed-before = previous
+row's value in the filtered global stream; format "SITE ORD SEED" as tools/s7896_rand_replay.py writes; check how
+ROGUESQ_RAND_REPLAY reads it in src/main/rt64_render_context.cpp and whether it is limited to pre-first-tick calls) and run 2 arms of the
+s7915 recipe (scratch/s7915/run.sh, drop DET_CLOCK) with ROGUESQ_RAND_REPLAY=<table>. Control: element in both arms must be present and
+the replay must visibly fire (log count > 0); a third arm with the table's 0x8006C0FC rows dropped is the negative control.
+Outcomes: E1==E2 (and ==D1) -> H-rng causal, close. E1!=E2 with replay firing on the element's sites -> element state is not only its
+rand values (re-open H-race via XTRACE_MEM write watch on the element vertex source). Replay cannot reach the element window -> close
+as single-source timing class and move on.

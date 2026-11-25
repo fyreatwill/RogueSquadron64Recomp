@@ -211651,3 +211651,29 @@ Work unit (NEXT s7915, HYPOTHESIS-ID g3-m6-island-b-nondet, iteration 2 of 2 on 
 - Rules out: "the element consumes osGetTime values"; "the element outcome is keyed by its start frame".
 - Kept: scratch/s7915/m6c{1,2}/{p1.bin,clock.bin,p1_rand.txt}.zst, elem_cross6.txt.
 ORIGIN: no mitigation; one offline tool option (--per-ra) added.
+
+## Session 7916 (2026-11-24) — m6 island B particle element follows the rand stream: the one element-exact arm pair shares its rand stream, all 14 differing pairs diverge before the element (H-rng selected, offline)
+Work unit (NEXT s7916, HYPOTHESIS-ID g3-m6-island-b-nondet, offline, no game run). Pre-checks: crash_reports new=0; no owner answers; no new SOAK lines.
+- New tools/s7916_rand_site_cmp.py: per arm parses p1_rand (rows idx vi site value; marker/probe sites dropped as s7845), per-site
+  value sequences + first global (site,value) divergence per pair, selector sites vs a given exact-pair set. Plant control (flip one value
+  of the busiest site 0x80054174 in a copy of D1): unequal on exactly that site -> PASS.
+- Arms: D1/D2 (s7915), C1/C2 (s7913), A/B (s7912). Element verdicts (s7915 elem_cross6): only D1==C1 exact (212/212), 14 pairs 0/212.
+- D1 vs C1: (site,value) stream identical over C1's whole length (74970 rows; C1 ends VI 18241, D1 18283; VI stamps differ by 1). So
+  s7915's "whole-run traces differ (md5)" was a length artefact -> superseded.
+- 14 differing pairs: first divergence at idx 12378-12396 (VI ~720-840) for every pair touching C2/A/B: the number of attract-flame
+  rand calls (0x800541FC/0x80054174, 0x8006C0FC) before the one-shot title call 0x800B48F8 is 12425 (D1,D2,C1) / 12396 (C2,A) / 12378 (B).
+  D1/D2 and D2/C1: equal through the title, diverge idx 13701 (VI ~2003-2026, 0x800B0F1C vs 0x800B4CC0). C2/A: equal to idx 42231
+  (VI 10913 C2 / 11012 A), then 0x80054174 vs 0x800541FC (the 16-call flame parity, s7901).
+- Is C2/A's divergence before their element? Bin frames 9705 (C2) / 9645 (A) vs final [vi] fs= 9734 / 9681 (offset 29 / 36, the
+  s7906 gap class). Element start frame 6071/6070 -> fs ~6100/6106 -> VI ~10947 / ~11087 (64-VI grain of the [vi] lines, linear
+  interpolation; single-source). Divergence at VI 10913/11012 precedes it by ~35-75 VI. So 15/15 pairs: element exact <=> rand
+  stream equal through the element start.
+- Selector-site test (whole run): exactly one site's sequence is equal on D1/C1 and unequal on all 14 others: 0x8006C0FC (612-614
+  calls/arm). Consistent but not needed: the global stream position already predicts all 15.
+- Reading: the particle element is a function of the shared rand stream position; that position is set by host-paced frame counts
+  (attract flame burst length, load-stall length, s7909/s7910). H-race and H-uninit are not needed. Same timing class as s7907/s7910:
+  no port defect value to fix. Evidence line 2 (causal) is still open: a replay of D1's own per-site seeds in 2 fresh arms must make the
+  element identical across them (NEXT, optional, 1 iteration cap).
+- Rules out: H-race / H-uninit as necessary explanations of the element's run-to-run variation (every pair is predicted without them).
+- Kept: scratch/s7916/{s7916_site_whole.txt,title_split.py,title_split.txt}.
+ORIGIN: no mitigation; one offline analysis tool added.
