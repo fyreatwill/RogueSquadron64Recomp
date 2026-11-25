@@ -309,7 +309,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    s7935: the 6 profiler gates (s7433/5/6/7/8, s7441) re-captured as scratch/s7935 (`env S7431_ARM=S7935 zsh
    tools/s7433_probe_cost.sh`, one owner-recipe run): every recorded verdict reproduced (two captures, own controls PASS); s7441
    gate now `--plant` (2 planted REDs from the capture) + REVIEWED budget for the post-s7441 rs64_s7463_hash (XXH3 relabel,
-   0.004 self). Allow-list now holds only s7723 (s7392-s7399 logs; regenerating them = next loose end).
+   0.004 self). s7936: s7723's six s7392-s7399 inputs re-captured (scratch/s7936/<k>/run.log.zst, 6 runs, all six verdicts +
+   controls reproduce); tools/gate_sweep_allowed_red.txt is EMPTY; full sweep 258 gates 0 RED. Any new RED gate now blocks the exit gate outright.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

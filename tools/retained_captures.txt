@@ -832,6 +832,12 @@ scratch/s7935/sample_5.txt
 scratch/s7935/sample_6.txt
 scratch/s7935/sample_7.txt
 scratch/s7935/sample_8.txt
+scratch/s7936/s7392_run/run.log
+scratch/s7936/s7393_own/run.log
+scratch/s7936/s7394_ownfix/run.log
+scratch/s7936/s7396_own/run.log
+scratch/s7936/s7397_own/run.log
+scratch/s7936/s7399_own/run.log
 scratch/ucode_regen/pristine/factor5_ucode_b_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl10_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl12_recompiled.c

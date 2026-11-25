@@ -1,3 +1,2 @@
 # s7656: census gates allowed to be RED (one per line: '<tool file name> <reason, session>'). stop_gate.sh --verify blocks on
-# any RED gate from tools/s7651_gate_sweep.py that is not listed here. Empty since s7655 (0 RED of 135).
-s7723_retained_controls.py s7865: 6 retained inputs (scratch/s7392/run, s7393/own, s7394/ownfix, s7396/own, s7397/own, s7399/own run.log.zst; never in git) were deleted 2026-11-23 08:25 by the owner-approved 7-day prune ~/.local/bin/rs64-scratch-prune.sh (identified s7893; .zst citations do not protect) (40 dirs emptied, not prune-scratch.sh, which never touches .zst); the s7392-s7399 report tools fall back to NEEDS-ARGS. Remove this line once those runs are re-captured.
+# any RED gate from tools/s7651_gate_sweep.py that is not listed here. Empty since s7655 (0 RED of 135). s7936: empty again (s7723 inputs re-captured).

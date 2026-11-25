@@ -212147,3 +212147,25 @@ Full sweep (--jobs 2): 258 gates, GREEN 248, REPORT 2, NEEDS-ARGS 7, RED 1 = s77
 "no control frames to rename": its SAMPLES mutant only rewrote sample_N.txt.zst, and the fresh scratch/s7935 is raw .txt until the
 owner's compress job runs. Fixed (raw and .zst both mutated); re-run: s7433/5/6/7/8 real PASS + mutant RED (11 control frames
 renamed), CONTROLS PASS bad=0 skipped=6 (the pruned s7392-s7399 inputs; still allow-listed, NEXT s7936).
+
+## Session 7936 (2026-11-25) — last allow-listed RED gate (s7723) GREEN: the six pruned s7392-s7399 census logs re-captured, every recorded verdict reproduces, allow-list empty
+HYPOTHESIS-ID: retained-gate-inputs-regen. crash_reports --since 2026-11-25: new=0. No new SOAK-RESULTS lines since s7927.
+What ran: 6 game runs, one at a time (scratch/s7936/drive.zsh): `env NOREPORT=1 zsh tools/s7392_mq_run.zsh scratch/s7936/<k> "<env>"`,
+owner arm (dd8 21:9 FPS60), s7386 in-process autopilot route, 200 s each, owner save read-only (ROGUESQ_NO_SAVE_WRITE=1). HID idle 6.4 h,
+screen unlocked, no other game. Env per arm = each s739x entry's recorded instrument + control: S7392_CTL; S7393_CQ+CTL;
+S7394_BD+CTL (HOLDFIX default on = the ownfix arm); S7396_TQ+TQ_CTL; S7397_TM+TM_CTL; S7399_EVP+CTL. 6/6 secs=200 crash=0.
+Discriminator (NEXT s7936): does each report reproduce its recorded verdict with its own control PASS? Result, H-repro on all six:
+  s7392 CONTROL PASS (guest=1 ext=1), VERDICT H-none-on-route drops=0.   s7393 CONTROL PASS (lost 1, orphan_r 1, raw_r 1), VERDICT H-none.
+  s7394 xcalls control 9086 foreign calls PASS, FIX-ARM CONTROL PASS (holdfix_skips=10 = s7394's 10 windows), VERDICT H-none.
+  s7396 control=PASS rows=21 (s7396: 21 removes, identical), VERDICT H-none.   s7397 control order=2,0,1 PASS, 0 real timer structs, H-none.
+  s7399 CONTROL PASS (delivery flagged=1, received=1), VERDICT H-none mismatches=0.
+Two lines: the s739x recorded runs (2026-11-15) and today's fresh capture, each with its own same-run planted control.
+Change: logs zstd'd to scratch/s7936/<k>/run.log.zst; the six S7723_RETAINED rows in tools/s7651_gate_sweep.py re-pointed; s7723 line
+removed from tools/gate_sweep_allowed_red.txt (now empty); manifest refreshed (849 paths, 6 s7936 inputs cited).
+`python3 tools/s7723_retained_controls.py`: all 19 rows real PASS + mutant RED, CONTROLS PASS bad=0 skipped=0 (was skipped=6).
+Rules out: the s7392-s7399 class BB-BI verdicts as stale artefacts of the pre-s7700 tree (they hold on today's binary).
+Retained-capture prune loss class from s7865/s7893 is now fully recovered: 0 allow-listed gates.
+Full sweep (`s7651_gate_sweep.py --jobs 2 --new-red-vs tools/gate_sweep_allowed_red.txt`, scratch/s7936/sweep.log, wall 1407 s): 258 gates,
+GREEN 254, REPORT 2 (s7031, s7210), NEEDS-ARGS 2 (s7827, s7836), RED 0, new RED vs allow-list 0; planted red/green + cache controls PASS.
+The six s739x report gates moved NEEDS-ARGS -> GREEN (248 -> 254). (Session was interrupted before this sweep and its commit; both
+finished in the follow-up invocation.)

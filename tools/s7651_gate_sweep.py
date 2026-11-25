@@ -172,19 +172,20 @@ S7720_CHECK = {t: (["--check"], None) for t in (
     "s7399_evpayload_census.py", "s7558_gr_census.py", "s7374_lazy_static_census.py", "s7380_condvar_census.py",
     "s7381_spin_census.py", "s7382_thread_qos_census.py", "s7383_atomic_order_census.py", "s7384_static_state_census.py")}
 S7720_CHECK["s7557_gq_census.py"] = (["--strict"], None)
+# s7936: the s7392-s7399 rows re-captured as scratch/s7936/<tool>/run.log.zst (originals pruned 2026-11-23).
 # s7723: one-capture scorers (s7718 NEEDS-INPUT) whose capture is still retained on disk under scratch/ (gitignored, so on a
 # fresh clone the paths are absent and the tool falls back to NEEDS-ARGS like before). Read compressed via tools/rs64_zopen.py.
 # Each regex needs the tool's own control AND its clean verdict; tools/s7723_retained_controls.py mutates one control/open row
 # per input and proves every row then reads RED (PORTING-STATE s7723).
 S7723_RETAINED = {
-    "s7392_mq_report.py": (["scratch/s7392/run/run.log.zst", "--known"],
+    "s7392_mq_report.py": (["scratch/s7936/s7392_run/run.log.zst", "--known"],
                            r"(?=[\s\S]*CONTROL PASS \(guest=1 ext=1\))(?=[\s\S]*VERDICT H-none-on-route drops=0)"),
-    "s7393_cq_report.py": (["scratch/s7393/own/run.log.zst"], r"(?=[\s\S]*\nCONTROL PASS)(?=[\s\S]*VERDICT H-none)"),
-    "s7394_bd_report.py": (["scratch/s7394/ownfix/run.log.zst", "--fix"],
+    "s7393_cq_report.py": (["scratch/s7936/s7393_own/run.log.zst"], r"(?=[\s\S]*\nCONTROL PASS)(?=[\s\S]*VERDICT H-none)"),
+    "s7394_bd_report.py": (["scratch/s7936/s7394_ownfix/run.log.zst", "--fix"],
                            r"(?=[\s\S]*FIX-ARM CONTROL PASS)(?=[\s\S]*-> PASS)(?=[\s\S]*VERDICT H-none)"),
-    "s7396_tq_report.py": (["scratch/s7396/own/run.log.zst"], r"(?=[\s\S]*control=PASS rows=\d+)(?=[\s\S]*VERDICT H-none)"),
-    "s7397_timer_report.py": (["scratch/s7397/own/run.log.zst"], r"(?=[\s\S]*=> PASS)(?=[\s\S]*VERDICT H-none)"),
-    "s7399_evp_report.py": (["scratch/s7399/own/run.log.zst"],
+    "s7396_tq_report.py": (["scratch/s7936/s7396_own/run.log.zst"], r"(?=[\s\S]*control=PASS rows=\d+)(?=[\s\S]*VERDICT H-none)"),
+    "s7397_timer_report.py": (["scratch/s7936/s7397_own/run.log.zst"], r"(?=[\s\S]*=> PASS)(?=[\s\S]*VERDICT H-none)"),
+    "s7399_evp_report.py": (["scratch/s7936/s7399_own/run.log.zst"],
                             r"(?=[\s\S]*CONTROL PASS \(delivery flagged=1)(?=[\s\S]*VERDICT H-none mismatches=0)"),
     "s7516_pak_shape.py": (["--controls", "--ctl", "scratch/s7516_fm_levels/log_l12.txt.zst"] +
                            ["scratch/s7516_fm_levels/log_l%d.txt.zst" % l for l in (1, 7, 10)], r"\(ctl\) rows=\d+ .* bad=0 ctl_ok=1"),
