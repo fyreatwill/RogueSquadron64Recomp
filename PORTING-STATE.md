@@ -212483,3 +212483,33 @@ Controls: mutation copy with the old .txt path -> s7922 RED "ARGS input missing"
 GREEN on .zst inputs (s7928/s7931 read via rs64_zopen).
 Second full sweep after the change: scratch/s7948/sweep2.log (result line below).
 Rules out: the pad/panel work (s7941-s7947) tripping any census; remaining hollow ARGS rows from compression (census 0 left).
+
+## Session 7949 (2026-11-25) — gate sweep scored an empty-output gate GREEN (s7283) and cache hits skipped new scoring rules; both fixed, full uncached sweep 0 RED / 0 HOLLOW
+
+Triage: crash_reports --since 2026-11-25 new=0; SOAK-RESULTS had no new lines (s7947_handoff_fast already folded by s7948).
+s7948's "second full sweep" never finished: scratch/s7948/sweep2.log is 0 bytes (process gone at session end), so s7948's
+change had no full-sweep confirmation; this session's sweep supersedes it.
+Unit (NEXT.md 1a, hollow-input idiom class): scratch/s7949/hollow_census.py enumerates every `scratch/...` literal in tools/*.py
+(236 literals: ok 145, .zst-only 47, missing 26, empty glob 17), joined against the 258 swept gates. Per swept-gate row:
+s7753/s7756 .zst-only inputs read via zopen (ok, s7802); s7864/s7865 zopen (ok); s7802/s7804/s7805/s7893 paths are planted controls
+created at runtime; s7641 plant_cf.cpp is an in-memory control path; s7612 witness s7108/push_a.txt.zst is gone but the tool needs
+>=2 of 3 witnesses and the sweep does not pass --witness (not hollow). One hollow: **s7283_commit_census.py**, an argv-loop
+summariser run bare -> 0 tags, no output, exit 0 -> scored GREEN (s7948 tsv: empty tail). Its inputs: none of the 21
+scratch/s7277/*.toggle tags' scratch/agent/m6/g1_lvl*s7009<TAG>/*.log survive raw or .zst.
+ORIGIN: writer of the vacuous GREEN is the sweep's scoring, not the tool: rc 0 with empty stdout+stderr passed every hollow rule
+(no open-class token, no unused flag). Legitimate value? No - a gate that prints nothing checked nothing.
+Second defect found on the way: cache hits returned the stored row verbatim, so any hollow-rule edit never applied to cached
+GREENs (only an input/ARGS change invalidated them).
+Change (tools/s7651_gate_sweep.py):
+- hollow_reason: rc 0 with whitespace-only output -> HOLLOW "exit 0 with empty output"; planted control hol_empty (argv loop) -> HOLLOW.
+- s7283 moved to REPORT (no exit path; reason records the 0-tag bare run and the missing logs).
+- cache entries store the scored output; on a hit a GREEN is re-scored by hollow_reason, and REPORT/NEEDS_INPUT names re-score
+  uncached. Pre-s7949 entries (no output) are misses, so this run was fully uncached.
+- the s7656 cache-control fixtures printed nothing and read HOLLOW under the new rule (control FAIL, rc 3, caught in-run); they
+  now print a line.
+Results: full sweep scratch/s7949/sweep.log, 1409 s uncached, --jobs 2: 258 gates, GREEN 253, REPORT 3, NEEDS-ARGS 2
+(s7827/s7836 usage-only, both take a capture argv), RED 0, HOLLOW 0, controls PASS incl. hol_empty, args_missing, args_zst_plainopen.
+s7922 now GREEN (was NEEDS-ARGS before s7948's fix) -> s7948's change confirmed by a full sweep.
+Rescore control (scratch/s7949/rescore_ctl.sh): appended "OPEN 7" to s7641's cached output -> `--only` run, hit=1 miss=0 ->
+HOLLOW "1 nonzero: OPEN 7"; restored cache -> hit=1 GREEN. Rules out: rule edits being blind to cached GREENs; other
+empty-output GREENs (0 in the full run); other swept gates reading a .zst-only input via a raw open (census 0).

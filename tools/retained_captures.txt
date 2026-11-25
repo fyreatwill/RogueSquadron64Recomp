@@ -834,10 +834,10 @@ scratch/s7861/v17/r1/oracle.log
 scratch/s7864/v17/p1_rand.txt
 scratch/s7864/v17/p2_rand.txt
 scratch/s7864/v17/r1/oracle.log
+scratch/s7925_mmark/ring_q4.txt
 scratch/s7928_gatew2/ring_q4.txt
 scratch/s7931_port/ring_fc.txt
 scratch/s7931_port/ring_nf.txt
-scratch/s7931_route/port7.3/oracle.log
 scratch/s7935/run.tlog
 scratch/s7935/sample_1.txt
 scratch/s7935/sample_2.txt

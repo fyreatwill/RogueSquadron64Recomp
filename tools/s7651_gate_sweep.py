@@ -48,6 +48,7 @@ NEEDS_INPUT = {
 # run like any other gate again.
 REPORT = {  # s7722: each re-run and read by hand (scratch/s7722/*.out); all H-report (no open-class row by construction)
     "s7031_offmap_census.py": "s7722 H-report: band/ring share table of one [s7030]/[s7031] run.log; s7803 checked: no run.log/.zst in scratch/s7030, scratch/s7031 or scratch/agent/m6/g1_lvl*s703[01]* (summary + keys.log.gz only), no open class",
+    "s7283_commit_census.py": "s7949 H-report: argv-loop summariser of [s7283-mtl] lines in scratch/agent/m6/g1_lvl*s7009<TAG>/*.log; bare it ran 0 tags and printed nothing (scored GREEN until s7949); none of the 21 s7277 tags' logs survive raw or .zst, no open class",
     "s7210_field_census.py": "s7722 H-report: per-swap scissor field-bit table of one G5B_FRAME .cap; s7803 checked: the ER169/FC1 .cap (22-30 GB caps) are not in scratch/s7210, only the tool's outputs, no open class",
 }
 EXIT_PATH = re.compile(r"\bsys\.exit\(|\bexit\(|\breturn [1-9]\b|raise SystemExit")
@@ -356,6 +357,8 @@ def hollow_reason(name, src, argv, out):
     for line in out.split("\n"):
         if not CONTROL_LINE.search(line) and HOLLOW_RE.search(line):
             toks.append(line.strip()[:160])
+    if not out.strip():  # s7949: exit 0 with no output ran nothing (s7283 bare: 0 argv tags), a vacuous GREEN
+        return "exit 0 with empty output: the gate checked nothing"
     unused = sorted({f for f in FLAG_RE.findall(src) if f not in argv})
     ok = HOLLOW_OK.get(name)
     if ok:
@@ -489,6 +492,7 @@ def traced(path, a):
                 os.unlink(f)
 
 
+OUTS = {}  # s7949: basename -> (src, argv, out) of the scored run, cached so later rule edits re-score cache hits
 TIMES = {}  # s7659: per-gate wall seconds (cache hit ~0), printed as the slowest gates vs GATE_CAP
 
 
@@ -505,17 +509,27 @@ def _run(path):
     if USE_CACHE:
         with CACHE_LOCK:
             ent = CACHE.get(key)
-        if ent and ent.get("args_row") == repr(ARGS.get(os.path.basename(path))) and fingerprint(ent["argv"], ent["trace"]) == ent["fp"]:  # s7948: ARGS edit invalidates
-            with CACHE_LOCK:
-                STATS["hit"] += 1
-            return tuple(ent["row"])
+        if ent and ent.get("args_row") == repr(ARGS.get(os.path.basename(path))) and fingerprint(ent["argv"], ent["trace"]) == ent["fp"] \
+                and "out" in ent:  # s7948: ARGS edit invalidates; s7949: pre-s7949 entries (no stored output) are misses
+            row = tuple(ent["row"])
+            name = os.path.basename(path)
+            if name in REPORT or name in NEEDS_INPUT:  # s7949: a classification row edited since the hit: rescore
+                row = None
+            elif row[1] == "GREEN":  # s7949: hollow rules edited after the entry was written apply to the cached output
+                hr = hollow_reason(name, open(path, errors="replace").read(), ent["argv"], ent["out"])
+                if hr:
+                    row = (name, "HOLLOW", row[2], hr)
+            if row is not None:
+                with CACHE_LOCK:
+                    STATS["hit"] += 1
+                return row
     row, argv, tr = run_uncached(path)
     cacheable = tr is not None and tr.get("complete") and tr.get("spawn_ok") and row[2] != "timeout"
     with CACHE_LOCK:
         STATS["miss" if cacheable else "uncacheable"] += 1
         if cacheable:
             CACHE[key] = {"argv": argv, "trace": tr, "fp": fingerprint(argv, tr), "row": list(row),
-                          "args_row": repr(ARGS.get(os.path.basename(path)))}
+                          "args_row": repr(ARGS.get(os.path.basename(path))), "out": OUTS.get(os.path.basename(path), "")}
         else:
             CACHE.pop(key, None)
     return row
@@ -541,6 +555,7 @@ def run_uncached(path):
         must = None
     try:
         rc, out, tr = traced(path, a)
+        OUTS[os.path.basename(path)] = out
     except subprocess.TimeoutExpired:
         return (os.path.basename(path), "RED", "timeout", f"timeout {GATE_CAP} s"), a, None
     tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
@@ -552,6 +567,7 @@ def run_uncached(path):
     if "--controls" in a and "unrecognized arguments: --controls" in out:  # mentions --controls in text only: retry bare
         a = []
         rc, out, tr = traced(path, a)
+        OUTS[os.path.basename(path)] = out
         tail = " | ".join(l.strip() for l in out.strip().split("\n")[-2:])[:200]
         if rc == 0:
             hr = hollow_reason(os.path.basename(path), src, a, out)
@@ -574,7 +590,7 @@ def cache_control(d):
     try:
         inp, tool = os.path.join(d, "cc_input.txt"), os.path.join(d, "cc_input_census.py")
         open(inp, "w").write("ok\n")
-        open(tool, "w").write(f"import sys\nsys.exit(0 if open({inp!r}).read().strip() == 'ok' else 1)\n")
+        open(tool, "w").write(f"import sys\nprint('cc')\nsys.exit(0 if open({inp!r}).read().strip() == 'ok' else 1)\n")
         r1 = run(tool)[1]
         h1 = STATS["hit"]
         r2 = run(tool)[1]
@@ -583,7 +599,7 @@ def cache_control(d):
         open(inp, "w").write("broken\n")
         r3 = run(tool)[1]
         sp = os.path.join(d, "cc_spawn_census.py")
-        open(sp, "w").write("import subprocess, sys\nsubprocess.run(['true'])\n")
+        open(sp, "w").write("import subprocess, sys\nsubprocess.run(['true'])\nprint('cc')\n")
         run(sp)
         spawn_uncached = os.path.abspath(sp) not in CACHE
         # compiler control: the tool reads only its .c; the header reaches the key via CC_PRINT_HEADERS alone
@@ -591,7 +607,7 @@ def cache_control(d):
         os.makedirs(hd, exist_ok=True)
         open(os.path.join(hd, "cc_h.h"), "w").write("#define CC_OK 1\n")
         open(cs, "w").write('#include "cc_h.h"\nint x[CC_OK ? 1 : -1];\n')
-        open(ct, "w").write("import subprocess, sys\n"
+        open(ct, "w").write("import subprocess, sys\nprint('cc')\n"
                             f"sys.exit(subprocess.run(['clang', '-fsyntax-only', '-I', {hd!r}, {cs!r}]).returncode)\n")
         c1 = run(ct)[1]
         hc = STATS["hit"]
@@ -604,7 +620,7 @@ def cache_control(d):
         # when the import is served from __pycache__ (the s7677 stale-RED defect)
         md, mt = os.path.join(d, "cc_mod_rows.py"), os.path.join(d, "cc_import_census.py")
         open(md, "w").write("OK = True\n")
-        open(mt, "w").write("import sys\nfrom cc_mod_rows import OK\nsys.exit(0 if OK else 1)\n")
+        open(mt, "w").write("import sys\nfrom cc_mod_rows import OK\nprint('cc')\nsys.exit(0 if OK else 1)\n")
         import py_compile  # pre-compile: the traced first run must load from __pycache__ only, never open the .py
         py_compile.compile(md, doraise=True)
         i1 = run(mt)[1]
@@ -664,7 +680,8 @@ def main():
         # s7720: the s7718 hollow row (OPEN 19, rc 0) must read HOLLOW, OPEN 0 GREEN, an unpassed --check HOLLOW
         for k, body in (("hol_open", "print('s7363 hostarr census')\nprint('OPEN 19')\n"), ("hol_zero", "print('OPEN 0 fail=0')\n"),
                         ("hol_flag", "import sys\nif '--check' in sys.argv: sys.exit(1)\nprint('table')\n"),
-                        ("hol_s7721", "print('SUMMARY missing=3')\nprint('race=1')\n")):
+                        ("hol_s7721", "print('SUMMARY missing=3')\nprint('race=1')\n"),
+                        ("hol_empty", "import sys\nfor t in sys.argv[1:]: print(t)\n")):
             f = os.path.join(d, k, "s9999_" + k + "_census.py")
             os.makedirs(os.path.dirname(f))
             open(f, "w").write(body)
@@ -689,7 +706,7 @@ def main():
         ccpass, cc = cache_control(d)
     cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED",
                  "rep_noexit": "REPORT", "rep_exit": "RED",
-                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW", "hol_s7721": "HOLLOW",
+                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW", "hol_s7721": "HOLLOW", "hol_empty": "HOLLOW",
                  "args_missing": "RED", "args_zst_plainopen": "RED"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
     print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit, import: green/green/hit/red-after-module-edit ->", cc, "PASS" if ccpass else "FAIL")
