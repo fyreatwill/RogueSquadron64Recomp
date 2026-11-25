@@ -5,9 +5,10 @@
 # At each hold: window screenshot + the latest [panel-rect] line (srcA= A-row source cell, msg= message line, and the
 # text the draw thread used). tools/s7944_text_check.py compares text masks of those crops across the shots.
 # Needs: unlocked screen + Screen Recording permission; no other game instance. Usage: zsh tools/s7944_pad_text_witness.zsh
+# s7945: optional env PANEL_ASPECT=16:9 PANEL_FS=1 = owner recipe (high-DPI drawable, fullscreen, no title bar).
 set -u
 R=$PWD; D=$R/scratch/s7944/w_$(date +%Y%m%d-%H%M%S); mkdir -p $D
-( cd $R/build && env SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_PAD_NAV_TEST=1 ROGUESQ_PAD_NAV_HOLD=${HOLD:-400} \
+( cd $R/build && env SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_FULLSCREEN=${PANEL_FS:-0} ${PANEL_ASPECT:+ROGUESQ_ASPECT=$PANEL_ASPECT} ROGUESQ_PAD_NAV_TEST=1 ROGUESQ_PAD_NAV_HOLD=${HOLD:-400} \
     ROGUESQ_PAD_NAV_HOLD_STEPS=open_idle,close_idle,clear_idle,r3_hold_idle \
     ROGUESQ_PANEL_RECTS=1 ROGUESQ_CONTROLS=$D/c.json ./RogueSquadron64Recomp rogue_squadron.z64 > $D/game.log 2>&1 ) &
 sleep 2; pid=$(pgrep -f 'RogueSquadron64Recomp rogue_squadron.z64' | head -1)

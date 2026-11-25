@@ -212390,3 +212390,25 @@ Work unit (NEXT s7943, owner-panel-pad-nav): before this, the pad could not Clea
   to pad:x, key:X, so Reset restores the whole table, not just the cleared row.
 - Rules out: stale draw and lost message for pad Clear/Reset. Nothing in the pad-nav thread is left that the agent can test
   except running it at the owner's display scale (NEXT).
+
+## Session 7945 (2026-11-25) — F6 panel pad witnesses at the owner recipe (16:9 fullscreen, Retina 2x): cursor 3/3 + Clear/Reset text 8/8, H-ok
+
+What ran: NEXT unit s7945. Added optional env PANEL_ASPECT / PANEL_FS to tools/s7942_pad_cursor_witness.zsh and
+tools/s7944_pad_text_witness.zsh (passed as ROGUESQ_ASPECT / ROGUESQ_FULLSCREEN, same as s7937_panel_e2e.zsh), then ran both
+with `env PANEL_ASPECT=16:9 PANEL_FS=1` (host idle 11672 s, screen unlocked, one game at a time). crash_reports --since
+2026-11-25: new=0. No new SOAK-RESULTS lines since the s7940 fold.
+
+Results:
+- Cursor witness (scratch/s7942/w_20261125-103732): window 1512x949 points = disp 1512x949 -> title bar 0; PNG 3024x1898 -> scale 2.00;
+  [g1f] drawable 3024x1898. shot1 row 0 band 372-424 vs logged prow 376-422; shot2 row 1 band 426-476 vs 428-474; shot3 row 17
+  (scrolled) band 1258-1308 vs 1260-1306; band moves (positive control). VERDICT PASS 3/3. Synthetic pad test 23/23.
+- Text witness (scratch/s7944/w_20261125-103815): drawn srcA 'pad:a,  key:Z' -> '(unbound)' after L1 -> 'pad:a,  key:Z' after R3 hold; msg 'Row cleared
+  (not saved yet).' / 'Defaults restored (not saved yet).'; IoU(open,r3)=1.000, IoU(open,clear)=0.151, msg IoU 0.216, ink
+  1182/1096/1182 px; negative control (closed panel at open's rect) IoU 0.026 despite 39608 white game pixels in the crop.
+  VERDICT PASS 8/8. Logged rects srcA=339,188,1173,211 and msg=84,827,1428,850 are single-line (23 pt high) at the larger
+  font, so the message does not wrap.
+Selects H-ok: the checkers' maths (title = wh - disp_h = 0, scale = png_w/win_w = 2) and the panel layout hold at the
+owner's 16:9 fullscreen Retina recipe. Rules out H-scale and H-layout. Two lines of evidence per shot: draw-thread text/rects
+logged by the game and pixels found in an OS window capture.
+Pad-nav thread (owner-panel-pad-nav) is DONE for the agent; closes on the owner's hands (no physical PS pad on this host).
+Not covered: 21:9 (owner's ultrawide) -> next unit.

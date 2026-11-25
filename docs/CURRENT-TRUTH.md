@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7942 (2026-11-25).
+Compact operational handoff, as of Session 7945 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -285,7 +285,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
     macOS 14; pid-posted CLICKS never reach SDL, only HID-tap clicks do). s7938 (`zsh tools/s7938_hotkeys_e2e.zsh`, 2 runs): real Cmd+Ctrl+F and Alt+Enter toggle fullscreen exactly once on pid AND
     HID paths (no double toggle); F6/F9 work on HID; real-keyboard F11 never reaches the game (macOS Show Desktop owns it: window
     slides to y=-467 and back, 0 keydowns) -> README/OWNER-OPT-INS now lead with Cmd+Ctrl+F / Option+Enter. Synthetic F11 still
-    works (positive control). Next (NEXT.md): F6 panel clicks at fullscreen/Retina scale.
+    works (positive control). s7941-s7945: pad-only panel (open, nav, Bind/Add/Save/Close, L1 Clear, R3 Reset) synthetic test 23/23 + pixel/drawn-text witnesses (cursor 3/3, Clear/Reset 8/8) at 640x480 AND at the owner 16:9 fullscreen Retina recipe (`env PANEL_ASPECT=16:9 PANEL_FS=1 zsh tools/s7942_pad_cursor_witness.zsh` / `tools/s7944_pad_text_witness.zsh`; scale 2, no title bar). Next (NEXT.md): same witnesses at 21:9.
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
 12. **G3 retail flight det sweep (s7832-s7890): CLOSED.** 19/19 missions render-exact on det ticks (m1-m16, b16, b17 pre-fork,

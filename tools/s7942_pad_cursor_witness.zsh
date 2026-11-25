@@ -4,9 +4,10 @@
 # (screencapture -l <wid>) + the latest [panel-rect] line (cursor row rect prow=, table clip=, vis=). tools/s7942_band_check.py
 # then finds the highlight band in each PNG and checks it sits on the logged rect and inside the clip.
 # Needs: unlocked screen + Screen Recording permission for this shell; no other game instance. Usage: zsh tools/s7942_pad_cursor_witness.zsh
+# s7945: optional env PANEL_ASPECT=16:9 PANEL_FS=1 = owner recipe (high-DPI drawable, fullscreen, no title bar).
 set -u
 R=$PWD; D=$R/scratch/s7942/w_$(date +%Y%m%d-%H%M%S); mkdir -p $D
-( cd $R/build && env SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_PAD_NAV_TEST=1 ROGUESQ_PAD_NAV_HOLD=${HOLD:-400} \
+( cd $R/build && env SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_FULLSCREEN=${PANEL_FS:-0} ${PANEL_ASPECT:+ROGUESQ_ASPECT=$PANEL_ASPECT} ROGUESQ_PAD_NAV_TEST=1 ROGUESQ_PAD_NAV_HOLD=${HOLD:-400} \
     ROGUESQ_PANEL_RECTS=1 ROGUESQ_CONTROLS=$D/c.json ./RogueSquadron64Recomp rogue_squadron.z64 > $D/game.log 2>&1 ) &
 sleep 2; pid=$(pgrep -f 'RogueSquadron64Recomp rogue_squadron.z64' | head -1)
 n=0
