@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7910 (2026-11-24).
+Compact operational handoff, as of Session 7913 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -232,6 +232,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    on it 0/212 frames exact (symdiff 25463 = as much as port vs retail), while the rest of the island is 212/212 exact. So no fixed
    port value exists to match; H-callcount/H-init/H-order as deterministic state are refuted. Lead (single-source, code reading):
    osGetCount/osGetTime = host wall clock (ultramodern timer.cpp); alternative a host thread race on the element's buffer.
+   **s7913: VI-keyed clock does NOT make it deterministic, but that lever was not itself deterministic, so H-clock is NOT refuted.**
+   ROGUESQ_DET_CLOCK=1 (osGetTime/osGetCount = total_vis*781250 + 256/call/thread, librecomp ultra_translation.cpp) C1 vs C2 element
+   0/212 exact (symdiff 25304, plant controls 4/4); ROGUESQ_S7913_CLOCKLOG=<path> (tools/s7913_clocklog.py, selftest PASS) shows the
+   C1/C2 clock streams diverge at record 0 (first osGetTime at VI 28 vs 20): guest progress vs host VI phase differs from boot.
+   ROGUESQ_DET_CLOCK=2 (65104 ticks per call per thread, VI-independent) exists and boots (60 s control); caller RA is now the host
+   return address (atos-symbolised: getTimeSinceLastFrame, recordFrameTimestamp, getTimeLow32, VI/SP/DP threads, MusyX synth).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

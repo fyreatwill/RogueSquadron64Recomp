@@ -211593,3 +211593,27 @@ Work unit (NEXT s7912, HYPOTHESIS-ID g3-m6-island-b-state): identify the island 
 - Kept: scratch/s7912/m6{a,b}/p1.bin.zst + p1_rand.txt.zst (zstd, raw deleted; tools resolve via rs64_zopen), analysis outputs.
   s7804 zst lint GREEN (694 tools, blind 0).
 ORIGIN: no mitigation; two new offline analysis tools, no code change.
+
+## Session 7913 (2026-11-24) — deterministic-clock lever for m6 island B: the VI-keyed clock leaves the particle element nondeterministic, but the clock streams themselves diverge from boot (VI phase is host-timed), so H-clock stands untested; DET_CLOCK=2 (call-count clock) + host-RA clock log built and controlled
+Pre-checks: crash_reports FOLDED=3 new=0; no new SOAK-RESULTS lines; no owner answers; CURRENT-TRUTH 57.2 KB (no maintenance).
+Work unit (NEXT s7913, HYPOTHESIS-ID g3-m6-island-b-nondet): split H-clock / H-race / H-uninit for the s7912 particle element.
+- Code (lib/N64ModernRuntime/librecomp/src/ultra_translation.cpp, default off, exported to submodule-patches/N64ModernRuntime.patch):
+  ROGUESQ_DET_CLOCK=1 makes osGetTime/osGetCount = total_vis*781250 + 256 per call per thread (thread-local, monotonic);
+  ROGUESQ_DET_CLOCK=2 = 65104 ticks per call per thread (no VI term); ROGUESQ_S7913_CLOCKLOG=<path> writes 16-byte records
+  (vi, ra, value low, kind). New tools/s7913_clocklog.py (per-RA counts, --cmp first divergence, --selftest plant).
+- Run (scratch/s7913/run.sh, 2 arms sequential, s7912 recipe `RBIN=1 SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c ROGUESQ_DET_CLOCK=1 ..."`
+  with r1/oracle.log from s7895/m6k): both rc=0, 0 crash lines, caps 34/35. tools/s7912_elem_cross.py 635A40/f0/s3/w1 FFFFFFFFFE793C
+  over C1, C2, A, B (s7912): plant controls 4/4 PASS; **C1 vs C2 element 0/212 exact, symdiff 25304** (A vs B 25463; all pairs 25.0-25.5k).
+- Clock logs (selftest PASS): C1 196608 / C2 212992 records, all osGetTime (osGetCount never called); **first divergence at record 0**:
+  first call at VI 28 (C1) vs 20 (C2); the per-call VI-delta sequence diverges at record 786 (VI 119). So with DET_CLOCK=1 the guest
+  still reads different clock values run to run: VI count vs guest progress is host-timed from boot. The element differing is
+  therefore NOT a refutation of H-clock (lever not deterministic). Also found: ra=ctx->r31 logged 0 for every call (generated code
+  never writes r31 for a direct jal), so this run cannot name callers.
+- Fixed the instrument and controlled it (scratch/s7913/ractl, 60 s boot, DET_CLOCK=2 + CLOCKLOG): ra = host return address -
+  &osGetTime_recomp, symbolised with atos: getTimeSinceLastFrame+104 (8602), recordFrameTimestamp+116 (6028), getTimeLow32+104 (5148),
+  viRetraceHandlerThread (3 sites), musyxSynthFrame_s4562_impl (2), serviceVoicePoolFrame (2), spTaskSchedulerThread,
+  dpInterruptHandlerThread. DET_CLOCK=2 boots and runs 60 s clean (caps 30).
+- Selected: nothing between H-clock/H-race/H-uninit (single result: VI-keyed lever is not run-to-run deterministic). Rules out:
+  "DET_CLOCK=1 is a determinism fix" (and by the same measurement VI_STAMP=1 leaves the VI phase itself host-timed).
+- Kept: scratch/s7913/m6c{1,2}/{p1.bin,clock.bin,p1_rand.txt}.zst, ractl/clock.bin.
+ORIGIN: no mitigation; default-off diagnostic lever + log in librecomp, one new offline tool.
