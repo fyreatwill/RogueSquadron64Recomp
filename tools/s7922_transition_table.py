@@ -51,7 +51,7 @@ def port_holds(ring, thr):
 
 def retail_groups(log, merge):
     holds, waits, hangar = [], [], None
-    for l in open(log, errors='replace'):
+    for l in zopen(log):
         m = re.match(r'\[vi-hold\] vi=(\d+)\.\.(\d+) len=(\d+) t=([\d.]+)s width=(\d+)', l)
         if m: holds.append(tuple(int(m.group(i)) for i in (1, 2, 3)) + (int(m.group(5)),)); continue
         if l.startswith('[hit]') and 'pc=0x80091ec4' in l:

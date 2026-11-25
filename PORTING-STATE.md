@@ -212457,3 +212457,29 @@ SKIP_INFLIGHT=1 skips the 12 min s7764 run. Control: `S7947_PLANT=1` adds a gate
 `VERDICT FAIL fails=1`, rc=1, with the 3 real gates PASS in the same run. Queued scratch/agent/soak_queue/s7947_handoff_fast.sh
 (fast arm + planted control) as a loop-run second witness.
 Rules out: pad/panel work (s7941-s7946) regressing any owner-queue command, opt-in path/name, in-flight toggle, or the controls dump.
+
+## Session 7948 (2026-11-25) — gate sweep after the pad work: 0 RED, but S7925_WAITPAIR had gone silently hollow (cron zstd'd its input); sweep now REDs missing/unreadable ARGS inputs
+
+Triage: crash_reports --since 2026-11-25 new=0. Folded SOAK-RESULTS s7947_handoff_fast (loop): `tag=s7947_handoff alive_at_end=1
+crashlines=0 handoff_pass=1 control_fail_seen=1` -> wrapper + planted-fail control hold.
+Unit (NEXT.md 1a): full `s7651_gate_sweep.py --jobs 2 --new-red-vs tools/gate_sweep_allowed_red.txt` (scratch/s7948/sweep.log,
+521 s): 258 gates, GREEN 253, REPORT 2, NEEDS-ARGS 3, RED 0, HOLLOW 0, controls PASS. H-green for RED/HOLLOW, BUT NEEDS-ARGS went
+2 -> 3 vs s7937: the new one is s7922_transition_table.py, which has an ARGS row (S7925_WAITPAIR, s7925).
+ORIGIN: the row's input scratch/s7925_mmark/ring_q4.txt no longer exists, only ring_q4.txt.zst. Writer: ~/.local/bin/
+rs64-scratch-compress.sh (cron, every 6 h: `zstd --rm` of scratch *.txt/*.log/*.bin/... >64 KB and >12 h old). run_uncached
+tested `os.path.exists` on the raw path, found it missing, silently dropped the row, ran the gate bare -> argparse usage ->
+NEEDS-ARGS, which the sweep and stop_gate allow. So the s7925 wait/hold pairing gate checked nothing since the compress pass.
+Value is legitimate (lossless compression); the defect is the sweep's fallback. Exposure census over all 132 ARGS rows: 1 broken
+now (s7922), 4 more inputs >64 KB raw and so next in line (s7928 ring_q4.txt, s7931 ring_nf/ring_fc.txt, s7931 port7.3/oracle.log).
+Change (tools/s7651_gate_sweep.py):
+- existence via rs64_zopen.resolve (raw or .zst); an ARGS row with an input in neither form -> RED "ARGS input missing";
+- a gate given its ARGS row that still ends in the NEEDS-ARGS signature (e.g. plain open() of a raw path stored as .zst) -> RED;
+- cache entries carry the ARGS row repr; an edited row invalidates the hit (before, a cached bare verdict could outlive the fix);
+- two planted controls added to the s7651 control dict: args_missing (absent path) -> RED, args_zst_plainopen (.zst-only input,
+  plain-open tool) -> RED. Both read RED, PASS.
+S7925_WAITPAIR re-pointed to ring_q4.txt.zst; tools/s7922_transition_table.py oracle log now read via zopen (was plain open).
+Controls: mutation copy with the old .txt path -> s7922 RED "ARGS input missing" (1/1); fixed -> s7922 GREEN with the must-regex
+(pairing 6/6 + shift-1 mutation PASS). Compressed the 4 at-risk inputs by hand (what the cron would do) -> s7922/s7928/s7931 3/3
+GREEN on .zst inputs (s7928/s7931 read via rs64_zopen).
+Second full sweep after the change: scratch/s7948/sweep2.log (result line below).
+Rules out: the pad/panel work (s7941-s7947) tripping any census; remaining hollow ARGS rows from compression (census 0 left).

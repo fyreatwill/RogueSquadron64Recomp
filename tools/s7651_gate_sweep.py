@@ -22,7 +22,9 @@ HIT, then RED after the input is edited (else exit 3). --no-cache re-proves ever
 --new-red-vs FILE: exit 1 only for RED gates NOT listed (first column) in FILE, the committed allowed-RED baseline.
 Usage: s7651_gate_sweep.py [--jobs N] [--only REGEX] [--tsv OUT] [--no-cache] [--new-red-vs FILE]
 exit 0 iff no (new) RED (NEEDS-ARGS allowed)."""
-import concurrent.futures as cf, glob, hashlib, json, os, re, subprocess, sys, tempfile, threading, time
+import concurrent.futures as cf, glob, hashlib, shutil, json, os, re, subprocess, sys, tempfile, threading, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from rs64_zopen import resolve as zresolve  # s7948
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ARGS_SIG = re.compile(r"IndexError: list index out of range|usage: |error: unrecognized arguments|error: the following arguments"
@@ -287,7 +289,7 @@ S7864_AIHIST = {"s7864_ai_per_vi_hist.py": (["--control"], r"VERDICT PASS \(cont
 ARGS.update(S7864_AIHIST)
 S7865_AIDMA = {"s7865_ai_dma_rate.py": ([], r"controls: .* -> PASS")}  # s7865 mupen gap-free AI rate vs retail; floor/planted controls
 ARGS.update(S7865_AIDMA)
-S7925_WAITPAIR = {"s7922_transition_table.py": (["scratch/s7925_mmark/ring_q4.txt", "scratch/s7921_oracle5/oracle.log", "--waits"],
+S7925_WAITPAIR = {"s7922_transition_table.py": (["scratch/s7925_mmark/ring_q4.txt.zst", "scratch/s7921_oracle5/oracle.log", "--waits"],
                   r"agreement wait-vs-hold pairing (\d+)/\1; mutation control \(shift 1\) \d+/\d+ -> PASS; wait_pairs_port_longer=0")}  # s7925 G5c: port MusyX wait rows pair = hold ordinal pairing; shift-1 mutation must break it
 ARGS.update(S7925_WAITPAIR)
 S7928_GATEW = {"s7928_gate_writers.py": (["scratch/s7928_gatew2/ring_q4.txt", "--oracle", "scratch/s7928_oracle/oracle.log"],
@@ -503,7 +505,7 @@ def _run(path):
     if USE_CACHE:
         with CACHE_LOCK:
             ent = CACHE.get(key)
-        if ent and fingerprint(ent["argv"], ent["trace"]) == ent["fp"]:
+        if ent and ent.get("args_row") == repr(ARGS.get(os.path.basename(path))) and fingerprint(ent["argv"], ent["trace"]) == ent["fp"]:  # s7948: ARGS edit invalidates
             with CACHE_LOCK:
                 STATS["hit"] += 1
             return tuple(ent["row"])
@@ -512,7 +514,8 @@ def _run(path):
     with CACHE_LOCK:
         STATS["miss" if cacheable else "uncacheable"] += 1
         if cacheable:
-            CACHE[key] = {"argv": argv, "trace": tr, "fp": fingerprint(argv, tr), "row": list(row)}
+            CACHE[key] = {"argv": argv, "trace": tr, "fp": fingerprint(argv, tr), "row": list(row),
+                          "args_row": repr(ARGS.get(os.path.basename(path)))}
         else:
             CACHE.pop(key, None)
     return row
@@ -526,7 +529,13 @@ def run_uncached(path):
                                                                      "complete": True, "spawn_ok": True}
     a = ["--controls"] if "--controls" in src else []
     fixed, must = ARGS.get(os.path.basename(path), (None, None))
-    if fixed is not None and all(os.path.exists(os.path.join(ROOT, x)) for x in fixed if "/" in x):  # s7724: bare arm names (s7467 "p") are not paths
+    if fixed is not None:
+        # s7948: a missing input used to fall back to a bare run that read NEEDS-ARGS (allowed), so the s7925 WAITPAIR gate went
+        # silently hollow when its ring was zstd'd (ring_q4.txt -> .zst). A row whose path inputs are missing is RED.
+        miss = [x for x in fixed if "/" in x and not zresolve(os.path.join(ROOT, x))]  # s7724: bare arm names are not paths;
+        # zresolve: rs64-scratch-compress.sh (cron, 6 h) zstd --rm's >64k logs/txt/bin, and zopen tools read the raw path's .zst
+        if miss:
+            return (os.path.basename(path), "RED", "-", "ARGS input missing: " + " ".join(miss)), list(fixed), None
         a = list(fixed)
     else:
         must = None
@@ -550,6 +559,8 @@ def run_uncached(path):
     ni = NEEDS_INPUT.get(os.path.basename(path))
     if ni and ni[0].search(out.strip()[-400:]):
         return (os.path.basename(path), "NEEDS-INPUT", rc, ni[1]), a, tr
+    if fixed is not None:  # s7948: a tool given its ARGS row that still reports missing args/input is broken, not NEEDS-ARGS
+        return (os.path.basename(path), "RED", rc, "ARGS row given, tool still fails: " + tail), a, tr
     return (os.path.basename(path), "NEEDS-ARGS" if ARGS_SIG.search(out[-3000:]) else "RED", rc, tail), a, tr
 
 
@@ -658,13 +669,28 @@ def main():
             os.makedirs(os.path.dirname(f))
             open(f, "w").write(body)
             c[k] = run(f)[1]
+        # s7948: an ARGS row whose input path is missing must read RED, not fall back to a bare NEEDS-ARGS run
+        f = os.path.join(d, "am", "s9998_argmiss_census.py")
+        os.makedirs(os.path.dirname(f))
+        open(f, "w").write("import sys\nprint(open(sys.argv[1]).read())\n")
+        ARGS["s9998_argmiss_census.py"] = (["scratch/s9998_absent/in.txt"], None)
+        c["args_missing"] = run(f)[1]
+        # s7948: a present input the tool still cannot open (plain open of a raw path that survives only as .zst) must read RED
+        os.makedirs(os.path.join(ROOT, "scratch", "s9998_ctl"), exist_ok=True)
+        zp = os.path.join(ROOT, "scratch", "s9998_ctl", "in.txt.zst")
+        subprocess.run(["zstd", "-qf", "-o", zp, "-"], input=b"x\n", check=True)
+        ARGS["s9998_argmiss_census.py"] = (["scratch/s9998_ctl/in.txt"], None)
+        c["args_zst_plainopen"] = run(f)[1]
+        shutil.rmtree(os.path.dirname(zp))
+        del ARGS["s9998_argmiss_census.py"]
         for k in list(CACHE):  # controls never persist
             if k.startswith(os.path.abspath(d)):
                 del CACHE[k]
         ccpass, cc = cache_control(d)
     cpass = c == {"ctl_red_census.py": "RED", "ctl_green_census.py": "GREEN", "ni_text": "NEEDS-INPUT", "ni_other": "RED",
                  "rep_noexit": "REPORT", "rep_exit": "RED",
-                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW", "hol_s7721": "HOLLOW"}
+                 "hol_open": "HOLLOW", "hol_zero": "GREEN", "hol_flag": "HOLLOW", "hol_s7721": "HOLLOW",
+                 "args_missing": "RED", "args_zst_plainopen": "RED"}
     print("[s7651] control planted red/green ->", c, "PASS" if cpass else "FAIL")
     print("[s7656] cache control read: green/green/hit/red-after-edit, spawn-uncached, compile: green/green/hit/red-after-header-edit, import: green/green/hit/red-after-module-edit ->", cc, "PASS" if ccpass else "FAIL")
     us_ctl = unswept({"s7999_plant_census.py": 0, "s9999_plant_gate.py": 0, "x.py": 0}, ("x.py",))
