@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7913 (2026-11-24).
+Compact operational handoff, as of Session 7915 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -239,6 +239,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    C1/C2 clock streams diverge at record 0 (first osGetTime at VI 28 vs 20): guest progress vs host VI phase differs from boot.
    ROGUESQ_DET_CLOCK=2 (65104 ticks per call per thread, VI-independent) exists and boots (60 s control); caller RA is now the host
    return address (atos-symbolised: getTimeSinceLastFrame, recordFrameTimestamp, getTimeLow32, VI/SP/DP threads, MusyX synth).
+   **s7915: H-clock REFUTED for the element (two lines).** DET_CLOCK=2 arms D1/D2 (scratch/s7915, 0 crash lines): D1 vs D2 0/212, but
+   **D1 vs s7913 C1 212/212 exact, symdiff 0**, although C1 ran DET_CLOCK=1 (VI-keyed) and D1 DET_CLOCK=2 (call-count): their clock
+   values differ completely, so the element is not a function of the values osGetTime returns. Line 2: per-RA clock compare
+   (s7913_clocklog.py --per-ra, plant PASS) D1 vs D2: getTimeLow32 18136/18136 equal yet the element differs. Not selected by element
+   start frame either (D2 and A both start 6070, 0/212). 1 exact pair of 15 over 6 arms; whole-run p1_rand traces all differ.
+   Open: H-rng (particle draws from a shared rand stream whose position at the element is host-paced), H-race, H-uninit.
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

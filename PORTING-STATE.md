@@ -211630,3 +211630,24 @@ H-canon RULES row with verify=`last = v; return v;`.
 Result: s7530 fails=0, --controls 6/6 PASS; s7531 --controls 5/5 PASS; full tools/s7651_gate_sweep.py --new-red-vs
 tools/gate_sweep_allowed_red.txt rc=0 (253 gates: 237 GREEN, 7 RED all allow-listed, 7 NEEDS-ARGS, 2 REPORT; new RED 0).
 Rules out: nothing about m6 island B; the s7914 DET_CLOCK=2 two-arm unit in NEXT.md is untouched and still next.
+
+## Session 7915 (2026-11-24) — DET_CLOCK=2 arms: m6 island B particle element is NOT a function of clock values (D1 under call-count clock is 212/212 exact with s7913 C1 under VI-keyed clock); H-clock refuted, H-rng / H-race / H-uninit open
+Pre-checks: crash_reports FOLDED=3 new=0; no new SOAK-RESULTS lines; no owner answers; CURRENT-TRUTH 58.1 KB (no maintenance).
+Work unit (NEXT s7915, HYPOTHESIS-ID g3-m6-island-b-nondet, iteration 2 of 2 on the clock lever):
+- Run scratch/s7915/run.sh = s7913 recipe with ROGUESQ_DET_CLOCK=2 (2 arms, sequential): rc=0 both, 0 crash lines, caps 31/30.
+- Element (tools/s7912_elem_cross.py 635A40/f0/s3/w1 FFFFFFFFFE793C, plant controls PASS for every arm) over D1, D2 (s7915), C1, C2
+  (s7913, DET_CLOCK=1), A, B (s7912, real clock): **D1 vs C1 212/212 exact, symdiff 0**; every other pair of the 15 is 0/212
+  (symdiff 25.0-25.5k) (scratch/s7915/elem_cross6.txt). Element start frames: D1 6068, C1 6068, D2 6070, A 6070, C2 6071, B 6071;
+  D2 vs A 0/212, so start frame alone does not select the outcome.
+- Clock: tools/s7913_clocklog.py gains `--per-ra` (each RA's own value sequence compared, VI ignored; plant control on the busiest
+  RA, PASS at 17501/17501; ractl self-compare ALL equal). D1 vs D2 under DET_CLOCK=2: first record differs (first call VI 25 vs 20);
+  game-thread getTimeLow32 (ra FFD81960) 18136/18136 equal, getTimeSinceLastFrame (FFD81C80) diverges at index 1, recordFrameTimestamp
+  (FFD81410) at 0 (per-thread counters still interleave with host-paced calls on other threads). So DET_CLOCK=2 is not run-to-run
+  deterministic either (the NEXT "values differ" branch).
+- But the cross-mode match decides H-clock anyway: C1 (VI-keyed values) and D1 (call-count values) feed the guest different clock
+  values throughout, yet render the element identically. Two lines: (1) cross-mode exact pair; (2) D1/D2 share the getTimeLow32 stream
+  exactly yet differ on the element. **H-clock refuted** for the element. Whole-run p1_rand traces differ in all 6 arms (md5),
+  so the rand stream position is a remaining candidate (H-rng), with H-race / H-uninit.
+- Rules out: "the element consumes osGetTime values"; "the element outcome is keyed by its start frame".
+- Kept: scratch/s7915/m6c{1,2}/{p1.bin,clock.bin,p1_rand.txt}.zst, elem_cross6.txt.
+ORIGIN: no mitigation; one offline tool option (--per-ra) added.
