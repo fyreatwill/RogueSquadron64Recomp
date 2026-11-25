@@ -181,9 +181,6 @@ scratch/s7386/sheet_fine.jpg
 scratch/s7386/sheet_on.jpg
 scratch/s7386/sheet_on_off.jpg
 scratch/s7386/strays.jpg
-scratch/s7439/run.tlog
-scratch/s7442/consumer.tlog
-scratch/s7442/run.tlog
 scratch/s7508/h_live_o2
 scratch/s7508/h_live_o2.cpp
 scratch/s7508/h_syn_o2
@@ -826,6 +823,15 @@ scratch/s7928_gatew2/ring_q4.txt
 scratch/s7931_port/ring_fc.txt
 scratch/s7931_port/ring_nf.txt
 scratch/s7931_route/port7.3/oracle.log
+scratch/s7935/run.tlog
+scratch/s7935/sample_1.txt
+scratch/s7935/sample_2.txt
+scratch/s7935/sample_3.txt
+scratch/s7935/sample_4.txt
+scratch/s7935/sample_5.txt
+scratch/s7935/sample_6.txt
+scratch/s7935/sample_7.txt
+scratch/s7935/sample_8.txt
 scratch/ucode_regen/pristine/factor5_ucode_b_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl10_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl12_recompiled.c

@@ -61,10 +61,13 @@ def samples_mutant(src, td):
     d = os.path.join(td, "smp"); os.makedirs(d); n = 0
     for f in glob.glob(os.path.join(ROOT, src, "*")):
         if not os.path.isfile(f): continue
-        if f.endswith(".txt.zst"):
-            t = subprocess.run(["zstd", "-dcq", f], capture_output=True, check=True).stdout.decode("utf-8", "replace")
+        if re.search(r"sample_\d+\.txt(\.zst)?$", f):  # s7935: raw sample_N.txt too (fresh capture, not yet zstd'd)
+            t = (subprocess.run(["zstd", "-dcq", f], capture_output=True, check=True).stdout if f.endswith(".zst")
+                 else open(f, "rb").read()).decode("utf-8", "replace")
             t, k = re.subn(r"rs64_(store_diag_tick|diag_spin_us|diag_quiet_tick)", r"mut_ctl_\1", t); n += k
-            subprocess.run(["zstd", "-1qf", "-o", os.path.join(d, os.path.basename(f))], input=t.encode(), check=True)
+            out = os.path.join(d, os.path.basename(f))
+            if f.endswith(".zst"): subprocess.run(["zstd", "-1qf", "-o", out], input=t.encode(), check=True)
+            else: open(out, "w").write(t)
         else:
             shutil.copy(f, d)
     assert n, "no control frames to rename"

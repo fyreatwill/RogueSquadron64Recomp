@@ -208,13 +208,15 @@ S7723_RETAINED = {
 # busy-on/off diag-quiet flips in run.tlog, sample_N.txt.zst read via rs64_zopen). Each prints CONTROL ... PASS from the planted
 # rs64_diag_spin_us 500 us/swap control; a control FAIL exits 3. s7437/s7438 verdict tokens are the tool's own (the ledger's
 # H-known / H-closed was the hand prior-closure check on these same numbers). s7434 has no control: REPORT-class (H-no-control).
+# s7935: scratch/s7435 was pruned 2026-11-23; re-captured as scratch/s7935 (same recipe, env S7431_ARM=S7935 zsh
+# tools/s7433_probe_cost.sh). All 5 verdicts reproduce; only s7433's probe number moved (s7435 0.1x -> 0.0925, still H-free).
 _CP = r"(?=[\s\S]*(?:^|\n)CONTROL ctrl delta [\d.]+ [a-z/]+ vs expected [\d.]+[^\n]*: PASS)"
 S7724_RETAINED = {
-    "s7433_probe_cost.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-free probe 0\.1\d* ms/frame)"),
-    "s7435_spin_cost.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-tail \(total 0\.04\d* core\))"),
-    "s7436_alloc_cost.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-free \(allocator total 0\.01\d* core)"),
-    "s7437_tmem_hash.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT H-candidate \(hash total 0\.5\d* ms/frame)"),
-    "s7438_rt64_terms.py": (["scratch/s7435"], _CP + r"(?=[\s\S]*\nVERDICT terms >= 0\.2 ms/f for prior-closure check: Gfx RT64::TMEMHasher::hash 0\.4)"),
+    "s7433_probe_cost.py": (["scratch/s7935"], _CP + r"(?=[\s\S]*\nVERDICT H-free probe 0\.0[89]\d* ms/frame)"),
+    "s7435_spin_cost.py": (["scratch/s7935"], _CP + r"(?=[\s\S]*\nVERDICT H-tail \(total 0\.04\d* core\))"),
+    "s7436_alloc_cost.py": (["scratch/s7935"], _CP + r"(?=[\s\S]*\nVERDICT H-free \(allocator total 0\.01\d* core)"),
+    "s7437_tmem_hash.py": (["scratch/s7935"], _CP + r"(?=[\s\S]*\nVERDICT H-candidate \(hash total 0\.5\d* ms/frame)"),
+    "s7438_rt64_terms.py": (["scratch/s7935"], _CP + r"(?=[\s\S]*\nVERDICT terms >= 0\.2 ms/f for prior-closure check: Gfx RT64::TMEMHasher::hash 0\.4)"),
     # s7724: ASan+UBSan flight arms (p = plant arm, l7, w15), logs as .zst; control=PASS needs both plants in arm p, a NEW group exits 1
     "s7467_san_report.py": (["scratch/s7467r", "p", "l7", "w15", "--plant", "p", "--known", "tools/s7467_san_reviewed.tsv"],
                             r"(?=[\s\S]*\ns7467 new_groups=0\n)(?=[\s\S]*\ns7467 control=PASS)"),
@@ -239,8 +241,8 @@ ARGS.update(S7802_RETAINED)
 # were zstd'd; it reads .zst since s7803 and has a --gate mode pinning the s7441 claims on the post-fix s7442 capture, with the
 # pre-fix s7439 capture as the same-run planted RED (rs64SkipDraw 0.0075 ms/f before the latch).
 S7803_RETAINED = {
-    "s7441_rs64_census.py": (["scratch/s7442", "--gate", "--control", "scratch/s7439"],
-                             r"(?=[\s\S]*\nCONTROL PASS \(pre-fix)(?=[\s\S]*GATE dir=scratch/s7442 windows=8 rs64SkipDraw_incl=0\.0000 named_ge_0\.003=0 -> PASS)(?=[\s\S]*\nVERDICT GREEN)"),
+    "s7441_rs64_census.py": (["scratch/s7935", "--gate", "--plant"],  # s7935: s7439/s7442 pruned; planted REDs replace the pre-fix control
+                             r"(?=[\s\S]*\nPLANT skipdraw \S+ hits=\d+ PASS)(?=[\s\S]*\nPLANT reviewed \S+ hits=\d+ PASS)(?=[\s\S]*GATE dir=scratch/s7935 windows=8 rs64SkipDraw_incl=0\.0000 named_ge_0\.003=0 -> PASS)(?=[\s\S]*\nVERDICT GREEN)"),
 }
 ARGS.update(S7803_RETAINED)
 # s7804: static+filesystem lint closing the s7801-s7803 class: a swept or CURRENT-TRUTH-cited tool that does not import rs64_zopen

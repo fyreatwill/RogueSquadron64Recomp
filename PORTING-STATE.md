@@ -212121,3 +212121,29 @@ printf literals (l%d.txt) expand against zst-only level logs; false positive (s7
 and strips .zst). Waived with `# zst-ok:` in s7893. The s7933 "0 new RED" must have been a cached s7804 row.
 Sweep after: 258 gates, GREEN 242, RED 7 = the allow-listed s7433/5/6/7/8, s7441, s7723; new RED vs allow-list 0.
 Rules out: "stat-only gate inputs are 0-3 and already safe" (NEXT.md's expectation): 31 unprotected, 6 within 3 days of deletion.
+
+## Session 7935 (2026-11-25) — 6 allow-listed RED profiler gates (s7433/5/6/7/8, s7441) re-captured and GREEN: fresh owner-recipe /usr/bin/sample run reproduces every recorded verdict; s7441 gate gets planted controls + a reviewed budget for the post-s7441 rs64_s7463_hash
+What ran: one game run, `env S7431_ARM=S7935 zsh tools/s7433_probe_cost.sh` (owner recipe FPS60 dd4 16:9, in-process autopilot to
+lvl1 flight, copied folder + copied save, ROGUESQ_NO_SAVE_WRITE=1; control ROGUESQ_DIAG_BUSY_GUEST_US=500 toggled every 30 s;
+8 x 12 s sample windows from t=95 s). HID idle 5.5 h, no other game. 0 crash lines. Capture kept in scratch/s7935 (8 sample_N.txt,
+samples.idx, run.tlog 15 MB), now cited by exact path in tools/retained_captures.txt (manifest missing=0 on all 3 sources).
+Discriminator (NEXT s7935): does a fresh capture reproduce each tool's recorded s74xx verdict within its pinned tolerance?
+Result, two lines (s7435 capture 2026-11-1x vs s7935 today, same recipe, each with its own same-run control PASS):
+  s7433 CONTROL 0.552 ms/f vs 0.500 PASS; VERDICT H-free probe 0.0925 ms/f (s7435: H-free 0.1x) -> same verdict, number moved.
+  s7435 CONTROL 0.0312 core vs 0.030 PASS; H-tail total 0.043 core (pinned 0.04x) -> reproduced.
+  s7436 H-free allocator 0.0141 core (pinned 0.01x) -> reproduced.   s7437 H-candidate hash 0.585 ms/f (pinned 0.5x) -> reproduced.
+  s7438 top term Gfx RT64::TMEMHasher::hash 0.482 (pinned 0.4x) -> reproduced.
+  s7441 --gate FAILED on the fresh capture: named_ge_0.003=1, rs64_s7463_hash 0.012 ms/f incl (self 0.004) in rt64_framebuffer.cpp.
+  That hook did not exist at s7441/s7442: s7463 wrapped RT64's XXH3 hashes of three padded structs to zero the padding (default-on
+  correctness fix, ROGUESQ_S7463_PADFIX). Its inclusive time is the XXH3 RT64 already paid before (now attributed under an rs64
+  frame); its own work is a <=256 B memcpy+memset, 0.004 ms/f self. ORIGIN: not a new cost, a relabel by a reviewed later fix.
+Change: tools/s7441_rs64_census.py REVIEWED = {rs64_s7463_hash: 0.02 ms/f incl budget} (over budget still FAILs); new --plant
+builds two planted REDs from the capture itself, replacing the pruned pre-fix s7439 control: rs64LoadBlockRuns->rs64SkipDraw
+(16 hits, gate FAIL rs64SkipDraw 0.306) and rs64_spike_scan->rs64_s7463_hash (44 hits, FAIL 0.283 > budget). Live gate PASS,
+VERDICT GREEN. tools/s7651_gate_sweep.py: the five S7724 rows and the S7803 s7441 row now read scratch/s7935 (s7433 regex re-pinned
+to 0.0[89]x); the 6 lines removed from tools/gate_sweep_allowed_red.txt (only s7723, the s7392-s7399 logs, remains).
+`--only 's743[3-8]_|s7441_' --no-cache`: 6/6 GREEN. Rules out: "unrecoverable" for these six (only the specific old numbers were).
+Full sweep (--jobs 2): 258 gates, GREEN 248, REPORT 2, NEEDS-ARGS 7, RED 1 = s7723_retained_controls.py, which first raised
+"no control frames to rename": its SAMPLES mutant only rewrote sample_N.txt.zst, and the fresh scratch/s7935 is raw .txt until the
+owner's compress job runs. Fixed (raw and .zst both mutated); re-run: s7433/5/6/7/8 real PASS + mutant RED (11 control frames
+renamed), CONTROLS PASS bad=0 skipped=6 (the pruned s7392-s7399 inputs; still allow-listed, NEXT s7936).
