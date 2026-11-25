@@ -212415,3 +212415,25 @@ Not covered: 21:9 (owner's ultrawide) -> next unit.
 ORIGIN: no mitigation added. The flagged words ("Defaults restored", "Reset") are the F6 panel's own UI text quoted from the
 witness output; the only code change is optional env passthrough (PANEL_ASPECT/PANEL_FS) in two test scripts. The values
 checked are written by the panel's draw thread from a legitimate synthetic user press (L1 / R3 hold), not a corruption.
+
+## Session 7946 (2026-11-25) — F6 panel witnesses at 21:9 windowed Retina: cursor 3/3, Clear/Reset text 8/8, mouse/key e2e 9/9 (H-ok); one-command wrapper; README pad L1/R3 gap fixed
+
+What ran: NEXT unit s7946 (HYPOTHESIS-ID owner-panel-21x9). Host idle 11883 s, one game at a time. crash_reports --since
+2026-11-25: new=0. No new SOAK-RESULTS lines since the s7940 fold.
+- `env PANEL_ASPECT=21:9 PANEL_FS=0 zsh tools/s7942_pad_cursor_witness.zsh`: window 1360x626 pt, disp 1360x594 -> title 32 pt,
+  scale 2.00. Bands row0 288-324 vs prow 292-320, row1 326-360 vs 328-356, row17 (scrolled) 902-936 vs 904-932, clip 288-1020;
+  band moves. 3/3 PASS, synthetic pad test 23/23.
+- `tools/s7944_pad_text_witness.zsh` same env: drawn srcA 'pad:a,  key:Z' -> '(unbound)' -> 'pad:a,  key:Z'; msg 'Row cleared
+  (not saved yet).' / 'Defaults restored (not saved yet).'; IoU(open,r3)=0.899, IoU(open,clear)=0.122, msg IoU 0.219; closed-panel
+  negative control IoU 0.013. 8/8 PASS.
+- `tools/s7937_panel_e2e.zsh` same env (real HID CGEvents): N1 K1 D1 N2 C1 C2 S1 R1 K2 all PASS (bind key:P captured, saved,
+  reset restores ['pad:a','key:Z']). 9/9.
+Selects H-ok over H-title (checker crop handles the 32 pt title bar: logged rects land on the bands) and H-layout (short/wide
+window: row 17 scrolls inside clip 112-478 pt, message line at y=510-524 inside disp 594). Two lines of evidence per shot (draw
+thread rects/text vs OS window capture pixels). Not covered: 21:9 FULLSCREEN (no 21:9 display on this host).
+Engineering: tools/s7946_panel_witness_all.zsh runs all three witnesses for one shape and prints one PASS/FAIL row each
+(exit 0 only if 3/3). Ran at retail 4:3 windowed: 3/3 (cursor 3/3, text 8/8, e2e 9/9 at 640x512). Classifier negative
+control (inline, 5 planted outputs): VERDICT FAIL, fail=1, alive=0, NO RESULT -> FAIL; good tag -> PASS.
+Doc fix: README pad-only paragraph lacked s7943's L1 = Clear row / R3 hold 1 s = Reset (OWNER-OPT-INS and the panel's own help
+line had it); added. `tools/s7762_owner_doc_check.py --controls`: control PASS, 0 missing/stale.
+ORIGIN: no mitigation added; the flagged words (Reset, Clear) are the panel's UI text. Changes are a test wrapper and README text.

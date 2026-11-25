@@ -1,15 +1,13 @@
-# NEXT (s7946)
-HYPOTHESIS-ID: owner-panel-21x9
-s7945: both pad witnesses PASS at 16:9 fullscreen Retina (cursor 3/3, text 8/8) -> pad thread done for the agent.
+# NEXT (s7947)
+HYPOTHESIS-ID: owner-handoff-regression
+s7946: F6 panel qualified at 4:3 / 16:9 fs / 21:9 windowed (tools/s7946_panel_witness_all.zsh). Pad thread done for the agent.
 0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines.
-1. Unit: the owner's other screen is a 21:9 ultrawide. Run, one at a time, windowed 21:9 (this host has no 21:9 display, so
-   fullscreen 21:9 cannot be tested; windowed high-DPI is the closest):
-     env PANEL_ASPECT=21:9 PANEL_FS=0 zsh tools/s7942_pad_cursor_witness.zsh
-     env PANEL_ASPECT=21:9 PANEL_FS=0 zsh tools/s7944_pad_text_witness.zsh
-     env PANEL_ASPECT=21:9 PANEL_FS=0 zsh tools/s7937_panel_e2e.zsh   (mouse/key path)
-   Hypotheses: H-ok (all pass), H-title (windowed high-DPI: title = wh - disp_h must be ~28 pt; checker crop off by it),
-   H-layout (a short/wide window: row 17 scroll or message line clipped by the window height -> fix panel layout).
-   Discriminator: logged rects vs bands/text found in the PNGs, plus window size vs display.
-   If all pass, the F6 panel is qualified on every owner screen shape; then take the next agent-testable G6/G5 item
-   (CURRENT-TRUTH Next steps), not one waiting only on the owner.
-Limits: no physical PS pad; the owner's feel closes G6b.
+1. Unit: whole owner-handoff regression after the s7941-s7946 pad/panel additions (last full pass ~s7762-s7765):
+     python3 tools/s7762_owner_doc_check.py --controls
+     python3 tools/s7763_owner_cmd_check.py --control      (expect 11/11 MATCH)
+     zsh tools/s7764_inflight_toggles.zsh                    (expect 7/7)
+     python3 tools/s7765_controls_dump_check.py              (expect 12/12)
+   Hypotheses: H-ok (all match), H-drift (a queue/opt-in command or controls dump changed with the pad work -> fix doc or code),
+   H-gate-stale (a checker's expectation predates s7941 pad rows -> update checker with a planted control).
+   Each FAIL: name which commit changed the behaviour, fix, re-run that gate.
+   If all pass: take the next agent-testable CURRENT-TRUTH Next-steps item; everything else waits on the owner.
