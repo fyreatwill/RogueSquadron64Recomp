@@ -211806,3 +211806,28 @@ Side check: the 17.3 s TRANSITION "hold" at ring t=11-28 s is the single-buffere
 1018 presents, so the picture animates; retail's title also sits on one buffer (0x790400/0x790800). Not a freeze; tool label only.
 Caveat (single-source for the absolute ms): oracle VIs are emulated time (mupen interpreter cycle model); the 17-VI equality is a
 VI-count match, and the wait's own length (8-9 VIs) is fixed by the audio countdown, not by CPU speed.
+
+## Session 7922 (2026-11-24) — G5c whole pre-flight route is retail-paced: 6/6 port transition holds EQUAL or shorter than the retail oracle's on two owner-recipe rings; new tools/s7922_transition_table.py
+
+Unit (NEXT s7922, slug preflight-transition-retail-table), offline, no game run. crash_reports --since 2026-11-24: new=0.
+1. New tools/s7922_transition_table.py <ring> <oracle.log>: port holds >= 120 ms from ROGUESQ_PRESENT_RING (s7920_hold_class
+   load/classify) in VIs (ms/16.683); a >2 s hold whose gen advances on >=90% of rows is the ANIMATING single-buffer title, kept
+   only as a 0-VI transition at its END (title -> menu). Retail: one transition per waitForMusyXAudioTaskDone wait-taken hit
+   (0x80091EC4, 8 hits), hold = the [vi-hold] run at the hit plus every run starting <= 3 VIs after the previous (wait hold +
+   load hold). Matching anchored at hangar entry (port IN-SCENE hold <-> retail group containing the mallocCraftSelectionData hit
+   with s3=0x80130b40, VI 2628), ordinal outward. Controls (same run): planted port=retail+10 -> PORT-LONGER, equal -> EQUAL,
+   exactly one anchor on each side; exit 3 otherwise. First draft matched without the title-end transition and read PORT-LONGER
+   at the 1911 wait (port 10.7 s hold paired with retail title->menu, which retail shows as 0 picture-hold VIs): an ordinal
+   off-by-one, fixed by keeping the animating hold's end as a transition (port 10.7 s follows A12600 -> B51E00 = logo -> title,
+   retail 1124 is 640 -> title).
+2. Result, scratch/s7921_port2/ring_q4.txt vs scratch/s7921_oracle5/oracle.log (s7921 ring), and scratch/s7919_g5c/ring_q4.txt
+   (independent run, same recipe) vs the same oracle:
+   boot 18.0 / 15.5 VIs vs retail 238 (17+221) PORT-SHORTER; logo->title 17.0 / 18.0 vs 18 EQUAL; title->menu 0 vs 0 EQUAL;
+   hangar entry 16.5 / 17.7 vs 140 (17+123) PORT-SHORTER; hangar->briefing 16.9 / 17.6 vs 124 PORT-SHORTER; -> mission 23.4 / 23.5
+   vs 212 PORT-SHORTER. pairs_port_longer=0 on both rings. Retail-only waits: VI 78 (port ring starts after it) and VI 4369
+   (640->512 flight entry; port shows no hold >= 120 ms or 60 ms there). At --thr-ms 60 the two port boot holds (6.3/4.7 VIs) add,
+   still shorter.
+Verdict: H-equal selected (port <= retail + 3 VIs at every pre-flight transition, two port runs); rules out H-port-longer
+(overlay evict, fb reconfiguration, first-hangar shader compile costing host time beyond retail). Single-source caveat: past the
+anchor the pairing is by ordinal (the port log has no wait marker); every alternative monotone pairing (e.g. -> mission vs 4369,
+278 VIs) is also PORT-SHORTER. G5c engineering is complete; docs/OWNER-REVIEW-QUEUE.md row 20 added (feel check).

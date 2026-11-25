@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7921 (2026-11-24).
+Compact operational handoff, as of Session 7922 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -213,6 +213,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    load; port host sample on that hold = game thread in musyxNoopStub -> waitForMusyXAudioTaskDone ~103 ms. Port <= retail at
    every transition. Oracle trap: interlaced fields alternate the origin by one scanline (512: 0x656400/0x656800), so raw-origin
    hold counts read "no holds"; `--vi-holds` handles it. The 17 s "hold" at t=11 s is the single-buffered animating title.
+   s7922 whole-route table (`tools/s7922_transition_table.py <ring> <oracle.log>`, planted PORT-LONGER/EQUAL controls, anchored at
+   the hangar-entry hit): 6/6 port transitions EQUAL or PORT-SHORTER vs retail on BOTH owner-recipe rings (s7919, s7921): boot
+   15-18 vs 238 VIs, ->title 17-18 vs 18, title->menu 0 vs 0, hangar 16.5-17.7 vs 140, ->briefing 17 vs 124, ->mission 23.5 vs 212.
+   Pre-flight route is retail-paced; owner-queue row 20. Ordinal matching past the anchor is single-source (no port wait marker).
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =
