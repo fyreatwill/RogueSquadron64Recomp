@@ -226,9 +226,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    max_vihold_ms or max_gap_ms >= FREEZE_MS (1000) - the G5c 1-5 s freeze that vi_stalls30s (>=30 s) cannot see. Controls in
    tools/agent/test_soak_verdict_fields.sh (planted 1.5 s frozen ring -> 1, 17 s animating -> 0, no-anim-rule mutation -> 1).
    12/12 recent owner-recipe rings re-scored -> freeze_arms=0 (max vihold 374-408 ms); fold any freeze_arms>0 as a G5c datum.
-   s7926: open datum (retail's 8th wait at flight entry has no port M row: skipped or < 0.05 ms?) instrumented:
-   ROGUESQ_S7926_WAITALL=1 writes an `m` row per call; `tools/s7926_wait_all.py <ring>` (slow waits = same-run control,
-   --selftest). Soak s7926_waitall queued (idle-gated); fold its SKIPPED/FAST line here. Harmless: no hold there.
+   s7926/s7927: datum CLOSED = SKIPPED (not FAST). ROGUESQ_S7926_WAITALL=1 m row per call, control 6/6 PASS: the port makes 6
+   waitForMusyXAudioTaskDone calls, 0 fast, none after the last slow wait (+62 s, flight reached). All 8 retail waits share ra
+   0x8008ED1C = musyxNoopStub 0x8008ED00, which skips the call when gate 0x800A0F50 == 0, so the port's gate is 0 at flight entry.
+   Same recipe with ROGUESQ_M5_B40_VALUE=1: 7 calls (control 7/7), the extra one early (+4.25 s, boot/title era), flight entry still
+   skipped -> B40 accounts for one missing retail wait, not the flight-entry one (single-source per arm; one run each). Harmless:
+   no hold there. Open only if the owner sees a flight-entry audio glitch: name the other 0x800A0F50 zero writer.
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =
@@ -242,7 +245,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    captured gfx task (ROGUESQ_S7751_SNAP + tools/s7751_cxd4_task/replay), emits the same 3 pinned tris bit-identically
    (2/2 FARMAX=0 tasks), and 0 at the default (control arm): the pin is the F5 ucode's own result, not our LLE. Sheets docs/owner_sheet_s7310_farmax.jpg,
    s7312_farmax_l5_l12.jpg. POSE_FREEZE "<x" = falling crossing (L12 needs it).
-3. **Owner decisions on defaults:** M5_B40_VALUE (s7558/s7564: default 0 is alive only via the s4889+s7476 compensations; =1 is retail and equally clean 6/6), RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
+3. **Owner decisions on defaults:** M5_B40_VALUE (s7558/s7564: default 0 is alive only via the s4889+s7476 compensations; =1 is retail and equally clean 6/6; s7927: =1 also restores one of the 2 retail MusyX waits the port skips), RETINA=1, QOS_ALL=1, S7524_V2P=1 (s7526), SP_LATE=1 (s7537), DD_FOG_ALT, dd8 bundle, RENDER_TO_RAM=0 (s7385). Never flip without the owner.
    QOS_ALL evidence: s7277-s7281 (load freezes removed) + s7382 (the threads it raises are exactly the hot ones, DEFAULT otherwise).
 4. **G5i hangar re-entry (s6995), G5a Gerrard V crash (s6893; s6998 writeback audit clean), G5b terrain drops
    (FWDWIN far-loss fix, tools/g5b_fwdwin_seamless.py), G5d logo (s6903), G5f knife lines (s6906; sheets

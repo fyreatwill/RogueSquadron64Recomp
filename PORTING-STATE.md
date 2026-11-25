@@ -211930,3 +211930,27 @@ Rules out nothing yet (instrument + control only). Harmless either way: there is
    rt64_render_context.cpp from s7891-s7896 (rs64_rand_trace getenv x3; rs64_xtrace_mark stores s_s7896_rdram, rs64_s7891_reset,
    rs64_s7895_dtpc). Read by hand: both functions are called only from tools/fixup_rand_trace.py hooks, every one under
    `if (g_rs64_rand_trace)` (ROGUESQ_RAND_TRACE) -> gated, not default-on. Rows added to tools/s7633_hb_census.py: OPEN 0, CONTROLS PASS.
+
+## Session 7927 (2026-11-24) — s7925 open datum closed: the port SKIPS retail's flight-entry MusyX wait (gate 0x800A0F50 == 0 in musyxNoopStub); B40=1 restores one other (early) missing wait, not that one
+What ran: the queued idle-gated soak s7926_waitall, run in-session (HID idle 353 s, nothing else running; recipe moved to
+soak_queue/done), plus one twin arm with the same recipe and ROGUESQ_M5_B40_VALUE=1 (scratch/s7927_b40), run serially (one game at a time).
+Both: owner recipe dd4, HOLD=120, ROGUESQ_S7926_WAITALL=1, tools/g1e_owner_quiet_arms.zsh.
+Results:
+- default (scratch/s7926_waitall/ring_q4.txt, log scratch/agent/soak_results/s7926_waitall_*.log): alive, crashlines 0,
+  vi_stalls30s=0, max_vihold 378 ms, level_ok=1. `s7926 control 6/6 PASS; calls 6 (fast 0, unpaired 0); after last slow wait
+  (+62.1 s): 0 -> SKIPPED`. Call times (s from first): 0, 5.98, 23.30, 38.63, 53.82, 62.08.
+- B40=1 (scratch/s7927_b40/ring_b1.txt): alive, crashlines 0, vi_stalls30s=0, max_vihold 410 ms, level_ok=1. Control 7/7 PASS,
+  7 calls, 0 fast, 0 after the last slow wait (+66.2 s) -> SKIPPED. Times: 0, 4.25, 10.10, 27.41, 42.74, 57.93, 66.20.
+- Instrument check (not just mirroring the M rows): src/rsp/s7324_rcp_spill.cpp writes the m row on every wait-exit before the
+  0.05 ms test, and on any entry without an exit, so 6 rows = 6 entries. 0 fast calls means the port never enters the function and
+  returns at once.
+- Retail oracle (scratch/s7921_oracle5/oracle.log): all 8 wait-taken hits (0x80091EC4) have ra=0x8008ED1C, the jal in
+  musyxNoopStub 0x8008ED00, which branches past the call when MEM_BU(0x800A0F50) == 0 (funcs_23.c 0x8008ED04-0x8008ED0C).
+  So in the port the call is not reached because the gate is 0 at flight entry (inference from the code plus the call count:
+  the branch itself was not logged).
+Verdict: SKIPPED selected, FAST refuted (0 fast calls in either arm). The B40 default (setDisplayMode 0x8008EB40 stores 0)
+accounts for one of the two retail waits the port lacks (an early, boot/title-era one), but not the flight-entry one, which stays
+skipped with B40=1. Single-source per arm (one run each). Harmless: no hold or freeze there (freeze 0 on both rings).
+Rules out: H-fast (the wait taken but sub-threshold); B40 as the sole cause of the flight-entry skip.
+Not done: naming the other gate-zero writer at flight entry (candidates: shutdownMusyXEngine 0x8008ECEC sb zero, the s4875
+force-zero gate stubs). Only worth it on an owner report of flight-entry audio trouble.
