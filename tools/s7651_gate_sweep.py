@@ -318,6 +318,8 @@ S7953_LC = {"s7953_locale_census.py": (["--witness", "scratch/s7953"], r"(?=[\s\
 ARGS.update(S7953_LC)  # s7953 class LC (process locale)
 S7954_CK = {"s7954_clock_census.py": ([], r"(?=[\s\S]*WITNESS cxx=\S+ hrc_is_steady_clock=1 hrc_is_steady=1 system_is_steady=0 PASS)(?=[\s\S]*CONTROL planted_source=FIRED drop_reviewed=FIRED hrc_not_steady=FIRED\(\+\d+\) planted_object=FIRED PASS)(?=[\s\S]*open=0 stale=0 wall_objects=\d+ obj_open=0)(?=[\s\S]*VERDICT CLOSED)")}
 ARGS.update(S7954_CK)  # s7954 class CK (wall clock in intervals/pacing)
+S7955_TF = {"s7955_settings_textfmt.py": ([], r"(?=[\s\S]*REAL PASS fail=0)(?=[\s\S]*CONTROL planted=ok mutant=FAIL fail=(?:9|[1-9]\d))(?=[\s\S]*VERDICT CLOSED)")}
+ARGS.update(S7955_TF)  # s7955 class TF (settings.txt BOM / CRLF / trailing comment)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)

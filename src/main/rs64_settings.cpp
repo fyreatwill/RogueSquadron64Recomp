@@ -70,11 +70,28 @@ std::string exe_path(const char* argv0) {
 // Exposed for tools/test_settings.cpp: rs64_settings_plan() fills `out` without touching the environment.
 extern "C" int rs64_settings_parse_line(const char* line, char* name, size_t name_sz, char* value, size_t value_sz) {
     // 0 = skip (blank/comment), 1 = ROGUESQ var, 2 = preset, 3 = empty value (left unset, s7729), -1 = rejected
-    const std::string l = trim(line ? line : "");
+    // s7955: a UTF-8 BOM (Windows Notepad, some editors) prefixed line 1 and rejected it, dropping the first setting.
+    std::string raw = line ? line : "";
+    if (raw.compare(0, 3, "\xEF\xBB\xBF") == 0) raw.erase(0, 3);
+    const std::string l = trim(raw);
     if (l.empty() || l[0] == '#') return 0;
     const size_t eq = l.find('=');
     if (eq == std::string::npos) return -1;
-    std::string n = trim(l.substr(0, eq)), v = trim(l.substr(eq + 1));
+    const std::string vraw = l.substr(eq + 1);  // untrimmed: `X= # c` is a comment, `X=#c` a value (sh rules)
+    std::string n = trim(l.substr(0, eq)), v = trim(vraw);
+    // s7955: shell-style trailing comment (`ROGUESQ_FPS60=1  # on`). Kept, "1  # on" read as 1 at atoi readers and as
+    // not-"1" at strcmp readers of the same name (the s7729 split). A '#' starts a comment only after whitespace and
+    // outside quotes, as in sh; `a#b` stays a value.
+    if (!v.empty() && (v.front() == '"' || v.front() == '\'')) {
+        const size_t close = v.find(v.front(), 1);
+        if (close != std::string::npos) {
+            const std::string rest = trim(v.substr(close + 1));
+            if (rest.empty() || rest[0] == '#') v = v.substr(0, close + 1);
+        }
+    } else {
+        for (size_t i = 1; i < vraw.size(); i++)
+            if (vraw[i] == '#' && (vraw[i - 1] == ' ' || vraw[i - 1] == '\t')) { v = trim(vraw.substr(0, i)); break; }
+    }
     if (v.size() >= 2 && ((v.front() == '"' && v.back() == '"') || (v.front() == '\'' && v.back() == '\''))) v = v.substr(1, v.size() - 2);
     if (n.compare(0, 4, "env ") == 0) n = trim(n.substr(4));
     if (n.compare(0, 7, "export ") == 0) n = trim(n.substr(7));

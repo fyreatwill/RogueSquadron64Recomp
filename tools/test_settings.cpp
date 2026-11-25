@@ -18,6 +18,13 @@ int main() {
         {"ROGUESQ_FPS60", -1, "", ""},
         {"ROGUESQ_ASPECT=", 3, "ROGUESQ_ASPECT", ""}, {"ROGUESQ_OSMEM_MB = \"\"", 3, "ROGUESQ_OSMEM_MB", ""}, {"preset=", 3, "preset", ""},  // s7729: empty = unset
         {"DYLD_INSERT_LIBRARIES=", -1, "", ""},
+        // s7955: UTF-8 BOM on line 1, CRLF, and shell-style trailing comments.
+        {"\xEF\xBB\xBFROGUESQ_FPS60=1", 1, "ROGUESQ_FPS60", "1"}, {"\xEF\xBB\xBFROGUESQ_FPS60=1\r", 1, "ROGUESQ_FPS60", "1"},
+        {"\xEF\xBB\xBF# comment", 0, "", ""}, {"\xEF\xBB\xBF", 0, "", ""},
+        {"ROGUESQ_DRAW_DISTANCE=4 # dd", 1, "ROGUESQ_DRAW_DISTANCE", "4"}, {"ROGUESQ_FPS60=1\t# on\r", 1, "ROGUESQ_FPS60", "1"},
+        {"ROGUESQ_ASPECT=\"16:9\"  # wide", 1, "ROGUESQ_ASPECT", "16:9"}, {"ROGUESQ_CONTROLS='a #b.json' # c", 1, "ROGUESQ_CONTROLS", "a #b.json"},
+        {"ROGUESQ_CONTROLS=a#b.json", 1, "ROGUESQ_CONTROLS", "a#b.json"}, {"ROGUESQ_ASPECT= # none", 3, "ROGUESQ_ASPECT", ""},
+        {"ROGUESQ_ASPECT=\"16:9 # x\"", 1, "ROGUESQ_ASPECT", "16:9 # x"},
     };
     int fail = 0;
     for (const auto& c : t) {

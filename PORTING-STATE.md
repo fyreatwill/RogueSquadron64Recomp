@@ -212633,3 +212633,20 @@ witness mutation (hrc not steady) -> +32 OPEN; planted unexplained _gettimeofday
 (regex verified: real output matches, obj_open=1 mutation does not). VERDICT CLOSED. H-steady selected; H-mixed refuted.
 Rules out: wall-clock steps as a cause of VI stalls / present bursts / freeze-detector false positives (G5c tooling reads
 mach/steady clocks).
+
+## Session 7955 (2026-11-25) — class TF (settings.txt text format) closed: UTF-8 BOM dropped line 1 and trailing `# comment` stayed in the value; both fixed in rs64_settings_parse_line, gate S7955_TF
+
+Unit (NEXT s7955 item 1): settings.txt / controls.json reads vs BOM, CRLF, no trailing newline.
+Hypotheses: H-tolerant (both parsers fine), H-BOM-drop (line 1 rejected), H-CRLF ('\r' kept in values), H-comment (inline comment kept).
+Discriminator: planted lines/files through the REAL parsers in a unit harness (/tmp probe linking src/main/rs64_settings.cpp + rs64_bindings_json.h).
+Result (pre-fix): settings.txt CRLF OK (trim strips \r), no-newline OK (getline); BOM -> k=-1 rejected (warned, but the setting is lost);
+`ROGUESQ_DRAW_DISTANCE=4 # dd` -> value "4 # dd" (atoi=4, strcmp/aspect_ok readers disagree = s7729-class split). controls.json: BOM, CRLF,
+trailing newline all accepted (nlohmann skip_bom); UTF-16 and "key:Space " rejected loudly with defaults kept = acceptable.
+H-BOM-drop + H-comment selected; H-CRLF refuted; H-tolerant holds for controls.json only.
+Fix: src/main/rs64_settings.cpp strips a leading EF BB BF and sh-style trailing comments (# after whitespace, outside quotes, on the
+untrimmed value so `X= # c` = empty/unset and `X=#c` = value). tools/test_settings.cpp +11 cases.
+Evidence (two lines): (1) tools/s7955_settings_textfmt.py: real PASS 78/78; planted mutant (fix removed) FAIL 9 = exactly the new cases;
+(2) rebuilt build/RogueSquadron64Recomp with ROGUESQ_SETTINGS=<planted BOM+CRLF+inline-comment+no-final-newline file>: "[s7663] set=4
+rejected=0", re-exec summary FPS60=1 DRAW_DISTANCE=2 HANGAR_FOV=38 ASPECT=16:9 (game SIGKILLed after 6 s, title only).
+ORIGIN: the writer is the owner's editor (BOM / habitual inline comments); the values are legitimate, our parser was too strict.
+Sweep row S7955_TF added. Rules out: settings-file text encoding as a cause of "my setting did nothing" reports (bar UTF-16, which warns per line).

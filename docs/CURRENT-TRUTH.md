@@ -330,6 +330,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    deadline + RT64 present pacing are monotonic; all 116 wall-clock sites are LABEL/CADENCE(env-gated diag)/ARM(env==2) rows, 19 importing objects
    explained (cv.wait_for via system_clock on Apple = single-source safe). `python3 tools/s7954_clock_census.py` (4 planted controls), sweep row S7954_CK.
    A new time()/system_clock/gettimeofday site turns it RED: add a REVIEWED row only if it never feeds an interval or deadline.
+13c. **s7955 class TF (settings.txt text format) CLOSED + FIXED:** a UTF-8 BOM rejected line 1 (owner's first setting dropped) and a
+   shell-style trailing comment stayed in the value (`ROGUESQ_FPS60=1 # on` -> "1 # on": atoi readers ON, strcmp readers OFF, the s7729
+   split). rs64_settings_parse_line now strips the BOM and sh-style comments (`#` after whitespace, outside quotes; `a#b` stays). CRLF and no
+   trailing newline were already fine; controls.json (nlohmann) already skips a BOM and CR. `python3 tools/s7955_settings_textfmt.py`
+   (planted mutant fails 9/78), sweep row S7955_TF; e2e: planted BOM+CRLF+comment file applied 4/4, rejected=0 in the real binary.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
