@@ -212554,3 +212554,20 @@ Gate sweep --only the 3 REPORT rows + S7932_RETAIN: 3 REPORT, 0 RED.
 ORIGIN: the writer was the launcher itself (mkdir -p + overwrite of an existing dir that the fs treats as the same name); not a guest defect.
 Not covered: launchers that build run dirs outside m6_god_common.sh (tools/g3_port_capture.sh OUTDIR, tools/*_arm.zsh writing scratch/sNNNN/<arm>).
 Rules out: a surviving s7031 census input; any other clobbered m6 run dir.
+
+## Session 7952 (2026-11-25) — case-only run-dir collision class closed: guard wired into every shared caller-named launcher
+What ran: NEXT s7952 unit 1 (close the run-dir-case-collision class after s7951 found TAG L4a overwriting the s7031 L4A dir).
+- crash_reports --since 2026-11-25: new=0. No new SOAK-RESULTS verdicts beyond s7947_handoff_fast (already folded).
+- Enumeration: ranked launchers by use in the last 300 soak recipes. Caller-named run dirs/files: g1e_owner_quiet_arms.zsh (151 uses;
+  $R from callers e.g. s7472 NAME, and per-arm files log_/ring_/ok_/void_/hz_<arm> in $R), g1_level_coverage_common.zsh (-> m6_god_common,
+  already guarded s7951), boot_freeze_hunt.sh (O=$1), g3_port_capture.sh (O=$1), probe.sh / regress.sh (OUTDIR=$1). s7277/s7263 and the
+  ~1100 other mkdir sites are one-off sNNNN scripts with literal or session-prefixed names (safe by construction, not wired).
+- Defect found beyond s7951: quiet_arms checked arm-name uniqueness case-sensitively, so ARMS="4:q4: 2:Q4:" passed and both arms would
+  write ring_q4.txt/ok_q4 as ONE file on this case-insensitive APFS (the second arm silently overwrites the first's data). Fixed: seen[] keyed
+  by ${(L)name}. $R is guarded too.
+- run_dir_guard.sh gained a one-arg <path> form (dirname/basename, trailing slash ok); wired into g3_port_capture/probe/regress/
+  boot_freeze_hunt before mkdir (rc 3, message names the existing dir). Guard works even after a caller's own mkdir -p (exact-name compare).
+- Controls: test_run_dir_guard.sh PASS (adds one-arg + trailing-slash + exact); test_quiet_arms_spec.sh 13/13 (new: q4/Q4 rc3, q4/q4b rc0,
+  R case-sibling rc3, R exact rc0, R fresh rc0); planted $T/CapX then launch with $T/capx: all 4 OUTDIR launchers rc 3, no game launched.
+- Census: 15 arms.log under scratch, 0 case-only arm-name pairs; planted q4/Q4 arms.log caught by the same pass (positive control).
+Rules out: further silent case-collision data loss through the shared launchers. Class closed; next rung per NEXT.md.

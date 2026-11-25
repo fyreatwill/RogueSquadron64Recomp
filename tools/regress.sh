@@ -54,6 +54,7 @@ for f in "$GAME" "$WINCTL" "$BUILD/rogue_squadron.z64"; do
     [[ -e $f ]] || { print -u2 "regress: missing required file: $f"; exit 2; }
 done
 
+_c=$(sh "$(git rev-parse --show-toplevel)/tools/agent/run_dir_guard.sh" "$OUTDIR") || { echo "tools/regress.sh: $_c (s7952: outdir differs from an existing dir only by case; rename)" >&2; exit 3; }
 mkdir -p "$OUTDIR" || exit 2
 OUTDIR=$(cd "$OUTDIR" && pwd)
 

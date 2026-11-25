@@ -19,7 +19,7 @@
 # crash= is the shared tools/agent/fatal_scan.sh count (was CRASH|SIGSEGV|SIGBUS|abort: missed quick_exit/switch_error exits).
 # GAMEDIR/GAME override the binary (fake-binary control: tools/s7453_harness_death_test.zsh).
 cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-O=${1:?outdir}; N=${2:-12}; BOOT_SECS=${3:-40}; STALL=${4:-12}; mkdir -p $O; O=${O:A}; bad=0; ctlbad=0
+O=${1:?outdir}; N=${2:-12}; BOOT_SECS=${3:-40}; STALL=${4:-12}; _c=$(sh "$(git rev-parse --show-toplevel)/tools/agent/run_dir_guard.sh" "$O") || { echo "tools/boot_freeze_hunt.sh: $_c (s7952: outdir differs from an existing dir only by case; rename)" >&2; exit 3; }; mkdir -p $O; O=${O:A}; bad=0; ctlbad=0
 OWNER_ENV="ROGUESQ_FORCE_SAVE_MISSION=4 ROGUESQ_FORCE_UNLOCK=4 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_GODMODE=1 ROGUESQ_FPS60=1 ROGUESQ_DRAW_DISTANCE=4 ROGUESQ_ASPECT=16:9 ROGUESQ_FULLSCREEN=1 ROGUESQ_VI_LOCK=1 ROGUESQ_VI_LOCK_TARGET_MS=10 ROGUESQ_QOS_ALL=1 ROGUESQ_G1B=1"
 [[ -n $HUNT_OWNER ]] && HUNT_ENV="$OWNER_ENV $HUNT_ENV"
 [[ -n $HUNT_CONTROL ]] && HUNT_SELFTEST=1

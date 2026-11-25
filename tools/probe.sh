@@ -43,6 +43,7 @@ ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 BUILD=${PROBE_BUILD:-$ROOT/build}
 WINCTL=$ROOT/build/winctl
 
+_c=$(sh "$(git rev-parse --show-toplevel)/tools/agent/run_dir_guard.sh" "$OUTDIR") || { echo "tools/probe.sh: $_c (s7952: outdir differs from an existing dir only by case; rename)" >&2; exit 3; }
 mkdir -p "$OUTDIR"
 # Absolute, because the game must be started from build/ (it looks for the ROM
 # next to the executable) and a relative outdir would land there instead.

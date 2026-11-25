@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7949 (2026-11-25).
+Compact operational handoff, as of Session 7952 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -315,6 +315,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    were uncited; prune dry run (KEEP_DAYS=2) put 6 hangar_hstate k900_*_end.bin on the list, now 0. Gate S7934_STATKEY.
    s7951: macOS case-insensitive fs: TAG g1_lvl4s7031L4a (s7056) reused + overwrote the s7031 L4A run dir (census 1/2365 m6 dirs). Shared launcher
    scratch/agent/m6_god_common.sh now refuses case-only TAG collisions (tools/agent/run_dir_guard.sh, rc 3; test_run_dir_guard.sh). REPORT gates stay 3.
+   s7952 closed the class: the guard (now also one-arg `run_dir_guard.sh <path>`) is wired into tools/g1e_owner_quiet_arms.zsh ($R, and arm
+   names are case-folded unique: q4/Q4 share log_/ring_/ok_ files), g3_port_capture.sh, probe.sh, regress.sh, boot_freeze_hunt.sh (all rc 3;
+   planted CapX/capx refused 4/4, test_quiet_arms_spec 13/13). Census of 15 arms.log: 0 case-only arm pairs (planted q4/Q4 control caught).
+   Other mkdir sites are one-off sNNNN scripts with literal names.
    A docstring apostrophe or new quoted .txt literal in s7893 can trip s7804 (it is waived `# zst-ok:`, never opens captures).
    s7935: the 6 profiler gates (s7433/5/6/7/8, s7441) re-captured as scratch/s7935 (`env S7431_ARM=S7935 zsh
    tools/s7433_probe_cost.sh`, one owner-recipe run): every recorded verdict reproduced (two captures, own controls PASS); s7441

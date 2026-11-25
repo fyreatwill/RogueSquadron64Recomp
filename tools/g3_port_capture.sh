@@ -10,7 +10,8 @@
 #   + audio_device.txt, its own saves/ holding SAVE_FROM) and runs from it; the save path resolves from the cwd
 #   (main.cpp register_config_path(rs_cwd) -> pi.cpp config_path/saves). ROGUESQ_NO_SAVE_WRITE=1 is forced as well.
 cd "$(git rev-parse --show-toplevel)"
-O=$1; mkdir -p $O
+O=$1; _c=$(sh "$(git rev-parse --show-toplevel)/tools/agent/run_dir_guard.sh" "$O") || { echo "tools/g3_port_capture.sh: $_c (s7952: outdir differs from an existing dir only by case; rename)" >&2; exit 3; }
+mkdir -p $O
 /usr/sbin/ioreg -n Root -d1 | grep -q '"CGSSessionScreenIsLocked"=Yes' && { echo LOCKED; exit 4; }
 GD=${GAMEDIR:-build}
 if [ -n "${SAVE_FROM:-}" ]; then

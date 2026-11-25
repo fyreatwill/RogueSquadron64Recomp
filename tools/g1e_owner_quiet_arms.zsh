@@ -50,9 +50,12 @@ watch_human(){ local p=$(idle) c t=0 f0="" f w0=$(date +%s) w; while kill -0 $1 
 # first's log_.txt, so the measuring arm's data were lost and the control read FAIL on an arm that never existed. Validate every
 # spec before launching anything: dd numeric, arm name [A-Za-z0-9_]+, names unique. Bad spec -> exit 3 (not 2: never re-queue).
 # Test: tools/agent/test_quiet_arms_spec.sh.
+# s7952: arm names key per-arm files in $R (log_/ring_/ok_/void_<arm>), so q4 and Q4 are ONE file on this case-insensitive fs:
+# uniqueness is checked case-folded. $R itself is refused when it differs from an existing sibling only by case (run_dir_guard.sh).
+_c=$(sh $PWD/tools/agent/run_dir_guard.sh $R) || { echo "bad R: $_c (case-only collision; rename)" >&2; exit 3; }
 typeset -A seen; for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do a=("${(@s/:/)spec}")
-  if [[ $spec != *:*:* || ! $a[1] =~ '^[0-9]+(\.[0-9]+)?$' || ! $a[2] =~ '^[A-Za-z0-9_]+$' || -n ${seen[$a[2]]} ]]; then
-    echo "bad arm spec '$spec' (want dd:arm:ENV1=v+ENV2=v, unique arm names)" | tee -a $R/arms.log >&2; exit 3; fi; seen[$a[2]]=1; done
+  if [[ $spec != *:*:* || ! $a[1] =~ '^[0-9]+(\.[0-9]+)?$' || ! $a[2] =~ '^[A-Za-z0-9_]+$' || -n ${seen[${(L)a[2]}]} ]]; then
+    echo "bad arm spec '$spec' (want dd:arm:ENV1=v+ENV2=v, unique arm names)" | tee -a $R/arms.log >&2; exit 3; fi; seen[${(L)a[2]}]=1; done
 [[ $SPEC_CHECK_ONLY == 1 ]] && { echo "spec ok"; exit 0; }
 for spec in ${=${ARMS:-"4:q4: 2:q2: 4:q4b: 2:q2b:"}}; do
   a=("${(@s/:/)spec}"); x=${spec#*:*:}; x=${x//+/ }; dd=$a[1]; arm=$a[2]; i=$(idle)
