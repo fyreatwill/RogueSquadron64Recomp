@@ -212232,3 +212232,28 @@ H-os-eats for F11 only. Rules out: the documented primary chords being broken by
 - run 4 (final script, F11 HID asserted as OS-eaten): 11/11 PASS, alive, rc 0, audio_device.txt restored (cmp). Owner doc gates
   after the README/OWNER-OPT-INS edits: s7762_owner_doc_check --controls CONTROL PASS, 0 missing/stale; s7763_owner_cmd_check
   --control commands=12 mismatch=0.
+
+## Session 7939 (2026-11-25) — F6 controls panel clicks verified with REAL HID events in the owner's high-DPI 16:9 window and 16:9 / 21:9 fullscreen: 9/9 checks in all 4 arms, ImGui works in window points (H-ok)
+
+Unit (NEXT s7939, HYPOTHESIS-ID owner-panel-fullscreen-scale): s7937 proved the F6 panel only at 640x480, where drawable ==
+window. The owner plays with ROGUESQ_ASPECT/FULLSCREEN set, which turns on SDL_WINDOW_ALLOW_HIGHDPI (drawable = 2x points on
+Retina). Hypotheses: H-ok (ImGui DisplaySize = window points, clicks land), H-scale (DisplaySize = drawable pixels, clicks miss
+by 2x), H-offset (fullscreen has no title bar, the driver's bottom-aligned offset misses vertically).
+
+Change: tools/s7937_panel_e2e.zsh takes env PANEL_ASPECT / PANEL_FS / PANEL_BOOT_S, re-reads the CG window bounds after the
+panel opens (fullscreen settles late), and adds check D1: ImGui DisplaySize width == CG window width and height within 40 pt
+title-bar slack (H-scale would log 2x). Relative outdir fixed (was resolved after `cd build`, VOID at boot on first try).
+
+Results, same session, CLICK_MODE=hid (real cursor), 9 checks each (D1 N1 K1 N2 C1 C2 S1 R1 K2):
+| arm | window (pt) | [g1f] drawable | ImGui disp | result |
+| control retail 4:3 | 640x512 CG (480 content) | 640x480 | 640x480 | 9/9 |
+| ASPECT=16:9 windowed | 1360x796 CG | 2720x1528 (2x) | 1360x764 | 9/9 |
+| ASPECT=16:9 FULLSCREEN=1 | 1512x949 at 0,33 (below the notch/menu strip) | 3024x1898 (2x) | 1512x949 | 9/9 |
+| ASPECT=21:9 FULLSCREEN=1 | 1512x949 | 3024x1898 (2x) | 1512x949 | 9/9 |
+Negative controls N1 (panel closed: click + P arm nothing) and N2 (click off the button arms nothing) pass in every arm, so
+the C1/S1/R1 passes are real hits. H-ok selected; H-scale refuted (drawable is 2x, yet disp = points in both high-DPI arms);
+H-offset refuted (fullscreen content = full CG bounds, D1 exact). No code change to the panel needed.
+Limits: built-in Retina only (scale 2). An external 1x TV / ultrawide or moving the window between displays of different
+scale is untested here (no second display attached). Pad-source capture (C2 via a gamepad) is still only covered by the s7620
+scripted test, not by real device input.
+Logs: scratch/s7939/{ctl,w169,fs169,fs219}/game.log.

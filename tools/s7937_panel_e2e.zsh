@@ -10,16 +10,19 @@
 #   R1 click Reset, Save again: A back to defaults
 #   K2 Esc closes the panel                       ([controls-panel] closed)
 # Usage: zsh tools/s7937_panel_e2e.zsh [outdir]   env CLICK_MODE=hid|pid (default hid; moves the real cursor)
+# s7939: env PANEL_ASPECT=<16:9|...> PANEL_FS=<0|1> run the same checks in the owner's high-DPI window / fullscreen
+#   (ASPECT or FULLSCREEN set -> SDL_WINDOW_ALLOW_HIGHDPI, drawable = 2x window points on Retina). Adds check D1:
+#   ImGui DisplaySize == CG window content size in points (H-scale would log drawable pixels instead).
 # Needs: unlocked screen, Accessibility trust for this shell (build/winctl trusted), no other game instance.
 cd "$(git rev-parse --show-toplevel)" || exit 2
-O=${1:-$PWD/scratch/s7937/run}; rm -rf $O; mkdir -p $O
+O=${1:-$PWD/scratch/s7937/run}; [[ $O == /* ]] || O=$PWD/$O; rm -rf $O; mkdir -p $O
 MODE=${CLICK_MODE:-hid}  # pid-posted clicks never reach SDL (s7937: C1 FAIL 1/1), keys do
 W=$PWD/build/winctl
 $W trusted >/dev/null || { echo "VOID: winctl not trusted"; exit 2; }
 pgrep -x RogueSquadron64Recomp >/dev/null && { echo "VOID: game already running"; exit 2; }
 LOG=$O/game.log; J=$O/controls.json
 cd build || exit 2
-env SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_SETTINGS=0 ROGUESQ_FULLSCREEN=0 \
+env SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1 ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_SETTINGS=0 ROGUESQ_FULLSCREEN=${PANEL_FS:-0} ${PANEL_ASPECT:+ROGUESQ_ASPECT=$PANEL_ASPECT} \
     ROGUESQ_PANEL_RECTS=1 ROGUESQ_CONTROLS=$J ./RogueSquadron64Recomp rogue_squadron.z64 > $LOG 2>&1 &
 PID=$!
 cd ..
@@ -29,7 +32,7 @@ res() { R[$1]=$2; echo "$1 $2 ${3:-}"; }
 cnt() { grep -c -- "$1" $LOG 2>/dev/null || true; }
 waitfor() {  # pattern, min count, timeout s
   local i=0; while (( i < $3 * 10 )); do (( $(cnt "$1") >= $2 )) && return 0; sleep 0.1; ((i++)); done; return 1; }
-sleep 20
+sleep ${PANEL_BOOT_S:-20}
 kill -0 $PID 2>/dev/null || { echo "VOID: game died at boot"; exit 1; }
 read WID BX BY BW BH <<< "$($W find $PID)"
 # winctl activate is a no-op on macOS 14+ (activateWithOptions ignoringOtherApps), and pid-posted keys only reach SDL
@@ -52,6 +55,11 @@ $W click $PID $((BX+BW/2)) $((BY+BH/2)) $MODE; $W key $PID 35 200; sleep 1.5
 $W key $PID 97 200
 waitfor '\[controls-panel\] open' 1 5 && waitfor '^\[panel-rect\]' 1 5 && res K1 PASS || res K1 FAIL
 sleep 1; grep '^\[panel-rect\]' $LOG | tail -1
+read WID BX BY BW BH <<< "$($W find $PID)"   # re-read: fullscreen/resize may have settled since boot
+disp=$(grep '^\[panel-rect\]' $LOG | tail -1 | sed 's/.*disp=\([0-9x]*\).*/\1/')
+dw=${disp%x*}; dh=${disp#*x}
+# content = full width, bottom-aligned (title bar, if any, on top): width must match, height within title-bar slack
+(( dw == BW && dh <= BH && BH - dh <= 40 )) && res D1 PASS "disp=$disp bounds=${BW}x$BH" || res D1 FAIL "disp=$disp bounds=${BW}x$BH"
 read AX AY <<< "$(pt bindA)"
 # N2: click in the Inputs cell of row A (left of the Bind button), must arm nothing
 read LX LY <<< "$(python3 -c "print($BX+($AX-$BX)*0.6, $AY)")"
@@ -79,6 +87,6 @@ sleep 0.5; $W key $PID 53 200
 waitfor '\[controls-panel\] closed' 1 4 && res K2 PASS || res K2 FAIL
 sleep 1; kill -0 $PID 2>/dev/null && alive=1 || alive=0
 kill -9 $PID 2>/dev/null
-bad=0; for k in N1 K1 N2 C1 C2 S1 R1 K2; do [[ ${R[$k]} == PASS ]] || bad=$((bad+1)); done
-echo "tag=s7937_panel_e2e mode=$MODE alive=$alive checks=8 fail=$bad"
+bad=0; for k in D1 N1 K1 N2 C1 C2 S1 R1 K2; do [[ ${R[$k]} == PASS ]] || bad=$((bad+1)); done
+echo "tag=s7937_panel_e2e mode=$MODE aspect=${PANEL_ASPECT:-retail} fs=${PANEL_FS:-0} win=${BW}x$BH disp=$disp alive=$alive checks=9 fail=$bad"
 (( bad == 0 && alive == 1 ))
