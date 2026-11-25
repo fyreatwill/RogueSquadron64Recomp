@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7952 (2026-11-25).
+Compact operational handoff, as of Session 7954 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -326,6 +326,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    0.004 self). s7936: s7723's six s7392-s7399 inputs re-captured (scratch/s7936/<k>/run.log.zst, 6 runs, all six verdicts +
    controls reproduce); tools/gate_sweep_allowed_red.txt is EMPTY; full sweep 258 gates 0 RED. Any new RED gate now blocks the exit gate outright.
 13a. **s7953 class LC (process locale) CLOSED, two lines:** every float parse (env knobs, settings.txt, stand-ins) is strtod/atof/printf = LC_NUMERIC-dependent; under a comma locale "1.5" parses as 1 (plant arm). No setter in src/ + lib/ (non-contrib), none imported by the binary's non-system dylibs incl. the dlopen'd SDL3 (`python3 tools/s7953_locale_census.py --witness scratch/s7953`, 3 planted controls, sweep row S7953_LC); runtime witness ROGUESQ_S7953_LOCALE=1 stays C/"." for 65 samples under an LC_ALL=de_DE.UTF-8 launch, ROGUESQ_S7953_PLANT=de_DE.UTF-8 flips it (CHANGED, dp=","). Owner AppleLocale en_US. A new setlocale/uselocale/locale::global anywhere turns the sweep RED.
+13b. **s7954 class CK (wall clock in intervals/pacing) CLOSED:** high_resolution_clock IS steady_clock in the build's libc++ (compile witness), so VI
+   deadline + RT64 present pacing are monotonic; all 116 wall-clock sites are LABEL/CADENCE(env-gated diag)/ARM(env==2) rows, 19 importing objects
+   explained (cv.wait_for via system_clock on Apple = single-source safe). `python3 tools/s7954_clock_census.py` (4 planted controls), sweep row S7954_CK.
+   A new time()/system_clock/gettimeofday site turns it RED: add a REVIEWED row only if it never feeds an interval or deadline.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

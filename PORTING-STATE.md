@@ -212603,3 +212603,33 @@ Verdict: H-C selected on two lines (static census with controls + runtime witnes
 for everything loaded by title. Not covered: system frameworks' internals (dyld shared cache) beyond what the runtime witness saw;
 in-flight frames were not sampled this run (static census covers all our code paths). No mitigation added (no defect); class closed.
 Next: NEXT.md (another unaudited class or ladder rung).
+
+## Session 7954 (2026-11-25) — class CK (wall clock in intervals/pacing) closed: high_resolution_clock is steady_clock in the build's libc++ (witness), all 116 wall-clock sites are log labels / env-gated diag cadence / env==2 A/B arms; gate S7954_CK
+
+Work unit (NEXT s7954 candidate "host clock source monotonicity"; PORTING-STATE grep: no prior audit of this class, s7514 FK
+covered only the GUEST time base). Hypotheses: H-steady (every pacing/deadline site reads a monotonic clock; wall reads are
+labels/diag only), H-wall (high_resolution_clock = system_clock in this toolchain, so the ultramodern VI deadline in events.cpp
+and RT64 present pacing in rt64_timer.cpp would stall or burst on an NTP/manual clock step), H-mixed (some default-path site
+mixes a wall timestamp into an interval). Discriminator: compile-time alias witness with the build's own compiler + a full
+source scan + the object-level import table.
+
+Tool: `python3 tools/s7954_clock_census.py [-v]` (three lines):
+1. WITNESS (/usr/bin/c++ from build/CMakeCache.txt, -std=c++20): hrc_is_steady_clock=1 hrc_is_steady=1 system_is_steady=0
+   -> H-wall refuted: the 34 high_resolution_clock sites (VI deadline/spin, sleep_until, rt64_timer present pacing) are monotonic.
+2. SOURCE scan src/, librecomp, ultramodern, lib/rt64/src (minus contrib) + live ../N64Recomp/RecompiledFuncs: 399 monotonic
+   sites; 116 wall sites, all REVIEWED: LABEL 86 (s7593 quit 'wall=' epoch, s6892 log header, 84 fixup-injected
+   ROGUESQ_LOG_HUDBIT log timestamps in RecompiledFuncs: the row only matches if the HUDBIT getenv is on the same line;
+   0 wall lines without it), CADENCE 15 (5 s / 1 s dump throttles of env-gated instruments s7094/5/6/7, s7324, s7523, s7526,
+   s7535, rt64 g1e-lrep, tmem provenance), ARM 15 (env==2 10 s A/B alternations in dpc_bridge, rt64_gbi_rdp SEAM_TOG/s_mode==2,
+   rt64_rdp_tmem tscan/mode). A step can only pause a diag dump or shift an opt-in A/B arm boundary. open=0, stale=0.
+3. OBJECTS (nm -u over build/*.a): 19 objects import a wall symbol; each explained by its own source sites, by REVIEWED_OBJ
+   (miniz zip mtimes, ImPlot demo), or CVWAIT: ultramodern events.cpp and plume_metal.cpp import system_clock::now +
+   condition_variable::__do_timed_wait<system_clock> only via cv.wait_for (libc++ on Apple has no clockwait, so wait_for goes
+   through an absolute system_clock deadline). Darwin libpthread converts it back to a relative kernel timeout at entry, so only
+   a step inside that sub-microsecond window could lengthen one wait: SINGLE-SOURCE (source reading), not measured (stepping
+   the clock needs root). obj_open=0.
+Controls (same run, all FIRED): planted system_clock source line -> +1 OPEN; dropping the dpc_bridge ARM row -> its sites OPEN;
+witness mutation (hrc not steady) -> +32 OPEN; planted unexplained _gettimeofday object -> +1 OPEN. Sweep row S7954_CK
+(regex verified: real output matches, obj_open=1 mutation does not). VERDICT CLOSED. H-steady selected; H-mixed refuted.
+Rules out: wall-clock steps as a cause of VI stalls / present bursts / freeze-detector false positives (G5c tooling reads
+mach/steady clocks).

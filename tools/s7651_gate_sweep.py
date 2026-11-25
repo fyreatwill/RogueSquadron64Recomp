@@ -316,6 +316,8 @@ S7934_STATKEY = {"s7934_stat_key_check.py": (["--controls"], r"(?=[\s\S]*tracer 
 ARGS.update(S7934_STATKEY)
 S7953_LC = {"s7953_locale_census.py": (["--witness", "scratch/s7953"], r"(?=[\s\S]*CONTROL planted_source=FIRED planted_dylib_import=FIRED drop_reviewed=FIRED/FIRED PASS)(?=[\s\S]*WITNESS base samples=\d+ C=\d+ changed_comma=0 stress samples=\d+ C=\d+ changed_comma=0 plant samples=\d+ C=\d+ changed_comma=1 PASS)(?=[\s\S]*open=0 dylibs=\d+ import_open=0)")}
 ARGS.update(S7953_LC)  # s7953 class LC (process locale)
+S7954_CK = {"s7954_clock_census.py": ([], r"(?=[\s\S]*WITNESS cxx=\S+ hrc_is_steady_clock=1 hrc_is_steady=1 system_is_steady=0 PASS)(?=[\s\S]*CONTROL planted_source=FIRED drop_reviewed=FIRED hrc_not_steady=FIRED\(\+\d+\) planted_object=FIRED PASS)(?=[\s\S]*open=0 stale=0 wall_objects=\d+ obj_open=0)(?=[\s\S]*VERDICT CLOSED)")}
+ARGS.update(S7954_CK)  # s7954 class CK (wall clock in intervals/pacing)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
