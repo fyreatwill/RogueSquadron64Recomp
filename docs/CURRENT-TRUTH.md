@@ -302,6 +302,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    Traced reads now join the manifest (rolling scratch/agent/soak_results excluded: s7415 samples it); --check line
    `s7933 sweep-trace ... missing=0` pinned in S7932_RETAIN. Directory-cited inputs need nothing more: loop.sh re-walks them
    every iteration and the prune needs mtime > 7 d. If a NEW capture a gate reads turns S7932_RETAIN RED, re-run the manifest.
+   s7934: tools/gate_trace.py now traces os.stat/lstat ("stats"; `--selftest`), the sweep keys them (exists/size), and the
+   manifest pins NAMED stat-only inputs (not scan hits, not scratch/agent): 31 s7751/s7754 snaps s7802 only exists()-checks
+   were uncited; prune dry run (KEEP_DAYS=2) put 6 hangar_hstate k900_*_end.bin on the list, now 0. Gate S7934_STATKEY.
+   A docstring apostrophe or new quoted .txt literal in s7893 can trip s7804 (it is waived `# zst-ok:`, never opens captures).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

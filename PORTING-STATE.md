@@ -212093,3 +212093,31 @@ missing cache do not) PASS; live positive control: --check on the pre-fix manife
 missing=0 rc 0 on all three lines. Two traced reads (s7797 L3/L6 soak logs) are already gone, rolling dir, no gate effect.
 Rules out: a gate input surviving the prune only by accident of doc text. Known residual gap (next unit): os.stat/exists raise no
 audit event, so existence-only inputs are not in the trace.
+
+## Session 7934 (2026-11-25) — gate tracer stat blind spot closed: os.stat/lstat now traced ("stats"), sweep keys them, manifest protects NAMED stat-only inputs; 6 hangar H-state snaps were due for prune deletion 2026-11-28
+HYPOTHESIS-ID: g5-owner-looks-standing. Crash reports new=0; no new SOAK-RESULTS lines.
+What ran: NEXT.md's candidate, the documented gate_trace.py gap (os.stat / os.path.exists / getsize raise no audit event).
+Instead of a grep census, measured it dynamically: tools/gate_trace.py now wraps os.stat and os.lstat (genericpath exists/
+isfile/isdir/getsize and pathlib go through them; importlib uses posix.stat directly so module lookup does not flood; the
+wrapper is added to os.supports_* so shutil.rmtree keeps its fd path) and writes "stats" (stat-only = minus reads).
+`gate_trace.py --selftest`: exists/getsize/pathlib -> stats, open -> reads, no-wrap mutation -> nothing, 5/5 PASS (first
+pathlib arm FAILED because the planted tool was named pathlib.py and shadowed the stdlib; arms now arm_*.py).
+tools/s7651_gate_sweep.py fingerprint() keys stats on existence / dir / file size. New gate tools/s7934_stat_key_check.py
+(sweep row S7934_STATKEY, in EXTRA_GATES): tracer selftest + planted fingerprint arms delete=CHANGED resize=CHANGED
+same=EQUAL, mutation (trace without stats) EQUAL = the pre-s7934 blindness. GREEN.
+Census (cold sweep, 227 cached traces): 96930 stat paths; scratch stat-only >64 KB files: 1132 total, of which 880 are SCAN
+hits (s7893 manifest's own walk 789, s7804 lint 91: found by listing a dir/glob, then stat-ed) and 84 are NAMED by 11 gates;
+35 named ones were absent from the manifest: 4 owner sheets (s7762_owner_doc_check; doc-cited, already safe) and 31 s7751/
+s7754 snaps that s7802_retained_input_controls only checks exist (snap_d k0_s4056, dd1_*, dd2w_*, w219*, hangar_hstate*/
+k900_*_end.bin). Ground truth = the owner's prune itself in dry run (DRY_RUN=1 KEEP_DAYS=2 ~/.local/bin/rs64-scratch-prune.sh,
+simulating 2026-11-28): pre-s7934 manifest -> 6 gate inputs on the deletion list (the 6 hangar_hstate*/k900_*_end.bin.zst,
+cited by no tracked file), post -> 0 (total 9524 -> 9518). KEEP_DAYS=7 today: 12 files, 0 gate inputs.
+Manifest (tools/s7893_retained_manifest.py trace_files): reads + NAMED stats only (stat path whose dir the gate did not list
+and no traced glob matches), files only, scratch/agent/ stats excluded; control adds planted statonly (in), scan/hit (out),
+agent/x.log (out) -> PASS. A first broad version pinned 1037 paths incl. scratch/agent/full_disasm.txt, loop.log etc.
+(would block the owner's cleanup of ~200 unrelated files); final 837 (was 804).
+Side datum: s7804_zst_blind_lint was RED at HEAD f9142b831 too (measured by swapping the HEAD s7893 file back): the s7932
+printf literals (l%d.txt) expand against zst-only level logs; false positive (s7893 never opens a capture, it globs/stats
+and strips .zst). Waived with `# zst-ok:` in s7893. The s7933 "0 new RED" must have been a cached s7804 row.
+Sweep after: 258 gates, GREEN 242, RED 7 = the allow-listed s7433/5/6/7/8, s7441, s7723; new RED vs allow-list 0.
+Rules out: "stat-only gate inputs are 0-3 and already safe" (NEXT.md's expectation): 31 unprotected, 6 within 3 days of deletion.

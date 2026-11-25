@@ -6,12 +6,15 @@ Usage: RS64_GATE_TRACE=<out.json> gate_trace.py <tool.py> [args...]   (the tool'
 Trace JSON: {"reads": [...abs paths...], "dirs": [...], "globs": [...patterns...], "spawn": [argv0...], "complete": bool}
 complete=False when the tool exited via os._exit or the trace could not be written; the sweep never caches those.
 Each subprocess.Popen is recorded as {argv, cwd, env_ok, shell}; the sweep decides which spawns it can key (s7656: toolchain
-binaries keyed on their file arguments, compilers also on the CC_PRINT_HEADERS header list) and leaves the rest uncacheable. Known gap: os.stat / os.path.exists raise no audit event, so a tool whose verdict depends only on whether a
-path EXISTS (never opened, never listed) is invalidated only by its other inputs; the sweep's --no-cache re-proves everything."""
+binaries keyed on their file arguments, compilers also on the CC_PRINT_HEADERS header list) and leaves the rest uncacheable.
+s7934: os.stat / os.lstat raise no audit event, so a tool whose verdict depended only on whether a path EXISTS (or its size)
+was invalidated only by its other inputs and its path was not manifest-protected. Both are now wrapped (genericpath's
+exists/isfile/isdir/getsize and pathlib call them through the os module); paths land in "stats", keyed by the sweep on
+existence/type/size. importlib uses posix.stat directly, so module lookup does not flood the list. `--selftest` = controls."""
 import json, os, runpy, sys
 
 OUT = os.environ.pop("RS64_GATE_TRACE", None)
-reads, dirs, globs, spawn = set(), set(), set(), []
+reads, dirs, globs, stats, spawn = set(), set(), set(), set(), []
 SKIP = tuple(p for p in {sys.prefix, sys.base_prefix, sys.exec_prefix, os.path.dirname(os.__file__)} if p)
 
 
@@ -56,6 +59,25 @@ def _hook(ev, args):
         pass
 
 
+def _wrap_stat(name):
+    """s7934: record every path the tool stats (exists/isfile/getsize/Path.exists); pass everything through unchanged."""
+    orig = getattr(os, name)
+
+    def w(path, *a, **k):
+        try:
+            if not isinstance(path, int) and k.get("dir_fd") is None:
+                p = os.path.abspath(os.fsdecode(path))
+                if not p.startswith(SKIP):
+                    stats.add(p)
+        except Exception:
+            pass
+        return orig(path, *a, **k)
+    for sset in (os.supports_dir_fd, os.supports_fd, os.supports_follow_symlinks):
+        if orig in sset:
+            sset.add(w)  # keep shutil.rmtree's fd-based path and follow_symlinks checks behaving as before
+    setattr(os, name, w)
+
+
 def _module_sources():
     """s7678: an import served from a valid __pycache__ opens only the .pyc (skipped above), never the .py, so a rows
     module edit (s7600_gx_rows.py) left the census's cached RED in place. Record every loaded non-stdlib module's source."""
@@ -73,17 +95,51 @@ def _dump(complete):
     _module_sources()
     tmp = OUT + ".tmp"
     with open(tmp, "w") as f:
-        json.dump({"reads": sorted(reads), "dirs": sorted(dirs), "globs": sorted(globs), "spawn": spawn,
+        json.dump({"reads": sorted(reads), "dirs": sorted(dirs), "globs": sorted(globs), "stats": sorted(stats - reads), "spawn": spawn,
                    "complete": complete}, f)
     os.replace(tmp, OUT)
 
 
+def selftest():
+    """Planted stat-only tool: its path must land in stats (not reads); a tool that opens the file lands it in reads only;
+    mutation = a run with the wrapper skipped records nothing."""
+    import subprocess, tempfile
+    ok = True
+    with tempfile.TemporaryDirectory() as d:
+        tgt = os.path.join(d, "probe.bin")
+        open(tgt, "w").write("x")
+        arms = [("exists", "import os,sys; sys.exit(0 if os.path.exists(%r) else 1)" % tgt, "stats"),
+                ("getsize", "import os; print(os.path.getsize(%r))" % tgt, "stats"),
+                ("pathlib", "import pathlib; print(pathlib.Path(%r).is_file())" % tgt, "stats"),
+                ("open", "print(open(%r).read())" % tgt, "reads"),
+                ("mutation", "import os; print(os.path.exists(%r))" % tgt, None)]
+        for name, code, want in arms:
+            tool, out = os.path.join(d, "arm_" + name + ".py"), os.path.join(d, name + ".json")  # arm_: "pathlib.py" shadowed the stdlib
+            open(tool, "w").write(code + "\n")
+            env = dict(os.environ, RS64_GATE_TRACE=out)
+            if want is None:
+                env["RS64_GATE_TRACE_NOSTAT"] = "1"
+            subprocess.run([sys.executable, os.path.abspath(__file__), tool], env=env, capture_output=True)
+            t = json.load(open(out))
+            where = [k for k in ("reads", "stats") if tgt in t.get(k, [])]
+            good = where == ([want] if want else [])
+            ok &= good
+            print(f"CONTROL s7934 {name}: {tgt.split('/')[-1]} in {where or 'nothing'} (want {want or 'nothing'}) {'PASS' if good else 'FAIL'}")
+    print("CONTROLS PASS" if ok else "CONTROLS FAIL")
+    return 0 if ok else 1
+
+
 def main():
+    if sys.argv[1:] == ["--selftest"]:
+        sys.exit(selftest())
     tool = os.path.abspath(sys.argv[1])
     sys.argv = [tool] + sys.argv[2:]
     sys.path[0] = os.path.dirname(tool)
     reads.add(tool)
     sys.addaudithook(_hook)
+    if not os.environ.pop("RS64_GATE_TRACE_NOSTAT", None):
+        for n in ("stat", "lstat"):
+            _wrap_stat(n)
     rc = 0
     try:
         runpy.run_path(tool, run_name="__main__")

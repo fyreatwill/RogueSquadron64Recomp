@@ -295,6 +295,9 @@ S7931_ROUTE = {"s7931_route_pair.py": (["scratch/s7931_port/ring_nf.txt", "scrat
 ARGS.update(S7931_ROUTE)
 S7932_RETAIN = {"s7893_retained_manifest.py": (["--check"], r"(?=[\s\S]*s7893 retained=\d+ manifest=\d+ missing=0)(?=[\s\S]*s7932 sweep-argv retained=(?:[1-9]\d{2,}) missing=0)(?=[\s\S]*s7933 sweep-trace retained=(?:[1-9]\d{2,}) missing=0)")}  # s7933: third source = the gates' traced reads (build/gate_sweep_cache.json); s7932: '%d' ARGS literals were unprotected from the 7-day prune (glob 'l*d'); second source = the sweep's own argv
 ARGS.update(S7932_RETAIN)
+# s7934: gate_trace.py now records stat-only paths ("stats"); controls = tracer selftest + sweep fingerprint planted arms
+S7934_STATKEY = {"s7934_stat_key_check.py": (["--controls"], r"(?=[\s\S]*tracer CONTROLS PASS)(?=[\s\S]*CONTROL fingerprint delete=CHANGED resize=CHANGED same=EQUAL mutation=EQUAL PASS)")}
+ARGS.update(S7934_STATKEY)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)
@@ -303,7 +306,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7922_transition_table.py", "s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR) + tuple(S7812_RECOMP_H) + tuple(S7813_CALLEE) + tuple(S7814_INCLUDE) + tuple(S7815_VU) + tuple(S7858_PINS) + tuple(S7861_VERDICT) + tuple(S7862_TABLE) + tuple(S7863_SONGN) + tuple(S7864_AIHIST) + tuple(S7865_AIDMA) + tuple(S7928_GATEW) + tuple(S7931_ROUTE) + tuple(S7932_RETAIN)
+EXTRA_GATES = ("s7922_transition_table.py", "s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR) + tuple(S7812_RECOMP_H) + tuple(S7813_CALLEE) + tuple(S7814_INCLUDE) + tuple(S7815_VU) + tuple(S7858_PINS) + tuple(S7861_VERDICT) + tuple(S7862_TABLE) + tuple(S7863_SONGN) + tuple(S7864_AIHIST) + tuple(S7865_AIDMA) + tuple(S7928_GATEW) + tuple(S7931_ROUTE) + tuple(S7932_RETAIN) + tuple(S7934_STATKEY)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
@@ -385,6 +388,12 @@ def fingerprint(argv, tr):
             h.update(f"d{d}\0missing\n".encode())
     for g in tr["globs"]:
         h.update(f"g{g}\0{chr(0).join(sorted(glob.glob(g, recursive=True)))}\n".encode())
+    for t in tr.get("stats", []):  # s7934: stat-only paths (exists/isfile/getsize): key on existence, type and file size
+        try:
+            st = os.stat(t)
+            h.update(f"t{t}\0{'d' if os.path.isdir(t) else 'f' + str(st.st_size)}\n".encode())
+        except OSError:
+            h.update(f"t{t}\0missing\n".encode())
     return h.hexdigest()
 
 

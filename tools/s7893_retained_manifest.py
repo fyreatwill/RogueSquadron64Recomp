@@ -15,8 +15,10 @@ s7933: third source = what the gates actually READ (build/gate_sweep_cache.json 
 inputs (s7852-s7864 oracle/rand captures, s7751/s7754 snaps, 4 old soak logs) were missing from the manifest, protected only by
 incidental ledger citations. Traced reads now join the manifest, except the rolling soak_results dir (s7415 samples whatever
 logs exist; no gate verdict depends on a fixed set, and the owner's prune should keep reclaiming it)."""
-import glob, json, os, re, sys, tempfile
+import fnmatch, glob, json, os, re, sys, tempfile
 
+# zst-ok: never opens a capture - it globs/stats paths and strips .zst itself to name both forms (s7934: the s7932 printf
+# literals l%d.txt matched zst-only level logs, a false s7804 RED measured at HEAD f9142b831 too)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "tools", "retained_captures.txt")
 CACHE = os.path.join(ROOT, "build", "gate_sweep_cache.json")
@@ -52,16 +54,23 @@ ROLLING = ("scratch/agent/soak_results/",)
 
 
 def trace_files(root, cache):
-    """s7933: every existing >64 KB scratch file a cached gate run opened for reading."""
+    """s7933: every existing >64 KB scratch file a cached gate run opened for reading (s7934: or only stat-ed)."""
     try:
         c = json.load(open(cache))
     except (OSError, ValueError):
         return []
     out = set()
     for e in c.values():
-        for p in (e.get("trace") or {}).get("reads", []):
+        tr = e.get("trace") or {}
+        ds, gs = set(tr.get("dirs", [])), tr.get("globs", [])
+        # s7934: a stat-only path (exists/getsize) is an input when the gate NAMED it; one it found by listing a dir or by
+        # a glob is a scan hit (s7804 lint, this tool's own walk: ~880 files) and would pin whole trees from the prune.
+        named = [p for p in tr.get("stats", []) if os.path.dirname(p) not in ds and not any(fnmatch.fnmatch(p, g) for g in gs)]
+        for p in tr.get("reads", []) + named:
             rel = os.path.relpath(p, root)
-            if not rel.startswith("scratch/") or rel.startswith(ROLLING):
+            if not rel.startswith("scratch/") or rel.startswith(ROLLING) or (p in named and rel.startswith("scratch/agent/")):
+                continue
+            if not os.path.isfile(os.path.join(root, rel)):
                 continue
             try:
                 if os.path.getsize(os.path.join(root, rel)) <= 65536:
@@ -86,12 +95,18 @@ def control():
         for n, sz in (("tr/read.log.zst", 70000), ("tr/tiny.log", 10), ("agent/soak_results/x.log.zst", 70000)):
             open(os.path.join(d, "scratch", n), "wb").write(b"x" * sz)
         cp = os.path.join(d, "cache.json")
+        open(os.path.join(d, "scratch", "tr", "statonly.bin.zst"), "wb").write(b"x" * 70000)  # s7934: exists()-only input
+        os.makedirs(os.path.join(d, "scratch", "scan"))  # s7934: found by listing its dir -> scan hit, not pinned
+        open(os.path.join(d, "scratch", "scan", "hit.bin.zst"), "wb").write(b"x" * 70000)
+        open(os.path.join(d, "scratch", "agent", "x.log"), "wb").write(b"x" * 70000)
         json.dump({"k": {"trace": {"reads": [os.path.join(d, "scratch", n) for n in
-                   ("tr/read.log.zst", "tr/tiny.log", "agent/soak_results/x.log.zst", "tr/gone.bin")]}}}, open(cp, "w"))
+                   ("tr/read.log.zst", "tr/tiny.log", "agent/soak_results/x.log.zst", "tr/gone.bin")],
+                   "stats": [os.path.join(d, "scratch", n) for n in ("tr/statonly.bin.zst", "scan/hit.bin.zst", "agent/x.log")],
+                   "dirs": [os.path.join(d, "scratch", "scan")]}}}, open(cp, "w"))
         tgot = trace_files(d, cp)
         tmut = trace_files(d, os.path.join(d, "nocache.json"))
     ok = got == ["scratch/fmt/log_l1.txt", "scratch/fmt/log_l12.txt", "scratch/plant/sub/big.txt"]
-    tok = tgot == ["scratch/tr/read.log"] and tmut == []
+    tok = tgot == ["scratch/tr/read.log", "scratch/tr/statonly.bin"] and tmut == []
     print(f"CONTROL planted dir -> {got} {'PASS' if ok else 'FAIL'}")
     print(f"CONTROL s7933 planted trace -> {tgot} (missing cache -> {tmut}) {'PASS' if tok else 'FAIL'}")
     return ok and tok

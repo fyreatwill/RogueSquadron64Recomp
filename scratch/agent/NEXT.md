@@ -1,12 +1,14 @@
-# NEXT (s7934)
+# NEXT (s7935)
 HYPOTHESIS-ID: g5-owner-looks-standing
-s7933 closed the retained-input class's last source: the manifest now also cites every scratch file a gate's traced run read
-(build/gate_sweep_cache.json), --check prints `s7933 sweep-trace ... missing=0` (pinned in S7932_RETAIN).
+s7934 closed the stat-only gate-input gap (gate_trace "stats", sweep keys them, manifest pins named ones; S7934_STATKEY).
 0. `python3 tools/crash_reports.py --since 2026-11-25` first; a new report outranks everything. Fold new SOAK-RESULTS lines;
    a freeze_arms>0 verdict is a G5c datum (tools/s7920_hold_class.py on its ring).
 1. Take the top open, not-owner-gated item of CURRENT-TRUTH "Next steps", or a "single-source" label a second line could
    settle; else the first unclosed rung of ITERATION.md 3c.
-   Candidate: gate_trace.py's documented gap - os.stat/os.path.exists raise no audit event, so a gate whose verdict depends
-   only on a path EXISTING is neither cache-keyed nor (now) manifest-protected by its trace. Census: grep tools/s7*.py run by
-   the sweep for os.path.exists/isfile/getsize on scratch/ paths that are never opened; each hit -> ensure the path is a
-   literal in the manifest scan or add an open; expected small (0-3), close the class with a planted control.
+   Candidate (retained-input class, last loose end): the 7 allow-listed RED gates (s7433/5/6/7/8, s7441, s7723) lost their
+   captures to the prune before s7893. Either regenerate the inputs (s7435-family = /usr/bin/sample of a live owner-recipe run:
+   one game run, queue as a soak with SOAK_NEEDS_IDLE) and drop them from tools/gate_sweep_allowed_red.txt, or convert each
+   to a control-only gate (planted input) and record that the live verdict is historical. Discriminator: does the regenerated
+   capture reproduce each tool's recorded s74xx verdict (same busy-on/off share within its stated tolerance)?
+   Prefer: dry-run the prune (`env DRY_RUN=1 KEEP_DAYS=2 bash ~/.local/bin/rs64-scratch-prune.sh`; grep gate inputs) as a
+   cheap standing check after any new capture-reading gate lands.
