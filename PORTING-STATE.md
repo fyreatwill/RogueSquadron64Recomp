@@ -212257,3 +212257,37 @@ Limits: built-in Retina only (scale 2). An external 1x TV / ultrawide or moving 
 scale is untested here (no second display attached). Pad-source capture (C2 via a gamepad) is still only covered by the s7620
 scripted test, not by real device input.
 Logs: scratch/s7939/{ctl,w169,fs169,fs219}/game.log.
+
+## Session 7940 (2026-11-25) — F1 (RT64 inspector) + F6 (controls panel) coexistence: the inspector cannot open on macOS, so the two never meet; panel e2e with F1 pressed 12/12 in the 16:9 fullscreen owner recipe, dev mode on and off
+
+Work unit (NEXT s7940, HYPOTHESIS-ID owner-panel-overlay-coexist): do F1 and F6, both ImGui, coexist under real OS events?
+Hypotheses: H-ok, H-steal (RT64's overlay takes mouse/keys), H-leak (game gets input), plus one found while reading the code,
+H-race: RT64's ImGui uses the plain global `GImGui` (imgui.cpp, not thread_local) under `presentQueue->inspectorMutex`, while our
+panel swaps `GImGui` under its own `g_mu` on the present thread (hook_draw) and the game thread (rs64_panel_feed). The two locks do not
+exclude each other, so with both open, the main thread's filter -> ImGui_ImplSDL2_ProcessEvent could run against our context.
+
+Reading the code settled it before any fix. On macOS the only route to `processDeveloperShortcut(Inspector)` is
+`Application::sdlEventFilter` (the other caller, rt64_application.cpp:566, is the Win32 message filter). It is installed only when
+`appWindow->sdlWindow != nullptr` (rt64_application_window.cpp:392), and our main creates the window and hands RT64 no SDL window.
+Evidence, three lines:
+1. Run log `[RT64] post-setup: sdlWindow=0x0 sdlEventFilterInstalled=0 ... developerMode=0` (CMAKE_BUILD_TYPE=Debug, but
+   _DEBUG is not what decides dev mode here). With `ROGUESQ_HLE_DEV_MODE=1`: developerMode=1, usesWindowMessageFilter=1, still
+   sdlWindow=0x0 and filter 0, and no `[RT64] sdlEventFilter NOW installed` line through a whole e2e run.
+2. F1 reaches OUR `poll_input` (`[input] SDL_KEYDOWN sym=1073741882 (F1) reached PollEvent`), so no filter consumed it.
+3. Window captures before/after F1, after Esc and after the second F1 show no overlay at all.
+So H-race and H-steal cannot happen; H-ok holds trivially. README line 100 already said the F1 overlay does not open on macOS.
+
+Failed instrument (documented dead end): the first version of the F1 arm scored the inspector by a pixel diff between window
+captures (pre vs post F1, baseline = two pre captures 1 s apart). It returned I1 PASS diff=0.89 base=0.013 with NO overlay on
+screen: the intro moved from the LucasArts logo to the next scene between captures, and the 1 s baseline did not span that cut.
+I2 then FAILED for the same reason. Rule: no pixel-diff witness on the animating boot sequence. Replaced by log witnesses.
+
+tools/s7937_panel_e2e.zsh: `env PANEL_F1=1` adds I1 (F1 polled once by us + RT64 filter absent), X1 (40 real HID clicks on inert
+panel cells with F1 pressed: 0 arms, game alive), F2 (a second F1 after the panel closed is also polled). Runs this session:
+- scratch/s7940/f1_fs169_v2: PANEL_ASPECT=16:9 PANEL_FS=1 PANEL_F1=1: 12/12 (N1 I1 K1 D1 N2 C1 C2 S1 R1 X1 K2 F2), alive.
+- scratch/s7940/f1_devmode: same + ROGUESQ_HLE_DEV_MODE=1: 12/12, post-setup developerMode=1 sdlWindow=0x0 filter=0.
+- Control without F1: s7939_panel_fs169 (loop soak, same build, today 07:15): 9/9 alive (folded below).
+Soak fold: 20261125 s7939_panel_fs169 rc=0, 1 arm alive, checks 9/9 fail 0 at 1512x949 16:9 fullscreen.
+Rules out: any F1/F6 interaction on macOS for now. If RT64 is ever given the SDL window (filter installed), H-race becomes live:
+both ImGui users would then need one shared lock (take presentQueue->inspectorMutex in hook_draw and rs64_panel_feed).
+Next: the F6 panel is mouse-only, but the owner plays on a 65" TV with a PS pad; s7941 measures pad-only panel use.

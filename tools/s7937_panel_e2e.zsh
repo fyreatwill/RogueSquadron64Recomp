@@ -13,6 +13,12 @@
 # s7939: env PANEL_ASPECT=<16:9|...> PANEL_FS=<0|1> run the same checks in the owner's high-DPI window / fullscreen
 #   (ASPECT or FULLSCREEN set -> SDL_WINDOW_ALLOW_HIGHDPI, drawable = 2x window points on Retina). Adds check D1:
 #   ImGui DisplaySize == CG window content size in points (H-scale would log drawable pixels instead).
+# s7940: env PANEL_F1=1 presses F1 (RT64 developer inspector) BEFORE F6 and adds checks
+#   I1 F1 reaches OUR PollEvent unconsumed and RT64's SDL filter never installed (no "[RT64] sdlEventFilter NOW installed"):
+#      on macOS that filter (sdlWindow!=null) is the only route to the inspector, so it cannot open (s7940: the pixel-diff
+#      version of this check passed on the animating intro alone with NO overlay drawn - never use pixel diffs here);
+#   X1 40 HID clicks on inert panel cells with F1 pressed arm nothing and the game survives;
+#   F2 a second F1 after the panel closed also reaches PollEvent (nothing grabbed the key in between).
 # Needs: unlocked screen, Accessibility trust for this shell (build/winctl trusted), no other game instance.
 cd "$(git rev-parse --show-toplevel)" || exit 2
 O=${1:-$PWD/scratch/s7937/run}; [[ $O == /* ]] || O=$PWD/$O; rm -rf $O; mkdir -p $O
@@ -40,7 +46,9 @@ read WID BX BY BW BH <<< "$($W find $PID)"
 osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $PID) to true" >/dev/null; sleep 1
 FRONT=$(osascript -e 'tell application "System Events" to get unix id of first process whose frontmost is true')
 [[ $FRONT == $PID ]] || { echo "VOID: game not frontmost (front=$FRONT)"; exit 2; }
-echo "window id=$WID bounds=$BX,$BY ${BW}x$BH mode=$MODE"
+echo "window id=$WID bounds=$BX,$BY ${BW}x$BH mode=$MODE f1=${PANEL_F1:-0}"
+F1=${PANEL_F1:-0}
+f1n() { cnt 'SDL_KEYDOWN sym=1073741882 (F1) reached PollEvent'; }
 # panel rects arrive in window points; content origin = bottom-aligned inside the CG bounds (title bar on top)
 pt() {  # name -> "gx gy" (centre of the logged rect, global screen points)
   local line=$(grep '^\[panel-rect\]' $LOG | tail -1)
@@ -51,6 +59,10 @@ arm0=$(cnt 'capture armed'); cap0=$(cnt 'captured target')
 # N1: panel closed. Click roughly where Bind-A will be (centre-left of window) and press P.
 $W click $PID $((BX+BW/2)) $((BY+BH/2)) $MODE; $W key $PID 35 200; sleep 1.5
 (( $(cnt 'capture armed') == arm0 && $(cnt 'captured target') == cap0 && $(cnt '\[controls-panel\] open') == 0 )) && res N1 PASS || res N1 FAIL
+if (( F1 )); then  # I1: F1 reaches our poll, RT64 filter absent
+  $W key $PID 122 200; waitfor 'F1) reached PollEvent' 1 4; sleep 1
+  ins=$(cnt 'sdlEventFilter NOW installed'); (( $(f1n) == 1 && ins == 0 )) && res I1 PASS "f1_polled=$(f1n) rt64_filter=$ins" || res I1 FAIL "f1_polled=$(f1n) rt64_filter=$ins"
+fi
 # K1: F6 opens
 $W key $PID 97 200
 waitfor '\[controls-panel\] open' 1 5 && waitfor '^\[panel-rect\]' 1 5 && res K1 PASS || res K1 FAIL
@@ -82,11 +94,20 @@ waitfor 'table set (panel reset)' 1 4; sleep 0.5; read SX SY <<< "$(pt save)"; $
 waitfor "\[controls\] Saved to $J" 2 4 && cp $J $O/after_reset.json && \
   python3 -c "import json,sys;d=json.load(open('$O/after_reset.json'));a=d['buttons'].get('A');sys.exit(0 if a and 'key:P' not in a else 1)" \
   && res R1 PASS "$(python3 -c "import json;print('A=',json.load(open('$O/after_reset.json'))['buttons'].get('A'))")" || res R1 FAIL
+if (( F1 )); then  # X1: click storm on inert cells (N64 label column) with both overlays open
+  a0=$(cnt 'capture armed'); read AX AY <<< "$(pt bindA)"
+  for i in {1..40}; do read QX QY <<< "$(python3 -c "print($BX+($AX-$BX)*(0.15+0.25*(($i*7)%10)/10), $AY+($i%5)*3)")"; $W click $PID $QX $QY $MODE; done
+  sleep 1; kill -0 $PID 2>/dev/null && (( $(cnt 'capture armed') == a0 )) && res X1 PASS "armed+$(( $(cnt 'capture armed') - a0 ))" || res X1 FAIL "alive=$(kill -0 $PID 2>/dev/null && echo 1 || echo 0) armed+$(( $(cnt 'capture armed') - a0 ))"
+fi
 # K2: Esc closes
 sleep 0.5; $W key $PID 53 200
 waitfor '\[controls-panel\] closed' 1 4 && res K2 PASS || res K2 FAIL
+if (( F1 )); then  # F2: second F1 after F6 closed
+  $W key $PID 122 200; waitfor 'F1) reached PollEvent' 2 4 && res F2 PASS "f1_polled=$(f1n)" || res F2 FAIL "f1_polled=$(f1n)"
+fi
 sleep 1; kill -0 $PID 2>/dev/null && alive=1 || alive=0
 kill -9 $PID 2>/dev/null
-bad=0; for k in D1 N1 K1 N2 C1 C2 S1 R1 K2; do [[ ${R[$k]} == PASS ]] || bad=$((bad+1)); done
-echo "tag=s7937_panel_e2e mode=$MODE aspect=${PANEL_ASPECT:-retail} fs=${PANEL_FS:-0} win=${BW}x$BH disp=$disp alive=$alive checks=9 fail=$bad"
+KS=(D1 N1 K1 N2 C1 C2 S1 R1 K2); (( F1 )) && KS+=(I1 X1 F2)
+bad=0; for k in $KS; do [[ ${R[$k]} == PASS ]] || bad=$((bad+1)); done
+echo "tag=s7937_panel_e2e mode=$MODE aspect=${PANEL_ASPECT:-retail} fs=${PANEL_FS:-0} win=${BW}x$BH disp=$disp f1=$F1 alive=$alive checks=${#KS} fail=$bad"
 (( bad == 0 && alive == 1 ))
