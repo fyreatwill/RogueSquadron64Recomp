@@ -212650,3 +212650,11 @@ Evidence (two lines): (1) tools/s7955_settings_textfmt.py: real PASS 78/78; plan
 rejected=0", re-exec summary FPS60=1 DRAW_DISTANCE=2 HANGAR_FOV=38 ASPECT=16:9 (game SIGKILLed after 6 s, title only).
 ORIGIN: the writer is the owner's editor (BOM / habitual inline comments); the values are legitimate, our parser was too strict.
 Sweep row S7955_TF added. Rules out: settings-file text encoding as a cause of "my setting did nothing" reports (bar UTF-16, which warns per line).
+
+## Session 7956 (2026-11-25) — S7955_TF gate row was unswept: added to EXTRA_GATES, sweep runs it GREEN
+Unmet contract from the previous iteration: `tools/s7651_gate_sweep.py` left uncommitted. The diff adds `tuple(S7955_TF)` to
+EXTRA_GATES. Cause: s7955 registered `s7955_settings_textfmt.py` in ARGS, but discovery only picks up `s7*_census.py` names plus
+EXTRA_GATES, so the row was never run; the s7932 `unswept()` check reported it (loading HEAD's sweep: unswept =
+['s7955_settings_textfmt.py']; working tree: []). Verified: the gate run bare matches its row regex (REAL PASS fail=0, CONTROL
+mutant=FAIL fail=9, VERDICT CLOSED); `python3 tools/s7651_gate_sweep.py --only 's795[45]'` -> controls PASS (planted unswept row
+caught), unswept real 0, gates 2 GREEN. Rules out: a TF regression hidden behind the missing row. No game run this session.

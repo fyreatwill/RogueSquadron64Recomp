@@ -335,6 +335,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    split). rs64_settings_parse_line now strips the BOM and sh-style comments (`#` after whitespace, outside quotes; `a#b` stays). CRLF and no
    trailing newline were already fine; controls.json (nlohmann) already skips a BOM and CR. `python3 tools/s7955_settings_textfmt.py`
    (planted mutant fails 9/78), sweep row S7955_TF; e2e: planted BOM+CRLF+comment file applied 4/4, rejected=0 in the real binary.
+   s7956: the S7955_TF row was in ARGS but not EXTRA_GATES (name not *_census.py), so the sweep never ran it; the s7932
+   unswept-row check caught it (exit 1). Added to EXTRA_GATES; `--only 's795[45]'` -> 2 GREEN, unswept real 0.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
