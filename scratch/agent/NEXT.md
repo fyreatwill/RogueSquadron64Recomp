@@ -1,13 +1,10 @@
-# NEXT (s7947)
+# NEXT (s7948)
 HYPOTHESIS-ID: owner-handoff-regression
-s7946: F6 panel qualified at 4:3 / 16:9 fs / 21:9 windowed (tools/s7946_panel_witness_all.zsh). Pad thread done for the agent.
-0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines.
-1. Unit: whole owner-handoff regression after the s7941-s7946 pad/panel additions (last full pass ~s7762-s7765):
-     python3 tools/s7762_owner_doc_check.py --controls
-     python3 tools/s7763_owner_cmd_check.py --control      (expect 11/11 MATCH)
-     zsh tools/s7764_inflight_toggles.zsh                    (expect 7/7)
-     python3 tools/s7765_controls_dump_check.py              (expect 12/12)
-   Hypotheses: H-ok (all match), H-drift (a queue/opt-in command or controls dump changed with the pad work -> fix doc or code),
-   H-gate-stale (a checker's expectation predates s7941 pad rows -> update checker with a planted control).
-   Each FAIL: name which commit changed the behaviour, fix, re-run that gate.
-   If all pass: take the next agent-testable CURRENT-TRUTH Next-steps item; everything else waits on the owner.
+s7947: handoff regression 4/4 PASS after the pad/panel work; wrapper tools/s7947_owner_handoff_all.zsh (planted-fail control).
+0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines, esp. s7947_handoff_fast
+   (expect handoff_pass=1 control_fail_seen=1; a 0 in either = wrapper or gate regression -> name the commit, fix).
+1. Every Next-steps item is closed or waiting on the owner. Agent-testable options, pick ONE:
+   a. `python3 tools/s7651_gate_sweep.py` (--jobs 2): confirm 0 RED / 0 HOLLOW after s7941-s7947 (last full sweep predates the pad work).
+      Hypotheses: H-green / H-red (a pad-work file tripped a census such as s7613 HP statics -> fix) / H-hollow.
+   b. If green: take ladder 3c's first non-closed rung that does not need the owner; otherwise BLOCKED is NOT allowed (3c) —
+      write the owner-waiting list into the session entry and do an M3 idiom-class audit instead.

@@ -212437,3 +212437,23 @@ control (inline, 5 planted outputs): VERDICT FAIL, fail=1, alive=0, NO RESULT ->
 Doc fix: README pad-only paragraph lacked s7943's L1 = Clear row / R3 hold 1 s = Reset (OWNER-OPT-INS and the panel's own help
 line had it); added. `tools/s7762_owner_doc_check.py --controls`: control PASS, 0 missing/stale.
 ORIGIN: no mitigation added; the flagged words (Reset, Clear) are the panel's UI text. Changes are a test wrapper and README text.
+
+## Session 7947 (2026-11-25) — whole owner-handoff regression after the s7941-s7946 pad/panel work: 4/4 gates PASS (H-ok); one-command wrapper tools/s7947_owner_handoff_all.zsh with planted-fail control
+
+HYPOTHESIS-ID: owner-handoff-regression. crash_reports --since 2026-11-25: new=0. No new SOAK-RESULTS lines since s7940's fold.
+Hypotheses: H-ok / H-drift (pad work changed a queue/opt-in command or the controls dump) / H-gate-stale (checker predates the s7941 pad rows).
+Ran, sequentially (one game at a time):
+- `python3 tools/s7762_owner_doc_check.py --controls`: CONTROL PASS (planted missing path + stale name both caught); OWNER-REVIEW-QUEUE
+  names=22 / OWNER-OPT-INS names=114, paths_missing=0 names_stale=0 on both.
+- `python3 tools/s7765_controls_dump_check.py`: 12/12 PASS (no-file defaults == old code, 30 button sources; override loaded;
+  bad file rejected -> D0). The pad panel rows did not change the defaults dump.
+- `python3 tools/s7763_owner_cmd_check.py --control`: commands=12 (11 queue + CTL) mismatch=0 noecho=0.
+- `zsh tools/s7764_inflight_toggles.zsh` (L1 dd4 21:9, def/off/tog 150 s + b0/b1 70 s): 5/5 arms alive, crashlines 0, vi_stalls30s 0,
+  max_vihold 354-405 ms; 7/7 toggles control=PASS H-works (RUMBLE=0 sdl_on 18->0; SCALE .5 vpad hi 24583->12293; W_CLAMP mixed-sign
+  2721/2394 -> 0/0, tog 0/2526; SKYFILL 91 lines -> 0, tog 46 odd-only; DD_FARMAX 32767 -> 0; STICK_GATE full_max 85 -> 127; B40 00 -> 01).
+Result: H-ok. H-drift and H-gate-stale refuted for these 4 gates (each gate's own planted control passed in the same run).
+Change: tools/s7947_owner_handoff_all.zsh runs all four gates and needs each gate's own pass line (and 0 missing/stale for s7762);
+SKIP_INFLIGHT=1 skips the 12 min s7764 run. Control: `S7947_PLANT=1` adds a gate that must fail -> measured `plant_fail FAIL`,
+`VERDICT FAIL fails=1`, rc=1, with the 3 real gates PASS in the same run. Queued scratch/agent/soak_queue/s7947_handoff_fast.sh
+(fast arm + planted control) as a loop-run second witness.
+Rules out: pad/panel work (s7941-s7946) regressing any owner-queue command, opt-in path/name, in-flight toggle, or the controls dump.
