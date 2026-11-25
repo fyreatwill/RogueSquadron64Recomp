@@ -13,7 +13,7 @@
 //   winctl find <pid>          -> "<windowid> <x> <y> <w> <h>" for the largest
 //                                 on-screen window owned by pid (exit 1 if none)
 //   winctl activate <pid>      -> bring that app forward
-//   winctl key <pid> <keycode> -> post key down/up straight to that process
+//   winctl key <pid> <keycode> [hold-ms] [mods] -> post key down/up straight to that process (s7938: mods=cmd,ctrl,alt,shift)
 //                                 (s7937: on macOS 26 SDL only sees them while the game is the ACTIVE app,
 //                                 and `activate` below is a no-op since macOS 14: raise it via System Events;
 //                                 WINCTL_KEY_HID=1: HID tap, front app)
@@ -74,18 +74,43 @@ static int findWindow(pid_t pid, CGWindowID *outId, CGRect *outRect) {
 }
 
 static int g_key_hid = 0;  // s7937: WINCTL_KEY_HID=1 posts keys at the HID tap (front app) instead of to the pid
-static void postKey(pid_t pid, CGKeyCode code, useconds_t holdUs) {
+static void postEv(pid_t pid, CGEventRef e) {
+    if (!e) return;
+    if (g_key_hid) CGEventPost(kCGHIDEventTap, e); else CGEventPostToPid(pid, e);
+}
+// s7938: mods = comma list of cmd,ctrl,alt,shift (or NULL). Like a real keyboard, each modifier key is pressed
+// first (its own flags-changed event), the main key carries the accumulated flags, then modifiers release in reverse.
+static void postKey(pid_t pid, CGKeyCode code, useconds_t holdUs, const char *mods) {
     CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
+    struct { const char *n; CGKeyCode kc; CGEventFlags f; } M[4] = {
+        {"cmd", 55, kCGEventFlagMaskCommand}, {"ctrl", 59, kCGEventFlagMaskControl},
+        {"alt", 58, kCGEventFlagMaskAlternate}, {"shift", 56, kCGEventFlagMaskShift}};
+    int use[4] = {0, 0, 0, 0}, nm = 0;
+    CGEventFlags flags = 0;
+    for (int i = 0; mods && i < 4; i++) if (strstr(mods, M[i].n)) { use[i] = 1; nm++; }
+    for (int i = 0; i < 4; i++) if (use[i]) {
+        flags |= M[i].f;
+        CGEventRef d = CGEventCreateKeyboardEvent(src, M[i].kc, true);
+        if (d) { CGEventSetFlags(d, flags); postEv(pid, d); CFRelease(d); }
+        usleep(40000);
+    }
     CGEventRef down = CGEventCreateKeyboardEvent(src, code, true);
     CGEventRef up = CGEventCreateKeyboardEvent(src, code, false);
+    if (nm) { if (down) CGEventSetFlags(down, flags); if (up) CGEventSetFlags(up, flags); }
     // Posting to the pid rather than the session means the window does not have
     // to be frontmost, so a failed raise cannot silently swallow the input.
-    if (g_key_hid) CGEventPost(kCGHIDEventTap, down); else CGEventPostToPid(pid, down);
+    postEv(pid, down);
     // The game samples SDL_GetKeyboardState once per frame, and the hangar runs
     // at roughly 10 fps, so a short hold can land entirely between two polls and
     // the press is simply never seen. Hold longer than one frame at that rate.
     usleep(holdUs);
-    if (g_key_hid) CGEventPost(kCGHIDEventTap, up); else CGEventPostToPid(pid, up);
+    postEv(pid, up);
+    for (int i = 3; i >= 0; i--) if (use[i]) {
+        flags &= ~M[i].f;
+        CGEventRef u = CGEventCreateKeyboardEvent(src, M[i].kc, false);
+        if (u) { CGEventSetFlags(u, flags); postEv(pid, u); CFRelease(u); }
+        usleep(40000);
+    }
     if (down) CFRelease(down);
     if (up) CFRelease(up);
     if (src) CFRelease(src);
@@ -189,12 +214,12 @@ int main(int argc, const char **argv) {
 
         if (strcmp(cmd, "key") == 0) {
             if (argc < 4) {
-                fprintf(stderr, "usage: winctl key <pid> <keycode> [hold-ms]\n");
+                fprintf(stderr, "usage: winctl key <pid> <keycode> [hold-ms] [cmd,ctrl,alt,shift]\n");
                 return 2;
             }
             const int holdMs = (argc >= 5) ? atoi(argv[4]) : 150;
             { const char *h = getenv("WINCTL_KEY_HID"); g_key_hid = h && *h == '1'; }
-            postKey(pid, (CGKeyCode)atoi(argv[3]), (useconds_t)(holdMs * 1000));
+            postKey(pid, (CGKeyCode)atoi(argv[3]), (useconds_t)(holdMs * 1000), argc >= 6 ? argv[5] : NULL);
             return 0;
         }
 

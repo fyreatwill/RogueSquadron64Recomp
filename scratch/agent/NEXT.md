@@ -1,19 +1,13 @@
-# NEXT (s7938)
-HYPOTHESIS-ID: owner-hotkeys-real-events
-s7937 closed the F6 panel's interactive gap with REAL OS events (tools/s7937_panel_e2e.zsh, 8/8 x2, negative controls N1/N2,
-pid-click arm = failing control). Same method, next untested owner-facing input: the window hotkeys.
-0. `python3 tools/crash_reports.py --since 2026-11-25` first; fold new SOAK-RESULTS lines.
-1. Unit: README documents **F11** / **Cmd+Ctrl+F** / Alt+Enter fullscreen toggle (main.cpp ~14263) and **F9** (audio device),
-   F1-F4, F12. Every fullscreen proof so far (s6688, s6888, s7670) used ROGUESQ_FS_TEST_TOGGLE_S = SDL_PushEvent of a synthetic
-   F11, which bypasses macOS. Hypotheses:
-   H-ok: real F11 / Cmd+Ctrl+F / Alt+Enter each reach the handler and toggle once ([g1f] log + window bounds change).
-   H-os-eats: macOS consumes the key first (F11 = Show Desktop / Mission Control by default; Cmd+Ctrl+F = Cocoa
-     toggleFullScreen: menu item, which may toggle native fullscreen itself -> double toggle or a different (Space) fullscreen).
-   H-double: SDL sees both the Cocoa menu action and the keydown -> toggles twice (net no change).
-   Discriminator, one script (copy the s7937 raise/VOID logic: System Events frontmost, CLICK not needed): post each chord with
-   real CGEvents (extend winctl `key` with a modifier-flags arg: cmd/ctrl/alt), record per chord the [g1f] toggle log count,
-   winctl find bounds before/after (fullscreen = display size), and whether the frontmost app stayed the game.
-   Positive control: ROGUESQ_FS_TEST_TOGGLE_S in the same run (synthetic toggle must show the same bounds change);
-   negative control: a non-hotkey (F7) changes nothing.
-   If H-os-eats/H-double: fix in main.cpp (e.g. handle the Cocoa fullscreen notification, or drop the chord the OS owns) and
-   correct README/OWNER-OPT-INS so the owner is told a key that works.
+# NEXT (s7939)
+HYPOTHESIS-ID: owner-panel-fullscreen-scale
+s7937 verified F6 panel clicks with real HID events only at a 640x480 window (fb == win, 1x). The owner plays FULLSCREEN
+(ROGUESQ_FULLSCREEN=1, ASPECT=16:9) on Retina / TV displays, where drawable != window points. s7938 confirmed Cmd+Ctrl+F
+toggles fullscreen with real keys (tools/s7938_hotkeys_e2e.zsh).
+0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines.
+1. Unit: run tools/s7937_panel_e2e.zsh logic with ROGUESQ_FULLSCREEN=1 (and a second arm ROGUESQ_RETINA=1), CLICK_MODE=hid.
+   Hypotheses: H-ok (clicks land: ImGui uses window points, [panel-rect] disp == window points), H-scale (ImGui display size is
+   drawable pixels -> click lands at 2x offset, C1 FAIL), H-offset (fullscreen has no title bar but the script's
+   bounds.h - disp.h offset assumes one -> vertical miss).
+   Discriminator: per arm, [panel-rect] disp vs `winctl find` bounds and C1/S1 pass/fail; the windowed arm in the same session is
+   the positive control (must stay 8/8). If H-scale/H-offset is a harness bug, fix pt(); if the panel itself mis-maps mouse at
+   Retina, fix rs64_controls_panel.cpp.

@@ -212200,3 +212200,35 @@ Hazard datum: a harness that relies on `winctl key` without raising the game dro
 Full sweep after the change (`python3 tools/s7651_gate_sweep.py`, scratch/s7937/sweep.log, wall 1669 s): 258 gates, GREEN 254, REPORT 2,
 NEEDS-ARGS 2, RED 0 (the new panel statics are bool/std::string, no HP/SN census row needed).
 Next: NEXT.md owner-hotkeys-real-events (F11 / Cmd+Ctrl+F / Alt+Enter with real CGEvents; macOS may own F11 and Cmd+Ctrl+F).
+
+## Session 7938 (2026-11-25) — fullscreen hotkeys with REAL key events: Cmd+Ctrl+F and Alt+Enter toggle once on both delivery paths; real F11 is eaten by macOS Show Desktop, docs corrected
+
+Triage: crash_reports --since 2026-11-25 new=0; no new SOAK-RESULTS lines. Unit from NEXT.md (owner-hotkeys-real-events): every
+earlier fullscreen proof (s6688, s6888, s7670) used ROGUESQ_FS_TEST_TOGGLE_S = SDL_PushEvent of a synthetic F11, bypassing macOS.
+Hypotheses: H-ok (each documented chord toggles once), H-os-eats (macOS takes the key first), H-double (Cocoa menu action + keydown
+toggle twice under Cmd+Ctrl+F).
+Changes:
+- tools/winctl.m: `key <pid> <keycode> [hold-ms] [cmd,ctrl,alt,shift]` posts each modifier key down first (flags accumulate), the
+  key with the flags, then modifiers up in reverse, like a real keyboard. Rebuilt build/winctl.
+- NEW tools/s7938_hotkeys_e2e.zsh: windowed launch with ROGUESQ_FS_TEST_TOGGLE_S=6,10 (P0 positive control: synthetic on/off and
+  bounds 640x512 -> 1512x949 -> back), N0 F7 negative control on pid + HID paths, then F11 / Alt+Enter / Cmd+Ctrl+F each pressed
+  twice on the pid path (CGEventPostToPid) and the HID path (kCGHIDEventTap, through WindowServer like a real keyboard), recording
+  [g1f] on/off deltas, [keywitness] keydowns, resize count, CG bounds, frontmost pid; then F6 (+Esc) and F9 on HID. F9 under
+  NO_SAVE_WRITE does not save; build/audio_device.txt is still backed up and restored with cmp (restored, mtime Oct 19 unchanged).
+  `tag=` line; F11_hid is asserted as OS behaviour (F11_hid_os_eats), so the script flips if the owner disables the shortcut.
+- README Hotkeys + OWNER-OPT-INS "Window fills your screen": lead with Cmd+Ctrl+F / Option+Enter; F11 only with macOS Show Desktop
+  turned off (System Settings > Keyboard > Keyboard Shortcuts > Mission Control). No code change in main.cpp: an app cannot see a
+  WindowServer symbolic hotkey.
+Runs (host idle 2251 s, screen unlocked; run 1 discarded: `for path in` clobbered zsh $PATH, script bug, fixed to `dp`):
+- run 2 and run 3 (scratch/s7938/run, identical): P0 PASS; N0 pid/hid PASS (F7 keydown seen, no toggle); F11 pid, Alt+Enter pid/hid,
+  Cmd+Ctrl+F pid/hid all PASS: +1 [g1f] on, +1 keydown, +1 resize, bounds 1512x949, then +1 off and original bounds, game frontmost.
+  F11 HID: 0 [g1f], 0 keydowns, 0 resizes, window bounds 436,-467 (pushed off the top = Show Desktop) and back on the second press.
+  F6 HID open+close PASS, F9 HID PASS ([audio-route] F9 -> AirPods, NOT saved).
+- Second line for F11: `defaults export com.apple.symbolichotkeys` lists no F-key overrides, so the macOS default (Show Desktop =
+  F11, enabled) is in force on this Mac; consistent with the window-slide signature.
+Verdict: H-ok for Cmd+Ctrl+F and Alt+Enter (H-double refuted: exactly one toggle, the Cocoa menu does not double-fire);
+H-os-eats for F11 only. Rules out: the documented primary chords being broken by macOS. Not covered: a physical keyboard press
+(CG HID tap is the nearest stand-in), the owner's TV/ultrawide display, fn-key setting variants.
+- run 4 (final script, F11 HID asserted as OS-eaten): 11/11 PASS, alive, rc 0, audio_device.txt restored (cmp). Owner doc gates
+  after the README/OWNER-OPT-INS edits: s7762_owner_doc_check --controls CONTROL PASS, 0 missing/stale; s7763_owner_cmd_check
+  --control commands=12 mismatch=0.

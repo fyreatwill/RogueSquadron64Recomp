@@ -97,7 +97,7 @@ Rumble: the game's Rumble Pak effects play on the pad (on by default; `ROGUESQ_R
 
 Rebinding: press **F6** in game to open the Controls panel. Click **Bind** next to an N64 button and press the pad button, trigger, stick direction or key you want (Esc cancels); **Add** keeps the existing inputs and adds one; **Clear** unbinds; **Reset to defaults** restores the table above; **Save** writes `controls.json` beside the game (loaded at the next start). The game receives no input while the panel is open; F6 or Esc closes it. You can also edit `controls.json` by hand (format in `docs/OWNER-OPT-INS.md`).
 
-Hotkeys: **F6** Controls panel, **F9** cycles the audio output device (remembered in `audio_device.txt`), **F11** or **Cmd+Ctrl+F** toggles fullscreen. (RT64's F1 developer overlay has no Metal backend, so it does not open on macOS.)
+Hotkeys: **F6** Controls panel, **F9** cycles the audio output device (remembered in `audio_device.txt`), **Cmd+Ctrl+F** or **Option+Enter** (Alt+Enter) toggles fullscreen. (**F11** is also bound, but macOS gives F11 to its Show Desktop shortcut first, so it only works if you turn that off in System Settings > Keyboard > Keyboard Shortcuts > Mission Control; tested with real key events, s7938.) (RT64's F1 developer overlay has no Metal backend, so it does not open on macOS.)
 
 ### Optional settings
 

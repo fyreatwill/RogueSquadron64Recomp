@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7928 (2026-11-24).
+Compact operational handoff, as of Session 7938 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -282,7 +282,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
     s7937: F6 panel driven by real CGEvents (keys need the game ACTIVE: raise via System Events, `winctl activate` is a no-op since
-    macOS 14; pid-posted CLICKS never reach SDL, only HID-tap clicks do). Next (NEXT.md): F11 / Cmd+Ctrl+F / Alt+Enter with real keys.
+    macOS 14; pid-posted CLICKS never reach SDL, only HID-tap clicks do). s7938 (`zsh tools/s7938_hotkeys_e2e.zsh`, 2 runs): real Cmd+Ctrl+F and Alt+Enter toggle fullscreen exactly once on pid AND
+    HID paths (no double toggle); F6/F9 work on HID; real-keyboard F11 never reaches the game (macOS Show Desktop owns it: window
+    slides to y=-467 and back, 0 keydowns) -> README/OWNER-OPT-INS now lead with Cmd+Ctrl+F / Option+Enter. Synthetic F11 still
+    works (positive control). Next (NEXT.md): F6 panel clicks at fullscreen/Retina scale.
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
 12. **G3 retail flight det sweep (s7832-s7890): CLOSED.** 19/19 missions render-exact on det ticks (m1-m16, b16, b17 pre-fork,
