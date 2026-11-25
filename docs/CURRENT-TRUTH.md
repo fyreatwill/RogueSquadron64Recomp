@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7918 (2026-11-24).
+Compact operational handoff, as of Session 7919 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -205,6 +205,12 @@ Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into o
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 (s7897: any new static pointer in src/ needs an s7613 HP census row, class base/host/gated/..., or the exit gate goes RED.)
+0a. **G5c freeze-gap regression check (s7919): no regression from the s7840-s7917 runtime edits** (DET_CLOCK/CLOCKLOG hooks, default off).
+   Owner recipe dd4 FPS60 16:9 fullscreen L1 300 s, no logging: alive, 0 crash, max present gap 148 ms, 0 gaps >=250 ms; VI-origin
+   holds >=250 ms only at t=4.8/10.7/11.0(17.3 s)/43.4/58.6/66.8 s (boot/menu route, flight keys from 95 s). Two lines: same
+   hold times to 0.1 s in the pre-edit s7806 L1/L4 rings. Tool `python3 tools/s7919_gap_check.py <ring>` (planted 300 ms gap + hold
+   controls, exit 3 if blind). Open lead: s7806 L4 had 3 IN-FLIGHT VI holds 273-329 ms at 245-260 s (picture frozen >250 ms
+   outside a load = the G5c bar) -> next unit places them (cutscene/scripted vs host stall).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =
    f(global rand stream position) = host-paced frame count, timing class, no port value to fix (s7912-s7917; DET_CLOCK=1/2 and

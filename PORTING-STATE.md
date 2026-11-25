@@ -211712,3 +211712,19 @@ Step 0 triggered (CURRENT-TRUTH 60273 B > 60000). No experiments.
 - `python3 tools/s7651_gate_sweep.py --jobs 2 --new-red-vs tools/gate_sweep_allowed_red.txt`: controls PASS, 253 gates
   {GREEN 237, REPORT 2, NEEDS-ARGS 7, RED 7}, new RED 0 (the 7 RED are the allow-listed s7433-s7438/s7441/s7723 pruned captures).
 Rules out nothing; the zst lint (s7804/s7848) reads both docs, so the citation move is gate-neutral.
+
+## Session 7919 (2026-11-24) — G5c freeze-gap regression check on the owner recipe: no regression since the s7840-s7917 runtime edits; new tools/s7919_gap_check.py with planted gap+hold controls
+
+What ran: in-session, host idle 34 min, screen unlocked, binary built 17:13 after the last librecomp edit (DET_CLOCK unset = default).
+`env R=scratch/s7919_g5c HOLD=300 ALLOW_SLOW=1 ARMS="4:q4:" zsh tools/g1e_owner_quiet_arms.zsh` (owner recipe dd4 FPS60 16:9
+fullscreen, L1, no recipe logging, present ring).
+Result: tag=g1eq_q4 alive_at_end=1 crashlines=0 vi_stalls30s=0 max_gap_ms=148 rows=17922 level_ok=1.
+New tool tools/s7919_gap_check.py: lists present gaps and VI-origin holds >= 250 ms (the G5c bar) with their time from the first
+ring row; positive controls in the same run on the same rows: a planted 300 ms present gap and a planted 300 ms VI hold must both
+be found (both True here; exit 3 if blind).
+s7919 ring: 0 gaps >= 250 ms; 6 holds >= 250 ms, all at t=4.8, 10.7, 11.0 (17302 ms), 43.4, 58.6, 66.8 s = boot/menu route (flight
+keys start at t=95 s). Second line of evidence: the pre-edit s7806 L1 ring shows the SAME six holds at the same times to 0.1 s
+(17285 ms for the long one); s7806 L4 the same six plus three IN-FLIGHT holds 273/329/311 ms at 245.5/257.1/259.8 s.
+Rules out: H-regress (a gap > 250 ms or a VI stall introduced by DET_CLOCK/CLOCKLOG hooks). H-clean holds for L1.
+Open: the L4 in-flight holds just over 250 ms are a G5c-bar datum (picture frozen outside a load) not yet placed: scripted cutscene
+/ pause vs host stall. Next unit.
