@@ -820,6 +820,10 @@ scratch/s7764/runs/log_tog.txt
 scratch/s7764/runs/ring_def.txt
 scratch/s7764/runs/ring_off.txt
 scratch/s7764/runs/ring_tog.txt
+scratch/s7765/bad.log
+scratch/s7765/def.log
+scratch/s7765/ovr.log
+scratch/s7765/rt.log
 scratch/s7852/p3_rand.txt
 scratch/s7852/r2/oracle.log
 scratch/s7857/v14/r1/oracle.log

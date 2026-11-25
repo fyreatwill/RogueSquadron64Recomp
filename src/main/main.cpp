@@ -13013,12 +13013,155 @@ static void rs64_bind_panel_test_step(long polls, long stable, long mism) {
         close_phase("end");
     }
 }
+// s7941 owner-panel-pad-nav: the F6 panel without a mouse or keyboard (owner plays on a TV with a PS pad).
+// Closed: touchpad click (only while the touchpad is not bound to anything) or Share/Back+Start opens it.
+// Open with no capture armed: D-pad up/down = row cursor, Cross/A = Bind, Square/X = Add, Triangle/Y = Save,
+// Circle/B (or the open trigger again) = close. With a capture armed nothing here acts: the capture takes the next pad
+// press, so any button stays bindable. Every pad button held when the panel opens or closes is masked from the game until
+// released, so the closing Circle never reaches it as C-Down. Runs before rs64_bind_capture_step, so a press that ends a
+// capture cannot also act here (edges are tracked every poll). ROGUESQ_PANEL_PAD=0 turns it off.
+static long g_nav_saves = 0;
+static bool g_nav_supp[SDL_CONTROLLER_BUTTON_MAX];
+static void rs64_panel_pad_step(rs64_input_snapshot* s) {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_PANEL_PAD"); return !(e && *e == '0'); }();
+    static bool prev[SDL_CONTROLLER_BUTTON_MAX];
+    if (!on) return;
+    bool now[SDL_CONTROLLER_BUTTON_MAX];
+    for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++) now[i] = s->have_pad && s->pad_btn[i];
+    auto edge = [&](int b) { return now[b] && !prev[b]; };
+    auto tp_bound = [] {
+        const rs64_bind_table t = rs64_bind_live_get();
+        for (const auto& e : t.buttons) if (e.src.kind == RS64_SRC_PAD_BUTTON && e.src.id == SDL_CONTROLLER_BUTTON_TOUCHPAD) return true;
+        return false;
+    };
+    const bool chord = now[SDL_CONTROLLER_BUTTON_BACK] && now[SDL_CONTROLLER_BUTTON_START] &&
+                       (edge(SDL_CONTROLLER_BUTTON_BACK) || edge(SDL_CONTROLLER_BUTTON_START));
+    const bool tp = edge(SDL_CONTROLLER_BUTTON_TOUCHPAD) && !tp_bound();
+    auto mask_held = [&] { for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++) if (now[i]) g_nav_supp[i] = true; };
+    if (!rs64_panel_is_open()) {
+        if (tp || chord) { rs64_panel_set_open(true); mask_held(); fprintf(stderr, "[panel-pad] open by=%s\n", tp ? "touchpad" : "back+start"); }
+    } else if (rs64_bind_capture_target() == 0) {
+        if (edge(SDL_CONTROLLER_BUTTON_DPAD_DOWN)) rs64_panel_pad_move(+1);
+        if (edge(SDL_CONTROLLER_BUTTON_DPAD_UP)) rs64_panel_pad_move(-1);
+        if (edge(SDL_CONTROLLER_BUTTON_DPAD_DOWN) || edge(SDL_CONTROLLER_BUTTON_DPAD_UP))
+            fprintf(stderr, "[panel-pad] row=%d target=%d\n", rs64_panel_pad_row(), rs64_panel_row_target(rs64_panel_pad_row()));
+        const int tg = rs64_panel_row_target(rs64_panel_pad_row());
+        const bool bind = edge(SDL_CONTROLLER_BUTTON_A), add = !bind && edge(SDL_CONTROLLER_BUTTON_X);
+        if (bind || add) {
+            if (tg < 0) { rs64_panel_set_msg("Stick-direction rows take keyboard keys only: bind them with the keyboard."); fprintf(stderr, "[panel-pad] refused keys-only row target=%d\n", tg); }
+            else { rs64_bind_capture_arm(tg, add); fprintf(stderr, "[panel-pad] %s target=%d\n", add ? "add" : "bind", tg); }
+        } else if (edge(SDL_CONTROLLER_BUTTON_Y)) {
+            std::string m; rs64_bind_save(&m); rs64_panel_set_msg(m); g_nav_saves++;
+            fprintf(stderr, "[panel-pad] save n=%ld\n", g_nav_saves);
+        } else if (edge(SDL_CONTROLLER_BUTTON_B) || tp || chord) {
+            rs64_panel_set_open(false); mask_held();
+            fprintf(stderr, "[panel-pad] close by=%s\n", tp ? "touchpad" : chord ? "back+start" : "circle");
+        }
+    }
+    memcpy(prev, now, sizeof prev);
+    for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++) {
+        if (!now[i]) g_nav_supp[i] = false;
+        else if (g_nav_supp[i]) s->pad_btn[i] = false;
+    }
+}
+// ROGUESQ_PAD_NAV_TEST=1: a virtual pad replaces the real one and presses a fixed script, checking the panel state and the
+// N64 buttons the game gets (after the panel gate) per step. Controls in the same run: Cross with the panel closed must
+// reach the game as N64 A and arm nothing; Circle pressed again after the masked closing press must reach it as C-Down.
+static void rs64_pad_nav_test(uint16_t game_btn) {
+    static const bool on = rs64_bind_flag("ROGUESQ_PAD_NAV_TEST");
+    if (!on) return;
+    static SDL_Joystick* vp = nullptr; static bool attached = false; static long poll = 0; static int checks = 0, fails = 0;
+    static bool done = false;
+    if (done) return;
+    if (!attached) {
+        attached = true;
+        SDL_VirtualJoystickDesc d; SDL_zero(d);
+        d.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION; d.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+        d.naxes = SDL_CONTROLLER_AXIS_MAX; d.nbuttons = SDL_CONTROLLER_BUTTON_MAX; d.name = "RS64 pad-nav test pad";
+        const int idx = SDL_JoystickAttachVirtualEx(&d);
+        if (controller) { SDL_GameControllerClose(controller); controller = nullptr; }
+        if (idx >= 0) controller = SDL_GameControllerOpen(idx);
+        vp = controller ? SDL_GameControllerGetJoystick(controller) : nullptr;
+        fprintf(stderr, "[pad-nav-test] vpad idx=%d open=%d\n", idx, controller ? 1 : 0);
+        if (!vp) { done = true; fprintf(stderr, "[pad-nav-test] checks=0 fail=1 (no virtual pad)\n"); return; }
+    }
+    // Script: each entry = buttons held for `n` polls, then checked on its last poll (the step after the press settles).
+    enum { T = SDL_CONTROLLER_BUTTON_TOUCHPAD };
+    struct St { std::vector<int> btns; int n; const char* what; };
+    static const std::vector<St> sc = {
+        {{}, 60, "settle"},
+        {{SDL_CONTROLLER_BUTTON_A}, 8, "closed_A"}, {{}, 8, "closed_idle"},
+        {{T}, 8, "open_touchpad"}, {{}, 8, "open_idle"},
+        {{SDL_CONTROLLER_BUTTON_DPAD_DOWN}, 8, "down"}, {{}, 8, "down_idle"},
+        {{SDL_CONTROLLER_BUTTON_A}, 8, "bind_B"}, {{}, 8, "bind_idle"},
+        {{SDL_CONTROLLER_BUTTON_Y}, 8, "capture_Y"}, {{}, 8, "capture_idle"},
+        {{SDL_CONTROLLER_BUTTON_Y}, 8, "save"}, {{}, 8, "save_idle"},
+        {{SDL_CONTROLLER_BUTTON_B}, 40, "close_circle_held"}, {{}, 8, "close_idle"},
+        {{SDL_CONTROLLER_BUTTON_B}, 8, "circle_again"}, {{}, 8, "circle_idle"},
+        {{SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_START}, 8, "open_chord"}, {{}, 8, "chord_idle"},
+        {{SDL_CONTROLLER_BUTTON_DPAD_UP}, 8, "up"}, {{}, 8, "up_idle"},
+        {{SDL_CONTROLLER_BUTTON_DPAD_UP}, 8, "up_wrap"}, {{}, 8, "wrap_idle"},
+        {{SDL_CONTROLLER_BUTTON_A}, 8, "keys_row_refused"}, {{}, 8, "refused_idle"},
+        {{SDL_CONTROLLER_BUTTON_DPAD_DOWN}, 8, "down_wrap"}, {{}, 8, "down_wrap_idle"},
+        {{SDL_CONTROLLER_BUTTON_A}, 8, "bind_A"}, {{}, 8, "bind_A_idle"},
+        {{SDL_CONTROLLER_BUTTON_B}, 8, "capture_circle"}, {{}, 8, "capture_circle_idle"},
+        {{SDL_CONTROLLER_BUTTON_B}, 8, "close_circle"}, {{}, 8, "end"},
+    };
+    static size_t si = 0; static int in = 0;
+    auto chk = [&](const char* name, bool ok, const char* detail) {
+        checks++; if (!ok) fails++;
+        fprintf(stderr, "[pad-nav-test] check %s=%s %s\n", name, ok ? "PASS" : "FAIL", detail);
+    };
+    poll++;
+    if (in == sc[si].n - 1) {  // last poll of the step: check what the game got this poll
+        char d[300];
+        const bool open = rs64_panel_is_open(); const int cap = rs64_bind_capture_target(); const int row = rs64_panel_pad_row();
+        snprintf(d, sizeof d, "raw=%d/%d joyraw=%d same=%d poll=%ld open=%d cap=%d row=%d game_btn=%04X saves=%ld last=%s",
+                 controller ? (int)SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A) : -1,
+                 controller ? (int)SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_B) : -1,
+                 vp ? (int)SDL_JoystickGetButton(vp, 0) : -1, controller && SDL_GameControllerGetJoystick(controller) == vp ? 1 : 0,
+                 poll, open, cap, row, game_btn, g_nav_saves,
+                 rs64_bind_capture_last().c_str());
+        const std::string w = sc[si].what;
+        if (w == "closed_A") chk("closed_A_reaches_game", !open && cap == 0 && (game_btn & RS64_N64_A), d);
+        else if (w == "open_touchpad") chk("touchpad_opens", open && game_btn == 0, d);
+        else if (w == "down") chk("dpad_moves_row", open && row == 1 && game_btn == 0, d);
+        else if (w == "bind_B") chk("cross_arms_B", cap == RS64_N64_B, d);
+        else if (w == "capture_Y") chk("Y_captured_not_saved", cap == 0 && g_nav_saves == 0 && rs64_bind_capture_last() == "pad:y", d);
+        else if (w == "save") chk("triangle_saves", open && g_nav_saves == 1, d);
+        else if (w == "close_circle_held") chk("circle_closes_masked", !open && !(game_btn & RS64_N64_CD), d);
+        else if (w == "circle_again") chk("circle_reaches_game_after_release", !open && (game_btn & RS64_N64_CD), d);
+        else if (w == "open_chord") chk("chord_opens", open && game_btn == 0, d);
+        else if (w == "up") chk("up_moves_row", open && row == 0, d);
+        else if (w == "up_wrap") chk("up_wraps_to_keys_row", open && row == rs64_panel_row_count() - 1, d);
+        else if (w == "keys_row_refused") chk("cross_on_keys_row_refused", open && cap == 0, d);
+        else if (w == "down_wrap") chk("down_wraps_to_A_row", open && row == 0, d);
+        else if (w == "bind_A") chk("cross_arms_A", cap == RS64_N64_A, d);
+        else if (w == "capture_circle") chk("capture_takes_circle_not_close", open && cap == 0 && rs64_bind_capture_last() == "pad:b", d);
+        else if (w == "close_circle") chk("circle_closes_again", !open && game_btn == 0, d);
+    }
+    if (++in >= sc[si].n) {
+        in = 0;
+        if (++si >= sc.size()) {
+            done = true;
+            fprintf(stderr, "[pad-nav-test] checks=%d fail=%d\n", checks, fails);
+            for (int bt = 0; bt < SDL_CONTROLLER_BUTTON_MAX; bt++) SDL_JoystickSetVirtualButton(vp, bt, 0);
+            SDL_GameControllerUpdate();
+            return;
+        }
+    }
+    for (int bt = 0; bt < SDL_CONTROLLER_BUTTON_MAX; bt++) SDL_JoystickSetVirtualButton(vp, bt, 0);
+    for (int bt : sc[si].btns) SDL_JoystickSetVirtualButton(vp, bt, 1);
+    SDL_GameControllerUpdate();
+}
 static void rs64_bind_poll(uint16_t* btn, float* sx, float* sy) {
     static const bool s_panel_test = rs64_bind_flag("ROGUESQ_BIND_PANEL_TEST");
     static const bool s_selftest = s_panel_test || rs64_bind_flag("ROGUESQ_BIND_SELFTEST");
     static const bool s_check = s_selftest || rs64_bind_flag("ROGUESQ_BIND_CHECK");
     rs64_input_snapshot s;
     rs64_bind_snapshot(&s);
+    if (!s_selftest) rs64_panel_pad_step(&s);  // s7941: before the capture step; masks held buttons in s. Off under the
+                                               // selftest, whose random combos would hit Back+Start and open the panel.
     rs64_bind_capture_step(s);
     { std::lock_guard<std::mutex> lk(g_bind_mu); rs64_bind_eval(rs64_bind_live_ref(), s, btn, sx, sy); }
     if (!s_check) return;
@@ -13086,6 +13229,7 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         rs64_bind_poll(&btn, &stick_x, &stick_y);
     }
     if (rs64_panel_is_open()) { btn = 0; stick_x = 0.0f; stick_y = 0.0f; }  // s7620: F6 panel owns the inputs while open
+    rs64_pad_nav_test(btn);  // s7941 ROGUESQ_PAD_NAV_TEST
     {   // s7668: game-thread view of the panel gate (polls gated while open / passed while closed), logged on each change.
         static const bool on = std::getenv("ROGUESQ_PANEL_TEST_WINDOW") != nullptr;
         static int last = -1; static long n = 0;

@@ -1,17 +1,15 @@
-# NEXT (s7941)
+# NEXT (s7942)
 HYPOTHESIS-ID: owner-panel-pad-nav
-s7940 closed owner-panel-overlay-coexist: RT64's F1 inspector cannot open on macOS (SDL filter never installed, sdlWindow=0x0,
-dev mode on or off); panel e2e with F1 pressed 12/12 (`env PANEL_F1=1 PANEL_ASPECT=16:9 PANEL_FS=1 zsh tools/s7937_panel_e2e.zsh`).
+s7941 landed pad-only navigation for the F6 panel (main.cpp rs64_panel_pad_step, panel row cursor g_pad_row):
+touchpad click / Share(Back)+Start opens; D-pad rows, Cross=Bind, Square=Add, Triangle=Save, Circle closes, held buttons masked
+from the game until released. `zsh tools/s7941_pad_nav_test.zsh` = on 16/16 + ROGUESQ_PANEL_PAD=0 control fail=14.
 0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines.
-1. Unit: the F6 panel is mouse-only (rs64_panel_feed feeds ImGui mouse events only; keys deliberately not fed). The owner plays on
-   a 65" TV with a PS pad, possibly without a mouse at hand. Measure whether the panel can be OPENED, NAVIGATED and SAVED from the pad
-   alone. Hypotheses: H-none (no pad path: a pad user cannot reach Bind/Save; F6 needs a keyboard), H-partial (capture accepts pad
-   buttons once armed - s7765 shows pad:a sources - but arming needs the mouse), H-ok (some pad path exists). Read
-   src/main/rs64_controls_panel.cpp + rs64_bind_capture_step (main.cpp ~12936) first; boring-first, this is likely H-partial.
-   If H-none/H-partial: add opt-in-free pad navigation that cannot clash with binding: e.g. while the panel is open and NO capture
-   is armed, D-pad up/down moves a row cursor, Cross = Bind, Square = Add, Triangle = Save, Circle = close (closing must not
-   pass the press to the game); a pad combo to open (e.g. Back/Share+Start, check it is unused by get_n64_input). Feed via
-   ImGuiConfigFlags_NavEnableGamepad or our own row cursor (simpler, testable by log lines).
-   Proof: ROGUESQ_PAD_TEST-style synthetic pad events (rs64_pad_test_tick exists) open, move, bind A to a pad button, save;
-   same-run control: the same synthetic presses with the panel closed reach the game as N64 buttons and arm nothing.
-Limits not testable here: an external 1x display or a move between displays of different scale (no second display).
+1. Unit: (a) VISUAL witness that the pad cursor is drawn where the log says: one run, panel opened by the synthetic pad,
+   cursor moved to row 1 then row 17 (scrolls the table), window screenshot per step (tools/winctl or screencapture -l <wid>),
+   measure the highlight band's y against [panel-rect]-style row rects (add a ROGUESQ_PANEL_RECTS rect for the cursor row).
+   Hypotheses: H-ok (band on the logged row, scrolls into view at row 17), H-clip (row 17 off-screen: SetScrollHereY placed
+   before the row's content height is known), H-none (RowBg1 overridden by ImGuiTableFlags_RowBg alternation).
+   (b) the pad still cannot Clear a row or Reset to defaults: decide if L1 = Clear row (with the Clear text shown) and a 1 s
+   Options/Start hold = Reset are worth adding; Start is the open chord's second half, so prefer a dedicated hold on R3
+   (unbound by default) and test the hold is not a bind source while a capture is armed.
+Limits: no physical PS pad on this host (virtual SDL pad only); the owner's feel is the close.

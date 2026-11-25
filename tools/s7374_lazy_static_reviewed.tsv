@@ -33,3 +33,5 @@ src/main/main.cpp	rs64_bind_selftest_step	attached	SINGLE	s7720: same caller cha
 src/main/rt64_render_context.cpp	update_screen	s_rt_boot_done	SINGLE	ScreenUpdateAction on gfx_thread (events.cpp:1617); s7845 boot open of s_rand_trace_f (its guest reader is the s7384 DIAG row)
 src/main/rt64_render_context.cpp	rs64_rand_trace	rp_init	GUEST-SERIAL	called only from the recompiled rngNext hook (tools/fixup_rand_trace.py); s7896/s7900 ROGUESQ_RAND_REPLAY[_BURST] diag, rp/rp_gap built before rp_init read by the same guest thread
 src/main/rt64_render_context.cpp	rs64_rand_trace	nsk	GUEST-SERIAL	s7901 ROGUESQ_RAND_REPLAY_SKEW parse; same guest rngNext hook thread as rp_init (tools/fixup_rand_trace.py)
+src/main/main.cpp	rs64_pad_nav_test	vp	SINGLE	s7941: ROGUESQ_PAD_NAV_TEST only; <- get_n64_input (guest input thread), same chain as s_bind_vpad
+src/main/main.cpp	rs64_pad_nav_test	attached	SINGLE	s7941: same caller chain as vp, ROGUESQ_PAD_NAV_TEST only

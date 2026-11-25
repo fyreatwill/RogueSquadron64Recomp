@@ -212291,3 +212291,39 @@ Soak fold: 20261125 s7939_panel_fs169 rc=0, 1 arm alive, checks 9/9 fail 0 at 15
 Rules out: any F1/F6 interaction on macOS for now. If RT64 is ever given the SDL window (filter installed), H-race becomes live:
 both ImGui users would then need one shared lock (take presentQueue->inspectorMutex in hook_draw and rs64_panel_feed).
 Next: the F6 panel is mouse-only, but the owner plays on a 65" TV with a PS pad; s7941 measures pad-only panel use.
+
+## Session 7941 (2026-11-25) — F6 Controls panel works from a pad alone: touchpad / Share+Start opens, D-pad rows, Cross Bind, Square Add, Triangle Save, Circle closes (masked); synthetic-pad same-run test 16/16, ROGUESQ_PANEL_PAD=0 control 14 fail
+
+HYPOTHESIS-ID: owner-panel-pad-nav. Work unit: NEXT s7941. Hypotheses: H-none (no pad path), H-partial (capture takes pad
+buttons, arming needs the mouse), H-ok. Code read selected **H-none** for the owner's case: rs64_panel_feed toggles on F6 only and
+feeds ImGui mouse events only; rs64_bind_capture_arm had no pad caller, so a pad-only user (owner, 65" TV) could neither open the
+panel nor arm a bind (capture itself does accept pad sources once armed).
+Change (default on, `ROGUESQ_PANEL_PAD=0` = off):
+- main.cpp `rs64_panel_pad_step(rs64_input_snapshot*)`, called in rs64_bind_poll BEFORE rs64_bind_capture_step (so the press that
+  completes a capture cannot also act; edges tracked every poll). Closed: touchpad click (only while no binding uses
+  pad:touchpad; unbound by default) or Back(Share)+Start chord opens. Open, no capture armed: D-pad up/down = row cursor (wraps),
+  Cross/A = Bind, Square/X = Add, Triangle/Y = Save, Circle/B / touchpad / chord = close. Keyboard-only stick rows refuse a pad
+  Bind with a status line (a pad user has no Esc to cancel a keys-only capture). Every pad button held at open/close is masked
+  from the snapshot until released, so the closing Circle never reaches the game as C-Down. Skipped under BIND_SELFTEST (its random
+  combos would hit Back+Start).
+- rs64_controls_panel.cpp: row list moved to namespace `k_targets`, atomic `g_pad_row`, cursor row highlighted (RowBg1 + "> "),
+  SetScrollHereY on move, pad hint line; API rs64_panel_row_count / pad_row / row_target / pad_move / set_msg.
+- `ROGUESQ_PAD_NAV_TEST=1`: SDL virtual pad replaces the real one and presses a 27-step script, checking panel state and the
+  N64 word the game gets after the panel gate. New tools/s7941_pad_nav_test.zsh runs on + off arms.
+Runs (build/, ROM, title screen):
+- run1/run2: every check FAIL, raw SDL_GameControllerGetButton=0 and SDL_JoystickGetButton=0 though SetVirtualButton rc=0:
+  boring cause, SDL drops joystick input when the window is not focused; s7667's selftest recipe sets
+  SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1. With it (run3, run5 final binary): **checks=16 fail=0**: closed Cross reaches the game
+  (game_btn=8000, nothing armed) = pass-through control; touchpad opens (game_btn 0); D-pad row 0->1; Cross arms B; Y while armed
+  is CAPTURED (B=pad:y), not a Save; Y again saves (file written: "B": ["pad:y"]); Circle closes and is masked for 40 held polls
+  (game_btn 0000), pressed again reaches the game as C-Down (0004) = mask-release control; Back+Start opens; up wraps 0->17
+  (Stick right); Cross there refused; down wraps to 0; Cross arms A; Circle while armed is captured (A=pad:b), not a close; Circle
+  then closes. Draw thread logged `[controls-panel] pad row=N (drawn)` on every move (single-source for the visual: log only).
+- run4 ROGUESQ_PANEL_PAD=0 (negative control, same script): 14 fail, only closed_A and circle_reaches_game pass, and
+  circle_closes_masked FAILS (B reaches the game) -> the mask is what holds it.
+- tools/s7765_controls_dump_check.py VERDICT PASS after the change (defaults/table unchanged). Owner-doc check names_stale=0.
+Rules out H-partial/H-ok as the state before; the instrument is not hollow (off arm and unfocused runs fail it).
+Not tested: a physical PS4/PS5 pad (none on this host; DS4 touchpad click maps to SDL TOUCHPAD on SDL >= 2.0.14 per SDL docs,
+unverified here); a pixel witness of the highlight (next). Behaviour change to flag: Share+Start in play now opens the panel
+(Share = C-Left by default) instead of sending C-Left+Start.
+Docs: README Controls pad paragraph, OWNER-OPT-INS F6 row.

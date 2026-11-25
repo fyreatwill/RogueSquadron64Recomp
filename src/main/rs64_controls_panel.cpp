@@ -39,6 +39,12 @@ std::atomic<uint32_t> g_window_id{0};
 std::atomic<uint64_t> g_win_size{0};
 std::atomic<uint32_t> g_win_id{0};    // s7639: SDL window ID, main thread (chk arm only)  // s7639: window size in points, (w << 32) | h, written by the main thread only
 std::string g_msg;              // status line (save result etc.)
+// s7941: the row list, shared by the mouse table and the pad cursor (main.cpp rs64_panel_pad_step moves g_pad_row).
+const int k_targets[] = {RS64_N64_A, RS64_N64_B, RS64_N64_Z, RS64_N64_START, RS64_N64_L, RS64_N64_R,
+    RS64_N64_CU, RS64_N64_CD, RS64_N64_CL, RS64_N64_CR, RS64_N64_DU, RS64_N64_DD, RS64_N64_DL, RS64_N64_DR,
+    RS64_TGT_UP, RS64_TGT_DOWN, RS64_TGT_LEFT, RS64_TGT_RIGHT};
+constexpr int k_nrows = (int)(sizeof k_targets / sizeof k_targets[0]);
+std::atomic<int> g_pad_row{0};
 long g_draws = 0;
 
 const char* tgt_name(int t) {
@@ -91,20 +97,27 @@ void draw_ui() {
                            rs64_bind_capture_add() ? "ADD to" : "BIND", tgt_label(cap));
     else
         ImGui::TextWrapped("Bind = replace that button's inputs with the next one you press.  Add = keep them and add one.  Save writes controls.json.");
+    ImGui::TextDisabled("Pad: D-pad up/down picks a row, Cross/A = Bind, Square/X = Add, Triangle/Y = Save, Circle/B = close.  Open: touchpad click or Share/Back+Start.");
     ImGui::Separator();
-    static const int targets[] = {RS64_N64_A, RS64_N64_B, RS64_N64_Z, RS64_N64_START, RS64_N64_L, RS64_N64_R,
-        RS64_N64_CU, RS64_N64_CD, RS64_N64_CL, RS64_N64_CR, RS64_N64_DU, RS64_N64_DD, RS64_N64_DL, RS64_N64_DR,
-        RS64_TGT_UP, RS64_TGT_DOWN, RS64_TGT_LEFT, RS64_TGT_RIGHT};
+    const int* targets = k_targets;
+    const int prow = g_pad_row.load();
+    static int s_prow_drawn = -1;
+    const bool prow_moved = prow != s_prow_drawn;
+    if (prow_moved) { s_prow_drawn = prow; fprintf(stderr, "[controls-panel] pad row=%d target=%s (drawn)\n", prow, tgt_label(k_targets[prow])); }
     if (ImGui::BeginTable("binds", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_ScrollY,
                           ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 3.2f))) {
         ImGui::TableSetupColumn("N64", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Stick right (keys)").x);
         ImGui::TableSetupColumn("Inputs", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Bind  Add  Clear____").x);
-        for (int tg : targets) {
+        for (int ri = 0; ri < k_nrows; ri++) {
+            const int tg = targets[ri];
             ImGui::TableNextRow();
+            if (ri == prow) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, ImGui::GetColorU32(ImVec4(0.25f, 0.45f, 0.85f, 0.55f)));
             ImGui::PushID(tg);
             ImGui::TableNextColumn();
-            if (tg < 0) ImGui::Text("%s (keys)", tgt_label(tg)); else ImGui::TextUnformatted(tgt_label(tg));
+            if (ri == prow && prow_moved) ImGui::SetScrollHereY(0.5f);
+            const char* mark = ri == prow ? "> " : "  ";
+            if (tg < 0) ImGui::Text("%s%s (keys)", mark, tgt_label(tg)); else ImGui::Text("%s%s", mark, tgt_label(tg));
             ImGui::TableNextColumn();
             if (cap == tg) ImGui::TextColored(ImVec4(1, 0.85f, 0.2f, 1), "...waiting...  %s", sources_of(t, tg).c_str());
             else ImGui::TextWrapped("%s", sources_of(t, tg).c_str());
@@ -300,3 +313,10 @@ void rs64_panel_test_action(const char* what) {
     if (!strcmp(what, "reset")) { rs64_bind_capture_arm(0, false); rs64_bind_live_set(rs64_bind_defaults(), "panel reset"); }
     else if (!strcmp(what, "save")) { std::string m; rs64_bind_save(&m); std::lock_guard<std::mutex> lk(g_mu); g_msg = m; }
 }
+
+// s7941 pad navigation (cursor state; the input logic lives in main.cpp rs64_panel_pad_step).
+int rs64_panel_row_count() { return k_nrows; }
+int rs64_panel_pad_row() { return g_pad_row.load(); }
+int rs64_panel_row_target(int row) { return row >= 0 && row < k_nrows ? k_targets[row] : 0; }
+void rs64_panel_pad_move(int d) { g_pad_row.store((g_pad_row.load() + d + k_nrows) % k_nrows); }
+void rs64_panel_set_msg(const std::string& m) { std::lock_guard<std::mutex> lk(g_mu); g_msg = m; }
