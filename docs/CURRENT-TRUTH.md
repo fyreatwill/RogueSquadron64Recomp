@@ -23,6 +23,9 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   RecompiledFuncs tree IS the regen replay: `tools/s7719_regen_gate.py --strict` byte-compares it, so ANY hand edit under
   ../N64Recomp/RecompiledFuncs turns the sweep RED (put it in a fixup/apply script). Ucode: `tools/s7741_ucode_regen_gate.py --controls`;
   after a fixup_factor5_ucode.py edit `zsh tools/ucode_regen.sh snapshot`. After a regen `python3 tools/s7734_compiled_reader_census.py`.
+  s7929: the SN scanner (tools/s7611_sn_scan.py) once let a same-named static ANYWHERE in a file hide a function's own local
+  from taint, and missed comma-list locals (`float raw[3], o[3]`); fixed, 18 hidden candidates classified. A new diag static
+  named `n`/`i`/`seen` can no longer silently drop an unrelated SN candidate (the s7928 STALE s_carry).
 - **s7788-s7791 vendored fixer pruning CLOSED:** dead-emitter census 0 dead; 257 never-run blocks deleted (s7790), shadowed-block prune
   1 block (s7791); `--strict` 0 differ, census HIT 326. **s7781-s7787 hook classes CLOSED** (s5660 unaligned-store hook value/address fix,
   load-hook hole, 4 pc-literal emitters).

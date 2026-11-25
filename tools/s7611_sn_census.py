@@ -63,7 +63,7 @@ row("s7644_rspdma.cpp", "last_h", "gated", r"if \(!g_on\) return;", "s7655: s764
 row("s7644_rspdma.cpp", "t_snap", "gated", r"const bool g_on = \(g_mode & 1\) != 0;[\s\S]*if \(!g_on \|\| g_tasks\.load\(\) == 0\) return;", "s7655: s7644 PI pre/post byte snapshot, ROGUESQ_S7644_RSPDMA&1", scope="file")
 row("s7644_rspdma.cpp", "t_g", "gated", r"t_g\.any = false;\s*if \(!g_gon\) return;", "s7655: s7645 gfx PI snapshot, ROGUESQ_S7644_RSPDMA&2", scope="file")
 # ---- src/main/main.cpp
-row("main.cpp", "g_rs64_m5_last_input_fnv", "gated", r"ROGUESQ_LOG_M5_(INPUT_WRITER|SOURCE_PRODUCER)", "M5 audio source-producer hash, log only")
+row("main.cpp", "g_rs64_m5_last_input_fnv g_rs64_m5_last_input_nonzero", "gated", r"ROGUESQ_LOG_M5_(INPUT_WRITER|SOURCE_PRODUCER)", "M5 audio source-producer hash, log only")
 row("main.cpp", "g_rs64_m5_last_source_dma_fnv g_rs64_m5_last_source_dma_nonzero g_rs64_m5_last_source_dma3_fnv "
     "g_rs64_m5_last_source_dma3_nonzero", "gated", r"ROGUESQ_LOG_M5_(HOST_WRITE|RSP_SOURCE)", "M5 source DMA hash, log only")
 row("main.cpp", "s_sh2_buf", "gated", r'getenv\("ROGUESQ_SHADOW2"\)', "ucode shadow2 buffer, ROGUESQ_SHADOW2 default off (s7548)")
@@ -154,6 +154,22 @@ row("RF", "s6497_x0 s6497_x1 s6497_z0 s6497_z1", "stash", r'getenv\("ROGUESQ_FOR
 row("RF", "s6499_post_tbl", "gated", r'if \(getenv\("ROGUESQ_FORFACE_LOG"\)\) \{\s*s6499_post_seq', "s7739: s6499 [raspost] table, written inside if (getenv(FORFACE_LOG))", "file")
 row("RF", "s7104_b s7104_r3 s7104_r4", "gated", r"s7104_cur", "s7104 cell visit log: s7104_cur = -1 unless ROGUESQ_S7104_CELL", "file")
 row("RF", "s7105_lod", "gated", r'getenv\("ROGUESQ_S7105_EMIT"\)', "s7105 emit census")
+# s7929: surfaced when the s7611 scanner learned comma-list local declarations (`float raw[3], o[3]`) and stopped letting a
+# same-named static elsewhere in the file hide a function's own local (the s7928 `static std::atomic<unsigned> n` dropped
+# s7324 s_carry). All but s6904_s are default-off diagnostics.
+row("main.cpp", "last_h", "gated", r"if \(!s_s7779_on\) return;", "s7779 arena transition log, ROGUESQ_S7779_ARENA")
+row("main.cpp", "walked", "gated", r'getenv\("ROGUESQ_S7505_FC"\)', "s7505 frame-content census, ROGUESQ_S7505_FC")
+row("main.cpp", "s_was_dead", "gated", r'getenv\("ROGUESQ_GODMODE2"\)', "s5492 GODMODE2 test lever death edge (test-only, default off)")
+row("upstream_compat.cpp", "s6904_s", "refresh", r"const float s = rf\(0x8011A878u\)[^\n]*\n\s*s6904_s = s <= D \? D : s;",
+    "s6904 fog start: re-read from the game's fog word 0x8011A878 on every fog-setup hook call (the game's own per-scene fog "
+    "path); its only reader rs64_s6904_clipmul acts only under s6904_on() (DRAW_DISTANCE>1 opt-in)")
+row("upstream_compat.cpp", "s_s7472_seen s_s7472_pa s_s7472_pw0", "gated", r'getenv\("ROGUESQ_S7472_HEAPCHK"\)', "s7472 heap checker + plant, ROGUESQ_S7472_HEAPCHK")
+row("upstream_compat.cpp", "seen", "gated", r"S7777Arm\(\) \{\s*if \(!s7777_on\(\)\) return;", "s7777 sweep thread, started only by S7777Arm under ROGUESQ_S7777_DANGLE", "file")
+row("upstream_compat.cpp", "rv", "gated", r"if \(!s7399::on\(\)\) return;", "s7399 message-queue recv census")
+row("dpc_bridge.cpp", "ch_idx", "gated", r'getenv\("ROGUESQ_LOG_G1D_READS"\)', "s6211 G1D chunk-read log, ROGUESQ_LOG_G1D_READS")
+row("dpc_bridge.cpp", "uc_fbytes", "gated", r'getenv\("ROGUESQ_S7532_UNDO_CHK"\)', "s7532 undo-check byte counter, ROGUESQ_S7532_UNDO_CHK")
+row("RF", "rs6660_pending_value previous predicate", "gated", r"if \(!rs6657_enabled\(\)", "s6657-s6668 objective-response harness, ROGUESQ_OBJECTIVE_RESPONSE (G1(d) parked)")
+row("RF", "seen", "gated", r"if \(rs6657_level >= 1\) rs6660_census\(rdram\);", "s6660 census: sole caller rs6657_callback_level returns unless rs6657_enabled() (ROGUESQ_OBJECTIVE_RESPONSE)", "file")
 
 def rowkey(c):
     b = os.path.basename(c["file"])

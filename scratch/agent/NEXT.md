@@ -1,5 +1,7 @@
-# NEXT (s7929)
+# NEXT (s7930)
 HYPOTHESIS-ID: g5-owner-looks-standing
+s7929 only repaired s7928's exit contract (hostarr cnt[i&3]; SN scanner taint blind spot fixed, 17 rows added). The unit
+below is unchanged and still open.
 s7928 closed the MusyX wait thread: the port takes retail's flight-entry wait (mainGameLoop@0x8003E360, gate 1 in both); the
 8-vs-6 count = B40 boot wait + one route-dependent menu transition. s7927 SKIPPED is superseded.
 0. `python3 tools/crash_reports.py --since 2026-11-24` first; a new report outranks everything. Fold new SOAK-RESULTS lines;

@@ -756,6 +756,7 @@ scratch/s7764/runs/ring_def.txt
 scratch/s7764/runs/ring_off.txt
 scratch/s7764/runs/ring_tog.txt
 scratch/s7925_mmark/ring_q4.txt
+scratch/s7928_gatew2/ring_q4.txt
 scratch/ucode_regen/pristine/factor5_ucode_b_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl10_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl12_recompiled.c

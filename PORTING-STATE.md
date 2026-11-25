@@ -211987,3 +211987,22 @@ B40=1 restores it, s7927) + one fewer menuOverlayInit transition on the port aut
 (different drive, single-source inference). s7927's SKIPPED verdict and its "gate == 0 at flight entry" inference are superseded
 (CURRENT-TRUTH superseded list).
 Rules out: H-writer (no zero store after the last set), H-nocall at flight entry. Nothing open on the MusyX waits.
+
+## Session 7929 (2026-11-25) — s7928's exit contract fixed: two census REDs were a hostarr index class and an SN-scanner taint blind spot, not new defects
+What ran: the unmet contract from s7928 (stop_gate --verify: s7363_hostarr_census and s7611_sn_census newly RED; the other REDs
+listed were already in tools/gate_sweep_allowed_red.txt (s7865/s7893 pruned retained captures), and s7827 is NEEDS-ARGS, not RED).
+- s7363 hostarr OPEN 1 = src/rsp/s7324_rcp_spill.cpp:286 `cnt[i]` in s7928's rs64_s7928_tick_caller: i comes from a guest pc,
+  but a ternary chain maps it to 0..3. Written as `cnt[i & 3]` (class MASK). Census OPEN 0, controls pass; build clean.
+- s7611 SN "STALE row (s7324_rcp_spill.cpp, s_carry)": NOT stale. ROOT CAUSE (scanner): tainted_locals() skipped any name that
+  was a static anywhere in the file, so s7928's function-local `static std::atomic<unsigned> n{0}` (rs64_s7928_gate_write)
+  hid rs64_s7324_rdp's own local `uint32_t n = tri_len[op-8]*8u` (tainted via rd8), and `s_carry = a + n - hi` stopped being a
+  candidate. Measured: scan_file on HEAD~1's file -> [(220, s_carry)], on HEAD's -> []. Fix: a name declared as a plain
+  (non-static, non-thread_local) local in the enclosing function is taintable even if it is a static elsewhere.
+- That fix alone then dropped RF (funcs_28.c:268 s6907 `lo`): the local-declaration regex `\b\w+\s*\*?\s*NAME\b` never saw
+  comma-list declarations (`float raw[3], ..., o[3]`) and had found `o` only by matching inside `lo[3]` on the static line.
+  Regex now `(?:\b\w+(?:\s+|\s*\*\s*)|,\s*\*?\s*)NAME\b\s*[=;,\[]`. Candidates 180 -> 198; 17 newly visible sites classified
+  (rows in tools/s7611_sn_census.py, s7929 block): 16 default-off diag gates (S7779_ARENA, S7505_FC, GODMODE2, S7472_HEAPCHK,
+  S7777_DANGLE, s7399, LOG_G1D_READS, S7532_UNDO_CHK, OBJECTIVE_RESPONSE x4, M5 input log) and one refresh: upstream_compat
+  s6904_s = the game's fog start 0x8011A878 re-read on every fog-setup hook call, read only by rs64_s6904_clipmul under
+  s6904_on() (DRAW_DISTANCE>1 opt-in). Census RESULT PASS, controls 8/8.
+Rules out: both REDs as real defects (no runtime behaviour change; the s7928 diag stays default off).

@@ -121,10 +121,14 @@ def scan_file(path, rel, taint_re=None, hot=None):
             for m in ASSIGN_LOCAL.finditer(l):
                 if m.group(1) in t:
                     continue
-                if m.group(1) not in file_statics and (G.search(m.group(2)) or
-                                                       any(re.search(r"\b" + re.escape(x) + r"\b", m.group(2)) for x in t)):
-                    # only plain locals already declared in this function are taintable
-                    if any(re.search(r"\b\w+\s*\*?\s*" + re.escape(m.group(1)) + r"\b\s*[=;,\[]", L[k]) for k in range(f0, j + 1)):
+                if G.search(m.group(2)) or any(re.search(r"\b" + re.escape(x) + r"\b", m.group(2)) for x in t):
+                    # only plain locals already declared in this function are taintable. s7929: a file static of the same
+                    # name elsewhere in the file (e.g. a function-local `static std::atomic<unsigned> n` in another
+                    # function) no longer hides this function's own non-static local `n` (it dropped s7324 s_carry).
+                    # (the old `\b\w+\s*\*?\s*NAME` form missed comma lists `float raw[3], o[3]` and only saw `o` by
+                    # matching inside `lo[3]`; this form needs a real word break or a comma before NAME)
+                    if any(re.search(r"(?:\b\w+(?:\s+|\s*\*\s*)|,\s*\*?\s*)" + re.escape(m.group(1)) + r"\b\s*[=;,\[]", L[k])
+                           and not re.match(r"\s*(?:inline\s+)?(?:static|thread_local)\b", L[k]) for k in range(f0, j + 1)):
                         t.add(m.group(1))
         return t
 

@@ -283,7 +283,7 @@ extern "C" void rs64_s7928_tick_caller(uint32_t pc) {
     if (!on) return;
     static std::atomic<unsigned> cnt[4];
     const int i = pc == 0x8003E29Cu ? 0 : pc == 0x8003E360u ? 1 : pc == 0x800A9C70u ? 2 : 3;
-    const unsigned n = cnt[i].fetch_add(1) + 1;
+    const unsigned n = cnt[i & 3].fetch_add(1) + 1;  // i is 0..3 by construction; mask = census class MASK (s7929)
     if (n > 16 && n % 600) return;
     const uint8_t* rd = rs64_s7928_rdram();
     char row[96];
