@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7920 (2026-11-24).
+Compact operational handoff, as of Session 7921 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -205,13 +205,14 @@ Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into o
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 (s7897: any new static pointer in src/ needs an s7613 HP census row, class base/host/gated/..., or the exit gate goes RED.)
-0a. **G5c freeze gap: in-flight bar MET on every owner-recipe ring s7694-s7919 (s7919 + s7920).** s7919: no regression from the
-   s7840-s7917 runtime edits (L1 300 s, max present gap 148 ms). s7920 `python3 tools/s7920_hold_class.py <rings> [--quiet]` classes
-   each VI-origin hold >= 250 ms as TRANSITION (buffer set changes = scene/mode reconfiguration) or IN-SCENE (frozen inside one
-   scene; planted controls both ways + real-run control = s7694 SIGSTOP read IN-SCENE). The s7806 L4 holds at 245-260 s are a
-   mission RESTART (TRANSITION x3 + the log initialises the mission twice), not in-flight freezes. Over 212 s7600+ rings the only
-   IN-SCENE holds are experimental arms (s7643 TSan, s7608 tkoff), the s7694 control, and ONE deterministic ~300-400 ms hold on
-   the 9DE900/A62B80 pre-flight scene at t=43.4 s (and 15.3 s after each mission restart). Open: is that hold retail (next unit).
+0a. **G5c freeze gap: CLOSED on measurement (s7919-s7921); owner judges feel.** In-flight bar met on every owner-recipe ring
+   s7694-s7919 (s7920 `tools/s7920_hold_class.py`: the s7806 L4 holds were a mission restart). The one IN-SCENE pre-flight hold
+   (t=43.4 s, 9DE900/A62B80, 275-295 ms) is the menu -> hangar entry and is RETAIL (s7921, two lines): retail oracle
+   (`--vi-holds 4 --hit-vi`, field-normalised) holds the same transition 17 VIs around the same waitForMusyXAudioTaskDone spin
+   (0x80091EC4 -> 0x80091F44, 8-9 VIs; every retail transition wait sits in a 15-19 VI hold), then 123 more VIs on the hangar
+   load; port host sample on that hold = game thread in musyxNoopStub -> waitForMusyXAudioTaskDone ~103 ms. Port <= retail at
+   every transition. Oracle trap: interlaced fields alternate the origin by one scanline (512: 0x656400/0x656800), so raw-origin
+   hold counts read "no holds"; `--vi-holds` handles it. The 17 s "hold" at t=11 s is the single-buffered animating title.
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =

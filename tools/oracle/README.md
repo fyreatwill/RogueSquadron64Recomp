@@ -331,3 +331,14 @@ pointers) and `RS64_ORACLE_SPW=20,74` appends ` spw: 20=.. 74=..` (guest words a
 Values are the state BEFORE the watched instruction executes. Used to replay a guest FP expression offline in IEEE float32
 (scratch/s7842/replay.py, chase_cmp.py) and diff its operands against the port's tools/apply_s7842_chasehex.py log.
 
+### Picture holds in VIs (s7921)
+
+`--vi-holds N` prints `[vi-hold] vi=A..B len=L t=.. width=W origin=O pc_hits=h0->h1` for every run of >= N
+consecutive VIs that show one framebuffer. An origin exactly one scanline (W*2 bytes) away from the hold's first
+origin is the other interlaced field of the same buffer and does NOT end the hold (the 512 menu alternates
+0x656400/0x656800 per field; without this every hold reads as a swap). `pc_hits` is the `--watch-pc` hit counter
+at both ends, so a watched function can be placed inside a hold. `--hit-vi` adds `vi=<emulated VI>` to every
+`[hit]` line (after prev_pc; off by default so existing parsers see unchanged lines). Positive control: the boot
+holds at VI 81..88 / 89..97 (8/9 VIs, 320 wide) appear in every run. s7921 retail numbers (Start/A every 6 s from
+6 s): every waitForMusyXAudioTaskDone spin (0x80091EC4 -> 0x80091F44, 8-9 VIs each) sits inside a 15-19 VI hold;
+hangar entry = VI 2602..2618 (17 VIs, wait) then 2619..2741 (123 VIs, mallocCraftSelectionData at 2628).

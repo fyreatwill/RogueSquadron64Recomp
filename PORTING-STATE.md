@@ -211764,3 +211764,45 @@ only ungated site; host sites all gated (s_rand_trace_f, floorWriterOn, log_bt, 
 --strict VERDICT H-mirrored (live == replay byte-for-byte, planted controls PASS); rebuilt binary disassembly now has
 `ldr w8,[x19,#0xbdc]; cbz w8` (the s_e load) ahead of the counter/backtrace call where the old one went straight to the counter.
 Not measured: the per-call cost of the removed backtrace (it fired once in this 300 s run, not at a hold).
+
+## Session 7921 (2026-11-24) — G5c: the last in-scene pre-flight hold (hangar entry, ~17 VIs) is retail: the retail oracle holds the same transition 17 VIs on the same MusyX wait; new oracle --vi-holds / --hit-vi
+
+Unit (NEXT s7921, slug g5c-preflight-43s-hold): name the scene of the deterministic ~300 ms IN-SCENE hold at t=43.4 s on fb pair
+9DE900/A62B80 and test H-retail vs H-port-load vs H-present.
+1. Scene, offline from the s7919 capture (scratch/s7919_g5c/log_q4.txt): 9DE900/A62B80 is the 796-wide front-end pair (menu, then
+   hangar; `[vi-follow-draw] REGISTER 0x009DE900 w=796`). Autopilot press 9 (Start, wall 42.0 s, vi 2593) is followed by two
+   osViSetMode 512->796 reapplies, then `[hangarmenu-a0-entry] a0=0x80130B40`, mallocCraftSelectionData, allocAndSetupModelInstance
+   x7, hangar-state 0->1: the hold is the menu -> SELECT YOUR CRAFT (hangar) entry. Ring rows across it: presents every VI until
+   43.384, then 125 ms with no present, 6 presents repeating one frozen workload (wl=2553, gen unchanged), 71 ms gap, resume: the
+   guest produced no frame for ~280 ms (H-present refuted: the guest did not swap, the VI report is not lagging).
+2. Port host profile, one in-session run (host idle 70 min, load 1.8; `env R=$PWD/scratch/s7921_port2 HOLD=90 ALLOW_SLOW=1
+   ARMS="4:q4:" zsh tools/g1e_owner_quiet_arms.zsh` + scratch/s7921_port2/sampler.zsh: macOS `sample` 1 ms windows triggered from the
+   log, A = 2 s after press 7, B = 4 s from press 9). Same-run control: the hold recurred (tools/s7920_hold_class.py
+   scratch/s7921_port2/ring_q4.txt: IN-SCENE t=43.4 s 275 ms; 6 holds at the same times as s7919), alive, max_gap 148 ms; window B
+   contains the hangar init (mallocCraftSelectionData/allocAndSetupModelInstance frames, 0 in A). [Game] MAIN in
+   scratch/s7921_port2/sampleB.txt: besides the normal waitForPostSwapAck/submitGfxFrame osRecvMesg waits, the one large block is
+   menuOverlayInit+3460 -> runVideoFrameTick -> musyxNoopStub -> waitForMusyXAudioTaskDone -> yield_self_1ms = 103 samples
+   (~103 ms); the init itself is a few samples. (First attempt scratch/s7921_port: relative R lost the ring and window A missed;
+   rerun with absolute R and tail -F triggers.) Same shape as s7065 (wait 113-138 ms = the 16-chunk countdown 0x8014998A).
+3. Ground truth, retail ROM under the oracle (Rice, Start every 6 s from 6 s + A every 6 s from 9 s). New oracle flags
+   (tools/oracle/rs64_oracle.c, README "Picture holds in VIs"): `--vi-holds N` (runs of >= N VIs on one buffer, with --watch-pc hit
+   counts at both ends) and `--hit-vi` (VI number on [hit] lines, default off so existing parsers see identical lines). Trap found
+   and fixed in the same session: retail interlaced modes alternate the origin by one scanline per field (0x656400/0x656800 at 512),
+   so the first two runs (scratch/s7921_oracle, _oracle2) read "no hold >= 4-6 VIs anywhere" = WRONG; holds now treat an origin
+   width*2 bytes away as the same buffer. Watches: waitForMusyXAudioTaskDone 0x80091EB0 (entry), 0x80091EC4 (gate 0x800A0F50
+   nonzero, wait taken), 0x80091F44 (after the spins), 0x80091FB4 (exit), mallocCraftSelectionData 0x800A9364.
+   Result (scratch/s7921_oracle5/oracle.log): retail takes the wait at every transition, 8-9 VIs each (VI 78->87, 360->368,
+   1124->1132, 1911->1920, 2602->2611, 3633->3642, 4009->4015, 4369->4378), and every one sits inside a 15-19 VI picture hold
+   (360..376 17, 1123..1140 18, 2602..2618 17, 3633..3649 17, 4009..4023 15, 4368..4386 19). Hangar entry: hit at 0x800A9364 from
+   ra 0x800C68AC with s3=0x80130B40 (= the port's hangarmenu a0) at VI 2628, inside a 123-VI hold (2619..2741) that follows the
+   17-VI wait hold. Positive control: the 8/9-VI boot holds at VI 81..97 appear in all five oracle runs (s7921_oracle..oracle5).
+Verdict: H-retail selected (two lines: oracle VI holds with PC attribution + port host stack on the same wait). Port hold at hangar
+entry 275-295 ms = 16.5-17.7 VIs vs retail 17 VIs on the same musyxNoopStub wait; retail then shows one static frame a further
+123 VIs during the hangar load, which the port does not (port is faster there). The same holds for the port's TRANSITION holds at
+58.6/66.8 s (282-392 ms) vs retail 15-19 VIs at the same waits. Rules out H-port-load (no port-only synchronous cost at this
+transition: the port is <= retail) and H-present. G5c: the in-flight bar was met (s7920) and the only in-scene pre-flight hold is
+retail-shaped -> G5c CLOSED on measurement; owner judges feel.
+Side check: the 17.3 s TRANSITION "hold" at ring t=11-28 s is the single-buffered title (B51E00, 1592 wide): gen advances on 1015 of
+1018 presents, so the picture animates; retail's title also sits on one buffer (0x790400/0x790800). Not a freeze; tool label only.
+Caveat (single-source for the absolute ms): oracle VIs are emulated time (mupen interpreter cycle model); the 17-VI equality is a
+VI-count match, and the wait's own length (8-9 VIs) is fixed by the audio countdown, not by CPU speed.

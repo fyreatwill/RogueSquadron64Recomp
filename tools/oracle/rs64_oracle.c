@@ -414,6 +414,7 @@ static void dump_ai_output(void)
     }
 }
 static long g_pc_hits;
+static int g_hit_vi; /* s7921 --hit-vi: add vi=<emulated VI count> to every [hit] line (after prev_pc) */
 static int g_gpr_ctl_printed;
 static long g_exec_logged;
 #define EXEC_LOG_CAP 20000
@@ -3311,11 +3312,13 @@ static void dbg_update(unsigned int pc)
     }
     if (g_hits <= g_hit_cap || detail_hit) {
         unsigned int prev = (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC);
-        printf("[hit] %s%s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld",
+        printf("[hit] %s%s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x",
                (flags & M64P_BKP_FLAG_WRITE) ? "w" : "",
                (flags & M64P_BKP_FLAG_READ)  ? "r" : "",
                (flags & M64P_BKP_FLAG_EXEC)  ? "x" : "",
-               accessed, pc, prev, now_s() - g_t0, g_hits);
+               accessed, pc, prev);
+        if (g_hit_vi) printf(" vi=%ld", g_vis);
+        printf(" t=%.1fs n=%ld", now_s() - g_t0, g_hits);
         if (g_hit_vi_lo >= 0)
         { g_self_read++; unsigned v = pDebugMemRead32(debug_rdram_addr(accessed & ~3u)); g_self_read--;
             printf(" vi=%ld val=0x%08x", g_vis, v); }
@@ -3433,6 +3436,10 @@ resume:
 #define N64_BTN_START  0x00001000u
 
 static int g_vi_trace;
+/* s7921 --vi-holds N: every run of >=N consecutive VIs with one VI origin (the picture held), with the
+ * watch-pc hit counter at both ends so a watched function can be placed inside a hold. An origin one scanline
+ * (width*2 bytes) away from the hold's first origin is the other field of the same buffer, not a swap. */
+static long g_vi_holds_min;
 static int g_vi_poll;
 static int g_vi_regs; /* --vi-regs: one line per change of the VI geometry registers (s6928) */
 static int g_status_poll;
@@ -3519,6 +3526,18 @@ static void dbg_vi(void)
 
     g_vis++;
     if (g_clock_vi) vi_clock_tick();
+    if (g_vi_holds_min > 0) {
+        static uint32_t ho; static long hs, hn, hpc0; static double ht0;
+        uint32_t o = pDebugMemRead32(VI_ORIGIN_ADDR), w = pDebugMemRead32(VI_WIDTH_ADDR);
+        /* interlaced modes alternate the origin by one scanline (width*2 bytes at 16bpp) per field: same buffer */
+        uint32_t dl = o > ho ? o - ho : ho - o;
+        if (hn == 0 || (o != ho && dl != w * 2u)) {
+            if (hn >= g_vi_holds_min)
+                printf("[vi-hold] vi=%ld..%ld len=%ld t=%.2fs width=%u origin=0x%08x pc_hits=%ld->%ld\n",
+                       hs, g_vis - 1, hn, ht0, w, ho, hpc0, g_pc_hits);
+            ho = o; hs = g_vis; hn = 1; hpc0 = g_pc_hits; ht0 = now_s() - g_t0;
+        } else hn++;
+    }
     if (g_nfbd) fb_dump_flush();
 
     {   /* s4439: AI_LEN/AI_STATUS sampled at every true VI = known-mid-buffer control for the submit-time AI_LEN=0 reading */
@@ -4060,6 +4079,8 @@ static void usage(void)
         "  --oracle-debugger 0|1 set Core/EnableDebugger (default 1; 0 disables watches and traces)\n"
         "  --oracle-emulator N   set Core/R4300Emulator (default 0, pure interpreter)\n"
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
+        "  --vi-holds N          log every run of >=N VIs with an unchanged VI origin (+watch-pc hits)\n"
+        "  --hit-vi              add vi=<emulated VI count> to each [hit] line\n"
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --vi-regs             --vi-poll plus one line per new H/V video, X/Y scale, status tuple\n"
         "  --status-poll         poll the 18 status-table words through the core API\n"
@@ -4324,6 +4345,8 @@ int main(int argc, char **argv)
                 g_shot[g_nshot++] = atof(tok);
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
+        else if (!strcmp(argv[i], "--vi-holds") && i + 1 < argc)   g_vi_holds_min = atol(argv[++i]);
+        else if (!strcmp(argv[i], "--hit-vi"))                     g_hit_vi = 1;
         else if (!strcmp(argv[i], "--clock") && i + 1 < argc)      g_clock_vi = !strcmp(argv[++i], "vi");
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
         else if (!strcmp(argv[i], "--vi-regs"))                    g_vi_poll = g_vi_regs = 1;
