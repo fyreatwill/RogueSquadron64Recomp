@@ -8,6 +8,7 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
+#include <clocale>  // s7953
 #include <csignal>
 #include <vector>
 #include <map>
@@ -14530,7 +14531,32 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
 #endif
 }
 
+// s7953 class LC (process locale): every float parse in our tree (env knobs, settings.txt, rs64_settings, stand-ins) uses
+// strtod/atof, which follow the C locale's LC_NUMERIC. Nothing in src/ or lib/ calls setlocale (tools/s7953_locale_census.py);
+// this witness proves at runtime that the locale stays "C" whatever LANG/LC_ALL the owner launches with.
+// ROGUESQ_S7953_LOCALE=1 logs the locale at the first frame, on every change and every 600 frames; ROGUESQ_S7953_PLANT=<name>
+// (positive control) calls setlocale(LC_ALL, name) at frame 300 so the witness must see the change and the comma parse.
+static void rs64_s7953_locale_probe() {
+    static const int on = [] { const char* e = std::getenv("ROGUESQ_S7953_LOCALE"); return (e && *e == '1') ? 1 : 0; }();
+    if (!on) return;
+    static unsigned frame = 0; static char last[96] = {0};
+    frame++;
+    if (frame == 300) { const char* pl = std::getenv("ROGUESQ_S7953_PLANT");
+        if (pl && *pl) { const char* r = setlocale(LC_ALL, pl); fprintf(stderr, "[s7953] plant setlocale(LC_ALL,%s) -> %s\n", pl, r ? r : "(null)"); } }
+    const char* all = setlocale(LC_ALL, nullptr); const char* num = setlocale(LC_NUMERIC, nullptr);
+    char cur[96]; snprintf(cur, sizeof cur, "%s|%s", all ? all : "(null)", num ? num : "(null)");
+    const bool changed = std::strcmp(cur, last) != 0;
+    if (changed || frame % 600 == 1) {
+        const struct lconv* lc = localeconv(); char fmt[32]; snprintf(fmt, sizeof fmt, "%.2f", 1.5);
+        fprintf(stderr, "[s7953] frame=%u LC_ALL=%s LC_NUMERIC=%s dp=%s strtod(1.5)=%g printf=%s%s\n", frame, all ? all : "(null)",
+            num ? num : "(null)", lc && lc->decimal_point ? lc->decimal_point : "(null)", std::strtod("1.5", nullptr), fmt,
+            changed && last[0] ? " CHANGED" : "");
+        snprintf(last, sizeof last, "%s", cur);
+    }
+}
+
 void update_gfx(ultramodern::gfx_callbacks_t::gfx_data_t) {
+    rs64_s7953_locale_probe();  // s7953 class LC witness (main thread, per frame; env-gated)
     // Pump SDL events on the main thread (the one that owns the SDL window).
     // Win32 routes window messages to the window-owning thread's queue, so
     // SDL_PumpEvents on any other thread won't dispatch them. Without this,

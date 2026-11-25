@@ -325,6 +325,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    gate now `--plant` (2 planted REDs from the capture) + REVIEWED budget for the post-s7441 rs64_s7463_hash (XXH3 relabel,
    0.004 self). s7936: s7723's six s7392-s7399 inputs re-captured (scratch/s7936/<k>/run.log.zst, 6 runs, all six verdicts +
    controls reproduce); tools/gate_sweep_allowed_red.txt is EMPTY; full sweep 258 gates 0 RED. Any new RED gate now blocks the exit gate outright.
+13a. **s7953 class LC (process locale) CLOSED, two lines:** every float parse (env knobs, settings.txt, stand-ins) is strtod/atof/printf = LC_NUMERIC-dependent; under a comma locale "1.5" parses as 1 (plant arm). No setter in src/ + lib/ (non-contrib), none imported by the binary's non-system dylibs incl. the dlopen'd SDL3 (`python3 tools/s7953_locale_census.py --witness scratch/s7953`, 3 planted controls, sweep row S7953_LC); runtime witness ROGUESQ_S7953_LOCALE=1 stays C/"." for 65 samples under an LC_ALL=de_DE.UTF-8 launch, ROGUESQ_S7953_PLANT=de_DE.UTF-8 flips it (CHANGED, dp=","). Owner AppleLocale en_US. A new setlocale/uselocale/locale::global anywhere turns the sweep RED.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

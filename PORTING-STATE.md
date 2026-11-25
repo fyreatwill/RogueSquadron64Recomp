@@ -212571,3 +212571,35 @@ What ran: NEXT s7952 unit 1 (close the run-dir-case-collision class after s7951 
   R case-sibling rc3, R exact rc0, R fresh rc0); planted $T/CapX then launch with $T/capx: all 4 OUTDIR launchers rc 3, no game launched.
 - Census: 15 arms.log under scratch, 0 case-only arm-name pairs; planted q4/Q4 arms.log caught by the same pass (positive control).
 Rules out: further silent case-collision data loss through the shared launchers. Class closed; next rung per NEXT.md.
+
+## Session 7953 (2026-11-25) — class LC (process locale) closed: no locale setter anywhere in the process (source + binary/dylib imports incl. dlopen'd SDL3), runtime witness stays C under an LC_ALL=de_DE.UTF-8 launch, planted setlocale flips "1.5" -> 1; census gate S7953_LC
+
+Triage: crash_reports --since 2026-11-25 new=0; SOAK-RESULTS no new lines (s7947_handoff_fast folded by s7948).
+Work unit (NEXT s7953, ladder 3c -> new M3/host idiom-class audit). Class chosen after grepping the ledger: env parses (s7358 AI),
+snprintf append (s7359 AJ), UBSan div0/fcast (s7583) were all closed; the process LOCALE had never been audited (0 ledger hits).
+Why it matters: every float parse in our tree (ROGUESQ_DRAW_DISTANCE and other env knobs, settings.txt, stand-in tuning) is
+strtod/atof/sscanf/printf, all LC_NUMERIC-dependent.
+Hypotheses: H-C (nothing in the process ever leaves the "C" locale -> class dead); H-lib (SDL3/AppKit/Metal or a lib/ file calls
+setlocale(LC_ALL,"") so the owner's LANG reaches strtod); H-thread (per-thread uselocale/std::locale::global somewhere).
+Discriminator: static census + per-frame runtime witness under a hostile launch env, with a planted setter as positive control.
+- Static (tools/s7953_locale_census.py): source scan of src/, lib/N64ModernRuntime/{librecomp,ultramodern}, lib/rt64/src minus
+  contrib (327 files; string literals and // comments stripped) for setlocale/uselocale/newlocale/locale::global/.imbue(: 3 rows =
+  2 query-only (setlocale(X, nullptr)) + 1 reviewed (the s7953 plant), 0 open. nm -u of build/RogueSquadron64Recomp + every
+  non-system dylib (otool -L, plus SDL3 which sdl2-compat dlopen()s and otool misses): binary imports _setlocale only through
+  the reviewed s7953 code; sdl2-compat and libSDL3.0.dylib (3.4.14) import no setter. Controls: planted `setlocale(LC_ALL, "")`
+  source -> OPEN, planted _uselocale in a fake SDL3 -> OPEN, dropped REVIEWED row -> OPEN (source and import), all FIRED.
+- Runtime: new ROGUESQ_S7953_LOCALE=1 witness in update_gfx (main thread, per frame; logs first frame, every change, every 600
+  frames: LC_ALL, LC_NUMERIC, localeconv dp, strtod("1.5"), printf %.2f); ROGUESQ_S7953_PLANT=<name> calls setlocale(LC_ALL,name)
+  at frame 300. scratch/s7953/run.zsh, 3 sequential 45 s boots (boot -> title/attract, ~38k frames each), 0 crash:
+  base 63/63 samples C '.' 1.5; stress (LANG=LC_ALL=LC_NUMERIC=de_DE.UTF-8) 65/65 C '.' 1.5; plant -> "frame=300
+  LC_ALL=de_DE.UTF-8 dp=, strtod(1.5)=1 printf=1,50 CHANGED" and stays there (positive control: the witness sees a change and the
+  real consequence: a 1.5 knob would silently parse as 1). Extracts scratch/s7953/{base,stress,plant}.s7953.txt.
+- Owner host: AppleLocale en_US (decimal '.'), so even a setter would not have bitten the owner today; the gate protects ports of
+  the setup and future code (e.g. an ImGui/SDL upgrade that starts calling setlocale).
+- Gate: sweep ARGS row S7953_LC (`--witness scratch/s7953`). Full uncached sweep 259 gates: GREEN 255, REPORT 3, RED 1 =
+  s7893_retained_manifest (the new scratch/s7953 logs uncited until the manifest refresh loop.sh does each iteration); refreshed
+  -> --check missing=0/0/0, so 0 RED.
+Verdict: H-C selected on two lines (static census with controls + runtime witness with planted control); H-lib and H-thread refuted
+for everything loaded by title. Not covered: system frameworks' internals (dyld shared cache) beyond what the runtime witness saw;
+in-flight frames were not sampled this run (static census covers all our code paths). No mitigation added (no defect); class closed.
+Next: NEXT.md (another unaudited class or ladder rung).

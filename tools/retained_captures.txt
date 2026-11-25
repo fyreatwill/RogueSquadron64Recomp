@@ -857,6 +857,9 @@ scratch/s7936/s7394_ownfix/run.log
 scratch/s7936/s7396_own/run.log
 scratch/s7936/s7397_own/run.log
 scratch/s7936/s7399_own/run.log
+scratch/s7953/base.log
+scratch/s7953/plant.log
+scratch/s7953/stress.log
 scratch/ucode_regen/pristine/factor5_ucode_b_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl10_recompiled.c
 scratch/ucode_regen/pristine/factor5_ucode_ovl12_recompiled.c
