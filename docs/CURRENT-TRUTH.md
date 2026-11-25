@@ -297,6 +297,11 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    unprotected (6 on the prune's dry-run list) while --check said missing=0 (same glob). Fixed (printf fields -> '*'),
    --check now also verifies the sweep's own ARGS argv (second source), swept as S7932_RETAIN; the sweep also exits 1 on
    an ARGS row discovery never runs (planted control). Dry-run prune now hits 0 gate inputs.
+   s7933: third source = what gates actually READ (build/gate_sweep_cache.json traces): 22 traced scratch inputs (s7852-s7864
+   oracle/rand captures, s7751/s7754 snaps, ...) were missing from the manifest, safe only via incidental ledger citations.
+   Traced reads now join the manifest (rolling scratch/agent/soak_results excluded: s7415 samples it); --check line
+   `s7933 sweep-trace ... missing=0` pinned in S7932_RETAIN. Directory-cited inputs need nothing more: loop.sh re-walks them
+   every iteration and the prune needs mtime > 7 d. If a NEW capture a gate reads turns S7932_RETAIN RED, re-run the manifest.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

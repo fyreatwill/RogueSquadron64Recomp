@@ -212073,3 +212073,23 @@ restored. Dry-run prune after: 0 gate inputs (198 files listed, all uncited ring
 be empty (exit 1 otherwise), planted s7999_plant_census / s9999_plant_gate / extra x.py -> only the gate row flagged (PASS;
 first plant named s9999_* was my error, the pattern is s7*). --only s7893|s751[678] -> GREEN 4. Full sweep: see below.
 Rules out: the s7516/s7517 gates silently falling to NEEDS-ARGS at the next 6-hourly prune (would have recurred s7865).
+
+## Session 7933 (2026-11-25) — retained-capture manifest third source: 22 scratch files the gates actually READ (sweep trace cache) were uncited by the manifest, safe only via incidental ledger citations; traced reads now join it and --check pins them
+NEXT s7933 asked whether directory-cited gate inputs could escape the owner's 7-day scratch prune. Directory walks are fine by
+construction (loop.sh re-walks every iteration; the prune needs mtime > 7 d). But the manifest's two sources (scratch literals
+in tools/s7*.py + the sweep's ARGS argv) both EXCLUDE scratch/agent and miss inputs built from non-literal paths. Third,
+independent source: build/gate_sweep_cache.json, where tools/gate_trace.py records every file each cached gate opened.
+Result: 490 traced scratch reads; 22 existing >64 KB files absent from tools/retained_captures.txt, 16 prune-eligible by type
+(s7852/s7857/s7858/s7861/s7864 oracle.log + *_rand.txt.zst read by the det-verdict --control gates and s7865_ai_dma_rate,
+s7751 snap_f0/k0_s4054.bin + s7754 hangar_hstate/k900_s1250.bin read by s7802_retained_input_controls, 4 old soak logs read by
+s7415). Simulating the prune's own reference scan: all 16 currently PROTECTED, but only because a tracked doc happens to cite
+them; the s7852-s7864 set (mtime 2026-11-23) would have become deletable on 2026-11-30 the moment those citations moved
+(maintenance prunes CURRENT-TRUTH). ORIGIN: refs() scans literals only, and excludes scratch/agent wholesale.
+Fix (tools/s7893_retained_manifest.py): trace_files() adds every existing >64 KB scratch file in the cache traces, except the
+rolling scratch/agent/soak_results dir (s7415 samples whatever logs exist; no verdict depends on a fixed set, and the owner's
+prune should keep reclaiming it). --check prints `s7933 sweep-trace retained=417 missing=N`, rc 1 if N>0; pinned in the
+S7932_RETAIN sweep regex. Controls: --control planted trace (big read file lands; tiny, rolling soak log, gone file and a
+missing cache do not) PASS; live positive control: --check on the pre-fix manifest -> missing=22 rc 1; regenerated (+22) ->
+missing=0 rc 0 on all three lines. Two traced reads (s7797 L3/L6 soak logs) are already gone, rolling dir, no gate effect.
+Rules out: a gate input surviving the prune only by accident of doc text. Known residual gap (next unit): os.stat/exists raise no
+audit event, so existence-only inputs are not in the trace.

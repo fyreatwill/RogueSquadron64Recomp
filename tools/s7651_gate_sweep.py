@@ -293,7 +293,7 @@ ARGS.update(S7928_GATEW)
 S7931_ROUTE = {"s7931_route_pair.py": (["scratch/s7931_port/ring_nf.txt", "scratch/s7931_route/port7.3/oracle.log", "--control", "scratch/s7931_port/ring_fc.txt"],
                r"common prefix 6/6 \(retail 6, port 7\) -> SEQ-MATCH; mutation prefix 3/6 differs\(ok\); control ring prefix 4/6 differs\(ok\)")}  # s7931: same owner save -> port and retail take the same transition sequence; FORCE arm + drop-one mutation are controls
 ARGS.update(S7931_ROUTE)
-S7932_RETAIN = {"s7893_retained_manifest.py": (["--check"], r"(?=[\s\S]*s7893 retained=\d+ manifest=\d+ missing=0)(?=[\s\S]*s7932 sweep-argv retained=(?:[1-9]\d{2,}) missing=0)")}  # s7932: '%d' ARGS literals were unprotected from the 7-day prune (glob 'l*d'); second source = the sweep's own argv
+S7932_RETAIN = {"s7893_retained_manifest.py": (["--check"], r"(?=[\s\S]*s7893 retained=\d+ manifest=\d+ missing=0)(?=[\s\S]*s7932 sweep-argv retained=(?:[1-9]\d{2,}) missing=0)(?=[\s\S]*s7933 sweep-trace retained=(?:[1-9]\d{2,}) missing=0)")}  # s7933: third source = the gates' traced reads (build/gate_sweep_cache.json); s7932: '%d' ARGS literals were unprotected from the 7-day prune (glob 'l*d'); second source = the sweep's own argv
 ARGS.update(S7932_RETAIN)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)

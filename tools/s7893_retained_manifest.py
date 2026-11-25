@@ -10,11 +10,16 @@ profiles (s7893), turning seven closed gates RED.
 This writes tools/retained_captures.txt: every existing file >64 KB under each scratch/ path literal in the gate sweep and in
 tools/s7*.py (recursive globs, bare 'scratch' and soak dirs excluded), one per line, '.zst' stripped. loop.sh refreshes it
 each iteration; the prune greps the working tree, so a refreshed tracked file protects new captures before its next commit.
---check exits 1 when a retained file on disk is missing from the manifest. --control: a planted dir must land in the list."""
-import glob, os, re, sys, tempfile
+--check exits 1 when a retained file on disk is missing from the manifest. --control: a planted dir must land in the list.
+s7933: third source = what the gates actually READ (build/gate_sweep_cache.json traces, tools/gate_trace.py). 16 traced scratch
+inputs (s7852-s7864 oracle/rand captures, s7751/s7754 snaps, 4 old soak logs) were missing from the manifest, protected only by
+incidental ledger citations. Traced reads now join the manifest, except the rolling soak_results dir (s7415 samples whatever
+logs exist; no gate verdict depends on a fixed set, and the owner's prune should keep reclaiming it)."""
+import glob, json, os, re, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "tools", "retained_captures.txt")
+CACHE = os.path.join(ROOT, "build", "gate_sweep_cache.json")
 FMT = re.compile(r"%[-+ #0-9.]*[sdixX]")  # s7932: a printf field in a literal ("log_l%d.txt.zst" % l) is a wildcard
 LIT = re.compile(r"""['"](scratch/[^'"\n ]+)['"]""")
 
@@ -43,6 +48,30 @@ def files(root, rs):
     return sorted(out)
 
 
+ROLLING = ("scratch/agent/soak_results/",)
+
+
+def trace_files(root, cache):
+    """s7933: every existing >64 KB scratch file a cached gate run opened for reading."""
+    try:
+        c = json.load(open(cache))
+    except (OSError, ValueError):
+        return []
+    out = set()
+    for e in c.values():
+        for p in (e.get("trace") or {}).get("reads", []):
+            rel = os.path.relpath(p, root)
+            if not rel.startswith("scratch/") or rel.startswith(ROLLING):
+                continue
+            try:
+                if os.path.getsize(os.path.join(root, rel)) <= 65536:
+                    continue
+            except OSError:
+                continue
+            out.add(rel[:-4] if rel.endswith(".zst") else rel)
+    return sorted(out)
+
+
 def control():
     with tempfile.TemporaryDirectory() as d:
         os.makedirs(os.path.join(d, "scratch", "plant", "sub"))
@@ -52,15 +81,27 @@ def control():
         for n in ("log_l1.txt.zst", "log_l12.txt.zst"):  # s7932: the s7516/s7517 '%d' row shape
             open(os.path.join(d, "scratch", "fmt", n), "wb").write(b"x" * 70000)
         got = files(d, ["scratch/plant", "scratch/fmt/log_l%d.txt.zst"])
+        # s7933: traced reads - a big read file lands, a small one, a rolling soak log and a gone file do not
+        os.makedirs(os.path.join(d, "scratch", "tr")); os.makedirs(os.path.join(d, "scratch", "agent", "soak_results"))
+        for n, sz in (("tr/read.log.zst", 70000), ("tr/tiny.log", 10), ("agent/soak_results/x.log.zst", 70000)):
+            open(os.path.join(d, "scratch", n), "wb").write(b"x" * sz)
+        cp = os.path.join(d, "cache.json")
+        json.dump({"k": {"trace": {"reads": [os.path.join(d, "scratch", n) for n in
+                   ("tr/read.log.zst", "tr/tiny.log", "agent/soak_results/x.log.zst", "tr/gone.bin")]}}}, open(cp, "w"))
+        tgot = trace_files(d, cp)
+        tmut = trace_files(d, os.path.join(d, "nocache.json"))
     ok = got == ["scratch/fmt/log_l1.txt", "scratch/fmt/log_l12.txt", "scratch/plant/sub/big.txt"]
+    tok = tgot == ["scratch/tr/read.log"] and tmut == []
     print(f"CONTROL planted dir -> {got} {'PASS' if ok else 'FAIL'}")
-    return ok
+    print(f"CONTROL s7933 planted trace -> {tgot} (missing cache -> {tmut}) {'PASS' if tok else 'FAIL'}")
+    return ok and tok
 
 
 def main(a):
     if "--control" in a:
         return 0 if control() else 3
-    rs = refs(); fs = files(ROOT, rs)
+    rs = refs(); lit = files(ROOT, rs); tr = trace_files(ROOT, CACHE)
+    fs = sorted(set(lit) | set(tr))
     if "--check" in a:
         have = set(open(OUT).read().split()) if os.path.exists(OUT) else set()
         miss = [f for f in fs if f not in have]
@@ -73,12 +114,14 @@ def main(a):
         argv_files = files(ROOT, sorted({x for a, _ in gs.ARGS.values() for x in a if x.startswith("scratch/")}))
         amiss = [f for f in argv_files if f not in have]
         print(f"s7932 sweep-argv retained={len(argv_files)} missing={len(amiss)}" + (f" e.g. {amiss[:3]}" if amiss else ""))
-        return 1 if (miss or amiss) else 0
+        tmiss = [f for f in tr if f not in have]
+        print(f"s7933 sweep-trace retained={len(tr)} missing={len(tmiss)}" + (f" e.g. {tmiss[:3]}" if tmiss else ""))
+        return 1 if (miss or amiss or tmiss) else 0
     with open(OUT, "w") as fh:
         fh.write("# s7893 generated by tools/s7893_retained_manifest.py: exact retained-capture paths the census gates read.\n"
                  "# Citing them here keeps ~/.local/bin/rs64-scratch-prune.sh from deleting them. Do not hand-edit.\n")
         fh.writelines(f + "\n" for f in fs)
-    print(f"s7893 wrote {len(fs)} paths from {len(rs)} scratch refs")
+    print(f"s7893 wrote {len(fs)} paths from {len(rs)} scratch refs (+{len(set(tr) - set(lit))} s7933 traced-only)")
     return 0
 
 
