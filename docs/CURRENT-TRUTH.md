@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7924 (2026-11-24).
+Compact operational handoff, as of Session 7925 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -216,7 +216,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    s7922 whole-route table (`tools/s7922_transition_table.py <ring> <oracle.log>`, planted PORT-LONGER/EQUAL controls, anchored at
    the hangar-entry hit): 6/6 port transitions EQUAL or PORT-SHORTER vs retail on BOTH owner-recipe rings (s7919, s7921): boot
    15-18 vs 238 VIs, ->title 17-18 vs 18, title->menu 0 vs 0, hangar 16.5-17.7 vs 140, ->briefing 17 vs 124, ->mission 23.5 vs 212.
-   Pre-flight route is retail-paced; owner-queue row 20. Ordinal matching past the anchor is single-source (no port wait marker).
+   Pre-flight route is retail-paced; owner-queue row 20. s7925: pairing now two-source: present-ring `M` rows (port MusyX wait,
+   src/rsp/s7324_rcp_spill.cpp rs64_s7925_wait_mark) pair 6/6 with the hold ordinals on 2 runs (`--waits`, shift-1 mutation 0/6;
+   sweep row S7925_WAITPAIR); port waits 133-150 ms = retail's 8-9 VI spin.
    s7923: `tools/agent/ring_stalls.py` max_vihold_ms (soak summary field) now excludes animating holds (>2 s, gen advancing on
    >=90% of rows) into a new `max_animhold_ms`; `--selftest` planted controls. Re-scored owner rings: 17302/17318 -> 392/391 ms,
    so the field now reads real freezes. Verdict/summary lines before s7923 carry the raw ~17300 (title). vi_stalls30s unchanged.

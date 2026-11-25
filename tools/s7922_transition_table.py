@@ -16,10 +16,18 @@ Matching: by transition identity, anchored at hangar entry: the port IN-SCENE ho
   outward from the anchor. Verdict per pair: PORT-LONGER if port > retail + slack, else EQUAL (|d| <= slack) or PORT-SHORTER.
 Planted controls (same run): a synthetic pair port = retail + 10 must read PORT-LONGER, an equal pair EQUAL; exit 3 otherwise.
 Exit 1 if any real pair reads PORT-LONGER.
+s7925 --waits: second, independent pairing by EVENT identity. The port ring now carries one "M <t> pc=0x80091EB0 dur_ms=..."
+  row per waitForMusyXAudioTaskDone call lasting >= 0.05 ms (src/rsp/s7324_rcp_spill.cpp rs64_s7925_wait_mark; the s7925 first
+  run wrote the same row as "W ... pc=0x80091EB0", also read). Port waits pair with retail 0x80091EC4 hits by ordinal outward
+  from the anchor wait (the port wait inside the IN-SCENE hold <-> the retail hangar group); each wait's port hold is the live
+  hold whose [t-win, end+win] contains it. Agreement = the hold the wait pairing picks equals the hold the hold-ordinal pairing
+  maps to the same retail transition. Mutation control (same run): shifting the wait pairing by one must lose agreement.
+  Exit 1 also if any wait-paired transition reads PORT-LONGER; exit 3 if no port wait rows or no anchor wait.
 """
 import sys, os, re, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from s7920_hold_class import load, classify
+from rs64_zopen import zopen
 VI_MS = 1000.0 / 59.94
 
 def verdict(p, r, slack):
@@ -63,11 +71,40 @@ def retail_groups(log, merge):
                       parts=[g[2] for g in grp], hangar=hangar is not None and a <= hangar <= b))
     return G, hangar, len(holds)
 
+def port_waits(ring):
+    with zopen(ring) as f:
+        data = f.read()
+    t0 = None; W = []
+    for l in data.split('\n'):
+        if t0 is None and l.startswith('Q ') and ' vi=' in l: t0 = float(l.split()[1])
+        if (l.startswith('M ') or l.startswith('W ')) and 'pc=0x80091EB0' in l:
+            p = l.split(); d = dict(x.split('=', 1) for x in p[2:] if '=' in x)
+            W.append((float(p[1]), float(d.get('dur_ms', 0))))
+    return [(t - t0, ms) for t, ms in W] if t0 is not None else []
+
+def hold_of(live, t, win):
+    for i, h in enumerate(live):
+        if h['t'] - win <= t <= h['t'] + h['ms'] / 1e3 + win: return i
+    return None
+
+def wait_pairing(live, G, off, ra, W, win, shift=0):
+    """-> rows (k, wait t, dur, retail j, hold index, agree) or None without an anchor wait"""
+    anc = [k for k, (t, _) in enumerate(W) if hold_of(live, t, win) is not None and live[hold_of(live, t, win)]['cls'] == 'IN-SCENE']
+    if len(anc) != 1: return None
+    woff = ra[0] - anc[0] + shift; out = []
+    for k, (t, ms) in enumerate(W):
+        j = k + woff
+        if not 0 <= j < len(G): out.append((k, t, ms, None, hold_of(live, t, win), None)); continue
+        i = hold_of(live, t, win)
+        out.append((k, t, ms, j, i, i is not None and i + off == j))
+    return out
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('ring'); ap.add_argument('oracle')
     ap.add_argument('--thr-ms', type=float, default=120); ap.add_argument('--slack', type=float, default=3)
     ap.add_argument('--merge', type=int, default=3)
+    ap.add_argument('--waits', action='store_true'); ap.add_argument('--win', type=float, default=0.5)
     A = ap.parse_args()
     ok1 = verdict(27, 17, A.slack) == 'PORT-LONGER'; ok2 = verdict(17, 17, A.slack) == 'EQUAL'
     P = port_holds(A.ring, A.thr_ms); G, hv, nh = retail_groups(A.oracle, A.merge)
@@ -104,6 +141,30 @@ def main():
             print('retail-only wait vi=%d hold %d..%d (%d VIs): port shows no hold >= %g ms here'
                   % (g['vi'], g['a'], g['b'], g['len'], A.thr_ms))
     print('pairs_port_longer=%d' % longer)
+    if A.waits:
+        W = port_waits(A.ring)
+        R = wait_pairing(live, G, off, ra, W, A.win)
+        print('s7925 wait pairing: port MusyX waits %d (retail %d)' % (len(W), len(G)))
+        if not W or R is None:
+            print('VOID: no port wait rows or no single anchor wait'); sys.exit(3)
+        wl = 0
+        for k, t, ms, j, i, ag in R:
+            if j is None:
+                print('  wait %d t=%7.1f s dur %6.1f ms | no retail twin' % (k, t, ms)); continue
+            g = G[j]; ph = live[i]['vis'] if i is not None else 0.0
+            v = verdict(ph, g['len'], A.slack); wl += v == 'PORT-LONGER'
+            print('  wait %d t=%7.1f s dur %6.1f ms -> port hold %s (%5.1f VIs) | retail wait vi=%-5d %4d VIs %-12s agree=%s'
+                  % (k, t, ms, i, ph, g['vi'], g['len'], v, ag))
+        paired = [r for r in R if r[3] is not None]
+        agree = sum(1 for r in paired if r[5])
+        M = wait_pairing(live, G, off, ra, W, A.win, shift=1)
+        magree = sum(1 for r in M if r[3] is not None and r[5])
+        mpaired = sum(1 for r in M if r[3] is not None)
+        ctl = mpaired == 0 or magree < mpaired
+        print('agreement wait-vs-hold pairing %d/%d; mutation control (shift 1) %d/%d -> %s; wait_pairs_port_longer=%d'
+              % (agree, len(paired), magree, mpaired, 'PASS' if ctl else 'FAIL', wl))
+        if not ctl: print('VOID'); sys.exit(3)
+        longer += wl
     sys.exit(1 if longer else 0)
 
 if __name__ == '__main__':

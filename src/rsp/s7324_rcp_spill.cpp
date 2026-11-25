@@ -228,7 +228,28 @@ extern "C" void rs64_s7330_aud_submit(uint32_t data_ptr) {
     std::lock_guard<std::mutex> lk(g_mu);
     const uint64_t s = ++g_seq30; g_t30[s & 65535] = T7330{s, s7330_now(), 0, 0, 0, data_ptr};
 }
+namespace plume { bool rs64_pring_on(); double rs64_pring_now(); void rs64_pring_write(const char *row); }
+// s7925 G5c: port-side MusyX wait marker for tools/s7922_transition_table.py (its pairing past the hangar anchor was ordinal,
+// single-source: the port log had no wait marker). While ROGUESQ_PRESENT_RING is on, every waitForMusyXAudioTaskDone call that
+// lasts >= 0.05 ms writes one row "M <entry t> pc=0x80091EB0 dur_ms=<entry->exit> fast=<shorter calls since last row>" on the
+// present-ring clock (mach_absolute_time). Retail's wait-taken marker is 0x80091EC4 (gate 0x800A0F50 != 0); the untaken path
+// returns in microseconds, so dur_ms separates the two without reading guest RAM. Off when the ring is off (no cost).
+static void rs64_s7925_wait_mark(const char* edge, uint32_t pc) {
+    static const bool on = plume::rs64_pring_on();
+    if (!on) return;
+    static thread_local double t_in = -1.0;
+    static thread_local unsigned fast = 0;
+    if (pc == 0x80091EB0u && !strcmp(edge, "wait-entry")) { t_in = plume::rs64_pring_now(); return; }
+    if (pc != 0x80091FBCu || strcmp(edge, "wait-exit") || t_in < 0) return;
+    const double d_ms = (plume::rs64_pring_now() - t_in) * 1e3;
+    if (d_ms < 0.05) { ++fast; t_in = -1.0; return; }
+    char row[128];
+    snprintf(row, sizeof(row), "M %.6f pc=0x80091EB0 dur_ms=%.3f fast=%u\n", t_in, d_ms, fast);
+    plume::rs64_pring_write(row);
+    fast = 0; t_in = -1.0;
+}
 extern "C" void rs64_s7330_gate(const char* edge, uint32_t pc) {
+    if (edge) rs64_s7925_wait_mark(edge, pc);
     if (!rs64_s7324_on || !edge) return;
     uint32_t e = 0;
     if (!strcmp(edge, "wait-entry")) e = 1; else if (!strcmp(edge, "wait-seed")) e = 2; else if (!strcmp(edge, "wait-exit")) e = 3; else return;

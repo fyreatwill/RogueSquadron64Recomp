@@ -211875,3 +211875,33 @@ Result (re-score of real rings, discriminating H-clean vs H-hidden-freeze): 12/1
 max_gap_ms 145-149 ms, max_animhold_ms 16684-17335 ms (the title). The pre-s7923 tag lines of s7919/s7921 read freeze_arms=1
 from their stale raw max_vihold_ms=17302/17318 -> H-hidden-freeze refuted, the 1 is the animating title. Rules out: a
 1-30 s freeze hiding in any of these soaks. Old-format ring-less tag lines read freeze_na=1 (no ring measure), not 0.
+
+## Session 7925 (2026-11-24) — G5c transition pairing is now two-source: a port-side MusyX wait marker in the present ring pairs 6/6 with the hold-ordinal pairing on two fresh owner-recipe runs (shift-1 mutation 0/6)
+
+Unit (NEXT s7925, slug g5-owner-looks-standing; every ladder item is owner-gated, so this took the one open single-source label in
+CURRENT-TRUTH item 0a: s7922 "ordinal matching past the anchor is single-source (no port wait marker)"). crash_reports
+--since 2026-11-24: new=0. SOAK-RESULTS: no new lines.
+1. src/rsp/s7324_rcp_spill.cpp rs64_s7925_wait_mark (called from the existing host hook rs64_s7330_gate, which every
+   rs64_s2031_m5_gate_event reaches before its own enable check, so no regen and no RecompiledFuncs edit): while
+   ROGUESQ_PRESENT_RING is on, each waitForMusyXAudioTaskDone call (entry 0x80091EB0 -> exit 0x80091FBC) lasting >= 0.05 ms
+   writes `M <entry t> pc=0x80091EB0 dur_ms=<d> fast=<shorter calls since last row>` on the ring clock. Off with the ring off.
+   First build wrote the tag `W`, which collides with the existing W (wake) row type: renamed to `M`, rebuilt, rerun (the W run
+   scratch/s7925_wmark is kept; the tool reads both spellings).
+2. tools/s7922_transition_table.py --waits: second pairing by EVENT identity (port M rows <-> retail 0x80091EC4 hits, ordinal
+   outward from the anchor wait inside the IN-SCENE hold), each wait's port hold = the live hold whose [t-0.5 s, end+0.5 s]
+   contains it; agreement = wait pairing and hold-ordinal pairing pick the same port hold for the same retail transition.
+   Mutation control (same run): wait pairing shifted by one must lose agreement; exit 3 if no M rows / no anchor wait.
+3. Two runs, owner recipe (`env R=... HOLD=120 ALLOW_SLOW=1 ARMS="4:q4:" zsh tools/g1e_owner_quiet_arms.zsh`, host idle 6345 s),
+   both vs scratch/s7921_oracle5/oracle.log:
+   scratch/s7925_wmark: alive 1, crashlines 0, vi_stalls30s 0, max_gap 146 ms, max_vihold 408; 6 waits 133-150 ms at t=4.8, 10.8,
+   28.1, 43.4, 58.6, 66.9 s; agreement 6/6, mutation 0/6 PASS, wait_pairs_port_longer=0.
+   scratch/s7925_mmark: alive 1, crashlines 0, vi_stalls30s 0, max_gap 148, max_vihold 391; same 6 waits (132.9-150.0 ms) at the
+   same times; agreement 6/6, mutation 0/6 PASS, 0 port-longer. Same per-transition verdicts as s7922 (boot / hangar / briefing /
+   mission PORT-SHORTER, logo->title and title->menu EQUAL).
+   Side datum: every port wait lasts 133-150 ms = 8-9 VIs, the same as the retail wait spin s7921 measured (8-9 VIs) -> the wait
+   itself is retail-length; the port is shorter only in the load that follows. fast=0 on every row: no sub-0.05 ms call happened
+   between waits. Retail's 8th wait (vi=4369, 640->512 flight entry) has no port M row before the ring's end; whether the port
+   skips that call or takes it in < 0.05 ms (a trailing fast count is never printed) is open and harmless (no hold there).
+4. Gate: sweep row S7925_WAITPAIR (s7922_transition_table.py added to EXTRA_GATES) over scratch/s7925_mmark/ring_q4.txt.
+Verdict: the s7922 pairing is confirmed by a second, independent line (event identity, two runs); the "single-source" caveat on
+item 0a is removed. Rules out H-misaligned (a hold paired with the wrong retail transition). G5c engineering stays complete.
