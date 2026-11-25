@@ -1,18 +1,19 @@
-# NEXT (s7909; carried over from s7908, which only closed the gate contract)
-HYPOTHESIS-ID: g3-preflight-frame-count
+# NEXT (s7910)
+HYPOTHESIS-ID: g3-preflight-load-cue
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, docs/OWNER-REVIEW-QUEUE.md answers,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7907): island B CLOSED (harness frame/VI-alignment class, flight exact both classes). In the m11 SNAP=3 pair the port
-renders 1047/1048 frames between the press-7 segment start (port ~1916, retail 1845) and the crawl start (port ~2963, retail
-2864); retail renders 1019. The same VI window, so the port makes ~28 more frames (fewer 3-VI frames?).
-Work unit (offline first, kept bins: scratch/s7905/s7905_island_b_rep3/p1.bin.zst, scratch/s7895/m11k/r1/retail.bin.zst):
-  per-frame VI spacing in that window on both sides (port: VI_STAMP / [dt7835] fr in p1/run.log; retail: oracle.log VI per
-  fullsync), histogram of 2-VI vs 3-VI frames, and where in the window the extra frames cluster (which sub-scene).
+State (s7909): the port's +28 pre-flight frames on m11 = ONE load stall 86 VI after press 7 (retail 77 VI, port 20 VI;
+tools/s7909_window_vi.py scratch/s7872/rdt/oracle.log.zst scratch/s7905/s7905_island_b_rep3/p1/run.log --end-ret 5171).
+All other frames 2-VI both sides. port[1916:2559] is exact 643/643 at its own offset, port[2559:2963] (404 vs retail 376)
+matches nothing: the scene content forks ~1286 VI after the load.
+Work unit (one iteration, then close the pre-flight thread either way): what clocks the fork at port 2559?
 Hypotheses:
-  H-cost: retail drops to 3 VI/frame where the RSP/RDP load is heavy (hardware cost), the port does not -> retail-faithful
-    only by modelling cost; not a defect, close.
-  H-scene: the port renders frames retail does not (e.g. a fade or load held longer, extra blank frames) -> port defect, name it.
-  H-dt: the game's dt per frame differs in the window (would contradict s7906 dt-equal crawl; check pre-crawl only).
-Discriminator: extra frames spread evenly with retail showing 3-VI frames at the same scene content -> H-cost; extra frames
-  contiguous at one scene transition / blank or duplicate content -> H-scene.
-Budget: one iteration; if H-cost, close and take the next CURRENT-TRUTH item (island A H-index, or owner-queue work).
+  H-vicue: a scene step keyed on elapsed VI / osGetTime (not frame count) -> fires 57 VI = 28 frames earlier in port frame
+    terms. Predicts: the fork frame's retail VI - load-end VI == port VI - load-end VI (same elapsed VI from the load end).
+  H-audio: keyed on the audio clock / music cue (AI DMA count) -> same elapsed AUDIO time, check [ai] or AI counter.
+  H-input: press 8 (VI-scheduled) leaks earlier (should not: press 8 is at port fs 2625 > 2559) -> refuted if fork < press 8 frame.
+Discriminator (offline first): retail VI of frame r2488 (s7872/rdt per-frame rows: index of row = retail frame - offset;
+  calibrate with the 643 segment start r1845 = port 1916) vs port dt7835 VI of port frame 2559; equal elapsed VI from the
+  stall end on both sides -> H-vicue; otherwise compare AI counters. If H-vicue/H-audio: CLOSE as retail load-time cost
+  (faster loads are fine, owner goal is not load-time fidelity) and record it in CURRENT-TRUTH item 0; take the next
+  ladder rung / owner queue.

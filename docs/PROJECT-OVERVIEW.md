@@ -16160,3 +16160,60 @@ Item 12 (G3 retail flight det sweep), 0x31=5..9 detail, verbatim as of s7861:
    **0x31=9 (s7853): H-exact.** 5076 ticks, seed 69f4f739, 58 dt pins. p1: seed/callers/hp equal all ticks, 0 fork windows, all
    11 song-handle switches same tick, rumble 35=35; record only 1 transient row (dump mid-update between two retail rows).
    s7849_rec_align.py now reports transient vs `first persistent nonpose diff row` (p2 control persistent at 1203).
+
+
+## (s7909) island B archive — CURRENT-TRUTH Next-steps item 0, s7896-s7907, verbatim
+
+0. **Island B (s7896-s7898, slug g3-island-b).** m3's B is pure pre-tick RNG, closed by det_pair `RREP=1` (s7896, 544/544).
+   m6/m11 B start at crawl call ~2675 of 2887 (the crawl tail). **s7898: H-dt refuted there**: crawl dt equals retail 2887/2887, with
+   cumulative 0 VI (s7891_crawl_clock `--plant 2675:4` PASS), yet 5-10 white FFFFFFFF tris per frame drift (m11 N213, m6 N212).
+   On m11 B continued through the post-crawl cinematic because of the island-A mechanism on its post-load frame (fire 7; retail 1.0 VI,
+   pinned port 2.038). `ROGUESQ_SNAP3_ONLY=c,7` (new list form) turns 237 of those frames exact: map N213@6073 + N79/N15/N22/N92/N396
+   (817 vs 1054). **s7899: the drift is guest INPUT, not our RSP.** Dump (tools/s7899_island_b_dump.py, plant PASS): drifting tris are
+   vertex-level sub-pixel moves (per-frame median 0.69 px, within-frame spread 0.67 = no common delta: H-cam refuted; corr(frame,|d|)
+   -0.39: H-anim refuted; 90/6002 found verbatim in retail +-4 frames: permutation/H-object-rng refuted), first a large white object
+   entering top-right (6073-6080), then tiny 2-5 px tris clustered x375-530 y204-238, ~28/frame. Two sources for H-input: cxd4 replay of
+   the port's own task snapshots (tools/s7899_snap_cmp.py, ROGUESQ_S7751_EVERY=10:40:5900, 40 tasks) is bit-identical to our LLE
+   on all 40 (20 in the drift window) and carries exactly the same retail diff (8-38 tris/frame); host FMA cannot fuse guest ops
+   (one op per C statement; cc test fuses a*b+c only within a statement), FMA sites exist only in PATCH code.
+   (s7899 next) name the guest data (matrix / vertex buffer) of the drifting tris and diff it against retail RDRAM at the same task.
+   **s7900: named and mostly closed.** The drifting tris are engine-flame meshes whose tip z = template - (s16)rand()%range
+   (updateAnimatedTextureStreaming 0x80054174/0x800541FC); matrices bit-equal to retail (tools/s7900_retail_mtx_cmp.py, oracle
+   --pc-ram-dump-also), only flame z differ. Cause = the s7896 replay key: per-site ordinals drift by the attract-scene flame burst
+   length (retail 19334 vs port 13608 calls). `tools/s7896_rand_replay.py --burst 600` + `ROGUESQ_RAND_REPLAY_BURST=600` (APM=1):
+   crawl tail 298 -> 68 frames (alternate frames, 1 tri), post-crawl cinematic 473 -> 0. Tools: tools/s7900_dma_trace (cxd4 DMA log
+   + poke), tools/s7900_tri_source.py.
+   **s7901: residual is NOT per-site ordinal skew.** "N1" in the map = 1 non-exact FRAME, not 1 tri: the 68 alternate frames each
+   carry 4-40 differing white tris (scratch/s7901/s7901_fdiff.py). Retail burst 2 starts on the 0x800541FC parity, the port on
+   0x80054174 (16-call frames alternate; retail 1FC 6736 vs 174 6688 calls), yet post-replay seeds equal retail's table on both sites.
+   New ROGUESQ_RAND_REPLAY_SKEW=SITE:BURST:DELTA: 800541fc:2:16 -> N213@5639 contiguous, 80054174:2:-16 -> N212@5639 (both arms
+   break the even frames too, so the knob is live and the current per-site keys are right for BOTH parities). Next: RDRAM vertex
+   arena at one odd residual frame vs retail (s7900 oracle --pc-ram-dump-also + ROGUESQ_S7751_SNAP), match each differing z
+   against retail's rand table to name the ordinal the port used; then m6 with the burst arm.
+   **s7902: odd-frame residual = flame meshes again, values are retail's but misplaced.** Snapshots s5680-5685 (serial = frame+42):
+   every odd-frame port-only tri comes from a flame mesh under instance mtx 700100/700140 (H-other refuted); those matrices equal
+   retail; each port flame mesh is found VERBATIM in retail RDRAM at another VI/address (scratch/s7902/mesh_search.py; H-value
+   refuted); the tris match no retail frame +-6 (shift control PASS). The crawl sim runs at half render rate (retail pool changes
+   every 4 VI), so the odd frame is a re-render with fresh jitter. Next: widen the retail dump to the DL (0x720000-0x751000) and
+   name the (instance, mesh) retail draws per odd frame. Tool: tools/s7902_arena_cmp.py.
+   **s7903: same instance, same address, adjacent-pair values.** Retail DL/mesh span dumped (oracle --pc-ram-dump-also now up to 10
+   ranges), overlaid onto port snapshots and cxd4-replayed (tools/s7903_retail_overlay.py, tools/s7903_retail_bind.py; control 6/6
+   retail frames reproduced exactly; PRIM excluded from tri keys, a replayed task starts with no SETPRIMCOLOR). Retail draws the
+   same flame instance at the same vertex address as the port (H-bind, H-alloc refuted); the port's bytes are retail's from the
+   neighbouring drawn frame: 700100 one frame LATE, 700140 one frame EARLY. Residual = rand-replay ordinal keying in the crawl tail
+   (harness, not game/RSP). Next: a tail-scoped two-site skew (opposite signs) in the replay knob.
+   **s7904: rand keying REFUTED as the residual (supersedes s7903's "Next").** Two-site opposite-sign SKEW arms (new optional FROM
+   field SITE:BURST:DELTA:FROM): A (1FC +16, 174 -16) leaves the residual unchanged (odd frames 3051 vs base 3033 tris / 106, even 0;
+   knob live, rand rows differ), B (swapped) breaks the tail contiguously. The port's RDRAM at s5683 holds retail's correct 700140
+   block at 0x74D710 (retail draws 0x724F70) and already holds retail's NEXT drawn frame's blocks (scratch/s7904/blk_search.py):
+   the values are right, their arena placement/timing vs the re-render task load is not. Next: write watches on the flame blocks
+   (0x724F70/0x727BC8/0x749930, vi 10560-10580) in the oracle and the port, writer PC + VI vs task-load n on both sides.
+   **s7906: deterministic two-class outcome, not host race / stale build** (same binary + recipe; gap 28 -> crawl exact, gap 29 ->
+   708 residual, 9/9 runs; tick state, dt and task interleave identical; tools/s7906_task_ptr_cmp.py: gap-29 runs resubmit the
+   previous odd-stream DL at crawl task 2665 and stay one task late to ~2885). s7905's "absent 3/3" was class luck.
+   **s7907: CLOSED as harness-alignment class; flight exact in both classes.** det_frame_cmp `--vote-ranges`: the 643 votes are
+   port phase 5 (retail r[1845:2488]) starting at press-7 fs+3 in all 7 runs; the crawl (phase 6) starts 1047 frames later
+   (gap 28, exact) or 1048 (gap 29, residual); retail 1019. Two-arm test with new autopilot `f<N>:key` (press 8 = N fullsyncs after
+   press 7): f712 -> crawl start press8+339, gap 29, 708 residual; f713 -> +337, gap 28, exact. So the press frame delta is
+   absorbed (crawl is VI/dt-timed): H-press REFUTED; the class is the frame count the port renders over that VI window (frame/VI
+   phase). Port renders +28 frames vs retail there (open, next unit). Use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ..." (s7898).

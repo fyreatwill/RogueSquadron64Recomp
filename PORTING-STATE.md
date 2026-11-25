@@ -211475,3 +211475,30 @@ Result: s7530 --controls 6/6 PASS (live census 0 fails), s7531 --controls 5/5 PA
 RED 7 (all allowed)}, new RED 0. Its own planted red/green and cache controls PASS in the same run.
 Rules out: none on the game side. This was a census bookkeeping gap: s7907 added a scalar latch without a census row.
 The NEXT.md unit (g3-preflight-frame-count, per-frame VI spacing in the m11 pre-crawl window) was not started and carries over.
+
+## Session 7909 (2026-11-24) — the port's +28 pre-flight frames (island B's window) are one shorter load stall: retail 77 VI vs port 20 VI after press 7, every other frame 2-VI on both sides (H-cost, not a render defect)
+Pre-checks: crash_reports FOLDED=3 new=0; no new SOAK-RESULTS lines; no owner answers; CURRENT-TRUTH 59.9 KB (< 60 KB, no maintenance).
+Work unit (NEXT s7909, HYPOTHESIS-ID g3-preflight-frame-count), offline only, no game run.
+Instrument: new tools/s7909_window_vi.py. Retail = scratch/s7872/rdt/oracle.log.zst (exec-trace 0x8000BBE8 = one row per game
+frame with its VI and dt; same press schedule as the m11k retail, WIDTH 512->640 at VI 5171 in both). Port = the kept
+s7905_island_b_rep3 p1 run.log ([dt7835] per VI wake / per frame, autopilot fire rows). VI clocks aligned by the presses:
+retail press - port fire = 20 for presses 6..9 (the port gate event shifts earlier ones; --off forces it).
+Result, window press 7 -> crawl (2216 VI both sides):
+- retail 1062 frames, port 1090 (+28); wake-gap hist retail {2:1060, 77:1}, port {2:1088, 20:1}; dt class 2.0 VI on 100% of frames
+  both sides. The single stall sits 86/87 VI after press 7 on both. (77-20)/2 = 28.5: the odd 57-VI difference is why s7906/s7907
+  saw two classes (28 / 29) depending on the 2-VI phase.
+- Equality control, same tool: press 8 -> 9 window 720 VI, 360/360 frames, no stall, 0 bucket diffs. Tool control (2-VI class on
+  both sides, every bucket populated) PASS.
+- Other windows (--off 20): press 2: retail stall 116 VI vs port 23; press 5: retail 72 vs port 20; press 3/6 windows equal (555/555,
+  360/360). So every port load stall is ~20-23 VI, retail's 72-116: the port loads faster than hardware; the frame excess is
+  purely that.
+Second line (render, det_frame_cmp --port-start/--port-end, m11k retail.bin): port[1916:2559] exact 643/643 at its own offset
+(votes 1845 only); port[2559:2963] (404 frames; retail's matching span r[2488:2864] is 376 = 28 fewer) shares NO unique frame with
+retail; port[567:1916] (phase 4) no alignment either (1 vote each). So within the press-7 scene the frames are render-exact until
+a fork ~1286 VI after the load, before press 8 (port fs 2625).
+Selected: H-cost (load stall length), not H-scene (no extra blank/duplicate frames) and not H-dt (dt equal on every frame).
+Rules out: the port rendering extra frames at 2-VI cadence anywhere (0 bucket diffs outside the two buckets holding the stall);
+H-dt in the pre-crawl window. Single-source on what clocks the 2559 fork (next unit: elapsed-VI vs audio cue).
+Docs: CURRENT-TRUTH Next-steps item 0 compacted (island B s7896-s7907 archived verbatim to PROJECT-OVERVIEW "(s7909) island B
+archive"), 59.9 -> 54.5 KB.
+ORIGIN: no mitigation; new offline analysis tool only.
