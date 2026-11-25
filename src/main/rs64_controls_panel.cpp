@@ -99,7 +99,7 @@ void draw_ui() {
         ImGui::TextWrapped("Bind = replace that button's inputs with the next one you press.  Add = keep them and add one.  Save writes controls.json.");
     // s7942: wrapped (TextDisabled does not wrap; at 640x480 it cut off "Circle/B = close").
     ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-    ImGui::TextWrapped("Pad: D-pad up/down picks a row, Cross/A = Bind, Square/X = Add, Triangle/Y = Save, Circle/B = close.  Open: touchpad click or Share/Back+Start.");
+    ImGui::TextWrapped("Pad: D-pad up/down picks a row, Cross/A = Bind, Square/X = Add, Triangle/Y = Save, L1 = Clear row, hold R3 1 s = Reset to defaults, Circle/B = close.  Open: touchpad click or Share/Back+Start.");
     ImGui::PopStyleColor();
     ImGui::Separator();
     const int* targets = k_targets;

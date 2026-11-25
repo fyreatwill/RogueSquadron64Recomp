@@ -13016,11 +13016,13 @@ static void rs64_bind_panel_test_step(long polls, long stable, long mism) {
 // s7941 owner-panel-pad-nav: the F6 panel without a mouse or keyboard (owner plays on a TV with a PS pad).
 // Closed: touchpad click (only while the touchpad is not bound to anything) or Share/Back+Start opens it.
 // Open with no capture armed: D-pad up/down = row cursor, Cross/A = Bind, Square/X = Add, Triangle/Y = Save,
-// Circle/B (or the open trigger again) = close. With a capture armed nothing here acts: the capture takes the next pad
+// Circle/B (or the open trigger again) = close, s7943: L1 = Clear the cursor row, R3 held 1 s (SDL_GetTicks, not polls:
+// the poll rate follows the game frame rate) = Reset to defaults (not saved). With a capture armed nothing here acts: the capture takes the next pad
 // press, so any button stays bindable. Every pad button held when the panel opens or closes is masked from the game until
 // released, so the closing Circle never reaches it as C-Down. Runs before rs64_bind_capture_step, so a press that ends a
 // capture cannot also act here (edges are tracked every poll). ROGUESQ_PANEL_PAD=0 turns it off.
 static long g_nav_saves = 0;
+static long g_nav_resets = 0; static uint32_t g_nav_r3_ms = 0;  // s7943: resets done, R3 hold length at the last reset
 static bool g_nav_supp[SDL_CONTROLLER_BUTTON_MAX];
 static void rs64_panel_pad_step(rs64_input_snapshot* s) {
     static const bool on = [] { const char* e = getenv("ROGUESQ_PANEL_PAD"); return !(e && *e == '0'); }();
@@ -13050,12 +13052,27 @@ static void rs64_panel_pad_step(rs64_input_snapshot* s) {
         if (bind || add) {
             if (tg < 0) { rs64_panel_set_msg("Stick-direction rows take keyboard keys only: bind them with the keyboard."); fprintf(stderr, "[panel-pad] refused keys-only row target=%d\n", tg); }
             else { rs64_bind_capture_arm(tg, add); fprintf(stderr, "[panel-pad] %s target=%d\n", add ? "add" : "bind", tg); }
+        } else if (edge(SDL_CONTROLLER_BUTTON_LEFTSHOULDER)) {
+            rs64_bind_table t = rs64_bind_live_get(); rs64_bind_clear(&t, tg); rs64_bind_live_set(t, "pad clear");
+            rs64_panel_set_msg("Row cleared (not saved yet).");
+            fprintf(stderr, "[panel-pad] clear target=%d\n", tg);
         } else if (edge(SDL_CONTROLLER_BUTTON_Y)) {
             std::string m; rs64_bind_save(&m); rs64_panel_set_msg(m); g_nav_saves++;
             fprintf(stderr, "[panel-pad] save n=%ld\n", g_nav_saves);
         } else if (edge(SDL_CONTROLLER_BUTTON_B) || tp || chord) {
             rs64_panel_set_open(false); mask_held();
             fprintf(stderr, "[panel-pad] close by=%s\n", tp ? "touchpad" : chord ? "back+start" : "circle");
+        }
+        // R3 hold: the timer starts only on an R3 edge seen here (no capture armed, panel open), so an R3 that a capture
+        // took, or one still held from before the panel opened, never resets.
+        static uint32_t r3_t0 = 0; static bool r3_live = false;
+        if (edge(SDL_CONTROLLER_BUTTON_RIGHTSTICK)) { r3_t0 = SDL_GetTicks(); r3_live = true; }
+        if (!now[SDL_CONTROLLER_BUTTON_RIGHTSTICK]) r3_live = false;
+        if (r3_live && SDL_GetTicks() - r3_t0 >= 1000) {
+            r3_live = false; g_nav_r3_ms = SDL_GetTicks() - r3_t0; g_nav_resets++;
+            rs64_bind_live_set(rs64_bind_defaults(), "pad reset");
+            rs64_panel_set_msg("Defaults restored (not saved yet).");
+            fprintf(stderr, "[panel-pad] reset held_ms=%u n=%ld\n", g_nav_r3_ms, g_nav_resets);
         }
     }
     memcpy(prev, now, sizeof prev);
@@ -13105,6 +13122,13 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
         {{SDL_CONTROLLER_BUTTON_DPAD_DOWN}, 8, "down_wrap"}, {{}, 8, "down_wrap_idle"},
         {{SDL_CONTROLLER_BUTTON_A}, 8, "bind_A"}, {{}, 8, "bind_A_idle"},
         {{SDL_CONTROLLER_BUTTON_B}, 8, "capture_circle"}, {{}, 8, "capture_circle_idle"},
+        // s7943: L1 clears row 0 (A); an R3 tap does not reset; an R3 hold >= 1 s does; L1 / R3 while a capture is armed
+        // are captured, not acted on (the R3 capture is held 150 polls, past the reset time).
+        {{SDL_CONTROLLER_BUTTON_LEFTSHOULDER}, 8, "clear_L1"}, {{}, 8, "clear_idle"},
+        {{SDL_CONTROLLER_BUTTON_RIGHTSTICK}, 8, "r3_tap"}, {{}, 8, "r3_tap_idle"},
+        {{SDL_CONTROLLER_BUTTON_RIGHTSTICK}, 150, "r3_hold"}, {{}, 8, "r3_hold_idle"},
+        {{SDL_CONTROLLER_BUTTON_A}, 8, "bind_A2"}, {{SDL_CONTROLLER_BUTTON_LEFTSHOULDER}, 8, "capture_L1"}, {{}, 8, "capture_L1_idle"},
+        {{SDL_CONTROLLER_BUTTON_A}, 8, "bind_A3"}, {{SDL_CONTROLLER_BUTTON_RIGHTSTICK}, 150, "capture_R3"}, {{}, 8, "capture_R3_idle"},
         {{SDL_CONTROLLER_BUTTON_B}, 8, "close_circle"}, {{}, 8, "end"},
     };
     static size_t si = 0; static int in = 0;
@@ -13123,7 +13147,7 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
     };
     poll++;
     if (in == steps(si) - 1) {  // last poll of the step: check what the game got this poll
-        char d[300];
+        char d[400];
         const bool open = rs64_panel_is_open(); const int cap = rs64_bind_capture_target(); const int row = rs64_panel_pad_row();
         snprintf(d, sizeof d, "raw=%d/%d joyraw=%d same=%d poll=%ld open=%d cap=%d row=%d game_btn=%04X saves=%ld last=%s",
                  controller ? (int)SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A) : -1,
@@ -13132,6 +13156,10 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
                  poll, open, cap, row, game_btn, g_nav_saves,
                  rs64_bind_capture_last().c_str());
         const std::string w = sc[si].what;
+        const rs64_bind_table lt = rs64_bind_live_get();
+        int nA = 0; for (const auto& e : lt.buttons) if (e.n64_mask == RS64_N64_A) nA++;
+        const bool isdef = rs64_bind_to_json(lt) == rs64_bind_to_json(rs64_bind_defaults());
+        snprintf(d + strlen(d), sizeof d - strlen(d), " nA=%d def=%d resets=%ld r3ms=%u", nA, isdef ? 1 : 0, g_nav_resets, g_nav_r3_ms);
         if (w == "closed_A") chk("closed_A_reaches_game", !open && cap == 0 && (game_btn & RS64_N64_A), d);
         else if (w == "open_touchpad") chk("touchpad_opens", open && game_btn == 0, d);
         else if (w == "down") chk("dpad_moves_row", open && row == 1 && game_btn == 0, d);
@@ -13147,6 +13175,13 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
         else if (w == "down_wrap") chk("down_wraps_to_A_row", open && row == 0, d);
         else if (w == "bind_A") chk("cross_arms_A", cap == RS64_N64_A, d);
         else if (w == "capture_circle") chk("capture_takes_circle_not_close", open && cap == 0 && rs64_bind_capture_last() == "pad:b", d);
+        else if (w == "clear_L1") chk("L1_clears_row", open && cap == 0 && nA == 0, d);
+        else if (w == "r3_tap") chk("R3_tap_no_reset", open && nA == 0 && !isdef && g_nav_resets == 0, d);
+        else if (w == "r3_hold") chk("R3_hold_resets", open && isdef && g_nav_resets == 1 && g_nav_r3_ms >= 1000, d);
+        else if (w == "bind_A2") chk("cross_arms_A_again", open && cap == RS64_N64_A, d);
+        else if (w == "capture_L1") chk("capture_takes_L1_not_clear", open && cap == 0 && nA == 1 && rs64_bind_capture_last() == "pad:leftshoulder", d);
+        else if (w == "bind_A3") chk("cross_arms_A_third", open && cap == RS64_N64_A, d);
+        else if (w == "capture_R3") chk("capture_takes_R3_not_reset", open && cap == 0 && nA == 1 && !isdef && g_nav_resets == 1 && rs64_bind_capture_last() == "pad:rightstick", d);
         else if (w == "close_circle") chk("circle_closes_again", !open && game_btn == 0, d);
     }
     if (++in >= steps(si)) {

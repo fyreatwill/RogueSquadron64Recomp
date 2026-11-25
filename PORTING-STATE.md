@@ -212352,3 +212352,24 @@ ORIGIN: no corrupted or wild value is involved. The mitigation-shaped lines the 
 iteration's range (pad buttons held across panel open/close are masked from the game until released; the pad step is skipped
 under BIND_SELFTEST). The writer is the user's own pad press, a legitimate value. The mask is deliberate UI input routing: the closing Circle
 must not reach the game as C-Down. The s7941 PANEL_PAD=0 control showed the press leaking without it.
+
+## Session 7943 (2026-11-25) — contract fix (s7364 heapbuf census new key sc[i] reviewed) + F6 panel pad Clear row (L1) and Reset to defaults (R3 held 1 s), synthetic pad test 23/23, PANEL_PAD=0 control 21 fail
+
+Contract first: s7651 gate sweep flagged s7364_heapbuf_census.py RED after s7942. The only open key was `sc[i]` at
+main.cpp:13115/13118, the s7942 `held`/`steps` lambdas in rs64_pad_nav_test. Both are only called as held(si)/steps(si), and
+si < sc.size() per the existing s7941 `sc[si]` verdict (++si >= sc.size() sets done and returns; done gates entry).
+I added a BOUNDED row to tools/s7364_heapbuf_reviewed.tsv. `--check` now gives OPEN 0 (rc 0), and s7363 `--check` is rc 0 too.
+
+Work unit (NEXT s7943, owner-panel-pad-nav): before this, the pad could not Clear a row or Reset to defaults.
+- H-chord: L1 is bound to N64 L by default. The panel already gives the game no input while open (main.cpp `btn = 0` when
+  open), so taking L1 inside the panel takes nothing from the game. R3 (rightstick) is unbound in rs64_bind_defaults.
+  Chosen: L1 = Clear the cursor row. R3 held 1 s = Reset to defaults (not saved, same as the mouse button).
+- H-hold: the hold is timed in SDL_GetTicks ms, not polls. The timer starts only on an R3 edge seen in the idle-open branch,
+  so an R3 that a capture took (or one already held) never resets.
+- Test (ROGUESQ_PAD_NAV_TEST script, 7 new checks): L1 clears row 0 (nA=0). An R3 tap (8 polls) does not reset. An R3 hold
+  resets (def=1, held_ms=1000). L1 while a capture is armed is captured as pad:leftshoulder and clears nothing (nA=1). R3 held
+  150 polls while armed is captured as pad:rightstick and does not reset. 150 polls is longer than the 1 s that reset needed
+  in this same run, which is the positive control. `zsh tools/s7941_pad_nav_test.zsh`: on 23/23 fail 0, PANEL_PAD=0 control
+  23/21 fail (only the 2 pass-through checks pass), saved B=['pad:y'] -> VERDICT PASS.
+- The hint line, README Controls and OWNER-OPT-INS were updated. Limits: no physical PS pad on this host. The owner's feel
+  closes it.
