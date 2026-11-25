@@ -211524,3 +211524,35 @@ source on that split only. Two lines for the time keying: VI stamps (s7909 stall
 Verdict: island B's +28 frames = retail load-time cost. The port loads 57 VI faster, and a time-keyed scene absorbs the
 difference. Load-time fidelity is not an owner goal: thread g3-preflight-load-cue CLOSED.
 ORIGIN: no mitigation; new offline analysis tool only.
+
+## Session 7911 (2026-11-24) — pre-flight island census: H-mixed. m11 island B is the only load shift; m6 island B re-locks at the SAME lag on both sides (state island, not stall/frame-count), m3 B is the same-lag RNG class; new tools/s7911_island_relock.py + s7911_island_phase.py
+Pre-checks: crash_reports FOLDED=3 new=0; no new SOAK-RESULTS lines; no owner answers; CURRENT-TRUTH 55.0 KB (no maintenance).
+Work unit (NEXT s7911, HYPOTHESIS-ID g3-preflight-load-class-census), offline only, no game run.
+Retained pairs with both bins: m6 scratch/s7896/m6q/r1/retail.bin.zst + scratch/s7896/m6q/p1.bin (replica scratch/s7895/m6k/r1/retail.bin.zst
++ scratch/s7895/m6k/p1.bin, SNAP=3 arm scratch/s7892/m6s3c/r1/retail.bin.zst + scratch/s7892/m6s3c/p1.bin.zst), m3 scratch/s7895/m3c/r1/retail.bin
++ scratch/s7895/m3c/p1.bin, m11 scratch/s7895/m11k/r1/retail.bin.zst + scratch/s7905/s7905_island_b_rep3/p1.bin.zst. m8, m12, m16, b16: no
+bins (deleted after scoring) -> na.
+Stall line: the s7909 tool needs a retail per-frame clock (exec-trace 0x8000BBE8); the m6/m3 oracle logs have none. [vi-poll] is a
+sub-VI origin poll (rows keep coming through loads, 0 gaps >= 0.25 s) and the xtrace 2nd field is not VI on either side (retail rand
+rows 422..18299, presses at VI 360..5835), so retail m6 stalls are NOT recoverable offline. Port m6q [dt7835]: load stalls 19-23 VI,
+incl. 19 VI at +87 VI after fire 7 (same place as m11's).
+Discriminator used instead (independent of stall values): H-loadshift predicts the exact-match lag AFTER the island differs from the
+lag BEFORE it (s7910). New tools/s7911_island_relock.py (hash every port frame, vote lags of exact retail matches in pre/island/post
+windows; control = pre window locks >=90%):
+- m11 B (2559:2960): pre 71 160/160, island 0/401, post 99 157/160 -> H-loadshift (confirms s7910 with exact frames, not ntri).
+- m6 B (6071:6283) m6q: pre 532 160/160, island 0/212, post 532 160/160; m6k replica: 531 159/160 -> 531 160/160. Same lag both sides.
+- m3 B (3760:3943) m3c: pre 536 160/160, post 536 159/160 (known H-rng, s7896 RESEED closes it).
+s7910_fork_lag.py ntri on m6q agrees (best lag 532 in both island windows, err 521/247 > 0); on m3c 536 err 41/65.
+Second line, new tools/s7911_island_phase.py (fixed-lag rank pairing of port-only vs retail-only tris, between-ness vs retail j+1, offset
+vs speed regression, growth of the diff count): control m6 island A (s7892/m6s3c 3399:3558 lag 533) = 6244/6244 between, offset
+0.510 x speed - 0.016 (= s7870) -> H-phase PASS. m6q island B: only 23/212 frames rank-pairable (port and retail differ in tri COUNT),
+0 between -> H-drift; m6s3c's grown island B (6072:7254, N1182) growth 3.58, 0.29 between, 0.091 x speed -> H-drift. Third check
+(scratch/s7911/elem_shift.py): m6q port-only tris are contained in NO retail frame within +-60 of the lag (182/212 frames best = 0%),
+so it is not a whole-element integer time shift either.
+Selected: H-mixed. m11 B = load shift (closed s7910); m6 B = a state island at an unchanged frame alignment: neither stall, frame count
+nor half-frame phase; it survives full rand-VALUE replay (s7896), so the state is something other than rand values (s7896: m6's
+advanceNpcOnCurvedPath 0x8006C0FC pre-tick run lengths differ 81/80, 71/69 = call count). m6 island B becomes the next G3 unit.
+Rules out for m6 B: H-loadshift, H-phase (time sampling), integer time shift of the element. Not claimed: what the PRIM FFFFFFFF
+element is. Single-source: the "no stall difference" reading is inferred from the unchanged lag, not from measured retail stalls.
+Docs: CURRENT-TRUTH item 0 + s7911 paragraph; NEXT = m6 island B mechanism.
+ORIGIN: no mitigation; two new offline analysis tools.

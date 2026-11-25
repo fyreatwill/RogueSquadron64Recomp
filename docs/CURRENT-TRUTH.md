@@ -215,6 +215,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    windows and at 4 ntri thresholds = 71 + 57/2 = the lag predicted if content keys on time since the load started (press 7).
    The half-frame phase is why no exact frame pairs. Replicated on scratch/s7905/m11C. VI vs audio clock not separated (both are real
    time). Faster port loads are not a fidelity goal. Pre-flight thread g3-preflight-load-cue CLOSED.
+   **s7911 census (H-mixed): m6 island B is NOT a load shift: it is the one open pre-flight item.** New tools/s7911_island_relock.py
+   (exact-match lag vote before/inside/after an island, control = pre window locks >=90%) and tools/s7911_island_phase.py
+   (half-frame phase vs drift at fixed lag; control m6 island A s7892/m6s3c = 6244/6244 between, 0.510 x speed -> H-phase PASS).
+   m11 B: pre lag 71 -> post 99 (157/160) = H-loadshift. m6 B (s7896/m6q, replica s7895/m6k): pre 532 160/160, post 532 160/160,
+   island 0/212 exact, port-only tris in no retail frame +-60, only 23/212 rank-pairable -> state island at the SAME alignment
+   (no stall/frame-count involvement). m3 B (s7895/m3c): same-lag state island too (536/536), = H-rng (s7896 RESEED closes it).
+   m6 B survived full rand-value replay (s7896), so it is state other than rand values. m8/m12 islands, m16 -98->-99, b16
+   lead-in: bins not retained -> na (m8/m12 were state class by the s7869/s7876 arm test).
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
