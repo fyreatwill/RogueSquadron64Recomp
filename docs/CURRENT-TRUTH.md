@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7954 (2026-11-25).
+Compact operational handoff, as of Session 7957 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -337,6 +337,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (planted mutant fails 9/78), sweep row S7955_TF; e2e: planted BOM+CRLF+comment file applied 4/4, rejected=0 in the real binary.
    s7956: the S7955_TF row was in ARGS but not EXTRA_GATES (name not *_census.py), so the sweep never ran it; the s7932
    unswept-row check caught it (exit 1). Added to EXTRA_GATES; `--only 's795[45]'` -> 2 GREEN, unswept real 0.
+13d. **s7957 RT64 preset library load (F1 inspector "Load library") FIXED:** `PresetLibrary<T>::load` (lib/rt64/src/preset/rt64_preset.h)
+   had no try, so a truncated / wrongly-typed / binary / directory .json picked in the Draw calls tab (developer mode) threw nlohmann
+   parse_error/type_error out of the ImGui frame: rc134. Now catches like ConfigurationJSON::read (log `[s7957]`, empty library, false).
+   `python3 tools/s7957_preset_load_gate.py` (sweep row S7957_PL): pre-fix header copy aborts 5/5 bad files (control), live header
+   survives 5/5, valid file loads on both. Other host JSON readers already caught (user config, texture-pack db, mods, controls.json).
+   s7957 full sweep 262 gates: 258 GREEN, 3 REPORT, 1 RED = s7364 heapbuf on the s7955 settings strip (2 rows, both BOUNDED, now
+   reviewed -> OPEN 0). An src/ edit needs the FULL sweep, not only its own `--only` row.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

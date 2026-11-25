@@ -212658,3 +212658,34 @@ EXTRA_GATES, so the row was never run; the s7932 `unswept()` check reported it (
 ['s7955_settings_textfmt.py']; working tree: []). Verified: the gate run bare matches its row regex (REAL PASS fail=0, CONTROL
 mutant=FAIL fail=9, VERDICT CLOSED); `python3 tools/s7651_gate_sweep.py --only 's795[45]'` -> controls PASS (planted unswept row
 caught), unswept real 0, gates 2 GREEN. Rules out: a TF regression hidden behind the missing row. No game run this session.
+
+## Session 7957 (2026-11-25) — RT64 PresetLibrary::load aborted on malformed preset json (H-throw); caught, gate S7957_PL
+Triage: crash_reports --since 2026-11-25 new=0; SOAK-RESULTS has no unfolded line (s7947_handoff_fast folded by s7947).
+Work unit (NEXT s7957 candidate, left open since s7597): RT64 `PresetLibrary<T>::load` (lib/rt64/src/preset/rt64_preset.h) did
+`i >> jroot; readJson(jroot);` with no try. Hypotheses: H-unreachable (no preset file is ever read in the owner's build) vs
+H-throw (a malformed file aborts via an uncaught nlohmann exception).
+Reachability (read from source + binary): the only caller is PresetLibraryInspector "Load library" (native file dialog). The
+Scenes/Lights/Materials tabs sit under `#if RT_ENABLED` (undefined here, so compiled out), but the "Draw calls" tab
+(rt64_state.cpp:4528) is not, and it renders in the F1 overlay whenever developer mode is on (rt64_render_context.cpp:624,
+debug || dev_mode_on). `strings build/RogueSquadron64Recomp` carries "Load library". So it is reachable in dev mode only, by an
+explicit user file pick: H-unreachable refuted for dev mode, true for the default owner config.
+Measurement: tools/s7957_preset_load_test.zsh builds tools/s7957_preset_load_test.cpp twice in one run, against the pre-fix
+header copy (tools/s7957_rt64_preset_pre.h) and against the live header, and loads 6 planted files. Pre arm: valid n=2 rc0;
+trunc / types ({"name":5}) / notarr ({"presets":7}) / dir.json (a directory) / bin (2 bytes) all rc134 (uncaught exception) ->
+H-throw selected, control fires 5/5. Post arm: valid n=2; all 5 bad files rc0, ok=0, n=0 with a `[s7957]` line.
+Change: load() wraps parse+readJson in try/catch nlohmann::detail::exception, logs, clears presetMap, returns false (same contract
+as RT64's own ConfigurationJSON::read). Game rebuilt (cmake --build build, 100%); the `[s7957] preset library` string is in the
+binary. rt64.patch re-exported. Gate: tools/s7957_preset_load_gate.py (CONTROL pre_aborts=5/5, FIX post_survives=5/5, VERDICT
+CLOSED), row S7957_PL in ARGS + EXTRA_GATES of tools/s7651_gate_sweep.py.
+Sibling census (grep `>> j|json::parse` over src/, lib/rt64/src, lib/N64ModernRuntime): rt64_user_configuration.cpp:163 has try;
+rt64_texture_cache.cpp:1622 (texture-pack db) has try; mod_manifest.cpp/mods.cpp catch parse_error; src/main/rs64_bindings_json.h
+parses with allow_exceptions=false; tools/texture_hasher|packer are offline tools, not linked into the game. No other open site.
+Not done: driving the native file dialog in the running game (no scripted path to an NSOpenPanel); the in-game evidence is the
+linked binary + source path, so the runtime claim rests on the unit harness of the exact header (single-source for the in-game UI).
+Rules out: any other host JSON reader in the game aborting on a malformed file.
+Full sweep (`python3 tools/s7651_gate_sweep.py`, --jobs 2, uncached, 1811 s): 262 gates {GREEN 258, REPORT 3, RED 1}; S7957_PL
+GREEN; controls PASS; unswept real 0. The one RED was NOT this session's change: s7364_heapbuf_census --rt64 OPEN 3 keys 2, both in
+src/main/rs64_settings.cpp from the s7955 comment strip (`rest[0]` :89, `vraw[i - 1]` :93). s7955/s7956 ran only `--only
+'s795[45]'`, so the full sweep had not seen them. Both hand-reviewed BOUNDED (rest[0] after rest.empty() short-circuit; loop i>=1 and
+i < vraw.size()) and added to tools/s7364_heapbuf_reviewed.tsv: census OPEN 0 keys 0; `--only 's7364|s795[457]'` -> 4 GREEN.
+Lesson: a session that edits src/ must run the full sweep (or at least the src-scanning censuses), not just its own row.

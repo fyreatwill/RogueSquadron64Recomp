@@ -11546,6 +11546,34 @@ index bde2f03..db3879b 100644
          uint64_t workloadId;
          uint64_t lastPresentId;
          std::mutex workloadIdMutex;
+diff --git a/src/preset/rt64_preset.h b/src/preset/rt64_preset.h
+index aceed80..990c252 100644
+--- a/src/preset/rt64_preset.h
++++ b/src/preset/rt64_preset.h
+@@ -76,10 +76,19 @@ namespace RT64 {
+                 return false;
+             }
+ 
+-            json jroot;
+-            i >> jroot;
+-            readJson(jroot);
+-            i.close();
++            // s7957: a malformed or wrongly-typed preset json (F1 inspector "Load library") used to throw
++            // nlohmann parse_error/type_error out of the ImGui frame and terminate the game (uncaught, rc134).
++            // Same contract as ConfigurationJSON::read: report, leave the library empty, return false.
++            try {
++                json jroot;
++                i >> jroot;
++                readJson(jroot);
++            }
++            catch (const nlohmann::detail::exception &e) {
++                fprintf(stderr, "[s7957] preset library %" PRIpath " not loaded: JSON error: %s\n", path.c_str(), e.what());
++                presetMap.clear();
++                return false;
++            }
+ 
+             return true;
+         }
 diff --git a/src/preset/rt64_preset_draw_call.cpp b/src/preset/rt64_preset_draw_call.cpp
 index b625749..9ee3f60 100644
 --- a/src/preset/rt64_preset_draw_call.cpp

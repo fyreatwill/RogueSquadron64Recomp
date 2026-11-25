@@ -1,9 +1,10 @@
-# NEXT (s7957)
-HYPOTHESIS-ID: post-textfmt-class-ladder
-s7956 committed the S7955_TF EXTRA_GATES row (it was unswept). Register any new non-*_census.py gate in EXTRA_GATES in the same commit.
+# NEXT (s7958)
+HYPOTHESIS-ID: post-preset-class-ladder
+s7957 fixed RT64 PresetLibrary::load (gate S7957_PL, registered in EXTRA_GATES). Register any new non-*_census.py gate in EXTRA_GATES in the same commit.
 0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines.
 1. Ladder 3c: first non-closed rung not needing the owner's look, or a NEW host idiom-class audit that commits a guard/proof.
-   Candidates (grep PORTING-STATE first): RT64 PresetLibrary::load has no try (s7597, F1-only, gated-dev) - hypotheses H-unreachable
-   (no preset file is ever read in owner config) vs H-throw (a malformed preset json aborts via uncaught nlohmann exception);
-   discriminator: plant a malformed preset file where RT64 looks and launch to title with F1 driven, vs a valid-file control.
-   Also: other host file readers (save path, rs64 caches) assuming files are well-formed - enumerate fopen/ifstream sites first.
+   Candidate: host file WRITERS in the game (ofstream/fopen "w" sites in src/ and lib/rt64/src: RT64 PresetLibrary::save, user
+   config write, rs64 logs/dumps) - hypotheses H-safe (write failure reported, no partial file replaces a good one) vs H-clobber
+   (truncate-then-write leaves an empty/partial file on a full disk or killed process, e.g. a settings or controls.json written in
+   place). Discriminator: enumerate every write site, classify in-place vs temp+rename; plant a read-only dir / SIGKILL mid-write
+   on any owner-data writer (controls.json, settings) and check the old file survives. Never touch build/saves.
