@@ -212006,3 +212006,22 @@ listed were already in tools/gate_sweep_allowed_red.txt (s7865/s7893 pruned reta
   s6904_s = the game's fog start 0x8011A878 re-read on every fog-setup hook call, read only by rs64_s6904_clipmul under
   s6904_on() (DRAW_DISTANCE>1 opt-in). Census RESULT PASS, controls 8/8.
 Rules out: both REDs as real defects (no runtime behaviour change; the s7928 diag stays default off).
+
+## Session 7930 (2026-11-25) — s7929's exit contract fixed: s7612 RG census RED came from the shared SN-scanner fix, 5 new candidates all diag-gated
+
+What ran: the unmet contract (loop.sh, s7929) listed new census REDs. Against tools/gate_sweep_allowed_red.txt every listed RED
+was already allowed (s7433-s7441 sample captures, s7723 retained runs, s7893/s7865) except **s7612_rg_census.py RESULT FAIL**.
+Cause: s7929 fixed tools/s7611_sn_scan.py (same-named statics hid function locals; comma-list locals missed); tools/s7612_rg_scan.py
+imports that module, so 5 RG candidates became visible and one row went STALE. s7929 ran only the SN census.
+Classified (read each site in ../N64Recomp/RecompiledFuncs):
+- funcs_16.c rs6660_pending_value (rs6657_write): written under `rs6657_level >= 1`, function opens `if (!rs6657_enabled() ...) return`
+  -> joined the existing rs6660_pending_id row (gated, ROGUESQ_OBJECTIVE_RESPONSE, G1(d) parked).
+- funcs_16.c `previous` (rs6668_counter_return), `seen` (rs6666_spawn), `values` (rs6670_reader): function-local statics, each
+  function starts `if (!rs6657_enabled() ||`; new row is fn-scoped (not file) because the names are generic.
+- funcs_43.c s5781_last_ret (s5781_sample): log rate key behind `if (!s5781_e || !player || !s5781_left) return;`, s5781_e =
+  ROGUESQ_LOG_MTM (default off) -> gated.
+- STALE row upstream_compat.cpp s_s6287_on: an env word, never register-tainted; the old scanner reached it through a name
+  collision. Row dropped.
+Result: s7612 RESULT PASS, --controls 8/8. Full sweep `s7651_gate_sweep.py --new-red-vs tools/gate_sweep_allowed_red.txt` rerun
+-> rc=0, 0 new RED vs the allowed list (remaining REDs all pre-listed s7865/s7893 lost captures). Rules out: a real stale-register defect in these 5 (all default-off diagnostics).
+Lesson: after editing a shared scanner module, run every census importing it (grep -l s7611_sn_scan tools/).

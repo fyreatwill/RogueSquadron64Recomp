@@ -77,7 +77,6 @@ row("upstream_compat.cpp", "s_s7325_lastmalloc s_s7325_hmin s_s7325_hmax s_s7325
     "s7317 alloc map (ROGUESQ_S7317_ALLOCMAP)")
 row("upstream_compat.cpp", "s_s6063_live s_s6063_bytes", "gated", r"if \(!s6063_on\(\)(?: \|\| !ptr)?\) return|s7317_on\(\)", "heap log (ROGUESQ_HEAPLOG)")
 row("upstream_compat.cpp", "first minlen maxlen last", "gated", r"ROGUESQ_HEADWATCH", "headwatch")
-row("upstream_compat.cpp", "s_s6287_on", "envflag", r'getenv\("ROGUESQ_PPLOG"\)', "env word, not a register")
 row("upstream_compat.cpp", "s6893_base", "value", r"s6893_base = req / 25u; s6893_cap = s6893_base \* k;",
     "tile pool size recomputed from this call's request")
 row("upstream_compat.cpp", "s6893_max", "stat", r"if \(count > s6893_max\)", "high-water mark for the [s6893] print")
@@ -106,8 +105,10 @@ row("RF", "s7101_dist", "gated", r"ROGUESQ_S7101_CHASE", "chase log/clamp; set o
 row("RF", "ids", "gated", r"ROGUESQ_LOG_HUDBIT", "HUD-bit harness")
 row("RF", "key", "gated", r"ROGUESQ_LOG_HITS|ROGUESQ_LOG_S4864", "hit logger / s4864 census")
 row("RF", "hio ow objs", "gated", r"ROGUESQ_LOG_HITS|rs5834_en", "hit logger", "file")
+row("RF", "s5781_last_ret", "gated", r"if \(!s5781_e \|\| !player \|\| !s5781_left\) return;", "s5781 terrain-sample log rate key (ROGUESQ_LOG_MTM, default off; s7930)")
+row("RF", "previous seen values", "gated", r"if \(!rs6657_enabled\(\) \|\|", "rs6668/rs6666/rs6670 objective-response log keys, fn-scoped (generic names; s7930)")
 row("RF", "lra", "gated", r"if \(!e\) return", "player dump")
-row("RF", "rs6660_pending_id rs6666_dat value", "gated", r"rs6657_enabled\(\)|rs6657_level >= 1",
+row("RF", "rs6660_pending_id rs6666_dat value rs6660_pending_value", "gated", r"rs6657_enabled\(\)|rs6657_level >= 1",
     "objective-response probe (G1 (d) parked): ROGUESQ_OBJECTIVE_RESPONSE", "file")
 row("RF", "rs5835_minsdr2 m0 m1 rs5835_min rs5835_minr2 rs5839_obj", "gated", r"ROGUESQ_TELE_BOLT", "TELE bolt probe", "file")
 row("RF", "rs64_s4542_prev_base", "gated", r"if \(!rs64_s4542_enabled\(\)\) return;", "s4542 alloc census")
