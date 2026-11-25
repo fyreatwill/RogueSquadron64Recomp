@@ -1,4 +1,4 @@
-# NEXT (s7914)
+# NEXT (s7915; s7914 was the gate-contract fix, this unit did not run)
 HYPOTHESIS-ID: g3-m6-island-b-nondet
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, docs/OWNER-REVIEW-QUEUE.md answers,
 new SOAK-RESULTS lines. A crash or owner report outranks this.

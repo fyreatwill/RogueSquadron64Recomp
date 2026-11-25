@@ -211617,3 +211617,16 @@ Work unit (NEXT s7913, HYPOTHESIS-ID g3-m6-island-b-nondet): split H-clock / H-r
   "DET_CLOCK=1 is a determinism fix" (and by the same measurement VI_STAMP=1 leaves the VI phase itself host-timed).
 - Kept: scratch/s7913/m6c{1,2}/{p1.bin,clock.bin,p1_rand.txt}.zst, ractl/clock.bin.
 ORIGIN: no mitigation; default-off diagnostic lever + log in librecomp, one new offline tool.
+
+## Session 7914 (2026-11-24) — contract fix: s7913's DET_CLOCK monotonic clamp `last` (ultra_translation.cpp) re-opened census class FW as UNCLASSIFIED; classified H-canon (host clock value, not a guest address), gate sweep 0 new RED
+
+What ran: loop.sh's stop_gate --verify failed after s7913 (it touched lib/N64ModernRuntime via the refreshed patch). Of the listed
+REDs, seven (s7433/5/6/7/8, s7441, s7723) are already allow-listed (s7865/s7893 lost scratch inputs); the only NEW one was
+tools/s7530_fw_census.py: `librecomp/src/ultra_translation.cpp:119 last` UNCLASSIFIED (functional read at 123), plus its
+dependant s7531_fx_census.py (whose control requires s7530 live fails=0). s7827 is NEEDS-ARGS, not RED.
+Classification: `last` is the thread_local monotonic clamp of s7913_det_value() under ROGUESQ_DET_CLOCK=1 (a synthetic Count
+value, re-set every call, `v <= last -> last+1`). It never holds a guest address, so no stale-guest-state hazard: added an
+H-canon RULES row with verify=`last = v; return v;`.
+Result: s7530 fails=0, --controls 6/6 PASS; s7531 --controls 5/5 PASS; full tools/s7651_gate_sweep.py --new-red-vs
+tools/gate_sweep_allowed_red.txt rc=0 (253 gates: 237 GREEN, 7 RED all allow-listed, 7 NEEDS-ARGS, 2 REPORT; new RED 0).
+Rules out: nothing about m6 island B; the s7914 DET_CLOCK=2 two-arm unit in NEXT.md is untouched and still next.

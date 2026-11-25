@@ -232,6 +232,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    on it 0/212 frames exact (symdiff 25463 = as much as port vs retail), while the rest of the island is 212/212 exact. So no fixed
    port value exists to match; H-callcount/H-init/H-order as deterministic state are refuted. Lead (single-source, code reading):
    osGetCount/osGetTime = host wall clock (ultramodern timer.cpp); alternative a host thread race on the element's buffer.
+   (s7914: census FW rule added for the DET_CLOCK `last` clamp; gate sweep clean, DET_CLOCK=2 arms still next.)
    **s7913: VI-keyed clock does NOT make it deterministic, but that lever was not itself deterministic, so H-clock is NOT refuted.**
    ROGUESQ_DET_CLOCK=1 (osGetTime/osGetCount = total_vis*781250 + 256/call/thread, librecomp ultra_translation.cpp) C1 vs C2 element
    0/212 exact (symdiff 25304, plant controls 4/4); ROGUESQ_S7913_CLOCKLOG=<path> (tools/s7913_clocklog.py, selftest PASS) shows the
