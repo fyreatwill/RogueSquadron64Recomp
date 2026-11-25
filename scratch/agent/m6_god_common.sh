@@ -3,7 +3,7 @@
 # Logs crash lines and VI-origin stalls (>30 s with no new origin row). usage: m6_keyed_hold.sh <tag> [hold_secs]
 set -u
 TAG=${TAG:-m6_god_x}; HOLD=${HOLD:-440}; FBD_EVERY=${FBD_EVERY_V:-$(print -r -- "${XENV:-}" | sed -n "s/.*ROGUESQ_FB_DUMP_EVERY=\([0-9]*\).*/\1/p")}; FBD_EVERY=${FBD_EVERY:-500}  # s6276: COMMON re-sets DUMP_EVERY after XENV, so XENV value was silently overridden
-ROOT=$(git rev-parse --show-toplevel); OUT=$ROOT/scratch/agent/m6/$TAG; BUILD=${BUILD:-$ROOT/build}; mkdir -p $OUT $OUT/fbd; K=$OUT/keys.log; : > $K
+ROOT=$(git rev-parse --show-toplevel); OUT=$ROOT/scratch/agent/m6/$TAG; _c=$(sh $ROOT/tools/agent/run_dir_guard.sh $ROOT/scratch/agent/m6 $TAG) || { echo "tag=$TAG $_c alive_at_end=na vi_stalls30s=na (s7951: case-only TAG collision on a case-insensitive fs; rename the TAG)"; exit 3; }; BUILD=${BUILD:-$ROOT/build}; mkdir -p $OUT $OUT/fbd; K=$OUT/keys.log; : > $K
 fbrun() { awk '{h=$NF} h==p {r++} h!=p {r=1;p=h} r>m {m=r} !(h in d) {d[h]=1;n++} END{print "maxrun=" m+0 " distinct=" n+0 " total=" NR}'; }
 [ "$(printf 'a\nb\nb\nb\nb\nb\nc\n' | fbrun)" = "maxrun=5 distinct=3 total=7" ] && echo 'fbrun-control OK' >> $K || { echo 'fbrun-control FAIL' >> $K; exit 1; }
 # s5553: mission_cycles = hangar entries after the first mission origin (title->hangar->mission re-entries). Control: synthetic sequence with 2 re-entries must give 2.

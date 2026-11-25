@@ -212533,3 +212533,24 @@ owner-handoff soak repeats s7947's 4/4 PASS. No game run (offline only).
   `--check` missing=0 on all three sources, `--control` PASS. `--only` sweep of both rows GREEN (27 s / 19 s).
 - Rules out: the last two NEEDS-ARGS gates being un-gateable (captures gone). Sweep NEEDS-ARGS 2 -> 0.
 - ORIGIN: n/a (no mitigation; gate/tool change only).
+
+## Session 7951 (2026-11-25) — REPORT gates stay report-only, but the check found a harness defect: macOS case-insensitive fs let TAG L4a overwrite the s7031 L4A run dir; launcher guard + census + planted test
+HYPOTHESIS-ID: owner-handoff-regression (NEXT option a, then a harness idiom-class fix).
+Triage: crash_reports --since 2026-11-25 new=0; SOAK-RESULTS no new lines. CURRENT-TRUTH 41.4 KB, no maintenance.
+Option (a), the 3 REPORT gates (s7031/s7210/s7283): can any gain a retained input like s7950? s7210: only outputs + census_FC1.txt.zst, no .cap.
+s7283: no [s7283-mtl] lines in any g1_lvl*s7009* dir (no run logs at all). s7031: s7803 said no input survives, but
+scratch/agent/m6/g1_lvl4s7031L4A/run.log.gz DOES carry 158 [s7030]/[s7031] lines. It is not s7031's run: census on it gives 7347 cells/f, 57% off-map,
+band 0.5-1.0 74%, phases 1-2 empty (tog3=0), vs s7031's recorded L4A 7532 / 62% / 82% with tog3 phases; its summary reads tag=g1_lvl4s7031L4a = s7056's
+"Run L4a". s7054 already noted the case-insensitive reuse ("old log survives as run.log.zst"); that .zst has since been pruned. Verdict: all 3 stay
+H-report (REPORT string for s7031 corrected), but the cause is a defect CLASS, not a one-off.
+Class census (/tmp script, scratch/agent/m6, every dir with a summary, tag= vs dir name): 2365 dirs, 1 case-only mismatch
+(g1_lvl4s7031L4A <- g1_lvl4s7031L4a) = the known case, which is the census's positive control. Ledger g1_lvl tags: 101, 0 case groups.
+Fix: tools/agent/run_dir_guard.sh <parent> <name> (rc 3 + `run_dir_collision=<existing>` when a sibling differs only by case; exact same name =
+deliberate re-run, allowed). Wired into scratch/agent/m6_god_common.sh line 6 (the OUT= chokepoint of 55 launchers): a colliding TAG prints a
+`tag=... run_dir_collision=... alive_at_end=na vi_stalls30s=na` line and exits 3 before anything is touched. Controls:
+tools/agent/test_run_dir_guard.sh (exact ok, planted L4A/L4a caught, distinct ok, absent parent ok, case-sensitive mutation misses) PASS, run_tests
+12/12 PASS; end-to-end `env TAG=g1_lvl4s7031L4a zsh scratch/agent/m6_god_common.sh` -> rc=3, no game launched, the L4A dir untouched.
+Gate sweep --only the 3 REPORT rows + S7932_RETAIN: 3 REPORT, 0 RED.
+ORIGIN: the writer was the launcher itself (mkdir -p + overwrite of an existing dir that the fs treats as the same name); not a guest defect.
+Not covered: launchers that build run dirs outside m6_god_common.sh (tools/g3_port_capture.sh OUTDIR, tools/*_arm.zsh writing scratch/sNNNN/<arm>).
+Rules out: a surviving s7031 census input; any other clobbered m6 run dir.

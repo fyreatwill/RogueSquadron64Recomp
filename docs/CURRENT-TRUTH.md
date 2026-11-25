@@ -313,6 +313,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    s7934: tools/gate_trace.py now traces os.stat/lstat ("stats"; `--selftest`), the sweep keys them (exists/size), and the
    manifest pins NAMED stat-only inputs (not scan hits, not scratch/agent): 31 s7751/s7754 snaps s7802 only exists()-checks
    were uncited; prune dry run (KEEP_DAYS=2) put 6 hangar_hstate k900_*_end.bin on the list, now 0. Gate S7934_STATKEY.
+   s7951: macOS case-insensitive fs: TAG g1_lvl4s7031L4a (s7056) reused + overwrote the s7031 L4A run dir (census 1/2365 m6 dirs). Shared launcher
+   scratch/agent/m6_god_common.sh now refuses case-only TAG collisions (tools/agent/run_dir_guard.sh, rc 3; test_run_dir_guard.sh). REPORT gates stay 3.
    A docstring apostrophe or new quoted .txt literal in s7893 can trip s7804 (it is waived `# zst-ok:`, never opens captures).
    s7935: the 6 profiler gates (s7433/5/6/7/8, s7441) re-captured as scratch/s7935 (`env S7431_ARM=S7935 zsh
    tools/s7433_probe_cost.sh`, one owner-recipe run): every recorded verdict reproduced (two captures, own controls PASS); s7441

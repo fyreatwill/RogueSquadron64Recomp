@@ -47,7 +47,7 @@ NEEDS_INPUT = {
 # vacuous and their frozen inputs cannot drift with the code. Verified per run: if the source gains any exit path the tool is
 # run like any other gate again.
 REPORT = {  # s7722: each re-run and read by hand (scratch/s7722/*.out); all H-report (no open-class row by construction)
-    "s7031_offmap_census.py": "s7722 H-report: band/ring share table of one [s7030]/[s7031] run.log; s7803 checked: no run.log/.zst in scratch/s7030, scratch/s7031 or scratch/agent/m6/g1_lvl*s703[01]* (summary + keys.log.gz only), no open class",
+    "s7031_offmap_census.py": "s7722 H-report: band/ring share table of one [s7030]/[s7031] run.log; s7803 checked: no run.log/.zst in scratch/s7030, scratch/s7031 or scratch/agent/m6/g1_lvl*s703[01]* (summary + keys.log.gz only), no open class; s7951: g1_lvl4s7031L4A/run.log.gz is s7056's tag L4a (case-insensitive fs reused the dir; summary tag=g1_lvl4s7031L4a), not s7031's L4A run, so no s7031 input survives",
     "s7283_commit_census.py": "s7949 H-report: argv-loop summariser of [s7283-mtl] lines in scratch/agent/m6/g1_lvl*s7009<TAG>/*.log; bare it ran 0 tags and printed nothing (scored GREEN until s7949); none of the 21 s7277 tags' logs survive raw or .zst, no open class",
     "s7210_field_census.py": "s7722 H-report: per-swap scissor field-bit table of one G5B_FRAME .cap; s7803 checked: the ER169/FC1 .cap (22-30 GB caps) are not in scratch/s7210, only the tool's outputs, no open class",
 }
