@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7922 (2026-11-24).
+Compact operational handoff, as of Session 7924 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -220,6 +220,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    s7923: `tools/agent/ring_stalls.py` max_vihold_ms (soak summary field) now excludes animating holds (>2 s, gen advancing on
    >=90% of rows) into a new `max_animhold_ms`; `--selftest` planted controls. Re-scored owner rings: 17302/17318 -> 392/391 ms,
    so the field now reads real freezes. Verdict/summary lines before s7923 carry the raw ~17300 (title). vi_stalls30s unchanged.
+   s7924: the loop verdict line now ends `freeze_arms=<n> freeze_na=<m>` (tools/agent/soak_verdict_fields.sh): arms whose
+   max_vihold_ms or max_gap_ms >= FREEZE_MS (1000) - the G5c 1-5 s freeze that vi_stalls30s (>=30 s) cannot see. Controls in
+   tools/agent/test_soak_verdict_fields.sh (planted 1.5 s frozen ring -> 1, 17 s animating -> 0, no-anim-rule mutation -> 1).
+   12/12 recent owner-recipe rings re-scored -> freeze_arms=0 (max vihold 374-408 ms); fold any freeze_arms>0 as a G5c datum.
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =

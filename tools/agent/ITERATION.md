@@ -548,7 +548,7 @@ A soak that only re-runs an existing recipe belongs to the loop, not to you.
   inits=12 for `inits=1`, exitrc=134 for `exitrc=1`, mission_restarts=3 for `restarts=3` (s7455, test_summary_field.sh).
 - Since s7456 each verdict line ends `arms=<k> alive=<a>/<k> crash_arms= stall_arms= fatal=` from the recipe's own `tag=`
   summary lines (tools/agent/soak_verdict_fields.sh); fold from those, not rc. arms=0 means the recipe printed no summary. Since s7457 it also ends `stall_na=<k>`: arms
-  with no stall measure (vi_stalls30s=na/missing, no frozen=), whose stall_arms=0 is not a zero. Since s7458 g1e_owner_quiet_arms arms score
+  with no stall measure (vi_stalls30s=na/missing, no frozen=), whose stall_arms=0 is not a zero. Since s7924 it also ends `freeze_arms=<n> freeze_na=<m>`: arms with a frozen VI hold or present gap >= 1 s (G5c freezes; vi_stalls30s misses them). Since s7458 g1e_owner_quiet_arms arms score
   vi_stalls30s from their present ring (tools/agent/ring_stalls.py; a held VI origin counts even when presents keep flowing). Every live launcher prints a tag= line.
 - Consume: read the new SOAK-RESULTS.md lines at session start (read list #3)
   and fold them into the ledger like any other run evidence.

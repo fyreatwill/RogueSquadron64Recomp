@@ -211850,3 +211850,28 @@ Unit (NEXT s7923, slug hold-metric-animating-label), offline, no game run. crash
    mutation controls, s7243 resume test) -> failures: 0 (held-origin fake still reads 1 stall; vi_stalls30s path intact).
 Verdict: H-title-only selected (two independent rings, max frozen hold 391-392 ms = the s7921 retail hangar-entry hold region);
 rules out H-other (no hidden >2 s frozen hold in either ring). Future G5c regression checks can read max_vihold_ms directly.
+
+## Session 7924 (2026-11-24) — soak verdict line gains freeze_arms (frozen VI hold or present gap >= 1 s): G5c-class freezes now visible in SOAK-RESULTS; 12/12 owner-recipe rings re-score 0
+
+HYPOTHESIS-ID: soak-verdict-freeze-field. crash_reports --since 2026-11-24: new=0. No new SOAK-RESULTS lines since s7907.
+
+Problem: the loop's per-soak verdict (tools/agent/soak_verdict_fields.sh) scored stalls only through vi_stalls30s (>=30 s
+episodes), so a 1-5 s "buffering" freeze (G5c, the owner's report) in any queued soak never reached SOAK-RESULTS.md.
+
+Change: the verdict line now ends `freeze_arms=<n> freeze_na=<m>`. A freeze arm is one whose tag line has max_vihold_ms
+(s7923: frozen VI-origin holds only; animating single-buffered title holds go to max_animhold_ms) OR max_gap_ms (present gap)
+>= FREEZE_MS (env, default 1000). freeze_na counts arms with neither key. rc semantics and all earlier fields unchanged
+(loop.sh reads the line with head -1; nothing parses by position). ITERATION.md soak section and CURRENT-TRUTH item 0a updated.
+
+Controls (tools/agent/test_soak_verdict_fields.sh, 19/19 rows ok), all through the real path ring file -> ring_stalls.py ->
+tag line -> verdict: planted 60 Hz rings steady -> freeze_arms=0 freeze_na=0; 1.5 s hold with gen frozen -> freeze_arms=1
+while stall_arms=0 (so it is visible ONLY through the new field); 17 s hold with gen advancing every row -> 0. Mutation:
+ring_stalls.py with animating() forced False reads the 17 s ring as freeze_arms=1 (the anim check has teeth). FREEZE_MS=2000
+drops the 1.5 s freeze to 0. Regression: tools/s7453_harness_death_test.zsh failures 0, test_soak_idle_gate.sh PASS,
+ring_stalls.py --selftest PASS.
+
+Result (re-score of real rings, discriminating H-clean vs H-hidden-freeze): 12/12 most recent owner-recipe / L-hold rings
+(s7797 L7/L8/L9, s7806 L1/L4, s7810, s7837 x2, s7839 x2, s7919, s7921_port2) -> freeze_arms=0; max_vihold_ms 374-408 ms,
+max_gap_ms 145-149 ms, max_animhold_ms 16684-17335 ms (the title). The pre-s7923 tag lines of s7919/s7921 read freeze_arms=1
+from their stale raw max_vihold_ms=17302/17318 -> H-hidden-freeze refuted, the 1 is the animating title. Rules out: a
+1-30 s freeze hiding in any of these soaks. Old-format ring-less tag lines read freeze_na=1 (no ring measure), not 0.
