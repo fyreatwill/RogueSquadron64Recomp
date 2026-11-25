@@ -226,6 +226,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    max_vihold_ms or max_gap_ms >= FREEZE_MS (1000) - the G5c 1-5 s freeze that vi_stalls30s (>=30 s) cannot see. Controls in
    tools/agent/test_soak_verdict_fields.sh (planted 1.5 s frozen ring -> 1, 17 s animating -> 0, no-anim-rule mutation -> 1).
    12/12 recent owner-recipe rings re-scored -> freeze_arms=0 (max vihold 374-408 ms); fold any freeze_arms>0 as a G5c datum.
+   s7926: open datum (retail's 8th wait at flight entry has no port M row: skipped or < 0.05 ms?) instrumented:
+   ROGUESQ_S7926_WAITALL=1 writes an `m` row per call; `tools/s7926_wait_all.py <ring>` (slow waits = same-run control,
+   --selftest). Soak s7926_waitall queued (idle-gated); fold its SKIPPED/FAST line here. Harmless: no hold there.
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =

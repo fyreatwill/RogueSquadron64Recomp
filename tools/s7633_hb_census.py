@@ -113,6 +113,13 @@ c.CLASS.update({
 })
 c.FNCLASS[("rs64_region_scan", "print")] = ("gated", "[s7635-late]/[s7635-chk] only past `if (fused == 1) return`: fused=2/3 "
                                             "need ROGUESQ_S7634_FUSE=chk|inj (default 1); late lines also <=32")
+# s7926: rows the s7891-s7896 RAND_TRACE work added in rt64_render_context.cpp (surfaced when an s7324_rcp_spill.cpp edit
+# invalidated the sweep cache). Read by hand: both functions are reached ONLY from tools/fixup_rand_trace.py hooks, every one
+# wrapped in `if (__builtin_expect(g_rs64_rand_trace, 0))` (ROGUESQ_RAND_TRACE; fixup_rand_trace.py lines 11/71/73/88/264).
+_RT = "only called from fixup_rand_trace.py hooks under `if (g_rs64_rand_trace)` (ROGUESQ_RAND_TRACE)"
+c.FNCLASS[("rs64_rand_trace", "getenv")] = (ENVG, _RT)
+c.CLASS.update({"s_s7896_rdram": (ENVG, "rs64_xtrace_mark: " + _RT), "rs64_s7891_reset": (ENVG, "rs64_xtrace_mark: " + _RT),
+                "rs64_s7895_dtpc": (ENVG, "rs64_xtrace_mark: " + _RT)})
 c.FRESH.update(d="scratch/s7633", gen_args=("--hot", "src/rsp/dpc_bridge.cpp,src/main/rt64_render_context.cpp"),
                scope=("src/", "lib/rt64/", "lib/N64ModernRuntime/"))  # s7657: no-arg sweep mode, the s7633 --hot set
 

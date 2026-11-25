@@ -239,11 +239,21 @@ static void rs64_s7925_wait_mark(const char* edge, uint32_t pc) {
     if (!on) return;
     static thread_local double t_in = -1.0;
     static thread_local unsigned fast = 0;
-    if (pc == 0x80091EB0u && !strcmp(edge, "wait-entry")) { t_in = plume::rs64_pring_now(); return; }
+    // s7926: ROGUESQ_S7926_WAITALL=1 also writes one "m <entry t> dur_ms=<d>" row for EVERY call (slow ones too, so the 6 known
+    // slow waits are the same-run positive control of this path), capped at 4096 rows; an entry that re-enters before its exit
+    // writes "m <t> unpaired=1". Settles s7925's open datum: is retail's 8th wait (flight entry) skipped or merely < 0.05 ms?
+    static const bool all = [] { const char* e = getenv("ROGUESQ_S7926_WAITALL"); return e && *e == '1'; }();
+    static thread_local unsigned nall = 0;
+    char row[128];
+    if (pc == 0x80091EB0u && !strcmp(edge, "wait-entry")) {
+        const double now = plume::rs64_pring_now();
+        if (all && t_in >= 0 && nall < 4096) { ++nall; snprintf(row, sizeof(row), "m %.6f unpaired=1\n", t_in); plume::rs64_pring_write(row); }
+        t_in = now; return;
+    }
     if (pc != 0x80091FBCu || strcmp(edge, "wait-exit") || t_in < 0) return;
     const double d_ms = (plume::rs64_pring_now() - t_in) * 1e3;
+    if (all && nall < 4096) { ++nall; snprintf(row, sizeof(row), "m %.6f dur_ms=%.4f\n", t_in, d_ms); plume::rs64_pring_write(row); }
     if (d_ms < 0.05) { ++fast; t_in = -1.0; return; }
-    char row[128];
     snprintf(row, sizeof(row), "M %.6f pc=0x80091EB0 dur_ms=%.3f fast=%u\n", t_in, d_ms, fast);
     plume::rs64_pring_write(row);
     fast = 0; t_in = -1.0;

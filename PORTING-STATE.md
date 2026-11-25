@@ -211905,3 +211905,28 @@ CURRENT-TRUTH item 0a: s7922 "ordinal matching past the anchor is single-source 
 4. Gate: sweep row S7925_WAITPAIR (s7922_transition_table.py added to EXTRA_GATES) over scratch/s7925_mmark/ring_q4.txt.
 Verdict: the s7922 pairing is confirmed by a second, independent line (event identity, two runs); the "single-source" caveat on
 item 0a is removed. Rules out H-misaligned (a hold paired with the wrong retail transition). G5c engineering stays complete.
+
+## Session 7926 (2026-11-24) — s7925 open datum instrumented: ROGUESQ_S7926_WAITALL=1 logs every MusyX wait call in the present ring (slow waits = same-run control); measurement queued as an idle-gated soak
+
+Unit (NEXT s7926, slug g5-owner-looks-standing; every ladder item owner-gated, crash_reports --since 2026-11-24 new=0, no new
+SOAK-RESULTS lines). Took the one open datum NEXT named: retail's 8th MusyX wait (vi=4369, 640->512 flight entry) has no port
+`M` row, and s7925's marker never printed a trailing fast= count, so "port skips the call" vs "port takes it in < 0.05 ms" was
+undecided.
+1. src/rsp/s7324_rcp_spill.cpp rs64_s7925_wait_mark: with ROGUESQ_S7926_WAITALL=1 (and the present ring on) EVERY completed
+   waitForMusyXAudioTaskDone call writes `m <entry t> dur_ms=<d>` (slow ones included), capped at 4096 rows; an entry that
+   re-enters before its exit writes `m <t> unpaired=1`. Default off: no behaviour or ring change without the env. No new static
+   pointer (bool/unsigned/double statics only), no RecompiledFuncs edit, no regen. Built (binary carries the env string).
+2. tools/s7926_wait_all.py <ring>: positive control = every M row has an m row at the same entry time and duration (proves the
+   all-call path writes in the same run), then lists calls after the last slow wait + 1 s -> SKIPPED / FAST / SLOW-AFTER; exit 3
+   on control fail. --selftest 4/4 planted (skipped, fast, nocontrol, empty). Real negative control: the s7925 ring (WAITALL
+   absent) -> "CONTROL FAIL: 0/6", rc=3.
+3. The run itself was NOT done in-session: HID idle read 3 s then 0 s (owner at the machine) and the recipe goes fullscreen and
+   voids on human input. Queued scratch/agent/soak_queue/s7926_waitall.sh (`# SOAK_NEEDS_IDLE=300`, s7925 arm + WAITALL,
+   HOLD=120, prints `s7926_verdict waitall_rc=`). Fold: the s7926_wait_all.py line in its log names SKIPPED or FAST.
+Rules out nothing yet (instrument + control only). Harmless either way: there is no hold at that transition.
+4. Gate sweep (tools/s7651_gate_sweep.py --jobs 2, 254 gates, 2718 s uncached): GREEN 237 / REPORT 2 / NEEDS-ARGS 7 / RED 8. 7 REDs
+   are the allow-listed prune casualties (s7433/5/6/7/8, s7441, s7723). The 8th, s7633_hb_census, was latent: editing
+   s7324_rcp_spill.cpp (in its hot scope) invalidated the cache, and the fresh AST showed 6 OPEN default-on rows in
+   rt64_render_context.cpp from s7891-s7896 (rs64_rand_trace getenv x3; rs64_xtrace_mark stores s_s7896_rdram, rs64_s7891_reset,
+   rs64_s7895_dtpc). Read by hand: both functions are called only from tools/fixup_rand_trace.py hooks, every one under
+   `if (g_rs64_rand_trace)` (ROGUESQ_RAND_TRACE) -> gated, not default-on. Rows added to tools/s7633_hb_census.py: OPEN 0, CONTROLS PASS.
