@@ -1,14 +1,16 @@
 """s5810: under ROGUESQ_LOG_HUDBIT, in updateDestructionDebrisNpc (a) at NPC init (msg 1, sw s0,0x34(s1) @0x8006CC24) tally spawns by descriptor
 +0x70 (class) and log every spawn whose +0x70==1 or +0x80==1 (desc, +0x70/74/78/7C/80/84, running sum of +0x74 for class 1); (b) at the objective-setter
 call site tally destroy arrivals by the same key. Separates H-supply (spawned class-1 sum ~8) from H-port-skip (spawned sum >=21, destroy arrivals <spawns).
-Idempotent; mirrored into fixup_game_funcs_vendored.py."""
+Idempotent; mirrored into fixup_game_funcs_vendored.py.
+s7920: the s5885 destroy-ctx backtrace sat OUTSIDE the s_e gate (brace bug), so the first 8 destroy-ctx arrivals in normal play
+ran backtrace()+backtrace_symbols_fd on the game thread; it is now under `if (s_e)`."""
 import pathlib
 base = pathlib.Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
 T0 = "PATCH: s5885 entry msg"; T1 = "PATCH: s5810 npc spawn tally"; T2 = "PATCH: s5810 npc destroy tally"
 A1 = "RS64_S5798_ST(0x8006CC24u, 0X34, ctx->r17, 4); }\n"
 A2 = "    datItemSetObjectiveBooleanCount(rdram, ctx);\n        goto after_53;\n"
 T3 = "PATCH: s5885 destroy ctx"
-B3 = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } uint32_t d = (uint32_t)MEM_W(ctx->r17, 0X34); if (s_e && d >= 0x80300000u && d < 0x80330000u) fprintf(stderr, "[supply] destroy-ctx desc=%08x +70=%u msg=%u entry_ra=%08x vi=%u\\n", d, (unsigned)MEM_W(S32((int32_t)d), 0X70), rs5885_msg, rs5885_ra, (unsigned)rs64_vi_n_g); { static unsigned s_bn; if (s_bn++ < 8) { void* bt[24]; int nb = backtrace(bt, 24); backtrace_symbols_fd(bt, nb, 2); } } } /* ' + T3 + ' */\n'
+B3 = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } uint32_t d = (uint32_t)MEM_W(ctx->r17, 0X34); if (s_e && d >= 0x80300000u && d < 0x80330000u) fprintf(stderr, "[supply] destroy-ctx desc=%08x +70=%u msg=%u entry_ra=%08x vi=%u\\n", d, (unsigned)MEM_W(S32((int32_t)d), 0X70), rs5885_msg, rs5885_ra, (unsigned)rs64_vi_n_g); if (s_e) { static unsigned s_bn; if (s_bn++ < 8) { void* bt[24]; int nb = backtrace(bt, 24); backtrace_symbols_fd(bt, nb, 2); } } } /* ' + T3 + ' */\n'
 A0 = "    ctx->r3 = ADD32(ctx->r5, -0X1);\n"
 B0 = "    { rs5885_msg = (uint32_t)ctx->r5 & 0xFFFFu; rs5885_ra = (uint32_t)ctx->r31; } /* " + T0 + " */\n"
 PRE = '    { static int s_e = -1; if (s_e < 0) { const char* e = getenv("ROGUESQ_LOG_HUDBIT"); s_e = (e && e[0]) ? 1 : 0; } '

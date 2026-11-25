@@ -211728,3 +211728,39 @@ keys start at t=95 s). Second line of evidence: the pre-edit s7806 L1 ring shows
 Rules out: H-regress (a gap > 250 ms or a VI stall introduced by DET_CLOCK/CLOCKLOG hooks). H-clean holds for L1.
 Open: the L4 in-flight holds just over 250 ms are a G5c-bar datum (picture frozen outside a load) not yet placed: scripted cutscene
 / pause vs host stall. Next unit.
+
+## Session 7920 (2026-11-24) — G5c: the s7806 L4 "in-flight" VI holds are a mission restart (fb reconfiguration), 0 in-flight in-scene freezes on owner-recipe rings since s7694; s5885 destroy-ctx backtrace ran ungated in normal play, fixed
+
+Offline only (no game run; capture once, analyze many). New tool `tools/s7920_hold_class.py <ring[.zst]>... [--quiet]`: every
+VI-origin hold >= 250 ms is TRANSITION (the set of framebuffer origins shown in the 10 rows after the hold differs from the 10
+before it: the game re-allocated its colour buffers, a scene/mode change) or IN-SCENE (exactly the same buffer set resumes: the
+picture froze inside one scene = the G5c defect class). Controls per file: a planted 300 ms in-scene hold must read IN-SCENE and a
+planted hold followed by relabelled buffers must read TRANSITION (else void, exit 3). Real-run positive control: the s7694 planted
+400 ms SIGSTOP at t~700 s reads IN-SCENE 442/426 ms at t=695.2 in both its arms (L4, L12).
+Result 1 (the s7919 open lead): the s7806 L4 holds at 245.5/257.1/259.8 s are all TRANSITION: flight pair 98AA00/A38C00 ->
+AA3C00/B51E00 (gen/frame 3347 -> 224) -> A12600/A7CA00 (the menu pair) -> 98AA00/A38C00 again: the same three-step sequence as the
+first mission entry at 58.6/66.7 s. Second line: the run's log prints `[standins] 155 objects ... level 4` and `[s7528] post idx=2`
+twice (lines 32740/32787 and 160344/160391): the mission initialised twice, i.e. it restarted (scripted end/fail under the blind
+autopilot; mission progression is owner playtest scope). So they are load-class, outside the G5c bar.
+Result 2 (sweep of all 607 retained rings, 601 scored, 10 void = too few alternating rows, 2 jobs): in s7600-s7919 rings (212
+files) the IN-SCENE holds outside the boot route are only (a) experimental arms: s7643 tsL1old (TSan build, ~100 holds of 250-330
+ms) and s7608 tkoff (witness arm), (b) the s7694 SIGSTOP control, (c) a ~300-400 ms hold on the 9DE900/A62B80 pair that every
+run shows at t=43.4 s and again exactly 15.3 s after each mission-restart transition (s7797/s7628 L6/L7/L17: 189.1->204.4,
+197.1->212.4, 125.1->140.4, 205.1->220.4). (c) is deterministic and on the pre-flight route, not in flight. Older large holds
+(s7585/s7586/s7592, up to 3.6 s) are the pre-fix Metal leak / fullscreen-resize stress arms of those sessions.
+Rules out: H-host and H-stream for the s7806 L4 holds (they are a game reconfiguration, not a frozen flight frame). H-script holds
+for them in the weak sense (game-driven restart). G5c in-flight bar: met on every owner-recipe ring s7694-s7919.
+Side datum -> fix: the s7806 L4 log carries a headerless 10-frame backtrace at line 126361 (updateDestructionDebrisNpc + 31772 <-
+npcWingmanUpdate <- runInMissionFrame), no crash. objdump of build/RogueSquadron64Recomp + lldb `image lookup` put the call at
+funcs_16.c:22300 = `PATCH: s5885 destroy ctx` from tools/apply_s5810_npc_supply.py.
+ORIGIN: our own s5885 diagnostic. Its `{ static unsigned s_bn; if (s_bn++ < 8) { backtrace(24); backtrace_symbols_fd(); } }`
+block was placed after the `if (s_e && d in range) fprintf(...);` statement instead of inside a gate, so with no ROGUESQ_LOG_HUDBIT
+the first 8 destroy-ctx arrivals per run did a backtrace + symbolisation on the game thread and wrote stderr in normal owner play.
+Not legitimate (the patch's own doc says "under ROGUESQ_LOG_HUDBIT"). Fix: the block is now `if (s_e) { ... }`, in the apply script
+(regen) and the live tree identically. Class audit (same session): all 56 backtrace() sites in RecompiledFuncs + factor5_ucode and
+the 7 host src/main sites enumerated; 55/56 generated sites sit under an env gate (getenv LOG_HUDBIT / LOG_S4700_CB / LOG_MTM /
+PLAYER_DUMP, or a helper that returns when its env is off: rs5813_en, rs5817_en, rs5846_log, s5798_init); the s5885 one was the
+only ungated site; host sites all gated (s_rand_trace_f, floorWriterOn, log_bt, FL_ZERO_ALWAYS). Proof: tools/s7719_regen_gate.py
+--strict VERDICT H-mirrored (live == replay byte-for-byte, planted controls PASS); rebuilt binary disassembly now has
+`ldr w8,[x19,#0xbdc]; cbz w8` (the s_e load) ahead of the counter/backtrace call where the old one went straight to the counter.
+Not measured: the per-call cost of the removed backtrace (it fired once in this 300 s run, not at a hold).
