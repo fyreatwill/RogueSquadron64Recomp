@@ -14,11 +14,16 @@
 //                                 on-screen window owned by pid (exit 1 if none)
 //   winctl activate <pid>      -> bring that app forward
 //   winctl key <pid> <keycode> -> post key down/up straight to that process
-//                                 (no focus required)
+//                                 (s7937: on macOS 26 SDL only sees them while the game is the ACTIVE app,
+//                                 and `activate` below is a no-op since macOS 14: raise it via System Events;
+//                                 WINCTL_KEY_HID=1: HID tap, front app)
 //   winctl burst <pid> <outdir> <t0-epoch> <secs> [interval-ms]
 //                              -> s6811: in-process window grabs (CGWindowListCreateImage,
 //                                 looked up by dlsym: the macOS 15+ SDK hides it) written as
 //                                 <outdir>/w_<secs since t0>.png, ~10x the screencapture rate
+//   winctl click <pid> <x> <y> [pid|hid]
+//                              -> s7937: left click at GLOBAL screen point (x,y) (points): move, down, 80 ms, up.
+//                                 "pid" (default) posts to the process, "hid" moves the real cursor (window must be front)
 //   winctl trusted             -> "yes"/"no" + exit 0/1: may THIS process post
 //                                 synthetic events? (Accessibility permission)
 #import <Cocoa/Cocoa.h>
@@ -68,20 +73,38 @@ static int findWindow(pid_t pid, CGWindowID *outId, CGRect *outRect) {
     return found;
 }
 
+static int g_key_hid = 0;  // s7937: WINCTL_KEY_HID=1 posts keys at the HID tap (front app) instead of to the pid
 static void postKey(pid_t pid, CGKeyCode code, useconds_t holdUs) {
     CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
     CGEventRef down = CGEventCreateKeyboardEvent(src, code, true);
     CGEventRef up = CGEventCreateKeyboardEvent(src, code, false);
     // Posting to the pid rather than the session means the window does not have
     // to be frontmost, so a failed raise cannot silently swallow the input.
-    CGEventPostToPid(pid, down);
+    if (g_key_hid) CGEventPost(kCGHIDEventTap, down); else CGEventPostToPid(pid, down);
     // The game samples SDL_GetKeyboardState once per frame, and the hangar runs
     // at roughly 10 fps, so a short hold can land entirely between two polls and
     // the press is simply never seen. Hold longer than one frame at that rate.
     usleep(holdUs);
-    CGEventPostToPid(pid, up);
+    if (g_key_hid) CGEventPost(kCGHIDEventTap, up); else CGEventPostToPid(pid, up);
     if (down) CFRelease(down);
     if (up) CFRelease(up);
+    if (src) CFRelease(src);
+}
+
+static void postClick(pid_t pid, double x, double y, int hid) {
+    CGEventSourceRef src = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
+    const CGPoint p = CGPointMake(x, y);
+    CGEventRef mv = CGEventCreateMouseEvent(src, kCGEventMouseMoved, p, kCGMouseButtonLeft);
+    CGEventRef dn = CGEventCreateMouseEvent(src, kCGEventLeftMouseDown, p, kCGMouseButtonLeft);
+    CGEventRef up = CGEventCreateMouseEvent(src, kCGEventLeftMouseUp, p, kCGMouseButtonLeft);
+    CGEventRef ev[3] = {mv, dn, up};
+    for (int i = 0; i < 3; i++) {
+        if (ev[i] == NULL) continue;
+        if (hid) CGEventPost(kCGHIDEventTap, ev[i]); else CGEventPostToPid(pid, ev[i]);
+        // ImGui needs the move and the press in different frames (hover first), and the press held across a frame.
+        usleep(i == 0 ? 150000 : 120000);
+    }
+    for (int i = 0; i < 3; i++) if (ev[i]) CFRelease(ev[i]);
     if (src) CFRelease(src);
 }
 
@@ -170,7 +193,17 @@ int main(int argc, const char **argv) {
                 return 2;
             }
             const int holdMs = (argc >= 5) ? atoi(argv[4]) : 150;
+            { const char *h = getenv("WINCTL_KEY_HID"); g_key_hid = h && *h == '1'; }
             postKey(pid, (CGKeyCode)atoi(argv[3]), (useconds_t)(holdMs * 1000));
+            return 0;
+        }
+
+        if (strcmp(cmd, "click") == 0) {
+            if (argc < 5) {
+                fprintf(stderr, "usage: winctl click <pid> <x> <y> [pid|hid]\n");
+                return 2;
+            }
+            postClick(pid, atof(argv[3]), atof(argv[4]), argc >= 6 && strcmp(argv[5], "hid") == 0);
             return 0;
         }
 

@@ -69,6 +69,15 @@ std::string sources_of(const rs64_bind_table& t, int target) {
 }
 
 void draw_ui() {
+    // s7937: ROGUESQ_PANEL_RECTS=1 logs widget rects (window points, the coordinate space SDL mouse events use) whenever
+    // the layout moves, so a driver can click the real widgets with OS mouse events (tools/s7937_panel_e2e.zsh).
+    static const bool s_rects = [] { const char* v = getenv("ROGUESQ_PANEL_RECTS"); return v && *v == '1'; }();
+    static std::string s_rect_last; std::string rect_now;
+    auto note_rect = [&](const char* name) {
+        if (!s_rects) return;
+        const ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
+        char buf[96]; snprintf(buf, sizeof buf, " %s=%.0f,%.0f,%.0f,%.0f", name, a.x, a.y, b.x, b.y); rect_now += buf;
+    };
     const ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.9f, io.DisplaySize.y * 0.9f), ImGuiCond_Always);
@@ -101,6 +110,7 @@ void draw_ui() {
             else ImGui::TextWrapped("%s", sources_of(t, tg).c_str());
             ImGui::TableNextColumn();
             if (ImGui::SmallButton("Bind")) rs64_bind_capture_arm(tg, false);
+            if (tg == RS64_N64_A) note_rect("bindA");
             ImGui::SameLine();
             if (ImGui::SmallButton("Add")) rs64_bind_capture_arm(tg, true);
             ImGui::SameLine();
@@ -111,13 +121,20 @@ void draw_ui() {
     }
     ImGui::Separator();
     if (ImGui::Button("Reset to defaults")) { rs64_bind_capture_arm(0, false); rs64_bind_live_set(rs64_bind_defaults(), "panel reset"); g_msg = "Defaults restored (not saved yet)."; }
+    note_rect("reset");
     ImGui::SameLine();
     if (ImGui::Button("Save")) { std::string m; rs64_bind_save(&m); g_msg = m; }
+    note_rect("save");
     ImGui::SameLine();
     if (ImGui::Button("Close")) { rs64_bind_capture_arm(0, false); g_open.store(false); }
+    note_rect("close");
     ImGui::SameLine();
     ImGui::TextDisabled("controls.json");
     if (!g_msg.empty()) ImGui::TextWrapped("%s", g_msg.c_str());
+    if (s_rects && rect_now != s_rect_last) {
+        s_rect_last = rect_now;
+        fprintf(stderr, "[panel-rect] disp=%.0fx%.0f%s\n", io.DisplaySize.x, io.DisplaySize.y, rect_now.c_str());
+    }
     ImGui::End();
 }
 

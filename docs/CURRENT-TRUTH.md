@@ -16,7 +16,7 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
 - **Owner: docs/OWNER-REVIEW-QUEUE.md (s7762) is the one-sitting list** (20 items, command + sheets each). Paths/settings in it and in
   OWNER-OPT-INS are gated by `python3 tools/s7762_owner_doc_check.py --controls`; every queue command is checked by
   `python3 tools/s7763_owner_cmd_check.py --control` (11/11 MATCH), in-flight toggles by `zsh tools/s7764_inflight_toggles.zsh`
-  (7/7), controls dump/controls.json by `python3 tools/s7765_controls_dump_check.py` (12/12). Only the F6 panel's interactive use is untested by us.
+  (7/7), controls dump/controls.json by `python3 tools/s7765_controls_dump_check.py` (12/12). F6 panel interactive use verified with REAL OS events (s7937, `zsh tools/s7937_panel_e2e.zsh`: F6 key, mouse clicks on Bind/Save/Reset, P captured, file A=[key:P] then defaults, Esc; 8/8 twice, 2 negative controls); only the owner's pad/feel remains.
 - **Owner decisions pending (defaults unchanged until the owner says):** QOS_ALL=1, RETINA=1, M5_B40_VALUE, S7524_V2P=1, SP_LATE,
   RENDER_TO_RAM=0, DD_FOG_ALT=1,3,1 look, STANDINS=1 look (G6c), rumble/controls feel (G6a/G6b), launch presets `--preset tv|ultrawide|window`, VI_STAMP=1 (determinism only, s7838 soak clean), ROGUESQ_RETAIL_SNAP=1 (s7840: timeSnapshotFiller pin el 811160 / vd 1; pinned port = retail CPO1 camera rest pitch on lvl2/3/4 and the lvl4 reticle to the pixel; soak s7839_snappin_L1 PASS; retail-accuracy candidate default, pairs with VI_STAMP=1).
 - **Sweep:** `python3 tools/s7651_gate_sweep.py` (--jobs 2, iron rule 0) ~216 gates, 0 RED, 0 HOLLOW; stop_gate blocks RED. The live
@@ -281,6 +281,8 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
     fb-cpu-reader census CLOSED s7391 (0 guest loads from a live colour image on 6 levels; build_fbld, ROGUESQ_S7389_FBLD=1).
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
+    s7937: F6 panel driven by real CGEvents (keys need the game ACTIVE: raise via System Events, `winctl activate` is a no-op since
+    macOS 14; pid-posted CLICKS never reach SDL, only HID-tap clicks do). Next (NEXT.md): F11 / Cmd+Ctrl+F / Alt+Enter with real keys.
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
 12. **G3 retail flight det sweep (s7832-s7890): CLOSED.** 19/19 missions render-exact on det ticks (m1-m16, b16, b17 pre-fork,

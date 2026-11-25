@@ -212169,3 +212169,34 @@ Full sweep (`s7651_gate_sweep.py --jobs 2 --new-red-vs tools/gate_sweep_allowed_
 GREEN 254, REPORT 2 (s7031, s7210), NEEDS-ARGS 2 (s7827, s7836), RED 0, new RED vs allow-list 0; planted red/green + cache controls PASS.
 The six s739x report gates moved NEEDS-ARGS -> GREEN (248 -> 254). (Session was interrupted before this sweep and its commit; both
 finished in the follow-up invocation.)
+
+## Session 7937 (2026-11-25) — F6 controls panel verified end to end with REAL OS events (keys + mouse clicks): 8/8 checks twice with negative controls; pid-posted clicks never reach SDL, pid-posted keys only while the game is the active app
+
+Triage: crash_reports --since 2026-11-25 new=0; no new SOAK-RESULTS lines. Every ladder rung is closed or owner-gated; NEXT.md asked
+for a game-side datum or code change. Picked the one owner-queue item never exercised by us: OWNER-REVIEW-QUEUE row 2 / CURRENT-TRUTH
+"Only the F6 panel's interactive use is untested" (s7620/s7666/s7668/s7670 all drove the panel through ROGUESQ_BIND_PANEL_TEST /
+PANEL_TEST_WINDOW hooks, never a real key or click).
+Hypotheses: H-ok (real F6 + clicks act like the hooks), H-coords (ImGui mouse space != SDL window points / title-bar offset, clicks
+miss), H-noinput (OS-posted events never reach SDL).
+Changes:
+- src/main/rs64_controls_panel.cpp: ROGUESQ_PANEL_RECTS=1 logs `[panel-rect] disp=WxH bindA=.. reset=.. save=.. close=..` (window
+  points) whenever the layout moves. Default off, no behaviour change.
+- tools/winctl.m: `click <pid> <x> <y> [pid|hid]`, WINCTL_KEY_HID=1 for keys; header comment corrected (keys need the game active).
+- NEW tools/s7937_panel_e2e.zsh: launches the game windowed with ROGUESQ_CONTROLS=<scratch>/controls.json (explicit path, so Save
+  writes there even under NO_SAVE_WRITE; build/controls.json never created, owner save untouched), raises it via System Events,
+  VOIDs unless it is frontmost, then: N1 closed-panel click + P arm nothing, K1 F6 opens, N2 click on a non-button cell arms nothing,
+  C1 click Bind(A) arms target=32768, C2 real P captured src=key:P, S1 click Save -> file A=["key:P"], R1 click Reset + Save -> A=
+  ["pad:a","key:Z"] (defaults), K2 Esc closes. `tag=` summary line, rc 0 only on 8/8 + alive.
+Runs (host idle 7.8 h, screen unlocked):
+- probe: `winctl activate` left Chrome frontmost (no-op since macOS 14, already known s45 probe.sh); F6 posted to pid -> 0 opens.
+  After System Events frontmost: pid-posted F6 1/1, HID F6 1/1 (toggled closed). So H-noinput for keys = focus only.
+- scratch/s7937/run (CLICK_MODE=pid): N1 K1 N2 K2 PASS, C1 C2 S1 R1 FAIL -> pid-posted mouse events never reach SDL (failing arm =
+  control that the click checks discriminate; the first run's C2..R1 also had a pt() parse bug from the missing rect line).
+- scratch/s7937/hid and scratch/s7937/rep2 (CLICK_MODE=hid, now the default): 8/8 PASS both, alive. Coordinates = CG bounds origin +
+  (bounds.h - disp.h) title offset + rect centre; disp 640x480 = win, fb 640x480 -> H-coords refuted at 1x.
+Verdict: H-ok selected (two runs, two negative controls, a failing pid arm). Rules out: panel widget/mouse mapping defects at a
+640x480 window; the hooks were not masking a real-input bug. Not covered: Retina/fullscreen scale (fb != win), a real pad press.
+Hazard datum: a harness that relies on `winctl key` without raising the game drops keys silently unless it self-checks (s7428 does).
+Full sweep after the change (`python3 tools/s7651_gate_sweep.py`, scratch/s7937/sweep.log, wall 1669 s): 258 gates, GREEN 254, REPORT 2,
+NEEDS-ARGS 2, RED 0 (the new panel statics are bool/std::string, no HP/SN census row needed).
+Next: NEXT.md owner-hotkeys-real-events (F11 / Cmd+Ctrl+F / Alt+Enter with real CGEvents; macOS may own F11 and Cmd+Ctrl+F).
