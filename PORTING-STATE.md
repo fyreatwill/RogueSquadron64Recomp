@@ -212025,3 +212025,30 @@ Classified (read each site in ../N64Recomp/RecompiledFuncs):
 Result: s7612 RESULT PASS, --controls 8/8. Full sweep `s7651_gate_sweep.py --new-red-vs tools/gate_sweep_allowed_red.txt` rerun
 -> rc=0, 0 new RED vs the allowed list (remaining REDs all pre-listed s7865/s7893 lost captures). Rules out: a real stale-register defect in these 5 (all default-off diagnostics).
 Lesson: after editing a shared scanner module, run every census importing it (grep -l s7611_sn_scan tools/).
+
+## Session 7931 (2026-11-25) — s7928's single-source route reading settled: retail 4 vs port 3 menu transitions are save state + harness FORCE flags, not the press schedule; same save -> same transition sequence 6/6
+Work unit (NEXT.md s7931 candidate): s7928 said retail 8 vs port 7 runVideoFrameTick calls = B40 + "one fewer menuOverlayInit
+transition on the autopilot route vs the oracle press schedule (single-source)". Hypotheses: H-sched (press schedule picks the
+route), H-save (save contents / FORCE pokes pick the route), H-port (port logic takes a different route on the same input+save).
+Discriminator: retail with the port's own schedule AND the same save; port with the same save and no FORCE flags.
+Runs (serial; crash_reports new=0 first; host idle ~4 h):
+1. tools/s7931_oracle_route.sh scratch/s7931_route (new; Rice, HLE RSP, wall clock, PRIVATE copy of build/saves/rs64.n64.us.1.0.bin
+   as the eep, build/saves only read). Arms port7.3 / port5.75 (g1e_owner_quiet_arms EARLY start/z schedule + offset, hold 1800 ms)
+   and s7928sched (s7928's start/A list). All three: menu@5A18 VI78, initScene@9C70 VI360, menu (->1024 title), menu (->512 hangar
+   0x6ab400), mainGameLoop@E360 (-> mission origin 0x690400, no crawl initScene), menu at ~98 s. Every tick followed by the wait
+   (6/6 per arm, same-run control). Schedules only shift times (E360 at VI 2243 / 2942 / 3035). H-sched REFUTED. s7928sched vs
+   s7928_oracle differ only in the save (user-default mupen save: menu x4 + crawl initScene 0x644d00) -> H-save SELECTED (retail side).
+   First attempt of this script ran all arms as one word (zsh ${@:-a b c} is not split) - fixed, rerun above.
+2. Port, same save, one g1e_owner_quiet_arms run (scratch/s7931_port, HOLD=120, + S7928_GATEW, S7926_WAITALL): arm nf
+   FORCE_SAVE_MISSION=-1 FORCE_UNLOCK=-1 -> menu(g0) initScene menu menu mainGameLoop@E360 menu mainGameLoop@E360 (alive, stalls 0,
+   max_vihold 333 ms, s7928 control 6/6); arm fc (as s7928, forced) -> s7928's 7-call shape (menu x3 + initScene + E360), control 6/6.
+   (nf "LEVEL MISMATCH" in arms.log is the harness parsing lvl -1, expected.)
+New tools/s7931_route_pair.py: caller-site common-prefix verdict (gate ignored: B40 differs by design), controls = drop-one
+mutation must differ + --control ring must differ. nf vs all 3 retail arms: prefix 6/6 SEQ-MATCH; mutation 3/6, fc control 4/6
+(both differ, PASS). nf/fc vs s7928's default-save oracle: 4/7, 5/7 DIFFER (different save). Sweep row S7931_ROUTE.
+Side fix: S7928_GATEW (and now S7931_ROUTE) were ARGS rows only and NOT in EXTRA_GATES, so s7928's "sweep row" never ran; both
+added to EXTRA_GATES, `s7651_gate_sweep.py --only 'route_pair|gate_writers'` -> GREEN 2.
+Verdict (two lines: retail oracle on the owner save x3 schedules + port on the same save): with the same save the port takes
+retail's exact transition sequence; the s7928 difference was the save (user-default mupen save) plus the harness FORCE pokes.
+H-port REFUTED, H-sched REFUTED. CURRENT-TRUTH superseded list carries s7928's "drive" reading.
+Rules out: a port menu-route defect on the MusyX-wait path. Nothing open on the MusyX waits.

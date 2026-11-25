@@ -71,6 +71,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7928 "retail 4 vs port 3 menu transitions = the autopilot route vs the oracle press schedule (drive)"** (superseded s7931).
+  Believable: the two runs used different press lists. Wrong: 3 schedules on one save give the same route; the cause is the save
+  (s7928's oracle used the user-default mupen save) plus the port harness FORCE_SAVE_MISSION/UNLOCK pokes.
 - **s7927 "the port SKIPS retail's flight-entry MusyX wait (gate 0x800A0F50 == 0 at flight entry)"** (superseded s7928). Believable:
   retail made 8 waits, the port 6, and every retail wait came from musyxNoopStub's gated jal. But nobody matched the waits by
   caller: retail's flight-entry wait is runVideoFrameTick from mainGameLoop@0x8003E360, and the port's 6th wait (+62 s) is that same
@@ -241,7 +244,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    per-TRANSITION tick and calls musyxNoopStub first) + retail oracle `--watch-pc 0x80001354,0x80091EC4 --hit-vi` (HLE RSP; cxd4
    stalls the 640 intro): retail 8 calls, 8/8 waits: menu, initScene, menu x4, initScene, mainGameLoop@0x8003E360 (flight entry).
    Port 7 calls: menu (gate 0 = B40 default), initScene, menu x3, initScene, mainGameLoop@0x8003E360 = the port's 6th slow wait.
-   So 8 vs 6 = B40 (1) + one fewer menuOverlayInit transition on the autopilot route (1; route, single-source). Gate is left 1
+   So 8 vs 6 = B40 (1) + a ROUTE difference (1). s7931 settled the route part (two lines): it is SAVE STATE + the harness FORCE
+   flags, not the press schedule and not the port. Retail oracle on a private copy of the owner save, 3 press schedules
+   (port autopilot at +7.3/+5.75 s, s7928's) -> identical caller sequence menu,initScene,menu,menu,mainGameLoop@E360,menu (hangar
+   -> mission 0x690400, no crawl initScene); port same save, FORCE_SAVE_MISSION/UNLOCK=-1 -> same 6/6 prefix; same-run FORCE arm
+   reproduces s7928's 7-call shape (prefix 4/6). `python3 tools/s7931_route_pair.py <ring> <oracle.log> --control <ring>`, oracle
+   launcher tools/s7931_oracle_route.sh, sweep row S7931_ROUTE (S7928_GATEW was ARGS-only, never swept; both now in EXTRA_GATES). Gate is left 1
    after flight entry, never 0. `python3 tools/s7928_gate_writers.py <ring> [--oracle <log>]`, sweep row S7928_GATEW. Nothing open.
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
