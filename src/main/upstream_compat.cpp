@@ -1026,6 +1026,8 @@ extern "C" void rs64_s4899_swap(uint32_t fb, uint32_t width);
 extern "C" void rs64_g1d_join_swap(uint32_t frame, uint32_t fb,
                                      uint32_t vi_width, uint32_t vi_origin);
 static std::atomic<uint8_t*> g_rs64_g1d_rdram{nullptr};
+// s7928: read-only accessor for host diagnostics that are not handed rdram (set at the first osViSwapBuffer).
+extern "C" uint8_t* rs64_s7928_rdram(void) { return g_rs64_g1d_rdram.load(std::memory_order_relaxed); }
 extern "C" void rs64_g1d_copy_to_ram_trace(uint32_t rowStart, uint32_t rowEnd,
                                              uint32_t width, uint8_t siz,
                                              uint8_t *destination,
@@ -2460,6 +2462,7 @@ extern "C" void rs64_m5_selector_tick_edge(const char* edge, uint32_t pc,
                                               uint32_t taken, uint32_t a0,
                                               uint32_t a1, uint32_t a2,
                                               uint32_t a3, uint32_t value) {
+    if (edge && edge[0] == 'c') { extern void rs64_s7928_tick_caller(uint32_t); rs64_s7928_tick_caller(pc); }  // s7928 (s7324_rcp_spill.cpp)
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_TICK");

@@ -14,6 +14,7 @@
 #include <cstring>
 #include <ctime>
 #include <mutex>
+#include <atomic>
 #include <chrono>
 extern "C" int rs64_s7324_class(uint32_t addr, uint32_t* blk, uint32_t* req, void** pc);
 extern "C" uint32_t rs64_s7324_lowspill();
@@ -258,8 +259,40 @@ static void rs64_s7925_wait_mark(const char* edge, uint32_t pc) {
     plume::rs64_pring_write(row);
     fast = 0; t_in = -1.0;
 }
+// s7928: ROGUESQ_S7928_GATEW=1 (needs the present ring) writes one row "G <t> pc=<writer> v=<byte after the store>" for every
+// guest store to the MusyX gate byte 0x800A0F50 (the 7 s2031 writer sites in funcs_23.c call this right after their store),
+// capped at 4096 rows. v=-1 before the first osViSwapBuffer (no rdram yet). Names the writer that leaves the gate 0 at flight
+// entry (s7927: the port skips retail's flight-entry wait). Same-run control: each slow M row must follow a G row with v!=0.
+extern "C" uint8_t* rs64_s7928_rdram(void);
+static void rs64_s7928_gate_write(const char* edge, uint32_t pc) {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_S7928_GATEW"); return e && *e == '1' && plume::rs64_pring_on(); }();
+    if (!on || strcmp(edge, "writer")) return;
+    static std::atomic<unsigned> n{0};
+    if (n.fetch_add(1) >= 4096) return;
+    const uint8_t* rd = rs64_s7928_rdram();
+    const int v = rd ? (int)rd[(0x800A0F50u - 0x80000000u) ^ 3u] : -1;
+    char row[96];
+    snprintf(row, sizeof(row), "G %.6f pc=0x%08X v=%d\n", plume::rs64_pring_now(), pc, v);
+    plume::rs64_pring_write(row);
+}
+// s7928: with ROGUESQ_S7928_GATEW=1 each runVideoFrameTick caller site (0x8003E29C/0x8003E360 mainGameLoop, 0x800A9C70
+// initSceneForMission, 0x800C5A18 menuOverlayInit; runVideoFrameTick calls musyxNoopStub first thing) writes
+// "C <t> pc=<site> n=<call # at that site> g=<gate byte>" for its first 16 calls and every 600th after.
+extern "C" void rs64_s7928_tick_caller(uint32_t pc) {
+    static const bool on = [] { const char* e = getenv("ROGUESQ_S7928_GATEW"); return e && *e == '1' && plume::rs64_pring_on(); }();
+    if (!on) return;
+    static std::atomic<unsigned> cnt[4];
+    const int i = pc == 0x8003E29Cu ? 0 : pc == 0x8003E360u ? 1 : pc == 0x800A9C70u ? 2 : 3;
+    const unsigned n = cnt[i].fetch_add(1) + 1;
+    if (n > 16 && n % 600) return;
+    const uint8_t* rd = rs64_s7928_rdram();
+    char row[96];
+    snprintf(row, sizeof(row), "C %.6f pc=0x%08X n=%u g=%d\n", plume::rs64_pring_now(), pc, n,
+             rd ? (int)rd[(0x800A0F50u - 0x80000000u) ^ 3u] : -1);
+    plume::rs64_pring_write(row);
+}
 extern "C" void rs64_s7330_gate(const char* edge, uint32_t pc) {
-    if (edge) rs64_s7925_wait_mark(edge, pc);
+    if (edge) { rs64_s7925_wait_mark(edge, pc); rs64_s7928_gate_write(edge, pc); }
     if (!rs64_s7324_on || !edge) return;
     uint32_t e = 0;
     if (!strcmp(edge, "wait-entry")) e = 1; else if (!strcmp(edge, "wait-seed")) e = 2; else if (!strcmp(edge, "wait-exit")) e = 3; else return;

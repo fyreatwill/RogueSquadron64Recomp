@@ -287,6 +287,9 @@ ARGS.update(S7865_AIDMA)
 S7925_WAITPAIR = {"s7922_transition_table.py": (["scratch/s7925_mmark/ring_q4.txt", "scratch/s7921_oracle5/oracle.log", "--waits"],
                   r"agreement wait-vs-hold pairing (\d+)/\1; mutation control \(shift 1\) \d+/\d+ -> PASS; wait_pairs_port_longer=0")}  # s7925 G5c: port MusyX wait rows pair = hold ordinal pairing; shift-1 mutation must break it
 ARGS.update(S7925_WAITPAIR)
+S7928_GATEW = {"s7928_gate_writers.py": (["scratch/s7928_gatew2/ring_q4.txt", "--oracle", "scratch/s7928_oracle/oracle.log"],
+               r"retail calls 8 \(waits 8/8\) port calls 7 \(gate set 6\); last caller retail mainGameLoop@E360 port mainGameLoop@E360 -> FLIGHT-ENTRY MATCH")}  # s7928: port takes retail's flight-entry MusyX wait (s7927 SKIPPED superseded)
+ARGS.update(S7928_GATEW)
 S7723_RETAINED_CTL = {"s7723_retained_controls.py": ([], r"CONTROLS PASS bad=0 skipped=0")}  # planted RED per row above
 ARGS.update(S7723_RETAINED_CTL)
 ARGS.update(S7720_CHECK)

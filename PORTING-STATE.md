@@ -211954,3 +211954,36 @@ skipped with B40=1. Single-source per arm (one run each). Harmless: no hold or f
 Rules out: H-fast (the wait taken but sub-threshold); B40 as the sole cause of the flight-entry skip.
 Not done: naming the other gate-zero writer at flight entry (candidates: shutdownMusyXEngine 0x8008ECEC sb zero, the s4875
 force-zero gate stubs). Only worth it on an owner report of flight-entry audio trouble.
+
+## Session 7928 (2026-11-24) — s7927 overturned: the port DOES take retail's flight-entry MusyX wait (runVideoFrameTick from mainGameLoop@0x8003E360, gate 1 in both); retail 8 vs port 6 waits = B40 boot wait + one route-dependent menu transition
+Work unit: name the writer that leaves gate 0x800A0F50 at 0 at flight entry (s7927's open item). Hypotheses: H-writer (a zero
+store - shutdownMusyXEngine 0x8008ECEC, a force-zero stub - runs after the last set), H-nocall (the gate stays 1 but musyxNoopStub
+is not reached), H-mismatch (the waits were never matched by caller; the port's "missing" flight-entry wait is present).
+Instrument (one build, src only, no regen): ROGUESQ_S7928_GATEW=1 + present ring.
+- src/rsp/s7324_rcp_spill.cpp: `G <t> pc=<writer> v=<byte after store>` from rs64_s7330_gate's "writer" edge (all 7 s2031 writer
+  sites in funcs_23.c call it right after their store); `C <t> pc=<site> n= g=<gate>` from rs64_m5_selector_tick_edge("caller")
+  (src/main/upstream_compat.cpp, now forwards to rs64_s7928_tick_caller) at the 4 runVideoFrameTick call sites (first 16 calls
+  per site + every 600th). rdram via new rs64_s7928_rdram() (set at first osViSwapBuffer; v=-1 before).
+- tools/s7928_gate_writers.py: G/C timeline, control = every slow M has a nonzero G before it and a musyxNoopStub noop-exit clear
+  (0x8008ED48 v=0) after it; `--oracle <log>` compares caller sequences; `--selftest` 3/3 (planted good / no-set / empty).
+Runs (serial, host idle 907-1160 s):
+1. scratch/s7928_gatew (owner recipe dd4 HOLD=120, tools/g1e_owner_quiet_arms.zsh, + S7926_WAITALL): alive, crash 0,
+   vi_stalls30s 0, max_vihold 392 ms. Control 6/6 PASS. Gate cycle per transition: reapplyDisplayMode entry 0 -> success r2 = 1 ->
+   wait -> noop-exit 0. Final write: reapplyDisplayMode:success v=1 at +62.27 s, nothing after (120 s of flight). H-writer REFUTED.
+2. scratch/s7928_gatew2 (same + C rows): alive, crash 0, stalls 0, max_vihold 387 ms, control 6/6. runVideoFrameTick is called
+   once per TRANSITION, not per frame: 7 calls = menuOverlayInit@0x800C5A18 at -4.12 s (g=0: the B40 default-0 skip),
+   initSceneForMission@0x800A9C70 0.00, menu 5.97 / 23.28 / 38.60, initScene 53.78, mainGameLoop@0x8003E360 62.07 (g=1) -> the
+   6th slow wait (+62.08). s7926 WAITALL agrees (6 calls, 0 fast).
+3. Retail oracle scratch/s7928_oracle (Rice, HLE RSP, Start every 6 s from 6 / A every 6 s from 9 sorted, 88 s,
+   `--watch-pc 0x80001354,0x80091EC4 --hit-vi --hit-cap 64`): 8 runVideoFrameTick entries (caller = ra-8), each followed by the
+   wait-taken hit at the same VI (8/8, same-run control): menu VI78, initScene 360, menu 939/1731/2245/2914, initScene 3108,
+   mainGameLoop@0x8003E360 VI 3469. Matches s7921_oracle5's register contexts (s1 0x800d0000 / 0x80037560 / 0x80130b1c).
+   Dead ends in the same session: an unsorted --press list and the cxd4 RSP (tools/oracle/rsp_plugin.sh) both left retail in the
+   640 intro for the whole run (one wait at VI 78; s7928_oracle_ctl shows it with cxd4 and no extra watch); s7921 used HLE.
+Verdict: H-mismatch selected, two sources (port ring C rows + retail oracle ra): both end on mainGameLoop@0x8003E360 with the gate
+at 1 and the wait taken. `python3 tools/s7928_gate_writers.py scratch/s7928_gatew2/ring_q4.txt --oracle scratch/s7928_oracle/oracle.log`
+-> FLIGHT-ENTRY MATCH (sweep row S7928_GATEW). Retail 8 vs port 6 waits = the B40 boot-menu skip (port calls the tick with gate 0;
+B40=1 restores it, s7927) + one fewer menuOverlayInit transition on the port autopilot route vs the oracle press schedule
+(different drive, single-source inference). s7927's SKIPPED verdict and its "gate == 0 at flight entry" inference are superseded
+(CURRENT-TRUTH superseded list).
+Rules out: H-writer (no zero store after the last set), H-nocall at flight entry. Nothing open on the MusyX waits.
