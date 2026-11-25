@@ -211556,3 +211556,40 @@ Rules out for m6 B: H-loadshift, H-phase (time sampling), integer time shift of 
 element is. Single-source: the "no stall difference" reading is inferred from the unchanged lag, not from measured retail stalls.
 Docs: CURRENT-TRUTH item 0 + s7911 paragraph; NEXT = m6 island B mechanism.
 ORIGIN: no mitigation; two new offline analysis tools.
+
+## Session 7912 (2026-11-24) — m6 island B is ONE element (a particle cloud of 0x0D shaded z-buffered tris) and it is port run-to-run NONDETERMINISTIC: two same-config, same-binary port arms differ on it as much as port vs retail, while every other tri in the island is exact; new tools/s7912_island_ctx.py + s7912_elem_cross.py
+Pre-checks: crash_reports FOLDED=3 new=0; no new SOAK-RESULTS lines; no owner answers; CURRENT-TRUTH 56.0 KB (no maintenance).
+Work unit (NEXT s7912, HYPOTHESIS-ID g3-m6-island-b-state): identify the island B element, then split H-callcount / H-init / H-order.
+- Offline 1, new tools/s7912_island_ctx.py (per-tri RDP draw context: last SetTextureImage / SetCombine / SetOtherModes / Prim / Env +
+  opcode + bbox; port-only / retail-only tris of an island grouped by context; LAG = port - retail index, s7911 convention). Controls
+  same run: pre-island frame 6060 exact (po 0 ro 0) PASS, planted YH+1 -> 1/1 PASS. (First two attempts FAILED their controls and
+  were fixed, not read: lag sign, and texrect-only frames must be kept so frame indexing equals s7821's.) On scratch/s7896/m6q
+  (p1.bin vs r1/retail.bin.zst, lag 532, 6071:6283): **all** port-only (12794) and retail-only (12640) tris are in ONE context:
+  opcode 0x0D (shade + z, untextured), combine FFFFFF/FFFE793C (shade), othermodes 082CC000504A50, teximg 635A40 (stale). The element
+  exists on exactly port 6071..6282 = retail 5539..5750 on both sides (same 212 frames), bbox equal within ~1-8 px, tris ~1-2 px tall:
+  a particle cloud (~6 -> 80 tris) sweeping across the screen. Per-frame tri counts are noise around equal (P 13528 / R 13374,
+  P>R 110 frames, P<R 79, eq 23), best count shift 0 (no spawn-timing offset); nearest retail-only tri per port-only tri: 1286 <=0.25 px,
+  4090 <=1, 5985 <=4, 1433 more (scratch/s7912/m6q_ctx.txt, m6q_counts.txt, m6q_nearest.txt).
+- Offline 2, new tools/s7912_elem_cross.py (extract one context's element from N bins, align on its first frame, pairwise exact /
+  symdiff; control = each bin vs itself with one planted YH+1 -> symdiff 2, exact n-1). Kept m6k (no replay) vs m6q (full rand replay)
+  port bins differ from EACH OTHER as much as from retail (25274 vs 25434 symdiff), which needed a same-config control:
+- Run (2 port-only arms, same binary, same command, sequential: `env RBIN=1 SNAP=3 P1E=ROGUESQ_SNAP3_ONLY=c zsh scratch/s7894/p1only.sh
+  5 scratch/s7912/m6{a,b}` with r1/oracle.log from s7895/m6k = the m6k recipe; 0 crash lines, caps 31/32, [snap7891] fire 6 dtpc
+  800C6674 as m6k): tools/s7912_elem_cross.py 635A40/f0/s3/w1 FFFFFFFFFE793C over A, B, K(m6k), Q(m6q), R(retail): 5/5 plant controls
+  PASS; **A vs B 0/212 element frames exact, symdiff 25463** (A vs R 25282, every pair 25.3-25.5k) (scratch/s7912/m6_cross2.txt).
+  scratch/s7912/ab_rest.py: with the element removed, A vs B island frames are **212/212 exact**, 200 frames before and 188 after exact
+  (element included), 0 non-element differing contexts in the island; the only other A/B diffs are boot/attract frames (pre seed pin).
+- Rand traces A vs B (p1_rand.txt): per-50-VI site counts in VI 5600-7400 are flat and identical in shape for every site
+  (800027c0/800998e8/80099720 50, 800c6674 25; 8008ee84 136-141 in both) -> no element-specific rand burst is visible there; the
+  element's VI window was not pinned (the port RDP bin header carries no VI), so this is not a rand-site exoneration.
+- Selected: **H-nondet** (new): m6 island B is port run-to-run nondeterminism confined to one particle element; two lines (same-config
+  A/B element differs while the rest of the same frames is bit-exact; m6k/m6q differ from each other as much as from retail).
+  Refutes H-callcount / H-init / H-order AS DETERMINISTIC STATE readings (s7911 "state island" stands only as "not a load shift"), and
+  explains why full rand replay (s7896) changed nothing: no fixed port value stream exists for that element to match.
+  Lead (single-source, by code reading): osGetCount/osGetTime are host wall clock (lib/N64ModernRuntime/ultramodern/src/timer.cpp
+  osGetCount = time_now()), so any element consuming Count/Time differs per run; retail under mupen is cycle-deterministic.
+  Alternative: a host race (RSP/audio thread vs game thread) on the element's buffer.
+- Not claimed: which guest function emits the element, nor that retail hardware is deterministic for it.
+- Kept: scratch/s7912/m6{a,b}/p1.bin.zst + p1_rand.txt.zst (zstd, raw deleted; tools resolve via rs64_zopen), analysis outputs.
+  s7804 zst lint GREEN (694 tools, blind 0).
+ORIGIN: no mitigation; two new offline analysis tools, no code change.

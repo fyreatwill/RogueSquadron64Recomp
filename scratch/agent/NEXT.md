@@ -1,21 +1,26 @@
-# NEXT (s7912)
-HYPOTHESIS-ID: g3-m6-island-b-state
+# NEXT (s7913)
+HYPOTHESIS-ID: g3-m6-island-b-nondet
 First: `python3 tools/crash_reports.py --since 2026-11-13 | grep -v '^FOLDED' | head`, docs/OWNER-REVIEW-QUEUE.md answers,
 new SOAK-RESULTS lines. A crash or owner report outranks this.
-State (s7911): pre-flight census H-mixed. m6 island B (port 6071:6283 on scratch/s7896/m6q, text-screen tail, PRIM FFFFFFFF tris,
-6 -> ~80 differing tris) re-locks at the SAME lag (532) after the island (tools/s7911_island_relock.py), is not a half-frame
-phase (tools/s7911_island_phase.py, control PASS) and survives full rand-value replay (s7896). So it is game state.
+State (s7912): m6 island B = ONE particle element (RDP opcode 0x0D shade+z untextured, combine FFFFFF/FFFE793C, othermodes
+082CC000504A50) drawn port 6071..6282 / retail 5539..5750, and it is port RUN-TO-RUN nondeterministic: same-config same-binary
+arms scratch/s7912/m6a vs m6b differ on it 0/212 (symdiff 25463), the rest of the island is 212/212 exact
+(tools/s7912_elem_cross.py, scratch/s7912/ab_rest.py).
 Hypotheses:
-- H-callcount: advanceNpcOnCurvedPath (0x8006C0FC) steps a different number of times pre-tick (s7896: run lengths 81 vs 80,
-  71 vs 69), so a curved-path NPC/element sits elsewhere when the text screen draws it.
-- H-init: the element's state is initialised from something that differs (camera/pose word, scene timer) before the screen.
-- H-order: same calls and values, different interleaving between update sites (s7896 saw interleaving diffs in m11).
-Discriminator (one oracle run + one port run, or offline first if possible): identify the element (which display list / object
-emits the PRIM FFFFFFFF tris: grep RDP bins' setPrim context, then the guest object via ROGUESQ_G3C_CAMLOG/RAMDUMP), then a write
-watch on its position/path-parameter word on both sides (retail oracle --watch-write PHYS, port XTRACE_MEM at 0x8006C0FC) across the
-text screen. H-callcount: same per-call values, different call totals; H-init: values differ from the first call; H-order: totals
-equal, sequence differs. Offline prerequisite: find what the xtrace 2nd field is (not VI: retail rand rows 422..18299) so the two
-sides' rand rows can be aligned on a shared clock; tools/s7896_rand_replay.py uses [vi] t= lines instead.
-Bins (cite exact paths so the prune keeps them): scratch/s7896/m6q/r1/retail.bin.zst, scratch/s7896/m6q/p1.bin,
-scratch/s7896/m6q/p1_rand.txt, scratch/s7896/m6q/r1/oracle.log.zst.
-Budget: if 2 iterations give no discriminating result, record the table and take the next ladder rung (owner queue / G1e).
+- H-clock: the element (or its emitter) consumes osGetCount / osGetTime, which are host wall clock in the port
+  (lib/N64ModernRuntime/ultramodern/src/timer.cpp osGetCount = time_now()) but cycle-deterministic under mupen.
+- H-race: a host thread (RSP task / audio / RDP async) races the game thread on the element's vertex or state buffer.
+- H-uninit: the element reads uninitialised / stale guest memory whose content depends on host timing earlier on.
+Discriminator, ONE build, 3 arms (one game run at a time, sequential, same p1only recipe as s7912):
+1. Passive (default off): ROGUESQ_S7913_CLOCKLOG=1 in osGetCount_recomp / osGetTime_recomp (lib/N64ModernRuntime/librecomp/src/
+   ultra_translation.cpp) logs caller RA (ctx->r31) + port VI per call into a ring dumped at exit (no per-call stderr).
+2. Lever (default off): ROGUESQ_DET_CLOCK=1 makes osGetCount/osGetTime a function of the VI count (rs64_vi_n_g * 781250 cycles
+   per VI at 46.875 MHz, plus a fixed per-call increment), so they are identical run to run.
+Arms: C1, C2 = DET_CLOCK=1 twice; the s7912 A/B pair is the control that differs. Score with
+`python3 tools/s7912_elem_cross.py 635A40/f0/s3/w1 FFFFFFFFFE793C C1=... C2=... A=scratch/s7912/m6a/p1.bin B=scratch/s7912/m6b/p1.bin`.
+Outcomes: C1==C2 exact on the element -> H-clock (then the CLOCKLOG callers active in the element's VI window name the consumer;
+next: is it a retail-match fix worth an opt-in, e.g. pair with VI_STAMP determinism). C1!=C2 -> H-clock refuted, H-race/H-uninit:
+next a write watch (XTRACE_MEM) on the element's vertex source. If DET_CLOCK breaks boot or audio, record it and use CLOCKLOG alone.
+Any lib/ edit: `./submodule-patches/export.sh` + commit the refreshed patches in the same session.
+Keep bins zstd'd (zstd -T2, iron rule 0). Budget: 2 iterations, then record the table and take the next ladder rung
+(owner queue / G1e).

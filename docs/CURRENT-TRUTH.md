@@ -65,6 +65,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
 - **Present thread (s6884-s6891, s6931):** SCREEN_JOB, PRESENT_INFLIGHT, PRESENT_DRAIN opt-in/off.
 
 ## Superseded conclusions — do not act on these
+- **s7911 "m6 island B is deterministic game state (state other than rand values)"** (superseded s7912). Believable: the lag re-locks at
+  532 and full rand replay changed nothing. But two same-config port runs differ on the element as much as port vs retail: it is
+  run-to-run nondeterminism in one particle element, not a reproducible state difference.
 - **s7905 "island B absent on the rebuilt binary; leading reading a host-timing race"** (superseded s7906). Believable: 3/3 exact
   right after a rebuild. But loop soaks on the same binary give 708 twice at different loads; class = det_cmp offset gap 28 vs 29.
 - **s7904 "island B = flame-block arena placement/timing (H-sched vs H-alloc-seq)"** (superseded s7905). Believable: port RAM held
@@ -223,6 +226,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (no stall/frame-count involvement). m3 B (s7895/m3c): same-lag state island too (536/536), = H-rng (s7896 RESEED closes it).
    m6 B survived full rand-value replay (s7896), so it is state other than rand values. m8/m12 islands, m16 -98->-99, b16
    lead-in: bins not retained -> na (m8/m12 were state class by the s7869/s7876 arm test).
+   **s7912: m6 island B = ONE particle element (opcode 0x0D shade+z untextured tris, combine FFFFFF/FFFE793C) that is port RUN-TO-RUN
+   NONDETERMINISTIC (H-nondet).** tools/s7912_island_ctx.py (draw-context census, controls PASS) puts 100% of port-only/retail-only tris
+   in that context; tools/s7912_elem_cross.py (plant controls 5/5): two same-config same-binary port arms scratch/s7912/m6a vs m6b differ
+   on it 0/212 frames exact (symdiff 25463 = as much as port vs retail), while the rest of the island is 212/212 exact. So no fixed
+   port value exists to match; H-callcount/H-init/H-order as deterministic state are refuted. Lead (single-source, code reading):
+   osGetCount/osGetTime = host wall clock (ultramodern timer.cpp); alternative a host thread race on the element's buffer.
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
