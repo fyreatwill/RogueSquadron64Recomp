@@ -16217,3 +16217,279 @@ Item 12 (G3 retail flight det sweep), 0x31=5..9 detail, verbatim as of s7861:
    press 7): f712 -> crawl start press8+339, gap 29, 708 residual; f713 -> +337, gap 28, exact. So the press frame delta is
    absorbed (crawl is VI/dt-timed): H-press REFUTED; the class is the frame count the port renders over that VI window (frame/VI
    phase). Port renders +28 frames vs retail there (open, next unit). Use SNAP=3 P1E="ROGUESQ_SNAP3_ONLY=c,7 ..." (s7898).
+
+## Migrated from CURRENT-TRUTH (s7918 maintenance): Next-steps item 0 (G3 pre-flight islands s7891-s7917) and item 12 (G3 det sweep s7832-s7893), verbatim
+
+### Item 0 (as of s7917)
+
+0. **G3 pre-flight retail match on det pairs: island A CLOSED (H-index, s7891/s7894), island B CLOSED (s7907 harness frame/VI
+   class, flight exact both classes); full s7896-s7907 detail archived in PROJECT-OVERVIEW "(s7909) island B archive".**
+   **s7909: the port's +28 pre-flight frames = one shorter load stall (H-cost, not a render defect).** tools/s7909_window_vi.py
+   (retail s7872/rdt exec-trace 0x8000BBE8 per frame vs port [dt7835], VI clocks aligned by presses, offset 20): press7->crawl
+   window 2216 VI on both sides; retail 1062 frames, port 1090; every frame 2-VI on both except ONE load stall 86 VI after press 7:
+   retail 77 VI, port 20 VI -> (77-20)/2 = 28.5 frames, the odd 57 VI is why the class is 28 or 29 (s7906/s7907). Press 8->9 window
+   360/360 frames, no stall (equality control); every other port load stall is 20-23 VI vs retail 72-116 (press 2: 116 vs 23,
+   press 5: 72 vs 20). Second line: det_frame_cmp `--port-start 1916 --port-end 2963`: port[1916:2559] exact 643/643 at its own
+   offset; port[2559:2963] (404 frames, retail 376 = +28) shares NO unique frame with retail: content forks ~1286 VI after the
+   load, before press 8.
+   **s7910: the fork is the scene switching from frame-count to elapsed-time keying: CLOSED as retail load-time cost.**
+   tools/s7910_fork_lag.py (ntri per frame, best lag): control port[2399:2559] lag 71 err 0; after the fork lag 99 in both
+   windows and at 4 ntri thresholds = 71 + 57/2 = the lag predicted if content keys on time since the load started (press 7).
+   The half-frame phase is why no exact frame pairs. Replicated on scratch/s7905/m11C. VI vs audio clock not separated (both are real
+   time). Faster port loads are not a fidelity goal. Pre-flight thread g3-preflight-load-cue CLOSED.
+   **s7911 census (H-mixed): m6 island B is NOT a load shift: it is the one open pre-flight item.** New tools/s7911_island_relock.py
+   (exact-match lag vote before/inside/after an island, control = pre window locks >=90%) and tools/s7911_island_phase.py
+   (half-frame phase vs drift at fixed lag; control m6 island A s7892/m6s3c = 6244/6244 between, 0.510 x speed -> H-phase PASS).
+   m11 B: pre lag 71 -> post 99 (157/160) = H-loadshift. m6 B (s7896/m6q, replica s7895/m6k): pre 532 160/160, post 532 160/160,
+   island 0/212 exact, port-only tris in no retail frame +-60, only 23/212 rank-pairable -> state island at the SAME alignment
+   (no stall/frame-count involvement). m3 B (s7895/m3c): same-lag state island too (536/536), = H-rng (s7896 RESEED closes it).
+   m6 B survived full rand-value replay (s7896), so it is state other than rand values. m8/m12 islands, m16 -98->-99, b16
+   lead-in: bins not retained -> na (m8/m12 were state class by the s7869/s7876 arm test).
+   **s7912: m6 island B = ONE particle element (opcode 0x0D shade+z untextured tris, combine FFFFFF/FFFE793C) that is port RUN-TO-RUN
+   NONDETERMINISTIC (H-nondet).** tools/s7912_island_ctx.py (draw-context census, controls PASS) puts 100% of port-only/retail-only tris
+   in that context; tools/s7912_elem_cross.py (plant controls 5/5): two same-config same-binary port arms scratch/s7912/m6a vs m6b differ
+   on it 0/212 frames exact (symdiff 25463 = as much as port vs retail), while the rest of the island is 212/212 exact. So no fixed
+   port value exists to match; H-callcount/H-init/H-order as deterministic state are refuted. Lead (single-source, code reading):
+   osGetCount/osGetTime = host wall clock (ultramodern timer.cpp); alternative a host thread race on the element's buffer.
+   (s7914: census FW rule added for the DET_CLOCK `last` clamp; gate sweep clean, DET_CLOCK=2 arms still next.)
+   **s7913: VI-keyed clock does NOT make it deterministic, but that lever was not itself deterministic, so H-clock is NOT refuted.**
+   ROGUESQ_DET_CLOCK=1 (osGetTime/osGetCount = total_vis*781250 + 256/call/thread, librecomp ultra_translation.cpp) C1 vs C2 element
+   0/212 exact (symdiff 25304, plant controls 4/4); ROGUESQ_S7913_CLOCKLOG=<path> (tools/s7913_clocklog.py, selftest PASS) shows the
+   C1/C2 clock streams diverge at record 0 (first osGetTime at VI 28 vs 20): guest progress vs host VI phase differs from boot.
+   ROGUESQ_DET_CLOCK=2 (65104 ticks per call per thread, VI-independent) exists and boots (60 s control); caller RA is now the host
+   return address (atos-symbolised: getTimeSinceLastFrame, recordFrameTimestamp, getTimeLow32, VI/SP/DP threads, MusyX synth).
+   **s7915: H-clock REFUTED for the element (two lines).** DET_CLOCK=2 arms D1/D2 (scratch/s7915, 0 crash lines): D1 vs D2 0/212, but
+   **D1 vs s7913 C1 212/212 exact, symdiff 0**, although C1 ran DET_CLOCK=1 (VI-keyed) and D1 DET_CLOCK=2 (call-count): their clock
+   values differ completely, so the element is not a function of the values osGetTime returns. Line 2: per-RA clock compare
+   (s7913_clocklog.py --per-ra, plant PASS) D1 vs D2: getTimeLow32 18136/18136 equal yet the element differs. Not selected by element
+   start frame either (D2 and A both start 6070, 0/212). 1 exact pair of 15 over 6 arms; whole-run p1_rand traces all differ.
+   **s7916: H-rng SELECTED (offline, 6 arms, 15 pairs).** tools/s7916_rand_site_cmp.py (rand (site,value) stream per arm, plant control
+   PASS): the ONE element-exact pair D1/C1 has an identical rand stream over C1's whole trace (75k rows; C1 just ends 42 VI earlier);
+   all 14 element-differing pairs diverge first at the attract flame burst before the one-shot title call 0x800B48F8 (12425 / 12396 /
+   12378 calls before it: flame sites 0x800541FC/0x80054174 + 0x8006C0FC, host-paced frame count), except C2/A, equal to VI 10913/11012
+   then forking on the 16-call flame parity ~35-75 VI before their element starts (~VI 10947/11087 from [vi] fs= stamps, 64-VI grain,
+   single-source). Element = f(rand stream position); stream position = host-paced frame count (s7909 load-stall class). H-race and
+   H-uninit unneeded (15/15 pairs predicted). Same timing class as s7907/s7910: no port value to fix.
+   **s7917: CLOSED (timing class).** D1 self-replay (tools/s7917_self_replay.py, fired 1385-1838 seeds/arm, per-site streams prefix-
+   identical) still gives 0-2/212 element frames in all 6 pairs: the element needs the GLOBAL stream position (host frame counts),
+   not per-site values. H-race not separately excluded (single-source). Slug g3-m6-island-b-nondet closed.
+
+### Item 12 (as of s7917)
+
+12. **G3 retail flight det sweep (s7832-s7853).** Pair = port (VI_STAMP=1 + RETAIL_SNAP=1) vs retail CPO1 oracle (FTZ per
+   FCR31.FS, s7841): render tris, HUD census, 460-w ramdump. lvl2/3/4 pinned = retail (s7840); lvl5 render exact (s7841); lvl5
+   1-ulp camera fork CLOSED s7843 as oracle timing (chase dt = running min of the 1/60-snapped dt; 0x3D088887 only for raw dt
+   low nibble 0, mupen CPO jitter; tools/s7843_dt_snap_replay.py, apply_s7842_chasehex.py, scratch/s7842/chase_cmp.py).
+   **0x31=5..9 (s7844-s7853)** detail (seed pin + dt replay recipe, rumble/3D-sound timing class, 0x31=8 audio-clock) migrated
+   verbatim to PROJECT-OVERVIEW "(s7862 migration)"; one-line verdicts in `tools/s7862_det_sweep_table.py`.
+   **0x31=10 (s7854): H-exact.** Bespin, 2672 ticks, seed 36b554eb, 1 dt pin, no song switch, hp static. p1 rand/callers equal all
+   2580 ticks (2 pinned runs). The 0x80043918 [ramdump] PC is in buildVisibleTerrainGridAroundCamera, so it runs 1x on no-terrain
+   levels (vacuous record). s7849_det_pair.sh REC=1 (default) now dumps the 460-w record at tick marker 0x800FA730 on both sides,
+   scored by tools/s7854_tick_rec_cmp.py: 0 diffs in 2580/2580 ticks; p2 forks tick 3; --control 100 is caught.
+   **0x31=11 (s7855): H-exact.** 1539 ticks, seed 05e6d779, 2 dt pins, 12 hp hits, 9 song switches. p1: rand/callers, hp, all
+   song switch ticks, rumble 16=16 and the 460-w record (1539/1539 ticks) all equal; p2 forks t0/t16, record t599; control ok.
+   **0x31=12 (s7856): H-exact.** 5765 retail ticks (5674 compared), seed 90ef4fcb, 42 dt pins, death t5304 + respawn t5490, 11 song
+   switches, rumble 5=5, record 0 diffs / 5673 ticks; p2 forks t0, control ok. Scorer tools/s7856_det_verdict.py (exit 0 exact /
+   1 fork / 2 no-verdict); serial driver tools/s7856_det_sweep.sh OUTROOT v... (stops at first FORK).
+   **0x31=13 (s7857): H-exact, residual timing-class.** 3903 ticks, seed 8d3c57d9, 73 pins: rand/hp/9 song switches/record nonpose
+   all equal; only TIMING words 135/149 (3D-sound flags) from t1898 and one rumble pulse-length swap (6/5 vs 5/6). Verdict lines
+   now end `residual=none|timing-class(...)` (s7855/s7856 none).
+   **0x31=14 (s7857, corrected s7858): FORK = H-audio-clock only.** Song 01 ends t1396 retail / t1395 port (336/643 vs 334/640
+   VI/buffers), rand forks t1413; record nonpose exact through t1395 with corrected pins (s7858 p4, control flip caught t100).
+   The s7857 "port-side 1-2 ULP transient t892-899" was a HARNESS artifact (superseded below): one r1 `[hit]` line at tick 886 had a
+   `[vi-poll]` printf spliced in, tools/s7849_det_pins.py dropped it and indexed dt by list position, so 118/160 pins after t886
+   landed one tick early. Fixed (rejoin splices, key by record-row ordinal, exit 2 on a missing/duplicate tick); test
+   tools/test_s7858_det_pins_splice.py (sweep row S7858_PINS; old parser fails it). Audit of every det-pair r1 log s7849-s7857:
+   only s7857/v14 affected, all other verdicts stand. Port store watch now stamps `tick=` (ROGUESQ_STORE_WATCH_PTS) and
+   tools/s7858_store_seq_cmp.py diffs per-tick store sequences vs an oracle `--watch-write --hit-vi-window --hit-cap` log.
+   **0x31=15 (s7859): H-exact**, residual timing-class (w149 from t943). 1892 retail ticks, seed f58510db, 4 pins, hp hits
+   t694-701 equal, songs t823/t1410 equal; port ends t1833 (305 s), so retail's t1848 death is past the compared window.
+   **0x31=16 without the bonus unlock = DUPLICATE of 15** (retail seed, ticks, hp, songs identical; the game clamp at
+   0x8006EE7C only caps >16, so the fallback comes from the locked bonus bit). With +0x39=0x60 (scratch/s7859/base_bonus.eep):
+   retail = the self-starting race (6626-6930 ticks, seed ebdad279, 787 dt pins; dt-pin cap raised 512 -> 8192 in
+   apply_s7844_dt_at.py + s7849_det_pins.py). Verdict FORK t395: retail crashes into the ground at t395 (hp 80->0, retry t458),
+   port only at t786, and the port stops ticking after t849. The cause is the harness, not the port (H-input, single-source):
+   retail's PP Start presses land at tick 0 and t458/t698 (the MISSION FAILED screen), but the port's AP fires 7-9 land
+   pre-race and mid-run. det_pair's hangar-mission press schedule is invalid for the race.
+   **s7860: bonus 16 (race) H-exact, H-input CLOSED.** s7849_det_pair.sh now takes PP_OVR/AP_OVR (unset = old schedules).
+   Race recipe: PP_OVR=19.5,31.5,43.5:start; AP_OVR=6,11,11.5:w1024,19.5,31.5,43.5,67.5:start (the port needs that 67.5 s
+   Start: without it the port waits on AVAILABLE CRAFT with 0 ticks). Port = retail on all 458 ticks (rand, hp 80->0 crash
+   t395-403, 460-w record, rumble 5/5); every press is pre-race on both sides. Controls: p2 forks t0, flip caught t100.
+   Data: scratch/s7860/v16s/score.txt. **The main-mission sweep 0x31=0..15 is COMPLETE**
+   (8 and 14 = H-audio-clock FORK; 7 residual closed s7851; the rest H-exact or timing-class).
+   **s7861: bonus 17 (Death Star trench) = H-audio-clock FORK:** p1 = retail t0-t1123 (rand, hp, 460-w record, rumble), seed fork
+   t1124 = song-3 end (retail t1124 / port t1123, 643 vs 640 AI buffers); agrees with s6772. Recipe: PP_OVR=19.5:start,
+   27.5:dright,31.5:start,43.5:start,55.5:start, AP_OVR=6,11,11.5:w1024,19.5,31.5,39.5:right,43.5,67.5,79.5:start, BASE_EEP=
+   scratch/s7859/base_bonus.eep, 0x31=16. **Retail's SELECT LEVEL window is between its 4th and 5th Starts (PP 19.5-31.5; the
+   5th = commit), the port's between AP 31.5 and 43.5** (cursor 0x800CDAC1 traced at 0x800C6674, s7861/probe). s7856_det_verdict.py
+   now prints fork=audio-clock|unclassified (test_s7856_det_verdict.py, sweep row S7861_VERDICT).
+   **s7862: bonus 18 (Hoth) H-exact, the det SWEEP 0..18 IS COMPLETE.** 6444 retail ticks, seed 43308409, 17 dt pins: rand/callers,
+   hp (t586 150->130), rumble 2=2, 460-w record 0 diffs on 6291 ticks, no song switch (agrees with s6773); p2 forks t0, flip t100.
+   Recipe = bonus 17's + PP 29:dright + 67.5:start (Hoth needs a 3rd retail Start after the commit; without it retail sat 305 s
+   pre-flight, 0 ticks, scratch/s7862/v18_short) + AP 41:right; cursor probe C1 0x10->0x11->0x12 (s7862/probe). **Verdict table:
+   `python3 tools/s7862_det_sweep_table.py`** (sweep row S7862_TABLE; re-scores the 10 retained score.txt rows, 10 hand rows cite
+   their session; --control plants a mismatch): 17 H-exact, 3 FORK all audio-clock (0x31=8, 14, bonus 17). In every FORK the
+   PORT song ends 1 tick early (3/3 same sign): b17 song 01 640/640 buffers equal, song 02 1869 vs 1872, song 03 640 vs 643.
+   **s7863: the 3 FORKs are timing class, not a port audio-rate defect (g3-audio-clock-sign CLOSED).** (a) every AI buffer is
+   a1=0x300 (immediate in the delay slot of both osAiSetNextBuffer jals 0x8008EE08/0x8008EE84), so H-buflen is dead by code;
+   (b) `python3 tools/s7863_song_end_threshold.py --control` (sweep row S7863_SONGN): in all 10 song windows (3 forks + retail
+   r1/r2) one song-end buffer count N fits both arms (b17 song 03 N=639..641, m9 N=640, m15 N=640..641), planted -1% rate
+   caught in every window. Whole-run buffers/VI retail 1.9146 vs port 1.9139, per-VI cum drift -4..+2 with no trend (H-rate
+   refuted). The port delivers 0-3 AI buffers per VI (host SDL-drain paced, events.cpp s4450 DRAIN=2048) vs retail's steady
+   1-2, so the port crosses N one VI early (b17: +2 local lead at dVI 334). The 3/3 sign is one cue (~640 buffers, 167-168
+   ticks) whose N sits on retail's tick edge in all three missions, not three independent samples.
+   **s7864: ROGUESQ_AI_VI_CLOCK opt-in (determinism harness only, default off; events.cpp s7864).** =1 posts AI-done from the VI
+   thread at rate/(192*60) per VI with a fractional accumulator (drain/HZ threads off); =2 uses the oracle's measured rate
+   (48681812/2207/192/60 = 1.914746/VI, s7854 r1); _BPV / _SEED override rate and phase. Positive control
+   (`python3 tools/s7864_ai_per_vi_hist.py --control`, sweep row S7864_AIHIST): port buffers/VI histogram {0:382,1:656,2:1252,3:1122}
+   -> {1:299,2:3102} (retail {1:297,2:3175}); same-run drain arm keeps 0..3. **b17 still forks at t1124 in all 3 arms (=1, =2,
+   =2+BPV 1.914588+SEED 0.28)**: song-3 song-relative count diff r-p stays -1 on 96-136 of 168 ticks; the seed moved the
+   port's residual 0.294 -> 0.055 but retail's own rate wanders (1.914588 to t1123, 1.914722 whole run), so no constant clock
+   holds retail's phase. Cause (mupen source, rs64-oracle ai_controller.c get_dma_duration/do_dma): each AI-done fires
+   LEN*floor(cpu_counts_per_sec/(4*fs)) cycles after its DMA STARTS, and a DMA starts only when queued (gap when the FIFO ran
+   empty), so the oracle's AI phase depends on guest queue latency. Remaining det lever: model DMA start/end events
+   (NEXT.md g3-ai-dma-model). Single-source for the mupen reading (code only, not yet measured).
+   **s7865: H-dma selected, H-const refuted (offline, `python3 tools/s7865_ai_dma_rate.py`, sweep row S7865_AIDMA).** mupen's
+   DMA time is D = 0x300*floor(cps/(4*fs)) = 768*551 = 423168 cycles (fs 22047, AI_DACRATE 2207, VI delay 811092), so its
+   GAP-FREE rate is 1.916714 buf/VI; retail measures 1.914459 -> the FIFO sits empty 0.118% of the time. A constant clock
+   cannot be retail at any rate (the port's =1 rate 1.913802 is exactly the no-floor value). Single-source (one oracle run
+   family; s7861/s7864 logs are the same deterministic run).
+   **s7867: det sweep CLOSED as timing class (H-unmodelable selected).** ROGUESQ_AI_VI_CLOCK=3 (events.cpp "AI DMA" thread,
+   stamp in audio.cpp queue_audio_buffer) = mupen ai_controller.c verbatim: 2-entry FIFO, AI_INT at DMA end, e = max(q, e_prev)
+   + bytes*551/811092 VI. The game's AI loop (0x8008EE10) primes 1 buffer and queues 1 per type-1 message, so the FIFO is 1 deep
+   in retail too: each buffer's gap = guest IRQ->osAiSetNextBuffer latency, retail 0.000615 VI (~10 us, from 1.914459 vs
+   gap-free 1.916714), port 0.0197 VI (~330 us, host thread wake). b17 v17c: 1.8425 buf/VI, FORK t436 (worse than =1/=2 t1124).
+   Retail's AI phase is set by guest instruction timing; a host-timed recomp cannot reproduce it, and a constant latency is the
+   constant clock already refuted (s7864 v17c). Det sweep verdict stands as s7863: 17 exact, 3 audio-clock timing forks.
+   **s7868: per-frame RENDER oracle on det-exact ticks: b17 render = retail, 1120/1120 frames.** `RBIN=1 zsh
+   tools/s7849_det_pair.sh` keeps retail + p1 + p2 RDP streams; `python3 tools/s7868_det_frame_cmp.py RETAIL.bin P1.bin --plant
+   --neg P2.bin` pairs frames by unique-signature offset vote and compares every frame's full multiset (tri edge coefficients +
+   PRIM, texrect geometry + PRIM = HUD). b17 (scratch/s7868/v17, same det verdict: p1 = retail t0-t1123, fork t1124): 1120
+   consecutive exact frames, 0 non-exact inside the exact span, ending at the fork; plant (1 tri YH+1) caught; unpinned p2 matches
+   only the 101-frame boot logo. Two lines: det state record + independent RDP stream. Retained s7844 (0x31=5) pair: its whole exact span is
+   PRE-flight (phase 6, intro cinematic + text screen; s7870 superseded the "tri-count = enemy-hit fork" reading: that diff is
+   ~1190 frames before tick 0); p4 had no seed pin, so its flight is 0% exact. s7868 also fixed a torn (vi_n, vi_t_ns) read in the =3 DMA model (now under
+   s7867::mtx) and classified the AI DMA thread in s7382/s7383/s7538/s7599.
+   **s7869: 0x31=12 (longest exact mission, death t5304 + respawn t5490) render = retail for ALL 5662 flight frames.**
+   `RBIN=1 zsh tools/s7849_det_pair.sh 12` (det H-exact 5765 ticks, residual none). s7868 cmp: retail 9272 / port 9704 frames,
+   offset -524 (6173 votes), exact span port[3388:9704] = E431 N143 E5742; flight phase (port phase 7 = retail 512-wide,
+   port 4042+) is 100% exact; plant caught, p2 neg PASS. The 143-frame island (port 3819-3961) is in the pre-flight 640-wide
+   phase 6, BEFORE mission tick 0 (no seed/dt pin there), and `tools/s7869_island_probe.py` shows it state-driven: p1 and p2
+   both diverge on the same retail frames 3295-3437 with DIFFERENT tri values (0/143 frames identical), both re-converge after
+   (p2 E80 to the end of phase 6). A port render defect on equal input would give identical wrong tris in both arms. Two
+   missions now render-exact on det-exact ticks (b17 1120, m12 5662). Pre-flight islands = unpinned window, not render.
+   **s7870: 0x31=5 (mission 6) flight render = retail, 2383/2383 frames (death + respawn incl.). G3 det render line CLOSED: 3
+   missions.** `RBIN=1 zsh tools/s7849_det_pair.sh 5` (H-exact whole run, p2 forks t0). s7868 cmp now prints phase tables, HUD
+   frames per phase, places islands by phase, and scopes --neg to the final (flight) phase (old whole-run bar failed a correct
+   p2 that matched the deterministic pre-flight cinematic). Islands: text screen p1/p2 differ (state); cinematic opening p1 ==
+   p2 but offset = 0.51 x per-frame speed (scratch/s7870/phase_a.py): half-frame animation-time phase, timing class.
+   **s7871: 0x31=10 (Bespin, mission 11) flight render = retail, 2519/2519 frames: 4 missions render-exact on det-exact
+   ticks (b17 1120, m12 5662, m6 2383, m11 2519).** Det p1 H-exact 2525 ticks (seed/calls/rec/pose/timing None), p2 forks t0;
+   plant caught, phase-7 neg PASS. Pre-flight phase 6 islands: A port[3395:3554] = the SAME 64 PRIM-FF opening-cinematic
+   tris as m6 island A (identical values, p1 == p2), i.e. the s7870 half-frame timing phase recurs per mission; B
+   port[6067:7121] (1054 frames, up to 869/873 tris) p1/p2 wrong by different values on 813/1054 -> state (unpinned window).
+   **s7872: island A (cinematic half-frame) is NOT dt:** retail dt row 2899 = port fr 3428 - 529 (same offset as the RDP
+   alignment) and both get dt 1,2,2.. from the cinematic's first frame (`tools/s7872_frame_clock.py`, retail CPO1 trace of
+   0x8000BBE8 + 0x8000BE28). H-count (stall parity) refuted. Retail timeSnapshotFiller el is phase-dependent (0 on most pre-flight
+   frames incl. the cinematic, 1 VI in a hangar stretch / post-load frames / flight); RETAIL_SNAP pins 811160 everywhere.
+   Lever `ROGUESQ_S7872_SNAP_WIN=lo:hi:el` (VI window, after the pin): el=0 at VI 5560-6300 MOVES island A (p1 values differ
+   from the p2 control on 164/168 frames) but far off (offsets -489..244), not onto retail; whole-run el=0 forks boot/menus.
+   **s7873: H-snap REFUTED at retail values.** timeSnapshotFiller stores el/rate + VIperiod*(vd<2?1:vd) (no el=0 special
+   case; RETAIL_SNAP also pins vd=1, so s7872's el=0 arm stored 1 VI = half retail). Retail store at 0x8000BF38 (`tools/
+   s7873_snap_value.py`, oracle scratch/s7873/rvd): cinematic = 0.03333 (el 0, vd 2), post-load frame 0.01667; port pin 0.03397.
+   Arms A (0.03333 from VI 5584) and B (A + 0.01667 on the post-load frame) both give island A unchanged (regression 0.510 x
+   speed - 0.016, = pin reference), with post-load dt 1 VI (A) vs 2 VI (B): neither the stored value nor the post-load dt
+   carries the half frame. **s7874: H-phase (raw clock) and H-audio REFUTED; slug PARKED (budget rule 8).** `python3 tools/s7874_clock_census.py`
+   (control PASS): game code has 0 inline Count reads (only 2 mfc0 Compare in a data gap), 0 osGetCount callers, 14 osGetTime
+   sites; on the render path only timeSnapshotFiller consumes raw time (0x8011A914 since-last-frame -> profiler only). Det pair
+   p1 ROGUESQ_AI_VI_CLOCK=3 (mupen AI-DMA clock; boot timeline moved, off -532 vs -535 = lever control) vs p2 default: island A
+   identical in both (0.510 x speed - 0.016, 6244/6244). Island A is pre-flight timing class, open: H-index (frame-counter offset)
+   / H-retail-rdp (capture lag). **s7891: CLOSED, H-index.** Crawl dt-site dump (`tools/s7891_crawl_clock.sh` + `_cmp.py`, plant PASS): the crawl's 3rd
+   call (first after a load's two flags-clear zeros) stores 1/60 on retail but 0.03397 (2 VI) under the RETAIL_SNAP=1 pin, so the port's
+   crawl clock is +1 VI = half a frame ahead. `ROGUESQ_RETAIL_SNAP=3` (unpins only the post-load frame) gives a cumulative delta of 0
+   on 1292/1292 calls and island A disappears (fix3b vs v10 retail.bin: exact from port 3397, only island B left). Flight stays exact
+   2554/2554 and det ticks are identical. `=2` (every sub-half-VI el kept 0) is refuted: it moves the boot and misses the mission.
+   `tools/s7891_fix_arm.sh`; s7849_det_pair.sh takes SNAP=. Retail bin: scratch/s7872/v10/r1 (hard-linked s7873/s7874).
+   **s7892: SNAP=3 is m11-only.** m6: crawl delta 0 under SNAP=3 yet island A N159 stays (and island B grows N212 -> N1182). SNAP=3
+   also had to be gated pre-flight: the mission-load reset was consumed at mission tick ~8 and forked m6 (now cleared per mission tick).
+   **s7894: m6 is H-index too; plain =3 is host-timing dependent.** The unpinned frame stores the REAL el (0 or 781250 = 1 VI): the m6
+   crawl fire n=6 got 781250 in s7892 m6s3c p1 (the render arm that "kept" island A) and in both s7894 crawl runs (delta +1 VI), el 0
+   only in s7892 crawl6. New `ROGUESQ_SNAP3_ONLY=<n>` (apply_s7839_snaplog.py): only fire n unpinned, el forced 0. Same build, same
+   retail bin (scratch/s7894/m6o vs m6c): ONLY=6 island A GONE (map starts N212@6071, pre-flight non-exact 245), SNAP=1 control
+   N159@3399 present (504); both H-exact (2434/2440 ticks), flight exact, plant PASS. Crawl locals (runModelViewerLoop sp+0xC0..DC,
+   tools/s7894_crawl_words.py, plant PASS) equal retail from call 0 except the time word D4 and the scroll word C4 = 10*D4: no other state.
+   **s7875: 0x31=2 (mission 3) flight render = retail, 3804/3804 det-tick frames: 5 missions render-exact** (b17, m12, m6, m11,
+   m3). `env RBIN=1 zsh tools/s7849_det_pair.sh 2`: p1 H-exact 3807 ticks (seed/calls/rec/pose None; timing word 149 from t3102),
+   p2 forks t0; plant caught, phase-7 neg PASS. rc 1 is NOT a flight defect: retail flight frames 3408-7212 = 3804 for 3807 ticks
+   (1 frame/tick), then a 10-frame tri-less blank on both sides (retail 7212, port 7739) ends the mission ticks; the 1953
+   post-blank phase-7 frames are an end-of-mission screen (212 tris PRIM 0A0000FF, texrects 128->470) with identical
+   counts/texrects and ~2-5% of tris off by 1/4-1 px (animation phase, outside the det window; scratch/s7875/*.py).
+   **s7876: 0x31=7 (mission 8) flight render = retail, 1958/1958 det-tick frames: 6 missions render-exact** (scorer rc 0,
+   plant caught, neg PASS; p1 H-exact 1961 ticks). The s7868 scorer now bounds flight itself: last port phase start to the
+   first >=3-frame tri-less run (cross-checked against retail's own blank: m8 port 5940 = retail 5408), and reports
+   pre-flight / post-flight diffs separately. rc 1 = flight diff only (`--no-cut` = old rule). m8 pre-tick-0 island
+   3636-3982 (346 frames) has p1/p2/retail all different (state, single-sample). Island A
+   (cinematic half-frame) did NOT appear in m3 (phase 6 exact port 3391-3752); pre-tick-0 island 3752-3935 = state (p1/p2
+   differ on 183/183).
+   **s7877: 0x31=3 (mission 4, Defection at Corellia, NOT Gerrard V; Gerrard V = 0x31=4) = H-audio-clock FORK, 4th of the
+   class; render exact on all 2308 pre-fork flight frames: 7 missions render-exact on det ticks.** 305 s pair (s7840's 170 s
+   run ended before the death): p1 = retail t0-t2312 (seed, calls, hp 150->0 t2111-2123), fork t2313 = respawn 1 tick early,
+   death song 01 334 VI/639 bufs port vs 336/643 retail (port ends 1 tick early, same sign as 8/14/b17). Scorer `--port-end N`
+   (new) scores the prefix: N=6368 -> offset -529, flight port[4055:6363] exact 2308 non-exact 0, plant caught. The whole-bin
+   run splits offset -529 (pre-fork) vs -528 (post-respawn, unpinned p2 also matches there, so post-respawn is non-
+   discriminating). Neg FAILs the s7870 en<ep/2 bar (p2 1662 exact) but shows 448 non-exact frames where p1 has 0: weak
+   control on this mission, single-source neg. Sweep table row updated (17 H-exact -> 16, FORK 3 -> 4).
+   **s7878: 0x31=4 (mission 5, Gerrard V) H-exact 5926 ticks, render exact 5779/5779 flight frames: 8 missions render-exact**
+   (plant caught, neg PASS strong: unpinned p2 0/5779). The 305 s window ends in flight. It does not reach G5a's half-way crash
+   point (owner row 5 still open). Sweep row 4 now rescores s7878 (TABLE OK rescored=12 hand=8). Next: 0x31=0 (mission 1).
+   **s7879: 0x31=0 (mission 1) H-exact, render exact 2895/2895 flight frames: 9 missions render-exact** (plant caught, neg
+   PASS strong: unpinned p2 0/2895). Port flight starts 3082 frames after retail's paired frame (pre-flight offset -531): the
+   port stays ~2551 frames longer in the 640-wide pre-flight scene, so only 2901 of 5556 retail ticks were covered.
+   **s7880: that gap is the recipe (H-sched), not input latching.** The default port AP schedule is one press short: retail's
+   fixed 16 s oracle press lands on level select (VI +232) and the PP presses sit +287 VI later than the AP's, so the port
+   gets no press in the 640 scene (every mission; only mission 1's intro is long without one: 6888 vs 1904 VI).
+   `tools/s7880_press_scene.py` shows it; **`APM=1 tools/s7849_det_pair.sh` = retail-matched schedule (use it for new rows)**.
+   With it mission 1 is H-exact on all 5556 ticks (full record 5555). Sweep row 0 now rescores s7880/v1.
+   **s7881: 0x31=1 (mission 2), APM=1: H-exact 5776 ticks, render exact 5771/5771 flight frames: 10 missions render-exact**
+   (plant caught, neg PASS strong). Sweep row 1 rescores s7881/v1 (rescored=14 hand=6). 
+   **s7882: 0x31=6 (mission 7), APM=1: H-exact 1876 ticks, render exact 1873/1873 flight frames: 11 missions render-exact**
+   (plant caught, neg PASS; post-flight 3598 = the s7876 end-screen class). Row 6 rescores s7882/v6 (rescored=15 hand=5).
+   **s7883: 0x31=8 (mission 9), APM=1: FORK audio-clock again at song 03 end (retail t3527, 643 AI buffers / port t3526, 640),
+   the same tick as s7852 under the old schedule (two schedules, same fork = not schedule-borne); render exact on all 3523
+   pre-fork flight frames, no --port-end needed (the exact run stops at the fork): 12 missions render-exact.** Plant caught, neg
+   PASS (unpinned 0/5690 exact in flight). Port presses sat +10 VI vs retail here (s7880-s7882: 0/-1); harmless pre-flight.
+   Row 8 rescores s7883/v8 (rescored=16 hand=4). 
+   **s7884: 0x31=9 (mission 10), APM=1: H-exact all 5076 ticks (full record 5074), render exact 5067/5067 flight frames:
+   13 missions render-exact.** Plant caught, neg PASS (unpinned 1/1251 exact in flight). Port presses +18 VI vs retail
+   (constant, pre-flight only, harmless). Row 9 rescores s7884/v9 (rescored=17 hand=3: rows 2, 5, 7). 
+   **s7885: 0x31=12 (mission 13), APM=1: H-exact all 5765 ticks (full record 5763), render exact 5754/5754 flight frames:
+   14 missions render-exact.** Plant caught, neg PASS (unpinned 214/4520 exact in flight). Port presses +8 VI (constant,
+   pre-flight). Row 12 rescores s7885/v12 (rescored=17 hand=3).
+   **s7886: 0x31=13 (mission 14), APM=1: H-exact all 3903 ticks (full record 3902, timing-class residual word 149 t1979 =
+   s7857), render exact 3900/3900 flight frames: 15 missions render-exact; the timing word does not reach the render.**
+   Plant caught, neg PASS. Presses 0/-1 VI. Row 13 rescores s7886/v13.
+   **s7887: 0x31=14 (mission 15), APM=1: FORK audio-clock again at song 01 end (retail t1396 / port t1395, = s7857/s7858
+   under the old schedule); render exact on all 1392 pre-fork flight frames (exact run port[3446:4838] stops at the fork,
+   no --port-end): 16 missions render-exact.** Plant caught, neg PASS (unpinned 0/6048 exact in phase 7). Presses -1 VI.
+   Row 14 rescores s7887/v14 (rescored=17 hand=3). 
+   **s7888: 0x31=15 (mission 16), APM=1: H-exact all 1892 retail ticks (full record 1891, timing-class word 149 t943); render
+   exact on all 1887 retail flight frames (port phase 7) -> 17 missions render-exact.** The ~150 s intro cinematic (phase 6,
+   deterministic in both arms to port 5636, then diverges in both: pre-tick-0 class) shifts the pairing offset -98 -> -99, so
+   the global offset scores 0 flight frames; new `s7868_det_frame_cmp.py --port-start N` scores flight at its own offset
+   (votes -99 1887 = retail flight length). Plant caught, neg PASS (unpinned 0). Row 15 rescored.
+   **s7889: bonus 16 (race), s7860 PP + APM-scaled AP (15.05,24.3,36.3,48.3) + BASE_EEP bonus save: H-exact all 458 ticks,
+   residual none; render exact on all 455 race frames (`--port-start 1916`; the 723-frame pre-tick-0 lead-in is unpinned)
+   -> 18 missions render-exact.** s7849_det_pair.sh now defaults BASE_EEP to scratch/s7859/base_bonus.eep for 0x31>=16 (run
+   without it = 0 retail ticks). Row b16 rescored.
+   **s7890: bonus 18 (Hoth), s7862 PP + APM-scaled AP (s7889 rule): retail seed 43308409 / 6444 ticks (= s7862), H-exact all
+   6444 ticks, residual none; render exact on all 6439 flight frames (global offset 317, longest exact run = whole phase 5, no
+   --port-start). Plant caught, neg PASS (unpinned p2 1516/5558). -> 19/19 missions render-exact on det ticks (m1-m16, b16, b17
+   pre-fork, b18): G3 det render coverage CLOSED (slug g3-det-render-coverage).** Row b18 rescored (TABLE OK, --control PASS).
+   s7865/s7893 gate note: the "unidentified scratch wipe" is the OWNER's launchd job ~/.local/bin/rs64-scratch-compress.sh
+   (6 h: zstd >12 h) -> rs64-scratch-prune.sh (deletes >7 d, >64 KB files not cited by EXACT path, .zst stripped, in a
+   tracked file; log ~/Library/Logs/rs64-scratch-prune.log). Dir-only or '.zst' citations do not protect, so it ate the
+   s7392-s7399 logs (s7723 RED) and the s7435/s7439/s7442 sample_N.txt (s7433/5/6/7/8 + s7441 RED, all allow-listed,
+   unrecoverable). Since s7893 tools/retained_captures.txt (tools/s7893_retained_manifest.py, refreshed by loop.sh every
+   iteration, --check / --control) cites all 766 surviving gate inputs by exact path. A new retained capture is safe only
+   once it is cited in a gate ARGS row or a tools/s7*.py literal. gate_trace.py records importlib-loaded modules.
+

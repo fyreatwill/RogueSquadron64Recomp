@@ -211700,3 +211700,15 @@ answers in OWNER-REVIEW-QUEUE; no new SOAK lines; CURRENT-TRUTH 59935 B (< 60000
 - Rules out: "replaying per-site rand values makes the element deterministic" (H-rng in its per-site form).
 - Kept: scratch/s7917/{d1_table.txt,d1_table_no6c0fc.txt,eff_cmp.py,elem_all.txt,run.sh}, m6{e1,e2,n}/p1_rand.txt.zst (bins deleted, 1.4 GB each).
 ORIGIN: no mitigation; one offline table tool added.
+
+## Session 7918 (2026-11-24) — maintenance: CURRENT-TRUTH 60273 -> 29576 B (items 0 and 12 migrated verbatim)
+
+Step 0 triggered (CURRENT-TRUTH 60273 B > 60000). No experiments.
+- Next-steps item 0 (G3 pre-flight islands A/B, s7891-s7917, 51 lines) and item 12 (G3 retail flight det sweep s7832-s7890,
+  216 lines) appended verbatim to PROJECT-OVERVIEW "## Migrated from CURRENT-TRUTH (s7918 maintenance)". Each replaced by a
+  one-paragraph CLOSED verdict + pointer; the s7865/s7893 owner launchd scratch-prune note kept in item 12 (operational).
+- Headline refreshed to "as of Session 7918". Backlog numbering 0-14 unchanged (already monotonic).
+- Net: -253 lines, -30697 B (268 lines, 29576 B).
+- `python3 tools/s7651_gate_sweep.py --jobs 2 --new-red-vs tools/gate_sweep_allowed_red.txt`: controls PASS, 253 gates
+  {GREEN 237, REPORT 2, NEEDS-ARGS 7, RED 7}, new RED 0 (the 7 RED are the allow-listed s7433-s7438/s7441/s7723 pruned captures).
+Rules out nothing; the zst lint (s7804/s7848) reads both docs, so the citation move is gate-neutral.

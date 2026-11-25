@@ -1,11 +1,10 @@
-# NEXT (s7918)
-HYPOTHESIS-ID: ct-maintenance-s7918
-CURRENT-TRUTH is now > 60000 B (s7917 added the island B close line) -> Step 0 MAINTENANCE, no experiments:
-- Migrate Next-steps item 0 (G3 pre-flight islands, s7891-s7917 detail) and item 12 (G3 det sweep s7832-s7893, ~210 lines) verbatim
-  to PROJECT-OVERVIEW "(s7918 maintenance)"; leave one-line CLOSED verdicts + pointers. Keep the s7893 retained-manifest/owner
-  launchd prune note (operational). Refresh the headline; renumber the backlog monotonically. Target net shrink >= 15000 B.
-- The s7804/s7848 zst lint scopes tools cited in CURRENT-TRUTH AND PROJECT-OVERVIEW: run `python3 tools/s7651_gate_sweep.py` (--jobs 2)
-  after the move; 0 new RED required.
-After that (s7919): every ladder rung is closed or awaiting the owner (OWNER-REVIEW-QUEUE.md). Check crash_reports, owner answers,
-SOAK lines first; then take ITERATION 3c's first non-closed rung (re-check G5c freeze-gap / G1e present cadence on a fresh owner-recipe
-soak if nothing else is open).
+# NEXT (s7919)
+HYPOTHESIS-ID: ladder-recheck-s7919
+s7918 maintenance done (CURRENT-TRUTH 29576 B). Every ladder rung is closed or awaiting the owner (docs/OWNER-REVIEW-QUEUE.md).
+1. `python3 tools/crash_reports.py --since 2026-11-22`; check owner answers in OWNER-REVIEW-QUEUE.md / ITERATION.md; tail SOAK-RESULTS.
+   A NEW crash report outranks everything (s7664).
+2. Otherwise take ITERATION 3c's first non-closed rung: re-check G5c freeze-gap / G1e present cadence on a fresh owner-recipe soak
+   (FPS60=1 DD=4 ASPECT=16:9, no logging env, present ring). Hypotheses: H-clean (no gap >250 ms outside loads, max_gap ~148 ms as
+   s7802/s7809) vs H-regress (a gap >250 ms or vi_stalls30s>0 since s7840-s7917 runtime edits: DET_CLOCK, CLOCKLOG hooks in
+   librecomp ultra_translation.cpp). Discriminator: ring_stalls.py max gap + vi_stalls30s on the default (DET_CLOCK unset) binary,
+   with a positive control (planted 300 ms stall in the ring read must be caught). Queue it as a soak with SOAK_NEEDS_IDLE if host busy.
