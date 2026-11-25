@@ -13108,12 +13108,21 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
         {{SDL_CONTROLLER_BUTTON_B}, 8, "close_circle"}, {{}, 8, "end"},
     };
     static size_t si = 0; static int in = 0;
+    // s7942 ROGUESQ_PAD_NAV_HOLD=<polls>: stretch the idle steps that sit on rows 0, 1 and 17 (open_idle, down_idle,
+    // wrap_idle) so a driver can screenshot the drawn cursor; prints "[pad-nav-test] hold ..." when each hold starts.
+    static const int s_hold = [] { const char* v = getenv("ROGUESQ_PAD_NAV_HOLD"); return v ? atoi(v) : 0; }();
+    auto held = [&](size_t i) {
+        const std::string w = sc[i].what;
+        return s_hold > 0 && (w == "open_idle" || w == "down_idle" || w == "wrap_idle");
+    };
+    auto steps = [&](size_t i) { return held(i) ? s_hold : sc[i].n; };
+    if (in == 0 && held(si)) fprintf(stderr, "[pad-nav-test] hold step=%s row=%d polls=%d\n", sc[si].what, rs64_panel_pad_row(), s_hold);
     auto chk = [&](const char* name, bool ok, const char* detail) {
         checks++; if (!ok) fails++;
         fprintf(stderr, "[pad-nav-test] check %s=%s %s\n", name, ok ? "PASS" : "FAIL", detail);
     };
     poll++;
-    if (in == sc[si].n - 1) {  // last poll of the step: check what the game got this poll
+    if (in == steps(si) - 1) {  // last poll of the step: check what the game got this poll
         char d[300];
         const bool open = rs64_panel_is_open(); const int cap = rs64_bind_capture_target(); const int row = rs64_panel_pad_row();
         snprintf(d, sizeof d, "raw=%d/%d joyraw=%d same=%d poll=%ld open=%d cap=%d row=%d game_btn=%04X saves=%ld last=%s",
@@ -13140,7 +13149,7 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
         else if (w == "capture_circle") chk("capture_takes_circle_not_close", open && cap == 0 && rs64_bind_capture_last() == "pad:b", d);
         else if (w == "close_circle") chk("circle_closes_again", !open && game_btn == 0, d);
     }
-    if (++in >= sc[si].n) {
+    if (++in >= steps(si)) {
         in = 0;
         if (++si >= sc.size()) {
             done = true;

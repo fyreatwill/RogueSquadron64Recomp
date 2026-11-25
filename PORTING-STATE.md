@@ -212327,3 +212327,24 @@ Not tested: a physical PS4/PS5 pad (none on this host; DS4 touchpad click maps t
 unverified here); a pixel witness of the highlight (next). Behaviour change to flag: Share+Start in play now opens the panel
 (Share = C-Left by default) instead of sending C-Left+Start.
 Docs: README Controls pad paragraph, OWNER-OPT-INS F6 row.
+
+## Session 7942 (2026-11-25) — F6 panel pad cursor PIXEL witness: highlight band drawn on the logged row for rows 0, 1 and 17 (17 scrolls into view), 3/3 + negative control; witness exposed and fixed two clipping defects (label column, pad hint line)
+
+HYPOTHESIS-ID: owner-panel-pad-nav. Work unit: NEXT s7942 (a). (s7941's work was found uncommitted, STATUS WORKING; committed
+first as de671a152 unchanged.) Hypotheses: H-ok (band on the logged row, row 17 scrolled into view), H-clip (SetScrollHereY
+called before the row height is known leaves row 17 outside the table clip), H-none (RowBg alternation overrides RowBg1).
+Instrument (one build): ROGUESQ_PANEL_RECTS=1 now also logs the cursor row's label rect `prow=`, `prow_i`, the table scroll
+window's y clip `clip=` and ImGui IsItemVisible `vis=`; ROGUESQ_PAD_NAV_HOLD=<polls> stretches the s7941 script's idle steps on
+rows 0/1/17 and prints `[pad-nav-test] hold step= row=`. New tools/s7942_pad_cursor_witness.zsh (one run: window screenshot per
+hold via screencapture -l <wid>) + tools/s7942_band_check.py (band = image rows whose median B-R across the table > 40; PASS =
+exactly one band, centre within one row of the logged rect, vis=1, inside clip; run PASS also needs the band to move).
+Result (640x480 window, scale 2.0): **3/3 PASS, H-ok**. row0 band 268-302 px vs rect 272-298; row1 304-336 vs 306-332; row17
+780-812 vs 782-808, clip 268-812, and bindA (row 0) moved from y 104 to 57 pt (above the clip top 102) = the table really
+scrolled. Pad test checks=16 fail=0 in the same run. Negative control (offline, same PNGs): shot3 scored against row 1's rect
+FAILS (band 780-812 vs 332-358), so the check discriminates position. Visual read of shot3 by eye agrees (second witness).
+H-clip and H-none refuted.
+Defects found by the screenshot and fixed (rs64_controls_panel.cpp): (1) the "> " cursor prefix clipped the label column
+("Stick right (keys" cut off): column width now measured on "> Stick right (keys)"; (2) the pad hint line was TextDisabled
+(no wrap) and at 640 wide cut off "Circle/B = close": now TextWrapped in the disabled colour. Re-run after the fix: 3/3 PASS,
+checks=16 fail=0, both texts fully visible in shot3. s7765 controls dump check PASS, owner-doc check names_stale=0.
+Not done: (b) pad Clear / Reset (next). No physical pad on this host.

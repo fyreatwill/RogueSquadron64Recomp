@@ -97,7 +97,10 @@ void draw_ui() {
                            rs64_bind_capture_add() ? "ADD to" : "BIND", tgt_label(cap));
     else
         ImGui::TextWrapped("Bind = replace that button's inputs with the next one you press.  Add = keep them and add one.  Save writes controls.json.");
-    ImGui::TextDisabled("Pad: D-pad up/down picks a row, Cross/A = Bind, Square/X = Add, Triangle/Y = Save, Circle/B = close.  Open: touchpad click or Share/Back+Start.");
+    // s7942: wrapped (TextDisabled does not wrap; at 640x480 it cut off "Circle/B = close").
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    ImGui::TextWrapped("Pad: D-pad up/down picks a row, Cross/A = Bind, Square/X = Add, Triangle/Y = Save, Circle/B = close.  Open: touchpad click or Share/Back+Start.");
+    ImGui::PopStyleColor();
     ImGui::Separator();
     const int* targets = k_targets;
     const int prow = g_pad_row.load();
@@ -106,7 +109,7 @@ void draw_ui() {
     if (prow_moved) { s_prow_drawn = prow; fprintf(stderr, "[controls-panel] pad row=%d target=%s (drawn)\n", prow, tgt_label(k_targets[prow])); }
     if (ImGui::BeginTable("binds", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_ScrollY,
                           ImVec2(0, -ImGui::GetFrameHeightWithSpacing() * 3.2f))) {
-        ImGui::TableSetupColumn("N64", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Stick right (keys)").x);
+        ImGui::TableSetupColumn("N64", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("> Stick right (keys)").x);
         ImGui::TableSetupColumn("Inputs", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("Bind  Add  Clear____").x);
         for (int ri = 0; ri < k_nrows; ri++) {
@@ -118,6 +121,12 @@ void draw_ui() {
             if (ri == prow && prow_moved) ImGui::SetScrollHereY(0.5f);
             const char* mark = ri == prow ? "> " : "  ";
             if (tg < 0) ImGui::Text("%s%s (keys)", mark, tgt_label(tg)); else ImGui::Text("%s%s", mark, tgt_label(tg));
+            if (ri == prow && s_rects) {  // s7942: cursor row rect + the table's scroll clip (y) + visibility, for a pixel witness
+                note_rect("prow");
+                const ImVec2 wp = ImGui::GetWindowPos(), ws = ImGui::GetWindowSize();
+                char buf[96]; snprintf(buf, sizeof buf, " prow_i=%d clip=%.0f,%.0f vis=%d", ri, wp.y, wp.y + ws.y, ImGui::IsItemVisible() ? 1 : 0);
+                rect_now += buf;
+            }
             ImGui::TableNextColumn();
             if (cap == tg) ImGui::TextColored(ImVec4(1, 0.85f, 0.2f, 1), "...waiting...  %s", sources_of(t, tg).c_str());
             else ImGui::TextWrapped("%s", sources_of(t, tg).c_str());
