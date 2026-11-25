@@ -217,6 +217,9 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    the hangar-entry hit): 6/6 port transitions EQUAL or PORT-SHORTER vs retail on BOTH owner-recipe rings (s7919, s7921): boot
    15-18 vs 238 VIs, ->title 17-18 vs 18, title->menu 0 vs 0, hangar 16.5-17.7 vs 140, ->briefing 17 vs 124, ->mission 23.5 vs 212.
    Pre-flight route is retail-paced; owner-queue row 20. Ordinal matching past the anchor is single-source (no port wait marker).
+   s7923: `tools/agent/ring_stalls.py` max_vihold_ms (soak summary field) now excludes animating holds (>2 s, gen advancing on
+   >=90% of rows) into a new `max_animhold_ms`; `--selftest` planted controls. Re-scored owner rings: 17302/17318 -> 392/391 ms,
+   so the field now reads real freezes. Verdict/summary lines before s7923 carry the raw ~17300 (title). vi_stalls30s unchanged.
    s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =

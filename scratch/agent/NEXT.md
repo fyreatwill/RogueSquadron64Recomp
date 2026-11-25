@@ -1,14 +1,12 @@
-# NEXT (s7923)
-HYPOTHESIS-ID: hold-metric-animating-label
-s7922: the pre-flight route is retail-paced (6/6 transitions port <= retail). Remaining ladder items are owner-look. One bounded
-engineering unit: the soak summary field `max_vihold_ms` (tools/g1e_owner_quiet_arms.zsh / tools/s7919_gap_check.py) reports
-17318 ms on every owner-recipe run, which is the single-buffered ANIMATING title (gen advances on 100% of rows, s7921/s7922),
-not a freeze. Any future G5c regression check reading that field is blind (a real 5 s freeze hides under 17 s).
+# NEXT (s7924)
+HYPOTHESIS-ID: soak-verdict-freeze-field
+s7923 made ring_stalls.py `max_vihold_ms` mean frozen holds only (title animation -> `max_animhold_ms`; owner rings 391-392 ms).
+The loop's verdict line (tools/agent/soak_verdict_fields.sh) still only scores `vi_stalls30s` (>= 30 s), so a G5c-class freeze
+(1-5 s, the owner's "buffering") in any future soak is invisible in SOAK-RESULTS.md.
 0. `python3 tools/crash_reports.py --since 2026-11-24` first; a new report outranks this.
-1. Find where max_vihold_ms is computed (grep max_vihold_ms tools/). Add the s7922 rule (hold > 2 s with gen advancing on >= 90%
-   of rows = animating, excluded) and print `max_vihold_ms` (freezes only) + `max_animhold_ms` (separately).
-2. Planted controls in the same tool run: a synthetic 1 s hold with gen frozen must count; a 17 s hold with gen advancing must
-   not. Re-score scratch/s7919_g5c/ring_q4.txt and scratch/s7921_port2/ring_q4.txt: expected max_vihold_ms ~300-390 ms.
-3. Keep the old field's meaning documented in the session entry (soak verdict lines before s7923 used the raw value).
-Hypotheses: H-title-only (the 17 s value is always the title; after the fix max_vihold <= 400 ms on both rings) vs H-other (some
-other >2 s hold appears with frozen gen = a real freeze the field was hiding -> root-cause it).
+1. Read tools/agent/soak_verdict_fields.sh + test (tools/s7453_harness_death_test.zsh V/VN helpers). Add `freeze_arms=<n>`:
+   arms whose tag line has max_vihold_ms >= 1000 (exact-key parse via tools/agent/summary_field.sh semantics; missing key ->
+   counted in a `freeze_na=<n>` like stall_na). Do not change rc semantics.
+2. Controls in the same harness test: fake ring with a 1.5 s frozen hold (gen frozen) -> freeze_arms=1; a 17 s animating hold
+   (gen=$i advancing) -> freeze_arms=0; steady -> 0. Mutation: scorer without the animating rule -> the 17 s fake reads 1.
+3. Re-score the s7919/s7921 rings through the verdict path: freeze_arms=0 expected (H-clean) vs 1 (H-hidden freeze).

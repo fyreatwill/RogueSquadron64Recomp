@@ -211831,3 +211831,22 @@ Verdict: H-equal selected (port <= retail + 3 VIs at every pre-flight transition
 (overlay evict, fb reconfiguration, first-hangar shader compile costing host time beyond retail). Single-source caveat: past the
 anchor the pairing is by ordinal (the port log has no wait marker); every alternative monotone pairing (e.g. -> mission vs 4369,
 278 VIs) is also PORT-SHORTER. G5c engineering is complete; docs/OWNER-REVIEW-QUEUE.md row 20 added (feel check).
+
+## Session 7923 (2026-11-24) — ring_stalls max_vihold_ms now counts frozen holds only: the 17.3 s value on every owner-recipe run was the animating title; real max is 391-392 ms on both rings
+
+Unit (NEXT s7923, slug hold-metric-animating-label), offline, no game run. crash_reports --since 2026-11-24: new=0.
+1. tools/agent/ring_stalls.py (the soak scorer behind g1e_owner_quiet_arms `vi_stalls30s`/`max_vihold_ms`): a VI-origin hold
+   > 2 s whose rows advance gen= on >= 90% of row pairs (the s7922 rule) is ANIMATING and goes to a new trailing field
+   `max_animhold_ms`; `max_vihold_ms` keeps the max of the rest. rows() gained `with_gen=False` so s7919_gap_check /
+   s7694_freeze_scan (2-tuple callers) are unchanged. `vi_stalls30s` deliberately unchanged: raw holds >= gap_s still count
+   (the s7453 harness fakes write gen=$i on a held origin and must still read 1 stall; a 30 s animating hold is worth a look).
+   OLD MEANING: soak verdict / summary lines before s7923 carried the raw max including the title (~17300 ms on every run).
+2. Planted controls, `ring_stalls.py --selftest` (exit 3 on fail): 1 s frozen + 17 s animating + 3 s hold with gen advancing on
+   only 50% of rows -> max_vihold_ms=3000 (the half-advancing hold counts as frozen), max_animhold_ms=17000; without the 3 s hold
+   -> max_vihold_ms=1000, max_animhold_ms=17000. PASS. (First draft of the control filtered rows out of the timeline, which
+   stretched the 17 s hold to 20 s: a test bug, fixed by building each arm separately.)
+3. Re-score: scratch/s7919_g5c/ring_q4.txt max_vihold_ms 17302 -> 392 (anim 17302); scratch/s7921_port2/ring_q4.txt 17318 -> 391
+   (anim 17318). vi_stalls30s=0, max_gap 148 ms on both, unchanged. tools/s7453_harness_death_test.zsh rerun (ring fakes +
+   mutation controls, s7243 resume test) -> failures: 0 (held-origin fake still reads 1 stall; vi_stalls30s path intact).
+Verdict: H-title-only selected (two independent rings, max frozen hold 391-392 ms = the s7921 retail hangar-entry hold region);
+rules out H-other (no hidden >2 s frozen hold in either ring). Future G5c regression checks can read max_vihold_ms directly.
