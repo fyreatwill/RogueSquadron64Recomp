@@ -212348,3 +212348,7 @@ Defects found by the screenshot and fixed (rs64_controls_panel.cpp): (1) the "> 
 (no wrap) and at 640 wide cut off "Circle/B = close": now TextWrapped in the disabled colour. Re-run after the fix: 3/3 PASS,
 checks=16 fail=0, both texts fully visible in shot3. s7765 controls dump check PASS, owner-doc check names_stale=0.
 Not done: (b) pad Clear / Reset (next). No physical pad on this host.
+ORIGIN: no corrupted or wild value is involved. The mitigation-shaped lines the gate counts come from the s7941 commit in this
+iteration's range (pad buttons held across panel open/close are masked from the game until released; the pad step is skipped
+under BIND_SELFTEST). The writer is the user's own pad press, a legitimate value. The mask is deliberate UI input routing: the closing Circle
+must not reach the game as C-Down. The s7941 PANEL_PAD=0 control showed the press leaking without it.
