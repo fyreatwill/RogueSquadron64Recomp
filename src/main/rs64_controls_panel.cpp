@@ -78,7 +78,7 @@ void draw_ui() {
     // s7937: ROGUESQ_PANEL_RECTS=1 logs widget rects (window points, the coordinate space SDL mouse events use) whenever
     // the layout moves, so a driver can click the real widgets with OS mouse events (tools/s7937_panel_e2e.zsh).
     static const bool s_rects = [] { const char* v = getenv("ROGUESQ_PANEL_RECTS"); return v && *v == '1'; }();
-    static std::string s_rect_last; std::string rect_now;
+    static std::string s_rect_last; std::string rect_now, srcA_txt;
     auto note_rect = [&](const char* name) {
         if (!s_rects) return;
         const ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
@@ -128,6 +128,11 @@ void draw_ui() {
                 rect_now += buf;
             }
             ImGui::TableNextColumn();
+            if (tg == RS64_N64_A && s_rects) {  // s7944: A-row source cell rect + the text drawn there, for a pixel witness
+                const ImVec2 c = ImGui::GetCursorScreenPos(); const float w = ImGui::GetContentRegionAvail().x;
+                char buf[96]; snprintf(buf, sizeof buf, " srcA=%.0f,%.0f,%.0f,%.0f", c.x, c.y, c.x + w, c.y + ImGui::GetTextLineHeight());
+                rect_now += buf; srcA_txt = sources_of(t, tg);
+            }
             if (cap == tg) ImGui::TextColored(ImVec4(1, 0.85f, 0.2f, 1), "...waiting...  %s", sources_of(t, tg).c_str());
             else ImGui::TextWrapped("%s", sources_of(t, tg).c_str());
             ImGui::TableNextColumn();
@@ -152,7 +157,15 @@ void draw_ui() {
     note_rect("close");
     ImGui::SameLine();
     ImGui::TextDisabled("controls.json");
-    if (!g_msg.empty()) ImGui::TextWrapped("%s", g_msg.c_str());
+    if (!g_msg.empty()) {
+        if (s_rects) {  // s7944: message line rect (first line) + the message text this draw used
+            const ImVec2 c = ImGui::GetCursorScreenPos(); const float w = ImGui::GetContentRegionAvail().x;
+            char buf[96]; snprintf(buf, sizeof buf, " msg=%.0f,%.0f,%.0f,%.0f", c.x, c.y, c.x + w, c.y + ImGui::GetTextLineHeight());
+            rect_now += buf;
+        }
+        ImGui::TextWrapped("%s", g_msg.c_str());
+    }
+    if (s_rects) rect_now += " |srcA_txt=" + srcA_txt + "| |msg_txt=" + g_msg + "|";
     if (s_rects && rect_now != s_rect_last) {
         s_rect_last = rect_now;
         fprintf(stderr, "[panel-rect] disp=%.0fx%.0f%s\n", io.DisplaySize.x, io.DisplaySize.y, rect_now.c_str());

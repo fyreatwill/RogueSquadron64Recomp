@@ -212373,3 +212373,20 @@ Work unit (NEXT s7943, owner-panel-pad-nav): before this, the pad could not Clea
   23/21 fail (only the 2 pass-through checks pass), saved B=['pad:y'] -> VERDICT PASS.
 - The hint line, README Controls and OWNER-OPT-INS were updated. Limits: no physical PS pad on this host. The owner's feel
   closes it.
+
+## Session 7944 (2026-11-25) — F6 panel pad Clear/Reset PIXEL + drawn-text witness: A-row cell shows (unbound) + "Row cleared" after L1, defaults + "Defaults restored" after the R3 hold, 8/8 with a closed-panel negative control
+- Ran: crash_reports --since 2026-11-25 new=0; no new SOAK-RESULTS lines since the s7940 fold.
+- Hypotheses (NEXT s7944): H-draw (the live table changes but the panel draws a cached copy), H-msg (rs64_panel_set_msg from
+  the input thread is overwritten by the draw thread). Both REFUTED.
+- Change: src/main/rs64_controls_panel.cpp under ROGUESQ_PANEL_RECTS=1 also logs srcA= (A-row source cell rect), msg= (message
+  line rect) and the text that draw used (|srcA_txt=..| |msg_txt=..|). src/main/main.cpp: ROGUESQ_PAD_NAV_HOLD_STEPS=<a,b,..>
+  picks which idle steps ROGUESQ_PAD_NAV_HOLD stretches (default = the s7942 set, so s7942 is unchanged).
+  New tools/s7944_pad_text_witness.zsh (holds open_idle, close_idle, clear_idle, r3_hold_idle; screenshots) +
+  tools/s7944_text_check.py (text mask = min(RGB)>170 over the logged crops).
+- Result (scratch/s7944/w_20261125-100157): pad script 23/23; drawn text open='pad:a,  key:Z' clear='(unbound)' r3='pad:a,  key:Z', msg ''/'Row cleared
+  (not saved yet).'/'Defaults restored (not saved yet).'; pixels srcA IoU(open,r3)=1.000, IoU(open,clear)=0.163, msg IoU(clear,r3)
+  =0.239, text present in every crop; negative control (panel closed, same crop) IoU 0.018. VERDICT PASS 8/8. Two lines agree
+  (draw-thread text log + screenshot pixels); I also looked at the shots: row B came back from pad:y (the earlier Y bind)
+  to pad:x, key:X, so Reset restores the whole table, not just the cleared row.
+- Rules out: stale draw and lost message for pad Clear/Reset. Nothing in the pad-nav thread is left that the agent can test
+  except running it at the owner's display scale (NEXT).

@@ -13135,9 +13135,12 @@ static void rs64_pad_nav_test(uint16_t game_btn) {
     // s7942 ROGUESQ_PAD_NAV_HOLD=<polls>: stretch the idle steps that sit on rows 0, 1 and 17 (open_idle, down_idle,
     // wrap_idle) so a driver can screenshot the drawn cursor; prints "[pad-nav-test] hold ..." when each hold starts.
     static const int s_hold = [] { const char* v = getenv("ROGUESQ_PAD_NAV_HOLD"); return v ? atoi(v) : 0; }();
+    // s7944 ROGUESQ_PAD_NAV_HOLD_STEPS=<a,b,...>: which idle steps to stretch (default the s7942 set), e.g.
+    // open_idle,clear_idle,r3_hold_idle,close_idle for the Clear/Reset text witness (tools/s7944_pad_text_witness.zsh).
+    static const std::string s_hold_steps = [] { const char* v = getenv("ROGUESQ_PAD_NAV_HOLD_STEPS");
+        return std::string(",") + (v && *v ? v : "open_idle,down_idle,wrap_idle") + ","; }();
     auto held = [&](size_t i) {
-        const std::string w = sc[i].what;
-        return s_hold > 0 && (w == "open_idle" || w == "down_idle" || w == "wrap_idle");
+        return s_hold > 0 && s_hold_steps.find(std::string(",") + sc[i].what + ",") != std::string::npos;
     };
     auto steps = [&](size_t i) { return held(i) ? s_hold : sc[i].n; };
     if (in == 0 && held(si)) fprintf(stderr, "[pad-nav-test] hold step=%s row=%d polls=%d\n", sc[si].what, rs64_panel_pad_row(), s_hold);
