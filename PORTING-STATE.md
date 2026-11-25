@@ -211502,3 +211502,25 @@ H-dt in the pre-crawl window. Single-source on what clocks the 2559 fork (next u
 Docs: CURRENT-TRUTH Next-steps item 0 compacted (island B s7896-s7907 archived verbatim to PROJECT-OVERVIEW "(s7909) island B
 archive"), 59.9 -> 54.5 KB.
 ORIGIN: no mitigation; new offline analysis tool only.
+
+## Session 7910 (2026-11-24) — island B's post-load fork is the scene switching to elapsed-time keying (lag 71 -> 99 = 71 + 57/2): pre-flight thread closed as retail load-time cost
+Pre-checks: crash_reports FOLDED=3 new=0; no new SOAK-RESULTS lines; no owner answers; CURRENT-TRUTH 54.5 KB (no maintenance).
+Work unit (NEXT s7910, HYPOTHESIS-ID g3-preflight-load-cue), offline only, no game run.
+Instrument: new tools/s7910_fork_lag.py. Per-frame triangle count of the s7868 RDP frames; per window, the retail-minus-port
+lag with least sum |ntri diff|, plus lag at ntri threshold crossings.
+Pair: scratch/s7895/m11k/r1/retail.bin.zst vs scratch/s7905/s7905_island_b_rep3/p1.bin.zst.
+- Control (same run): port[2399:2559] lag 71 err 0 (= the s7909 exact segment). With --ctl-lag 72 the control FAILs.
+- After the fork: port[2559:2699] best lag 99 (err 518 vs 2568 at 71), port[2699:2960] lag 99 (err 1623 vs 43001 at 71);
+  crossings ntri>420/600/740/1000 all at lag 99 (port 2690/2733/2738/2783, retail 2591/2634/2639/2684).
+- Prediction for time keying: the port's stall is 57 VI shorter, so the same elapsed time since press 7 sits 57/2 = 28.5 frames
+  later in port frames: 71 + 28.5 = 99.5. Measured 99. The half-frame phase explains why s7909 found no exact frame after the
+  fork: a time-keyed animation is sampled half a frame apart on the two sides. The fork region is not a static screen either
+  (404/376 distinct signatures, no repeat runs).
+- Replica: scratch/s7905/m11C/p1.bin.zst gives the same numbers. The unaligned scratch/s7895/m11k/p1.bin FAILs the control
+  (negative).
+Selected: H-vicue/H-audio (content keyed on time since the load started). Rules out H-input: the fork comes before press 8,
+and the lag already holds at port 2690 < 2625+65. Not separated: VI counter vs audio clock (both run in real time). Single-
+source on that split only. Two lines for the time keying: VI stamps (s7909 stall 77 vs 20) and RDP content lag (this session).
+Verdict: island B's +28 frames = retail load-time cost. The port loads 57 VI faster, and a time-keyed scene absorbs the
+difference. Load-time fidelity is not an owner goal: thread g3-preflight-load-cue CLOSED.
+ORIGIN: no mitigation; new offline analysis tool only.

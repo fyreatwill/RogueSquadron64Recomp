@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7907 (2026-11-24).
+Compact operational handoff, as of Session 7910 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -209,7 +209,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    360/360 frames, no stall (equality control); every other port load stall is 20-23 VI vs retail 72-116 (press 2: 116 vs 23,
    press 5: 72 vs 20). Second line: det_frame_cmp `--port-start 1916 --port-end 2963`: port[1916:2559] exact 643/643 at its own
    offset; port[2559:2963] (404 frames, retail 376 = +28) shares NO unique frame with retail: content forks ~1286 VI after the
-   load, before press 8 (single-source reading: a VI/time-clocked cue in that scene lands earlier because the load ended 57 VI sooner).
+   load, before press 8.
+   **s7910: the fork is the scene switching from frame-count to elapsed-time keying: CLOSED as retail load-time cost.**
+   tools/s7910_fork_lag.py (ntri per frame, best lag): control port[2399:2559] lag 71 err 0; after the fork lag 99 in both
+   windows and at 4 ntri thresholds = 71 + 57/2 = the lag predicted if content keys on time since the load started (press 7).
+   The half-frame phase is why no exact frame pairs. Replicated on scratch/s7905/m11C. VI vs audio clock not separated (both are real
+   time). Faster port loads are not a fidelity goal. Pre-flight thread g3-preflight-load-cue CLOSED.
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**
