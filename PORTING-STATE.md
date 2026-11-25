@@ -212412,3 +212412,6 @@ owner's 16:9 fullscreen Retina recipe. Rules out H-scale and H-layout. Two lines
 logged by the game and pixels found in an OS window capture.
 Pad-nav thread (owner-panel-pad-nav) is DONE for the agent; closes on the owner's hands (no physical PS pad on this host).
 Not covered: 21:9 (owner's ultrawide) -> next unit.
+ORIGIN: no mitigation added. The flagged words ("Defaults restored", "Reset") are the F6 panel's own UI text quoted from the
+witness output; the only code change is optional env passthrough (PANEL_ASPECT/PANEL_FS) in two test scripts. The values
+checked are written by the panel's draw thread from a legitimate synthetic user press (L1 / R3 hold), not a corruption.
