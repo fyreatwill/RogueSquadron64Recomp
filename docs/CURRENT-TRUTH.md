@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7916 (2026-11-24).
+Compact operational handoff, as of Session 7917 (2026-11-24).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -252,7 +252,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    12378 calls before it: flame sites 0x800541FC/0x80054174 + 0x8006C0FC, host-paced frame count), except C2/A, equal to VI 10913/11012
    then forking on the 16-call flame parity ~35-75 VI before their element starts (~VI 10947/11087 from [vi] fs= stamps, 64-VI grain,
    single-source). Element = f(rand stream position); stream position = host-paced frame count (s7909 load-stall class). H-race and
-   H-uninit unneeded (15/15 pairs predicted). Same timing class as s7907/s7910: no port value to fix. Optional causal confirm in NEXT.
+   H-uninit unneeded (15/15 pairs predicted). Same timing class as s7907/s7910: no port value to fix.
+   **s7917: CLOSED (timing class).** D1 self-replay (tools/s7917_self_replay.py, fired 1385-1838 seeds/arm, per-site streams prefix-
+   identical) still gives 0-2/212 element frames in all 6 pairs: the element needs the GLOBAL stream position (host frame counts),
+   not per-site values. H-race not separately excluded (single-source). Slug g3-m6-island-b-nondet closed.
 1. **G5e fog: owner look.** ROGUESQ_DD_FOG_ALT=1,3,1 qualified at 16:9 and 21:9 (headline). Only if the owner asks for
    more haze at 21:9: sweep ke 2 / 2.5 with `tools/s7306_fog_219.zsh l1k2:1:1,2,1`.
 2. **21:9 dd>1 left-edge sliver FIXED (s7310, ROGUESQ_DD_FARMAX default 32767, 0 = old), qualified s7312: owner look.**

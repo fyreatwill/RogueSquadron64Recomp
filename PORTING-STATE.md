@@ -211677,3 +211677,26 @@ Work unit (NEXT s7916, HYPOTHESIS-ID g3-m6-island-b-nondet, offline, no game run
 - Rules out: H-race / H-uninit as necessary explanations of the element's run-to-run variation (every pair is predicted without them).
 - Kept: scratch/s7916/{s7916_site_whole.txt,title_split.py,title_split.txt}.
 ORIGIN: no mitigation; one offline analysis tool added.
+
+## Session 7917 (2026-11-24) — m6 island B causal check: D1's own per-site rand replay fires in 3 fresh arms (1385-1838 replaced seeds each, per-site streams prefix-identical to D1 through the element) yet the particle element differs in all 6 pairs -> per-site rand VALUES do not fix the element; thread CLOSED as host-timing class
+Work unit (NEXT s7917, HYPOTHESIS-ID g3-m6-island-b-nondet, cap 1 iteration). Pre-checks: crash_reports new=0 (3 folded); no owner
+answers in OWNER-REVIEW-QUEUE; no new SOAK lines; CURRENT-TRUTH 59935 B (< 60000, not maintenance).
+- New tools/s7917_self_replay.py: ROGUESQ_RAND_REPLAY table ("SITE ORD SEED") from a PORT arm's own RAND_TRACE, pre-first-tick only
+  (the replay acts only at tick 0). Filter control: the LCG seed'=seed*0xA8351D63 must chain over every kept row. First pass had 19
+  breaks = 4-field XTRACE_MEM marker rows 0x800B3FA0/0x800B380C/0x800B4004 (own idx counter); added to MARKS -> 49694 rows, 44 sites,
+  0 breaks (first tick VI 13398; element starts ~VI 10947, so the replay window covers it). `--drop 8006c0fc` = negative table (211 rows).
+- Arms (scratch/s7917/run.sh = s7915 recipe minus DET_CLOCK, SNAP=3, one game at a time): E1, E2 full D1 table; N without 0x8006C0FC.
+  Replay fired: [s7896 replay] 49694 rows loaded; replay= rows E1 1838, E2 1385, N 1491 (0x80054174 916 each, 0x800541FC 457-915).
+- Effective per-site streams (scratch/s7917/eff_cmp.py, NEW value taken from replay=OLD>NEW, VI <= 10947) vs D1: every differing
+  site differs ONLY in length (first diff ord = shorter count + 1): values are prefix-identical; counts differ (0x80054174 13339 D1 vs
+  13144/13363, 0x800541FC 7468 vs 7268/7532). Global (site,value) order still forks at the attract flame (idx 12378/12396).
+- Element (tools/s7912_elem_cross.py 635A40/f0/s3/w1 FFFFFFFFFE793C, plant control PASS on all 4 bins): D1 vs E1 0/212, D1 vs E2
+  2/212 (E2 starts at D1's frame 6068 and still differs), E1 vs E2 0/212, N vs all 0/212 (scratch/s7917/elem_all.txt).
+- Reading (NEXT's branch "E1!=E2 with replay firing"): forcing every site's k-th value to D1's does NOT reproduce the element. With
+  s7916 (element exact <=> GLOBAL stream equal), what the element needs is the global position: which ordinal of the shared flame
+  sites (0x80054174/0x800541FC) a given frame consumes, set by host-paced frame counts (attract flame length, load stalls,
+  s7909/s7910). Per-site keying cannot hold that; a frame-keyed replay would be forcing the timing itself. No port value defect
+  located; H-race (non-rand state) not separately excluded -> single-source. Closed as timing class per the 1-iteration cap.
+- Rules out: "replaying per-site rand values makes the element deterministic" (H-rng in its per-site form).
+- Kept: scratch/s7917/{d1_table.txt,d1_table_no6c0fc.txt,eff_cmp.py,elem_all.txt,run.sh}, m6{e1,e2,n}/p1_rand.txt.zst (bins deleted, 1.4 GB each).
+ORIGIN: no mitigation; one offline table tool added.
