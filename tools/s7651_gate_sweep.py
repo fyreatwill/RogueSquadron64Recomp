@@ -299,6 +299,16 @@ ARGS.update(S7928_GATEW)
 S7931_ROUTE = {"s7931_route_pair.py": (["scratch/s7931_port/ring_nf.txt", "scratch/s7931_route/port7.3/oracle.log", "--control", "scratch/s7931_port/ring_fc.txt"],
                r"common prefix 6/6 \(retail 6, port 7\) -> SEQ-MATCH; mutation prefix 3/6 differs\(ok\); control ring prefix 4/6 differs\(ok\)")}  # s7931: same owner save -> port and retail take the same transition sequence; FORCE arm + drop-one mutation are controls
 ARGS.update(S7931_ROUTE)
+S7950_DETPAIR = {
+    # s7950: ex-NEEDS-ARGS det-pair census tools over their retained captures (s7826 lvl2 / s7836 lvl3 flight). Output reproduces the
+    # ledger scores byte-for-byte (scratch/s7826/score_pose_s7827.txt, scratch/s7836/hud_census.txt); both carry same-run planted controls.
+    "s7827_tri_yshift_census.py": (["scratch/s7826/retail.bin.zst", "scratch/s7826/port.bin.zst", "--win", "3521:3825,4378:4702", "--controls",
+                                    "--pose", "3623:3825,4516:4702"],
+                                   r"controls PASS \(A mode 0, B mode 2\)\nVERDICT: world-tri dy mode = 0 quanta[\s\S]*port  H-pitch  rms 0\.107 px[\s\S]*pose controls PASS; VERDICT pose: H-pitch"),
+    "s7836_hud_elem_census.py": (["scratch/s7836/ret/retail.bin.zst:retail:3300:4300", "scratch/s7836/port.bin.zst:port:4060:5160", "--control"],
+                                 r"REST retail b=\(230\.25,183\.25\)x973 s=\(243\.0,190\.75\)x970[\s\S]*REST port b=\(230\.0,184\.25\)x725 s=\(242\.75,192\.0\)x719[\s\S]*CONTROL PASS"),
+}
+ARGS.update(S7950_DETPAIR)
 S7932_RETAIN = {"s7893_retained_manifest.py": (["--check"], r"(?=[\s\S]*s7893 retained=\d+ manifest=\d+ missing=0)(?=[\s\S]*s7932 sweep-argv retained=(?:[1-9]\d{2,}) missing=0)(?=[\s\S]*s7933 sweep-trace retained=(?:[1-9]\d{2,}) missing=0)")}  # s7933: third source = the gates' traced reads (build/gate_sweep_cache.json); s7932: '%d' ARGS literals were unprotected from the 7-day prune (glob 'l*d'); second source = the sweep's own argv
 ARGS.update(S7932_RETAIN)
 # s7934: gate_trace.py now records stat-only paths ("stats"); controls = tracer selftest + sweep fingerprint planted arms
@@ -312,7 +322,7 @@ ARGS.update(S7724_RETAINED)
 ARGS.update(S7718_LIVE)
 ARGS.update(S7718_CONTROL_ONLY)
 # s7717: swept although not named s7*_census.py (each needs an ARGS row above).
-EXTRA_GATES = ("s7922_transition_table.py", "s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR) + tuple(S7812_RECOMP_H) + tuple(S7813_CALLEE) + tuple(S7814_INCLUDE) + tuple(S7815_VU) + tuple(S7858_PINS) + tuple(S7861_VERDICT) + tuple(S7862_TABLE) + tuple(S7863_SONGN) + tuple(S7864_AIHIST) + tuple(S7865_AIDMA) + tuple(S7928_GATEW) + tuple(S7931_ROUTE) + tuple(S7932_RETAIN) + tuple(S7934_STATKEY)
+EXTRA_GATES = ("s7922_transition_table.py", "s7427_env_policy_order.py", "s7424_stale_objects.py", "s7425_build_options.py", "s7719_regen_gate.py", "s7741_ucode_regen_gate.py", "s7742_fixup_idem_gate.py", "s7743_ovl_consumers.py", "s7753_rdp_output_gate.py", "s7756_hstate_gate.py", "s7762_owner_doc_check.py", "s7772_ovl_lookup_audit.py", "s7773_ovl_fnptr_audit.py") + tuple(S7718_LIVE) + tuple(S7718_CONTROL_ONLY) + tuple(S7723_RETAINED) + tuple(S7724_RETAINED) + tuple(S7723_RETAINED_CTL) + tuple(S7802_RETAINED) + tuple(S7803_RETAINED) + tuple(S7804_LINT) + tuple(S7805_CITED) + tuple(S7808_FIND) + tuple(S7809_PATCH_CLASS) + tuple(S7810_HOST_OVR) + tuple(S7812_RECOMP_H) + tuple(S7813_CALLEE) + tuple(S7814_INCLUDE) + tuple(S7815_VU) + tuple(S7858_PINS) + tuple(S7861_VERDICT) + tuple(S7862_TABLE) + tuple(S7863_SONGN) + tuple(S7864_AIHIST) + tuple(S7865_AIDMA) + tuple(S7928_GATEW) + tuple(S7931_ROUTE) + tuple(S7950_DETPAIR) + tuple(S7932_RETAIN) + tuple(S7934_STATKEY)
 # s7720 hollow-GREEN scan: s7719 found s7363/s7364/s7366 printing "OPEN 19/22/6" yet exiting 0 (they only fail under --check),
 # so rc 0 alone scored them GREEN. A GREEN gate is re-scored HOLLOW (blocks like RED) when (a) its full output carries a nonzero
 # open-class count, or (b) its source parses a --check/--strict/--gate flag the sweep did not pass. HOLLOW_OK holds hand-reviewed
@@ -546,7 +556,7 @@ def run_uncached(path):
     if fixed is not None:
         # s7948: a missing input used to fall back to a bare run that read NEEDS-ARGS (allowed), so the s7925 WAITPAIR gate went
         # silently hollow when its ring was zstd'd (ring_q4.txt -> .zst). A row whose path inputs are missing is RED.
-        miss = [x for x in fixed if "/" in x and not zresolve(os.path.join(ROOT, x))]  # s7724: bare arm names are not paths;
+        miss = [x for x in fixed if "/" in x and not zresolve(os.path.join(ROOT, x.split(":")[0]))]  # s7950: PATH:kind:F0:F1 specs  # s7724: bare arm names are not paths;
         # zresolve: rs64-scratch-compress.sh (cron, 6 h) zstd --rm's >64k logs/txt/bin, and zopen tools read the raw path's .zst
         if miss:
             return (os.path.basename(path), "RED", "-", "ARGS input missing: " + " ".join(miss)), list(fixed), None

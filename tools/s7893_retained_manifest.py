@@ -37,6 +37,7 @@ def refs():
 def files(root, rs):
     out = set()
     for r in rs:
+        r = r.split(":")[0]  # s7950: sweep ARGS specs PATH:kind:F0:F1 (s7836) name PATH
         for g in glob.glob(os.path.join(root, FMT.sub("*", r))):  # s7932: was r.replace("%","*"): "l%d.txt" -> "l*d.txt" matched nothing
             ps = [os.path.join(a, f) for a, _, fs in os.walk(g) for f in fs] if os.path.isdir(g) else [g]
             for p in ps:

@@ -824,6 +824,10 @@ scratch/s7765/bad.log
 scratch/s7765/def.log
 scratch/s7765/ovr.log
 scratch/s7765/rt.log
+scratch/s7826/port.bin
+scratch/s7826/retail.bin
+scratch/s7836/port.bin
+scratch/s7836/ret/retail.bin
 scratch/s7852/p3_rand.txt
 scratch/s7852/r2/oracle.log
 scratch/s7857/v14/r1/oracle.log

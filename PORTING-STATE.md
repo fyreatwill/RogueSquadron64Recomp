@@ -212513,3 +212513,23 @@ s7922 now GREEN (was NEEDS-ARGS before s7948's fix) -> s7948's change confirmed 
 Rescore control (scratch/s7949/rescore_ctl.sh): appended "OPEN 7" to s7641's cached output -> `--only` run, hit=1 miss=0 ->
 HOLLOW "1 nonzero: OPEN 7"; restored cache -> hit=1 GREEN. Rules out: rule edits being blind to cached GREENs; other
 empty-output GREENs (0 in the full run); other swept gates reading a .zst-only input via a raw open (census 0).
+
+## Session 7950 (2026-11-25) — the sweep's last two NEEDS-ARGS gates (s7827 tri y-shift, s7836 HUD census) now gate over their retained det-pair captures; s7836 gained a planted +1 px control; s7836 colon specs were unprotected from the scratch prune
+Work unit (NEXT s7950 option a, HYPOTHESIS-ID owner-handoff-regression). Pre-checks: crash_reports new=0. Fold: SOAK-RESULTS
+s7947_handoff_fast (loop, 307 s) rc=0 alive 1/1, crashlines 0, handoff_pass=1, control_fail_seen=1, VERDICT PASS gates=3 -> the fast-arm
+owner-handoff soak repeats s7947's 4/4 PASS. No game run (offline only).
+- H-retained vs H-gone: retained. scratch/s7826/{retail,port}.bin.zst (s7827's inputs) and scratch/s7836/ret/retail.bin.zst +
+  scratch/s7836/port.bin.zst (s7836's) all survive as .zst.
+- s7827 re-run with its ledger argv (`--win 3521:3825,4378:4702 --controls --pose 3623:3825,4516:4702`, 22 s) reproduces
+  scratch/s7826/score_pose_s7827.txt byte-for-byte (controls PASS A mode 0 / B mode 2; H-pitch rms 0.107; pose controls PASS).
+- s7836 had no control. Added `--control` to tools/s7836_hud_elem_census.py: every element of the first capture shifted +1 px in y must move
+  both reticle rest positions by exactly +1 with the same counts, plus a `REST <kind> b=(x,y)xN s=(x,y)xN` line per capture. Run
+  (15 s) reproduces scratch/s7836/hud_census.txt (retail b 230.25,183.25 x973 / s 243.0,190.75 x970; port b 230.0,184.25 x725 / s
+  242.75,192.0 x719) and CONTROL PASS. Mutation (plant disabled) -> CONTROL FAIL. Frames are now cached per capture (control re-census free).
+- tools/s7651_gate_sweep.py: new S7950_DETPAIR ARGS rows (+ EXTRA_GATES) with must-regexes on the reproduced verdicts. First run read
+  s7836 RED "ARGS input missing" because the s7948 missing-path check took `PATH:kind:F0:F1` as a literal path; it now strips the spec
+  suffix. Same defect in tools/s7893_retained_manifest.py files(): the s7836 spec paths globbed to nothing, so those captures would have been
+  left OUT of tools/retained_captures.txt and pruned (argv retained 290 -> 292 after the fix). Manifest regenerated (+4 paths);
+  `--check` missing=0 on all three sources, `--control` PASS. `--only` sweep of both rows GREEN (27 s / 19 s).
+- Rules out: the last two NEEDS-ARGS gates being un-gateable (captures gone). Sweep NEEDS-ARGS 2 -> 0.
+- ORIGIN: n/a (no mitigation; gate/tool change only).
