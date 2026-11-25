@@ -293,6 +293,10 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    unrecoverable). Since s7893 tools/retained_captures.txt (tools/s7893_retained_manifest.py, refreshed by loop.sh every
    iteration, --check / --control) cites all 766 surviving gate inputs by exact path. A new retained capture is safe only
    once it is cited in a gate ARGS row or a tools/s7*.py literal. gate_trace.py records importlib-loaded modules.
+   s7932: the manifest globbed '%d' literals as 'l*d' (matches nothing), so 9 s7516/s7517/s7518 level-log inputs were
+   unprotected (6 on the prune's dry-run list) while --check said missing=0 (same glob). Fixed (printf fields -> '*'),
+   --check now also verifies the sweep's own ARGS argv (second source), swept as S7932_RETAIN; the sweep also exits 1 on
+   an ARGS row discovery never runs (planted control). Dry-run prune now hits 0 gate inputs.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

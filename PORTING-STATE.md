@@ -212052,3 +212052,24 @@ Verdict (two lines: retail oracle on the owner save x3 schedules + port on the s
 retail's exact transition sequence; the s7928 difference was the save (user-default mupen save) plus the harness FORCE pokes.
 H-port REFUTED, H-sched REFUTED. CURRENT-TRUTH superseded list carries s7928's "drive" reading.
 Rules out: a port menu-route defect on the MusyX-wait path. Nothing open on the MusyX waits.
+
+## Session 7932 (2026-11-25) — retained-capture manifest was hollow for '%d' gate inputs: 9 s7516/s7517/s7518 level logs unprotected from the 7-day prune (6 on its next deletion list); fixed + second-source check + unswept-ARGS self-check
+Work unit (NEXT.md s7932 class audit): enumerate gate-sweep ARGS rows that discovery never runs, and every way an ARGS row can
+silently degrade. crash_reports --since 2026-11-25: new=0. No new SOAK-RESULTS lines.
+1. Unswept ARGS rows: set(ARGS) minus (s7*_census.py | EXTRA_GATES) = 0 of 130 (s7931 already fixed S7928_GATEW/S7931_ROUTE).
+   Every ARGS/EXTRA/REPORT/NEEDS_INPUT/HOLLOW_OK key names an existing tool. ARGS rows with absent inputs: only the six
+   s7392-s7399 report logs, already allow-listed (s7865).
+2. Prune exposure (the s7865/s7893 failure mode): `env DRY_RUN=1 ~/.local/bin/rs64-scratch-prune.sh` (list only) intersected
+   with every ARGS scratch path -> 6 gate inputs on the deletion list: s7516_fm_levels/log_l{1,7,10} and
+   s7517_fn_levels/log_l{7,10,12}.txt.zst. ORIGIN: tools/s7893_retained_manifest.py globbed r.replace("%","*"), so the ARGS
+   literal "scratch/s7516_fm_levels/log_l%d.txt.zst" became "log_l*d.txt.zst" (needs a literal 'd'), matching nothing; only
+   the literal --ctl paths were cited. Its --check used the same glob, so it said missing=0 (hollow). s7518's three were also
+   uncited (younger than 7 d, so not yet listed).
+Fix: printf fields (%d, %s, ...) -> '*' (FMT regex); --control gains a planted '%d' pair (PASS); --check adds a second source,
+the sweep's own ARGS argv via import (s7932 sweep-argv retained=280). Pre-fix manifest with the new check: missing=9 rc 1 on
+both lines (positive control on the real defect); regenerated (+9 paths) -> missing=0 both; dropping one line by hand -> rc 1,
+restored. Dry-run prune after: 0 gate inputs (198 files listed, all uncited rings/logs). New sweep row S7932_RETAIN
+(s7893_retained_manifest.py --check, both missing=0 pinned) in EXTRA_GATES. Sweep self-check: unswept(ARGS, EXTRA_GATES) must
+be empty (exit 1 otherwise), planted s7999_plant_census / s9999_plant_gate / extra x.py -> only the gate row flagged (PASS;
+first plant named s9999_* was my error, the pattern is s7*). --only s7893|s751[678] -> GREEN 4. Full sweep: see below.
+Rules out: the s7516/s7517 gates silently falling to NEEDS-ARGS at the next 6-hourly prune (would have recurred s7865).
