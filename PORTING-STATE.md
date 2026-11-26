@@ -212715,3 +212715,27 @@ censuses: s7384 static-state (inline-function locals f/ok in the new header -> 2
 s7428 config precedence (persist-gated check pinned the old fopen text -> now pins rs64_write_file_atomic(audio_route_file_path()),
 s7430 file growth (site map key updated to the new call, header temp fopen = HELPER, header comment reworded). `--only
 's7384|s7428|s7430|s7958'` -> 4 GREEN. Rules out: any other owner-state file in a default run being left empty by a kill.
+
+## Session 7959 (2026-11-25) — class RD (host owner-state file readers) closed: audio_device.txt empty/NUL/junk file read as the "default" route, now treated as absent (built-in default); gate S7959_RD
+Triage: crash_reports --since 2026-11-25 new=0; SOAK-RESULTS has no unfolded line.
+Unit (NEXT s7959 item 1): host readers of owner-state files given an empty / short / corrupt file. Hypotheses H-fallback
+(each reader treats empty/short as absent and falls back to the backup / built-in default) vs H-trust (it is read as data).
+Readers: save (librecomp pi.cpp), controls.json (rs64_bind_load -> rs64_bind_parse_json), audio_device.txt (audio_route_load_pref).
+Measurement: tools/s7959_rd_test.cpp feeds planted contents through the real reader code (old audio reader inlined verbatim as
+the control). audio: 10 cases (empty, "\n", spaces+CRLF, 21 NUL bytes, \x01\x02junk, full name, "default", CRLF name, BOM name,
+no-newline name). OLD: 6/10 wrong - empty/newline/spaces/NUL fill -> DEFAULT (system output), junk -> device "garbage", BOM ->
+name with a BOM (substring match would fail) -> H-trust selected for audio_device.txt. controls.json: remapped file loads
+(positive control) and all 1076 partial files (every byte prefix, NUL fill, empty) are rejected to defaults, 0 trusted wrong ->
+H-fallback holds. Save: short file -> whole .bak (s7429), else zero-fill tail (s7357); a full-length all-zero save is the same
+bytes as an erased EEPROM, which the game's own checksum handles - not a host decision.
+ORIGIN: the reader is our own (s6739 audio routing); the empty file it trusted came from the pre-s7958 truncate-in-place writer
+(822/1500 kills) - files written by older binaries can still be on disk, so the reader fix is needed beside the s7958 writer fix.
+Change: src/main/rs64_owner_text.h rs64_audio_pref_from_text (first line, BOM dropped, trimmed; empty or any control byte ->
+false); audio_route_load_pref reads the file through it, else logs "[audio-route] <path> is empty or unreadable: ignored" and
+uses the built-in default. Written "default" lines are unchanged.
+Evidence (two lines): (1) tools/s7959_rd_gate.py: CONTROL old_bad=6 PASS, FIX new_bad=0 cases=10 PASS, CONTROLS remap_loaded=1
+partial=1076 trusted_wrong=0 PASS, CENSUS PASS -> VERDICT CLOSED, row S7959_RD in ARGS + EXTRA_GATES. (2) e2e, real binaries in
+private /tmp/s7959e2e dirs (copy of exe + ROM, NO_SAVE_WRITE=1, build/saves untouched), empty audio_device.txt: pre-fix binary
+(RogueSquadron64Recomp_s6714B) "preference ... ''" -> output=<system default>; new binary "is empty or unreadable: ignored" ->
+built-in default -> output=MacBook Pro Speakers; same new binary with a "default\n" file -> output=<system default> (file still
+honoured, positive control).

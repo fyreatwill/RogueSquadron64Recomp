@@ -350,6 +350,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    was fopen("w") in place and logged "saved to" even on failure -> a kill mid-write left an EMPTY file, which the next run reads
    as "default" (system route, not the owner's choice). Now src/main/rs64_atomic_write.h (temp+fsync+rename, "SAVE FAILED:" log).
    `python3 tools/s7958_fw_gate.py` (sweep row S7958_FW): 1500 SIGKILLs/arm, old writer empty 822-852 (control), new 0.
+13f. **s7959 class RD (host owner-state file READERS on empty/short/corrupt files) CLOSED:** audio_device.txt reader
+   (audio_route_load_pref) turned an empty / whitespace / NUL-filled file into '' = "default" = system output, and junk
+   bytes into a device name; now src/main/rs64_owner_text.h rs64_audio_pref_from_text treats those as ABSENT -> built-in
+   default "MacBook Pro Speakers" (BOM dropped, CRLF ok, a real "default" line still honoured). controls.json already
+   rejected every byte prefix / NUL fill / empty (1076 cases, 0 trusted). Save loader: short file -> whole .bak (s7429);
+   a full-length zero save = erased EEPROM, game-owned. `python3 tools/s7959_rd_gate.py` (sweep row S7959_RD): old
+   reader 6/10 planted files misrouted (control), new 0/10; e2e empty file: old binary output=<system default>, new
+   output=MacBook Pro Speakers.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

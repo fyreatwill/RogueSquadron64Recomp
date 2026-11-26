@@ -8314,6 +8314,7 @@ static std::atomic<int> g_audio_route_cycle{0};   // F9 presses; consumed on the
 static std::string g_audio_route_pref;            // audio thread only after first open
 static bool g_audio_route_loaded = false;
 
+#include "rs64_owner_text.h"
 static std::string audio_route_file_path() {
     char* base = SDL_GetBasePath();
     std::string path = base ? std::string(base) + "audio_device.txt" : "audio_device.txt";
@@ -8341,12 +8342,12 @@ static void audio_route_load_pref() {
     if (const char* env = std::getenv("ROGUESQ_AUDIO_DEVICE")) {
         g_audio_route_pref = audio_route_trim(env);
         fprintf(stderr, "[audio-route] preference from ROGUESQ_AUDIO_DEVICE: '%s'\n", g_audio_route_pref.c_str());
-    } else if (FILE* f = fopen(audio_route_file_path().c_str(), "r")) {
-        char line[256] = {0};
-        if (fgets(line, sizeof line, f)) g_audio_route_pref = audio_route_trim(line);
-        fclose(f);
+    } else if (std::ifstream f(audio_route_file_path(), std::ios::binary); f &&
+               rs64_audio_pref_from_text(std::string(std::istreambuf_iterator<char>(f), {}).substr(0, 4096), &g_audio_route_pref)) {
+        // s7959 class RD: an empty/NUL-filled/junk file is treated as absent (built-in default below), not as "default".
         fprintf(stderr, "[audio-route] preference from %s: '%s'\n", audio_route_file_path().c_str(), g_audio_route_pref.c_str());
     } else {
+        if (f) fprintf(stderr, "[audio-route] %s is empty or unreadable: ignored\n", audio_route_file_path().c_str());
         // Owner default "for now" (2026-10-19): with no env var and no file, play on
         // the laptop speakers. If they are absent, audio_route_resolve() falls back
         // to the system default. Write "default" to audio_device.txt to undo.

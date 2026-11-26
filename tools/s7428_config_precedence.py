@@ -22,6 +22,7 @@ ROOTS = ['src', 'lib/N64ModernRuntime/librecomp/src', 'lib/N64ModernRuntime/ultr
 OPEN = re.compile(r'\b(?:std::)?(fopen|ifstream|ofstream|open_input_file_with_backup|open_output_file_with_backup|read_file|write_file)\b\s*[({]?\s*([^;]*)')
 REVIEWED = {  # (file, function-ish marker) -> name of the check that covers it
     'audio_route_file_path().c_str(), "r"': 'audio_device',
+    'audio_route_file_path(), std::ios::binary': 'audio_device',  # s7959 reader via rs64_audio_pref_from_text
     'audio_route_file_path().c_str(), "w"': 'audio_device',
     'userPaths.configurationPath': 'rt64',
     'save_file_path': 'save', 'get_save_file_path': 'save',
@@ -104,7 +105,7 @@ def checks(main_t, rc_t, pi_t):
     ok = 'appConfig.useConfigurationFile = false' in rc_t and 'appConfig.detectDataPath = false' in rc_t and 'appConfig.dataPath' not in rc_t
     out.append(('rt64', ok, 'useConfigurationFile=false, detectDataPath=false, no dataPath -> RT64 reads/writes no config file'))
     lp = fn_body(main_t, 'audio_route_load_pref')
-    out.append(('audio_device:env-first', check_env_first(lp, 'ROGUESQ_AUDIO_DEVICE', 'fopen(audio_route_file_path().c_str(), "r")'),
+    out.append(('audio_device:env-first', check_env_first(lp, 'ROGUESQ_AUDIO_DEVICE', 'std::ifstream f(audio_route_file_path()'),
                 'ROGUESQ_AUDIO_DEVICE tested before audio_device.txt is opened'))
     ac = fn_body(main_t, 'audio_route_apply_cycle')
     out.append(('audio_device:persist-gated', check_gated_write(ac, 'rs64_write_file_atomic(audio_route_file_path()'),
