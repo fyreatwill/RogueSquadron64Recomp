@@ -15,12 +15,13 @@ o = subprocess.run([exe], capture_output=True, text=True).stdout
 a = re.search(r"DR old_bad=(\d+) new_bad=(\d+) cases=(\d+)", o)
 if not a: print(o); print("VERDICT OPEN (output)"); sys.exit(1)
 src = open(os.path.join(root, "src/main/main.cpp")).read()
-m = re.search(r"rs64_pick_data_root\(rs_cwd,.*?\n\s*rs_cwd = root;\s*\}\s*recomp::register_config_path\(rs_cwd\);", src, re.S)
+m = re.search(r"rs64_pick_data_root\(rs_cwd,.*?\n\s*rs_cwd = root;\s*(?:rs64_data_root_str\(\) = root\.string\(\);[^\n]*\s*)?\}\s*recomp::register_config_path\(rs_cwd\);", src, re.S)
 rom = re.search(r"std::filesystem::path p = rs_cwd / name;", src)
 regs = len(re.findall(r"register_config_path\(", src))
 st = open(os.path.join(root, "src/main/rs64_settings.cpp")).read()
+# s7972: controls.json / audio_device.txt now try the data root first (SDL_GetBasePath only as a fallback before main sets it)
 others = "_NSGetExecutablePath" in st and src.count('SDL_GetBasePath(); std::string path = base ? std::string(base) + "controls.json"') == 1 \
-    and re.search(r'audio_route_file_path\(\) \{\s*char\* base = SDL_GetBasePath\(\);', src) is not None
+    and re.search(r'audio_route_file_path\(\) \{\s*if \(!rs64_owner_file_old_rule\(\) && !rs64_data_root_str\(\)\.empty\(\)\)[^\n]*\n\s*char\* base = SDL_GetBasePath\(\);', src) is not None
 census = bool(m) and bool(rom) and regs == 1 and others
 ctl = int(a[1]) > 0; fix = int(a[2]) == 0 and int(a[3]) >= 7
 print(f"CONTROL old_bad={a[1]} {'PASS' if ctl else 'FAIL'}")

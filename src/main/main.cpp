@@ -8321,6 +8321,7 @@ static bool g_audio_route_loaded = false;
 
 #include "rs64_owner_text.h"
 static std::string audio_route_file_path() {
+    if (!rs64_owner_file_old_rule() && !rs64_data_root_str().empty()) return rs64_data_root_str() + "/audio_device.txt";  // s7972
     char* base = SDL_GetBasePath();
     std::string path = base ? std::string(base) + "audio_device.txt" : "audio_device.txt";
     if (base) SDL_free(base);
@@ -12936,6 +12937,7 @@ static void rs64_bind_selftest_step(long step) {
 #include "rs64_bindings_json.h"
 std::string rs64_bind_path() {
     if (const char* e = getenv("ROGUESQ_CONTROLS"); e && *e) return e;
+    if (!rs64_owner_file_old_rule() && !rs64_data_root_str().empty()) return rs64_data_root_str() + "/controls.json";  // s7972
     char* base = SDL_GetBasePath(); std::string path = base ? std::string(base) + "controls.json" : "controls.json"; if (base) SDL_free(base);
     return path;
 }
@@ -13011,11 +13013,12 @@ bool rs64_bind_save(std::string* msg) {
         snprintf(buf, sizeof buf, "NOT saved (ROGUESQ_NO_SAVE_WRITE): would write %zu bytes to %s", text.size(), path.c_str());
         *msg = buf; fprintf(stderr, "[controls] %s\n", buf); return false;
     }
-    const std::string tmp = rs64_private_tmp_path(path);  // s7966 class DI
-    bool ok = false;
-    if (FILE* f = fopen(tmp.c_str(), "wb")) { ok = fwrite(text.data(), 1, text.size(), f) == text.size(); ok = (fclose(f) == 0) && ok; }
-    ok = ok && rename(tmp.c_str(), path.c_str()) == 0;
-    snprintf(buf, sizeof buf, ok ? "Saved to %s" : "SAVE FAILED: %s", path.c_str());
+    // s7972 class NS: was its own temp+rename that left the temp behind on a failed write (full disk); now the shared
+    // writer (private temp, checked write + fsync, temp removed on failure, the old file kept).
+    std::string werr;
+    const bool ok = rs64_write_file_atomic(path, text, &werr);
+    if (ok) snprintf(buf, sizeof buf, "Saved to %s", path.c_str());
+    else snprintf(buf, sizeof buf, "SAVE FAILED: %s (%s)", path.c_str(), werr.c_str());
     *msg = buf; fprintf(stderr, "[controls] %s\n", buf); return ok;
 }
 // Capture: the first source that turns on after arming (one already held at arming must be released first).
@@ -15837,6 +15840,7 @@ int main(int argc, char* argv[]) {
         std::filesystem::path root = rs64_pick_data_root(rs_cwd, exe_dir, std::getenv("ROGUESQ_DATA_ROOT"), &why);
         fprintf(stderr, "[s7960-root] data=%s (%s) cwd=%s\n", root.string().c_str(), why, rs_cwd.string().c_str());
         rs_cwd = root;
+        rs64_data_root_str() = root.string();  // s7972: controls.json / audio_device.txt follow the data root
     }
     recomp::register_config_path(rs_cwd);
     {

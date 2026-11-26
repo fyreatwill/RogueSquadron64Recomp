@@ -51,7 +51,7 @@ main = open(os.path.join(root, "src/main/main.cpp")).read()
 w = main.find('rs64_instance_lock(rs_cwd / "saves"'); g = main.find("for (const auto& game : supported_games)")
 blk = main[w:g] if w > 0 else ""
 st = (w > 0 and main.find("recomp::register_config_path(rs_cwd)") < w < g and 'setenv("ROGUESQ_NO_SAVE_WRITE"' in blk
-      and "ROGUESQ_DI_DIALOG" in blk and "rs64_private_tmp_path(path)" in main and 'path + ".tmp"' not in main
+      and "ROGUESQ_DI_DIALOG" in blk and ("rs64_private_tmp_path(path)" in main or "rs64_write_file_atomic(path, text" in main) and 'path + ".tmp"' not in main  # s7972: rs64_bind_save -> shared writer
       and "rs64_private_tmp_path(path)" in open(os.path.join(root, "src/main/rs64_atomic_write.h")).read()
       and open(os.path.join(L, "src/files.cpp")).read().count("rs64_private_temp(") >= 3)
 say("STATIC", f"lock_before_game_start+nosave_flip+private_temps={int(st)}", st)

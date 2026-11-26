@@ -213161,3 +213161,47 @@ Gate tools/s7971_mp_gate.py: STATIC handlers=0 census_control=1, SELFTEST 9, E2E
 hog 5.01 GB, game rss drop 55 MB), CONTROL planted FAIL rejected -> VERDICT CLOSED. Row S7971_MP in s7651 ARGS + EXTRA_GATES. No new
 thread/loop/atomic/env in src/ -> no review rows needed.
 Not covered: warn/critical notifications (root), jetsam, a swap-bound host.
+
+## Session 7972 (2026-11-26) — class NS (data volume full while the game runs) closed: every writer fails cleanly; the full-disk e2e exposed that controls.json and audio_device.txt followed the s7969 relocated exe copy in ~/Library/Caches instead of the game folder (fixed: data root), gate S7972_NS
+Ladder 3c host class NS (NEXT.md s7972). Step 0: CURRENT-TRUTH 59070 bytes (< 60000, no maintenance). crash_reports --since
+2026-11-26: new=0. No new SOAK-RESULTS lines.
+Census (offline, from the s7958 FW list): owner-state writers = EEPROM save (pi.cpp: checked close, temp+fsync+rename, s7357/s7429),
+mods config (mods.cpp, same), controls.json (rs64_bind_save: own temp+rename, checked, but the temp was NOT removed on failure),
+audio_device.txt (rs64_write_file_atomic, s7958), stored ROM copy (recomp.cpp write_file, in place, checked, non-fatal), settings.txt
+(read only, never written), RT64 config (dead, useConfigurationFile=false). Everything else is env-gated diagnostics.
+New tool tools/s7972_ns_e2e.zsh: one 160 MB APFS image per arm (the image counts as an external volume, so the s7969 code re-execs from
+~/Library/Caches/RogueSquadron64Recomp/exe-*), private game copy, owner save COPIED (build/saves untouched), saving ON +
+ROGUESQ_S7969_SAVE_TICK_MS=1500, ROGUESQ_BIND_PANEL_TEST=2 (the F6 panel's Save at poll 1200), audio_device.txt = 'BlackHole 2ch'
+(not the built-in default), a valid seed controls.json. Arms ctl (not full) / run (dd to ENOSPC at 3.2 s, before the Save) / boot (full
+before launch, ROM only as rogue_squadron.z64) / boot2 (relaunch, same image). Phases old (pre-fix exe copy) / mut / new.
+FIRST run (old exe) exposed the path split: "[controls] Saved to /Users/.../Library/Caches/RogueSquadron64Recomp/exe-56578888-.../
+controls.json" in BOTH ctl and run (the full disk never touched it), and "[audio-route] preference from built-in default" although
+the game folder held audio_device.txt. Cause: rs64_bind_path and audio_route_file_path used SDL_GetBasePath = the RUNNING exe's
+folder = the cache copy (s7960 DR moved saves/ROM/mods/settings to the data root but left these two on the exe folder, which was the
+same folder until s7969 added the relocation). Owner impact: a game folder on an external drive ignores its controls.json and
+audio_device.txt, and F6 / F9 saves go into a cache folder keyed by exe size+mtime (lost on the next build). Owner `cd build` launch:
+root = exe folder, unaffected. ORIGIN: ours (s7969 relocation x s7960 partial root move), not a game value.
+Fix: rs64_data_root.h rs64_data_root_str() (set in main right after the [s7960-root] pick) used by both paths before SDL_GetBasePath;
+rs64_exe_dir_or() makes settings_default_dir honour ROGUESQ_S7969_EXE_DIR (its exe-dir fallback was the cache too, when cwd has no
+game data, e.g. Finder launch); rs64_bind_save now calls rs64_write_file_atomic (fsync, temp removed on failure).
+ROGUESQ_S7972_BASEPATH=1 = old rule (mutant).
+Results (one game at a time; every arm alive, 0 crash lines, 0 new crash reports, HUP->exit 528-544 ms, save 512 bytes):
+  phase  ctl: ctl_in_game audio_in_game   run: controls result  ctl/audio in game  controls.json  save sha  temps
+  old    0 0 (Saved to cache)             Saved to (cache)      0 0                kept           kept      0
+  mut    0 0                              Saved to (cache)      0 0                kept           kept      0
+  new    1 1 (game file replaced)         SAVE FAILED           1 1                kept 1ed62ec5  kept      0
+  boot/boot2 (all phases): [s7964-ro] "game folder NOT writable (No space left on device)", instance lock unavailable, mods/
+  mod_config not created (logged), save unchanged, 0 temps, alive, quit clean; new reads audio_device.txt from the game folder.
+Discrimination: H-crash refuted (0 crash in 12 arms), H-silent refuted for the writers (old content kept on ENOSPC, sha equal),
+H-stall refuted (the save failure path is s7969's one-line streak; quit 541 ms), H-moot for the writers; the separate path-split
+defect reproduced by old exe and mutant (0/0) and fixed by new (1/1) in the same session.
+OPEN residue found by the boot arm: fresh install on a full disk -> "[s7357-io] storing the ROM copy failed", "[ROM] Imported
+rogue_squadron.z64", then "[ROM] Place your ... ROM named 'rogue_squadron.z64' next to the executable" with the file present; no
+boot. -> NEXT.md s7973 (NS-2).
+Gate tools/s7972_ns_gate.py (sweep row S7972_NS in ARGS + EXTRA_GATES): STATIC 5 source checks, UNIT (compiled rs64_exe_dir_or
+env/relocated/mutant + atomic writer on a read-only dir keeps the old file), REPRO-old 0/0, REPRO-mut 0/0, E2E new 1/1 SAVE_FAILED,
+CONTROL planted ctl_in_game=0 rejected -> VERDICT CLOSED. Retained manifest refreshed.
+Full sweep after the last game run: 276 gates, 271 GREEN, 3 REPORT (standing), 2 RED, both stale source anchors from this edit:
+s7960_dr CENSUS regex expected `rs_cwd = root; }` and the old audio_route_file_path body (now allows the rs64_data_root_str line and
+requires the data-root-first form); s7966_di STATIC wanted rs64_private_tmp_path(path) in main.cpp (rs64_bind_save now reaches it
+through rs64_write_file_atomic; accepted). Both re-run GREEN, S7972_NS GREEN.

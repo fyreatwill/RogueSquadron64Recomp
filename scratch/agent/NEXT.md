@@ -1,31 +1,24 @@
-# NEXT (s7972)
+# NEXT (s7973)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7971 closed class MP (host memory pressure, real 5 GB hog; game pages compressed 55 MB, presents 59-60/s, 0 underruns): H-moot,
-no code change, gate S7971_MP. Do not redo MP, SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
-Note: CURRENT-TRUTH is 59 KB, near the 60 KB maintenance trigger; if Step 0 prints > 60000, do maintenance instead.
-Trap from s7971: present-ring Q rows are host-uptime stamped, ROGUESQ_AI_TRACE rows launch-relative; align with
-tools/s7971_mp_score.py align() before windowing on a launch offset.
+Note: CURRENT-TRUTH is now > 60 KB, so Step 0 should make s7973 a MAINTENANCE iteration (compact toward ~35 KB, migrate
+items 13a-13s to PROJECT-OVERVIEW, no experiments). If it does, carry this unit to s7974 unchanged.
+s7972 closed class NS (full data volume: writers fail cleanly) and fixed controls.json/audio_device.txt following the s7969
+relocated exe copy (gate S7972_NS). Do not redo NS, MP, SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
 
-## Work unit: ladder 3c host class NS (data volume full while the game runs: the NON-save writers)
-s7357 covered the save path on a full disk (EEPROM main/.bak). Not covered: every other writer that runs during normal play when the
-data root's volume is full: RT64 shader/pipeline cache, settings.txt writes from the F1/F6 panels, controls.json save (F6), log files,
-rs64 crash breadcrumbs, the s7969 relocated exe copy in ~/Library/Caches (only when off-volume). Proxy without filling the owner's
-disk: a small APFS disk image (`hdiutil create -size 200m -fs APFS`, attach, no sudo), private game copy + COPIED save inside it,
-fill it with a filler file to 0 bytes free (`mkfile`/dd until ENOSPC) at a phase-gated point, then exercise the writers.
+## Work unit: NS-2 fresh install on a full volume (ROM store fails -> misleading "Place your ROM", no boot)
+s7972 boot arm (scratch/s7972/new_boot.log): ROM given as rogue_squadron.z64 only, volume full before launch ->
+"[s7357-io] storing the ROM copy failed", "[ROM] Imported rogue_squadron.z64", then "[ROM] Place your Rogue Squadron ... ROM
+named 'rogue_squadron.z64' next to the executable and restart." while that file IS there. Game sits at the prompt.
 Hypotheses:
-- H-crash: a writer treats a failed write/close as impossible (unchecked fwrite/fclose, std::ofstream without checks) -> abort/crash.
-- H-silent: a writer truncates then fails -> an empty/partial controls.json or settings.txt that the next launch reads as defaults
-  (owner loses bindings/settings silently). Outcome: file size 0 / truncated after the run, next launch logs defaults.
-- H-stall: a writer retries in a loop on the game or render thread -> VI holds / present gaps (score like s7971).
-- H-moot: every writer fails cleanly, files keep their previous content, 0 crash, presents 60/s.
-Positive control: same run, the image NOT full (writers succeed, files change) and a planted truncate (old non-atomic write path, if
-one exists, via a mutant env) showing the silent loss is detectable by the scorer.
-
-## Commands (one game at a time)
-0. `python3 tools/crash_reports.py --since 2026-11-26`; fold any new SOAK-RESULTS lines.
-1. Census first (offline): grep every fopen("w"/"wb")/ofstream/std::filesystem write in src/, lib/rt64/src (outside contrib),
-   lib/N64ModernRuntime; classify each as atomic (temp+rename, checked) or truncate-in-place; s7958_fw's census is the starting list.
-2. tools/s7972_ns_e2e.zsh: arms not-full control / full-at-title / full-in-flight; drive the F6 save + a settings write via existing
-   in-flight toggle hooks (tools/s7764_inflight_toggles.zsh) if possible, else the s7765 controls dump path.
-3. Fix only what is ours; gate tools/s7972_ns_gate.py, add S7972_NS to s7651 ARGS + EXTRA_GATES, review rows for any new
-   thread/loop/atomic/env, then the full sweep (--jobs 2) after the last game run.
+- H-store-required: the boot path loads the ROM only from the stored copy (config_path / stored_filename), so a failed store
+  = no ROM, whatever validate said. Outcome: grep recomp.cpp load path; booting works when the store is skipped via a mutant.
+- H-message: the "Place your ROM" text is chosen without knowing the store failed (wrong cause shown to the user).
+Fix candidates: boot from the validated in-memory ROM when the store fails (s7357 comment already claims this) and say once
+"could not store the ROM copy (disk full): running from rogue_squadron.z64"; or a clear disk-full message. Prefer booting.
+Positive control: same image NOT full -> boots (stored copy written); mutant env restoring the old path -> prompt.
+## Commands
+1. Read lib/N64ModernRuntime/librecomp/src/recomp.cpp around validate (line ~436 write_file) and the caller that prints
+   "[ROM] Imported" / "Place your" (src/main). Edits under lib/ -> ./submodule-patches/export.sh + commit.
+2. Extend tools/s7972_ns_e2e.zsh boot arms (or a new s7973 e2e): boot must reach [phase] vi_width>0 / gfx tasks on the full
+   image, and on the not-full control; old exe must show the prompt.
+3. Gate row (extend S7972_NS or a new S7973 row), full sweep --jobs 2 after the last game run.

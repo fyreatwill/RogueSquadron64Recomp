@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7971 (2026-11-26).
+Compact operational handoff, as of Session 7972 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -453,6 +453,14 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    0 AI underruns, quit 532 ms. No memory-pressure handler anywhere (static census + contrib control). Kernel level never left normal
    (warn/jetsam not reached). Trap: present-ring Q rows are UPTIME-stamped, the AI trace launch-relative; tools/s7971_mp_score.py
    aligns them by framebuffer first-appearance (reuse it for any window anchored on a launch offset). Gate S7971_MP.
+13s. **s7972 class NS (data volume full while the game runs) CLOSED + path split FIXED:** tools/s7972_ns_e2e.zsh, 160 MB APFS image
+   (= external volume, so s7969 re-execs from ~/Library/Caches), arms ctl / run (ENOSPC 3 s in, before the F6 Save) / boot / boot2,
+   phases old exe / mut (ROGUESQ_S7972_BASEPATH=1) / new. Full disk: every writer fails cleanly (Save FAILED, old controls.json and
+   save sha kept, 0 temps, 0 crash, quit ~540 ms). FOUND: controls.json + audio_device.txt used SDL_GetBasePath = the CACHED copy's
+   folder, so a game folder on an external drive had both ignored (built-in defaults) and F6/F9 saves went to the cache (old/mut
+   0/0, new 1/1). Now rs64_data_root_str() (main records the data root); settings.txt honours ROGUESQ_S7969_EXE_DIR; rs64_bind_save
+   uses rs64_write_file_atomic. Owner `cd build` launch unaffected (root = exe dir). Gate S7972_NS; sweep 276, 2 stale-anchor REDs (s7960_dr, s7966_di) fixed. OPEN residue (next): fresh
+   install on a full disk imports the ROM, the store fails, then "[ROM] Place your ROM" = misleading, game does not boot.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

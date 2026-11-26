@@ -81,6 +81,7 @@ std::string settings_default_dir(const char** why) {
         if (!ab_ec) exe_dir = ep.lexically_normal().parent_path();
     }
 #endif
+    exe_dir = rs64_exe_dir_or(exe_dir);  // s7972: the relocated copy's folder is a cache, not the game folder
     const std::filesystem::path root = rs64_pick_data_root(cwd, exe_dir, std::getenv("ROGUESQ_DATA_ROOT"), why);
     return root.empty() ? std::string(".") : root.string();
 }
