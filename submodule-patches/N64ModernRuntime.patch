@@ -3635,7 +3635,7 @@ index 944e9fe..415f0fc 100644
      std::unique_ptr<char[]> to_print = std::make_unique<char[]>(size + 1);
  
 diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
-index 4276b7d..575cd1d 100644
+index 4276b7d..9cbe317 100644
 --- a/librecomp/src/recomp.cpp
 +++ b/librecomp/src/recomp.cpp
 @@ -84,8 +84,20 @@ bool recomp::register_game(const recomp::GameEntry& entry) {
@@ -3720,16 +3720,44 @@ index 4276b7d..575cd1d 100644
          return false;
      }
  
-@@ -219,7 +259,7 @@ bool recomp::load_stored_rom(std::u8string& game_id) {
+@@ -195,6 +235,11 @@ bool check_stored_rom(const recomp::GameEntry& game_entry) {
+ }
+ 
+ static std::unordered_set<std::u8string> valid_game_roms;
++// ROGUESQ s7974 class NS-2: a ROM that validated but could not be stored (full volume, read-only data root) used to be
++// dropped, so boot showed "Place your ROM" next to the very file it had just imported. Keep the validated bytes for this
++// session instead. ROGUESQ_S7974_NOMEM=1 restores the old drop (gate mutant).
++static std::unordered_map<std::u8string, std::vector<uint8_t>> unstored_game_roms;
++static bool s7974_mem_enabled() { const char* e = std::getenv("ROGUESQ_S7974_NOMEM"); return !(e && e[0] == '1'); }
+ 
+ bool recomp::is_rom_valid(std::u8string& game_id) {
+     return valid_game_roms.contains(game_id);
+@@ -205,6 +250,9 @@ void recomp::check_all_stored_roms() {
+         if (check_stored_rom(cur_rom_entry.second)) {
+             valid_game_roms.insert(cur_rom_entry.first);
+         }
++        else if (unstored_game_roms.contains(cur_rom_entry.first)) {
++            valid_game_roms.insert(cur_rom_entry.first);  // s7974: validated this session, held in memory
++        }
+     }
+ }
+ 
+@@ -219,7 +267,13 @@ bool recomp::load_stored_rom(std::u8string& game_id) {
  
      if (!check_hash(stored_rom_data, find_it->second.rom_hash)) {
          // The ROM no longer has the right hash, delete it.
 -        std::filesystem::remove(config_path / find_it->second.stored_filename());
 +        remove_stored_rom(config_path / find_it->second.stored_filename());
++        auto mem_it = unstored_game_roms.find(game_id);
++        if (mem_it != unstored_game_roms.end()) {
++            fprintf(stderr, "[s7974-ns2] loading the ROM from memory (%zu bytes; no stored copy)\n", mem_it->second.size());
++            recomp::set_rom_contents(std::vector<uint8_t>(mem_it->second));  // copy: a later reload still has it
++            return true;
++        }
          return false;
      }
  
-@@ -393,12 +433,15 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
+@@ -393,12 +447,26 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
          }
      }
  
@@ -3737,6 +3765,17 @@ index 4276b7d..575cd1d 100644
 +    if (!write_file(config_path / game_entry.stored_filename(), rom_data)) {
 +        // ROGUESQ s7357: non-fatal (the ROM is valid in memory; check_stored_rom rejects a bad copy by hash next boot).
 +        fprintf(stderr, "[s7357-io] storing the ROM copy failed; it will be re-validated next boot\n");
++        std::error_code rm_ec;
++        std::filesystem::remove(config_path / game_entry.stored_filename(), rm_ec);  // s7974: no partial copy left behind
++        if (s7974_mem_enabled()) {
++            fprintf(stderr, "[s7974-ns2] could not store the ROM copy in %s (disk full or not writable): running from %s "
++                            "this session; free some space so it can be stored for next time\n",
++                    config_path.string().c_str(), rom_path.filename().string().c_str());
++            unstored_game_roms[game_id] = std::move(rom_data);
++        }
++        else {
++            fprintf(stderr, "[s7974-ns2] mutant ROGUESQ_S7974_NOMEM=1: validated ROM dropped (old behaviour)\n");
++        }
 +    }
      
      return recomp::RomValidationError::Good;
@@ -3747,7 +3786,7 @@ index 4276b7d..575cd1d 100644
      ctx->r2 = 8 * 1024 * 1024;
  }
  
-@@ -452,7 +495,10 @@ extern "C" void switch_error(const char* func, uint32_t vram, uint32_t jtbl) {
+@@ -452,7 +520,10 @@ extern "C" void switch_error(const char* func, uint32_t vram, uint32_t jtbl) {
  }
  
  extern "C" void do_break(uint32_t vram) {
@@ -3759,7 +3798,7 @@ index 4276b7d..575cd1d 100644
      assert(false);
      exit(EXIT_FAILURE);
  }
-@@ -470,6 +516,20 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
+@@ -470,6 +541,20 @@ void run_thread_function(uint8_t* rdram, uint64_t addr, uint64_t sp, uint64_t ar
      ctx.mips3_float_mode = 0;
      ctx.f_odd = &ctx.f0.u32h;
  
@@ -3780,7 +3819,7 @@ index 4276b7d..575cd1d 100644
      if (game_entry.thread_create_callback != nullptr) {
          game_entry.thread_create_callback(rdram, &ctx);
      }
-@@ -543,7 +603,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
+@@ -543,7 +628,18 @@ void init(uint8_t* rdram, recomp_context* ctx, gpr entrypoint) {
      MEM_W(osTvType, 0) = 1; // NTSC
      MEM_W(osRomBase, 0) = 0xB0000000u; // standard rom base
      MEM_W(osResetType, 0) = 0; // cold reset
@@ -3800,7 +3839,7 @@ index 4276b7d..575cd1d 100644
  }
  
  std::u8string recomp::current_game_id() {
-@@ -726,6 +797,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
+@@ -726,6 +822,17 @@ bool wait_for_game_started(uint8_t* rdram, recomp_context* context) {
                  save_type = game_entry.save_type;
                  ultramodern::init_saving(rdram);
  
@@ -3818,7 +3857,7 @@ index 4276b7d..575cd1d 100644
                  try {
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
-@@ -839,6 +921,7 @@ void recomp::start(const recomp::Configuration& cfg) {
+@@ -839,6 +946,7 @@ void recomp::start(const recomp::Configuration& cfg) {
  
      std::thread game_thread{[](ultramodern::renderer::WindowHandle window_handle, uint8_t* rdram) {
          debug_printf("[Recomp] Starting\n");

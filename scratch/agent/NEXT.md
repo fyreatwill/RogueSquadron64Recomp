@@ -1,23 +1,22 @@
-# NEXT (s7974)
+# NEXT (s7975)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7973 was the maintenance iteration (CURRENT-TRUTH 26 KB, backlog item 14 = this unit). Run this unit now.
-s7972 closed class NS (full data volume: writers fail cleanly) and fixed controls.json/audio_device.txt following the s7969
-relocated exe copy (gate S7972_NS). Do not redo NS, MP, SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
+s7974 closed NS-2 (validated ROM kept in memory when the store fails; boots on a full volume; gate S7974_NS2).
+Do not redo NS, NS-2, MP, SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
 
-## Work unit: NS-2 fresh install on a full volume (ROM store fails -> misleading "Place your ROM", no boot)
-s7972 boot arm (scratch/s7972/new_boot.log): ROM given as rogue_squadron.z64 only, volume full before launch ->
-"[s7357-io] storing the ROM copy failed", "[ROM] Imported rogue_squadron.z64", then "[ROM] Place your Rogue Squadron ... ROM
-named 'rogue_squadron.z64' next to the executable and restart." while that file IS there. Game sits at the prompt.
-Hypotheses:
-- H-store-required: the boot path loads the ROM only from the stored copy (config_path / stored_filename), so a failed store
-  = no ROM, whatever validate said. Outcome: grep recomp.cpp load path; booting works when the store is skipped via a mutant.
-- H-message: the "Place your ROM" text is chosen without knowing the store failed (wrong cause shown to the user).
-Fix candidates: boot from the validated in-memory ROM when the store fails (s7357 comment already claims this) and say once
-"could not store the ROM copy (disk full): running from rogue_squadron.z64"; or a clear disk-full message. Prefer booting.
-Positive control: same image NOT full -> boots (stored copy written); mutant env restoring the old path -> prompt.
+## Work unit: class RN — the ROM a real owner actually has (names, dumps, formats)
+main.cpp ~15899 tries only 4 candidate names (rogue_squadron.z64, "rogue squadron.z64", RogueSquadron.z64, rs64.z64) and
+DISCARDS every select_rom result except Good, then prints the same "Place your ... ROM named 'rogue_squadron.z64'" text.
+Owners usually have a No-Intro name ("Star Wars - Rogue Squadron (USA).z64"), a .v64/.n64 byteswapped dump, a (Rev 1) / PAL
+dump (IncorrectVersion / IncorrectRom), or a .zip.
+Hypotheses (one e2e, arms = fixtures in a private game folder, no full image needed):
+- H-silent: wrong version/region/format gets the generic "Place your ROM" text with no cause (validation error swallowed).
+- H-byteswap-ok: .v64/.n64 content under a candidate name already boots (select_rom byteswaps) -> moot for that arm.
+- H-name: a correct ROM under the No-Intro name is never tried -> prompt with the right file present.
+Arms: ctl (rogue_squadron.z64, boots), noIntro (No-Intro .z64 name only), v64 (byteswapped bytes as rogue_squadron.v64 and as
+rogue_squadron.z64), wrongver (header-patched copy: internal name kept, 1 byte changed -> IncorrectVersion), notrom (zeros),
+zip (zipped ROM). Score: boot marker [si-thr]/[dpc-fwd] (s7974 e2e), prompt text, and whether the stated cause matches.
+Fix candidates: scan the folder for *.z64/*.v64/*.n64 (bounded, size 8-64 MB) after the fixed names; print the select_rom
+error per candidate ("wrong version: this port needs USA v1.0"); keep the old text as the last resort. Mutant env for old path.
 ## Commands
-1. Read lib/N64ModernRuntime/librecomp/src/recomp.cpp around validate (line ~436 write_file) and the caller that prints
-   "[ROM] Imported" / "Place your" (src/main). Edits under lib/ -> ./submodule-patches/export.sh + commit.
-2. Extend tools/s7972_ns_e2e.zsh boot arms (or a new s7973 e2e): boot must reach [phase] vi_width>0 / gfx tasks on the full
-   image, and on the not-full control; old exe must show the prompt.
-3. Gate row (extend S7972_NS or a new S7973 row), full sweep --jobs 2 after the last game run.
+1. Copy tools/s7974_ns2_e2e.zsh as tools/s7975_rn_e2e.zsh (plain temp dir instead of hdiutil images); pre-fix exe for old arm.
+2. Gate tools/s7975_rn_gate.py + sweep row S7975_RN; full sweep --jobs 2 after the last game run.

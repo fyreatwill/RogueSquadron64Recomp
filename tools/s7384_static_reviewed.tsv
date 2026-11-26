@@ -117,3 +117,4 @@ src/rsp/s7644_rspdma.cpp|g_srcc	LOCKED g_gmu s7720: written via src_idx (from gf
 src/rsp/s7644_rspdma.cpp|g_stale_n	LOCKED g_gmu s7720: written via src_idx (from gfx_pi_post under g_gmu) / stale_tally (task-end edge under g_gmu); ROGUESQ_S7644_RSPDMA diag
 src/main/rs64_atomic_write.h|f	CONFINED LOCAL: automatic local of inline rs64_write_file_atomic (s7958), not static state; each caller has its own frame
 src/main/rs64_atomic_write.h|ok	CONFINED LOCAL: automatic local of inline rs64_write_file_atomic (s7958), not static state
+lib/N64ModernRuntime/librecomp/src/recomp.cpp|unstored_game_roms	INITORDER s7974 select_rom/check_all_stored_roms from main() and recomp::start before the game thread exists; GUEST load_stored_rom (wait_for_game_started) only reads it

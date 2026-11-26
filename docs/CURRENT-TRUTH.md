@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7973 (2026-11-26).
+Compact operational handoff, as of Session 7974 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -202,9 +202,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    folder S7964_RO | s7965 flaky cached RED, harness hardened | DI two instances one root S7966_DI | CS iCloud/synced folder S7967_CS |
    XF exFAT/FAT32 S7968_XF | UE volume vanishes S7969_UE | SW SIGSTOP/resume S7970_SW | MP memory pressure S7971_MP (moot) | NS full
    data volume S7972_NS (writers fail cleanly; controls.json/audio_device.txt now follow rs64_data_root_str()).
-14. **ACTIVE (scratch/agent/NEXT.md): NS-2 fresh install on a full volume.** ROM imported, store fails, then "[ROM] Place your ROM"
-   while the file is there; game does not boot (s7972 scratch/s7972/new_boot.log). Fix: boot from the validated in-memory ROM when
-   the store fails, with one clear disk-full message.
+14. **NS-2 fresh install on a full volume: CLOSED s7974** (gate S7974_NS2). Cause (code + e2e): librecomp's "ROM valid" and
+   "load ROM" were both "stored copy hashes OK", so a failed store dropped the validated ROM -> "Place your ROM" beside the file.
+   Fix in lib/N64ModernRuntime recomp.cpp: validated bytes kept in memory for the session (unstored_game_roms), partial copy
+   removed, one "[s7974-ns2] could not store the ROM copy" line; ROGUESQ_S7974_NOMEM=1 = old drop (mutant). tools/s7974_ns2_e2e.zsh:
+   ctl stores + boots, full boots from memory (boot lines 502 vs ctl 499), mut and pre-fix exe show the prompt with 0 boot lines.
+14b. **ACTIVE (scratch/agent/NEXT.md): class RN, the ROM a real owner has.** Only 4 fixed candidate names; every select_rom
+   error except Good is swallowed into the same "Place your ROM" text (No-Intro names, .v64/.n64, Rev 1/PAL, zip untested).
 15. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
@@ -214,7 +218,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    VI_STAMP=1 determinism opt-in (s7837, soak PASS s7838); lvl4 rest-pitch fork = timeSnapshotFiller el=0 on a fast host
    (s7838-s7839 -> ROGUESQ_RETAIL_SNAP=1, s7840 two lines lvl2/3/4); s7841 oracle FIX: arm64 mupen never emulated FCR31.FS
    (tools/oracle/patches/arm64-fcr31-fs-ftz.patch, RS64_ORACLE_FTZ=0 = old): retail captures before s7841 carry denormals,
-   so any port-vs-oracle diff in a decaying float is suspect there. Active work = item 14.
+   so any port-vs-oracle diff in a decaying float is suspect there. Active work = item 14b.
 
 ## Evidence index
 

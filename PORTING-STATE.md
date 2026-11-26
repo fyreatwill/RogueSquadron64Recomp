@@ -213216,3 +213216,27 @@ Backlog renumbered into one monotonic sequence 0a,0,1-16: 13a-13s folded into 13
 is item 14 (ACTIVE), old 13/14 -> 15/16. Headline "as of Session 7973". Doc-scoped gates after the edit: s7804 zst lint rc 0,
 s7805 cited-cmd rc 0, s7557 GQ census --strict rc 0 (they read CURRENT-TRUTH + PROJECT-OVERVIEW, so moved citations stay seen).
 Rules out nothing; NS-2 work unit carried unchanged to s7974.
+
+## Session 7974 (2026-11-26) — class NS-2 closed: fresh install on a full volume now boots from the validated in-memory ROM instead of "Place your ROM" beside the file (librecomp recomp.cpp), gate S7974_NS2
+Work unit from NEXT.md (s7972 boot-arm residue). Code read first (boring thing): recomp::is_rom_valid = valid_game_roms, filled
+only by check_all_stored_roms = "stored copy hashes OK"; load_stored_rom reads only the stored copy; select_rom's failed
+write_file just logged [s7357-io] and dropped rom_data. -> H-store-required selected by code, H-message is its consequence
+(main never knew the store failed; its prompt names the file it had just imported).
+ORIGIN: the drop is ours/upstream librecomp (select_rom discards the validated vector on a failed store); no game-side value.
+Fix (lib/N64ModernRuntime/librecomp/src/recomp.cpp, submodule-patches/N64ModernRuntime.patch refreshed): on a failed store,
+remove any partial stored copy, keep the validated bytes in unstored_game_roms[game_id] and print one line "[s7974-ns2] could
+not store the ROM copy in <dir> (disk full or not writable): running from <file> this session; free some space ...";
+check_all_stored_roms counts a held ROM valid; load_stored_rom falls back to it (copy, so a reload still has it) with
+"[s7974-ns2] loading the ROM from memory". Mutant ROGUESQ_S7974_NOMEM=1 = old drop.
+e2e tools/s7974_ns2_e2e.zsh (one 160 MB APFS image per arm, candidate name rogue_squadron.z64 only, owner save copied,
+NO_SAVE_WRITE, 25 s, SIGKILL): ctl (not full) boot_lines=499 stored 16777216 B, no prompt | full (3736 KB free) store_failed=1,
+ns2_store=1, ns2_memload=1, boot_lines=502, no prompt, no partial copy | mut boot_lines=0, prompt=1 | old (pre-fix exe
+/tmp/rs64_pre_s7974) boot_lines=0, prompt=1. 0 crash lines, 0 new crash reports. Two lines: mutant and old exe both reproduce
+the s7972 prompt; ctl and full boot to the same depth (499 vs 502 [si-thr]/[dpc-fwd] lines) in the same session.
+Gate tools/s7974_ns2_gate.py (sweep ARGS + EXTRA_GATES row S7974_NS2): STATIC 6 code points, E2E all four arms, CONTROL planted
+summary with full boot_lines=0 rejected -> VERDICT CLOSED.
+Full sweep after the last game run (first attempt was killed at the 10 min tool limit, rerun): 277 gates, 272 GREEN, 3 REPORT,
+2 RED = the new static unstored_game_roms unreviewed in s7375_nolock_threads and s7384_static_state_census. Verdict INIT-ONLY /
+INITORDER (written on main by select_rom and check_all_stored_roms, also from recomp::start before game_thread exists; guest
+load_stored_rom only reads it), same shape as pi.cpp rom and config_path. Both re-run GREEN (--only, 4/4 GREEN).
+Rules out: nothing else left in NS. Next: class RN (main.cpp swallows every select_rom error except Good; only 4 fixed names).
