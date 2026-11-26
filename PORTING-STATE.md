@@ -212841,3 +212841,32 @@ HYPOTHESIS-ID: post-preset-class-ladder
 - Full sweep (1 run, --jobs 2): 267 gates, 262 GREEN, 3 REPORT, 2 RED, both mine (stale anchors on the edited stall
   self-sample lambda text): s7382 thread QoS reviewed.tsv key and s7597 XC census key re-pointed to `std::thread([c = cmd]`.
   `--only 's7382|s7597|s7962'` 3/3 GREEN.
+
+## Session 7963 (2026-11-25) — class AN (App Nap / hidden window / SIGSTOP) closed H-moot: hidden 60 s shows 0/1916 presents on screen yet the game keeps nominal cadence; SIGSTOP 5 s + CONT gives no catch-up burst; SDL screensaver assertion + unbundled exe; gate S7963_AN
+
+Ladder 3c host class AN (NEXT.md s7963). Start: crash_reports new=0, no new SOAK-RESULTS lines, screen unlocked, HID idle 10 h
+(quiet host). Grep: no beginActivity / IOPMAssertion call in src/, librecomp, ultramodern (only metal-cpp headers declare it).
+
+Hypotheses: H-nap (a hidden/occluded window is napped -> VI/present cadence throttles, then catches up in a burst = the G5c
+"buffering" signature) vs H-moot (the process is never napped; steady-clock pacing resumes cleanly after a stop).
+
+Run (one game, tools/s7963_an_e2e.zsh an1, private game dir with the owner save copied, NO_SAVE_WRITE=1, ROGUESQ_PRESENT_RING on,
+stderr timestamped with CLOCK_UPTIME_RAW = the ring's mach clock): t=30 frontmost; +30 s foreground; hide (System Events visible=false)
+60 s; show + frontmost 30 s; SIGSTOP 5 s; SIGCONT 20 s; SIGKILL.
+- Positive control (CoreAnimation presentedTime, not our runtime): foreground 1274/1274 presents on screen; hidden 0/1916 on screen;
+  shown 849/849; after CONT 1036/1036. So the hide really took effect.
+- Cadence: per-5 s queued presents follow the scene (attract alternates cinematic 30 queued / 30 new per s and static 60 / 0), and the
+  hidden phase reads the same: min 29.2, max 60.0 per 5 s (foreground 30.0 / 60.0). No throttling.
+- SIGSTOP: 0.2 queued/s while stopped; after CONT the 1-s buckets are 30/29, 30/29, 27/26, then the scene's static 60/0; max 60 queued,
+  30 new. No catch-up burst (H-nap-like pacing would exceed nominal).
+- Mechanism (second line): `pmset -g assertions` shows the pid holding PreventUserIdleDisplaySleep "RogueSquadron64Recomp using
+  SDL_DisableScreenSaver" (SDL's default), and lsappinfo reports bundleID NULL (unbundled exe, type Foreground). App Nap targets
+  bundled apps and is held off by such assertions. CPU 37.7% hidden vs 33.5% foreground (not napped).
+Verdict: selects H-moot, refutes H-nap. Class closed with no code change. Not covered: real system sleep (lid close; cannot be forced on
+the owner's machine) and a .app-bundled build (App Nap would then apply: re-run the e2e if the port is ever bundled).
+
+Engineering: tools/s7963_an_e2e.zsh (the run), tools/s7963_an_gate.py: STATIC no SDL_EnableScreenSaver / SDL_HINT_VIDEO_ALLOW_SCREENSAVER /
+MACOSX_BUNDLE in host code or CMakeLists (bad_sites=0 PASS), MUTANT planted SDL_EnableScreenSaver caught, CONTROL / HIDDEN / RESUME over
+the retained capture scratch/s7963/an1 (_events.txt, _pring.txt.zst) -> VERDICT CLOSED. Sweep row S7963_AN (ARGS + EXTRA_GATES);
+`--only 's796[23]' --no-cache` 2/2 GREEN, sweep self-controls PASS. No src/ edit, so the full sweep was not required.
+Next: class RO (read-only / unwritable game folder), NEXT.md.

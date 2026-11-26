@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7957 (2026-11-25).
+Compact operational handoff, as of Session 7963 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -381,6 +381,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    "nm -n '%s'" — the apostrophe ended the quote), so crash reports would have lost every function name. Fixed with
    src/main/rs64_shell_quote.h (also the stall `sample -file` command): new 29057 = control. `zsh tools/s7962_ps_e2e.zsh new` 5 arms.
    Census: every path-carrying char[] in host code is >=512 and env-gated diagnostic. Gate tools/s7962_ps_gate.py (S7962_PS).
+13j. **s7963 class AN (App Nap / hidden window / SIGSTOP) CLOSED, H-moot, no code change:** one run (tools/s7963_an_e2e.zsh, title/attract,
+   owner save copied): hidden 60 s (System Events visible=false) the compositor showed 0/1916 presents (positive control: the hide took
+   effect) while the game queued presents at the scene's nominal rate (29-60/s per 5 s, = foreground); SIGSTOP 5 s + CONT: no 1-s bucket
+   above nominal (max 60 queued / 30 new), so no catch-up burst. Why (second line): SDL_DisableScreenSaver holds a
+   PreventUserIdleDisplaySleep IOPMAssertion for the pid and the exe is unbundled (lsappinfo bundleID NULL), so App Nap does not apply.
+   Gate tools/s7963_an_gate.py (S7963_AN): no SDL_EnableScreenSaver / ALLOW_SCREENSAVER hint / MACOSX_BUNDLE, mutant caught, capture
+   verdict over scratch/s7963/an1. If the port is ever shipped as a .app bundle, re-run the e2e (App Nap would then apply).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
