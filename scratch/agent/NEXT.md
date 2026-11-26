@@ -7,6 +7,10 @@ the drain-stall watchdog fired instead (a 180 ms reopen as "drain-stall"), which
 heartbeat thread sees a > 1 s whole-process freeze; the next audio post resets the drain-stall clock and reopens the device once
 with why=resume. ROGUESQ_S7970_SW=0 = old. Gate S7970_SW. Do not redo SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
 Not covered by SW: a REAL system sleep (the audio device and display stop too; the SIGSTOP proxy cannot show that).
+s7970 commit landed in a resumed iteration (2e0833ba8): mutant 4/4 reproduced, sweep 274 had 2 own REDs, both fixed (s7615 thread
+ordinals: a new capture-less std::thread in main.cpp shifts every `[]` row -> renumber; s7804: gates globbing *.log need rs64_zopen
+or a `# zst-ok:` waiver). Run the FULL sweep once at the start of s7971 (it was not re-run after those two edits) and fix any RED
+before the MP work. If s7971 adds a thread to main.cpp, re-check s7615 ordinals.
 
 ## Work unit: ladder 3c host class MP (system memory pressure while the game runs)
 Proxy without harming the owner's Mac: `memory_pressure -S -l warn` then `-l critical` (simulated pressure notification, no real
