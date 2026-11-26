@@ -1,18 +1,23 @@
-# NEXT (s7967)
+# NEXT (s7968)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7966 closed class DI (two instances: per-pid save/atomic temps + flock single-instance guard, second copy runs no-save; gate S7966_DI,
-e2e tools/s7966_di_e2e.zsh). Do not redo DI, RO (s7964), AN (s7963), PS (s7962), SD (s7961), DR (s7960), RD (s7959), FW (s7958),
-CK (s7954), LC (s7953), TF (s7955), EV.
-An src/ edit needs the FULL sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, ~28 min: run it in the background).
-0. `python3 tools/crash_reports.py --since 2026-11-26`; fold new SOAK-RESULTS lines.
-1. Ladder 3c, new host class CS (game folder inside a cloud-synced folder: iCloud Desktop & Documents, Dropbox, OneDrive).
-   librecomp's own save-failure dialog already blames "Dropbox or similar", and the owner's tree lives under ~/Documents.
-   Hypotheses: H-evict (iCloud "Optimize Mac Storage" evicts the ROM/save to a dataless placeholder; first open blocks on a download
-   or fails EDEADLK/ETIMEDOUT offline -> boot hang or zero-filled save), H-conflict (the sync client sees the rename-over and writes
-   "rs64.n64.us.1.0 2.bin" conflict copies, or reverts the save from another Mac), H-temp-upload (our per-pid .temp.<pid> /
-   .bak.temp.<pid> / .rs64_instance.lock get uploaded and litter other machines), H-moot (nothing breaks).
-   Discriminator, offline first: is ~/Documents iCloud-managed on this Mac (`brctl status`, `ls -lO@` for com.apple.fileprovider /
-   SF_DATALESS flags on build/)? Then a harness that opens a dataless file (create one with `brctl evict <file>` on a COPY under an
-   iCloud folder, never the owner's save) through open_input_file_with_backup and reports bytes/errno/latency; control = the same copy
-   materialised. If no sync client is active here, the class is H-moot for this host: record that with the measurement and write the
-   one-line owner note (README) about keeping the game folder out of synced folders if evicted reads are shown to fail.
+s7967 closed class CS: an iCloud placeholder save that cannot be read now means "no save this session", not "empty save". Online
+eviction costs only ~1 s. Gate S7967_CS, e2e tools/s7967_cs_e2e.zsh (it uploads a COPY of the save to a probe folder in the owner's
+iCloud and deletes it after). Do not redo CS, DI (s7966), RO (s7964), AN (s7963), PS (s7962), SD (s7961), DR (s7960), RD (s7959),
+FW (s7958), CK (s7954), LC (s7953), TF (s7955), EV.
+An src/ or lib/ edit needs the FULL sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, ~28 min: run it in the background).
+0. `python3 tools/crash_reports.py --since 2026-11-26`. Fold any new SOAK-RESULTS lines.
+1. Ladder 3c, new host class XF: the game folder is on a non-APFS volume, such as an exFAT/FAT32 USB stick or an SMB share. Owners
+   often copy games to a stick.
+   Hypotheses:
+   - H-rename: rename-over-existing is not atomic, or fails on FAT/exFAT. Then finalize_output_file_with_backup fails, or leaves
+     neither the file nor the .bak.
+   - H-flock: flock returns ENOTSUP on msdos/exfat/smbfs. Then the s7966 lock reads "unavailable", which is fine, or "busy", which
+     would make every launch run no-save.
+   - H-fsync: F_FULLFSYNC is not supported, and the s7429 finalize path errors.
+   - H-xattr: AppleDouble `._` files appear next to saves/ and controls.json, and a loader trips on them.
+   - H-moot.
+   Discriminator, all offline and no game needed first: `hdiutil create -size 64m -fs ExFAT` and `-fs MS-DOS` (FAT32) images, mount
+   them, then run tools/s7967_cs/harness.cpp write/read cycles (pi.cpp save sequence) and tools/s7966_di/hdr_test.cpp (lock +
+   atomic writer) on each. The APFS image is the control. Then one e2e boot per FS from a private game copy on the image, checking
+   the [s7964-ro] / [s7966-di] lines and that a save written with saving on survives a SIGKILL + relaunch. Fix what breaks, and add a
+   gate.

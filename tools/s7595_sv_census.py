@@ -43,6 +43,7 @@ ROWS = {
     ("pi.cpp", "read_save_file", "open_input_file_with_backup"): "ok: good() tested; else zero buffer",
     ("pi.cpp", "read_save_file", ".read"): "ok: gcount checked (s7357/s7429)",
     ("pi.cpp", "read_save_file", "open_input_backup_file"): "ok: good()+gcount checked",
+    ("pi.cpp", "read_save_file", "message_box"): "ok s7967 (class CS): stderr only, non-blocking; unreadable cloud placeholder -> no-save notice",
 }
 FUNCS = {"files.cpp": None, "pi.cpp": ["update_save_file", "read_save_file", "flush_save_file"], "recomp.cpp": ["initialize_mods"]}
 RECOMP = os.path.join(LR, "src/recomp.cpp")

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7966 (2026-11-25).
+Compact operational handoff, as of Session 7967 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -416,6 +416,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    see the dialog, so concurrent arms from build/ still work. e2e tools/s7966_di_e2e.zsh 5/5 PASS (nosave, save, dialog, NO_LOCK mutant,
    relock after SIGKILL). Gate tools/s7966_di_gate.py (S7966_DI): FIX, SHARED_TEMP mutant caught, OLD_FINALIZE control, ATOMIC + mutant,
    LOCK + NO_LOCK mutant, STATIC, E2E. Mutant envs ROGUESQ_S7966_SHARED_TEMP=1 / ROGUESQ_S7966_NO_LOCK=1. Sweep 270: 267 GREEN + 3 REPORT, 0 RED.
+13n. **s7967 class CS (game folder in iCloud Drive / a synced folder) CLOSED + FIXED:** on this Mac iCloud Drive is active but
+   ~/Documents is not synced (no dataless flags on build/), so the owner's current tree is not exposed. tools/s7967_cs/harness.cpp on
+   real `brctl evict`ed files: an evicted save or 16 MB file reads in full in ~1 s online. The fallback to the .bak works, 20 saves
+   over an evicted save give 0 fails, and no temps are left. The hazard is offline: an unreadable placeholder was zero-filled, and the
+   game then rewrote the cloud save within 25 s (e2e mutant arm, ROGUESQ_S7967_CS=0). Fix: pi.cpp read_save_file probes main + .bak
+   with recomp::is_cloud_placeholder (files.cpp, SF_DATALESS). A short read of a placeholder logs `[s7967-cs] ... will NOT save` and
+   sets ROGUESQ_NO_SAVE_WRITE=1. That is stderr only, NOT a dialog: the message_box callback here only prints. The offline case is
+   SIMULATED (ROGUESQ_S7967_SIM_OFFLINE=1), not measured with the network off. e2e tools/s7967_cs_e2e.zsh 5/5 PASS. Gate S7967_CS.
+   README has a paragraph under Running. Sweep 271: 0 RED after two own fixes (s7595 row, harness `opened=` field).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

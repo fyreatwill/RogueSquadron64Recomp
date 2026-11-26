@@ -70,6 +70,8 @@ cd rs64/RogueSquadron64Recomp/build
 
 The game uses the folder you run it from as its data folder: the ROM (`rogue_squadron.z64`) goes there, saves go in `saves/`, and settings like the audio device are stored there. The build script already copies your ROM into `build/`.
 
+If that folder is inside iCloud Drive (or Dropbox/OneDrive), macOS can swap the save for a download placeholder to free space. With internet the game downloads it on start (about a second). If it can't be downloaded, the game starts with an empty save and won't save that session, so your real save is kept. A folder outside the synced folders avoids this.
+
 Default settings are faithful to the original: 4:3, 30 fps, original draw distance. Close the window to quit.
 
 ### Controls

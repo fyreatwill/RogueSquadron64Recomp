@@ -212962,3 +212962,42 @@ Rules out: H-moot. Not covered: two instances on DIFFERENT data roots (separate 
 folder where flock may be advisory-only (next class CS).
 Full sweep (uncached, --jobs 2, 1708 s): 270 gates {GREEN 267, REPORT 3}, 0 RED, 0 HOLLOW (S7966_DI GREEN). Next: NEXT.md class CS
 (cloud-synced game folder).
+
+## Session 7967 (2026-11-26) — class CS (game folder in a cloud-synced folder) closed: online evicted saves read fine (~1 s), but an unreadable placeholder zero-filled the save and the game rewrote the cloud copy within 25 s; placeholder probe + no-save guard, e2e 5 arms, gate S7967_CS
+Ladder 3c host class CS (NEXT.md s7967). Boring check first: on this Mac iCloud Drive is active (CloudDocs container foreground, and
+11 of 13 top-level CloudDocs files are `compressed,dataless`). Desktop & Documents sync is NOT in effect: no CloudDocs/Documents, and
+~/Documents and build/saves carry no dataless or file-provider flags. So the owner's current tree is not exposed. The class can still
+be reached by putting the game folder in iCloud Drive (or Dropbox/OneDrive, which use the same File Provider placeholders).
+Measurement (new tools/s7967_cs/harness.cpp, the read_save_file path open_input_file_with_backup + read + gcount, with st_flags
+SF_DATALESS before/after): test files in a dedicated CloudDocs/rs64_s7967_cs_probe folder, uploaded, `brctl evict`ed after 10 s.
+Evicted 512 B save: open=1 errno=0 got=512 payload ok, 1101 ms. Evicted 16 MB (ROM-sized): ok, 1052 ms. Materialised control: 0.0 /
+4.6 ms. Local /tmp control: 0.0 ms. Main moved away, .bak evicted: the fallback reads the .bak ok, 952 ms. 20 save cycles over an evicted
+save: 0 fails, final local, no .temp.<pid> left. So H-evict online = only a ~1 s stall on first read. H-temp-upload: no temps outlive a
+save. H-conflict needs a second Mac and is not tested.
+Hazard (offline, placeholder cannot be downloaded): read_save_file zero-fills (s7357/s7429 short-read path), the game formats the
+blank EEPROM, and the next write publishes it over the real cloud save. The real offline errno/latency is NOT measured (the network
+would have to go off). It is simulated: ROGUESQ_S7967_SIM_OFFLINE=1 treats placeholders (main and .bak) as unreadable.
+Change (lib/N64ModernRuntime, patches exported): files.cpp/.hpp recomp::is_cloud_placeholder (stat SF_DATALESS). pi.cpp read_save_file
+probes main + .bak before the read. A full read logs `[s7967-cs] save was a cloud placeholder: downloaded N bytes in M ms`. A short read
+of a placeholder logs `... could not be read (got of 512 bytes); this session will NOT save (saving_was=)` and sets
+ROGUESQ_NO_SAVE_WRITE=1, which update_save_file and the quit flush already check per call. When saving was on it also prints a
+message_box line. That is stderr only in this port, NOT a dialog. ROGUESQ_S7967_CS=0 turns the guard off.
+ORIGIN: the writer of the blank-derived save is the game's own EEPROM format/save after read_save_file handed it a zero-filled buffer.
+Legitimate game behaviour on a blank save. The defect is ours: the runtime presented "could not read" as "empty".
+e2e tools/s7967_cs_e2e.zsh: a private game copy whose saves/ symlinks into the iCloud probe folder, owner save COPIED there (build/saves
+untouched, probe folder deleted after), both files evicted per arm, 25 s, SIGKILL. online PASS (downloaded 512 B in 1031 ms, save same).
+offline PASS (0 of 512, will NOT save saving_was=1, cloud save byte-identical). mutant PASS (guard OFF: save=REWRITTEN, the positive
+control showing the hazard is real). nosave PASS (saving_was=0). local PASS (no [s7967-cs] line). All alive, 0 crash lines, 0 temps
+left. The s7966 instance lock was `held` in all 5 arms with the lock file inside iCloud. flock contention there was not tested.
+Gate tools/s7967_cs_gate.py (sweep row S7967_CS, ARGS + EXTRA_GATES): HARNESS, STATIC (probe<open<else<sim<no-save flip, guard-off
+switch, SF_DATALESS), STATIC_MUTANT (setenv removed -> caught), E2E 5/5 + hazard_shown -> VERDICT CLOSED. README: one paragraph
+under Running.
+Single-source: the offline branch is shown with the simulation only. The guard triggers on any short read of a placeholder, so it
+covers whatever errno the real offline read returns, unless the File Provider blocks forever instead of failing. That would be a boot
+hang, still unmeasured.
+Rules out: H-moot for the offline case. H-evict online is harmless (1 s).
+Full sweep, uncached, --jobs 2, 1709 s: 271 gates, 266 GREEN + 3 REPORT + 1 RED + 1 HOLLOW. Both non-green results were caused by this
+session and are now fixed:
+- RED s7595_sv_census: the new read_save_file message_box site was unclassified. Now classified as "stderr only, non-blocking".
+- HOLLOW s7967_cs_gate: the scorer read the harness field `open=1` as one OPEN item. Renamed to `opened=`.
+Re-run `--only 's7967_cs|s7595_sv|s7357|s7429|s7966'`: 4/4 GREEN.
