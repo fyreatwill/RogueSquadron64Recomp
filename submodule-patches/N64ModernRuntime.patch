@@ -2839,17 +2839,22 @@ index 0be1513..47922ad 100644
 +    RS64_PAK("osPfsRepairId", ctx->r4, -1);
  }
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
-index 43509ba..f0f746e 100644
+index 43509ba..1acfb69 100644
 --- a/librecomp/src/pi.cpp
 +++ b/librecomp/src/pi.cpp
-@@ -1,3 +1,6 @@
+@@ -1,16 +1,36 @@
 +#include <atomic>
 +#include <chrono>
 +#include <execinfo.h>
  #include <memory>
  #include <fstream>
  #include <array>
-@@ -8,9 +11,24 @@
+ #include <cstring>
+ #include <string>
+ #include <mutex>
++#include <filesystem>
++#include <cerrno>
+ #include "recomp.h"
  #include "librecomp/addresses.hpp"
  #include "librecomp/game.hpp"
  #include "librecomp/files.hpp"
@@ -2874,7 +2879,7 @@ index 43509ba..f0f746e 100644
  static std::vector<uint8_t> rom;
  
  bool recomp::is_rom_loaded() {
-@@ -61,22 +79,131 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -61,22 +81,131 @@ extern "C" void osCreatePiManager_recomp(uint8_t* rdram, recomp_context* ctx) {
      ;
  }
  
@@ -3006,7 +3011,7 @@ index 43509ba..f0f746e 100644
      uint8_t* rom_addr = rom.data() + physical_addr - recomp::rom_base;
      MEM_B(0, ram_address) = *rom_addr++;
      MEM_B(1, ram_address) = *rom_addr++;
-@@ -94,6 +221,11 @@ struct {
+@@ -94,6 +223,11 @@ struct {
      // Used to tell the consumer thread that the saving thread is ready for a file swap.
      moodycamel::LightweightSemaphore swap_file_ready_sempahore;
      std::mutex save_buffer_mutex;
@@ -3018,7 +3023,7 @@ index 43509ba..f0f746e 100644
  } save_context;
  
  const std::u8string save_folder = u8"saves";
-@@ -113,13 +245,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
+@@ -113,13 +247,26 @@ void set_save_file_path(const std::u8string& subfolder, const std::u8string& nam
  }
  
  void update_save_file() {
@@ -3045,17 +3050,57 @@ index 43509ba..f0f746e 100644
          }
          else {
              saving_failed = true;
-@@ -128,6 +273,9 @@ void update_save_file() {
+@@ -128,11 +275,48 @@ void update_save_file() {
      if (!saving_failed) {
          saving_failed = !recomp::finalize_output_file_with_backup(ultramodern::get_save_file_path());
      }
 +    if (!saving_failed) {
 +        save_context.saved_gen = pending_gen;
 +    }
++    // ROGUESQ s7969 class UE: when the save volume goes away mid-run (USB stick pulled, force eject) EVERY later save
++    // fails, and each one printed the full "Failed to write" message (26-28 lines in 40 s of the e2e's 1.5 s save
++    // tick, tools/s7969_ue_e2e.zsh). Report the first failure of a streak in full plus one [s7969-ue] line naming
++    // whether the save folder is gone, count the rest silently, and say so when a later save succeeds again (the stick
++    // came back: the whole buffer is rewritten, so nothing is lost). The quit path asks to retry if the file is still
++    // behind (main.cpp rs64_s7969_quit_check). ROGUESQ_S7969_UE=0 = old (every failure reported).
++    static uint64_t ue_streak = 0;
++    static const bool ue_off = [] { const char* e = getenv("ROGUESQ_S7969_UE"); return e && *e == '0'; }();
      if (saving_failed) {
-         ultramodern::error_handling::message_box("Failed to write to the save file. Check your file permissions and whether the save folder has been moved to Dropbox or similar, as this can cause issues.");
+-        ultramodern::error_handling::message_box("Failed to write to the save file. Check your file permissions and whether the save folder has been moved to Dropbox or similar, as this can cause issues.");
++        const int err = errno;
++        if (ue_off || ue_streak == 0) {
++            ultramodern::error_handling::message_box("Failed to write to the save file. Check your file permissions and whether the save folder has been moved to Dropbox or similar, as this can cause issues.");
++        }
++        if (!ue_off && ue_streak == 0) {
++            std::error_code ec;
++            const auto dir = ultramodern::get_save_file_path().parent_path();
++            const bool gone = !std::filesystem::is_directory(dir, ec);
++            fprintf(stderr, "[s7969-ue] save %s: %s (errno %d %s); progress is kept in memory and saved again when the folder is back\n",
++                    gone ? "folder gone" : "write failing", dir.string().c_str(), err, strerror(err));
++        }
++        ue_streak++;
++        if (!ue_off && (ue_streak & 63) == 0) {
++            fprintf(stderr, "[s7969-ue] save still failing: %llu failed saves in a row\n", (unsigned long long)ue_streak);
++        }
++    } else if (ue_streak != 0) {
++        if (!ue_off) {
++            fprintf(stderr, "[s7969-ue] save folder back after %llu failed saves: progress saved\n", (unsigned long long)ue_streak);
++        }
++        ue_streak = 0;
      }
-@@ -163,17 +311,30 @@ void saving_thread_func(RDRAM_ARG1) {
+ }
+ 
++// ROGUESQ s7969: true when saving is on and the newest save buffer has not reached the file (the last write failed).
++bool ultramodern::save_file_behind() {
++    if (getenv("ROGUESQ_NO_SAVE_WRITE") || save_context.save_buffer.empty()) { return false; }
++    std::lock_guard file_lock{ save_context.save_file_mutex };
++    return save_context.write_gen.load() != save_context.saved_gen;
++}
++
+ extern std::atomic_bool exited;
+ 
+ void saving_thread_func(RDRAM_ARG1) {
+@@ -163,17 +347,30 @@ void saving_thread_func(RDRAM_ARG1) {
  }
  
  void save_write_ptr(const void* in, uint32_t offset, uint32_t count) {
@@ -3086,7 +3131,7 @@ index 43509ba..f0f746e 100644
      assert(offset + count <= save_context.save_buffer.size());
  
      {
-@@ -181,22 +342,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
+@@ -181,22 +378,53 @@ void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t cou
          for (gpr i = 0; i < count; i++) {
              save_context.save_buffer[offset + i] = MEM_B(i, rdram_address);
          }
@@ -3141,7 +3186,7 @@ index 43509ba..f0f746e 100644
  
      {
          std::lock_guard lock { save_context.save_buffer_mutex };
-@@ -227,17 +419,84 @@ void read_save_file() {
+@@ -227,17 +455,84 @@ void read_save_file() {
      std::filesystem::path save_file_path = ultramodern::get_save_file_path();
  
      // Ensure the save file directory exists.
@@ -3227,7 +3272,28 @@ index 43509ba..f0f746e 100644
  }
  
  void ultramodern::init_saving(RDRAM_ARG1) {
-@@ -260,22 +519,197 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
+@@ -248,6 +543,20 @@ void ultramodern::init_saving(RDRAM_ARG1) {
+     read_save_file();
+ 
+     save_context.saving_thread = std::thread{saving_thread_func, PASS_RDRAM};
++    // ROGUESQ s7969 class UE test plant: ROGUESQ_S7969_SAVE_TICK_MS=<ms> rewrites save byte 0 with itself every <ms>
++    // (content unchanged), so a save write can be forced after the save volume vanishes. Off by default.
++    if (const char* t = getenv("ROGUESQ_S7969_SAVE_TICK_MS"); t && atoi(t) > 0 && !save_context.save_buffer.empty()) {
++        const int ms = atoi(t);
++        fprintf(stderr, "[s7969-ue] plant: save rewrite every %d ms\n", ms);
++        std::thread([ms] {
++            for (;;) {
++                std::this_thread::sleep_for(std::chrono::milliseconds(ms));
++                char b;
++                { std::lock_guard lock{ save_context.save_buffer_mutex }; b = save_context.save_buffer[0]; }
++                save_write_ptr(&b, 0, 1);
++            }
++        }).detach();
++    }
+ }
+ 
+ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8string& name) {
+@@ -260,22 +569,197 @@ void ultramodern::change_save_file(const std::u8string& subfolder, const std::u8
      read_save_file();
  }
  
@@ -3426,7 +3492,7 @@ index 43509ba..f0f746e 100644
          } else if (physical_addr >= recomp::sram_base) {
              if (!recomp::sram_allowed()) {
                  ultramodern::error_handling::message_box("Attempted to use SRAM saving with other save type");
-@@ -285,9 +719,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -285,9 +769,10 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_read(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -3438,7 +3504,7 @@ index 43509ba..f0f746e 100644
          }
      } else {
          if (physical_addr >= recomp::rom_base) {
-@@ -302,26 +737,86 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
+@@ -302,26 +787,86 @@ void do_dma(RDRAM_ARG PTR(OSMesgQueue) mq, gpr rdram_address, uint32_t physical_
              save_write(rdram, rdram_address, physical_addr - recomp::sram_base, size);
  
              // Send a message to the mq to indicate that the transfer completed
@@ -3526,7 +3592,7 @@ index 43509ba..f0f746e 100644
  
      ctx->r2 = 0;
  }
-@@ -336,9 +831,17 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
+@@ -336,9 +881,17 @@ extern "C" void osEPiStartDma_recomp(RDRAM_ARG recomp_context* ctx) {
      PTR(OSMesgQueue) mq = mb->hdr.retQueue;
      uint32_t physical_addr = k1_to_phys(devAddr);
  
@@ -6472,7 +6538,7 @@ index 31eb106..0f4381e 100644
  #  ifdef __cplusplus
  #    define NULLPTR (PTR(void))0
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
-index 57db6f6..fb3e733 100644
+index 57db6f6..17777b1 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
 +++ b/ultramodern/include/ultramodern/ultramodern.hpp
 @@ -119,10 +119,19 @@ void trigger_config_action();
@@ -6496,12 +6562,14 @@ index 57db6f6..fb3e733 100644
      using get_samples_remaining_t = size_t();
      using set_frequency_t = void(uint32_t);
      queue_samples_t* queue_samples;
-@@ -147,6 +156,8 @@ void quit();
+@@ -147,6 +156,10 @@ void quit();
  void join_event_threads();
  void join_thread_cleaner_thread();
  void join_saving_thread();
 +// ROGUESQ s7429: write a pending save before a quick_exit quit; returns 1 if a write was needed.
 +int flush_save_file();
++// ROGUESQ s7969 class UE: saving is on and the newest save has not reached the file.
++bool save_file_behind();
  
  void set_audio_callbacks(const audio_callbacks_t& callbacks);
  

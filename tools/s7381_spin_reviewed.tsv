@@ -74,7 +74,7 @@ guest|bufferArbiterAllocSlot|YIELD|2	IDLE	guest osYieldThread poll; 0 calls (no 
 guest|acquireFreeBufferSlot|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
 guest|waitForPostSwapAck|YIELD|1	IDLE	guest osYieldThread poll; 0 calls (no [s7381] yield row) over 2 x 260 s + 2 x 200 s hangar->mission->abort runs incl. TSan; one host sched_yield per call if reached
 main.cpp|rs64_diag_spin_us|PURE-SPIN|1	DIAG	s7720: ROGUESQ_DIAG_BUSY_US/_GUEST_US default 0, returns when us<=0
-main.cpp|rs64_s7593_plant|SLEEP|1	EXIT	s7720: rs64_s7593_quit_now second consumer parks while the first exits
+main.cpp|rs64_s7969_quit_check|SLEEP|2	EXIT	s7720 (re-keyed s7969: the attributor now names the preceding rs64_s7969_quit_check): rs64_s7593_quit_now second consumer parks while the first exits
 main.cpp|rs64_s7592_plant_event|SLEEP|1	DIAG	s7720: ROGUESQ_S7592_PLANT_FROM default -1 returns before the planted thread
 main.cpp|s7382_qos_start|SLEEP|1	DIAG	s7720: ROGUESQ_S7382_QOS=1 sampler, sleep_until between dumps
 rt64_render_context.cpp|rs64_rdpq_task_exit|YIELD|1	BOUNDED	s7720: rs64_s7540_reads_done hold wait, only ROGUESQ_S7541_HOLD + wk_mode 4, 50 ms timeout, yields
@@ -83,3 +83,5 @@ upstream_compat.cpp|s7490_pre|SLEEP|1	BOUNDED	s7720: cine watchdog thread Sleep(
 plume_metal.cpp|MetalSwapChain::present|PURE-SPIN|1	BOUNDED	s7720: s7641 CAS increment of rs64AvailIdx, retries only on a concurrent update (one other writer), no wait
 upstream_compat.cpp|s7776_load|SLEEP|1	DIAG	s7776: S7776Arm summary thread (attributed to s7776_load), spawned only under ROGUESQ_S7776_TBLWATCH=1; 5 s sleep loop
 upstream_compat.cpp|s7777_access|SLEEP|1	DIAG	s7777: S7777Arm sweep thread (attributed to s7777_access), spawned only under ROGUESQ_S7777_DANGLE=1 (default off); 250 ms sleep loop
+main.cpp|rs64_s7969_quit_check|SLEEP|1	BOUNDED	s7969: quit-time save retry, <=50 tries; each try is a user Retry press (modal dialog) or, test-only ROGUESQ_S7969_RETRY_AUTO=n, a 1 s sleep up to n; no busy wait
+pi.cpp|ultramodern::init_saving|SLEEP|1	DIAG	s7969: test plant thread, spawned only under ROGUESQ_S7969_SAVE_TICK_MS>0 (default off); sleeps <ms> between save rewrites

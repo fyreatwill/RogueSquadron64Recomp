@@ -41,6 +41,7 @@ VNAME = {None: "unset", "": "empty"}
 
 # name -> reason. Each entry read by hand at s7714.
 REVIEWED = {
+    "ROGUESQ_S7969_EXE_DIR": "internal handoff, not a user setting: rs64_ue.h sets it to the original folder before execv of the local copy; relocate tests presence (any value = already relocated, so never re-exec), main.cpp data root needs a non-empty path. Empty only if a user sets it by hand",
     "ROGUESQ_BIND_PANEL_TEST": "=2 is the save-bound round-trip variant of the test (s7666); rs64_bind_flag reads 2 as on too",
     "ROGUESQ_DD_WIDEWIN": "deliberate mode word: upstream_compat.cpp:399 recognises only 'tog3' (3-way toggle); every reader "
                           "reads tog3 as on (s6919-style mode letters)",

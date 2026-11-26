@@ -6,6 +6,7 @@
 #include "rs64_atomic_write.h"  // s7958 class FW
 #include "rs64_data_root.h"  // s7960 class DR
 #include "rs64_ro_probe.h"  // s7964 class RO
+#include "rs64_ue.h"  // s7969 class UE
 #include "rs64_instance_lock.h"  // s7966 class DI
 #include "rs64_shell_quote.h"  // s7962 class PS
 #include <dlfcn.h>
@@ -12295,6 +12296,39 @@ static const std::string& rs64_s7593_plant() {
     static const std::string p = [] { const char* e = std::getenv("ROGUESQ_S7593_PLANT"); return std::string(e ? e : ""); }();
     return p;
 }
+// s7969 class UE: the quit flush failed (the save volume went away: USB stick pulled). Before s7969 the game quit
+// silently and the session's progress was lost. Ask on the main thread: Retry (reconnect the drive first) or quit
+// without saving. ROGUESQ_UE_DIALOG=0 = report line only. Test-only ROGUESQ_S7969_RETRY_AUTO=<n>: press Retry
+// automatically up to n times, 1 s apart (the e2e re-attaches the volume in between).
+static void rs64_s7969_quit_check() {
+    if (!ultramodern::save_file_behind()) return;
+    const std::string where = ultramodern::get_save_file_path().string();
+    const char* d = std::getenv("ROGUESQ_UE_DIALOG");
+    const int autor = [] { const char* e = std::getenv("ROGUESQ_S7969_RETRY_AUTO"); return e ? std::atoi(e) : 0; }();
+    const bool main_thr = pthread_main_np() != 0;
+    const bool dlg = !(d && *d == '0') && main_thr && autor <= 0;
+    fprintf(stderr, "[s7969-ue] quit: latest progress NOT saved to %s (dialog=%s)\n", where.c_str(),
+            dlg ? "show" : (autor > 0 ? "auto-retry" : (main_thr ? "off" : "off-not-main-thread")));
+    for (int tries = 1; tries <= 50; tries++) {
+        if (dlg) {
+            const std::string m = "Your latest progress could not be saved to\n\n" + where +
+                "\n\nThe drive or folder holding it is not reachable (was a USB drive removed?). Reconnect it and press "
+                "Retry, or quit without saving this session's progress.";
+            const SDL_MessageBoxButtonData b[2] = {
+                {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Retry"}, {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Quit without saving"}};
+            const SDL_MessageBoxData md = {SDL_MESSAGEBOX_WARNING, nullptr, "Rogue Squadron: progress not saved", m.c_str(), 2, b, nullptr};
+            int hit = 0;
+            if (SDL_ShowMessageBox(&md, &hit) != 0 || hit != 1) break;
+        } else if (tries <= autor) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        } else {
+            break;
+        }
+        ultramodern::flush_save_file();
+        if (!ultramodern::save_file_behind()) { fprintf(stderr, "[s7969-ue] quit: saved on retry %d\n", tries); return; }
+    }
+    fprintf(stderr, "[s7969-ue] quit: quitting without saving\n");
+}
 [[noreturn]] static void rs64_s7593_quit_now(const char* who) {
     static std::atomic<bool> once{false};
     if (once.exchange(true)) { for (;;) std::this_thread::sleep_for(std::chrono::hours(1)); } // the other consumer is exiting
@@ -12304,6 +12338,7 @@ static const std::string& rs64_s7593_plant() {
             g_s7593_max_gap_ns.load() / 1e6, rs64_s7593_epoch(), rs64_s7593_plant().c_str());
     // s7429 class CL: write a save still inside the saving thread's 10 ms coalescing window.
     fprintf(stderr, "[s7429-quit] save flush=%d\n", ultramodern::flush_save_file());
+    rs64_s7969_quit_check();
     fflush(stderr);
     const std::string& pl = rs64_s7593_plant();
     if (pl == "crash") std::at_quick_exit([] { fprintf(stderr, "[s7593] plant crash\n"); fflush(stderr); *(volatile int*)8 = 1; });
@@ -15327,6 +15362,9 @@ static void rs64_s7467_asan_plant() {
 
 extern "C" void rs64_settings_apply(int argc, char** argv);  // s7663 src/main/rs64_settings.cpp
 int main(int argc, char* argv[]) {
+#ifdef __APPLE__
+    rs64_s7969_relocate(argv); // s7969 class UE: before any thread starts (rs64_ue.h)
+#endif
     rs64_settings_apply(argc, argv);  // s7663: settings.txt / --preset; re-execs (same pid) when it sets anything
     rs64_s7467_asan_plant();
 #if defined(RS64_S7467_ASAN)
@@ -15743,7 +15781,9 @@ int main(int argc, char* argv[]) {
         // s7960 class DR: the launch folder only when it holds game data, else the executable's folder.
         std::filesystem::path exe_dir;
         char exe_buf[4096]; uint32_t exe_sz = sizeof(exe_buf);
-        if (_NSGetExecutablePath(exe_buf, &exe_sz) == 0) {
+        if (const char* s7969 = std::getenv("ROGUESQ_S7969_EXE_DIR"); s7969 && *s7969) {
+            exe_dir = std::filesystem::path(s7969); // s7969 class UE: relocated copy, the game folder is the original's
+        } else if (_NSGetExecutablePath(exe_buf, &exe_sz) == 0) {
             std::error_code ab_ec;
             std::filesystem::path ep = std::filesystem::absolute(std::filesystem::path(exe_buf), ab_ec);
             if (!ab_ec) exe_dir = ep.lexically_normal().parent_path();

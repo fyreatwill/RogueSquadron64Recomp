@@ -213036,3 +213036,54 @@ landed), TWOWRITER, ATOMIC+LOCK, WRITEREAD (+ sidecar count: 0 on APFS, >0 on FA
 FAT mutants opening the sidecar -> VERDICT CLOSED.
 Rules out for XF: H-rename, H-flock, H-fsync. H-moot is false only for mods/ (cosmetic log line).
 Full sweep, uncached, --jobs 2, 1851 s: 272 gates, 269 GREEN + 3 REPORT (the standing s7031/s7210/s7283 H-reports), 0 RED, 0 HOLLOW.
+
+## Session 7969 (2026-11-26) — class UE (game volume vanishes mid-run) closed: an exe on a pulled stick livelocked at ~660% CPU (code pages un-pageable, mlock refused EPERM) -> re-exec from a local copy; a pulled saves/ volume repeated the failure report per save and quit lost progress silently -> one report per streak, "back" line, quit Retry; e2e 12 arms, gate S7969_UE
+Ladder 3c host class UE (NEXT.md s7969). crash_reports --since 2026-11-26: new=0. No new SOAK-RESULTS lines.
+Setup (tools/s7969_ue_e2e.zsh, new): 256 MB APFS (control FS) and ExFAT images, private game copy, owner save COPIED (build/saves
+untouched), one game at a time, saving ON. A save write needs a trigger: the game writes no save in 40 s of boot even with FORCE_UNLOCK
++ FORCE_SAVE_MISSION=3 (re-measured this session, same as s7429 R2), so a test plant ROGUESQ_S7969_SAVE_TICK_MS=1500 (pi.cpp
+init_saving, off by default) rewrites save byte 0 with itself every 1.5 s. Pull = `hdiutil detach -force` at 10 s, watch 20 s, then
+SIGHUP (the s7594 quit path: flush + quick_exit; SIGINT is useless for background jobs, it is inherited SIG_IGN and SDL then skips it,
+measured: SIGINT left the game running). Layouts: whole (exe+ROM+saves on the image) and data (exe in /tmp, saves/ a symlink onto it).
+Base (pre-fix binary + plant):
+- whole pull, APFS and ExFAT: H-hang CONFIRMED (not H-sigbus): update_screen stops, process stays alive at 662% CPU, HUP never exits
+  (SIGKILL after 15 s), no crash report, 0 "Failed to" lines. lldb attach: every thread (main, Gfx, VI, AI Drain, RT64 Idle, workers)
+  stopped at ONE address with EXC_BAD_ACCESS code=10 (KERN_MEMORY_ERROR): the pager cannot supply code pages from the vanished vnode
+  and the SIGBUS handler is itself paged-out code, so nothing can run.
+- data pull: alive, HUP exits in 530 ms, but H-savefail CONFIRMED in its "spam" form: 13-14 failure reports in 20 s (26-28 lines: one
+  report = 2 lines, ultramodern prints it and our message_box callback prints it again; the callback is stderr-only, no dialog), and the
+  quit flush fails silently (flush=1, file never written): the session's progress is lost with no notice.
+Attempt 1 (FAILED, kept as data): mlock() every segment of every loaded image on the exe's volume. __TEXT (46.6 MB) -> EPERM
+(code-signed text cannot be wired); the other segments wired (63.5 MB total in 11 ms); whole pull still livelocked. Removed.
+Fix (src/main/rs64_ue.h new, main.cpp, lib/N64ModernRuntime pi.cpp + ultramodern.hpp, patch exported):
+1. rs64_s7969_relocate(argv), first statement of main(): if the exe's st_dev is neither $HOME's nor /'s, copy it once to
+   ~/Library/Caches/RogueSquadron64Recomp/exe-<size>-<mtime>/ (temp + fsync + rename, older copies dropped) and execve() it with the
+   same argv/env/fds/cwd (same pid), setting ROGUESQ_S7969_EXE_DIR so the s7960 data root still resolves to the original game folder
+   (whole_keep log: data=.../m_ExFAT_whole_keep/game (cwd-data)). Runs in place if any other loaded image lives on that volume (a
+   bundled dylib would not load from the copy), on copy/exec failure, or with ROGUESQ_S7969_RELOC=0 (=1 forces it on internal disk).
+2. pi.cpp update_save_file: the full report only on the first failure of a streak, plus `[s7969-ue] save folder gone|write failing:
+   <dir> (errno)`; later failures counted (a summary line every 64); a later success logs `save folder back after N failed saves:
+   progress saved` (the whole buffer is rewritten, so nothing is lost when the stick returns). ROGUESQ_S7969_UE=0 = old.
+3. ultramodern::save_file_behind() + main.cpp rs64_s7969_quit_check() after the s7429 quit flush: if the file is behind, a Retry /
+   Quit-without-saving message box on the main thread (retry re-flushes); ROGUESQ_UE_DIALOG=0 line only; test-only
+   ROGUESQ_S7969_RETRY_AUTO=<n> presses Retry n times 1 s apart.
+ORIGIN: the dead code pages' "writer" is the kernel pager after a forced unmount (legitimate OS behaviour; the defect is that our process
+cannot survive losing its own text); the save failures are legitimate ENOENT on a vanished directory, the defect was the per-save
+repetition and the silent quit.
+After (same e2e, 12 arms, all PASS, 0 crash lines, 0 new crash reports): whole pull APFS+ExFAT: alive, HUP exit 529-533 ms, re-exec
+lines present, 1 report (2 lines), `folder gone` 1, quit NOT-saved + quitting-without-saving 1. whole mutant (RELOC=0): livelock again
+(hup=hung) = positive control that the bug still reproduces. data pull APFS+ExFAT: 1 report, gone 1, quit lines 1. data mutant
+(UE=0): 28 lines. data return (re-attach 6 s after the pull): `back` 1, quit clean, save 512 B. data retry (HUP 6 s after the pull,
+re-attach 2 s later, RETRY_AUTO=8): `saved on retry` 1, HUP->exit 3355 ms, save 512 B. keep arms (no pull): 0 failures, writes landed
+(mtime moved), quit flush=0, whole layout re-execs, data layout (exe on /tmp = internal) does not.
+Not covered: the SDL message box itself (headless; code reading only, single-source); a real USB pull (hdiutil force detach is the
+proxy); ROM/audio_device.txt reads after the pull (the ROM is read into memory at boot, so the whole arm ran on).
+Gate tools/s7969_ue_gate.py (sweep row S7969_UE, ARGS + EXTRA_GATES): STATIC (each fix present + env-gated, relocate first in main),
+E2E 12/12 with whole mutant hung and data mutant >= 6 lines, CONTROL (a planted FAIL arm is rejected) -> VERDICT CLOSED.
+Rules out: H-sigbus (no death, a livelock), H-moot. Class UE CLOSED.
+Sweep (finished on the loop's retry after the first attempt timed out, rc=124, before it could commit; build re-checked current):
+`s7651_gate_sweep.py --jobs 2` 273 gates: 265 GREEN + 3 REPORT (standing s7031/s7210/s7283) + 5 RED, every RED a new s7969 site that
+no review table listed: s7381 (quit-retry loop bounded to 50, SAVE_TICK plant sleep loop, and the s7593 park loop re-keyed because the
+attributor now names the new rs64_s7969_quit_check), s7382 + s7597 (plant thread, env-gated DIAG), s7595 (update_save_file
+is_directory is the error_code form), s7714 (ROGUESQ_S7969_EXE_DIR is an internal re-exec handoff: presence = already relocated,
+main.cpp needs non-empty). Each site read before its row was written; all 5 rerun GREEN (controls PASS) -> sweep 273, 0 RED.

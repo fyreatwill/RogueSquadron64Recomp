@@ -36,6 +36,7 @@ ROWS = {
     ("pi.cpp", "update_save_file", "open_output_file_with_backup"): "ok: good() tested",
     ("pi.cpp", "update_save_file", ".write"): "ok: failbit sticky, tested after close (s7357)",
     ("pi.cpp", "update_save_file", ".close"): "ok: fail() tested -> no finalize (s7357)",
+    ("pi.cpp", "update_save_file", "std::filesystem::is_directory"): "ok s7969 (class UE): error_code form, non-throwing; only classifies a failure as folder gone vs write failing",
     ("pi.cpp", "update_save_file", "finalize_output_file_with_backup"): "ok: false -> message",
     ("pi.cpp", "update_save_file", "message_box"): "ok: stderr only (ultramodern + main.cpp callback), non-blocking",
     ("pi.cpp", "read_save_file", "std::filesystem::create_directories"): "FIXED s7595 (SV-1): was the throwing form -> std::terminate at boot (rc134 0.7 s); now error_code + [s7595-io] (old form kept only under ROGUESQ_S7595_DIRS=0)",

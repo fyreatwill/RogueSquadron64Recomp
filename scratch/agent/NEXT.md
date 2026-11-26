@@ -1,23 +1,24 @@
-# NEXT (s7969)
+# NEXT (s7970)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7968 closed class XF: on exFAT/FAT32 (fskit) save rename, flock and fsync behave as on APFS; only AppleDouble `._*` sidecars in
-mods/ were opened as mods (now skipped, ROGUESQ_S7968_XF=0 = old). Gate S7968_XF, e2e tools/s7968_xf_e2e.zsh (makes its own images
-under /tmp). Do not redo XF, CS (s7967), DI (s7966), RO (s7964), AN (s7963), PS (s7962), SD (s7961), DR (s7960), RD (s7959),
-FW (s7958), CK (s7954), LC (s7953), TF (s7955), EV.
-An src/ or lib/ edit needs the FULL sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, ~28 min: run it in the background).
+s7969 closed class UE: the game volume vanishing mid-run. Exe on it livelocked (code pages un-pageable) -> re-exec from a local copy
+(src/main/rs64_ue.h, ROGUESQ_S7969_RELOC=0 = old); saves/ on it -> one report per failure streak, "back" line, quit Retry dialog
+(ROGUESQ_S7969_UE=0 = old). Gate S7969_UE, e2e tools/s7969_ue_e2e.zsh. Do not redo UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC,
+TF, EV.
+An src/ or lib/ edit needs the FULL sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, ~30 min: run it in the background).
+Test-script note (s7969): a zsh background job inherits SIGINT as SIG_IGN, so SDL never turns it into SDL_QUIT; drive the quit path
+with SIGHUP (s7594 handler -> flush + quick_exit).
 0. `python3 tools/crash_reports.py --since 2026-11-26`. Fold any new SOAK-RESULTS lines.
-1. Ladder 3c, new host class UE: the volume holding the game folder goes away mid-run (USB stick pulled, `diskutil eject`, or the
-   stick's sleep). Follows XF: owners who copy to a stick will pull it.
+1. Ladder 3c, new host class SW: the process is frozen for a long time and resumed (system sleep / lid close, App Nap, a debugger
+   stop). The host clock jumps by minutes between two VI ticks. Proxy without sleeping the owner's Mac: SIGSTOP the game for 60 s
+   and 300 s, then SIGCONT (never `pmset sleepnow`).
    Hypotheses:
-   - H-sigbus: the executable's pages are mapped from the vanished device; the next page-in SIGBUSes (crash report, no save flush).
-     Expected and mostly unfixable, but measure it: time-to-death, and whether a crash report names it.
-   - H-savefail: the exe survives (pages resident), but the next save write fails: does the game show the "Failed to write" dialog
-     once, or spam it every save, or hang in the quit flush?
-   - H-hang: a read/write on the dead mount blocks forever (EIO vs block) and the game freezes rather than failing.
-   - H-moot.
-   Discriminator: tools/s7968_xf_e2e.zsh's image setup (256 MB ExFAT image, private game copy, owner save COPIED). Arms, one game at a
-   time, saving ON: (a) `hdiutil detach -force` at 10 s, watch 20 s more: alive/dead, signal, last stderr lines, crash report;
-   (b) exe copied to /tmp but saves/ on the image (symlink, as s7967 did) so only the data volume vanishes: then trigger a save
-   (how: grep s7429_save_quit.sh for the unforced-write recipe) and count "Failed to" lines and the quit-flush time after SIGTERM-free
-   quit (Cmd-Q not available headless: use the existing ROGUESQ quit-flush path, grep "quit flush"). APFS image detach = control.
-   Fix only what is ours (e.g. repeated dialogs, a hang); add a gate.
+   - H-burst: VI/timer threads try to catch up on the missed time (thousands of VIs or audio buffers queued at once), so the game
+     fast-forwards, spins, or the audio queue overflows.
+   - H-stall: a wait with an absolute deadline or a watchdog (s3290-stall, waitForMusyXAudioTaskDone, RT64 present fences) fires on
+     resume and aborts or deadlocks.
+   - H-audio: the audio device stops/changes over a real sleep (SIGSTOP does not reproduce this part; note it as not covered).
+   - H-moot: one long frame then normal pacing.
+   Discriminator, one build, one game at a time: private copy, NO_SAVE_WRITE, present ring (ROGUESQ VI_STAMP / ring_stalls.py) and
+   [ai] cadence logging on; arms: control (no stop), stop 60 s, stop 300 s, each at t=20 s on the title and once in flight (forced
+   level route). Measure for 30 s after SIGCONT: VIs/s per second (burst = >>60), max present gap, audio queue depth, crash/abort.
+   Fix only what is ours (e.g. clamp the catch-up to a few VIs); add a gate.

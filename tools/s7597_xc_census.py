@@ -58,6 +58,7 @@ ROWS = {
     # thread
     ("src/main/rt64_render_context.cpp", "thread", "std::thread([c = cmd]"): "once: stall self-sample, s_sd_sampled latch (one per run)",
     ("src/main/upstream_compat.cpp", "thread", "std::thread([rdram] {"): G,
+    ("librecomp/src/pi.cpp", "thread", "std::thread([ms] {"): "gated: s7969 save-rewrite test plant, only under ROGUESQ_S7969_SAVE_TICK_MS>0 (default off)",
     ("src/main/upstream_compat.cpp", "thread", "std::thread([]() {"): G,
     ("src/main/upstream_compat.cpp", "thread", "std::thread([] {"): G,
     ("src/main/upstream_compat.cpp", "thread", "std::thread([s4580_id]"): "gated: s4580::on() VI-recv census, one per blocked recv; off by default",

@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7968 (2026-11-26).
+Compact operational handoff, as of Session 7969 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -431,6 +431,15 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    `._<name>` AppleDouble sidecars and the mods/ scan opened `._foo.nrm` as a mod ("invalid zip file" line). mods.cpp now skips `._*`
    (ROGUESQ_S7968_XF=0 = old). e2e tools/s7968_xf_e2e.zsh 15/15 (boot, lock, 2nd copy, mods fix/mutant, relaunch per FS; mod lines
    need `stdbuf -o L`, SIGKILL drops buffered stdout). Gate S7968_XF. SMB untested. Sweep 272: 269 GREEN + 3 REPORT, 0 RED.
+13p. **s7969 class UE (game volume vanishes mid-run: stick pulled / force eject) CLOSED + FIXED:** e2e tools/s7969_ue_e2e.zsh
+   (`hdiutil detach -force` of APFS/ExFAT images, test plant ROGUESQ_S7969_SAVE_TICK_MS forces a save every 1.5 s; the game itself
+   writes none in 40 s of boot). Exe on the pulled volume LIVELOCKED (all threads at one PC, KERN_MEMORY_ERROR, 660% CPU, no report,
+   quit never returns); mlock of __TEXT is EPERM, so src/main/rs64_ue.h re-execs from ~/Library/Caches/RogueSquadron64Recomp when the
+   exe is not on the system/home volume (ROGUESQ_S7969_EXE_DIR keeps the data root; ROGUESQ_S7969_RELOC=0 off). saves/ on it: the
+   failure report repeated per save and quit lost progress silently; pi.cpp now reports once per streak + "back" line, quit asks Retry
+   (ROGUESQ_UE_DIALOG=0 line only; dialog untested headless). ROGUESQ_S7969_UE=0 = old. 12/12 arms incl. mutants. Gate S7969_UE.
+   Note for test scripts: background-job SIGINT is SIG_IGN, use SIGHUP to drive the quit path. Sweep 273: 270 GREEN + 3 REPORT, 0 RED
+   (5 own sites reviewed into s7381/s7382/s7595/s7597/s7714).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

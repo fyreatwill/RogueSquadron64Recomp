@@ -63,3 +63,4 @@ src/main/upstream_compat.cpp|std::thread([] {|2	DIAG	-	s7720: recv_trace dumper,
 lib/rt64/src/render/rt64_framebuffer_renderer.cpp|std::thread([] { t_s7384Planted = true; std::this_thread::sl|1	DIAG	-	s7720: ROGUESQ_S7384_CTL=1 planted overlap control, default off
 src/main/upstream_compat.cpp|std::thread([] { for (int k = 1;; ++k) { std::this_thread::s|1	DIAG	-	s7776: table-pointer watch summary thread, spawned only by S7776Arm when ROGUESQ_S7776_TBLWATCH=1 (default off)
 src/main/upstream_compat.cpp|std::thread([] { for (;;) { std::this_thread::sleep_for(std:|1	DIAG	-	s7777: dangling-global sweep thread, spawned only by S7777Arm when ROGUESQ_S7777_DANGLE=1 (default off)
+lib/N64ModernRuntime/librecomp/src/pi.cpp|std::thread([ms] {|1	DIAG	-	s7969: save-rewrite test plant thread, spawned only under ROGUESQ_S7969_SAVE_TICK_MS>0 (default off)
