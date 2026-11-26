@@ -1,40 +1,31 @@
-# NEXT (s7971)
+# NEXT (s7972)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7970 closed class SW (process frozen then resumed, SIGSTOP/SIGCONT proxy): video, game clock and quit were fine on resume;
-audio was not. After a stop the device drained the SDL queue at ~3.3x real time for ~0.18x the stop length (15 s -> 3 s, 60 s ->
-10.5 s, 300 s -> the whole 30 s watch), so the game posted 3.3x audio with ~94 empty-queue posts/s (skipping audio). Sometimes
-the drain-stall watchdog fired instead (a 180 ms reopen as "drain-stall"), which had no burst. Fix (main.cpp s7970): a 50 ms
-heartbeat thread sees a > 1 s whole-process freeze; the next audio post resets the drain-stall clock and reopens the device once
-with why=resume. ROGUESQ_S7970_SW=0 = old. Gate S7970_SW. Do not redo SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
-Not covered by SW: a REAL system sleep (the audio device and display stop too; the SIGSTOP proxy cannot show that).
-s7970 commit landed in a resumed iteration (2e0833ba8): mutant 4/4 reproduced, sweep 274 had 2 own REDs, both fixed (s7615 thread
-ordinals: a new capture-less std::thread in main.cpp shifts every `[]` row -> renumber; s7804: gates globbing *.log need rs64_zopen
-or a `# zst-ok:` waiver). Run the FULL sweep once at the start of s7971 (it was not re-run after those two edits) and fix any RED
-before the MP work. If s7971 adds a thread to main.cpp, re-check s7615 ordinals.
+s7971 closed class MP (host memory pressure, real 5 GB hog; game pages compressed 55 MB, presents 59-60/s, 0 underruns): H-moot,
+no code change, gate S7971_MP. Do not redo MP, SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
+Note: CURRENT-TRUTH is 59 KB, near the 60 KB maintenance trigger; if Step 0 prints > 60000, do maintenance instead.
+Trap from s7971: present-ring Q rows are host-uptime stamped, ROGUESQ_AI_TRACE rows launch-relative; align with
+tools/s7971_mp_score.py align() before windowing on a launch offset.
 
-## Work unit: ladder 3c host class MP (system memory pressure while the game runs)
-Proxy without harming the owner's Mac: `memory_pressure -S -l warn` then `-l critical` (simulated pressure notification, no real
-allocation), and a bounded real-allocation arm (a helper that mallocs + touches N GB and holds it for 60 s, N sized from
-`sysctl hw.memsize` and `vm_stat` free pages so the host never swaps hard). Run in flight (forced route, tools/s7970_sw_e2e.zsh is the
-template: private game copy, save COPIED, ROGUESQ_NO_SAVE_WRITE=1, present ring + ROGUESQ_AI_TRACE, SIGHUP quit timing).
+## Work unit: ladder 3c host class NS (data volume full while the game runs: the NON-save writers)
+s7357 covered the save path on a full disk (EEPROM main/.bak). Not covered: every other writer that runs during normal play when the
+data root's volume is full: RT64 shader/pipeline cache, settings.txt writes from the F1/F6 panels, controls.json save (F6), log files,
+rs64 crash breadcrumbs, the s7969 relocated exe copy in ~/Library/Caches (only when off-volume). Proxy without filling the owner's
+disk: a small APFS disk image (`hdiutil create -size 200m -fs APFS`, attach, no sudo), private game copy + COPIED save inside it,
+fill it with a filler file to 0 bytes free (`mkfile`/dd until ENOSPC) at a phase-gated point, then exercise the writers.
 Hypotheses:
-- H-jetsam: the game is killed or a Metal resource allocation fails (RT64 texture/pipeline creation returns nil) -> crash or
-  missing draws. Outcome: death, crash report, `[RT64]` alloc errors, or a black frame.
-- H-compress: the 512 MB rdram mapping / texture caches get compressed or swapped out -> long frames when touched again.
-  Outcome: present gaps > 250 ms, VI holds, AI underruns during or just after pressure.
-- H-handler: someone registered a memory-pressure dispatch source (SDL, RT64, MoltenVK-free Metal path) that drops caches and
-  rebuilds them badly. Outcome: a log line at the notification plus a frame-time spike right after it.
-- H-moot: presents 60/s, swaps unchanged, 0 underruns, quit < 1 s.
-Positive control: a planted present gap / underrun in the scorer selftest (reuse s7970_sw_score.py's planted cases) and a control
-arm with no pressure in the same run set.
+- H-crash: a writer treats a failed write/close as impossible (unchecked fwrite/fclose, std::ofstream without checks) -> abort/crash.
+- H-silent: a writer truncates then fails -> an empty/partial controls.json or settings.txt that the next launch reads as defaults
+  (owner loses bindings/settings silently). Outcome: file size 0 / truncated after the run, next launch logs defaults.
+- H-stall: a writer retries in a loop on the game or render thread -> VI holds / present gaps (score like s7971).
+- H-moot: every writer fails cleanly, files keep their previous content, 0 crash, presents 60/s.
+Positive control: same run, the image NOT full (writers succeed, files change) and a planted truncate (old non-atomic write path, if
+one exists, via a mutant env) showing the silent loss is detectable by the scorer.
 
 ## Commands (one game at a time)
 0. `python3 tools/crash_reports.py --since 2026-11-26`; fold any new SOAK-RESULTS lines.
-1. `memory_pressure -h` (check it runs without sudo; if it needs sudo, use only the real-allocation arm and say so).
-2. Write tools/s7971_mp_e2e.zsh (template s7970_sw_e2e.zsh; arms control / warn / critical / alloc), score with
-   tools/s7970_sw_score.py-style windows anchored on the pressure start time instead of a ring gap.
-3. Fix only what is ours; gate tools/s7971_mp_gate.py (STATIC if a fix lands, E2E, CONTROL), add S7971_MP to s7651 ARGS +
-   EXTRA_GATES, review rows for any new thread/loop/atomic/env (s7381/s7382/s7383/s7597/s7714 went UNREVIEWED on s7970's heartbeat
-   until rows were added), then `python3 -u tools/s7651_gate_sweep.py --jobs 2 > /tmp/s7971_sweep.txt 2>&1` in the background
-   AFTER the last game run (one game at a time; the sweep itself is 2 jobs).
-If H-moot holds on every arm with the control passing, close MP with no code change (the e2e + gate are the deliverable).
+1. Census first (offline): grep every fopen("w"/"wb")/ofstream/std::filesystem write in src/, lib/rt64/src (outside contrib),
+   lib/N64ModernRuntime; classify each as atomic (temp+rename, checked) or truncate-in-place; s7958_fw's census is the starting list.
+2. tools/s7972_ns_e2e.zsh: arms not-full control / full-at-title / full-in-flight; drive the F6 save + a settings write via existing
+   in-flight toggle hooks (tools/s7764_inflight_toggles.zsh) if possible, else the s7765 controls dump path.
+3. Fix only what is ours; gate tools/s7972_ns_gate.py, add S7972_NS to s7651 ARGS + EXTRA_GATES, review rows for any new
+   thread/loop/atomic/env, then the full sweep (--jobs 2) after the last game run.

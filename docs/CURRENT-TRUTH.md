@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7969 (2026-11-26).
+Compact operational handoff, as of Session 7971 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -447,6 +447,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    freeze; next post resets the stall clock and reopens the device once (why=resume). Fix on 6/6 moot. Gate S7970_SW. A real
    system sleep (device/display stop too) is NOT covered. Sweep 274: 2 own REDs fixed (s7615 thread ordinals shift when a new `[]`
    std::thread lands in main.cpp; s7804 waiver), re-run individually GREEN.
+13r. **s7971 class MP (host memory pressure in flight) CLOSED, H-moot, no code change:** `memory_pressure -S` is root-only, so
+   tools/s7971_mp_e2e.zsh uses a real hog (tools/s7971_mem_hog.py, incompressible, page-hot; control 0 / mid 1.4 / high 5.0 GB at 125 s
+   for 60 s). High arm: 368k system compressions, game RSS 270 -> 215 MB (its own pages compressed), presents 59-60/s, max gap 25 ms,
+   0 AI underruns, quit 532 ms. No memory-pressure handler anywhere (static census + contrib control). Kernel level never left normal
+   (warn/jetsam not reached). Trap: present-ring Q rows are UPTIME-stamped, the AI trace launch-relative; tools/s7971_mp_score.py
+   aligns them by framebuffer first-appearance (reuse it for any window anchored on a launch offset). Gate S7971_MP.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

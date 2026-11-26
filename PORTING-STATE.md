@@ -213126,3 +213126,38 @@ as the same-recipe positive control (4/4 not moot) and fix-on arms 4/4 moot; ref
 base 61/s after resume, refutes) and H-quit-hang (HUP->exit 528-533 ms in all 12 arms). Next discriminator (s7971, class MP): present-gap /
 AI-underrun windows anchored on the memory_pressure start time, control vs warn vs critical vs real-alloc arms in one run set, to split
 H-jetsam / H-compress / H-handler / H-moot.
+
+## Session 7971 (2026-11-26) — class MP (host memory pressure while the game flies) closed H-moot: `memory_pressure -S` needs root, so a real 5 GB incompressible page-hot hog drove free pages to ~0 and compressed 55 MB of the game's own resident set; presents 59-60/s, max gap 25-28 ms, 0 AI underruns, quit 532 ms; no memory-pressure handler exists; gate S7971_MP
+Ladder 3c host class MP (NEXT.md s7971). crash_reports --since 2026-11-26: new=0. No new SOAK-RESULTS lines.
+Start-of-session full sweep (s7970's two edits had not been swept): 274 gates, 271 GREEN + 3 REPORT (standing s7031/s7210/s7283), 0 RED.
+Boring check first: `memory_pressure -S -l warn` -> "sysctl: kern.memorypressure_manual_trigger failed : Operation not permitted"
+(root only), so no simulated warn/critical notification arm is possible headless; the stimulus is real allocation only.
+New tools: tools/s7971_mem_hog.py (N GB of random 64 MB chunks, one byte per 16 KB page re-read every 2 s so the hog stays active and
+the kernel must compress someone else; zero pages would just be compressed away), tools/s7971_mp_e2e.zsh (s7970 template: private
+/tmp copy, save COPIED, NO_SAVE_WRITE, lvl1 forced-route flight, hog at 125 s for 60 s, watch 30 s, SIGHUP quit; 2 s host sampler
+.vm: vm_stat compressions/swapouts, memorystatus level, game RSS, footprint), tools/s7971_mp_score.py (base/press/post windows:
+min presents/s, max present gap, non-animating VI hold, empty-queue AI posts /10 s; selftest 9 planted cases), tools/s7971_mp_gate.py.
+Instrument bug found and fixed in the same session: the present ring (rt64_present_queue.cpp Q rows) is stamped in host steady_clock
+(uptime, ~116700 s), the AI trace in seconds since launch, so the first scoring put the windows on an empty ring (pres_min=0 gap=0 =
+a false moot). Scorer now aligns: offset = median over framebuffers of (first Q row presenting it - first AI row committing it), the
+AI trace logging the VI origin register = base + one scanline (2 x width). 12-13 framebuffers per arm, spread 52-71 ms, ring_t0
+0.42-0.49 s after launch (matches the AI trace's first row at 0.489 s). Selftest has an uptime-ring case (aligned -> planted 0.6 s gap
+= stall; without the AI path -> moot, i.e. the alignment is what makes the stall visible). Summary score fields re-computed (marked).
+Results (one game at a time, flight lvl1 FPS60, host: REAPER/Chrome/Discord live, swap 8.6/9.2 GB used before the run):
+  arm      hog GB  sys compressions  game RSS base->press min  pres_min b/p/post  max gap ms b/p/post  ai_zero10  verdict
+  control  0       0                 266 -> 267                60/59/51*          23.5/26.5/30.7       0/0/0      moot
+  mid      1.38    0                 270 -> 270                60/60/60           21.8/21.6/21.2       0/0/0      moot
+  high     5.01    368174 (~5.6 GB)  270 -> 215 (-55 MB)       59/59/60           28.1/25.4/23.8       0/0/0      moot
+  (* control post window's last second overlaps the HUP exit.) memorystatus level stayed 1 (normal) in every arm: the kernel never
+  declared warn, so H-jetsam (kill / Metal alloc nil) was not provoked; 0 crash lines, 0 alloc-failure lines, 0 new crash reports,
+  HUP->exit 528-533 ms. The mid arm (0.8 x free) fit in free memory = no pressure, a useful null with its own zero-compression witness.
+Discrimination: H-compress refuted (the game's own pages WERE compressed, 55 MB, and touching them again cost no frame: max gap
+<= 28 ms, VI holds <= 0.03 s, presents never below 59/s); H-handler refuted two lines: static census finds no
+DISPATCH_SOURCE_TYPE_MEMORYPRESSURE / LOWMEMORY / didReceiveMemoryWarning / os_proc_available_memory in src/, RT64 (outside contrib/)
+or the runtime (census positive control: the vendored contrib SDL_events.h DOES match), and the high arm logged no cache-drop line
+or spike; H-jetsam not reached (level never left normal; reaching warn needs >~10 GB and real swapping on the owner's Mac, not done).
+Selects H-moot for pressure up to compression of the game's resident set. No code change (none warranted).
+Gate tools/s7971_mp_gate.py: STATIC handlers=0 census_control=1, SELFTEST 9, E2E 3/3, STIMULUS (high comp+swo 368174 vs control 0,
+hog 5.01 GB, game rss drop 55 MB), CONTROL planted FAIL rejected -> VERDICT CLOSED. Row S7971_MP in s7651 ARGS + EXTRA_GATES. No new
+thread/loop/atomic/env in src/ -> no review rows needed.
+Not covered: warn/critical notifications (root), jetsam, a swap-bound host.
