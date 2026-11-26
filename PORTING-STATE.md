@@ -212930,3 +212930,35 @@ missing publish still fails FIX, only a failed read/fork/reap is refused as unsc
 Rules out: CPU load, fsync I/O pressure, the tracer env, SIGCHLD-ignored reaping as reproducible causes on this host.
 Full sweep (`--jobs 2 --new-red-vs`, 1440 s; a first attempt was killed at a 10 min background cap): gates 269 {GREEN 266, REPORT 3},
 new RED 0; s7958_fw GREEN under sweep load this time. Next: NEXT.md class DI (two instances), unchanged.
+
+## Session 7966 (2026-11-25) — class DI (two instances on one data root) closed: shared save .temp tore saves (49 torn + 273 finalize failures / 2x2000); per-pid temps + flock single-instance guard, second copy runs no-save with a dialog; gate S7966_DI
+
+What ran: NEXT class DI. Offline first: tools/s7966_di/harness.cpp includes the real librecomp files.cpp and runs the exact pi.cpp
+update_save_file sequence from 2 writer processes (payload A / B, 2x2000 saves, each write split in two halves) while the parent samples
+the save via open_input_file_with_backup. Baseline (rename finalize, shared `<save>.temp`): samples 36286, torn/short 49 (4 short, 45 mixed),
+finalize failures 273 (each = librecomp's "Failed to write to the save file" message box) -> H-corrupt CONFIRMED. Control
+ROGUESQ_S7429_OLD_FINALIZE=1 (copy): 6754 torn. Mechanism: open(O_TRUNC) of the shared temp by instance 2 truncates the inode instance 1 is
+writing; instance 1's rename publishes it mid-write; instance 2's rename then fails ENOENT. Same shape for rs64_write_file_atomic
+(audio_device.txt, `<file>.tmp`): shared-temp arm 149/1000 failed writes. H-clobber holds by construction (last writer wins) and is what
+the owner would actually lose: instance 2's save erases instance 1's progress. H-moot refuted: no lock or single-instance check existed.
+Change: lib/N64ModernRuntime librecomp/src/files.cpp rs64_private_temp: `<save>.temp.<pid>`, and the .bak refresh via
+`<save>.bak.temp.<pid>` + rename (it was copy_file onto the shared .bak); src/main/rs64_atomic_write.h rs64_private_tmp_path (`.tmp.<pid>`),
+also used by the F6 controls.json save; new src/main/rs64_instance_lock.h: exclusive flock(LOCK_NB) on <data root>/saves/.rs64_instance.lock,
+fd held for the process life (kernel releases on exit/SIGKILL, no stale lock). main.cpp after the s7964 RO probe: busy -> `[s7966-di]
+another copy is already running ...; this copy will NOT save (saving_was= dialog=)`, setenv ROGUESQ_NO_SAVE_WRITE=1 (save, controls.json
+and audio_device.txt writers all getenv it per call), one warning dialog when saving was on (ROGUESQ_DI_DIALOG=0 = line only).
+Mutants ROGUESQ_S7966_SHARED_TEMP=1, ROGUESQ_S7966_NO_LOCK=1. submodule-patches exported.
+Results: harness fix arm 49768 samples, 0 torn, 0 finalize failures (shared-temp mutant on the new code: 185 failures, still caught);
+atomic writer fix 0/0. Live e2e tools/s7966_di_e2e.zsh (one private game copy, owner save copied, build/saves untouched, two instances 3 s
+apart, 12 s, SIGKILL): nosave PASS (#2 busy, skip-nosave, both reach update_screen 640-832), save PASS (#2 saving_was=1 dialog=off),
+dialog PASS (#2 dialog=show, modal up, never dismissed, us=0 = blocked on it as intended), mutant PASS (NO_LOCK: neither reports busy),
+relock PASS (fresh instance after the SIGKILLs holds the lock). 0 crash lines, 0 temps left in saves/.
+Gate tools/s7966_di_gate.py (sweep row S7966_DI, ARGS + EXTRA_GATES): FIX, MUTANT shared_temp caught, CONTROL old_copy_finalize, ATOMIC,
+ATOMIC_MUTANT, LOCK (first=1 second=0 after_holder_sigkill=1), LOCK_MUTANT, STATIC, E2E -> VERDICT CLOSED. tools/s7429_save_quit.sh
+temp_left now globs `.temp*`.
+Single-source note: the second instance's no-save behaviour is shown by the env flip + the per-call getenv in each writer, not by a
+measured save attempt from instance 2 (a 12 s title run writes no save).
+Rules out: H-moot. Not covered: two instances on DIFFERENT data roots (separate saves, no conflict by design); a network/cloud-synced
+folder where flock may be advisory-only (next class CS).
+Full sweep (uncached, --jobs 2, 1708 s): 270 gates {GREEN 267, REPORT 3}, 0 RED, 0 HOLLOW (S7966_DI GREEN). Next: NEXT.md class CS
+(cloud-synced game folder).

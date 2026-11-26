@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7964 (2026-11-25).
+Compact operational handoff, as of Session 7966 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -405,6 +405,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    missing/zero/partial vs openerr/forkfail/waitfail (unscored = HARNESS FAIL), with a CLASSIFIER control (unlink mutant must show
    missing>0) and a fork()==-1 guard (it would have run kill(-1, SIGKILL) on every user process). A recurrence now names its kind.
    Full sweep s7965: 269 gates, 266 GREEN + 3 REPORT, 0 new RED.
+13m. **s7966 class DI (two game instances on one data root) CLOSED + FIXED, H-corrupt and H-clobber both measured:** offline
+   tools/s7966_di/harness.cpp (librecomp files.cpp save path, 2 writer processes x 2000 saves + sampling reader): the shared
+   `<save>.temp` gave 49 torn/short samples + 273 finalize failures (each one = the in-game "Failed to write" dialog); copy-finalize
+   control 6754 torn. Fix: per-pid temps (files.cpp rs64_private_temp, also for the .bak refresh; rs64_atomic_write.h
+   rs64_private_tmp_path for audio_device.txt; F6 controls.json save) -> 0 torn, 0 failures in 50k samples. Even then the last writer
+   wins, so src/main/rs64_instance_lock.h takes an flock on <data root>/saves/.rs64_instance.lock at boot (kernel drops it on exit or
+   SIGKILL); a second copy logs `[s7966-di] another copy is already running`, shows one dialog when saving is on (ROGUESQ_DI_DIALOG=0 =
+   line only) and runs with ROGUESQ_NO_SAVE_WRITE=1 (all three owner-state writers read it per call). Agent runs (NO_SAVE_WRITE) never
+   see the dialog, so concurrent arms from build/ still work. e2e tools/s7966_di_e2e.zsh 5/5 PASS (nosave, save, dialog, NO_LOCK mutant,
+   relock after SIGKILL). Gate tools/s7966_di_gate.py (S7966_DI): FIX, SHARED_TEMP mutant caught, OLD_FINALIZE control, ATOMIC + mutant,
+   LOCK + NO_LOCK mutant, STATIC, E2E. Mutant envs ROGUESQ_S7966_SHARED_TEMP=1 / ROGUESQ_S7966_NO_LOCK=1. Sweep 270: 267 GREEN + 3 REPORT, 0 RED.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

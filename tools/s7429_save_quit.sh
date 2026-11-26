@@ -29,6 +29,6 @@ R1c=$(grep -ac 's7357-io.*zero-filling' $W/R1c.log); print "R1c control short fi
 [[ $R1 -ge 1 ]] || rc=1
 setup; m0=$(stat -f %m $S); sleep 1; run R2 40 ROGUESQ_FORCE_UNLOCK=1 ROGUESQ_FORCE_SAVE_MISSION=3
 m1=$(stat -f %m $S); sz=$(stat -f %z $S)
-print "R2 write run: mtime_changed=$([[ $m1 != $m0 ]] && print 1 || print 0) size=$sz temp_left=$([[ -e $S.temp ]] && print 1 || print 0) bak=$([[ -e $S.bak ]] && print 1 || print 0)"
+print "R2 write run: mtime_changed=$([[ $m1 != $m0 ]] && print 1 || print 0) size=$sz temp_left=$(ls $S.temp* 2>/dev/null | wc -l | tr -d " ") bak=$([[ -e $S.bak ]] && print 1 || print 0)"
 [[ $sz = 512 ]] || rc=1
 print "VERDICT $([[ $rc = 0 ]] && print H-durable || print window)"; exit $rc

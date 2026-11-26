@@ -1590,23 +1590,76 @@ index 048246e..5d5c245 100644
 +    if (rs64_eep_log()) { rs64_eep_row(rdram, "osEepromLongRead", eep_address, nbytes, buffer, 0, rs64_eep_fits(eep_address, nbytes), 0); rs64_eep_ctl_once(rdram, buffer); }
  }
 diff --git a/librecomp/src/files.cpp b/librecomp/src/files.cpp
-index af6f18d..e5dee75 100644
+index af6f18d..0df032f 100644
 --- a/librecomp/src/files.cpp
 +++ b/librecomp/src/files.cpp
-@@ -1,5 +1,9 @@
+@@ -1,8 +1,27 @@
  #include "files.hpp"
  
 +#include <cstdlib>
++#include <string>
 +#include <fcntl.h>
 +#include <unistd.h>
 +
  constexpr std::u8string_view backup_suffix = u8".bak";
  constexpr std::u8string_view temp_suffix = u8".temp";
  
-@@ -42,6 +46,20 @@ bool recomp::finalize_output_file_with_backup(const std::filesystem::path& filep
-             return false;
-         }
-     }
++// ROGUESQ s7966 class DI: two game instances on one data root (double-click twice) both wrote <save>.temp: the second
++// open truncated the inode the first was still writing, and the first rename published it (tools/s7966_di: 49 torn/short
++// samples + 273 finalize failures = "Failed to write" dialogs in 2x2000 saves). The temp name now carries the pid so
++// each writer owns its own inode; the .bak refresh goes through a per-pid temp + rename too. ROGUESQ_S7966_SHARED_TEMP=1
++// restores the shared names (mutant arm for the gate).
++static std::filesystem::path rs64_private_temp(const std::filesystem::path& filepath, std::u8string_view suffix) {
++    std::filesystem::path p{filepath};
++    p += suffix;
++    if (getenv("ROGUESQ_S7966_SHARED_TEMP") == nullptr) {
++        p += "." + std::to_string((long)getpid());
++    }
++    return p;
++}
++
+ std::ifstream recomp::open_input_backup_file(const std::filesystem::path& filepath, std::ios_base::openmode mode) {
+     std::filesystem::path backup_path{filepath};
+     backup_path += backup_suffix;
+@@ -21,8 +40,7 @@ std::ifstream recomp::open_input_file_with_backup(const std::filesystem::path& f
+ }
+ 
+ std::ofstream recomp::open_output_file_with_backup(const std::filesystem::path& filepath, std::ios_base::openmode mode) {
+-    std::filesystem::path temp_path{filepath};
+-    temp_path += temp_suffix;
++    std::filesystem::path temp_path = rs64_private_temp(filepath, temp_suffix);
+     std::ofstream temp_file_out{ temp_path, mode };
+ 
+     return temp_file_out;
+@@ -32,15 +50,39 @@ bool recomp::finalize_output_file_with_backup(const std::filesystem::path& filep
+     std::filesystem::path backup_path{filepath};
+     backup_path += backup_suffix;
+ 
+-    std::filesystem::path temp_path{filepath};
+-    temp_path += temp_suffix;
++    std::filesystem::path temp_path = rs64_private_temp(filepath, temp_suffix);
+ 
+     std::error_code ec;
+     if (std::filesystem::exists(filepath, ec)) {
+-        std::filesystem::copy_file(filepath, backup_path, std::filesystem::copy_options::overwrite_existing, ec);
+-        if (ec) {
+-            return false;
++        if (getenv("ROGUESQ_S7966_SHARED_TEMP") == nullptr) {
++            std::filesystem::path bak_tmp = rs64_private_temp(filepath, u8".bak.temp");
++            std::filesystem::copy_file(filepath, bak_tmp, std::filesystem::copy_options::overwrite_existing, ec);
++            if (!ec) std::filesystem::rename(bak_tmp, backup_path, ec);
++            if (ec) {
++                std::error_code rm_ec;
++                std::filesystem::remove(bak_tmp, rm_ec);
++                return false;
++            }
++        } else {
++            std::filesystem::copy_file(filepath, backup_path, std::filesystem::copy_options::overwrite_existing, ec);
++            if (ec) {
++                return false;
++            }
++        }
++    }
 +    // ROGUESQ s7429 class CL: copy_file(temp -> final) truncates final first, so a quit/kill inside it left a
 +    // short or empty final save; the loader opens that (it exists) and never reaches the complete .bak
 +    // (tools/s7429_save_quit: 259/2000 kills -> 0-byte save). Flush the temp to disk, then rename it over the
@@ -1617,13 +1670,12 @@ index af6f18d..e5dee75 100644
 +        if (fd >= 0) {
 +            ::fsync(fd);
 +            ::close(fd);
-+        }
+         }
 +        std::filesystem::rename(temp_path, filepath, ec);
 +        return !ec;
-+    }
+     }
      std::filesystem::copy_file(temp_path, filepath, std::filesystem::copy_options::overwrite_existing, ec);
      if (ec) {
-         return false;
 diff --git a/librecomp/src/heap.cpp b/librecomp/src/heap.cpp
 index f84ac71..d5a83bf 100644
 --- a/librecomp/src/heap.cpp

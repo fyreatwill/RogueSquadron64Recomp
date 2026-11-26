@@ -6,6 +6,7 @@
 #include "rs64_atomic_write.h"  // s7958 class FW
 #include "rs64_data_root.h"  // s7960 class DR
 #include "rs64_ro_probe.h"  // s7964 class RO
+#include "rs64_instance_lock.h"  // s7966 class DI
 #include "rs64_shell_quote.h"  // s7962 class PS
 #include <dlfcn.h>
 #include <cstdio>
@@ -12930,7 +12931,7 @@ bool rs64_bind_save(std::string* msg) {
         snprintf(buf, sizeof buf, "NOT saved (ROGUESQ_NO_SAVE_WRITE): would write %zu bytes to %s", text.size(), path.c_str());
         *msg = buf; fprintf(stderr, "[controls] %s\n", buf); return false;
     }
-    const std::string tmp = path + ".tmp";
+    const std::string tmp = rs64_private_tmp_path(path);  // s7966 class DI
     bool ok = false;
     if (FILE* f = fopen(tmp.c_str(), "wb")) { ok = fwrite(text.data(), 1, text.size(), f) == text.size(); ok = (fclose(f) == 0) && ok; }
     ok = ok && rename(tmp.c_str(), path.c_str()) == 0;
@@ -15772,6 +15773,29 @@ int main(int argc, char* argv[]) {
             }
         } else {
             fprintf(stderr, "[s7964-ro] game folder writable: %s\n", ro_where.string().c_str());
+        }
+    }
+    {
+        // s7966 class DI: a second copy of the game on the same data root would silently overwrite the first one's
+        // progress (last writer wins). The first copy holds an flock on saves/; a later one runs without saving.
+        std::string di_why;
+        const int di = rs64_instance_lock(rs_cwd / "saves", &di_why);
+        if (di == 0) {
+            const bool saving = std::getenv("ROGUESQ_NO_SAVE_WRITE") == nullptr;
+            const char* dlg = std::getenv("ROGUESQ_DI_DIALOG");
+            const bool show = saving && !(dlg && std::string(dlg) == "0");
+            fprintf(stderr, "[s7966-di] another copy is already running on %s; this copy will NOT save (saving_was=%d dialog=%s)\n",
+                    (rs_cwd / "saves").string().c_str(), saving ? 1 : 0, show ? "show" : (saving ? "off" : "skip-nosave"));
+            setenv("ROGUESQ_NO_SAVE_WRITE", "1", 1);  // every owner-state writer (save, controls.json, audio_device.txt) checks it
+            if (show) {
+                const std::string m = "Rogue Squadron is already running from this game folder:\n\n" + rs_cwd.string() +
+                    "\n\nThis second copy will run, but it will NOT save progress, control bindings or the audio device, so it "
+                    "cannot overwrite the first copy's save. Quit this copy and use the one already open to keep your progress.";
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Rogue Squadron: already running", m.c_str(), nullptr);
+                fprintf(stderr, "[s7966-di] dialog dismissed\n");
+            }
+        } else {
+            fprintf(stderr, "[s7966-di] instance lock %s (%s)\n", di == 1 ? "held" : "unavailable", di_why.c_str());
         }
     }
 
