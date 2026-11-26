@@ -358,6 +358,17 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    a full-length zero save = erased EEPROM, game-owned. `python3 tools/s7959_rd_gate.py` (sweep row S7959_RD): old
    reader 6/10 planted files misrouted (control), new 0/10; e2e empty file: old binary output=<system default>, new
    output=MacBook Pro Speakers. Full sweep 264: 259 GREEN, 3 REPORT, 2 RED (s7466 stale anchor, s7598 new alloc row) -> both fixed, 7/7 GREEN.
+13g. **s7960 class DR (host data-root split) CLOSED + FIXED:** saves/, the stored ROM, mods/, mod_config/, mods.json were
+   resolved against the LAUNCH folder, settings.txt / controls.json / audio_device.txt next to the executable. Launched from any
+   other folder (Finder -> $HOME, `build/RogueSquadron64Recomp` from the repo root) the ROM was not found ("[ROM] Place your...",
+   no boot; with a stored ROM the save would have been a fresh empty one) and mods/ + mod_config/ were created there. Now
+   src/main/rs64_data_root.h: launch folder if it holds game data (stored ROM, saves/, a ROM candidate name), else the exe's
+   folder as invoked (not realpath'd, so symlinked private harness dirs stay private); `[s7960-root]` logs the pick;
+   ROGUESQ_DATA_ROOT=cwd = old rule. Owner `cd build` launch unchanged (cwd-data). e2e `zsh scratch/s7960/e2e.zsh` (4 arms):
+   old binary from an empty folder romfail=1 + litter, new boots (exe-dir, 5686 log lines) with the folder untouched, cwd
+   control cwd-data, forced arm reproduces the old failure; owner save sha 687d9f77 unchanged. Gate `python3
+   tools/s7960_dr_gate.py` (sweep row S7960_DR; old rule misroutes 2/7, planted mutant 2/7 FAIL). Full sweep 265: 2 RED (s7348 path-join read as /, s7424 stale) both fixed.
+   Residue: settings.txt uses realpath(exe), so a symlinked private dir still reads build/settings.txt (NEXT.md item 1).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

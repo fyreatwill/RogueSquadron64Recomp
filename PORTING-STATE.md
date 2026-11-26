@@ -212746,3 +212746,36 @@ row "bounded": nl < size, caller caps 4096). s7428 precedence pinned the old fop
 tested first; control 4/4 planted flagged). `--only 's7466_analyzer_rest|s7598_az|s7428|s7959|s7384|s7430|s7958'` -> 7 GREEN.
 Rules out: an empty/corrupt owner-state file left by an older binary silently changing the next run's audio output; partial
 controls.json being trusted. Not done: a full-length corrupt-but-nonzero save (the game's EEPROM checksum is its own witness).
+
+## Session 7960 (2026-11-25) — class DR closed: launch from any folder other than build/ found no ROM/save and littered mods/ + mod_config/ there (data root = cwd, settings/controls/audio = exe dir); now launch folder only if it holds game data, else exe dir; e2e old romfail=1 / new boots; gate S7960_DR
+
+HYPOTHESIS-ID: post-preset-class-ladder
+- Start checks: crash_reports --since 2026-11-25 new=0; no new SOAK-RESULTS lines since s7947_handoff_fast. CURRENT-TRUTH
+  46952 B (no maintenance). NEXT.md's candidate class EV (numeric env parses) is already closed by s7358 (class AI, 290 sites),
+  s7711 (owner value census) and s7713 (multi-reader clamps): not redone.
+- New class DR (host data-root split). Code read: main.cpp registered std::filesystem::current_path() as recomp config_path,
+  which pi.cpp (saves/), recomp.cpp (stored ROM <id>.z64, mods/, mod_config/, mods.json) and the ROM import loop use, while
+  rs64_settings.cpp reads settings.txt via realpath(_NSGetExecutablePath) and controls.json / audio_device.txt use
+  SDL_GetBasePath. Hypotheses: H-split (another launch folder applies the owner's settings but loses ROM/save) vs H-moot
+  (something else re-anchors cwd). Discriminator: launch from an empty folder.
+- Fix: src/main/rs64_data_root.h rs64_pick_data_root: the launch folder when it holds game data (stored ROM, saves/, a ROM
+  candidate name), else the executable's folder as invoked (absolute + lexically_normal, NOT realpath: a symlinked private
+  harness dir stays private). `[s7960-root] data=... (cwd-data|exe-dir|cwd-forced|cwd-noexe)` logged once.
+  ROGUESQ_DATA_ROOT=cwd restores the old rule. Not a mitigation: a path-semantics fix. ORIGIN: main.cpp's "portable mode"
+  comment chose cwd; the three later owner-file readers (s7620 controls, F9 audio, s7663 settings) chose the exe dir.
+- e2e `zsh scratch/s7960/e2e.zsh` (one game at a time, 30 s, SIGKILL; private game dirs with symlinked binary + ROMs +
+  copied save, NO_SAVE_WRITE=1): old_away romfail=1, 202 log lines, away/ gained mods,mod_config (H-split selected);
+  new_away romfail=0, 5686 lines, root exe-dir, away/ empty; new_game (control) cwd-data, 5768 lines; new_forced
+  (DATA_ROOT=cwd, plant) romfail=1 + litter = old behaviour reproduced in the new binary. build/saves sha 687d9f77 before
+  and after (owner save untouched).
+- Gate tools/s7960_dr_gate.py + tools/s7960_dr_test.cpp (sweep row S7960_DR in ARGS + EXTRA_GATES): old always-cwd rule
+  misroutes 2/7 cases (CONTROL), new 0/7; planted mutant (cwd-data branch disabled) -> FIX new_bad=2 FAIL / VERDICT OPEN;
+  census: one register_config_path, fed by the picked root; ROM import uses it; settings/controls/audio readers exe-relative.
+- Owner effect: `cd build && ./RogueSquadron64Recomp` unchanged (cwd-data). Double-clicking the binary in Finder (cwd=$HOME)
+  or running build/RogueSquadron64Recomp from the repo root now boots with the owner's save instead of "[ROM] Place your...".
+- Residue (NEXT.md 1): settings.txt uses realpath(exe), so a symlinked private dir reads build/settings.txt.
+- Full sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, 1673 s): 265 gates, 260 GREEN, 3 REPORT, 2 RED, both mine:
+  s7348 div census read the header's `d / n` path join as a division (renamed `dir`, matched by its fs-path rule -> 0
+  unclassified); s7424 H-stale = header mtime bumped by the mutant-restore cp after the build (rebuilt -> H-fresh).
+  `--only 's7348|s7424|s7960'` 3/3 GREEN; rebuilt binary e2e re-run: new_away exe-dir boots, new_game cwd-data, save sha same.
+

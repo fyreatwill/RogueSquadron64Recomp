@@ -4,6 +4,7 @@
 #include <cmath>
 #include "rs64_rdram_peek.h"
 #include "rs64_atomic_write.h"  // s7958 class FW
+#include "rs64_data_root.h"  // s7960 class DR
 #include <dlfcn.h>
 #include <cstdio>
 #include <cstdarg>
@@ -15734,6 +15735,20 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "[s7596-io] current_path failed: %s; using \".\"\n", cwd_ec.message().c_str());
             rs_cwd = ".";
         }
+    }
+    {
+        // s7960 class DR: the launch folder only when it holds game data, else the executable's folder.
+        std::filesystem::path exe_dir;
+        char exe_buf[4096]; uint32_t exe_sz = sizeof(exe_buf);
+        if (_NSGetExecutablePath(exe_buf, &exe_sz) == 0) {
+            std::error_code ab_ec;
+            std::filesystem::path ep = std::filesystem::absolute(std::filesystem::path(exe_buf), ab_ec);
+            if (!ab_ec) exe_dir = ep.lexically_normal().parent_path();
+        }
+        const char* why = "";
+        std::filesystem::path root = rs64_pick_data_root(rs_cwd, exe_dir, std::getenv("ROGUESQ_DATA_ROOT"), &why);
+        fprintf(stderr, "[s7960-root] data=%s (%s) cwd=%s\n", root.string().c_str(), why, rs_cwd.string().c_str());
+        rs_cwd = root;
     }
     recomp::register_config_path(rs_cwd);
 
