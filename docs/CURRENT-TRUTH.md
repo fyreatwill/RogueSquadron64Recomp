@@ -375,7 +375,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    pg file (dir=cwd-data), owner_build build/settings.txt, empty folder exe-dir, DATA_ROOT=cwd forced. Loop runs were already
    moot (runner.sh/loop.sh ROGUESQ_SETTINGS=0); g3_port_capture.sh now defaults it to 0 too. Gate tools/s7961_sd_gate.py (S7961_SD).
    controls.json/audio_device.txt stay SDL_GetBasePath (harness symlinks them in on purpose).
-   Residue: settings.txt uses realpath(exe), so a symlinked private dir still reads build/settings.txt (NEXT.md item 1).
+13i. **s7962 class PS (owner folder paths: spaces / non-ASCII / apostrophe / long) CLOSED + FIXED:** ROM, save (EEPROM b0..7),
+   settings.txt and data root all worked from a 307-char "Rogue Squadron ü/William's Games/..." folder (old binary too; plain-dir
+   control identical). One break: with the exe itself in that folder the crash-handler symbol table loaded 0 symbols (popen
+   "nm -n '%s'" — the apostrophe ended the quote), so crash reports would have lost every function name. Fixed with
+   src/main/rs64_shell_quote.h (also the stall `sample -file` command): new 29057 = control. `zsh tools/s7962_ps_e2e.zsh new` 5 arms.
+   Census: every path-carrying char[] in host code is >=512 and env-gated diagnostic. Gate tools/s7962_ps_gate.py (S7962_PS).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

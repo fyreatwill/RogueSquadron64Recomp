@@ -5,6 +5,7 @@
 #include "rs64_rdram_peek.h"
 #include "rs64_atomic_write.h"  // s7958 class FW
 #include "rs64_data_root.h"  // s7960 class DR
+#include "rs64_shell_quote.h"  // s7962 class PS
 #include <dlfcn.h>
 #include <cstdio>
 #include <cstdarg>
@@ -3711,9 +3712,9 @@ static void rs64_build_local_symbol_table() {
     // no arithmetic needed at signal time.
     intptr_t slide = _dyld_get_image_vmaddr_slide(0);
 
-    char cmd[4096];
-    snprintf(cmd, sizeof(cmd), "nm -n '%s' 2>/dev/null", exe_path);
-    FILE* p = popen(cmd, "r");
+    // s7962: shell-quoted (an apostrophe in the folder name broke the old '%s' and loaded 0 symbols).
+    const std::string cmd = "nm -n " + rs64_shell_quote(exe_path) + " 2>/dev/null";
+    FILE* p = popen(cmd.c_str(), "r");
     if (!p) {
         fprintf(stderr, "[symtab] popen(nm) failed: %s\n", strerror(errno));
         return;

@@ -56,7 +56,7 @@ ROWS = {
     ("librecomp/src/mods.cpp", "dent", "s7597_old ? mod_path.is_regular_file()"): "gated: ROGUESQ_S7597_MODSCAN=0 old-form arm only (XC-1 fix)",
     ("librecomp/src/mods.cpp", "dent", "(s7597_old ? mod_path.is_directory()"): "gated: same old-form arm",
     # thread
-    ("src/main/rt64_render_context.cpp", "thread", "std::thread([c = std::string(cmd)]"): "once: stall self-sample, s_sd_sampled latch (one per run)",
+    ("src/main/rt64_render_context.cpp", "thread", "std::thread([c = cmd]"): "once: stall self-sample, s_sd_sampled latch (one per run)",
     ("src/main/upstream_compat.cpp", "thread", "std::thread([rdram] {"): G,
     ("src/main/upstream_compat.cpp", "thread", "std::thread([]() {"): G,
     ("src/main/upstream_compat.cpp", "thread", "std::thread([] {"): G,

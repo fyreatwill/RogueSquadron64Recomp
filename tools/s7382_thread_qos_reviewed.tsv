@@ -23,7 +23,7 @@ src/main/main.cpp|std::thread([] {|1	DIAG	-	env-gated diagnostic / test / crash-
 src/main/main.cpp|std::thread([at] {|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
 src/main/main.cpp|std::thread([at] { std::this_thread::sleep_for(std::chrono::|2	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
 src/main/main.cpp|std::thread([mt] { std::this_thread::sleep_for(std::chrono::|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
-src/main/rt64_render_context.cpp|std::thread([c = std::string(cmd)] { int rc = std::system(c.|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
+src/main/rt64_render_context.cpp|std::thread([c = cmd] { int rc = std::system(c.c_str());|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
 src/main/rt64_render_context.cpp|std::thread(worker).detach(); }|1	DIAG	RS64 RDP async	ROGUESQ_RDP_ASYNC opt-in only, sets UI itself
 src/main/upstream_compat.cpp|std::thread([rdram] {|1	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)
 src/main/upstream_compat.cpp|std::thread([rdram] {|2	DIAG	-	env-gated diagnostic / test / crash-control thread, default off (read the 4 lines above the site)

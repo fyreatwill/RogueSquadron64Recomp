@@ -212814,3 +212814,30 @@ HYPOTHESIS-ID: post-preset-class-ladder
 - Residue, deliberate: controls.json / audio_device.txt stay SDL_GetBasePath (the harness symlinks them into private dirs).
 - Verdict: selects H-leak outside the loop (H-moot only inside it); fixed. Next (NEXT.md): class PS (paths with spaces /
   non-ASCII / long).
+
+## Session 7962 (2026-11-25) — class PS (owner folder paths: spaces / non-ASCII / apostrophe / >255-char) closed: everything read fine, but an apostrophe in the exe's folder broke the crash-handler `nm '%s'` popen (0 symbols); shell-quoted; gate S7962_PS
+
+HYPOTHESIS-ID: post-preset-class-ladder
+- Start checks: crash_reports --since 2026-11-25 new=0; no new SOAK-RESULTS lines since s7947 (folded). CURRENT-TRUTH 49190 B.
+- NEXT.md 1: H-break (some owner-facing reader fails/truncates on an unusual folder path) vs H-moot. Census first: every
+  fixed char[] path buffer and every shell command in src/main, librecomp, ultramodern. Readers (ROM, saves, settings,
+  controls, audio_device) are all std::filesystem / std::string; two host shell commands quoted a path as bare '%s':
+  rs64_build_local_symbol_table `nm -n '%s'` (main.cpp) and the stall self-sample `sample -file '%s/...'` (rt64_render_context).
+- e2e scratch/s7962/e2e.zsh (= tools/s7962_ps_e2e.zsh), one game at a time, 8 s each, SIGKILL, NO_SAVE_WRITE, RS64_EEP_TRACE:
+  folder "Rogue Squadron ü/William's Games/<4 x 48-char sub folders>" (307 chars) vs plain ASCII control. Old binary:
+  plain_ctl / weird_cwd (symlinked exe) / weird_exedir (launched from an empty folder) all: symtab 29057, root right,
+  settings plant applied, ROM found, EEPROM b0..7=37 14 07 c3.., ~21 swaps. Copied (real) exe in the weird folder:
+  weird_copy and weird_copy_exedir `[symtab] loaded 0` (everything else fine). The symlinked arms were the positive
+  control that the instrument reads 29057 when the path has no apostrophe reaching nm (dyld reports the resolved path).
+- Fix: src/main/rs64_shell_quote.h (' -> '\'') used by both commands; cmd buffers become std::string. Not a mitigation:
+  quoting bug. ORIGIN: the symtab reader (crash handler) was written with a bare '%s' quote assuming repo paths.
+  New binary: all 5 arms symtab 29057, rest identical. Owner save sha 687d9f77 before/after.
+- Gate tools/s7962_ps_gate.py (sweep row S7962_PS + EXTRA_GATES): CONTROL fdfb97972 source bad=1, FIX bad=0 + both sites
+  use the helper, MUTANT (old nm format replanted) caught, UNIT 5 hostile names round-trip through /bin/sh (incl.
+  `x'; echo PWNED; '`), CENSUS 14 path-ish char[] buffers, every %s-carrying one >=512 and env-gated diagnostic
+  (S7504_DIR, DUMP_UCODE, DUMP_VTXDATA, G1D_SPANDUMP, RDRAM_DUMP_DIR, G1E_DUMP, RAMSNAP, RS64_GFX_DL_DUMP_DIR, tl path).
+- Rules out: H-break for every owner-facing reader (spaces, ü, apostrophe, 307-char path); selects H-break only for the
+  crash symbol table (diagnostic but owner-facing via crash reports). Next (NEXT.md): class AN (App Nap / suspension).
+- Full sweep (1 run, --jobs 2): 267 gates, 262 GREEN, 3 REPORT, 2 RED, both mine (stale anchors on the edited stall
+  self-sample lambda text): s7382 thread QoS reviewed.tsv key and s7597 XC census key re-pointed to `std::thread([c = cmd]`.
+  `--only 's7382|s7597|s7962'` 3/3 GREEN.

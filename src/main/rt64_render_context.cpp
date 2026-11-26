@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include "rs64_controls_panel.h"
+#include "rs64_shell_quote.h"  // s7962 class PS
 #include <mach/mach_time.h>  // s6922: dump window clock
 #include <execinfo.h>
 #include <dlfcn.h>
@@ -1324,11 +1325,12 @@ public:
                     if (s_sd_sample_on && !s_sd_sampled) {
                         s_sd_sampled = true;
                         const char* dir = std::getenv("ROGUESQ_STALL_SAMPLE_DIR");
-                        char cmd[1200];
-                        std::snprintf(cmd, sizeof(cmd), "/usr/bin/sample %d 3 -file '%s/rs64_stall_%d_vi%d.sample.txt' >/dev/null 2>&1",
-                                      (int)getpid(), (dir && *dir) ? dir : ".", (int)getpid(), s_n);
-                        fprintf(stderr, "[stall-dump] self-sample: %s\n", cmd);
-                        std::thread([c = std::string(cmd)] { int rc = std::system(c.c_str());
+                        char fn[96]; std::snprintf(fn, sizeof(fn), "/rs64_stall_%d_vi%d.sample.txt", (int)getpid(), s_n);
+                        // s7962: shell-quoted dir (an apostrophe in it broke the old '%s'); no fixed-size cmd buffer.
+                        const std::string cmd = "/usr/bin/sample " + std::to_string((int)getpid()) + " 3 -file " +
+                            rs64_shell_quote(std::string((dir && *dir) ? dir : ".") + fn) + " >/dev/null 2>&1";
+                        fprintf(stderr, "[stall-dump] self-sample: %s\n", cmd.c_str());
+                        std::thread([c = cmd] { int rc = std::system(c.c_str());
                             fprintf(stderr, "[stall-dump] self-sample done rc=%d\n", rc); fflush(stderr); }).detach();
                     }
                     fflush(stderr);
