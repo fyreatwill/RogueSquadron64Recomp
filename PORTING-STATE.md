@@ -213001,3 +213001,38 @@ session and are now fixed:
 - RED s7595_sv_census: the new read_save_file message_box site was unclassified. Now classified as "stderr only, non-blocking".
 - HOLLOW s7967_cs_gate: the scorer read the harness field `open=1` as one OPEN item. Renamed to `opened=`.
 Re-run `--only 's7967_cs|s7595_sv|s7357|s7429|s7966'`: 4/4 GREEN.
+
+## Session 7968 (2026-11-26) — class XF (game folder on exFAT / FAT32) closed: save rename, flock and fsync all work on the fskit drivers (H-rename/H-flock/H-fsync refuted with controls); H-xattr confirmed, AppleDouble "._foo.nrm" sidecars were opened as mods; mods scan now skips "._*", e2e 15 arms, gate S7968_XF
+Ladder 3c host class XF (NEXT.md s7968). crash_reports --since 2026-11-26: new=0. No new SOAK-RESULTS lines.
+Setup: hdiutil 64 MB / 256 MB images, `-fs APFS` (control), `-fs ExFAT`, `-fs "MS-DOS FAT32"`; on this macOS they mount as `exfat` /
+`msdos` through fskit (the same drivers a USB stick gets). SMB not tested (needs a server).
+Offline, real librecomp files.cpp in every harness:
+- H-rename: tools/s7429_save_quit/harness.cpp, SIGKILL at a random offset inside the pi.cpp save sequence, 600 trials, offsets up to
+  60 ms (FAT writes are slower: at the s7429 default 3 ms no new save ever landed, B=0, so the window was not reached; widened). Old
+  copy-finalize (ROGUESQ_S7429_OLD_FINALIZE=1) control: short loads APFS 176 / exFAT 48 / FAT32 40. Rename finalize: 0 bad on all
+  three, B=265-282 (new saves did land). REFUTED: rename over an existing file is atomic enough for SIGKILL on both drivers. Power loss
+  or yanking the stick mid-write is NOT covered (FAT has no journal).
+- H-flock: tools/s7966_di/hdr_test.cpp: first=1 second=0 (busy) after_holder_sigkill=1 on exFAT and FAT32, same as APFS. REFUTED.
+- Two writers (s7966 harness, 500/writer): torn 0, finalize_fail 0 on all three. Atomic writer: bad 0 fails 0.
+- H-fsync: 200 save cycles (s7967 harness write mode) 0 fails, read back payload ok. REFUTED (fsync, not F_FULLFSYNC, is used).
+- H-xattr: every file that has an xattr grows a 4096-byte `._<name>` sidecar on exFAT/FAT32 (saves/ got 3: `._rs64...bin`, `.bak`,
+  `._.rs64_instance.lock`; also `._saves`, `._audio_device.txt`). Census of host directory scans: only librecomp mods.cpp
+  scan_mod_folder iterates a game-folder directory (rt64 recursive iterators are texture-pack/tool paths). It picks mods by extension,
+  so `._foo.nrm` is opened as a mod: `Error opening mod .../mods/._junk.nrm: Mod is an invalid zip file`. CONFIRMED. Effect: one error
+  line per downloaded mod copied to a stick (the quarantine xattr makes the sidecar); scan_mods only printfs errors, no dialog.
+Change (lib/N64ModernRuntime, patch exported): scan_mod_folder skips entries whose filename starts with "._" and logs `Skipping
+AppleDouble sidecar`. ROGUESQ_S7968_XF=0 restores the old scan.
+ORIGIN: the sidecar's writer is the macOS exFAT/msdos driver, which stores xattrs (com.apple.quarantine, com.apple.provenance) as
+AppleDouble files. That is legitimate OS behaviour; the defect was our scanner treating them as mods.
+e2e tools/s7968_xf_e2e.zsh (new): private game copy per image, owner save COPIED (build/saves untouched). Per FS: save (saving ON 20 s),
+second (2nd copy 8 s in), mods_fix + mods_mutant (junk.nrm with a quarantine xattr; stdbuf -o L because stdout is block-buffered and
+SIGKILL dropped the mod lines: the first run's mods arm read 0 for the plain junk file too, i.e. no control, so that run's mods result
+was void), relaunch. 15/15 PASS: all alive, us=1088, 0 crash, 0 "Failed to" lines, [s7964-ro] writable, [s7966-di] lock held, the 2nd
+copy logs "another copy is already running" on all three FS, save 512 B, 0 temps. mods: control junk.nrm error 1 in every boot;
+exFAT/FAT32 sidecar present=1, fix opened=0 skipped=1, mutant opened=1; APFS no sidecar (opened 0). Note the save arm's save stayed
+byte-identical to the seed, so the e2e shows boot/lock/no-failure, not a changed save; write durability comes from the harnesses.
+Gate tools/s7968_xf_gate.py (sweep row S7968_XF, ARGS + EXTRA_GATES, ~2 min): per FS KILL (old tears = control, new 0 bad, new saves
+landed), TWOWRITER, ATOMIC+LOCK, WRITEREAD (+ sidecar count: 0 on APFS, >0 on FAT), STATIC (skip before is_mod), E2E 15/15 with both
+FAT mutants opening the sidecar -> VERDICT CLOSED.
+Rules out for XF: H-rename, H-flock, H-fsync. H-moot is false only for mods/ (cosmetic log line).
+Full sweep, uncached, --jobs 2, 1851 s: 272 gates, 269 GREEN + 3 REPORT (the standing s7031/s7210/s7283 H-reports), 0 RED, 0 HOLLOW.

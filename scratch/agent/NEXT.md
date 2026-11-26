@@ -1,23 +1,23 @@
-# NEXT (s7968)
+# NEXT (s7969)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7967 closed class CS: an iCloud placeholder save that cannot be read now means "no save this session", not "empty save". Online
-eviction costs only ~1 s. Gate S7967_CS, e2e tools/s7967_cs_e2e.zsh (it uploads a COPY of the save to a probe folder in the owner's
-iCloud and deletes it after). Do not redo CS, DI (s7966), RO (s7964), AN (s7963), PS (s7962), SD (s7961), DR (s7960), RD (s7959),
+s7968 closed class XF: on exFAT/FAT32 (fskit) save rename, flock and fsync behave as on APFS; only AppleDouble `._*` sidecars in
+mods/ were opened as mods (now skipped, ROGUESQ_S7968_XF=0 = old). Gate S7968_XF, e2e tools/s7968_xf_e2e.zsh (makes its own images
+under /tmp). Do not redo XF, CS (s7967), DI (s7966), RO (s7964), AN (s7963), PS (s7962), SD (s7961), DR (s7960), RD (s7959),
 FW (s7958), CK (s7954), LC (s7953), TF (s7955), EV.
 An src/ or lib/ edit needs the FULL sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, ~28 min: run it in the background).
 0. `python3 tools/crash_reports.py --since 2026-11-26`. Fold any new SOAK-RESULTS lines.
-1. Ladder 3c, new host class XF: the game folder is on a non-APFS volume, such as an exFAT/FAT32 USB stick or an SMB share. Owners
-   often copy games to a stick.
+1. Ladder 3c, new host class UE: the volume holding the game folder goes away mid-run (USB stick pulled, `diskutil eject`, or the
+   stick's sleep). Follows XF: owners who copy to a stick will pull it.
    Hypotheses:
-   - H-rename: rename-over-existing is not atomic, or fails on FAT/exFAT. Then finalize_output_file_with_backup fails, or leaves
-     neither the file nor the .bak.
-   - H-flock: flock returns ENOTSUP on msdos/exfat/smbfs. Then the s7966 lock reads "unavailable", which is fine, or "busy", which
-     would make every launch run no-save.
-   - H-fsync: F_FULLFSYNC is not supported, and the s7429 finalize path errors.
-   - H-xattr: AppleDouble `._` files appear next to saves/ and controls.json, and a loader trips on them.
+   - H-sigbus: the executable's pages are mapped from the vanished device; the next page-in SIGBUSes (crash report, no save flush).
+     Expected and mostly unfixable, but measure it: time-to-death, and whether a crash report names it.
+   - H-savefail: the exe survives (pages resident), but the next save write fails: does the game show the "Failed to write" dialog
+     once, or spam it every save, or hang in the quit flush?
+   - H-hang: a read/write on the dead mount blocks forever (EIO vs block) and the game freezes rather than failing.
    - H-moot.
-   Discriminator, all offline and no game needed first: `hdiutil create -size 64m -fs ExFAT` and `-fs MS-DOS` (FAT32) images, mount
-   them, then run tools/s7967_cs/harness.cpp write/read cycles (pi.cpp save sequence) and tools/s7966_di/hdr_test.cpp (lock +
-   atomic writer) on each. The APFS image is the control. Then one e2e boot per FS from a private game copy on the image, checking
-   the [s7964-ro] / [s7966-di] lines and that a save written with saving on survives a SIGKILL + relaunch. Fix what breaks, and add a
-   gate.
+   Discriminator: tools/s7968_xf_e2e.zsh's image setup (256 MB ExFAT image, private game copy, owner save COPIED). Arms, one game at a
+   time, saving ON: (a) `hdiutil detach -force` at 10 s, watch 20 s more: alive/dead, signal, last stderr lines, crash report;
+   (b) exe copied to /tmp but saves/ on the image (symlink, as s7967 did) so only the data volume vanishes: then trigger a save
+   (how: grep s7429_save_quit.sh for the unforced-write recipe) and count "Failed to" lines and the quit-flush time after SIGTERM-free
+   quit (Cmd-Q not available headless: use the existing ROGUESQ quit-flush path, grep "quit flush"). APFS image detach = control.
+   Fix only what is ours (e.g. repeated dialogs, a hang); add a gate.

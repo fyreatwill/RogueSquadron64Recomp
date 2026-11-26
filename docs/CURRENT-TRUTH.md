@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7967 (2026-11-26).
+Compact operational handoff, as of Session 7968 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -425,6 +425,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    sets ROGUESQ_NO_SAVE_WRITE=1. That is stderr only, NOT a dialog: the message_box callback here only prints. The offline case is
    SIMULATED (ROGUESQ_S7967_SIM_OFFLINE=1), not measured with the network off. e2e tools/s7967_cs_e2e.zsh 5/5 PASS. Gate S7967_CS.
    README has a paragraph under Running. Sweep 271: 0 RED after two own fixes (s7595 row, harness `opened=` field).
+13o. **s7968 class XF (game folder on exFAT / FAT32 stick) CLOSED + FIXED (cosmetic):** fskit exfat/msdos images, APFS control.
+   s7429 SIGKILL harness: old copy-finalize tears 40-176 loads per FS (control), rename finalize 0 bad, so saves are kill-safe there
+   (power loss / yanked stick NOT covered). flock busy/release, two writers, fsync cycles: all as on APFS. Only defect: xattrs become
+   `._<name>` AppleDouble sidecars and the mods/ scan opened `._foo.nrm` as a mod ("invalid zip file" line). mods.cpp now skips `._*`
+   (ROGUESQ_S7968_XF=0 = old). e2e tools/s7968_xf_e2e.zsh 15/15 (boot, lock, 2nd copy, mods fix/mutant, relaunch per FS; mod lines
+   need `stdbuf -o L`, SIGKILL drops buffered stdout). Gate S7968_XF. SMB untested. Sweep 272: 269 GREEN + 3 REPORT, 0 RED.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

@@ -1874,7 +1874,7 @@ index a75d253..e6808be 100644
      exists = true;
      return ret;
 diff --git a/librecomp/src/mods.cpp b/librecomp/src/mods.cpp
-index ff40212..5b0d25a 100644
+index ff40212..b52e097 100644
 --- a/librecomp/src/mods.cpp
 +++ b/librecomp/src/mods.cpp
 @@ -2,6 +2,8 @@
@@ -1906,7 +1906,7 @@ index ff40212..5b0d25a 100644
  
      return recomp::finalize_output_file_with_backup(path);
  }
-@@ -813,11 +821,29 @@ std::vector<recomp::mods::ModOpenErrorDetails> recomp::mods::ModContext::scan_mo
+@@ -813,11 +821,37 @@ std::vector<recomp::mods::ModOpenErrorDetails> recomp::mods::ModContext::scan_mo
      close_mods();
  
      static const std::vector<ModContentTypeId> empty_content_types{};
@@ -1923,6 +1923,14 @@ index ff40212..5b0d25a 100644
 +            break;
 +        }
 +        const std::filesystem::directory_entry& mod_path = *s7597_it;
++        // s7968 class XF: on exFAT/FAT32/SMB volumes macOS stores xattrs (e.g. the quarantine flag of a downloaded mod) in an
++        // AppleDouble sidecar "._<name>", so "._foo.nrm" sits beside "foo.nrm" and was opened as a mod ("invalid zip file"
++        // per sidecar, tools/s7968_xf_e2e.zsh). Skip them. ROGUESQ_S7968_XF=0 restores the old scan (gate mutant).
++        static const bool s7968_old = [] { const char* e = std::getenv("ROGUESQ_S7968_XF"); return e && e[0] == '0'; }();
++        if (!s7968_old && mod_path.path().filename().string().rfind("._", 0) == 0) {
++            printf("Skipping AppleDouble sidecar " PATHFMT "\n", mod_path.path().filename().c_str());
++            continue;
++        }
          bool is_mod = false;
          bool requires_manifest = true;
          std::reference_wrapper<const std::vector<ModContentTypeId>> supported_content_types = std::cref(empty_content_types);
@@ -1938,7 +1946,7 @@ index ff40212..5b0d25a 100644
              auto find_container_it = container_types.find(mod_path.path().extension().string());
              if (find_container_it != container_types.end()) {
                  is_mod = true;
-@@ -825,7 +851,7 @@ std::vector<recomp::mods::ModOpenErrorDetails> recomp::mods::ModContext::scan_mo
+@@ -825,7 +859,7 @@ std::vector<recomp::mods::ModOpenErrorDetails> recomp::mods::ModContext::scan_mo
                  requires_manifest = find_container_it->second.requires_manifest;
              }
          }
@@ -1947,7 +1955,7 @@ index ff40212..5b0d25a 100644
              is_mod = true;
          }
          if (is_mod) {
-@@ -2231,6 +2257,9 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::init_mod_code(uint8_t*
+@@ -2231,6 +2265,9 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::init_mod_code(uint8_t*
              mod.section_load_addresses[section_index] = section.ram_addr;
          }
          else {
@@ -1957,7 +1965,7 @@ index ff40212..5b0d25a 100644
              for (size_t i = 0; i < section.size; i++) {
                  MEM_B(i, (gpr)cur_section_addr) = binary_data[section.rom_addr + i];
              }
-@@ -2441,12 +2470,22 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+@@ -2441,12 +2478,22 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
      dependencies_ordered.resize(mod.recompiler_context->dependencies_by_name.size());
  
      for (const auto& [dependency, dependency_index] : mod.recompiler_context->dependencies_by_name) {
@@ -1980,7 +1988,7 @@ index ff40212..5b0d25a 100644
          const std::string& dependency_id = dependencies_ordered[imported_func.dependency_index];
  
          GenericFunction func_handle{};
-@@ -2499,7 +2538,15 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
+@@ -2499,7 +2546,15 @@ recomp::mods::CodeModLoadError recomp::mods::ModContext::resolve_code_dependenci
  
      // Register callbacks.
      for (const N64Recomp::Callback& callback : mod.recompiler_context->callbacks) {
