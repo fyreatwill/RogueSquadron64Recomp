@@ -3,6 +3,7 @@
 #include <string>
 #include <cmath>
 #include "rs64_rdram_peek.h"
+#include "rs64_atomic_write.h"  // s7958 class FW
 #include <dlfcn.h>
 #include <cstdio>
 #include <cstdarg>
@@ -8430,14 +8431,13 @@ static void audio_route_apply_cycle() {
     // s7428 class CK: audio_device.txt is the only owner-facing state a run persists besides the save. Probe/test runs
     // (ROGUESQ_NO_SAVE_WRITE, exported by tools/agent/runner.sh) must not change the next run's default, same as the save.
     const bool persist = !std::getenv("ROGUESQ_NO_SAVE_WRITE");
-    if (persist) {
-        if (FILE* f = fopen(audio_route_file_path().c_str(), "w")) {
-            fprintf(f, "%s\n", g_audio_route_pref.c_str());
-            fclose(f);
-        }
-    }
-    fprintf(stderr, "[audio-route] F9 -> '%s' (%s %s)\n", g_audio_route_pref.c_str(),
-            persist ? "saved to" : "NOT saved (ROGUESQ_NO_SAVE_WRITE):", audio_route_file_path().c_str());
+    // s7958 class FW: was fopen("w") in place (a kill/full disk mid-write left an empty file = "default" next run)
+    // and logged "saved to" even when the write failed. Temp + fsync + rename, and report the failure.
+    std::string werr;
+    const bool saved = persist && rs64_write_file_atomic(audio_route_file_path(), g_audio_route_pref + "\n", &werr);
+    fprintf(stderr, "[audio-route] F9 -> '%s' (%s %s%s%s)\n", g_audio_route_pref.c_str(),
+            !persist ? "NOT saved (ROGUESQ_NO_SAVE_WRITE):" : saved ? "saved to" : "SAVE FAILED:",
+            audio_route_file_path().c_str(), werr.empty() ? "" : " ", werr.c_str());
     std::lock_guard<std::recursive_mutex> lock(audio_device_mutex);
     if (audio_device) {
         SDL_CloseAudioDevice(audio_device);

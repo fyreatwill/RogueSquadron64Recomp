@@ -107,7 +107,7 @@ def checks(main_t, rc_t, pi_t):
     out.append(('audio_device:env-first', check_env_first(lp, 'ROGUESQ_AUDIO_DEVICE', 'fopen(audio_route_file_path().c_str(), "r")'),
                 'ROGUESQ_AUDIO_DEVICE tested before audio_device.txt is opened'))
     ac = fn_body(main_t, 'audio_route_apply_cycle')
-    out.append(('audio_device:persist-gated', check_gated_write(ac, 'fopen(audio_route_file_path().c_str(), "w")'),
+    out.append(('audio_device:persist-gated', check_gated_write(ac, 'rs64_write_file_atomic(audio_route_file_path()'),
                 'F9 persist write gated by ROGUESQ_NO_SAVE_WRITE'))
     us = fn_body(pi_t, 'update_save_file')
     out.append(('save:write-gated', check_gated_write(us, 'open_output_file_with_backup'), 'save write gated by ROGUESQ_NO_SAVE_WRITE'))

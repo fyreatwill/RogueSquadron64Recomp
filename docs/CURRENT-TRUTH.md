@@ -344,6 +344,12 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    survives 5/5, valid file loads on both. Other host JSON readers already caught (user config, texture-pack db, mods, controls.json).
    s7957 full sweep 262 gates: 258 GREEN, 3 REPORT, 1 RED = s7364 heapbuf on the s7955 settings strip (2 rows, both BOUNDED, now
    reviewed -> OPEN 0). An src/ edit needs the FULL sweep, not only its own `--only` row.
+13e. **s7958 class FW (host owner-state file writers) CLOSED:** census of every fopen("w")/ofstream in src/, librecomp, RT64 hle:
+   all but 5 are env-gated diagnostic dumps/logs. Owner-state: save (pi.cpp) + mods config = s7429 temp+fsync+rename; controls.json
+   = temp+rename (s7620); RT64 saveConfiguration dead (rt64_render_context.cpp useConfigurationFile=false); audio_device.txt (F9)
+   was fopen("w") in place and logged "saved to" even on failure -> a kill mid-write left an EMPTY file, which the next run reads
+   as "default" (system route, not the owner's choice). Now src/main/rs64_atomic_write.h (temp+fsync+rename, "SAVE FAILED:" log).
+   `python3 tools/s7958_fw_gate.py` (sweep row S7958_FW): 1500 SIGKILLs/arm, old writer empty 822-852 (control), new 0.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

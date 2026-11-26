@@ -212689,3 +212689,29 @@ src/main/rs64_settings.cpp from the s7955 comment strip (`rest[0]` :89, `vraw[i 
 's795[45]'`, so the full sweep had not seen them. Both hand-reviewed BOUNDED (rest[0] after rest.empty() short-circuit; loop i>=1 and
 i < vraw.size()) and added to tools/s7364_heapbuf_reviewed.tsv: census OPEN 0 keys 0; `--only 's7364|s795[457]'` -> 4 GREEN.
 Lesson: a session that edits src/ must run the full sweep (or at least the src-scanning censuses), not just its own row.
+
+## Session 7958 (2026-11-25) — class FW (host owner-state file writers) closed: audio_device.txt was truncate-in-place (SIGKILL mid-write -> empty file 822/1500), now temp+fsync+rename via rs64_atomic_write.h; gate S7958_FW
+Triage: crash_reports --since 2026-11-25 new=0; SOAK-RESULTS has no unfolded line.
+Unit (NEXT s7958 item 1): host file writers. Hypotheses H-safe (owner-state writers never leave a partial file and report
+failure) vs H-clobber (truncate-then-write leaves an empty/partial file on a kill / full disk).
+Census (grep fopen "w"/"wb"/"a", ofstream, rename over src/, lib/rt64/src, lib/N64ModernRuntime): every site is an env-gated
+diagnostic dump/log except 5 owner-state writers: save (librecomp pi.cpp) and mods config (mods.cpp) both go through
+finalize_output_file_with_backup = s7429 temp+fsync+rename; controls.json (rs64_bind_save) temp+rename (s7620); RT64
+Application::saveConfiguration is in-place but dead (rt64_render_context.cpp:608 useConfigurationFile=false); audio_device.txt
+(audio_route_apply_cycle, F9) was `fopen(path, "w")` in place with no error check and logged "saved to" even on failure.
+Measurement: tools/s7958_fw_kill_test.cpp forks a writer alternating two device names into one file and SIGKILLs it at a random
+0.2-2 ms, 1500 kills per arm, one run. OLD (exact pre-fix writer): 822 of 1500 kills left the file EMPTY (sweep rerun: 852) ->
+H-clobber selected for audio_device.txt. An empty file is read by audio_route_load_pref as '' = "default" = system output,
+not the owner's chosen device nor the "MacBook Pro Speakers" built-in default. NEW: 0/1500 bad; unwritable path returns false.
+ORIGIN: the writer is our own F9 handler (s6739); the value it wrote is legitimate, the write was not atomic.
+Change: src/main/rs64_atomic_write.h `rs64_write_file_atomic` (sibling .tmp, check fwrite/fflush/fsync/fclose, rename; removes
+the temp on failure); audio_route_apply_cycle uses it and logs "SAVE FAILED: <path> <strerror>". ROGUESQ_NO_SAVE_WRITE gate kept.
+Evidence (two lines): (1) tools/s7958_fw_gate.py: CONTROL old_bad=822 PASS, FIX new_bad=0 PASS, CENSUS 5 owner writers PASS ->
+VERDICT CLOSED, row S7958_FW in ARGS + EXTRA_GATES; (2) game rebuilt (100%), "SAVE FAILED:" in the binary, 10 s title boot from
+build/: "[audio-route] preference from .../audio_device.txt: 'MacBook Pro Speakers'", output opened, no crash (read path intact).
+Not done: pressing F9 in the running game (runner exports NO_SAVE_WRITE, so the write is gated off in every loop run anyway).
+Full sweep (uncached, --jobs 2): 263 gates {GREEN 257, REPORT 3, RED 3}; all 3 REDs were this change tripping text-pinned
+censuses: s7384 static-state (inline-function locals f/ok in the new header -> 2 CONFINED LOCAL rows in s7384_static_reviewed.tsv),
+s7428 config precedence (persist-gated check pinned the old fopen text -> now pins rs64_write_file_atomic(audio_route_file_path()),
+s7430 file growth (site map key updated to the new call, header temp fopen = HELPER, header comment reworded). `--only
+'s7384|s7428|s7430|s7958'` -> 4 GREEN. Rules out: any other owner-state file in a default run being left empty by a kill.
