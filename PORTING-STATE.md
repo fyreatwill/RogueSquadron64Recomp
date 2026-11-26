@@ -212783,3 +212783,34 @@ HYPOTHESIS-ID: post-preset-class-ladder
   re-anchors cwd). The change is a code fix (data-root rule in main.cpp + rs64_data_root.h), not diagnostics; the one
   fprintf is the pick log. Next discriminator (NEXT.md 1): H-leak vs H-moot for settings.txt under a symlinked private
   game dir: plant a settings.txt in build-like dir, launch via symlink, read the [settings] lines.
+
+## Session 7961 (2026-11-25) — class SD (settings.txt dir split, s7960 DR residue) closed: default settings.txt came from realpath(exe), so a symlinked private game dir kept its own save but applied build/settings.txt; now follows the data-root rule; gate S7961_SD
+
+HYPOTHESIS-ID: post-preset-class-ladder
+- Start checks: crash_reports --since 2026-11-25 new=0; no new SOAK-RESULTS lines. CURRENT-TRUTH 48347 B (no maintenance).
+- NEXT.md 1: H-leak (a harness run picks up the owner's settings.txt) vs H-moot. Boring check first: runner.sh:41 and
+  loop.sh:40 export ROGUESQ_SETTINGS=0, so loop iterations and queued soaks are moot; build/ has no settings.txt today.
+  Outside the loop (owner or manual g3_port_capture.sh SAVE_FROM run) the path was the leak: old binary from a symlinked
+  private dir (env -u ROGUESQ_SETTINGS) logged `[s7663] settings file=build/settings.txt(absent)` with data root =
+  the private dir (cwd-data), and the dir's planted settings.txt (ROGUESQ_S7961_PLANT=1) was ignored. Positive control,
+  same run set: ROGUESQ_SETTINGS=<pg>/settings.txt -> set=1, `S7961_PLANT=1(file)` applied. Two lines: code read
+  (exe_path() = realpath(_NSGetExecutablePath)) + e2e. Selects H-leak (outside the loop), refutes H-moot as a product claim.
+- Fix: src/main/rs64_settings.cpp settings_default_dir() = rs64_pick_data_root(cwd, exe dir as invoked lexically_normal,
+  ROGUESQ_DATA_ROOT) — the exact s7960 rule, so settings.txt sits with the save in use. `[s7663]` line gains
+  `dir=cwd-data|exe-dir|cwd-forced|arg|env`. execv still uses the realpath exe. Not a mitigation: a path-semantics fix.
+  ORIGIN: s7663 wrote the settings reader before s7960 made the data root exe-relative-as-invoked; the two drifted.
+  tools/g3_port_capture.sh now defaults ROGUESQ_SETTINGS=0 itself (retail arms outside the loop too).
+- e2e `zsh tools/s7961_sd_e2e.zsh new` (one game at a time, 6 s each, SIGKILL, NO_SAVE_WRITE): symlink_pg reads the pg
+  file (set=1, plant applied, dir=cwd-data); owner_build build/settings.txt (cwd-data, owner launch unchanged); repo_root
+  <repo>/settings.txt (repo root holds ROM + saves/, so data root is repo root too -> now consistent); away_empty (empty
+  folder) build/settings.txt dir=exe-dir; forced_cwd (DATA_ROOT=cwd) away/settings.txt cwd-forced. build/saves sha 687d9f77
+  before and after.
+- Gate tools/s7961_sd_gate.py (sweep row S7961_SD + EXTRA_GATES): CONTROL old source (a6af9af8b) old_bad=1, FIX new_bad=0,
+  MUTANT (old default line replanted) caught, CENSUS shared header.
+- Full sweep (1 run, --jobs 2): 266 gates, 260 GREEN, 3 REPORT, 3 RED, all mine: s7955 test build lacked -I src/main
+  (new include) -> added; s7596 fs census did not see `ab` as an error_code name -> renamed ab_ec; s7714 truth census:
+  ROGUESQ_DATA_ROOT readers (main.cpp from s7960 and the new one) unclassified -> 2 STRING rows. Rebuilt; `--only
+  's7596|s7714|s7955|s7960|s7961|s7424'` 6/6 GREEN; e2e re-run on the rebuilt binary identical.
+- Residue, deliberate: controls.json / audio_device.txt stay SDL_GetBasePath (the harness symlinks them into private dirs).
+- Verdict: selects H-leak outside the loop (H-moot only inside it); fixed. Next (NEXT.md): class PS (paths with spaces /
+  non-ASCII / long).

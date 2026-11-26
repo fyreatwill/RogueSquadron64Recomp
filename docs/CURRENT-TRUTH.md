@@ -368,6 +368,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    old binary from an empty folder romfail=1 + litter, new boots (exe-dir, 5686 log lines) with the folder untouched, cwd
    control cwd-data, forced arm reproduces the old failure; owner save sha 687d9f77 unchanged. Gate `python3
    tools/s7960_dr_gate.py` (sweep row S7960_DR; old rule misroutes 2/7, planted mutant 2/7 FAIL). Full sweep 265: 2 RED (s7348 path-join read as /, s7424 stale) both fixed.
+13h. **s7961 class SD (settings.txt dir split, DR residue) CLOSED + FIXED:** the default settings.txt came from realpath(exe)'s
+   folder, so a symlinked private game dir kept its own save but read build/settings.txt (old e2e: file=build/settings.txt,
+   planted pg file ignored; explicit ROGUESQ_SETTINGS=pg file read = control). Now src/main/rs64_settings.cpp
+   settings_default_dir() = rs64_pick_data_root (same rule as saves). `zsh tools/s7961_sd_e2e.zsh new` 5 arms: symlink_pg reads
+   pg file (dir=cwd-data), owner_build build/settings.txt, empty folder exe-dir, DATA_ROOT=cwd forced. Loop runs were already
+   moot (runner.sh/loop.sh ROGUESQ_SETTINGS=0); g3_port_capture.sh now defaults it to 0 too. Gate tools/s7961_sd_gate.py (S7961_SD).
+   controls.json/audio_device.txt stay SDL_GetBasePath (harness symlinks them in on purpose).
    Residue: settings.txt uses realpath(exe), so a symlinked private dir still reads build/settings.txt (NEXT.md item 1).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through

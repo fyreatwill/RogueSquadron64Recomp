@@ -89,6 +89,8 @@ UNMODELLED_T = [
 ("ROGUESQ_ASPECT_SCALE","tools/apply_s6144_fpx.py","kx6144",S),
 ("ROGUESQ_ASPECT_SCALE","tools/apply_s6294_edgewriter.py","const char* a = getenv",S),
 ("ROGUESQ_CONTROLS","src/main/main.cpp","e && *e) return e;",S),
+("ROGUESQ_DATA_ROOT","src/main/main.cpp","rs64_pick_data_root(rs_cwd",S),  # s7961: mode string == "cwd" (rs64_data_root.h)
+("ROGUESQ_DATA_ROOT","src/main/rs64_settings.cpp","rs64_pick_data_root(cwd",S),  # s7961 settings.txt dir, same rule
 ("ROGUESQ_DD_FOGCULL","src/main/upstream_compat.cpp","g_rs64_s7030 = [",M),
 ("ROGUESQ_DD_OFFMAPCULL","src/main/upstream_compat.cpp","g_rs64_s7030 = [",M),
 ("ROGUESQ_DD_WIDEWIN_CAP","src/main/upstream_compat.cpp","static const Cfg cfg",S),

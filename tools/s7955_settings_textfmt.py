@@ -8,7 +8,7 @@ R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(R, "src/main/rs64_settings.cpp"); T = os.path.join(R, "tools/test_settings.cpp")
 def run(src, d, tag):
     exe = os.path.join(d, tag)
-    c = subprocess.run(["c++", "-std=c++17", "-w", T, src, "-o", exe], capture_output=True, text=True)
+    c = subprocess.run(["c++", "-std=c++17", "-w", "-I", os.path.join(R, "src/main"), T, src, "-o", exe], capture_output=True, text=True)
     if c.returncode: print(f"{tag} BUILD FAIL\n{c.stderr[:400]}"); sys.exit(1)
     o = subprocess.run([exe], capture_output=True, text=True).stdout
     m = re.search(r"(PASS|FAIL) (\d+) cases, (\d+) fail", o); return m.group(1), int(m.group(3))

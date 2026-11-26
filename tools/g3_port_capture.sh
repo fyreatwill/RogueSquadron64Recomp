@@ -9,6 +9,7 @@
 #   s7819: the owner's save is never touched. SAVE_FROM builds a private game dir OUTDIR/game (symlinked binary + ROM
 #   + audio_device.txt, its own saves/ holding SAVE_FROM) and runs from it; the save path resolves from the cwd
 #   (main.cpp register_config_path(rs_cwd) -> pi.cpp config_path/saves). ROGUESQ_NO_SAVE_WRITE=1 is forced as well.
+#   s7961: ROGUESQ_SETTINGS defaults to 0 here (retail arms outside the loop too); set it to a file to apply one.
 cd "$(git rev-parse --show-toplevel)"
 O=$1; _c=$(sh "$(git rev-parse --show-toplevel)/tools/agent/run_dir_guard.sh" "$O") || { echo "tools/g3_port_capture.sh: $_c (s7952: outdir differs from an existing dir only by case; rename)" >&2; exit 3; }
 mkdir -p $O
@@ -26,7 +27,7 @@ if [ -n "${SAVE_FROM:-}" ]; then
   XE="ROGUESQ_NO_SAVE_WRITE=1 ${XE:-}"
 fi
 AP=${AP:-6:start,11:start,16:start,21:start}
-( cd $GD && exec env ROGUESQ_NO_PKILL=1 ROGUESQ_AUTOPILOT=$AP ROGUESQ_LOG_PHASE=1 ${=XE} ./RogueSquadron64Recomp ) > $O/run.log 2>&1 &
+( cd $GD && exec env ROGUESQ_SETTINGS=${ROGUESQ_SETTINGS:-0} ROGUESQ_NO_PKILL=1 ROGUESQ_AUTOPILOT=$AP ROGUESQ_LOG_PHASE=1 ${=XE} ./RogueSquadron64Recomp ) > $O/run.log 2>&1 &
 P=$!; zmodload zsh/datetime; S=$EPOCHREALTIME; c=0; g=
 sleep 1
 # s6811: zsh clock + cached window id (was 3 python spawns + a winctl lookup per frame, ~0.58 s cadence)

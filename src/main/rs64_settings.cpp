@@ -11,6 +11,7 @@
 // Many options are read by file-scope statics before main() runs, so setting them from main() would be too late for
 // those readers. When anything is applied, the process re-executes itself (same pid, execv) with the new environment
 // and ROGUESQ_SETTINGS_APPLIED=1, so every reader sees the values exactly as if they had been typed on the command line.
+#include "rs64_data_root.h"  // s7961: settings.txt follows the data-root rule
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -62,6 +63,26 @@ std::string exe_path(const char* argv0) {
     if (_NSGetExecutablePath(buf, &sz) == 0) { char real[4096]; return realpath(buf, real) ? std::string(real) : std::string(buf); }
 #endif
     return argv0 ? argv0 : "";
+}
+
+// s7961: the default settings.txt folder follows the s7960 data-root rule (launch folder when it holds game data,
+// else the executable's folder AS INVOKED, not realpath'd). It was realpath(exe)'s folder, so a symlinked private
+// game dir (g3_port_capture.sh SAVE_FROM) kept its own saves/ but applied build/settings.txt (H-leak, s7961 e2e).
+std::string settings_default_dir(const char** why) {
+    std::error_code ec;
+    std::filesystem::path cwd = std::filesystem::current_path(ec);
+    if (ec) cwd.clear();
+    std::filesystem::path exe_dir;
+#if defined(__APPLE__)
+    char buf[4096]; uint32_t sz = sizeof(buf);
+    if (_NSGetExecutablePath(buf, &sz) == 0) {
+        std::error_code ab_ec;
+        std::filesystem::path ep = std::filesystem::absolute(std::filesystem::path(buf), ab_ec);
+        if (!ab_ec) exe_dir = ep.lexically_normal().parent_path();
+    }
+#endif
+    const std::filesystem::path root = rs64_pick_data_root(cwd, exe_dir, std::getenv("ROGUESQ_DATA_ROOT"), why);
+    return root.empty() ? std::string(".") : root.string();
 }
 
 }  // namespace
@@ -258,9 +279,10 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
     std::string file;
     const char* se = std::getenv("ROGUESQ_SETTINGS");
     const bool files_off = se && std::strcmp(se, "0") == 0;
+    const char* dir_why = "arg";
     if (!file_arg.empty()) file = file_arg;
-    else if (se && *se && !files_off) file = se;
-    else if (!files_off) { const size_t sl = exe.rfind('/'); file = (sl == std::string::npos ? std::string(".") : exe.substr(0, sl)) + "/settings.txt"; }
+    else if (se && *se && !files_off) { file = se; dir_why = "env"; }
+    else if (!files_off) file = settings_default_dir(&dir_why) + "/settings.txt";
 
     std::vector<std::pair<std::string, std::string>> from_file;
     int rejected = 0;
@@ -310,9 +332,9 @@ extern "C" void rs64_settings_apply(int argc, char** argv) {
         if (!summary.empty()) summary += " ROGUESQ_ASPECT(unset: not an aspect, s7732)";
     }
 
-    std::fprintf(stderr, "[s7663] settings file=%s%s preset=%s set=%d kept_from_env=%d rejected=%d\n",
+    std::fprintf(stderr, "[s7663] settings file=%s%s preset=%s set=%d kept_from_env=%d rejected=%d dir=%s\n",
         file.empty() ? "(off)" : file.c_str(), file.empty() ? "" : (file_read ? "" : "(absent)"),
-        pp ? pp->name : "(none)", set, kept, rejected);
+        pp ? pp->name : "(none)", set, kept, rejected, file.empty() ? "off" : dir_why);
     if (set == 0 && stripped == 0) return;  // nothing new in the environment: no re-exec needed
     // ROGUESQ_S7663_NOEXEC=1: control arm only (s7663): keep the setenv values but skip the re-exec, so pre-main statics miss them.
     { const char* ne = std::getenv("ROGUESQ_S7663_NOEXEC"); if (ne && *ne == '1') { std::fprintf(stderr, "[s7663] NOEXEC control: no re-exec\n"); return; } }
