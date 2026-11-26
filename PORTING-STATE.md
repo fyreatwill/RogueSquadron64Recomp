@@ -213087,3 +213087,37 @@ no review table listed: s7381 (quit-retry loop bounded to 50, SAVE_TICK plant sl
 attributor now names the new rs64_s7969_quit_check), s7382 + s7597 (plant thread, env-gated DIAG), s7595 (update_save_file
 is_directory is the error_code form), s7714 (ROGUESQ_S7969_EXE_DIR is an internal re-exec handoff: presence = already relocated,
 main.cpp needs non-empty). Each site read before its row was written; all 5 rerun GREEN (controls PASS) -> sweep 273, 0 RED.
+
+## Session 7970 (2026-11-26) — class SW (process frozen then resumed: sleep / App Nap / debugger stop, proxy SIGSTOP/SIGCONT) closed: video, game clock and quit fine on resume; audio had a false drain-stall reopen (60 s) or a ~3.2x catch-up burst (300 s); 50 ms heartbeat + one why=resume device reopen, e2e 6+6 arms, gate S7970_SW
+Ladder 3c host class SW (NEXT.md s7970). crash_reports --since 2026-11-26: new=0. No new SOAK-RESULTS lines. (This entry was written by
+a resumed iteration: the first pass built the fix and ran the new e2e, then stopped mid-mutant-run uncommitted; the mutant arms were
+re-run from scratch here, 04:29-04:52, and the sweep re-run after the review rows were added.)
+Setup (tools/s7970_sw_e2e.zsh, new): private game copy in /tmp, owner save COPIED, ROGUESQ_NO_SAVE_WRITE=1, FPS60, one game at a time.
+Scenes title (stop at 20 s) and flight (forced lvl1 route, g1e_owner_quiet_arms keys, stop at 125 s) x stop 0 (control) / 60 / 300 s:
+`kill -STOP`, sleep, `kill -CONT`, watch 30 s, SIGHUP quit timed. Instruments ROGUESQ_PRESENT_RING + ROGUESQ_AI_TRACE, scored by
+tools/s7970_sw_score.py (resume anchored on the largest ring gap, must ~= stop length; selftest 8 planted cases).
+Findings (both arms in the same run set, stop-0 controls moot in both):
+- video/clock/quit H-moot: presents 60-61/s within 1 s of resume, swaps unchanged, no VI catch-up (the VI thread recomputes total_vis
+  from the clock), HUP->exit 528-533 ms every arm, 0 crash lines, 0 new crash reports.
+- audio DEFECT (mutant ROGUESQ_S7970_SW=0, 4/4 stop arms not moot): 60 s stops -> verdict=reopen (the drain-stall watchdog saw a
+  pull gap as long as the freeze and reopened the device as "drain-stall", ~180 ms gap); 300 s stops -> verdict=burst: AI posts
+  376/364 per s vs base 117 (3.2x), 2719/2723 empty-queue posts (the device drained the SDL queue at ~3x real time while CoreAudio
+  caught up its timeline; audible as skipped/garbled audio). Which of the two a stop gets is by chance of where the watchdog sat.
+Fix (src/main/main.cpp, audio_hotplug_note_queue/apply): a detached 50 ms heartbeat thread ("s7970-heartbeat", USER_INITIATED)
+counts > 1 s gaps of its own sleep (only a frozen or wholly starved process misses it); on the next audio post after one, last_pull
+is reset (no false drain-stall) and the device is reopened ONCE with why=resume, resetting the device timeline. ROGUESQ_S7970_SW=0 =
+old (no thread).
+ORIGIN: the false stall is our watchdog measuring wall time across a freeze; the burst writer is CoreAudio's post-resume timeline
+catch-up pulling our SDL queue (legitimate OS behaviour, our defect was not resetting the device after a freeze).
+After (fix on, 6/6 PASS): every stop arm verdict=moot, 1 `[s7970-sw] resume after` line + 1 why=resume reopen, 0 drain-stall,
+ai_post_max 117-118 (base 117), ai_zero_post 0. Gate tools/s7970_sw_gate.py: STATIC, SELFTEST 8, E2E 6/6 resume_wired 4/4, MUTANT
+4/4 not moot with 0 s7970 lines, CONTROL planted FAIL rejected -> VERDICT CLOSED. S7970_SW in s7651 ARGS + EXTRA_GATES; heartbeat
+reviewed into s7381 (IDLE sleep loop), s7382 (WARM thread), s7383 (freeze_ms VALUE-RELAXED). Retained manifest regenerated.
+Not covered: a REAL system sleep (audio device and display also stop; SIGSTOP cannot show it); App Nap timer coalescing (process
+not stopped, only slowed - heartbeat only fires past 1 s).
+Sweep (after the last game run, --jobs 2): 274 gates, 269 GREEN + 3 REPORT + 2 RED, both from this session and both fixed:
+(1) s7615_dq_census: thread rows are keyed by per-file ordinal and the heartbeat became main.cpp's first `[]` thread, so every row
+shifted one slot and the ROGUESQ_HWBP watchdog (ordinal 12) read as UNCLASSIFIED; rows renumbered +1, ordinal 0 = heartbeat
+host(auto) with a setname proof -> open=0 CLOSED. Lesson: a new capture-less std::thread in main.cpp shifts s7615's ordinals.
+(2) s7804_zst_blind_lint: s7970_sw_gate.py globbed `*_*.log` without rs64_zopen; it reads only the raw s7970 logs, `# zst-ok:`
+waiver added -> blind=0 GREEN. Both re-run individually; the full sweep was NOT re-run after these two edits.

@@ -126,9 +126,12 @@ for i, (var, fn) in enumerate([("ROGUESQ_LOG_STATE", "start_state_poller"), ("RO
         pr = [(M, r"static void %s\(\) \{[\s\S]{0,300}?getenv\(\"%s\"\)" % (fn, var))]
     else:
         pr = [env(M, var, fn + r"\(\);")]
-    T[("main.cpp", "[]", "[]", i)] = dict(cls="gated", proofs=pr, note=fn)
-T[("main.cpp", "[]", "[]", 10)] = dict(cls="gated", proofs=[env(M, "ROGUESQ_LOG_FL_ZERO_WATCH", r"start_fl_zero_poller\(\);")], note="fl-zero re-arm spinner (inside start_fl_zero_poller)")
-T[("main.cpp", "[]", "[]", 11)] = dict(cls="gated", proofs=[(M, r"if \(flag_enabled \|\| addr_enabled\) \{[\s\S]{0,300}?start_memwp_watchdog\(\);")], note="ROGUESQ_HWBP watchdog")
+    T[("main.cpp", "[]", "[]", i + 1)] = dict(cls="gated", proofs=pr, note=fn)
+# s7970: the class SW heartbeat thread is the first [] thread in main.cpp (ordinal 0); it touches no guest state (sleep + clock +
+# two atomics), so it is host-only. Every ordinal row below it shifted by one.
+T[("main.cpp", "[]", "[]", 0)] = dict(cls="host(auto)", proofs=[(M, r'pthread_setname_np\("s7970-heartbeat"\)')], note="s7970 SW heartbeat (host only)")
+T[("main.cpp", "[]", "[]", 11)] = dict(cls="gated", proofs=[env(M, "ROGUESQ_LOG_FL_ZERO_WATCH", r"start_fl_zero_poller\(\);")], note="fl-zero re-arm spinner (inside start_fl_zero_poller)")
+T[("main.cpp", "[]", "[]", 12)] = dict(cls="gated", proofs=[(M, r"if \(flag_enabled \|\| addr_enabled\) \{[\s\S]{0,300}?start_memwp_watchdog\(\);")], note="ROGUESQ_HWBP watchdog")
 trow("main.cpp", "[rdp,mode]", "[rdp,mode]", "gated", [env(M, "ROGUESQ_GODMODE3", r"if \(s_god3\) \{")], "GODMODE3 cheat (opt-in)")
 trow("rt64_render_context.cpp", "worker", "()", "gated", [("src/main/rt64_render_context.cpp", r"if \(!rs64_rdp_async_on \|\| !in_task")], "RDP_ASYNC worker (queue row q)")
 trow("upstream_compat.cpp", "[rdram]", "[rdram]", "gated", [env(UC, "ROGUESQ_LOG_S4222", r"\}\(\); return on; \}"), env(UC, "ROGUESQ_LOG_S4299P")], "s4299 poll", 0)

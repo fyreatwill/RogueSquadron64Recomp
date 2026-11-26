@@ -8469,12 +8469,54 @@ static std::atomic<int> g_audio_hp_added{0};
 // unpaused device = stalled -> reopen (falls back to the system default if the named device is gone). Back-off 1,2,4,8 s
 // between stall reopens so a present-but-stuck device does not reopen 115 times a second; reset after 2 s of pulling.
 static bool g_audio_hp_stalled = false;  // audio thread only
+// s7970 class SW (process frozen for seconds-minutes, then resumed: sleep, App Nap, a debugger stop; proxy SIGSTOP/SIGCONT,
+// tools/s7970_sw_e2e.zsh). Two audio defects on resume: (1) the drain-stall watchdog below saw last_pull as old as the freeze
+// and reopened the device as "drain-stall" (a 180 ms gap, by chance on some resumes); (2) when it did not, the device drained
+// the SDL queue at ~3x real time for ~3 s (CoreAudio catching up its timeline), so the game posted 3x audio and played it
+// skipped/garbled. A whole-process freeze is told apart from a game-side load stall by a 50 ms heartbeat thread: only a
+// frozen (or completely starved) process misses it by > 1 s. On the next post after one: last_pull is reset (no false
+// drain-stall) and the device is reopened ONCE with why=resume, which resets the device timeline (the smoke arm that got
+// the accidental reopen had no burst). ROGUESQ_S7970_SW=0 restores the old behaviour (no heartbeat thread).
+static std::atomic<uint32_t> g_s7970_freeze_seq{0};
+static std::atomic<uint32_t> g_s7970_freeze_ms{0};
+static bool s7970_sw_on() { static const bool on = [] { const char* e = getenv("ROGUESQ_S7970_SW"); return !(e && e[0] == '0'); }(); return on; }
+static void s7970_heartbeat_start() {
+    static const bool started = [] {
+        if (!s7970_sw_on()) return false;
+        std::thread([] { pthread_setname_np("s7970-heartbeat"); pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
+            auto last = std::chrono::steady_clock::now();
+            for (;;) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                const auto now = std::chrono::steady_clock::now();
+                const double gap = std::chrono::duration<double>(now - last).count();
+                last = now;
+                if (gap > 1.0) {
+                    g_s7970_freeze_ms.store((uint32_t)std::min(gap * 1e3, 4.0e9), std::memory_order_relaxed);
+                    g_s7970_freeze_seq.fetch_add(1, std::memory_order_release);
+                }
+            }
+        }).detach();
+        return true;
+    }();
+    (void)started;
+}
+static bool g_s7970_resume_reopen = false;  // audio thread only
 static void audio_hotplug_note_queue(uint32_t raw_before, uint32_t after) {
     static uint32_t last_after = 0;
     static auto last_pull = std::chrono::steady_clock::now();
     static auto last_reopen = last_pull - std::chrono::hours(1);
     static double backoff_s = 1.0;
+    static uint32_t seen_freeze = 0;
     const auto now = std::chrono::steady_clock::now();
+    s7970_heartbeat_start();
+    if (const uint32_t fs = g_s7970_freeze_seq.load(std::memory_order_acquire); fs != seen_freeze) {
+        seen_freeze = fs;
+        fprintf(stderr, "[s7970-sw] resume after a %.1f s process freeze: reopen the audio device (no drain-stall)\n",
+                g_s7970_freeze_ms.load(std::memory_order_relaxed) / 1e3);
+        last_pull = now; last_after = after;
+        g_s7970_resume_reopen = true;
+        return;
+    }
     if (raw_before < last_after || after == 0) {
         last_pull = now;
         if (backoff_s > 1.0 && std::chrono::duration<double>(now - last_reopen).count() > backoff_s + 2.0) backoff_s = 1.0;
@@ -8525,7 +8567,10 @@ static void audio_hotplug_apply() {
     const char* why = nullptr;
     const bool stall = g_audio_hp_stalled;
     g_audio_hp_stalled = false;
+    const bool resumed = g_s7970_resume_reopen;  // s7970
+    g_s7970_resume_reopen = false;
     if (audio_device && (rem & (1u << ((uint32_t)audio_device & 31u)))) why = "removed-event";
+    else if (resumed && audio_device) why = "resume";
     else if (stopped) why = "status-stopped";
     else if (stall) why = "drain-stall";
     else if (added > 0 && !audio_device) why = "added-while-closed";

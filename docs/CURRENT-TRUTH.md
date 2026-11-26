@@ -440,6 +440,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    (ROGUESQ_UE_DIALOG=0 line only; dialog untested headless). ROGUESQ_S7969_UE=0 = old. 12/12 arms incl. mutants. Gate S7969_UE.
    Note for test scripts: background-job SIGINT is SIG_IGN, use SIGHUP to drive the quit path. Sweep 273: 270 GREEN + 3 REPORT, 0 RED
    (5 own sites reviewed into s7381/s7382/s7595/s7597/s7714).
+13q. **s7970 class SW (process frozen then resumed: sleep / App Nap / debugger; proxy SIGSTOP/SIGCONT) CLOSED + FIXED:** e2e
+   tools/s7970_sw_e2e.zsh (title + lvl1 flight x stop 0/60/300 s, present ring + AI trace, scorer tools/s7970_sw_score.py). Video,
+   game clock and SIGHUP quit fine on resume. Audio (mutant ROGUESQ_S7970_SW=0, 4/4): 60 s -> false "drain-stall" reopen, 300 s ->
+   3.2x AI post burst with ~2700 empty-queue posts (CoreAudio timeline catch-up). main.cpp 50 ms heartbeat thread detects a >1 s
+   freeze; next post resets the stall clock and reopens the device once (why=resume). Fix on 6/6 moot. Gate S7970_SW. A real
+   system sleep (device/display stop too) is NOT covered. Sweep 274: 2 own REDs fixed (s7615 thread ordinals shift when a new `[]`
+   std::thread lands in main.cpp; s7804 waiver), re-run individually GREEN.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

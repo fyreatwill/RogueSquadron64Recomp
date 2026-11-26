@@ -1,35 +1,36 @@
-# NEXT (s7970)
+# NEXT (s7971)
 HYPOTHESIS-ID: post-preset-class-ladder
-s7969 (committed 874a6e7b7 on the retry iteration) closed class UE: exe on a vanished volume re-execs from a local copy
-(src/main/rs64_ue.h, ROGUESQ_S7969_RELOC=0 = old); saves/ on it -> one report per streak, "back" line, quit Retry
-(ROGUESQ_S7969_UE=0 = old). Gate S7969_UE. Sweep 273: 270 GREEN + 3 REPORT, 0 RED. Do not redo UE, XF, CS, DI, RO, AN, PS, SD,
-DR, RD, FW, CK, LC, TF, EV.
-Lesson from s7969: the full sweep takes ~26 min. Start it in the background EARLY (right after the build), and add review rows to
-s7381 (spin loops) / s7382 + s7597 (threads) / s7595 (save I/O) / s7714 (env readers) for every new loop, thread, fs call or env
-name in the same edit: those 5 gates went RED on s7969's own sites.
-Test-script note: background-job SIGINT is SIG_IGN; drive the quit path with SIGHUP (s7594 handler -> flush + quick_exit).
+s7970 closed class SW (process frozen then resumed, SIGSTOP/SIGCONT proxy): video, game clock and quit were fine on resume;
+audio was not. After a stop the device drained the SDL queue at ~3.3x real time for ~0.18x the stop length (15 s -> 3 s, 60 s ->
+10.5 s, 300 s -> the whole 30 s watch), so the game posted 3.3x audio with ~94 empty-queue posts/s (skipping audio). Sometimes
+the drain-stall watchdog fired instead (a 180 ms reopen as "drain-stall"), which had no burst. Fix (main.cpp s7970): a 50 ms
+heartbeat thread sees a > 1 s whole-process freeze; the next audio post resets the drain-stall clock and reopens the device once
+with why=resume. ROGUESQ_S7970_SW=0 = old. Gate S7970_SW. Do not redo SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
+Not covered by SW: a REAL system sleep (the audio device and display stop too; the SIGSTOP proxy cannot show that).
 
-## Work unit: ladder 3c host class SW (process frozen for minutes, then resumed: sleep / lid close / App Nap / debugger)
-Proxy without sleeping the owner's Mac: SIGSTOP the game, then SIGCONT (never `pmset sleepnow`).
+## Work unit: ladder 3c host class MP (system memory pressure while the game runs)
+Proxy without harming the owner's Mac: `memory_pressure -S -l warn` then `-l critical` (simulated pressure notification, no real
+allocation), and a bounded real-allocation arm (a helper that mallocs + touches N GB and holds it for 60 s, N sized from
+`sysctl hw.memsize` and `vm_stat` free pages so the host never swaps hard). Run in flight (forced route, tools/s7970_sw_e2e.zsh is the
+template: private game copy, save COPIED, ROGUESQ_NO_SAVE_WRITE=1, present ring + ROGUESQ_AI_TRACE, SIGHUP quit timing).
 Hypotheses:
-- H-burst: VI/timer threads catch up on the missed time (thousands of VIs or audio buffers at once): fast-forward, spin, or
-  audio queue overflow. Outcome: VIs/s >> 60 in the first seconds after SIGCONT, or AI queue depth jumps.
-- H-stall: an absolute-deadline wait or watchdog (s3290-stall, waitForMusyXAudioTaskDone, RT64 present fences, s7593 quit
-  latency) fires on resume -> abort / deadlock. Outcome: abort line, crash report, or VI frozen > 5 s after SIGCONT.
-- H-audio: the audio device changes across a real sleep. SIGSTOP cannot show this; record it as not covered.
-- H-moot: one long frame, then normal pacing. Outcome: VIs/s back to 60 +-2 within 2 s, max present gap ~= stop length only.
+- H-jetsam: the game is killed or a Metal resource allocation fails (RT64 texture/pipeline creation returns nil) -> crash or
+  missing draws. Outcome: death, crash report, `[RT64]` alloc errors, or a black frame.
+- H-compress: the 512 MB rdram mapping / texture caches get compressed or swapped out -> long frames when touched again.
+  Outcome: present gaps > 250 ms, VI holds, AI underruns during or just after pressure.
+- H-handler: someone registered a memory-pressure dispatch source (SDL, RT64, MoltenVK-free Metal path) that drops caches and
+  rebuilds them badly. Outcome: a log line at the notification plus a frame-time spike right after it.
+- H-moot: presents 60/s, swaps unchanged, 0 underruns, quit < 1 s.
+Positive control: a planted present gap / underrun in the scorer selftest (reuse s7970_sw_score.py's planted cases) and a control
+arm with no pressure in the same run set.
 
-## Commands (one game at a time, private copy, owner save untouched)
+## Commands (one game at a time)
 0. `python3 tools/crash_reports.py --since 2026-11-26`; fold any new SOAK-RESULTS lines.
-1. Write tools/s7970_sw_e2e.zsh modelled on tools/s7969_ue_e2e.zsh (private game copy under /tmp, save COPIED, env
-   ROGUESQ_NO_SAVE_WRITE=1 ROGUESQ_PRESENT_RING=1 plus the [ai] cadence log). Arms: control (no stop), stop 60 s, stop 300 s
-   at t=20 s on the title; then the same three in flight via the forced level route (ROGUESQ_FORCE_UNLOCK=1
-   ROGUESQ_FORCE_SAVE_MISSION=1, s5705 recipe). Per arm: `kill -STOP $pid; sleep N; kill -CONT $pid`, watch 30 s,
-   then SIGHUP and measure HUP->exit; SIGKILL after 15 s.
-2. Score each arm: VIs/s per second for 30 s after SIGCONT, max present gap (tools/g1e_present_cadence.py on the ring),
-   AI queue depth, abort/crash lines, quit latency. Positive control: a planted burst (e.g. an env-gated "inject 600 VIs"
-   test plant, or the control arm's own 60/s) must score as burst / normal respectively in the same harness.
-3. Fix only what is ours (e.g. clamp the VI/audio catch-up to a few ticks; env =0 restores old). Add gate tools/s7970_sw_gate.py
-   (STATIC + E2E + planted-FAIL CONTROL) to s7651 ARGS + EXTRA_GATES, add review rows for new sites, then
-   `python3 -u tools/s7651_gate_sweep.py --jobs 2 > /tmp/s7970_sweep.txt 2>&1` in the background. Target: 0 RED.
-If H-moot holds on all 6 arms with the control passing, close class SW with no code change (the e2e + gate are the deliverable).
+1. `memory_pressure -h` (check it runs without sudo; if it needs sudo, use only the real-allocation arm and say so).
+2. Write tools/s7971_mp_e2e.zsh (template s7970_sw_e2e.zsh; arms control / warn / critical / alloc), score with
+   tools/s7970_sw_score.py-style windows anchored on the pressure start time instead of a ring gap.
+3. Fix only what is ours; gate tools/s7971_mp_gate.py (STATIC if a fix lands, E2E, CONTROL), add S7971_MP to s7651 ARGS +
+   EXTRA_GATES, review rows for any new thread/loop/atomic/env (s7381/s7382/s7383/s7597/s7714 went UNREVIEWED on s7970's heartbeat
+   until rows were added), then `python3 -u tools/s7651_gate_sweep.py --jobs 2 > /tmp/s7971_sweep.txt 2>&1` in the background
+   AFTER the last game run (one game at a time; the sweep itself is 2 jobs).
+If H-moot holds on every arm with the control passing, close MP with no code change (the e2e + gate are the deliverable).

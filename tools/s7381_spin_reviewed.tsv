@@ -85,3 +85,4 @@ upstream_compat.cpp|s7776_load|SLEEP|1	DIAG	s7776: S7776Arm summary thread (attr
 upstream_compat.cpp|s7777_access|SLEEP|1	DIAG	s7777: S7777Arm sweep thread (attributed to s7777_access), spawned only under ROGUESQ_S7777_DANGLE=1 (default off); 250 ms sleep loop
 main.cpp|rs64_s7969_quit_check|SLEEP|1	BOUNDED	s7969: quit-time save retry, <=50 tries; each try is a user Retry press (modal dialog) or, test-only ROGUESQ_S7969_RETRY_AUTO=n, a 1 s sleep up to n; no busy wait
 pi.cpp|ultramodern::init_saving|SLEEP|1	DIAG	s7969: test plant thread, spawned only under ROGUESQ_S7969_SAVE_TICK_MS>0 (default off); sleeps <ms> between save rewrites
+main.cpp|s7970_heartbeat_start|SLEEP|1	IDLE	s7970 class SW heartbeat: sleep_for(50 ms) forever, a clock watch, waits on nothing; ROGUESQ_S7970_SW=0 never starts it
