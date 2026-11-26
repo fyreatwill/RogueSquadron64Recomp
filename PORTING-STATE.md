@@ -212779,3 +212779,7 @@ HYPOTHESIS-ID: post-preset-class-ladder
   unclassified); s7424 H-stale = header mtime bumped by the mutant-restore cp after the build (rebuilt -> H-fresh).
   `--only 's7348|s7424|s7960'` 3/3 GREEN; rebuilt binary e2e re-run: new_away exe-dir boots, new_game cwd-data, save sha same.
 
+- Verdict: selects H-split, refutes H-moot (old binary from an empty folder: romfail=1 + mods/mod_config litter; nothing
+  re-anchors cwd). The change is a code fix (data-root rule in main.cpp + rs64_data_root.h), not diagnostics; the one
+  fprintf is the pick log. Next discriminator (NEXT.md 1): H-leak vs H-moot for settings.txt under a symlinked private
+  game dir: plant a settings.txt in build-like dir, launch via symlink, read the [settings] lines.
