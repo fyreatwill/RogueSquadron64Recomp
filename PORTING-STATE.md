@@ -212903,3 +212903,30 @@ Engineering: src/main/rs64_ro_probe.h, main.cpp boot probe, tools/s7964_ro_e2e.z
 MUTANT always-true probe caught, STATIC probe before game start, CONTROL/BOOT/FIX over scratch/s7964/{old,new}_summary.txt -> VERDICT
 CLOSED), sweep row S7964_RO (ARGS + EXTRA_GATES). Full sweep: full sweep (uncached, --jobs 2) 269 gates: GREEN 263, REPORT 3, RED 2, HOLLOW 1. Own: S7348 div census flagged the probe's std::filesystem `d / (...)` as an unclassified division (now a string join) and my gate's `old+new=1` token read HOLLOW ("new=1"; renamed). Not own: s7958_fw_gate VERDICT OPEN under sweep load (kill-timing harness), GREEN on rerun alone. Rebuilt, e2e `new` re-run (same 5 arm results), `--only 's7964|s7348_div|s7958_fw' --no-cache` 3/3 GREEN. Lesson: in gate output avoid `<word>=1` tokens where word is a HOLLOW key (new, bad, open, missing...) even mid-identifier after `+`.
 Next: class DI (two instances at once: shared save temp path), NEXT.md.
+
+## Session 7965 (2026-11-25) — unmet contract: s7958_fw sweep RED was one cached flaky run (new_bad=170 empty); harness now classifies bad-file kinds, unscored runs read HARNESS FAIL, unlink-mutant classifier control, fork()==-1 guard
+
+What ran: loop.sh carried an unmet contract: s7651 sweep reported s7958_fw_gate.py RED (new vs allowed list). The cached sweep
+output (build/gate_sweep_cache.json) showed the s7964 sweep run: old arm bad=808 (control PASS) but the FIXED atomic arm new_bad=170, all
+empty. The cache key (argv + read files incl. headers) had not changed since, so every --verify re-served that one run.
+Re-measured this session: standalone 4/4 GREEN (old 842/906/852/865 empty, new 0); under 10x `yes` CPU load 0/1500; under 2 concurrent
+8 MB fsync writers + 2 CPU 0/3000 (old 389/500); under gate_trace.py with the sweep's env (RS64_GATE_TRACE, CC_PRINT_HEADERS_FILE) 0/1500 x2.
+SIGCHLD=SIG_IGN arm (would let waitpid return before the writer dies -> overlapping writers on the shared .tmp): 0/1500 (macOS waitpid
+still blocks), so that mechanism is not shown either.
+What it shows (single-source, cause NOT named): a published-empty target is impossible for temp+fsync+rename with one writer at a time;
+it needs either two writers overlapping on the same `<path>.tmp` (one truncates the temp the other is about to rename = the class-DI
+H-corrupt shape queued in NEXT) or a failed READ counted as "empty" (the old ifstream path could not tell). The old harness could not
+distinguish these.
+Change (tools only, no runtime code): tools/s7958_fw_kill_test.cpp now (1) guards fork() < 0 (c=-1 would have run kill(-1, SIGKILL) =
+every process of this user), (2) retries EINTR on waitpid and counts waitfail when the reap did not return the child, (3) reads with
+fopen/fread and classifies every bad state: missing (ENOENT, counted bad), zero, partial, or openerr (+errno, retried 20x, unscored),
+(4) a third arm `del` (unlink target then atomic write) as the classifier's positive control. tools/s7958_fw_gate.py prints HARNESS
+(openerr/forkfail/waitfail = 0 in every arm, else the run is unscored and the gate FAILs rather than lying either way), CLASSIFIER control
+(del_missing>0 and old_zero>0) and NEW-ARM bad kinds; the del RESULT line is labelled as a control so the HOLLOW scorer skips it.
+S7958_FW ARGS regex in tools/s7651_gate_sweep.py now also requires the HARNESS and CLASSIFIER PASS lines.
+Result: gate GREEN standalone (del_missing=194, old_zero=870, new 0/1500) and via `--only s7958` (cache miss -> GREEN).
+ORIGIN: the bad datum's writer is unknown (not reproduced in 5 arms); this is not a mitigation - nothing is masked: a real empty/partial/
+missing publish still fails FIX, only a failed read/fork/reap is refused as unscored, and the next recurrence prints its kind.
+Rules out: CPU load, fsync I/O pressure, the tracer env, SIGCHLD-ignored reaping as reproducible causes on this host.
+Full sweep (`--jobs 2 --new-red-vs`, 1440 s; a first attempt was killed at a 10 min background cap): gates 269 {GREEN 266, REPORT 3},
+new RED 0; s7958_fw GREEN under sweep load this time. Next: NEXT.md class DI (two instances), unchanged.

@@ -1,6 +1,8 @@
-# NEXT (s7965)
+# NEXT (s7966)
 HYPOTHESIS-ID: post-preset-class-ladder
 s7964 closed class RO (unwritable game folder: boot OK, saves lost silently -> boot probe + dialog, gate S7964_RO, e2e tools/s7964_ro_e2e.zsh).
+s7965 spent on the unmet contract (s7958_fw cached flaky RED; harness hardened, see CURRENT-TRUTH 13l). If s7958 HARNESS ever
+reads FAIL or new_bad>0 again, the printed kind (missing/zero/partial/openerr) is the datum: zero with waitfail=0 = DI-style overlap.
 Do not redo RO (s7964), AN (s7963), PS (s7962), SD (s7961), DR (s7960), RD (s7959), FW (s7958), CK (s7954), LC (s7953), TF (s7955), EV.
 An src/ edit needs the FULL sweep (`python3 -u tools/s7651_gate_sweep.py --jobs 2`, ~28 min: run it in the background).
 0. `python3 tools/crash_reports.py --since 2026-11-25`; fold new SOAK-RESULTS lines.

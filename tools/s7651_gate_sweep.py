@@ -322,8 +322,8 @@ S7955_TF = {"s7955_settings_textfmt.py": ([], r"(?=[\s\S]*REAL PASS fail=0)(?=[\
 ARGS.update(S7955_TF)  # s7955 class TF (settings.txt BOM / CRLF / trailing comment)
 S7957_PL = {"s7957_preset_load_gate.py": ([], r"(?=[\s\S]*CONTROL pre_aborts=5/5 PASS)(?=[\s\S]*FIX post_survives=5/5 PASS)(?=[\s\S]*VERDICT CLOSED)")}
 ARGS.update(S7957_PL)  # s7957 RT64 preset library load vs malformed json
-S7958_FW = {"s7958_fw_gate.py": ([], r"(?=[\s\S]*CONTROL old_bad=[1-9]\d* \(empty=\d+\) PASS)(?=[\s\S]*FIX new_bad=0 nodir_reports_fail=True PASS)(?=[\s\S]*CENSUS owner_writers=5 audio_atomic=True PASS)(?=[\s\S]*VERDICT CLOSED)")}
-ARGS.update(S7958_FW)  # s7958 class FW owner-state file writers (audio_device.txt in-place)
+S7958_FW = {"s7958_fw_gate.py": ([], r"(?=[\s\S]*CONTROL old_bad=[1-9]\d* \(empty=\d+\) PASS)(?=[\s\S]*FIX new_bad=0 nodir_reports_fail=True PASS)(?=[\s\S]*CENSUS owner_writers=5 audio_atomic=True PASS)(?=[\s\S]*HARNESS [^\n]* PASS)(?=[\s\S]*CLASSIFIER control del_missing=[1-9]\d* old_zero=[1-9]\d* PASS)(?=[\s\S]*VERDICT CLOSED)")}
+ARGS.update(S7958_FW)  # s7958 class FW owner-state file writers (audio_device.txt in-place); s7965 + HARNESS/CLASSIFIER lines
 S7959_RD = {"s7959_rd_gate.py": ([], r"(?=[\s\S]*CONTROL old_bad=[1-9]\d* PASS)(?=[\s\S]*FIX new_bad=0 cases=\d+ PASS)(?=[\s\S]*CONTROLS remap_loaded=1 partial=\d+ trusted_wrong=0 PASS)(?=[\s\S]*VERDICT CLOSED)")}
 ARGS.update(S7959_RD)  # s7959 class RD owner-state file readers (audio_device.txt empty -> default route)
 S7960_DR = {"s7960_dr_gate.py": ([], r"(?=[\s\S]*CONTROL old_bad=[1-9]\d* PASS)(?=[\s\S]*FIX new_bad=0 cases=\d+ PASS)(?=[\s\S]*CENSUS .* PASS)(?=[\s\S]*VERDICT CLOSED)")}

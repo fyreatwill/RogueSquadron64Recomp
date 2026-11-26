@@ -398,6 +398,13 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    sites enumerated: diag fopen sites null-checked, F6 controls save reports SAVE FAILED. Gate tools/s7964_ro_gate.py (S7964_RO): UNIT
    (rw / a-w / missing saves), MUTANT always-true probe caught, STATIC, retained e2e summaries old+new. Sweep 269 (s7964: 2 own REDs/HOLLOW
    fixed; s7958_fw went OPEN once under sweep load, GREEN alone: watch for flakiness).
+13l. **s7965 s7958_fw sweep RED = one cached flaky run, harness hardened (single-source, not reproduced):** the cached s7964 sweep run read
+   new_bad=170 (all "empty") in the atomic arm; the cache key never changed, so every verify re-served it. Standalone 4/4 GREEN, and 0/1500,
+   0/3000 under 10x CPU, 2x fsync I/O + tracer env. Cause unknown; a published-empty file is impossible for temp+fsync+rename unless two
+   writers overlap on the shared .tmp (= next item, class DI) or the READ failed. Harness now classifies each bad file
+   missing/zero/partial vs openerr/forkfail/waitfail (unscored = HARNESS FAIL), with a CLASSIFIER control (unlink mutant must show
+   missing>0) and a fork()==-1 guard (it would have run kill(-1, SIGKILL) on every user process). A recurrence now names its kind.
+   Full sweep s7965: 269 gates, 266 GREEN + 3 REPORT, 0 new RED.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
