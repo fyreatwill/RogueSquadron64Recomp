@@ -213121,3 +213121,8 @@ shifted one slot and the ROGUESQ_HWBP watchdog (ordinal 12) read as UNCLASSIFIED
 host(auto) with a setname proof -> open=0 CLOSED. Lesson: a new capture-less std::thread in main.cpp shifts s7615's ordinals.
 (2) s7804_zst_blind_lint: s7970_sw_gate.py globbed `*_*.log` without rs64_zopen; it reads only the raw s7970 logs, `# zst-ok:`
 waiver added -> blind=0 GREEN. Both re-run individually; the full sweep was NOT re-run after these two edits.
+Discrimination: SELECTS H-audio-resume (watchdog wall-clock across the freeze + device timeline catch-up), with the fix-off arms
+as the same-recipe positive control (4/4 not moot) and fix-on arms 4/4 moot; REFUTES H-video-catchup (presents/swaps never exceed
+base 61/s after resume) and H-quit-hang (HUP->exit 528-533 ms in all 12 arms). Next discriminator (s7971, class MP): present-gap /
+AI-underrun windows anchored on the memory_pressure start time, control vs warn vs critical vs real-alloc arms in one run set, to split
+H-jetsam / H-compress / H-handler / H-moot.
