@@ -5,6 +5,7 @@
 #include "rs64_rdram_peek.h"
 #include "rs64_atomic_write.h"  // s7958 class FW
 #include "rs64_data_root.h"  // s7960 class DR
+#include "rs64_ro_probe.h"  // s7964 class RO
 #include "rs64_shell_quote.h"  // s7962 class PS
 #include <dlfcn.h>
 #include <cstdio>
@@ -15752,6 +15753,27 @@ int main(int argc, char* argv[]) {
         rs_cwd = root;
     }
     recomp::register_config_path(rs_cwd);
+    {
+        // s7964 class RO: a read-only game folder boots but silently loses every save (see rs64_ro_probe.h).
+        std::string ro_why; std::filesystem::path ro_where;
+        if (!rs64_dir_writable(rs_cwd / "saves", &ro_why, &ro_where)) {
+            const bool saving = std::getenv("ROGUESQ_NO_SAVE_WRITE") == nullptr;
+            const char* dlg = std::getenv("ROGUESQ_RO_DIALOG");
+            const bool show = saving && !(dlg && std::string(dlg) == "0");
+            fprintf(stderr, "[s7964-ro] game folder NOT writable: %s (%s); saves, controls.json and mods will not be kept "
+                            "(saving=%d dialog=%s)\n", ro_where.string().c_str(), ro_why.c_str(), saving ? 1 : 0,
+                    show ? "show" : (saving ? "off" : "skip-nosave"));
+            if (show) {
+                const std::string m = "This game folder cannot be written to:\n\n" + ro_where.string() + "\n(" + ro_why +
+                    ")\n\nThe game will run, but your progress, control bindings and mods will NOT be saved. "
+                    "Copy the game folder somewhere writable (for example your home folder) to keep your progress.";
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Rogue Squadron: progress will not be saved", m.c_str(), nullptr);
+                fprintf(stderr, "[s7964-ro] dialog dismissed\n");
+            }
+        } else {
+            fprintf(stderr, "[s7964-ro] game folder writable: %s\n", ro_where.string().c_str());
+        }
+    }
 
     for (const auto& game : supported_games) {
         recomp::register_game(game);

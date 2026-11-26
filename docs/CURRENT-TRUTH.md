@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7963 (2026-11-25).
+Compact operational handoff, as of Session 7964 (2026-11-25).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -388,6 +388,16 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    PreventUserIdleDisplaySleep IOPMAssertion for the pid and the exe is unbundled (lsappinfo bundleID NULL), so App Nap does not apply.
    Gate tools/s7963_an_gate.py (S7963_AN): no SDL_EnableScreenSaver / ALLOW_SCREENSAVER hint / MACOSX_BUNDLE, mutant caught, capture
    verdict over scratch/s7963/an1. If the port is ever shipped as a .app bundle, re-run the e2e (App Nap would then apply).
+13k. **s7964 class RO (unwritable game folder) CLOSED, H-silent fixed:** tools/s7964_ro_e2e.zsh (private copies, owner save copied,
+   10 s arms, SIGKILL): writable / chmod -R a-w / read-only UDRO disk image all BOOT (vi320, 0 crash lines; H-fatal refuted; mods/ +
+   mod_config/ failures already reported by s7595). But game saves in such a folder fail in librecomp update_save_file with only a generic
+   stderr line per attempt, so a Finder launch loses progress unseen. Fix: src/main/rs64_ro_probe.h rs64_dir_writable() probes
+   <data root>/saves (or its parent) once at boot -> `[s7964-ro] game folder NOT writable: <dir> (<errno>)` and, when saving is on
+   (NO_SAVE_WRITE unset), one modal warning dialog before the game starts (screenshot scratch/s7964/dialog.png; the dmg_dialog arm stays at
+   update_screen=0 until OK). ROGUESQ_RO_DIALOG=0 = line only. All harness runs set NO_SAVE_WRITE so they never see the dialog. 80 write
+   sites enumerated: diag fopen sites null-checked, F6 controls save reports SAVE FAILED. Gate tools/s7964_ro_gate.py (S7964_RO): UNIT
+   (rw / a-w / missing saves), MUTANT always-true probe caught, STATIC, retained e2e summaries old+new. Sweep 269 (s7964: 2 own REDs/HOLLOW
+   fixed; s7958_fw went OPEN once under sweep load, GREEN alone: watch for flakiness).
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.

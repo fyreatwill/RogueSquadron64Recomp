@@ -212870,3 +212870,36 @@ MACOSX_BUNDLE in host code or CMakeLists (bad_sites=0 PASS), MUTANT planted SDL_
 the retained capture scratch/s7963/an1 (_events.txt, _pring.txt.zst) -> VERDICT CLOSED. Sweep row S7963_AN (ARGS + EXTRA_GATES);
 `--only 's796[23]' --no-cache` 2/2 GREEN, sweep self-controls PASS. No src/ edit, so the full sweep was not required.
 Next: class RO (read-only / unwritable game folder), NEXT.md.
+
+## Session 7964 (2026-11-25) — class RO (unwritable game folder) closed: boots on chmod a-w and a read-only disk image, but game saves there failed with only a stderr line (progress lost silently); boot probe + one-time warning dialog; gate S7964_RO
+
+Ladder 3c host class RO (NEXT.md s7963). Start: crash_reports new=0, no new SOAK-RESULTS lines.
+Hypotheses: H-fatal (a write failure aborts/crashes boot), H-silent (boots, but saves / F6 controls / crash data vanish unseen),
+H-moot (every write site handles failure and tells the user).
+
+Run (tools/s7964_ro_e2e.zsh, one game at a time, 10 s per arm, SIGKILL; each arm a private copy of exe + ROM + owner save, build/saves
+never touched, NO_SAVE_WRITE=1 except the two arms on the immutable disk image):
+- old binary: rw boots, creates mods/ + mod_config/ (control that the run writes); chmod -R a-w and UDRO dmg (`hdiutil attach -readonly`,
+  positive control: `touch` on the volume refused) both boot (vi_width=320, 0 crash lines), only output = s7595's two
+  "cannot create mods/mod_config ... continuing" lines. H-fatal refuted at boot.
+- Static (80 write sites in src/main, src/rsp, librecomp, ultramodern): diag fopen sites are `if (FILE* f = fopen(...))` or a static FILE*
+  tested before use (mesgqueue tl, AI_TRACE tr/tp, RDP_BIN s_bin, s7064 fo all checked); F6 controls save (main.cpp rs64_bind_save) reports
+  "SAVE FAILED" in the panel; the game save (librecomp pi.cpp update_save_file) on failure calls ultramodern message_box, whose callback
+  here is stderr only (main.cpp `.message_box = ... fprintf(stderr, "[Error] %s")`), once per save attempt. So from a read-only folder,
+  launched from Finder, every mission save is lost with no visible sign: H-silent selected.
+Fix: src/main/rs64_ro_probe.h rs64_dir_writable() (O_CREAT|O_EXCL probe file in <data root>/saves, or its parent when saves/ does not
+exist yet, then unlink), called once right after register_config_path. Unwritable -> `[s7964-ro] game folder NOT writable: <dir> (<strerror>)
+... saving=<0|1> dialog=<show|off|skip-nosave>`; when saving is on (NO_SAVE_WRITE unset) one SDL_ShowSimpleMessageBox warning before the
+game starts (path, reason, "progress, control bindings and mods will NOT be saved; copy the game folder somewhere writable");
+ROGUESQ_RO_DIALOG=0 keeps the line only. Writable folders print `[s7964-ro] game folder writable: <dir>` and nothing else changes.
+new binary arms: rw writable line + boots; chmod/dmg NOT writable saving=0 skip-nosave, boot; dmg_dialog (saving on, immutable volume)
+dialog=show and update_screen=0 for 10 s (modal holds boot until OK; screenshot scratch/s7964/dialog.png shows the dialog text);
+dmg_nodlg dialog=off, boots. Second line of evidence for the probe: its errno matches the volume's (Read-only file system on the dmg,
+Permission denied on chmod) and the independent `touch` control.
+ORIGIN: the silent loss's writer is librecomp update_save_file -> message_box -> our stderr-only callback (main.cpp ~15822); the failure is
+legitimate (the OS refuses the write), the defect was only that nobody is told.
+Not covered: a save folder that becomes unwritable mid-session (still stderr only), crash-report destination on a read-only folder.
+Engineering: src/main/rs64_ro_probe.h, main.cpp boot probe, tools/s7964_ro_e2e.zsh, tools/s7964_ro_gate.py (UNIT rw/a-w/missing PASS,
+MUTANT always-true probe caught, STATIC probe before game start, CONTROL/BOOT/FIX over scratch/s7964/{old,new}_summary.txt -> VERDICT
+CLOSED), sweep row S7964_RO (ARGS + EXTRA_GATES). Full sweep: full sweep (uncached, --jobs 2) 269 gates: GREEN 263, REPORT 3, RED 2, HOLLOW 1. Own: S7348 div census flagged the probe's std::filesystem `d / (...)` as an unclassified division (now a string join) and my gate's `old+new=1` token read HOLLOW ("new=1"; renamed). Not own: s7958_fw_gate VERDICT OPEN under sweep load (kill-timing harness), GREEN on rerun alone. Rebuilt, e2e `new` re-run (same 5 arm results), `--only 's7964|s7348_div|s7958_fw' --no-cache` 3/3 GREEN. Lesson: in gate output avoid `<word>=1` tokens where word is a HOLLOW key (new, bad, open, missing...) even mid-identifier after `+`.
+Next: class DI (two instances at once: shared save temp path), NEXT.md.
