@@ -44,6 +44,7 @@ FILES = {  # every site in the file shares one verdict
     "rt64/src/render/rt64_render_target.cpp": "bounded: target dims come only from resize()/computeScaledSize clamped to MaxDimension (rows framebuffer_manager)",
 }
 ROWS = {
+    ("src/main/rs64_owner_text.h", "alloc", "if (nl != std::string::npos) v.resize(nl);"): "bounded: s7959 shrinks to the first newline (nl < size); the only caller (audio_route_load_pref) caps the file text at 4096 bytes",
     # src/ diagnostics
     ("src/rsp/s7097_edit_census.cpp", "alloc", "g_s0.assign(rd + g_glo"): G,
     ("src/rsp/dpc_bridge.cpp", "alloc", "s_shw.resize(nw); s_sop.assign(nw, 0xFF)"): "gated: s7635 fused=2/3 (ROGUESQ_S7634_FUSE=chk|inj) only; default 1 and 0 return above; nw = words of one bridge walk range [lo, hi)",

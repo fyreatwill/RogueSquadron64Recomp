@@ -212739,3 +212739,10 @@ private /tmp/s7959e2e dirs (copy of exe + ROM, NO_SAVE_WRITE=1, build/saves unto
 (RogueSquadron64Recomp_s6714B) "preference ... ''" -> output=<system default>; new binary "is empty or unreadable: ignored" ->
 built-in default -> output=MacBook Pro Speakers; same new binary with a "default\n" file -> output=<system default> (file still
 honoured, positive control).
+Full sweep (uncached, --jobs 2, 1698 s): 264 gates {GREEN 259, REPORT 3, RED 2}; both REDs were this change tripping
+text-pinned censuses: s7466 analyzer-rest (reviewed row anchored on the removed fgets line -> STALE-ANCHOR; row dropped, the
+finding is gone with the code, survivors 0) and s7598 AZ (new v.resize(nl) in rs64_owner_text.h = unreviewed alloc site ->
+row "bounded": nl < size, caller caps 4096). s7428 precedence pinned the old fopen "r" text -> now pins the ifstream (env still
+tested first; control 4/4 planted flagged). `--only 's7466_analyzer_rest|s7598_az|s7428|s7959|s7384|s7430|s7958'` -> 7 GREEN.
+Rules out: an empty/corrupt owner-state file left by an older binary silently changing the next run's audio output; partial
+controls.json being trusted. Not done: a full-length corrupt-but-nonzero save (the game's EEPROM checksum is its own witness).

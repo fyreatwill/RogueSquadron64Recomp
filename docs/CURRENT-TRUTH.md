@@ -357,7 +357,7 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
    rejected every byte prefix / NUL fill / empty (1076 cases, 0 trusted). Save loader: short file -> whole .bak (s7429);
    a full-length zero save = erased EEPROM, game-owned. `python3 tools/s7959_rd_gate.py` (sweep row S7959_RD): old
    reader 6/10 planted files misrouted (control), new 0/10; e2e empty file: old binary output=<system default>, new
-   output=MacBook Pro Speakers.
+   output=MacBook Pro Speakers. Full sweep 264: 259 GREEN, 3 REPORT, 2 RED (s7466 stale anchor, s7598 new alloc row) -> both fixed, 7/7 GREEN.
 13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
