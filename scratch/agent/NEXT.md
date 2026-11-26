@@ -1,7 +1,6 @@
-# NEXT (s7973)
+# NEXT (s7974)
 HYPOTHESIS-ID: post-preset-class-ladder
-Note: CURRENT-TRUTH is now > 60 KB, so Step 0 should make s7973 a MAINTENANCE iteration (compact toward ~35 KB, migrate
-items 13a-13s to PROJECT-OVERVIEW, no experiments). If it does, carry this unit to s7974 unchanged.
+s7973 was the maintenance iteration (CURRENT-TRUTH 26 KB, backlog item 14 = this unit). Run this unit now.
 s7972 closed class NS (full data volume: writers fail cleanly) and fixed controls.json/audio_device.txt following the s7969
 relocated exe copy (gate S7972_NS). Do not redo NS, MP, SW, UE, XF, CS, DI, RO, AN, PS, SD, DR, RD, FW, CK, LC, TF, EV.
 

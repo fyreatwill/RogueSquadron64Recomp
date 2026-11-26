@@ -213205,3 +213205,14 @@ Full sweep after the last game run: 276 gates, 271 GREEN, 3 REPORT (standing), 2
 s7960_dr CENSUS regex expected `rs_cwd = root; }` and the old audio_route_file_path body (now allows the rs64_data_root_str line and
 requires the data-root-first form); s7966_di STATIC wanted rs64_private_tmp_path(path) in main.cpp (rs64_bind_save now reaches it
 through rs64_write_file_atomic; accepted). Both re-run GREEN, S7972_NS GREEN.
+
+## Session 7973 (2026-11-26) — MAINTENANCE: CURRENT-TRUTH 60167 -> 26231 bytes (483 -> 226 lines)
+Step 0 triggered (60167 > 60000). No experiments. scratch/s7973/compact.py migrated 286 lines verbatim to PROJECT-OVERVIEW
+"Migrated from CURRENT-TRUTH (s7973 maintenance)": headline sweep-bullet tail (s7929/s7930 scanner fix), superseded entries
+s7645-s7915, Next-steps 0a (G5c s7919-s7931), item 11 detail (F6/hotkeys s7937-s7945), item 12 (det sweep + scratch-prune /
+retained-manifest hardening s7865-s7952), items 13a-13s (host-environment classes s7953-s7972). Replaced each with a compact
+summary keeping the operative facts (gates, tools, hazards: prune job, manifest, allowed-red empty, freeze_arms folding).
+Backlog renumbered into one monotonic sequence 0a,0,1-16: 13a-13s folded into 13 (one row per class + gate), the NS-2 residue
+is item 14 (ACTIVE), old 13/14 -> 15/16. Headline "as of Session 7973". Doc-scoped gates after the edit: s7804 zst lint rc 0,
+s7805 cited-cmd rc 0, s7557 GQ census --strict rc 0 (they read CURRENT-TRUTH + PROJECT-OVERVIEW, so moved citations stay seen).
+Rules out nothing; NS-2 work unit carried unchanged to s7974.

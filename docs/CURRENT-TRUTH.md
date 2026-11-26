@@ -1,6 +1,6 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Compact operational handoff, as of Session 7972 (2026-11-26).
+Compact operational handoff, as of Session 7973 (2026-11-26).
 `PORTING-STATE.md` is the chronological ledger; durable and migrated material lives in
 `docs/PROJECT-OVERVIEW.md`. The full s7416 text of this file (every audit class AQ-BZ s7373-s7416 with all numbers,
 controls and tool flags) is archived verbatim in PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s7417 maintenance)"; item-1 classes DG-EO in "(s7491 migration)"; classes CC-DH s7420-s7451 in "(s7452 maintenance)";
@@ -26,12 +26,8 @@ PROJECT-OVERVIEW "(s7792 maintenance)". Standing facts an agent needs:
   RecompiledFuncs tree IS the regen replay: `tools/s7719_regen_gate.py --strict` byte-compares it, so ANY hand edit under
   ../N64Recomp/RecompiledFuncs turns the sweep RED (put it in a fixup/apply script). Ucode: `tools/s7741_ucode_regen_gate.py --controls`;
   after a fixup_factor5_ucode.py edit `zsh tools/ucode_regen.sh snapshot`. After a regen `python3 tools/s7734_compiled_reader_census.py`.
-  s7929: the SN scanner (tools/s7611_sn_scan.py) once let a same-named static ANYWHERE in a file hide a function's own local
-  from taint, and missed comma-list locals (`float raw[3], o[3]`); fixed, 18 hidden candidates classified. A new diag static
-  named `n`/`i`/`seen` can no longer silently drop an unrelated SN candidate (the s7928 STALE s_carry).
-  s7930: tools/s7612_rg_scan.py imports that scanner, so the same fix surfaced 5 RG candidates (all rs6657/ROGUESQ_LOG_MTM
-  diag-gated, rows added; generic names fn-scoped) and staled s_s6287_on (env word, never register-tainted; row dropped).
-  After editing a shared scanner, run every census that imports it, not only the one you fixed.
+  s7929/s7930: after editing a shared scanner (tools/s7611_sn_scan.py, imported by s7612_rg_scan.py), run every census that
+  imports it, not only the one you fixed (detail "(s7973 maintenance)").
 - **s7788-s7791 vendored fixer pruning CLOSED:** dead-emitter census 0 dead; 257 never-run blocks deleted (s7790), shadowed-block prune
   1 block (s7791); `--strict` 0 differ, census HIT 326. **s7781-s7787 hook classes CLOSED** (s5660 unaligned-store hook value/address fix,
   load-hook hole, 4 pc-literal emitters).
@@ -81,77 +77,9 @@ Detail: PROJECT-OVERVIEW "Migrated from CURRENT-TRUTH (s6900 / s6994 / s7187 / s
   retail made 8 waits, the port 6, and every retail wait came from musyxNoopStub's gated jal. But nobody matched the waits by
   caller: retail's flight-entry wait is runVideoFrameTick from mainGameLoop@0x8003E360, and the port's 6th wait (+62 s) is that same
   call with the gate at 1. The missing ones are the B40 boot wait and one route-dependent menu transition.
-- **s7915 "whole-run p1_rand traces differ in all 6 arms (md5)"** (superseded s7916). Believable: the six files' md5s all differ. But
-  C1's (site,value) stream is a strict prefix of D1's (C1 stopped 42 VI sooner, VI stamps off by 1): the element-exact pair shares its rand stream.
-- **s7911 "m6 island B is deterministic game state (state other than rand values)"** (superseded s7912). Believable: the lag re-locks at
-  532 and full rand replay changed nothing. But two same-config port runs differ on the element as much as port vs retail: it is
-  run-to-run nondeterminism in one particle element, not a reproducible state difference.
-- **s7905 "island B absent on the rebuilt binary; leading reading a host-timing race"** (superseded s7906). Believable: 3/3 exact
-  right after a rebuild. But loop soaks on the same binary give 708 twice at different loads; class = det_cmp offset gap 28 vs 29.
-- **s7904 "island B = flame-block arena placement/timing (H-sched vs H-alloc-seq)"** (superseded s7905). Believable: port RAM held
-  retail's correct blocks at other addresses. But the residual vanishes 3/3 on today's rebuilt binary (same recipe/pins),
-  and the addresses are shared bump-arena slots, so "other address" was never a per-object fact.
-- **s7903 "island B residual = rand-replay ordinal keying, one burst frame per instance with opposite signs"** (superseded s7904).
-  Believable because the port's flame bytes hash-matched retail's adjacent-frame blocks. But both two-site skews fail (one is a
-  no-op on the residual) and retail's correct current blocks exist in the port's RAM at other arena addresses: placement/timing.
-- **s7892 "RETAIL_SNAP=3 is m11-only: on m6 the crawl clock lead is 0 but island A stays"** (superseded s7894). Believable because
-  two instruments agreed. They were two runs: the crawl dump (el 0 at fire 6, delta 0) and the render arm m6s3c (el 781250 at fire 6,
-  so =3 never took effect there). =3 stores real el; with the crawl frame forced to retail's 1 VI, m6 island A disappears.
-- **s7873 "the post-load dt (1 vs 2 VI) does not carry island A's half frame"** (superseded s7891). Believable because a
-  retail-valued post-load window left island A unchanged. That window (VI 5584:5587) was placed from computeFrameDeltaTime's
-  post-load frame and never checked the crawl dt site. The s7891 crawl-site dump shows the crawl's post-load frame IS the half frame (SNAP=3 removes it).
-- **s7879 "the same Start schedule (19.5..91.5) runs on both sides"** (superseded s7880). Believable because PP and AP carry the
-  same times; but PP is placed from a different anchor and the oracle adds a fixed 16 s press, so the port is 1 press short.
-- **s7840 "0x31=3 (mission 4) pinned port = retail, H-exact"** (superseded s7877). Believable because every tick of that run matched;
-  it was a 170 s run that ended before the t2111 death. At 305 s the respawn forks on the death-song end (audio-clock class).
-- **s7872 "el=0 hits a special 0-divisor path in timeSnapshotFiller; the cinematic needs el in (0, 811160)"** (superseded s7873).
-  Believable because el=0 moved island A far off instead of onto retail. Reading 0x8000BE28-BF38 shows no el branch: the value is
-  el/rate + VIperiod*max(vd,1) and RETAIL_SNAP pins vd=1, so el=0 stored 1 VI vs retail's 2 VI. Retail-valued arms leave island A unchanged.
-- **s7857 "0x31=14 port-side 1-2 ULP transient t892-899"** (superseded s7858). Believable because retail r2 == r1 and r2 differed
-  from the port in the same words, so it looked port-side. Both retail runs were scored against the SAME misindexed pin file: the
-  port was fed dt 0x3D088887 at tick 891 where retail ran it at 892 (store watch: same PCs, f10 = [sp+0x1DC] dt arg 87 vs 88).
-- s7828 "the port's flight pitch delta is port-side (H-cpu-pose): the port feeds or computes something differently": believable
-  because retail's pose was timing-invariant while the port was 42/42 pitched in its one schedule. s7829 showed the same port binary
-  matches retail (0/42) when the autopilot presses land ~36 game frames later: the pitch belongs to one press schedule, not to
-  port math or a port input (idle stick 0 on all 8043 reads).
-- s7827/s7825 "sub-pixel flight-pose/logo residuals are H-input-time (time-integrated state depends on frame/dt history)": believable
-  because static-authored scenes were exact and only time-integrated scenes differed. s7828 changed ONLY retail's emulated CPU timing
-  (26% fewer frames) and the steady flight pose stayed within one quantum, while the port differs by 3-6 quanta: the pose is
-  timing-independent in retail, so the port delta is port-side. (The s7825 logo verdict was not re-tested.)
-- s7826 "reticle +0.5 px = a screen-space constant on the reticle only (HUD anchor chain suspect)": believable because the texrect
-  path matched to <0.5 px and only that PRIM missed. s7827 found the projected sky mesh shifted too, with a pitch-shaped x/y
-  pattern: a camera pose delta of ~0.1 deg, not a reticle/HUD transform.
-- s7816 "animated oracle frames differ cross-run because of wall-clock press/dump timing" was only half the cause: with presses
-  and dumps VI-locked, runs still diverged from VI ~2115 because mupen64plus-core randomizes PI/SI interrupt timing with a
-  time-seeded rand() (s7817). Believable because wall-clock jitter was a real, visible source and the first fix to try.
-- s7752 "residual (a), 31-33 replaced commands per task, is <=1 LSB sub-visible precision": believable because the render diff was
-  tiny and both RSPs looked healthy, but s7815 showed it is cxd4's VCH (vt=0x8000) and VCR (signs differ) defects: with those two
-  fixed, cxd4 is byte-identical to our stream on both retained tasks.
-- s7783/s7781 "the port places DL chunks inside the framebuffer pair (H-overlap / H-shared-slot, port-only)" and s5661 "unaligned
-  stores are not the rail writer": believable because the hook fired with a passing plant control and the oracle disagreed, but
-  the s5660 hook used the stored value as the address at every swl/swr/sdl/sdr site (s7784). Any [swatch]/s6843 hit from an
-  unaligned-store pc before s7784 names the value, not the destination.
-- s6268/s6868 "no syms-toml placeholder is a real function / the leftovers are shape-only": believable because s6868 audited the
-  generated tree and s6268 read objdump, but N64Recomp never emits the libultra exception block and objdump prints it as data.
-  Overturned s7770 (ELF byte census, tools/s7770_placeholder_census.py): func_8002BB34 had 14 jal sites and is send_mesg (named).
-- s7748/s7690 "L12: 85/92 stand-in items are never added": believable because [s7690-par] reads tries=120 adds=0 per item; it prints once at the first 120 tries, so it is a window, not lifetime (s7749: 79 of 85 added later).
-- s7746 "L12 stand-ins are added but NOT visible (H-gain refuted on L12, H-not-visible)": believable because the ground-only
-  scorer and its paint control both passed. Overturned s7748: the same on-window flicker (131 vs 146 per triplet) against a quiet
-  control (36, not 126) gives 4.1x, and the on-frames show extra pylons by eye; s7746's forced-off window carried camera-motion flicker.
-- s7587 "the 2026-11-18-014353 RT64 Present SIGTRAP is an OBJC_DEBUG_MISSING_POOLS instrument artifact": believable because only
-  the debug arm crashed; superseded by s7725 (the env alone never traps; the push flushes a freed +0 texture descriptor that plume
-  over-released; fixed).
-- **s7645/s7646 "gfx tasks read display-list bytes that PI DMAs refill mid-task at dd>1 (L4 4912/120 s); H-slot-recycle" (superseded
-  s7647).** Believable: controls fired, dd1 arm read 0, and the issuer/ROM offsets were coherent. But both sides were keyed `& 0x7FFFFF`
-  while the RSP addresses 32 MB and dd>1 data lives above 8 MB: true-key overlap 0, alias-only overlap 4881 in the same run.
-- **s7552 "pre-mission out-of-rect colour change is real content (a darkening fade)" (superseded s7553).** Believable: samples
-  0x294B->0x2109 failed RT64's requant test F(pre,d). But F only models upward dither from pre; the source is the retained float.
-  s7553 shadow: pre == RT64's own last writeback for 100% of those px, post within ±1, dark/bright balanced, outside every draw.
-- **s4711 "retail never runs reapplyAudioConfig/reapplyDisplayMode at boot/attract" (superseded s7476).** Believable because the oracle
-  ran 120 s with 0 hits; but it ran with dummy video, which never leaves the 320 boot phase. With Rice + Start presses retail calls
-  reapplyDisplayMode on every scene (t=2.1/6.7/17.3/38.4 s). The count=1 re-init was the port's s4889 patch clobbering $a1.
-Recent only; older entries in the PROJECT-OVERVIEW maintenance archives (s7307, s6994, s6900, s6870, s6759).
-- Pre-s7300 superseded entries (s6445-s7288, 27 lines) moved verbatim to PROJECT-OVERVIEW "(s7581 maintenance)"; grep there.
+- **Older superseded entries (s7645-s7915)** are verbatim in PROJECT-OVERVIEW "(s7973 maintenance)"; earlier ones in the
+  s7581/s7747 archives. Check there before trusting any pre-s7920 PORTING-STATE conclusion.
+
 ## Run recipes and hard config
 
 - Run from `build/` with the ROM beside it; SIGKILL to stop; one game run at a time.
@@ -217,44 +145,16 @@ docs/G1-FRAMEBUFFER-COVERAGE.md and docs/G1-OBJECTIVE-RESPONSE.md. Never send hu
 
 ## Next steps (single monotonic backlog)
 
-Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12); the s7790 numbering (1-36) is
+Spec: ITERATION.md item 3c (no backlog-exhausted block). Renumbered s7792 into one sequence (s7848: 11b -> 12; s7973: 13a-13s folded to 13, active 14); the s7790 numbering (1-36) is
 archived verbatim in PROJECT-OVERVIEW "(s7792 maintenance)". Ladder item 4 REVISIT has no open target (rename sweep CLOSED s7770,
 M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 (s7897: any new static pointer in src/ needs an s7613 HP census row, class base/host/gated/..., or the exit gate goes RED.)
-0a. **G5c freeze gap: CLOSED on measurement (s7919-s7921); owner judges feel.** In-flight bar met on every owner-recipe ring
-   s7694-s7919 (s7920 `tools/s7920_hold_class.py`: the s7806 L4 holds were a mission restart). The one IN-SCENE pre-flight hold
-   (t=43.4 s, 9DE900/A62B80, 275-295 ms) is the menu -> hangar entry and is RETAIL (s7921, two lines): retail oracle
-   (`--vi-holds 4 --hit-vi`, field-normalised) holds the same transition 17 VIs around the same waitForMusyXAudioTaskDone spin
-   (0x80091EC4 -> 0x80091F44, 8-9 VIs; every retail transition wait sits in a 15-19 VI hold), then 123 more VIs on the hangar
-   load; port host sample on that hold = game thread in musyxNoopStub -> waitForMusyXAudioTaskDone ~103 ms. Port <= retail at
-   every transition. Oracle trap: interlaced fields alternate the origin by one scanline (512: 0x656400/0x656800), so raw-origin
-   hold counts read "no holds"; `--vi-holds` handles it. The 17 s "hold" at t=11 s is the single-buffered animating title.
-   s7922 whole-route table (`tools/s7922_transition_table.py <ring> <oracle.log>`, planted PORT-LONGER/EQUAL controls, anchored at
-   the hangar-entry hit): 6/6 port transitions EQUAL or PORT-SHORTER vs retail on BOTH owner-recipe rings (s7919, s7921): boot
-   15-18 vs 238 VIs, ->title 17-18 vs 18, title->menu 0 vs 0, hangar 16.5-17.7 vs 140, ->briefing 17 vs 124, ->mission 23.5 vs 212.
-   Pre-flight route is retail-paced; owner-queue row 20. s7925: pairing now two-source: present-ring `M` rows (port MusyX wait,
-   src/rsp/s7324_rcp_spill.cpp rs64_s7925_wait_mark) pair 6/6 with the hold ordinals on 2 runs (`--waits`, shift-1 mutation 0/6;
-   sweep row S7925_WAITPAIR); port waits 133-150 ms = retail's 8-9 VI spin.
-   s7923: `tools/agent/ring_stalls.py` max_vihold_ms (soak summary field) now excludes animating holds (>2 s, gen advancing on
-   >=90% of rows) into a new `max_animhold_ms`; `--selftest` planted controls. Re-scored owner rings: 17302/17318 -> 392/391 ms,
-   so the field now reads real freezes. Verdict/summary lines before s7923 carry the raw ~17300 (title). vi_stalls30s unchanged.
-   s7924: the loop verdict line now ends `freeze_arms=<n> freeze_na=<m>` (tools/agent/soak_verdict_fields.sh): arms whose
-   max_vihold_ms or max_gap_ms >= FREEZE_MS (1000) - the G5c 1-5 s freeze that vi_stalls30s (>=30 s) cannot see. Controls in
-   tools/agent/test_soak_verdict_fields.sh (planted 1.5 s frozen ring -> 1, 17 s animating -> 0, no-anim-rule mutation -> 1).
-   12/12 recent owner-recipe rings re-scored -> freeze_arms=0 (max vihold 374-408 ms); fold any freeze_arms>0 as a G5c datum.
-   s7926-s7928: datum CLOSED = port TAKES retail's flight-entry wait (s7927 "SKIPPED" superseded). s7928 ROGUESQ_S7928_GATEW=1
-   (present ring: G row per store to gate 0x800A0F50, C row per runVideoFrameTick caller site; runVideoFrameTick is the
-   per-TRANSITION tick and calls musyxNoopStub first) + retail oracle `--watch-pc 0x80001354,0x80091EC4 --hit-vi` (HLE RSP; cxd4
-   stalls the 640 intro): retail 8 calls, 8/8 waits: menu, initScene, menu x4, initScene, mainGameLoop@0x8003E360 (flight entry).
-   Port 7 calls: menu (gate 0 = B40 default), initScene, menu x3, initScene, mainGameLoop@0x8003E360 = the port's 6th slow wait.
-   So 8 vs 6 = B40 (1) + a ROUTE difference (1). s7931 settled the route part (two lines): it is SAVE STATE + the harness FORCE
-   flags, not the press schedule and not the port. Retail oracle on a private copy of the owner save, 3 press schedules
-   (port autopilot at +7.3/+5.75 s, s7928's) -> identical caller sequence menu,initScene,menu,menu,mainGameLoop@E360,menu (hangar
-   -> mission 0x690400, no crawl initScene); port same save, FORCE_SAVE_MISSION/UNLOCK=-1 -> same 6/6 prefix; same-run FORCE arm
-   reproduces s7928's 7-call shape (prefix 4/6). `python3 tools/s7931_route_pair.py <ring> <oracle.log> --control <ring>`, oracle
-   launcher tools/s7931_oracle_route.sh, sweep row S7931_ROUTE (S7928_GATEW was ARGS-only, never swept; both now in EXTRA_GATES). Gate is left 1
-   after flight entry, never 0. `python3 tools/s7928_gate_writers.py <ring> [--oracle <log>]`, sweep row S7928_GATEW. Nothing open.
-   s7920 also fixed an ungated diagnostic: PATCH s5885 destroy-ctx did backtrace+symbolisation in normal play (class audit: 1/63 sites).
+0a. **G5c freeze gap: CLOSED on measurement (s7919-s7931); owner judges feel.** In-flight bar met on every owner-recipe ring;
+   every pre-flight transition hold is EQUAL or PORT-SHORTER than retail (`tools/s7922_transition_table.py`, 6/6 on 2 rings), the
+   menu->hangar hold is retail's waitForMusyXAudioTaskDone spin (two lines, s7921/S7925_WAITPAIR). Retail 8 vs port 6 MusyX waits =
+   B40 default (1) + save/FORCE-flag route (1) (S7928_GATEW, S7931_ROUTE). Soak verdicts carry `freeze_arms=` (>=1 s holds, s7924;
+   `max_animhold_ms` splits animating title holds, s7923): fold any freeze_arms>0 as a G5c datum. Oracle trap: interlaced fields
+   alternate origin by one scanline, use `--vi-holds`. Full text verbatim in PROJECT-OVERVIEW "(s7973 maintenance)".
 0. **G3 pre-flight retail match on det pairs: CLOSED (s7891-s7917).** Island A H-index (s7891/s7894); island B harness frame/VI
    class (s7907); +28 frames = one shorter port load stall, retail load-time cost (s7909/s7910); m6 island B particle element =
    f(global rand stream position) = host-paced frame count, timing class, no port value to fix (s7912-s7917; DET_CLOCK=1/2 and
@@ -284,193 +184,37 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
     fb-cpu-reader census CLOSED s7391 (0 guest loads from a live colour image on 6 levels; build_fbld, ROGUESQ_S7389_FBLD=1).
     Not covered: RSP/RDP DMA reads (RT64 fb-as-texture owns those).
 11. **G6 (owner 2026-11-18): G6a rumble, G6b controls, G6c stand-ins: all LANDED, close on the owner's hands/look** (headline).
-    s7937: F6 panel driven by real CGEvents (keys need the game ACTIVE: raise via System Events, `winctl activate` is a no-op since
-    macOS 14; pid-posted CLICKS never reach SDL, only HID-tap clicks do). s7938 (`zsh tools/s7938_hotkeys_e2e.zsh`, 2 runs): real Cmd+Ctrl+F and Alt+Enter toggle fullscreen exactly once on pid AND
-    HID paths (no double toggle); F6/F9 work on HID; real-keyboard F11 never reaches the game (macOS Show Desktop owns it: window
-    slides to y=-467 and back, 0 keydowns) -> README/OWNER-OPT-INS now lead with Cmd+Ctrl+F / Option+Enter. Synthetic F11 still
-    works (positive control). s7941-s7945: pad-only panel (open, nav, Bind/Add/Save/Close, L1 Clear, R3 Reset) synthetic test 23/23 + pixel/drawn-text witnesses (cursor 3/3, Clear/Reset 8/8) at 640x480 AND at the owner 16:9 fullscreen Retina recipe (`env PANEL_ASPECT=16:9 PANEL_FS=1 zsh tools/s7942_pad_cursor_witness.zsh` / `tools/s7944_pad_text_witness.zsh`; scale 2, no title bar) AND 21:9 windowed Retina (s7946: 1360x626 window, title 32 pt, cursor 3/3, text 8/8, mouse/key e2e 9/9). One command per screen shape: `env PANEL_ASPECT=<16:9|21:9> PANEL_FS=<0|1> zsh tools/s7946_panel_witness_all.zsh` (3/3 at retail 4:3 too). F6 panel qualified on every owner screen shape this host can make (no 21:9 display here, so 21:9 fullscreen untested); closes on the owner's hands.: same witnesses at 21:9.
+    F6 panel/hotkeys detail s7937-s7945 (CGEvent driving, Cmd+Ctrl+F / Option+Enter, F11 owned by macOS Show Desktop, pad-only
+    panel 23/23) verbatim in PROJECT-OVERVIEW "(s7973 maintenance)".
     Full step history s7617-s7691 (stand-in steps 2-4, H-culled/H-far, draw proof, handoff polish) verbatim in PROJECT-OVERVIEW
     "(s7703 maintenance)".
-12. **G3 retail flight det sweep (s7832-s7890): CLOSED.** 19/19 missions render-exact on det ticks (m1-m16, b16, b17 pre-fork,
-   b18; slug g3-det-render-coverage); one-line verdicts in `tools/s7862_det_sweep_table.py`; recipe tools/s7849_det_pair.sh +
-   tools/s7856_det_verdict.py / s7856_det_sweep.sh. Full text verbatim in PROJECT-OVERVIEW "(s7918 maintenance)".
-   s7865/s7893 gate note: the "unidentified scratch wipe" is the OWNER's launchd job ~/.local/bin/rs64-scratch-compress.sh
-   (6 h: zstd >12 h) -> rs64-scratch-prune.sh (deletes >7 d, >64 KB files not cited by EXACT path, .zst stripped, in a
-   tracked file; log ~/Library/Logs/rs64-scratch-prune.log). Dir-only or '.zst' citations do not protect, so it ate the
-   s7392-s7399 logs (s7723 RED) and the s7435/s7439/s7442 sample_N.txt (s7433/5/6/7/8 + s7441 RED, all allow-listed,
-   unrecoverable). Since s7893 tools/retained_captures.txt (tools/s7893_retained_manifest.py, refreshed by loop.sh every
-   iteration, --check / --control) cites all 766 surviving gate inputs by exact path. A new retained capture is safe only
-   once it is cited in a gate ARGS row or a tools/s7*.py literal. gate_trace.py records importlib-loaded modules.
-   s7932: the manifest globbed '%d' literals as 'l*d' (matches nothing), so 9 s7516/s7517/s7518 level-log inputs were
-   unprotected (6 on the prune's dry-run list) while --check said missing=0 (same glob). Fixed (printf fields -> '*'),
-   --check now also verifies the sweep's own ARGS argv (second source), swept as S7932_RETAIN; the sweep also exits 1 on
-   an ARGS row discovery never runs (planted control). Dry-run prune now hits 0 gate inputs.
-   s7933: third source = what gates actually READ (build/gate_sweep_cache.json traces): 22 traced scratch inputs (s7852-s7864
-   oracle/rand captures, s7751/s7754 snaps, ...) were missing from the manifest, safe only via incidental ledger citations.
-   Traced reads now join the manifest (rolling scratch/agent/soak_results excluded: s7415 samples it); --check line
-   `s7933 sweep-trace ... missing=0` pinned in S7932_RETAIN. Directory-cited inputs need nothing more: loop.sh re-walks them
-   every iteration and the prune needs mtime > 7 d. If a NEW capture a gate reads turns S7932_RETAIN RED, re-run the manifest.
-   s7934: tools/gate_trace.py now traces os.stat/lstat ("stats"; `--selftest`), the sweep keys them (exists/size), and the
-   manifest pins NAMED stat-only inputs (not scan hits, not scratch/agent): 31 s7751/s7754 snaps s7802 only exists()-checks
-   were uncited; prune dry run (KEEP_DAYS=2) put 6 hangar_hstate k900_*_end.bin on the list, now 0. Gate S7934_STATKEY.
-   s7951: macOS case-insensitive fs: TAG g1_lvl4s7031L4a (s7056) reused + overwrote the s7031 L4A run dir (census 1/2365 m6 dirs). Shared launcher
-   scratch/agent/m6_god_common.sh now refuses case-only TAG collisions (tools/agent/run_dir_guard.sh, rc 3; test_run_dir_guard.sh). REPORT gates stay 3.
-   s7952 closed the class: the guard (now also one-arg `run_dir_guard.sh <path>`) is wired into tools/g1e_owner_quiet_arms.zsh ($R, and arm
-   names are case-folded unique: q4/Q4 share log_/ring_/ok_ files), g3_port_capture.sh, probe.sh, regress.sh, boot_freeze_hunt.sh (all rc 3;
-   planted CapX/capx refused 4/4, test_quiet_arms_spec 13/13). Census of 15 arms.log: 0 case-only arm pairs (planted q4/Q4 control caught).
-   Other mkdir sites are one-off sNNNN scripts with literal names.
-   A docstring apostrophe or new quoted .txt literal in s7893 can trip s7804 (it is waived `# zst-ok:`, never opens captures).
-   s7935: the 6 profiler gates (s7433/5/6/7/8, s7441) re-captured as scratch/s7935 (`env S7431_ARM=S7935 zsh
-   tools/s7433_probe_cost.sh`, one owner-recipe run): every recorded verdict reproduced (two captures, own controls PASS); s7441
-   gate now `--plant` (2 planted REDs from the capture) + REVIEWED budget for the post-s7441 rs64_s7463_hash (XXH3 relabel,
-   0.004 self). s7936: s7723's six s7392-s7399 inputs re-captured (scratch/s7936/<k>/run.log.zst, 6 runs, all six verdicts +
-   controls reproduce); tools/gate_sweep_allowed_red.txt is EMPTY; full sweep 258 gates 0 RED. Any new RED gate now blocks the exit gate outright.
-13a. **s7953 class LC (process locale) CLOSED, two lines:** every float parse (env knobs, settings.txt, stand-ins) is strtod/atof/printf = LC_NUMERIC-dependent; under a comma locale "1.5" parses as 1 (plant arm). No setter in src/ + lib/ (non-contrib), none imported by the binary's non-system dylibs incl. the dlopen'd SDL3 (`python3 tools/s7953_locale_census.py --witness scratch/s7953`, 3 planted controls, sweep row S7953_LC); runtime witness ROGUESQ_S7953_LOCALE=1 stays C/"." for 65 samples under an LC_ALL=de_DE.UTF-8 launch, ROGUESQ_S7953_PLANT=de_DE.UTF-8 flips it (CHANGED, dp=","). Owner AppleLocale en_US. A new setlocale/uselocale/locale::global anywhere turns the sweep RED.
-13b. **s7954 class CK (wall clock in intervals/pacing) CLOSED:** high_resolution_clock IS steady_clock in the build's libc++ (compile witness), so VI
-   deadline + RT64 present pacing are monotonic; all 116 wall-clock sites are LABEL/CADENCE(env-gated diag)/ARM(env==2) rows, 19 importing objects
-   explained (cv.wait_for via system_clock on Apple = single-source safe). `python3 tools/s7954_clock_census.py` (4 planted controls), sweep row S7954_CK.
-   A new time()/system_clock/gettimeofday site turns it RED: add a REVIEWED row only if it never feeds an interval or deadline.
-13c. **s7955 class TF (settings.txt text format) CLOSED + FIXED:** a UTF-8 BOM rejected line 1 (owner's first setting dropped) and a
-   shell-style trailing comment stayed in the value (`ROGUESQ_FPS60=1 # on` -> "1 # on": atoi readers ON, strcmp readers OFF, the s7729
-   split). rs64_settings_parse_line now strips the BOM and sh-style comments (`#` after whitespace, outside quotes; `a#b` stays). CRLF and no
-   trailing newline were already fine; controls.json (nlohmann) already skips a BOM and CR. `python3 tools/s7955_settings_textfmt.py`
-   (planted mutant fails 9/78), sweep row S7955_TF; e2e: planted BOM+CRLF+comment file applied 4/4, rejected=0 in the real binary.
-   s7956: the S7955_TF row was in ARGS but not EXTRA_GATES (name not *_census.py), so the sweep never ran it; the s7932
-   unswept-row check caught it (exit 1). Added to EXTRA_GATES; `--only 's795[45]'` -> 2 GREEN, unswept real 0.
-13d. **s7957 RT64 preset library load (F1 inspector "Load library") FIXED:** `PresetLibrary<T>::load` (lib/rt64/src/preset/rt64_preset.h)
-   had no try, so a truncated / wrongly-typed / binary / directory .json picked in the Draw calls tab (developer mode) threw nlohmann
-   parse_error/type_error out of the ImGui frame: rc134. Now catches like ConfigurationJSON::read (log `[s7957]`, empty library, false).
-   `python3 tools/s7957_preset_load_gate.py` (sweep row S7957_PL): pre-fix header copy aborts 5/5 bad files (control), live header
-   survives 5/5, valid file loads on both. Other host JSON readers already caught (user config, texture-pack db, mods, controls.json).
-   s7957 full sweep 262 gates: 258 GREEN, 3 REPORT, 1 RED = s7364 heapbuf on the s7955 settings strip (2 rows, both BOUNDED, now
-   reviewed -> OPEN 0). An src/ edit needs the FULL sweep, not only its own `--only` row.
-13e. **s7958 class FW (host owner-state file writers) CLOSED:** census of every fopen("w")/ofstream in src/, librecomp, RT64 hle:
-   all but 5 are env-gated diagnostic dumps/logs. Owner-state: save (pi.cpp) + mods config = s7429 temp+fsync+rename; controls.json
-   = temp+rename (s7620); RT64 saveConfiguration dead (rt64_render_context.cpp useConfigurationFile=false); audio_device.txt (F9)
-   was fopen("w") in place and logged "saved to" even on failure -> a kill mid-write left an EMPTY file, which the next run reads
-   as "default" (system route, not the owner's choice). Now src/main/rs64_atomic_write.h (temp+fsync+rename, "SAVE FAILED:" log).
-   `python3 tools/s7958_fw_gate.py` (sweep row S7958_FW): 1500 SIGKILLs/arm, old writer empty 822-852 (control), new 0.
-13f. **s7959 class RD (host owner-state file READERS on empty/short/corrupt files) CLOSED:** audio_device.txt reader
-   (audio_route_load_pref) turned an empty / whitespace / NUL-filled file into '' = "default" = system output, and junk
-   bytes into a device name; now src/main/rs64_owner_text.h rs64_audio_pref_from_text treats those as ABSENT -> built-in
-   default "MacBook Pro Speakers" (BOM dropped, CRLF ok, a real "default" line still honoured). controls.json already
-   rejected every byte prefix / NUL fill / empty (1076 cases, 0 trusted). Save loader: short file -> whole .bak (s7429);
-   a full-length zero save = erased EEPROM, game-owned. `python3 tools/s7959_rd_gate.py` (sweep row S7959_RD): old
-   reader 6/10 planted files misrouted (control), new 0/10; e2e empty file: old binary output=<system default>, new
-   output=MacBook Pro Speakers. Full sweep 264: 259 GREEN, 3 REPORT, 2 RED (s7466 stale anchor, s7598 new alloc row) -> both fixed, 7/7 GREEN.
-13g. **s7960 class DR (host data-root split) CLOSED + FIXED:** saves/, the stored ROM, mods/, mod_config/, mods.json were
-   resolved against the LAUNCH folder, settings.txt / controls.json / audio_device.txt next to the executable. Launched from any
-   other folder (Finder -> $HOME, `build/RogueSquadron64Recomp` from the repo root) the ROM was not found ("[ROM] Place your...",
-   no boot; with a stored ROM the save would have been a fresh empty one) and mods/ + mod_config/ were created there. Now
-   src/main/rs64_data_root.h: launch folder if it holds game data (stored ROM, saves/, a ROM candidate name), else the exe's
-   folder as invoked (not realpath'd, so symlinked private harness dirs stay private); `[s7960-root]` logs the pick;
-   ROGUESQ_DATA_ROOT=cwd = old rule. Owner `cd build` launch unchanged (cwd-data). e2e `zsh scratch/s7960/e2e.zsh` (4 arms):
-   old binary from an empty folder romfail=1 + litter, new boots (exe-dir, 5686 log lines) with the folder untouched, cwd
-   control cwd-data, forced arm reproduces the old failure; owner save sha 687d9f77 unchanged. Gate `python3
-   tools/s7960_dr_gate.py` (sweep row S7960_DR; old rule misroutes 2/7, planted mutant 2/7 FAIL). Full sweep 265: 2 RED (s7348 path-join read as /, s7424 stale) both fixed.
-13h. **s7961 class SD (settings.txt dir split, DR residue) CLOSED + FIXED:** the default settings.txt came from realpath(exe)'s
-   folder, so a symlinked private game dir kept its own save but read build/settings.txt (old e2e: file=build/settings.txt,
-   planted pg file ignored; explicit ROGUESQ_SETTINGS=pg file read = control). Now src/main/rs64_settings.cpp
-   settings_default_dir() = rs64_pick_data_root (same rule as saves). `zsh tools/s7961_sd_e2e.zsh new` 5 arms: symlink_pg reads
-   pg file (dir=cwd-data), owner_build build/settings.txt, empty folder exe-dir, DATA_ROOT=cwd forced. Loop runs were already
-   moot (runner.sh/loop.sh ROGUESQ_SETTINGS=0); g3_port_capture.sh now defaults it to 0 too. Gate tools/s7961_sd_gate.py (S7961_SD).
-   controls.json/audio_device.txt stay SDL_GetBasePath (harness symlinks them in on purpose).
-13i. **s7962 class PS (owner folder paths: spaces / non-ASCII / apostrophe / long) CLOSED + FIXED:** ROM, save (EEPROM b0..7),
-   settings.txt and data root all worked from a 307-char "Rogue Squadron ü/William's Games/..." folder (old binary too; plain-dir
-   control identical). One break: with the exe itself in that folder the crash-handler symbol table loaded 0 symbols (popen
-   "nm -n '%s'" — the apostrophe ended the quote), so crash reports would have lost every function name. Fixed with
-   src/main/rs64_shell_quote.h (also the stall `sample -file` command): new 29057 = control. `zsh tools/s7962_ps_e2e.zsh new` 5 arms.
-   Census: every path-carrying char[] in host code is >=512 and env-gated diagnostic. Gate tools/s7962_ps_gate.py (S7962_PS).
-13j. **s7963 class AN (App Nap / hidden window / SIGSTOP) CLOSED, H-moot, no code change:** one run (tools/s7963_an_e2e.zsh, title/attract,
-   owner save copied): hidden 60 s (System Events visible=false) the compositor showed 0/1916 presents (positive control: the hide took
-   effect) while the game queued presents at the scene's nominal rate (29-60/s per 5 s, = foreground); SIGSTOP 5 s + CONT: no 1-s bucket
-   above nominal (max 60 queued / 30 new), so no catch-up burst. Why (second line): SDL_DisableScreenSaver holds a
-   PreventUserIdleDisplaySleep IOPMAssertion for the pid and the exe is unbundled (lsappinfo bundleID NULL), so App Nap does not apply.
-   Gate tools/s7963_an_gate.py (S7963_AN): no SDL_EnableScreenSaver / ALLOW_SCREENSAVER hint / MACOSX_BUNDLE, mutant caught, capture
-   verdict over scratch/s7963/an1. If the port is ever shipped as a .app bundle, re-run the e2e (App Nap would then apply).
-13k. **s7964 class RO (unwritable game folder) CLOSED, H-silent fixed:** tools/s7964_ro_e2e.zsh (private copies, owner save copied,
-   10 s arms, SIGKILL): writable / chmod -R a-w / read-only UDRO disk image all BOOT (vi320, 0 crash lines; H-fatal refuted; mods/ +
-   mod_config/ failures already reported by s7595). But game saves in such a folder fail in librecomp update_save_file with only a generic
-   stderr line per attempt, so a Finder launch loses progress unseen. Fix: src/main/rs64_ro_probe.h rs64_dir_writable() probes
-   <data root>/saves (or its parent) once at boot -> `[s7964-ro] game folder NOT writable: <dir> (<errno>)` and, when saving is on
-   (NO_SAVE_WRITE unset), one modal warning dialog before the game starts (screenshot scratch/s7964/dialog.png; the dmg_dialog arm stays at
-   update_screen=0 until OK). ROGUESQ_RO_DIALOG=0 = line only. All harness runs set NO_SAVE_WRITE so they never see the dialog. 80 write
-   sites enumerated: diag fopen sites null-checked, F6 controls save reports SAVE FAILED. Gate tools/s7964_ro_gate.py (S7964_RO): UNIT
-   (rw / a-w / missing saves), MUTANT always-true probe caught, STATIC, retained e2e summaries old+new. Sweep 269 (s7964: 2 own REDs/HOLLOW
-   fixed; s7958_fw went OPEN once under sweep load, GREEN alone: watch for flakiness).
-13l. **s7965 s7958_fw sweep RED = one cached flaky run, harness hardened (single-source, not reproduced):** the cached s7964 sweep run read
-   new_bad=170 (all "empty") in the atomic arm; the cache key never changed, so every verify re-served it. Standalone 4/4 GREEN, and 0/1500,
-   0/3000 under 10x CPU, 2x fsync I/O + tracer env. Cause unknown; a published-empty file is impossible for temp+fsync+rename unless two
-   writers overlap on the shared .tmp (= next item, class DI) or the READ failed. Harness now classifies each bad file
-   missing/zero/partial vs openerr/forkfail/waitfail (unscored = HARNESS FAIL), with a CLASSIFIER control (unlink mutant must show
-   missing>0) and a fork()==-1 guard (it would have run kill(-1, SIGKILL) on every user process). A recurrence now names its kind.
-   Full sweep s7965: 269 gates, 266 GREEN + 3 REPORT, 0 new RED.
-13m. **s7966 class DI (two game instances on one data root) CLOSED + FIXED, H-corrupt and H-clobber both measured:** offline
-   tools/s7966_di/harness.cpp (librecomp files.cpp save path, 2 writer processes x 2000 saves + sampling reader): the shared
-   `<save>.temp` gave 49 torn/short samples + 273 finalize failures (each one = the in-game "Failed to write" dialog); copy-finalize
-   control 6754 torn. Fix: per-pid temps (files.cpp rs64_private_temp, also for the .bak refresh; rs64_atomic_write.h
-   rs64_private_tmp_path for audio_device.txt; F6 controls.json save) -> 0 torn, 0 failures in 50k samples. Even then the last writer
-   wins, so src/main/rs64_instance_lock.h takes an flock on <data root>/saves/.rs64_instance.lock at boot (kernel drops it on exit or
-   SIGKILL); a second copy logs `[s7966-di] another copy is already running`, shows one dialog when saving is on (ROGUESQ_DI_DIALOG=0 =
-   line only) and runs with ROGUESQ_NO_SAVE_WRITE=1 (all three owner-state writers read it per call). Agent runs (NO_SAVE_WRITE) never
-   see the dialog, so concurrent arms from build/ still work. e2e tools/s7966_di_e2e.zsh 5/5 PASS (nosave, save, dialog, NO_LOCK mutant,
-   relock after SIGKILL). Gate tools/s7966_di_gate.py (S7966_DI): FIX, SHARED_TEMP mutant caught, OLD_FINALIZE control, ATOMIC + mutant,
-   LOCK + NO_LOCK mutant, STATIC, E2E. Mutant envs ROGUESQ_S7966_SHARED_TEMP=1 / ROGUESQ_S7966_NO_LOCK=1. Sweep 270: 267 GREEN + 3 REPORT, 0 RED.
-13n. **s7967 class CS (game folder in iCloud Drive / a synced folder) CLOSED + FIXED:** on this Mac iCloud Drive is active but
-   ~/Documents is not synced (no dataless flags on build/), so the owner's current tree is not exposed. tools/s7967_cs/harness.cpp on
-   real `brctl evict`ed files: an evicted save or 16 MB file reads in full in ~1 s online. The fallback to the .bak works, 20 saves
-   over an evicted save give 0 fails, and no temps are left. The hazard is offline: an unreadable placeholder was zero-filled, and the
-   game then rewrote the cloud save within 25 s (e2e mutant arm, ROGUESQ_S7967_CS=0). Fix: pi.cpp read_save_file probes main + .bak
-   with recomp::is_cloud_placeholder (files.cpp, SF_DATALESS). A short read of a placeholder logs `[s7967-cs] ... will NOT save` and
-   sets ROGUESQ_NO_SAVE_WRITE=1. That is stderr only, NOT a dialog: the message_box callback here only prints. The offline case is
-   SIMULATED (ROGUESQ_S7967_SIM_OFFLINE=1), not measured with the network off. e2e tools/s7967_cs_e2e.zsh 5/5 PASS. Gate S7967_CS.
-   README has a paragraph under Running. Sweep 271: 0 RED after two own fixes (s7595 row, harness `opened=` field).
-13o. **s7968 class XF (game folder on exFAT / FAT32 stick) CLOSED + FIXED (cosmetic):** fskit exfat/msdos images, APFS control.
-   s7429 SIGKILL harness: old copy-finalize tears 40-176 loads per FS (control), rename finalize 0 bad, so saves are kill-safe there
-   (power loss / yanked stick NOT covered). flock busy/release, two writers, fsync cycles: all as on APFS. Only defect: xattrs become
-   `._<name>` AppleDouble sidecars and the mods/ scan opened `._foo.nrm` as a mod ("invalid zip file" line). mods.cpp now skips `._*`
-   (ROGUESQ_S7968_XF=0 = old). e2e tools/s7968_xf_e2e.zsh 15/15 (boot, lock, 2nd copy, mods fix/mutant, relaunch per FS; mod lines
-   need `stdbuf -o L`, SIGKILL drops buffered stdout). Gate S7968_XF. SMB untested. Sweep 272: 269 GREEN + 3 REPORT, 0 RED.
-13p. **s7969 class UE (game volume vanishes mid-run: stick pulled / force eject) CLOSED + FIXED:** e2e tools/s7969_ue_e2e.zsh
-   (`hdiutil detach -force` of APFS/ExFAT images, test plant ROGUESQ_S7969_SAVE_TICK_MS forces a save every 1.5 s; the game itself
-   writes none in 40 s of boot). Exe on the pulled volume LIVELOCKED (all threads at one PC, KERN_MEMORY_ERROR, 660% CPU, no report,
-   quit never returns); mlock of __TEXT is EPERM, so src/main/rs64_ue.h re-execs from ~/Library/Caches/RogueSquadron64Recomp when the
-   exe is not on the system/home volume (ROGUESQ_S7969_EXE_DIR keeps the data root; ROGUESQ_S7969_RELOC=0 off). saves/ on it: the
-   failure report repeated per save and quit lost progress silently; pi.cpp now reports once per streak + "back" line, quit asks Retry
-   (ROGUESQ_UE_DIALOG=0 line only; dialog untested headless). ROGUESQ_S7969_UE=0 = old. 12/12 arms incl. mutants. Gate S7969_UE.
-   Note for test scripts: background-job SIGINT is SIG_IGN, use SIGHUP to drive the quit path. Sweep 273: 270 GREEN + 3 REPORT, 0 RED
-   (5 own sites reviewed into s7381/s7382/s7595/s7597/s7714).
-13q. **s7970 class SW (process frozen then resumed: sleep / App Nap / debugger; proxy SIGSTOP/SIGCONT) CLOSED + FIXED:** e2e
-   tools/s7970_sw_e2e.zsh (title + lvl1 flight x stop 0/60/300 s, present ring + AI trace, scorer tools/s7970_sw_score.py). Video,
-   game clock and SIGHUP quit fine on resume. Audio (mutant ROGUESQ_S7970_SW=0, 4/4): 60 s -> false "drain-stall" reopen, 300 s ->
-   3.2x AI post burst with ~2700 empty-queue posts (CoreAudio timeline catch-up). main.cpp 50 ms heartbeat thread detects a >1 s
-   freeze; next post resets the stall clock and reopens the device once (why=resume). Fix on 6/6 moot. Gate S7970_SW. A real
-   system sleep (device/display stop too) is NOT covered. Sweep 274: 2 own REDs fixed (s7615 thread ordinals shift when a new `[]`
-   std::thread lands in main.cpp; s7804 waiver), re-run individually GREEN.
-13r. **s7971 class MP (host memory pressure in flight) CLOSED, H-moot, no code change:** `memory_pressure -S` is root-only, so
-   tools/s7971_mp_e2e.zsh uses a real hog (tools/s7971_mem_hog.py, incompressible, page-hot; control 0 / mid 1.4 / high 5.0 GB at 125 s
-   for 60 s). High arm: 368k system compressions, game RSS 270 -> 215 MB (its own pages compressed), presents 59-60/s, max gap 25 ms,
-   0 AI underruns, quit 532 ms. No memory-pressure handler anywhere (static census + contrib control). Kernel level never left normal
-   (warn/jetsam not reached). Trap: present-ring Q rows are UPTIME-stamped, the AI trace launch-relative; tools/s7971_mp_score.py
-   aligns them by framebuffer first-appearance (reuse it for any window anchored on a launch offset). Gate S7971_MP.
-13s. **s7972 class NS (data volume full while the game runs) CLOSED + path split FIXED:** tools/s7972_ns_e2e.zsh, 160 MB APFS image
-   (= external volume, so s7969 re-execs from ~/Library/Caches), arms ctl / run (ENOSPC 3 s in, before the F6 Save) / boot / boot2,
-   phases old exe / mut (ROGUESQ_S7972_BASEPATH=1) / new. Full disk: every writer fails cleanly (Save FAILED, old controls.json and
-   save sha kept, 0 temps, 0 crash, quit ~540 ms). FOUND: controls.json + audio_device.txt used SDL_GetBasePath = the CACHED copy's
-   folder, so a game folder on an external drive had both ignored (built-in defaults) and F6/F9 saves went to the cache (old/mut
-   0/0, new 1/1). Now rs64_data_root_str() (main records the data root); settings.txt honours ROGUESQ_S7969_EXE_DIR; rs64_bind_save
-   uses rs64_write_file_atomic. Owner `cd build` launch unaffected (root = exe dir). Gate S7972_NS; sweep 276, 2 stale-anchor REDs (s7960_dr, s7966_di) fixed. OPEN residue (next): fresh
-   install on a full disk imports the ROM, the store fails, then "[ROM] Place your ROM" = misleading, game does not boot.
-13. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
+12. **G3 retail flight det sweep (s7832-s7890): CLOSED.** 19/19 missions render-exact on det ticks; verdicts
+   `tools/s7862_det_sweep_table.py`, recipe tools/s7849_det_pair.sh + tools/s7856_det_verdict.py. **Scratch-prune hazard:** the
+   OWNER's launchd job ~/.local/bin/rs64-scratch-compress.sh -> rs64-scratch-prune.sh zstd's/deletes uncited scratch files; a gate
+   input is safe only once cited by exact path in tools/retained_captures.txt (tools/s7893_retained_manifest.py, refreshed by
+   loop.sh; also covers sweep ARGS argv s7932, traced reads s7933, stat-only inputs s7934; gate S7932_RETAIN). If a NEW capture a
+   gate reads turns S7932_RETAIN RED, re-run the manifest. Case-only TAG collisions refused by tools/agent/run_dir_guard.sh (s7951/2).
+   tools/gate_sweep_allowed_red.txt is EMPTY (s7936): any RED gate blocks the exit gate. Full text "(s7973 maintenance)".
+13. **Host-environment classes s7953-s7972: ALL CLOSED** (full text verbatim in PROJECT-OVERVIEW "(s7973 maintenance)"). One row each,
+   gate in the sweep: LC locale (s7953) | CK wall clock S7954_CK | TF settings.txt BOM/format S7955_TF | PL RT64 preset load S7957_PL |
+   FW owner-state writers S7958_FW (atomic rs64_write_file_atomic) | RD readers on empty/corrupt files S7959_RD | DR data-root split
+   S7960_DR | SD settings.txt dir S7961_SD | PS spaces/non-ASCII/long paths S7962_PS | AN App Nap S7963_AN (moot) | RO unwritable
+   folder S7964_RO | s7965 flaky cached RED, harness hardened | DI two instances one root S7966_DI | CS iCloud/synced folder S7967_CS |
+   XF exFAT/FAT32 S7968_XF | UE volume vanishes S7969_UE | SW SIGSTOP/resume S7970_SW | MP memory pressure S7971_MP (moot) | NS full
+   data volume S7972_NS (writers fail cleanly; controls.json/audio_device.txt now follow rs64_data_root_str()).
+14. **ACTIVE (scratch/agent/NEXT.md): NS-2 fresh install on a full volume.** ROM imported, store fails, then "[ROM] Place your ROM"
+   while the file is there; game does not boot (s7972 scratch/s7972/new_boot.log). Fix: boot from the validated in-memory ROM when
+   the store fails, with one clear disk-full message.
+15. **Closed audit classes / censuses / gates (old items 1-36, s7808-s7815 siblings): ALL CLOSED, 0 open.** Full text + per-item
    tool lists verbatim in PROJECT-OVERVIEW "(s7848 maintenance)" (and "(s7792 maintenance)"). They stay live through
    `python3 tools/s7651_gate_sweep.py` (--jobs 2) and `python3 tools/s7719_regen_gate.py --strict`.
-14. **Closed G3 threads (verbatim in PROJECT-OVERVIEW "(s7848 maintenance)"):** post-G6c fidelity (s7793-s7800: L1/L10/L12 16:9,
+16. **Closed G3 threads (verbatim in PROJECT-OVERVIEW "(s7848 maintenance)"):** post-G6c fidelity (s7793-s7800: L1/L10/L12 16:9,
    L1/L4 21:9, dd2 H-equal, handoffs H-clean; STANDINS 300 s holds 19/19 s7802); oracle det mode `--det` default (s7817-s7819);
    lvl1 det pair title->flight no port render defect (s7820-s7831); lvl2/lvl3 pitch = dt/snapshot path, not render (s7832-s7836);
    VI_STAMP=1 determinism opt-in (s7837, soak PASS s7838); lvl4 rest-pitch fork = timeSnapshotFiller el=0 on a fast host
    (s7838-s7839 -> ROGUESQ_RETAIL_SNAP=1, s7840 two lines lvl2/3/4); s7841 oracle FIX: arm64 mupen never emulated FCR31.FS
    (tools/oracle/patches/arm64-fcr31-fs-ftz.patch, RS64_ORACLE_FTZ=0 = old): retail captures before s7841 carry denormals,
-   so any port-vs-oracle diff in a decaying float is suspect there. Active continuation = item 12.
+   so any port-vs-oracle diff in a decaying float is suspect there. Active work = item 14.
 
 ## Evidence index
 
@@ -480,4 +224,4 @@ M4 boundary CLOSED s5354, retail-entry boundary CLOSED s4845).
 - Owner commands docs/OWNER-OPT-INS.md; owner sheets docs/owner_sheet_s7*.png/jpg.
 - Queued-soak verdicts `scratch/agent/SOAK-RESULTS.md`; loop.sh edits take effect before the next soak phase
   (s7235 re-exec); idle-gated recipes polled up to SOAK_IDLE_WAIT=1800 s (s7254).
-- Recent chronology: PORTING-STATE sessions 7748-7848; search bounded windows only.
+- Recent chronology: PORTING-STATE sessions 7848-7973; search bounded windows only.
